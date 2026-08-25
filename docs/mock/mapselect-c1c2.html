@@ -1,0 +1,124 @@
+<!-- 유즈맵 선택 — C1·C2 계열 각 4안 (2026-08-23, 2차)
+     · 하단 네비는 **살아 있는 화면에서 그대로 떠온 마크업**이다(손으로 베끼지 않음).
+       그래서 css/30-home.css 도 함께 링크한다 — .navBar 규칙이 거기 있다.
+     ⚠ 게임의 html,body(폰 가운데 flex)는 되돌려야 레이아웃이 안 깨진다. -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>유즈맵 선택 C1·C2 각 4안</title>
+<link rel="stylesheet" href="../../css/00-base.css">
+<link rel="stylesheet" href="../../css/30-home.css">
+<style>
+  html,body{display:block;height:auto;overflow:visible;background:#08090b}
+  body{font-family:var(--font-ko);color:var(--txt);padding:18px;width:1330px}
+  h2{font-family:var(--font-ti);font-size:18px;color:#fff;margin:12px 0 2px}
+  h2 small{font-family:var(--font-ko);font-size:11px;color:var(--txt-mute);margin-left:8px}
+  .sheet{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin:10px 0 24px}
+  .p{background:#0d0e11;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:10px}
+  .tag{font-family:var(--font-ti);font-size:12.5px;color:#fff}
+  .note{font-size:9.5px;line-height:1.5;color:var(--txt-mute);min-height:40px;margin:2px 0 7px}
+  .ph{position:relative;width:100%;aspect-ratio:390/720;border-radius:9px;overflow:hidden;background:#07080b;
+    display:flex;flex-direction:column;font-size:10px}
+  .art{position:absolute;inset:0;background:url(../../assets/backgrounds/title/boot.webp) center/cover;opacity:.55}
+  .art::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,8,11,.30),rgba(7,8,11,.72) 52%,rgba(7,8,11,.95))}
+  .hd{position:relative;display:flex;align-items:center;gap:6px;padding:11px 12px 8px}
+  .hd b{font-family:var(--font-ti);font-size:15px;color:#fff}
+  .hd .sp{flex:1}
+  .cur{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-num);font-size:9px;color:#cfd3d8}
+  .cur i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .burger{width:14px;height:11px;border-top:2px solid #cfd3d8;border-bottom:2px solid #cfd3d8;position:relative}
+  .burger::after{content:'';position:absolute;left:0;right:0;top:3px;height:2px;background:#cfd3d8}
+  .seg{position:relative;display:flex;gap:2px;padding:0 12px 7px}
+  .seg span{flex:1;text-align:center;padding:6px 0;font-family:var(--font-ti);font-size:10px;color:#7d8590}
+  .seg span.on{color:#fff;box-shadow:inset 0 -2px 0 var(--acc-sel)}
+  .seg.head{padding:0 12px 6px;justify-content:flex-start}
+  .seg.head span{flex:none;padding:2px 0;margin-right:12px}
+  .list{position:relative;flex:1;overflow:hidden;padding:0 12px}
+  .row{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .row:last-child{border-bottom:0}
+  .th{width:34px;height:34px;border-radius:6px;flex:none;position:relative;background:#0c0f14;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+  .th::after{content:'';position:absolute;inset:9px;border:2px solid var(--c);border-radius:3px;box-shadow:0 0 8px var(--c)}
+  .big .th{width:44px;height:44px} .big .th::after{inset:12px}
+  .big .row{padding:11px 0}
+  .tx{flex:1;min-width:0}
+  .nm{font-family:var(--font-ti);font-size:12px;color:#fff}
+  .de{font-size:9px;color:#8b9199;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .me{font-family:var(--font-num);font-size:9px;color:#7d8590;margin-top:2px}
+  .me em{font-style:normal;color:#5dff8f}
+  .rt{font-family:var(--font-num);font-size:11px;color:#cfd3d8;text-align:right;flex:none}
+  .rt s{display:block;text-decoration:none;font-size:8px;color:#6e7681}
+  .star{color:#5a6169;font-size:12px;flex:none}
+  .new{border:1px solid #5dff8f;color:#5dff8f;border-radius:3px;padding:0 4px;font-size:8px;margin-left:4px}
+  .bar .row{padding-left:8px;border-left:2px solid var(--c)}
+  .bar2 .row{padding-left:10px;border-left:3px solid var(--c)}
+  .chat{position:relative;padding:8px 12px;border-top:1px solid rgba(255,255,255,.07)}
+  .chat p{font-size:9px;color:#aeb4bb;margin-bottom:3px}
+  .chat p b{color:#fff;font-weight:400}
+  .chatbar{position:relative;display:flex;align-items:center;gap:7px;padding:7px 12px;border-top:1px solid rgba(255,255,255,.07);font-size:9px;color:#6e7681}
+  .chatbar em{flex:1;font-style:normal}
+  .chatbar u{text-decoration:none;color:var(--neon)}
+  /* 진짜 네비 — 폰 안에 넣기 위한 자리 잡기만(생김새는 30-home.css 가 갖는다) */
+  .navwrap{position:relative;height:var(--navH,46px);flex:none}
+  .navwrap .navBar{position:absolute;left:0;right:0;bottom:0}
+</style>
+<script>
+const NAVHTML = "<div id=\"navBar\" class=\"navBar\"><button class=\"navIt\" data-nav=\"upg\" onclick=\"navGo('upg')\"><span data-ico=\"user\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"8\" r=\"3.3\"></circle><path d=\"M5.5 20c0-3.6 2.9-6.3 6.5-6.3s6.5 2.7 6.5 6.3\"></path></svg></span>캐릭터</button><button class=\"navIt\" data-nav=\"gear\" onclick=\"navGo('gear')\"><span data-ico=\"bag\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4.6 8.4h14.8L18.6 20H5.4z\"></path><path d=\"M9 8.4V6.6a3 3 0 0 1 6 0v1.8\"></path></svg></span>정비</button><button class=\"navIt on\" data-nav=\"map\" class=\"on\" onclick=\"navGo('map')\"><span data-ico=\"map\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 5 4.5 6.8v12L9 17l6 1.8 4.5-1.8v-12L15 6.8z\"></path><path d=\"M9 5v12M15 6.8v12\"></path></svg></span>유즈맵</button><button class=\"navIt\" data-nav=\"shop\" onclick=\"navGo('shop')\"><span data-ico=\"gift\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"9.4\" width=\"16\" height=\"10.6\" rx=\"1.6\"></rect><path d=\"M3.2 9.4h17.6M12 9.4V20\"></path><path d=\"M12 9.4C10.6 6 9.4 5 8.2 5a2 2 0 0 0 0 4.4M12 9.4C13.4 6 14.6 5 15.8 5a2 2 0 0 1 0 4.4\"></path></svg></span>상점</button></div>";
+
+const MAPS=[
+ {n:'가시탑 디펜스', d:'가시탑으로 길목을 막는 타워 디펜스', w:'2.1k', r:261, c:'#4ade80', new:0},
+ {n:'용병 키우기',   d:'용병을 성장시켜 최강으로 키우는 RPG', w:'2.5k', r:312, c:'#f59e0b', new:0},
+ {n:'네모네모 디펜스', d:'유닛을 뽑고 합성해 트랙의 적을 막는다', w:'2.1k', r:257, c:'#4aa8ff', new:0},
+ {n:'성소 공성전',   d:'상대 성소를 먼저 파괴하는 공성전',     w:'1.4k', r:173, c:'#a78bfa', new:1},
+ {n:'오토 배틀',     d:'건물에 유닛을 배정해 출격시킨다',       w:'1.2k', r:152, c:'#22d3ee', new:1}];
+function rows(o){ o=o||{};
+  return MAPS.slice(0,o.n||5).map(m=>{
+    const th=o.noThumb?'':`<div class="th" style="--c:${m.c}"></div>`;
+    const nm=`<div class="nm">${m.n}${m.new?'<span class="new">신규</span>':''}</div>`;
+    const de=o.noDesc?'':`<div class="de">${m.d}</div>`;
+    const me=o.rightMeta?'':`<div class="me"><em>●</em> ${m.w} 명 대기 &nbsp; ${m.r} 개 대기방</div>`;
+    const rt=o.rightMeta?`<div class="rt">${m.w}<s>${m.r}방</s></div>`:'';
+    const st=o.noStar?'':'<span class="star">☆</span>';
+    return `<div class="row" style="--c:${m.c}">${th}<div class="tx">${nm}${de}${me}</div>${rt}${st}</div>`;
+  }).join('');
+}
+function phone(o){ o=o||{};
+  const seg = o.segHead
+    ? `<div class="seg head"><span class="on">인기순</span><span>신규</span><span>추천</span><span>즐겨찾기</span></div>`
+    : `<div class="seg"><span class="on">인기순</span><span>신규</span><span>추천</span><span>즐겨찾기</span></div>`;
+  const chat = o.chatBar
+    ? '<div class="chatbar"><em>노바777 : 성소공성전 해보신 분?</em><u>▲</u></div>'
+    : '<div class="chat"><p><b>노바777</b> : 성소공성전 해보신 분?</p><p><b>보이드킹</b> : 용병키우기 고수 계신가요?</p><p><b>Crystalize</b> : 같이 하실 분</p></div><div class="chatbar"><em>메시지 입력…</em><u>전송</u></div>';
+  return `<div class="ph"><div class="art"></div>
+    <div class="hd"><b>유즈맵 선택</b><span class="sp"></span>
+      <span class="cur"><i style="background:#4aa8ff"></i>0</span>
+      <span class="cur"><i style="background:#4ade80"></i>0</span>
+      <span class="cur"><i style="background:#c084fc"></i>0</span>
+      <span class="burger"></span></div>
+    ${seg}
+    <div class="list ${o.cls||''}">${rows(o)}</div>
+    ${chat}
+    <div class="navwrap">${NAVHTML}</div></div>`;
+}
+const C1=[
+ ['C1-1 · 기본','C1 그대로에 <b>진짜 하단 네비</b>를 붙였다. 배경 아트가 비치고 목록은 얇은 선으로만 나뉜다.',{}],
+ ['C1-2 · 썸네일 크게','썸네일을 <b>44px</b>로 키우고 줄 간격을 넓혔다. 맵이 눈에 먼저 들어온다.',{cls:'big'}],
+ ['C1-3 · 정렬을 위로','정렬을 <b>제목 바로 아래 작은 글자</b>로. 띠 한 칸이 사라져 목록이 한 줄 더 보인다.',{segHead:1}],
+ ['C1-4 · 채팅 접기','채팅을 <b>한 줄로 접는다</b>. 목록이 화면을 거의 다 쓴다 — 고르는 일에 집중.',{chatBar:1}],
+];
+const C2=[
+ ['C2-1 · 기본','C1 에 <b>왼쪽 색 막대</b>를 더했다. 배경 아트가 있어도 맵이 색으로 갈린다.',{cls:'bar'}],
+ ['C2-2 · 막대 굵게 · 썸네일 빼기','막대를 <b>3px</b>로 굵히고 썸네일을 뺐다. 색만으로 구분 — 가장 담백하다.',{cls:'bar2',noThumb:1}],
+ ['C2-3 · 막대 + 우측 숫자','수치를 <b>오른쪽 끝</b>으로 정렬. 설정 화면(라벨 좌 / 값 우)과 같은 규칙.',{cls:'bar',rightMeta:1}],
+ ['C2-4 · 막대 + 채팅 접기','막대 목록에 <b>접은 채팅</b>. 이 묶음에서 목록이 가장 많이 보인다.',{cls:'bar',chatBar:1}],
+];
+window.addEventListener('DOMContentLoaded',()=>{
+  const a=document.getElementById('s1'), b=document.getElementById('s2');
+  const put=(host,arr)=>arr.forEach(o=>{ const el=document.createElement('div'); el.className='p';
+    el.innerHTML=`<div class="tag">${o[0]}</div><div class="note">${o[1]}</div>${phone(o[2])}`; host.appendChild(el); });
+  put(a,C1); put(b,C2);
+});
+</script>
+
+<h2>C1 계열 4안 <small>배경 아트 + 상자 없는 목록 · 하단 네비는 진짜 것</small></h2>
+<div class="sheet" id="s1"></div>
+<h2>C2 계열 4안 <small>거기에 왼쪽 색 막대를 더한 것</small></h2>
+<div class="sheet" id="s2"></div>

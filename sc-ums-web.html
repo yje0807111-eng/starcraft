@@ -316,7 +316,14 @@
       </div>
       <!-- 소셜 = 목록 카드와 **완전히 분리된 카드**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
            탭 전환은 하단 네비가 맡는다 -->
-      <div id="msSocialDock"></div>
+      <!-- 접기 손잡이 — 접히면 줄 전체(마지막 채팅 + ▲), 펴지면 윗변의 작은 ▼ 하나.
+           내용(.mdPeek)은 #msChat 마지막 줄의 **복제**다(msDockPeek) — 채팅을 두 번 그리지 않는다. -->
+      <div id="msSocialDock">
+        <button class="msDockBar" id="msDockBar" onclick="mapDockToggle()" aria-label="채팅 펼치기/접기">
+          <span class="mdPeek" id="msDockPeek"></span>
+          <svg class="mdChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>
+        </button>
+      </div>
     </div>
 
 

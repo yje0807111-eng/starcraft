@@ -1311,25 +1311,59 @@
        (카드 안에 카드가 겹치면 테두리가 두 줄로 보인다). 값은 목록 카드와 같은 토큰이라 같은 재질로 읽힌다.
      ⚠ 목록 카드에 붙으면 한 덩어리로 보인다 — 채팅 한 줄(17px)만큼 띄우고 그만큼 낮춘다(margin + calc).
        차지하는 총 높이가 그대로라 위 목록은 줄지 않는다. */
-  #msSocialDock{position:relative;flex:0 0 calc(30% - 24px);min-height:168px;display:flex;flex-direction:column;overflow:hidden;
+  /* --dockHandle = 펴진 도크 윗변의 손잡이 줄 높이. **한 곳에서만 정한다** — 손잡이의 높이이자
+     도크가 그만큼 더 받아야 하는 값이라 두 군데에 같은 숫자를 적으면 반드시 어긋난다.
+     ⚠ 높이 셈: 옛 도크는 (판 높이) + 위 여백 17px + 테두리 2px 를 썼다. 여백도 테두리도 없어졌으니
+       그 자리를 **안쪽 내용에 돌려준다** — 차지하는 총 높이는 옛것과 같고 쓸 수 있는 높이만 늘어난다. */
+  #msSocialDock{--dockHandle:15px;
+    position:relative;flex:0 0 calc(30% - 24px + 17px + var(--dockHandle));min-height:168px;display:flex;flex-direction:column;overflow:hidden;
     /* B안(2026-08-18 확정) — 목록 카드와 **같은 규격의 두 번째 카드**, 무게만 한 단 낮다.
        좌우 변·라운드·테두리를 목록 카드에 맞춘다(전폭 띠였던 옛 3안 '터미널'은 좌우가 26px 어긋나
        '화면 밖으로 샌' 것처럼 보였다). 폭만 바뀌므로 높이 계산(목록 5장·파티 8칸)은 그대로다. */
     margin:17px 0 0;border-radius:var(--r-bar);
     /* 면은 목록 카드(--panelBig)보다 한 톤 어둡게 — 같은 반투명 재질이라 뒤 배경이 똑같이 비친다.
        완전 검정으로 떨어뜨리면 목록 '항목'(.mapItem)과 같은 색이 되어 구역이 아니라 큰 항목 한 장으로 읽힌다. */
-    background:linear-gradient(180deg,rgba(18,18,18,.9),rgba(9,9,9,.92));
-    border:1px solid var(--panelBigEdge);
+    /* ⚠ 면·테두리를 걷었다(2026-08-25 · C1-4). 목록이 카드를 잃은 화면에서 채팅만 판을 이고 있으면
+       거기가 주인공이 된다. 구역을 가르는 일은 윗변 헤어라인 하나가 이미 하고 있다. */
+    background:none;
+    border:0;
     /* 안쪽 목록이 판 끝선에 딱 붙어 잘리지 않게 — 스크롤러가 아니라 도크에 준다.
        ⚠ 6px → 4px(DESIGN 간격 표의 값): 도크는 box-sizing:border-box + 높이 고정이라 **아랫변 테두리 1px 이
        그대로 안높이에서 빠진다**. 파티 8칸은 여유가 1px 뿐이라 그 1px 에 스크롤이 생겼다(실제로 겪었다).
        바깥 높이는 그대로라 목록 '5장' 계산은 건드리지 않는다. */
     padding-bottom:4px}
+  /* ══ 접힌 채팅(2026-08-25 · C1-4) ═════════════════════════════════════════
+     유즈맵 선택은 「고르는 화면」이다 — 목록이 주인공이고 채팅은 곁다리다.
+     접으면 도크는 **한 줄**이 되고 그 자리는 전부 목록이 가져간다(.msPanel 이 flex:1 이라 자동).
+     ⚠ 접힌 줄의 내용은 새로 그리지 않는다 — #msChat 의 마지막 줄을 **복제**한다(msDockPeek).
+     ⚠ 접혔을 때는 붉은 헤어라인 대신 중립 1px 이다 — 판이 다 사라진 화면에서 붉은 선 하나만
+       남으면 거기가 주인공처럼 보인다. */
+  #msSocialDock.collapsed{flex:0 0 auto;min-height:0;margin:0;padding-bottom:0;
+    background:none;border:0;border-radius:0}
+  #msSocialDock.collapsed .msSocial{display:none}
+  /* 손잡이 — 접혔을 때는 **줄 전체**(마지막 채팅 + ▲), 펴졌을 때는 윗변에 얹힌 작은 ▼ 하나.
+     한 요소가 두 모습을 갖는다(버튼을 둘 만들지 않는다). 펴진 쪽은 absolute 라 높이를 먹지 않는다. */
+  /* 펴진 모습 = 윗변에 붙은 **손잡이 한 줄**(15px). 바텀시트의 그것과 같은 뜻이라 설명이 필요 없다.
+     ⚠ 오른쪽 구석에 띄우지 말 것 — 채팅 첫 줄의 시각(.mcT)이 바로 거기에 떠서 글자가 겹친다(실제로 그랬다). */
+  .msDockBar{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    width:100%;height:var(--dockHandle);padding:0;border:0;border-radius:0;background:none;cursor:pointer;color:#8c97a4}
+  .msDockBar:active{color:#dfe7f0}
+  .msDockBar .mdPeek{display:none}
+  .msDockBar .mdChev{width:12px;height:12px;flex:none;transition:transform .18s}
+  #msSocialDock.collapsed .msDockBar{position:relative;width:100%;height:auto;gap:8px;
+    justify-content:flex-start;padding:9px 2px;color:#9aa4b0}
+  #msSocialDock.collapsed .msDockBar .mdPeek{display:block;flex:1;min-width:0;text-align:left;
+    font-size:var(--fs-md);line-height:1.35;color:#aab3bd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #msSocialDock.collapsed .msDockBar .mdPeek .mcWho{font-weight:800;color:#e2e9f1}
+  #msSocialDock.collapsed .msDockBar .mdPeek .mcSep{color:#6b7682;font-weight:700}
+  #msSocialDock.collapsed .msDockBar .mdPeek .mcT{display:none}   /* 한 줄에는 시각까지 넣지 않는다 */
+  /* 친구·파티는 대화가 아니라 **요약**이다 — 머리줄과 같은 무게로 밝게 */
+  #msSocialDock.collapsed .msDockBar .mdPeek.sum{font-weight:800;color:#dbe3ec}
+  #msSocialDock.collapsed .msDockBar .mdChev{transform:rotate(180deg)}   /* 접힘 = 위로(펴기) */
   /* 헤어라인 — 목록 카드와 같은 붉은 광선이되 **윗변 한 줄뿐**이다(카드는 위·아래 두 줄).
      두 줄씩 넷이 되면 어느 판이 주인공인지 사라진다. 이 한 줄이 위아래를 같은 화면으로 묶는다. */
   #msSocialDock::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:2;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
-    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
+    background:rgba(255,255,255,.09)}   /* ⚠ 붉은 광선 → 중립 1px. 판이 다 사라진 화면에서 붉은 선 하나만 남으면 거기가 주인공처럼 보인다 */
   #msSocialDock .msSocial{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none;box-shadow:none}
   #msSocialDock .msSocial::before{display:none}
   #msSocialDock .msTabs2{display:none}

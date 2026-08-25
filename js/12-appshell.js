@@ -981,6 +981,7 @@ function setChatScope(sc){ _chatScope=sc;
   const lbl=document.getElementById('msScopeLbl'); if(lbl) lbl.textContent=(_MS_SCOPE_KO[sc]||sc);
   document.querySelectorAll('#msScopeMenu .msScopeOpt').forEach(o=>o.classList.toggle('on', o.dataset.sc===sc));
   const c=document.getElementById('msChat'); if(c){ c.dataset.scope=sc; c.scrollTop=c.scrollHeight; }
+  if(typeof mapDockPeek==='function') mapDockPeek();   // 범위가 바뀌면 접힌 줄도 그 범위의 마지막 줄로
   const inp=document.getElementById('msChatInput'); if(inp) inp.placeholder='메시지 입력…'; }   // 범위는 왼쪽 배지가 표시(문구 중복 제거)
 function _msScopeClose(){ const m=document.getElementById('msScopeMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('msScopeDD'); if(d) d.classList.remove('open'); }
 function toggleMsScope(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('msScopeMenu'), d=document.getElementById('msScopeDD'); if(!m||!d) return;
@@ -994,11 +995,13 @@ function addGlobalMsg(who, text, cls, scope){ const box=document.getElementById(
   const d=document.createElement('div'); d.className='mcLine sc-'+(scope||'all')+(cls?(' '+cls):'');
   d.innerHTML=_mcTime()+(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
   box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild);
-  box.scrollTop=box.scrollHeight; }
+  box.scrollTop=box.scrollHeight;
+  if(typeof mapDockPeek==='function') mapDockPeek(); }   // 접힌 도크의 한 줄도 같이 따라온다
 function addWhisperMsg(fromNick, toNick, text){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine whisper';
   d.innerHTML=_mcTime()+'<span class="mcWhisper">'+escHtml(fromNick)+'<span class="mcArrow"> → </span>'+escHtml(toNick)+'</span><span class="mcSep"> : </span>'+escHtml(text);
-  box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight; }
+  box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight;
+  if(typeof mapDockPeek==='function') mapDockPeek(); }
 function findFriendByNick(nick){ const lo=(nick||'').toLowerCase(); for(const k in _friendIndex){ const f=_friendIndex[k]; if(f && (f.nick||'').toLowerCase()===lo) return f; } return null; }
 async function sendWhisper(nick, msg){ const f=findFriendByNick(nick);
   if(RT.active && f && !f.temp && f.id){   // 실연동: messages 테이블에 저장 → 상대에게 실시간 전달
@@ -1177,7 +1180,8 @@ function setBottomTab(t){ _bottomTab=t;
     // ⛔ 게시판을 자동으로 띄우지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다.
     //    들어가는 길은 머리줄의 '파티 찾기' 버튼 하나뿐이다.
     if(t==='party') renderPartyTab();
-    else renderFriendList(); } }
+    else renderFriendList(); }
+  if(typeof mapDockPeek==='function') mapDockPeek(); }   // 접힌 줄도 지금 탭을 따라간다
    // 구버전 호환
 // ── 임시 친구(기능 확인용) + 파티(내가 초대하면 무조건 수락) ──
 const _tempFriends=[
@@ -1910,7 +1914,12 @@ function buildRoomList(){ _roomList=[];
       gameEndAt:playing?(now+1000+Math.random()*9000):0});   // 게임중 방: 시작 후 10초 내 목록에서 사라짐
   }
   renderRoomList(); }
-function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'">'+D.name+'</span>'; }
+// 난이도 배지 = **앞 글자 한 자**만 폭 고정 상자에 담는다(2026-08-25 · B3안).
+// 이름을 다 쓰면 EASY(4)~NORMAL(6) 로 폭이 들쭉날쭉해 **난이도마다 제목 줄이 어긋났다.**
+// ⚠ EASY/NORMAL/HARD/HELL/FINAL — 첫 글자로 따면 H 가 둘이다. 그 둘은 **색이 가른다**(HARD 주황 / HELL 빨강).
+//   그래서 full 이름을 title 로 함께 남긴다 — 색을 못 보는 사람도 눌러서 확인할 수 있게.
+function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal;
+  return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'" title="'+escHtml(D.name)+'" aria-label="'+escHtml(D.name)+'">'+escHtml(D.name.charAt(0))+'</span>'; }
 let _roomFilter='all';
 function setRoomFilter(f){ _roomFilter=f;
   if(typeof playSfx==='function') playSfx('ui_tab'); renderRoomList(); }
@@ -1945,7 +1954,7 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
     // 밑변 광원 = 난이도 색. 난이도가 없는 유즈맵은 안 실어 주고 중립 흰선으로 둔다(.actBtn 기본형)
     if(mapHasDiff()){ const c=DIFF_COLOR[r.diff]||'#888';
       el.style.setProperty('--dc', c); if(joinable) el.style.setProperty('--dcGlow', c); }
-    el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 - '+escHtml(r.host)+(r.opts?' · <span class="riOpt">사용자 지정</span>':'')+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
+    el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+'<span class="riTx">'+escHtml(r.name)+'</span>'+(priv?'<span class="riLock">'+stIco('lock','\u{1F512}')+'</span>':'')+'<span class="riNum">#'+r.num+'</span></div><div class="riSub">방장 - '+escHtml(r.host)+(r.opts?' · <span class="riOpt">사용자 지정</span>':'')+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
     else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };

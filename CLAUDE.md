@@ -65,6 +65,7 @@
 | 정비(장비·펫·동료) | `#gearScreen` + `renderGear()` | 전용 화면 · 내용은 **전부 기존 렌더러 호출**: 장비=`renderProfGear()`(마을 장비창과 같은 함수) · 펫=`_shopPetPanel()`(상점 '보유 펫'과 같은 함수) · 동료=아직 시스템 없음(HOME 건설로 안내) |
 | 보유 펫 목록 | `_shopPetPanel(note)` | 상점 ④ 구역 = 정비 '펫' 탭 — 한 함수 |
 | 토벌 입구 | HOME 스킬 바(`renderHbBar()`)의 **토벌** 버튼 → `openDungeonHub()` 팝업 | 네비에서 뺐다(2번 칸은 정비) · 다른 화면에서 부르면 먼저 `openHome()` |
+| **유즈맵 하단 채팅 접기** | `.msDockBar` + `mapDockToggle()`/`mapDockPeek()` | 한 요소가 두 모습 — 접힘=줄 전체(마지막 채팅+▲) / 펴짐=윗변 15px 손잡이(▼) · 접힌 줄은 `#msChat` 마지막 줄의 **복제**(채팅 렌더러는 하나) · 상태는 `nm_mapdock` |
 | 상자(목록 판) | `.msPanel` | 유즈맵 목록 · 정비 · 캐릭터 공용 |
 | **방향·증감 버튼(◀▶)** | **`.arwBtn` + `data-arw="l\|r"`** (`paintIcons`가 함께 채운다) | 기본 = **글리프만**(판·선 없음 · 그림자로 띄움 · 터치 영역 30px 유지) · 판이 필요한 자리에만 `.framed`(모서리 컷 테두리) · 새 화살표 SVG를 마크업에 직접 박지 말 것 |
 | 로비 팝업 껍데기 | **`_lobbyOv(id, onClose)`** + `.ptInviteOv.top` / `.ptInviteCard` / `.ptInviteHead` | 친구 초대·친구 추가·파티 찾기 공용 · `#phone`에 붙여 유즈맵 도크와 마을 시트 어느 쪽에서 열어도 보인다 |
