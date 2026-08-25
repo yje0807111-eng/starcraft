@@ -780,10 +780,18 @@
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
     background:
       linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
-      /* ⚠ 2026-08-25: 여기에 평평한 판 한 겹(.38→.58)을 받쳐 전체를 앉혔다가 **되돌렸다** —
-         속이 어두워지는 게 아니라 「바깥 화면과 구분되는 경계」가 필요한 것이었다(사용자 정정).
-         구분은 면이 아니라 **윗변·그림자·형태**가 맡는다. */
-      var(--loadDim);
+      var(--loadDim),
+      /* ③ 무채 틴트 — 배경과 **무관하게** 판을 한 단 앉힌다. 아래 채도 빼기가 색 있는 배경만
+         담당하므로, 이미 채도가 낮은 배경(유즈맵 우주)은 이 겹이 맡는다. */
+      linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+    /* ⭐ 판 뒤의 **채도를 뺀다** — 색을 더하지 않고 그 자리만 무채로 만들어 바깥과 가른다.
+       ⚠ 축이 둘인 이유: `saturate` 는 **색이 있는 배경**(캠프 초록 지형)에서만 일하고,
+          우주처럼 원래 채도가 낮은 배경에서는 뺄 색이 없어 아무 일도 안 한다 — 그건 위 틴트가 맡는다.
+          목업 docs/mock/bot-2axis-9.html 에서 두 배경을 한 칸에 놓고 골랐다(틴트 .38 · 채도 .45).
+       ⛔ 여기에 **색을 얹지 말 것**(남색·청록). 2026-08-13 에 푸른기를 전부 걷어냈고
+          스모크가 판의 면에서 그것을 잰다 — 이 방식은 색을 안 더하므로 그 규칙과 안 부딪힌다.
+       ⚠ 저사양은 `body.lite *{backdrop-filter:none}`(위 747줄)이 이미 꺼 준다 — 따로 안 해도 된다. */
+    backdrop-filter:saturate(.45) brightness(.92);
     border-top:0;box-sizing:border-box;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
