@@ -640,6 +640,31 @@
   #createPanel .cpDiffInfo{margin:0}
   #createPanel .cpSeg{margin:0}
   #createPanel .cpPwWrap{margin:11px 0 0}
+  /* ══ 방 만들기 = 「판 없는 폼」(2026-08-25 · C3 확정) ═══════════════════════
+     유즈맵 선택·방 찾기와 같은 규칙이다. 여기서 걷는 판은 넷 — 입력칸 · 무한 모드 · 난이도 상세 · 인원 칸.
+     ⛔ 전부 #createPanel 스코프다. .sdInf 는 개인 플레이 난이도 화면(#soloDiffPanel)이,
+        .cpVs 는 오토배틀 대전 설정이 같이 쓴다(대전 설정은 이 화면 안이라 함께 바뀌는 게 맞다). */
+  /* 방 이름 = 로그인과 같은 **밑줄 입력칸**. 상자를 두지 않는다.
+     ⚠ 위 `#createPanel #cpName` 규칙 둘과 같은 명시도라 **반드시 그 아래**에 있어야 이긴다. */
+  #createPanel #cpName{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.18);
+    border-radius:0;padding:9px 2px;margin:0 0 4px}
+  #createPanel #cpName:focus{border-color:transparent;border-bottom-color:rgba(255,59,59,.85)}
+  /* 무한 모드 = 판을 걷고 왼쪽 보라 막대만 남긴다(막대가 곧 이 줄의 정체다) */
+  #createPanel .sdInf{background:none;box-shadow:none;border:0;padding-left:11px}
+  /* 난이도 상세 = 위아래 선 사이의 숫자.
+     ⚠ 테두리만 걷으면 안 된다 — 안쪽 초록 글로우(box-shadow inset)가 남아 그대로 상자로 읽힌다(실제로 그랬다). */
+  #createPanel .cpVs{background:none;border:0;border-radius:0;box-shadow:none;padding:11px 2px;
+    border-top:1px solid rgba(255,255,255,.09);border-bottom:1px solid rgba(255,255,255,.09)}
+  #createPanel .cpVs::before{display:none}
+  /* 인원 = 4×2 → **한 줄 8칸**. 세로 53px 이 폼으로 돌아온다 */
+  #createPanel .cpPGrid{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+  /* 칸의 면이 반투명(파랑 7%)이라 배경 아트가 **숫자 뒤로 지나갔다** — 불투명한 검정으로 앉힌다.
+     ⚠ 못 고르는 칸(1명)은 opacity:.4 였다 — 그것도 배경이 뚫린 원인이라 글자 색으로 바꾼다. */
+  #createPanel .cpPc{height:38px;font-size:12px;background:linear-gradient(180deg,#111216,#0a0b0d)}
+  #createPanel .cpPc.sel{background:linear-gradient(180deg,#16202e,#0c1119)}
+  #createPanel .cpPc:disabled{opacity:1;background:linear-gradient(180deg,#0b0b0d,#08080a);color:#4b525c}
+  #createPanel .cpSegBtn{background:linear-gradient(180deg,#111216,#0a0b0d)}
+  #createPanel .cpSegBtn.on{background:linear-gradient(180deg,#1c1e24,#111318)}
   /* 난이도 = 이름 pill 한 줄(선택 시 난이도 색 강조) + 아래 정보줄 */
   .cpDiffBtns{display:flex;gap:6px;margin-bottom:7px}
   .cpDiffBtns .moDiffBtn{flex:1;min-width:0;padding:9px 2px;border-radius:9px;font-weight:800;text-align:center;
