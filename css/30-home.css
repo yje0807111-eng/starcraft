@@ -921,6 +921,58 @@
     stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
   .curTitle.asChip.open .cdCv{transform:rotate(180deg);color:var(--hud)}
 
+  /* 🧭 가이드 「지금 할 일」 띠 — 재화 바 바로 아래(2026-08-25).
+     ⚠ #phone 직속이다 — 캠프 화면 안에 넣으면 캠프 파일을 건드리게 된다.
+     ⚠ z 는 재화 바(62)보다 **낮게** 둔다 — 던전 드롭다운이 이 위를 덮어야 한다. */
+  .guideBar{position:absolute;left:10px;right:10px;z-index:58;
+    top:calc(var(--topPad) + var(--curH) + 3px);
+    display:flex;align-items:center;gap:6px;min-height:26px;padding:0 9px;
+    border:none;border-radius:var(--r-bar,3px);cursor:pointer;overflow:hidden;
+    background:#06090e;   /* ⚠ 불투명이다. 전폭 띠라 7% 만 비쳐도 뒤 글자가 그대로 읽힌다(.72·.93 둘 다 비쳤다) */
+    font-family:var(--font-ko);font-size:11px;font-weight:700;color:#d6e2f0;text-align:left;
+    text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .guideBar .gbIco{flex:none;width:12px;height:12px;display:block;color:rgba(214,226,240,.7)}
+  .guideBar .gbIco svg{display:block;width:100%;height:100%}
+  .guideBar .gbTx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .guideBar .gbN{font-family:var(--font-num);font-size:12px;font-weight:800;flex:none;
+    color:var(--hud);text-shadow:0 0 6px var(--hud-glow)}
+  .guideBar .gbD{font-style:normal;font-family:var(--font-num);font-size:11px;flex:none;
+    color:rgba(214,226,240,.5);margin-left:-3px}
+  /* 진행은 **밑변 한 줄**로만 말한다 — 띠 안에 막대를 또 두면 줄이 두 개가 된다 */
+  .guideBar .gbFill{position:absolute;left:0;bottom:0;height:2px;
+    background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+  .guideBar:active{background:rgba(14,20,28,.96)}
+
+  /* 🧭 가이드 목록 — 껍데기는 일일 퀘스트와 같다(.hbModal). 여기서는 줄 생김새만 정한다. */
+  .gqRow{position:relative;display:flex;align-items:baseline;gap:9px;padding:8px 2px;
+    border-top:1px solid rgba(255,255,255,.07)}
+  .gqRow:first-child{border-top:none}
+  .gqIx{flex:none;min-width:15px;text-align:center;font-style:normal;font-family:var(--font-num);
+    font-size:12px;font-weight:800;color:#5f6874}
+  .gqBody{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .gqNm{font-size:12px;font-weight:700;color:#8b95a3}
+  .gqWhy{font-style:normal;font-size:10.5px;color:#5f6874}
+  /* ⚠ 보상 아이콘은 크기를 여기서 잡아야 한다 — resIco() 가 만드는 <img> 는 규격이 없어
+     안 잡으면 젬 그림이 줄 전체를 덮는다(실제로 그랬다). 일일 퀘스트도 같은 값을 쓴다. */
+  .gqRw{flex:none;display:flex;align-items:center;gap:2px;opacity:.55;
+    font-family:var(--font-num);font-size:11px;font-weight:800;color:#ffd24a}
+  .gqRw img{width:11px;height:11px;object-fit:contain;display:block;flex:none}
+  .gqRw i{font-style:normal}
+  /* 지금 할 것만 밝다 — 나머지는 물러난다(끝난 것은 더). 순서가 있는 목록이라 하나만 강조한다. */
+  .gqRow.now .gqIx{color:var(--hud);text-shadow:0 0 7px var(--hud-glow)}
+  .gqRow.now .gqNm{color:#fff}
+  .gqRow.now .gqWhy{color:#8b95a3}
+  .gqRow.now .gqRw{opacity:1}
+  .gqRow.now::before{content:'';position:absolute;left:-9px;top:8px;bottom:8px;width:2px;
+    background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+  .gqRow.done .gqIx{color:#4e5560}
+  .gqRow.done .gqNm{color:#4e5560;text-decoration:line-through;text-decoration-color:rgba(255,255,255,.18)}
+  .gqRow.done .gqWhy{color:#3f454e}
+  .gqRow.done .gqRw{opacity:.25}
+  .gqBar{display:block;width:100%;height:2px;margin-top:3px;border-radius:1px;
+    background:rgba(255,255,255,.13);overflow:hidden}
+  .gqBar i{display:block;height:100%;background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+
   /* 🏕 던전·라운드 드롭다운 — 칩이 아래로 자란 것. 자리는 JS 가 칩을 재서 박는다.
      ⚠ 칩의 자식이 아니라 **형제**다 — 칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아간다.
      ⚠ 넓어지는 것은 이 판뿐이고 칩은 내용 폭 그대로다 — 칩까지 넓히면 오른쪽 재화 숫자를 덮는다

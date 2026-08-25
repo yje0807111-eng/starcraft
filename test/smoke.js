@@ -3008,17 +3008,19 @@ async function groupLobby(){
     return '전환·게임진입·정지 3경로 원복 ok'+(window.M3D?' · 유휴 풀 삭제 실행 ok':' · 유휴 풀은 M3D 없어 미검증'); });
   await step('용어 분리: 자동사냥=던전 / 옛 콘텐츠=토벌', async()=>{ skipIf(typeof openDungeonHub!=='function','토벌 허브 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    // 토벌 입구는 네비가 아니라 HOME 스킬 바의 버튼 하나뿐 — 없어지면 들어갈 길이 사라진다
     openHome(); await sleep(80);
-    // 토벌 입구는 ☰ 더보기 시트 안의 항목 하나 — 하단 바에는 스킬만 남았다(2026-08-12)
+    // ⚠ **토벌 입구는 2026-08-25 에 의도적으로 닫혔다**(더보기 ☰ 에서 뺐다). 토벌은 §5-D 유보다.
+    //   그래서 이 검사가 지키는 것은 이제 「입구가 있다」가 아니라 **「유보가 보존됐다 + 용어가 갈렸다」** 둘이다.
     assert(typeof hbOpenMore==='function','더보기가 없음');
     hbOpenMore(); await sleep(120);
-    assert(document.querySelector('#hbMoreGrid [data-k="dg"]'),'더보기에 토벌 항목이 없음 — 들어갈 길이 사라진다');
+    assert(!document.querySelector('#hbMoreGrid [data-k="dg"]'),
+      '토벌이 더보기에 되살아났다 — 유보 상태라 길은 닫혀 있어야 한다(GAME_DIRECTION §5-D)');
     hbCloseMore();
     assert(![...document.querySelectorAll('#hbBar .hbSk')].some(b=>b.textContent.indexOf('토벌')>=0),
       '하단 바에 토벌이 남아 있음');
-    hbOpenMore(); await sleep(100);
-    document.querySelector('#hbMoreGrid [data-k="dg"]').click(); await sleep(250);   // 시트가 닫히고 허브가 열린다
+    // ⛔ 유보는 삭제가 아니다 — 길은 닫혔어도 화면과 함수는 그대로 돌아야 한다(직접 열어 확인)
+    assert($('dgHubScreen'),'토벌 허브 마크업이 사라졌다 — 유보는 삭제가 아니다');
+    openDungeonHub(); await sleep(250);
     const hub=document.getElementById('dgHubBody');
     assert(visible(hub),'토벌 허브가 안 열림');
     assert(hub.textContent.indexOf('던전')<0,'토벌 화면에 던전 표기가 남음: '+hub.textContent.slice(0,60));
@@ -3027,7 +3029,7 @@ async function groupLobby(){
     openHome(); await sleep(80);
     assert(!visible($('dgHubScreen')),'HOME으로 돌아왔는데 토벌 허브 팝업이 HOME을 덮은 채 남음');
     assert($('hbMid').textContent.indexOf('던전')>=0,'자동사냥은 던전 표기를 유지해야 함');
-    return '네비 토벌 · HOME 던전'; });
+    return '토벌 길 닫힘 · 코드 보존 · 용어 분리 ok'; });
   // HOME 좌상단 HUD — 프로필은 상세하게 맨 위 왼쪽에 고정 · 킬수는 없음 · 라운드 조절은 전용 아이콘 버튼.
   await step('HOME HUD: 좌상단 프로필 상세 · 킬수 없음 · 라운드는 아이콘 버튼', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof openHome!=='function','HOME 없음');
@@ -5419,6 +5421,94 @@ async function groupLobby(){
       curSetTitle('');            // 칩을 확실히 걷는다 — 남으면 다른 화면 제목 자리를 차지한다
       updateCurBar();
       if(_barWas) curShow(false);
+    }
+  });
+
+  // ☰ 더보기 칸 정리(2026-08-25) — 캠프에서 실제로 도는 것만 남겼다.
+  await step('더보기: 가이드·출석·부스트·설정 네 칸', async()=>{
+    skipIf(typeof HB_MORE==='undefined','더보기 표 없음');
+    const ks=HB_MORE.map(x=>x.k);
+    assert(ks.join(',')==='guide,att,boost,set','더보기 칸이 다름: '+ks.join(','));
+    // 아이콘 키가 ICO 표에 있어야 빈 칸이 안 된다(설정만 직접 그린다 — ico:'')
+    { const bad=HB_MORE.filter(x=>x.ico && typeof ICO!=='undefined' && !ICO[x.ico]).map(x=>x.name+'→'+x.ico);
+      assert(!bad.length,'더보기 아이콘 키가 ICO 표에 없음: '+bad.join(' · ')); }
+    // ⛔ 유보 규칙 — 뺀 것의 코드는 살아 있어야 한다(길만 닫았다 · GAME_DIRECTION §5)
+    for(const f of ['openVillage','hbOpenGrow','hbBuildStart','openDungeonHub','openDaily'])
+      assert(typeof window[f]==='function', '뺀 칸의 함수가 사라졌다 — 유보는 삭제가 아니다: '+f);
+    assert($('hbDailySheet'),'옛 일일 퀘스트 시트 마크업이 사라졌다');
+    // 누르면 실제로 열리는가
+    hbMoreTap('guide'); await sleep(120);
+    assert(visible($('hbGuideSheet')),'더보기 → 가이드가 안 열림');
+    closeGuide();
+    return ks.join(' · ');
+  });
+
+  // 🧭 가이드 퀘스트(2026-08-25) — 「이 게임을 어떻게 하는가」를 순서로 가르친다.
+  //   일일 퀘스트와 달리 **한 번만** 돌고 순서가 있다. 캠프 화면은 3D 라 못 띄우므로 상태만 흉내 낸다.
+  await step('가이드 퀘스트: 순서 · 띠 · 목록', async()=>{
+    skipIf(typeof guideNote!=='function','가이드 함수 없음');
+    const prof=PROF(), g0=prof.guide, camp0=prof.camp;
+    const on0=window.campIsOn, st0=window.campState;
+    const _barWas=$('curBar').classList.contains('hide'); if(_barWas) curShow(true);
+    try{
+      delete prof.guide;
+      prof.camp=Object.assign({}, camp0||{}, {dg:1, race:'terran'});
+      window.campIsOn=()=>true; window.campState=()=>PROF().camp;
+      updateCurBar();
+      // ① 순서가 있다 — 첫 단계는 탭. 다른 종류를 아무리 넣어도 안 움직인다.
+      assert(guideOn(),'가이드가 안 켜짐(종족·진행 조건을 볼 것)');
+      const first=guideCur(); assert(first && first.kind==='tap','첫 단계가 탭이 아님: '+(first&&first.kind));
+      for(let i=0;i<5;i++) guideNote('research',1);     // 뒷 단계 종류 — 지금은 무시돼야 한다
+      assert(guideCur().kind==='tap','순서를 건너뛰었다 — 뒷 단계 계측이 지금 단계를 밀었다');
+      assert(guideState().n===0,'다른 종류인데 진행이 찼다: '+guideState().n);
+      // ② 목표만큼 채우면 다음으로 넘어간다(넘치게 넣어도 한 칸만)
+      for(let i=0;i<first.goal+5;i++) guideNote('tap',1);
+      assert(guideState().i===1,'탭을 채웠는데 다음 단계로 안 감: i='+guideState().i);
+      assert(guideState().n===0,'다음 단계 진행이 0 이 아님: '+guideState().n);
+      // ③ 화면 띠 — 지금 할 일 한 줄. ⚠ 더보기 안에만 두면 초보자가 못 찾는다.
+      const gb=$('guideBar'); assert(gb,'「지금 할 일」 띠가 없음');
+      assert(gb.parentElement===$('phone'),'띠가 #phone 직속이 아니다 — 캠프 화면 안에 넣으면 캠프 파일을 건드리게 된다');
+      assert((gb.querySelector('.gbTx')||{}).textContent===guideCur().do,'띠 글이 지금 단계와 다름');
+      { const cs=getComputedStyle(gb), a=cs.backgroundColor.match(/[\d.]+/g)||[];
+        const alpha=(a.length===4)?parseFloat(a[3]):1;
+        assert(alpha>=0.995,'띠가 비친다(전폭이라 7% 만 비쳐도 뒤 글자가 읽힌다): '+cs.backgroundColor);
+        assert(parseInt(cs.zIndex,10) < parseInt(getComputedStyle($('curBar')).zIndex,10),
+          '띠가 재화 바보다 위다 — 던전 드롭다운이 띠에 가린다'); }
+      { const cr=$('curBar').getBoundingClientRect(), gr=gb.getBoundingClientRect();
+        assert(gr.top>=cr.bottom-0.5,'띠가 재화 바를 덮는다'); }
+      // ④ 목록 — 껍데기는 일일 퀘스트와 같은 것을 쓴다(새 팝업을 만들지 않는다)
+      openGuide(); await sleep(50);
+      assert(visible($('hbGuideSheet')),'가이드 목록이 안 열림');
+      assert($('hbGuideSheet').classList.contains('hbModal') && $('hbGuideSheet').querySelector('.hbmCard'),
+        '가이드 목록이 공용 팝업 껍데기(.hbModal/.hbmCard)를 안 쓴다');
+      const rows=$('hbGuideBody').querySelectorAll('.gqRow');
+      assert(rows.length===GUIDE_STEPS.length,'목록 줄 수가 다름: '+rows.length);
+      assert($('hbGuideBody').querySelectorAll('.gqRow.done').length===1,'끝난 줄이 1개가 아님');
+      assert($('hbGuideBody').querySelectorAll('.gqRow.now').length===1,'지금 줄이 1개가 아님(순서가 있는 목록이다)');
+      // 보상 아이콘 크기 — resIco 의 <img> 는 규격이 없어 안 잡으면 줄을 통째로 덮는다(실제로 그랬다)
+      { const im=$('hbGuideBody').querySelector('.gqRw img');
+        if(im){ const w=im.getBoundingClientRect().width;
+          assert(w>0 && w<=16,'보상 아이콘이 너무 크다(줄을 덮는다): '+w.toFixed(0)+'px'); } }
+      closeGuide();
+      // ⑤ 다른 종족이면 아예 안 띄운다 — 건물 키가 종족마다 다르다(union=barracks · swarm=pool …)
+      prof.camp.race='zerg'; updateCurBar();
+      assert(!guideOn(),'유니온이 아닌데 가이드가 켜졌다 — 건물 키가 달라 영영 못 깬다');
+      assert(!$('guideBar'),'가이드를 끄는 종족인데 띠가 남았다');
+      // ⑥ 던전 이동이 실제로 센다(지금 이어져 있는 유일한 계측)
+      prof.camp.race='terran'; prof.guide={i:7, n:0};    // 8번째 = 던전 2 로 옮기기
+      updateCurBar();
+      assert(guideCur().kind==='dg:2','8번째 단계가 던전 2 가 아님: '+guideCur().kind);
+      window.campSkin=()=>{};
+      campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
+      assert(guideState().i===8,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i);
+      return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 가드 · 던전 이동 계측';
+    } finally {
+      campDropClose(); closeGuide();
+      window.campIsOn=on0; window.campState=st0;
+      if(g0) prof.guide=g0; else delete prof.guide;
+      if(camp0) prof.camp=camp0; else delete prof.camp;
+      updateCurBar(); curSetTitle(''); if(_barWas) curShow(false);
+      { const b=$('guideBar'); if(b) b.remove(); }
     }
   });
 

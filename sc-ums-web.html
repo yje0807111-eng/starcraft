@@ -528,6 +528,15 @@
       </div>
     </div>
     <!-- 📅 일일 퀘스트 — 하루 5개 + 주간 25개. 껍데기는 라운드 팝업과 같은 .hbModal -->
+    <!-- 🧭 가이드 퀘스트 — 일일 퀘스트와 **같은 껍데기**를 쓴다(.hbModal/.hbmCard/.hbRows) -->
+    <div class="hbModal hide" id="hbGuideSheet" onclick="if(event.target===this)closeGuide()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>가이드</b><em id="hbGuideHead"></em>
+          <button class="hbmX" onclick="closeGuide()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbGuideBody"></div>
+      </div>
+    </div>
     <div class="hbModal hide" id="hbDailySheet" onclick="if(event.target===this)closeDaily()">
       <div class="hbmCard">
         <div class="hbmHead"><b>일일 퀘스트</b>

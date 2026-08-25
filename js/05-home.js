@@ -282,13 +282,18 @@ function hbCloseMore(){ const el=document.getElementById('hbMoreSheet'); if(el) 
   if(typeof playSfx==='function') playSfx('ui_close'); }
 // 시트를 닫고 나서 연다 — 배치(건설)처럼 필드를 눌러야 하는 것이 시트에 가리면 안 된다
 function hbMoreGo(fn){ hbCloseMore(); setTimeout(function(){ try{ fn(); }catch(e){} }, 60); }
+// ☰ 더보기 칸 (2026-08-25 정리) — 캠프에서 **실제로 도는 것**만 남겼다.
+// ⛔ 뺀 것의 코드는 지우지 않았다(유보는 삭제가 아니다 · GAME_DIRECTION §5). 길만 닫았다:
+//   · 마을(town)   — 5구역 중 상점은 하단 네비와 같은 화면 · 캐릭터/장비는 §5-B 유보 · 관문은 토벌(§5-D)
+//   · 성장(grow)   — 환생·진화는 §5-A 유보
+//   · 건설(build)  — **이미 죽은 칸이었다**: hbBuildStart() 가 `if(!_hb) return` 이라 캠프에선 아무 일도 안 한다
+//   · 토벌(dg)     — §5-D 유보(도달 불가)
+//   · 일일 퀘스트  — 14종 중 9종이 옛 사냥터 계측이라 캠프에선 거의 안 찬다 → **가이드**로 바꿨다
+// ⚠ 부스트는 남겼지만 **지금 효과가 없다** — 수입·공격 배율이 옛 사냥터 전투에만 걸려 있고
+//   캠프 수급(campTapGain/campGatherMul)에는 안 들어간다. 캠프 쪽에서 걸어 줘야 산다.
 const HB_MORE=[
-  {k:'town',   ico:'hero',    name:'마을',        sub:''},
-  {k:'grow',   ico:'fav',     name:'성장',        sub:'진화·환생'},
+  {k:'guide',  ico:'flag',    name:'가이드',      sub:'무엇을 할지 순서대로'},
   {k:'att',    ico:'cal',     name:'출석',        sub:'4주 캘린더'},
-  {k:'daily',  ico:'gift',    name:'일일 퀘스트', sub:'하루 5개 · 주간 25개'},
-  {k:'build',  ico:'build',   name:'건설',        sub:'터렛·벙커'},
-  {k:'dg',     ico:'dungeon', name:'토벌',        sub:'열쇠·단계'},
   {k:'boost',  ico:'boost',   name:'부스트',      sub:'일시 강화'},
   {k:'set',    ico:'',        name:'설정',        sub:''},
 ];
@@ -297,7 +302,8 @@ function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) r
     const off='';
     // 배지(!) — '지금 받을 게 있다'만 알린다. 판정은 각 시스템이 갖고 여기선 묻기만 한다.
     // ⚠ 글자를 넣지 않는다 — 이 격자는 아이콘만(이름은 title/aria-label). 점은 CSS 로만 그린다.
-    const dot=((it.k==='daily' && typeof dqQHas==='function'   && dqQHas())
+    const dot=((it.k==='guide' && typeof guideOn==='function'  && guideOn())
+            || (it.k==='daily' && typeof dqQHas==='function'   && dqQHas())
             || (it.k==='att'   && typeof dqAttHas==='function' && dqAttHas())
             || (it.k==='grow'  && typeof hbGrowHas==='function' && hbGrowHas())) ? '<i class="hbGrowDot show"></i>' : '';
     // 설정은 아이콘 세트에 톱니가 없어 직접 그린다. ☰ 와 같은 그림을 쓰면 '메뉴 안의 메뉴'로 보인다.
@@ -313,7 +319,8 @@ function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) r
       +' title="'+tip+'" aria-label="'+tip+'">'+dot+ico+'</button>'; }).join('');
   if(typeof paintIcons==='function') paintIcons(g); }
 function hbMoreTap(k){
-  if(k==='daily') return hbMoreGo(function(){ if(typeof openDaily==='function') openDaily(); });
+  if(k==='guide') return hbMoreGo(function(){ if(typeof openGuide==='function') openGuide(); });
+  if(k==='daily') return hbMoreGo(function(){ if(typeof openDaily==='function') openDaily(); });   // ⛔ 칸에서만 뺐다 — 함수는 살아 있다
   if(k==='att')   return hbMoreGo(function(){ if(typeof openAtt==='function') openAtt(); });
   if(k==='set')   return hbMoreGo(function(){
     if(typeof openAppSettings==='function') openAppSettings();   // 앱 문맥(.appCtx) — 인게임 설정에는 배속·게임 나가기가 있다

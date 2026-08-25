@@ -216,7 +216,9 @@ function campDropGo(){ if(!_cdPick) return;
   if(typeof saveMeta==='function') saveMeta();
   if(typeof playSfx==='function') playSfx('ui_confirm');
   campDropClose();
-  updateCurBar(); }                                      // 칩도 새 값으로
+  updateCurBar();                                        // 칩도 새 값으로
+  // 🧭 가이드 — 지금 이어져 있는 계측은 이것 하나뿐이다(나머지는 캠프가 넣어야 한다)
+  if(typeof guideNote==='function') guideNote('dg:'+C.dg, 1); }
 
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
@@ -249,7 +251,8 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   set('curGas', fmtCur(_camp ? (_camp.energy||0) : profGas()));
   if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
   set('curGem', fmtCur(profGem()));
-  curPaintChip(); }   // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
+  curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
+  if(typeof guidePaint==='function') guidePaint(); }   // 🧭 가이드 띠도 같은 박자로
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
 // ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
 //   var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
