@@ -1,0 +1,256 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>하단 프로필 리뉴얼 — 4안</title>
+<style>
+/* ══ 실제 토큰 (css/00-base.css 에서 그대로 옮김) ══ */
+:root{
+  --metal-edge:#3c3e46;
+  --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --nav-plate:linear-gradient(180deg,#1b1d23 0%,#121319 55%,#0c0d11 100%);
+  --nav-plate-on:linear-gradient(180deg,#2a1a1e 0%,#1d1114 55%,#130c0e 100%);
+  --nav-ring-on:linear-gradient(180deg,#ffa8a8 0%,#ff3b3b 46%,#a32b2b 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+  --trayPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --ca:#5cd6ff; --caG:rgba(92,214,255,.45); --caS:rgba(92,214,255,.5); --caL:#dff4ff;
+  --cgDim:#8a94a6; --cgMuted:#657085;
+  --font-num:'DIN Alternate','Bahnschrift',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:flex;gap:18px;align-items:flex-start}
+.col{width:390px;flex:none}
+.hd{font-size:13px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#ff8a8a}
+.sub{font-size:11px;line-height:1.5;color:#98a0ad;margin:0 0 10px;min-height:46px}
+
+/* 전장(3D가 도는 자리) — 판의 물성이 이 위에서 어떻게 읽히는지가 핵심이라 실제처럼 깐다 */
+.stage{position:relative;padding:150px 0 0;border-radius:6px;overflow:hidden;
+  background:linear-gradient(180deg,#2c3a4e 0%,#1d2836 40%,#141c27 70%,#0d1219 100%)}
+.stage::before{content:'';position:absolute;left:0;right:0;top:0;height:170px;
+  background:radial-gradient(ellipse at 30% 60%,rgba(120,160,210,.30),transparent 62%),
+             radial-gradient(ellipse at 78% 30%,rgba(255,150,90,.20),transparent 58%)}
+
+/* ══ 하단 콘솔 = 프로필 + 네비바 ══ */
+.bot{position:relative;padding:8px 8px 0;background:rgba(6,8,12,.86);
+  border-top:1px solid rgba(255,255,255,.07)}
+
+/* ── 프로필(.cmdG) ── */
+.cmdG{position:relative;height:196px;display:flex;flex-direction:column}
+.cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
+.cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--caS),transparent 72%)}
+.cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+.cgN{font-size:15px;font-weight:800;color:#fff;line-height:1.1}
+.cgS{flex-basis:100%;margin-top:1px;font-size:10px;color:var(--cgDim)}
+.cgS b{color:#cfe0f5;font-weight:700}
+.cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
+.cgHpsh .hpv{color:#7ee081} .cgHpsh .shv{color:#8fd8ff}
+.cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px}
+.cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+.cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;
+  padding:7px 8px;overflow:hidden;background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
+.cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)}
+.cgDn{font-size:12px;font-weight:800;color:#eaf1fb;line-height:1.15}
+.cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4}
+.cgVal{display:flex;align-items:baseline;gap:4px;font-family:var(--font-num);font-weight:700;margin-top:auto}
+.cgVal .cur{font-size:13px;color:#c2ccda} .cgVal .arw{color:var(--cgMuted);font-size:10px}
+.cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG)}
+.cgGrid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;gap:2px;padding:7px 2px 6px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+.cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;
+  color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);background:var(--bpTile);
+  display:flex;align-items:center;justify-content:center;font-size:20px}
+.cgPro::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
+             linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.55))}
+.cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px}
+.cgSlot.empty{background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.05);box-shadow:none}
+.cgSlot.empty::after{display:none}
+
+/* ── 네비바(#tabs) = 기준 ── */
+.tabs{display:flex;gap:5px;height:56px;padding:0;margin-top:8px}
+.tab{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;font-size:11px;font-weight:700;letter-spacing:.1em;color:#b6bac2;
+  text-shadow:0 1px 3px rgba(0,0,0,.95);border-radius:var(--r-bar);border:1px solid transparent;
+  background:var(--nav-plate) padding-box,var(--metal-ring) border-box}
+.tab .ic{width:23px;height:23px;display:block;opacity:.9}
+.tab.on{color:#fff;background:var(--nav-plate-on) padding-box,var(--nav-ring-on) border-box}
+
+/* ══ 1안 — 물성만 이식 (구조 그대로) ══ */
+.v1 .cgInfo,.v1 .cgSlot{border-radius:var(--r-bar);border:1px solid transparent;
+  background:var(--nav-plate) padding-box,var(--metal-ring) border-box;box-shadow:none}
+.v1 .cgSlot::after{display:none}
+.v1 .cgPro{border-radius:var(--r-bar)}
+
+/* ══ 2안 — 물성 이식 + 칸을 트레이 한 판에 담는다 ══ */
+.v2 .cgBody{padding:4px;gap:5px;background:var(--trayPanel);
+  border:1px solid transparent;border-radius:var(--r-bar);
+  background-image:var(--trayPanel),var(--metal-ring);
+  background-origin:padding-box,border-box;background-clip:padding-box,border-box}
+.v2 .cgInfo,.v2 .cgSlot{border-radius:var(--r-bar);border:1px solid transparent;
+  background:var(--nav-plate) padding-box,var(--metal-ring) border-box;box-shadow:none}
+.v2 .cgSlot::after{display:none}
+.v2 .cgPro{border-radius:var(--r-bar)}
+.v2 .cgHead{padding-bottom:7px}
+
+/* ══ 3안 — 물성 이식 + 「지금 고른 칸」을 네비와 같은 붉은 링으로 ══ */
+.v3 .cgInfo,.v3 .cgSlot{border-radius:var(--r-bar);border:1px solid transparent;
+  background:var(--nav-plate) padding-box,var(--metal-ring) border-box;box-shadow:none}
+.v3 .cgSlot::after{display:none}
+.v3 .cgPro{border-radius:var(--r-bar);border-color:rgba(255,255,255,.10)}
+.v3 .cgSlot.pick{background:var(--nav-plate-on) padding-box,var(--nav-ring-on) border-box}
+.v3 .cgSlot.pick .cgName{color:#fff}
+.v3 .cgHead::after{background:linear-gradient(90deg,rgba(255,59,59,.5),transparent 72%)}
+</style></head><body>
+
+<div class="col">
+  <p class="hd">현행 — 기준선</p>
+  <p class="sub">라운드 9px · 테두리 단색 <b>#3c3e46</b> · 면 <b>#0a0a0a→#000</b>(거의 순검정) ·
+     슬롯 윗변 흰 헤어라인. 네비바와 계열이 갈린다.</p>
+  <div class="stage"><div class="bot">
+    <div class="cmdG">
+      <div class="cgHead">
+        <div class="cgTtl"><span class="cgN">레인저</span>
+          <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+        <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+      </div>
+      <div class="cgBody">
+        <div class="cgInfo">
+          <div class="cgEb">다음 강화</div>
+          <div class="cgDn">보병 무기</div>
+          <div class="cgDd">보병 계열 공격력 +2</div>
+          <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+        </div>
+        <div class="cgGrid">
+          <div class="cgSlot"><div class="cgPro">🎯</div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+          <div class="cgSlot"><div class="cgPro">🔥</div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+          <div class="cgSlot"><div class="cgPro">✚</div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+          <div class="cgSlot empty"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+    </div>
+  </div></div>
+</div>
+
+<div class="col v1">
+  <p class="hd">1안 — 물성만 이식</p>
+  <p class="sub">라운드 <b>3px</b> · 테두리 <b>금속 링 그라데</b> · 면 <b>--nav-plate</b>.
+     구조·정보 배치는 손대지 않는다. 위아래가 한 재질로 붙는다.</p>
+  <div class="stage"><div class="bot">
+    <div class="cmdG">
+      <div class="cgHead">
+        <div class="cgTtl"><span class="cgN">레인저</span>
+          <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+        <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+      </div>
+      <div class="cgBody">
+        <div class="cgInfo">
+          <div class="cgEb">다음 강화</div>
+          <div class="cgDn">보병 무기</div>
+          <div class="cgDd">보병 계열 공격력 +2</div>
+          <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+        </div>
+        <div class="cgGrid">
+          <div class="cgSlot"><div class="cgPro">🎯</div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+          <div class="cgSlot"><div class="cgPro">🔥</div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+          <div class="cgSlot"><div class="cgPro">✚</div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+          <div class="cgSlot empty"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+    </div>
+  </div></div>
+</div>
+
+<div class="col v2">
+  <p class="hd">2안 — 1안 + 칸을 한 판에 담는다</p>
+  <p class="sub">1안 위에 <b>트레이 한 겹</b>을 더한다(사냥터 스킬 바 <b>.hbTray</b> 문법).
+     네비바처럼 「판 안에 칸이 든」 구조가 되어 위아래가 같은 문법이 된다.</p>
+  <div class="stage"><div class="bot">
+    <div class="cmdG">
+      <div class="cgHead">
+        <div class="cgTtl"><span class="cgN">레인저</span>
+          <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+        <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+      </div>
+      <div class="cgBody">
+        <div class="cgInfo">
+          <div class="cgEb">다음 강화</div>
+          <div class="cgDn">보병 무기</div>
+          <div class="cgDd">보병 계열 공격력 +2</div>
+          <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+        </div>
+        <div class="cgGrid">
+          <div class="cgSlot"><div class="cgPro">🎯</div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+          <div class="cgSlot"><div class="cgPro">🔥</div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+          <div class="cgSlot"><div class="cgPro">✚</div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+          <div class="cgSlot empty"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+    </div>
+  </div></div>
+</div>
+
+<div class="col v3">
+  <p class="hd">3안 — 1안 + <em>고른 칸 = 붉은 링</em></p>
+  <p class="sub">1안 위에 「지금 고른 것」 신호까지 네비와 통일한다(<b>--nav-plate-on + --nav-ring-on</b>).
+     초상 테두리의 시안도 뺀다 — 칸마다 색이 있으면 고른 칸이 안 튄다.</p>
+  <div class="stage"><div class="bot">
+    <div class="cmdG">
+      <div class="cgHead">
+        <div class="cgTtl"><span class="cgN">레인저</span>
+          <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+        <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+      </div>
+      <div class="cgBody">
+        <div class="cgInfo">
+          <div class="cgEb">다음 강화</div>
+          <div class="cgDn">보병 무기</div>
+          <div class="cgDd">보병 계열 공격력 +2</div>
+          <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+        </div>
+        <div class="cgGrid">
+          <div class="cgSlot pick"><div class="cgPro">🎯</div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+          <div class="cgSlot"><div class="cgPro">🔥</div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+          <div class="cgSlot"><div class="cgPro">✚</div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+          <div class="cgSlot empty"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+      <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+    </div>
+  </div></div>
+</div>
+
+</body></html>
