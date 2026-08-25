@@ -146,6 +146,10 @@ try {
         // 부팅 타이틀(#titleBlack/#titleMark)은 정상 진입 경로에서만 걷힌다 — 샌드박스는 직접 내린다
         ['titleBlack','titleMark'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.opacity='0'; }); });
       await new Promise(r=>setTimeout(r,1000));
+      // 시트(.bp)를 올려야 하단 프로필이 보인다 — 스모크가 쓰는 그 두 줄과 같다
+      await page.evaluate(() => { document.body.classList.add('sheetOpen');
+        if(typeof openMainHome==='function') openMainHome(); });
+      await new Promise(r=>setTimeout(r,400));
       if(sel) await page.evaluate(() => { const u=(G.units||[])[0]; if(u){ G.sel=[u.uid]; G.sheetDown=false;
         document.body.classList.add('sheetOpen'); refreshSelCard(); } });
       await new Promise(r=>setTimeout(r,800)); }

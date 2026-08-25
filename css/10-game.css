@@ -768,15 +768,31 @@
      자식(예: ⊘ 지정 해제 버튼)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
      쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
      모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
+  /* ── 면 = 로딩·로그인의 딤 (2026-08-25) ────────────────────────────────
+     전에는 회색 판 하나(--panelBig · rgba(25,25,25,.88))였다. 전장 위에 불투명한 회색 판이
+     얹혀 있어서, 아트가 배경이 되는 로딩·로그인과 이 화면이 다른 앱처럼 보였다.
+     지금은 **--loadDim**(진입 화면이 쓰는 그 곡선) 한 장이다 — 위 40% 는 사실상 투명이라
+     전장이 그대로 비치고, 글자가 앉는 아래로 갈수록 짙어진다.
+     ⚠ 안의 칸(.cgInfo/.cgSlot)은 **그대로 검정**이다. 판만 옅어지고 칸은 안 옅어져야
+        「배경 위에 부품이 놓인」 것으로 읽힌다(스모크가 칸의 푸른 톤 금지를 계속 잰다).
+     ⛔ 윗변을 전폭 실선으로 되돌리지 말 것 — 선이 전장을 가로질러 아트가 '표'가 된다
+        (로그인이 전폭 헤어라인을 버린 그 이유). 좌우로 사라지는 그라데를 배경 한 겹으로 얹는다. */
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
-    background:var(--panelBig);
-    border-top:1px solid var(--panelBigEdge);box-sizing:border-box;
+    background:
+      linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+      var(--loadDim);
+    border-top:0;box-sizing:border-box;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
   #chatBar,#chatLog,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
-  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
+  /* ⚠ #mergeFab(합체)도 여기 있어야 한다 — z-index 20 이라 시트(.bp 22) **아래**다.
+     전에는 시트 판이 불투명해서(--panelBig .88) 가려졌지만, 판이 --loadDim 으로 옅어진
+     2026-08-25 부터는 칸 위로 비쳐 보인다(실제로 「조합」이 에테리얼 칸에 겹쳤다).
+     ⛔ z-index 를 올려 덮지 말 것 — 그러면 시트 내용을 영구히 가린다. 채팅바와 똑같이 '같이 올린다'. */
+  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #fxLabActs,
+  body.sheetOpen:not(.cstMode) #mergeFab{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -1469,7 +1485,7 @@
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
-    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
+    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
@@ -1519,7 +1535,7 @@
      **수치와 비용 사이의 틈 = 남는 높이 전부**다. 틈만 따로 줄일 수가 없다(gap 을 줄이면 그만큼 남는 높이가 늘어 제자리).
      그래서 남는 높이를 초상이 먹게 한다 — 좌우 여백을 줄이면 초상이 그만큼 커지고 틈이 닫힌다. */
   .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:7px 2px 6px;touch-action:none;
-    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
   /* 초상은 남는 높이만 갖는다(flex:0 1 auto + min-height:0) — 글자 줄을 밀어내지 않게.
@@ -1529,7 +1545,7 @@
        바로 옆 업그레이드 아이콘(정사각)과 크기가 달라 보였다. 초상 원본이 정사각이므로 1 이 맞다.
      ⚠ flex:0 1 auto + min-height:0 이라 칸이 좁으면 세로로 눌려 다시 직사각이 된다 — 스모크가 정사각인지 검사한다.
      예외는 벙커(.cgBunk 1.35) 하나뿐. */
-  .cmdG .cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
+  .cmdG .cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:2px;
     background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
@@ -1563,7 +1579,7 @@
   .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
-  .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
+  .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:2px}
   .cmdG .cgSlot.cgBunk .cgPro svg{width:62%;height:62%} .cmdG .cgSlot.cgBunk .cgPro img{width:100%;height:100%}
   .cmdG .cgBunkHp{font:800 10px/1 var(--font-num);color:#ff9a9a;text-align:center;margin-top:auto;text-shadow:0 1px 2px #000}
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}

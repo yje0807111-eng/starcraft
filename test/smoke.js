@@ -4022,8 +4022,9 @@ async function groupLobby(){
     setInGame(was); openHome(); await sleep(40);
     return '전장 가림 ok · 캔버스 '+Math.round(r.width)+'×'+Math.round(r.height)+' 유지'; });
   // 🔻 하단 네비 = 로그인 화면과 같은 어휘(2026-08-24 · E안). 여기가 어긋나면 두 화면이 다른 앱처럼 보인다.
-  //    ⚠ 인게임 유즈맵 탭바(#tabs)는 함께 바뀌면 안 된다 — 전장 위라 판이 필요하다. 그것까지 같이 잰다.
-  await step('하단 네비: 판 없이 가로 42px · 선택은 밑변 광원 (인게임 탭바는 그대로)', async()=>{
+  //    ⚠ 2026-08-25: 인게임 유즈맵 탭바(#tabs)도 **같은 어휘로 통일**했다(그전 계약을 뒤집었다).
+  //       판 대신 스크림이 가독성을 맡는다 — 로딩·로그인이 쓰는 그 방식이다. 둘 다 같이 잰다.
+  await step('하단 네비 + 인게임 탭바: 판 없이 가로 42px · 선택은 밑변 광원', async()=>{
     skipIf(typeof navGo!=='function','네비 없음');
     openHome(); await sleep(60);
     const bar=$('navBar'); assert(bar,'navBar 없음');
@@ -4047,13 +4048,26 @@ async function groupLobby(){
     assert(a.height==='1px','선택 광원이 1px 이 아니다: '+a.height);
     assert(a.backgroundImage.indexOf('255, 59, 59')>=0,'선택 광원에 액센트 halo 가 없다');
     assert(a.boxShadow!=='none','선택 광원에 halo(box-shadow)가 없다');
+    // 인게임 탭바도 같은 규칙이다 — 판 없음 · 가로 · 라운드 0 · 스크림이 가독성을 맡는다
     const tb=$('tabs');
-    if(tb){ const th=getComputedStyle(tb).height;
-      assert(th==='56px','인게임 탭바까지 낮아졌다: '+th+' — #tabs 는 전장 위라 그대로 둔다');
+    if(tb){ const ts=getComputedStyle(tb);
+      assert(ts.height==='42px','인게임 탭바가 안 낮아졌다: '+ts.height+' (--tabH 42px)');
+      assert(ts.backgroundImage==='none','인게임 탭바가 아직 면을 깔았다');
+      assert(getComputedStyle(tb,'::before').display==='none','탭바 윗변 광선이 남아 있다');
+      // ⛔ 판을 걷었으면 스크림이 반드시 있어야 한다 — 없으면 전장 위에서 글자가 사라진다
+      const sc=getComputedStyle(tb,'::after');
+      assert(sc.content!=='none' && sc.backgroundImage.indexOf('gradient')>=0,
+        '탭바에 스크림이 없다 — 판을 걷었으면 이것이 가독성을 맡는다');
       const tab=tb.querySelector('.tab');
-      if(tab) assert(getComputedStyle(tab).backgroundImage!=='none','인게임 탭바 칸의 판까지 걷어냈다'); }
+      if(tab){ const cs=getComputedStyle(tab);
+        assert(cs.backgroundImage==='none','인게임 탭바 칸이 아직 판을 깔았다');
+        assert(cs.flexDirection==='row','인게임 탭바 칸이 아직 세로로 쌓인다');
+        assert(parseFloat(cs.borderTopLeftRadius)===0,'인게임 탭바 칸이 라운드다');
+        // 5칸이라 글자가 넘치기 쉽다 — 실제로 안 넘치는지 잰다(0.5px 차이로 갈렸던 자리다)
+        assert(tab.scrollWidth<=Math.ceil(tab.clientWidth)+1,
+          '탭바 칸의 글자가 넘친다: scroll '+tab.scrollWidth+' > client '+tab.clientWidth); } }
     navBack(); openHome(); await sleep(40);
-    return '네비 '+bh+'px · 칸 '+cells.length+' · 탭바 '+(tb?getComputedStyle(tb).height:'-'); });
+    return '네비 '+bh+'px · 칸 '+cells.length+' · 인게임 탭바 '+(tb?getComputedStyle(tb).height:'-'); });
   // 🖼 폰 바깥 여백 — 검정이면 폰 밑변과 이어져 하단 네비가 어디서 끝나는지 안 보인다.
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다

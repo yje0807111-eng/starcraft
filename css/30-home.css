@@ -1556,6 +1556,37 @@
   .navBar .navIt.navBk{flex:0 0 var(--navHit);gap:0;font-size:0}   /* 정사각 — **누르는 높이**와 같은 폭(스모크가 폭==높이를 잰다) */
   .navBar .navIt.navBk .ic{width:18px;height:18px}
 
+  /* ══ 🎮 인게임 유즈맵 탭바(#tabs)도 같은 어휘로 (2026-08-25) ═══════════════════
+     ⚠ **2026-08-24 의 「#tabs 는 건드리지 않는다」를 뒤집는다.** 그때 판을 남긴 이유는
+        "전장 위라 판이 필요하다" 였는데, 같은 문제를 로딩·로그인은 판이 아니라 **스크림**으로
+        푼다. 하단 시트(.bp)도 이번에 --loadDim 으로 갔으므로 탭바만 판을 이고 있을 이유가 없다.
+        스모크의 계약(th==='56px')도 같이 뒤집었다.
+     ⚠ #tabs 는 최상위가 `.tab`, 한 층 내려가면 `.navIt` 이라 **둘 다** 덮어야 한다.
+     ⚠ 글자만 10px 이다(.navBar 는 10.5px) — 이 바는 **5칸**이라 378/5=75.6px 뿐인데
+        「업그레이드」가 10.5px 이면 아이콘+틈까지 77px 이 되어 넘친다(실측). 0.5px 이 그 차이다. */
+  #tabs{height:var(--tabH);padding:0 6px;gap:0;background:none;align-items:center;overflow:visible}
+  #tabs::before{display:none}   /* 윗변 광선 폐지 — 면이 없으면 가를 경계도 없다 */
+  /* 스크림 = 판을 대신해 글자를 읽히게 하는 한 장. 바보다 위로 20px 뻗어 전장과 이어진다 */
+  #tabs::after{content:'';position:absolute;left:0;right:0;bottom:0;top:-20px;z-index:0;pointer-events:none;
+    background:linear-gradient(180deg,transparent 0%,rgba(3,5,9,.42) 26%,rgba(3,5,9,.74) 52%,
+      rgba(3,5,9,.90) 76%,rgba(3,5,9,.95) 100%)}
+  #tabs .tab,#tabs .navIt{flex-direction:row;gap:4px;padding:0;height:var(--navHit);
+    border:none;border-radius:0;background:none;
+    font-size:10px;letter-spacing:.02em;white-space:nowrap;color:#8b939f}
+  #tabs .tab .ti{flex:none;display:flex;line-height:0}   /* block 이면 글자 baseline 에 끌려 내려간다 */
+  #tabs .navIt>span{display:flex;flex:none}
+  #tabs .tab .ti svg,#tabs .navIt .ic{width:16px;height:16px}
+  #tabs .tab.on,#tabs .navIt.on,#tabs .navIt.cur{color:#fff;background:none}
+  #tabs .tab.on::after,#tabs .navIt.on::after,#tabs .navIt.cur::after{content:'';position:absolute;
+    left:11%;right:11%;bottom:1px;height:1px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+    box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+  #tabs .navIt.navBk{flex:0 0 var(--navHit);gap:0;font-size:0}
+  #tabs .navIt.navBk .ic{width:18px;height:18px}
+  /* 보스 수 배지 — 세로 쌓기였을 땐 아이콘 오른쪽 위였다. 가로가 됐으니 칸 오른쪽 위로 옮긴다 */
+  #tabs .tab .tabDot{top:2px;left:auto;right:4px;font-size:11px}
+
   /* ══ 🧬 캠프 종족 선택 — 전체 화면(볼륨 3 · 진입 화면) ═══════════════════════
      기준은 로딩 · 로그인 · 설정 세 화면이다(DESIGN.md · 목업 docs/mock/race-select-v2-4a.html b안).
      · 위는 전투 미리보기 자리(.crPrev) — 지금은 빈 칸. 나중에 종족별 녹화 영상이 들어가고
