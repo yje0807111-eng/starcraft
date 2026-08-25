@@ -1,5 +1,5 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8">
-<title>인게임 하단 프로필 — 디테일만 더하는 8안</title>
+<title>인게임 하단 프로필 — 새 네비바 + 디테일만 더하는 8안</title>
 <style>
 /* ══════════════════════════════════════════════════════════════════
    기존(현행) 디자인은 **그대로 둔다.** 각 안은 그 위에 디테일 하나씩만 얹는다.
@@ -76,14 +76,20 @@ body{margin:0;padding:16px;background:#141416;color:#e6eefc;
   text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px}
 
-/* ══════ 현행 인게임 탭바 (#tabs) — 그대로 ══════ */
-.tabs{display:flex;gap:5px;height:56px;margin-top:8px}
-.tab{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:2px;font-size:11px;font-weight:700;letter-spacing:.1em;color:#b6bac2;
-  text-shadow:0 1px 3px rgba(0,0,0,.95);border-radius:var(--r-bar);border:1px solid transparent;
-  background:var(--nav-plate) padding-box,var(--metal-ring) border-box}
-.tab .ic{width:23px;height:23px;display:block;opacity:.9}
-.tab.on{color:#fff;background:var(--nav-plate-on) padding-box,var(--nav-ring-on) border-box}
+/* ══════ 하단 네비바 — **새 문법**(css/30-home.css 파일 끝 .navBar 블록) ══════
+   판 없음 · 라운드 0 · 테두리 없음 · 아이콘+글자 가로 · 42px(히트 44) · 선택 = 밑변 광원.
+   8안 전부 이것으로 고정한다 — 위쪽 프로필의 디테일만 다르다. */
+.navBar{position:relative;height:42px;padding:0 6px;margin-top:6px;display:flex;align-items:center;overflow:visible}
+.navIt{position:relative;flex:1 1 0;min-width:0;height:44px;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap;color:#8b939f;
+  text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.navIt .ic{width:17px;height:17px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+.navIt.on{color:#fff}
+.navIt.on::after{content:'';position:absolute;left:11%;right:11%;bottom:1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+  box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
 
 /* ══════════ 델타 — 안마다 딱 하나씩 ══════════ */
 
@@ -153,25 +159,26 @@ body{margin:0;padding:16px;background:#141416;color:#e6eefc;
       </div>
     </div>
   </div>
-  <div class="tabs">
-    <div class="tab on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
-    <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
-    <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
-    <div class="tab"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+  <div class="navBar">
+    <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
   </div>
 </template>
 
 <div class="col"><p class="hd base">현행 — 손대지 않음</p>
-  <p class="sub">아래 여덟은 전부 <b>이것 + 델타 하나</b>다. 나란히 놓고 무엇이 달라졌는지만 보시면 됩니다.</p>
+  <p class="sub">프로필은 손대지 않았다. <b>네비바만 새 버전</b>(판 없음 · 가로 · 42px · 밑변 광원)이고,
+     아래 여덟은 전부 <b>이것 + 델타 하나</b>다.</p>
   <div class="stage"><div class="bot" data-fill></div></div></div>
 
-<div class="col d1"><p class="hd">1안 — <em>라운드만</em> 탭바에 맞춤</p>
+<div class="col d1"><p class="hd">1안 — <em>라운드</em> 9px → 3px</p>
   <p class="sub">칸 라운드 <b>9px → 3px</b>(초상 6 → 2). 다른 건 그대로.
-     프로필이 탭바보다 둥글어 보이던 것이 사라진다.</p>
+     네비바가 라운드 0 으로 갔으므로 위도 그쪽으로 한 걸음.</p>
   <div class="stage"><div class="bot" data-fill></div></div></div>
 
-<div class="col d2"><p class="hd">2안 — <em>테두리만</em> 금속 링으로</p>
-  <p class="sub">단색 <b>#3c3e46</b> → 탭바와 같은 <b>금속 링 그라데</b>.
+<div class="col d2"><p class="hd">2안 — <em>테두리</em>를 금속 링으로</p>
+  <p class="sub">단색 <b>#3c3e46</b> → <b>금속 링 그라데</b>(상단 탭 띠·수량 상자가 쓰는 공용 재질).
      위가 밝고 아래가 어두워 칸에 두께가 생긴다.</p>
   <div class="stage"><div class="bot" data-fill></div></div></div>
 
@@ -191,8 +198,8 @@ body{margin:0;padding:16px;background:#141416;color:#e6eefc;
   <div class="stage"><div class="bot" data-fill></div></div></div>
 
 <div class="col d6"><p class="hd">6안 — <em>고른 칸에 밑변 광원</em></p>
-  <p class="sub">지금은 고른 칸 표시가 없다. <b>탭바의 선택 신호와 똑같은 1px 광원</b>을
-     칸 밑변에 넣는다 — 위아래가 한 신호가 된다.</p>
+  <p class="sub">지금은 고른 칸 표시가 없다. <b>네비바의 선택 신호와 똑같은 1px 광원</b>을
+     칸 밑변에 넣는다 — 하단 위아래가 한 신호가 된다.</p>
   <div class="stage"><div class="bot" data-fill></div></div></div>
 
 <div class="col d7"><p class="hd">7안 — <em>초상 사선 글린트</em></p>
