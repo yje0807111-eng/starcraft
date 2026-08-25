@@ -1555,3 +1555,49 @@
   /* ⚠ font-size:0 을 되돌리지 말 것 — 위에서 10.5px 을 줬으므로 여기서 다시 끄지 않으면 라벨이 나온다 */
   .navBar .navIt.navBk{flex:0 0 var(--navHit);gap:0;font-size:0}   /* 정사각 — **누르는 높이**와 같은 폭(스모크가 폭==높이를 잰다) */
   .navBar .navIt.navBk .ic{width:18px;height:18px}
+
+  /* ══ 🧬 캠프 종족 선택 — 전체 화면(볼륨 3 · 진입 화면) ═══════════════════════
+     기준은 로딩 · 로그인 · 설정 세 화면이다(DESIGN.md · 목업 docs/mock/race-select-v2-4a.html b안).
+     · 위는 전투 미리보기 자리(.crPrev) — 지금은 빈 칸. 나중에 종족별 녹화 영상이 들어가고
+       전환은 짧은 크로스페이드다.
+     · 딤은 로딩과 같은 값(.06 → .10 → .62 → .96) — 글자가 앉는 아래쪽만 덮는다.
+     ⛔ 행 구분선을 전폭 실선으로 되돌리지 말 것 — 선이 그림을 가로질러 아트가 '표'로 보인다.
+        좌우로 사라지는 헤어라인이 DESIGN.md §1 볼륨 1 규격이다. */
+  #campRaceOv{position:absolute;inset:0;z-index:64;display:flex;flex-direction:column;
+    background:#07080b}
+  #campRaceOv.hide{display:none}
+  /* 미리보기 자리 — 영상이 들어올 칸. 비어 있어도 아래로 갈수록 어두워진다(글자가 앉는 자리) */
+  #campRaceOv .crPrev{position:absolute;inset:0;
+    background:linear-gradient(180deg,#25344a 0%,#1a2636 26%,#101823 48%,#0a0e15 70%,#06080c 100%)}
+  #campRaceOv .crPrev::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 34%,
+      rgba(6,8,12,.62) 72%,rgba(6,8,12,.96) 100%)}
+  #campRaceOv .crScr{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;
+    padding:16px 14px 0}
+  /* 제목 — 설정 화면과 같은 크기·자리(왼쪽 정렬) */
+  #campRaceOv .crHd{display:flex;align-items:flex-start;justify-content:space-between}
+  #campRaceOv .crTtl{font-family:var(--font-ti);font-size:21px;color:#fff}
+  /* 행 — 설정의 구조(좌 라벨 / 우 표시), 선만 좌우로 사라진다 */
+  #campRaceOv .crRows{margin-top:auto;display:flex;flex-direction:column}
+  #campRaceOv .crRow{position:relative;display:flex;align-items:center;gap:11px;width:100%;
+    padding:14px 0;background:none;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+  #campRaceOv .crRow::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+  #campRaceOv .crRow:first-child::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+  #campRaceOv .crIco{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;
+    justify-content:center;font-size:17px;line-height:1}
+  #campRaceOv .crMain{min-width:0;flex:1;display:flex;flex-direction:column}
+  #campRaceOv .crNm{font-size:var(--fs-xl);font-weight:700;color:#8b939d}
+  #campRaceOv .crRow.on .crNm{color:#fff}
+  #campRaceOv .crDs{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+  #campRaceOv .crGoIc{flex:0 0 auto;color:#7b838d;font-size:13px}
+  #campRaceOv .crRow.on .crGoIc{color:var(--acc-sel)}
+  /* 확정 — 판 없이 글자 + 밑변 광원(주 버튼의 서명) */
+  #campRaceOv .crGo{position:relative;width:100%;height:44px;margin:14px 0 18px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;
+    background:none;border:0;cursor:pointer}
+  #campRaceOv .crGo::after{content:'';position:absolute;left:16%;right:16%;bottom:7px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);
+    box-shadow:0 0 9px var(--acc-sel)}

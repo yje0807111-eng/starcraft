@@ -668,12 +668,29 @@ async function groupLobby(){
     skipIf(typeof campOpen!=='function','캠프 없음');
     const C=campState(); C.race=null; C.ents=[]; C.minerals=[]; C.built={};   // 신규 계정처럼
     openHome(); await sleep(260);
-    // ① 종족을 안 골랐으면 선택 시트가 뜬다 — 전용 UI 가 아니라 공용 세그먼트 바를 쓴다
+    // ① 종족을 안 골랐으면 선택 화면이 뜬다 — 2026-08-24 개편: 팝업이 아니라 **전체 화면**이다
+    //   기준은 로딩·로그인·설정(DESIGN.md · 목업 docs/mock/race-select-v2-4a.html b안).
     const ov=$('campRaceOv');
     assert(ov && !ov.classList.contains('hide'),'종족 선택이 안 뜸');
-    assert(ov.querySelector('.pdSeg'),'종족 띠가 공용 세그먼트 바(.pdSeg)를 안 씀');
-    assert(ov.querySelectorAll('.pdSegBtn').length===STK_RACE_ORDER.length,
-      '종족 수가 STK_RACE_ORDER 와 다름: '+ov.querySelectorAll('.pdSegBtn').length);
+    assert(!ov.classList.contains('hbModal'),'종족 선택이 팝업(.hbModal)으로 돌아갔다 — 전체 화면이어야 한다');
+    { const r=ov.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
+      assert(r.height>ph.height*0.9,'전체 화면이 아니다: '+Math.round(r.height)+' vs '+Math.round(ph.height)); }
+    // ⚠ 캠프는 3종족만 쓴다(페럴·콜로서스는 캠프 경제 미대응) — STK_RACE_ORDER(5)와 다른 것이 정상
+    const rows=[...ov.querySelectorAll('.crRow')];
+    assert(rows.length===CAMP_RACE_ORDER.length,'종족 행이 CAMP_RACE_ORDER 와 다름: '+rows.length);
+    assert(rows.map(r=>r.querySelector('.crNm').textContent).join()===
+      CAMP_RACE_ORDER.map(k=>STK_RACES[k].name).join(),'종족 이름/순서가 표와 다르다');
+    // ⛔ 행 구분선은 좌우로 사라지는 헤어라인이다(DESIGN.md §1 볼륨 1). 전폭 실선으로 되돌리면
+    //   선이 그림을 가로질러 아트가 배경이 아니라 '표'로 보인다 — 로그인이 그 이유로 버린 처리다.
+    assert(getComputedStyle(rows[0]).borderBottomWidth==='0px','행이 전폭 실선 테두리를 쓴다');
+    assert(/linear-gradient/.test(getComputedStyle(rows[0],'::after').backgroundImage),
+      '행 구분선이 그라데 헤어라인이 아니다');
+    // 확정 버튼은 판 없이 글자 + 밑변 광원(주 버튼의 서명)
+    { const go=ov.querySelector('.crGo'); assert(go,'확정 버튼이 없다');
+      assert(getComputedStyle(go).borderTopWidth==='0px','확정 버튼에 테두리가 생겼다 — 판을 쓰지 않는 화면이다');
+      assert(/linear-gradient/.test(getComputedStyle(go,'::after').backgroundImage),'확정 버튼에 밑변 광원이 없다'); }
+    // 경고 문구는 뺐다(사용자 결정 2026-08-24) — 되살리려면 확정 단계에 붙일 것
+    assert(!/바꿀 수 없/.test(ov.textContent),'제거하기로 한 경고 문구가 살아 있다');
     // ② 고르면 본부·일꾼·광맥이 깔린다
     campRaceSel('terran'); campPickRace(); await sleep(420);
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);

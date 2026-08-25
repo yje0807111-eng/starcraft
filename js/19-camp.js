@@ -434,33 +434,49 @@ function campAutoSave(reset){
 }
 
 // ── 종족 선택 ───────────────────────────────────────────────────────────
+// 🎨 2026-08-24 개편 — 기준은 **로딩 · 로그인 · 설정** 세 화면이다(DESIGN.md).
+//   목업 진행: race-select-8 → race-sheet-4 → race-sheet-login-4 → race-sheet-8
+//             → race-select-v2-8 → race-select-v2-4a(b안 확정).
+//   · 팝업(.hbModal)이 아니라 **전체 화면**이다 — 볼륨 3(진입 화면). 캠프 첫 진입에서
+//     되돌릴 수 없는 선택을 하는 자리라 작은 카드로는 무게가 안 맞았다.
+//   · 위는 **전투 미리보기 자리**(지금은 빈 칸 — 전투 시스템이 생긴 뒤 녹화 영상이 들어간다).
+//     종족을 바꾸면 그 칸이 **짧은 크로스페이드**로 갈리기로 했다. 영상이 들어올 때 붙인다.
+//   · 행 구분선은 **좌우로 사라지는 헤어라인**(DESIGN.md §1 볼륨 1 규격)이다.
+//     ⛔ 전폭 실선으로 되돌리지 말 것 — 선이 그림을 가로질러 아트가 배경이 아니라 '표'로 보인다
+//     (로그인이 그 이유로 전폭 헤어라인을 버렸다).
+//   · 확정 버튼은 판 없이 **글자 + 밑변 광원**이다. 밑변 광원은 이 앱에서 주 버튼의 서명이고,
+//     판을 안 쓰는 화면에서 버튼만 상자가 되면 그것만 튄다.
 // ⛔ 전용 종족 UI 를 새로 만들지 말 것 — 13-room.js:268 에 같은 경고가 있다.
-//   표는 STK_RACES/STK_RACE_ORDER, 띠는 segNavHTML() 이 단일 소스다.
-//   껍데기는 .hbModal/.hbmCard(HOME 팝업 공용).
+//   표는 STK_RACES 가 단일 소스다.
+// ⚠ 캠프는 **3종족만** 쓴다. 페럴·콜로서스는 설계·오토배틀 편입까지 끝났지만(RACES.md)
+//   캠프 건물·경제가 아직 3종족 기준이라 여기 목록에 넣지 않는다.
+const CAMP_RACE_ORDER = ['terran','zerg','protoss'];
 let _campRacePick = null;
 function campRaceSheet(){
-  if(typeof STK_RACE_ORDER === 'undefined' || typeof segNavHTML !== 'function') return;
-  _campRacePick = _campRacePick || STK_RACE_ORDER[0];
+  if(typeof STK_RACES === 'undefined') return;
+  _campRacePick = _campRacePick || CAMP_RACE_ORDER[0];
   let ov = document.getElementById('campRaceOv');
-  if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv'; ov.className = 'hbModal';
+  if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv';
     (document.getElementById('phone') || document.body).appendChild(ov); }
   ov.classList.remove('hide');
   campRaceRender();
 }
 function campRaceRender(){
   const ov = document.getElementById('campRaceOv'); if(!ov) return;
-  const i = Math.max(0, STK_RACE_ORDER.indexOf(_campRacePick));
-  const R = STK_RACES[_campRacePick] || {};
-  ov.innerHTML = '<div class="hbmCard">'
-    + '<div class="hbRow"><b>종족 선택</b></div>'
-    // ⚠ segNavHTML(items, i, act) — 항목은 {label}, 셋째는 **함수**(k → onclick 문자열)다.
-    + '<div class="hbRow">' + segNavHTML(
-        STK_RACE_ORDER.map(function(k){ const S = STK_RACES[k] || {}; return { label:S.name || k }; }),
-        i,
-        function(k){ return "campRaceSel('" + STK_RACE_ORDER[k] + "')"; }) + '</div>'
-    + '<div class="hbRow campRaceDesc"><span class="crName">' + (R.name || '') + '</span>'
-    + '<span class="crSub">' + (R.sub || '') + ' · ' + (R.desc || '') + '</span></div>'
-    + '<div class="hbRow"><button class="actBtn pri" onclick="campPickRace()">이 종족으로 시작</button></div>'
+  const cur = _campRacePick || CAMP_RACE_ORDER[0], R = STK_RACES[cur] || {};
+  let rows = '';
+  for(const k of CAMP_RACE_ORDER){ const S = STK_RACES[k] || {}; const on = (k === cur);
+    rows += '<button type="button" class="crRow' + (on ? ' on' : '') + '" onclick="campRaceSel(\'' + k + '\')">'
+      + '<span class="crIco">' + (S.icon || '') + '</span>'
+      + '<span class="crMain"><span class="crNm">' + (S.name || k) + '</span>'
+      + '<span class="crDs">' + (S.sub || '') + ' · ' + (S.desc || '') + '</span></span>'
+      + '<span class="crGoIc">' + (on ? '✓' : '›') + '</span></button>'; }
+  // ⚠ 미리보기(.crPrev)는 **의도적으로 빈 칸**이다. 여기에 종족별 전투 영상이 들어간다.
+  ov.innerHTML = '<div class="crPrev"></div>'
+    + '<div class="crScr">'
+    + '<div class="crHd"><div class="crTtl">종족 선택</div></div>'
+    + '<div class="crRows">' + rows + '</div>'
+    + '<button type="button" class="crGo" onclick="campPickRace()">' + (R.name || '') + '으로 시작</button>'
     + '</div>';
   if(typeof paintIcons === 'function') paintIcons(ov);
 }
@@ -469,7 +485,7 @@ function campRaceSel(k){ if(STK_RACES[k]) { _campRacePick = k; campRaceRender();
 //   (바꾸는 기능이 필요해지면 '기지를 버리고 새로 시작'으로 따로 만든다)
 function campPickRace(){
   const C = campState(); if(!C || C.race) return;
-  C.race = _campRacePick || STK_RACE_ORDER[0];
+  C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
   const ov = document.getElementById('campRaceOv'); if(ov) ov.classList.add('hide');
   campEnter();
