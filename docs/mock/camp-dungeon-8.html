@@ -1,0 +1,213 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>캠프 좌상단 던전 구역 8안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --txt:#d6e2f0; --txt-mute:#9aa0a8;
+  --hud:#5cd6ff; --hud-glow:rgba(92,214,255,.55);
+  --fs-md:11.5px; --fs-lg:13px;
+}
+*{box-sizing:border-box}
+button{margin:0;padding:0;font:inherit;color:inherit;background:none;border:none;cursor:pointer;text-align:left}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 6px;font-size:12.5px;color:var(--txt-mute);line-height:1.7;max-width:900px}
+.lead b{color:#ececec}
+.lead code{color:#9fd0ff;font-family:var(--font-num)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;max-width:1180px;margin-top:20px}
+@media(max-width:1000px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 한 칸 = 폰 화면 위쪽만 잘라 보여 준다 */
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px;color:#ececec}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--txt-mute);line-height:1.5}
+/* 캠프 화면 흉내 — 어두운 맵 위에 재화 바가 오른쪽에 있다 */
+.ph{position:relative;height:190px;
+  background:
+    radial-gradient(120% 80% at 30% 20%, rgba(60,80,110,.22), transparent 60%),
+    linear-gradient(180deg,#0d1018,#0a0c11 60%,#090a0e);
+  overflow:hidden}
+.ph::after{content:'';position:absolute;left:8px;right:8px;top:64px;bottom:8px;
+  border:1px dashed rgba(120,150,190,.10);border-radius:4px}   /* 맵 영역 암시 */
+/* 오른쪽 재화 바(실제 #curBar 자리) */
+.res{position:absolute;right:10px;top:12px;display:flex;gap:9px;align-items:center;
+  font-family:var(--font-num);font-size:12px;font-weight:800;color:#cfd8e4;opacity:.9}
+.res s{text-decoration:none;display:inline-flex;align-items:center;gap:3px}
+.res u{text-decoration:none;width:11px;height:11px;border-radius:2px;display:inline-block}
+.res .m u{background:#59b7ff}.res .g u{background:#5ddb8a}.res .j u{background:#e879f9}
+.res .bars{width:16px;height:12px;margin-left:2px;
+  background:repeating-linear-gradient(180deg,#cfd8e4 0 2px,transparent 2px 5px)}
+/* 좌상단 묶음 — 모든 안의 공통 자리 */
+.tl{position:absolute;left:12px;top:11px;display:flex;flex-direction:column;gap:3px;
+  white-space:nowrap;line-height:1.15;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.9)) drop-shadow(0 0 10px rgba(0,0,0,.6))}
+/* 네모 HUD 어휘 그대로 */
+.stage{font-size:var(--fs-md);color:var(--txt);font-weight:800;letter-spacing:1.5px}
+.stage b{font-size:14px;color:var(--hud);letter-spacing:0;
+  text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
+.sub{font-size:var(--fs-md);color:rgba(214,226,240,.5);letter-spacing:0;font-weight:800}
+.name{font-size:var(--fs-lg);color:#fff;font-weight:800;letter-spacing:.3px}
+.time{font-family:var(--font-num);font-size:18px;font-weight:800;line-height:1.1;color:#fff}
+.dim{color:rgba(214,226,240,.5)}
+.cy{color:var(--hud);text-shadow:0 0 6px var(--hud-glow),0 2px 3px #000}
+/* ◀▶ — 글리프만(공용 .arwBtn 규칙: 판 없음) */
+.arw{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+  color:rgba(214,226,240,.72);filter:drop-shadow(0 1px 2px #000)}
+.arw svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;
+  stroke-linecap:round;stroke-linejoin:round}
+.row{display:flex;align-items:center;gap:6px}
+/* 진행 막대 */
+.bar{width:76px;height:3px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
+.bar i{display:block;height:100%;width:62%;background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+/* 계단(층) 표시 */
+.steps{display:flex;gap:2px;align-items:flex-end;height:11px}
+.steps s{text-decoration:none;width:3px;background:rgba(255,255,255,.22);border-radius:1px}
+.steps s.on{background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+/* 칩 */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:3px;
+  background:rgba(10,14,20,.55);border:1px solid rgba(120,160,210,.22);
+  font-size:10.5px;font-weight:800;color:var(--txt);letter-spacing:.3px}
+.chip.cy{border-color:rgba(92,214,255,.4)}
+/* 밑줄형 */
+.uline{border-bottom:1px solid rgba(92,214,255,.45);padding-bottom:2px}
+.note{margin:26px 0 0;font-size:12px;color:var(--txt-mute);line-height:1.75;max-width:900px}
+.note b{color:#ececec}
+</style>
+
+<h1>캠프 좌상단 — 던전 선택 구역 8안</h1>
+<p class="lead">
+  <b>기준</b> — 네모네모 디펜스의 좌상단(<code>#hudL</code>)을 그대로 따른다:
+  <b>판(배경 상자)이 없다</b> · 세로로 쌓는다 · 그림자로 띄운다 ·
+  <b>숫자만 청록 발광</b>(<code>--hud</code>), 라벨은 흰/회색 · 숫자는 <code>Rajdhani</code>.
+  자리는 재화 바 왼쪽의 빈 칸(<code>#curTitle</code>)이다 — 새로 만들 필요 없이 그 칸을 쓴다.
+</p>
+<p class="lead">
+  <b>담아야 할 것</b> — ① 지금 어느 던전인가(번호+이름) ② 지금 몇 층/라운드인가
+  ③ <b>바꾸는 길</b>(눌러서 고르기). 8안은 ③을 어떻게 주느냐로 갈린다.
+</p>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <div class="cell">
+    <div class="cap"><b>1 — 네모 그대로</b><i>ROUND 줄 + 이름 줄. 탭하면 팝업.<br>가장 안전하다. 새 어휘가 없다.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="stage">DUNGEON <b>3</b><span class="sub">/10</span></span>
+        <span class="name">잊혀진 회랑</span>
+        <span class="sub">라운드 <span class="cy">27</span>/99</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cell">
+    <div class="cap"><b>2 — 화살표로 바로 바꾼다</b><i>◀▶ 로 던전을 넘긴다. 팝업 없이 한 손으로.<br>공용 <code>.arwBtn</code>(글리프만) 규칙.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="stage">DUNGEON <b>3</b><span class="sub">/10</span></span>
+        <span class="row">
+          <span class="arw"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+          <span class="name">잊혀진 회랑</span>
+          <span class="arw"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>
+        </span>
+        <span class="sub">라운드 <span class="cy">27</span>/99</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cell">
+    <div class="cap"><b>3 — 시간을 맨 위로</b><i>네모처럼 큰 숫자가 먼저 온다.<br>여기선 '이 층에서 버틴 시간'.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="time">12:04</span>
+        <span class="stage">DUNGEON <b>3</b><span class="sub">/10</span></span>
+        <span class="sub">잊혀진 회랑 · <span class="cy">27</span>층</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cell">
+    <div class="cap"><b>4 — 두 줄로 줄인다</b><i>가장 조용하다. 맵을 제일 안 가린다.<br>정보가 적은 대신 자리를 거의 안 먹는다.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="name">잊혀진 회랑 <span class="dim" style="font-weight:800">3</span></span>
+        <span class="stage">ROUND <b>27</b><span class="sub">/99</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="cell">
+    <div class="cap"><b>5 — 진행 막대를 붙인다</b><i>이 던전을 얼마나 뚫었는지 한눈에.<br>숫자를 안 읽어도 진도가 보인다.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="stage">DUNGEON <b>3</b><span class="sub">/10</span></span>
+        <span class="name">잊혀진 회랑</span>
+        <span class="row"><span class="bar"><i></i></span><span class="sub"><span class="cy">27</span>/99</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="cell">
+    <div class="cap"><b>6 — 계단으로 층을 본다</b><i>던전 10개를 막대 10칸으로.<br>'어디까지 왔나'가 그림으로 읽힌다.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="steps">
+          <s class="on" style="height:4px"></s><s class="on" style="height:5px"></s><s class="on" style="height:6px"></s>
+          <s style="height:7px"></s><s style="height:8px"></s><s style="height:8px"></s>
+          <s style="height:9px"></s><s style="height:10px"></s><s style="height:10px"></s><s style="height:11px"></s>
+        </span>
+        <span class="name">잊혀진 회랑</span>
+        <span class="sub">라운드 <span class="cy">27</span>/99</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="cell">
+    <div class="cap"><b>7 — 칩 하나로 접는다</b><i>평소엔 한 줄. 누르면 목록이 열린다.<br>맵을 가장 안 가리면서 '누르는 곳'이 분명하다.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">잊혀진 회랑 <span class="cy">3</span>
+          <span class="arw" style="width:11px;height:11px"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+        </span>
+        <span class="sub" style="padding-left:2px">라운드 <span class="cy">27</span>/99</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="cell">
+    <div class="cap"><b>8 — 이름을 크게, 번호는 작게</b><i>던전 <b>이름</b>이 주인공. 밑줄이 '누르는 곳'을 말한다.<br>이름이 기억에 남는다.</i></div>
+    <div class="ph">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="time uline" style="font-size:16px">잊혀진 회랑</span>
+        <span class="stage">DUNGEON <b>3</b><span class="sub">/10</span> · ROUND <b>27</b></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">
+  <b>공통</b> — 여덟 안 모두 <b>판이 없다</b>(네모 규칙). 배경 상자를 쓰면 맵 위에 창이 하나 더 뜬 것처럼 보이고,
+  캠프는 맵을 끌고 미는 화면이라 판이 손을 막는다.<br>
+  <b>자리</b> — 재화 바 왼쪽 <code>#curTitle</code> 칸. 재화는 오른쪽 정렬이라 왼쪽이 비어 있다.<br>
+  <b>안 넣은 것</b> — 웨이브 표시. 캠프는 웨이브 방어가 아니라 기지 운영이라 <b>웨이브가 없다</b>.
+  옛 사냥터 HUD 를 그대로 옮기면 여기서 어긋난다.
+</p>

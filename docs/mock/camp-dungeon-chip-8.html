@@ -1,0 +1,233 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>캠프 좌상단 던전 칩 8안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --txt:#d6e2f0; --txt-mute:#9aa0a8;
+  --hud:#5cd6ff; --hud-glow:rgba(92,214,255,.55);
+  --fs-md:11.5px;
+  /* 칩 = 맵 위에 얹히는 얇은 판. 배경은 '어둡게 눌러' 맵 글자가 비쳐도 읽히게 한다 */
+  --chipBg:rgba(8,12,18,.62);
+  --chipEdge:rgba(120,160,210,.24);
+  --chipEdgeCy:rgba(92,214,255,.42);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 6px;font-size:12.5px;color:var(--txt-mute);line-height:1.7;max-width:920px}
+.lead b{color:#ececec}
+.lead code{color:#9fd0ff;font-family:var(--font-num)}
+.grid{display:grid;grid-template-columns:repeat(2,390px);gap:14px;margin-top:20px}
+@media(max-width:820px){.grid{grid-template-columns:390px}}
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px;color:#ececec}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--txt-mute);line-height:1.5}
+.cap em{font-style:normal;color:#9fd0ff}
+.ph{position:relative;height:172px;
+  background:
+    radial-gradient(120% 80% at 30% 20%, rgba(60,80,110,.22), transparent 60%),
+    linear-gradient(180deg,#0d1018,#0a0c11 60%,#090a0e);overflow:hidden}
+.ph::after{content:'';position:absolute;left:8px;right:8px;top:60px;bottom:8px;
+  border:1px dashed rgba(120,150,190,.10);border-radius:4px}
+.top{position:absolute;left:11px;right:10px;top:10px;display:flex;gap:10px;
+  justify-content:space-between;align-items:flex-start}
+.res{order:2;flex:none;display:flex;gap:9px;align-items:center;padding-top:2px;
+  font-family:var(--font-num);font-size:12px;font-weight:800;color:#cfd8e4;opacity:.9}
+.res s{text-decoration:none;display:inline-flex;align-items:center;gap:3px}
+.res u{text-decoration:none;width:11px;height:11px;border-radius:2px;display:inline-block}
+.res .m u{background:#59b7ff}.res .g u{background:#5ddb8a}.res .j u{background:#e879f9}
+.res .bars{width:16px;height:12px;margin-left:2px;
+  background:repeating-linear-gradient(180deg,#cfd8e4 0 2px,transparent 2px 5px)}
+.tl{order:1;min-width:0;display:flex;flex-direction:column;gap:4px;
+  align-items:flex-start;white-space:nowrap;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.85))}
+
+/* ── 칩 공통 ─────────────────────────────────────────── */
+.chip{display:inline-flex;align-items:center;gap:6px;
+  padding:3px 8px;border-radius:3px;                 /* 각진 3px — DESIGN 규칙 */
+  background:var(--chipBg);border:1px solid var(--chipEdge);
+  font-size:11px;font-weight:800;color:var(--txt);letter-spacing:.2px;line-height:1.35}
+.chip.cy{border-color:var(--chipEdgeCy)}
+.chip .n{font-family:var(--font-num);color:var(--hud);
+  text-shadow:0 0 6px var(--hud-glow);font-size:12.5px}
+.chip .dim{color:rgba(214,226,240,.5);font-family:var(--font-num)}
+.chip .lab{color:rgba(214,226,240,.62);font-weight:800;letter-spacing:1px;font-size:9.5px}
+.chip .sep{width:1px;height:11px;background:rgba(255,255,255,.16)}
+.cv{display:inline-flex;width:11px;height:11px;color:rgba(214,226,240,.7)}
+.cv svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;
+  stroke-linecap:round;stroke-linejoin:round}
+/* 칩 밖 텍스트(판 없음) */
+.bare{font-size:var(--fs-md);color:rgba(214,226,240,.55);font-weight:800;padding-left:2px}
+.bare .n{font-family:var(--font-num);color:var(--hud);text-shadow:0 0 6px var(--hud-glow)}
+/* 칩 안 진행 막대 */
+.bar{width:52px;height:3px;border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden}
+.bar i{display:block;height:100%;width:27%;background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+/* 칩 안 계단 */
+.steps{display:flex;gap:1.5px;align-items:flex-end;height:10px}
+.steps s{text-decoration:none;width:2.5px;background:rgba(255,255,255,.22);border-radius:1px}
+.steps s.on{background:var(--hud);box-shadow:0 0 4px var(--hud-glow)}
+/* 번호 배지 */
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;
+  padding:0 4px;border-radius:2px;background:rgba(92,214,255,.16);
+  border:1px solid rgba(92,214,255,.45);font-family:var(--font-num);font-size:11px;
+  font-weight:800;color:var(--hud);text-shadow:0 0 5px var(--hud-glow)}
+/* 두 줄 칩 */
+.chip.col{flex-direction:column;align-items:flex-start;gap:2px;padding:4px 9px}
+.chip.col .r{display:flex;align-items:center;gap:5px}
+.note{margin:26px 0 0;font-size:12px;color:var(--txt-mute);line-height:1.75;max-width:920px}
+.note b{color:#ececec}
+</style>
+
+<h1>캠프 좌상단 — 던전 칩 8안</h1>
+<p class="lead">
+  전부 <b>칩(얇은 판)</b> 형태다. 갈리는 것은 <b>칩이 무엇까지 덮느냐</b> —
+  이름만 덮을지, 라운드까지 넣을지, 칩을 둘로 나눌지.
+</p>
+<p class="lead">
+  <b>칩을 쓰는 이유</b> — 「여기를 누르면 바뀐다」가 형태로 말해진다. 맨 글자는 눌러도 되는지 모른다.<br>
+  <b>대신 치르는 값</b> — 맵을 조금 가린다. 그래서 칩은 <b>작을수록 좋고</b>, 덮는 범위가 곧 선택이다.
+</p>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <div class="cell">
+    <div class="cap"><b>1 — 이름만</b><i>칩 = 던전 이름 + 펼침 표시.<br>라운드는 칩 <em>밖</em>에 맨 글자로.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">잊혀진 회랑<span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+        <span class="bare">라운드 <span class="n">27</span>/99</span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cell">
+    <div class="cap"><b>2 — 이름 + 번호</b><i>번호를 배지로 왼쪽에 세운다.<br>「3번 던전」이 먼저 읽힌다.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy"><span class="badge">3</span>잊혀진 회랑<span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+        <span class="bare">라운드 <span class="n">27</span>/99</span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cell">
+    <div class="cap"><b>3 — 전부 한 칩</b><i>이름 · 라운드가 한 칩 안에.<br>줄이 하나뿐이라 가장 조용하다.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">잊혀진 회랑<span class="sep"></span><span class="lab">R</span><span class="n">27</span><span class="dim">/99</span>
+          <span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cell">
+    <div class="cap"><b>4 — 칩 둘</b><i>던전 칩 / 라운드 칩을 나눈다.<br><em>각각 따로 누를 수 있다</em> — 층 이동도 여기서.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">잊혀진 회랑<span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+        <span class="chip"><span class="lab">ROUND</span><span class="n">27</span><span class="dim">/99</span>
+          <span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="cell">
+    <div class="cap"><b>5 — 칩 안에 진행 막대</b><i>이 던전을 얼마나 뚫었는지 칩이 품는다.<br>숫자를 안 읽어도 진도가 보인다.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">잊혀진 회랑<span class="sep"></span><span class="bar"><i></i></span><span class="n">27</span>
+          <span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="cell">
+    <div class="cap"><b>6 — 칩 안에 ◀▶</b><i>펼치지 않고 <em>칩 안에서 바로</em> 넘긴다.<br>가운데를 누르면 목록도 열린다.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">
+          <span class="cv"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+          잊혀진 회랑
+          <span class="cv"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span></span>
+        <span class="bare">라운드 <span class="n">27</span>/99</span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="cell">
+    <div class="cap"><b>7 — 칩 안에 계단</b><i>던전 10개를 막대 10칸으로 품는다.<br>「어디까지 왔나」가 그림으로.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy">
+          <span class="steps">
+            <s class="on" style="height:4px"></s><s class="on" style="height:5px"></s><s class="on" style="height:6px"></s>
+            <s style="height:6px"></s><s style="height:7px"></s><s style="height:8px"></s>
+            <s style="height:8px"></s><s style="height:9px"></s><s style="height:9px"></s><s style="height:10px"></s>
+          </span>
+          <span class="sep"></span>잊혀진 회랑
+          <span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+        <span class="bare">라운드 <span class="n">27</span>/99</span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="cell">
+    <div class="cap"><b>8 — 두 줄 칩(전부 덮기)</b><i>칩 하나가 두 줄을 품는다.<br>덮는 면은 크지만 <em>묶음이 분명하다</em>.</i></div>
+    <div class="ph">
+      <div class="top">
+      <div class="res"><s class="m"><u></u>1.2k</s><s class="g"><u></u>340</s><s class="j"><u></u>12</s><s class="bars"></s></div>
+      <div class="tl">
+        <span class="chip cy col">
+          <span class="r"><span class="badge">3</span>잊혀진 회랑
+            <span class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span></span>
+          <span class="r"><span class="lab">ROUND</span><span class="n">27</span><span class="dim">/99</span>
+            <span class="bar" style="width:38px"><i></i></span></span>
+        </span>
+      </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">
+  <b>칩이 덮는 범위 정리</b> — 1·2·6·7 은 <b>이름만</b> 덮고 라운드는 칩 밖 맨 글자다(맵을 덜 가린다).
+  3·5 는 <b>한 칩이 전부</b>를 품는다(줄이 하나뿐). 4 는 <b>둘로 나눠</b> 각각 누르게 한다.
+  8 은 <b>두 줄을 한 칩</b>이 품는다(묶음이 가장 분명하고, 가장 많이 가린다).<br>
+  <b>공통</b> — 칩 모서리는 3px(각진 규칙) · 배경은 어둡게 눌러 맵 위에서도 읽힌다 ·
+  숫자만 청록 발광 · 숫자 폰트는 <code>Rajdhani</code>.<br>
+  <b>4 만 다른 점</b> — 라운드 칩을 따로 누를 수 있어 <b>층 이동의 입구</b>가 될 수 있다.
+  나머지는 던전만 고르고 층은 다른 곳에서 정해야 한다.
+</p>

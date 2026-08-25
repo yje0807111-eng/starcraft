@@ -322,7 +322,14 @@
       </div>
       <!-- 소셜 = 목록 카드와 **완전히 분리된 카드**. 내용(.msSocial)은 #twChat 의 것을 옮겨 쓴다(복제 금지).
            탭 전환은 하단 네비가 맡는다 -->
-      <div id="msSocialDock"></div>
+      <!-- 접기 손잡이 — 접히면 줄 전체(마지막 채팅 + ▲), 펴지면 윗변의 작은 ▼ 하나.
+           내용(.mdPeek)은 #msChat 마지막 줄의 **복제**다(msDockPeek) — 채팅을 두 번 그리지 않는다. -->
+      <div id="msSocialDock">
+        <button class="msDockBar" id="msDockBar" onclick="mapDockToggle()" aria-label="채팅 펼치기/접기">
+          <span class="mdPeek" id="msDockPeek"></span>
+          <svg class="mdChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>
+        </button>
+      </div>
     </div>
 
 
@@ -534,6 +541,15 @@
       </div>
     </div>
     <!-- 📅 일일 퀘스트 — 하루 5개 + 주간 25개. 껍데기는 라운드 팝업과 같은 .hbModal -->
+    <!-- 🧭 가이드 퀘스트 — 일일 퀘스트와 **같은 껍데기**를 쓴다(.hbModal/.hbmCard/.hbRows) -->
+    <div class="hbModal hide" id="hbGuideSheet" onclick="if(event.target===this)closeGuide()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>가이드</b><em id="hbGuideHead"></em>
+          <button class="hbmX" onclick="closeGuide()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbGuideBody"></div>
+      </div>
+    </div>
     <div class="hbModal hide" id="hbDailySheet" onclick="if(event.target===this)closeDaily()">
       <div class="hbmCard">
         <div class="hbmHead"><b>일일 퀘스트</b>
@@ -697,6 +713,16 @@
   <div id="upgScreen" class="appScreen hide">
     <!-- 본문은 비어 있다 — 정보·성장은 팝업 본문을 빌려 오고, 스킬만 여기서 그린다(setChrSec) -->
     <div class="msPanel"><div class="chrBody uiScroll" id="chrBody"></div></div>
+  </div>
+  <!-- 🔬 연구 · 📋 임무 — 하단 네비 개편(2026-08-25). 지금은 **껍데기만** 있다.
+       기획서(GAME_DIRECTION.md §3-1)가 성장 축을 「연구·경제」 둘로 못박았고, 옛 캐릭터·정비 칸은
+       내용이 전부 유보(§5-A·§5-B)라 빈 껍데기였다. 그 두 칸을 이 둘로 갈아끼웠다.
+       ⛔ 옛 화면(#upgScreen·#gearScreen)과 그 코드는 지우지 않는다 — 유보는 삭제가 아니다(§5). -->
+  <div id="researchScreen" class="appScreen hide">
+    <div class="msPanel"><div class="setSoon">준비 중입니다</div></div>
+  </div>
+  <div id="questScreen" class="appScreen hide">
+    <div class="msPanel"><div class="setSoon">준비 중입니다</div></div>
   </div>
   <div id="gearScreen" class="appScreen hide">
     <div class="msPanel">

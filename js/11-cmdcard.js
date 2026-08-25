@@ -748,6 +748,51 @@ function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:fa
       bottom:'<div class="cgSwWrap"><span class="cgSw"></span></div>', act:'onclick="toggleRallyShow(event)"' }); }
   return { mode:'auto', title:'자동화 설정', icon:pIco('⚙️'), sub:'', compact:true, build:true,
     info:{ hideName:true, desc:'버튼을 눌러 켜기/끄기' }, items:items }; }
+// ═══ 🏕 캠프 「아무것도 안 골랐을 때」 요약 — 하단 프로필 구역 ═══════════
+//   캠프는 시트를 늘 열어 두는데, 지금은 아무것도 안 고르면 **본부를 대신 골라** 준다
+//   (19-camp.js campSyncSheet). 그러면 늘 본부 카드만 보여서 "고르지 않은 상태"가 없다.
+//   대신 여기서 **기지 전체 요약**을 보여 준다 — 유즈맵 하단이 늘 내 캐릭터를 보여 주는 것과 같은 자리다.
+//   ⚠ 캠프 상태는 **읽기만** 한다(19-camp.js 는 다른 작업자 영역).
+function _campIdleModel(){
+  const C=(typeof campState==='function')?campState():null;
+  const T=(typeof G!=='undefined')?G.tech:null;
+  const f=(typeof fmtCur==='function')?fmtCur:(n=>String(Math.floor(n||0)));
+  const dg=C?Math.max(1,Math.min(10,C.dg||1)):1;
+  const wk=(T&&T.ents)?T.ents.filter(e=>e.type==='worker').length:0;
+  const rate=(C&&C.rate>0)?C.rate:0;
+  const st=[];
+  st.push(['터치 획득', (typeof campTapGain==='function')?f(campTapGain()):'-']);
+  st.push(['자동 수급', rate? (f(rate)+'/초') : '측정 중']);
+  st.push(['일꾼',      wk+'기']);
+  st.push(['인구',      T? ((T.sup||0)+' / '+(T.supCap||0)) : '-']);
+  st.push(['던전 배수', (typeof campDgMul==='function')?('×'+campDgMul(dg).toFixed(1)):'-']);
+  st.push(['채취 배수', (typeof campGatherMul==='function')?('×'+campGatherMul().toFixed(1)):'-']);
+  if(typeof campUpgLv==='function'){
+    st.push(['터치 강화', 'Lv.'+campUpgLv('tap')]);
+    st.push(['채취 강화', 'Lv.'+campUpgLv('gather')]); }
+  // ⛔ 제목에 **던전 이름을 쓰지 않는다** — 던전은 좌상단 칩이 이미 말한다(같은 것을 두 번 말하게 된다).
+  //    대신 이 구역이 무엇인지를 자간 넓은 작은 라벨로 말한다(kicker · 로딩창 LOADING 과 같은 어법).
+  return { mode:'upg', compact:true, build:true, wide:true,   // 빈 슬롯 4칸이 의미 없다 → 안쪽 전체를 쓴다
+    title:'MY BASE', kicker:true,
+    info:{ hideName:true, statsWide:true, stats:st },
+    items:[] }; }
+// 값이 바뀔 때만 다시 그린다 — 캠프 틱은 매 프레임 돌아서 그냥 그리면 입력이 끊긴다
+function _campIdleSig(){
+  const C=(typeof campState==='function')?campState():null;
+  const T=(typeof G!=='undefined')?G.tech:null;
+  return 'ci|'+(C?(C.dg||1):0)+'|'+(C?(C.upg&&C.upg.tap||0):0)+'|'+(C?(C.upg&&C.upg.gather||0):0)
+    +'|'+((C&&C.rate>0)?C.rate.toFixed(1):0)
+    +'|'+(T?((T.ents||[]).filter(e=>e.type==='worker').length):0)+'|'+(T?(T.sup||0):0)+'|'+(T?(T.supCap||0):0); }
+// 캠프가 부르는 입구. host 를 안 주면 캠프 시트 본문(#btSheetBody)에 그린다.
+function renderCampIdleSheet(host){
+  const el=host||document.getElementById('btSheetBody'); if(!el) return;
+  const sig=_campIdleSig()+'|'+(el._cgPage||0);
+  // ⚠ **지금 그려진 것이 요약인지**도 본다. 건물 카드를 보다가 해제하면 값은 그대로라 서명이 같은데,
+  //   화면에는 건물 카드가 남아 있다 — 서명만 보면 영영 안 그려진다.
+  const mine=!!(el._cgModel && el._cgModel.kicker);
+  if(mine && el._gSig===sig) return;
+  el._gSig=sig; el._cgSig=undefined; renderCmdGrid(el, _campIdleModel()); }
+
 function renderAutoSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='auto|'+autoSig()+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _autoSheetModel()); } }
@@ -1737,7 +1782,7 @@ function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class=
   const bot=(it.bottom!=null)?it.bottom:('<div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div>');   // 🧱 bottom = 커스텀 하단 줄(벙커 HP 등)
   return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+((it.sub!=null&&it.sub!=='')?('<div class="cgSub">'+it.sub+'</div>'):'')+bot+'</div>'; }
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
-  let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' cgScr':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
+  let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' cgScr':'')+(d.statsWide?' cgWide':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
   const valSm=(d.val&&d.val.sm)?('<div class="cgVal sm"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span></div>'):'';   // sm=진행 바 아래 작게(업그레이드 단계)
   let q=''; if(d.queue){ const cap=d.qcap||5, lbl=d.qlabel||'대기열', have=d.queue.filter(Boolean).length;
@@ -1767,8 +1812,17 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const tray=(m.back||'')+(m.topRight||'');
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
     +(tray?('<div class="cgTopOut">'+tray+'</div>'):'')
-    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶]
-    +'<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>';
+    // 🏕 m.kicker = 제목을 **자간 넓은 작은 라벨**로 낮춘다(로딩창 LOADING 과 같은 어법).
+    //    줄은 있되 무게가 없어, 고른 것이 있을 때와 자리는 같으면서 조용하다. 옵션이 없으면 지금까지 그대로.
+    +'<div class="cgHead'+(m.kicker?' kick':'')+'"><div class="cgTtl">'
+      +(m.kicker ? ('<div class="cgKick">'+(m.title||'')+'</div>')
+                 : ('<div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))))
+      +'</div>'+pill+pager+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶]
+    // 🏕 m.wide = 그리드를 안 쓰고 **카드 안쪽 전체**를 정보로 쓴다(빈 슬롯이 의미 없는 요약 카드용).
+    //    ⚠ 옵션이 없으면 지금까지와 똑같이 동작한다 — 다른 시트에 영향이 없다.
+    +(m.wide
+      ? ('<div class="cgBody"><div class="cgInfo wide">'+_cgInfoHTML(m.info)+'</div></div></div>')
+      : ('<div class="cgBody"><div class="cgInfo">'+_cgInfoHTML(m.info)+'</div><div class="cgCol"><div class="cgGrid">'+cells.join('')+'</div></div></div></div>'));
   if(m.build){ const nms=el.querySelectorAll('.cgName'); for(const nm of nms){ let fs=10; nm.style.fontSize=fs+'px'; let g=0; while(nm.scrollWidth>nm.clientWidth+0.5 && fs>6 && g++<12){ fs-=0.5; nm.style.fontSize=fs+'px'; } } } }   // 이름 생략(...) 대신 폰트 축소로 한 줄에 전부
 function _cgTurn(btn,delta){ let h=btn; while(h && !h._cgModel) h=h.parentElement; if(!h||!h._cgModel) return; h._cgModel.page=(h._cgPage||0)+delta; renderCmdGrid(h,h._cgModel); }
 // 업그레이드 모델 빌더(현재 무기 강화 데이터 → 커맨드 그리드)

@@ -75,15 +75,151 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 // 화면 제목은 재화 바 왼쪽에 붙는다(유즈맵과 같은 방식) — 화면 안에 가운데 제목을 또 두지 않는다.
 // 여기 한 곳에서만 정한다. 화면마다 curSetTitle을 부르면 새 화면에서 빠뜨린다.
 const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상점' };
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 이 화면들은 공용 재화 바를 쓴다
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
-const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
-function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
+  campDropClose(); e.classList.remove('asChip','open'); e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
+const CAMP_DG_MAX=10;      // 던전 1~10 (HB_DUNGEONS 길이와 같다)
+const CAMP_RND_MAX=99;     // 던전 하나 = 99라운드
+// 🏕 캠프 좌상단 던전 칩 — 재화 바 왼쪽 빈 슬롯(#curTitle)에 얹힌다(목업 docs/mock/camp-dungeon-onechip-8.html 7안).
+//   ⛔ 캠프 파일(19-camp.js)은 다른 작업자 영역이라 손대지 않는다 — 여기서 상태를 **읽기만** 한다.
+//   ⭐ 무엇을 보여줄지는 이 함수 하나가 정한다(단일 소스). 캠프에 라운드가 생기면 여기 한 곳만 고친다.
+//   ⚠ 지금 캠프 상태(p.camp)에는 **라운드 칸이 없다** — 있는 것은 던전(dg 1~10)뿐이다.
+//      그래서 둘째 줄은 「던전 3/10」이다. C.rnd 가 생기는 순간 자동으로 「라운드 n/99」로 바뀐다.
+function campChipInfo(){
+  if(typeof campIsOn!=='function' || !campIsOn()) return null;
+  const C=(typeof campState==='function')?campState():null; if(!C) return null;
+  const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
+  const d=(typeof hbDun==='function')?hbDun(dg):null;
+  const hasRnd=(typeof C.rnd==='number');
+  return { name:(d&&d.name)||('던전 '+dg),
+           lab: hasRnd?'라운드':'던전',
+           cur: hasRnd?C.rnd:dg,
+           max: hasRnd?CAMP_RND_MAX:CAMP_DG_MAX }; }
+// 칩 마크업 — 왼쪽 광원 띠 + 두 줄(이름 / 라벨·숫자·진행 막대)
+function curChipHTML(o){
+  const pct=Math.max(0, Math.min(100, (o.cur/o.max)*100));
+  return '<i class="cdRail"></i><span class="cdBody">'
+    +'<span class="cdNm">'+escHtml(o.name)+'</span>'
+    +'<span class="cdSub"><i class="cdLab">'+escHtml(o.lab)+'</i>'
+    +'<b class="cdN">'+o.cur+'</b><i class="cdDim">/'+o.max+'</i>'
+    +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span></span></span>'
+    // ⌄ 는 **오른쪽 위 모서리**에 앉힌다 — 두 줄짜리 칩이라 글자 줄에 끼우면 어느 줄의 표시인지 모호해진다
+    +'<i class="cdCv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>'; }
+// 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
+function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
+  const o=campChipInfo();
+  if(!o){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip'); e.textContent=''; } return; }
+  e.classList.add('asChip'); e.innerHTML=curChipHTML(o);
+  if(!e._cdWired){ e._cdWired=1; e.setAttribute('role','button'); e.onclick=campDropToggle; }
+  e.classList.toggle('open', !!_cdPick); }
+// ── 🏕 던전·라운드 드롭다운 (2026-08-25) ────────────────────────────────
+// 칩을 누르면 **칩 아래로 자란다**. 팝업도 전체 화면도 아니다(목업 docs/mock/camp-dgdrop-8.html 2안 + 확정 버튼).
+// ⛔ 캠프 파일(19-camp.js)은 다른 작업자 영역이라 손대지 않는다 — 상태를 읽고, 확정할 때만 두 값을 쓴다.
+//
+// ⚠ **던전 잠금은 여기서 짓지 않는다.** 캠프가 정해 둔 것은 `CAMP_DG_UNLOCK='barracks'` 하나인데
+//    그건 **유니온에서만 맞다** — 병영에 해당하는 건물 키가 종족마다 다르다
+//    (union=barracks · swarm=pool · aetherial=gateway · feral=huntpen · colossus=assembly).
+//    표를 여기서 새로 지으면 두 벌이 된다. 규칙이 정해지면 이 함수 하나만 채운다.
+function campDgOpen(dg){ return dg>=1 && dg<=CAMP_DG_MAX; }
+// 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
+function campEnsureRnd(C){ if(C && typeof C.rnd!=='number') C.rnd=1; return C; }
+let _cdPick=null;            // 드롭다운이 열려 있는 동안의 **임시** 선택 {dg,rnd} — [이동]을 눌러야 진짜가 된다
+const CAMP_RND_H=26;         // 라운드 칸 높이(px) — CSS 와 한 값이어야 스크롤 계산이 맞는다
+let _cdRndT=null;
+
+function campDropToggle(){ _cdPick? campDropClose() : campDropOpen(); }
+function campDropOpen(){
+  const o=campChipInfo(); if(!o) return;
+  const C=campEnsureRnd(campState()); if(!C) return;
+  _cdPick={ dg:Math.max(1,Math.min(CAMP_DG_MAX,C.dg||1)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
+  campDropRender();
+  const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
+  if(typeof playSfx==='function') playSfx('ui_open');
+  document.addEventListener('pointerdown', _cdOutside, true);
+  // 고른 라운드를 가운데로 — 보인 뒤에 해야 높이가 잡힌다
+  // ⚠ requestAnimationFrame(campRndCenter) 로 넘기지 말 것 — rAF 가 timestamp 를 인자로 주는 바람에
+  //    smooth 가 켜져 열 때마다 라운드가 주르륵 굴러 내려온다(실제로 그랬다). 열 때는 즉시 제자리.
+  requestAnimationFrame(()=>campRndCenter(false)); }
+function campDropClose(){
+  if(!_cdPick) return;
+  _cdPick=null; clearTimeout(_cdRndT); _cdRndT=null;
+  const d=document.getElementById('campDrop'); if(d) d.remove();
+  const t=document.getElementById('curTitle'); if(t) t.classList.remove('open');
+  document.removeEventListener('pointerdown', _cdOutside, true); }
+// 바깥을 누르면 닫힌다. 칩 자신은 토글이 맡으므로 제외한다.
+function _cdOutside(ev){ const d=document.getElementById('campDrop'), t=document.getElementById('curTitle');
+  if(!d) return; if(d.contains(ev.target)) return; if(t && t.contains(ev.target)) return; campDropClose(); }
+
+function campDropRender(){
+  const bar=document.getElementById('curBar'), chip=document.getElementById('curTitle');
+  if(!bar||!chip||!_cdPick) return;
+  let d=document.getElementById('campDrop');
+  if(!d){ d=document.createElement('div'); d.id='campDrop'; d.className='cdDrop'; bar.appendChild(d); }
+  // ⚠ 드롭다운은 **칩의 형제**다(칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아간다).
+  //    자리는 칩을 실제로 재서 박는다 — 칩 높이가 바뀌어도 따라온다.
+  const cr=chip.getBoundingClientRect(), br=bar.getBoundingClientRect();
+  d.style.left=(cr.left-br.left)+'px';
+  d.style.top =(cr.bottom-br.top-1)+'px';    // 칩 아래 테두리와 1px 포개 한 줄로 보이게
+  let L='';
+  for(let i=1;i<=CAMP_DG_MAX;i++){ const D=(typeof hbDun==='function')?hbDun(i):null;
+    const open=campDgOpen(i), here=(i===_cdPick.dg);
+    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+'" data-dg="'+i+'"'
+      +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
+      +'<span class="cdRnm">'+escHtml((D&&D.name)||('던전 '+i))+'</span>'
+      +'<span class="cdMul">'+(open?('×'+campDgMul(i).toFixed(1)):'잠김')+'</span></button>'; }
+  let R='';
+  for(let r=CAMP_RND_MAX;r>=1;r--) R+='<button class="cdRn'+(r===_cdPick.rnd?' on':'')+'" data-r="'+r+'">'+r+'</button>';
+  d.innerHTML='<div class="cdSec cdTwo">'
+    +'<div class="cdL"><div class="cdSl">DUNGEON</div><div class="cdList uiScroll">'+L+'</div></div>'
+    +'<div class="cdR"><div class="cdSl">ROUND</div>'
+      // ⚠ 가운데 선은 **스크롤 상자 밖**에 둔다 — 안에 두면 absolute 라도 내용과 같이 굴러 화면 밖으로 나간다
+      +'<div class="cdPickWrap"><i class="cdMid"></i>'
+        +'<div class="cdPick uiScroll" id="cdPickBox"><div class="cdCol">'+R+'</div></div></div></div>'
+    +'</div>'
+    +'<div class="cdSec cdFoot"><button class="cdGo">이동</button></div>';
+  for(const b of d.querySelectorAll('.cdRow')) b.onclick=()=>campDropPickDg(+b.dataset.dg);
+  for(const b of d.querySelectorAll('.cdRn'))  b.onclick=()=>campRndTap(+b.dataset.r);
+  d.querySelector('.cdGo').onclick=campDropGo;
+  const box=d.querySelector('#cdPickBox'); if(box) box.onscroll=campRndScrolled; }
+
+function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
+  _cdPick.dg=dg;
+  const d=document.getElementById('campDrop'); if(d)
+    for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// 라운드 = 스크롤 피커. 큰 수가 위, 1 이 맨 아래 — 옛 사냥터 피커와 같은 방향이다.
+function campRndCenter(smooth){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
+  box.scrollTo({ top:(CAMP_RND_MAX-_cdPick.rnd)*CAMP_RND_H, behavior:smooth?'smooth':'auto' }); }
+function campRndScrolled(){ clearTimeout(_cdRndT); _cdRndT=setTimeout(campRndSettle, 110); }
+function campRndSettle(){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
+  const i=Math.max(0, Math.min(CAMP_RND_MAX-1, Math.round(box.scrollTop/CAMP_RND_H)));
+  const r=CAMP_RND_MAX-i; if(r===_cdPick.rnd) return;
+  _cdPick.rnd=r; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function campRndMark(){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
+  for(const b of box.querySelectorAll('.cdRn')) b.classList.toggle('on', +b.dataset.r===_cdPick.rnd); }
+function campRndTap(r){ if(!_cdPick) return; _cdPick.rnd=r; campRndMark(); campRndCenter(true);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
+function campDropGo(){ if(!_cdPick) return;
+  const C=campEnsureRnd(campState()); if(!C){ campDropClose(); return; }
+  C.dg=_cdPick.dg; C.rnd=_cdPick.rnd;
+  if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로
+  if(typeof saveMeta==='function') saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  campDropClose();
+  updateCurBar();                                        // 칩도 새 값으로
+  // 🧭 가이드 — 지금 이어져 있는 계측은 이것 하나뿐이다(나머지는 캠프가 넣어야 한다)
+  if(typeof guideNote==='function') guideNote('dg:'+C.dg, 1); }
+
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
@@ -114,7 +250,9 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   set('curMin', fmtCur(_camp ? (_camp.credit||0) : profMineral()));
   set('curGas', fmtCur(_camp ? (_camp.energy||0) : profGas()));
   if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
-  set('curGem', fmtCur(profGem())); }
+  set('curGem', fmtCur(profGem()));
+  curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
+  if(typeof guidePaint==='function') guidePaint(); }   // 🧭 가이드 띠도 같은 박자로
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
 // ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
 //   var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
@@ -843,6 +981,7 @@ function setChatScope(sc){ _chatScope=sc;
   const lbl=document.getElementById('msScopeLbl'); if(lbl) lbl.textContent=(_MS_SCOPE_KO[sc]||sc);
   document.querySelectorAll('#msScopeMenu .msScopeOpt').forEach(o=>o.classList.toggle('on', o.dataset.sc===sc));
   const c=document.getElementById('msChat'); if(c){ c.dataset.scope=sc; c.scrollTop=c.scrollHeight; }
+  if(typeof mapDockPeek==='function') mapDockPeek();   // 범위가 바뀌면 접힌 줄도 그 범위의 마지막 줄로
   const inp=document.getElementById('msChatInput'); if(inp) inp.placeholder='메시지 입력…'; }   // 범위는 왼쪽 배지가 표시(문구 중복 제거)
 function _msScopeClose(){ const m=document.getElementById('msScopeMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('msScopeDD'); if(d) d.classList.remove('open'); }
 function toggleMsScope(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('msScopeMenu'), d=document.getElementById('msScopeDD'); if(!m||!d) return;
@@ -856,11 +995,13 @@ function addGlobalMsg(who, text, cls, scope){ const box=document.getElementById(
   const d=document.createElement('div'); d.className='mcLine sc-'+(scope||'all')+(cls?(' '+cls):'');
   d.innerHTML=_mcTime()+(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
   box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild);
-  box.scrollTop=box.scrollHeight; }
+  box.scrollTop=box.scrollHeight;
+  if(typeof mapDockPeek==='function') mapDockPeek(); }   // 접힌 도크의 한 줄도 같이 따라온다
 function addWhisperMsg(fromNick, toNick, text){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine whisper';
   d.innerHTML=_mcTime()+'<span class="mcWhisper">'+escHtml(fromNick)+'<span class="mcArrow"> → </span>'+escHtml(toNick)+'</span><span class="mcSep"> : </span>'+escHtml(text);
-  box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight; }
+  box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight;
+  if(typeof mapDockPeek==='function') mapDockPeek(); }
 function findFriendByNick(nick){ const lo=(nick||'').toLowerCase(); for(const k in _friendIndex){ const f=_friendIndex[k]; if(f && (f.nick||'').toLowerCase()===lo) return f; } return null; }
 async function sendWhisper(nick, msg){ const f=findFriendByNick(nick);
   if(RT.active && f && !f.temp && f.id){   // 실연동: messages 테이블에 저장 → 상대에게 실시간 전달
@@ -1039,7 +1180,8 @@ function setBottomTab(t){ _bottomTab=t;
     // ⛔ 게시판을 자동으로 띄우지 않는다 — 탭을 누를 때마다 판이 덮여 내 파티가 안 보였다.
     //    들어가는 길은 머리줄의 '파티 찾기' 버튼 하나뿐이다.
     if(t==='party') renderPartyTab();
-    else renderFriendList(); } }
+    else renderFriendList(); }
+  if(typeof mapDockPeek==='function') mapDockPeek(); }   // 접힌 줄도 지금 탭을 따라간다
    // 구버전 호환
 // ── 임시 친구(기능 확인용) + 파티(내가 초대하면 무조건 수락) ──
 const _tempFriends=[
@@ -1772,7 +1914,12 @@ function buildRoomList(){ _roomList=[];
       gameEndAt:playing?(now+1000+Math.random()*9000):0});   // 게임중 방: 시작 후 10초 내 목록에서 사라짐
   }
   renderRoomList(); }
-function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'">'+D.name+'</span>'; }
+// 난이도 배지 = **앞 글자 한 자**만 폭 고정 상자에 담는다(2026-08-25 · B3안).
+// 이름을 다 쓰면 EASY(4)~NORMAL(6) 로 폭이 들쭉날쭉해 **난이도마다 제목 줄이 어긋났다.**
+// ⚠ EASY/NORMAL/HARD/HELL/FINAL — 첫 글자로 따면 H 가 둘이다. 그 둘은 **색이 가른다**(HARD 주황 / HELL 빨강).
+//   그래서 full 이름을 title 로 함께 남긴다 — 색을 못 보는 사람도 눌러서 확인할 수 있게.
+function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal;
+  return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'" title="'+escHtml(D.name)+'" aria-label="'+escHtml(D.name)+'">'+escHtml(D.name.charAt(0))+'</span>'; }
 let _roomFilter='all';
 function setRoomFilter(f){ _roomFilter=f;
   if(typeof playSfx==='function') playSfx('ui_tab'); renderRoomList(); }
@@ -1807,7 +1954,7 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
     // 밑변 광원 = 난이도 색. 난이도가 없는 유즈맵은 안 실어 주고 중립 흰선으로 둔다(.actBtn 기본형)
     if(mapHasDiff()){ const c=DIFF_COLOR[r.diff]||'#888';
       el.style.setProperty('--dc', c); if(joinable) el.style.setProperty('--dcGlow', c); }
-    el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">🔒</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 - '+escHtml(r.host)+(r.opts?' · <span class="riOpt">사용자 지정</span>':'')+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
+    el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+'<span class="riTx">'+escHtml(r.name)+'</span>'+(priv?'<span class="riLock">'+stIco('lock','\u{1F512}')+'</span>':'')+'<span class="riNum">#'+r.num+'</span></div><div class="riSub">방장 - '+escHtml(r.host)+(r.opts?' · <span class="riOpt">사용자 지정</span>':'')+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
     else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };

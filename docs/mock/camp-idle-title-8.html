@@ -1,0 +1,210 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>기지 요약 카드 머리줄 8안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --caS:rgba(255,59,59,.5);        /* 실제 카드의 머리줄 밑선 색(upg 모드) */
+  --cgDim:#8a94a6; --cgMuted:#657085;
+  --hud:#00e5ff; --hud-glow:rgba(0,229,255,.45);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 6px;font-size:12.5px;color:var(--cgDim);line-height:1.7;max-width:960px}
+.lead b{color:#ececec}.lead em{font-style:normal;color:#9fd0ff}
+.grid{display:grid;grid-template-columns:repeat(2,392px);gap:16px;margin-top:20px}
+@media(max-width:830px){.grid{grid-template-columns:392px}}
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px;color:#ececec}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--cgDim);line-height:1.5}
+.cap em{font-style:normal;color:#9fd0ff}
+.cap .h{float:right;font-family:var(--font-num);font-size:11px;color:#7d8792;font-style:normal}
+.stage{padding:12px;background:#07080b}
+
+/* ── 실제 카드 ─────────────────────────────────────────
+   값은 css/10-game.css 의 .cmdG 계열에서 그대로 가져왔다(비교용이라 목업에 옮겨 적었다). */
+.card{background:#0e1218;border:1px solid #1e242e;border-radius:6px;padding:0 10px 0;
+  display:flex;flex-direction:column}
+.head{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
+.head::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--caS),transparent 72%)}
+.ttl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+.n{font-size:13px;font-weight:800;color:#fff;line-height:1.1;white-space:nowrap}
+.s{flex-basis:100%;margin-top:1px;font-size:9.5px;color:var(--cgDim);white-space:nowrap}
+/* 값 격자 */
+.body{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+.info{flex:1 1 auto;min-width:0;padding:8px 0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px;align-content:center;height:100%}
+.stat{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.stat span{font-size:9px;letter-spacing:.06em;color:#8794a8}
+.stat b{font-size:14px;line-height:1.05;color:#e6eefc;font-family:var(--font-num);font-weight:700}
+/* 좁은 변형 */
+.tight .info{padding:6px 0}
+.tight .stats{gap:5px 6px}
+.tight .stat b{font-size:12.5px}
+.tight .stat span{font-size:8.5px}
+/* 라벨형 머리(로딩창 어법) */
+.kick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c}
+/* 세로 제목 */
+/* ⚠ 한글은 writing-mode 만으로 위→아래로 읽힌다. rotate(180deg) 를 같이 걸면 글자가 뒤집힌다(그랬다). */
+.vert{flex:none;writing-mode:vertical-rl;text-orientation:upright;
+  font-size:10px;font-weight:800;letter-spacing:.06em;color:#8794a8;padding:2px 1px;
+  display:flex;align-items:center}
+/* 제목이 첫 칸 */
+.stat.asTtl b{font-size:12.5px;color:#fff}
+.stat.asTtl span{color:#657085}
+/* 머리줄 오른쪽 핵심 수치 */
+.hero{flex:none;display:flex;align-items:baseline;gap:3px;font-family:var(--font-num)}
+.hero b{font-size:17px;font-weight:700;color:var(--hud);text-shadow:0 0 8px var(--hud-glow);line-height:1}
+.hero i{font-style:normal;font-size:10px;color:#7d8792}
+.note{margin-top:24px;font-size:12.5px;color:var(--cgDim);line-height:1.8;max-width:1000px}
+.note b{color:#ececec}.note em{font-style:normal;color:#9fd0ff}
+</style>
+
+<h1>기지 요약 카드 — 머리줄 8안</h1>
+<p class="lead">
+지금 머리줄은 <b>던전 이름</b>(잊혀진 회랑)을 쓴다. 그런데 던전은 <em>좌상단 칩이 이미 말하고 있다</em> — 같은 것을 두 번 말하는 셈이다.<br>
+그래서 갈리는 것은 둘이다: <b>머리줄을 둘 것인가</b>, 둔다면 <b>무엇이라고 부를 것인가</b>. 그리고 머리줄이 있으면 아래 값 구역을 <em>얼마나 조일 것인가</em>.
+</p>
+<p class="lead">
+카드 폭은 실제와 같은 <b>360px</b>, 값 여덟 개도 실제와 같다. 오른쪽 위 숫자는 <b>실제로 잰 카드 높이</b> — 하단 시트가 그만큼 화면을 먹는다.
+</p>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <div class="cell">
+    <div class="cap"><i class="h">83px</i><b>1 — 머리줄 없음</b><i>값만 남긴다. <em>가장 낮고 가장 조용하다.</em><br>무슨 카드인지는 값이 스스로 말한다.</i></div>
+    <div class="stage"><div class="card">
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat"><span>터치 획득</span><b>36</b></div>
+        <div class="stat"><span>자동 수급</span><b>12/초</b></div>
+        <div class="stat"><span>일꾼</span><b>3기</b></div>
+        <div class="stat"><span>인구</span><b>9/18</b></div>
+        <div class="stat"><span>던전 배수</span><b>×2.3</b></div>
+        <div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+        <div class="stat"><span>터치 강화</span><b>Lv.4</b></div>
+        <div class="stat"><span>채취 강화</span><b>Lv.2</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cell">
+    <div class="cap"><i class="h">112px</i><b>2 — 제목만 「내 기지」</b><i>부제를 뺐다. 던전 이름 대신 <em>이 구역이 무엇인지</em>를 말한다.<br>지금과 같은 자리, 한 줄만.</i></div>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="ttl"><div class="n">내 기지</div></div></div>
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat"><span>터치 획득</span><b>36</b></div><div class="stat"><span>자동 수급</span><b>12/초</b></div>
+        <div class="stat"><span>일꾼</span><b>3기</b></div><div class="stat"><span>인구</span><b>9/18</b></div>
+        <div class="stat"><span>던전 배수</span><b>×2.3</b></div><div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+        <div class="stat"><span>터치 강화</span><b>Lv.4</b></div><div class="stat"><span>채취 강화</span><b>Lv.2</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cell">
+    <div class="cap"><i class="h">126px</i><b>3 — 제목 + 부제(지금 형태)</b><i>제목만 <em>던전 이름 → 「내 기지」</em>로 바꿨다.<br>부제가 「고르지 않았다」를 말해 준다.</i></div>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="ttl"><div class="n">내 기지</div><div class="s">아무것도 고르지 않음</div></div></div>
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat"><span>터치 획득</span><b>36</b></div><div class="stat"><span>자동 수급</span><b>12/초</b></div>
+        <div class="stat"><span>일꾼</span><b>3기</b></div><div class="stat"><span>인구</span><b>9/18</b></div>
+        <div class="stat"><span>던전 배수</span><b>×2.3</b></div><div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+        <div class="stat"><span>터치 강화</span><b>Lv.4</b></div><div class="stat"><span>채취 강화</span><b>Lv.2</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cell">
+    <div class="cap"><i class="h">106px</i><b>4 — 작은 라벨 머리</b><i>제목을 <em>자간 넓은 작은 글자</em>로 낮춘다(로딩창 어법).<br>줄은 있되 무게가 없다.</i></div>
+    <div class="stage"><div class="card">
+      <div class="head" style="padding:6px 2px 7px"><div class="ttl"><div class="kick">MY BASE</div></div></div>
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat"><span>터치 획득</span><b>36</b></div><div class="stat"><span>자동 수급</span><b>12/초</b></div>
+        <div class="stat"><span>일꾼</span><b>3기</b></div><div class="stat"><span>인구</span><b>9/18</b></div>
+        <div class="stat"><span>던전 배수</span><b>×2.3</b></div><div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+        <div class="stat"><span>터치 강화</span><b>Lv.4</b></div><div class="stat"><span>채취 강화</span><b>Lv.2</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+  <!-- 5 -->
+  <div class="cell">
+    <div class="cap"><i class="h">83px</i><b>5 — 제목을 왼쪽에 세운다</b><i>머리줄을 없애고 제목을 <em>세로로</em> 옆에 붙였다.<br>세로 공간을 하나도 안 쓴다.</i></div>
+    <div class="stage"><div class="card">
+      <div class="body" style="padding-top:8px;padding-bottom:8px">
+        <div class="vert">내 기지</div>
+        <div class="info" style="padding:0"><div class="stats">
+          <div class="stat"><span>터치 획득</span><b>36</b></div><div class="stat"><span>자동 수급</span><b>12/초</b></div>
+          <div class="stat"><span>일꾼</span><b>3기</b></div><div class="stat"><span>인구</span><b>9/18</b></div>
+          <div class="stat"><span>던전 배수</span><b>×2.3</b></div><div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+          <div class="stat"><span>터치 강화</span><b>Lv.4</b></div><div class="stat"><span>채취 강화</span><b>Lv.2</b></div>
+        </div></div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- 6 -->
+  <div class="cell">
+    <div class="cap"><i class="h">83px</i><b>6 — 제목이 첫 칸</b><i>머리줄을 없애고 <em>격자 첫 칸</em>을 제목으로 쓴다.<br>값은 일곱 개가 된다(강화 둘을 한 칸에).</i></div>
+    <div class="stage"><div class="card">
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat asTtl"><span>지금 보는 것</span><b>내 기지</b></div>
+        <div class="stat"><span>터치 획득</span><b>36</b></div>
+        <div class="stat"><span>자동 수급</span><b>12/초</b></div>
+        <div class="stat"><span>일꾼</span><b>3기</b></div>
+        <div class="stat"><span>인구</span><b>9/18</b></div>
+        <div class="stat"><span>던전 배수</span><b>×2.3</b></div>
+        <div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+        <div class="stat"><span>강화 터치/채취</span><b>4 / 2</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+  <!-- 7 -->
+  <div class="cell">
+    <div class="cap"><i class="h">115px</i><b>7 — 제목 + 오른쪽에 핵심 수치</b><i>머리줄이 놀지 않는다 — <em>지금 초당 얼마 버는지</em>를 크게.<br>값 격자에서는 그 줄을 뺀다.</i></div>
+    <div class="stage"><div class="card">
+      <div class="head"><div class="ttl"><div class="n">내 기지</div></div>
+        <div class="hero"><b>12</b><i>/초</i></div></div>
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat"><span>터치 획득</span><b>36</b></div><div class="stat"><span>일꾼</span><b>3기</b></div>
+        <div class="stat"><span>인구</span><b>9/18</b></div><div class="stat"><span>던전 배수</span><b>×2.3</b></div>
+        <div class="stat"><span>채취 배수</span><b>×9.0</b></div><div class="stat"><span>터치 강화</span><b>Lv.4</b></div>
+        <div class="stat"><span>채취 강화</span><b>Lv.2</b></div><div class="stat"><span>누적 탭</span><b>1.2k</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+  <!-- 8 -->
+  <div class="cell">
+    <div class="cap"><i class="h">112px</i><b>8 — 제목 + 값 구역을 조인다</b><i>3안에서 <em>값 쪽만 좁혔다</em>(글자·간격 축소).<br>머리줄을 두고도 3안보다 14px 낮다.</i></div>
+    <div class="stage"><div class="card tight">
+      <div class="head" style="padding:5px 2px 7px"><div class="ttl"><div class="n">내 기지</div><div class="s">아무것도 고르지 않음</div></div></div>
+      <div class="body"><div class="info"><div class="stats">
+        <div class="stat"><span>터치 획득</span><b>36</b></div><div class="stat"><span>자동 수급</span><b>12/초</b></div>
+        <div class="stat"><span>일꾼</span><b>3기</b></div><div class="stat"><span>인구</span><b>9/18</b></div>
+        <div class="stat"><span>던전 배수</span><b>×2.3</b></div><div class="stat"><span>채취 배수</span><b>×9.0</b></div>
+        <div class="stat"><span>터치 강화</span><b>Lv.4</b></div><div class="stat"><span>채취 강화</span><b>Lv.2</b></div>
+      </div></div></div>
+    </div></div>
+  </div>
+
+</div>
+
+<p class="note">
+<b>머리줄을 둘까</b> — 1·5·6 은 <b>없앤다</b>(가장 낮다). 2·3·4·7·8 은 둔다.
+없애도 되는 이유는 <em>이 카드가 늘 같은 자리에 있고</em>, 값이 스스로 무엇인지 말하기 때문이다.
+반대로 두는 이유는 <em>고른 것이 있을 때</em>(건물·유닛 카드)와 <b>같은 자리에 제목이 서야</b> 화면이 덜 흔들리기 때문이다.<br>
+<b>뭐라고 부를까</b> — 「내 기지」로 적었다. 「기지 요약」·「캠프」·「전체」도 된다. ⛔ 던전 이름은 <b>좌상단 칩이 이미 말한다</b>.<br>
+<b>5 만 다른 점</b> — 제목이 <b>세로로</b> 서서 높이를 하나도 안 쓴다. 대신 가로를 조금 먹고, 세로 글자는 읽는 데 잠깐 걸린다.<br>
+<b>6 만 다른 점</b> — 제목이 <b>값 칸 하나</b>를 차지한다. 그만큼 값 한 줄을 합쳐야 한다(강화 둘을 「4 / 2」로).<br>
+<b>7 만 다른 점</b> — 머리줄 오른쪽에 <b>초당 수급</b>을 크게 세운다. 머리줄이 자리만 차지하지 않는다.<br>
+<b>8 만 다른 점</b> — 머리줄을 두면서도 값 구역을 조여 <b>3안보다 14px 낮다</b>(126 → 112). ⚠ 처음엔 28px 줄 것으로 봤는데 실제로 재니 절반이었다 — 값 글자를 줄여도 <b>격자 두 줄</b>이라 높이가 크게 안 준다.
+</p>
