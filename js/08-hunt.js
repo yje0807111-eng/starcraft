@@ -534,7 +534,14 @@ function hbRoundRate(base, dg){ return Math.pow(base, hbDgK(dg)); }
 //   ⚠ 보상(REW/XP)에는 태우지 않는다. 태우면 중반 고비가 '힘든데 보상도 짜다'가 된다.
 //      균일하게 두면 중반은 손해·후반은 꿀이 되어 돌파 보상이 자연스럽게 붙는다.
 const HB_ROUND_S=0.5;                        // S자 세기 (0 = 균일)
-function hbRoundS(round){ return Math.exp(-HB_ROUND_S*Math.sin(2*Math.PI*(Math.max(1,round||1)-1)/HB_ROUND_MAX)); }
+// ⛔ 주기를 HB_ROUND_MAX 에 묶지 말 것 (2026-08-25).
+//    ⚔ 토벌(dgHbStart)이 이 라운드 축을 빌려 쓴다 — dg=1 · round=층 이라 던전 개념이 없다.
+//    HB_ROUND_MAX 를 99 → 50 으로 줄였을 때 사인 주기가 같이 줄어 **토벌 20~45층이 통째로
+//    다시 위상을 잡았고**, 실측에서 20층 직접 클리어율이 88% → 13% 로 무너졌다(사거리 Lv20).
+//    S자는 '던전 하나의 리듬'인데 토벌에는 그 단위가 없으므로, 주기를 별도 상수로 고정한다.
+//    ⚠ 캠프 던전(50라운드)을 코드로 옮길 때는 그쪽 주기를 따로 줄 것 — HUNT_R1.md §6-1.
+const HB_S_PERIOD=99;                        // S자 한 주기 (라운드 수)
+function hbRoundS(round){ return Math.exp(-HB_ROUND_S*Math.sin(2*Math.PI*(Math.max(1,round||1)-1)/HB_S_PERIOD)); }
 
 // 진행도 누적 배수 — 던전마다 기울기가 다르므로 이전 던전들을 곱해서 온다.
 // ⚠ 매 스폰마다 불리므로 던전별 누적은 캐시한다(던전은 10개뿐이다).

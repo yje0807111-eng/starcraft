@@ -6485,6 +6485,24 @@ async function groupLobby(){
       hbSetSess('dg',null); document.body.classList.remove('dgFight'); hbUse('hunt');
       if(HBS.hunt) HBS.hunt.bg=false; c.dgFloors={}; } });
   // 실패해도 열쇠는 안 쓴다 — 자동이 1초 만에 끝나므로 실패가 잦아진다(이 규칙이 없으면 열쇠가 순식간에 마른다)
+  // ⚔ 토벌 난이도가 사냥터 라운드 상한에 끌려다니지 않는다 — 실측으로 잡은 회귀의 재발 방지.
+  //    선례(2026-08-25): HB_ROUND_MAX 를 99 → 50 으로 줄였더니 hbRoundS 의 사인 주기가 같이
+  //    줄어 **토벌 20~45층이 통째로 위상을 다시 잡았다**. dg-bench 실측에서 20층 직접
+  //    클리어율이 88% → 13% 로 무너졌다(사거리 Lv20). S자 주기는 '던전 하나의 리듬'인데
+  //    토벌에는 그 단위가 없다 — 그래서 HB_S_PERIOD 로 떼어 냈다.
+  await step('토벌 난이도는 라운드 상한(HB_ROUND_MAX)에 안 묶인다', async()=>{
+    skipIf(typeof hbRoundS!=='function','사냥터 곡선 없음');
+    assert(typeof HB_S_PERIOD==='number' && HB_S_PERIOD>0, 'HB_S_PERIOD 가 없다 — S자 주기가 다시 HB_ROUND_MAX 에 묶였나');
+    assert(!/HB_ROUND_MAX/.test(String(hbRoundS)), 'hbRoundS 가 HB_ROUND_MAX 를 다시 참조한다');
+    // 위상 잠금 — 주기가 바뀌면 이 셋 중 하나는 반드시 어긋난다
+    const want=[[1,1.000],[20,0.627],[38,0.700]];
+    for(const [r,v] of want){ const got=hbRoundS(r);
+      assert(Math.abs(got-v)<0.005, '토벌 '+r+'층 S자 계수가 달라졌다: '+got.toFixed(3)+' (기대 '+v+')'); }
+    // 토벌 세션은 dg=1 이라 hbCurve 의 던전 누적을 안 탄다 — 상한이 체력에 새어들 길이 없다
+    assert(hbFoeHp(1,20,1)>0 && Math.abs(hbFoeHp(1,20,1)/(18*hbCurve(HB_ROUND_HP,1,20)*hbRoundS(20))-1)<1e-9,
+      '토벌 체력식이 hbRoundS 밖의 무언가를 더 탄다');
+    return 'S자 주기 '+HB_S_PERIOD+' · 20층 계수 '+hbRoundS(20).toFixed(3)+' 고정'; });
+
   await step('토벌 실패는 열쇠를 쓰지 않는다', async()=>{
     skipIf(typeof dgStart!=='function','토벌 없음');
     const c=CHAR(); c.dgFloors={}; const p=PROF(); p.dgKeys={};
