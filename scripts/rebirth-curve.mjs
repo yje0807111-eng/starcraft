@@ -110,3 +110,28 @@ for(let t = 1; t <= TIER_N; t++){
 }
 console.log(`\n트리 전체 ${F(cum)} 포인트 · 노드 ${1 + TIER_N*8}개 (시작점 1 + ${TIER_N}티어 × 8)`);
 console.log(`마지막 티어 T${TIER_N} 은 던전 ${DUNGEONS} R${ROUNDS} 에서 ${(tierCost(TIER_N)/gainPts(DUNGEONS,ROUNDS)).toFixed(1)}회 환생 — 의도된 최종 반복 구간이다.`);
+
+// ══ E. 가정 검증 (§4-5-5 · §5 B) ═════════════════════════════════════════════
+//   트리를 §4-4-3 대로 채워 나갈 때, 매 티어 시점의 「누적 환생 배수」와 「화력 ÷ 난이도」를 잰다.
+console.log('\n=== E. 가정 검증 ===');
+const LADDER = [1, 1.5, 2.5, 5, 11, 25];        // 계열 누적 효과 (§4-5) — 등장 0~5차
+const ENEMY_CUT = 5;                            // 적 약화 최대 (§4-5-4)
+const stageOf = t => Math.min(5, Math.floor((t - 1) / 4) + 1);
+function openAt(tier){                          // 그 티어가 열리는 지점과 필요한 환생 횟수
+  let c = NODE_BASE;
+  for(let k = 1; k <= tier; k++) c += tierCost(k);
+  for(let d = 1; d <= DUNGEONS; d++) for(let r = 1; r <= ROUNDS; r++)
+    if(gainPts(d, r) * TRIES >= c) return { d, r, n: tierCost(tier) / gainPts(d, r) };
+  return { d: DUNGEONS, r: ROUNDS, n: tierCost(tier) / gainPts(DUNGEONS, ROUNDS) };
+}
+let accN = 0, accMul = 0;
+console.log('티어  열림      환생(누적)  누적 배수  화력          난이도        화력÷난이도');
+for(let t = 1; t <= TIER_N; t++){
+  const o = openAt(t); accN += o.n; accMul += o.n * gainMul(o.d, o.r);
+  const power = Math.pow(LADDER[stageOf(t)], 8) * Math.max(1, accMul) * ENEMY_CUT * mineral(o.d, o.r);
+  const need  = diff(o.d, o.r);
+  if(t % 4 === 0 || t === TIER_N)
+    console.log(`T${P(t,4)} ${P('D'+o.d+' R'+o.r,10)}${P(accN.toFixed(0)+'회',12)}×${P(accMul.toFixed(0),10)}${P(F(power),14)}${P(F(need),14)}${(power/need).toFixed(2)}배`);
+}
+console.log(`\n⭐ 트리 완주까지 환생 ${accN.toFixed(0)}회 · 누적 배수 ×${accMul.toFixed(0)}`);
+console.log('⭐ 화력÷난이도가 전 구간 1 부근이면 「중반 구멍」이 없는 것이다. ⚠ 어디까지나 해석적 모델 — 엔진 실측은 별개다.');
