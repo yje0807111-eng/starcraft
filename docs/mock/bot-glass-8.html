@@ -1,0 +1,230 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>하단 프로필 — 판 투명도 4안 + 로딩·로그인 문법 4안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   기준 = 1안(칸 라운드 3px). 여덟 안 모두 **칸(작고 짙은 검정 네모)은 그대로 둔다.**
+   바뀌는 것은 그 뒤의 **가장 큰 배경 판**(.bot) 하나뿐이다.
+     T1~T4 — 그 판의 투명도·경계를 조절
+     L1~L4 — 로딩/로그인 화면의 문법을 그대로 가져온다(값은 css/20-lobby.css 실제 값)
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --metal-edge:#3c3e46;
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+  --r-bar:3px;
+  --ca:#5cd6ff; --caG:rgba(92,214,255,.45); --caS:rgba(92,214,255,.5); --caL:#dff4ff;
+  --cgDim:#8a94a6; --cgMuted:#657085;
+  --neon:#ff3b3b; --neon-d2:#7a1414; --neon-glow:rgba(255,59,59,.55);
+  --font-num:'DIN Alternate','Bahnschrift',system-ui,sans-serif;
+  /* ── 로딩·로그인 실제 값 (css/20-lobby.css) ── */
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --loadScrim:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+    rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,390px);gap:14px;justify-content:start}
+.col{width:390px}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base{color:#c9cfd8}
+.hd.grp{color:#ffc978}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:58px}
+.sub b{color:#dfe6f0}
+
+/* 전장 — 투명도가 뜻을 가지려면 뒤에 볼 것이 있어야 한다 */
+.stage{position:relative;padding:104px 0 0;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#2c3a4e 0%,#22303f 30%,#3c5040 52%,#6b5533 74%,#3a2a1c 100%)}
+.stage::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 24% 78%,rgba(255,196,112,.52),transparent 42%),
+             radial-gradient(ellipse at 72% 92%,rgba(150,255,190,.30),transparent 40%),
+             radial-gradient(ellipse at 82% 22%,rgba(120,170,230,.32),transparent 50%)}
+/* 전장에 '볼거리' — 판이 투명해졌을 때 무엇이 비치는지 보이게 */
+.stage::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:190px;
+  background:repeating-linear-gradient(72deg,rgba(255,255,255,.06) 0 3px,transparent 3px 26px),
+             repeating-linear-gradient(-64deg,rgba(255,255,255,.05) 0 2px,transparent 2px 34px)}
+
+/* ══ 가장 큰 배경 판 — 안들이 덮는 것은 오직 이것 ══ */
+.bot{position:relative;z-index:2;padding:8px 8px 0;
+  background:rgba(6,8,12,.86);border-top:1px solid rgba(255,255,255,.07)}
+
+/* ══ 프로필 — 칸은 여덟 안 전부 동일(짙은 검정 유지) ══ */
+.cmdG{position:relative;height:180px;display:flex;flex-direction:column}
+.cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
+.cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--caS),transparent 72%)}
+.cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+.cgN{font-size:15px;font-weight:800;color:#fff;line-height:1.1;text-shadow:0 1px 4px rgba(0,0,0,.85)}
+.cgS{flex-basis:100%;margin-top:1px;font-size:10px;color:var(--cgDim);text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.cgS b{color:#cfe0f5;font-weight:700}
+.cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1;
+  text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.cgHpsh .hpv{color:#7ee081} .cgHpsh .shv{color:#8fd8ff}
+.cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px}
+.cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+.cgInfo{position:relative;flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:3px;
+  padding:6px 8px;overflow:hidden;background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)}
+.cgDn{font-size:12px;font-weight:800;color:#eaf1fb;line-height:1.15}
+.cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.35}
+.cgVal{display:flex;align-items:baseline;gap:4px;font-family:var(--font-num);font-weight:700;margin-top:auto}
+.cgVal .cur{font-size:13px;color:#c2ccda} .cgVal .arw{color:var(--cgMuted);font-size:10px}
+.cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG)}
+.cgGrid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;gap:2px;padding:6px 2px 5px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:var(--bpFace);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+.cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;
+  color:var(--ca);border:1px solid var(--caS);border-radius:2px;background:var(--bpTile);
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.cgPro>i{font-style:normal;position:relative;z-index:2}
+.cgPro::after{content:'';position:absolute;inset:0;z-index:1;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
+             linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.55))}
+.cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px}
+
+/* ══ 하단 네비바 — 새 문법(고정) ══ */
+.navBar{position:relative;height:42px;padding:0 6px;margin-top:6px;display:flex;align-items:center;overflow:visible}
+.navIt{position:relative;flex:1 1 0;min-width:0;height:44px;display:flex;align-items:center;justify-content:center;gap:5px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap;color:#8b939f;
+  text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.navIt .ic{width:17px;height:17px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+.navIt.on{color:#fff}
+.navIt.on::after{content:'';position:absolute;left:11%;right:11%;bottom:1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+  box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+
+/* ═══════════ T · 판의 투명도만 만진다 ═══════════ */
+/* T1 — 그냥 옅게 */
+.t1 .bot{background:rgba(6,8,12,.55)}
+/* T2 — 세로 그라데: 위는 거의 투명, 아래로 갈수록 짙게 → 윗 경계가 사라진다 */
+.t2 .bot{border-top:0;
+  background:linear-gradient(180deg,rgba(6,8,12,.22) 0%,rgba(6,8,12,.62) 34%,
+    rgba(6,8,12,.86) 70%,rgba(6,8,12,.93) 100%)}
+/* T3 — 옅게 + 윗변 선을 좌우로 사라지는 헤어라인으로(전폭 실선 폐지 — 로그인이 그런 이유) */
+.t3 .bot{background:rgba(6,8,12,.52);border-top:0}
+.t3 .bot::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:3;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+/* T4 — 옅게 + 블러: 전장이 비치되 형태는 뭉갠다 */
+.t4 .bot{background:rgba(6,8,12,.40);backdrop-filter:blur(7px);border-top:0}
+.t4 .bot::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:3;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent)}
+
+/* ═══════════ L · 로딩·로그인 문법을 가져온다 ═══════════ */
+/* 공통: 판을 없애고 딤이 그 일을 한다 */
+.l1 .bot,.l2 .bot,.l3 .bot,.l4 .bot{background:none;border-top:0}
+.l1 .bot::before,.l2 .bot::before,.l3 .bot::before,.l4 .bot::before{
+  content:'';position:absolute;left:0;right:0;bottom:0;top:-46px;z-index:0;pointer-events:none;
+  background:var(--loadDim)}
+.l1 .cmdG,.l2 .cmdG,.l3 .cmdG,.l4 .cmdG,.l1 .navBar,.l2 .navBar,.l3 .navBar,.l4 .navBar{z-index:1}
+
+/* L2 — 딤 + 국소 스크림 타원 한 장(#titleBg::before 값) */
+.l2 .bot::after{content:'';position:absolute;left:-10%;right:-10%;bottom:-30px;top:-70px;z-index:0;
+  pointer-events:none;background:var(--loadScrim)}
+
+/* L3 — 로그인 문법: 전폭 선 폐지 → 짧은 가운데 선 56px · 머리줄 가운데 정렬 */
+.l3 .cgHead{flex-direction:column;align-items:center;gap:2px;padding:4px 2px 10px}
+.l3 .cgTtl{flex:none;justify-content:center;text-align:center}
+.l3 .cgS{text-align:center}
+.l3 .cgHead::after{left:50%;right:auto;width:56px;transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+
+/* L4 — 로딩 도크 문법: 딤 + 하단 전폭 3px 막대 + 라벨 자간 .28em */
+.l4 .cgHead{padding-bottom:7px}
+.l4 .cgHead::after{left:0;right:0;height:3px;border-radius:2px;overflow:hidden;
+  background:rgba(255,255,255,.12)}
+.l4 .cgHead::before{content:'';position:absolute;left:0;bottom:0;width:62%;height:3px;z-index:2;
+  border-radius:2px;background:linear-gradient(90deg,var(--neon-d2),var(--neon));
+  box-shadow:0 0 10px var(--neon-glow)}
+.l4 .cgEb{letter-spacing:.28em;font-size:7.5px}
+.l4 .cgN{letter-spacing:.02em}
+</style></head><body>
+
+<template id="prof">
+  <div class="cmdG">
+    <div class="cgHead">
+      <div class="cgTtl"><span class="cgN">레인저</span>
+        <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+      <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+    </div>
+    <div class="cgBody">
+      <div class="cgInfo">
+        <div class="cgEb">다음 강화</div>
+        <div class="cgDn">보병 무기</div>
+        <div class="cgDd">보병 계열 공격력 +2</div>
+        <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+      </div>
+      <div class="cgGrid">
+        <div class="cgSlot pick"><div class="cgPro"><i>🎯</i></div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+        <div class="cgSlot"><div class="cgPro"><i>🔥</i></div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+        <div class="cgSlot"><div class="cgPro"><i>✚</i></div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+        <div class="cgSlot"><div class="cgPro"><i>🎖</i></div><div class="cgName">저격수</div><div class="cgSub">90</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="navBar">
+    <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+  </div>
+</template>
+
+<div class="col"><p class="hd base">기준 — 1안 (판 불투명 .86)</p>
+  <p class="sub">지금 가장 큰 배경 판은 <b>rgba(6,8,12,.86)</b> + 윗변 전폭 실선.
+     아래 여덟은 <b>이 판 하나만</b> 바꾼다 — 칸(작고 짙은 검정 네모)은 전부 그대로.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col t1"><p class="hd">T1 — 그냥 <em>옅게</em> (.86 → .55)</p>
+  <p class="sub">가장 단순한 한 줄. 전장의 색이 판 너머로 배어 나온다.
+     윗변 전폭 실선은 그대로라 경계는 여전히 또렷하다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col t2"><p class="hd">T2 — <em>세로 그라데</em>로 (.22 → .93)</p>
+  <p class="sub">위는 거의 투명, 아래로 갈수록 짙게. <b>윗 경계 자체가 사라져</b>
+     전장에서 콘솔로 자연스럽게 넘어간다. 로딩 딤과 같은 발상.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col t3"><p class="hd">T3 — 옅게 + <em>짧아지는 윗변</em></p>
+  <p class="sub">.52 + 윗변을 <b>좌우로 사라지는 헤어라인</b>으로. 전폭 실선은 그림을 가로질러
+     아트를 '표'로 만든다 — 로그인이 전폭 선을 버린 그 이유.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col t4"><p class="hd">T4 — 옅게 + <em>블러</em></p>
+  <p class="sub">.40 + <b>backdrop blur 7px</b>. 전장이 비치되 형태는 뭉개져 글자가 산다.
+     ⚠ 저사양에서 블러는 비싸다(<b>body.lite</b>에서 꺼야 한다).</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col l1"><p class="hd grp">L1 — 로딩 딤 <em>규격 그대로</em></p>
+  <p class="sub">판을 없애고 <b>#titleBg::after 값을 그대로</b> 쓴다
+     (<b>.06 → .10(40%) → .62(74%) → .96</b>). 로딩·로그인·타이틀이 쓰는 바로 그 곡선.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col l2"><p class="hd grp">L2 — L1 + <em>국소 스크림 타원</em></p>
+  <p class="sub">L1 위에 <b>#titleBg::before</b>의 타원 스크림 한 장을 더한다.
+     「글자가 앉을 자리만」 어둡게 파는 장치 — 가운데가 짙고 끝은 0.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col l3"><p class="hd grp">L3 — 로그인 문법 · <em>짧은 가운데 선</em></p>
+  <p class="sub">L1 + 머리줄을 <b>가운데 정렬</b>하고 구분선을 <b>56px 짧은 가운데 선</b>으로.
+     로그인 허브의 행 구분(<b>.authWay+.authWay::before</b>) 값 그대로.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col l4"><p class="hd grp">L4 — 로딩 도크 문법 · <em>3px 막대</em></p>
+  <p class="sub">L1 + 머리줄 밑을 <b>전폭 3px 막대</b>로(<b>.opBarWrap/.opBar</b> 값 그대로 — 붉은 그라데 + 광).
+     라벨 자간도 로딩과 같은 <b>.28em</b>. 하단이 로딩 도크처럼 읽힌다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<script>
+const t=document.getElementById('prof');
+document.querySelectorAll('[data-fill]').forEach(h=>h.appendChild(t.content.cloneNode(true)));
+</script>
+</body></html>
