@@ -10,9 +10,12 @@ const RB_STEP  = 0.003;                                // 던전당 라운드 �
 const DG_STEP  = Number(process.argv[2] ?? 3);         // 던전 문턱 (앞 던전 50라운드분 위에 얹는 배수)
 
 // --- 미네랄 배율 (§6-1) : 라운드당 증가폭이 던전마다 커진다 ---
-const M_BASE   = 1.5;                                  // 각 던전 R1 의 기본값(×2^(던전-1) 이 곱해진다)
-const M_R0     = 0.01;                                 // 던전 1 의 라운드당 증가
-const M_R_STEP = 0.006;                                // 던전당 그 증가폭이 얼마나 커지는가
+// ⛔ ×2^(던전-1) 로 두면 던전 5 부터 문턱에서 배율이 '내려간다'(라운드 보너스가 계단을 앞지른다).
+//    그래서 난이도와 같은 방식으로 「앞 던전 R50 × 문턱」에서 이어붙인다.
+const M_BASE   = 1.5;                                  // 던전 1 R1
+const M_STEP   = 1.5;                                  // 미네랄 문턱 (앞 던전 R50 대비)
+const M_C0     = 0.0067;                               // 던전 1 의 라운드당 증가 비율
+const M_C_STEP = 0.004;                                // 던전당 그 비율이 얼마나 커지는가
 
 // --- 환생 보상 (§4-2) : 기준량은 재화가 키우고, 깊이 배수는 완만하게 ---
 const V0       = 1e6;                                  // 기준선 = 누적 100만 (첫 환생 관문 · 플레이 약 10시간)
@@ -36,7 +39,11 @@ const tierFactor = t => Object.entries(isMile(t) ? MIX_MILE : MIX).reduce((a,[g,
 const rbase   = d => RB0 + (d - 1) * RB_STEP;
 const dgStep  = d => Math.pow(rbase(d - 1), ROUNDS - 1) * DG_STEP;
 function diff(d, r){ let x = 1; for(let k = 2; k <= d; k++) x *= dgStep(k); return x * Math.pow(rbase(d), r - 1); }
-const mineral  = (d, r) => (M_BASE + (r - 1) * (M_R0 + (d - 1) * M_R_STEP)) * Math.pow(2, d - 1);
+const mCoef    = d => M_C0 + (d - 1) * M_C_STEP;
+const M_BASE_D = (() => { const b = [0, M_BASE];
+  for(let d = 2; d <= DUNGEONS; d++) b[d] = b[d-1] * (1 + (ROUNDS-1)*mCoef(d-1)) * M_STEP;
+  return b; })();
+const mineral  = (d, r) => M_BASE_D[d] * (1 + (r - 1) * mCoef(d));
 // 재화 누적은 난이도에 비례한다고 본다 — 그 난이도를 이길 군대를 미네랄로 사기 때문. ⚠ 실측 필요(§5 D)
 const wealth   = (d, r) => V0 * diff(d, r);
 const gainPts  = (d, r) => Math.sqrt(wealth(d, r) / V0) * Math.pow(P_DG, d - 1) * Math.pow(P_RD, r - 1);
@@ -59,7 +66,7 @@ for(let d = 1; d <= DUNGEONS; d++)
 
 console.log('\n=== B. 던전 안에서 라운드가 오를 때 (§4-6-B) ===');
 for(const d of [1, 5, DUNGEONS]){
-  console.log(` 던전 ${d} (라운드밑 ${rbase(d).toFixed(3)} · 난이도 +${((rbase(d)-1)*100).toFixed(1)}%/칸 · 미네랄 +${(M_R0+(d-1)*M_R_STEP).toFixed(3)}/칸 · 포인트 +${(Math.sqrt(rbase(d))*P_RD*100-100).toFixed(1)}%/칸 · 50라운드 누적 난이도 ×${F(Math.pow(rbase(d),ROUNDS-1))})`);
+  console.log(` 던전 ${d} (라운드밑 ${rbase(d).toFixed(3)} · 난이도 +${((rbase(d)-1)*100).toFixed(1)}%/칸 · 미네랄 +${F(M_BASE_D[d]*mCoef(d))}/칸 · 포인트 +${(Math.sqrt(rbase(d))*P_RD*100-100).toFixed(1)}%/칸 · 50라운드 누적 난이도 ×${F(Math.pow(rbase(d),ROUNDS-1))})`);
   console.log('   라운드  미네랄배율  적 난이도    환생 포인트');
   for(const r of [1,10,20,30,40,50])
     console.log(`   R${P(r,7)}${P('×'+mineral(d,r).toFixed(2),12)}${P(F(diff(d,r)),13)}${F(gainPts(d,r))}`);
