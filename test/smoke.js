@@ -5309,6 +5309,10 @@ async function groupLobby(){
   await step('캠프 좌상단: 던전 칩(왼쪽 광원 띠 + 두 줄)', async()=>{
     skipIf(typeof curChipHTML!=='function','칩 함수 없음');
     const t=$('curTitle'); assert(t,'재화 바 왼쪽 슬롯(#curTitle)이 없음');
+    // ⚠ 아래는 전부 try/finally 안이다 — 중간에 실패해도 캠프 스텁이 남으면 **뒤 검사가 줄줄이 깨진다**
+    //   (실제로 그랬다: 칩이 안 걷혀 상점 제목 자리에 던전 이름이 남았다).
+    const _on0=window.campIsOn, _st0=window.campState;
+    try{
     // ① 마크업 — 이름·라벨·숫자·진행 막대가 다 들어간다
     t.classList.add('asChip');
     t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10});
@@ -5338,6 +5342,50 @@ async function groupLobby(){
       if(was) curShow(false);
       assert(bh>0,'재화 바 높이를 못 쟀다 — 이 검사가 헛돈다');
       assert(ch<=bh,'칩이 재화 바를 넘는다(바 밖으로 삐져나온다): 칩 '+ch.toFixed(1)+'px > 바 '+bh.toFixed(1)+'px'); }
+    // ②-3 칩이 상단 바를 밀어 더보기(☰)를 화면 밖으로 내보내지 않는다.
+    //   ⚠ 두 겹으로 잰다. ⓐ 재화가 커져도 ☰ 가 화면 안 (칩이 줄어드는가) ⓑ 보통 재화에서 칩 폭 예산.
+    //     진행 막대를 라운드 **오른쪽**에 두었을 때 칩이 134px 이 되어 ☰ 가 밀렸다 — ⓑ 가 그걸 잡는다.
+    //     ⓐ 는 그 뒤에도 남아 있던 진짜 원인(재화가 261~305px 까지 자란다)을 잡는다.
+    { const CHIP_W_MAX=110;   // 좌상단 칩 폭 예산(px) — 옛 프로필(≈138px)보다 좁게 잡는다
+      const bar=$('curBar'), ph=$('phone'), set=$('curSettingsBtn'), p=PROF();
+      const was=bar.classList.contains('hide'); if(was) curShow(true);
+      const m0=p.pcoin, g0=p.gas, j0=p.gem;                 // ⚠ 미네랄은 p.mineral 이 아니라 **p.pcoin** 이다
+      const on0=window.campIsOn, st0=window.campState;
+      window.campIsOn=()=>true; window.campState=()=>({dg:3, rnd:27});   // 라운드까지 있는 쪽이 라벨이 길어 최악이다
+      // ⚠ 캠프에서는 재화가 프로필이 아니라 **G.tech.credit/energy** 에서 온다(updateCurBar 의 _camp 경로).
+      //   프로필만 세우면 화면 값이 안 바뀌어 이 검사가 통째로 헛돈다(실제로 '5,156' 을 재고 있었다).
+      const T=(typeof G!=='undefined')?G.tech:null, tc0=T?T.credit:0, te0=T?T.energy:0;
+      const setRes=(v)=>{ p.pcoin=v; p.gas=v; p.gem=v; if(T){ T.credit=v; T.energy=v; } updateCurBar(); };
+      const wid=()=>$('curTitle').getBoundingClientRect().width;
+      const over=()=>set.getBoundingClientRect().right - ph.getBoundingClientRect().right;
+      // ⓑ 보통 재화 — 칩 폭 예산. 옛 좌상단 프로필(≈138px)보다 좁아야 한다.
+      setRes(1240);
+      const wNormal=wid();
+      assert(wNormal<=CHIP_W_MAX,'칩이 예산('+CHIP_W_MAX+'px)보다 넓다: '+wNormal.toFixed(0)+'px '
+        +'— 좌상단은 재화 바와 폭을 나눠 쓴다(막대를 라운드 오른쪽에 두면 134px 이 된다)');
+      // ⓐ 재화가 커져도 ☰ 는 화면 안. 표기가 실제로 길어졌는지 먼저 확인한다(안 그러면 통째로 헛돈다).
+      setRes(99999);
+      assert($('curMin').textContent==='99,999','재화를 큰 값으로 못 세웠다 — 이 검사가 헛돈다: '+$('curMin').textContent);
+      const o1=over(), w1=wid();
+      setRes(1e70);
+      assert($('curMin').textContent.length>=8,'지수 표기가 안 나왔다 — 최악을 못 쟀다: '+$('curMin').textContent);
+      const o2=over(), w2=wid();
+      // 줄어든 칩에서 이름이 잘리는가. ⚠ rect 로는 못 잰다 — 요소 폭은 컨테이너를 따라 줄고 **글자만** 넘친다.
+      //   그래서 규칙 자체를 본다(이 경우엔 규칙이 곧 증상 방지책이다).
+      //   ⚠ 값을 **여기서 바로 뽑는다** — getComputedStyle 은 live 라, 아래에서 칩을 다시 그리면
+      //     잡아 둔 노드가 교체돼 빈 문자열이 된다(그래서 한 번 헛돌았다).
+      const nmOv=(()=>{ const e=t.querySelector('.cdNm'); if(!e) return {o:'(이름 없음)', t:''};
+        const c=getComputedStyle(e); return {o:c.overflowX, t:c.textOverflow}; })();
+      window.campIsOn=on0; window.campState=st0;
+      p.pcoin=m0; p.gas=g0; p.gem=j0; if(T){ T.credit=tc0; T.energy=te0; } updateCurBar();
+      if(was) curShow(false);
+      assert(o1<=0,'재화 6자리에서 ☰ 가 화면 밖으로 '+o1.toFixed(1)+'px 나갔다(칩 '+w1.toFixed(0)+'px)');
+      assert(o2<=0,'재화 지수 표기에서 ☰ 가 화면 밖으로 '+o2.toFixed(1)+'px 나갔다(칩 '+w2.toFixed(0)+'px)');
+      assert(w2<w1,'재화가 커졌는데 칩이 안 줄었다 — 줄어들지 않으면 언젠가 ☰ 를 민다');
+      assert(nmOv.o==='hidden' && nmOv.t==='ellipsis',
+        '칩이 줄어들 때 던전 이름이 안 잘린다 — 글자가 칩을 뚫고 나간다(overflow-x '+nmOv.o+' / '+nmOv.t+')');
+      // 칩을 다시 세워 아래 검사가 이어지게 한다
+      t.classList.add('asChip'); t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10}); }
     // ③ 다른 화면으로 가면 칩은 걷히고 글자로 돌아온다(안 걷으면 상점 제목 자리에 던전이 남는다)
     curSetTitle('상점');
     assert(!t.classList.contains('asChip'),'화면이 바뀌었는데 칩이 안 걷혔다');
@@ -5353,8 +5401,12 @@ async function groupLobby(){
       const b=campChipInfo();
       assert(b && b.lab==='라운드' && b.cur===27 && b.max===99,'라운드가 생겨도 안 따라감: '+JSON.stringify(b));
       window.campIsOn=on; window.campState=st; }
-    curSetTitle('');
-    return '이름·던전 3/10 · 막대 30% · 바 안에 들어감 · 걷힘 확인';
+    return '이름·던전 3/10 · 막대 30% · 바 안에 들어감 · ☰ 안 밀림 · 걷힘 확인';
+    } finally {
+      window.campIsOn=_on0; window.campState=_st0;
+      curSetTitle('');            // 칩을 확실히 걷는다 — 남으면 다른 화면 제목 자리를 차지한다
+      updateCurBar();
+    }
   });
 
   // 🏕 던전·라운드 드롭다운(2026-08-25) — 칩을 누르면 칩 아래로 자란다.
