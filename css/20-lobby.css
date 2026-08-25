@@ -479,6 +479,8 @@
      제목 13px 흰 굵은 글씨 › 번호 12.5px 회색 숫자글꼴 › 방장 9.5px 흐린 본문글꼴.
      ⚠ 크기는 px 이 아니라 em — 이름(.riName)에 매달아 두면 이름을 키워도 비율이 유지된다. */
   #rooms .riNum{color:#78828e;font-weight:700;font-size:.96em;margin:0;flex:none}
+  /* 방장 이름 = 셋 중 맨 아래 층. 공용 --fs-xs(9.5px)보다 반 단 더 내려 번호와 확실히 갈린다 */
+  #rooms .riSub{font-size:9px}
   .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
   /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
   .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}
