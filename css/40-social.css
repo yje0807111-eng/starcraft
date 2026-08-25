@@ -64,6 +64,10 @@
   /* 썸네일 48 → 42px. 카드가 없어진 자리에서 48px 은 글자 세 줄을 눌러 혼자 무거웠다.
      줄 높이가 71 → 60px 로 낮아져 목록에 맵이 한 장 더 들어온다(C1 을 고른 이유). */
   #mapSelect .mapThumb{width:42px;height:42px;border-color:rgba(255,255,255,.08)}
+  /* 빈 목록(즐겨찾기 0개) — 카드가 없어지니 안내문이 맨 위에 붙고 아래가 통째로 검게 비어
+     '화면이 깨졌나' 로 읽혔다. 목록이 flex 열이라 margin:auto 하나면 세로 가운데로 온다.
+     ⚠ .msEmpty 자체(padding:28px)는 건드리지 않는다 — 다른 화면도 쓰는 공용 문구다. */
+  #mapSelect .msEmpty{margin:auto;padding:0 12px}
   /* 배경 가리개를 한 겹 더 — 목록이 카드를 잃고 **아트 위에 바로** 앉았기 때문이다.
      가운데 구간이 .2 뿐이라 밝은 행성 위에서 설명 글자(#929ba6)가 씻겼다.
      ⛔ 공용 규칙을 고치지 말 것 — #rooms·#createPanel·#shopScreen·#gearScreen·#upgScreen 은
