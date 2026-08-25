@@ -465,7 +465,8 @@
     color:color-mix(in srgb,var(--dc,#888) 68%,#8d949d)}
   /* 방 번호 = 이름이 아니라 **식별자**다. ⛔ 시안(--hud)은 DESIGN §2 에서 '지금 선택된 것' 전용이고
      화면당 한 곳인데, 목록 열 줄이 전부 그 색을 쓰고 있었다. 중립 회색으로 물러난다. */
-  #rooms .riNum{color:#78828e;font-weight:700}
+  /* ⚠ 크기를 px 로 박지 말 것 — 방 이름(.riName)에 매달아 두면 이름 크기를 바꿔도 비율이 유지된다 */
+  #rooms .riNum{color:#78828e;font-weight:700;font-size:.86em}
   .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
   /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
   .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}
