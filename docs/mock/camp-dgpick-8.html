@@ -1,0 +1,356 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>캠프 던전 고르기 8안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-ti:'IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --acRGB:255,59,59;                 /* 로그인·로딩의 액센트(빨강) — 주 동작 전용 */
+  --hud:#00e5ff; --hud-glow:rgba(0,229,255,.45);   /* 좌상단 칩과 같은 청록 — 「지금 여기」 전용 */
+  --txt:#dfe7f0; --mute:#8a929c; --dim:#6f7a88;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:22px 16px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 4px;font-size:19px;letter-spacing:.02em}
+.lead{margin:0 0 6px;font-size:12.5px;color:var(--mute);line-height:1.7;max-width:960px}
+.lead b{color:#ececec}.lead em{font-style:normal;color:#9fd0ff}
+.lead code{color:#9fd0ff;font-family:var(--font-num)}
+.grid{display:grid;grid-template-columns:repeat(2,390px);gap:16px;margin-top:20px}
+@media(max-width:820px){.grid{grid-template-columns:390px}}
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px;color:#ececec}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--mute);line-height:1.5}
+.cap em{font-style:normal;color:#9fd0ff}
+
+/* ── 폰 ───────────────────────────────────────────────── */
+.ph{position:relative;height:600px;overflow:hidden;background:#05070c;font-size:13px;color:var(--txt)}
+.art{position:absolute;inset:0;background-size:cover;background-position:center;
+  transition:opacity .3s}
+/* 🌑 스크림 = 판을 두르지 않고 읽히게 하는 장치(로그인이 쓰는 것과 같은 문법) */
+.scrim{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(4,6,10,.72),rgba(4,6,10,.42) 32%,rgba(4,6,10,.86))}
+.scrim.deep{background:linear-gradient(180deg,rgba(4,6,10,.86),rgba(4,6,10,.72) 40%,rgba(4,6,10,.94))}
+/* 좌상단 칩(기존) — 어디서 열리는지 보이라고 같이 그린다 */
+.chip{position:absolute;left:11px;top:10px;z-index:5;display:inline-flex;align-items:stretch;
+  padding:0 8px 0 0;border-radius:3px;background:rgba(8,12,18,.62);
+  border:1px solid rgba(0,229,255,.42);font-size:11px;line-height:1.1}
+.chip .rail{width:2px;margin-right:7px;border-radius:2px 0 0 2px;background:var(--hud);
+  box-shadow:0 0 6px var(--hud-glow)}
+.chip .bd{display:flex;flex-direction:column;justify-content:center;padding:2px 0 3px}
+.chip .nm{font-weight:800;color:#d6e2f0}
+.chip .sb{display:flex;align-items:center;gap:5px;line-height:1}
+.chip .lb{font-size:9.5px;font-weight:800;letter-spacing:1px;color:rgba(214,226,240,.62)}
+.chip .n{font-family:var(--font-num);font-size:12px;font-weight:800;color:var(--hud);
+  text-shadow:0 0 6px var(--hud-glow)}
+.chip .dm{font-family:var(--font-num);font-size:11px;color:rgba(214,226,240,.5)}
+.chip.press{border-color:rgba(0,229,255,.8);background:rgba(8,12,18,.8)}
+
+/* 팝업 공통 — 판이 없다. 배경 아트 + 스크림 위에 글자만 */
+.pop{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column}
+.head{padding:52px 22px 0;text-align:center}
+.head .kicker{font-family:var(--font-num);font-size:10.5px;letter-spacing:.42em;color:#96a1af}
+.head h2{margin:6px 0 0;font-family:var(--font-ti);font-weight:400;font-size:25px;letter-spacing:.02em;
+  color:#fff;text-shadow:0 3px 20px #000,0 1px 3px #000}
+.list{margin:22px auto 0;width:100%;max-width:330px;padding:0 22px;flex:1;overflow:hidden}
+/* 행 = 글자만. 구분은 **가운데 짧은 선** 하나 — 전폭 선은 그림을 잘라 '표'로 보이게 한다 */
+.row{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;min-height:38px;border:none;background:none;cursor:pointer;
+  font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--txt)}
+.row+.row::before{content:'';position:absolute;left:50%;top:0;width:56px;height:1px;
+  transform:translateX(-50%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+.row .ix{font-family:var(--font-num);font-size:12px;color:var(--dim);min-width:16px;text-align:right}
+.row.here{color:#fff}
+.row.here .dot{width:4px;height:4px;border-radius:50%;background:var(--hud);
+  box-shadow:0 0 6px var(--hud-glow)}
+.row.lock{color:#5c646f;cursor:default}
+.row.lock .why{font-size:10.5px;font-weight:700;color:#4d545e}
+.row .mul{font-family:var(--font-num);font-size:11.5px;color:var(--dim)}
+/* 주 동작 = 면을 채우지 않는다. 1px 테두리 + 밑변 광원(로그인 버튼의 서명) */
+.go{position:relative;display:block;width:100%;max-width:286px;margin:0 auto;min-height:44px;
+  background:none;border:1px solid rgba(255,255,255,.24);border-radius:0;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:800;letter-spacing:.5px;color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.go::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(var(--acRGB),.92),transparent);
+  box-shadow:0 0 2px rgba(var(--acRGB),.6),0 0 5px rgba(var(--acRGB),.24)}
+.foot{padding:0 22px 30px}
+.back{display:block;width:100%;margin-top:13px;background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:11.5px;font-weight:700;color:#8b97a6}
+
+/* 라벨·숫자 — 로딩창 문법 */
+.kv{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:7px}
+.kv i{font-style:normal;font-size:11px;letter-spacing:.2em;color:var(--mute)}
+.kv b{font-family:var(--font-num);font-size:21px;font-weight:700;color:#fff}
+.kv b s{text-decoration:none;font-size:13px;color:#7d8792}
+.bar{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,rgba(var(--acRGB),.4),rgba(var(--acRGB),1));
+  box-shadow:0 0 10px rgba(var(--acRGB),.5)}
+
+/* 안별 전용 */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:8;padding-top:16px;
+  background:linear-gradient(180deg,rgba(4,6,10,0),rgba(4,6,10,.86) 12%,rgba(4,6,10,.96))}
+.sheet .head{padding:14px 22px 0}
+.strip{position:absolute;left:0;right:0;top:46px;z-index:8;padding:9px 11px;
+  background:linear-gradient(180deg,rgba(4,6,10,.9),rgba(4,6,10,.55))}
+.strip .sr{display:flex;gap:0;align-items:stretch}
+.strip .sc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 0 6px;
+  background:none;border:none;cursor:pointer;position:relative}
+.strip .sc+.sc::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:1px;
+  background:rgba(255,255,255,.12)}
+.strip .sc em{font-style:normal;font-family:var(--font-num);font-size:14px;font-weight:700;color:#8f99a6}
+.strip .sc u{text-decoration:none;font-size:8.5px;color:#5c646f}
+.strip .sc.here em{color:var(--hud);text-shadow:0 0 6px var(--hud-glow)}
+.strip .sc.here u{color:#c9d4e0}
+.strip .sc.lock em{color:#454c56}
+.strip .nmRow{margin-top:6px;text-align:center;font-size:12px;font-weight:700;color:#fff}
+/* 계단 */
+.stair{position:relative;padding-left:26px}
+.stair::before{content:'';position:absolute;left:9px;top:8px;height:184px;width:1px;background:rgba(255,255,255,.10)}
+.stair .lit{position:absolute;left:9px;top:8px;width:1px;background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+.st{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:40px;
+  background:none;border:none;cursor:pointer;text-align:left;font-family:inherit;color:var(--txt)}
+.st .big{font-family:var(--font-num);font-size:19px;font-weight:700;color:#6f7a88;min-width:22px}
+.st.here .big{color:var(--hud);text-shadow:0 0 7px var(--hud-glow)}
+.st.here{color:#fff}
+.st.lock{color:#5c646f}.st.lock .big{color:#454c56}
+.st .nm{flex:1;font-size:12.5px;font-weight:700}
+.st .mul{font-family:var(--font-num);font-size:11.5px;color:var(--dim)}
+.st .node{position:absolute;left:-21px;width:5px;height:5px;border-radius:50%;background:#2b3038}
+.st.here .node{background:var(--hud);box-shadow:0 0 7px var(--hud-glow)}
+.st.done .node{background:#6f7a88}
+/* 두 단 */
+.two{display:flex;height:100%}
+.two .col{width:56px;padding:52px 0 24px;display:flex;flex-direction:column;align-items:center;gap:0;
+  border-right:1px solid rgba(255,255,255,.08)}
+.two .cn{width:100%;padding:9px 0;background:none;border:none;cursor:pointer;position:relative;
+  font-family:var(--font-num);font-size:15px;font-weight:700;color:#6f7a88}
+.two .cn.here{color:#fff}
+.two .cn.here::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:1px;
+  background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+.two .cn.lock{color:#3f454e}
+.two .pane{flex:1;display:flex;flex-direction:column;padding:52px 20px 24px}
+.two .pane h3{margin:0;font-family:var(--font-ti);font-weight:400;font-size:22px;color:#fff}
+.two .pane .kicker{font-family:var(--font-num);font-size:10.5px;letter-spacing:.42em;color:#96a1af}
+/* 한 장 넘김 */
+.one{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 22px}
+.arw{background:none;border:none;cursor:pointer;color:#9aa5b3;font-size:19px;padding:6px 10px;
+  font-family:var(--font-num)}
+.arw:disabled{color:#3f454e}
+.oneRow{display:flex;align-items:center;gap:6px;width:100%;justify-content:center}
+.oneNm{font-family:var(--font-ti);font-weight:400;font-size:23px;color:#fff;text-align:center;min-width:190px}
+.pips{display:flex;gap:7px;margin-top:16px}
+.pips s{text-decoration:none;width:5px;height:5px;border-radius:50%;background:#414954}
+.pips s.on{background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+.pips s.lock{background:#272c34}
+.note{margin-top:24px;font-size:12.5px;color:var(--mute);line-height:1.8;max-width:1000px}
+.note b{color:#ececec}.note em{font-style:normal;color:#9fd0ff}
+.note code{color:#9fd0ff;font-family:var(--font-num)}
+</style>
+
+<h1>캠프 던전 고르기 — 8안</h1>
+<p class="lead">
+좌상단 칩을 누르면 열린다. <b>담는 것</b>은 옛 사냥터 팝업과 같다 — 어느 던전인가 · 무엇이 잠겼나 · 보상 배수 · 이동.<br>
+<b>생김새는 로그인·로딩 어휘</b>다: <em>판을 두르지 않는다</em> · 배경 아트 + 스크림 한 장 · 행 구분은 <em>가운데 짧은 1px 선</em>
+(전폭 선은 그림을 잘라 '표'로 보이게 한다) · 주 동작은 면을 안 채우고 <em>밑변 1px 광원</em>만 갖는다.
+</p>
+<p class="lead">
+<b>색 두 가지</b> — 「지금 여기」는 <em style="color:#00e5ff">청록</em>(좌상단 칩과 같은 색이라 칩에서 열린 것이 이어져 보인다),
+주 동작 「이동」은 <em style="color:#ff5b5b">빨강</em>(로그인 버튼과 같은 서명). 갈리는 것은 <b>목록을 어떤 꼴로 보여주고 어디에 띄우느냐</b>다.
+</p>
+<p class="lead">
+⚠ 캠프에는 <b>라운드도 최고 도달도 없다</b> — 그래서 옛 팝업의 라운드 피커·반복/등반은 뺐고, 그 자리에 <b>보상 배수</b>(×1.5<sup>던전-1</sup>)를 넣었다.
+잠금은 <code>CAMP_DG_UNLOCK='barracks'</code>(던전 2 = 병영) 하나만 정해져 있다.
+</p>
+
+<div class="grid">
+
+  <!-- 1 -->
+  <div class="cell">
+    <div class="cap"><b>1 — 전체 화면 · 선 목록</b><i>로그인 허브를 그대로. 글자만 열 줄, 사이 짧은 선.<br>가장 조용하고 가장 <em>이 앱답다</em>.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/dungeons/dg3.webp)"></div>
+      <div class="scrim deep"></div>
+      <div class="pop">
+        <div class="head"><div class="kicker">CAMP</div><h2>던전</h2></div>
+        <div class="list">
+          <button class="row"><i class="ix">1</i>감염된 둥지<span class="mul">×1.0</span></button>
+          <button class="row"><i class="ix">2</i>버려진 전초기지<span class="mul">×1.5</span></button>
+          <button class="row here"><i class="ix">3</i>잊혀진 회랑<span class="dot"></span><span class="mul">×2.3</span></button>
+          <button class="row lock"><i class="ix">4</i>산란장<span class="why">병영 필요</span></button>
+          <button class="row lock"><i class="ix">5</i>폐쇄된 시설<span class="why">잠김</span></button>
+          <button class="row lock"><i class="ix">6</i>봉인된 성소<span class="why">잠김</span></button>
+        </div>
+        <div class="foot"><button class="go">이동</button><button class="back">닫기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cell">
+    <div class="cap"><b>2 — 배경이 따라 바뀐다</b><i>고른 줄의 던전 그림이 <em>화면 배경</em>으로 넘어온다.<br>이름을 몰라도 어디로 가는지 보인다.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/dungeons/dg7.webp)"></div>
+      <div class="scrim"></div>
+      <div class="pop">
+        <div class="head"><div class="kicker">DUNGEON 07</div><h2>군단의 심장</h2></div>
+        <div class="list">
+          <button class="row"><i class="ix">5</i>폐쇄된 시설<span class="mul">×5.1</span></button>
+          <button class="row"><i class="ix">6</i>봉인된 성소<span class="mul">×7.6</span></button>
+          <button class="row here"><i class="ix">7</i>군단의 심장<span class="dot"></span><span class="mul">×11.4</span></button>
+          <button class="row lock"><i class="ix">8</i>함대 정박지<span class="why">잠김</span></button>
+          <button class="row lock"><i class="ix">9</i>공허의 문<span class="why">잠김</span></button>
+        </div>
+        <div class="foot"><button class="go">이동</button><button class="back">닫기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cell">
+    <div class="cap"><b>3 — 하단 시트</b><i>아래에서 올라온다. <em>위쪽은 캠프가 그대로 보인다</em>.<br>내 기지를 보면서 고를 수 있다.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/camp/dg1.webp)"></div>
+      <div class="scrim" style="background:linear-gradient(180deg,rgba(4,6,10,.45),rgba(4,6,10,.2) 40%,rgba(4,6,10,.3))"></div>
+      <div class="chip press"><i class="rail"></i><span class="bd"><span class="nm">잊혀진 회랑</span>
+        <span class="sb"><i class="lb">던전</i><b class="n">3</b><i class="dm">/10</i></span></span></div>
+      <div class="sheet">
+        <div class="head"><div class="kicker">CAMP</div><h2>던전</h2></div>
+        <div class="list" style="margin-top:16px">
+          <button class="row"><i class="ix">2</i>버려진 전초기지<span class="mul">×1.5</span></button>
+          <button class="row here"><i class="ix">3</i>잊혀진 회랑<span class="dot"></span><span class="mul">×2.3</span></button>
+          <button class="row lock"><i class="ix">4</i>산란장<span class="why">병영 필요</span></button>
+        </div>
+        <div class="foot" style="padding-top:16px"><button class="go">이동</button><button class="back">닫기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cell">
+    <div class="cap"><b>4 — 한 장씩 넘김</b><i>옛 사냥터 팝업의 방식을 <em>로그인 어휘로</em> 옮긴 것.<br>한 번에 한 던전만 크게 본다.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/dungeons/dg3.webp)"></div>
+      <div class="scrim"></div>
+      <div class="pop">
+        <div class="head"><div class="kicker">DUNGEON 03</div></div>
+        <div class="one">
+          <div class="oneRow">
+            <button class="arw">‹</button>
+            <div class="oneNm">잊혀진 회랑</div>
+            <button class="arw">›</button>
+          </div>
+          <div class="pips"><s></s><s></s><s class="on"></s><s class="lock"></s><s class="lock"></s><s class="lock"></s><s class="lock"></s><s class="lock"></s><s class="lock"></s><s class="lock"></s></div>
+          <div style="margin-top:26px;width:100%;max-width:286px">
+            <div class="kv"><i>보상 배수</i><b>2.3<s>×</s></b></div>
+            <div class="bar"><i style="width:23%"></i></div>
+          </div>
+        </div>
+        <div class="foot"><button class="go">이동</button><button class="back">닫기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="cell">
+    <div class="cap"><b>5 — 칩 아래 가로 띠</b><i>팝업을 안 띄운다. 칩 밑에 <em>얇은 띠</em>가 펼쳐진다.<br>가장 적게 가리고 한 번에 넘길 수 있다.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/camp/dg1.webp)"></div>
+      <div class="scrim" style="background:linear-gradient(180deg,rgba(4,6,10,.5),rgba(4,6,10,.15) 40%,rgba(4,6,10,.25))"></div>
+      <div class="chip press"><i class="rail"></i><span class="bd"><span class="nm">잊혀진 회랑</span>
+        <span class="sb"><i class="lb">던전</i><b class="n">3</b><i class="dm">/10</i></span></span></div>
+      <div class="strip">
+        <div class="sr">
+          <button class="sc"><em>1</em><u>×1.0</u></button>
+          <button class="sc"><em>2</em><u>×1.5</u></button>
+          <button class="sc here"><em>3</em><u>×2.3</u></button>
+          <button class="sc lock"><em>4</em><u>잠김</u></button>
+          <button class="sc lock"><em>5</em><u>잠김</u></button>
+          <button class="sc lock"><em>6</em><u>잠김</u></button>
+          <button class="sc lock"><em>7</em><u>잠김</u></button>
+          <button class="sc lock"><em>8</em><u>잠김</u></button>
+        </div>
+        <div class="nmRow">잊혀진 회랑</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="cell">
+    <div class="cap"><b>6 — 계단</b><i>번호를 크게 왼쪽에, 지나온 데까지 <em>세로 광원 선</em>이 이어진다.<br>「어디까지 왔나」가 한눈에.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/dungeons/dg9.webp)"></div>
+      <div class="scrim deep"></div>
+      <div class="pop">
+        <div class="head"><div class="kicker">CAMP</div><h2>던전</h2></div>
+        <div class="list stair">
+          <i class="lit" style="height:112px"></i>
+          <button class="st done"><i class="node"></i><b class="big">1</b><span class="nm">감염된 둥지</span><span class="mul">×1.0</span></button>
+          <button class="st done"><i class="node"></i><b class="big">2</b><span class="nm">버려진 전초기지</span><span class="mul">×1.5</span></button>
+          <button class="st here"><i class="node"></i><b class="big">3</b><span class="nm">잊혀진 회랑</span><span class="mul">×2.3</span></button>
+          <button class="st lock"><i class="node"></i><b class="big">4</b><span class="nm">산란장</span><span class="mul">병영 필요</span></button>
+          <button class="st lock"><i class="node"></i><b class="big">5</b><span class="nm">폐쇄된 시설</span><span class="mul">잠김</span></button>
+        </div>
+        <div class="foot"><button class="go">이동</button><button class="back">닫기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 -->
+  <div class="cell">
+    <div class="cap"><b>7 — 로딩창 문법</b><i>행마다 <em>얇은 막대</em>와 큰 숫자. 라벨은 자간 넓은 대문자.<br>배수 차이가 길이로 보인다.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/dungeons/dg5.webp)"></div>
+      <div class="scrim deep"></div>
+      <div class="pop">
+        <div class="head"><div class="kicker">CAMP</div><h2>던전</h2></div>
+        <div class="list" style="max-width:340px">
+          <div style="margin-bottom:15px"><div class="kv"><i>02 &nbsp;버려진 전초기지</i><b>1.5<s>×</s></b></div><div class="bar"><i style="width:15%"></i></div></div>
+          <div style="margin-bottom:15px"><div class="kv"><i style="color:#fff">03 &nbsp;잊혀진 회랑</i><b>2.3<s>×</s></b></div>
+            <div class="bar"><i style="width:23%;background:var(--hud);box-shadow:0 0 10px var(--hud-glow)"></i></div></div>
+          <div style="margin-bottom:15px;opacity:.45"><div class="kv"><i>04 &nbsp;산란장</i><b>3.4<s>×</s></b></div><div class="bar"><i style="width:34%"></i></div></div>
+          <div style="opacity:.45"><div class="kv"><i>05 &nbsp;폐쇄된 시설</i><b>5.1<s>×</s></b></div><div class="bar"><i style="width:51%"></i></div></div>
+        </div>
+        <div class="foot"><button class="go">이동</button><button class="back">닫기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 -->
+  <div class="cell">
+    <div class="cap"><b>8 — 두 단(번호 열 + 상세)</b><i>왼쪽엔 번호만, 고르면 오른쪽이 바뀐다.<br>던전이 <em>열 개까지 늘어도</em> 목록이 안 길어진다.</i></div>
+    <div class="ph">
+      <div class="art" style="background-image:url(../../assets/backgrounds/dungeons/dg3.webp)"></div>
+      <div class="scrim"></div>
+      <div class="pop"><div class="two">
+        <div class="col">
+          <button class="cn">1</button><button class="cn">2</button><button class="cn here">3</button>
+          <button class="cn lock">4</button><button class="cn lock">5</button><button class="cn lock">6</button>
+          <button class="cn lock">7</button><button class="cn lock">8</button>
+        </div>
+        <div class="pane">
+          <div class="kicker">DUNGEON 03</div>
+          <h3>잊혀진 회랑</h3>
+          <div style="margin-top:22px">
+            <div class="kv"><i>보상 배수</i><b>2.3<s>×</s></b></div>
+            <div class="bar"><i style="width:23%"></i></div>
+          </div>
+          <div style="flex:1"></div>
+          <button class="go" style="max-width:none">이동</button>
+          <button class="back">닫기</button>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">
+<b>어디에 뜨나</b> — 1·2·4·6·7·8 은 <b>화면을 덮는다</b>(캠프가 안 보인다). 3 은 <b>아래에서만</b> 올라와 기지를 보면서 고른다.
+5 는 <b>팝업이 아니다</b> — 칩 밑에 띠가 펼쳐질 뿐이라 가장 적게 가린다.<br>
+<b>목록 꼴</b> — 1·2·3 은 글자 줄, 6 은 계단(지나온 자취), 7 은 막대(배수 비교), 4 는 한 장씩, 8 은 번호 열 + 상세, 5 는 가로 칸.<br>
+<b>2 만 다른 점</b> — 줄을 고를 때마다 <b>배경 그림이 바뀐다.</b> 어디로 가는지 이름 대신 그림이 말해 준다. 대신 그림 열 장을 미리 받아야 하고, 지금 캠프 전용 그림은 <code>dg1</code> 한 장뿐이다(나머지는 사냥터 그림으로 대체).<br>
+<b>공통</b> — 판 없음 · 스크림 한 장 · 가운데 짧은 구분선 · 「지금 여기」 청록 · 「이동」 밑변 광원 빨강 · 숫자 폰트 Rajdhani.
+</p>
