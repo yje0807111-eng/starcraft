@@ -5312,6 +5312,8 @@ async function groupLobby(){
     // ⚠ 아래는 전부 try/finally 안이다 — 중간에 실패해도 캠프 스텁이 남으면 **뒤 검사가 줄줄이 깨진다**
     //   (실제로 그랬다: 칩이 안 걷혀 상점 제목 자리에 던전 이름이 남았다).
     const _on0=window.campIsOn, _st0=window.campState;
+    // ⚠ 재화 바가 숨겨져 있으면 rect 가 전부 0 이라 자리 검사가 통째로 헛돈다 — 먼저 켜 둔다
+    const _barWas=$('curBar').classList.contains('hide'); if(_barWas) curShow(true);
     try{
     // ① 마크업 — 이름·라벨·숫자·진행 막대가 다 들어간다
     t.classList.add('asChip');
@@ -5324,6 +5326,16 @@ async function groupLobby(){
     assert(bar,'진행 막대가 없음');
     assert(Math.abs(parseFloat(bar.style.width)-30)<0.6,'진행 막대가 3/10=30% 가 아님: '+bar.style.width);
     assert(t.querySelector('.cdRail'),'왼쪽 광원 띠(7안의 핵심)가 없음');
+    // ①-2 진행 막대는 **판 안쪽**에 앉는다 — 아래 테두리에 붙거나 좌우 모서리에 물리면 새어 보인다
+    { const r=t.getBoundingClientRect(), br=t.querySelector('.cdBar').getBoundingClientRect();
+      const gapB=r.bottom-br.bottom, gapL=br.left-r.left, gapR=r.right-br.right;
+      assert(gapB>=2,'막대가 칩 아래 테두리에 붙었다(간격 '+gapB.toFixed(1)+'px)');
+      assert(gapL>=3 && gapR>=3,'막대 좌우가 안 잘렸다 — 판 모서리에 물린다(좌 '+gapL.toFixed(1)+' / 우 '+gapR.toFixed(1)+')'); }
+    // ①-3 라운드 줄은 **밑선 정렬**이다. 글자 크기가 셋 다 달라(9.5/12/11px) 가운데로 맞추면 어긋나 보인다.
+    //   ⚠ rect 로는 못 잰다 — 밑선이 맞아도 글자 크기가 다르면 **하강부만큼 아래가 벌어진다**
+    //     (실측 1.0px). 그래서 규칙 자체를 본다(말줄임과 같은 이유).
+    { const ai=getComputedStyle(t.querySelector('.cdSub')).alignItems;
+      assert(ai==='baseline','라운드 줄이 밑선 정렬이 아니다 — 숫자와 총 라운드가 어긋나 보인다: '+ai); }
     // ② CSS — 클래스만 붙이면 칩 물성이 실제로 걸리는가(규칙이 다른 파일에 있어 조용히 빠질 수 있다)
     { const cs=getComputedStyle(t);
       assert(parseFloat(cs.borderRadius)===3,'칩 모서리가 3px 이 아님(DESIGN 각진 규칙): '+cs.borderRadius);
@@ -5401,11 +5413,12 @@ async function groupLobby(){
       const b=campChipInfo();
       assert(b && b.lab==='라운드' && b.cur===27 && b.max===99,'라운드가 생겨도 안 따라감: '+JSON.stringify(b));
       window.campIsOn=on; window.campState=st; }
-    return '이름·던전 3/10 · 막대 30% · 바 안에 들어감 · ☰ 안 밀림 · 걷힘 확인';
+    return '이름·던전 3/10 · 막대 30%(판 안쪽) · 밑선 정렬 · 바 안에 들어감 · ☰ 안 밀림 · 걷힘 확인';
     } finally {
       window.campIsOn=_on0; window.campState=_st0;
       curSetTitle('');            // 칩을 확실히 걷는다 — 남으면 다른 화면 제목 자리를 차지한다
       updateCurBar();
+      if(_barWas) curShow(false);
     }
   });
 
