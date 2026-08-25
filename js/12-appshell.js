@@ -843,6 +843,7 @@ function setChatScope(sc){ _chatScope=sc;
   const lbl=document.getElementById('msScopeLbl'); if(lbl) lbl.textContent=(_MS_SCOPE_KO[sc]||sc);
   document.querySelectorAll('#msScopeMenu .msScopeOpt').forEach(o=>o.classList.toggle('on', o.dataset.sc===sc));
   const c=document.getElementById('msChat'); if(c){ c.dataset.scope=sc; c.scrollTop=c.scrollHeight; }
+  if(typeof mapDockPeek==='function') mapDockPeek();   // 범위가 바뀌면 접힌 줄도 그 범위의 마지막 줄로
   const inp=document.getElementById('msChatInput'); if(inp) inp.placeholder='메시지 입력…'; }   // 범위는 왼쪽 배지가 표시(문구 중복 제거)
 function _msScopeClose(){ const m=document.getElementById('msScopeMenu'); if(m) m.classList.add('hide'); const d=document.getElementById('msScopeDD'); if(d) d.classList.remove('open'); }
 function toggleMsScope(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } const m=document.getElementById('msScopeMenu'), d=document.getElementById('msScopeDD'); if(!m||!d) return;
@@ -856,11 +857,13 @@ function addGlobalMsg(who, text, cls, scope){ const box=document.getElementById(
   const d=document.createElement('div'); d.className='mcLine sc-'+(scope||'all')+(cls?(' '+cls):'');
   d.innerHTML=_mcTime()+(who?'<span class="mcWho">'+escHtml(who)+'</span><span class="mcSep"> : </span>':'')+escHtml(text);
   box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild);
-  box.scrollTop=box.scrollHeight; }
+  box.scrollTop=box.scrollHeight;
+  if(typeof mapDockPeek==='function') mapDockPeek(); }   // 접힌 도크의 한 줄도 같이 따라온다
 function addWhisperMsg(fromNick, toNick, text){ const box=document.getElementById('msChat'); if(!box) return;
   const d=document.createElement('div'); d.className='mcLine whisper';
   d.innerHTML=_mcTime()+'<span class="mcWhisper">'+escHtml(fromNick)+'<span class="mcArrow"> → </span>'+escHtml(toNick)+'</span><span class="mcSep"> : </span>'+escHtml(text);
-  box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight; }
+  box.appendChild(d); while(box.children.length>60) box.removeChild(box.firstChild); box.scrollTop=box.scrollHeight;
+  if(typeof mapDockPeek==='function') mapDockPeek(); }
 function findFriendByNick(nick){ const lo=(nick||'').toLowerCase(); for(const k in _friendIndex){ const f=_friendIndex[k]; if(f && (f.nick||'').toLowerCase()===lo) return f; } return null; }
 async function sendWhisper(nick, msg){ const f=findFriendByNick(nick);
   if(RT.active && f && !f.temp && f.id){   // 실연동: messages 테이블에 저장 → 상대에게 실시간 전달

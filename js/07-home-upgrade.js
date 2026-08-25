@@ -528,10 +528,35 @@ function mapDockSocial(){ const dock=document.getElementById('msSocialDock'), so
   if(!dock||!so) return;
   if(so.parentNode!==dock) dock.appendChild(so);
   if(!_mapSocial) _mapSocial='chat';
+  mapDockApply();
   if(typeof setBottomTab==='function') setBottomTab(_mapSocial); }
 function mapOpenSocial(bt){ _mapSocial=bt;
+  mapDockSet(true);   // 네비에서 채팅·친구·파티를 고른 것 = 펴 달라는 뜻
   if(typeof setBottomTab==='function') setBottomTab(bt);
   navPaint(); }
+// ── 소셜 도크 접기/펴기 ──────────────────────────────────────────────
+//  유즈맵 선택은 「고르는 화면」이라 기본은 접힘이다 — 목록이 화면을 거의 다 쓴다.
+//  ⚠ 접힌 줄의 내용은 #msChat 의 마지막 줄을 **복제**한다. 채팅을 두 번 그리지 않는다.
+const MAPDOCK_KEY='nm_mapdock';
+let _mapDockOpen=(typeof _lsGet==='function') ? !!_lsGet(MAPDOCK_KEY,false) : false;
+function mapDockApply(){ const dock=document.getElementById('msSocialDock'); if(!dock) return;
+  dock.classList.toggle('collapsed', !_mapDockOpen);
+  if(!_mapDockOpen) mapDockPeek(); }
+function mapDockSet(open){ if(_mapDockOpen===!!open){ mapDockApply(); return; }
+  _mapDockOpen=!!open; if(typeof _lsSet==='function') _lsSet(MAPDOCK_KEY,_mapDockOpen); mapDockApply(); }
+function mapDockToggle(){ mapDockSet(!_mapDockOpen);
+  if(typeof playSfx==='function') playSfx(_mapDockOpen?'ui_open':'ui_close');
+  if(_mapDockOpen){ const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; } }
+// 접힌 줄 갱신 — 채팅이 한 줄 늘 때마다 addGlobalMsg/addWhisperMsg 가 불러 준다.
+function mapDockPeek(){ const peek=document.getElementById('msDockPeek'); if(!peek) return;
+  const box=document.getElementById('msChat');
+  // ⚠ 지금 범위(전체/파티/친구)에서 **실제로 보이는** 줄만 센다 — .msChat 의 표시 필터와 같은 규칙이다.
+  //   전부 세면 파티 범위인데 전체 채팅 마지막 줄이 접힌 줄에 뜬다.
+  const sc=(box&&box.dataset.scope)||'all';
+  const lines=box? box.querySelectorAll('.mcLine.sc-'+sc+', .mcLine.whisper') : null;
+  const last=(lines&&lines.length)? lines[lines.length-1] : null;
+  if(!last){ peek.textContent='채팅'; return; }
+  peek.innerHTML=last.innerHTML; }   // 복제 — 이름·구분자·본문 서식이 채팅과 그대로 같다
 // ‹ 돌아가기 = 사냥터 화면 + 최상위 네비
 function navBack(){ if(typeof playSfx==='function') playSfx('ui_back');
   openHome(); _navDrill=''; navPaint(); }

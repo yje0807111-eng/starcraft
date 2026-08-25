@@ -34,6 +34,42 @@
      카드 맨 아래 선에 딱 붙어 잘린다('밖으로 나간' 느낌의 원인). margin 으로 줘야 잘리는 자리가 안쪽으로 들어온다.
      ⛔ 끝을 흐리는 마스크는 뺐다(2026-08-18) — 안쪽에서 끝난다는 것은 여백이 이미 말한다. */
   #mapSelect .msList{flex:1 1 auto;min-height:0;padding:8px 8px 0;margin-bottom:6px}
+  /* ══ 유즈맵 선택 = 「판 없는 목록」(2026-08-25 · C1-4 확정) ═══════════════════
+     로딩·로그인·설정 화면에는 **상자가 하나도 없다** — 가는 선과 글자뿐이고 뒤 배경이 그대로 비친다.
+     여기만 상자가 셋(카드 .msPanel → 안쪽 판 .msTop → 항목 .mapItem)이라 같은 앱으로 안 읽혔다.
+     셋을 다 걷고 항목은 1px 헤어라인으로만 나눈다. 배경(lobby_bg)이 목록 뒤로 살아난다.
+     ⛔ 여기 규칙은 **전부 #mapSelect 안에서만** 덮는다 — .msPanel 은 정비·캐릭터·난이도 판이,
+        .mapItem 은 HOME 허브 카드가 같이 쓴다. 공용 규칙을 고치면 그쪽이 함께 무너진다.
+     ⛔ 정렬 띠는 로그인 탭 바(.authTabs)와 **같은 처리**다 — 새 탭 스타일을 만들지 않는다. */
+  #mapSelect .msPanel{background:none;border:0;border-radius:0;overflow:visible}
+  #mapSelect .msPanel::before,#mapSelect .msPanel::after{display:none}   /* 붉은 헤어라인 = 카드가 있을 때의 표시. 카드가 없으니 뺀다 */
+  #mapSelect .msTop{background:none}
+  /* 좌우 여백은 화면(#mapSelect{padding:12px 13px})이 이미 준다 — 여기서 또 주면 두 겹이 된다 */
+  #mapSelect .msList{gap:0;padding:0;margin-bottom:6px}   /* 스크롤이 끝나는 자리를 채팅 선에서 6px 띄운다 — 잘린 행이 '끝난 행'처럼 보이지 않게 */
+  #mapSelect .msSortTabs{padding:0 0 2px}
+  /* 정렬 띠 — 판 없는 띠(로그인과 같은 것). 움직이는 표시는 살리고 1px 밑줄로 바꾼다 */
+  #mapSelect .msSortTabs .pdSeg{padding:0;border:none;background:none;border-radius:0}
+  #mapSelect .msSortTabs .pdSegInd{top:auto;bottom:0;height:1px;border:none;border-radius:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.85) 50%,transparent)}
+  #mapSelect .msSortTabs .pdSegInd::after{display:none}   /* 판이 없으니 밑변 광원도 뺀다(선이 곧 표시다) */
+  #mapSelect .msSortTabs .pdSegBtn{padding:9px 4px}
+  /* 항목 — 면·테두리·라운드·좌측 액센트바를 전부 걷고 아래 헤어라인 하나만 남긴다.
+     맵별 아이덴티티 색은 사라지지 않는다 — 썸네일 안쪽 글로우가 그대로 갖는다. */
+  #mapSelect .mapItem{padding:9px 2px;border:0;border-bottom:1px solid rgba(255,255,255,.075);
+    border-radius:0;background:none;box-shadow:none;transition:background .13s}
+  #mapSelect .mapItem:last-child{border-bottom:0}
+  #mapSelect .mapItem::before{display:none}
+  #mapSelect .mapItem:hover{border-color:transparent;border-bottom-color:rgba(255,255,255,.075);transform:none;box-shadow:none}
+  #mapSelect .mapItem:active{background:rgba(255,255,255,.05)}   /* 누른 표시 = 판이 아니라 잠깐 밝아지는 것 */
+  /* 썸네일 48 → 42px. 카드가 없어진 자리에서 48px 은 글자 세 줄을 눌러 혼자 무거웠다.
+     줄 높이가 71 → 60px 로 낮아져 목록에 맵이 한 장 더 들어온다(C1 을 고른 이유). */
+  #mapSelect .mapThumb{width:42px;height:42px;border-color:rgba(255,255,255,.08)}
+  /* 배경 가리개를 한 겹 더 — 목록이 카드를 잃고 **아트 위에 바로** 앉았기 때문이다.
+     가운데 구간이 .2 뿐이라 밝은 행성 위에서 설명 글자(#929ba6)가 씻겼다.
+     ⛔ 공용 규칙을 고치지 말 것 — #rooms·#createPanel·#shopScreen·#gearScreen·#upgScreen 은
+        아직 카드가 있어서 이 정도로 덮으면 배경이 죽는다. 여기서만 덮는다. */
+  #mapSelect::after{background:linear-gradient(180deg, rgba(2,3,8,.94) 0%, rgba(2,3,8,.74) 13%,
+    rgba(2,3,8,.6) 34%, rgba(2,3,8,.64) 62%, rgba(2,3,8,.86) 86%, rgba(2,3,8,.96) 100%)}
   /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
   #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
