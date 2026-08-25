@@ -100,10 +100,27 @@ function campWithStk(fn){
 function campFoeRace(dg){ const o = (typeof STK_RACE_ORDER !== 'undefined') ? STK_RACE_ORDER : ['terran'];
   return o[Math.max(0, (dg | 0) - 1) % o.length]; }
 
-// 웨이브 크기 — 라운드가 오를수록 조금씩 두꺼워진다.
-// ⚠ 적 '세기'(체력·공격)는 4단계에서 HUNT_R1 §6-1 난이도 곡선에 연결한다. 여기서는 **마리 수만**.
-const CAMP_FOE_N0 = 3, CAMP_FOE_PER_R = 0.2;
-function campFoeCount(round){ return CAMP_FOE_N0 + Math.floor(Math.max(0, (round | 0) - 1) * CAMP_FOE_PER_R); }
+// ══ 📈 적 난이도 곡선 — HUNT_R1.md §6-1 (2026-08-25 · 4단계) ══════════
+//   라운드 밑   = 1.07 + (던전-1) × 0.003          ← 깊을수록 라운드가 무겁다
+//   던전 문턱   = (앞 던전 라운드 밑)^49 × 3        ← 어느 던전에서나 ×3
+//   적 난이도   = Π(던전 문턱) × (라운드 밑)^(깬 라운드 수)
+//   ⛔ 미네랄(CAMP_MINE)과 **같은 식으로 묶지 말 것.** 보상은 라운드마다 조금, 난이도는 크게 —
+//      둘을 묶으면 50라운드를 돌아도 적이 1.33배인데 아군 화력은 20배가 된다(HUNT_R1 §6-1).
+const CAMP_RB0 = 1.07, CAMP_RB_STEP = 0.003, CAMP_DG_STEP = 3;
+function campRBase(dg){ return CAMP_RB0 + Math.max(0, (dg | 0) - 1) * CAMP_RB_STEP; }
+function campDgThreshold(dg){ return Math.pow(campRBase(dg - 1), CAMP_ROUND_MAX - 1) * CAMP_DG_STEP; }
+// dg=0(캠프)은 적이 없으므로 1을 준다
+function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
+  let x = 1; for(let k = 2; k <= dg; k++) x *= campDgThreshold(k);
+  return x * Math.pow(campRBase(dg), Math.max(0, cleared | 0)); }
+
+// ── 웨이브 — 총량은 난이도가 정하고, 몇 마리로 쪼갤지는 라운드가 정한다 (HUNT_R1 §6-2-1) ──
+//   기본값: 체력 3.3 · 공격 0.33. 여기에 난이도가 곱해진 것이 **그 라운드의 총 유입량**이다.
+const CAMP_FOE_HP0 = 3.3, CAMP_FOE_ATK0 = 0.33;
+const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
+function campFoeCount(round){
+  return Math.max(1, Math.min(CAMP_FOE_NMAX,
+    Math.round(CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1))))); }
 
 // 전장을 연다. 적은 **위**에서 내려오고 내 본부는 **아래** — 캠프 배치와 같은 방향이다.
 function campBattleOpen(){
@@ -131,7 +148,24 @@ function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') re
   const n = campFoeCount(campRoundN());
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
     for(let i = 0; i < n; i++) strikeSpawnUnit('ai');
+    campScaleFoes(CAMPB.ai.units.slice(b4));
     return CAMPB.ai.units.length - b4; }) | 0; }
+
+// 갓 스폰된 적을 이번 라운드 난이도에 맞춘다.
+//   ⭐ 개체 값을 통째로 덮어쓰지 않고 **무리 전체의 기본값 합** 대비 배율로 민다 —
+//      그래야 탱크가 마린보다 단단하다는 유닛별 차이가 살아남는다.
+function campScaleFoes(list){
+  if(!list || !list.length) return 0;
+  const diff = campFoeDiff(campDgN(), campCleared());
+  let hp0 = 0, dmg0 = 0;
+  for(const u of list){ hp0 += (u.maxHp || 0) + (u.maxSh || 0); dmg0 += (u.dmg || 0); }
+  const hpMul  = hp0  > 0 ? (CAMP_FOE_HP0  * diff) / hp0  : 1;
+  const dmgMul = dmg0 > 0 ? (CAMP_FOE_ATK0 * diff) / dmg0 : 1;
+  for(const u of list){
+    u.maxHp = u.maxHp * hpMul; u.hp = u.maxHp;
+    u.maxSh = (u.maxSh || 0) * hpMul; u.sh = u.maxSh;
+    u.dmg = (u.dmg || 0) * dmgMul; }
+  return diff; }
 
 // 살아 있는 유닛 수
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;

@@ -1163,6 +1163,47 @@ async function groupLobby(){
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
       campBattleClose(); if(typeof campSave==='function') campSave(); } });
 
+  // 📈 적 난이도 곡선 — HUNT_R1.md §6-1. ⛔ 미네랄(CAMP_MINE)과 같은 식으로 묶지 말 것.
+  await step('캠프 던전: 적 난이도 곡선 · 웨이브 분할', async()=>{
+    skipIf(typeof campFoeDiff!=='function','난이도 곡선 없음');
+    const C=campState(); const back={dg:C.dg, cleared:C.cleared};
+    try{
+      // ① 던전 문턱은 어느 던전에서나 ×3 — 하나라도 어긋나면 「내려갈수록 쉬워지는」 구간이 생긴다
+      assert(CAMP_DG_STEP===3,'던전 문턱 상수가 3 이 아님: '+CAMP_DG_STEP+' (HUNT_R1 §6-1)');
+      for(let d=2; d<=CAMP_DG_MAX; d++){
+        const step=campFoeDiff(d,0)/campFoeDiff(d-1,CAMP_ROUND_MAX-1);
+        assert(Math.abs(step-3)<0.01,'던전 '+d+' 문턱이 ×3 이 아님: '+step.toFixed(3)); }
+      // ② 깊은 던전일수록 라운드 한 칸이 더 무겁다
+      assert(Math.abs(campRBase(1)-1.07)<1e-9 && Math.abs(campRBase(10)-1.097)<1e-9,
+        '라운드 밑이 설계값(1.070→1.097)과 다름: '+campRBase(1)+'→'+campRBase(10));
+      assert(campFoeDiff(1,49)/campFoeDiff(1,0) < campFoeDiff(10,49)/campFoeDiff(10,0),
+        '던전 10 의 50라운드가 던전 1 보다 안 무겁다');
+      // ③ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
+      C.dg=1; C.cleared=0; const m0=campMineMul();
+      C.cleared=49;        const m1=campMineMul();
+      assert((campFoeDiff(1,49)/campFoeDiff(1,0)) > (m1/m0)*10,
+        '50라운드에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
+      // ④ 마리 수 — 라운드가 오르면 잘게 쪼갠다. 상한 100
+      assert(campFoeCount(1)===3,'1라운드 마리 수: '+campFoeCount(1));
+      assert(campFoeCount(50)===CAMP_FOE_NMAX,'50라운드가 상한이 아님: '+campFoeCount(50));
+      assert(campFoeCount(999)<=CAMP_FOE_NMAX,'마리 수가 상한을 넘음');
+      // ⑤ campScaleFoes 는 무리의 **총 체력**을 목표에 맞추되 유닛별 차이를 남긴다
+      C.dg=2; C.cleared=10;
+      const want=campFoeDiff(2,10);
+      const mob=[{maxHp:40,maxSh:0,dmg:6},{maxHp:400,maxSh:0,dmg:30}];   // 마린급 · 탱크급
+      const r0=mob[1].maxHp/mob[0].maxHp;
+      campScaleFoes(mob);
+      const tot=mob.reduce((a,u)=>a+u.maxHp+u.maxSh,0), td=mob.reduce((a,u)=>a+u.dmg,0);
+      assert(Math.abs(tot/(CAMP_FOE_HP0*want)-1)<1e-6,'무리 총 체력이 목표와 다름: '+tot+' vs '+(CAMP_FOE_HP0*want));
+      assert(Math.abs(td/(CAMP_FOE_ATK0*want)-1)<1e-6,'무리 총 공격이 목표와 다름: '+td);
+      assert(Math.abs(mob[1].maxHp/mob[0].maxHp-r0)<1e-6,'유닛별 체력 차이가 사라졌다 — 통째로 덮어썼나');
+      assert(mob[0].hp===mob[0].maxHp,'현재 체력이 상한과 다름');
+      // ⑥ 0단계(캠프)에는 난이도가 없다
+      assert(campFoeDiff(0,0)===1,'캠프에 난이도가 붙었다: '+campFoeDiff(0,0));
+      return '문턱 ×'+CAMP_DG_STEP+' · 라운드밑 '+campRBase(1).toFixed(3)+'→'+campRBase(10).toFixed(3)
+        +' · 천장 '+campFoeDiff(CAMP_DG_MAX,CAMP_ROUND_MAX-1).toExponential(2);
+    } finally { C.dg=back.dg; C.cleared=back.cleared; } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;
