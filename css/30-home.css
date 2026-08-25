@@ -1575,9 +1575,19 @@
     background-position:center;background-size:cover;background-repeat:no-repeat;
     transition:opacity .32s ease}
   #campRaceOv .crPrevL.on{opacity:1}
+  /* 딤 두 장을 한 겹(::after)에 겹쳐 깐다 — ::before 는 .crPrevL 보다 **아래**로 들어가서
+     그림에 가려진다(둘 다 position:absolute → DOM 순서로 쌓인다). 순서를 바꾸지 말 것.
+     ① 윗머리 그늘: 제목「종족 선택」이 밝은 하늘 위에서도 읽히도록. 148px 띠로 끊어
+        가운데를 흐리지 않는다.
+     ② 아래 딤: 로딩 화면(.06→.10→.62→.96)보다 **65% 부근을 더 눌렀다.** 로딩은 로고 한 점만
+        얹지만 여기는 종족 3행 + 확정 버튼이 앉는다 — 에테리얼 배경의 불길이 그 자리를 정통으로
+        때려 이름이 묻혔다(실측). 행이 시작되는 65%에서 이미 .80 이어야 읽힌다. */
   #campRaceOv .crPrev::after{content:'';position:absolute;inset:0;
-    background:linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 34%,
-      rgba(6,8,12,.62) 72%,rgba(6,8,12,.96) 100%)}
+    background:
+      linear-gradient(180deg,rgba(6,8,12,.72) 0%,rgba(6,8,12,.34) 46%,rgba(6,8,12,0) 100%)
+        top/100% 148px no-repeat,
+      linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 30%,
+        rgba(6,8,12,.38) 52%,rgba(6,8,12,.80) 66%,rgba(6,8,12,.95) 100%)}
   #campRaceOv .crScr{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;
     padding:16px 14px 0}
   /* 제목 — 설정 화면과 같은 크기·자리(왼쪽 정렬) */

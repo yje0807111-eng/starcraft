@@ -139,6 +139,11 @@ try {
     else if (WHAT === 'navsub') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('shop'); }catch(e){} }); await new Promise(r=>setTimeout(r,800)); }
     else if (WHAT === 'home') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); }
     else if (WHAT === 'settings') { await page.evaluate(() => openAppSettings()); await new Promise(r=>setTimeout(r,400)); }
+    // 캠프 종족 선택 — race / race:zerg / race:protoss (딤이 그림을 제대로 눌러 주는지 종족별로 봐야 한다)
+    else if (WHAT.startsWith('race')) { const r0=WHAT.split(':')[1]||'';
+      await page.evaluate((rk) => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷');
+        openHome(); campRaceSheet(); if(rk) campRaceSel(rk); }, r0);
+      await new Promise(r=>setTimeout(r,1400)); }
     else if (WHAT === 'press') {
       const box = await page.evaluate(() => { const r=document.getElementById('authGuest').getBoundingClientRect(); return {x:r.x+r.width/2, y:r.y+r.height/2}; });
       await page.mouse.move(box.x, box.y); await page.mouse.down();
