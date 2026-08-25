@@ -1555,3 +1555,34 @@
   /* ⚠ font-size:0 을 되돌리지 말 것 — 위에서 10.5px 을 줬으므로 여기서 다시 끄지 않으면 라벨이 나온다 */
   .navBar .navIt.navBk{flex:0 0 var(--navHit);gap:0;font-size:0}   /* 정사각 — **누르는 높이**와 같은 폭(스모크가 폭==높이를 잰다) */
   .navBar .navIt.navBk .ic{width:18px;height:18px}
+
+/* ══ 🗺 캠프 단계·라운드 배지 (2026-08-25 · 3단계) ═════════════════════════
+   맵 위, 재화 바 아래에 얹는 얇은 표시. 0단계(캠프)와 던전에서 모습이 다르다.
+   값은 전부 DESIGN.md §2 표에서 꺼냈다 — 라운드 --r-bar(3px) · 간격 4/8/12 ·
+   글자 --fs-sm/--fs-md · 숫자 --font-num · 진행 바는 파랑(생산 진행과 같은 규칙).
+   ⛔ 여기에 시안(--acc-sel)을 쓰지 말 것 — 그건 '지금 선택된 것' 전용이다. */
+#campBar{position:absolute;left:8px;right:8px;top:calc(var(--topPad) + var(--curH) + 8px);z-index:9;
+  display:none;flex-direction:column;gap:4px;padding:8px 12px;
+  border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(14,18,26,.92),rgba(8,11,16,.92));
+  box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 6px 18px rgba(0,0,0,.45);
+  pointer-events:none}
+#phone.campMode #homeScreen #campBar{display:flex}
+#campBar .cbTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#campBar .cbNm{font-size:var(--fs-md);font-weight:800;letter-spacing:.02em;color:#e8eef7}
+#campBar .cbRd{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-md);font-weight:800;color:#cfd8e6}
+#campBar .cbRd b{color:#fff}
+#campBar .cbFoe{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-sm);color:var(--neon,#ff3b3b);font-weight:800}
+#campBar .cbTrk{height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+#campBar .cbFil{height:100%;width:0;border-radius:var(--r-bar);
+  background:var(--info,#4aa8ff);box-shadow:0 0 8px rgba(74,168,255,.55);
+  transition:width .18s linear}
+/* 🏕 0단계 = 캠프. 위험 광원을 끄고 중립으로 — "여기는 안전하다"를 색으로 말한다 */
+#campBar.safe{border-color:rgba(255,255,255,.10)}
+#campBar.safe .cbNm{color:#9fb0c4}
+#campBar.safe .cbTrk{display:none}   /* 캠프에는 진행할 라운드가 없다 — 빈 바를 두지 않는다 */
+/* ⚔ 던전 = 밑변 광원 --neon(위험). DESIGN §2 액센트 역할표 */
+#campBar.dng{box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 6px 18px rgba(0,0,0,.45),
+  0 2px 0 -1px var(--neon,#ff3b3b)}

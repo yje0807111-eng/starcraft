@@ -1204,6 +1204,54 @@ async function groupLobby(){
         +' · 천장 '+campFoeDiff(CAMP_DG_MAX,CAMP_ROUND_MAX-1).toExponential(2);
     } finally { C.dg=back.dg; C.cleared=back.cleared; } });
 
+  // 🗺 단계·라운드 배지 — 화면에서 지금 어디인지 보이는가
+  await step('캠프 던전: 단계·라운드 배지', async()=>{
+    skipIf(typeof campBarRender!=='function','배지 없음');
+    const el=document.getElementById('campBar');
+    assert(el,'#campBar 가 마크업에 없다');
+    const C=campState(); const back={dg:C.dg, cleared:C.cleared};
+    try{
+      // ① 0단계 = 캠프. 안전 표시 · 진행 바 0
+      C.dg=0; C.cleared=0; campBarReset(); campBarRender();
+      assert(el.classList.contains('safe') && !el.classList.contains('dng'),'캠프인데 안전 표시가 아님');
+      assert(/캠프/.test(el.querySelector('.cbNm').textContent),'캠프 이름이 안 나옴: '+el.querySelector('.cbNm').textContent);
+      assert(parseFloat(el.querySelector('.cbFil').style.width)===0,'캠프인데 진행 바가 참: '+el.querySelector('.cbFil').style.width);
+      // ② 던전 = 위험 표시 · 라운드와 진행 바
+      C.dg=3; C.cleared=25; campBarReset(); campBarRender();
+      assert(el.classList.contains('dng') && !el.classList.contains('safe'),'던전인데 위험 표시가 아님');
+      assert(/던전 3/.test(el.querySelector('.cbNm').textContent),'단계가 안 나옴');
+      assert(/26/.test(el.querySelector('.cbRd').textContent),'라운드가 26 이 아님: '+el.querySelector('.cbRd').textContent);
+      assert(Math.abs(parseFloat(el.querySelector('.cbFil').style.width)-50)<0.05,'진행 바가 50% 가 아님: '+el.querySelector('.cbFil').style.width);
+      // ③ ⚠ 매 프레임 불리므로 바뀐 것만 쓴다 — 캐시가 실제로 막는가
+      const rd=el.querySelector('.cbRd'); rd.textContent='XX';
+      campBarRender();
+      assert(rd.textContent==='XX','안 바뀌었는데 다시 그렸다 — 캐시가 안 먹는다');
+      campBarReset(); campBarRender();
+      assert(rd.textContent!=='XX','campBarReset 뒤에도 안 그렸다');
+      // ④ campMode 에서만 보인다(캠프 밖 화면을 덮지 않는다)
+      { const ph=document.getElementById('phone'), had=ph.classList.contains('campMode');
+        ph.classList.remove('campMode');
+        assert(getComputedStyle(el).display==='none','campMode 가 아닌데 배지가 보인다');
+        if(had) ph.classList.add('campMode'); }
+      // ⑤ DESIGN §2 — 라운드는 3px(--r-bar) · 시안(--acc-sel)은 '선택됨' 전용이라 쓰지 않는다
+      { const trk=el.querySelector('.cbTrk'), cs=getComputedStyle(trk);
+        assert(cs.borderRadius==='3px','진행 바 라운드가 3px 이 아님: '+cs.borderRadius);
+        const fil=getComputedStyle(el.querySelector('.cbFil')).backgroundColor;
+        assert(!/92,\s*214,\s*255/.test(fil),'진행 바에 시안을 썼다 — 시안은 선택 전용(DESIGN §2)'); }
+      // ⑥ ⭐ 맵 밑에 깔리지 않는다 — #vBuild 안 형제들이 z-index 6~8 이라 낮게 잡으면 안 보인다.
+      //    실제로 3 으로 뒀다가 맵(#cstMain z=6)에 가려 화면에 아예 안 나왔다.
+      { const mz=[...el.parentElement.children]
+          .filter(c=>c!==el && c.id!=='techSkTip' && c.id!=='btDesel')
+          .map(c=>parseInt(getComputedStyle(c).zIndex,10)||0);
+        const top=Math.max(0,...mz), mine=parseInt(getComputedStyle(el).zIndex,10)||0;
+        assert(mine>top,'배지 z-index('+mine+')가 맵 층('+top+') 아래다 — 화면에 안 나온다'); }
+      // ⑦ 재화 바와 겹치지 않는다
+      { const c=document.getElementById('curBar');
+        if(c){ const a=el.getBoundingClientRect(), b=c.getBoundingClientRect();
+          assert(a.y >= b.y+b.height-0.5,'배지가 재화 바와 겹친다: 배지 '+Math.round(a.y)+' vs 재화바 '+Math.round(b.y+b.height)); } }
+      return '캠프/던전 두 모습 · 진행 바 3px · 가림 없음 · 캐시 ok';
+    } finally { C.dg=back.dg; C.cleared=back.cleared; campBarReset(); } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;

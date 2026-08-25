@@ -58,7 +58,9 @@ function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max
 // 캠프(0) → 던전으로 내려간다. 인자가 없으면 **최고 기록 다음 칸**이 아니라 던전 1부터.
 function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
   const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
-  C.dg = n; C.cleared = 0; campSave(); return n; }
+  C.dg = n; C.cleared = 0; campSave();
+  if(typeof campBarReset === 'function') campBarReset();
+  return n; }
 
 // 라운드 하나를 깼다. 50을 채우면 **다음 던전으로 자동으로** 넘어간다.
 //   ⚠ 전투(2단계)가 부를 입구다. 여기 말고 다른 곳에서 C.cleared 를 만지지 말 것.
@@ -186,14 +188,55 @@ function campCombatStep(dt){
   // ① 졌나 — **먼저 본다.** 본부가 뚫린 프레임에 마침 마지막 적도 죽었다면 그건 진 것이다.
   //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
   if(CAMPB.me.base.hp <= 0 || (CAMPB._started && campAlive('me') === 0 && campAlive('ai') > 0)){
-    campFail(); campBattleClose(); return; }
+    const was = campFail(); campBattleClose(); campBarReset();
+    campSay(was.cleared > 0
+      ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
+      : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다'), 'lose');
+    return; }
   // ② 적을 다 잡았다 → 라운드 클리어
   if(CAMPB._started && campAlive('ai') === 0){
     const dgWas = campDgN();
     campClearRound();
-    if(campDgN() !== dgWas) campBattleOpen();                  // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
+    if(campDgN() !== dgWas){                                   // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
+      campBattleOpen(); campBarReset();
+      campSay('🏁 던전 ' + dgWas + ' 완주 — 던전 ' + campDgN() + ' 진입', 'game_start'); }
     if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S; } }
 }
+
+// ══ 🗺 단계·라운드 배지 (2026-08-25 · 3단계) ═══════════════════════════
+//   #campBar — 맵 위, 재화 바 아래. 마크업은 sc-ums-web.html · 값은 css/30-home.css.
+//   ⛔ 여기서 마크업을 만들지 말 것(단일 소스). 채우기만 한다.
+//   ⚠ 매 프레임 불리므로 **바뀐 것만** 쓴다 — 무조건 innerHTML 을 갈면 리플로가 초당 30번 난다.
+let _campBarS = '';
+function campBarRender(){
+  const el = document.getElementById('campBar'); if(!el) return;
+  const dg = campDgN(), cleared = campCleared(), foe = campAlive('ai');
+  const key = dg + '|' + cleared + '|' + foe;
+  if(key === _campBarS) return;
+  _campBarS = key;
+  const nm = el.querySelector('.cbNm'), rd = el.querySelector('.cbRd'),
+        fo = el.querySelector('.cbFoe'), fil = el.querySelector('.cbFil');
+  el.classList.toggle('safe', dg <= 0);
+  el.classList.toggle('dng',  dg > 0);
+  if(dg <= 0){
+    if(nm) nm.textContent = '🏕 캠프 — 안전';
+    if(rd) rd.textContent = '';
+    if(fo) fo.textContent = '';
+    if(fil) fil.style.width = '0%';
+    return; }
+  if(nm) nm.textContent = '⚔ 던전 ' + dg;
+  // 지금 도전 중인 라운드 = 깬 수 + 1. 50을 다 깨면 다음 던전으로 넘어가므로 51은 안 나온다.
+  if(rd) rd.innerHTML = '라운드 <b>' + campRoundN() + '</b>/' + CAMP_ROUND_MAX;
+  if(fo) fo.textContent = foe > 0 ? ('적 ' + foe) : '';
+  if(fil) fil.style.width = (cleared / CAMP_ROUND_MAX * 100).toFixed(1) + '%';
+}
+// 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
+function campBarReset(){ _campBarS = ''; }
+
+// 진입·클리어·탈락 알림 — toast()/playSfx() 는 등록된 단일 소스다(CLAUDE.md 레지스트리)
+function campSay(msg, sfx){
+  if(typeof toast === 'function') toast(msg);
+  if(sfx && typeof playSfx === 'function') playSfx(sfx); }
 
 // ── 상태 — hbHunt() 와 같은 지연 초기화 모양 ────────────────────────────
 function campState(){
@@ -586,6 +629,7 @@ function campNoteStay(){
 //   남의 판을 캠프 저장에 덮어써 기지가 통째로 바뀐다.
 function campExit(){ if(!_campOn) return;
   campBattleClose();   // 🧹 전장은 화면을 떠날 때 지운다(공용 STK 를 빌려 쓴 것이라 남기면 샌다)
+  campBarReset();      // 🧹 배지 캐시도 비운다(다음 진입에서 옛 값이 남지 않게)
   campNoteStay();                                      // 이번 체류의 수급 속도를 재고
   const C = campState(); if(C) C.leftAt = Date.now();  // 나간 시각을 남긴다(다음 진입에 정산)
   campStopTimer(); campStopFrame();
@@ -837,6 +881,7 @@ function campFrame(now){
   try{
     if(typeof renderBuildTab === 'function') renderBuildTab(dt);   // 건설 틱 + 3D — 단일 소스 그대로
     campCombatStep(dt);                                           // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
+    campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
   } finally { _campRectC = null; }   // ⛔ 프레임 밖으로 캐시를 들고 나가지 않는다(이벤트 핸들러가 낡은 값을 본다)
