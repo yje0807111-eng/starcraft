@@ -460,7 +460,9 @@
   #rooms .riMain{display:flex;align-items:baseline;gap:14px;min-width:0}
   /* ⚠ 줄머리 요소들의 틈은 **gap 이 만든다**. 앞선 요소의 margin-right 로 만들면
      순서를 바꾸는 순간 틈이 사라진다(목업에서 「고인물 전용#8066」처럼 붙었다). margin 을 되살리지 말 것. */
-  #rooms .riName{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:7px}
+  /* ⚠ 배지가 폭 고정 상자가 된 뒤로 baseline 정렬은 못 쓴다 — 상자 밑변에 글자 밑선을 맞추면 배지가 위로 뜬다.
+     center 로 두고 배지·자물쇠만 세로 가운데, 글자들은 그 안에서 자연히 맞는다. */
+  #rooms .riName{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:7px}
   /* 이름은 span(.riTx)이다 — 텍스트 노드로 두면 순서를 바꿀 수 없고 말줄임도 못 건다 */
   #rooms .riTx{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #rooms .riSub{margin-top:0;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -470,8 +472,16 @@
      ⚠ 배지의 **테두리를 걷는다**: 판을 다 벗은 목록에서 배지만 작은 상자를 이고 있으면 열 줄 내내 그것만 튄다.
        난이도는 이제 둘이 말한다 — 배지 글자색 + 줄 구분선. 상자는 셋째 목소리라 뺀다.
      ⚠ 글자색은 난이도 색 그대로가 아니라 **회색을 섞은 값**이다. 원색은 방 이름(흰 글자)을 이긴다. */
-  #rooms .riDiff{border:0;padding:0;margin:0;flex:none;letter-spacing:.5px;
-    color:color-mix(in srgb,var(--dc,#888) 68%,#8d949d)}
+  /* 난이도 배지 = **앞 글자 한 자 · 폭 19px 고정**(2026-08-25 · B3안).
+     ⚠ 이 고정 폭 하나가 「난이도가 뭐든 제목 줄이 맞는다」의 전부다. width 를 auto 로 되돌리지 말 것.
+     면은 난이도 색을 14%만 깐 것이고 **테두리는 없다** — 판을 다 벗은 목록에서 배지만 상자를 이면 거기가 튄다.
+     글자색도 원색이 아니라 회색을 섞은 값이다(원색은 흰 제목을 이긴다). */
+  #rooms .riDiff{display:inline-flex;align-items:center;justify-content:center;align-self:center;
+    width:19px;height:19px;box-sizing:border-box;flex:none;
+    border:0;padding:0;margin:0;border-radius:var(--r-bar);
+    font-family:var(--font-num);font-size:10.5px;font-weight:800;letter-spacing:0;
+    background:color-mix(in srgb,var(--dc,#888) 14%,transparent);
+    color:color-mix(in srgb,var(--dc,#888) 80%,#8d949d)}
   /* 방 번호 = 이름이 아니라 **식별자**다. ⛔ 시안(--hud)은 DESIGN §2 에서 '지금 선택된 것' 전용이고
      화면당 한 곳인데, 목록 열 줄이 전부 그 색을 쓰고 있었다. 중립 회색으로 물러난다. */
   /* ⚠ 크기를 px 로 박지 말 것 — 방 이름(.riName)에 매달아 두면 이름 크기를 바꿔도 비율이 유지된다 */

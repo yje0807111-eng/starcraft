@@ -1776,7 +1776,12 @@ function buildRoomList(){ _roomList=[];
       gameEndAt:playing?(now+1000+Math.random()*9000):0});   // 게임중 방: 시작 후 10초 내 목록에서 사라짐
   }
   renderRoomList(); }
-function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal; return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'">'+D.name+'</span>'; }
+// 난이도 배지 = **앞 글자 한 자**만 폭 고정 상자에 담는다(2026-08-25 · B3안).
+// 이름을 다 쓰면 EASY(4)~NORMAL(6) 로 폭이 들쭉날쭉해 **난이도마다 제목 줄이 어긋났다.**
+// ⚠ EASY/NORMAL/HARD/HELL/FINAL — 첫 글자로 따면 H 가 둘이다. 그 둘은 **색이 가른다**(HARD 주황 / HELL 빨강).
+//   그래서 full 이름을 title 로 함께 남긴다 — 색을 못 보는 사람도 눌러서 확인할 수 있게.
+function diffBadge(d){ const D=DIFFICULTY[d]||DIFFICULTY.normal;
+  return '<span class="riDiff" style="--dc:'+(DIFF_COLOR[d]||'#888')+'" title="'+escHtml(D.name)+'" aria-label="'+escHtml(D.name)+'">'+escHtml(D.name.charAt(0))+'</span>'; }
 let _roomFilter='all';
 function setRoomFilter(f){ _roomFilter=f;
   if(typeof playSfx==='function') playSfx('ui_tab'); renderRoomList(); }
