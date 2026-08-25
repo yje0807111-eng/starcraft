@@ -17,25 +17,82 @@
 //
 // 옛 사냥터(08-hunt.js)는 **코드를 남긴 채 진입만 끊었다**(05-home.js). 되살리려면 거기 한 줄이다.
 
-const CAMP_VER = 1;
+const CAMP_VER = 2;   // 1 → 2 : 단계 번호가 한 칸 내려갔다(옛 던전 1 = 지금 0단계 = 캠프)
 
-// ── 던전 규칙 — 4단계에서 구현하되 상수는 여기서 못 박는다 ──────────────
-//   던전 1 : 적 없음 · ×1.0        ← 누르고·뽑고·짓는 것을 위협 없이 익히는 구간
-//   던전 2 : 병영을 지으면 열린다 · ×1.5 · **여기서부터 적이 나온다**
-//   던전 3+: ×1.5^(dg-1)
-// ⭐ 배수는 **터치와 일꾼 양쪽에 똑같이** 걸어야 한다. 한쪽만 올리면 두 수입의 비율이
-//   던전마다 달라져 2단계에서 맞춰 둔 균형이 무너진다.
-const CAMP_DG_MUL = 1.5;
-const CAMP_DG_UNLOCK = 'barracks';                 // 던전 2를 여는 건물(TECH_TREE 의 b.k)
-function campDgMul(dg){ return Math.pow(CAMP_DG_MUL, Math.max(0, (dg || 1) - 1)); }
+// ══ 🗺 단계와 라운드 (2026-08-25) ═══════════════════════════════════════
+//   **0단계 = 캠프.** 적이 없다. 누르고·뽑고·짓는 것을 위협 없이 익히는 구간이다.
+//   **1단계부터 던전.** 여기서부터 적이 내려온다. 단계마다 50라운드.
+//   ⭐ 화면은 하나뿐이다 — 단계가 바뀌어도 기지·광맥·일꾼은 그대로 있고 적만 달라진다.
+//
+//   설계 단일 소스: HUNT_R1.md §6-1 (미네랄 표) · §6-1-0-2 (클리어 기준) · §6-1-0-3 (탈락)
+//   ⛔ 아래 표를 공식으로 바꾸지 말 것 — HUNT_R1.md §6-1-0-1-1 에 이유가 있다.
+//      (옛 ×2^(단계-1) 공식은 단계 5부터 문턱에서 배율이 '내려갔다')
+const CAMP_DG_MAX = 10;        // 던전 1~10
+const CAMP_ROUND_MAX = 50;     // 던전 하나 = 50라운드
+// [0]=캠프 · [1..10]=던전. base=진입 배율 · x=50라운드 다 깼을 때 몇 배가 되는가
+const CAMP_MINE = [
+  { base: 1,      x: 1 },      // 0단계 캠프 — 배율 고정, 라운드 없음
+  { base: 1,      x: 2 }, { base: 3,      x: 2 }, { base: 10,     x: 2 },
+  { base: 30,     x: 3 }, { base: 150,    x: 3 }, { base: 700,    x: 3 },
+  { base: 3000,   x: 4 }, { base: 20000,  x: 4 }, { base: 120000, x: 4 },
+  { base: 700000, x: 5 },
+];
+function campDgN(){ const C = campState(); return Math.max(0, Math.min(CAMP_DG_MAX, (C && C.dg) | 0)); }
+// ⭐ 배율은 라운드를 **클리어해야** 붙는다 → 50라운드면 50번 붙는다(49번이 아니다).
+//    그래서 증가량이 전부 딱 떨어진다: +0.02 · +0.06 · +0.2 · +1.2 · +6 · +28 · +180 · …
+function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))];
+  return t.base * (t.x - 1) / CAMP_ROUND_MAX; }
+// 지금 미네랄 배율 — 탭과 일꾼 **양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
+function campMineMul(){ const C = campState(); if(!C) return 1;
+  const dg = campDgN(), t = CAMP_MINE[dg];
+  return t.base + campCleared() * campMineInc(dg); }
+function campCleared(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) return 0;
+  return Math.max(0, Math.min(CAMP_ROUND_MAX, C.cleared | 0)); }
+// 지금 도전 중인 라운드 = 클리어한 수 + 1 (0단계에는 라운드가 없다)
+function campRoundN(){ return (campDgN() > 0) ? campCleared() + 1 : 0; }
+
+// ── 진입 · 클리어 · 탈락 ────────────────────────────────────────────────
+// ⛔ 옛 이름 campDgMul 은 남겨 둔다 — 밖에서 부르는 곳이 생겼을 때 조용히 갈라지지 않게.
+function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))].base; }
+
+// 캠프(0) → 던전으로 내려간다. 인자가 없으면 **최고 기록 다음 칸**이 아니라 던전 1부터.
+function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
+  const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
+  C.dg = n; C.cleared = 0; campSave(); return n; }
+
+// 라운드 하나를 깼다. 50을 채우면 **다음 던전으로 자동으로** 넘어간다.
+//   ⚠ 전투(2단계)가 부를 입구다. 여기 말고 다른 곳에서 C.cleared 를 만지지 말 것.
+function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) return false;
+  C.cleared = campCleared() + 1;
+  if(!C.best) C.best = {};
+  C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.cleared);
+  if(C.cleared >= CAMP_ROUND_MAX){
+    if(C.dg < CAMP_DG_MAX){ C.dg++; C.cleared = 0; }   // 자동 이동 — 방치형이라 손이 안 가는 게 맞다
+    else C.cleared = CAMP_ROUND_MAX;                    // 마지막 던전은 끝에 머문다
+  }
+  campSave(); return true; }
+
+// 졌다 → **캠프(0단계)로 돌아간다.** 몇 라운드를 깼든 그 판은 끝이다.
+//   ⭐ 1라운드도 못 깼으면 보너스 0 — 배율이 base 인 채로 끝난다(HUNT_R1 §6-1-0-3).
+//   ⚠ best 는 지우지 않는다. 다시 내려갈 때의 목표가 된다.
+function campFail(){ const C = campState(); if(!C) return 0;
+  const was = { dg:C.dg | 0, cleared: campCleared() };
+  C.dg = 0; C.cleared = 0; campSave(); return was; }
+
+function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
 
 // ── 상태 — hbHunt() 와 같은 지연 초기화 모양 ────────────────────────────
 function campState(){
   const p = (typeof PROF === 'function') ? PROF() : null;
   if(!p) return null;
-  if(!p.camp) p.camp = { ver:CAMP_VER, race:null, dg:1, credit:0, energy:0,
+  if(!p.camp) p.camp = { ver:CAMP_VER, race:null, dg:0, cleared:0, best:{}, credit:0, energy:0,
     built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, eseq:1, ents:[], minerals:[],
-    upg:{}, rate:0, leftAt:0, tapped:0 };   // upg=캠프 업그레이드(정수 레벨) · rate=실측 수급속도 · leftAt=나간 시각
+    upg:{}, rate:0, leftAt:0, tapped:0 };   // dg=0 은 캠프 · upg=캠프 업그레이드 · rate=실측 수급속도 · leftAt=나간 시각
+  // 🔄 ver1 → ver2 : 단계 번호가 한 칸 내려갔다. 옛 「던전 1(적 없음)」이 지금의 0단계(캠프)다.
+  //    ⛔ 그냥 두면 옛 저장이 곧장 던전 1(적이 나오는 곳)에 서 있게 된다.
+  if((p.camp.ver | 0) < 2){ p.camp.dg = Math.max(0, (p.camp.dg | 0) - 1); p.camp.ver = CAMP_VER; }
+  if(typeof p.camp.cleared !== 'number') p.camp.cleared = 0;
+  if(!p.camp.best || typeof p.camp.best !== 'object') p.camp.best = {};
   return p.camp;
 }
 function campHasRace(){ const C = campState(); return !!(C && C.race); }
@@ -532,12 +589,12 @@ function campUpgCost(k){
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
-  return Math.max(1, Math.round(CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) * campDgMul(C.dg)));
+  return Math.max(1, Math.round(CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) * campMineMul()));
 }
 // 일꾼 채취 배수 — 일꾼 **수**로는 못 올린다(실측: 12기 26.8/초에서 천장. 300기도 26.8).
 //   광맥 6덩이가 한 번에 한 명씩만 캐서 나머지는 줄을 선다. 그래서 **1회 채취량**을 올린다.
 function campGatherMul(){ const C = campState(); if(!C) return 1;
-  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campDgMul(C.dg); }
+  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campMineMul(); }
 // 눌린 곳이 광맥인가 — 맞으면 캐고 true
 function campTapAt(clientX, clientY){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
@@ -700,7 +757,7 @@ const CAMP_BG_HAVE = { 1:1 };   // 캠프 전용 그림이 있는 던전(늘어�
 function campSkin(){
   const C = campState(); if(!C) return;
   const el = document.getElementById('phone'); if(!el) return;
-  const dg = Math.max(1, Math.min(10, C.dg || 1));
+  const dg = Math.max(1, Math.min(10, (C.dg | 0) || 1));   // 0단계(캠프)는 던전 1 그림을 쓴다
   // ⚠ **문서 기준 절대 URL 로 만든다.** CSS 변수 안의 상대 경로는 변수를 *선언한 곳*이 아니라
   //   *쓰는 곳*(css/30-home.css)을 기준으로 풀린다 → 'assets/…' 가 'css/assets/…' 가 된다.
   //   같은 함정을 파일 분할 때도 밟았다(커밋 「분할이 깨뜨린 상대 경로」).

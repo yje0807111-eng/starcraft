@@ -1082,6 +1082,51 @@ async function groupLobby(){
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
+  // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
+  //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.
+  await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
+    skipIf(typeof campMineMul!=='function','캠프 던전 없음');
+    const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
+    try{
+      // ① 표 불변식 — 정수 · 문턱이 안 내려간다 · 50R 배수가 안 줄어든다
+      for(let d=0; d<=CAMP_DG_MAX; d++){ const t=CAMP_MINE[d];
+        assert(Number.isInteger(t.base) && Number.isInteger(t.x), 'CAMP_MINE['+d+'] 가 정수가 아님');
+        assert(Number.isInteger(t.base*t.x), 'CAMP_MINE['+d+'] 50클리어 배율이 정수가 아님');
+        if(d>1){ const prev=CAMP_MINE[d-1], step=t.base/(prev.base*prev.x);
+          assert(step>1, '단계 '+d+' 문턱에서 배율이 안 오른다: '+(prev.base*prev.x)+' → '+t.base);
+          assert(step<=2, '단계 '+d+' 문턱이 2배를 넘는다: '+step.toFixed(2));
+          assert(t.x>=prev.x, '단계 '+d+' 50R 배수가 앞 단계보다 작다'); } }
+      // ② 0단계 = 캠프. 라운드가 없고 배율은 1
+      C.dg=0; C.cleared=0;
+      assert(campRoundN()===0, '0단계에 라운드가 있다: '+campRoundN());
+      assert(campMineMul()===1, '캠프 배율이 1이 아님: '+campMineMul());
+      // ③ 라운드는 **클리어할 때마다** 붙는다 — 50라운드면 50번(49번이 아니다)
+      campEnterDungeon(1);
+      assert(campRoundN()===1 && campMineMul()===1, '던전 1 진입값이 틀림');
+      campClearRound();
+      assert(Math.abs(campMineMul()-1.02)<1e-9, '1라운드 클리어 뒤 배율: '+campMineMul()+' (기대 1.02)');
+      for(let i=0;i<48;i++) campClearRound();          // 누계 49회
+      assert(Math.abs(campMineMul()-1.98)<1e-9, '49회 클리어 배율: '+campMineMul()+' (기대 1.98)');
+      // ④ 50회째를 깨면 **다음 던전으로 자동** — 그 순간 배율은 다음 던전 진입값
+      campClearRound();
+      assert(campDgN()===2 && campRoundN()===1, '50 클리어인데 자동 이동 안 함: '+campDgN()+'-'+campRoundN());
+      assert(campMineMul()===3, '던전 2 진입 배율: '+campMineMul()+' (기대 3)');
+      assert(campBest(1)===50, '던전 1 최고 기록이 50이 아님: '+campBest(1));
+      // ⑤ 지면 캠프(0)로 탈락 — 몇 라운드를 깼든. best 는 남는다
+      campClearRound(); campClearRound();
+      const was=campFail();
+      assert(was.dg===2 && was.cleared===2, '탈락 기록이 틀림: '+JSON.stringify(was));
+      assert(campDgN()===0 && campMineMul()===1, '탈락인데 캠프로 안 돌아감: '+campDgN());
+      assert(campBest(1)===50 && campBest(2)===2, '탈락으로 best 가 지워짐');
+      // ⑥ 마지막 던전은 끝에 머문다(넘어갈 곳이 없다)
+      campEnterDungeon(CAMP_DG_MAX);
+      for(let i=0;i<60;i++) campClearRound();
+      assert(campDgN()===CAMP_DG_MAX, '마지막 던전에서 넘어가 버림: '+campDgN());
+      assert(campCleared()===CAMP_ROUND_MAX, '마지막 던전 클리어 수가 상한을 넘음: '+campCleared());
+      return '0=캠프 · 1~'+CAMP_DG_MAX+'던전 × '+CAMP_ROUND_MAX+'라운드 · 배율 1→'+(CAMP_MINE[CAMP_DG_MAX].base*CAMP_MINE[CAMP_DG_MAX].x);
+    } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
+      if(typeof campSave==='function') campSave(); } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;
@@ -1114,9 +1159,13 @@ async function groupLobby(){
     //   ⚠ **낮은 레벨에서 재지 말 것.** 탭 0레벨은 1미네랄이라 ×1.5 가 정수로 안 떨어져
     //     round(1.5)=2 로 33% 과다가 된다(실제 게임에서도 그렇다 — 값이 작을 때만 생기는 반올림 특성).
     //     레벨이 조금만 올라도 사라지므로 여기서는 L10(1024)에서 잰다.
-    { const S=campState(); S.upg.tap=10;
-      const g0=campTapGain(); S.dg=2; const g2=campTapGain(); S.dg=1; S.upg.tap=0;
-      assert(Math.abs(g2/g0-CAMP_DG_MUL)<0.02,'던전 배수가 탭에 안 걸림: '+(g2/g0).toFixed(3)); }
+    //   ⚠ 2026-08-25: 단계 번호가 한 칸 내려갔다(0=캠프). 배수도 공식이 아니라 CAMP_MINE 표다.
+    { const S=campState(); S.upg.tap=10; const d0=S.dg, c0=S.cleared;
+      S.dg=0; S.cleared=0; const g0=campTapGain();
+      S.dg=2; S.cleared=0; const g2=campTapGain();
+      S.dg=d0; S.cleared=c0; S.upg.tap=0;
+      const want=CAMP_MINE[2].base/CAMP_MINE[0].base;
+      assert(Math.abs(g2/g0-want)<0.02,'던전 배수가 탭에 안 걸림: '+(g2/g0).toFixed(3)+' (기대 '+want+')'); }
     // ⑤-b ⭐ **폭주 방지 불변식 — 비용 계단이 획득 계단보다 가팔라야 한다.**
     //    같거나 낮으면 「다음 레벨까지 필요한 탭 수」가 0 으로 수렴해 누를수록 쉬워진다.
     //    실측: 비용이 선형이면 21초, ×1.5 면 23초, ×2 면 299초 만에 레벨 60(탭당 10^18).
