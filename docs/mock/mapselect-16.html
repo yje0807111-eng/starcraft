@@ -1,0 +1,134 @@
+<!-- 유즈맵 선택 — 새 디자인 16안 (2026-08-23)
+     기준 = 로딩 · 로그인 · 하단 네비 · 설정. 이 넷은 이미 **상자를 걷어내고 얇은 선과 글자만**
+     남기는 방향으로 정리됐는데, 유즈맵 선택만 '상자 안에 상자'로 남아 있다.
+     ⚠ css/00-base.css 링크(토큰 복사 금지) · 게임 body(폰 가운데 flex)는 되돌린다. -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>유즈맵 선택 16안</title>
+<link rel="stylesheet" href="../../css/00-base.css">
+<style>
+  html,body{display:block;height:auto;overflow:visible;background:#08090b}
+  body{font-family:var(--font-ko);color:var(--txt);padding:18px;width:1330px}
+  h2{font-family:var(--font-ti);font-size:18px;color:#fff;margin:12px 0 2px}
+  h2 small{font-family:var(--font-ko);font-size:11px;color:var(--txt-mute);margin-left:8px}
+  .sheet{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin:10px 0 24px}
+  .p{background:#0d0e11;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:10px}
+  .tag{font-family:var(--font-ti);font-size:12.5px;color:#fff}
+  .note{font-size:9.5px;line-height:1.5;color:var(--txt-mute);min-height:40px;margin:2px 0 7px}
+  .ph{position:relative;width:100%;aspect-ratio:390/720;border-radius:9px;overflow:hidden;background:#07080b;
+    display:flex;flex-direction:column;font-size:10px}
+  .art{position:absolute;inset:0;background:url(../../assets/backgrounds/title/boot.webp) center/cover;opacity:.55}
+  .art::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,8,11,.30),rgba(7,8,11,.72) 52%,rgba(7,8,11,.95))}
+  .hd{position:relative;display:flex;align-items:center;gap:6px;padding:11px 12px 8px}
+  .hd b{font-family:var(--font-ti);font-size:15px;color:#fff}
+  .hd .sp{flex:1}
+  .cur{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-num);font-size:9px;color:#cfd3d8}
+  .cur i{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .burger{width:14px;height:11px;border-top:2px solid #cfd3d8;border-bottom:2px solid #cfd3d8;position:relative}
+  .burger::after{content:'';position:absolute;left:0;right:0;top:3px;height:2px;background:#cfd3d8}
+  /* 정렬 띠 — 지금 것(판) vs 로그인식(글자만) */
+  .seg{position:relative;display:flex;gap:2px;padding:0 12px 7px}
+  .seg span{flex:1;text-align:center;padding:6px 0;font-family:var(--font-ti);font-size:10px;color:#7d8590}
+  .seg span.on{color:#fff}
+  .seg.line span.on{box-shadow:inset 0 -2px 0 var(--acc-sel)}
+  .seg.box span{background:#111318;border:1px solid #24262c;border-radius:3px}
+  .seg.box span.on{background:#000;border-color:var(--acc-sel)}
+  /* 목록 */
+  .list{position:relative;flex:1;overflow:hidden;padding:0 12px}
+  .row{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+  .row:last-child{border-bottom:0}
+  .th{width:34px;height:34px;border-radius:6px;flex:none;position:relative;background:#0c0f14;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+  .th::after{content:'';position:absolute;inset:9px;border:2px solid var(--c);border-radius:3px;box-shadow:0 0 8px var(--c)}
+  .tx{flex:1;min-width:0}
+  .nm{font-family:var(--font-ti);font-size:12px;color:#fff}
+  .de{font-size:9px;color:#8b9199;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .me{font-family:var(--font-num);font-size:9px;color:#7d8590;margin-top:2px}
+  .me em{font-style:normal;color:#5dff8f}
+  .rt{font-family:var(--font-num);font-size:11px;color:#cfd3d8;text-align:right;flex:none}
+  .rt s{display:block;text-decoration:none;font-size:8px;color:#6e7681}
+  .star{color:#5a6169;font-size:12px;flex:none}
+  .new{border:1px solid #5dff8f;color:#5dff8f;border-radius:3px;padding:0 4px;font-size:8px;margin-left:4px}
+  /* 채팅 */
+  .chat{position:relative;padding:8px 12px;border-top:1px solid rgba(255,255,255,.07)}
+  .chat p{font-size:9px;color:#aeb4bb;margin-bottom:3px}
+  .chat p b{color:#fff;font-weight:400}
+  .chatbar{display:flex;align-items:center;gap:7px;padding:7px 12px;border-top:1px solid rgba(255,255,255,.07);font-size:9px;color:#6e7681}
+  .chatbar em{flex:1;font-style:normal}
+  .chatbar u{text-decoration:none;color:var(--neon)}
+  /* 하단 네비 */
+  .nav{position:relative;display:flex;border-top:1px solid rgba(255,255,255,.08);padding:7px 0 8px}
+  .nav div{flex:1;text-align:center;font-size:9px;color:#6e7681}
+  .nav div i{display:block;width:14px;height:14px;margin:0 auto 3px;border:1.5px solid currentColor;border-radius:3px}
+  .nav div.on{color:#fff}
+  .nav div.on::after{content:'';display:block;width:16px;height:2px;background:#fff;margin:4px auto 0;border-radius:2px}
+  /* 옵션별 변형 */
+  .boxed .row{border-bottom:0;background:#0b0d11;border:1px solid #202329;border-radius:6px;padding:8px;margin-bottom:6px}
+  .barleft .row{padding-left:8px;border-left:2px solid var(--c)}
+  .wide .th{width:100%;height:46px;border-radius:5px;background:linear-gradient(120deg,color-mix(in srgb,var(--c) 26%,#0b0e13),#0b0e13 70%)}
+  .wide .th::after{inset:auto 10px 8px auto;width:16px;height:16px;border-width:2px}
+  .wide .row{flex-direction:column;align-items:stretch;gap:5px}
+</style>
+<script>
+const MAPS=[
+ {n:'가시탑 디펜스', d:'가시탑으로 길목을 막는 타워 디펜스', w:'2.1k', r:261, c:'#4ade80', new:0},
+ {n:'용병 키우기',   d:'용병을 성장시켜 최강으로 키우는 RPG', w:'2.5k', r:312, c:'#f59e0b', new:0},
+ {n:'네모네모 디펜스', d:'유닛을 뽑고 합성해 트랙의 적을 막는다', w:'2.1k', r:257, c:'#4aa8ff', new:0},
+ {n:'성소 공성전',   d:'상대 성소를 먼저 파괴하는 공성전',     w:'1.4k', r:173, c:'#a78bfa', new:1},
+ {n:'오토 배틀',     d:'건물에 유닛을 배정해 출격시킨다',       w:'1.2k', r:152, c:'#22d3ee', new:1}];
+function rows(o){ o=o||{}; const n=o.n||5;
+  return MAPS.slice(0,n).map(m=>{
+    const th=`<div class="th" style="--c:${m.c}"></div>`;
+    const nm=`<div class="nm">${m.n}${m.new&&!o.noNew?'<span class="new">신규</span>':''}</div>`;
+    const de=o.noDesc?'':`<div class="de">${m.d}</div>`;
+    const me=o.rightMeta?'':`<div class="me"><em>●</em> ${m.w} 명 대기 &nbsp; ${m.r} 개 대기방</div>`;
+    const rt=o.rightMeta?`<div class="rt">${m.w}<s>${m.r}방</s></div>`:'';
+    const st=o.noStar?'':'<span class="star">☆</span>';
+    return `<div class="row" style="--c:${m.c}">${o.noThumb?'':th}<div class="tx">${nm}${de}${me}</div>${rt}${st}</div>`;
+  }).join('');
+}
+function phone(o){ o=o||{};
+  return `<div class="ph">
+    ${o.art?'<div class="art"></div>':''}
+    <div class="hd"><b>유즈맵 선택</b><span class="sp"></span>
+      <span class="cur"><i style="background:#4aa8ff"></i>0</span>
+      <span class="cur"><i style="background:#4ade80"></i>0</span>
+      <span class="cur"><i style="background:#c084fc"></i>0</span>
+      <span class="burger"></span></div>
+    ${o.segInHead?`<div class="seg line" style="padding:0 12px 6px;justify-content:flex-start"><span class="on" style="flex:none;padding:2px 0;margin-right:12px">인기순</span><span style="flex:none;padding:2px 0;margin-right:12px">신규</span><span style="flex:none;padding:2px 0;margin-right:12px">추천</span><span style="flex:none;padding:2px 0">즐겨찾기</span></div>`:''}
+    ${o.segInHead||o.noSeg?'':`<div class="seg ${o.segBox?'box':'line'}"><span class="on">인기순</span><span>신규</span><span>추천</span><span>즐겨찾기</span></div>`}
+    <div class="list ${o.cls||''}">${rows(o)}</div>
+    ${o.chatBar?'<div class="chatbar"><em>노바777 : 성소공성전 해보신 분?</em><u>▲</u></div>'
+      :(o.noChat?'':'<div class="chat"><p><b>노바777</b> : 성소공성전 해보신 분?</p><p><b>보이드킹</b> : 용병키우기 고수 계신가요?</p><p><b>Crystalize</b> : 같이 하실 분</p></div><div class="chatbar"><em>메시지 입력…</em><u>전송</u></div>')}
+    <div class="nav"><div><i></i>캐릭터</div><div><i></i>정비</div><div class="on"><i></i>유즈맵</div><div><i></i>상점</div></div>
+  </div>`;
+}
+const OPTS=[
+ ['A1 · 상자 제거','행을 감싼 테두리를 없애고 <b>얇은 구분선</b>만 남긴다. 설정 화면과 같은 문법.',{}],
+ ['A2 · 좌측 색 막대','테두리 대신 <b>맵 색 막대</b> 하나. 상자 없이도 맵이 구분된다.',{cls:'barleft'}],
+ ['A3 · 설명 빼기','설명 줄을 빼고 <b>이름과 수치</b>만. 한 화면에 더 많이 들어온다.',{noDesc:1}],
+ ['A4 · 우측 정렬 수치','대기 인원·방 수를 <b>오른쪽 끝</b>으로. 설정 행(라벨 좌 / 값 우)과 같다.',{rightMeta:1}],
+ ['B1 · 정렬을 위로 붙임','정렬을 <b>제목 바로 아래 작은 글자</b>로. 띠 한 칸이 사라져 목록이 한 줄 더 보인다.',{segInHead:1}],
+ ['B2 · 정렬 띠 판 유지','비교용 — 정렬 띠만 지금처럼 <b>판</b>으로 두고 목록은 선으로.',{segBox:1}],
+ ['B3 · 별 빼기','즐겨찾기 별을 목록에서 빼고 <b>정렬 띠의 즐겨찾기</b>로만.',{noStar:1}],
+ ['B4 · 최소 한 줄','썸네일·설명·별 전부 빼고 <b>이름 + 수치</b> 한 줄. 가장 조밀하다.',{noDesc:1,noStar:1,noThumb:1,rightMeta:1}],
+ ['C1 · 배경 아트','로그인처럼 <b>배경 아트가 계속 비친다</b>. 목록은 그 위에 글자로만.',{art:1}],
+ ['C2 · 배경 + 색 막대','배경 아트에 <b>색 막대</b>를 더한다. 아트가 있어도 맵이 구분된다.',{art:1,cls:'barleft'}],
+ ['C3 · 와이드 배너','썸네일을 <b>가로 배너</b>로 키운다. 맵 그림이 주인공이 된다.',{cls:'wide',n:3,noStar:1}],
+ ['C4 · 배경 + 최소 한 줄','배경 아트 위에 <b>한 줄 목록</b>. 가장 조용하고 가장 넓게 보인다.',{art:1,noDesc:1,noStar:1,noThumb:1,rightMeta:1}],
+ ['D1 · 채팅 접기','채팅을 <b>한 줄로 접는다</b>. 탭하면 올라온다 — 목록이 화면을 다 쓴다.',{chatBar:1}],
+ ['D2 · 채팅 접기 + 색 막대','접은 채팅에 색 막대 목록. <b>목록이 두 배로</b> 보인다.',{chatBar:1,cls:'barleft'}],
+ ['D3 · 채팅 없음','채팅을 <b>다른 화면으로</b> 뺀다. 유즈맵 선택은 고르는 일만 한다.',{noChat:1}],
+ ['D4 · 상자 유지(지금)','비교용 — <b>지금 디자인</b>. 상자 안에 상자, 행마다 테두리.',{cls:'boxed',segBox:1}],
+];
+window.addEventListener('DOMContentLoaded',()=>{
+  const a=document.getElementById('s1'), b=document.getElementById('s2');
+  OPTS.forEach((o,i)=>{ const el=document.createElement('div'); el.className='p';
+    el.innerHTML=`<div class="tag">${o[0]}</div><div class="note">${o[1]}</div>${phone(o[2])}`;
+    (i<8?a:b).appendChild(el); });
+});
+</script>
+
+<h2>유즈맵 선택 16안 — 앞 8 <small>기준: 로딩 · 로그인 · 하단 네비 · 설정 (상자를 걷고 선과 글자로)</small></h2>
+<div class="sheet" id="s1"></div>
+<h2>뒤 8 <small>배경 아트 활용 · 채팅 배치 · 지금 디자인 비교</small></h2>
+<div class="sheet" id="s2"></div>
