@@ -692,6 +692,16 @@
     <!-- 본문은 비어 있다 — 정보·성장은 팝업 본문을 빌려 오고, 스킬만 여기서 그린다(setChrSec) -->
     <div class="msPanel"><div class="chrBody uiScroll" id="chrBody"></div></div>
   </div>
+  <!-- 🔬 연구 · 📋 임무 — 하단 네비 개편(2026-08-25). 지금은 **껍데기만** 있다.
+       기획서(GAME_DIRECTION.md §3-1)가 성장 축을 「연구·경제」 둘로 못박았고, 옛 캐릭터·정비 칸은
+       내용이 전부 유보(§5-A·§5-B)라 빈 껍데기였다. 그 두 칸을 이 둘로 갈아끼웠다.
+       ⛔ 옛 화면(#upgScreen·#gearScreen)과 그 코드는 지우지 않는다 — 유보는 삭제가 아니다(§5). -->
+  <div id="researchScreen" class="appScreen hide">
+    <div class="msPanel"><div class="setSoon">준비 중입니다</div></div>
+  </div>
+  <div id="questScreen" class="appScreen hide">
+    <div class="msPanel"><div class="setSoon">준비 중입니다</div></div>
+  </div>
   <div id="gearScreen" class="appScreen hide">
     <div class="msPanel">
       <div class="gearBody uiScroll" id="gearBody"></div>

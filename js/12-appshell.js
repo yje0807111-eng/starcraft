@@ -75,14 +75,14 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','townScreen','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 // 화면 제목은 재화 바 왼쪽에 붙는다(유즈맵과 같은 방식) — 화면 안에 가운데 제목을 또 두지 않는다.
 // 여기 한 곳에서만 정한다. 화면마다 curSetTitle을 부르면 새 화면에서 빠뜨린다.
 const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상점' };
-const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen'];   // 이 화면들은 공용 재화 바를 쓴다
+const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
-const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(e) e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별)
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }

@@ -1622,7 +1622,9 @@ async function groupLobby(){
   await step('캐릭터 스탯: 전투력 칩 + 하이라인 2열', async()=>{
     skipIf(typeof renderChrStat!=='function','스탯 화면 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    navGo('upg'); await sleep(120);
+    // ⚠ 하단 네비에서 빠진 화면이다(2026-08-25 개편 — 연구·임무로 교체). 화면·코드는 살아 있으므로
+    //   **직접 열어서** 계속 검사한다 — 유보한 코드가 썩지 않게. ⛔ navGo('upg'/'gear') 는 이제 없다.
+    openUpgScreen(); await sleep(120);
     const host=$('upgScreen');
     const hv=host.querySelector('.csHv');
     assert(hv,'전투력 칩이 없음');
@@ -1645,7 +1647,8 @@ async function groupLobby(){
   await step('제목: 재화 바 왼쪽 한 곳 (캐릭터·정비·상점)', async()=>{
     skipIf(typeof SCREEN_TITLE!=='object','제목 표 없음');
     const out=[];
-    for(const [id,go] of [['upgScreen',()=>navGo('upg')],['gearScreen',()=>openGear()],['shopScreen',()=>openShop()]]){
+    // ⚠ 캐릭터·정비는 하단 네비에서 빠졌다(연구·임무로 교체) — 화면은 살아 있으니 직접 연다
+    for(const [id,go] of [['upgScreen',()=>openUpgScreen()],['gearScreen',()=>openGear()],['shopScreen',()=>openShop()]]){
       go(); await sleep(150);
       const t=$('curTitle'), tr=t.getBoundingClientRect();
       const res=document.querySelector('#curBar .res').getBoundingClientRect();
@@ -5243,13 +5246,13 @@ async function groupLobby(){
   await step('캐릭터: 스탯·환생·스킬 · 환생 본문은 빌려 쓴다', async()=>{
     skipIf(typeof setChrSec!=='function','캐릭터 구역 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    navGo('upg'); await sleep(60);
+    // ⚠ 하단 네비에서 빠진 화면이다(2026-08-25 개편 — 연구·임무로 교체). 화면·코드는 살아 있으므로
+    //   **직접 열어서** 계속 검사한다 — 유보한 코드가 썩지 않게. ⛔ navGo('upg'/'gear') 는 이제 없다.
+    openUpgScreen(); await sleep(60);
     assert(visible($('upgScreen')),'캐릭터 화면이 안 열림');   // APP_SCREENS 에 빠지면 영영 안 켜진다
-    assert(document.querySelector('#navBar .navIt[data-nav=upg]')===null,'내려간 상태인데 구역 칸이 남음');
-    const subs=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.dataset.sub);
-    assert(subs.join(',')==='stat,reb,skill','캐릭터 하위가 스탯·환생·스킬이 아님: '+subs.join(','));
-    const lab=[...document.querySelectorAll('#navBar .navIt[data-sub]')].map(e=>e.textContent.trim());
-    assert(lab.join(',').indexOf('스탯')>=0 && lab.join(',').indexOf('환생')>=0,'하위 이름이 스탯·환생이 아님: '+lab.join(','));
+    // ⛔ 옛 네비 하위(스탯·환생·스킬) 검사는 걷어냈다 — 2026-08-25 개편으로 그 칸들이 없어졌다.
+    //   화면 자체(setChrSec 로 구역 전환)는 아래에서 계속 검사한다.
+
     const host=()=>$('chrBody');
     // ① 스탯 = 이 화면 전용 렌더러다 — 팝업 본문을 빌려오지 않는다(상세표는 사냥터 프로필이 맡는다)
     assert(!host().querySelector('#hbInfoBody'),'스탯이 아직 팝업 본문을 빌려옴');
@@ -5269,14 +5272,37 @@ async function groupLobby(){
     setChrSec('reb'); await sleep(40); hbOpenGrow(); await sleep(40);
     assert($('hbGrowModal').querySelector('#hbGrowBody'),'팝업이 본문을 못 되찾음');
     assert($('hbGrowBody').textContent.indexOf('환생')>=0,'되찾은 본문이 비어 있음');
-    hbCloseGrow(); navGo('upg'); await sleep(60);
+    hbCloseGrow(); openUpgScreen(); await sleep(60);
     assert(host().querySelector('#hbGrowBody'),'화면 복귀 시 본문을 다시 못 빌려옴');
     for(const id of ['hbInfoBody','hbGrowBody'])
       assert(document.querySelectorAll('#'+id).length===1,'본문이 복제됨: '+id);
-    setChrSec('stat'); navBack(); await sleep(40);
-    return '스탯·환생·스킬 3칸 · 본문 단일 DOM';
+    setChrSec('stat'); await sleep(40);
+    return '스탯·환생·스킬 구역 전환 · 본문 단일 DOM';
   });
 
+  // 🔬📋 하단 네비 개편(2026-08-25) — 옛 캐릭터·정비를 연구·임무로 갈아끼웠다.
+  //   ⚠ 지금은 **껍데기**다(본문 '준비 중'). 그래도 칸·아이콘·화면 열림은 지금부터 지킨다 —
+  //     APP_SCREENS 에 빠지면 화면이 영영 안 켜지는데, 눈으로만 보면 그걸 못 잡는다.
+  await step('하단 네비: 연구·임무·유즈맵·상점 네 칸', async()=>{
+    skipIf(typeof NAV_TREE==='undefined','네비 표 없음');
+    const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.label);
+    assert(cells.join(',')==='연구,임무,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
+    // 두 칸이 실제로 열리는가 — APP_SCREENS 누락이면 여기서 걸린다
+    for(const [fn,id,label] of [[()=>openResearch(),'researchScreen','연구'],[()=>openQuest(),'questScreen','임무']]){
+      fn(); await sleep(60);
+      assert(visible($(id)), label+' 화면이 안 열림(APP_SCREENS 에 빠졌는지 볼 것)');
+      assert($(id).querySelector('.setSoon'), label+' 화면 본문이 없음'); }
+    // 네비 아이콘이 실제로 칠해지는가(ICO 표에 없는 키를 쓰면 빈 칸이 된다)
+    { const bad=[];
+      for(const x of NAV_TREE){ if(x.noCell) continue; if(typeof ICO==='undefined') break;
+        if(!ICO[x.ico]) bad.push(x.label+'→'+x.ico); }
+      assert(!bad.length,'네비 아이콘 키가 ICO 표에 없음: '+bad.join(' · ')); }
+    // ⛔ 유보 규칙 — 옛 화면과 코드는 살아 있어야 한다(길만 닫았다 · GAME_DIRECTION §5)
+    assert(typeof openUpgScreen==='function' && typeof openGear==='function',
+      '옛 캐릭터·정비 함수가 사라졌다 — 유보는 삭제가 아니다(GAME_DIRECTION §5)');
+    assert($('upgScreen') && $('gearScreen'), '옛 캐릭터·정비 화면 마크업이 사라졌다');
+    return cells.join(' · ');
+  });
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);
@@ -5702,13 +5728,15 @@ async function groupLobby(){
                 phantom:{lv:1,dup:0}, gunner:{lv:1,dup:0}, goliath:{lv:1,dup:0} };
       H.party=['sniper'];                                // 열린 칸(2) 중 하나만 채운다
       saveMeta(); }
-    navGo('gear'); await sleep(60);
-    assert(visible($('gearScreen')),'네비 정비가 전용 화면을 안 엶');
+    // ⚠ 하단 네비에서 빠진 화면이다(2026-08-25 개편 — 연구·임무로 교체). 화면·코드는 살아 있으므로
+    //   **직접 열어서** 계속 검사한다 — 유보한 코드가 썩지 않게. ⛔ navGo('gear') 는 이제 없다.
+    openGear(); await sleep(60);
+    assert(visible($('gearScreen')),'정비 화면이 안 열림');
     assert(!visible($('townPanel')) && !visible($('townScreen')),'정비인데 마을이 남아 있음');
     // 탭 띠는 화면에서 걷어내고 하단 네비로 올렸다(2026-08-14) — 같은 UI 를 두 군데 두지 않는다
     assert(!document.getElementById('gearTabs'),'정비 화면에 옛 탭 띠가 남아 있음');
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 네비에 3칸이 아님');
-    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='gear','기본 하위가 장비가 아님');
+    // ⛔ 옛 네비 하위(장비·펫·동료) 검사는 걷어냈다 — 2026-08-25 개편으로 그 칸들이 없어졌다.
+    //   탭 전환(setGearTab)과 화면 내용은 아래에서 계속 검사한다.
     // ⓪ 장비 슬롯 카드 — 각진 판 + 윗변 광선(네비바와 같은 --edge-light)
     { setGearTab('gear'); await sleep(40);
       // 착용 칸이 있어야 '등급 테두리가 통째로 차지하는가'를 볼 수 있다
@@ -5761,7 +5789,9 @@ async function groupLobby(){
         '정비 장비 탭이 renderProfGear()와 다름(복제 의심)'); }
     // ② 펫 = 상점 '보유 펫'과 같은 _shopPetPanel()
     setGearTab('pet'); await sleep(40);
-    assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='pet','펫 하위가 활성이 아님');
+    // ⛔ 옛 네비 하위 활성 검사는 걷어냈다 — 2026-08-25 개편으로 정비 하위 칸이 없어졌다.
+    //   탭 전환 자체는 아래 본문 비교가 확인한다(_gearTab 이 실제로 펫으로 갔는지).
+    assert(_gearTab==='pet','펫 탭으로 안 바뀜: '+_gearTab);
     { const ref=_shopPetPanel().replace(/\s+/g,'');
       assert(document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,60)===ref.slice(0,60),
         '정비 펫 탭이 _shopPetPanel()과 다름(복제 의심)'); }
