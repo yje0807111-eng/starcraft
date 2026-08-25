@@ -1566,9 +1566,15 @@
   #campRaceOv{position:absolute;inset:0;z-index:64;display:flex;flex-direction:column;
     background:#07080b}
   #campRaceOv.hide{display:none}
-  /* 미리보기 자리 — 영상이 들어올 칸. 비어 있어도 아래로 갈수록 어두워진다(글자가 앉는 자리) */
+  /* 미리보기 자리 — 종족별 전장 그림. 파일이 없으면 이 그라데가 그대로 보인다.
+     두 겹(.crPrevL)을 번갈아 써서 종족을 바꿀 때 **짧은 크로스페이드**로 갈린다.
+     나중에 녹화 영상이 들어오면 이 두 겹을 <video> 로 바꾼다 — 자리·딤은 그대로. */
   #campRaceOv .crPrev{position:absolute;inset:0;
     background:linear-gradient(180deg,#25344a 0%,#1a2636 26%,#101823 48%,#0a0e15 70%,#06080c 100%)}
+  #campRaceOv .crPrevL{position:absolute;inset:0;opacity:0;
+    background-position:center;background-size:cover;background-repeat:no-repeat;
+    transition:opacity .32s ease}
+  #campRaceOv .crPrevL.on{opacity:1}
   #campRaceOv .crPrev::after{content:'';position:absolute;inset:0;
     background:linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 34%,
       rgba(6,8,12,.62) 72%,rgba(6,8,12,.96) 100%)}
@@ -1585,8 +1591,10 @@
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
   #campRaceOv .crRow:first-child::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+  /* 아이콘 자리 — 파일이 있으면 그림, 없으면 onerror 가 이모지로 되돌린다(크기는 같다) */
   #campRaceOv .crIco{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;
     justify-content:center;font-size:17px;line-height:1}
+  #campRaceOv .crIco img{width:100%;height:100%;object-fit:contain;display:block}
   #campRaceOv .crMain{min-width:0;flex:1;display:flex;flex-direction:column}
   #campRaceOv .crNm{font-size:var(--fs-xl);font-weight:700;color:#8b939d}
   #campRaceOv .crRow.on .crNm{color:#fff}

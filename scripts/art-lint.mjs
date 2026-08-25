@@ -4,11 +4,12 @@
 // 실제로 한 번 무너졌다 — 밝기 문제로 프롬프트를 다시 쓰면서 구도 문장(§2-D)을 흘렸고,
 // 문서에는 "넣는다"고 적혀 있는데 실물에는 없는 상태가 됐다. 그런 어긋남을 잡는 게 이 스크립트다.
 //
-// ⚠ **계열이 셋이다**(2026-08-21). 둘은 목적이 달라 시점·구도가 반대다 —
+// ⚠ **계열이 넷이다**(2026-08-24). 둘은 목적이 달라 시점·구도가 반대다 —
 //    한 벌의 규칙으로 검사하면 타이틀 프롬프트가 무조건 실패한다.
 //      · 유즈맵 키 아트(§6) — 내려다보는 맵 그림. 가운데를 비운다(미니맵 자리)
 //      · 타이틀 배경(§8)    — 올려다보는 전투 그림. 위쪽을 비운다(제목 자리)
 //      · 유닛 참고 아트(§9) — **캐릭터**다. 앞 둘의 `no characters`·안개 규칙이 통째로 반대라 별도 규칙을 쓴다
+//      · 종족 전장(§10)   — 타이틀과 같은 9:16 이지만 **비우는 자리가 반대**(위가 아니라 아래)
 //    프롬프트가 어느 §에 적혔는지로 계열을 가른다.
 //
 // 검사 내용
@@ -48,6 +49,16 @@ const FAMILY = {
       ['D 구도(위쪽)',   /The upper third of the frame is calm open sky/],
       ['인물 실루엣',    /All figures are distant silhouettes, no close-up faces\./]],
   },
+  // 🧬 종족 전장(§10) — 타이틀(§8)과 A·C·금지는 같고, 비우는 자리와 종족 수만 다르다.
+  //   ⛔ 「아래 1/3 을 비운다」를 빼면 종족 행·확정 버튼이 그림 위에서 안 읽힌다.
+  race: {
+    label: '종족 전장',
+    need: [...COMMON,
+      ['시점(올려다봄)', /from a low three-quarter angle/],
+      ['D 구도(아래쪽)', /The lower third of the frame is calm and uncluttered/],
+      ['좌상단 비움',    /the upper left corner is free of bright detail/],
+      ['인물 실루엣',    /All figures are distant silhouettes, no close-up faces\./]],
+  },
   // 🐺 유닛 참고 아트(§9) — 환경 계열의 COMMON(안개·탈채도·명암분리)을 쓰지 않는다. 목적이 8방향 스프라이트 원본이라
   //   지켜야 할 것이 다르다: 배경이 흰 단색인가 · 그림자가 발밑인가 · 조명이 고정인가 · 금지줄이 있는가.
   unit: {
@@ -74,7 +85,7 @@ const BANNED = [
 ];
 
 // ── 프롬프트를 계열별로 모은다(어느 ## 아래에 있는가) ──────────────
-const prompts = { usemap: [], title: [], unit: [] };
+const prompts = { usemap: [], title: [], unit: [], race: [] };
 {
   let fam = null;
   // 환경 계열은 한 줄 프롬프트(Moody…), 유닛 계열은 여러 문단이라 블록 전체를 담는다.
@@ -83,7 +94,7 @@ const prompts = { usemap: [], title: [], unit: [] };
   const re = /^## (\d+)\.|^```([a-z]*)\n([\s\S]*?)\n```/gm;
   let m;
   while ((m = re.exec(art))) {
-    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : null)); continue; }
+    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : null))); continue; }
     if (m[2] || !fam) continue;   // 언어 태그가 있으면 프롬프트가 아니다(bash 등)
     const body = m[3];
     if (/[가-힣]/.test(body)) continue;   // 한글이 있으면 프롬프트가 아니다(설명용 도표 등)
@@ -92,7 +103,7 @@ const prompts = { usemap: [], title: [], unit: [] };
   }
 }
 
-for (const key of ['usemap', 'title', 'unit']) {
+for (const key of ['usemap', 'title', 'unit', 'race']) {
   const F = FAMILY[key], list = prompts[key];
   console.log(`${F.label} 프롬프트 ${list.length}개`);
   if (!list.length) bad(`${F.label} 프롬프트를 하나도 못 찾았다 — ART.md 형식이 바뀌었나?`);

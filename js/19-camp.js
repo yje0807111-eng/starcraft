@@ -452,35 +452,56 @@ function campAutoSave(reset){
 //   캠프 건물·경제가 아직 3종족 기준이라 여기 목록에 넣지 않는다.
 const CAMP_RACE_ORDER = ['terran','zerg','protoss'];
 let _campRacePick = null;
+// 🖼 종족별 전장 그림 · 아이콘 — **파일을 넣기만 하면 뜬다**(코드 수정 불필요).
+//   assets/backgrounds/races/<union|swarm|aetherial>.webp   9:16 · 전장 미리보기
+//   assets/icons/races/<union|swarm|aetherial>.webp         128×128 알파 · 선택 행 아이콘
+//   없으면 배경은 기본 그라데, 아이콘은 STK_RACES[k].icon(이모지)로 대체된다.
+function campRaceArt(k){ return 'assets/backgrounds/races/' + stkTechRace(k) + '.webp'; }
+function campRaceIcon(k){ return 'assets/icons/races/' + stkTechRace(k) + '.webp'; }
 function campRaceSheet(){
   if(typeof STK_RACES === 'undefined') return;
   _campRacePick = _campRacePick || CAMP_RACE_ORDER[0];
   let ov = document.getElementById('campRaceOv');
   if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv';
+    // ⚠ 껍데기는 **한 번만** 짓는다 — 미리보기 두 겹(.crPrevL)이 살아 있어야 크로스페이드가 된다.
+    //   행/버튼만 campRaceRender() 가 다시 그린다.
+    ov.innerHTML = '<div class="crPrev"><div class="crPrevL"></div><div class="crPrevL"></div></div>'
+      + '<div class="crScr"><div class="crHd"><div class="crTtl">종족 선택</div></div>'
+      + '<div class="crRows"></div>'
+      + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
     (document.getElementById('phone') || document.body).appendChild(ov); }
   ov.classList.remove('hide');
-  campRaceRender();
+  campRaceRender(); campRacePrev(_campRacePick, true);
+}
+// 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
+function campRacePrev(k, now){
+  const ov = document.getElementById('campRaceOv'); if(!ov) return;
+  const ls = ov.querySelectorAll('.crPrevL'); if(ls.length < 2) return;
+  const cur = ov.querySelector('.crPrevL.on') || ls[0], nxt = (cur === ls[0]) ? ls[1] : ls[0];
+  const url = campRaceArt(k);
+  if(nxt.dataset.race === k && cur.classList.contains('on')) return;   // 같은 종족이면 아무것도 안 한다
+  nxt.dataset.race = k; nxt.style.backgroundImage = 'url("' + url + '")';
+  if(now){ cur.classList.remove('on'); nxt.classList.add('on'); return; }
+  requestAnimationFrame(function(){ cur.classList.remove('on'); nxt.classList.add('on'); });
 }
 function campRaceRender(){
   const ov = document.getElementById('campRaceOv'); if(!ov) return;
   const cur = _campRacePick || CAMP_RACE_ORDER[0], R = STK_RACES[cur] || {};
   let rows = '';
   for(const k of CAMP_RACE_ORDER){ const S = STK_RACES[k] || {}; const on = (k === cur);
+    // 아이콘 파일이 없으면 onerror 가 이모지로 되돌린다 — 자리·크기는 그대로다
     rows += '<button type="button" class="crRow' + (on ? ' on' : '') + '" onclick="campRaceSel(\'' + k + '\')">'
-      + '<span class="crIco">' + (S.icon || '') + '</span>'
+      + '<span class="crIco"><img src="' + campRaceIcon(k) + '" alt="" '
+      + 'onerror="this.parentNode.textContent=\'' + (S.icon || '') + '\'"></span>'
       + '<span class="crMain"><span class="crNm">' + (S.name || k) + '</span>'
       + '<span class="crDs">' + (S.sub || '') + ' · ' + (S.desc || '') + '</span></span>'
       + '<span class="crGoIc">' + (on ? '✓' : '›') + '</span></button>'; }
-  // ⚠ 미리보기(.crPrev)는 **의도적으로 빈 칸**이다. 여기에 종족별 전투 영상이 들어간다.
-  ov.innerHTML = '<div class="crPrev"></div>'
-    + '<div class="crScr">'
-    + '<div class="crHd"><div class="crTtl">종족 선택</div></div>'
-    + '<div class="crRows">' + rows + '</div>'
-    + '<button type="button" class="crGo" onclick="campPickRace()">' + (R.name || '') + '으로 시작</button>'
-    + '</div>';
+  ov.querySelector('.crRows').innerHTML = rows;
+  ov.querySelector('.crGo').textContent = (R.name || '') + '으로 시작';
   if(typeof paintIcons === 'function') paintIcons(ov);
 }
-function campRaceSel(k){ if(STK_RACES[k]) { _campRacePick = k; campRaceRender(); } }
+function campRaceSel(k){ if(!STK_RACES[k] || k === _campRacePick) return;
+  _campRacePick = k; campRaceRender(); campRacePrev(k); }
 // ⚠ 한 번 고르면 바꾸지 않는다 — 기지가 종족 건물로 채워지므로 도중 교체는 뜻이 없다.
 //   (바꾸는 기능이 필요해지면 '기지를 버리고 새로 시작'으로 따로 만든다)
 function campPickRace(){
