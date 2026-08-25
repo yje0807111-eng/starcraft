@@ -1,0 +1,180 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>하단 시트 — 색조로 가르기(S4) 8안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   문제: 판(.bp::before)이 --loadDim 뿐이라 위쪽이 거의 투명 → 바깥 화면(전장)과
+         구분이 안 되고 「섹션」으로 안 읽힌다.
+   ⛔ 해법을 「그냥 어둡게」로 가지 않는다(속이 탁해진다).
+      경계 = **윗변 · 그림자 · 형태 · 색조**가 맡는다. 여덟 가지를 비교한다.
+   ⚠ 속(칸)은 여덟 안 전부 그대로다.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --metal-edge:#3c3e46;
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+  --r-bar:3px;
+  --ca:var(--gold,#ffd24a); --caS:rgba(255,210,74,.5); --caL:#ffe9a8;
+  --cgDim:#8a94a6; --cgMuted:#657085;
+  --font-num:'DIN Alternate','Bahnschrift',system-ui,sans-serif;
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --ch:7px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,390px);gap:14px;justify-content:start}
+.col{width:390px}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#ffd08a}
+.hd.base{color:#c9cfd8}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:58px}
+.sub b{color:#dfe6f0}
+
+/* 전장 = 캠프의 초록 지형(구분이 가장 안 되던 그 배경) */
+.stage{position:relative;padding:112px 0 0;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#6f7f45 0%,#5d6f3c 34%,#4c5c33 62%,#3d4b2b 100%)}
+.stage::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 30% 28%,rgba(190,205,130,.55),transparent 46%),
+             radial-gradient(ellipse at 76% 74%,rgba(70,92,52,.75),transparent 50%),
+             repeating-linear-gradient(58deg,rgba(0,0,0,.05) 0 6px,transparent 6px 22px)}
+.bot{position:relative;z-index:2;padding:10px 12px 0}
+/* 판의 면 = ::before (실제 코드와 같은 구조) */
+.bot::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+             var(--loadDim);
+  clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
+
+/* ══ 프로필(캠프 건물 프로필과 같은 구성) ══ */
+.cmdG{position:relative;height:150px;display:grid;grid-template-columns:1fr auto;
+  grid-template-rows:auto minmax(0,1fr);column-gap:9px}
+.cgHead{grid-area:1/1;align-self:center;display:flex;align-items:center;gap:9px;padding:2px 2px 7px;position:relative}
+.cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--caS),transparent 72%)}
+.cgN{font-size:15px;font-weight:800;color:#fff;line-height:1.1}
+.cgHpsh{font-family:var(--font-num);font-weight:800;font-size:12.5px;color:#7ee081}
+.cgHpsh .stAb{font-style:normal;font-size:8.5px;opacity:.7;margin-right:2px;vertical-align:1px}
+.cgTray{grid-area:1/2;align-self:center;display:flex;gap:3px}
+.cgBtn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  color:#ececec;font:800 13px/1 var(--font-num);border:1px solid rgba(255,59,59,.30);
+  background:var(--bpFace);border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.cgBtn.wide{width:61px}
+.cgBody{grid-area:2/1/3/3;display:flex;gap:8px;align-items:stretch;min-height:0}
+.cgInfo{flex:0 0 31%;max-width:158px;display:flex;flex-direction:column;gap:3px;padding:6px 8px;
+  background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)}
+.cgDd{font-size:9.5px;color:var(--cgDim)}
+.cgGrid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 2px 5px;border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:var(--bpFace);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.cgSlot.empty{border-style:dashed;border-color:rgba(255,255,255,.10)}
+.cgSlot.dim .cgPro,.cgSlot.dim .cgName,.cgSlot.dim .cgSub{opacity:.42}
+.cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;border:1px solid var(--caS);border-radius:2px;
+  background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:18px}
+.cgName{font:800 10px/1.3 sans-serif;color:#e6eefc;text-align:center}
+.cgSub{font:800 7px/1 var(--font-num);color:var(--caL);text-align:center}
+
+/* ══ 하단 네비바 ══ */
+.navBar{position:relative;height:42px;margin:6px -12px 0;padding:0 6px;display:flex;align-items:center}
+.navIt{position:relative;flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:5px;height:44px;
+  font-size:10px;font-weight:700;color:#8b939f;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.navIt .ic{width:16px;height:16px}
+.navIt.on{color:#fff}
+.navIt.on::after{content:'';position:absolute;left:11%;right:11%;bottom:1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+  box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   S4(색조로 가른다)의 여덟 갈래. 바뀌는 것은 **판 맨 아래 한 겹**뿐이고
+   윗변 헤어라인과 --loadDim 은 전부 같다. 속(칸)도 전부 같다.
+   ⚠ 「푸른 톤」 표시 — 스모크가 판의 면에 `b-r>=10 && b-g>=6 && b>=20` 을 금지한다
+      (2026-08-13 「푸른기를 전부 걷어냈다 · 다시 넣지 말 것」). 위반하는 안은 그 규칙을
+      같이 뒤집어야 쓸 수 있다.
+   ══════════════════════════════════════════════════════════════════ */
+.tint .bot::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  var(--loadDim), var(--tint)}
+.t1{--tint:linear-gradient(180deg,rgba(24,38,72,.42),rgba(14,22,44,.30))}
+.t2{--tint:linear-gradient(180deg,rgba(24,38,72,.24),rgba(14,22,44,.16))}
+.t3{--tint:linear-gradient(180deg,rgba(24,38,72,.62),rgba(14,22,44,.46))}
+.t4{--tint:linear-gradient(180deg,rgba(30,32,38,.50),rgba(18,20,24,.36))}
+.t5{--tint:linear-gradient(180deg,rgba(16,48,56,.44),rgba(10,28,34,.30))}
+.t6{--tint:linear-gradient(180deg,rgba(42,26,62,.42),rgba(24,16,38,.30))}
+.t7{--tint:linear-gradient(180deg,rgba(58,40,24,.44),rgba(32,22,14,.32))}
+/* T8 — 색을 **더하지 않고** 뒤 배경의 채도를 뺀다. 판 자리만 무채가 되어 갈린다 */
+.t8 .bot::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  var(--loadDim), linear-gradient(180deg,rgba(26,28,32,.26),rgba(16,18,21,.18));
+  backdrop-filter:saturate(.18) brightness(.92)}
+.warn{color:#ff9a9a;font-weight:800}
+.okk{color:#8fe0a0;font-weight:800}
+</style></head><body>
+
+<template id="prof">
+  <div class="cmdG">
+    <div class="cgHead"><span class="cgN">본부</span>
+      <span class="cgHpsh"><i class="stAb">H</i>1500</span></div>
+    <div class="cgTray"><div class="cgBtn wide">− 1 +</div><div class="cgBtn">▶</div><div class="cgBtn">⬆</div></div>
+    <div class="cgBody">
+      <div class="cgInfo"><div class="cgEb">생산</div><div class="cgDd">생산 대기</div></div>
+      <div class="cgGrid">
+        <div class="cgSlot"><div class="cgPro">🔧</div><div class="cgName">정비공</div><div class="cgSub">50</div></div>
+        <div class="cgSlot empty"></div>
+        <div class="cgSlot dim"><div class="cgPro">📡</div><div class="cgName">통신소</div><div class="cgSub">50</div></div>
+        <div class="cgSlot dim"><div class="cgPro">☢</div><div class="cgName">핵 격납고</div><div class="cgSub">50</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="navBar">
+    <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>캐릭터</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 8h16v11H4zM9 8V6a3 3 0 0 1 6 0v2"/></svg>정비</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/></svg>유즈맵</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 9h16v11H4zM8 9V7a4 4 0 0 1 8 0v2"/></svg>상점</div>
+  </div>
+</template>
+
+<div class="col "><p class="hd base">기준 — 색조 없음</p>
+  <p class="sub">지금 코드 상태. 판은 <b>--loadDim</b> 한 장뿐이라 초록 지형과 섞인다.<br><span class='okk'>✓ 규칙 통과</span></p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t1"><p class="hd">T1 — 남색 <em>기본</em></p>
+  <p class="sub"><b>rgba(24,38,72,.42 → .30)</b>. 고르신 S4 그대로.<br><span class='warn'>⚠ 푸른 톤 규칙 위반</span> — 스모크를 같이 뒤집어야 한다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t2"><p class="hd">T2 — 남색 <em>옅게</em></p>
+  <p class="sub">같은 색을 <b>.24 → .16</b> 으로. 지형이 더 비치고 색은 은은하게만 갈린다.<br><span class='warn'>⚠ 푸른 톤 규칙 위반</span></p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t3"><p class="hd">T3 — 남색 <em>짙게</em></p>
+  <p class="sub"><b>.62 → .46</b>. 섹션이 가장 분명하지만 그만큼 어두워진다(되돌린 그 방향으로 반쯤 간다).<br><span class='warn'>⚠ 푸른 톤 규칙 위반</span></p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t4"><p class="hd">T4 — <em>무채</em>(중성 회색)</p>
+  <p class="sub"><b>rgba(30,32,38,.50 → .36)</b>. 색은 안 넣고 <b>톤만</b> 갈린다. 초록 위에서 회색은 충분히 다르다.<br><span class='okk'>✓ 규칙 통과</span> — 지금 규칙 그대로 쓸 수 있다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t5"><p class="hd">T5 — <em>청록</em></p>
+  <p class="sub"><b>rgba(16,48,56,.44)</b>. 남색보다 초록에 가까워 지형과 덜 싸우고 SF 계기판 느낌이 난다.<br><span class='warn'>⚠ 푸른 톤 규칙 위반</span></p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t6"><p class="hd">T6 — <em>보라</em></p>
+  <p class="sub"><b>rgba(42,26,62,.42)</b>. 초록의 보색 쪽이라 가장 세게 갈린다. 에테리얼 배경과는 겹칠 수 있다.<br><span class='warn'>⚠ 푸른 톤 규칙 위반</span></p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t7"><p class="hd">T7 — <em>세피아</em>(따뜻)</p>
+  <p class="sub"><b>rgba(58,40,24,.44)</b>. 따뜻한 쪽으로 가른다 — 초록 지형과 색상환에서 갈리고 <b>푸른기가 아니다</b>.<br><span class='okk'>✓ 규칙 통과</span></p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col tint t8"><p class="hd">T8 — <em>탈색</em>(뒤를 빼서 가른다)</p>
+  <p class="sub">색을 <b>더하지 않고</b> 판 뒤의 <b>채도를 0.18 로</b> 뺀다. 그 자리만 무채가 되어 갈린다.<br><span class='okk'>✓ 규칙 통과</span> · ⚠ 블러와 같은 계열이라 저사양 확인 필요.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<script>
+const t=document.getElementById('prof');
+document.querySelectorAll('[data-fill]').forEach(h=>h.appendChild(t.content.cloneNode(true)));
+</script>
+</body></html>
