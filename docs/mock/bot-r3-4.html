@@ -1,0 +1,197 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>하단 프로필 — 1안(라운드 3px) 위의 모바일 게임형 4안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   기준 = 1안(칸 라운드 9px → 3px). 네 안 모두 그 위에 서고,
+   **모바일 게임에서 흔한 칸 문법**을 하나씩 얹는다.
+   정보(이름·비용·다음 강화)와 네비바는 손대지 않는다.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --metal-edge:#3c3e46;
+  --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --ca:#5cd6ff; --caG:rgba(92,214,255,.45); --caS:rgba(92,214,255,.5); --caL:#dff4ff;
+  --cgDim:#8a94a6; --cgMuted:#657085;
+  --font-num:'DIN Alternate','Bahnschrift',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,390px);gap:14px;justify-content:start}
+.col{width:390px}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base{color:#c9cfd8}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:58px}
+.sub b{color:#dfe6f0}
+
+.stage{position:relative;padding:104px 0 0;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#2c3a4e 0%,#22303f 34%,#3a4a3a 58%,#584a32 80%,#2a2118 100%)}
+.stage::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 26% 82%,rgba(255,190,110,.40),transparent 44%),
+             radial-gradient(ellipse at 80% 24%,rgba(120,170,230,.30),transparent 52%)}
+.bot{position:relative;z-index:2;padding:8px 8px 0;background:rgba(6,8,12,.86);
+  border-top:1px solid rgba(255,255,255,.07)}
+
+/* ══════ 프로필 뼈대 — 현행 그대로, 라운드만 3px(=1안) ══════ */
+.cmdG{position:relative;height:184px;display:flex;flex-direction:column}
+.cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
+.cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--caS),transparent 72%)}
+.cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+.cgN{font-size:15px;font-weight:800;color:#fff;line-height:1.1}
+.cgS{flex-basis:100%;margin-top:1px;font-size:10px;color:var(--cgDim)}
+.cgS b{color:#cfe0f5;font-weight:700}
+.cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
+.cgHpsh .hpv{color:#7ee081} .cgHpsh .shv{color:#8fd8ff}
+.cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px}
+.cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+.cgInfo{position:relative;flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:3px;
+  padding:6px 8px;overflow:hidden;background:var(--bpFace);border:1px solid var(--metal-edge);
+  border-radius:var(--r-bar)}
+.cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)}
+.cgDn{font-size:12px;font-weight:800;color:#eaf1fb;line-height:1.15}
+.cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.35}
+.cgVal{display:flex;align-items:baseline;gap:4px;font-family:var(--font-num);font-weight:700;margin-top:auto}
+.cgVal .cur{font-size:13px;color:#c2ccda} .cgVal .arw{color:var(--cgMuted);font-size:10px}
+.cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG)}
+.cgGrid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;gap:2px;padding:6px 2px 5px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:var(--bpFace);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+.cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;
+  color:var(--ca);border:1px solid var(--caS);border-radius:2px;background:var(--bpTile);
+  display:flex;align-items:center;justify-content:center;font-size:19px}
+.cgPro>i{font-style:normal;position:relative;z-index:2}
+.cgPro::after{content:'';position:absolute;inset:0;z-index:1;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
+             linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.55))}
+.cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px}
+
+/* ══════ 하단 네비바 — 새 문법(고정) ══════ */
+.navBar{position:relative;height:42px;padding:0 6px;margin-top:6px;display:flex;align-items:center;overflow:visible}
+.navIt{position:relative;flex:1 1 0;min-width:0;height:44px;display:flex;align-items:center;justify-content:center;gap:5px;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap;color:#8b939f;
+  text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.navIt .ic{width:17px;height:17px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+.navIt.on{color:#fff}
+.navIt.on::after{content:'';position:absolute;left:11%;right:11%;bottom:1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+  box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+
+/* ═══════════ A · 라벨 띠형 — 아트가 칸을 꽉 채우고 글자는 띠 위에 ═══════════ */
+.vA .cgSlot{padding:0;justify-content:flex-end;gap:0}
+.vA .cgPro{position:absolute;inset:0;width:auto;height:auto;aspect-ratio:auto;flex:none;
+  border:0;border-radius:0;z-index:0;font-size:26px;align-items:flex-start;padding-top:14%}
+.vA .cgPro::after{background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.18) 2px 3px),
+  linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(4,6,10,.86))}
+.vA .cgName{position:relative;z-index:2;padding:0 3px}
+.vA .cgSub{position:relative;z-index:2;padding:0 0 4px;color:#ffd98a}
+.vA .cgSlot.pick{border-color:rgba(255,120,120,.55);box-shadow:0 0 9px -3px rgba(255,59,59,.6)}
+
+/* ═══════════ B · 등급 프레임형 — 테두리 색이 등급, 좌상단에 코스트 배지 ═══════════ */
+.vB .cgSub{display:none}
+.vB .cgSlot::before{content:attr(data-c);position:absolute;left:0;top:0;z-index:3;
+  font:800 8.5px/1 var(--font-num);color:#ffd98a;background:rgba(0,0,0,.80);
+  padding:3px 4px 3px 3px;border-bottom-right-radius:var(--r-bar)}
+.vB .cgSlot[data-t="n"]{border-color:#5b6474}
+.vB .cgSlot[data-t="r"]{border-color:#3f8fd6;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 8px -3px rgba(63,143,214,.85)}
+.vB .cgSlot[data-t="e"]{border-color:#a86fe6;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 0 9px -3px rgba(168,111,230,.95)}
+.vB .cgSlot[data-t="r"] .cgPro{border-color:rgba(63,143,214,.55)}
+.vB .cgSlot[data-t="e"] .cgPro{border-color:rgba(168,111,230,.6)}
+.vB .cgName{margin-top:1px}
+
+/* ═══════════ C · 광택 + 눌림형 — 캐주얼 모바일 버튼 물성 ═══════════ */
+.vC .cgSlot{background:linear-gradient(180deg,#232830 0%,#141820 46%,#0a0c11 100%);
+  border-color:#4a5160}
+.vC .cgSlot::before{content:'';position:absolute;left:1px;right:1px;top:1px;height:44%;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.15),rgba(255,255,255,.02) 70%,transparent);
+  border-radius:2px 2px 44% 44%/2px 2px 22% 22%}
+.vC .cgSlot::after{display:none}
+.vC .cgPro{z-index:2}
+.vC .cgName,.vC .cgSub{position:relative;z-index:2}
+.vC .cgSlot.pick{background:linear-gradient(180deg,#0b0d12 0%,#171c24 100%);border-color:#7a4046;
+  box-shadow:inset 0 3px 7px rgba(0,0,0,.95),inset 0 0 0 1px rgba(255,120,120,.28)}
+.vC .cgSlot.pick::before{opacity:.22}
+.vC .cgInfo{background:linear-gradient(180deg,#1b1f27,#0a0c11);border-color:#454c59}
+
+/* ═══════════ D · 각진 노치형 — 좌상 대각 + 우하 컷 + 밑변 액센트 바 ═══════════ */
+.vD .cgSlot{border-radius:0;
+  clip-path:polygon(0 8px,8px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%)}
+.vD .cgSlot::before{content:'';position:absolute;left:16%;right:16%;bottom:0;height:2px;z-index:3;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)}
+.vD .cgSlot.pick::before{background:linear-gradient(90deg,transparent,#ff6b6b,transparent);
+  box-shadow:0 0 7px rgba(255,59,59,.8)}
+.vD .cgSlot.pick{border-color:rgba(255,120,120,.5)}
+.vD .cgInfo{border-radius:0;clip-path:polygon(0 10px,10px 0,100% 0,100% 100%,0 100%)}
+.vD .cgPro{border-radius:0;clip-path:polygon(0 5px,5px 0,100% 0,100% 100%,0 100%)}
+</style></head><body>
+
+<template id="prof">
+  <div class="cmdG">
+    <div class="cgHead">
+      <div class="cgTtl"><span class="cgN">레인저</span>
+        <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+      <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+    </div>
+    <div class="cgBody">
+      <div class="cgInfo">
+        <div class="cgEb">다음 강화</div>
+        <div class="cgDn">보병 무기</div>
+        <div class="cgDd">보병 계열 공격력 +2</div>
+        <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+      </div>
+      <div class="cgGrid">
+        <div class="cgSlot pick" data-t="e" data-c="50"><div class="cgPro"><i>🎯</i></div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+        <div class="cgSlot" data-t="r" data-c="75"><div class="cgPro"><i>🔥</i></div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+        <div class="cgSlot" data-t="n" data-c="60"><div class="cgPro"><i>✚</i></div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+        <div class="cgSlot" data-t="n" data-c="90"><div class="cgPro"><i>🎖</i></div><div class="cgName">저격수</div><div class="cgSub">90</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="navBar">
+    <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+  </div>
+</template>
+
+<div class="col"><p class="hd base">1안 — 기준 (라운드 3px만)</p>
+  <p class="sub">고르신 그것. 칸 라운드 <b>9 → 3px</b> · 초상 <b>6 → 2px</b> 외에는 현행 그대로.
+     아래 넷은 전부 <b>이것 위에</b> 모바일 게임에서 흔한 칸 문법을 하나씩 얹은 것.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col vA"><p class="hd">A — <em>라벨 띠형</em></p>
+  <p class="sub">초상이 <b>칸을 꽉 채우고</b> 이름·비용은 그 위 어두운 띠에 얹는다. 초상 틀이 사라져
+     칸 하나가 곧 카드가 된다. 아트가 가장 커 보이는 방식 — 유닛 초상이 들어오면 제일 살아난다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col vB"><p class="hd">B — <em>등급 프레임형</em></p>
+  <p class="sub">테두리 색이 <b>등급</b>(회색·파랑·보라)을 말하고, 좌상단에 <b>비용 배지</b>가 붙는다.
+     비용 줄이 배지로 올라가 이름이 한 줄을 온전히 쓴다. 인벤토리 슬롯 문법.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col vC"><p class="hd">C — <em>광택 + 눌림형</em></p>
+  <p class="sub">칸 위쪽에 <b>광택 곡선</b>을 넣어 볼록하게, 고른 칸은 <b>안으로 눌린</b> 느낌으로.
+     "누를 수 있는 것 / 지금 눌린 것"이 색이 아니라 <b>물성</b>으로 읽힌다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<div class="col vD"><p class="hd">D — <em>각진 노치형</em></p>
+  <p class="sub">3px 라운드 대신 <b>좌상단 대각 8px + 우하단 컷 5px</b>, 칸 밑변에 얇은 액센트 바.
+     고른 칸은 그 바가 붉게 켜진다. SF 모바일 게임에서 가장 흔한 각진 슬롯.</p>
+  <div class="stage"><div class="bot" data-fill></div></div></div>
+
+<script>
+const t=document.getElementById('prof');
+document.querySelectorAll('[data-fill]').forEach(h=>h.appendChild(t.content.cloneNode(true)));
+</script>
+</body></html>
