@@ -1127,6 +1127,42 @@ async function groupLobby(){
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
       if(typeof campSave==='function') campSave(); } });
 
+  // ⚔ 던전 전투 — 오토배틀(18-strike.js)을 빌려 쓴다. ⛔ 전투를 캠프에 새로 짜지 말 것.
+  await step('캠프 던전: 적 웨이브 · 전투 · 승패', async()=>{
+    skipIf(typeof campCombatStep!=='function','캠프 전투 없음');
+    const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
+    const stk0=(typeof STK!=='undefined')?STK:null;
+    try{
+      // ① 0단계(캠프)에는 전투가 없다 — 전장이 열리지 않는다
+      C.dg=0; C.cleared=0; campBattleClose();
+      campCombatStep(0.05);
+      assert(CAMPB===null,'0단계인데 전장이 열렸다');
+      // ② 던전에 들어가면 전장이 열리고 양쪽이 나온다
+      campEnterDungeon(1); campBattleClose();
+      campCombatStep(0.05);
+      assert(CAMPB,'던전인데 전장이 안 열림');
+      assert(CAMPB.me.base.y>CAMPB.ai.base.y,'적이 위에서 안 온다 — 내 본부가 아래여야 한다');
+      assert(campAlive('ai')>0,'적이 안 나옴: '+campAlive('ai'));
+      // ③ ⭐ 전역 STK 를 빌려 쓰고 **반드시 돌려놓는다** — 안 돌려놓으면 오토배틀이 캠프 전장을 본다
+      assert(STK===stk0,'campCombatStep 이 전역 STK 를 돌려놓지 않았다');
+      const seen=campWithStk(S=>{ assert(STK===S,'campWithStk 안에서 STK 가 안 바뀜'); return S; });
+      assert(seen===CAMPB && STK===stk0,'campWithStk 가 STK 를 안 돌려놓음');
+      // ④ 적을 다 잡으면 라운드가 오른다
+      const r0=campRoundN();
+      for(const u of CAMPB.ai.units) u.dead=true;
+      campCombatStep(0.05);
+      assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
+      // ⑤ 본부가 뚫리면 캠프(0)로 탈락한다
+      CAMPB._gapT=0; CAMPB._started=true; CAMPB.me.base.hp=0;
+      campCombatStep(0.05);
+      assert(campDgN()===0,'본부가 뚫렸는데 캠프로 안 감: '+campDgN());
+      assert(CAMPB===null,'탈락인데 전장이 안 닫힘');
+      // ⑥ 웨이브는 라운드가 오를수록 두꺼워진다
+      assert(campFoeCount(50)>campFoeCount(1),'웨이브가 라운드에 안 따라온다');
+      return '적 '+campFoeCount(1)+'→'+campFoeCount(50)+'마리 · STK 빌리고 반납 ok';
+    } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
+      campBattleClose(); if(typeof campSave==='function') campSave(); } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;

@@ -79,8 +79,31 @@
 ⚠ **저장 마이그레이션**: `CAMP_VER` 1 → 2 에서 단계 번호가 한 칸 내려갔다(옛 「던전 1(적 없음)」 = 지금 0단계).
 그냥 두면 옛 저장이 곧장 던전 1(적이 나오는 곳)에 서게 된다.
 
-🚧 **아직 전투가 없다.** `campClearRound()` 를 부를 주체가 없다 — 2단계에서 적 웨이브를 붙인다.
-그때는 오토배틀의 `strikeStepUnits` 를 빌린다(새로 짜면 유닛 스탯·상성·스킬이 두 벌이 된다).
+#### ⚔ 던전 전투 (2026-08-25 · 2단계)
+
+⭐ **전투를 새로 짜지 않았다 — 오토배틀(`18-strike.js`)의 것을 빌린다.**
+유닛 스탯·상성·스킬·표적 선정·회피가 거기 다 있다. 빌리는 방법은 사냥터의 `hbWith()` 와 같다:
+**전역 `STK` 를 캠프 전장으로 바꿔 끼우고 부른다.**
+
+```
+campCombatStep(dt)            ← campFrame 이 매 프레임 부른다(0단계면 스스로 빠진다)
+  ├ campBattleOpen()          전장 개설 — strikeNewState() + 내 본부 아래 / 적 위
+  ├ campSortie()              내 병력 출격 = strikeSpawnForPlayer('me',{local:true})
+  │                             └ 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮기는 다리(오토배틀 것)
+  ├ campSpawnFoes()           적 웨이브 = strikeSpawnUnit('ai') × campFoeCount(라운드)
+  └ campWithStk(strikeStepUnits)
+```
+
+| 규칙 | |
+|---|---|
+| ⛔ **`18-strike.js` 를 고치지 말 것** | 오토배틀 본체와 공유한다 |
+| ⚠ **`STK` 는 `let`** (`14-input-fx.js`) | `const` 로 바꾸면 빌릴 수 없다 |
+| ⚠ **`campWithStk` 는 `finally` 로 반납한다** | 안 돌려놓으면 오토배틀이 캠프 전장을 본다 |
+| ⛔ **승패는 「졌나」를 먼저 본다** | 본부가 뚫린 프레임에 마침 마지막 적도 죽으면 그건 진 것이다. 순서를 바꾸면 본부 0 인데 라운드가 오른다(스모크가 잡았다) |
+| 🧹 `campExit()` 이 `campBattleClose()` | 공용 `STK` 를 빌린 것이라 남기면 샌다 |
+
+🚧 **적의 세기는 아직 라운드에 안 붙었다** — 지금은 **마리 수만** 늘어난다(`campFoeCount`).
+체력·공격을 `HUNT_R1.md` §6-1 난이도 곡선(라운드 밑 1.07 · 문턱 ×3)에 잇는 것이 4단계다.
 
 ```
 campOpen() → campEnter() → ① techUIInit(종족)  ② campRestore()  ③ 치트 끄기  ④ campShowView()

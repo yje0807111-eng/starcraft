@@ -81,6 +81,86 @@ function campFail(){ const C = campState(); if(!C) return 0;
 
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
 
+// ══ ⚔ 던전 전투 (2026-08-25 · 2단계) ═══════════════════════════════════
+//   ⭐ **전투를 새로 짜지 않는다 — 오토배틀(18-strike.js)의 것을 빌린다.**
+//      유닛 스탯·상성·스킬·표적 선정·회피가 거기 다 있다. 새로 짜면 두 벌이 되어 언젠가 갈라진다.
+//      빌리는 방법은 사냥터의 hbWith() 와 같다: 전역 STK 를 캠프 것으로 바꿔 끼우고 부른다.
+//
+//   ⛔ 18-strike.js 를 고치지 말 것 — 오토배틀 본체와 공유한다.
+//   ⚠ STK 는 14-input-fx.js 의 `let STK=null` 이다(바꿔 끼울 수 있다). const 로 바꾸지 말 것.
+let CAMPB = null;               // 캠프 전투 상태 — strikeNewState() 모양 그대로
+let _campStkPrev = null;
+function campWithStk(fn){
+  if(!CAMPB || typeof STK === 'undefined') return null;
+  const prev = STK; STK = CAMPB;
+  try { return fn(CAMPB); } finally { STK = prev; }
+}
+
+// 적 종족 — 단계마다 돌아가며 나온다(1단계부터. 0단계=캠프에는 적이 없다)
+function campFoeRace(dg){ const o = (typeof STK_RACE_ORDER !== 'undefined') ? STK_RACE_ORDER : ['terran'];
+  return o[Math.max(0, (dg | 0) - 1) % o.length]; }
+
+// 웨이브 크기 — 라운드가 오를수록 조금씩 두꺼워진다.
+// ⚠ 적 '세기'(체력·공격)는 4단계에서 HUNT_R1 §6-1 난이도 곡선에 연결한다. 여기서는 **마리 수만**.
+const CAMP_FOE_N0 = 3, CAMP_FOE_PER_R = 0.2;
+function campFoeCount(round){ return CAMP_FOE_N0 + Math.floor(Math.max(0, (round | 0) - 1) * CAMP_FOE_PER_R); }
+
+// 전장을 연다. 적은 **위**에서 내려오고 내 본부는 **아래** — 캠프 배치와 같은 방향이다.
+function campBattleOpen(){
+  if(typeof strikeNewState !== 'function') return null;
+  const C = campState(); if(!C) return null;
+  const S = strikeNewState(); const W = S.world;
+  S.me.race = C.race || 'terran';
+  S.ai.race = campFoeRace(campDgN());
+  S.me.base.x = W * 0.5; S.me.base.y = W * 0.86;      // 아래 = 내 본부
+  S.ai.base.x = W * 0.5; S.ai.base.y = W * 0.14;      // 위 = 적이 오는 쪽
+  // 캠프에는 2차·중앙 신전이 없다 — 죽은 것으로 두면 strikeFrontStruct 가 본진을 표적으로 준다
+  S.me.sec.dead = true; S.ai.sec.dead = true; S.central.dead = true;
+  S.me.units.length = 0; S.ai.units.length = 0;
+  CAMPB = S; return S;
+}
+function campBattleClose(){ CAMPB = null; }
+
+// 내 병력 출격 — 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮긴다.
+//   ⭐ 이 다리는 오토배틀이 이미 갖고 있다(strikeSpawnForPlayer). 그대로 부른다.
+function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
+  return campWithStk(() => strikeSpawnForPlayer('me', { local:true })) | 0; }
+
+// 이번 라운드의 적을 낸다.
+function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
+  const n = campFoeCount(campRoundN());
+  return campWithStk(() => { const b4 = CAMPB.ai.units.length;
+    for(let i = 0; i < n; i++) strikeSpawnUnit('ai');
+    return CAMPB.ai.units.length - b4; }) | 0; }
+
+// 살아 있는 유닛 수
+function campAlive(side){ if(!CAMPB) return 0; let n = 0;
+  for(const u of CAMPB[side].units) if(!u.dead) n++; return n; }
+
+// 한 프레임 — 전투를 굴리고 승패를 본다.
+//   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
+const CAMP_ROUND_GAP_S = 1.5;      // 라운드 사이 숨 고르기
+function campCombatStep(dt){
+  const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
+  if(!CAMPB) campBattleOpen();
+  if(!CAMPB) return;
+  if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
+    if(CAMPB._gapT <= 0){ campSortie(); campSpawnFoes(); }
+    return; }
+  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
+  campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+  // ① 졌나 — **먼저 본다.** 본부가 뚫린 프레임에 마침 마지막 적도 죽었다면 그건 진 것이다.
+  //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
+  if(CAMPB.me.base.hp <= 0 || (CAMPB._started && campAlive('me') === 0 && campAlive('ai') > 0)){
+    campFail(); campBattleClose(); return; }
+  // ② 적을 다 잡았다 → 라운드 클리어
+  if(CAMPB._started && campAlive('ai') === 0){
+    const dgWas = campDgN();
+    campClearRound();
+    if(campDgN() !== dgWas) campBattleOpen();                  // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
+    if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S; } }
+}
+
 // ── 상태 — hbHunt() 와 같은 지연 초기화 모양 ────────────────────────────
 function campState(){
   const p = (typeof PROF === 'function') ? PROF() : null;
@@ -471,6 +551,7 @@ function campNoteStay(){
 //   관리자 건설 탭이나 오토배틀에서 온 경우 G.tech 는 그쪽 판이다. 무턱대고 저장하면
 //   남의 판을 캠프 저장에 덮어써 기지가 통째로 바뀐다.
 function campExit(){ if(!_campOn) return;
+  campBattleClose();   // 🧹 전장은 화면을 떠날 때 지운다(공용 STK 를 빌려 쓴 것이라 남기면 샌다)
   campNoteStay();                                      // 이번 체류의 수급 속도를 재고
   const C = campState(); if(C) C.leftAt = Date.now();  // 나간 시각을 남긴다(다음 진입에 정산)
   campStopTimer(); campStopFrame();
@@ -721,6 +802,7 @@ function campFrame(now){
   _campRectC = null;
   try{
     if(typeof renderBuildTab === 'function') renderBuildTab(dt);   // 건설 틱 + 3D — 단일 소스 그대로
+    campCombatStep(dt);                                           // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
   } finally { _campRectC = null; }   // ⛔ 프레임 밖으로 캐시를 들고 나가지 않는다(이벤트 핸들러가 낡은 값을 본다)
