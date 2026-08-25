@@ -5424,6 +5424,57 @@ async function groupLobby(){
     }
   });
 
+  // 🏕 「아무것도 안 골랐을 때」 하단 프로필 = 기지 요약(2026-08-25)
+  await step('캠프 하단 프로필: 아무것도 안 골랐을 때 기지 요약', async()=>{
+    skipIf(typeof _campIdleModel!=='function','요약 모델 없음');
+    const prof=PROF(), camp0=prof.camp, on0=window.campIsOn, st0=window.campState;
+    const G0=(typeof G!=='undefined')?G.tech:null;
+    const box=document.createElement('div'); box.id='__idleTest'; $('phone').appendChild(box);
+    try{
+      prof.camp={dg:3, rnd:27, race:'terran', upg:{tap:4, gather:2}, rate:12.4};
+      window.campIsOn=()=>true; window.campState=()=>PROF().camp;
+      if(typeof G!=='undefined') G.tech={ race:'union', sup:9, supCap:18,
+        ents:[{type:'worker'},{type:'worker'},{type:'worker'},{type:'bldg',bk:'command'}] };
+      const m=_campIdleModel(), get=k=>{ const r=(m.info.stats||[]).find(x=>x[0]===k); return r&&r[1]; };
+      // ① 캠프 값을 **실제로 읽는가** — 하드코딩이면 여기서 걸린다
+      assert(m.title==='잊혀진 회랑','제목이 지금 던전이 아님: '+m.title);
+      assert(get('일꾼')==='3기','일꾼 수를 안 읽음: '+get('일꾼'));
+      assert(get('인구')==='9 / 18','인구를 안 읽음: '+get('인구'));
+      assert(get('터치 강화')==='Lv.4','터치 강화 레벨을 안 읽음: '+get('터치 강화'));
+      assert(get('채취 강화')==='Lv.2','채취 강화 레벨을 안 읽음: '+get('채취 강화'));
+      assert(/\/초$/.test(get('자동 수급')||''),'자동 수급이 초당 표기가 아님: '+get('자동 수급'));
+      assert(get('던전 배수')==='×2.3','던전 배수가 안 맞음(던전 3 = 1.5^2): '+get('던전 배수'));
+      // ② 던전을 옮기면 값이 따라간다(두 곳에서 각자 계산하면 여기서 갈린다)
+      prof.camp.dg=1; const m2=_campIdleModel();
+      assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.0','던전을 바꿨는데 배수가 그대로');
+      assert(m2.title==='감염된 둥지','던전을 바꿨는데 제목이 그대로: '+m2.title);
+      prof.camp.dg=3;
+      // ③ 실제로 그려진다 — 공용 렌더러(renderCmdGrid)를 쓴다(새 카드를 만들지 않는다)
+      renderCampIdleSheet(box);
+      assert(box.querySelector('.cmdG'),'요약 카드가 안 그려짐');
+      assert(box.querySelectorAll('.cgStat').length===m.info.stats.length,'요약 줄 수가 다름');
+      // ④ 값이 바뀌면 다시 그린다 — 시그니처가 안 움직이면 영영 옛 값이 남는다
+      const sig1=box._gSig; prof.camp.upg.tap=9; renderCampIdleSheet(box);
+      assert(box._gSig!==sig1,'값이 바뀌었는데 다시 안 그림(시그니처가 안 움직인다)');
+      assert(box.textContent.indexOf('Lv.9')>=0,'다시 그렸는데 새 값이 안 보임');
+      // ⑤ 캠프 함수가 **아예 없을 때**도 안 터진다(다른 화면·다른 빌드에서 불려도 조용히)
+      //   ⚠ delete 로는 못 지운다 — function 선언으로 만든 전역은 지워지지 않는다(그래서 한 번 헛돌았다).
+      //     undefined 로 덮어야 '함수가 없는' 상황이 실제로 만들어진다.
+      { const keep={}; for(const k of ['campState','campTapGain','campGatherMul','campDgMul','campUpgLv']){ keep[k]=window[k]; window[k]=undefined; }
+        let m3=null, err='';
+        try{ m3=_campIdleModel(); }catch(e){ err=e.message; }
+        for(const k in keep) if(keep[k]) window[k]=keep[k];
+        assert(!err,'캠프 함수가 없을 때 모델이 터진다: '+err);
+        assert(m3 && m3.info && m3.info.stats.length,'캠프가 없을 때 모델이 비었다'); }
+      return m.info.stats.length+'줄 · 던전/일꾼/인구/강화 읽음 · 값 바뀌면 갱신';
+    } finally {
+      box.remove();
+      window.campIsOn=on0; window.campState=st0;
+      if(camp0) prof.camp=camp0; else delete prof.camp;
+      if(typeof G!=='undefined'){ if(G0) G.tech=G0; else delete G.tech; }
+    }
+  });
+
   // ☰ 더보기 칸 정리(2026-08-25) — 캠프에서 실제로 도는 것만 남겼다.
   await step('더보기: 가이드·출석·부스트·설정 네 칸', async()=>{
     skipIf(typeof HB_MORE==='undefined','더보기 표 없음');

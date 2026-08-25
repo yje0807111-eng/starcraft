@@ -747,6 +747,48 @@ function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:fa
       bottom:'<div class="cgSwWrap"><span class="cgSw"></span></div>', act:'onclick="toggleRallyShow(event)"' }); }
   return { mode:'auto', title:'자동화 설정', icon:pIco('⚙️'), sub:'', compact:true, build:true,
     info:{ hideName:true, desc:'버튼을 눌러 켜기/끄기' }, items:items }; }
+// ═══ 🏕 캠프 「아무것도 안 골랐을 때」 요약 — 하단 프로필 구역 ═══════════
+//   캠프는 시트를 늘 열어 두는데, 지금은 아무것도 안 고르면 **본부를 대신 골라** 준다
+//   (19-camp.js campSyncSheet). 그러면 늘 본부 카드만 보여서 "고르지 않은 상태"가 없다.
+//   대신 여기서 **기지 전체 요약**을 보여 준다 — 유즈맵 하단이 늘 내 캐릭터를 보여 주는 것과 같은 자리다.
+//   ⚠ 캠프 상태는 **읽기만** 한다(19-camp.js 는 다른 작업자 영역).
+function _campIdleModel(){
+  const C=(typeof campState==='function')?campState():null;
+  const T=(typeof G!=='undefined')?G.tech:null;
+  const f=(typeof fmtCur==='function')?fmtCur:(n=>String(Math.floor(n||0)));
+  const dg=C?Math.max(1,Math.min(10,C.dg||1)):1;
+  const D=(typeof hbDun==='function')?hbDun(dg):null;
+  const wk=(T&&T.ents)?T.ents.filter(e=>e.type==='worker').length:0;
+  const rate=(C&&C.rate>0)?C.rate:0;
+  const st=[];
+  st.push(['터치 획득', (typeof campTapGain==='function')?f(campTapGain()):'-']);
+  st.push(['자동 수급', rate? (f(rate)+'/초') : '측정 중']);
+  st.push(['일꾼',      wk+'기']);
+  st.push(['인구',      T? ((T.sup||0)+' / '+(T.supCap||0)) : '-']);
+  st.push(['던전 배수', (typeof campDgMul==='function')?('×'+campDgMul(dg).toFixed(1)):'-']);
+  st.push(['채취 배수', (typeof campGatherMul==='function')?('×'+campGatherMul().toFixed(1)):'-']);
+  if(typeof campUpgLv==='function'){
+    st.push(['터치 강화', 'Lv.'+campUpgLv('tap')]);
+    st.push(['채취 강화', 'Lv.'+campUpgLv('gather')]); }
+  return { mode:'upg', compact:true, build:true,
+    title:(D&&D.name)||('던전 '+dg),
+    sub:'아무것도 고르지 않음',
+    info:{ hideName:true, eb:'기지 요약', stats:st, statsScroll:true },
+    items:[] }; }
+// 값이 바뀔 때만 다시 그린다 — 캠프 틱은 매 프레임 돌아서 그냥 그리면 입력이 끊긴다
+function _campIdleSig(){
+  const C=(typeof campState==='function')?campState():null;
+  const T=(typeof G!=='undefined')?G.tech:null;
+  return 'ci|'+(C?(C.dg||1):0)+'|'+(C?(C.upg&&C.upg.tap||0):0)+'|'+(C?(C.upg&&C.upg.gather||0):0)
+    +'|'+((C&&C.rate>0)?C.rate.toFixed(1):0)
+    +'|'+(T?((T.ents||[]).filter(e=>e.type==='worker').length):0)+'|'+(T?(T.sup||0):0)+'|'+(T?(T.supCap||0):0); }
+// 캠프가 부르는 입구. host 를 안 주면 캠프 시트 본문(#btSheetBody)에 그린다.
+function renderCampIdleSheet(host){
+  const el=host||document.getElementById('btSheetBody'); if(!el) return;
+  const sig=_campIdleSig()+'|'+(el._cgPage||0);
+  if(el._gSig===sig) return;
+  el._gSig=sig; el._cgSig=undefined; renderCmdGrid(el, _campIdleModel()); }
+
 function renderAutoSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='auto|'+autoSig()+'|'+(host._cgPage||0);
   if(host._gSig!==sig){ host._gSig=sig; host._cgSig=undefined; renderCmdGrid(host, _autoSheetModel()); } }
