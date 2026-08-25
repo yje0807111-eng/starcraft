@@ -474,7 +474,8 @@
   /* ⚠ 되살릴 것을 빠뜨리면 그 요소는 '눌러도 아무 일 없고 뒤 화면이 대신 반응'한다.
      설정(☰)이 .res의 형제라 빠져 있었고, 그래서 HOME·마을·유즈맵·상점·정비 다섯 화면에서
      설정이 죽고 클릭이 #homeScreen까지 내려가 캐릭터가 그리로 걸어갔다. 새 자식을 넣으면 여기도 볼 것. */
-  .curBar.bare .res,.curBar.bare .hudSet{pointer-events:auto}
+  .curBar.bare .res,.curBar.bare .hudSet,
+  .curBar.bare .curTitle.asChip,.curBar.bare .cdDrop{pointer-events:auto}   /* 🏕 던전 칩·드롭다운 */
   /* 중앙 = 표시 전용(라운드 조절은 좌상단 .hbRoundBtn 담당) → 클릭을 통과시켜 전장을 가리지 않는다 */
   /* 던전·라운드 표시 = 그대로 버튼이다(옛 깃발 아이콘은 폐지). pointer-events를 켜도 캐릭터는
      안 움직인다 — hbFieldEl이 필드 탭 대상을 homeScreen/hbCv/hmScroll로 한정하기 때문. */
@@ -881,7 +882,7 @@
   /* 🏕 캠프 좌상단 던전 칩 — 목업 docs/mock/camp-dungeon-onechip-8.html 7안(왼쪽 광원 띠 + 두 줄).
      맵 위에 얹히는 얇은 판이라 배경을 '어둡게 눌러' 아래 그림이 비쳐도 글자가 읽히게 한다.
      ⚠ 색은 인게임 좌상단 HUD와 같은 토큰(--hud)을 쓴다 — 같은 자리는 같은 어법이어야 한다. */
-  .curTitle.asChip{display:inline-flex;align-items:stretch;gap:0;padding:0 8px 0 0;
+  .curTitle.asChip{position:relative;display:inline-flex;align-items:stretch;gap:0;padding:0 8px 0 0;
     font-family:var(--font-ko);font-size:11px;letter-spacing:.2px;line-height:1.1;
     border-radius:var(--r-bar,3px);                 /* 각진 3px — DESIGN §라운드 토큰 */
     background:rgba(8,12,18,.62);border:1px solid rgba(0,229,255,.42);
@@ -902,6 +903,69 @@
   .curTitle.asChip .cdBar{width:34px;height:2.5px;flex:none;border-radius:2px;
     background:rgba(255,255,255,.14);overflow:hidden}
   .curTitle.asChip .cdBar i{display:block;height:100%;background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+  .curTitle.asChip{cursor:pointer;padding-right:15px}                 /* ⌄ 자리 */
+  /* ⌄ = 오른쪽 위 모서리. 글자 줄에 끼우지 않는다 — 두 줄짜리라 어느 줄의 표시인지 모호해진다 */
+  .curTitle.asChip .cdCv{position:absolute;right:3px;top:2px;width:11px;height:11px;
+    color:rgba(214,226,240,.66);transition:transform .16s}
+  .curTitle.asChip .cdCv svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;
+    stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  .curTitle.asChip.open .cdCv{transform:rotate(180deg);color:var(--hud)}
+  .curTitle.asChip.open{border-bottom-color:rgba(0,229,255,.24)}      /* 드롭다운 윗변과 포개진다 */
+
+  /* 🏕 던전·라운드 드롭다운 — 칩이 아래로 자란 것. 자리는 JS 가 칩을 재서 박는다.
+     ⚠ 칩의 자식이 아니라 **형제**다 — 칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아간다.
+     ⚠ 넓어지는 것은 이 판뿐이고 칩은 내용 폭 그대로다 — 칩까지 넓히면 오른쪽 재화 숫자를 덮는다
+        (실측: 재화 왼끝 185px · 자릿수가 커지면 165px). 이 판은 칩 아래라 재화와 세로로 안 겹친다. */
+  .cdDrop{position:absolute;z-index:5;width:250px;padding:8px 0 9px;
+    border:1px solid rgba(0,229,255,.42);border-radius:0 3px 3px 3px;
+    background:#0a0e14;   /* ⚠ 불투명이다. 큰 판이라 3% 만 비쳐도 뒤 글자가 읽힌다(.94·.97 둘 다 비쳤다).
+                             떠 있는 느낌은 테두리와 그림자가 낸다 — 칩(.62)과 달리 여기서는 반투명을 쓰지 않는다. */font-size:11px;color:var(--txt,#d6e2f0);
+    box-shadow:0 8px 22px rgba(0,0,0,.55)}
+  .cdSec{padding:0 9px}
+  .cdSec+.cdSec{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.09)}
+  /* 구역 라벨 = 로딩창의 LOADING 과 같은 문법(자간 넓은 작은 글자) */
+  .cdSl{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c;margin-bottom:5px}
+  .cdTwo{display:flex}
+  .cdL{flex:1;min-width:0;padding-right:8px}
+  .cdR{width:84px;flex:none;padding-left:9px;border-left:1px solid rgba(255,255,255,.09)}
+  .cdList{max-height:104px;overflow-y:auto}
+  /* 던전 줄 — 판 없이 글자만. 「지금 여기」는 왼쪽 청록 띠 하나로 말한다 */
+  .cdRow{position:relative;display:flex;align-items:center;gap:7px;width:100%;min-height:27px;
+    padding:0 3px 0 8px;background:none;border:none;cursor:pointer;text-align:left;
+    font-family:inherit;font-size:11.5px;font-weight:700;color:#b9c4d2}
+  .cdRow .cdIx{font-style:normal;font-family:var(--font-num);font-size:11px;color:#6f7a88;
+    min-width:11px;text-align:right}
+  .cdRow .cdRnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cdRow .cdMul{font-family:var(--font-num);font-size:10.5px;color:#6f7a88}
+  .cdRow.here{color:#fff}
+  .cdRow.here .cdIx{color:var(--hud);text-shadow:0 0 6px var(--hud-glow)}
+  .cdRow.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;
+    background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+  .cdRow.lock{color:#5c646f;cursor:default}
+  .cdRow.lock .cdMul{color:#4d545e}
+  /* 라운드 = 굴리는 피커. 큰 수가 위, 1 이 맨 아래(옛 사냥터 피커와 같은 방향) */
+  .cdPickWrap{position:relative}
+  /* 위아래를 흐려 준다 — 안 그러면 맨 위 칸이 반쯤 잘린 채 딱 끊겨 보인다 */
+  .cdPick{height:104px;overflow-y:auto;scroll-snap-type:y mandatory;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 24%,#000 76%,transparent);
+    mask-image:linear-gradient(180deg,transparent,#000 24%,#000 76%,transparent);
+    padding:39px 0;                                   /* (104-26)/2 — 첫·마지막 칸도 가운데에 설 수 있다 */
+    -webkit-overflow-scrolling:touch}
+  .cdPickWrap .cdMid{position:absolute;left:0;right:0;top:39px;height:26px;z-index:1;pointer-events:none;
+    border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
+  .cdPick .cdCol{display:flex;flex-direction:column;align-items:center}
+  .cdRn{height:26px;flex:none;scroll-snap-align:center;background:none;border:none;cursor:pointer;
+    font-family:var(--font-num);font-size:13px;font-weight:700;color:#5f6874;line-height:26px;padding:0}
+  .cdRn.on{color:var(--hud);font-size:18px;text-shadow:0 0 8px var(--hud-glow)}
+  /* 주 동작 — 면을 채우지 않는다. 1px 테두리 + 밑변 광원(로그인 버튼과 같은 서명) */
+  .cdGo{position:relative;display:block;width:100%;min-height:32px;background:none;
+    border:1px solid rgba(255,255,255,.2);border-radius:0;cursor:pointer;
+    font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.4px;color:#fff}
+  .cdGo::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+    box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+  .cdGo:active{background:rgba(255,255,255,.06)}
   .curBar .res{display:flex;align-items:center;gap:4px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:12.5px;color:#f2f6fb;white-space:nowrap;
     text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.6)}
   .curBar .ri{width:14px;height:14px;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}

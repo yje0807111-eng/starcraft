@@ -84,7 +84,9 @@ const CUR_SCREENS=['homeScreen','townScreen','mapSelect','modeSheet','dgScreen',
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
-  e.classList.remove('asChip'); e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
+  campDropClose(); e.classList.remove('asChip','open'); e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
+const CAMP_DG_MAX=10;      // 던전 1~10 (HB_DUNGEONS 길이와 같다)
+const CAMP_RND_MAX=99;     // 던전 하나 = 99라운드
 // 🏕 캠프 좌상단 던전 칩 — 재화 바 왼쪽 빈 슬롯(#curTitle)에 얹힌다(목업 docs/mock/camp-dungeon-onechip-8.html 7안).
 //   ⛔ 캠프 파일(19-camp.js)은 다른 작업자 영역이라 손대지 않는다 — 여기서 상태를 **읽기만** 한다.
 //   ⭐ 무엇을 보여줄지는 이 함수 하나가 정한다(단일 소스). 캠프에 라운드가 생기면 여기 한 곳만 고친다.
@@ -93,15 +95,13 @@ function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) ret
 function campChipInfo(){
   if(typeof campIsOn!=='function' || !campIsOn()) return null;
   const C=(typeof campState==='function')?campState():null; if(!C) return null;
-  const dg=Math.max(1, Math.min(CAMP_CHIP_DG_MAX, C.dg||1));
+  const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
   const d=(typeof hbDun==='function')?hbDun(dg):null;
   const hasRnd=(typeof C.rnd==='number');
   return { name:(d&&d.name)||('던전 '+dg),
            lab: hasRnd?'라운드':'던전',
            cur: hasRnd?C.rnd:dg,
-           max: hasRnd?CAMP_CHIP_RND_MAX:CAMP_CHIP_DG_MAX }; }
-const CAMP_CHIP_DG_MAX=10;      // 던전 1~10 (HB_DUNGEONS 길이와 같다)
-const CAMP_CHIP_RND_MAX=99;     // 던전 하나 = 99라운드 (라운드가 생겼을 때만 쓰인다)
+           max: hasRnd?CAMP_RND_MAX:CAMP_DG_MAX }; }
 // 칩 마크업 — 왼쪽 광원 띠 + 두 줄(이름 / 라벨·숫자·진행 막대)
 function curChipHTML(o){
   const pct=Math.max(0, Math.min(100, (o.cur/o.max)*100));
@@ -109,12 +109,115 @@ function curChipHTML(o){
     +'<span class="cdNm">'+escHtml(o.name)+'</span>'
     +'<span class="cdSub"><i class="cdLab">'+escHtml(o.lab)+'</i>'
     +'<b class="cdN">'+o.cur+'</b><i class="cdDim">/'+o.max+'</i>'
-    +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span></span></span>'; }
+    +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span></span></span>'
+    // ⌄ 는 **오른쪽 위 모서리**에 앉힌다 — 두 줄짜리 칩이라 글자 줄에 끼우면 어느 줄의 표시인지 모호해진다
+    +'<i class="cdCv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>'; }
 // 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
   const o=campChipInfo();
-  if(!o){ if(e.classList.contains('asChip')){ e.classList.remove('asChip'); e.textContent=''; } return; }
-  e.classList.add('asChip'); e.innerHTML=curChipHTML(o); }
+  if(!o){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip'); e.textContent=''; } return; }
+  e.classList.add('asChip'); e.innerHTML=curChipHTML(o);
+  if(!e._cdWired){ e._cdWired=1; e.setAttribute('role','button'); e.onclick=campDropToggle; }
+  e.classList.toggle('open', !!_cdPick); }
+// ── 🏕 던전·라운드 드롭다운 (2026-08-25) ────────────────────────────────
+// 칩을 누르면 **칩 아래로 자란다**. 팝업도 전체 화면도 아니다(목업 docs/mock/camp-dgdrop-8.html 2안 + 확정 버튼).
+// ⛔ 캠프 파일(19-camp.js)은 다른 작업자 영역이라 손대지 않는다 — 상태를 읽고, 확정할 때만 두 값을 쓴다.
+//
+// ⚠ **던전 잠금은 여기서 짓지 않는다.** 캠프가 정해 둔 것은 `CAMP_DG_UNLOCK='barracks'` 하나인데
+//    그건 **유니온에서만 맞다** — 병영에 해당하는 건물 키가 종족마다 다르다
+//    (union=barracks · swarm=pool · aetherial=gateway · feral=huntpen · colossus=assembly).
+//    표를 여기서 새로 지으면 두 벌이 된다. 규칙이 정해지면 이 함수 하나만 채운다.
+function campDgOpen(dg){ return dg>=1 && dg<=CAMP_DG_MAX; }
+// 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
+function campEnsureRnd(C){ if(C && typeof C.rnd!=='number') C.rnd=1; return C; }
+let _cdPick=null;            // 드롭다운이 열려 있는 동안의 **임시** 선택 {dg,rnd} — [이동]을 눌러야 진짜가 된다
+const CAMP_RND_H=26;         // 라운드 칸 높이(px) — CSS 와 한 값이어야 스크롤 계산이 맞는다
+let _cdRndT=null;
+
+function campDropToggle(){ _cdPick? campDropClose() : campDropOpen(); }
+function campDropOpen(){
+  const o=campChipInfo(); if(!o) return;
+  const C=campEnsureRnd(campState()); if(!C) return;
+  _cdPick={ dg:Math.max(1,Math.min(CAMP_DG_MAX,C.dg||1)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
+  campDropRender();
+  const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
+  if(typeof playSfx==='function') playSfx('ui_open');
+  document.addEventListener('pointerdown', _cdOutside, true);
+  // 고른 라운드를 가운데로 — 보인 뒤에 해야 높이가 잡힌다
+  // ⚠ requestAnimationFrame(campRndCenter) 로 넘기지 말 것 — rAF 가 timestamp 를 인자로 주는 바람에
+  //    smooth 가 켜져 열 때마다 라운드가 주르륵 굴러 내려온다(실제로 그랬다). 열 때는 즉시 제자리.
+  requestAnimationFrame(()=>campRndCenter(false)); }
+function campDropClose(){
+  if(!_cdPick) return;
+  _cdPick=null; clearTimeout(_cdRndT); _cdRndT=null;
+  const d=document.getElementById('campDrop'); if(d) d.remove();
+  const t=document.getElementById('curTitle'); if(t) t.classList.remove('open');
+  document.removeEventListener('pointerdown', _cdOutside, true); }
+// 바깥을 누르면 닫힌다. 칩 자신은 토글이 맡으므로 제외한다.
+function _cdOutside(ev){ const d=document.getElementById('campDrop'), t=document.getElementById('curTitle');
+  if(!d) return; if(d.contains(ev.target)) return; if(t && t.contains(ev.target)) return; campDropClose(); }
+
+function campDropRender(){
+  const bar=document.getElementById('curBar'), chip=document.getElementById('curTitle');
+  if(!bar||!chip||!_cdPick) return;
+  let d=document.getElementById('campDrop');
+  if(!d){ d=document.createElement('div'); d.id='campDrop'; d.className='cdDrop'; bar.appendChild(d); }
+  // ⚠ 드롭다운은 **칩의 형제**다(칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아간다).
+  //    자리는 칩을 실제로 재서 박는다 — 칩 높이가 바뀌어도 따라온다.
+  const cr=chip.getBoundingClientRect(), br=bar.getBoundingClientRect();
+  d.style.left=(cr.left-br.left)+'px';
+  d.style.top =(cr.bottom-br.top-1)+'px';    // 칩 아래 테두리와 1px 포개 한 줄로 보이게
+  let L='';
+  for(let i=1;i<=CAMP_DG_MAX;i++){ const D=(typeof hbDun==='function')?hbDun(i):null;
+    const open=campDgOpen(i), here=(i===_cdPick.dg);
+    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+'" data-dg="'+i+'"'
+      +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
+      +'<span class="cdRnm">'+escHtml((D&&D.name)||('던전 '+i))+'</span>'
+      +'<span class="cdMul">'+(open?('×'+campDgMul(i).toFixed(1)):'잠김')+'</span></button>'; }
+  let R='';
+  for(let r=CAMP_RND_MAX;r>=1;r--) R+='<button class="cdRn'+(r===_cdPick.rnd?' on':'')+'" data-r="'+r+'">'+r+'</button>';
+  d.innerHTML='<div class="cdSec cdTwo">'
+    +'<div class="cdL"><div class="cdSl">DUNGEON</div><div class="cdList uiScroll">'+L+'</div></div>'
+    +'<div class="cdR"><div class="cdSl">ROUND</div>'
+      // ⚠ 가운데 선은 **스크롤 상자 밖**에 둔다 — 안에 두면 absolute 라도 내용과 같이 굴러 화면 밖으로 나간다
+      +'<div class="cdPickWrap"><i class="cdMid"></i>'
+        +'<div class="cdPick uiScroll" id="cdPickBox"><div class="cdCol">'+R+'</div></div></div></div>'
+    +'</div>'
+    +'<div class="cdSec cdFoot"><button class="cdGo">이동</button></div>';
+  for(const b of d.querySelectorAll('.cdRow')) b.onclick=()=>campDropPickDg(+b.dataset.dg);
+  for(const b of d.querySelectorAll('.cdRn'))  b.onclick=()=>campRndTap(+b.dataset.r);
+  d.querySelector('.cdGo').onclick=campDropGo;
+  const box=d.querySelector('#cdPickBox'); if(box) box.onscroll=campRndScrolled; }
+
+function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
+  _cdPick.dg=dg;
+  const d=document.getElementById('campDrop'); if(d)
+    for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// 라운드 = 스크롤 피커. 큰 수가 위, 1 이 맨 아래 — 옛 사냥터 피커와 같은 방향이다.
+function campRndCenter(smooth){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
+  box.scrollTo({ top:(CAMP_RND_MAX-_cdPick.rnd)*CAMP_RND_H, behavior:smooth?'smooth':'auto' }); }
+function campRndScrolled(){ clearTimeout(_cdRndT); _cdRndT=setTimeout(campRndSettle, 110); }
+function campRndSettle(){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
+  const i=Math.max(0, Math.min(CAMP_RND_MAX-1, Math.round(box.scrollTop/CAMP_RND_H)));
+  const r=CAMP_RND_MAX-i; if(r===_cdPick.rnd) return;
+  _cdPick.rnd=r; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function campRndMark(){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
+  for(const b of box.querySelectorAll('.cdRn')) b.classList.toggle('on', +b.dataset.r===_cdPick.rnd); }
+function campRndTap(r){ if(!_cdPick) return; _cdPick.rnd=r; campRndMark(); campRndCenter(true);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
+function campDropGo(){ if(!_cdPick) return;
+  const C=campEnsureRnd(campState()); if(!C){ campDropClose(); return; }
+  C.dg=_cdPick.dg; C.rnd=_cdPick.rnd;
+  if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로
+  if(typeof saveMeta==='function') saveMeta();
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  campDropClose();
+  updateCurBar(); }                                      // 칩도 새 값으로
+
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.

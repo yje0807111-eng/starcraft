@@ -5357,6 +5357,81 @@ async function groupLobby(){
     return '이름·던전 3/10 · 막대 30% · 바 안에 들어감 · 걷힘 확인';
   });
 
+  // 🏕 던전·라운드 드롭다운(2026-08-25) — 칩을 누르면 칩 아래로 자란다.
+  //   ⚠ 캠프 화면은 3D 라 여기서 못 띄운다 → 캠프 상태만 흉내 내고 **판 자체**를 검사한다.
+  await step('캠프 좌상단: 던전·라운드 드롭다운(칩 아래로)', async()=>{
+    skipIf(typeof campDropOpen!=='function','드롭다운 함수 없음');
+    const t=$('curTitle'); assert(t,'#curTitle 이 없음');
+    const on0=window.campIsOn, st0=window.campState, sk0=window.campSkin, prof=PROF();
+    const camp0=prof?prof.camp:null;
+    let skin=0;
+    try{
+      prof.camp=Object.assign({}, camp0||{}, {dg:3, rnd:27});
+      window.campIsOn=()=>true; window.campState=()=>PROF().camp; window.campSkin=()=>{skin++;};
+      curShow(true); updateCurBar();
+      // ① 칩에 펼침 표시가 있고, 열면 뒤집힌다
+      assert(t.querySelector('.cdCv'),'칩에 펼침 표시(⌄)가 없음');
+      { const cv=t.querySelector('.cdCv'), c=getComputedStyle(cv);
+        assert(c.position==='absolute','⌄ 가 오른쪽 위 모서리에 안 앉음(글자 줄에 끼면 어느 줄인지 모호해진다)'); }
+      t.click(); await sleep(40);
+      const d=()=>$('campDrop');
+      assert(d(),'칩을 눌렀는데 드롭다운이 안 열림');
+      assert(t.classList.contains('open'),'열렸는데 칩에 open 표시가 없음(⌄ 가 안 뒤집힌다)');
+      // ② 담긴 것 — 던전 열 줄 · 라운드 99칸 · 현재 값이 잡힌다
+      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX,'던전 줄이 '+CAMP_DG_MAX+'개가 아님');
+      assert(d().querySelectorAll('.cdRn').length===CAMP_RND_MAX,'라운드 칸이 '+CAMP_RND_MAX+'개가 아님');
+      assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='잊혀진 회랑','현재 던전이 안 잡힘');
+      assert((d().querySelector('.cdRn.on')||{}).textContent==='27','현재 라운드가 안 잡힘');
+      // ③ 자리 — 칩 아래에 1px 포개 붙는다(왼쪽 변도 맞는다)
+      { const cr=t.getBoundingClientRect(), dr=d().getBoundingClientRect();
+        assert(Math.abs(dr.left-cr.left)<1.5,'판 왼쪽 변이 칩과 안 맞음: '+(dr.left-cr.left).toFixed(1));
+        assert(Math.abs(dr.top-(cr.bottom-1))<1.5,'판이 칩 아래에 안 붙음: 칩밑 '+cr.bottom.toFixed(1)+' / 판위 '+dr.top.toFixed(1)); }
+      // ④ 판은 **불투명**이다 — 큰 판이라 3% 만 비쳐도 뒤 글자가 읽힌다(.94·.97 둘 다 비쳤다)
+      { const bg=getComputedStyle(d()).backgroundColor, a=bg.match(/[\d.]+/g)||[];
+        const alpha=(a.length===4)? parseFloat(a[3]) : 1;
+        assert(alpha>=0.995,'드롭다운 판이 비친다(불투명이어야 한다): '+bg); }
+      // ⑤ 「지금 여기」 띠가 스크롤 상자에 잘리지 않는다
+      //    (overflow-y:auto 는 x 도 auto 로 만든다 — 띠를 음수 left 에 두면 통째로 잘린다)
+      { const row=d().querySelector('.cdRow.here'); const bf=getComputedStyle(row,'::before');
+        assert(bf.content!=='none','현재 던전 띠(::before)가 없음');
+        assert(parseFloat(bf.left)>=0,'현재 던전 띠가 스크롤 상자 왼쪽 밖에 있어 잘린다: left '+bf.left); }
+      // ⑥ 라운드 가운데 선은 스크롤 상자 **밖**에 있다(안에 두면 내용과 같이 굴러 사라진다)
+      { const mid=d().querySelector('.cdMid'), box=d().querySelector('#cdPickBox');
+        assert(mid && box,'라운드 피커 조각이 없음');
+        assert(!box.contains(mid),'가운데 선이 스크롤 상자 안에 있다 — 굴리면 같이 사라진다');
+        const mr=mid.getBoundingClientRect(), br=box.getBoundingClientRect();
+        assert(mr.top>=br.top-1 && mr.bottom<=br.bottom+1,'가운데 선이 피커 밖으로 나갔다'); }
+      // ⑦ 고르기만 해서는 **안 바뀐다** — 확정 버튼이 있는 이유다
+      d().querySelector('.cdRow[data-dg="5"]').click();
+      d().querySelector('.cdRn[data-r="40"]').click();
+      assert(PROF().camp.dg===3 && PROF().camp.rnd===27,
+        '고르기만 했는데 실제 값이 바뀌었다(확정 버튼이 무의미해진다): '+PROF().camp.dg+'/'+PROF().camp.rnd);
+      assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='폐쇄된 시설','고른 것이 표시에 안 반영됨');
+      // ⑧ [이동] — 여기서만 옮긴다. 배경도 새 던전 것으로 갈고 칩도 갱신된다.
+      d().querySelector('.cdGo').click(); await sleep(40);
+      assert(PROF().camp.dg===5 && PROF().camp.rnd===40,'이동이 반영 안 됨: '+PROF().camp.dg+'/'+PROF().camp.rnd);
+      assert(skin===1,'던전을 옮겼는데 바닥 그림을 안 갈았다(campSkin 호출 '+skin+'회)');
+      assert(!d(),'이동했는데 판이 안 닫힘');
+      assert((t.querySelector('.cdNm')||{}).textContent==='폐쇄된 시설','칩이 새 던전으로 안 바뀜');
+      assert((t.querySelector('.cdLab')||{}).textContent==='라운드','라운드가 생겼는데 칩이 아직 던전을 보여준다');
+      assert((t.querySelector('.cdN')||{}).textContent==='40','칩 라운드 값이 안 맞음');
+      // ⑨ 바깥을 누르면 닫힌다
+      t.click(); await sleep(40); assert(d(),'다시 안 열림');
+      $('phone').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
+      assert(!d(),'바깥을 눌렀는데 안 닫힘');
+      // ⑩ click-through 화면(.bare)에서도 칩·판이 눌린다 — 안 되면 뒤 캠프가 대신 반응한다
+      { const bar=$('curBar'); const had=bar.classList.contains('bare'); bar.classList.add('bare');
+        const pe=getComputedStyle(t).pointerEvents; if(!had) bar.classList.remove('bare');
+        assert(pe!=='none','.curBar.bare 에서 칩이 눌리지 않는다(뒤 화면이 대신 반응한다)'); }
+      return '던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 닫힘 확인';
+    } finally {
+      campDropClose();
+      window.campIsOn=on0; window.campState=st0; window.campSkin=sk0;
+      if(prof){ if(camp0) prof.camp=camp0; else delete prof.camp; }
+      curSetTitle(''); curShow(false);
+    }
+  });
+
   await step('하단 네비 2층: 구역 → 전용 네비 → 돌아가기', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     const read=()=>[...document.querySelectorAll('#navBar .navIt')].map(e=>e.dataset.nav||('~'+e.dataset.sub));
     openHome(); await sleep(40);
