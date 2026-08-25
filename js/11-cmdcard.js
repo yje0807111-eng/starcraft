@@ -53,11 +53,12 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(id==='Boss'){ BOSS_VIEW.x=0; BOSS_VIEW.y=0; renderBossPanel(); drawBoss(); }
   if(typeof updateCoopBossBar==='function') updateCoopBossBar();
   updateSpecLabel();
-  // 메인 외 탭에서 전투 미니맵 표시 / 조합 버튼은 메인에서만(미니맵과 자리 교대)
+  // 메인 외 탭에서 전투 미니맵 표시(조합 FAB 은 폐지 — 하단 네비 「유닛 조합」이 단일 소스)
   const _labView=(G.sandbox && id==='Unit'), _arena=(id==='Main'||id==='Battle');   // 이펙트 랩: 미니맵 숨김 / 아레나(메인·전투실험)
   document.getElementById('miniWrap').classList.toggle('on', !_arena && !_labView);
-  document.getElementById('mergeFab').classList.toggle('hide', id!=='Main');
   if(!_arena && !_labView) drawMiniMap();
+  // 구역마다 시트가 다른 요소다(.bp ↔ #btSheet) — 넘어올 때 채팅바 높이를 다시 잡는다
+  if(typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
 }
 // 계열 한글명(타입 라벨용)
 // 유닛 직업(이름 옆 작은 배지)
@@ -2152,7 +2153,15 @@ function checkEnemyWarn(n){
 // ── 오버레이 ──
 // 게임 플레이 중에만 하단 콘솔(#bot)을 노출. 타이틀/방찾기/로비 등 메뉴 화면에서는 숨김.
 function setInGame(on){ const p=document.getElementById('phone'); if(p) p.classList.toggle('inGame', !!on); if(on && typeof navShow==='function') navShow(null); document.body.classList.toggle('sheetOpen', !!on); if(typeof _syncSheetLift==='function') requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }   // 게임 진입 = 하단 시트 기본 오픈(시작 탭 메인)
-function _syncSheetLift(){ const open=document.body.classList.contains('sheetOpen')&&!document.body.classList.contains('cstMode');
+// 하단 시트가 밀어 올리는 높이. ⚠ 구역마다 **시트가 다른 요소다** — 보통은 `.bp.on`,
+// 건설 구역은 `#btSheet`(bottom:0 · z-index 30). 둘을 갈라 재지 않으면 건설에서 채팅바가 시트 밑에 깔린다.
+function _syncSheetLift(){ const B=document.body, ph=document.getElementById('phone');
+  if(B.classList.contains('cstMode')){                                   // 🏗 건설 구역
+    if(ph && ph.classList.contains('campMode')){ document.documentElement.style.setProperty('--sheetH','0px'); return; }   // 캠프는 채팅이 없다
+    const bs=document.getElementById('btSheet');
+    const h=(bs && bs.classList.contains('open')) ? (bs.offsetHeight||0) : 0;
+    document.documentElement.style.setProperty('--sheetH', h+'px'); return; }
+  const open=B.classList.contains('sheetOpen');
   if(open){ const p=document.querySelector('.bp.on'); const h=p?(p.offsetHeight||0):0; if(h<20) return;   // 리렌더 중 순간 높이 0/저값 무시(사이드 배너 깜빡임 방지) — 이전 값 유지
     document.documentElement.style.setProperty('--sheetH', h+'px'); }
   else document.documentElement.style.setProperty('--sheetH', '0px'); }   // 닫힘 = 0(사이드 배너 원위치)

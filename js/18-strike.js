@@ -159,7 +159,7 @@ function strikeSetTabLabels(map){ for(const t in map){ const el=document.querySe
   if(span){ span.textContent=map[t]; continue; }
   let tn=null; el.childNodes.forEach(n=>{ if(n.nodeType===3 && n.textContent.trim()) tn=n; });
   if(tn) tn.textContent=map[t]; else el.appendChild(document.createTextNode(map[t])); } }
-function strikeHideNemoChrome(on){ ['coopBossBar','mergeFab','skillFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
+function strikeHideNemoChrome(on){ ['coopBossBar','skillFab','deselTop','cvMarine','cvFx','mergeZone','miniWrap','defaultCmd','zoneLabel','chatBar'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display=on?'none':''; });   // unitCmd 제외: 직스 선택 프로필(커맨드 그리드) 호스트로 사용 → .on 클래스로 표시 제어 · chatBar 숨김(전투화면 하단 비움)
   { const uc=document.getElementById('unitCmd'); if(uc){ uc.classList.remove('on','simple'); uc.innerHTML=''; uc._stkSig=null; uc.style.display=''; } }   // 진입/종료 시 초기화(인라인 display 잔존 제거)
   const kill=document.querySelector('#hudL .kill'); if(kill) kill.style.display=on?'none':'';
   const stage=document.querySelector('#hudL .stage'); if(stage) stage.style.display=on?'none':'';   // 좌상단 ROUND 숨김

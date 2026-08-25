@@ -4011,7 +4011,7 @@ async function groupLobby(){
     if(typeof campExit==='function') campExit();
     const was=$('phone').classList.contains('inGame');
     setInGame(false);
-    for(const id of ['vMain','hud','mergeFab','chatBar','chatLog'])
+    for(const id of ['vMain','hud','chatBar','chatLog'])
       assert(getComputedStyle($(id)).visibility==='hidden', id+' 이 게임 밖에서도 보인다 — 로딩·로그인 화면에 전장 조각이 남는다');
     assert(getComputedStyle($('cvMarine')).visibility!=='hidden','공용 3D 캔버스까지 가렸다 — HOME·마을 3D 가 사라진다');
     const r=$('cvMain').getBoundingClientRect();
@@ -4068,37 +4068,6 @@ async function groupLobby(){
           '탭바 칸의 글자가 넘친다: scroll '+tab.scrollWidth+' > client '+tab.clientWidth); } }
     navBack(); openHome(); await sleep(40);
     return '네비 '+bh+'px · 칸 '+cells.length+' · 인게임 탭바 '+(tb?getComputedStyle(tb).height:'-'); });
-  // 💬 채팅바 = 접힘↔열림 **한 부품**(2026-08-25 · F1안). 평소엔 말풍선 아이콘만 떠 전장을 덜 가린다.
-  //    ⛔ 열렸을 때 왼쪽 ∨ 가 사라지면 접을 방법이 없다 — 앞선 안이 실제로 그 함정을 밟았다.
-  await step('채팅바: 접히면 아이콘만 · 열려도 접기 버튼이 남는다', async()=>{
-    skipIf(typeof chatToggle!=='function','채팅 접기 없음');
-    const bar=$('chatBar'), fold=$('chatFold'), fld=$('chatField'), snd=$('chatSend'), mf=$('mergeFab');
-    assert(bar&&fold&&fld&&snd,'채팅바 조각이 없다(접기 버튼·입력칸·전송)');
-    chatFoldBar(); await sleep(300);
-    const w0=bar.getBoundingClientRect().width;
-    assert(w0<=48,'접혀도 안 좁아졌다: '+Math.round(w0)+'px — 아이콘 하나 폭이어야 한다');
-    assert(+getComputedStyle(fld).opacity===0 && +getComputedStyle(snd).opacity===0,'접혔는데 입력칸·전송이 보인다');
-    assert(getComputedStyle(fold.querySelector('.cfOpen')).display!=='none','접힘 아이콘(말풍선)이 안 나온다');
-    chatOpenBar(); await sleep(320);
-    const r=bar.getBoundingClientRect();
-    assert(r.width>w0+120,'열려도 안 넓어졌다: '+Math.round(r.width)+'px');
-    assert(fold.getBoundingClientRect().width>=20,'열리니 접기 버튼이 사라졌다 — 다시 접을 방법이 없다');
-    assert(getComputedStyle(fold.querySelector('.cfClose')).display!=='none','열림 아이콘(∨)이 안 나온다');
-    assert(+getComputedStyle(fld).opacity===1 && +getComputedStyle(snd).opacity===1,'열렸는데 입력칸·전송이 안 보인다');
-    // 한 상자로 읽혀야 한다 — 테두리는 바깥 껍데기 하나뿐이고 구획은 1px 선이다
-    assert(parseFloat(getComputedStyle(bar).borderTopWidth)>0,'바깥 껍데기에 테두리가 없다 — 일체형으로 안 읽힌다');
-    for(const [n,e] of [['입력',fld],['전송',snd]])
-      assert(parseFloat(getComputedStyle(e).borderTopWidth)===0, n+'칸이 제 테두리를 갖고 있다 — 상자가 셋으로 갈라진다');
-    // ⛔ 항상 켜진 청록은 뺐다 — 액센트는 '지금 선택된 것' 전용이다(DESIGN §2)
-    for(const [n,e] of [['바',bar],['입력',fld],['전송',snd]]){
-      const c=getComputedStyle(e), all=c.borderColor+' '+c.boxShadow+' '+c.color+' '+c.backgroundColor;
-      assert(all.indexOf('229, 255')<0, n+'에 상시 청록이 남아 있다: '+all.slice(0,80)); }
-    // 조합 버튼과 같은 줄이다 — 높이가 다르거나 붙으면 한 줄로 안 읽힌다
-    if(mf){ const m=mf.getBoundingClientRect();
-      assert(Math.abs(m.height-r.height)<=1,'조합 버튼 높이가 채팅바와 다르다: '+Math.round(m.height)+' vs '+Math.round(r.height));
-      assert(r.right<=m.left-3,'채팅바가 조합 버튼과 붙었다/겹쳤다: right '+Math.round(r.right)+' vs left '+Math.round(m.left)); }
-    chatFoldBar(); await sleep(60);
-    return '접힘 '+Math.round(w0)+'px → 열림 '+Math.round(r.width)+'px · 높이 '+Math.round(r.height); });
   // 🖼 폰 바깥 여백 — 검정이면 폰 밑변과 이어져 하단 네비가 어디서 끝나는지 안 보인다.
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다
@@ -8208,7 +8177,34 @@ async function groupGame(){
       assert(!_lsGet('nm_run',null),'깨진 저장본이 남아 있다 — 다음 부팅도 같은 곳에서 걸린다');
       return '예외 없음 · 저장본 삭제';
     } finally { G=keepG; if(keepMap) MAP=keepMap; clearRun(); } });
-}
+  // 💬 채팅바 = 접힘↔열림 **한 부품**(2026-08-25 · F1안). 평소엔 말풍선 아이콘만 떠 전장을 덜 가린다.
+  //    ⛔ 열렸을 때 왼쪽 ∨ 가 사라지면 접을 방법이 없다 — 앞선 안이 실제로 그 함정을 밟았다.
+  await step('채팅바: 접히면 아이콘만 · 열려도 접기 버튼이 남는다', async()=>{
+    skipIf(typeof chatToggle!=='function','채팅 접기 없음');
+    const bar=$('chatBar'), fold=$('chatFold'), fld=$('chatField'), snd=$('chatSend');
+    assert(bar&&fold&&fld&&snd,'채팅바 조각이 없다(접기 버튼·입력칸·전송)');
+    chatFoldBar(); await sleep(300);
+    const w0=bar.getBoundingClientRect().width;
+    assert(w0<=48,'접혀도 안 좁아졌다: '+Math.round(w0)+'px — 아이콘 하나 폭이어야 한다');
+    assert(+getComputedStyle(fld).opacity===0 && +getComputedStyle(snd).opacity===0,'접혔는데 입력칸·전송이 보인다');
+    assert(getComputedStyle(fold.querySelector('.cfOpen')).display!=='none','접힘 아이콘(말풍선)이 안 나온다');
+    chatOpenBar(); await sleep(320);
+    const r=bar.getBoundingClientRect();
+    assert(r.width>w0+120,'열려도 안 넓어졌다: '+Math.round(r.width)+'px');
+    assert(fold.getBoundingClientRect().width>=20,'열리니 접기 버튼이 사라졌다 — 다시 접을 방법이 없다');
+    assert(getComputedStyle(fold.querySelector('.cfClose')).display!=='none','열림 아이콘(∨)이 안 나온다');
+    assert(+getComputedStyle(fld).opacity===1 && +getComputedStyle(snd).opacity===1,'열렸는데 입력칸·전송이 안 보인다');
+    // 한 상자로 읽혀야 한다 — 테두리는 바깥 껍데기 하나뿐이고 구획은 1px 선이다
+    assert(parseFloat(getComputedStyle(bar).borderTopWidth)>0,'바깥 껍데기에 테두리가 없다 — 일체형으로 안 읽힌다');
+    for(const [n,e] of [['입력',fld],['전송',snd]])
+      assert(parseFloat(getComputedStyle(e).borderTopWidth)===0, n+'칸이 제 테두리를 갖고 있다 — 상자가 셋으로 갈라진다');
+    // ⛔ 항상 켜진 청록은 뺐다 — 액센트는 '지금 선택된 것' 전용이다(DESIGN §2)
+    for(const [n,e] of [['바',bar],['입력',fld],['전송',snd]]){
+      const c=getComputedStyle(e), all=c.borderColor+' '+c.boxShadow+' '+c.color+' '+c.backgroundColor;
+      assert(all.indexOf('229, 255')<0, n+'에 상시 청록이 남아 있다: '+all.slice(0,80)); }
+    assert(!$('mergeFab'),'조합 FAB(#mergeFab)이 아직 있다 — 하단 네비 「유닛 조합」과 두 벌이다');
+    chatFoldBar(); await sleep(60);
+    return '접힘 '+Math.round(w0)+'px → 열림 '+Math.round(r.width)+'px · 높이 '+Math.round(r.height); });}
 
 // ── 그룹: sandbox (관리자) ──
 async function groupSandbox(){
@@ -8397,7 +8393,24 @@ async function groupSandbox(){
     return '뷰 '+v0.toFixed(2)+'→'+v1.toFixed(2)+' · 고스트 추종 ok'; });
   await step('전투실험 탭 전환', ()=>{ switchTab('Battle', document.querySelector('.tab[data-tab="Battle"]'));
     assert(G.tab==='Battle','tab='+G.tab); switchTab('Main', document.querySelector('.tab[data-tab="Main"]')); return 'ok'; });
-}
+  // 🏗 채팅바는 **유즈맵 안 모든 구역**에 있어야 한다(2026-08-25). 예전엔 건설 구역(cstMode)에서만 사라졌다.
+  //    ⚠ 건설 구역의 시트는 `.bp` 가 아니라 `#btSheet` 다 — 갈라 재지 않으면 채팅바가 시트 밑에 깔린다.
+  await step('채팅바: 건설 구역에도 있고 · 건설 시트가 열리면 그 위로 올라간다', async()=>{
+    skipIf(typeof switchTab!=='function' || !$('btSheet'),'건설 구역 없음');
+    const was=(typeof G!=='undefined'&&G)?G.tab:null;
+    switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(220);
+    assert(document.body.classList.contains('cstMode'),'건설 구역인데 cstMode 가 아니다');
+    const cb=$('chatBar'), bs=$('btSheet');
+    assert(getComputedStyle(cb).display!=='none','건설 구역에서 채팅바가 사라졌다');
+    const y0=cb.getBoundingClientRect().bottom;
+    bs.classList.add('open','simple'); _syncSheetLift(); await sleep(340);
+    const y1=cb.getBoundingClientRect().bottom, top=bs.getBoundingClientRect().top;
+    assert(y1<y0-20,'건설 시트가 열렸는데 채팅바가 안 올라갔다: '+Math.round(y0)+' → '+Math.round(y1));
+    assert(y1<=top+1,'채팅바가 건설 시트에 깔렸다: 밑변 '+Math.round(y1)+' vs 시트 윗변 '+Math.round(top));
+    bs.classList.remove('open'); _syncSheetLift(); await sleep(60);
+    if(was) switchTab(was, document.querySelector('.tab[data-tab="'+was+'"]'));
+    await sleep(120);
+    return '건설 채팅바 ok · 시트 열림에 '+Math.round(y0-y1)+'px 상승'; });}
 
 const GROUPS={ lobby:groupLobby, game:groupGame, sandbox:groupSandbox };
 
