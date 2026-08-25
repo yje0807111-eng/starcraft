@@ -780,7 +780,11 @@
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
     background:
       linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
-      var(--loadDim);
+      var(--loadDim),
+      /* ⚠ 바닥 한 겹 — --loadDim 은 **화면 높이**에 맞춰 만든 곡선이라 위 40% 가 거의 투명하다.
+         161px 짜리 시트에 그대로 깔면 윗부분이 너무 비친다(사용자 지적). 곡선은 그대로 두고
+         아래에 평평한 판 한 겹을 받쳐 전체를 한 단 앉힌다 — 토큰은 손대지 않는다. */
+      linear-gradient(180deg,rgba(6,8,12,.38),rgba(6,8,12,.58));
     border-top:0;box-sizing:border-box;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
@@ -1422,6 +1426,26 @@
      그래서 '붉은 테두리 = 지금 만질 수 있는 칸'이 스킬과 조작 버튼에서 한 뜻이 된다.
      ⛔ 예전처럼 버튼마다 다른 색(랠리=초록·부양=파랑·전체지정=시안)을 주지 말 것 — 특히 시안은
         DESIGN §2 에서 '지금 선택된 것' 전용(화면당 한 곳)이라 상시로 쓰면 그 뜻이 닳는다. */
+  /* 🔧 2026-08-25 — 판 **밖**에서 판 **안 오른쪽 위**로 옮겼다. 원래 밖에 둔 이유는
+     "머리줄에 넣으면 버튼 높이(38px)가 머리줄을 밀어 그리드가 짧아진다" 였는데, 판이 옅어진 뒤로는
+     밖에 뜬 트레이가 전장 위에 홀로 떠 있어 어디에 속한 것인지 안 읽혔다.
+     그래서 `.cmdG` 를 **2열 그리드**로 바꿔 [머리줄 | 트레이] 를 같은 줄에 둔다 —
+     겹치지 않으므로 HP·상태칩이 트레이 밑에 깔릴 일이 없고, 폭은 트레이가 알아서 잡는다.
+     ⚠ 대가는 머리줄이 트레이 높이(38px)만큼 커지는 것 = 그리드가 그만큼 짧아진다. 그건 감수한 값이다.
+     ⚠ 트레이가 없으면 `.cmdG` 는 예전 그대로 flex 컬럼이다(:has 로 갈린다). */
+  /* ⛔ 여기에 `align-items:center` 를 주지 말 것 — 그리드에서는 그 값이 **본문 줄까지** 가운데로
+     붙여 `.cgBody` 가 늘어나지 못한다(그리드가 4px 짧아져 스모크가 잡았다). 줄마다 align-self 로. */
+  .cmdG:has(.cgTopOut){display:grid;grid-template-columns:1fr auto;grid-template-rows:auto minmax(0,1fr);
+    column-gap:9px}
+  .cmdG:has(.cgTopOut) .cgHead{grid-area:1/1;align-self:center}
+  .cmdG:has(.cgTopOut) .cgBody{grid-area:2/1/3/3}
+  /* 판 안에서는 트레이의 **회색 판을 걷는다** — 판 위에 또 판을 얹으면 겹쳐 보이고,
+     무엇보다 판(3px 여백 + 1px 테두리)이 머리줄을 38px 로 밀어 그리드가 그만큼 짧아진다.
+     ⚠ 실측: 판을 두면 건물 프로필 그리드가 일꾼보다 4.2px 짧아져 스모크가 잡는다.
+        걷으면 트레이 높이가 버튼 높이(30px) 그대로라 머리줄(29px)과 거의 같아져 손실이 1px 이다.
+     묶음이라는 신호는 칸들이 이미 갖고 있다(검정 면 + 붉은 알파 테두리 + 모서리 컷). */
+  .cmdG:has(.cgTopOut) .cgTopOut{position:static;grid-area:1/2;bottom:auto;right:auto;align-self:center;
+    background:none;border:0;padding:0;clip-path:none}
   .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 10px);display:flex;align-items:stretch;gap:3px;padding:3px;
     z-index:31;pointer-events:auto;
     background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
@@ -1598,7 +1622,14 @@
   .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
   .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
-  .cmdG .cgSlot:active{transform:translateY(1px)} .cmdG .cgSlot.dim{opacity:.5} .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important}
+  .cmdG .cgSlot:active{transform:translateY(1px)}
+  /* 🔒 못 사는 칸 — 예전엔 `opacity:.5` 였다. 그러면 **칸 전체**(면·테두리·글자)가 반투명해져
+     뒤 배경이 비치고, 빈 칸(면 알파로 옅게)과 옅어지는 방식이 갈려 칸마다 투명도가 달라 보였다.
+     지금은 **면은 그대로 두고 내용만 죽인다** — 네 칸의 면 투명도가 하나가 된다.
+     ⛔ opacity 로 되돌리지 말 것(2026-08-25 · 판이 옅어진 뒤로는 배경까지 비친다). */
+  .cmdG .cgSlot.dim{opacity:1;border-color:rgba(255,255,255,.07)}
+  .cmdG .cgSlot.dim .cgPro,.cmdG .cgSlot.dim .cgName,.cmdG .cgSlot.dim .cgSub,.cmdG .cgSlot.dim .cgCost{opacity:.42}
+  .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important;opacity:1}
   /* 자동화 시트 셀: 이름 아래 on/off 토글 스위치(시각용 · 클릭은 셀 전체가 처리) */
   .cgSwWrap{display:flex;align-items:center;justify-content:center;margin-top:2px;pointer-events:none;font-size:11px}
   .cgSwWrap.lk{color:#c8b06a}
@@ -1607,7 +1638,7 @@
   .cmdG .cgSlot.sel .cgSw{background:#46f06a}
   .cmdG .cgSlot.sel .cgSw::after{left:17px;background:#0c1410}
   .cmdG .cgSlot.max{cursor:default;opacity:.6} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
-  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(180deg,rgba(10,10,10,.5),rgba(0,0,0,.6));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
+  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:var(--bpFace);cursor:default;box-shadow:none}   /* 면은 다른 칸과 같다 — '비었다'는 신호는 점선 테두리가 낸다(반투명으로 티내면 칸마다 투명도가 갈린다) */ .cmdG .cgSlot.empty::after{display:none}
   .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
   .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}

@@ -6745,7 +6745,7 @@ async function groupGame(){
     return G.sel.length+'기 선택'; });
   // 🎛 판 '밖' 오른쪽 위에 붙는 조작 버튼(.cgTopOut)은 .bp 의 overflow-y:auto 에 통째로 잘려 사라진 적이 있다.
   //   위치만 재면 통과한다(레이아웃 사각형은 잘려도 그대로다) → **실제로 눌리는지**(elementFromPoint) 까지 본다.
-  await step('메인 프로필: 판 밖 조작 버튼이 잘리지 않는다 · UI 아이콘 6종 로드', async()=>{
+  await step('메인 프로필: 조작 버튼이 판 안 오른쪽 위에 붙는다 · UI 아이콘 6종 로드', async()=>{
     // ⚠ 헤드리스에선 three.js(esm.sh)가 막혀 오프닝 오버레이가 안 걷힌다 — 재는 동안만 치운다(안 그러면 opWrap 이 전부 가린다)
     const ph=$('phone'), faked=ph && !ph.classList.contains('inGame'); if(faked) ph.classList.add('inGame');
     const op=$('opening'), opHid=op && !op.classList.contains('hide'); if(opHid) op.classList.add('hide');
@@ -6764,16 +6764,21 @@ async function groupGame(){
       const to=document.querySelector('#unitCmd .cgTopOut');
       assert(to,'조작 버튼 묶음(.cgTopOut)이 없음 — 제목 '+((document.querySelector('#unitCmd .cgN')||{}).textContent||'-'));
       const cg=document.querySelector('#unitCmd .cmdG').getBoundingClientRect(), r=to.getBoundingClientRect();
-      assert(r.bottom<=cg.top+0.5,'조작 버튼이 판 안에 있음');
+      // 2026-08-25: 판 **밖 위**에서 판 **안 오른쪽 위**로 옮겼다(그전 계약을 뒤집음).
+      //   밖에 떠 있으면 시트가 옅어진 뒤로 어디에 속한 버튼인지 안 읽혔다.
+      assert(r.top>=cg.top-0.5 && r.bottom<=cg.bottom+0.5,'조작 버튼이 판 밖으로 나감');
+      assert(r.right<=cg.right+0.5 && r.right>=cg.right-26,'조작 버튼이 오른쪽에 안 붙음');
       assert(r.width>0&&r.height>0,'조작 버튼 크기가 0');
       const hit=document.elementFromPoint(r.x+r.width/2, r.y+r.height/2);
       assert(hit && to.contains(hit),'조작 버튼이 잘려 안 보임(맨 위 요소: '+(hit?(hit.id||hit.className||hit.tagName):'없음')+')');
-      // 🎛 한 판 트레이(2026-08-19 · E+S3) — 사냥터 스킬 바와 같은 구조·같은 토큰
+      // 🎛 트레이 (2026-08-19 E+S3 → 2026-08-25 판 안으로)
+      //   ⛔ 판 **안**에서는 트레이의 회색 판을 걷는다 — 판 위에 판을 얹으면 겹쳐 보이고,
+      //      그 판(여백 3 + 테두리 1)이 머리줄을 38px 로 밀어 그리드가 짧아진다(실측 4.2px).
+      //      묶음이라는 신호는 아래에서 검사하는 **칸들**(검정 면 + 붉은 테두리 + 모서리 컷)이 낸다.
+      //   ⚠ 토큰은 남겨 둔다 — 사냥터 스킬 바(.hbTray)가 아직 쓴다(--hmPanel 함정 방지 검사도 유지).
       { const ts=getComputedStyle(to);
-        // ⚠ --trayPanel 이 :root 에 없으면 var() 가 무효가 되어 판이 통째로 사라진다(--hmPanel 함정)
         assert(getComputedStyle(document.documentElement).getPropertyValue('--trayPanel').trim(),'--trayPanel 토큰이 :root 에 없음');
-        assert(ts.backgroundImage!=='none','조작 트레이에 판이 없음');
-        assert(ts.clipPath!=='none','조작 트레이에 모서리 컷이 없음');
+        assert(ts.backgroundImage==='none','판 안 트레이가 아직 판을 이고 있다(머리줄이 두꺼워진다)');
         const cell=to.querySelector('.cgSelAll,.cgRally,.cgLift');
         if(cell){ const cs=getComputedStyle(cell), bg=cs.backgroundImage||'';
           // 치수는 2026-08-19 에 0.8배(38 → 30px). 판 밖에 떠 있어 클수록 전장을 가린다
@@ -8204,7 +8209,7 @@ async function groupSandbox(){
     assert(c.scrollHeight-c.clientHeight<=0,'건물 카드 안에서 내용이 넘침');
     return 'ok'; });
   // 머리줄이 두꺼워지면 그만큼 아래 그리드가 눌린다 — 제목·HP 는 한 줄, 조작 버튼은 판 밖으로.
-  await step('건물 프로필: 머리줄 한 줄 · 조작 버튼은 판 밖 · 마나는 왼쪽', async()=>{
+  await step('건물 프로필: 머리줄 한 줄 · 조작 버튼은 판 안 오른쪽 위 · 마나는 왼쪽', async()=>{
     switchTab('Build', document.querySelector('.tab[data-tab="Build"]')); await sleep(300);
     skipIf(!G.tech,'건설 상태 없음');
     const body=$('btSheetBody'), pick=(f)=>{ f(); G.tech.sheet={open:true,sec:'ent'}; techPanelRender(); };
@@ -8218,10 +8223,12 @@ async function groupSandbox(){
     const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
     assert(hr.left>=nr.right-1,'HP 가 제목 오른쪽이 아님: 제목 '+nr.right.toFixed(1)+' / HP '+hr.left.toFixed(1));
     assert(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)>0,'제목과 HP 가 같은 줄이 아님(머리줄이 두 줄)');
-    // 일꾼 스텝퍼·랠리·부양은 머리줄이 아니라 판 밖 오른쪽 위
+    // 일꾼 스텝퍼·랠리·부양은 머리줄 '안'이 아니라 **판 안 오른쪽 위**(머리줄과 같은 줄, 별도 칸)
     const to=body.querySelector('.cgTopOut'); assert(to,'조작 버튼 묶음(.cgTopOut)이 없음');
     const cg=body.querySelector('.cmdG').getBoundingClientRect();
-    assert(to.getBoundingClientRect().bottom<=cg.top+0.5,'조작 버튼이 판 안에 있음');
+    { const tr=to.getBoundingClientRect();
+      assert(tr.top>=cg.top-0.5 && tr.bottom<=cg.bottom+0.5,'조작 버튼이 판 밖으로 나감');
+      assert(tr.right<=cg.right+0.5 && tr.right>=cg.right-26,'조작 버튼이 오른쪽에 안 붙음'); }
     assert(!head.querySelector('.cgGasAuto,.cgRally,.cgLift,.cgSelAll'),'조작 버튼이 아직 머리줄 안에 있음');
     // 머리줄이 얇아진 만큼 그리드는 일꾼 프로필보다 짧지 않아야 한다(전엔 88 vs 97 로 눌렸다)
     const gB=body.querySelector('.cgGrid').getBoundingClientRect().height;
@@ -8267,7 +8274,9 @@ async function groupSandbox(){
           if(gs.clipPath==='none') bad.push(label+': 일꾼 칸에 모서리 컷 없음');
           const inner=[...ga.querySelectorAll('.gaBtn')].some(b=>getComputedStyle(b).backgroundImage!=='none');
           if(inner) bad.push(label+': 일꾼 칸 안쪽 −/+ 가 또 판을 가짐(구분선만이어야 한다)'); } }
-      if(to && to.getBoundingClientRect().bottom > g.getBoundingClientRect().top+0.5) bad.push(label+': 조작 버튼이 판 안');
+      if(to){ const tr=to.getBoundingClientRect(), gr=g.getBoundingClientRect();
+        if(tr.top<gr.top-0.5 || tr.bottom>gr.bottom+0.5) bad.push(label+': 조작 버튼이 판 밖');
+        if(tr.right>gr.right+0.5 || tr.right<gr.right-26) bad.push(label+': 조작 버튼이 오른쪽에 안 붙음'); }
       if(nm&&hp){ const nr=nm.getBoundingClientRect(), hr=hp.getBoundingClientRect();
         if(Math.min(nr.bottom,hr.bottom)-Math.max(nr.top,hr.top)<=0) bad.push(label+': 제목·HP 가 다른 줄');
         if(hr.left<nr.right-1) bad.push(label+': HP 가 제목 왼쪽'); }
