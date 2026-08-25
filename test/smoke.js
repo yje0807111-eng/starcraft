@@ -767,8 +767,12 @@ async function groupLobby(){
     //     **시점을 내려서** 피한다. 이 assert 가 그 방식이 살아 있는지를 지킨다.
     { const sh=$('btSheet');
       assert(sh && sh.classList.contains('open'),'캠프인데 하단 시트가 안 떠 있다');
-      assert((sh.textContent||'').trim().length>4,'하단 시트가 비어 있다 — 기본 선택(본부)이 안 걸렸다');
-      assert(G.tech.sel!=null||(G.tech.selU&&G.tech.selU.length),'시트에 표시할 대상이 없다');
+      assert((sh.textContent||'').trim().length>4,'하단 시트가 비어 있다');
+      // ⚠ 2026-08-25: 아무것도 안 골랐을 때 **본부를 대신 고르지 않는다** — 그 자리는 기지 요약이 채운다.
+      //   그래서 여기서 보는 것은 「선택이 있다」가 아니라 **「시트에 볼 것이 있다」**로 바뀌었다.
+      assert((G.tech.sel!=null) || (G.tech.selU&&G.tech.selU.length)
+             || ($('btSheetBody') && $('btSheetBody').querySelector('.cgKick')),
+        '시트에 표시할 대상도, 기지 요약도 없다');
       // ⚠ rect 로 재지 말 것 — 시트는 translateY 로 올라오므로 애니메이션 중에는 화면 밖을
       //   가리킨다(헤드리스는 transition 이 끝나지 않아 늘 그렇다). 레이아웃 값으로 잰다.
       const par=sh.offsetParent, mh=par.offsetHeight;
@@ -5471,6 +5475,28 @@ async function groupLobby(){
       const sig1=box._gSig; prof.camp.upg.tap=9; renderCampIdleSheet(box);
       assert(box._gSig!==sig1,'값이 바뀌었는데 다시 안 그림(시그니처가 안 움직인다)');
       assert(box.textContent.indexOf('Lv.9')>=0,'다시 그렸는데 새 값이 안 보임');
+      // ④-2 건물 카드를 보다가 해제하면 요약이 **되살아난다**
+      //   ⚠ 값이 그대로면 서명이 같다 — 서명만 보면 건물 카드가 그대로 남는다(그래서 모델 종류도 본다)
+      { renderCmdGrid(box, {mode:'upg', compact:true, build:true, title:'병영', items:[], info:{desc:'x'}});
+        assert(!box.querySelector('.cgKick'),'덮어쓰기 준비가 안 됨');
+        renderCampIdleSheet(box);
+        assert(box.querySelector('.cgKick'),'해제했는데 요약이 안 돌아온다(서명이 같아 건너뛴다)'); }
+      // ④-3 **실제로 이어져 있다** — campSyncSheet 가 본부를 고르지 않고 요약을 그린다
+      if(typeof campSyncSheet==='function' && typeof G!=='undefined'){
+        const body=$('btSheetBody');
+        if(body){
+          G.tech={ race:'union', sel:null, selU:[], selRes:null, arm:null, skillArm:null, rallySet:null,
+                   sheet:{open:false,sec:null}, sup:9, supCap:18,
+                   ents:[{eid:1,type:'bldg',bk:'command',key:'command',bt:0},{type:'worker'},{type:'worker'},{type:'worker'}] };
+          body._gSig=undefined; body._cgModel=undefined;
+          //   ⚠ 본부를 대신 고르면 techUIRender 가 불려 3D 를 건드리다 터진다(이 환경엔 3D 가 없다).
+          //     그냥 두면 「worker_human 을 읽을 수 없다」 같은 엉뚱한 메시지가 나와 원인을 못 찾는다.
+          let _err=''; try{ campSyncSheet(); }catch(e){ _err=e.message; }
+          assert(G.tech.sel==null,'아무것도 안 골랐는데 본부가 대신 선택됐다 — 「고르지 않은 상태」가 사라진다'
+            +(_err?(' (그리고 터졌다: '+_err+')'):''));
+          assert(!_err,'campSyncSheet 가 터졌다: '+_err);
+          assert(body.querySelector('.cgKick'),'campSyncSheet 가 요약을 안 그렸다 — 연결이 끊겼다');
+          assert($('btSheet').classList.contains('open'),'시트가 안 열려 있다'); } }
       // ⑤ 캠프 함수가 **아예 없을 때**도 안 터진다(다른 화면·다른 빌드에서 불려도 조용히)
       //   ⚠ delete 로는 못 지운다 — function 선언으로 만든 전역은 지워지지 않는다(그래서 한 번 헛돌았다).
       //     undefined 로 덮어야 '함수가 없는' 상황이 실제로 만들어진다.
@@ -5480,7 +5506,7 @@ async function groupLobby(){
         for(const k in keep) if(keep[k]) window[k]=keep[k];
         assert(!err,'캠프 함수가 없을 때 모델이 터진다: '+err);
         assert(m3 && m3.info && m3.info.stats.length,'캠프가 없을 때 모델이 비었다'); }
-      return m.info.stats.length+'값 · 작은 라벨 머리 · 전폭 4열 2줄 · 값 바뀌면 갱신';
+      return m.info.stats.length+'값 · 작은 라벨 머리 · 전폭 4열 2줄 · campSyncSheet 연결 확인';
     } finally {
       box.remove();
       window.campIsOn=on0; window.campState=st0;

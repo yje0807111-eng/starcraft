@@ -932,15 +932,20 @@ function campSyncSheet(){
   if(T && (T.arm != null || T.rallySet != null)) return;     // 높이도 건드리지 않는다(맵은 화면 전체라 무관)
   sh.classList.add('open');                                  // #btSheet.open → transform:translateY(0)
   if(T){
-    // 시트를 늘 열어 두므로 **내용도 늘 있어야** 한다. 아무것도 안 골랐으면 본부를 고른다
-    // (유즈맵 하단 프로필이 늘 내 캐릭터를 보여 주는 것과 같다).
+    // 시트를 늘 열어 두므로 **내용도 늘 있어야** 한다. 아무것도 안 골랐으면 **기지 요약**을 보여 준다.
+    // ⛔ 예전에는 여기서 **본부를 대신 골랐다**(2026-08-25 교체). 그러면 「고르지 않은 상태」가
+    //    아예 없어서 늘 본부 카드만 보였다 — 지금은 요약 카드가 그 자리를 맡는다.
+    //    요약을 그리는 곳은 renderCampIdleSheet() 하나뿐이다(js/11-cmdcard.js · 공용 renderCmdGrid 사용).
+    // ⚠ 이때 techPanelRender 는 model 이 null 이라 시트 본문을 건드리지 않는다 — 요약이 덮이지 않는다.
+    //    (건물을 고르면 그쪽이 body 를 다시 그리고, 해제하면 요약이 스스로 되살아난다)
     // ⛔ 배치·스킬 조준 중에는 건드리지 않는다 — 조준 대상이 바뀌어 버린다.
     const idle = T.sel == null && !(T.selU && T.selU.length) && !T.selRes && !T.arm && !T.skillArm;
     if(idle){
-      const hq = campHQ();
-      if(hq){ T.sel = hq.eid;
-        const st = T.sheet || (T.sheet = {open:false, sec:null}); st.open = true; st.sec = 'ent';
-        if(typeof techUIRender === 'function') techUIRender(); }   // 내용이 바뀌었을 때만(idle 진입 순간 한 번)
+      const st = T.sheet || (T.sheet = {open:false, sec:null}); st.open = false; st.sec = null;
+      // ⚠ 높이 클래스(.simple)를 직접 붙인다 — techPanelRender 는 '보여 줄 모델이 있을 때만' 붙이는데
+      //   요약은 그쪽 모델이 아니다. 안 붙이면 시트가 내용대로 커져 **기지를 가린다**(실측으로 걸렸다).
+      sh.classList.add('simple');
+      if(typeof renderCampIdleSheet === 'function') renderCampIdleSheet();
     }
   }
 }

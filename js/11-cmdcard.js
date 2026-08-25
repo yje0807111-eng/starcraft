@@ -786,7 +786,10 @@ function _campIdleSig(){
 function renderCampIdleSheet(host){
   const el=host||document.getElementById('btSheetBody'); if(!el) return;
   const sig=_campIdleSig()+'|'+(el._cgPage||0);
-  if(el._gSig===sig) return;
+  // ⚠ **지금 그려진 것이 요약인지**도 본다. 건물 카드를 보다가 해제하면 값은 그대로라 서명이 같은데,
+  //   화면에는 건물 카드가 남아 있다 — 서명만 보면 영영 안 그려진다.
+  const mine=!!(el._cgModel && el._cgModel.kicker);
+  if(mine && el._gSig===sig) return;
   el._gSig=sig; el._cgSig=undefined; renderCmdGrid(el, _campIdleModel()); }
 
 function renderAutoSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
