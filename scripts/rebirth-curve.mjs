@@ -41,8 +41,10 @@ const tierFactor = t => Object.entries(isMile(t) ? MIX_MILE : MIX).reduce((a,[g,
 const rbase   = d => RB0 + (d - 1) * RB_STEP;
 const dgStep  = d => Math.pow(rbase(d - 1), ROUNDS - 1) * DG_STEP;
 function diff(d, r){ let x = 1; for(let k = 2; k <= d; k++) x *= dgStep(k); return x * Math.pow(rbase(d), r - 1); }
-const mineral  = (d, r) => M_TABLE[d].base * (1 + (r - 1) * (M_TABLE[d].x - 1) / (ROUNDS - 1));
-const mInc     = d => M_TABLE[d].base * (M_TABLE[d].x - 1) / (ROUNDS - 1);
+// ⭐ 배율은 라운드를 **클리어**해야 붙는다 → 50라운드면 50번 붙는다(49번이 아니다).
+//    그래서 증가량이 전부 딱 떨어진다. mineral(d, n) 의 n 은 '그 던전에서 클리어한 라운드 수'(0~50).
+const mInc     = d => M_TABLE[d].base * (M_TABLE[d].x - 1) / ROUNDS;
+const mineral  = (d, n) => M_TABLE[d].base + Math.max(0, n) * mInc(d);
 // 재화 누적은 난이도에 비례한다고 본다 — 그 난이도를 이길 군대를 미네랄로 사기 때문. ⚠ 실측 필요(§5 D)
 const wealth   = (d, r) => V0 * diff(d, r);
 const gainPts  = (d, r) => Math.sqrt(wealth(d, r) / V0) * Math.pow(P_DG, d - 1) * Math.pow(P_RD, r - 1);
@@ -55,20 +57,40 @@ const F = n => { if(n < 1e4) return n.toFixed(n < 100 ? (n < 10 ? 2 : 1) : 0);
   return n.toFixed(0); };
 const P = (s, n) => String(s).padEnd(n);
 
+// ── 🔒 미네랄 표 불변식 — 표는 사람이 손으로 고른 값이라 공식이 지켜 주던 것을 여기서 지킨다 ──
+(function checkMineralTable(){
+  const bad = [];
+  for(let d = 1; d <= DUNGEONS; d++){
+    const t = M_TABLE[d];
+    if(!Number.isInteger(t.base)) bad.push(`D${d} 기본 배율이 정수가 아니다: ${t.base}`);
+    if(!Number.isInteger(t.x))    bad.push(`D${d} 50라운드 배수가 정수가 아니다: ${t.x}`);
+    if(!Number.isInteger(mineral(d, ROUNDS))) bad.push(`D${d} 50클리어 배율이 정수가 아니다: ${mineral(d, ROUNDS)}`);
+    if(d > 1){
+      const prevTop = mineral(d - 1, ROUNDS), step = t.base / prevTop;
+      // ⛔ 여기가 옛 공식이 깨졌던 곳 — 던전 5 부터 문턱에서 배율이 '내려갔다'
+      if(step <= 1)   bad.push(`D${d} 문턱에서 배율이 안 오른다: ${prevTop} → ${t.base} (×${step.toFixed(2)})`);
+      if(step > 2)    bad.push(`D${d} 문턱이 너무 크다: ×${step.toFixed(2)} (난이도 문턱 ×${DG_STEP} 보다 커지면 내려갈수록 쉬워진다)`);
+      if(t.x < M_TABLE[d-1].x) bad.push(`D${d} 50라운드 배수가 앞 던전보다 작다: ${M_TABLE[d-1].x} → ${t.x}`);
+    }
+  }
+  if(bad.length){ console.error('⛔ 미네랄 표 불변식 위반\n  - ' + bad.join('\n  - ')); process.exit(1); }
+  console.log('🔒 미네랄 표 불변식 ok — 정수 · 문턱 1~2배 · 배수 단조 증가');
+})();
+
 console.log(`라운드밑 ${RB0} → ${rbase(DUNGEONS).toFixed(3)} (+${RB_STEP}/던전) · 던전 문턱 ×${DG_STEP} · 티어당 ×${TIER_MUL}`);
 console.log(`포인트 = √(재화점수 ÷ ${F(V0)}) × ${P_DG}^(던전-1) × ${P_RD}^(라운드-1)  ·  재화점수 = 누적 미네랄 + 누적 가스 × ${GAS_RATE}`);
 
 console.log('\n=== A. 던전별 (§4-6-A) ===');
-console.log('던전 라운드밑 문턱  미네랄R1   미네랄R50  R50÷R1  난이도R1     난이도R50    포인트R1   포인트R50');
+console.log('던전 라운드밑 문턱  미네랄진입 미네랄50클 50클÷진입 난이도R1     난이도R50    포인트R1   포인트R50');
 for(let d = 1; d <= DUNGEONS; d++)
-  console.log(`D${P(d,3)} ${P(rbase(d).toFixed(3),8)} ${P(d===1?'-':'×'+(diff(d,1)/diff(d-1,ROUNDS)).toFixed(2),6)} ${P('×'+mineral(d,1).toFixed(2),10)} ${P('×'+mineral(d,ROUNDS).toFixed(2),10)} ${P((mineral(d,ROUNDS)/mineral(d,1)).toFixed(2)+'배',7)} ${P(F(diff(d,1)),12)} ${P(F(diff(d,ROUNDS)),12)} ${P(F(gainPts(d,1)),10)} ${F(gainPts(d,ROUNDS))}`);
+  console.log(`D${P(d,3)} ${P(rbase(d).toFixed(3),8)} ${P(d===1?'-':'×'+(diff(d,1)/diff(d-1,ROUNDS)).toFixed(2),6)} ${P('×'+mineral(d,0).toFixed(2),10)} ${P('×'+mineral(d,ROUNDS).toFixed(2),10)} ${P((mineral(d,ROUNDS)/mineral(d,0)).toFixed(2)+'배',7)} ${P(F(diff(d,1)),12)} ${P(F(diff(d,ROUNDS)),12)} ${P(F(gainPts(d,1)),10)} ${F(gainPts(d,ROUNDS))}`);
 
 console.log('\n=== B. 던전 안에서 라운드가 오를 때 (§4-6-B) ===');
 for(const d of [1, 5, DUNGEONS]){
   console.log(` 던전 ${d} (라운드밑 ${rbase(d).toFixed(3)} · 난이도 +${((rbase(d)-1)*100).toFixed(1)}%/칸 · 미네랄 +${F(mInc(d))}/칸 (50라운드에 ×${M_TABLE[d].x}) · 포인트 +${(Math.sqrt(rbase(d))*P_RD*100-100).toFixed(1)}%/칸 · 50라운드 누적 난이도 ×${F(Math.pow(rbase(d),ROUNDS-1))})`);
-  console.log('   라운드  미네랄배율  적 난이도    환생 포인트');
-  for(const r of [1,10,20,30,40,50])
-    console.log(`   R${P(r,7)}${P('×'+mineral(d,r).toFixed(2),12)}${P(F(diff(d,r)),13)}${F(gainPts(d,r))}`);
+  console.log('   클리어   미네랄배율  적 난이도    환생 포인트');
+  for(const r of [0,10,20,30,40,50])
+    console.log(`   ${P(r===0?'진입':'R'+r,8)}${P('×'+mineral(d,r).toFixed(2),12)}${P(F(diff(d,r)),13)}${F(gainPts(d,r))}`);
 }
 
 console.log('\n=== C. 환생 보상 격자 — 「획득 배수 / 획득 포인트」 (§4-6-C) ===');
