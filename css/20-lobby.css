@@ -204,11 +204,11 @@
   .rmNum button:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
   .rmNum button:active{transform:translateY(1px)}
   .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
-  /* 🔒 이모지를 쓰던 자리 — 라인아트 아이콘(ICO.lock)으로 바꿨다(2026-08-25).
+  /* 🔒 이모지를 쓰던 자리 — **사냥터가 쓰는 자물쇠 그림**(`stIco('lock')` → assets/icons/state/st_lock.webp)이다.
      ⛔ 이모지를 되돌리지 말 것: 기기마다 그림이 다르고, 이 화면의 다른 아이콘과 결이 어긋난다.
-     ⚠ renderRoomList 는 paintIcons 를 부르지 않는다 — data-ico 가 아니라 ICO.lock 을 **직접 심는다**. */
-  .riLock{display:inline-flex;align-items:center;color:#828b97;margin-right:4px;vertical-align:-1px}
-  .riLock .ic{width:11px;height:11px}
+     ⛔ 라인아트(ICO.lock)로 바꾸지도 말 것 — 잠김을 뜻하는 그림은 앱 전체에서 이 하나다(정비 펫·동료 칸과 같은 것). */
+  .riLock{display:inline-flex;align-items:center;flex:none}
+  .riLock .stIco{width:12px;height:12px}
   /* 방 만들기 모달 */
   #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:stretch;justify-content:stretch;padding:0;background:none}   /* 방 찾기와 같은 전체 화면 */
   #createPanel.hide{display:none}
@@ -456,8 +456,13 @@
   #rooms .roomItem.locked::after{background:linear-gradient(90deg,#33363c,transparent 70%);opacity:.4}
   /* 한 줄 압축 — 방장 이름을 방 이름 **옆으로** 눕힌다. 줄 57 → 35px, 방이 4개 더 보인다.
      ⚠ 두 글자 블록 다 flex:0 1 auto + ellipsis 다 — 긴 방 이름이 방장 이름을 밀어내지 않고 둘 다 줄어든다. */
-  #rooms .riMain{display:flex;align-items:baseline;gap:7px;min-width:0}
-  #rooms .riName{flex:0 1 auto;min-width:0}
+  /* 방 이름 묶음 ↔ 방장 이름 사이는 **넓게** 벌린다 — 붙어 있으면 방 번호와 방장이 한 덩어리로 읽힌다 */
+  #rooms .riMain{display:flex;align-items:baseline;gap:14px;min-width:0}
+  /* ⚠ 줄머리 요소들의 틈은 **gap 이 만든다**. 앞선 요소의 margin-right 로 만들면
+     순서를 바꾸는 순간 틈이 사라진다(목업에서 「고인물 전용#8066」처럼 붙었다). margin 을 되살리지 말 것. */
+  #rooms .riName{flex:0 1 auto;min-width:0;display:flex;align-items:baseline;gap:7px}
+  /* 이름은 span(.riTx)이다 — 텍스트 노드로 두면 순서를 바꿀 수 없고 말줄임도 못 건다 */
+  #rooms .riTx{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #rooms .riSub{margin-top:0;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #rooms .riRight{display:flex;align-items:baseline;gap:7px}
   #rooms .riStat{margin-top:0}
@@ -465,12 +470,15 @@
      ⚠ 배지의 **테두리를 걷는다**: 판을 다 벗은 목록에서 배지만 작은 상자를 이고 있으면 열 줄 내내 그것만 튄다.
        난이도는 이제 둘이 말한다 — 배지 글자색 + 줄 구분선. 상자는 셋째 목소리라 뺀다.
      ⚠ 글자색은 난이도 색 그대로가 아니라 **회색을 섞은 값**이다. 원색은 방 이름(흰 글자)을 이긴다. */
-  #rooms .riDiff{border:0;padding:0;margin-right:7px;letter-spacing:.5px;
+  #rooms .riDiff{border:0;padding:0;margin:0;flex:none;letter-spacing:.5px;
     color:color-mix(in srgb,var(--dc,#888) 68%,#8d949d)}
   /* 방 번호 = 이름이 아니라 **식별자**다. ⛔ 시안(--hud)은 DESIGN §2 에서 '지금 선택된 것' 전용이고
      화면당 한 곳인데, 목록 열 줄이 전부 그 색을 쓰고 있었다. 중립 회색으로 물러난다. */
   /* ⚠ 크기를 px 로 박지 말 것 — 방 이름(.riName)에 매달아 두면 이름 크기를 바꿔도 비율이 유지된다 */
-  #rooms .riNum{color:#78828e;font-weight:700;font-size:.86em}
+  /* 방 번호 = 방장 이름과 **다른 층**이라는 게 보여야 한다. 셋이 층을 이룬다:
+     제목 13px 흰 굵은 글씨 › 번호 12.5px 회색 숫자글꼴 › 방장 9.5px 흐린 본문글꼴.
+     ⚠ 크기는 px 이 아니라 em — 이름(.riName)에 매달아 두면 이름을 키워도 비율이 유지된다. */
+  #rooms .riNum{color:#78828e;font-weight:700;font-size:.96em;margin:0;flex:none}
   .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
   /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
   .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}

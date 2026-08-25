@@ -1811,7 +1811,7 @@ function renderRoomList(){ const list=document.getElementById('roomList'); if(!l
     // 밑변 광원 = 난이도 색. 난이도가 없는 유즈맵은 안 실어 주고 중립 흰선으로 둔다(.actBtn 기본형)
     if(mapHasDiff()){ const c=DIFF_COLOR[r.diff]||'#888';
       el.style.setProperty('--dc', c); if(joinable) el.style.setProperty('--dcGlow', c); }
-    el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+'<span class="riNum">#'+r.num+'</span>'+(priv?'<span class="riLock">'+ICO.lock+'</span>':'')+escHtml(r.name)+'</div><div class="riSub">방장 - '+escHtml(r.host)+(r.opts?' · <span class="riOpt">사용자 지정</span>':'')+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
+    el.innerHTML='<div class="riMain"><div class="riName">'+(mapHasDiff()?diffBadge(r.diff):'')+(priv?'<span class="riLock">'+stIco('lock','\u{1F512}')+'</span>':'')+'<span class="riTx">'+escHtml(r.name)+'</span><span class="riNum">#'+r.num+'</span></div><div class="riSub">방장 - '+escHtml(r.host)+(r.opts?' · <span class="riOpt">사용자 지정</span>':'')+(need>1&&waiting&&!full&&!fits?' · <span class="riOver">파티 자리 부족</span>':'')+'</div></div>'
       +'<div class="riRight"><div class="riCnt'+(full?' full':'')+'">'+r.cur+'/'+r.max+'</div><div class="riStat '+(waiting?'wait':'play')+'">'+(waiting?(full?'가득참':'대기중'):(r.round?('게임중 '+r.round+'R'):'게임중'))+'</div></div>';
     if(joinable) el.onclick=()=> priv? openPwPrompt(r) : joinRoom(r);
     else if(waiting && !full && !fits) el.onclick=()=>{ if(typeof playSfx==='function') playSfx('ui_denied'); toast('⚠️ 파티 인원이 초과되었습니다 (남은 자리 '+(r.max-r.cur)+' / 필요 '+need+')'); };
