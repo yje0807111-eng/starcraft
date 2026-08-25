@@ -4,12 +4,21 @@
 - Deliverable: a static file set — `sc-ums-web.html` (markup only, ~900 lines) + **`css/` 5 files** + **`js/` 19 files** — a mobile StarCraft-style usemap (vanilla JS, Three.js 3D, Supabase realtime). No build step and **no test framework**.
   - **Find the right file first: `ARCHITECTURE.md` §1 파일 지도.** Don't grep the HTML for logic — it holds only markup now.
   - `js/*.js` are **classic scripts** sharing one global scope, executed in tag order. ⛔ Never reorder the `<script>` tags, never convert them to `type="module"`, and remember declarations hoist **within a file only**.
-- **Read `GAME_DIRECTION.md` before any 사냥터 gameplay/성장 decision** — 이 게임을 *어떤 게임으로* 만들 것인가의 단일 소스(재미·성장 축·확장·유보). 전투 성장은 추상 카드가 아니라 **`TECH_TREE` 연구**다. ⚠ `HUNT2.md`(구현 부록)는 그보다 먼저 쓰여 **일부 결정이 무효**다 — 무효 목록은 `GAME_DIRECTION.md` §6.
+- 🏕 **HOME 메인은 「캠프」다**(`js/19-camp.js` · 2026-08-23). 옛 **사냥터(웨이브 방어)를 대체했다** — 새로 만든 게 아니라 관리자 건설 시스템을 빌려 쓴다. 구조는 `ARCHITECTURE.md` §「🏕 캠프」.
+  - ⛔ `js/08-hunt.js`(2953줄)는 **던전 1~10 데이터·마을 때문에 남아 있을 뿐**이다. HOME 게임플레이를 여기서 고치지 말 것 — 화면에 안 나온다.
+  - ⚠ 문서·코드의 **「사냥터」는 대부분 옛 이름**이다(102곳). 다만 화면의 **「사냥터 업그레이드」(`.hmUpg`)와 `UM_*` 경제 상수는 살아 있는 이름**이라 일괄 치환 금지.
+- **Read `GAME_DIRECTION.md` before any 사냥터(=지금의 캠프) gameplay/성장 decision** — 이 게임을 *어떤 게임으로* 만들 것인가의 단일 소스(재미·성장 축·확장·유보). 전투 성장은 추상 카드가 아니라 **`TECH_TREE` 연구**다. ⚠ `HUNT2.md`(구현 부록)는 그보다 먼저 쓰여 **일부 결정이 무효**다 — 무효 목록은 `GAME_DIRECTION.md` §6.
 - **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
 - **Read `DESIGN.md` before any visual change** — 확정된 스타일 규칙(각진 SF · 볼륨 3단 · 라운드 0/3/6/9 · 역할별 액센트). 값은 고민하지 말고 표에서 꺼낼 것. **일괄 치환 금지** — 화면을 만지는 김에 그 화면만 체크리스트를 통과시킨다(touch-it-fix-it).
 - **Read `ART.md` before generating any image asset** — 장면 이미지(유즈맵 키 아트·배경)의 모델·비율·프롬프트 템플릿·후처리 규격. **프롬프트를 새로 쓰지 말 것**: 고정 블록 4개를 그대로 복사하고 장면 한 칸만 바꾼다. 세션이 바뀌어도 같은 스타일이 나와야 하므로 이 문서가 단일 소스다. 계열이 셋이다(유즈맵 키 아트 §2~§7 · 타이틀 배경 §8 · **유닛 참고 아트 §9**) — 어느 계열인지 먼저 정할 것. 새로 뽑았으면 그 계열 절에 전문을 추가하고 **`node scripts/art-lint.mjs`** 로 규격(고정 블록·금지 표현·맵 표↔`UMAP_BG` 일치)을 확인할 것.
 - **Read `RACES.md` before touching any race/unit/building number** — 5종족 오각형 상성의 단일 소스(설계·실수치·상수·측정 결과). ⚠ 상성은 **모델로 추정하지 말고** `node test/race-matchup.mjs` 로 실제 엔진을 돌려 잰다 — 여기서 자체 웨이브 모델을 네 번 짰다가 전부 폐기했다. 종족을 오토배틀에 넣을 땐 `ARCHITECTURE.md` §1 의 "조용히 빠지는 표" 목록(`SB_ATK_MODE`·`UNIT_COMBAT_CLASS`·`FXLAB_AIR`·`TECH_BLDG_UNIT`)을 체크리스트로 쓸 것.
 - **Read `GEM.md` before touching 젬·상점·부스트·환생 증폭** — 현질 재화의 자리(정체·획득·용도 둘·안전장치). ⛔ 젬으로 **영구 능력**을 팔거나 배율을 **곱해서 중첩**하면 지수 축이 둘이 되어 폭주한다. 상점의 장비·펫·동료 꾸러미는 **화면에서만 빼고 코드는 남긴다**(유보 규칙).
+- 📊 **수치·방향 문서의 층위(2026-08-25 정리)** — 헷갈리면 이 순서다.
+  1. `GAME_DIRECTION.md` — ***왜***(재미·성장 축·확장·유보). 최상위.
+  2. `HUNT_R1.md` — ***설계 출발점***(1회차·환생 수치). ⚠ 규칙이 아니라 출발점 — 실측이 이긴다.
+  3. `BALANCE.md` — ***실측 확정치***(지금 값·기준선·재는 방법). 값을 바꿨으면 여기를 갱신.
+  4. `HUNT2.md` — ***구현 부록***(SC2식 기지 운영 = 지금의 캠프). 일부 결정 무효(목록은 `GAME_DIRECTION.md` §6).
+  5. `GEM.md` — 젬·상점·환생 **증폭**만. 환생 규칙 자체는 `HUNT_R1.md` §4.
 - **Read `BALANCE.md` before touching any growth/difficulty number** — 성장 축 넷의 역할 · 환생 규칙 · 지금 상수 · **실측 기준선** · 남은 일. ⚠ 값을 바꿨으면 **해석적 추정으로 끝내지 말고** 거기 §4 의 엔진 자동 플레이로 다시 재고 표를 갱신할 것 — 이 프로젝트에서 모델 추정은 여러 번 크게 빗나갔다(회수 시간·손익분기·레벨 간격). *왜 그렇게 설계했는가*는 `ARCHITECTURE.md` 가 단일 소스다.
 - Behavioral verification = **`npm test`** (headless suite: `test/smoke.js` + `test/run-smoke.mjs`, groups lobby/game/sandbox **+ `duo(2인)`** = two real clients relayed to each other via `test/duo.mjs`) plus browser preview for visuals. Run it after every change; add a `step(...)` when you add a feature. Never claim "done" without it passing.
   - ⚠ **Touching anything multiplayer? The `duo` group is the only thing that catches a send/receive shape mismatch** — a one-page test with a stubbed channel never will. See `ARCHITECTURE.md` §8 「멀티 검증」.
