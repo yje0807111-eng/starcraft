@@ -1,0 +1,202 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>인게임 하단 전체 통일 — 3안</title>
+<style>
+/* ══ 실제 토큰 (css/00-base.css) ══ */
+:root{
+  --metal-edge:#3c3e46;
+  --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+  --nav-plate:linear-gradient(180deg,#1b1d23 0%,#121319 55%,#0c0d11 100%);
+  --nav-plate-on:linear-gradient(180deg,#2a1a1e 0%,#1d1114 55%,#130c0e 100%);
+  --nav-ring-on:linear-gradient(180deg,#ffa8a8 0%,#ff3b3b 46%,#a32b2b 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --bpTile:radial-gradient(circle at 50% 34%,rgba(96,96,104,.32),#050505 82%);
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --ca:#5cd6ff; --caG:rgba(92,214,255,.45); --caS:rgba(92,214,255,.5); --caL:#dff4ff;
+  --cgDim:#8a94a6; --cgMuted:#657085;
+  --font-num:'DIN Alternate','Bahnschrift',system-ui,sans-serif;
+  --navHit:44px;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:flex;gap:16px;align-items:flex-start}
+.col{width:390px;flex:none}
+.hd{font-size:13px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#ff8a8a}
+.sub{font-size:11px;line-height:1.5;color:#98a0ad;margin:0 0 9px;min-height:60px}
+
+/* 전장 — 판을 걷었을 때 정말 읽히는지가 이번 판단의 전부라 밝은 곳·어두운 곳을 같이 깐다 */
+.stage{position:relative;padding:132px 0 0;border-radius:6px;overflow:hidden;
+  background:linear-gradient(180deg,#2c3a4e 0%,#22303f 34%,#3a4a3a 58%,#584a32 78%,#2a2118 100%)}
+.stage::before{content:'';position:absolute;left:0;right:0;top:0;bottom:0;
+  background:radial-gradient(ellipse at 26% 74%,rgba(255,190,110,.42),transparent 46%),
+             radial-gradient(ellipse at 74% 88%,rgba(140,255,180,.26),transparent 44%),
+             radial-gradient(ellipse at 82% 26%,rgba(120,170,230,.30),transparent 52%)}
+.bot{position:relative;z-index:2}
+
+/* ══ 새 네비바 문법 (css/30-home.css 파일 끝 .navBar 블록 그대로) ══ */
+.navBar{position:relative;height:42px;padding:0 6px;display:flex;gap:0;align-items:center;overflow:visible}
+.navBar::after{content:'';position:absolute;left:0;right:0;bottom:0;top:-20px;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 0%,rgba(3,5,9,.42) 26%,rgba(3,5,9,.74) 52%,
+    rgba(3,5,9,.90) 76%,rgba(3,5,9,.95) 100%)}
+.navIt{position:relative;z-index:1;flex:1 1 0;min-width:0;height:var(--navHit);
+  display:flex;flex-direction:row;align-items:center;justify-content:center;gap:5px;
+  border:none;border-radius:0;background:none;
+  font-size:10.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap;color:#8b939f;
+  text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.navIt .ic{width:17px;height:17px;display:block;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+.navIt.on{color:#fff}
+.navIt.on::after{content:'';position:absolute;left:11%;right:11%;bottom:1px;height:1px;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+  box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+
+/* ══ 프로필 공통 뼈대 ══ */
+.cmdG{position:relative;z-index:1;height:188px;display:flex;flex-direction:column;padding:0 8px}
+.cgHead{display:flex;align-items:center;gap:9px;padding:5px 2px 9px;position:relative;flex:none}
+.cgTtl{flex:1;min-width:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:0 8px}
+.cgN{font-size:15px;font-weight:800;color:#fff;line-height:1.1;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.cgS{flex-basis:100%;margin-top:1px;font-size:10px;color:var(--cgDim);text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.cgS b{color:#cfe0f5;font-weight:700}
+.cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1;
+  text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.cgHpsh .hpv{color:#7ee081} .cgHpsh .shv{color:#8fd8ff}
+.cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px}
+.cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
+.cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;
+  padding:7px 8px;overflow:hidden}
+.cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)}
+.cgDn{font-size:12px;font-weight:800;color:#eaf1fb;line-height:1.15}
+.cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4}
+.cgVal{display:flex;align-items:baseline;gap:4px;font-family:var(--font-num);font-weight:700;margin-top:auto}
+.cgVal .cur{font-size:13px;color:#c2ccda} .cgVal .arw{color:var(--cgMuted);font-size:10px}
+.cgVal .nxt{font-size:16px;color:var(--ca);text-shadow:0 0 7px var(--caG)}
+.cgGrid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;gap:2px;padding:7px 2px 6px}
+.cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;
+  color:var(--ca);display:flex;align-items:center;justify-content:center;font-size:20px}
+.cgName{flex:none;align-self:stretch;font:800 10px/1.3 sans-serif;letter-spacing:-.2px;color:#e6eefc;
+  text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.cgSub{flex:none;font:800 7px/1 var(--font-num);color:var(--caL);text-align:center;margin-top:-1px;
+  text-shadow:0 1px 3px rgba(0,0,0,.95)}
+
+/* ── 현행(기준선) ── */
+.cur .cmdG{padding:8px 8px 0}
+.cur .cgHead::after{content:'';position:absolute;left:2px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,var(--caS),transparent 72%)}
+.cur .cgInfo{background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
+.cur .cgSlot{border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.cur .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+.cur .cgPro{border:1px solid var(--caS);border-radius:var(--r-md);background:var(--bpTile)}
+.cur .cgPro::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.26) 2px 3px),
+             linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.55))}
+.cur .navBar{height:56px;gap:5px;padding:0}
+.cur .navBar::after{display:none}
+.cur .navIt{flex-direction:column;gap:2px;height:auto;align-self:stretch;font-size:11px;letter-spacing:.1em;
+  border:1px solid transparent;border-radius:var(--r-bar);
+  background:var(--nav-plate) padding-box,var(--metal-ring) border-box}
+.cur .navIt .ic{width:23px;height:23px}
+.cur .navIt.on{color:#fff;background:var(--nav-plate-on) padding-box,var(--nav-ring-on) border-box}
+.cur .navIt.on::after{display:none}
+
+/* ══ 스크림 — 판을 걷은 세 안이 공유한다. 네비 위 20px 이 아니라 프로필 전체를 덮는다 ══ */
+.vA .bot::before,.vB .bot::before,.vC .bot::before{content:'';position:absolute;left:0;right:0;bottom:0;top:-26px;
+  z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 0%,rgba(3,5,9,.46) 18%,rgba(3,5,9,.78) 42%,
+    rgba(3,5,9,.92) 68%,rgba(3,5,9,.96) 100%)}
+.vA .navBar::after,.vB .navBar::after,.vC .navBar::after{display:none}
+/* 프로필 ↔ 네비 사이 한 줄 — 좌우로 사라지는 헤어라인(볼륨1 규격) */
+.vA .cgHead::after,.vB .cgHead::after,.vC .cgHead::after{content:'';position:absolute;left:2px;right:2px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent)}
+
+/* ══ A안 — 완전 무판 ══ */
+.vA .cgInfo{border-right:1px solid rgba(255,255,255,.08)}
+.vA .cgPro{opacity:.96}
+
+/* ══ B안 — 무판 + 초상만 상자 ══ */
+.vB .cgInfo{border-right:1px solid rgba(255,255,255,.08)}
+.vB .cgPro{border:1px solid rgba(255,255,255,.14);background:rgba(4,6,10,.55)}
+.vB .cgPro::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(0,0,0,0) 58%,rgba(4,6,10,.5))}
+
+/* ══ C안 — 무판 + 칸 사이 세로 구획선 ══ */
+.vC .cgInfo{border-right:1px solid rgba(255,255,255,.10)}
+.vC .cgGrid{gap:0}
+.vC .cgSlot+.cgSlot::before{content:'';position:absolute;left:0;top:12%;bottom:12%;width:1px;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.13),transparent)}
+.vC .cgSlot{padding:7px 4px 6px}
+/* 「지금 고른 칸」 = 네비와 같은 밑변 광원 */
+.vC .cgSlot.pick::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+    linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+  box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+</style></head><body>
+
+<template id="prof">
+  <div class="cmdG">
+    <div class="cgHead">
+      <div class="cgTtl"><span class="cgN">레인저</span>
+        <span class="cgS">사거리 <b>7</b> · 대공 가능 · 지금 <b>대기</b></span></div>
+      <div class="cgHpsh"><span class="hpv"><i class="stAb">H</i>45/45</span><span class="shv"><i class="stAb">S</i>0/0</span></div>
+    </div>
+    <div class="cgBody">
+      <div class="cgInfo">
+        <div class="cgEb">다음 강화</div>
+        <div class="cgDn">보병 무기</div>
+        <div class="cgDd">보병 계열 공격력 +2</div>
+        <div class="cgVal"><span class="cur">6</span><span class="arw">▸</span><span class="nxt">8</span></div>
+      </div>
+      <div class="cgGrid">
+        <div class="cgSlot pick"><div class="cgPro">🎯</div><div class="cgName">레인저</div><div class="cgSub">50</div></div>
+        <div class="cgSlot"><div class="cgPro">🔥</div><div class="cgName">화력병</div><div class="cgSub">75</div></div>
+        <div class="cgSlot"><div class="cgPro">✚</div><div class="cgName">의무병</div><div class="cgSub">60</div></div>
+        <div class="cgSlot"><div class="cgPro">🎖</div><div class="cgName">저격수</div><div class="cgSub">90</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="navBar">
+    <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 7v6M15 10h6"/></svg>유닛뽑기</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+    <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5M14 19c0-3 2-5 4-5s4 2 4 5"/></svg>플레이어</div>
+  </div>
+</template>
+
+<div class="col cur">
+  <p class="hd">현행 — 기준선</p>
+  <p class="sub">프로필·탭바 모두 <b>판 + 금속 테두리</b>. 로비 네비바(판 없음)와 계열이 갈린다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div>
+</div>
+
+<div class="col vA">
+  <p class="hd">A안 — 완전 무판</p>
+  <p class="sub">프로필·탭바에서 <b>면·테두리·라운드를 전부</b> 걷는다. 읽히게 하는 것은
+     <b>스크림 한 장</b>(로비 네비바가 쓰는 그 방식)이고, 구분은 헤어라인 하나뿐.
+     로비와 완전히 같은 문법.</p>
+  <div class="stage"><div class="bot" data-fill></div></div>
+</div>
+
+<div class="col vB">
+  <p class="hd">B안 — 무판 + <em>초상만 상자</em></p>
+  <p class="sub">A안과 같되 <b>유닛 초상만 1px 상자</b>로 남긴다. 초상은 그림이라
+     전장 위에 그냥 얹으면 배경과 섞인다 — 그 한 겹만 지킨다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div>
+</div>
+
+<div class="col vC">
+  <p class="hd">C안 — 무판 + <em>칸 사이 구획선</em> + 밑변 광원</p>
+  <p class="sub">칸을 '판'이 아니라 <b>자리</b>로 둔다(네비바가 간 그 논리).
+     칸 사이는 세로 헤어라인, <b>지금 고른 칸은 네비와 같은 밑변 광원</b>.
+     하단 위아래가 선택 신호까지 하나가 된다.</p>
+  <div class="stage"><div class="bot" data-fill></div></div>
+</div>
+
+<script>
+const t=document.getElementById('prof');
+document.querySelectorAll('[data-fill]').forEach(h=>h.appendChild(t.content.cloneNode(true)));
+</script>
+</body></html>
