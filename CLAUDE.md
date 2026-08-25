@@ -1,5 +1,16 @@
 # Claude Code Project Guidelines (Superpowers Style)
 
+## 🗣 말하는 방식 (MANDATORY)
+사용자에게 답할 때는 **쉽고 간단하게** 말한다. 여러 번 요청받은 사항이다.
+
+- **결론부터 한두 줄.** 그 다음에 필요한 만큼만 덧붙인다.
+- **표와 수식은 꼭 필요할 때만.** 숫자를 나열하기 전에 "그래서 무슨 뜻인지"를 한 문장으로 먼저 말한다.
+- **과정 중계 금지.** 무엇을 어떻게 뒤졌는지가 아니라 **무엇을 알아냈는지**를 말한다.
+- 전문 용어를 쓸 거면 **그 자리에서 한 줄로 풀어 준다.**
+- ⚠ 다만 **나쁜 소식·불확실한 것은 줄이지 말고 그대로** 말한다. 짧게 말하라는 것이지
+  숨기라는 것이 아니다. "안 쟀다 / 틀렸다 / 못 고쳤다"는 분명하게.
+- 문서·주석은 이 규칙의 대상이 아니다(거기는 지금처럼 촘촘하게 쓴다).
+
 ## Project Context (this repo)
 - Deliverable: a static file set — `sc-ums-web.html` (markup only, ~900 lines) + **`css/` 5 files** + **`js/` 19 files** — a mobile StarCraft-style usemap (vanilla JS, Three.js 3D, Supabase realtime). No build step and **no test framework**.
   - **Find the right file first: `ARCHITECTURE.md` §1 파일 지도.** Don't grep the HTML for logic — it holds only markup now.
