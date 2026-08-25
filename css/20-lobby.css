@@ -204,7 +204,11 @@
   .rmNum button:hover{background:rgba(255,255,255,.1);border-color:var(--glass-edge)}
   .rmNum button:active{transform:translateY(1px)}
   .riNum{font-family:var(--font-num);font-weight:800;color:var(--hud);margin-right:5px}
-  .riLock{font-size:var(--fs-sm);color:var(--warn);margin-right:3px}
+  /* 🔒 이모지를 쓰던 자리 — 라인아트 아이콘(ICO.lock)으로 바꿨다(2026-08-25).
+     ⛔ 이모지를 되돌리지 말 것: 기기마다 그림이 다르고, 이 화면의 다른 아이콘과 결이 어긋난다.
+     ⚠ renderRoomList 는 paintIcons 를 부르지 않는다 — data-ico 가 아니라 ICO.lock 을 **직접 심는다**. */
+  .riLock{display:inline-flex;align-items:center;color:#828b97;margin-right:4px;vertical-align:-1px}
+  .riLock .ic{width:11px;height:11px}
   /* 방 만들기 모달 */
   #createPanel{position:absolute;inset:0;z-index:50;display:flex;align-items:stretch;justify-content:stretch;padding:0;background:none}   /* 방 찾기와 같은 전체 화면 */
   #createPanel.hide{display:none}
