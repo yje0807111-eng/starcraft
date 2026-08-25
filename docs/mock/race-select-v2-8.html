@@ -1,0 +1,250 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>종족 선택 v2 — 8안 (로딩·로그인·설정 기반)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+ --font-num:'Rajdhani','Noto Sans KR',sans-serif;--neon:#ff3b3b;--neon-d2:#a32020;--metal-edge:#3c3e46;
+ --acc-sel:#5cd6ff;--txt:#e0dcdc;--txt-mute:#9aa0a8;--gold:#ffd24a;--r-bar:3px;--r-md:6px;--r-lg:9px;
+ --fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px}
+*{box-sizing:border-box}
+body{margin:0;background:#07080b;color:var(--txt);font-family:var(--font-ko);font-size:var(--fs-md)}
+button{font-family:inherit;background:none;border:none;color:inherit}
+.wrap{max-width:1560px;margin:0 auto;padding:22px}
+h1{font-family:var(--font-ti);font-size:19px;margin:0 0 4px;color:#fff}
+.lead{color:var(--txt-mute);font-size:var(--fs-lg);margin:0 0 6px;line-height:1.7}
+.lead b{color:var(--gold)}
+.rule{color:#8b939d;font-size:var(--fs-sm);line-height:1.75;margin:0 0 20px;padding:10px 12px;
+ border-left:2px solid #2b2e34;background:rgba(255,255,255,.02)}
+.rule b{color:#cfd6e2}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:20px}
+.cap{font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;margin:0 0 3px}
+.cap i{font-style:normal;color:var(--acc-sel)}
+.cap em{font-style:normal;color:#7d848d;font-size:var(--fs-sm)}
+.note{color:var(--txt-mute);font-size:var(--fs-sm);line-height:1.6;margin:0 0 9px;min-height:92px}
+.note b{color:#cfd6e2}
+.phone{position:relative;width:300px;height:600px;overflow:hidden;background:#07080b;
+ border:1px solid #23252b;border-radius:var(--r-bar);display:flex;flex-direction:column}
+/* 배경 아트 — 로딩/로그인이 쓰는 처리(딤은 아래쪽만) */
+.art{position:absolute;inset:0;
+ background:linear-gradient(180deg,#25344a 0%,#1a2636 26%,#101823 48%,#0a0e15 70%,#06080c 100%)}
+.art::after{content:'';position:absolute;inset:0;
+ background:linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 34%,rgba(6,8,12,.62) 72%,rgba(6,8,12,.96) 100%)}
+.artHint{position:absolute;left:0;right:0;top:30%;text-align:center;color:#3f4854;font-size:var(--fs-sm);letter-spacing:.5px}
+.scr{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;padding:16px 14px 0}
+/* 로고 축(로딩/로그인 공통) */
+.mark{width:40px;height:40px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;
+ color:#dfe5ec}
+.mark svg{width:40px;height:40px}
+.logo{font-family:var(--font-ti);font-size:29px;color:#fff;text-align:center;line-height:1.05}
+.logoSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#9aa4b0;text-align:center;
+ letter-spacing:.42em;margin-top:5px;font-weight:600}
+/* 설정 문법 */
+.setHd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.setTtl{font-family:var(--font-ti);font-size:21px;color:#fff}
+.setTtl .s{display:block;font-family:var(--font-ko);font-size:var(--fs-sm);color:var(--txt-mute);margin-top:3px}
+.x{width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:#9a9a9a;font-size:15px;flex:0 0 auto}
+.setRows{display:flex;flex-direction:column}
+.setRow{display:flex;align-items:center;gap:11px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.09)}
+.setRow:first-child{border-top:1px solid rgba(255,255,255,.09)}
+.sMain{min-width:0;flex:1}
+.sNm{font-size:var(--fs-xl);font-weight:700;color:#fff}
+.sDs{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+.sGo{color:#7b838d;font-size:13px}
+.setRow.on .sGo{color:var(--acc-sel)}
+.setRow.off .sNm{color:#8b939d}
+/* 로그인 문법 — 글자만 · 짧은 가운데 선 */
+.lgRows{display:flex;flex-direction:column;margin-top:auto}
+.lgRow{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+ min-height:46px;padding:5px 0}
+.lgRow+.lgRow::before{content:'';position:absolute;left:50%;top:0;width:56px;height:1px;
+ transform:translateX(-50%);background:rgba(255,255,255,.13)}
+.lgNm{font-size:var(--fs-xl);font-weight:700;color:#c9ced6}
+.lgRow.on .lgNm{color:#fff}
+.lgRow.on::after{content:'';position:absolute;left:50%;bottom:2px;width:30px;height:1px;
+ transform:translateX(-50%);background:var(--acc-sel);box-shadow:0 0 8px var(--acc-sel)}
+.lgDs{font-size:9.5px;color:#6e7680;margin-top:2px}
+.lgGuest{text-align:center;font-size:var(--fs-md);color:#8b939d;padding:14px 0 18px}
+.lgGuest u{text-decoration:none;color:#fff;font-weight:700;position:relative}
+.lgGuest u::after{content:'';position:absolute;left:0;right:0;bottom:-4px;height:1px;
+ background:var(--acc-sel);box-shadow:0 0 8px var(--acc-sel)}
+/* 로딩 문법 — 하단 도크 */
+.dock{margin-top:auto;padding:0 0 16px}
+.dockTop{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px}
+.dockLb{font-family:var(--font-num);font-size:var(--fs-md);font-weight:700;color:#7d8792;letter-spacing:.28em}
+.dockVal{font-family:var(--font-ti);font-size:23px;color:#fff;line-height:1}
+.dockVal s{text-decoration:none;font-family:var(--font-ko);font-size:var(--fs-sm);color:#7d8792;margin-left:5px}
+.barWrap{width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;display:flex;gap:2px}
+.barSeg{flex:1;height:100%;background:transparent}
+.barSeg.on{background:linear-gradient(90deg,var(--neon-d2),var(--neon));box-shadow:0 0 10px var(--neon)}
+.barSeg.cy.on{background:linear-gradient(90deg,#2a7f9e,var(--acc-sel));box-shadow:0 0 10px var(--acc-sel)}
+/* 3칸 탭(도크용) */
+.pick3{display:flex;margin-bottom:10px}
+.p3{flex:1;text-align:center;padding:8px 0;font-size:var(--fs-lg);font-weight:700;color:#79818b}
+.p3.on{color:#fff}
+/* 큰 타이포 세로 목록 */
+.bigList{margin-top:auto;padding-bottom:6px}
+.bigRow{position:relative;padding:9px 0;display:flex;align-items:baseline;gap:9px}
+.bigNm{font-family:var(--font-ti);font-size:26px;color:#565f6b;line-height:1.1}
+.bigRow.on .bigNm{color:#fff}
+.bigDs{font-size:9.5px;color:#5c646e}
+.bigRow.on .bigDs{color:var(--txt-mute)}
+.bigRow.on::before{content:'';position:absolute;left:-14px;top:14px;bottom:14px;width:2px;
+ background:var(--acc-sel);box-shadow:0 0 8px var(--acc-sel)}
+/* 전폭 중립 버튼(설정의 로그아웃) */
+.setBtn{width:100%;height:44px;display:flex;align-items:center;justify-content:center;
+ font-family:var(--font-ti);font-size:var(--fs-xl);color:#dfe4ea;
+ border:1px solid rgba(255,255,255,.13);border-radius:var(--r-bar);
+ background:linear-gradient(180deg,rgba(28,30,35,.9),rgba(12,13,16,.9))}
+/* 글자 + 밑변 광원(주 버튼의 서명) */
+.txtBtn{position:relative;width:100%;height:44px;display:flex;align-items:center;justify-content:center;
+ font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff}
+.txtBtn::after{content:'';position:absolute;left:16%;right:16%;bottom:7px;height:1px;
+ background:linear-gradient(90deg,transparent,var(--acc-sel),transparent);box-shadow:0 0 9px var(--acc-sel)}
+.ico{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:var(--r-md);
+ border:1px dashed rgba(255,255,255,.16);color:#5b626b;font-size:7.5px;background:rgba(255,255,255,.02);flex:0 0 auto}
+</style></head><body><div class="wrap">
+<h1>종족 선택 v2 — 8안 (로딩 · 로그인 · 설정 기반)</h1>
+<p class="lead">하단 시트를 버리고 <b>처음부터 다시</b>. 셋에서 실제로 쓰는 어휘만 조합했다 —
+아트 풀블리드 + 아래만 덮는 딤 · 가운데 로고 축 · 글자만 행 + 짧은 가운데 선 ·
+전폭 헤어라인 행(좌 라벨 / 우 값) · 하단 도크(좌 라벨 + 우 큰 숫자 + 전폭 3px 막대).</p>
+<div class="rule"><b>세 화면에서 가져온 것</b> —
+<b>로딩</b>: 아트 풀블리드 · 딤 `.06→.10→.62→.96` · 하단 도크 · 라벨 자간 .28em + 큰 값 23px · 전폭 3px 막대(색을 가진 건 이것 하나) ·
+<b>로그인</b>: 판 없음 · 가운데 축 · 글자만 · 짧은 가운데 선(56px) · 같은 무게 ·
+<b>설정</b>: 큰 제목 왼쪽 + ✕ · 전폭 헤어라인 행 · 좌 라벨 / 우 값·화살표 · 전폭 중립 버튼.</div>
+<div class="grid">
+
+<!-- 1 -->
+<div><div class="cap"><i>1</i> 로그인 정본 <em>· 판 없음 · 글자만</em></div>
+<div class="note"><b>로그인 화면과 글자 하나 다르지 않다.</b> 로고 축 아래 종족 셋이 글자로 놓이고,
+짧은 가운데 선으로 갈린다. 확정은 게스트 줄과 같은 <b>텍스트 + 밑변 광원</b>.
+가장 조용하고 규칙 위반 0. 대신 종족의 성격이 글자로만 전달된다.</div>
+<div class="phone"><div class="art"><div class="artHint">전투 미리보기</div></div><div class="scr">
+ <div style="margin-top:64px">
+  <div class="mark"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M20 4l14 8v16l-14 8-14-8V12z"/><path d="M20 12l7 4v8l-7 4-7-4v-8z" opacity=".55"/></svg></div>
+  <div class="logo">종족 선택</div><div class="logoSub">CHOOSE YOUR RACE</div>
+ </div>
+ <div class="lgRows">
+  <div class="lgRow on"><div class="lgNm">유니온</div><div class="lgDs">인간 · 보병·기계</div></div>
+  <div class="lgRow"><div class="lgNm">스웜</div><div class="lgDs">군체 · 유기체</div></div>
+  <div class="lgRow"><div class="lgNm">에테리얼</div><div class="lgDs">외계 · 사이오닉</div></div>
+ </div>
+ <div class="lgGuest">한 번 고르면 바꿀 수 없습니다 · <u>유니온으로 시작</u></div>
+</div></div></div>
+
+<!-- 2 -->
+<div><div class="cap"><i>2</i> 로딩 도크 <em>· 하단 도크 + 3칸 막대</em></div>
+<div class="note"><b>로딩의 하단 도크를 그대로 쓴다.</b> 좌측 라벨 `RACE` + 우측 큰 이름(23px),
+그 아래 <b>전폭 3px 막대가 3칸으로 나뉘어</b> 선택을 나타낸다.
+로딩과 한 세트로 읽히고 <b>아트를 가장 크게</b> 남긴다.</div>
+<div class="phone"><div class="art"><div class="artHint">전투 미리보기</div></div><div class="scr">
+ <div class="setHd"><div class="setTtl">종족 선택<span class="s">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+ <div class="dock">
+  <div class="pick3"><div class="p3 on">유니온</div><div class="p3">스웜</div><div class="p3">에테리얼</div></div>
+  <div class="dockTop"><div class="dockLb">RACE</div><div class="dockVal">유니온<s>인간 · 보병·기계</s></div></div>
+  <div class="barWrap"><div class="barSeg cy on"></div><div class="barSeg"></div><div class="barSeg"></div></div>
+  <div class="txtBtn" style="margin-top:10px">유니온으로 시작</div>
+ </div>
+</div></div></div>
+
+<!-- 3 -->
+<div><div class="cap"><i>3</i> 설정 정본 <em>· 전폭 헤어라인 행</em></div>
+<div class="note"><b>설정 화면 문법 그대로.</b> 큰 제목 왼쪽 + ✕, 전폭 헤어라인으로 갈린 3행,
+좌측 라벨 + 우측 화살표. 하단은 설정의 <b>전폭 중립 버튼</b>.
+정보를 읽는 자리로는 가장 또렷하지만 <b>아트가 배경으로 밀린다</b>.</div>
+<div class="phone" style="background:#08090c"><div class="scr">
+ <div class="setHd"><div class="setTtl">종족 선택<span class="s">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+ <div class="setRows">
+  <div class="setRow on"><div class="ico">ICON</div><div class="sMain"><div class="sNm">유니온</div><div class="sDs">인간 · 보병·기계</div></div><div class="sGo">✓</div></div>
+  <div class="setRow off"><div class="ico">ICON</div><div class="sMain"><div class="sNm">스웜</div><div class="sDs">군체 · 유기체</div></div><div class="sGo">›</div></div>
+  <div class="setRow off"><div class="ico">ICON</div><div class="sMain"><div class="sNm">에테리얼</div><div class="sDs">외계 · 사이오닉</div></div><div class="sGo">›</div></div>
+ </div>
+ <div style="margin-top:auto;padding-bottom:18px"><div class="setBtn">유니온으로 시작</div></div>
+</div></div></div>
+
+<!-- 4 -->
+<div><div class="cap"><i>4</i> 설정 + 아트 <em>· 행은 설정 · 배경은 로딩</em></div>
+<div class="note"><b>3안의 행을 아트 위에 올린다.</b> 전폭 헤어라인은 유지하되 배경은 로딩의 풀블리드.
+딤이 아래를 덮어 행이 읽힌다. <b>또렷함과 분위기의 절충</b>.
+⚠ 헤어라인이 그림을 가로질러 아트가 '표'로 보일 위험이 있다(로그인이 그래서 전폭 선을 버렸다).</div>
+<div class="phone"><div class="art"><div class="artHint" style="top:22%">전투 미리보기</div></div><div class="scr">
+ <div class="setHd"><div class="setTtl">종족 선택<span class="s">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+ <div style="margin-top:auto"></div>
+ <div class="setRows">
+  <div class="setRow on"><div class="ico">ICON</div><div class="sMain"><div class="sNm">유니온</div><div class="sDs">인간 · 보병·기계</div></div><div class="sGo">✓</div></div>
+  <div class="setRow off"><div class="ico">ICON</div><div class="sMain"><div class="sNm">스웜</div><div class="sDs">군체 · 유기체</div></div><div class="sGo">›</div></div>
+  <div class="setRow off"><div class="ico">ICON</div><div class="sMain"><div class="sNm">에테리얼</div><div class="sDs">외계 · 사이오닉</div></div><div class="sGo">›</div></div>
+ </div>
+ <div style="padding:14px 0 18px"><div class="txtBtn">유니온으로 시작</div></div>
+</div></div></div>
+
+<!-- 5 -->
+<div><div class="cap"><i>5</i> 로고 자리를 종족이 차지 <em>· 이름이 곧 제목</em></div>
+<div class="note"><b>로딩·로그인의 로고 블록 자리에 종족 이름이 크게 들어간다.</b>
+`STAR WAR` 자리에 종족명(Jua 29px), `BATTLE ARENA` 자리에 부제. 종족을 바꾸면
+<b>이 덩어리가 크로스페이드</b>된다 — 세 화면이 같은 자리에 같은 덩어리를 보여주는 규칙이 이어진다.</div>
+<div class="phone"><div class="art"><div class="artHint" style="top:22%">전투 미리보기</div></div><div class="scr">
+ <div class="setHd"><div class="setTtl" style="font-size:14px;color:#c9ced6">종족 선택</div><div class="x">✕</div></div>
+ <div style="margin-top:74px">
+  <div class="mark"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M20 4l14 8v16l-14 8-14-8V12z"/><path d="M20 12l7 4v8l-7 4-7-4v-8z" opacity=".55"/></svg></div>
+  <div class="logo">유니온</div><div class="logoSub">인간 · 보병·기계</div>
+ </div>
+ <div class="lgRows" style="margin-top:auto">
+  <div class="lgRow on"><div class="lgNm">유니온</div></div>
+  <div class="lgRow"><div class="lgNm">스웜</div></div>
+  <div class="lgRow"><div class="lgNm">에테리얼</div></div>
+ </div>
+ <div style="padding:10px 0 18px"><div class="txtBtn">유니온으로 시작</div></div>
+</div></div></div>
+
+<!-- 6 -->
+<div><div class="cap"><i>6</i> 큰 타이포 세로 목록 <em>· 왼쪽 정렬</em></div>
+<div class="note"><b>로딩의 「큰 값」 감각을 종족 이름에 적용.</b> 셋을 26px로 왼쪽에 세로로 쌓고
+고른 것만 흰색 + 좌측 시안 바. 오른쪽은 비워 아트를 남긴다.
+<b>고른 것이 가장 강하게 읽히고</b> 아이콘이 없어도 성립한다.</div>
+<div class="phone"><div class="art"><div class="artHint" style="top:20%">전투 미리보기</div></div><div class="scr">
+ <div class="setHd"><div class="setTtl">종족 선택<span class="s">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+ <div class="bigList">
+  <div class="bigRow on"><div class="bigNm">유니온</div><div class="bigDs">인간 · 보병·기계</div></div>
+  <div class="bigRow"><div class="bigNm">스웜</div><div class="bigDs">군체 · 유기체</div></div>
+  <div class="bigRow"><div class="bigNm">에테리얼</div><div class="bigDs">외계 · 사이오닉</div></div>
+ </div>
+ <div style="padding:12px 0 18px"><div class="txtBtn">유니온으로 시작</div></div>
+</div></div></div>
+
+<!-- 7 -->
+<div><div class="cap"><i>7</i> 설정 행 + 로딩 도크 <em>· 둘을 위아래로</em></div>
+<div class="note"><b>위는 설정, 아래는 로딩.</b> 고르는 것은 설정식 전폭 헤어라인 행,
+확정은 로딩식 도크(좌 라벨 + 우 큰 이름 + 전폭 막대).
+<b>고른 결과가 아래에서 한 번 더 확인</b>되므로 되돌릴 수 없는 선택에 어울린다.</div>
+<div class="phone" style="background:#08090c"><div class="scr">
+ <div class="setHd"><div class="setTtl">종족 선택<span class="s">한 번 고르면 바꿀 수 없습니다.</span></div><div class="x">✕</div></div>
+ <div class="setRows">
+  <div class="setRow on"><div class="ico">ICON</div><div class="sMain"><div class="sNm">유니온</div><div class="sDs">인간 · 보병·기계</div></div><div class="sGo">✓</div></div>
+  <div class="setRow off"><div class="ico">ICON</div><div class="sMain"><div class="sNm">스웜</div><div class="sDs">군체 · 유기체</div></div><div class="sGo">›</div></div>
+  <div class="setRow off"><div class="ico">ICON</div><div class="sMain"><div class="sNm">에테리얼</div><div class="sDs">외계 · 사이오닉</div></div><div class="sGo">›</div></div>
+ </div>
+ <div class="dock">
+  <div class="dockTop"><div class="dockLb">SELECTED</div><div class="dockVal">유니온</div></div>
+  <div class="barWrap"><div class="barSeg cy on"></div><div class="barSeg"></div><div class="barSeg"></div></div>
+  <div class="txtBtn" style="margin-top:10px">유니온으로 시작</div>
+ </div>
+</div></div></div>
+
+<!-- 8 -->
+<div><div class="cap"><i>8</i> 아트 전면 + 도크만 <em>· 가장 조용</em></div>
+<div class="note"><b>화면에 제목도 목록도 없다.</b> 아트가 전부를 차지하고 아래 도크 한 줄에
+3칸 막대와 이름만 있다. 로딩 화면과 <b>구조가 문자 그대로 같다</b>(라벨 + 값 + 막대).
+가장 몰입감이 크지만 <b>고르는 방법을 배워야</b> 한다 — 처음 보는 사람에게 불친절할 수 있다.</div>
+<div class="phone"><div class="art"><div class="artHint" style="top:34%">전투 미리보기</div></div><div class="scr">
+ <div style="display:flex;justify-content:flex-end"><div class="x">✕</div></div>
+ <div class="dock">
+  <div class="dockTop"><div class="dockLb">RACE</div><div class="dockVal">유니온<s>인간 · 보병·기계</s></div></div>
+  <div class="barWrap"><div class="barSeg cy on"></div><div class="barSeg"></div><div class="barSeg"></div></div>
+  <div class="pick3" style="margin:10px 0 0"><div class="p3 on">유니온</div><div class="p3">스웜</div><div class="p3">에테리얼</div></div>
+  <div class="txtBtn" style="margin-top:4px">유니온으로 시작</div>
+ </div>
+</div></div></div>
+
+</div></div></body></html>
