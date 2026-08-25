@@ -47,7 +47,7 @@ function switchTab(id,el){ if(G.strike){ strikeSwitchTab(id,el); return; }   // 
   if(id==='Players'){ const mine=G.myPlayer||1; const others=(G.activePlayers||[1,2,3,4,5,6,7,8]).filter(n=>n!==mine);
     if(others.indexOf(G.curPlayer)<0) G.curPlayer=others[0]||mine;   // 입장한 다른 플레이어 기본
     if(typeof clearPlayerSel==='function') clearPlayerSel(); renderPlayers(); drawPlayer(); }
-  if(id==='Main'){ drawMain(); renderUnits(); placeMergeZone(); }
+  if(id==='Main'){ drawMain(); renderUnits(); }
   if(id==='Battle'){ if(typeof sprLabStart==='function') sprLabStart(); }   // 🧪 스프라이트 유닛 실험장(전투실험 대체)
   else { if(typeof sprLabStop==='function') sprLabStop(); }
   if(id==='Boss'){ BOSS_VIEW.x=0; BOSS_VIEW.y=0; renderBossPanel(); drawBoss(); }

@@ -2157,7 +2157,7 @@ function startGameNow(activePlayers, myNum, names){
   const lb=document.getElementById('lobby'); if(lb) lb.classList.add('hide');
   setInGame(true);
   G.mainSheet='gacha'; _setBottomTab('Unit');   // 첫 진입 기본 섹션 = 유닛뽑기(하단 시트 + 탭 하이라이트)
-  renderUnits(); updateHud(); placeMergeZone();
+  renderUnits(); updateHud();
   gameStartCountdown();   // G 셋업 후: 미니맵+설명 / 3·2·1 / 플레이어·시작 준비(폰 전체 덮음)
 }
 // ══ 자리(슬롯) 상태 — 단일 소스 ══════════════════════════════
