@@ -780,11 +780,10 @@
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
     background:
       linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
-      var(--loadDim),
-      /* ⚠ 바닥 한 겹 — --loadDim 은 **화면 높이**에 맞춰 만든 곡선이라 위 40% 가 거의 투명하다.
-         161px 짜리 시트에 그대로 깔면 윗부분이 너무 비친다(사용자 지적). 곡선은 그대로 두고
-         아래에 평평한 판 한 겹을 받쳐 전체를 한 단 앉힌다 — 토큰은 손대지 않는다. */
-      linear-gradient(180deg,rgba(6,8,12,.38),rgba(6,8,12,.58));
+      /* ⚠ 2026-08-25: 여기에 평평한 판 한 겹(.38→.58)을 받쳐 전체를 앉혔다가 **되돌렸다** —
+         속이 어두워지는 게 아니라 「바깥 화면과 구분되는 경계」가 필요한 것이었다(사용자 정정).
+         구분은 면이 아니라 **윗변·그림자·형태**가 맡는다. */
+      var(--loadDim);
     border-top:0;box-sizing:border-box;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
