@@ -5436,8 +5436,12 @@ async function groupLobby(){
       if(typeof G!=='undefined') G.tech={ race:'union', sup:9, supCap:18,
         ents:[{type:'worker'},{type:'worker'},{type:'worker'},{type:'bldg',bk:'command'}] };
       const m=_campIdleModel(), get=k=>{ const r=(m.info.stats||[]).find(x=>x[0]===k); return r&&r[1]; };
-      // ① 캠프 값을 **실제로 읽는가** — 하드코딩이면 여기서 걸린다
-      assert(m.title==='잊혀진 회랑','제목이 지금 던전이 아님: '+m.title);
+      // ① 제목은 **던전 이름이 아니다** — 던전은 좌상단 칩이 이미 말한다(두 번 말하지 않는다).
+      //   자간 넓은 작은 라벨(kicker)로 「이 구역이 무엇인지」만 말한다.
+      assert(m.kicker,'제목이 작은 라벨(kicker)이 아니다');
+      assert(m.title.indexOf('잊혀진')<0 && m.title.indexOf('던전')<0,
+        '제목에 던전 이름이 들어갔다 — 좌상단 칩과 같은 말을 두 번 한다: '+m.title);
+      // 캠프 값을 **실제로 읽는가** — 하드코딩이면 아래에서 걸린다
       assert(get('일꾼')==='3기','일꾼 수를 안 읽음: '+get('일꾼'));
       assert(get('인구')==='9 / 18','인구를 안 읽음: '+get('인구'));
       assert(get('터치 강화')==='Lv.4','터치 강화 레벨을 안 읽음: '+get('터치 강화'));
@@ -5447,7 +5451,6 @@ async function groupLobby(){
       // ② 던전을 옮기면 값이 따라간다(두 곳에서 각자 계산하면 여기서 갈린다)
       prof.camp.dg=1; const m2=_campIdleModel();
       assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.0','던전을 바꿨는데 배수가 그대로');
-      assert(m2.title==='감염된 둥지','던전을 바꿨는데 제목이 그대로: '+m2.title);
       prof.camp.dg=3;
       // ③ 실제로 그려진다 — 공용 렌더러(renderCmdGrid)를 쓴다(새 카드를 만들지 않는다)
       renderCampIdleSheet(box);
@@ -5455,6 +5458,11 @@ async function groupLobby(){
       assert(box.querySelectorAll('.cgStat').length===m.info.stats.length,'요약 줄 수가 다름');
       // ③-2 안쪽 **전체**를 쓴다 — 빈 슬롯 4칸은 이 카드에서 의미가 없다
       assert(!box.querySelector('.cgGrid'),'요약 카드에 빈 슬롯 그리드가 남았다');
+      { const k=box.querySelector('.cgKick');
+        assert(k,'머리줄이 작은 라벨로 안 그려짐');
+        const cs=getComputedStyle(k);
+        assert(parseFloat(cs.fontSize)<=10,'머리줄 라벨이 너무 크다(제목처럼 보인다): '+cs.fontSize);
+        assert(parseFloat(cs.letterSpacing)>=1.5,'머리줄 라벨의 자간이 안 넓다: '+cs.letterSpacing); }
       { const w=box.querySelector('.cgStats.cgWide');
         assert(w,'요약이 전폭 격자가 아니다');
         const cols=(getComputedStyle(w).gridTemplateColumns||'').split(/\s+/).filter(Boolean).length;
@@ -5472,7 +5480,7 @@ async function groupLobby(){
         for(const k in keep) if(keep[k]) window[k]=keep[k];
         assert(!err,'캠프 함수가 없을 때 모델이 터진다: '+err);
         assert(m3 && m3.info && m3.info.stats.length,'캠프가 없을 때 모델이 비었다'); }
-      return m.info.stats.length+'값 · 전폭 4열 2줄 · 던전/일꾼/인구/강화 읽음 · 값 바뀌면 갱신';
+      return m.info.stats.length+'값 · 작은 라벨 머리 · 전폭 4열 2줄 · 값 바뀌면 갱신';
     } finally {
       box.remove();
       window.campIsOn=on0; window.campState=st0;

@@ -1420,6 +1420,11 @@
   .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
   .cmdG .cgS{flex-basis:100%;margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  /* 🏕 m.kicker — 제목을 자간 넓은 작은 라벨로(로딩창 LOADING · 로그인 BATTLE ARENA 와 같은 어법).
+     줄은 있되 무게가 없다: 고른 것이 있을 때와 제목 자리는 같으면서 화면이 덜 흔들린다. */
+  .cmdG .cgHead.kick{padding:6px 2px 7px}
+  .cmdG .cgKick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
   .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */

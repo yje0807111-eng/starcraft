@@ -757,7 +757,6 @@ function _campIdleModel(){
   const T=(typeof G!=='undefined')?G.tech:null;
   const f=(typeof fmtCur==='function')?fmtCur:(n=>String(Math.floor(n||0)));
   const dg=C?Math.max(1,Math.min(10,C.dg||1)):1;
-  const D=(typeof hbDun==='function')?hbDun(dg):null;
   const wk=(T&&T.ents)?T.ents.filter(e=>e.type==='worker').length:0;
   const rate=(C&&C.rate>0)?C.rate:0;
   const st=[];
@@ -770,9 +769,10 @@ function _campIdleModel(){
   if(typeof campUpgLv==='function'){
     st.push(['터치 강화', 'Lv.'+campUpgLv('tap')]);
     st.push(['채취 강화', 'Lv.'+campUpgLv('gather')]); }
+  // ⛔ 제목에 **던전 이름을 쓰지 않는다** — 던전은 좌상단 칩이 이미 말한다(같은 것을 두 번 말하게 된다).
+  //    대신 이 구역이 무엇인지를 자간 넓은 작은 라벨로 말한다(kicker · 로딩창 LOADING 과 같은 어법).
   return { mode:'upg', compact:true, build:true, wide:true,   // 빈 슬롯 4칸이 의미 없다 → 안쪽 전체를 쓴다
-    title:(D&&D.name)||('던전 '+dg),
-    sub:'아무것도 고르지 않음',
+    title:'MY BASE', kicker:true,
     info:{ hideName:true, statsWide:true, stats:st },
     items:[] }; }
 // 값이 바뀔 때만 다시 그린다 — 캠프 틱은 매 프레임 돌아서 그냥 그리면 입력이 끊긴다
@@ -1808,7 +1808,12 @@ function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getE
   const tray=(m.back||'')+(m.topRight||'');
   el.innerHTML='<div class="cmdG" data-mode="'+(m.mode||'upg')+'" data-compact="'+(m.compact?1:0)+'" data-build="'+(m.build?1:0)+'">'
     +(tray?('<div class="cgTopOut">'+tray+'</div>'):'')
-    +'<div class="cgHead"><div class="cgTtl"><div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))+'</div>'+pill+pager+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶]
+    // 🏕 m.kicker = 제목을 **자간 넓은 작은 라벨**로 낮춘다(로딩창 LOADING 과 같은 어법).
+    //    줄은 있되 무게가 없어, 고른 것이 있을 때와 자리는 같으면서 조용하다. 옵션이 없으면 지금까지 그대로.
+    +'<div class="cgHead'+(m.kicker?' kick':'')+'"><div class="cgTtl">'
+      +(m.kicker ? ('<div class="cgKick">'+(m.title||'')+'</div>')
+                 : ('<div class="cgN">'+(m.title||'')+'</div>'+(m.hpsh?'<div class="cgHpsh">'+m.hpsh+'</div>':(m.sub?'<div class="cgS">'+m.sub+'</div>':''))))
+      +'</div>'+pill+pager+'</div>'   // 머리줄 = [제목 HP/실드 / 설명][상태칩][◀페이지▶]
     // 🏕 m.wide = 그리드를 안 쓰고 **카드 안쪽 전체**를 정보로 쓴다(빈 슬롯이 의미 없는 요약 카드용).
     //    ⚠ 옵션이 없으면 지금까지와 똑같이 동작한다 — 다른 시트에 영향이 없다.
     +(m.wide
