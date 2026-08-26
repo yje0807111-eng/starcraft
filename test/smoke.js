@@ -1313,6 +1313,76 @@ async function groupLobby(){
       return '관문 '+(CAMP_REB_COST/1e4)+'만 · 배수 로그 · 포인트 √×깊이 · 되감기 ok';
     } finally { const F=campState(); if(F) Object.assign(F, back); campSave(); } });
 
+  // 🌳 환생 포인트 트리 — HUNT_R1.md §4-4(구조·비용) · §4-5(32계열)
+  await step('캠프 던전: 환생 포인트 트리', async()=>{
+    skipIf(typeof campRtBuy!=='function','트리 없음');
+    const C=campState(); const back={rbPts:C.rbPts, rbTree:C.rbTree};
+    try{
+      // ① 구성 — 32계열 · 갈래 넷에 8개씩 · 묶음마다 흔함4 보통3 귀함1
+      assert(CAMP_RT_LINES.length===32,'계열이 32개가 아님: '+CAMP_RT_LINES.length);
+      for(const br of ['start','econ','army','enemy'])
+        assert(CAMP_RT_LINES.filter(L=>L.br===br).length===8, br+' 갈래가 8계열이 아님');
+      for(const g of ['가','나','다','라']){
+        const m=CAMP_RT_LINES.filter(L=>L.grp===g);
+        assert(m.length===8, g+' 묶음이 8계열이 아님: '+m.length);
+        const c=k=>m.filter(L=>L.gr===k).length;
+        assert(c('흔함')===4 && c('보통')===3 && c('귀함')===1,
+          g+' 묶음 등급 구성이 4·3·1 이 아님: '+c('흔함')+'·'+c('보통')+'·'+c('귀함')); }
+      // ② 티어당 노드 8개 — 계열 5등장을 다 펼쳐 세어 본다
+      { const per={}; for(const L of CAMP_RT_LINES) for(let n=1;n<=5;n++){
+          const t=campRtTier(L.k,n); per[t]=(per[t]|0)+1; }
+        for(let t=1;t<=CAMP_RT_TIERS;t++) assert(per[t]===8,'티어 '+t+' 노드가 8개가 아님: '+per[t]);
+        assert(CAMP_RT_LINES.length*5===160,'노드가 160개가 아님'); }
+      // ③ 극상은 갈래마다 하나씩 — 이정표 티어에서만
+      { const ex=[]; for(const L of CAMP_RT_LINES) for(let n=1;n<=5;n++)
+          if(campRtGrade(L.k,n)==='극상') ex.push(L.br+'@T'+campRtTier(L.k,n));
+        assert(ex.length===4,'극상 노드가 4개가 아님: '+ex.join(','));
+        assert(new Set(ex.map(x=>x.split('@')[0])).size===4,'극상이 갈래마다 하나씩이 아님: '+ex.join(',')); }
+      // ④ 비용 = 티어 기준값 × 등급 배수
+      assert(campRtCost('tap',1)===2*0.5,'T1 흔함 비용이 1 이 아님: '+campRtCost('tap',1));
+      assert(campRtCost('foeN',1)===2*3,'T1 귀함 비용이 6 이 아님: '+campRtCost('foeN',1));
+      assert(campRtCost('foeN',2)===2*Math.pow(4,4)*10,'T5 극상 비용이 틀림: '+campRtCost('foeN',2));
+      // ⑤ 사슬 — 시작점 먼저, 그 다음 앞 차수를 샀어야 한다
+      C.rbTree={}; C.rbPts=1e13;   // 5차는 T17 이라 비용이 43억이다 — 예산을 넉넉히
+      assert(!campRtCanBuy('tap'),'시작점 없이 계열을 산다');
+      assert(campRtCanBuy('root'),'포인트가 넘치는데 시작점을 못 산다');
+      campRtBuy('root');
+      assert(campRtCanBuy('tap'),'시작점을 샀는데 1차를 못 산다');
+      campRtBuy('tap');
+      assert(campRtHas('tap')===1,'1차가 안 사짐');
+      for(let i=0;i<4;i++) campRtBuy('tap');
+      assert(campRtHas('tap')===5,'5차까지 못 삼: '+campRtHas('tap'));
+      assert(!campRtCanBuy('tap'),'6차가 있다 — 계열은 5등장뿐이다');
+      // ⑥ 포인트가 모자라면 못 산다
+      C.rbTree={root:1}; C.rbPts=0;
+      assert(!campRtCanBuy('tap'),'포인트 0 인데 산다');
+      // ⑦ 초기화 — 100% 돌려받는다
+      C.rbTree={}; C.rbPts=1e13; const p0=C.rbPts;
+      campRtBuy('root'); campRtBuy('tap'); campRtBuy('tap'); campRtBuy('gather');
+      assert(C.rbPts<p0,'샀는데 포인트가 안 줄었다');
+      campRtReset();
+      assert(Math.abs(C.rbPts-p0)<1e-9,'초기화 환급이 100% 가 아님: '+C.rbPts+' vs '+p0);
+      assert(!Object.keys(C.rbTree).length,'초기화인데 트리가 남았다');
+      // ⑧ ⭐ 적 약화는 막혀 있다 — 계열 −40% · 갈래 실효 하한 ×0.2
+      C.rbTree={root:1}; 
+      for(const L of CAMP_RT_LINES) if(L.br==='enemy') C.rbTree[L.k]=5;
+      assert(Math.abs(campRtCut('foeHp')-CAMP_RT_CUT_MAX)<0.01,'계열 상한이 −40% 가 아님: '+campRtCut('foeHp'));
+      assert(campRtFoeMul()>=CAMP_RT_CUT_FLOOR-1e-9,'적 약화가 하한을 뚫었다: '+campRtFoeMul());
+      assert(Math.abs(campRtFoeMul()-CAMP_RT_CUT_FLOOR)<1e-9,'전부 찍었는데 하한이 아님: '+campRtFoeMul());
+      // ⑨ 효과가 실제로 걸린다 — 탭·일꾼·적
+      { C.rbTree={root:1}; const t0=campTapGain(), g0=campGatherMul();
+        C.rbTree={root:1, tap:5, tapMul:5, gather:5};
+        assert(campTapGain()>t0,'탭에 트리가 안 걸린다: '+t0+'→'+campTapGain());
+        assert(Math.abs(campGatherMul()/g0-CAMP_RT_LADDER[5])<1e-6,'일꾼 채취량에 트리가 안 걸린다'); }
+      { C.rbTree={root:1}; const n0=campFoeCount(30);
+        C.rbTree={root:1, foeN:5};
+        assert(campFoeCount(30)<n0,'적 마리 수에 트리가 안 걸린다: '+n0+'→'+campFoeCount(30)); }
+      { C.rbTree={root:1}; const mob=[{maxHp:100,maxSh:0,dmg:10}]; campScaleFoes(mob); const h0=mob[0].maxHp;
+        C.rbTree={root:1, foeHp:5, foeAtk:5}; const m2=[{maxHp:100,maxSh:0,dmg:10}]; campScaleFoes(m2);
+        assert(m2[0].maxHp<h0,'적 체력에 트리가 안 걸린다: '+h0+'→'+m2[0].maxHp); }
+      return '32계열 × 5등장 = 160노드 · 티어당 8 · 극상 4 · 적 약화 하한 ×'+CAMP_RT_CUT_FLOOR;
+    } finally { C.rbPts=back.rbPts; C.rbTree=back.rbTree; campSave(); } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;

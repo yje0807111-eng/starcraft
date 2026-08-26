@@ -158,6 +158,116 @@ function campWipeBoard(){
   T.sup = 0; T.supCap = 0; T.ents = []; T.minerals = [];
   return false; }
 
+// ══ 🌳 환생 포인트 트리 (2026-08-25 · 6단계) ═══════════════════════════
+//   설계 단일 소스: HUNT_R1.md §4-4(구조·비용) · §4-5(32계열 내용).
+//   ⭐ 시작점 하나에서 사방 넷으로 퍼지는 마인드맵이다. 계열 하나가 티어 5곳에 등장하고,
+//      **산 노드에 붙어 있는 것만** 살 수 있다(사슬).
+//   ⛔ 비용 규칙을 여기 말고 다른 곳에 다시 적지 말 것 — campRtCost 하나가 단일 소스다.
+const CAMP_RT_TIERS = 20;
+const CAMP_RT_BASE = 2;                     // 시작점 노드 값 = 티어 1 기준값
+const CAMP_RT_MUL = 4;                      // 티어당 기준값 배수
+const CAMP_RT_GRADE = { 흔함:0.5, 보통:1, 귀함:3, 극상:10 };
+// 등장 티어 묶음 — 갈래마다 묶음당 계열 2개 → 티어 하나에 노드 8개가 자동으로 맞는다
+const CAMP_RT_GRP = { 가:[1,5,9,13,17], 나:[2,6,10,14,18], 다:[3,7,11,15,19], 라:[4,8,12,16,20] };
+const CAMP_RT_MILE = { 가:5, 나:10, 다:15, 라:20 };   // 그 묶음의 귀함 계열이 극상이 되는 티어
+
+// 효과 사다리 — HUNT_R1 §4-5. 배수형은 1~5차가 이 값(누적)이다.
+const CAMP_RT_LADDER = [0, 1.5, 2.5, 5, 11, 25];
+
+// 32계열. br=갈래 · grp=묶음 · gr=등급 · f=효과 종류(배선된 것만 아래에서 쓴다)
+//   ⚠ 묶음마다 흔함4 · 보통3 · 귀함1 이어야 티어당 등급 구성이 맞는다(스모크가 검사).
+const CAMP_RT_LINES = [
+  // ── 갈래 ① 시작 도움 — 절대값이라 후반에는 저절로 희석된다
+  {k:'tap',      br:'start', grp:'가', gr:'흔함', nm:'탭당 미네랄',    f:'tapAdd'},
+  {k:'startMin', br:'start', grp:'가', gr:'보통', nm:'시작 미네랄',    f:'startMin'},
+  {k:'startWk',  br:'start', grp:'나', gr:'흔함', nm:'시작 일꾼',      f:'startWorker'},
+  {k:'startBld', br:'start', grp:'나', gr:'보통', nm:'시작 건물',      f:'startBldg'},
+  {k:'earlyDc',  br:'start', grp:'다', gr:'흔함', nm:'초반 건물 할인', f:'earlyDisc'},
+  {k:'startUp',  br:'start', grp:'다', gr:'보통', nm:'시작 업그레이드', f:'startUpg'},
+  {k:'startUnit',br:'start', grp:'라', gr:'흔함', nm:'시작 유닛',      f:'startUnit'},
+  {k:'skipRd',   br:'start', grp:'라', gr:'귀함', nm:'라운드 건너뛰기', f:'skipRound'},
+  // ── 갈래 ② 재화 획득
+  {k:'gather',   br:'econ',  grp:'가', gr:'흔함', nm:'일꾼 채취량',    f:'gatherMul'},
+  {k:'gas',      br:'econ',  grp:'가', gr:'보통', nm:'가스 생산량',    f:'gasMul'},
+  {k:'wkCap',    br:'econ',  grp:'나', gr:'흔함', nm:'일꾼 상한',      f:'workerCap'},
+  {k:'mine',     br:'econ',  grp:'나', gr:'귀함', nm:'광산 등급',      f:'mineMul'},
+  {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul'},
+  {k:'dgRw',     br:'econ',  grp:'다', gr:'보통', nm:'던전 보상',      f:'dgRewardMul'},
+  {k:'tapMul',   br:'econ',  grp:'라', gr:'흔함', nm:'탭 배수',        f:'tapMul'},
+  {k:'gasEx',    br:'econ',  grp:'라', gr:'보통', nm:'가스 교환비',    f:'gasExMul'},
+  // ── 갈래 ③ 아군 강화
+  {k:'atk',      br:'army',  grp:'가', gr:'흔함', nm:'유닛 공격력',    f:'unitAtk'},
+  {k:'hp',       br:'army',  grp:'가', gr:'보통', nm:'유닛 체력',      f:'unitHp'},
+  {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul'},
+  {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한',      f:'supAdd'},
+  {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc'},
+  {k:'rebuild',  br:'army',  grp:'다', gr:'귀함', nm:'자동 재생산',    f:'autoRebuild'},
+  {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul'},
+  {k:'skCd',     br:'army',  grp:'라', gr:'보통', nm:'스킬 쿨다운',    f:'skillCd'},
+  // ── 갈래 ④ 적 약화 — ⚠ 상한이 있다. 다른 셋과 곱해지므로 반드시 막혀 있어야 한다
+  {k:'foeHp',    br:'enemy', grp:'가', gr:'흔함', nm:'적 체력',        f:'cutHp'},
+  {k:'foeN',     br:'enemy', grp:'가', gr:'귀함', nm:'적 마리 수',     f:'cutCount'},
+  {k:'foeAtk',   br:'enemy', grp:'나', gr:'흔함', nm:'적 공격력',      f:'cutAtk'},
+  {k:'foeRes',   br:'enemy', grp:'나', gr:'보통', nm:'적 부활 시간',   f:'cutRes'},
+  {k:'foeSpd',   br:'enemy', grp:'다', gr:'흔함', nm:'적 이동 속도',   f:'cutSpd'},
+  {k:'bossHp',   br:'enemy', grp:'다', gr:'보통', nm:'보스 체력',      f:'cutBoss'},
+  {k:'foeRng',   br:'enemy', grp:'라', gr:'흔함', nm:'적 사거리',      f:'cutRng'},
+  {k:'foeDelay', br:'enemy', grp:'라', gr:'보통', nm:'적 등장 지연',   f:'foeDelay'},
+];
+function campRtLine(k){ for(const L of CAMP_RT_LINES) if(L.k === k) return L; return null; }
+// 계열의 n차 등장이 몇 티어인가 (n = 1~5)
+function campRtTier(k, n){ const L = campRtLine(k); if(!L) return 0;
+  return CAMP_RT_GRP[L.grp][Math.max(1, Math.min(5, n | 0)) - 1]; }
+// 그 자리의 등급 — 귀함 계열은 자기 이정표 티어에서만 극상이 된다
+function campRtGrade(k, n){ const L = campRtLine(k); if(!L) return '보통';
+  return (L.gr === '귀함' && campRtTier(k, n) === CAMP_RT_MILE[L.grp]) ? '극상' : L.gr; }
+// 노드 비용 = 티어 기준값 × 등급 배수
+function campRtCost(k, n){ const t = campRtTier(k, n); if(!t) return Infinity;
+  return CAMP_RT_BASE * Math.pow(CAMP_RT_MUL, t - 1) * CAMP_RT_GRADE[campRtGrade(k, n)]; }
+
+// ── 보유 · 구매 ─────────────────────────────────────────────────────────
+//   저장은 C.rbTree = { root:1, '<계열>':<몇 차까지 샀나> }
+function campRtBag(){ const C = campState(); if(!C) return null;
+  if(!C.rbTree || typeof C.rbTree !== 'object') C.rbTree = {};
+  return C.rbTree; }
+function campRtHas(k){ const b = campRtBag(); return b ? (b[k] | 0) : 0; }
+function campRtRootOn(){ return campRtHas('root') > 0; }
+// 다음으로 살 수 있는 차수 (없으면 0)
+function campRtNext(k){ const n = campRtHas(k) + 1; return n <= 5 ? n : 0; }
+// ⭐ 사슬 규칙 — 시작점 먼저, 그 다음은 그 계열의 앞 차수를 샀어야 한다
+function campRtCanBuy(k){ const C = campState(); if(!C) return false;
+  if(k === 'root') return !campRtRootOn() && (C.rbPts || 0) >= CAMP_RT_BASE;
+  if(!campRtRootOn()) return false;
+  const n = campRtNext(k); if(!n) return false;
+  return (C.rbPts || 0) >= campRtCost(k, n); }
+function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 0;
+  const b = campRtBag();
+  const cost = (k === 'root') ? CAMP_RT_BASE : campRtCost(k, campRtNext(k));
+  C.rbPts = (C.rbPts || 0) - cost;
+  b[k] = (b[k] | 0) + 1;
+  campSave(); return cost; }
+// 초기화 — 산 것을 전부 물리고 포인트를 100% 돌려받는다. 비용은 젬(GEM.md §4).
+function campRtReset(){ const C = campState(); if(!C) return 0;
+  const b = campRtBag(); let back = 0;
+  if(b.root) back += CAMP_RT_BASE;
+  for(const L of CAMP_RT_LINES){ const n = b[L.k] | 0;
+    for(let i = 1; i <= n; i++) back += campRtCost(L.k, i); }
+  C.rbTree = {}; C.rbPts = (C.rbPts || 0) + back; campSave(); return back; }
+
+// ── 효과 ────────────────────────────────────────────────────────────────
+//   배수형 = 사다리 값(누적) · 감소형 = 계열마다 −40% 까지 수확 체감
+const CAMP_RT_CUT_MAX = 0.40;          // 계열 하나가 깎을 수 있는 최대
+const CAMP_RT_CUT_FLOOR = 0.20;        // ⭐ 갈래 전체 실효 하한 — 적이 1/5 밑으로는 안 내려간다
+function campRtMul(k){ const n = campRtHas(k); return n > 0 ? CAMP_RT_LADDER[Math.min(5, n)] : 1; }
+// ⛔ 공식으로 만들지 말 것 — 지수 감쇠는 5차에서 상한에 **정확히** 닿지 않는다(실측 −37.99%).
+//    HUNT_R1 §4-5-4 의 표를 그대로 둔다: 5차가 딱 −40% 여야 「다 찍었다」가 성립한다.
+const CAMP_RT_CUT = [0, 0.12, 0.25, 0.33, 0.38, CAMP_RT_CUT_MAX];
+function campRtCut(k){ const n = campRtHas(k); return n <= 0 ? 0 : CAMP_RT_CUT[Math.min(5, n)]; }
+// 적 약화 갈래의 실효 배수 — 곱한 뒤 하한으로 막는다. ⛔ 하한을 빼면 지수 축이 둘이 된다.
+function campRtFoeMul(){ let m = 1;
+  for(const L of CAMP_RT_LINES){ if(L.br !== 'enemy') continue; m *= (1 - campRtCut(L.k)); }
+  return Math.max(CAMP_RT_CUT_FLOOR, m); }
+
 // ══ ⚔ 던전 전투 (2026-08-25 · 2단계) ═══════════════════════════════════
 //   ⭐ **전투를 새로 짜지 않는다 — 오토배틀(18-strike.js)의 것을 빌린다.**
 //      유닛 스탯·상성·스킬·표적 선정·회피가 거기 다 있다. 새로 짜면 두 벌이 되어 언젠가 갈라진다.
@@ -196,8 +306,10 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
 const CAMP_FOE_HP0 = 3.3, CAMP_FOE_ATK0 = 0.33;
 const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
-  return Math.max(1, Math.min(CAMP_FOE_NMAX,
-    Math.round(CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1))))); }
+  const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1));
+  // 🌳 트리 「적 마리 수」 — 총 유입량은 그대로고 **나누는 수만** 준다(개체가 두꺼워진다)
+  const cut = (typeof campRtCut === 'function') ? (1 - campRtCut('foeN')) : 1;
+  return Math.max(1, Math.min(CAMP_FOE_NMAX, Math.round(n * cut))); }
 
 // 전장을 연다. 적은 **위**에서 내려오고 내 본부는 **아래** — 캠프 배치와 같은 방향이다.
 function campBattleOpen(){
@@ -236,8 +348,10 @@ function campScaleFoes(list){
   const diff = campFoeDiff(campDgN(), campCleared());
   let hp0 = 0, dmg0 = 0;
   for(const u of list){ hp0 += (u.maxHp || 0) + (u.maxSh || 0); dmg0 += (u.dmg || 0); }
-  const hpMul  = hp0  > 0 ? (CAMP_FOE_HP0  * diff) / hp0  : 1;
-  const dmgMul = dmg0 > 0 ? (CAMP_FOE_ATK0 * diff) / dmg0 : 1;
+  // 🌳 트리 「적 약화」 갈래 — 계열마다 −40% · 갈래 전체 실효 하한 ×0.2(HUNT_R1 §4-5-4)
+  const cut = campRtFoeMul();
+  const hpMul  = hp0  > 0 ? (CAMP_FOE_HP0  * diff * cut) / hp0  : 1;
+  const dmgMul = dmg0 > 0 ? (CAMP_FOE_ATK0 * diff * cut) / dmg0 : 1;
   for(const u of list){
     u.maxHp = u.maxHp * hpMul; u.hp = u.maxHp;
     u.maxSh = (u.maxSh || 0) * hpMul; u.sh = u.maxSh;
@@ -827,12 +941,15 @@ function campUpgCost(k){
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
-  return Math.max(1, Math.round(CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) * campMineMul() * campRebMul()));
+  // 🌳 트리 — 「탭당 미네랄」은 절대값을 더하고(초반 단축), 「탭 배수」는 곱한다
+  const add = campRtHas('tap') > 0 ? CAMP_RT_LADDER[Math.min(5, campRtHas('tap'))] : 0;
+  return Math.max(1, Math.round((CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) + add)
+    * campMineMul() * campRebMul() * campRtMul('tapMul')));
 }
 // 일꾼 채취 배수 — 일꾼 **수**로는 못 올린다(실측: 12기 26.8/초에서 천장. 300기도 26.8).
 //   광맥 6덩이가 한 번에 한 명씩만 캐서 나머지는 줄을 선다. 그래서 **1회 채취량**을 올린다.
 function campGatherMul(){ const C = campState(); if(!C) return 1;
-  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campMineMul() * campRebMul(); }
+  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campMineMul() * campRebMul() * campRtMul('gather'); }
 // 눌린 곳이 광맥인가 — 맞으면 캐고 true
 function campTapAt(clientX, clientY){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
