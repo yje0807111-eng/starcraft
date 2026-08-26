@@ -869,10 +869,6 @@ function loop(now){
   updatePcFab();      // 🎨 플레이어 색 확인 FAB — 관리자 샌드박스 메인 전용(네모네모 게임엔 미노출)
   if(typeof renderRallyArrows==='function') renderRallyArrows();   // 자동 배치 ON 시 등급별 랠리 화살표(드래그)
   updateHud();
-  // '합체' 라벨 페이드: 1라운드만 표시, 2라운드부터 매 프레임 opacity 보간으로 부드럽게 사라짐
-  { const mzl=document.querySelector('#mergeZone .mz');
-    if(mzl){ const tgt=(G.bossOpen||G.round>1)?0:1; G._mzF=(G._mzF==null?1:G._mzF)+(tgt-(G._mzF==null?1:G._mzF))*Math.min(1,dt*(G.bossOpen?8:1.6));
-      if(G._mzF<0.002)G._mzF=0; mzl.style.opacity=G._mzF.toFixed(3); } }
   // 아군 유닛 림 색: 플레이어 구역 관전 시 관전 플레이어 색(+또렷하게), 그 외엔 내 색(은은)
   if(window.M3D && window.M3D.setPlayerRim){ if(G.tab==='Players') window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[(G.curPlayer-1)%PLAYER_VIEW_COLORS.length], 0.9); else window.M3D.setPlayerRim(PLAYER_VIEW_COLORS[((G.myPlayer||1)-1)%PLAYER_VIEW_COLORS.length]); }   // 플레이어 구분=테두리(림) 색 하나로만 · 관전은 구별용으로 조금 더 강하게(0.9)
   const _specNum = (typeof specRemoteBoard==='function') ? specRemoteBoard() : null;   // 관전 중인 상대 번호
@@ -957,8 +953,8 @@ function renderBuildTab(dt){
     if(_fcv){ if(mcv.style.display==='block' && typeof techMoveTrails==='function'){ _fcv.style.display='block'; techMoveTrails(dt); } else _fcv.style.display='none'; }
   }
 }
-window.addEventListener('resize',()=>{ if(G.strike) return; if(G.tab==='Main'){drawMain();placeMergeZone();} if(G.tab==='Unit'&&!G.sandbox){drawProd();renderClock();} if(G.tab==='Upgrade')drawUpg(); if(G.tab==='Players')drawPlayer(); });
-window.addEventListener('load',()=>{ drawMain(); placeMergeZone(); updateHud(); bootApp(); initChat(); if(typeof _sfxInit==='function') _sfxInit(); if(typeof buildGachaDex==='function') buildGachaDex(); requestAnimationFrame(loop); });
+window.addEventListener('resize',()=>{ if(G.strike) return; if(G.tab==='Main'){drawMain();} if(G.tab==='Unit'&&!G.sandbox){drawProd();renderClock();} if(G.tab==='Upgrade')drawUpg(); if(G.tab==='Players')drawPlayer(); });
+window.addEventListener('load',()=>{ drawMain(); updateHud(); bootApp(); initChat(); if(typeof _sfxInit==='function') _sfxInit(); if(typeof buildGachaDex==='function') buildGachaDex(); requestAnimationFrame(loop); });
 
 // ════════════════════════════════════════════════════════════════
 // 컴퓨터가 싸운다(직스) — nemo 셸(상단 HUD·하단 탭·미니맵·채팅·프로필) 재사용 게임플레이 모듈.

@@ -1,0 +1,191 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>채팅바 — 접힘은 아이콘(A) · 열림 8안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   접힘 = A안 고정(말풍선 아이콘 44px 하나). **열렸을 때의 구성**만 여덟 갈래.
+   축은 둘이다:  ① 일체형(한 부품) ↔ 따로따로(두 부품)
+                 ② 판이 있다 ↔ 없다 ↔ 트레이에 담는다
+   물성은 여덟 안 전부 같다 — 면 rgba(6,8,12,.62) · 금속 테두리 · 3px · 시안 없음.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --metal-edge:#3c3e46;
+  --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+  --trayPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --r-bar:3px;
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --ch:7px;
+  --glow:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+         linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,390px);gap:14px;justify-content:start}
+.col{width:390px}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base{color:#ffd08a}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:62px}
+.sub b{color:#dfe6f0}
+
+.stage{position:relative;padding:96px 0 0;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#5c6f7f 0%,#48606f 30%,#4a6a4a 58%,#6b5a33 82%,#2e2418 100%)}
+.stage::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 28% 62%,rgba(255,200,120,.42),transparent 44%),
+             radial-gradient(ellipse at 78% 28%,rgba(140,190,240,.34),transparent 48%)}
+.chatWrap{position:relative;z-index:3;padding:0 9px 9px}
+.cmsg{font-size:12px;line-height:1.4;color:#cfe0f4;text-shadow:0 0 5px #000,0 1px 2px #000}
+.cmsg b{font-weight:800}
+.cmsg.sys{color:#a5d4ee}
+.row{display:flex;gap:6px;align-items:stretch;margin-top:6px}
+.spacer{flex:1}
+.ic{width:17px;height:17px;flex:none}
+
+/* 공용 부품 */
+.box{height:34px;display:flex;align-items:center;background:rgba(6,8,12,.62);
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);color:#e6eefc;
+  font-size:13px;font-weight:700;text-shadow:0 1px 2px #000}
+.fold{width:44px;justify-content:center;flex:none}
+.field{flex:1;min-width:0;justify-content:flex-start;padding:0 13px;font-weight:400}
+.field i{font-style:normal;color:rgba(150,205,230,.72)}
+.send{flex:none;padding:0 17px;justify-content:center;position:relative}
+.send::after{content:'';position:absolute;left:16%;right:16%;bottom:-1px;height:1px;
+  background:var(--glow);box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+.merge{flex:none;width:66px;justify-content:center;color:#aeb6c2}
+
+/* 일체형 껍데기 — 안쪽 조각은 테두리·면을 벗는다 */
+.unit{flex:1;min-width:0;display:flex;align-items:stretch;height:34px;overflow:hidden;
+  background:rgba(6,8,12,.62);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.unit .field,.unit .send{border:0;background:none;border-radius:0;height:auto}
+.unit .send{border-left:1px solid rgba(255,255,255,.13)}
+.unit .send::after{display:none}
+
+.bot{position:relative;z-index:2;padding:8px 12px 0;height:80px}
+.bot::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+             var(--loadDim), linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92);
+  clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
+.sheetHint{font-size:10.5px;color:#8a94a6}
+.navBar{position:relative;height:42px;margin:6px -12px 0;padding:0 6px;display:flex;align-items:center}
+.navIt{position:relative;flex:1 1 0;display:flex;align-items:center;justify-content:center;gap:5px;height:42px;
+  font-size:10px;font-weight:700;color:#8b939f;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.navIt .ic{width:15px;height:15px}
+.navIt.on{color:#fff}
+.navIt.on::after{content:'';position:absolute;left:11%;right:11%;bottom:1px;height:1px;
+  background:var(--glow);box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+
+/* ─── 안별 차이 ─── */
+/* O3 — 전송이 칸 안 아이콘 */
+.o3 .sendIco{flex:none;width:34px;display:flex;align-items:center;justify-content:center;color:#e6eefc;
+  border-left:1px solid rgba(255,255,255,.13)}
+/* O4 — 트레이 한 판 */
+.o4 .tray{flex:1;min-width:0;display:flex;gap:3px;padding:3px;background:var(--trayPanel);
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.o4 .tray .box{height:26px;background:var(--bpFace) padding-box,var(--metal-ring) border-box;
+  border:1px solid transparent}
+/* O5 — 판 없음 */
+.o5 .field{background:none;border:0;border-radius:0;position:relative}
+.o5 .field::after{content:'';position:absolute;left:0;right:0;bottom:4px;height:1px;
+  background:linear-gradient(90deg,rgba(255,255,255,.30),rgba(255,255,255,.10) 70%,transparent)}
+.o5 .send{background:none;border:0}
+/* O7 — 각진 컷 */
+.o7 .unit{border-radius:0;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+/* O8 — 전송이 정사각 아이콘 버튼(따로) */
+.o8 .sq{flex:none;width:34px;justify-content:center;position:relative}
+.o8 .sq::after{content:'';position:absolute;left:16%;right:16%;bottom:-1px;height:1px;
+  background:var(--glow);box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
+</style></head><body>
+
+<template id="tail">
+  <div class="bot"><div class="sheetHint">— 하단 시트(프로필) —</div>
+    <div class="navBar">
+      <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+      <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>유닛뽑기</div>
+      <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+      <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5"/></svg>플레이어</div>
+    </div></div>
+</template>
+<template id="logs">
+  <div class="cmsg sys">◈ 3라운드가 시작됩니다</div>
+  <div class="cmsg"><b>2P</b> 좌측 본진 밀어요</div>
+</template>
+
+<div class="col"><p class="hd base">접힘 — 여덟 안 <em>공통</em></p>
+  <p class="sub">평소엔 <b>말풍선 아이콘 44px</b> 하나. 오른쪽 조합 자리는 그대로.
+     아래 여덟은 이걸 눌렀을 때 <b>어떻게 펼쳐지는가</b>만 다르다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row">
+      <div class="box fold"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12a8 8 0 0 1-8 8H5l-2 2v-9a8 8 0 0 1 8-8h1a8 8 0 0 1 8 7z"/></svg></div>
+      <div class="spacer"></div><div class="box merge">조합</div>
+    </div></div><div data-tail></div></div></div>
+
+<div class="col o1"><p class="hd">O1 — <em>일체형</em>(구분선)</p>
+  <p class="sub">입력칸과 전송이 <b>한 상자</b> 안에 붙는다. 사이는 1px 구분선뿐.
+     둘이 한 부품으로 읽혀 가장 조용하다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="unit"><div class="field"><i>메시지…</i></div><div class="send">전송</div></div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o2"><p class="hd">O2 — <em>따로따로</em>(두 부품)</p>
+  <p class="sub">입력칸과 전송이 <b>떨어진 두 상자</b>(틈 6px). 전송에 <b>밑변 광원</b>이 붙어
+     「누르는 것」이 분명하다. 지금 구조에서 가장 적게 바뀐다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="box field"><i>메시지…</i></div><div class="box send">전송</div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o3"><p class="hd">O3 — 일체형 + <em>전송이 아이콘</em></p>
+  <p class="sub">전송이 글자가 아니라 <b>종이비행기 아이콘</b>으로 칸 안에 들어간다.
+     가로를 가장 적게 먹어 입력칸이 제일 넓다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="unit"><div class="field"><i>메시지…</i></div>
+      <div class="sendIco"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l16-8-6 16-3-6z"/></svg></div></div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o4"><p class="hd">O4 — <em>트레이 한 판</em>에 담는다</p>
+  <p class="sub">회색 판 하나에 <b>검정 칸 둘</b>. 사냥터 스킬 바(<b>.hbTray</b>)·조작 트레이와 같은 구조라
+     「여기까지가 채팅」이 한 덩어리로 읽힌다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="tray"><div class="box field"><i>메시지…</i></div><div class="box send">전송</div></div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o5"><p class="hd">O5 — <em>판 없음</em></p>
+  <p class="sub">입력칸은 <b>밑줄 하나</b>, 전송은 <b>글자 + 밑변 광원</b>.
+     전장이 가장 잘 보이고 하단 네비바와 같은 어휘가 된다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="box field"><i>메시지…</i></div><div class="box send">전송</div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o6"><p class="hd">O6 — <em>아이콘이 남는다</em></p>
+  <p class="sub">열려도 왼쪽 <b>말풍선 아이콘이 그대로</b> 있고 그 옆에 입력칸·전송이 붙는다.
+     <b>어디서 열렸는지</b>가 보이고, 그 아이콘을 다시 눌러 접는다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="box fold"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12a8 8 0 0 1-8 8H5l-2 2v-9a8 8 0 0 1 8-8h1a8 8 0 0 1 8 7z"/></svg></div>
+      <div class="box field"><i>메시지…</i></div><div class="box send">전송</div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o7"><p class="hd">O7 — 일체형 + <em>각진 컷</em></p>
+  <p class="sub">O1 에 <b>모서리 대각 컷 7px</b>. 스킬 칸·조작 트레이·하단 프로필 칸이 쓰는
+     그 계약이라 하단 전체가 같은 실루엣이 된다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="unit"><div class="field"><i>메시지…</i></div><div class="send">전송</div></div></div>
+  </div><div data-tail></div></div></div>
+
+<div class="col o8"><p class="hd">O8 — <em>정사각 아이콘 버튼</em></p>
+  <p class="sub">전송이 <b>34px 정사각</b> 아이콘 버튼으로 떨어져 나온다.
+     조작 트레이의 칸(30px 정사각)과 같은 형태라 「누르는 것」의 생김새가 하나가 된다.</p>
+  <div class="stage"><div class="chatWrap" data-logs>
+    <div class="row"><div class="box field"><i>메시지…</i></div>
+      <div class="box sq"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 12l16-8-6 16-3-6z"/></svg></div></div>
+  </div><div data-tail></div></div></div>
+
+<script>
+const t=document.getElementById('tail'), lg=document.getElementById('logs');
+document.querySelectorAll('[data-logs]').forEach(h=>h.prepend(lg.content.cloneNode(true)));
+document.querySelectorAll('[data-tail]').forEach(h=>h.replaceWith(t.content.cloneNode(true)));
+</script>
+</body></html>

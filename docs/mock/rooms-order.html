@@ -1,0 +1,77 @@
+<!-- 방 찾기 줄머리 순서 6안 (2026-08-25)
+     ⚠ 마크업은 살아 있는 화면에서 그대로 떠온 것이고, 각 안은 **그 안의 노드를 옮기기만** 한다.
+       새 행 마크업을 쓰지 않는다 — 고른 순서를 renderRoomList 에 그대로 옮길 수 있게 하려는 것이다.
+     ⚠ 방 이름은 지금 **맨 뒤 텍스트 노드**다. 자리를 옮기려면 span(.riTx)으로 감싸야 하고,
+       그건 실제 코드에도 똑같이 필요한 변경이다(여기서 미리 해 본다). -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>방 찾기 줄머리 순서 6안</title>
+<link rel="stylesheet" href="../../css/00-base.css">
+<link rel="stylesheet" href="../../css/20-lobby.css">
+<link rel="stylesheet" href="../../css/30-home.css">
+<link rel="stylesheet" href="../../css/40-social.css">
+<style>
+  html,body{display:block;height:auto;overflow:visible;background:#08090b}
+  body{font-family:var(--font-ko);color:var(--txt);padding:18px;width:1660px}
+  h2{font-family:var(--font-ti);font-size:18px;color:#fff;margin:14px 0 2px}
+  h2 small{font-family:var(--font-ko);font-size:11px;color:var(--txt-mute);margin-left:8px}
+  .sheet{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:10px 0 26px}
+  .p{background:#0d0e11;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:10px}
+  .tag{font-family:var(--font-ti);font-size:13px;color:#fff}
+  .ord{font-family:var(--font-num);font-size:10.5px;color:#8fb7e0;margin:3px 0 2px}
+  .note{font-size:10px;line-height:1.55;color:var(--txt-mute);min-height:30px;margin:0 0 8px}
+  .ph{position:relative;width:100%;aspect-ratio:390/560;border-radius:9px;overflow:hidden;background:#04050b}
+  .ph #rooms{position:absolute;inset:0}
+  /* ⚠ 순서를 바꾸려면 **여백부터 gap 으로** 옮겨야 한다.
+     지금은 앞선 요소가 margin-right 로 틈을 만드는 구조라, 이름을 번호 앞으로 보내면
+     「고인물 전용#8066」처럼 딱 붙는다(첫 렌더에서 실제로 그랬다).
+     flex + gap 이면 어느 순서로 놓아도 틈이 같다 — 실제 코드에도 이 변경이 함께 필요하다. */
+  .ph .riName{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .ph .riDiff,.ph .riNum,.ph .riLock{margin:0;flex:none}
+  .ph .riTx{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ph .riSub .riNum{font-size:1em}
+  .ph .riRight .riDiff,.ph .riRight .riNum{margin:0}
+</style>
+<script>
+const RM="<div class=\"rmCard\">\n        <div class=\"rmHead\">\n          <span class=\"rmTitle\">방 찾기</span>\n          <span class=\"rmHeadR\">\n            <span class=\"rmOnline\">방 <b id=\"roomCount\">6</b>개</span>\n            <button class=\"rmIco\" id=\"rmNumBtn\" onclick=\"toggleRoomNum()\" title=\"방 번호로 입장\" aria-label=\"방 번호로 입장\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"></circle><path d=\"M16 16l4 4\"></path></svg></button>\n          </span>\n        </div>\n        <!-- 가장 잦은 동작이 맨 위 = 빠른 입장(화면의 유일한 주 액션) -->\n        <button class=\"actBtn pri rmQuickTop\" onclick=\"quickJoin()\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 3 5 14h6l-1 7 8-11h-6z\"></path></svg>빠른 입장<em id=\"rmQuickSub\">대기 중 4방</em></button>\n        <!-- 방 번호 입장 = 친구 방 전용이라 평소엔 접어 둔다(우상단 🔍로 편다) -->\n        <div class=\"rmNum hide\" id=\"rmNumRow\">\n          <input id=\"roomNumField\" type=\"text\" inputmode=\"numeric\" placeholder=\"방 번호로 입장 (친구 방)\" maxlength=\"5\" onkeydown=\"if(event.key==='Enter')joinByNumber()\">\n          <button onclick=\"joinByNumber()\">입장</button>\n        </div>\n        <div class=\"rmFilter\" id=\"rmFilter\"><div class=\"pdSeg\" style=\"--n:5\"><i class=\"pdSegInd\" style=\"left:calc(var(--pad) + 0*(100% - 2*var(--pad))/5)\"></i><button class=\"pdSegBtn on\" onclick=\"pickRmDiff('all')\">전체</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('easy')\">EASY</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('normal')\">NORMAL</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('hard')\">HARD</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('hell')\">HELL</button></div></div>   <!-- 난이도 있는 유즈맵에서만 (segNavHTML) -->\n        <div class=\"rmList\" id=\"roomList\"><div class=\"roomItem\" style=\"--dc: #ffb14d; --dcGlow: #ffb14d;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#ffb14d\">HARD</span><span class=\"riNum\">#8066</span><span class=\"riLock\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5.2\" y=\"10.5\" width=\"13.6\" height=\"9.3\" rx=\"2\"></rect><path d=\"M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3\"></path><circle cx=\"12\" cy=\"14.6\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"></circle><path d=\"M12 15.5v2.1\"></path></svg></span>고인물 전용</div><div class=\"riSub\">방장 - 리퍼장인</div></div><div class=\"riRight\"><div class=\"riCnt\">4/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #4aa8ff; --dcGlow: #4aa8ff;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#4aa8ff\">NORMAL</span><span class=\"riNum\">#9317</span><span class=\"riLock\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5.2\" y=\"10.5\" width=\"13.6\" height=\"9.3\" rx=\"2\"></rect><path d=\"M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3\"></path><circle cx=\"12\" cy=\"14.6\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"></circle><path d=\"M12 15.5v2.1\"></path></svg></span>협동 클리어</div><div class=\"riSub\">방장 - 막눈</div></div><div class=\"riRight\"><div class=\"riCnt\">3/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem locked\" style=\"--dc: #5dff8f;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#5dff8f\">EASY</span><span class=\"riNum\">#2790</span>초보만 ㄱㄱ</div><div class=\"riSub\">방장 - GG준비됨</div></div><div class=\"riRight\"><div class=\"riCnt\">6/8</div><div class=\"riStat play\">게임중 6R</div></div></div><div class=\"roomItem locked\" style=\"--dc: #4aa8ff;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#4aa8ff\">NORMAL</span><span class=\"riNum\">#8955</span>무한 고수방</div><div class=\"riSub\">방장 - Striker</div></div><div class=\"riRight\"><div class=\"riCnt\">3/8</div><div class=\"riStat play\">게임중 22R</div></div></div><div class=\"roomItem\" style=\"--dc: #4aa8ff; --dcGlow: #4aa8ff;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#4aa8ff\">NORMAL</span><span class=\"riNum\">#9034</span>영웅 키우기</div><div class=\"riSub\">방장 - 보이드킹</div></div><div class=\"riRight\"><div class=\"riCnt\">3/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #4aa8ff; --dcGlow: #4aa8ff;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#4aa8ff\">NORMAL</span><span class=\"riNum\">#1711</span>풀방 가즈아</div><div class=\"riSub\">방장 - Crystalize</div></div><div class=\"riRight\"><div class=\"riCnt\">6/8</div><div class=\"riStat wait\">대기중</div></div></div></div>\n        <div class=\"rmBtns\">\n          <button class=\"actBtn sq\" onclick=\"backToTitle()\" title=\"로비로 돌아가기\" aria-label=\"로비로\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 5l-7 7 7 7\"></path></svg></button>\n          <button class=\"actBtn\" data-sfx=\"ui_open\" onclick=\"createRoom()\">방 만들기</button>\n          <button class=\"actBtn sq\" onclick=\"refreshRooms()\" title=\"새로고침\" aria-label=\"새로고침\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8\"></path><path d=\"M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6\"></path></svg></button>\n        </div>\n      </div>";
+const SEP=' \u00b7 ';
+function prep(row){
+  const nm=row.querySelector('.riName');
+  for(const n of [...nm.childNodes]) if(n.nodeType===3 && n.textContent.trim()){
+    const s=document.createElement('span'); s.className='riTx'; s.textContent=n.textContent; nm.replaceChild(s,n); }
+  return { nm, diff:nm.querySelector('.riDiff'), num:nm.querySelector('.riNum'),
+    lock:nm.querySelector('.riLock'), tx:nm.querySelector('.riTx'),
+    sub:row.querySelector('.riSub'), right:row.querySelector('.riRight') };
+}
+function seq(nm, arr){ arr.forEach(el=>{ if(el) nm.appendChild(el); }); }
+function toSub(p, el){ if(!el) return; p.sub.appendChild(document.createTextNode(SEP)); p.sub.appendChild(el); }
+function toRight(p, el){ if(!el) return; p.right.insertBefore(el, p.right.firstChild); }
+const ORDER={
+  N1:p=>seq(p.nm,[p.diff,p.num,p.lock,p.tx]),
+  N2:p=>seq(p.nm,[p.diff,p.lock,p.tx,p.num]),
+  N3:p=>{ seq(p.nm,[p.diff,p.lock,p.tx]); toSub(p,p.num); },
+  N4:p=>seq(p.nm,[p.lock,p.tx,p.diff,p.num]),
+  N5:p=>{ seq(p.nm,[p.lock,p.tx]); toSub(p,p.num); toRight(p,p.diff); },
+  N6:p=>{ seq(p.nm,[p.diff,p.lock,p.tx]); toRight(p,p.num); },
+};
+const V=[
+ ['N1 · 지금 이것','난이도 \u203a #번호 \u203a 자물쇠 \u203a 제목','번호가 제목 앞을 막는다. 이름을 찾으려면 매 줄 번호를 건너뛰어야 한다.'],
+ ['N2 · 제목 \u203a 해시태그','난이도 \u203a 자물쇠 \u203a 제목 \u203a #번호','<b>제목이 먼저</b>. 번호는 제목 뒤에 따라붙는다.'],
+ ['N3 · 제목 \u203a 방장 \u203a 해시태그','난이도 \u203a 자물쇠 \u203a 제목 | 방장 · #번호','번호를 <b>아랫줄 끝</b>으로. 윗줄엔 난이도와 제목만 남는다.'],
+ ['N4 · 제목이 맨 앞','자물쇠 \u203a 제목 \u203a 난이도 \u203a #번호','<b>제목이 줄머리</b>. 난이도는 제목 뒤로 물러난다.'],
+ ['N5 · 난이도를 오른쪽으로','자물쇠 \u203a 제목 | 방장 · #번호 &nbsp;/&nbsp; 오른쪽: 난이도 · 인원','왼쪽은 <b>제목뿐</b>. 난이도는 인원 옆에 모인다.'],
+ ['N6 · 번호를 오른쪽으로','난이도 \u203a 자물쇠 \u203a 제목 | 방장 &nbsp;/&nbsp; 오른쪽: #번호 · 인원','번호를 오른쪽 끝으로. 왼쪽은 난이도와 제목.'],
+];
+window.addEventListener('DOMContentLoaded',()=>{
+  const host=document.getElementById('s');
+  V.forEach((o,i)=>{ const key='N'+(i+1);
+    const el=document.createElement('div'); el.className='p';
+    el.innerHTML='<div class="tag">'+o[0]+'</div><div class="ord">'+o[1]+'</div><div class="note">'+o[2]+'</div>'
+      +'<div class="ph"><div id="rooms">'+RM+'</div></div>';
+    host.appendChild(el);
+    el.querySelectorAll('.roomItem').forEach(r=>ORDER[key](prep(r)));
+  });
+});
+</script>
+
+<h2>방 찾기 — 줄머리 순서 6안 <small>자물쇠는 라인아트 아이콘으로 이미 바꾼 상태</small></h2>
+<div class="sheet" id="s"></div>

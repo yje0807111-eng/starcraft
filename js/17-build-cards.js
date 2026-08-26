@@ -417,7 +417,10 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   else if(typeof STK!=='undefined' && STK && STK.supSheet && typeof _stkSupplyModel==='function'){ model=_stkSupplyModel(); _sup=true; }
   const _shown=!!((sh.open||_sup) && (model||specHTML) && G.tech.arm==null && G.tech.rallySet==null);   // 🗺 배치·착륙(arm)·랠리 지정 중 = 프로필 시트 잠시 내려 맵을 넓게 확보 · 모드 종료 시 자동 복귀
   if(model && !_sup){ model.compact=(cm===1); model.build=true; }   // 건설 탭 카드 스타일(업그레이드 시트는 모델이 이미 같은 스타일을 들고 온다)
+  const _wasOpen=sheet.classList.contains('open');
   sheet.classList.toggle('open', _shown);
+  // 시트가 여닫힐 때만 채팅바를 올린다(--sheetH). ⚠ 이 함수는 전투 중 0.22초마다 불린다 — 매번 재면 낭비다.
+  if(_wasOpen!==_shown && typeof _syncSheetLift==='function'){ requestAnimationFrame(_syncSheetLift); setTimeout(_syncSheetLift,220); }
   if(_shown) sheet.classList.add('simple');   // 숨길 땐 높이 클래스(.simple) 유지 → 현재 높이 그대로 아래로 슬라이드(즉시 확대로 위로 울컥이는 것 방지)
   body.classList.toggle('stkSpec', specHTML!=null);
   // ⚠ 보급·관전 시트는 값이 안 변해도 0.22초마다 이 함수를 부른다(strikeFrame). DOM 을 통째로 새로 만들면

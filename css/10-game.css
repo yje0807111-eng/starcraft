@@ -58,7 +58,7 @@
     text-shadow:0 1px 2px #000}
   #specLabel.on{display:inline-block}
   /* 채팅: 게임 배경 위 오버레이 — 입력창 좌측 위에 떠올랐다 일정시간 후 사라짐 */
-  #chatLog{position:absolute;left:9px;right:74px;bottom:50px;z-index:18;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+  #chatLog{position:absolute;left:9px;right:var(--chatR,9px);bottom:50px;z-index:18;display:flex;flex-direction:column;gap:2px;pointer-events:none}
   .cmsg{font-size:var(--fs-md);line-height:1.4;color:#cfe0f4;text-shadow:0 0 5px #000,0 1px 2px #000,0 0 2px #000;white-space:normal;overflow-wrap:anywhere;word-break:break-word;
     opacity:1;transition:opacity .8s}
   .cmsg.fade{opacity:0}
@@ -83,29 +83,42 @@
   /* 채팅 표시 끄기 — 플레이어 채팅·입력창·로비 채팅만 감춘다(시스템 알림 .cmsg.sys 는 남긴다) */
   body.chatOff #chatLog .cmsg:not(.sys){display:none}
   body.chatOff #chatBar,body.chatOff .msChatWrap{display:none}
-  #chatBar{position:absolute;left:9px;right:74px;bottom:9px;z-index:18;display:flex;gap:6px}   /* 우하단 우측열 버튼(58px 정사각) 한 줄 자리만 비움 → 채팅 영역 확장 */
-  /* 채팅창·전송 — 반투명 어두운 내부 + 테두리/텍스트 또렷하게(밝은 맵 위에서도 가독) */
-  #chatField{flex:1;min-width:0;background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.42);border-radius:var(--r-md);color:#e9f7ff;font-size:var(--fs-lg);padding:9px 13px;outline:none;text-shadow:0 1px 2px #000;transition:border-color .15s}
-  #chatField:focus{border-color:rgba(0,229,255,.7);box-shadow:0 0 7px var(--hud-glow)}
+  /* ── 채팅바 = 일체형 한 부품 · 접힘↔열림 (2026-08-25 · F1안) ─────────────────
+     접힘 = 말풍선 아이콘 44px 만(전장을 덜 가린다) · 열림 = [∨ | 입력 | 전송] 한 상자.
+     구획은 **1px 선**으로만 나눈다 — 붉은 밑변 광원은 쓰지 않는다(그건 네비 선택 표시 전용).
+     ⚠ 항상 켜져 있던 청록 테두리를 뺐다: 액센트는 '지금 선택된 것' 전용이다(DESIGN §2).
+     ⚠ 접는 폭은 right 로 준다 — width:auto 는 전환이 안 붙는다. */
+  #chatBar{position:absolute;left:9px;right:var(--chatR,9px);bottom:9px;z-index:18;
+    /* 오른쪽 여백은 --chatR 하나가 정한다: 조합 FAB 이 사라진 뒤로는 **전투 미니맵만** 자리를 다툰다.
+       ⛔ .fold 의 right 와 싸우지 않게 값이 아니라 **변수**로 준다(형제 선택자가 더 세서 접힘을 덮어쓴다). */
+    display:flex;align-items:stretch;height:30px;overflow:hidden;
+    background:rgba(6,8,12,.34);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+    transition:right .22s cubic-bezier(.2,.8,.25,1),border-color .15s}
+  #chatBar.fold{right:calc(100% - 9px - 44px)}
+  #chatBar:focus-within{border-color:rgba(126,140,162,.78)}
+  #chatBar>*{display:flex;align-items:center;justify-content:center}
+  #chatFold{flex:none;width:34px;padding:0;background:none;border:0;border-right:1px solid rgba(255,255,255,.10);
+    color:#c8d2df;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:width .22s cubic-bezier(.2,.8,.25,1)}
+  #chatFold svg{width:17px;height:17px;filter:drop-shadow(0 1px 2px #000)}
+  #chatBar.fold #chatFold{width:42px;border-right:0}
+  #chatFold .cfOpen{display:none}
+  #chatBar.fold #chatFold .cfOpen{display:block}
+  #chatBar.fold #chatFold .cfClose{display:none}
+  #chatField{flex:1;min-width:0;background:none;border:0;border-radius:0;color:#e6eefc;
+    font-size:12.5px;padding:0 11px;outline:none;text-shadow:0 1px 2px #000;transition:opacity .14s}
   #chatField::placeholder{color:rgba(150,205,230,.72)}
-  #chatSend{background:rgba(6,12,18,.55);border:1px solid rgba(0,229,255,.5);color:var(--hud);border-radius:var(--r-md);padding:0 17px;font-size:var(--fs-lg);font-weight:700;cursor:pointer;white-space:nowrap;letter-spacing:.5px;text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;transition:all .15s}
-  #chatSend:active{transform:translateY(1px);background:rgba(0,229,255,.1)}
+  #chatSend{flex:none;background:none;border:0;border-left:1px solid rgba(255,255,255,.15);border-radius:0;
+    color:#e6eefc;padding:0 13px;font-size:12.5px;font-weight:700;letter-spacing:.02em;cursor:pointer;
+    white-space:nowrap;text-shadow:0 1px 2px #000;transition:background .14s,opacity .14s}
+  #chatSend:active{background:rgba(255,255,255,.10)}
+  #chatBar.fold #chatField,#chatBar.fold #chatSend{opacity:0;pointer-events:none}
 
   /* 전투 미니맵(좌하단) — 메인 외 탭에서 전투를 도트로 표시 */
   #miniWrap{position:absolute;bottom:8px;right:8px;z-index:20;display:none;width:58px;pointer-events:none}
   #miniWrap.on{display:block}
-  /* 조합 버튼(메인 탭 — 메시지 전송 버튼과 같은 높이, 버튼 느낌) */
-  #mergeFab{position:absolute;bottom:9px;right:9px;z-index:20;width:66px;height:34px;border-radius:var(--r-md);cursor:pointer;pointer-events:auto;
-    display:flex;align-items:center;justify-content:center;
-    border:1px solid rgba(0,229,255,.55);
-    background:linear-gradient(180deg,rgba(11,42,56,.95),rgba(6,22,32,.95));
-    color:var(--hud);text-shadow:0 0 5px var(--hud-glow),0 1px 2px #000;
-    box-shadow:0 0 8px -3px var(--hud-glow),0 2px 4px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.09);
-    transition:transform .08s,background .15s,box-shadow .15s}
-  #mergeFab.hide{display:none}
-  #mergeFab:active{transform:translateY(1px);background:rgba(0,229,255,.16);box-shadow:0 1px 2px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06)}
-  #mergeFab .mfi{display:none}   /* 조합 아이콘 제거 */
-  #mergeFab .mfl{font-size:var(--fs-xl);font-weight:800;letter-spacing:1.5px}
+  #miniWrap.on ~ #chatBar,#miniWrap.on ~ #chatLog{--chatR:74px}   /* 미니맵(58px)이 뜬 구역에서만 오른쪽을 비운다 */
+  /* ⛔ 조합 FAB(#mergeFab) 은 2026-08-25 에 없앴다 — 하단 네비 '유닛 조합'(GTAB_TREE.Main.subs)
+     이 같은 일을 하는 단일 소스라 버튼이 둘이었다. 채팅바가 이제 그 자리까지 쓴다. */
   /* 스킬 FAB — 메인 화면, 조합 버튼 위(에너지 시안 톤) */
   #skillFab{position:absolute;bottom:88px;right:8px;z-index:20;width:58px;height:58px;border-radius:10px;cursor:pointer;pointer-events:auto;overflow:hidden;
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -380,13 +393,6 @@
   .bent.illusion{opacity:.45;filter:hue-rotate(200deg) saturate(1.4)}   /* 👥 할루시네이션 환영 = 반투명·푸른 틴트 */
 
   /* 합체존 = 우하단 구석 지정 베이(테두리 없음 — 비콘 발판이 구역을 표시, 상단 표지 라벨만) */
-  #mergeZone{position:absolute;z-index:5;pointer-events:none;display:flex;align-items:flex-start;justify-content:center}
-  #mergeZone .mz{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-2px);   /* 합체존 테두리 바로 위에 붙임 */
-    display:flex;align-items:center;justify-content:center;line-height:1;   /* 박스 안 정중앙 */
-    font-size:var(--fs-sm);color:#d6f1ff;font-weight:800;letter-spacing:1.5px;text-indent:1.5px;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.7);white-space:nowrap;  /* text-indent=자간 보정 */
-    background:rgba(8,22,36,.28);backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px);   /* 투명 배너(뒤가 비침) */
-    padding:3px 12px;border-radius:var(--r-md);border:1px solid rgba(140,210,255,.25);box-shadow:0 1px 2px rgba(0,0,0,.35)}
-    /* 라벨 페이드는 JS 루프에서 인라인 opacity 보간(1라운드만 표시) */
 
   /* 유닛뽑기: 패드 위 유닛 + 패드 아래 라벨(가림 방지) */
   .shopUnit{position:absolute;transform:translate(-50%,-50%);width:96px;height:92px;z-index:10;cursor:pointer}
@@ -426,7 +432,6 @@
        display 를 끄면 0×0 이 되어 그리기가 망가진다. */
   #phone:not(.inGame) #vMain,
   #phone:not(.inGame) #hud,
-  #phone:not(.inGame) #mergeFab,
   #phone:not(.inGame) #chatBar,
   #phone:not(.inGame) #chatLog{visibility:hidden}
   #bot::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;z-index:2;   /* 상단 경계 = 중립 저채도 하이라이트(빨강 제거) */
@@ -768,15 +773,41 @@
      자식(예: ⊘ 지정 해제 버튼)까지 잘려 사라진다. z-index:-1 은 .bp/#btSheet 가 z-index 를 가져
      쌓임 맥락을 만들기 때문에 판 안에만 머문다(자식 위로 새지 않는다).
      모서리 컷은 사냥터 카드(.hmUp)와 같은 7px — 위 두 귀퉁이만 자른다(아래는 화면 끝에 붙는다). */
+  /* ── 면 = 로딩·로그인의 딤 (2026-08-25) ────────────────────────────────
+     전에는 회색 판 하나(--panelBig · rgba(25,25,25,.88))였다. 전장 위에 불투명한 회색 판이
+     얹혀 있어서, 아트가 배경이 되는 로딩·로그인과 이 화면이 다른 앱처럼 보였다.
+     지금은 **--loadDim**(진입 화면이 쓰는 그 곡선) 한 장이다 — 위 40% 는 사실상 투명이라
+     전장이 그대로 비치고, 글자가 앉는 아래로 갈수록 짙어진다.
+     ⚠ 안의 칸(.cgInfo/.cgSlot)은 **그대로 검정**이다. 판만 옅어지고 칸은 안 옅어져야
+        「배경 위에 부품이 놓인」 것으로 읽힌다(스모크가 칸의 푸른 톤 금지를 계속 잰다).
+     ⛔ 윗변을 전폭 실선으로 되돌리지 말 것 — 선이 전장을 가로질러 아트가 '표'가 된다
+        (로그인이 전폭 헤어라인을 버린 그 이유). 좌우로 사라지는 그라데를 배경 한 겹으로 얹는다. */
   .bp::before,#btSheet::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;--ch:7px;
-    background:var(--panelBig);
-    border-top:1px solid var(--panelBigEdge);box-sizing:border-box;
+    background:
+      linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+      var(--loadDim),
+      /* ③ 무채 틴트 — 배경과 **무관하게** 판을 한 단 앉힌다. 아래 채도 빼기가 색 있는 배경만
+         담당하므로, 이미 채도가 낮은 배경(유즈맵 우주)은 이 겹이 맡는다. */
+      linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+    /* ⭐ 판 뒤의 **채도를 뺀다** — 색을 더하지 않고 그 자리만 무채로 만들어 바깥과 가른다.
+       ⚠ 축이 둘인 이유: `saturate` 는 **색이 있는 배경**(캠프 초록 지형)에서만 일하고,
+          우주처럼 원래 채도가 낮은 배경에서는 뺄 색이 없어 아무 일도 안 한다 — 그건 위 틴트가 맡는다.
+          목업 docs/mock/bot-2axis-9.html 에서 두 배경을 한 칸에 놓고 골랐다(틴트 .38 · 채도 .45).
+       ⛔ 여기에 **색을 얹지 말 것**(남색·청록). 2026-08-13 에 푸른기를 전부 걷어냈고
+          스모크가 판의 면에서 그것을 잰다 — 이 방식은 색을 안 더하므로 그 규칙과 안 부딪힌다.
+       ⚠ 저사양은 `body.lite *{backdrop-filter:none}`(위 747줄)이 이미 꺼 준다 — 따로 안 해도 된다. */
+    backdrop-filter:saturate(.45) brightness(.92);
+    border-top:0;box-sizing:border-box;
     clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% 100%,0 100%,0 var(--ch))}
   .bp.on{display:flex}   /* 활성 탭 패널만 렌더(내려간 상태로 대기) */
   body.sheetOpen .bp.on{transform:translateY(0);pointer-events:auto}   /* 시트 올라옴 */
   /* 시트 올라오면 하단 사이드 배너(채팅·자동·개인보스)도 시트 위로 함께 상승 */
   #chatBar,#chatLog,#fxLabActs{transition:transform .26s cubic-bezier(.2,.8,.25,1)}
-  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
+  /* ⛔ z-index 를 올려 시트를 덮지 말 것 — 그러면 시트 내용을 영구히 가린다. '같이 올린다'가 규칙이다. */
+  body.sheetOpen:not(.cstMode) #chatBar,body.sheetOpen:not(.cstMode) #chatLog,
+  body.sheetOpen:not(.cstMode) #fxLabActs{transform:translateY(calc(-1 * var(--sheetH,0px)))}   /* 이펙트 랩 동작 배너(공격/이동/사망)도 시트 위로 함께 상승 */
+  /* 🏗 건설 구역도 같다 — 다만 거기 시트는 .bp 가 아니라 #btSheet 다(_syncSheetLift 가 둘을 갈라 잰다). */
+  body.cstMode #chatBar,body.cstMode #chatLog{transform:translateY(calc(-1 * var(--sheetH,0px)))}
 
   .row{display:flex;gap:7px;flex-shrink:0;flex-wrap:wrap}
   /* 버튼: 스타크래프트식 메탈 베벨 박스 */
@@ -1135,7 +1166,10 @@
   #btDesel.on{display:flex}
   #btDesel svg{filter:drop-shadow(0 0 5px var(--neon-glow))}
   #btDesel:active{transform:translateY(1px);border-color:var(--neon);box-shadow:0 0 12px var(--neon-glow)}
-  body.cstMode #chatBar,body.cstMode #chatLog,body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #mergeFab,body.cstMode #skillFab,body.cstMode #btCtl{display:none !important}
+  body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #skillFab,body.cstMode #btCtl{display:none !important}
+  /* 💬 채팅은 **건설 구역에도 남긴다**(2026-08-25) — 유즈맵 안 모든 구역에서 같은 자리에 있어야 한다.
+     빼는 곳은 캠프뿐이다: HOME 안에 사는 전용 화면이라 멀티 채팅이 붙을 자리가 아니다. */
+  #phone.campMode #chatBar,#phone.campMode #chatLog{display:none !important}
   /* 🏗 관리자 건설은 자체 상단바(.bmapTop = 종족 탭·치트 버튼·자원)만 쓴다 → 게임 HUD 숨김(이중 표시 방지).
      오토배틀 건설지(.stkCst)는 반대다 — 상단이 전투 화면과 **같아야** 하므로 #hud 를 그대로 두고
      건설맵 쪽 자원 복제본(.bres)을 만들지 않는다(techMapRender 가 techWallet() 일 때 생략). */
@@ -1406,6 +1440,26 @@
      그래서 '붉은 테두리 = 지금 만질 수 있는 칸'이 스킬과 조작 버튼에서 한 뜻이 된다.
      ⛔ 예전처럼 버튼마다 다른 색(랠리=초록·부양=파랑·전체지정=시안)을 주지 말 것 — 특히 시안은
         DESIGN §2 에서 '지금 선택된 것' 전용(화면당 한 곳)이라 상시로 쓰면 그 뜻이 닳는다. */
+  /* 🔧 2026-08-25 — 판 **밖**에서 판 **안 오른쪽 위**로 옮겼다. 원래 밖에 둔 이유는
+     "머리줄에 넣으면 버튼 높이(38px)가 머리줄을 밀어 그리드가 짧아진다" 였는데, 판이 옅어진 뒤로는
+     밖에 뜬 트레이가 전장 위에 홀로 떠 있어 어디에 속한 것인지 안 읽혔다.
+     그래서 `.cmdG` 를 **2열 그리드**로 바꿔 [머리줄 | 트레이] 를 같은 줄에 둔다 —
+     겹치지 않으므로 HP·상태칩이 트레이 밑에 깔릴 일이 없고, 폭은 트레이가 알아서 잡는다.
+     ⚠ 대가는 머리줄이 트레이 높이(38px)만큼 커지는 것 = 그리드가 그만큼 짧아진다. 그건 감수한 값이다.
+     ⚠ 트레이가 없으면 `.cmdG` 는 예전 그대로 flex 컬럼이다(:has 로 갈린다). */
+  /* ⛔ 여기에 `align-items:center` 를 주지 말 것 — 그리드에서는 그 값이 **본문 줄까지** 가운데로
+     붙여 `.cgBody` 가 늘어나지 못한다(그리드가 4px 짧아져 스모크가 잡았다). 줄마다 align-self 로. */
+  .cmdG:has(.cgTopOut){display:grid;grid-template-columns:1fr auto;grid-template-rows:auto minmax(0,1fr);
+    column-gap:9px}
+  .cmdG:has(.cgTopOut) .cgHead{grid-area:1/1;align-self:center}
+  .cmdG:has(.cgTopOut) .cgBody{grid-area:2/1/3/3}
+  /* 판 안에서는 트레이의 **회색 판을 걷는다** — 판 위에 또 판을 얹으면 겹쳐 보이고,
+     무엇보다 판(3px 여백 + 1px 테두리)이 머리줄을 38px 로 밀어 그리드가 그만큼 짧아진다.
+     ⚠ 실측: 판을 두면 건물 프로필 그리드가 일꾼보다 4.2px 짧아져 스모크가 잡는다.
+        걷으면 트레이 높이가 버튼 높이(30px) 그대로라 머리줄(29px)과 거의 같아져 손실이 1px 이다.
+     묶음이라는 신호는 칸들이 이미 갖고 있다(검정 면 + 붉은 알파 테두리 + 모서리 컷). */
+  .cmdG:has(.cgTopOut) .cgTopOut{position:static;grid-area:1/2;bottom:auto;right:auto;align-self:center;
+    background:none;border:0;padding:0;clip-path:none}
   .cmdG .cgTopOut{position:absolute;right:0;bottom:calc(100% + 10px);display:flex;align-items:stretch;gap:3px;padding:3px;
     z-index:31;pointer-events:auto;
     background:var(--trayPanel);border:1px solid var(--metal-edge);border-radius:var(--r-bar);
@@ -1420,6 +1474,11 @@
   .cmdG .cgN{font-size:var(--fs-xl);font-weight:800;color:#fff;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgN .nsub{font-size:10px;font-weight:700;color:#9fb0c2;text-shadow:none;margin-left:3px}   /* 이름 옆 작은 괄호 수치(라바 수 등) */
   .cmdG .cgS{flex-basis:100%;margin-top:1px;font-size:var(--fs-xs);color:var(--cgDim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .cmdG .cgS b{color:#cfe0f5;font-weight:700}
+  /* 🏕 m.kicker — 제목을 자간 넓은 작은 라벨로(로딩창 LOADING · 로그인 BATTLE ARENA 와 같은 어법).
+     줄은 있되 무게가 없다: 고른 것이 있을 때와 제목 자리는 같으면서 화면이 덜 흔들린다. */
+  .cmdG .cgHead.kick{padding:6px 2px 7px}
+  .cmdG .cgKick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}
   .cmdG .cgHpsh .stAb{font-style:normal;font-size:8.5px;font-weight:700;opacity:.7;margin-right:2px;vertical-align:1px;letter-spacing:.3px}   /* S/H/E 약자 프리픽스(아이콘 대체) */
@@ -1469,7 +1528,7 @@
   .cmdG .cgBody{display:flex;gap:8px;align-items:stretch;flex:1;min-height:0}
   /* 좌측 보조 정보 */
   .cmdG .cgInfo{flex:0 0 31%;max-width:158px;min-width:110px;display:flex;flex-direction:column;gap:4px;padding:7px 8px;overflow:hidden;
-    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:9px}
+    background:var(--bpFace);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .cmdG .cgInfo:has(.cgUnits){padding-top:2px;padding-bottom:3px}   /* 👥 유닛 HP 칩 프로필: 세로 패딩 축소 → 칩 영역 넓혀 칩/텍스트 1.2× · 8기 4줄 무스크롤 유지 */
   .cmdG .cgEb{font:800 8px/1 sans-serif;letter-spacing:1px;color:var(--cgMuted)} .cmdG .cgDn{font-size:var(--fs-md);font-weight:800;color:#eaf1fb;line-height:1.15;word-break:keep-all}
   .cmdG .cgDd{font-size:9.5px;color:var(--cgDim);line-height:1.4;word-break:keep-all;overflow-wrap:break-word}   /* 한글 단어 안 끊기고 줄바꿈(잘림 방지) */
@@ -1482,6 +1541,14 @@
   .cmdG .cgStat span{color:#9aa6b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cmdG .cgStat b{color:#e6eefc;font-family:var(--font-num);font-size:11.5px;font-variant-numeric:tabular-nums}
   .cmdG .cgStats.cgScr .cgStat+.cgStat{border-top:1px solid rgba(255,255,255,.045)}   /* 행 구분 — 5줄이 한 덩어리로 뭉치지 않게 */
+  /* 🏕 전폭 요약(m.wide + statsWide) — 카드 안쪽을 통으로 쓰고 값을 **격자 두 줄**로 편다.
+     ⚠ 라벨 옆에 값을 두는 세로 목록(위)과 달리, 폭이 넓으면 라벨 위 / 값 아래가 훨씬 잘 읽힌다. */
+  .cmdG .cgInfo.wide{flex:1 1 auto;max-width:none;min-width:0;padding:8px 10px}
+  .cmdG .cgStats.cgWide{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px;align-content:center;height:100%}
+  .cmdG .cgStats.cgWide .cgStat{display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+    justify-content:flex-start;border:none;min-height:0}
+  .cmdG .cgStats.cgWide .cgStat span{font-size:9px;letter-spacing:.06em;color:#8794a8;width:100%}
+  .cmdG .cgStats.cgWide .cgStat b{font-size:14px;line-height:1.05;color:#e6eefc}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
   .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:start;grid-auto-rows:calc((100% - 6px)/4);flex:1 1 auto;min-height:0;max-height:none;margin-top:0;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 · 행 높이=구역의 1/4(gap 3칸 제외) → 8기=4줄이 구역을 정확히 꽉 채움 / 소수 선택 시엔 늘어나지 않고 정상 높이 유지 / 8기 초과=스크롤 */
   .cmdG .cgUChip{position:relative;min-height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* 높이=그리드 행 stretch로 채움(min 11px) */
@@ -1519,7 +1586,7 @@
      **수치와 비용 사이의 틈 = 남는 높이 전부**다. 틈만 따로 줄일 수가 없다(gap 을 줄이면 그만큼 남는 높이가 늘어 제자리).
      그래서 남는 높이를 초상이 먹게 한다 — 좌우 여백을 줄이면 초상이 그만큼 커지고 틈이 닫힌다. */
   .cmdG .cgSlot{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;cursor:pointer;padding:7px 2px 6px;touch-action:none;
-    border:1px solid var(--metal-edge);border-radius:var(--r-lg);background:var(--bpFace);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:var(--bpFace);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:.12s}
   .cmdG .cgSlot::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
   /* 초상은 남는 높이만 갖는다(flex:0 1 auto + min-height:0) — 글자 줄을 밀어내지 않게.
@@ -1529,7 +1596,7 @@
        바로 옆 업그레이드 아이콘(정사각)과 크기가 달라 보였다. 초상 원본이 정사각이므로 1 이 맞다.
      ⚠ flex:0 1 auto + min-height:0 이라 칸이 좁으면 세로로 눌려 다시 직사각이 된다 — 스모크가 정사각인지 검사한다.
      예외는 벙커(.cgBunk 1.35) 하나뿐. */
-  .cmdG .cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:var(--r-md);
+  .cmdG .cgPro{width:100%;aspect-ratio:1;flex:0 1 auto;min-height:0;position:relative;overflow:hidden;color:var(--ca);border:1px solid var(--caS);border-radius:2px;
     background:var(--bpTile);display:flex;align-items:center;justify-content:center;font-size:22px}
   /* 스캔라인 + 아래쪽 비네트 — 초상이 커진 만큼 재질을 주고 이름줄과 분리한다 */
   .cmdG .cgPro::after{content:'';position:absolute;inset:0;
@@ -1563,7 +1630,7 @@
   .cmdG .cgDcost .ri{width:12px;height:12px;flex:none}
   /* 🧱 벙커 탑승 슬롯: 가로 꽉 찬 초상 → 이름 → HP 세로 스택 */
   .cmdG .cgSlot.cgBunk{justify-content:flex-start;gap:3px;padding:5px 4px}
-  .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:6px}
+  .cmdG .cgSlot.cgBunk .cgPro{width:100%;height:auto;aspect-ratio:1.35;border-radius:2px}
   .cmdG .cgSlot.cgBunk .cgPro svg{width:62%;height:62%} .cmdG .cgSlot.cgBunk .cgPro img{width:100%;height:100%}
   .cmdG .cgBunkHp{font:800 10px/1 var(--font-num);color:#ff9a9a;text-align:center;margin-top:auto;text-shadow:0 1px 2px #000}
   .cmdG .cgCost{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;line-height:1;margin-top:auto}
@@ -1582,7 +1649,14 @@
   .cmdG .cgMeta.lv{color:var(--caL);border-color:var(--caS)}
   .cmdG .cgSlot.sel{border-color:var(--ca);box-shadow:0 0 13px -2px var(--caG),inset 0 0 10px rgba(0,0,0,.35)}
   .cmdG .cgSlot.sel .cgPro{box-shadow:0 0 9px -2px var(--caG)}
-  .cmdG .cgSlot:active{transform:translateY(1px)} .cmdG .cgSlot.dim{opacity:.5} .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important}
+  .cmdG .cgSlot:active{transform:translateY(1px)}
+  /* 🔒 못 사는 칸 — 예전엔 `opacity:.5` 였다. 그러면 **칸 전체**(면·테두리·글자)가 반투명해져
+     뒤 배경이 비치고, 빈 칸(면 알파로 옅게)과 옅어지는 방식이 갈려 칸마다 투명도가 달라 보였다.
+     지금은 **면은 그대로 두고 내용만 죽인다** — 네 칸의 면 투명도가 하나가 된다.
+     ⛔ opacity 로 되돌리지 말 것(2026-08-25 · 판이 옅어진 뒤로는 배경까지 비친다). */
+  .cmdG .cgSlot.dim{opacity:1;border-color:rgba(255,255,255,.07)}
+  .cmdG .cgSlot.dim .cgPro,.cmdG .cgSlot.dim .cgName,.cmdG .cgSlot.dim .cgSub,.cmdG .cgSlot.dim .cgCost{opacity:.42}
+  .cmdG .cgSlot.dim .cc{color:var(--cgBad)!important;opacity:1}
   /* 자동화 시트 셀: 이름 아래 on/off 토글 스위치(시각용 · 클릭은 셀 전체가 처리) */
   .cgSwWrap{display:flex;align-items:center;justify-content:center;margin-top:2px;pointer-events:none;font-size:11px}
   .cgSwWrap.lk{color:#c8b06a}
@@ -1591,7 +1665,7 @@
   .cmdG .cgSlot.sel .cgSw{background:#46f06a}
   .cmdG .cgSlot.sel .cgSw::after{left:17px;background:#0c1410}
   .cmdG .cgSlot.max{cursor:default;opacity:.6} .cmdG .cgSlot.busy .cgPro{color:var(--cgBad);border-color:var(--cgBad)} .cmdG .cgSlot.busy .cgName{color:var(--cgBad)}
-  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:linear-gradient(180deg,rgba(10,10,10,.5),rgba(0,0,0,.6));cursor:default;box-shadow:none} .cmdG .cgSlot.empty::after{display:none}
+  .cmdG .cgSlot.empty{border-style:dashed;border-color:var(--glass);background:var(--bpFace);cursor:default;box-shadow:none}   /* 면은 다른 칸과 같다 — '비었다'는 신호는 점선 테두리가 낸다(반투명으로 티내면 칸마다 투명도가 갈린다) */ .cmdG .cgSlot.empty::after{display:none}
   .cmdG .cgPage{display:flex;align-items:center;justify-content:center;gap:7px;height:20px;flex:0 0 auto;margin-left:auto}   /* 헤더 우측 상단 */
   .cmdG .cgPage button{width:24px;height:19px;border-radius:5px;border:1px solid var(--metal-edge);background:rgba(255,255,255,.04);color:var(--caL);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center}
   .cmdG .cgPage button:disabled{opacity:.3;cursor:default} .cmdG .cgPage .dots{display:flex;gap:5px}

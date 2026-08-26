@@ -10,7 +10,7 @@
 
 **게임에 들어갈 이미지를 생성하기 전에.** 유즈맵 키 아트·던전 배경·화면 배경 등 "장면"을 만드는 모든 경우.
 
-**계열이 셋이다.**
+**계열이 넷이다.**
 
 | 계열 | 절 | 무엇 |
 |---|---|---|
@@ -537,3 +537,77 @@ the lance, and the eagle's talons are wrapped in leather.]
 - [ ] 게임 각도 재렌더(9-5) — 원근 없음 · 머리가 실루엣에 남음 · 그림자 발밑 정위치
 - [ ] 턴테이블 영상(9-6) — 한 바퀴 도는 동안 같은 개체인가
 - [ ] 프롬프트 전문을 9-8 에 추가하고 `node scripts/art-lint.mjs` 통과
+
+
+---
+
+## 10. 종족 전장·아이콘 계열 — 캠프 종족 선택 (2026-08-24)
+
+캠프 첫 진입의 종족 선택 화면(`#campRaceOv`)에 쓰는 둘이다.
+화면 규격은 `DESIGN.md` 전환 기록 「캠프 종족 선택」이 단일 소스다.
+
+### 10-1. 전장 그림 — §8 과 같은 9:16, **비우는 자리만 반대**
+
+| 항목 | 타이틀 배경(§8) | **종족 전장** |
+|---|---|---|
+| 모델 · 비율 | `soul_location` · `9:16` | **같다** |
+| 시점 | `low three-quarter angle` | **같다** |
+| 인물 | `All figures are distant silhouettes` | **같다** |
+| 종족 | 다섯 종족이 한 화면에서 전면전 | **한 종족만** |
+| 비우는 자리 | **위** 1/3(로고·제목이 앉는다) | **아래** 1/3(종족 행·확정 버튼이 앉는다) + 좌상단(제목) |
+| 파일 | `assets/backgrounds/title/boot.webp` | `assets/backgrounds/races/<종족>.webp` |
+
+⚠ **§8 의 「다섯 종족 묘사」 고정 블록을 여기 가져오지 말 것.** 한 종족만 보여주는 그림이다.
+바뀌는 것은 **장면 한 문단과 지배 팔레트**뿐이고, 나머지 문장은 아래를 글자 그대로 복사한다.
+
+지배 팔레트는 **`STK_RACES[k].col` 이 단일 소스**다(ART.md §3 — 색은 새로 만들지 않는다):
+유니온 `#4aa8ff` steel blue · 스웜 `#9fd356` 산성 황록 · 에테리얼 `#ffc040` 앰버 골드.
+
+#### 유니온 — `assets/backgrounds/races/union.webp`
+```
+Moody sci-fi battle key art, bright and clearly readable exposure with rich midtones, well lit, not underexposed. A human power-armour army holding a fortified line in the ruins of a shattered industrial city — blue-lit infantry in heavy powered suits behind concrete revetments and razor wire, tracked battle tanks with long barrels braced between broken walls, missile turrets and supply gantries rising behind them, tracer fire and shellbursts crossing the street ahead. Thin volumetric haze catches the light and separates the ranks into distinct depth layers without hiding them. Muted desaturated colour, the palette is a tint over neutral greys, not a monochrome wash. Steel blue base palette with cold azure running lights, strong value separation between the army and the background, atmospheric perspective, layered depth, strong sense of motion, seen from a low three-quarter angle. The lower third of the frame is calm and uncluttered, and the upper left corner is free of bright detail. Painterly concept art, cinematic, detailed environment clearly visible throughout the frame. All figures are distant silhouettes, no close-up faces. No text, no logos, no user interface, no watermark.
+```
+
+#### 스웜 — `assets/backgrounds/races/swarm.webp`
+```
+Moody sci-fi battle key art, bright and clearly readable exposure with rich midtones, well lit, not underexposed. A green chitinous insectile swarm pouring across a ruined city street — a living tide of segmented carapaced creatures breaking over rubble, spined hatching mounds and pulsing organic spires rooted in creep that coats the ground and climbs the broken walls, acid spray and spore bursts hanging in the air. Thin volumetric haze catches the light and separates the swarm into distinct depth layers without hiding it. Muted desaturated colour, the palette is a tint over neutral greys, not a monochrome wash. Sickly yellow-green base palette with pale bone highlights, strong value separation between the swarm and the background, atmospheric perspective, layered depth, strong sense of motion, seen from a low three-quarter angle. The lower third of the frame is calm and uncluttered, and the upper left corner is free of bright detail. Painterly concept art, cinematic, detailed environment clearly visible throughout the frame. All figures are distant silhouettes, no close-up faces. No text, no logos, no user interface, no watermark.
+```
+
+#### 에테리얼 — `assets/backgrounds/races/aetherial.webp`
+```
+Moody sci-fi battle key art, bright and clearly readable exposure with rich midtones, well lit, not underexposed. A golden psionic alien host advancing through the ruins of a shattered city — tall warriors in ornate gilded armour with glowing energy blades, shimmering hexagonal shield barriers flaring where fire strikes them, hovering crystalline craft and floating obelisks of cut stone drifting above the street, warp light blooming where reinforcements arrive. Thin volumetric haze catches the light and separates the host into distinct depth layers without hiding it. Muted desaturated colour, the palette is a tint over neutral greys, not a monochrome wash. Warm amber and old-gold base palette with pale cyan psionic accents, strong value separation between the host and the background, atmospheric perspective, layered depth, strong sense of motion, seen from a low three-quarter angle. The lower third of the frame is calm and uncluttered, and the upper left corner is free of bright detail. Painterly concept art, cinematic, detailed environment clearly visible throughout the frame. All figures are distant silhouettes, no close-up faces. No text, no logos, no user interface, no watermark.
+```
+
+### 10-2. 종족 아이콘 — 커런시/무판 계열
+
+`assets/icons/README.md` 의 **공통 블록 C — 커런시/무판 계열**을 그대로 쓴다(128×128 · 알파 ·
+검정 배경에서 `scripts/icon-cutout.mjs` 로 오려냄). 판(plate) 계열이 **아니다** — 종족 아이콘은
+판 없이 어두운 아트 위에 바로 얹힌다.
+
+모델은 **`recraft_v4_1`**(`model_type:'utility'` · `background_color:'#000000'` · `1:1`)을 썼다.
+아이콘 계열의 모델은 그동안 어디에도 안 적혀 있었다 — 이 줄이 첫 기록이다.
+
+`SUBJECT` 만 종족마다 바꾼다. 나머지 문장(COMPOSITION / FORM / TREATMENT / SHADING / LIGHT /
+BACKGROUND / NEGATIVE)은 공통 블록 C 그대로다.
+
+| 종족 | SUBJECT |
+|---|---|
+| 유니온 | `a heavy armoured shield plate of a human military faction, a broad chamfered pentagon slab with a raised cross-brace over its face and a small rivetted boss at the centre, painted vivid azure blue #4aa8ff with pale steel chamfer edges and cold white running lights along the brace` |
+| 스웜 | `a curved chitin claw of an insectile hive faction, a single upward-hooking talon built from stacked segmented carapace plates with a sharp bone-white tip, the carapace a vivid acid green #9fd356 with darker moss-green segment joints and pale yellow-green edge facets` |
+| 에테리얼 | `a floating psionic crystal shard of an ancient alien faction, a tall faceted gem cut into sharp flat planes with a narrower base and a broad crowned top, the body a warm amber gold #ffc040 glowing from within, with pale ivory facet edges and a thin ring of cut stone braces clasping its waist` |
+
+### 10-3. 2026-08-25 — 여섯 장 모두 저장소에 들어갔다
+
+`assets/backgrounds/races/{union,swarm,aetherial}.webp` (660×1173) ·
+`assets/icons/races/{union,swarm,aetherial}.webp` (128×128 알파) — 전부 실물이 있다.
+다시 뽑을 때는 위 프롬프트를 **그대로** 쓸 것. 다시 쓰면 톤이 갈린다.
+
+⚠ **생성물 CDN(`d8j0ntlcm91z4.cloudfront.net`)은 이 개발 환경의 네트워크 허용 목록에
+없다**(`403` — 조직 이그레스 정책). 그래서 파일을 직접 내려받지 못하고, 힉스필드
+`sandbox_exec`(거기서는 CDN에 닿는다)에서 base64 텍스트로 찍어 옮겨 적었다.
+샌드박스 출력은 호출당 **약 20,000자에서 잘린다** — 19,000자씩 끊어야 한다.
+
+- 다음에 또 옮겨야 한다면 **조각마다 `md5`를 먼저 받아 둘 것.** 이번에 한 조각이
+  전송 중 깨졌는데(2001~3000자), 1,000자 단위 md5 이분탐색으로 그 칸만 다시 받아 고쳤다.
+  검사값이 없으면 21만 자를 통째로 다시 옮겨야 한다.
+- 근본 해결은 **CDN 호스트를 허용 목록에 추가**하는 것이다. 그러면 `curl` 한 번이다.

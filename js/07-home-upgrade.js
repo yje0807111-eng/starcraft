@@ -453,15 +453,16 @@ const NAV_TREE=[
   // 사냥터 = 기본 화면이자 '‹ 뒤로'가 돌아가는 곳. 칸은 두지 않는다(noCell) — 다른 구역이 내려갈 때
   //   자기 이름 칸을 빼는 것과 같은 규칙이다. ⚠ 항목 자체는 남겨야 navShow('home')·navBack() 이 찾는다.
   { k:'home', label:'사냥터', ico:'home', noCell:true, go:()=>openHome(), subs:[] },
-  // 캐릭터 — '나 자신'에 관한 것. 내용은 아직 비어 있다(옛 '강화' 자리).
-  { k:'upg',  label:'캐릭터', ico:'user', go:()=>openUpgScreen(), cur:()=>_chrSec, reset:()=>setChrSec('stat'), subs:[
-      { k:'stat',  label:'스탯', ico:'user',  act:()=>setChrSec('stat') },
-      { k:'reb',   label:'환생', ico:'fav',   act:()=>setChrSec('reb') },
-      { k:'skill', label:'스킬', ico:'boost', act:()=>setChrSec('skill') } ] },
-  { k:'gear', label:'정비', ico:'bag', go:()=>openGear(), cur:()=>_gearTab, reset:()=>setGearTab('gear'), subs:[
-      { k:'gear', label:'장비', ico:'armor', act:()=>setGearTab('gear') },
-      { k:'pet',  label:'펫',   ico:'paw',   act:()=>setGearTab('pet') },
-      { k:'ally', label:'동료', ico:'party', act:()=>setGearTab('ally') } ] },
+  // 🔬 연구 · 📋 임무 — 옛 '캐릭터'·'정비' 자리(2026-08-25 개편).
+  //   ⭐ 왜 이 둘인가: 기획서(GAME_DIRECTION.md)가 **성장 축을 「연구·경제」 둘로** 못박았고(§3-1),
+  //     **1분 세션**(들어와서 쓸 곳이 한눈에 보여야 한다 · §2-2)을 가장 중요하게 본다.
+  //     연구 = 강해지는 곳 · 임무 = 뭘 할지 알려주는 곳.
+  //   옛 두 칸은 내용이 전부 유보였다 — 캐릭터(스탯·환생·스킬)는 §5-A, 정비(장비·펫·동료)는 §5-B.
+  //   ⛔ **코드는 지우지 않았다**(유보는 삭제가 아니다 · §5). openUpgScreen()·openGear() 와
+  //     #upgScreen·#gearScreen 은 그대로 살아 있고, 하단에서 길만 닫았다. 되살릴 땐 이 줄을 되돌리면 된다.
+  //   ⚠ 지금은 **껍데기다** — 화면 본문이 '준비 중'이다. 하위 항목(subs)도 아직 없다.
+  { k:'research', label:'연구', ico:'upg',  go:()=>openResearch(), subs:[] },
+  { k:'quest',    label:'임무', ico:'flag', go:()=>openQuest(),    subs:[] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
   { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
@@ -475,6 +476,16 @@ const NAV_TREE=[
       { k:'pack', label:'패키지',  ico:'box',   act:()=>setShopSec('pack') },
       { k:'gem',  label:'충전',    ico:'boost', act:()=>setShopSec('gem') } ] },
 ];
+// 🔬📋 두 칸을 여는 함수 — 옛 openUpgScreen()/openGear() 와 **같은 순서**를 따른다
+//   (메타 다시 읽기 → 마을 루프 정리 → 화면 켜기 → 네비 표시 → 아이콘 칠하기).
+//   ⚠ 지금은 본문이 '준비 중'이라 render* 호출이 없다. 내용이 생기면 여기서 부른다.
+function _navOpenShell(id, key){
+  if(typeof loadMeta==='function') loadMeta();
+  if(typeof twLeave==='function') twLeave();          // 마을·캠프에서 들어왔으면 루프·팝업 정리
+  showAppScreen(id); navShow(key);
+  if(typeof paintIcons==='function') paintIcons(document.getElementById(id)); }
+function openResearch(){ _navOpenShell('researchScreen','research'); }
+function openQuest(){    _navOpenShell('questScreen','quest'); }
 const navSec=(k)=>NAV_TREE.find(x=>x.k===k)||null;
 let _navSec='', _navDrill='';   // 지금 구역 / 내려가 있는 구역('' = 최상위)
 // attr = 'nav'(구역) / 'sub'(구역 안 항목). 같은 키가 두 층에 있을 수 있어(정비 구역 = 장비 하위 = gear) 나눈다.
@@ -528,10 +539,43 @@ function mapDockSocial(){ const dock=document.getElementById('msSocialDock'), so
   if(!dock||!so) return;
   if(so.parentNode!==dock) dock.appendChild(so);
   if(!_mapSocial) _mapSocial='chat';
-  if(typeof setBottomTab==='function') setBottomTab(_mapSocial); }
+  // ⚠ 판을 **먼저** 그리고 나서 접기를 적용한다 — 접힌 줄이 그 판의 머리줄을 읽어 가기 때문이다
+  if(typeof setBottomTab==='function') setBottomTab(_mapSocial);
+  mapDockApply(); }
 function mapOpenSocial(bt){ _mapSocial=bt;
+  mapDockSet(true);   // 네비에서 채팅·친구·파티를 고른 것 = 펴 달라는 뜻
   if(typeof setBottomTab==='function') setBottomTab(bt);
   navPaint(); }
+// ── 소셜 도크 접기/펴기 ──────────────────────────────────────────────
+//  유즈맵 선택은 「고르는 화면」이라 기본은 접힘이다 — 목록이 화면을 거의 다 쓴다.
+//  ⚠ 접힌 줄의 내용은 #msChat 의 마지막 줄을 **복제**한다. 채팅을 두 번 그리지 않는다.
+const MAPDOCK_KEY='nm_mapdock';
+let _mapDockOpen=(typeof _lsGet==='function') ? !!_lsGet(MAPDOCK_KEY,false) : false;
+function mapDockApply(){ const dock=document.getElementById('msSocialDock'); if(!dock) return;
+  dock.classList.toggle('collapsed', !_mapDockOpen);
+  if(!_mapDockOpen) mapDockPeek(); }
+function mapDockSet(open){ if(_mapDockOpen===!!open){ mapDockApply(); return; }
+  _mapDockOpen=!!open; if(typeof _lsSet==='function') _lsSet(MAPDOCK_KEY,_mapDockOpen); mapDockApply(); }
+function mapDockToggle(){ mapDockSet(!_mapDockOpen);
+  if(typeof playSfx==='function') playSfx(_mapDockOpen?'ui_open':'ui_close');
+  if(_mapDockOpen){ const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; } }
+// 접힌 줄 갱신 — 채팅이 한 줄 늘 때마다 addGlobalMsg/addWhisperMsg 가 불러 준다.
+function mapDockPeek(){ const peek=document.getElementById('msDockPeek'); if(!peek) return;
+  // 친구·파티 = 그 판의 **머리줄을 그대로** 읽는다(요약 문구를 새로 쓰지 않는다 — 수가 어긋날 자리가 없다).
+  // ⚠ innerHTML 로 베끼지 말 것 — 머리줄 안에 id(#foCount)가 있어 같은 id 가 둘이 된다.
+  if(_mapSocial && _mapSocial!=='chat'){
+    const t=document.querySelector('#msPanelBody .ptTitle');
+    peek.textContent = t ? t.textContent.replace(/\s+/g,' ').trim() : (_mapSocial==='party'?'파티':'친구');
+    peek.classList.add('sum'); return; }
+  peek.classList.remove('sum');
+  const box=document.getElementById('msChat');
+  // ⚠ 지금 범위(전체/파티/친구)에서 **실제로 보이는** 줄만 센다 — .msChat 의 표시 필터와 같은 규칙이다.
+  //   전부 세면 파티 범위인데 전체 채팅 마지막 줄이 접힌 줄에 뜬다.
+  const sc=(box&&box.dataset.scope)||'all';
+  const lines=box? box.querySelectorAll('.mcLine.sc-'+sc+', .mcLine.whisper') : null;
+  const last=(lines&&lines.length)? lines[lines.length-1] : null;
+  if(!last){ peek.textContent='채팅'; return; }
+  peek.innerHTML=last.innerHTML; }   // 복제 — 이름·구분자·본문 서식이 채팅과 그대로 같다
 // ‹ 돌아가기 = 사냥터 화면 + 최상위 네비
 function navBack(){ if(typeof playSfx==='function') playSfx('ui_back');
   openHome(); _navDrill=''; navPaint(); }

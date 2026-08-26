@@ -27,7 +27,8 @@ const CAMP_VER = 2;   // 1 → 2 : 단계 번호가 한 칸 내려갔다(옛 던
 //   설계 단일 소스: HUNT_R1.md §6-1 (미네랄 표) · §6-1-0-2 (클리어 기준) · §6-1-0-3 (탈락)
 //   ⛔ 아래 표를 공식으로 바꾸지 말 것 — HUNT_R1.md §6-1-0-1-1 에 이유가 있다.
 //      (옛 ×2^(단계-1) 공식은 단계 5부터 문턱에서 배율이 '내려갔다')
-const CAMP_DG_MAX = 10;        // 던전 1~10
+// ⚠ CAMP_DG_MAX 는 js/12-appshell.js 가 먼저 선언한다(재화 바 칩이 쓴다).
+//    고전 스크립트라 전역이 하나뿐 — 여기서 다시 선언하면 파일 전체가 안 읽힌다(머지에서 실제로 그랬다).
 const CAMP_ROUND_MAX = 50;     // 던전 하나 = 50라운드
 // [0]=캠프 · [1..10]=던전. base=진입 배율 · x=50라운드 다 깼을 때 몇 배가 되는가
 const CAMP_MINE = [
@@ -1026,42 +1027,79 @@ function campAutoSave(reset){
 }
 
 // ── 종족 선택 ───────────────────────────────────────────────────────────
+// 🎨 2026-08-24 개편 — 기준은 **로딩 · 로그인 · 설정** 세 화면이다(DESIGN.md).
+//   목업 진행: race-select-8 → race-sheet-4 → race-sheet-login-4 → race-sheet-8
+//             → race-select-v2-8 → race-select-v2-4a(b안 확정).
+//   · 팝업(.hbModal)이 아니라 **전체 화면**이다 — 볼륨 3(진입 화면). 캠프 첫 진입에서
+//     되돌릴 수 없는 선택을 하는 자리라 작은 카드로는 무게가 안 맞았다.
+//   · 위는 **전투 미리보기 자리**(지금은 빈 칸 — 전투 시스템이 생긴 뒤 녹화 영상이 들어간다).
+//     종족을 바꾸면 그 칸이 **짧은 크로스페이드**로 갈리기로 했다. 영상이 들어올 때 붙인다.
+//   · 행 구분선은 **좌우로 사라지는 헤어라인**(DESIGN.md §1 볼륨 1 규격)이다.
+//     ⛔ 전폭 실선으로 되돌리지 말 것 — 선이 그림을 가로질러 아트가 배경이 아니라 '표'로 보인다
+//     (로그인이 그 이유로 전폭 헤어라인을 버렸다).
+//   · 확정 버튼은 판 없이 **글자 + 밑변 광원**이다. 밑변 광원은 이 앱에서 주 버튼의 서명이고,
+//     판을 안 쓰는 화면에서 버튼만 상자가 되면 그것만 튄다.
 // ⛔ 전용 종족 UI 를 새로 만들지 말 것 — 13-room.js:268 에 같은 경고가 있다.
-//   표는 STK_RACES/STK_RACE_ORDER, 띠는 segNavHTML() 이 단일 소스다.
-//   껍데기는 .hbModal/.hbmCard(HOME 팝업 공용).
+//   표는 STK_RACES 가 단일 소스다.
+// ⚠ 캠프는 **3종족만** 쓴다. 페럴·콜로서스는 설계·오토배틀 편입까지 끝났지만(RACES.md)
+//   캠프 건물·경제가 아직 3종족 기준이라 여기 목록에 넣지 않는다.
+const CAMP_RACE_ORDER = ['terran','zerg','protoss'];
 let _campRacePick = null;
+// 🖼 종족별 전장 그림 · 아이콘 — **파일을 넣기만 하면 뜬다**(코드 수정 불필요).
+//   assets/backgrounds/races/<union|swarm|aetherial>.webp   9:16 · 전장 미리보기
+//   assets/icons/races/<union|swarm|aetherial>.webp         128×128 알파 · 선택 행 아이콘
+//   없으면 배경은 기본 그라데, 아이콘은 STK_RACES[k].icon(이모지)로 대체된다.
+function campRaceArt(k){ return 'assets/backgrounds/races/' + stkTechRace(k) + '.webp'; }
+function campRaceIcon(k){ return 'assets/icons/races/' + stkTechRace(k) + '.webp'; }
 function campRaceSheet(){
-  if(typeof STK_RACE_ORDER === 'undefined' || typeof segNavHTML !== 'function') return;
-  _campRacePick = _campRacePick || STK_RACE_ORDER[0];
+  if(typeof STK_RACES === 'undefined') return;
+  _campRacePick = _campRacePick || CAMP_RACE_ORDER[0];
   let ov = document.getElementById('campRaceOv');
-  if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv'; ov.className = 'hbModal';
+  if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv';
+    // ⚠ 껍데기는 **한 번만** 짓는다 — 미리보기 두 겹(.crPrevL)이 살아 있어야 크로스페이드가 된다.
+    //   행/버튼만 campRaceRender() 가 다시 그린다.
+    ov.innerHTML = '<div class="crPrev"><div class="crPrevL"></div><div class="crPrevL"></div></div>'
+      + '<div class="crScr"><div class="crHd"><div class="crTtl">종족 선택</div></div>'
+      + '<div class="crRows"></div>'
+      + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
     (document.getElementById('phone') || document.body).appendChild(ov); }
   ov.classList.remove('hide');
-  campRaceRender();
+  campRaceRender(); campRacePrev(_campRacePick, true);
+}
+// 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
+function campRacePrev(k, now){
+  const ov = document.getElementById('campRaceOv'); if(!ov) return;
+  const ls = ov.querySelectorAll('.crPrevL'); if(ls.length < 2) return;
+  const cur = ov.querySelector('.crPrevL.on') || ls[0], nxt = (cur === ls[0]) ? ls[1] : ls[0];
+  const url = campRaceArt(k);
+  if(nxt.dataset.race === k && cur.classList.contains('on')) return;   // 같은 종족이면 아무것도 안 한다
+  nxt.dataset.race = k; nxt.style.backgroundImage = 'url("' + url + '")';
+  if(now){ cur.classList.remove('on'); nxt.classList.add('on'); return; }
+  requestAnimationFrame(function(){ cur.classList.remove('on'); nxt.classList.add('on'); });
 }
 function campRaceRender(){
   const ov = document.getElementById('campRaceOv'); if(!ov) return;
-  const i = Math.max(0, STK_RACE_ORDER.indexOf(_campRacePick));
-  const R = STK_RACES[_campRacePick] || {};
-  ov.innerHTML = '<div class="hbmCard">'
-    + '<div class="hbRow"><b>종족 선택</b></div>'
-    // ⚠ segNavHTML(items, i, act) — 항목은 {label}, 셋째는 **함수**(k → onclick 문자열)다.
-    + '<div class="hbRow">' + segNavHTML(
-        STK_RACE_ORDER.map(function(k){ const S = STK_RACES[k] || {}; return { label:S.name || k }; }),
-        i,
-        function(k){ return "campRaceSel('" + STK_RACE_ORDER[k] + "')"; }) + '</div>'
-    + '<div class="hbRow campRaceDesc"><span class="crName">' + (R.name || '') + '</span>'
-    + '<span class="crSub">' + (R.sub || '') + ' · ' + (R.desc || '') + '</span></div>'
-    + '<div class="hbRow"><button class="actBtn pri" onclick="campPickRace()">이 종족으로 시작</button></div>'
-    + '</div>';
+  const cur = _campRacePick || CAMP_RACE_ORDER[0], R = STK_RACES[cur] || {};
+  let rows = '';
+  for(const k of CAMP_RACE_ORDER){ const S = STK_RACES[k] || {}; const on = (k === cur);
+    // 아이콘 파일이 없으면 onerror 가 이모지로 되돌린다 — 자리·크기는 그대로다
+    rows += '<button type="button" class="crRow' + (on ? ' on' : '') + '" onclick="campRaceSel(\'' + k + '\')">'
+      + '<span class="crIco"><img src="' + campRaceIcon(k) + '" alt="" '
+      + 'onerror="this.parentNode.textContent=\'' + (S.icon || '') + '\'"></span>'
+      + '<span class="crMain"><span class="crNm">' + (S.name || k) + '</span>'
+      + '<span class="crDs">' + (S.sub || '') + ' · ' + (S.desc || '') + '</span></span>'
+      + '<span class="crGoIc">' + (on ? '✓' : '›') + '</span></button>'; }
+  ov.querySelector('.crRows').innerHTML = rows;
+  ov.querySelector('.crGo').textContent = (R.name || '') + '으로 시작';
   if(typeof paintIcons === 'function') paintIcons(ov);
 }
-function campRaceSel(k){ if(STK_RACES[k]) { _campRacePick = k; campRaceRender(); } }
+function campRaceSel(k){ if(!STK_RACES[k] || k === _campRacePick) return;
+  _campRacePick = k; campRaceRender(); campRacePrev(k); }
 // ⚠ 한 번 고르면 바꾸지 않는다 — 기지가 종족 건물로 채워지므로 도중 교체는 뜻이 없다.
 //   (바꾸는 기능이 필요해지면 '기지를 버리고 새로 시작'으로 따로 만든다)
 function campPickRace(){
   const C = campState(); if(!C || C.race) return;
-  C.race = _campRacePick || STK_RACE_ORDER[0];
+  C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
   const ov = document.getElementById('campRaceOv'); if(ov) ov.classList.add('hide');
   campEnter();
@@ -1533,15 +1571,20 @@ function campSyncSheet(){
   if(T && (T.arm != null || T.rallySet != null)) return;     // 높이도 건드리지 않는다(맵은 화면 전체라 무관)
   sh.classList.add('open');                                  // #btSheet.open → transform:translateY(0)
   if(T){
-    // 시트를 늘 열어 두므로 **내용도 늘 있어야** 한다. 아무것도 안 골랐으면 본부를 고른다
-    // (유즈맵 하단 프로필이 늘 내 캐릭터를 보여 주는 것과 같다).
+    // 시트를 늘 열어 두므로 **내용도 늘 있어야** 한다. 아무것도 안 골랐으면 **기지 요약**을 보여 준다.
+    // ⛔ 예전에는 여기서 **본부를 대신 골랐다**(2026-08-25 교체). 그러면 「고르지 않은 상태」가
+    //    아예 없어서 늘 본부 카드만 보였다 — 지금은 요약 카드가 그 자리를 맡는다.
+    //    요약을 그리는 곳은 renderCampIdleSheet() 하나뿐이다(js/11-cmdcard.js · 공용 renderCmdGrid 사용).
+    // ⚠ 이때 techPanelRender 는 model 이 null 이라 시트 본문을 건드리지 않는다 — 요약이 덮이지 않는다.
+    //    (건물을 고르면 그쪽이 body 를 다시 그리고, 해제하면 요약이 스스로 되살아난다)
     // ⛔ 배치·스킬 조준 중에는 건드리지 않는다 — 조준 대상이 바뀌어 버린다.
     const idle = T.sel == null && !(T.selU && T.selU.length) && !T.selRes && !T.arm && !T.skillArm;
     if(idle){
-      const hq = campHQ();
-      if(hq){ T.sel = hq.eid;
-        const st = T.sheet || (T.sheet = {open:false, sec:null}); st.open = true; st.sec = 'ent';
-        if(typeof techUIRender === 'function') techUIRender(); }   // 내용이 바뀌었을 때만(idle 진입 순간 한 번)
+      const st = T.sheet || (T.sheet = {open:false, sec:null}); st.open = false; st.sec = null;
+      // ⚠ 높이 클래스(.simple)를 직접 붙인다 — techPanelRender 는 '보여 줄 모델이 있을 때만' 붙이는데
+      //   요약은 그쪽 모델이 아니다. 안 붙이면 시트가 내용대로 커져 **기지를 가린다**(실측으로 걸렸다).
+      sh.classList.add('simple');
+      if(typeof renderCampIdleSheet === 'function') renderCampIdleSheet();
     }
   }
 }

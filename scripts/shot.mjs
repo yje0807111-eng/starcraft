@@ -18,7 +18,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
 const WHAT = argv.find(a => !a.startsWith('--')) || 'boot';
 const AT = (() => { const i = argv.indexOf('--at'); return i < 0 ? null : +argv[i + 1]; })();
-const OUT = path.join(ROOT, 'scratch_shot_' + WHAT + '.png');
+const OUT = path.join(ROOT, 'scratch_shot_' + WHAT.replace(/[\/:]/g, '_') + '.png');   // 목업 경로(docs/mock/…)도 파일명 하나로
 
 const CHROME = ['C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
@@ -139,6 +139,26 @@ try {
     else if (WHAT === 'navsub') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('shop'); }catch(e){} }); await new Promise(r=>setTimeout(r,800)); }
     else if (WHAT === 'home') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); }
     else if (WHAT === 'settings') { await page.evaluate(() => openAppSettings()); await new Promise(r=>setTimeout(r,400)); }
+    // 인게임 하단 — 프로필(#unitCmd) + 하단 네비(#tabs). 관리자 샌드박스로 바로 들어가 유닛을 하나 지정한다.
+    //   ingame       무선택(기본 상태)   ingame:sel  유닛 지정 → 프로필 카드   ingame:chat  채팅바 열림
+    else if (WHAT.startsWith('ingame')) { const sel=WHAT.split(':')[1]||'';
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); enterSandbox();
+        // 부팅 타이틀(#titleBlack/#titleMark)은 정상 진입 경로에서만 걷힌다 — 샌드박스는 직접 내린다
+        ['titleBlack','titleMark'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.opacity='0'; }); });
+      await new Promise(r=>setTimeout(r,1000));
+      // 시트(.bp)를 올려야 하단 프로필이 보인다 — 스모크가 쓰는 그 두 줄과 같다
+      await page.evaluate(() => { document.body.classList.add('sheetOpen');
+        if(typeof openMainHome==='function') openMainHome(); });
+      await new Promise(r=>setTimeout(r,400));
+      if(sel==='chat') await page.evaluate(() => { if(typeof chatOpenBar==='function') chatOpenBar(); });   // 채팅바 열린 상태
+      else if(sel) await page.evaluate(() => { const u=(G.units||[])[0]; if(u){ G.sel=[u.uid]; G.sheetDown=false;
+        document.body.classList.add('sheetOpen'); refreshSelCard(); } });
+      await new Promise(r=>setTimeout(r,800)); }
+    // 캠프 종족 선택 — race / race:zerg / race:protoss (딤이 그림을 제대로 눌러 주는지 종족별로 봐야 한다)
+    else if (WHAT.startsWith('race')) { const r0=WHAT.split(':')[1]||'';
+      await page.evaluate((rk) => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷');
+        openHome(); campRaceSheet(); if(rk) campRaceSel(rk); }, r0);
+      await new Promise(r=>setTimeout(r,1400)); }
     else if (WHAT === 'press') {
       const box = await page.evaluate(() => { const r=document.getElementById('authGuest').getBoundingClientRect(); return {x:r.x+r.width/2, y:r.y+r.height/2}; });
       await page.mouse.move(box.x, box.y); await page.mouse.down();

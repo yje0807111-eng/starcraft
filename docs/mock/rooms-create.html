@@ -1,0 +1,119 @@
+<!-- 방 찾기 · 방 만들기 — 새 기준(C1-4)으로 맞춘 안 (2026-08-25)
+     ⚠ 안의 마크업은 **살아 있는 화면에서 그대로 떠온 것**이다(손으로 베끼지 않음).
+       그래서 실제 CSS 를 그대로 링크하고, 각 안은 래퍼 클래스로 **덮기만** 한다 —
+       여기서 고른 규칙을 그대로 실제 CSS 에 옮길 수 있게 하려는 것이다.
+     ⚠ 프레임마다 id="rooms"/"createPanel" 이 반복된다. 목업엔 JS 가 없어 문제되지 않고,
+       실제 화면 규칙(#rooms .rmCard{...})을 그대로 받으려면 이 방법뿐이다. -->
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>방 찾기·방 만들기 안</title>
+<link rel="stylesheet" href="../../css/00-base.css">
+<link rel="stylesheet" href="../../css/20-lobby.css">
+<link rel="stylesheet" href="../../css/30-home.css">
+<link rel="stylesheet" href="../../css/40-social.css">
+<style>
+  html,body{display:block;height:auto;overflow:visible;background:#08090b}
+  body{font-family:var(--font-ko);color:var(--txt);padding:18px;width:1660px}
+  h2{font-family:var(--font-ti);font-size:18px;color:#fff;margin:14px 0 2px}
+  h2 small{font-family:var(--font-ko);font-size:11px;color:var(--txt-mute);margin-left:8px}
+  .sheet{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:10px 0 26px}
+  .p{background:#0d0e11;border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:10px}
+  .tag{font-family:var(--font-ti);font-size:13px;color:#fff}
+  .note{font-size:10px;line-height:1.55;color:var(--txt-mute);min-height:46px;margin:3px 0 8px}
+  .ph{position:relative;width:100%;aspect-ratio:390/844;border-radius:9px;overflow:hidden;background:#04050b}
+  .ph #rooms,.ph #createPanel{position:absolute;inset:0}
+
+  /* ══ 공통 — 두 화면 다 「판을 벗는다」. 유즈맵 C1-4 와 같은 규칙이다 ═══════════ */
+  /* 난이도 필터 띠 = 로그인 탭 바와 같은 처리(판 없는 띠 + 1px 밑줄) */
+  .vR .rmFilter .pdSeg{padding:0;border:none;background:none;border-radius:0}
+  .vR .rmFilter .pdSegInd{top:auto;bottom:0;height:1px;border:none;border-radius:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.85) 50%,transparent)}
+  .vR .rmFilter .pdSegInd::after{display:none}
+  /* 방 목록 행 — 면·테두리·라운드·볼록을 걷고 줄로만 나눈다(유즈맵 목록과 같은 문법) */
+  .vR .rmList{gap:0;padding-right:0}
+  .vR .roomItem{height:auto;min-height:0;padding:11px 2px;border:0;border-radius:0;
+    background:none;box-shadow:none}
+  .vR .roomItem:active{transform:none;background:rgba(255,255,255,.05)}
+  .vR .roomItem:hover{border-color:transparent}
+  .vR .roomItem.locked{background:none;border:0;box-shadow:none}
+  /* 배경 가리개 — 목록이 카드를 잃고 아트 위에 바로 앉으므로 유즈맵과 같은 값으로 */
+  .vR::after,.vC::after{background:linear-gradient(180deg, rgba(2,3,8,.94) 0%, rgba(2,3,8,.74) 13%,
+    rgba(2,3,8,.6) 34%, rgba(2,3,8,.64) 62%, rgba(2,3,8,.86) 86%, rgba(2,3,8,.96) 100%)!important}
+
+  /* R1 — 구분선은 중립. 난이도는 배지가 혼자 말한다 */
+  .vR1 .roomItem{border-bottom:1px solid rgba(255,255,255,.075)}
+  .vR1 .roomItem:last-child{border-bottom:0}
+  .vR1 .roomItem::after{display:none}
+  /* R2 — 밑변 광원이 그대로 **줄 구분선**이 된다. 색을 잃지 않고 선이 하나 줄어든다 */
+  .vR2 .roomItem::after{left:0;right:0;bottom:0;height:1px;opacity:.6;
+    background:linear-gradient(90deg,var(--dc,rgba(255,255,255,.3)) 0%,var(--dc,rgba(255,255,255,.3)) 62%,transparent 100%);
+    box-shadow:none}
+  .vR2 .roomItem.locked::after{background:linear-gradient(90deg,#33363c,transparent 90%);opacity:.5}
+  /* R3 — 난이도는 왼쪽 2px 막대. 구분선은 중립 */
+  .vR3 .roomItem{border-bottom:1px solid rgba(255,255,255,.075);padding-left:10px}
+  .vR3 .roomItem:last-child{border-bottom:0}
+  .vR3 .roomItem::after{left:0;right:auto;top:9px;bottom:9px;width:2px;height:auto;
+    background:var(--dc,rgba(255,255,255,.3));box-shadow:0 0 6px -1px var(--dcGlow,transparent)}
+  /* R4 = R2 + 행을 **한 줄**로. 방장 이름을 방 이름 옆으로 눕히면 57 → 38px, 방이 4개 더 보인다 */
+  .vR4 .roomItem::after{left:0;right:0;bottom:0;height:1px;opacity:.6;
+    background:linear-gradient(90deg,var(--dc,rgba(255,255,255,.3)) 0%,var(--dc,rgba(255,255,255,.3)) 62%,transparent 100%);
+    box-shadow:none}
+  .vR4 .roomItem{padding:8px 2px}
+  .vR4 .riMain{display:flex;align-items:baseline;gap:7px;min-width:0}
+  .vR4 .riName{flex:0 1 auto;min-width:0}
+  .vR4 .riSub{margin-top:0;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vR4 .riRight{display:flex;align-items:baseline;gap:7px}
+  .vR4 .riStat{margin-top:0}
+
+  /* ══ 방 만들기 ═══════════════════════════════════════════════════════ */
+  /* 입력칸 = 로그인과 같은 **밑줄**. 상자를 두지 않는다 */
+  .vC #cpName{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.18);
+    border-radius:0;padding:9px 2px;margin-bottom:16px}
+  /* 무한 모드 = 판을 걷고 왼쪽 막대만 남긴다(유즈맵 항목에서 걷어낸 그 문법) */
+  .vC .sdInf{background:none;box-shadow:none;border:0;padding-left:11px}
+  /* 인원 칸·공개 칸 — 면이 반투명이라 배경 아트가 뚫고 비쳤다. 불투명한 검정으로 앉힌다 */
+  .vC .cpPc{background:linear-gradient(180deg,#111216,#0a0b0d)}
+  .vC .cpPc.sel{background:linear-gradient(180deg,#16202e,#0c1119)}
+  .vC .cpPc:disabled{opacity:1;background:linear-gradient(180deg,#0b0b0d,#08080a);color:#4b525c}
+  .vC .cpSegBtn{background:linear-gradient(180deg,#111216,#0a0b0d)}
+  .vC .cpSegBtn.on{background:linear-gradient(180deg,#1c1e24,#111318)}
+
+  /* C2 — 난이도 상세도 판을 벗는다. 위아래 선 사이에 숫자만 */
+  .vC2 .cpVs,.vC3 .cpVs,.vC4 .cpVs{background:none;border:0;border-top:1px solid rgba(255,255,255,.09);
+    border-bottom:1px solid rgba(255,255,255,.09);border-radius:0;padding:11px 2px;box-shadow:none}
+  .vC2 .cpVs::before,.vC3 .cpVs::before,.vC4 .cpVs::before{display:none}
+  /* C3 — 인원 8칸을 한 줄로 눕힌다. 세로 53px 이 목록 쪽으로 돌아간다 */
+  .vC3 .cpPGrid{grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+  .vC3 .cpPc{height:38px;font-size:12px}
+  /* C4 — 공개/비공개도 판 없이. 고른 쪽만 밑줄 */
+  .vC4 .cpSeg{background:none;border:0;border-radius:0;padding:0;gap:0}
+  .vC4 .cpSegBtn{background:none;border:0;border-radius:0;border-bottom:1px solid rgba(255,255,255,.1)}
+  .vC4 .cpSegBtn.on{background:none;border-bottom:1px solid rgba(255,255,255,.85)}
+</style>
+
+<h2>방 찾기 <small>바깥 카드는 이미 없다 · 여기서 걷는 것은 「행 카드」와 「필터 띠 판」</small></h2>
+<div class="sheet" id="sR"></div>
+<h2>방 만들기 <small>입력칸·무한모드·인원칸·난이도판 — 판을 어디까지 벗을 것인가</small></h2>
+<div class="sheet" id="sC"></div>
+<script>
+const RM="<div class=\"rmCard\">\n        <div class=\"rmHead\">\n          <span class=\"rmTitle\">방 찾기</span>\n          <span class=\"rmHeadR\">\n            <span class=\"rmOnline\">방 <b id=\"roomCount\">6</b>개</span>\n            <button class=\"rmIco\" id=\"rmNumBtn\" onclick=\"toggleRoomNum()\" title=\"방 번호로 입장\" aria-label=\"방 번호로 입장\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"6.5\"></circle><path d=\"M16 16l4 4\"></path></svg></button>\n          </span>\n        </div>\n        <!-- 가장 잦은 동작이 맨 위 = 빠른 입장(화면의 유일한 주 액션) -->\n        <button class=\"actBtn pri rmQuickTop\" onclick=\"quickJoin()\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M13 3 5 14h6l-1 7 8-11h-6z\"></path></svg>빠른 입장<em id=\"rmQuickSub\">대기 중 6방</em></button>\n        <!-- 방 번호 입장 = 친구 방 전용이라 평소엔 접어 둔다(우상단 🔍로 편다) -->\n        <div class=\"rmNum hide\" id=\"rmNumRow\">\n          <input id=\"roomNumField\" type=\"text\" inputmode=\"numeric\" placeholder=\"방 번호로 입장 (친구 방)\" maxlength=\"5\" onkeydown=\"if(event.key==='Enter')joinByNumber()\">\n          <button onclick=\"joinByNumber()\">입장</button>\n        </div>\n        <div class=\"rmFilter\" id=\"rmFilter\"><div class=\"pdSeg\" style=\"--n:5\"><i class=\"pdSegInd\" style=\"left:calc(var(--pad) + 0*(100% - 2*var(--pad))/5)\"></i><button class=\"pdSegBtn on\" onclick=\"pickRmDiff('all')\">전체</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('easy')\">EASY</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('normal')\">NORMAL</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('hard')\">HARD</button><button class=\"pdSegBtn\" onclick=\"pickRmDiff('hell')\">HELL</button></div></div>   <!-- 난이도 있는 유즈맵에서만 (segNavHTML) -->\n        <div class=\"rmList\" id=\"roomList\"><div class=\"roomItem\" style=\"--dc: #ff5c5c; --dcGlow: #ff5c5c;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#ff5c5c\">HELL</span><span class=\"riNum\">#8804</span>즐겜 환영</div><div class=\"riSub\">방장 - GG준비됨</div></div><div class=\"riRight\"><div class=\"riCnt\">7/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #5dff8f; --dcGlow: #5dff8f;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#5dff8f\">EASY</span><span class=\"riNum\">#3250</span><span class=\"riLock\">🔒</span>연습 같이해요</div><div class=\"riSub\">방장 - Crystalize</div></div><div class=\"riRight\"><div class=\"riCnt\">7/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #5dff8f; --dcGlow: #5dff8f;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#5dff8f\">EASY</span><span class=\"riNum\">#7609</span><span class=\"riLock\">🔒</span>막판러시 ㄱ</div><div class=\"riSub\">방장 - Striker</div></div><div class=\"riRight\"><div class=\"riCnt\">1/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #ff5c5c; --dcGlow: #ff5c5c;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#ff5c5c\">HELL</span><span class=\"riNum\">#1256</span><span class=\"riLock\">🔒</span>쫄?</div><div class=\"riSub\">방장 - 노바777</div></div><div class=\"riRight\"><div class=\"riCnt\">6/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #ffb14d; --dcGlow: #ffb14d;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#ffb14d\">HARD</span><span class=\"riNum\">#6779</span>1라운드부터</div><div class=\"riSub\">방장 - 리퍼장인</div></div><div class=\"riRight\"><div class=\"riCnt\">3/8</div><div class=\"riStat wait\">대기중</div></div></div><div class=\"roomItem\" style=\"--dc: #5dff8f; --dcGlow: #5dff8f;\"><div class=\"riMain\"><div class=\"riName\"><span class=\"riDiff\" style=\"--dc:#5dff8f\">EASY</span><span class=\"riNum\">#4487</span><span class=\"riLock\">🔒</span>무한 고수방</div><div class=\"riSub\">방장 - 보이드킹</div></div><div class=\"riRight\"><div class=\"riCnt\">3/8</div><div class=\"riStat wait\">대기중</div></div></div></div>\n        <div class=\"rmBtns\">\n          <button class=\"actBtn sq\" onclick=\"backToTitle()\" title=\"로비로 돌아가기\" aria-label=\"로비로\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 5l-7 7 7 7\"></path></svg></button>\n          <button class=\"actBtn\" data-sfx=\"ui_open\" onclick=\"createRoom()\">방 만들기</button>\n          <button class=\"actBtn sq\" onclick=\"refreshRooms()\" title=\"새로고침\" aria-label=\"새로고침\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3.6 12a8.4 8.4 0 0 1 14.5-5.8M20.4 12a8.4 8.4 0 0 1-14.5 5.8\"></path><path d=\"M18.4 2.9v3.6h-3.6M5.6 21.1v-3.6h3.6\"></path></svg></button>\n        </div>\n      </div>", CP="<div class=\"cpCard\">\n        <div class=\"cpTitle\">방 만들기</div>\n        <div class=\"cpForm\">\n          <div class=\"cpSection\">\n            <label class=\"cpLabel\">방 이름</label>\n            <input id=\"cpName\" type=\"text\" placeholder=\"방 이름을 입력하세요\" maxlength=\"18\">\n          </div>\n          <div class=\"cpSection\" id=\"cpDiffSec\">   <!-- 대인전 유즈맵(noDiff)에선 숨김 -->\n            <label class=\"cpLabel\">난이도</label>\n            <div class=\"cpDiffStep\" id=\"cpDiffStep\" style=\"--dc: #5dff8f;\"><div class=\"sdStepRow\"><button type=\"button\" class=\"arwBtn\" data-arw=\"l\" onclick=\"stepCpDiff(-1)\" aria-label=\"이전 난이도\" disabled=\"\"><svg class=\"arwFrame\" viewBox=\"0 0 30 30\" aria-hidden=\"true\"><path d=\"M9 .5H29.5V29.5H9L.5 15Z\"></path></svg><svg class=\"arwIco\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M15 5l-7 7 7 7\"></path></svg></button><div class=\"sdStepTx\">EASY</div><button type=\"button\" class=\"arwBtn\" data-arw=\"r\" onclick=\"stepCpDiff(1)\" aria-label=\"다음 난이도\"><svg class=\"arwFrame\" viewBox=\"0 0 30 30\" aria-hidden=\"true\"><path d=\"M21 .5H.5V29.5H21L29.5 15Z\"></path></svg><svg class=\"arwIco\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M9 5l7 7-7 7\"></path></svg></button></div><div class=\"sdDots\"><i class=\"on\"></i><i class=\"\"></i><i class=\"\"></i><i class=\"\"></i><i class=\"\"></i></div></div>   <!-- ◀ 이름 ▶ + 점 = 난이도 선택 화면과 같은 컴포넌트 -->\n            <div class=\"cpVs\" id=\"cpDiffInfo\" style=\"--cc: #5dff8f;\"><div class=\"cpVsSt\"><span><i>적 HP</i><b>×1.0</b></span><span><i>포인트 획득량</i><b>×1</b></span></div><div class=\"cpVsNote\">처음이라면 여기서 · 규칙을 익히는 단계</div></div>\n            <button type=\"button\" class=\"sdInf\" id=\"cpInfBtn\" onclick=\"setCpInf()\"><b>∞ 무한 모드</b><em>노말 고정 · 끝없이 도전</em></button>\n          </div>\n          <div class=\"cpSection\" id=\"cpMode\"></div>   <!-- 대전 설정(난이도 없는 유즈맵 전용) — renderCpMode 가 채운다 -->\n          <div class=\"cpSection\">\n            <label class=\"cpLabel\">최대 인원 <b id=\"cpMaxVal\">8명</b></label>\n            <div class=\"cpPGrid\" id=\"cpMaxGrid\"><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(1)\" disabled=\"\">1</button><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(2)\">2</button><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(3)\">3</button><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(4)\">4</button><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(5)\">5</button><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(6)\">6</button><button type=\"button\" class=\"cpPc on\" onclick=\"setCpMax(7)\">7</button><button type=\"button\" class=\"cpPc on sel\" onclick=\"setCpMax(8)\">8</button></div>\n          </div>\n          <div class=\"cpSection\">\n            <label class=\"cpLabel\">공개 설정</label>\n            <div class=\"cpSeg\" id=\"cpVis\">\n              <button class=\"cpSegBtn on\" data-v=\"public\" onclick=\"setRoomVis('public')\"><span data-ico=\"globe\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.3\"></circle><path d=\"M3.7 12h16.6\"></path><path d=\"M12 3.7c2.5 2.3 2.5 14.3 0 16.6c-2.5-2.3-2.5-14.3 0-16.6z\"></path></svg></span>공개</button>\n              <button class=\"cpSegBtn\" data-v=\"private\" onclick=\"setRoomVis('private')\"><span data-ico=\"lock\"><svg class=\"ic\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5.2\" y=\"10.5\" width=\"13.6\" height=\"9.3\" rx=\"2\"></rect><path d=\"M8.2 10.5V8.2a3.8 3.8 0 0 1 7.6 0v2.3\"></path><circle cx=\"12\" cy=\"14.6\" r=\"1.25\" fill=\"currentColor\" stroke=\"none\"></circle><path d=\"M12 15.5v2.1\"></path></svg></span>비공개</button>\n            </div>\n            <div class=\"cpPwWrap hide\" id=\"cpPwWrap\">\n              <label class=\"cpLabel\">비밀번호</label>\n              <input id=\"cpPw\" type=\"text\" inputmode=\"numeric\" placeholder=\"비밀번호 설정 (숫자)\" maxlength=\"8\">\n            </div>\n          </div>\n        </div>\n        <div class=\"cpHint\" id=\"cpHint\"></div>\n        <div class=\"cpBtns\">\n          <button class=\"actBtn sub\" onclick=\"closeCreate()\">취소</button>\n          <button class=\"actBtn pri\" onclick=\"confirmCreate()\">만들기</button>\n        </div>\n      </div>";
+const R=[
+ ['R1 · 구분선은 중립','행 카드를 걷고 <b>1px 회색 줄</b>로만 나눈다. 난이도는 배지(EASY/HARD)가 혼자 말한다. 가장 담백하다.','vR1'],
+ ['R2 · 난이도 선이 곧 구분선','밑변 광원이 <b>그대로 줄 구분선</b>이 된다. 색을 하나도 안 잃고 선이 한 겹 줄어든다.','vR2'],
+ ['R3 · 왼쪽 난이도 막대','난이도를 <b>왼쪽 2px 막대</b>로. 구분선은 중립이라 색과 줄의 역할이 갈린다.','vR3'],
+ ['R4 · R2 + 한 줄로 압축','R2 에 더해 방장 이름을 <b>방 이름 옆으로</b> 눕힌다. 줄 높이 57→38px — 방이 4개 더 보인다.','vR4'],
+];
+const C=[
+ ['C1 · 판만 걷기','입력칸은 <b>밑줄</b>(로그인과 같은 것) · 무한모드 판 제거 · 인원·공개 칸을 <b>불투명</b>하게(배경이 뚫고 비치던 것). 난이도 판은 그대로.','vC1'],
+ ['C2 · 난이도 판까지','C1 에 더해 난이도 상세도 <b>위아래 선 사이 숫자</b>로. ⚠ 개인 플레이 난이도 고르기와 공용이라 그쪽도 같이 바뀐다.','vC2'],
+ ['C3 · 인원을 한 줄로','C2 에 더해 인원 8칸을 <b>한 줄</b>로 눕힌다. 세로 53px 이 돌아온다.','vC3'],
+ ['C4 · 공개 칸까지','C2 에 더해 공개/비공개도 <b>판 없이 밑줄</b>로. 판이 하나도 안 남는다.','vC4'],
+];
+function put(host, arr, mk, cls){ arr.forEach(o=>{ const el=document.createElement('div'); el.className='p';
+  el.innerHTML='<div class="tag">'+o[0]+'</div><div class="note">'+o[1]+'</div>'
+    +'<div class="ph"><div id="'+(cls==='vR'?'rooms':'createPanel')+'" class="'+cls+' '+o[2]+'">'+mk+'</div></div>';
+  host.appendChild(el); }); }
+window.addEventListener('DOMContentLoaded',()=>{
+  put(document.getElementById('sR'), R, RM, 'vR');
+  put(document.getElementById('sC'), C, CP, 'vC');
+});
+</script>

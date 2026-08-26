@@ -1279,13 +1279,8 @@ window.M3D={
       }
       for(const [key,g] of ghostModels){ if(!gLive.has(key)) g.holder.visible=false; }
     }
-    // ── 합체 베이 3D 비콘(우하단 구석) ──
-    if(beaconBase && typeof mergeRect!=='undefined'){ let bz=beaconInsts.get('bay');
-      if(!bz){ bz=makeBeacon(); if(bz) beaconInsts.set('bay',bz); }
-      if(bz){ bz.holder.visible=false; }   // 합체존 제거 — 전 범위 조합으로 대체(3D 베이 비콘 숨김)
-    }
-    // 다른 탭의 shop 비콘 인스턴스는 숨김
-    for(const [k,b] of beaconInsts){ if(k!=='bay') b.holder.visible=false; }
+    // ⛔ 합체 베이 3D 비콘은 걷어냈다(2026-08-25) — 매 프레임 만들어 놓고 곧바로 숨기던 껍데기였다.
+    for(const [,b] of beaconInsts) b.holder.visible=false;   // 다른 탭의 shop 비콘 인스턴스는 숨김
     if(ringInst){ ringInst.count=ringN;   // 인스턴스 선택링 커밋(0=전부 숨김)
       if(ringN){ ringInst.instanceMatrix.needsUpdate=true; if(ringInst.instanceColor) ringInst.instanceColor.needsUpdate=true; } }
     _shadowInstPass();   // 발밑 그림자 일괄 커밋(모델별 그림자 메시 대체 — 드로우콜 2개)

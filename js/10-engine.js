@@ -175,12 +175,9 @@ function posAt(d,W,H){ const {bw,bh,ox,oy}=geom(W,H); const t=((d%1)+1)%1,total=
   if(dist<bh)return{x:ox+bw,y:oy+dist}; dist-=bh;
   if(dist<bw)return{x:ox+bw-dist,y:oy+bh}; dist-=bw;
   return{x:ox,y:oy+bh-dist}; }
-// 합체존 = 안쪽 사각의 우하단 구석 지정 구역(사각 베이)
-const MZ_FRAC=0.30;     // 합체존 한 변 = 안쪽 사각 변 대비 비율
-function mergeRect(W,H){ const {ox,oy,bw,bh,side}=geom(W,H); const z=side*MZ_FRAC;
-  const lw=Math.max(11,side*0.05);   // 용암 테두리 두께(buildFloor와 동일) — 안쪽 타일 경계 기준
-  return { x:ox+bw-lw-z, y:oy+bh-lw-z, w:z, h:z }; }   // 외곽을 안쪽 타일 경계(용암 안쪽 모서리)에 딱 맞춤
-function zoneCenter(){ const r=mergeRect(GW,GH); return { x:(r.x+r.w/2)/GW, y:(r.y+r.h/2)/GH }; }
+// ⛔ 합체존(우하단 구석 베이)은 2026-08-25 에 통째로 걷어냈다 — 조합은 **전 범위**가 되어
+//   하단 「유닛 조합」 패널이 맡는다. MZ_FRAC·mergeRect·zoneCenter·inZone·combine·drawBeacon·
+//   #mergeZone·placeMergeZone 이 전부 그 잔재였다(대부분 이미 첫 줄에서 return 하는 껍데기였다).
 
 // 적 형상 그리기 — 자체 제작 네온 벡터 도형. shape: orb/blob/jet/ship/capital
 function drawEnemyShape(ctx,x,y,r,shape,color,t,ph){
@@ -300,7 +297,6 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain');
   if(_floorW!==W||_floorH!==H||!_floorReady){ _floorReady=buildFloor(W,H); _floorW=W;_floorH=H; }
   if(_floorReady) ctx.drawImage(_floorCv,0,0,W,H);
   else bg(ctx,W,H,'#0a0c16','#03040a');   // 타일 로딩 전 폴백(우주)
-  drawBeacon(ctx,W,H);      // 합체 베이 비콘 발판(바닥, 유닛 아래)
   drawFixedSlots(ctx,W,H);  // 고정 구조물 자리(빈칸=잠금)
   // ── 스폰 포탈(닫힌 장치 — '열리기 전' 느낌의 어두운 차원문) ──
   drawSpawnPortal(ctx,ox,oy);
@@ -527,7 +523,6 @@ function tryRestoreRun(){
     if(typeof _setBottomTab==='function') _setBottomTab(G.tab||'Main');
     if(typeof renderUnits==='function') renderUnits();
     if(typeof updateHud==='function') updateHud();
-    if(typeof placeMergeZone==='function') placeMergeZone();
     if(typeof updateCoopBossBar==='function') updateCoopBossBar();
     nemoCatchUp(age);   // 탭이 죽어 있던 시간도 똑같이 따라잡는다
     // 협동이었으면 채널에 다시 붙어 본다 — 실패해도 혼자 이어서 하면 되므로 판을 막지 않는다
@@ -590,9 +585,6 @@ function drawMiniMap(){
   const tx=ox*sx, ty=oy*sy, tw=bw*sx, th=bh*sy;
   rR(ctx,tx,ty,tw,th,2); ctx.fillStyle='rgba(16,36,54,.26)'; ctx.fill();
   rR(ctx,tx,ty,tw,th,2); ctx.strokeStyle='rgba(0,229,255,.28)'; ctx.lineWidth=0.7; ctx.stroke();
-  // 합체존(점선)
-  const mr=mergeRect(GW,GH); ctx.save(); ctx.setLineDash([2,2]); ctx.strokeStyle='rgba(255,192,64,.6)'; ctx.lineWidth=1;
-  ctx.strokeRect(mr.x*sx, mr.y*sy, mr.w*sx, mr.h*sy); ctx.restore();
   // 스폰 포인트(정적 점)
   if(!G.sandbox){ ctx.fillStyle=COL.enemy; ctx.beginPath(); ctx.arc(ox*sx, oy*sy, 2, 0, 6.28); ctx.fill(); }   // 적 스폰 점(샌드박스 제외)
   // 유닛/적 — 단색 도트(내 유닛=파랑, 적사이드=빨강)
@@ -605,27 +597,6 @@ function drawMiniMap(){
 }
 
 // 합체 베이 = 바닥 발광 구역(영역 표시) + 가운데 작은 3D 비콘(M3D가 렌더). 여기선 바닥 구역 데칼만 그림
-function drawBeacon(ctx,W,H){ return;   /* 합체존 제거 — 전 범위 조합(하단 조합 패널) */ const r=mergeRect(W,H), cx=r.x+r.w/2, cy=r.y+r.h/2;
-  const rad=Math.min(r.w,r.h)*0.16;   // 사각 영역 모서리 둥글기
-  ctx.save(); ctx.globalCompositeOperation='lighter';
-  // 바닥 발광 구역(사각, 은은) — '여기에 유닛을 모아라' 영역
-  const g=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(r.w,r.h)*0.62);
-  g.addColorStop(0,'rgba(255,80,80,.12)'); g.addColorStop(0.6,'rgba(230,60,60,.05)'); g.addColorStop(1,'rgba(200,50,50,0)');
-  ctx.fillStyle=g; ctx.beginPath(); rRpath(ctx,r.x,r.y,r.w,r.h,rad); ctx.fill();
-  // 점선 사각 경계 1개(정적 — 깜빡임 없음)
-  ctx.strokeStyle='rgba(255,95,95,.5)'; ctx.lineWidth=1.5;
-  ctx.setLineDash([6,5]); ctx.beginPath(); rRpath(ctx,r.x,r.y,r.w,r.h,rad); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.restore();
-  // 3D 비콘이 아직이면(로드 전) 중앙에 작은 절차적 비콘 폴백(사각, 1개)
-  if(!(window.M3D && M3D.beaconReady && M3D.beaconReady())){
-    ctx.save(); ctx.globalCompositeOperation='lighter';
-    const ins=Math.min(r.w,r.h)*0.3; ctx.strokeStyle='rgba(255,110,110,.4)'; ctx.lineWidth=2; ctx.beginPath(); rRpath(ctx,r.x+ins,r.y+ins,r.w-2*ins,r.h-2*ins,rad*0.6); ctx.stroke();
-    ctx.restore();
-  }
-}
-// 합체존 DOM 위치 갱신
-function placeMergeZone(){ const mz=document.getElementById('mergeZone'); if(mz) mz.style.display='none'; }   // 합체존 제거
 
 // ============================================================================
 // 유닛/적 로직
@@ -658,8 +629,6 @@ function unitAirParts(u){ const d=U[u.id]; if(d.airDmg==null) return null;
   const base=Math.round(aD*lv); let total=(u.id==='turret'||u.id==='photon') ? base : base+Math.round(aU*wlv*1.2);   // 타워: 업그레이드 비례 상승 제거(초반 강·고정)
   if(u.id==='turret'||u.id==='photon'){ total=Math.round(total*((G.metaB&&G.metaB.towerMul)||1)); }   // 타워 강화(메타)
   return {base, up:total-base, total}; }
-function inZone(u){ const r=mergeRect(GW,GH); const px=u.x*GW, py=u.y*GH;
-  return px>=r.x && px<=r.x+r.w && py>=r.y && py<=r.y+r.h; }
 
 function buyUnit(id){
   const def=U[id]; if(!def) return;
@@ -954,38 +923,6 @@ function testSpawnGacha(gid){
 }
 function _consumeUnits(con){ G.units=G.units.filter(x=>!con.has(x.uid)); G.sel=G.sel.filter(uid=>!con.has(uid));
   if(window.M3D&&M3D.dropModels) M3D.dropModels([...con]); }   // 합성 소비: 유닛/선택/3D모델 제거
-function combine(){
-  const inz=G.units.filter(u=>inZone(u)&&!u.hero&&!u.fixed);
-  // 1) (레시피 폐지 — TRANSCEND_RECIPE 빈 맵이라 이 루프는 건너뜀. 참조 안전용으로 유지)
-  const cnt={}; for(const u of inz){ if(u.gid) cnt[u.gid]=(cnt[u.gid]||0)+1; }
-  for(const res in TRANSCEND_RECIPE){ const need={}; TRANSCEND_RECIPE[res].forEach(id=>need[id]=(need[id]||0)+1);
-    if(Object.keys(need).every(id=>(cnt[id]||0)>=need[id])){
-      const con=new Set(); for(const id in need){ let n=need[id]; for(const u of inz){ if(u.gid===id && n>0 && !con.has(u.uid)){ con.add(u.uid); n--; } } }
-      _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(res, c.x, c.y);
-      const tg=GACHA_UNITS[res]; toast('✦ '+tg.displayName+' '+GACHA_TIERS[tg.tier].name+' 강림!');
-      if(typeof playSfx==='function') playSfx('hero_merge');
-      refreshSelCard(); renderUnits(); updateHud(); return true;
-    }
-  }
-  // 2) 단순 조합 — 같은 유닛 3개 → 다음 등급 랜덤(갓=최종 제외) / 레거시=영웅
-  const grp={}; for(const u of inz){ const key=u.gid||('@'+u.id); (grp[key]=grp[key]||[]).push(u); }
-  for(const k in grp){ const g=grp[k]; if(g.length<3) continue; const pick=g.slice(0,3), base=pick[0], con=new Set(pick.map(x=>x.uid));
-    if(base.gid){ const nt=SIMPLE_COMBINE_TIERS[base.gtier]; if(!nt) continue;   // 단순조합 대상 아님(갓=최종) → 다른 그룹 시도
-      const pool=gachaUnitsOfTier(nt), tgt=pool[Math.floor(Math.random()*pool.length)];   // 다음 등급 랜덤 1종
-      _consumeUnits(con); const c=zoneCenter(); spawnGachaUnit(tgt.id, c.x, c.y);
-      toast('⭐ '+tgt.displayName+' '+GACHA_TIERS[nt].name+' 진화!');
-    } else {   // 레거시 → 영웅
-      _consumeUnits(con); const c=zoneCenter();
-      G.units.push(initUnitStats({uid:G.idSeq++,id:base.id,hero:true,lv:1,x:c.x,y:c.y,cd:0}));
-      toast('⭐ '+U[base.id].name+' 영웅 탄생!');
-    }
-    if(typeof playSfx==='function') playSfx('hero_merge'); refreshSelCard(); renderUnits(); updateHud(); return true;
-  }
-  // 3) 안내
-  const stuck=Object.values(grp).some(g=>g.length>=3 && g[0].gid && !SIMPLE_COMBINE_TIERS[g[0].gtier]);
-  toast(stuck ? 'ℹ️ 갓은 최종 등급이라 더 조합되지 않습니다' : 'ℹ️ 합체존에 같은 유닛 3개를 모으세요');
-  return false;
-}
 
 function roundDef(r){ const m=MON[Math.min(Math.max(1,r),MON.length)-1]; return m; }
 const ENEMY_MODEL={ '옵저버':'observer', '오버로드':'overlord',   // 적 이름 → 3D 모델 id(있으면 3D 렌더, 없으면 네온 도형)

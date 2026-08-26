@@ -1,0 +1,142 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>채팅바 — 채팅바 P4 확정형 — 전송 글자 · 붉은 선 제거 3안</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   셋을 합친다:
+     ① O6 의 해결 — **왼쪽 아이콘이 열려도 남아** 그것을 다시 눌러 접는다(배울 게 없다)
+     ② 판 아낌 — 전송을 글자가 아니라 **아이콘**으로(가로를 덜 먹는다)
+     ③ 일체형 — [접기 | 입력 | 전송] 이 **한 부품**으로 읽힌다
+   네 안 모두 이 셋을 갖고, **구획을 무엇으로 나누느냐**만 다르다.
+   접힌 모습은 앞서 확정한 A(말풍선 아이콘 44px) 그대로다.
+   ══════════════════════════════════════════════════════════════════ */
+:root{
+  --metal-edge:#3c3e46;
+  --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --r-bar:3px;
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --ch:7px;
+  --glow:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+         linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:#e6eefc;
+  font-family:'Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,390px);gap:12px;justify-content:start}
+.col{width:390px}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:76px}
+.sub b{color:#dfe6f0}
+.state{font:800 10px/1 sans-serif;color:#ffd08a;margin:8px 0 4px;letter-spacing:.06em}
+
+.stage{position:relative;padding:92px 0 0;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#5c6f7f 0%,#48606f 30%,#4a6a4a 58%,#6b5a33 82%,#2e2418 100%)}
+.stage::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 28% 62%,rgba(255,200,120,.42),transparent 44%),
+             radial-gradient(ellipse at 78% 28%,rgba(140,190,240,.34),transparent 48%)}
+.chatWrap{position:relative;z-index:3;padding:0 9px 9px}
+.cmsg{font-size:12px;line-height:1.4;color:#cfe0f4;text-shadow:0 0 5px #000,0 1px 2px #000}
+.cmsg b{font-weight:800}
+.cmsg.sys{color:#a5d4ee}
+.row{display:flex;gap:6px;align-items:stretch;margin-top:6px}
+.spacer{flex:1}
+.ic{width:17px;height:17px;flex:none}
+
+/* 접힘(공통) · 조합 */
+.box{height:34px;display:flex;align-items:center;justify-content:center;background:rgba(6,8,12,.62);
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);color:#e6eefc;
+  font-size:13px;font-weight:700;text-shadow:0 1px 2px #000}
+.fold{width:44px;flex:none}
+.merge{flex:none;width:66px;color:#aeb6c2}
+
+/* ── 일체형 껍데기(네 안 공통 뼈대) ── */
+.unit{flex:1;min-width:0;display:flex;align-items:stretch;height:34px;overflow:hidden;
+  background:rgba(6,8,12,.62);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.unit>*{display:flex;align-items:center;justify-content:center}
+.u-fold{flex:none;width:38px;color:#c8d2df;cursor:pointer}
+.u-field{flex:1;min-width:0;justify-content:flex-start;padding:0 11px;font-size:13px;color:#e6eefc}
+.u-field i{font-style:normal;color:rgba(150,205,230,.72)}
+.u-send{flex:none;width:38px;color:#e6eefc;position:relative}
+
+
+/* ══ 확정 뼈대 = P4(얇게 30px · 면 .34) + 전송은 **글자** + 붉은 광원 제거 ══ */
+.unit{height:30px;background:rgba(6,8,12,.34)}
+.box{height:30px}
+.u-fold{width:34px}
+.u-field{font-size:12.5px}
+.u-send{width:auto;flex:none;padding:0 13px;font-size:12.5px;font-weight:700;letter-spacing:.02em}
+
+/* ═══ F1 · 왼쪽에 1px 선 하나 ═══ */
+.f1 .u-send{border-left:1px solid rgba(255,255,255,.15)}
+.f1 .u-fold{border-right:1px solid rgba(255,255,255,.10)}
+
+/* ═══ F2 · 면 단차(P3 방식) — 선 없이 명암만 ═══ */
+.f2 .u-send{background:rgba(255,255,255,.075);box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
+.f2 .u-fold{background:rgba(0,0,0,.30)}
+
+/* ═══ F3 · 밑변 광원에서 **붉은기만** 뺀다(흰 한 줄) ═══ */
+.f3 .u-send::after{content:'';position:absolute;left:16%;right:16%;bottom:2px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.72) 50%,transparent);
+  box-shadow:0 0 3px rgba(255,255,255,.28)}
+.f3 .u-fold{border-right:1px solid rgba(255,255,255,.08)}
+</style></head><body>
+
+<template id="tail">
+  <div class="bot"><div class="sheetHint">— 하단 시트(프로필) —</div>
+    <div class="navBar">
+      <div class="navIt on"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>관리</div>
+      <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>유닛뽑기</div>
+      <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 4v14M6 10l6-6 6 6"/></svg>업그레이드</div>
+      <div class="navIt"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 19c0-3 2.7-5 6-5s6 2 6 5"/></svg>플레이어</div>
+    </div></div>
+</template>
+<template id="unit">
+  <div class="unit">
+    <div class="u-fold"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 9.5 12 15l5.5-5.5"/></svg></div>
+    <div class="u-field"><i>메시지…</i></div>
+    <div class="u-send">전송</div>
+  </div>
+</template>
+
+
+<div class="col f1"><p class="hd">F1 — <em>1px 선 하나</em></p>
+  <p class="sub">전송칸 왼쪽에 <b>얇은 선 한 줄</b>만. 가장 조용하고, 붉은기가 전혀 없다. 접기 쪽에도 더 흐린 선을 둬 세 구획이 균형을 잡는다.</p>
+  <p class="state">접힘 (공통)</p>
+  <div class="stage"><div class="chatWrap" data-logs><div class="row">
+    <div class="box fold"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12a8 8 0 0 1-8 8H5l-2 2v-9a8 8 0 0 1 8-8h1a8 8 0 0 1 8 7z"/></svg></div>
+    <div class="spacer"></div><div class="box merge">조합</div></div></div><div data-tail></div></div>
+  <p class="state">열림</p>
+  <div class="stage"><div class="chatWrap" data-logs><div class="row" data-unit></div></div><div data-tail></div></div>
+</div>
+
+<div class="col f2"><p class="hd">F2 — <em>면 단차 — 선 없이</em></p>
+  <p class="sub">선을 아예 쓰지 않는다. 전송칸이 <b>한 단 밝고</b>(도드라진 판) 접기칸이 한 단 어둡다. 하단 프로필에서 확정한 「선이 아니라 빛의 양」과 같은 어법.</p>
+  <p class="state">접힘 (공통)</p>
+  <div class="stage"><div class="chatWrap" data-logs><div class="row">
+    <div class="box fold"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12a8 8 0 0 1-8 8H5l-2 2v-9a8 8 0 0 1 8-8h1a8 8 0 0 1 8 7z"/></svg></div>
+    <div class="spacer"></div><div class="box merge">조합</div></div></div><div data-tail></div></div>
+  <p class="state">열림</p>
+  <div class="stage"><div class="chatWrap" data-logs><div class="row" data-unit></div></div><div data-tail></div></div>
+</div>
+
+<div class="col f3"><p class="hd">F3 — <em>흰 밑변 광원</em></p>
+  <p class="sub">밑변 광원은 <b>남기되 붉은기만 뺀다</b> — 흰 한 줄. P4 가 갖고 있던 「누르는 곳」 신호를 그대로 유지하면서 네온만 사라진다.</p>
+  <p class="state">접힘 (공통)</p>
+  <div class="stage"><div class="chatWrap" data-logs><div class="row">
+    <div class="box fold"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 12a8 8 0 0 1-8 8H5l-2 2v-9a8 8 0 0 1 8-8h1a8 8 0 0 1 8 7z"/></svg></div>
+    <div class="spacer"></div><div class="box merge">조합</div></div></div><div data-tail></div></div>
+  <p class="state">열림</p>
+  <div class="stage"><div class="chatWrap" data-logs><div class="row" data-unit></div></div><div data-tail></div></div>
+</div>
+<script>
+const t=document.getElementById('tail'), u=document.getElementById('unit');
+const logs='<div class="cmsg sys">◈ 3라운드가 시작됩니다</div><div class="cmsg"><b>2P</b> 좌측 본진 밀어요</div>';
+document.querySelectorAll('[data-logs]').forEach(h=>h.insertAdjacentHTML('afterbegin',logs));
+// ⭐ 전송을 아이콘으로 줄인 덕에 **열려 있어도 조합이 남는다** — A안의 문제(열리면 조합이 밀려 사라짐)가 풀린다
+document.querySelectorAll('[data-unit]').forEach(h=>{ h.appendChild(u.content.cloneNode(true));
+  h.insertAdjacentHTML('beforeend','<div class="box merge">조합</div>'); });
+document.querySelectorAll('[data-tail]').forEach(h=>h.replaceWith(t.content.cloneNode(true)));
+</script>
+</body></html>
