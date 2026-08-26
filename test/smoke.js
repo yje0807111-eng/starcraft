@@ -1105,6 +1105,52 @@ async function groupLobby(){
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
   // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
   //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.
+  // 🩹 아군 부활 — HUNT_R1 §6-5「죽지 않는다. 빈사로 누웠다가 부활」
+  //   ⚠ strikeStepUnits 가 죽은 유닛을 배열에서 걷어낸다(18-strike.js:1301) — '남아 있다'고 가정하면 안 된다.
+  await step('캠프: 아군은 죽지 않고 누웠다가 부활한다', async()=>{
+    skipIf(typeof campReviveStep!=='function'||typeof campEnterDungeon!=='function','부활 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={};
+      assert(campReviveSec()===30,'기본 부활이 30초가 아님: '+campReviveSec());
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me'); });
+      const n0=CAMPB.me.units.length; assert(n0>0,'아군이 없음');
+      // 적 하나만 남겨 라운드가 끝나지 않게 한다(전멸시키면 클리어로 빠진다)
+      CAMPB.ai.units.forEach((u,i)=>{ if(i>0){ u.dead=true; return; } u.dmg=0; u.hp=1e9; u.maxHp=1e9; });
+      CAMPB.me.units.forEach(u=>{ u.dead=true; u.hp=0; });
+      campCombatStep(0.05);
+      // ① 전멸해도 지지 않는다 — 패배는 본부 파괴뿐(부활이 생긴 뒤의 규칙)
+      assert(campDgN()>0 && CAMPB,'전멸했다고 졌다 — 부활이 있으면 전멸은 패배가 아니다');
+      assert(campDown()===n0,'누운 유닛을 못 붙잡았다: '+campDown()+'/'+n0);
+      assert(CAMPB.me.units.length===0,'죽은 유닛이 전장 배열에 남아 있다');
+      // ② 시간이 지나면 체력 만땅으로 일어나 전장으로 돌아온다
+      // ⚠ 부활 '직후'에 잰다 — 더 굴리면 장기전 방지(strikeSuddenDeath) 등이 체력을 깎아 헛돈다
+      let step=0; while(campDown()>0 && step<900){ campCombatStep(0.05); step++; }
+      assert(campDown()===0,'부활 대기가 안 비워짐: '+campDown());
+      assert(step>500 && step<700,'30초쯤에 일어나야 한다 — 걸린 틱: '+step);
+      assert(CAMPB.me.units.length===n0,'부활 뒤 인원이 다름: '+CAMPB.me.units.length+'/'+n0);
+      { const u=CAMPB.me.units[0];
+        assert(!u.dead && u.hp===u.maxHp,'부활했는데 빈사거나 체력이 안 찼다'); }
+      // ③ 트리 rebuild = 부활 단축. ⛔ 0초가 되면 눕는 것이 무의미하므로 하한이 있다
+      const base=campReviveSec();
+      C.rbTree={rebuild:1}; const s1=campReviveSec();
+      C.rbTree={rebuild:5}; const s5=campReviveSec();
+      assert(s1<base && s5<s1,'rebuild 가 부활을 안 줄인다: '+base+' → '+s1+' → '+s5);
+      assert(s5>=CAMP_REV_MIN,'부활 하한을 뚫었다: '+s5);
+      // ④ 되살릴 것이 하나도 없으면 그때는 진다(끝이 없어지므로)
+      C.rbTree={};
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      CAMPB.me.units.length=0; if(CAMPB._down) CAMPB._down.length=0; CAMPB._started=true;
+      campCombatStep(0.05);
+      assert(campDgN()===0,'출격 병력이 0인데 안 짐');
+      return '30초 부활 · 단축 '+s1+'→'+s5+'초 · 전멸≠패배';
+    } finally { C.rbTree=keep; if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🌳 아군 강화 갈래 — 트리를 찍으면 실제로 값이 움직이는가(2026-08-25 · 6/8 배선).
   //   ⚠ campRtMul 은 **계열 키**를 받는다(f 가 아니다). 'atk' 이지 'unitAtk' 가 아니다.
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{

@@ -615,6 +615,48 @@ function campScaleAllies(list){
     n++; }
   return n; }
 
+// ══ 🩹 아군 부활 (2026-08-25) — HUNT_R1 §6-5 ═════════════════════════
+//   ⭐ 아군은 **죽지 않는다**. 빈사로 누웠다가 고정 시간 뒤 그 자리에서 일어난다.
+//     그래서 §6-6 의 「가동률」이 성립한다 — 사거리가 긴 유닛일수록 덜 눕고 더 오래 싸운다.
+//   ⛔ 18-strike.js 를 고치지 않는다. 죽은 유닛은 배열에 남아 있으므로(u.dead=true 로 표시만)
+//     캠프가 **전이를 감지해** 타이머를 달고 되살린다.
+const CAMP_REV_S = 30;            // 부활 시간(초) — 유닛 종류와 무관한 고정값
+// 🌳 「자동 재생산」(rebuild) — 설계의 「죽은 유닛 n% 자동 재구매」를 **부활 단축**으로 읽는다.
+//   재구매는 '미네랄을 깎나'가 계속 애매했다. 부활 시간은 적 갈래의 「적 부활 시간」과 대칭이고
+//   §6-6 의 가동률(생존÷사이클)에 곧바로 붙어 효과가 읽힌다.
+const CAMP_RT_REV = [0, 0.25, 0.50, 0.75, 0.90, 1.00];   // 단축률 — HUNT_R1 §4-5-3 의 25/50/75/90/100
+const CAMP_REV_MIN = 3;           // ⛔ 0 으로 만들지 않는다 — 즉시 부활이면 눕는 것이 무의미해진다
+function campReviveSec(){ const n = campRtHas('rebuild');
+  const cut = n > 0 ? CAMP_RT_REV[Math.min(5, n)] : 0;
+  return Math.max(CAMP_REV_MIN, CAMP_REV_S * (1 - cut)); }
+//   ⚠ **죽은 유닛은 배열에 남지 않는다** — strikeStepUnits 끝에서 `me.units=me.units.filter(u=>!u.dead)`
+//     로 걷어낸다(18-strike.js:1301, 공유 파일이라 못 고침). 그래서 **걷히기 전후를 비교해** 붙잡는다.
+//     객체는 살아 있으므로(배열에서 빠졌을 뿐) 그대로 들고 있다가 되살려 배열에 돌려놓는다.
+function campCatchDown(before){
+  if(!CAMPB || !before) return 0;
+  if(!CAMPB._down) CAMPB._down = [];
+  const now = CAMPB.me.units, keep = new Set(now);
+  let n = 0;
+  for(const u of before){ if(keep.has(u) || !u) continue;
+    CAMPB._down.push({ u:u, t:campReviveSec() }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것
+  return n; }
+function campReviveStep(dt){
+  if(!CAMPB || !CAMPB._down || !CAMPB._down.length) return 0;
+  let up = 0;
+  for(let i = CAMPB._down.length - 1; i >= 0; i--){
+    const d = CAMPB._down[i];
+    if((d.t -= dt) > 0) continue;
+    const u = d.u;
+    u.dead = false;
+    u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
+    u._collapseT = null; u.wait = 0;                 // 붕괴 대기·스폰 대기 흔적 정리
+    u.tgtUid = null; u._btgt = null; u._btT = 0;     // 표적은 새로 고른다
+    CAMPB.me.units.push(u);                          // 전장에 돌려놓는다
+    CAMPB._down.splice(i, 1); up++; }
+  return up; }
+// 누워 있는(부활 대기) 유닛 수 — 승패 판정이 쓴다
+function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
+
 // 살아 있는 유닛 수
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;
   for(const u of CAMPB[side].units) if(!u.dead) n++; return n; }
@@ -630,16 +672,21 @@ function campCombatStep(dt){
     if(CAMPB._gapT <= 0){ campSortie(); campSpawnFoes(); }
     return; }
   if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
+  const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+  campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
+  campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)
   { const sk = campRtMul('skCd');
     if(sk !== 1){ const extra = dt * (sk - 1);
       for(const u of CAMPB.me.units){ if(u.dead || !u.skillCd) continue;
         for(const k in u.skillCd){ if(u.skillCd[k] > 0) u.skillCd[k] = Math.max(0, u.skillCd[k] - extra); } } } }
   // ① 졌나 — **먼저 본다.** 본부가 뚫린 프레임에 마침 마지막 적도 죽었다면 그건 진 것이다.
   //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
-  if(CAMPB.me.base.hp <= 0 || (CAMPB._started && campAlive('me') === 0 && campAlive('ai') > 0)){
+  //    ⭐ **패배 = 본부 파괴다**(HUNT_R1 §6-5). 부활이 생긴 뒤로 「전멸」은 패배가 아니다 —
+  //      다 누워도 30초 뒤 일어난다. 다만 **되살릴 유닛이 하나도 없으면**(출격 병력 0) 끝이 없으므로 그때만 진다.
+  if(CAMPB.me.base.hp <= 0 || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0 && campAlive('ai') > 0)){
     const was = campFail(); campBattleClose(); campBarReset();
     campSay(was.cleared > 0
       ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
