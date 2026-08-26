@@ -12,6 +12,9 @@ import http from 'node:http'; import fs from 'node:fs'; import path from 'node:p
 import url from 'node:url'; import puppeteer from 'puppeteer-core';
 const ROOT=path.resolve(path.dirname(url.fileURLToPath(import.meta.url)),'..');
 const MINS=+(process.argv[2]||10), DG0=+(process.argv[3]||1);
+// 🧭 구매 정책 — HUNT_R1 §6-7-0 의 세 갈래를 그대로 옵션으로 둔다(대조용)
+//   A 살 수 있는 것 중 ROI 1위   B 인구가 막히면 보급소만 모은다   C ROI 1위가 비싸면 모은다
+const POL=(process.argv[4]||'A').toUpperCase();
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp3':'audio/mpeg','.woff2':'font/woff2'};
 const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.url,'http://x').pathname);
  let f=path.join(ROOT,p==='/'?'sc-ums-web.html':p); if(!f.startsWith(ROOT)){s.writeHead(403);return s.end();}
@@ -29,13 +32,13 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate(dg0=>{
+await pg.evaluate((dg0,pol)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0 };
-}, DG0);
+  window.__CB={ dg0, pol };
+}, DG0, POL);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -57,7 +60,14 @@ await pg.evaluate(()=>{
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
   // ⚠ **탭은 필수다.** 시작 일꾼이 0기라(HUNT_R1 §1) 탭으로 첫 일꾼(140)을 사지 않으면
   //   건설할 일꾼이 없어 건물도 유닛도 영영 안 생긴다 — 실측: 탭 0이면 8분 내내 D0·일꾼 0·유닛 0.
-  __CB.rate=0; __CB.taps=2;   // 초당 탭 수
+  __CB.rate=0; __CB.taps=3;   // 초당 탭 수(설계 §1-2 가정)
+  // ⚔ 아군 총 DPS — 적 총량을 역산하려면 이 값이 있어야 한다(HUNT_R1 §6-2 재설계 입력).
+  //   DPS = 공격력 ÷ 공격주기(cdMax). 누워 있는(부활 대기) 유닛은 안 센다.
+  __CB.dps=function(){ if(typeof CAMPB==='undefined' || !CAMPB || !CAMPB.me) return 0;
+    let d=0; for(const u of CAMPB.me.units){ if(u.dead) continue;
+      const cd=u.cdMax||u.cd||0; if(cd>0) d+=(u.dmg||0)/cd; }
+    return Math.round(d*10)/10; };
+  __CB.pol=__CB.pol||'A';
   __CB.tap=function(){ const m=(G.tech&&G.tech.minerals||[])[0]; if(!m) return;
     for(let i=0;i<__CB.taps;i++) G.tech.credit=(G.tech.credit||0)+campTapGain(); };
   __CB.RESERVE=600;   // 건물·유닛 몫으로 남겨 두는 미네랄
@@ -65,37 +75,63 @@ await pg.evaluate(()=>{
   //   옛 사냥터용 규약이라 캠프에서는 왜곡된다 — 실측(camp-econ-bench): 값만 보면 일꾼(3만)이
   //   탭업(2.2만)에 계속 밀려 1시간 내내 10기에서 굳었다. BALANCE.md §3-3.
   //   여기서는 탭·효율 둘만 고른다(일꾼·건물은 __CB.produce/build 가 맡는다).
+  // ⭐ **구매 정책 셋을 나란히 돌린다**(HUNT_R1 §6-7-0). 후보는 넷 — 효율 / 탭 / 일꾼 / 보급소.
+  //   Δ 는 전부 「초당 수입이 얼마나 느는가」로 통일한다. 값이 아니라 **Δ÷비용** 으로 고른다.
+  //   ⛔ 「가장 싼 것」(BALANCE §4 규약)은 옛 사냥터용이라 여기서는 일꾼이 영영 안 팔린다.
   __CB.buy=function(){
-    const R=__CB.rate||0;                       // 최근 초당 수입(아래 샘플러가 채운다)
-    // ⭐ **인구가 막혔으면 업그레이드를 멈추고 보급소 값을 모은다.** 안 그러면 더 싼 탭업·효율업이
-    //   3만이 모이기 전에 계속 돈을 빼가 보급소가 영영 안 지어지고, 일꾼·유닛이 인구에 갇힌다
-    //   (실측: 8.5분에 일꾼 6·유닛 4·인구 10/10 고정, 던전 진입 실패). BALANCE.md §3-3.
-    { const free=(G.tech.supCap||0)-(G.tech.sup||0), sn=G.tech.built.supply|0;
+    const S=campState(), T=G.tech;
+    for(let g=0; g<20; g++){
+      const cash=Math.floor((T.credit||0)) - __CB.RESERVE;
+      if(cash<=0) return;
+      const wn=T.ents.filter(e=>e.type==='worker').length;
+      const free=(T.supCap||0)-(T.sup||0), sn=T.built.supply|0;
       const smax=(typeof CAMP_SUPPLY_MAX!=='undefined')?CAMP_SUPPLY_MAX:24;
-      if(free<2 && sn<smax) return; }
-    for(let g=0;g<20;g++){
-      const have=Math.floor((G.tech&&G.tech.credit)||0) - __CB.RESERVE;
-      if(have<=0) return;
-      const C=campState(), opts=[];
-      { const L=C.upg.gather|0, cur=campGatherMul();
-        C.upg.gather=L+1; const nxt=campGatherMul(); C.upg.gather=L;
-        opts.push({k:'gather', c:campUpgCost('gather'), d:R*(nxt/cur-1)}); }
-      { const L=C.upg.tap|0, cur=campTapGain();
-        C.upg.tap=L+1; const nxt=campTapGain(); C.upg.tap=L;
-        opts.push({k:'tap', c:campUpgCost('tap'), d:(nxt-cur)*__CB.taps}); }   // 탭은 누르는 만큼만 값어치
-      const ok=opts.filter(o=>o.c<=have&&o.d>0).sort((a,b)=>(b.d/b.c)-(a.d/a.c));
-      if(!ok.length) return;
-      const pick=ok[0];
-      C.upg[pick.k]=(C.upg[pick.k]|0)+1;
-      G.tech.credit=Math.max(0,(G.tech.credit||0)-pick.c); } };
+      const wmax=(typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:40;
+      const R=__CB.rate||0, perWk=(wn>0? R/wn : 3.5);
+      const opts=[];
+      { const L=S.upg.gather|0, cur=campGatherMul();
+        S.upg.gather=L+1; const nxt=campGatherMul(); S.upg.gather=L;
+        opts.push({k:'gather', c:campUpgCost('gather'), d:R*(nxt/cur-1),
+          go:()=>{ S.upg.gather=L+1; T.credit-=campUpgCost('gather'); }}); }
+      { const L=S.upg.tap|0, cur=campTapGain();
+        S.upg.tap=L+1; const nxt=campTapGain(); S.upg.tap=L;
+        opts.push({k:'tap', c:campUpgCost('tap'), d:(nxt-cur)*__CB.taps,
+          go:()=>{ S.upg.tap=L+1; T.credit-=campUpgCost('tap'); }}); }
+      if(wn<wmax && free>=1)
+        opts.push({k:'worker', c:campHireCost(wn), d:perWk,
+          go:()=>{ try{ T.sel=(T.ents.find(e=>e.type==='bldg'&&e.bk===TECH_TREE[T.race].buildings[0].k)||{}).eid;
+            techDoProduce(TECH_WORKER[T.race], TECH_TREE[T.race].buildings[0].k); }catch(e){} }});
+      if(sn<smax && wn<wmax){
+        const capNow=Math.min(200,T.supCap||0), capNext=Math.min(200,(T.supCap||0)+8);
+        const gain=Math.max(0, Math.min(capNext-capNow, wmax-wn-Math.max(0,free)));
+        opts.push({k:'supply', c:campSupplyCost(sn), d:gain*perWk,
+          go:()=>{ __CB.want.supply=sn+1; __CB.build(); }});   // 배치는 build 가 한다
+      }
+      const live=opts.filter(o=>o.d>0);
+      if(!live.length) return;
+      const ranked=live.sort((a,b)=>(b.d/b.c)-(a.d/a.c));
+      let pick=null;
+      if(__CB.pol==='C'){                       // C — 1위가 비싸면 그때까지 모은다
+        if(ranked[0].c>cash) return;
+        pick=ranked[0];
+      } else if(__CB.pol==='B'){                // B — 인구가 막히면 보급소만 모은다
+        if(free<1 && sn<smax){
+          const sup=live.find(o=>o.k==='supply');
+          if(!sup || sup.c>cash) return;
+          pick=sup;
+        } else pick=ranked.find(o=>o.c<=cash);
+      } else {                                  // A — 살 수 있는 것 중 1위
+        pick=ranked.find(o=>o.c<=cash);
+      }
+      if(!pick) return;
+      pick.go();
+    } };
   // 자동 건설 — 트리 순서대로, 선행이 맞고 돈이 되면 짓는다
   __CB.build=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
     // 🏠 인구가 막혔으면 보급소를 한 채 더 — 그게 일꾼·유닛 축을 여는 유일한 길이다.
     //   ⛔ want.supply 를 24 로 못 박지 말 것: build 가 보급소만 계속 짓느라 병영까지 못 간다.
-    { const free=(G.tech.supCap||0)-(G.tech.sup||0), sn=G.tech.built.supply|0;
-      const smax=(typeof CAMP_SUPPLY_MAX!=='undefined')?CAMP_SUPPLY_MAX:24;
-      if(free<2 && sn<smax) __CB.want.supply=sn+1; }
+    // ⚠ 보급소도 __CB.buy 가 정책에 따라 결정한다(want.supply 를 올려 준다).
     for(const b of T.buildings){
       if(b.k===T.buildings[0].k) continue;                 // 본부는 이미 있다
       if((G.tech.built[b.k]|0) >= (__CB.want[b.k]|0)) continue;
@@ -111,10 +147,7 @@ await pg.evaluate(()=>{
   __CB.produce=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
     const main=T.buildings[0];
-    const wn=G.tech.ents.filter(e=>e.type==='worker').length;
-    if(wn<__CB.wkCap){ const p=(main.produces||[])[0];
-      if(p && (G.tech.credit||0)>=(p.m||0)){ try{ G.tech.sel=(G.tech.ents.find(e=>e.type==='bldg'&&e.bk===main.k)||{}).eid;
-        techDoProduce(p.id, main.k); }catch(e){} return; } }
+    // ⚠ 일꾼은 __CB.buy 가 정책에 따라 산다 — 여기서 무조건 사면 정책 비교가 흐려진다.
     for(const b of T.buildings){ if(b.k===main.k) continue;
       if(!(G.tech.built[b.k]>0)) continue;
       const p=(b.produces||[])[0]; if(!p) continue;
@@ -157,6 +190,10 @@ await pg.evaluate(()=>{
             gl:campUpgLv('gather'), tl:campUpgLv('tap'), rate:Math.round((w-(__CB.lastW||0))/15),
             ore:Math.round((G.tech&&G.tech.minerals||[]).reduce((a,m)=>a+(m.amount||0),0)),
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
+            me:(typeof campAlive==='function'?campAlive('me'):0),      // 전장에 서 있는 내 병력
+            dps:__CB.dps(),                                            // ⚔ 아군 총 DPS
+            dn:(typeof campDown==='function'?campDown():0),            // 누워서 부활 대기 중
+            dif:Math.round(typeof campFoeDiff==='function'?campFoeDiff(campDgN(),campCleared()):0),
             un:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='unit').length });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
@@ -208,10 +245,10 @@ console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이�
 console.log(fin.gateT ? `\n□ E 관문 100만 도달: 시작 후 **${(fin.gateT/60).toFixed(1)}분** (설계 추정 10시간)`
                      : `\n□ E 관문 100만: ${(fin.t/60).toFixed(1)}분 안에 못 넘음(번 돈 ${F(fin.earn)})`);
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
-console.log('시각(초) | 위치    | 번 돈      | 초당    | 채취Lv | 탭Lv | 광맥잔량 | 일꾼 | 유닛');
+console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 병력(선+누움) | 아군DPS | 적난이도');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
-    console.log(`${String(w.t).padEnd(9)}| D${w.dg}R${String(w.r).padEnd(4)}| ${F(w.w).padEnd(11)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(7)}| ${String(w.tl).padEnd(5)}| ${F(w.ore).padEnd(9)}| ${String(w.wk).padEnd(5)}| ${w.un}`); } }
+    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${w.dif}`); } }
 if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
   for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
 if(fin.dead) console.log('\n⛔ 판이 빈 순간: '+JSON.stringify(fin.dead));

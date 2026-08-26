@@ -1332,8 +1332,20 @@ async function groupLobby(){
       assert(STK===stk0,'campCombatStep 이 전역 STK 를 돌려놓지 않았다');
       const seen=campWithStk(S=>{ assert(STK===S,'campWithStk 안에서 STK 가 안 바뀜'); return S; });
       assert(seen===CAMPB && STK===stk0,'campWithStk 가 STK 를 안 돌려놓음');
-      // ④ 적을 다 잡으면 라운드가 오른다
+      // ④ ⏱ **라운드의 적은 웨이브로 나뉘어 들어온다** — 화면의 적을 다 잡아도
+      //    아직 안 나온 웨이브가 남아 있으면 라운드가 오르면 안 된다.
+      //    (전투가 0.5초에 끝나 라운드가 ~2초였고, 그래서 진행이 설계보다 수십 배 빨랐다)
       const r0=campRoundN();
+      assert(typeof campFoesPending==='function','웨이브 대기 판정이 없다');
+      if(campFoesPending()){
+        for(const u of CAMPB.ai.units) u.dead=true;
+        campCombatStep(0.05);
+        assert(campRoundN()===r0,'대기 웨이브가 남았는데 라운드가 올랐다 — 첫 묶음만 잡고 넘어간다');
+        // 남은 웨이브를 다 흘려보낸다(간격만큼 시간을 준다)
+        let guard=0;
+        while(campFoesPending() && guard++<60) campCombatStep(CAMP_WAVE_GAP_S);
+        assert(!campFoesPending(),'웨이브가 안 비워진다');
+      }
       for(const u of CAMPB.ai.units) u.dead=true;
       campCombatStep(0.05);
       assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());

@@ -327,6 +327,11 @@ TECH_TREE.colossus={ name:'콜로서스', res:{m:'크레딧', g:'에너지'}, bu
 ]};
 // ══ 테크트리 상세 스펙(SC1 기반, B안=실제 수치) — 건물{hp,ar,size,t(초)} / 유닛{hp,ar,sh,atk,at(공격형),rng,spd,t,abil} ══
 //   at: norm(일반형)·conc(진동형)·expl(폭발형)·'-'(무공격)
+// ⚠ `at`(공격 타입)은 **표기용 사본**이다. 전투가 실제로 쓰는 것은
+//   `UNIT_COMBAT_CLASS[id].dt`(js/11-cmdcard.js) 이고 `_sbTypeMul`(js/18-strike.js)이 그걸 읽는다.
+//   ⛔ 값을 바꿀 일이 있으면 **그쪽을 고치고 여기를 맞춘다**(반대 방향 금지).
+//   실측(2026-08-27): 27기 중 12기가 어긋나 있었다 — 지금은 화면이 이 값을 안 읽어 티가 안 났지만,
+//   프로필에 타입을 표시하는 순간 틀린 값이 나온다. 그래서 dt 에 맞춰 두었다.
 const TECH_SPEC={};
 TECH_SPEC.union={
   bldg:{ command:{hp:1500,ar:1,size:[4,3],t:120}, comsat:{hp:500,ar:1,t:40}, nuke:{hp:600,ar:1,t:40},
@@ -344,12 +349,12 @@ TECH_SPEC.union={
     ghost:{hp:45,ar:0,sh:0,atk:10,at:'conc',rng:7,t:50,abil:'핵·클로킹·락다운'},
     racer:{hp:80,ar:0,sh:0,atk:20,at:'conc',rng:5,t:30,abil:'스파이더 마인'},
     tank:{hp:150,ar:1,sh:0,atk:30,at:'expl',rng:7,t:50,abil:'시즈 85·스플·사거리12'},
-    goliath:{hp:125,ar:1,sh:0,atk:12,at:'norm',rng:5,t:40,abil:'대공 20(폭발)·사거리→8'},
-    skyguard:{hp:120,ar:0,sh:0,atk:20,at:'expl',rng:5,t:60,abil:'클로킹'},
+    goliath:{hp:125,ar:1,sh:0,atk:12,at:'expl',rng:5,t:40,abil:'대공 20(폭발)·사거리→8'},
+    skyguard:{hp:120,ar:0,sh:0,atk:20,at:'norm',rng:5,t:60,abil:'클로킹'},
     pelican:{hp:150,ar:1,sh:0,atk:0,at:'-',rng:0,t:50,abil:'수송'},
     hellfire:{hp:200,ar:2,sh:0,atk:48,at:'expl',rng:6,t:50,abil:'공중전용 스플래시'},
     aegis:{hp:200,ar:1,sh:0,atk:0,at:'-',rng:0,t:80,abil:'디텍터·매트릭스·EMP·이레디에이트'},
-    dreadnought:{hp:500,ar:3,sh:0,atk:25,at:'norm',rng:6,t:133,abil:'야마토 260'},
+    dreadnought:{hp:500,ar:3,sh:0,atk:25,at:'expl',rng:6,t:133,abil:'야마토 260'},
     nuke:{hp:0,ar:0,sh:0,atk:0,at:'-',rng:0,t:75,abil:'핵미사일'} }
 };
 TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막), 실드 없음
@@ -363,14 +368,14 @@ TECH_SPEC.swarm={   // 저그: 건물 자동재생·유닛 자동재생(점막),
     worker_swarm:{hp:40,ar:0,sh:0,atk:5,at:'norm',rng:1,t:20,abil:'건물 변태'},
     overlord:{hp:200,ar:0,sh:0,atk:0,at:'-',rng:0,t:40,abil:'디텍터·수송(연구)'},
     snapper:{hp:35,ar:0,sh:0,atk:5,at:'norm',rng:1,t:28,abil:'2기 생산·발업·아드레날린'},
-    hydra:{hp:80,ar:0,sh:0,atk:10,at:'expl',rng:4,t:28,abil:'사거리+1·럴커 변태'},
-    thornqueen:{hp:125,ar:1,sh:0,atk:20,at:'norm',rng:6,t:40,abil:'버로우 공격·일직선 스플'},
-    wyvern:{hp:120,ar:0,sh:0,atk:9,at:'norm',rng:3,t:40,abil:'바운스 9-3-1'},
-    stinger:{hp:25,ar:0,sh:0,atk:110,at:'norm',rng:1,t:28,abil:'2기 생산·공중전용 자폭'},
+    hydra:{hp:80,ar:0,sh:0,atk:10,at:'conc',rng:4,t:28,abil:'사거리+1·럴커 변태'},
+    thornqueen:{hp:125,ar:1,sh:0,atk:20,at:'expl',rng:6,t:40,abil:'버로우 공격·일직선 스플'},
+    wyvern:{hp:120,ar:0,sh:0,atk:9,at:'expl',rng:3,t:40,abil:'바운스 9-3-1'},
+    stinger:{hp:25,ar:0,sh:0,atk:110,at:'expl',rng:1,t:28,abil:'2기 생산·공중전용 자폭'},
     medusa:{hp:120,ar:0,sh:0,atk:0,at:'-',rng:0,t:50,abil:'패러사이트·브루들링·인스네어'},
     defiler:{hp:80,ar:1,sh:0,atk:0,at:'-',rng:0,t:50,abil:'다크 스웜·플레이그·컨슘'},   // 디파일러(오염술사) — 임시
     venom:{hp:250,ar:2,sh:0,atk:25,at:'expl',rng:6,t:40,abil:'공중전용 포자 디버프(디바우러)'},
-    behemoth:{hp:150,ar:2,sh:0,atk:20,at:'norm',rng:8,t:40,abil:'지상 전용 폭격'},
+    behemoth:{hp:150,ar:2,sh:0,atk:20,at:'expl',rng:8,t:40,abil:'지상 전용 폭격'},
     ultralisk:{hp:400,ar:1,sh:0,atk:20,at:'norm',rng:1,t:60,abil:'방업 시 방어+2'},
     broodling:{hp:30,ar:0,sh:0,atk:6,at:'norm',rng:1,t:20,abil:'브루들링(일정시간 후 소멸)'} }
 };
@@ -386,12 +391,12 @@ TECH_SPEC.aetherial={   // 프로토스: 건물·유닛 실드 자동재생(기�
     blade:{hp:100,ar:1,sh:60,atk:16,at:'norm',rng:1,t:40,abil:'발업(다리 강화)'},
     dragoon:{hp:100,ar:1,sh:80,atk:20,at:'expl',rng:4,t:50,abil:'사거리 4→6'},
     high_templar:{hp:40,ar:0,sh:40,atk:0,at:'-',rng:0,t:50,abil:'아칸 합체·스톰·할루시네이션'},
-    dark_templar:{hp:80,ar:1,sh:40,atk:40,at:'norm',rng:1,t:50,abil:'영구 은신·다크아칸 합체'},
+    dark_templar:{hp:80,ar:1,sh:40,atk:40,at:'conc',rng:1,t:50,abil:'영구 은신·다크아칸 합체'},
     seraph:{hp:80,ar:1,sh:60,atk:0,at:'-',rng:0,t:60,abil:'수송·속업'},
     observer:{hp:40,ar:0,sh:20,atk:0,at:'-',rng:0,t:40,abil:'디텍터·영구 은신'},
-    skydancer:{hp:120,ar:1,sh:80,atk:5,at:'expl',rng:5,t:40,abil:'공중전용 스플·디스럽션 웹(커세어)'},
-    falcon:{hp:150,ar:0,sh:100,atk:8,at:'norm',rng:4,t:80,abil:'지8·대공 28(폭발)·속업(스카웃)'},
-    archangel:{hp:300,ar:4,sh:150,atk:6,at:'norm',rng:8,t:140,abil:'인터셉터 최대 8기'},
+    skydancer:{hp:120,ar:1,sh:80,atk:5,at:'conc',rng:5,t:40,abil:'공중전용 스플·디스럽션 웹(커세어)'},
+    falcon:{hp:150,ar:0,sh:100,atk:8,at:'expl',rng:4,t:80,abil:'지8·대공 28(폭발)·속업(스카웃)'},
+    archangel:{hp:300,ar:4,sh:150,atk:6,at:'expl',rng:8,t:140,abil:'인터셉터 최대 8기'},
     kronos:{hp:200,ar:1,sh:150,atk:10,at:'expl',rng:5,t:160,abil:'클로킹 필드·리콜·스테이시스'},
     archon:{hp:10,ar:0,sh:350,atk:30,at:'norm',rng:2,t:20,abil:'하이세이지 2 융합·스플'},
     dark_archon:{hp:25,ar:0,sh:200,atk:0,at:'-',rng:0,t:20,abil:'마인드 컨트롤·메일스트롬·피드백'},   // 다크보이드(다크아칸) — 무공격 마법 · 임시 스탯

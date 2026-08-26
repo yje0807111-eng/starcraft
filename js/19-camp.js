@@ -576,12 +576,32 @@ function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') 
   return n; }
 
 // 이번 라운드의 적을 낸다.
+// ⏱ **라운드의 적을 한 번에 쏟지 않고 웨이브로 나눠 내보낸다.**
+//   왜: 전투가 0.5초 만에 끝나 라운드 하나가 ~2초였고, 그래서 진행이 설계보다 수십 배 빨랐다
+//   (실측: 20분에 던전 3 · 1억 — 설계는 4일에 던전 1-50 · 5,752만).
+//   ⛔ **적 수·난이도는 건드리지 않는다**(campFoeCount · campScaleFoes 그대로) — 그쪽은
+//     HUNT_R1 §6-2 의 영역이고, 여기서 같이 만지면 무엇이 원인인지 못 가린다.
+//     늘리는 것은 **시간 축 하나**다.
+const CAMP_WAVE_MAX = 6;        // 라운드 하나를 최대 몇 번에 나눠 내보내나
+const CAMP_WAVE_GAP_S = 4;      // 웨이브 사이 간격(초)
 function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
   const n = campFoeCount(campRoundN());
+  const w = Math.max(1, Math.min(CAMP_WAVE_MAX, n));
+  const per = Math.floor(n / w), rem = n % w;
+  CAMPB._wq = [];
+  for(let i = 0; i < w; i++) CAMPB._wq.push(per + (i < rem ? 1 : 0));
+  CAMPB._wqT = 0;
+  return campSpawnWave(); }                       // 첫 웨이브는 곧바로
+// 대기 중인 웨이브 한 묶음을 내보낸다
+function campSpawnWave(){
+  if(!CAMPB || !CAMPB._wq || !CAMPB._wq.length) return 0;
+  const k = CAMPB._wq.shift();
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
-    for(let i = 0; i < n; i++) strikeSpawnUnit('ai');
+    for(let i = 0; i < k; i++) strikeSpawnUnit('ai');
     campScaleFoes(CAMPB.ai.units.slice(b4));
     return CAMPB.ai.units.length - b4; }) | 0; }
+// 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
+function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 
 // 갓 스폰된 적을 이번 라운드 난이도에 맞춘다.
 //   ⭐ 개체 값을 통째로 덮어쓰지 않고 **무리 전체의 기본값 합** 대비 배율로 민다 —
@@ -682,6 +702,9 @@ function campCombatStep(dt){
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)
+  if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
+    CAMPB._wqT -= dt;
+    if(CAMPB._wqT <= 0){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
   { const sk = campRtMul('skCd');
     if(sk !== 1){ const extra = dt * (sk - 1);
       for(const u of CAMPB.me.units){ if(u.dead || !u.skillCd) continue;
@@ -690,14 +713,15 @@ function campCombatStep(dt){
   //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
   //    ⭐ **패배 = 본부 파괴다**(HUNT_R1 §6-5). 부활이 생긴 뒤로 「전멸」은 패배가 아니다 —
   //      다 누워도 30초 뒤 일어난다. 다만 **되살릴 유닛이 하나도 없으면**(출격 병력 0) 끝이 없으므로 그때만 진다.
-  if(CAMPB.me.base.hp <= 0 || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0 && campAlive('ai') > 0)){
+  if(CAMPB.me.base.hp <= 0 || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0
+     && (campAlive('ai') > 0 || campFoesPending()))){
     const was = campFail(); campBattleClose(); campBarReset();
     campSay(was.cleared > 0
       ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
       : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다'), 'lose');
     return; }
   // ② 적을 다 잡았다 → 라운드 클리어
-  if(CAMPB._started && campAlive('ai') === 0){
+  if(CAMPB._started && campAlive('ai') === 0 && !campFoesPending()){
     const dgWas = campDgN();
     campClearRound();
     if(campDgN() !== dgWas){                                   // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
