@@ -505,6 +505,9 @@ function campBattleOpen(){
   // 캠프에는 2차·중앙 신전이 없다 — 죽은 것으로 두면 strikeFrontStruct 가 본진을 표적으로 준다
   S.me.sec.dead = true; S.ai.sec.dead = true; S.central.dead = true;
   S.me.units.length = 0; S.ai.units.length = 0;
+  // 🌳 「건물 강화」 — 캠프에 건물은 본부 하나뿐이라 그 체력에 얹는다(HUNT_R1 §4-5-3)
+  { const bm = campRtMul('bldg');
+    if(bm !== 1){ S.me.base.maxHp = (S.me.base.maxHp || S.me.base.hp) * bm; S.me.base.hp = S.me.base.maxHp; } }
   CAMPB = S; return S;
 }
 function campBattleClose(){ CAMPB = null; }
@@ -563,7 +566,10 @@ function campWithBattleDraw(fn){
 // 내 병력 출격 — 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮긴다.
 //   ⭐ 이 다리는 오토배틀이 이미 갖고 있다(strikeSpawnForPlayer). 그대로 부른다.
 function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
-  return campWithStk(() => strikeSpawnForPlayer('me', { local:true })) | 0; }
+  const b4 = CAMPB.me.units.length;
+  const n = campWithStk(() => strikeSpawnForPlayer('me', { local:true })) | 0;
+  campScaleAllies(CAMPB.me.units.slice(b4));   // 🌳 아군 강화 — 새로 나온 것만
+  return n; }
 
 // 이번 라운드의 적을 낸다.
 function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
@@ -591,6 +597,24 @@ function campScaleFoes(list){
     u.dmg = (u.dmg || 0) * dmgMul; }
   return diff; }
 
+// 🌳 아군 강화 — 갓 출격한 내 유닛에 트리 배수를 얹는다(HUNT_R1 §4-5-3).
+//   ⭐ 적(campScaleFoes)과 달리 **개체 값에 그대로 곱한다** — 적은 '무리 총량'을 난이도에 맞추지만
+//      아군은 기준 총량이 없다. 유닛별 차이는 곱셈이라 그대로 보존된다.
+//   ⚠ 같은 유닛에 두 번 걸지 말 것 — 출격 직후 새로 나온 것만 넘긴다(_campRtOn 표시).
+function campScaleAllies(list){
+  if(!list || !list.length) return 0;
+  const atk = campRtMul('atk'), hp = campRtMul('hp');
+  if(atk === 1 && hp === 1) return 0;
+  let n = 0;
+  for(const u of list){
+    if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
+    u._campRtOn = 1;
+    if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
+      u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }
+    if(atk !== 1) u.dmg = (u.dmg || 0) * atk;
+    n++; }
+  return n; }
+
 // 살아 있는 유닛 수
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;
   for(const u of CAMPB[side].units) if(!u.dead) n++; return n; }
@@ -607,6 +631,12 @@ function campCombatStep(dt){
     return; }
   if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+  // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
+  //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
+  { const sk = campRtMul('skCd');
+    if(sk !== 1){ const extra = dt * (sk - 1);
+      for(const u of CAMPB.me.units){ if(u.dead || !u.skillCd) continue;
+        for(const k in u.skillCd){ if(u.skillCd[k] > 0) u.skillCd[k] = Math.max(0, u.skillCd[k] - extra); } } } }
   // ① 졌나 — **먼저 본다.** 본부가 뚫린 프레임에 마침 마지막 적도 죽었다면 그건 진 것이다.
   //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
   if(CAMPB.me.base.hp <= 0 || (CAMPB._started && campAlive('me') === 0 && campAlive('ai') > 0)){
@@ -896,8 +926,18 @@ function campRestore(){
   T.ents = C.ents.map(function(e){ return Object.assign({}, e); });
   T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m); });
   T.sel = null; T.selU = []; T.arm = null; T.pend = [];   // 선택·배치 중이던 것은 이어받지 않는다
+  campApplySupCap();   // 🌳 「인구 상한」 — 복원 뒤에 얹는다(복원이 supCap 을 통째로 덮어쓴다)
   return true;
 }
+// 🌳 「인구 상한」 +500 — ⚠ _techAddSupCap 은 TECH_SUP_MAX(200)에서 잘린다.
+//   그 상한은 관리자·오토배틀 것이라 건드리지 않고, 캠프에서 트리 몫을 **위에 더한다**.
+// 🌳 「업그레이드 비용」 −20~−80% — 캠프가 값을 매기는 두 곳(campUpgCost · campCost)에 함께 건다.
+const CAMP_RT_DISC = [0, 0.20, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
+function campUpgDisc(){ const n = campRtHas('upCost'); return n > 0 ? (1 - CAMP_RT_DISC[Math.min(5, n)]) : 1; }
+const CAMP_RT_SUP = [0, 10, 30, 80, 200, 500];   // HUNT_R1 §4-5-3 — 공식이 아니라 표다
+function campSupAdd(){ const n = campRtHas('sup'); return n > 0 ? CAMP_RT_SUP[Math.min(5, n)] : 0; }
+function campApplySupCap(){ const add = campSupAdd();
+  if(add > 0 && typeof G !== 'undefined' && G.tech) G.tech.supCap = (G.tech.supCap || 0) + add; }
 
 // ── 화면 층 ─────────────────────────────────────────────────────────────
 // 건설 맵 #vBuild 는 .gview(인게임 층)이고 HOME 은 .appScreen 이다. 층이 다르다.
@@ -1177,7 +1217,8 @@ function campCost(kind, key, lv){
         if(q){ m = q.m || 0; g = q.g || 0; break; } }
     }
   }
-  return { m: Math.round(m * CAMP_COST_K), g: Math.round(g * CAMP_COST_K), lv: L };
+  const _d = campUpgDisc();   // 🌳 「업그레이드 비용」 — 건물·유닛 값도 캠프가 매긴다
+  return { m: Math.round(m * CAMP_COST_K * _d), g: Math.round(g * CAMP_COST_K * _d), lv: L };
 }
 
 // ── 터치 채집 ───────────────────────────────────────────────────────────
@@ -1199,7 +1240,7 @@ function campUpgLv(k){ const C = campState(); return (C && C.upg && C.upg[k]) | 
 // 업그레이드 비용 — ⛔ 값은 여기 한 곳에서만 (campCost 와 같은 원칙)
 function campUpgCost(k){
   const base = (k === 'tap') ? CAMP_TAP_COST0 : CAMP_GAT_COST0;
-  return Math.ceil(base * Math.pow(CAMP_PRICE, campUpgLv(k)));
+  return Math.max(1, Math.ceil(base * Math.pow(CAMP_PRICE, campUpgLv(k)) * campUpgDisc()));   // 🌳 업그레이드 비용
 }
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;

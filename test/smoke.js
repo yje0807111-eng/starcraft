@@ -1105,6 +1105,53 @@ async function groupLobby(){
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
   // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
   //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.
+  // 🌳 아군 강화 갈래 — 트리를 찍으면 실제로 값이 움직이는가(2026-08-25 · 6/8 배선).
+  //   ⚠ campRtMul 은 **계열 키**를 받는다(f 가 아니다). 'atk' 이지 'unitAtk' 가 아니다.
+  await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{
+    skipIf(typeof campScaleAllies!=='function'||typeof campState!=='function','아군 강화 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      // ① 비용 — 업그레이드·건물 둘 다 캠프가 값을 매긴다
+      C.rbTree={};
+      const up0=campUpgCost('tap'), bd0=campCost('bldg','barracks',0).m, sup0=campSupAdd();
+      C.rbTree={upCost:5, sup:5};
+      assert(Math.abs(campUpgDisc()-0.2)<1e-6,'업그레이드 할인 5차가 −80%가 아님: '+campUpgDisc());
+      assert(campUpgCost('tap')<up0,'업그레이드 비용이 안 내려감');
+      assert(campCost('bldg','barracks',0).m<bd0,'건물 비용이 안 내려감');
+      assert(sup0===0 && campSupAdd()===500,'인구 상한 5차가 +500이 아님: '+campSupAdd());
+      // ② 전투 값 — 공격력·체력·본부는 사다리 5차에서 ×25
+      skipIf(typeof campEnterDungeon!=='function'||typeof campCombatStep!=='function','캠프 던전 없음');
+      C.rbTree={};
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me'); });
+      campScaleAllies(CAMPB.me.units);
+      const base0=CAMPB.me.base.hp, u0=CAMPB.me.units[0], hp0=u0.maxHp, dm0=u0.dmg||0;
+      C.rbTree={atk:5, hp:5, bldg:5};
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me'); });
+      campScaleAllies(CAMPB.me.units);
+      const u1=CAMPB.me.units[0];
+      assert(Math.abs(u1.maxHp/hp0-25)<0.5,'유닛 체력 5차가 ×25가 아님: ×'+(u1.maxHp/hp0).toFixed(1));
+      assert(Math.abs((u1.dmg||0)/(dm0||1)-25)<0.5,'유닛 공격력 5차가 ×25가 아님');
+      assert(Math.abs(CAMPB.me.base.hp/base0-25)<0.5,'본부 체력(건물 강화) 5차가 ×25가 아님');
+      // ③ 같은 유닛에 두 번 걸리지 않는다 — 걸리면 라운드마다 눈덩이가 된다
+      const h=u1.maxHp; const again=campScaleAllies(CAMPB.me.units);
+      assert(again===0 && u1.maxHp===h,'아군 강화가 이중 적용됨');
+      // ④ 스킬 쿨다운 — dt 만큼 깎인 뒤 (배수−1)dt 를 더 깎는다
+      C.rbTree={skCd:5};
+      const t=CAMPB.me.units[0]; t.skillCd=t.skillCd||{}; t.skillCd.probe=10;
+      campCombatStep(0.05);
+      const cut5=10-t.skillCd.probe;
+      C.rbTree={}; t.skillCd.probe=10; campCombatStep(0.05);
+      const cut0=10-t.skillCd.probe;
+      assert(cut5>cut0*5,'스킬 쿨다운 감소가 트리를 안 탄다: '+cut5.toFixed(3)+' vs '+cut0.toFixed(3));
+      return '공격·체력·건물 ×25 · 비용 −80% · 인구 +500 · 스킬쿨 '+cut5.toFixed(2)+'/틱';
+    } finally { C.rbTree=keep; if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🎨 전투 렌더 — 화면을 바꾸지 않고 기지 맵 '위쪽 레인'에 겹쳐 그린다(A안 · 2026-08-25).
   //   ⚠ 건설 맵은 M3D.sync 가 아니라 **M3D.syncBuild** 를 쓴다 — 감쌀 대상을 헷갈리면 0건이 된다(실제로 그랬다).
   await step('캠프 던전: 전투가 기지 맵에 겹쳐 그려진다', async()=>{
