@@ -1240,9 +1240,9 @@ async function groupLobby(){
         assert(!/92,\s*214,\s*255/.test(fil),'진행 바에 시안을 썼다 — 시안은 선택 전용(DESIGN §2)'); }
       // ⑥ ⭐ 맵 밑에 깔리지 않는다 — #vBuild 안 형제들이 z-index 6~8 이라 낮게 잡으면 안 보인다.
       //    실제로 3 으로 뒀다가 맵(#cstMain z=6)에 가려 화면에 아예 안 나왔다.
-      { const mz=[...el.parentElement.children]
-          .filter(c=>c!==el && c.id!=='techSkTip' && c.id!=='btDesel')
-          .map(c=>parseInt(getComputedStyle(c).zIndex,10)||0);
+      { const MAP=['cstMain','cstFog','techMap3d','cstLabels','cstPrev'];
+        const mz=MAP.map(id=>{ const c=document.getElementById(id);
+          return c ? (parseInt(getComputedStyle(c).zIndex,10)||0) : 0; });
         const top=Math.max(0,...mz), mine=parseInt(getComputedStyle(el).zIndex,10)||0;
         assert(mine>top,'배지 z-index('+mine+')가 맵 층('+top+') 아래다 — 화면에 안 나온다'); }
       // ⑦ 재화 바와 겹치지 않는다
@@ -1382,6 +1382,63 @@ async function groupLobby(){
         assert(m2[0].maxHp<h0,'적 체력에 트리가 안 걸린다: '+h0+'→'+m2[0].maxHp); }
       return '32계열 × 5등장 = 160노드 · 티어당 8 · 극상 4 · 적 약화 하한 ×'+CAMP_RT_CUT_FLOOR;
     } finally { C.rbPts=back.rbPts; C.rbTree=back.rbTree; campSave(); } });
+
+  // 🌳 트리 화면 — 마인드맵. 밀고 확대해서 본다.
+  await step('캠프 던전: 트리 화면(마인드맵)', async()=>{
+    skipIf(typeof campTreeOpen!=='function','트리 화면 없음');
+    const el=document.getElementById('campTree');
+    assert(el,'#campTree 가 마크업에 없다');
+    const C=campState(); const back={rbPts:C.rbPts, rbTree:C.rbTree};
+    try{
+      // ① ⭐ #phone 직속이라야 한다 — #vBuild 안에 두면 재화 바(z=62)·시트가 위에 뜬다(실제로 그랬다)
+      assert(el.parentElement && el.parentElement.id==='phone',
+        '트리가 #phone 직속이 아니다: '+(el.parentElement&&el.parentElement.id));
+      { const cur=document.getElementById('curBar');
+        const mz=cur?(parseInt(getComputedStyle(cur).zIndex,10)||0):0;
+        const mine=parseInt(getComputedStyle(el).zIndex,10)||0;
+        assert(mine>mz,'트리 z-index('+mine+')가 재화 바('+mz+') 아래다'); }
+      // ② 열고 닫기
+      C.rbPts=1e13; C.rbTree={};
+      campTreeOpen();
+      assert(campTreeIsOn(),'열었는데 안 열림');
+      // ③ 노드 수 — 시작점 1 + 32계열 × 5 = 161
+      { const n=el.querySelectorAll('#ctG [data-k]').length;
+        assert(n===161,'노드가 161개가 아님: '+n); }
+      // ④ 시작점을 안 샀으면 계열은 전부 잠김
+      { const buy=el.querySelectorAll('#ctG .ct-buy').length;
+        assert(buy===0,'시작점 없이 살 수 있는 노드가 있다: '+buy); }
+      // ⑤ 시작점을 사면 32계열의 1차가 열린다
+      campTreeTap('root',0); campTreeRender();
+      assert(campRtRootOn(),'시작점이 안 사짐');
+      { const buy=el.querySelectorAll('#ctG .ct-buy').length;
+        assert(buy===32,'1차가 32개 안 열림: '+buy); }
+      // ⑥ 한 번 누르면 고르고, 다시 누르면 산다
+      campTreeTap('gather',1);
+      assert(_campTreeSel==='gather:1','안 골라짐: '+_campTreeSel);
+      assert(el.querySelectorAll('#ctG .ctN.sel').length===1,'시안이 한 곳이 아니다(DESIGN §2)');
+      const p0=C.rbPts;
+      campTreeTap('gather',1);
+      assert(campRtHas('gather')===1,'두 번 눌렀는데 안 사짐');
+      assert(C.rbPts<p0,'샀는데 포인트가 안 줄었다');
+      // ⑦ 아래 정보줄이 고른 노드를 말한다
+      _campTreeSel='gather:2'; campTreeRender();
+      assert(/일꾼 채취량/.test(el.querySelector('.ctInfoNm').textContent),
+        '정보줄이 이름을 안 보여준다: '+el.querySelector('.ctInfoNm').textContent);
+      assert(/T\d/.test(el.querySelector('.ctInfoSub').textContent),'정보줄에 티어가 없다');
+      // ⑧ 잠긴 노드는 사기 버튼이 꺼진다
+      _campTreeSel='gather:5'; campTreeRender();
+      assert(el.querySelector('.ctBuy').disabled,'잠긴 노드인데 사기가 켜져 있다');
+      // ⑨ 좌표 — 갈래 넷이 서로 다른 방향, 사슬은 바깥으로
+      { const a1=campTreePos('gather',1), a5=campTreePos('gather',5);
+        assert(Math.hypot(a5.x,a5.y)>Math.hypot(a1.x,a1.y),'5차가 1차보다 안쪽이다');
+        const dirs=['start','econ','army','enemy'].map(br=>{
+          const L=CAMP_RT_LINES.filter(x=>x.br===br)[3]; const p=campTreePos(L.k,3);
+          return Math.round(Math.atan2(p.y,p.x)*100)/100; });
+        assert(new Set(dirs).size===4,'갈래 넷이 같은 방향을 본다: '+dirs.join(',')); }
+      // ⑩ 닫기
+      campTreeClose(); assert(!campTreeIsOn(),'닫았는데 안 닫힘');
+      return '161노드 · 시작점→32계열 · 두 번 눌러 구매 · 시안 한 곳';
+    } finally { campTreeClose(); C.rbPts=back.rbPts; C.rbTree=back.rbTree; campSave(); } });
 
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');

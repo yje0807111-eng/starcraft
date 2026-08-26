@@ -268,6 +268,187 @@ function campRtFoeMul(){ let m = 1;
   for(const L of CAMP_RT_LINES){ if(L.br !== 'enemy') continue; m *= (1 - campRtCut(L.k)); }
   return Math.max(CAMP_RT_CUT_FLOOR, m); }
 
+// ══ 🌳 트리 화면 — 마인드맵 (2026-08-25 · 6단계-b) ═════════════════════
+//   시작점이 가운데, 갈래 넷이 사방으로. 계열 하나가 바깥으로 5칸 사슬을 이룬다.
+//   ⭐ 밀고(드래그) 확대(핀치)해서 본다 — 160노드를 세로 화면에 다 못 담기 때문이다.
+//   ⛔ 좌표를 화면 픽셀로 잡지 말 것. **월드 좌표(SVG viewBox)** 로 두고 변환만 바꾼다 —
+//      그래야 확대·이동이 노드 위치 계산과 섞이지 않는다.
+//   갈래 색은 DESIGN.md §2 액센트 **역할표**에서 그대로 꺼냈다(재화=금 · 위험=적 · 정보=청 · 긍정=녹).
+//   시안(--acc-sel)은 「지금 고른 노드」 전용으로 남긴다 — 화면당 한 곳 규칙.
+const CAMP_TREE_BR = {
+  enemy:{ a:-Math.PI/2, nm:'적 약화',    col:'#ff3b3b' },   // 위
+  army: { a: Math.PI/2, nm:'아군 강화',  col:'#4aa8ff' },   // 아래
+  start:{ a: Math.PI,   nm:'시작 도움',  col:'#5dff8f' },   // 왼쪽
+  econ: { a: 0,         nm:'재화 획득',  col:'#ffd24a' },   // 오른쪽
+};
+const CAMP_TREE_SPREAD = 1.45;      // 갈래 하나가 벌어지는 각(rad) — 8계열이 이 안에 부챗살로 선다
+const CAMP_TREE_R0 = 150, CAMP_TREE_RS = 86;   // 첫 칸까지 거리 · 칸 간격
+//   ⚠ R0 을 줄이지 말 것 — 8계열의 1차가 한 자리에 모여 **링처럼** 보인다(부챗살 느낌이 죽는다)
+
+// 계열 k 의 n차 노드가 월드 좌표 어디인가 (n=0 이면 시작점)
+function campTreePos(k, n){
+  if(!k || n <= 0) return { x:0, y:0 };
+  const L = campRtLine(k); if(!L) return { x:0, y:0 };
+  const B = CAMP_TREE_BR[L.br]; if(!B) return { x:0, y:0 };
+  const idx = CAMP_RT_LINES.filter(x => x.br === L.br).indexOf(L);   // 갈래 안 0~7
+  const a = B.a + (idx - 3.5) * (CAMP_TREE_SPREAD / 7);
+  const r = CAMP_TREE_R0 + (n - 1) * CAMP_TREE_RS;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+}
+// 노드 상태 — 'own'(샀다) · 'buy'(살 수 있다) · 'next'(앞 칸을 사면 열린다) · 'lock'
+function campTreeState(k, n){
+  const have = campRtHas(k);
+  if(n <= have) return 'own';
+  if(n !== have + 1) return 'lock';
+  if(!campRtRootOn()) return 'lock';
+  const C = campState();
+  return ((C && C.rbPts || 0) >= campRtCost(k, n)) ? 'buy' : 'next';
+}
+
+let _campTreeSel = null;            // 지금 고른 노드 'k:n' — 시안은 여기 한 곳만
+let _campTreeView = { x:0, y:0, z:1 };
+const CAMP_TREE_ZMIN = 0.35, CAMP_TREE_ZMAX = 2.2;
+
+function campTreeSvg(){
+  const rows = [];
+  // ① 선 — 시작점→1차, n차→n+1차. 노드보다 먼저 그려야 뒤에 깔린다
+  for(const L of CAMP_RT_LINES){ const B = CAMP_TREE_BR[L.br];
+    for(let n = 1; n <= 5; n++){
+      const a = campTreePos(L.k, n - 1), b = campTreePos(L.k, n);
+      const on = campRtHas(L.k) >= n;
+      rows.push('<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) +
+        '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1) +
+        '" stroke="' + (on ? B.col : 'rgba(255,255,255,.10)') + '" stroke-width="' + (on ? 2.5 : 1.5) + '"/>'); } }
+  // ② 갈래 이름 — 부챗살 바깥에
+  for(const bk in CAMP_TREE_BR){ const B = CAMP_TREE_BR[bk];
+    const r = CAMP_TREE_R0 + 2 * CAMP_TREE_RS;   // 사슬 중간 — 끝에 두면 기본 배율에서 화면 밖이다
+    rows.push('<text x="' + (Math.cos(B.a) * r).toFixed(0) + '" y="' + (Math.sin(B.a) * r).toFixed(0) +
+      '" class="ctBrNm" fill="' + B.col + '">' + B.nm + '</text>'); }
+  // ③ 시작점
+  const rootOn = campRtRootOn();
+  rows.push('<circle cx="0" cy="0" r="30" class="ctRoot' + (rootOn ? ' on' : '') + '" data-k="root" data-n="0"/>');
+  rows.push('<text x="0" y="4" class="ctRootTx">시작</text>');
+  // ④ 노드
+  for(const L of CAMP_RT_LINES){ const B = CAMP_TREE_BR[L.br];
+    for(let n = 1; n <= 5; n++){
+      const p = campTreePos(L.k, n), st = campTreeState(L.k, n);
+      const gr = campRtGrade(L.k, n);
+      const sel = (_campTreeSel === L.k + ':' + n);
+      const r = (gr === '극상') ? 20 : (gr === '귀함' ? 17 : 14);
+      rows.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r +
+        '" class="ctN ct-' + st + (sel ? ' sel' : '') + '" style="--bc:' + B.col +
+        '" data-k="' + L.k + '" data-n="' + n + '"/>');
+      if(gr === '극상' || gr === '귀함')
+        rows.push('<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 4).toFixed(1) + '" class="ctNm">' +
+          (gr === '극상' ? '★' : '◆') + '</text>'); } }
+  return rows.join('');
+}
+// ── 화면 열고 닫기 ──────────────────────────────────────────────────────
+function campTreeOpen(){
+  const el = document.getElementById('campTree'); if(!el) return;
+  _campTreeSel = null; _campTreeView = { x:0, y:0, z:0.55 };   // 처음엔 전체가 보이게
+  el.classList.add('on');
+  campTreeRender(); campTreeBind();
+}
+function campTreeClose(){ const el = document.getElementById('campTree'); if(el) el.classList.remove('on'); }
+function campTreeIsOn(){ const el = document.getElementById('campTree'); return !!(el && el.classList.contains('on')); }
+
+// 다시 그리기 — SVG 통째로 갈고 아래 정보줄을 채운다
+function campTreeRender(){
+  const el = document.getElementById('campTree'); if(!el) return;
+  const g = el.querySelector('#ctG'); if(g) g.innerHTML = campTreeSvg();
+  campTreeApplyView();
+  const C = campState();
+  const pt = el.querySelector('.ctPts'); if(pt) pt.textContent = campNum(C ? (C.rbPts || 0) : 0);
+  campTreeInfo();
+}
+// 큰 수 표기 — 재화 바와 같은 규칙이 있으면 그것을 쓴다
+function campNum(n){ if(typeof fmtCur === 'function') return fmtCur(n);
+  return Math.floor(n).toLocaleString('en-US'); }
+
+// 고른 노드 설명 + 사기 버튼
+function campTreeInfo(){
+  const el = document.getElementById('campTree'); if(!el) return;
+  const nm = el.querySelector('.ctInfoNm'), sub = el.querySelector('.ctInfoSub'), btn = el.querySelector('.ctBuy');
+  if(!_campTreeSel){
+    if(nm) nm.textContent = campRtRootOn() ? '노드를 고르세요' : '시작점부터 — 탭당 미네랄';
+    if(sub) sub.textContent = campRtRootOn() ? '' : ('비용 ' + campNum(CAMP_RT_BASE) + ' 포인트');
+    if(btn){ btn.textContent = campRtRootOn() ? '고르기' : '시작점 사기';
+      btn.disabled = campRtRootOn() || !campRtCanBuy('root');
+      btn.dataset.k = 'root'; btn.dataset.n = '0'; }
+    return; }
+  const [k, ns] = _campTreeSel.split(':'); const n = +ns;
+  const L = campRtLine(k); if(!L) return;
+  const st = campTreeState(k, n), cost = campRtCost(k, n), gr = campRtGrade(k, n);
+  if(nm) nm.textContent = L.nm + ' ' + n + '차';
+  if(sub) sub.textContent = CAMP_TREE_BR[L.br].nm + ' · ' + gr + ' · T' + campRtTier(k, n) +
+    ' · 비용 ' + campNum(cost);
+  if(btn){ btn.dataset.k = k; btn.dataset.n = String(n);
+    btn.textContent = st === 'own' ? '보유' : (st === 'buy' ? '사기' : (st === 'next' ? '포인트 부족' : '잠김'));
+    btn.disabled = (st !== 'buy'); }
+}
+function campTreeApplyView(){
+  const g = document.getElementById('ctG'); if(!g) return;
+  const v = _campTreeView;
+  g.setAttribute('transform', 'translate(' + v.x.toFixed(1) + ' ' + v.y.toFixed(1) + ') scale(' + v.z.toFixed(3) + ')');
+}
+// 노드를 누르면 고르고, 이미 고른 것을 다시 누르면 산다(두 번 누르기 = 구매)
+function campTreeTap(k, n){
+  const key = k + ':' + n;
+  if(k === 'root'){ if(!campRtRootOn() && campRtCanBuy('root')){ campRtBuy('root'); campTreeRender(); } 
+    _campTreeSel = null; campTreeInfo(); return; }
+  if(_campTreeSel === key && campTreeState(k, n) === 'buy'){ campTreeBuySel(); return; }
+  _campTreeSel = key; campTreeRender();
+}
+function campTreeBuySel(){
+  const el = document.getElementById('campTree'); if(!el) return;
+  const btn = el.querySelector('.ctBuy'); if(!btn || btn.disabled) return;
+  const k = btn.dataset.k, n = +btn.dataset.n;
+  if(k === 'root'){ campRtBuy('root'); }
+  else { if(campTreeState(k, n) !== 'buy') return; campRtBuy(k); }
+  if(typeof playSfx === 'function') playSfx('upgrade');
+  campTreeRender();
+}
+
+// ── 밀고 확대 ───────────────────────────────────────────────────────────
+//   ⛔ 캠프 맵의 팬·줌(campPatchZoom)을 빌리지 말 것 — 그건 건설 격자 좌표계에 묶여 있다.
+//   여기는 SVG viewBox 하나뿐이라 훨씬 단순하다.
+let _ctBound = false, _ctPtrs = new Map(), _ctDrag = null, _ctPinch = null, _ctMoved = 0;
+function campTreeBind(){
+  const el = document.getElementById('campTree'); if(!el || _ctBound) return;
+  const svg = el.querySelector('#ctSvg'); if(!svg) return;
+  _ctBound = true;
+  svg.addEventListener('pointerdown', e => {
+    svg.setPointerCapture(e.pointerId); _ctPtrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    _ctMoved = 0;
+    if(_ctPtrs.size === 1) _ctDrag = { x:e.clientX, y:e.clientY, vx:_campTreeView.x, vy:_campTreeView.y };
+    else if(_ctPtrs.size === 2){ _ctDrag = null; _ctPinch = campTreePinch(); }
+  });
+  svg.addEventListener('pointermove', e => {
+    if(!_ctPtrs.has(e.pointerId)) return;
+    _ctPtrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(_ctPinch && _ctPtrs.size === 2){ const now = campTreePinch();
+      if(now && _ctPinch.d > 0){ const z = _campTreeView.z * (now.d / _ctPinch.d);
+        _campTreeView.z = Math.max(CAMP_TREE_ZMIN, Math.min(CAMP_TREE_ZMAX, z)); _ctPinch = now; campTreeApplyView(); }
+      return; }
+    if(_ctDrag){ const dx = e.clientX - _ctDrag.x, dy = e.clientY - _ctDrag.y;
+      _ctMoved = Math.max(_ctMoved, Math.abs(dx) + Math.abs(dy));
+      _campTreeView.x = _ctDrag.vx + dx; _campTreeView.y = _ctDrag.vy + dy; campTreeApplyView(); }
+  });
+  const up = e => { _ctPtrs.delete(e.pointerId); if(_ctPtrs.size < 2) _ctPinch = null; if(!_ctPtrs.size) _ctDrag = null; };
+  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
+  // ⚠ 밀고 나서 손을 뗄 때 노드가 눌리면 안 된다 — 움직인 거리로 가른다
+  svg.addEventListener('click', e => {
+    if(_ctMoved > 8) return;
+    const t = e.target.closest && e.target.closest('[data-k]'); if(!t) return;
+    campTreeTap(t.dataset.k, +t.dataset.n);
+  });
+  el.querySelector('.ctBuy')?.addEventListener('click', campTreeBuySel);
+  el.querySelector('.ctX')?.addEventListener('click', campTreeClose);
+}
+function campTreePinch(){ const a = [..._ctPtrs.values()]; if(a.length < 2) return null;
+  return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) }; }
+
 // ══ ⚔ 던전 전투 (2026-08-25 · 2단계) ═══════════════════════════════════
 //   ⭐ **전투를 새로 짜지 않는다 — 오토배틀(18-strike.js)의 것을 빌린다.**
 //      유닛 스탯·상성·스킬·표적 선정·회피가 거기 다 있다. 새로 짜면 두 벌이 되어 언젠가 갈라진다.
@@ -400,11 +581,13 @@ let _campBarS = '';
 function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
   const dg = campDgN(), cleared = campCleared(), foe = campAlive('ai');
-  const key = dg + '|' + cleared + '|' + foe;
+  const C = campState(); const pts = C ? Math.floor(C.rbPts || 0) : 0;
+  const key = dg + '|' + cleared + '|' + foe + '|' + pts;
   if(key === _campBarS) return;
   _campBarS = key;
   const nm = el.querySelector('.cbNm'), rd = el.querySelector('.cbRd'),
         fo = el.querySelector('.cbFoe'), fil = el.querySelector('.cbFil');
+  { const tb = el.querySelector('.cbTree b'); if(tb) tb.textContent = campNum(pts); }
   el.classList.toggle('safe', dg <= 0);
   el.classList.toggle('dng',  dg > 0);
   if(dg <= 0){

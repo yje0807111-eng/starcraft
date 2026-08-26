@@ -86,6 +86,7 @@
 | 난이도 고르기(선택 화면·방 만들기) | `.sdStepRow`/`.sdStepTx`/`.sdDots` + 상세 판 + `.sdInf`(무한 모드) | 개인 플레이 난이도 선택(`#soloDiffPanel`)이 원본 · 방 만들기가 그대로 빌린다 · ⛔ 화면별 난이도 UI 를 새로 만들지 말 것 |
 | 오토배틀 대전 설정 | `STK_OPTS`(상하한 표) + `STK_PRESETS` + `renderCpMode()` | 상하한·기본값은 표 한 곳에서만 · 엔진 반영은 `MAP_CFG_OVR` → `mapCfg` 한 입구(시작 때 심고 로비 복귀 때 반납) |
 | 목록 고르는 판(방 찾기·파티 찾기) | `.rmCard` + `.rmHead`/`.rmNum`/`.rmList`+`.roomItem`/`.rmBtns` | 방 찾기(`#rooms`)가 원본 · 파티 찾기는 이 컴포넌트를 그대로 빌린다(딤만 `.pfOv`) · **새 목록 판을 만들지 말 것** · 행 밑변 광원 = `--dc`(난이도 색, 없으면 중립) · 하단은 `.actBtn`(주 동작 길게 + `.sq` 38px 둘) |
+| **환생 트리(마인드맵)** | `#campTree` + `campTreeOpen()` · 노드는 `campTreeSvg()` | `#phone` 직속 전체 화면 · 밀고 확대 · 입구는 캠프 배지(`#campBar`)의 🌳 칩 · 갈래 색은 `CAMP_TREE_BR` 한 곳 |
 | **일일 퀘스트** | `openDaily()` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 퀘스트 · 하루 5개 + 주간 25개 |
 | **출석** | `openAtt()` → `#hbAttSheet` + `renderAtt()` | 더보기 ☰ > 출석 · **퀘스트와 화면이 다르다**(같은 판에 탭으로 묶지 말 것 — 2026-08-14 분리) |
 | 일일 진행 계측·보상 | **`dqNote(kind, n)`** / `dqGive(rw)` | 출석·퀘스트가 함께 쓰는 뒷단 · 새 계측 지점이 생기면 `dqNote` 한 줄만 넣는다 |

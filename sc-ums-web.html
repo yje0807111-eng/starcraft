@@ -71,7 +71,7 @@
     <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="cstFog"></canvas><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="techHidePreview()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg> 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <!-- 🗺 캠프 단계·라운드 배지 — campMode 에서만 보인다(css/30-home.css). 내용은 campBarRender() -->
-      <div id="campBar"><div class="cbTop"><span class="cbNm"></span><span class="cbRd"></span><span class="cbFoe"></span></div><div class="cbTrk"><div class="cbFil"></div></div></div>
+      <div id="campBar"><div class="cbTop"><span class="cbNm"></span><span class="cbRd"></span><span class="cbFoe"></span><button class="cbTree" type="button" onclick="campTreeOpen()">🌳 <b>0</b></button></div><div class="cbTrk"><div class="cbFil"></div></div></div>
       <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="techSkTip" class="hide"></div>   <!-- 🔮 스킬 롱프레스 설명 팝업(손 떼면 사라짐) -->
 
@@ -591,6 +591,11 @@
   <!-- 하단 네비(전역) — 화면이 아니라 #phone 위에 떠 있다. 칸은 NAV_TREE 를 보고 navPaint()가 만든다 -->
   <div id="navBar" class="navBar hide"></div>
   <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
+  <!-- 🌳 환생 포인트 트리 — 마인드맵. 내용은 campTreeSvg() 가 #ctG 안에 넣는다 -->
+  <div id="campTree"><svg id="ctSvg" viewBox="-195 -300 390 600" preserveAspectRatio="xMidYMid meet"><g id="ctG"></g></svg>
+    <div class="ctTop"><span class="ctTitle">🌳 환생 트리</span><span class="ctPtsWrap">포인트 <b class="ctPts">0</b></span><button class="ctX" type="button">닫기</button></div>
+    <div class="ctInfo"><div class="ctInfoTx"><div class="ctInfoNm"></div><div class="ctInfoSub"></div></div><button class="ctBuy actBtn pri" type="button"></button></div>
+  </div>
   <div id="curBar" class="curBar hide">
     <span class="curTitle" id="curTitle"></span><!-- 화면 제목 슬롯(curSetTitle) — 비어 있으면 재화만 오른쪽 정렬 -->
     <span class="curRes">
