@@ -1554,6 +1554,25 @@ async function groupLobby(){
       const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
       assert(Math.abs(c(5)/c(4)-1.09)<0.02,'무릎 전 비용 계단이 1.09 가 아니다: '+(c(5)/c(4)).toFixed(3));
       assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
+    // 👥 **인구 — 상한 200 · 일꾼도 한 칸을 먹는다** (HUNT_R1 §2-2 · §2-2-1, 2026-08-26 확정)
+    //    보급소 24채면 10 + 24×8 = 202 가 나오지만 **200 에서 잘린다**(스타크래프트와 같은 숫자).
+    //    ⭐ 일꾼이 인구를 먹는 것이 1회차 총수입을 목표에 맞춘 규칙이다 — 안 먹던 설계 시뮬은
+    //      4일에 목표(5,700만)를 45% 넘겼고, 먹게 하니 5,752만(+1%)이 됐다.
+    { const T=G.tech, keep={cap:T.supCap, sup:T.sup, built:T.built.supply|0};
+      // 건물로 올리는 경로가 200 에서 잘리는가
+      T.supCap=0; _techAddSupCap(10);                       // 본부
+      for(let i=0;i<CAMP_SUPPLY_MAX;i++) _techAddSupCap(8); // 보급소 24채
+      assert(T.supCap===200,'인구 상한이 200 이 아니다(보급소 '+CAMP_SUPPLY_MAX+'채): '+T.supCap);
+      assert(typeof TECH_SUP_MAX!=='undefined'&&TECH_SUP_MAX===200,
+        'TECH_SUP_MAX 가 200 이 아니다: '+(typeof TECH_SUP_MAX!=='undefined'?TECH_SUP_MAX:'없음'));
+      // 일꾼이 인구를 먹는가 — 생산 카드에 pop 이 붙어 있어야 한다
+      { const wk=TECH_WORKER[T.race], t=TECH_TREE[T.race];
+        let q=null; for(const b of (t.buildings||[])){ const f=(b.produces||[]).find(x=>x.id===wk); if(f){ q=f; break; } }
+        assert(q,'일꾼 생산 항목을 못 찾았다');
+        assert((q.pop|0)>=1,'일꾼이 인구를 안 먹는다 — 인구 200 이 목표가 되지 못한다: pop='+q.pop); }
+      // 일꾼 40 을 채우려면 보급소가 먼저다(설계상 맞는 동작) — 시작 인구 10 이라 11기째부터 막힌다
+      assert(CAMP_WORKER_MAX>10,'전제가 바뀜: 일꾼 상한이 시작 인구보다 작다');
+      T.supCap=keep.cap; T.sup=keep.sup; T.built.supply=keep.built; }
     // ⑤-c 일꾼 축은 **수와 효율 둘 다**로 오른다.
     //    ⚠ 예전에는 광맥 한 덩이에 1명씩만 붙어(res.miner 단일 락) 12기 26.8/초가 천장이었고
     //      일꾼을 뽑는 행위 자체가 무의미했다. 캠프 광맥에 cap 을 얹어 열었다(실측 40기 137/초).
