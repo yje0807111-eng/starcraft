@@ -773,6 +773,12 @@ function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRa
 //        │
 //        ├── 본부      CAMP_ROW_BASE
 //        └── 광맥 2×3  CAMP_ROW_MINE   ← 엄지 범위
+// ⛏ **광맥 한 덩이에 붙는 일꾼 수.** 건설 탭 기본은 1이라(res.miner 단일 락) 광맥 6덩이 =
+//   동시 6명이 상한이었고, 그래서 일꾼을 아무리 뽑아도 수입이 안 늘었다
+//   (실측: 12기 26.8/초 · 300기도 26.8 — 나머지는 줄을 선다). 일꾼 축이 통째로 죽어 있었다.
+//   `cap` 은 16-build.js 가 읽는 캠프 표식이다(`inf` 와 같은 수법) — 관리자 탭·오토배틀은
+//   cap 이 없어 1로 동작하므로 영향이 없다. 설계 근거는 HUNT_R1.md §1.
+const CAMP_MINE_CAP = 5;
 const CAMP_MINE_COLS = 3, CAMP_MINE_ROWS = 2;   // 가로로 넓게 — 세로 화면에서 아래를 덜 먹는다
 // ⚠ 이 둘이 **기지가 하단 시트에 가리지 않게** 하는 유일한 장치다.
 //   맵은 화면 전체를 쓰고 시트가 그 위를 덮으므로(css/30-home.css 캠프 블록), 시트 상단보다
@@ -798,7 +804,7 @@ function campLayMinerals(){
       // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
       //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
       //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.
-      amount: TECH_MINE_START, inf: true, owner:null, miner:null });
+      amount: TECH_MINE_START, inf: true, cap: CAMP_MINE_CAP, owner:null, miner:null });
 }
 // 본부·일꾼을 하단으로 옮긴다 — techUIInit 은 관리자 자리(0.5, 0.3)에 놓는다.
 // ⛔ 16-build.js 를 고치지 않는다. 놓인 것을 캠프가 옮긴다(오토배틀의 strikeTechLayout 과 같은 결).
@@ -965,7 +971,7 @@ function campSave(){
   C.units = campClean(T.units); C.research = campClean(T.research);
   C.sup = T.sup || 0; C.supCap = T.supCap || 0; C.eseq = T.eseq || 1;
   C.ents = (T.ents || []).map(campClean);
-  C.minerals = (T.minerals || []).map(function(m){ return { eid:m.eid, x:m.x, y:m.y, amount:m.amount, inf:true, owner:null, miner:null }; });   // 캠프 광맥은 마르지 않는다
+  C.minerals = (T.minerals || []).map(function(m){ return { eid:m.eid, x:m.x, y:m.y, amount:m.amount, inf:true, cap:CAMP_MINE_CAP, owner:null, miner:null }; });   // 캠프 광맥은 마르지 않는다
   if(typeof saveMeta === 'function') saveMeta();
 }
 // 저장분이 있으면 통째로 덮어쓴다. 없으면 false — 호출부가 새 판으로 이어 간다.
@@ -978,7 +984,7 @@ function campRestore(){
   T.units = Object.assign({}, C.units); T.research = Object.assign({}, C.research);
   T.sup = C.sup || 0; T.supCap = C.supCap || 0; T.eseq = C.eseq || 1;
   T.ents = C.ents.map(function(e){ return Object.assign({}, e); });
-  T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m, { inf:true, amount:(m.amount>0?m.amount:TECH_MINE_START) }); });   // 옛 저장(마른 광맥)도 되살린다
+  T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m, { inf:true, cap:CAMP_MINE_CAP, amount:(m.amount>0?m.amount:TECH_MINE_START) }); });   // 옛 저장(마른 광맥·cap 없던 것)도 되살린다
   T.sel = null; T.selU = []; T.arm = null; T.pend = [];   // 선택·배치 중이던 것은 이어받지 않는다
   campApplySupCap();   // 🌳 「인구 상한」 — 복원 뒤에 얹는다(복원이 supCap 을 통째로 덮어쓴다)
   return true;
@@ -1084,6 +1090,8 @@ function campHideView(){
   }
   campUnmountView();                                   // #vBuild 를 원래 자리로
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
+  campRestoreHire(); campRestoreSupply();                  // 👷🏠 가격 원복(TECH_TREE 는 공유다)
+  campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
   campClearSheet();
   if(typeof G !== 'undefined' && G && _campPrevTab !== null){ G.tab = _campPrevTab; _campPrevTab = null; }
@@ -1101,6 +1109,10 @@ function campEnter(){
   const had = campRestore();                           // ② 저장분이 있으면 덮어씀
   if(!had){ campLayBase(); campLayMinerals(); }         // 새 판이면 기지·광맥을 하단으로 다시 깐다
   G.tech.inf = false; G.tech.nocool = false;           // ③ ⚠ 관리자 치트(무한 자원·쿨 없음)를 끈다
+  // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
+  //    techUIInit 이 1기를 깔아 두므로(16-build.js:14) 새 판일 때만 걷는다.
+  if(!had) G.tech.ents = (G.tech.ents || []).filter(function(e){ return e.type !== 'worker'; });
+  campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
   //   그 뒤로 _techCW()·_techCH()·_techRows() 값이 전부 달라진다.
@@ -1279,35 +1291,67 @@ function campCost(kind, key, lv){
 // 광맥을 누르면 그 자리에서 미네랄이 나온다. 일꾼 왕복(방치)과 **다른 축**이다.
 // ⛔ 16/17-build.js 를 고치지 않는다 — 관리자 탭·오토배틀과 공유하는 파일이다.
 //   대신 **캡처 단계**에서 먼저 받아 광맥이면 삼키고, 아니면 그대로 흘려보낸다.
-// ⭐ **두 축 모두 ×2 계단(지수)이고 비용은 ×2.5 계단이다.**
-//   선형으로 두면 수급이 초당 수백에서 멎는다. 지수로 두되 **비용이 더 가팔라야** 브레이크가 걸린다 —
-//   실측(초당 2탭 · 1시간): 비용이 선형이면 21초, ×1.5 면 23초, ×2 면 299초 만에 레벨 60(탭당 10^18).
-//   ×2.5 라야 1시간에 레벨 23 에서 멈춘다. 기준은 「다음 레벨까지 몇 탭인가」이고, 그 값이
-//   ×2.5 에서 10 → 93 → 867 탭으로 **늘어난다**(선형은 0 으로 수렴 = 누를수록 쉬워짐 = 폭주).
-// ⛔ 비용 계단을 획득 계단보다 낮추지 말 것. BALANCE.md §0 의 "지수 축이 둘이면 폭주"가 바로 이것이다.
-const CAMP_GROW = 2;            // 획득 계단 — 레벨당 ×2 (0레벨 1 → 1레벨 2 → 2레벨 4 …)
-const CAMP_PRICE = 2.5;         // 비용 계단 — 획득보다 가팔라야 한다
+// ⭐ **모바일 클리커 표준 구조** — 효과는 **선형**, 비용은 **완만한 지수**, 곱셈은 **마일스톤**.
+//   (Cookie Clicker ×1.15 · AdVenture Capitalist ×1.07~1.14 가 쓰는 방식. HUNT_R1.md §1)
+//
+// ⛔ 예전에는 효과 ×2 / 비용 ×2.5 의 **단일 지수**였다. 그 구조를 버린 이유:
+//   ① 마일스톤이 없으면 「다음 계단까지 몇 레벨 남았나」가 안 보인다 — 계단이 목표를 만든다.
+//   ② 지수 효과는 값이 금세 10^18 로 튀어 숫자가 뜻을 잃는다.
+//   ③ 이 게임의 지수 축은 **던전 배율(2^d)과 환생 배율** 둘이다. 레벨까지 지수면 셋이 되어
+//     BALANCE.md §0 폭주 조건에 걸린다. 레벨은 **던전 사이를 잇는 완충**이라 다항이 맞다.
+//
+// 마일스톤 배수는 Lv 에 **선형**이다(간격이 2배씩 넓어지므로 배수 ÷ Lv ≈ 0.08 로 일정).
+//   효과 ≈ (1+0.025L) × 0.08L ≈ 0.002L² — 2차 다항.
+// ⛔ 마일스톤 간격을 좁혀 지수로 만들지 말 것(위 ③).
 const CAMP_TAP_BASE = 1;        // 탭 0레벨 = 1미네랄
-const CAMP_TAP_COST0 = 10;      // 탭 0→1레벨 비용(= 10탭)
-const CAMP_GAT_COST0 = 400;     // 채취량 0→1레벨 비용(일꾼 축은 초당 26.8 이라 눈금이 다르다)
+const CAMP_TAP_STEP = 1;        // 탭 레벨당 +1
+const CAMP_GAT_STEP = 0.025;    // 효율 레벨당 +2.5% (왕복 1회당)
+const CAMP_TAP_COST0 = 70;      // 탭 0→1레벨 비용
+const CAMP_GAT_COST0 = 210;     // 효율 0→1레벨 비용
+const CAMP_COST_R0 = { tap:1.09, gather:1.12 };   // 무릎 전 비용 계단
+const CAMP_COST_R1 = { tap:1.15, gather:1.20 };   // 무릎 후(Lv10~)
+const CAMP_COST_KNEE = 10;
+// 마일스톤 — 20, 50, 100, 200, 400 … (50 부터 2배씩) · 넘을 때마다 효과 ×2
+const CAMP_MILE_FIRST = 20, CAMP_MILE_SECOND = 50;
+function campMileMul(lv){
+  let mul = 1, m = CAMP_MILE_FIRST;
+  while(lv >= m && mul < 1e12){ mul *= 2; m = (m === CAMP_MILE_FIRST) ? CAMP_MILE_SECOND : m * 2; }
+  return mul;
+}
+// 다음 마일스톤까지 몇 레벨 남았나 — 화면에 「계단이 보이게」 쓰는 값
+function campMileNext(lv){
+  let m = CAMP_MILE_FIRST;
+  while(lv >= m){ m = (m === CAMP_MILE_FIRST) ? CAMP_MILE_SECOND : m * 2; }
+  return m;
+}
 function campUpgLv(k){ const C = campState(); return (C && C.upg && C.upg[k]) | 0; }
 // 업그레이드 비용 — ⛔ 값은 여기 한 곳에서만 (campCost 와 같은 원칙)
 function campUpgCost(k){
+  const lv = campUpgLv(k);
   const base = (k === 'tap') ? CAMP_TAP_COST0 : CAMP_GAT_COST0;
-  return Math.max(1, Math.ceil(base * Math.pow(CAMP_PRICE, campUpgLv(k)) * campUpgDisc()));   // 🌳 업그레이드 비용
+  const r0 = CAMP_COST_R0[k] || CAMP_COST_R0.gather, r1 = CAMP_COST_R1[k] || CAMP_COST_R1.gather;
+  const knee = Math.min(lv, CAMP_COST_KNEE);                    // Lv10 까지는 완만하게, 그 뒤로 가팔라진다
+  const cost = base * Math.pow(r0, knee) * Math.pow(r1, Math.max(0, lv - CAMP_COST_KNEE));
+  return Math.max(1, Math.ceil(cost * campUpgDisc()));           // 🌳 업그레이드 비용
 }
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
   // 🌳 트리 — 「탭당 미네랄」은 절대값을 더하고(초반 단축), 「탭 배수」는 곱한다
   const add = campRtHas('tap') > 0 ? CAMP_RT_LADDER[Math.min(5, campRtHas('tap'))] : 0;
-  return Math.max(1, Math.round((CAMP_TAP_BASE * Math.pow(CAMP_GROW, campUpgLv('tap')) + add)
+  const lv = campUpgLv('tap');
+  const base = (CAMP_TAP_BASE + CAMP_TAP_STEP * lv) * campMileMul(lv);   // 선형 × 마일스톤(HUNT_R1 §1)
+  return Math.max(1, Math.round((base + add)
     * campMineMul() * campRebMul() * campRtMul('tapMul')));
 }
-// 일꾼 채취 배수 — 일꾼 **수**로는 못 올린다(실측: 12기 26.8/초에서 천장. 300기도 26.8).
-//   광맥 6덩이가 한 번에 한 명씩만 캐서 나머지는 줄을 선다. 그래서 **1회 채취량**을 올린다.
+// 일꾼 효율 — **왕복 1회당** 배수(HUNT_R1 §1). Lv0 = 1.0 이라 기준선이 바뀌지 않는다.
+// ⚠ 일꾼 **수**로 올리는 축은 따로 산다 — 광맥 cap 을 5로 열어 두었다(CAMP_MINE_CAP).
+//   그 전에는 덩이당 1명이라 12기 26.8/초에서 천장이었고 일꾼을 뽑아도 소용이 없었다.
+//   지금은 실측 40기 137/초로 일꾼 수에 선형이다(scripts/camp-gather-bench.mjs).
 function campGatherMul(){ const C = campState(); if(!C) return 1;
-  return Math.pow(CAMP_GROW, campUpgLv('gather')) * campMineMul() * campRebMul() * campRtMul('gather'); }
+  const lv = campUpgLv('gather');
+  return (1 + CAMP_GAT_STEP * lv) * campMileMul(lv)
+    * campMineMul() * campRebMul() * campRtMul('gather'); }
 // 눌린 곳이 광맥인가 — 맞으면 캐고 true
 function campTapAt(clientX, clientY){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
@@ -1376,7 +1420,23 @@ function campAutoGather(){
   if(!mins.length) return 0;
   const idle = (G.tech.ents || []).filter(function(w){
     return w.type === 'worker' && w.build == null && !w._gKind; });
-  for(const w of idle) _techAssignGatherMineral([w], mins[0].eid);
+  if(!idle.length) return 0;
+  // ⛏ **덩이별로 고르게 나눈다.** 예전에는 전부 mins[0] 한 곳에 몰아넣었고,
+  //   원본의 분산(_techAssignGatherMineral)은 cap 을 모르는 채 "차 있나"만 보므로
+  //   일꾼이 많아지면 한 덩이에 쌓여 줄만 섰다 — 실측: 20기·40기에서 수입이 **0** 이었다.
+  //   지금 배정 수를 세어 가장 적은 덩이에 붙인다.
+  const cnt = new Map();
+  for(const m of mins) cnt.set(m.eid, 0);
+  for(const w of (G.tech.ents || [])){
+    if(w.type === 'worker' && w._gKind === 'mineral' && cnt.has(w._gEid))
+      cnt.set(w._gEid, cnt.get(w._gEid) + 1);
+  }
+  for(const w of idle){
+    let best = mins[0], bn = cnt.get(best.eid) || 0;
+    for(const m of mins){ const n = cnt.get(m.eid) || 0; if(n < bn){ best = m; bn = n; } }
+    _techAssignGatherMineral([w], best.eid);
+    cnt.set(best.eid, bn + 1);
+  }
   return idle.length;
 }
 
@@ -1442,6 +1502,7 @@ function campFrame(now){
     campCombatStep(dt);                                           // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
+    campSyncHire(); campSyncSupply();                              // 👷🏠 일꾼·보급소 다음 가격(보유 수에 따라)
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
   } finally { _campRectC = null; }   // ⛔ 프레임 밖으로 캐시를 들고 나가지 않는다(이벤트 핸들러가 낡은 값을 본다)
   _campRAF = requestAnimationFrame(campFrame);
@@ -1802,4 +1863,100 @@ function campEmptyAt(cx, cy){
     if(Math.abs(e.x - w.x) <= cw && Math.abs(e.y - w.y) <= ch) return false;   // 유닛·일꾼·라바·알
   }
   return true;
+}
+
+// ── 👷 일꾼 고용 — 마리마다 비싸진다 (HUNT_R1 §1-1-2) ────────────────────
+// `140 × 1.65^n` · 31마리째부터 계단을 ×1.10 으로 눕힌다 · 상한 40마리 · **시작 0기**.
+// ⚠ 배수를 그대로(×1.65) 두면 40마리째가 424억이라 200회차 안에도 못 채운다 —
+//   눕혀서 7.4억(약 19회차)으로 만들었다. 일꾼 수가 「며칠짜리 벽」이 아니라 「중기 목표」다.
+// ⛔ 비용은 TECH_TREE 의 produces[].m 에 들어 있고 그건 관리자 탭·오토배틀과 **공유**다.
+//   캠프가 값을 갈아 끼우되 나갈 때 **반드시 되돌린다**(TECH_GAS 와 같은 규약).
+const CAMP_HIRE0 = 140, CAMP_HIRE_R = 1.65;      // n마리 보유 → 다음 마리 가격
+const CAMP_HIRE_KNEE = 30, CAMP_HIRE_R2 = 1.10;  // 31마리째부터 완만하게
+const CAMP_WORKER_MAX = 40;                      // 일꾼 상한
+function campHireCost(n){
+  const k = CAMP_HIRE_KNEE - 1;                  // 30마리째 = 보유 29
+  const cost = (n < k) ? CAMP_HIRE0 * Math.pow(CAMP_HIRE_R, n)
+                       : CAMP_HIRE0 * Math.pow(CAMP_HIRE_R, k) * Math.pow(CAMP_HIRE_R2, n - k);
+  return Math.max(1, Math.ceil(cost));
+}
+function campWorkerN(){
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  return (G.tech.ents || []).filter(function(e){ return e.type === 'worker'; }).length;
+}
+// ── 🏠 보급소 — 지을수록 비싸진다 (HUNT_R1 §2-2) ────────────────────────
+// `3만 × 1.20^n` · 한 채당 인구 +8 · 24채(=설계의 24레벨)에서 인구 202(본부 10 + 192).
+// ⚠ 설계 문구는 「한 채를 레벨업」이다. 지금은 **여러 채를 짓되 값이 누진**하는 형태로 넣었다 —
+//   수치(비용·인구·누적 1,177만)는 같고, 한 채 레벨업 UI 는 별도 작업이다.
+const CAMP_SUPPLY0 = 30000, CAMP_SUPPLY_R = 1.20, CAMP_SUPPLY_MAX = 24;
+function campSupplyCost(n){ return Math.max(1, Math.ceil(CAMP_SUPPLY0 * Math.pow(CAMP_SUPPLY_R, n))); }
+function campSupplyN(){
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  return (G.tech.built && G.tech.built.supply) | 0;
+}
+// 일꾼·보급소 가격을 지금 상태에 맞춰 갱신 — 매 프레임 부른다(카드가 그 값을 읽는다)
+let _campHireHome = null, _campSupHome = null;
+function campSyncSupply(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t || !t.buildings) return;
+  const b = t.buildings.find(function(x){ return x.k === 'supply'; }); if(!b) return;
+  if(!_campSupHome) _campSupHome = { b: b, m: b.m, g: b.g };
+  b.m = campSupplyCost(campSupplyN()); b.g = 0;
+}
+function campRestoreSupply(){
+  if(!_campSupHome) return;
+  _campSupHome.b.m = _campSupHome.m; _campSupHome.b.g = _campSupHome.g;
+  _campSupHome = null;
+}
+function campSyncHire(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t || !t.buildings) return;
+  const wk = (typeof TECH_WORKER !== 'undefined') ? TECH_WORKER[G.tech.race] : null; if(!wk) return;
+  let q = null;
+  for(const b of t.buildings){ const f = (b.produces || []).find(function(x){ return x.id === wk; }); if(f){ q = f; break; } }
+  if(!q) return;
+  if(!_campHireHome) _campHireHome = { q: q, m: q.m, g: q.g };
+  q.m = campHireCost(campWorkerN());
+  q.g = 0;
+}
+function campRestoreHire(){
+  if(!_campHireHome) return;
+  _campHireHome.q.m = _campHireHome.m; _campHireHome.q.g = _campHireHome.g;
+  _campHireHome = null;
+}
+// 상한 — 일꾼 40기 · 보급소 24채를 넘기지 못하게 한다.
+// ⛔ TECH_TREE 의 req 를 조작하지 않는다(「선행: undefined」 같은 안내가 나온다).
+let _campProdHome = null, _campArmHome = null;
+function campPatchArm(){
+  if(_campArmHome || typeof window === 'undefined') return;
+  const o = window.techArm; if(typeof o !== 'function') return;
+  _campArmHome = o;
+  window.techArm = function(bk){
+    if(_campOn && bk === 'supply' && campSupplyN() >= CAMP_SUPPLY_MAX){
+      if(typeof toast === 'function') toast('⛔ 보급소는 ' + CAMP_SUPPLY_MAX + '채까지(인구 202)');
+      return;
+    }
+    return o.apply(this, arguments);
+  };
+}
+function campUnpatchArm(){
+  if(!_campArmHome) return;
+  window.techArm = _campArmHome; _campArmHome = null;
+}
+function campPatchProduce(){
+  if(_campProdHome || typeof window === 'undefined') return;
+  const o = window.techDoProduce; if(typeof o !== 'function') return;
+  _campProdHome = o;
+  window.techDoProduce = function(id, bk){
+    if(_campOn && typeof TECH_WORKER !== 'undefined' && G.tech && id === TECH_WORKER[G.tech.race]
+       && campWorkerN() >= CAMP_WORKER_MAX){
+      if(typeof toast === 'function') toast('⛔ 일꾼은 ' + CAMP_WORKER_MAX + '기까지');
+      return;
+    }
+    return o.apply(this, arguments);
+  };
+}
+function campUnpatchProduce(){
+  if(!_campProdHome) return;
+  window.techDoProduce = _campProdHome; _campProdHome = null;
 }

@@ -38,7 +38,8 @@ await pg.evaluate(dg0=>{
 }, DG0);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
-  +"&& (G.tech.minerals||[]).length>0 && (G.tech.ents||[]).length>=2",
+  // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
+  +"&& (G.tech.minerals||[]).length>0 && (G.tech.ents||[]).some(e=>e.type==='bldg')",
   {timeout:30000});
 await new Promise(r=>setTimeout(r,800));
 
@@ -47,22 +48,54 @@ await pg.evaluate(()=>{
   const C=campState(); C.dg=__CB.dg0; C.cleared=0; C.earn=0; C.earnGas=0;
   campBattleClose();
   __CB.log=[]; __CB.t=0; __CB.lastRound=campRoundN(); __CB.roundT=0; __CB.stuck=0;
-  __CB.want={}; __CB.wkCap=12;
-  { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1,5)) __CB.want[b.k]=1; }
+  // ⚠ 상한은 **설계값**을 쓴다(HUNT_R1 §1). 12기로 묶어 두면 일꾼 축을 잰 것이 아니게 된다 —
+  //   광맥 cap 을 연 뒤로 일꾼 수가 수입에 선형이라(실측 40기 137/초) 여기가 결과를 좌우한다.
+  __CB.want={}; __CB.wkCap=(typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:40;
+  { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1,5)) __CB.want[b.k]=1;
+  }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
+  // ⚠ **탭은 필수다.** 시작 일꾼이 0기라(HUNT_R1 §1) 탭으로 첫 일꾼(140)을 사지 않으면
+  //   건설할 일꾼이 없어 건물도 유닛도 영영 안 생긴다 — 실측: 탭 0이면 8분 내내 D0·일꾼 0·유닛 0.
+  __CB.rate=0; __CB.taps=2;   // 초당 탭 수
+  __CB.tap=function(){ const m=(G.tech&&G.tech.minerals||[])[0]; if(!m) return;
+    for(let i=0;i<__CB.taps;i++) G.tech.credit=(G.tech.credit||0)+campTapGain(); };
   __CB.RESERVE=600;   // 건물·유닛 몫으로 남겨 두는 미네랄
-  __CB.buy=function(){ for(let g=0;g<50;g++){
-    const have=Math.floor((G.tech&&G.tech.credit)||0) - __CB.RESERVE;
-    if(have<=0) return;
-    let best=null,bc=Infinity;
-    for(const k of ['tap','gather']){ const c=campUpgCost(k); if(c<=have&&c<bc){bc=c;best=k;} }
-    if(!best) return;
-    const C=campState(); C.upg[best]=(C.upg[best]|0)+1;
-    G.tech.credit=Math.max(0,(G.tech.credit||0)-bc); } };
+  // ⭐ **투자 대비 수익(ROI)으로 산다.** 「가장 싼 것」은 성격이 같은 업그레이드가 줄지어 있던
+  //   옛 사냥터용 규약이라 캠프에서는 왜곡된다 — 실측(camp-econ-bench): 값만 보면 일꾼(3만)이
+  //   탭업(2.2만)에 계속 밀려 1시간 내내 10기에서 굳었다. BALANCE.md §3-3.
+  //   여기서는 탭·효율 둘만 고른다(일꾼·건물은 __CB.produce/build 가 맡는다).
+  __CB.buy=function(){
+    const R=__CB.rate||0;                       // 최근 초당 수입(아래 샘플러가 채운다)
+    // ⭐ **인구가 막혔으면 업그레이드를 멈추고 보급소 값을 모은다.** 안 그러면 더 싼 탭업·효율업이
+    //   3만이 모이기 전에 계속 돈을 빼가 보급소가 영영 안 지어지고, 일꾼·유닛이 인구에 갇힌다
+    //   (실측: 8.5분에 일꾼 6·유닛 4·인구 10/10 고정, 던전 진입 실패). BALANCE.md §3-3.
+    { const free=(G.tech.supCap||0)-(G.tech.sup||0), sn=G.tech.built.supply|0;
+      const smax=(typeof CAMP_SUPPLY_MAX!=='undefined')?CAMP_SUPPLY_MAX:24;
+      if(free<2 && sn<smax) return; }
+    for(let g=0;g<20;g++){
+      const have=Math.floor((G.tech&&G.tech.credit)||0) - __CB.RESERVE;
+      if(have<=0) return;
+      const C=campState(), opts=[];
+      { const L=C.upg.gather|0, cur=campGatherMul();
+        C.upg.gather=L+1; const nxt=campGatherMul(); C.upg.gather=L;
+        opts.push({k:'gather', c:campUpgCost('gather'), d:R*(nxt/cur-1)}); }
+      { const L=C.upg.tap|0, cur=campTapGain();
+        C.upg.tap=L+1; const nxt=campTapGain(); C.upg.tap=L;
+        opts.push({k:'tap', c:campUpgCost('tap'), d:(nxt-cur)*__CB.taps}); }   // 탭은 누르는 만큼만 값어치
+      const ok=opts.filter(o=>o.c<=have&&o.d>0).sort((a,b)=>(b.d/b.c)-(a.d/a.c));
+      if(!ok.length) return;
+      const pick=ok[0];
+      C.upg[pick.k]=(C.upg[pick.k]|0)+1;
+      G.tech.credit=Math.max(0,(G.tech.credit||0)-pick.c); } };
   // 자동 건설 — 트리 순서대로, 선행이 맞고 돈이 되면 짓는다
   __CB.build=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
+    // 🏠 인구가 막혔으면 보급소를 한 채 더 — 그게 일꾼·유닛 축을 여는 유일한 길이다.
+    //   ⛔ want.supply 를 24 로 못 박지 말 것: build 가 보급소만 계속 짓느라 병영까지 못 간다.
+    { const free=(G.tech.supCap||0)-(G.tech.sup||0), sn=G.tech.built.supply|0;
+      const smax=(typeof CAMP_SUPPLY_MAX!=='undefined')?CAMP_SUPPLY_MAX:24;
+      if(free<2 && sn<smax) __CB.want.supply=sn+1; }
     for(const b of T.buildings){
       if(b.k===T.buildings[0].k) continue;                 // 본부는 이미 있다
       if((G.tech.built[b.k]|0) >= (__CB.want[b.k]|0)) continue;
@@ -117,7 +150,7 @@ await pg.evaluate(()=>{
           round:campRoundN(), ore:Math.round(G.tech.minerals.reduce((a,m)=>a+(m.amount||0),0)),
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
-      if((i%20)===0){ const w=campWealth();
+      if((i%20)===0){ __CB.tap(); const w=campWealth();
         if(!__CB.gateT && w>=1e6) __CB.gateT=__CB.t;
         if(__CB.t-(__CB.lastSample||0) >= 15){ __CB.lastSample=__CB.t;
           __CB.wealth.push({ t:+__CB.t.toFixed(0), w:Math.round(w), dg:campDgN(), r:campRoundN(),
@@ -125,6 +158,7 @@ await pg.evaluate(()=>{
             ore:Math.round((G.tech&&G.tech.minerals||[]).reduce((a,m)=>a+(m.amount||0),0)),
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
             un:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='unit').length });
+          __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
       if((i%40)===0){ __CB.build(); __CB.produce(); __CB.buy();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
@@ -138,7 +172,7 @@ await pg.evaluate(()=>{
           earn:Math.round(campWealth()), diff:campFoeDiff(campDgN(), Math.max(0,r-1)) });
         __CB.lastRound=r; __CB.roundT=0; __CB.stuck=0;
         if(!__CB.gateT && campWealth()>=1e6) __CB.gateT=__CB.t;
-      } else if(__CB.roundT>120){ __CB.stuck++; __CB.roundT=0; }
+      } else if(__CB.roundT>120 && campDgN()>0){ __CB.stuck++; __CB.roundT=0; }   // ⚠ D0(캠프)엔 라운드가 없다 — 거기서 세면 오작동한다
     } };
 });
 

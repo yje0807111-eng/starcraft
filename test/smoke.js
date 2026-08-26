@@ -696,7 +696,18 @@ async function groupLobby(){
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
     assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
     assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
-    assert((G.tech.ents||[]).filter(e=>e.type==='worker').length>=1,'일꾼이 없음');
+    // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
+    //    ⛔ techUIInit 이 깔아 두는 1기를 되살리지 말 것. 「일꾼을 사는 것」이 첫 목표다.
+    assert((G.tech.ents||[]).filter(e=>e.type==='worker').length===0,
+      '시작 일꾼이 0기가 아니다: '+(G.tech.ents||[]).filter(e=>e.type==='worker').length);
+    // 다음 마리 가격이 보유 수에 따라 오른다 — 140 × 1.65^n (31마리째부터 ×1.10 · 상한 40)
+    assert(campHireCost(0)===140,'첫 일꾼 가격이 140 이 아니다: '+campHireCost(0));
+    assert(campHireCost(1)>campHireCost(0),'일꾼 가격이 안 오른다');
+    { const c30=campHireCost(29), c40=campHireCost(39);
+      assert(c30>2.7e8&&c30<3.0e8,'30마리째가 설계(2.83억)와 다르다: '+c30);
+      assert(c40>7.0e8&&c40<7.8e8,'40마리째가 설계(7.4억)와 다르다: '+c40);
+      // ⭐ 31마리째부터 계단이 눕는다 — 안 그러면 40마리째가 424억이라 200회차에도 못 채운다
+      assert(c40/c30 < 3,'후반 계단이 안 눕었다(×1.10 이어야): '+(c40/c30).toFixed(1)+'배'); }
     // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
     const M=G.tech.minerals||[];
     assert(M.length===6,'광맥이 6개가 아님: '+M.length);
@@ -871,7 +882,11 @@ async function groupLobby(){
       window.renderBuildTab=orig;
       assert(m===0,'프레임 제한이 안 걸린다 — 2ms 간격 5회에 '+m+'번 그렸다(0이어야 한다)'); }
     // ⊘ 지정 해제 버튼 — 관리자 건설 탭과 같은 것(techPanelRender 가 .on 을 토글한다).
-    { const dz=$('btDesel'), wk=G.tech.ents.find(e=>e.type==='worker');
+    { const dz=$('btDesel');
+      // ⚠ 시작 일꾼이 0기다(HUNT_R1 §1) — 고를 대상이 있어야 하므로 하나 들여놓는다
+      if(!G.tech.ents.some(e=>e.type==='worker')){ const _b1=G.tech.ents.find(e=>e.type==='bldg');
+        G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:_b1.x, y:_b1.y+0.03}); }
+      const wk=G.tech.ents.find(e=>e.type==='worker');
       G.tech.selU=[]; G.tech.sel=null; techUIRender();
       assert(getComputedStyle(dz).display==='none','아무것도 안 골랐는데 ⊘ 가 떠 있다');
       G.tech.selU=[wk.eid]; G.tech.sel=null; techUIRender();
@@ -883,7 +898,8 @@ async function groupLobby(){
     //   원본이 이미 그렇게 한다(17-build-cards.js 의 _shown 에 arm==null). 캠프가 시트를 늘
     //   열어 두므로, 그 강제 열기가 이 동작을 덮어쓰지 않는지 본다.
     { const sh2=$('btSheet'), spin=n=>{ for(let i=0;i<n;i++) campFrame(performance.now()+i*33); };
-      const keep={m:G.tech.credit,g:G.tech.energy}; G.tech.credit=9999; G.tech.energy=9999;
+      // ⚠ 넉넉히 — 캠프 건물값은 설계 곡선을 탄다(보급소 3만부터 · HUNT_R1 §2-2)
+      const keep={m:G.tech.credit,g:G.tech.energy}; G.tech.credit=1e9; G.tech.energy=1e9;
       const bs=TECH_TREE[G.tech.race].buildings, bk=(bs.find(x=>!x.addonTo&&x.k!==bs[0].k)||{}).k;
       campSyncSheet(); spin(3);
       assert(sh2.classList.contains('open'),'전제가 바뀜: 배치 전에 시트가 안 열려 있다');
@@ -979,6 +995,9 @@ async function groupLobby(){
           fire(pid,'pointerup',q.x,q.y); spin(5); return q; };
         const t3=techViewT(); t3.zoom=1; t3.x=0.5; t3.y=0.5; _techClampView(t3); spin(40);
         campPanMode(false); spin(2);
+        // ⚠ 시작 일꾼이 0기다(HUNT_R1 §1) — 조작 검사용으로 하나 들여놓는다
+        if(!G.tech.ents.some(e=>e.type==='worker')){ const _b0=G.tech.ents.find(e=>e.type==='bldg');
+          G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:_b0.x, y:_b0.y+0.03}); }
         const wk=G.tech.ents.find(e=>e.type==='worker');
         const bd=G.tech.ents.find(e=>e.type==='bldg');
         const mnn=G.tech.minerals[0];
@@ -1504,26 +1523,47 @@ async function groupLobby(){
       S.dg=d0; S.cleared=c0; S.upg.tap=0;
       const want=CAMP_MINE[2].base/CAMP_MINE[0].base;
       assert(Math.abs(g2/g0-want)<0.02,'던전 배수가 탭에 안 걸림: '+(g2/g0).toFixed(3)+' (기대 '+want+')'); }
-    // ⑤-b ⭐ **폭주 방지 불변식 — 비용 계단이 획득 계단보다 가팔라야 한다.**
-    //    같거나 낮으면 「다음 레벨까지 필요한 탭 수」가 0 으로 수렴해 누를수록 쉬워진다.
-    //    실측: 비용이 선형이면 21초, ×1.5 면 23초, ×2 면 299초 만에 레벨 60(탭당 10^18).
-    //    ⛔ 이 검사를 풀지 말 것 — BALANCE.md §0 「지수 축이 둘이면 폭주」가 이 자리다.
-    assert(CAMP_PRICE > CAMP_GROW,
-      '비용 계단(×'+CAMP_PRICE+')이 획득 계단(×'+CAMP_GROW+')보다 가파르지 않다 — 폭주한다');
-    { const S=campState(); S.upg.tap=0;
-      const g0=campTapGain(), c0=campUpgCost('tap');
-      S.upg.tap=1; const g1=campTapGain(), c1=campUpgCost('tap');
-      S.upg.tap=0;
-      assert(Math.abs(g1/g0-CAMP_GROW)<0.01,'획득 계단이 '+CAMP_GROW+'배가 아님: '+(g1/g0).toFixed(2));
-      assert(Math.abs(c1/c0-CAMP_PRICE)<0.06,'비용 계단이 '+CAMP_PRICE+'배가 아님: '+(c1/c0).toFixed(2));
-      // 레벨이 올라도 「다음 레벨까지 탭 수」가 줄지 않는다
-      const taps=(n)=>{ S.upg.tap=n; const t=campUpgCost('tap')/campTapGain(); S.upg.tap=0; return t; };
-      assert(taps(10)>taps(0) && taps(20)>taps(10),
-        '레벨이 오를수록 레벨업이 쉬워진다(폭주): '+taps(0).toFixed(1)+' → '+taps(10).toFixed(1)+' → '+taps(20).toFixed(1)); }
-    // ⑤-c 일꾼 축은 **채취량**으로 오른다 — 일꾼 수로는 12기에서 천장(실측 26.8/초, 300기도 26.8)
+    // ⑤-b ⭐ **폭주 방지 불변식 — 레벨이 올라도 레벨업이 쉬워지지 않는다.**
+    //    이 게임의 지수 축은 **던전 배율(2^d)과 환생 배율** 둘이다. 레벨까지 지수로 두면
+    //    셋이 되어 BALANCE.md §0 폭주 조건에 걸린다 — 그래서 레벨은 **다항**이다
+    //    (효과 = 선형 × 마일스톤 ≈ 0.002L², 비용 = 완만한 지수). HUNT_R1.md §1.
+    //    ⛔ 이 검사를 풀지 말 것. 재는 기준은 「다음 레벨까지 몇 탭인가」이고, 그 값이 늘어야 한다.
+    //    ⚠ 곡선은 **U자**다 — 초반엔 효과(선형)가 비용(완만한 지수)보다 빨리 늘어 레벨업이
+    //      쉬워지고(실측 탭 70 → 15탭), 무릎(Lv10)을 지나면 비용이 이겨 가팔라진다(43 → 736).
+    //      그게 정상이다. **보는 것은 최소점 이후가 단조 증가하는가** 하나다.
+    { const S=campState(); const taps=(n)=>{ S.upg.tap=n; const t=campUpgCost('tap')/campTapGain(); S.upg.tap=0; return t; };
+      assert(taps(30)>taps(10) && taps(60)>taps(30) && taps(100)>taps(60),
+        '레벨이 오를수록 레벨업이 쉬워진다(폭주): '+[10,30,60,100].map(n=>taps(n).toFixed(1)).join(' → '));
+      const gats=(n)=>{ S.upg.gather=n; const t=campUpgCost('gather')/campGatherMul(); S.upg.gather=0; return t; };
+      assert(gats(30)>gats(10) && gats(60)>gats(30),
+        '효율도 같은 불변식이 깨졌다: '+[10,30,60].map(n=>gats(n).toFixed(1)).join(' → ')); }
+    // ⑤-b-2 효과는 **선형**, 비용은 **완만한 지수**, 곱셈은 **마일스톤**이 맡는다
+    { const S=campState();
+      const tap=(n)=>{ S.upg.tap=n; const v=campTapGain(); S.upg.tap=0; return v; };
+      // 마일스톤 사이(19→20 은 계단이라 제외)에서는 레벨당 +1 로 선형이다
+      assert(tap(5)-tap(4)===tap(9)-tap(8),'탭 효과가 선형이 아니다: '+(tap(5)-tap(4))+' vs '+(tap(9)-tap(8)));
+      // 마일스톤 20 을 넘는 순간 ×2 — 「계단이 목표를 만든다」
+      assert(Math.abs(tap(20)/((1+20)) - 2) < 0.01,'Lv20 마일스톤(×2)이 안 걸린다: '+tap(20));
+      assert(campMileMul(19)===1 && campMileMul(20)===2 && campMileMul(50)===4 && campMileMul(100)===8,
+        '마일스톤 계단이 20/50/100 에서 안 오른다: '+[campMileMul(19),campMileMul(20),campMileMul(50),campMileMul(100)].join(','));
+      // ⛔ 마일스톤 배수는 Lv 에 **선형**이어야 한다(간격이 2배씩 넓어지므로). 지수가 되면 축이 셋이 된다.
+      const k1=campMileMul(100)/100, k2=campMileMul(800)/800, k3=campMileMul(6400)/6400;
+      assert(Math.abs(k1-k2)<0.01 && Math.abs(k2-k3)<0.01,
+        '마일스톤이 지수로 자란다 — 지수 축이 셋이 되어 폭주한다: '+[k1,k2,k3].map(v=>v.toFixed(3)).join(','));
+      // 비용 무릎 — Lv10 부터 가팔라진다
+      const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
+      assert(Math.abs(c(5)/c(4)-1.09)<0.02,'무릎 전 비용 계단이 1.09 가 아니다: '+(c(5)/c(4)).toFixed(3));
+      assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
+    // ⑤-c 일꾼 축은 **수와 효율 둘 다**로 오른다.
+    //    ⚠ 예전에는 광맥 한 덩이에 1명씩만 붙어(res.miner 단일 락) 12기 26.8/초가 천장이었고
+    //      일꾼을 뽑는 행위 자체가 무의미했다. 캠프 광맥에 cap 을 얹어 열었다(실측 40기 137/초).
     { const S=campState(); S.upg.gather=0; const m0=campGatherMul();
-      S.upg.gather=2; const m2=campGatherMul(); S.upg.gather=0;
-      assert(Math.abs(m2/m0-CAMP_GROW*CAMP_GROW)<0.01,'채취 배수가 계단대로 안 오름: '+(m2/m0).toFixed(2)); }
+      S.upg.gather=40; const m40=campGatherMul(); S.upg.gather=0;
+      assert(Math.abs(m0-1)<0.01,'효율 Lv0 은 배수 1 이어야 한다(기준선): '+m0.toFixed(3));
+      assert(m40>m0,'효율 레벨이 채취 배수를 못 올린다');
+      const mins=(G.tech&&G.tech.minerals)||[];
+      assert(mins.length&&mins.every(m=>(m.cap|0)>1),
+        '캠프 광맥에 cap 표식이 없다 — 일꾼 수 축이 다시 막힌다'); }
     // ⑥ 비용은 한 문으로만 조회한다 — 표를 갈아끼울 자리
     { const b=campCost('bldg','barracks',0);
       assert(b && b.m>0,'건물 비용 조회 실패'); assert('lv' in b,'campCost 가 레벨 인자를 안 받는다(무한 티어 대비)'); }
@@ -1536,7 +1576,13 @@ async function groupLobby(){
     // ⑧ 일꾼은 **자동으로** 광맥에 붙어 실제로 번다
     //    ⚠ 관리자 건설 탭은 사람이 클릭해야 캔다 — 캠프가 대신 눌러 주지 않으면 초당 수급이 0 이다.
     //    ⚠ 헤드리스는 rAF 가 throttle 되므로 techTick 을 직접 돌린다(hbStep 과 같은 방식).
-    { const gathering=(G.tech.ents||[]).filter(w=>w.type==='worker'&&w._gKind==='mineral').length;
+    // ⚠ 시작 일꾼이 0기다(설계) — 이 검사는 일꾼을 직접 넣고 배정만 본다
+    { const _b=G.tech.ents.find(e=>e.type==='bldg');
+      if(!(G.tech.ents||[]).some(e=>e.type==='worker'))
+        G.tech.ents.push({eid:G.tech.eseq++, type:'worker', x:_b.x, y:_b.y+0.03});
+      if(typeof campAutoGather==='function') campAutoGather();
+      for(let i=0;i<40;i++) techTick(0.05);
+      const gathering=(G.tech.ents||[]).filter(w=>w.type==='worker'&&w._gKind==='mineral').length;
       assert(gathering>=1,'일꾼이 광맥에 자동 배정되지 않음');
       const c0=G.tech.credit, DT=1/30;
       for(let i=0;i<60/DT;i++) techTick(DT);

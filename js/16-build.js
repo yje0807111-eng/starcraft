@@ -400,7 +400,39 @@ function _techMineralAt(wx,wy){ const cw=_techCW(),ch=_techCH(); for(const m of 
 function _techInGasZone(wx,wy){ if(techWallet()) return false;   // 오토배틀: 가스 구역 없음
   const cw=_techCW(),ch=_techCH(), x0=TECH_GRID.x0+TECH_GAS.c0*cw, x1=TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*cw, y0=techY0()+TECH_GAS.r0*ch, y1=techY0()+(TECH_GAS.r0+TECH_GAS.h)*ch; return wx>=x0&&wx<=x1&&wy>=y0&&wy<=y1; }   // ⛽ 가스 광산 구역 안?
 function _techGatherRes(w){ if(w._gKind==='mineral') return (G.tech.minerals||[]).find(m=>m.eid===w._gEid)||null; if(w._gKind==='gas'){ const gb=G.tech.ents.find(e=>e.eid===w._gEid&&e.type==='bldg'); return (gb&&gb.bt<=0)?gb:null; } return null; }
-function _techReleaseGather(w){ for(const m of (G.tech.minerals||[])){ if(m.owner===w.eid) m.owner=null; if(m.miner===w.eid) m.miner=null; }   // 배정·채취락 반환
+// ⛏ 광맥 채취락 — **한 덩이에 몇 명까지 붙나.** `res.cap` 이 없으면 1이라 관리자 탭·오토배틀은
+//   기존과 똑같이 굴러간다. 캠프만 cap 을 얹어 여러 명이 동시에 캔다(19-camp.js) —
+//   `m.inf`(무제한 광맥)와 같은 수법이다.
+// ⚠ 왜 필요한가: 락이 1이면 광맥 6덩이 = 동시 6명이 상한이라 **일꾼을 아무리 뽑아도 수입이
+//   안 는다**(실측: 12기 26.8/초 · 300기도 26.8). 일꾼 축이 통째로 죽는다.
+// `res.miner` 는 그대로 둔다 — 다른 코드가 "지금 캐는 사람"으로 읽는다.
+const TECH_MINE_CROWD = 0.05;   // 광맥이 cap 을 넘을 때 1명당 채취 시간 증가율(HUNT_R1 §1)
+function _techMinerCap(res){ const c = res && res.cap | 0; return c > 1 ? c : 1; }
+function _techMinerHas(res, eid){ return !!(res && res._miners && res._miners.indexOf(eid) >= 0); }
+function _techMinerN(res){ return (res && res._miners) ? res._miners.length : (res && res.miner != null ? 1 : 0); }
+function _techMinerFull(res, eid){
+  if(_techMinerHas(res, eid)) return false;                       // 이미 붙어 있으면 자리 있음
+  // ⭐ cap 이 붙은 광맥(캠프)은 **막지 않는다** — cap 을 넘으면 대기가 아니라 **왕복이 느려진다**
+  //   (HUNT_R1 §1: 덩이당 5기까지 제 속도, 초과분마다 +5%). 막아 버리면 일꾼 상한이
+  //   6덩이×5=30 으로 굳어 설계의 40마리가 뜻을 잃는다.
+  if(_techMinerCap(res) > 1) return false;
+  return _techMinerN(res) >= 1;                                   // 관리자 탭·오토배틀 = 기존 1명 락 그대로
+}
+// 초과 인원만큼 채취가 느려진다 — cap 이하면 1.0
+function _techMinerSlow(res){
+  const over = _techMinerN(res) - _techMinerCap(res);
+  return over > 0 ? (1 + TECH_MINE_CROWD * over) : 1;
+}
+function _techMinerAdd(res, eid){
+  if(!res._miners) res._miners = [];
+  if(res._miners.indexOf(eid) < 0) res._miners.push(eid);
+  res.miner = eid;
+}
+function _techMinerDel(res, eid){
+  if(res._miners){ const i = res._miners.indexOf(eid); if(i >= 0) res._miners.splice(i, 1); }
+  if(res.miner === eid) res.miner = (res._miners && res._miners[0] != null) ? res._miners[0] : null;
+}
+function _techReleaseGather(w){ for(const m of (G.tech.minerals||[])){ if(m.owner===w.eid) m.owner=null; _techMinerDel(m, w.eid); }   // 배정·채취락 반환
   for(const e of G.tech.ents){ if(e.type==='bldg'&&e._gasWorker===w.eid) e._gasWorker=null; }
   w._gKind=null; w._gEid=null; w._gSt=null; w._working=false; w._ghost=false; w._gSpot=null; w._gDep=false; w._inGas=false; w._gBaseSpot=null; w._forceCC=null; w._dropEid=null; }   // _carry·_cKind는 유지 — 수동 이동해도 들고 있던 자원 안 사라짐(반납/교체 시에만 해제)
 // 자원 상자(미네랄 1×1 / 가스건물 발판) 가장자리에 딱 붙는 채취 지점 — 이상적으로는 (fromX,fromY) 쪽 면,
@@ -535,16 +567,19 @@ function _techGatherTick(dt){ let dep=false, any=false;
     if(w._gSt==='go'){
       if(!w._gSpot) _techGatherGoto(w,res,{x:w.x,y:w.y});
       const gdx=w._gSpot.x-w.x, gdy=w._gSpot.y-w.y, d=Math.hypot(gdx,gdy);
-      if(d<=0.008){ const miner=(w._gKind==='mineral')?res.miner:res._gasWorker;   // 채취 지점 도착 → 채취락(1마리씩). 스냅 없음(걸어서 이미 붙음)
-        if(miner==null||miner===w.eid){ if(w._carry){ w._carry=false; w._cKind=null; w._cEid=null; }   // 다른 종류를 들고 왔으면 광산에서 폐기(교체 채취 시작)
-          if(w._gKind==='mineral') res.miner=w.eid; else { res._gasWorker=w.eid; w._inGas=true; } w._gSt='mine'; w._gT=(w._gKind==='gas'?TECH_GAS_T:TECH_MINE_T); w.tx=null; w.ty=null; w._wp=null; w._working=true; }
+      if(d<=0.008){ const _full=(w._gKind==='mineral') ? _techMinerFull(res, w.eid)
+          : (res._gasWorker!=null && res._gasWorker!==w.eid);   // 채취 지점 도착 → 채취락(광맥은 res.cap 명까지 · 가스는 1명). 스냅 없음(걸어서 이미 붙음)
+        if(!_full){ if(w._carry){ w._carry=false; w._cKind=null; w._cEid=null; }   // 다른 종류를 들고 왔으면 광산에서 폐기(교체 채취 시작)
+          if(w._gKind==='mineral') _techMinerAdd(res, w.eid); else { res._gasWorker=w.eid; w._inGas=true; } w._gSt='mine';
+          w._gT=(w._gKind==='gas'?TECH_GAS_T:(TECH_MINE_T*_techMinerSlow(res)));   // 💎 붐비면 그만큼 느리게(_techMinerSlow)
+          w.tx=null; w.ty=null; w._wp=null; w._working=true; }
         else { w.tx=null; w.ty=null; w._wp=null; w._working=false; const k2=Math.min(1,dt*6); w.x+=gdx*k2; w.y+=gdy*k2; } }   // 선점됨 → 스르륵 모여 겹쳐 대기(교대·유령)
       else if(w.tx==null){ if(d<=0.07){ const st=Math.min(d,0.42*dt); w.x+=gdx/d*st; w.y+=gdy/d*st; w.face=Math.atan2(gdx,gdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음(순간이동 X)
         else _techRoute(w, w._gSpot.x, w._gSpot.y); } }
     else if(w._gSt==='mine'){ w._working=true; const fx=res.x-w.x, fy=res.y-w.y; if(fx*fx+fy*fy>1e-6) w.face=Math.atan2(fx,fy);
       if(w._gSpot){ const k2=Math.min(1,dt*10); w.x+=(w._gSpot.x-w.x)*k2; w.y+=(w._gSpot.y-w.y)*k2; }   // 채취 중 지점에 부드럽게 정착
       w._gT-=dt;
-      if(w._gT<=0){ if(w._gKind==='mineral'){ if(res.miner===w.eid) res.miner=null; } else { if(res._gasWorker===w.eid) res._gasWorker=null; w._inGas=false; }   // 채취 완료 → 채취락 반환·운반(가스=건물서 나옴)
+      if(w._gT<=0){ if(w._gKind==='mineral'){ _techMinerDel(res, w.eid); } else { if(res._gasWorker===w.eid) res._gasWorker=null; w._inGas=false; }   // 채취 완료 → 채취락 반환·운반(가스=건물서 나옴)
         w._carry=true; w._cKind=w._gKind; w._cEid=w._gEid; w._gSt='back'; w._working=false;
         const forceB=(w._forceCC!=null)?_techCCList().find(c=>c.eid===w._forceCC):null;   // 수동 + 강제 소속(접지 상태일 때만) 우선 반납
         const drop0=forceB||_techNearestCC(w.x,w.y)||mainB; w._dropEid=drop0?drop0.eid:null;   // 그 외엔 가장 가까운 CC → 더 가까운 CC가 생기면 다음 왕복부터 자동 이동
