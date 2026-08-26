@@ -1105,6 +1105,24 @@ async function groupLobby(){
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
   // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
   //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.
+  // ⭐ 캠프 광맥은 마르지 않는다 — 방치형이라 5분에 경제가 죽으면 게임이 끝난다
+  await step('캠프 광맥: 마르지 않는다', async()=>{
+    skipIf(typeof campLayMinerals!=='function','캠프 광맥 없음');
+    const keep=G.tech;
+    try{
+      techUIInit('union'); campLayMinerals();
+      const M=G.tech.minerals; assert(M && M.length,'캠프 광맥이 안 깔림');
+      assert(M.every(m=>m.inf===true),'캠프 광맥에 무제한 표식이 없다 — 5분이면 마른다');
+      // 저장/복원을 거쳐도 표식이 남는가(옛 저장에서 마른 광맥도 되살아나는가)
+      const C=campState(); const bk=C.minerals;
+      C.minerals=M.map(m=>({eid:m.eid,x:m.x,y:m.y,amount:0,owner:null,miner:null}));   // 마른 옛 저장
+      campRestore();
+      assert(G.tech.minerals.every(m=>m.inf===true),'복원 뒤 무제한 표식이 사라졌다');
+      assert(G.tech.minerals.every(m=>m.amount>0),'옛 저장의 마른 광맥이 안 되살아났다');
+      C.minerals=bk;
+      return '광맥 '+M.length+'덩이 전부 무제한 · 복원해도 유지';
+    } finally { G.tech=keep; } });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
@@ -1299,7 +1317,13 @@ async function groupLobby(){
       // ③ 남은 것보다 많이 가져가지 않는다 — 잔량이 음수가 되면 안 된다
       arm(3); run();
       assert(node.amount>=0,'잔량이 음수가 됐다: '+node.amount);
-      return '넉넉하면 지급 · 고갈이면 0 · 잔량 음수 없음';
+      // ④ ⭐ inf 광맥은 **줄지도 않고 계속 준다** — 캠프가 이렇게 깐다
+      node.inf=true; arm(TECH_MINE_START);
+      let inf=0; for(let i=0;i<10;i++){ arm(node.amount); inf+=run(); }
+      assert(inf>0,'무제한 광맥인데 안 준다');
+      assert(node.amount===TECH_MINE_START,'무제한 광맥이 줄었다: '+node.amount);
+      node.inf=false;
+      return '넉넉하면 지급 · 고갈이면 0 · 무제한(inf)은 안 줄고 계속 준다';
     } finally { G.tech=keep; } });
 
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{

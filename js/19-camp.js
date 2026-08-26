@@ -663,7 +663,10 @@ function campLayMinerals(){
   for(let r = 0; r < CAMP_MINE_ROWS; r++) for(let c = 0; c < CAMP_MINE_COLS; c++)
     G.tech.minerals.push({ eid:G.tech.eseq++,
       x: x0 + c * cw, y: y0 + r * ch,
-      amount: TECH_MINE_START, owner:null, miner:null });
+      // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
+      //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
+      //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.
+      amount: TECH_MINE_START, inf: true, owner:null, miner:null });
 }
 // 본부·일꾼을 하단으로 옮긴다 — techUIInit 은 관리자 자리(0.5, 0.3)에 놓는다.
 // ⛔ 16-build.js 를 고치지 않는다. 놓인 것을 캠프가 옮긴다(오토배틀의 strikeTechLayout 과 같은 결).
@@ -830,7 +833,7 @@ function campSave(){
   C.units = campClean(T.units); C.research = campClean(T.research);
   C.sup = T.sup || 0; C.supCap = T.supCap || 0; C.eseq = T.eseq || 1;
   C.ents = (T.ents || []).map(campClean);
-  C.minerals = (T.minerals || []).map(function(m){ return { eid:m.eid, x:m.x, y:m.y, amount:m.amount, owner:null, miner:null }; });
+  C.minerals = (T.minerals || []).map(function(m){ return { eid:m.eid, x:m.x, y:m.y, amount:m.amount, inf:true, owner:null, miner:null }; });   // 캠프 광맥은 마르지 않는다
   if(typeof saveMeta === 'function') saveMeta();
 }
 // 저장분이 있으면 통째로 덮어쓴다. 없으면 false — 호출부가 새 판으로 이어 간다.
@@ -843,7 +846,7 @@ function campRestore(){
   T.units = Object.assign({}, C.units); T.research = Object.assign({}, C.research);
   T.sup = C.sup || 0; T.supCap = C.supCap || 0; T.eseq = C.eseq || 1;
   T.ents = C.ents.map(function(e){ return Object.assign({}, e); });
-  T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m); });
+  T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m, { inf:true, amount:(m.amount>0?m.amount:TECH_MINE_START) }); });   // 옛 저장(마른 광맥)도 되살린다
   T.sel = null; T.selU = []; T.arm = null; T.pend = [];   // 선택·배치 중이던 것은 이어받지 않는다
   return true;
 }

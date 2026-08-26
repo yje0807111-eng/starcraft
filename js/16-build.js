@@ -566,10 +566,13 @@ function _techGatherTick(dt){ let dep=false, any=false;
         //    캠프 실측에서 잔량 0 인 채로 초당 9,236 을 벌었다(BALANCE.md §3-2).
         //    ⚠ 잔량 그릇을 못 찾은 경우(_sm/_sg 없음)는 예전대로 전액 준다 — 그 경로까지 바꾸면
         //       관리자 탭·오토배틀의 다른 채취 흐름을 건드리게 된다.
+        //    ⭐ `m.inf` 가 붙은 광맥은 **줄지 않는다**(캠프가 그렇게 깐다 — 19-camp.js).
+        //       관리자 건설 탭은 잔량 %를 화면에 보여주는 기능이 있으므로 거기는 그대로 줄어든다.
         if(_ck==='mineral'){ const _sm=(G.tech.minerals||[]).find(m=>m.eid===_ce)||((w._gKind==='mineral')?res:null);
-          const _got=_sm ? Math.min(TECH_GATHER_AMT, Math.max(0,_sm.amount||0)) : TECH_GATHER_AMT;
+          const _inf=!!(_sm&&_sm.inf);
+          const _got=(_sm&&!_inf) ? Math.min(TECH_GATHER_AMT, Math.max(0,_sm.amount||0)) : TECH_GATHER_AMT;
           if(!G.tech.inf) G.tech.credit+=_got;
-          if(_sm) _sm.amount=Math.max(0,(_sm.amount||0)-_got); }
+          if(_sm&&!_inf) _sm.amount=Math.max(0,(_sm.amount||0)-_got); }
         else { const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null);
           const _got=_sg ? Math.min(TECH_GATHER_AMT, Math.max(0,_techGasRemain())) : TECH_GATHER_AMT;
           if(!G.tech.inf) G.tech.energy+=_got;

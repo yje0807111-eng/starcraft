@@ -45,7 +45,6 @@ await pg.evaluate(()=>{
   { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1,5)) __CB.want[b.k]=1; }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
-  // 자동 구매 — 살 수 있는 캠프 업그레이드 중 가장 싼 것
   __CB.RESERVE=600;   // 건물·유닛 몫으로 남겨 두는 미네랄
   __CB.buy=function(){ for(let g=0;g<50;g++){
     const have=Math.floor((G.tech&&G.tech.credit)||0) - __CB.RESERVE;
@@ -92,7 +91,11 @@ await pg.evaluate(()=>{
       __CB.t+=dt; __CB.roundT+=dt;
       if((i%20)===0 && typeof campAutoGather==='function'){ try{ campAutoGather(); }catch(e){} }
       if((i%10)===0 && G.tech){ const wk=G.tech.ents.filter(e=>e.type==='worker').length;
-        if(__CB.prevWk>2 && wk===0 && !__CB.vanish){ __CB.vanish={ t:+__CB.t.toFixed(1), dg:campDgN(),
+        if(__CB.prevWk>2 && wk===0 && !__CB.vanish){ __CB.vanish={ t:+__CB.t.toFixed(1),
+          hasTech:!!G.tech, techEnts:(G.tech&&G.tech.ents)?G.tech.ents.length:'없음',
+          types:(G.tech&&G.tech.ents)?[...new Set(G.tech.ents.map(e=>e.type))].join(','):'-',
+          mins:(G.tech&&G.tech.minerals)?G.tech.minerals.length:'없음',
+          campOn:(typeof campIsOn==='function')?campIsOn():'-', dg:campDgN(),
           round:campRoundN(), ore:Math.round(G.tech.minerals.reduce((a,m)=>a+(m.amount||0),0)),
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
@@ -158,6 +161,7 @@ console.log('시각(초) | 위치    | 번 돈      | 초당    | 채취Lv | 탭
   for(let i=0;i<W.length;i+=step){ const w=W[i];
     console.log(`${String(w.t).padEnd(9)}| D${w.dg}R${String(w.r).padEnd(4)}| ${F(w.w).padEnd(11)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(7)}| ${String(w.tl).padEnd(5)}| ${F(w.ore).padEnd(9)}| ${String(w.wk).padEnd(5)}| ${w.un}`); } }
 if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.stringify(fin.vanish));
+
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();
