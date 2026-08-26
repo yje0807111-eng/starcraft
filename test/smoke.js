@@ -1271,6 +1271,37 @@ async function groupLobby(){
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.rbPts=back.rbPts;
       campBattleClose(); campBarReset(); campSave(); } });
 
+  // ⛏ 채취 — 남아 있는 만큼만 준다. 무한 자원이 되던 자리다(BALANCE.md §3-2 실측).
+  //   ⚠ 지급 로직을 테스트 안에서 다시 구현하지 말 것 — 그러면 코드를 되돌려도 통과한다(실제로 한 번 그랬다).
+  //     여기서는 **진짜 함수(_techGatherTick)** 를 돌려서 크레딧이 느는지 본다.
+  await step('채취: 광맥이 마르면 더 안 준다', async()=>{
+    skipIf(typeof _techGatherTick!=='function','채취 틱 없음');
+    const keep=G.tech;
+    try{
+      techUIInit('union'); G.tech.inf=false;
+      const M=G.tech.minerals; assert(M && M.length,'광맥이 없다');
+      const cc=G.tech.ents.find(e=>e.type==='bldg'); assert(cc,'본부가 없다');
+      const w=G.tech.ents.find(e=>e.type==='worker'); assert(w,'일꾼이 없다');
+      const node=M[0];
+      // 일꾼을 '자원을 들고 본부에 딱 붙은' 상태로 세운다 — 반납 지점이 바로 실행된다
+      const arm=(amount)=>{ node.amount=amount;
+        w.x=cc.x; w.y=cc.y; w.tx=null; w.ty=null; w._wp=null; w._bStuck=0; w._bPrevD=null;
+        w._carry=true; w._cKind='mineral'; w._cEid=node.eid; w._gKind='mineral'; w._gEid=node.eid;
+        w.build=null; w._gSt='back'; w._dropEid=cc.eid; w._gBaseSpot={x:w.x,y:w.y}; };
+      const run=()=>{ const c0=G.tech.credit; _techGatherTick(0.05); return G.tech.credit-c0; };
+      // ① 잔량이 넉넉하면 준다
+      arm(100); const g1=run();
+      assert(g1>0,'넉넉한데 한 푼도 안 준다 — 반납 지점을 못 탔다');
+      assert(g1<=TECH_GATHER_AMT,'한 번에 채취량보다 많이 준다: '+g1);
+      // ② ⭐ 다 마르면 **한 푼도 안 준다** — 여기가 무한 자원이던 자리다
+      let got=0; for(let i=0;i<15;i++){ arm(0); got+=run(); }
+      assert(got===0,'광맥이 0 인데 계속 번다(무한 자원): +'+got);
+      // ③ 남은 것보다 많이 가져가지 않는다 — 잔량이 음수가 되면 안 된다
+      arm(3); run();
+      assert(node.amount>=0,'잔량이 음수가 됐다: '+node.amount);
+      return '넉넉하면 지급 · 고갈이면 0 · 잔량 음수 없음';
+    } finally { G.tech=keep; } });
+
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;

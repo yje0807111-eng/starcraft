@@ -561,8 +561,19 @@ function _techGatherTick(dt){ let dep=false, any=false;
       if(bD<=0.008 || _wedged){   // 건물에 딱 붙어 도착(또는 끼임 강제 반납) → 적립
         w.tx=null; w.ty=null; w._wp=null; w._bStuck=0; w._bPrevD=null;
         const _ck=w._cKind||w._gKind, _ce=(w._cEid!=null?w._cEid:w._gEid);   // 들고 있는 자원 기준 적립(재지정 후에도 원래 캔 자원에서 차감)
-        if(_ck==='mineral'){ if(!G.tech.inf) G.tech.credit+=TECH_GATHER_AMT; const _sm=(G.tech.minerals||[]).find(m=>m.eid===_ce)||((w._gKind==='mineral')?res:null); if(_sm) _sm.amount=Math.max(0,_sm.amount-TECH_GATHER_AMT); }
-        else { if(!G.tech.inf) G.tech.energy+=TECH_GATHER_AMT; const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null); if(_sg){ G.tech.gasAmt=Math.max(0,_techGasRemain()-TECH_GATHER_AMT); _sg._gasAmt=G.tech.gasAmt; } }   // ⛽ 광산 지속 잔량에서 차감(건물엔 미러)
+        // ⛔ **남아 있는 만큼만 준다.** 예전에는 지급에 잔량 검사가 없어서, 광맥이 0 이 된 뒤에도
+        //    거기 붙은 일꾼이 왕복할 때마다 계속 벌었다 — 사실상 무한 자원이었다.
+        //    캠프 실측에서 잔량 0 인 채로 초당 9,236 을 벌었다(BALANCE.md §3-2).
+        //    ⚠ 잔량 그릇을 못 찾은 경우(_sm/_sg 없음)는 예전대로 전액 준다 — 그 경로까지 바꾸면
+        //       관리자 탭·오토배틀의 다른 채취 흐름을 건드리게 된다.
+        if(_ck==='mineral'){ const _sm=(G.tech.minerals||[]).find(m=>m.eid===_ce)||((w._gKind==='mineral')?res:null);
+          const _got=_sm ? Math.min(TECH_GATHER_AMT, Math.max(0,_sm.amount||0)) : TECH_GATHER_AMT;
+          if(!G.tech.inf) G.tech.credit+=_got;
+          if(_sm) _sm.amount=Math.max(0,(_sm.amount||0)-_got); }
+        else { const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null);
+          const _got=_sg ? Math.min(TECH_GATHER_AMT, Math.max(0,_techGasRemain())) : TECH_GATHER_AMT;
+          if(!G.tech.inf) G.tech.energy+=_got;
+          if(_sg){ G.tech.gasAmt=Math.max(0,_techGasRemain()-_got); _sg._gasAmt=G.tech.gasAmt; } }   // ⛽ 광산 지속 잔량에서 차감(건물엔 미러)
         dep=true; w._carry=false; w._cKind=null; w._cEid=null; w._gDep=true; w._gBaseSpot=null; w._forceCC=null; _techGatherGoto(w,res,{x:dropB.x,y:dropB.y}); }   // 반납 완료 → 강제 소속 해제(1회 상호작용 끝, 이후 자동 판단) · 바로 다음 왕복
       else if(w.tx==null){ if(bD<=0.07){ const st=Math.min(bD,0.42*dt); w.x+=bdx/bD*st; w.y+=bdy/bD*st; w.face=Math.atan2(bdx,bdy); }   // 경로 종료 후 남은 거리 = 걷는 속도 그대로 마저 붙음
         else _techRoute(w, w._gBaseSpot.x, w._gBaseSpot.y); } } }
