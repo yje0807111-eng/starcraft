@@ -24,6 +24,8 @@ if(!CHROME||!fs.existsSync(CHROME)){ console.error('CHROME_PATH 를 지정하세
 const b=await puppeteer.launch({executablePath:CHROME,headless:'new',args:['--mute-audio','--no-sandbox','--disable-gpu-sandbox']});
 const pg=await b.newPage(); await pg.setViewport({width:390,height:844,deviceScaleFactor:1});
 const errs=[]; pg.on('pageerror',e=>errs.push(String(e.message).slice(0,140)));
+const probes=[];
+pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.push(t.slice(10)); });
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
@@ -34,7 +36,11 @@ await pg.evaluate(dg0=>{
   const C=campState(); C.race='terran'; saveMeta(); openHome();
   window.__CB={ dg0 };
 }, DG0);
-await new Promise(r=>setTimeout(r,2500));
+await pg.waitForFunction(
+  "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
+  +"&& (G.tech.minerals||[]).length>0 && (G.tech.ents||[]).length>=2",
+  {timeout:30000});
+await new Promise(r=>setTimeout(r,800));
 
 await pg.evaluate(()=>{
   campStopFrame(); campStopTimer();          // 시계를 끄고 직접 민다
@@ -90,7 +96,19 @@ await pg.evaluate(()=>{
       campCombatStep(dt);
       __CB.t+=dt; __CB.roundT+=dt;
       if((i%20)===0 && typeof campAutoGather==='function'){ try{ campAutoGather(); }catch(e){} }
-      if((i%10)===0 && G.tech){ const wk=G.tech.ents.filter(e=>e.type==='worker').length;
+      if((i%10)===0){
+        if(!__CB.techRef) __CB.techRef=G.tech;
+        const T=G.tech;
+        if(!__CB.dead && (!T || !T.ents || T.ents.length===0)){
+          __CB.dead={ t:+__CB.t.toFixed(1),
+            hasG:(typeof G!=='undefined'), hasTech:!!T,
+            same:(T===__CB.techRef),
+            keys:T?Object.keys(T).length:'-', race:T?T.race:'-',
+            entsType:T?Object.prototype.toString.call(T.ents):'-',
+            ents:T&&T.ents?T.ents.length:'-', mins:T&&T.minerals?T.minerals.length:'-',
+            refEnts:(__CB.techRef&&__CB.techRef.ents)?__CB.techRef.ents.length:'-',
+            campOn:(typeof campIsOn==='function')?campIsOn():'-' }; } }
+      if((i%10)===0 && G.tech && G.tech.ents){ const wk=G.tech.ents.filter(e=>e.type==='worker').length;
         if(__CB.prevWk>2 && wk===0 && !__CB.vanish){ __CB.vanish={ t:+__CB.t.toFixed(1),
           hasTech:!!G.tech, techEnts:(G.tech&&G.tech.ents)?G.tech.ents.length:'없음',
           types:(G.tech&&G.tech.ents)?[...new Set(G.tech.ents.map(e=>e.type))].join(','):'-',
@@ -135,7 +153,7 @@ while(ran<MINS*60){
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);
   if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 2분 넘게 안 넘어감 — 중단\n'); break; }
 }
-const fin=await pg.evaluate(()=>({ log:__CB.log, wealth:__CB.wealth, vanish:__CB.vanish||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
+const fin=await pg.evaluate(()=>({ log:__CB.log, wealth:__CB.wealth, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth() }));
 const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
@@ -160,6 +178,9 @@ console.log('시각(초) | 위치    | 번 돈      | 초당    | 채취Lv | 탭
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
     console.log(`${String(w.t).padEnd(9)}| D${w.dg}R${String(w.r).padEnd(4)}| ${F(w.w).padEnd(11)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(7)}| ${String(w.tl).padEnd(5)}| ${F(w.ore).padEnd(9)}| ${String(w.wk).padEnd(5)}| ${w.un}`); } }
+if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
+  for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
+if(fin.dead) console.log('\n⛔ 판이 빈 순간: '+JSON.stringify(fin.dead));
 if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.stringify(fin.vanish));
 
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);

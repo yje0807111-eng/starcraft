@@ -498,6 +498,10 @@ function campBattleOpen(){
   if(typeof strikeNewState !== 'function') return null;
   const C = campState(); if(!C) return null;
   const S = strikeNewState(); const W = S.world;
+  // ⭐ **캠프 전장이라는 표식.** 오토배틀의 승패 처리(strikeCheckOver)가 이걸 보고 빠진다 —
+  //    없으면 적 본진을 부순 순간 「오토배틀 승리」 결과창이 뜨고 자동 진행이 로비까지 가서
+  //    G 를 새로 만들어 캠프 판을 통째로 날린다(실측으로 잡았다).
+  S.camp = true;
   S.me.race = C.race || 'terran';
   S.ai.race = campFoeRace(campDgN());
   S.me.base.x = W * 0.5; S.me.base.y = W * 0.86;      // 아래 = 내 본부

@@ -1196,7 +1196,19 @@ async function groupLobby(){
       campCombatStep(0.05);
       assert(campDgN()===0,'본부가 뚫렸는데 캠프로 안 감: '+campDgN());
       assert(CAMPB===null,'탈락인데 전장이 안 닫힘');
-      // ⑥ 웨이브는 라운드가 오를수록 두꺼워진다
+      // ⑥ ⭐ 캠프 전장은 오토배틀 승패 처리를 타지 않는다
+      //    안 막으면 적 본진을 부순 순간 「오토배틀 승리」 결과창이 뜨고,
+      //    자동 진행이 로비까지 가서 G=newGame() 이 캠프 판을 통째로 날린다(실측으로 잡았다).
+      { campEnterDungeon(1); campBattleClose(); campCombatStep(0.05);
+        assert(CAMPB && CAMPB.camp===true,'캠프 전장에 camp 표식이 없다');
+        const prevG=G, prevTech=G.tech, prevPhase=G.phase;
+        CAMPB.ai.base.hp=0; CAMPB.me.base.hp=0;          // 양쪽 본진을 부순다
+        campWithStk(()=>{ if(typeof strikeCheckOver==='function') strikeCheckOver(); });
+        assert(!CAMPB.over,'캠프 전장인데 오토배틀 승패가 났다: '+CAMPB.over);
+        assert(G===prevG && G.tech===prevTech,'승패 처리가 G 를 갈아엎었다');
+        assert(G.phase===prevPhase,'승패 처리가 G.phase 를 바꿨다: '+G.phase);
+        campBattleClose(); }
+      // ⑦ 웨이브는 라운드가 오를수록 두꺼워진다
       assert(campFoeCount(50)>campFoeCount(1),'웨이브가 라운드에 안 따라온다');
       return '적 '+campFoeCount(1)+'→'+campFoeCount(50)+'마리 · STK 빌리고 반납 ok';
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
