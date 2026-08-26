@@ -611,3 +611,106 @@ BACKGROUND / NEGATIVE)은 공통 블록 C 그대로다.
   전송 중 깨졌는데(2001~3000자), 1,000자 단위 md5 이분탐색으로 그 칸만 다시 받아 고쳤다.
   검사값이 없으면 21만 자를 통째로 다시 옮겨야 한다.
 - 근본 해결은 **CDN 호스트를 허용 목록에 추가**하는 것이다. 그러면 `curl` 한 번이다.
+
+---
+## 11. 캠프·던전 맵 계열 — 게임판 지면 (2026-08-27 전면 개정)
+
+**앞의 세 계열과 목적이 다르다.** 유즈맵 키 아트(§2)·타이틀(§8)·종족 전장(§10)은 **뒤에 깔리는 그림**이고,
+이것은 **유닛이 그 위를 걸어다니는 게임판**이다.
+
+| 항목 | 유즈맵 키 아트(§2) | **캠프·던전 맵** |
+|---|---|---|
+| 정체 | 팝업 뒤 배경 | **플레이 공간 그 자체** |
+| 비율 | `3:4` | **`9:16`** — 맵 화면이 390×767(비 0.508) |
+| 모델 | `soul_location` | **`gpt_image_2` · `9:16` · `2k`~`4k` · `high`** |
+| 파일 | `assets/backgrounds/usemaps/` | `camp/camp.webp` · `dungeons/dg1~10.webp` |
+| 저장 | — | 폭 **1600** 으로 리사이즈 + WebP `q82`(11장 6.4MB) |
+
+⚠ **모델을 `soul_location` 으로 되돌리지 말 것.** 같은 문장으로도 게임플레이 구조(기지 터·통로·
+가장자리)를 못 지켰다 — 세 판(9장)을 버렸다. `gpt_image_2` 는 한 번에 지켰다.
+
+### 11-1. 핵심 방법 — **0번을 먼저 뽑고, 나머지는 그것을 레퍼런스로 첨부한다**
+
+이 계열의 전부다. 스타일·색·조명·하단 기지 터를 **말로 설명하지 않는다** — 레퍼런스가 정한다.
+
+1. **0번(캠프)** 을 레퍼런스 없이 뽑는다. 마음에 들 때까지 여러 장.
+2. **1~10번(던전)** 은 그 0번 이미지를 **첨부**하고, 프롬프트는 「하단은 그대로 · 위쪽만 교체」.
+
+⛔ **후처리로 하단을 이식하지 말 것.** 한때 캠프 하단을 잘라 던전에 얹는 스크립트를 썼는데,
+자르는 선이 18px 어긋나 **캠프의 노란 흙이 딸려 가 던전 위에 초록빛 띠로 번졌다**(2026-08-27).
+레퍼런스로 뽑으면 하단이 이미 맞는다 — 손대는 순간 오히려 틀어진다.
+
+### 11-2. 그림이 곧 게임판이다
+
+지형지물이 그려진 자리는 **못 지나다니는 곳으로 읽힌다.** 그래서 그림이 규칙을 따라야 한다.
+
+1. **아래 1/3 = 기지 터.** 석판이 화면 폭을 꽉 채운다. 그 위에 아무것도 없다.
+   ⚠ **1/5 로는 모자란다** — 하단 정보판이 이미지 아래 17% 를 덮어 석판이 거의 안 보였다(실측).
+2. **가운데 세로 통로 = 적이 내려오는 길.** 캠프에도 적이 온다(`campSpawnFoes`) — 캠프를 숲으로
+   꽉 막으면 적이 나무 위를 걷는다. ⛔ 「캠프는 길 없이 숲」으로 되돌리지 말 것.
+3. **지형지물 = 좌우 가장자리와 위 모서리에만.**
+4. **덩어리 크기** — 나무·바위 하나가 **건물보다 작아야** 한다. 크면 배경이 유닛과 경쟁한다
+   (실측: 나무 하나 36px vs 본부 40px · 가스 28px · 미네랄 12px).
+
+### 11-3. 0번 프롬프트 — 캠프 (`assets/backgrounds/camp/camp.webp`)
+
+레퍼런스 없이 처음 뽑는 유일한 장이다. 이 한 장이 **11장 전체의 스타일과 색을 결정한다.**
+
+```
+A tall vertical top-down game map for a real-time strategy game, seen from directly above. The bottom third of the frame is a stone-paved base platform spanning the full width and running off both side edges, completely bare. Just above it lies a band of bare worked earth with low rocky outcrops breaking through. Above that a wide open lane of bare earth runs up the centre of the frame to the top edge, staying clear of every obstacle. All the forest is banked along the left and right margins and into the upper corners — many small rounded tree canopies packed shoulder to shoulder, low shrubs, mossy boulders and fallen trunks, each canopy much smaller than a building. Nothing is built anywhere — no huts, tents, towers or fences. STYLE: soft anime game background art, gentle airbrushed gradients, clean simple shapes with delicate highlights, the look of a stylised mobile RPG world map. No text, no logos, no user interface, no characters, no watermark.
+```
+
+### 11-4. 1~10번 프롬프트 — 던전 (0번을 첨부)
+
+`{GROUND}` 와 `{EDGE}` 두 칸만 바꾼다. 나머지는 글자 그대로 복사한다.
+
+```
+Use the attached image as the reference. Keep its bottom section exactly as it is — the same tall stone-paved base platform and the same band of worked earth above it, unchanged in shape, colour, texture and position. Match the reference exactly in art style, rendering, colour palette and lighting throughout the whole image.
+
+Replace only the area above that band: a wide open lane of bare {GROUND} runs up the centre to the top edge, clear of every obstacle, with {EDGE} banked along the left and right margins and into the upper corners. Nothing intact is standing anywhere.
+
+No text, no logos, no user interface, no characters, no watermark.
+```
+
+| n | 이름 | `{GROUND}` | `{EDGE}` |
+|---|---|---|---|
+| 1 | 감염된 둥지 | `earth` | `infested growth — rounded chitinous nodules, spore vents, mossy boulders and creeping tendrils` |
+| 2 | 버려진 전초기지 | `cracked concrete` | `ruined outpost wreckage — toppled concrete revetments, rusted cargo containers, coils of razor wire and collapsed watch posts` |
+| 3 | 잊혀진 회랑 | `polished floor stone` | `ancient ruins — fallen columns, broken floor plates and carved stone lintels` |
+| 4 | 산란장 | `damp earth` | `a breeding ground — heaped pale egg sacs, split hatched shells, glistening pools of thick slime and low fleshy mounds` |
+| 5 | 폐쇄된 시설 | `metal deck plating` | `sealed facility wreckage — locked bulkhead doors, bundled pipework, hazard-striped steel cages and torn floor grating` |
+| 6 | 봉인된 성소 | `worn temple stone` | `sanctum ruins — rune-carved altar blocks, shattered violet crystal pillars, stacked warding stones and toppled masonry` |
+| 7 | 군단의 심장 | `ash-covered ground` | `hive flesh — pulsing fleshy spires, arching bone ribs and crusted sinew` |
+| 8 | 함대 정박지 | `riveted deck plate` | `dock wreckage — heavy mooring clamps, severed fuel lines and collapsed cargo cranes` |
+| 9 | 공허의 문 | `fractured dark stone` | `warped matter — floating shards of stone, torn rifts in the air and drifting broken arches` |
+| 10 | 심연 | `black basalt` | `abyssal rock — jagged basalt outcrops, glowing fissures and drifting weightless debris` |
+
+#### ⚠ 색이 레퍼런스를 너무 따라올 때 (4·6 에서 실제로 났다)
+
+레퍼런스가 초록이면 산란장·성소까지 초록으로 나와 던전 1 과 구별이 안 됐다. **두 곳을 고친다.**
+
+- 스타일 일치에서 `colour palette` 를 **뺀다** → `Match the reference exactly in art style, rendering and lighting`
+- `{EDGE}` 뒤에 한 줄 붙인다:
+  `Shift the palette away from green: this map is <색>, and there is no vegetation, no moss and no foliage anywhere.`
+  (4번 = `sickly bone-white and yellow-ochre over wet grey mud` · 6번 = `cool violet-grey stone with pale amber rune glow`)
+
+### 11-5. 화면 배선
+
+- `#phone.campMode #cstMain .bmapFloor`(css/30-home.css) — `background-size:auto 118%` · `center bottom`.
+  118% 인 이유는 그 자리 주석이 단일 소스다.
+- `campSkin()`(js/19-camp.js) — 0단계면 `camp/camp.webp`, 그 밖에는 `dungeons/dg<n>.webp`.
+  ⛔ 캠프가 던전 1 그림을 빌려 쓰게 되돌리지 말 것(2026-08-26 에 갈랐다).
+- ⛔ `git checkout -- assets/backgrounds/dungeons/` 를 함부로 쓰지 말 것. 새로 받은 그림은 커밋
+  전까지 작업 트리에만 있어서 그 한 줄로 10장이 통째로 날아간다(2026-08-26 에 겪었다).
+
+### 11-6. 실패 기록 — 이 규칙들이 있는 이유
+
+- **정사각(1536²) 그림을 세로 화면에 억지로 맞췄다.** `auto 150%` 로 키워 위를 잘라내는 방식이라
+  **원본의 34% 만 쓰고 그걸 다시 늘렸다** — DPR 2 에서 1.5배, DPR 3 에서 2.25배 확대. 실기기에서 뭉개졌다.
+  화면 비율과 같은 세로 그림(9:16)을 그리는 것이 유일한 근본 해결이었다.
+- **`soul_location` 으로 세 판(9장)을 버렸다.** 사진풍 → 스타일은 잡았지만 구조 실패 → 기지 터가 흰 판.
+- **스타일을 형용사로 지정하다 계속 어긋났다.** `hand-painted` 를 일러스트 느낌의 원인으로 지목했다가
+  틀렸고(같은 문구로 좋은 결과가 나왔었다), 짧게 줄이면서 `clearly readable at small size` 를 빼자
+  나무가 건물만큼 커졌다. **레퍼런스 한 장이 형용사 스무 개보다 정확하다.**
+- **후처리 이식은 문제를 만들기만 했다**(§11-1 ⛔). 지금 쓰지 않는다.
+- ⛔ 심연(10)에 `near-black` · `lit only by` 를 쓰지 말 것 — 화면이 통째로 까매진다(§7 ①).

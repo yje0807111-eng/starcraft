@@ -45,7 +45,7 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
 try {
   const page = await browser.newPage();
   const isPage = WHAT.endsWith('.html');   // 임의의 페이지를 통째로 찍는 모드(시안 비교용)
-  await page.setViewport(isPage ? { width: 1640, height: 1030, deviceScaleFactor: 1 } : { width: 430, height: 880, deviceScaleFactor: 1 });
+  await page.setViewport(isPage ? { width: 1640, height: 1030, deviceScaleFactor: 1 } : { width: 430, height: 880, deviceScaleFactor: +(process.env.SHOT_DPR||1) });
   await page.goto('http://127.0.0.1:' + PORT + '/' + (isPage ? WHAT : 'sc-ums-web.html'), { waitUntil: 'domcontentloaded' });
   if (isPage) { await new Promise(r => setTimeout(r, 1200)); await page.screenshot({ path: OUT, fullPage: true });
     console.log(WHAT + ' → ' + path.basename(OUT)); await browser.close(); server.close(); process.exit(0); }
@@ -108,6 +108,23 @@ try {
         return {aboveBlack:out, canvases:cvs, blackZ:bz, blackOp:getComputedStyle(document.getElementById('titleBlack')).opacity};
       });
       console.log(JSON.stringify(info,null,1));
+      const grid=await page.evaluate(()=>{
+        const m=document.querySelector('#cstMain'); if(!m) return null;
+        const mr=m.getBoundingClientRect();
+        const f=m.querySelector('.bmapFloor'); const fr=f?f.getBoundingClientRect():null;
+        const bl=[...m.querySelectorAll('*')].filter(e=>/bBld|bUnit|bGhost|bItem/.test(e.className||''));
+        const rs=bl.map(e=>e.getBoundingClientRect()).filter(r=>r.width>4&&r.height>4);
+        const ph=document.getElementById('phone').getBoundingClientRect();
+        let infoTop=null;
+        document.querySelectorAll('#homeScreen *').forEach(e=>{ const t=(e.textContent||'');
+          if(/MY BASE/.test(t) && t.length<200){ const r=e.getBoundingClientRect(); if(r.height>20) infoTop=Math.round(r.top-ph.top); } });
+        return {phoneH:Math.round(ph.height),
+          map:{t:Math.round(mr.top-ph.top), b:Math.round(mr.bottom-ph.top)},
+          floor:fr?{t:Math.round(fr.top-ph.top), b:Math.round(fr.bottom-ph.top)}:null,
+          objs:rs.length,
+          objBand:rs.length?{t:Math.round(Math.min(...rs.map(r=>r.top))-ph.top), b:Math.round(Math.max(...rs.map(r=>r.bottom))-ph.top)}:null,
+          infoTop}; });
+      console.log('GRID '+JSON.stringify(grid));
     }
     if (WHAT === 'outro' || WHAT === 'black') {
       await page.evaluate(() => titleToBlack());          // 그림·막대를 걷어 검은 화면 + 로고
@@ -137,6 +154,69 @@ try {
     else if (WHAT === 'bg') { await page.evaluate(()=>{ window.__bg={body:getComputedStyle(document.body).backgroundColor,html:getComputedStyle(document.documentElement).backgroundColor,phone:getComputedStyle(document.getElementById('phone')).backgroundColor}; }); const r=await page.evaluate(()=>window.__bg); console.log(JSON.stringify(r)); }
     else if (WHAT === 'nav') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('upg'); navBack(); }catch(e){} }); await new Promise(r=>setTimeout(r,700)); }
     else if (WHAT === 'navsub') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('shop'); }catch(e){} }); await new Promise(r=>setTimeout(r,800)); }
+    else if (WHAT === 'camp') {   // 캠프(HOME 메인) — 맵 확대율·배경 해상도 측정
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
+      await new Promise(r=>setTimeout(r,1200));
+      await page.evaluate(()=>{ const ov=document.getElementById('campRaceOv');
+        if(ov && !ov.classList.contains('hide')){ const b=[...ov.querySelectorAll('button')].find(x=>/시작/.test(x.textContent||'')); if(b) b.click(); } });
+      await new Promise(r=>setTimeout(r,3000));
+      if(process.env.SHOT_DG) await page.evaluate((n)=>{ try{ const C=campState(); if(C){ C.dg=+n; campSkin(); } }catch(e){} }, process.env.SHOT_DG);
+      await new Promise(r=>setTimeout(r,500));
+      if(process.env.SHOT_BGPOS) await page.addStyleTag({content:'#phone.campMode #cstMain .bmapFloor{background-position:center '+process.env.SHOT_BGPOS+' !important}'});
+      if(process.env.SHOT_BGZ) await page.addStyleTag({content:'#phone.campMode #cstMain .bmapFloor{background-size:auto '+process.env.SHOT_BGZ+' !important}'});
+      await new Promise(r=>setTimeout(r,400));
+      const info=await page.evaluate(()=>{
+        const out={imgs:[],canvas:[],css:[]};
+        document.querySelectorAll('img').forEach(im=>{ const r=im.getBoundingClientRect();
+          if(r.width>40&&r.height>40) out.imgs.push({src:(im.currentSrc||im.src).split('/').slice(-2).join('/'),
+            nat:im.naturalWidth+'x'+im.naturalHeight, shown:Math.round(r.width)+'x'+Math.round(r.height),
+            zoom:+(r.width/(im.naturalWidth||1)).toFixed(2)}); });
+        document.querySelectorAll('canvas').forEach(c=>{ const r=c.getBoundingClientRect();
+          if(r.width>40) out.canvas.push({id:c.id, buf:c.width+'x'+c.height, shown:Math.round(r.width)+'x'+Math.round(r.height),
+            zoom:+(r.width/(c.width||1)).toFixed(2), dpr:window.devicePixelRatio}); });
+        document.querySelectorAll('*').forEach(el=>{ const bi=getComputedStyle(el).backgroundImage;
+          if(bi && bi!=='none' && bi.indexOf('url(')>=0){ const r=el.getBoundingClientRect();
+            if(r.width>60&&r.height>60) out.css.push({el:(el.id||el.className||el.tagName).toString().slice(0,26),
+              url:bi.slice(bi.lastIndexOf('/')+1, bi.indexOf(')')).replace(/["']/g,''),
+              size:getComputedStyle(el).backgroundSize, box:Math.round(r.width)+'x'+Math.round(r.height)}); } });
+        return out; });
+      console.log(JSON.stringify(info,null,1));
+    }
+    else if (WHAT === 'tabs') {   // 인게임 유즈맵 탭바(#tabs) — 전장 위에 얹힌 상태
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => { try{ enterSandbox(); }catch(e){} });
+      await new Promise(r=>setTimeout(r,2200));
+      await page.evaluate(()=>{   // 종족 선택이 떠 있으면 통과시킨다
+        const ov=document.getElementById('campRaceOv');
+        if(ov && !ov.classList.contains('hide')){
+          const btns=[...ov.querySelectorAll('button')];
+          const go=btns.find(b=>/시작/.test(b.textContent||''));
+          if(go) go.click(); } });
+      await new Promise(r=>setTimeout(r,2600));
+      const info=await page.evaluate(()=>{ const t=document.getElementById('tabs');
+        if(!t) return {no:'tabs 없음'};
+        const cs=getComputedStyle(t); const r=t.getBoundingClientRect();
+        const tab=t.querySelector('.tab'); const ts=tab?getComputedStyle(tab):null;
+        return {h:Math.round(r.height), bg:cs.backgroundImage.slice(0,40), vis:cs.visibility,
+          tabBg:ts?ts.backgroundImage.slice(0,30):'-', tabBorder:ts?ts.borderTopWidth:'-',
+          tabRadius:ts?ts.borderTopLeftRadius:'-', tabDir:ts?ts.flexDirection:'-',
+          n:t.querySelectorAll('.tab').length}; });
+      console.log(JSON.stringify(info));
+      const gap=await page.evaluate(()=>{ const t=document.getElementById('tabs');
+        const tabs=[...t.querySelectorAll('.tab')].filter(e=>getComputedStyle(e).display!=='none');
+        const rows=tabs.map(e=>{ const r=e.getBoundingClientRect();
+          const ti=e.querySelector('.ti'); const ir=ti?ti.getBoundingClientRect():null;
+          const txt=(e.textContent||'').trim();
+          return {t:txt, w:Math.round(r.width), left:Math.round(r.left), right:Math.round(r.right),
+            over:e.scrollWidth>e.clientWidth+1}; });
+        const gaps=[]; for(let i=1;i<rows.length;i++) gaps.push(rows[i].left-rows[i-1].right);
+        const on=t.querySelector('.tab.on');
+        const af=on?getComputedStyle(on,'::after'):null;
+        return {rows, gaps, onLabel:on?on.textContent.trim():'-',
+          onAfter:af?{c:af.content,h:af.height,bg:af.backgroundImage.slice(0,50)}:null}; });
+      console.log(JSON.stringify(gap,null,1));
+    }
     else if (WHAT === 'home') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); }
     else if (WHAT === 'settings') { await page.evaluate(() => openAppSettings()); await new Promise(r=>setTimeout(r,400)); }
     // 인게임 하단 — 프로필(#unitCmd) + 하단 네비(#tabs). 관리자 샌드박스로 바로 들어가 유닛을 하나 지정한다.

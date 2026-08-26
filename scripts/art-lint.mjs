@@ -59,6 +59,34 @@ const FAMILY = {
       ['좌상단 비움',    /the upper left corner is free of bright detail/],
       ['인물 실루엣',    /All figures are distant silhouettes, no close-up faces\./]],
   },
+  // 🗺 캠프·던전 맵(§11) — **유닛이 그 위를 걸어다니는 게임판**이라 다른 계열과 요구가 다르다.
+  //   방법이 둘로 갈린다: 0번(캠프)은 레퍼런스 없이 뽑고, 1~10번(던전)은 그 0번을 첨부해 위쪽만 바꾼다.
+  //   ⛔ 스타일을 형용사로 늘어놓지 말 것 — 던전은 레퍼런스가 스타일·색·조명을 다 정한다(§11-1).
+  campmap: {
+    label: '맵 · 0번 캠프(§11-3)',
+    need: [
+      ['탑다운 선언',    /top-down game map for a real-time strategy game/],
+      ['시점(바로 위)',  /seen from directly above/],
+      ['구조① 기지 터',  /bottom third of the frame is a stone-paved base platform/],
+      ['기지 터 전폭',   /spanning the full width and running off both side edges/],
+      ['구조② 열린 통로', /a wide open lane of bare earth runs up the centre/],
+      ['구조③ 가장자리',  /banked along the left and right margins and into the upper corners/],
+      ['덩어리 크기',    /much smaller than a building/],
+      ['건물 금지',      /Nothing is built anywhere/],
+      ['E 금지',        /No text, no logos, no user interface, no characters, no watermark.$/]],
+  },
+  dungeonmap: {
+    label: '맵 · 1~10번 던전 템플릿(§11-4)',
+    need: [
+      ['레퍼런스 선언',  /Use the attached image as the reference/],
+      ['하단 유지',      /Keep its bottom section exactly as it is/],
+      ['스타일 일치',    /Match the reference exactly in art style/],
+      ['위쪽만 교체',    /Replace only the area above that band/],
+      ['구조② 열린 통로', /runs up the centre to the top edge, clear of every obstacle/],
+      ['구조③ 가장자리',  /banked along the left and right margins and into the upper corners/],
+      ['잔해만',        /Nothing intact is standing anywhere/],
+      ['E 금지',        /No text, no logos, no user interface, no characters, no watermark.$/]],
+  },
   // 🐺 유닛 참고 아트(§9) — 환경 계열의 COMMON(안개·탈채도·명암분리)을 쓰지 않는다. 목적이 8방향 스프라이트 원본이라
   //   지켜야 할 것이 다르다: 배경이 흰 단색인가 · 그림자가 발밑인가 · 조명이 고정인가 · 금지줄이 있는가.
   unit: {
@@ -85,7 +113,7 @@ const BANNED = [
 ];
 
 // ── 프롬프트를 계열별로 모은다(어느 ## 아래에 있는가) ──────────────
-const prompts = { usemap: [], title: [], unit: [], race: [] };
+const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [] };
 {
   let fam = null;
   // 환경 계열은 한 줄 프롬프트(Moody…), 유닛 계열은 여러 문단이라 블록 전체를 담는다.
@@ -94,16 +122,20 @@ const prompts = { usemap: [], title: [], unit: [], race: [] };
   const re = /^## (\d+)\.|^```([a-z]*)\n([\s\S]*?)\n```/gm;
   let m;
   while ((m = re.exec(art))) {
-    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : null))); continue; }
+    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : null)))); continue; }
     if (m[2] || !fam) continue;   // 언어 태그가 있으면 프롬프트가 아니다(bash 등)
     const body = m[3];
     if (/[가-힣]/.test(body)) continue;   // 한글이 있으면 프롬프트가 아니다(설명용 도표 등)
     if (fam === 'unit') { if (!/^\[UNIT:/.test(body)) prompts.unit.push(body); }   // [UNIT:…] 은 변수 칸 = 검사 대상 아님
+    // §11 은 매체 문장이 달라 'Moody' 로 시작하지 않는다. 던전(battlefield)과 캠프(home-camp)를 문장으로 가른다.
+    // §11 은 둘로 갈린다: 레퍼런스를 쓰는 던전 템플릿과, 레퍼런스 없이 뽑는 0번 캠프.
+    else if (fam === 'camp') { if (/^Use the attached/.test(body)) prompts.dungeonmap.push(body);
+                               else if (/^A tall vertical top-down/.test(body)) prompts.campmap.push(body); }
     else if (/^Moody/.test(body)) prompts[fam].push(body);
   }
 }
 
-for (const key of ['usemap', 'title', 'unit', 'race']) {
+for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap']) {
   const F = FAMILY[key], list = prompts[key];
   console.log(`${F.label} 프롬프트 ${list.length}개`);
   if (!list.length) bad(`${F.label} 프롬프트를 하나도 못 찾았다 — ART.md 형식이 바뀌었나?`);

@@ -1534,11 +1534,20 @@ function campStopTimer(){ if(_campTimer){ clearInterval(_campTimer); _campTimer 
 //   파일이 없는 던전은 사냥터 배경으로 폴백한다(README 의 "없으면 타일 바닥" 규칙과 같은 결).
 const CAMP_BG_DIR = 'assets/backgrounds/camp/';
 const CAMP_BG_FALLBACK = 'assets/backgrounds/dungeons/';
-const CAMP_BG_HAVE = { 1:1 };   // 캠프 전용 그림이 있는 던전(늘어나면 여기 추가)
+const CAMP_BG_HAVE = {};   // 캠프 전용 '던전' 그림이 있는 번호(지금은 없다 — 전부 사냥터 것을 쓴다)
+// 🏕 **0단계(캠프 그 자체)는 던전이 아니다**(2026-08-26). 예전엔 던전 1 그림을 빌려 썼는데,
+//    캠프는 적이 내려오는 통로가 없는 '터전'이라 그림의 요구가 다르다 — 위쪽이 통째로 숲이다.
+//    ⛔ dg 를 1 로 클램프해서 던전 1 과 공유하지 말 것. 던전 1(감염된 둥지)을 손보면 캠프가 같이 바뀐다.
+const CAMP_BG_HOME = 'camp.webp';   // 0단계 전용 그림(ART.md §11-B)
 function campSkin(){
   const C = campState(); if(!C) return;
   const el = document.getElementById('phone'); if(!el) return;
-  const dg = Math.max(1, Math.min(10, (C.dg | 0) || 1));   // 0단계(캠프)는 던전 1 그림을 쓴다
+  const raw = (C.dg | 0);
+  if(raw <= 0){   // 캠프 — 전용 그림 한 장
+    const u = new URL(CAMP_BG_DIR + CAMP_BG_HOME, document.baseURI).href;
+    el.style.setProperty('--campBg', "url('" + u + "')");
+    return; }
+  const dg = Math.max(1, Math.min(10, raw));
   // ⚠ **문서 기준 절대 URL 로 만든다.** CSS 변수 안의 상대 경로는 변수를 *선언한 곳*이 아니라
   //   *쓰는 곳*(css/30-home.css)을 기준으로 풀린다 → 'assets/…' 가 'css/assets/…' 가 된다.
   //   같은 함정을 파일 분할 때도 밟았다(커밋 「분할이 깨뜨린 상대 경로」).
