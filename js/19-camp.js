@@ -581,27 +581,18 @@ function campCombatStep(dt){
 let _campBarS = '';
 function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
-  const dg = campDgN(), cleared = campCleared(), foe = campAlive('ai');
   const C = campState(); const pts = C ? Math.floor(C.rbPts || 0) : 0;
-  const key = dg + '|' + cleared + '|' + foe + '|' + pts;
+  const dg = campDgN(), foe = campAlive('ai');
+  const key = dg + '|' + foe + '|' + pts;
   if(key === _campBarS) return;
   _campBarS = key;
-  const nm = el.querySelector('.cbNm'), rd = el.querySelector('.cbRd'),
-        fo = el.querySelector('.cbFoe'), fil = el.querySelector('.cbFil');
+  // ⛔ 던전·라운드·진행은 여기 두지 말 것 — 재화 바 왼쪽 칩(#curTitle · js/12-appshell.js)이
+  //    이미 그걸 보여주고 거기에 이동 드롭다운까지 붙어 있다. 두 곳에 두면 반드시 어긋난다.
+  const fo = el.querySelector('.cbFoe');
+  if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
   { const tb = el.querySelector('.cbTree b'); if(tb) tb.textContent = campNum(pts); }
-  el.classList.toggle('safe', dg <= 0);
-  el.classList.toggle('dng',  dg > 0);
-  if(dg <= 0){
-    if(nm) nm.textContent = '🏕 캠프 — 안전';
-    if(rd) rd.textContent = '';
-    if(fo) fo.textContent = '';
-    if(fil) fil.style.width = '0%';
-    return; }
-  if(nm) nm.textContent = '⚔ 던전 ' + dg;
-  // 지금 도전 중인 라운드 = 깬 수 + 1. 50을 다 깨면 다음 던전으로 넘어가므로 51은 안 나온다.
-  if(rd) rd.innerHTML = '라운드 <b>' + campRoundN() + '</b>/' + CAMP_ROUND_MAX;
-  if(fo) fo.textContent = foe > 0 ? ('적 ' + foe) : '';
-  if(fil) fil.style.width = (cleared / CAMP_ROUND_MAX * 100).toFixed(1) + '%';
+  // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && pts <= 0);
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; }

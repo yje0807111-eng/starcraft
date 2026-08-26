@@ -71,7 +71,8 @@
     <div class="gview" id="vBuild"><div id="cstMain"></div><canvas id="cstFog"></canvas><div id="cstLabels"></div><canvas id="techMap3d"></canvas><div id="cstPrev"><canvas id="cstPrevCv"></canvas><div id="cstPrevName"></div><div id="cstPrevInfo"></div><button id="cstPrevX" onclick="techHidePreview()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg> 닫기</button></div>
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <!-- 🗺 캠프 단계·라운드 배지 — campMode 에서만 보인다(css/30-home.css). 내용은 campBarRender() -->
-      <div id="campBar"><div class="cbTop"><span class="cbNm"></span><span class="cbRd"></span><span class="cbFoe"></span><button class="cbTree" type="button" onclick="campTreeOpen()">🌳 <b>0</b></button></div><div class="cbTrk"><div class="cbFil"></div></div></div>
+      <!-- 던전·라운드는 재화 바 왼쪽 칩(#curTitle)이 단일 소스다 — 여기는 칩과 안 겹치는 것만 -->
+      <div id="campBar"><span class="cbFoe"></span><button class="cbTree" type="button" onclick="campTreeOpen()">🌳 <b>0</b></button></div>
       <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="techSkTip" class="hide"></div>   <!-- 🔮 스킬 롱프레스 설명 팝업(손 떼면 사라짐) -->
 
