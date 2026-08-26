@@ -1932,7 +1932,8 @@ function renderVote(){ ensureVote(); const me=G.myPlayer||1, myv=G.vote[me]||1;
   [1,2,4].forEach(s=>{ const col=document.getElementById('vcol-'+s); if(col) col.classList.toggle('active', s===activeS); }); }
 function tickVote(dt){}   // 배속은 내 선택만 — 봇 투표 제거
 // ── 설정 팝업(소리/비디오/임무목표/배속) ──
-function openSettings(){ const p=document.getElementById('settingsPop'); if(!p) return; p.classList.remove('hide','appCtx');
+function openSettings(){ const p=document.getElementById('settingsPop'); if(!p) return;
+  clearTimeout(p._closeT); p.classList.remove('hide','closing','appCtx');   // ⚠ 밖과 같은 처리 — 닫는 중에 다시 열면 예약된 감추기를 취소한다
   if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
   if(typeof syncSndUI==='function') syncSndUI();
   if(typeof applyVideo==='function') applyVideo();
@@ -2032,7 +2033,9 @@ function closeSetSub(){ const bd=document.getElementById('setSubBody');
 // 게임 밖 설정은 흐려지며 닫힌다(로그인과 같은 박자). 인게임은 예전대로 즉시 닫는다.
 function closeSettings(){ closeSetSub();
   const p=document.getElementById('settingsPop');
-  if(p && !p.classList.contains('hide') && p.classList.contains('appCtx') && typeof _cssMs==='function'){
+  // ⭐ 2026-08-26: .appCtx 조건을 뺐다 — 설정 창 생김새를 두 문맥 공통으로 통일하면서
+  //   닫기만 밖에서 부드럽고 안에서 뚝 끊기던 것을 맞췄다(여는 쪽은 CSS 가 이미 공통).
+  if(p && !p.classList.contains('hide') && typeof _cssMs==='function'){
     clearTimeout(p._closeT); p.classList.add('closing');
     p._closeT=setTimeout(function(){ p.classList.remove('closing'); p.classList.add('hide'); }, _cssMs('--t-swap', .22));
     return; }

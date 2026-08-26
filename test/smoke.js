@@ -4970,10 +4970,16 @@ async function groupLobby(){
       '계정이 없는데 배지가 계정 입구가 아님: '+badge.outerHTML.slice(0,60));
     else assert(badge.tagName!=='BUTTON','정식 계정인데 배지가 버튼임');
     // ③ 금색 스캔라인 → 붉은 헤어라인(이 화면 성격색). 금색은 재화·보상 전용이다
-    { const ti=getComputedStyle(card.querySelector('.setTitle'),'::after');
-      const cols=[...((ti.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
-      assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
-        '설정 제목 밑선이 붉지 않음(금색이 남았다): '+(ti.backgroundImage||'').slice(0,80)); }
+    // ⭐ 2026-08-26: 제목 밑선 자체를 걷어냈다 — 설정 창을 로딩·로그인과 같은 언어로 맞추며
+    //    이 화면에서 유일한 색 덩어리였기 때문이다. 선이 **살아 있을 때만** 색을 잰다.
+    //    (그전에는 display:none 인 선의 색을 검사했다 — 화면에 없는 것을 지키고 있었던 셈)
+    { const _ti0=getComputedStyle(card.querySelector('.setTitle'),'::after');
+      if(_ti0.display!=='none' && _ti0.content && _ti0.content!=='none'){
+      { const ti=getComputedStyle(card.querySelector('.setTitle'),'::after');
+        const cols=[...((ti.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
+        assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),
+          '설정 제목 밑선이 붉지 않음(금색이 남았다): '+(ti.backgroundImage||'').slice(0,80)); }
+      } }
     // ④ 닫기 ✕ 터치 타겟 — 31.5×17.5px 이었다(§0 권고 44px 의 절반도 안 됨)
     { const x=card.querySelector('.setX').getBoundingClientRect();
       assert(x.width>=40 && x.height>=40,'✕ 터치 타겟이 작음: '+x.width.toFixed(1)+'×'+x.height.toFixed(1)); }
@@ -5001,7 +5007,7 @@ async function groupLobby(){
       assert($('setSubPop').classList.contains('appCtx'),'하위 팝업이 게임 밖 문맥을 못 물려받음');
       { const ti=getComputedStyle($('setSubPop').querySelector('.setTitle'),'::after');
         const cols=[...((ti.backgroundImage||'').matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g))];
-        assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),'하위 팝업 제목 밑선이 붉지 않음'); }
+        if(getComputedStyle(document.querySelector('#setSubPop .setTitle'),'::after').display!=='none') assert(cols.some(c=>+c[1]>=180 && +c[2]<=110 && +c[3]<=110),'하위 팝업 제목 밑선이 붉지 않음'); }
       closeSetSub(); }
     closeSettings();
     return '프로필·붉은 선·✕ 44px·중립 ON·항목 5';
@@ -8015,8 +8021,11 @@ async function groupGame(){
     const scan=(root)=>{ const bad=[];
       for(const e of root.querySelectorAll('*')){ const c=getComputedStyle(e);
         if(c.display==='none') continue;
+        // 🔘 토글(.setSw)은 **알약**이다 — 설정 창을 로딩·로그인과 같은 언어로 맞추며 확정(2026-08-26).
+        //    높이의 절반(11px)이라야 알약이 되므로 라운드 토큰 표(0/3/6/9) 밖이다. DESIGN.md 에 예외로 적었다.
+        const _pill=(' '+(typeof e.className==='string'?e.className:'')+' ').indexOf(' setSw ')>=0;
         for(const v of c.borderRadius.split(/[\s\/]+/))
-          if(v && v!=='0px' && v!=='50%' && OK.indexOf(v)<0) bad.push((e.className||e.tagName)+'='+v);
+          if(v && v!=='0px' && v!=='50%' && !_pill && OK.indexOf(v)<0) bad.push((e.className||e.tagName)+'='+v);
         if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth); }
       return bad; };
     // 결과 제목 문구(승리는 VICTORY) · 나가기 확인은 한 줄

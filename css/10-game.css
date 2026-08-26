@@ -446,8 +446,9 @@
 /* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
   /* 설정 팝업 */
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
-    background-color:rgba(2,3,6,.62);
-    background-image:radial-gradient(ellipse 300px 320px at 50% 50%,rgba(92,214,255,.13),transparent 72%);
+    /* ⛔ 청록 방사를 뺐다 — 판을 없앤 뒤로는 이 화면에서 유일한 색 덩어리였다(로그인·로딩과 같은 언어).
+       판이 없으니 읽힘은 딤이 책임진다. 게임 안은 전장 위라 밖(.72)보다 진하게 간다. */
+    background-color:rgba(2,3,6,.80);
     backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
   #settingsPop.hide{display:none}
   /* 컨텍스트: 앱(로비/로그인)에선 게임 전용 항목 숨기고 로그아웃 표시 */
@@ -456,30 +457,13 @@
     border-bottom:1px solid rgba(255,255,255,.16)}
 
 
-  #settingsPop.appCtx .setCard{background:linear-gradient(180deg,rgba(25,25,25,.985),rgba(14,14,14,.99))}   /* 거의 불투명(겹침 방지) */
   #settingsPop.appCtx #si-mission,#settingsPop.appCtx #body-mission,#settingsPop.appCtx #qrow-spd,#settingsPop.appCtx #body-spd,#settingsPop.appCtx #setPauseBtn,#settingsPop.appCtx #setExit{display:none}
   #settingsPop:not(.appCtx) #setLogout{display:none}
   /* 게임 안에서는 프로필 머리줄·닉네임·버전을 두지 않는다 — 전장 위 카드에 더 얹을 자리가 없다 */
   #settingsPop:not(.appCtx) .setMe,#settingsPop:not(.appCtx) #si-nick,#settingsPop:not(.appCtx) #si-ver{display:none}
-  /* ══ 게임 밖 설정(유즈맵 ☰) — 2026-08-18 · H안 ══
-     ⛔ 금색 스캔라인을 뺐다: 금색은 DESIGN §2 에서 **재화·보상 전용**이고, 이 화면의 성격색은 빨강이다.
-        바로 뒤의 목록 카드·소셜 카드가 쓰는 붉은 헤어라인과 같은 값으로 맞춘다. */
-  /* ⚠ 하위 팝업(#setSubPop)에도 같이 건다 — `openSetSub` 가 부모의 `.appCtx` 를 그대로 옮겨 붙인다.
-     안 그러면 '닉네임 변경'만 금색 선인 채로 남는다(실제로 그랬다). */
-  #settingsPop.appCtx .setTitle::after,#setSubPop.appCtx .setTitle::after{
-    background:linear-gradient(90deg,transparent,rgba(255,59,59,.72) 18%,rgba(255,59,59,.72) 82%,transparent);
-    box-shadow:0 0 7px -1px rgba(255,59,59,.5)}
-  /* ⚠ 닫기 ✕ 의 터치 타겟이 31.5×17.5px 이었다 — §0 권고 44px 의 절반도 안 됐다.
-     글자 크기는 그대로 두고 패딩으로만 키우고, 음수 마진으로 제목줄 높이는 건드리지 않는다. */
-  #settingsPop.appCtx .setX,#setSubPop.appCtx .setX{width:44px;height:44px;padding:0;margin:-11px -11px -11px 0;
-    display:flex;align-items:center;justify-content:center}   /* 글리프 크기는 그대로 두고 상자만 44px */
-  /* ⛔ 켜짐을 빨강으로 칠하지 않는다 — 빨강은 위험·파괴·나가기다. 켜짐 = 중립 강조(밝은 면 + 흰 손잡이). */
-  #settingsPop.appCtx .setSw.on{background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.09)) padding-box,var(--metal-ring) border-box}
-  #settingsPop.appCtx .setSw.on>i{background:linear-gradient(180deg,#fff,#d6dde6)}
-  /* 두 판(즉시조작 · 리스트)을 한 판으로 — 구분선만으로 나눈다 */
-  #settingsPop.appCtx .setQuick{margin-bottom:0;clip-path:none;border-radius:var(--r-bar) var(--r-bar) 0 0}
-  #settingsPop.appCtx .setMenu{border-top:0;border-radius:0 0 var(--r-bar) var(--r-bar)}
-  #settingsPop.appCtx .setMenu .setItem:first-child{border-top:1px solid rgba(255,255,255,.07)}
+  /* ⚠ 옛 「게임 밖 설정 H안」(2026-08-18)의 생김새 규칙들은 파일 뒤쪽 공통 블록으로 옮겼다.
+     여기 .appCtx 한정으로 남겨 두면 특이도가 높아 공통 규칙을 **바깥에서만** 덮어,
+     고치려던 두 화면이 도로 갈린다. 문맥 차이(항목 숨김·z-index)만 위에 남는다. */
   /* 내 프로필 한 줄 — 초상·닉은 기존 것(avatarHTML·myNick)을 그대로 쓴다 */
   .setMe{display:flex;align-items:center;gap:9px;margin-bottom:9px;padding:8px 10px;
     border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);background:linear-gradient(180deg,#0a0a0a,#000)}
@@ -537,15 +521,14 @@
   /* 코너 브래킷 — 위 양쪽 L자. 패널·팝업 공통 장식(디자인 시스템) */
   /* 코너 브래킷(금색 ㄱ자)은 못 박아 냈다 — 팝업은 면·테두리만으로 읽히게 한다 */
   .setCard>*,.ecCard>*,.ovCard>*{position:relative;z-index:1}
-  #settingsPop.appCtx .setCard::before{display:none}   /* 게임 밖은 별도 방향 — 프레임 미적용 */
   .ecCard{--frameAcc:rgba(92,214,255,.5)}
   .ovCard{--frameAcc:rgba(92,214,255,.5)}
   .ovCard.win{--frameAcc:rgba(255,210,74,.62)}
   .ovCard.lose{--frameAcc:rgba(255,107,122,.6)}
-  /* 바깥 화면(유즈맵 선택 등) = 라운드 글래스 팝업 + 메인 강조색 */
-  #settingsPop.appCtx .setCard{--setAcc:var(--neon);--setAccS:var(--neon-soft);
-    border:1px solid var(--metal-edge);   /* 라운드 16px → 챔퍼 — 업그레이드 패널과 같은 각진 모서리 */
-    box-shadow:0 18px 46px -12px #000,0 0 0 1px var(--shade)}
+  /* 바깥 화면의 성격색만 남긴다.
+     ⛔ border·box-shadow 를 여기서 다시 주지 말 것 — 이 선택자가 공통 블록보다 특이도가 높아
+        **바깥에서만** 판이 되살아난다(2026-08-26 에 실제로 그래서 걷어냈다). */
+  #settingsPop.appCtx .setCard{--setAcc:var(--neon);--setAccS:var(--neon-soft)}
   .setCard::-webkit-scrollbar{width:5px}
   .setCard::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .setCard::-webkit-scrollbar-track{background:transparent}
@@ -699,54 +682,76 @@
     background:linear-gradient(180deg,#2a1214,#261012 55%,#170a0c) padding-box,
       var(--nav-ring-on-d) border-box}
   .setQGo:active{transform:translateY(1px)}
-  /* ══ 게임 밖 설정(.appCtx) = 로그인과 같은 언어로 (2026-08-23) ══════════════════
+  /* ══ 설정 창 = 로딩·로그인과 같은 언어로 (2026-08-23 · 게임 안까지 확대 2026-08-26) ═══════
      판·상자를 걷어내고 **헤어라인 행 + 국소 스크림**만 남긴다. 로그인 폼과 같은 문법이다.
-     ⛔ .appCtx 에만 건다 — 같은 #settingsPop 을 인게임도 쓴다(거긴 전장 위라 판이 필요하다). */
-  #settingsPop.appCtx{background:rgba(2,3,6,.72);z-index:95}
+     ⭐ 2026-08-26: 게임 안(#settingsPop:not(.appCtx))도 같은 언어로 통일했다.
+        옛 주석은 "거긴 전장 위라 판이 필요하다"였지만, 읽힘은 판이 아니라 **딤과 스크림**이
+        책임지게 바꿨다(딤 .62 → .80 · 청록 방사 제거 · 아래 ::after 스크림 공통).
+     ⛔ 생김새는 여기 한 곳에서만 건다. .appCtx 를 다시 붙이지 말 것 —
+        붙이는 순간 특이도가 갈려 두 화면이 도로 달라진다. 문맥 차이(항목 숨김·z-index)만 위에 있다.
+     ⚠ #setSubPop 에도 같이 건다 — openSetSub 가 부모 문맥을 옮겨 붙이는데, 게임 안에는 .appCtx 가 없다. */
+  #settingsPop.appCtx{background:rgba(2,3,6,.72);z-index:95}   /* 밖 전용: 배경이 단순해 덜 눌러도 되고, 타이틀 로고(89)보다 위여야 한다 */
   /* 🎬 여닫기 — 로그인 안의 전환과 같은 박자(--t-swap). 뚝 나타나지 않게. */
-  #settingsPop.appCtx{animation:setPopIn var(--t-swap) ease both}
-  #settingsPop.appCtx.closing{animation:setPopOut var(--t-swap) ease both;pointer-events:none}
+  #settingsPop{animation:setPopIn var(--t-swap) ease both}
+  #settingsPop.closing{animation:setPopOut var(--t-swap) ease both;pointer-events:none}
   @keyframes setPopIn{from{opacity:0}to{opacity:1}}
   @keyframes setPopOut{from{opacity:1}to{opacity:0}}
   /* 내용은 살짝 올라오며 자리를 잡는다 — 딤만 흐리면 판이 없어서 움직임이 안 읽힌다 */
-  #settingsPop.appCtx .setCard{animation:setCardIn var(--t-swap) ease both}
-  #settingsPop.appCtx.closing .setCard{animation:none}
-  @keyframes setCardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}   /* ⚠ z: 타이틀 로고(89)보다 위 — 안 그러면 로고가 카드를 뚫고 보인다 */
-  #settingsPop.appCtx::after{content:'';position:absolute;inset:0;pointer-events:none;
+  :is(#settingsPop,#setSubPop) .setCard{animation:setCardIn var(--t-swap) ease both}
+  #settingsPop.closing .setCard{animation:none}
+  /* ⚠ to 를 transform:none 으로 두면 애니메이션이 끝나며 카드 배율(--setScale)이 풀린다 */
+  @keyframes setCardIn{from{opacity:0;transform:translateY(8px) scale(var(--setScale,1))}
+    to{opacity:1;transform:scale(var(--setScale,1))}}
+  /* 국소 스크림 — 판을 대신해 글자 뒤를 눌러 준다. 게임 안에서는 이것이 읽힘의 절반이다. */
+  #settingsPop::after{content:'';position:absolute;inset:0;pointer-events:none;
     background:radial-gradient(78% 54% at 50% 46%,rgba(3,5,9,.90),rgba(3,5,9,.50) 66%,transparent 100%)}
+  /* ⚠ 하위 팝업(#setSubPop)은 설정 **위에** 뜬다 — 카드·내용 규칙만 공유하고
+     딤(::after 스크림)은 공유하지 않는다. 겹치면 뒤가 새카매진다. */
   /* 카드 → 판 없음 */
-  #settingsPop.appCtx .setCard{width:calc(100% - 44px);max-width:340px;padding:0;z-index:1;
-    background:none;border:none;box-shadow:none;clip-path:none}
-  #settingsPop.appCtx .setCard::before{display:none}   /* 이중 테두리 프레임도 뺀다 */
+  /* ⭐ 폭 — 판이 없으면 글자가 곧 카드 경계라, 340px(390 화면의 87%)에서는 꽉 차 보였다.
+     300px(77%)로 좁혀 좌우에 숨 쉴 자리를 준다. 작은 화면(320px)에서는 calc 쪽이 이겨 252px. */
+  :is(#settingsPop,#setSubPop) .setCard{width:calc(100% - 68px);max-width:300px;padding:0;z-index:1;
+    background:none;border:none;box-shadow:none;clip-path:none;
+    /* ⛔ 배율은 이 변수 한 곳에서만 바꾼다 — 아래 setCardIn 키프레임이 같은 값을 쓴다.
+       키프레임이 transform 을 건드리므로 여기에만 scale 을 쓰면 애니메이션 끝에 지워진다. */
+    --setScale:.8;transform:scale(var(--setScale))}
+  :is(#settingsPop,#setSubPop) .setCard::before{display:none}   /* 이중 테두리 프레임도 뺀다 */
   /* 묶음(빠른 조작·메뉴) → 판 없이 행만 */
-  #settingsPop.appCtx .setQuick,#settingsPop.appCtx .setMenu{padding:0;margin:0;border:none;
+  :is(#settingsPop,#setSubPop) .setQuick,:is(#settingsPop,#setSubPop) .setMenu{padding:0;margin:0;border:none;
     background:none;border-radius:0;clip-path:none}
-  #settingsPop.appCtx .setQRow,#settingsPop.appCtx .setItem{padding:12px 0;border-top:none;
+  /* ⛔ 터치 타겟(§0 권고 44px)은 **배율이 걸린 뒤** 기준으로 지킨다.
+     카드에 scale(--setScale)이 걸리므로 여기 여백은 1/배율 만큼 키워 둔다 —
+     17px → 행 55px → 화면에서 44px. ⚠ 배율을 바꾸면 이 값도 같이 봐야 한다.
+     (11px 로 좁혔더니 화면에서 43.4px 이 나와 권고를 깬 적이 있다 — 2026-08-26 실측) */
+  :is(#settingsPop,#setSubPop) .setQRow,:is(#settingsPop,#setSubPop) .setItem{padding:17px 0;border-top:none;
     border-bottom:1px solid rgba(255,255,255,.16)}
-  /* ⚠ 이 블록은 **파일 뒤쪽**에 있어야 한다 — 앞쪽 .appCtx 규칙들과 특이도가 같아 앞에 두면 덮인다. */
   /* 제목 — 로그인처럼 글자만. 밑줄 액센트는 이 화면에서 유일한 색 덩어리라 뺀다. */
-  #settingsPop.appCtx .setTitle{padding-bottom:12px;font-weight:700}
-  #settingsPop.appCtx .setTitle::after{display:none}
+  :is(#settingsPop,#setSubPop) .setTitle,#setSubPop .setTitle{padding-bottom:10px;font-weight:700}
+  :is(#settingsPop,#setSubPop) .setTitle::after,#setSubPop .setTitle::after{display:none}
+  /* ⚠ 닫기 ✕ 의 터치 타겟이 31.5×17.5px 이었다 — §0 권고 44px 의 절반도 안 됐다.
+     글자 크기는 그대로 두고 패딩으로만 키우고, 음수 마진으로 제목줄 높이는 건드리지 않는다. */
+  :is(#settingsPop,#setSubPop) .setX{width:55px;height:55px;padding:0;margin:-16px -16px -16px 0;
+    display:flex;align-items:center;justify-content:center;color:#8b939f}
   /* ⚠ .mIco 기본색이 빨강(--neon)이라 색을 물려받게 해야 한다 — 다른 화면들도 같은 처리를 해 뒀다 */
-  #settingsPop.appCtx .setX{color:#8b939f}
-  #settingsPop.appCtx .setX .mIco{color:inherit;margin:0}
+  :is(#settingsPop,#setSubPop) .setX .mIco,#setSubPop .setX .mIco{color:inherit;margin:0}
   /* 🔘 토글 = 알약 테두리만(5a). 면을 채우지 않는다 — 이 화면에서 색을 채우는 유일한 부품이었다. */
-  #settingsPop.appCtx .setSw{width:40px;height:22px;border-radius:11px;
+  :is(#settingsPop,#setSubPop) .setSw{width:40px;height:22px;border-radius:11px;
     background:none;border:1px solid rgba(255,255,255,.16);transition:border-color .16s,box-shadow .16s}
-  #settingsPop.appCtx .setSw>i{top:4px;left:4px;width:12px;height:12px;border-radius:50%;
+  :is(#settingsPop,#setSubPop) .setSw>i{top:4px;left:4px;width:12px;height:12px;border-radius:50%;
     background:#6d757f;transition:left .16s,background .16s,box-shadow .16s}
-  #settingsPop.appCtx .setSw.on{background:none;border-color:rgba(255,255,255,.34)}
-  #settingsPop.appCtx .setSw.on>i{left:22px;background:#fff;box-shadow:0 0 7px rgba(255,255,255,.55)}
+  /* ⛔ 켜짐을 빨강으로 칠하지 않는다 — 빨강은 위험·파괴·나가기다. 켜짐 = 중립(테두리가 밝아지고 손잡이가 흰색). */
+  :is(#settingsPop,#setSubPop) .setSw.on{background:none;border-color:rgba(255,255,255,.34)}
+  :is(#settingsPop,#setSubPop) .setSw.on>i{left:22px;background:#fff;box-shadow:0 0 7px rgba(255,255,255,.55)}
   /* '로그인 ›' — 판 없이 글자만(허브의 행과 같은 무게) */
-  #settingsPop.appCtx .setQGo{padding:6px 0 6px 10px;min-width:0;border:none;background:none;
+  :is(#settingsPop,#setSubPop) .setQGo{padding:6px 0 6px 10px;min-width:0;border:none;background:none;
     color:#98a1ad;font-weight:400}
   /* 글자 무게 — 로그인 행과 같게 낮춘다(판이 없어지면 굵은 글씨만 남아 무거워 보인다) */
-  #settingsPop.appCtx .setQRow,#settingsPop.appCtx .setItem,#settingsPop.appCtx .setMe{
+  :is(#settingsPop,#setSubPop) .setQRow,:is(#settingsPop,#setSubPop) .setItem,:is(#settingsPop,#setSubPop) .setMe{
     font-size:13.5px;font-weight:400;color:#e6ebf2}
-  #settingsPop.appCtx .setItem b{font-weight:400;color:#98a1ad}
-  #settingsPop.appCtx .setItem .setArr{color:#7f8794}
-  /* ⚠ 위 블록은 **여기(파일 뒤쪽)** 에 있어야 한다 — 앞쪽 .appCtx 규칙들과 특이도가 같아
-     앞에 두면 그것들에 덮인다(실제로 제목 밑줄·로그인 칩이 안 바뀌었다). */
+  :is(#settingsPop,#setSubPop) .setItem b{font-weight:400;color:#98a1ad}
+  :is(#settingsPop,#setSubPop) .setItem .setArr{color:#7f8794}
+  /* ⚠ 이 블록은 **파일 뒤쪽**에 있어야 한다 — 앞쪽 규칙들과 특이도가 같아 앞에 두면 덮인다
+     (실제로 제목 밑줄·로그인 칩이 안 바뀌었다). */
   
   
   body.lite *{backdrop-filter:none!important;box-shadow:none!important}
