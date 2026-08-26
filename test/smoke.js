@@ -1105,6 +1105,41 @@ async function groupLobby(){
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
   // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
   //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.
+  // 🎨 전투 렌더 — 화면을 바꾸지 않고 기지 맵 '위쪽 레인'에 겹쳐 그린다(A안 · 2026-08-25).
+  //   ⚠ 건설 맵은 M3D.sync 가 아니라 **M3D.syncBuild** 를 쓴다 — 감쌀 대상을 헷갈리면 0건이 된다(실제로 그랬다).
+  await step('캠프 던전: 전투가 기지 맵에 겹쳐 그려진다', async()=>{
+    skipIf(typeof campBattleList!=='function'||typeof campWithBattleDraw!=='function','전투 렌더 없음');
+    // ① 0단계(캠프)에는 전투 유닛이 없다
+    if(typeof campEnterDungeon==='function'){ const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    assert(campBattleList().length===0,'0단계인데 전투 유닛이 리스트에 실림');
+    // ② 던전에 들어가 전장을 열면 유닛이 엔트리로 나온다
+    skipIf(typeof campEnterDungeon!=='function'||typeof campCombatStep!=='function','캠프 던전 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ for(let i=0;i<6;i++) strikeSpawnUnit('me'); });
+    const list=campBattleList();
+    assert(list.length>0,'전장에 유닛이 있는데 렌더 엔트리가 0');
+    // ③ 좌표 규약 — 기지 유닛과 같은 형태(정규화 x/y · scl · z)
+    { const e=list[0];
+      assert(typeof e.x==='number' && typeof e.y==='number','좌표가 숫자가 아님');
+      assert(e.scl>0,'scl 이 없다 — 기지 유닛과 크기 규약이 다름');
+      assert(typeof e.z==='number','z 가 없다 — 깊이 정렬에서 빠진다');
+      assert(String(e.uid).indexOf('cb_')===0,'uid 접두사가 cb_ 가 아님(기지 uid 와 충돌 위험)'); }
+    // ④ 레인 안에 있는가 — 적은 위(격자 위끝), 내 병력은 아래(본부 쪽)
+    { const g=campW2G(0, CAMPB.world*0.14, CAMPB.world);   // 적 본부
+      const m=campW2G(0, CAMPB.world*0.86, CAMPB.world);   // 내 본부
+      assert(g.gy<m.gy,'세로 대응이 뒤집혔다 — 적이 아래에서 온다');
+      assert(g.gy>=CAMP_LANE_TOP-1e-6 && m.gy<=CAMP_LANE_BOT+1e-6,'레인 밖으로 나감'); }
+    // ⑤ 감싸기는 반드시 원복된다 — 안 그러면 관리자 탭·오토배틀이 캠프 유닛을 달고 다닌다
+    if(window.M3D && typeof M3D.syncBuild==='function'){
+      const before=M3D.syncBuild;
+      campWithBattleDraw(()=>{ assert(M3D.syncBuild!==before,'감싸지 않았다'); });
+      assert(M3D.syncBuild===before,'syncBuild 를 원복하지 않았다'); }
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }   // 상태 정리
+    campBattleClose();
+    return list.length+'기 · 레인 '+CAMP_LANE_TOP+'~'+CAMP_LANE_BOT;
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};

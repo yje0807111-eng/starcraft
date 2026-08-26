@@ -509,6 +509,57 @@ function campBattleOpen(){
 }
 function campBattleClose(){ CAMPB = null; }
 
+// ══ 🎨 전투 렌더 (2026-08-25 · A안) — 기지 맵 **위쪽 레인**에 겹쳐 그린다 ══════
+//   화면을 바꾸지 않는다. 적은 격자 위끝에서 내려오고 내 병력이 맞으러 올라간다.
+//   ⛔ 공유 코드를 고치지 않는다(renderBuildTab · 18-strike · 16/17-build).
+//     캠프 프레임 동안만 M3D.sync 를 감싸 **기지 리스트 뒤에 전투 유닛을 덧붙여** 통과시킨다 —
+//     campWithStk 가 전역 STK 를 바꿔 끼우는 것과 같은 관용구다.
+//   ⭐ 캔버스도 sync 호출도 **프레임당 하나** 그대로다. 두 번 부르면 뒤엣것이 앞엣것을 지운다.
+const CAMP_LANE_TOP = 0.18;   // 격자 위끝 = 적이 나타나는 줄(techY0 와 같은 값)
+const CAMP_LANE_BOT = 0.62;   // 본부(y≈0.642) 바로 위 = 내 병력이 맞으러 가는 끝
+const CAMP_LANE_W   = 0.88;   // 레인 가로 폭 = 격자 폭(x0 0.06 ~ x1 0.94)
+
+// 전장 월드 → 격자 월드비율. 전장 세로축(적 W*0.14 ↔ 내 본부 W*0.86)을 레인에 선형 대응한다.
+function campW2G(sx, sy, W){
+  const t = Math.max(0, Math.min(1, ((sy / W) - 0.14) / 0.72));   // 0=적(위) · 1=나(아래)
+  return { gx: 0.5 + ((sx / W) - 0.5) * CAMP_LANE_W,
+           gy: CAMP_LANE_TOP + t * (CAMP_LANE_BOT - CAMP_LANE_TOP) }; }
+
+// 전투 유닛 → 기지 유닛과 **같은 규약**의 렌더 엔트리(scl·yoff·yawFix·z 를 맞춘다).
+//   ⚠ _cellK·_zOf 는 renderBuildTab 안의 지역값이라 못 쓴다 — 공개 헬퍼로 똑같이 다시 구한다.
+function campBattleList(){
+  if(!CAMPB || campDgN() <= 0) return [];
+  const W = CAMPB.world || 1, v = (G.tech && G.tech.view) || { x:0.5, y:0.5, zoom:1 };
+  const cellK = _techCW() / ((TECH_GRID.x1 - TECH_GRID.x0) / TECH_GRID.cols);
+  const rows = Math.max(1, _techRows()), zstep = Math.min(60, 2600 / (rows + 1));
+  const scl = ((typeof TECH_USCALE !== 'undefined') ? TECH_USCALE : 1)
+            * ((typeof TECH_UVIS   !== 'undefined') ? TECH_UVIS   : 1) * cellK;
+  const yoff = (typeof TECH_UNIT_YOFF !== 'undefined') ? TECH_UNIT_YOFF : 6;
+  const out = [];
+  for(const side of ['me', 'ai']){
+    for(const u of CAMPB[side].units){
+      if(u.dead) continue;
+      const g = campW2G(u.x, u.y, W);
+      const x = (g.gx - v.x) * v.zoom + 0.5, y = (g.gy - v.y) * v.zoom + 0.5;
+      if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;   // ⚡ 화면 밖은 넘기지 않는다(오토배틀 STK_CULL 과 같은 뜻)
+      out.push({ uid:'cb_' + side + '_' + u.uid, id:u.id, x:x, y:y,
+        face:(u.face || 0), moving:!!u.moving, yoff:yoff, yawFix:true, scl:scl,
+        fireSeq:(u.fireSeq || 0), selCol:(side === 'ai') ? 0xff5c5c : undefined,
+        z: -1000 + (Math.floor((g.gy - techY0()) / _techCH()) + 0.5) * zstep }); } }
+  return out; }
+
+// 기지 렌더를 감싼다 — 그 안에서 renderBuildTab 이 부르는 M3D.sync 에 전투 유닛을 얹는다.
+//   ⚠ finally 로 반드시 되돌린다. 안 되돌리면 관리자 탭·오토배틀이 캠프 유닛을 달고 다닌다.
+function campWithBattleDraw(fn){
+  const M = window.M3D;
+  if(!M || typeof M.syncBuild !== 'function' || !CAMPB || campDgN() <= 0) return fn();
+  const orig = M.syncBuild;   // ⚠ 건설 맵은 sync 가 아니라 **syncBuild** 다(14-input-fx.js:950)
+  M.syncBuild = function(list){
+    try{ const add = campBattleList();
+      if(add.length && Array.isArray(list)) for(const e of add) list.push(e); }catch(_e){}
+    return orig.apply(M, arguments); };
+  try{ return fn(); } finally { M.syncBuild = orig; } }
+
 // 내 병력 출격 — 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮긴다.
 //   ⭐ 이 다리는 오토배틀이 이미 갖고 있다(strikeSpawnForPlayer). 그대로 부른다.
 function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
@@ -1291,7 +1342,8 @@ function campFrame(now){
   // ⚡ **한 프레임 안에서 맵 rect 를 한 번만 잰다.** 아래 campPatchRect 설명 참고.
   _campRectC = null;
   try{
-    if(typeof renderBuildTab === 'function') renderBuildTab(dt);   // 건설 틱 + 3D — 단일 소스 그대로
+    // 기지 렌더(단일 소스 그대로) — 던전 중이면 전투 유닛을 같은 sync 에 얹어 보낸다
+    if(typeof renderBuildTab === 'function') campWithBattleDraw(() => renderBuildTab(dt));
     campCombatStep(dt);                                           // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
