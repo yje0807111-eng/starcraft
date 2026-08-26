@@ -484,8 +484,13 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
   return x * Math.pow(campRBase(dg), Math.max(0, cleared | 0)); }
 
 // ── 웨이브 — 총량은 난이도가 정하고, 몇 마리로 쪼갤지는 라운드가 정한다 (HUNT_R1 §6-2-1) ──
-//   기본값: 체력 3.3 · 공격 0.33. 여기에 난이도가 곱해진 것이 **그 라운드의 총 유입량**이다.
-const CAMP_FOE_HP0 = 3.3, CAMP_FOE_ATK0 = 0.33;
+//   기본값: 체력 40 · 공격 0.33. 여기에 난이도가 곱해진 것이 **그 라운드의 총 유입량**이다.
+// ⭐ 체력 3.3 → 40 (2026-08-27, HUNT_R1 §6-2). 3.3 은 아군 여섯 기(DPS 3.6)에 **0.9초**면
+//   녹는 양이라, 난이도가 11배 올라도 라운드 시간이 18초에 고정됐다(실측) — 브레이크가 없었다.
+//   40 이면 워밍업이 R10 까지로 끝나고 그 뒤로 적이 실제 저항이 된다.
+// ⚠ **공격(0.33)은 같이 올리지 않는다.** 체력은 「얼마나 오래 싸우나」, 공격은 「얼마나 위험한가」다.
+//   라운드 길이는 체력만으로 늘고, 공격까지 12배면 본부(체력 150)가 몇 초에 부서진다.
+const CAMP_FOE_HP0 = 40, CAMP_FOE_ATK0 = 0.33;
 const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
   const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1));
@@ -506,15 +511,109 @@ function campBattleOpen(){
   S.ai.race = campFoeRace(campDgN());
   S.me.base.x = W * 0.5; S.me.base.y = W * 0.86;      // 아래 = 내 본부
   S.ai.base.x = W * 0.5; S.ai.base.y = W * 0.14;      // 위 = 적이 오는 쪽
-  // 캠프에는 2차·중앙 신전이 없다 — 죽은 것으로 두면 strikeFrontStruct 가 본진을 표적으로 준다
+  // 캠프에는 2차·중앙 신전이 없다
   S.me.sec.dead = true; S.ai.sec.dead = true; S.central.dead = true;
+  // ⛔ **적 본부도 없다.** 캠프의 라운드는 「적 유닛을 다 잡으면 끝」이고 부술 적 기지가 없다.
+  //   살려 두면 내 병력이 그걸 때리러 **적 진영까지 올라가** 버리고, 그 사이 적은 반대 방향으로
+  //   내 건물을 치러 내려온다 — 둘이 엇갈려 영원히 안 만난다.
+  //   실측(2026-08-27): 아군 y≈980 · 적 y≈2500 · 사거리 88 → D1R24 에서 라운드가 멈췄다.
+  //   (적 본부 HP 가 -7298 이었다. 이미 부순 것을 계속 붙잡고 있었다.)
+  // ⚠ 위치는 남겨 둔다 — 적 유닛이 그 자리에서 스폰된다.
+  S.ai.base.dead = true; S.ai.base.hp = 0;
   S.me.units.length = 0; S.ai.units.length = 0;
-  // 🌳 「건물 강화」 — 캠프에 건물은 본부 하나뿐이라 그 체력에 얹는다(HUNT_R1 §4-5-3)
+  // 🌳 「건물 강화」 — 내 건물 전체의 체력에 얹는다(HUNT_R1 §4-5-3)
   { const bm = campRtMul('bldg');
     if(bm !== 1){ S.me.base.maxHp = (S.me.base.maxHp || S.me.base.hp) * bm; S.me.base.hp = S.me.base.maxHp; } }
-  CAMPB = S; return S;
+  CAMPB = S;
+  campBuildStructs();                                  // 🏢 기지의 건물들을 전장에 올린다
+  return S;
 }
 function campBattleClose(){ CAMPB = null; }
+
+// ══ 🏢 기지 건물을 전장에 올린다 (2026-08-27) ═══════════════════════════
+// **패배 = 내 건물이 전부 부서지는 것**이다. 예전에는 전장에 본부 하나뿐이라
+// 병영·보급소를 적이 때릴 수도 없었다(그 하나가 모든 건물을 대표했다).
+//
+// ⛔ 18-strike.js 를 고치지 않는다. 적이 무엇을 때릴지는 strikeFrontStruct() 가 정하는데,
+//   그 함수가 고르는 것은 중립 → 적 2차 → 적 본진 **셋뿐**이다. 캠프는 그 함수를 감싸
+//   **가장 앞(적에 가까운) 내 건물**을 대신 돌려준다. 구조물에 필요한 것은 {x,y,hp,max,dead} 뿐이라
+//   캠프 건물로 그 모양을 만들어 주면 사거리·피해 처리가 그대로 돈다.
+//
+// ⚠ 부서진 건물은 **그 판에서만** 부서진다 — 캠프로 돌아오면 그대로 있다.
+//   유닛 부활과 같은 철학이다(대가는 비용이 아니라 시간 · HUNT_R1 §5-4).
+const CAMP_BLD_HP = 1200;          // 건물 한 채의 기본 체력(본부는 전장 기본값을 쓴다)
+function campBuildStructs(){
+  if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
+  const W = CAMPB.world, bm = campRtMul('bldg');
+  const x0 = TECH_GRID.x0, x1 = TECH_GRID.x1, y0 = techY0(), y1 = techY1();
+  const sx = function(wx){ return W * (0.15 + (wx - x0) / Math.max(1e-6, x1 - x0) * 0.70); };
+  const sy = function(wy){ return W * (0.62 + (wy - y0) / Math.max(1e-6, y1 - y0) * 0.30); };
+  const mainK = (TECH_TREE[G.tech.race] && TECH_TREE[G.tech.race].buildings[0] || {}).k;
+  const out = [];
+  for(const e of (G.tech.ents || [])){
+    if(e.type !== 'bldg' || (e.bt || 0) > 0) continue;          // 짓는 중인 건물은 아직 없다
+    const isMain = (e.bk === mainK);
+    const hp = Math.round((isMain ? (CAMPB.me.base.maxHp || CAMPB.me.base.hp) : CAMP_BLD_HP) * (isMain ? 1 : bm));
+    if(isMain){ CAMPB.me.base.x = sx(e.x); CAMPB.me.base.y = sy(e.y); CAMPB.me.base.eid = e.eid; out.push(CAMPB.me.base); continue; }
+    out.push({ x:sx(e.x), y:sy(e.y), hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
+  }
+  CAMPB._bld = out;
+  return out.length;
+}
+// 살아 있는 내 건물들 — 패배 판정과 표적 선택이 같은 목록을 본다(단일 소스)
+function campBldAlive(){
+  if(!CAMPB || !CAMPB._bld) return [];
+  return CAMPB._bld.filter(function(b){ return b && !b.dead && (b.hp || 0) > 0; });
+}
+// 적에게 **가장 가까운** 내 건물 — 적은 위에서 내려오므로 y 가 작은 것이 앞이다
+function campFrontBld(){
+  const live = campBldAlive();
+  if(!live.length) return null;
+  let best = live[0];
+  for(const b of live) if(b.y < best.y) best = b;
+  return best;
+}
+// 🛡 **아군 집결점 — 캠프는 방어전이다.** 내 병력은 진격하지 않고 건물 앞에 서서 적을 기다린다.
+//   ⚠ 그냥 「목표 없음」으로 둘 수는 없다. strikeFrontStruct 가 돌려준 구조물이 dead 여도
+//     **이동은 막히지 않아서**(18-strike.js:1277~ _toTemple 분기에 dead 검사가 없다) 아군이
+//     죽은 적 본부 자리까지 행군해 버린다 — 실측: 아군 y≈500 · 적 y≈2558 로 1764 떨어져
+//     서로 못 만나고 라운드가 멈췄다.
+//   ⭐ 그래서 **내 건물 앞의 더미 구조물**을 목표로 준다. 아군은 거기 닿으면 멈추고(사거리 안),
+//     적이 오면 그때 적을 표적으로 잡는다(_toTemple 은 적 표적이 없을 때만 탄다).
+//   ⚠ 체력을 거대하게 둔다 — 아군이 때려도 안 부서져야 집결점이 사라지지 않는다.
+function campRallyPoint(){
+  if(!CAMPB) return null;
+  const W = CAMPB.world;
+  if(!CAMPB._rally) CAMPB._rally = { x:W * 0.5, y:W * 0.72, hp:1e18, max:1e18, maxHp:1e18, dead:false, _rally:true };
+  const r = CAMPB._rally;
+  const live = campBldAlive();
+  if(live.length){                                   // 가장 앞(적 쪽) 건물보다 조금 앞에 선다
+    let f = live[0];
+    for(const b of live) if(b.y < f.y) f = b;
+    r.x = f.x; r.y = Math.max(W * 0.55, f.y - W * 0.06);
+  }
+  r.hp = r.max = r.maxHp = 1e18; r.dead = false;      // 아군 오사로 부서지지 않게 되돌린다
+  return r;
+}
+// ⛔ strikeFrontStruct 를 감싼다 — 적이 내 건물을 때릴 수 있게 하는 유일한 입구다.
+//   ⚠ side 는 **때리는 쪽**이다(원본: foe = S[side==='me'?'ai':'me']). 적이 칠 때만 바꿔 준다.
+let _campFrontPatched = null;
+function campPatchFront(){
+  if(_campFrontPatched || typeof window === 'undefined') return;
+  const o = window.strikeFrontStruct; if(typeof o !== 'function') return;
+  _campFrontPatched = o;
+  window.strikeFrontStruct = function(side){
+    if(_campOn && CAMPB){
+      if(side === 'ai'){ const b = campFrontBld(); if(b) return b; }   // 적 → 내 건물(앞쪽부터)
+      if(side === 'me'){ const r = campRallyPoint(); if(r) return r; } // 아군 → 집결점(진격하지 않는다)
+    }
+    return o.apply(this, arguments);
+  };
+}
+function campUnpatchFront(){
+  if(!_campFrontPatched) return;
+  window.strikeFrontStruct = _campFrontPatched; _campFrontPatched = null;
+}
 
 // ══ 🎨 전투 렌더 (2026-08-25 · A안) — 기지 맵 **위쪽 레인**에 겹쳐 그린다 ══════
 //   화면을 바꾸지 않는다. 적은 격자 위끝에서 내려오고 내 병력이 맞으러 올라간다.
@@ -569,21 +668,105 @@ function campWithBattleDraw(fn){
 
 // 내 병력 출격 — 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮긴다.
 //   ⭐ 이 다리는 오토배틀이 이미 갖고 있다(strikeSpawnForPlayer). 그대로 부른다.
+// 병력을 전장에 내보낸다.
+// ⛔ **라운드마다 부르지 말 것.** strikeSpawnForPlayer 는 건물 하나당 유닛을 새로 만드는데
+//   (18-strike.js:1091 — techBldgCount 만큼), 건물은 그대로 있으므로 **부를 때마다 증식**한다.
+//   실측(2026-08-27): 라운드 갭마다 불렀더니 던전 1 R50 에 병력 **623기 · DPS 12,415** 였다
+//   (인구 상한 200 을 훨씬 넘는다). 그 화력이면 적이 무슨 체력이든 즉사해서
+//   난이도 곡선이 아무 브레이크도 못 건다.
+// ⭐ 그래서 **전장이 비었을 때만** 부른다 — 첫 진입과 던전 전환이 그 자리다.
+//   라운드 사이에는 부활(campReviveStep)이 병력을 유지하므로 보충이 필요 없다.
 function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
   const b4 = CAMPB.me.units.length;
   const n = campWithStk(() => strikeSpawnForPlayer('me', { local:true })) | 0;
   campScaleAllies(CAMPB.me.units.slice(b4));   // 🌳 아군 강화 — 새로 나온 것만
+  campTrimArmy();                              // 👥 인구 상한을 전장에도 건다(아래 설명)
   return n; }
+// 👥 **전장 병력도 인구 상한을 지킨다.**
+// ⚠ 전장 자체에는 제한이 없다 — STK_UNIT_CAP 이 0(무제한)이다(18-strike.js:504).
+//   캠프의 인구 200 은 **생산** 제한이라, 전장으로 나간 뒤에는 아무도 안 막는다.
+//   실측(2026-08-27): 던전 1 을 20기로 잘 돌다가 던전 2 로 넘어가며 **292기**가 됐다 —
+//   전환 때마다 strikeSpawnForPlayer 가 건물 수만큼 새로 만들고, 캠프에 쌓여 있던
+//   대기 병력(126기)까지 한꺼번에 쏟아져 들어간다.
+// ⛔ 여기를 안 막으면 적 체력을 아무리 올려도 병력 수로 뭉갠다(623기 때와 같은 일이다).
+function campTrimArmy(){
+  if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
+  const cap = Math.max(1, Math.min(200, G.tech.supCap || 200));
+  const live = CAMPB.me.units, down = (CAMPB._down || []).length;
+  const over = live.length + down - cap;
+  if(over <= 0) return 0;
+  live.splice(cap - down < 0 ? 0 : cap - down);   // 뒤(가장 최근에 나온 것)부터 걷는다
+  return over;
+}
+
+// ⛔ **공중 전용 적은 뽑지 않는다.** hellfire·stinger·venom 은 SB_ATK_MODE 가 'air' 라
+//   지상 아군을 한 대도 못 때린다 — 그리고 지상만 있는 편성은 그 적을 못 때린다.
+//   실측(2026-08-27): 던전 1 R12 에서 hellfire 하나가 남아 **라운드가 영원히 안 끝났다**
+//   (아군 화력병 20기 전부 gnd 전용). 적 본부는 이미 부쉈는데 게임이 멈췄다.
+// ⚠ 공중 유닛 자체는 남긴다 — skyguard·dreadnought·medusa 는 공중이면서 지상을 친다.
+//   전부 빼면 대공이라는 축이 사라진다(HUNT_R1 §6-2-0).
+function campFoeId(){
+  if(typeof STK_RACES === 'undefined' || !CAMPB) return null;
+  const ids = ((STK_RACES[CAMPB.ai.race] || STK_RACES.terran).units) || [];
+  if(!ids.length) return null;
+  const mode = (typeof SB_ATK_MODE !== 'undefined') ? SB_ATK_MODE : {};
+  const ok = ids.filter(function(id){ return (mode[id] || 'both') !== 'air'; });
+  const pool = ok.length ? ok : ids;
+  return pool[(Math.random() * pool.length) | 0];
+}
+// 지금 있는 적을 내 병력이 때릴 수 있나 — 하나도 못 때리면 그 판은 끝이 없다.
+// ⚠ 누운(부활 대기) 병력도 센다 — 곧 일어나므로 성급하게 지면 안 된다.
+function campCanHitFoes(){
+  if(!CAMPB) return true;
+  const foes = CAMPB.ai.units.filter(function(u){ return !u.dead; });
+  if(!foes.length) return true;
+  // ⭐ **전투가 쓰는 값을 그대로 쓴다.** 별도 표를 따로 읽으면 어긋난다 —
+  //   실측(2026-08-27): 적이 dreadnought(공중) 하나, 아군이 화력병 20기(지상 전용)인데
+  //   판정만 "때릴 수 있다"고 나와 패배가 안 걸리고 라운드가 멈췄다.
+  //   전투(18-strike.js:1196~1197)는 이 둘을 쓴다:
+  //     공격 가능 레이어 = u._atk (= _sbAtkMode({id, gmodel}))
+  //     대상이 공중인가 = FXLAB_AIR.has(o.gm || o.id)      ← **gm 우선**, OR 가 아니다
+  const isAir = function(o){
+    const k = o.gm || o.id;
+    return (typeof FXLAB_AIR !== 'undefined') && FXLAB_AIR.has(k);
+  };
+  const atkOf = function(u){
+    if(u._atk) return u._atk;                                  // 전투가 이미 채워 둔 값이 있으면 그것
+    return (typeof _sbAtkMode === 'function')
+      ? _sbAtkMode({ id:u.id, gmodel:u.gm })
+      : { air:true, gnd:true };
+  };
+  // ⚠ 공격을 못 하는 유닛은 세지 않는다 — 의무병은 사거리 0 · 공격력 0 이라 아무리 많아도 못 죽인다.
+  //   ⭐ _sbAtkMode 가 비전투(FXLAB_NOATK)를 {air:false,gnd:false} 로 돌려주므로 그것도 함께 걸린다.
+  const canFight = function(u){ if((u.dmg || 0) <= 0) return false; const a = atkOf(u); return !!(a.air || a.gnd); };
+  const mine = CAMPB.me.units.filter(function(u){ return !u.dead && canFight(u); })
+    .concat((CAMPB._down || []).map(function(d){ return d.u; }).filter(function(u){ return u && canFight(u); }));
+  if(!mine.length) return false;                // 때릴 수 있는 병력이 하나도 없다 = 끝이 없다
+  for(const f of foes){
+    const fa = isAir(f);
+    for(const m of mine){
+      const a = atkOf(m);
+      if(fa ? a.air : a.gnd) return true;
+    }
+  }
+  return false;
+}
 
 // 이번 라운드의 적을 낸다.
-// ⏱ **라운드의 적을 한 번에 쏟지 않고 웨이브로 나눠 내보낸다.**
-//   왜: 전투가 0.5초 만에 끝나 라운드 하나가 ~2초였고, 그래서 진행이 설계보다 수십 배 빨랐다
-//   (실측: 20분에 던전 3 · 1억 — 설계는 4일에 던전 1-50 · 5,752만).
-//   ⛔ **적 수·난이도는 건드리지 않는다**(campFoeCount · campScaleFoes 그대로) — 그쪽은
-//     HUNT_R1 §6-2 의 영역이고, 여기서 같이 만지면 무엇이 원인인지 못 가린다.
-//     늘리는 것은 **시간 축 하나**다.
+// 🎬 **적을 나눠 내보내는 것은 연출이다.** 100마리가 한 프레임에 쏟아지지 않게 나눠 낸다.
+//   ⛔ **라운드 길이를 여기서 만들지 않는다.** 라운드 시간은 오직
+//        `적 총 체력 ÷ 아군 총 DPS`
+//     이고, 화면의 적을 다 잡으면 **그 순간** 다음 라운드다(HUNT_R1 §6-2, 2026-08-27 확정).
+//   ⚠ 한때 「안 나온 무리가 남으면 라운드가 안 끝난다」는 하한을 뒀었다. 적 체력이 3.3 이라
+//     시간을 벌 다른 방법이 없던 때의 임시방편이었고, 체력을 40 으로 올린 지금은 필요 없다.
+//     ⛔ 되살리지 말 것 — 손잡이가 둘이 되면 라운드가 길어졌을 때 **대기 때문인지 전투 때문인지
+//       못 가린다.** 실제로 그랬다(난이도가 11배 올라도 18초 고정 = 전부 대기 시간이었다).
+//     라운드를 길게 하고 싶으면 **적 체력만** 만진다.
 const CAMP_WAVE_MAX = 6;        // 라운드 하나를 최대 몇 번에 나눠 내보내나
-const CAMP_WAVE_GAP_S = 4;      // 웨이브 사이 간격(초)
+// ⚠ 간격은 **짧게** 둔다. 이건 연출이지 라운드 길이를 만드는 장치가 아니다 —
+//   길게 잡으면 화면의 적을 다 잡아도 다음 무리를 기다리느라 라운드가 안 끝나고,
+//   그 대기가 곧 라운드 길이가 되어 「적 총 체력 ÷ 아군 DPS」 규칙이 깨진다(실측 18초 고정).
+const CAMP_WAVE_GAP_S = 0.3;    // 웨이브 사이 간격(초) — 6무리가 1.8초 안에 다 나온다
 function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
   const n = campFoeCount(campRoundN());
   const w = Math.max(1, Math.min(CAMP_WAVE_MAX, n));
@@ -597,7 +780,7 @@ function campSpawnWave(){
   if(!CAMPB || !CAMPB._wq || !CAMPB._wq.length) return 0;
   const k = CAMPB._wq.shift();
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
-    for(let i = 0; i < k; i++) strikeSpawnUnit('ai');
+    for(let i = 0; i < k; i++) strikeSpawnUnit('ai', campFoeId());   // ⛔ 공중 전용은 뽑지 않는다
     campScaleFoes(CAMPB.ai.units.slice(b4));
     return CAMPB.ai.units.length - b4; }) | 0; }
 // 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
@@ -693,7 +876,12 @@ function campCombatStep(dt){
   if(!CAMPB) campBattleOpen();
   if(!CAMPB) return;
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
-    if(CAMPB._gapT <= 0){ campSortie(); campSpawnFoes(); }
+    if(CAMPB._gapT <= 0){
+      // ⚠ 전장이 비었을 때만 출격한다(위 campSortie 설명) — 누운 병력이 있으면 곧 일어난다
+      if(!CAMPB.me.units.length && campDown() === 0) campSortie();
+      campBuildStructs();                                 // 🏢 그새 지은 건물을 전장에 반영(체력도 새로)
+      campTrimArmy();                                     // 👥 인구 상한 재확인(던전 전환에서 새는 자리)
+      campSpawnFoes(); }
     return; }
   if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
@@ -713,15 +901,27 @@ function campCombatStep(dt){
   //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
   //    ⭐ **패배 = 본부 파괴다**(HUNT_R1 §6-5). 부활이 생긴 뒤로 「전멸」은 패배가 아니다 —
   //      다 누워도 30초 뒤 일어난다. 다만 **되살릴 유닛이 하나도 없으면**(출격 병력 0) 끝이 없으므로 그때만 진다.
-  if(CAMPB.me.base.hp <= 0 || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0
-     && (campAlive('ai') > 0 || campFoesPending()))){
+  // ⛔ **때릴 수 없는 적만 남았으면 진다.** 안 그러면 라운드가 영원히 안 끝난다(실측: R12 hellfire).
+  //   ⚠ 아직 안 나온 무리가 있으면 그중에 때릴 수 있는 것이 있을 수 있으므로 기다린다.
+  const _noHit = CAMPB._started && !campFoesPending() && !campCanHitFoes();
+  // 🏢 **패배 = 내 건물이 전부 부서지는 것**(2026-08-27 확정). 본부 하나가 아니라 기지 전체다.
+  //    ⚠ 건물 목록이 비어 있으면(아직 안 세웠으면) 본부 체력으로 판정한다 — 옛 규칙 폴백.
+  const _bld = campBldAlive();
+  const _allDown = (CAMPB._bld && CAMPB._bld.length) ? (_bld.length === 0) : (CAMPB.me.base.hp <= 0);
+  if(_allDown || _noHit
+     || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0 && campAlive('ai') > 0)){
     const was = campFail(); campBattleClose(); campBarReset();
-    campSay(was.cleared > 0
-      ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
-      : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다'), 'lose');
+    campSay(_allDown
+      ? ('🏢 기지가 무너졌습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
+      : _noHit
+      ? ('✈ 공중을 칠 수 없어 탈락 — 대공이 되는 병력을 섞으세요(던전 ' + was.dg + ' ' + was.cleared + '라운드)')
+      : (was.cleared > 0
+        ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
+        : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다')), 'lose');
     return; }
   // ② 적을 다 잡았다 → 라운드 클리어
-  if(CAMPB._started && campAlive('ai') === 0 && !campFoesPending()){
+  if(CAMPB._started && campAlive('ai') === 0){
+    if(CAMPB._wq) CAMPB._wq.length = 0;    // 아직 안 나온 무리는 그냥 안 나온다(기다리는 화면을 만들지 않는다)
     const dgWas = campDgN();
     campClearRound();
     if(campDgN() !== dgWas){                                   // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
@@ -1116,6 +1316,7 @@ function campHideView(){
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   campRestoreHire(); campRestoreSupply();                  // 👷🏠 가격 원복(TECH_TREE 는 공유다)
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
+  campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
   campClearSheet();
   if(typeof G !== 'undefined' && G && _campPrevTab !== null){ G.tab = _campPrevTab; _campPrevTab = null; }
@@ -1137,6 +1338,7 @@ function campEnter(){
   //    techUIInit 이 1기를 깔아 두므로(16-build.js:14) 새 판일 때만 걷는다.
   if(!had) G.tech.ents = (G.tech.ents || []).filter(function(e){ return e.type !== 'worker'; });
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
+  campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
   //   그 뒤로 _techCW()·_techCH()·_techRows() 값이 전부 달라진다.

@@ -1332,27 +1332,82 @@ async function groupLobby(){
       assert(STK===stk0,'campCombatStep 이 전역 STK 를 돌려놓지 않았다');
       const seen=campWithStk(S=>{ assert(STK===S,'campWithStk 안에서 STK 가 안 바뀜'); return S; });
       assert(seen===CAMPB && STK===stk0,'campWithStk 가 STK 를 안 돌려놓음');
-      // ④ ⏱ **라운드의 적은 웨이브로 나뉘어 들어온다** — 화면의 적을 다 잡아도
-      //    아직 안 나온 웨이브가 남아 있으면 라운드가 오르면 안 된다.
-      //    (전투가 0.5초에 끝나 라운드가 ~2초였고, 그래서 진행이 설계보다 수십 배 빨랐다)
+      // ④ ⏱ **화면의 적을 다 잡으면 그 순간 라운드가 오른다.**
+      //    라운드 길이는 오직 `적 총 체력 ÷ 아군 총 DPS` 다(HUNT_R1 §6-2).
+      //    ⛔ 최소 시간·대기 시간을 두지 말 것 — 한때 「안 나온 무리가 남으면 안 끝난다」는
+      //      하한이 있었는데, 그러면 라운드가 길어졌을 때 **대기 때문인지 전투 때문인지 못 가린다**
+      //      (실제로 난이도가 11배 올라도 18초 고정이었고 전부 대기 시간이었다).
+      //      길게 하고 싶으면 적 체력만 만진다.
       const r0=campRoundN();
-      assert(typeof campFoesPending==='function','웨이브 대기 판정이 없다');
-      if(campFoesPending()){
-        for(const u of CAMPB.ai.units) u.dead=true;
-        campCombatStep(0.05);
-        assert(campRoundN()===r0,'대기 웨이브가 남았는데 라운드가 올랐다 — 첫 묶음만 잡고 넘어간다');
-        // 남은 웨이브를 다 흘려보낸다(간격만큼 시간을 준다)
-        let guard=0;
-        while(campFoesPending() && guard++<60) campCombatStep(CAMP_WAVE_GAP_S);
-        assert(!campFoesPending(),'웨이브가 안 비워진다');
-      }
+      CAMPB._gapT=0;                       // ⚠ 라운드 사이 숨 고르기 중이면 그 프레임은 갭만 처리한다
+      if(CAMPB._wq) CAMPB._wq.length=0;    // ⚠ 아직 안 나온 무리가 있으면 그 프레임에 새로 나와 전멸이 아니게 된다
       for(const u of CAMPB.ai.units) u.dead=true;
       campCombatStep(0.05);
       assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
-      // ⑤ 본부가 뚫리면 캠프(0)로 탈락한다
-      CAMPB._gapT=0; CAMPB._started=true; CAMPB.me.base.hp=0;
-      campCombatStep(0.05);
-      assert(campDgN()===0,'본부가 뚫렸는데 캠프로 안 감: '+campDgN());
+      assert(!(CAMPB._wq && CAMPB._wq.length),'라운드가 넘어갔는데 안 나온 무리가 남아 있다');
+      // ⑤ ⛔ **라운드가 넘어가도 병력이 불어나지 않는다.**
+      //    strikeSpawnForPlayer 는 건물 하나당 유닛을 새로 만든다(18-strike.js:1091).
+      //    라운드 갭마다 부르면 건물이 그대로라 계속 증식한다 — 실측: R50 에 623기 · DPS 12,415
+      //    (인구 상한 200 을 훨씬 넘음). 그 화력이면 적 체력을 아무리 올려도 즉사한다.
+      //    ⭐ 전장이 비었을 때(첫 진입·던전 전환)만 출격해야 한다.
+      { const n0=CAMPB.me.units.length+campDown();
+        assert(n0>0,'전제가 바뀜: 라운드가 넘어갔는데 병력이 없다');
+        for(let i=0;i<8;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘긴다
+        const n1=CAMPB.me.units.length+campDown();
+        assert(n1<=n0,'라운드가 넘어갈 때마다 병력이 불어난다(재출격 중복): '+n0+' → '+n1); }
+      // 👥 **전장 병력도 인구 상한을 넘지 않는다.**
+      //    ⚠ 전장 자체엔 제한이 없다(STK_UNIT_CAP=0) — 캠프의 200 은 생산 제한일 뿐이라
+      //      던전 전환에서 샌다. 실측: 던전 1 은 20기였는데 던전 2 로 넘어가며 292기가 됐다.
+      { assert(typeof campTrimArmy==='function','인구 상한 트림이 없다');
+        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
+        // 상한을 넘겨 억지로 채운 뒤 트림이 도는지 본다
+        const proto=CAMPB.me.units[0];
+        if(proto){ for(let i=0;i<cap+30;i++) CAMPB.me.units.push(Object.assign({},proto,{uid:'x'+i}));
+          campTrimArmy();
+          const tot=CAMPB.me.units.length+campDown();
+          assert(tot<=cap,'전장 병력이 인구 상한을 넘는다: '+tot+' > '+cap); } }
+      // ⑥ ✈ **때릴 수 없는 적만 남으면 진다** — 안 그러면 라운드가 영원히 안 끝난다.
+      //    실측(2026-08-27): 던전 1 R12 에서 hellfire(공중 전용) 하나가 남았는데 아군이
+      //    화력병 20기(지상 전용)뿐이라 서로 한 대도 못 때렸다. 적 본부는 이미 부순 뒤였다.
+      { assert(typeof campCanHitFoes==='function','때릴 수 있나 판정이 없다');
+        assert(campCanHitFoes(),'전제가 바뀜: 지금 편성으로 적을 못 때린다');
+        // 적을 공중 전용으로, 아군을 지상 전용으로 바꿔 그 상황을 만든다
+        const foe=CAMPB.ai.units.find(u=>!u.dead);
+        if(foe && typeof FXLAB_AIR!=='undefined' && typeof SB_ATK_MODE!=='undefined'){
+          const airId=[...FXLAB_AIR][0], gndId=Object.keys(SB_ATK_MODE).find(k=>SB_ATK_MODE[k]==='gnd');
+          if(airId && gndId){
+            // ⚠ 전투는 공격 레이어를 u._atk 에 **캐시**한다(18-strike.js:1196) — id 만 바꾸면 옛 값이 남는다
+            foe.id=airId; foe.gm=airId; delete foe._atk;
+            for(const m of CAMPB.me.units){ m.id=gndId; m.gm=gndId; delete m._atk; m.dmg=m.dmg||10; }
+            for(const d of (CAMPB._down||[])) if(d.u){ d.u.id=gndId; d.u.gm=gndId; delete d.u._atk; }   // ⚠ 누운 병력도 곧 일어난다 — 같이 바꿔야 상황이 성립한다
+            for(const o of CAMPB.ai.units) if(o!==foe) o.dead=true;                    // 다른 적이 남아 있으면 그쪽은 때릴 수 있다
+            assert(!campCanHitFoes(),'공중 적 + 지상 아군인데 때릴 수 있다고 한다');
+            if(CAMPB._wq) CAMPB._wq.length=0;
+            const dg0=campDgN();
+            campCombatStep(0.05);
+            assert(campDgN()===0,'때릴 수 없는 적만 남았는데 안 졌다 — 라운드가 영원히 안 끝난다(던전 '+dg0+')');
+            // 🧹 일부러 진 검사다 — 전장이 닫혔으므로 뒤 검사를 위해 다시 들어간다
+            if(typeof campEnterDungeon==='function'){ campEnterDungeon(dg0||1); campCombatStep(0.05); }
+          } } }
+      // ⛔ 적 풀에 공중 **전용**은 안 들어간다(공중이면서 지상을 치는 것은 남긴다)
+      { if(typeof campFoeId==='function' && typeof SB_ATK_MODE!=='undefined'){
+          for(let i=0;i<40;i++){ const id=campFoeId();
+            if(id) assert(SB_ATK_MODE[id]!=='air','공중 전용 적이 뽑혔다: '+id); } } }
+      // ⑤ 🏢 **패배 = 내 건물이 전부 부서지는 것**(2026-08-27 확정). 본부 하나가 아니다.
+      //    ⛔ 예전에는 me.base.hp<=0 하나로 졌다 — 전장에 본부밖에 없어서 병영·보급소는
+      //      적이 때릴 수도 없었다. 지금은 기지의 건물이 모두 표적이고, 마지막 한 채까지
+      //      부서져야 진다(적은 strikeFrontStruct 를 통해 가장 앞 건물부터 친다).
+      assert(typeof campBldAlive==='function','건물 목록 판정이 없다');
+      { const live=campBldAlive();
+        assert(live.length>=1,'전장에 내 건물이 하나도 없다 — campBuildStructs 가 안 돌았다');
+        CAMPB._gapT=0; CAMPB._started=true;
+        if(live.length>1){                       // 한 채만 부숴도 지면 안 된다
+          live[0].hp=0; live[0].dead=true;
+          campCombatStep(0.05);
+          assert(campDgN()>0,'건물 한 채가 부서졌다고 탈락했다 — 전부 부서져야 진다'); }
+        for(const b of campBldAlive()){ b.hp=0; b.dead=true; }
+        campCombatStep(0.05);
+        assert(campDgN()===0,'건물이 전부 부서졌는데 캠프로 안 감: '+campDgN()); }
       assert(CAMPB===null,'탈락인데 전장이 안 닫힘');
       // ⑥ ⭐ 캠프 전장은 오토배틀 승패 처리를 타지 않는다
       //    안 막으면 적 본진을 부순 순간 「오토배틀 승리」 결과창이 뜨고,

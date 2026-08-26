@@ -192,6 +192,12 @@ await pg.evaluate(()=>{
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
             me:(typeof campAlive==='function'?campAlive('me'):0),      // 전장에 서 있는 내 병력
             dps:__CB.dps(),                                            // ⚔ 아군 총 DPS
+            bld:(typeof campBldAlive==='function'?campBldAlive().length:0),          // 🏢 살아있는 건물
+            bldAll:(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._bld?CAMPB._bld.length:0),
+            bldHp:(function(){ if(typeof campBldAlive!=='function') return 0;
+              const L=campBldAlive(); if(!L.length) return 0;
+              let h=0,m=0; for(const b of L){ h+=b.hp||0; m+=b.max||b.maxHp||0; }
+              return m>0?Math.round(h/m*100):0; })(),                                // 남은 체력 %
             dn:(typeof campDown==='function'?campDown():0),            // 누워서 부활 대기 중
             dif:Math.round(typeof campFoeDiff==='function'?campFoeDiff(campDgN(),campCleared()):0),
             un:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='unit').length });
@@ -209,7 +215,41 @@ await pg.evaluate(()=>{
           earn:Math.round(campWealth()), diff:campFoeDiff(campDgN(), Math.max(0,r-1)) });
         __CB.lastRound=r; __CB.roundT=0; __CB.stuck=0;
         if(!__CB.gateT && campWealth()>=1e6) __CB.gateT=__CB.t;
-      } else if(__CB.roundT>120 && campDgN()>0){ __CB.stuck++; __CB.roundT=0; }   // ⚠ D0(캠프)엔 라운드가 없다 — 거기서 세면 오작동한다
+      } else if(__CB.roundT>60 && campDgN()>0){
+        // 🩺 정체 진단 — 라운드가 60초 넘게 안 넘어가면 전장을 통째로 찍는다(한 번만)
+        if(!__CB.jam && CAMPB){
+          const cls=(typeof UNIT_COMBAT_CLASS!=='undefined')?UNIT_COMBAT_CLASS:{};
+          const mode=(typeof SB_ATK_MODE!=='undefined')?SB_ATK_MODE:{};
+          const air=(typeof FXLAB_AIR!=='undefined')?FXLAB_AIR:new Set();
+          const desc=u=>({ id:u.id, hp:Math.round(u.hp), max:Math.round(u.maxHp||0),
+            x:+(u.x||0).toFixed(3), y:+(u.y||0).toFixed(3), dead:!!u.dead,
+            rng:u.rng, dmg:u.dmg, atk:mode[u.id]||'both', air:air.has(u.id)||air.has(u.gm),
+            sz:(cls[u.id]||{}).sz, dt:(cls[u.id]||{}).dt });
+          __CB.jam={ round:campRoundN(), dg:campDgN(),
+            foes:CAMPB.ai.units.filter(u=>!u.dead).map(desc),
+            mine:CAMPB.me.units.filter(u=>!u.dead).map(desc),
+            down:campDown(), pending:(CAMPB._wq&&CAMPB._wq.length)|0,
+            canHit:(typeof campCanHitFoes==='function'?campCanHitFoes():null),
+            started:!!CAMPB._started,
+            foesPending:(typeof campFoesPending==='function'?campFoesPending():null),
+            airHas:(typeof FXLAB_AIR!=='undefined'&&CAMPB.ai.units[0])?FXLAB_AIR.has(CAMPB.ai.units[0].gm||CAMPB.ai.units[0].id):null,
+            myMode:(typeof SB_ATK_MODE!=='undefined'&&CAMPB.me.units[0])?(SB_ATK_MODE[CAMPB.me.units[0].id]||'both'):null,
+            // 🔎 아군 구성과 「대공 가능」 수 — 못 때리는 것인지, 때릴 수 있는데 안 잡는 것인지 가른다
+            mix:(function(){ const c={}; for(const u of CAMPB.me.units){ if(u.dead) continue; c[u.id]=(c[u.id]||0)+1; } return c; })(),
+            aa:(function(){ let n=0; for(const u of CAMPB.me.units){ if(u.dead) continue;
+              const a=u._atk||((typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id,gmodel:u.gm}):{air:1,gnd:1});
+              if(a.air) n++; } return n; })(),
+            // 대공 가능한 아군과 적 사이의 최단 거리 — 사거리와 견줘 본다
+            aaDist:(function(){ const f=CAMPB.ai.units.find(u=>!u.dead); if(!f) return null;
+              let best=null, rng=null;
+              for(const u of CAMPB.me.units){ if(u.dead) continue;
+                const a=u._atk||((typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id,gmodel:u.gm}):{air:1,gnd:1});
+                if(!a.air) continue; const d=Math.hypot(u.x-f.x,u.y-f.y);
+                if(best===null||d<best){ best=d; rng=u.rng; } }
+              return best===null?null:{d:Math.round(best), rng:Math.round(rng||0)}; })(),
+            baseHp:Math.round(CAMPB.me.base.hp), aiBaseHp:Math.round(CAMPB.ai.base.hp) };
+        }
+        __CB.stuck++; __CB.roundT=0; }   // ⚠ D0(캠프)엔 라운드가 없다 — 거기서 세면 오작동한다
     } };
 });
 
@@ -224,7 +264,7 @@ while(ran<MINS*60){
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);
   if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 2분 넘게 안 넘어감 — 중단\n'); break; }
 }
-const fin=await pg.evaluate(()=>({ log:__CB.log, wealth:__CB.wealth, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
+const fin=await pg.evaluate(()=>({ log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth() }));
 const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
@@ -245,12 +285,25 @@ console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이�
 console.log(fin.gateT ? `\n□ E 관문 100만 도달: 시작 후 **${(fin.gateT/60).toFixed(1)}분** (설계 추정 10시간)`
                      : `\n□ E 관문 100만: ${(fin.t/60).toFixed(1)}분 안에 못 넘음(번 돈 ${F(fin.earn)})`);
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
-console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 병력(선+누움) | 아군DPS | 적난이도');
+console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
-    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${w.dif}`); } }
+    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${w.dif}`); } }
 if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
   for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
+if(fin.jam){ const J=fin.jam;
+  console.log('');
+  console.log('🩺 정체 진단 — D'+J.dg+'R'+J.round+' (라운드가 60초 넘게 안 넘어감)');
+  console.log('  본부 HP '+J.baseHp+' · 적 본부 '+J.aiBaseHp+' · 누운 아군 '+J.down+' · 안 나온 무리 '+J.pending);
+  console.log('  🔎 campCanHitFoes='+J.canHit+' · 적[0] 공중='+J.airHas);
+  console.log('  🔎 아군 구성 '+JSON.stringify(J.mix)+' · 대공 가능 '+J.aa+'기');
+  if(J.aaDist) console.log('  🔎 대공 아군↔적 최단거리 '+J.aaDist.d+' · 그 유닛 사거리 '+J.aaDist.rng
+    +(J.aaDist.d>J.aaDist.rng?'  ⛔ 사거리 밖':'  ✔ 사거리 안'));
+  console.log('  ■ 살아있는 적 '+J.foes.length+'기');
+  for(const f of J.foes.slice(0,12)) console.log('    '+String(f.id).padEnd(14)+' hp '+String(f.hp).padStart(6)+'/'+String(f.max).padEnd(6)+' 위치('+f.x+','+f.y+') 사거리 '+f.rng+' 공격대상 '+f.atk+(f.air?' 공중':'')+' 크기 '+(f.sz||'?')+' 타입 '+(f.dt||'?'));
+  console.log('  ■ 살아있는 아군 '+J.mine.length+'기');
+  for(const m of J.mine.slice(0,8)) console.log('    '+String(m.id).padEnd(14)+' hp '+String(m.hp).padStart(6)+'/'+String(m.max).padEnd(6)+' 위치('+m.x+','+m.y+') 사거리 '+m.rng+' 공격력 '+m.dmg+' 공격대상 '+m.atk+(m.air?' 공중':''));
+}
 if(fin.dead) console.log('\n⛔ 판이 빈 순간: '+JSON.stringify(fin.dead));
 if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.stringify(fin.vanish));
 
