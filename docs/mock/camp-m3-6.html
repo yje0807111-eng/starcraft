@@ -1,0 +1,141 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>보상 미리보기(M3) 정돈 6안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* M3(보상 미리보기)로 정해졌다. 고칠 것은 **정돈**과 **가시성** 둘.
+   지금 M3 의 문제(찍어서 확인한 것):
+     ① 축이 둘이다 — 머리줄은 좌우로 벌어지는데 수량 줄은 가운데 정렬이라 세로선이 안 맞는다.
+     ② 「캠프 2시간치」가 수량과 **같은 크기·같은 색 계열**로 붙어 무엇이 주인공인지 없다.
+     ③ 재화 아이콘이 작고(17px) 원본 여백이 달라 미네랄·가스가 서로 다른 크기로 보인다.
+     ④ 상세 판 안에 판이 또 들어가 테두리가 두 겹이다.
+   여섯 안 모두 **아이콘 20px 통일 · 수량 19px · 라벨 대비 상향**을 깔고, 짜임만 다르다. */
+:root{--font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px;--fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px;
+  --dc:#ffb14d;--dcRGB:255,177,77;--camp:#8fe3ff}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#141416;color:#e7e9ee;
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,372px);gap:16px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base em{color:#ffd08a}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:62px}
+.sub b{color:#dfe6f0}
+.det{position:relative;border-radius:6px;padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:12px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4}
+.stat b{display:block;font-family:var(--font-num);font-size:20px;font-weight:700;margin-top:2px}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+
+/* ── 가시성 기본값(여섯 안 공통) ── */
+.ic{width:20px;height:20px;flex:none;display:block;object-fit:contain}
+.amt{display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--font-num);font-size:19px;font-weight:700;color:#eef2f6}
+.lab{font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em;color:#a8b3c0}
+.hr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
+.timeV{font-family:var(--font-num);font-weight:700;color:var(--camp)}
+.timeV small{font-size:11px;opacity:.8;margin-left:1px}
+
+/* N1 좌우 한 축 */
+.n1 .box{display:flex;align-items:center;gap:14px;padding:10px 12px;border-radius:var(--r-bar);
+  background:rgba(255,255,255,.04)}
+.n1 .r{margin-left:auto;text-align:right}
+.n1 .r .timeV{font-size:19px}
+.n1 .r .lab{display:block;margin-bottom:1px}
+
+/* N2 머리줄 + 두 칸 균등 */
+.n2 .hdr{display:flex;align-items:center}
+.n2 .hdr .timeV{margin-left:auto;font-size:15px}
+.n2 .grid{display:grid;grid-template-columns:1fr 1px 1fr;align-items:center;
+  padding:10px 0;border-radius:var(--r-bar);background:rgba(255,255,255,.04)}
+.n2 .cell{display:flex;justify-content:center}
+.n2 .vr{height:22px;background:rgba(255,255,255,.10)}
+
+/* N3 재화별 한 줄 */
+.n3 .list{border-radius:var(--r-bar);background:rgba(255,255,255,.04);padding:2px 12px}
+.n3 .row{display:flex;align-items:center;gap:9px;height:36px}
+.n3 .row+.row{border-top:1px solid rgba(255,255,255,.06)}
+.n3 .row .nm{font-size:var(--fs-md);color:#a8b3c0}
+.n3 .row .v{margin-left:auto;font-family:var(--font-num);font-size:18px;font-weight:700}
+.n3 .row.t .v{color:var(--camp)}
+
+/* N4 시간이 주인공 */
+.n4 .big{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px;
+  border-radius:var(--r-bar);background:rgba(143,227,255,.07);border:1px solid rgba(143,227,255,.20)}
+.n4 .big .timeV{font-size:28px;line-height:1}
+.n4 .mini{display:flex;gap:16px}
+.n4 .mini .amt{font-size:15px;color:#b9c3cf}
+.n4 .mini .ic{width:16px;height:16px}
+
+/* N5 좌우 두 덩어리 */
+.n5 .split{display:grid;grid-template-columns:1fr 1px auto;gap:12px;align-items:center;
+  padding:11px 13px;border-radius:var(--r-bar);background:rgba(255,255,255,.04)}
+.n5 .stack{display:flex;flex-direction:column;gap:6px}
+.n5 .stack .amt{font-size:16px}
+.n5 .vr{align-self:stretch;background:rgba(255,255,255,.10)}
+.n5 .rt{text-align:right}
+.n5 .rt .timeV{font-size:22px;display:block}
+
+/* N6 판 없이 구분선만 */
+.n6 .sec{display:flex;align-items:center;gap:14px;padding:2px 2px}
+.n6 .sec .timeV{margin-left:auto;font-size:17px}
+</style></head><body>
+<div id="w"></div>
+<script>
+const MIN='../../assets/icons/res_mineral.webp', GAS='../../assets/icons/res_gas.webp';
+const STATS=`<div class="stats">
+  <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+  <div class="stat c"><i>포인트 획득량</i><b>×2</b></div></div>`;
+const DESC=`<div class="desc">메타 업그레이드가 어느 정도 쌓여야 버팁니다</div>`;
+const A=(src,v)=>`<span class="amt"><img class="ic" src="${src}" alt="">${v}</span>`;
+const T=`<span class="timeV">2<small>시간치</small></span>`;
+const det=(cls,inner)=>`<div class="det ${cls}">${STATS}<div class="hr"></div>${inner}${DESC}</div>`;
+
+const V=[
+['n1','N1 — <em>한 축</em>으로 정렬',
+ '왼쪽에 받을 재화, 오른쪽에 캠프 시간. <b>세로선이 하나</b>라 눈이 안 흔들린다. 시간에만 색을 줘서 무엇이 기준인지 분명하다.',
+ det('n1',`<div class="box">${A(MIN,'12.4K')}${A(GAS,'1.3K')}
+   <span class="r"><span class="lab">캠프 자동수급</span>${T}</span></div>`)],
+
+['n2','N2 — 머리줄 + <em>두 칸 균등</em>',
+ '「클리어 보상 … 2시간치」가 머리줄을 맡고, 재화는 <b>세로선으로 반씩 나눈 두 칸</b>. 재화가 셋으로 늘어도 짜임이 안 무너진다.',
+ det('n2',`<div class="hdr"><span class="lab">클리어 보상</span>${T}</div>
+   <div class="grid"><span class="cell">${A(MIN,'12.4K')}</span><span class="vr"></span>
+     <span class="cell">${A(GAS,'1.3K')}</span></div>`)],
+
+['n3','N3 — <em>재화별 한 줄</em>',
+ '아이콘 · 이름 · 값이 <b>모든 줄에서 같은 자리</b>에 온다. 가장 단정하고 읽기 쉽다. 캠프 시간도 한 줄로 합류시켜 셋이 같은 규격이 된다.',
+ det('n3',`<div class="list">
+   <div class="row"><img class="ic" src="${MIN}" alt=""><span class="nm">미네랄</span><span class="v">12.4K</span></div>
+   <div class="row"><img class="ic" src="${GAS}" alt=""><span class="nm">가스</span><span class="v">1.3K</span></div>
+   <div class="row t"><img class="ic" src="${MIN}" alt="" style="opacity:.45"><span class="nm">캠프 자동수급</span><span class="v">2시간치</span></div>
+ </div>`)],
+
+['n4','N4 — <em>시간이 주인공</em>',
+ '캠프 시간을 <b>28px 로 크게</b> 놓고 재화는 그 아래 작게. 지수 경제에서 <b>판단 기준은 시간</b>이라는 원칙을 화면이 그대로 말한다.',
+ det('n4',`<div class="big"><span class="lab">캠프 자동수급</span>${T}
+   <div class="mini">${A(MIN,'12.4K')}${A(GAS,'1.3K')}</div></div>`)],
+
+['n5','N5 — <em>좌우 두 덩어리</em>',
+ '왼쪽은 재화 두 줄, 오른쪽은 시간. <b>세로 구분선</b>이 성격이 다른 둘을 갈라 준다. 가로 자리를 가장 알뜰하게 쓴다.',
+ det('n5',`<div class="split">
+   <span class="stack">${A(MIN,'12.4K')}${A(GAS,'1.3K')}</span>
+   <span class="vr"></span>
+   <span class="rt"><span class="lab">캠프 자동수급</span>${T}</span></div>`)],
+
+['n6','N6 — <em>판 없이</em> 구분선만',
+ '안쪽 판을 걷고 <b>얇은 선 하나</b>로만 위(전투 배율)와 아래(보상)를 가른다. 테두리가 두 겹이던 것이 한 겹이 된다 — 가장 조용하다.',
+ det('n6',`<div class="sec">${A(MIN,'12.4K')}${A(GAS,'1.3K')}
+   <span class="lab">캠프</span>${T}</div>`)],
+];
+document.getElementById('w').outerHTML=V.map(([k,t,d,body])=>
+ `<div><p class="hd">${t}</p><p class="sub">${d}</p>${body}</div>`).join('');
+</script>
+</body></html>
