@@ -260,8 +260,10 @@ await pg.evaluate(()=>{
             // ⚔ 병력 구성 — 반복 구매(×1.15)가 실제로 조합을 강제하는지 보는 값이다.
             //   한 종류가 절반을 넘으면 배수가 약한 것이다.
             mix:(function(){ const m={};
-              const add=L=>{ for(const u of (L||[])){ if(!u||u.dead) continue; const k=u.gm||u.id; m[k]=(m[k]||0)+1; } };
-              if(typeof CAMPB!=='undefined'&&CAMPB){ add(CAMPB.me&&CAMPB.me.units); add(CAMPB._down); }
+              // ⚠ _down 은 유닛이 아니라 **{u,t} 껍데기**다 — 그대로 세면 전부 undefined 가 된다.
+              //   그리고 누운 유닛은 dead=true 라, 살아있는 것만 거를 때 통째로 사라진다.
+              const add=(L,skipDead)=>{ for(const u of (L||[])){ if(!u||(skipDead&&u.dead)) continue; const k=u.gm||u.id; m[k]=(m[k]||0)+1; } };
+              if(typeof CAMPB!=='undefined'&&CAMPB){ add(CAMPB.me&&CAMPB.me.units,true); add((CAMPB._down||[]).map(d=>d&&d.u),false); }
               for(const e of (G.tech&&G.tech.ents||[])) if(e.type==='unit'){ m[e.uid]=(m[e.uid]||0)+1; }
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
