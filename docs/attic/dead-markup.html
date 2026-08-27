@@ -1,0 +1,56 @@
+<!-- 🗄 다락 — 화면에서 뺀 마크업 보관소. 자세한 이유는 ATTIC.md.
+     ⛔ 지우지 않는다(GAME_DIRECTION.md §5 「유보는 삭제가 아니다」). 되살릴 때의 자산이다.
+     ⛔ 여기 것을 sc-ums-web.html 로 되돌리기 전에 ATTIC.md 를 먼저 볼 것. -->
+
+<!-- ══ twChat — 마을 채팅 시트 껍데기 ══ -->
+<div class="twSheet hide" id="twChat">
+      <div class="twSheetHead"><b>채팅</b>
+        <button class="twSheetX" onclick="twCloseChat()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <!--SOCIAL-HOLE-->
+    </div>
+
+<!-- ══ twSocial — 마을 친구 시트(마을 전용 · 유즈맵 친구 목록과 다른 구현) ══ -->
+<div class="twSheet hide" id="twSocial">
+      <div class="twSheetHead"><b>친구</b>
+        <button class="twSheetX" onclick="twCloseSocial()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <!-- 친구 필터 띠 = 공용 세그먼트 바(segNavHTML) — renderHubFriendTabs()가 채운다 -->
+      <div class="msTabs2" id="hubFriendTabs"></div>
+      <div class="hsList uiScroll" id="hubFriends"></div>
+    </div>
+
+<!-- ══ townScreen — 마을 화면 ══ -->
+<div id="townScreen" class="appScreen spaceBg hide">
+    <button class="vgBack" onclick="vgBack()" aria-label="사냥터로" title="사냥터로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18 3 12l6-6"/><path d="M3 12h13a5 5 0 0 1 0 10h-1"/></svg>
+    </button>
+    <div class="twBar">
+      <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
+      <button class="twWho" data-sfx="ui_open" onclick="openTownPanel('plaza')" title="내 캐릭터" aria-label="내 캐릭터"><span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span></button>
+      <span class="twCoinSpacer" style="margin-left:auto"></span>
+      <button class="twGear" data-sfx="ui_open" onclick="twOpenChat()" title="채팅" aria-label="채팅"><span data-ico="chat"></span></button>
+      <button class="twGear" data-sfx="ui_open" onclick="twOpenSocial()" title="친구" aria-label="친구"><span data-ico="friend"></span></button>
+      <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
+    </div>
+    <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
+      <!-- 월드(화면보다 큼) — 카메라가 이 요소의 transform만 바꾼다. HOME 필드가 이 엔진을 쓴다. -->
+      <div class="twWorld" id="twWorld"><div class="twGround"></div></div>
+      <div class="twAvatar" id="twAvatar"><span class="twAvShadow"></span><span class="twAvFlip" id="twAvFlip"><span class="twAvBody">🧍</span></span></div>
+    </div>
+    <div id="twToast" class="twToast hide"></div>
+    </div>
+
+<!-- ══ dmChat — 1:1 DM 화면(들어가는 길은 마을 친구 목록뿐이었다) ══ -->
+<div id="dmChat" class="dmChat hide">
+    <div class="dmHead">
+      <button class="dmBack" onclick="closeDM()" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="dmAv" id="dmAv"><i class="dmStat" id="dmStat"></i></span>
+      <span class="dmWho"><b id="dmName">친구</b><span class="dmSt" id="dmStTx">오프라인</span></span>
+    </div>
+    <div class="dmBody" id="dmBody"></div>
+    <div class="dmInputBar">
+      <input id="dmInput" type="text" placeholder="메시지 입력…" maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendDM()">
+      <button class="dmSend" onclick="sendDM()" aria-label="전송"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></button>
+    </div>
+  </div>

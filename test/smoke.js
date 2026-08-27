@@ -71,7 +71,6 @@ async function groupLobby(){
   await step('인증: 로그인 화면 노출 + 회원가입 전환', ()=>{ skipIf(typeof openAuth!=='function','인증 화면 없음');
     openAuth();
     assert(visible($('auth')),'로그인 화면이 안 뜸(자동 로그인으로 건너뛰는지 확인)');
-    assert(!visible($('townScreen')),'로그인 전에 메인(마을)이 떠 있음');
     // 첫 화면 = 방식 선택 허브. 아이디/비번은 방식을 고른 뒤에 나온다
     assert(visible($('authHub')),'로그인 방식 허브가 안 보임');
     assert(!visible($('authForm')),'허브인데 입력 폼이 이미 떠 있음');
@@ -237,31 +236,26 @@ async function groupLobby(){
     // ⚠ 렌더러를 여기서 직접 부르면 안 된다 — 그러면 「화면을 열었을 때 띠가 채워지는가」를
     //    영영 못 잰다. 실제로 그 구멍으로 회귀가 지나갔다(twOpenChat 이 렌더러를 안 불러 띠가 통째로 비었음).
     //    반드시 **사용자가 여는 길**로 열고 나서 본다.
-    // ① 채팅/파티/친구 — 마을 채팅 시트를 연다
-    skipIf(typeof twOpenChat!=='function','마을 채팅 시트 없음');
-    twOpenChat();
-    const soc=$('msBottomTabs'); assert(seg(soc),'채팅 시트를 열었는데 탭 띠가 안 그려짐');
-    assert(seg(soc).querySelectorAll('.pdSegBtn').length===3,'채팅/파티/친구 3칸이 아님');
-    // ② 친구 필터 — 마을 친구 시트를 연다
-    skipIf(typeof twOpenSocial!=='function','마을 친구 시트 없음');
-    twOpenSocial();
-    const hub=$('hubFriendTabs'); assert(seg(hub),'친구 시트를 열었는데 탭 띠가 안 그려짐');
-    // ③ 코인 공학소 — 포인트 업그레이드를 연다
+    // ① 유즈맵 정렬 띠 — 유즈맵 선택을 연다
+    skipIf(typeof openMapSelect!=='function','유즈맵 선택 없음');
+    openMapSelect();
+    const srt=$('msSortTabs'); assert(seg(srt),'유즈맵 정렬 띠가 .pdSeg 가 아님');
+    // ② 코인 공학소 — 포인트 업그레이드를 연다
     skipIf(typeof openPointUpgrade!=='function','코인 공학소 없음');
     openPointUpgrade();
     const pt=$('ptTabs'); assert(seg(pt),'코인 공학소를 열었는데 탭 띠가 안 그려짐');
+    assert(seg(pt).querySelectorAll('.pdSegBtn').length===5,'코인 공학소 5칸이 아님');
     // 형태가 같은가 — 같은 함수가 그렸으니 버튼의 뼈대가 같아야 한다(크기만 화면이 덮는다)
+    // ⚠ 글자 크기·굵기는 뺀다 — 화면이 덮으라고 열어 둔 자리다. 뼈대(칸 나눔·정렬·테두리)만 본다.
     const key=b=>{ const c=getComputedStyle(b);
-      return [c.flex,c.fontWeight,c.justifyContent,c.alignItems,c.borderStyle].join('|'); };
-    const a=seg(soc).querySelector('.pdSegBtn'), b=seg(hub).querySelector('.pdSegBtn'), c=seg(pt).querySelector('.pdSegBtn');
-    assert(key(a)===key(b),'채팅 띠와 친구 필터의 형태가 다름\n'+key(a)+'\n'+key(b));
-    assert(key(a)===key(c),'채팅 띠와 코인 공학소의 형태가 다름\n'+key(a)+'\n'+key(c));
+      return [c.flex,c.justifyContent,c.alignItems,c.borderStyle].join('|'); };
+    assert(key(seg(srt).querySelector('.pdSegBtn'))===key(seg(pt).querySelector('.pdSegBtn')),
+      '유즈맵 정렬과 코인 공학소의 뼈대가 다름');
     // 선택 표시가 옮겨가는가(띠를 다시 그리므로 매번 새로 찾아야 한다)
-    setFriendFilter('rpg');
-    assert($('hubFriendTabs').querySelectorAll('.pdSegBtn')[2].classList.contains('on'),'친구 필터 선택이 안 옮겨감');
-    setFriendFilter('all');
-    assert($('hubFriendTabs').querySelectorAll('.pdSegBtn')[0].classList.contains('on'),'친구 필터가 처음으로 안 돌아옴');
-    return '3곳 + 유즈맵 정렬 = 한 컴포넌트'; });
+    setPtGroup('combat');
+    assert($('ptTabs').querySelectorAll('.pdSegBtn')[3].classList.contains('on'),'코인 공학소 선택이 안 옮겨감');
+    setPtGroup('team');
+    return '2곳 = 한 컴포넌트'; });
   // 「둘 중 하나 고르기」도 하나뿐 — 방 만들기 공개/비공개가 설정 창의 그래픽 품질과 같은 컴포넌트여야 한다.
   await step('둘 중 하나 고르기 단일 소스: 방 공개 설정 = 설정 그래픽 품질', ()=>{
     skipIf(typeof createRoom!=='function','방 만들기 없음');
@@ -278,6 +272,17 @@ async function groupLobby(){
     assert(vis.querySelectorAll('.segBtn')[1].classList.contains('on'),'비공개 선택이 안 켜짐');
     setRoomVis('public');
     return '2칸 · 설정과 형태 일치'; });
+  // 🗄 다락으로 보낸 화면이 마크업째 되살아나지 않았는가.
+  //    ⚠ 여기 것을 되돌리려면 ATTIC.md 를 먼저 읽고, 이 스텝도 같이 고쳐야 한다.
+  await step('다락: 마을 화면이 되살아나지 않았다', ()=>{
+    for(const id of ['townScreen','twChat','twSocial','msBottomTabs','hubFriendTabs','hubFriends','dmChat'])
+      assert(!document.getElementById(id), '다락으로 보낸 마크업이 다시 있음: #'+id);
+    // 소셜 알맹이는 살아 있어야 한다 — 유즈맵 하단 도크가 그것을 쓴다
+    const so=document.querySelectorAll('.msSocial');
+    assert(so.length===1,'소셜 DOM 이 하나가 아님: '+so.length+'개 (도크가 쓰는 단일 DOM 이어야 한다)');
+    assert(so[0].closest('#msSocialDock'),'소셜 DOM 이 도크 밖에 있음');
+    assert(document.getElementById('msChat') && document.getElementById('msChatInput'),'유즈맵 채팅 알맹이가 없어졌다');
+    return '마을 7개 없음 · 소셜 1개 도크에 있음'; });
   // 옛 탭 사본이 되살아나지 않았는가 — 다른 작업자가 옛 화면을 되가져오는 일이 반복됐다.
   await step('탭 띠: 옛 사본이 되살아나지 않았다', ()=>{
     for(const cls of ['msTab2','ptTab','cpSegBtn','cpSeg']){
@@ -285,9 +290,9 @@ async function groupLobby(){
       assert(n===0, '없앤 탭 클래스가 화면에 다시 있음: .'+cls+' ×'+n); }
     return '4종 없음 확인'; });
   // 스크롤바는 .uiScroll 하나로 통일. 같은 UI를 두 번 정의하면 화면마다 굵기·색이 어긋난다(실제로 어긋나 있었음).
-  await step('스크롤바 단일 소스: 맵 목록 = 친구 시트', ()=>{
-    const ms=$('msList'), hs=$('hubFriends'); skipIf(!ms||!hs,'대상 목록 없음');
-    for(const [n,el] of [['맵 목록',ms],['허브 소셜',hs]])
+  await step('스크롤바 단일 소스: 맵 목록 = 가이드 시트', ()=>{
+    const ms=$('msList'), hs=$('hbGuideBody'); skipIf(!ms||!hs,'대상 목록 없음');
+    for(const [n,el] of [['맵 목록',ms],['가이드 시트',hs]])
       assert(el.classList.contains('uiScroll'), n+'에 공용 스크롤바 클래스(.uiScroll)가 없음');
     // 이 요소들에 실제로 매칭되는 스크롤바 규칙을 모아 비교 — 스타일 몇 개 눈대중이 아니라 규칙 집합을 통째로 diff
     const rulesFor=(el)=>{ const out=[];
@@ -320,8 +325,8 @@ async function groupLobby(){
     // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
     // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
     //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
-    for(let i=0;i<120 && !(visible($('townScreen'))||visible($('homeScreen'))); i++) await sleep(250);
-    assert(visible($('townScreen'))||visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인으로 안 감');
+    for(let i=0;i<120 && !visible($('homeScreen')); i++) await sleep(250);
+    assert(visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인(HOME)으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
     assert(AUTH.user,'입장했는데 유저가 비어 있음');
@@ -3689,7 +3694,7 @@ async function groupLobby(){
     const home=cv.parentNode;
     assert(home && home.id==='gameArea','원래 자리가 유즈맵(#gameArea)이 아님: '+(home&&(home.id||home.className)));
     for(const [name, leave] of [
-        ['showAppScreen(화면 전환)', ()=>showAppScreen('townScreen')],
+        ['showAppScreen(화면 전환)', ()=>showAppScreen('shopScreen')],
         ['hideAppScreens(게임 진입)', ()=>hideAppScreens()],
         ['hbStop(직접 정지)',        ()=>hbStop()] ]){
       hb3dAttach();
@@ -3697,17 +3702,8 @@ async function groupLobby(){
       leave();
       assert(cv.parentNode===home, name+' 뒤에 3D 캔버스가 안 돌아옴 — 유즈맵 3D가 사라진다');
       assert(!cv.style.zIndex, name+' 뒤에 z-index가 남음: '+cv.style.zIndex); }
-    // 마을 → HOME 순서로 이어 빌리는 경로. 남이 빌린 상태에서 또 빌리면 그 임시 위치를
-    // '원래 자리'로 기억해, 반납해도 캔버스가 마을에 갇힌다(유즈맵 3D가 통째로 사라진다).
-    if(typeof tw3dAttach==='function'){
-      tw3dAttach();
-      assert(cv.parentNode!==home,'마을이 캔버스를 못 빌림');
-      hb3dAttach();                       // 마을이 쥔 채로 HOME이 이어받는다
-      assert(cv.parentNode!==home,'HOME이 이어받지 못함');
-      hbStop();                           // HOME 이탈 = hb3dDetach만 타는 경로
-      assert(cv.parentNode===home,
-        '마을→HOME 순서로 빌린 뒤 반납했는데 원래 자리가 아님(현재: '+(cv.parentNode.id||cv.parentNode.className)+') — 유즈맵 3D가 사라진다');
-      if(typeof tw3dDetach==='function') tw3dDetach(); }
+    // ⛔ 「마을 → HOME 이어 빌리기」 검사는 걷어냈다 — 마을 화면이 다락으로 갔다(ATTIC.md · 2026-08-27).
+    //    이어 빌리기 자체의 위험(임시 위치를 '원래 자리'로 기억하는 것)은 위 세 경로가 계속 잡는다.
     // 네모네모 전용 장식(고정 슬롯 터렛 고스트)은 sync가 매 프레임 다시 만든다.
     // ⚠ 플래그 이름이 아니라 '결과'를 본다 — 아무것도 모르는 새 화면이 sync를 불러도 0이어야 한다.
     //    기본이 '그림'이던 시절엔 새 맵·관리자 랩·마을마다 유령 터렛이 떴다(세 번 반복).
@@ -6330,7 +6326,7 @@ async function groupLobby(){
     { const bad=HB_MORE.filter(x=>x.ico && typeof ICO!=='undefined' && !ICO[x.ico]).map(x=>x.name+'→'+x.ico);
       assert(!bad.length,'더보기 아이콘 키가 ICO 표에 없음: '+bad.join(' · ')); }
     // ⛔ 유보 규칙 — 뺀 것의 코드는 살아 있어야 한다(길만 닫았다 · GAME_DIRECTION §5)
-    for(const f of ['openVillage','hbOpenGrow','hbBuildStart','openDungeonHub','openDaily'])
+    for(const f of ['hbOpenGrow','hbBuildStart','openDungeonHub','openDaily'])
       assert(typeof window[f]==='function', '뺀 칸의 함수가 사라졌다 — 유보는 삭제가 아니다: '+f);
     assert($('hbDailySheet'),'옛 일일 퀘스트 시트 마크업이 사라졌다');
     // 누르면 실제로 열리는가
@@ -6648,15 +6644,13 @@ async function groupLobby(){
       { const so=getComputedStyle(dock.querySelector('.msSocial'));
         assert(so.borderTopStyle==='none' && so.backgroundImage==='none','소셜 안쪽이 또 카드 껍데기를 가짐'); } }
     navSub('party'); await sleep(40);
-    assert(document.querySelector('#twChat.hide'),'파티를 눌렀는데 마을 시트가 열림(도크가 맡아야 한다)');
     assert(getComputedStyle($('msPanelBody')).display!=='none','파티 패널이 안 보임');
     assert(document.querySelector('#navBar .navIt.cur').dataset.sub==='party','소셜 선택 표시가 안 따라옴');
-    // 마을 채팅 시트가 열리면 소셜을 되찾아 가고, 유즈맵에 다시 오면 도크로 돌아온다
-    openHome(); await sleep(40); twOpenChat(); await sleep(40);
-    assert(document.querySelector('#twChat .msSocial'),'마을 시트가 소셜을 못 되찾음');
-    assert(visible(document.querySelector('#twChat .msTabs2')),'마을 시트에선 탭 띠가 보여야 함(네비에 소셜 칸이 없다)');
-    twCloseChat(); navGo('map'); await sleep(60);
-    assert($('msSocialDock').querySelector('.msSocial'),'유즈맵 복귀 시 소셜이 도크로 안 돌아옴');
+    // ⚠ 소셜 DOM(.msSocial)의 집은 이제 도크 하나뿐이다 — 마을이 다락으로 가면서 시트가 없어졌다(ATTIC.md).
+    //    HOME 을 다녀와도 도크에 그대로 있어야 한다(다른 데로 새면 유즈맵 채팅이 사라진다).
+    openHome(); await sleep(40); navGo('map'); await sleep(60);
+    assert($('msSocialDock').querySelector('.msSocial'),'유즈맵 복귀 시 소셜이 도크에 없음');
+    assert(document.querySelectorAll('.msSocial').length===1,'소셜 DOM 이 둘 이상이다(복제 금지)');
     navSub('chat');   // 상태 정리(기본 채팅)
     // 👥 친구 = 머리 한 줄(친구 N + ＋) · 온라인/오프라인 라벨 없이 밝기로 갈린다
     navSub('friend'); await sleep(120);
@@ -6871,7 +6865,6 @@ async function groupLobby(){
     navGo('shop'); await sleep(60);
     assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
     assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
-    assert(!visible($('townScreen')),'상점인데 마을 화면이 남아 있음');
     assert($('curTitle').textContent==='상점','상점 제목이 재화 바 왼쪽에 없음: "'+$('curTitle').textContent+'"');
     // 구역 5개를 하단 네비로 나눴다(2026-08-14) — 화면에는 고른 구역 하나만 그린다
     assert(document.querySelectorAll('#shopBody .shopPanel').length>=1,'상점 구역이 안 그려짐');
@@ -6918,7 +6911,7 @@ async function groupLobby(){
     //   **직접 열어서** 계속 검사한다 — 유보한 코드가 썩지 않게. ⛔ navGo('gear') 는 이제 없다.
     openGear(); await sleep(60);
     assert(visible($('gearScreen')),'정비 화면이 안 열림');
-    assert(!visible($('townPanel')) && !visible($('townScreen')),'정비인데 마을이 남아 있음');
+    assert(!visible($('townPanel')),'정비인데 마을 팝업이 남아 있음');
     // 탭 띠는 화면에서 걷어내고 하단 네비로 올렸다(2026-08-14) — 같은 UI 를 두 군데 두지 않는다
     assert(!document.getElementById('gearTabs'),'정비 화면에 옛 탭 띠가 남아 있음');
     // ⛔ 옛 네비 하위(장비·펫·동료) 검사는 걷어냈다 — 2026-08-25 개편으로 그 칸들이 없어졌다.
