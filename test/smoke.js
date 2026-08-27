@@ -4595,6 +4595,32 @@ async function groupLobby(){
     navBack(); openHome(); await sleep(40);
     return '네비 '+bh+'px · 칸 '+cells.length+' · 인게임 탭바 '+(tb?getComputedStyle(tb).height:'-'); });
   // 🖼 폰 바깥 여백 — 검정이면 폰 밑변과 이어져 하단 네비가 어디서 끝나는지 안 보인다.
+  // 🎥 DOM(바닥·격자·구역·건물·HP바)과 3D(유닛·선택링)는 그리는 경로가 다르다. 팬·줌 중에
+  //    DOM 을 안 그리면 3D 만 움직여 선택링이 건물에서 떨어져 보이고, 밀어낸 바깥이 검게 빈다.
+  //    pointermove/up 은 document 에 걸려 있어 다시 그려도 드래그가 안 끊긴다 → 그냥 그린다.
+  //    ⭐ **정상 조작과 같은 경로로 잰다**: 목표 뷰(techViewT)만 바꾸고 프레임 루프가 보간하게 둔다.
+  await step('맵 확대·이동: 손가락이 닿아 있어도 맵이 3D 와 같이 다시 그려진다', async()=>{
+    skipIf(typeof techView!=='function' || typeof techViewT!=='function','건설 뷰 없음');
+    openHome(); await sleep(120);
+    skipIf(!document.querySelector('.bmap'),'맵 요소 없음');
+    const v=techView(), t=techViewT(); skipIf(!v||!t,'뷰 없음');
+    const z0=v.zoom, tz0=t.zoom;
+    const hold0=(typeof _techHold!=='undefined')?_techHold:0;
+    let vz=z0, floorZ=null;
+    try{
+      _techHold=1;                                   // 👆 손가락이 눌린 상태
+      t.zoom=Math.min(2.2, tz0*1.7);                 // 핀치와 같은 경로 — 목표만 바꾼다
+      await sleep(420);                              // 프레임 루프가 보간하는 동안
+      vz=v.zoom;
+      // 바닥은 techMapRender 가 그릴 때만 새 transform 을 갖는다 → 이게 '다시 그렸다'의 증거
+      const f=document.querySelector('.bmapFloor');
+      if(f){ const m=getComputedStyle(f).transform; floorZ=parseFloat(m.slice(m.indexOf('(')+1)); }
+    } finally { _techHold=hold0; t.zoom=tz0; v.zoom=z0; if(typeof techMapRender==='function') techMapRender(); }
+    assert(Math.abs(vz-z0)>0.05,'뷰가 아예 안 움직였다 — 프레임 루프가 안 돈다(검사가 무의미)');
+    assert(floorZ!=null,'바닥 요소를 못 찾았다');
+    assert(Math.abs(floorZ-vz)<0.03,
+      '손가락 중 맵이 다시 안 그려졌다 — 바닥 ×'+floorZ.toFixed(3)+' vs 뷰 ×'+vz.toFixed(3)+' (3D 만 움직여 선택링이 어긋난다)');
+    return '뷰 ×'+vz.toFixed(2)+' · 바닥 ×'+floorZ.toFixed(2)+' 동기'; });
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다
     const lum=(c)=>{ const i=(c||'').indexOf('('), j=(c||'').indexOf(')');

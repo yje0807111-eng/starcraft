@@ -160,6 +160,8 @@ try {
       await page.evaluate(()=>{ const ov=document.getElementById('campRaceOv');
         if(ov && !ov.classList.contains('hide')){ const b=[...ov.querySelectorAll('button')].find(x=>/시작/.test(x.textContent||'')); if(b) b.click(); } });
       await new Promise(r=>setTimeout(r,3000));
+      if(process.env.SHOT_ZOOM){ const zr=await page.evaluate((z)=>{ const out={}; try{ window.__zHold=setInterval(()=>{ try{ const v=G.tech.view; if(v && v.zoom!==+z){ v.zoom=+z; } }catch(e){} }, 16); const v=G.tech.view; v.zoom=+z; if(typeof _techClampView==="function") _techClampView(); out.set=v.zoom; }catch(e){ out.err=String(e).slice(0,90); } return out; }, process.env.SHOT_ZOOM); await new Promise(r=>setTimeout(r,900)); const zr2=await page.evaluate(()=>{ const f=document.querySelector(".bmapFloor"); return { zoom:G.tech.view.zoom, x:+G.tech.view.x.toFixed(3), y:+G.tech.view.y.toFixed(3),          tr:f?getComputedStyle(f).transform:"-" }; }); console.log('ZOOM '+JSON.stringify(zr)+' | '+JSON.stringify(zr2)); }
+      await new Promise(r=>setTimeout(r,700));
       if(process.env.SHOT_DG) await page.evaluate((n)=>{ try{ const C=campState(); if(C){ C.dg=+n; campSkin(); } }catch(e){} }, process.env.SHOT_DG);
       await new Promise(r=>setTimeout(r,500));
       if(process.env.SHOT_BGPOS) await page.addStyleTag({content:'#phone.campMode #cstMain .bmapFloor{background-position:center '+process.env.SHOT_BGPOS+' !important}'});
