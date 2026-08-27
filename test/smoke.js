@@ -1155,11 +1155,15 @@ async function groupLobby(){
               +' | selU='+JSON.stringify(G.tech.selU)+' sel='+G.tech.sel); }
           wk.x=bak.x; wk.y=bak.y; wk.tx=bak.tx; wk.ty=bak.ty; wk._wp=bak.wp;
           wk._gKind=bak.gk; wk._gTgt=bak.gt; wk._working=bak.working; }   // 🧹 원복 — 뒤 step 의 채취 검사가 이 흔적을 물려받지 않게
+        // 💎 광맥 탭은 **그 자리에서 캐지 않고 채굴 판을 연다**(2026-08-27). 캐는 것은 그 판의 과녁이 맡는다.
         { await arm(); const q=at(mnn.x,mnn.y);
-          if(onMap(q)){ const c0=G.tech.credit; pid++;
+          if(onMap(q)){ pid++;
             fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 광맥을 탭했는데 모드가 안 꺼진다');
-            assert(G.tech.credit>c0,'모드 중 광맥 탭이 채집을 못 한다'); } }
+            const _sh=document.getElementById('campMineSheet');
+            assert(_sh && !_sh.classList.contains('hide'),'광맥을 탭했는데 채굴 판이 안 열린다');
+            if(typeof closeCampMine==='function') closeCampMine();   // 🧹 뒤 step 에 열린 판을 물려주지 않는다
+          } }
         { await arm(); const q=at(bd.x,bd.y);
           if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 건물을 탭했는데 모드가 안 꺼진다');
@@ -4995,6 +4999,106 @@ async function groupLobby(){
     assert(Math.abs(floorZ-vz)<0.03,
       '손가락 중 맵이 다시 안 그려졌다 — 바닥 ×'+floorZ.toFixed(3)+' vs 뷰 ×'+vz.toFixed(3)+' (3D 만 움직여 선택링이 어긋난다)');
     return '뷰 ×'+vz.toFixed(2)+' · 바닥 ×'+floorZ.toFixed(2)+' 동기'; });
+  // 🎬 종족을 고르고 캠프로 들어올 때 살짝 물러난 자리에서 본진 쪽으로 다가간다.
+  //    ⭐ 맵(#vBuild)과 3D(#cvMarine)는 **형제**다 — 둘에 같은 애니를 걸어야 배경과 건물이 같이 온다.
+  //    ⛔ 뷰(CAMP_ZOOM)로 연출하지 말 것 — 그건 격자·배치·전투 계산에 얽혀 있다(2026-08-27 실패).
+  await step('캠프 진입: 맵과 3D 가 같은 애니로 다가온다 · 종족 판은 페이드로 걷힌다', async()=>{
+    skipIf(typeof campPickRace!=='function' || typeof campEnterAnim!=='function','캠프 진입 연출 없음');
+    skipIf(typeof campState!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      openHome(); await sleep(160);
+      // ⚠ race 는 openHome 뒤에 비운다 — 앞에서 비우면 openHome 이 상태를 다시 만들며 되돌린다
+      const C2=campState(); assert(C2,'캠프 상태 없음(재조회)');
+      C2.race=null;
+      if(typeof campRaceSheet==='function') campRaceSheet();
+      await sleep(80);
+      const ov=document.getElementById('campRaceOv');
+      skipIf(!ov,'종족 판이 안 떴다');
+      campPickRace();
+      assert(C2.race,'campPickRace 가 종족을 정하지 않았다');
+      await sleep(60);   // 클래스를 붙인 직후엔 애니 객체가 아직 없다 — 스타일 계산을 기다린다
+      const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
+      assert(vb&&mc,'맵·3D 요소를 못 찾았다');
+      const av=vb.getAnimations?vb.getAnimations():[], am=mc.getAnimations?mc.getAnimations():[];
+      assert(av.length&&am.length,'맵('+av.length+')·3D('+am.length+') 중 애니가 빠진 쪽이 있다 — vb.cls='+vb.className+' mc.cls='+mc.className+' race='+C2.race+' vbDisp='+getComputedStyle(vb).display+' mcDisp='+getComputedStyle(mc).display);
+      // 같은 시각에 같은 값이어야 한다
+      const at=(t)=>{ [...av,...am].forEach(a=>{ try{ a.pause(); a.currentTime=t; }catch(e){} });
+        return [getComputedStyle(vb).transform+'|'+(+getComputedStyle(vb).opacity).toFixed(2),
+                getComputedStyle(mc).transform+'|'+(+getComputedStyle(mc).opacity).toFixed(2)]; };
+      const [v0,m0]=at(0), [v1,m1]=at(400), [v2]=at(1200);
+      assert(v0===m0,'시작 시점에 맵과 3D 가 다르다: '+v0+' vs '+m0);
+      assert(v1===m1,'중간 시점에 맵과 3D 가 다르다: '+v1+' vs '+m1);
+      assert(v0!==v1,'애니가 진행되지 않는다(값이 같다) — 연출이 없는 것과 같다');
+      const sc=(t)=>parseFloat(t.slice(t.indexOf('(')+1));
+      // ⚠ **확대에서 시작한다.** 1 보다 작게 시작하면 맵 바깥의 빈 자리가 위·좌우에 드러난다.
+      assert(sc(v0)>1.08,'시작 배율이 '+sc(v0).toFixed(3)+' — 확대에서 시작해야 맵 바깥이 안 드러난다');
+      assert(Math.abs(sc(v2)-1)<0.001===false || sc(v2)>1.0001,'1.2초에 이미 끝났다 — 연출이 짧아 보인다');
+      // ⚠ 페이드는 줌보다 **먼저** 끝난다 — 같이 끝나면 뭉뚱그려져 밋밋해 보인다
+      const op=(t)=>parseFloat(t.slice(t.indexOf('|')+1));
+      assert(op(v1)>0.98,'400ms 에 아직 투명하다('+op(v1)+') — 페이드가 줌만큼 길게 끌린다');
+      assert(sc(v1)>1.05,'400ms 에 줌이 거의 끝났다('+sc(v1).toFixed(3)+') — 페이드와 같이 끝나 짧아 보인다');
+      // 종족 판은 잘라내지 말고 흐려져야 한다
+      assert(ov.classList.contains('closing'),'종족 판이 페이드 없이 사라진다(display 로 끊는다)');
+      const oTr=getComputedStyle(ov).transition;
+      assert(/opacity/.test(oTr),'종족 판에 opacity 전이가 없다: '+oTr);
+      return '맵·3D 동일 · '+v0.slice(0,26)+' → '+v1.slice(0,26);
+    } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} try{ const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('closing'); o.classList.add('hide'); } }catch(e){}
+      try{ ['vBuild','cvMarine'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.classList.remove('campIn'); (e.getAnimations?e.getAnimations():[]).forEach(a=>{try{a.cancel();}catch(_){}}); } }); }catch(e){}
+      openHome(); await sleep(60); } });
+  // 💎 미네랄 채굴 판 — 광맥은 화면의 5% 뿐이라 손끝이 일꾼·건물을 자꾸 눌렀다. 넓은 과녁을 따로 둔다.
+  //    ⛔ 값은 campTapGain / campUpgCost 하나가 정한다 — 판에서 따로 계산하면 두 벌이 되어 어긋난다.
+  await step('미네랄 채굴 판: 과녁 탭으로 캐고 · 업그레이드를 산다 · 시작 미네랄은 0', async()=>{
+    skipIf(typeof openCampMine!=='function' || typeof campUpgBuy!=='function','채굴 판 없음');
+    skipIf(typeof campState!=='function' || typeof G==='undefined' || !G.tech,'캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const c0=G.tech.credit, u0=JSON.parse(JSON.stringify(C.upg||{}));
+    const force0=window._campTapForce;
+    try{
+      openCampMine();
+      const sh=document.getElementById('campMineSheet');
+      assert(sh && !sh.classList.contains('hide'),'판이 안 열린다');
+      // ① 과녁이 넓어야 한다 — 그게 이 판의 존재 이유다
+      const tgt=document.getElementById('campMineTap');
+      assert(tgt,'과녁이 없다');
+      const tr=tgt.getBoundingClientRect();
+      assert(tr.height>=120,'과녁이 좁다('+Math.round(tr.height)+'px) — 판을 만든 뜻이 사라진다');
+      // ② 탭하면 campTapGain 만큼 는다
+      window._campTapForce=1;
+      G.tech.credit=0;
+      const g=campTapGain();
+      campMineTap({isTrusted:false});
+      assert(G.tech.credit===g,'과녁 탭이 campTapGain('+g+') 과 다르게 준다: '+G.tech.credit);
+      // ③ 돈이 모자라면 못 산다
+      G.tech.credit=0;
+      assert(campUpgBuy('tap')===false,'돈이 0 인데 업그레이드가 팔렸다');
+      // ④ 사면 값이 빠지고 레벨이 오른다
+      const cost=campUpgCost('tap'), lv=campUpgLv('tap');
+      G.tech.credit=cost;
+      assert(campUpgBuy('tap')===true,'돈이 딱 맞는데 안 팔린다');
+      assert(campUpgLv('tap')===lv+1,'레벨이 안 올랐다');
+      assert(G.tech.credit===0,'값이 안 빠졌다: '+G.tech.credit);
+      // ⑤ 레벨이 오르면 탭 수확도 는다(값이 한 소스에서 온다는 증거)
+      assert(campTapGain()>g,'레벨을 올렸는데 탭 수확이 그대로다');
+      return '과녁 '+Math.round(tr.height)+'px · 탭 +'+g+' → +'+campTapGain()+' · '+cost+' 로 Lv'+lv+'→'+campUpgLv('tap');
+    } finally {
+      window._campTapForce=force0;
+      G.tech.credit=c0; C.upg=u0;
+      if(typeof closeCampMine==='function') closeCampMine(); } });
+
+  // 시작 미네랄 0 — 첫 미네랄은 탭으로 번다(일꾼 0기와 같은 규칙 · HUNT_R1 §1)
+  await step('캠프 시작: 미네랄 0 에서 출발한다', async()=>{
+    skipIf(typeof campEnter!=='function' || typeof campState!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep=C.ents; const kc=C.credit; const race0=C.race;
+    try{
+      C.ents=null;                        // 새 판으로 들어간다 — campRestore 는 C.ents 가 있으면 그것으로 덮는다
+      campEnter();
+      assert((G.tech.credit|0)===0,'새 판인데 미네랄이 '+G.tech.credit+' 이다 — 탭으로 벌기 전에 이미 부자다');
+      assert((G.tech.energy|0)===0,'새 판인데 가스가 '+G.tech.energy+' 이다');
+      return '미네랄 0 · 가스 0';
+    } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다
     const lum=(c)=>{ const i=(c||'').indexOf('('), j=(c||'').indexOf(')');

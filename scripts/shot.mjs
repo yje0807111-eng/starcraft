@@ -154,6 +154,49 @@ try {
     else if (WHAT === 'bg') { await page.evaluate(()=>{ window.__bg={body:getComputedStyle(document.body).backgroundColor,html:getComputedStyle(document.documentElement).backgroundColor,phone:getComputedStyle(document.getElementById('phone')).backgroundColor}; }); const r=await page.evaluate(()=>window.__bg); console.log(JSON.stringify(r)); }
     else if (WHAT === 'nav') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('upg'); navBack(); }catch(e){} }); await new Promise(r=>setTimeout(r,700)); }
     else if (WHAT === 'navsub') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('shop'); }catch(e){} }); await new Promise(r=>setTimeout(r,800)); }
+    else if (WHAT === 'mine') {   // 💎 미네랄 채굴 판
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
+      await new Promise(r=>setTimeout(r,1200));
+      await page.evaluate(()=>{ const ov=document.getElementById('campRaceOv'); if(ov && !ov.classList.contains('hide')){ try{ campPickRace(); }catch(e){} } });
+      await new Promise(r=>setTimeout(r,2600));
+      const info = await page.evaluate((rich) => {
+        const out={};
+        try{ if(rich) G.tech.credit = 5000; out.credit=G.tech.credit; openCampMine(); }catch(e){ out.err=String(e).slice(0,90); }
+        const sh=document.getElementById('campMineSheet');
+        out.open = sh ? !sh.classList.contains('hide') : 'no sheet';
+        out.tapGain = (typeof campTapGain==='function') ? campTapGain() : '-';
+        out.cost = (typeof campUpgCost==='function') ? [campUpgCost('tap'), campUpgCost('gather')] : '-';
+        const btns=[...document.querySelectorAll('#campMineUpg [data-upg]')];
+        out.buttons = btns.map(b=>b.getAttribute('data-upg')+(b.disabled?'(잠김)':'(살수있음)'));
+        return out;
+      }, process.env.SHOT_RICH ? 1 : 0);
+      console.log('MINE '+JSON.stringify(info));
+      await new Promise(r=>setTimeout(r,300));
+    }
+    else if (WHAT === 'campin') {   // 🎬 종족 선택 → 캠프 진입 연출. 애니 시각을 직접 지정해 잡는다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
+      await new Promise(r=>setTimeout(r,1000));
+      const at = +(process.env.SHOT_AT || 300);
+      const info = await page.evaluate((ms) => {
+        const out={};
+        try{ campPickRace(); }catch(e){ out.err=String(e).slice(0,90); }
+        const seek=(el)=>{ if(!el) return '-';
+          const as=el.getAnimations?el.getAnimations():[];
+          out['anim_'+el.id]=as.length;
+          as.forEach(a=>{ try{ a.pause(); a.currentTime=ms; }catch(e){} });
+          const cs=getComputedStyle(el);
+          return cs.transform.slice(0,34)+' op='+(+cs.opacity).toFixed(2); };
+        const ov=document.getElementById('campRaceOv');
+        if(ov){ const oa=ov.getAnimations?ov.getAnimations():[]; oa.forEach(a=>{ try{ a.pause(); a.currentTime=ms; }catch(e){} }); }
+        out.at=ms;
+        out.vBuild=seek(document.getElementById('vBuild'));
+        out.cvMarine=seek(document.getElementById('cvMarine'));
+        out.ov = ov ? (ov.className+' op='+(+getComputedStyle(ov).opacity).toFixed(2)) : '-';
+        return out;
+      }, at);
+      console.log('CAMPIN '+JSON.stringify(info));
+      await new Promise(r=>setTimeout(r,150));
+    }
     else if (WHAT === 'camp') {   // 캠프(HOME 메인) — 맵 확대율·배경 해상도 측정
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
       await new Promise(r=>setTimeout(r,1200));

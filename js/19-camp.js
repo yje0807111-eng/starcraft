@@ -1247,8 +1247,8 @@ const CAMP_MINE_COLS = 3, CAMP_MINE_ROWS = 2;   // 가로로 넓게 — 세로 �
 //   위에 앉혀야 한다. 시트 상단 = 화면 세로의 0.77 지점(실측: 맵 701px 중 시트 161px + 네비).
 //   ⛔ 값을 바꿨으면 **가장 아래 요소인 가스**(광맥 행 + h-0.55)까지 재서 0.74 아래로
 //     내려가지 않는지 확인할 것 — 광맥만 보고 정했다가 가스가 시트에 물렸다.
-const CAMP_ROW_BASE = 0.61;   // 본부 중심(격자 세로 비율 0~1)
-const CAMP_ROW_MINE = 0.70;   // 광맥 첫 줄
+const CAMP_ROW_BASE = 0.58;   // 본부 중심(격자 세로 비율 0~1)
+const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 // ⚠ 행 번호는 **여기 한 곳에서만** 만든다. 광맥과 가스가 각자 round(rows*f) 를 하면
 //   호출 시점에 _techRows() 가 달라져 서로 다른 행에 앉는다(실측: 가스가 광맥보다 5행 위였다).
 function campRow(f){ return Math.max(0, Math.round(_techRows() * f)); }
@@ -1583,6 +1583,10 @@ function campEnter(){
   //    연구를 26레벨이나 공짜로 사서 「가스는 늘 모자란다」가 첫 5분에 무너진다(실측 2026-08-27).
   //    ⚠ 미네랄(1500)은 건드리지 않는다 — 그쪽은 환생 트리 「시작 미네랄」의 기준선이다(§4-5).
   if(!had) G.tech.energy = 0;
+  // 💎 **시작 미네랄 0**(2026-08-27) — 첫 미네랄은 탭으로 번다. 일꾼 0기와 같은 규칙이다.
+  //    techUIInit 은 관리자 탭 기본값 1500 을 넣는다(16-build.js `TECH_START`).
+  //    ⚠ 환생 트리 「시작 미네랄」(startMin)이 구현되면 **여기에 그 값을 더한다** — 지금은 노드 정의만 있다.
+  if(!had) G.tech.credit = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
   campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
@@ -1723,8 +1727,42 @@ function campPickRace(){
   const C = campState(); if(!C || C.race) return;
   C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
-  const ov = document.getElementById('campRaceOv'); if(ov) ov.classList.add('hide');
+  // 🎬 종족 판은 페이드로 걷고, 캠프는 살짝 물러난 자리에서 다가온다(css/30-home.css 「캠프 진입 연출」)
+  const ov = document.getElementById('campRaceOv');
+  if(ov){ ov.classList.add('closing');
+    clearTimeout(ov._closeT);
+    ov._closeT = setTimeout(function(){ ov.classList.remove('closing'); ov.classList.add('hide'); }, _campMs('--campOvDur', .4)); }
   campEnter();
+  campEnterAnim();
+}
+
+// CSS 가 시간을 정한다 — JS 는 읽기만 한다(두 곳에 숫자를 두면 반드시 어긋난다).
+function _campMs(name, def){
+  try{ const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+            || getComputedStyle(document.getElementById('phone')||document.body).getPropertyValue(name).trim();
+    if(v.slice(-2) === 'ms') return parseFloat(v);
+    if(v.slice(-1) === 's')  return parseFloat(v) * 1000;
+  }catch(e){}
+  return def * 1000; }
+
+// 🎬 맵과 3D 에 **같은** 애니메이션을 건다 — 형제라 하나만 걸면 배경과 건물이 따로 논다.
+//   ⚠ 끝나면 클래스를 뺀다. 남겨 두면 나중에 transform 을 쓰는 코드와 부딪힌다.
+function campEnterAnim(){
+  const els = [document.getElementById('vBuild'), document.getElementById('cvMarine')];
+  const ms = _campMs('--campInDur', 2.3);
+  for(const e of els){ if(!e) continue;
+    clearTimeout(e._campInT);
+    if(e._campInEnd){ e.removeEventListener('animationend', e._campInEnd); e._campInEnd = null; }
+    e.classList.remove('campIn'); void e.offsetWidth;   // 재생 중이어도 처음부터 다시
+    e.classList.add('campIn');
+    // ⭐ **animationend 로 뗀다.** setTimeout 은 프레임이 밀리면 애니가 아직 끝나기 전에 떼어
+    //    배율이 도중에 1 로 튄다. 타이머는 그 이벤트를 못 받았을 때의 보험으로만 남긴다.
+    e._campInEnd = function(ev){ if(ev && ev.target !== e) return;
+      e.classList.remove('campIn');
+      e.removeEventListener('animationend', e._campInEnd); e._campInEnd = null;
+      clearTimeout(e._campInT); };
+    e.addEventListener('animationend', e._campInEnd);
+    e._campInT = setTimeout(function(){ if(e._campInEnd) e._campInEnd(); }, ms + 400); }
 }
 
 // ══ 💠 2단계 — 터치 채집 · 비용 조회 · 자리 비움 정산 (2026-08-23) ═════════════
@@ -1932,13 +1970,131 @@ if(typeof document !== 'undefined'){
     if(ev.button != null && ev.button !== 0) return;              // 좌클릭·터치만
     if(!ev.target || !ev.target.closest || !ev.target.closest('#cstMain')) return;
     if(G && G.tech && G.tech.arm) return;                          // 🧱 건물 배치 중이면 채집하지 않는다
-    if(campTapAt(ev.clientX, ev.clientY, true)){
-      // 🖐 광맥을 눌렀다 = '조작'이다 → 화면 이동 모드를 끈다(빈 바닥 탭·유닛/건물 탭과 같은 규칙).
-      // ⚠ 여기서 끊어 줘야 한다 — 이 리스너는 캡처 단계에서 stopPropagation 하므로
-      //   .bmap 의 인라인 techPtrDown(모드를 끄는 곳)이 **아예 안 불린다**.
-      campPanMode(false);
+    // 💎 **광맥을 누르면 캐지 않고 판을 연다**(2026-08-27). 캐는 것은 그 판의 넓은 과녁이 맡는다.
+    //   ⛔ 여기서 바로 campTapAt 을 부르게 되돌리지 말 것 — 광맥이 화면의 5% 뿐이라 손끝이
+    //     일꾼·건물·바닥을 자꾸 눌렀다. campTapAt 은 남겨 둔다(벤치·스모크가 직접 부른다).
+    if(campMineHit(ev.clientX, ev.clientY)){
+      campPanMode(false);   // 🖐 광맥을 눌렀다 = '조작'이다(빈 바닥 탭·유닛/건물 탭과 같은 규칙)
+      openCampMine();
       ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault(); }
   }, true);
+}
+
+// 광맥을 눌렀나 — **판정만** 한다(캐지 않는다). campTapAt 의 앞부분과 같은 규약이다.
+// ⛔ 좌표 변환을 여기서 새로 짜지 말 것 — _btRect / _techS2W / _techMineralAt 를 그대로 쓴다.
+function campMineHit(clientX, clientY){
+  if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
+  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
+  if(G.tech.arm) return false;                      // 🧱 건물 배치 중에는 열지 않는다
+  const r = _btRect(); if(!r || !r.width || !r.height) return false;
+  const sx = (clientX - r.left) / r.width, sy = (clientY - r.top) / r.height;
+  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return false;
+  if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
+  const w = _techS2W(sx, sy);
+  const m = _techMineralAt(w.x, w.y);
+  return !!(m && m.amount > 0);
+}
+
+// ══ 💎 미네랄 채굴 판 (2026-08-27) ══════════════════════════════════════
+// 광맥을 누르면 **그 자리에서 캐지 않고** 이 판이 열린다.
+// ⛔ 메인 화면에서 바로 캐게 되돌리지 말 것 — 광맥은 화면의 5% 뿐이라 손끝이 자꾸 일꾼·건물·
+//   바닥을 눌렀다(사용자 지적 2026-08-27). 넓은 과녁을 따로 두는 것이 이 판의 존재 이유다.
+// ⭐ 껍데기는 공용(.hbModal/.hbmCard) — 새 팝업 컴포넌트를 만들지 않는다(CLAUDE.md 레지스트리).
+
+// 업그레이드 구매 — **값은 campUpgCost 하나가 정한다**(여기서 다시 계산하지 않는다).
+function campUpgBuy(k){
+  const C = campState(); if(!C || typeof G === 'undefined' || !G.tech) return false;
+  const cost = campUpgCost(k);
+  if((G.tech.credit || 0) < cost) return false;
+  G.tech.credit -= cost;
+  C.upg = C.upg || {};
+  C.upg[k] = (C.upg[k] | 0) + 1;
+  if(typeof saveMeta === 'function') saveMeta();
+  if(typeof updateCurBar === 'function') updateCurBar();
+  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  if(typeof dqNote === 'function') try{ dqNote('upg:' + k, 1); }catch(e){}   // 일일 퀘스트 계측(공용 입구)
+  campMineRender();
+  return true;
+}
+
+// 판 안의 과녁 탭 — 계산은 **campTapGain / campTapHuman 그대로**(메인 탭과 같은 축이다).
+// ⛔ 여기서 따로 수식을 만들지 말 것 — 두 벌이 되면 반드시 어긋난다.
+function campMineTap(ev){
+  if(!_campOn || typeof G === 'undefined' || !G.tech) return;
+  if(ev && ev.isTrusted === false && !window._campTapForce) return;   // 🤖 1차 방어선(메인 탭과 같은 규칙)
+  let gain = campTapGain();
+  if(ev && ev.isTrusted !== false) gain = Math.max(1, Math.floor(gain * campTapHuman(ev.clientX, ev.clientY)));
+  G.tech.credit = (G.tech.credit || 0) + gain;
+  _campTapAcc += gain;
+  const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
+  if(typeof updateCurBar === 'function') updateCurBar();
+  campMineFloat(gain, ev);
+  campMineRender();
+}
+
+// 캔 만큼 숫자가 튀어오른다 — 눌렀다는 것이 손끝에서 눈으로 돌아오는 유일한 신호다
+function campMineFloat(n, ev){
+  const host = document.getElementById('campMineTap'); if(!host) return;
+  const el = document.createElement('i'); el.className = 'cmPop'; el.textContent = '+' + campNum(n);
+  if(ev && ev.clientX != null){ const r = host.getBoundingClientRect();
+    el.style.left = Math.max(6, Math.min(r.width - 6, ev.clientX - r.left)) + 'px';
+    el.style.top  = Math.max(6, Math.min(r.height - 6, ev.clientY - r.top)) + 'px'; }
+  host.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 900);
+}
+
+function openCampMine(){
+  const el = document.getElementById('campMineSheet'); if(!el) return;
+  el.classList.remove('hide'); campMineRender();
+  if(typeof playSfx === 'function') playSfx('ui_open');
+}
+function closeCampMine(){
+  const el = document.getElementById('campMineSheet'); if(el) el.classList.add('hide');
+  if(typeof playSfx === 'function') playSfx('ui_close');
+}
+// 구매 버튼은 **위임**으로 받는다 — onclick 문자열에 따옴표를 넣으면 편집·이스케이프에서 깨진다.
+if(typeof document !== 'undefined'){
+  document.addEventListener('click', function(ev){
+    const b = ev.target && ev.target.closest ? ev.target.closest('#campMineUpg [data-upg]') : null;
+    if(!b || b.disabled) return;
+    ev.preventDefault(); campUpgBuy(b.getAttribute('data-upg'));
+  });
+}
+
+function campMineOpen(){ openCampMine(); }   // 별칭 — 호출부가 어느 이름을 쓰든 통하게
+
+// 큰 수를 읽히게 — 이미 있는 것이 있으면 그것을 쓴다(표기가 두 벌이 되면 화면마다 달라진다)
+function campNum(n){
+  if(typeof fmtNum === 'function') return fmtNum(n);
+  if(typeof numAbbr === 'function') return numAbbr(n);
+  n = Math.floor(n || 0);
+  return n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 1e4 ? (n/1e4).toFixed(1)+'만' : n.toLocaleString();
+}
+
+const CAMP_MINE_UPGS = [
+  { k:'tap',    nm:'터치 강화', why:'한 번 누를 때 캐는 양' },
+  { k:'gather', nm:'채취 강화', why:'일꾼이 한 번 다녀올 때 캐는 양' }
+];
+function campMineRender(){
+  const sheet = document.getElementById('campMineSheet');
+  if(!sheet || sheet.classList.contains('hide')) return;
+  const have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit | 0) : 0;
+  { const h = document.getElementById('campMineHead');
+    if(h) h.innerHTML = (typeof resIco === 'function' ? resIco('mineral','cmIco') : '') + '<b>' + campNum(have) + '</b>'; }
+  { const t = document.getElementById('campMineTap');
+    if(t) t.innerHTML = (typeof resIco === 'function' ? resIco('mineral','cmBig') : '')
+      + '<em class="cmGain">+' + campNum(campTapGain()) + '</em>'; }
+  const box = document.getElementById('campMineUpg'); if(!box) return;
+  box.innerHTML = CAMP_MINE_UPGS.map(function(u){
+    const lv = campUpgLv(u.k), cost = campUpgCost(u.k), can = have >= cost;
+    const next = campMileNext(lv);
+    return '<div class="cmRow">'
+      + '<span class="cmB"><b class="cmNm">' + u.nm + ' <i>Lv.' + lv + '</i></b>'
+      + '<em class="cmWhy">' + u.why + ' · 다음 계단 Lv.' + next + '</em></span>'
+      + '<button type="button" class="actBtn pri cmBuy"' + (can ? '' : ' disabled')
+      + ' data-upg="' + u.k + '">'
+      + (typeof resIco === 'function' ? resIco('mineral','cmC') : '') + campNum(cost) + '</button></div>'; }).join('');
+  if(typeof paintIcons === 'function') paintIcons(sheet);
 }
 
 // ── 자리 비움 정산 ──────────────────────────────────────────────────────
@@ -2133,7 +2289,7 @@ function campSkin(){
 //   (js/14-input-fx.js). 상수를 바꾸면 기준선도 같이 움직여 _cellK 가 1 로 남고
 //   건물만 작아지고 **유닛은 그대로**인 어긋난 화면이 된다.
 //   techCols() 만 감싸면 분모가 20 으로 남아 유닛도 같은 비율로 줄어든다(실측 _cellK 0.417).
-const CAMP_ZOOM = 1;
+const CAMP_ZOOM = 1.3;
 const CAMP_COLS = 48;
 // 🚧 **맵 밖이 화면에 보이지 않게 하는 한도.**
 // 바닥(.bmapFloor)은 inset:0 이지만 **뷰 변환을 함께 받는다**(_techViewCSS). 그래서
