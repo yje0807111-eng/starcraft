@@ -100,7 +100,10 @@ const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇
 // ⭐ **일꾼을 빼서 배치하지 않는다.** 정제소가 스스로 캔다 — 스타 원본과 다르다.
 //   분당 = (0.2 + 0.1 × 정제소Lv) × 던전배율 · 업그레이드 비용 = 미네랄 3만 × 1.15^Lv
 // ⚠ 가스 값은 작다(전함 30 · 공성전차 10). 미네랄과 자릿수가 다르다는 것을 전제로 볼 것.
-const CAMP_REF_BASE = 0.2, CAMP_REF_STEP = 0.1;   // 분당 생산 — 기본 · 레벨당
+// ⚠ **값은 실측으로 정한다**(BALANCE.md §3-2-2). 옛 0.2/0.1 은 「한 회차 = 3시간」을 전제로
+//   쓴 값인데, 실측 회차는 41분이라 25분에 가스가 5개뿐이었다 — 상위 유닛도 연구도 못 열었다.
+//   합격 기준: 회차 하나에 **계열 업그레이드 144레벨(계열당 24) + 단발 3~5개** ≈ 가스 476.
+const CAMP_REF_BASE = 6, CAMP_REF_STEP = 0.6;    // 분당 생산 — 기본 · 레벨당
 const CAMP_REF_COST0 = 30000, CAMP_REF_R = 1.15;  // 업그레이드 비용(미네랄)
 function campRefLv(){ return campUpgLv('refinery'); }
 function campHasRefinery(){
@@ -1469,6 +1472,11 @@ function campEnter(){
   // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
   //    techUIInit 이 1기를 깔아 두므로(16-build.js:14) 새 판일 때만 걷는다.
   if(!had) G.tech.ents = (G.tech.ents || []).filter(function(e){ return e.type !== 'worker'; });
+  // ⛽ **시작 가스 0**(HUNT_R1 §2-3-1 — 정제소를 지어야 나온다).
+  //    techUIInit 은 관리자 탭 기본값 1000 을 넣는다(16-build.js `TECH_START`). 그대로 두면
+  //    연구를 26레벨이나 공짜로 사서 「가스는 늘 모자란다」가 첫 5분에 무너진다(실측 2026-08-27).
+  //    ⚠ 미네랄(1500)은 건드리지 않는다 — 그쪽은 환생 트리 「시작 미네랄」의 기준선이다(§4-5).
+  if(!had) G.tech.energy = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
@@ -2395,12 +2403,14 @@ const CAMP_UNIT_PRICE = {
 // ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
 //   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
 const CAMP_UNIT_PRICE_MUL = 200;
-// ⛽ **유닛 가스는 §2-3-2 가 단일 소스다.** ⚠ 그 표의 「미네랄」 열은 §3-1 이전 값이라 무시한다
-//   (화력병 5,000 vs 10,000 · 저격수 3,000 vs 20,000 — 전부 다르다).
-//   **미네랄은 §3-1 · 가스는 §2-3-2.** 표에 없는 유닛은 가스가 안 든다.
-const CAMP_UNIT_GAS = {
-  machinegun:3, medic:3, goliath:5, ghost:8, tank:10, skyguard:10, hellfire:13,
-  pelican:10, aegis:10, dreadnought:30 };
+// ⛽ **유닛에는 가스가 안 든다** (2026-08-27 확정 — 축 분리).
+//   ⭐ **미네랄 = 양(유닛·일꾼·건물) / 가스 = 질(강화·해금).** 유닛은 '양' 쪽이다.
+//   ⛔ 되살리지 말 것 — 가스는 늘 모자란 자원이라, 유닛과 연구가 나눠 쓰면 **연구가 굶는다.**
+//     상위 유닛의 뚜껑은 **반복 구매 ×1.15**(`campUnitCost`)가 이미 맡고 있다.
+//   ⚠ 옛 값(§2-3-2 · 원본 ÷10)은 되돌릴 때를 위해 남긴다 —
+//     machinegun 3 · medic 3 · goliath 5 · ghost 8 · tank 10 · skyguard 10 ·
+//     hellfire 13 · pelican 10 · aegis 10 · dreadnought 30
+const CAMP_UNIT_GAS = {};
 function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
   return (v != null) ? v : Math.round((m || 0) * CAMP_UNIT_PRICE_MUL); }
 function campUnitOwned(id){

@@ -701,6 +701,11 @@ async function groupLobby(){
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
     assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
     assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
+    // ⛽ **시작 가스 0** — 정제소를 지어야 나온다(HUNT_R1 §2-3-1).
+    //    ⚠ techUIInit 은 관리자 탭 기본값 1000 을 넣는다(`TECH_START`). 그게 새면 연구를
+    //      26레벨이나 공짜로 사서 「가스는 늘 모자란다」가 첫 5분에 무너진다(실측 2026-08-27).
+    //    ⚠ 미네랄(1500)은 그대로 둔다 — 환생 트리 「시작 미네랄」의 기준선이다(§4-5).
+    assert((G.tech.energy||0)===0,'새 캠프인데 시작 가스가 0 이 아님: '+G.tech.energy);
     // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
     //    ⛔ techUIInit 이 깔아 두는 1기를 되살리지 말 것. 「일꾼을 사는 것」이 첫 목표다.
     assert((G.tech.ents||[]).filter(e=>e.type==='worker').length===0,
@@ -720,14 +725,17 @@ async function groupLobby(){
       assert(campGasPerMin()===0,'정제소가 없는데 가스가 나온다: '+campGasPerMin());
       const e0=G.tech.energy||0; campGasTick(60);
       assert((G.tech.energy||0)===e0,'정제소가 없는데 가스가 쌓였다');
-      // 정제소를 세운 셈 치고 — 분당 (0.2 + 0.1×Lv)
+      // 정제소를 세운 셈 치고 — 분당 (6 + 0.6×Lv)
+      //   ⚠ 옛 0.2/0.1 은 「한 회차 = 3시간」 전제로 쓴 값이라 41분 회차에서는 25분에 5개뿐이었다.
+      //     지금 값의 근거는 BALANCE.md §3-2-2 (회차당 계열 144레벨 + 단발 3~5개 ≈ 가스 476).
       const fake={ type:'bldg', bt:0, bk:(TECH_TREE[G.tech.race].buildings.find(b=>b.gas)||{}).k, eid:'gasT' };
       if(fake.bk){ G.tech.ents.push(fake);
-        assert(Math.abs(campGasPerMin()-0.2*campMineMul()*campRtMul('gasMul'))<1e-9,
-          'Lv0 분당 생산이 0.2 가 아니다: '+campGasPerMin());
+        assert(Math.abs(campGasPerMin()-CAMP_REF_BASE*campMineMul()*campRtMul('gasMul'))<1e-9,
+          'Lv0 분당 생산이 기본값과 다르다: '+campGasPerMin());
+        assert(CAMP_REF_BASE>=1,'가스 기본 생산이 1/분 미만이다 — 회차 안에 연구를 못 연다: '+CAMP_REF_BASE);
         S.upg.refinery=10;
-        assert(Math.abs(campGasPerMin()-1.2*campMineMul()*campRtMul('gasMul'))<1e-9,
-          'Lv10 분당 생산이 1.2 가 아니다: '+campGasPerMin());
+        assert(Math.abs(campGasPerMin()-(CAMP_REF_BASE+CAMP_REF_STEP*10)*campMineMul()*campRtMul('gasMul'))<1e-9,
+          'Lv10 분당 생산이 레벨 계단과 다르다: '+campGasPerMin());
         const g0=G.tech.energy||0; campGasTick(60);
         assert(Math.abs((G.tech.energy||0)-g0-campGasPerMin())<1e-6,'1분 틱이 분당 생산과 다르다');
         // 업그레이드 비용 = 3만 × 1.15^Lv (무릎 없음)
@@ -748,9 +756,17 @@ async function groupLobby(){
       G.tech.units[q.id]=3; campSyncUnitCost();
       const want=Math.ceil(base*Math.pow(1.15,3));
       assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
+      // ⛽ **유닛에는 가스가 안 든다**(2026-08-27 축 분리 — 미네랄=양 / 가스=질).
+      //   ⛔ 되살리면 가스를 유닛과 연구가 나눠 써 **연구가 굶는다**(가스는 늘 모자란 자원).
+      { let n=0; for(const b of TECH_TREE[G.tech.race].buildings)
+          for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
+        assert(n===0,'캠프인데 가스가 드는 유닛이 '+n+'종 있다'); }
       // ⛔ TECH_TREE 는 관리자 탭·오토배틀과 공유 — 반드시 원복된다
       campRestoreUnitCost();
       assert(q.m===raw,'가격을 원복하지 않았다: '+q.m+' (원값 '+raw+')');
+      { let n=0; for(const b of TECH_TREE[G.tech.race].buildings)
+          for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
+        assert(n>0,'원복했는데 원본 가스값이 안 돌아왔다 — 오토배틀이 함께 망가진다'); }
       G.tech.units[q.id]=0; }
     // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
     const M=G.tech.minerals||[];

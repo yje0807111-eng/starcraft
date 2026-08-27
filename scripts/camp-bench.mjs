@@ -154,6 +154,25 @@ await pg.evaluate(()=>{
       if((G.tech.credit||0) < c*1.5) return;                       // 다른 축도 사야 하니 여유를 남긴다
       if(campRefLv() >= 40) return;
       G.tech.credit-=c; S.upg.refinery=(S.upg.refinery|0)+1; } };
+  // 🔬 연구 — **가스는 여기에만 쓴다**(2026-08-27). 건물마다 한 번에 하나씩이라
+  //   가스가 남아돌아도 **건물 수와 연구 시간**이 처리량을 정한다 — 그것도 재는 값이다.
+  //   ⚠ 살 수 있는 것 중 **가장 싼 것**을 산다(§4 규약). 계열 업그레이드는 상한이 없어
+  //     늘 후보에 남고, 단발 연구는 한 번 사면 빠진다.
+  __CB.research=function(){ const T=G.tech; if(!T) return;
+    const t=TECH_TREE[T.race]; if(!t) return;
+    for(const b of (t.buildings||[])){
+      if(!b.research || !b.research.length) continue;
+      if(!(T.built[b.k]>0)) continue;
+      const be=T.ents.find(e=>e.type==='bldg'&&e.bk===b.k&&(e.bt||0)<=0); if(!be||be._rj) continue;
+      let best=null;
+      for(const r of b.research){
+        const key=T.race+'_'+r.k, lv=T.research[key]|0;
+        if(!r.tier && lv) continue;                        // 단발은 한 번뿐
+        if(typeof _techReqMet==='function' && !_techReqMet(r.req)) continue;
+        const c=(typeof campResearchCost==='function' && campResearchCost(r,lv))||[r.m||0,r.g||0];
+        if((T.credit||0)<c[0] || (T.energy||0)<c[1]) continue;
+        if(!best || c[1]<best.c[1]) best={r:r,c:c}; }
+      if(best){ T.sel=be.eid; try{ techDoResearch(b.k,best.r.k); }catch(e){} } } };
   __CB.build=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
     // 🏠 인구가 막혔으면 보급소를 한 채 더 — 그게 일꾼·유닛 축을 여는 유일한 길이다.
@@ -246,6 +265,8 @@ await pg.evaluate(()=>{
             ore:Math.round((G.tech&&G.tech.minerals||[]).reduce((a,m)=>a+(m.amount||0),0)),
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
             gas:Math.round((G.tech&&G.tech.energy)||0), rl:(typeof campRefLv==='function'?campRefLv():0),
+            res:(function(){ const R=(G.tech&&G.tech.research)||{}; let n=0;
+              for(const k in R) n+=(R[k]===true?1:(R[k]|0)); return n; })(),   // 🔬 연구 총레벨(계열+단발)
             me:(typeof campAlive==='function'?campAlive('me'):0),      // 전장에 서 있는 내 병력
             dps:__CB.dps(),                                            // ⚔ 아군 총 DPS
             bld:(typeof campBldAlive==='function'?campBldAlive().length:0),          // 🏢 살아있는 건물
@@ -268,7 +289,7 @@ await pg.evaluate(()=>{
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
-      if((i%40)===0){ __CB.build(); __CB.refine(); __CB.produce(); __CB.buy();
+      if((i%40)===0){ __CB.build(); __CB.refine(); __CB.research(); __CB.produce(); __CB.buy();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
         const units=G.tech?G.tech.ents.filter(e=>e.type==='unit').length:0;
         __CB.army=units;
@@ -354,10 +375,10 @@ console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이�
 console.log(fin.gateT ? `\n□ E 관문 100만 도달: 시작 후 **${(fin.gateT/60).toFixed(1)}분** (설계 추정 10시간)`
                      : `\n□ E 관문 100만: ${(fin.t/60).toFixed(1)}분 안에 못 넘음(번 돈 ${F(fin.earn)})`);
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
-console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 가스/정제소 | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
+console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
-    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
+    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String(w.res|0).padEnd(6)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
 if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
   for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
 if(fin.jam){ const J=fin.jam;
