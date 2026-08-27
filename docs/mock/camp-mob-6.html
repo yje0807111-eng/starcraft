@@ -1,0 +1,127 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>캠프 수급 — 모바일 게임식 표기 6안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* 모바일(방치형) 게임이 흔히 쓰는 표기 여섯. 바탕은 C2(두 칸 + 캠프는 아래 한 줄).
+   ⚠ 한 가지 충돌을 미리 적어 둔다 —
+      모바일 게임에서 가장 흔한 건 **실제 수량**을 보여 주는 것이다(🪙 12.4K).
+      그런데 이 게임의 캠프 경제는 **지수**라 절대값이 판단 기준이 못 된다
+      (DESIGN §「같은 자로 재기」: FINAL 첫 클리어 10.3억도 그 시점 시급으로는 16시간치다).
+      → 수량만 크게 두면 며칠 뒤엔 뜻을 잃는 숫자가 된다. 시간을 같이 두거나, 시간만 둔다. */
+:root{--font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;--font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px;--fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px;
+  --dc:#ffb14d;--dcRGB:255,177,77;--camp:#8fe3ff}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#141416;color:#e7e9ee;
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,372px);gap:16px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:70px}
+.sub b{color:#dfe6f0} .sub .w{color:#ffb14d}
+.det{position:relative;border-radius:6px;padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:11px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4}
+.stat b{display:block;font-family:var(--font-num);font-size:20px;font-weight:700;margin-top:2px}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+.ci{width:17px;height:17px;flex:none;display:block}
+/* 공통 한 줄 껍데기 */
+.camp{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:var(--r-bar);
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.camp .cl{font-size:var(--fs-md);color:#9aa4b0}
+.camp .cv{margin-left:auto;font-family:var(--font-num);font-size:17px;font-weight:700;color:var(--camp)}
+.camp .cv small{font-size:10.5px;opacity:.75;margin-left:1px}
+/* M1 시계 칩 */
+.chip{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;
+  background:rgba(143,227,255,.12);border:1px solid rgba(143,227,255,.28);
+  font-family:var(--font-num);font-size:14px;font-weight:700;color:var(--camp)}
+.chip svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+/* M2 수량 + 시간 */
+.amts{display:flex;align-items:center;gap:14px;justify-content:center}
+.amt{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-num);font-size:17px;font-weight:700;color:#e7e9ee}
+.sub2{text-align:center;font-size:var(--fs-sm);color:#7d8b98;margin-top:-4px}
+/* M3 보상 미리보기 */
+.prev{display:flex;flex-direction:column;gap:8px;padding:10px 11px;border-radius:var(--r-bar);
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.prevHd{display:flex;align-items:center;font-size:var(--fs-sm);color:#8b96a4}
+.prevHd .t{margin-left:auto;font-family:var(--font-num);font-size:var(--fs-lg);font-weight:700;color:var(--camp)}
+.prevRow{display:flex;gap:10px;justify-content:center}
+/* M4 게이지 */
+.gauge{height:6px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden;margin-top:2px}
+.gauge i{display:block;height:100%;width:40%;border-radius:999px;
+  background:linear-gradient(90deg,rgba(143,227,255,.5),var(--camp));box-shadow:0 0 8px rgba(143,227,255,.5)}
+.gscale{display:flex;justify-content:space-between;font-size:8.5px;color:#5f6772;margin-top:3px}
+/* M5 배너 */
+.ban{display:flex;align-items:center;gap:10px;padding:13px 13px;border-radius:var(--r-bar);
+  background:linear-gradient(90deg,rgba(143,227,255,.13),rgba(143,227,255,.03));
+  border:1px solid rgba(143,227,255,.24)}
+.ban .bt{font-size:var(--fs-md);color:#9fc9dd}
+.ban .bv{margin-left:auto;font-family:var(--font-num);font-size:24px;font-weight:700;color:var(--camp);
+  text-shadow:0 0 14px rgba(143,227,255,.4)}
+.ban .bv small{font-size:12px;opacity:.8}
+/* M6 초압축 배지 */
+.mini{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--r-bar);
+  background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.09);white-space:nowrap;
+  font-family:var(--font-num);font-size:var(--fs-xl);font-weight:700;color:var(--camp)}
+.mini svg{width:13px;height:13px;flex:none;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.miniRow{display:flex;justify-content:center;gap:7px}
+</style></head><body>
+<div id="w"></div>
+<script>
+const MIN='../../assets/icons/res_mineral.webp', GAS='../../assets/icons/res_gas.webp';
+const CLK=`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`;
+const STATS=`<div class="stats">
+  <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+  <div class="stat c"><i>포인트 획득량</i><b>×2</b></div></div>`;
+const DESC=`<div class="desc">메타 업그레이드가 어느 정도 쌓여야 버팁니다</div>`;
+const det=(inner)=>`<div class="det">${STATS}${inner}${DESC}</div>`;
+
+const V=[
+['M1 — <em>시계 칩</em>',
+ '방치형 게임이 「AFK 보상」에 흔히 쓰는 모양. <b>시계 아이콘 + 시간</b>만 둥근 칩으로. 가장 짧고, 시간이라는 걸 아이콘이 말해 준다.',
+ det(`<div class="camp"><img class="ci" src="${MIN}" alt=""><span class="cl">캠프 자동수급</span>
+   <span class="chip">${CLK}2시간</span></div>`)],
+
+['M2 — <em>실수량 + 시간</em>',
+ '<b>가장 흔한 방식</b> — 받을 재화를 숫자로 보여 주고 시간은 아래 작게. <span class="w">⚠ 이 게임에선 위험하다</span>: 캠프 경제가 지수라 <b>절대값이 며칠 뒤엔 뜻을 잃는다</b>(DESIGN 이 명시적으로 금하는 판단 기준).',
+ det(`<div class="camp" style="flex-direction:column;align-items:stretch;gap:7px">
+   <div class="amts"><span class="amt"><img class="ci" src="${MIN}" alt="">12.4K</span>
+     <span class="amt"><img class="ci" src="${GAS}" alt="">1.3K</span></div></div>
+   <div class="sub2">캠프 자동수급 2시간치</div>`)],
+
+['M3 — <em>보상 미리보기</em> 줄',
+ '「이번 판을 깨면 받는 것」을 <b>재화 아이콘으로 나열</b>하고, 오른쪽 위에 시간을 적는다. 모바일 게임의 <b>보상 미리보기</b> 그대로 — 무엇을 받는지가 한눈에 온다.',
+ det(`<div class="prev">
+   <div class="prevHd">클리어 보상<span class="t">${'캠프 2시간치'}</span></div>
+   <div class="prevRow"><span class="amt"><img class="ci" src="${MIN}" alt="">12.4K</span>
+     <span class="amt"><img class="ci" src="${GAS}" alt="">1.3K</span></div></div>`)],
+
+['M4 — <em>게이지</em>로 난이도 간 차이를',
+ '값을 <b>막대 길이</b>로도 보여 준다 — 1 ↔ 3시간치 사이 어디쯤인지가 숫자를 안 읽어도 보인다. 난이도를 넘길 때 <b>막대가 자라는 맛</b>이 있다.',
+ det(`<div class="camp" style="flex-direction:column;align-items:stretch;gap:4px">
+   <div style="display:flex;align-items:center"><img class="ci" src="${MIN}" alt="" style="margin-right:8px">
+     <span class="cl">캠프 자동수급</span><span class="cv">2<small>시간치</small></span></div>
+   <div class="gauge"><i style="width:40%"></i></div>
+   <div class="gscale"><span>1시간</span><span>3시간</span></div></div>`)],
+
+['M5 — <em>큰 배너</em>',
+ '캠프 수급을 <b>한 줄 배너</b>로 크게. 「이 판을 왜 도는가」가 가장 강하게 온다. 모바일 게임의 「획득 보상」 띠와 같은 무게.',
+ det(`<div class="ban"><img class="ci" src="${MIN}" alt="" style="width:21px;height:21px">
+   <span class="bt">캠프 자동수급</span><span class="bv">2<small>시간치</small></span></div>`)],
+
+['M6 — <em>초압축 배지</em> 두 개',
+ '옆 두 칸과 같은 줄에 <b>작은 배지</b>로 나란히. 판을 하나도 안 늘리고 자리도 거의 안 먹는다. 대신 존재감이 가장 약하다.',
+ det(`<div class="miniRow"><span class="mini"><img class="ci" src="${MIN}" alt="" style="width:14px;height:14px">캠프 2시간치</span>
+   <span class="mini" style="color:#c9a6ff;border-color:rgba(201,166,255,.2)">${CLK}클리어 시</span></div>`)],
+];
+document.getElementById('w').outerHTML=V.map(([t,d,body])=>
+ `<div><p class="hd">${t}</p><p class="sub">${d}</p>${body}</div>`).join('');
+</script>
+</body></html>

@@ -1,0 +1,169 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>난이도 상세에 캠프 수급 넣기 — 4안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   확정 바탕 = D2 + D8 머리줄 + A3 화살표 + 무한을 스테퍼 마지막 칸 + **B5 버튼**
+   (취소는 머리줄 ✕ · 아래는 시작 하나).
+   여기서 더하는 건 상세 판의 **세 번째 값 = 캠프 수급**이다.
+
+   ⭐ 값은 이미 정해져 있다 — 새로 정할 게 없다.
+      `UM_ANCHOR_MIN = 60`(판당 캠프 60분치) × `umDiffMul()`(= DIFFICULTY.coinMult)
+        EASY 1 · NORMAL 1.5 · HARD 2 · HELL 2.5 · FINAL 3 시간치   (무한 = 노말 고정 1.5)
+   ⛔ 「×1h」처럼 배율(×)과 시간(h)을 섞지 말 것 — 배율인지 시간인지 흐려진다.
+      이 프로젝트의 단위는 **「시간치」**다(DESIGN §「같은 자로 재기 — 절대값이 아니라 '사냥터 몇 분치'」).
+   ⚠ 실제로 받는 양은 **진행도**(못 깨면 도달 라운드 비율)와 **하루 판수**(4판째부터 30%)로 줄어든다 →
+      여기 적는 건 '이 난이도의 기준치'다. 표기에 그걸 흘려 둔다.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --txt:#e7e9ee; --txt-mute:#9aa0a8; --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --art:url('../../assets/backgrounds/usemaps/nemo.webp');
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --dc:#5dff8f; --dcRGB:93,255,143;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(4,390px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:76px}
+.sub b{color:#dfe6f0}
+
+.ph{position:relative;width:390px;height:600px;overflow:hidden;border-radius:5px;background:#04050b}
+.art{position:absolute;inset:0;background:var(--art) center center/cover no-repeat #04050b}
+.art::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+    rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+.art::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
+.ph::before{content:'';position:absolute;left:0;right:0;top:0;height:118px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(3,5,9,.80) 0%,rgba(3,5,9,.42) 48%,transparent 100%)}
+.scr{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;padding:18px 16px 20px}
+
+.mapRow{flex:none;display:flex;align-items:center;gap:9px}
+.mapRow .th{width:38px;height:38px;flex:none;border-radius:var(--r-bar);overflow:hidden;
+  background:var(--art) center/cover;border:1px solid rgba(255,255,255,.12)}
+.mapRow b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;display:block;text-shadow:0 1px 4px #000}
+.mapRow em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;display:block;margin-top:2px;text-shadow:0 1px 3px #000}
+.mapRow .x{margin-left:auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  color:#a8b2be;font-size:19px;text-shadow:0 1px 4px #000}
+
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.step{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.stepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;
+  letter-spacing:1px;color:var(--dc);text-shadow:0 0 18px rgba(var(--dcRGB),.45),0 2px 6px #000}
+.dots{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.20)}
+.dots i.on{width:14px;border-radius:3px;background:var(--dc)}
+.dots i.inf{background:rgba(176,107,255,.45)}
+.arwBtn{position:relative;width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;
+  padding:0;color:#dfe1e4;background:none;border:none}
+.arwBtn .arwIco{width:24px;height:24px;display:block;fill:none;stroke:currentColor;stroke-width:3.2;
+  stroke-linecap:round;filter:drop-shadow(0 1px 2px #000) drop-shadow(0 0 7px rgba(0,0,0,.95))}
+
+.blk{margin-top:auto;display:flex;flex-direction:column;gap:12px;
+  padding:16px 16px 0;margin-left:-16px;margin-right:-16px;
+  background:linear-gradient(180deg,transparent,rgba(4,6,11,.55) 22%,rgba(4,6,11,.84))}
+.det{position:relative;border-radius:var(--r-md);padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:11px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:20px}
+.stat{text-align:center;min-width:0}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4;white-space:nowrap}
+.stat b{display:block;font-family:var(--font-num);font-size:20px;font-weight:700;margin-top:2px;white-space:nowrap}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485} .stat.k b{color:#8fe3ff}
+.stat b small{font-size:11px;font-weight:700;opacity:.75;margin-left:1px}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+/* 캠프 수급 한 줄(C2·C4) */
+.camp{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:var(--r-bar);
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.camp .ci{width:17px;height:17px;flex:none}
+.camp .cl{font-size:var(--fs-md);color:#9aa4b0}
+.camp .cv{margin-left:auto;font-family:var(--font-num);font-size:17px;font-weight:700;color:#8fe3ff}
+.camp .cv small{font-size:10.5px;opacity:.75;margin-left:1px}
+/* C3 세로 목록 */
+.vlist{display:flex;flex-direction:column}
+.vrow{display:flex;align-items:center;padding:8px 2px;font-size:var(--fs-md);color:#9aa4b0}
+.vrow+.vrow{border-top:1px solid rgba(255,255,255,.06)}
+.vrow b{margin-left:auto;font-family:var(--font-num);font-size:16px;font-weight:700;color:#e7e9ee}
+.vrow.e b{color:#ff9e9e} .vrow.c b{color:#ffd485} .vrow.k b{color:#8fe3ff}
+.vrow .ci{width:15px;height:15px;margin-right:6px}
+/* 시작 = B5(취소 없음 · 하나만) */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:50px;padding:0 14px;overflow:hidden;
+  font-family:var(--font-ti);font-size:15px;color:#fff;
+  border:1px solid rgba(255,59,59,.34);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.note{font-size:var(--fs-xs);color:#6f7883;text-align:center}
+</style></head><body>
+<div id="cols"></div>
+<script>
+const MIN='../../assets/icons/res_mineral.webp';
+const ARW=d=>`<button class="arwBtn"><svg class="arwIco" viewBox="0 0 24 24">
+  <path d="${d==='l'?'M15 5 8 12l7 7':'M9 5l7 7-7 7'}"/></svg></button>`;
+const HEAD=`<div class="mapRow"><span class="th"></span>
+  <span><b>네모네모 디펜스</b><em>개인 플레이 · 난이도를 고르고 시작하세요</em></span>
+  <span class="x">✕</span></div>`;
+const MID=`<div class="mid"><div class="step">${ARW('l')}<div class="stepTx">HARD</div>${ARW('r')}</div>
+  <div class="dots"><i></i><i></i><i class="on"></i><i></i><i></i><i class="inf"></i></div></div>`;
+const GO=`<div class="actBtn">이 난이도로 시작</div>`;
+const DESC=`<div class="desc">메타 업그레이드가 어느 정도 쌓여야 버팁니다</div>`;
+
+const V=[
+['c1','C1 — <em>세 칸 가로</em>',
+ '지금 두 칸 옆에 <b>한 칸을 더</b>. 라벨을 짧게 줄여야 320px 에 들어간다(「포인트 획득량」 → 「포인트」). 셋이 같은 무게로 읽힌다.',
+ `<div class="det">
+   <div class="stats">
+     <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+     <div class="stat c"><i>포인트</i><b>×2</b></div>
+     <div class="stat k"><i>캠프 수급</i><b>2<small>시간치</small></b></div>
+   </div>${DESC}</div>`],
+
+['c2','C2 — 두 칸 + <em>캠프는 아래 한 줄</em>',
+ '기존 두 칸은 그대로 두고, 캠프 수급만 <b>재화 아이콘이 붙은 한 줄</b>로 아래에 붙인다. 성격이 다른 값(전투 배율 ↔ 밖에서 받는 것)이 <b>섞이지 않는다</b>.',
+ `<div class="det">
+   <div class="stats">
+     <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+     <div class="stat c"><i>포인트 획득량</i><b>×2</b></div>
+   </div>
+   <div class="camp"><img class="ci" src="${MIN}" alt=""><span class="cl">캠프 수급</span>
+     <span class="cv">2<small>시간치</small></span></div>${DESC}</div>`],
+
+['c3','C3 — <em>세로 목록</em>',
+ '셋을 <b>라벨 왼쪽 · 값 오른쪽</b>으로 쌓는다. 라벨을 안 줄여도 되고, 넷째·다섯째가 생겨도 그대로 늘어난다. 대신 수치가 작아져 훑기엔 약하다.',
+ `<div class="det"><div class="vlist">
+   <div class="vrow e">적 HP<b>×2.0</b></div>
+   <div class="vrow c">포인트 획득량<b>×2</b></div>
+   <div class="vrow k"><img class="ci" src="${MIN}" alt="">캠프 수급<b>2시간치</b></div>
+ </div>${DESC}</div>`],
+
+['c4','C4 — 두 칸 + <em>캠프를 강조</em>',
+ 'C2 와 같되 캠프 줄을 <b>가장 크게</b> 놓는다 — 「이 판을 왜 도는가」가 사실 이 값이라 그것을 주인공으로 삼는다. 아래에 줄어들 수 있다는 단서를 한 줄.',
+ `<div class="det">
+   <div class="stats">
+     <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+     <div class="stat c"><i>포인트 획득량</i><b>×2</b></div>
+   </div>
+   <div class="camp" style="background:rgba(143,227,255,.07);border-color:rgba(143,227,255,.20);padding:12px 13px">
+     <img class="ci" src="${MIN}" alt="" style="width:21px;height:21px">
+     <span class="cl" style="font-size:var(--fs-lg)">캠프 수급</span>
+     <span class="cv" style="font-size:22px">2<small>시간치</small></span></div>
+   <div class="note">클리어 기준 · 도중에 지면 진행도만큼</div>${DESC}</div>`],
+];
+document.getElementById('cols').outerHTML=V.map(([k,t,d,det])=>`
+<div class="col"><p class="hd">${t}</p><p class="sub">${d}</p>
+  <div class="ph"><div class="art"></div><div class="scr">
+    ${HEAD}${MID}<div class="blk">${det}${GO}</div></div></div></div>`).join('');
+</script>
+</body></html>

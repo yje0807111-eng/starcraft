@@ -1,0 +1,158 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>무한이 스테퍼 마지막 칸에 들어간 모습</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   확정된 바탕 = D2(상세만 판) + D8(머리줄에 맵) + A3(글리프 24px + 이중 그림자).
+   여기서 바꾸는 건 둘:
+     ① 무한 모드 칩을 없애고 **스테퍼 마지막 칸**으로 넣는다 → 점이 5 → 6개.
+        ⚠ 「무한은 난이도 축이 아니다(노말 고정)」던 옛 결정을 뒤집는다 —
+           플레이어가 보기엔 FINAL 다음이 무한이라 **사다리 한 줄**로 읽히고, 칩이 하나 사라진다.
+     ② 하단 버튼을 새로 — 여덟 안.
+   ⛔ 안 건드리는 것: 시작 버튼을 난이도 색으로 물들이지 않는다(무엇이 확정인지가 흔들린다).
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --txt:#e7e9ee; --txt-mute:#9aa0a8; --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --mapAccent:#4aa8ff;
+  --art:url('../../assets/backgrounds/usemaps/nemo.webp');
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --dc:#5dff8f; --dcRGB:93,255,143;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(2,390px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base em{color:#ffd08a}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:74px}
+.sub b{color:#dfe6f0}
+
+.ph{position:relative;width:390px;height:640px;overflow:hidden;border-radius:5px;background:#04050b}
+.art{position:absolute;inset:0;background:var(--art) center center/cover no-repeat #04050b}
+.art::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+    rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+.art::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
+.ph::before{content:'';position:absolute;left:0;right:0;top:0;height:118px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(3,5,9,.80) 0%,rgba(3,5,9,.42) 48%,transparent 100%)}
+.scr{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;padding:18px 16px 20px}
+
+.mapRow{flex:none;display:flex;align-items:center;gap:9px}
+.mapRow .th{width:38px;height:38px;flex:none;border-radius:var(--r-bar);overflow:hidden;
+  background:var(--art) center/cover;border:1px solid rgba(255,255,255,.12)}
+.mapRow b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;display:block;text-shadow:0 1px 4px #000}
+.mapRow em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;display:block;margin-top:2px;text-shadow:0 1px 3px #000}
+.mapRow .x{margin-left:auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  color:#a8b2be;font-size:19px;text-shadow:0 1px 4px #000}
+
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.step{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.stepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;
+  letter-spacing:1px;color:var(--dc);text-shadow:0 0 18px rgba(var(--dcRGB),.45),0 2px 6px #000}
+.dots{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.20)}
+.dots i.on{width:14px;border-radius:3px;background:var(--dc)}
+.dots i.inf{background:rgba(176,107,255,.45)}     /* 마지막 칸 = 무한(보라) — 사다리의 끝임을 색으로 남긴다 */
+/* A3 화살표 */
+.arwBtn{position:relative;width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;
+  padding:0;color:#dfe1e4;background:none;border:none}
+.arwBtn .arwIco{width:24px;height:24px;display:block;fill:none;stroke:currentColor;stroke-width:3.2;
+  stroke-linecap:round;filter:drop-shadow(0 1px 2px #000) drop-shadow(0 0 7px rgba(0,0,0,.95))}
+
+.blk{margin-top:auto;display:flex;flex-direction:column;gap:12px;
+  padding:16px 16px 0;margin-left:-16px;margin-right:-16px;
+  background:linear-gradient(180deg,transparent,rgba(4,6,11,.55) 22%,rgba(4,6,11,.84))}
+.det{position:relative;border-radius:var(--r-md);padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:11px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4}
+.stat b{display:block;font-family:var(--font-num);font-size:21px;font-weight:700;margin-top:2px}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+
+/* ══ 버튼 여덟 ══ */
+.btns{display:flex;flex-direction:column;gap:8px}
+/* B1 지금 — 공용 .actBtn 두 개 */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:44px;padding:0 14px;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+
+/* B2 캠프식 — 판 없는 글자 + 밑변 광원 / 취소는 작은 글자 */
+.bare{position:relative;height:46px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-ti);font-size:15px;color:#fff;background:none;border:0;text-shadow:0 1px 4px #000}
+.bare::after{content:'';position:absolute;left:16%;right:16%;bottom:7px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.txtBtn{height:34px;display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-lg);color:#8b939d;background:none;border:0;text-shadow:0 1px 3px #000}
+
+/* B4 가로 한 줄 */
+.row2{display:flex;gap:8px}
+.row2 .actBtn{flex:1}
+.row2 .actBtn.sub{flex:0 0 34%}
+
+/* B6 각진 컷 */
+.cut{clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);border-radius:0}
+
+/* B7 무게 극단 */
+.b7 .bare{height:56px;font-size:20px;letter-spacing:1px}
+.b7 .bare::after{height:2px;left:12%;right:12%;box-shadow:0 0 14px var(--neon)}
+.b7 .txtBtn{font-size:var(--fs-md)}
+
+/* B8 밑변 고정 바 */
+.dock{margin:0 -16px -20px;padding:0 16px;height:62px;display:flex;align-items:center;gap:10px;
+  background:linear-gradient(180deg,rgba(4,6,11,.30),rgba(4,6,11,.92))}
+.dock::before{content:'';position:absolute;left:0;right:0;height:1px;margin-top:-31px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent)}
+.dock .go{position:relative;flex:1;height:44px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-ti);font-size:15px;color:#fff}
+.dock .go::after{content:'';position:absolute;left:8%;right:8%;bottom:4px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 10px var(--neon)}
+.dock .cx{flex:0 0 76px;height:44px;display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-lg);color:#8b939d}
+
+/* B3 시작만 판 */
+/* B5 취소를 머리줄 ✕ 로 */
+</style></head><body>
+<div id="cols"></div>
+<script>
+const ARW=d=>`<button class="arwBtn"><svg class="arwIco" viewBox="0 0 24 24">
+  <path d="${d==='l'?'M15 5 8 12l7 7':'M9 5l7 7-7 7'}"/></svg></button>`;
+const HEAD=`<div class="mapRow"><span class="th"></span>
+  <span><b>네모네모 디펜스</b><em>개인 플레이 · 난이도를 고르고 시작하세요</em></span></div>`;
+function scr(name,on,col,rgb,stats,desc,go){return `
+ ${HEAD}
+ <div class="mid" style="--dc:${col};--dcRGB:${rgb}">
+   <div class="step">${ARW('l')}<div class="stepTx">${name}</div>${ARW('r')}</div>
+   <div class="dots">${[0,1,2,3,4].map(i=>`<i class="${i===on?'on':''}"></i>`).join('')}<i class="${on===5?'on inf':'inf'}"></i></div>
+ </div>
+ <div class="blk" style="--dc:${col};--dcRGB:${rgb}">
+   <div class="det"><div class="stats">${stats}</div><div class="desc">${desc}</div></div>
+   <div class="btns"><div class="bare">${go}</div><div class="txtBtn">취소</div></div></div>`;}
+const S=(a,b)=>`<div class="stat e"><i>적 HP</i><b>${a}</b></div><div class="stat c"><i>포인트 획득량</i><b>${b}</b></div>`;
+const V=[
+ ['EASY',0,'#5dff8f','93,255,143',S('×0.5','×1'),'처음이라면 여기서 · 규칙을 익히는 단계','이 난이도로 시작','첫 칸 — 지금까지와 같다'],
+ ['무한',5,'#b06bff','176,107,255',S('×1.0','×1.5'),'노말 고정 · 라운드가 끝나지 않는다','무한 모드로 시작','<b>마지막 칸</b> — 칩이 사라지고 사다리 한 줄이 된다'],
+];
+document.getElementById('cols').outerHTML=V.map(([n,on,c,r,st,d,g,cap])=>`
+<div class="col"><p class="hd">${cap}</p>
+  <div class="ph"><div class="art"></div><div class="scr">${scr(n,on,c,r,st,d,g)}</div></div></div>`).join('');
+</script>
+</body></html>
