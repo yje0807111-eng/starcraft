@@ -856,7 +856,7 @@ function campFoeRngCap(){
     if(!(u.dmg > 0) || !(u.rng > 0) || u.melee) return;
     if(u.rng < min) min = u.rng; };
   for(const u of CAMPB.me.units) see(u);
-  for(const u of (CAMPB._down || [])) see(u);
+  for(const d of (CAMPB._down || [])) see(d && d.u);   // ⚠ _down 은 {u,t} 껍데기다(유닛이 아니다)
   return (min === Infinity) ? CAMP_FOE_RNG_FB : min * CAMP_FOE_RNG_K;
 }
 

@@ -260,7 +260,8 @@ await pg.evaluate(()=>{
             // ⚔ 병력 구성 — 반복 구매(×1.15)가 실제로 조합을 강제하는지 보는 값이다.
             //   한 종류가 절반을 넘으면 배수가 약한 것이다.
             mix:(function(){ const m={};
-              const add=L=>{ for(const u of (L||[])){ if(!u||u.dead) continue; const k=u.gm||u.id; m[k]=(m[k]||0)+1; } };
+              const add=L=>{ for(const e of (L||[])){ const u=(e&&e.u)?e.u:e; if(!u) continue;   // ⚠ _down 은 {u,t} 껍데기
+                const k=u.gm||u.id; if(k) m[k]=(m[k]||0)+1; } };
               if(typeof CAMPB!=='undefined'&&CAMPB){ add(CAMPB.me&&CAMPB.me.units); add(CAMPB._down); }
               for(const e of (G.tech&&G.tech.ents||[])) if(e.type==='unit'){ m[e.uid]=(m[e.uid]||0)+1; }
               return m; })() });
