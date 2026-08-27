@@ -148,12 +148,9 @@ await pg.evaluate(()=>{
     } };
   // 자동 건설 — 트리 순서대로, 선행이 맞고 돈이 되면 짓는다
   // ⛽ 정제소 레벨 — 가스가 없으면 유닛 12종 중 8종을 못 산다. 경제 몫으로 산다.
-  __CB.refine=function(){ if(!G.tech || typeof campUpgCost!=='function') return;
-    const S=campState(); if(!S || !campHasRefinery()) return;
-    for(let i=0;i<6;i++){ const c=campUpgCost('refinery');
-      if((G.tech.credit||0) < c*1.5) return;                       // 다른 축도 사야 하니 여유를 남긴다
-      if(campRefLv() >= 40) return;
-      G.tech.credit-=c; S.upg.refinery=(S.upg.refinery|0)+1; } };
+  const RES_M_RESERVE=4;   // 미네랄로 사는 연구 = 값의 몇 배가 지갑에 있어야 사는가
+  // ⛽ 정제소 업그레이드는 **__CB.research 가 진짜 경로로 산다**(정제소 연구 카드 · 2026-08-27).
+  //   ⛔ 예전엔 여기서 S.upg.refinery 를 직접 올렸다 — 화면에 없는 길이라 실제와 달랐다.
   // 🔬 연구 — **가스는 여기에만 쓴다**(2026-08-27). 건물마다 한 번에 하나씩이라
   //   가스가 남아돌아도 **건물 수와 연구 시간**이 처리량을 정한다 — 그것도 재는 값이다.
   //   ⚠ 살 수 있는 것 중 **가장 싼 것**을 산다(§4 규약). 계열 업그레이드는 상한이 없어
@@ -171,6 +168,10 @@ await pg.evaluate(()=>{
         if(typeof _techReqMet==='function' && !_techReqMet(r.req)) continue;
         const c=(typeof campResearchCost==='function' && campResearchCost(r,lv))||[r.m||0,r.g||0];
         if((T.credit||0)<c[0] || (T.energy||0)<c[1]) continue;
+        // ⛽ **미네랄로 사는 연구(정제소)는 여유가 있을 때만.**
+        //   ⛔ 이 문이 없으면 정제소가 싸다는 이유로 미네랄을 다 먹어 **경제 축이 멎는다** —
+        //     실측(2026-08-27): 효율Lv 32→10 · 일꾼 14→7 · 45분 수입 199만→60만.
+        if(c[0]>0 && (T.credit||0) < c[0]*RES_M_RESERVE) continue;
         if(!best || c[1]<best.c[1]) best={r:r,c:c}; }
       if(best){ T.sel=be.eid; try{ techDoResearch(b.k,best.r.k); }catch(e){} } } };
   __CB.build=function(){ if(!G.tech) return;
@@ -289,7 +290,7 @@ await pg.evaluate(()=>{
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
-      if((i%40)===0){ __CB.build(); __CB.refine(); __CB.research(); __CB.produce(); __CB.buy();
+      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
         const units=G.tech?G.tech.ents.filter(e=>e.type==='unit').length:0;
         __CB.army=units;

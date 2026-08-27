@@ -738,10 +738,24 @@ async function groupLobby(){
           'Lv10 분당 생산이 레벨 계단과 다르다: '+campGasPerMin());
         const g0=G.tech.energy||0; campGasTick(60);
         assert(Math.abs((G.tech.energy||0)-g0-campGasPerMin())<1e-6,'1분 틱이 분당 생산과 다르다');
-        // 업그레이드 비용 = 3만 × 1.15^Lv (무릎 없음)
+        // 업그레이드 비용 = CAMP_REF_COST0 × CAMP_REF_R^Lv (무릎 없음)
         S.upg.refinery=0; const c0=campUpgCost('refinery'); S.upg.refinery=1; const c1=campUpgCost('refinery');
-        assert(Math.abs(c0/campUpgDisc()-30000)<1,'정제소 0→1 비용이 3만이 아니다: '+c0);
-        assert(Math.abs(c1/c0-1.15)<0.01,'정제소 비용 계단이 1.15 가 아니다: '+(c1/c0).toFixed(3));
+        assert(Math.abs(c0/campUpgDisc()-CAMP_REF_COST0)<1,'정제소 0→1 비용이 기준값과 다르다: '+c0);
+        assert(Math.abs(c1/c0-CAMP_REF_R)<0.01,'정제소 비용 계단이 상수와 다르다: '+(c1/c0).toFixed(3));
+        assert(CAMP_REF_R>1.05,'정제소 계단이 너무 눕다 — 가스가 폭주한다: '+CAMP_REF_R);
+        // ⛽ **정제소 안에서 산다**(§2-3-1) — 캠프에서만 정제소에 연구 카드가 꽂힌다.
+        //   ⛔ 이게 없으면 화면에서 가스 생산을 **올릴 방법이 아예 없다**(2026-08-27 실측으로 걸렸다).
+        { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+          const ent=(rb.research||[]).find(x=>x.k===CAMP_REF_KEY);
+          assert(ent,'정제소에 「가스 생산」 연구 카드가 없다 — 올릴 방법이 없다');
+          const cc=campResearchCost(ent,campRefLv());
+          assert(cc && cc[1]===0,'정제소 업그레이드에 가스가 붙었다 — 가스를 가스로 사는 셈이다');
+          assert(cc[0]===campUpgCost('refinery'),'정제소 카드 값이 campUpgCost 와 다르다: '+cc[0]);
+          // 레벨은 **연구 칸**에도 쌓인다(카드로 사므로) — 둘이 어긋나면 값이 안 오른다
+          const before=campRefLv();
+          G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]=before+3;
+          assert(campRefLv()===before+3,'연구 칸에 쌓인 정제소 레벨을 안 읽는다: '+campRefLv());
+          delete G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]; }
         S.upg.refinery=0; G.tech.ents.splice(G.tech.ents.indexOf(fake),1); G.tech.energy=e0; } }
     // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × 1.15^보유). 조합을 강제하는 유일한 장치다.
     if(typeof campSyncUnitCost==='function'){
@@ -1396,8 +1410,14 @@ async function groupLobby(){
       const wasOn=(typeof campExit==='function');
       campExit();
       assert(campResearchCost(tierR,0)===null,'캠프를 나갔는데 캠프 값이 계속 나온다');
+      // ⛔ 정제소 「가스 생산」 카드는 **캠프 전용**이다(tier:[] 라 캠프 밖에서 그리면 터진다).
+      { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+        assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),
+          '캠프를 나갔는데 정제소 카드가 남아 있다 — 관리자 탭이 터진다'); }
       openHome(); await sleep(420);
       assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
+      { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+        assert((rb.research||[]).some(x=>x.k===CAMP_REF_KEY),'캠프로 돌아왔는데 정제소 카드가 없다'); }
       void wasOn;
       return '계열 가스 1→'+campResearchCost(tierR,7)[1]+'(Lv7) · 단발 10/15/20 · 미네랄 0';
     } finally {
