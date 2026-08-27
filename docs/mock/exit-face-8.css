@@ -9,26 +9,26 @@
    ⚠ 딤을 .8 → .55 로 낮췄다 — 딤이 다 가리면 카드 면이 무슨 일을 하는지 볼 수 없다. */
 
 /* 공통 — 옛 껍데기를 걷고 E8(붉은 나가기)을 켠다 */
-.f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard,.f8 .ecCard{
+.f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard,.f8 .ecCard,.f9 .ecCard,.f10 .ecCard{
   background:none!important;border:0!important;box-shadow:none!important;
   position:relative;overflow:hidden;padding:18px 16px 17px!important}
-.f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard{clip-path:none!important;border-radius:var(--r-bar)}
+.f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard,.f9 .ecCard,.f10 .ecCard{clip-path:none!important;border-radius:var(--r-bar)}
 .f1 #exitConfirm,.f2 #exitConfirm,.f3 #exitConfirm,.f4 #exitConfirm,
-.f5 #exitConfirm,.f6 #exitConfirm,.f7 #exitConfirm,.f8 #exitConfirm{
+.f5 #exitConfirm,.f6 #exitConfirm,.f7 #exitConfirm,.f8 #exitConfirm,.f9 #exitConfirm,.f10 #exitConfirm{
   background-image:none!important;background-color:rgba(3,4,8,.55)!important;backdrop-filter:none!important;
   z-index:999!important}   /* 목업 전용 — 배경 화면들이 저마다 오버레이를 갖고 있어 그 위로 올려야 보인다 */
-.f1 .ecTitle,.f2 .ecTitle,.f3 .ecTitle,.f4 .ecTitle,.f5 .ecTitle,.f6 .ecTitle,.f7 .ecTitle,.f8 .ecTitle{
+.f1 .ecTitle,.f2 .ecTitle,.f3 .ecTitle,.f4 .ecTitle,.f5 .ecTitle,.f6 .ecTitle,.f7 .ecTitle,.f8 .ecTitle,.f9 .ecTitle,.f10 .ecTitle{
   font-family:var(--font-ko)!important;text-shadow:none!important}
 .f1 .ecTitle::after,.f2 .ecTitle::after,.f3 .ecTitle::after,.f4 .ecTitle::after,
-.f5 .ecTitle::after,.f6 .ecTitle::after,.f7 .ecTitle::after,.f8 .ecTitle::after{
+.f5 .ecTitle::after,.f6 .ecTitle::after,.f7 .ecTitle::after,.f8 .ecTitle::after,.f9 .ecTitle::after,.f10 .ecTitle::after{
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent)!important;opacity:1!important}
 /* E8 — 「나가기」만 붉게 */
 .f1 .ecCard .ecGo,.f2 .ecCard .ecGo,.f3 .ecCard .ecGo,.f4 .ecCard .ecGo,
-.f5 .ecCard .ecGo,.f6 .ecCard .ecGo,.f7 .ecCard .ecGo,.f8 .ecCard .ecGo{
+.f5 .ecCard .ecGo,.f6 .ecCard .ecGo,.f7 .ecCard .ecGo,.f8 .ecCard .ecGo,.f9 .ecCard .ecGo,.f10 .ecCard .ecGo{
   color:#ff8a94!important;border-color:rgba(255,107,122,.55)!important;background:rgba(255,107,122,.1)!important}
 /* 면은 ::before 한 겹이 만든다(하단 시트와 같은 구조) */
 .f1 .ecCard::before,.f2 .ecCard::before,.f3 .ecCard::before,.f4 .ecCard::before,
-.f5 .ecCard::before,.f6 .ecCard::before,.f7 .ecCard::before,.f8 .ecCard::before{
+.f5 .ecCard::before,.f6 .ecCard::before,.f7 .ecCard::before,.f8 .ecCard::before,.f9 .ecCard::before,.f10 .ecCard::before{
   content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;display:block!important;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat}
 
@@ -71,3 +71,15 @@
   linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
   linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
   backdrop-filter:saturate(.45) brightness(.92)}
+
+/* ── 틴트 세기 비교(2026-08-26) — F4 보다 더 덮는 값 둘 ────────────────
+   ⚠ 뒤 글자 비침은 밝기가 아니라 **덮는 정도**의 문제다. 틴트 알파만 올린다.
+      채도 빼기(saturate .45)는 그대로 — 색을 더하지 않는다는 규칙은 유지. */
+.f9 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.7),rgba(16,18,21,.55));
+  backdrop-filter:saturate(.45) brightness(.9)}
+.f10 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.85),rgba(16,18,21,.7));
+  backdrop-filter:saturate(.45) brightness(.9)}
