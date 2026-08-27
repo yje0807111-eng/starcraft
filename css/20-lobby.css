@@ -236,11 +236,11 @@
      ⚠ .pfOv .rmCard 는 위 옛 공용 껍데기의 ::before(네온 프레임)를 상속한다 — 아래에서 함께 끈다.
         명시도(0,2,0 > 0,1,0)로 이기므로 순서와 무관하지만, 옛 목록에서 .rmCard 를 빼면 안 된다
         (#rooms 전체 화면이 그 목록을 기준으로 자기 것을 덮고 있다). */
-  .moCard,#soloDiffPanel .cpCard,.ptInviteCard,.pfOv .rmCard{position:relative;
+  .moCard,#soloDiffPanel .cpCard,#raceSelPanel .cpCard,.ptInviteCard,.pfOv .rmCard{position:relative;
     clip-path:none;border-radius:var(--r-bar);
     background:#08080a;border:1px solid rgba(255,255,255,.08);
     box-shadow:0 16px 44px -12px #000}
-  .moCard::before,#soloDiffPanel .cpCard::before,.ptInviteCard::before,.pfOv .rmCard::before{display:none}
+  .moCard::before,#soloDiffPanel .cpCard::before,#raceSelPanel .cpCard::before,.ptInviteCard::before,.pfOv .rmCard::before{display:none}
   .cpCard{width:300px;max-width:84vw;padding:20px}
   .cpTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:7px}   /* 제목 = 화이트 통일(방 만들기·난이도·종족 선택 공용) */
   .cpTitle [data-ico] .ic{width:18px;height:18px}
@@ -340,21 +340,42 @@
      위계는 밑변 광원의 색·세기만으로 갈린다. 여기서 덮는 건 높이뿐이다. */
   #soloDiffPanel .cpBtns{flex:none}
   #soloDiffPanel .cpBtns .actBtn{height:40px}
-  #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  /* ⚠ 난이도 팝업 바로 다음에 뜬다 — 딤·껍데기·폭이 다르면 두 장면이 덜컹인다. 같은 값을 쓴다. */
+  #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;
+    background:var(--popDim);backdrop-filter:blur(3px)}
+  #raceSelPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);padding:20px 16px 16px}
+  #raceSelPanel .cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
+    background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent,#4aa8ff),transparent 70%)}
+  #raceSelPanel .cpCard>*{position:relative;z-index:1}
   #raceSelPanel.hide{display:none}
-  /* 종족 선택 — 아이콘 없는 깔끔한 드롭다운(세로 목록) */
-  /* 종족 = 개인플레이 난이도 카드와 동일 언어: 중립 글래스 + 좌측 종족색 바 + 우측 화살표(무지개 글로우 제거) */
-  .raceSelBtns{display:flex;flex-direction:column;gap:8px;margin:6px 0 12px}
-  .raceOpt{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:10px;height:52px;padding:0 13px 0 18px;border-radius:12px;text-align:left;overflow:hidden;cursor:pointer;
-    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.038));border:1px solid var(--glass-edge);
-    box-shadow:0 3px 10px -5px rgba(0,0,0,.6),inset 9px 0 22px -12px var(--rc),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .1s}
-  .raceOpt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--rc,#8a93a0);box-shadow:0 0 14px 0 var(--rc65,transparent)}   /* 좌측 종족색 바(항상) */
-  .raceOpt:active{transform:scale(.99) translateY(1px)}
-  .raceOpt .roNm{flex:1;min-width:0;font-family:var(--font-num);font-size:14px;font-weight:800;letter-spacing:.6px;color:#f2f6fb;text-shadow:0 1px 2px rgba(0,0,0,.45)}
-  .raceOpt .roDesc{flex:none;font-size:10.5px;font-weight:700;color:#98a4b2;letter-spacing:.2px}
-  .raceOpt .roGo{flex:none;width:15px;height:15px;color:#7a8593}
+  /* ── 종족 선택 = 캠프(.crRow)의 행 문법 + 「고른 행을 종족색이 물들인다」 (2026-08-27 · S3안) ──
+     ⛔ 전체 화면(캠프 방식)으로 만들지 말 것 — 판마다 고르는 선택이라 무게가 안 맞고,
+        종족 전장 그림이 3장뿐인데 여긴 5종족이다(페럴·콜로서스가 빈 배경이 된다).
+     ✔ 맞출 상대는 **바로 앞에 뜨는 난이도 팝업**이다(0.2초 간격으로 이어지는 두 장면).
+        거기 규칙 그대로 — **색을 갖는 건 선·빛뿐이고 면은 검정이다**(DESIGN §0).
+     ⛔ 고른 행에 **붉은** 밑변 광원을 주지 말 것. 그건 아래 확정 버튼(.actBtn.pri)의 서명이라
+        한 카드에 두 번 나오면 무엇이 확정인지 흐려진다 — 난이도 화면이 이미 피해 놓은 함정이다. */
+  .raceSelBtns{display:flex;flex-direction:column;margin:2px 0 10px;
+    border-top:1px solid rgba(255,255,255,.08)}
+  .raceOpt{position:relative;display:flex;align-items:center;gap:11px;width:100%;
+    padding:11px 8px;background:none;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+  .raceOpt::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+  .raceOpt .roIco{flex:0 0 auto;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+  .raceOpt .roIco img{width:100%;height:100%;object-fit:contain;display:block}
+  .raceOpt .roMain{min-width:0;flex:1;display:flex;flex-direction:column}
+  .raceOpt .roNm{font-size:var(--fs-xl);font-weight:700;color:#8b939d}
+  .raceOpt .roDs{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+  .raceOpt .roGo{flex:0 0 auto;color:#7b838d;font-size:13px}
+  /* 고른 행 = 그 종족색이 물든다. 면은 검정 그대로고 색을 갖는 건 얇은 결·선뿐이다. */
+  .raceOpt.on{background:linear-gradient(90deg,var(--rc14,rgba(255,255,255,.06)),transparent 76%)}
+  .raceOpt.on::after{background:linear-gradient(90deg,transparent,var(--rc,#fff),transparent);
+    box-shadow:0 0 8px var(--rc,#fff);opacity:.7}
   .raceOpt.on .roNm{color:#fff}
-  .raceOpt.on{border-color:var(--rc42,var(--glass-edge))}
+  .raceOpt.on .roGo{color:var(--rc,#fff)}
+  .raceOpt:active{background:rgba(255,255,255,.04)}
+  /* 확정/취소를 세로로 쌓는다(주 동작이 위) — .cpBtns 는 기본이 가로 한 줄이다 */
+  .cpBtns.col{flex-direction:column}
   /* (인라인 종족 드롭다운 #raceMenu 계열 CSS 는 2026-08-19 삭제 — JS·마크업과 함께. 종족 입구 = 공용 탭 띠) */
   /* .raceTrig(솔로 종족 트리거)는 2026-08-18 삭제 — 항상 hide 였고 onclick 이 없는 함수(openSoloRace)를 불렀다.
      종족은 난이도 선택 뒤 별도 팝업(#raceSelPanel)이 맡는다. */

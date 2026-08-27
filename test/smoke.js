@@ -5211,6 +5211,44 @@ async function groupLobby(){
     assert(!visible($('sdInf'))||$('sdInf').textContent.indexOf('무한')>=0,'무한 모드 줄이 이상함');
     closeSoloDiff(); await sleep(40);
     return '스테퍼 '+dots.length+'단 · 잠금 분리 ok'; });
+  // 🧬 종족 선택 팝업 = 캠프의 행 문법 + 「고른 행을 종족색이 물들인다」(2026-08-27 · S3안).
+  //    ⚠ 이 팝업은 **난이도 팝업 바로 다음**에 뜬다 — 껍데기가 다르면 두 장면이 덜컹인다.
+  //    ⛔ 고른 행에 붉은 밑변 광원을 주면 아래 확정 버튼과 서명이 겹쳐 '무엇이 확정인지'가 흐려진다.
+  await step('종족 선택: 캠프 행 문법 · 고른 행은 종족색 · 확정과 서명이 안 겹친다', async()=>{
+    skipIf(typeof openRacePicker!=='function','종족 선택 없음');
+    openRacePicker(null, function(){}); await sleep(120);
+    const rows=[...document.querySelectorAll('.raceOpt')];
+    assert(rows.length===STK_RACE_ORDER.length,'행 수가 종족 수와 다르다: '+rows.length);
+    // 캠프(.crRow)와 같은 조각을 갖는가 — 아이콘 · 이름 · 부제 · ✓/›
+    for(const r of rows) for(const c of ['.roIco','.roNm','.roDs','.roGo'])
+      assert(r.querySelector(c),'행에 '+c+' 가 없다 — 캠프 행 문법과 어긋난다');
+    assert(parseFloat(getComputedStyle(rows[0]).borderTopLeftRadius)===0,'행이 라운드다 — 목록 행은 라운드 0');
+    // 껍데기 = 난이도 팝업과 같은 것(둘은 이어서 뜬다)
+    const card=document.querySelector('#raceSelPanel .cpCard'), dCard=document.querySelector('#soloDiffPanel .cpCard');
+    if(dCard){ const a=getComputedStyle(card), b=getComputedStyle(dCard);
+      assert(a.borderTopLeftRadius===b.borderTopLeftRadius,'껍데기 모서리가 난이도 팝업과 다르다: '+a.borderTopLeftRadius+' vs '+b.borderTopLeftRadius);
+      assert(getComputedStyle(card,'::before').display==='none','옛 카드 장식(::before)이 남아 있다'); }
+    // 고른 행 = 그 종족색이 물든다 · ✓ 로 갈린다
+    const on=document.querySelector('.raceOpt.on'); assert(on,'고른 행이 없다');
+    assert(on.querySelector('.roGo').textContent.indexOf('✓')>=0,'고른 행이 ✓ 가 아니다');
+    const face=getComputedStyle(on).backgroundImage;
+    assert(face!=='none','고른 행이 종족색으로 안 물든다');
+    // ⛔ 확정 버튼과 서명이 겹치면 안 된다 — 고른 행의 밑변이 붉으면 실패
+    const line=getComputedStyle(on,'::after').backgroundImage;
+    assert(line.indexOf('255, 59, 59')<0,'고른 행에 붉은 밑변 광원이 붙었다 — 확정 버튼(.actBtn.pri)과 서명이 겹친다');
+    const go=$('raceGo');
+    assert(go && go.classList.contains('actBtn') && go.classList.contains('pri'),'확정이 공용 액션 버튼이 아니다');
+    assert(getComputedStyle(go,'::after').backgroundImage.indexOf('255, 59, 59')>=0,'확정 버튼의 붉은 밑변 광원이 사라졌다');
+    // 확정 문구가 고른 종족을 따라가고, **조사가 맞는가**(ㄹ 받침·받침 없음 = '로')
+    const seen=[];
+    for(const k of STK_RACE_ORDER){ raceSel(k); await sleep(30);
+      const nm=STK_RACES[k].name, t=$('raceGo').textContent;
+      assert(t.indexOf(nm)===0,'확정 문구가 고른 종족을 안 따라간다: '+t);
+      assert(t===nm+josaRo(nm)+' 시작','조사가 틀렸다: '+t);
+      seen.push(t); }
+    assert(seen.indexOf('에테리얼로 시작')>=0,'ㄹ 받침 조사가 안 잡힌다: '+seen.join(' / '));
+    closeRaceSelect(); await sleep(40);
+    return '행 '+rows.length+' · 껍데기 통일 · 조사 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
   // ══ 게임 진입 로딩 = 카드 덱(H안). 한 화면이 협동·팀전·개인 셋을 다 맡는다 ══
   await step('게임 진입 로딩: 카드 덱 · 팀은 윗변 · 준비는 밑변 · 혼자면 덱이 없다', async ()=>{

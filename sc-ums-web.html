@@ -247,7 +247,11 @@
         <div class="cpTitle">종족 선택</div>
         <div class="pickHint">선택한 종족으로 게임을 플레이합니다</div>
         <div class="raceSelBtns" id="raceSelBtns"></div>
-        <div class="cpBtns"><button class="actBtn" onclick="closeRaceSelect()">취소</button></div>
+        <!-- 고르고 → 확정. 캠프 종족 선택과 같은 두 단계다(오탭으로 시작되지 않는다). -->
+        <div class="cpBtns col">
+          <button class="actBtn pri" id="raceGo" onclick="raceConfirm()"></button>
+          <button class="actBtn" onclick="closeRaceSelect()">취소</button>
+        </div>
       </div>
     </div>
     <!-- 로그아웃 확인 — 기존 .cpCard 다이얼로그 구조 재사용 -->

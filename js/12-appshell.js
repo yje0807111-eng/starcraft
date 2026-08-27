@@ -1818,14 +1818,38 @@ function _rcHex(hex){ hex=(hex||'#8a93a0').replace('#',''); if(hex.length===3) h
   return [parseInt(hex.slice(0,2),16)||138, parseInt(hex.slice(2,4),16)||147, parseInt(hex.slice(4,6),16)||160]; }
 function raceVars(col){ const c=_rcHex(col), rgb=c[0]+','+c[1]+','+c[2];
   return '--rc:'+col+';--rc14:rgba('+rgb+',.14);--rc42:rgba('+rgb+',.42);--rc65:rgba('+rgb+',.65)'; }
+// 「…으로/…로 시작」 — 받침이 없거나 ㄹ 받침이면 '로', 그 밖엔 '으로'.
+// ⚠ 한 곳에서만 만든다: 캠프 종족 선택(campRaceRender)도 같은 문장을 쓴다.
+//   그전엔 양쪽 다 '으로'로 고정이라 「에테리얼으로 시작」이 나왔다.
+function josaRo(w){ w=String(w||''); if(!w) return '로';
+  const c=w.charCodeAt(w.length-1)-0xAC00;
+  if(c<0||c>11171) return '로';                 // 한글이 아니면(영문·숫자) 기본형
+  const jong=c%28;                              // 종성 인덱스(0=없음, 8=ㄹ)
+  return (jong===0||jong===8) ? '로' : '으로'; }
+
+// 행 문법은 **캠프 종족 선택(.crRow)에서 빌린다** — 아이콘 · 이름 · 부제 · ✓/›.
+// ⛔ 여기 전용 종족 행을 새로 만들지 말 것. 다른 것은 '고른 행을 종족색이 물들인다'(S3안)뿐이다.
+// ⚠ 아이콘 파일이 없으면(페럴·콜로서스) onerror 가 이모지로 되돌린다 — 자리·크기는 그대로다.
+let _racePick=null;
+function raceIconSrc(k){ return 'assets/icons/races/'+(typeof stkTechRace==='function'?stkTechRace(k):k)+'.webp'; }
+function renderRacePicker(){ const box=document.getElementById('raceSelBtns'); if(!box) return;
+  const cur=_racePick||STK_RACE_ORDER[0], R=STK_RACES[cur]||{};
+  let rows='';
+  for(const k of STK_RACE_ORDER){ const S=STK_RACES[k]||{}; const on=(k===cur);
+    rows+='<button type="button" class="raceOpt'+(on?' on':'')+'" style="'+raceVars(S.col)+'" onclick="raceSel(\''+k+'\')">'
+      +'<span class="roIco"><img src="'+raceIconSrc(k)+'" alt="" '
+      +'onerror="this.parentNode.textContent=\''+(S.icon||'')+'\'"></span>'
+      +'<span class="roMain"><span class="roNm">'+(S.name||k)+'</span>'
+      +'<span class="roDs">'+(S.sub||'')+' · '+(S.desc||'')+'</span></span>'
+      +'<span class="roGo">'+(on?'✓':'›')+'</span></button>'; }
+  box.innerHTML=rows;
+  const go=document.getElementById('raceGo'); if(go) go.textContent=(R.name||'')+josaRo(R.name)+' 시작'; }
+function raceSel(k){ if(!STK_RACES[k] || k===_racePick) return;
+  _racePick=k; if(typeof playSfx==='function') playSfx('ui_tap'); renderRacePicker(); }
+function raceConfirm(){ pickRace(_racePick||STK_RACE_ORDER[0]); }
 function openRacePicker(current, onPick){ _racePickCb=onPick||null;
-  const box=document.getElementById('raceSelBtns'); if(box){ box.innerHTML='';
-    STK_RACE_ORDER.forEach(k=>{ const R=STK_RACES[k]; const b=document.createElement('div');
-      b.className='raceOpt'+(k===current?' on':''); b.setAttribute('style', raceVars(R.col));
-      b.innerHTML='<span class="roNm">'+R.name+'</span>'   // 이름(괄호 서브명 제거) + 특성 + 우측 화살표 — 난이도 카드와 동일 언어
-        +(R.desc?'<span class="roDesc">'+R.desc+'</span>':'')
-        +'<svg class="roGo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-      b.onclick=()=>pickRace(k); box.appendChild(b); }); }
+  _racePick=(current&&STK_RACES[current])?current:STK_RACE_ORDER[0];
+  renderRacePicker();
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; _startSoloNow(); }); }   // 솔로: 난이도 후 종족 확정 → 게임 시작
 // (인라인 종족 드롭다운 showRaceMenu/hideRaceMenu/#raceMenu 는 2026-08-19 삭제 — 유일한 입구였던
