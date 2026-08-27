@@ -466,20 +466,23 @@
   /* 이름은 span(.riTx)이다 — 텍스트 노드로 두면 순서를 바꿀 수 없고 말줄임도 못 건다 */
   #rooms .riTx{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #rooms .riSub{margin-top:0;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #rooms .riRight{display:flex;align-items:baseline;gap:7px}
+  /* ⚠ 오른쪽은 baseline 이 아니라 **center** 다. 인원(12px)과 상태(8px)는 크기 차가 커서
+     밑선을 맞추면 작은 글자가 바닥에 깔려 어긋나 보인다. 세로 가운데로 묶어야 한 덩어리로 읽힌다.
+     (왼쪽 .riMain 은 글자끼리라 baseline 이 맞다 — 같이 바꾸지 말 것.) */
+  #rooms .riRight{display:flex;align-items:center;gap:7px}
   #rooms .riStat{margin-top:0}
   /* 줄머리(난이도 배지 · 방 번호)를 한 단 낮춘다 — 방 이름보다 먼저 읽히면 안 되는 것들이다.
      ⚠ 배지의 **테두리를 걷는다**: 판을 다 벗은 목록에서 배지만 작은 상자를 이고 있으면 열 줄 내내 그것만 튄다.
        난이도는 이제 둘이 말한다 — 배지 글자색 + 줄 구분선. 상자는 셋째 목소리라 뺀다.
      ⚠ 글자색은 난이도 색 그대로가 아니라 **회색을 섞은 값**이다. 원색은 방 이름(흰 글자)을 이긴다. */
-  /* 난이도 배지 = **앞 글자 한 자 · 폭 19px 고정**(2026-08-25 · B3안).
+  /* 난이도 배지 = **앞 글자 한 자 · 폭 17px 고정**(2026-08-25 · B3안).
      ⚠ 이 고정 폭 하나가 「난이도가 뭐든 제목 줄이 맞는다」의 전부다. width 를 auto 로 되돌리지 말 것.
      면은 난이도 색을 14%만 깐 것이고 **테두리는 없다** — 판을 다 벗은 목록에서 배지만 상자를 이면 거기가 튄다.
      글자색도 원색이 아니라 회색을 섞은 값이다(원색은 흰 제목을 이긴다). */
   #rooms .riDiff{display:inline-flex;align-items:center;justify-content:center;align-self:center;
-    width:19px;height:19px;box-sizing:border-box;flex:none;
+    width:17px;height:17px;box-sizing:border-box;flex:none;
     border:0;padding:0;margin:0;border-radius:var(--r-bar);
-    font-family:var(--font-num);font-size:10.5px;font-weight:800;letter-spacing:0;
+    font-family:var(--font-num);font-size:9.5px;font-weight:800;letter-spacing:0;
     background:color-mix(in srgb,var(--dc,#888) 14%,transparent);
     color:color-mix(in srgb,var(--dc,#888) 80%,#8d949d)}
   /* 방 번호 = 이름이 아니라 **식별자**다. ⛔ 시안(--hud)은 DESIGN §2 에서 '지금 선택된 것' 전용이고
@@ -490,11 +493,11 @@
      ⚠ 크기는 px 이 아니라 em — 이름(.riName)에 매달아 두면 이름을 키워도 비율이 유지된다. */
   #rooms .riNum{color:#78828e;font-weight:700;font-size:.96em;margin:0;flex:none}
   /* 방장 이름 = 셋 중 맨 아래 층. 공용 --fs-xs(9.5px)보다 반 단 더 내려 번호와 확실히 갈린다 */
-  #rooms .riSub{font-size:9px}
+  #rooms .riSub{font-size:8.5px}
   /* 오른쪽도 같은 층 규칙을 따른다 — 인원이 제목보다 크면 목록에서 숫자가 먼저 읽힌다.
-     인원 15 → 13px(제목과 같은 층) · 상태 9.5 → 9px(방장과 같은 층). */
+     인원 15 → 12px · 상태 9.5 → 8px(방장 8.5px 보다도 아래 — 상태는 색이 이미 말한다). */
   #rooms .riCnt{font-size:12px}
-  #rooms .riStat{font-size:8.5px}
+  #rooms .riStat{font-size:8px}
   .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
   /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
   .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}
