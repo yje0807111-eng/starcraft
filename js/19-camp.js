@@ -918,6 +918,37 @@ function campSpawnWave(){
 // 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
 function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 
+// 👀 **발견 전파** — 적을 본 아군 주변에게만 「넓게 봐라」를 옮긴다.
+//   ⚠ 매 프레임 돌면 아군×적 만큼 비싸다(56×100). CAMP_ALERT_TICK 주기로만 돈다.
+//   ⚠ 남은 시간은 매 프레임 깎는다 — 주기로만 깎으면 지속이 들쭉날쭉해진다.
+function campAlertTick(dt){
+  if(!CAMPB || !CAMPB.me) return 0;
+  const mine = CAMPB.me.units, foes = CAMPB.ai.units;
+  for(const u of mine){ if(u._alertT > 0) u._alertT = Math.max(0, u._alertT - dt); }
+  CAMPB._alT = (CAMPB._alT || 0) - dt;
+  if(CAMPB._alT > 0){ campAlertApply(); return 0; }
+  CAMPB._alT = CAMP_ALERT_TICK;
+  // ① 발견자 — 기본 인식 거리 안에 적이 있는 아군
+  const B2 = CAMP_ACQ_BASE * CAMP_ACQ_BASE, spot = [];
+  for(const u of mine){ if(u.dead) continue;
+    for(const e of foes){ if(e.dead) continue;
+      const dx = e.x - u.x, dy = e.y - u.y;
+      if(dx * dx + dy * dy <= B2){ spot.push(u); break; } } }
+  // ② 발견자 주변에만 전파 — ⭐ 멀리 있는 아군은 자기 자리를 지킨다
+  if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R;
+    for(const u of mine){ if(u.dead) continue;
+      for(const sp of spot){ const dx = sp.x - u.x, dy = sp.y - u.y;
+        if(dx * dx + dy * dy <= R2){ u._alertT = CAMP_ALERT_S; break; } } } }
+  campAlertApply();
+  return spot.length;
+}
+// 전파 상태를 실제 인식 거리로 옮긴다(발견자 자신도 전파 대상이라 함께 넓어진다)
+function campAlertApply(){
+  if(!CAMPB || !CAMPB.me) return;
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    u.acq = (u._alertT > 0) ? CAMP_ACQ_ALERT : CAMP_ACQ_BASE; }
+}
+
 // 🪢 **목줄** — 집결지에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
 //   ⛔ 「인식 거리를 넓힌다」만 하고 이걸 빼면 적 본진까지 쫓아간다. 그러면 아군이 흩어져
 //     각개격파되고, 적이 건물을 때리는데 아군은 저 위에 있는 그림이 된다.
@@ -1051,8 +1082,9 @@ function campResMul(uid, kind){ const lv = campResLv(uid, kind);
 function campScaleAllies(list){
   if(!list || !list.length) return 0;
   campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 배수는 그 위에 곱한다
-  // 👀 마중 나갈 수 있게 인식 거리를 넓힌다(사거리는 그대로 — 사거리를 늘리면 상성이 바뀐다)
-  for(const u of list) if(u && u.acq < CAMP_ALLY_ACQ) u.acq = CAMP_ALLY_ACQ;
+  // 👀 기본 인식 거리만 맞춰 둔다 — 넓히는 것은 campAlertTick 이 **전파로만** 한다.
+  //    ⛔ 사거리는 건드리지 않는다(늘리면 종족 상성이 바뀐다).
+  for(const u of list) if(u) u.acq = CAMP_ACQ_BASE;
   const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
   let n = 0;
   for(const u of list){
@@ -1124,7 +1156,18 @@ function campAlive(side){ if(!CAMPB) return 0; let n = 0;
 //   들어오니 **앞줄만 쏘고 뒷줄은 놀았다.** 인식 거리를 넓히면 뒷줄도 마중 나가 싸운다.
 // ⚠ **목줄(leash)이 반드시 필요하다.** 인식만 넓히면 적 본진까지 쫓아가 「제자리 방어」가
 //   통째로 무너진다 — 예전에 그렇게 해서 라운드가 영영 안 끝나는 정체를 네 번 겪었다.
-const CAMP_ALLY_ACQ = 1500;        // 아군 인식 거리(월드 단위 · 기본 560~900)
+// ⭐ **전파식 인식** (2026-08-28 사용자 확정) — 전원이 똑같이 넓게 보는 게 아니다.
+//   ① 혼자서는 CAMP_ACQ_BASE 만큼만 본다.
+//   ② 누군가 적을 발견하면 **그 아군 주변 CAMP_ALERT_R 안의 아군에게만** 전파된다.
+//   ③ 전파받은 아군은 CAMP_ACQ_ALERT 로 넓게 보며 마중 나간다. CAMP_ALERT_S 초 뒤 풀린다.
+//   ⭐ 그래서 **발견자에게서 먼 아군은 자기 자리를 지킨다** — 한쪽으로 우르르 몰리지 않고
+//     싸움이 난 구역의 병력만 거든다.
+//   ⛔ 전원에게 넓은 인식을 주면(옛 방식) 판 전체가 한 덩어리로 움직여, 반대쪽이 통째로 빈다.
+const CAMP_ACQ_BASE = 900;         // 혼자 볼 수 있는 거리(엔진 기본 560~900 의 위끝)
+const CAMP_ACQ_ALERT = 1500;       // 전파받았을 때 보는 거리
+const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
+const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
+const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 const CAMP_LEASH = 1300;           // 집결지에서 이보다 멀리는 못 나간다
 const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
 const CAMP_SORTIE_S = 3;           // 🚚 증원 간격(초) — 라운드 도중에도 이만큼마다 내보낸다
@@ -1150,6 +1193,7 @@ function campCombatStep(dt){
   //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다.
   CAMPB._soT = (CAMPB._soT || 0) - dt;
   if(CAMPB._soT <= 0){ CAMPB._soT = CAMP_SORTIE_S; campSortie(); }
+  campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다

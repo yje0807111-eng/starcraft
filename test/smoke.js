@@ -1724,8 +1724,8 @@ async function groupLobby(){
         const u=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return STK.me.units[STK.me.units.length-1]; });
         assert(u,'레인저를 못 만들었다');
         campScaleAllies([u]);
-        assert(u.acq>=CAMP_ALLY_ACQ,'인식 거리가 안 넓어졌다: '+u.acq);
-        assert(u.rng<CAMP_ALLY_ACQ,'사거리까지 늘렸다 — 상성이 바뀐다: '+u.rng);
+        assert(u.acq===CAMP_ACQ_BASE,'혼자인데 인식이 기본이 아니다: '+u.acq);
+        assert(u.rng<CAMP_ACQ_ALERT,'사거리까지 늘렸다 — 상성이 바뀐다: '+u.rng);
         const r=campRallyPoint();
         u.x=r.x; u.y=r.y-CAMP_LEASH*3;                     // 적진 쪽으로 멀리 밀어 놓는다
         campLeash();
@@ -1734,6 +1734,28 @@ async function groupLobby(){
         u.x=r.x; u.y=r.y-10; const y0=u.y; campLeash();
         assert(u.y===y0,'목줄 안인데 위치를 건드렸다');
         u.dead=true; }
+      // 👀 **발견 전파** (2026-08-28) — 한 명이 보면 **그 주변만** 같이 달려든다.
+      //    ⭐ 발견자에게서 먼 아군은 자기 자리를 지킨다 — 판 전체가 한 덩어리로 몰리지 않게.
+      if(typeof campAlertTick==='function'){
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+        const mk=(side,id,x,y)=>campWithStk(()=>{ strikeSpawnUnit(side,id);
+          const z=STK[side].units[STK[side].units.length-1]; if(z){ z.x=x; z.y=y; z._alertT=0; } return z; });
+        const r=campRallyPoint();
+        const near=mk('me','marine', r.x, r.y);                            // 발견자
+        const mid =mk('me','marine', r.x + CAMP_ALERT_R*0.5, r.y);         // 발견자 곁 — 전파됨
+        const far =mk('me','marine', r.x + CAMP_ALERT_R*3,   r.y);         // 멀리 — 전파 안 됨
+        const foe =mk('ai','marine', r.x, r.y - CAMP_ACQ_BASE*0.5);        // 발견자 사정권 안
+        if(near&&mid&&far&&foe){
+          campScaleAllies([near,mid,far]);
+          CAMPB._alT=0; campAlertTick(0.05);
+          assert(near.acq===CAMP_ACQ_ALERT,'발견자가 안 넓어졌다: '+near.acq);
+          assert(mid.acq===CAMP_ACQ_ALERT,'곁의 아군에게 전파가 안 됐다: '+mid.acq);
+          assert(far.acq===CAMP_ACQ_BASE,'멀리 있는 아군까지 전파됐다 — 판 전체가 몰린다: '+far.acq);
+          // ⏳ 적이 사라지면 풀린다(지속 시간 뒤 제자리로)
+          foe.dead=true; CAMPB._alT=0; campAlertTick(CAMP_ALERT_S+0.1);
+          assert(near.acq===CAMP_ACQ_BASE,'적이 없는데 인식이 안 풀렸다: '+near.acq);
+          assert(mid.acq===CAMP_ACQ_BASE,'전파가 안 풀렸다: '+mid.acq); }
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
       // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
       //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).
       if(typeof campFoeTierOf==='function'){
