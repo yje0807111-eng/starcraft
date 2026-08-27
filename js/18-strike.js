@@ -635,12 +635,15 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; if(!S) return;
     if(cd<need){ u.x=R.x+dx/cd*need; u.y=R.y+dy/cd*need; } } }
 // 🔮 마나·쿨다운·자기 강화 — 관리자 SKILLS 데이터를 그대로 사용(자기강화/오라만 1단계 적용)
 function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') return;
+  _stkDotTick(S, dt);   // ⏳ 지속 피해 장판·도트 먼저 굴린다
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'];
     for(const u of me.units){ if(u.dead) continue;
       if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+STK_EN_REGEN*dt);   // 원본 SC 재생률
       if(u.skillCd) for(const k in u.skillCd){ if(u.skillCd[k]>0) u.skillCd[k]=Math.max(0,u.skillCd[k]-dt); }
       if(u.buff){ for(const k in u.buff){ if(u.buff[k]>0){ u.buff[k]-=dt; if(u.buff[k]<0) u.buff[k]=0; } } }
-      const keys=u._skKeys||(u._skKeys=strikeSkillKeys(u)); if(!keys.length) continue;
+      // ⚠ **비싼 것부터** 시전한다 — 싼 것부터 쓰면 마나가 늘 바닥이라 비싼 스킬이 영영 안 나간다.
+      const keys=u._skKeys||(u._skKeys=strikeSkillKeys(u).slice().sort((a,b)=>strikeSkillCost(SKILLS[b]||{})-strikeSkillCost(SKILLS[a]||{})));
+      if(!keys.length) continue;
       u._skT=(u._skT||0)-dt; if(u._skT>0) continue; u._skT=0.4;   // 판정 주기(0.4초)
       let nearFoe=null, nd=Infinity;
       for(const e of foe.units){ if(e.dead) continue; const dx=e.x-u.x, dy=e.y-u.y, d2=dx*dx+dy*dy;
@@ -659,7 +662,115 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
           if(!!u.skillOn[k]===want) continue;
           u.skillOn[k]=want; u.skillCd[k]=sk.cd||1; }
         else if(sk.kind==='aura'){ u.skillOn[k]=true; }   // 은신 장막 — 상시
+        // ⭐ **대상을 고르는 스킬** (HUNT_R1 §3-4-2, 2026-08-27)
+        //   ⚠ 예전에는 self/toggle/aura 만 처리했다. 그래서 마법 유닛 대부분이 **에너지만 채운 채 서 있었다.**
+        //   ⛔ 「대상만 고르면 된다」가 아니었다 — 오토배틀에는 **효과를 적용하는 코드가 아예 없었다.**
+        //     그래서 대상 선택 + 효과를 여기서 함께 낸다. 엔진에 걸 곳이 없는 효과(둔화·기절·실명·은신·
+        //     순간이동·환영·정신지배·지연 폭격·지뢰 매설)는 **시전하지 않는다** — 에너지만 태우고
+        //     아무 일도 안 일어나는 것이 아무것도 안 하는 것보다 나쁘다. 목록은 STK_SK_DEAD.
+        else if(sk.kind==='target_unit'){ const t=_stkPickAlly(u, me, sk, k); if(!t) continue;
+          if(!_stkApplyAlly(u, t, sk, k, dt)) continue;
+          if(cost>0) u.en-=cost; if(sk.cd) u.skillCd[k]=sk.cd; }
+        else if(sk.kind==='target_enemy'){ const t=_stkPickFoe(u, foe, sk); if(!t) continue;
+          if(!_stkApplyFoe(u, t, sk, k)) continue;
+          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||1; }
+        else if(sk.kind==='target_ground'){ const c=_stkPickSpot(u, foe, sk); if(!c) continue;
+          if(!_stkApplySpot(u, c, sk, k, foe)) continue;
+          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||1; }
       } } } }
+// ── 🔮 자동 시전 ────────────────────────────────────────────────────────
+// ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬.** 둔화·기절·실명·은신은 이동/사격 코드가 읽는 값이 없고,
+//    순간이동·환영·정신지배는 유닛을 만들거나 진영을 옮겨야 하며, 핵·지뢰는 설치물 시스템이 필요하다.
+//    ⚠ 나중에 훅을 만들면 여기서 빼면 된다 — 시전 코드는 이미 준비돼 있다.
+const STK_SK_DEAD={ ensnare:1, lockdown:1, nuke:1, spider_mine:1, maelstrom:1, mind_control:1,
+  disruption_web:1, stasis:1, recall:1, hallucination:1, parasite:1, dark_swarm:1,
+  optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
+const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
+const STK_SK_SPOT_MIN=3;       // 광역 = 적이 이만큼 뭉쳤을 때만(한두 기에 쓰면 낭비)
+// ⚠ SKILLS 의 range/radius 는 **건설 화면의 0~1 정규 좌표**다. 오토배틀은 픽셀(world=4800)이라
+//    반드시 world 를 곱한다. 안 곱하면 사거리가 0.14픽셀이 되어 아무에게도 안 닿는다.
+function _stkSkLen(v){ const S=STK; return (v||0)*((S&&S.world)||4800); }
+// ⚠ **마법 전용 유닛은 사거리가 0이다**(하이템플러·이지스 — 평타가 없다). 공격 사거리로 잡으면
+//    영원히 시전 못 한다. 그래서 sk.range 가 없으면 **최소 시전 사거리**를 바닥으로 깐다.
+const STK_SK_CAST_R=0.13;   // 정규 좌표(원본 SC 마법 사거리 ≈ 9~10칸)
+function _stkSkRange(u, sk){ const base=sk.range ? _stkSkLen(sk.range) : (u.rng||0)*1.2;
+  return Math.max(base, _stkSkLen(STK_SK_CAST_R)); }
+// ⏳ 지속 피해(번개 폭풍·역병·방사능) — 엔진에 장판이 없어서 여기서 목록으로 굴린다.
+function _stkDotTick(S, dt){ const D=S._dots; if(!D||!D.length) return;
+  for(let i=D.length-1;i>=0;i--){ const z=D[i]; z.left-=dt;
+    if(z.tgt){ const t=z.tgt; if(!t.dead){ strikeHit(t, z.dps*dt, z.src); if(t.hp<=0) t.dead=true; } }
+    else { const foe=S[z.foe]; if(foe) for(const e of foe.units){ if(e.dead) continue;
+        const dx=e.x-z.x, dy=e.y-z.y; if(dx*dx+dy*dy>z.r2) continue;
+        strikeHit(e, z.dps*dt, z.src); if(e.hp<=0) e.dead=true; } }
+    if(z.left<=0) D.splice(i,1); } }
+function _stkDotAdd(S, z){ (S._dots||(S._dots=[])).push(z); }
+// ── 🔮 대상 고르기 ──────────────────────────────────────────────────────
+// 사거리 안에서 **가장 많이 다친 아군**. ⚠ 포식만 예외 — 아군을 잡아먹으므로 **가장 값싼 아군**을 고른다
+//   (체력으로 고르면 다친 전함을 먹는다).
+function _stkPickAlly(u, me, sk, key){
+  const R=_stkSkRange(u, sk), R2=R*R; let best=null, bv=Infinity;
+  for(const a of me.units){ if(a.dead || a===u) continue;
+    const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy>R2) continue;
+    if(key==='consume'){ const c=(((typeof U!=='undefined')&&U[a.gm||a.id])||{}).cost||((a.maxHp||1)+(a.dmg||0)*10);
+      if(c<bv){ bv=c; best=a; } continue; }
+    const r=(a.hp||0)/Math.max(1,a.maxHp||a.hp||1);
+    if(r>=STK_SK_ALLY_HURT) continue;                 // 멀쩡하면 대상 아님
+    if(r<bv){ bv=r; best=a; } }
+  return best; }
+// 사거리 안에서 **체력이 가장 높은 적**
+function _stkPickFoe(u, foe, sk){
+  const R=_stkSkRange(u, sk), R2=R*R; let best=null, bv=-1;
+  for(const e of foe.units){ if(e.dead) continue;
+    const dx=e.x-u.x, dy=e.y-u.y; if(dx*dx+dy*dy>R2) continue;
+    const v=(e.hp||0)+(e.sh||0); if(v>bv){ bv=v; best=e; } }
+  return best; }
+// 사거리 안에서 **적이 가장 많이 뭉친 지점**. 적이 STK_SK_SPOT_MIN 미만이면 쓰지 않는다.
+function _stkPickSpot(u, foe, sk){
+  const R=_stkSkRange(u, sk), R2=R*R, rad=_stkSkLen(sk.radius||0.08), rad2=rad*rad, near=[];
+  for(const e of foe.units){ if(e.dead) continue;
+    const dx=e.x-u.x, dy=e.y-u.y; if(dx*dx+dy*dy<=R2) near.push(e); }
+  if(near.length<STK_SK_SPOT_MIN) return null;
+  let best=null, bn=0;
+  for(const c of near){ let n=0;
+    for(const e of near){ const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy<=rad2) n++; }
+    if(n>bn){ bn=n; best=c; } }
+  return (bn>=STK_SK_SPOT_MIN) ? {x:best.x, y:best.y, n:bn} : null; }
+// ── 🔮 효과 내기 ────────────────────────────────────────────────────────
+//   ⛔ 낼 수 없으면 false 를 돌려 **시전 자체를 취소**한다(에너지를 쓰지 않는다).
+function _stkApplyAlly(u, t, sk, key, dt){
+  if(STK_SK_DEAD[key]) return false;
+  if(sk.hps){ if(HEALER[u.gm||u.id]) return false;   // 💉 의무병은 strikeHealStep 이 이미 치유한다(두 번 걸지 않는다)
+    if((t.hp||0)>=(t.maxHp||0)) return false;
+    t.hp=Math.min(t.maxHp||t.hp, (t.hp||0)+sk.hps*dt);
+    if(sk.drain) u.en=Math.max(0,(u.en||0)-sk.drain*dt);
+    return true; }
+  if(sk.absorb){ if((t.sh||0)>0) return false;       // 🛡 보호막 — 실드로 얹는다(strikeHit 이 실드를 먼저 깎는다)
+    t.sh=sk.absorb; t.maxSh=Math.max(t.maxSh||0, sk.absorb); return true; }
+  if(sk.rate){ if((t.sh||0)>=(t.maxSh||0)) return false;   // 🔋 쉴드 충전 — 마나 1 → 실드 2
+    const add=Math.min(sk.rate*10, (t.maxSh||0)-(t.sh||0)); if(add<=0) return false;
+    t.sh=(t.sh||0)+add; return true; }
+  if(key==='consume'){ if(!t||t===u) return false;   // 🍽 포식 — 값싼 아군을 먹고 마나
+    if((u.en||0)>=(u.maxEn||0)*0.6) return false;    //   마나가 넉넉하면 아군을 죽이지 않는다
+    t.dead=true; u.en=Math.min(u.maxEn||0,(u.en||0)+(sk.gain||50)); return true; }
+  return false; }
+function _stkApplyFoe(u, t, sk, key){
+  if(STK_SK_DEAD[key]) return false;
+  if(key==='broodling'){ t.hp=0; t.sh=0; t.dead=true; return true; }        // 🐛 즉사(스웜링 2기 소환은 미구현)
+  if(key==='feedback'){ const en=t.en||0; if(en<=0) return false;           // 💥 마나 소각 — 남은 마나만큼 피해
+    t.en=0; strikeHit(t, en, u); if(t.hp<=0) t.dead=true; return true; }
+  if(sk.dps){ _stkDotAdd(STK, {tgt:t, dps:sk.dps, left:sk.dur||1, src:u}); return true; }   // ☢ 방사능
+  if(sk.dmg){ strikeHit(t, sk.dmg, u); if(t.hp<=0) t.dead=true; return true; }               // 💥 집중포
+  return false; }
+function _stkApplySpot(u, c, sk, key, foe){
+  if(STK_SK_DEAD[key]) return false;
+  const rad=_stkSkLen(sk.radius||0.08), r2=rad*rad;
+  if(key==='emp'){ let n=0;                                   // ⚡ EMP — 범위 안 마나·실드 소거
+    for(const e of foe.units){ if(e.dead) continue; const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
+      if((e.en||0)>0||(e.sh||0)>0){ e.en=0; e.sh=0; n++; } }
+    return n>0; }
+  const dps=sk.dps||sk.dmg; if(!dps) return false;
+  _stkDotAdd(STK, {x:c.x, y:c.y, r2:r2, dps:dps, left:sk.dur||1, src:u, foe:foe===STK.me?'me':'ai'});   // ⚡ 번개 폭풍 · 🩸 역병
+  return true; }
 const STK_SD_AT=900, STK_SD_DPS=12, STK_SD_RAMP=0.02;   // 15분 후 시작 · 초당 피해(시간이 지날수록 가속)
 function strikeSuddenDeath(dt){ const S=STK; if(!S||S.over||S.stress) return;   // 🧪 관측 모드는 서든 데스 없음(끝나면 안 됨)
   const t=(S.t||0)-STK_SD_AT; if(t<=0) return;

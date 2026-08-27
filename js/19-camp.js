@@ -1314,11 +1314,12 @@ function campHideView(){
   }
   campUnmountView();                                   // #vBuild 를 원래 자리로
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
-  campRestoreHire(); campRestoreSupply();                  // 👷🏠 가격 원복(TECH_TREE 는 공유다)
+  campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
   campClearSheet();
+  campTapReset();                                          // 🤖 탭 리듬 기록을 비운다(다음 입장과 섞이면 오판한다)
   if(typeof G !== 'undefined' && G && _campPrevTab !== null){ G.tab = _campPrevTab; _campPrevTab = null; }
   _campOn = false;
 }
@@ -1578,8 +1579,46 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   const lv = campUpgLv('gather');
   return (1 + CAMP_GAT_STEP * lv) * campMileMul(lv)
     * campMineMul() * campRebMul() * campRtMul('gather'); }
+// ── 🤖 매크로 방지 (HUNT_R1 §1-1-3 · 2026-08-27) ────────────────────────
+// ⛔ 탭에 **상한을 두지 않기로** 했다. 그러면 매크로가 초당 10회를 누를 수 있고,
+//   그 순간 일꾼·보급소·인구 200 이 통째로 장식이 된다(설계 추정: 손 수입의 98%).
+// 방어선 둘 —
+//   1차 event.isTrusted — 콘솔·스크립트가 만든 가짜 이벤트를 한 줄로 막는다.
+//   2차 리듬·좌표 감쇠 — 외부 오토클리커는 **진짜 이벤트**라 1차를 통과한다.
+//      사람은 탭 간격이 20~80ms 씩 흔들리고 손끝도 3~15px 움직인다. 기계는 둘 다 거의 0이다.
+// ⛔ **차단이 아니라 감쇠다.** 오탐 한 번에 플레이어를 막아 세우면 억울하지만,
+//   덜 오르는 것은 「왜 덜 오르지」로 끝난다. 그래서 0 이 아니라 20% 를 남긴다.
+// ⛔ **경고를 띄우지 않는다** — 「매크로 감지」라고 알리면 우회 방법을 찾게 만든다. 조용히 줄인다.
+const CAMP_TAP_WIN = 20;                      // 최근 몇 탭으로 리듬을 재는가
+const CAMP_TAP_SIG_OK = 20, CAMP_TAP_SIG_BAD = 5;   // ms — 탭 간격 표준편차
+const CAMP_TAP_JIT_OK = 3, CAMP_TAP_JIT_BAD = 1;    // px — 좌표 흔들림
+const CAMP_TAP_FLOOR = 0.2;                   // 감쇠 하한(완전히 0 으로 만들지 않는다)
+let _campTapLog = [];
+function campTapReset(){ _campTapLog = []; }
+function _campLerp(v, bad, ok){ if(!(ok>bad)) return 1;
+  return Math.max(0, Math.min(1, (v - bad) / (ok - bad))); }
+// 사람다움 0~1 — 리듬과 좌표 중 **하나라도** 사람 같으면 사람으로 본다(오탐을 줄인다).
+function campTapHuman(x, y){
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  _campTapLog.push({ t: now, x: x, y: y });
+  if(_campTapLog.length > CAMP_TAP_WIN) _campTapLog.shift();
+  if(_campTapLog.length < CAMP_TAP_WIN) return 1;        // 표본이 모자라면 의심하지 않는다
+  const gaps = []; for(let i = 1; i < _campTapLog.length; i++) gaps.push(_campTapLog[i].t - _campTapLog[i-1].t);
+  const gm = gaps.reduce(function(a,b){ return a+b; }, 0) / gaps.length;
+  let gv = 0; for(const d of gaps) gv += (d - gm) * (d - gm);
+  const sig = Math.sqrt(gv / gaps.length);
+  let cx = 0, cy = 0; for(const e of _campTapLog){ cx += e.x; cy += e.y; }
+  cx /= _campTapLog.length; cy /= _campTapLog.length;
+  let jit = 0; for(const e of _campTapLog) jit += Math.hypot(e.x - cx, e.y - cy);
+  jit /= _campTapLog.length;
+  const h = Math.max(_campLerp(sig, CAMP_TAP_SIG_BAD, CAMP_TAP_SIG_OK),
+                     _campLerp(jit, CAMP_TAP_JIT_BAD, CAMP_TAP_JIT_OK));
+  return CAMP_TAP_FLOOR + (1 - CAMP_TAP_FLOOR) * h;
+}
 // 눌린 곳이 광맥인가 — 맞으면 캐고 true
-function campTapAt(clientX, clientY){
+// ⚠ human=true 는 **실제 사람 이벤트로 들어온 탭**에만 준다(아래 리스너). 그때만 감쇠를 잰다 —
+//   벤치·스모크가 직접 부르는 탭까지 감쇠하면 측정값이 오염된다.
+function campTapAt(clientX, clientY, human){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
   if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
   const r = _btRect(); if(!r || !r.width || !r.height) return false;
@@ -1588,7 +1627,8 @@ function campTapAt(clientX, clientY){
   if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
   const w = _techS2W(sx, sy);
   const m = _techMineralAt(w.x, w.y); if(!m || m.amount <= 0) return false;
-  const gain = Math.min(campTapGain(), m.amount);   // 매장량보다 많이 캘 수는 없다
+  let gain = Math.min(campTapGain(), m.amount);     // 매장량보다 많이 캘 수는 없다
+  if(human){ gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY))); }   // 🤖 리듬·좌표 감쇠
   m.amount -= gain;
   G.tech.credit = (G.tech.credit || 0) + gain;
   _campTapAcc += gain;                              // 이 몫에는 채취 배수를 걸지 않는다(위 참고)
@@ -1602,10 +1642,16 @@ function campTapAt(clientX, clientY){
 if(typeof document !== 'undefined'){
   document.addEventListener('pointerdown', function(ev){
     if(!_campOn) return;
+    // 🤖 1차 방어선 — 스크립트가 만든 이벤트는 isTrusted 가 false 다. 한 줄로 JS 매크로가 막힌다.
+    // ⚠ 스모크는 포인터 이벤트를 **프로그램으로 쏜다**(isTrusted=false) — 그대로 두면 채집 관련
+    //   step 이 통째로 깨진다. 그래서 테스트 전용 문 하나를 둔다.
+    // ⛔ 이걸로 매크로가 막히리라 기대하지 말 것 — 콘솔을 여는 사람은 campTapAt 을 직접 부르면 그만이다.
+    //   1차는 「무심코 붙여넣는 스크립트」를, 2차(리듬 감쇠)는 「외부 오토클리커」를 맡는다.
+    if(ev.isTrusted === false && !window._campTapForce) return;
     if(ev.button != null && ev.button !== 0) return;              // 좌클릭·터치만
     if(!ev.target || !ev.target.closest || !ev.target.closest('#cstMain')) return;
     if(G && G.tech && G.tech.arm) return;                          // 🧱 건물 배치 중이면 채집하지 않는다
-    if(campTapAt(ev.clientX, ev.clientY)){
+    if(campTapAt(ev.clientX, ev.clientY, true)){
       // 🖐 광맥을 눌렀다 = '조작'이다 → 화면 이동 모드를 끈다(빈 바닥 탭·유닛/건물 탭과 같은 규칙).
       // ⚠ 여기서 끊어 줘야 한다 — 이 리스너는 캡처 단계에서 stopPropagation 하므로
       //   .bmap 의 인라인 techPtrDown(모드를 끄는 곳)이 **아예 안 불린다**.
@@ -1728,7 +1774,7 @@ function campFrame(now){
     campCombatStep(dt);                                           // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
-    campSyncHire(); campSyncSupply();                              // 👷🏠 일꾼·보급소 다음 가격(보유 수에 따라)
+    campSyncHire(); campSyncSupply(); campSyncUnitCost();          // 👷🏠⚔ 일꾼·보급소·전투 유닛 다음 가격(보유 수에 따라)
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
   } finally { _campRectC = null; }   // ⛔ 프레임 밖으로 캐시를 들고 나가지 않는다(이벤트 핸들러가 낡은 값을 본다)
   _campRAF = requestAnimationFrame(campFrame);
@@ -2158,6 +2204,43 @@ function campRestoreHire(){
   if(!_campHireHome) return;
   _campHireHome.q.m = _campHireHome.m; _campHireHome.q.g = _campHireHome.g;
   _campHireHome = null;
+}
+// ── ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다 (HUNT_R1 §3-3 · 2026-08-27) ──
+// `기본가 × 1.15^(이미 보유한 같은 유닛 수)`.
+// ⭐ **이게 없으면 「제일 센 유닛 도배」가 늘 정답이다.** 크기·데미지 타입 상성(§3-2)과
+//   적 티어 구성(§6-2-0)이 통째로 이 규칙에 기대고 있다 — 조합을 강제하는 유일한 장치다.
+// ⚠ 배수 1.10 은 약했다(도배↔골고루 7배). 1.15 로 16배가 된다 — 인구까지 세고 나온 값이다.
+// ⛔ 값은 TECH_TREE 의 produces[].m/g 에 있고 관리자 탭·오토배틀과 **공유**다 — 나갈 때 되돌린다.
+// ⚠ 보유 수 = 기지에 있는 것(G.tech.units) + **전장에 나가 있는 것**. 전장 것을 안 세면
+//   출격할 때마다 값이 처음으로 돌아가 규칙이 통째로 무력해진다.
+const CAMP_UNIT_R = 1.15;
+function campUnitOwned(id){
+  let n = (typeof G !== 'undefined' && G.tech && G.tech.units) ? (G.tech.units[id] | 0) : 0;
+  if(typeof CAMPB !== 'undefined' && CAMPB){
+    const cnt = (L) => { let k = 0; for(const u of (L || [])){ if(u && !u.dead && (u.id === id || u.gm === id)) k++; } return k; };
+    n += cnt(CAMPB.me && CAMPB.me.units) + cnt(CAMPB._down);
+  }
+  return n;
+}
+function campUnitCost(base, id){ return Math.max(1, Math.ceil((base || 0) * Math.pow(CAMP_UNIT_R, campUnitOwned(id)))); }
+let _campUnitHome = null;
+function campSyncUnitCost(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t || !t.buildings) return;
+  const wk = (typeof TECH_WORKER !== 'undefined') ? TECH_WORKER[G.tech.race] : null;
+  if(!_campUnitHome){ _campUnitHome = [];
+    for(const b of t.buildings) for(const q of (b.produces || [])){
+      if(q.id === wk) continue;                       // 👷 일꾼은 campSyncHire 가 맡는다(두 곳에서 만지면 어긋난다)
+      _campUnitHome.push({ q: q, m: q.m, g: q.g }); } }
+  for(const h of _campUnitHome){
+    h.q.m = campUnitCost(h.m, h.q.id);
+    h.q.g = h.g ? campUnitCost(h.g, h.q.id) : h.q.g;
+  }
+}
+function campRestoreUnitCost(){
+  if(!_campUnitHome) return;
+  for(const h of _campUnitHome){ h.q.m = h.m; h.q.g = h.g; }
+  _campUnitHome = null;
 }
 // 상한 — 일꾼 40기 · 보급소 24채를 넘기지 못하게 한다.
 // ⛔ TECH_TREE 의 req 를 조작하지 않는다(「선행: undefined」 같은 안내가 나온다).

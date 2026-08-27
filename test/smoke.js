@@ -15,6 +15,11 @@
 (function(){
 'use strict';
 
+// 🤖 매크로 방지 1차(event.isTrusted)의 **테스트 전용 문**.
+//   스모크는 포인터 이벤트를 프로그램으로 쏘므로 isTrusted 가 false 다 — 열어 두지 않으면
+//   캠프 채집 관련 step 이 통째로 깨진다(js/19-camp.js 의 리스너 참고).
+window._campTapForce = true;
+
 // ── 콘솔/전역 오류 수집(알려진 GLB blob 텍스처 경고는 별도 분류) ──
 const KNOWN_NOISE=[/GLTFLoader: Couldn't load texture blob/];
 const errors=[], noise=[];
@@ -708,6 +713,21 @@ async function groupLobby(){
       assert(c40>7.0e8&&c40<7.8e8,'40마리째가 설계(7.4억)와 다르다: '+c40);
       // ⭐ 31마리째부터 계단이 눕는다 — 안 그러면 40마리째가 424억이라 200회차에도 못 채운다
       assert(c40/c30 < 3,'후반 계단이 안 눕었다(×1.10 이어야): '+(c40/c30).toFixed(1)+'배'); }
+    // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × 1.15^보유). 조합을 강제하는 유일한 장치다.
+    if(typeof campSyncUnitCost==='function'){
+      const T=TECH_TREE[G.tech.race], wk=TECH_WORKER[G.tech.race];
+      let q=null; for(const b of T.buildings){ const f=(b.produces||[]).find(x=>x.id!==wk); if(f){ q=f; break; } }
+      assert(q,'전투 유닛 생산 항목을 못 찾음');
+      campRestoreUnitCost(); const base=q.m;
+      campSyncUnitCost();
+      assert(q.m===base,'0기 보유인데 값이 올랐다: '+q.m+' (기본 '+base+')');
+      G.tech.units[q.id]=3; campSyncUnitCost();
+      const want=Math.ceil(base*Math.pow(1.15,3));
+      assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
+      // ⛔ TECH_TREE 는 관리자 탭·오토배틀과 공유 — 반드시 원복된다
+      campRestoreUnitCost();
+      assert(q.m===base,'가격을 원복하지 않았다: '+q.m+' (기본 '+base+')');
+      G.tech.units[q.id]=0; }
     // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
     const M=G.tech.minerals||[];
     assert(M.length===6,'광맥이 6개가 아님: '+M.length);
@@ -1269,6 +1289,63 @@ async function groupLobby(){
     return list.length+'기 · 레인 '+CAMP_LANE_TOP+'~'+CAMP_LANE_BOT;
   });
 
+
+  // 🔮 스킬 자동 시전 (HUNT_R1 §3-4-2 · 2026-08-27)
+  //   ⚠ 예전엔 self/toggle/aura 만 돌아 마법 유닛이 **에너지만 채운 채 서 있었다.** 그리고
+  //     오토배틀에는 효과를 적용하는 코드가 **아예 없었다** — 그래서 대상 선택 + 효과를 함께 넣었다.
+  //   ⛔ 엔진에 걸 곳이 없는 효과(둔화·기절·환영 등)는 **시전하지 않는다** — 이것도 여기서 잰다.
+  await step('오토배틀: 마법 유닛이 스킬을 알아서 쓴다', async()=>{
+    skipIf(typeof strikeSkillTick!=='function'||typeof campEnterDungeon!=='function','스킬/캠프 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+    const out=[];
+    const setup=(myId, foeIds)=>campWithStk(()=>{
+      STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null;
+      strikeSpawnUnit('me', myId); const u=STK.me.units[0];
+      if(!u) return null; u.x=1000; u.y=1000; u.en=u.maxEn||200; u.skillCd={}; u._skT=0; delete u._skKeys;
+      const fs_=[]; for(let i=0;i<foeIds.length;i++){ strikeSpawnUnit('ai', foeIds[i]);
+        const e=STK.ai.units[STK.ai.units.length-1]; if(!e) continue;
+        e.x=1000+i*30; e.y=1060; e.sh=0; fs_.push(e); }
+      return {u:u, foes:fs_}; });
+    // ① 💥 집중포(드레드노트) — 사거리 안 **체력이 가장 높은 적**을 때린다
+    { const s=setup('dreadnought', ['tank','tank']);
+      if(s && s.foes.length===2){ s.foes[0].hp=s.foes[0].maxHp=900; s.foes[1].hp=s.foes[1].maxHp=300;
+        const en0=s.u.en; campWithStk(()=>strikeSkillTick(0.5));
+        assert(s.foes[0].hp<900,'집중포가 안 나갔다 — 체력 1위 적이 멀쩡하다');
+        assert(s.foes[1].hp===300,'체력 낮은 쪽을 때렸다 — 대상 선택이 틀렸다');
+        assert(s.u.en<en0,'마나를 안 썼다 — 시전 판정이 헛돌았다');
+        out.push('집중포 -'+Math.round(900-s.foes[0].hp)); } }
+    // ② ⚡ 번개 폭풍(하이템플러) — **적이 3기 이상 뭉쳤을 때만**. 2기면 안 쓴다.
+    { const s2=setup('high_templar', ['machinegun','machinegun']);   // ⚠ marine 은 스스로 광폭화하며 체력을 깎는다 — 광역과 헷갈리므로 스킬 없는 유닛으로 잰다
+      if(s2){ const hp0=s2.foes.map(e=>e.hp); campWithStk(()=>strikeSkillTick(0.5));
+        assert(s2.foes.every((e,i)=>e.hp===hp0[i]),'적 2기인데 광역을 썼다 — 낭비 규칙이 안 걸렸다'); }
+      const s3=setup('high_templar', ['machinegun','machinegun','machinegun','machinegun']);
+      if(s3){ const hp0=s3.foes.map(e=>e.hp);
+        campWithStk(()=>{ strikeSkillTick(0.5); for(let i=0;i<8;i++) strikeSkillTick(0.4); });
+        const hit=s3.foes.filter((e,i)=>e.hp<hp0[i]||e.dead).length;
+        assert(hit>=3,'적 4기가 뭉쳤는데 광역이 안 들어갔다(맞은 수 '+hit+')');
+        out.push('번개폭풍 '+hit+'기'); } }
+    // ③ 🛡 보호막(이지스) — **다친 아군**에게만. 멀쩡하면 안 쓴다.
+    { const s=setup('aegis', ['marine']);
+      // ⚠ strikeSpawnUnit 은 STK 를 읽는다 — campWithStk 밖에서 부르면 STK 가 null 이다
+      const a=s ? campWithStk(()=>{ strikeSpawnUnit('me','marine'); const z=STK.me.units[1];
+        if(z){ z.x=1010; z.y=1000; z.sh=0; z.maxSh=0; z.hp=z.maxHp; } return z; }) : null;
+      if(a){ campWithStk(()=>strikeSkillTick(0.5));
+        assert(!(a.sh>0),'멀쩡한 아군에 보호막을 걸었다');
+        a.hp=a.maxHp*0.5; s.u.skillCd={}; s.u._skT=0; s.u.en=s.u.maxEn||200;
+        campWithStk(()=>strikeSkillTick(0.5));
+        assert(a.sh>0,'다친 아군인데 보호막이 안 걸렸다');
+        out.push('보호막 '+Math.round(a.sh)); } }
+    // ④ ⛔ 엔진에 걸 곳이 없는 스킬은 **마나를 태우지 않는다**(고스트 봉쇄·핵)
+    { const s=setup('ghost', ['tank','tank','tank']);
+      if(s){ const en0=s.u.en; campWithStk(()=>strikeSkillTick(0.5));
+        assert(s.u.en===en0,'미구현 스킬(봉쇄·핵)에 마나를 썼다 — 헛시전');
+        out.push('미구현 무시 ok'); } }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return out.join(' · ');
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
@@ -1621,6 +1698,25 @@ async function groupLobby(){
       const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
       assert(Math.abs(c(5)/c(4)-1.09)<0.02,'무릎 전 비용 계단이 1.09 가 아니다: '+(c(5)/c(4)).toFixed(3));
       assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
+    // 🤖 매크로 방지 (HUNT_R1 §1-1-3) — 탭에 상한이 없으므로 이것이 유일한 제동이다
+    if(typeof campTapHuman==='function'){
+      // ① 사람처럼 흔들리는 탭 = 감쇠 없음
+      campTapReset(); let h=1;
+      { let t=0; const rnd=(function(){ let s=12345; return function(){ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; }; })();
+        const now=performance.now; let fake=now.call(performance);
+        performance.now=function(){ return fake; };
+        for(let i=0;i<25;i++){ fake+=90+rnd()*120; h=campTapHuman(200+rnd()*20, 300+rnd()*20); }
+        performance.now=now; }
+      assert(h>0.95,'사람처럼 친 탭이 감쇠됐다: '+h.toFixed(2));
+      // ② 오토클리커 = 간격도 좌표도 흔들림이 없다 → 감쇠. 다만 0 이 되지는 않는다.
+      campTapReset(); let m=1;
+      { const now=performance.now; let fake=now.call(performance);
+        performance.now=function(){ return fake; };
+        for(let i=0;i<25;i++){ fake+=50; m=campTapHuman(200, 300); }
+        performance.now=now; }
+      assert(m<0.35,'오토클리커가 감쇠되지 않았다: '+m.toFixed(2));
+      assert(m>=CAMP_TAP_FLOOR-1e-9,'감쇠가 하한(20%) 아래로 내려갔다 — 완전 차단은 오탐 때 억울하다: '+m.toFixed(2));
+      campTapReset(); }
     // 👥 **인구 — 상한 200 · 일꾼도 한 칸을 먹는다** (HUNT_R1 §2-2 · §2-2-1, 2026-08-26 확정)
     //    보급소 24채면 10 + 24×8 = 202 가 나오지만 **200 에서 잘린다**(스타크래프트와 같은 숫자).
     //    ⭐ 일꾼이 인구를 먹는 것이 1회차 총수입을 목표에 맞춘 규칙이다 — 안 먹던 설계 시뮬은
