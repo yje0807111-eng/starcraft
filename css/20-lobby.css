@@ -374,8 +374,11 @@
   .raceOpt.on .roNm{color:#fff}
   .raceOpt.on .roGo{color:var(--rc,#fff)}
   .raceOpt:active{background:rgba(255,255,255,.04)}
-  /* 확정/취소를 세로로 쌓는다(주 동작이 위) — .cpBtns 는 기본이 가로 한 줄이다 */
+  /* 확정/취소를 세로로 쌓는다(주 동작이 위) — .cpBtns 는 기본이 가로 한 줄이다.
+     ⛔ 자식의 flex 를 반드시 풀 것: 공용 규칙 `.cpBtns .actBtn{flex:1}` 은 가로 배치를 전제한 것이라
+        세로로 세우면 **높이**를 나눠 갖는다(44px 버튼이 반 토막 났다). */
   .cpBtns.col{flex-direction:column}
+  .cpBtns.col .actBtn{flex:none}
   /* (인라인 종족 드롭다운 #raceMenu 계열 CSS 는 2026-08-19 삭제 — JS·마크업과 함께. 종족 입구 = 공용 탭 띠) */
   /* .raceTrig(솔로 종족 트리거)는 2026-08-18 삭제 — 항상 hide 였고 onclick 이 없는 함수(openSoloRace)를 불렀다.
      종족은 난이도 선택 뒤 별도 팝업(#raceSelPanel)이 맡는다. */

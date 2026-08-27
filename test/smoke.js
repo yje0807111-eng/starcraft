@@ -5218,7 +5218,9 @@ async function groupLobby(){
     skipIf(typeof openRacePicker!=='function','종족 선택 없음');
     openRacePicker(null, function(){}); await sleep(120);
     const rows=[...document.querySelectorAll('.raceOpt')];
-    assert(rows.length===STK_RACE_ORDER.length,'행 수가 종족 수와 다르다: '+rows.length);
+    assert(rows.length===RACE_PICK_ORDER.length,'행 수가 고를 수 있는 종족 수와 다르다: '+rows.length);
+    // ⛔ 고르는 목록을 줄였다고 종족 표 자체를 줄이면 안 된다 — 대기실 띠·관리자·상성이 같은 것을 본다
+    assert(STK_RACE_ORDER.length>RACE_PICK_ORDER.length,'STK_RACE_ORDER 까지 줄었다 — 다른 화면이 종족을 잃는다');
     // 캠프(.crRow)와 같은 조각을 갖는가 — 아이콘 · 이름 · 부제 · ✓/›
     for(const r of rows) for(const c of ['.roIco','.roNm','.roDs','.roGo'])
       assert(r.querySelector(c),'행에 '+c+' 가 없다 — 캠프 행 문법과 어긋난다');
@@ -5241,12 +5243,15 @@ async function groupLobby(){
     assert(getComputedStyle(go,'::after').backgroundImage.indexOf('255, 59, 59')>=0,'확정 버튼의 붉은 밑변 광원이 사라졌다');
     // 확정 문구가 고른 종족을 따라가고, **조사가 맞는가**(ㄹ 받침·받침 없음 = '로')
     const seen=[];
-    for(const k of STK_RACE_ORDER){ raceSel(k); await sleep(30);
+    for(const k of RACE_PICK_ORDER){ raceSel(k); await sleep(30);
       const nm=STK_RACES[k].name, t=$('raceGo').textContent;
       assert(t.indexOf(nm)===0,'확정 문구가 고른 종족을 안 따라간다: '+t);
       assert(t===nm+josaRo(nm)+' 시작','조사가 틀렸다: '+t);
       seen.push(t); }
     assert(seen.indexOf('에테리얼로 시작')>=0,'ㄹ 받침 조사가 안 잡힌다: '+seen.join(' / '));
+    // 버튼은 공용 크기(44px) 그대로 — 세로로 쌓느라 flex 가 높이를 나눠 갖던 적이 있다
+    for(const b of document.querySelectorAll('#raceSelPanel .cpBtns .actBtn'))
+      assert(b.getBoundingClientRect().height>=43,'버튼이 작아졌다: '+Math.round(b.getBoundingClientRect().height)+'px (44px 이어야 한다)');
     closeRaceSelect(); await sleep(40);
     return '행 '+rows.length+' · 껍데기 통일 · 조사 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다

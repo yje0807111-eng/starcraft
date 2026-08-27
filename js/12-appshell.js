@@ -1830,12 +1830,16 @@ function josaRo(w){ w=String(w||''); if(!w) return '로';
 // 행 문법은 **캠프 종족 선택(.crRow)에서 빌린다** — 아이콘 · 이름 · 부제 · ✓/›.
 // ⛔ 여기 전용 종족 행을 새로 만들지 말 것. 다른 것은 '고른 행을 종족색이 물들인다'(S3안)뿐이다.
 // ⚠ 아이콘 파일이 없으면(페럴·콜로서스) onerror 가 이모지로 되돌린다 — 자리·크기는 그대로다.
+// ⚠ **지금 고를 수 있는 종족은 셋뿐이다** — 페럴·콜로서스는 아이콘도 전장 그림도 아직 없다.
+//   ⛔ STK_RACE_ORDER 를 줄여서 해결하지 말 것: 대기실 종족 띠·관리자 화면·상성 표가 같은 것을 본다.
+//      에셋이 들어오면 이 배열만 STK_RACE_ORDER 로 되돌리면 된다.
+const RACE_PICK_ORDER=['terran','zerg','protoss'];
 let _racePick=null;
 function raceIconSrc(k){ return 'assets/icons/races/'+(typeof stkTechRace==='function'?stkTechRace(k):k)+'.webp'; }
 function renderRacePicker(){ const box=document.getElementById('raceSelBtns'); if(!box) return;
-  const cur=_racePick||STK_RACE_ORDER[0], R=STK_RACES[cur]||{};
+  const cur=_racePick||RACE_PICK_ORDER[0], R=STK_RACES[cur]||{};
   let rows='';
-  for(const k of STK_RACE_ORDER){ const S=STK_RACES[k]||{}; const on=(k===cur);
+  for(const k of RACE_PICK_ORDER){ const S=STK_RACES[k]||{}; const on=(k===cur);
     rows+='<button type="button" class="raceOpt'+(on?' on':'')+'" style="'+raceVars(S.col)+'" onclick="raceSel(\''+k+'\')">'
       +'<span class="roIco"><img src="'+raceIconSrc(k)+'" alt="" '
       +'onerror="this.parentNode.textContent=\''+(S.icon||'')+'\'"></span>'
@@ -1846,9 +1850,9 @@ function renderRacePicker(){ const box=document.getElementById('raceSelBtns'); i
   const go=document.getElementById('raceGo'); if(go) go.textContent=(R.name||'')+josaRo(R.name)+' 시작'; }
 function raceSel(k){ if(!STK_RACES[k] || k===_racePick) return;
   _racePick=k; if(typeof playSfx==='function') playSfx('ui_tap'); renderRacePicker(); }
-function raceConfirm(){ pickRace(_racePick||STK_RACE_ORDER[0]); }
+function raceConfirm(){ pickRace(_racePick||RACE_PICK_ORDER[0]); }
 function openRacePicker(current, onPick){ _racePickCb=onPick||null;
-  _racePick=(current&&STK_RACES[current])?current:STK_RACE_ORDER[0];
+  _racePick=(current&&RACE_PICK_ORDER.indexOf(current)>=0)?current:RACE_PICK_ORDER[0];
   renderRacePicker();
   const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
 function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; _startSoloNow(); }); }   // 솔로: 난이도 후 종족 확정 → 게임 시작
