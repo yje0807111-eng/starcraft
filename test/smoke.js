@@ -1342,6 +1342,56 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // ⛽ 연구 값 — 캠프는 **가스만** 받는다(HUNT_R1 §2-3 · §3-4 · 2026-08-27).
+  //   ⛔ 미네랄이 다시 붙으면 「비싼 미네랄」로 되돌아간다 — 두 번째 자원을 둔 뜻이 사라진다.
+  //   ⚠ 16/17-build.js 는 관리자 탭·오토배틀과 공유다. **캠프 밖은 원본 값 그대로**여야 한다.
+  await step('캠프 연구: 값이 가스만이고 계열 업그레이드에 상한이 없다', async()=>{
+    skipIf(typeof campResearchCost!=='function','연구 값 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    const keepR=G.tech?Object.assign({},G.tech.research):null;
+    const keepC=G.tech?G.tech.credit:0, keepE=G.tech?G.tech.energy:0;
+    const eng=techGetBldg(G.tech.race,'engbay'); skipIf(!eng||!eng.research,'공학소가 없다');
+    const tierR=eng.research.find(x=>x.k==='inf_atk'); skipIf(!tierR||!tierR.tier,'보병 공격력 연구가 없다');
+    try{
+      C.rbTree={};                                    // 🌳 할인 없이 기준값을 본다
+      // ① 계열 업그레이드 — 미네랄 0 · 가스 1×1.08^Lv · **3티어를 넘어서도 값이 나온다**
+      for(const lv of [0,1,2,3,7]){
+        const c=campResearchCost(tierR,lv);
+        assert(c && c[0]===0, 'Lv'+lv+' 계열 업그레이드에 미네랄이 붙었다: '+(c&&c[0]));
+        const want=Math.max(1,Math.ceil(CAMP_RES_GAS0*Math.pow(CAMP_RES_GAS_R,lv)));
+        assert(c[1]===want,'Lv'+lv+' 가스가 '+want+'이 아님: '+c[1]); }
+      assert(campResearchCost(tierR,7)[1]>0,'3티어를 넘으니 값이 0 이 됐다 — 상한이 남아 있다');
+      // ② 단발 연구 — 등급별 고정 가스(원본 미네랄 100/150/200 이 곧 등급)
+      for(const [m,g] of [[100,10],[150,15],[200,20]]){
+        const c=campResearchCost({m:m,g:m},0);
+        assert(c[0]===0 && c[1]===g,'등급 '+m+' 단발 연구가 가스 '+g+'이 아님: '+JSON.stringify(c)); }
+      // ③ 실제로 사 본다 — **가스만 깎이고 미네랄은 그대로**여야 한다
+      G.tech.research={}; G.tech.credit=1e9; G.tech.energy=1000;
+      G.tech.built.engbay=1;
+      G.tech.ents.push({eid:'__resTest', type:'bldg', bk:'engbay', bt:0, x:0.5, y:0.5});
+      G.tech.sel=null;
+      const m0=G.tech.credit, e0=G.tech.energy;
+      techDoResearch('engbay','inf_atk');
+      assert(G.tech.credit===m0,'연구를 샀는데 미네랄이 깎였다: '+(m0-G.tech.credit));
+      assert(e0-G.tech.energy===campResearchCost(tierR,0)[1],
+        '깎인 가스가 값과 다르다: '+(e0-G.tech.energy)+' vs '+campResearchCost(tierR,0)[1]);
+      // ④ 캠프 밖은 원본 값 그대로다 — 공유 파일이 오염되면 안 된다
+      const wasOn=(typeof campExit==='function');
+      campExit();
+      assert(campResearchCost(tierR,0)===null,'캠프를 나갔는데 캠프 값이 계속 나온다');
+      openHome(); await sleep(420);
+      assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
+      void wasOn;
+      return '계열 가스 1→'+campResearchCost(tierR,7)[1]+'(Lv7) · 단발 10/15/20 · 미네랄 0';
+    } finally {
+      C.rbTree=keepT;
+      if(G.tech){ if(keepR) G.tech.research=keepR; G.tech.credit=keepC; G.tech.energy=keepE;
+        G.tech.ents=(G.tech.ents||[]).filter(e=>e.eid!=='__resTest');
+        const be=(G.tech.ents||[]).find(e=>e._rj); if(be) be._rj=null; }
+    }
+  });
+
   // 🎨 전투 렌더 — 화면을 바꾸지 않고 기지 맵 '위쪽 레인'에 겹쳐 그린다(A안 · 2026-08-25).
   //   ⚠ 건설 맵은 M3D.sync 가 아니라 **M3D.syncBuild** 를 쓴다 — 감쌀 대상을 헷갈리면 0건이 된다(실제로 그랬다).
   await step('캠프 던전: 전투가 기지 맵에 겹쳐 그려진다', async()=>{

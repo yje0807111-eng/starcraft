@@ -1694,6 +1694,30 @@ function campUpgCost(k){
   const cost = base * Math.pow(r0, knee) * Math.pow(r1, Math.max(0, lv - CAMP_COST_KNEE));
   return Math.max(1, Math.ceil(cost * campUpgDisc()));           // 🌳 업그레이드 비용
 }
+// ══ 🔬 연구·계열 업그레이드 값 — 캠프는 **가스만** 받는다 (2026-08-27 확정) ═══
+//   ⭐ **미네랄 = 양(유닛·일꾼·건물) / 가스 = 질(강화·해금).**
+//     미네랄은 지수로 자라서 어떤 가격표를 붙여도 결국 공짜가 된다 — 그래서 미네랄로 매긴
+//     강화 비용은 「비싼 미네랄」일 뿐이고 두 번째 자원을 둔 뜻이 사라진다.
+//     가스는 안 자라므로 **끝까지 모자란 것**으로 남는다. 그 자리가 강화·해금이다.
+//   ⛔ 연구에 미네랄을 도로 붙이지 말 것.
+//   ⛔ 계열 업그레이드에 상한을 두지 말 것 — 설계 §3-4 가 「무제한」으로 확정했다.
+//     적이 던전당 ×2 세지는 것을 11레벨씩 따라잡는 구조라 3티어로 막으면 던전 2에서 멎는다.
+//   ⚠ **캠프 밖(관리자 탭·오토배틀)은 원본 값 그대로다** — null 을 돌려 갈라 준다.
+//     16/17-build.js 는 공유 파일이라 그쪽에 캠프 값을 박으면 두 모드가 함께 망가진다.
+const CAMP_RES_GAS0 = 1;        // 계열 업그레이드 1레벨 가스
+const CAMP_RES_GAS_R = 1.08;    // 레벨당 비싸짐 — 설계 §3-4 의 「× 1.08^Lv」에서 배수만 가져왔다
+const CAMP_RES_ONE = { 100:10, 150:15, 200:20 };   // 단발 연구(§3-4-1) — 원본 미네랄값이 곧 등급
+const CAMP_RES_ONE_DEF = 15;    // 표에 없는 등급은 '보통'으로 본다
+// r = TECH_TREE 의 연구 정의 · lv = 지금 레벨. 캠프가 아니면 null(호출부가 원본 값을 쓴다).
+// ⚠ r 를 키 문자열로 다시 찾지 않는다 — 같은 k 가 종족마다 있어 건물까지 알아야 한다.
+function campResearchCost(r, lv){
+  if(!_campOn || !r) return null;
+  const d = campUpgDisc();                        // 🌳 「업그레이드 비용」 — 건물·유닛과 같은 문
+  const g = r.tier
+    ? CAMP_RES_GAS0 * Math.pow(CAMP_RES_GAS_R, Math.max(0, lv | 0))
+    : (CAMP_RES_ONE[r.m | 0] || CAMP_RES_ONE_DEF);
+  return [0, Math.max(1, Math.ceil(g * d))]; }
+
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
