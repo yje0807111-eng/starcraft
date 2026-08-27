@@ -461,10 +461,25 @@
         <div class="ovTtl"><h1 id="ovTitle">네모네모 디펜스</h1></div>
       </div>
       <div class="ovPanel"><p id="ovDesc"></p></div>   <!-- 설정 항목 패널과 같은 글래스 패널 -->
-      <div class="ovBtns">
+      <div class="ovBtns" id="ovBtns">
         <button id="ovBtn"><i class="autoBar" id="ovAutoBar"></i><span class="ovBtnTx" id="ovBtnTx">멀티플레이</span></button>
         <button id="ovBtn2" class="ghost" style="display:none"><span class="ovBtnTx">관전하기</span></button>
       </div>
+    </div>
+    <!-- 종료 결과(승/패/나감) — 시작 안내(.ovCard)와는 **다른 화면**이다.
+         판 없이 전면으로 뜨고, 게임 진입 화면(#gsRoot)의 짝이 되는 골격이다.
+         ⚠ 버튼은 새로 만들지 않는다 — 위 #ovBtns 를 여기로 **옮겨 쓴다**(마을 채팅이 .msSocial 을 옮겨 쓰는 것과 같은 방식).
+            그래야 #ovBtn/#ovBtn2 핸들러와 자동 진행 바가 그대로 산다. -->
+    <div class="rsCard" id="rsCard">
+      <div class="rsTop">
+        <div class="rsTtl" id="rsTtl">VICTORY</div>
+        <div class="rsMeta" id="rsMeta"></div>
+      </div>
+      <div class="rsSpacer"></div>
+      <div class="rsRows" id="rsRows"></div>
+      <div class="rsCur" id="rsCur"></div>
+      <!-- ⚠ .rsAnim 이 있어야 버튼이 **맨 마지막에** 나온다. 빼면 처음부터 보인다 -->
+      <div class="rsBtnHost rsAnim" id="rsBtnHost"></div>
     </div>
   </div>
 
