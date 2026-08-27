@@ -1202,7 +1202,10 @@ function strikeSpawnForPlayer(side, e){ const S=STK; let n=0;
     for(let k=0;k<cnt;k++){ const b4=S[side].units.length; strikeSpawnUnit(side, uid); if(S[side].units.length<=b4) break; n++; } };   // 진영 상한 도달 → 중단
   if(e.local && G.tech && G.tech.ents){
     const race=G.tech.race;
-    for(const b of G.tech.ents){ if(b.type!=='bldg' || (b.bt||0)>0 || b._dead) continue; _emit(race, b.bk); }   // 🏭 미완성(bt>0)·파괴(_dead) 건물은 생산에서 제외
+    // 🏕 캠프는 **건물 수만큼 공짜로 배출하지 않는다**(e.noEmit). 값을 안 내고 나오는 병력이 있으면
+    //   반복 구매(×1.15)도 인구 상한도 의미가 없다 — 여기로 다 새 버린다.
+    //   ⛔ 오토배틀은 이 배출이 병력 공급의 전부다. 플래그 없이 지우지 말 것.
+    if(!e.noEmit) for(const b of G.tech.ents){ if(b.type!=='bldg' || (b.bt||0)>0 || b._dead) continue; _emit(race, b.bk); }   // 🏭 미완성(bt>0)·파괴(_dead) 건물은 생산에서 제외
     const out=G.tech.ents.filter(x=>x.type==='unit' && STK_UNITS[x.uid]);   // 🏗 건설지에서 완성해 둔 유닛도 함께 출격(일꾼·라바·알은 남김)
     for(const x of out){ const i=G.tech.ents.indexOf(x); if(i>=0) G.tech.ents.splice(i,1);
       G.tech.sup=Math.max(0,(G.tech.sup||0)-(x.pop||0));   // 전장으로 나가면 건설지 인구 반환

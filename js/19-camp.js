@@ -678,7 +678,7 @@ function campWithBattleDraw(fn){
 //   라운드 사이에는 부활(campReviveStep)이 병력을 유지하므로 보충이 필요 없다.
 function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
   const b4 = CAMPB.me.units.length;
-  const n = campWithStk(() => strikeSpawnForPlayer('me', { local:true })) | 0;
+  const n = campWithStk(() => strikeSpawnForPlayer('me', { local:true, noEmit:true })) | 0;   // ⛔ 건물당 공짜 배출 금지(값을 내고 산 병력만)
   campScaleAllies(CAMPB.me.units.slice(b4));   // 🌳 아군 강화 — 새로 나온 것만
   campTrimArmy();                              // 👥 인구 상한을 전장에도 건다(아래 설명)
   return n; }
@@ -798,11 +798,33 @@ function campScaleFoes(list){
   const cut = campRtFoeMul();
   const hpMul  = hp0  > 0 ? (CAMP_FOE_HP0  * diff * cut) / hp0  : 1;
   const dmgMul = dmg0 > 0 ? (CAMP_FOE_ATK0 * diff * cut) / dmg0 : 1;
+  const rCap = campFoeRngCap();                     // 🎯 사거리 상한(아래 설명)
   for(const u of list){
     u.maxHp = u.maxHp * hpMul; u.hp = u.maxHp;
     u.maxSh = (u.maxSh || 0) * hpMul; u.sh = u.maxSh;
-    u.dmg = (u.dmg || 0) * dmgMul; }
+    u.dmg = (u.dmg || 0) * dmgMul;
+    if(u.rng > rCap){ u.rng = rCap; if(u.acq < rCap) u.acq = rCap; } }   // acq 를 같이 열어야 다가와서 쏜다
   return diff; }
+// ── 🎯 적 사거리 상한 — **아군이 먼저 쏘게 한다** (2026-08-27) ─────────
+// ⛔ 안 걸면 라운드가 안 끝난다. 적 탱크 332 · 고스트 273 이 아군 최대 215 보다 멀리서 쏘는데
+//   아군은 제자리 방어라 다가가지 않고, 맞은 만큼 의무병이 채운다 → **양쪽 다 안 죽는다.**
+//   ⚠ 「때릴 수 없으면 패배」에는 안 걸린다 — campCanHitFoes 는 true 다(원리상 때릴 수는 있다).
+//     때릴 수 없는 게 아니라 **닿지 않는 것**이라 규칙이 따로 필요했다.
+// ⚠ 기준은 아군 **최소** 사거리다. 최대(공성전차)로 잡으면 초반에 레인저밖에 없을 때 또 대치한다.
+// ⛔ U 표·STK_UNITS 의 range 를 고치지 말 것 — 멀티 대전과 오각형 상성이 같이 바뀐다(RACES.md).
+//   **소환된 적 개체의 값만** 깎는다. 아군은 건드리지 않는다.
+const CAMP_FOE_RNG_K = 0.9;        // 아군 최소 사거리의 이만큼까지만
+const CAMP_FOE_RNG_FB = 168;       // 아군이 아직 전장에 없을 때(레인저 187 × 0.9)
+function campFoeRngCap(){
+  if(!CAMPB || !CAMPB.me) return CAMP_FOE_RNG_FB;
+  let min = Infinity;
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    if(!(u.dmg > 0) || !(u.rng > 0)) continue;     // 의무병처럼 안 때리는 유닛은 기준이 아니다
+    if(u.rng < min) min = u.rng; }
+  for(const u of (CAMPB._down || [])){ if(!(u.dmg > 0) || !(u.rng > 0)) continue;
+    if(u.rng < min) min = u.rng; }
+  return (min === Infinity) ? CAMP_FOE_RNG_FB : min * CAMP_FOE_RNG_K;
+}
 
 // 🌳 아군 강화 — 갓 출격한 내 유닛에 트리 배수를 얹는다(HUNT_R1 §4-5-3).
 //   ⭐ 적(campScaleFoes)과 달리 **개체 값에 그대로 곱한다** — 적은 '무리 총량'을 난이도에 맞추지만
@@ -877,8 +899,11 @@ function campCombatStep(dt){
   if(!CAMPB) return;
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
     if(CAMPB._gapT <= 0){
-      // ⚠ 전장이 비었을 때만 출격한다(위 campSortie 설명) — 누운 병력이 있으면 곧 일어난다
-      if(!CAMPB.me.units.length && campDown() === 0) campSortie();
+      // 👥 **인구 한도까지 계속 내보낸다** (2026-08-27 · sc-3 판단).
+      //   ⛔ 예전 규칙(전장이 비어야 출격)은 전장 병력을 17~18기에 묶었다 — 대기 68기가 놀았고
+      //     아군 총 DPS 가 335 에서 멎었다. 적이 100마리까지 나오는 판에서 그건 방어전이 아니다.
+      //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다 — 세는 곳이 둘이면 어긋난다.
+      campSortie();
       campBuildStructs();                                 // 🏢 그새 지은 건물을 전장에 반영(체력도 새로)
       campTrimArmy();                                     // 👥 인구 상한 재확인(던전 전환에서 새는 자리)
       campSpawnFoes(); }
@@ -2214,6 +2239,22 @@ function campRestoreHire(){
 // ⚠ 보유 수 = 기지에 있는 것(G.tech.units) + **전장에 나가 있는 것**. 전장 것을 안 세면
 //   출격할 때마다 값이 처음으로 돌아가 규칙이 통째로 무력해진다.
 const CAMP_UNIT_R = 1.15;
+// ── 💰 캠프 기본가 — HUNT_R1 §3-1 표 (2026-08-27) ────────────────────────
+// ⛔ **코드 값이 설계표의 1/100 ~ 1/800 이었다.** 그래서 반복 구매(×1.15)가 안 물었다 —
+//   레인저 50 짜리는 초당 수입 8,781 에 견줘 공짜라, 36기를 사고 나서야 처음 비싸진다.
+//   배수가 약한 게 아니라 **기본가가 수입에 비해 작았다.**
+// ⚠ 캠프 전용이다. TECH_TREE 값을 프레임마다 갈아 끼우고 나갈 때 되돌린다(관리자 탭·오토배틀 공유).
+// ⛔ **가스는 건드리지 않는다.** 설계표(§3-1)는 「미네랄만」이라고 못 박았고 가스 규칙은 §2-3-2 인데
+//   아직 안 나왔다. 미네랄이 오른 비율만큼 가스도 올렸더니 **화력병 가스 5,000** 이 되어
+//   가스 유닛을 한 기도 못 샀다(실측 2026-08-27: 25분 내내 마린만 나왔다). 원값 그대로 둔다.
+const CAMP_UNIT_PRICE = {
+  marine:5000, machinegun:10000, racer:8000, goliath:20000, ghost:20000, medic:20000,
+  pelican:25000, aegis:20000, tank:35000, skyguard:35000, hellfire:50000, dreadnought:100000 };
+// ⚠ **유니온(테란) 표만 나왔다.** 스웜·에테리얼 등은 설계표가 없어 일단 일률 배수를 쓴다 —
+//   유니온 12종의 비율 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채워 넣을 것.
+const CAMP_UNIT_PRICE_MUL = 200;
+function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
+  return (v != null) ? v : Math.round((m || 0) * CAMP_UNIT_PRICE_MUL); }
 function campUnitOwned(id){
   let n = (typeof G !== 'undefined' && G.tech && G.tech.units) ? (G.tech.units[id] | 0) : 0;
   if(typeof CAMPB !== 'undefined' && CAMPB){
@@ -2233,8 +2274,9 @@ function campSyncUnitCost(){
       if(q.id === wk) continue;                       // 👷 일꾼은 campSyncHire 가 맡는다(두 곳에서 만지면 어긋난다)
       _campUnitHome.push({ q: q, m: q.m, g: q.g }); } }
   for(const h of _campUnitHome){
-    h.q.m = campUnitCost(h.m, h.q.id);
-    h.q.g = h.g ? campUnitCost(h.g, h.q.id) : h.q.g;
+    const base = campUnitBase(h.q.id, h.m);                    // 💰 설계표 값(없으면 일률 배수)
+    h.q.m = campUnitCost(base, h.q.id);
+    h.q.g = h.g ? campUnitCost(h.g, h.q.id) : 0;               // 가스는 **원값**에만 ×1.15^보유(0 이면 0)
   }
 }
 function campRestoreUnitCost(){

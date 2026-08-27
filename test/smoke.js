@@ -718,15 +718,17 @@ async function groupLobby(){
       const T=TECH_TREE[G.tech.race], wk=TECH_WORKER[G.tech.race];
       let q=null; for(const b of T.buildings){ const f=(b.produces||[]).find(x=>x.id!==wk); if(f){ q=f; break; } }
       assert(q,'전투 유닛 생산 항목을 못 찾음');
-      campRestoreUnitCost(); const base=q.m;
+      campRestoreUnitCost(); const raw=q.m, base=campUnitBase(q.id, raw);
+      // 💰 캠프 기본가는 설계표(HUNT_R1 §3-1) 값이다 — 코드 원값의 100~800배
+      assert(base>raw,'캠프 기본가가 코드 원값보다 크지 않다: '+base+' vs '+raw);
       campSyncUnitCost();
-      assert(q.m===base,'0기 보유인데 값이 올랐다: '+q.m+' (기본 '+base+')');
+      assert(q.m===base,'0기 보유인데 설계 기본가가 아니다: '+q.m+' (기대 '+base+')');
       G.tech.units[q.id]=3; campSyncUnitCost();
       const want=Math.ceil(base*Math.pow(1.15,3));
       assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
       // ⛔ TECH_TREE 는 관리자 탭·오토배틀과 공유 — 반드시 원복된다
       campRestoreUnitCost();
-      assert(q.m===base,'가격을 원복하지 않았다: '+q.m+' (기본 '+base+')');
+      assert(q.m===raw,'가격을 원복하지 않았다: '+q.m+' (원값 '+raw+')');
       G.tech.units[q.id]=0; }
     // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
     const M=G.tech.minerals||[];
@@ -1227,14 +1229,17 @@ async function groupLobby(){
       C.rbTree={};
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
       skipIf(!CAMPB,'전장이 안 열림');
-      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me'); });
+      // ⚠ **같은 유닛으로 재야 한다.** 무작위로 뽑으면 두 번의 units[0] 이 서로 다른 유닛이라
+      //   배수가 아니라 유닛 차이를 재게 된다(공짜 배출을 끄면서 실제로 그랬다).
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me','marine'); });
       campScaleAllies(CAMPB.me.units);
-      const base0=CAMPB.me.base.hp, u0=CAMPB.me.units[0], hp0=u0.maxHp, dm0=u0.dmg||0;
+      const base0=CAMPB.me.base.hp, u0=CAMPB.me.units.find(z=>z.id==='marine')||CAMPB.me.units[0],
+            hp0=u0.maxHp, dm0=u0.dmg||0;
       C.rbTree={atk:5, hp:5, bldg:5};
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
-      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me'); });
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me','marine'); });
       campScaleAllies(CAMPB.me.units);
-      const u1=CAMPB.me.units[0];
+      const u1=CAMPB.me.units.find(z=>z.id==='marine')||CAMPB.me.units[0];
       assert(Math.abs(u1.maxHp/hp0-25)<0.5,'유닛 체력 5차가 ×25가 아님: ×'+(u1.maxHp/hp0).toFixed(1));
       assert(Math.abs((u1.dmg||0)/(dm0||1)-25)<0.5,'유닛 공격력 5차가 ×25가 아님');
       assert(Math.abs(CAMPB.me.base.hp/base0-25)<0.5,'본부 체력(건물 강화) 5차가 ×25가 아님');
@@ -1422,16 +1427,19 @@ async function groupLobby(){
       campCombatStep(0.05);
       assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
       assert(!(CAMPB._wq && CAMPB._wq.length),'라운드가 넘어갔는데 안 나온 무리가 남아 있다');
-      // ⑤ ⛔ **라운드가 넘어가도 병력이 불어나지 않는다.**
-      //    strikeSpawnForPlayer 는 건물 하나당 유닛을 새로 만든다(18-strike.js:1091).
-      //    라운드 갭마다 부르면 건물이 그대로라 계속 증식한다 — 실측: R50 에 623기 · DPS 12,415
-      //    (인구 상한 200 을 훨씬 넘음). 그 화력이면 적 체력을 아무리 올려도 즉사한다.
-      //    ⭐ 전장이 비었을 때(첫 진입·던전 전환)만 출격해야 한다.
-      { const n0=CAMPB.me.units.length+campDown();
-        assert(n0>0,'전제가 바뀜: 라운드가 넘어갔는데 병력이 없다');
+      // ⑤ **인구 한도까지 계속 출격하되, 상한은 절대 넘지 않는다** (2026-08-27 규칙 변경)
+      //    ⛔ 옛 규칙은 「전장이 비어야 출격」이었다. 그러면 전장 병력이 17~18기에 묶여
+      //      대기 병력 68기가 놀았다 — 적이 100마리 나오는 판에서 그건 방어전이 아니다.
+      //    ⚠ 그때 이 규칙이 있었던 이유는 **건물 하나당 공짜로 유닛이 나왔기 때문**이다
+      //      (strikeSpawnForPlayer 의 _emit · 실측 R50 에 623기). 지금은 캠프가 그 배출을
+      //      꺼서(noEmit) 값을 내고 산 병력만 나온다 — 그래서 갭마다 출격해도 안전하다.
+      //    ⭐ 상한을 지키는 곳은 campTrimArmy() **한 곳**이다.
+      { campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
+        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
         for(let i=0;i<8;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘긴다
         const n1=CAMPB.me.units.length+campDown();
-        assert(n1<=n0,'라운드가 넘어갈 때마다 병력이 불어난다(재출격 중복): '+n0+' → '+n1); }
+        assert(n1>0,'갭을 넘기고 나니 병력이 통째로 사라졌다');
+        assert(n1<=cap,'갭마다 병력이 불어나 인구 상한을 넘는다: '+n1+' > '+cap); }
       // 👥 **전장 병력도 인구 상한을 넘지 않는다.**
       //    ⚠ 전장 자체엔 제한이 없다(STK_UNIT_CAP=0) — 캠프의 200 은 생산 제한일 뿐이라
       //      던전 전환에서 샌다. 실측: 던전 1 은 20기였는데 던전 2 로 넘어가며 292기가 됐다.
@@ -1470,6 +1478,26 @@ async function groupLobby(){
       { if(typeof campFoeId==='function' && typeof SB_ATK_MODE!=='undefined'){
           for(let i=0;i<40;i++){ const id=campFoeId();
             if(id) assert(SB_ATK_MODE[id]!=='air','공중 전용 적이 뽑혔다: '+id); } } }
+      // 🎯 **적 사거리는 아군 최소 사거리보다 짧다** (2026-08-27 · 캠프 전용)
+      //    ⛔ 안 걸면 라운드가 안 끝난다 — 적이 아군보다 멀리서 쏘는데 아군은 제자리 방어라
+      //      다가가지 않고, 맞은 만큼 의무병이 채워 준다(실측: R31 55초).
+      //    ⛔ U 표·STK_UNITS 의 range 를 고쳐서 맞추면 멀티 대전과 오각형 상성이 같이 바뀐다.
+      //      소환된 **적 개체의 값만** 깎아야 한다.
+      if(typeof campFoeRngCap==='function'){
+        campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me','marine'); });
+        const cap=campFoeRngCap();
+        let minAlly=Infinity;
+        for(const u of CAMPB.me.units){ if(u.dead||!(u.dmg>0)||!(u.rng>0)) continue;
+          if(u.rng<minAlly) minAlly=u.rng; }
+        assert(minAlly<Infinity,'전제가 바뀜: 때리는 아군이 없다');
+        assert(Math.abs(cap-minAlly*0.9)<1e-6,'상한이 아군 최소 사거리 ×0.9 가 아니다: '+cap.toFixed(1)+' vs '+(minAlly*0.9).toFixed(1));
+        // 실제 소환된 적이 그 상한을 지키는가 — 사거리가 긴 적(탱크)을 억지로 넣어 본다
+        campWithStk(()=>{ strikeSpawnUnit('ai','tank'); });
+        const foe=CAMPB.ai.units[CAMPB.ai.units.length-1];
+        if(foe){ foe.rng=999; foe.acq=0; campScaleFoes([foe]);
+          assert(foe.rng<=cap+1e-6,'적 사거리가 안 깎였다: '+foe.rng);
+          assert(foe.acq>=cap-1e-6,'적 인지범위가 사거리보다 좁다 — 다가오지 않아 또 대치한다: '+foe.acq);
+          foe.dead=true; } }
       // ⑤ 🏢 **패배 = 내 건물이 전부 부서지는 것**(2026-08-27 확정). 본부 하나가 아니다.
       //    ⛔ 예전에는 me.base.hp<=0 하나로 졌다 — 전장에 본부밖에 없어서 병영·보급소는
       //      적이 때릴 수도 없었다. 지금은 기지의 건물이 모두 표적이고, 마지막 한 채까지
@@ -1477,6 +1505,9 @@ async function groupLobby(){
       assert(typeof campBldAlive==='function','건물 목록 판정이 없다');
       { const live=campBldAlive();
         assert(live.length>=1,'전장에 내 건물이 하나도 없다 — campBuildStructs 가 안 돌았다');
+        // ⚠ 병력을 채워 두고 재야 한다 — 아군이 0기면 「때릴 수 없어서」 지고, 그러면
+        //   건물 규칙을 잰 것이 아니게 된다(공짜 배출을 끈 뒤로 실제로 그랬다).
+        campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
         CAMPB._gapT=0; CAMPB._started=true;
         if(live.length>1){                       // 한 채만 부숴도 지면 안 된다
           live[0].hp=0; live[0].dead=true;
