@@ -234,19 +234,22 @@ async function groupLobby(){
   // segNavHTML(.pdSeg) 한 함수로 그려진다(2026-08-27 통일). 옛 사본(.msTab2/.ptTab/.cpSegBtn)은 없앴다.
   await step('탭 띠 단일 소스: 네 곳이 모두 공용 .pdSeg', ()=>{
     const seg=(host)=>host && host.querySelector('.pdSeg');
-    // ① 채팅/파티/친구 — 렌더러가 채운다(정적 버튼이 아니다)
-    skipIf(typeof renderSocialTabs!=='function','소셜 탭 렌더러 없음');
-    renderSocialTabs();
-    const soc=$('msBottomTabs'); assert(seg(soc),'채팅/파티/친구 띠가 .pdSeg 가 아님');
+    // ⚠ 렌더러를 여기서 직접 부르면 안 된다 — 그러면 「화면을 열었을 때 띠가 채워지는가」를
+    //    영영 못 잰다. 실제로 그 구멍으로 회귀가 지나갔다(twOpenChat 이 렌더러를 안 불러 띠가 통째로 비었음).
+    //    반드시 **사용자가 여는 길**로 열고 나서 본다.
+    // ① 채팅/파티/친구 — 마을 채팅 시트를 연다
+    skipIf(typeof twOpenChat!=='function','마을 채팅 시트 없음');
+    twOpenChat();
+    const soc=$('msBottomTabs'); assert(seg(soc),'채팅 시트를 열었는데 탭 띠가 안 그려짐');
     assert(seg(soc).querySelectorAll('.pdSegBtn').length===3,'채팅/파티/친구 3칸이 아님');
-    // ② 친구 필터
-    skipIf(typeof renderHubFriendTabs!=='function','친구 필터 렌더러 없음');
-    renderHubFriendTabs();
-    const hub=$('hubFriendTabs'); assert(seg(hub),'친구 필터 띠가 .pdSeg 가 아님');
-    // ③ 코인 공학소
-    skipIf(typeof renderPtTabs!=='function','코인 공학소 탭 렌더러 없음');
-    renderPtTabs();
-    const pt=$('ptTabs'); assert(seg(pt),'코인 공학소 띠가 .pdSeg 가 아님');
+    // ② 친구 필터 — 마을 친구 시트를 연다
+    skipIf(typeof twOpenSocial!=='function','마을 친구 시트 없음');
+    twOpenSocial();
+    const hub=$('hubFriendTabs'); assert(seg(hub),'친구 시트를 열었는데 탭 띠가 안 그려짐');
+    // ③ 코인 공학소 — 포인트 업그레이드를 연다
+    skipIf(typeof openPointUpgrade!=='function','코인 공학소 없음');
+    openPointUpgrade();
+    const pt=$('ptTabs'); assert(seg(pt),'코인 공학소를 열었는데 탭 띠가 안 그려짐');
     // 형태가 같은가 — 같은 함수가 그렸으니 버튼의 뼈대가 같아야 한다(크기만 화면이 덮는다)
     const key=b=>{ const c=getComputedStyle(b);
       return [c.flex,c.fontWeight,c.justifyContent,c.alignItems,c.borderStyle].join('|'); };
@@ -261,6 +264,9 @@ async function groupLobby(){
     return '3곳 + 유즈맵 정렬 = 한 컴포넌트'; });
   // 「둘 중 하나 고르기」도 하나뿐 — 방 만들기 공개/비공개가 설정 창의 그래픽 품질과 같은 컴포넌트여야 한다.
   await step('둘 중 하나 고르기 단일 소스: 방 공개 설정 = 설정 그래픽 품질', ()=>{
+    skipIf(typeof createRoom!=='function','방 만들기 없음');
+    if(typeof openMapSelect==='function'){ openMapSelect(); if(typeof USEMAPS!=='undefined') _selMap=USEMAPS.nemo; }
+    createRoom();
     const vis=$('cpVis'); skipIf(!vis,'방 만들기 공개 설정 없음');
     assert(vis.classList.contains('setSeg'),'공개 설정이 공용 .setSeg 가 아님: '+vis.className);
     const btns=vis.querySelectorAll('.segBtn'); assert(btns.length===2,'공개/비공개 2칸이 아님: '+btns.length);

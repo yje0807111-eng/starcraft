@@ -2579,6 +2579,8 @@ function twOpenChat(){ const el=document.getElementById('twChat'); if(!el) retur
   const so=document.querySelector('.msSocial');
   if(so && so.parentNode!==el) el.appendChild(so);   // 유즈맵 도크에 가 있으면 시트로 되찾아온다(단일 DOM)
   twCloseSocial(); el.classList.remove('hide');
+  // ⚠ 탭 띠는 마크업이 아니라 렌더러가 그린다 — 안 부르면 띠가 통째로 빈다(2026-08-27 회귀)
+  if(typeof renderSocialTabs==='function') renderSocialTabs();
   if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open');
   const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; }
 function twCloseChat(){ const el=document.getElementById('twChat'); if(el) el.classList.add('hide'); }
