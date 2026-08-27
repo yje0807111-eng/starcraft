@@ -1,0 +1,70 @@
+/* 액션 버튼 8안 (2026-08-26)
+   지금 문제: 두 가족 다 **볼록한 판**이다(윗변 하이라이트 + 안쪽 그림자 + 바깥 그림자).
+     A. .actBtn — 방 찾기·방 만들기·대기실·던전 (44px · --font-ti(Jua) · 밑변 광원)
+     B. 팝업 버튼 — #ovBtn/#ovBtn2 · .ecGo/.ecCancel · .authBtn/.authGuest (36px · 아래만 라운드)
+   판을 다 벗은 화면들 사이에서 버튼만 볼록해 혼자 옛날 것처럼 보인다.
+   ⚠ 8안 모두 **두 가족에 동시에** 건다 — 고르면 그대로 전체 적용된다.
+   ⚠ 글꼴도 --font-ko(본문)로 맞춘다. Jua 는 400 단일 굵기라 버튼에서 가짜 볼드가 그려진다. */
+
+/* ── 공통: 볼록함을 걷는다 ────────────────────────────────────── */
+.b1 .actBtn,.b2 .actBtn,.b3 .actBtn,.b4 .actBtn,.b5 .actBtn,.b6 .actBtn,.b7 .actBtn,.b8 .actBtn,
+.b1 #ovBtn,.b2 #ovBtn,.b3 #ovBtn,.b4 #ovBtn,.b5 #ovBtn,.b6 #ovBtn,.b7 #ovBtn,.b8 #ovBtn,
+.b1 #ovBtn2,.b2 #ovBtn2,.b3 #ovBtn2,.b4 #ovBtn2,.b5 #ovBtn2,.b6 #ovBtn2,.b7 #ovBtn2,.b8 #ovBtn2,
+.b1 .ecGo,.b2 .ecGo,.b3 .ecGo,.b4 .ecGo,.b5 .ecGo,.b6 .ecGo,.b7 .ecGo,.b8 .ecGo,
+.b1 .ecCancel,.b2 .ecCancel,.b3 .ecCancel,.b4 .ecCancel,.b5 .ecCancel,.b6 .ecCancel,.b7 .ecCancel,.b8 .ecCancel,
+.b1 .authBtn,.b2 .authBtn,.b3 .authBtn,.b4 .authBtn,.b5 .authBtn,.b6 .authBtn,.b7 .authBtn,.b8 .authBtn{
+  box-shadow:none!important;background:none!important;background-image:none!important;
+  font-family:var(--font-ko)!important;font-weight:800!important;letter-spacing:.02em!important;
+  border-radius:var(--r-bar)!important;max-width:none!important;transition:background .13s,border-color .13s,color .13s!important}
+/* 밑변 광원(::after)은 안마다 따로 정한다 */
+.b1 .actBtn::after,.b2 .actBtn::after,.b3 .actBtn::after,.b4 .actBtn::after,
+.b5 .actBtn::after,.b7 .actBtn::after,.b8 .actBtn::after{display:none!important}
+.b1 #ovBtn:active,.b2 #ovBtn:active,.b3 #ovBtn:active,.b4 #ovBtn:active,
+.b5 #ovBtn:active,.b6 #ovBtn:active,.b7 #ovBtn:active,.b8 #ovBtn:active{background:none!important;box-shadow:none!important}
+
+/* B1 · 선만 — 부는 흐린 테두리, 주는 밝은 테두리 + 흰 글자 */
+.b1 .actBtn,.b1 #ovBtn2,.b1 .ecCancel{border:1px solid rgba(255,255,255,.16)!important;color:#c3cbd4!important}
+.b1 .actBtn.pri,.b1 #ovBtn,.b1 .ecGo,.b1 .authBtn{border:1px solid rgba(255,255,255,.55)!important;color:#fff!important}
+/* B2 · 주 버튼을 흰 면으로 채운다(모바일 게임에서 가장 흔한 위계) */
+.b2 .actBtn,.b2 #ovBtn2,.b2 .ecCancel{border:1px solid rgba(255,255,255,.16)!important;color:#c3cbd4!important}
+.b2 .actBtn.pri,.b2 #ovBtn,.b2 .ecGo,.b2 .authBtn{border:1px solid #fff!important;color:#0b0d11!important;
+  background:#f2f5f8!important}
+/* B3 · 판 없이 글자 + 밑변 1px (로그인 「게스트로 시작」 문법) */
+.b3 .actBtn,.b3 #ovBtn,.b3 #ovBtn2,.b3 .ecGo,.b3 .ecCancel,.b3 .authBtn{
+  border:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important;border-radius:0!important;color:#c3cbd4!important}
+.b3 .actBtn.pri,.b3 #ovBtn,.b3 .ecGo,.b3 .authBtn{border-bottom:1px solid rgba(255,255,255,.8)!important;color:#fff!important}
+/* B4 · 아주 옅은 면 + 1px — 판은 있되 볼록하지 않다 */
+.b4 .actBtn,.b4 #ovBtn2,.b4 .ecCancel{border:1px solid rgba(255,255,255,.1)!important;color:#c3cbd4!important;
+  background:rgba(255,255,255,.05)!important}
+.b4 .actBtn.pri,.b4 #ovBtn,.b4 .ecGo,.b4 .authBtn{border:1px solid rgba(255,255,255,.32)!important;color:#fff!important;
+  background:rgba(255,255,255,.14)!important}
+/* B5 · 각진 컷 — 모서리를 자른 실루엣(DESIGN 의 각진 SF) */
+.b5 .actBtn,.b5 #ovBtn,.b5 #ovBtn2,.b5 .ecGo,.b5 .ecCancel,.b5 .authBtn{
+  border-radius:0!important;clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,9px 100%,0 calc(100% - 9px))!important;
+  border:1px solid rgba(255,255,255,.14)!important;color:#c3cbd4!important;background:rgba(255,255,255,.05)!important}
+.b5 .actBtn.pri,.b5 #ovBtn,.b5 .ecGo,.b5 .authBtn{border-color:rgba(255,255,255,.4)!important;color:#fff!important;
+  background:rgba(255,255,255,.13)!important}
+/* B6 · 평평한 판 + 밑변 광원은 남긴다(지금 언어에서 볼록함만 뺀 것) */
+.b6 .actBtn,.b6 #ovBtn2,.b6 .ecCancel{border:1px solid rgba(255,255,255,.12)!important;color:#c3cbd4!important;
+  background:rgba(255,255,255,.045)!important}
+.b6 .actBtn.pri,.b6 #ovBtn,.b6 .ecGo,.b6 .authBtn{border:1px solid rgba(255,255,255,.22)!important;color:#fff!important;
+  background:rgba(255,255,255,.1)!important}
+.b6 #ovBtn,.b6 .ecGo,.b6 .authBtn{position:relative}
+.b6 #ovBtn::before,.b6 .ecGo::before,.b6 .authBtn::before{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:rgba(255,255,255,.85)}
+.b6 .actBtn::after{left:10%!important;right:10%!important;bottom:0!important;height:1px!important;
+  background:rgba(255,255,255,.22)!important;box-shadow:none!important}
+.b6 .actBtn.pri::after{background:rgba(255,255,255,.85)!important;box-shadow:none!important}
+/* B7 · 주 버튼만 화면 액센트 색으로 채운다(결과 화면은 승 금 / 패 빨강) */
+.b7 .actBtn,.b7 #ovBtn2,.b7 .ecCancel{border:1px solid rgba(255,255,255,.15)!important;color:#c3cbd4!important}
+.b7 .actBtn.pri,.b7 #ovBtn,.b7 .ecGo,.b7 .authBtn{border:1px solid transparent!important;color:#0b0d11!important;
+  background:var(--btnAcc,#e8eef5)!important}
+.b7 #ov.win .rsBtnHost #ovBtn{--btnAcc:var(--gold)}
+.b7 #ov.lose .rsBtnHost #ovBtn{--btnAcc:#ff8a94}
+/* B8 · 선만 + 주 버튼에 화살표 자리(글자 오른쪽으로 밀기) */
+.b8 .actBtn,.b8 #ovBtn2,.b8 .ecCancel{border:1px solid rgba(255,255,255,.16)!important;color:#c3cbd4!important}
+.b8 .actBtn.pri,.b8 #ovBtn,.b8 .ecGo,.b8 .authBtn{border:1px solid rgba(255,255,255,.5)!important;color:#fff!important;
+  background:rgba(255,255,255,.07)!important}
+.b8 .actBtn.pri::before,.b8 #ovBtn::before,.b8 .ecGo::before{content:'';position:absolute;right:14px;top:50%;
+  width:6px;height:6px;border-right:1.6px solid currentColor;border-top:1.6px solid currentColor;
+  transform:translateY(-50%) rotate(45deg);opacity:.8}
