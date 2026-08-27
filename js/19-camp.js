@@ -127,6 +127,24 @@ function campPatchRefinery(){
   const b = (t.buildings || []).find(function(x){ return x.gas; }); if(!b) return;
   _campRefHome = { b: b, had: b.research || null };
   b.research = (b.research || []).concat([CAMP_REF_RES]); }
+// 🩸 **스킬의 체력 코스트를 캠프 자릿수로 낮춘다** (2026-08-27).
+//   ⛔ 캠프 설계 체력은 SC 의 약 1/8 이다(레인저 5 vs SC 마린 40). 원본 `hpCost:10` 을 그대로 두면
+//     `strikeSkillTick` 의 `u.hp <= sk.hpCost*2` 가 **늘 참**이라 광폭화가 영영 안 나간다
+//     (실측 2026-08-27: 16분 동안 strikeSkillTick 5,139회 · 시전 0회).
+//   ⚠ `SKILLS` 는 관리자 탭·오토배틀과 **공유**다 — 캠프에서만 바꾸고 나갈 때 되돌린다.
+//   ⚠ 지금 hpCost 를 쓰는 스킬은 광폭화 하나뿐이지만, 표를 훑어 **전부** 바꾼다(새로 생겨도 따라온다).
+const CAMP_SK_HP_K = 0.125;      // 캠프 체력 ÷ SC 체력 (설계표 레인저 5 ÷ SC 마린 40)
+let _campSkHome = null;
+function campPatchSkillCost(){
+  if(_campSkHome || typeof SKILLS === 'undefined') return;
+  _campSkHome = [];
+  for(const k in SKILLS){ const sk = SKILLS[k];
+    if(sk && sk.hpCost > 0){ _campSkHome.push([sk, sk.hpCost]);
+      sk.hpCost = Math.max(0.1, sk.hpCost * CAMP_SK_HP_K); } } }
+function campRestoreSkillCost(){
+  if(!_campSkHome) return;
+  for(const pair of _campSkHome) pair[0].hpCost = pair[1];
+  _campSkHome = null; }
 function campRestoreRefinery(){
   if(!_campRefHome) return;
   const h = _campRefHome; _campRefHome = null;
@@ -1485,6 +1503,7 @@ function campHideView(){
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
+  campRestoreSkillCost();                                         // 🩸 스킬 체력 코스트 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
@@ -1515,6 +1534,7 @@ function campEnter(){
   if(!had) G.tech.energy = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
+  campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,

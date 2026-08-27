@@ -70,6 +70,22 @@ await pg.evaluate(()=>{
       const r=o.apply(this, arguments);
       const af=(me&&me.units||[]).reduce((a,x)=>a+(x.dead?0:(x.hp||0)),0);
       if(af>b4) __CB.medHp+=(af-b4); return r; }; }
+  // ⛔ **아래 세 함수만 세면 절반을 놓친다.** 광폭화(self)·공성 모드(toggle)·은신 장막(aura)은
+  //   그 경로를 안 타고 `u.buff` / `u.skillOn` 을 직접 켠다 — 그래서 「스킬 0회」로 잘못 읽혔다
+  //   (2026-08-27 실측: 마린 스팀팩이 1,814프레임 걸려 있는데 계측은 0이었다).
+  //   strikeSkillTick 앞뒤로 buff/skillOn 이 꺼짐→켜짐으로 바뀐 것을 센다.
+  if(typeof window.strikeSkillTick==='function'){ const o=window.strikeSkillTick;
+    window.strikeSkillTick=function(){
+      __CB.skTick=(__CB.skTick||0)+1;
+      const S=(typeof STK!=='undefined')?STK:null, snap=[];
+      if(S&&S.me&&S.me.units&&S.me.units.length) __CB.skTickU=(__CB.skTickU||0)+1;
+      if(S&&S.me&&S.me.units) for(const u of S.me.units){ if(u.dead) continue;
+        snap.push([u, Object.assign({},u.buff||{}), Object.assign({},u.skillOn||{})]); }
+      const r=o.apply(this, arguments);
+      for(const [u,b0,n0] of snap){
+        if(u.buff) for(const k in u.buff){ if((u.buff[k]||0)>0 && !((b0[k]||0)>0)) __CB.sk[k]=(__CB.sk[k]||0)+1; }
+        if(u.skillOn) for(const k in u.skillOn){ if(u.skillOn[k] && !n0[k]) __CB.sk[k]=(__CB.sk[k]||0)+1; } }
+      return r; }; }
   for(const fn of ['_stkApplyAlly','_stkApplyFoe','_stkApplySpot']){
     const o=window[fn]; if(typeof o!=='function') continue;
     window[fn]=function(u,t,sk,key){ const ally=(fn==='_stkApplyAlly'), hp0=(ally&&t)?(t.hp||0):0;
@@ -355,7 +371,7 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
-    return out; })(), sk:__CB.sk||{}, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
+    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
   // 🔬 연구 내역 — 계열(레벨)과 단발(해금)을 갈라 본다. ⚠ 합계만 보면 둘을 못 가른다.
   resBreak:(function(){ const T=G.tech, R=(T&&T.research)||{}, t=TECH_TREE[T.race]||{};
@@ -409,6 +425,7 @@ if(fin.jam){ const J=fin.jam;
 { const E=Object.entries(fin.sk||{}).sort((a,b)=>b[1]-a[1]);
   console.log("\n■ 🔮 실제로 나간 스킬 (효과가 적용된 횟수)");
   console.log(E.length ? '  '+E.map(([k,v])=>k+' '+v+'회').join(' · ') : '  ⛔ 한 번도 안 나감');
+  console.log('  (계측: strikeSkillTick '+fin.skTick+'회 · 그중 내 유닛이 있던 것 '+fin.skTickU+'회)');
   console.log('  ✚ 스킬로 회복시킨 체력 '+(fin.healHp||0)+' · 💉 의무병(전용 경로)이 회복시킨 체력 '+(fin.medHp||0)); }
 if(fin.dead) console.log('\n⛔ 판이 빈 순간: '+JSON.stringify(fin.dead));
 if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.stringify(fin.vanish));

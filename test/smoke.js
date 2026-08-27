@@ -1428,6 +1428,40 @@ async function groupLobby(){
     }
   });
 
+  // 🔮 스킬이 캠프 전투에서 실제로 나가는가 (2026-08-27).
+  //   ⛔ 벤치의 「스킬 0회」는 **계측 구멍이었다** — _stkApplyAlly/Foe/Spot 만 세는데
+  //     광폭화(self)·공성 모드(toggle)·은신 장막(aura)은 그 경로를 안 타고
+  //     u.buff / u.skillOn 을 직접 켠다. 여기서는 **게임 상태를 직접** 본다.
+  await step('캠프: 스킬이 전투에서 실제로 나간다', async()=>{
+    skipIf(typeof campEnterDungeon!=='function'||typeof campCombatStep!=='function','캠프 던전 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ for(let i=0;i<8;i++) strikeSpawnUnit('me','marine'); });
+      // ⛔ **설계 능력치를 반드시 씌운다.** 안 씌우면 유닛이 SC 체력(40)을 그대로 갖고 있어
+      //   테스트가 **가짜로 통과한다** — 실제 캠프 마린은 체력 5 라 광폭화의 hpCost(10)에 막혔다
+      //   (2026-08-27: 이 절차를 빼먹어서 실측과 반대되는 결과를 얻었다).
+      campScaleAllies(CAMPB.me.units);
+      const u0=CAMPB.me.units[0]; skipIf(!u0,'마린이 안 나옴');
+      assert(u0.maxHp<=10,'설계 능력치가 안 씌워졌다 — 이 테스트는 무의미하다: hp '+u0.maxHp);
+      // ① 마린은 스팀팩을 갖는다 — ⚠ 연구와 무관하다(unitSkillKeys 는 연구를 안 본다)
+      const keys=campWithStk(()=>strikeSkillKeys(u0));
+      assert(keys.indexOf('stim')>=0,'마린 스킬 목록에 스팀팩이 없다: '+keys.join(','));
+      assert((SKILLS.stim||{}).kind==='self'||!SKILLS.stim.kind,'스팀팩이 self 가 아니다');
+      // ② 교전이 붙으면 버프가 실제로 켜진다
+      let on=0;
+      for(let i=0;i<600 && !on;i++){ campCombatStep(0.05);
+        for(const x of CAMPB.me.units){ if(x.buff && (x.buff.stim||0)>0){ on=1; break; } } }
+      assert(on,'30초를 싸웠는데 스팀팩이 한 번도 안 걸렸다 — 캠프에서 스킬이 안 나간다');
+      // ③ 체력 코스트가 캠프 자릿수여야 한다 — 원본(10)이면 체력 5 짜리가 영영 못 쓴다
+      assert(SKILLS.stim.hpCost*2 < u0.maxHp,
+        '광폭화 체력값이 캠프 체력보다 크다 — 조건에 늘 걸린다: hpCost '+SKILLS.stim.hpCost+' vs hp '+u0.maxHp);
+      return '스팀팩 자동 시전 ok · hpCost '+SKILLS.stim.hpCost+' vs 체력 '+u0.maxHp;
+    } finally { if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🎨 전투 렌더 — 화면을 바꾸지 않고 기지 맵 '위쪽 레인'에 겹쳐 그린다(A안 · 2026-08-25).
   //   ⚠ 건설 맵은 M3D.sync 가 아니라 **M3D.syncBuild** 를 쓴다 — 감쌀 대상을 헷갈리면 0건이 된다(실제로 그랬다).
   await step('캠프 던전: 전투가 기지 맵에 겹쳐 그려진다', async()=>{
