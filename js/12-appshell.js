@@ -2096,28 +2096,43 @@ function setCpMax(m, silent){ m=Math.max(2,Math.min(8,m|0)); _createMax=m;
   if(!silent && typeof playSfx==='function') playSfx('ui_toggle'); }
 // 난이도 = 난이도 선택 화면(#soloDiffPanel)과 **같은 컴포넌트**: ◀ 이름 ▶ + 점 + 상세 판 + 무한 모드 줄.
 // ⛔ 여기에만 있는 난이도 UI 를 새로 만들지 말 것 — 두 화면이 어긋난다(옛 .cpDiffBtns pill 나열은 폐지).
+// 방 만들기의 난이도 사다리 = 난이도 다섯 + **무한 한 칸**(2026-08-27).
+// ⚠ 난이도 선택 화면(_sdList)과 **같은 규칙**이다 — 하단에 따로 있던 무한 줄(#cpInfBtn)을 여기로 합쳤다.
+function _cpList(){ const L=DIFFICULTY_ORDER.map(function(d){ return {k:d, name:DIFFICULTY[d].name, col:DIFF_COLOR[d]}; });
+  L.push({k:'inf', name:'무한', col:(typeof SD_INF_COL!=='undefined')?SD_INF_COL:'#b06bff'});
+  return L; }
+function _cpCur(){ return _createInf ? 'inf' : _createDiff; }
 function renderCpDiff(){ const nav=document.getElementById('cpDiffStep'), det=document.getElementById('cpDiffInfo');
   if(!nav||!det) return;
-  const L=DIFFICULTY_ORDER, i=Math.max(0, L.indexOf(_createDiff)), col=DIFF_COLOR[L[i]]||'#fff';
+  const L=_cpList(); let i=L.findIndex(function(x){ return x.k===_cpCur(); }); if(i<0) i=0;
+  const cur=L[i], col=cur.col||'#fff';
   nav.style.setProperty('--dc', col); det.style.setProperty('--cc', col);
   nav.innerHTML='<div class="sdStepRow">'
     +'<button type="button" class="arwBtn" data-arw="l" onclick="stepCpDiff(-1)" aria-label="이전 난이도"'+(i>0?'':' disabled')+'></button>'
-    +'<div class="sdStepTx">'+escHtml(DIFFICULTY[L[i]].name)+'</div>'
+    +'<div class="sdStepTx">'+escHtml(cur.name)+'</div>'
     +'<button type="button" class="arwBtn" data-arw="r" onclick="stepCpDiff(1)" aria-label="다음 난이도"'+(i<L.length-1?'':' disabled')+'></button>'
-    +'</div><div class="sdDots">'+L.map(function(_,j){ return '<i class="'+(j===i?'on':'')+'"></i>'; }).join('')+'</div>';
+    +'</div><div class="sdDots">'
+    +L.map(function(x,j){ return '<i class="'+(j===i?'on ':'')+(x.k==='inf'?'inf':'')+'"></i>'; }).join('')+'</div>';
   if(typeof paintArrows==='function') paintArrows(nav);
-  const D=DIFFICULTY[L[i]], atk=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
+  const D=(cur.k==='inf')?DIFFICULTY.normal:DIFFICULTY[cur.k], atk=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
+  // 🏕 캠프 보상은 **기준만** 적는다(수치 없음).
+  //   ⚠ 방은 여럿이 함께 보는 자리다. 미네랄·가스 실수치는 `umRate()`(내 캠프 시급)에서 나와
+  //     **사람마다 다르다** — 남의 방에 내 숫자가 걸리면 거짓말이 된다.
+  //     반면 「몇 시간치」는 난이도에서만 나오므로 누가 봐도 같다.
+  const hrs=(typeof UM_ANCHOR_MIN!=='undefined') ? (UM_ANCHOR_MIN*(D.coinMult||1))/60 : 0;
+  const hTx=(typeof _sdHours==='function')?_sdHours(hrs):String(hrs);
   det.innerHTML='<div class="cpVsSt"><span><i>적 HP</i><b>×'+atk+'</b></span>'
-    +'<span><i>포인트 획득량</i><b>×'+D.coinMult+'</b></span></div>'
-    +'<div class="cpVsNote">'+((typeof SD_DESC!=='undefined'&&SD_DESC[L[i]])||'')+'</div>';
-  det.classList.toggle('dim', !!_createInf);   // 무한 모드가 켜지면 난이도는 뜻이 없다(노말 고정)
-  const el=document.getElementById('cpInfBtn');
-  if(el){ el.className='sdInf'+(_createInf?' on':'');
-    el.innerHTML='<b>∞ 무한 모드</b><em>'+(_createInf?'켜짐 · 노말 고정':'노말 고정 · 끝없이 도전')+'</em>'; } }
-function stepCpDiff(d){ const L=DIFFICULTY_ORDER, i=L.indexOf(_createDiff), n=i+d;
-  if(n<0||n>=L.length) return; setCpDiff(L[n]); }
+    +'<span><i>포인트 획득량</i><b>×'+D.coinMult+'</b></span>'
+    +(hrs?'<span class="cmp"><i>캠프 보상</i><b>'+hTx+'시간치</b></span>':'')+'</div>'
+    +'<div class="cpVsNote">'+escHtml(cur.k==='inf' ? '노말 고정 · 라운드가 끝나지 않는다'
+        : ((typeof SD_DESC!=='undefined'&&SD_DESC[cur.k])||''))+'</div>'; }
+function stepCpDiff(d){ const L=_cpList(), i=L.findIndex(function(x){ return x.k===_cpCur(); }), n=i+d;
+  if(n<0||n>=L.length) return;
+  const k=L[n].k;
+  if(k==='inf'){ _createInf=true; } else { _createInf=false; _createDiff=k; }
+  renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
 function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=false; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function setCpInf(){ _createInf=!_createInf; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_confirm'); }   // 무한 모드 토글 = 난이도 대신 무한(노말 고정)
+// (setCpInf/#cpInfBtn 은 2026-08-27 삭제 — 무한이 난이도 사다리 마지막 칸으로 들어가 토글이 필요 없다)
 function mapHasDiff(){ return !(typeof _selMap!=='undefined' && _selMap && _selMap.noDiff); }   // 대인전 유즈맵 = 난이도 개념 없음
 // ══════════ 🎛 오토 배틀 대전 설정 — 방장이 정하고 방 전원에게 적용된다 ══════════
 // ⚠ **상하한은 이 표 한 곳에서만 정한다.** 슬라이더·스테퍼·프리셋·검증이 전부 여기를 본다.
@@ -2174,10 +2189,17 @@ function stepCpOpt(k,d){ const o=STK_OPT_BY[k]; if(!o) return;
 function renderCpMode(){ const box=document.getElementById('cpMode'); if(!box) return;
   if(mapHasDiff()){ box.innerHTML=''; return; }   // 난이도 있는 유즈맵은 이 구역을 안 쓴다
   const cus=(_createPre==='custom'), pay=cpOptsPayload()||stkOptDefaults();
-  let h='<span class="cpLabel">대전 설정</span><div class="cpPre">'
-    +STK_PRESETS.map(function(p){ return '<button type="button" class="cpPreC'+(p.id===_createPre?' on':'')
-      +(p.id==='custom'?' cu':'')+'" onclick="setCpPreset(\''+p.id+'\')"><b>'+p.name+'</b><i>'+p.sub+'</i></button>'; }).join('')
-    +'</div>';
+  // 🎚 프리셋 고르기 = **난이도와 같은 스테퍼**(2026-08-27 통일). 칸 세 개를 늘어놓던 방식은 폐지 —
+  //    같은 화면의 같은 자리에서 고르는 것인데 부품이 둘이면 두 화면처럼 읽힌다.
+  const PI=Math.max(0, STK_PRESETS.findIndex(function(x){ return x.id===_createPre; })), PC=STK_PRESETS[PI];
+  let h='<span class="cpLabel">대전 설정</span>'
+    +'<div class="cpDiffStep" id="cpPreStep"><div class="sdStepRow">'
+    +'<button type="button" class="arwBtn" data-arw="l" onclick="stepCpPre(-1)" aria-label="이전 설정"'+(PI>0?'':' disabled')+'></button>'
+    +'<div class="sdStepTx">'+escHtml(PC.name)+'</div>'
+    +'<button type="button" class="arwBtn" data-arw="r" onclick="stepCpPre(1)" aria-label="다음 설정"'+(PI<STK_PRESETS.length-1?'':' disabled')+'></button>'
+    +'</div><div class="sdDots">'
+    +STK_PRESETS.map(function(_,j){ return '<i class="'+(j===PI?'on':'')+'"></i>'; }).join('')+'</div>'
+    +'<div class="cpPreSub">'+escHtml(PC.sub)+'</div></div>';
   if(!cus){   // 프리셋 = 결과를 카드로 보여 준다(난이도 상세 판과 같은 자리·모양)
     h+='<div class="cpVs"><div class="cpVsBd"><span class="vsDot"></span>4<em>vs</em>4<span class="vsDot b"></span></div>'
       +'<div class="cpVsSt">'+STK_OPTS.map(function(o){ return '<span><i>'+o.name+'</i><b>'+stkOptText(o.k,pay[o.k])+'</b></span>'; }).join('')
@@ -2194,6 +2216,8 @@ function renderCpMode(){ const box=document.getElementById('cpMode'); if(!box) r
   }
   box.innerHTML=h;
   if(typeof paintArrows==='function') paintArrows(box); }
+function stepCpPre(d){ const i=Math.max(0, STK_PRESETS.findIndex(function(x){ return x.id===_createPre; })), n=i+d;
+  if(n<0||n>=STK_PRESETS.length) return; setCpPreset(STK_PRESETS[n].id); }
 function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.value=''; const pw=document.getElementById('cpPw'); if(pw) pw.value=''; setRoomVis('public'); _createDiff='easy'; _createInf=false; renderCpDiff(); setCpMax(8, true);
   _createPre='normal'; _createOpts=null; renderCpMode();   // 대전 설정은 항상 '일반'에서 시작한다
   { const hd=mapHasDiff(), ds=document.getElementById('cpDiffSec'), cd=document.querySelector('#createPanel .cpCard');

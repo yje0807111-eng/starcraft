@@ -5038,9 +5038,21 @@ async function groupLobby(){
       assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'방 만들기가 화면을 다 안 씀(카드 틀에 갇혔다)');
       assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
     assert($('cpDiffStep').querySelector('.sdStepRow'),'난이도가 스테퍼(.sdStepRow)가 아님');
-    assert($('cpDiffStep').querySelectorAll('.sdDots i').length===DIFFICULTY_ORDER.length,'난이도 점이 난이도 수와 다름');
+    // 사다리 = 난이도 다섯 + **무한 한 칸**(2026-08-27) — 난이도 선택 화면과 같은 규칙
+    assert($('cpDiffStep').querySelectorAll('.sdDots i').length===_cpList().length,'난이도 점이 사다리 칸 수와 다름');
     assert(!document.querySelector('#createPanel .cpDiffBtns .moDiffBtn'),'옛 난이도 pill 나열이 남아 있음');
-    assert($('cpInfBtn').classList.contains('sdInf'),'무한 모드 줄이 공용 .sdInf 가 아님');
+    assert(!$('cpInfBtn'),'무한 모드가 아직 별도 줄이다 — 사다리 마지막 칸으로 들어갔다');
+    { const L=_cpList(); assert(L[L.length-1].k==='inf','무한이 마지막 칸이 아니다');
+      for(let n=0;n<L.length;n++) stepCpDiff(1);   // 끝까지 밀어 본다
+      await sleep(60);
+      assert(_createInf===true,'마지막 칸까지 갔는데 무한이 안 켜졌다');
+      assert($('cpDiffStep').querySelector('.sdDots i.inf'),'마지막 점이 무한 표시(보라)가 아니다');
+      for(let n=0;n<L.length;n++) stepCpDiff(-1); await sleep(60);
+      assert(_createInf===false,'첫 칸으로 돌아왔는데 무한이 안 꺼졌다'); }
+    // 🏕 캠프 보상은 **기준만**(수치 없음) — 방은 여럿이 보는 자리라 사람마다 다른 실수치를 걸면 거짓이 된다
+    { const c=$('cpDiffInfo').querySelector('.cmp b'); assert(c,'캠프 보상 기준이 없다');
+      assert(c.textContent.indexOf('시간치')>0,'캠프 보상이 「n시간치」가 아니다: '+c.textContent);
+      assert(!/\d{3,}/.test($('cpDiffInfo').textContent),'방 만들기에 재화 실수치가 적혔다 — 사람마다 다른 값이다'); }
     assert($('cpMode').innerHTML==='','난이도 있는 맵인데 대전 설정 구역이 채워졌다');
     // 인원 = 1~8 칸 게이지(고른 값까지 채우고 고른 칸만 발광)
     setCpMax(5, true); await sleep(50);
@@ -5051,7 +5063,10 @@ async function groupLobby(){
     closeCreate(); await sleep(60); backToTitle(); await sleep(80);
     _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(200); createRoom(); await sleep(200);
     assert($('cpDiffSec').style.display==='none','난이도 없는 맵인데 난이도 구역이 보인다');
-    assert($('cpMode').querySelectorAll('.cpPreC').length===STK_PRESETS.length,'프리셋 카드 수가 다름');
+    // 대전 설정도 **난이도와 같은 스테퍼**로 통일했다(2026-08-27) — 칸 세 개 나열은 폐지
+    assert(!$('cpMode').querySelector('.cpPreC'),'프리셋이 아직 칸 나열이다 — 스테퍼로 통일했다');
+    assert($('cpMode').querySelector('#cpPreStep .sdStepRow'),'대전 설정이 스테퍼(.sdStepRow)가 아님');
+    assert($('cpMode').querySelectorAll('#cpPreStep .sdDots i').length===STK_PRESETS.length,'프리셋 점 수가 다름');
     assert(_createPre==='normal' && cpOptsPayload()===null,'일반 모드인데 오버라이드가 생김');
     assert(stkCfgFromOpts(cpOptsPayload())===null,'일반 모드인데 cfg 오버라이드가 생김');
     // ③ 프리셋(속도전) → 실제 cfg 로 번역된다. 체력 배율은 신전 3종 **구체값**이 되어야 한다
