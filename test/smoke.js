@@ -5121,13 +5121,13 @@ async function groupLobby(){
     MAP=keep; if(typeof _lobbyRoom!=='undefined') _lobbyRoom=keepRoom;
     return '라운드·골드·수입·체력 4항목 반영 ok'; });
   // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
-  await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
+  await step('공용 액션 버튼: 주·하위·비활성이 면과 테두리 밝기로만 갈린다', async ()=>{
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
     const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d)), ui=DIFFICULTY_ORDER.findIndex(d=>diffUnlocked(d));
     skipIf(ui<0,'해금된 난이도 없음');
     const rgb=x=>(x.match(/\d+/g)||[]).slice(0,3).map(Number);
     const lum=c=>(0.2126*c[0]+0.7152*c[1]+0.0722*c[2])/255;
-    // ① 면(背)은 세 상태 **모두 중립 회색**이다 — 색은 밑변 광원만 갖는다(DESIGN §0: 면을 채우지 않는다)
+    // ① 면(背)은 세 상태 **모두 중립 회색**이다 — 색을 채우지 않는다(DESIGN §0)
     sdPick(ui); await sleep(70);
     const pri=$('sdGo'), sub=document.querySelector('#soloDiffPanel .cpBtns .actBtn');
     assert(pri.classList.contains('pri'),'주 동작에 .pri 가 없음');
@@ -5136,19 +5136,25 @@ async function groupLobby(){
       const bg=rgb(getComputedStyle(el).backgroundColor);
       const dev=Math.max(...bg)-Math.min(...bg);
       assert(dev<=30, nm+' 버튼 면이 회색이 아님(채널 편차 '+dev+') — 색은 밑변 광원만 갖는다'); }
-    // ② 밑변 광원: 활성은 붉고, 하위는 중립. ::after 한 겹이 단일 소스다
-    const bar=el=>getComputedStyle(el,'::after').backgroundImage;
-    const isRed=t=>[...t.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].some(m=>+m[1]>=180 && +m[2]<=110 && +m[3]<=110);
-    assert(isRed(bar(pri)),'활성 버튼의 밑변 광원이 붉지 않음: '+bar(pri).slice(0,70));
-    assert(!isRed(bar(sub)),'하위 버튼의 밑변까지 붉다 — 위계가 안 갈린다');
-    // ③ 비활성 = 볼록 ↔ 오목이 통째로 뒤집힌다(윗변 하이라이트가 사라지고 위에서 그림자가 들어온다)
+    // ② 「옅은 면 + 1px」(2026-08-26 · B4안) — ⛔ 볼록한 판을 되돌리지 말 것.
+    //    위계는 **면과 테두리의 밝기**가 맡는다. 밑변 광원(::after)은 폐지했다.
+    const alpha=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):(/rgb\(/.test(t||'')?1:0); };
+    for(const [nm,el] of [['주',pri],['하위',sub]]){
+      const c=getComputedStyle(el);
+      assert(c.boxShadow==='none', nm+' 버튼에 볼록 그림자가 남아 있음: '+c.boxShadow.slice(0,40));
+      assert(c.backgroundImage==='none', nm+' 버튼 면이 그라데이션임: '+c.backgroundImage.slice(0,40));
+      assert(getComputedStyle(el,'::after').content==='none', nm+' 버튼에 밑변 광원(::after)이 남아 있음'); }
+    const aFace=alpha(getComputedStyle(pri).backgroundColor), sFace=alpha(getComputedStyle(sub).backgroundColor);
+    const aEdge=alpha(getComputedStyle(pri).borderTopColor), sEdge=alpha(getComputedStyle(sub).borderTopColor);
+    assert(aFace>sFace,'주 동작의 면이 하위보다 밝지 않음: '+aFace+' vs '+sFace);
+    assert(aEdge>sEdge,'주 동작의 테두리가 하위보다 밝지 않음: '+aEdge+' vs '+sEdge);
+    // ③ 비활성 = 면·테두리·글자가 한 단 더 죽는다
     // ⚠ renderSoloDiff 가 상세를 통째로 다시 그린다 → 값은 **다시 그리기 전에** 재 둘 것
     //    (떨어져 나간 노드에 getComputedStyle 을 걸면 빈 값이 와서 어떤 비교도 통과한다)
-    const onSh=getComputedStyle(pri).boxShadow, onLum=lum(rgb(getComputedStyle(pri).color));
+    const onLum=lum(rgb(getComputedStyle(pri).color));
     if(li>=0){ sdPick(li); await sleep(70);
       const off=$('sdGo'); assert(off.disabled,'잠긴 난이도인데 버튼이 열려 있음');
-      assert(getComputedStyle(off).boxShadow!==onSh,'비활성인데 볼록 그림자가 그대로다(오목으로 뒤집혀야 한다)');
-      assert(!isRed(bar(off)),'비활성인데 밑변이 아직 붉다');
+      assert(alpha(getComputedStyle(off).backgroundColor)<aFace,'비활성 면이 주 동작보다 어둡지 않음');
       assert(lum(rgb(getComputedStyle(off).color))<onLum,'비활성 글자가 활성보다 어둡지 않음'); }
     // ④ 방 만들기도 **같은 컴포넌트**를 쓴다 — 확정/취소 짝이 화면마다 달라지면 안 된다
     closeSoloDiff(); await sleep(40); openRooms(); await sleep(60); createRoom(); await sleep(120);
@@ -5157,7 +5163,7 @@ async function groupLobby(){
     assert(!document.querySelector('.cpMake,.cpCancel'),'옛 확정/취소 클래스가 남아 있음');
     assert(cGo.getBoundingClientRect().width > cNo.getBoundingClientRect().width,'주 동작이 취소보다 넓지 않음');
     closeCreate(); await sleep(40);
-    return '면 중립 · 광원으로만 위계 ok'; });
+    return '면 중립 · 면/테두리 밝기로만 위계 ok'; });
   await step('난이도 선택: 스테퍼 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
     skipIf(typeof openSoloDiff!=='function','난이도 선택 없음');
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
@@ -8456,17 +8462,25 @@ async function groupGame(){
       assert(!cy.length,'팝업 안에 시안을 쓴 요소: '+cy.slice(0,4).join(', ')); }
     { const rgb=(cbg.match(/\d+/g)||[]).slice(0,3).map(Number);
       assert(Math.max.apply(null,rgb)-Math.min.apply(null,rgb)<=12,'팝업 면에 푸른기가 남음: '+cbg.slice(0,50)); }
-    // 팝업 액션 버튼 4종은 카드 액센트를 따라가지 않고 한 스타일이어야 한다
-    const btnStyle=(el)=>{ const c=getComputedStyle(el);
-      return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor+'|'+c.fontSize+'|'+c.height+'|'+c.borderRadius; };
-    card.classList.add('win');
-    const bWin=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
-    card.classList.remove('win'); card.classList.add('lose');
-    const bLose=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
-    card.classList.remove('win','lose');
+    // 팝업 액션 버튼은 **결과 색을 따라가지 않는다** — 카드가 금색이든 붉은빛이든 버튼은 그대로다.
+    // ⚠ 2026-08-26(B4안)부터 확인과 관전하기는 **한 얼굴이되 주/부만 밝기로 갈린다**.
+    //    예전엔 둘이 완전히 같아야 했는데, 그때는 어느 쪽이 주 동작인지 알 수 없었다.
+    const btnSame=(el)=>{ const c=getComputedStyle(el); return c.fontSize+'|'+c.height+'|'+c.borderRadius+'|'+c.fontFamily; };
+    const btnFull=(el)=>{ const c=getComputedStyle(el); return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor+'|'+btnSame(el); };
+    const ovRoot=$('ov');
+    ovRoot.classList.add('win');
+    const bWin=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnFull);
+    ovRoot.classList.remove('win'); ovRoot.classList.add('lose');
+    const bLose=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnFull);
+    ovRoot.classList.remove('win','lose');
     assert(bWin.length===2,'결과 창 버튼 2개를 못 찾음');
     assert(bWin[0]===bLose[0] && bWin[1]===bLose[1],'승/패에 따라 버튼 색이 바뀜(통일 안 됨)');
-    assert(bWin[0]===bWin[1],'확인과 관전하기의 스타일이 다름');
+    assert(btnSame($('ovBtn'))===btnSame($('ovBtn2')),'확인과 관전하기가 같은 얼굴이 아님(크기·글꼴·라운드)');
+    { const al=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):(/rgb\(/.test(t||'')?1:0); };
+      const go=getComputedStyle($('ovBtn')), sub=getComputedStyle($('ovBtn2'));
+      assert(go.boxShadow==='none'&&sub.boxShadow==='none','팝업 버튼에 볼록 그림자가 남아 있음');
+      assert(al(go.backgroundColor)>al(sub.backgroundColor),'확인(주)의 면이 관전하기보다 밝지 않음');
+      assert(al(go.borderTopColor)>al(sub.borderTopColor),'확인(주)의 테두리가 관전하기보다 밝지 않음'); }
     // 중립 회색이어야 한다(색을 띠면 채널 편차가 커진다)
     for(const el of [$('ovBtn'),$('ovBtn2')].filter(Boolean)){
       for(const prop of ['color','borderTopColor']){
@@ -8484,25 +8498,34 @@ async function groupGame(){
     try{
       const ob=getComputedStyle($('ovBtn'));
       assert(parseFloat(ob.height)<=38,'버튼이 큼: '+ob.height);   // 2026-08-06: 36px로 상향(DESIGN.md §2 팝업 버튼)
-      const wEls=[$('ovBtn'),document.querySelector('#exitConfirm .ecGo')].filter(Boolean);
-      if($('ovBtn2') && getComputedStyle($('ovBtn2')).display!=='none') wEls.push($('ovBtn2'));
-      assert(wEls.length>=2,'폭을 잴 버튼을 못 찾음');
+      // ⚠ 폭 상한(옛 max-width:120px)은 2026-08-26 에 뺐다 — 결과 화면이 **전면**이 되면서
+      //    버튼이 화면 폭을 flex 로 나눠 가져야 한다(120px 로 묶으면 가운데 오종종하게 몰린다).
+      //    대신 **나가기 확인처럼 카드 안에 있는 버튼**은 카드를 넘지 않아야 한다.
+      const ecCard=document.querySelector('#exitConfirm .ecCard');
+      const wEls=[document.querySelector('#exitConfirm .ecGo'),document.querySelector('#exitConfirm .ecCancel')].filter(Boolean);
+      assert(wEls.length===2 && ecCard,'나가기 확인 버튼 둘을 못 찾음');
+      const cardW=ecCard.getBoundingClientRect().width;
       for(const el of wEls){
         const w=el.getBoundingClientRect().width;
         assert(w>0,'버튼 폭을 못 잼(안 그려짐): '+(el.id||el.className));
-        assert(w<=124,'버튼 가로가 넓음('+(el.id||el.className)+'): '+Math.round(w)+'px'); }
-      assert(ob.boxShadow.indexOf('0px 0px 0px 2px')<0,'버튼에 이중 테두리가 남아 있음');
-      assert(/0px 1px 0px[^,]*inset/.test(ob.boxShadow),'볼록(윗변 하이라이트)이 없음: '+ob.boxShadow);
-      assert(/0px -\d+px \d+px[^,]*inset/.test(ob.boxShadow),'볼록(아래 안쪽 그림자)이 없음: '+ob.boxShadow);
+        assert(w<=cardW,'버튼이 카드를 넘음('+(el.className)+'): '+Math.round(w)+'px > '+Math.round(cardW)+'px'); }
+      // ⛔ 2026-08-26(B4안): 볼록한 판을 **폐지**했다. 되살리려 하면 여기서 걸린다.
+      //    옛 규칙은 윗변 하이라이트 + 아래 안쪽 그림자 + 아래만 라운드였다.
+      assert(ob.boxShadow==='none','버튼에 볼록 그림자가 남아 있음: '+ob.boxShadow);
+      assert(ob.backgroundImage==='none','버튼 면이 그라데이션임: '+ob.backgroundImage.slice(0,40));
       const rTop=parseFloat(ob.borderTopLeftRadius), rBot=parseFloat(ob.borderBottomLeftRadius);
-      assert(rTop<rBot,'윗변이 아랫변보다 평평하지 않음: 위 '+rTop+' / 아래 '+rBot);
+      assert(rTop===rBot,'네 모서리 라운드가 다름(아래만 둥근 옛 규칙): 위 '+rTop+' / 아래 '+rBot);
     } finally { if(wasLite0) document.body.classList.add('lite'); if(wasHid) $('ov').classList.add('hide'); if(wasHidE) $('exitConfirm').classList.add('hide'); }
     // 자동 진행은 면이 차오르는 것만 — 앞머리 선(::after)을 두지 않는다
     const abAfter=getComputedStyle(document.querySelector('#ovBtn .autoBar'),'::after').content;
     assert(abAfter==='none' || abAfter==='normal','자동 진행 표시에 앞머리 선이 남아 있음: '+abAfter);
+    // 확인창도 **같은 얼굴 · 주/부만 밝기로** — 크기·글꼴·라운드가 결과창 버튼과 같아야 한다
     const ecGo=document.querySelector('#exitConfirm .ecGo'), ecC=document.querySelector('#exitConfirm .ecCancel');
-    if(ecGo&&ecC){ assert(btnStyle(ecGo)===btnStyle(ecC),'취소와 나가기의 스타일이 다름');
-      assert(btnStyle(ecGo)===bWin[0],'확인창 버튼과 결과창 버튼의 스타일이 다름'); }
+    if(ecGo&&ecC){ assert(btnSame(ecGo)===btnSame(ecC),'취소와 나가기가 같은 얼굴이 아님');
+      assert(btnSame(ecGo)===btnSame($('ovBtn')),'확인창 버튼과 결과창 버튼의 얼굴이 다름');
+      const al=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):(/rgb\(/.test(t||'')?1:0); };
+      assert(al(getComputedStyle(ecGo).backgroundColor)>al(getComputedStyle(ecC).backgroundColor),
+        '나가기(주)의 면이 취소보다 밝지 않음'); }
     // 카드 바깥 오라(덮개 배경) — 카드에 clip-path가 있어 box-shadow를 못 쓰므로 #ov가 낸다
     const aura=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
       return getComputedStyle($('ov')).getPropertyValue('--aura').trim(); };

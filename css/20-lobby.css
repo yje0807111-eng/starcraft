@@ -375,23 +375,23 @@
        하위(기본) : 같은 판에 중립 흰 밑변 — 판이 같아서 '같은 줄의 버튼'으로 읽힌다
      ⛔ 새 확정/취소 버튼을 만들 때 면·테두리를 따로 쓰지 말 것. 여기에 클래스만 붙인다.
      ⚠ 결과창·확인창(.ecGo/.ecCancel)은 이 규칙 밖이다 — 'DESIGN §팝업 액션 버튼은 중립 회색'이 따로 확정돼 있다. */
+  /* ══ 공용 액션 버튼 — 「옅은 면 + 1px」(2026-08-26 · B4안 확정) ═══════════
+     ⛔ 볼록한 판(윗변 하이라이트 + 안쪽 그림자 + 바깥 그림자)을 되돌리지 말 것.
+        화면에서 판을 다 걷어낸 뒤로 버튼만 볼록해서 혼자 옛날 것처럼 보였다.
+        **면은 있되 평평하다** — 흰색을 5%(부) / 14%(주)만 깐 것이 전부다.
+     ⛔ 밑변 광원(::after)은 폐지했다 — 위계는 **면과 테두리의 밝기**가 맡는다. 빛을 더 얹지 말 것.
+     ⛔ 글꼴을 --font-ti(Jua)로 되돌리지 말 것 — 400 단일 굵기라 버튼에서 가짜 볼드가 그려진다. */
   .actBtn{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
     height:44px;padding:0 14px;cursor:pointer;overflow:hidden;
-    font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
-    border:1px solid var(--metal-edge);border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7);
-    transition:color .12s,border-color .12s}
-  /* 밑변 광원 — 양 끝에서 사라진다. ⚠ 전폭으로 그으면 카드 벽과 T자로 부딪혀 어색하다(유즈맵 구분선에서 겪었다) */
-  .actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
-  .actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
-  .actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);
-    box-shadow:0 0 9px var(--neon)}
-  .actBtn:active{transform:translateY(1px)}
-  .actBtn:disabled{cursor:default;color:#5f6772;border-color:#2b2d33;transform:none;
-    background:linear-gradient(180deg,#131316,#0a0a0c);box-shadow:inset 0 3px 6px -4px #000}
-  .actBtn:disabled::after{background:linear-gradient(90deg,transparent,#33363c,transparent);box-shadow:none}
+    font-family:var(--font-ko);font-size:var(--fs-xl);font-weight:800;letter-spacing:.02em;color:#c3cbd4;
+    border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar);background:rgba(255,255,255,.05);
+    transition:color .12s,border-color .12s,background .12s}
+  .actBtn::after{display:none}
+  .actBtn.pri{color:#fff;border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.14)}
+  /* 누른 표시 = 눌려 들어가는 것이 아니라 **면이 잠깐 밝아지는 것**(볼록하지 않으니 눌릴 것도 없다) */
+  .actBtn:active{background:rgba(255,255,255,.12)}
+  .actBtn.pri:active{background:rgba(255,255,255,.22)}
+  .actBtn:disabled{cursor:default;color:#5f6772;border-color:rgba(255,255,255,.07);background:rgba(255,255,255,.03)}
   /* 확정/취소 한 줄 — 취소는 좁게(주 동작이 넓다). .cpBtns 안에서만 적용한다 */
   .cpBtns .actBtn{flex:1;min-width:0}
   .cpBtns .actBtn.sub{flex:0 0 34%}
