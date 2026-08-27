@@ -15,7 +15,8 @@
 .f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard{clip-path:none!important;border-radius:var(--r-bar)}
 .f1 #exitConfirm,.f2 #exitConfirm,.f3 #exitConfirm,.f4 #exitConfirm,
 .f5 #exitConfirm,.f6 #exitConfirm,.f7 #exitConfirm,.f8 #exitConfirm{
-  background-image:none!important;background-color:rgba(3,4,8,.55)!important;backdrop-filter:none!important}
+  background-image:none!important;background-color:rgba(3,4,8,.55)!important;backdrop-filter:none!important;
+  z-index:999!important}   /* 목업 전용 — 배경 화면들이 저마다 오버레이를 갖고 있어 그 위로 올려야 보인다 */
 .f1 .ecTitle,.f2 .ecTitle,.f3 .ecTitle,.f4 .ecTitle,.f5 .ecTitle,.f6 .ecTitle,.f7 .ecTitle,.f8 .ecTitle{
   font-family:var(--font-ko)!important;text-shadow:none!important}
 .f1 .ecTitle::after,.f2 .ecTitle::after,.f3 .ecTitle::after,.f4 .ecTitle::after,
