@@ -1661,7 +1661,7 @@ function campRaceRender(){
       + '<span class="crDs">' + (S.sub || '') + ' · ' + (S.desc || '') + '</span></span>'
       + '<span class="crGoIc">' + (on ? '✓' : '›') + '</span></button>'; }
   ov.querySelector('.crRows').innerHTML = rows;
-  ov.querySelector('.crGo').textContent = (R.name || '') + '으로 시작';
+  ov.querySelector('.crGo').textContent = (R.name || '') + (typeof josaRo==='function'?josaRo(R.name):'으로') + ' 시작';
   if(typeof paintIcons === 'function') paintIcons(ov);
 }
 function campRaceSel(k){ if(!STK_RACES[k] || k === _campRacePick) return;

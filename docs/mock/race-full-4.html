@@ -1,0 +1,176 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>종족 선택 — 팝업 ↔ 전체 화면 4안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   「팝업이 밋밋하다 · 로딩·로그인처럼 전체 화면을 쓰고 싶다」에 대한 비교.
+   ⭐ 앞서 '전체 화면은 안 된다'고 본 근거는 **종족** 전장 그림이 3장뿐이라는 것이었다.
+      여기 넷은 **맵 키 아트**(assets/backgrounds/usemaps/*.webp · 7개 맵 전부 있다)를 쓰므로
+      그 제약이 없다. 로딩·로그인이 쓰는 공식을 그대로 빌린다:
+        키 아트 한 장  +  국소 스크림(#titleBg::before)  +  --loadDim(::after)
+   ⚠ 확인창(로그아웃·비밀번호)은 이 비교 밖이다 — 그건 흐름이 아니라 끼어드는 질문이라 팝업이 맞다.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --acc-sel:#5cd6ff;
+  --txt:#e7e9ee; --txt-mute:#9aa0a8; --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --mapAccent:#4aa8ff; --popDim:rgba(2,3,6,.84);
+  --art:url('../../assets/backgrounds/usemaps/nemo.webp');
+  /* 로딩·로그인의 딤 곡선 — css/00-base.css 와 같은 값 */
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(4,390px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base em{color:#ffd08a}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:88px}
+.sub b{color:#dfe6f0}
+
+.ph{position:relative;width:390px;height:700px;overflow:hidden;border-radius:5px;background:#04050b}
+/* 🖼 키 아트 = #titleBg 그대로 */
+.art{position:absolute;inset:0;background:var(--art) center center/cover no-repeat #04050b}
+.art::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+    rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+.art::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
+.scr{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;padding:18px 16px 20px}
+
+/* ── 공용 행(캠프 문법) ── */
+.rows{display:flex;flex-direction:column}
+.row{position:relative;display:flex;align-items:center;gap:11px;width:100%;
+  padding:13px 2px;background:none;border:0;text-align:left;color:inherit;font:inherit}
+.row::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.row:first-child::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.row.on{background:linear-gradient(90deg,var(--rc14),transparent 76%)}
+.row.on::after{background:linear-gradient(90deg,transparent,var(--rc),transparent);
+  box-shadow:0 0 8px var(--rc);opacity:.7}
+.ico{flex:0 0 auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+.ico img{width:100%;height:100%;object-fit:contain;display:block}
+.main{min-width:0;flex:1;display:flex;flex-direction:column}
+.nm{font-size:var(--fs-xl);font-weight:700;color:#8b939d}
+.row.on .nm{color:#fff}
+.ds{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+.go{flex:0 0 auto;color:#7b838d;font-size:13px}
+.row.on .go{color:var(--rc)}
+
+/* ── 공용 버튼 ── */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:44px;padding:0 14px;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.btns{display:flex;flex-direction:column;gap:8px}
+/* 판 없는 확정(캠프 .crGo) */
+.bare{position:relative;height:44px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;background:none;border:0}
+.bare::after{content:'';position:absolute;left:16%;right:16%;bottom:7px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+
+.ttl{font-family:var(--font-ti);font-size:21px;color:#fff;text-shadow:0 2px 8px #000}
+.hint{font-size:var(--fs-sm);color:#9aa4b2;margin-top:5px;text-shadow:0 1px 3px #000}
+.mapTag{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:#8fa3b8;
+  text-shadow:0 1px 3px #000}
+.mapTag i{font-style:normal;width:4px;height:4px;border-radius:50%;background:var(--mapAccent);
+  box-shadow:0 0 6px var(--mapAccent)}
+
+/* ═══ P0 · 지금 팝업(기준) ═══ */
+.p0 .ph{background:linear-gradient(180deg,#1a2740,#080c14)}
+.p0 .dimOv{position:absolute;inset:0;background:var(--popDim);backdrop-filter:blur(3px);z-index:1}
+.p0 .card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2;
+  width:350px;padding:20px 16px 16px;display:flex;flex-direction:column;
+  border-radius:var(--r-bar);background:#08080a;border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 16px 44px -12px #000,0 0 40px -16px var(--mapAccent)}
+.p0 .card::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
+  background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent),transparent 70%)}
+.p0 .card>*{position:relative;z-index:1}
+.p0 .cTtl{font-size:17px;font-weight:800;color:#eef1f6;text-align:center;margin-bottom:6px}
+.p0 .cHint{font-size:var(--fs-sm);color:var(--txt-mute);text-align:center;margin-bottom:14px}
+.p0 .rows{margin-bottom:10px;border-top:1px solid rgba(255,255,255,.08)}
+
+/* ═══ F1 · 전체 화면 · 캠프와 같은 배치(제목 위 · 목록 아래 · 판 없는 확정) ═══ */
+.f1 .scr{justify-content:flex-start}
+.f1 .rows{margin-top:auto}
+
+/* ═══ F2 · 전체 화면 · 로그인 구도(아트가 주인공 · 아래 블록에 내용) ═══ */
+.f2 .scr{justify-content:flex-end;padding:0 0 20px}
+.f2 .blk{padding:16px 16px 0;background:linear-gradient(180deg,transparent,rgba(4,6,11,.55) 22%,rgba(4,6,11,.82))}
+.f2 .ttl{font-size:19px}
+.f2 .rows{margin-top:12px}
+.f2 .btns{padding:12px 16px 0}
+
+/* ═══ F3 · 아트는 위 절반만 · 아래는 검정 판(아트 ↔ 목록이 갈린다) ═══ */
+.f3 .art{bottom:auto;height:46%}
+.f3 .art::after{background:linear-gradient(180deg,rgba(4,6,11,.04) 0%,rgba(4,6,11,.18) 46%,
+  rgba(5,6,10,.72) 80%,#07080c 100%)}
+.f3 .ph{background:#07080c}
+.f3 .scr{justify-content:flex-end}
+.f3 .head{position:absolute;left:16px;top:18px;right:16px;z-index:3}
+/* 윗머리 그늘 — 캠프 종족 선택과 같은 처리(밝은 하늘 위에서도 제목이 읽히게) */
+.f3 .art{--topBand:120px}
+.f3 .ph::before{content:'';position:absolute;left:0;right:0;top:0;height:120px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(3,5,9,.82) 0%,rgba(3,5,9,.46) 46%,transparent 100%)}
+.f3 .rows{margin-bottom:12px}
+</style></head><body>
+
+<script id="data" type="application/json">
+[["terran","유니온","인간 · 보병·기계","#4aa8ff","74,168,255","union"],
+ ["zerg","스웜","군체 · 유기체","#9fd356","159,211,86","swarm"],
+ ["protoss","에테리얼","외계 · 사이오닉","#ffc040","255,192,64","aetherial"]]
+</script>
+<div id="cols"></div>
+<script>
+const R=JSON.parse(document.getElementById('data').textContent), SEL=0;
+const vars=r=>`--rc:${r[3]};--rc14:rgba(${r[4]},.14)`;
+const rows=()=>`<div class="rows">`+R.map((r,i)=>
+ `<div class="row ${i===SEL?'on':''}" style="${vars(r)}">
+    <span class="ico"><img src="../../assets/icons/races/${r[5]}.webp" alt=""></span>
+    <span class="main"><span class="nm">${r[1]}</span><span class="ds">${r[2]}</span></span>
+    <span class="go">${i===SEL?'✓':'›'}</span></div>`).join('')+`</div>`;
+const MAP=`<span class="mapTag"><i></i>네모네모 디펜스</span>`;
+
+const V=[
+['p0','base','P0 — <em>지금 팝업</em> (기준)',
+ '검정 카드가 딤 위에 뜬다. 규칙에는 맞지만 <b>그림이 한 점도 없어</b> 밋밋하다. 뒤 화면은 블러로 지워져 「어느 맵인지」도 사라진다.',
+ `<div class="art" style="filter:saturate(.7)"></div><div class="dimOv"></div>
+  <div class="card"><div class="cTtl">종족 선택</div><div class="cHint">선택한 종족으로 게임을 플레이합니다</div>
+  ${rows()}<div class="btns"><div class="actBtn pri">유니온으로 시작</div><div class="actBtn">취소</div></div></div>`],
+
+['f1','','F1 — 전체 화면 · <em>캠프와 같은 배치</em>',
+ '제목은 위, 목록은 <b>아래에 밀착</b>, 확정은 판 없이 밑변 광원만. 캠프 종족 선택과 <b>같은 화면</b>이 된다 — 두 곳이 한 게임으로 읽힌다. 대신 캠프와 구별이 거의 없어진다.',
+ `<div class="art"></div><div class="scr">
+   <div class="ttl">종족 선택</div><div class="hint">${MAP}</div>
+   ${rows()}<div class="bare">유니온으로 시작</div></div>`],
+
+['f2','','F2 — 전체 화면 · <em>로그인 구도</em>',
+ '<b>아트가 주인공</b>이고 내용은 아래 블록에 앉는다. 로그인·로딩과 가장 닮은 구도라 <b>흐름이 안 끊긴다</b>. 목록이 아래로 몰려 그림을 가장 많이 남긴다.',
+ `<div class="art"></div><div class="scr">
+   <div class="blk"><div class="ttl">종족 선택</div><div class="hint">${MAP}</div>${rows()}</div>
+   <div class="btns"><div class="actBtn pri" style="margin:12px 16px 0">유니온으로 시작</div>
+     <div class="actBtn" style="margin:0 16px">취소</div></div></div>`],
+
+['f3','','F3 — 아트는 <em>위 절반만</em>',
+ '위는 그림, 아래는 검정 판으로 <b>또렷하게 갈린다</b>. 목록이 그림 위에 안 얹혀 가장 읽기 쉽고, 종족을 바꿀 때 <b>위쪽에 종족 그림을 넣을 자리</b>가 생긴다(지금은 맵 아트).',
+ `<div class="art"></div>
+  <div class="head"><div class="ttl">종족 선택</div><div class="hint">${MAP}</div></div>
+  <div class="scr">${rows()}<div class="btns"><div class="actBtn pri">유니온으로 시작</div>
+    <div class="actBtn">취소</div></div></div>`],
+];
+document.getElementById('cols').outerHTML=V.map(([k,c,t,d,body])=>`
+<div class="col ${k}"><p class="hd ${c}">${t}</p><p class="sub">${d}</p>
+  <div class="ph">${body}</div></div>`).join('');
+</script>
+</body></html>
