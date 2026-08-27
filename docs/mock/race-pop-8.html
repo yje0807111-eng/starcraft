@@ -1,0 +1,234 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>유즈맵 종족 선택 팝업 — 8안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   유즈맵(개인 플레이) 종족 선택 팝업을 지금 어휘로.
+   ⛔ 전체 화면(캠프 방식)으로 가지 않는다 — 판마다 고르는 선택이라 무게가 안 맞고,
+      전장 그림이 3종족치뿐인데 여긴 **5종족**이다.
+   ✔ 맞출 상대는 **바로 앞에 뜨는 난이도 팝업**이다(0.2초 간격으로 이어지는 두 장면).
+      껍데기 .cpCard / 상세 판 .sdDet / 스테퍼 .sdStepRow / 확정 .actBtn.pri 를 그대로 빌린다.
+   ✔ 캠프에서 빌리는 것은 **행의 문법**뿐이다 — 아이콘 · 이름 · 부제 · ✓/›
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --acc-sel:#5cd6ff;
+  --txt:#e7e9ee; --txt-mute:#9aa0a8;
+  --glass:rgba(255,255,255,.05); --glass-edge:rgba(255,255,255,.12);
+  --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --mapAccent:#4aa8ff;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(4,352px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:74px}
+.sub b{color:#dfe6f0}
+
+/* ── 무대 = 딤 위에 카드(난이도 팝업과 같은 껍데기) ── */
+.stage{position:relative;width:352px;height:560px;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#1a2740 0%,#101a2c 55%,#080c14 100%);
+  display:flex;align-items:center;justify-content:center}
+.stage::before{content:'';position:absolute;inset:0;background:rgba(2,3,6,.84)}
+.cpCard{position:relative;width:320px;max-height:520px;padding:20px 16px 16px;
+  display:flex;flex-direction:column;overflow:hidden;
+  border-radius:var(--r-bar);background:#08080a;border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 16px 44px -12px #000,0 0 40px -16px var(--mapAccent)}
+.cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
+  background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent),transparent 70%)}
+.cpCard>*{position:relative;z-index:1}
+.cpTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);
+  margin-bottom:6px;text-align:center}
+.cpHint{font-size:var(--fs-sm);color:var(--txt-mute);text-align:center;margin-bottom:14px}
+
+/* ── 공용 액션 버튼(.actBtn) — 원본 그대로 ── */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:40px;padding:0 14px;cursor:pointer;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.btns{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+
+/* ── 캠프에서 빌려온 행 문법 ── */
+.rows{display:flex;flex-direction:column}
+.row{position:relative;display:flex;align-items:center;gap:11px;width:100%;
+  padding:11px 2px;background:none;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.row::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.row:first-child::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.ico{flex:0 0 auto;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+.ico img{width:100%;height:100%;object-fit:contain;display:block}
+.main{min-width:0;flex:1;display:flex;flex-direction:column}
+.nm{font-size:var(--fs-xl);font-weight:700;color:#8b939d}
+.row.on .nm{color:#fff}
+.ds{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+.go{flex:0 0 auto;color:#7b838d;font-size:13px}
+.row.on .go{color:var(--acc-sel)}
+
+/* ═══ A1 · 행 목록 · 탭하면 바로 확정 ═══ */
+.a1 .btns .pri{display:none}
+
+/* ═══ A2 · 행 목록 + 「…으로 시작」 (캠프와 같은 확정) ═══ */
+
+/* ═══ A3 · 선택 행에 밑변 광원 ═══ */
+.a3 .row.on::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);
+  box-shadow:0 0 8px var(--neon);height:1px}
+.a3 .row.on .go{color:#fff}
+
+/* ═══ A4 · 왼쪽에 얇은 종족색 선(4px 색바 + 글로우의 절제판) ═══ */
+.a4 .row{padding-left:11px}
+.a4 .row::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:2px;
+  background:var(--rc);opacity:.42;border-radius:2px}
+.a4 .row:first-child::before{top:9px;bottom:9px;left:0;right:auto;height:auto;
+  background:var(--rc);opacity:.42}
+.a4 .row.on::before{opacity:1;box-shadow:0 0 7px var(--rc)}
+.a4 .rows{border-top:1px solid rgba(255,255,255,.08)}
+
+/* ═══ B1 · 난이도와 **완전히 같은** 스테퍼 + 상세 판 ═══ */
+.stepRow{display:flex;align-items:center;justify-content:center;gap:4px;width:100%}
+.arw{width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  color:#8b939d;font-size:20px;cursor:pointer;background:none;border:0}
+.stepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:23px;font-weight:700;
+  letter-spacing:1px;color:var(--rc);white-space:nowrap;
+  text-shadow:0 0 16px color-mix(in srgb,var(--rc) 40%,transparent)}
+.dots{display:flex;align-items:center;justify-content:center;gap:5px;margin:4px 0 12px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.16)}
+.dots i.on{width:14px;border-radius:3px;background:var(--rc)}
+.det{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
+  padding:16px 14px 14px;margin-bottom:8px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--rcRGB),.22);
+  box-shadow:inset 0 0 30px -18px var(--rc)}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--rc),transparent);box-shadow:0 0 7px -1px var(--rc)}
+.detBody{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+.detIco{width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:30px}
+.detIco img{width:100%;height:100%;object-fit:contain}
+.detSub{font-size:var(--fs-md);color:#8a929c;line-height:1.6}
+.units{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:2px}
+.units span{font-size:var(--fs-xs);color:#7d8b98;padding:3px 7px;border-radius:var(--r-bar);
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
+.b1 .detIco{display:none}
+
+/* ═══ C1 · 아이콘 그리드(3+2) ═══ */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.cell{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:13px 4px;cursor:pointer;border:1px solid rgba(255,255,255,.07);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#0e0e10,#070708)}
+.cell .ico{width:32px;height:32px;font-size:19px}
+.cell b{font-size:var(--fs-lg);font-weight:700;color:#8b939d}
+.cell i{font-style:normal;font-size:var(--fs-xs);color:#6f7883}
+.cell.on b{color:#fff}
+.cell.on{border-color:rgba(var(--rcRGB),.45)}
+.cell.on::after{content:'';position:absolute;left:16%;right:16%;bottom:1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--rc),transparent);box-shadow:0 0 8px var(--rc)}
+
+/* ═══ C2 · 아이콘 띠 + 아래 상세 ═══ */
+.strip{display:flex;gap:6px;margin-bottom:12px}
+.sCell{flex:1;position:relative;display:flex;align-items:center;justify-content:center;height:44px;cursor:pointer;
+  border-radius:var(--r-bar);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.sCell .ico{width:24px;height:24px;font-size:15px;opacity:.5}
+.sCell.on .ico{opacity:1}
+.sCell.on{background:rgba(255,255,255,.06);border-color:rgba(var(--rcRGB),.4)}
+.sCell.on::after{content:'';position:absolute;left:20%;right:20%;bottom:1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--rc),transparent);box-shadow:0 0 8px var(--rc)}
+
+/* ═══ D1 · 컴팩트 행(부제 없이 한 줄) ═══ */
+.d1 .row{padding:9px 2px}
+.d1 .ds{display:none}
+.d1 .nm{font-size:var(--fs-lg)}
+.d1 .ico{width:22px;height:22px;font-size:13px}
+</style></head><body>
+
+<script id="data" type="application/json">
+[["terran","유니온","인간 · 보병·기계","#4aa8ff","74,168,255","union","🛡️","레인저 · 공성전차 · 전함"],
+ ["zerg","스웜","군체 · 유기체","#9fd356","159,211,86","swarm","🦎","히드라 · 군단여왕 · 돌격괴수"],
+ ["protoss","에테리얼","외계 · 사이오닉","#ffc040","255,192,64","aetherial","🔮","검사 · 광전사 · 모함"],
+ ["feral","페럴","수인 · 야수 무리","#c98b5a","201,139,90","_none","🐺","늑대 · 독니 · 폭풍조"],
+ ["colossus","콜로서스","거신 · 중장 포격","#9aa6b2","154,166,178","_none","🗿","포격병 · 레일건 · 공성거신"]]
+</script>
+
+<div id="cols"></div>
+
+<script>
+const R=JSON.parse(document.getElementById('data').textContent);
+const ICO=(r,cls)=>r[5]==='_none'
+  ? `<span class="ico ${cls||''}">${r[6]}</span>`
+  : `<span class="ico ${cls||''}"><img src="../../assets/icons/races/${r[5]}.webp" alt=""></span>`;
+const vars=r=>`--rc:${r[3]};--rcRGB:${r[4]}`;
+const SEL=0;   // 고른 종족 = 유니온
+
+const rows=(cls='')=>`<div class="rows">`+R.map((r,i)=>
+  `<button class="row ${i===SEL?'on':''} ${cls}" style="${vars(r)}">${ICO(r)}
+     <span class="main"><span class="nm">${r[1]}</span><span class="ds">${r[2]}</span></span>
+     <span class="go">${i===SEL?'✓':'›'}</span></button>`).join('')+`</div>`;
+
+const stepper=(showIco)=>{const r=R[SEL];return `
+  <div class="stepRow" style="${vars(r)}"><button class="arw">‹</button>
+    <div class="stepTx">${r[1]}</div><button class="arw">›</button></div>
+  <div class="dots" style="${vars(r)}">${R.map((_,i)=>`<i class="${i===SEL?'on':''}"></i>`).join('')}</div>
+  <div class="det" style="${vars(r)}"><div class="detBody">
+    ${showIco?`<span class="detIco">${ICO(r).replace('class="ico "','class=""')}</span>`:''}
+    <div class="detSub">${r[2]}</div>
+    <div class="units">${r[7].split(' · ').map(u=>`<span>${u}</span>`).join('')}</div>
+  </div></div>`;};
+
+const grid=()=>`<div class="grid">`+R.map((r,i)=>
+  `<div class="cell ${i===SEL?'on':''}" style="${vars(r)}">${ICO(r)}<b>${r[1]}</b><i>${r[2].split(' · ')[1]}</i></div>`
+).join('')+`</div>`;
+
+const strip=()=>{const r=R[SEL];return `<div class="strip">`+R.map((x,i)=>
+  `<div class="sCell ${i===SEL?'on':''}" style="${vars(x)}">${ICO(x)}</div>`).join('')+`</div>
+  <div class="det" style="${vars(r)}"><div class="detBody">
+    <div style="font-family:var(--font-num);font-size:20px;font-weight:700;color:${r[3]}">${r[1]}</div>
+    <div class="detSub">${r[2]}</div>
+    <div class="units">${r[7].split(' · ').map(u=>`<span>${u}</span>`).join('')}</div>
+  </div></div>`;};
+
+const V=[
+ ['a1','A1 — <em>행 목록</em> · 탭하면 바로 시작',
+  '캠프의 행 문법을 그대로 가져온다(아이콘·이름·부제·✓). <b>지금 동작 그대로</b> 누르는 즉시 시작 — 버튼이 없어 한 단계가 짧다. 가장 작은 변화.',
+  ()=>rows()+`<div class="btns"><button class="actBtn">취소</button></div>`],
+ ['a2','A2 — 행 목록 + <em>「…으로 시작」</em>',
+  '고르고 → 확정. <b>캠프와 완전히 같은 두 단계</b>라 두 화면이 형제로 읽힌다. 잘못 눌러도 되돌릴 여지가 생긴다.',
+  ()=>rows()+`<div class="btns"><button class="actBtn pri">유니온으로 시작</button><button class="actBtn">취소</button></div>`],
+ ['a3','A3 — 선택 행에 <em>밑변 광원</em>',
+  '고른 행의 밑줄이 <b>붉게 발광</b>한다 — 네비·버튼이 쓰는 그 서명. 목록 어디를 보든 「지금 고른 것」이 한눈에 잡힌다.',
+  ()=>rows()+`<div class="btns"><button class="actBtn pri">유니온으로 시작</button><button class="actBtn">취소</button></div>`],
+ ['a4','A4 — 왼쪽 <em>얇은 종족색 선</em>',
+  '지금의 4px 색바 + 글로우를 <b>2px</b>로 절제해 남긴다. 다섯 종족이 <b>색으로도</b> 갈려 이름을 안 읽어도 훑힌다.',
+  ()=>rows()+`<div class="btns"><button class="actBtn pri">유니온으로 시작</button><button class="actBtn">취소</button></div>`],
+ ['b1','B1 — 난이도와 <em>같은 스테퍼</em>',
+  '◀ 이름 ▶ + 점 다섯 + 상세 한 장. <b>바로 앞 화면과 쌍둥이</b>가 된다 — 손이 이미 배운 동작이라 설명이 필요 없다. 대신 다섯을 한눈에 못 본다.',
+  ()=>stepper(false)+`<div class="btns"><button class="actBtn pri">이 종족으로 시작</button><button class="actBtn">취소</button></div>`],
+ ['b2','B2 — 스테퍼 + <em>큰 아이콘</em>',
+  'B1 과 같고 상세 판 가운데에 <b>종족 아이콘을 크게</b> 놓는다. 빈 판을 메우고, 이름보다 그림이 먼저 들어온다.',
+  ()=>stepper(true)+`<div class="btns"><button class="actBtn pri">이 종족으로 시작</button><button class="actBtn">취소</button></div>`],
+ ['c1','C1 — <em>아이콘 그리드</em> 3+2',
+  '다섯을 <b>한 화면에 펼친다</b>. 훑는 속도가 가장 빠르고 카드가 짧아진다. ⚠ 아이콘이 주인공이라 <b>그림 없는 두 종족</b>이 가장 크게 티 난다.',
+  ()=>grid()+`<div class="btns"><button class="actBtn pri">유니온으로 시작</button><button class="actBtn">취소</button></div>`],
+ ['c2','C2 — <em>아이콘 띠</em> + 아래 상세',
+  '위는 탭 띠(공용 <b>segNav</b> 문법), 아래는 고른 종족 상세. 고르기와 설명이 갈려 <b>둘 다 넉넉</b>하다. 장비창·업그레이드 탭과 같은 어법.',
+  ()=>strip()+`<div class="btns"><button class="actBtn pri">유니온으로 시작</button><button class="actBtn">취소</button></div>`],
+];
+
+document.getElementById('cols').outerHTML = V.map(([k,t,d,body])=>`
+<div class="col ${k}"><p class="hd">${t}</p><p class="sub">${d}</p>
+  <div class="stage"><div class="cpCard ${k}">
+    <div class="cpTitle">종족 선택</div>
+    <div class="cpHint">선택한 종족으로 게임을 플레이합니다</div>
+    ${body()}
+  </div></div></div>`).join('');
+</script>
+</body></html>
