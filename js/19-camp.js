@@ -96,6 +96,7 @@ function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg |
 //      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
 const CAMP_REB_COST = 1e6;        // 환생 관문 = 포인트 공식의 기준선과 같은 숫자
 const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가
+const CAMP_GAS_SHARE = 0.25;      // ⛽ 일꾼 중 가스로 보내는 비율(잠정 — 설계표 §2-3-2 나오면 교체)
 const CAMP_REB_K = 0.8, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
 const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
 
@@ -541,7 +542,11 @@ function campBattleClose(){ CAMPB = null; }
 //
 // ⚠ 부서진 건물은 **그 판에서만** 부서진다 — 캠프로 돌아오면 그대로 있다.
 //   유닛 부활과 같은 철학이다(대가는 비용이 아니라 시간 · HUNT_R1 §5-4).
-const CAMP_BLD_HP = 1200;          // 건물 한 채의 기본 체력(본부는 전장 기본값을 쓴다)
+// ⚠ **설계 스케일**(§3-1 의 1/10 체계)에 맞춘 값이다 — 유닛 체력이 4~47 이고 공격이 1~31 인
+//   판에서 1200 을 두면 아군 하나가 건물을 부수는 데 수백 초가 걸린다(전에 그 값이었다).
+//   전함(체력 47)의 25배 = 한 채를 레인저(공격 1) 넷이 5분쯤 두드리는 크기다.
+//   ⛔ 설계표(§6-6 본부 체력)가 나오면 그 값으로 바꿀 것 — 지금은 잠정이다.
+const CAMP_BLD_HP = 1200 / 10;     // 건물 한 채의 기본 체력(본부는 전장 기본값을 쓴다)
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
@@ -791,6 +796,7 @@ function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 //      그래야 탱크가 마린보다 단단하다는 유닛별 차이가 살아남는다.
 function campScaleFoes(list){
   if(!list || !list.length) return 0;
+  campDesignStats(list);                          // ⚔ 설계 능력치 먼저 — 그 뒤에 난이도 정규화가 총량을 맞춘다
   const diff = campFoeDiff(campDgN(), campCleared());
   let hp0 = 0, dmg0 = 0;
   for(const u of list){ hp0 += (u.maxHp || 0) + (u.maxSh || 0); dmg0 += (u.dmg || 0); }
@@ -817,14 +823,59 @@ const CAMP_FOE_RNG_K = 0.9;        // 아군 최소 사거리의 이만큼까지
 const CAMP_FOE_RNG_FB = 168;       // 아군이 아직 전장에 없을 때(레인저 187 × 0.9)
 function campFoeRngCap(){
   if(!CAMPB || !CAMPB.me) return CAMP_FOE_RNG_FB;
+  // ⚠ **근접 유닛은 기준에서 뺀다.** 어차피 붙어야 때리므로 얘네로 상한을 잡으면
+  //   적 사거리가 46 까지 내려가 원거리 적이 통째로 근접 유닛이 된다.
   let min = Infinity;
-  for(const u of CAMPB.me.units){ if(u.dead) continue;
-    if(!(u.dmg > 0) || !(u.rng > 0)) continue;     // 의무병처럼 안 때리는 유닛은 기준이 아니다
-    if(u.rng < min) min = u.rng; }
-  for(const u of (CAMPB._down || [])){ if(!(u.dmg > 0) || !(u.rng > 0)) continue;
-    if(u.rng < min) min = u.rng; }
+  const see = (u) => { if(!u || u.dead) return;
+    if(!(u.dmg > 0) || !(u.rng > 0) || u.melee) return;
+    if(u.rng < min) min = u.rng; };
+  for(const u of CAMPB.me.units) see(u);
+  for(const u of (CAMPB._down || [])) see(u);
   return (min === Infinity) ? CAMP_FOE_RNG_FB : min * CAMP_FOE_RNG_K;
 }
+
+// ── ⚔ 캠프 전용 능력치 — HUNT_R1 §3-1 / §3-A / §3-B (2026-08-27) ────────
+// ⭐ **캠프는 설계표가 단일 소스다.** 사용자가 「체력과 공격을 다 −10해서 1, 5, 2.2, 8 같은
+//   수치로 낮추겠다」고 새로 정한 체계라, 코드값(U 표)과 처음부터 다른 표다.
+//   ⚠ 인구는 예외 — 그건 **코드가 단일 소스**다(사용자가 원래 정해 둔 값을 되돌린 것).
+// ⛔ **U · STK_UNITS · TECH_SPEC 을 고치지 말 것** — 멀티 대전과 오각형 상성(RACES.md)이
+//   같이 바뀐다. 가격·적 사거리와 같은 방식으로 **소환된 개체의 값만** 덮는다.
+// 표기: a=공격 · h=체력 (설계표는 1/10 스케일이라 ×10 해서 엔진 값으로 쓴다)
+//       r=사거리(칸) · c=주기(초). 안 때리는 유닛은 a·r·c 를 비운다.
+// ⚠ **설계 스케일을 그대로 쓴다(×1).** §3-1 은 1/10 스케일이고 적 체력 기본값(CAMP_FOE_HP0=40)·
+//   본부 체력도 **같은 스케일**로 정해져 있다. 여기서 ×10 을 하면 아군만 10배 세진다.
+const CAMP_STAT_HPK = 1, CAMP_STAT_ATK = 1;
+const CAMP_STAT_TILE = 850 * 0.22 / 4;             // 칸 → 월드 거리. 레인저 4칸이 지금 엔진 값(187)과 같아지게 맞췄다
+const CAMP_UNIT_STAT = {
+  // 유니온 §3-1 (⚠ 레이서·저격수는 §3-1-1 조정분이 들어 있다)
+  marine:{a:1,h:5,r:4.0,c:1.0}, machinegun:{a:2.2,h:8,r:1.5,c:0.9}, racer:{a:2.5,h:7,r:3.5,c:0.8},
+  goliath:{a:3,h:14,r:5.0,c:1.0}, ghost:{a:4,h:9,r:7.0,c:1.6}, medic:{h:23,r:2.0},
+  pelican:{h:27}, aegis:{h:23}, tank:{a:12,h:22,r:10.0,c:2.2}, skyguard:{a:4.5,h:22,r:5.0,c:1.0},
+  hellfire:{a:10,h:28,r:6.0,c:1.6}, dreadnought:{a:31,h:47,r:6.0,c:2.0},
+  // 스웜 §3-A
+  snapper:{a:1.2,h:4,r:1.0,c:0.8}, hydra:{a:1.8,h:6,r:4.0,c:1.0}, stinger:{a:6.5,h:2,r:1.0,c:2.5},
+  wyvern:{a:3,h:12,r:3.0,c:1.0}, medusa:{h:14}, ultralisk:{a:14,h:38,r:1.0,c:1.4}, overlord:{h:20},
+  // 에테리얼 §3-B — ⭐ 실드를 체력에 합쳐 본다(그래서 실드는 0 으로 만든다)
+  blade:{a:3,h:16,r:1.0,c:0.9}, dragoon:{a:4,h:18,r:4.0,c:1.2}, dark_templar:{a:6.5,h:12,r:1.0,c:1.3},
+  falcon:{a:3.5,h:20,r:4.0,c:1.0}, skydancer:{a:3,h:20,r:5.0,c:0.8}, reaver:{a:20,h:18,r:8.0,c:3.0},
+  kronos:{a:8,h:35,r:5.0,c:1.4}, archangel:{a:6,h:45,r:8.0,c:0.9}, high_templar:{h:8},
+  seraph:{h:14}, observer:{h:6} };
+// 소환된 개체 하나에 설계값을 얹는다. ⚠ **한 번만** 걸어야 한다(_campStat 표시).
+function campDesignStat(u){
+  if(!u || u._campStat) return false;
+  const d = CAMP_UNIT_STAT[u.gm || u.id]; if(!d) return false;
+  u._campStat = true;
+  if(d.h != null){ const hp = d.h * CAMP_STAT_HPK;
+    u.maxHp = hp; u.hp = hp;
+    u.sh = 0; u.maxSh = 0; }              // ⭐ 실드는 체력에 합친 값이다 — 따로 두면 두 번 센다
+  if(d.a != null) u.dmg = d.a * CAMP_STAT_ATK;
+  if(d.c != null) u.cdMax = Math.max(0.45, d.c);
+  if(d.r != null){ u.rng = d.r * CAMP_STAT_TILE;
+    if(typeof strikeAcq === 'function') u.acq = strikeAcq(u.rng);
+    u.melee = d.r <= 1.0; }               // 1칸 = 근접
+  return true;
+}
+function campDesignStats(list){ let n = 0; for(const u of (list || [])) if(campDesignStat(u)) n++; return n; }
 
 // 🌳 아군 강화 — 갓 출격한 내 유닛에 트리 배수를 얹는다(HUNT_R1 §4-5-3).
 //   ⭐ 적(campScaleFoes)과 달리 **개체 값에 그대로 곱한다** — 적은 '무리 총량'을 난이도에 맞추지만
@@ -832,6 +883,7 @@ function campFoeRngCap(){
 //   ⚠ 같은 유닛에 두 번 걸지 말 것 — 출격 직후 새로 나온 것만 넘긴다(_campRtOn 표시).
 function campScaleAllies(list){
   if(!list || !list.length) return 0;
+  campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 트리 배수는 그 위에 곱한다
   const atk = campRtMul('atk'), hp = campRtMul('hp');
   if(atk === 1 && hp === 1) return 0;
   let n = 0;
@@ -893,6 +945,7 @@ function campAlive(side){ if(!CAMPB) return 0; let n = 0;
 // 한 프레임 — 전투를 굴리고 승패를 본다.
 //   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
 const CAMP_ROUND_GAP_S = 1.5;      // 라운드 사이 숨 고르기
+const CAMP_SORTIE_S = 3;           // 🚚 증원 간격(초) — 라운드 도중에도 이만큼마다 내보낸다
 function campCombatStep(dt){
   const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
   if(!CAMPB) campBattleOpen();
@@ -909,6 +962,12 @@ function campCombatStep(dt){
       campSpawnFoes(); }
     return; }
   if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
+  // 🚚 **라운드 도중에도 증원을 내보낸다** (2026-08-27)
+  //   ⛔ 예전엔 라운드 갭에서만 출격했다. 그래서 판이 밀려 아군이 전멸하면 **그 라운드가
+  //     영원히 안 끝났다** — 기지에 57기가 대기 중인데 한 기도 못 나갔다(실측 D2R1).
+  //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다.
+  CAMPB._soT = (CAMPB._soT || 0) - dt;
+  if(CAMPB._soT <= 0){ CAMPB._soT = CAMP_SORTIE_S; campSortie(); }
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
@@ -1718,6 +1777,18 @@ function campAutoGather(){
   const idle = (G.tech.ents || []).filter(function(w){
     return w.type === 'worker' && w.build == null && !w._gKind; });
   if(!idle.length) return 0;
+  // ⛽ **가스에도 붙인다.** 예전엔 일꾼을 전부 미네랄에만 보냈다 — 그래서 캠프의 가스 수입이
+  //   **0** 이었고, 가스가 드는 유닛(화력병·의무병·기갑병·공성전차…)을 한 기도 못 샀다.
+  //   실측(2026-08-27 · 3시간): 56분 동안 나온 유닛이 **레인저·레이서 둘뿐**이었다.
+  //   ⚠ 비율은 잠정이다 — 설계표(§2-3-2)가 정해지면 그 값으로 바꿀 것.
+  { const gb = (G.tech.ents || []).find(function(e){
+      return e.type === 'bldg' && (e.bt || 0) <= 0 && !e._dead
+          && ((typeof techGetBldg === 'function' ? (techGetBldg(G.tech.race, e.bk) || {}) : {}).gas); });
+    if(gb && typeof _techAssignGather === 'function'){
+      const onGas = (G.tech.ents || []).filter(function(w){ return w.type === 'worker' && w._gKind === 'gas'; }).length;
+      const want = Math.max(0, Math.round((G.tech.ents || []).filter(function(w){ return w.type === 'worker'; }).length * CAMP_GAS_SHARE) - onGas);
+      for(let i = 0; i < want && idle.length; i++) _techAssignGather([idle.shift()], 'gas', gb.eid);
+      if(!idle.length) return want; } }
   // ⛏ **덩이별로 고르게 나눈다.** 예전에는 전부 mins[0] 한 곳에 몰아넣었고,
   //   원본의 분산(_techAssignGatherMineral)은 cap 을 모르는 채 "차 있나"만 보므로
   //   일꾼이 많아지면 한 덩이에 쌓여 줄만 섰다 — 실측: 20기·40기에서 수입이 **0** 이었다.
@@ -2248,10 +2319,16 @@ const CAMP_UNIT_R = 1.15;
 //   아직 안 나왔다. 미네랄이 오른 비율만큼 가스도 올렸더니 **화력병 가스 5,000** 이 되어
 //   가스 유닛을 한 기도 못 샀다(실측 2026-08-27: 25분 내내 마린만 나왔다). 원값 그대로 둔다.
 const CAMP_UNIT_PRICE = {
+  // 유니온 (§3-1)
   marine:5000, machinegun:10000, racer:8000, goliath:20000, ghost:20000, medic:20000,
-  pelican:25000, aegis:20000, tank:35000, skyguard:35000, hellfire:50000, dreadnought:100000 };
-// ⚠ **유니온(테란) 표만 나왔다.** 스웜·에테리얼 등은 설계표가 없어 일단 일률 배수를 쓴다 —
-//   유니온 12종의 비율 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채워 넣을 것.
+  pelican:25000, aegis:20000, tank:35000, skyguard:35000, hellfire:50000, dreadnought:100000,
+  // 스웜 (§3-A) — ⭐ 싸고 얇다. 인구 1짜리가 둘이라 머릿수로 민다
+  snapper:4000, hydra:6000, stinger:8000, wyvern:16000, medusa:18000, ultralisk:55000, overlord:10000,
+  // 에테리얼 (§3-B) — ⭐ 비싸고 두껍다(실드를 체력에 합쳐 본다)
+  blade:12000, dragoon:18000, dark_templar:25000, falcon:22000, skydancer:30000, reaver:45000,
+  kronos:50000, archangel:90000, high_templar:20000, seraph:25000, observer:12000 };
+// ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
+//   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
 const CAMP_UNIT_PRICE_MUL = 200;
 function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
   return (v != null) ? v : Math.round((m || 0) * CAMP_UNIT_PRICE_MUL); }

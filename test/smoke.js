@@ -1478,6 +1478,25 @@ async function groupLobby(){
       { if(typeof campFoeId==='function' && typeof SB_ATK_MODE!=='undefined'){
           for(let i=0;i<40;i++){ const id=campFoeId();
             if(id) assert(SB_ATK_MODE[id]!=='air','공중 전용 적이 뽑혔다: '+id); } } }
+      // ⚔ **캠프 전용 능력치** — §3-1/§3-A/§3-B 가 단일 소스. 인구만 코드가 이긴다.
+      //    ⛔ U · STK_UNITS · TECH_SPEC 을 고치면 멀티 대전과 오각형 상성이 같이 바뀐다.
+      //      소환된 개체 값만 덮어야 한다.
+      if(typeof campDesignStat==='function'){
+        const uDmg0=U.marine.dmg, uHp0=U.marine.hp;
+        const m=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return STK.me.units[STK.me.units.length-1]; });
+        assert(m,'레인저를 못 만들었다');
+        assert(campDesignStat(m),'설계 능력치가 안 걸렸다');
+        assert(m.maxHp===5 && m.hp===5,'레인저 체력이 설계값(5)이 아니다: '+m.maxHp);
+        assert(m.dmg===1,'레인저 공격이 설계값(1)이 아니다: '+m.dmg);
+        assert(Math.abs(m.cdMax-1.0)<1e-9,'레인저 주기가 설계값(1.0)이 아니다: '+m.cdMax);
+        assert(Math.abs(m.rng-4*CAMP_STAT_TILE)<1e-6,'레인저 사거리가 설계값(4칸)이 아니다: '+m.rng);
+        assert(!campDesignStat(m),'같은 유닛에 두 번 걸렸다');
+        // ⛔ 공용 표는 그대로여야 한다
+        assert(U.marine.dmg===uDmg0 && U.marine.hp===uHp0,'U 표를 건드렸다 — 멀티 대전이 바뀐다');
+        // §3-1-1 조정분이 들어 있는가
+        assert(CAMP_UNIT_STAT.racer.a===2.5 && CAMP_UNIT_STAT.racer.c===0.8,'레이서 조정분(2.5·0.8)이 없다');
+        assert(CAMP_UNIT_STAT.ghost.a===4,'저격수 조정분(4)이 없다');
+        m.dead=true; }
       // 🎯 **적 사거리는 아군 최소 사거리보다 짧다** (2026-08-27 · 캠프 전용)
       //    ⛔ 안 걸면 라운드가 안 끝난다 — 적이 아군보다 멀리서 쏘는데 아군은 제자리 방어라
       //      다가가지 않고, 맞은 만큼 의무병이 채워 준다(실측: R31 55초).

@@ -54,7 +54,10 @@ await pg.evaluate(()=>{
   // ⚠ 상한은 **설계값**을 쓴다(HUNT_R1 §1). 12기로 묶어 두면 일꾼 축을 잰 것이 아니게 된다 —
   //   광맥 cap 을 연 뒤로 일꾼 수가 수입에 선형이라(실측 40기 137/초) 여기가 결과를 좌우한다.
   __CB.want={}; __CB.wkCap=(typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:40;
-  { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1,5)) __CB.want[b.k]=1;
+  // 🏭 **생산 건물을 전부 열어 둔다.** 예전엔 앞 4채만 지어서 병영 계열 3종밖에 안 나왔고,
+  //   그러면 반복 구매(×1.15)가 마린에 쏠린다 — 12종이 열려야 조합이 의미를 갖는다.
+  //   ⚠ 값·선행은 __CB.build 가 본다(못 지으면 그냥 넘어간다).
+  { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1)) __CB.want[b.k]=1;
   }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
@@ -183,6 +186,15 @@ await pg.evaluate(()=>{
       try{ G.tech.sel=best.be.eid; techDoProduce(best.p.id, best.b.k); }catch(e){ break; }
       if(typeof campSyncUnitCost==='function') campSyncUnitCost();     // 산 즉시 다음 마리 값이 오른다
     } };
+  // 💰 **수입의 절반은 경제, 절반은 병력** (2026-08-27 · sc-3 요청)
+  //   ⛔ ROI 만 보면 한쪽으로 쏠려 실측이 왜곡된다 — 실제로 유닛을 사느라 업그레이드가 멎어
+  //     초당 수입이 6,902 → 2,909 로 줄었다. 사람도 그렇게 몰아 쓰지 않는다.
+  //   ⚠ 지갑은 하나(G.tech.credit)라 **누적 지출**로 가른다.
+  { const oP=__CB.produce, oB=__CB.buy;
+    __CB.produce=function(){ if((__CB.spentU||0) >= campWealth()*0.5) return;
+      const c0=G.tech.credit||0; oP(); __CB.spentU=(__CB.spentU||0)+Math.max(0,c0-(G.tech.credit||0)); };
+    __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
+      const c0=G.tech.credit||0; oB(); __CB.spentE=(__CB.spentE||0)+Math.max(0,c0-(G.tech.credit||0)); }; }
   __CB.tick=function(sec){
     const dt=0.05, n=Math.round(sec/dt);
     for(let i=0;i<n;i++){
