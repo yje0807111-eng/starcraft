@@ -602,19 +602,33 @@
     transition:background .16s}
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
+  /* ⚠ 딤은 옅게(.55) — 카드 자신이 무채 틴트로 갈리므로 딤이 다 가릴 필요가 없다.
+     ⚠ 흐림은 남긴다 — 「창이 뜨면 뒤가 흐려진다」는 전 팝업 공통 규칙이고 스모크가 잰다(≥1.5px).
+     ⛔ 시안 방사 그라데이션을 되살리지 말 것 — 시안은 §2 에서 '지금 선택된 것' 전용이다. */
   #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
-    background-color:rgba(2,3,6,.6);
-    background-image:radial-gradient(ellipse 290px 180px at 50% 50%,rgba(92,214,255,.14),transparent 72%);
-    backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
+    background-color:rgba(3,4,8,.55);
+    backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   #exitConfirm.hide{display:none}
-  /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
-  .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:18px 14px 17px;box-sizing:border-box;text-align:center;
-    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
-  .ecTitle{position:relative;font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
+  /* ══ 딤 위 카드의 면 — 「무채 틴트 + 뒤 채도 빼기」(2026-08-26 · F10 확정) ══════
+     유즈맵/캠프 **하단 프로필 시트(.bp::before)** 가 쓰는 그 방식이다. 축이 둘인 것이 핵심:
+       · 뒤 채도 빼기 — 색 있는 배경(캠프 지형)에서 일한다. 색을 **더하지 않고** 그 자리만 무채로 만든다.
+       · 무채 틴트   — 원래 채도가 낮은 배경(우주·어두운 전장)에서 일한다. 거기선 뺄 색이 없기 때문이다.
+     ⛔ 하나만 쓰지 말 것. 채도 빼기만 쓰면(F3) 캠프에서만 보이고 나머지 네 화면에서 뒤 글자가 그대로 비친다
+        — 배경 다섯 곳에서 재서 확인했다(docs/mock/exit-face-bg.shot.mjs).
+     ⛔ 면에 색을 얹지 말 것(남색·청록). 2026-08-13 에 푸른기를 걷어냈고 스모크가 잰다.
+     ⚠ 틴트 세기 .85/.7 은 「뒤 글자가 안 비치는」 값이다. 낮추면 뒤 목록·메뉴 글자가 카드 안으로 읽힌다. */
+  .ecCard{width:86%;max-width:320px;padding:18px 16px 17px;box-sizing:border-box;text-align:center;
+    position:relative;overflow:hidden;border-radius:var(--r-bar);background:none;border:0;box-shadow:none}
+  .ecCard::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:
+      linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+      linear-gradient(180deg,rgba(26,28,32,.85),rgba(16,18,21,.7));
+    backdrop-filter:saturate(.45) brightness(.9);-webkit-backdrop-filter:saturate(.45) brightness(.9)}
+  /* 제목 = 본문 글꼴 · 밑줄은 중립 흰선(옛 시안 폐지) */
+  .ecTitle{position:relative;font-family:var(--font-ko);font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;
     margin-bottom:11px;padding-bottom:9px}
-  .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ecAcc),transparent 72%);opacity:.5}
+  .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent)}
   .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px;justify-content:center}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
@@ -640,6 +654,10 @@
     font-family:var(--font-ko);font-weight:800;letter-spacing:.02em;
     background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);box-shadow:none;color:#c3cbd4}
   .ecCard .ecGo,.hbModal .ecGo,#ovBtn{border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.14);color:#fff}
+  /* ⚠ 「나가기」는 **되돌릴 수 없는 동작**이라 여기만 붉다(2026-08-26 · E8).
+     ⛔ 다른 주 동작(확인·만들기·시작)에 이 붉은색을 퍼뜨리지 말 것 — 위험 표시가 뜻을 잃는다. */
+  #exitConfirm .ecGo{color:#ff8a94;border-color:rgba(255,107,122,.55);background:rgba(255,107,122,.1)}
+  #exitConfirm .ecGo:active{background:rgba(255,107,122,.22)}
   /* 누른 표시 = 눌려 들어가는 것이 아니라 면이 잠깐 밝아지는 것 */
   .ecCard .ecCancel:active,.hbModal .ecCancel:active,#ovBtn2.ghost:active{background:rgba(255,255,255,.12);box-shadow:none}
   .ecCard .ecGo:active,.hbModal .ecGo:active,#ovBtn:active{background:rgba(255,255,255,.22);box-shadow:none}
