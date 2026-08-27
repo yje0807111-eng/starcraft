@@ -210,9 +210,10 @@
           </div>
           <div class="cpSection">
             <label class="cpLabel">공개 설정</label>
-            <div class="cpSeg" id="cpVis">
-              <button class="cpSegBtn on" data-v="public" onclick="setRoomVis('public')"><span data-ico="globe"></span>공개</button>
-              <button class="cpSegBtn" data-v="private" onclick="setRoomVis('private')"><span data-ico="lock"></span>비공개</button>
+            <!-- 둘 중 하나 고르기 = 설정 창의 그래픽 품질과 같은 컴포넌트(.setSeg/.segBtn). 새 토글을 만들지 말 것 -->
+            <div class="setSeg" id="cpVis">
+              <button class="segBtn on" data-v="public" onclick="setRoomVis('public')"><span data-ico="globe"></span>공개</button>
+              <button class="segBtn" data-v="private" onclick="setRoomVis('private')"><span data-ico="lock"></span>비공개</button>
             </div>
             <div class="cpPwWrap hide" id="cpPwWrap">
               <label class="cpLabel">비밀번호</label>
@@ -576,11 +577,8 @@
         <button class="twSheetX" onclick="twCloseChat()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
       </div>
       <div class="msSocial inTown">
-        <div class="msTabs2">
-          <button class="msTab2 on" data-bt="chat" onclick="setBottomTab('chat')"><span data-ico="chat"></span>채팅</button>
-          <button class="msTab2" data-bt="party" onclick="setBottomTab('party')"><span data-ico="party"></span>파티</button>
-          <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
-        </div>
+        <!-- 탭 띠 = 공용 세그먼트 바(segNavHTML) — renderSocialTabs()가 채운다. ⛔ 버튼을 여기 직접 쓰지 말 것 -->
+        <div class="msTabs2" id="msBottomTabs"></div>
         <div class="msChatWrap" id="msChatWrap">
           <div class="msChat" id="msChat" data-scope="all"></div>
           <div class="msChatBar" id="msChatBar">
@@ -603,12 +601,8 @@
       <div class="twSheetHead"><b>친구</b>
         <button class="twSheetX" onclick="twCloseSocial()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
       </div>
-      <div class="msTabs2" id="hubFriendTabs">
-        <button class="msTab2 on" data-fil="all" onclick="setFriendFilter('all',this)"><span data-ico="friend"></span>전체</button>
-        <button class="msTab2" data-fil="usemap" onclick="setFriendFilter('usemap',this)"><span data-ico="map"></span>유즈맵</button>
-        <button class="msTab2" data-fil="rpg" onclick="setFriendFilter('rpg',this)"><span data-ico="hero"></span>RPG</button>
-        <button class="msTab2" data-fil="close" onclick="setFriendFilter('close',this)"><span data-ico="fav"></span>친한친구</button>
-      </div>
+      <!-- 친구 필터 띠 = 공용 세그먼트 바(segNavHTML) — renderHubFriendTabs()가 채운다 -->
+      <div class="msTabs2" id="hubFriendTabs"></div>
       <div class="hsList uiScroll" id="hubFriends"></div>
     </div>
   <!-- 하단 네비(전역) — 화면이 아니라 #phone 위에 떠 있다. 칸은 NAV_TREE 를 보고 navPaint()가 만든다 -->

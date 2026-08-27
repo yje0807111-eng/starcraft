@@ -230,35 +230,54 @@ async function groupLobby(){
   //   목록용 .mapItem을 늘려 쓰던 방식은 큰 빈 상자가 되어 폐기했다 — 재질·배지·타이포를 소셜 기준으로 맞춘다.
   // 카드 하단 바로가기(인기맵 / 내 캐릭터)와 소셜 고정 높이.
   // 허브 소셜: 상단(게임 선택)과 시각적으로 분리되고, '친구'가 한눈에 읽혀야 한다.
-  // 허브 소셜 탭 = 유즈맵 하단 탭(채팅·파티·친구)과 같은 .msTabs2/.msTab2 단일 소스.
-  await step('탭 바 단일 소스: 친구 시트 = 마을 채팅 시트', ()=>{
-    const hub=$('hubFriendTabs'); skipIf(!hub,'친구 시트 탭 없음');
-    assert(hub.classList.contains('msTabs2'),'친구 시트가 공용 탭 바(.msTabs2)를 안 씀');
-    // 채팅 블록은 유즈맵 → 마을(#twChat)로 옮겼다. 유즈맵은 목록만 남는다.
-    assert(!document.querySelector('#mapSelect .msSocial'),'유즈맵에 채팅 블록이 남아 있음');
-    const map=document.querySelector('#twChat .msTabs2');
-    assert(map,'마을 채팅 시트 탭 바를 못 찾음');
-    const hb=hub.querySelectorAll('button'), mb=map.querySelectorAll('button');
-    assert(hb.length && mb.length,'탭 버튼이 없음');
-    hb.forEach(b=>assert(b.classList.contains('msTab2'), '허브 탭 버튼에 .msTab2 없음: '+b.textContent.trim()));
-    // 허브는 두꺼운 변형 — 복제가 아니라 같은 컴포넌트의 크기 변형이어야 한다(크기 override가 유즈맵 하단으로 새면 안 됨).
-    const pad=e=>parseFloat(getComputedStyle(e).paddingTop);
-    assert(pad(hb[1])>pad(mb[1]),'허브 소셜 바가 채팅 시트보다 두껍지 않음: '+pad(hb[1])+' vs '+pad(mb[1]));
-    assert(pad(mb[1])<=10,'채팅 시트까지 두꺼워짐(변형이 새어나감): '+pad(mb[1]));
-    // ⚠ 밑줄 두께는 뺀다 — 허브는 DESIGN.md(테두리 1px)로 전환돼 2px 테두리 대신 inset 밑줄을 쓴다.
-    //    유즈맵 하단은 아직 미전환이라 2px 테두리 그대로다(touch-it-fix-it).
+  // 탭 띠는 **하나뿐**이다 — 채팅/파티/친구 · 친구 필터 · 코인 공학소 · 유즈맵 정렬이 전부
+  // segNavHTML(.pdSeg) 한 함수로 그려진다(2026-08-27 통일). 옛 사본(.msTab2/.ptTab/.cpSegBtn)은 없앴다.
+  await step('탭 띠 단일 소스: 네 곳이 모두 공용 .pdSeg', ()=>{
+    const seg=(host)=>host && host.querySelector('.pdSeg');
+    // ① 채팅/파티/친구 — 렌더러가 채운다(정적 버튼이 아니다)
+    skipIf(typeof renderSocialTabs!=='function','소셜 탭 렌더러 없음');
+    renderSocialTabs();
+    const soc=$('msBottomTabs'); assert(seg(soc),'채팅/파티/친구 띠가 .pdSeg 가 아님');
+    assert(seg(soc).querySelectorAll('.pdSegBtn').length===3,'채팅/파티/친구 3칸이 아님');
+    // ② 친구 필터
+    skipIf(typeof renderHubFriendTabs!=='function','친구 필터 렌더러 없음');
+    renderHubFriendTabs();
+    const hub=$('hubFriendTabs'); assert(seg(hub),'친구 필터 띠가 .pdSeg 가 아님');
+    // ③ 코인 공학소
+    skipIf(typeof renderPtTabs!=='function','코인 공학소 탭 렌더러 없음');
+    renderPtTabs();
+    const pt=$('ptTabs'); assert(seg(pt),'코인 공학소 띠가 .pdSeg 가 아님');
+    // 형태가 같은가 — 같은 함수가 그렸으니 버튼의 뼈대가 같아야 한다(크기만 화면이 덮는다)
     const key=b=>{ const c=getComputedStyle(b);
-      return [c.flex,c.fontWeight,c.justifyContent,c.alignItems].join('|'); };
-    const onTab=hub.querySelector('.msTab2.on'), oc=getComputedStyle(onTab);
-    assert(/0px -2px 0px 0px inset/.test(oc.boxShadow),'허브 선택 탭에 밑줄 표시가 없음: '+oc.boxShadow.slice(0,60));
-    assert(parseFloat(oc.borderBottomWidth)<=1,'허브 탭이 아직 2px 테두리를 씀: '+oc.borderBottomWidth);
-    assert(key(hb[1])===key(mb[1]), '크기 외 형태가 다름\n허브: '+key(hb[1])+'\n유즈맵: '+key(mb[1]));
-    assert(hub.querySelectorAll('svg').length===hb.length, '탭 아이콘이 안 그려짐(paintIcons 누락)');
-    // 선택 표시가 새 클래스에서도 동작하는지
-    setFriendFilter('rpg', hb[2]);
-    assert(hb[2].classList.contains('on') && !hb[0].classList.contains('on'),'탭 선택 표시가 안 옮겨감');
-    setFriendFilter('all', hb[0]);
-    return hb.length+'탭 · 스타일 일치'; });
+      return [c.flex,c.fontWeight,c.justifyContent,c.alignItems,c.borderStyle].join('|'); };
+    const a=seg(soc).querySelector('.pdSegBtn'), b=seg(hub).querySelector('.pdSegBtn'), c=seg(pt).querySelector('.pdSegBtn');
+    assert(key(a)===key(b),'채팅 띠와 친구 필터의 형태가 다름\n'+key(a)+'\n'+key(b));
+    assert(key(a)===key(c),'채팅 띠와 코인 공학소의 형태가 다름\n'+key(a)+'\n'+key(c));
+    // 선택 표시가 옮겨가는가(띠를 다시 그리므로 매번 새로 찾아야 한다)
+    setFriendFilter('rpg');
+    assert($('hubFriendTabs').querySelectorAll('.pdSegBtn')[2].classList.contains('on'),'친구 필터 선택이 안 옮겨감');
+    setFriendFilter('all');
+    assert($('hubFriendTabs').querySelectorAll('.pdSegBtn')[0].classList.contains('on'),'친구 필터가 처음으로 안 돌아옴');
+    return '3곳 + 유즈맵 정렬 = 한 컴포넌트'; });
+  // 「둘 중 하나 고르기」도 하나뿐 — 방 만들기 공개/비공개가 설정 창의 그래픽 품질과 같은 컴포넌트여야 한다.
+  await step('둘 중 하나 고르기 단일 소스: 방 공개 설정 = 설정 그래픽 품질', ()=>{
+    const vis=$('cpVis'); skipIf(!vis,'방 만들기 공개 설정 없음');
+    assert(vis.classList.contains('setSeg'),'공개 설정이 공용 .setSeg 가 아님: '+vis.className);
+    const btns=vis.querySelectorAll('.segBtn'); assert(btns.length===2,'공개/비공개 2칸이 아님: '+btns.length);
+    const q=document.querySelector('#seg-q .segBtn'); assert(q,'설정 그래픽 품질 버튼을 못 찾음');
+    const key=b=>{ const c=getComputedStyle(b); return [c.flex,c.borderRadius,c.borderStyle].join('|'); };
+    assert(key(btns[0])===key(q),'같은 컴포넌트인데 형태가 다름\n공개설정: '+key(btns[0])+'\n그래픽품질: '+key(q));
+    // 선택 표시
+    setRoomVis('private');
+    assert(vis.querySelectorAll('.segBtn')[1].classList.contains('on'),'비공개 선택이 안 켜짐');
+    setRoomVis('public');
+    return '2칸 · 설정과 형태 일치'; });
+  // 옛 탭 사본이 되살아나지 않았는가 — 다른 작업자가 옛 화면을 되가져오는 일이 반복됐다.
+  await step('탭 띠: 옛 사본이 되살아나지 않았다', ()=>{
+    for(const cls of ['msTab2','ptTab','cpSegBtn','cpSeg']){
+      const n=document.querySelectorAll('.'+cls).length;
+      assert(n===0, '없앤 탭 클래스가 화면에 다시 있음: .'+cls+' ×'+n); }
+    return '4종 없음 확인'; });
   // 스크롤바는 .uiScroll 하나로 통일. 같은 UI를 두 번 정의하면 화면마다 굵기·색이 어긋난다(실제로 어긋나 있었음).
   await step('스크롤바 단일 소스: 맵 목록 = 친구 시트', ()=>{
     const ms=$('msList'), hs=$('hubFriends'); skipIf(!ms||!hs,'대상 목록 없음');

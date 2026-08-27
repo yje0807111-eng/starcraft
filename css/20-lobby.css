@@ -248,10 +248,13 @@
   #cpName{width:100%;box-sizing:border-box;padding:12px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:14px;outline:none;margin-bottom:20px}
   #cpName:focus{border-color:var(--neon-soft)}
   #cpName::placeholder{color:#6f757d}
-  .cpSeg{display:flex;gap:8px;margin-bottom:14px}
-  .cpSegBtn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:var(--r-bar);font-family:inherit;font-size:var(--fs-xl);font-weight:800;cursor:pointer;color:var(--txt-mute);background:var(--glass);border:1px solid var(--metal-edge);transition:all .12s}
-  .cpSegBtn .ic{width:15px;height:15px}
-  .cpSegBtn.on{color:#fff;background:rgba(255,255,255,.14);border-color:var(--glass-edge);box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}   /* 선택=중립 밝은 토글(레드 만들기 버튼과 구분) */
+  /* 공개/비공개 = 설정 창의 「둘 중 하나 고르기」와 같은 컴포넌트(.setSeg/.segBtn · css/10-game.css).
+     ⛔ 여기서 토글을 새로 만들지 말 것(2026-08-27 통일). 덮는 것은 크기·아이콘 자리뿐이다. */
+  /* 액센트는 화면이 정한다(.setCard 가 하는 것과 같은 방식) — 여기서 중립 밝은 색을 쓰는 이유는
+     아래 「만들기」가 빨강이라, 선택 토글까지 빨강이면 무엇이 주 동작인지 안 읽히기 때문이다. */
+  #cpVis{--setAcc:#ececec;--setAccS:rgba(255,255,255,.34);gap:8px;margin-bottom:14px}
+  #cpVis .segBtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px;font-size:var(--fs-xl)}
+  #cpVis .segBtn .ic{width:15px;height:15px}
   .cpPwWrap{margin-bottom:9px}.cpPwWrap.hide{display:none}
   .cpPwWrap .cpLabel{margin-top:4px}
   #cpPw,#pwField{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:var(--r-bar);background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:var(--txt);font-family:inherit;font-size:14px;letter-spacing:2px;outline:none}
@@ -1031,15 +1034,10 @@
   /* 카테고리 = 게임 하단 네비 바처럼: 하나의 바(가로 꽉 참) + 탭 사이 세로줄 + 아이콘 + 활성=하단 시안 라인 */
   /* 카테고리 바 = 세그먼트 필: 선택 탭에 라운드 배경 · 하단 선·세로 구분선 없음 */
   /* 바 = 팝업 카드와 같은 톤: 별도 색 판때기 대신 은은한 글래스 + 아래 구분선만 */
-  .ptSeg{display:flex;gap:4px;margin:0 0 11px;padding:4px;position:relative;border-radius:10px;
-    background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);box-shadow:none}
-  .ptTab{flex:1;min-width:0;position:relative;display:flex;align-items:center;justify-content:center;gap:4px;
-    padding:6px 2px;border-radius:8px;font-family:inherit;font-size:var(--fs-xs);font-weight:800;cursor:pointer;white-space:nowrap;
-    color:#93a1b3;background:none;border:1px solid transparent;transition:color .16s,background .16s,border-color .16s}
-  .ptTab .ptTabIco{line-height:0;flex:none}.ptTab .ptTabIco svg{width:14px;height:14px;display:block;transition:color .16s}
-  .ptTab:active{background:rgba(255,255,255,.05)}
-  .ptTab.on{color:#eaf6ff;background:rgba(92,214,255,.14);border-color:rgba(92,214,255,.34)}
-  .ptTab.on .ptTabIco{color:var(--setAcc)}
+  /* 코인 공학소 탭 = 공용 세그먼트 바(.pdSeg · segNavHTML). 그릇이 덮는 것은 폭·바깥 여백뿐이다 */
+  .ptSeg{margin:0 0 11px}
+  .ptSeg .pdSeg{max-width:none;margin:0}
+  .ptSeg .pdSegBtn{font-size:var(--fs-xs);white-space:nowrap}
   .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;

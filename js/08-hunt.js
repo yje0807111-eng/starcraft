@@ -2402,8 +2402,14 @@ function _frActHTML(f){ const a=f.act||{};
 const _FR_CHAT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-10.8 6.75L4 20l1.3-4.9A7.5 7.5 0 1 1 20 11.5z"/></svg>';
 let _friendFil='all';
 function _friendMatch(f){ if(_friendFil==='all') return true; if(_friendFil==='close') return !!f.close; return (f.act&&f.act.type===_friendFil); }
-function setFriendFilter(fil, btn){ _friendFil=fil;
-  document.querySelectorAll('#hubFriendTabs button').forEach(b=>b.classList.toggle('on', b===btn));   // 탭 바 = 공용 .msTab2(클래스 비의존 선택)
+// 친구 필터 띠 = 공용 세그먼트 바(segNavHTML). ⛔ 새 탭 띠를 만들지 말 것.
+const HUB_FRIEND_FILS=[['all','전체'],['usemap','유즈맵'],['rpg','RPG'],['close','친한친구']];
+function renderHubFriendTabs(){ const box=document.getElementById('hubFriendTabs'); if(!box) return;
+  const i=Math.max(0, HUB_FRIEND_FILS.findIndex(f=>f[0]===_friendFil));
+  box.innerHTML=segNavHTML(HUB_FRIEND_FILS.map(function(f){ return { label:f[1] }; }), i,
+    function(k){ return "setFriendFilter('"+HUB_FRIEND_FILS[k][0]+"')"; }); }
+function setFriendFilter(fil){ _friendFil=fil;
+  renderHubFriendTabs();
   renderFriends(); if(typeof playSfx==='function') playSfx('ui_tab'); }
 function renderFriends(){ const box=document.getElementById('hubFriends'); if(!box) return; box.innerHTML='';
   let on=0; HUB_FRIENDS.forEach(f=>{ if(f.status!=='offline') on++; });
@@ -2577,7 +2583,9 @@ function twOpenChat(){ const el=document.getElementById('twChat'); if(!el) retur
   const c=document.getElementById('msChat'); if(c) c.scrollTop=c.scrollHeight; }
 function twCloseChat(){ const el=document.getElementById('twChat'); if(el) el.classList.add('hide'); }
 function twOpenSocial(){ twCloseChat(); const el=document.getElementById('twSocial'); if(!el) return;
-  el.classList.remove('hide'); if(typeof renderFriends==='function') renderFriends();
+  el.classList.remove('hide');
+  renderHubFriendTabs();   // 띠는 마크업이 아니라 여기서 그린다(공용 세그먼트 바)
+  if(typeof renderFriends==='function') renderFriends();
   if(typeof paintIcons==='function') paintIcons(el); if(typeof playSfx==='function') playSfx('ui_open'); }
 function twCloseSocial(){ const el=document.getElementById('twSocial'); if(el) el.classList.add('hide'); }
 
@@ -3236,7 +3244,8 @@ function segNavHTML(items, i, act){ const n=items.length;
   let h='<div class="pdSeg" style="--n:'+n+'"><i class="pdSegInd" style="left:calc(var(--pad) + '+i+'*(100% - 2*var(--pad))/'+n+')'
     +(col?';--segCol:'+col:'')+'"></i>';
   items.forEach(function(it,k){ h+='<button class="pdSegBtn'+(k===i?' on':'')+'" onclick="'+act(k)+'">'
-    +(it.ico?'<span data-ico="'+it.ico+'"></span>':'')+it.label+'</button>'; });
+    +(it.ico?'<span data-ico="'+it.ico+'"></span>':'')+it.label
+    +(it.tail||'')+'</button>'; });   // tail = 버튼 안 끝에 덧붙이는 것(친구 탭의 안 읽은 배지)
   return h+'</div>'; }
 function _profPageNav(){ const i=PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage);
   return '<div class="pdNav">'+segNavHTML(PROF_GEAR_PAGES.map(p=>({label:p.name})), i, k=>'profGearPageAt('+k+')')+'</div>'; }

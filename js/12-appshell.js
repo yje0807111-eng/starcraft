@@ -1175,7 +1175,20 @@ async function sbLoadFriends(){
     else if(r.addressee===AUTH.user.uid) incoming.push(item);
     else outgoing.push(item); }
   return {friends, incoming, outgoing}; }
-function updateFriendBadge(n){ const b=document.getElementById('msFriendBadge'); if(!b) return; if(n>0){ b.textContent=n; b.classList.remove('hide'); } else b.classList.add('hide'); }
+// 안 읽은 친구 알림 수 — 띠가 다시 그려질 때마다 함께 그려야 하므로 여기 들고 있는다
+let _friendBadgeN=0;
+function updateFriendBadge(n){ _friendBadgeN=Math.max(0, n|0); renderSocialTabs(); }
+// 채팅·파티·친구 탭 띠 = 공용 세그먼트 바(segNavHTML). ⛔ 새 탭 띠를 만들지 말 것.
+//   친구 칸의 배지는 segNavHTML 의 tail 슬롯으로 넣는다(버튼 안 끝).
+const SOCIAL_TABS=[['chat','채팅'],['party','파티'],['friend','친구']];
+function renderSocialTabs(){ const box=document.getElementById('msBottomTabs'); if(!box) return;
+  if(typeof segNavHTML!=='function') return;
+  const i=Math.max(0, SOCIAL_TABS.findIndex(t=>t[0]===_bottomTab));
+  box.innerHTML=segNavHTML(SOCIAL_TABS.map(function(t){
+    return { label:t[1], tail:(t[0]==='friend' && _friendBadgeN>0)
+      ? '<span class="msFriendBadge" id="msFriendBadge">'+_friendBadgeN+'</span>' : '' }; }),
+    i, function(k){ return "setBottomTab('"+SOCIAL_TABS[k][0]+"')"; });
+  if(typeof paintIcons==='function') paintIcons(box); }
 async function refreshFriendBadge(){ if(!sbReady()) return; try{ const {incoming}=await sbLoadFriends(); updateFriendBadge(incoming.length); }catch(e){} }
 // ── 친구 오버레이 ──
 // 하단 영역 탭 전환(채팅/파티/친구)
@@ -1183,7 +1196,7 @@ let _bottomTab='chat';
 function setBottomTab(t){ _bottomTab=t;
   if(t!=='party'){ if(typeof closePartyInvite==='function') closePartyInvite(); if(typeof closePartyFind==='function') closePartyFind(); }
   if(t!=='friend'){ if(typeof closeFriendCtx==='function') closeFriendCtx(); if(typeof closeFriendAdd==='function') closeFriendAdd(); }
-  document.querySelectorAll('.msTab2').forEach(b=>b.classList.toggle('on', b.dataset.bt===t));
+  renderSocialTabs();
   const wrap=document.getElementById('msChatWrap'), chat=document.getElementById('msChat'), panel=document.getElementById('msPanelBody');
   if(!wrap||!chat||!panel) return;
   if(t==='chat'){ wrap.style.display='flex'; panel.style.display='none'; chat.scrollTop=chat.scrollHeight; }
@@ -1662,9 +1675,9 @@ function playSfxT(name, ms){ const now=Date.now(); if(now-(_sfxTLast[name]||0)<(
 function _sfxForEl(el){
   if(el.dataset && el.dataset.sfx) return el.dataset.sfx;
   if(el.classList.contains('locked')) return 'ui_denied';
-  if(el.matches('.tab, .msTab2, .msScopeBtn')) return 'ui_tab';                                   // 탭 전환
+  if(el.matches('.tab, .pdSegBtn, .msScopeBtn')) return 'ui_tab';                                 // 탭 전환(.pdSegBtn = 공용 세그먼트 바)
   if(el.matches('.msSortCur, .msSortOpt')) return 'ui_dropdown';                                  // 정렬 드롭다운
-  if(el.matches('.segBtn, .setSw, .cpSegBtn, .msTab2, .voteCol')) return 'ui_toggle';        // 켜기↔끄기/세그먼트/배속
+  if(el.matches('.segBtn, .setSw, .voteCol')) return 'ui_toggle';                                 // 켜기↔끄기/배속
   if(el.matches('.moClose, .setX, .actBtn.sub, .ecCancel')) return 'ui_close';   // 닫기/취소/뒤로
   if(el.matches('.opStart, .moBtn, .actBtn.pri, .ecGo, .authBtn, .authGuest, #chatSend, .msChatSend')) return 'ui_confirm';  // 시작·만들기·전송·확정
   return 'click';                                                                                  // 일반 버튼 기본음
@@ -2114,7 +2127,7 @@ function createRoom(){ const nm=document.getElementById('cpName'); if(nm) nm.val
   if(typeof paintIcons==='function') paintIcons(cp); if(nm) nm.focus(); }
 function closeCreate(){ popHide('createPanel'); }
 function setRoomVis(v){ _createVis=v;
-  document.querySelectorAll('#cpVis .cpSegBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
+  document.querySelectorAll('#cpVis .segBtn').forEach(b=>b.classList.toggle('on', b.dataset.v===v));
   const w=document.getElementById('cpPwWrap'); if(w) w.classList.toggle('hide', v!=='private');
   const h=document.getElementById('cpHint'); if(h){ h.style.color=''; h.textContent=''; } }   // 안내 텍스트 제거(에러만 표시)
 function confirmCreate(){ const nmEl=document.getElementById('cpName');
