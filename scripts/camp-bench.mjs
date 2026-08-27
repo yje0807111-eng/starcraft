@@ -315,8 +315,20 @@ await pg.evaluate(()=>{
       }
       const r=campRoundN();
       if(r!==__CB.lastRound){
-        __CB.log.push({ dg:campDgN(), round:__CB.lastRound, sec:+__CB.roundT.toFixed(1),
-          earn:Math.round(campWealth()), diff:campFoeDiff(campDgN(), Math.max(0,r-1)) });
+        // ⭐ **라운드마다** 화력을 남긴다 — 15초 표본으로는 라운드별 곡선을 못 만든다.
+        //   dps  = 명목(아군 공격력 합) · hit = 실제로 꽂힌 화력(적 총 체력 ÷ 걸린 초)
+        //   eff  = hit ÷ dps — 제자리 방어라 앞줄만 닿는 탓에 1 이 안 된다.
+        { const _d=campFoeDiff(campDgN(), Math.max(0,__CB.lastRound-1));
+          const _sec=+__CB.roundT.toFixed(1), _dps=__CB.dps();
+          const _hp=(typeof CAMP_FOE_HP0!=='undefined'?CAMP_FOE_HP0:0)*_d
+                    *((typeof campRtFoeMul==='function')?campRtFoeMul():1);
+          const _hit=_sec>0 ? _hp/_sec : 0;
+          __CB.log.push({ dg:campDgN(), round:__CB.lastRound, sec:_sec,
+            earn:Math.round(campWealth()), diff:_d,
+            dps:Math.round(_dps*10)/10, hit:Math.round(_hit*10)/10,
+            eff:_dps>0 ? Math.round(_hit/_dps*1000)/1000 : 0,
+            me:(typeof campAlive==='function'?campAlive('me'):0),
+            dn:(typeof campDown==='function'?campDown():0) }); }
         __CB.lastRound=r; __CB.roundT=0; __CB.stuck=0;
         if(!__CB.gateT && campWealth()>=1e6) __CB.gateT=__CB.t;
       // ⚠ **정체 판정 문턱은 설계 라운드 길이보다 길어야 한다.** 적 체력 1,300 확정 뒤
@@ -389,12 +401,13 @@ const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
   return String(Math.round(n)); };
 console.log('\n\n■ 라운드별 (전 구간에서 고르게 뽑음)');
-console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이도  | 번돈÷난이도');
-{ const L=fin.log, step=Math.max(1, Math.floor(L.length/22));
+console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이도  | 명목DPS | 꽂힌화력 | 실효 | 병력(선+누움)');
+// ⚠ 라운드 곡선을 보려면 **전부** 찍어야 한다 — 22개 표본으로는 R1~50 곡선이 안 나온다.
+{ const L=fin.log, step=(L.length<=60) ? 1 : Math.max(1, Math.floor(L.length/22));
   for(let i=0;i<L.length;i+=step){ const r=L[i];
-    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${F(r.earn).padEnd(15)}| ${F(r.diff).padEnd(11)}| ${F(r.earn/r.diff)}`); }
+    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${F(r.earn).padEnd(15)}| ${F(r.diff).padEnd(11)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}`); }
   if(L.length){ const r=L[L.length-1];
-    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${F(r.earn).padEnd(15)}| ${F(r.diff).padEnd(11)}| ${F(r.earn/r.diff)}  ← 끝`); } }
+    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${F(r.earn).padEnd(15)}| ${F(r.diff).padEnd(11)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}  ← 끝`); } }
 // D 가정 검사 — 번돈÷난이도가 일정한가
 { const L=fin.log.filter(r=>r.earn>0 && r.diff>0);
   if(L.length>4){ const q=L.map(r=>r.earn/r.diff).sort((a,b)=>a-b);
