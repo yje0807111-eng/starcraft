@@ -1937,7 +1937,7 @@ function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=docum
   if(ok){ const R=sdRewardPreview(cur.k);
     if(R){ const f=(typeof fmtStat==='function')?fmtStat:function(n){ return ''+n; };
       rw='<div class="sdRw"><div class="sdRwHd"><span class="lab">클리어 보상</span><span class="fill"></span>'
-        +'<span class="t">캠프 '+_sdHours(R.hours)+'<small>시간치</small></span></div>'
+        +'<span class="t"><small>캠프</small>'+_sdHours(R.hours)+'시간치</span></div>'
         +'<div class="sdRwList">'
         +'<div class="sdRwRow">'+(typeof resIco==='function'?resIco('mineral','ric'):'')+'<span class="nm">미네랄</span><span class="v">'+f(R.min)+'</span></div>'
         +'<div class="sdRwRow">'+(typeof resIco==='function'?resIco('gas','ric'):'')+'<span class="nm">가스</span><span class="v">'+f(R.gas)+'</span></div>'
