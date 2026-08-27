@@ -1,0 +1,158 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>유즈맵 종족 선택 — A3 선택 표시 4안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   유즈맵(개인 플레이) 종족 선택 팝업을 지금 어휘로.
+   ⛔ 전체 화면(캠프 방식)으로 가지 않는다 — 판마다 고르는 선택이라 무게가 안 맞고,
+      전장 그림이 3종족치뿐인데 여긴 **5종족**이다.
+   ✔ 맞출 상대는 **바로 앞에 뜨는 난이도 팝업**이다(0.2초 간격으로 이어지는 두 장면).
+      껍데기 .cpCard / 상세 판 .sdDet / 스테퍼 .sdStepRow / 확정 .actBtn.pri 를 그대로 빌린다.
+   ✔ 캠프에서 빌리는 것은 **행의 문법**뿐이다 — 아이콘 · 이름 · 부제 · ✓/›
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --acc-sel:#5cd6ff;
+  --txt:#e7e9ee; --txt-mute:#9aa0a8;
+  --glass:rgba(255,255,255,.05); --glass-edge:rgba(255,255,255,.12);
+  --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --mapAccent:#4aa8ff;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(4,352px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:74px}
+.sub b{color:#dfe6f0}
+
+/* ── 무대 = 딤 위에 카드(난이도 팝업과 같은 껍데기) ── */
+.stage{position:relative;width:352px;height:560px;border-radius:5px;overflow:hidden;
+  background:linear-gradient(180deg,#1a2740 0%,#101a2c 55%,#080c14 100%);
+  display:flex;align-items:center;justify-content:center}
+.stage::before{content:'';position:absolute;inset:0;background:rgba(2,3,6,.84)}
+.cpCard{position:relative;width:320px;max-height:520px;padding:20px 16px 16px;
+  display:flex;flex-direction:column;overflow:hidden;
+  border-radius:var(--r-bar);background:#08080a;border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 16px 44px -12px #000,0 0 40px -16px var(--mapAccent)}
+.cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
+  background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent),transparent 70%)}
+.cpCard>*{position:relative;z-index:1}
+.cpTitle{font-size:17px;font-weight:800;color:#eef1f6;text-shadow:0 1px 3px rgba(0,0,0,.65);
+  margin-bottom:6px;text-align:center}
+.cpHint{font-size:var(--fs-sm);color:var(--txt-mute);text-align:center;margin-bottom:14px}
+
+/* ── 공용 액션 버튼(.actBtn) — 원본 그대로 ── */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:40px;padding:0 14px;cursor:pointer;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);letter-spacing:.3px;color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000,0 2px 4px -2px rgba(0,0,0,.7)}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.btns{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+
+/* ── 캠프에서 빌려온 행 문법 ── */
+.rows{display:flex;flex-direction:column}
+.row{position:relative;display:flex;align-items:center;gap:11px;width:100%;
+  padding:11px 2px;background:none;border:0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.row::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.row:first-child::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent)}
+.ico{flex:0 0 auto;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1}
+.ico img{width:100%;height:100%;object-fit:contain;display:block}
+.main{min-width:0;flex:1;display:flex;flex-direction:column}
+.nm{font-size:var(--fs-xl);font-weight:700;color:#8b939d}
+.row.on .nm{color:#fff}
+.ds{font-size:var(--fs-sm);color:var(--txt-mute);margin-top:2px}
+.go{flex:0 0 auto;color:#7b838d;font-size:13px}
+.row.on .go{color:var(--acc-sel)}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   A3 이 좋았으나 **붉은 밑변 광원이 한 카드에 두 번** 나온다 —
+   고른 행에 한 줄, 확정 버튼에 한 줄. 같은 서명이 「고른 것」과 「확정」을
+   둘 다 맡으면 무엇이 확정인지 흐려진다.
+   ⛔ 난이도 화면이 이미 이 함정을 피해 놨다: 정보(고른 것)=난이도 색 /
+      액션(확정)=붉은 광원. 그 구분을 여기서 무너뜨리지 않는다.
+   → 확정 버튼의 붉은 광원은 **건드리지 않고**, 선택 표시만 넷으로 갈라 본다.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══ S1 · 청록 체크 (--acc-sel = 문자 그대로 「지금 선택된 것」 토큰) ═══ */
+.s1 .row.on .go{color:var(--acc-sel);text-shadow:0 0 8px var(--acc-sel)}
+
+/* ═══ S2 · 흰 밑변 광원 (서명은 같되 붉은기를 뺀다 — 확정과 안 겹친다) ═══ */
+.s2 .row.on::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);
+  box-shadow:0 0 7px rgba(255,255,255,.45)}
+.s2 .row.on .go{color:#fff}
+
+/* ═══ S3 · 종족색이 행을 물들인다 (난이도 상세 판과 같은 어법 — 면은 검정 그대로) ═══ */
+.s3 .rows{border-top:1px solid rgba(255,255,255,.08)}
+.s3 .row.on{background:linear-gradient(90deg,rgba(var(--rcRGB),.10),transparent 76%)}
+.s3 .row.on::after{background:linear-gradient(90deg,transparent,var(--rc),transparent);
+  box-shadow:0 0 8px var(--rc);opacity:.7}
+.s3 .row.on .go{color:var(--rc)}
+
+/* ═══ S4 · 고른 행만 판이 뜬다 (테두리 발광 — 난이도 .sdDet 그대로) ═══ */
+.s4 .rows{gap:2px}
+.s4 .row::after,.s4 .row:first-child::before{display:none}
+.s4 .row{padding:11px 10px;border:1px solid transparent;border-radius:var(--r-bar)}
+.s4 .row.on{background:linear-gradient(180deg,#0d0d0d,#050505);
+  border-color:rgba(var(--rcRGB),.34);box-shadow:inset 0 0 30px -18px var(--rc)}
+.s4 .row.on::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--rc),transparent);box-shadow:0 0 7px -1px var(--rc)}
+.s4 .row.on .go{color:var(--rc)}
+</style></head><body>
+
+<script id="data" type="application/json">
+[["terran","유니온","인간 · 보병·기계","#4aa8ff","74,168,255","union","🛡️","레인저 · 공성전차 · 전함"],
+ ["zerg","스웜","군체 · 유기체","#9fd356","159,211,86","swarm","🦎","히드라 · 군단여왕 · 돌격괴수"],
+ ["protoss","에테리얼","외계 · 사이오닉","#ffc040","255,192,64","aetherial","🔮","검사 · 광전사 · 모함"],
+ ["feral","페럴","수인 · 야수 무리","#c98b5a","201,139,90","_none","🐺","늑대 · 독니 · 폭풍조"],
+ ["colossus","콜로서스","거신 · 중장 포격","#9aa6b2","154,166,178","_none","🗿","포격병 · 레일건 · 공성거신"]]
+</script>
+
+
+<div id="cols"></div>
+
+<script>
+const R=JSON.parse(document.getElementById('data').textContent);
+const ICO=(r,cls)=>r[5]==='_none'
+  ? `<span class="ico ${cls||''}">${r[6]}</span>`
+  : `<span class="ico ${cls||''}"><img src="../../assets/icons/races/${r[5]}.webp" alt=""></span>`;
+const vars=r=>`--rc:${r[3]};--rcRGB:${r[4]}`;
+const SEL=0;
+const rows=()=>`<div class="rows">`+R.map((r,i)=>
+  `<button class="row ${i===SEL?'on':''}" style="${vars(r)}">${ICO(r)}
+     <span class="main"><span class="nm">${r[1]}</span><span class="ds">${r[2]}</span></span>
+     <span class="go">${i===SEL?'✓':'›'}</span></button>`).join('')+`</div>`;
+
+const V=[
+ ['s1','S1 — <em>청록 체크</em>만',
+  '밑줄은 전부 중립으로 되돌리고 <b>오른쪽 ✓ 하나</b>가 선택을 맡는다. <code>--acc-sel</code> 은 문자 그대로 「지금 선택된 것」 토큰이라 규칙과 정확히 맞고, 캠프 화면이 쓰는 그 표시다. 가장 조용하다.'],
+ ['s2','S2 — <em>흰</em> 밑변 광원',
+  '밑변 광원이라는 <b>서명은 그대로</b> 두고 붉은기만 뺀다. 목록 어디를 봐도 고른 줄이 잡히면서 아래 확정 버튼(붉은 광원)과 <b>겹치지 않는다</b>.'],
+ ['s3','S3 — <em>종족색</em>이 행을 물들인다',
+  '고른 행에 그 종족색이 얇게 깔리고 밑줄도 그 색이 된다. <b>난이도 상세 판과 같은 어법</b>(색을 갖는 건 선·빛뿐, 면은 검정). 다섯이 색으로도 갈린다.'],
+ ['s4','S4 — 고른 행만 <em>판이 뜬다</em>',
+  '구분선을 걷고, 고른 행만 <b>테두리가 발광하는 판</b>이 된다 — 난이도 <code>.sdDet</code> 를 행 크기로 줄인 것. 두 화면이 가장 노골적으로 같은 부품을 쓴다.'],
+];
+
+document.getElementById('cols').outerHTML = V.map(([k,t,d])=>`
+<div class="col ${k}"><p class="hd">${t}</p><p class="sub">${d}</p>
+  <div class="stage"><div class="cpCard ${k}">
+    <div class="cpTitle">종족 선택</div>
+    <div class="cpHint">선택한 종족으로 게임을 플레이합니다</div>
+    ${rows()}
+    <div class="btns"><button class="actBtn pri">유니온으로 시작</button><button class="actBtn">취소</button></div>
+  </div></div></div>`).join('');
+</script>
+</body></html>

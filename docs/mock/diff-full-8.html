@@ -1,0 +1,206 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>난이도 선택 — 전체 화면 8안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   난이도 선택을 **F2 어법**(로그인 구도: 아트가 주인공 · 내용은 아래 블록)으로 옮긴다.
+   종족 선택이 F2 로 정해졌으므로 바로 앞 화면인 여기도 같이 가야 흐름이 안 덜컹인다.
+
+   ⛔ 지켜야 할 것(전부 이미 확정된 규칙이다)
+     · 난이도는 **순서가 있는 축** → 스테퍼(◀ 이름 ▶ + 점)를 버리지 않는다.
+     · 색을 갖는 건 **선·빛뿐**이고 면은 검정이다(DESIGN §0).
+     · ⛔ 시작 버튼을 난이도 색으로 물들이지 말 것 — 고를 때마다 색이 바뀌면 '무엇이 확정인지'가 흔들린다.
+     · 잠긴 난이도도 **고를 수는 있다**(무엇이 필요한지 보여 준다) — 시작만 막힌다.
+     · 무한 모드는 난이도 축이 아니다 → 아래 별도 줄.
+   여덟은 **스테퍼를 어디에 두고 · 상세를 판으로 두느냐**만 다르다.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --txt:#e7e9ee; --txt-mute:#9aa0a8; --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --mapAccent:#4aa8ff;
+  --art:url('../../assets/backgrounds/usemaps/nemo.webp');
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --dc:#5dff8f; --dcRGB:93,255,143;      /* EASY — 여덟 안 모두 같은 상태로 비교한다 */
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(4,390px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:76px}
+.sub b{color:#dfe6f0}
+
+.ph{position:relative;width:390px;height:700px;overflow:hidden;border-radius:5px;background:#04050b}
+.art{position:absolute;inset:0;background:var(--art) center center/cover no-repeat #04050b}
+.art::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+    rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+.art::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
+/* 윗머리 그늘 — 밝은 하늘 위에서도 머리줄이 읽히게(캠프 종족 선택과 같은 처리) */
+.ph::before{content:'';position:absolute;left:0;right:0;top:0;height:118px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(3,5,9,.80) 0%,rgba(3,5,9,.42) 48%,transparent 100%)}
+.scr{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;padding:18px 16px 20px}
+
+/* ── 머리줄 = 어느 맵인가 ── */
+.head{flex:none}
+.ttl{font-family:var(--font-ti);font-size:21px;color:#fff;text-shadow:0 2px 8px #000}
+.mapTag{display:inline-flex;align-items:center;gap:6px;margin-top:5px;font-size:var(--fs-sm);
+  color:#8fa3b8;text-shadow:0 1px 3px #000}
+.mapTag i{font-style:normal;width:4px;height:4px;border-radius:50%;background:var(--mapAccent);
+  box-shadow:0 0 6px var(--mapAccent)}
+.mapRow{display:flex;align-items:center;gap:9px}
+.mapRow .th{width:38px;height:38px;flex:none;border-radius:var(--r-bar);overflow:hidden;
+  background:var(--art) center/cover;border:1px solid rgba(255,255,255,.12)}
+.mapRow b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;display:block}
+.mapRow em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;display:block;margin-top:2px}
+
+/* ── 스테퍼(순서가 있는 축) ── */
+.step{display:flex;align-items:center;justify-content:center;gap:4px;width:100%}
+.arw{width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  color:#8b939d;font-size:22px;background:none;border:0;text-shadow:0 1px 4px #000}
+.stepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;
+  letter-spacing:1px;color:var(--dc);text-shadow:0 0 18px rgba(var(--dcRGB),.45),0 2px 6px #000}
+.dots{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:5px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.20)}
+.dots i.on{width:14px;border-radius:3px;background:var(--dc)}
+
+/* ── 수치·설명 ── */
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4;text-shadow:0 1px 3px #000}
+.stat b{display:block;font-family:var(--font-num);font-size:21px;font-weight:700;margin-top:2px;text-shadow:0 2px 6px #000}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6;text-shadow:0 1px 3px #000}
+/* 배지형 수치(D6) */
+.badges{display:flex;justify-content:center;gap:7px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:var(--r-bar);
+  background:rgba(0,0,0,.42);border:1px solid rgba(255,255,255,.09);font-size:var(--fs-sm);color:#9fb0c0}
+.badge b{font-family:var(--font-num);font-size:var(--fs-xl);font-weight:700}
+.badge.e b{color:#ff9e9e} .badge.c b{color:#ffd485}
+
+/* ── 상세 판(난이도 색이 물든다 · 면은 검정) ── */
+.det{position:relative;border-radius:var(--r-md);padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:11px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+
+/* ── 무한 모드 줄 ── */
+.inf{position:relative;height:42px;display:flex;align-items:center;gap:8px;padding:0 13px;overflow:hidden;
+  border-radius:var(--r-bar);background:rgba(20,12,32,.62);border:1px solid rgba(176,107,255,.28)}
+.inf::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#b06bff;
+  box-shadow:0 0 9px #b06bff}
+.inf b{font-size:var(--fs-lg);font-weight:800;color:#d9c4ff}
+.inf em{font-style:normal;font-size:var(--fs-xs);color:#9a8ab8;margin-left:auto}
+
+/* ── 버튼 ── */
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:44px;padding:0 14px;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.btns{display:flex;flex-direction:column;gap:8px}
+.bare{position:relative;height:44px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-ti);font-size:var(--fs-xl);color:#fff;background:none;border:0}
+.bare::after{content:'';position:absolute;left:16%;right:16%;bottom:7px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+
+/* ── 아래 블록(F2 의 서명) ── */
+.blk{margin-top:auto;display:flex;flex-direction:column;gap:12px;
+  padding:16px 16px 0;margin-left:-16px;margin-right:-16px;
+  background:linear-gradient(180deg,transparent,rgba(4,6,11,.55) 22%,rgba(4,6,11,.84))}
+
+/* ═══ 안별 차이 ═══ */
+/* D1 · 스테퍼가 아트 한가운데 · 아래 블록엔 수치·설명·버튼 (판 없음) */
+.d1 .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* D2 · D1 + 상세만 검정 판 하나 */
+.d2 .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* D3 · 전부 아래 블록에(아트는 순수 그림) */
+/* D4 · 난이도 이름을 타이틀만큼 크게 */
+.d4 .stepTx{font-size:46px;letter-spacing:2px}
+.d4 .arw{font-size:26px}
+.d4 .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* D5 · 좌우 화살표를 화면 양 가장자리로(엄지 조작) */
+.d5 .step{gap:0}
+.d5 .arw{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:64px;font-size:26px;z-index:4}
+.d5 .arw.l{left:2px} .d5 .arw.r{right:2px}
+.d5 .mid{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* D6 · 수치를 배지로 압축 → 블록이 얕아지고 그림이 많이 남는다 */
+.d6 .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* D7 · 난이도 색이 아래쪽 대기를 물들인다 */
+.d7 .ph::after{content:'';position:absolute;left:0;right:0;bottom:0;height:62%;z-index:1;pointer-events:none;
+  opacity:.16;background:radial-gradient(86% 74% at 50% 88%,var(--dc),transparent 70%)}
+.d7 .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+/* D8 · 맵을 머리줄에 크게(썸네일+이름) — 「어느 맵의 몇 단계」가 한눈에 */
+.d8 .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+</style></head><body>
+<div id="cols"></div>
+<script>
+const STEP=(cls='')=>`<div class="step ${cls}"><button class="arw l">‹</button>
+  <div class="stepTx">EASY</div><button class="arw r">›</button></div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>`;
+const STATS=`<div class="stats">
+  <div class="stat e"><i>적 HP</i><b>×0.5</b></div>
+  <div class="stat c"><i>포인트 획득량</i><b>×1</b></div></div>`;
+const BADGES=`<div class="badges">
+  <span class="badge e">적 HP <b>×0.5</b></span><span class="badge c">포인트 <b>×1</b></span></div>`;
+const DESC=`<div class="desc">처음이라면 여기서 · 규칙을 익히는 단계</div>`;
+const INF=`<div class="inf"><b>무한 모드</b><em>노말 고정 · 끝없이</em></div>`;
+const BTNS=`<div class="btns"><div class="actBtn pri">이 난이도로 시작</div><div class="actBtn">취소</div></div>`;
+const HEAD=`<div class="head"><div class="ttl">난이도 선택</div>
+  <div class="mapTag"><i></i>네모네모 디펜스</div></div>`;
+const HEADMAP=`<div class="head"><div class="mapRow"><span class="th"></span>
+  <span><b>네모네모 디펜스</b><em>개인 플레이 · 난이도를 고르고 시작하세요</em></span></div></div>`;
+
+const V=[
+['d1','D1 — 스테퍼가 <em>아트 한가운데</em>',
+ '난이도 이름이 그림 위에 크게 뜨고, 아래 블록엔 수치·설명·버튼만. <b>판이 하나도 없다</b> — F2 를 가장 곧이곧대로 옮긴 것.',
+ `${HEAD}<div class="mid">${STEP()}</div><div class="blk">${STATS}${DESC}${INF}${BTNS}</div>`],
+
+['d2','D2 — D1 + <em>상세만 판 하나</em>',
+ '수치·설명을 지금 쓰는 검정 판(<code>.sdDet</code>)에 그대로 담는다. <b>난이도 색이 판을 물들이는 연출</b>이 살아남는다 — 난이도를 바꾸면 판이 바뀐 느낌이 난다.',
+ `${HEAD}<div class="mid">${STEP()}</div>
+  <div class="blk"><div class="det">${STATS}${DESC}</div>${INF}${BTNS}</div>`],
+
+['d3','D3 — <em>전부 아래 블록</em>에',
+ '아트는 순수하게 그림만 맡고, 스테퍼부터 버튼까지 한 덩어리로 아래에 앉는다. <b>고르는 곳이 한 곳</b>이라 엄지가 안 움직인다. 그림은 가장 적게 남는다.',
+ `${HEAD}<div class="blk">${STEP()}${STATS}${DESC}${INF}${BTNS}</div>`],
+
+['d4','D4 — 난이도 이름을 <em>타이틀만큼 크게</em>',
+ '<b>EASY</b> 가 화면의 주인공이 된다. 지금 무엇을 고르는 중인지가 가장 강하게 읽히고, 난이도 색도 가장 넓게 퍼진다. 이름이 길면(NIGHTMARE) 좁아진다.',
+ `${HEAD}<div class="mid">${STEP()}</div><div class="blk">${STATS}${DESC}${INF}${BTNS}</div>`],
+
+['d5','D5 — 화살표를 <em>화면 양 가장자리</em>로',
+ '‹ › 를 좌우 끝으로 빼고 가운데는 이름만 남긴다. <b>엄지가 닿는 자리</b>이고 그림을 가리는 것도 가장 적다. 대신 화살표가 그림 위에 떠 눈에 덜 띈다.',
+ `${HEAD}<div class="mid"><button class="arw l">‹</button><button class="arw r">›</button>
+   <div class="stepTx">EASY</div><div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="blk">${STATS}${DESC}${INF}${BTNS}</div>`],
+
+['d6','D6 — 수치를 <em>배지로 압축</em>',
+ '적 HP·포인트를 큰 숫자 대신 <b>작은 배지 두 개</b>로. 블록이 얕아져 <b>그림이 가장 많이 남는다</b>. 수치를 비교하며 고르기엔 약하다.',
+ `${HEAD}<div class="mid">${STEP()}</div><div class="blk">${BADGES}${DESC}${INF}${BTNS}</div>`],
+
+['d7','D7 — 난이도 색이 <em>아래 대기를 물들인다</em>',
+ '고른 난이도의 색이 화면 아래쪽에 <b>은은한 오라</b>로 깔린다. 판을 안 쓰고도 「판이 바뀐 느낌」을 낸다. ⚠ 시작 버튼은 그대로 붉은색이다(확정은 안 흔들린다).',
+ `${HEAD}<div class="mid">${STEP()}</div><div class="blk">${STATS}${DESC}${INF}${BTNS}</div>`],
+
+['d8','D8 — 머리줄에 <em>맵 썸네일</em>',
+ '「난이도 선택」 대신 <b>어느 맵인지</b>를 머리줄이 맡는다(지금 상세 판이 하던 <code>.sdMap</code> 을 위로 올린 것). 맵 → 난이도 → 종족이 한 줄기로 읽힌다.',
+ `${HEADMAP}<div class="mid">${STEP()}</div><div class="blk">${STATS}${DESC}${INF}${BTNS}</div>`],
+];
+document.getElementById('cols').outerHTML=V.map(([k,t,d,body])=>`
+<div class="col ${k}"><p class="hd">${t}</p><p class="sub">${d}</p>
+  <div class="ph ${k}"><div class="art"></div><div class="scr">${body}</div></div></div>`).join('');
+</script>
+</body></html>
