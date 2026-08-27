@@ -1,0 +1,94 @@
+/* 게임 종료 화면 — 캠프 재화 두 개를 같은 급으로 (2026-08-26 · 4차)
+   확정된 것(바꾸지 않는다):
+     · 제목은 **가운데보다 살짝 위**(rsTop 47% + flex-end) — 3차에서 정한 자리 그대로
+     · 제목 글꼴은 **본문 글꼴(--font-ko)** — 제목 글꼴(--font-ti = Jua)은 동글동글해서 이 화면에 안 맞는다
+     · 위 줄들 = 게임 안에서 벌어진 것 + 게임 내 포인트
+   이번에 정하는 것: **미네랄과 가스를 같은 레벨로** 놓는 여덟 가지 배치
+   ⛔ 재화 아이콘은 resIco() 로만 — 이모지 금지(CLAUDE.md). */
+
+#ov .rsX{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:0 26px calc(20px + env(safe-area-inset-bottom,0px));color:var(--txt);text-align:center}
+#ov .rsTop{flex:0 0 auto;height:47%;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px}
+/* ⚠ 제목 글꼴 = 본문(--font-ko). --font-ti(Jua)로 되돌리지 말 것 — 이 화면에서 너무 동글동글하다 */
+#ov .rsTtl{font-family:var(--font-ko);font-size:34px;font-weight:800;letter-spacing:4px;line-height:1.05;color:#fff}
+#ov .rsX.win .rsTtl{color:var(--gold);text-shadow:0 0 20px rgba(255,210,74,.4)}
+#ov .rsX.lose .rsTtl{color:#ff8a94;text-shadow:0 0 20px rgba(255,107,122,.32)}
+#ov .rsMeta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:13px;font-size:12px;color:#aab3bd}
+#ov .rsDiff{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:22px;padding:0 8px;
+  font-family:var(--font-num);font-size:11px;font-weight:800;letter-spacing:.5px;color:#dfe7f0;
+  border:1px solid rgba(255,255,255,.22);border-radius:var(--r-bar)}
+#ov .rsSpacer{flex:1 1 auto;min-height:0}
+#ov .rsRows{display:flex;flex-direction:column;text-align:left;margin-bottom:16px}
+#ov .rsRow{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.075)}
+#ov .rsRow b{font-size:11.5px;font-weight:400;letter-spacing:.02em;color:#9aa4af}
+#ov .rsRow em{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:13.5px;font-weight:800;color:#e7edf4}
+#ov .rsRow.hi em{color:#fff;font-size:15px}
+
+/* ── 캠프 재화 두 칸 — 미네랄과 가스는 **같은 급**이다 ─────────────── */
+#ov .rsCur{display:flex;margin-bottom:16px}
+#ov .rsCurC{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:7px}
+#ov .rsCurI{display:inline-flex;flex:none}
+#ov .rsCurI .ri{width:16px;height:16px;object-fit:contain;display:block}
+#ov .rsCurL{font-size:11.5px;letter-spacing:.03em;color:#9aa4af}
+#ov .rsCurV{font-family:var(--font-num);font-size:26px;font-weight:800;color:#fff;line-height:1}
+#ov .rsBar{height:2px;background:rgba(255,255,255,.1);margin-bottom:18px}
+#ov .rsBar i{display:block;height:100%;width:100%;background:var(--gold)}
+#ov .rsX.lose .rsBar i{background:#ff6b7a}
+#ov .rsBtns{display:flex;gap:10px}
+#ov .rsBtns button{flex:1;height:46px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#dfe7f0;
+  background:linear-gradient(180deg,rgba(26,32,44,.72),rgba(4,6,10,.9));border:1px solid var(--metal-edge);
+  border-radius:0 0 var(--r-bar) var(--r-bar);box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 2px 4px -2px rgba(0,0,0,.7)}
+#ov .rsBtns .rsPri{position:relative;flex:1.6;color:#fff}
+#ov .rsBtns .rsPri::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:2px;
+  background:var(--gold);box-shadow:0 0 10px var(--gold)}
+#ov .rsX.lose .rsBtns .rsPri::after{background:#ff6b7a;box-shadow:0 0 10px #ff6b7a}
+#ov.rsOn{background:linear-gradient(180deg,rgba(3,4,8,.62) 0%,rgba(3,4,8,.86) 46%,rgba(3,4,8,.96) 100%)!important;
+  padding:0!important;display:block!important}
+#ov.rsOn .ovCard{display:none!important}
+#ov:not(.rsOn) .rsX{display:none}
+
+/* ── 8안 ── ⚠ 뼈대가 #ov 접두사를 가지므로 변형도 같은 접두사가 필요하다 ── */
+/* P1 · 좌우 두 칸 + 가운데 세로선 · 라벨 위 / 숫자 아래 */
+#ov.p1 .rsCurC{flex-direction:column;gap:6px}
+#ov.p1 .rsCurC:first-child{border-right:1px solid rgba(255,255,255,.12)}
+#ov.p1 .rsCurI{order:1} #ov.p1 .rsCurL{order:2} #ov.p1 .rsCurV{order:3}
+#ov.p1 .rsCurC{position:relative} #ov.p1 .rsCurI{position:absolute;top:0;left:50%;transform:translateX(-50%)}
+#ov.p1 .rsCurL{margin-top:20px}
+/* P2 · 좌우 두 칸 · 아이콘 + 숫자 한 줄(라벨 없음) */
+#ov.p2 .rsCurL{display:none}
+#ov.p2 .rsCurI .ri{width:20px;height:20px}
+/* P3 · 위아래 두 줄 · 라벨 좌 / 숫자 우 — 위 목록과 같은 문법인데 글자만 크다 */
+#ov.p3 .rsCur{flex-direction:column;gap:0}
+#ov.p3 .rsCurC{justify-content:flex-start;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09)}
+#ov.p3 .rsCurC:last-child{border-bottom:0}
+#ov.p3 .rsCurV{margin-left:auto;font-size:23px}
+/* P4 · 위아래 두 줄 · 가운데 정렬 · 라벨 없이 아이콘 + 큰 숫자 */
+#ov.p4 .rsCur{flex-direction:column;gap:8px}
+#ov.p4 .rsCurL{display:none}
+#ov.p4 .rsCurI .ri{width:19px;height:19px}
+#ov.p4 .rsCurV{font-size:30px}
+/* P5 · 좌우 두 칸 · 숫자 크게 + 라벨 아래 작게 · 위 헤어라인으로 구역을 가른다 */
+#ov.p5 .rsCur{border-top:1px solid rgba(255,255,255,.12);padding-top:14px}
+#ov.p5 .rsCurC{flex-direction:column;gap:5px}
+#ov.p5 .rsCurI{display:none}
+#ov.p5 .rsCurV{order:1;font-size:29px}
+#ov.p5 .rsCurL{order:2}
+/* P6 · 좌우 두 칸 · 아이콘을 크게 · 양끝으로 밀어 놓는다 */
+#ov.p6 .rsCurC{justify-content:flex-start;gap:9px}
+#ov.p6 .rsCurC:last-child{justify-content:flex-end}
+#ov.p6 .rsCurL{display:none}
+#ov.p6 .rsCurI .ri{width:24px;height:24px}
+#ov.p6 .rsCurV{font-size:28px}
+/* P7 · 위아래 두 줄 · 숫자 끝을 맞춘다(라벨 좌 · 숫자 우) · 큰 글자 */
+#ov.p7 .rsCur{flex-direction:column;gap:6px}
+#ov.p7 .rsCurC{justify-content:flex-start}
+#ov.p7 .rsCurV{margin-left:auto;font-size:28px}
+/* P8 · 좌우 두 칸 · 라벨 없이 아이콘 + 숫자 · 칸마다 **재화 색 밑변 광원** */
+#ov.p8 .rsCur{gap:14px}
+#ov.p8 .rsCurC{position:relative;padding-bottom:11px;gap:8px}
+#ov.p8 .rsCurL{display:none}
+#ov.p8 .rsCurI .ri{width:20px;height:20px}
+#ov.p8 .rsCurV{font-size:27px}
+#ov.p8 .rsCurC::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;opacity:.75}
+#ov.p8 .rsCurC[data-k="min"]::after{background:#7fd4ff;box-shadow:0 0 8px -1px #7fd4ff}
+#ov.p8 .rsCurC[data-k="gas"]::after{background:#5dff8f;box-shadow:0 0 8px -1px #5dff8f}

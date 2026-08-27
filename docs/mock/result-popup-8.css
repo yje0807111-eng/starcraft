@@ -1,0 +1,73 @@
+/* 게임 종료 팝업 8안 (2026-08-26) — 후보 CSS.
+   뽑는 법: `node docs/mock/result-popup-8.shot.mjs` (OUT=<폴더> 필요) — 앱을 띄우고 실제로
+   게임에 들어간 뒤 <html class="vN"> 을 갈아 끼우며 승리/나가기 화면을 찍는다.
+   ⚠ 목업은 **실제 게임 화면 위에서** 찍는다. 여기 규칙을 <html class="vN"> 로 켜서 그대로 씌운다.
+      가짜 배경 위에 그린 목업은 실제와 다르게 보인다(예전에 그렇게 하다 네 번 갈아엎었다).
+   기준: 로딩·로그인·설정 = 판이 없고 가는 선과 글자뿐 · 뒤가 비친다.
+   지키는 것(기존 팝업 느낌): 화면 가운데 뜨는 카드 · 제목 아래 액센트 선 · 버튼 둘 · 승금/패빨 */
+
+/* ── 공통(V1~V8 전부) — 카드에서 판을 걷는다 ───────────────────────── */
+.v1 .ovCard,.v2 .ovCard,.v3 .ovCard,.v4 .ovCard,.v6 .ovCard,.v7 .ovCard,.v8 .ovCard,
+.v1 .ecCard,.v2 .ecCard,.v3 .ecCard,.v4 .ecCard,.v6 .ecCard,.v7 .ecCard,.v8 .ecCard{
+  background:none!important;border:0!important;box-shadow:none!important;clip-path:none!important}
+.v1 .ovCard::before,.v2 .ovCard::before,.v3 .ovCard::before,.v4 .ovCard::before,
+.v6 .ovCard::before,.v7 .ovCard::before,.v8 .ovCard::before,
+.v1 .ecCard::before,.v2 .ecCard::before,.v3 .ecCard::before,.v4 .ecCard::before,
+.v6 .ecCard::before,.v7 .ecCard::before,.v8 .ecCard::before{display:none!important}
+/* 안쪽 글래스 패널도 판이다 — 글자만 남긴다 */
+.v1 .ovPanel,.v2 .ovPanel,.v3 .ovPanel,.v4 .ovPanel,.v5 .ovPanel,.v6 .ovPanel,.v7 .ovPanel,.v8 .ovPanel{
+  background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+/* 뒤가 비쳐야 하므로 딤은 더 진하게(카드 면이 하던 일을 딤이 대신한다) */
+.v1 #ov,.v2 #ov,.v3 #ov,.v4 #ov,.v6 #ov,.v7 #ov,.v8 #ov,
+.v1 #exitConfirm,.v2 #exitConfirm,.v3 #exitConfirm,.v4 #exitConfirm,
+.v6 #exitConfirm,.v7 #exitConfirm,.v8 #exitConfirm{background:rgba(3,4,8,.82)!important;backdrop-filter:blur(2px)}
+
+/* ── V2~ : 제목을 설정 창처럼 **왼쪽 정렬 + 전체폭 1px 밑줄** ────────── */
+.v2 .ovCard,.v3 .ovCard,.v4 .ovCard,.v8 .ovCard,
+.v2 .ecCard,.v3 .ecCard,.v4 .ecCard,.v8 .ecCard{text-align:left!important;width:88%;max-width:330px}
+.v2 .ovTop,.v3 .ovTop,.v4 .ovTop,.v8 .ovTop{padding-bottom:9px!important;margin-bottom:11px!important;
+  border-bottom:1px solid rgba(255,255,255,.1)}
+.v2 .ovTop::after,.v3 .ovTop::after,.v4 .ovTop::after,.v8 .ovTop::after{
+  left:0!important;right:auto!important;width:52px;height:1px!important;opacity:1!important}
+.v2 .ecTitle,.v3 .ecTitle,.v4 .ecTitle,.v8 .ecTitle{text-align:left!important;padding-bottom:9px;margin-bottom:11px;
+  border-bottom:1px solid rgba(255,255,255,.1)}
+.v2 .ecTitle::after,.v3 .ecTitle::after,.v4 .ecTitle::after,.v8 .ecTitle::after{left:0!important;transform:none!important;width:52px}
+.v2 .ecMsg,.v3 .ecMsg,.v4 .ecMsg,.v8 .ecMsg{text-align:left!important}
+
+/* ── V3·V4·V8 : 요약 줄 — 설정 행과 같은 문법(라벨 좌 / 값 우 / 1px 선) ── */
+.ovStatsX{display:none}
+.v3 .ovStatsX,.v4 .ovStatsX,.v8 .ovStatsX{display:block;margin:12px 0 4px;text-align:left}
+.v3 .ovStatsX div,.v4 .ovStatsX div,.v8 .ovStatsX div{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 0;border-bottom:1px solid rgba(255,255,255,.075)}
+.v3 .ovStatsX div:last-child,.v4 .ovStatsX div:last-child,.v8 .ovStatsX div:last-child{border-bottom:0}
+.v3 .ovStatsX span,.v4 .ovStatsX span,.v8 .ovStatsX span{font-size:11px;color:#9aa0a8}
+.v3 .ovStatsX b,.v4 .ovStatsX b,.v8 .ovStatsX b{font-family:var(--font-num);font-size:14px;font-weight:800;color:#e6ecf3}
+
+/* ── V4 : 버튼도 판을 벗는다(설정 「로그아웃」 버튼과 같은 것) ───────── */
+.v4 #ovBtn,.v4 #ovBtn2,.v4 .ecCancel,.v4 .ecGo{
+  background:none!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:none!important;clip-path:none!important}
+.v4 #ovBtn{border-color:rgba(255,255,255,.3)!important}
+
+/* ── V5 : 카드 실루엣(각진 컷)은 남기고 **면만** 비운다 ─────────────── */
+.v5 .ovCard,.v5 .ecCard{background:rgba(4,5,9,.34)!important;box-shadow:none!important}
+.v5 #ov,.v5 #exitConfirm{background:rgba(3,4,8,.7)!important}
+
+/* ── V6 : 카드가 아니라 **화면 아래 시트** ──────────────────────────── */
+.v6 #ov,.v6 #exitConfirm{align-items:flex-end!important;padding:0!important}
+.v6 .ovCard,.v6 .ecCard{width:100%!important;max-width:none!important;text-align:left!important;
+  padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px))!important;
+  border-top:1px solid rgba(255,255,255,.12)!important;background:rgba(6,7,11,.9)!important}
+.v6 .ovTop::after,.v6 .ecTitle::after{left:0!important;right:auto!important;transform:none!important;width:52px}
+.v6 .ecTitle,.v6 .ecMsg{text-align:left!important}
+
+/* ── V7 : 카드가 없다 — 화면 가운데 제목·문구·버튼만(가장 시네마틱) ── */
+.v7 .ovCard,.v7 .ecCard{width:100%!important;max-width:300px;padding:0!important}
+.v7 #ovTitle{font-size:34px!important;letter-spacing:4px!important}
+.v7 .ovTop{padding-bottom:14px!important;margin-bottom:14px!important}
+.v7 .ovTop::after{left:34%!important;right:34%!important;height:1px!important;opacity:.9!important}
+.v7 .ecTitle::after{width:64px;height:1px}
+.v7 .ovBtns,.v7 .ecBtns{margin-top:22px!important}
+
+/* ── V8 : 색은 **선 하나에만**. 제목 글자까지 흰색으로 ───────────────── */
+.v8 #ovTitle{color:#f2f5f8!important;text-shadow:none!important}
+.v8 .ovCard.win .ovTop::after,.v8 .ovCard.lose .ovTop::after{height:1px!important;box-shadow:none!important}

@@ -1,0 +1,67 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>캠프 수급 표기 4안</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* C2 확정(두 칸 + 캠프는 아래 한 줄). 남은 건 **그 한 줄을 뭐라고 쓰느냐**뿐이다.
+   ⛔ 「×」를 쓰지 말 것 — 옆 두 칸이 진짜 배율(×2.0 / ×2)이라 같은 기호를 쓰면
+      캠프 값도 배율로 읽힌다. 캠프 값은 배율이 아니라 **양**이다.
+   ⚠ 이 프로젝트의 단위는 「시간치」다(DESIGN §「같은 자로 재기」 · UM_ANCHOR_MIN=60분치). */
+:root{--font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px;--fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px;
+  --dc:#ffb14d;--dcRGB:255,177,77}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#141416;color:#e7e9ee;
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;width:760px}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:16px 0 3px}
+.hd:first-child{margin-top:0}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 7px}
+.sub b{color:#dfe6f0}
+.det{position:relative;width:340px;border-radius:6px;padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:11px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4}
+.stat b{display:block;font-family:var(--font-num);font-size:20px;font-weight:700;margin-top:2px}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.camp{display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:var(--r-bar);
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.camp .ci{width:17px;height:17px;flex:none}
+.camp .cl{font-size:var(--fs-md);color:#9aa4b0}
+.camp .cv{margin-left:auto;font-family:var(--font-num);font-size:17px;font-weight:700;color:#8fe3ff}
+.camp .cv small{font-size:10.5px;opacity:.75;margin-left:1px}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+.bad{color:#ff8a8a}
+</style></head><body>
+<div id="w"></div>
+<script>
+const MIN='../../assets/icons/res_mineral.webp';
+const det=(label,val)=>`<div class="det">
+  <div class="stats">
+    <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+    <div class="stat c"><i>포인트 획득량</i><b>×2</b></div></div>
+  <div class="camp"><img class="ci" src="${MIN}" alt=""><span class="cl">${label}</span>
+    <span class="cv">${val}</span></div>
+  <div class="desc">메타 업그레이드가 어느 정도 쌓여야 버팁니다</div></div>`;
+const V=[
+['U0','<span class="bad">U0 — 「2h × auto」</span> (제안하신 것)',
+ '옆 두 칸이 <b>진짜 배율</b>(×2.0 · ×2)이라 같은 <b>×</b> 를 쓰면 캠프 값도 배율로 읽힌다. 글자 그대로는 「2시간 <b>곱하기</b> 자동」 — 수량이 아니라 수식이다. 한글 라벨 사이에 영문 <b>auto</b> 하나만 섞이는 것도 걸린다.',
+ '캠프 수급','2h <small>× auto</small>'],
+['U1','U1 — 라벨이 일을 한다: <em>「캠프 자동수급」 + 2시간치</em>',
+ '「자동수급」을 <b>라벨</b>로 옮기고 값은 순수한 양만 남긴다. 프로젝트가 이미 쓰는 단위(<b>시간치</b>)라 문서·코드와 말이 맞는다.',
+ '캠프 자동수급','2<small>시간치</small>'],
+['U2','U2 — <em>「2시간분」</em>',
+ '「치」 대신 「분」. 일상어로는 이쪽이 더 흔하다(「하루치」 ↔ 「하루분」). ⚠ 다만 이 게임엔 <b>분(minute)</b> 도 나와서 헷갈릴 여지가 있다.',
+ '캠프 자동수급','2<small>시간분</small>'],
+['U3','U3 — <em>「+2시간」</em>',
+ '「치/분」을 아예 빼고 <b>+</b> 로 「받는 것」임을 표시. 가장 짧고, 옆 배율(×)과 기호가 <b>확실히 갈린다</b>. 대신 「2시간이 지나간다」로 오해할 수 있다.',
+ '캠프 자동수급','+2<small>시간</small>'],
+];
+document.getElementById('w').outerHTML=V.map(([k,t,d,l,v])=>
+ `<div><p class="hd">${t}</p><p class="sub">${d}</p>${det(l,v)}</div>`).join('');
+</script>
+</body></html>

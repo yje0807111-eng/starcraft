@@ -100,9 +100,61 @@ const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇
 // ⭐ **일꾼을 빼서 배치하지 않는다.** 정제소가 스스로 캔다 — 스타 원본과 다르다.
 //   분당 = (0.2 + 0.1 × 정제소Lv) × 던전배율 · 업그레이드 비용 = 미네랄 3만 × 1.15^Lv
 // ⚠ 가스 값은 작다(전함 30 · 공성전차 10). 미네랄과 자릿수가 다르다는 것을 전제로 볼 것.
-const CAMP_REF_BASE = 0.2, CAMP_REF_STEP = 0.1;   // 분당 생산 — 기본 · 레벨당
-const CAMP_REF_COST0 = 30000, CAMP_REF_R = 1.15;  // 업그레이드 비용(미네랄)
-function campRefLv(){ return campUpgLv('refinery'); }
+// ⚠ **값은 실측으로 정한다**(BALANCE.md §3-2-2). 옛 0.2/0.1 은 「한 회차 = 3시간」을 전제로
+//   쓴 값인데, 실측 회차는 41분이라 25분에 가스가 5개뿐이었다 — 상위 유닛도 연구도 못 열었다.
+//   합격 기준: 회차 하나에 **계열 업그레이드 144레벨(계열당 24) + 단발 3~5개** ≈ 가스 476.
+const CAMP_REF_BASE = 12, CAMP_REF_STEP = 2;     // 분당 생산 — 기본 · 레벨당
+// ⭐ 레벨당 +2 인 이유: 정제소를 올리는 것이 **가스가 눈에 띄게 느는 일**이어야 한다.
+//   +0.6 일 때는 12레벨을 올려도 분당 13 뿐이라, 미네랄만 새고 체감이 없었다(실측).
+// ⛽ 업그레이드 비용(미네랄) — ⭐ **자주 오르는 것이 목적**이다(2026-08-27 사용자 확정).
+//   계단이 가파르면 한 회차에 몇 번 못 올라 「가스 구역을 키운다」가 체감되지 않는다.
+//   ⛔ 계단을 1 에 가깝게 눕히지 말 것 — 미네랄이 지수로 자라므로 비용도 지수여야
+//     정제소 레벨이 로그로 자란다(그래야 가스가 폭주하지 않는다 · BALANCE §0).
+const CAMP_REF_COST0 = 10000, CAMP_REF_R = 1.12;
+// ⛽ **정제소 「가스 생산」 업그레이드** — 설계 §2-3-1 은 「정제소 안에서」 산다.
+//   ⭐ **UI 를 새로 만들지 않는다.** 캠프에 들어올 때 정제소의 `research` 배열에 항목을 하나
+//     꽂고 나갈 때 뺀다(`campSyncUnitCost` 와 같은 빌림-반납). 그러면 카드·구매·진행바·
+//     비용 표시를 전부 공짜로 얻는다.
+//   ⛔ TECH_TREE 는 관리자 탭·오토배틀과 공유다 — 항목을 영구히 넣지 말 것.
+//   ⚠ `tier:[]` 는 **캠프에서만** 성립한다(값을 campResearchCost 가 대신 낸다).
+//     캠프 밖에서 이 항목이 보이면 `r.tier[lv]` 가 undefined 라 터진다. 그래서 반드시 뺀다.
+const CAMP_REF_KEY = 'gasup';
+const CAMP_REF_RES = { k:CAMP_REF_KEY, name:'가스 생산', desc:'정제소 자동 생산 +' + CAMP_REF_STEP + '/분', tier:[] };
+let _campRefHome = null;
+function campPatchRefinery(){
+  if(_campRefHome || typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t) return;
+  const b = (t.buildings || []).find(function(x){ return x.gas; }); if(!b) return;
+  _campRefHome = { b: b, had: b.research || null };
+  b.research = (b.research || []).concat([CAMP_REF_RES]); }
+// 🩸 **스킬의 체력 코스트를 캠프 자릿수로 낮춘다** (2026-08-27).
+//   ⛔ 캠프 설계 체력은 SC 의 약 1/8 이다(레인저 5 vs SC 마린 40). 원본 `hpCost:10` 을 그대로 두면
+//     `strikeSkillTick` 의 `u.hp <= sk.hpCost*2` 가 **늘 참**이라 광폭화가 영영 안 나간다
+//     (실측 2026-08-27: 16분 동안 strikeSkillTick 5,139회 · 시전 0회).
+//   ⚠ `SKILLS` 는 관리자 탭·오토배틀과 **공유**다 — 캠프에서만 바꾸고 나갈 때 되돌린다.
+//   ⚠ 지금 hpCost 를 쓰는 스킬은 광폭화 하나뿐이지만, 표를 훑어 **전부** 바꾼다(새로 생겨도 따라온다).
+const CAMP_SK_HP_K = 0.125;      // 캠프 체력 ÷ SC 체력 (설계표 레인저 5 ÷ SC 마린 40)
+let _campSkHome = null;
+function campPatchSkillCost(){
+  if(_campSkHome || typeof SKILLS === 'undefined') return;
+  _campSkHome = [];
+  for(const k in SKILLS){ const sk = SKILLS[k];
+    if(sk && sk.hpCost > 0){ _campSkHome.push([sk, sk.hpCost]);
+      sk.hpCost = Math.max(0.1, sk.hpCost * CAMP_SK_HP_K); } } }
+function campRestoreSkillCost(){
+  if(!_campSkHome) return;
+  for(const pair of _campSkHome) pair[0].hpCost = pair[1];
+  _campSkHome = null; }
+function campRestoreRefinery(){
+  if(!_campRefHome) return;
+  const h = _campRefHome; _campRefHome = null;
+  if(h.had) h.b.research = h.had; else delete h.b.research; }
+// 레벨 저장소는 **연구 칸**이다(연구 카드로 사므로 G.tech.research 에 쌓인다).
+// ⚠ 옛 저장(`C.upg.refinery`)도 함께 본다 — 화면이 없던 시절 벤치·테스트가 그쪽에 썼다.
+function campRefLv(){
+  const T = (typeof G !== 'undefined') ? G.tech : null;
+  const r = (T && T.research && (T.research[T.race + '_' + CAMP_REF_KEY] | 0)) || 0;
+  return Math.max(r, campUpgLv('refinery')); }
 function campHasRefinery(){
   if(typeof G === 'undefined' || !G.tech) return false;
   return (G.tech.ents || []).some(function(e){
@@ -907,14 +959,39 @@ function campDesignStats(list){ let n = 0; for(const u of (list || [])) if(campD
 //   ⭐ 적(campScaleFoes)과 달리 **개체 값에 그대로 곱한다** — 적은 '무리 총량'을 난이도에 맞추지만
 //      아군은 기준 총량이 없다. 유닛별 차이는 곱셈이라 그대로 보존된다.
 //   ⚠ 같은 유닛에 두 번 걸지 말 것 — 출격 직후 새로 나온 것만 넘긴다(_campRtOn 표시).
+// 🔬 연구 배수 — 계열 업그레이드(공격·체력)를 캠프 전투에 얹는다(HUNT_R1 §3-4).
+//   ⛔ `_upgAtk`/`_upgDef`(11-cmdcard.js)를 빌려 쓰지 말 것 — 그것은 **샌드박스 전투실험 전용**이고
+//     「+1/티어」 **덧셈**이다. 캠프는 설계대로 **×1.065^Lv 곱셈** — 레벨이 무제한이라
+//     덧셈은 후반에 무의미해진다(적 체력은 던전당 ×2 로 자란다).
+//   ⚠ 방어(armor)는 §3-1 에서 뺐다 — 방어구 업그레이드 자리를 **체력**이 대신한다(§3-4).
+//     그래서 'hp' 는 `UNIT_UPG[uid].def` 키를 읽는다.
+//   ⚠ 종족은 `RACE_OF` 가 아니라 **`G.tech.race`** 를 쓴다 — `techDoResearch` 가
+//     `race+'_'+key` 로 써 넣으므로 읽는 쪽도 같아야 한다.
+// ⭐ **한 레벨은 가볍게, 대신 많이 오른다**(2026-08-27 사용자 확정 · 옛 1.065).
+//   가스 수급을 키워 레벨 수를 늘리는 대신 한 레벨의 무게를 줄였다 — 총 강함은 비슷한데
+//   「오르는 느낌」이 훨씬 자주 온다.
+//   ⚠ 던전 하나(적 ×2)를 따라잡는 데 필요한 레벨이 **11 → 24** 로 늘었다(§3-4 표도 그렇게 고쳤다).
+const CAMP_RES_STEP = 1.03;       // 계열 업그레이드 한 레벨당(HUNT_R1 §3-4)
+function campResLv(uid, kind){    // kind: 'atk' | 'hp'
+  if(typeof G === 'undefined' || !G.tech || typeof UNIT_UPG === 'undefined') return 0;
+  const m = UNIT_UPG[uid]; if(!m) return 0;
+  const k = (kind === 'atk') ? m.atk : m.def;
+  if(!k) return 0;
+  return (G.tech.research && (G.tech.research[G.tech.race + '_' + k] | 0)) || 0; }
+function campResMul(uid, kind){ const lv = campResLv(uid, kind);
+  return lv ? Math.pow(CAMP_RES_STEP, lv) : 1; }
+
 function campScaleAllies(list){
   if(!list || !list.length) return 0;
-  campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 트리 배수는 그 위에 곱한다
-  const atk = campRtMul('atk'), hp = campRtMul('hp');
-  if(atk === 1 && hp === 1) return 0;
+  campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 배수는 그 위에 곱한다
+  const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
   let n = 0;
   for(const u of list){
     if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
+    const uid = u.gm || u.id;
+    const atk = tAtk * campResMul(uid, 'atk');   // 🌳 트리 × 🔬 연구(계열별)
+    const hp  = tHp  * campResMul(uid, 'hp');
+    if(atk === 1 && hp === 1) continue;          // 얹을 것이 없으면 표시도 남기지 않는다
     u._campRtOn = 1;
     if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
       u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }
@@ -1425,6 +1502,8 @@ function campHideView(){
   campUnmountView();                                   // #vBuild 를 원래 자리로
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
+  campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
+  campRestoreSkillCost();                                         // 🩸 스킬 체력 코스트 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
@@ -1448,7 +1527,14 @@ function campEnter(){
   // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
   //    techUIInit 이 1기를 깔아 두므로(16-build.js:14) 새 판일 때만 걷는다.
   if(!had) G.tech.ents = (G.tech.ents || []).filter(function(e){ return e.type !== 'worker'; });
+  // ⛽ **시작 가스 0**(HUNT_R1 §2-3-1 — 정제소를 지어야 나온다).
+  //    techUIInit 은 관리자 탭 기본값 1000 을 넣는다(16-build.js `TECH_START`). 그대로 두면
+  //    연구를 26레벨이나 공짜로 사서 「가스는 늘 모자란다」가 첫 5분에 무너진다(실측 2026-08-27).
+  //    ⚠ 미네랄(1500)은 건드리지 않는다 — 그쪽은 환생 트리 「시작 미네랄」의 기준선이다(§4-5).
+  if(!had) G.tech.energy = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
+  campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
+  campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
@@ -1575,7 +1661,7 @@ function campRaceRender(){
       + '<span class="crDs">' + (S.sub || '') + ' · ' + (S.desc || '') + '</span></span>'
       + '<span class="crGoIc">' + (on ? '✓' : '›') + '</span></button>'; }
   ov.querySelector('.crRows').innerHTML = rows;
-  ov.querySelector('.crGo').textContent = (R.name || '') + '으로 시작';
+  ov.querySelector('.crGo').textContent = (R.name || '') + (typeof josaRo==='function'?josaRo(R.name):'으로') + ' 시작';
   if(typeof paintIcons === 'function') paintIcons(ov);
 }
 function campRaceSel(k){ if(!STK_RACES[k] || k === _campRacePick) return;
@@ -1666,13 +1752,45 @@ function campUpgLv(k){ const C = campState(); return (C && C.upg && C.upg[k]) | 
 function campUpgCost(k){
   const lv = campUpgLv(k);
   // ⛽ 정제소는 계단이 하나다(무릎 없음) — §2-3-1
-  if(k === 'refinery') return Math.max(1, Math.ceil(CAMP_REF_COST0 * Math.pow(CAMP_REF_R, lv) * campUpgDisc()));
+  if(k === 'refinery') return Math.max(1, Math.ceil(CAMP_REF_COST0 * Math.pow(CAMP_REF_R, campRefLv()) * campUpgDisc()));
   const base = (k === 'tap') ? CAMP_TAP_COST0 : CAMP_GAT_COST0;
   const r0 = CAMP_COST_R0[k] || CAMP_COST_R0.gather, r1 = CAMP_COST_R1[k] || CAMP_COST_R1.gather;
   const knee = Math.min(lv, CAMP_COST_KNEE);                    // Lv10 까지는 완만하게, 그 뒤로 가팔라진다
   const cost = base * Math.pow(r0, knee) * Math.pow(r1, Math.max(0, lv - CAMP_COST_KNEE));
   return Math.max(1, Math.ceil(cost * campUpgDisc()));           // 🌳 업그레이드 비용
 }
+// ══ 🔬 연구·계열 업그레이드 값 — 캠프는 **가스만** 받는다 (2026-08-27 확정) ═══
+//   ⭐ **미네랄 = 양(유닛·일꾼·건물) / 가스 = 질(강화·해금).**
+//     미네랄은 지수로 자라서 어떤 가격표를 붙여도 결국 공짜가 된다 — 그래서 미네랄로 매긴
+//     강화 비용은 「비싼 미네랄」일 뿐이고 두 번째 자원을 둔 뜻이 사라진다.
+//     가스는 안 자라므로 **끝까지 모자란 것**으로 남는다. 그 자리가 강화·해금이다.
+//   ⛔ 연구에 미네랄을 도로 붙이지 말 것.
+//   ⛔ 계열 업그레이드에 상한을 두지 말 것 — 설계 §3-4 가 「무제한」으로 확정했다.
+//     적이 던전당 ×2 세지는 것을 11레벨씩 따라잡는 구조라 3티어로 막으면 던전 2에서 멎는다.
+//   ⚠ **캠프 밖(관리자 탭·오토배틀)은 원본 값 그대로다** — null 을 돌려 갈라 준다.
+//     16/17-build.js 는 공유 파일이라 그쪽에 캠프 값을 박으면 두 모드가 함께 망가진다.
+const CAMP_RES_GAS0 = 1;        // 계열 업그레이드 1레벨 가스
+// ⭐ **효과 계단(1.03)과 짝이다.** 한 레벨의 무게를 절반으로 눕혔으면 **비용 계단도 눕혀야**
+//   같은 가스로 두 배 더 오른다 — 안 그러면 축이 그냥 약해진다(실측: DPS 215→108).
+//   ⚠ 비율이 중요하다: 효과 1.03 ÷ 비용 1.04 → 강함이 가스의 0.75제곱으로 자란다.
+//     옛 짝(1.065 / 1.08)은 0.81제곱이었으므로 **지금이 더 안전한 쪽**이다(BALANCE §0).
+const CAMP_RES_GAS_R = 1.04;    // 레벨당 비싸짐
+const CAMP_RES_ONE = { 100:10, 150:15, 200:20 };   // 단발 연구(§3-4-1) — 원본 미네랄값이 곧 등급
+const CAMP_RES_ONE_DEF = 15;    // 표에 없는 등급은 '보통'으로 본다
+// r = TECH_TREE 의 연구 정의 · lv = 지금 레벨. 캠프가 아니면 null(호출부가 원본 값을 쓴다).
+// ⚠ r 를 키 문자열로 다시 찾지 않는다 — 같은 k 가 종족마다 있어 건물까지 알아야 한다.
+function campResearchCost(r, lv){
+  if(!_campOn || !r) return null;
+  // ⛽ **정제소만 미네랄로 산다** — 미네랄(양) → 가스(질)로 가는 **유일한 다리**다.
+  //   ⛔ 이것까지 가스로 만들면 가스를 가스로 사는 셈이라 축이 닫힌다.
+  //   ⭐ 후반에 남아도는 미네랄의 출구이기도 하다(비용이 지수라 폭주하지 않는다).
+  if(r.k === CAMP_REF_KEY) return [campUpgCost('refinery'), 0];
+  const d = campUpgDisc();                        // 🌳 「업그레이드 비용」 — 건물·유닛과 같은 문
+  const g = r.tier
+    ? CAMP_RES_GAS0 * Math.pow(CAMP_RES_GAS_R, Math.max(0, lv | 0))
+    : (CAMP_RES_ONE[r.m | 0] || CAMP_RES_ONE_DEF);
+  return [0, Math.max(1, Math.ceil(g * d))]; }
+
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
@@ -2350,12 +2468,14 @@ const CAMP_UNIT_PRICE = {
 // ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
 //   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
 const CAMP_UNIT_PRICE_MUL = 200;
-// ⛽ **유닛 가스는 §2-3-2 가 단일 소스다.** ⚠ 그 표의 「미네랄」 열은 §3-1 이전 값이라 무시한다
-//   (화력병 5,000 vs 10,000 · 저격수 3,000 vs 20,000 — 전부 다르다).
-//   **미네랄은 §3-1 · 가스는 §2-3-2.** 표에 없는 유닛은 가스가 안 든다.
-const CAMP_UNIT_GAS = {
-  machinegun:3, medic:3, goliath:5, ghost:8, tank:10, skyguard:10, hellfire:13,
-  pelican:10, aegis:10, dreadnought:30 };
+// ⛽ **유닛에는 가스가 안 든다** (2026-08-27 확정 — 축 분리).
+//   ⭐ **미네랄 = 양(유닛·일꾼·건물) / 가스 = 질(강화·해금).** 유닛은 '양' 쪽이다.
+//   ⛔ 되살리지 말 것 — 가스는 늘 모자란 자원이라, 유닛과 연구가 나눠 쓰면 **연구가 굶는다.**
+//     상위 유닛의 뚜껑은 **반복 구매 ×1.15**(`campUnitCost`)가 이미 맡고 있다.
+//   ⚠ 옛 값(§2-3-2 · 원본 ÷10)은 되돌릴 때를 위해 남긴다 —
+//     machinegun 3 · medic 3 · goliath 5 · ghost 8 · tank 10 · skyguard 10 ·
+//     hellfire 13 · pelican 10 · aegis 10 · dreadnought 30
+const CAMP_UNIT_GAS = {};
 function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
   return (v != null) ? v : Math.round((m || 0) * CAMP_UNIT_PRICE_MUL); }
 function campUnitOwned(id){

@@ -1,0 +1,51 @@
+/* 나가기 확인 팝업 8안 (2026-08-26)
+   지금: 각진 컷 카드 + 반투명 면 + 테두리 + 시안 밑줄. 버튼만 새것(B4)이고 카드는 옛날 것이다.
+   기준: 로딩·로그인·설정 + **방금 만든 결과 화면**(판 없는 전면 · 본문 글꼴 제목 · 헤어라인 줄).
+   ⚠ 이건 「정말 나가시겠습니까?」 짧은 확인창이다 — 전면 화면으로 만들면 과하다.
+      같은 어휘의 **작은 버전**을 찾는 것이 목표다.
+   ⛔ 시안(--ecAcc:#5cd6ff)은 DESIGN §2 에서 '지금 선택된 것' 전용이다. 확인창 밑줄에 쓸 자리가 아니다. */
+
+/* ── 공통: 카드에서 옛 껍데기를 걷는다(E7 만 제외) ────────────────── */
+.e1 .ecCard,.e2 .ecCard,.e3 .ecCard,.e4 .ecCard,.e5 .ecCard,.e6 .ecCard,.e8 .ecCard{
+  background:none!important;border:0!important;box-shadow:none!important;clip-path:none!important}
+/* 딤 — 카드 면이 하던 일을 딤이 대신한다. ⛔ 시안 방사 그라데이션은 뺀다 */
+.e1 #exitConfirm,.e2 #exitConfirm,.e4 #exitConfirm,.e5 #exitConfirm,.e6 #exitConfirm,.e8 #exitConfirm{
+  background-image:none!important;background-color:rgba(3,4,8,.8)!important}
+/* 제목 글꼴 = 결과 화면과 같은 본문 글꼴 */
+.e1 .ecTitle,.e2 .ecTitle,.e3 .ecTitle,.e4 .ecTitle,.e5 .ecTitle,.e6 .ecTitle,.e8 .ecTitle{
+  font-family:var(--font-ko)!important;text-shadow:none!important}
+
+/* E1 · 판만 벗기기 — 제목·문구·버튼은 그대로 가운데 */
+.e1 .ecTitle::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent)!important;opacity:1!important}
+/* E2 · 설정 제목줄 — 왼쪽 정렬 + 전체폭 1px 밑줄 */
+.e2 .ecCard{text-align:left!important;width:88%!important;max-width:330px!important}
+.e2 .ecTitle{padding-bottom:10px!important;margin-bottom:12px!important;border-bottom:1px solid rgba(255,255,255,.1)}
+.e2 .ecTitle::after{left:0!important;right:auto!important;width:52px;background:rgba(255,255,255,.75)!important;opacity:1!important}
+.e2 .ecMsg{text-align:left!important;margin-bottom:16px!important}
+/* E3 · 아래 시트 — 화면 아래에서 올라온다. 위쪽만 1px 선 */
+.e3 #exitConfirm{align-items:flex-end!important;background-image:none!important;background-color:rgba(3,4,8,.72)!important}
+.e3 .ecCard{width:100%!important;max-width:none!important;text-align:left!important;
+  padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px))!important;
+  border-top:1px solid rgba(255,255,255,.12)!important;background:rgba(6,7,11,.92)!important}
+.e3 .ecTitle::after{left:0!important;right:auto!important;width:52px;background:rgba(255,255,255,.75)!important;opacity:1!important}
+/* E4 · 결과 화면의 작은 판 — 자간 넓은 제목 + 문구 + 버튼(같은 골격, 크기만 작다) */
+.e4 .ecTitle{font-size:22px!important;letter-spacing:3px!important;color:#fff!important;padding-bottom:0!important;margin-bottom:14px!important}
+.e4 .ecTitle::after{display:none!important}
+.e4 .ecMsg{font-size:12px!important;color:#9aa4af!important;margin-bottom:20px!important}
+/* E5 · 선 두 줄 사이 — 결과 화면의 재화 줄과 같은 문법 */
+.e5 .ecCard{text-align:left!important;width:88%!important;max-width:330px!important}
+.e5 .ecTitle{padding:11px 0!important;margin:0!important;border-top:1px solid rgba(255,255,255,.1);
+  border-bottom:1px solid rgba(255,255,255,.1);font-size:15px!important}
+.e5 .ecTitle::after{display:none!important}
+.e5 .ecMsg{text-align:left!important;margin:12px 0 16px!important}
+/* E6 · 제목 없이 질문 한 줄 — 가장 짧다 */
+.e6 .ecTitle{display:none!important}
+.e6 .ecMsg{font-size:16px!important;font-weight:700!important;color:#e7edf4!important;margin-bottom:20px!important}
+/* E7 · 카드는 남기되 각·네온만 없앤다(평평한 판) */
+.e7 .ecCard{clip-path:none!important;border-radius:var(--r-bar)!important;
+  background:rgba(10,11,15,.92)!important;border:1px solid rgba(255,255,255,.1)!important;box-shadow:none!important}
+.e7 .ecTitle{font-family:var(--font-ko)!important;text-shadow:none!important}
+.e7 .ecTitle::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent)!important;opacity:1!important}
+/* E8 · 위험을 색이 아니라 **한 줄**로 — 「나가기」만 붉은 글자·테두리 */
+.e8 .ecTitle::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent)!important;opacity:1!important}
+.e8 .ecCard .ecGo{color:#ff8a94!important;border-color:rgba(255,107,122,.55)!important;background:rgba(255,107,122,.1)!important}

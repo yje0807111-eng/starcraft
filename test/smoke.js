@@ -739,6 +739,11 @@ async function groupLobby(){
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
     assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
     assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
+    // ⛽ **시작 가스 0** — 정제소를 지어야 나온다(HUNT_R1 §2-3-1).
+    //    ⚠ techUIInit 은 관리자 탭 기본값 1000 을 넣는다(`TECH_START`). 그게 새면 연구를
+    //      26레벨이나 공짜로 사서 「가스는 늘 모자란다」가 첫 5분에 무너진다(실측 2026-08-27).
+    //    ⚠ 미네랄(1500)은 그대로 둔다 — 환생 트리 「시작 미네랄」의 기준선이다(§4-5).
+    assert((G.tech.energy||0)===0,'새 캠프인데 시작 가스가 0 이 아님: '+G.tech.energy);
     // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
     //    ⛔ techUIInit 이 깔아 두는 1기를 되살리지 말 것. 「일꾼을 사는 것」이 첫 목표다.
     assert((G.tech.ents||[]).filter(e=>e.type==='worker').length===0,
@@ -758,20 +763,37 @@ async function groupLobby(){
       assert(campGasPerMin()===0,'정제소가 없는데 가스가 나온다: '+campGasPerMin());
       const e0=G.tech.energy||0; campGasTick(60);
       assert((G.tech.energy||0)===e0,'정제소가 없는데 가스가 쌓였다');
-      // 정제소를 세운 셈 치고 — 분당 (0.2 + 0.1×Lv)
+      // 정제소를 세운 셈 치고 — 분당 (6 + 0.6×Lv)
+      //   ⚠ 옛 0.2/0.1 은 「한 회차 = 3시간」 전제로 쓴 값이라 41분 회차에서는 25분에 5개뿐이었다.
+      //     지금 값의 근거는 BALANCE.md §3-2-2 (회차당 계열 144레벨 + 단발 3~5개 ≈ 가스 476).
       const fake={ type:'bldg', bt:0, bk:(TECH_TREE[G.tech.race].buildings.find(b=>b.gas)||{}).k, eid:'gasT' };
       if(fake.bk){ G.tech.ents.push(fake);
-        assert(Math.abs(campGasPerMin()-0.2*campMineMul()*campRtMul('gasMul'))<1e-9,
-          'Lv0 분당 생산이 0.2 가 아니다: '+campGasPerMin());
+        assert(Math.abs(campGasPerMin()-CAMP_REF_BASE*campMineMul()*campRtMul('gasMul'))<1e-9,
+          'Lv0 분당 생산이 기본값과 다르다: '+campGasPerMin());
+        assert(CAMP_REF_BASE>=1,'가스 기본 생산이 1/분 미만이다 — 회차 안에 연구를 못 연다: '+CAMP_REF_BASE);
         S.upg.refinery=10;
-        assert(Math.abs(campGasPerMin()-1.2*campMineMul()*campRtMul('gasMul'))<1e-9,
-          'Lv10 분당 생산이 1.2 가 아니다: '+campGasPerMin());
+        assert(Math.abs(campGasPerMin()-(CAMP_REF_BASE+CAMP_REF_STEP*10)*campMineMul()*campRtMul('gasMul'))<1e-9,
+          'Lv10 분당 생산이 레벨 계단과 다르다: '+campGasPerMin());
         const g0=G.tech.energy||0; campGasTick(60);
         assert(Math.abs((G.tech.energy||0)-g0-campGasPerMin())<1e-6,'1분 틱이 분당 생산과 다르다');
-        // 업그레이드 비용 = 3만 × 1.15^Lv (무릎 없음)
+        // 업그레이드 비용 = CAMP_REF_COST0 × CAMP_REF_R^Lv (무릎 없음)
         S.upg.refinery=0; const c0=campUpgCost('refinery'); S.upg.refinery=1; const c1=campUpgCost('refinery');
-        assert(Math.abs(c0/campUpgDisc()-30000)<1,'정제소 0→1 비용이 3만이 아니다: '+c0);
-        assert(Math.abs(c1/c0-1.15)<0.01,'정제소 비용 계단이 1.15 가 아니다: '+(c1/c0).toFixed(3));
+        assert(Math.abs(c0/campUpgDisc()-CAMP_REF_COST0)<1,'정제소 0→1 비용이 기준값과 다르다: '+c0);
+        assert(Math.abs(c1/c0-CAMP_REF_R)<0.01,'정제소 비용 계단이 상수와 다르다: '+(c1/c0).toFixed(3));
+        assert(CAMP_REF_R>1.05,'정제소 계단이 너무 눕다 — 가스가 폭주한다: '+CAMP_REF_R);
+        // ⛽ **정제소 안에서 산다**(§2-3-1) — 캠프에서만 정제소에 연구 카드가 꽂힌다.
+        //   ⛔ 이게 없으면 화면에서 가스 생산을 **올릴 방법이 아예 없다**(2026-08-27 실측으로 걸렸다).
+        { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+          const ent=(rb.research||[]).find(x=>x.k===CAMP_REF_KEY);
+          assert(ent,'정제소에 「가스 생산」 연구 카드가 없다 — 올릴 방법이 없다');
+          const cc=campResearchCost(ent,campRefLv());
+          assert(cc && cc[1]===0,'정제소 업그레이드에 가스가 붙었다 — 가스를 가스로 사는 셈이다');
+          assert(cc[0]===campUpgCost('refinery'),'정제소 카드 값이 campUpgCost 와 다르다: '+cc[0]);
+          // 레벨은 **연구 칸**에도 쌓인다(카드로 사므로) — 둘이 어긋나면 값이 안 오른다
+          const before=campRefLv();
+          G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]=before+3;
+          assert(campRefLv()===before+3,'연구 칸에 쌓인 정제소 레벨을 안 읽는다: '+campRefLv());
+          delete G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]; }
         S.upg.refinery=0; G.tech.ents.splice(G.tech.ents.indexOf(fake),1); G.tech.energy=e0; } }
     // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × 1.15^보유). 조합을 강제하는 유일한 장치다.
     if(typeof campSyncUnitCost==='function'){
@@ -786,9 +808,17 @@ async function groupLobby(){
       G.tech.units[q.id]=3; campSyncUnitCost();
       const want=Math.ceil(base*Math.pow(1.15,3));
       assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
+      // ⛽ **유닛에는 가스가 안 든다**(2026-08-27 축 분리 — 미네랄=양 / 가스=질).
+      //   ⛔ 되살리면 가스를 유닛과 연구가 나눠 써 **연구가 굶는다**(가스는 늘 모자란 자원).
+      { let n=0; for(const b of TECH_TREE[G.tech.race].buildings)
+          for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
+        assert(n===0,'캠프인데 가스가 드는 유닛이 '+n+'종 있다'); }
       // ⛔ TECH_TREE 는 관리자 탭·오토배틀과 공유 — 반드시 원복된다
       campRestoreUnitCost();
       assert(q.m===raw,'가격을 원복하지 않았다: '+q.m+' (원값 '+raw+')');
+      { let n=0; for(const b of TECH_TREE[G.tech.race].buildings)
+          for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
+        assert(n>0,'원복했는데 원본 가스값이 안 돌아왔다 — 오토배틀이 함께 망가진다'); }
       G.tech.units[q.id]=0; }
     // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
     const M=G.tech.minerals||[];
@@ -1315,6 +1345,157 @@ async function groupLobby(){
       assert(cut5>cut0*5,'스킬 쿨다운 감소가 트리를 안 탄다: '+cut5.toFixed(3)+' vs '+cut0.toFixed(3));
       return '공격·체력·건물 ×25 · 비용 −80% · 인구 +500 · 스킬쿨 '+cut5.toFixed(2)+'/틱';
     } finally { C.rbTree=keep; if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
+  // 🔬 연구 배선 — 계열 업그레이드가 **캠프 전투에** 실제로 걸리는가(HUNT_R1 §3-4 · 2026-08-27).
+  //   ⛔ 이게 없으면 가스로 연구를 사도 아무 일도 안 일어난다 — 실제로 그 상태였다.
+  //   ⚠ 계열이 유닛마다 다르다(marine=inf · racer=veh). **찍은 계열만** 세져야 한다.
+  await step('캠프 연구: 계열 업그레이드가 전투에 걸린다', async()=>{
+    skipIf(typeof campResMul!=='function'||typeof campScaleAllies!=='function','연구 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    const keepR=G.tech?Object.assign({},G.tech.research):null;
+    try{
+      C.rbTree={};                                     // 🌳 트리를 비워 연구만 남긴다
+      const race=G.tech.race;
+      // ① 기준선 — 연구 0
+      G.tech.research={};
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      // ⚠ 무작위 소환이면 마린·레이서가 안 나오는 판이 생긴다 — forceId 로 못 박는다
+      const spawn=()=>campWithStk(()=>{ strikeSpawnUnit('me','marine'); strikeSpawnUnit('me','racer'); });
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const pick=(id)=>CAMPB.me.units.find(u=>(u.gm||u.id)===id);
+      skipIf(!pick('marine')||!pick('racer'),'마린·레이서가 안 나옴');
+      const m0=pick('marine'), r0=pick('racer');
+      const mA0=m0.dmg, mH0=m0.maxHp, rA0=r0.dmg, rH0=r0.maxHp;
+      // ② 보병 공격만 3레벨 — 마린은 세지고 레이서는 그대로여야 한다
+      G.tech.research={}; G.tech.research[race+'_inf_atk']=3;
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const m1=pick('marine'), r1=pick('racer');
+      const want=Math.pow(CAMP_RES_STEP,3);
+      assert(Math.abs(m1.dmg/mA0-want)<1e-6,'보병 공격 3레벨이 ×'+want.toFixed(3)+'가 아님: ×'+(m1.dmg/mA0).toFixed(3));
+      assert(Math.abs(m1.maxHp-mH0)<1e-6,'공격 연구인데 체력이 움직였다');
+      assert(Math.abs(r1.dmg-rA0)<1e-6,'보병 연구가 차량(레이서)에 샜다: ×'+(r1.dmg/rA0).toFixed(3));
+      // ③ 체력은 **방어 키**를 읽는다(§3-1 에서 방어를 뺐다 → 그 자리를 체력이 대신)
+      G.tech.research={}; G.tech.research[race+'_veh_def']=2;
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const m2=pick('marine'), r2=pick('racer');
+      const want2=Math.pow(CAMP_RES_STEP,2);
+      assert(Math.abs(r2.maxHp/rH0-want2)<1e-6,'차량 체력 2레벨이 ×'+want2.toFixed(3)+'가 아님: ×'+(r2.maxHp/rH0).toFixed(3));
+      assert(Math.abs(m2.maxHp-mH0)<1e-6,'차량 연구가 보병(마린)에 샜다');
+      // ④ 트리와 곱해진다(둘 중 하나만 걸리면 안 된다)
+      C.rbTree={atk:1};                                 // 사다리 1차 = ×1.5
+      G.tech.research={}; G.tech.research[race+'_inf_atk']=3;
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const m3=pick('marine');
+      const both=campRtMul('atk')*want;
+      assert(Math.abs(m3.dmg/mA0-both)<1e-6,'트리×연구가 안 곱해짐: ×'+(m3.dmg/mA0).toFixed(3)+' (기대 ×'+both.toFixed(3)+')');
+      // ⑤ 두 번 걸리지 않는다
+      const h=m3.maxHp, d=m3.dmg;
+      campScaleAllies(CAMPB.me.units);
+      assert(m3.maxHp===h && m3.dmg===d,'연구 배수가 이중 적용됨');
+      return '보병 공격 ×'+want.toFixed(3)+' · 차량 체력 ×'+want2.toFixed(3)+' · 트리와 곱 ×'+both.toFixed(2);
+    } finally { C.rbTree=keepT; if(G.tech&&keepR) G.tech.research=keepR;
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
+  // ⛽ 연구 값 — 캠프는 **가스만** 받는다(HUNT_R1 §2-3 · §3-4 · 2026-08-27).
+  //   ⛔ 미네랄이 다시 붙으면 「비싼 미네랄」로 되돌아간다 — 두 번째 자원을 둔 뜻이 사라진다.
+  //   ⚠ 16/17-build.js 는 관리자 탭·오토배틀과 공유다. **캠프 밖은 원본 값 그대로**여야 한다.
+  await step('캠프 연구: 값이 가스만이고 계열 업그레이드에 상한이 없다', async()=>{
+    skipIf(typeof campResearchCost!=='function','연구 값 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    const keepR=G.tech?Object.assign({},G.tech.research):null;
+    const keepC=G.tech?G.tech.credit:0, keepE=G.tech?G.tech.energy:0;
+    const eng=techGetBldg(G.tech.race,'engbay'); skipIf(!eng||!eng.research,'공학소가 없다');
+    const tierR=eng.research.find(x=>x.k==='inf_atk'); skipIf(!tierR||!tierR.tier,'보병 공격력 연구가 없다');
+    try{
+      C.rbTree={};                                    // 🌳 할인 없이 기준값을 본다
+      // ① 계열 업그레이드 — 미네랄 0 · 가스 1×1.08^Lv · **3티어를 넘어서도 값이 나온다**
+      for(const lv of [0,1,2,3,7]){
+        const c=campResearchCost(tierR,lv);
+        assert(c && c[0]===0, 'Lv'+lv+' 계열 업그레이드에 미네랄이 붙었다: '+(c&&c[0]));
+        const want=Math.max(1,Math.ceil(CAMP_RES_GAS0*Math.pow(CAMP_RES_GAS_R,lv)));
+        assert(c[1]===want,'Lv'+lv+' 가스가 '+want+'이 아님: '+c[1]); }
+      assert(campResearchCost(tierR,7)[1]>0,'3티어를 넘으니 값이 0 이 됐다 — 상한이 남아 있다');
+      // ② 단발 연구 — 등급별 고정 가스(원본 미네랄 100/150/200 이 곧 등급)
+      for(const [m,g] of [[100,10],[150,15],[200,20]]){
+        const c=campResearchCost({m:m,g:m},0);
+        assert(c[0]===0 && c[1]===g,'등급 '+m+' 단발 연구가 가스 '+g+'이 아님: '+JSON.stringify(c)); }
+      // ③ 실제로 사 본다 — **가스만 깎이고 미네랄은 그대로**여야 한다
+      G.tech.research={}; G.tech.credit=1e9; G.tech.energy=1000;
+      G.tech.built.engbay=1;
+      G.tech.ents.push({eid:'__resTest', type:'bldg', bk:'engbay', bt:0, x:0.5, y:0.5});
+      G.tech.sel=null;
+      const m0=G.tech.credit, e0=G.tech.energy;
+      techDoResearch('engbay','inf_atk');
+      assert(G.tech.credit===m0,'연구를 샀는데 미네랄이 깎였다: '+(m0-G.tech.credit));
+      assert(e0-G.tech.energy===campResearchCost(tierR,0)[1],
+        '깎인 가스가 값과 다르다: '+(e0-G.tech.energy)+' vs '+campResearchCost(tierR,0)[1]);
+      // ④ 캠프 밖은 원본 값 그대로다 — 공유 파일이 오염되면 안 된다
+      const wasOn=(typeof campExit==='function');
+      campExit();
+      assert(campResearchCost(tierR,0)===null,'캠프를 나갔는데 캠프 값이 계속 나온다');
+      // ⛔ 정제소 「가스 생산」 카드는 **캠프 전용**이다(tier:[] 라 캠프 밖에서 그리면 터진다).
+      { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+        assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),
+          '캠프를 나갔는데 정제소 카드가 남아 있다 — 관리자 탭이 터진다'); }
+      openHome(); await sleep(420);
+      assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
+      { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+        assert((rb.research||[]).some(x=>x.k===CAMP_REF_KEY),'캠프로 돌아왔는데 정제소 카드가 없다'); }
+      void wasOn;
+      return '계열 가스 1→'+campResearchCost(tierR,7)[1]+'(Lv7) · 단발 10/15/20 · 미네랄 0';
+    } finally {
+      C.rbTree=keepT;
+      if(G.tech){ if(keepR) G.tech.research=keepR; G.tech.credit=keepC; G.tech.energy=keepE;
+        G.tech.ents=(G.tech.ents||[]).filter(e=>e.eid!=='__resTest');
+        const be=(G.tech.ents||[]).find(e=>e._rj); if(be) be._rj=null; }
+    }
+  });
+
+  // 🔮 스킬이 캠프 전투에서 실제로 나가는가 (2026-08-27).
+  //   ⛔ 벤치의 「스킬 0회」는 **계측 구멍이었다** — _stkApplyAlly/Foe/Spot 만 세는데
+  //     광폭화(self)·공성 모드(toggle)·은신 장막(aura)은 그 경로를 안 타고
+  //     u.buff / u.skillOn 을 직접 켠다. 여기서는 **게임 상태를 직접** 본다.
+  await step('캠프: 스킬이 전투에서 실제로 나간다', async()=>{
+    skipIf(typeof campEnterDungeon!=='function'||typeof campCombatStep!=='function','캠프 던전 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ for(let i=0;i<8;i++) strikeSpawnUnit('me','marine'); });
+      // ⛔ **설계 능력치를 반드시 씌운다.** 안 씌우면 유닛이 SC 체력(40)을 그대로 갖고 있어
+      //   테스트가 **가짜로 통과한다** — 실제 캠프 마린은 체력 5 라 광폭화의 hpCost(10)에 막혔다
+      //   (2026-08-27: 이 절차를 빼먹어서 실측과 반대되는 결과를 얻었다).
+      campScaleAllies(CAMPB.me.units);
+      const u0=CAMPB.me.units[0]; skipIf(!u0,'마린이 안 나옴');
+      assert(u0.maxHp<=10,'설계 능력치가 안 씌워졌다 — 이 테스트는 무의미하다: hp '+u0.maxHp);
+      // ① 마린은 스팀팩을 갖는다 — ⚠ 연구와 무관하다(unitSkillKeys 는 연구를 안 본다)
+      const keys=campWithStk(()=>strikeSkillKeys(u0));
+      assert(keys.indexOf('stim')>=0,'마린 스킬 목록에 스팀팩이 없다: '+keys.join(','));
+      assert((SKILLS.stim||{}).kind==='self'||!SKILLS.stim.kind,'스팀팩이 self 가 아니다');
+      // ② 교전이 붙으면 버프가 실제로 켜진다
+      let on=0;
+      for(let i=0;i<600 && !on;i++){ campCombatStep(0.05);
+        for(const x of CAMPB.me.units){ if(x.buff && (x.buff.stim||0)>0){ on=1; break; } } }
+      assert(on,'30초를 싸웠는데 스팀팩이 한 번도 안 걸렸다 — 캠프에서 스킬이 안 나간다');
+      // ③ 체력 코스트가 캠프 자릿수여야 한다 — 원본(10)이면 체력 5 짜리가 영영 못 쓴다
+      assert(SKILLS.stim.hpCost*2 < u0.maxHp,
+        '광폭화 체력값이 캠프 체력보다 크다 — 조건에 늘 걸린다: hpCost '+SKILLS.stim.hpCost+' vs hp '+u0.maxHp);
+      return '스팀팩 자동 시전 ok · hpCost '+SKILLS.stim.hpCost+' vs 체력 '+u0.maxHp;
+    } finally { if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
@@ -5036,9 +5217,21 @@ async function groupLobby(){
       assert(Math.abs(r.width-o.width)<1 && Math.abs(r.height-o.height)<1,'방 만들기가 화면을 다 안 씀(카드 틀에 갇혔다)');
       assert(parseFloat(getComputedStyle(card).borderTopWidth)===0,'전체 화면인데 카드 테두리가 남아 있음'); }
     assert($('cpDiffStep').querySelector('.sdStepRow'),'난이도가 스테퍼(.sdStepRow)가 아님');
-    assert($('cpDiffStep').querySelectorAll('.sdDots i').length===DIFFICULTY_ORDER.length,'난이도 점이 난이도 수와 다름');
+    // 사다리 = 난이도 다섯 + **무한 한 칸**(2026-08-27) — 난이도 선택 화면과 같은 규칙
+    assert($('cpDiffStep').querySelectorAll('.sdDots i').length===_cpList().length,'난이도 점이 사다리 칸 수와 다름');
     assert(!document.querySelector('#createPanel .cpDiffBtns .moDiffBtn'),'옛 난이도 pill 나열이 남아 있음');
-    assert($('cpInfBtn').classList.contains('sdInf'),'무한 모드 줄이 공용 .sdInf 가 아님');
+    assert(!$('cpInfBtn'),'무한 모드가 아직 별도 줄이다 — 사다리 마지막 칸으로 들어갔다');
+    { const L=_cpList(); assert(L[L.length-1].k==='inf','무한이 마지막 칸이 아니다');
+      for(let n=0;n<L.length;n++) stepCpDiff(1);   // 끝까지 밀어 본다
+      await sleep(60);
+      assert(_createInf===true,'마지막 칸까지 갔는데 무한이 안 켜졌다');
+      assert($('cpDiffStep').querySelector('.sdDots i.inf'),'마지막 점이 무한 표시(보라)가 아니다');
+      for(let n=0;n<L.length;n++) stepCpDiff(-1); await sleep(60);
+      assert(_createInf===false,'첫 칸으로 돌아왔는데 무한이 안 꺼졌다'); }
+    // 🏕 캠프 보상은 **기준만**(수치 없음) — 방은 여럿이 보는 자리라 사람마다 다른 실수치를 걸면 거짓이 된다
+    { const c=$('cpDiffInfo').querySelector('.cmp b'); assert(c,'캠프 보상 기준이 없다');
+      assert(c.textContent.indexOf('시간치')>0,'캠프 보상이 「n시간치」가 아니다: '+c.textContent);
+      assert(!/\d{3,}/.test($('cpDiffInfo').textContent),'방 만들기에 재화 실수치가 적혔다 — 사람마다 다른 값이다'); }
     assert($('cpMode').innerHTML==='','난이도 있는 맵인데 대전 설정 구역이 채워졌다');
     // 인원 = 1~8 칸 게이지(고른 값까지 채우고 고른 칸만 발광)
     setCpMax(5, true); await sleep(50);
@@ -5049,7 +5242,10 @@ async function groupLobby(){
     closeCreate(); await sleep(60); backToTitle(); await sleep(80);
     _selMap=USEMAPS.cpu; hideAppScreens(); openRooms(); await sleep(200); createRoom(); await sleep(200);
     assert($('cpDiffSec').style.display==='none','난이도 없는 맵인데 난이도 구역이 보인다');
-    assert($('cpMode').querySelectorAll('.cpPreC').length===STK_PRESETS.length,'프리셋 카드 수가 다름');
+    // 대전 설정도 **난이도와 같은 스테퍼**로 통일했다(2026-08-27) — 칸 세 개 나열은 폐지
+    assert(!$('cpMode').querySelector('.cpPreC'),'프리셋이 아직 칸 나열이다 — 스테퍼로 통일했다');
+    assert($('cpMode').querySelector('#cpPreStep .sdStepRow'),'대전 설정이 스테퍼(.sdStepRow)가 아님');
+    assert($('cpMode').querySelectorAll('#cpPreStep .sdDots i').length===STK_PRESETS.length,'프리셋 점 수가 다름');
     assert(_createPre==='normal' && cpOptsPayload()===null,'일반 모드인데 오버라이드가 생김');
     assert(stkCfgFromOpts(cpOptsPayload())===null,'일반 모드인데 cfg 오버라이드가 생김');
     // ③ 프리셋(속도전) → 실제 cfg 로 번역된다. 체력 배율은 신전 3종 **구체값**이 되어야 한다
@@ -5119,43 +5315,58 @@ async function groupLobby(){
     MAP=keep; if(typeof _lobbyRoom!=='undefined') _lobbyRoom=keepRoom;
     return '라운드·골드·수입·체력 4항목 반영 ok'; });
   // ══ 공용 액션 버튼(.actBtn) — 세 상태를 한 컴포넌트가 갖는다 ══
-  await step('공용 액션 버튼: 활성·비활성·하위가 한 판에서 빛으로만 갈린다', async ()=>{
+  await step('공용 액션 버튼: 주·하위·비활성이 면과 테두리 밝기로만 갈린다', async ()=>{
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
     const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d)), ui=DIFFICULTY_ORDER.findIndex(d=>diffUnlocked(d));
     skipIf(ui<0,'해금된 난이도 없음');
     const rgb=x=>(x.match(/\d+/g)||[]).slice(0,3).map(Number);
     const lum=c=>(0.2126*c[0]+0.7152*c[1]+0.0722*c[2])/255;
-    // ① 면(背)은 세 상태 **모두 중립 회색**이다 — 색은 밑변 광원만 갖는다(DESIGN §0: 면을 채우지 않는다)
+    // ① 면(背)은 세 상태 **모두 중립 회색**이다 — 색을 채우지 않는다(DESIGN §0)
     sdPick(ui); await sleep(70);
-    const pri=$('sdGo'), sub=document.querySelector('#soloDiffPanel .cpBtns .actBtn');
+    // ⚠ 난이도 화면에는 **하위 버튼이 없다**(2026-08-27 · B5: 나가기는 머리줄 ✕). 주/하위 짝은 방 만들기에서 잰다.
+    const pri=$('sdGo');
     assert(pri.classList.contains('pri'),'주 동작에 .pri 가 없음');
+    assert(!document.querySelector('#soloDiffPanel .cpBtns'),'난이도 화면에 취소 버튼 줄이 되살아났다 — 나가기는 머리줄 ✕ 가 맡는다');
+    openRooms(); await sleep(60); createRoom(); await sleep(120);
+    const sub=document.querySelector('#createPanel .actBtn.sub');
     assert(sub && !sub.classList.contains('pri'),'하위 단계에 .pri 가 붙어 있음');
     for(const [nm,el] of [['활성',pri],['하위',sub]]){
       const bg=rgb(getComputedStyle(el).backgroundColor);
       const dev=Math.max(...bg)-Math.min(...bg);
       assert(dev<=30, nm+' 버튼 면이 회색이 아님(채널 편차 '+dev+') — 색은 밑변 광원만 갖는다'); }
-    // ② 밑변 광원: 활성은 붉고, 하위는 중립. ::after 한 겹이 단일 소스다
-    const bar=el=>getComputedStyle(el,'::after').backgroundImage;
-    const isRed=t=>[...t.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)].some(m=>+m[1]>=180 && +m[2]<=110 && +m[3]<=110);
-    assert(isRed(bar(pri)),'활성 버튼의 밑변 광원이 붉지 않음: '+bar(pri).slice(0,70));
-    assert(!isRed(bar(sub)),'하위 버튼의 밑변까지 붉다 — 위계가 안 갈린다');
-    // ③ 비활성 = 볼록 ↔ 오목이 통째로 뒤집힌다(윗변 하이라이트가 사라지고 위에서 그림자가 들어온다)
+    // ② 「옅은 면 + 1px」(2026-08-26 · B4안) — ⛔ 볼록한 판을 되돌리지 말 것.
+    //    위계는 **면과 테두리의 밝기**가 맡는다. 밑변 광원(::after)은 폐지했다.
+    const alpha=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):(/rgb\(/.test(t||'')?1:0); };
+    for(const [nm,el] of [['주',pri],['하위',sub]]){
+      const c=getComputedStyle(el);
+      assert(c.boxShadow==='none', nm+' 버튼에 볼록 그림자가 남아 있음: '+c.boxShadow.slice(0,40));
+      assert(c.backgroundImage==='none', nm+' 버튼 면이 그라데이션임: '+c.backgroundImage.slice(0,40));
+      assert(getComputedStyle(el,'::after').content==='none', nm+' 버튼에 밑변 광원(::after)이 남아 있음'); }
+    const aFace=alpha(getComputedStyle(pri).backgroundColor), sFace=alpha(getComputedStyle(sub).backgroundColor);
+    const aEdge=alpha(getComputedStyle(pri).borderTopColor), sEdge=alpha(getComputedStyle(sub).borderTopColor);
+    assert(aFace>sFace,'주 동작의 면이 하위보다 밝지 않음: '+aFace+' vs '+sFace);
+    assert(aEdge>sEdge,'주 동작의 테두리가 하위보다 밝지 않음: '+aEdge+' vs '+sEdge);
+    // ③ 비활성 = 면·테두리·글자가 한 단 더 죽는다
     // ⚠ renderSoloDiff 가 상세를 통째로 다시 그린다 → 값은 **다시 그리기 전에** 재 둘 것
     //    (떨어져 나간 노드에 getComputedStyle 을 걸면 빈 값이 와서 어떤 비교도 통과한다)
-    const onSh=getComputedStyle(pri).boxShadow, onLum=lum(rgb(getComputedStyle(pri).color));
+    // ⚠ 하위 버튼을 재느라 방 만들기를 열어 뒀다 — 잠김 검사는 **난이도 화면으로 돌아가서** 한다
+    //    (다른 화면이 덮은 채로 재면 떨어져 나간 노드에 걸려 어떤 비교도 통과한다)
+    closeCreate(); await sleep(40); openMapSelect(); await sleep(40); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(120);
+    sdPick(ui); await sleep(70);
+    const onLum=lum(rgb(getComputedStyle($('sdGo')).color));
     if(li>=0){ sdPick(li); await sleep(70);
       const off=$('sdGo'); assert(off.disabled,'잠긴 난이도인데 버튼이 열려 있음');
-      assert(getComputedStyle(off).boxShadow!==onSh,'비활성인데 볼록 그림자가 그대로다(오목으로 뒤집혀야 한다)');
-      assert(!isRed(bar(off)),'비활성인데 밑변이 아직 붉다');
+      assert(alpha(getComputedStyle(off).backgroundColor)<aFace,'비활성 면이 주 동작보다 어둡지 않음');
       assert(lum(rgb(getComputedStyle(off).color))<onLum,'비활성 글자가 활성보다 어둡지 않음'); }
     // ④ 방 만들기도 **같은 컴포넌트**를 쓴다 — 확정/취소 짝이 화면마다 달라지면 안 된다
     closeSoloDiff(); await sleep(40); openRooms(); await sleep(60); createRoom(); await sleep(120);
     const cGo=document.querySelector('#createPanel .actBtn.pri'), cNo=document.querySelector('#createPanel .actBtn.sub');
+    void 0;
     assert(cGo && cNo,'방 만들기가 공용 액션 버튼을 안 씀');
     assert(!document.querySelector('.cpMake,.cpCancel'),'옛 확정/취소 클래스가 남아 있음');
     assert(cGo.getBoundingClientRect().width > cNo.getBoundingClientRect().width,'주 동작이 취소보다 넓지 않음');
     closeCreate(); await sleep(40);
-    return '면 중립 · 광원으로만 위계 ok'; });
+    return '면 중립 · 면/테두리 밝기로만 위계 ok'; });
   await step('난이도 선택: 스테퍼 + 상세 · 잠긴 것은 고를 수 있고 시작만 막힌다', async ()=>{
     skipIf(typeof openSoloDiff!=='function','난이도 선택 없음');
     openMapSelect(); await sleep(60); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(150);
@@ -5167,8 +5378,12 @@ async function groupLobby(){
     assert(prev&&next&&prev.classList.contains('arwBtn')&&next.classList.contains('arwBtn'),
       '◀▶ 가 공용 .arwBtn 이 아님');
     assert(prev.querySelector('.arwIco')&&next.querySelector('.arwIco'),'화살표 글리프가 안 채워짐(paintArrows 누락)');
-    const dots=[...nav.querySelectorAll('.sdDots i')];
-    assert(dots.length===DIFFICULTY_ORDER.length,'점이 난이도 수와 다름: '+dots.length);
+    const dots=[...nav.querySelectorAll('.sdDots i')], SD=_sdList();
+    // ⚠ 사다리 = 난이도 다섯 + **무한 한 칸**(2026-08-27). 무한은 별도 줄(.sdInf)이 아니라 마지막 칸이다.
+    assert(dots.length===SD.length,'점이 사다리 칸 수와 다름: '+dots.length+' vs '+SD.length);
+    assert(!$('sdInf'),'무한 모드가 아직 별도 줄로 남아 있다 — 스테퍼 마지막 칸으로 들어갔다');
+    if(_sdHasInf()){ assert(SD[SD.length-1].k==='inf','무한이 마지막 칸이 아니다');
+      assert(dots[dots.length-1].classList.contains('inf'),'마지막 점이 무한 표시(보라)가 아니다'); }
     // 이름은 스테퍼가 갖는다 — 상세에 또 쓰면 같은 글자가 두 번 나온다
     const stx=nav.querySelector('.sdStepTx');
     assert(stx && stx.scrollWidth<=stx.clientWidth+0.5,'스테퍼 이름이 잘림: '+(stx&&stx.textContent));
@@ -5176,39 +5391,116 @@ async function groupLobby(){
     // 양 끝에서는 멈춘다(순환하지 않는다)
     sdPick(0); await sleep(60);
     assert($('sdPrev').disabled && !$('sdNext').disabled,'첫 난이도에서 ◀ 가 안 잠김');
-    sdPick(DIFFICULTY_ORDER.length-1); await sleep(60);
-    assert($('sdNext').disabled && !$('sdPrev').disabled,'마지막 난이도에서 ▶ 가 안 잠김');
-    sdStepBy(1); await sleep(40); assert(_sdPick===DIFFICULTY_ORDER[DIFFICULTY_ORDER.length-1],'끝에서 ▶ 가 순환함');
+    sdPick(SD.length-1); await sleep(60);
+    assert($('sdNext').disabled && !$('sdPrev').disabled,'마지막 칸에서 ▶ 가 안 잠김');
+    sdStepBy(1); await sleep(40); assert(_sdPick===SD[SD.length-1].k,'끝에서 ▶ 가 순환함');
     sdStepBy(-1); await sleep(60);
-    assert(_sdPick===DIFFICULTY_ORDER[DIFFICULTY_ORDER.length-2],'◀ 가 한 칸 안 움직임');
+    assert(_sdPick===SD[SD.length-2].k,'◀ 가 한 칸 안 움직임');
     assert(nav.querySelectorAll('.sdDots i.on').length===1,'켜진 점이 하나가 아님');
     // 잠긴 난이도 = 고를 수는 있고(무엇이 필요한지 보여 준다) 시작만 막힌다
     const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d));
     if(li>=0){ sdPick(li); await sleep(80);
       assert($('sdGo').disabled,'잠긴 난이도인데 시작 버튼이 열려 있음');
-      assert($('sdDet').querySelector('.sdLock'),'잠금 사유가 안 보임'); }
+      assert($('sdInfo').querySelector('.sdLock'),'잠금 사유가 안 보임');
+      assert($('sdDet').classList.contains('hide'),'잠긴 난이도인데 보상 판이 남아 있다'); }
     // 해금된 난이도 = 시작 버튼이 열리고 상세에 수치가 나온다
     sdPick(0); await sleep(80);
     assert(!$('sdGo').disabled,'해금된 난이도인데 시작 버튼이 잠김');
-    assert($('sdDet').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
-    assert($('sdDet').querySelector('.sdMap b').textContent===USEMAPS.nemo.name,'상세 머리에 고른 맵이 없음');
-    // ⚠ 상세 본문(이름·수치·설명)이 시작 버튼 위로 흘러 잘렸던 적이 있다 — 모든 난이도에서 담기는지 본다
-    for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
-      const body=$('sdDet').querySelector('.sdBody'), go=$('sdGo');
+    // 수치·설명은 2026-08-27 에 **난이도 이름 바로 아래**(그림 위)로 옮겼다 — 아래 판엔 보상만 남는다
+    assert($('sdInfo').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
+    assert(!$('sdDet').querySelector('.sdStat'),'수치가 아직 보상 판 안에 있다 — 그림 위로 올라갔다');
+    assert($('sdInfo').getBoundingClientRect().top < $('sdDet').getBoundingClientRect().top,
+      '수치·설명이 보상 판보다 아래에 있다');
+    // 맵 머리줄은 2026-08-27 에 **상세 판 안에서 화면 머리줄로 올라갔다**(D8)
+    assert(!$('sdDet').querySelector('.sdMap'),'맵 줄이 아직 상세 판 안에 있다 — 화면 머리줄로 올라갔다');
+    assert($('sdMapNm').textContent===USEMAPS.nemo.name,'머리줄에 고른 맵이 없음: '+$('sdMapNm').textContent);
+    assert(document.querySelector('#soloDiffPanel .sdX'),'나가기 ✕ 가 머리줄에 없다(B5: 취소 버튼을 여기로 올렸다)');
+    // 🖼 전체 화면 = 그 맵의 키 아트가 깔린다(팝업이던 시절엔 그림이 한 점도 없었다)
+    { const bg=getComputedStyle($('sdArt')).backgroundImage;
+      assert(bg && bg!=='none','맵 키 아트가 안 깔렸다');
+      assert(getComputedStyle($('sdArt'),'::after').backgroundImage.indexOf('gradient')>=0,'딤(--loadDim)이 없다'); }
+    // 🎁 보상 미리보기 — 머리줄이 「캠프 몇 시간치」를 갖고 아래는 재화 두 줄
+    { const rw=$('sdDet').querySelector('.sdRw'); assert(rw,'보상 미리보기가 없다');
+      const t=rw.querySelector('.sdRwHd .t');
+      assert(t && t.textContent.indexOf('캠프')===0 && t.textContent.indexOf('시간치')>0,
+        '머리줄이 「캠프 n시간치」가 아니다: '+(t&&t.textContent));
+      assert(t.textContent.indexOf('×')<0,'⛔ 배율 기호(×)가 섞였다 — 옆 두 칸이 진짜 배율이라 같은 기호를 쓰면 안 된다');
+      assert(rw.querySelectorAll('.sdRwRow').length===2,'재화 줄이 둘이 아니다');
+      assert(rw.querySelectorAll('.sdRwRow .ric').length===2,'재화 아이콘이 빠졌다(resIco)'); }
+    // ⚠ 상세 본문(이름·수치·설명)이 시작 버튼 위로 흘러 잘렸던 적이 있다 — 모든 칸에서 담기는지 본다
+    for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
+      const body=$('sdInfo').querySelector('.sdBody'), go=$('sdGo');
       assert(body.scrollHeight<=body.clientHeight+0.5,
-        DIFFICULTY_ORDER[i]+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
+        SD[i].k+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
       assert(body.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+0.5,
-        DIFFICULTY_ORDER[i]+' 본문이 시작 버튼과 겹침'); }
+        SD[i].k+' 본문이 시작 버튼과 겹침'); }
     // ⛔ 시작 버튼 색은 **난이도를 따라가지 않는다** — 공용 액션 버튼(.actBtn.pri) 한 색으로 고정
     assert($('sdGo').classList.contains('actBtn')&&$('sdGo').classList.contains('pri'),
       '시작 버튼이 공용 액션 버튼(.actBtn.pri)을 안 씀');
-    { const face=[]; for(let i=0;i<DIFFICULTY_ORDER.length;i++){ sdPick(i); await sleep(50);
+    { const face=[]; for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
         const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
       assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
-    // 무한 모드는 난이도가 아니다 — 스테퍼가 아니라 별도 줄
-    assert(!visible($('sdInf'))||$('sdInf').textContent.indexOf('무한')>=0,'무한 모드 줄이 이상함');
+    // 🎬 넘어올 때 **앞 팝업이 먼저 사라지면 안 된다** — 그 순간 뒤 로비가 드러나 화면이 튄다
     closeSoloDiff(); await sleep(40);
-    return '스테퍼 '+dots.length+'단 · 잠금 분리 ok'; });
+    openMapSelect(); await sleep(40); openModeSheet(USEMAPS.nemo); await sleep(120);
+    chooseSolo(); await sleep(120);
+    assert(!$('modeSheet').classList.contains('hide'),
+      '새 화면이 덮기 전에 앞 팝업이 사라졌다 — 그 사이 뒤 로비가 비쳐 화면이 튄다');
+    assert(!$('soloDiffPanel').classList.contains('hide'),'새 화면이 안 떴다');
+    await sleep(420);
+    assert($('modeSheet').classList.contains('hide'),'다 덮은 뒤에도 앞 팝업이 남아 있다');
+    closeSoloDiff(); await sleep(40);
+    return '사다리 '+dots.length+'칸(무한 포함) · 잠금 분리 · 전환 이어짐 ok'; });
+  // 🧬 종족 선택 팝업 = 캠프의 행 문법 + 「고른 행을 종족색이 물들인다」(2026-08-27 · S3안).
+  //    ⚠ 이 팝업은 **난이도 팝업 바로 다음**에 뜬다 — 껍데기가 다르면 두 장면이 덜컹인다.
+  //    ⛔ 고른 행에 붉은 밑변 광원을 주면 아래 확정 버튼과 서명이 겹쳐 '무엇이 확정인지'가 흐려진다.
+  await step('종족 선택: 캠프 행 문법 · 고른 행은 종족색 · 확정과 서명이 안 겹친다', async()=>{
+    skipIf(typeof openRacePicker!=='function','종족 선택 없음');
+    openRacePicker(null, function(){}); await sleep(120);
+    const rows=[...document.querySelectorAll('.raceOpt')];
+    assert(rows.length===RACE_PICK_ORDER.length,'행 수가 고를 수 있는 종족 수와 다르다: '+rows.length);
+    // ⛔ 고르는 목록을 줄였다고 종족 표 자체를 줄이면 안 된다 — 대기실 띠·관리자·상성이 같은 것을 본다
+    assert(STK_RACE_ORDER.length>RACE_PICK_ORDER.length,'STK_RACE_ORDER 까지 줄었다 — 다른 화면이 종족을 잃는다');
+    // 캠프(.crRow)와 같은 조각을 갖는가 — 아이콘 · 이름 · 부제 · ✓/›
+    for(const r of rows) for(const c of ['.roIco','.roNm','.roDs','.roGo'])
+      assert(r.querySelector(c),'행에 '+c+' 가 없다 — 캠프 행 문법과 어긋난다');
+    assert(parseFloat(getComputedStyle(rows[0]).borderTopLeftRadius)===0,'행이 라운드다 — 목록 행은 라운드 0');
+    // 껍데기 = 난이도 화면과 **같은 부품**을 빌린다(둘은 이어서 뜬다 — 다르면 그 자리에서 덜컹인다)
+    assert(!document.querySelector('#raceSelPanel .cpCard'),'종족 선택이 아직 팝업 카드다 — 전체 화면으로 바뀌었다');
+    for(const sel of ['.sdArt','.sdScr','.sdMap','.sdX','.sdBlk'])
+      assert(document.querySelector('#raceSelPanel '+sel),'전체 화면 부품 '+sel+' 이 없다 — 난이도 화면과 같은 것을 쓴다');
+    { const bg=getComputedStyle(document.querySelector('#raceSelPanel .sdArt')).backgroundImage;
+      assert(bg && bg!=='none','맵 키 아트가 안 깔렸다'); }
+    assert(getComputedStyle($('raceSelPanel')).zIndex===getComputedStyle($('soloDiffPanel')).zIndex,
+      '두 화면의 z-index 가 다르다 — 하나만 네비를 덮으면 흐름이 어긋난다');
+    // 고른 행 = 그 종족색이 물든다 · ✓ 로 갈린다
+    const on=document.querySelector('.raceOpt.on'); assert(on,'고른 행이 없다');
+    assert(on.querySelector('.roGo').textContent.indexOf('✓')>=0,'고른 행이 ✓ 가 아니다');
+    const face=getComputedStyle(on).backgroundImage;
+    assert(face!=='none','고른 행이 종족색으로 안 물든다');
+    // ⛔ 확정 버튼과 서명이 겹치면 안 된다 — 고른 행의 밑변이 붉으면 실패
+    const line=getComputedStyle(on,'::after').backgroundImage;
+    assert(line.indexOf('255, 59, 59')<0,'고른 행에 붉은 밑변 광원이 붙었다 — 확정 버튼(.actBtn.pri)과 서명이 겹친다');
+    const go=$('raceGo');
+    assert(go && go.classList.contains('actBtn') && go.classList.contains('pri'),'확정이 공용 액션 버튼이 아니다');
+    // ⚠ 2026-08-26(B4안) 이후 확정 버튼에는 **밑변 광원이 없다** — 위계는 면·테두리 밝기가 맡는다.
+    //   그래서 「행과 버튼이 같은 서명을 쓰지 않는가」를 그 언어로 다시 잰다:
+    //   행은 **종족색이 물든 면**, 버튼은 **면을 안 채운다**(B4).
+    assert(getComputedStyle(go).backgroundImage==='none','확정 버튼이 면을 채웠다 — B4(옅은 면 + 1px)를 되돌리지 말 것');
+    assert(face.indexOf('gradient')>=0,'고른 행이 종족색으로 안 물든다');
+    // 확정 문구가 고른 종족을 따라가고, **조사가 맞는가**(ㄹ 받침·받침 없음 = '로')
+    const seen=[];
+    for(const k of RACE_PICK_ORDER){ raceSel(k); await sleep(30);
+      const nm=STK_RACES[k].name, t=$('raceGo').textContent;
+      assert(t.indexOf(nm)===0,'확정 문구가 고른 종족을 안 따라간다: '+t);
+      assert(t===nm+josaRo(nm)+' 시작','조사가 틀렸다: '+t);
+      seen.push(t); }
+    assert(seen.indexOf('에테리얼로 시작')>=0,'ㄹ 받침 조사가 안 잡힌다: '+seen.join(' / '));
+    // 버튼은 공용 크기(44px) 그대로 — 세로로 쌓느라 flex 가 높이를 나눠 갖던 적이 있다
+    for(const b of document.querySelectorAll('#raceSelPanel .cpBtns .actBtn'))
+      assert(b.getBoundingClientRect().height>=43,'버튼이 작아졌다: '+Math.round(b.getBoundingClientRect().height)+'px (44px 이어야 한다)');
+    closeRaceSelect(); await sleep(40);
+    return '행 '+rows.length+' · 껍데기 통일 · 조사 ok'; });
   // ⚙ 게임 밖 설정(유즈맵 ☰ → .appCtx) — 게임 안 설정과 **같은 카드**를 문맥만 바꿔 쓴다
   // ══ 게임 진입 로딩 = 카드 덱(H안). 한 화면이 협동·팀전·개인 셋을 다 맡는다 ══
   await step('게임 진입 로딩: 카드 덱 · 팀은 윗변 · 준비는 밑변 · 혼자면 덱이 없다', async ()=>{
@@ -8243,11 +8535,50 @@ async function groupGame(){
         if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth); }
       return bad; };
     // 결과 제목 문구(승리는 VICTORY) · 나가기 확인은 한 줄
-    assert(showOverlay.toString().indexOf("'VICTORY'")>=0,'승리 제목이 VICTORY가 아님');
-    assert(showOverlay.toString().indexOf("'CLEAR'")<0,'옛 제목 CLEAR가 남아 있음');
+    // ⚠ 종료 결과는 2026-08-26 부터 **rsShow** 가 그린다(판 없는 전면 화면). showOverlay 는 갈래만 고른다.
+    assert(rsShow.toString().indexOf("'VICTORY'")>=0,'승리 제목이 VICTORY가 아님');
+    assert(rsShow.toString().indexOf("'CLEAR'")<0,'옛 제목 CLEAR가 남아 있음');
     const ecm=document.querySelector('#exitConfirm .ecMsg');
     assert(ecm && ecm.innerHTML.indexOf('<br')<0 && ecm.textContent.trim()==='정말 나가시겠습니까?',
       '나가기 확인 문구가 한 줄이 아님: '+(ecm?ecm.textContent.trim():'없음'));
+    // ── 종료 결과 화면(2026-08-26 · P7안) ──────────────────────────
+    // ⚠ showOverlay() 를 부르지 않는다 — 그러면 _runSummary() 가 **보상을 다시 지급**하고
+    //   판을 다시 기록한다. G._runSum 을 미리 심어 두면 _runSummary 가 그대로 돌려주므로 부작용이 없다.
+    // ⚠ 끝에 _ovClearAuto() 를 꼭 부른다 — 건너뛰기가 5초 자동 진행 타이머를 켜는데,
+    //   그걸 안 끄면 뒤 테스트 도중에 화면이 로비로 넘어간다(실제로 그랬다).
+    {
+      const ov=$('ov'), was=G.phase, savedSum=G._runSum;
+      G._runSum={ coins:3150, kills:1284, round:20, time:724,
+        prof:{ xp:412, pc:8420, gas:1684, ups:0, level:24, day:1, dayMul:1 } };
+      assert(showOverlay.toString().indexOf('rsShow(')>=0,'showOverlay 가 결과 화면을 안 부른다');
+      G.phase='won'; rsShow('won');
+      assert(ov.classList.contains('rsOn'),'결과 화면이 안 켜짐(rsOn)');
+      assert(getComputedStyle($('rsCard')).display!=='none','결과 화면이 안 보임');
+      assert(getComputedStyle(ov.querySelector('.ovCard')).display==='none','시작 안내 카드가 같이 떠 있음');
+      // 버튼은 새로 만들지 않고 **옮겨** 쓴다 — #ovBtn 핸들러·자동 진행 바가 그대로 살아야 한다.
+      // ⚠ 옮기는 건 화면을 세울 때다. 마지막에 옮기면 그때 자리가 생겨 위 내용이 밀린다.
+      assert($('ovBtns').parentNode===$('rsBtnHost'),'버튼을 결과 화면으로 안 옮김');
+      // ⚠ 등장 애니메이션 중에 화면을 누르면 **아직 세지 않은 수치까지** 최종값으로 가야 한다.
+      //   예전엔 목표값을 셀 때 심어서, 차례가 안 온 재화가 「+0」 으로 굳었다.
+      const min=$('rsCurMin'), gas=$('rsCurGas');
+      assert(min&&gas,'캠프 재화 두 줄이 없음');
+      assert(min.dataset.to==='8420'&&gas.dataset.to==='1684','재화 목표값이 렌더 때 안 심김');
+      rsSkip();
+      assert(ov.classList.contains('rsDone'),'건너뛰기 후에도 애니메이션 상태');
+      assert(min.textContent.replace(/[^0-9]/g,'')==='8420','건너뛰기 후 미네랄이 최종값이 아님: '+min.textContent);
+      assert(gas.textContent.replace(/[^0-9]/g,'')==='1684','건너뛰기 후 가스가 최종값이 아님: '+gas.textContent);
+      // 미네랄과 가스는 **같은 급**이다 — 하나만 크게 하지 않는다
+      assert(getComputedStyle(min).fontSize===getComputedStyle(gas).fontSize,
+        '미네랄·가스 크기가 다름: '+getComputedStyle(min).fontSize+' vs '+getComputedStyle(gas).fontSize);
+      // 승/패는 제목 색이 갈려야 한다(둘 다 같으면 구분이 안 된다)
+      const cw=(c)=>{ ov.classList.remove('win','lose'); if(c) ov.classList.add(c);
+        return getComputedStyle($('rsTtl')).color; };
+      const tw=cw('win'), tl=cw('lose');
+      assert(tw!==tl,'승/패 제목 색이 같음: '+tw);
+      rsHide(); _ovClearAuto(); ov.classList.add('hide');
+      G.phase=was; G._runSum=savedSum;
+      assert($('ovBtns').parentNode===ov.querySelector('.ovCard'),'결과를 걷은 뒤 버튼을 안 돌려놓음');
+    }
     openSettings();
     const sp=$('settingsPop');
     assert(!sp.classList.contains('appCtx'),'게임 안인데 게임 밖(appCtx) 규격임');
@@ -8286,17 +8617,25 @@ async function groupGame(){
       assert(!cy.length,'팝업 안에 시안을 쓴 요소: '+cy.slice(0,4).join(', ')); }
     { const rgb=(cbg.match(/\d+/g)||[]).slice(0,3).map(Number);
       assert(Math.max.apply(null,rgb)-Math.min.apply(null,rgb)<=12,'팝업 면에 푸른기가 남음: '+cbg.slice(0,50)); }
-    // 팝업 액션 버튼 4종은 카드 액센트를 따라가지 않고 한 스타일이어야 한다
-    const btnStyle=(el)=>{ const c=getComputedStyle(el);
-      return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor+'|'+c.fontSize+'|'+c.height+'|'+c.borderRadius; };
-    card.classList.add('win');
-    const bWin=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
-    card.classList.remove('win'); card.classList.add('lose');
-    const bLose=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnStyle);
-    card.classList.remove('win','lose');
+    // 팝업 액션 버튼은 **결과 색을 따라가지 않는다** — 카드가 금색이든 붉은빛이든 버튼은 그대로다.
+    // ⚠ 2026-08-26(B4안)부터 확인과 관전하기는 **한 얼굴이되 주/부만 밝기로 갈린다**.
+    //    예전엔 둘이 완전히 같아야 했는데, 그때는 어느 쪽이 주 동작인지 알 수 없었다.
+    const btnSame=(el)=>{ const c=getComputedStyle(el); return c.fontSize+'|'+c.height+'|'+c.borderRadius+'|'+c.fontFamily; };
+    const btnFull=(el)=>{ const c=getComputedStyle(el); return c.color+'|'+c.borderTopColor+'|'+c.backgroundColor+'|'+btnSame(el); };
+    const ovRoot=$('ov');
+    ovRoot.classList.add('win');
+    const bWin=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnFull);
+    ovRoot.classList.remove('win'); ovRoot.classList.add('lose');
+    const bLose=[$('ovBtn'),$('ovBtn2')].filter(Boolean).map(btnFull);
+    ovRoot.classList.remove('win','lose');
     assert(bWin.length===2,'결과 창 버튼 2개를 못 찾음');
     assert(bWin[0]===bLose[0] && bWin[1]===bLose[1],'승/패에 따라 버튼 색이 바뀜(통일 안 됨)');
-    assert(bWin[0]===bWin[1],'확인과 관전하기의 스타일이 다름');
+    assert(btnSame($('ovBtn'))===btnSame($('ovBtn2')),'확인과 관전하기가 같은 얼굴이 아님(크기·글꼴·라운드)');
+    { const al=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):(/rgb\(/.test(t||'')?1:0); };
+      const go=getComputedStyle($('ovBtn')), sub=getComputedStyle($('ovBtn2'));
+      assert(go.boxShadow==='none'&&sub.boxShadow==='none','팝업 버튼에 볼록 그림자가 남아 있음');
+      assert(al(go.backgroundColor)>al(sub.backgroundColor),'확인(주)의 면이 관전하기보다 밝지 않음');
+      assert(al(go.borderTopColor)>al(sub.borderTopColor),'확인(주)의 테두리가 관전하기보다 밝지 않음'); }
     // 중립 회색이어야 한다(색을 띠면 채널 편차가 커진다)
     for(const el of [$('ovBtn'),$('ovBtn2')].filter(Boolean)){
       for(const prop of ['color','borderTopColor']){
@@ -8314,25 +8653,34 @@ async function groupGame(){
     try{
       const ob=getComputedStyle($('ovBtn'));
       assert(parseFloat(ob.height)<=38,'버튼이 큼: '+ob.height);   // 2026-08-06: 36px로 상향(DESIGN.md §2 팝업 버튼)
-      const wEls=[$('ovBtn'),document.querySelector('#exitConfirm .ecGo')].filter(Boolean);
-      if($('ovBtn2') && getComputedStyle($('ovBtn2')).display!=='none') wEls.push($('ovBtn2'));
-      assert(wEls.length>=2,'폭을 잴 버튼을 못 찾음');
+      // ⚠ 폭 상한(옛 max-width:120px)은 2026-08-26 에 뺐다 — 결과 화면이 **전면**이 되면서
+      //    버튼이 화면 폭을 flex 로 나눠 가져야 한다(120px 로 묶으면 가운데 오종종하게 몰린다).
+      //    대신 **나가기 확인처럼 카드 안에 있는 버튼**은 카드를 넘지 않아야 한다.
+      const ecCard=document.querySelector('#exitConfirm .ecCard');
+      const wEls=[document.querySelector('#exitConfirm .ecGo'),document.querySelector('#exitConfirm .ecCancel')].filter(Boolean);
+      assert(wEls.length===2 && ecCard,'나가기 확인 버튼 둘을 못 찾음');
+      const cardW=ecCard.getBoundingClientRect().width;
       for(const el of wEls){
         const w=el.getBoundingClientRect().width;
         assert(w>0,'버튼 폭을 못 잼(안 그려짐): '+(el.id||el.className));
-        assert(w<=124,'버튼 가로가 넓음('+(el.id||el.className)+'): '+Math.round(w)+'px'); }
-      assert(ob.boxShadow.indexOf('0px 0px 0px 2px')<0,'버튼에 이중 테두리가 남아 있음');
-      assert(/0px 1px 0px[^,]*inset/.test(ob.boxShadow),'볼록(윗변 하이라이트)이 없음: '+ob.boxShadow);
-      assert(/0px -\d+px \d+px[^,]*inset/.test(ob.boxShadow),'볼록(아래 안쪽 그림자)이 없음: '+ob.boxShadow);
+        assert(w<=cardW,'버튼이 카드를 넘음('+(el.className)+'): '+Math.round(w)+'px > '+Math.round(cardW)+'px'); }
+      // ⛔ 2026-08-26(B4안): 볼록한 판을 **폐지**했다. 되살리려 하면 여기서 걸린다.
+      //    옛 규칙은 윗변 하이라이트 + 아래 안쪽 그림자 + 아래만 라운드였다.
+      assert(ob.boxShadow==='none','버튼에 볼록 그림자가 남아 있음: '+ob.boxShadow);
+      assert(ob.backgroundImage==='none','버튼 면이 그라데이션임: '+ob.backgroundImage.slice(0,40));
       const rTop=parseFloat(ob.borderTopLeftRadius), rBot=parseFloat(ob.borderBottomLeftRadius);
-      assert(rTop<rBot,'윗변이 아랫변보다 평평하지 않음: 위 '+rTop+' / 아래 '+rBot);
+      assert(rTop===rBot,'네 모서리 라운드가 다름(아래만 둥근 옛 규칙): 위 '+rTop+' / 아래 '+rBot);
     } finally { if(wasLite0) document.body.classList.add('lite'); if(wasHid) $('ov').classList.add('hide'); if(wasHidE) $('exitConfirm').classList.add('hide'); }
     // 자동 진행은 면이 차오르는 것만 — 앞머리 선(::after)을 두지 않는다
     const abAfter=getComputedStyle(document.querySelector('#ovBtn .autoBar'),'::after').content;
     assert(abAfter==='none' || abAfter==='normal','자동 진행 표시에 앞머리 선이 남아 있음: '+abAfter);
+    // 확인창도 **같은 얼굴 · 주/부만 밝기로** — 크기·글꼴·라운드가 결과창 버튼과 같아야 한다
     const ecGo=document.querySelector('#exitConfirm .ecGo'), ecC=document.querySelector('#exitConfirm .ecCancel');
-    if(ecGo&&ecC){ assert(btnStyle(ecGo)===btnStyle(ecC),'취소와 나가기의 스타일이 다름');
-      assert(btnStyle(ecGo)===bWin[0],'확인창 버튼과 결과창 버튼의 스타일이 다름'); }
+    if(ecGo&&ecC){ assert(btnSame(ecGo)===btnSame(ecC),'취소와 나가기가 같은 얼굴이 아님');
+      assert(btnSame(ecGo)===btnSame($('ovBtn')),'확인창 버튼과 결과창 버튼의 얼굴이 다름');
+      const al=t=>{ const m=/rgba?\([^)]*?,\s*([\d.]+)\)/.exec(t||''); return m?parseFloat(m[1]):(/rgb\(/.test(t||'')?1:0); };
+      assert(al(getComputedStyle(ecGo).backgroundColor)>al(getComputedStyle(ecC).backgroundColor),
+        '나가기(주)의 면이 취소보다 밝지 않음'); }
     // 카드 바깥 오라(덮개 배경) — 카드에 clip-path가 있어 box-shadow를 못 쓰므로 #ov가 낸다
     const aura=(c)=>{ card.classList.remove('win','lose'); if(c) card.classList.add(c);
       return getComputedStyle($('ov')).getPropertyValue('--aura').trim(); };

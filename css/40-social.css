@@ -560,6 +560,10 @@
     background:var(--tmC1);box-shadow:0 0 8px var(--tmC1)}
   /* 🎛 대전 설정(오토 배틀) — 프리셋 3장 + 결과 카드/세부 스테퍼.
      결과 카드는 난이도 상세 판(#soloDiffPanel .sdDet)과 **같은 자리·같은 모양**이다 — 맵이 바뀌어도 골격이 안 흔들린다. */
+  /* ⛔ 프리셋을 칸 세 개로 늘어놓던 `.cpPre` 는 2026-08-27 폐지 — 난이도와 같은 스테퍼로 통일했다.
+     (같은 화면 같은 자리에서 고르는 것인데 부품이 둘이면 두 화면처럼 읽힌다) */
+  .cpPreSub{margin-top:6px;font-size:var(--fs-sm);color:#8a929c;text-align:center}
+  #cpPreStep{margin-bottom:10px}
   .cpPre{display:flex;gap:7px;margin-bottom:10px}
   .cpPreC{position:relative;flex:1;min-width:0;padding:10px 6px;cursor:pointer;overflow:hidden;text-align:center;
     border:1px solid rgba(255,255,255,.08);border-radius:var(--r-bar);
@@ -586,6 +590,9 @@
   .cpVsSt span{text-align:center;min-width:0}
   .cpVsSt i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96;white-space:nowrap}
   .cpVsSt b{display:block;font-family:var(--font-num);font-size:17px;color:#fff;margin-top:2px}
+  /* 🏕 캠프 보상은 성격이 다르다(판 안 배율 ↔ 판 밖에서 받는 것) — 색으로만 가른다.
+     ⚠ 방은 여럿이 보는 자리라 **수치는 안 적는다**(사람마다 다르다). 기준(몇 시간치)만 적는다. */
+  .cpVsSt span.cmp b{color:#8fe3ff;font-size:15px}
   .cpVsNote{margin-top:10px;font-size:var(--fs-sm);color:#8a929c;text-align:center}
   .cpOptRows{display:flex;flex-direction:column;gap:9px}
   .cpOptRow{display:flex;align-items:center;gap:8px}
