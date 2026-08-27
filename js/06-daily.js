@@ -89,13 +89,6 @@ function dqDraw(dk){ const rnd=_dqRand(Math.floor((dk||0)/86400000)+7919);
     const q=rest[Math.floor(rnd()*rest.length)]; used[q.kind]=1; sel.push(q); }
   return sel.map(function(q){ return {id:q.id, n:0, got:0}; }); }
 // ── 보상 지급·표기(재화 아이콘은 resIco 단일 소스) ──
-function dqRwTx(rw){ if(!rw) return '';
-  const t=[]; const ri=function(k,v){ return '<span class="dqRw">'+resIco(k,'dqRi')+fmtCur(v)+'</span>'; };
-  if(rw.pcoin) t.push(ri('mineral',rw.pcoin));
-  if(rw.gas)   t.push(ri('gas',rw.gas));
-  if(rw.gem)   t.push(ri('gem',rw.gem));
-  for(const k in DQ_TK) if(rw[k]) t.push('<span class="dqRw">'+resIco('ticket_'+k,'dqRi')+DQ_TK[k]+' ×'+rw[k]+'</span>');   // '뽑기권'은 🎟 이 말한다
-  return t.join(''); }
 function dqRwPlain(rw){ if(!rw) return '';
   const t=[];
   if(rw.pcoin) t.push('미네랄 '+fmtCur(rw.pcoin));

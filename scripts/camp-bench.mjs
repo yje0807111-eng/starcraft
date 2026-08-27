@@ -70,6 +70,22 @@ await pg.evaluate(()=>{
       const r=o.apply(this, arguments);
       const af=(me&&me.units||[]).reduce((a,x)=>a+(x.dead?0:(x.hp||0)),0);
       if(af>b4) __CB.medHp+=(af-b4); return r; }; }
+  // ⛔ **아래 세 함수만 세면 절반을 놓친다.** 광폭화(self)·공성 모드(toggle)·은신 장막(aura)은
+  //   그 경로를 안 타고 `u.buff` / `u.skillOn` 을 직접 켠다 — 그래서 「스킬 0회」로 잘못 읽혔다
+  //   (2026-08-27 실측: 마린 스팀팩이 1,814프레임 걸려 있는데 계측은 0이었다).
+  //   strikeSkillTick 앞뒤로 buff/skillOn 이 꺼짐→켜짐으로 바뀐 것을 센다.
+  if(typeof window.strikeSkillTick==='function'){ const o=window.strikeSkillTick;
+    window.strikeSkillTick=function(){
+      __CB.skTick=(__CB.skTick||0)+1;
+      const S=(typeof STK!=='undefined')?STK:null, snap=[];
+      if(S&&S.me&&S.me.units&&S.me.units.length) __CB.skTickU=(__CB.skTickU||0)+1;
+      if(S&&S.me&&S.me.units) for(const u of S.me.units){ if(u.dead) continue;
+        snap.push([u, Object.assign({},u.buff||{}), Object.assign({},u.skillOn||{})]); }
+      const r=o.apply(this, arguments);
+      for(const [u,b0,n0] of snap){
+        if(u.buff) for(const k in u.buff){ if((u.buff[k]||0)>0 && !((b0[k]||0)>0)) __CB.sk[k]=(__CB.sk[k]||0)+1; }
+        if(u.skillOn) for(const k in u.skillOn){ if(u.skillOn[k] && !n0[k]) __CB.sk[k]=(__CB.sk[k]||0)+1; } }
+      return r; }; }
   for(const fn of ['_stkApplyAlly','_stkApplyFoe','_stkApplySpot']){
     const o=window[fn]; if(typeof o!=='function') continue;
     window[fn]=function(u,t,sk,key){ const ally=(fn==='_stkApplyAlly'), hp0=(ally&&t)?(t.hp||0):0;
@@ -148,12 +164,32 @@ await pg.evaluate(()=>{
     } };
   // 자동 건설 — 트리 순서대로, 선행이 맞고 돈이 되면 짓는다
   // ⛽ 정제소 레벨 — 가스가 없으면 유닛 12종 중 8종을 못 산다. 경제 몫으로 산다.
-  __CB.refine=function(){ if(!G.tech || typeof campUpgCost!=='function') return;
-    const S=campState(); if(!S || !campHasRefinery()) return;
-    for(let i=0;i<6;i++){ const c=campUpgCost('refinery');
-      if((G.tech.credit||0) < c*1.5) return;                       // 다른 축도 사야 하니 여유를 남긴다
-      if(campRefLv() >= 40) return;
-      G.tech.credit-=c; S.upg.refinery=(S.upg.refinery|0)+1; } };
+  const RES_M_RESERVE=4;   // 미네랄로 사는 연구 = 값의 몇 배가 지갑에 있어야 사는가
+  // ⛽ 정제소 업그레이드는 **__CB.research 가 진짜 경로로 산다**(정제소 연구 카드 · 2026-08-27).
+  //   ⛔ 예전엔 여기서 S.upg.refinery 를 직접 올렸다 — 화면에 없는 길이라 실제와 달랐다.
+  // 🔬 연구 — **가스는 여기에만 쓴다**(2026-08-27). 건물마다 한 번에 하나씩이라
+  //   가스가 남아돌아도 **건물 수와 연구 시간**이 처리량을 정한다 — 그것도 재는 값이다.
+  //   ⚠ 살 수 있는 것 중 **가장 싼 것**을 산다(§4 규약). 계열 업그레이드는 상한이 없어
+  //     늘 후보에 남고, 단발 연구는 한 번 사면 빠진다.
+  __CB.research=function(){ const T=G.tech; if(!T) return;
+    const t=TECH_TREE[T.race]; if(!t) return;
+    for(const b of (t.buildings||[])){
+      if(!b.research || !b.research.length) continue;
+      if(!(T.built[b.k]>0)) continue;
+      const be=T.ents.find(e=>e.type==='bldg'&&e.bk===b.k&&(e.bt||0)<=0); if(!be||be._rj) continue;
+      let best=null;
+      for(const r of b.research){
+        const key=T.race+'_'+r.k, lv=T.research[key]|0;
+        if(!r.tier && lv) continue;                        // 단발은 한 번뿐
+        if(typeof _techReqMet==='function' && !_techReqMet(r.req)) continue;
+        const c=(typeof campResearchCost==='function' && campResearchCost(r,lv))||[r.m||0,r.g||0];
+        if((T.credit||0)<c[0] || (T.energy||0)<c[1]) continue;
+        // ⛽ **미네랄로 사는 연구(정제소)는 여유가 있을 때만.**
+        //   ⛔ 이 문이 없으면 정제소가 싸다는 이유로 미네랄을 다 먹어 **경제 축이 멎는다** —
+        //     실측(2026-08-27): 효율Lv 32→10 · 일꾼 14→7 · 45분 수입 199만→60만.
+        if(c[0]>0 && (T.credit||0) < c[0]*RES_M_RESERVE) continue;
+        if(!best || c[1]<best.c[1]) best={r:r,c:c}; }
+      if(best){ T.sel=be.eid; try{ techDoResearch(b.k,best.r.k); }catch(e){} } } };
   __CB.build=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
     // 🏠 인구가 막혔으면 보급소를 한 채 더 — 그게 일꾼·유닛 축을 여는 유일한 길이다.
@@ -246,6 +282,8 @@ await pg.evaluate(()=>{
             ore:Math.round((G.tech&&G.tech.minerals||[]).reduce((a,m)=>a+(m.amount||0),0)),
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
             gas:Math.round((G.tech&&G.tech.energy)||0), rl:(typeof campRefLv==='function'?campRefLv():0),
+            res:(function(){ const R=(G.tech&&G.tech.research)||{}; let n=0;
+              for(const k in R) n+=(R[k]===true?1:(R[k]|0)); return n; })(),   // 🔬 연구 총레벨(계열+단발)
             me:(typeof campAlive==='function'?campAlive('me'):0),      // 전장에 서 있는 내 병력
             dps:__CB.dps(),                                            // ⚔ 아군 총 DPS
             bld:(typeof campBldAlive==='function'?campBldAlive().length:0),          // 🏢 살아있는 건물
@@ -260,14 +298,15 @@ await pg.evaluate(()=>{
             // ⚔ 병력 구성 — 반복 구매(×1.15)가 실제로 조합을 강제하는지 보는 값이다.
             //   한 종류가 절반을 넘으면 배수가 약한 것이다.
             mix:(function(){ const m={};
-              const add=L=>{ for(const e of (L||[])){ const u=(e&&e.u)?e.u:e; if(!u) continue;   // ⚠ _down 은 {u,t} 껍데기
-                const k=u.gm||u.id; if(k) m[k]=(m[k]||0)+1; } };
-              if(typeof CAMPB!=='undefined'&&CAMPB){ add(CAMPB.me&&CAMPB.me.units); add(CAMPB._down); }
+              // ⚠ _down 은 유닛이 아니라 **{u,t} 껍데기**다 — 그대로 세면 전부 undefined 가 된다.
+              //   그리고 누운 유닛은 dead=true 라, 살아있는 것만 거를 때 통째로 사라진다.
+              const add=(L,skipDead)=>{ for(const u of (L||[])){ if(!u||(skipDead&&u.dead)) continue; const k=u.gm||u.id; m[k]=(m[k]||0)+1; } };
+              if(typeof CAMPB!=='undefined'&&CAMPB){ add(CAMPB.me&&CAMPB.me.units,true); add((CAMPB._down||[]).map(d=>d&&d.u),false); }
               for(const e of (G.tech&&G.tech.ents||[])) if(e.type==='unit'){ m[e.uid]=(m[e.uid]||0)+1; }
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
-      if((i%40)===0){ __CB.build(); __CB.refine(); __CB.produce(); __CB.buy();
+      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
         const units=G.tech?G.tech.ents.filter(e=>e.type==='unit').length:0;
         __CB.army=units;
@@ -332,8 +371,17 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
-    return out; })(), sk:__CB.sk||{}, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
-  dg:campDgN(), round:campRoundN(), reb:campCanRebirth() }));
+    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
+  dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
+  // 🔬 연구 내역 — 계열(레벨)과 단발(해금)을 갈라 본다. ⚠ 합계만 보면 둘을 못 가른다.
+  resBreak:(function(){ const T=G.tech, R=(T&&T.research)||{}, t=TECH_TREE[T.race]||{};
+    const tierK=new Set(), oneK={};
+    for(const b of (t.buildings||[])) for(const r of (b.research||[])){
+      if(r.tier) tierK.add(r.k); else oneK[r.k]=r.name||r.k; }
+    let tierN=0; const one=[];
+    for(const k in R){ const kk=k.replace(T.race+'_',''), v=(R[k]===true?1:(R[k]|0));
+      if(tierK.has(kk)) tierN+=v; else if(oneK[kk]) one.push(oneK[kk]); else if(kk!=='gasup') one.push(kk); }
+    return { tier:tierN, one:one }; })() }));
 const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
   return String(Math.round(n)); };
@@ -353,10 +401,10 @@ console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이�
 console.log(fin.gateT ? `\n□ E 관문 100만 도달: 시작 후 **${(fin.gateT/60).toFixed(1)}분** (설계 추정 10시간)`
                      : `\n□ E 관문 100만: ${(fin.t/60).toFixed(1)}분 안에 못 넘음(번 돈 ${F(fin.earn)})`);
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
-console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 가스/정제소 | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
+console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
-    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
+    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String(w.res|0).padEnd(6)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
 if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
   for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
 if(fin.jam){ const J=fin.jam;
@@ -377,10 +425,13 @@ if(fin.jam){ const J=fin.jam;
 { const E=Object.entries(fin.sk||{}).sort((a,b)=>b[1]-a[1]);
   console.log("\n■ 🔮 실제로 나간 스킬 (효과가 적용된 횟수)");
   console.log(E.length ? '  '+E.map(([k,v])=>k+' '+v+'회').join(' · ') : '  ⛔ 한 번도 안 나감');
+  console.log('  (계측: strikeSkillTick '+fin.skTick+'회 · 그중 내 유닛이 있던 것 '+fin.skTickU+'회)');
   console.log('  ✚ 스킬로 회복시킨 체력 '+(fin.healHp||0)+' · 💉 의무병(전용 경로)이 회복시킨 체력 '+(fin.medHp||0)); }
 if(fin.dead) console.log('\n⛔ 판이 빈 순간: '+JSON.stringify(fin.dead));
 if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.stringify(fin.vanish));
 
+if(fin.resBreak) console.log(`\n■ 🔬 연구 내역 — 계열 업그레이드 ${fin.resBreak.tier}레벨 · 단발 해금 ${fin.resBreak.one.length}개`
+  + (fin.resBreak.one.length?('\n  '+fin.resBreak.one.join(' · ')):''));
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();

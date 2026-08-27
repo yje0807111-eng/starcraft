@@ -1,0 +1,85 @@
+/* 나가기 확인 팝업 — E8 확정 후 「카드 면」 8안 (2026-08-26)
+   확정: 「나가기」만 붉은 글자·테두리(E8). 제목 글꼴은 본문. 시안 밑줄 폐지.
+   이번에 정하는 것: **투명한데 배경과는 확실히 갈리는 면**.
+   ⚠ 이 앱은 이미 그 답을 갖고 있다 — 유즈맵/캠프 **하단 프로필 시트(.bp::before)** 다:
+        ① 위 그라데 헤어라인  ② --loadDim  ③ 무채 틴트  ④ backdrop-filter: saturate(.45) brightness(.92)
+      핵심은 ③+④ **두 축**이다. 채도 빼기는 색 있는 배경(캠프 지형)에서 일하고,
+      틴트는 원래 채도가 낮은 배경(우주)에서 일한다. 하나만으로는 한쪽 배경에서 아무 일도 안 한다.
+   ⛔ 면에 **색을 얹지 말 것**(남색·청록). 2026-08-13 에 푸른기를 전부 걷어냈고 스모크가 잰다.
+   ⚠ 딤을 .8 → .55 로 낮췄다 — 딤이 다 가리면 카드 면이 무슨 일을 하는지 볼 수 없다. */
+
+/* 공통 — 옛 껍데기를 걷고 E8(붉은 나가기)을 켠다 */
+.f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard,.f8 .ecCard,.f9 .ecCard,.f10 .ecCard{
+  background:none!important;border:0!important;box-shadow:none!important;
+  position:relative;overflow:hidden;padding:18px 16px 17px!important}
+.f1 .ecCard,.f2 .ecCard,.f3 .ecCard,.f4 .ecCard,.f5 .ecCard,.f6 .ecCard,.f7 .ecCard,.f9 .ecCard,.f10 .ecCard{clip-path:none!important;border-radius:var(--r-bar)}
+.f1 #exitConfirm,.f2 #exitConfirm,.f3 #exitConfirm,.f4 #exitConfirm,
+.f5 #exitConfirm,.f6 #exitConfirm,.f7 #exitConfirm,.f8 #exitConfirm,.f9 #exitConfirm,.f10 #exitConfirm{
+  background-image:none!important;background-color:rgba(3,4,8,.55)!important;backdrop-filter:none!important;
+  z-index:999!important}   /* 목업 전용 — 배경 화면들이 저마다 오버레이를 갖고 있어 그 위로 올려야 보인다 */
+.f1 .ecTitle,.f2 .ecTitle,.f3 .ecTitle,.f4 .ecTitle,.f5 .ecTitle,.f6 .ecTitle,.f7 .ecTitle,.f8 .ecTitle,.f9 .ecTitle,.f10 .ecTitle{
+  font-family:var(--font-ko)!important;text-shadow:none!important}
+.f1 .ecTitle::after,.f2 .ecTitle::after,.f3 .ecTitle::after,.f4 .ecTitle::after,
+.f5 .ecTitle::after,.f6 .ecTitle::after,.f7 .ecTitle::after,.f8 .ecTitle::after,.f9 .ecTitle::after,.f10 .ecTitle::after{
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent)!important;opacity:1!important}
+/* E8 — 「나가기」만 붉게 */
+.f1 .ecCard .ecGo,.f2 .ecCard .ecGo,.f3 .ecCard .ecGo,.f4 .ecCard .ecGo,
+.f5 .ecCard .ecGo,.f6 .ecCard .ecGo,.f7 .ecCard .ecGo,.f8 .ecCard .ecGo,.f9 .ecCard .ecGo,.f10 .ecCard .ecGo{
+  color:#ff8a94!important;border-color:rgba(255,107,122,.55)!important;background:rgba(255,107,122,.1)!important}
+/* 면은 ::before 한 겹이 만든다(하단 시트와 같은 구조) */
+.f1 .ecCard::before,.f2 .ecCard::before,.f3 .ecCard::before,.f4 .ecCard::before,
+.f5 .ecCard::before,.f6 .ecCard::before,.f7 .ecCard::before,.f8 .ecCard::before,.f9 .ecCard::before,.f10 .ecCard::before{
+  content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;display:block!important;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat}
+
+/* F1 · 하단 시트 값 그대로 — 틴트 .38/.26 + 채도 .45 */
+.f1 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92)}
+/* F2 · 틴트만 — backdrop-filter 없음(저사양에서도 같은 모습) */
+.f2 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.58),rgba(16,18,21,.46))}
+/* F3 · 채도 빼기만 — 면을 안 얹고 그 자리만 무채·어둡게 */
+.f3 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat;
+  backdrop-filter:saturate(.35) brightness(.72)}
+/* F4 · 틴트 진하게 + 채도 — 가장 또렷하게 갈린다 */
+.f4 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.55),rgba(16,18,21,.42));
+  backdrop-filter:saturate(.45) brightness(.9)}
+/* F5 · F1 + 흐림 — 뒤가 뿌예져 카드가 앞으로 나온다 */
+.f5 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92) blur(4px)}
+/* F6 · F1 + 사방 1px 테두리 — 경계를 선이 마저 긋는다 */
+.f6 .ecCard{border:1px solid rgba(255,255,255,.1)!important}
+.f6 .ecCard::before{background:
+  linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92)}
+/* F7 · F1 + 위아래 헤어라인 — 좌우는 열어 둔다(가로 선이 화면을 가르지 않게) */
+.f7 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent) top/100% 1px no-repeat,
+  linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent) bottom/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92)}
+/* F8 · 각진 컷 실루엣은 남기고 면만 이 재질로(옛 모양 + 새 재질) */
+.f8 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92)}
+
+/* ── 틴트 세기 비교(2026-08-26) — F4 보다 더 덮는 값 둘 ────────────────
+   ⚠ 뒤 글자 비침은 밝기가 아니라 **덮는 정도**의 문제다. 틴트 알파만 올린다.
+      채도 빼기(saturate .45)는 그대로 — 색을 더하지 않는다는 규칙은 유지. */
+.f9 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.7),rgba(16,18,21,.55));
+  backdrop-filter:saturate(.45) brightness(.9)}
+.f10 .ecCard::before{background:
+  linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+  linear-gradient(180deg,rgba(26,28,32,.85),rgba(16,18,21,.7));
+  backdrop-filter:saturate(.45) brightness(.9)}

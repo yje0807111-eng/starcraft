@@ -281,8 +281,6 @@ const _DG_KEY_SVG='<svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.2"/><
 function dgKeyHTML(n, max){ return '<span class="dgKey"><img src="assets/icons/ui/ui_key.webp" alt="" draggable="false" onerror="_dgKeyFail(this)">'
   +'<span>'+n+'<s>/'+(max||DG_KEY_DAILY)+'</s></span></span>'; }
 function _dgKeyFail(im){ try{ im.outerHTML=_DG_KEY_SVG; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
-// 단계 배지 — 12단계 / 미개척 / Lv.50 이 같은 자리에서 읽힌다
-function dgStgHTML(d, mx){ return '<span class="dgStg">'+(d.reqLvLocked? ('Lv.'+d.reqLv) : (mx? mx+'단계' : '미개척'))+'</span>'; }
 // 한 버튼이 주는 것 — 재화 아이콘 + 수치를 세로로. 없으면 '—'
 function dgValsHTML(r){ if(!r) return '<div class="dgVals off"><span>—</span></div>';
   let h='<div class="dgVals"><span>'+resIco('mineral','ri')+r.pc.toLocaleString()+'</span>';
@@ -543,8 +541,11 @@ const _PT_ICO={
   combat:'<path d="M5 5 15 15M19 5 9 15M14.5 15.5 17.5 18.5M9.5 15.5 6.5 18.5"/>',                          // 전투=교차 검
   team:'<rect x="3.8" y="3.8" width="7" height="7" rx="1.6"/><rect x="13.2" y="3.8" width="7" height="7" rx="1.6"/><rect x="3.8" y="13.2" width="7" height="7" rx="1.6"/><rect x="13.2" y="13.2" width="7" height="7" rx="1.6"/>',   // 전체=ALL 텍스트(다른 아이콘 크기에 맞춤)
   coop:'<path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/>' };  // 보스=해골
+// 탭 띠 = 공용 세그먼트 바(segNavHTML). ⛔ 새 탭 띠를 만들지 말 것 — 아이콘 없이 글자만이 이 컴포넌트의 규칙이다.
 function renderPtTabs(){ const box=document.getElementById('ptTabs'); if(!box) return;
-  box.innerHTML=_PT_TABS.map(function(t){ return '<button class="ptTab'+(t[0]===_ptGroup?' on':'')+'" onclick="setPtGroup(\''+t[0]+'\')"><span class="ptTabIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+(_PT_ICO[t[0]]||'')+'</svg></span>'+t[1]+'</button>'; }).join(''); }
+  const i=Math.max(0, _PT_TABS.findIndex(function(t){ return t[0]===_ptGroup; }));
+  box.innerHTML=segNavHTML(_PT_TABS.map(function(t){ return { label:t[1] }; }), i,
+    function(k){ return "setPtGroup('"+_PT_TABS[k][0]+"')"; }); }
 function renderPt(){ const list=document.getElementById('ptList'); if(!list) return;
   if(TEMP_COIN_TEST) PLAYER_META.coins=9999999;   // [임시] 포인트 항상 넉넉(상점 렌더 시 보충)
   const cE=document.getElementById('ptCoins'); if(cE) cE.textContent=PLAYER_META.coins||0;

@@ -1,0 +1,112 @@
+/* 게임 종료 화면 8안 — 2차 (2026-08-26)
+   ⛔ 1차(카드 변형 8안)는 전부 반려됐다. 카드를 붙들고 변형만 한 것이 문제였다.
+   이번 기준은 **로딩·로그인 화면의 골격 그대로**다:
+     · 아트가 화면을 채운다 — 판(카드)이 없다
+     · 정보는 그 위에 뜬 글자다. 큰 제목 → 작은 메타 → 줄 목록 → 하단 버튼
+     · 선택지는 버튼 판이 아니라 **가는 선으로 나뉜 글자 줄**일 수 있다(로그인)
+     · 진입 화면(#gsRoot)은 아이콘+라벨 행 3개 + 큰 숫자 + 1px 막대 + 버튼 둘로 끝난다
+   ⚠ 목업 골격(.rsX)은 **목업 전용**이다. 고른 뒤 실제 구현은 기존 렌더러 하나로 정리한다. */
+
+#ov .rsX{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:0 26px calc(20px + env(safe-area-inset-bottom,0px));color:var(--txt);text-align:center}
+#ov .rsHead{margin-top:26%}
+#ov .rsTtl{font-family:var(--font-ti);font-size:34px;font-weight:800;letter-spacing:3px;line-height:1.05;color:#fff}
+#ov .rsX.win .rsTtl{color:var(--gold);text-shadow:0 0 18px rgba(255,210,74,.45)}
+#ov .rsX.lose .rsTtl{color:#ff8a94;text-shadow:0 0 18px rgba(255,107,122,.35)}
+#ov .rsMeta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;
+  font-size:12px;color:#aab3bd}
+#ov .rsDiff{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:22px;padding:0 8px;
+  font-family:var(--font-num);font-size:11px;font-weight:800;letter-spacing:.5px;color:#dfe7f0;
+  border:1px solid rgba(255,255,255,.22);border-radius:var(--r-bar)}
+#ov .rsSpacer{flex:1 1 auto;min-height:0}
+/* 줄 목록 — 진입 화면의 특징 행과 같은 문법(아이콘 칩 + 라벨 + 값) */
+#ov .rsRows{display:flex;flex-direction:column;gap:14px;text-align:left;margin-bottom:20px}
+#ov .rsRow{display:flex;align-items:center;gap:12px}
+#ov .rsIco{flex:none;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,.13);border-radius:9px;color:#9fb6d6;background:rgba(255,255,255,.03)}
+#ov .rsIco svg{width:17px;height:17px}
+#ov .rsRow b{font-size:13px;font-weight:700;color:#e7edf4}
+#ov .rsRow em{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:15px;font-weight:800;color:#fff}
+/* 큰 숫자 한 줄 — 진입 화면의 「100%」 자리 */
+#ov .rsBig{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px}
+#ov .rsBig span{font-size:12px;letter-spacing:.06em;color:#8f99a4}
+#ov .rsBig b{font-family:var(--font-num);font-size:30px;font-weight:800;color:#fff;line-height:1}
+#ov .rsBar{height:2px;background:rgba(255,255,255,.1);margin-bottom:18px}
+#ov .rsBar i{display:block;height:100%;width:100%;background:var(--gold)}
+#ov .rsX.lose .rsBar i{background:#ff6b7a}
+/* 버튼 둘 — 진입 화면(나가기 / 전투 시작)과 같은 자리·같은 무게 */
+#ov .rsBtns{display:flex;gap:10px}
+#ov .rsBtns button{flex:1;height:46px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#dfe7f0;
+  background:linear-gradient(180deg,rgba(26,32,44,.72),rgba(4,6,10,.9));border:1px solid var(--metal-edge);
+  border-radius:0 0 var(--r-bar) var(--r-bar);box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 2px 4px -2px rgba(0,0,0,.7)}
+#ov .rsBtns .rsPri{position:relative;flex:1.6;color:#fff}
+#ov .rsBtns .rsPri::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:2px;
+  background:var(--gold);box-shadow:0 0 10px var(--gold)}
+#ov .rsX.lose .rsBtns .rsPri::after{background:#ff6b7a;box-shadow:0 0 10px #ff6b7a}
+/* 딤 — 아트(게임 화면)가 비쳐야 하므로 판 대신 그라데이션 */
+#ov.rsOn{background:linear-gradient(180deg,rgba(3,4,8,.62) 0%,rgba(3,4,8,.86) 46%,rgba(3,4,8,.96) 100%)!important;
+  padding:0!important;display:block!important}
+#ov.rsOn .ovCard{display:none!important}
+/* v0(지금) 비교 칸에서는 새 골격을 감춘다 — 둘이 겹쳐 찍히면 비교가 안 된다 */
+#ov:not(.rsOn) .rsX{display:none}
+
+/* ── 켜고 끄는 부분 ───────────────────────────────────────────────
+   ⚠ 뼈대 규칙이 `#ov .rsX` 라 (id + class) 명시도를 갖는다. 변주도 **같은 `#ov` 접두사**를 써야 이긴다.
+      접두사 없이 `.n6 .rsRows` 로 쓰면 `#ov .rsRows` 에 밀려 아무 일도 안 일어난다(실제로 그랬다). */
+#ov.n1 .rsBig, #ov.n1 .rsBar{display:none}                       /* N1: 아이콘 행 3개 + 버튼 */
+#ov.n2 .rsIco{display:none}                                  /* N2: 아이콘 빼고 설정 행 문법으로 */
+#ov.n2 .rsRow{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);gap:0}
+#ov.n2 .rsRows{gap:0}
+#ov.n2 .rsBig, #ov.n2 .rsBar{display:none}
+#ov.n3 .rsRows{gap:0}                                        /* N3: 큰 숫자가 주인공 */
+#ov.n3 .rsIco{display:none}
+#ov.n3 .rsRow{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+#ov.n3 .rsRow b{font-size:11.5px;color:#9aa4af} .n3 .rsRow em{font-size:13px}
+#ov.n3 .rsBig b{font-size:44px}
+/* N4: 로그인 골격 — 가운데 정렬 · 선으로 나뉜 글자 줄 · 하단은 밑줄 링크 */
+#ov.n4 .rsIco{display:none}
+#ov.n4 .rsRows{gap:0;text-align:center}
+#ov.n4 .rsRow{flex-direction:column;gap:3px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+#ov.n4 .rsRow b{font-size:11px;font-weight:400;letter-spacing:.08em;color:#8f99a4;order:2}
+#ov.n4 .rsRow em{margin:0;font-size:19px;order:1}
+#ov.n4 .rsBig, #ov.n4 .rsBar{display:none}
+#ov.n4 .rsBtns{flex-direction:column;gap:0;margin-top:6px}
+#ov.n4 .rsBtns button{background:none;border:0;box-shadow:none;height:44px;font-weight:700;color:#c9d2dc}
+#ov.n4 .rsBtns .rsPri{flex:1;color:#fff}
+#ov.n4 .rsBtns .rsPri::after{left:38%;right:38%;height:1px;box-shadow:none;background:rgba(255,255,255,.7)}
+/* N5: N4 골격에 하단 버튼 둘(진입 화면 버튼 그대로) */
+#ov.n5 .rsIco{display:none}
+#ov.n5 .rsRows{gap:0;text-align:center}
+#ov.n5 .rsRow{flex-direction:column;gap:3px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+#ov.n5 .rsRow b{font-size:11px;font-weight:400;letter-spacing:.08em;color:#8f99a4;order:2}
+#ov.n5 .rsRow em{margin:0;font-size:19px;order:1}
+#ov.n5 .rsBig, #ov.n5 .rsBar{display:none}
+/* N6: 결과는 위쪽 얇은 띠 하나 — 게임 화면이 거의 다 보인다(관전 중심) */
+#ov.n6 .rsHead{margin-top:0;padding:16px 0 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,.12)}
+#ov.n6 .rsTtl{font-size:20px;letter-spacing:2px}
+#ov.n6 .rsMeta{justify-content:flex-start;margin-top:7px}
+#ov.n6 .rsRows{display:none} #ov.n6 .rsBig{display:none} #ov.n6 .rsBar{display:none}
+#ov.rsOn.n6{background:linear-gradient(180deg,rgba(3,4,8,.94) 0%,rgba(3,4,8,.55) 22%,rgba(3,4,8,.2) 55%,rgba(3,4,8,.9) 100%)!important}
+/* N7: 왼쪽 정렬 대형 — 잡지식. 제목이 왼쪽 위, 값이 왼쪽에 세로로 */
+#ov.n7 .rsX{text-align:left}
+#ov.n7 .rsHead{margin-top:18%;text-align:left}
+#ov.n7 .rsTtl{font-size:40px;letter-spacing:1px}
+#ov.n7 .rsMeta{justify-content:flex-start}
+#ov.n7 .rsIco{display:none}
+#ov.n7 .rsRows{gap:0}
+#ov.n7 .rsRow{flex-direction:column;align-items:flex-start;gap:2px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+#ov.n7 .rsRow b{font-size:11px;font-weight:400;letter-spacing:.08em;color:#8f99a4}
+#ov.n7 .rsRow em{margin:0;font-size:22px}
+#ov.n7 .rsBig, #ov.n7 .rsBar{display:none}
+/* N8: 승/패를 **화면 색면 한 겹**으로. 글자는 전부 흰색 */
+#ov.n8 .rsIco{display:none}
+#ov.n8 .rsRows{gap:0}
+#ov.n8 .rsRow{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.09)}
+#ov.n8 .rsTtl{color:#fff!important;text-shadow:none!important}
+#ov.n8 .rsBig, #ov.n8 .rsBar{display:none}
+#ov.rsOn.n8{background:
+  radial-gradient(120% 60% at 50% 0%,rgba(255,210,74,.20),transparent 60%),
+  linear-gradient(180deg,rgba(3,4,8,.6) 0%,rgba(3,4,8,.9) 50%,rgba(3,4,8,.97) 100%)!important}
+#ov.rsOn.n8:has(.rsX.lose){background:
+  radial-gradient(120% 60% at 50% 0%,rgba(255,90,105,.20),transparent 60%),
+  linear-gradient(180deg,rgba(3,4,8,.6) 0%,rgba(3,4,8,.9) 50%,rgba(3,4,8,.97) 100%)!important}

@@ -602,19 +602,33 @@
     transition:background .16s}
   .setExit:active{transform:translateY(1px);background:rgba(255,80,80,.14)}
   /* 나가기 확인 창 */
+  /* ⚠ 딤은 옅게(.55) — 카드 자신이 무채 틴트로 갈리므로 딤이 다 가릴 필요가 없다.
+     ⚠ 흐림은 남긴다 — 「창이 뜨면 뒤가 흐려진다」는 전 팝업 공통 규칙이고 스모크가 잰다(≥1.5px).
+     ⛔ 시안 방사 그라데이션을 되살리지 말 것 — 시안은 §2 에서 '지금 선택된 것' 전용이다. */
   #exitConfirm{position:absolute;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
-    background-color:rgba(2,3,6,.6);
-    background-image:radial-gradient(ellipse 290px 180px at 50% 50%,rgba(92,214,255,.14),transparent 72%);
-    backdrop-filter:blur(2px) saturate(.95);-webkit-backdrop-filter:blur(2px) saturate(.95)}
+    background-color:rgba(3,4,8,.55);
+    backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
   #exitConfirm.hide{display:none}
-  /* 나가기 확인 = 설정 창과 같은 규격(각진 카드 · 제목+강조 언더라인 · 44px 버튼) */
-  .ecCard{--ecAcc:#5cd6ff;width:86%;max-width:320px;padding:18px 14px 17px;box-sizing:border-box;text-align:center;
-    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
-  .ecTitle{position:relative;font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;text-shadow:0 1px 3px rgba(0,0,0,.65);
+  /* ══ 딤 위 카드의 면 — 「무채 틴트 + 뒤 채도 빼기」(2026-08-26 · F10 확정) ══════
+     유즈맵/캠프 **하단 프로필 시트(.bp::before)** 가 쓰는 그 방식이다. 축이 둘인 것이 핵심:
+       · 뒤 채도 빼기 — 색 있는 배경(캠프 지형)에서 일한다. 색을 **더하지 않고** 그 자리만 무채로 만든다.
+       · 무채 틴트   — 원래 채도가 낮은 배경(우주·어두운 전장)에서 일한다. 거기선 뺄 색이 없기 때문이다.
+     ⛔ 하나만 쓰지 말 것. 채도 빼기만 쓰면(F3) 캠프에서만 보이고 나머지 네 화면에서 뒤 글자가 그대로 비친다
+        — 배경 다섯 곳에서 재서 확인했다(docs/mock/exit-face-bg.shot.mjs).
+     ⛔ 면에 색을 얹지 말 것(남색·청록). 2026-08-13 에 푸른기를 걷어냈고 스모크가 잰다.
+     ⚠ 틴트 세기 .85/.7 은 「뒤 글자가 안 비치는」 값이다. 낮추면 뒤 목록·메뉴 글자가 카드 안으로 읽힌다. */
+  .ecCard{width:86%;max-width:320px;padding:18px 16px 17px;box-sizing:border-box;text-align:center;
+    position:relative;overflow:hidden;border-radius:var(--r-bar);background:none;border:0;box-shadow:none}
+  .ecCard::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background:
+      linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+      linear-gradient(180deg,rgba(26,28,32,.85),rgba(16,18,21,.7));
+    backdrop-filter:saturate(.45) brightness(.9);-webkit-backdrop-filter:saturate(.45) brightness(.9)}
+  /* 제목 = 본문 글꼴 · 밑줄은 중립 흰선(옛 시안 폐지) */
+  .ecTitle{position:relative;font-family:var(--font-ko);font-size:17px;font-weight:800;letter-spacing:.5px;color:#eaf1fb;
     margin-bottom:11px;padding-bottom:9px}
-  .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,var(--ecAcc),transparent 72%);opacity:.5}
+  .ecTitle::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent)}
   .ecMsg{font-size:var(--fs-sm);font-weight:500;line-height:1.55;color:var(--txt-mute);letter-spacing:.2px;margin:0 0 12px;word-break:keep-all}
   .ecBtns{display:flex;gap:8px;justify-content:center}
   /* 버튼 = 설정 규격(중립 글래스 / 위험은 붉은 글자·테두리만) — 방 만들기 버튼과 공유하지 않게 카드 안에서만 재정의 */
@@ -630,23 +644,28 @@
      윗변 안쪽 하이라이트 + 아래로 말려드는 안쪽 그림자 + 바깥 아래 그림자 = 솟아 있는 느낌.
      위는 완전히 평평(라운드 0), 아래만 --r-bar(3px) — 둥글면 볼록함이 물방울처럼 보인다.
      폭은 max-width 120px로 묶는다(flex:1 1 0라 안 묶으면 카드 폭까지 늘어난다). */
-  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo,#ovBtn,#ovBtn2.ghost,.authBtn,.authGuest{
-    height:36px;max-width:120px;
-    border-radius:0 0 var(--r-bar) var(--r-bar);   /* 위는 완전히 평평, 아래만 살짝 — 둘 다 토큰 값 */
-    /* 면 색은 토큰 3개로만 뺀다 — 화면이 덮는 것은 색뿐이고 모양·볼륨은 공유한다(§세그먼트 바와 같은 규칙) */
-    background:linear-gradient(180deg,var(--btnA,rgba(26,32,44,.72)) 0%,var(--btnB,rgba(12,16,23,.82)) 52%,var(--btnC,rgba(4,6,10,.9)) 100%);
-    border:1px solid var(--metal-edge);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.13),      /* 윗변 하이라이트 = 볼록 */
-               inset 0 -4px 6px -3px rgba(0,0,0,.8),     /* 아래로 말려드는 그림자 */
-               0 2px 4px -2px rgba(0,0,0,.7)}            /* 바깥 아래 그림자 = 솟아 있음 */
-  .ecCard .ecCancel:active,.ecCard .ecGo:active,.hbModal .ecCancel:active,.hbModal .ecGo:active,#ovBtn:active,#ovBtn2.ghost:active{
-    background:linear-gradient(180deg,rgba(16,20,29,.8),rgba(4,6,10,.92));
-    box-shadow:inset 0 2px 4px -1px rgba(0,0,0,.85),0 0 0 rgba(0,0,0,0)}   /* 누르면 눌려 들어간다 */
+  /* ══ 팝업 액션 버튼 — 「옅은 면 + 1px」(2026-08-26 · B4안 확정) · 공용 .actBtn 과 **같은 얼굴** ══
+     ⛔ 볼록한 판(윗변 하이라이트 + 안쪽·바깥 그림자)을 되돌리지 말 것 — 판을 다 걷어낸 화면에서 혼자 튄다.
+     ⛔ 로그인 버튼(.authBtn/.authGuest)은 여기 넣지 말 것 — 그쪽은 이미 판 없는 제 디자인을 갖고 있다.
+     ⚠ 위계는 **면과 테두리의 밝기**다: 부(취소·관전하기) 면 5% / 선 .1 · 주(나가기·확인) 면 14% / 선 .32 + 흰 글자.
+     ⚠ max-width 를 되돌리지 말 것 — 결과 화면 버튼은 flex 로 늘어나야 한다(옛 120px 이 눌렀다). */
+  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo,#ovBtn,#ovBtn2.ghost{
+    height:36px;max-width:none;border-radius:var(--r-bar);
+    font-family:var(--font-ko);font-weight:800;letter-spacing:.02em;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);box-shadow:none;color:#c3cbd4}
+  .ecCard .ecGo,.hbModal .ecGo,#ovBtn{border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.14);color:#fff}
+  /* ⚠ 「나가기」는 **되돌릴 수 없는 동작**이라 여기만 붉다(2026-08-26 · E8).
+     ⛔ 다른 주 동작(확인·만들기·시작)에 이 붉은색을 퍼뜨리지 말 것 — 위험 표시가 뜻을 잃는다. */
+  #exitConfirm .ecGo{color:#ff8a94;border-color:rgba(255,107,122,.55);background:rgba(255,107,122,.1)}
+  #exitConfirm .ecGo:active{background:rgba(255,107,122,.22)}
+  /* 누른 표시 = 눌려 들어가는 것이 아니라 면이 잠깐 밝아지는 것 */
+  .ecCard .ecCancel:active,.hbModal .ecCancel:active,#ovBtn2.ghost:active{background:rgba(255,255,255,.12);box-shadow:none}
+  .ecCard .ecGo:active,.hbModal .ecGo:active,#ovBtn:active{background:rgba(255,255,255,.22);box-shadow:none}
   /* ⛔ 로그인 화면 버튼(.authBtn/.authGuest)은 여기 넣지 말 것 — 그쪽은 판이 없어서
      누를 때 없던 상자가 생긴다(실제로 게스트 버튼에서 그랬다). 누름 반응은 css/20-lobby.css 에 따로 있다. */
   .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
-  /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼) */
-  .ecCard .ecCancel,.ecCard .ecGo,.hbModal .ecCancel,.hbModal .ecGo{color:#dfe7f0}
+  /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼).
+     ⚠ 색은 위 「선만」 규칙이 정한다 — 여기서 다시 덮으면 주/부 구분이 사라진다. */
   
   
   
@@ -1724,6 +1743,56 @@
   /* 오버레이(시작/승패) */
   /* 시작 화면 — 검정+빨강 네온 카드 */
   /* 승/패 오버레이 = 게임 화면 위 모달(뒤로 게임이 흐리게 비침) */
+  /* ══ 종료 결과 화면(승/패/나감) — 2026-08-26 · P7안 확정 ═══════════════════
+     게임 **진입** 화면(#gsRoot)의 짝이다: 아트가 화면을 채우고, 판 없이 글자가 그 위에 뜬다.
+     위에서 아래로 — 제목 → 메타 한 줄 → 게임 안 기록 줄 → **캠프 재화 두 줄** → 버튼 둘.
+     ⛔ 카드(면·테두리)를 되돌리지 말 것. 이 화면은 로딩·로그인과 같은 언어를 쓴다.
+     ⛔ 제목 글꼴을 --font-ti(Jua)로 되돌리지 말 것 — 400 단일 굵기의 동글동글한 얼굴이라 여기 안 맞는다.
+     ⚠ 미네랄과 가스는 **같은 급**이다. 하나를 크게 하지 말 것(캠프로 가져가는 두 재화다). */
+  #ov .rsCard{display:none}
+  #ov.rsOn{background:linear-gradient(180deg,rgba(3,4,8,.62) 0%,rgba(3,4,8,.86) 46%,rgba(3,4,8,.96) 100%);
+    padding:0;display:block}
+  #ov.rsOn .ovCard{display:none}
+  #ov.rsOn .rsCard{position:absolute;inset:0;display:flex;flex-direction:column;
+    padding:0 26px calc(20px + env(safe-area-inset-bottom,0px));color:var(--txt);text-align:center}
+  /* 제목 = 가운데보다 살짝 위. ⚠ margin-top 퍼센트로 박지 말 것 — 폰 높이가 바뀌면 제목만 따로 논다 */
+  #ov .rsTop{flex:0 0 auto;height:47%;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px}
+  #ov .rsTtl{font-family:var(--font-ko);font-size:34px;font-weight:800;letter-spacing:4px;line-height:1.05;color:#fff}
+  #ov.win .rsTtl{color:var(--gold);text-shadow:0 0 20px rgba(255,210,74,.4)}
+  #ov.lose .rsTtl{color:#ff8a94;text-shadow:0 0 20px rgba(255,107,122,.32)}
+  #ov .rsMeta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:13px;font-size:12px;color:#aab3bd}
+  #ov .rsDiff{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:22px;padding:0 8px;
+    font-family:var(--font-num);font-size:11px;font-weight:800;letter-spacing:.5px;color:#dfe7f0;
+    border:1px solid rgba(255,255,255,.22);border-radius:var(--r-bar)}
+  #ov .rsSpacer{flex:1 1 auto;min-height:0}
+  /* 게임 안 기록 — 설정 화면 행 문법(라벨 좌 / 값 우 / 1px 선) */
+  #ov .rsRows{display:flex;flex-direction:column;text-align:left;margin-bottom:16px}
+  #ov .rsRow{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.075)}
+  #ov .rsRow b{font-size:11.5px;font-weight:400;letter-spacing:.02em;color:#9aa4af}
+  #ov .rsRow em{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:13.5px;font-weight:800;color:#e7edf4}
+  #ov .rsRow.hi em{color:#fff;font-size:15px}
+  /* 캠프 재화 = 두 줄, 숫자 끝을 맞춘다(P7). 둘은 같은 급이다 */
+  #ov .rsCur{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  #ov .rsCurC{display:flex;align-items:center;justify-content:flex-start;gap:7px}
+  #ov .rsCurI{display:inline-flex;flex:none}
+  #ov .rsCurI .ri{width:16px;height:16px;object-fit:contain;display:block}
+  #ov .rsCurL{font-size:11.5px;letter-spacing:.03em;color:#9aa4af}
+  #ov .rsCurV{margin-left:auto;font-family:var(--font-num);font-size:28px;font-weight:800;color:#fff;line-height:1}
+  /* ⛔ 재화 위아래에 금색 막대(옛 .rsBar)를 되돌리지 말 것 — 진입 화면의 **진행 막대**를 흉내낸 것인데
+     여기서는 진행하는 것이 없어 뜻이 없다. 구역은 재화 두 줄과 버튼 사이 여백이 가른다. */
+  #ov .rsCur{margin-bottom:20px}
+  /* 버튼 자리 — 위 .ovBtns 를 그대로 옮겨 담는 host. 버튼 모양은 공용 규칙이 갖는다 */
+  #ov .rsBtnHost{display:flex}
+  #ov .rsBtnHost .ovBtns{flex:1;display:flex;gap:10px}
+  /* ── 등장 애니메이션 ──────────────────────────────────────────────
+     승리가 먼저 뜨고, 아래 내용이 하나씩 빠르게 올라온다. 수치는 1부터 세어 올라간다(JS).
+     ⚠ 애니메이션 중 화면을 한 번 누르면 즉시 끝 상태로 간다 — 그 처리가 `.rsDone`. */
+  #ov.rsOn .rsAnim{opacity:0;transform:translateY(9px)}
+  #ov.rsOn .rsAnim.on{opacity:1;transform:none;transition:opacity .22s ease-out,transform .22s cubic-bezier(.2,.9,.3,1)}
+  #ov.rsOn.rsDone .rsAnim{opacity:1;transform:none;transition:none}
+  #ov.rsOn .rsTtl.rsAnim{transform:translateY(0) scale(.92)}
+  #ov.rsOn .rsTtl.rsAnim.on{transform:none;transition:opacity .26s ease-out,transform .26s cubic-bezier(.2,.9,.3,1.25)}
+  #ov.rsOn.rsDone .rsTtl.rsAnim{transform:none}
   #ov{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
     --aura:rgba(92,214,255,.15);
     background:radial-gradient(ellipse 300px 220px at 50% 50%,var(--aura),transparent 72%),
@@ -1782,8 +1851,8 @@
     font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;cursor:pointer;white-space:nowrap;
     display:flex;align-items:center;justify-content:center;transition:background .16s,border-color .16s}
   #ovBtn2.ghost{order:-1}
-  /* 확인·관전하기도 같은 한 스타일 — 카드가 금색이든 붉은빛이든 버튼은 안 바뀐다 */
-  #ovBtn,#ovBtn2.ghost{color:#dfe7f0}
+  /* 확인·관전하기도 같은 한 스타일 — 결과가 금색이든 붉은빛이든 버튼은 안 바뀐다.
+     ⚠ 색은 위 「선만」 규칙이 정한다(주 #ovBtn 흰 글자 / 부 #ovBtn2 흐린 글자). 여기서 덮지 말 것. */
   #ovBtn .autoBar{--abC:#dfe7f0}   /* 차오르는 빛도 버튼 색을 따른다 */
   #ovBtn,#ovBtn2.ghost{transform:none}
   #ovBtn:active,#ovBtn2.ghost:active{transform:translateY(1px)}

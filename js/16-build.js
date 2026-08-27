@@ -110,8 +110,10 @@ function _techLarvaBox(h){ const cw=_techCW(), ch=_techCH(), fh=_techFoot('swarm
   return { x0:h.x-1.5*cw, x1:h.x+1.5*cw, y0:yb, y1:yb+ch*0.2 }; }
 // 🔬 연구 카드(단계형=다음 단계 배지 tr · 완료/MAX=비활성) — techBldgUpgModel·라바 건물 공용 단일 소스
 function _techResearchCard(b, r, e){ const race=G.tech.race, rj=e&&e._rj, key=race+'_'+r.k, isThis=!!(rj&&rj.rk===r.k); let meta,state,cr,en,tr='';
-  if(r.tier){ const lv=G.tech.research[key]||0, isMax=lv>=r.tier.length, nx=r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); tr=isMax?'MAX':''+(lv+1); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
-  else { const done=G.tech.research[key]; meta=done?'완료':'연구'; cr=done?0:r.m; en=done?0:r.g; state=isThis?'busy':(done?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
+  // 🏕 캠프는 **가스만** 받고 계열 업그레이드에 상한이 없다(값은 js/19-camp.js · null=캠프 밖)
+  const _lv=G.tech.research[key]|0, _cc=(typeof campResearchCost==='function')?campResearchCost(r,_lv):null;
+  if(r.tier){ const lv=_lv, isMax=!_cc&&lv>=r.tier.length, nx=_cc||r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); tr=isMax?'MAX':''+(lv+1); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
+  else { const done=G.tech.research[key], _c=_cc||[r.m,r.g]; meta=done?'완료':'연구'; cr=done?0:_c[0]; en=done?0:_c[1]; state=isThis?'busy':(done?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
   const _act=isThis?'onclick="techCancelResearch(event)"':(state==='max'?'':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"');
   return { pro:(SKILLS&&SKILLS[r.k]?skillIcoHTML(r.k):upgIcoHTML(r.k)), sn:r.name, cr, en, meta, metaCls:'lv', tr, state, sel:isThis, act:_act+_techTipAttr('r',r.k,b.k) }; }   // 길게 = 연구 설명
 // 🧬 건물 진화 카드 — b.evolveTo(단일/배열)의 각 대상으로 진화. 진행 중(_evo)=busy(남은 초)

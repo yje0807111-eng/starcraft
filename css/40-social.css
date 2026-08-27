@@ -119,18 +119,12 @@
   .msSocial{flex:1;min-height:80px;display:flex;flex-direction:column;margin-top:9px;overflow:hidden;
     background:linear-gradient(180deg,rgba(6,7,11,.42),rgba(4,5,8,.5));border:1px solid var(--metal-edge);border-radius:var(--r-bar);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}   /* 테두리 중립(빨강 글로우 제거) */
-  /* 탭(채팅/파티/친구) — 박스 안 헤더, 밑줄 인디케이터로 자연스럽게 전환 */
-  .msTabs2{flex:0 0 auto;display:flex;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
-  .msTab2{flex:1;position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 4px;line-height:1;
-    font-family:inherit;font-size:var(--fs-lg);font-weight:700;cursor:pointer;color:var(--txt-hud);background:transparent;border:none;
-    border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .16s,border-color .16s}
-  .msTab2 .ic{position:relative;top:-.75px}
-  /* 얇은 변형 — 같은 컴포넌트의 크기 변형(복제 금지). 유즈맵 하단은 기본 두께 유지 */
-  .msTab2:hover{color:#cdd7e1}
-  .msTab2.on{color:#5fd0ff;border-bottom-color:#00e5ff}   /* 채팅=청록 포인트(빨강 제거) */
-  .msTab2[data-bt="party"].on{color:#b98cff;border-bottom-color:#8a56ff}   /* 파티=진한 보라 포인트 */
-  .msTab2[data-bt="friend"].on{color:#7fa8ff;border-bottom-color:#3a6ee0}   /* 친구=짙은 파랑 포인트 */
-  .msTab2:active{opacity:.85}
+  /* 탭(채팅/파티/친구 · 친구 필터) = 공용 세그먼트 바(.pdSeg · segNavHTML) 를 담는 그릇일 뿐이다.
+     ⛔ 여기서 탭의 생김새를 만들지 말 것 — 유즈맵 정렬 띠·장비창 섹션 바와 한 컴포넌트다(2026-08-27 통일).
+        덮는 것은 폭(공용은 max-width:286px 라 그대로 두면 오른쪽이 빈다)뿐이다. */
+  .msTabs2{flex:0 0 auto;display:block;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
+  .msTabs2 .pdSeg{max-width:none;margin:0}
+  .msTabs2 .pdSegBtn{position:relative}   /* 친구 배지가 버튼 기준으로 붙는다 */
   .msPanelBody{flex:1;min-height:60px;padding:8px 9px;overflow-y:auto;overflow-x:hidden;background:transparent;border:none}
   .msPanelBody::-webkit-scrollbar{width:4px}.msPanelBody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   /* 채팅: 보기영역 + 입력줄(박스 내부에서 작동) */
@@ -257,7 +251,7 @@
     color:#ffd2d2;background:rgba(200,50,50,.18);border:1px solid rgba(255,80,80,.4)}
   .ptDisband:active{transform:translateY(1px)}
   .ptHeadBtns{flex:0 0 auto;display:flex;align-items:center;gap:5px}
-  /* 파티 찾기 = 파티 색(보라 · .msTab2[data-bt=party]와 같은 계열) */
+  /* 파티 찾기 = 파티 색(보라) */
   /* 머리줄 버튼(파티 찾기 · 친구 추가) = 오른쪽 위 더보기 배너 칸(.hbMoreIt)과 같은 물성 —
      각진 3px · 검은 판 · 금속 엣지. 구역색으로 물들이지 않는다(그 자리는 제목의 숫자가 맡는다). */
   .ptFind{flex:0 0 auto;padding:4px 8px;border-radius:var(--r-bar);cursor:pointer;font-family:inherit;
@@ -409,7 +403,6 @@
   .ic{display:inline-block;flex:none;vertical-align:middle}
   [data-ico]{display:inline-flex;align-items:center;vertical-align:middle;line-height:1}
   
-  .msTab2 .ic{width:17px;height:17px}
   .msBanner .ic{width:11px;height:11px;margin-right:1px}
   .mapLive .ic{width:10px;height:10px;margin:0 1px}
   .mapThumb .ic{width:27px;height:27px;color:#ffb0b0}
@@ -567,6 +560,10 @@
     background:var(--tmC1);box-shadow:0 0 8px var(--tmC1)}
   /* 🎛 대전 설정(오토 배틀) — 프리셋 3장 + 결과 카드/세부 스테퍼.
      결과 카드는 난이도 상세 판(#soloDiffPanel .sdDet)과 **같은 자리·같은 모양**이다 — 맵이 바뀌어도 골격이 안 흔들린다. */
+  /* ⛔ 프리셋을 칸 세 개로 늘어놓던 `.cpPre` 는 2026-08-27 폐지 — 난이도와 같은 스테퍼로 통일했다.
+     (같은 화면 같은 자리에서 고르는 것인데 부품이 둘이면 두 화면처럼 읽힌다) */
+  .cpPreSub{margin-top:6px;font-size:var(--fs-sm);color:#8a929c;text-align:center}
+  #cpPreStep{margin-bottom:10px}
   .cpPre{display:flex;gap:7px;margin-bottom:10px}
   .cpPreC{position:relative;flex:1;min-width:0;padding:10px 6px;cursor:pointer;overflow:hidden;text-align:center;
     border:1px solid rgba(255,255,255,.08);border-radius:var(--r-bar);
@@ -593,6 +590,9 @@
   .cpVsSt span{text-align:center;min-width:0}
   .cpVsSt i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96;white-space:nowrap}
   .cpVsSt b{display:block;font-family:var(--font-num);font-size:17px;color:#fff;margin-top:2px}
+  /* 🏕 캠프 보상은 성격이 다르다(판 안 배율 ↔ 판 밖에서 받는 것) — 색으로만 가른다.
+     ⚠ 방은 여럿이 보는 자리라 **수치는 안 적는다**(사람마다 다르다). 기준(몇 시간치)만 적는다. */
+  .cpVsSt span.cmp b{color:#8fe3ff;font-size:15px}
   .cpVsNote{margin-top:10px;font-size:var(--fs-sm);color:#8a929c;text-align:center}
   .cpOptRows{display:flex;flex-direction:column;gap:9px}
   .cpOptRow{display:flex;align-items:center;gap:8px}
@@ -638,7 +638,7 @@
   #createPanel #cpName{margin:0}
   #createPanel .cpDiffBtns{margin-bottom:9px}
   #createPanel .cpDiffInfo{margin:0}
-  #createPanel .cpSeg{margin:0}
+  #createPanel #cpVis{margin:0}
   #createPanel .cpPwWrap{margin:11px 0 0}
   /* ══ 방 만들기 = 「판 없는 폼」(2026-08-25 · C3 확정) ═══════════════════════
      유즈맵 선택·방 찾기와 같은 규칙이다. 여기서 걷는 판은 넷 — 입력칸 · 무한 모드 · 난이도 상세 · 인원 칸.
@@ -663,8 +663,8 @@
   #createPanel .cpPc{height:38px;font-size:12px;background:linear-gradient(180deg,#111216,#0a0b0d)}
   #createPanel .cpPc.sel{background:linear-gradient(180deg,#16202e,#0c1119)}
   #createPanel .cpPc:disabled{opacity:1;background:linear-gradient(180deg,#0b0b0d,#08080a);color:#4b525c}
-  #createPanel .cpSegBtn{background:linear-gradient(180deg,#111216,#0a0b0d)}
-  #createPanel .cpSegBtn.on{background:linear-gradient(180deg,#1c1e24,#111318)}
+  /* ⛔ 여기서 면색을 덮지 말 것 — 그러면 A5(.setSeg)를 쓰는 의미가 없어진다.
+     방 만들기의 공개/비공개는 설정 창의 그래픽 품질과 **같은 모습**이어야 한다(2026-08-27). */
   /* 난이도 = 이름 pill 한 줄(선택 시 난이도 색 강조) + 아래 정보줄 */
   .cpDiffBtns{display:flex;gap:6px;margin-bottom:7px}
   .cpDiffBtns .moDiffBtn{flex:1;min-width:0;padding:9px 2px;border-radius:9px;font-weight:800;text-align:center;
@@ -713,5 +713,5 @@
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
   #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead,
-  .curTitle,.mapName,#mapSelect .msTab2,#msSortLbl,.hbmHead{
+  .curTitle,.mapName,#msSortLbl,.hbmHead{
     font-family:var(--font-ti);font-weight:700}

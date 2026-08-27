@@ -991,9 +991,11 @@ function techDoResearch(bk, rk){ const race=G.tech.race, b=techGetBldg(race,bk);
   const be=_techSelBldgOf(bk); if(!be){ if(typeof toast==='function') toast('⛔ 건물 없음'); return; }
   if(be._rj){ if(typeof toast==='function') toast('⛔ 연구 중 — 완료 후'); return; }   // 단일 연구(순차)
   if(_techNeedsPower(bk) && !_techPowered(be.x,be.y)){ if(typeof toast==='function') toast('⛔ 동력 없음'); return; }
-  const key=race+'_'+rk; let cost;
-  if(r.tier){ const lv=G.tech.research[key]||0; if(lv>=r.tier.length){ if(typeof toast==='function') toast('최대 레벨'); return; } cost=r.tier[lv]; }
-  else { if(G.tech.research[key]){ if(typeof toast==='function') toast('이미 연구됨'); return; } cost=[r.m||0, r.g||0]; }
+  const key=race+'_'+rk, _lv=G.tech.research[key]|0; let cost;
+  // 🏕 캠프는 **가스만** 받고 계열 업그레이드에 상한이 없다(값은 js/19-camp.js 가 단일 소스 · null=캠프 밖)
+  const _cc=(typeof campResearchCost==='function')?campResearchCost(r,_lv):null;
+  if(r.tier){ if(!_cc && _lv>=r.tier.length){ if(typeof toast==='function') toast('최대 레벨'); return; } cost=_cc||r.tier[_lv]; }
+  else { if(_lv){ if(typeof toast==='function') toast('이미 연구됨'); return; } cost=_cc||[r.m||0, r.g||0]; }
   if(_techFailRes(cost[0],cost[1])) return;
   _techSpend(cost[0],cost[1]);   // 선차감 — 취소 시 100% 환불
   const t=_techResearchTime(r); be._rj={ rk:rk, key:key, name:r.name||'', t:t, tMax:t, tier:!!r.tier, cost:[cost[0]||0,cost[1]||0] };

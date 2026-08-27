@@ -201,7 +201,6 @@
             <label class="cpLabel">난이도</label>
             <div class="cpDiffStep" id="cpDiffStep"></div>   <!-- ◀ 이름 ▶ + 점 = 난이도 선택 화면과 같은 컴포넌트 -->
             <div class="cpVs" id="cpDiffInfo"></div>
-            <button type="button" class="sdInf" id="cpInfBtn" onclick="setCpInf()"></button>
           </div>
           <div class="cpSection" id="cpMode"></div>   <!-- 대전 설정(난이도 없는 유즈맵 전용) — renderCpMode 가 채운다 -->
           <div class="cpSection">
@@ -210,9 +209,10 @@
           </div>
           <div class="cpSection">
             <label class="cpLabel">공개 설정</label>
-            <div class="cpSeg" id="cpVis">
-              <button class="cpSegBtn on" data-v="public" onclick="setRoomVis('public')"><span data-ico="globe"></span>공개</button>
-              <button class="cpSegBtn" data-v="private" onclick="setRoomVis('private')"><span data-ico="lock"></span>비공개</button>
+            <!-- 둘 중 하나 고르기 = 설정 창의 그래픽 품질과 같은 컴포넌트(.setSeg/.segBtn). 새 토글을 만들지 말 것 -->
+            <div class="setSeg" id="cpVis">
+              <button class="segBtn on" data-v="public" onclick="setRoomVis('public')"><span data-ico="globe"></span>공개</button>
+              <button class="segBtn" data-v="private" onclick="setRoomVis('private')"><span data-ico="lock"></span>비공개</button>
             </div>
             <div class="cpPwWrap hide" id="cpPwWrap">
               <label class="cpLabel">비밀번호</label>
@@ -229,25 +229,41 @@
     </div>
 
     <!-- 개인 플레이: 난이도 선택 팝업(선택 즉시 게임 시작) -->
+    <!-- 난이도 선택 = 전체 화면(2026-08-27). 맵 키 아트 한 장 + 국소 스크림 + --loadDim —
+         로딩·로그인이 쓰는 그 공식이다. 나가기는 머리줄 ✕ 가 맡고 아래는 시작 하나뿐이다. -->
     <div id="soloDiffPanel" class="hide">
-      <div class="cpCard">
-        <div class="cpTitle">난이도 선택</div>
-        <div class="pickHint">개인 플레이 · 난이도를 고르고 시작하세요</div>
-        <!-- 위에서 고르고(공용 세그먼트 바) 아래에서 확인 후 시작 — 목록을 훑지 않고 한 칸씩 비교한다 -->
-        <div class="sdNav" id="sdNav"></div>
-        <div class="sdDet" id="sdDet"></div>
-        <!-- 무한 모드는 난이도가 아니다(노말 고정) — 탭에 끼우지 않고 별도 줄로 둔다 -->
-        <button class="sdInf hide" id="sdInf" onclick="sdStartInf()"></button>
-        <div class="cpBtns"><button class="actBtn" onclick="closeSoloDiff()">취소</button></div>
+      <div class="sdArt" id="sdArt"></div>
+      <div class="sdScr">
+        <div class="sdMap">
+          <span class="moThumb" id="sdThumb"></span>
+          <span class="sdMapTx"><b id="sdMapNm"></b><em id="sdMapDs"></em></span>
+          <button class="sdX" onclick="closeSoloDiff()" aria-label="닫기" title="닫기">
+            <svg viewBox="0 0 24 24"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <!-- 수치·설명은 **난이도 이름 바로 아래**(그림 위). 아래 판에는 보상만 남는다. -->
+        <div class="sdMid"><div class="sdNav" id="sdNav"></div><div class="sdInfo" id="sdInfo"></div></div>
+        <div class="sdBlk">
+          <div class="sdDet" id="sdDet"></div>
+          <button class="actBtn pri sdGo" id="sdGo" onclick="sdStart()"></button>
+        </div>
       </div>
     </div>
     <!-- 종족 선택(컴퓨터가 싸운다): 맵→종족→난이도 -->
+    <!-- 종족 선택 = 난이도 화면과 **같은 어법**(전체 화면 · 맵 키 아트 · 머리줄 ✕ · 아래는 시작 하나).
+         둘은 0.2초 간격으로 이어져 뜬다 — 껍데기가 다르면 그 자리에서 덜컹인다. -->
     <div id="raceSelPanel" class="hide">
-      <div class="cpCard">
-        <div class="cpTitle">종족 선택</div>
-        <div class="pickHint">선택한 종족으로 게임을 플레이합니다</div>
-        <div class="raceSelBtns" id="raceSelBtns"></div>
-        <div class="cpBtns"><button class="actBtn" onclick="closeRaceSelect()">취소</button></div>
+      <div class="sdArt" id="rsArt"></div>
+      <div class="sdScr">
+        <div class="sdMap">
+          <span class="moThumb" id="rsThumb"></span>
+          <span class="sdMapTx"><b id="rsMapNm"></b><em>종족을 고르고 시작하세요</em></span>
+          <button class="sdX" onclick="closeRaceSelect()" aria-label="닫기" title="닫기">
+            <svg viewBox="0 0 24 24"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="sdBlk">
+          <div class="raceSelBtns" id="raceSelBtns"></div>
+          <button class="actBtn pri sdGo" id="raceGo" onclick="raceConfirm()"></button>
+        </div>
       </div>
     </div>
     <!-- 로그아웃 확인 — 기존 .cpCard 다이얼로그 구조 재사용 -->
@@ -332,6 +348,24 @@
           <span class="mdPeek" id="msDockPeek"></span>
           <svg class="mdChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5 12 15.5 18 9.5"/></svg>
         </button>
+        <div class="msSocial">
+          <div class="msChatWrap" id="msChatWrap">
+            <div class="msChat" id="msChat" data-scope="all"></div>
+            <div class="msChatBar" id="msChatBar">
+              <div class="msScopeDD" id="msScopeDD" data-sc="all">   <!-- 범위 배지 = 입력창 내부 왼쪽(누구에게 보내는지 입력 직전에 읽힘) -->
+                <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+                <div class="msScopeMenu hide" id="msScopeMenu">
+                  <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
+                  <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
+                  <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
+                </div>
+              </div>
+              <input id="msChatInput" type="text" placeholder="메시지 입력…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
+              <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
+            </div>
+          </div>
+          <div class="msPanelBody" id="msPanelBody" style="display:none"></div>
+        </div>
       </div>
     </div>
 
@@ -445,10 +479,25 @@
         <div class="ovTtl"><h1 id="ovTitle">네모네모 디펜스</h1></div>
       </div>
       <div class="ovPanel"><p id="ovDesc"></p></div>   <!-- 설정 항목 패널과 같은 글래스 패널 -->
-      <div class="ovBtns">
+      <div class="ovBtns" id="ovBtns">
         <button id="ovBtn"><i class="autoBar" id="ovAutoBar"></i><span class="ovBtnTx" id="ovBtnTx">멀티플레이</span></button>
         <button id="ovBtn2" class="ghost" style="display:none"><span class="ovBtnTx">관전하기</span></button>
       </div>
+    </div>
+    <!-- 종료 결과(승/패/나감) — 시작 안내(.ovCard)와는 **다른 화면**이다.
+         판 없이 전면으로 뜨고, 게임 진입 화면(#gsRoot)의 짝이 되는 골격이다.
+         ⚠ 버튼은 새로 만들지 않는다 — 위 #ovBtns 를 여기로 **옮겨 쓴다**(마을 채팅이 .msSocial 을 옮겨 쓰는 것과 같은 방식).
+            그래야 #ovBtn/#ovBtn2 핸들러와 자동 진행 바가 그대로 산다. -->
+    <div class="rsCard" id="rsCard">
+      <div class="rsTop">
+        <div class="rsTtl" id="rsTtl">VICTORY</div>
+        <div class="rsMeta" id="rsMeta"></div>
+      </div>
+      <div class="rsSpacer"></div>
+      <div class="rsRows" id="rsRows"></div>
+      <div class="rsCur" id="rsCur"></div>
+      <!-- ⚠ .rsAnim 이 있어야 버튼이 **맨 마지막에** 나온다. 빼면 처음부터 보인다 -->
+      <div class="rsBtnHost rsAnim" id="rsBtnHost"></div>
     </div>
   </div>
 
@@ -466,43 +515,13 @@
 
     <!-- 친구 시트 — 허브 소셜을 그대로 옮겨온 것(id 유지 → renderFriends/setFriendFilter 그대로 동작) -->
     <!-- 캐릭터 정보 — 스탯이 어디서 오는지(직업/배분/레벨/진화/장비/펫) 한눈에 -->
-    <div class="hbModal hide" id="hbInfoModal" onclick="if(event.target===this)hbCloseInfo()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>스탯 출처</b>
-          <button class="hbmX" onclick="hbCloseInfo()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbRows uiScroll" id="hbInfoBody"></div>
-      </div>
-    </div>
+    
     <!-- 성장 — 전직·진화. 마을 광장까지 안 가고 여기서(판정·실행은 공용 함수 재사용) -->
-    <div class="hbModal hide" id="hbGrowModal" onclick="if(event.target===this)hbCloseGrow()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>성장</b>
-          <button class="hbmX" onclick="hbCloseGrow()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbRows uiScroll" id="hbGrowBody"></div>
-      </div>
-    </div>
+    
     <!-- 🤝 동료 — 영입·강화·출전. 껍데기는 라운드 팝업과 같은 .hbModal -->
-    <div class="hbModal hide" id="hbMateModal" onclick="if(event.target===this)hbCloseMates()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>동료</b>
-          <button class="hbmX" onclick="hbCloseMates()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbRows uiScroll" id="hbMateBody"></div>
-        <div class="hbRoundNote" id="hbMateNote"></div>
-      </div>
-    </div>
+    
     <!-- 🪖 벙커 — 필드에서 벙커를 눌러 연다. 유닛을 넣으면 그만큼 함께 쏜다 -->
-    <div class="hbModal hide" id="hbBunkerModal" onclick="if(event.target===this)hbCloseBunker()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>벙커</b>
-          <button class="hbmX" onclick="hbCloseBunker()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbRows uiScroll" id="hbBunkerBody"></div>
-        <div class="hbRoundNote">유닛은 벙커마다 사서 채우고(최대 4), 출전 동료 1명을 더 넣을 수 있습니다. 전체 화력에 <b>건물</b> 구역의 벙커 공격력이 곱해집니다.</div>
-      </div>
-    </div>
+    
     <!-- 부스트 — 시간제 강화 -->
     <div class="hbModal hide" id="hbBoostModal" onclick="if(event.target===this)hbCloseBoost()">
       <div class="hbmCard">
@@ -518,31 +537,7 @@
     <div class="hbMoreWrap hide" id="hbMoreSheet">
       <div class="hbMoreBox" id="hbMoreBox"><div class="hbMoreGrid" id="hbMoreGrid"></div></div>
     </div>
-    <div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>던전 · 라운드</b>
-          <button class="hbmX" onclick="hbCloseRounds()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <!-- 던전 = 좌우 화살표로 한 장씩 · 라운드 = 세로 스크롤 피커(아래가 1) -->
-        <div class="hbPickDg">
-          <button class="arwBtn" data-arw="l" id="hbPickPrev" onclick="hbPickDg(-1)" aria-label="이전 던전"></button>
-          <div class="hbDgc" id="hbPickCard"></div>
-          <button class="arwBtn" data-arw="r" id="hbPickNext" onclick="hbPickDg(1)" aria-label="다음 던전"></button>
-        </div>
-        <div class="hbModeRow">
-          <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)" title="같은 라운드 무한 파밍"><b>반복</b></button>
-          <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)" title="클리어하면 다음 라운드"><b>등반</b></button>
-        </div>
-        <div class="hbRdPick">
-          <div class="hbRdBand"></div>
-          <div class="hbRdScroll uiScroll" id="hbRdScroll" onscroll="hbRdScrolled()"></div>
-        </div>
-        <div class="hbPickBtns">
-          <button class="ecCancel" onclick="hbCloseRounds()">취소</button>
-          <button class="ecGo" id="hbPickGoBtn" onclick="hbPickGo()">이동</button>
-        </div>
-      </div>
-    </div>
+    
     <!-- 📅 일일 퀘스트 — 하루 5개 + 주간 25개. 껍데기는 라운드 팝업과 같은 .hbModal -->
     <!-- 🧭 가이드 퀘스트 — 일일 퀘스트와 **같은 껍데기**를 쓴다(.hbModal/.hbmCard/.hbRows) -->
     <div class="hbModal hide" id="hbGuideSheet" onclick="if(event.target===this)closeGuide()">
@@ -571,46 +566,11 @@
       </div>
     </div>
     <!-- 💬 채팅 — 유즈맵에서 마을로 옮겨왔다(유즈맵은 목록만). 내용·기능은 그대로 -->
-    <div class="twSheet hide" id="twChat">
-      <div class="twSheetHead"><b>채팅</b>
-        <button class="twSheetX" onclick="twCloseChat()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-      </div>
-      <div class="msSocial inTown">
-        <div class="msTabs2">
-          <button class="msTab2 on" data-bt="chat" onclick="setBottomTab('chat')"><span data-ico="chat"></span>채팅</button>
-          <button class="msTab2" data-bt="party" onclick="setBottomTab('party')"><span data-ico="party"></span>파티</button>
-          <button class="msTab2" data-bt="friend" onclick="setBottomTab('friend')"><span data-ico="friend"></span>친구<span class="msFriendBadge hide" id="msFriendBadge">0</span></button>
-        </div>
-        <div class="msChatWrap" id="msChatWrap">
-          <div class="msChat" id="msChat" data-scope="all"></div>
-          <div class="msChatBar" id="msChatBar">
-            <div class="msScopeDD" id="msScopeDD" data-sc="all">   <!-- 범위 배지 = 입력창 내부 왼쪽(누구에게 보내는지 입력 직전에 읽힘) -->
-              <button class="msScopeTrig" type="button" onclick="toggleMsScope(event)" title="채팅 범위"><span class="msScopeLbl" id="msScopeLbl">전체</span><svg class="msScopeChev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
-              <div class="msScopeMenu hide" id="msScopeMenu">
-                <button class="msScopeOpt on" data-sc="all" onclick="pickMsScope('all')">전체</button>
-                <button class="msScopeOpt" data-sc="party" onclick="pickMsScope('party')">파티</button>
-                <button class="msScopeOpt" data-sc="friend" onclick="pickMsScope('friend')">친구</button>
-              </div>
-            </div>
-            <input id="msChatInput" type="text" placeholder="메시지 입력…" maxlength="120" autocomplete="off" onkeydown="if(event.key==='Enter')sendGlobalChat()">
-            <button class="msChatSend" onclick="sendGlobalChat()">전송</button>
-          </div>
-        </div>
-        <div class="msPanelBody" id="msPanelBody" style="display:none"></div>
-      </div>
-    </div>
-    <div class="twSheet hide" id="twSocial">
-      <div class="twSheetHead"><b>친구</b>
-        <button class="twSheetX" onclick="twCloseSocial()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-      </div>
-      <div class="msTabs2" id="hubFriendTabs">
-        <button class="msTab2 on" data-fil="all" onclick="setFriendFilter('all',this)"><span data-ico="friend"></span>전체</button>
-        <button class="msTab2" data-fil="usemap" onclick="setFriendFilter('usemap',this)"><span data-ico="map"></span>유즈맵</button>
-        <button class="msTab2" data-fil="rpg" onclick="setFriendFilter('rpg',this)"><span data-ico="hero"></span>RPG</button>
-        <button class="msTab2" data-fil="close" onclick="setFriendFilter('close',this)"><span data-ico="fav"></span>친한친구</button>
-      </div>
-      <div class="hsList uiScroll" id="hubFriends"></div>
-    </div>
+    
+    
+<!-- 🗄 마을(townScreen)·마을 채팅 시트(twChat)·마을 친구 시트(twSocial)는 다락으로 갔다.
+     마크업 docs/attic/dead-markup.html · 이유 ATTIC.md. 마을은 쓰지 않는다.
+     ⚠ 채팅 알맹이(.msSocial)는 살아 있다 — 유즈맵 하단 도크(#msSocialDock)가 그것을 쓴다. -->
   <!-- 하단 네비(전역) — 화면이 아니라 #phone 위에 떠 있다. 칸은 NAV_TREE 를 보고 navPaint()가 만든다 -->
   <div id="navBar" class="navBar hide"></div>
   <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
@@ -632,47 +592,17 @@
     </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
-  <div id="dmChat" class="dmChat hide">
-    <div class="dmHead">
-      <button class="dmBack" onclick="closeDM()" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span class="dmAv" id="dmAv"><i class="dmStat" id="dmStat"></i></span>
-      <span class="dmWho"><b id="dmName">친구</b><span class="dmSt" id="dmStTx">오프라인</span></span>
-    </div>
-    <div class="dmBody" id="dmBody"></div>
-    <div class="dmInputBar">
-      <input id="dmInput" type="text" placeholder="메시지 입력…" maxlength="200" autocomplete="off" onkeydown="if(event.key==='Enter')sendDM()">
-      <button class="dmSend" onclick="sendDM()" aria-label="전송"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></button>
-    </div>
-  </div>
+  
 
   <!-- 🏠 HOME — 메인 대시보드. 카드는 POWER UPGRADES 하나뿐이고 나머지는 전부 배경이다.
        위쪽 빈 자리는 채우지 않는다 — 우주 배경(.spaceBg)이 상단 재화 바 뒤까지 이어져 보이는 게 의도다. -->
   <div id="homeScreen" class="appScreen spaceBg hide">
     <canvas id="hbCv"></canvas>   <!-- 배경 전투 — UI 아래 레이어(클릭 통과) -->
     <!-- 좌상단 고정 — 프로필(상세) + 라운드 선택 아이콘. 재화 바(우측 정렬)와 같은 줄을 나눠 쓴다 -->
-    <div class="hbHudTop">
-      <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="스탯 출처">
-        <span class="hbAv" id="hbAv">🪖</span>
-        <span class="hbCol">
-          <b id="hbName">캐릭터</b>
-          <span class="hbXp"><i id="hbXpBar"></i></span>
-          <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
-        </span></button>
-    </div>
+    
     <!-- 던전·라운드 — 판 없이 글자만. ◀▶ = ±1 미세조정(가장 잦은 동작), 가운데 = 전체 목록.
          모바일 스테이지 UI의 표준 배치다. 조절을 시트 안에만 두면 한 칸 내리는 데 4~5탭이 든다. -->
-    <div class="hbMid" id="hbMid">
-      <div class="hbMidRow">
-        <button class="arwBtn" data-arw="l" id="hbRdPrev" onclick="hbRoundStep(-1)" aria-label="이전 라운드"></button>
-        <button class="hbMidTx" id="hbMidTx" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">
-          <b id="hbDgName">던전 1 · 감염된 둥지</b>
-          <span class="hbMidRd"><i id="hbRoundLb">라운드</i> <em id="hbRound">1</em></span>
-          <i class="hbMidLine"></i>
-        </button>
-        <button class="arwBtn" data-arw="r" id="hbRdNext" onclick="hbRoundStep(1)" aria-label="다음 라운드"></button>
-      </div>
-      <span class="hbMidSub"><i id="hbWaveTx">웨이브 1/3</i> · <i id="hbTimer">50s</i> · <i id="hbMode">반복</i></span>
-    </div>
+    
     <!-- 오른쪽 위 — 설정(☰, 재화 바 안) 바로 아래. 건설 중에만 ⊘가 뜬다.
          ⚠ #curBar는 .bare에서 click-through라 그 안에 두면 안 눌린다 — #homeScreen의 자식으로 둔다. -->
     <div class="hbHudRight">
@@ -684,7 +614,7 @@
         <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="hbBar" id="hbBar"></div>   <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
+       <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
     <div id="hbArmBtns" class="hbArmBtns hide"></div>   <!-- 🧱 배치 확정/취소 — 공용 .bArmBtns를 담는 앵커 -->
     <div class="hmScroll uiScroll" id="hmScroll">
       <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
@@ -700,14 +630,7 @@
   <!-- ⚔ 토벌 허브 — 네비 '토벌' 진입. 목록 카드 → 팝업. 전투는 #dgScreen 재사용. (#phone 안이라 재화 바 패딩 적용)
        ⚠ 표기는 '토벌'(열쇠·소탕·단계 등반), '던전'은 자동사냥(HOME) 전용어다. 코드 식별자 dg*/DG_*는 옛 이름 그대로 둔다. -->
   <!-- ⚔ 토벌 — HOME 위 팝업(.hbModal 규격). 내용 렌더러는 renderDungeonHub() 그대로 -->
-  <div class="hbModal hide" id="dgHubScreen" onclick="if(event.target===this)closeDungeonHub()">
-    <div class="hbmCard">
-      <div class="hbmHead"><b>토벌</b>
-        <button class="hbmX" onclick="closeDungeonHub()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-      </div>
-      <div class="dgHubBody uiScroll" id="dgHubBody"></div>
-    </div>
-  </div>
+  
   <!-- 🎁 상점 — 네비 '상점' 진입. 팝업이 아닌 전용 화면(렌더러는 renderProfGacha 단일 소스 재사용) -->
   <!-- 배경 = 유즈맵 선택과 같은 lobby_bg (규칙 공유: #mapSelect::before/::after 셀렉터에 #shopScreen 포함) -->
   <div id="shopScreen" class="appScreen hide">
@@ -719,8 +642,13 @@
        탭 띠 = 유즈맵 목록 상자와 같은 .msPanel/.msSortTabs 규격(복제 금지, 클래스만 재사용). -->
   <!-- ⬆ 강화 — 자리만 잡아 뇐다(내용 미정). 화면 구조는 다른 화면과 같은 .appScreen 규격 -->
   <div id="upgScreen" class="appScreen hide">
-    <!-- 본문은 비어 있다 — 정보·성장은 팝업 본문을 빌려 오고, 스킬만 여기서 그린다(setChrSec) -->
+    <!-- 본문은 비어 있다 — 환생은 아래 보관함의 #hbGrowBody 를 빌려 오고, 스킬만 여기서 그린다(setChrSec) -->
     <div class="msPanel"><div class="chrBody uiScroll" id="chrBody"></div></div>
+    <!-- ⚠ 환생 본문의 집. 원래는 성장 팝업(#hbGrowModal) 안에 있었는데 그 팝업이 다락으로 가면서
+         여기로 옮겼다(ATTIC.md). renderGrowModal() 은 그대로 같은 id 를 찾는다. -->
+    <div id="chrStash" style="display:none">
+      <div class="hbRows uiScroll" id="hbGrowBody"></div>
+    </div>
   </div>
   <!-- 🔬 연구 · 📋 임무 — 하단 네비 개편(2026-08-25). 지금은 **껍데기만** 있다.
        기획서(GAME_DIRECTION.md §3-1)가 성장 축을 「연구·경제」 둘로 못박았고, 옛 캐릭터·정비 칸은
@@ -742,66 +670,19 @@
   <!-- ⚔ 토벌 시트 — 소탕이 목록 행으로 올라가면서 여기 남는 것은 "어떻게 싸울지" 하나다.
        S4안(2026-08-21): 방금 누른 그 행을 그대로 얹어 맥락이 자리로 이어지게 한다(dgRowHTML 공용).
        ⚠ 카드는 앱 팝업 규격 그대로 — 바깥 1px + 모서리 컷 11px + 제목 아래 헤어라인. 면을 색으로 채우지 않는다. -->
-  <div id="dgSheet" class="dgSheet hide">
-    <div class="dgSheetCard">
-      <button class="dgSheetX" onclick="dgCloseSheet()" aria-label="닫기">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>
-      </button>
-      <div class="dgSheetTtl">어떻게 싸울까</div>
-      <div id="dgSheetRow"></div>
-      <div class="dgSheetGo">
-        <button class="actBtn dgGo" id="dgSheetAuto" onclick="dgSheetEnter(1)"><b>자동 전투</b><i>제자리 · 즉시</i></button>
-        <button class="actBtn dgGo" id="dgSheetEnter" onclick="dgSheetEnter(0)"><b>직접 전투</b><i>이동·카이팅 · 확률↑</i></button>
-      </div>
-    </div>
-  </div>
+  
 
   <!-- 🏘 RPG 마을 -->
-  <div id="townScreen" class="appScreen spaceBg hide">
-    <button class="vgBack" onclick="vgBack()" aria-label="사냥터로" title="사냥터로">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18 3 12l6-6"/><path d="M3 12h13a5 5 0 0 1 0 10h-1"/></svg>
-    </button>
-    <div class="twBar">
-      <button class="twBack" onclick="askLogout()" aria-label="로그아웃" title="로그아웃"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4.6h3.7A1.8 1.8 0 0 1 20 6.4v11.2a1.8 1.8 0 0 1-1.8 1.8h-3.7"/><path d="M10.6 8.2L14.4 12l-3.8 3.8"/><path d="M14.4 12H4"/></svg></button>
-      <button class="twWho" data-sfx="ui_open" onclick="openTownPanel('plaza')" title="내 캐릭터" aria-label="내 캐릭터"><span class="twName" id="twName">캐릭터</span><span class="twLv" id="twLv">Lv.1</span><span class="twPow" id="twPow">⚔ 0</span></button>
-      <span class="twCoinSpacer" style="margin-left:auto"></span>
-      <button class="twGear" data-sfx="ui_open" onclick="twOpenChat()" title="채팅" aria-label="채팅"><span data-ico="chat"></span></button>
-      <button class="twGear" data-sfx="ui_open" onclick="twOpenSocial()" title="친구" aria-label="친구"><span data-ico="friend"></span></button>
-      <button class="twGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
-    </div>
-    <div class="twMap" id="twMap" onpointerdown="twPtrDown(event)" onpointermove="twPtrMove(event)" onpointerup="twPtrUp(event)" onpointercancel="twPtrUp(event)">
-      <!-- 월드(화면보다 큼) — 카메라가 이 요소의 transform만 바꾼다. HOME 필드가 이 엔진을 쓴다. -->
-      <div class="twWorld" id="twWorld"><div class="twGround"></div></div>
-      <div class="twAvatar" id="twAvatar"><span class="twAvShadow"></span><span class="twAvFlip" id="twAvFlip"><span class="twAvBody">🧍</span></span></div>
-    </div>
-    <div id="twToast" class="twToast hide"></div>
-    </div>
+  
 
   <!-- ⚔ 토벌 전투 — 캐릭터가 직접 싸우는 전용 화면(유즈맵과 완전 분리) -->
-  <div id="dgScreen" class="appScreen spaceBg hide">
-    <div class="twBar">
-      <button class="twBack" onclick="dgFlee()" aria-label="나가기"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span class="twName">토벌</span><span class="twLv" id="dgWave">1층 · 1/3</span>
-      <span class="twCoin"><b id="dgHpTxt">0</b> HP</span>
-    </div>
-    <div class="dgWrap">
-      <div class="dgArena" id="dgArena"></div>
-      <div class="dgBar"><i><b id="dgHpBar"></b></i></div>
-      <div class="dgBtns"><button class="dgSkillBtn" id="dgSkillBtn" onclick="dgSkill()"><span id="dgSkillIco">🎯</span><i id="dgSkillCd"></i></button></div>
-    </div>
-    <div id="dgResult" class="dgResult hide"></div>
-  </div>
+  
   <!-- ⚠ 여기서 #phone 을 닫지 말 것 — 로딩창(#opening)·설정·마을 팝업이 프레임 밖으로 떨어져
        .appScreen(position:absolute) 이 뷰포트 기준이 되어 전체 화면을 덮는다(2026-08-19 병합 잔재 제거).
        #phone 은 파일 끝(모든 화면·팝업 뒤)에서 한 번만 닫는다. -->
 
   <!-- 마을 시설 팝업(구역 도착 시) -->
-  <div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
-    <div class="setCard twCard">
-      <div class="setTitle"><span id="tpTitle">시설</span><div class="setX" onclick="closeTownPanel()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
-      <div class="twBody" id="tpBody"></div>
-    </div>
-  </div>
+  
 
   <div id="pointPanel" class="hide" onclick="if(event.target===this)closePointUpgrade()">
     <div class="setCard ptCard">
@@ -964,6 +845,10 @@
 <script src="js/17-build-cards.js"></script>
 <script src="js/18-strike.js"></script>
 <script src="js/19-camp.js"></script>
+<!-- 🗄 다락(휴지통) — 지금 화면에서 도달할 수 없는 코드. 무엇이 왜 여기 있는지는 ATTIC.md.
+     ⚠ **맨 마지막**이다: 아무도 여기 것을 부르지 않으므로 순서가 무의미하고, 거꾸로 여기 것이
+     살아 있는 코드를 부르는 것은 런타임이라 문제가 없다. ⛔ 위 순서는 건드리지 않았다. -->
+<script src="js/99-attic.js"></script>
 
 <!-- 유닛 3D 모델(Three.js) — assets/models/*.glb(마린/골리앗/고스트 + 마린총)를 WebGL로 렌더. 애니메이션은 코드로 구현(숨쉬기/공격기울임/사망), 가장 가까운 적 방향 자동 회전 -->
 <script type="module" src="js/90-m3d.module.js"></script>

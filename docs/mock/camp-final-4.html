@@ -1,0 +1,96 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>보상 미리보기 확정형 — 머리줄 + 재화 두 줄</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* 확정 짜임 = **N2 의 머리줄 + N3 의 재화별 한 줄**, 맨 아래 캠프 줄은 뺀다.
+     클리어 보상 ─────────── 2시간치      ← 시간은 머리줄이 갖는다(이 블록 전체의 자)
+     🪙 미네랄                   12.4K
+     ⛽ 가스                      1.3K
+   시간이 머리줄로 올라간 덕에 「미네랄+가스를 합쳐 캠프 2시간치」라는 뜻이 정확해진다
+   (아래 세 줄로 늘어놓으면 캠프가 세 번째 재화처럼 보였다).
+   네 안은 **머리줄의 말과 구획 방식**만 다르다. */
+:root{--font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px;--fs-xs:9.5px;--fs-sm:10px;--fs-md:11px;--fs-lg:12px;--fs-xl:13px;
+  --dc:#ffb14d;--dcRGB:255,177,77;--camp:#8fe3ff}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#141416;color:#e7e9ee;
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(2,372px);gap:18px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:46px}
+.sub b{color:#dfe6f0}
+.det{position:relative;border-radius:6px;padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:12px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4}
+.stat b{display:block;font-family:var(--font-num);font-size:20px;font-weight:700;margin-top:2px}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+.hr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
+
+/* ── 확정 부품 ── */
+.rw{display:flex;flex-direction:column;gap:7px}
+.rwHd{display:flex;align-items:baseline;gap:8px}
+.rwHd .lab{font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em;color:#a8b3c0}
+.rwHd .fill{flex:1;height:1px;background:rgba(255,255,255,.10);transform:translateY(-3px)}
+.rwHd .t{font-family:var(--font-num);font-size:15px;font-weight:700;color:var(--camp);white-space:nowrap}
+.rwHd .t small{font-size:10.5px;opacity:.8;margin-left:1px}
+.list{border-radius:var(--r-bar);background:rgba(255,255,255,.04);padding:1px 12px}
+.row{display:flex;align-items:center;gap:9px;height:36px}
+.row+.row{border-top:1px solid rgba(255,255,255,.06)}
+.row .ic{width:20px;height:20px;flex:none;display:block;object-fit:contain}
+.row .nm{font-size:var(--fs-md);color:#a8b3c0}
+.row .v{margin-left:auto;font-family:var(--font-num);font-size:19px;font-weight:700;color:#eef2f6}
+/* P3 시간을 칩으로 */
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;
+  background:rgba(143,227,255,.12);border:1px solid rgba(143,227,255,.28);
+  font-family:var(--font-num);font-size:13px;font-weight:700;color:var(--camp);white-space:nowrap}
+.chip svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+/* P4 판 없이 */
+.p4 .list{background:none;padding:1px 2px}
+</style></head><body>
+<div id="w"></div>
+<script>
+const MIN='../../assets/icons/res_mineral.webp', GAS='../../assets/icons/res_gas.webp';
+const CLK=`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`;
+const STATS=`<div class="stats">
+  <div class="stat e"><i>적 HP</i><b>×2.0</b></div>
+  <div class="stat c"><i>포인트 획득량</i><b>×2</b></div></div>`;
+const DESC=`<div class="desc">메타 업그레이드가 어느 정도 쌓여야 버팁니다</div>`;
+const LIST=`<div class="list">
+  <div class="row"><img class="ic" src="${MIN}" alt=""><span class="nm">미네랄</span><span class="v">12.4K</span></div>
+  <div class="row"><img class="ic" src="${GAS}" alt=""><span class="nm">가스</span><span class="v">1.3K</span></div></div>`;
+const det=(cls,hdr)=>`<div class="det ${cls}">${STATS}<div class="hr"></div>
+  <div class="rw">${hdr}${LIST}</div>${DESC}</div>`;
+
+const V=[
+['p1','P1 — <em>말씀하신 그대로</em>',
+ '머리줄 「클리어 보상 … 2시간치」 + 재화 두 줄. 시간이 머리줄로 올라가 <b>「둘을 합쳐 캠프 2시간치」</b> 라는 뜻이 정확해진다.',
+ det('',`<div class="rwHd"><span class="lab">클리어 보상</span><span class="fill"></span>
+   <span class="t">2<small>시간치</small></span></div>`)],
+
+['p2','P2 — 시간에 <em>「캠프」</em>를 붙여',
+ '「2시간치」만 있으면 <b>무엇의 2시간</b>인지 모른다. 「캠프 2시간치」로 적으면 그 자리에서 뜻이 닫힌다.',
+ det('',`<div class="rwHd"><span class="lab">클리어 보상</span><span class="fill"></span>
+   <span class="t" style="font-size:14px">캠프 2<small>시간치</small></span></div>`)],
+
+['p3','P3 — 시간을 <em>칩</em>으로',
+ '시간을 둥근 칩 + 시계 아이콘으로 떼어 낸다. 재화 수량(흰 숫자)과 <b>기호가 확실히 갈려</b> 같은 종류로 안 읽힌다.',
+ det('',`<div class="rwHd"><span class="lab">클리어 보상</span><span class="fill"></span>
+   <span class="chip">${CLK}캠프 2시간치</span></div>`)],
+
+['p4','P4 — 목록의 <em>판을 걷고</em>',
+ 'P2 와 같되 안쪽 회색 판을 없앤다. 상세 판 안에 판이 겹치지 않아 <b>테두리가 한 겹</b>으로 끝난다 — 가장 조용하다.',
+ det('p4',`<div class="rwHd"><span class="lab">클리어 보상</span><span class="fill"></span>
+   <span class="t" style="font-size:14px">캠프 2<small>시간치</small></span></div>`)],
+];
+document.getElementById('w').outerHTML=V.map(([k,t,d,body])=>
+ `<div><p class="hd">${t}</p><p class="sub">${d}</p>${body}</div>`).join('');
+</script>
+</body></html>

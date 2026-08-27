@@ -146,13 +146,6 @@ function profScrapValue(it){ const T=profItemTier(it.tier); return Math.round(12
 function profScrapItem(iid){ const p=PROF(), inv=profItems(), i=inv.findIndex(x=>x.iid===iid);
   if(i<0 || profItemHolder(iid)) return -1;                              // 장착 중엔 분해 불가
   const v=profScrapValue(inv[i]); inv.splice(i,1); p.pcoin+=v; saveMeta(); return v; }
-function profBuyItem(tierId){ const p=PROF(), T=profItemTier(tierId);
-  if(!T.cost || p.pcoin<T.cost) return null;
-  if(profItems().length>=PROF_INV_MAX) return null;
-  const sl=profSlots(); if(!sl.length) return null;
-  const it=profMakeItem(sl[Math.floor(Math.random()*sl.length)], Math.max(1, dgMaxFloor()), tierId);
-  if(!profAddItem(it)) return null;
-  p.pcoin-=T.cost; saveMeta(); return it; }
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
 // 레벨 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
 // idle_arena→훈련장 장소 / evolve→진화 / idle_8h·idle_12h→오프라인 상한
@@ -171,8 +164,6 @@ const PROF_UNLOCKS=[
 // 해금 판정에 쓰는 레벨 — 환생해도 이미 연 것은 유지되고(unlocks에 영구 기록),
 // 새로 여는 기준은 '지금 캐릭터 레벨'이다.
 function profUnlockLv(){ const c=CHAR(); return c? (c.level||1) : 1; }
-// 표시용 — 해금에 필요한 레벨(문구에 숫자를 손으로 박지 말 것)
-function profUnlockNeed(id){ const u=PROF_UNLOCKS.find(x=>x.id===id); return u? u.lv : 0; }
 const PROF_OFF_CAP_MIN=4*60, PROF_OFF_RATE=0.5, PROF_OFF_CAP8_MIN=8*60, PROF_OFF_RATE8=1.0, PROF_OFF_CAP12_MIN=12*60;   // 오프라인 상한/비율(idle_8h 해금 시 8h/100%)
 // 곡선(순수함수)
 // 📈 레벨 곡선 — 설계: "초반은 아주 빠르게, 뒤로 갈수록 배로" (2026-08-12 확정)
@@ -225,7 +216,6 @@ function profRebGainAt(lv){ return Math.max(0,(lv|0)-PROF_REB_MIN_LV)*REB_LIN; }
 // 🔹 이 레벨에서 환생하면 받는 환생 포인트 — 아주 조금씩만 는다.
 function profRebGrantAt(lv){ const over=Math.max(0,(lv|0)-PROF_REB_MIN_LV);
   return 1+Math.floor(PROF_REB_RP_K*Math.log(1+over)); }
-function profRebGrant(lv){ return profRebGrantAt(lv); }   // 옛 이름 호환(인자가 회차→레벨로 바뀌었다)
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
 // 🔑 환생 관문 — 2회차부터 **유즈맵 전용 재화(포인트)** 를 요구한다.
 //   설계: 평소엔 강제가 없고(1회차 무료), 사냥터 최상위 축을 끝까지 밀려면 결국 유즈맵을 하게 된다.
@@ -404,10 +394,6 @@ function profPetFeed(targetId, matId){
   while(profPetStar(targetId)<PROF_PET_STAR_MAX && T.fed>=profPetNeed(targetId)){
     T.fed-=profPetNeed(targetId); T.star=(T.star||0)+1; up++; }
   saveMeta(); return up? up : true; }
-function profPetMats(){ const p=PROF(), out=[];
-  for(const id in (p.pets||{})){ if(!PROF_PETS[id]) continue; const d=p.pets[id].dup||0;
-    if(d>0) out.push({id:id, dup:d, pt:profPetPt(id)}); }
-  return out.sort((a,b)=>b.pt-a.pt); }
 // 상점: 미네랄 → 펫 뽑기권
 
 function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
@@ -516,9 +502,6 @@ function profRunReward(){ const p=PROF();
 function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
   : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
 function profOfflineRate(){ return profHasUnlock('idle_8h')?PROF_OFF_RATE8:PROF_OFF_RATE; }
-function profClaimOffline(){ const p=PROF(), now=Date.now(), last=p.idle.lastClaimTs||p.lastSeenTs||now;
-  const mins=Math.max(0, Math.min((now-last)/60000, profOfflineCapMin())), gained=Math.round(profIdleRate()*mins*profOfflineRate());
-  p.idle.lastClaimTs=now; p.lastSeenTs=now; if(gained>0){ profGainCoin(gained); saveMeta(); } return gained; }
 function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=PROF();   // 켜둔 동안 60초마다 100%
   profGainCoin(profIdleRate()); const now=Date.now(); p.lastSeenTs=now; p.idle.lastClaimTs=now; saveMeta();
   if(typeof _townOpen!=='undefined' && _townOpen && typeof renderTownIdle==='function') renderTownIdle(); }
