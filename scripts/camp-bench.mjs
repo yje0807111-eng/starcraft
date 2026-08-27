@@ -60,6 +60,7 @@ await pg.evaluate(()=>{
   { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1)) __CB.want[b.k]=1;
   }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
+  __CB.stallS=300;             // 이보다 오래 안 넘어가면 정체로 본다(설계 최장 R50 175초의 약 1.7배)
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
   // 🔮 스킬 자동 시전 계측 — 어떤 스킬이 **실제로 효과를 냈는지**만 센다(시도 X).
   //   ⚠ 효과 함수가 false 를 돌리면 시전 자체가 취소되므로, 여기서 세는 것이 곧 「진짜 나간 횟수」다.
@@ -318,7 +319,9 @@ await pg.evaluate(()=>{
           earn:Math.round(campWealth()), diff:campFoeDiff(campDgN(), Math.max(0,r-1)) });
         __CB.lastRound=r; __CB.roundT=0; __CB.stuck=0;
         if(!__CB.gateT && campWealth()>=1e6) __CB.gateT=__CB.t;
-      } else if(__CB.roundT>60 && campDgN()>0){
+      // ⚠ **정체 판정 문턱은 설계 라운드 길이보다 길어야 한다.** 적 체력 1,300 확정 뒤
+      //   R50 목표가 175초라, 옛 문턱(60초)이면 정상 라운드를 정체로 세고 스스로 중단한다.
+      } else if(__CB.roundT>__CB.stallS && campDgN()>0){
         // 🩺 정체 진단 — 라운드가 60초 넘게 안 넘어가면 전장을 통째로 찍는다(한 번만)
         if(!__CB.jam && CAMPB){
           const cls=(typeof UNIT_COMBAT_CLASS!=='undefined')?UNIT_COMBAT_CLASS:{};
@@ -365,7 +368,7 @@ while(ran<MINS*60){
       cr:Math.round((G.tech&&G.tech.credit)||0) }; }, CH);
   ran=st.t;
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);
-  if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 2분 넘게 안 넘어감 — 중단\n'); break; }
+  if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 5분 넘게 안 넘어감 — 중단\n'); break; }
 }
 const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.race], out=[];
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
