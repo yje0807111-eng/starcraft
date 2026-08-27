@@ -2259,6 +2259,101 @@ function _umRwRows(S){ let h='';
   return h; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function _ovBtnTx(btn,txt){ const t=btn&&btn.querySelector('.ovBtnTx'); if(t) t.textContent=txt; }   // 라벨만 교체(진행 바 유지)
+// ══════════════════════════════════════════════════════════════
+//  종료 결과 화면(승/패/나감) — 게임 **진입** 화면(#gsRoot)의 짝
+//  ⛔ 시작 안내(.ovCard)와 섞지 말 것. 같은 #ov 안에 있지만 다른 화면이다.
+//  ⚠ 버튼은 새로 만들지 않는다 — #ovBtns 를 rsBtnHost 로 **옮겨** 쓴다(핸들러·자동 진행 바가 그대로 산다).
+// ══════════════════════════════════════════════════════════════
+let _rsTimers=[], _rsRaf=[], _rsAnimating=false;
+function _rsClearAnim(){ _rsTimers.forEach(clearTimeout); _rsTimers=[];
+  _rsRaf.forEach(id=>cancelAnimationFrame(id)); _rsRaf=[]; _rsAnimating=false; }
+// 목표값 심기 — ⚠ **애니메이션이 시작될 때가 아니라 화면을 세울 때** 심는다.
+//   아직 차례가 안 온 줄도 목표를 알고 있어야 건너뛰기(rsSkip)가 그 값으로 바로 갈 수 있다
+//   (안 그러면 아직 안 센 재화가 「+0」 으로 굳는다 — 실제로 그랬다).
+function _rsAim(el, to, pre){ if(!el) return; pre=pre||'';
+  el.dataset.to=String(to||0); el.dataset.pre=pre; el.textContent=pre+fmtCur(0); }
+// 숫자 세어 올리기 — 1 에서 data-to 까지.
+function _rsCount(el, ms){ if(!el) return;
+  const to=+el.dataset.to||0, pre=el.dataset.pre||'';
+  if(to<=0){ el.textContent=pre+fmtCur(0); return; }
+  const t0=(typeof performance!=='undefined'?performance.now():Date.now());
+  const step=()=>{ const now=(typeof performance!=='undefined'?performance.now():Date.now());
+    const k=Math.min(1,(now-t0)/ms), e=1-Math.pow(1-k,3);          // easeOutCubic — 빠르게 붙고 부드럽게 멎는다
+    el.textContent=pre+fmtCur(Math.max(1,Math.round(to*e)));
+    if(k<1) _rsRaf.push(requestAnimationFrame(step)); };
+  _rsRaf.push(requestAnimationFrame(step)); }
+function _rsSettle(){ document.querySelectorAll('#rsCard [data-to]').forEach(el=>{
+  el.textContent=(el.dataset.pre||'')+fmtCur(+el.dataset.to||0); }); }
+// 화면을 한 번 누르면 애니메이션을 건너뛰고 즉시 최종값으로 간다
+function rsSkip(){ if(!_rsAnimating) return false;
+  _rsClearAnim(); _rsSettle();
+  const ov=document.getElementById('ov'); if(ov) ov.classList.add('rsDone');
+  document.querySelectorAll('#rsCard .rsAnim').forEach(e=>e.classList.add('on'));
+  _rsShowBtns(); return true; }
+// 버튼 옮기기 — ⚠ **화면을 세울 때** 옮긴다. 마지막에 옮기면 그때 자리가 생겨 위 내용이 밀린다(실제로 그랬다).
+//   보이는 것만 마지막에 한다(.rsAnim → .on).
+function _rsMountBtns(){ const host=document.getElementById('rsBtnHost'), btns=document.getElementById('ovBtns');
+  if(host&&btns&&btns.parentNode!==host) host.appendChild(btns); }
+function _rsShowBtns(){ _rsMountBtns();
+  const h=document.getElementById('rsBtnHost'); if(h) h.classList.add('on');
+  if(typeof _ovStartAuto==='function') _ovStartAuto(); }   // 자동 진행은 **애니메이션이 끝난 뒤에** 센다
+function _rsRow(label,val,cls){ return '<div class="rsRow rsAnim'+(cls?' '+cls:'')+'"><b>'+escHtml(label)+'</b>'
+  +'<em>'+val+'</em></div>'; }
+function _rsCur(k,ko,id){ return '<div class="rsCurC rsAnim"><span class="rsCurI">'
+  +((typeof resIco==='function')?resIco(ko):'')+'</span><span class="rsCurL">'+ko+'</span>'
+  +'<b class="rsCurV" id="'+id+'">+0</b></div>'; }
+// 결과 화면을 세우고 등장 애니메이션을 돌린다. kind: 'won' | 'lost' | 'quit'
+function rsShow(kind){ const ov=document.getElementById('ov'); if(!ov) return;
+  _rsClearAnim(); _ovClearAuto();
+  const S=_runSummary(), inf=mapCfg('infinite'), won=(kind==='won'), quit=(kind==='quit');
+  ov.classList.add('rsOn'); ov.classList.remove('rsDone','win','lose');
+  if(won&&!quit) ov.classList.add('win'); else if(!won&&!quit&&!inf) ov.classList.add('lose');
+  const tt=document.getElementById('rsTtl');
+  tt.textContent = inf?'기록 종료':(won?'VICTORY':(quit?'게임 종료':'DEFEAT'));
+  // 메타 한 줄 — 난이도 배지 + 맵 이름 + 플레이 시간(진입 화면의 머리줄과 같은 구성)
+  const D=(typeof DIFFICULTY!=='undefined'&&DIFFICULTY[G.difficulty])||null;
+  document.getElementById('rsMeta').innerHTML=
+    (D?'<span class="rsDiff">'+escHtml(D.name)+'</span>':'')
+    +escHtml((MAP&&MAP.name)||'')+' · '+fmtTime(S.time||G.timeSec||0);
+  // 게임 안에서 벌어진 것 + 게임 내 포인트
+  //   ⚠ 값은 전부 이미 있는 것만 쓴다(_runSummary / G). 없는 값을 지어내지 말 것.
+  const rounds=inf?String(G.round||0):((G.round||0)+' / '+mapCfg('rounds',TOTAL_ROUNDS));
+  let rows=_rsRow('라운드', rounds)
+    + _rsRow('처치','<span data-cnt="kills">0</span>')
+    + _rsRow('획득 포인트','<span data-cnt="coins">0</span>','hi');
+  if(S.prof) rows+=_rsRow('내 캐릭터 XP','<span data-cnt="xp">0</span>'+(S.prof.ups?(' · Lv.'+S.prof.level):''));
+  document.getElementById('rsRows').innerHTML=rows;
+  document.getElementById('rsCur').innerHTML=_rsCur('min','미네랄','rsCurMin')+_rsCur('gas','가스','rsCurGas');
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('rsCard'));
+  // ── 등장 순서 ──
+  const el=q=>document.getElementById('rsCard').querySelector(q);
+  const seq=[]; let t=0;
+  seq.push([t, ()=>tt.classList.add('on')]);                       t+=170;
+  seq.push([t, ()=>document.getElementById('rsMeta').classList.add('on')]); t+=150;
+  const rowEls=[...document.querySelectorAll('#rsRows .rsRow')];
+  const cs0=[...document.querySelectorAll('#rsCur .rsCurC')];
+  rowEls.forEach(r=>{ const k=r.querySelector('[data-cnt]'); if(!k) return;
+    const n=k.dataset.cnt;
+    _rsAim(k, (n==='kills')?(S.kills||0):(n==='coins')?(S.coins||0):(S.prof?S.prof.xp:0), (n==='kills')?'':'+'); });
+  cs0.forEach((c,ix)=>_rsAim(c.querySelector('.rsCurV'),
+    (ix===0)?((S.prof&&S.prof.pc)||0):((S.prof&&S.prof.gas)||0), '+'));
+  rowEls.forEach(r=>{ seq.push([t, ()=>{ r.classList.add('on');
+      _rsCount(r.querySelector('[data-cnt]'), 420); }]); t+=95; });
+  t+=140;
+  cs0.forEach(c=>{ seq.push([t, ()=>{ c.classList.add('on');
+      _rsCount(c.querySelector('.rsCurV'), 680); }]); t+=130; });
+  t+=560;   // 마지막 재화가 다 세어질 때까지 기다렸다가 버튼
+  seq.push([t, ()=>{ _rsAnimating=false; _rsShowBtns(); }]);
+  [...document.querySelectorAll('#rsCard .rsAnim')].forEach(e=>e.classList.remove('on'));
+  _rsMountBtns();
+  const host=document.getElementById('rsBtnHost'); if(host) host.classList.remove('on');
+  _rsAnimating=true;
+  seq.forEach(([ms,fn])=>_rsTimers.push(setTimeout(fn, ms)));
+}
+function rsHide(){ const ov=document.getElementById('ov'); if(!ov) return;
+  _rsClearAnim(); ov.classList.remove('rsOn','rsDone','win','lose');
+  const btns=document.getElementById('ovBtns'), card=ov.querySelector('.ovCard');
+  if(btns&&card&&btns.parentNode!==card) card.appendChild(btns); }   // 버튼을 시작 안내 카드로 돌려놓는다
 function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getElementById('ovTitle'),dd=document.getElementById('ovDesc'),bt=document.getElementById('ovBtn');
   const bt2=document.getElementById('ovBtn2');
   if(G.bossOpen && typeof closeBossArena==='function') closeBossArena();   // 게임 종료 → 보스 팝업 닫기
@@ -2267,22 +2362,18 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   ov.classList.remove('hide');
   { const ac=(typeof MAP_ACCENT!=='undefined'&&MAP&&MAP_ACCENT[MAP.id])||'#7f93b0'; ov.style.setProperty('--mapAccent', ac); }   // 카드 강조색 = 맵 아이덴티티(팝업·시작 화면과 통일)
   if(G.phase==='ready'){   // 시작 안내 = 메뉴 화면(자체 우주 배경)
+    rsHide();   // 결과 화면을 걷고 버튼을 시작 안내 카드로 돌려놓는다
     ov.classList.add('spaceBg'); setInGame(false);
     tt.textContent=MAP.name; tt.style.color='';
     dd.style.display=''; dd.textContent=MAP.desc+'.\n유닛 구매 → 배치 → 합성으로 영웅을 키우고\n'+(mapCfg('infinite')?'끝없이 밀려오는 적을 최대한 오래 막아내세요!':(mapCfg('rounds',TOTAL_ROUNDS)+'라운드를 클리어!'));
     _ovBtnTx(bt,'멀티플레이'); bt2.style.display='none'; _ovClearAuto();   // 시작 안내엔 자동 진행 없음
     const ovc0=ov.querySelector('.ovCard'); if(ovc0) ovc0.classList.remove('win','lose');
-  } else {   // 승/패/종료 = 게임 화면 위 콘솔 카드(확인 → 통계 전체 화면)
+  } else {   // 승/패/종료 = **결과 화면**(판 없는 전면 · 진입 화면의 짝). 확인 → 통계 전체 화면
     ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
-    _runSummary();   // 기록 반영 + 이번 판 요약(1회)
-    const won=(G.phase==='won'), quit=(G.phase==='quit'), inf=mapCfg('infinite');
-    tt.textContent=inf?'기록 종료':(won?'VICTORY':(quit?'게임 종료':'DEFEAT')); tt.style.color='';   // 제목 = 흰색 통일
-    const ovc=ov.querySelector('.ovCard');   // 승/패에 따라 카드 액센트 교체(제목·언더라인·주 버튼이 함께 따라온다)
-    if(ovc){ ovc.classList.toggle('win', !!won && !quit); ovc.classList.toggle('lose', !won && !quit && !inf); }
-    // 대사 = 맵 종류와 무관하게 통하는 한 줄(보상 유무·라운드 등 맵 고유 표현 없음)
-    dd.style.display=''; dd.textContent=quit?'게임에서 나가셨습니다.':(won&&!inf?'게임에서 승리하셨습니다.':(inf?'게임을 마치셨습니다.':'게임에서 패배하셨습니다.'));
-    _ovBtnTx(bt,'확인'); _ovStartAuto();                          // 확인 → 통계(또는 로비) · 5초 뒤 자동 진행
-    bt2.style.display=''; bt2.textContent='관전하기';              // 확인 아래 = 창을 닫고 최종 전장 보기(멀티는 팀 관전)
+    const ovc=ov.querySelector('.ovCard'); if(ovc) ovc.classList.remove('win','lose');
+    _ovBtnTx(bt,'확인');                                          // ⚠ 자동 진행은 rsShow 가 **애니메이션이 끝난 뒤** 시작한다
+    bt2.style.display=''; bt2.textContent='관전하기';              // 확인 옆 = 창을 닫고 최종 전장 보기(멀티는 팀 관전)
+    rsShow(G.phase);                                              // 제목 → 기록 줄 → 캠프 재화 순서로 등장 + 수치 카운트업
   }
 }
 // 통계 창(전체 화면) — 게임 진입 로딩 창과 같은 구조: 미니맵 + 맵 이름 + 기록 패널 + 나가기
@@ -2339,6 +2430,11 @@ function _rsStartAuto(){ _rsClearAuto(); _barRun(document.getElementById('rsAuto
   _rsAutoT=setTimeout(function(){ _rsAutoT=null; resultToLobby(); }, RS_AUTO_MS); }
 // 확인 = 통계 쓰는 맵이면 통계 화면, 아니면 바로 로비
 function _ovConfirm(){ _ovClearAuto(); if(mapCfg('stats')||G.strike) openResultScreen(); else overlayToLobby(); }
+// 결과 화면을 한 번 누르면 등장 애니메이션을 건너뛰고 즉시 최종값으로 간다.
+// ⚠ 캡처 단계로 잡지 말 것 — 버튼을 눌렀을 때 버튼이 먼저 동작해야 한다.
+document.getElementById('ov').addEventListener('click', function(e){
+  if(e.target && e.target.closest && e.target.closest('#ovBtns')) return;   // 버튼은 제 일을 한다
+  rsSkip(); });
 document.getElementById('ovBtn').onclick=()=>{
   if(G.phase==='ready'){ openRooms(); return; }   // 멀티플레이 → 방 찾기
   _ovConfirm();                                   // 확인 → 통계(또는 로비)

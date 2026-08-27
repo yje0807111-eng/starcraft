@@ -8374,11 +8374,50 @@ async function groupGame(){
         if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth); }
       return bad; };
     // 결과 제목 문구(승리는 VICTORY) · 나가기 확인은 한 줄
-    assert(showOverlay.toString().indexOf("'VICTORY'")>=0,'승리 제목이 VICTORY가 아님');
-    assert(showOverlay.toString().indexOf("'CLEAR'")<0,'옛 제목 CLEAR가 남아 있음');
+    // ⚠ 종료 결과는 2026-08-26 부터 **rsShow** 가 그린다(판 없는 전면 화면). showOverlay 는 갈래만 고른다.
+    assert(rsShow.toString().indexOf("'VICTORY'")>=0,'승리 제목이 VICTORY가 아님');
+    assert(rsShow.toString().indexOf("'CLEAR'")<0,'옛 제목 CLEAR가 남아 있음');
     const ecm=document.querySelector('#exitConfirm .ecMsg');
     assert(ecm && ecm.innerHTML.indexOf('<br')<0 && ecm.textContent.trim()==='정말 나가시겠습니까?',
       '나가기 확인 문구가 한 줄이 아님: '+(ecm?ecm.textContent.trim():'없음'));
+    // ── 종료 결과 화면(2026-08-26 · P7안) ──────────────────────────
+    // ⚠ showOverlay() 를 부르지 않는다 — 그러면 _runSummary() 가 **보상을 다시 지급**하고
+    //   판을 다시 기록한다. G._runSum 을 미리 심어 두면 _runSummary 가 그대로 돌려주므로 부작용이 없다.
+    // ⚠ 끝에 _ovClearAuto() 를 꼭 부른다 — 건너뛰기가 5초 자동 진행 타이머를 켜는데,
+    //   그걸 안 끄면 뒤 테스트 도중에 화면이 로비로 넘어간다(실제로 그랬다).
+    {
+      const ov=$('ov'), was=G.phase, savedSum=G._runSum;
+      G._runSum={ coins:3150, kills:1284, round:20, time:724,
+        prof:{ xp:412, pc:8420, gas:1684, ups:0, level:24, day:1, dayMul:1 } };
+      assert(showOverlay.toString().indexOf('rsShow(')>=0,'showOverlay 가 결과 화면을 안 부른다');
+      G.phase='won'; rsShow('won');
+      assert(ov.classList.contains('rsOn'),'결과 화면이 안 켜짐(rsOn)');
+      assert(getComputedStyle($('rsCard')).display!=='none','결과 화면이 안 보임');
+      assert(getComputedStyle(ov.querySelector('.ovCard')).display==='none','시작 안내 카드가 같이 떠 있음');
+      // 버튼은 새로 만들지 않고 **옮겨** 쓴다 — #ovBtn 핸들러·자동 진행 바가 그대로 살아야 한다.
+      // ⚠ 옮기는 건 화면을 세울 때다. 마지막에 옮기면 그때 자리가 생겨 위 내용이 밀린다.
+      assert($('ovBtns').parentNode===$('rsBtnHost'),'버튼을 결과 화면으로 안 옮김');
+      // ⚠ 등장 애니메이션 중에 화면을 누르면 **아직 세지 않은 수치까지** 최종값으로 가야 한다.
+      //   예전엔 목표값을 셀 때 심어서, 차례가 안 온 재화가 「+0」 으로 굳었다.
+      const min=$('rsCurMin'), gas=$('rsCurGas');
+      assert(min&&gas,'캠프 재화 두 줄이 없음');
+      assert(min.dataset.to==='8420'&&gas.dataset.to==='1684','재화 목표값이 렌더 때 안 심김');
+      rsSkip();
+      assert(ov.classList.contains('rsDone'),'건너뛰기 후에도 애니메이션 상태');
+      assert(min.textContent.replace(/[^0-9]/g,'')==='8420','건너뛰기 후 미네랄이 최종값이 아님: '+min.textContent);
+      assert(gas.textContent.replace(/[^0-9]/g,'')==='1684','건너뛰기 후 가스가 최종값이 아님: '+gas.textContent);
+      // 미네랄과 가스는 **같은 급**이다 — 하나만 크게 하지 않는다
+      assert(getComputedStyle(min).fontSize===getComputedStyle(gas).fontSize,
+        '미네랄·가스 크기가 다름: '+getComputedStyle(min).fontSize+' vs '+getComputedStyle(gas).fontSize);
+      // 승/패는 제목 색이 갈려야 한다(둘 다 같으면 구분이 안 된다)
+      const cw=(c)=>{ ov.classList.remove('win','lose'); if(c) ov.classList.add(c);
+        return getComputedStyle($('rsTtl')).color; };
+      const tw=cw('win'), tl=cw('lose');
+      assert(tw!==tl,'승/패 제목 색이 같음: '+tw);
+      rsHide(); _ovClearAuto(); ov.classList.add('hide');
+      G.phase=was; G._runSum=savedSum;
+      assert($('ovBtns').parentNode===ov.querySelector('.ovCard'),'결과를 걷은 뒤 버튼을 안 돌려놓음');
+    }
     openSettings();
     const sp=$('settingsPop');
     assert(!sp.classList.contains('appCtx'),'게임 안인데 게임 밖(appCtx) 규격임');

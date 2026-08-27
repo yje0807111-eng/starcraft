@@ -1724,6 +1724,56 @@
   /* 오버레이(시작/승패) */
   /* 시작 화면 — 검정+빨강 네온 카드 */
   /* 승/패 오버레이 = 게임 화면 위 모달(뒤로 게임이 흐리게 비침) */
+  /* ══ 종료 결과 화면(승/패/나감) — 2026-08-26 · P7안 확정 ═══════════════════
+     게임 **진입** 화면(#gsRoot)의 짝이다: 아트가 화면을 채우고, 판 없이 글자가 그 위에 뜬다.
+     위에서 아래로 — 제목 → 메타 한 줄 → 게임 안 기록 줄 → **캠프 재화 두 줄** → 버튼 둘.
+     ⛔ 카드(면·테두리)를 되돌리지 말 것. 이 화면은 로딩·로그인과 같은 언어를 쓴다.
+     ⛔ 제목 글꼴을 --font-ti(Jua)로 되돌리지 말 것 — 400 단일 굵기의 동글동글한 얼굴이라 여기 안 맞는다.
+     ⚠ 미네랄과 가스는 **같은 급**이다. 하나를 크게 하지 말 것(캠프로 가져가는 두 재화다). */
+  #ov .rsCard{display:none}
+  #ov.rsOn{background:linear-gradient(180deg,rgba(3,4,8,.62) 0%,rgba(3,4,8,.86) 46%,rgba(3,4,8,.96) 100%);
+    padding:0;display:block}
+  #ov.rsOn .ovCard{display:none}
+  #ov.rsOn .rsCard{position:absolute;inset:0;display:flex;flex-direction:column;
+    padding:0 26px calc(20px + env(safe-area-inset-bottom,0px));color:var(--txt);text-align:center}
+  /* 제목 = 가운데보다 살짝 위. ⚠ margin-top 퍼센트로 박지 말 것 — 폰 높이가 바뀌면 제목만 따로 논다 */
+  #ov .rsTop{flex:0 0 auto;height:47%;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px}
+  #ov .rsTtl{font-family:var(--font-ko);font-size:34px;font-weight:800;letter-spacing:4px;line-height:1.05;color:#fff}
+  #ov.win .rsTtl{color:var(--gold);text-shadow:0 0 20px rgba(255,210,74,.4)}
+  #ov.lose .rsTtl{color:#ff8a94;text-shadow:0 0 20px rgba(255,107,122,.32)}
+  #ov .rsMeta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:13px;font-size:12px;color:#aab3bd}
+  #ov .rsDiff{display:inline-flex;align-items:center;justify-content:center;min-width:52px;height:22px;padding:0 8px;
+    font-family:var(--font-num);font-size:11px;font-weight:800;letter-spacing:.5px;color:#dfe7f0;
+    border:1px solid rgba(255,255,255,.22);border-radius:var(--r-bar)}
+  #ov .rsSpacer{flex:1 1 auto;min-height:0}
+  /* 게임 안 기록 — 설정 화면 행 문법(라벨 좌 / 값 우 / 1px 선) */
+  #ov .rsRows{display:flex;flex-direction:column;text-align:left;margin-bottom:16px}
+  #ov .rsRow{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.075)}
+  #ov .rsRow b{font-size:11.5px;font-weight:400;letter-spacing:.02em;color:#9aa4af}
+  #ov .rsRow em{margin-left:auto;font-style:normal;font-family:var(--font-num);font-size:13.5px;font-weight:800;color:#e7edf4}
+  #ov .rsRow.hi em{color:#fff;font-size:15px}
+  /* 캠프 재화 = 두 줄, 숫자 끝을 맞춘다(P7). 둘은 같은 급이다 */
+  #ov .rsCur{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  #ov .rsCurC{display:flex;align-items:center;justify-content:flex-start;gap:7px}
+  #ov .rsCurI{display:inline-flex;flex:none}
+  #ov .rsCurI .ri{width:16px;height:16px;object-fit:contain;display:block}
+  #ov .rsCurL{font-size:11.5px;letter-spacing:.03em;color:#9aa4af}
+  #ov .rsCurV{margin-left:auto;font-family:var(--font-num);font-size:28px;font-weight:800;color:#fff;line-height:1}
+  /* ⛔ 재화 위아래에 금색 막대(옛 .rsBar)를 되돌리지 말 것 — 진입 화면의 **진행 막대**를 흉내낸 것인데
+     여기서는 진행하는 것이 없어 뜻이 없다. 구역은 재화 두 줄과 버튼 사이 여백이 가른다. */
+  #ov .rsCur{margin-bottom:20px}
+  /* 버튼 자리 — 위 .ovBtns 를 그대로 옮겨 담는 host. 버튼 모양은 공용 규칙이 갖는다 */
+  #ov .rsBtnHost{display:flex}
+  #ov .rsBtnHost .ovBtns{flex:1;display:flex;gap:10px}
+  /* ── 등장 애니메이션 ──────────────────────────────────────────────
+     승리가 먼저 뜨고, 아래 내용이 하나씩 빠르게 올라온다. 수치는 1부터 세어 올라간다(JS).
+     ⚠ 애니메이션 중 화면을 한 번 누르면 즉시 끝 상태로 간다 — 그 처리가 `.rsDone`. */
+  #ov.rsOn .rsAnim{opacity:0;transform:translateY(9px)}
+  #ov.rsOn .rsAnim.on{opacity:1;transform:none;transition:opacity .22s ease-out,transform .22s cubic-bezier(.2,.9,.3,1)}
+  #ov.rsOn.rsDone .rsAnim{opacity:1;transform:none;transition:none}
+  #ov.rsOn .rsTtl.rsAnim{transform:translateY(0) scale(.92)}
+  #ov.rsOn .rsTtl.rsAnim.on{transform:none;transition:opacity .26s ease-out,transform .26s cubic-bezier(.2,.9,.3,1.25)}
+  #ov.rsOn.rsDone .rsTtl.rsAnim{transform:none}
   #ov{position:absolute;inset:0;z-index:46;display:flex;align-items:center;justify-content:center;text-align:center;padding:26px;
     --aura:rgba(92,214,255,.15);
     background:radial-gradient(ellipse 300px 220px at 50% 50%,var(--aura),transparent 72%),
