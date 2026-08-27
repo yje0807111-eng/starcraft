@@ -292,7 +292,15 @@
     filter:drop-shadow(0 1px 3px #000)}
   .sdX:active{color:#fff}
   /* 스테퍼는 그림 한가운데 */
-  .sdMid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+  .sdMid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;gap:16px}
+  /* 수치·설명 = **난이도 이름 바로 아래**(2026-08-27 재배치). 그림 위라 판 없이 그림자로만 띄운다. */
+  /* ⚠ min-height — 잠긴 난이도는 내용이 한 줄뿐이라, 없으면 .sdMid 가 다시 가운데를 잡으며
+     **스테퍼가 29px 내려앉는다**(재 봤다). 난이도를 넘길 때마다 이름이 튀는 원인이다. */
+  .sdInfo{width:100%;min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px}
+  .sdInfo .sdStat i{text-shadow:0 1px 3px #000}
+  .sdInfo .sdStat b{text-shadow:0 2px 6px #000}
+  .sdInfo .sdDesc{text-shadow:0 1px 3px #000}
+  .sdInfo .sdLock{text-shadow:0 1px 3px #000}
   /* 아래 블록 = 로그인 구도의 서명(내용이 앉는 자리) */
   /* ⚠ margin-top:auto — 블록은 **항상 밑변에 붙는다**. 난이도 화면은 .sdMid(flex:1)가 밀어 주지만
      종족 화면엔 그게 없어, 없이 두면 목록이 머리줄 바로 밑에 붙고 아래가 통째로 빈다(실제로 그랬다). */
@@ -323,10 +331,11 @@
      ⚠ 색을 갖는 건 선·빛뿐이고 면은 검정 그대로다(DESIGN §0) — 난이도를 바꾸면 '판이 바뀐' 느낌만 준다.
      ⛔ 난이도 이름을 여기에 또 쓰지 말 것 — 이름은 위 스테퍼가 갖는다(워터마크·.sdName 둘 다 폐지, 2026-08-19).
      --dc(hex) 와 --dcRGB(채널 셋)를 renderSoloDiff 가 함께 실어 준다(알파를 얹으려면 채널이 필요). */
-  /* ⚠ min-height 가 있어야 **잠긴 난이도에서 판이 확 줄지 않는다** — 판이 줄면 위 스테퍼가
-     따라 내려와 난이도를 넘길 때마다 이름이 위아래로 튄다(실제로 그랬다). */
+  /* 상세 판 = 이제 **보상만** 담는다(수치·설명은 그림 위로 올라갔다).
+     ⚠ 잠긴 난이도에는 보상이 없어 판이 통째로 사라진다 → 높이는 아래 블록(.sdBlk)이 잡아 준다.
+        안 그러면 판이 사라진 만큼 위 스테퍼가 내려와 난이도를 넘길 때마다 이름이 튄다. */
   #soloDiffPanel .sdDet{position:relative;flex:none;display:flex;flex-direction:column;justify-content:center;gap:12px;
-    min-height:200px;padding:15px 14px 14px;margin-bottom:0;border-radius:var(--r-md);
+    padding:14px;margin-bottom:0;border-radius:var(--r-md);
     background:linear-gradient(180deg,#0d0d0d,#050505);
     border:1px solid rgba(var(--dcRGB,60,62,70),.22);
     box-shadow:inset 0 0 30px -18px var(--dc,#fff)}
@@ -402,6 +411,9 @@
   #raceSelPanel .sdGo{flex:none;width:100%;height:50px;margin-top:0}
   /* 목록은 아래 블록 안에서 자기 높이만 갖는다(가운데를 그림에 내준다) */
   #raceSelPanel .sdBlk{gap:10px}
+  /* 보상 판이 잠김에서 사라져도 블록 높이는 그대로 — 위 스테퍼가 안 흔들린다 */
+  #soloDiffPanel .sdBlk{min-height:214px;justify-content:flex-end}
+  #soloDiffPanel .sdDet.hide{display:none}
   /* ── 종족 선택 = 캠프(.crRow)의 행 문법 + 「고른 행을 종족색이 물들인다」 (2026-08-27 · S3안) ──
      ⛔ 전체 화면(캠프 방식)으로 만들지 말 것 — 판마다 고르는 선택이라 무게가 안 맞고,
         종족 전장 그림이 3장뿐인데 여긴 5종족이다(페럴·콜로서스가 빈 배경이 된다).
@@ -616,7 +628,10 @@
   #createPanel .cpCard, #soloDiffPanel .cpCard, #soloDiffPanel .msPanel{animation:none!important}
   @keyframes fxPopOn{0%{opacity:0;transform:translateY(7px) scale(.965)}100%{opacity:1;transform:translateY(0) scale(1)}}
   /* 배경 딤 페이드인(맵 선택·개인 플레이 팝업) — 카드 스프링과 함께 부드럽게 덮음 */
-  #modeSheet:not(.hide),#soloDiffPanel:not(.hide){animation:ovDimIn .22s ease-out}
+  #modeSheet:not(.hide){animation:ovDimIn .22s ease-out}
+  /* 🎬 전체 화면 두 장은 **디졸브로 들어온다** — 앞 팝업 위에 겹쳐 떠오른다(앞은 다 덮인 뒤에 치운다).
+     ⚠ 시간을 바꾸면 js 의 SD_HANDOFF 도 같이 바꿀 것 — 그게 짧으면 앞이 먼저 사라져 다시 튄다. */
+  #soloDiffPanel:not(.hide),#raceSelPanel:not(.hide){animation:ovDimIn .32s ease-out}
   @keyframes ovDimIn{from{opacity:0}to{opacity:1}}
   /* 화면전환(개인 플레이→난이도): 배경 딤은 끊김 없이 유지(페이드 생략), 새 카드가 오른쪽에서 슬라이드 인 */
   #soloDiffPanel.noDim:not(.hide){animation:none}

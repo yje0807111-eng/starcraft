@@ -240,7 +240,8 @@
           <button class="sdX" onclick="closeSoloDiff()" aria-label="닫기" title="닫기">
             <svg viewBox="0 0 24 24"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
         </div>
-        <div class="sdMid"><div class="sdNav" id="sdNav"></div></div>
+        <!-- 수치·설명은 **난이도 이름 바로 아래**(그림 위). 아래 판에는 보상만 남는다. -->
+        <div class="sdMid"><div class="sdNav" id="sdNav"></div><div class="sdInfo" id="sdInfo"></div></div>
         <div class="sdBlk">
           <div class="sdDet" id="sdDet"></div>
           <button class="actBtn pri sdGo" id="sdGo" onclick="sdStart()"></button>

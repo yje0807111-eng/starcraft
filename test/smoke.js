@@ -5200,11 +5200,16 @@ async function groupLobby(){
     const li=DIFFICULTY_ORDER.findIndex(d=>!diffUnlocked(d));
     if(li>=0){ sdPick(li); await sleep(80);
       assert($('sdGo').disabled,'잠긴 난이도인데 시작 버튼이 열려 있음');
-      assert($('sdDet').querySelector('.sdLock'),'잠금 사유가 안 보임'); }
+      assert($('sdInfo').querySelector('.sdLock'),'잠금 사유가 안 보임');
+      assert($('sdDet').classList.contains('hide'),'잠긴 난이도인데 보상 판이 남아 있다'); }
     // 해금된 난이도 = 시작 버튼이 열리고 상세에 수치가 나온다
     sdPick(0); await sleep(80);
     assert(!$('sdGo').disabled,'해금된 난이도인데 시작 버튼이 잠김');
-    assert($('sdDet').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
+    // 수치·설명은 2026-08-27 에 **난이도 이름 바로 아래**(그림 위)로 옮겼다 — 아래 판엔 보상만 남는다
+    assert($('sdInfo').querySelectorAll('.sdStat').length===2,'적 HP·포인트 두 지표가 안 나옴');
+    assert(!$('sdDet').querySelector('.sdStat'),'수치가 아직 보상 판 안에 있다 — 그림 위로 올라갔다');
+    assert($('sdInfo').getBoundingClientRect().top < $('sdDet').getBoundingClientRect().top,
+      '수치·설명이 보상 판보다 아래에 있다');
     // 맵 머리줄은 2026-08-27 에 **상세 판 안에서 화면 머리줄로 올라갔다**(D8)
     assert(!$('sdDet').querySelector('.sdMap'),'맵 줄이 아직 상세 판 안에 있다 — 화면 머리줄로 올라갔다');
     assert($('sdMapNm').textContent===USEMAPS.nemo.name,'머리줄에 고른 맵이 없음: '+$('sdMapNm').textContent);
@@ -5223,7 +5228,7 @@ async function groupLobby(){
       assert(rw.querySelectorAll('.sdRwRow .ric').length===2,'재화 아이콘이 빠졌다(resIco)'); }
     // ⚠ 상세 본문(이름·수치·설명)이 시작 버튼 위로 흘러 잘렸던 적이 있다 — 모든 칸에서 담기는지 본다
     for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
-      const body=$('sdDet').querySelector('.sdBody'), go=$('sdGo');
+      const body=$('sdInfo').querySelector('.sdBody'), go=$('sdGo');
       assert(body.scrollHeight<=body.clientHeight+0.5,
         SD[i].k+' 상세 본문이 넘침: '+body.scrollHeight+'>'+body.clientHeight);
       assert(body.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+0.5,
@@ -5234,8 +5239,17 @@ async function groupLobby(){
     { const face=[]; for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
         const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
       assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
+    // 🎬 넘어올 때 **앞 팝업이 먼저 사라지면 안 된다** — 그 순간 뒤 로비가 드러나 화면이 튄다
     closeSoloDiff(); await sleep(40);
-    return '사다리 '+dots.length+'칸(무한 포함) · 잠금 분리 ok'; });
+    openMapSelect(); await sleep(40); openModeSheet(USEMAPS.nemo); await sleep(120);
+    chooseSolo(); await sleep(120);
+    assert(!$('modeSheet').classList.contains('hide'),
+      '새 화면이 덮기 전에 앞 팝업이 사라졌다 — 그 사이 뒤 로비가 비쳐 화면이 튄다');
+    assert(!$('soloDiffPanel').classList.contains('hide'),'새 화면이 안 떴다');
+    await sleep(420);
+    assert($('modeSheet').classList.contains('hide'),'다 덮은 뒤에도 앞 팝업이 남아 있다');
+    closeSoloDiff(); await sleep(40);
+    return '사다리 '+dots.length+'칸(무한 포함) · 잠금 분리 · 전환 이어짐 ok'; });
   // 🧬 종족 선택 팝업 = 캠프의 행 문법 + 「고른 행을 종족색이 물들인다」(2026-08-27 · S3안).
   //    ⚠ 이 팝업은 **난이도 팝업 바로 다음**에 뜬다 — 껍데기가 다르면 두 장면이 덜컹인다.
   //    ⛔ 고른 행에 붉은 밑변 광원을 주면 아래 확정 버튼과 서명이 겹쳐 '무엇이 확정인지'가 흐려진다.

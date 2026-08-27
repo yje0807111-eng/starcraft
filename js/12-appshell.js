@@ -1804,13 +1804,17 @@ function _moFitInfo(box){
   for(let s=98; s>=70; s-=2){ box.style.setProperty('--mfS',(s/100).toFixed(2)); if(box.scrollHeight<=H) return; }   // 2) 아이콘·텍스트를 같은 비율로 축소
 }
 function closeModeSheet(){ popHide('modeSheet'); }
+// 🎬 화면 넘기기 = **덮고 나서 치운다**.
+//   ⛔ 앞 팝업을 먼저 닫지 말 것 — 닫는 순간 뒤 로비가 드러나 새 화면이 페이드인하는 내내 비친다.
+//      그게 「창이 내려갔다가 뚝 튀는」 느낌의 정체다. 새 화면(불투명 · z-64)이 다 덮은 뒤에 앞을 치운다.
+const SD_HANDOFF=340;   // #soloDiffPanel/#raceSelPanel 의 페이드(.32s)보다 살짝 길게
+function _handoff(fn){ setTimeout(fn, SD_HANDOFF); }
 function chooseSolo(){ if(_selMap && _selMap.soloOff){ if(typeof lobbyToast==='function') lobbyToast('이 유즈맵은 멀티플레이 전용입니다'); return; }   // 멀티 전용 맵 = 개인 플레이 차단
   if(typeof inPartyNow==='function' && inPartyNow()){ if(typeof lobbyToast==='function') lobbyToast('파티 중에는 멀티플레이만 가능합니다'); return; }
-  closeModeSheet();
   const m=_selMap;
-  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ openSoloDiff(); return; }   // 난이도 선택은 네모네모 디펜스 전용
-  if(m && m.cfg && m.cfg.mode==='strike'){ openRaceSelect(); return; }       // 컴퓨터가 싸운다(오토 배틀): 종족만 선택 후 시작
-  _startSoloNow(); }                                                          // 관리자 테스트(샌드박스)·기타: 난이도 없이 바로 시작
+  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ openSoloDiff(); _handoff(closeModeSheet); return; }   // 난이도 선택은 네모네모 디펜스 전용
+  if(m && m.cfg && m.cfg.mode==='strike'){ openRaceSelect(); _handoff(closeModeSheet); return; }       // 컴퓨터가 싸운다(오토 배틀): 종족만 선택 후 시작
+  closeModeSheet(); _startSoloNow(); }                                        // 관리자 테스트(샌드박스)·기타: 난이도 없이 바로 시작
 // ── 종족 선택 팝업(재사용): 솔로(맵→종족→난이도) + 멀티 대기실(카드 칩→팝업) 공용 ──
 let _racePickCb=null;
 // 종족색 → CSS 변수(rgba 변형) 문자열. SC 네온 콘솔 행 스타일에 주입
@@ -1911,7 +1915,8 @@ function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=docum
   const cur=L[i], ok=_sdOk(cur.k);
   // 잠긴 난이도는 회색으로 물들인다 — 색이 살아 있으면 '고를 수 있다'로 읽힌다
   const col = ok ? cur.col : '#5a626c';
-  [nav,det].forEach(function(el){ el.style.setProperty('--dc', col); el.style.setProperty('--dcRGB', _sdRGB(col)); });
+  [nav,det,document.getElementById('sdInfo')].forEach(function(el){ if(!el) return;
+    el.style.setProperty('--dc', col); el.style.setProperty('--dcRGB', _sdRGB(col)); });
   // ◀ 이름 ▶ + 위치 점. 화살표는 공용 .arwBtn(paintIcons 가 글리프를 채운다)
   nav.innerHTML='<div class="sdStepRow">'
     +'<button class="arwBtn" data-arw="l" id="sdPrev" onclick="sdStepBy(-1)" aria-label="이전 난이도"'+(i>0?'':' disabled')+'></button>'
@@ -1937,7 +1942,10 @@ function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=docum
         +'<div class="sdRwRow">'+(typeof resIco==='function'?resIco('mineral','ric'):'')+'<span class="nm">미네랄</span><span class="v">'+f(R.min)+'</span></div>'
         +'<div class="sdRwRow">'+(typeof resIco==='function'?resIco('gas','ric'):'')+'<span class="nm">가스</span><span class="v">'+f(R.gas)+'</span></div>'
         +'</div></div>'; } }
-  det.innerHTML='<div class="sdBody">'+body+'</div>'+(rw?'<div class="sdHr"></div>'+rw:'');
+  // 수치·설명은 그림 위(스테퍼 바로 아래), 아래 판에는 **보상만** 둔다(2026-08-27 재배치).
+  { const info=document.getElementById('sdInfo'); if(info) info.innerHTML='<div class="sdBody">'+body+'</div>'; }
+  det.innerHTML=rw;
+  det.classList.toggle('hide', !rw);
   // 머리줄(화면 상단) — 맵은 세 화면 내내 같은 자리에 있다
   { const nm=document.getElementById('sdMapNm'), ds=document.getElementById('sdMapDs');
     if(nm) nm.textContent=(_selMap&&_selMap.name)||'';
@@ -1982,9 +1990,10 @@ function openSoloDiff(){
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeSoloDiff(){ popHide('soloDiffPanel'); }
 function startSoloInfinite(){ if(!USEMAPS.nemo_inf) return; _selMap=USEMAPS.nemo_inf; closeSoloDiff(); _startSoloNow(); }   // 무한 모드 시작(테스트 단계: 해금 게이트 미적용)
-function startSoloWithDiff(d){ if(DIFFICULTY[d]) _selDiff=d; closeSoloDiff();
-  if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); return; }   // 직스: 난이도 후 종족 선택 팝업 → 시작
-  _startSoloNow(); }
+function startSoloWithDiff(d){ if(DIFFICULTY[d]) _selDiff=d;
+  // 난이도 → 종족도 같다 — 종족 화면이 덮은 뒤에 난이도를 치운다(그 사이 배경이 이어진다)
+  if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); _handoff(closeSoloDiff); return; }
+  closeSoloDiff(); _startSoloNow(); }
 function _startSoloNow(){ if(_selMap&&_selMap.id&&typeof _lsSet==='function') try{ _lsSet('nm_recentMap', _selMap.id); }catch(e){}   // 허브 '최근 플레이' 표시용
   if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); hideAppScreens(); if(typeof playSfx==='function') playSfx('ui_confirm'); startGameNow([1],1); }
 function chooseMulti(){ if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); closeModeSheet(); hideAppScreens(); openRooms(); }            // 멀티 → 방 찾기
