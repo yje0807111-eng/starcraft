@@ -65,6 +65,13 @@ await pg.evaluate(()=>{
   // 🔮 스킬 자동 시전 계측 — 어떤 스킬이 **실제로 효과를 냈는지**만 센다(시도 X).
   //   ⚠ 효과 함수가 false 를 돌리면 시전 자체가 취소되므로, 여기서 세는 것이 곧 「진짜 나간 횟수」다.
   __CB.sk={}; __CB.healHp=0; __CB.medHp=0;
+  // ⚔ **이번 라운드에 실제로 나온 적**의 체력 합과 마리 수. ⛔ 「총량이 맞겠거니」 가정하지 않는다 —
+  //   무리가 덜 나오거나(안 나온 무리는 버려진다) 티어·공중 제외로 마리 수가 달라질 수 있다.
+  __CB.roundHp=0; __CB.roundFoe=0;
+  if(typeof window.campScaleFoes==='function'){ const o=window.campScaleFoes;
+    window.campScaleFoes=function(list, share){ const r=o.apply(this, arguments);
+      for(const u of (list||[])){ __CB.roundHp+=(u.maxHp||0)+(u.maxSh||0); __CB.roundFoe++; }
+      return r; }; }
   // 💉 의무병 치유는 **스킬 경로가 아니다**(strikeHealStep). 따로 재지 않으면 「치유가 도는가」에 답할 수 없다.
   if(typeof window.strikeHealStep==='function'){ const o=window.strikeHealStep;
     window.strikeHealStep=function(u, me, dt){ const b4=(me&&me.units||[]).reduce((a,x)=>a+(x.dead?0:(x.hp||0)),0);
@@ -320,20 +327,24 @@ await pg.evaluate(()=>{
         //   eff  = hit ÷ dps — 제자리 방어라 앞줄만 닿는 탓에 1 이 안 된다.
         { const _d=campFoeDiff(campDgN(), Math.max(0,__CB.lastRound-1));
           const _sec=+__CB.roundT.toFixed(1), _dps=__CB.dps();
-          const _hp=(typeof CAMP_FOE_HP0!=='undefined'?CAMP_FOE_HP0:0)*_d
+          // ⭐ **설계 총량이 아니라 실제로 나온 체력**으로 잰다. 둘이 다르면 want/got 로 드러난다.
+          const _want=(typeof CAMP_FOE_HP0!=='undefined'?CAMP_FOE_HP0:0)*_d
                     *((typeof campRtFoeMul==='function')?campRtFoeMul():1);
+          const _hp=__CB.roundHp||0;
           const _hit=_sec>0 ? _hp/_sec : 0;
           __CB.log.push({ dg:campDgN(), round:__CB.lastRound, sec:_sec,
             earn:Math.round(campWealth()), diff:_d,
             dps:Math.round(_dps*10)/10, hit:Math.round(_hit*10)/10,
+            want:Math.round(_want), got:Math.round(_hp), foe:__CB.roundFoe|0,
             eff:_dps>0 ? Math.round(_hit/_dps*1000)/1000 : 0,
             me:(typeof campAlive==='function'?campAlive('me'):0),
             dn:(typeof campDown==='function'?campDown():0) }); }
-        __CB.lastRound=r; __CB.roundT=0; __CB.stuck=0;
+        __CB.lastRound=r; __CB.roundT=0; __CB.stallT=0; __CB.stuck=0;
+        __CB.roundHp=0; __CB.roundFoe=0;
         if(!__CB.gateT && campWealth()>=1e6) __CB.gateT=__CB.t;
       // ⚠ **정체 판정 문턱은 설계 라운드 길이보다 길어야 한다.** 적 체력 1,300 확정 뒤
       //   R50 목표가 175초라, 옛 문턱(60초)이면 정상 라운드를 정체로 세고 스스로 중단한다.
-      } else if(__CB.roundT>__CB.stallS && campDgN()>0){
+      } else if((__CB.stallT=(__CB.stallT||0)+dt) > __CB.stallS && campDgN()>0){
         // 🩺 정체 진단 — 라운드가 60초 넘게 안 넘어가면 전장을 통째로 찍는다(한 번만)
         if(!__CB.jam && CAMPB){
           const cls=(typeof UNIT_COMBAT_CLASS!=='undefined')?UNIT_COMBAT_CLASS:{};
@@ -367,7 +378,10 @@ await pg.evaluate(()=>{
               return best===null?null:{d:Math.round(best), rng:Math.round(rng||0)}; })(),
             baseHp:Math.round(CAMPB.me.base.hp), aiBaseHp:Math.round(CAMPB.ai.base.hp) };
         }
-        __CB.stuck++; __CB.roundT=0; }   // ⚠ D0(캠프)엔 라운드가 없다 — 거기서 세면 오작동한다
+        // ⛔ **roundT 를 건드리지 않는다.** 예전엔 여기서 0 으로 되돌려, 300초를 넘긴 라운드가
+        //   **나머지 시간만** 기록됐다 — R39 가 14.3초로 찍혔지만 실제로는 약 314초였다.
+        //   그 값으로 계산한 실효 계수가 3.53(물리적으로 불가능)이 되어 곡선을 통째로 흔들었다.
+        __CB.stuck++; __CB.stallT=0; }   // ⚠ D0(캠프)엔 라운드가 없다 — 거기서 세면 오작동한다
     } };
 });
 
@@ -401,13 +415,13 @@ const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
   return String(Math.round(n)); };
 console.log('\n\n■ 라운드별 (전 구간에서 고르게 뽑음)');
-console.log('던전-라운드 | 걸린 초 | 그때까지 번 돈 | 적 난이도  | 명목DPS | 꽂힌화력 | 실효 | 병력(선+누움)');
+console.log('던전-라운드 | 걸린 초 | 적난이도 | 적체력(설계→실제) | 적수 | 명목DPS | 꽂힌화력 | 실효 | 병력(선+누움)');
 // ⚠ 라운드 곡선을 보려면 **전부** 찍어야 한다 — 22개 표본으로는 R1~50 곡선이 안 나온다.
 { const L=fin.log, step=(L.length<=60) ? 1 : Math.max(1, Math.floor(L.length/22));
   for(let i=0;i<L.length;i+=step){ const r=L[i];
-    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${F(r.earn).padEnd(15)}| ${F(r.diff).padEnd(11)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}`); }
+    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${String(r.diff).padEnd(9)}| ${(F(r.want||0)+'→'+F(r.got||0)).padEnd(18)}| ${String(r.foe==null?'-':r.foe).padEnd(5)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}`); }
   if(L.length){ const r=L[L.length-1];
-    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${F(r.earn).padEnd(15)}| ${F(r.diff).padEnd(11)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}  ← 끝`); } }
+    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${String(r.diff).padEnd(9)}| ${(F(r.want||0)+'→'+F(r.got||0)).padEnd(18)}| ${String(r.foe==null?'-':r.foe).padEnd(5)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}  ← 끝`); } }
 // D 가정 검사 — 번돈÷난이도가 일정한가
 { const L=fin.log.filter(r=>r.earn>0 && r.diff>0);
   if(L.length>4){ const q=L.map(r=>r.earn/r.diff).sort((a,b)=>a-b);

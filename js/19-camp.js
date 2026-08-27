@@ -918,6 +918,22 @@ function campSpawnWave(){
 // 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
 function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 
+// 🪢 **목줄** — 집결지에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
+//   ⛔ 「인식 거리를 넓힌다」만 하고 이걸 빼면 적 본진까지 쫓아간다. 그러면 아군이 흩어져
+//     각개격파되고, 적이 건물을 때리는데 아군은 저 위에 있는 그림이 된다.
+//   ⚠ 속도를 깎지 않고 **위치만** 자른다 — 이동 로직(stepUnitMove)은 공용이라 건드리지 않는다.
+function campLeash(){
+  if(!CAMPB || !CAMPB.me) return 0;
+  const r = campRallyPoint(); if(!r) return 0;
+  const L2 = CAMP_LEASH * CAMP_LEASH; let n = 0;
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const dx = u.x - r.x, dy = u.y - r.y, d2 = dx * dx + dy * dy;
+    if(d2 <= L2) continue;
+    const d = Math.sqrt(d2) || 1;
+    u.x = r.x + dx / d * CAMP_LEASH; u.y = r.y + dy / d * CAMP_LEASH; n++; }
+  return n;
+}
+
 // 갓 스폰된 적을 이번 라운드 난이도에 맞춘다.
 //   ⭐ 개체 값을 통째로 덮어쓰지 않고 **무리 전체의 기본값 합** 대비 배율로 민다 —
 //      그래야 탱크가 마린보다 단단하다는 유닛별 차이가 살아남는다.
@@ -1035,6 +1051,8 @@ function campResMul(uid, kind){ const lv = campResLv(uid, kind);
 function campScaleAllies(list){
   if(!list || !list.length) return 0;
   campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 배수는 그 위에 곱한다
+  // 👀 마중 나갈 수 있게 인식 거리를 넓힌다(사거리는 그대로 — 사거리를 늘리면 상성이 바뀐다)
+  for(const u of list) if(u && u.acq < CAMP_ALLY_ACQ) u.acq = CAMP_ALLY_ACQ;
   const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
   let n = 0;
   for(const u of list){
@@ -1098,7 +1116,17 @@ function campAlive(side){ if(!CAMPB) return 0; let n = 0;
 
 // 한 프레임 — 전투를 굴리고 승패를 본다.
 //   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
-const CAMP_ROUND_GAP_S = 1.5;      // 라운드 사이 숨 고르기
+// ── ⚔ 마중 나가 싸우고 자리로 돌아온다 (2026-08-28 사용자 확정) ─────────
+// ⭐ **완전 고정이 아니다.** 인식 거리 안에 적이 들어오면 마중 나가 싸우고, 적이 없어지면
+//   제자리로 돌아와 대기한다. 돌아올 시간을 주려고 라운드 사이 텀도 늘렸다.
+// ⛔ 왜 필요했나 — 실측(2026-08-28): 병력을 14 → 56 으로 늘려도 **실제로 꽂히는 화력은
+//   27.5 → 72 밖에 안 늘었다**(병력당 1.96 → 1.29). 적이 집결지에 닿아야만 사거리에
+//   들어오니 **앞줄만 쏘고 뒷줄은 놀았다.** 인식 거리를 넓히면 뒷줄도 마중 나가 싸운다.
+// ⚠ **목줄(leash)이 반드시 필요하다.** 인식만 넓히면 적 본진까지 쫓아가 「제자리 방어」가
+//   통째로 무너진다 — 예전에 그렇게 해서 라운드가 영영 안 끝나는 정체를 네 번 겪었다.
+const CAMP_ALLY_ACQ = 1500;        // 아군 인식 거리(월드 단위 · 기본 560~900)
+const CAMP_LEASH = 1300;           // 집결지에서 이보다 멀리는 못 나간다
+const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
 const CAMP_SORTIE_S = 3;           // 🚚 증원 간격(초) — 라운드 도중에도 이만큼마다 내보낸다
 function campCombatStep(dt){
   const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
@@ -1125,6 +1153,7 @@ function campCombatStep(dt){
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
+  campLeash();          // 🪢 너무 멀리 나간 아군을 집결선 안으로 되돌린다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)

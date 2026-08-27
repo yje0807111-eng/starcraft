@@ -1718,6 +1718,22 @@ async function groupLobby(){
       { if(typeof campFoeId==='function' && typeof SB_ATK_MODE!=='undefined'){
           for(let i=0;i<40;i++){ const id=campFoeId();
             if(id) assert(SB_ATK_MODE[id]!=='air','공중 전용 적이 뽑혔다: '+id); } } }
+      // ⚔ **마중 나가 싸우고 자리로 돌아온다** (2026-08-28) — 인식 거리는 넓히되 목줄을 건다.
+      //    ⛔ 목줄이 없으면 적 본진까지 쫓아가 「제자리 방어」가 무너진다(정체를 네 번 겪었다).
+      if(typeof campLeash==='function'){
+        const u=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return STK.me.units[STK.me.units.length-1]; });
+        assert(u,'레인저를 못 만들었다');
+        campScaleAllies([u]);
+        assert(u.acq>=CAMP_ALLY_ACQ,'인식 거리가 안 넓어졌다: '+u.acq);
+        assert(u.rng<CAMP_ALLY_ACQ,'사거리까지 늘렸다 — 상성이 바뀐다: '+u.rng);
+        const r=campRallyPoint();
+        u.x=r.x; u.y=r.y-CAMP_LEASH*3;                     // 적진 쪽으로 멀리 밀어 놓는다
+        campLeash();
+        const d=Math.hypot(u.x-r.x, u.y-r.y);
+        assert(d<=CAMP_LEASH+1e-6,'목줄 밖으로 나갔다: '+Math.round(d)+' > '+CAMP_LEASH);
+        u.x=r.x; u.y=r.y-10; const y0=u.y; campLeash();
+        assert(u.y===y0,'목줄 안인데 위치를 건드렸다');
+        u.dead=true; }
       // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
       //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).
       if(typeof campFoeTierOf==='function'){
