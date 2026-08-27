@@ -187,9 +187,12 @@
   .msFriendBadge.hide{display:none}
   .msChatBar input{flex:1;min-width:0;padding:7px 8px;background:transparent;border:none;color:var(--txt);font-family:inherit;font-size:var(--fs-lg);outline:none}
   .msChatBar input::placeholder{color:#6f757d}
+  /* ⚠ 전송은 **중립 밝은 회색**이다. 청록이 기본이던 시절 유일한 사용처(유즈맵 도크)가 그걸 회색으로 덮고
+     있었다 — 즉 청록은 아무 데도 안 쓰였다. 화면에 실제로 보이던 색을 컴포넌트로 올렸다(2026-08-27).
+     ⛔ 빨강으로 되돌리지 말 것: 대기실의 빨강은 「시작」 주 동작의 색이다. */
   .msChatSend{flex:0 0 auto;padding:0 13px;margin:0;cursor:pointer;font-family:inherit;font-weight:800;font-size:var(--fs-md);
-    border:none;border-left:1px solid rgba(255,255,255,.09);background:transparent;color:#5fd0ff;transition:background .12s}   /* 전송=청록 포인트 */
-  .msChatSend:active{background:rgba(0,229,255,.12)}
+    border:none;border-left:1px solid rgba(255,255,255,.09);background:transparent;color:#cfd8e3;transition:background .12s}
+  .msChatSend:active{background:rgba(255,255,255,.07)}
   .msChatSend:active{transform:translateY(1px)}
   /* 친구 오버레이(스텁 — 다음 단계에서 친구목록/메시지/파티 채움) */
   

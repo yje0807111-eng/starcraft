@@ -1381,8 +1381,6 @@
   /* 입력 바 — 판을 걷고 청록을 뺀다. ⛔ 시안은 DESIGN §2 에서 '지금 선택된 것' 전용(화면당 1곳)인데
      전송 버튼과 범위 라벨 둘이 쓰고 있었다. 범위는 색이 아니라 **글자('전체'·'파티'·'친구')**가 말한다. */
   #msSocialDock .msChatBar{border-top:1px solid rgba(255,255,255,.07);background:none}
-  #msSocialDock .msChatSend{color:#cfd8e3}
-  #msSocialDock .msChatSend:active{background:rgba(255,255,255,.07)}
   #msSocialDock .msScopeLbl{color:#aeb7c1}
   #msSocialDock .msScopeTrig{border-radius:var(--r-bar)}
   /* 친구 — 카드 판을 걷고 헤어라인 목록으로 · **한 줄 조밀형**(2026-08-18 확정)

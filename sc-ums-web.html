@@ -150,9 +150,11 @@
         <div class="lbGrid" id="lbGrid"></div>
         <div class="lbChatWrap">   <!-- 로비 전체채팅처럼 보기영역+입력줄 일체형 -->
           <div class="lbChat" id="lbChat"></div>
-          <div class="lbChatBar">
-            <input id="lbChatField" type="text" placeholder="메시지…" maxlength="80" autocomplete="off" onkeydown="if(event.key==='Enter')sendLobbyChat()">
-            <button onclick="sendLobbyChat()">전송</button>
+          <!-- 입력줄 = 유즈맵 도크와 **같은 컴포넌트**(.msChatBar/.msChatSend). ⛔ 새 채팅바를 만들지 말 것.
+               범위 배지(.msScopeDD)는 없다 — 대기실은 그 방 사람들끼리라 고를 범위가 하나뿐이다. -->
+          <div class="msChatBar">
+            <input id="lbChatField" type="text" placeholder="메시지 입력…" maxlength="80" autocomplete="off" onkeydown="if(event.key==='Enter')sendLobbyChat()">
+            <button class="msChatSend" onclick="sendLobbyChat()">전송</button>
           </div>
         </div>
         <div class="lbBtns">

@@ -291,6 +291,22 @@ async function groupLobby(){
     assert(so[0].closest('#msSocialDock'),'소셜 DOM 이 도크 밖에 있음');
     assert(document.getElementById('msChat') && document.getElementById('msChatInput'),'유즈맵 채팅 알맹이가 없어졌다');
     return '다락 18개 없음 · 소셜/환생 본문은 살아 있음'; });
+  // 💬 채팅 입력줄도 하나뿐 — 유즈맵 도크와 대기실이 같은 컴포넌트(.msChatBar)를 쓴다(2026-08-27 통일).
+  //    옛 사본 .lbChatBar 는 없앴다(전송이 빨강이라 「시작」 주 동작과 색이 겹쳤다).
+  await step('채팅 입력줄 단일 소스: 대기실 = 유즈맵 도크', ()=>{
+    const lb=document.querySelector('#lobby .msChatBar'), ms=$('msChatBar');
+    skipIf(!lb||!ms,'채팅 입력줄을 못 찾음');
+    assert(!document.querySelector('.lbChatBar'),'없앤 옛 채팅바(.lbChatBar)가 다시 있음');
+    assert(lb.querySelector('.msChatSend'),'대기실 전송 버튼이 공용 .msChatSend 가 아님');
+    // 형태가 같은가 — 같은 클래스를 쓰니 뼈대와 전송 색이 같아야 한다
+    const key=e=>{ const c=getComputedStyle(e); return [c.display,c.alignItems,c.borderTopStyle].join('|'); };
+    assert(key(lb)===key(ms),'대기실과 도크의 입력줄 뼈대가 다름\n'+key(lb)+'\n'+key(ms));
+    const col=e=>getComputedStyle(e.querySelector('.msChatSend')).color;
+    assert(col(lb)===col(ms),'전송 버튼 색이 다름: 대기실 '+col(lb)+' / 도크 '+col(ms));
+    // 그 화면의 빨강은 「시작」 주 동작의 색이다 — 전송이 빨강이면 안 된다
+    { const g=col(lb).match(/\d+/g).map(Number);
+      assert(!(g[0]>140 && g[0]>g[1]+50 && g[0]>g[2]+50),'전송이 아직 빨강이다: '+col(lb)); }
+    return '대기실 = 도크 · 전송 '+col(lb); });
   // 옛 탭 사본이 되살아나지 않았는가 — 다른 작업자가 옛 화면을 되가져오는 일이 반복됐다.
   await step('탭 띠: 옛 사본이 되살아나지 않았다', ()=>{
     for(const cls of ['msTab2','ptTab','cpSegBtn','cpSeg']){

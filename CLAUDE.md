@@ -71,6 +71,7 @@
 | 유닛 초상 | `_techUnitPortrait(uid)` | 카드·헤더·대기열 공용 |
 | 프리뷰 패널 | `#cstPrev` + `techHidePreview()` | (구 cstHidePreview는 삭제됨) |
 | 알림/사운드 | `toast()` / `playSfx()`·`playSfxT()` | |
+| **채팅 입력줄** | **`.msChatBar` + `.msChatSend`** (`css/40-social.css`) | 유즈맵 하단 도크 = 대기실 — 한 컴포넌트(2026-08-27 통일 · 옛 사본 `.lbChatBar` 는 없앴다) · 범위 배지(`.msScopeDD`)는 **선택 슬롯**이다(대기실은 고를 범위가 하나뿐이라 뺐다) · 전송은 **중립 밝은 회색** — ⛔ 빨강으로 되돌리지 말 것(대기실의 빨강은 「시작」 주 동작의 색) · ⚠ 인게임 `#chatBar` 는 **다른 것**이다(전장 위에 떠서 접히는 말풍선) |
 | **인게임 채팅바** | `#chatBar` + `chatToggle()`/`chatOpenBar()`/`chatFoldBar()` | 접힘(말풍선 44px) ↔ 열림(`[∨｜입력｜전송]` 한 상자) · **유즈맵 안 전 구역**에 있다(캠프만 제외) · ⛔ 열려도 왼쪽 ∨ 를 없애지 말 것(접을 방법이 사라진다) · 상시 청록·붉은 밑변 광원 금지 · ⚠ 구역마다 시트가 다른 요소다(`.bp` ↔ 건설 `#btSheet`) — `_syncSheetLift()` 가 갈라 잰다 |
 | 세로 스크롤바 | `.uiScroll` (CSS 공용) | 스크롤 영역에 클래스만 추가 · `::-webkit-scrollbar`를 새로 정의하지 말 것 (Chrome 최신은 웹킷 의사요소를 무시하고 표준 `scrollbar-width`/`scrollbar-color`만 적용 → 화면마다 굵기가 달라지는 원인이었음) |
 | **재화 아이콘**(미네랄·가스·젬·인구) | **`resIco(key, cls)`** → `assets/icons/res_*.webp` | ⛔ **이모지를 임의로 넣지 말 것.** 한글 이름으로도 찾는다(`resIco('미네랄')`=`resIco('mineral')`) · 새 UI에서 재화를 표시할 땐 무조건 이 함수 · 상단 재화 바(`#curBar`)·인게임 HUD와 같은 그림이 나온다 |
