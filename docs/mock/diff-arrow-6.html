@@ -1,0 +1,165 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>난이도 스테퍼 화살표 — 6안 (D2+D8 위에서)</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════════════════════════════════════
+   바탕은 **D2 + D8 머리줄** 확정안이다. 여기서 고치는 건 ‹ › 하나뿐 —
+   검정 카드 안에서는 그림자만으로 읽혔지만 **키 아트 위에서는 묻힌다**.
+   ⛔ 새 화살표 SVG 를 박지 말 것 — 공용 `.arwBtn`(+`data-arw`)이 단일 소스다.
+      그 규칙이 이미 답을 갖고 있다: **판이 필요한 자리에만 `.framed`** 를 붙인다.
+   ⚠ 글리프가 커져도 **터치 영역 ≥44px** 은 지킨다(DESIGN §0).
+   ══════════════════════════════════════════════════════════════════════════ */
+:root{
+  --font-ti:'Jua','Apple SD Gothic Neo',sans-serif;
+  --font-num:'Rajdhani','Apple SD Gothic Neo',sans-serif;
+  --neon:#ff3b3b; --txt:#e7e9ee; --txt-mute:#9aa0a8; --metal-edge:#3c3e46;
+  --r-bar:3px; --r-md:6px;
+  --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
+  --mapAccent:#4aa8ff;
+  --art:url('../../assets/backgrounds/usemaps/nemo.webp');
+  --loadDim:linear-gradient(180deg,rgba(4,6,11,.06) 0%,rgba(4,6,11,.10) 40%,
+    rgba(5,6,10,.62) 74%,rgba(5,6,10,.96) 100%);
+  --dc:#5dff8f; --dcRGB:93,255,143;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:#141416;color:var(--txt);
+  font-family:'Apple SD Gothic Neo',system-ui,sans-serif;
+  display:grid;grid-template-columns:repeat(3,390px);gap:14px;justify-content:start}
+.hd{font-size:12.5px;font-weight:800;color:#fff;margin:0 0 3px}
+.hd em{font-style:normal;color:#7ee0ff}
+.hd.base em{color:#ffd08a}
+.sub{font-size:10.5px;line-height:1.5;color:#98a0ad;margin:0 0 8px;min-height:60px}
+.sub b{color:#dfe6f0}
+
+.ph{position:relative;width:390px;height:640px;overflow:hidden;border-radius:5px;background:#04050b}
+.art{position:absolute;inset:0;background:var(--art) center center/cover no-repeat #04050b}
+.art::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+    rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+.art::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
+.ph::before{content:'';position:absolute;left:0;right:0;top:0;height:118px;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(3,5,9,.80) 0%,rgba(3,5,9,.42) 48%,transparent 100%)}
+.scr{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;padding:18px 16px 20px}
+
+/* D8 머리줄 = 맵 썸네일 + 이름 */
+.mapRow{flex:none;display:flex;align-items:center;gap:9px}
+.mapRow .th{width:38px;height:38px;flex:none;border-radius:var(--r-bar);overflow:hidden;
+  background:var(--art) center/cover;border:1px solid rgba(255,255,255,.12)}
+.mapRow b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;display:block;text-shadow:0 1px 4px #000}
+.mapRow em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;display:block;margin-top:2px;text-shadow:0 1px 3px #000}
+
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.step{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+.stepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;
+  letter-spacing:1px;color:var(--dc);text-shadow:0 0 18px rgba(var(--dcRGB),.45),0 2px 6px #000}
+.dots{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px}
+.dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.20)}
+.dots i.on{width:14px;border-radius:3px;background:var(--dc)}
+
+/* ── 공용 .arwBtn (css/30-home.css 원본 그대로) ── */
+.arwBtn{position:relative;width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center;
+  padding:0;color:#dfe1e4;background:none;border:none}
+.arwBtn .arwIco{position:relative;width:17px;height:17px;display:block;fill:none;
+  stroke:currentColor;stroke-width:3;stroke-linecap:round;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}
+.arwBtn .arwFrame{display:none;position:absolute;inset:0;width:30px;height:30px;fill:none;
+  stroke:rgba(255,255,255,.30);stroke-width:1;pointer-events:none}
+.arwBtn.framed .arwFrame{display:block}
+.arwBtn.framed .arwIco{width:13px;height:13px;stroke-width:2.8;filter:none}
+/* 터치 영역은 44px 로 넓힌다(글리프 크기와 무관하게) */
+.arwBtn::before{content:'';position:absolute;left:50%;top:50%;width:44px;height:44px;transform:translate(-50%,-50%)}
+
+/* ═══ A3 · 글리프를 키우고 그림자를 세게 ═══ */
+.a3 .arwBtn{width:44px;height:44px}
+.a3 .arwBtn .arwIco{width:24px;height:24px;stroke-width:3.2;
+  filter:drop-shadow(0 1px 2px #000) drop-shadow(0 0 7px rgba(0,0,0,.95))}
+/* ═══ A4 · 어두운 유리 원판 ═══ */
+.a4 .arwBtn{width:38px;height:38px;border-radius:50%;
+  background:rgba(6,9,14,.46);border:1px solid rgba(255,255,255,.10);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.a4 .arwBtn .arwIco{width:16px;height:16px;filter:none}
+/* ═══ A5 · 난이도 색을 입힌 글리프 ═══ */
+.a5 .arwBtn{width:38px;height:38px;color:var(--dc)}
+.a5 .arwBtn .arwIco{width:20px;height:20px;stroke-width:3.2;
+  filter:drop-shadow(0 0 6px rgba(var(--dcRGB),.55)) drop-shadow(0 1px 3px #000)}
+/* ═══ A6 · 이름줄 전체가 얕은 판 — [‹ EASY ›] 가 한 부품 ═══ */
+.a6 .step{background:rgba(6,9,14,.44);border:1px solid rgba(255,255,255,.09);
+  border-radius:var(--r-bar);padding:6px 4px;
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.a6 .arwBtn{width:40px;height:40px}
+.a6 .arwBtn .arwIco{width:18px;height:18px;filter:none}
+.a6 .stepTx{font-size:26px}
+
+/* ── 상세 판(D2) ── */
+.blk{margin-top:auto;display:flex;flex-direction:column;gap:12px;
+  padding:16px 16px 0;margin-left:-16px;margin-right:-16px;
+  background:linear-gradient(180deg,transparent,rgba(4,6,11,.55) 22%,rgba(4,6,11,.84))}
+.det{position:relative;border-radius:var(--r-md);padding:15px 14px 14px;
+  background:linear-gradient(180deg,#0d0d0d,#050505);
+  border:1px solid rgba(var(--dcRGB),.22);box-shadow:inset 0 0 30px -18px var(--dc);
+  display:flex;flex-direction:column;gap:11px}
+.det::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;opacity:.75;
+  background:linear-gradient(90deg,transparent,var(--dc),transparent);box-shadow:0 0 7px -1px var(--dc)}
+.stats{display:flex;justify-content:center;gap:26px}
+.stat{text-align:center}
+.stat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#8b96a4}
+.stat b{display:block;font-family:var(--font-num);font-size:21px;font-weight:700;margin-top:2px}
+.stat.e b{color:#ff9e9e} .stat.c b{color:#ffd485}
+.desc{font-size:var(--fs-md);color:#96a0ac;text-align:center;line-height:1.6}
+.inf{position:relative;height:42px;display:flex;align-items:center;gap:8px;padding:0 13px;overflow:hidden;
+  border-radius:var(--r-bar);background:rgba(20,12,32,.62);border:1px solid rgba(176,107,255,.28)}
+.inf::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#b06bff;box-shadow:0 0 9px #b06bff}
+.inf b{font-size:var(--fs-lg);font-weight:800;color:#d9c4ff}
+.inf em{font-style:normal;font-size:var(--fs-xs);color:#9a8ab8;margin-left:auto}
+.actBtn{position:relative;display:flex;align-items:center;justify-content:center;
+  height:44px;padding:0 14px;overflow:hidden;
+  font-family:var(--font-ti);font-size:var(--fs-xl);color:#c6cdd6;
+  border:1px solid var(--metal-edge);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#24262b 0%,#15161a 46%,#0c0d10 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),inset 0 -6px 9px -6px #000}
+.actBtn::after{content:'';position:absolute;left:8%;right:8%;bottom:1px;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent)}
+.actBtn.pri{color:#fff;border-color:rgba(255,59,59,.34)}
+.actBtn.pri::after{background:linear-gradient(90deg,transparent,var(--neon),transparent);box-shadow:0 0 9px var(--neon)}
+.btns{display:flex;flex-direction:column;gap:8px}
+</style></head><body>
+<div id="cols"></div>
+<script>
+const ARW=(d,cls)=>`<button class="arwBtn ${cls||''}">
+  <svg class="arwFrame" viewBox="0 0 30 30" preserveAspectRatio="none">
+    <path d="M6 0.5 H29.5 V24 L24 29.5 H0.5 V6 Z"/></svg>
+  <svg class="arwIco" viewBox="0 0 24 24"><path d="${d==='l'?'M15 5 8 12l7 7':'M9 5l7 7-7 7'}"/></svg></button>`;
+const BODY=(cls)=>`
+  <div class="mapRow"><span class="th"></span>
+    <span><b>네모네모 디펜스</b><em>개인 플레이 · 난이도를 고르고 시작하세요</em></span></div>
+  <div class="mid">
+    <div class="step">${ARW('l',cls)}<div class="stepTx">EASY</div>${ARW('r',cls)}</div>
+    <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div class="blk">
+    <div class="det">
+      <div class="stats"><div class="stat e"><i>적 HP</i><b>×0.5</b></div>
+        <div class="stat c"><i>포인트 획득량</i><b>×1</b></div></div>
+      <div class="desc">처음이라면 여기서 · 규칙을 익히는 단계</div></div>
+    <div class="inf"><b>무한 모드</b><em>노말 고정 · 끝없이</em></div>
+    <div class="btns"><div class="actBtn pri">이 난이도로 시작</div><div class="actBtn">취소</div></div>
+  </div>`;
+const V=[
+['a1','base','A1 — <em>지금</em> (기준 · 글리프만)',
+ '공용 <code>.arwBtn</code> 기본형. 검정 카드 안에서는 그림자만으로 읽혔는데 <b>키 아트 위에서는 묻힌다</b>.',''],
+['a2','','A2 — <em>.framed</em> (공용 규칙의 답)',
+ '레지스트리가 정한 그것 — <b>판이 필요한 자리에만</b> 모서리 컷 테두리를 붙인다. 새로 만드는 게 하나도 없다.','framed'],
+['a3','','A3 — 글리프를 <em>키우고</em> 그림자를 세게',
+ '판을 안 쓰고 <b>17 → 24px</b> + 이중 그림자로만 띄운다. 그림을 가장 안 가린다.',''],
+['a4','','A4 — 어두운 <em>유리 원판</em>',
+ '반투명 원판 + 블러. 어떤 그림 위에서도 균일하게 읽힌다. ⚠ 각진 SF 톤에서 <b>원형은 이 게임의 어휘가 아니다</b>.',''],
+['a5','','A5 — <em>난이도 색</em>을 입힌 글리프',
+ '‹ › 가 고른 난이도 색을 따라간다. 이름·점과 <b>한 덩어리</b>로 읽힌다. ⚠ 색이 하나 더 늘어난다.',''],
+['a6','','A6 — 이름줄 전체가 <em>얕은 판</em>',
+ '<b>[‹ EASY ›]</b> 가 한 부품이 된다. 어디를 눌러야 바뀌는지가 가장 분명하다. 대신 그림 위에 판이 하나 생긴다.',''],
+];
+document.getElementById('cols').outerHTML=V.map(([k,c,t,d,cls])=>`
+<div class="col"><p class="hd ${c}">${t}</p><p class="sub">${d}</p>
+  <div class="ph ${k}"><div class="art"></div><div class="scr">${BODY(cls)}</div></div></div>`).join('');
+</script>
+</body></html>
