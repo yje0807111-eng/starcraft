@@ -834,7 +834,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _panLive=(_panSig!=null && _panSig!==G.tech._panSig);   // 표시값(정수) 변화 감지
   if(done){ if(_techHold) _techDirty=true; else techUIRender(); }
   else { let _panDone=false;
-    if(active||_vmoving){ if(_techHold) _techDirty=true; else techMapRender();
+    if(active||_vmoving){ if(_techHold && !_vmoving) _techDirty=true; else techMapRender();   // 🎥 팬·줌 중이면 손가락이 닿아 있어도 그린다(17-build-cards.js 의 _vmoving 주석)
       const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 건물(건설·생산·연구·장전 진행) = 프로필 실시간 갱신(스로틀 5/s)
       const _selU1=((G.tech.selU||[]).length===1)?G.tech.ents.find(x=>x.eid===G.tech.selU[0]):null;   // 단일 지정 유닛(캐리어·리버 장전)
       if((_selB && (_selB.bt>0 || (_selB._pq&&_selB._pq.length) || _selB._rj || (_selB._chq&&_selB._chq.length))) || (_selU1&&_selU1._chq&&_selU1._chq.length)){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); _panDone=true; } } }

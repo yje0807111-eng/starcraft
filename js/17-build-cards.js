@@ -568,6 +568,15 @@ function techSubSelectOne(ev,eid){ if(ev&&ev.stopPropagation) ev.stopPropagation
 function techView(){ if(!G.tech.view) G.tech.view={x:0.5,y:0.5,zoom:1}; return G.tech.view; }
 function techViewT(){ if(!G.tech.viewT){ const v=techView(); G.tech.viewT={x:v.x,y:v.y,zoom:v.zoom}; } return G.tech.viewT; }   // 목표 뷰(핀치가 갱신) — G.view/G.viewT 규약과 동일
 function _techViewCSS(){ const v=techView(); return 'translate(50%,50%) scale('+v.zoom.toFixed(4)+') translate('+(-v.x*100).toFixed(3)+'%,'+(-v.y*100).toFixed(3)+'%)'; }   // viewApply(translate W/2,H/2·scale zoom·translate -v.x*W,-v.y*H)의 CSS 등가 — 메인맵 뷰와 동일 규약
+// 🎥 **팬·줌 중에는 손가락이 닿아 있어도 그냥 다시 그린다.**
+//   오래 `_techHold`(포인터가 눌린 상태)에서 techMapRender 를 막아 왔는데, 그 사이 DOM 이 멈춰
+//   3D(유닛·선택링)만 움직였다. 보정 transform 으로 덧씌워 봤지만 두 가지가 남았다(2026-08-27):
+//     · 밀어낸 만큼의 **바깥이 비어 검게** 나온다 — 그 영역은 애초에 그려진 적이 없다
+//     · **.bmap 밖**에 매 프레임 자리만 갱신하는 요소들(HP바·오른쪽 가스 구역 등)은 안 따라온다
+//   ⭐ 막을 이유가 없었다 — pointermove/up 은 .bmap 이 아니라 **document 에 걸려 있어**(이 파일 아래)
+//      innerHTML 을 갈아도 드래그가 끊기지 않는다.
+//   ⚠ 단, **뷰가 실제로 움직이는 중(_vmoving)** 일 때만 푼다. 제자리 탭에서까지 다시 그리면
+//     그때는 정말로 클릭이 먹힌다 — 그게 _techHold 가 원래 막던 것이다.
 function techBX0(){ return TECH_GRID.x0+_techCW()*0.5; }   // 이동 가능 경계 = 건설 가능 구역(격자)과 동일
 function techBX1(){ return TECH_GRID.x1-_techCW()*0.5; }
 function techBY0(){ return techY0()+_techCH()*0.5; }
