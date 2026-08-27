@@ -907,14 +907,35 @@ function campDesignStats(list){ let n = 0; for(const u of (list || [])) if(campD
 //   ⭐ 적(campScaleFoes)과 달리 **개체 값에 그대로 곱한다** — 적은 '무리 총량'을 난이도에 맞추지만
 //      아군은 기준 총량이 없다. 유닛별 차이는 곱셈이라 그대로 보존된다.
 //   ⚠ 같은 유닛에 두 번 걸지 말 것 — 출격 직후 새로 나온 것만 넘긴다(_campRtOn 표시).
+// 🔬 연구 배수 — 계열 업그레이드(공격·체력)를 캠프 전투에 얹는다(HUNT_R1 §3-4).
+//   ⛔ `_upgAtk`/`_upgDef`(11-cmdcard.js)를 빌려 쓰지 말 것 — 그것은 **샌드박스 전투실험 전용**이고
+//     「+1/티어」 **덧셈**이다. 캠프는 설계대로 **×1.065^Lv 곱셈** — 레벨이 무제한이라
+//     덧셈은 후반에 무의미해진다(적 체력은 던전당 ×2 로 자란다).
+//   ⚠ 방어(armor)는 §3-1 에서 뺐다 — 방어구 업그레이드 자리를 **체력**이 대신한다(§3-4).
+//     그래서 'hp' 는 `UNIT_UPG[uid].def` 키를 읽는다.
+//   ⚠ 종족은 `RACE_OF` 가 아니라 **`G.tech.race`** 를 쓴다 — `techDoResearch` 가
+//     `race+'_'+key` 로 써 넣으므로 읽는 쪽도 같아야 한다.
+const CAMP_RES_STEP = 1.065;      // 계열 업그레이드 한 레벨당(HUNT_R1 §3-4)
+function campResLv(uid, kind){    // kind: 'atk' | 'hp'
+  if(typeof G === 'undefined' || !G.tech || typeof UNIT_UPG === 'undefined') return 0;
+  const m = UNIT_UPG[uid]; if(!m) return 0;
+  const k = (kind === 'atk') ? m.atk : m.def;
+  if(!k) return 0;
+  return (G.tech.research && (G.tech.research[G.tech.race + '_' + k] | 0)) || 0; }
+function campResMul(uid, kind){ const lv = campResLv(uid, kind);
+  return lv ? Math.pow(CAMP_RES_STEP, lv) : 1; }
+
 function campScaleAllies(list){
   if(!list || !list.length) return 0;
-  campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 트리 배수는 그 위에 곱한다
-  const atk = campRtMul('atk'), hp = campRtMul('hp');
-  if(atk === 1 && hp === 1) return 0;
+  campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 배수는 그 위에 곱한다
+  const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
   let n = 0;
   for(const u of list){
     if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
+    const uid = u.gm || u.id;
+    const atk = tAtk * campResMul(uid, 'atk');   // 🌳 트리 × 🔬 연구(계열별)
+    const hp  = tHp  * campResMul(uid, 'hp');
+    if(atk === 1 && hp === 1) continue;          // 얹을 것이 없으면 표시도 남기지 않는다
     u._campRtOn = 1;
     if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
       u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }

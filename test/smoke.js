@@ -1281,6 +1281,67 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🔬 연구 배선 — 계열 업그레이드가 **캠프 전투에** 실제로 걸리는가(HUNT_R1 §3-4 · 2026-08-27).
+  //   ⛔ 이게 없으면 가스로 연구를 사도 아무 일도 안 일어난다 — 실제로 그 상태였다.
+  //   ⚠ 계열이 유닛마다 다르다(marine=inf · racer=veh). **찍은 계열만** 세져야 한다.
+  await step('캠프 연구: 계열 업그레이드가 전투에 걸린다', async()=>{
+    skipIf(typeof campResMul!=='function'||typeof campScaleAllies!=='function','연구 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    const keepR=G.tech?Object.assign({},G.tech.research):null;
+    try{
+      C.rbTree={};                                     // 🌳 트리를 비워 연구만 남긴다
+      const race=G.tech.race;
+      // ① 기준선 — 연구 0
+      G.tech.research={};
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      // ⚠ 무작위 소환이면 마린·레이서가 안 나오는 판이 생긴다 — forceId 로 못 박는다
+      const spawn=()=>campWithStk(()=>{ strikeSpawnUnit('me','marine'); strikeSpawnUnit('me','racer'); });
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const pick=(id)=>CAMPB.me.units.find(u=>(u.gm||u.id)===id);
+      skipIf(!pick('marine')||!pick('racer'),'마린·레이서가 안 나옴');
+      const m0=pick('marine'), r0=pick('racer');
+      const mA0=m0.dmg, mH0=m0.maxHp, rA0=r0.dmg, rH0=r0.maxHp;
+      // ② 보병 공격만 3레벨 — 마린은 세지고 레이서는 그대로여야 한다
+      G.tech.research={}; G.tech.research[race+'_inf_atk']=3;
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const m1=pick('marine'), r1=pick('racer');
+      const want=Math.pow(CAMP_RES_STEP,3);
+      assert(Math.abs(m1.dmg/mA0-want)<1e-6,'보병 공격 3레벨이 ×'+want.toFixed(3)+'가 아님: ×'+(m1.dmg/mA0).toFixed(3));
+      assert(Math.abs(m1.maxHp-mH0)<1e-6,'공격 연구인데 체력이 움직였다');
+      assert(Math.abs(r1.dmg-rA0)<1e-6,'보병 연구가 차량(레이서)에 샜다: ×'+(r1.dmg/rA0).toFixed(3));
+      // ③ 체력은 **방어 키**를 읽는다(§3-1 에서 방어를 뺐다 → 그 자리를 체력이 대신)
+      G.tech.research={}; G.tech.research[race+'_veh_def']=2;
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const m2=pick('marine'), r2=pick('racer');
+      const want2=Math.pow(CAMP_RES_STEP,2);
+      assert(Math.abs(r2.maxHp/rH0-want2)<1e-6,'차량 체력 2레벨이 ×'+want2.toFixed(3)+'가 아님: ×'+(r2.maxHp/rH0).toFixed(3));
+      assert(Math.abs(m2.maxHp-mH0)<1e-6,'차량 연구가 보병(마린)에 샜다');
+      // ④ 트리와 곱해진다(둘 중 하나만 걸리면 안 된다)
+      C.rbTree={atk:1};                                 // 사다리 1차 = ×1.5
+      G.tech.research={}; G.tech.research[race+'_inf_atk']=3;
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      spawn();
+      campScaleAllies(CAMPB.me.units);
+      const m3=pick('marine');
+      const both=campRtMul('atk')*want;
+      assert(Math.abs(m3.dmg/mA0-both)<1e-6,'트리×연구가 안 곱해짐: ×'+(m3.dmg/mA0).toFixed(3)+' (기대 ×'+both.toFixed(3)+')');
+      // ⑤ 두 번 걸리지 않는다
+      const h=m3.maxHp, d=m3.dmg;
+      campScaleAllies(CAMPB.me.units);
+      assert(m3.maxHp===h && m3.dmg===d,'연구 배수가 이중 적용됨');
+      return '보병 공격 ×'+want.toFixed(3)+' · 차량 체력 ×'+want2.toFixed(3)+' · 트리와 곱 ×'+both.toFixed(2);
+    } finally { C.rbTree=keepT; if(G.tech&&keepR) G.tech.research=keepR;
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🎨 전투 렌더 — 화면을 바꾸지 않고 기지 맵 '위쪽 레인'에 겹쳐 그린다(A안 · 2026-08-25).
   //   ⚠ 건설 맵은 M3D.sync 가 아니라 **M3D.syncBuild** 를 쓴다 — 감쌀 대상을 헷갈리면 0건이 된다(실제로 그랬다).
   await step('캠프 던전: 전투가 기지 맵에 겹쳐 그려진다', async()=>{
