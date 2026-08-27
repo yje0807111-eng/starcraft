@@ -54,3 +54,270 @@
       <button class="dmSend" onclick="sendDM()" aria-label="전송"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12 2-12 2z"/></svg></button>
     </div>
   </div>
+
+<!-- ══════════ ⚔ 토벌 — 전투 화면 · 시트 · 허브 ══════════ -->
+<!-- ── dgScreen — 토벌 전투 화면(깨져 있었다) ── -->
+<div id="dgScreen" class="appScreen spaceBg hide">
+    <div class="twBar">
+      <button class="twBack" onclick="dgFlee()" aria-label="나가기"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="twName">토벌</span><span class="twLv" id="dgWave">1층 · 1/3</span>
+      <span class="twCoin"><b id="dgHpTxt">0</b> HP</span>
+    </div>
+    <div class="dgWrap">
+      <div class="dgArena" id="dgArena"></div>
+      <div class="dgBar"><i><b id="dgHpBar"></b></i></div>
+      <div class="dgBtns"><button class="dgSkillBtn" id="dgSkillBtn" onclick="dgSkill()"><span id="dgSkillIco">🎯</span><i id="dgSkillCd"></i></button></div>
+    </div>
+    <div id="dgResult" class="dgResult hide"></div>
+  </div>
+<!-- ── dgSheet — 토벌 상세 시트 ── -->
+<div id="dgSheet" class="dgSheet hide">
+    <div class="dgSheetCard">
+      <button class="dgSheetX" onclick="dgCloseSheet()" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>
+      </button>
+      <div class="dgSheetTtl">어떻게 싸울까</div>
+      <div id="dgSheetRow"></div>
+      <div class="dgSheetGo">
+        <button class="actBtn dgGo" id="dgSheetAuto" onclick="dgSheetEnter(1)"><b>자동 전투</b><i>제자리 · 즉시</i></button>
+        <button class="actBtn dgGo" id="dgSheetEnter" onclick="dgSheetEnter(0)"><b>직접 전투</b><i>이동·카이팅 · 확률↑</i></button>
+      </div>
+    </div>
+  </div>
+<!-- ── dgHubScreen — 토벌 입구(일반·장비·펫·동료·룬) ── -->
+<div class="hbModal hide" id="dgHubScreen" onclick="if(event.target===this)closeDungeonHub()">
+    <div class="hbmCard">
+      <div class="hbmHead"><b>토벌</b>
+        <button class="hbmX" onclick="closeDungeonHub()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <div class="dgHubBody uiScroll" id="dgHubBody"></div>
+    </div>
+  </div>
+
+<!-- ══════════ 🏘 마을 팝업 ══════════ -->
+<!-- ── townPanel — 마을 팝업(내 캐릭터) ── -->
+<div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
+    <div class="setCard twCard">
+      <div class="setTitle"><span id="tpTitle">시설</span><div class="setX" onclick="closeTownPanel()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <div class="twBody" id="tpBody"></div>
+    </div>
+  </div>
+
+<!-- ══════════ 🏹 옛 사냥터 — 팝업 5개 + 화면 잔재 ══════════ -->
+<!-- ── hbInfoModal — 스탯 출처 ── -->
+<div class="hbModal hide" id="hbInfoModal" onclick="if(event.target===this)hbCloseInfo()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>스탯 출처</b>
+          <button class="hbmX" onclick="hbCloseInfo()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbInfoBody"></div>
+      </div>
+    </div>
+<!-- ── hbGrowModal — 성장(내용이 비어 있었다) ── -->
+<div class="hbModal hide" id="hbGrowModal" onclick="if(event.target===this)hbCloseGrow()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>성장</b>
+          <button class="hbmX" onclick="hbCloseGrow()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbGrowBody"></div>
+      </div>
+    </div>
+<!-- ── hbMateModal — 동료 뽑기 ── -->
+<div class="hbModal hide" id="hbMateModal" onclick="if(event.target===this)hbCloseMates()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>동료</b>
+          <button class="hbmX" onclick="hbCloseMates()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbMateBody"></div>
+        <div class="hbRoundNote" id="hbMateNote"></div>
+      </div>
+    </div>
+<!-- ── hbBunkerModal — 벙커(내용 없음) ── -->
+<div class="hbModal hide" id="hbBunkerModal" onclick="if(event.target===this)hbCloseBunker()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>벙커</b>
+          <button class="hbmX" onclick="hbCloseBunker()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbBunkerBody"></div>
+        <div class="hbRoundNote">유닛은 벙커마다 사서 채우고(최대 4), 출전 동료 1명을 더 넣을 수 있습니다. 전체 화력에 <b>건물</b> 구역의 벙커 공격력이 곱해집니다.</div>
+      </div>
+    </div>
+<!-- ── hbRoundSheet — 던전·라운드 선택 ── -->
+<div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>던전 · 라운드</b>
+          <button class="hbmX" onclick="hbCloseRounds()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <!-- 던전 = 좌우 화살표로 한 장씩 · 라운드 = 세로 스크롤 피커(아래가 1) -->
+        <div class="hbPickDg">
+          <button class="arwBtn" data-arw="l" id="hbPickPrev" onclick="hbPickDg(-1)" aria-label="이전 던전"></button>
+          <div class="hbDgc" id="hbPickCard"></div>
+          <button class="arwBtn" data-arw="r" id="hbPickNext" onclick="hbPickDg(1)" aria-label="다음 던전"></button>
+        </div>
+        <div class="hbModeRow">
+          <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)" title="같은 라운드 무한 파밍"><b>반복</b></button>
+          <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)" title="클리어하면 다음 라운드"><b>등반</b></button>
+        </div>
+        <div class="hbRdPick">
+          <div class="hbRdBand"></div>
+          <div class="hbRdScroll uiScroll" id="hbRdScroll" onscroll="hbRdScrolled()"></div>
+        </div>
+        <div class="hbPickBtns">
+          <button class="ecCancel" onclick="hbCloseRounds()">취소</button>
+          <button class="ecGo" id="hbPickGoBtn" onclick="hbPickGo()">이동</button>
+        </div>
+      </div>
+    </div>
+<!-- ── hbMid — 옛 사냥터 라운드 줄(캠프에선 안 보였다) ── -->
+<div class="hbMid" id="hbMid">
+      <div class="hbMidRow">
+        <button class="arwBtn" data-arw="l" id="hbRdPrev" onclick="hbRoundStep(-1)" aria-label="이전 라운드"></button>
+        <button class="hbMidTx" id="hbMidTx" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">
+          <b id="hbDgName">던전 1 · 감염된 둥지</b>
+          <span class="hbMidRd"><i id="hbRoundLb">라운드</i> <em id="hbRound">1</em></span>
+          <i class="hbMidLine"></i>
+        </button>
+        <button class="arwBtn" data-arw="r" id="hbRdNext" onclick="hbRoundStep(1)" aria-label="다음 라운드"></button>
+      </div>
+      <span class="hbMidSub"><i id="hbWaveTx">웨이브 1/3</i> · <i id="hbTimer">50s</i> · <i id="hbMode">반복</i></span>
+    </div>
+<!-- ── hbBar — 옛 사냥터 스킬 바(캠프에선 안 보였다) ── -->
+<div class="hbBar" id="hbBar"></div>
+
+<!-- ══════════ ⚔ 토벌 — 전투 화면 · 시트 · 허브 (2026-08-27) ══════════ -->
+<!-- ── dgScreen — 토벌 전투 화면(깨져 있었다: 캐릭터·적이 좌상단에 겹침) ── -->
+<div id="dgScreen" class="appScreen spaceBg hide">
+    <div class="twBar">
+      <button class="twBack" onclick="dgFlee()" aria-label="나가기"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="twName">토벌</span><span class="twLv" id="dgWave">1층 · 1/3</span>
+      <span class="twCoin"><b id="dgHpTxt">0</b> HP</span>
+    </div>
+    <div class="dgWrap">
+      <div class="dgArena" id="dgArena"></div>
+      <div class="dgBar"><i><b id="dgHpBar"></b></i></div>
+      <div class="dgBtns"><button class="dgSkillBtn" id="dgSkillBtn" onclick="dgSkill()"><span id="dgSkillIco">🎯</span><i id="dgSkillCd"></i></button></div>
+    </div>
+    <div id="dgResult" class="dgResult hide"></div>
+  </div>
+<!-- ── dgSheet — 토벌 상세 시트 ── -->
+<div id="dgSheet" class="dgSheet hide">
+    <div class="dgSheetCard">
+      <button class="dgSheetX" onclick="dgCloseSheet()" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg>
+      </button>
+      <div class="dgSheetTtl">어떻게 싸울까</div>
+      <div id="dgSheetRow"></div>
+      <div class="dgSheetGo">
+        <button class="actBtn dgGo" id="dgSheetAuto" onclick="dgSheetEnter(1)"><b>자동 전투</b><i>제자리 · 즉시</i></button>
+        <button class="actBtn dgGo" id="dgSheetEnter" onclick="dgSheetEnter(0)"><b>직접 전투</b><i>이동·카이팅 · 확률↑</i></button>
+      </div>
+    </div>
+  </div>
+<!-- ── dgHubScreen — 토벌 입구(일반·장비·펫·동료·룬) ── -->
+<div class="hbModal hide" id="dgHubScreen" onclick="if(event.target===this)closeDungeonHub()">
+    <div class="hbmCard">
+      <div class="hbmHead"><b>토벌</b>
+        <button class="hbmX" onclick="closeDungeonHub()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+      </div>
+      <div class="dgHubBody uiScroll" id="dgHubBody"></div>
+    </div>
+  </div>
+
+<!-- ══════════ 🏘 마을 팝업 (2026-08-27) ══════════ -->
+<!-- ── townPanel — 마을 팝업(내 캐릭터). 마을 화면이 다락으로 가면서 함께 갔다 ── -->
+<div id="townPanel" class="hide" onclick="if(event.target===this)closeTownPanel()">
+    <div class="setCard twCard">
+      <div class="setTitle"><span id="tpTitle">시설</span><div class="setX" onclick="closeTownPanel()"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></div></div>
+      <div class="twBody" id="tpBody"></div>
+    </div>
+  </div>
+
+<!-- ══════════ 🏹 옛 사냥터 — 팝업 5개 + 화면 잔재 (2026-08-27) ══════════ -->
+<!-- ── hbInfoModal — 스탯 출처. 입구(#hbHud)가 캠프에서 크기 0 이라 도달 불가였다 ── -->
+<div class="hbModal hide" id="hbInfoModal" onclick="if(event.target===this)hbCloseInfo()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>스탯 출처</b>
+          <button class="hbmX" onclick="hbCloseInfo()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbInfoBody"></div>
+      </div>
+    </div>
+<!-- ── hbGrowModal — 성장. ⚠ 본문 #hbGrowBody 는 캐릭터 화면이 빌려 쓰므로 #chrStash 로 옮겼다(껍데기만 여기 있다) ── -->
+<div class="hbModal hide" id="hbGrowModal" onclick="if(event.target===this)hbCloseGrow()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>성장</b>
+          <button class="hbmX" onclick="hbCloseGrow()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+      </div>
+    </div>
+<!-- ── hbMateModal — 동료 뽑기. hbOpenMates 를 부르는 곳이 없었다(동료 버튼은 2026-08-14 폐지) ── -->
+<div class="hbModal hide" id="hbMateModal" onclick="if(event.target===this)hbCloseMates()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>동료</b>
+          <button class="hbmX" onclick="hbCloseMates()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbMateBody"></div>
+        <div class="hbRoundNote" id="hbMateNote"></div>
+      </div>
+    </div>
+<!-- ── hbBunkerModal — 벙커(내용 없음) ── -->
+<div class="hbModal hide" id="hbBunkerModal" onclick="if(event.target===this)hbCloseBunker()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>벙커</b>
+          <button class="hbmX" onclick="hbCloseBunker()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="hbRows uiScroll" id="hbBunkerBody"></div>
+        <div class="hbRoundNote">유닛은 벙커마다 사서 채우고(최대 4), 출전 동료 1명을 더 넣을 수 있습니다. 전체 화력에 <b>건물</b> 구역의 벙커 공격력이 곱해집니다.</div>
+      </div>
+    </div>
+<!-- ── hbRoundSheet — 던전·라운드 선택. 입구 #hbMidTx 가 같이 갔다 ── -->
+<div class="hbModal hide" id="hbRoundSheet" onclick="if(event.target===this)hbCloseRounds()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>던전 · 라운드</b>
+          <button class="hbmX" onclick="hbCloseRounds()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <!-- 던전 = 좌우 화살표로 한 장씩 · 라운드 = 세로 스크롤 피커(아래가 1) -->
+        <div class="hbPickDg">
+          <button class="arwBtn" data-arw="l" id="hbPickPrev" onclick="hbPickDg(-1)" aria-label="이전 던전"></button>
+          <div class="hbDgc" id="hbPickCard"></div>
+          <button class="arwBtn" data-arw="r" id="hbPickNext" onclick="hbPickDg(1)" aria-label="다음 던전"></button>
+        </div>
+        <div class="hbModeRow">
+          <button class="hbModeBtn" id="hbModeRep"  onclick="hbSetClimb(false)" title="같은 라운드 무한 파밍"><b>반복</b></button>
+          <button class="hbModeBtn" id="hbModeClm" onclick="hbSetClimb(true)" title="클리어하면 다음 라운드"><b>등반</b></button>
+        </div>
+        <div class="hbRdPick">
+          <div class="hbRdBand"></div>
+          <div class="hbRdScroll uiScroll" id="hbRdScroll" onscroll="hbRdScrolled()"></div>
+        </div>
+        <div class="hbPickBtns">
+          <button class="ecCancel" onclick="hbCloseRounds()">취소</button>
+          <button class="ecGo" id="hbPickGoBtn" onclick="hbPickGo()">이동</button>
+        </div>
+      </div>
+    </div>
+<!-- ── hbMid — 옛 사냥터 라운드 줄(캠프에선 크기 0) ── -->
+<div class="hbMid" id="hbMid">
+      <div class="hbMidRow">
+        <button class="arwBtn" data-arw="l" id="hbRdPrev" onclick="hbRoundStep(-1)" aria-label="이전 라운드"></button>
+        <button class="hbMidTx" id="hbMidTx" onclick="hbOpenRounds()" aria-label="던전·라운드 선택">
+          <b id="hbDgName">던전 1 · 감염된 둥지</b>
+          <span class="hbMidRd"><i id="hbRoundLb">라운드</i> <em id="hbRound">1</em></span>
+          <i class="hbMidLine"></i>
+        </button>
+        <button class="arwBtn" data-arw="r" id="hbRdNext" onclick="hbRoundStep(1)" aria-label="다음 라운드"></button>
+      </div>
+      <span class="hbMidSub"><i id="hbWaveTx">웨이브 1/3</i> · <i id="hbTimer">50s</i> · <i id="hbMode">반복</i></span>
+    </div>
+<!-- ── hbBar — 옛 사냥터 스킬 바(캠프에선 크기 0) ── -->
+<div class="hbBar" id="hbBar"></div>
+<!-- ── hbHudTop — 옛 사냥터 좌상단 프로필(#hbHud). 캠프는 자기 칩(#curTitle)을 쓴다 ── -->
+<div class="hbHudTop">
+      <button class="hbHud" id="hbHud" onclick="hbOpenInfo()" aria-label="스탯 출처">
+        <span class="hbAv" id="hbAv">🪖</span>
+        <span class="hbCol">
+          <b id="hbName">캐릭터</b>
+          <span class="hbXp"><i id="hbXpBar"></i></span>
+          <span class="hbSt"><i id="hbLv">Lv.1</i><i id="hbAtk"><em>⚔</em><span id="hbAtkN">0</span></i></span>
+        </span></button>
+    </div>

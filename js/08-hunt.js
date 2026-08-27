@@ -2460,10 +2460,10 @@ function gearOpen(){ const e=document.getElementById('gearScreen'); return !!(e 
 // ── 🧍 캐릭터 구역 — 정보 · 성장 · 스킬 ────────────────────────────────
 // 스탯 = 이 화면 전용 렌더러(간단 요약 + 레벨 포인트). '스탯 출처' 상세표는 사냥터 좌상단
 //   프로필(#hbHud → hbOpenInfo)이 맡는다 — 같은 표를 두 곳에 두지 않는다.
-// ⛔ 환생 본문은 복제하지 않는다: 팝업의 #hbGrowBody 를 통째로 빌려 오고
-//   팝업이 열릴 때(hbOpenGrow) 제자리로 돌려준다. 렌더러는 그대로 같은 id 를 찾는다.
+// ⛔ 환생 본문은 복제하지 않는다: 보관함(#chrStash)의 #hbGrowBody 를 통째로 빌려 오고
+//   화면을 떠날 때 제자리로 돌려준다. 렌더러는 그대로 같은 id 를 찾는다.
 const CHR_SECS={ stat: { html:()=>renderChrStat() },
-                 reb:  { body:'hbGrowBody', home:'hbGrowModal', render:()=>renderGrowModal() },
+                 reb:  { body:'hbGrowBody', home:'chrStash', render:()=>renderGrowModal() },   // ⚠ 집이 성장 팝업 → #chrStash 로 바뀌었다(팝업은 다락 · ATTIC.md)
                  skill:{ html:()=>_chrSkillHTML() } };
 let _chrSec='stat';
 // 빌린 본문을 원래 팝업으로 되돌린다(화면을 떠나거나 팝업이 열릴 때)
