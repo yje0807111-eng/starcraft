@@ -5289,7 +5289,11 @@ async function groupLobby(){
     assert(line.indexOf('255, 59, 59')<0,'고른 행에 붉은 밑변 광원이 붙었다 — 확정 버튼(.actBtn.pri)과 서명이 겹친다');
     const go=$('raceGo');
     assert(go && go.classList.contains('actBtn') && go.classList.contains('pri'),'확정이 공용 액션 버튼이 아니다');
-    assert(getComputedStyle(go,'::after').backgroundImage.indexOf('255, 59, 59')>=0,'확정 버튼의 붉은 밑변 광원이 사라졌다');
+    // ⚠ 2026-08-26(B4안) 이후 확정 버튼에는 **밑변 광원이 없다** — 위계는 면·테두리 밝기가 맡는다.
+    //   그래서 「행과 버튼이 같은 서명을 쓰지 않는가」를 그 언어로 다시 잰다:
+    //   행은 **종족색이 물든 면**, 버튼은 **면을 안 채운다**(B4).
+    assert(getComputedStyle(go).backgroundImage==='none','확정 버튼이 면을 채웠다 — B4(옅은 면 + 1px)를 되돌리지 말 것');
+    assert(face.indexOf('gradient')>=0,'고른 행이 종족색으로 안 물든다');
     // 확정 문구가 고른 종족을 따라가고, **조사가 맞는가**(ㄹ 받침·받침 없음 = '로')
     const seen=[];
     for(const k of RACE_PICK_ORDER){ raceSel(k); await sleep(30);
