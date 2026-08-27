@@ -1854,7 +1854,19 @@ function raceConfirm(){ pickRace(_racePick||RACE_PICK_ORDER[0]); }
 function openRacePicker(current, onPick){ _racePickCb=onPick||null;
   _racePick=(current&&RACE_PICK_ORDER.indexOf(current)>=0)?current:RACE_PICK_ORDER[0];
   renderRacePicker();
-  const p=document.getElementById('raceSelPanel'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard')); } if(typeof playSfx==='function') playSfx('ui_open'); }
+  const p=document.getElementById('raceSelPanel'); if(!p) return;
+  // 🖼 배경·머리줄은 난이도 화면과 **같은 것**을 쓴다 — 두 화면이 이어져 뜨므로 맵이 같은 자리에 남아야 한다.
+  //    ⛔ url() 을 커스텀 속성으로 넘기지 말 것(상대 경로가 스타일시트 기준으로 풀린다) — 요소에 직접 준다.
+  { const art=document.getElementById('rsArt');
+    const ac=(typeof MAP_ACCENT!=='undefined'&&_selMap&&MAP_ACCENT[_selMap.id])||'#7f93b0';
+    if(art){ const u=(typeof mapBgUrl==='function')?mapBgUrl(_selMap):'';
+      art.style.backgroundImage = u ? 'url("'+u+'")'
+        : 'radial-gradient(120% 80% at 50% 30%,'+ac+'22,#04050b 72%)'; }
+    p.style.setProperty('--mapAccent', ac);
+    const nm=document.getElementById('rsMapNm'); if(nm) nm.textContent=(_selMap&&_selMap.name)||'';
+    if(typeof _mapThumbInto==='function') _mapThumbInto(document.getElementById('rsThumb'), _selMap); }
+  p.classList.remove('hide');
+  if(typeof playSfx==='function') playSfx('ui_open'); }
 function openRaceSelect(){ openRacePicker(_selRace, function(k){ _selRace=k; _startSoloNow(); }); }   // 솔로: 난이도 후 종족 확정 → 게임 시작
 // (인라인 종족 드롭다운 showRaceMenu/hideRaceMenu/#raceMenu 는 2026-08-19 삭제 — 유일한 입구였던
 //  대기실 칩 경로(openLobbyRace)가 공용 탭 띠로 대체되면서 통째로 고아가 됐다.)
@@ -1874,7 +1886,13 @@ const SD_DESC={ easy:'처음이라면 여기서 · 규칙을 익히는 단계',
 function _sdRGB(hex){ const h=(hex||'#ffffff').replace('#',''); 
   return [0,2,4].map(function(i){ return parseInt(h.substr(i,2),16); }).join(','); }
 // 탭에는 난이도만 — 무한 모드는 아래 별도 줄이 맡는다(노말 고정이라 난이도 축이 아니다)
-function _sdList(){ return DIFFICULTY_ORDER.map(function(d){ return {k:d, name:DIFFICULTY[d].name, col:DIFF_COLOR[d]}; }); }
+// 난이도 사다리 = 난이도 다섯 + **무한 한 칸**(2026-08-27).
+// ⚠ 「무한은 난이도 축이 아니다(노말 고정)」던 옛 결정을 뒤집었다 — 플레이어가 보기엔 FINAL 다음이
+//   무한이라 한 줄기로 읽히고, 하단에 따로 쌓이던 칩(.sdInf)이 사라진다.
+const SD_INF_COL='#b06bff';
+function _sdList(){ const L=DIFFICULTY_ORDER.map(function(d){ return {k:d, name:DIFFICULTY[d].name, col:DIFF_COLOR[d]}; });
+  if(_sdHasInf()) L.push({k:'inf', name:'무한', col:SD_INF_COL});
+  return L; }
 function _sdHasInf(){ return !!(_selMap && _selMap.id==='nemo' && USEMAPS.nemo_inf); }
 function _sdOk(k){ return (k==='inf') ? ((typeof infiniteUnlocked!=='function')||infiniteUnlocked())
                                       : ((typeof diffUnlocked!=='function')||diffUnlocked(k)); }
@@ -1899,37 +1917,68 @@ function renderSoloDiff(){ const nav=document.getElementById('sdNav'), det=docum
     +'<button class="arwBtn" data-arw="l" id="sdPrev" onclick="sdStepBy(-1)" aria-label="이전 난이도"'+(i>0?'':' disabled')+'></button>'
     +'<div class="sdStepTx">'+escHtml(cur.name)+'</div>'
     +'<button class="arwBtn" data-arw="r" id="sdNext" onclick="sdStepBy(1)" aria-label="다음 난이도"'+(i<L.length-1?'':' disabled')+'></button>'
-    +'</div><div class="sdDots">'+L.map(function(x,j){ return '<i class="'+(j===i?'on':'')+'"></i>'; }).join('')+'</div>';
+    +'</div><div class="sdDots">'
+    +L.map(function(x,j){ return '<i class="'+(j===i?'on ':'')+(x.k==='inf'?'inf':'')+'"></i>'; }).join('')+'</div>';
   if(typeof paintArrows==='function') paintArrows(nav);
   let body;
   if(!ok){ body='<div class="sdLock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
       +escHtml(_sdPrevKo(cur.k))+' 클리어 시 잠금 해제</div>'; }
-  else { const D=DIFFICULTY[cur.k], hp=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
+  else { const D=(cur.k==='inf')?DIFFICULTY.normal:DIFFICULTY[cur.k], hp=(D.enemyHp/DIFFICULTY.easy.enemyHp).toFixed(1);
     body='<div class="sdStats"><span class="sdStat e"><i>적 HP</i><b>×'+hp+'</b></span>'
         +'<span class="sdStat c"><i>포인트 획득량</i><b>×'+D.coinMult+'</b></span></div>'
-        +'<div class="sdDesc">'+(SD_DESC[cur.k]||'')+'</div>'; }
-  // 머리에 지금 고른 맵을 얹는다 — '무엇을 어느 난이도로' 가 한 화면에 있다
-  const mapHead='<div class="sdMap"><span class="moThumb" id="sdThumb"></span>'
-    +'<span class="sdMapTx"><b>'+escHtml((_selMap&&_selMap.name)||'')+'</b>'
-    +'<em>'+escHtml((_selMap&&_selMap.desc)||'')+'</em></span></div>';
-  det.innerHTML=mapHead+'<div class="sdBody">'+body+'</div>'
-    +'<button class="actBtn pri sdGo" id="sdGo" onclick="sdStart()"'+(ok?'':' disabled')+'>'
-    +(ok ? '이 난이도로 시작' : '잠겨 있습니다')+'</button>';
-  if(typeof _mapThumbInto==='function') _mapThumbInto(document.getElementById('sdThumb'), _selMap);
-  // 무한 모드 줄 — 이 맵에 있을 때만
-  { const el=document.getElementById('sdInf'); if(el){ const has=_sdHasInf(), iok=_sdOk('inf');
-      el.classList.toggle('hide', !has); el.classList.toggle('lk', !iok);
-      if(has) el.innerHTML='<b>∞ 무한 모드</b><em>'+(iok?'노말 고정 · 끝없이 도전':'NORMAL 클리어 시 개방')+'</em>'; } } }
-function sdStart(){ if(!_sdOk(_sdPick)) return; startSoloWithDiff(_sdPick); }
+        +'<div class="sdDesc">'+escHtml(cur.k==='inf' ? '노말 고정 · 라운드가 끝나지 않는다' : (SD_DESC[cur.k]||''))+'</div>'; }
+  // 🎁 클리어 보상 미리보기 — 머리줄이 「캠프 몇 시간치」를 갖고, 아래는 재화 두 줄(2026-08-27 · P4안)
+  let rw='';
+  if(ok){ const R=sdRewardPreview(cur.k);
+    if(R){ const f=(typeof fmtStat==='function')?fmtStat:function(n){ return ''+n; };
+      rw='<div class="sdRw"><div class="sdRwHd"><span class="lab">클리어 보상</span><span class="fill"></span>'
+        +'<span class="t">캠프 '+_sdHours(R.hours)+'<small>시간치</small></span></div>'
+        +'<div class="sdRwList">'
+        +'<div class="sdRwRow">'+(typeof resIco==='function'?resIco('mineral','ric'):'')+'<span class="nm">미네랄</span><span class="v">'+f(R.min)+'</span></div>'
+        +'<div class="sdRwRow">'+(typeof resIco==='function'?resIco('gas','ric'):'')+'<span class="nm">가스</span><span class="v">'+f(R.gas)+'</span></div>'
+        +'</div></div>'; } }
+  det.innerHTML='<div class="sdBody">'+body+'</div>'+(rw?'<div class="sdHr"></div>'+rw:'');
+  // 머리줄(화면 상단) — 맵은 세 화면 내내 같은 자리에 있다
+  { const nm=document.getElementById('sdMapNm'), ds=document.getElementById('sdMapDs');
+    if(nm) nm.textContent=(_selMap&&_selMap.name)||'';
+    if(ds) ds.textContent=(_selMap&&_selMap.desc)||'';
+    if(typeof _mapThumbInto==='function') _mapThumbInto(document.getElementById('sdThumb'), _selMap); }
+  const go=document.getElementById('sdGo');
+  if(go){ go.disabled=!ok; go.textContent = ok ? (cur.k==='inf' ? '무한 모드로 시작' : '이 난이도로 시작') : '잠겨 있습니다'; } }
+function sdStart(){ if(!_sdOk(_sdPick)) return;
+  if(_sdPick==='inf'){ startSoloInfinite(); return; }   // 마지막 칸 = 무한 모드
+  startSoloWithDiff(_sdPick); }
+// 🎁 보상 미리보기 — **클리어 기준**(진행도 1.0). 나머지 계수는 지금 상태 그대로 반영한다.
+//   ⚠ 값은 profRunReward 와 **같은 식**이어야 한다 — 두 벌을 두면 화면과 실제가 어긋난다.
+//   ⛔ 수량만 보여 주지 말 것: 캠프 경제는 지수라 절대값이 며칠 뒤엔 뜻을 잃는다(DESIGN §「같은 자로 재기」).
+//      그래서 머리줄에 **캠프 몇 시간치**를 같이 적는다 — 그게 이 게임의 자다.
+function sdRewardPreview(k){
+  if(typeof umRate!=='function' || typeof UM_ANCHOR_MIN==='undefined') return null;
+  const D = (k==='inf') ? DIFFICULTY.normal : DIFFICULTY[k]; if(!D) return null;
+  const dMul = D.coinMult||1;
+  const day  = (typeof umDayMul==='function') ? umDayMul() : 1;
+  const pet  = (typeof profPetBonus==='function') ? profPetBonus('coin') : 0;
+  const min  = Math.round(umRate()*UM_ANCHOR_MIN*dMul*day*(1+pet));
+  const gas  = Math.round(min*((typeof UM_GAS_RATIO!=='undefined')?UM_GAS_RATIO:0));
+  return { min:min, gas:gas, hours:(UM_ANCHOR_MIN*dMul)/60 }; }
+function _sdHours(h){ return (Math.round(h*10)%10===0) ? String(Math.round(h)) : h.toFixed(1); }
 function openSoloDiff(){
   // 처음 열 때는 **해금된 것 중 가장 높은 난이도**를 고른 상태로 — 매번 EASY 부터 넘기지 않게
   { const L=_sdList().filter(function(x){ return _sdOk(x.k); });
     _sdPick = L.length ? L[L.length-1].k : 'easy'; }
   renderSoloDiff();
-  const p=document.getElementById('soloDiffPanel'); if(p){ p.classList.add('noDim'); p.classList.remove('hide');   // 화면전환: 배경 딤 유지(페이드 생략)
-    const card=p.querySelector('.cpCard'); if(card){ card.classList.remove('fxPop','fxPush');   // 난이도 선택 = 효과 없이 즉시(요청)
-      const ac=(typeof MAP_ACCENT!=='undefined'&&_selMap&&MAP_ACCENT[_selMap.id])||'#7f93b0';
-      card.style.setProperty('--mapAccent', ac); } }   // 방금 고른 맵의 액센트를 이어받는다 — 두 팝업이 한 흐름으로 읽힌다
+  const p=document.getElementById('soloDiffPanel');
+  if(p){ p.classList.remove('hide');
+    // 🖼 배경 = **그 맵의 키 아트**. 로딩·로그인이 쓰는 공식(아트 + 국소 스크림 + --loadDim)을 그대로 빌린다.
+    //    ⚠ 아트가 없는 맵이면 검은 화면이 되지 않게 맵 액센트로 은은한 대기만 깐다.
+    const art=document.getElementById('sdArt');
+    const ac=(typeof MAP_ACCENT!=='undefined'&&_selMap&&MAP_ACCENT[_selMap.id])||'#7f93b0';
+    // ⛔ var(--sdArt) 로 넘기지 말 것 — 커스텀 속성 안의 **상대 경로는 스타일시트 기준**으로 풀려
+    //    `css/assets/…` 를 찾는다(실제로 그렇게 깨졌다). 요소에 직접 준다.
+    if(art){ const u=(typeof mapBgUrl==='function')?mapBgUrl(_selMap):'';
+      art.style.backgroundImage = u ? 'url("'+u+'")'
+        : 'radial-gradient(120% 80% at 50% 30%,'+ac+'22,#04050b 72%)'; }
+    p.style.setProperty('--mapAccent', ac); }
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeSoloDiff(){ popHide('soloDiffPanel'); }
 function startSoloInfinite(){ if(!USEMAPS.nemo_inf) return; _selMap=USEMAPS.nemo_inf; closeSoloDiff(); _startSoloNow(); }   // 무한 모드 시작(테스트 단계: 해금 게이트 미적용)

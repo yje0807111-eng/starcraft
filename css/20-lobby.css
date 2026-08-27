@@ -262,51 +262,102 @@
   /* 로그아웃 확인 — 허브(60) 위에 떠야 한다. 규칙이 없으면 문서 흐름에 그려져 보이지 않는다 */
   #logoutPanel{position:absolute;inset:0;z-index:73;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #logoutPanel.hide{display:none}
-  #soloDiffPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;background:rgba(2,3,6,.84);backdrop-filter:blur(3px);padding:20px}   /* 뒤 화면과 확실히 구분 = 진한 딤 */
+  /* ══ 🎚 난이도 선택 = **전체 화면**(2026-08-27 · F2+D2+D8+A3+B5 확정) ══════════════
+     로딩·로그인이 쓰는 공식을 그대로 빌린다: **맵 키 아트 한 장 + 국소 스크림 + --loadDim**.
+     ⛔ 팝업(딤 위 카드)으로 되돌리지 말 것 — 카드에는 그림이 한 점도 없어 밋밋했고,
+        뒤를 블러로 지워 「어느 맵인지」까지 사라졌다.
+     ⚠ 종족 선택(#raceSelPanel)도 **같은 어법**이다. 둘은 0.2초 간격으로 이어져 뜬다. */
+  /* ⚠ z-index 는 **하단 네비(62)보다 위**여야 한다 — 팝업이던 시절엔 54 로 충분했지만 전체 화면은
+     재화 바·네비를 덮어야 한다(54 로 뒀더니 시작 버튼을 네비가 가렸다). 캠프 종족 선택(64)과 같은 층. */
+  #soloDiffPanel{position:absolute;inset:0;z-index:64;display:block;background:#04050b;padding:0}
   #soloDiffPanel.hide{display:none}
+  .sdArt{position:absolute;inset:0;background-position:center center;background-size:cover;background-repeat:no-repeat;background-color:#04050b;
+    transform-origin:center center;animation:titleBreath var(--artDur) ease-in-out infinite}
+  .sdArt::before{content:'';position:absolute;inset:0;   /* 국소 스크림 — #titleBg::before 와 같은 값 */
+    background:radial-gradient(118% 52% at 50% 66%,rgba(3,5,9,.88) 0%,rgba(3,5,9,.66) 26%,
+      rgba(3,5,9,.40) 46%,rgba(3,5,9,.18) 66%,rgba(3,5,9,.06) 84%,transparent 100%)}
+  .sdArt::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
+  /* 윗머리 그늘 — 밝은 하늘 위에서도 머리줄이 읽히게(캠프 종족 선택과 같은 처리) */
+  #soloDiffPanel::before{content:'';position:absolute;left:0;right:0;top:0;height:118px;z-index:1;pointer-events:none;
+    background:linear-gradient(180deg,rgba(3,5,9,.80) 0%,rgba(3,5,9,.42) 48%,transparent 100%)}
+  .sdScr{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;padding:18px 16px 20px}
+  /* 머리줄 = 어느 맵인가 + 나가기(B5: 취소 버튼을 여기로 올렸다 → 아래는 시작 하나뿐) */
+  #soloDiffPanel .sdMap{flex:none;display:flex;align-items:center;gap:9px;padding:0;margin:0;border:0}
+  #soloDiffPanel .sdMap .moThumb{width:38px;height:38px;flex:none}
+  #soloDiffPanel .sdMap b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;text-shadow:0 1px 4px #000}
+  #soloDiffPanel .sdMap em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;margin-top:2px;text-shadow:0 1px 3px #000}
+  .sdX{margin-left:auto;width:36px;height:36px;flex:none;display:flex;align-items:center;justify-content:center;
+    padding:0;background:none;border:0;color:#a8b2be;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .sdX svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;
+    filter:drop-shadow(0 1px 3px #000)}
+  .sdX:active{color:#fff}
+  /* 스테퍼는 그림 한가운데 */
+  .sdMid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0}
+  /* 아래 블록 = 로그인 구도의 서명(내용이 앉는 자리) */
+  /* ⚠ margin-top:auto — 블록은 **항상 밑변에 붙는다**. 난이도 화면은 .sdMid(flex:1)가 밀어 주지만
+     종족 화면엔 그게 없어, 없이 두면 목록이 머리줄 바로 밑에 붙고 아래가 통째로 빈다(실제로 그랬다). */
+  .sdBlk{flex:none;margin-top:auto;display:flex;flex-direction:column;gap:12px;margin-left:-16px;margin-right:-16px;margin-bottom:-20px;padding:16px 16px 20px;
+    background:linear-gradient(180deg,transparent,rgba(4,6,11,.55) 22%,rgba(4,6,11,.84))}
   /* 난이도 선택 = 유즈맵 팝업(.moCard) 바로 다음에 뜬다. 껍데기는 공용 '팝업 껍데기'가 맡고
      여기서 정하는 것은 **크기·여백·맵색 발광**뿐이다(2026-08-19 단일 소스로 정리).
      ⚠ .cpCard 는 방 만들기·종족 선택·로그아웃과 공용이다 — 반드시 #soloDiffPanel 안에서만 덮을 것. */
-  #soloDiffPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);height:min(474px,90%);max-height:90%;
-    display:flex;flex-direction:column;overflow:hidden;padding:20px 16px 16px;
-    box-shadow:0 16px 44px -12px #000,0 0 40px -16px var(--mapAccent,#4aa8ff)}
-  /* 위쪽 맵색 오라 = 유즈맵 팝업 아트의 마지막 층과 같은 것. var() 색엔 알파를 못 얹으므로 opacity 로 낮춘다.
-     z-index 를 주지 않는다 — .cpCard>* 가 z:1 이라 내용은 자동으로 이 위에 온다 */
-  #soloDiffPanel .cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
-    background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent,#4aa8ff),transparent 70%)}
   /* 난이도 고르기 = 위 스테퍼(◀ 이름 ▶ + 점) + 아래 상세 한 장(2026-08-19).
      ⛔ 탭 띠(.pdSeg)로 5칸을 늘어놓던 방식은 폐지 — 한 칸이 59px 뿐이라 글자가 잘리기 직전이었고,
         난이도는 **순서가 있는 축**이라 좌우 이동이 맞다(사냥터 라운드 ◀▶ 와 같은 동작).
      ◀▶ 는 공용 .arwBtn(data-arw) 그대로 — 새 화살표 SVG를 박지 말 것. */
-  #soloDiffPanel .sdNav{flex:none;margin-bottom:9px;display:flex;flex-direction:column;align-items:center;gap:5px}
-  .sdStepRow{display:flex;align-items:center;justify-content:center;gap:4px;width:100%}
-  .sdStepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:23px;font-weight:700;
+  #soloDiffPanel .sdNav{flex:none;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .sdStepRow{display:flex;align-items:center;justify-content:center;gap:6px;width:100%}
+  /* ⚠ 그림 위에 뜨는 화살표다 — 판 없이 **크기와 그림자**로만 띄운다(A3안).
+     공용 .arwBtn 을 그대로 쓰고 여기서 덮는 건 크기·그림자뿐이다. */
+  #soloDiffPanel .sdStepRow .arwBtn{width:44px;height:44px}
+  #soloDiffPanel .sdStepRow .arwBtn .arwIco{width:24px;height:24px;stroke-width:3.2;
+    filter:drop-shadow(0 1px 2px #000) drop-shadow(0 0 7px rgba(0,0,0,.95))}
+  .sdStepTx{flex:1;min-width:0;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;
     letter-spacing:1px;color:var(--dc,#eef2f6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    text-shadow:0 0 16px color-mix(in srgb,var(--dc,#fff) 40%,transparent)}
+    text-shadow:0 0 18px color-mix(in srgb,var(--dc,#fff) 45%,transparent),0 2px 6px #000}
   .sdDots{display:flex;align-items:center;justify-content:center;gap:5px}
   .sdDots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.16);transition:background .12s,width .12s}
   .sdDots i.on{width:14px;border-radius:3px;background:var(--dc,#fff)}
+  .sdDots i.inf{background:rgba(176,107,255,.45)}   /* 마지막 칸 = 무한. 난이도가 아니라는 것을 색으로 남긴다 */
   /* 상세 = 고른 난이도가 판 전체를 물들인다(테두리 광원 + 윗변 선). 카드가 남는 높이를 전부 먹는다.
      ⚠ 색을 갖는 건 선·빛뿐이고 면은 검정 그대로다(DESIGN §0) — 난이도를 바꾸면 '판이 바뀐' 느낌만 준다.
      ⛔ 난이도 이름을 여기에 또 쓰지 말 것 — 이름은 위 스테퍼가 갖는다(워터마크·.sdName 둘 다 폐지, 2026-08-19).
      --dc(hex) 와 --dcRGB(채널 셋)를 renderSoloDiff 가 함께 실어 준다(알파를 얹으려면 채널이 필요). */
-  #soloDiffPanel .sdDet{position:relative;flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;
-    padding:16px 14px 14px;margin-bottom:8px;border-radius:var(--r-md);
+  /* ⚠ min-height 가 있어야 **잠긴 난이도에서 판이 확 줄지 않는다** — 판이 줄면 위 스테퍼가
+     따라 내려와 난이도를 넘길 때마다 이름이 위아래로 튄다(실제로 그랬다). */
+  #soloDiffPanel .sdDet{position:relative;flex:none;display:flex;flex-direction:column;justify-content:center;gap:12px;
+    min-height:200px;padding:15px 14px 14px;margin-bottom:0;border-radius:var(--r-md);
     background:linear-gradient(180deg,#0d0d0d,#050505);
     border:1px solid rgba(var(--dcRGB,60,62,70),.22);
     box-shadow:inset 0 0 30px -18px var(--dc,#fff)}
   #soloDiffPanel .sdDet::before{content:'';position:absolute;left:9%;right:9%;top:0;height:1px;z-index:0;pointer-events:none;opacity:.75;
     background:linear-gradient(90deg,transparent,var(--dc,#fff),transparent);box-shadow:0 0 7px -1px var(--dc,#fff)}
   #soloDiffPanel .sdDet>*{position:relative;z-index:1}
-  /* 상세 머리 = 지금 고른 맵(썸네일 + 이름) — 두 팝업이 한 흐름으로 읽히고, 빈 칸도 메운다 */
-  .sdMap{flex:none;display:flex;align-items:center;gap:9px;padding-bottom:11px;margin-bottom:2px;
-    border-bottom:1px solid rgba(255,255,255,.06)}
+  /* 맵 머리줄 — 2026-08-27 에 **상세 판 안에서 화면 머리줄로 올라갔다**(D8).
+     맵 → 난이도 → 종족 세 화면 내내 같은 자리에 있어 한 줄기로 읽힌다. */
+  .sdMap{display:flex;align-items:center;gap:9px}
   .sdMap .moThumb{width:38px;height:38px;flex:none}
   .sdMap .sdMapTx{flex:1;min-width:0;display:flex;flex-direction:column}
   .sdMap b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sdMap em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* ⚠ overflow:hidden 없이 두면 설명 줄이 시작 버튼 위로 흘러 잘린 것처럼 보인다(2026-08-19) */
-  .sdBody{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  .sdBody{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  /* ── 🎁 보상 미리보기(P4) — 머리줄 + 재화 두 줄. 판을 겹치지 않는다(테두리 한 겹) ──
+     ⚠ 시간은 **머리줄이 갖는다** — 아래 세 줄로 늘어놓으면 캠프가 세 번째 재화처럼 보인다.
+     ⛔ 수량만 크게 두지 말 것: 캠프 경제는 지수라 절대값이 며칠 뒤엔 뜻을 잃는다
+        (DESIGN §「같은 자로 재기」) — 시간이 그 자다. */
+  .sdRw{display:flex;flex-direction:column;gap:7px}
+  .sdRwHd{display:flex;align-items:baseline;gap:8px}
+  .sdRwHd .lab{font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em;color:#a8b3c0}
+  .sdRwHd .fill{flex:1;height:1px;background:rgba(255,255,255,.10);transform:translateY(-3px)}
+  .sdRwHd .t{font-family:var(--font-num);font-size:14px;font-weight:700;color:#8fe3ff;white-space:nowrap}
+  .sdRwHd .t small{font-size:10.5px;opacity:.8;margin-left:1px}
+  .sdRwList{display:flex;flex-direction:column;padding:1px 2px}
+  .sdRwRow{display:flex;align-items:center;gap:9px;height:34px}
+  .sdRwRow+.sdRwRow{border-top:1px solid rgba(255,255,255,.06)}
+  .sdRwRow .ric{width:20px;height:20px;flex:none;display:block;object-fit:contain}
+  .sdRwRow .nm{font-size:var(--fs-md);color:#a8b3c0}
+  .sdRwRow .v{margin-left:auto;font-family:var(--font-num);font-size:19px;font-weight:700;color:#eef2f6}
+  .sdHr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
   .sdStats{display:flex;justify-content:center;gap:22px}
   .sdStat{text-align:center}
   .sdStat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96}
@@ -320,8 +371,12 @@
      ⛔ 난이도 색으로 물들이지 말 것 — 고를 때마다 확정 버튼 색이 바뀌면 '무엇이 확정인지'가 흔들린다.
         난이도 색은 위 스테퍼와 상세 판(선·빛)이 이미 말해 준다.
      ⚠ 공용 .actBtn 규칙이 이 블록보다 **아래**에 있어 같은 특이도면 진다 → ID 를 붙인다. */
-  #soloDiffPanel .sdGo{flex:none;width:100%;height:50px;margin-top:12px}
-  /* 무한 모드 = 난이도 밖의 별개 모드. 한 줄로 두되 보라 광원 하나로만 구분한다 */
+  /* ⛔ 난이도 화면의 무한 모드 **별도 줄은 2026-08-27 에 없앴다** — 스테퍼 마지막 칸으로 들어갔다.
+     「무한은 난이도 축이 아니다(노말 고정)」던 옛 결정을 뒤집은 것이다: 플레이어가 보기엔
+     FINAL 다음이 무한이라 사다리 한 줄로 읽히고, 하단에 쌓이던 칩도 하나 사라진다.
+     ⛔ 취소 버튼도 없앴다 — 나가기는 머리줄 ✕(.sdX)가 맡는다(B5안).
+     ⚠ 그런데 `.sdInf` 클래스 자체는 **방 만들기(#cpInfBtn)가 아직 쓴다** — 규칙을 지우면 그 화면이
+        무너진다(실제로 한 번 무너뜨렸다). 아래는 그쪽 전용으로 남긴 것이다. */
   .sdInf{position:relative;flex:none;width:100%;height:42px;margin-bottom:8px;padding:0 13px;cursor:pointer;overflow:hidden;
     display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;
     border:1px solid transparent;border-radius:var(--r-bar);
@@ -334,20 +389,19 @@
   .sdInf.lk{cursor:default}
   .sdInf.lk::before{background:#4a525e;box-shadow:none}
   .sdInf.lk b{color:#7f8a98}
-  #soloDiffPanel .cpTitle{margin-bottom:10px}
-  #soloDiffPanel .pickHint{margin-bottom:8px;color:#8a8a8a}
-  /* 취소 = 하위 단계. 공용 .actBtn 기본형(중립 밑변) 그대로 — 판이 같아서 시작과 '같은 줄'로 읽히고,
-     위계는 밑변 광원의 색·세기만으로 갈린다. 여기서 덮는 건 높이뿐이다. */
-  #soloDiffPanel .cpBtns{flex:none}
-  #soloDiffPanel .cpBtns .actBtn{height:40px}
-  /* ⚠ 난이도 팝업 바로 다음에 뜬다 — 딤·껍데기·폭이 다르면 두 장면이 덜컹인다. 같은 값을 쓴다. */
-  #raceSelPanel{position:absolute;inset:0;z-index:54;display:flex;align-items:center;justify-content:center;
-    background:var(--popDim);backdrop-filter:blur(3px)}
-  #raceSelPanel .cpCard{width:var(--popW);max-width:var(--popMaxW);padding:20px 16px 16px}
-  #raceSelPanel .cpCard::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.14;
-    background:radial-gradient(78% 34% at 50% 0%,var(--mapAccent,#4aa8ff),transparent 70%)}
-  #raceSelPanel .cpCard>*{position:relative;z-index:1}
+  #soloDiffPanel .sdGo{flex:none;width:100%;height:50px;margin-top:0}
+  /* ⚠ 난이도 화면 **바로 다음**에 뜬다 — 껍데기가 다르면 그 자리에서 덜컹인다.
+     그래서 전체 화면 부품(.sdArt/.sdScr/.sdMap/.sdX/.sdBlk/.sdGo)을 **그대로 빌린다**.
+     ⛔ 여기 전용 껍데기를 새로 만들지 말 것. */
+  #raceSelPanel{position:absolute;inset:0;z-index:64;display:block;background:#04050b;padding:0}
   #raceSelPanel.hide{display:none}
+  #raceSelPanel::before{content:'';position:absolute;left:0;right:0;top:0;height:118px;z-index:1;pointer-events:none;
+    background:linear-gradient(180deg,rgba(3,5,9,.80) 0%,rgba(3,5,9,.42) 48%,transparent 100%)}
+  #raceSelPanel .sdMap b{font-size:var(--fs-lg);font-weight:700;color:#eef2f6;text-shadow:0 1px 4px #000}
+  #raceSelPanel .sdMap em{font-style:normal;font-size:var(--fs-xs);color:#7d8b98;margin-top:2px;text-shadow:0 1px 3px #000}
+  #raceSelPanel .sdGo{flex:none;width:100%;height:50px;margin-top:0}
+  /* 목록은 아래 블록 안에서 자기 높이만 갖는다(가운데를 그림에 내준다) */
+  #raceSelPanel .sdBlk{gap:10px}
   /* ── 종족 선택 = 캠프(.crRow)의 행 문법 + 「고른 행을 종족색이 물들인다」 (2026-08-27 · S3안) ──
      ⛔ 전체 화면(캠프 방식)으로 만들지 말 것 — 판마다 고르는 선택이라 무게가 안 맞고,
         종족 전장 그림이 3장뿐인데 여긴 5종족이다(페럴·콜로서스가 빈 배경이 된다).

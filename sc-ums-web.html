@@ -229,28 +229,39 @@
     </div>
 
     <!-- 개인 플레이: 난이도 선택 팝업(선택 즉시 게임 시작) -->
+    <!-- 난이도 선택 = 전체 화면(2026-08-27). 맵 키 아트 한 장 + 국소 스크림 + --loadDim —
+         로딩·로그인이 쓰는 그 공식이다. 나가기는 머리줄 ✕ 가 맡고 아래는 시작 하나뿐이다. -->
     <div id="soloDiffPanel" class="hide">
-      <div class="cpCard">
-        <div class="cpTitle">난이도 선택</div>
-        <div class="pickHint">개인 플레이 · 난이도를 고르고 시작하세요</div>
-        <!-- 위에서 고르고(공용 세그먼트 바) 아래에서 확인 후 시작 — 목록을 훑지 않고 한 칸씩 비교한다 -->
-        <div class="sdNav" id="sdNav"></div>
-        <div class="sdDet" id="sdDet"></div>
-        <!-- 무한 모드는 난이도가 아니다(노말 고정) — 탭에 끼우지 않고 별도 줄로 둔다 -->
-        <button class="sdInf hide" id="sdInf" onclick="sdStartInf()"></button>
-        <div class="cpBtns"><button class="actBtn" onclick="closeSoloDiff()">취소</button></div>
+      <div class="sdArt" id="sdArt"></div>
+      <div class="sdScr">
+        <div class="sdMap">
+          <span class="moThumb" id="sdThumb"></span>
+          <span class="sdMapTx"><b id="sdMapNm"></b><em id="sdMapDs"></em></span>
+          <button class="sdX" onclick="closeSoloDiff()" aria-label="닫기" title="닫기">
+            <svg viewBox="0 0 24 24"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="sdMid"><div class="sdNav" id="sdNav"></div></div>
+        <div class="sdBlk">
+          <div class="sdDet" id="sdDet"></div>
+          <button class="actBtn pri sdGo" id="sdGo" onclick="sdStart()"></button>
+        </div>
       </div>
     </div>
     <!-- 종족 선택(컴퓨터가 싸운다): 맵→종족→난이도 -->
+    <!-- 종족 선택 = 난이도 화면과 **같은 어법**(전체 화면 · 맵 키 아트 · 머리줄 ✕ · 아래는 시작 하나).
+         둘은 0.2초 간격으로 이어져 뜬다 — 껍데기가 다르면 그 자리에서 덜컹인다. -->
     <div id="raceSelPanel" class="hide">
-      <div class="cpCard">
-        <div class="cpTitle">종족 선택</div>
-        <div class="pickHint">선택한 종족으로 게임을 플레이합니다</div>
-        <div class="raceSelBtns" id="raceSelBtns"></div>
-        <!-- 고르고 → 확정. 캠프 종족 선택과 같은 두 단계다(오탭으로 시작되지 않는다). -->
-        <div class="cpBtns col">
-          <button class="actBtn pri" id="raceGo" onclick="raceConfirm()"></button>
-          <button class="actBtn" onclick="closeRaceSelect()">취소</button>
+      <div class="sdArt" id="rsArt"></div>
+      <div class="sdScr">
+        <div class="sdMap">
+          <span class="moThumb" id="rsThumb"></span>
+          <span class="sdMapTx"><b id="rsMapNm"></b><em>종족을 고르고 시작하세요</em></span>
+          <button class="sdX" onclick="closeRaceSelect()" aria-label="닫기" title="닫기">
+            <svg viewBox="0 0 24 24"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <div class="sdBlk">
+          <div class="raceSelBtns" id="raceSelBtns"></div>
+          <button class="actBtn pri sdGo" id="raceGo" onclick="raceConfirm()"></button>
         </div>
       </div>
     </div>
