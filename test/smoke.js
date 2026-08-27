@@ -1718,6 +1718,24 @@ async function groupLobby(){
       { if(typeof campFoeId==='function' && typeof SB_ATK_MODE!=='undefined'){
           for(let i=0;i<40;i++){ const id=campFoeId();
             if(id) assert(SB_ATK_MODE[id]!=='air','공중 전용 적이 뽑혔다: '+id); } } }
+      // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
+      //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).
+      if(typeof campFoeTierOf==='function'){
+        const S=campState(), keep=S.cleared|0;
+        const sample=(r,n)=>{ S.cleared=Math.max(0,r-1); const c={t1:0,t2:0,t3:0,x:0};
+          for(let i=0;i<n;i++){ const id=campFoeId(); const t=campFoeTierOf(id); c[t?('t'+t):'x']++; }
+          S.cleared=keep; return c; };
+        { const c=sample(5,120);
+          assert(c.t1===120,'R5 는 T1 만 나와야 한다: '+JSON.stringify(c)); }
+        { const c=sample(20,300);   // T1 60 / T2 40
+          assert(c.t3===0,'R20 에 T3 가 나왔다: '+JSON.stringify(c));
+          assert(c.t1>c.t2,'R20 에서 T1 이 T2 보다 많아야 한다: '+JSON.stringify(c));
+          assert(c.t2>300*0.25,'R20 에 T2 가 너무 적다(40% 여야): '+JSON.stringify(c)); }
+        { const c=sample(45,300);   // T2 40 / T3 60
+          assert(c.t1===0,'R45 에 T1 이 나왔다: '+JSON.stringify(c));
+          assert(c.t3>c.t2,'R45 에서 T3 가 T2 보다 많아야 한다: '+JSON.stringify(c)); }
+        // ⛔ 어느 구간에서도 공중 전용은 안 나온다
+        assert(campFoePool(['hellfire','marine']).indexOf('hellfire')<0,'공중 전용이 풀에 남아 있다'); }
       // ⚔ **캠프 전용 능력치** — §3-1/§3-A/§3-B 가 단일 소스. 인구만 코드가 이긴다.
       //    ⛔ U · STK_UNITS · TECH_SPEC 을 고치면 멀티 대전과 오각형 상성이 같이 바뀐다.
       //      소환된 개체 값만 덮어야 한다.

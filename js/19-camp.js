@@ -789,14 +789,55 @@ function campTrimArmy(){
 //   (아군 화력병 20기 전부 gnd 전용). 적 본부는 이미 부쉈는데 게임이 멈췄다.
 // ⚠ 공중 유닛 자체는 남긴다 — skyguard·dreadnought·medusa 는 공중이면서 지상을 친다.
 //   전부 빼면 대공이라는 축이 사라진다(HUNT_R1 §6-2-0).
+// ── 🎖 적 티어 구성 (HUNT_R1 §6-2-0 · 2026-08-28) ────────────────────────
+// ⛔ **뽑기로 섞으면 라운드 시간이 20배까지 흔들린다.** 실측(2026-08-27): 같은 구간에서
+//   2.6초와 59.7초가 섞여 나왔다. 평균을 어디에 두든 그 위에서는 어떤 목표도 못 지킨다.
+//   그래서 라운드 구간마다 **어느 티어가 몇 %인지**를 못 박는다.
+// ⚠ 유니온·스웜은 §6-2-0 표 그대로다. **에테리얼·페럴·콜로서스는 설계표가 없어
+//   내가 나눈 것이다**(가격·역할 순) — 표가 나오면 바꿀 것.
+const CAMP_FOE_TIER = {
+  terran:   { t1:['ghost','marine','machinegun'], t2:['racer','goliath','tank'], t3:['skyguard','dreadnought'] },
+  zerg:     { t1:['broodling','snapper'], t2:['hydra','thornqueen'], t3:['medusa','matron','ultralisk'] },
+  protoss:  { t1:['blade','dark_templar'], t2:['dragoon','archon','falcon'], t3:['skydancer','kronos','archangel'] },
+  feral:    { t1:['wolfrunner','thornspitter','clawfighter'], t2:['hornedcharger','howlslinger','stalkercat','venomfang'], t3:['alphawolf','wyvernrider','skytalon','stormroc'] },
+  colossus: { t1:['gunner','guardwalker'], t2:['twincannon','flakbattery','railgun'], t3:['arclight','siegecolossus','skylance'] } };
+// 라운드 구간별 티어 비율 — [최대라운드, t1, t2, t3]
+const CAMP_FOE_MIX = [[10, 100, 0, 0], [25, 60, 40, 0], [40, 25, 50, 25], [Infinity, 0, 40, 60]];
+function campFoeMix(r){
+  for(const row of CAMP_FOE_MIX) if(r <= row[0]) return row;
+  return CAMP_FOE_MIX[CAMP_FOE_MIX.length - 1];
+}
+// ⛔ **공중 전용은 적 풀에서 뺀다**(hellfire · stinger · venom — SB_ATK_MODE 가 'air').
+//   아군 지상군을 한 대도 못 때려서, 하나만 남아도 라운드가 영원히 안 끝난다(실측 R12).
+function campFoePool(ids){
+  const mode = (typeof SB_ATK_MODE !== 'undefined') ? SB_ATK_MODE : {};
+  return (ids || []).filter(function(id){ return (mode[id] || 'both') !== 'air'; });
+}
+// 이 id 가 몇 티어인가 — 없으면 0. (구성이 실제로 지켜지는지 재는 데 쓴다)
+function campFoeTierOf(id){
+  if(!id || !CAMPB) return 0;
+  const T = CAMP_FOE_TIER[CAMPB.ai.race] || CAMP_FOE_TIER.terran;
+  if(T.t1.indexOf(id) >= 0) return 1;
+  if(T.t2.indexOf(id) >= 0) return 2;
+  if(T.t3.indexOf(id) >= 0) return 3;
+  return 0;
+}
 function campFoeId(){
   if(typeof STK_RACES === 'undefined' || !CAMPB) return null;
-  const ids = ((STK_RACES[CAMPB.ai.race] || STK_RACES.terran).units) || [];
-  if(!ids.length) return null;
-  const mode = (typeof SB_ATK_MODE !== 'undefined') ? SB_ATK_MODE : {};
-  const ok = ids.filter(function(id){ return (mode[id] || 'both') !== 'air'; });
-  const pool = ok.length ? ok : ids;
-  return pool[(Math.random() * pool.length) | 0];
+  const race = CAMPB.ai.race;
+  const all = ((STK_RACES[race] || STK_RACES.terran).units) || [];
+  if(!all.length) return null;
+  const T = CAMP_FOE_TIER[race] || CAMP_FOE_TIER.terran;
+  const mix = campFoeMix(campRoundN());
+  // 비율대로 티어를 고르고, 그 티어가 비었으면 아래 티어로 내려간다(초반에 T3 만 있는 종족 대비)
+  const tiers = [campFoePool(T.t1), campFoePool(T.t2), campFoePool(T.t3)];
+  let roll = Math.random() * 100, pick = -1;
+  for(let i = 0; i < 3; i++){ roll -= mix[i + 1]; if(roll < 0){ pick = i; break; } }
+  if(pick < 0) pick = 2;
+  for(let i = pick; i >= 0; i--) if(tiers[i].length) return tiers[i][(Math.random() * tiers[i].length) | 0];
+  for(let i = pick + 1; i < 3; i++) if(tiers[i].length) return tiers[i][(Math.random() * tiers[i].length) | 0];
+  const fb = campFoePool(all);                    // 티어표에 없는 종족 — 예전처럼 통째로 뽑는다
+  return (fb.length ? fb : all)[(Math.random() * (fb.length ? fb.length : all.length)) | 0];
 }
 // 지금 있는 적을 내 병력이 때릴 수 있나 — 하나도 못 때리면 그 판은 끝이 없다.
 // ⚠ 누운(부활 대기) 병력도 센다 — 곧 일어나므로 성급하게 지면 안 된다.
