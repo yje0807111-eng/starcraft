@@ -410,8 +410,24 @@ const TECH_MINE_CROWD = 0.05;   // 광맥이 cap 을 넘을 때 1명당 채취 �
 function _techMinerCap(res){ const c = res && res.cap | 0; return c > 1 ? c : 1; }
 function _techMinerHas(res, eid){ return !!(res && res._miners && res._miners.indexOf(eid) >= 0); }
 function _techMinerN(res){ return (res && res._miners) ? res._miners.length : (res && res.miner != null ? 1 : 0); }
+// 🧹 **찜해 놓고 안 캐는 일꾼의 자리를 뺏는다.**
+// ⚠ 이걸 안 하면 일꾼이 많을 때 판이 통째로 굳는다 — 실측(2026-08-27): 관리자 탭에서
+//   일꾼 20기부터 **수입이 0** 이었다. 광맥 6개가 전부 찜(miner)돼 있는데 찜한 6명이 모두
+//   'go'(가는 중)에 머물러 아무도 캐지 않았다(목표까지 거리가 0 인데도).
+//   원인: 도착 판정이 d<=0.008 인데, 북적일 때 서로 밀리며 찜해 둔 일꾼이 그 문턱을 놓친다.
+//   찜은 남고 나머지는 자리가 없다며 기다리니 교착이 된다.
+// ⭐ 「지금 실제로 캐는 중(_gSt==='mine')이고 이 광맥에 배정된」 일꾼만 자리를 지킨다.
+function _techMinerSweep(res){
+  if(!res || !G.tech) return;
+  const ents=G.tech.ents;
+  const holds=(id)=>{ for(const w of ents){ if(w.eid!==id) continue;
+      return w.type==='worker' && w._gSt==='mine' && w._gEid===res.eid; } return false; };
+  if(res._miners){ for(let i=res._miners.length-1;i>=0;i--) if(!holds(res._miners[i])) res._miners.splice(i,1); }
+  if(res.miner!=null && !holds(res.miner)) res.miner=(res._miners&&res._miners[0]!=null)?res._miners[0]:null;
+}
 function _techMinerFull(res, eid){
   if(_techMinerHas(res, eid)) return false;                       // 이미 붙어 있으면 자리 있음
+  if(_techMinerN(res) > 0) _techMinerSweep(res);                  // 🧹 막혀 보이면 먼저 유령 찜을 걷는다
   // ⭐ cap 이 붙은 광맥(캠프)은 **막지 않는다** — cap 을 넘으면 대기가 아니라 **왕복이 느려진다**
   //   (HUNT_R1 §1: 덩이당 5기까지 제 속도, 초과분마다 +5%). 막아 버리면 일꾼 상한이
   //   6덩이×5=30 으로 굳어 설계의 40마리가 뜻을 잃는다.

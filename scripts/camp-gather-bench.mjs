@@ -41,17 +41,36 @@ const res=await pg.evaluate(async()=>{
       x:base.x+((i%8)-4)*cw*1.2, y:base.y+ch*3+Math.floor(i/8)*ch*1.2});
     if(typeof campAutoGather==='function') campAutoGather(); };
   const run=s=>{ const c0=T.credit; for(let t=0;t<s;t+=0.05) techTick(0.05); return (T.credit-c0)/s; };
-  const rows=[];
+  const rows=[]; let jam=null;
   for(const cap of [1,5]) for(const n of [6,12,20,40]){
     setW(n); for(const m of T.minerals) m.cap=cap;
-    run(90); rows.push({cap,n,rate:+run(60).toFixed(1)});
+    run(90); const _r=+run(60).toFixed(1); rows.push({cap,n,rate:_r});
+    if(_r===0 && !jam){                       // 🩺 수입 0 = 관리자 탭 버그 — 그 순간 일꾼 상태를 찍는다
+      const st={};
+      for(const w of T.ents){ if(w.type!=='worker') continue;
+        const k=(w._gKind||'none')+'/'+(w._gSt||'-')+(w._carry?'+carry':''); st[k]=(st[k]||0)+1; }
+      jam={ cap, n, states:st,
+        nodes:T.minerals.map(m=>({ miner:m.miner==null?'-':m.miner, n:(m._miners&&m._miners.length)|0 })),
+        sample:T.ents.filter(w=>w.type==='worker').slice(0,3).map(w=>({
+          kind:w._gKind, st:w._gSt, carry:!!w._carry, working:!!w._working,
+          pos:(+w.x.toFixed(3))+','+(+w.y.toFixed(3)),
+          spot:w._gSpot?((+w._gSpot.x.toFixed(3))+','+(+w._gSpot.y.toFixed(3))):null,
+          dist:w._gSpot?+Math.hypot(w._gSpot.x-w.x, w._gSpot.y-w.y).toFixed(4):null })) };
+    }
   }
-  return { 광맥:T.minerals.length, cap상수:(typeof CAMP_MINE_CAP!=='undefined'?CAMP_MINE_CAP:null), rows };
+  return { jam, 광맥:T.minerals.length, cap상수:(typeof CAMP_MINE_CAP!=='undefined'?CAMP_MINE_CAP:null), rows };
 });
 console.log('광맥 '+res.광맥+'덩이 · CAMP_MINE_CAP='+res.cap상수+'\n');
 console.log('cap  일꾼   초당수입   일꾼당');
 for(const r of res.rows) console.log(String(r.cap).padStart(3)+String(r.n).padStart(6)
   +String(r.rate).padStart(11)+String((r.rate/r.n).toFixed(2)).padStart(9));
 const c1=res.rows.filter(r=>r.cap===1), c5=res.rows.filter(r=>r.cap===5);
+if(res.jam){ const J=res.jam;
+  console.log('');
+  console.log('🩺 수입 0 인 조합: cap'+J.cap+' 일꾼 '+J.n+'기');
+  console.log('  일꾼 상태 '+JSON.stringify(J.states));
+  console.log('  광맥 점유 '+JSON.stringify(J.nodes));
+  for(const w of J.sample) console.log('  샘플 '+JSON.stringify(w));
+}
 console.log('\ncap1 천장 '+Math.max(...c1.map(r=>r.rate))+'/초 · cap5 최대 '+Math.max(...c5.map(r=>r.rate))+'/초');
 await b.close(); server.close();

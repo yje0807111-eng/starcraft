@@ -1659,6 +1659,25 @@ async function groupLobby(){
       assert(got>0 && G.tech.credit>c2,'자리 비움 정산이 0');
       assert(got<=Math.ceil(2*600*CAMP_AWAY_EFF)+1,'정산이 과다: '+got);
       assert(campState().leftAt===0,'정산 후 leftAt 이 안 지워짐'); }
+    // ⛏ 🧹 **찜해 놓고 안 캐는 일꾼의 자리는 뺏긴다.**
+    //    ⚠ 광맥은 정해진 인원만 캘 수 있어 일꾼이 도착하면 자리를 「찜」한다. 북적일 때 찜한
+    //      일꾼이 도착 판정(d<=0.008)을 놓치면 찜만 남아 **아무도 못 캔다** — 실측(2026-08-27):
+    //      관리자 탭에서 일꾼 20기부터 수입이 **0** 이었다(광맥 6개 전부 찜, 찜한 6명 모두 'go').
+    //      캠프는 cap 5 라 자리가 남아 안 걸렸을 뿐이다.
+    { assert(typeof _techMinerSweep==='function','유령 찜 청소가 없다');
+      const m=(G.tech.minerals||[])[0];
+      if(m){ const bak={ms:m._miners, mi:m.miner};
+        m._miners=[999999]; m.miner=999999;              // 있지도 않은 일꾼이 찜한 상태
+        _techMinerSweep(m);
+        assert(!(m._miners&&m._miners.length),'캐지 않는 일꾼의 찜이 안 걷힌다');
+        assert(m.miner==null,'miner 가 유령인 채로 남는다');
+        const w=(G.tech.ents||[]).find(e=>e.type==='worker');
+        if(w){ const wb={st:w._gSt, eid:w._gEid};
+          w._gSt='mine'; w._gEid=m.eid; m._miners=[w.eid]; m.miner=w.eid;
+          _techMinerSweep(m);
+          assert(m._miners.length===1 && m.miner===w.eid,'캐는 중인 일꾼의 찜까지 걷어냈다');
+          w._gSt=wb.st; w._gEid=wb.eid; }
+        m._miners=bak.ms||[]; m.miner=bak.mi==null?null:bak.mi; } }
     // ⑧ 일꾼은 **자동으로** 광맥에 붙어 실제로 번다
     //    ⚠ 관리자 건설 탭은 사람이 클릭해야 캔다 — 캠프가 대신 눌러 주지 않으면 초당 수급이 0 이다.
     //    ⚠ 헤드리스는 rAF 가 throttle 되므로 techTick 을 직접 돌린다(hbStep 과 같은 방식).
