@@ -356,7 +356,16 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
     return out; })(), sk:__CB.sk||{}, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
-  dg:campDgN(), round:campRoundN(), reb:campCanRebirth() }));
+  dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
+  // 🔬 연구 내역 — 계열(레벨)과 단발(해금)을 갈라 본다. ⚠ 합계만 보면 둘을 못 가른다.
+  resBreak:(function(){ const T=G.tech, R=(T&&T.research)||{}, t=TECH_TREE[T.race]||{};
+    const tierK=new Set(), oneK={};
+    for(const b of (t.buildings||[])) for(const r of (b.research||[])){
+      if(r.tier) tierK.add(r.k); else oneK[r.k]=r.name||r.k; }
+    let tierN=0; const one=[];
+    for(const k in R){ const kk=k.replace(T.race+'_',''), v=(R[k]===true?1:(R[k]|0));
+      if(tierK.has(kk)) tierN+=v; else if(oneK[kk]) one.push(oneK[kk]); else if(kk!=='gasup') one.push(kk); }
+    return { tier:tierN, one:one }; })() }));
 const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
   return String(Math.round(n)); };
@@ -404,6 +413,8 @@ if(fin.jam){ const J=fin.jam;
 if(fin.dead) console.log('\n⛔ 판이 빈 순간: '+JSON.stringify(fin.dead));
 if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.stringify(fin.vanish));
 
+if(fin.resBreak) console.log(`\n■ 🔬 연구 내역 — 계열 업그레이드 ${fin.resBreak.tier}레벨 · 단발 해금 ${fin.resBreak.one.length}개`
+  + (fin.resBreak.one.length?('\n  '+fin.resBreak.one.join(' · ')):''));
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();
