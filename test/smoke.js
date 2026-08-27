@@ -713,6 +713,28 @@ async function groupLobby(){
       assert(c40>7.0e8&&c40<7.8e8,'40마리째가 설계(7.4억)와 다르다: '+c40);
       // ⭐ 31마리째부터 계단이 눕는다 — 안 그러면 40마리째가 424억이라 200회차에도 못 채운다
       assert(c40/c30 < 3,'후반 계단이 안 눕었다(×1.10 이어야): '+(c40/c30).toFixed(1)+'배'); }
+    // ⛽ **가스는 정제소가 스스로 캔다** (§2-3-1) — ⛔ 일꾼을 빼서 배치하는 방식이 아니다.
+    //    스타 원본과 다른 지점이라 헷갈리기 쉽다. 한 번 일꾼 1/4 을 가스로 보냈다가 되돌렸다.
+    if(typeof campGasTick==='function'){
+      const S=campState();
+      assert(campGasPerMin()===0,'정제소가 없는데 가스가 나온다: '+campGasPerMin());
+      const e0=G.tech.energy||0; campGasTick(60);
+      assert((G.tech.energy||0)===e0,'정제소가 없는데 가스가 쌓였다');
+      // 정제소를 세운 셈 치고 — 분당 (0.2 + 0.1×Lv)
+      const fake={ type:'bldg', bt:0, bk:(TECH_TREE[G.tech.race].buildings.find(b=>b.gas)||{}).k, eid:'gasT' };
+      if(fake.bk){ G.tech.ents.push(fake);
+        assert(Math.abs(campGasPerMin()-0.2*campMineMul()*campRtMul('gasMul'))<1e-9,
+          'Lv0 분당 생산이 0.2 가 아니다: '+campGasPerMin());
+        S.upg.refinery=10;
+        assert(Math.abs(campGasPerMin()-1.2*campMineMul()*campRtMul('gasMul'))<1e-9,
+          'Lv10 분당 생산이 1.2 가 아니다: '+campGasPerMin());
+        const g0=G.tech.energy||0; campGasTick(60);
+        assert(Math.abs((G.tech.energy||0)-g0-campGasPerMin())<1e-6,'1분 틱이 분당 생산과 다르다');
+        // 업그레이드 비용 = 3만 × 1.15^Lv (무릎 없음)
+        S.upg.refinery=0; const c0=campUpgCost('refinery'); S.upg.refinery=1; const c1=campUpgCost('refinery');
+        assert(Math.abs(c0/campUpgDisc()-30000)<1,'정제소 0→1 비용이 3만이 아니다: '+c0);
+        assert(Math.abs(c1/c0-1.15)<0.01,'정제소 비용 계단이 1.15 가 아니다: '+(c1/c0).toFixed(3));
+        S.upg.refinery=0; G.tech.ents.splice(G.tech.ents.indexOf(fake),1); G.tech.energy=e0; } }
     // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × 1.15^보유). 조합을 강제하는 유일한 장치다.
     if(typeof campSyncUnitCost==='function'){
       const T=TECH_TREE[G.tech.race], wk=TECH_WORKER[G.tech.race];

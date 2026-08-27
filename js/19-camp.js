@@ -96,7 +96,33 @@ function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg |
 //      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
 const CAMP_REB_COST = 1e6;        // 환생 관문 = 포인트 공식의 기준선과 같은 숫자
 const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가
-const CAMP_GAS_SHARE = 0.25;      // ⛽ 일꾼 중 가스로 보내는 비율(잠정 — 설계표 §2-3-2 나오면 교체)
+// ── ⛽ 정제소 자동 생산 (HUNT_R1 §2-3-1) ────────────────────────────────
+// ⭐ **일꾼을 빼서 배치하지 않는다.** 정제소가 스스로 캔다 — 스타 원본과 다르다.
+//   분당 = (0.2 + 0.1 × 정제소Lv) × 던전배율 · 업그레이드 비용 = 미네랄 3만 × 1.15^Lv
+// ⚠ 가스 값은 작다(전함 30 · 공성전차 10). 미네랄과 자릿수가 다르다는 것을 전제로 볼 것.
+const CAMP_REF_BASE = 0.2, CAMP_REF_STEP = 0.1;   // 분당 생산 — 기본 · 레벨당
+const CAMP_REF_COST0 = 30000, CAMP_REF_R = 1.15;  // 업그레이드 비용(미네랄)
+function campRefLv(){ return campUpgLv('refinery'); }
+function campHasRefinery(){
+  if(typeof G === 'undefined' || !G.tech) return false;
+  return (G.tech.ents || []).some(function(e){
+    return e.type === 'bldg' && (e.bt || 0) <= 0 && !e._dead
+        && ((typeof techGetBldg === 'function' ? (techGetBldg(G.tech.race, e.bk) || {}) : {}).gas); });
+}
+function campGasPerMin(){
+  if(!campHasRefinery()) return 0;                // 정제소를 지어야 나온다
+  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gasMul');
+}
+// ⚠ **campFrame 이 민다.** 프레임을 끄고 직접 미는 코드(벤치)는 이것도 같이 불러야 한다 —
+//   안 부르면 가스가 영영 0 이고, 가스가 드는 유닛을 한 기도 못 산다(실측으로 겪었다).
+function campGasTick(dt){
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  const per = campGasPerMin(); if(per <= 0) return 0;
+  const got = per / 60 * dt;
+  G.tech.energy = (G.tech.energy || 0) + got;
+  const C = campState(); if(C) C.earnGas = (C.earnGas || 0) + got;
+  return got;
+}
 const CAMP_REB_K = 0.8, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
 const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
 
@@ -1639,6 +1665,8 @@ function campUpgLv(k){ const C = campState(); return (C && C.upg && C.upg[k]) | 
 // 업그레이드 비용 — ⛔ 값은 여기 한 곳에서만 (campCost 와 같은 원칙)
 function campUpgCost(k){
   const lv = campUpgLv(k);
+  // ⛽ 정제소는 계단이 하나다(무릎 없음) — §2-3-1
+  if(k === 'refinery') return Math.max(1, Math.ceil(CAMP_REF_COST0 * Math.pow(CAMP_REF_R, lv) * campUpgDisc()));
   const base = (k === 'tap') ? CAMP_TAP_COST0 : CAMP_GAT_COST0;
   const r0 = CAMP_COST_R0[k] || CAMP_COST_R0.gather, r1 = CAMP_COST_R1[k] || CAMP_COST_R1.gather;
   const knee = Math.min(lv, CAMP_COST_KNEE);                    // Lv10 까지는 완만하게, 그 뒤로 가팔라진다
@@ -1777,18 +1805,9 @@ function campAutoGather(){
   const idle = (G.tech.ents || []).filter(function(w){
     return w.type === 'worker' && w.build == null && !w._gKind; });
   if(!idle.length) return 0;
-  // ⛽ **가스에도 붙인다.** 예전엔 일꾼을 전부 미네랄에만 보냈다 — 그래서 캠프의 가스 수입이
-  //   **0** 이었고, 가스가 드는 유닛(화력병·의무병·기갑병·공성전차…)을 한 기도 못 샀다.
-  //   실측(2026-08-27 · 3시간): 56분 동안 나온 유닛이 **레인저·레이서 둘뿐**이었다.
-  //   ⚠ 비율은 잠정이다 — 설계표(§2-3-2)가 정해지면 그 값으로 바꿀 것.
-  { const gb = (G.tech.ents || []).find(function(e){
-      return e.type === 'bldg' && (e.bt || 0) <= 0 && !e._dead
-          && ((typeof techGetBldg === 'function' ? (techGetBldg(G.tech.race, e.bk) || {}) : {}).gas); });
-    if(gb && typeof _techAssignGather === 'function'){
-      const onGas = (G.tech.ents || []).filter(function(w){ return w.type === 'worker' && w._gKind === 'gas'; }).length;
-      const want = Math.max(0, Math.round((G.tech.ents || []).filter(function(w){ return w.type === 'worker'; }).length * CAMP_GAS_SHARE) - onGas);
-      for(let i = 0; i < want && idle.length; i++) _techAssignGather([idle.shift()], 'gas', gb.eid);
-      if(!idle.length) return want; } }
+  // ⛔ **일꾼을 가스로 보내지 않는다** (HUNT_R1 §2-3-1 「생산 — 일꾼이 필요 없다」).
+  //   정제소가 **스스로** 캔다(campGasTick). 스타 원본과 다른 지점이라 헷갈리기 쉽다 —
+  //   실제로 한 번 일꾼 1/4 을 가스로 보냈다가 되돌렸다(2026-08-27).
   // ⛏ **덩이별로 고르게 나눈다.** 예전에는 전부 mins[0] 한 곳에 몰아넣었고,
   //   원본의 분산(_techAssignGatherMineral)은 cap 을 모르는 채 "차 있나"만 보므로
   //   일꾼이 많아지면 한 덩이에 쌓여 줄만 섰다 — 실측: 20기·40기에서 수입이 **0** 이었다.
@@ -1870,6 +1889,7 @@ function campFrame(now){
     campCombatStep(dt);                                           // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
+    campGasTick(dt);                                              // ⛽ 정제소 자동 생산
     campSyncHire(); campSyncSupply(); campSyncUnitCost();          // 👷🏠⚔ 일꾼·보급소·전투 유닛 다음 가격(보유 수에 따라)
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
   } finally { _campRectC = null; }   // ⛔ 프레임 밖으로 캐시를 들고 나가지 않는다(이벤트 핸들러가 낡은 값을 본다)
@@ -2330,6 +2350,12 @@ const CAMP_UNIT_PRICE = {
 // ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
 //   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
 const CAMP_UNIT_PRICE_MUL = 200;
+// ⛽ **유닛 가스는 §2-3-2 가 단일 소스다.** ⚠ 그 표의 「미네랄」 열은 §3-1 이전 값이라 무시한다
+//   (화력병 5,000 vs 10,000 · 저격수 3,000 vs 20,000 — 전부 다르다).
+//   **미네랄은 §3-1 · 가스는 §2-3-2.** 표에 없는 유닛은 가스가 안 든다.
+const CAMP_UNIT_GAS = {
+  machinegun:3, medic:3, goliath:5, ghost:8, tank:10, skyguard:10, hellfire:13,
+  pelican:10, aegis:10, dreadnought:30 };
 function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
   return (v != null) ? v : Math.round((m || 0) * CAMP_UNIT_PRICE_MUL); }
 function campUnitOwned(id){
@@ -2353,7 +2379,8 @@ function campSyncUnitCost(){
   for(const h of _campUnitHome){
     const base = campUnitBase(h.q.id, h.m);                    // 💰 설계표 값(없으면 일률 배수)
     h.q.m = campUnitCost(base, h.q.id);
-    h.q.g = h.g ? campUnitCost(h.g, h.q.id) : 0;               // 가스는 **원값**에만 ×1.15^보유(0 이면 0)
+    const gas = CAMP_UNIT_GAS[h.q.id];                         // ⛽ 설계표(§2-3-2) · 없으면 가스 안 듦
+    h.q.g = gas ? campUnitCost(gas, h.q.id) : 0;
   }
 }
 function campRestoreUnitCost(){
