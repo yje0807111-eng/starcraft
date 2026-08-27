@@ -1847,6 +1847,15 @@ async function groupLobby(){
       assert(Math.abs(td/(CAMP_FOE_ATK0*want)-1)<1e-6,'무리 총 공격이 목표와 다름: '+td);
       assert(Math.abs(mob[1].maxHp/mob[0].maxHp-r0)<1e-6,'유닛별 체력 차이가 사라졌다 — 통째로 덮어썼나');
       assert(mob[0].hp===mob[0].maxHp,'현재 체력이 상한과 다름');
+      // ⛔ **무리로 쪼개도 라운드 총량은 그대로다.** 예전엔 무리마다 총량을 통째로 줘서
+      //    6무리면 라운드 체력이 6배였다 — R24 가 설계 16초 대신 193초였다(실측 2026-08-28).
+      { const mk=()=>[{maxHp:40,maxSh:0,dmg:6},{maxHp:400,maxSh:0,dmg:30}];
+        const full=mk(); campScaleFoes(full, 1);
+        const whole=full.reduce((a,u)=>a+u.maxHp,0);
+        let split=0;
+        for(const sh of [0.5,0.25,0.25]){ const m=mk(); campScaleFoes(m, sh);
+          split+=m.reduce((a,u)=>a+u.maxHp,0); }
+        assert(Math.abs(split/whole-1)<1e-6,'쪼개서 낸 총 체력이 한 번에 낸 것과 다르다: '+split+' vs '+whole); }
       // ⑥ 0단계(캠프)에는 난이도가 없다
       assert(campFoeDiff(0,0)===1,'캠프에 난이도가 붙었다: '+campFoeDiff(0,0));
       return '문턱 ×'+CAMP_DG_STEP+' · 라운드밑 '+campRBase(1).toFixed(3)+'→'+campRBase(10).toFixed(3)

@@ -901,14 +901,19 @@ function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') re
   CAMPB._wq = [];
   for(let i = 0; i < w; i++) CAMPB._wq.push(per + (i < rem ? 1 : 0));
   CAMPB._wqT = 0;
+  CAMPB._wqTot = n;                              // ⚠ 라운드 전체 마리 수 — 무리마다 몫을 나누는 데 쓴다
   return campSpawnWave(); }                       // 첫 웨이브는 곧바로
 // 대기 중인 웨이브 한 묶음을 내보낸다
 function campSpawnWave(){
   if(!CAMPB || !CAMPB._wq || !CAMPB._wq.length) return 0;
   const k = CAMPB._wq.shift();
+  // ⛔ **무리마다 라운드 총량을 통째로 주면 안 된다.** 6무리로 쪼개면 라운드 총 체력이 6배가 된다 —
+  //   실측(2026-08-28): 적 체력 1,300 을 넣었더니 R24 가 설계 16초 대신 **193초**였다.
+  //   ⭐ 라운드 총량 = CAMP_FOE_HP0 × 난이도. 각 무리는 **마리 수 비율만큼**만 가져간다.
+  const share = (CAMPB._wqTot > 0) ? (k / CAMPB._wqTot) : 1;
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
     for(let i = 0; i < k; i++) strikeSpawnUnit('ai', campFoeId());   // ⛔ 공중 전용은 뽑지 않는다
-    campScaleFoes(CAMPB.ai.units.slice(b4));
+    campScaleFoes(CAMPB.ai.units.slice(b4), share);
     return CAMPB.ai.units.length - b4; }) | 0; }
 // 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
 function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
@@ -916,16 +921,18 @@ function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 // 갓 스폰된 적을 이번 라운드 난이도에 맞춘다.
 //   ⭐ 개체 값을 통째로 덮어쓰지 않고 **무리 전체의 기본값 합** 대비 배율로 민다 —
 //      그래야 탱크가 마린보다 단단하다는 유닛별 차이가 살아남는다.
-function campScaleFoes(list){
+// share = 이 무리가 라운드 총량에서 가져갈 몫(0~1). 한 번에 다 낼 때는 1.
+function campScaleFoes(list, share){
   if(!list || !list.length) return 0;
+  const sh = (share > 0) ? share : 1;
   campDesignStats(list);                          // ⚔ 설계 능력치 먼저 — 그 뒤에 난이도 정규화가 총량을 맞춘다
   const diff = campFoeDiff(campDgN(), campCleared());
   let hp0 = 0, dmg0 = 0;
   for(const u of list){ hp0 += (u.maxHp || 0) + (u.maxSh || 0); dmg0 += (u.dmg || 0); }
   // 🌳 트리 「적 약화」 갈래 — 계열마다 −40% · 갈래 전체 실효 하한 ×0.2(HUNT_R1 §4-5-4)
   const cut = campRtFoeMul();
-  const hpMul  = hp0  > 0 ? (CAMP_FOE_HP0  * diff * cut) / hp0  : 1;
-  const dmgMul = dmg0 > 0 ? (CAMP_FOE_ATK0 * diff * cut) / dmg0 : 1;
+  const hpMul  = hp0  > 0 ? (CAMP_FOE_HP0  * diff * cut * sh) / hp0  : 1;
+  const dmgMul = dmg0 > 0 ? (CAMP_FOE_ATK0 * diff * cut * sh) / dmg0 : 1;
   const rCap = campFoeRngCap();                     // 🎯 사거리 상한(아래 설명)
   for(const u of list){
     u.maxHp = u.maxHp * hpMul; u.hp = u.maxHp;
