@@ -498,6 +498,23 @@
      인원 15 → 12px · 상태 9.5 → 8px(방장 8.5px 보다도 아래 — 상태는 색이 이미 말한다). */
   #rooms .riCnt{font-size:12px}
   #rooms .riStat{font-size:8px}
+  /* ══ 광학 정렬 — 상자가 아니라 **글자가** 맞아야 한다 (2026-08-26) ══════════
+     증상: 「대기중」이 인원수보다 내려가 보이고, 자물쇠는 제목보다 올라가 보인다.
+     ⛔ 원인은 flex 정렬이 아니다 — 재 보면 상자 중심(boxMid)은 다섯 개가 **전부 같다**.
+     실제 원인: **글꼴마다 잉크가 상자 안에서 앉는 높이가 다르다.** 측정값(canvas measureText 의
+     fontBoundingBox 로 baseline 을 구하고 actualBoundingBox 로 잉크를 잰 값, 상자 중심 대비):
+        NotoKR 13px (제목)      +1.5px  ← 한글은 아래 여백이 커서 잉크가 내려앉는다
+        NotoKR  8px (상태)      +0.5px
+        Rajdhani (번호·인원)     ±0     ← 숫자 글꼴은 거의 정중앙
+        Rajdhani 9.5px (배지 글자) −1px
+        자물쇠 그림              ±0     (webp 위아래 여백 4.7% 대칭 — 그림 잘못이 아니다)
+     그래서 **제목의 잉크 중심을 기준선으로** 삼고 나머지를 그만큼 내려 맞춘다.
+     오른쪽은 인원(숫자)이 기준이라 상태만 0.5px 올린다.
+     ⛔ 이 값들을 눈대중으로 고치지 말 것. 글꼴이나 크기를 바꿨으면 다시 **재서** 갱신한다. */
+  #rooms .riDiff{position:relative;top:2.5px}
+  #rooms .riLock{position:relative;top:1.5px}
+  #rooms .riNum{position:relative;top:1.5px}
+  #rooms .riStat{position:relative;top:-.5px}
   .rmBtns{display:flex;gap:9px;margin-top:14px;align-items:center}
   /* ⚠ 공용 .actBtn 의 좌우 여백(14px)을 그대로 두면 '파티 만들기'가 두 줄로 접힌다 — 여기선 조인다 */
   .rmBtns .actBtn{flex:1;min-width:0;height:46px;padding:0 6px;white-space:nowrap}
