@@ -501,9 +501,7 @@ function hbSyncChar(heal){ if(!_hb||!_hb.char) return null;
 function hbProg(dg,round){ return (Math.max(1,dg||1)-1)*HB_ROUND_MAX + Math.max(1,round||1); }
 // ⚠ 아래 넷은 '던전 시작까지의 누적 배수'다 — hbCurve(base,dg,1) 과 같다(옛 이름 호환).
 function HB_DG_HP (dg){ return hbCurve(HB_ROUND_HP , dg, 1); }   // 적 체력
-function HB_DG_ATK(dg){ return hbCurve(HB_ROUND_ATK, dg, 1); }   // 적 공격
 function HB_DG_REW(dg){ return hbCurve(HB_ROUND_REW, dg, 1); }   // 재화 보상
-function HB_DG_XP (dg){ return hbCurve(HB_ROUND_XP , dg, 1); }   // 경험치
 function HB_DG_MUL(dg){ return HB_DG_HP(dg); }             // 옛 이름 호환
 // ── 📈 라운드 곡선 = 지수(2026-08-18). 레벨 1회에 포인트 1 = +50% 라 성장이 폭발적이고,
 //    옛 선형 곡선(체력 14+5R)으로는 몇 라운드 만에 저항이 사라졌다. 그래서 적도 같이 지수로 올린다.
@@ -553,8 +551,6 @@ function hbCurve(base, dg, round){
     for(let d=1; d<dg; d++) head*=Math.pow(hbRoundRate(base,d), HB_ROUND_MAX);
     _hbCurveC[key]=head; }
   return head*Math.pow(hbRoundRate(base,dg), Math.max(0,(round||1)-1)); }
-// 옛 이름 — 던전 1 기준. ⛔ 새 코드는 hbCurve 를 쓸 것(던전 기울기를 반영한다).
-function hbRoundK(mul,round){ return Math.pow(mul, Math.max(0,(round||1)-1)); }
 // 라운드 한 판 목표 40~60초(3웨이브). 웨이브가 갈수록 조금씩 두꺼워진다.
 function hbFoeCount(round,w){ return 3+Math.floor(round*0.4)+w; }
 function hbFoeHp(dg,round,w){ return (15+w*3)*hbCurve(HB_ROUND_HP,dg,round)*hbRoundS(round); }
@@ -2850,7 +2846,6 @@ let _mgPick=null;   // 상태창: {kind,id}
 let _mgSwap=null;   // 교체 대상 고르는 중: {kind,id} — 상단 세 칸이 빨갛게 변한다
 let _mgMix=null;    // 합성 팝업: {kind,id,sel:{재료id:개수}}
 function _mgReset(){ _mgPick=null; _mgSwap=null; _mgMix=null; }
-function _mgK(){ return _gearTab==='pet' ? 'pet' : 'ally'; }
 
 // ── 상단 한 줄 ──
 // 아직 안 산 칸 — 무엇을 내면 열리는지 그 줄에서 바로 보여 준다
@@ -3029,8 +3024,6 @@ function bagScrollHint(){   // 장비창은 마을 팝업·정비 화면 두 곳
   s.classList.toggle('more', b.scrollHeight-b.scrollTop-b.clientHeight>4); }
 function closeTownPanel(){ popHide('townPanel'); _twZone=null; _gearPick=null; _gearSel=null; }
 
-function twApplyChar(){ const c=CHAR(), b=document.querySelector('#twAvatar .twAvBody');   // 아바타 겉모습 = 현재 캐릭터 종류
-  if(b) b.textContent=(c && PROF_CLASSES[c.cls] && PROF_CLASSES[c.cls].ico) || '🧍'; }
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
 // 광장: 캐릭터 요약(스탯 조작은 캐릭터 화면이 맡는다)
 function renderProfStats(){ const c=CHAR(); if(!c) return '<div class="twHead">캐릭터가 없습니다.</div>';
@@ -3324,7 +3317,6 @@ function profSlotTap(slot){ const g=PROF_GEAR[slot];
   _gearPick=slot; _gearSel=CHAR().unit.gear[slot]||null;
   if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
 function profSelItem(iid){ _gearSel=(_gearSel===iid)?null:iid; if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
-function profPickSlot(slot){ profSlotTap(slot); }        // 예전 이름 유지(외부 호출)
 function profPickBack(){ _gearPick=null; _gearSel=null; if(typeof playSfx==='function') playSfx('ui_close'); refreshTownPanel(); }
 function profDoEquip(iid){ if(!profEquipItem(iid)) return; if(typeof playSfx==='function') playSfx('ui_open');
   renderTownBar(); refreshTownPanel(); }

@@ -224,8 +224,6 @@ function hbSetRound(n){ const H=hbHunt(), best=hbBest(H.dg);
     _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
   if(typeof playSfx==='function') playSfx('ui_open');
   hbHud(); return true; }
-// 목록에서 고르기 = 이동 + 시트 닫기
-function hbGoRound(n){ hbSetRound(n); renderRoundSheet(); hbCloseRounds(); }
 // ◀▶ ±1 — 가장 잦은 동작이라 시트를 거치지 않는다. 1 ~ 최고 도달 사이로 가둔다.
 function hbRoundStep(d){ const H=hbHunt(), cur=(_hb?_hb.round:(H.round||1));
   if(hbSetRound(cur+(d|0)) && !document.getElementById('hbRoundSheet').classList.contains('hide')) renderRoundSheet(); }

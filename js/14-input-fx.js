@@ -694,25 +694,11 @@ function drawBattleGround(ctx,W,H){   // ⚔ 전용 전장: 어두운 격전지 
   ctx.save(); ctx.globalAlpha=0.55; ctx.font='bold 10px '+FONT_NUM; ctx.textBaseline='top';
   ctx.fillStyle='#7fb0ff'; ctx.textAlign='left'; ctx.fillText('◈ 아군 배치', 8, 8);
   ctx.fillStyle='#ff8a8a'; ctx.textAlign='right'; ctx.fillText('적 더미 ▶', W-8, 8); ctx.restore(); }
-// ⚔ 아군 배치 피커(전투실험 탭) — 종족별 유닛 버튼. 누르면 전장 좌측 진형에 추가
-function _btPickerHTML(addFn){ let html=''; if(typeof SANDBOX_ROSTER==='undefined') return html;
-  SANDBOX_RACE_ORDER.forEach(function(race){ const arr=SANDBOX_ROSTER[race]||[]; if(!arr.length) return;
-    html+='<div class="btpRaceHead">'+(SANDBOX_RACE_KO[race]||race)+'</div>';
-    arr.forEach(function(it){ const disp=it.gm||it.b, sid=((it.gm&&typeof U[it.gm]!=='undefined')?it.gm:it.b);
-      html+='<button class="btpCard" onclick="'+addFn+'(\''+sid+'\',\''+(it.gm||'')+'\',\''+it.n+'\')"><span class="btpPic">'+((typeof unitPortraitHTML==='function')?unitPortraitHTML(disp):'')+'</span><span class="btpNm">'+it.n+'</span></button>'; }); });
-  return html; }
 function _btRosterFlat(){ const out=[]; if(typeof SANDBOX_ROSTER==='undefined') return out;
   (typeof SANDBOX_RACE_ORDER!=='undefined'?SANDBOX_RACE_ORDER:Object.keys(SANDBOX_ROSTER)).forEach(function(race){ (SANDBOX_ROSTER[race]||[]).forEach(function(it){ out.push(it); }); }); return out; }
 function _btModelStats(u, gm){ const d=Udef(gm); if(!d) return; const m=(u.hero?HERO_STAT_MUL:1)*gachaTierMul(u);   // 전투실험 전용: HP/실드/에너지도 gmodel 기준 → 공격 정의와 일치(프랑켄슈타인 방지)
   u.maxHp=Math.round((d.hp||0)*m); u.hp=u.maxHp; u.maxSh=Math.round((d.shield||0)*m); u.sh=u.maxSh; u.maxEn=d.energy||0; u.en=u.maxEn;
   if((d.shield||0)>0){ const _s=_upgShield(u); if(_s){ u.maxSh+=_s; u.sh=u.maxSh; } } }   // 🛡 에테리얼 실드 티어(생성 시 적용 · 무기/방어는 라이브)
-function btAdd(sid, gm, name){ if(typeof G==='undefined') return; G.btUnits=G.btUnits||[]; if(G.idSeq==null) G.idSeq=1;
-  const n=G.btUnits.filter(u=>u.team!=='foe').length, c=n%4, r=(n/4)|0;   // 아군만 카운트 → 좌측 격자
-  const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.10+c*0.05, y:0.44+r*0.052, cd:0, fixed:false});
-  if(gm){ u.gmodel=gm; _btModelStats(u, gm); } u.gname=name;
-  if(u.maxEn>0) u.en=Math.min(50,u.maxEn);   // 🔮 마나: 마법 유닛 생산 직후 50(SC) → stepSkills가 자연 회복
-  G.btUnits.push(u); if(G.tab==='Battle') G.units=G.btUnits;   // 전투실험 중이면 즉시 전장에 반영
-  if(typeof toast==='function') toast(name+' 배치'); }
 function btAddFoe(sid, gm, name, quiet){ if(typeof G==='undefined') return; G.btUnits=G.btUnits||[]; if(G.idSeq==null) G.idSeq=1;
   const n=G.btUnits.filter(u=>u.team==='foe').length, c=n%4, r=(n/4)|0;   // 적군만 카운트 → 우측 격자
   const u=initUnitStats({uid:G.idSeq++, id:sid, hero:false, lv:1, x:0.90-c*0.05, y:0.44+r*0.052, cd:0, fixed:false});

@@ -6271,6 +6271,31 @@ async function groupLobby(){
     }
   });
 
+  // 🗄 다락(2026-08-26) — 옛 화면·옛 코드가 **되살아나지 않았는지** 지킨다.
+  //   다른 작업자가 안 쓰는 화면을 자꾸 되돌려 놓는 것이 이 검사의 존재 이유다(ATTIC.md).
+  await step('다락: 치운 코드가 되살아나지 않았다', async()=>{
+    // ① 다락 파일이 실제로 실려 있다 — 안 실리면 여기 것들이 통째로 사라진다(유보는 삭제가 아니다)
+    //   ⚠ 기준은 **classic script 중** 마지막이다 — 90-m3d 는 type=module 이라 어차피 뒤에 실행된다
+    const cls=[...document.querySelectorAll('script[src]')].filter(s=>s.type!=='module').map(s=>s.getAttribute('src'));
+    assert(cls.indexOf('js/99-attic.js')>=0,'다락 파일이 안 실렸다 — 치운 코드가 통째로 사라진다');
+    assert(cls[cls.length-1]==='js/99-attic.js',
+      '다락이 마지막이 아니다(순서가 곧 동작인 구조라 그 뒤에 무엇을 두면 안 된다): 지금 마지막은 '+cls[cls.length-1]);
+    // ② 치운 함수들은 살아 있되(유보) **아무도 부르지 않는다**
+    const moved=['profBuyItem','profUnlockNeed','profRebGrant','profPetMats','profClaimOffline',
+      'hbGoRound','dqRwTx','hbRoundK','twApplyChar','profPickSlot','dgStgHTML','authIsGuest',
+      'playerLeave','btAdd','_btPickerHTML','strikeWpnTotal'];
+    const gone=moved.filter(n=>typeof window[n]!=='function');
+    assert(!gone.length,'다락에 치운 함수가 사라졌다 — 지우지 말고 옮기기만 한다(ATTIC.md): '+gone.join(','));
+    // ③ 길이 다시 열리지 않았다 — 표에서 뺀 것들이 되돌아오면 여기서 걸린다
+    if(typeof HB_MORE!=='undefined'){
+      const back=HB_MORE.map(x=>x.k).filter(k=>['town','grow','dg','daily','build'].indexOf(k)>=0);
+      assert(!back.length,'더보기에 치운 칸이 되살아났다(ATTIC.md §1): '+back.join(',')); }
+    if(typeof NAV_TREE!=='undefined'){
+      const back=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k).filter(k=>['upg','gear'].indexOf(k)>=0);
+      assert(!back.length,'하단 네비에 치운 칸이 되살아났다(ATTIC.md §1): '+back.join(',')); }
+    return '다락 '+moved.length+'개 보존 · 길 닫힘 유지';
+  });
+
   // ☰ 더보기 칸 정리(2026-08-25) — 캠프에서 실제로 도는 것만 남겼다.
   await step('더보기: 가이드·출석·부스트·설정 네 칸', async()=>{
     skipIf(typeof HB_MORE==='undefined','더보기 표 없음');

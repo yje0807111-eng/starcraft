@@ -126,8 +126,6 @@ const STK_WEAPONS=[
 ];
 const STK_WPN=k=>STK_WEAPONS.find(w=>w.k===k)||null;
 function strikeWpnHave(k){ const S=STK; return (S&&S.me&&S.me.wpn&&S.me.wpn[k])||0; }
-function strikeWpnTotal(){ const S=STK; if(!S||!S.me||!S.me.wpn) return 0;
-  return STK_WEAPONS.reduce((n,w)=>n+(S.me.wpn[w.k]||0),0); }
 // 유닛 강화 배율(소환 시 적용) — 공격 +12%/Lv, 체력 +16%/Lv
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
 const STK_RACE_POWER={ union:1.00, swarm:1.00, aetherial:1.00, feral:1.00, colossus:1.00 };   // 종족 세기는 스탯(공격·체력)으로만 조절 — 전역 파워 배수는 중립(1). 상성이 승패를 결정하도록.

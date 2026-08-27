@@ -281,8 +281,6 @@ const _DG_KEY_SVG='<svg viewBox="0 0 24 24"><circle cx="8.5" cy="8.5" r="4.2"/><
 function dgKeyHTML(n, max){ return '<span class="dgKey"><img src="assets/icons/ui/ui_key.webp" alt="" draggable="false" onerror="_dgKeyFail(this)">'
   +'<span>'+n+'<s>/'+(max||DG_KEY_DAILY)+'</s></span></span>'; }
 function _dgKeyFail(im){ try{ im.outerHTML=_DG_KEY_SVG; }catch(_e){ try{ im.remove(); }catch(_e2){} } }
-// 단계 배지 — 12단계 / 미개척 / Lv.50 이 같은 자리에서 읽힌다
-function dgStgHTML(d, mx){ return '<span class="dgStg">'+(d.reqLvLocked? ('Lv.'+d.reqLv) : (mx? mx+'단계' : '미개척'))+'</span>'; }
 // 한 버튼이 주는 것 — 재화 아이콘 + 수치를 세로로. 없으면 '—'
 function dgValsHTML(r){ if(!r) return '<div class="dgVals off"><span>—</span></div>';
   let h='<div class="dgVals"><span>'+resIco('mineral','ri')+r.pc.toLocaleString()+'</span>';

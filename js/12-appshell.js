@@ -819,8 +819,6 @@ async function authGuestStart(){
     }catch(e){ console.warn('익명 로그인 실패 → 로컬 게스트', e); } }
   return authGuestUser(); }
 async function authGuest(){ await authGuestStart(); authRememberWay('guest'); enterAfterWarm(); }
-// 게스트 → 정식 계정. uid 를 그대로 두고 이메일·비밀번호만 붙이므로 진행도가 따라온다.
-function authIsGuest(){ return !!(AUTH.user && AUTH.user.guest); }
 function authCanLink(){ return !!(AUTH.mode==='supabase' && _sb && AUTH.user && AUTH.user.uid && AUTH.user.guest); }
 async function authLinkAccount(idOrEmail, pw, nick){
   if(!authCanLink()) throw new Error('이 게스트는 이 기기에만 저장돼 있어 계정 연결을 지원하지 않습니다.');
@@ -2255,8 +2253,6 @@ function killSlot(n, reason, nick){ n=+n; if(!n||typeof G==='undefined'||!G) ret
   if(G.tab==='Players'){ if(typeof renderPlayers==='function') renderPlayers();
     if(typeof updatePlayerCounts==='function') updatePlayerCounts();
     if(typeof updateSpecLabel==='function') updateSpecLabel(); } }
-// 게임 중 플레이어 탈락 → 죽은 자리로(옛 이름 유지 — 호출부가 여럿)
-function playerLeave(n){ killSlot(n, 'lost'); }
 let _leaveT=1e9;
 // ── 멀티 플레이어 시뮬레이션: 각 플레이어 트랙의 적 누적 수(나는 실제 G.enemies, 나머지는 시뮬) ──
 function initPlayerSim(){ G.pSim={}; const mine=G.myPlayer||1;
