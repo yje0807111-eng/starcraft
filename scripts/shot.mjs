@@ -154,6 +154,25 @@ try {
     else if (WHAT === 'bg') { await page.evaluate(()=>{ window.__bg={body:getComputedStyle(document.body).backgroundColor,html:getComputedStyle(document.documentElement).backgroundColor,phone:getComputedStyle(document.getElementById('phone')).backgroundColor}; }); const r=await page.evaluate(()=>window.__bg); console.log(JSON.stringify(r)); }
     else if (WHAT === 'nav') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('upg'); navBack(); }catch(e){} }); await new Promise(r=>setTimeout(r,700)); }
     else if (WHAT === 'navsub') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('shop'); }catch(e){} }); await new Promise(r=>setTimeout(r,800)); }
+    else if (WHAT === 'toRace') {   // 🎬 로딩 → 종족 선택 전환을 시각별로 잰다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,600));
+      const at = +(process.env.SHOT_AT || 300);
+      const info = await page.evaluate((ms) => new Promise(res=>{
+        const pick=()=>{ const ph=document.getElementById('phone');
+          const g=(id)=>{ const e=document.getElementById(id); if(!e) return '-';
+            const cs=getComputedStyle(e);
+            return cs.display==='none'?'none':((+cs.opacity).toFixed(2)+(e.classList.contains('hide')?' hide':'')); };
+          return { op:g('opening'), home:g('homeScreen'), race:g('campRaceOv'),
+                   bg:g('titleBg'), mark:g('titleMark'), black:g('titleBlack'),
+                   cls:ph?ph.className:'-' }; };
+        const before = pick();
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ enterAfterWarm(); }catch(e){}
+        setTimeout(()=>res({ at:ms, before, after:pick() }), ms);
+      }), at);
+      console.log('TORACE '+JSON.stringify(info));
+    }
     else if (WHAT === 'mine') {   // 💎 미네랄 채굴 판
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
       await new Promise(r=>setTimeout(r,1200));

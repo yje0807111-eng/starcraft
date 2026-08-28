@@ -1919,10 +1919,12 @@
      작아서 맵 바깥의 빈 자리가 위·좌우에 드러난다 — 2026-08-27 에 그렇게 했다가 되돌렸다.
      ⚠ 페이드는 **앞 5분의 1에서 끝낸다.** 줌과 같이 끝나면 둘이 뭉뚱그려져 연출이 짧고 밋밋해 보인다.
        불투명해진 뒤에도 한참 더 다가오는 것이 「게임 속으로 들어가는」 느낌을 만든다. */
+  /* ⚠ **여기서 페이드하지 않는다.** 화면이 드러나는 일은 검은 판(#titleBlack)이 맡는다.
+     둘 다 페이드하면 「어두워졌다 밝아지고 또 밝아지는」 이중으로 보인다(2026-08-27).
+     이 애니가 맡는 것은 **다가오는 움직임 하나**다. */
   @keyframes campEnterIn{
-    0%  { transform:scale(1.18); opacity:0 }
-    20% { opacity:1 }
-    100%{ transform:none;        opacity:1 } }
+    0%  { transform:scale(1.18) }
+    100%{ transform:none } }
   /* ⚠ will-change 를 켜 두면 브라우저가 **확대된 크기로 래스터**해 애니 내내 선명도가 같다.
      없으면 원본 크기로 래스터한 것을 늘려 그리다가 끝나는 순간 다시 그려서 **선명도가 확 바뀐다**
      — 그게 「마지막에 뚝 끊긴다」의 정체였다(2026-08-27 · 차이가 석판 이음매 선 전체에 깔렸다). */
@@ -1931,7 +1933,10 @@
     transform-origin:50% 72%;   /* 아래쪽 기준 = 본진을 향한 시선 */
     animation:campEnterIn var(--campInDur,2.3s) cubic-bezier(.4,0,.2,1) both}   /* ⚠ 초반이 급하면 1초 만에 끝나 보인다 — 2.3초 내내 눈에 띄게 움직여야 한다 */
   /* 종족 선택 판이 사라지는 것도 같이 부드럽게 — display 로 끊으면 화면이 툭 바뀐다 */
-  #campRaceOv{transition:opacity var(--campOvDur,.4s) ease}
+  /* 종족 판은 **들 때도 날 때도** 페이드다. 툭 나타나면 로딩이 걷히는 것과 따로 놀아
+     「로고만 디졸브되고 나머지는 그냥 바뀐다」로 보인다(2026-08-27). */
+  #campRaceOv{opacity:0;transition:opacity var(--campOvDur,.4s) ease}
+  #campRaceOv.on{opacity:1}
   #campRaceOv.closing{opacity:0;pointer-events:none}
 
   /* ══ 💎 미네랄 채굴 판 (2026-08-27) ═══════════════════════════════════

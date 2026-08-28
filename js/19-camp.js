@@ -1763,6 +1763,9 @@ function campRaceSheet(){
       + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
     (document.getElementById('phone') || document.body).appendChild(ov); }
   ov.classList.remove('hide');
+  // ⚠ display 를 푼 **다음 프레임**에 켠다 — 같은 프레임에 붙이면 전이가 안 돌고 툭 나타난다.
+  ov.classList.remove('closing');
+  requestAnimationFrame(function(){ ov.classList.add('on'); });
   campRaceRender(); campRacePrev(_campRacePick, true);
 }
 // 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
@@ -1805,6 +1808,7 @@ function campPickRace(){
   const ov = document.getElementById('campRaceOv');
   if(ov){ ov.classList.add('closing');
     clearTimeout(ov._closeT);
+    ov.classList.remove('on');   // 페이드아웃 시작(.on 이 빠지면 opacity 0 으로 전이)
     ov._closeT = setTimeout(function(){ ov.classList.remove('closing'); ov.classList.add('hide'); }, _campMs('--campOvDur', .4)); }
   campRaceToCamp();
 }

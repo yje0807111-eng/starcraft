@@ -2234,10 +2234,12 @@ async function enterAfterWarm(){
   //    검은 화면은 종족을 고른 뒤(campPickRace)가 맡는다. 안 그러면 검은 화면이 두 번 나온다:
   //    로딩→검정→종족선택→(다시)캠프 — 그 사이가 깜빡이는 것처럼 보였다(2026-08-27).
   const _needRace = (function(){ try{ return typeof campState==='function' && campState() && !campState().race; }catch(e){ return false; } })();
-  if(_needRace){ const op=document.getElementById('opening');
-    if(op && typeof screenFadeOut==='function') screenFadeOut(op);
-    if(typeof _sleep==='function' && typeof _fadeMs==='function') await _sleep(_fadeMs()); }
-  else if(typeof titleToBlack==='function') await titleToBlack();
+  //   ⭐ 종족 선택으로 갈 때는 **여기서 아무것도 걷지 않는다.** 아래 openHome() 이 부르는
+  //     showAppScreen 이 이미 로딩을 페이드아웃시키고 그 아래에 HOME·종족 판을 세운다 —
+  //     그것이 진짜 크로스페이드다.
+  //     ⛔ 여기서 먼저 걷고 기다리지 말 것. 로딩이 **완전히 사라진 뒤에** HOME 이 켜지면
+  //       그 사이 빈 HOME 이 키 아트를 덮어 검게 한 번 깜빡인다(2026-08-27).
+  if(!_needRace && typeof titleToBlack==='function') await titleToBlack();
   opBarReset();
   // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
   //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
