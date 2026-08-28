@@ -783,6 +783,70 @@ photorealistic PBR game texture, 3D render, tall vertical composition
 
 ⚠ **판 위는 비워야 한다** — 유닛이 그 위에 선다. `open and bare`·`uncluttered` 를 꼭 넣을 것.
 
+### 12-3-1. ⭐ 네모네모 디펜스 바닥 — 전문 (2026-08-28)
+
+**지금 코드가 조립하는 것을 한 장으로 옮긴 것이다**(`js/10-engine.js` 의 `buildFloor`).
+
+#### 먼저 — 코드가 그리는 실제 비율
+
+| 부분 | 값 |
+|---|---|
+| 플랫폼 가로 | 화면의 **85%** |
+| 플랫폼 세로 | 화면의 **27%** (y **28.5% ~ 55.5%**) |
+| 가로 : 세로 | **1.52 : 1** — 가로로 넓은 직사각형 |
+| 절벽 테두리 | 플랫폼 세로의 **5%** — 얇다 |
+| 모서리 반경 | 플랫폼 세로의 **8%** — 거의 직각 |
+
+⚠ **트랙선은 코드가 안 그린다** — **플랫폼 자체가 트랙**이고 적이 그 가장자리를 따라 돈다.
+그림에 길이나 선을 그리지 말 것.
+
+⭐ **9:16 에서는 위아래가 안 잘린다**(9:16 이 가장 짧은 폰과 같은 비율). 좌우만 0~17.9% 잘린다.
+그래서 **세로 위치는 그대로 지켜지고**, 가로만 잘림을 감안해 **75%** 로 그린다.
+
+#### 프롬프트 전문
+
+```
+A single wide horizontal rectangular rock platform floating alone in deep space.
+The platform is much wider than it is tall, roughly three units wide to two units tall,
+with almost square corners, only slightly rounded.
+It spans about three quarters of the image width and sits in the upper middle of the frame,
+its top edge near the upper third and its bottom edge just past the middle.
+The platform surface is dry cracked badlands earth, dark brown grey, with fine gravel,
+small scattered pebbles and shallow hairline cracks; the surface is completely open and bare,
+nothing standing on it, no paths, no lines, no markings.
+A narrow rim of dark volcanic rock runs around the platform edge, about one twentieth of its height,
+with dim restrained molten seams in the cracks, pale ember glow, not bright.
+Everything around and beyond the platform is deep empty starfield with faint distant nebula,
+darkest at the frame edges.
+
+perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
+flat even ambient lighting with no directional shadows and no visible light source,
+fine small-scale surface detail, nothing larger than a fist,
+muted low-saturation palette, dark tones,
+the important area stays within the central 80% of the width,
+no characters, no objects, no units, no structures, no text, no user interface,
+photorealistic PBR game texture, 3D render, tall vertical composition
+```
+
+| 설정 | 값 |
+|---|---|
+| 모델 | `gpt_image_2` |
+| 비율 | `9:16` |
+| 해상도 · 품질 | `2k` 이상 · `high` |
+
+#### ⚠ 이 프롬프트에서 꼭 지킬 것
+
+| | 왜 |
+|---|---|
+| **표면이 비어 있어야 한다** | 유닛이 그 위에 선다. `completely open and bare` · `no paths, no lines, no markings` |
+| **발광을 약하게** | `dim restrained` · `pale ember glow, not bright` — 밝으면 유닛이 안 보인다 |
+| **테두리는 얇게** | `about one twentieth of its height` — 두꺼우면 설 자리가 줄어든다 |
+| **모서리는 거의 직각** | `almost square corners, only slightly rounded` — 코드의 반경이 8% 다 |
+| **바깥은 어둡게** | `darkest at the frame edges` — 잘리는 부분이라 정보가 없어야 한다 |
+
+⚠ **비율을 숫자로 말하지 않는다.** 모델이 「3:2」 같은 표기를 못 지켜서 `three units wide to two units tall` 처럼
+풀어 썼다. 그래도 어긋나면 **뽑은 것을 레퍼런스로 잡고 「같은 배치, 더 넓게」** 로 고친다(§12-5).
+
 ### 12-4. 기존 타일에서 관찰한 것 (2026-08-28 · 넷을 직접 열어 봄)
 
 | 타일 | 본 것 |
