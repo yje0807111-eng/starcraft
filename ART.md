@@ -717,85 +717,105 @@ No text, no logos, no user interface, no characters, no watermark.
 
 ---
 
-## 12. 타일 계열 — 바닥 텍스처 (`assets/tiles/` · 2026-08-28)
+## 12. 통짜 지면 계열 — 유즈맵 바닥 (2026-08-28)
 
-**앞의 계열들과 목적이 다르다.** 키 아트(§2)·게임판(§11)은 **한 장이 화면 하나**지만,
-이것은 **사방으로 반복해 깔리는 정사각 조각**이다.
+> ⛔ **타일 반복은 폐기했다**(2026-08-28 사용자 확정). 「통으로 된 하나의 이미지가 더 깔끔하다」.
+> 옛 타일 프롬프트는 **스타일의 근거로만** 남긴다(§12-4).
 
-| 항목 | 값 |
-|---|---|
-| 크기 | **정사각** (기존 512×512) |
-| 시점 | **완전 수직 톱다운** — 원근이 전혀 없다 |
-| 조명 | **방향 없는 균일광** — 그림자가 한쪽으로 지면 반복할 때 격자가 드러난다 |
-| 이어짐 | **네 변이 맞물린다**(seamless) |
-| 지금 있는 것 | ashworld · badlands · desert · installation · protoss_floor · space_bg · space_platform · terran_tile_light |
+**§11(캠프·던전 맵)과 무엇이 다른가** — 목적은 같은 「게임판 지면」인데 **그림체가 다르다.**
 
-### 12-1. ⭐ 공통 스타일 블록 — 모든 타일에 그대로 붙인다
+| | §11 캠프·던전 | **§12 유즈맵 바닥** |
+|---|---|---|
+| 그림체 | `soft anime game background art` | **사진 같은 질감** — 기존 타일을 잇는다 |
+| 구조 | 아래 1/3 기지 터 · 가운데 통로 | 맵마다 다르다(트랙 · 플랫폼 …) |
+| 모델 | `gpt_image_2` | `gpt_image_2` — 같다 |
 
-기존 프롬프트의 마지막 세 줄을 **실제 이미지와 대조해 보강**한 것이다.
+⚠ **두 그림체가 게임 안에 섞인다.** 캠프는 애니풍, 유즈맵은 사진풍이다 — **의도된 것**이다
+(사용자: 「기존 타일 스타일로 최대한 같은 스타일」). 통일하려면 그때 다시 정한다.
+
+### 12-1. 규격
+
+| 항목 | 값 | 왜 |
+|---|---|---|
+| 모델 | **`gpt_image_2`** · `2k`~`4k` · `high` | ⛔ `soul_location` 은 쓰지 말 것 — §11 에서 9장을 버렸고, 2026-08-28 에 다시 시험했더니 **또 원근으로 나왔다** |
+| 비율 | **`9:16`** | `gpt_image_2` 가 지원하는 **가장 세로로 긴 값** |
+| 안전 여백 | **양옆 각 10%** | 폰 화면에 `cover` 로 깔면 **좌우가 최대 17.9% 잘린다**(실측 계산) |
+
+⭐ **중요한 것은 전부 가로 80% 안에** 넣는다. 가장자리는 잘려도 되는 것만 둔다.
+
+### 12-2. ⭐ 공통 스타일 블록 — 모든 장에 그대로 붙인다
+
+기존 타일 넷을 직접 열어 보고 **공통점만 추린 것**이다(§12-4).
 
 ```
-seamless tileable texture, edges match perfectly on all four sides,
 perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
 flat even ambient lighting with no directional shadows and no visible light source,
-fine small-scale detail, nothing larger than a fist,
+fine small-scale surface detail, nothing larger than a fist,
 muted low-saturation palette, dark tones,
-no characters, no objects, no units, no structures, no text,
-photorealistic PBR game texture, 3D render, square tile
+the important area stays within the central 80% of the width,
+no characters, no objects, no units, no structures, no text, no user interface,
+photorealistic PBR game texture, 3D render, tall vertical composition
 ```
 
-#### 옛 세 줄에서 무엇이 늘었나 — 실제 이미지에서 확인한 것
+#### 옛 타일 세 줄에서 무엇이 바뀌었나
 
-| 더한 것 | 왜 |
-|---|---|
-| `edges match perfectly on all four sides` | `seamless` 만으로는 이음매가 생긴다 |
-| `orthographic … no perspective, no horizon` | ⚠ `bird's eye view` 는 **비스듬한 부감**으로도 해석된다. 실제 타일 넷은 전부 **완전 수직**이다 |
-| `flat even ambient lighting, no directional shadows` | ⭐ **이게 반복의 핵심이다.** 그림자가 한쪽으로 지면 타일을 깔았을 때 **격자무늬가 눈에 보인다.** 지금 타일 넷은 전부 방향 없는 균일광이다 |
-| `nothing larger than a fist` | 실제 타일의 자갈·균열은 **아주 잘다**. 큰 덩어리가 들어가면 반복이 티 난다 |
-| `muted low-saturation` | ⚠ `dark tones` 만으로는 부족했다 — `desert` 가 혼자 **밝고 채도가 높게** 나왔다 |
-| `no structures` | `no objects` 를 건물로는 안 읽는 경우가 있다 |
-| `photorealistic PBR game texture` | `3D render` 만 쓰면 그림체가 흔들린다. 지금 타일은 **사진 같은 질감**이다 |
+| | 옛 타일 | **통짜** |
+|---|---|---|
+| 이어짐 | `seamless tileable` | ⛔ **뺀다** — 반복하지 않는다 |
+| 모양 | `square tile` | **`tall vertical composition`** |
+| 시점 | `top-down bird's eye view` | ⚠ **`orthographic … no perspective, no horizon`** — `bird's eye` 는 **비스듬한 부감으로 읽힌다**(2026-08-28 실제로 그렇게 나왔다) |
+| 조명 | (없음) | **`flat even ambient, no directional shadows`** — 지금 타일 넷의 공통점이다 |
+| 채도 | `dark tones` | **`muted low-saturation`** 추가 — `dark tones` 만으로는 `desert` 가 밝게 나왔다 |
+| 여백 | (없음) | **`central 80% of the width`** — 좌우가 잘린다 |
 
-⚠ **`square tile` 을 빼지 말 것** — 세로로 긴 그림이 나오면 반복이 안 된다.
+⭐ **발광은 장면 줄에서만** 준다(용암 주황 · 프로토스 파랑). 공통 블록이 발광을 말하면 흙까지 빛난다.
 
-### 12-2. 장면 줄 — 타일마다 이 한 덩이만 바꾼다
+### 12-3. 장면 줄 — 맵마다 이 한 덩이만 바꾼다
 
-**공통 블록 앞에** 붙인다. 지금 있는 것들의 실제 문구:
+**공통 블록 앞에** 붙인다. 지금 네모네모 바닥은 코드가 이렇게 조립하고 있다
+(`js/10-engine.js` — 이걸 한 장으로 옮기는 것이 이번 작업이다):
 
-```
-badlands   dark brown grey rocky gravel ground, cracked dry earth texture,
-           small scattered pebbles, uneven rough surface, dusty terrain
+| 부분 | 지금 | 장면 줄에 쓸 말 |
+|---|---|---|
+| 바깥 | `space_bg` 반복 + 성운 + 비네팅 | deep starfield with faint distant nebula |
+| 안쪽 판 | `badlands` 반복 + 노이즈 | a wide rectangular platform of dry cracked badlands earth, open and bare |
+| 테두리 | `ashworld` 용암 절벽 | its edge a rim of dark volcanic rock with dim restrained molten seams |
 
-ashworld   dark volcanic rock ground with glowing lava cracks,
-           fissures of orange red molten lava between rocks,
-           charred black volcanic surface, ember glow
+⚠ **판 위는 비워야 한다** — 유닛이 그 위에 선다. `open and bare`·`uncluttered` 를 꼭 넣을 것.
 
-desert     sandy desert ground with fine sand texture,
-           subtle wind ripple patterns in sand,
-           small scattered rocks and pebbles, dark amber brown sandy surface, dry terrain
-```
-
-⭐ **발광은 장면 줄에서만 준다**(용암의 주황 · 프로토스 바닥의 파랑). 공통 블록은 발광을 말하지 않는다 —
-말하면 흙 타일까지 빛난다.
-
-### 12-3. ⚠ 실제 이미지에서 관찰한 것 (2026-08-28 · 넷을 직접 열어 봄)
+### 12-4. 기존 타일에서 관찰한 것 (2026-08-28 · 넷을 직접 열어 봄)
 
 | 타일 | 본 것 |
 |---|---|
-| `badlands` | 아주 어두운 갈회색. 자갈이 **잘고 고르게** 흩어져 있다. 균열은 가늘다 |
-| `ashworld` | 검은 암괴 + 주황 용암 균열. **넷 중 발광이 가장 강하다** |
-| `protoss_floor` | 검은 금속 패널의 **기하학 반복** + 가는 파란 선. 자연물과 규칙이 다르다 |
-| `desert` | ⚠ **넷 중 혼자 밝고 채도가 높다.** `dark tones` 를 넣었는데도 그렇다 |
+| `badlands` | 아주 어두운 갈회색. 자갈이 **잘고 고르게** 흩어져 있다 |
+| `ashworld` | 검은 암괴 + 주황 용암 균열. **발광이 가장 강하다** |
+| `protoss_floor` | 검은 금속 패널의 **기하학 반복** + 가는 파란 선 |
+| `desert` | ⚠ **혼자 밝고 채도가 높다.** `dark tones` 를 넣었는데도 그렇다 |
 
 ⭐ **공통점 넷** — ① 완전 수직 ② 방향 없는 균일광 ③ 잔 디테일 ④ 사진 같은 질감.
-**이 넷이 무너지면 반복했을 때 격자가 보인다.**
+**이 넷이 「기존 스타일」의 정체**이고, 공통 블록이 지키는 것이 그것이다.
 
-⚠ `desert` 가 튀는 것은 **프롬프트가 아니라 결과의 문제**였다. 새로 뽑을 때는
-`muted low-saturation` 를 넣고, 그래도 밝게 나오면 **레퍼런스로 잡아 준다**(§11-1 방법).
+<details><summary>옛 타일 프롬프트 (참고 · 더 쓰지 않는다)</summary>
 
-### 12-4. 레퍼런스 방법 — §11-1 과 같다
+```
+공통 3줄:
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
 
-1. **기준 타일 한 장**을 먼저 뽑는다(어두운 흙 계열이 무난하다 — 발광이 없어 스타일이 순수하게 보인다).
+badlands  dark brown gray rocky gravel ground, cracked dry earth texture,
+          small scattered pebbles, uneven rough surface, dusty terrain
+ashworld  dark volcanic rock ground with glowing lava cracks,
+          fissures of orange red molten lava between rocks, charred black volcanic surface, ember glow
+desert    sandy desert ground with fine sand texture, subtle wind ripple patterns in sand,
+          small scattered rocks and pebbles, dark amber brown sandy surface, dry terrain
+```
+
+</details>
+
+### 12-5. 레퍼런스 방법 — §11-1 과 같다
+
+1. **기준 한 장**을 먼저 뽑는다(네모네모 바닥이 무난하다 — 흙·우주·용암이 다 들어간다).
 2. 나머지는 그 이미지를 **첨부**하고 장면 줄만 바꾼다.
 
-⛔ **스타일을 말로 다시 설명하지 말 것** — 레퍼런스가 정한다(§11-1 · §9-2 에서 같은 결론).
+⛔ **스타일을 말로 다시 설명하지 말 것** — 레퍼런스가 정한다(§9-2 · §11-1 에서 같은 결론).
