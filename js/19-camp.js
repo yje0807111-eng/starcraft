@@ -864,38 +864,13 @@ function campWithBattleDraw(fn){
     return orig.apply(M, arguments); };
   try{ return fn(); } finally { M.syncBuild = orig; } }
 
-// 내 병력 출격 — 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮긴다.
-//   ⭐ 이 다리는 오토배틀이 이미 갖고 있다(strikeSpawnForPlayer). 그대로 부른다.
-// 병력을 전장에 내보낸다.
-// ⛔ **라운드마다 부르지 말 것.** strikeSpawnForPlayer 는 건물 하나당 유닛을 새로 만드는데
-//   (18-strike.js:1091 — techBldgCount 만큼), 건물은 그대로 있으므로 **부를 때마다 증식**한다.
-//   실측(2026-08-27): 라운드 갭마다 불렀더니 던전 1 R50 에 병력 **623기 · DPS 12,415** 였다
-//   (인구 상한 200 을 훨씬 넘는다). 그 화력이면 적이 무슨 체력이든 즉사해서
-//   난이도 곡선이 아무 브레이크도 못 건다.
-// ⭐ 그래서 **전장이 비었을 때만** 부른다 — 첫 진입과 던전 전환이 그 자리다.
-//   라운드 사이에는 부활(campReviveStep)이 병력을 유지하므로 보충이 필요 없다.
-function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
-  const b4 = CAMPB.me.units.length;
-  const n = campWithStk(() => strikeSpawnForPlayer('me', { local:true, noEmit:true })) | 0;   // ⛔ 건물당 공짜 배출 금지(값을 내고 산 병력만)
-  campScaleAllies(CAMPB.me.units.slice(b4));   // 🌳 아군 강화 — 새로 나온 것만
-  campTrimArmy();                              // 👥 인구 상한을 전장에도 건다(아래 설명)
-  return n; }
-// 👥 **전장 병력도 인구 상한을 지킨다.**
-// ⚠ 전장 자체에는 제한이 없다 — STK_UNIT_CAP 이 0(무제한)이다(18-strike.js:504).
-//   캠프의 인구 200 은 **생산** 제한이라, 전장으로 나간 뒤에는 아무도 안 막는다.
-//   실측(2026-08-27): 던전 1 을 20기로 잘 돌다가 던전 2 로 넘어가며 **292기**가 됐다 —
-//   전환 때마다 strikeSpawnForPlayer 가 건물 수만큼 새로 만들고, 캠프에 쌓여 있던
-//   대기 병력(126기)까지 한꺼번에 쏟아져 들어간다.
-// ⛔ 여기를 안 막으면 적 체력을 아무리 올려도 병력 수로 뭉갠다(623기 때와 같은 일이다).
-function campTrimArmy(){
-  if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
-  const cap = Math.max(1, Math.min(200, G.tech.supCap || 200));
-  const live = CAMPB.me.units, down = (CAMPB._down || []).length;
-  const over = live.length + down - cap;
-  if(over <= 0) return 0;
-  live.splice(cap - down < 0 ? 0 : cap - down);   // 뒤(가장 최근에 나온 것)부터 걷는다
-  return over;
-}
+// ⛔ **출격·전장 트림은 없앴다** (2026-08-28 사용자 확정).
+//   유닛이 두 번 태어나던 구조를 걷어내면서 둘 다 필요가 없어졌다 —
+//     · campSortie   기지에 선 유닛을 전장으로 옮기던 다리. 지금은 생산될 때 이미 전장에 선다.
+//     · campTrimArmy 전장 병력을 인구 상한에서 잘라내던 것. 지금은 **생산에서** 막힌다
+//                    (출격이 인구를 반환하지 않으므로 G.tech.sup 이 실제로 쌓인다).
+//   ⭐ 둘 다 **원인이 아니라 증상을 막던 코드**였다. 원인이 사라져 함께 지운다.
+//   ⛔ 오토배틀의 strikeSpawnForPlayer 는 그대로다 — 캠프가 안 부를 뿐이다.
 
 // ⛔ **공중 전용 적은 뽑지 않는다.** hellfire·stinger·venom 은 SB_ATK_MODE 가 'air' 라
 //   지상 아군을 한 대도 못 때린다 — 그리고 지상만 있는 편성은 그 적을 못 때린다.
@@ -1288,6 +1263,22 @@ function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;
   for(const u of CAMPB[side].units) if(!u.dead) n++; return n; }
 
+// 🏁 던전 전환 — **내 병력·자리·건물은 그대로 두고 적만 갈아 끼운다** (2026-08-28 사용자 확정).
+//   ⛔ 예전엔 campBattleOpen() 으로 전장을 통째로 새로 만들었다. 그러면 me.units 가 비워져
+//     **병력이 통째로 사라진다.** 지금까지는 campSortie 가 기지에서 곧바로 다시 채워 넣어
+//     가려져 있었을 뿐이다 — 유닛이 한 번만 태어나게 된 지금은 그대로 증발한다.
+//   ⭐ 전장을 새로 만들 이유는 **적 종족이 바뀌는 것 하나뿐**이었다. 나머지(본부 위치·신전
+//     없음·적 본부 없음)는 던전과 무관하게 늘 같다.
+//   ⭐ 건물 체력은 **채워 준다**(사용자 결정) — 다음 던전을 온전한 기지로 시작한다.
+function campDungeonSwap(){
+  if(!CAMPB) return false;
+  CAMPB.ai.race = campFoeRace(campDgN());
+  CAMPB.ai.units.length = 0;                       // 적만 비운다
+  if(CAMPB._wq) CAMPB._wq.length = 0;
+  CAMPB._wqTot = 0; CAMPB._wqT = 0;
+  campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
+  return true; }
+
 // 한 프레임 — 전투를 굴리고 승패를 본다.
 //   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
 // ── ⚔ 마중 나가 싸우고 자리로 돌아온다 (2026-08-28 사용자 확정) ─────────
@@ -1313,29 +1304,18 @@ const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레�
 const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
 const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
 const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
-const CAMP_SORTIE_S = 3;           // 🚚 증원 간격(초) — 라운드 도중에도 이만큼마다 내보낸다
 function campCombatStep(dt){
   const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
   if(!CAMPB) campBattleOpen();
   if(!CAMPB) return;
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
     if(CAMPB._gapT <= 0){
-      // 👥 **인구 한도까지 계속 내보낸다** (2026-08-27 · sc-3 판단).
-      //   ⛔ 예전 규칙(전장이 비어야 출격)은 전장 병력을 17~18기에 묶었다 — 대기 68기가 놀았고
-      //     아군 총 DPS 가 335 에서 멎었다. 적이 100마리까지 나오는 판에서 그건 방어전이 아니다.
-      //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다 — 세는 곳이 둘이면 어긋난다.
-      campSortie();
+      // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
+      //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
       campBuildStructs();                                 // 🏢 그새 지은 건물을 전장에 반영(체력도 새로)
-      campTrimArmy();                                     // 👥 인구 상한 재확인(던전 전환에서 새는 자리)
       campSpawnFoes(); }
     return; }
-  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
-  // 🚚 **라운드 도중에도 증원을 내보낸다** (2026-08-27)
-  //   ⛔ 예전엔 라운드 갭에서만 출격했다. 그래서 판이 밀려 아군이 전멸하면 **그 라운드가
-  //     영원히 안 끝났다** — 기지에 57기가 대기 중인데 한 기도 못 나갔다(실측 D2R1).
-  //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다.
-  CAMPB._soT = (CAMPB._soT || 0) - dt;
-  if(CAMPB._soT <= 0){ CAMPB._soT = CAMP_SORTIE_S; campSortie(); }
+  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSpawnFoes(); return; }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campPostSnap();       // 🪧 되돌리기 전 위치를 떠 둔다(아래 campPostStep 이 쓴다)
@@ -1380,8 +1360,8 @@ function campCombatStep(dt){
     if(CAMPB._wq) CAMPB._wq.length = 0;    // 아직 안 나온 무리는 그냥 안 나온다(기다리는 화면을 만들지 않는다)
     const dgWas = campDgN();
     campClearRound();
-    if(campDgN() !== dgWas){                                   // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
-      campBattleOpen(); campBarReset();
+    if(campDgN() !== dgWas){                                   // 던전이 바뀌면 **적만** 갈아 끼운다
+      campDungeonSwap(); campBarReset();
       campSay('🏁 던전 ' + dgWas + ' 완주 — 던전 ' + campDgN() + ' 진입', 'game_start'); }
     if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S; } }
 }

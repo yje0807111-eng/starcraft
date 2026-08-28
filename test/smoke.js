@@ -1618,9 +1618,9 @@ async function groupLobby(){
     { const W=CAMPB.world, g=campW2G(u.x,u.y,W), b=campG2W(g.gx,g.gy,W);
       assert(Math.hypot(b.x-u.x,b.y-u.y)<1,'campG2W 가 campW2G 의 역이 아니다'); }
     // ④ ⛔ 인구를 돌려주지 않는다 — 출격이 인구를 반환하던 것이 무한 생산의 원인이었다
-    if(typeof campSortie==='function') campSortie();
+    for(let i=0;i<4;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘겨 본다
     assert((G.tech.sup|0)===sup0,'인구가 반환됐다: '+G.tech.sup+' → '+sup0);
-    assert(CAMPB.me.units.length===1,'출격이 병력을 또 만들었다: '+CAMPB.me.units.length);
+    assert(CAMPB.me.units.length===1,'라운드를 넘기며 병력이 또 생겼다: '+CAMPB.me.units.length);
     // ⑤ 일꾼은 그대로 기지에 (미네랄을 캐야 한다)
     { const w0=ents.filter(e=>e.type==='worker').length;
       techFinishProduce({ id:TECH_WORKER[G.tech.race], pop:1, bk:'command' }, null);
@@ -1745,6 +1745,37 @@ async function groupLobby(){
     return '탭 지정 · 링 · 자리 이동 · 대형 · 박스 ok';
   });
 
+  // 🏁 **던전이 바뀌어도 병력·자리·건물은 그대로** (2026-08-28 사용자 확정)
+  //    ⛔ 예전엔 campBattleOpen() 으로 전장을 통째로 새로 만들어 me.units 를 비웠다.
+  //      campSortie 가 곧바로 다시 채워서 가려져 있었을 뿐이라, 출격을 없앤 지금은 증발한다.
+  await step('캠프: 던전이 바뀌어도 병력과 자리가 그대로다', async()=>{
+    skipIf(typeof campDungeonSwap!=='function'||typeof campDeploy!=='function','4단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45); assert(u,'배치 실패');
+    const px=u._post.x, py=u._post.y, uid=u.uid;
+    campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
+    const raceWas=CAMPB.ai.race, bldWas=(CAMPB._bld||[]).length;
+    const C=campState(); C.cleared=(C.cleared|0)+1; C.dg=(C.dg|0)+1;   // 던전을 넘긴 셈
+    campDungeonSwap();
+    // ① 내 병력과 자리가 남는다
+    const still=CAMPB.me.units.find(x=>x.uid===uid);
+    assert(still,'던전이 바뀌며 병력이 사라졌다');
+    assert(Math.abs(still._post.x-px)<1e-6 && Math.abs(still._post.y-py)<1e-6,'자리가 초기화됐다');
+    // ② 적은 비워지고 종족이 갈린다
+    assert(CAMPB.ai.units.length===0,'적이 안 비워졌다: '+CAMPB.ai.units.length);
+    assert(CAMPB.ai.race===campFoeRace(campDgN()),'적 종족이 안 바뀌었다: '+CAMPB.ai.race+' (전 '+raceWas+')');
+    // ③ 건물은 그대로 있고 체력이 가득 찬다(사용자 결정)
+    assert((CAMPB._bld||[]).length>=bldWas,'건물이 사라졌다: '+(CAMPB._bld||[]).length+' (전 '+bldWas+')');
+    { const live=campBldAlive();
+      if(live.length) assert(live.every(b=>b.hp>=(b.max||b.maxHp||b.hp)-1e-6),'건물 체력이 안 찼다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+    campBattleClose();
+    return '병력·자리 유지 · 적만 교체 · 건물 체력 회복';
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
@@ -1821,30 +1852,17 @@ async function groupLobby(){
       campCombatStep(0.05);
       assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
       assert(!(CAMPB._wq && CAMPB._wq.length),'라운드가 넘어갔는데 안 나온 무리가 남아 있다');
-      // ⑤ **인구 한도까지 계속 출격하되, 상한은 절대 넘지 않는다** (2026-08-27 규칙 변경)
-      //    ⛔ 옛 규칙은 「전장이 비어야 출격」이었다. 그러면 전장 병력이 17~18기에 묶여
-      //      대기 병력 68기가 놀았다 — 적이 100마리 나오는 판에서 그건 방어전이 아니다.
-      //    ⚠ 그때 이 규칙이 있었던 이유는 **건물 하나당 공짜로 유닛이 나왔기 때문**이다
-      //      (strikeSpawnForPlayer 의 _emit · 실측 R50 에 623기). 지금은 캠프가 그 배출을
-      //      꺼서(noEmit) 값을 내고 산 병력만 나온다 — 그래서 갭마다 출격해도 안전하다.
-      //    ⭐ 상한을 지키는 곳은 campTrimArmy() **한 곳**이다.
+      // ⑤ ⛔ **출격이 없다** (2026-08-28) — 유닛은 생산될 때 이미 전장에 선다.
+      //    라운드가 넘어가도 **병력이 저절로 불어나지 않고, 있던 것이 그대로 남는다.**
+      //    ⚠ 옛 규칙(campSortie · campTrimArmy)은 「유닛이 두 번 태어나던 구조」의 증상을
+      //      막던 것이라 함께 지웠다. 되살아나면 여기서 실패한다.
+      assert(typeof campSortie==='undefined','campSortie 가 되살아났다 — 유닛이 두 번 태어난다');
+      assert(typeof campTrimArmy==='undefined','campTrimArmy 가 되살아났다 — 생산에서 막아야 한다');
       { campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
-        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
+        const n0=CAMPB.me.units.length+campDown();
         for(let i=0;i<8;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘긴다
         const n1=CAMPB.me.units.length+campDown();
-        assert(n1>0,'갭을 넘기고 나니 병력이 통째로 사라졌다');
-        assert(n1<=cap,'갭마다 병력이 불어나 인구 상한을 넘는다: '+n1+' > '+cap); }
-      // 👥 **전장 병력도 인구 상한을 넘지 않는다.**
-      //    ⚠ 전장 자체엔 제한이 없다(STK_UNIT_CAP=0) — 캠프의 200 은 생산 제한일 뿐이라
-      //      던전 전환에서 샌다. 실측: 던전 1 은 20기였는데 던전 2 로 넘어가며 292기가 됐다.
-      { assert(typeof campTrimArmy==='function','인구 상한 트림이 없다');
-        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
-        // 상한을 넘겨 억지로 채운 뒤 트림이 도는지 본다
-        const proto=CAMPB.me.units[0];
-        if(proto){ for(let i=0;i<cap+30;i++) CAMPB.me.units.push(Object.assign({},proto,{uid:'x'+i}));
-          campTrimArmy();
-          const tot=CAMPB.me.units.length+campDown();
-          assert(tot<=cap,'전장 병력이 인구 상한을 넘는다: '+tot+' > '+cap); } }
+        assert(n1===n0,'라운드를 넘길 때마다 병력이 바뀐다: '+n0+' → '+n1); }
       // ⑥ ✈ **때릴 수 없는 적만 남으면 진다** — 안 그러면 라운드가 영원히 안 끝난다.
       //    실측(2026-08-27): 던전 1 R12 에서 hellfire(공중 전용) 하나가 남았는데 아군이
       //    화력병 20기(지상 전용)뿐이라 서로 한 대도 못 때렸다. 적 본부는 이미 부순 뒤였다.
