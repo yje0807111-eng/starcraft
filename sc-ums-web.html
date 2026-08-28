@@ -540,6 +540,17 @@
     
     <!-- 📅 일일 퀘스트 — 하루 5개 + 주간 25개. 껍데기는 라운드 팝업과 같은 .hbModal -->
     <!-- 🧭 가이드 퀘스트 — 일일 퀘스트와 **같은 껍데기**를 쓴다(.hbModal/.hbmCard/.hbRows) -->
+    <!-- 💎 미네랄 채굴 — 광맥을 누르면 열린다. 껍데기는 공용(.hbModal/.hbmCard/.hbmHead/.hbmX) -->
+    <div class="hbModal hide" id="campMineSheet" onclick="if(event.target===this)closeCampMine()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>미네랄 채굴</b><em id="campMineHead"></em>
+          <button class="hbmX" onclick="closeCampMine()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <!-- 과녁 — 여기가 넓어야 하는 이유가 이 판의 존재 이유다 -->
+        <button type="button" class="cmTap" id="campMineTap" aria-label="미네랄 캐기"></button>
+        <div class="cmUpg uiScroll" id="campMineUpg"></div>
+      </div>
+    </div>
     <div class="hbModal hide" id="hbGuideSheet" onclick="if(event.target===this)closeGuide()">
       <div class="hbmCard">
         <div class="hbmHead"><b>가이드</b><em id="hbGuideHead"></em>

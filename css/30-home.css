@@ -1907,3 +1907,65 @@
 #campTree .ctRootTx{font-size:11px;fill:#e8eef7}
 #campTree .ctNm{font-size:12px;fill:#0b0f16}
 #campTree .ctBrNm{font-size:15px;paint-order:stroke;stroke:rgba(6,9,13,.9);stroke-width:4px}
+
+  /* ══ 🎬 캠프 진입 연출 (2026-08-27) ══════════════════════════════════
+     종족을 고르고 캠프로 들어올 때, 살짝 물러난 자리에서 **본진 쪽으로 다가간다**.
+     ⭐ 뷰(G.tech.view)를 건드리지 않는다 — CAMP_ZOOM 은 격자·배치·전투 계산에 얽혀 있어
+        연출로 손대면 게임이 깨진다(2026-08-27 실패 기록: 스모크 셋이 깨졌다).
+        여기는 **순수 CSS** 라 게임 좌표와 무관하다.
+     ⚠ 맵(#vBuild)과 3D(#cvMarine)는 형제다 — **둘에 같은 애니메이션**을 걸어야 같이 움직인다.
+        하나만 걸면 배경과 건물이 따로 논다. */
+  /* ⚠ **확대에서 시작해 기본으로 안정된다**(1.18 → 1.0). 반대로(0.9 → 1.0) 하면 시작이 기본보다
+     작아서 맵 바깥의 빈 자리가 위·좌우에 드러난다 — 2026-08-27 에 그렇게 했다가 되돌렸다.
+     ⚠ 페이드는 **앞 5분의 1에서 끝낸다.** 줌과 같이 끝나면 둘이 뭉뚱그려져 연출이 짧고 밋밋해 보인다.
+       불투명해진 뒤에도 한참 더 다가오는 것이 「게임 속으로 들어가는」 느낌을 만든다. */
+  @keyframes campEnterIn{
+    0%  { transform:scale(1.18); opacity:0 }
+    20% { opacity:1 }
+    100%{ transform:none;        opacity:1 } }
+  /* ⚠ will-change 를 켜 두면 브라우저가 **확대된 크기로 래스터**해 애니 내내 선명도가 같다.
+     없으면 원본 크기로 래스터한 것을 늘려 그리다가 끝나는 순간 다시 그려서 **선명도가 확 바뀐다**
+     — 그게 「마지막에 뚝 끊긴다」의 정체였다(2026-08-27 · 차이가 석판 이음매 선 전체에 깔렸다). */
+  #vBuild.campIn,#cvMarine.campIn{
+    will-change:transform,opacity;backface-visibility:hidden;
+    transform-origin:50% 72%;   /* 아래쪽 기준 = 본진을 향한 시선 */
+    animation:campEnterIn var(--campInDur,2.3s) cubic-bezier(.4,0,.2,1) both}   /* ⚠ 초반이 급하면 1초 만에 끝나 보인다 — 2.3초 내내 눈에 띄게 움직여야 한다 */
+  /* 종족 선택 판이 사라지는 것도 같이 부드럽게 — display 로 끊으면 화면이 툭 바뀐다 */
+  #campRaceOv{transition:opacity var(--campOvDur,.4s) ease}
+  #campRaceOv.closing{opacity:0;pointer-events:none}
+
+  /* ══ 💎 미네랄 채굴 판 (2026-08-27) ═══════════════════════════════════
+     껍데기는 공용(.hbModal/.hbmCard) — 여기서는 안쪽만 정한다.
+     ⭐ 이 판의 존재 이유는 **넓은 과녁**이다. 메인 화면의 광맥은 화면의 5% 뿐이라
+        손끝이 일꾼·건물·바닥을 자꾸 눌렀다. 과녁을 작게 만들면 만든 뜻이 사라진다. */
+  #campMineSheet .hbmHead em{display:flex;align-items:center;gap:5px;margin-left:auto;margin-right:8px;
+    font-style:normal;font-family:var(--font-num);font-size:15px;color:#dfe7f0}
+  #campMineSheet .cmIco{width:16px;height:16px}
+  /* 과녁 — 판 안에서 가장 큰 것. 누르면 살짝 눌린다(판이 아니라 반응이 신호다) */
+  .cmTap{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    width:100%;min-height:190px;margin:0;padding:18px 0;border:none;border-radius:0;cursor:pointer;
+    background:radial-gradient(120% 90% at 50% 45%,rgba(90,150,220,.16),transparent 70%);
+    -webkit-tap-highlight-color:transparent;overflow:hidden}
+  .cmTap:active{background:radial-gradient(120% 90% at 50% 45%,rgba(90,150,220,.26),transparent 70%)}
+  .cmTap:active .cmBig{transform:scale(.94)}
+  .cmBig{width:96px;height:96px;transition:transform .09s ease;filter:drop-shadow(0 4px 14px rgba(0,0,0,.6))}
+  .cmGain{font-family:var(--font-num);font-size:19px;font-weight:700;color:#bcd8f6;font-style:normal;
+    text-shadow:0 1px 4px #000}
+  /* 캔 만큼 튀어오르는 숫자 — 눌렀다는 것이 눈으로 돌아오는 유일한 신호 */
+  .cmPop{position:absolute;transform:translate(-50%,-50%);pointer-events:none;
+    font-family:var(--font-num);font-size:17px;font-weight:700;font-style:normal;color:#eaf4ff;
+    text-shadow:0 1px 4px #000;animation:cmPopUp .9s ease-out forwards}
+  @keyframes cmPopUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}
+    18%{opacity:1;transform:translate(-50%,-70%) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+  /* 업그레이드 줄 — 행 사이 1px 만(로그인·설정과 같은 어법) */
+  .cmUpg{max-height:38vh;overflow-y:auto;padding:0 14px 12px}
+  .cmRow{display:flex;align-items:center;gap:10px;padding:11px 0;
+    border-top:1px solid rgba(255,255,255,.10)}
+  .cmB{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .cmNm{font-size:var(--fs-md);font-weight:700;color:#e8edf3}
+  .cmNm i{font-style:normal;font-family:var(--font-num);color:#9fb4cc;margin-left:3px}
+  .cmWhy{font-style:normal;font-size:var(--fs-xs);color:var(--txt-mute);line-height:1.4}
+  .cmBuy{flex:0 0 auto;display:flex;align-items:center;gap:5px;min-height:38px;padding:0 12px;
+    font-family:var(--font-num);font-size:var(--fs-md)}
+  .cmBuy .cmC{width:14px;height:14px}
