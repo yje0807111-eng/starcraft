@@ -608,8 +608,23 @@ function campBattleOpen(){
     if(bm !== 1){ S.me.base.maxHp = (S.me.base.maxHp || S.me.base.hp) * bm; S.me.base.hp = S.me.base.maxHp; } }
   CAMPB = S;
   campBuildStructs();                                  // 🏢 기지의 건물들을 전장에 올린다
+  campAdoptBaseUnits();                                // 🪖 캠프에서 뽑아 둔 병력을 그 자리로 데려온다
   return S;
 }
+// 🪖 **캠프(0단계)에서 뽑은 병력을 전장이 열릴 때 데려온다.**
+//   ⛔ 던전 밖에는 전장이 없어서(CAMPB=null) 생산 가로채기가 못 옮긴다 — 그동안은 기지에 선다.
+//     전장이 열리는 순간 **그 자리 그대로** 데려와야 한다.
+//   ⚠ 실측(2026-08-28)에서 이걸 빠뜨려 판이 통째로 멈췄다: 캠프에서 54기를 뽑아 두었는데
+//     던전에 들어가면 전장 병력이 0 이라 곧바로 패배 → 캠프 → 다시 입장이 2,583번 반복됐다.
+//   ⛔ 인구를 반환하지 않는다 — 옛 출격이 그걸 해서 인구 상한이 무력했다.
+function campAdoptBaseUnits(){
+  if(!CAMPB || typeof G === 'undefined' || !G.tech || typeof STK_UNITS === 'undefined') return 0;
+  const ents = G.tech.ents, take = [];
+  for(let i = ents.length - 1; i >= 0; i--){ const e = ents[i];
+    if(e.type !== 'unit' || !STK_UNITS[e.uid]) continue;
+    ents.splice(i, 1); take.push(e); }
+  for(const e of take) campDeploy(e.uid, e.x, e.y);
+  return take.length; }
 function campBattleClose(){ CAMPB = null; }
 
 // ══ 🏢 기지 건물을 전장에 올린다 (2026-08-27) ═══════════════════════════

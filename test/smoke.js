@@ -1621,11 +1621,26 @@ async function groupLobby(){
     for(let i=0;i<4;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘겨 본다
     assert((G.tech.sup|0)===sup0,'인구가 반환됐다: '+G.tech.sup+' → '+sup0);
     assert(CAMPB.me.units.length===1,'라운드를 넘기며 병력이 또 생겼다: '+CAMPB.me.units.length);
-    // ⑤ 일꾼은 그대로 기지에 (미네랄을 캐야 한다)
+    // ⑤ 🪖 **캠프(0단계)에서 뽑아 둔 병력은 전장이 열릴 때 그 자리로 데려온다.**
+    //    ⛔ 던전 밖에는 전장이 없어 생산 가로채기가 못 옮긴다 — 그동안은 기지에 선다.
+    //    ⚠ 실측(2026-08-28)에서 이걸 빠뜨려 판이 멈췄다: 캠프에서 54기를 뽑아 뒀는데 던전에
+    //      들어가면 전장 병력이 0 이라 곧바로 패배 → 캠프 → 재입장이 2,583번 반복됐다.
+    { const C=campState(); const dgWas=C.dg, clWas=C.cleared;
+      campBattleClose(); C.dg=0; C.cleared=0;                       // 캠프(0단계)로 내려온다
+      const sup1=G.tech.sup|0;
+      techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+      assert(ents.filter(e=>e.type==='unit').length===1,'0단계에서는 기지에 서야 한다');
+      C.dg=1; C.cleared=0; CAMPB=null; campCombatStep(0.05);        // 던전 입장 = 전장이 열린다
+      assert(CAMPB,'전장이 안 열림');
+      assert(ents.filter(e=>e.type==='unit').length===0,'기지에 병력이 남았다 — 못 데려왔다');
+      assert(CAMPB.me.units.length>=1,'전장으로 못 데려왔다: '+CAMPB.me.units.length);
+      assert((G.tech.sup|0)===sup1,'데려오며 인구를 반환했다');
+      C.dg=dgWas; C.cleared=clWas; }
+    // ⑥ 일꾼은 그대로 기지에 (미네랄을 캐야 한다)
     { const w0=ents.filter(e=>e.type==='worker').length;
       techFinishProduce({ id:TECH_WORKER[G.tech.race], pop:1, bk:'command' }, null);
       assert(ents.filter(e=>e.type==='worker').length===w0+1,'일꾼이 기지에서 사라졌다'); }
-    // ⑥ ⛔ 공유 함수다 — 되돌리면 기지에 서야 한다
+    // ⑦ ⛔ 공유 함수다 — 되돌리면 기지에 서야 한다
     campUnpatchFinish();
     techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
     assert(uOf()===n0+1,'원복했는데도 전장으로 갔다 — 관리자 탭이 깨진다');
