@@ -1637,6 +1637,67 @@ async function groupLobby(){
     return '전장 1기 · 자리 고정 · 인구 유지';
   });
 
+  // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
+  //    복귀는 위치를 덮어쓰는 게 아니라 strikeMoveToward 로 **다시 미는** 방식이다 —
+  //    그래야 겹침 회피(stepUnitMove)를 탄다.
+  await step('캠프: 유닛이 자기 자리로 돌아온다 (겹침 회피 · 싸울 땐 안 돌아감)', async()=>{
+    skipIf(typeof campPostStep!=='function'||typeof campEnterDungeon!=='function','2단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const W=CAMPB.world;
+    const mk=(id,x,y)=>campWithStk(()=>{ strikeSpawnUnit('me',id);
+      const z=STK.me.units[STK.me.units.length-1];
+      if(z){ z.x=x; z.y=y; z.wait=0; z.rallied=true; z._post={x:x,y:y}; z._sx=x; z._sy=y; } return z; });
+    // ① 자리에서 밀려나면 돌아온다
+    const a=mk('marine', W*0.5, W*0.70);
+    assert(a,'레인저를 못 만들었다');
+    campScaleAllies([a]);
+    a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y;      // 자리에서 멀리 떼어 놓는다
+    const d0=Math.hypot(a.x-a._post.x, a.y-a._post.y);
+    for(let i=0;i<40;i++){ campPostSnap(); campPostStep(0.05); }
+    const d1=Math.hypot(a.x-a._post.x, a.y-a._post.y);
+    assert(d1<d0,'자리로 안 돌아온다: '+Math.round(d0)+' → '+Math.round(d1));
+    // ② ⚔ 표적이 있으면 복귀보다 전투가 먼저다 — 돌아오다 싸움이 나면 합류한다
+    { a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y; a.tgtUid='someone';
+      const bx=a.x, by=a.y;
+      campPostSnap(); campPostStep(0.05);
+      assert(a.x===bx && a.y===by,'싸우는 유닛을 복귀시켰다');
+      a.tgtUid=null; }
+    // ③ 겹침 회피 — 같은 자리를 준 둘이 포개지지 않는다
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const px=W*0.5, py=W*0.60;
+      const u1=mk('marine', W*0.45, W*0.45), u2=mk('marine', W*0.55, W*0.45);
+      if(u1&&u2){ campScaleAllies([u1,u2]);
+        u1._post={x:px,y:py}; u2._post={x:px,y:py};        // 일부러 같은 자리
+        for(let i=0;i<80;i++){ campPostSnap(); campPostStep(0.05); }
+        const gap=Math.hypot(u1.x-u2.x, u1.y-u2.y);
+        const need=((u1.size||14)+(u2.size||14))*0.5;
+        assert(gap>=need*0.8,'둘이 포개졌다 — 회피가 안 걸렸다: 간격 '+Math.round(gap)+' (최소 '+Math.round(need*0.8)+')'); } }
+    // ④ 🪢 목줄 기준이 **자기 자리**다(집결지가 아니다)
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const u=mk('marine', W*0.30, W*0.55);
+      if(u){ u._post={x:W*0.30,y:W*0.55};
+        u.x=u._post.x; u.y=u._post.y-CAMP_LEASH*3;
+        campLeash();
+        const d=Math.hypot(u.x-u._post.x, u.y-u._post.y);
+        assert(d<=CAMP_LEASH+1e-6,'자기 자리 기준 목줄이 안 걸렸다: '+Math.round(d)); } }
+    // ⑤ 부활하면 자기 자리에서 일어난다
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const u=mk('marine', W*0.5, W*0.60);
+      if(u){ const px=u._post.x, py=u._post.y;
+        u.x=W*0.5; u.y=W*0.25;                            // 멀리서 죽은 셈
+        u.dead=true; CAMPB._down=[{u:u, t:0}];
+        CAMPB.me.units.length=0;
+        campReviveStep(1);
+        assert(Math.abs(u.x-px)<1e-6 && Math.abs(u.y-py)<1e-6,'누운 자리에서 일어났다 — 자기 자리여야 한다'); } }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    CAMPB._down=[];
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '복귀 · 회피 · 목줄 · 부활 자리 ok';
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};

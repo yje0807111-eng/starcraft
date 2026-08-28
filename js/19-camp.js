@@ -978,15 +978,43 @@ function campAlertApply(){
     u.acq = (u._alertT > 0) ? CAMP_ACQ_ALERT : CAMP_ACQ_BASE; }
 }
 
-// 🪢 **목줄** — 집결지에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
+// ── 🪧 자리(post) — 내가 준 자리를 지킨다 (2026-08-28 사용자 확정) ─────
+// ⭐ 자리는 **내가 옮길 때마다 바뀐다**. 태어난 자리는 첫 값일 뿐이다(campDeploy).
+// ⭐ **싸우는 중이면 건드리지 않는다** — 표적이 있으면 그대로 두고, 표적이 없을 때만 돌아온다.
+//   그래서 **돌아오다가도 근처에서 싸움이 나면 그대로 합류한다**(발견 전파가 인식 거리를 넓히면
+//   strikeStepUnits 가 표적을 잡아 주고, 표적이 잡힌 유닛은 이 함수가 손대지 않는다).
+// ⚠ **왜 되돌렸다가 다시 미는가** — strikeStepUnits 는 표적 없는 유닛을 집결지로 보낸다.
+//   그 이동을 그대로 두고 위치만 덮어쓰면 **겹침 회피를 안 탄다**(유닛이 포개진다).
+//   그래서 프레임 시작 위치로 되돌린 뒤 **strikeMoveToward 로 다시 민다** — 그 함수가
+//   stepUnitMove(주변 회피·신전 회피)를 타므로 복귀도 전진과 똑같은 이동 규칙을 쓴다.
+function campPostSnap(){
+  if(!CAMPB || !CAMPB.me) return;
+  for(const u of CAMPB.me.units){ if(u.dead) continue; u._sx = u.x; u._sy = u.y; } }
+function campPostStep(dt){
+  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
+  const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
+  campWithStk(function(){
+    for(const u of CAMPB.me.units){ if(u.dead) continue;
+      if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
+      if(u.tgtUid) continue;                        // ⚔ 싸우는 중 — 복귀보다 전투가 먼저다
+      const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
+      if(dx * dx + dy * dy <= R2){ u.moving = false; continue; }   // 이미 자리
+      if(u._sx != null){ u.x = u._sx; u.y = u._sy; }               // 집결지로 간 이동을 무르고
+      strikeMoveToward(u, p.x, p.y, dt); n++; }                     // 회피를 타는 이동으로 다시 민다
+    if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
+  });
+  return n; }
+
+// 🪢 **목줄** — **자기 자리**에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
 //   ⛔ 「인식 거리를 넓힌다」만 하고 이걸 빼면 적 본진까지 쫓아간다. 그러면 아군이 흩어져
 //     각개격파되고, 적이 건물을 때리는데 아군은 저 위에 있는 그림이 된다.
 //   ⚠ 속도를 깎지 않고 **위치만** 자른다 — 이동 로직(stepUnitMove)은 공용이라 건드리지 않는다.
 function campLeash(){
   if(!CAMPB || !CAMPB.me) return 0;
-  const r = campRallyPoint(); if(!r) return 0;
   const L2 = CAMP_LEASH * CAMP_LEASH; let n = 0;
+  const fb = campRallyPoint();                     // 자리가 아직 없는 유닛만 옛 기준을 쓴다
   for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const r = u._post || fb; if(!r) continue;
     const dx = u.x - r.x, dy = u.y - r.y, d2 = dx * dx + dy * dy;
     if(d2 <= L2) continue;
     const d = Math.sqrt(d2) || 1;
@@ -1165,6 +1193,8 @@ function campReviveStep(dt){
     u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
     u._collapseT = null; u.wait = 0;                 // 붕괴 대기·스폰 대기 흔적 정리
     u.tgtUid = null; u._btgt = null; u._btT = 0;     // 표적은 새로 고른다
+    if(u._post){ u.x = u._post.x; u.y = u._post.y; } // 🪧 자기 자리에서 일어난다(누운 곳이 아니라)
+    u._sx = u.x; u._sy = u.y;
     CAMPB.me.units.push(u);                          // 전장에 돌려놓는다
     CAMPB._down.splice(i, 1); up++; }
   return up; }
@@ -1197,7 +1227,8 @@ const CAMP_ACQ_ALERT = 1500;       // 전파받았을 때 보는 거리
 const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
-const CAMP_LEASH = 1300;           // 집결지에서 이보다 멀리는 못 나간다
+const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
+const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
 const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
 const CAMP_SORTIE_S = 3;           // 🚚 증원 간격(초) — 라운드 도중에도 이만큼마다 내보낸다
 function campCombatStep(dt){
@@ -1224,9 +1255,11 @@ function campCombatStep(dt){
   if(CAMPB._soT <= 0){ CAMPB._soT = CAMP_SORTIE_S; campSortie(); }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
+  campPostSnap();       // 🪧 되돌리기 전 위치를 떠 둔다(아래 campPostStep 이 쓴다)
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
-  campLeash();          // 🪢 너무 멀리 나간 아군을 집결선 안으로 되돌린다
+  campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 돌아온다)
+  campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)
