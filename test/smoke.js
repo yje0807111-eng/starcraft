@@ -1658,11 +1658,20 @@ async function groupLobby(){
     for(let i=0;i<40;i++){ campPostSnap(); campPostStep(0.05); }
     const d1=Math.hypot(a.x-a._post.x, a.y-a._post.y);
     assert(d1<d0,'자리로 안 돌아온다: '+Math.round(d0)+' → '+Math.round(d1));
-    // ② ⚔ 표적이 있으면 복귀보다 전투가 먼저다 — 돌아오다 싸움이 나면 합류한다
-    { a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y; a.tgtUid='someone';
+    // ② ⚔ **살아 있는** 표적이 있으면 복귀보다 전투가 먼저다 — 돌아오다 싸움이 나면 합류한다
+    { const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+        const z=STK.ai.units[STK.ai.units.length-1]; if(z){ z.x=W*0.5; z.y=W*0.38; } return z; });
+      a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y; a.tgtUid=foe?foe.uid:'x';
       const bx=a.x, by=a.y;
       campPostSnap(); campPostStep(0.05);
       assert(a.x===bx && a.y===by,'싸우는 유닛을 복귀시켰다');
+      // ⛔ **적이 죽으면 표적 번호가 남아도 돌아와야 한다.**
+      //   실측(2026-08-28): 이걸 안 보고 tgtUid 만 봤더니 적을 다 없앤 뒤 20초를 굴려도
+      //   유닛이 제자리에 붙박여 있었다. 스모크가 가짜 표적을 써서 못 잡았다.
+      if(foe) foe.dead=true;
+      campWithStk(()=>{ STK.ai.units.length=0; });
+      campPostSnap(); campPostStep(0.05);
+      assert(a.x!==bx || a.y!==by,'적이 죽었는데 표적 번호 때문에 안 돌아온다');
       a.tgtUid=null; }
     // ③ 겹침 회피 — 같은 자리를 준 둘이 포개지지 않는다
     { campWithStk(()=>{ STK.me.units.length=0; });

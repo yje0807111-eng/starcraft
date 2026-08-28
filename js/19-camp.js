@@ -1054,7 +1054,11 @@ function campPostStep(dt){
   campWithStk(function(){
     for(const u of CAMPB.me.units){ if(u.dead) continue;
       if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
-      if(u.tgtUid) continue;                        // ⚔ 싸우는 중 — 복귀보다 전투가 먼저다
+      // ⚔ 싸우는 중이면 복귀보다 전투가 먼저다.
+      // ⛔ **표적 번호가 있다는 것만으로 판단하지 말 것.** 적이 죽어도 u.tgtUid 는 그대로 남는다 —
+      //   그러면 「싸우는 중」으로 오해해 **영영 자리로 안 돌아온다**(브라우저 실측 2026-08-28:
+      //   적을 다 없앤 뒤 20초를 굴려도 거리가 97·282 그대로였다). 살아 있는지까지 본다.
+      if(u.tgtUid && strikeFindUnit(CAMPB.ai.units, u.tgtUid)) continue;
       const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
       if(dx * dx + dy * dy <= R2){ u.moving = false; continue; }   // 이미 자리
       if(u._sx != null){ u.x = u._sx; u.y = u._sy; }               // 집결지로 간 이동을 무르고
