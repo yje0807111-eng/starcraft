@@ -136,11 +136,12 @@ await pg.evaluate(()=>{
       { const L=S.upg.gather|0, cur=campGatherMul();
         S.upg.gather=L+1; const nxt=campGatherMul(); S.upg.gather=L;
         opts.push({k:'gather', c:campUpgCost('gather'), d:R*(nxt/cur-1),
-          go:()=>{ S.upg.gather=L+1; T.credit-=campUpgCost('gather'); }}); }
+          // ⛔ 레벨을 올린 **뒤에** 값을 물으면 한 칸 위 값을 낸다(실측: 잔액이 −12만까지 갔다).
+          go:()=>{ const pay=campUpgCost('gather'); S.upg.gather=L+1; T.credit-=pay; }}); }
       { const L=S.upg.tap|0, cur=campTapGain();
         S.upg.tap=L+1; const nxt=campTapGain(); S.upg.tap=L;
         opts.push({k:'tap', c:campUpgCost('tap'), d:(nxt-cur)*__CB.taps,
-          go:()=>{ S.upg.tap=L+1; T.credit-=campUpgCost('tap'); }}); }
+          go:()=>{ const pay=campUpgCost('tap'); S.upg.tap=L+1; T.credit-=pay; }}); }
       if(wn<wmax && free>=1)
         opts.push({k:'worker', c:campHireCost(wn), d:perWk,
           go:()=>{ try{ T.sel=(T.ents.find(e=>e.type==='bldg'&&e.bk===TECH_TREE[T.race].buildings[0].k)||{}).eid;
