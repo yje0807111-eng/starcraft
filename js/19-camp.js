@@ -717,6 +717,88 @@ function campW2G(sx, sy, W){
   return { gx: 0.5 + ((sx / W) - 0.5) * CAMP_LANE_W,
            gy: CAMP_LANE_TOP + t * (CAMP_LANE_BOT - CAMP_LANE_TOP) }; }
 
+// ── 🖐 전장 병력 배치 (3단계 · 2026-08-28 사용자 확정) ─────────────────
+// ⭐ **내가 지정해서 원하는 자리로 옮긴다.** 옮긴 자리가 곧 그 유닛의 자리(_post)다.
+// ⛔ 원본(건설 탭)의 탭 로직을 고치지 않는다 — 원본은 **기지 엔티티만** 안다.
+//   캠프가 up 에서 **먼저** 보고, 처리했으면 _btDown 을 비워 원본이 그 탭을 다시 안 쓰게 한다
+//   (17-build-cards.js 가 쓰는 것과 같은 규약이다).
+let _campSel = [];                 // 고른 전장 유닛 uid
+let _campBox = null;               // 캠프의 드래그 박스(원본 _btBox 와 별개 — 전장 유닛용)
+const CAMP_PICK_R = 0.022;         // 탭 히트 반경(격자 정규 좌표)
+const CAMP_BOX_MIN = 0.015;        // 이만큼 끌어야 박스로 본다(원본과 같은 값)
+function campSelList(){ if(!CAMPB) return [];
+  const out = []; for(const u of CAMPB.me.units){ if(!u.dead && _campSel.indexOf(u.uid) >= 0) out.push(u); } return out; }
+function campSelClear(){ if(!_campSel.length) return false; _campSel = []; return true; }
+function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.uid; });
+  if(_campSel.length && typeof G !== 'undefined' && G.tech){ G.tech.selU = []; G.tech.sel = null; G.tech.selRes = null; }
+  return _campSel.length; }
+// 화면 좌표 → 격자 좌표(기지와 같은 규약)
+function campScr2G(cx, cy){
+  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function') return null;
+  const r = _btRect(); if(!r || !r.width || !r.height) return null;
+  const sx = (cx - r.left) / r.width, sy = (cy - r.top) / r.height;
+  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return null;
+  if(sy < 0.13) return null;                       // 상단바 — techPtrDown 과 같은 규약
+  return _techS2W(sx, sy); }
+// 그 자리에 있는 **내** 전장 유닛 하나(가장 가까운 것)
+function campBattleAt(cx, cy){
+  if(!CAMPB || campDgN() <= 0) return null;
+  const g = campScr2G(cx, cy); if(!g) return null;
+  const W = CAMPB.world || 4800; let best = null, bd = CAMP_PICK_R * CAMP_PICK_R;
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const q = campW2G(u.x, u.y, W), dx = q.gx - g.x, dy = q.gy - g.y, d2 = dx * dx + dy * dy;
+    if(d2 <= bd){ bd = d2; best = u; } }
+  return best; }
+// 박스 안의 내 전장 유닛 전부
+function campBattleInBox(g0, g1){
+  if(!CAMPB) return [];
+  const W = CAMPB.world || 4800, out = [];
+  const x0 = Math.min(g0.x, g1.x), x1 = Math.max(g0.x, g1.x);
+  const y0 = Math.min(g0.y, g1.y), y1 = Math.max(g0.y, g1.y);
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const q = campW2G(u.x, u.y, W);
+    if(q.gx >= x0 && q.gx <= x1 && q.gy >= y0 && q.gy <= y1) out.push(u); }
+  return out; }
+// 🪧 고른 유닛들의 **자리를 옮긴다** — 한 점에 포개지지 않게 대형으로 편다.
+//   ⭐ 대형 슬롯은 기지 랠리가 쓰는 _ringSlotN 을 그대로 빌린다(새로 만들지 않는다).
+function campMoveSel(gx, gy){
+  const list = campSelList(); if(!list.length || !CAMPB) return 0;
+  const W = CAMPB.world || 4800, c = campG2W(gx, gy, W);
+  for(let i = 0; i < list.length; i++){ const u = list[i];
+    const sp = (u.size || 14) * 2.2;
+    const s = (typeof _ringSlotN === 'function') ? _ringSlotN(i, sp) : { dx:0, dy:0 };
+    const px = Math.max(0, Math.min(W, c.x + s.dx)), py = Math.max(0, Math.min(W, c.y + s.dy));
+    u._post = { x:px, y:py };
+    u.tgtUid = null; u._btgt = null; u._btT = 0;   // 표적을 놓고 자리로 간다(복귀가 손댈 수 있게)
+  }
+  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  return list.length; }
+
+// 🖐 up 에서 캠프가 **먼저** 판정한다. true 를 돌리면 원본은 이 탭을 쓰지 않는다.
+//   ⚠ 순서가 중요하다 — 박스가 먼저다(끌었으면 탭이 아니다).
+function campPtrUp(ev){
+  if(!_campOn || !CAMPB || campDgN() <= 0 || !ev) return false;
+  const box = _campBox; _campBox = null;
+  // ① 박스로 끌었다 = 여러 기 지정
+  if(box && box.on){
+    const g0 = campScr2G(box.cx0, box.cy0), g1 = campScr2G(ev.clientX, ev.clientY);
+    if(g0 && g1){ const hit = campBattleInBox(g0, g1);
+      if(hit.length){ campSelSet(hit);
+        if(typeof playSfx === 'function') playSfx('ui_tab');
+        return true; } }                      // 잡힌 게 있으면 원본 박스(기지 유닛)는 쓰지 않는다
+    return false; }
+  // ② 탭 — 원본이 아직 지우기 전에 읽는다
+  if(typeof _btDown === 'undefined' || !_btDown || _btMoved) return false;
+  const u = campBattleAt(ev.clientX, ev.clientY);
+  if(u){ campSelSet([u]); if(typeof playSfx === 'function') playSfx('ui_tab'); return true; }
+  // ③ 고른 병력이 있고 빈 바닥을 눌렀다 = 그 자리로 이동
+  if(_campSel.length && campEmptyAt(ev.clientX, ev.clientY)){
+    const g = campScr2G(ev.clientX, ev.clientY);
+    if(g){ campMoveSel(g.x, g.y); return true; } }
+  // ④ 그 밖의 탭 = 지정 해제하고 원본에 넘긴다
+  campSelClear();
+  return false; }
+
 // 격자(기지 정규 좌표) → 전장 좌표. **campW2G 의 역**이다.
 //   ⚠ 두 식은 반드시 짝이어야 한다 — 한쪽만 고치면 유닛이 다른 자리에 선다.
 //   ⚠ 레인 밖(본부·건물이 있는 아래쪽)은 레인 끝으로 자른다. 전장은 0.18~0.62 뿐이라
@@ -764,6 +846,7 @@ function campBattleList(){
       const x = (g.gx - v.x) * v.zoom + 0.5, y = (g.gy - v.y) * v.zoom + 0.5;
       if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;   // ⚡ 화면 밖은 넘기지 않는다(오토배틀 STK_CULL 과 같은 뜻)
       out.push({ uid:'cb_' + side + '_' + u.uid, id:u.id, x:x, y:y,
+        sel:(side === 'me' && _campSel.indexOf(u.uid) >= 0),   // 🔵 지정 표시 = 3D 하단 링(기지 유닛과 같은 규약)
         face:(u.face || 0), moving:!!u.moving, yoff:yoff, yawFix:true, scl:scl,
         fireSeq:(u.fireSeq || 0), selCol:(side === 'ai') ? 0xff5c5c : undefined,
         z: -1000 + (Math.floor((g.gy - techY0()) / _techCH()) + 0.5) * zstep }); } }
@@ -2531,6 +2614,9 @@ function campPatchZoom(){
         return;
       }
       const ret = oDown.apply(this, arguments);
+      // 🖐 캠프의 박스 시작점 — 원본 _btBox 는 기지 엔티티용이라 전장 유닛을 못 잡는다
+      if(_campOn && CAMPB && campDgN() > 0 && !_btPan && !_btCmd && !_btArm)
+        _campBox = { cx0:ev.clientX, cy0:ev.clientY, on:false };
       // 빈 바닥을 눌렀나 — **좌표로 직접 판정한다.**
       // ⛔ _btBox(원본의 드래그 박스)로 판별하면 안 된다. 캠프는 시트를 채우려고 늘 본부를
       //   자동 선택해 두는데(campSyncSheet), 그러면 빈 바닥 탭이 원본의 "건물 지정 해제"
@@ -2547,6 +2633,9 @@ function campPatchZoom(){
       // 끌기 시작하면 롱프레스 취소 — 끌었다는 건 박스 지정을 하겠다는 뜻이다
       if(_campLongT && ev && _campLongFrom && ev.pointerId === _campLongFrom.id
          && Math.hypot(ev.clientX - _campLongFrom.x, ev.clientY - _campLongFrom.y) > 8) campPanDisarm();
+      if(_campBox && ev && !_campBox.on){ const r = (typeof _btRect === 'function') ? _btRect() : null;
+        if(r && (Math.abs(ev.clientX - _campBox.cx0) / (r.width || 1) > CAMP_BOX_MIN
+              || Math.abs(ev.clientY - _campBox.cy0) / (r.height || 1) > CAMP_BOX_MIN)) _campBox.on = true; }
       return oMove.apply(this, arguments);
     };
 
@@ -2569,6 +2658,13 @@ function campPatchZoom(){
           return oUp.apply(this, arguments);
         }
       }
+      // 🖐 전장 병력 조작 — 원본보다 **먼저** 본다(원본은 기지 엔티티만 안다).
+      //   처리했으면 _btDown·_btBox 를 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
+      if(_campOn && !_campPanMode && campPtrUp(ev)){
+        if(typeof _btDown !== 'undefined') _btDown = null;
+        if(typeof _btBox !== 'undefined') _btBox = null;
+      }
+      _campBox = null;
       return oUp.apply(this, arguments);
     };
   }
@@ -2619,6 +2715,7 @@ function campUnpatchZoom(){
   if(!_campZoomPatched) return;
   campUnpatchWheel();
   campPanDisarm(); campPanMode(false); _campPanDown = null; _campPanJustOn = false;   // 🖐 모드를 들고 나가지 않는다
+  campSelClear(); _campBox = null;                                                    // 🖐 전장 병력 지정도 들고 나가지 않는다
   for(const k in _campZoomPatched) window[k] = _campZoomPatched[k];
   _campZoomPatched = null;
 }

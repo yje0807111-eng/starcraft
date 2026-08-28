@@ -1698,6 +1698,53 @@ async function groupLobby(){
     return '복귀 · 회피 · 목줄 · 부활 자리 ok';
   });
 
+  // 🖐 **내가 지정해서 원하는 자리로 옮긴다** (2026-08-28 사용자 확정)
+  //    ⛔ 원본(건설 탭)의 탭 로직은 기지 엔티티만 안다 — 캠프가 up 에서 먼저 보고,
+  //      처리했으면 _btDown 을 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
+  await step('캠프: 전장 병력을 골라 원하는 자리로 옮긴다', async()=>{
+    skipIf(typeof campBattleAt!=='function'||typeof campMoveSel!=='function','3단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const W=CAMPB.world, r=_btRect(); skipIf(!r||!r.width,'맵 사각을 못 잼');
+    const mk=(gx,gy)=>{ const u=campDeploy('marine', gx, gy); return u; };
+    // 화면 좌표로 바꾸는 도우미 — 격자 → 화면
+    const scr=(wx,wy)=>{ const sp=_techW2S(wx,wy); return { x:r.left+sp.x*r.width, y:r.top+sp.y*r.height }; };
+    // ① 탭으로 고른다
+    const a=mk(0.5,0.55); assert(a,'유닛 배치 실패');
+    { const g=campW2G(a.x,a.y,W), pt=scr(g.gx,g.gy);
+      const hit=campBattleAt(pt.x, pt.y);
+      assert(hit===a,'탭으로 유닛을 못 골랐다');
+      campSelSet([a]);
+      assert(campSelList().length===1,'지정이 안 됐다'); }
+    // ② 지정 표시가 렌더 엔트리에 실린다(3D 하단 링)
+    { const e=campBattleList().find(x=>x.uid==='cb_me_'+a.uid);
+      assert(e && e.sel===true,'지정 링이 안 붙었다'); }
+    // ③ 빈 자리로 옮기면 **그 자리가 새 자리**가 된다
+    { const gx=0.35, gy=0.30, want=campG2W(gx,gy,W);
+      campMoveSel(gx,gy);
+      assert(Math.hypot(a._post.x-want.x, a._post.y-want.y)<40,'자리가 안 옮겨졌다');
+      assert(!a.tgtUid,'표적을 놓지 않았다 — 복귀가 못 움직인다'); }
+    // ④ 여러 기를 옮기면 **한 점에 포개지지 않는다**
+    { campWithStk(()=>{ STK.me.units.length=0; }); _campSel=[];
+      const us=[mk(0.4,0.5), mk(0.5,0.5), mk(0.6,0.5)].filter(Boolean);
+      if(us.length===3){ campSelSet(us); campMoveSel(0.5,0.35);
+        const d01=Math.hypot(us[0]._post.x-us[1]._post.x, us[0]._post.y-us[1]._post.y);
+        const d02=Math.hypot(us[0]._post.x-us[2]._post.x, us[0]._post.y-us[2]._post.y);
+        assert(d01>1 && d02>1,'세 기의 자리가 같다 — 대형으로 안 펴졌다'); } }
+    // ⑤ 박스로 여러 기 고르기
+    { const g0={x:0.2,y:0.2}, g1={x:0.9,y:0.9};
+      const hit=campBattleInBox(g0,g1);
+      assert(hit.length>=1,'박스 안 유닛을 못 찾았다: '+hit.length); }
+    // ⑥ ⛔ 나가면 지정을 들고 나가지 않는다
+    { campSelSet(campSelList()); assert(campSelList().length>0,'전제가 바뀜');
+      campSelClear(); assert(campSelList().length===0,'지정이 안 풀렸다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '탭 지정 · 링 · 자리 이동 · 대형 · 박스 ok';
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
