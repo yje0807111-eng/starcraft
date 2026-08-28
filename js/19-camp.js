@@ -1727,13 +1727,29 @@ function campPickRace(){
   const C = campState(); if(!C || C.race) return;
   C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
-  // 🎬 종족 판은 페이드로 걷고, 캠프는 살짝 물러난 자리에서 다가온다(css/30-home.css 「캠프 진입 연출」)
+  // 🎬 종족 판을 페이드로 걷고 → **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
+  //    여기가 「게임이 실제로 시작되는 지점」이다(enterAfterWarm 의 _needRace 주석과 짝).
   const ov = document.getElementById('campRaceOv');
   if(ov){ ov.classList.add('closing');
     clearTimeout(ov._closeT);
     ov._closeT = setTimeout(function(){ ov.classList.remove('closing'); ov.classList.add('hide'); }, _campMs('--campOvDur', .4)); }
-  campEnter();
-  campEnterAnim();
+  campRaceToCamp();
+}
+
+// 종족 선택 → 캠프.
+// ⭐ **순서가 핵심이다.** campEnter() 는 **즉시** 부른다 — 늦추면 이 함수를 부르고 바로 캠프를
+//   쓰는 곳(스모크 여덟 군데)이 전부 깨진다. 대신 **검은 판을 먼저 올려** 그 아래에서 세팅되게 한다.
+//   검은 판(z 88)은 종족 판(z 64)보다 위라, 캠프가 준비돼도 화면에는 안 보인다.
+//   ⛔ campEnter() 를 await 뒤로 옮기지 말 것. ⛔ 검은 판 없이 campEnter() 만 부르면
+//     캠프가 잠깐 보였다가 덮이고 다시 나와 — 그게 「깜빡인다」의 정체였다(2026-08-27).
+function campRaceToCamp(){
+  const ph = document.getElementById('phone');
+  const hasBlack = (typeof titleToBlack === 'function' && typeof titleOutroEnd === 'function' && ph);
+  if(hasBlack) ph.classList.add('artMark');   // 로고를 다시 켠다 — titleOutroEnd 가 앞서 걷었다
+  const black = hasBlack ? titleToBlack() : null;   // 검은 판이 덮이기 시작한다(기다리지 않는다)
+  campEnter();                                       // 그 아래에서 캠프가 선다
+  if(!black){ campEnterAnim(); return; }
+  black.then(function(){ campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
 }
 
 // CSS 가 시간을 정한다 — JS 는 읽기만 한다(두 곳에 숫자를 두면 반드시 어긋난다).

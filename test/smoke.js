@@ -5017,8 +5017,18 @@ async function groupLobby(){
       const ov=document.getElementById('campRaceOv');
       skipIf(!ov,'종족 판이 안 떴다');
       campPickRace();
+      // ⭐ **상태는 즉시**여야 한다 — 검은 판이 덮이기를 기다렸다가 세팅하면 그 사이를 전제하는
+      //    코드가 전부 어긋난다(2026-08-27 에 스모크 여덟 군데가 깨졌다).
       assert(C2.race,'campPickRace 가 종족을 정하지 않았다');
-      await sleep(60);   // 클래스를 붙인 직후엔 애니 객체가 아직 없다 — 스타일 계산을 기다린다
+      assert(typeof G!=='undefined' && G.tech,'campPickRace 직후 캠프 상태가 아직 없다 — campEnter 가 늦춰졌다');
+      // 🎬 화면은 **검은 판이 먼저 덮는다** — 캠프가 잠깐 보였다 덮이면 그게 「깜빡임」이다
+      assert(document.getElementById('phone').classList.contains('artBlack'),
+        '검은 판이 안 올라온다 — 캠프가 그대로 드러나 깜빡인다');
+      // 종족 판은 잘라내지 말고 흐려져야 한다 — **지금 재야 한다**(0.4초면 closing 이 끝난다)
+      assert(ov.classList.contains('closing'),'종족 판이 페이드 없이 사라진다(display 로 끊는다)');
+      { const oTr=getComputedStyle(ov).transition;
+        assert(/opacity/.test(oTr),'종족 판에 opacity 전이가 없다: '+oTr); }
+      await sleep(1350);   // 다 덮인 뒤(--t-screen + 유지) 걷히며 줌이 시작되기를 기다린다
       const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
       assert(vb&&mc,'맵·3D 요소를 못 찾았다');
       const av=vb.getAnimations?vb.getAnimations():[], am=mc.getAnimations?mc.getAnimations():[];
@@ -5039,10 +5049,7 @@ async function groupLobby(){
       const op=(t)=>parseFloat(t.slice(t.indexOf('|')+1));
       assert(op(v1)>0.98,'400ms 에 아직 투명하다('+op(v1)+') — 페이드가 줌만큼 길게 끌린다');
       assert(sc(v1)>1.05,'400ms 에 줌이 거의 끝났다('+sc(v1).toFixed(3)+') — 페이드와 같이 끝나 짧아 보인다');
-      // 종족 판은 잘라내지 말고 흐려져야 한다
-      assert(ov.classList.contains('closing'),'종족 판이 페이드 없이 사라진다(display 로 끊는다)');
-      const oTr=getComputedStyle(ov).transition;
-      assert(/opacity/.test(oTr),'종족 판에 opacity 전이가 없다: '+oTr);
+      // (종족 판 페이드 검사는 campPickRace 직후로 옮겼다 — 0.4초면 closing 이 끝난다)
       return '맵·3D 동일 · '+v0.slice(0,26)+' → '+v1.slice(0,26);
     } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} try{ const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('closing'); o.classList.add('hide'); } }catch(e){}
       try{ ['vBuild','cvMarine'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.classList.remove('campIn'); (e.getAnimations?e.getAnimations():[]).forEach(a=>{try{a.cancel();}catch(_){}}); } }); }catch(e){}

@@ -2229,9 +2229,15 @@ async function enterAfterWarm(){
   if(!cont) opBarStart();
   await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
   await opBarDone();
-  // 🎬 그림·막대를 걷어 **로고만 남은 검은 화면**으로. 게임 화면은 그 뒤에 서고,
-  //    검은 판과 로고가 함께 사라지며 드러난다(titleOutroEnd).
-  if(typeof titleToBlack==='function') await titleToBlack();
+  // 🎬 **검은 화면 + 로고는 「게임이 실제로 시작되는 지점」에 쓴다.**
+  //    종족을 아직 안 골랐으면 여기가 그 지점이 아니다 — 로딩에서 종족 선택으로 **바로 디졸브**하고,
+  //    검은 화면은 종족을 고른 뒤(campPickRace)가 맡는다. 안 그러면 검은 화면이 두 번 나온다:
+  //    로딩→검정→종족선택→(다시)캠프 — 그 사이가 깜빡이는 것처럼 보였다(2026-08-27).
+  const _needRace = (function(){ try{ return typeof campState==='function' && campState() && !campState().race; }catch(e){ return false; } })();
+  if(_needRace){ const op=document.getElementById('opening');
+    if(op && typeof screenFadeOut==='function') screenFadeOut(op);
+    if(typeof _sleep==='function' && typeof _fadeMs==='function') await _sleep(_fadeMs()); }
+  else if(typeof titleToBlack==='function') await titleToBlack();
   opBarReset();
   // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
   //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
