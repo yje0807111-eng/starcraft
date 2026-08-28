@@ -1595,6 +1595,48 @@ async function groupLobby(){
     return out.join(' · ');
   });
 
+  // 🏭 **유닛은 한 번만 태어난다** (2026-08-28 사용자 확정)
+  //    ⛔ 예전엔 생산하면 기지에 서고, 3초 뒤 campSortie 가 그것을 **지우고 전장에 새로 만들었다.**
+  //      그래서 내가 둔 자리가 사라지고, 나갈 때 인구가 반환되어 인구 200 이 생산을 못 막았다.
+  await step('캠프: 생산한 유닛이 그 자리에서 바로 전장에 선다', async()=>{
+    skipIf(typeof campPatchFinish!=='function'||typeof campEnterDungeon!=='function','1단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const ents=G.tech.ents, uOf=()=>ents.filter(e=>e.type==='unit').length;
+    const n0=uOf(), sup0=G.tech.sup|0;
+    // ① 생산이 끝나면 기지에 안 남고 전장에 선다
+    techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+    assert(uOf()===n0,'기지에 유닛이 남았다 — 전장으로 안 갔다: '+uOf()+' vs '+n0);
+    assert(CAMPB.me.units.length===1,'전장에 안 섰다: '+CAMPB.me.units.length);
+    // ② 자리(_post)가 생기고, 그 자리가 선 자리다
+    const u=CAMPB.me.units[0];
+    assert(u._post,'자리(_post)가 없다');
+    assert(Math.abs(u._post.x-u.x)<1e-6 && Math.abs(u._post.y-u.y)<1e-6,'자리와 선 위치가 다르다');
+    assert(u.rallied===true,'집결지로 걸어가려 한다 — 여기가 이미 제자리다');
+    // ③ 좌표 변환이 짝이다(campG2W 는 campW2G 의 역)
+    { const W=CAMPB.world, g=campW2G(u.x,u.y,W), b=campG2W(g.gx,g.gy,W);
+      assert(Math.hypot(b.x-u.x,b.y-u.y)<1,'campG2W 가 campW2G 의 역이 아니다'); }
+    // ④ ⛔ 인구를 돌려주지 않는다 — 출격이 인구를 반환하던 것이 무한 생산의 원인이었다
+    if(typeof campSortie==='function') campSortie();
+    assert((G.tech.sup|0)===sup0,'인구가 반환됐다: '+G.tech.sup+' → '+sup0);
+    assert(CAMPB.me.units.length===1,'출격이 병력을 또 만들었다: '+CAMPB.me.units.length);
+    // ⑤ 일꾼은 그대로 기지에 (미네랄을 캐야 한다)
+    { const w0=ents.filter(e=>e.type==='worker').length;
+      techFinishProduce({ id:TECH_WORKER[G.tech.race], pop:1, bk:'command' }, null);
+      assert(ents.filter(e=>e.type==='worker').length===w0+1,'일꾼이 기지에서 사라졌다'); }
+    // ⑥ ⛔ 공유 함수다 — 되돌리면 기지에 서야 한다
+    campUnpatchFinish();
+    techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+    assert(uOf()===n0+1,'원복했는데도 전장으로 갔다 — 관리자 탭이 깨진다');
+    campPatchFinish();
+    { const i=ents.findIndex(e=>e.type==='unit'); if(i>=0) ents.splice(i,1); }   // 정리
+    campWithStk(()=>{ STK.me.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '전장 1기 · 자리 고정 · 인구 유지';
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};

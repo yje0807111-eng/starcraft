@@ -717,6 +717,35 @@ function campW2G(sx, sy, W){
   return { gx: 0.5 + ((sx / W) - 0.5) * CAMP_LANE_W,
            gy: CAMP_LANE_TOP + t * (CAMP_LANE_BOT - CAMP_LANE_TOP) }; }
 
+// 격자(기지 정규 좌표) → 전장 좌표. **campW2G 의 역**이다.
+//   ⚠ 두 식은 반드시 짝이어야 한다 — 한쪽만 고치면 유닛이 다른 자리에 선다.
+//   ⚠ 레인 밖(본부·건물이 있는 아래쪽)은 레인 끝으로 자른다. 전장은 0.18~0.62 뿐이라
+//     그보다 아래에서 뽑힌 유닛은 **레인 맨 아래(건물 바로 앞)** 에 선다.
+function campG2W(gx, gy, W){
+  const t = Math.max(0, Math.min(1, (gy - CAMP_LANE_TOP) / (CAMP_LANE_BOT - CAMP_LANE_TOP)));
+  return { x: W * (0.5 + (gx - 0.5) / CAMP_LANE_W),
+           y: W * (0.14 + t * 0.72) }; }
+
+// ⭐ **유닛은 한 번만 태어난다** (2026-08-28 사용자 확정).
+//   ⛔ 예전엔 두 번 태어났다 — 생산하면 기지(G.tech.ents)에 서고, campSortie 가 3초 뒤
+//     그것을 **지우고 전장에 새로 만들었다**(스폰 지점에). 그래서 ①내가 둔 자리가 사라지고
+//     ②나갈 때 인구가 반환되어 인구 200 이 생산을 못 막았다(대기 병력 68기).
+//   지금은 생산이 끝나는 순간 **그 자리에 그대로** 전장 유닛이 된다.
+// ⚠ 이 함수는 「자리」의 단일 소스이기도 하다 — u._post 를 여기서 처음 준다.
+function campDeploy(id, gx, gy){
+  if(!CAMPB || typeof strikeSpawnUnit !== 'function') return null;
+  const W = CAMPB.world || 4800, p = campG2W(gx, gy, W);
+  const u = campWithStk(function(){
+    const b4 = CAMPB.me.units.length;
+    strikeSpawnUnit('me', id);
+    return (CAMPB.me.units.length > b4) ? CAMPB.me.units[CAMPB.me.units.length - 1] : null; });
+  if(!u) return null;
+  u.x = p.x; u.y = p.y;
+  u.wait = 0; u.rallied = true;            // ⚠ 집결지로 걸어가지 않는다 — 여기가 이미 제자리다
+  u._post = { x:p.x, y:p.y };              // 🪧 자리 — 내가 옮기면 갱신된다(2단계)
+  campScaleAllies([u]);                    // ⚔ 설계 능력치 + 🌳 트리 배수 + 👀 인식 거리
+  return u; }
+
 // 전투 유닛 → 기지 유닛과 **같은 규약**의 렌더 엔트리(scl·yoff·yawFix·z 를 맞춘다).
 //   ⚠ _cellK·_zOf 는 renderBuildTab 안의 지역값이라 못 쓴다 — 공개 헬퍼로 똑같이 다시 구한다.
 function campBattleList(){
@@ -1629,6 +1658,7 @@ function campHideView(){
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
   campRestoreSkillCost();                                         // 🩸 스킬 체력 코스트 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
+  campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
   campClearSheet();
@@ -1661,6 +1691,7 @@ function campEnter(){
   //    ⚠ 환생 트리 「시작 미네랄」(startMin)이 구현되면 **여기에 그 값을 더한다** — 지금은 노드 정의만 있다.
   if(!had) G.tech.credit = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
+  campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
   campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
   campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
@@ -2823,6 +2854,31 @@ function campUnpatchArm(){
   if(!_campArmHome) return;
   window.techArm = _campArmHome; _campArmHome = null;
 }
+// 🏭 생산 완료 가로채기 — 기지에 선 전투 유닛을 **그 자리 그대로** 전장으로 옮긴다.
+//   ⭐ 원본을 먼저 부른다 — 보유 수·인구 상한·스폰 위치 계산이 전부 거기 있다.
+//     여기서 다시 계산하면 두 벌이 되어 반드시 어긋난다.
+//   ⛔ 일꾼·라바·알은 그대로 기지에 둔다(미네랄을 캐야 한다).
+//   ⚠ 공유 파일(16-build.js)의 함수라 **나갈 때 반드시 되돌린다** — 안 되돌리면
+//     관리자 탭에서 뽑은 유닛이 화면에서 사라진다.
+let _campFinHome = null;
+function campPatchFinish(){
+  if(_campFinHome || typeof window === 'undefined') return;
+  const o = window.techFinishProduce; if(typeof o !== 'function') return;
+  _campFinHome = o;
+  window.techFinishProduce = function(q, be){
+    const r = o.apply(this, arguments);
+    if(!_campOn || !CAMPB || !q || typeof STK_UNITS === 'undefined' || !STK_UNITS[q.id]) return r;
+    const ents = (typeof G !== 'undefined' && G.tech) ? G.tech.ents : null; if(!ents) return r;
+    for(let i = ents.length - 1; i >= 0; i--){ const e = ents[i];
+      if(e.type !== 'unit' || e.uid !== q.id) continue;
+      ents.splice(i, 1);                       // 기지에서 빼고
+      campDeploy(q.id, e.x, e.y);              // 같은 자리에 전장 유닛으로 세운다
+      break; }
+    return r; }; }
+function campUnpatchFinish(){
+  if(!_campFinHome) return;
+  window.techFinishProduce = _campFinHome; _campFinHome = null; }
+
 function campPatchProduce(){
   if(_campProdHome || typeof window === 'undefined') return;
   const o = window.techDoProduce; if(typeof o !== 'function') return;
