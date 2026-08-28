@@ -785,39 +785,61 @@ photorealistic PBR game texture, 3D render, tall vertical composition
 
 ### 12-3-1. ⭐ 네모네모 디펜스 바닥 — 전문 (2026-08-28)
 
-**지금 코드가 조립하는 것을 한 장으로 옮긴 것이다**(`js/10-engine.js` 의 `buildFloor`).
+> ⛔ **1차안은 폐기했다.** 기존 타일 문구를 그대로 옮겨 적어서 **「타일과 똑같은데 크기만 커진 것」**이 됐다.
+> 통짜로 만드는 이유가 사라진다 — 사용자: 「기존 이미지랑 너무 비슷하잖아? 훨씬 더 멋지고 퀄리티 높은 배경을 원해」.
 
-#### 먼저 — 코드가 그리는 실제 비율
+#### ⭐ 무엇이 달라져야 하나 — **타일이 못 하던 것**을 넣는다
+
+| 타일의 한계 | 통짜에서 할 수 있는 것 |
+|---|---|
+| 무늬가 **균일**하다 — 어디를 봐도 같다 | **큰 지질 구조** — 균열이 한쪽에서 다른 쪽으로 흐른다 |
+| 512px 안에서 끝난다 | **디테일 층위** — 멀리서도 가까이서도 볼 것이 있다 |
+| 절벽이 그냥 띠다 | **주상절리** — 층층이 갈라진 현무암 기둥, 깊이가 보인다 |
+| 발광이 균등하다 | **깊은 곳에서 새어 나오는 빛** — 균열 바닥에서만 |
+| 우주가 별 반복이다 | **성운의 흐름 · 먼 별무리 · 떠다니는 파편** |
+| 재질이 하나다 | **재질 대비** — 마른 흙 / 유리질 암반 / 광물 맥 |
+
+⛔ **그러면서 표면은 평평해야 한다** — 유닛이 그 위에 선다.
+**풍부함은 무늬와 색으로 내고, 솟은 장애물로 내지 않는다.**
+
+#### 코드가 그리는 실제 비율 (그대로 지킨다)
 
 | 부분 | 값 |
 |---|---|
-| 플랫폼 가로 | 화면의 **85%** |
-| 플랫폼 세로 | 화면의 **27%** (y **28.5% ~ 55.5%**) |
-| 가로 : 세로 | **1.52 : 1** — 가로로 넓은 직사각형 |
+| 플랫폼 가로 : 세로 | **1.52 : 1** — 가로로 넓은 직사각형 |
+| 세로 위치 | 그림의 **28% ~ 56%** (가운데보다 살짝 위) |
+| 가로 | 그림의 **75%** (좌우 잘림 감안) |
 | 절벽 테두리 | 플랫폼 세로의 **5%** — 얇다 |
-| 모서리 반경 | 플랫폼 세로의 **8%** — 거의 직각 |
+| 모서리 | 반경 8% — **거의 직각** |
 
-⚠ **트랙선은 코드가 안 그린다** — **플랫폼 자체가 트랙**이고 적이 그 가장자리를 따라 돈다.
-그림에 길이나 선을 그리지 말 것.
-
-⭐ **9:16 에서는 위아래가 안 잘린다**(9:16 이 가장 짧은 폰과 같은 비율). 좌우만 0~17.9% 잘린다.
-그래서 **세로 위치는 그대로 지켜지고**, 가로만 잘림을 감안해 **75%** 로 그린다.
+⚠ **트랙선은 그리지 않는다** — 플랫폼 자체가 트랙이고 적이 그 가장자리를 돈다.
+⭐ **9:16 은 위아래가 안 잘린다**(가장 짧은 폰과 같은 비율). 좌우만 0~17.9% 잘린다.
 
 #### 프롬프트 전문
 
 ```
-A single wide horizontal rectangular rock platform floating alone in deep space.
-The platform is much wider than it is tall, roughly three units wide to two units tall,
-with almost square corners, only slightly rounded.
-It spans about three quarters of the image width and sits in the upper middle of the frame,
-its top edge near the upper third and its bottom edge just past the middle.
-The platform surface is dry cracked badlands earth, dark brown grey, with fine gravel,
-small scattered pebbles and shallow hairline cracks; the surface is completely open and bare,
-nothing standing on it, no paths, no lines, no markings.
-A narrow rim of dark volcanic rock runs around the platform edge, about one twentieth of its height,
-with dim restrained molten seams in the cracks, pale ember glow, not bright.
-Everything around and beyond the platform is deep empty starfield with faint distant nebula,
-darkest at the frame edges.
+A single vast rectangular slab of ancient rock hanging alone in deep space, seen from directly above.
+The slab is much wider than it is tall, roughly three units wide to two units tall,
+with almost square corners, only slightly rounded. It spans about three quarters of the image width
+and sits in the upper middle of the frame, its top edge near the upper third,
+its bottom edge just past the middle.
+
+The slab surface is a weathered plain of dry cracked earth, but it is not uniform:
+a great fracture system runs across it from one side to the other, branching into finer and finer
+hairline cracks like a dry riverbed, and from deep inside the widest fissures a faint amber glow
+seeps upward, dim and restrained, never bright. Broad patches of pale mineral salt and rust-brown
+oxidised dust drift across the plain in soft bands, and thin dark veins of glassy volcanic stone
+thread through the earth and catch a cold sheen. Fine gravel and small angular shards gather
+in the low places. Every part of the surface stays flat and walkable — the richness is in texture,
+colour and pattern, never in raised obstacles. Nothing stands on the slab, no paths, no markings.
+
+The slab edge falls away as a rim of columnar basalt, tall hexagonal stone columns packed shoulder
+to shoulder and sheared off clean, only a narrow band around the plain, about one twentieth of its
+height, with dim molten seams glowing faintly deep between the columns.
+
+Beyond the slab is open space: a slow drift of deep nebula in dusty blue and faint violet,
+distant star clusters, and a scattering of small broken rock fragments floating near the slab,
+catching the same cold light. The frame edges fall away into near darkness.
 
 perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
 flat even ambient lighting with no directional shadows and no visible light source,
@@ -825,28 +847,30 @@ fine small-scale surface detail, nothing larger than a fist,
 muted low-saturation palette, dark tones,
 the important area stays within the central 80% of the width,
 no characters, no objects, no units, no structures, no text, no user interface,
-photorealistic PBR game texture, 3D render, tall vertical composition
+highly detailed photorealistic PBR game texture, AAA game environment asset,
+3D render, tall vertical composition
 ```
 
 | 설정 | 값 |
 |---|---|
 | 모델 | `gpt_image_2` |
 | 비율 | `9:16` |
-| 해상도 · 품질 | `2k` 이상 · `high` |
+| 해상도 · 품질 | `4k` · `high` |
 
-#### ⚠ 이 프롬프트에서 꼭 지킬 것
+#### ⚠ 꼭 지킬 것
 
 | | 왜 |
 |---|---|
-| **표면이 비어 있어야 한다** | 유닛이 그 위에 선다. `completely open and bare` · `no paths, no lines, no markings` |
-| **발광을 약하게** | `dim restrained` · `pale ember glow, not bright` — 밝으면 유닛이 안 보인다 |
-| **테두리는 얇게** | `about one twentieth of its height` — 두꺼우면 설 자리가 줄어든다 |
-| **모서리는 거의 직각** | `almost square corners, only slightly rounded` — 코드의 반경이 8% 다 |
-| **바깥은 어둡게** | `darkest at the frame edges` — 잘리는 부분이라 정보가 없어야 한다 |
+| **표면은 평평하게** | `stays flat and walkable` · `never in raised obstacles` — 유닛이 선다 |
+| **발광은 깊은 곳에서만** | `deep inside the widest fissures` · `dim and restrained, never bright` — 밝으면 유닛이 안 보인다 |
+| **테두리는 얇게** | `only a narrow band` · `about one twentieth of its height` |
+| **바깥은 어둡게** | `frame edges fall away into near darkness` — 잘리는 부분이다 |
+| **품질 어휘는 둘만** | `highly detailed` · `AAA game environment asset`. ⛔ `epic`·`dramatic lighting`·`masterpiece` 는 금지(§2) |
 
-⚠ **비율을 숫자로 말하지 않는다.** 모델이 「3:2」 같은 표기를 못 지켜서 `three units wide to two units tall` 처럼
-풀어 썼다. 그래도 어긋나면 **뽑은 것을 레퍼런스로 잡고 「같은 배치, 더 넓게」** 로 고친다(§12-5).
+⭐ **「멋짐」은 형용사가 아니라 구조에서 나온다.** 이 프롬프트가 1차안과 다른 점은
+**균열 흐름 · 주상절리 · 광물 맥 · 성운 · 떠다니는 파편** 다섯이고, 전부 **눈에 보이는 것**이다.
 
+⚠ 그래도 밋밋하면 **뽑은 것을 레퍼런스로 잡고 한 요소씩 강화**한다(§12-5) — 프롬프트를 길게 늘이지 말 것.
 ### 12-4. 기존 타일에서 관찰한 것 (2026-08-28 · 넷을 직접 열어 봄)
 
 | 타일 | 본 것 |
