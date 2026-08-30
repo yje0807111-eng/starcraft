@@ -261,7 +261,10 @@ await pg.evaluate(()=>{
       if((G.tech.credit||0) < (b.m||0) || (G.tech.energy||0) < (b.g||0)) continue;
       const wk=G.tech.ents.find(e=>e.type==='worker' && e.build==null); if(!wk) return;
       G.tech.arm=b.k; G.tech.selU=[wk.eid];
-      const c=0.30+Math.random()*0.40, r=0.20+Math.random()*0.22;
+      // 🛡 방어 건물은 **격자 맨 위**에 짓는다 — 전장에서 가장 앞(선두)에 서야 방어막이 된다.
+      //   ⚠ 랜덤(0.20~0.42)이면 판마다 벙커 위치가 달라져 비교가 안 된다.
+      const c=0.30+Math.random()*0.40;
+      const r=(b.k==='bunker'||b.k==='turret') ? 0.20+Math.random()*0.04 : 0.24+Math.random()*0.18;
       try{ techPlace(c, r); }catch(e){}
       G.tech.arm=null; return; } };
   // 🧱 **벙커에 태운다** (2026-08-30) — 사거리가 짧아 앞에서 얻어맞는 유닛부터.
@@ -269,18 +272,54 @@ await pg.evaluate(()=>{
   //   ⚠ 탑승은 유닛의 **자리**가 되므로 한 번만 넣으면 라운드마다 저절로 유지된다 —
   //     그래도 매번 부르는 이유는 새로 뽑힌 유닛과 새로 지은 벙커를 채우기 위해서다.
   //   ⚠ BUNK=0 이면 아무것도 안 한다(벙커는 짓되 태우지 않는 대조군).
+  //   ⛔ **전 병력을 가두지 말 것** (2026-08-30 고침). 예전에는 빈자리를 사거리 짧은 순으로
+  //     전부 채웠다 — 병력 8기가 벙커 3채에 통째로 갇혔고, 사람은 그렇게 하지 않는다.
+  //     그 판이 D1R3(실효 0.32) 이었다: 벙커를 평가한 게 아니라 **병력을 창고에 넣은 것**이다.
+  //   ⭐ 사람이 할 판단 둘을 규칙으로 못 박는다:
+  //     ① 사거리가 **짧은 유닛만** 태운다 — 마린(187)은 밖에서 쏘는 게 낫다
+  //     ② 전투 병력의 **1/3 을 넘기지 않는다** — 나머지는 밖에서 싸워야 라운드가 끝난다
+  __CB.bunkMaxR=100;                       // 이보다 사거리가 길면 안 태운다(화력병 70 ○ · 마린 187 ✕)
+  __CB.bunkShare=1/3;                      // 전투 병력 중 벙커에 넣는 최대 비율
   __CB.board=function(){
     if(!__CB.bunk) return;
     if(typeof campBoard!=='function' || typeof CAMPB==='undefined' || !CAMPB) return;
     const cap=(typeof CAMP_BUNK_CAP!=='undefined')?CAMP_BUNK_CAP:4;
+    const alive=CAMPB.me.units.filter(u=>!u.dead && (u.dmg||0)>0);
+    const inB=alive.filter(u=>u._bunk!=null).length;
+    let room=Math.floor(alive.length*__CB.bunkShare)-inB;      // ② 비율 상한
+    if(room<=0) return;
     for(const b of (CAMPB._bld||[])){
+      if(room<=0) break;
       if(!b || b.bk!=='bunker' || b.dead) continue;
-      const room=cap-((typeof campBunkCrew==='function')?campBunkCrew(b.eid):0);
-      if(room<=0) continue;
-      const cand=CAMPB.me.units
-        .filter(u=>!u.dead && u._bunk==null && (u.dmg||0)>0)
-        .sort((x,y)=>(x.rng||0)-(y.rng||0)).slice(0,room);     // 사거리 짧은 순
-      if(cand.length) campBoard(cand, b); } };
+      const free=cap-((typeof campBunkCrew==='function')?campBunkCrew(b.eid):0);
+      if(free<=0) continue;
+      const cand=alive
+        .filter(u=>u._bunk==null && (u.rng||0)<=__CB.bunkMaxR)  // ① 사거리 짧은 유닛만
+        .sort((x,y)=>(x.rng||0)-(y.rng||0)).slice(0, Math.min(free, room));
+      if(cand.length){ campBoard(cand, b); room-=cand.length; } } };
+  // 🛡 **벙커를 방어선의 기준으로 삼는다** (2026-08-30 사용자 확정).
+  //   ⭐ 사용자가 그리는 그림: 「벙커가 **방어막**처럼 가장 선두에서 대신 맞아 주고,
+  //     병력들은 그 근처에서 싸운다」. 화력병처럼 근접이라 손으로 체력 관리가 어려운 유닛을
+  //     벙커에 넣어 대신 버티게 하는 것이다.
+  //   ⛔ 이게 없어서 지금까지 벙커를 **엉뚱한 자리에 두고 쟀다** — 벙커는 격자 랜덤 위치인데
+  //     병력은 생산된 자리에 그대로 서 있었다. 다섯 판 내내 벙커 체력이 안 깎였던 이유다.
+  //   ⚠ 사람이 하는 조작(병력 지정 → 자리 옮기기)을 흉내내는 것이라 **벤치 쪽**에 둔다.
+  //     게임 규칙으로 만들 것인지는 이 측정 결과를 보고 정한다.
+  __CB.rally=function(){
+    if(!__CB.bunk || typeof CAMPB==='undefined' || !CAMPB) return;
+    const bunks=(CAMPB._bld||[]).filter(b=>b && b.bk==='bunker' && !b.dead);
+    if(!bunks.length) return;
+    let f=bunks[0]; for(const b of bunks) if(b.y<f.y) f=b;      // 가장 앞(적 쪽) 벙커
+    const W=CAMPB.world||4800;
+    let i=0;
+    for(const u of CAMPB.me.units){
+      if(u.dead || u._bunk!=null) continue;
+      if(u._rallyB===f.eid) continue;                          // 이미 이 벙커를 기준으로 섰다
+      u._rallyB=f.eid;
+      // 벙커보다 **뒤**(y 큰 쪽)에 반원으로 — 벙커가 먼저 맞고 병력이 뒤에서 쏜다
+      const a=(i%9)/8*Math.PI, r=130+((i/9)|0)*70; i++;
+      u._post={ x:Math.max(0,Math.min(W, f.x+Math.cos(a)*r)),
+                y:Math.max(0,Math.min(W, f.y+Math.abs(Math.sin(a))*r*0.6+60)) }; } };
   // 자동 생산 — 본부는 일꾼, 그 밖의 완성 건물은 첫 유닛을 계속
   __CB.produce=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
@@ -418,7 +457,7 @@ await pg.evaluate(()=>{
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
-      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy(); __CB.board();
+      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy(); __CB.board(); __CB.rally();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
         const units=G.tech?G.tech.ents.filter(e=>e.type==='unit').length:0;
         __CB.army=units;
