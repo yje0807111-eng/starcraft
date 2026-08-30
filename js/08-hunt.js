@@ -2201,7 +2201,13 @@ function warmAll(onStep){
     // 🏕 **종족 전장 그림도 미리 받는다.** 로딩이 걷힌 자리에 종족 판이 오는데, 그림을 그때
     //    처음 받으면 어두운 그라데이션(.crPrev)만 보이다가 뒤늦게 채워진다 — 그것이
     //    「검게 한 번 깜빡인다」의 정체였다(2026-08-27).
-    try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function')
+    // ⚡ 캠프 바닥 그림도 미리 **디코드**해 둔다 — src 만 걸어 두면 로드만 되고,
+//    실제로 그릴 때 디코드가 메인 스레드를 잡는다(실측 47ms · 2026-08-27).
+try{ if(typeof CAMP_BG_DIR !== 'undefined' && typeof CAMP_BG_HOME !== 'undefined'){
+  const _cb=new Image(); _cb.src=new URL(CAMP_BG_DIR+CAMP_BG_HOME, document.baseURI).href;
+  if(_cb.decode) _cb.decode().catch(function(){}); }
+}catch(e){}
+try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function')
       for(const _rk of CAMP_RACE_ORDER){
         const _a=new Image(); _a.src=campRaceArt(_rk);
         if(typeof campRaceIcon === 'function'){ const _i=new Image(); _i.src=campRaceIcon(_rk); } }

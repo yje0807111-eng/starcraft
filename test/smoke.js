@@ -5330,10 +5330,13 @@ async function groupLobby(){
       //    아래의 「검은 판보다 먼저 걷혔나」 검사가 그 초기값(op 0.09)을 걷히는 것으로 오해한다.
       await sleep(_cssMs('--t-screen',.7)+90);
       campPickRace();
-      // ⭐ **상태는 즉시**여야 한다 — 검은 판이 덮이기를 기다렸다가 세팅하면 그 사이를 전제하는
-      //    코드가 전부 어긋난다(2026-08-27 에 스모크 여덟 군데가 깨졌다).
+      // ⭐ 종족은 **즉시** 정해진다. 캠프를 세우는 일만 **두 프레임** 뒤다(검은 판을 먼저 그리려고).
+      //    ⛔ 그보다 더 미루면 캠프 상태를 바로 쓰는 코드가 어긋난다 — 0.7초까지 미뤘다가
+      //       스모크 여섯 군데가 깨졌다(2026-08-27).
       assert(C2.race,'campPickRace 가 종족을 정하지 않았다');
-      assert(typeof G!=='undefined' && G.tech,'campPickRace 직후 캠프 상태가 아직 없다 — campEnter 가 늦춰졌다');
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+      assert(typeof G!=='undefined' && G.tech && G.tech.ents,
+        '세 프레임이 지났는데 캠프가 안 섰다 — campEnter 가 너무 늦다');
       // 🎬 화면은 **검은 판이 먼저 덮는다** — 캠프가 잠깐 보였다 덮이면 그게 「깜빡임」이다
       assert(document.getElementById('phone').classList.contains('artBlack'),
         '검은 판이 안 올라온다 — 캠프가 그대로 드러나 깜빡인다');

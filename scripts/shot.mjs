@@ -40,8 +40,12 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const PORT = server.address().port;
 
-const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new',
-  args: ['--no-sandbox', '--use-gl=angle', '--enable-unsafe-swiftshader', '--mute-audio'] });
+// 🖥 SHOT_HEADFUL=1 이면 **창을 띄운 진짜 크롬**으로 돈다 — 소프트웨어 래스터(SwiftShader)가 아니라
+//    실제 GPU 를 쓴다. 전환 성능(프레임 정지)을 실기 조건으로 재려면 이쪽이어야 한다.
+const HEADFUL = process.env.SHOT_HEADFUL === '1';
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: HEADFUL ? false : 'new',
+  args: HEADFUL ? ['--no-sandbox', '--mute-audio', '--window-size=460,940']
+                : ['--no-sandbox', '--use-gl=angle', '--enable-unsafe-swiftshader', '--mute-audio'] });
 try {
   const page = await browser.newPage();
   const isPage = WHAT.endsWith('.html');   // 임의의 페이지를 통째로 찍는 모드(시안 비교용)
@@ -274,6 +278,89 @@ try {
         }, 250);
       }));
       console.log('SLOW '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow8') {   // 🔍 그 240ms 가 JS 인가 렌더인가 — longtask 로 가른다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1400); }));
+      const r = await page.evaluate((kill) => new Promise(res=>{
+        const out={ kill, long:[], frames:[] };
+        try{ new PerformanceObserver(l=>{ for(const e of l.getEntries())
+          out.long.push(+e.duration.toFixed(0)); }).observe({entryTypes:['longtask']}); }catch(e){}
+        const C=campState(); C.race=_campRacePick||CAMP_RACE_ORDER[0];
+        // ⭐ campEnter **전에** 끈다 — 뒤에 끄면 이미 그려진 뒤라 의미가 없다(2026-08-27 에 그랬다)
+        if(kill==='3d'){ try{ window.M3D=Object.assign({},window.M3D,{
+          sync:function(){}, clearGameModels:function(){}, clearIdlePools:function(){} }); }catch(e){} }
+        if(kill==='bg'){ try{ const st=document.createElement('style');
+          st.textContent='.bmapFloor{background-image:none !important}'; document.head.appendChild(st); }catch(e){} }
+        if(kill==='render'){ try{ window.techMapRender=function(){}; }catch(e){} }
+        const t0=performance.now();
+        try{ campEnter(); }catch(e){ out.err=String(e).slice(0,80); }
+        out.sync=+(performance.now()-t0).toFixed(1);
+        let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(0));
+          if(++n<8) requestAnimationFrame(tick); else res(out); };
+        requestAnimationFrame(tick); }), process.env.SHOT_KILL||'none');
+      console.log('SLOW8 '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow7') {   // 🔍 campEnter 안에서 무엇이 그 시간을 쓰나 — 단계별
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1400); }));
+      await page.evaluate((k)=>{ document.__kill=k; }, process.env.SHOT_KILL||'none');
+      const r = await page.evaluate(() => new Promise(res=>{
+        const out={ steps:[], frames:[] };
+        const C=campState(); C.race=_campRacePick||CAMP_RACE_ORDER[0];
+        // campEnter 를 통째로 부르되, 그 안의 주요 단계를 감싸서 잰다
+        const wrap=(name)=>{ const f=window[name]; if(typeof f!=='function') return;
+          window[name]=function(){ const a=performance.now(); const r=f.apply(this,arguments);
+            out.steps.push([name, +(performance.now()-a).toFixed(1)]); return r; }; };
+        ['techUIInit','campRestore','campLayBase','campLayMinerals','campShowView',
+         'campPatchZoom','campSettleAway','campMountView','techMapRender','campBarReset'].forEach(wrap);
+        const kill=out.kill=(document.__kill||'none');
+        const t0=performance.now();
+        try{ campEnter(); }catch(e){ out.err=String(e).slice(0,80); }
+        // 무엇이 비싼지 하나씩 빼 보고 잰다
+        if(kill==='bg'||kill==='both'){ const f=document.querySelector('.bmapFloor');
+          if(f) f.style.backgroundImage='none'; }
+        if(kill==='3d'||kill==='both'){ for(const id of ['vBuild','cvMarine']){
+          const e=document.getElementById(id); if(e) e.style.display='none'; } }
+        if(kill==='panel'){ const p=document.querySelector('.bp,#btSheet,.cstBot');
+          if(p) p.style.display='none'; }
+        out.sync=+(performance.now()-t0).toFixed(1);
+        let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(0));
+          if(++n<10) requestAnimationFrame(tick); else res(out); };
+        requestAnimationFrame(tick); }));
+      console.log('SLOW7 '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow6') {   // 🔍 종족을 고른 직후 화면이 멈추는 것 — 무엇이 쓰는 시간인가
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1400); }));
+      const r = await page.evaluate(() => new Promise(res=>{
+        const out={ steps:[], frames:[] };
+        const mark=(n,f)=>{ const a=performance.now(); try{ f(); }catch(e){ out.steps.push([n,'ERR '+e.message]); return; }
+          out.steps.push([n, +(performance.now()-a).toFixed(1)]); };
+        const t0=performance.now();
+        // campPickRace() 가 하는 일을 같은 순서로 하나씩
+        mark('race+save', ()=>{ const C=campState(); C.race=_campRacePick||CAMP_RACE_ORDER[0];
+          if(typeof saveMeta==='function') saveMeta(); });
+        const ph=document.getElementById('phone');
+        mark('artMark', ()=>{ ph.classList.add('artMark'); });
+        mark('titleToBlack', ()=>{ window.__blk = titleToBlack(); });
+        mark('campEnter', ()=>{ campEnter(); });
+        let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(0));
+          if(++n<12) requestAnimationFrame(tick); else res(out); };
+        requestAnimationFrame(tick); }));
+      console.log('SLOW6 '+JSON.stringify(r));
     }
     else if (WHAT === 'flick2') {   // 🔍 종족 선택 → 캠프 : 페이드아웃·검은 화면·페이드인을 프레임으로 본다
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
