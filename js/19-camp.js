@@ -898,6 +898,7 @@ function campMoveSel(gx, gy){
     const sp = (u.size || 14) * 2.2;
     const s = (typeof _ringSlotN === 'function') ? _ringSlotN(i, sp) : { dx:0, dy:0 };
     const px = Math.max(0, Math.min(W, c.x + s.dx)), py = Math.max(0, Math.min(W, c.y + s.dy));
+    u._bunk = null; u._bhp = null;                // 🧱 다른 자리를 주면 벙커에서 내린다
     u._post = { x:px, y:py };
     u.tgtUid = null; u._btgt = null; u._btT = 0;   // 표적을 놓고 자리로 간다(복귀가 손댈 수 있게)
   }
@@ -921,11 +922,21 @@ function campPtrUp(ev){
   if(typeof _btDown === 'undefined' || !_btDown || _btMoved) return false;
   const u = campBattleAt(ev.clientX, ev.clientY);
   if(u){ campSelSet([u]); if(typeof playSfx === 'function') playSfx('ui_tab'); return true; }
-  // ③ 고른 병력이 있고 빈 바닥을 눌렀다 = 그 자리로 이동
+  // ③ 고른 병력이 있고 **벙커**를 눌렀다 = 탑승 (2026-08-30)
+  //    ⚠ 바닥 판정보다 **먼저** 본다 — 벙커는 빈 바닥이 아니라서 아래 ④로 새 버린다.
+  if(_campSel.length){
+    const bunk = campBunkerAtScr(ev.clientX, ev.clientY);
+    if(bunk){
+      const got = campBoard(campSelList(), bunk);
+      if(typeof playSfx === 'function') playSfx(got ? 'ui_confirm' : 'ui_denied');
+      if(typeof toast === 'function') toast(got ? ('🧱 벙커 탑승 ' + got + '기')
+                                               : ('⛔ 벙커가 찼다 (정원 ' + CAMP_BUNK_CAP + ')'));
+      return true; } }
+  // ④ 고른 병력이 있고 빈 바닥을 눌렀다 = 그 자리로 이동
   if(_campSel.length && campEmptyAt(ev.clientX, ev.clientY)){
     const g = campScr2G(ev.clientX, ev.clientY);
     if(g){ campMoveSel(g.x, g.y); return true; } }
-  // ④ 그 밖의 탭 = 지정 해제하고 원본에 넘긴다
+  // ⑤ 그 밖의 탭 = 지정 해제하고 원본에 넘긴다
   campSelClear();
   return false; }
 
@@ -1233,6 +1244,7 @@ function campPostStep(dt){
   const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
   campWithStk(function(){
     for(const u of CAMPB.me.units){ if(u.dead) continue;
+      if(campInBunker(u)) continue;               // 🧱 벙커에 탄 유닛은 campBunkerStep 이 붙든다
       if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
       // ⚔ 싸우는 중이면 복귀보다 전투가 먼저다.
       // ⛔ **표적 번호가 있다는 것만으로 판단하지 말 것.** 적이 죽어도 u.tgtUid 는 그대로 남는다 —
@@ -1248,6 +1260,81 @@ function campPostStep(dt){
       strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K); n++; }     // 회피를 타는 이동으로 다시 민다
     if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
   });
+  return n; }
+
+// 🧱 **벙커 — 화력병을 살리는 자리** (2026-08-30 사용자 확정).
+//   ⚠ 왜 필요한가: 화력병 사거리는 70 인데 적(스웜 T1)은 34~47 이다. **적 사거리 안까지
+//     들어가야만 때릴 수 있는 유닛**이라, 마린(187)처럼 안전한 거리에서 쏘지 못한다.
+//     실측(2026-08-30): 의무병을 8기까지 늘려도 마린은 2/8 → 7/8 로 살아나는데
+//     **화력병은 5/8 에서 꿈쩍도 안 했다.** 치유가 그 집중포화를 못 따라간다.
+//   ⭐ 벙커는 **건설 시스템에 이미 있다**(TECH_TREE union · 100 미네랄 · 병영 필요 · 바이오닉 4기).
+//     ⛔ 그런데 캠프 전장에는 반영이 없어서, 넣으면 그 유닛이 **전투에서 그냥 빠졌다.**
+//   ⭐ 그래서 여기서 잇는다 — 탄 유닛은 **벙커 자리에서 쏘고, 피해는 벙커가 대신 맞는다.**
+//   ⚠ 벙커를 그 유닛의 **자리(_post)** 로 삼는다. 라운드마다 죽고 부활해도 손으로 다시
+//     태울 필요가 없다 — 부활이 _post 로 되돌리므로 저절로 벙커로 돌아간다(사용자 결정).
+//   ⚠ 전장을 닫았다 다시 열면 탑승은 풀린다(유닛 객체가 새로 만들어진다). 자리는 벙커 앞이라
+//     그 자리에 서긴 한다. 그때까지 이어 붙이는 것은 다음 일이다.
+const CAMP_BUNK_CAP = 4;          // 벙커 한 채의 정원 — 건설 시스템(_techBunkerable)과 같은 값
+const CAMP_BUNK_SLOT = 26;        // 벙커 안에서 서로 벌리는 간격(px) — 3D 로 겹쳐 보이지 않을 만큼
+function campBldFind(eid){
+  if(!CAMPB || !CAMPB._bld || eid == null) return null;
+  for(const b of CAMPB._bld) if(b && b.eid === eid) return b;
+  return null; }
+// 지금 그 벙커에 탄 아군 수
+function campBunkCrew(eid){
+  if(!CAMPB) return 0; let n = 0;
+  for(const u of CAMPB.me.units) if(!u.dead && u._bunk === eid) n++;
+  return n; }
+// 화면 좌표에 벙커가 있나 — 기지 격자에서 찾는다(건물은 격자에 놓이므로)
+function campBunkerAtScr(cx, cy){
+  if(!CAMPB || typeof G === 'undefined' || !G.tech) return null;
+  const g = campScr2G(cx, cy); if(!g) return null;
+  const cw = (typeof _techCW === 'function') ? _techCW() : 0.05;
+  const ch = (typeof _techCH === 'function') ? _techCH() : 0.05;
+  for(const e of (G.tech.ents || [])){
+    if(!e || e.type !== 'bldg' || e.bk !== 'bunker' || (e.bt || 0) > 0) continue;
+    const w = (e.w || 2) * cw, h = (e.h || 2) * ch;      // 건물이 차지하는 격자 크기
+    if(Math.abs(g.x - e.x) <= w * 0.7 && Math.abs(g.y - e.y) <= h * 0.7){
+      const b = campBldFind(e.eid); if(b && !b.dead) return b; } }
+  return null; }
+// 태운다 — 정원을 넘기면 넘긴 만큼은 그대로 둔다
+function campBoard(list, b){
+  if(!b || b.dead || !list || !list.length) return 0;
+  let n = campBunkCrew(b.eid), got = 0;
+  for(const u of list){
+    if(u.dead || u._bunk === b.eid) continue;
+    if(n >= CAMP_BUNK_CAP) break;
+    u._bunk = b.eid; u._bslot = n; u._bhp = u.hp;
+    u._post = { x:b.x, y:b.y };                 // 🪧 벙커가 이 유닛의 자리가 된다
+    u.tgtUid = null; u._btgt = null; u._btT = 0;
+    n++; got++; }
+  return got; }
+// 지금 **실제로** 벙커 안에 있나 — 벙커가 살아 있어야 탄 것이다.
+//   ⭐ 탑승 기록(_bunk)은 벙커가 무너져도 **지우지 않는다.** 라운드가 새로 시작하면
+//     campBuildStructs 가 건물 체력을 채우므로, 그때 **저절로 다시 탄다**(사용자 요구:
+//     한 번 태우면 매 라운드 손으로 다시 태우지 않는다).
+//   ⚠ 벙커가 무너져 있는 동안에는 null 을 준다 → 그 유닛은 평소처럼 싸우고 자리로 돌아간다.
+function campInBunker(u){
+  if(!u || u._bunk == null) return null;
+  const b = campBldFind(u._bunk);
+  return (b && !b.dead && (b.hp || 0) > 0) ? b : null; }
+// 벙커 안 유닛을 붙들어 둔다 — 자리 고정 · 피해는 벙커가 대신 맞는다
+//   ⚠ **campBldAmp 뒤에** 불러야 한다. 앞에서 부르면 유닛이 대신 넘긴 피해까지
+//     건물 배수(×40)를 먹어 벙커가 한순간에 무너진다.
+function campBunkerStep(dt){
+  if(!CAMPB || !CAMPB.me) return 0;
+  let n = 0;
+  for(const u of CAMPB.me.units){
+    if(u.dead || u._bunk == null) continue;
+    const b = campInBunker(u);
+    if(!b){ u._bhp = null; continue; }          // 🧱 무너져 있는 동안은 밖에서 싸운다(기록은 남긴다)
+    const s = (typeof _ringSlotN === 'function') ? _ringSlotN(u._bslot | 0, CAMP_BUNK_SLOT) : { dx:0, dy:0 };
+    u.x = b.x + s.dx; u.y = b.y + s.dy; u.moving = false;
+    if(u._bhp != null && u.hp < u._bhp){        // 이번 프레임에 맞은 만큼을 벙커로 넘긴다
+      const d = u._bhp - u.hp; u.hp = u._bhp;
+      b.hp -= d; if(b.hp <= 0){ b.hp = 0; b.dead = true; } }
+    u._bhp = u.hp;                              // 치유로 오른 것은 그대로 받는다
+    n++; }
   return n; }
 
 // ⚔ **싸울 때는 빈자리를 찾아 파고든다** (2026-08-30 사용자 확정).
@@ -1273,6 +1360,7 @@ function campEngageStep(dt){
   const byTgt = new Map();
   for(const u of CAMPB.me.units){
     if(u.dead || !u.tgtUid) continue;
+    if(campInBunker(u)) continue;              // 🧱 벙커에 탄 유닛은 나가지 않는다(무너졌으면 나간다)
     if(!byTgt.has(u.tgtUid)) byTgt.set(u.tgtUid, []);
     byTgt.get(u.tgtUid).push(u); }
   if(!byTgt.size) return 0;
@@ -1609,6 +1697,7 @@ function campCombatStep(dt){
     //     라운드가 시작돼도 3 그대로였다. 벽 측정에서 병력이 88 → 85 로 줄던 것이 이것이다.
     campCatchDown(_g4);
     campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
+    campBunkerStep(dt);                                   // 🧱 벙커에 탄 유닛은 그 자리에 (숨 고르기에도 유지)
     campLeash();
     // ⛔ 여기서 부활시키지 않는다 — **부활은 라운드 단위**다(campRoundRevive · 2026-08-29).
     //   숨 고르기 끝에서 한 번에 일으키므로, 여기서 또 부르면 두 벌이 된다.
@@ -1630,6 +1719,7 @@ function campCombatStep(dt){
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
   campEngageStep(dt);   // ⚔ 싸우는 유닛은 **빈자리를 찾아 파고든다**(근접=둘러싸기 · 원거리=부채꼴)
   campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 빠르게 돌아온다)
+  campBunkerStep(dt);   // 🧱 벙커에 탄 유닛은 그 자리에 붙들고, 맞은 만큼을 벙커가 대신 받는다
   campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.

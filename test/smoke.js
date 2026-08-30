@@ -1775,6 +1775,55 @@ async function groupLobby(){
     return '전장 1기 · 자리 고정 · 인구 유지';
   });
 
+  // 🧱 **벙커 — 화력병을 살리는 자리** (2026-08-30 사용자 확정)
+  //    ⚠ 왜: 화력병 사거리 70 vs 적(스웜 T1) 34~47 — **적 사거리 안까지 들어가야 때린다.**
+  //      실측: 의무병을 8기까지 늘려도 마린은 2/8 → 7/8 인데 **화력병은 5/8 에서 안 변했다.**
+  //    ⭐ 탄 유닛은 벙커 자리에서 쏘고, 맞은 만큼은 **벙커가 대신 받는다.**
+  await step('캠프: 벙커에 태우면 그 자리에서 쏘고 피해는 벙커가 받는다', async()=>{
+    skipIf(typeof campBunkerStep!=='function'||typeof campBoard!=='function','벙커 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    // 벙커를 기지에 심는다(전장 앞쪽 = 격자 위쪽)
+    const hq=(G.tech.ents||[]).find(e=>e&&e.type==='bldg');
+    skipIf(!hq,'본부가 없다');
+    G.tech.built['bunker']=(G.tech.built['bunker']|0)+1;
+    const bEid=G.tech.eseq++;
+    G.tech.ents.push({ eid:bEid, type:'bldg', bk:'bunker', x:hq.x, y:Math.max(0.05,hq.y-0.18), w:2, h:2, bt:0 });
+    CAMPB=null; campCombatStep(0.05);
+    campWipeField();
+    const bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
+    assert(bunk,'벙커가 전장에 안 올라왔다 — campBuildStructs 가 못 봤다');
+    const crew=[]; for(let i=0;i<6;i++) crew.push(campDeploy('machinegun', 0.34+(i%3)*0.03, 0.50));
+    CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+    // ① 정원 4기 — 넘치면 안 탄다
+    assert(campBoard(crew.slice(0,4), bunk)===4,'4기가 안 탔다');
+    assert(campBoard(crew.slice(4,6), bunk)===0,'정원(4)을 넘겨 태웠다: 지금 '+campBunkCrew(bunk.eid));
+    // ② 탄 유닛은 벙커 자리에 붙어 있다
+    for(let i=0;i<200;i++) campCombatStep(0.05);
+    { const inB=CAMPB.me.units.filter(u=>!u.dead&&campInBunker(u));
+      assert(inB.length>0,'10초 만에 탑승이 풀렸다');
+      const far=inB.filter(u=>Math.hypot(u.x-bunk.x,u.y-bunk.y)>80);
+      assert(!far.length,'탄 유닛이 벙커에서 떨어져 나갔다: '+far.length+'기'); }
+    // ③ 피해는 벙커가 받는다 — 탄 유닛을 때려도 체력이 안 줄고 벙커가 준다
+    { const u=CAMPB.me.units.find(x=>!x.dead&&campInBunker(x));
+      assert(u,'탄 유닛이 없다');
+      const uhp=u.hp, bhp=bunk.hp;
+      u.hp -= 5; campBunkerStep(0.05);
+      assert(Math.abs(u.hp-uhp)<1e-6,'탄 유닛이 직접 피해를 받았다: '+u.hp+' (전 '+uhp+')');
+      assert(Math.abs((bhp-5)-bunk.hp)<1e-6,'벙커가 대신 안 받았다: '+bunk.hp+' (기대 '+(bhp-5)+')'); }
+    // ④ 벙커가 무너지면 밖에서 싸운다 — 그리고 **기록은 남아** 복구되면 다시 탄다
+    { const u=CAMPB.me.units.find(x=>!x.dead&&x._bunk!=null);
+      bunk.hp=0; bunk.dead=true;
+      assert(!campInBunker(u),'무너진 벙커에 아직 타 있다');
+      assert(u._bunk!=null,'탑승 기록까지 지웠다 — 라운드가 새로 시작해도 다시 못 탄다');
+      bunk.hp=bunk.maxHp||bunk.max||100; bunk.dead=false;      // 라운드 시작 = 건물 체력 복구
+      assert(campInBunker(u),'벙커가 복구됐는데 다시 안 탔다'); }
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '정원 4 · 자리 고정 · 피해 전가 · 무너지면 나갔다 복구되면 다시 탄다';
+  });
+
   // ⚔ **싸울 때는 빈자리를 찾아 파고든다** (2026-08-30 사용자 확정)
   //    ⛔ 예전에는 표적이 있으면 strike 기본 이동에 맡겨서, 앞줄만 닿고 뒷줄은 겹침 회피에
   //      밀려 뒤로만 갔다. 실측: 공격 가능 13기 중 **사거리 안이 2기**(실효 0.15).
