@@ -1501,7 +1501,12 @@
   /* 🏕 m.kicker — 제목을 자간 넓은 작은 라벨로(로딩창 LOADING · 로그인 BATTLE ARENA 와 같은 어법).
      줄은 있되 무게가 없다: 고른 것이 있을 때와 제목 자리는 같으면서 화면이 덜 흔들린다. */
   .cmdG .cgHead.kick{padding:6px 2px 7px}
-  .cmdG .cgKick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c;
+  /* 🏷 제목 — **밝은 글자 + 어두운 그림자**(2026-08-27 · A안 · docs/mock/camp-kick-4.html).
+     ⚠ 시트 **위쪽 가장자리**라 뒤로 맵이 비친다. 배경이 한 가지가 아니라(캠프=밝은 돌바닥 /
+     던전=어두움) **색만 바꿔서는 못 푼다** — 흰색은 밝은 바닥에서, 검은색은 어두운 던전에서 묻힌다.
+     ⇒ 밝은 글자로 두고 **그림자로 배경과 끊는다**. 어느 배경에서도 읽힌다. */
+  .cmdG .cgKick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#e8edf5;
+    text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .cmdG .cgHpsh{flex:none;display:flex;gap:9px;font-family:var(--font-num);font-weight:800;font-size:12.5px;line-height:1}
   .cmdG .cgHpsh .hpv{color:#7ee081} .cmdG .cgHpsh .shv{color:#8fd8ff} .cmdG .cgHpsh .env{color:#b06bff}

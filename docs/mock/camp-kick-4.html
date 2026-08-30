@@ -1,0 +1,65 @@
+<meta charset="utf-8">
+<title>프로필 제목 가독성 — 4안</title>
+<!--
+  🏷 프로필 시트 왼쪽 위 제목(.cgKick)이 배경에 묻히는 문제 — 4안 비교 (2026-08-27)
+
+  지금: color:#77808c (회색) · 시트 **위쪽 가장자리**(시트 top +15px)라 뒤로 맵이 비친다.
+  ⭐ 배경은 **실제 게임 화면을 그대로 찍어 깐 것**이다(_kick-bg.png · scripts/shot.mjs kickbg).
+     목업으로 시트를 흉내내면 그라데이션이 실제와 달라 판단이 틀어진다 — 한 번 그렇게 틀렸다.
+  ⚠ 배경이 한 가지가 아니다 — 캠프(밝은 모래·돌)일 수도, 던전(어두움)일 수도 있다.
+    그래서 **색만 바꿔서는 못 푼다**: 흰색은 밝은 바닥에서, 검은색은 어두운 던전에서 묻힌다.
+-->
+<style>
+  :root{ --font-num:'Rajdhani','Noto Sans KR',sans-serif; }
+  body{margin:0;background:#c9c0ac;font-family:'Noto Sans KR',sans-serif;padding:20px}
+  h1{font:700 16px/1.4 'Noto Sans KR';color:#2b2b2b;margin:0 0 4px}
+  p.lead{font:400 12px/1.7 'Noto Sans KR';color:#4a4a4a;margin:0 0 18px}
+  .row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  .tag{width:150px;flex:none;font:700 12.5px/1.5 'Noto Sans KR';color:#2b2b2b}
+  .tag em{display:block;font-style:normal;font-weight:400;font-size:10.5px;color:#5a5a5a;margin-top:2px}
+
+  /* 실제 화면 띠 — 시트 윗변 -6px 부터 70px */
+  .strip{position:relative;width:390px;height:70px;flex:none;overflow:hidden;
+    background:url('./_kick-bg.png') 0 0/390px 70px no-repeat}
+  .strip.dark{filter:brightness(.42) saturate(.75)}   /* 던전(어두운 바닥)에서도 본다 */
+  /* 제목 자리 — 실측: 시트 x+10 · 띠 안에서 y=21 */
+  .kick{position:absolute;left:10px;top:21px;
+    font-family:var(--font-num);font-size:9px;letter-spacing:.24em;white-space:nowrap;
+    color:#77808c}
+
+  .A .kick{color:#e8edf5;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 6px rgba(0,0,0,.7)}
+  .B .kick{color:#0b0d11;text-shadow:0 1px 0 rgba(255,255,255,.6),0 0 5px rgba(255,255,255,.5)}
+  .C .kick{color:#dfe6f0;background:rgba(6,8,11,.78);padding:3px 7px;border-radius:3px;
+    border:1px solid rgba(255,255,255,.10);left:8px;top:16px}
+  .D .kick{color:#c3ccd8;left:10px;top:21px;
+    text-shadow:none;background:none;
+    /* 글자 뒤에만 얇은 스크림 — 판이 아니라 「그늘」이다(DESIGN.md 의 어법) */
+    padding:2px 8px 2px 0}
+  .D .scrim{position:absolute;left:0;top:14px;width:120px;height:22px;
+    background:linear-gradient(90deg,rgba(4,6,10,.82),rgba(4,6,10,.55) 62%,transparent);
+    pointer-events:none}
+</style>
+
+<h1>프로필 제목(.cgKick) 가독성 — 4안</h1>
+<p class="lead">배경은 <b>실제 캠프 화면을 그대로 찍은 것</b>입니다. 왼쪽 = 캠프(밝음) · 오른쪽 = 던전(어두움).<br>
+<b>같은 안이 두 배경 모두에서 읽혀야 합니다.</b></p>
+
+<div id="g"></div>
+
+<script>
+const ANS=[
+ ['지금','회색 #77808c','now'],
+ ['A. 흰 글자 + 그림자','색 하나 + 뒤에 어두운 그림자','A'],
+ ['B. 검은 글자 + 밝은 테두리','밝은 바닥에 맞춘다','B'],
+ ['C. 어두운 칩 위 흰 글자','작은 판으로 배경과 끊는다','C'],
+ ['D. 왼쪽 그늘 + 밝은 글자','판 대신 「그늘」을 깐다','D'],
+];
+const g=document.getElementById('g');
+for(const [t,d,k] of ANS){
+  const row=document.createElement('div'); row.className='row';
+  row.innerHTML='<div class="tag">'+t+'<em>'+d+'</em></div>'
+    +'<div class="strip '+k+'">'+(k==='D'?'<i class="scrim"></i>':'')+'<span class="kick">MY BASE</span></div>'
+    +'<div class="strip dark '+k+'">'+(k==='D'?'<i class="scrim"></i>':'')+'<span class="kick">MY BASE</span></div>';
+  g.appendChild(row);
+}
+</script>
