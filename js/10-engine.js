@@ -97,6 +97,38 @@ function terrainNoise(ctx, x0,y0,w,h, cell, seed){
 // ── 정적 지형 바닥: 오프스크린에 1회 그려 매 프레임 재사용(캐시). 동적 요소(적·이펙트)는 위에 따로 ──
 // 구조: 바깥=우주(space_bg) / 안쪽 플랫폼=지형(badlands)이 우주에 떠 있고 테두리는 용암 절벽(ashworld)
 let _floorCv=null,_floorCtx=null,_floorW=0,_floorH=0,_floorReady=false;
+// ── ⭐ 통짜 바닥 그림(2026-08-28) — 판·테두리·우주가 한 장에 다 들어 있다 ──
+// 아래 타일 조립(badlands+ashworld+space_bg)을 **대체**한다. 그림이 없으면 자동으로 타일로 돌아간다.
+// ⚠ geom() 은 절대 건드리지 않는다 — 유닛 좌표(innerBounds·posAt·trackCenter)가 전부 거기 매여 있다.
+//    대신 **그림을 geom 의 판에 맞춰 배치**한다(아래 buildFloor 참조).
+// ── 🟩 통짜 바닥 그림 — **판과 우주를 따로 둔다**(2026-08-30) ───────────────────
+// ⛔ 왜 나눴나: 바닥은 _floorCv 캐시에 **화면 크기로** 한 번 그려지고, 줌은 그 **캐시를 확대**한다
+//    (drawMain 이 viewApply 뒤에 캐시를 통째로 drawImage 한다). 그래서 그림이 몇 픽셀이든
+//    판은 캐시에서 995px 로 줄었다가 줌 3배에 2984px 로 늘어난다 — **원본 해상도가 버려진다.**
+//    실제로 그림을 1080→2160 으로 올려도 줌만 하면 도로 깨졌다.
+//  ⭐ 그래서 **판은 캐시를 거치지 않고 매 프레임 원본에서 직접** 그린다(drawSlabDirect).
+//    drawImage 한 번이라 싸고, 줌 변환이 걸린 상태로 그리므로 브라우저가 원본에서 샘플링한다.
+//  · 우주는 캐시에 남긴다 — 어둡고 단순해서 확대돼도 티가 안 나고, 타일 패턴·비네팅이 비싸다.
+// ⛔ **부팅 때 받지 않는다.** 위의 타일들은 10~80KB 인데 이 그림들은 합쳐 900KB 다.
+//    스크립트 로드 시점에 src 를 박아 뒀더니 디코딩이 rAF 를 밀어 **부팅 로딩이 0% 에서 멈췄다**.
+//    그래서 **네모네모 전장을 처음 그릴 때** 받기 시작한다.
+const SLAB_IMG=new Image();   // 판만 — 원본 해상도(1912×1048). 유닛이 서는 면이라 여기에 픽셀을 몰아준다
+const SPACE_IMG=new Image();  // 바깥 우주 — 흐려도 되는 곳이라 작게(540×960)
+SLAB_IMG.onload=()=>{ _floorReady=false; };
+SPACE_IMG.onload=()=>{ _floorReady=false; };
+function slabImgReady(){ if(!SLAB_IMG.src) SLAB_IMG.src='assets/backgrounds/floor/nemo_slab.webp';
+  return !!(SLAB_IMG.complete && SLAB_IMG.naturalWidth); }
+function floorImgReady(){ if(!SPACE_IMG.src) SPACE_IMG.src='assets/backgrounds/floor/nemo_space.webp';
+  return !!(SPACE_IMG.complete && SPACE_IMG.naturalWidth); }
+// 우주 그림 안에서 판이 차지하던 사각형 — 우주를 세 조각으로 나눌 때만 쓴다(판 자체는 SLAB_IMG 가 그린다).
+// 눈대중이 아니라 픽셀로 재서 넣는다(행·열 평균 밝기의 경계).
+const FLOOR_IMG_RECT={x:0.058, y:0.338, w:0.885, h:0.273};
+// ⭐ 판을 캐시 밖에서 직접 그린다 — 줌이 걸린 ctx 에 원본을 얹으므로 해상도가 안 죽는다.
+// ⚠ 그림 속 판은 1.823 : 1 인데 geom() 판은 1.515 : 1 이라 세로로 약 20% 늘어난다.
+//    잔디·얼룩은 방향성이 없어 티가 안 난다. 격자무늬 바닥으로 바꿀 땐 이 차이를 다시 볼 것.
+function drawSlabDirect(ctx,W,H){ if(!slabImgReady()) return false;
+  const {bw,bh,ox,oy}=geom(W,H);
+  ctx.drawImage(SLAB_IMG, ox, oy, bw, bh); return true; }
 function tilesReady(){ return [TILE_BAD,TILE_ASH,TILE_SPACE].every(t=>t.complete&&t.naturalWidth); }
 function mkPat(ctx,img,tile){ const p=ctx.createPattern(img,'repeat'); if(p&&p.setTransform){const s=tile/img.naturalWidth;p.setTransform(new DOMMatrix([s,0,0,s,0,0]));} return p; }
 // 깊은 우주 비네팅 + 은은한 성운 — 별 타일 반복감을 줄이고 가장자리를 어둡게
@@ -113,6 +145,24 @@ function buildFloor(W,H){ if(!tilesReady()) return false;
   if(!_floorCv){_floorCv=document.createElement('canvas');_floorCtx=_floorCv.getContext('2d');}
   _floorCv.width=Math.round(W*DPR);_floorCv.height=Math.round(H*DPR); const ec=_floorCtx; ec.setTransform(DPR,0,0,DPR,0,0); ec.clearRect(0,0,W,H);
   const {bw,bh,side,ox,oy}=geom(W,H), R=18, lw=Math.max(11,side*0.05), Ri=Math.max(4,R-lw*0.5); // R=모서리반경, lw=용암절벽 두께, Ri=안쪽 반경
+  // ── ⭐ 통짜 그림이 있으면 그것으로 끝낸다(타일 조립은 아래 폴백) ──
+  // ⚠ 여기서는 **우주만** 그린다. 판은 drawSlabDirect 가 캐시 밖에서 매 프레임 그린다(위 설명).
+  if(floorImgReady()){
+    // 바탕: 그림이 못 덮는 자리(그림보다 세로로 긴 화면)를 우주 타일로 메운다 — 가장자리 이음이 안 보이게
+    ec.fillStyle=mkPat(ec,TILE_SPACE,SPACE_TILE)||'#05060d'; ec.fillRect(0,0,W,H);
+    spaceVignette(ec,W,H);
+    // 우주 그림을 판 기준으로 배치한다. 가로 배율만 판 기준으로 잡고(dw), 세로는 **세 조각**으로 나눈다.
+    // ⚠ 통으로 그리면 화면을 못 덮는다 — 그림은 9:16 인데 폰 게임 뷰는 0.508 이라 아래에 빈 띠가 남고
+    //    거기서 우주 타일과의 이음선이 보였다(2026-08-28 실제로 보였다). 그래서 3분할이다.
+    //    ① 판 위 → 화면 위쪽 전부  ② 판 자리(곧 SLAB_IMG 가 덮는다)  ③ 판 아래 → 화면 아래쪽 전부
+    const r=FLOOR_IMG_RECT, iw=SPACE_IMG.naturalWidth, ih=SPACE_IMG.naturalHeight;
+    const dw=bw/r.w, dx=ox-dw*r.x;                 // 가로: 판 기준 한 배율
+    const sy1=ih*r.y, sy2=ih*(r.y+r.h);            // 그림 안 판의 위·아래 픽셀
+    if(oy>0)      ec.drawImage(SPACE_IMG, 0,0,   iw,sy1,      dx,0,     dw,oy);        // ① 판 위
+                  ec.drawImage(SPACE_IMG, 0,sy1, iw,sy2-sy1,  dx,oy,    dw,bh);        // ② 판 자리
+    if(oy+bh<H)   ec.drawImage(SPACE_IMG, 0,sy2, iw,ih-sy2,   dx,oy+bh, dw,H-oy-bh);   // ③ 판 아래
+    return true;
+  }
   // ── 바깥 = 우주 ──
   ec.fillStyle=mkPat(ec,TILE_SPACE,SPACE_TILE)||'#05060d'; ec.fillRect(0,0,W,H);
   spaceVignette(ec,W,H);
@@ -297,6 +347,7 @@ function drawMain(cvId){ const {ctx,W,H}=setup(cvId||'cvMain');
   if(_floorW!==W||_floorH!==H||!_floorReady){ _floorReady=buildFloor(W,H); _floorW=W;_floorH=H; }
   if(_floorReady) ctx.drawImage(_floorCv,0,0,W,H);
   else bg(ctx,W,H,'#0a0c16','#03040a');   // 타일 로딩 전 폴백(우주)
+  drawSlabDirect(ctx,W,H);   // ⭐ 판은 캐시 밖에서 원본으로 — 줌해도 해상도가 안 죽는다(위 SLAB_IMG 설명)
   drawFixedSlots(ctx,W,H);  // 고정 구조물 자리(빈칸=잠금)
   // ── 스폰 포탈(닫힌 장치 — '열리기 전' 느낌의 어두운 차원문) ──
   drawSpawnPortal(ctx,ox,oy);

@@ -1,0 +1,484 @@
+<title>네모 판 16안</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --ink:#e8eaf0; --ink-dim:#98a0b4; --ink-faint:#5d6579;
+  --ground:#0a0c12; --card:#0d1017; --line:#232838;
+  --accent:#6fd3c7; --warm:#e0a45c;
+  --font-ui:'IBM Plex Sans KR',system-ui,-apple-system,sans-serif;
+  --font-num:'IBM Plex Mono',ui-monospace,monospace;
+  --space:
+    radial-gradient(62% 38% at 24% 20%,rgba(84,68,150,.30),transparent 72%),
+    radial-gradient(54% 40% at 80% 72%,rgba(38,120,132,.24),transparent 72%),
+    radial-gradient(120% 80% at 50% 42%,#101422 0%,#05070d 76%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font-ui);line-height:1.55;padding:32px 20px 64px}
+.wrap{max-width:1180px;margin:0 auto}
+
+h1{font-size:22px;font-weight:700;margin:0 0 6px;letter-spacing:-.01em}
+.sub{color:var(--ink-dim);font-size:13.5px;margin:0;max-width:66ch}
+.sub b{color:var(--ink)}
+.meta{color:var(--ink-faint);font-size:12px;font-family:var(--font-num);margin-top:10px}
+
+.ref{display:flex;gap:20px;align-items:center;margin:22px 0 6px;padding:16px;
+     border:1px solid var(--line);border-radius:4px;background:var(--card)}
+.refPhone{position:relative;width:88px;aspect-ratio:9/16;border-radius:3px;overflow:hidden;
+          border:1px solid var(--line);background:var(--space);flex:none}
+.refPlat{position:absolute;left:12.5%;right:12.5%;top:28%;height:28%;border-radius:2px;
+         background:linear-gradient(180deg,#3b3227,#2a241c);
+         box-shadow:0 0 0 1.5px rgba(111,211,199,.9),0 4px 12px rgba(0,0,0,.6)}
+.refTx{font-size:13px;color:var(--ink-dim);margin:0}
+.refTx b{color:var(--ink)}
+
+h2{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+   margin:40px 0 4px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+h2 span{color:var(--ink-faint);letter-spacing:0;text-transform:none;font-weight:400;margin-left:10px}
+.gnote{color:var(--ink-dim);font-size:13px;margin:10px 0 18px;max-width:68ch}
+.gnote b{color:var(--ink)}
+
+/* ── 테두리 개선 설명 ── */
+.rimBox{margin:20px 0 8px;padding:16px 18px;border:1px solid var(--line);border-radius:4px;background:var(--card)}
+.rimBox h3{margin:0 0 10px;font-size:14px;font-weight:600}
+.rimGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:12px}
+.rimIt{font-size:12.5px;color:var(--ink-dim)}
+.rimIt b{display:block;color:var(--ink);font-size:13px;margin-bottom:2px}
+.rimDemo{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.rimD{text-align:center}
+.rimD p{margin:7px 0 0;font-size:11.5px;color:var(--ink-faint);font-family:var(--font-num)}
+.rimS{width:150px;aspect-ratio:1.52/1;background:var(--space);border-radius:3px;padding:9%;display:flex}
+.rimP{flex:1;position:relative;border-radius:3px;background:linear-gradient(180deg,#3b3227,#2a241c)}
+/* 옛 테두리 — 한 겹 */
+.rimOld{border:2px solid rgba(20,16,12,.85)}
+/* 새 테두리 — 갓돌 + 홈 + 부스러기 */
+.rimNew{box-shadow:
+  inset 0 0 0 2px #6b6055,          /* 바깥 갓돌(밝다) */
+  inset 0 0 0 4.5px #100d09,        /* 안쪽 그림자 홈 */
+  inset 0 0 0 6px rgba(120,108,92,.35)} /* 부스러기 전이대 */
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.grid.big{grid-template-columns:repeat(2,1fr);gap:22px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}
+                        .grid.big{grid-template-columns:1fr}}
+.grid.big .t{font-size:15px}
+.grid.big .d{font-size:12.5px}
+
+.qBox{margin:0 0 20px;padding:16px 18px;border:1px solid var(--line);border-radius:4px;
+      background:var(--card);font-size:12.5px;color:var(--ink-dim)}
+.qBox>b{color:var(--ink);font-size:13.5px}
+.qGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px;margin-top:12px}
+.qIt{font-size:12.5px;color:var(--ink-dim);line-height:1.5}
+.qIt b{display:block;color:var(--accent);font-size:12.5px;margin-bottom:2px;font-weight:600}
+.qIt b+*{color:inherit}
+.card{display:flex;flex-direction:column;gap:9px}
+
+.box{aspect-ratio:1.52/1;background:var(--space);border-radius:3px;border:1px solid var(--line);
+     padding:11%;display:flex}
+.plat{flex:1;border-radius:3px;position:relative;overflow:hidden;box-shadow:0 5px 16px rgba(0,0,0,.6)}
+.rim{position:absolute;inset:0;border-radius:3px;
+     box-shadow:inset 0 0 0 1.5px rgba(150,138,120,.55),
+                inset 0 0 0 4px rgba(12,10,7,.9),
+                inset 0 0 0 5.5px rgba(130,118,100,.22)}
+.plat.lt .rim{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55),
+                inset 0 0 0 4px rgba(40,44,52,.6),
+                inset 0 0 0 5.5px rgba(255,255,255,.16)}
+
+.lab{display:flex;align-items:baseline;gap:8px}
+.n{font-family:var(--font-num);font-size:11px;color:var(--ink-faint);flex:none}
+.t{font-size:13px;font-weight:600}
+.d{color:var(--ink-dim);font-size:12px;line-height:1.5;margin:0}
+
+details{border-top:1px solid var(--line);padding-top:8px;margin-top:2px}
+summary{cursor:pointer;font-size:12px;color:var(--accent);list-style:none;
+        display:flex;align-items:center;gap:6px;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▸';font-size:10px;transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+.pw{margin-top:9px}
+.cp{font:500 11px var(--font-ui);color:var(--ink);background:#1a1f2b;border:1px solid var(--line);
+    border-radius:3px;padding:5px 11px;cursor:pointer}
+.cp:hover{background:#232935}
+.cp:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.cp.done{color:var(--accent);border-color:var(--accent)}
+pre{margin:8px 0 0;padding:11px;background:#06080d;border:1px solid var(--line);border-radius:3px;
+    font:400 10.5px/1.5 var(--font-num);color:#b9c2d4;white-space:pre-wrap;word-break:break-word;
+    max-height:280px;overflow:auto}
+
+.setBox{margin:26px 0 0;padding:14px 18px;border:1px solid var(--line);border-radius:4px;background:var(--card);
+        font-size:12.5px;color:var(--ink-dim)}
+.setBox b{color:var(--ink)}
+.setBox code{font-family:var(--font-num);color:var(--warm);font-size:11.5px}
+
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-faint);font-size:12px}
+footer b{color:var(--ink-dim);font-weight:600}
+</style>
+
+<div class="wrap">
+<h1>네모네모 디펜스 — 판 16안</h1>
+<p class="sub">배경(우주)은 <b>전 칸 고정</b>이다. 유닛이 서는 <b>판 자체</b>만 바꿔 비교한다.
+   각 칸에 <b>바로 뽑을 수 있는 프롬프트 전문</b>이 붙어 있다 — 펼쳐서 복사하면 된다.</p>
+<p class="meta">gpt_image_2 · 9:16 · 4k · high · 그림은 CSS 목업(색·무늬 방향만)</p>
+
+<div class="ref">
+  <div class="refPhone"><div class="refPlat"></div></div>
+  <p class="refTx">판은 화면에서 이만큼이다 — <b>가로 75% · 세로 28~56%</b>.<br>
+     작아 보이지만 <b>유닛이 서고 적이 도는 곳은 여기뿐</b>이라, 바닥 인상의 대부분을 판이 만든다.</p>
+</div>
+
+<div class="rimBox">
+  <h3>테두리를 고쳤다 — 형태는 그대로, 읽히는 것만 늘렸다</h3>
+  <div class="rimDemo">
+    <div class="rimD"><div class="rimS"><div class="rimP rimOld"></div></div><p>전 · 한 겹</p></div>
+    <div class="rimD"><div class="rimS"><div class="rimP rimNew"></div></div><p>후 · 세 겹</p></div>
+    <div class="rimIt" style="flex:1;min-width:240px">
+      두께·위치·비율은 <b>하나도 안 바꿨다</b>(판 세로의 5%). 띠 안에 층을 넣었을 뿐인데
+      가장자리에 <b>두께가 생긴다</b>.
+    </div>
+  </div>
+  <div class="rimGrid">
+    <div class="rimIt"><b>바깥 갓돌</b>밝은 풍화석 한 겹이 빛을 받는다. 한 겹짜리 띠는 평평해 보인다.</div>
+    <div class="rimIt"><b>안쪽 그림자 홈</b>갓돌과 판 사이가 파여 어둡다. 여기서 깊이가 읽힌다.</div>
+    <div class="rimIt"><b>부스러기 전이대</b>둘이 만나는 자리에 잔돌이 쌓인다. 칼로 자른 듯한 경계를 없앤다.</div>
+    <div class="rimIt"><b>미세 파손</b>직선이되 완벽하지 않다 — 네 귀가 조금 깨져 오래된 돌이 된다.</div>
+  </div>
+  <p class="rimIt" style="margin:14px 0 0">⛔ <b>절벽 옆면은 그리지 않는다.</b> 정투영이라 옆면은 원래 안 보인다 —
+     넣으면 판이 기울어 보인다(1차 실패 원인이 이것이었다).</p>
+</div>
+
+<h2>⭐ 고른 둘 · 다듬은 판 <span>잔디 2 · 갑판 2</span></h2>
+<p class="gnote">09(잔디)와 14(갑판)을 골랐다. 여기 넷은 <b>같은 두 소재를 두 방향으로</b> 밀어붙인 것이다 —
+   각 소재마다 <b>자연스러운 쪽</b>과 <b>구조가 드러나는 쪽</b>.</p>
+
+<div class="qBox">
+  <b>1차안보다 무엇을 더 넣었나</b> — 「퀄리티」는 형용사가 아니라 <b>눈에 보이는 것</b>에서 나온다.
+  <div class="qGrid">
+    <div class="qIt"><b>① 큰 구조</b>판 전체를 관통하는 것 하나. ⚠ 단 <b>길처럼 보이면 안 된다</b> —
+      판 전체가 이동 구역이라 통로로 오해된다. 그래서 <b>드러난 암반·색 얼룩</b>으로 준다.</div>
+    <div class="qIt"><b>② 재질 대비</b>한 재질만 있으면 평평하다. 잔디+암반, 금속+도장처럼 <b>둘 이상</b>을 섞는다.</div>
+    <div class="qIt"><b>③ 디테일 층위</b>멀리서 볼 큰 얼룩, 가까이서 볼 잔디날·리벳. 둘 다 있어야 확대해도 버틴다.</div>
+    <div class="qIt"><b>④ 사용감</b>닳고 벗겨진 흔적. 새것처럼 깨끗하면 CG로 읽힌다.</div>
+    <div class="qIt"><b>⑤ 색 층위</b>같은 초록·같은 회색 안에서 <b>미묘하게 다른 톤</b>이 번갈아 나온다.</div>
+    <div class="qIt"><b>⑥ 테두리 연결</b>테두리 재질이 판 표면에서 <b>이어져 나온다</b>. 따로 붙인 띠처럼 보이지 않는다.</div>
+  </div>
+</div>
+
+<div class="grid big" id="gF"></div>
+
+<h2>A · 지금 스타일 <span>어두운 사진 질감 · 01~08</span></h2>
+<p class="gnote">지금(01)이 밋밋한 이유는 <b>단색 흙 하나</b>라서다. 판 위에 <b>읽을 것</b>을 넣는다.</p>
+<div class="grid" id="gA"></div>
+
+<h2>B · 모바일 형태 <span>밝고 선명 · 09~16</span></h2>
+<p class="gnote">판을 <b>밝게</b> 만들어 유닛을 띄운다. 배경은 우주 그대로라 <b>판만 도려낸 듯</b> 대비가 강해진다.<br>
+   ⚠ 이 여덟은 공통 블록의 <b>넷째 줄 하나</b>가 다르다 — 안 바꾸면 전부 어둡게 나온다.</p>
+<div class="grid" id="gB"></div>
+
+<div class="setBox">
+  <b>생성 설정</b> — 모델 <code>gpt_image_2</code> · 비율 <code>9:16</code> · 해상도 <code>4k</code> · 품질 <code>high</code>.<br>
+  ⛔ <code>soul_location</code> 은 쓰지 말 것 — 두 번 다 원근으로 나와 판이 사다리꼴이 됐다.
+</div>
+
+<footer>
+  <p><b>고를 때 볼 것</b> — ① 유닛이 판 위에서 또렷한가 ② 무늬가 <b>길처럼 보이지 않는가</b>
+     (판 전체가 이동 구역이라 통로로 오해되면 안 된다) ③ 캠프와 나란히 놓았을 때 한 게임으로 읽히는가.</p>
+  <p style="margin-top:8px">규격의 단일 소스는 <b>ART.md §12</b> 다. 새로 뽑았으면 거기 표를 갱신할 것.</p>
+</footer>
+</div>
+
+<script>
+/* 한 프롬프트 = 다섯 덩이. 바뀌는 것은 표면(surface)과 테두리 재질(rim) 둘뿐. */
+const A_FORM =
+`A single vast rectangular slab hanging alone in deep space, seen from directly above.
+The slab is much wider than it is tall, roughly three units wide to two units tall,
+with almost square corners, only slightly rounded. It spans about three quarters of the
+image width and sits in the upper middle of the frame, its top edge near the upper third,
+its bottom edge just past the middle.`;
+
+const C_RIM =
+`The slab edge is a narrow band, only about one twentieth of the slab's height, but it is
+layered: an outermost lip of paler weathered stone catches the ambient light, and just inside
+it a darker recessed groove of shadow separates the lip from the plain. Where the two meet,
+a thin scatter of broken grit and small fallen shards has collected. The outline is straight
+overall but never perfectly clean — the corners are slightly chipped and the edges nibbled
+with small irregular breaks, as if the slab was sheared away long ago.`;
+
+const D_SPACE =
+`Beyond the slab is open space: a slow drift of deep nebula in dusty blue and faint violet,
+distant star clusters, and a scattering of small broken rock fragments floating near the slab,
+catching the same cold light. The frame edges fall away into near darkness.`;
+
+const E_BLOCK = (bright) =>
+`perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
+flat even ambient lighting with no directional shadows and no visible light source,
+fine small-scale surface detail, nothing larger than a fist,
+${bright ? 'clean readable palette, bright and evenly lit,' : 'muted low-saturation palette, dark tones,'}
+the important area stays within the central 80% of the width,
+no characters, no objects, no units, no structures, no text, no user interface,
+highly detailed photorealistic PBR game texture, AAA game environment asset,
+3D render, tall vertical composition`;
+
+const FLAT = `Every part of the surface stays flat and walkable — the richness is in texture, colour and pattern, never in raised obstacles. Nothing stands on the slab, no paths, no markings.`;
+
+const OPTS = [
+/* ───── ⭐ 고른 둘을 다듬은 넷 ───── */
+{g:'F',n:'09-a',key:'f1',bright:true,name:'잔디 · 야생 초원',
+ note:'풀만 있는 게 아니라 <b>아래 암반이 군데군데 드러난다</b> — 「이 섬이 무엇 위에 있는지」가 읽힌다. 이끼·야생화가 그 경계에서 자란다.',
+ surface:`The slab surface is an open meadow of short wind-cropped grass, and its green is never one green: cooler blue-green where the turf grows thick, warm yellow-green where it has dried back, and darker olive in broad soft patches. In several places the turf thins and gives way entirely to the pale grey bedrock beneath, showing that the slab is a piece of rock wearing a thin skin of soil — these bare outcrops are worn smooth and sit flush with the grass, spreading in irregular islands rather than in lines. Low cushions of moss creep out from the rock edges, tiny pale wildflowers cluster in the sheltered hollows, and small weathered pebbles and fine dry litter settle down into the turf. ${FLAT}`,
+ rim:`The band is bare packed soil over that same pale bedrock, the turf overhanging the lip in a ragged fringe with thin pale roots trailing down across the stone.`},
+
+{g:'F',n:'09-b',key:'f2',bright:true,name:'잔디 · 유적 정원',
+ note:'잔디 아래에서 <b>옛 석재 포장이 비쳐 나온다</b>. 격자가 부분적으로 살아나 10번(석판)의 <b>거리 감각</b>까지 같이 얻는다.',
+ surface:`The slab surface is grass grown over an ancient stone pavement, and the pavement shows through: large square flagstones, cut and fitted long ago, emerge from the turf in broad patches — some swept almost bare, some showing only their edges as pale lines beneath the grass, some lost entirely under it. The stone is warm grey weathered to pale ochre, its joints packed with moss and fine soil. The grass itself shifts from thick cool green over deep earth to sparse yellow-green where it grows thin across buried stone, and small wildflowers and pebbles gather along the joints. ${FLAT}`,
+ rim:`The band is a course of those same dressed capstones, cut square and fitted tight, their tops furred with moss and the turf spilling over them in places.`},
+
+{g:'F',n:'14-a',key:'f3',bright:true,name:'갑판 · 착륙장',
+ note:'<b>도장이 닳은 자리</b>가 이야기를 만든다 — 선명한 그래픽이 아니라 유령처럼 남은 자국이라야 쓰던 물건으로 읽힌다.',
+ surface:`The slab surface is a starship landing deck of large brushed metal panels in pale cool grey, butted together along recessed seams and fixed with neat rows of flush rivets. Painted markings survive across the deck — broad guide bands, a wide chevron, alignment numerals — but they are worn thin and scuffed away entirely along the busiest lines, so the paint reads as ghosted patches rather than clean graphics. The metal itself is not uniform: some panels sit lighter, some faintly warmer, and a few have been replaced and look newer than their neighbours. Small amber lamps are set flush into the deck at intervals, glowing dim and restrained, never bright, and fine grime and scuff marks have collected along the seams. ${FLAT}`,
+ rim:`The band is the deck's outer frame, riveted armour plating with worn yellow and black hazard striping running along its top face.`},
+
+{g:'F',n:'14-b',key:'f4',bright:true,name:'갑판 · 장갑판',
+ note:'마름모 미끄럼방지 무늬가 <b>다닌 자리만 닳아 반들거린다</b>. 무늬 하나로 재질·사용감·밝기 대비가 한꺼번에 생긴다.',
+ surface:`The slab surface is heavy armour decking: a field of large diamond-pattern anti-slip tread pressed into pale grey metal, the raised diamonds worn flat and polished bright across the most travelled areas and still sharp and matte where nothing has passed. Wide structural panels divide the field along recessed seams, and set flush into them are a few maintenance hatches and grated vents, all level with the deck. The metal carries a faint patina shifting from cool grey to warm steel, with dark grime settled down in the tread and a scatter of small scorch marks and fine scratches. ${FLAT}`,
+ rim:`The band is the deck's cut structural edge, layered steel ribs with the tread plate folded over the lip and finished in a worn pale kerb.`},
+
+/* ───── A · 어두운 사진 질감 ───── */
+{g:'A',n:'01',key:'p1',name:'지금',note:'마른 흙 단색. 기준선이다.',
+ surface:`The slab surface is a weathered plain of dry cracked earth, even and bare from edge to edge, fine gravel and small angular shards scattered evenly across it in muted grey-brown. ${FLAT}`,
+ rim:`The band is dark volcanic rock.`},
+
+{g:'A',n:'02',key:'p2',name:'균열 흐름',note:'마른 강바닥. 발광 없이 밀도만 올린다.',
+ surface:`The slab surface is a weathered plain of dry cracked earth, and a great fracture system runs across it from one side to the other, branching into finer and finer hairline cracks like a dry riverbed. The fissures are deep and unlit, only shadow inside them. Broad bands of rust-brown oxidised dust drift across the plain, and fine gravel gathers in the low places. ${FLAT}`,
+ rim:`The band is fractured basalt, its columns split and packed tight.`},
+
+{g:'A',n:'03',key:'p3',name:'용암 균열',note:'균열 깊은 곳에서 빛이 샌다 — 어두운 판에 온기가 생긴다.',
+ surface:`The slab surface is a weathered plain of dry cracked earth, and a great fracture system runs across it from one side to the other, branching into finer and finer hairline cracks. From deep inside the widest fissures a faint amber glow seeps upward, dim and restrained, never bright, and the earth immediately around them is scorched a darker red-brown. ${FLAT}`,
+ rim:`The band is columnar basalt, tall hexagonal columns packed shoulder to shoulder and sheared off clean, with dim molten seams glowing faintly deep between them.`},
+
+{g:'A',n:'04',key:'p4',name:'광물 맥',note:'청록 광맥. 우주 배경과 색이 이어진다.',
+ surface:`The slab surface is a weathered plain of dark grey-brown earth threaded with veins of pale cyan crystal that run across it in branching seams, their faces flush with the ground and catching a cold sheen. Inside the thickest veins a faint cyan glow rests deep below the surface, dim and restrained, never bright. Fine gravel and small angular shards gather along the seams. ${FLAT}`,
+ rim:`The band is dark basalt, and the cyan mineral veins from the plain run out into it and glint coldly along the rim.`},
+
+{g:'A',n:'05',key:'p5',name:'소금 평원',note:'밝은 얼룩 — 판만 밝혀 유닛 가독성을 올린다.',
+ surface:`The slab surface is a dry salt flat: broad patches of pale mineral salt bleach the plain to a chalky off-white, ringed and streaked by rust-brown oxidised dust, with a fine polygonal crust of shallow drying cracks spreading across the paler areas. Small angular shards and coarse grit collect where the crust has broken. ${FLAT}`,
+ rim:`The band is crusted with the same pale salt, bleached almost white where it meets the plain.`},
+
+{g:'A',n:'06',key:'p6',name:'금속 갑판',note:'흙을 버리고 인공물로. 우주에 떠 있는 이유가 생긴다.',
+ surface:`The slab surface is not stone but a deck of corroded metal plating: large rectangular panels butted together with riveted seams, the paint long weathered away to bare oxidised steel streaked with rust and old scorch marks. Dark grime has settled along the seams and a fine grit of metal dust lies in the shallow depressions. ${FLAT}`,
+ rim:`The band is the sheared structural frame of the deck, cut steel ribs and torn plating.`},
+
+{g:'A',n:'07',key:'p7',name:'퇴적 층리',note:'「잘려 나온 조각」이 읽힌다.',
+ surface:`The slab surface is tilted sedimentary rock sheared off flat, so the ground reads as long parallel bands of alternating stone running diagonally from one corner toward the other — pale sandstone, dark shale, rust-red ironstone — their boundaries softened by drifted dust and fine gravel. ${FLAT}`,
+ rim:`The band exposes the same tilted strata edge-on, reading as fine stacked layers.`},
+
+{g:'A',n:'08',key:'p8',name:'크레이터',note:'⚠ 웅덩이가 통로처럼 오해될 수 있다.',
+ surface:`The slab surface is a weathered grey-brown plain pocked with shallow meteor craters of varying size, each only a slight saucer-like depression ringed by a faint halo of ejected dust, never deep enough to break the walking surface. Fine gravel and small angular shards are scattered across the plain and gathered inside the hollows. ${FLAT}`,
+ rim:`The band is especially battered, deeply chipped and notched all the way round.`},
+
+/* ───── B · 밝은 모바일 형태 ───── */
+{g:'B',n:'09',key:'p9',name:'잔디 섬',note:'캠프(애니풍 초원)와 그림체가 맞는 유일한 안.',
+ surface:`The slab surface is a meadow of short cropped grass in fresh muted green, worn through to pale bare earth in broad irregular patches, with small clusters of tiny pale flowers, scattered pebbles and a few flat stones set into the turf. ${FLAT}`,
+ rim:`The band is bare packed soil with pale exposed roots trailing over the lip.`},
+
+{g:'B',n:'10',key:'p10',name:'석판 타일',note:'격자가 거리 감각을 준다 — 사거리·이동이 눈에 읽힌다.',
+ surface:`The slab surface is paved with large square flagstones laid in an even grid, each stone slightly different in tone from warm sandy grey to pale ochre, with thin darker mortar joints between them and fine sand settled in the gaps. A few stones are cracked or worn smooth, and the grid runs straight and unbroken across the whole plain. ${FLAT}`,
+ rim:`The band is a course of dressed capstones, cut square and fitted tight.`},
+
+{g:'B',n:'11',key:'p11',name:'모래 평원',note:'어두운 유닛이 또렷하게 뜬다.',
+ surface:`The slab surface is pale golden sand combed into long soft ripples by wind, with occasional patches of coarser gravel, a scatter of small flat sun-bleached stones half buried in the sand, and faint darker streaks where damper sand shows through. ${FLAT}`,
+ rim:`The band is hardened sandstone, wind-scoured smooth.`},
+
+{g:'B',n:'12',key:'p12',name:'빙판',note:'가장 밝다. 균열이 얼음으로 읽혀 무늬가 자연스럽다.',
+ surface:`The slab surface is a sheet of thick pale blue ice, its interior threaded with white fracture planes and columns of trapped bubbles, the surface polished glassy in places and frosted matte in others, with fine dry snow drifted into the shallow seams. ${FLAT}`,
+ rim:`The band is sheared ice, its cut face pale and translucent.`},
+
+{g:'B',n:'13',key:'p13',name:'네온 회로',note:'⚠ 발광이 유닛 이펙트와 경쟁할 수 있다.',
+ surface:`The slab surface is a dark matte composite panel etched with a fine network of glowing cyan circuit traces running in clean right angles and branching into smaller pathways, the light dim and restrained, never bright, with flat black substrate between the lines and faint dust settled in the etched channels. ${FLAT}`,
+ rim:`The band is a machined metal rail with a thin cyan light line inset along it, dim and restrained.`},
+
+{g:'B',n:'14',key:'p14',name:'함선 갑판',note:'「정거장에 착륙한 판」으로 읽힌다.',
+ surface:`The slab surface is a starship landing deck of brushed pale metal plating with riveted seams and painted guide markings worn thin by traffic, small amber lamps set flush into the surface glowing dim and restrained, never bright, and faint scuff marks and grime tracked across the panels. ${FLAT}`,
+ rim:`The band is riveted armour plating with worn yellow hazard striping.`},
+
+{g:'B',n:'15',key:'p15',name:'석회 평원',note:'B 중 가장 차분해 유닛이 안 묻힌다.',
+ surface:`The slab surface is a pale grey-white limestone pavement, dry and chalky, split by a network of shallow hairline fissures into large irregular blocks, with thin drifts of fine white dust settled in the seams and a scatter of small weathered pebbles across the flat blocks. ${FLAT}`,
+ rim:`The band is weathered limestone, softened and rounded by age.`},
+
+{g:'B',n:'16',key:'p16',name:'보라 결정',note:'배경 성운과 같은 색족이라 잘 붙는다.',
+ surface:`The slab surface is pale grey rock shot through with clusters of violet crystal growing flush with the ground, their faceted faces catching a cold light, and a faint violet glow resting deep inside the largest clusters, dim and restrained, never bright. Fine crystalline grit is scattered across the rock between the clusters. ${FLAT}`,
+ rim:`The band is dark rock with violet crystals growing outward along the lip.`},
+];
+
+const build = o =>
+  `${A_FORM}\n\n${o.surface}\n\n${C_RIM} ${o.rim}\n\n${D_SPACE}\n\n${E_BLOCK(o.bright || o.g === 'B')}`;
+
+const LIGHT = new Set(['p5','p9','p10','p11','p12','p14','p15','f1','f2','f3','f4']);
+const HOST = {A:'gA', B:'gB', F:'gF'};
+
+for (const o of OPTS) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const full = build(o);
+  el.innerHTML =
+    `<div class="box"><div class="plat ${o.key}${LIGHT.has(o.key) ? ' lt' : ''}"><div class="rim"></div></div></div>` +
+    `<div class="lab"><span class="n">${o.n}</span><span class="t">${o.name}</span></div>` +
+    `<p class="d">${o.note}</p>` +
+    `<details><summary>프롬프트 전문</summary><div class="pw">` +
+    `<button class="cp" type="button">복사</button><pre></pre></div></details>`;
+  el.querySelector('pre').textContent = full;
+  const btn = el.querySelector('.cp');
+  btn.addEventListener('click', async () => {
+    let ok = false;
+    try { await navigator.clipboard.writeText(full); ok = true; }
+    catch (e) {
+      const ta = document.createElement('textarea');
+      ta.value = full; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (e2) { ok = false; }
+      ta.remove();
+    }
+    btn.textContent = ok ? '복사됨' : '아래 글을 직접 선택하세요';
+    btn.classList.toggle('done', ok);
+    setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('done'); }, 2200);
+  });
+  document.getElementById(HOST[o.g]).appendChild(el);
+}
+</script>
+
+<style>
+/* ⭐ 다듬은 넷 */
+/* 09-a 야생 초원 — 초록 톤이 여럿 + 드러난 암반 섬 */
+.f1{background:linear-gradient(168deg,#6a9e58,#527f45 55%,#456e3c)}
+.f1::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(closest-side,#a9a89b,rgba(169,168,155,.4) 72%,transparent) 27% 33%/23% 30% no-repeat,
+  radial-gradient(closest-side,#9d9c8f,rgba(157,156,143,.35) 70%,transparent) 71% 64%/17% 24% no-repeat,
+  radial-gradient(closest-side,#a4a396,rgba(164,163,150,.3) 70%,transparent) 52% 80%/12% 17% no-repeat}
+.f1::after{content:'';position:absolute;inset:0;opacity:.55;background:
+  radial-gradient(closest-side,rgba(150,190,110,.75),transparent) 62% 24%/30% 34% no-repeat,
+  radial-gradient(closest-side,rgba(58,92,52,.7),transparent) 18% 72%/34% 38% no-repeat}
+
+/* 09-b 유적 정원 — 잔디 아래 격자가 부분적으로 드러남 */
+.f2{background:linear-gradient(168deg,#66965a,#4e7a44)}
+.f2::before{content:'';position:absolute;inset:0;opacity:.7;background:
+  repeating-linear-gradient(90deg,rgba(196,184,150,.9) 0 1.5px,transparent 1.5px 16.6%),
+  repeating-linear-gradient(0deg,rgba(196,184,150,.8) 0 1.5px,transparent 1.5px 25%)}
+.f2::after{content:'';position:absolute;inset:0;background:
+  radial-gradient(closest-side,rgba(190,178,144,.85),transparent) 33% 36%/30% 36% no-repeat,
+  radial-gradient(closest-side,rgba(185,173,140,.7),transparent) 74% 68%/22% 28% no-repeat,
+  radial-gradient(closest-side,rgba(66,100,56,.75),transparent) 62% 22%/26% 30% no-repeat}
+
+/* 14-a 착륙장 — 큰 패널 + 유령 도장 + 유도등 */
+.f3{background:linear-gradient(180deg,#9aa7b3,#77848f)}
+.f3::before{content:'';position:absolute;inset:0;opacity:.5;background:
+  repeating-linear-gradient(90deg,rgba(20,26,34,.45) 0 1.5px,transparent 1.5px 25%),
+  repeating-linear-gradient(0deg,rgba(20,26,34,.4) 0 1.5px,transparent 1.5px 33%)}
+.f3::after{content:'';position:absolute;inset:0;background:
+  linear-gradient(180deg,transparent 40%,rgba(226,208,140,.35) 41%,transparent 47%),
+  radial-gradient(closest-side,rgba(226,208,140,.3),transparent) 50% 62%/34% 26% no-repeat,
+  radial-gradient(14% 18% at 16% 22%,rgba(255,196,92,.85),transparent 70%),
+  radial-gradient(14% 18% at 84% 78%,rgba(255,196,92,.75),transparent 70%)}
+
+/* 14-b 장갑판 — 마름모 트레드 + 닳아 반들거리는 자리 */
+.f4{background:linear-gradient(180deg,#98a3ad,#6f7b86)}
+.f4::before{content:'';position:absolute;inset:0;opacity:.55;background:
+  repeating-linear-gradient(45deg,rgba(28,34,42,.5) 0 1.5px,transparent 1.5px 9px),
+  repeating-linear-gradient(-45deg,rgba(28,34,42,.5) 0 1.5px,transparent 1.5px 9px)}
+.f4::after{content:'';position:absolute;inset:0;background:
+  radial-gradient(closest-side,rgba(232,238,244,.5),transparent) 42% 46%/44% 50% no-repeat,
+  repeating-linear-gradient(90deg,rgba(20,26,34,.35) 0 1.5px,transparent 1.5px 33%)}
+
+/* 판 표면 — CSS 목업 (색·무늬 방향만) */
+.p1{background:linear-gradient(180deg,#3b3227,#2a241c)}
+
+.p2{background:linear-gradient(180deg,#3f362a,#2b251d)}
+.p2::before{content:'';position:absolute;inset:0;opacity:.85;background:
+  linear-gradient(104deg,transparent 40%,rgba(0,0,0,.55) 41.5%,transparent 43%),
+  linear-gradient(96deg,transparent 55%,rgba(0,0,0,.4) 56%,transparent 57%),
+  linear-gradient(150deg,transparent 28%,rgba(0,0,0,.35) 29%,transparent 30%),
+  linear-gradient(66deg,transparent 70%,rgba(0,0,0,.3) 71%,transparent 72%)}
+
+.p3{background:linear-gradient(180deg,#332a21,#241e18)}
+.p3::before{content:'';position:absolute;inset:0;filter:blur(.4px);background:
+  linear-gradient(104deg,transparent 40%,rgba(255,132,40,.85) 41.5%,transparent 43%),
+  linear-gradient(96deg,transparent 55%,rgba(255,110,30,.6) 56%,transparent 57%),
+  linear-gradient(150deg,transparent 28%,rgba(255,150,60,.5) 29%,transparent 30%)}
+.p3::after{content:'';position:absolute;inset:0;background:
+  radial-gradient(60% 40% at 45% 45%,rgba(255,120,40,.18),transparent 70%)}
+
+.p4{background:linear-gradient(180deg,#37302a,#26211d)}
+.p4::before{content:'';position:absolute;inset:0;opacity:.9;background:
+  linear-gradient(72deg,transparent 32%,rgba(150,200,215,.5) 33%,rgba(90,140,160,.3) 34%,transparent 35%),
+  linear-gradient(72deg,transparent 58%,rgba(150,200,215,.42) 59%,transparent 61%),
+  linear-gradient(112deg,transparent 44%,rgba(130,180,200,.35) 45%,transparent 46%)}
+
+.p5{background:linear-gradient(180deg,#5a5348,#3d3830)}
+.p5::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(38% 46% at 26% 34%,rgba(226,220,205,.75),transparent 70%),
+  radial-gradient(30% 34% at 72% 66%,rgba(214,208,192,.6),transparent 70%),
+  radial-gradient(26% 30% at 58% 20%,rgba(200,194,178,.45),transparent 72%)}
+
+.p6{background:linear-gradient(180deg,#4a423a,#332d28)}
+.p6::before{content:'';position:absolute;inset:0;opacity:.6;background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.35) 0 1.5px,transparent 1.5px 25%),
+  repeating-linear-gradient(0deg,rgba(0,0,0,.3) 0 1.5px,transparent 1.5px 33%)}
+.p6::after{content:'';position:absolute;inset:0;opacity:.5;background:
+  radial-gradient(30% 34% at 68% 30%,rgba(150,86,44,.5),transparent 72%),
+  radial-gradient(24% 28% at 26% 70%,rgba(150,86,44,.4),transparent 72%)}
+
+.p7{background:repeating-linear-gradient(24deg,#3a3128 0 7%,#332b23 7% 11%,#4a3d2c 11% 15%,#2e2720 15% 21%)}
+
+.p8{background:linear-gradient(180deg,#38302a,#272220)}
+.p8::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(closest-side,rgba(0,0,0,.5),transparent) 28% 38%/26% 34% no-repeat,
+  radial-gradient(closest-side,rgba(0,0,0,.42),transparent) 68% 62%/19% 26% no-repeat,
+  radial-gradient(closest-side,rgba(0,0,0,.35),transparent) 82% 26%/13% 18% no-repeat,
+  radial-gradient(closest-side,rgba(0,0,0,.3),transparent) 44% 76%/15% 20% no-repeat}
+
+.p9{background:linear-gradient(180deg,#6fae5a,#4d8440)}
+.p9::before{content:'';position:absolute;inset:0;opacity:.5;background:
+  radial-gradient(closest-side,rgba(220,206,170,.7),transparent) 30% 30%/24% 28% no-repeat,
+  radial-gradient(closest-side,rgba(0,0,0,.18),transparent) 70% 66%/26% 30% no-repeat}
+
+.p10{background:linear-gradient(180deg,#c8a877,#a5854f)}
+.p10::before{content:'';position:absolute;inset:0;opacity:.6;background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.22) 0 2px,transparent 2px 12.5%),
+  repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 2px,transparent 2px 20%)}
+
+.p11{background:linear-gradient(180deg,#e8c692,#c99b5e)}
+.p11::before{content:'';position:absolute;inset:0;opacity:.4;background:
+  repeating-linear-gradient(78deg,rgba(255,255,255,.3) 0 2px,transparent 2px 9px)}
+
+.p12{background:linear-gradient(180deg,#cfe4f2,#9fc0d8)}
+.p12::before{content:'';position:absolute;inset:0;opacity:.55;background:
+  linear-gradient(104deg,transparent 40%,rgba(255,255,255,.85) 41%,transparent 42.5%),
+  linear-gradient(66deg,transparent 62%,rgba(255,255,255,.7) 63%,transparent 64%),
+  linear-gradient(148deg,transparent 30%,rgba(160,200,225,.7) 31%,transparent 32%)}
+
+.p13{background:linear-gradient(180deg,#1d2b3d,#121a26)}
+.p13::before{content:'';position:absolute;inset:0;background:
+  repeating-linear-gradient(90deg,rgba(96,232,255,.5) 0 1.5px,transparent 1.5px 12.5%),
+  repeating-linear-gradient(0deg,rgba(96,232,255,.4) 0 1.5px,transparent 1.5px 20%)}
+.p13::after{content:'';position:absolute;inset:0;background:
+  radial-gradient(52% 44% at 50% 46%,rgba(96,232,255,.16),transparent 72%)}
+
+.p14{background:linear-gradient(180deg,#93a3b2,#6b7d8e)}
+.p14::before{content:'';position:absolute;inset:0;opacity:.6;background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.2) 0 1px,transparent 1px 16.6%),
+  linear-gradient(180deg,rgba(255,255,255,.2),transparent 45%)}
+.p14::after{content:'';position:absolute;inset:0;background:
+  radial-gradient(16% 20% at 18% 24%,rgba(255,196,92,.7),transparent 70%),
+  radial-gradient(16% 20% at 82% 76%,rgba(255,196,92,.6),transparent 70%)}
+
+.p15{background:linear-gradient(180deg,#d8d2c6,#b0a795)}
+.p15::before{content:'';position:absolute;inset:0;opacity:.5;background:
+  linear-gradient(104deg,transparent 38%,rgba(120,110,95,.6) 39%,transparent 40%),
+  linear-gradient(72deg,transparent 60%,rgba(120,110,95,.45) 61%,transparent 62%),
+  linear-gradient(150deg,transparent 26%,rgba(140,130,115,.4) 27%,transparent 28%)}
+
+.p16{background:linear-gradient(180deg,#8b8894,#5f5c68)}
+.p16::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(closest-side,rgba(168,110,230,.8),transparent) 32% 36%/22% 28% no-repeat,
+  radial-gradient(closest-side,rgba(150,96,215,.7),transparent) 70% 62%/18% 24% no-repeat,
+  radial-gradient(closest-side,rgba(180,130,240,.6),transparent) 54% 78%/14% 18% no-repeat}
+</style>

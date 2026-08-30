@@ -44,6 +44,14 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new'
   args: ['--no-sandbox', '--use-gl=angle', '--enable-unsafe-swiftshader', '--mute-audio'] });
 try {
   const page = await browser.newPage();
+  // 🩺 SHOT_LOG=1 이면 페이지 예외·콘솔 오류·실패한 요청을 그대로 흘린다.
+  //    「화면은 떴는데 진행이 멈춘다」류는 대개 top-level 예외라 이걸 켜야 보인다.
+  if (process.env.SHOT_LOG) {
+    page.on('pageerror', e => console.log('‼ pageerror: ' + (e && e.message)));
+    page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') console.log('· ' + m.type() + ': ' + m.text().slice(0, 200)); });
+    page.on('requestfailed', r => console.log('✗ 요청실패: ' + r.url().split('/').pop() + ' — ' + (r.failure() && r.failure().errorText)));
+    page.on('response', r => { if (r.status() >= 400) console.log('✗ HTTP ' + r.status() + ': ' + r.url().split('/').pop()); });
+  }
   const isPage = WHAT.endsWith('.html');   // 임의의 페이지를 통째로 찍는 모드(시안 비교용)
   await page.setViewport(isPage ? { width: 1640, height: 1030, deviceScaleFactor: 1 } : { width: 430, height: 880, deviceScaleFactor: +(process.env.SHOT_DPR||1) });
   await page.goto('http://127.0.0.1:' + PORT + '/' + (isPage ? WHAT : 'sc-ums-web.html'), { waitUntil: 'domcontentloaded' });
@@ -281,6 +289,63 @@ try {
         return {rows, gaps, onLabel:on?on.textContent.trim():'-',
           onAfter:af?{c:af.content,h:af.height,bg:af.backgroundImage.slice(0,50)}:null}; });
       console.log(JSON.stringify(gap,null,1));
+    }
+    else if (WHAT === 'nemo') {   // 🟩 네모네모 디펜스 전장 — 통짜 바닥 그림이 geom() 판에 맞는지 본다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,300));
+      await page.evaluate(() => { _selMap=USEMAPS.nemo; _startSoloNow(); });
+      await new Promise(r=>setTimeout(r,2400));
+      // 진입 카드(#gsRoot)의 '전투 시작' 을 눌러야 전장이 나온다
+      await page.evaluate(()=>{ const b=[...document.querySelectorAll('button,.actBtn')]
+        .find(e=>/전투\s*시작|시작/.test((e.textContent||'').trim()) && e.offsetParent);
+        if(b) b.click(); });
+      await new Promise(r=>setTimeout(r, AT != null ? AT : 3200));
+      // 🔍 SHOT_ZOOM=3 → 그 배율로 확대해 찍는다(바닥 해상도 확인용 · 상한은 NEMO_MAXZOOM)
+      if (process.env.SHOT_ZOOM) {
+        await page.evaluate((z) => { if (G.view) G.view.zoom = z; if (G.viewT) G.viewT.zoom = z;
+          if (typeof nemoClampView === 'function') nemoClampView(); }, +process.env.SHOT_ZOOM);
+        await new Promise(r=>setTimeout(r, 900));
+      }
+      const info=await page.evaluate(()=>{
+        const cv=document.querySelector('.gview.on canvas')||document.querySelector('canvas');
+        const r=cv?cv.getBoundingClientRect():null;
+        const has=typeof GW!=='undefined'&&GW>0;
+        const g=(typeof geom==='function'&&has)?geom(GW,GH):null;
+        const pct=(v,t)=>+(v/t*100).toFixed(1);
+        return {
+          canvasCSS:r?{w:Math.round(r.width),h:Math.round(r.height),ratio:+(r.width/r.height).toFixed(3)}:null,
+          GW:has?GW:null, GH:has?GH:null, 'GW:GH':has?+(GW/GH).toFixed(3):null,
+          판:g?{좌:pct(g.ox,GW)+'%', 우:pct(g.ox+g.bw,GW)+'%',
+                 위:pct(g.oy,GH)+'%', 아래:pct(g.oy+g.bh,GH)+'%',
+                 비율:+(g.bw/g.bh).toFixed(3)}:null,
+          그림:(typeof FLOOR_IMG!=='undefined')
+            ?{로드:!!(FLOOR_IMG.complete&&FLOOR_IMG.naturalWidth), 크기:FLOOR_IMG.naturalWidth+'x'+FLOOR_IMG.naturalHeight}
+            :'FLOOR_IMG 없음'
+        };
+      });
+      console.log(JSON.stringify(info,null,1));
+    }
+    else if (WHAT === 'auto') {   // ⚔️ 오토배틀 전장 — 지형 타일 해상도 확인용(멀티 전용이라 UI 잠금을 건너뛴다)
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,300));
+      await page.evaluate(() => { _selMap=USEMAPS.cpu; _startSoloNow(); });
+      await new Promise(r=>setTimeout(r,2400));
+      await page.evaluate(()=>{ const b=[...document.querySelectorAll('button,.actBtn')]
+        .find(e=>/전투\s*시작|시작/.test((e.textContent||'').trim()) && e.offsetParent);
+        if(b) b.click(); });
+      await new Promise(r=>setTimeout(r, AT != null ? AT : 4000));
+      if (process.env.SHOT_ZOOM) { await page.evaluate((z)=>{ if(typeof STK!=='undefined'&&STK) STK.zoom=z; }, +process.env.SHOT_ZOOM);
+        await new Promise(r=>setTimeout(r,800)); }
+      const info=await page.evaluate(()=>{
+        const S=(typeof STK!=='undefined')?STK:null;
+        const g=(typeof STRIKE_GROUND!=='undefined')?STRIKE_GROUND:null;
+        if(!S) return {STK:'없음'};
+        const W=S.cw||1,H=S.ch||1, scale=Math.min(W,H)/(S.viewWorld||1);
+        return { world:S.world, viewWorld:S.viewWorld, zoom:S.zoom, 캔버스:W+'x'+H,
+          scale:+scale.toFixed(4), '타일 화면크기(CSS px)':Math.round(460*scale),
+          '타일 원본': g?(g.naturalWidth+'x'+g.naturalHeight):'-', 타일파일:g?g.src.split('/').pop():'-' };
+      });
+      console.log(JSON.stringify(info,null,1));
     }
     else if (WHAT === 'home') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); }
     else if (WHAT === 'settings') { await page.evaluate(() => openAppSettings()); await new Promise(r=>setTimeout(r,400)); }
