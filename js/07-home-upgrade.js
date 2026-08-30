@@ -461,7 +461,13 @@ const NAV_TREE=[
   //   ⛔ **코드는 지우지 않았다**(유보는 삭제가 아니다 · §5). openUpgScreen()·openGear() 와
   //     #upgScreen·#gearScreen 은 그대로 살아 있고, 하단에서 길만 닫았다. 되살릴 땐 이 줄을 되돌리면 된다.
   //   ⚠ 지금은 **껍데기다** — 화면 본문이 '준비 중'이다. 하위 항목(subs)도 아직 없다.
-  { k:'research', label:'연구', ico:'upg',  go:()=>openResearch(), subs:[] },
+  // 🔬 연구 — 하위 셋(자원·무장·기술). 실제 동작은 js/20-camp-research.js 가 갖는다.
+  //   ⭐ 고른 요소는 화면이 아니라 **캠프 하단 시트**에 뜬다 — 그래서 go 가 캠프로 데려간다.
+  { k:'research', label:'연구', ico:'upg',  go:()=>openResearch(),
+    cur:()=>(typeof _resSec!=='undefined'?_resSec:null), reset:()=>campResEnter('res'), subs:[
+      { k:'res',  label:'자원', ico:'coin', act:()=>campResEnter('res') },
+      { k:'arm',  label:'무장', ico:'upg',  act:()=>campResEnter('arm') },
+      { k:'tech', label:'기술', ico:'flag', act:()=>campResEnter('tech') } ] },
   { k:'quest',    label:'임무', ico:'flag', go:()=>openQuest(),    subs:[] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
@@ -484,7 +490,20 @@ function _navOpenShell(id, key){
   if(typeof twLeave==='function') twLeave();          // 마을·캠프에서 들어왔으면 루프·팝업 정리
   showAppScreen(id); navShow(key);
   if(typeof paintIcons==='function') paintIcons(document.getElementById(id)); }
-function openResearch(){ _navOpenShell('researchScreen','research'); }
+// 🔬 연구는 **전용 화면이 없다** — 캠프 하단 시트를 쓴다(js/20-camp-research.js).
+//   ⚠ 다른 구역(유즈맵·상점)에서 눌러도 되게, 캠프에 먼저 들어간 뒤 내려간다(토벌 입구와 같은 규칙).
+//   ⛔ #researchScreen 은 지우지 않았다 — 되살릴 길을 막지 않는다(유보 규칙).
+// 🔬 연구는 **전용 화면이 없다** — 캠프 하단 시트를 쓴다(js/20-camp-research.js).
+//   ⭐ 캠프에 있으면 **화면을 갈아치우지 않는다.** showAppScreen 을 부르면 캠프가 통째로 닫혔다
+//     다시 열려 화면이 한 번 튕긴다(2026-08-27 사용자 지적) — 바뀌어야 하는 것은 하단뿐이다.
+//   ⚠ 다른 구역(유즈맵·상점)에서 눌렀을 때만 캠프로 데려간다(토벌 입구와 같은 규칙).
+//   ⛔ #researchScreen 은 지우지 않았다 — 되살릴 길을 막지 않는다(유보 규칙).
+function openResearch(){
+  if(typeof campResEnter!=='function'){ _navOpenShell('researchScreen','research'); return; }
+  const on=(typeof campIsOn==='function') && campIsOn();
+  if(!on && typeof openHome==='function') openHome();   // 캠프 밖에서 눌렀다 — 먼저 데려간다
+  navShow('research');
+  campResEnter('res'); }
 function openQuest(){    _navOpenShell('questScreen','quest'); }
 const navSec=(k)=>NAV_TREE.find(x=>x.k===k)||null;
 let _navSec='', _navDrill='';   // 지금 구역 / 내려가 있는 구역('' = 최상위)
@@ -578,4 +597,15 @@ function mapDockPeek(){ const peek=document.getElementById('msDockPeek'); if(!pe
   peek.innerHTML=last.innerHTML; }   // 복제 — 이름·구분자·본문 서식이 채팅과 그대로 같다
 // ‹ 돌아가기 = 사냥터 화면 + 최상위 네비
 function navBack(){ if(typeof playSfx==='function') playSfx('ui_back');
-  openHome(); _navDrill=''; navPaint(); }
+  // 🔬 연구에서 나가면 하단은 **캠프 기본 요약**으로 돌아간다(renderCampIdleSheet).
+  //   ⛔ 이걸 안 하면 연구 그리드가 시트를 계속 쥐고 있어, 최상위로 올라와도 하단이 안 바뀐다.
+  if(typeof campResExit==='function') campResExit();
+  // ⛔ **이미 캠프에 있으면 openHome() 을 부르지 않는다.** 부르면 캠프가 닫혔다 다시 열려
+  //   화면이 한 번 튄다(2026-08-27 사용자 지적 · 들어갈 때와 같은 이유).
+  //   ⚠ 다른 구역(유즈맵·상점)에서 올라오는 길은 그대로 openHome() 이 맡는다.
+  const _here=(typeof campIsOn==='function') && campIsOn()
+    && document.getElementById('homeScreen') && !document.getElementById('homeScreen').classList.contains('hide');
+  if(_here){ if(typeof navShow==='function') navShow('home');
+    if(typeof renderCampIdleSheet==='function') renderCampIdleSheet(); }   // 하단만 기본 요약으로 되돌린다
+  else openHome();
+  _navDrill=''; navPaint(); }
