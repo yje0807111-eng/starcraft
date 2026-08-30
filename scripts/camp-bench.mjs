@@ -26,6 +26,10 @@ const REB=(process.argv[6]||'')==='reb';
 //   판정 기준은 sc-3 §: 한 라운드를 **10분** 넘게 못 깨면 벽 후보 · **30분**이면 벽으로 보고 멈춘다.
 //   ⚠ 정체 문턱(stallS)과는 다른 것이다 — 그건 「측정을 계속할까」이고, 이건 「벽을 만났나」다.
 const WALL_WARN=600, WALL_STOP=1800;
+// 🧱 벙커 탑승(2026-08-30) — 환경변수 BUNK=0 이면 **짓기는 하되 태우지 않는다.**
+//   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
+//   ⚠ 벙커 건설 자체는 원래부터 한다(__CB.want 가 모든 생산 건물을 연다) — 다른 것은 탑승뿐이다.
+const BUNK=(process.env.BUNK==null) ? 1 : (+process.env.BUNK ? 1 : 0);
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp3':'audio/mpeg','.woff2':'font/woff2'};
 const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.url,'http://x').pathname);
  let f=path.join(ROOT,p==='/'?'sc-ums-web.html':p); if(!f.startsWith(ROOT)){s.writeHead(403);return s.end();}
@@ -47,13 +51,13 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -260,6 +264,23 @@ await pg.evaluate(()=>{
       const c=0.30+Math.random()*0.40, r=0.20+Math.random()*0.22;
       try{ techPlace(c, r); }catch(e){}
       G.tech.arm=null; return; } };
+  // 🧱 **벙커에 태운다** (2026-08-30) — 사거리가 짧아 앞에서 얻어맞는 유닛부터.
+  //   ⭐ 사람이 할 판단을 그대로 흉내낸다: 「제일 가까이 붙어야 하는 애를 넣어 준다」.
+  //   ⚠ 탑승은 유닛의 **자리**가 되므로 한 번만 넣으면 라운드마다 저절로 유지된다 —
+  //     그래도 매번 부르는 이유는 새로 뽑힌 유닛과 새로 지은 벙커를 채우기 위해서다.
+  //   ⚠ BUNK=0 이면 아무것도 안 한다(벙커는 짓되 태우지 않는 대조군).
+  __CB.board=function(){
+    if(!__CB.bunk) return;
+    if(typeof campBoard!=='function' || typeof CAMPB==='undefined' || !CAMPB) return;
+    const cap=(typeof CAMP_BUNK_CAP!=='undefined')?CAMP_BUNK_CAP:4;
+    for(const b of (CAMPB._bld||[])){
+      if(!b || b.bk!=='bunker' || b.dead) continue;
+      const room=cap-((typeof campBunkCrew==='function')?campBunkCrew(b.eid):0);
+      if(room<=0) continue;
+      const cand=CAMPB.me.units
+        .filter(u=>!u.dead && u._bunk==null && (u.dmg||0)>0)
+        .sort((x,y)=>(x.rng||0)-(y.rng||0)).slice(0,room);     // 사거리 짧은 순
+      if(cand.length) campBoard(cand, b); } };
   // 자동 생산 — 본부는 일꾼, 그 밖의 완성 건물은 첫 유닛을 계속
   __CB.produce=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
@@ -397,7 +418,7 @@ await pg.evaluate(()=>{
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
-      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy();
+      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy(); __CB.board();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
         const units=G.tech?G.tech.ents.filter(e=>e.type==='unit').length:0;
         __CB.army=units;
@@ -490,6 +511,15 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
     return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
+  // 🧱 벙커 — 몇 채이고 몇 기가 탔고 실제로 얼마나 맞았나
+  bunk:(function(){ const on=!!__CB.bunk;
+    let n=0, crew=0, hp=0, mx=0;
+    if(typeof CAMPB!=='undefined' && CAMPB) for(const b of (CAMPB._bld||[])){
+      if(!b || b.bk!=='bunker') continue; n++;
+      hp+=Math.max(0,b.hp||0); mx+=(b.maxHp||b.max||0);
+      if(typeof campBunkCrew==='function') crew+=campBunkCrew(b.eid); }
+    return { on:on, n:n, crew:crew, hp:Math.round(hp), max:Math.round(mx),
+             built:(G.tech.built&&G.tech.built.bunker)|0 }; })(),
   // 📊 수입 내역 — 번 돈이 어디서 왔는가(sc-3 요청 2026-08-30 · 100만 22배 건)
   inc:(typeof CAMP_INC!=='undefined')?{ tap:Math.round(CAMP_INC.tap), gather:Math.round(CAMP_INC.gather),
        mul:Math.round(CAMP_INC.mul), gmul:(typeof campGatherMul==='function')?campGatherMul():1 }:null,
@@ -583,6 +613,13 @@ if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.s
 
 if(fin.resBreak) console.log(`\n■ 🔬 연구 내역 — 계열 업그레이드 ${fin.resBreak.tier}레벨 · 단발 해금 ${fin.resBreak.one.length}개`
   + (fin.resBreak.one.length?('\n  '+fin.resBreak.one.join(' · ')):''));
+// 🧱 벙커 — 켰나 · 실제로 탔나 · 몸으로 받았나
+if(fin.bunk){ const B=fin.bunk;
+  console.log(`\n■ 🧱 벙커 — 탑승 ${B.on?'켬':'끔(대조군)'}`);
+  console.log(`  지은 채수 ${B.built} · 전장 ${B.n}채 · 탄 병력 **${B.crew}기** · 체력 ${B.hp}/${B.max}`);
+  if(B.on && B.n && !B.crew) console.log('  ⚠ 벙커가 있는데 **아무도 안 탔다** — 태우는 경로가 안 돈다');
+  if(B.n && B.max && B.hp===B.max) console.log('  ⚠ 벙커가 **한 대도 안 맞았다** — 전선 뒤에 있다는 뜻이다');
+}
 // 📊 수입 내역 — 그 돈이 어디서 왔는가(sc-3 요청 · 100만 22배 건)
 if(fin.inc){
   const I=fin.inc, tot=I.tap+I.gather+I.mul || 1;
