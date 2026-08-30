@@ -79,7 +79,10 @@ const FAMILY = {
     label: '맵 · 1~10번 던전 템플릿(§11-4)',
     need: [
       ['레퍼런스 선언',  /Use the attached image as the reference/],
-      ['하단 유지',      /Keep its bottom section exactly as it is/],
+      // ⭐ 하단을 붙드는 것은 문구 셋이다(§11-4) — 숫자·생김새·금지. 하나라도 빠지면 하단이 제각각이 된다.
+      ['하단 잠금',      /THE BOTTOM 62% OF THE FRAME IS LOCKED/],
+      ['경계 위치',      /crossing the frame at about 38% down/],
+      ['재그리기 금지',  /do not redraw it, do not restyle it, do not move it up or down/i],
       ['스타일 일치',    /Match the reference exactly in art style/],
       ['위쪽만 교체',    /Replace only the area above that band/],
       ['구조② 열린 통로', /runs up the centre to the top edge, clear of every obstacle/],

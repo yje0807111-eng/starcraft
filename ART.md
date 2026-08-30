@@ -665,12 +665,62 @@ A tall vertical top-down game map for a real-time strategy game, seen from direc
 `{GROUND}` 와 `{EDGE}` 두 칸만 바꾼다. 나머지는 글자 그대로 복사한다.
 
 ```
-Use the attached image as the reference. Keep its bottom section exactly as it is — the same tall stone-paved base platform and the same band of worked earth above it, unchanged in shape, colour, texture and position. Match the reference exactly in art style, rendering, colour palette and lighting throughout the whole image.
+Use the attached image as the reference.
+
+THE BOTTOM 62% OF THE FRAME IS LOCKED. Reproduce it exactly as it appears in the reference, pixel for pixel: a pale grey-cream plaza of irregular flagstones filling the whole width and running off both the left and right edges of the frame, its upper edge crossing the frame at about 38% down from the top and curving in a gentle shallow arch that rises slightly toward the centre, bordered along that curved edge by a low parapet of squared stone blocks. Above the parapet, a narrow band of bare worked earth. Do not redraw it, do not restyle it, do not move it up or down, do not change its colour, its stone pattern, the shape of its arch or the height at which it sits. It must be indistinguishable from the reference.
 
 Replace only the area above that band: a wide open lane of bare {GROUND} runs up the centre to the top edge, clear of every obstacle, with {EDGE} banked along the left and right margins and into the upper corners. Nothing intact is standing anywhere.
 
-No text, no logos, no user interface, no characters, no watermark.
+Match the reference exactly in art style, rendering, colour palette and lighting throughout the whole image. No text, no logos, no user interface, no characters, no watermark.
 ```
+
+#### ⭐ 왜 이렇게 길어졌나 (2026-08-30 개정)
+
+옛 문구는 **「레퍼런스와 똑같이」라고만 하고 그 하단이 어떻게 생겼는지는 한 마디도 안 했다.**
+모델 입장에서 지킬 기준이 없다 — 실제로 하단이 장마다 제각각으로 나왔다(옛 dg9 는 캠프와 색 차이 62).
+
+**두 겹으로 붙든다:**
+
+| | |
+|---|---|
+| ① **숫자** | `THE BOTTOM 62%` · `crossing the frame at about 38% down` — 실측값이다 |
+| ② **생김새를 말로** | 완만한 아치 · 낮은 돌 난간 · 회백색 판석 · 좌우로 빠져나감 |
+| ③ **강한 금지** | `do not redraw / restyle / move up or down` · `indistinguishable from the reference` |
+
+⭐ ②가 결정적이다. 레퍼런스와 문장이 **서로를 붙든다** — 말로도 그려 주면 재생성해도 같은 것이 나온다.
+
+### 11-4-1. ⚠ 그래도 경계는 어긋난다 — **뽑은 뒤 반드시 맞춘다** (2026-08-30)
+
+강화한 프롬프트로 10장을 다시 뽑았더니 하단 **모양·색은 거의 같아졌는데**,
+**경계 높이가 전부 2~5%p 아래로 치우쳤다**(화면에서 최대 38px). `pixel for pixel` 이라고
+못박아도 모델이 그 정도는 흘린다. **정렬은 후처리로 해야 한다.**
+
+#### ⛔ 경계를 「찾으려」 하지 말 것 — 두 번 실패했다
+
+| 방법 | 왜 틀렸나 |
+|---|---|
+| 색이 가장 급변하는 줄 | 그림마다 **다른 지점**을 잡는다(잔해·풀·이끼) |
+| 석판 색에서 벗어나는 줄 | 캠프 석판이 아래로 갈수록 밝아져 **64%** 가 나왔다 |
+
+#### ⭐ 캠프와 **겹쳐서** 맞춘다
+
+하단은 원래 같은 그림이므로, **세로로 밀어가며 차이가 최소인 위치**가 곧 정답이다.
+
+| | |
+|---|---|
+| 비교 구간 | 세로 **50~95%** (확실한 석판만) |
+| 방법 | 흑백 축소(160×400) 후 오프셋 −40~+40 을 훑어 평균 절대차 최소 |
+| 신뢰 판단 | **잔차 4~7** 이면 잘 맞은 것이다(0~255 기준). 그보다 크면 하단 자체가 다른 그림이다 |
+
+#### ⛔ 크기를 건드리지 말 것
+
+경계 위/아래를 각각 세로 스케일해서 맞추면 **석판 자체가 늘어나** 무늬가 안 맞는다
+(실제로 해 봤더니 어긋남이 3.25 → 4.00%p 로 **오히려 늘었다**).
+
+⭐ **평행 이동만 한다.** 위에서 s 픽셀 잘라내 위로 밀고, 아래에는 **자기 석판 맨 아랫줄을 복제**해 채운다.
+석판 하단은 균일해서 복제가 보이지 않는다. 이 방법으로 11장 전부 **0.00%p** 가 됐다.
+
+⚠ 위쪽이 최대 5%(149px) 잘리지만 **가운데 통로와 좌우 지형지물은 남는다** — 게임에 영향 없다.
 
 | n | 이름 | `{GROUND}` | `{EDGE}` |
 |---|---|---|---|
