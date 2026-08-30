@@ -5275,10 +5275,11 @@ async function groupLobby(){
       // ⚠ **확대에서 시작한다.** 1 보다 작게 시작하면 맵 바깥의 빈 자리가 위·좌우에 드러난다.
       assert(sc(v0)>1.08,'시작 배율이 '+sc(v0).toFixed(3)+' — 확대에서 시작해야 맵 바깥이 안 드러난다');
       assert(Math.abs(sc(v2)-1)<0.001===false || sc(v2)>1.0001,'1.2초에 이미 끝났다 — 연출이 짧아 보인다');
-      // ⚠ 페이드는 줌보다 **먼저** 끝난다 — 같이 끝나면 뭉뚱그려져 밋밋해 보인다
+      // ⚠ **줌 애니는 페이드하지 않는다** — 화면이 드러나는 일은 검은 판이 맡는다.
+      //    둘 다 페이드하면 어두워졌다 밝아지고 또 밝아지는 이중으로 보인다.
       const op=(t)=>parseFloat(t.slice(t.indexOf('|')+1));
-      assert(op(v1)>0.98,'400ms 에 아직 투명하다('+op(v1)+') — 페이드가 줌만큼 길게 끌린다');
-      assert(sc(v1)>1.05,'400ms 에 줌이 거의 끝났다('+sc(v1).toFixed(3)+') — 페이드와 같이 끝나 짧아 보인다');
+      assert(op(v0)>0.98 && op(v1)>0.98,'줌 애니가 스스로 페이드한다('+op(v0)+'→'+op(v1)+') — 검은 판과 이중으로 보인다');
+      assert(sc(v1)>1.05,'400ms 에 줌이 거의 끝났다('+sc(v1).toFixed(3)+') — 연출이 짧아 보인다');
       // (종족 판 페이드 검사는 campPickRace 직후로 옮겼다 — 0.4초면 closing 이 끝난다)
       return '맵·3D 동일 · '+v0.slice(0,26)+' → '+v1.slice(0,26);
     } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} try{ const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('closing'); o.classList.add('hide'); } }catch(e){}

@@ -714,3 +714,196 @@ No text, no logos, no user interface, no characters, no watermark.
   나무가 건물만큼 커졌다. **레퍼런스 한 장이 형용사 스무 개보다 정확하다.**
 - **후처리 이식은 문제를 만들기만 했다**(§11-1 ⛔). 지금 쓰지 않는다.
 - ⛔ 심연(10)에 `near-black` · `lit only by` 를 쓰지 말 것 — 화면이 통째로 까매진다(§7 ①).
+
+---
+
+## 12. 통짜 지면 계열 — 유즈맵 바닥 (2026-08-28)
+
+> ⛔ **타일 반복은 폐기했다**(2026-08-28 사용자 확정). 「통으로 된 하나의 이미지가 더 깔끔하다」.
+> 옛 타일 프롬프트는 **스타일의 근거로만** 남긴다(§12-4).
+
+**§11(캠프·던전 맵)과 무엇이 다른가** — 목적은 같은 「게임판 지면」인데 **그림체가 다르다.**
+
+| | §11 캠프·던전 | **§12 유즈맵 바닥** |
+|---|---|---|
+| 그림체 | `soft anime game background art` | **사진 같은 질감** — 기존 타일을 잇는다 |
+| 구조 | 아래 1/3 기지 터 · 가운데 통로 | 맵마다 다르다(트랙 · 플랫폼 …) |
+| 모델 | `gpt_image_2` | `gpt_image_2` — 같다 |
+
+⚠ **두 그림체가 게임 안에 섞인다.** 캠프는 애니풍, 유즈맵은 사진풍이다 — **의도된 것**이다
+(사용자: 「기존 타일 스타일로 최대한 같은 스타일」). 통일하려면 그때 다시 정한다.
+
+### 12-1. 규격
+
+| 항목 | 값 | 왜 |
+|---|---|---|
+| 모델 | **`gpt_image_2`** · `2k`~`4k` · `high` | ⛔ `soul_location` 은 쓰지 말 것 — §11 에서 9장을 버렸고, 2026-08-28 에 다시 시험했더니 **또 원근으로 나왔다** |
+| 비율 | **`9:16`** | `gpt_image_2` 가 지원하는 **가장 세로로 긴 값** |
+| 안전 여백 | **양옆 각 10%** | 폰 화면에 `cover` 로 깔면 **좌우가 최대 17.9% 잘린다**(실측 계산) |
+
+⭐ **중요한 것은 전부 가로 80% 안에** 넣는다. 가장자리는 잘려도 되는 것만 둔다.
+
+### 12-2. ⭐ 공통 스타일 블록 — 모든 장에 그대로 붙인다
+
+기존 타일 넷을 직접 열어 보고 **공통점만 추린 것**이다(§12-4).
+
+```
+perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
+flat even ambient lighting with no directional shadows and no visible light source,
+fine small-scale surface detail, nothing larger than a fist,
+muted low-saturation palette, dark tones,
+the important area stays within the central 80% of the width,
+no characters, no objects, no units, no structures, no text, no user interface,
+photorealistic PBR game texture, 3D render, tall vertical composition
+```
+
+#### 옛 타일 세 줄에서 무엇이 바뀌었나
+
+| | 옛 타일 | **통짜** |
+|---|---|---|
+| 이어짐 | `seamless tileable` | ⛔ **뺀다** — 반복하지 않는다 |
+| 모양 | `square tile` | **`tall vertical composition`** |
+| 시점 | `top-down bird's eye view` | ⚠ **`orthographic … no perspective, no horizon`** — `bird's eye` 는 **비스듬한 부감으로 읽힌다**(2026-08-28 실제로 그렇게 나왔다) |
+| 조명 | (없음) | **`flat even ambient, no directional shadows`** — 지금 타일 넷의 공통점이다 |
+| 채도 | `dark tones` | **`muted low-saturation`** 추가 — `dark tones` 만으로는 `desert` 가 밝게 나왔다 |
+| 여백 | (없음) | **`central 80% of the width`** — 좌우가 잘린다 |
+
+⭐ **발광은 장면 줄에서만** 준다(용암 주황 · 프로토스 파랑). 공통 블록이 발광을 말하면 흙까지 빛난다.
+
+### 12-3. 장면 줄 — 맵마다 이 한 덩이만 바꾼다
+
+**공통 블록 앞에** 붙인다. 지금 네모네모 바닥은 코드가 이렇게 조립하고 있다
+(`js/10-engine.js` — 이걸 한 장으로 옮기는 것이 이번 작업이다):
+
+| 부분 | 지금 | 장면 줄에 쓸 말 |
+|---|---|---|
+| 바깥 | `space_bg` 반복 + 성운 + 비네팅 | deep starfield with faint distant nebula |
+| 안쪽 판 | `badlands` 반복 + 노이즈 | a wide rectangular platform of dry cracked badlands earth, open and bare |
+| 테두리 | `ashworld` 용암 절벽 | its edge a rim of dark volcanic rock with dim restrained molten seams |
+
+⚠ **판 위는 비워야 한다** — 유닛이 그 위에 선다. `open and bare`·`uncluttered` 를 꼭 넣을 것.
+
+### 12-3-1. ⭐ 네모네모 디펜스 바닥 — 전문 (2026-08-28)
+
+> ⛔ **1차안은 폐기했다.** 기존 타일 문구를 그대로 옮겨 적어서 **「타일과 똑같은데 크기만 커진 것」**이 됐다.
+> 통짜로 만드는 이유가 사라진다 — 사용자: 「기존 이미지랑 너무 비슷하잖아? 훨씬 더 멋지고 퀄리티 높은 배경을 원해」.
+
+#### ⭐ 무엇이 달라져야 하나 — **타일이 못 하던 것**을 넣는다
+
+| 타일의 한계 | 통짜에서 할 수 있는 것 |
+|---|---|
+| 무늬가 **균일**하다 — 어디를 봐도 같다 | **큰 지질 구조** — 균열이 한쪽에서 다른 쪽으로 흐른다 |
+| 512px 안에서 끝난다 | **디테일 층위** — 멀리서도 가까이서도 볼 것이 있다 |
+| 절벽이 그냥 띠다 | **주상절리** — 층층이 갈라진 현무암 기둥, 깊이가 보인다 |
+| 발광이 균등하다 | **깊은 곳에서 새어 나오는 빛** — 균열 바닥에서만 |
+| 우주가 별 반복이다 | **성운의 흐름 · 먼 별무리 · 떠다니는 파편** |
+| 재질이 하나다 | **재질 대비** — 마른 흙 / 유리질 암반 / 광물 맥 |
+
+⛔ **그러면서 표면은 평평해야 한다** — 유닛이 그 위에 선다.
+**풍부함은 무늬와 색으로 내고, 솟은 장애물로 내지 않는다.**
+
+#### 코드가 그리는 실제 비율 (그대로 지킨다)
+
+| 부분 | 값 |
+|---|---|
+| 플랫폼 가로 : 세로 | **1.52 : 1** — 가로로 넓은 직사각형 |
+| 세로 위치 | 그림의 **28% ~ 56%** (가운데보다 살짝 위) |
+| 가로 | 그림의 **75%** (좌우 잘림 감안) |
+| 절벽 테두리 | 플랫폼 세로의 **5%** — 얇다 |
+| 모서리 | 반경 8% — **거의 직각** |
+
+⚠ **트랙선은 그리지 않는다** — 플랫폼 자체가 트랙이고 적이 그 가장자리를 돈다.
+⭐ **9:16 은 위아래가 안 잘린다**(가장 짧은 폰과 같은 비율). 좌우만 0~17.9% 잘린다.
+
+#### 프롬프트 전문
+
+```
+A single vast rectangular slab of ancient rock hanging alone in deep space, seen from directly above.
+The slab is much wider than it is tall, roughly three units wide to two units tall,
+with almost square corners, only slightly rounded. It spans about three quarters of the image width
+and sits in the upper middle of the frame, its top edge near the upper third,
+its bottom edge just past the middle.
+
+The slab surface is a weathered plain of dry cracked earth, but it is not uniform:
+a great fracture system runs across it from one side to the other, branching into finer and finer
+hairline cracks like a dry riverbed, and from deep inside the widest fissures a faint amber glow
+seeps upward, dim and restrained, never bright. Broad patches of pale mineral salt and rust-brown
+oxidised dust drift across the plain in soft bands, and thin dark veins of glassy volcanic stone
+thread through the earth and catch a cold sheen. Fine gravel and small angular shards gather
+in the low places. Every part of the surface stays flat and walkable — the richness is in texture,
+colour and pattern, never in raised obstacles. Nothing stands on the slab, no paths, no markings.
+
+The slab edge falls away as a rim of columnar basalt, tall hexagonal stone columns packed shoulder
+to shoulder and sheared off clean, only a narrow band around the plain, about one twentieth of its
+height, with dim molten seams glowing faintly deep between the columns.
+
+Beyond the slab is open space: a slow drift of deep nebula in dusty blue and faint violet,
+distant star clusters, and a scattering of small broken rock fragments floating near the slab,
+catching the same cold light. The frame edges fall away into near darkness.
+
+perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
+flat even ambient lighting with no directional shadows and no visible light source,
+fine small-scale surface detail, nothing larger than a fist,
+muted low-saturation palette, dark tones,
+the important area stays within the central 80% of the width,
+no characters, no objects, no units, no structures, no text, no user interface,
+highly detailed photorealistic PBR game texture, AAA game environment asset,
+3D render, tall vertical composition
+```
+
+| 설정 | 값 |
+|---|---|
+| 모델 | `gpt_image_2` |
+| 비율 | `9:16` |
+| 해상도 · 품질 | `4k` · `high` |
+
+#### ⚠ 꼭 지킬 것
+
+| | 왜 |
+|---|---|
+| **표면은 평평하게** | `stays flat and walkable` · `never in raised obstacles` — 유닛이 선다 |
+| **발광은 깊은 곳에서만** | `deep inside the widest fissures` · `dim and restrained, never bright` — 밝으면 유닛이 안 보인다 |
+| **테두리는 얇게** | `only a narrow band` · `about one twentieth of its height` |
+| **바깥은 어둡게** | `frame edges fall away into near darkness` — 잘리는 부분이다 |
+| **품질 어휘는 둘만** | `highly detailed` · `AAA game environment asset`. ⛔ `epic`·`dramatic lighting`·`masterpiece` 는 금지(§2) |
+
+⭐ **「멋짐」은 형용사가 아니라 구조에서 나온다.** 이 프롬프트가 1차안과 다른 점은
+**균열 흐름 · 주상절리 · 광물 맥 · 성운 · 떠다니는 파편** 다섯이고, 전부 **눈에 보이는 것**이다.
+
+⚠ 그래도 밋밋하면 **뽑은 것을 레퍼런스로 잡고 한 요소씩 강화**한다(§12-5) — 프롬프트를 길게 늘이지 말 것.
+### 12-4. 기존 타일에서 관찰한 것 (2026-08-28 · 넷을 직접 열어 봄)
+
+| 타일 | 본 것 |
+|---|---|
+| `badlands` | 아주 어두운 갈회색. 자갈이 **잘고 고르게** 흩어져 있다 |
+| `ashworld` | 검은 암괴 + 주황 용암 균열. **발광이 가장 강하다** |
+| `protoss_floor` | 검은 금속 패널의 **기하학 반복** + 가는 파란 선 |
+| `desert` | ⚠ **혼자 밝고 채도가 높다.** `dark tones` 를 넣었는데도 그렇다 |
+
+⭐ **공통점 넷** — ① 완전 수직 ② 방향 없는 균일광 ③ 잔 디테일 ④ 사진 같은 질감.
+**이 넷이 「기존 스타일」의 정체**이고, 공통 블록이 지키는 것이 그것이다.
+
+<details><summary>옛 타일 프롬프트 (참고 · 더 쓰지 않는다)</summary>
+
+```
+공통 3줄:
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
+
+badlands  dark brown gray rocky gravel ground, cracked dry earth texture,
+          small scattered pebbles, uneven rough surface, dusty terrain
+ashworld  dark volcanic rock ground with glowing lava cracks,
+          fissures of orange red molten lava between rocks, charred black volcanic surface, ember glow
+desert    sandy desert ground with fine sand texture, subtle wind ripple patterns in sand,
+          small scattered rocks and pebbles, dark amber brown sandy surface, dry terrain
+```
+
+</details>
+
+### 12-5. 레퍼런스 방법 — §11-1 과 같다
+
+1. **기준 한 장**을 먼저 뽑는다(네모네모 바닥이 무난하다 — 흙·우주·용암이 다 들어간다).
+2. 나머지는 그 이미지를 **첨부**하고 장면 줄만 바꾼다.
+
+⛔ **스타일을 말로 다시 설명하지 말 것** — 레퍼런스가 정한다(§9-2 · §11-1 에서 같은 결론).
