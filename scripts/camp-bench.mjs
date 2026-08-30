@@ -35,7 +35,11 @@ const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const CHROME=process.env.CHROME_PATH;
 if(!CHROME||!fs.existsSync(CHROME)){ console.error('CHROME_PATH 를 지정하세요'); process.exit(2); }
-const b=await puppeteer.launch({executablePath:CHROME,headless:'new',args:['--mute-audio','--no-sandbox','--disable-gpu-sandbox']});
+// ⚠ **protocolTimeout 을 늘려 둔다.** 기본 30초인데, 병력이 100기를 넘어가면 한 덩이(CH초)를
+//   미는 evaluate 호출이 그보다 오래 걸려 「Runtime.callFunctionOn timed out」으로 죽는다
+//   (실측 2026-08-29: 던전 2 R8 · 91분 지점에서 그렇게 끊겼다). 게임이 아니라 벤치가 죽는 것이다.
+const b=await puppeteer.launch({executablePath:CHROME,headless:'new',protocolTimeout:1800000,
+  args:['--mute-audio','--no-sandbox','--disable-gpu-sandbox']});
 const pg=await b.newPage(); await pg.setViewport({width:390,height:844,deviceScaleFactor:1});
 const errs=[]; pg.on('pageerror',e=>errs.push(String(e.message).slice(0,140)));
 const probes=[];
@@ -449,7 +453,9 @@ await pg.evaluate(()=>{
     } };
 });
 
-const CH=30; let ran=0;
+// ⚠ 한 번에 미는 시뮬 초. 짧을수록 evaluate 하나가 가벼워 타임아웃에 안전하다
+//   (병력 100기대에서 30초는 무거웠다 — 10초로 줄였다. 총 실행 시간은 거의 같다).
+const CH=10; let ran=0;
 process.stdout.write(`⏱  캠프 시뮬 ${MINS}분 · 던전 ${DG0} 시작\n`);
 while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
