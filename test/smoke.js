@@ -1797,6 +1797,49 @@ async function groupLobby(){
     return '탭 지정 · 링 · 자리 이동 · 대형 · 박스 ok';
   });
 
+  // 🚶 **숨 고르기 동안 걸어서 자기 자리로 돌아온다** (2026-08-30 사용자 확정)
+  //    ⛔ 예전엔 _gapT>0 이면 곧바로 return 해서 **6초 동안 한 발짝도 안 움직였다.**
+  //      「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 늘려도 소용없었다.
+  //    ⛔ 순간이동으로 옮기지도 않는다(사용자가 걸어서 오는 쪽으로 정했다).
+  await step('캠프: 숨 고르기 동안 걸어서 자리로 돌아온다', async()=>{
+    skipIf(typeof campDeploy!=='function'||typeof CAMP_ROUND_GAP_S==='undefined','캠프 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45); assert(u&&u._post,'배치 실패');
+    const px=u._post.x, py=u._post.y;
+    u.x = px + 300; u.y = py + 300;                   // 자리에서 멀찍이 떼어 놓는다
+    const d0 = Math.hypot(u.x-px, u.y-py);
+    CAMPB._gapT = CAMP_ROUND_GAP_S;                   // 숨 고르기 중으로 만든다
+    CAMPB.ai.units.length = 0;
+    for(let i=0;i<40;i++) campCombatStep(0.05);       // 2초 — 아직 숨 고르기 안이다
+    assert(CAMPB._gapT>0,'테스트가 숨 고르기를 다 써 버렸다(간격을 줄일 것)');
+    const d1 = Math.hypot(u.x-px, u.y-py);
+    assert(d1 < d0-1, '숨 고르기 동안 자리로 안 걸어온다: '+d0.toFixed(0)+' → '+d1.toFixed(0));
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    campBattleClose();
+    return '2초에 '+d0.toFixed(0)+' → '+d1.toFixed(0)+' (자리 쪽으로)';
+  });
+
+  // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
+  //    ⛔ 옛 campFoeRace 는 STK_RACE_ORDER 를 그냥 돌려서, 「감염된 둥지」에 유니온이,
+  //      「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로 그림과 적이 어긋났다.
+  //    ⭐ HB_DUNGEONS 표가 단일 소스다 — 표를 고치면 적도 따라와야 한다.
+  await step('캠프: 던전 이름과 적 종족이 맞는다', async()=>{
+    skipIf(typeof campFoeRace!=='function'||typeof HB_DUNGEONS==='undefined','던전 표 없음');
+    const KEY={ union:'terran', swarm:'zerg', aetherial:'protoss', feral:'feral', colossus:'colossus', abyss:'colossus' };
+    const bad=[];
+    for(const d of HB_DUNGEONS){
+      const want=KEY[d.race];
+      if(!want){ bad.push('dg'+d.dg+' 표의 race="'+d.race+'" 를 엔진 종족으로 못 옮긴다'); continue; }
+      const got=campFoeRace(d.dg);
+      if(got!==want) bad.push('dg'+d.dg+' '+d.name+': 표 '+want+' ≠ 실제 '+got);
+    }
+    assert(!bad.length, bad.join(' / '));
+    assert(campFoeRace(0)==='terran','0단계 캠프의 종족이 바뀌었다: '+campFoeRace(0));
+    return HB_DUNGEONS.length+'개 던전 전부 표와 일치';
+  });
+
   // 🏁 **던전이 바뀌어도 병력·자리·건물은 그대로** (2026-08-28 사용자 확정)
   //    ⛔ 예전엔 campBattleOpen() 으로 전장을 통째로 새로 만들어 me.units 를 비웠다.
   //      campSortie 가 곧바로 다시 채워서 가려져 있었을 뿐이라, 출격을 없앤 지금은 증발한다.
@@ -1822,10 +1865,13 @@ async function groupLobby(){
     assert((CAMPB._bld||[]).length>=bldWas,'건물이 사라졌다: '+(CAMPB._bld||[]).length+' (전 '+bldWas+')');
     { const live=campBldAlive();
       if(live.length) assert(live.every(b=>b.hp>=(b.max||b.maxHp||b.hp)-1e-6),'건물 체력이 안 찼다'); }
+    // ④ 표적이 풀리고 **숨 고르기**가 걸린다(2026-08-30) — 그 사이 걸어서 자리로 돌아온다
+    assert(!still.tgtUid,'표적이 안 풀렸다 — 사라진 적을 계속 쫓는다');
+    assert(CAMPB._gapT>0,'던전이 바뀌었는데 숨 고르기가 없다 — 적이 곧바로 쏟아진다');
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
     { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
     campBattleClose();
-    return '병력·자리 유지 · 적만 교체 · 건물 체력 회복';
+    return '병력·자리 유지 · 제자리 집결 · 적만 교체 · 건물 체력 회복';
   });
 
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{

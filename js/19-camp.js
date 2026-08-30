@@ -556,8 +556,21 @@ function campWithStk(fn){
 }
 
 // 적 종족 — 단계마다 돌아가며 나온다(1단계부터. 0단계=캠프에는 적이 없다)
-function campFoeRace(dg){ const o = (typeof STK_RACE_ORDER !== 'undefined') ? STK_RACE_ORDER : ['terran'];
-  return o[Math.max(0, (dg | 0) - 1) % o.length]; }
+// 던전 → 적 종족. ⭐ **`HB_DUNGEONS`(js/08-hunt.js)가 단일 소스**다 — 던전 이름·배경 그림과 맞춘다.
+//   ⛔ 옛 코드는 STK_RACE_ORDER 를 그냥 돌려서 이름·그림과 어긋나 있었다(2026-08-30 발견):
+//     「감염된 둥지」에 유니온이, 「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로
+//     그림에 알집이 깔린 산란장에 야수가 걸어 나오는 상태였다.
+//   ⚠ 표의 이름(union/swarm/aetherial)과 엔진 키(terran/zerg/protoss)가 달라 한 번 옮긴다.
+const CAMP_DG_RACE = { union:'terran', swarm:'zerg', aetherial:'protoss', feral:'feral', colossus:'colossus',
+  abyss:'colossus' };   // 심연(10)은 전용 종족이 없다 — 가장 무거운 콜로서스로 대신한다
+function campFoeRace(dg){
+  const n = dg | 0;
+  if(n <= 0) return 'terran';                        // 0단계 캠프는 유니온
+  const d = (typeof hbDun === 'function') ? hbDun(n) : null;
+  const r = d && CAMP_DG_RACE[d.race];
+  if(r && typeof STK_RACES !== 'undefined' && STK_RACES[r]) return r;
+  const o = (typeof STK_RACE_ORDER !== 'undefined') ? STK_RACE_ORDER : ['terran'];
+  return o[Math.max(0, n - 1) % o.length]; }         // 폴백 — 표가 없거나 그 종족이 엔진에 없을 때
 
 // ══ 📈 적 난이도 곡선 — HUNT_R1.md §6-1 (2026-08-25 · 4단계) ══════════
 //   라운드 밑   = 1.07 + (던전-1) × 0.003          ← 깊을수록 라운드가 무겁다
@@ -1314,7 +1327,26 @@ function campDungeonSwap(){
   if(CAMPB._wq) CAMPB._wq.length = 0;
   CAMPB._wqTot = 0; CAMPB._wqT = 0;
   campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
+  campRegroup();                                   // 🧭 표적을 풀어 자기 자리로 돌아가게 (아래)
+  // ⏸ **던전이 바뀔 때도 숨 고르기를 준다**(2026-08-30 사용자 확정) — 라운드 사이와 같은 6초.
+  //   그 사이 병력이 걸어서 자리를 잡고, 다 모인 뒤에 새 던전의 적이 나온다.
+  //   ⛔ 0 으로 두면 적이 곧바로 쏟아져 흩어진 채로 첫 라운드를 맞는다.
+  CAMPB._gapT = CAMP_ROUND_GAP_S;
   return true; }
+
+// 🧭 **제 자리로 걸어 돌아가게 한다** (2026-08-30 사용자 확정).
+//   ⛔ 순간이동시키지 말 것 — 처음엔 즉시 옮겼는데, 사용자가 **걸어서 오는 쪽**으로 정했다.
+//   ⛔ _post 를 새로 잡지도 말 것 — 플레이어가 공들여 옮긴 배치가 통째로 리셋된다.
+//     「전열로 정렬」안은 그래서 쓰지 않는다.
+//   ⭐ 여기서 하는 일은 **표적을 푸는 것뿐**이다. 표적이 없으면 campPostStep 이 자기 자리로
+//     걸려 보낸다 — 그 걸어올 시간은 숨 고르기(CAMP_ROUND_GAP_S)가 대준다.
+function campRegroup(){
+  if(!CAMPB || !CAMPB.me) return 0;
+  let n = 0;
+  for(const u of CAMPB.me.units){
+    u.tgtUid = null; u._btgt = null; u._btT = 0;    // 표적 해제 — 없어진 적을 쫓지 않는다
+    if(u._post) n++; }
+  return n; }
 
 // 한 프레임 — 전투를 굴리고 승패를 본다.
 //   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
@@ -1340,12 +1372,24 @@ const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 �
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
 const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
-const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
+const CAMP_ROUND_GAP_S = 4;        // 라운드·던전 사이 숨 고르기(초) — 자리로 걸어 돌아올 시간
+  // ⭐ **라운드 사이와 던전 이동이 같은 값을 쓴다** — 여기 하나만 고치면 양쪽이 함께 움직인다.
+  // ⚠ 실측: 자리에서 424 떨어진 유닛이 **2초에 35 까지** 붙는다(스모크 「걸어서 자리로」).
+  //   4초면 판 반대편에서도 도착한다. ⛔ 0 으로 두면 흩어진 채로 다음 라운드를 맞는다.
 function campCombatStep(dt){
   const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
   if(!CAMPB) campBattleOpen();
   if(!CAMPB) return;
+  // ⏸ 숨 고르기 — 적이 안 나오는 동안 **걸어서 자기 자리로 돌아온다**.
+  //   ⛔ 예전엔 여기서 곧바로 return 해서 **6초 동안 유닛이 한 발짝도 안 움직였다**(2026-08-30 발견).
+  //     「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 아무리 늘려도 소용없었다.
+  //   ⭐ 그래서 이동·복귀·부활만 굴린다. 적이 없으니 전투는 저절로 일어나지 않는다.
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
+    campPostSnap();                                       // 🪧 되돌리기 전 위치(campPostStep 이 쓴다)
+    campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+    campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
+    campLeash();
+    campReviveStep(dt);                                   // 🩹 누운 아군도 이 사이에 일어난다
     if(CAMPB._gapT <= 0){
       // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
       //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
