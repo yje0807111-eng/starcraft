@@ -1048,6 +1048,11 @@ function campCanHitFoes(){
 //       못 가린다.** 실제로 그랬다(난이도가 11배 올라도 18초 고정 = 전부 대기 시간이었다).
 //     라운드를 길게 하고 싶으면 **적 체력만** 만진다.
 const CAMP_WAVE_MAX = 6;        // 라운드 하나를 최대 몇 번에 나눠 내보내나
+// ⛔ **한 무리가 이보다 적어지면 쪼개지 않는다**(2026-08-30). 안 그러면 초반이 깜빡인다:
+//   R1 은 적이 3마리인데 옛 식(w = min(6, n))이 **3무리로 1마리씩** 쪼갰고, 거기에
+//   「다 잡으면 즉시 다음 무리」가 겹쳐 **적 1 → 0 → 1 → 0** 이 반복됐다(배지가 깜빡였다).
+//   ⭐ 후반은 그대로다 — R25(30마리)부터는 어차피 상한 6무리에 걸린다.
+const CAMP_WAVE_MIN_N = 4;      // 한 무리 최소 마리 수
 // ⚠ 옛 규칙은 「간격은 짧게」였다 — 길게 잡으면 화면의 적을 다 잡아도 다음 무리를 기다리느라
 //   라운드가 안 끝나고, 그 대기가 곧 라운드 길이가 되어 「적 총 체력 ÷ 아군 DPS」 규칙이
 //   깨졌다(실측: 난이도가 11배 올라도 18초 고정 = 전부 대기 시간).
@@ -1066,6 +1071,9 @@ const CAMP_WAVE_GAP_S = 1.5;    // 웨이브 사이 간격(초) — 6무리가 7
 const CAMP_FOE_SPAWN_Y = 0.18;   // 스폰 줄(세로 비율) — 화면 상단보다 확실히 위
 const CAMP_FOE_SPAWN_J = 0.05;   // 그 줄에서 위아래로 흩는 폭 — 한 줄로 딱 서면 기계 같다
 const CAMP_FOE_SPAWN_W = 0.62;   // 가로로 퍼뜨리는 폭(가운데 통로만큼)
+// ⚠ **후반(R30+)에는 다시 재야 한다**(sc-2 지적 2026-08-30). 지금 확인은 R15(적 11마리)까지다.
+//   R40 이후엔 100마리가 한 줄로 내려와 **행렬**이 되므로, 앞줄이 닿고 뒷줄이 뒤따르는 사이
+//   「다 잡을 때까지」가 길어질 소지가 있다. 라운드 길이가 늘면 이 세 값부터 의심할 것.
 function campPlaceFoes(list){
   if(!CAMPB || !list || !list.length) return 0;
   const W = CAMPB.world;
@@ -1077,7 +1085,7 @@ function campPlaceFoes(list){
   return list.length; }
 function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
   const n = campFoeCount(campRoundN());
-  const w = Math.max(1, Math.min(CAMP_WAVE_MAX, n));
+  const w = Math.max(1, Math.min(CAMP_WAVE_MAX, Math.ceil(n / CAMP_WAVE_MIN_N)));
   const per = Math.floor(n / w), rem = n % w;
   CAMPB._wq = [];
   for(let i = 0; i < w; i++) CAMPB._wq.push(per + (i < rem ? 1 : 0));
