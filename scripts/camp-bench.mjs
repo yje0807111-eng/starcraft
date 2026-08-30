@@ -357,6 +357,9 @@ await pg.evaluate(()=>{
             gl:campUpgLv('gather'), tl:campUpgLv('tap'), rate:Math.round((w-(__CB.lastW||0))/15),
             ore:Math.round((G.tech&&G.tech.minerals||[]).reduce((a,m)=>a+(m.amount||0),0)),
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
+            // 👥 인구 — ⚠ **기수(병력 수)와 함께 봐야 한다.** 기수만 보면 「병력이 준다」가
+            //   새는 것인지 구성이 바뀐 것인지(인구 큰 유닛 ↔ 작은 유닛) 못 가른다(sc-3 지적).
+            sup:(G.tech&&G.tech.sup)|0, supCap:(G.tech&&G.tech.supCap)|0,
             gas:Math.round((G.tech&&G.tech.energy)||0), rl:(typeof campRefLv==='function'?campRefLv():0),
             res:(function(){ const R=(G.tech&&G.tech.research)||{}; let n=0;
               for(const k in R) n+=(R[k]===true?1:(R[k]|0)); return n; })(),   // 🔬 연구 총레벨(계열+단발)
@@ -530,10 +533,10 @@ console.log('던전-라운드 | 걸린 초 | 적난이도 | 적체력(설계→�
 console.log(fin.gateT ? `\n□ E 관문 100만 도달: 시작 후 **${(fin.gateT/60).toFixed(1)}분** (설계 추정 10시간)`
                      : `\n□ E 관문 100만: ${(fin.t/60).toFixed(1)}분 안에 못 넘음(번 돈 ${F(fin.earn)})`);
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
-console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
+console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 인구     | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
-    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String(w.res|0).padEnd(6)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
+    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.sup|0)+"/"+(w.supCap|0)).padEnd(7)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String(w.res|0).padEnd(6)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
 if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
   for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
 if(fin.jam){ const J=fin.jam;
