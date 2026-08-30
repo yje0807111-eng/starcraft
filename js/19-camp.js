@@ -1242,20 +1242,20 @@ function campScaleAllies(list){
     n++; }
   return n; }
 
-// ══ 🩹 아군 부활 (2026-08-25) — HUNT_R1 §6-5 ═════════════════════════
-//   ⭐ 아군은 **죽지 않는다**. 빈사로 누웠다가 고정 시간 뒤 그 자리에서 일어난다.
-//     그래서 §6-6 의 「가동률」이 성립한다 — 사거리가 긴 유닛일수록 덜 눕고 더 오래 싸운다.
-//   ⛔ 18-strike.js 를 고치지 않는다. 죽은 유닛은 배열에 남아 있으므로(u.dead=true 로 표시만)
-//     캠프가 **전이를 감지해** 타이머를 달고 되살린다.
-const CAMP_REV_S = 30;            // 부활 시간(초) — 유닛 종류와 무관한 고정값
-// 🌳 「자동 재생산」(rebuild) — 설계의 「죽은 유닛 n% 자동 재구매」를 **부활 단축**으로 읽는다.
-//   재구매는 '미네랄을 깎나'가 계속 애매했다. 부활 시간은 적 갈래의 「적 부활 시간」과 대칭이고
-//   §6-6 의 가동률(생존÷사이클)에 곧바로 붙어 효과가 읽힌다.
-const CAMP_RT_REV = [0, 0.25, 0.50, 0.75, 0.90, 1.00];   // 단축률 — HUNT_R1 §4-5-3 의 25/50/75/90/100
-const CAMP_REV_MIN = 3;           // ⛔ 0 으로 만들지 않는다 — 즉시 부활이면 눕는 것이 무의미해진다
-function campReviveSec(){ const n = campRtHas('rebuild');
-  const cut = n > 0 ? CAMP_RT_REV[Math.min(5, n)] : 0;
-  return Math.max(CAMP_REV_MIN, CAMP_REV_S * (1 - cut)); }
+// ══ 🩹 아군 부활 — **라운드 단위** (2026-08-29 사용자 확정) ═══════════
+//   ⭐ 아군은 죽지 않는다. 다만 **그 라운드 안에서는 못 일어난다** —
+//     라운드가 새로 시작할 때 **전원 부활 + 체력 전체 회복**으로 판이 리셋된다.
+//   ⛔ **시간 부활(30초)을 없앴다.** 그것이 후반 발산의 실제 동력이었다 —
+//     실측(2026-08-29 · 던전 2): 누운 병력이 6 → 34 로 쌓이며 꽂힌 화력이
+//     R9 정점 891 에서 R24 487 로 **떨어졌고**(라운드당 ×0.968), 난이도는 ×1.073 로
+//     계속 올라 R24 가 11.4분이 됐다. 죽는 속도가 30초 부활보다 빨랐던 것이다.
+//   ⭐ 라운드마다 리셋되면 화력이 **줄지 않는다** — 발산의 되먹임 고리가 끊어진다.
+//   ⛔ **결과 하나가 딸려 온다: 전멸 = 패배.** 라운드 도중에는 못 일어나므로 서 있는 병력이
+//     0 이 되면 그 라운드를 깰 방법이 없다. 예전에는 「다 누워도 30초 뒤 일어난다」라
+//     전멸이 패배가 아니었다 — 그 전제가 사라졌다.
+// 🌳 「자동 재생산」(rebuild) 갈래는 이제 **부활 시간**이 아니라 다른 것에 걸어야 한다 —
+//   시간이라는 축이 없어졌기 때문이다. ⚠ 지금은 효과가 없다(sc-3 재설계 필요).
+const CAMP_RT_REV = [0, 0.25, 0.50, 0.75, 0.90, 1.00];   // ⚠ 미사용 — 갈래 재설계 전까지 남겨 둔다
 //   ⚠ **죽은 유닛은 배열에 남지 않는다** — strikeStepUnits 끝에서 `me.units=me.units.filter(u=>!u.dead)`
 //     로 걷어낸다(18-strike.js:1301, 공유 파일이라 못 고침). 그래서 **걷히기 전후를 비교해** 붙잡는다.
 //     객체는 살아 있으므로(배열에서 빠졌을 뿐) 그대로 들고 있다가 되살려 배열에 돌려놓는다.
@@ -1265,23 +1265,25 @@ function campCatchDown(before){
   const now = CAMPB.me.units, keep = new Set(now);
   let n = 0;
   for(const u of before){ if(keep.has(u) || !u) continue;
-    CAMPB._down.push({ u:u, t:campReviveSec() }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것
+    CAMPB._down.push({ u:u, t:0 }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것 (⏱ 타이머 없음 — 라운드가 끝나야 일어난다)
   return n; }
-function campReviveStep(dt){
-  if(!CAMPB || !CAMPB._down || !CAMPB._down.length) return 0;
+// 🩹 **라운드 리셋** — 누운 병력을 전원 일으키고, 서 있는 병력도 체력을 가득 채운다.
+//   ⭐ 라운드가 시작될 때 · 던전이 바뀔 때 · 전장을 새로 열 때 부른다.
+//   ⛔ 라운드 도중에는 부르지 않는다 — 그게 이 규칙의 전부다.
+function campRoundRevive(){
+  if(!CAMPB || !CAMPB.me) return 0;
   let up = 0;
-  for(let i = CAMPB._down.length - 1; i >= 0; i--){
-    const d = CAMPB._down[i];
-    if((d.t -= dt) > 0) continue;
-    const u = d.u;
+  for(const d of (CAMPB._down || [])){ const u = d && d.u; if(!u) continue;
     u.dead = false;
-    u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
     u._collapseT = null; u.wait = 0;                 // 붕괴 대기·스폰 대기 흔적 정리
     u.tgtUid = null; u._btgt = null; u._btT = 0;     // 표적은 새로 고른다
     if(u._post){ u.x = u._post.x; u.y = u._post.y; } // 🪧 자기 자리에서 일어난다(누운 곳이 아니라)
     u._sx = u.x; u._sy = u.y;
-    CAMPB.me.units.push(u);                          // 전장에 돌려놓는다
-    CAMPB._down.splice(i, 1); up++; }
+    CAMPB.me.units.push(u); up++; }
+  if(CAMPB._down) CAMPB._down.length = 0;
+  // ⭐ **서 있던 병력도 가득 채운다** — 라운드가 온전한 상태로 시작해야 화력이 줄지 않는다.
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0; }
   return up; }
 // 누워 있는(부활 대기) 유닛 수 — 승패 판정이 쓴다
 function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
@@ -1304,6 +1306,7 @@ function campDungeonSwap(){
   if(CAMPB._wq) CAMPB._wq.length = 0;
   CAMPB._wqTot = 0; CAMPB._wqT = 0;
   campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
+  campRoundRevive();                               // 🩹 던전이 바뀌어도 온전한 상태로 시작한다
   return true; }
 
 // 한 프레임 — 전투를 굴리고 승패를 본다.
@@ -1340,9 +1343,10 @@ function campCombatStep(dt){
       // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
       //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
       campBuildStructs();                                 // 🏢 그새 지은 건물을 전장에 반영(체력도 새로)
+      campRoundRevive();                                  // 🩹 라운드 시작 = 전원 부활 + 체력 전체 회복
       campSpawnFoes(); }
     return; }
-  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSpawnFoes(); return; }
+  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campRoundRevive(); campSpawnFoes(); return; }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campPostSnap();       // 🪧 되돌리기 전 위치를 떠 둔다(아래 campPostStep 이 쓴다)
@@ -1352,7 +1356,6 @@ function campCombatStep(dt){
   campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
-  campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)
   if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
     CAMPB._wqT -= dt;
     if(CAMPB._wqT <= 0){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
@@ -1371,13 +1374,17 @@ function campCombatStep(dt){
   //    ⚠ 건물 목록이 비어 있으면(아직 안 세웠으면) 본부 체력으로 판정한다 — 옛 규칙 폴백.
   const _bld = campBldAlive();
   const _allDown = (CAMPB._bld && CAMPB._bld.length) ? (_bld.length === 0) : (CAMPB.me.base.hp <= 0);
-  if(_allDown || _noHit
-     || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0 && campAlive('ai') > 0)){
+  // ⛔ **전멸 = 패배** (2026-08-29). 라운드 도중에는 못 일어나므로 서 있는 병력이 0 이면
+  //   그 라운드를 깰 방법이 없다. 옛 규칙(다 누워도 30초 뒤 일어난다)의 전제가 사라졌다.
+  const _wipe = CAMPB._started && campAlive('me') === 0 && campAlive('ai') > 0;
+  if(_allDown || _noHit || _wipe){
     const was = campFail(); campBattleClose(); campBarReset();
     campSay(_allDown
       ? ('🏢 기지가 무너졌습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
       : _noHit
       ? ('✈ 공중을 칠 수 없어 탈락 — 대공이 되는 병력을 섞으세요(던전 ' + was.dg + ' ' + was.cleared + '라운드)')
+      : _wipe
+      ? ('☠ 병력이 전멸했습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
       : (was.cleared > 0
         ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
         : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다')), 'lose');
