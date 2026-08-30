@@ -1762,10 +1762,15 @@ function campRaceSheet(){
       + '<div class="crRows"></div>'
       + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
     (document.getElementById('phone') || document.body).appendChild(ov); }
+  { const _ph=document.getElementById('phone'); if(_ph) _ph.classList.add('campPick'); }   // 옛 사냥터 UI 를 숨긴다(css 「campPick」)
+  // ⭐ display 해제와 `on` 을 **같은 프레임에** 한다. animation 은 클래스가 붙는 순간 처음부터 돌기 때문에
+  //    한 프레임 미룰 이유가 없다 — 미루면 그 사이 프레임에 판이 보여 검은 섬광이 된다(css 「기본값은 0」).
   ov.classList.remove('hide');
-  // ⚠ display 를 푼 **다음 프레임**에 켠다 — 같은 프레임에 붙이면 전이가 안 돌고 툭 나타난다.
   ov.classList.remove('closing');
-  requestAnimationFrame(function(){ ov.classList.add('on'); });
+  // 🎬 로딩에서 바로 넘어온 것이면 로딩과 **같은 길이로** 차오른다(css 「raceFx」)
+  { const _ph2=document.getElementById('phone');
+    ov.classList.toggle('raceFx', !!(_ph2 && _ph2.classList.contains('raceIn'))); }
+  ov.classList.add('on');
   campRaceRender(); campRacePrev(_campRacePick, true);
 }
 // 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
@@ -1803,13 +1808,12 @@ function campPickRace(){
   const C = campState(); if(!C || C.race) return;
   C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
-  // 🎬 종족 판을 페이드로 걷고 → **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
+  // 🎬 **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
   //    여기가 「게임이 실제로 시작되는 지점」이다(enterAfterWarm 의 _needRace 주석과 짝).
-  const ov = document.getElementById('campRaceOv');
-  if(ov){ ov.classList.add('closing');
-    clearTimeout(ov._closeT);
-    ov.classList.remove('on');   // 페이드아웃 시작(.on 이 빠지면 opacity 0 으로 전이)
-    ov._closeT = setTimeout(function(){ ov.classList.remove('closing'); ov.classList.add('hide'); }, _campMs('--campOvDur', .4)); }
+  //    ⛔ 여기서 종족 판을 걷지 않는다. 위에서 검은 판(z88)이 덮어 주므로 걷을 이유가 없고,
+  //       먼저 걷으면 **아직 반투명한 검은 판 아래로 캠프가 통째로 드러난다**
+  //       (2026-08-27 프레임 실측: 종족 선택 73.9 → **캠프 139** → 검은 화면 35.6 → 캠프 142.
+  //        캠프가 두 번 나온다). 걷는 일은 campRaceToCamp 이 다 덮은 뒤에 한다.
   campRaceToCamp();
 }
 
@@ -1824,9 +1828,22 @@ function campRaceToCamp(){
   const hasBlack = (typeof titleToBlack === 'function' && typeof titleOutroEnd === 'function' && ph);
   if(hasBlack) ph.classList.add('artMark');   // 로고를 다시 켠다 — titleOutroEnd 가 앞서 걷었다
   const black = hasBlack ? titleToBlack() : null;   // 검은 판이 덮이기 시작한다(기다리지 않는다)
+  // ⛔ campEnter() 는 **즉시** 부른다. 검은 화면 뒤로 미뤄 봤더니(정지를 숨기려고) 캠프 상태를
+  //    바로 기대하는 코드가 여럿이라 스모크 6 개가 깨졌다(2026-08-27). 그 준비 비용 때문에
+  //    검은 판이 덮이는 도중 280ms 정도 얼어붙지만, 그 구간은 어차피 어두워지는 중이라 덜 띈다.
   campEnter();                                       // 그 아래에서 캠프가 선다
-  if(!black){ campEnterAnim(); return; }
-  black.then(function(){ campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
+  // 🎬 **다 덮인 뒤에** 치운다 — 종족 판·campPick 둘 다.
+  //    campPick 을 먼저 떼면 네비와 재화 바가 종족 선택 화면 위로 튀어나오고,
+  //    그 네비가 처음 그려지는 프레임에 165ms 를 써서 화면까지 얼어붙는다(DESIGN.md §5.5 ⑤).
+  const done = function(){
+    const ov = document.getElementById('campRaceOv');
+    if(ov){ clearTimeout(ov._closeT);
+      ov.classList.remove('on'); ov.classList.remove('raceFx'); ov.classList.remove('closing');
+      ov.classList.add('hide'); }
+    if(ph) ph.classList.remove('campPick');   // 캠프가 켜지면 campMode 가 이어받는다
+  };
+  if(!black){ done(); campEnterAnim(); return; }
+  black.then(function(){ done(); campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
 }
 
 // CSS 가 시간을 정한다 — JS 는 읽기만 한다(두 곳에 숫자를 두면 반드시 어긋난다).

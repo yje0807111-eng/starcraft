@@ -2198,6 +2198,14 @@ function warmAll(onStep){
     for(let i=0;i<200 && !(window.M3D&&M3D.ready&&M3D.ready()); i++) await new Promise(r=>setTimeout(r,50));
     if(!(window.M3D&&M3D.ready&&M3D.ready())){ _warmDone=true; return 0; }   // 3D가 없으면 데울 것도 없다
     try{ hbBgImg((typeof hbHunt==='function' && hbHunt().dg)||1); }catch(e){}   // 배경 그림도 미리 받아 둔다
+    // 🏕 **종족 전장 그림도 미리 받는다.** 로딩이 걷힌 자리에 종족 판이 오는데, 그림을 그때
+    //    처음 받으면 어두운 그라데이션(.crPrev)만 보이다가 뒤늦게 채워진다 — 그것이
+    //    「검게 한 번 깜빡인다」의 정체였다(2026-08-27).
+    try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function')
+      for(const _rk of CAMP_RACE_ORDER){
+        const _a=new Image(); _a.src=campRaceArt(_rk);
+        if(typeof campRaceIcon === 'function'){ const _i=new Image(); _i.src=campRaceIcon(_rk); } }
+    }catch(e){}
     const ids=warmIds(); let n=0;
     for(const id of ids){
       await new Promise(r=>requestAnimationFrame(()=>r()));
@@ -2218,6 +2226,9 @@ function warmAll(onStep){
   return _warmRun; }
 // 로그인/게스트 → 로딩 화면(#opening 재사용)에서 데우기를 끝낸 뒤 HOME으로.
 // 새 로딩 UI를 만들지 않는다 — 부팅 때 쓰는 그 화면의 막대와 문구를 그대로 쓴다.
+// 🎬 로딩 → 종족 선택 : 머무는 시간과 디졸브 길이(css 「raceIn」 과 **같은 값**이어야 한다)
+const RACE_HOLD_MS = 420;    // 100% 를 잠깐 보여준다
+const RACE_FADE_MS = 440;    // 앞판이 걷히고(200) → 종족 판이 든다(240) · css 「--t-race」 와 같은 값
 async function enterAfterWarm(){
   const op=document.getElementById('opening');
   showAppScreen('opening');
@@ -2233,14 +2244,27 @@ async function enterAfterWarm(){
   //    종족을 아직 안 골랐으면 여기가 그 지점이 아니다 — 로딩에서 종족 선택으로 **바로 디졸브**하고,
   //    검은 화면은 종족을 고른 뒤(campPickRace)가 맡는다. 안 그러면 검은 화면이 두 번 나온다:
   //    로딩→검정→종족선택→(다시)캠프 — 그 사이가 깜빡이는 것처럼 보였다(2026-08-27).
+  // 🎬 **종족 선택으로 가는 길은 단순 디졸브 하나다**(2026-08-27 재작성).
+  //   로딩이 100% 로 잠깐 머문 뒤(RACE_HOLD_MS) 앞판이 걷히고, 그 다음 종족 판이 든다(RACE_FADE_MS).
+  //   ⚠ **겹치지 않는다** — 크로스페이드를 여러 길이로 만들어 봤지만 겹치는 구간이 계속 거슬렸다(2026-08-27).
+  //   ⛔ 검은 화면을 끼우지 말 것 — 그건 「게임이 실제로 시작되는 지점」(종족을 고른 뒤)의 몫이다.
+  //   ⛔ 로딩만 먼저 걷고 기다리지 말 것 — 그 사이 키 아트만 남아 「배경이 깜빡」인다.
+  //   ⛔ 로고·키 아트를 따로따로 다른 속도로 걷지 말 것 — 한 화면이 조각나 보인다.
+  //   ⭐ 실제로 걷는 일은 openHome() → showAppScreen 이 이미 다 한다(로딩 fadeOut +
+  //     titleArtShow(false) 로 키 아트·로고). 여기서는 **잠깐 머무는 것**만 맡는다.
   const _needRace = (function(){ try{ return typeof campState==='function' && campState() && !campState().race; }catch(e){ return false; } })();
-  //   ⭐ 종족 선택으로 갈 때는 **여기서 아무것도 걷지 않는다.** 아래 openHome() 이 부르는
-  //     showAppScreen 이 이미 로딩을 페이드아웃시키고 그 아래에 HOME·종족 판을 세운다 —
-  //     그것이 진짜 크로스페이드다.
-  //     ⛔ 여기서 먼저 걷고 기다리지 말 것. 로딩이 **완전히 사라진 뒤에** HOME 이 켜지면
-  //       그 사이 빈 HOME 이 키 아트를 덮어 검게 한 번 깜빡인다(2026-08-27).
-  if(!_needRace && typeof titleToBlack==='function') await titleToBlack();
-  opBarReset();
+  if(_needRace){
+    if(typeof _sleep==='function') await _sleep(RACE_HOLD_MS);   // ① 100% 를 잠깐 보여준다
+    const _ph0=document.getElementById('phone');
+    if(_ph0) _ph0.classList.add('raceIn');            // ② 이 전환만 짧게(css 「raceIn」)
+    // ⛔ 여기서 로딩을 직접 hide 하지 말 것 — 걷는 일은 openHome() → showAppScreen 이 한다.
+    //    직접 감추면 그 판만 전이 없이 사라져 나머지와 어긋난다(= 컷 시절의 코드).
+  }
+  else if(typeof titleToBlack==='function') await titleToBlack();
+  // ⛔ 막대는 **로딩 판이 다 걷힌 뒤에** 되돌린다. 여기서 바로 부르면 100% 이던 막대가
+  //    아직 화면에 보이는 채로 0% 로 뚝 떨어진다(2026-08-27 프레임 확인: 1648ms 에 「LOADING 0%」).
+  if(_needRace) setTimeout(opBarReset, RACE_FADE_MS + 60);
+  else opBarReset();
   // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
   //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
   //    setInGame(false) 가 걸려 하단 콘솔(#bot)이 통째로 사라진다(스모크가 간헐 실패했다).
@@ -2253,6 +2277,17 @@ async function enterAfterWarm(){
   // ⛔ 부팅 경로다 — 여기서 예외가 나면 사용자가 HOME 에 영영 못 간다. 한 겹 더 감싼다.
   try{ if(typeof tryRestoreRun==='function' && tryRestoreRun()){ if(typeof titleOutroEnd==='function') titleOutroEnd(); return; } }catch(e){ console.warn('tryRestoreRun', e); }
   openHome();
+  // 🎨 **종족 선택으로 갈 때는 키 아트를 조금 더 남긴다.**
+  //    openHome → showAppScreen 이 titleArtShow(false) 로 키 아트를 로딩과 **같은 시간에** 걷는데,
+  //    그때 종족 판은 아직 반투명이라 그 아래 키 아트(boot.webp — 전투 장면)가 그대로 드러난다.
+  //    「그 사이에 사냥터 배경이 스친다」가 그것이었다(2026-08-27).
+  //    종족 판이 다 찬 뒤에 걷으면 그때는 가려져 있어 보이지 않는다.
+  // 🎬 느린 전환 클래스는 다 걷힌 뒤에 뗀다(다음 화면 전환이 느려지지 않게)
+  //   ⚠ 넉넉히 기다렸다 뗀다. 로딩 판을 걷는 애니메이션(fxOut)은 기본 길이(--t-screen .7s)로 잡혀 있어서,
+  //     그 시간이 지나기 전에 클래스를 떼면 남은 구간이 다시 계산돼 **다 사라진 판이 살짝 돌아온다**(실측 0.01).
+  if(_needRace){ const _ph=document.getElementById('phone');
+    if(_ph){ clearTimeout(window._raceInT);
+      window._raceInT=setTimeout(function(){ _ph.classList.remove('raceIn'); }, RACE_FADE_MS+700); } }
   if(typeof titleOutroEnd==='function') titleOutroEnd(); }   // 게임 화면이 선 뒤 — 검은 판과 로고가 함께 걷힌다
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;

@@ -1072,10 +1072,26 @@
   #phone.campMode #homeScreen #cstMain{position:absolute;inset:0}
   /* 옛 사냥터 UI 는 캠프에서 뜻이 없다 — 업그레이드 카드는 사냥터 것이고,
      가운데 줄은 옛 던전·웨이브를 보여 준다(캠프에는 웨이브가 없다). */
-  #phone.campMode #hmScroll{display:none}
-  #phone.campMode .hbMid{display:none}
+  /* 🏕 **종족을 고르는 동안**(campPick) — 캠프는 아직 안 켜졌지만 openHome → renderHome 이
+     **옛 사냥터 UI 를 이미 그려 놓았다**. 종족 판이 페이드로 드는 0.7초 동안 그 업그레이드
+     카드들이 판 뒤로 비쳐 두 화면이 겹쳐 보였다(2026-08-27 · 사용자 스크린샷).
+     campMode 와 **같은 것들**을 숨긴다 — 목록이 갈리면 한쪽만 고쳐져 또 새어 나온다. */
+  #phone.campMode #hmScroll,
+  #phone.campPick #hmScroll{display:none}
+  #phone.campMode .hbMid,
+  #phone.campPick .hbMid{display:none}
   /* 캐릭터 프로필(초상·레벨·XP)은 캠프에 없다 — 캠프는 기지를 키우는 게임이고 캐릭터가 없다. */
-  #phone.campMode .hbHudTop{display:none}
+  #phone.campMode .hbHudTop,
+  #phone.campPick .hbHudTop{display:none}
+  /* ⚡ 종족 선택 중에는 하단 네비도 뺀다 — 전체 화면 선택이라 누를 일이 없고, 눌러서 선택을 우회하는 것도 막는다.
+     ⭐ 그리고 이것이 로딩→종족 선택 전환에서 **화면이 130ms 얼어붙던 원인**이었다(2026-08-27 실측).
+     네비가 나타나는 프레임의 래스터 비용이다: 네비만 빼면 35ms, 두면 165ms — 그림자·그라데를 걷어내도 그대로였다.
+     ⛔ visibility/opacity 로 감추면 소용없다(그려는 진다). display:none 이어야 한다.
+     종족을 고르면 campPick 이 걷히며 네비가 돌아오는데, 그때는 검은 화면이 덮고 있어 그 비용이 안 보인다. */
+  #phone.campPick .navBar{display:none}
+  /* 상단 재화 바도 마찬가지 — 로딩 화면에는 없던 것이라, 종족 판이 차오르는 동안 우상단에 비쳐
+     「없던 UI 가 튀어나오는」 것으로 보인다(.curBar z62 < 종족 판 z64 라 반투명 구간에만 비친다). */
+  #phone.campPick .curBar{display:none}
   /* 인구 칸은 캠프에서만 — 다른 화면의 재화 바는 미네랄·가스·젬 셋 그대로다. */
   .curBar .curPop{display:none}
   #phone.campMode .curBar .curPop{display:flex}   /* ⚠ 다른 칸(.curBar .res)이 flex 다 — 맞춘다 */
@@ -1935,9 +1951,35 @@
   /* 종족 선택 판이 사라지는 것도 같이 부드럽게 — display 로 끊으면 화면이 툭 바뀐다 */
   /* 종족 판은 **들 때도 날 때도** 페이드다. 툭 나타나면 로딩이 걷히는 것과 따로 놀아
      「로고만 디졸브되고 나머지는 그냥 바뀐다」로 보인다(2026-08-27). */
-  #campRaceOv{opacity:0;transition:opacity var(--campOvDur,.4s) ease}
-  #campRaceOv.on{opacity:1}
-  #campRaceOv.closing{opacity:0;pointer-events:none}
+  /* ⚠ **드는 시간 = 로딩이 걷히는 시간**(--t-screen). 짧게 잡으면 로딩이 아직 반투명한데
+     종족 판은 이미 다 차서 두 그림이 겹쳐 보인다. 날 때만 짧게 끊는다. */
+  /* ⚠ **transition 이 아니라 animation 이다.** display:none 에서 풀린 직후의 transition 은
+     브라우저·상황에 따라 건너뛰어 판이 툭 나타난다(2026-08-27 실측: op 0 → 1.00 즉시).
+     animation 은 클래스가 붙는 순간 반드시 처음부터 돈다. */
+  @keyframes campOvIn{ from{opacity:0} to{opacity:1} }
+  /* ⛔ **기본값은 0 이다** — 1 로 두면 display 가 풀린 프레임에 판(거의 검정 #07080b)이 통째로 보였다가
+     다음 프레임에 애니메이션이 0 부터 시작해 **검은 섬광 한 프레임**이 된다.
+     2026-08-27 프레임 녹화 실측: 화면 밝기 68.4 → **35.4** → 65.8 (약 20ms). 그게 그 「깜박임」이었다.
+     끝 상태(1)는 .on 의 `both` 가 유지하므로 여기서 1 로 둘 이유가 없다. */
+  #campRaceOv{opacity:0}
+  #campRaceOv.on{animation:campOvIn var(--t-screen,.7s) ease both}
+  /* 🎬 로딩에서 넘어온 첫 진입은 **로딩과 같은 길이로** 차오른다(--t-race · css/20-lobby.css 「raceIn」).
+     ⚠ `#phone.raceIn` 을 조건으로 쓰면 안 된다: 나중에 그 클래스를 떼는 순간 `.on` 의 애니메이션이
+     처음부터 되살아나 **판이 한 번 더 흐려졌다 돌아온다**(실측: 1.5s 에 0.01 → 2.0s 에 1.00).
+     그래서 상태를 판 자신에게 둔다 — 시트가 닫힐 때까지 유지되고 phone 쪽 클래스와 무관하다. */
+  /* ⭐ **지연이 핵심이다.** 앞판(로딩·로고)이 다 걷힌 뒤에 들어와야 두 화면이 안 겹친다.
+     지연 = 나가는 시간(--t-race-out) 과 같은 값. 그동안 판은 opacity 0 으로 기다린다(both). */
+  #campRaceOv.raceFx{animation-duration:var(--t-race-in,.24s) !important;
+    animation-delay:var(--t-race-out,.20s) !important}
+  /* 🎬 **디졸브 동안 홈 화면을 비워 둔다** — 이것이 그 「깜박임」의 진짜 원인이었다(2026-08-27).
+     로딩 화면의 밝은 그림은 #opening(z90) 이 아니라 **#titleBg(z40)** 가 깐다. #opening 자체는 투명하다.
+     그런데 #homeScreen 은 z60 — 키 아트보다 **위**다. 그래서 홈이 켜지는 순간 밝은 그림이
+     opacity 와 무관하게 **한 프레임에 가려지고**, 아직 안 찬 종족 판 아래로 어두운 캠프 지도가 드러난다.
+     프레임 녹화 실측: 밝기 68.4 → **35.4** → 65.8 (약 20ms). opacity 를 아무리 맞춰도 안 고쳐지는 이유다.
+     ⇒ 종족 선택 중에는 홈에 볼 것이 없으니(campPick 이 본문을 이미 숨긴다) 통째로 비운다.
+        디졸브가 끝나 raceIn 이 걷힐 때 홈이 돌아오지만, 그때는 불투명한 종족 판이 덮고 있어 안 보인다. */
+  #phone.raceIn #homeScreen{opacity:0;transition:none}
+  #campRaceOv.closing{opacity:0;animation:none;transition:opacity var(--campOvDur,.4s) ease;pointer-events:none}
 
   /* ══ 💎 미네랄 채굴 판 (2026-08-27) ═══════════════════════════════════
      껍데기는 공용(.hbModal/.hbmCard) — 여기서는 안쪽만 정한다.

@@ -735,7 +735,9 @@ async function groupLobby(){
     // 경고 문구는 뺐다(사용자 결정 2026-08-24) — 되살리려면 확정 단계에 붙일 것
     assert(!/바꿀 수 없/.test(ov.textContent),'제거하기로 한 경고 문구가 살아 있다');
     // ② 고르면 본부·일꾼·광맥이 깔린다
-    campRaceSel('terran'); campPickRace(); await sleep(420);
+    // ⚠ 종족 판은 **검은 판이 다 덮은 뒤에** 걷힌다(js/19-camp.js campRaceToCamp).
+    //    그 전에 재면 화면 가운데를 종족 판이 짚는다 — 전환이 끝나기를 기다린다.
+    campRaceSel('terran'); campPickRace(); await sleep(_cssMs('--t-screen',.7)+700);
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
     assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
     assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
@@ -4923,6 +4925,84 @@ async function groupLobby(){
     if(typeof authShowHub==='function'){ authShowHub(); await sleep(_cssMs('--t-swap',.22)+240); }
     openHome(); await sleep(40);
     return '디졸브 '+_cssMs('--t-swap',.22)+'ms'; });
+  // 🎬 로딩 → 종족 선택 : **짧은 디졸브 하나**로 두 화면을 잇는다.
+  //   길이를 바꿔 가며 여러 번 만들었다 — 1.1초는 로고와 종족 목록이 오래 겹쳐 어색했고, 컷은 뚝 끊겼다.
+  await step('로딩 → 종족 선택: 앞판이 다 걷힌 뒤에 종족 판이 든다(안 겹친다)', async()=>{
+    skipIf(typeof RACE_FADE_MS==='undefined','전환 상수 없음');
+    assert(RACE_HOLD_MS>0,'100% 를 보여주는 시간이 없다');
+    const out=_cssMs('--t-race-out',.20), inn=_cssMs('--t-race-in',.24), race=_cssMs('--t-race',.44);
+    assert(race===out+inn,'--t-race 가 두 토막의 합이 아니다 ('+race+' ≠ '+out+'+'+inn+')');
+    assert(race===RACE_FADE_MS,'js 와 css 의 전환 길이가 다르다 ('+RACE_FADE_MS+' vs '+race+')');
+    assert(race>0 && race<=700,'전환이 너무 길다 — '+race+'ms');
+    const ph=$('phone'), had=ph.classList.contains('raceIn');
+    ph.classList.add('raceIn');
+    // ① 앞판(로딩·로고)은 **같은 길이로 함께** 걷힌다 — 하나만 달라도 화면이 조각나 보인다.
+    for(const id of ['opening','titleMark']){
+      const cs=getComputedStyle($(id));
+      assert(Math.round(parseFloat(cs.transitionDuration)*1000)===out
+        && Math.round(parseFloat(cs.animationDuration)*1000)===out,
+        id+' 의 길이가 다르다 ('+cs.transitionDuration+' / '+cs.animationDuration+')'); }
+    // ②ᐟ **배경은 버틴다.** 로딩↔로그인이 자연스러운 원리가 이것이다 — 키 아트를 공유하고 앞판만 바꾼다.
+    //    키 아트까지 흐려지면 홈이 비어 있는 동안 **맨바닥**이 드러나 화면이 툭 꺼졌다 돌아온다
+    //    (실측 2026-08-27: 밝기 곡선에 4.7 짜리 골 → 고친 뒤 0.4).
+    //    ⚠ 실제 전환은 **로딩 화면에서** 시작하므로 키 아트가 이미 켜져 있다(artBg). 그 상태로 재야 한다
+    //      — 꺼진 상태에서 클래스만 붙이면 0→1 전이가 막 시작한 값이 읽혀 헛되이 실패한다.
+    { const hadA=ph.classList.contains('artBg'); ph.classList.add('artBg');
+      await sleep(_cssMs('--t-screen',.7)+60);
+      assert(+getComputedStyle($('titleBg')).opacity===1,'전환 중에 키 아트가 흐려진다 — 맨바닥이 드러난다');
+      if(!hadA) ph.classList.remove('artBg'); }
+    // ⛔ **호흡을 죽이면 안 된다.** animation 을 끄면 raceIn 이 걷히는 순간 titleBreath 가 0% 부터
+    //    다시 시작해 그림이 툭 작아진다 — 위 호흡 주석이 경고하는 그 버그를 2026-08-27 에 재발시켰다.
+    assert(getComputedStyle($('titleBg')).animationName!=='none',
+      '전환 중에 키 아트 호흡이 멈춰 있다 — 걷힐 때 그림이 처음 크기로 튄다');
+    // 로딩 화면에 없던 UI 가 튀어나오면 안 된다 — 상단 재화 바는 종족 선택 중 숨긴다.
+    { const had4=ph.classList.contains('campPick'); ph.classList.add('campPick');
+      const cb=document.querySelector('.curBar');
+      if(cb) assert(getComputedStyle(cb).display==='none','종족 선택 중에 상단 재화 바가 보인다');
+      if(!had4) ph.classList.remove('campPick'); }
+    // 막대는 로딩 판이 다 걷힌 뒤에 되돌린다 — 100% 가 보이는 채로 0% 가 되면 화면이 튄다.
+    assert(enterAfterWarm.toString().indexOf('setTimeout(opBarReset')>=0,
+      '막대 되돌리기가 즉시다 — 로딩 100% 가 눈앞에서 0% 로 떨어진다');
+    if(!had) ph.classList.remove('raceIn');
+    // ② 종족 판도 **같은 길이**로 차오른다. 그 상태는 **판 자신**이 들고 있어야 한다.
+    //    ⛔ #phone.raceIn 을 조건으로 쓰면 그 클래스를 떼는 순간 애니메이션이 처음부터 되살아난다.
+    const ov=$('campRaceOv');
+    if(ov){
+      const before=ov.className;
+      ov.classList.add('raceFx');
+      const cs2=getComputedStyle(ov);
+      assert(Math.round(parseFloat(cs2.animationDuration)*1000)===inn,
+        '종족 판이 드는 시간이 다르다 — '+cs2.animationDuration);
+      // ⭐ **겹치면 안 된다.** 종족 판은 앞판이 다 걷힌 뒤에 들어온다 — 지연 ≥ 나가는 시간.
+      assert(Math.round(parseFloat(cs2.animationDelay)*1000)>=out,
+        '종족 판이 앞판과 겹친다 (지연 '+cs2.animationDelay+' < 나감 '+out+'ms)');
+      ov.className=before; }
+    let bad=[];
+    for(const sh of document.styleSheets){ let rs; try{ rs=sh.cssRules; }catch(e){ continue; }
+      for(const r of rs||[]) if(r.selectorText && r.selectorText.indexOf('raceIn')>=0
+        && r.selectorText.indexOf('campRaceOv')>=0) bad.push(r.selectorText); }
+    assert(!bad.length,'종족 판을 phone.raceIn 으로 제어한다 — 재페이드 버그가 돌아온다: '+bad.join(' / '));
+    // ③ 디졸브 중에 **어두운 것이 끼어들면 안 된다**. 두 곳에서 샜다(둘 다 실측으로 잡았다):
+    //    · 종족 판(거의 검정)이 display 풀린 프레임에 통째로 보였다 → 기본 opacity 를 0 으로.
+    //    · 홈 화면(z60)이 키 아트(z40)보다 **위**라, 켜지는 순간 밝은 그림이 한 프레임에 가려졌다.
+    //      화면 밝기 68.4 → 35.4 → 65.8. opacity 를 맞춰도 안 고쳐지는 z 축 문제다.
+    if(ov){ const was=ov.className; ov.className='';
+      assert(+getComputedStyle(ov).opacity===0,'종족 판 기본 opacity 가 0 이 아니다 — 검은 섬광이 돌아온다');
+      ov.className=was; }
+    { const hs=$('homeScreen'), had2=ph.classList.contains('raceIn');
+      ph.classList.add('raceIn');
+      assert(+getComputedStyle(hs).opacity===0,'디졸브 중에 홈 화면이 켜져 있다 — 키 아트를 덮어 화면이 어두워진다');
+      if(!had2) ph.classList.remove('raceIn'); }
+    // ④ 디졸브가 **끊기지 않아야** 한다. 종족 선택 중에 네비가 켜져 있으면 그 프레임의 래스터에
+    //    130ms 를 써서 화면이 얼어붙고, 디졸브의 절반이 그 뒤에서 흘러가 버린다(2026-08-27 프레임 녹화).
+    //    ⛔ visibility/opacity 로는 안 된다 — 안 보여도 그려진다.
+    { const had3=ph.classList.contains('campPick');
+      ph.classList.add('campPick');
+      const nb=document.querySelector('.navBar');
+      if(nb) assert(getComputedStyle(nb).display==='none',
+        '종족 선택 중에 네비가 살아 있다 — 전환이 얼어붙는다 ('+getComputedStyle(nb).display+')');
+      if(!had3) ph.classList.remove('campPick'); }
+    return '머묾 '+RACE_HOLD_MS+'ms → 나감 '+out+'ms → 듦 '+inn+'ms'; });
   // 🎬 게임으로 들어가는 마무리 — 로딩 → **로고만 남은 검은 화면** → 게임 화면이 드러나며 로고도 함께 사라진다.
   await step('게임 진입: 검은 화면에 로고만 남았다가 게임과 함께 걷힌다', async()=>{
     skipIf(typeof titleToBlack!=='function' || typeof titleOutroEnd!=='function','진입 연출 없음');
@@ -5054,6 +5134,9 @@ async function groupLobby(){
       await sleep(80);
       const ov=document.getElementById('campRaceOv');
       skipIf(!ov,'종족 판이 안 떴다');
+      // ⚠ 판이 **다 차오른 뒤에** 고른다. 뜨자마자 누르면 campOvIn 이 아직 도는 중이라
+      //    아래의 「검은 판보다 먼저 걷혔나」 검사가 그 초기값(op 0.09)을 걷히는 것으로 오해한다.
+      await sleep(_cssMs('--t-screen',.7)+90);
       campPickRace();
       // ⭐ **상태는 즉시**여야 한다 — 검은 판이 덮이기를 기다렸다가 세팅하면 그 사이를 전제하는
       //    코드가 전부 어긋난다(2026-08-27 에 스모크 여덟 군데가 깨졌다).
@@ -5062,10 +5145,13 @@ async function groupLobby(){
       // 🎬 화면은 **검은 판이 먼저 덮는다** — 캠프가 잠깐 보였다 덮이면 그게 「깜빡임」이다
       assert(document.getElementById('phone').classList.contains('artBlack'),
         '검은 판이 안 올라온다 — 캠프가 그대로 드러나 깜빡인다');
-      // 종족 판은 잘라내지 말고 흐려져야 한다 — **지금 재야 한다**(0.4초면 closing 이 끝난다)
-      assert(ov.classList.contains('closing'),'종족 판이 페이드 없이 사라진다(display 로 끊는다)');
-      { const oTr=getComputedStyle(ov).transition;
-        assert(/opacity/.test(oTr),'종족 판에 opacity 전이가 없다: '+oTr); }
+      // ⭐ 종족 판은 **검은 판이 다 덮을 때까지 그대로 버틴다**(2026-08-27 재설계).
+      //    예전엔 여기서 자체 페이드로 걷었는데, 검은 판(0.7초)보다 먼저 사라져
+      //    **캠프가 통째로 한 번 노출됐다**(프레임 실측: 종족 선택 73.9 → 캠프 139 → 검은 화면 35.6).
+      //    걷는 일은 검은 판이 다 덮은 뒤 campRaceToCamp 의 done() 이 한다.
+      assert(!ov.classList.contains('hide') && +getComputedStyle(ov).opacity > .9,
+        '종족 판이 검은 판보다 먼저 걷혔다 — 그 틈으로 캠프가 드러난다 (op '
+        +getComputedStyle(ov).opacity+' / hide '+ov.classList.contains('hide')+')');
       await sleep(1350);   // 다 덮인 뒤(--t-screen + 유지) 걷히며 줌이 시작되기를 기다린다
       const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
       assert(vb&&mc,'맵·3D 요소를 못 찾았다');
@@ -5145,6 +5231,49 @@ async function groupLobby(){
       assert((G.tech.energy|0)===0,'새 판인데 가스가 '+G.tech.energy+' 이다');
       return '미네랄 0 · 가스 0';
     } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });
+  // 🏕 종족 전장 그림은 **예열에서 미리 받아야 한다.** 로딩이 걷힌 자리에 종족 판이 오는데,
+  //    그림을 그때 처음 받으면 어두운 그라데이션만 보이다 뒤늦게 채워진다 = 검은 깜빡임.
+  await step('예열: 종족 전장 그림을 미리 받아 둔다(종족 판이 검게 뜨지 않게)', async()=>{
+    skipIf(typeof warmAll!=='function' || typeof campRaceArt!=='function','예열·종족 그림 없음');
+    skipIf(typeof CAMP_RACE_ORDER==='undefined','종족 목록 없음');
+    _warmDone=false; _warmRun=null;
+    await warmAll(()=>{});
+    // 브라우저 캐시에 들어왔는가 — 새 Image 가 즉시 complete 면 이미 받은 것이다
+    const miss=[];
+    for(const k of CAMP_RACE_ORDER){
+      const im=new Image(); im.src=campRaceArt(k);
+      if(!im.complete) miss.push(k);
+    }
+    assert(!miss.length,'예열이 종족 그림을 안 받았다: '+miss.join(',')+' — 종족 판이 검게 떴다가 채워진다');
+    return CAMP_RACE_ORDER.length+'종 미리 받음'; });
+  // 🏕 종족을 고르는 동안 옛 사냥터 UI(#hmScroll 업그레이드 카드)가 판 뒤로 비치면 두 화면이
+  //    겹쳐 보인다. openHome → renderHome 이 이미 그려 놨기 때문이다.
+  await step('종족 선택 중: 옛 사냥터 UI 가 판 뒤로 비치지 않는다', async()=>{
+    skipIf(typeof campRaceSheet!=='function' || typeof campState!=='function','종족 판 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race, ents0=C.ents;
+    try{
+      openHome(); await sleep(140);
+      const C2=campState(); C2.race=null;
+      campRaceSheet(); await sleep(80);
+      const ov=document.getElementById('campRaceOv');
+      skipIf(!ov || ov.classList.contains('hide'),'종족 판이 안 떴다');
+      const ph=document.getElementById('phone');
+      // ⚠ 종족을 고르는 시점엔 **아직 캠프가 아니다** — campMode 를 떼고 재야 campPick 만으로
+      //    숨는지 확인된다(안 그러면 campMode 덕에 통과해 회귀를 못 잡는다).
+      ph.classList.remove('campMode');
+      assert(ph.classList.contains('campPick'),'campPick 이 안 붙는다 — 옛 UI 를 숨길 방법이 없다');
+      const sc=document.getElementById('hmScroll');
+      if(sc) assert(getComputedStyle(sc).display==='none',
+        '사냥터 업그레이드 본문이 보인다 — 종족 판 뒤로 비쳐 두 화면이 겹친다');
+      // 판이 다 차기 전에도 안 보여야 한다(페이드 중이 문제였다)
+      const mid=document.querySelector('.hbMid');
+      if(mid) assert(getComputedStyle(mid).display==='none','사냥터 중단 UI 가 보인다');
+      return 'campPick · #hmScroll 숨김';
+    } finally { const CC=campState(); if(CC){ CC.race=race0; CC.ents=ents0; }
+      const ph=document.getElementById('phone'); if(ph) ph.classList.remove('campPick');
+      const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('on','closing'); o.classList.add('hide'); }
+      openHome(); await sleep(60); } });
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다
     const lum=(c)=>{ const i=(c||'').indexOf('('), j=(c||'').indexOf(')');

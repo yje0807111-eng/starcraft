@@ -154,6 +154,286 @@ try {
     else if (WHAT === 'bg') { await page.evaluate(()=>{ window.__bg={body:getComputedStyle(document.body).backgroundColor,html:getComputedStyle(document.documentElement).backgroundColor,phone:getComputedStyle(document.getElementById('phone')).backgroundColor}; }); const r=await page.evaluate(()=>window.__bg); console.log(JSON.stringify(r)); }
     else if (WHAT === 'nav') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('upg'); navBack(); }catch(e){} }); await new Promise(r=>setTimeout(r,700)); }
     else if (WHAT === 'navsub') { await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); }); await new Promise(r=>setTimeout(r,900)); await page.evaluate(()=>{ try{ navGo('shop'); }catch(e){} }); await new Promise(r=>setTimeout(r,800)); }
+    else if (WHAT === 'slow5') {   // 🔍 기준선 — 아무것도 안 해도 이 구간에 프레임이 비는가
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate((mode) => new Promise(res=>{
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        const out={ mode, frames:[] };
+        // nav2 = 로딩 중에 네비를 미리 한 번 그려 두는 처방을 흉내낸다
+        if(mode==='nav2'){ try{ navShow('home'); navShow(null); }catch(e){} }
+        setTimeout(()=>{
+          const t0=performance.now();
+          if(mode==='home') { try{ openHome(); }catch(e){} }
+          else if(mode==='screen') { try{ showAppScreen('homeScreen'); }catch(e){} }
+          else if(mode==='camp') { try{ showAppScreen('homeScreen'); campOpen(); }catch(e){} }
+          else if(mode==='render') { try{ showAppScreen('homeScreen'); renderHome(); paintIcons(document.getElementById('homeScreen')); }catch(e){} }
+          else if(mode==='nav') { try{ showAppScreen('homeScreen'); navShow('home'); }catch(e){} }
+          else if(mode==='nav2') { try{ showAppScreen('homeScreen'); navShow('home'); }catch(e){} }   // 앞서 미리 한 번 그려 뒀다
+          else if(mode==='navhide') { try{ showAppScreen('homeScreen'); navShow('home');
+            document.getElementById('navBar').style.display='none'; }catch(e){} }   // 네비를 안 보이게 한 채로
+          else if(mode==='navplain') { try{ showAppScreen('homeScreen'); navShow('home');
+            const b=document.getElementById('navBar'); b.style.background='#000'; b.style.boxShadow='none';
+            for(const e of b.querySelectorAll('*')) e.style.boxShadow='none'; }catch(e){} }   // 그림자·그라데만 뺀 채로
+          let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(1));
+            if(++n<10) requestAnimationFrame(tick); else res(out); };
+          requestAnimationFrame(tick);
+        }, 250); }), process.env.SHOT_MODE||'none');
+      console.log('SLOW5 '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow4') {   // 🔍 3D 인가 — 캔버스를 뺀 채로 같은 것을 잰다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate((kill) => new Promise(res=>{
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        const out={ killed:kill, frames:[] };
+        setTimeout(()=>{
+          if(kill){ const c=document.getElementById('vBuild'); if(c){ c.style.display='none'; out.had3d=true; }
+            const m=document.getElementById('cvMarine'); if(m) m.style.display='none'; }
+          const t0=performance.now(); try{ openHome(); }catch(e){}
+          if(kill){ const c=document.getElementById('vBuild'); if(c) c.style.display='none';
+            const m=document.getElementById('cvMarine'); if(m) m.style.display='none'; }
+          let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(1));
+            if(++n<10) requestAnimationFrame(tick); else res(out); };
+          requestAnimationFrame(tick);
+        }, 250); }), process.env.SHOT_KILL3D==='1');
+      console.log('SLOW4 '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow3') {   // 🔍 그 123ms 가 이미지 디코딩인지 — 미리 디코드하고 다시 잰다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate(async () => {
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        const out={ decoded:[], frames:[] };
+        const urls=[];
+        try{ for(const k of CAMP_RACE_ORDER){ urls.push(campRaceArt(k)); urls.push(campRaceIcon(k)); } }catch(e){}
+        try{ urls.push(new URL(CAMP_BG_DIR+CAMP_BG_HOME, document.baseURI).href); }catch(e){}
+        for(const u of urls){ const a=performance.now();
+          try{ const im=new Image(); im.src=u; await im.decode(); out.decoded.push([u.split('/').pop(), +(performance.now()-a).toFixed(1)]); }
+          catch(e){ out.decoded.push([u.split('/').pop(),'ERR']); } }
+        await new Promise(r=>setTimeout(r,120));
+        return await new Promise(res=>{
+          const t0=performance.now(); try{ openHome(); }catch(e){}
+          let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(1));
+            if(++n<10) requestAnimationFrame(tick); else res(out); };
+          requestAnimationFrame(tick); }); });
+      console.log('SLOW3 '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow2') {   // 🔍 openHome() 은 15ms 인데 화면은 118ms 얼었다 — 나머지는 어디에
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate(() => new Promise(res=>{
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        const out={ frames:[], long:[] };
+        // 긴 작업이 무엇인지 브라우저에게 직접 묻는다
+        try{ new PerformanceObserver(l=>{ for(const e of l.getEntries())
+          out.long.push({ name:e.name, ms:+e.duration.toFixed(1) }); }).observe({entryTypes:['longtask']}); }catch(e){}
+        setTimeout(()=>{
+          const t0=performance.now();
+          const sync = (function(){ const a=performance.now(); try{ openHome(); }catch(e){} return +(performance.now()-a).toFixed(1); })();
+          let n=0; const tick=()=>{ out.frames.push(+(performance.now()-t0).toFixed(1));
+            if(++n<14) requestAnimationFrame(tick);
+            else { out.sync=sync;
+              const imgs=[...document.images].filter(i=>!i.complete).map(i=>i.src.split('/').pop());
+              out.notLoaded=imgs.slice(0,8); out.imgTotal=document.images.length;
+              res(out); } };
+          requestAnimationFrame(tick);
+        }, 250);
+      }));
+      console.log('SLOW2 '+JSON.stringify(r));
+    }
+    else if (WHAT === 'slow') {   // 🔍 종족 선택으로 넘어갈 때 화면을 얼리는 것이 무엇인가
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate(() => new Promise(res=>{
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        const T=[]; const mark=(n,f)=>{ const a=performance.now(); try{ f(); }catch(e){ T.push([n,'ERR '+e.message]); return; }
+          T.push([n, +(performance.now()-a).toFixed(1)]); };
+        setTimeout(()=>{
+          // openHome() 이 하는 일을 **같은 순서로** 하나씩 재다
+          mark('loadMeta', ()=>loadMeta());
+          mark('closeDungeonHub', ()=>{ if(typeof closeDungeonHub==='function') closeDungeonHub(); });
+          mark('profEnsureChar', ()=>profEnsureChar());
+          mark('bgmStart', ()=>{ if(typeof bgmStart==='function') bgmStart('lobby'); });
+          mark('showAppScreen', ()=>showAppScreen('homeScreen'));
+          mark('navShow', ()=>navShow('home'));
+          mark('renderHome', ()=>renderHome());
+          mark('campOpen', ()=>{ if(typeof campOpen==='function') campOpen(); });
+          mark('paintIcons', ()=>{ if(typeof paintIcons==='function') paintIcons(document.getElementById('homeScreen')); });
+          res(T);
+        }, 250);
+      }));
+      console.log('SLOW '+JSON.stringify(r));
+    }
+    else if (WHAT === 'flick2') {   // 🔍 종족 선택 → 캠프 : 페이드아웃·검은 화면·페이드인을 프레임으로 본다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      // 먼저 종족 선택까지 간다
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1200); }));
+      const cdp = await page.createCDPSession();
+      const frames = [];
+      cdp.on('Page.screencastFrame', async (f) => {
+        frames.push({ t: f.metadata.timestamp, d: f.data });
+        try{ await cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }); }catch(e){}
+      });
+      await cdp.send('Page.startScreencast', { format:'jpeg', quality:70, everyNthFrame:1 });
+      await new Promise(r=>setTimeout(r,300));
+      await page.evaluate(() => { setTimeout(()=>{ try{ campPickRace(); }catch(e){} }, 200); });
+      await new Promise(r=>setTimeout(r, +(process.env.SHOT_MS||6000)));
+      try{ await cdp.send('Page.stopScreencast'); }catch(e){}
+      const lum = await page.evaluate(async (list) => {
+        const out=[];
+        for(const it of list){
+          const img=new Image();
+          await new Promise(r=>{ img.onload=r; img.onerror=r; img.src='data:image/jpeg;base64,'+it.d; });
+          if(!img.width){ out.push({t:it.t,L:null}); continue; }
+          const c=document.createElement('canvas'); c.width=64; c.height=128;
+          const x=c.getContext('2d'); x.drawImage(img,0,0,64,128);
+          const d=x.getImageData(0,0,64,128).data; let sum=0;
+          for(let i=0;i<d.length;i+=4) sum += .2126*d[i] + .7152*d[i+1] + .0722*d[i+2];
+          out.push({ t:it.t, L:+(sum/(d.length/4)).toFixed(1) });
+        }
+        return out; }, frames);
+      const t0 = lum.length ? lum[0].t : 0;
+      const rows = lum.map(v=>({ ms: Math.round((v.t-t0)*1000), L: v.L }));
+      if(process.env.SHOT_SAVE){
+        const from=+(process.env.SHOT_FROM||0), to=+(process.env.SHOT_TO||99999), step=+(process.env.SHOT_STEP||1);
+        let k=0, saved=0;
+        for(let i=0;i<rows.length;i++){ if(rows[i].ms<from||rows[i].ms>to) continue;
+          if((k++)%step) continue;
+          fs.writeFileSync(path.join(ROOT,'scratch_f2_'+String(rows[i].ms).padStart(5,'0')+'.jpg'),
+            Buffer.from(frames[i].d,'base64')); saved++; }
+        console.log('SAVED '+saved+' frames'); }
+      console.log('FLICK2 frames='+rows.length);
+      console.log(rows.map(r=>r.ms+':'+r.L).join(' '));
+    }
+    else if (WHAT === 'flick') {   // 🔍 전환 구간을 **프레임마다** 찍어 밝기가 튀는 곳을 찾는다
+      // ⭐ 눈에 보이는 '깜박임' 은 opacity 표본으로는 안 잡힌다 — 한 프레임짜리라서.
+      //    그래서 화면을 통째로 녹화하고 프레임별 평균 휘도를 본다. 비단조로 튀는 지점이 깜박임이다.
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const cdp = await page.createCDPSession();
+      const frames = [];
+      cdp.on('Page.screencastFrame', async (f) => {
+        frames.push({ t: f.metadata.timestamp, d: f.data });
+        try{ await cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }); }catch(e){}
+      });
+      await cdp.send('Page.startScreencast', { format:'jpeg', quality:70, everyNthFrame:1 });
+      await page.evaluate(() => {
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        setTimeout(()=>{ try{ enterAfterWarm(); }catch(e){} }, 250);
+      });
+      await new Promise(r=>setTimeout(r, +(process.env.SHOT_MS||3200)));
+      try{ await cdp.send('Page.stopScreencast'); }catch(e){}
+      // 휘도는 브라우저에게 계산시킨다(Node 쪽에 디코더가 없다)
+      const lum = await page.evaluate(async (list) => {
+        const out=[];
+        for(const it of list){
+          const img=new Image();
+          await new Promise(r=>{ img.onload=r; img.onerror=r; img.src='data:image/jpeg;base64,'+it.d; });
+          if(!img.width){ out.push({t:it.t,L:null}); continue; }
+          const c=document.createElement('canvas'); c.width=64; c.height=128;
+          const x=c.getContext('2d'); x.drawImage(img,0,0,64,128);
+          const d=x.getImageData(0,0,64,128).data; let sum=0;
+          for(let i=0;i<d.length;i+=4) sum += .2126*d[i] + .7152*d[i+1] + .0722*d[i+2];
+          out.push({ t:it.t, L:+(sum/(d.length/4)).toFixed(1) });
+        }
+        return out; }, frames);
+      const t0 = lum.length ? lum[0].t : 0;
+      const rows = lum.map(v=>({ ms: Math.round((v.t-t0)*1000), L: v.L }));
+      // 튀는 지점 = 직전 대비 밝기가 되돌아가는 곳(단조롭게 어두워져야 정상)
+      const jumps=[];
+      for(let i=2;i<rows.length;i++){
+        const a=rows[i-2].L, b=rows[i-1].L, c=rows[i].L;
+        if(a==null||b==null||c==null) continue;
+        if((b-a)*(c-b) < 0 && Math.abs(c-b) > 6 && Math.abs(b-a) > 6)
+          jumps.push(rows[i-1].ms+'ms '+a+'→'+b+'→'+c);
+      }
+      // 프레임을 눈으로 본다 — 평균 밝기는 배경 크기 변화나 작은 UI 를 못 잡는다(2026-08-27 에 놓쳤다)
+      if(process.env.SHOT_SAVE){
+        const from=+(process.env.SHOT_FROM||0), to=+(process.env.SHOT_TO||99999), step=+(process.env.SHOT_STEP||1);
+        let k=0, saved=0;
+        for(let i=0;i<rows.length;i++){ if(rows[i].ms<from||rows[i].ms>to) continue;
+          if((k++)%step) continue;
+          fs.writeFileSync(path.join(ROOT,'scratch_fr_'+String(rows[i].ms).padStart(5,'0')+'.jpg'),
+            Buffer.from(frames[i].d,'base64')); saved++; }
+        console.log('SAVED '+saved+' frames'); }
+      console.log('FLICK frames='+rows.length);
+      console.log(rows.map(r=>r.ms+':'+r.L).join(' '));
+      console.log('JUMPS '+(jumps.length?jumps.join(' | '):'없음'));
+    }
+    else if (WHAT === 'overlap') {   // 🔍 로딩→종족 선택 사이에 무엇이 겹쳐 보이나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const at = +(process.env.SHOT_AT || 250);
+      const info = await page.evaluate((ms) => new Promise(res=>{
+        // ⭐ **진짜 enterAfterWarm 을 돌린다.** 예열만 건너뛴다(_warmDone) — 흐름을 흉내내면
+        //    그 흉내를 재게 되어 실제 코드의 회귀를 못 잡는다(2026-08-27 에 그랬다).
+        try{ showAppScreen('opening'); }catch(e){}
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ _warmDone=true; _warmRun=null; }catch(e){}
+        setTimeout(()=>{
+          try{ enterAfterWarm(); }catch(e){}
+          setTimeout(()=>{
+            const g=(id)=>{ const e=document.getElementById(id); if(!e) return '없음';
+              const cs=getComputedStyle(e);
+              if(cs.display==='none'||e.classList.contains('hide')) return '숨김';
+              return 'op='+(+cs.opacity).toFixed(2); };
+            const _tb=document.getElementById('titleBg');
+            const _tr=_tb?getComputedStyle(_tb).transform:'-';
+            const _bar=document.querySelector('.opStartBar,.opBar,#opBar');
+            const _tx=document.querySelector('.opPct,.opBarTx');
+            const sc=document.getElementById('hmScroll');
+            res({ at:ms,
+              로딩:g('opening'), 홈:g('homeScreen'), 종족판:g('campRaceOv'),
+              키아트:g('titleBg'), 로고:g('titleMark'), 검은판:g('titleBlack'),
+              사냥터본문: sc?(getComputedStyle(sc).display==='none'?'숨김':'보임'):'없음',
+              배경크기:_tr, 막대:(_bar?getComputedStyle(_bar).width:'-'),
+              막대글자:(_tx?_tx.textContent.trim():'-'),
+              phone:document.getElementById('phone').className,
+              vBuild:g('vBuild'), cstMain:(document.getElementById('cstMain')?'있음':'없음'),
+              바닥:(function(){ const f=document.querySelector('.bmapFloor'); if(!f) return '없음';
+                const cs=getComputedStyle(f); return (cs.display==='none'?'숨김':'보임 bg='+(cs.backgroundImage||'').slice(0,60)); })(),
+              campBg:(getComputedStyle(document.getElementById('phone')).getPropertyValue('--campBg')||'없음').slice(0,60) });
+          }, ms);
+        }, 250);
+      }), at);
+      console.log('OVERLAP '+JSON.stringify(info,null,1));
+    }
+    else if (WHAT === 'hbpix') {   // #hbCv 에 옛 사냥터 배경이 남아 있나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
+      await new Promise(r=>setTimeout(r,1500));
+      const r = await page.evaluate(() => {
+        const cv=document.getElementById('hbCv');
+        if(!cv) return {no:'hbCv'};
+        const rc=cv.getBoundingClientRect();
+        const out={ buf:cv.width+'x'+cv.height, shown:Math.round(rc.width)+'x'+Math.round(rc.height),
+                    vis:getComputedStyle(cv).visibility, disp:getComputedStyle(cv).display };
+        try{ const c=document.createElement('canvas'); c.width=cv.width; c.height=cv.height;
+          const x=c.getContext('2d'); x.drawImage(cv,0,0);
+          const d=x.getImageData(0,0,c.width,c.height).data; let on=0;
+          for(let i=3;i<d.length;i+=4) if(d[i]>8) on++;
+          out.painted = on; out.total = d.length/4;
+        }catch(e){ out.err=String(e).slice(0,60); }
+        out.hbOn = (typeof _hb!=='undefined' && _hb) ? {on:_hb.on, bg:_hb.bg, dg:_hb.dg} : 'no _hb';
+        return out; });
+      console.log('HBPIX '+JSON.stringify(r));
+    }
     else if (WHAT === 'toRace') {   // 🎬 로딩 → 종족 선택 전환을 시각별로 잰다
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
       await new Promise(r=>setTimeout(r,600));
