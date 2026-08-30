@@ -78,8 +78,18 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 // 졌다 → **캠프(0단계)로 돌아간다.** 몇 라운드를 깼든 그 판은 끝이다.
 //   ⭐ 1라운드도 못 깼으면 보너스 0 — 배율이 base 인 채로 끝난다(HUNT_R1 §6-1-0-3).
 //   ⚠ best 는 지우지 않는다. 다시 내려갈 때의 목표가 된다.
+// 🛠 **개발용 — 져도 캠프로 끌려오지 않는다**(2026-08-27 사용자 요청 · 임시).
+//   왜 필요했나: 좌상단 드롭다운으로 던전을 골라도 **291ms 만에 되돌아왔다**. 새 회차는 병력이 0 이라
+//   도착하자마자 패배 조건(병력 0 · 쓰러진 것 0 · 적 있음)에 걸린다 — 드롭다운은 멀쩡했다.
+//   ⚠ **원래 계획은 「병력이 없으면 이동을 막는다」**(사용자 확정). 그것이 들어오면 이 플래그와
+//     아래 분기를 **지운다** — 두 장치를 함께 두면 어느 쪽이 막는지 헷갈린다.
+//   ⛔ 배포 전에 반드시 false 로 돌리거나 지울 것.
+let CAMP_DEV_NOFAIL = true;
 function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared() };
+  // 개발 모드에서는 **아무것도 되돌리지 않는다** — 고른 던전·라운드 그대로 계속 볼 수 있다.
+  //   (메시지는 그대로 뜬다 — 졌다는 사실 자체는 알려야 한다.)
+  if(CAMP_DEV_NOFAIL) return was;
   C.dg = 0; C.cleared = 0; campSave(); return was; }
 
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
@@ -565,14 +575,22 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
 
 // ── 웨이브 — 총량은 난이도가 정하고, 몇 마리로 쪼갤지는 라운드가 정한다 (HUNT_R1 §6-2-1) ──
 //   기본값: 체력 40 · 공격 0.33. 여기에 난이도가 곱해진 것이 **그 라운드의 총 유입량**이다.
-// ⭐ 체력 3.3 → 40 → **1,300** (2026-08-28 확정, HUNT_R1 §6-2).
-//   40 은 「아군 9기 · DPS 5.7」 을 전제로 잡은 값인데, 실측 아군 DPS 가 **190~226** 이라
-//   라운드가 목표(2~4분)의 30분의 1로 끝났다. 실측 DPS 205 로 역산한 값이 1,300 이다.
-//   ⭐ 아군 화력이 진동해도(163~226) R50 이 **2.6~3.7분**이라 목표 범위를 안 벗어난다.
-//   라운드별 예상: R1 6초 · R10 12초 · R25 32초 · R40 89초 · R50 175초.
+// ⭐ 체력 3.3 → 40 → 1,300 → 300 → **800** (2026-08-29 확정, HUNT_R1 §6-2).
+//   ⚠ 값이 네 번 바뀐 이유는 **매번 전제가 틀렸기 때문**이다. 그 기록이 곧 이 축의 설명이다:
+//     3.3·40  아군 병력을 9~17기로 본 **시뮬 추정**(재지 않았다)
+//     1,300   **명목 DPS**(공격력 합)로 역산 — 실제로 꽂히는 화력은 그 3분의 1이었다
+//     300     **꽂힌 화력**으로 역산 — 방향은 맞았지만 그때 아군이 한 점에 뭉쳐 있었다
+//     800     뭉침을 걷어낸 뒤(유닛이 한 번만 태어난다 · BALANCE §3-6) 다시 역산
+//   ⭐ R50 을 2~4분에 두는 것이 확정 의도라 거기서 역산했다 — d(50)=1.07^49=27.53,
+//     꽂힌 화력 F(50)≈130(R33 의 98 에서 외삽 · 병력이 인구 상한에 닿아 연구로만 는다).
+//   ⭐ **추정 오차에 강한 값이다.** F(50) 이 98~160 어디로 튀어도 R50 이 2.3~3.7분에 든다.
+//   ⚠ **초반이 길다 — 알고 고른 것이다.** R1~10 이 약 35초로 목표(6~11초)의 3~6배다.
+//     새 구조에서 후반 꽂힌 화력이 45 → 130 으로 크게 올라 곡선이 가팔라졌고, 초반은 병력이
+//     11기뿐이라 덜 올랐다. **상수 하나로는 양쪽을 못 맞춘다** — R50 을 맞추면 R1 이 길어진다.
+//     줄이려면 적 난이도를 구간별로 두어야 하는데(손잡이가 둘이 된다) 사용자 결정이 필요하다.
 // ⚠ **공격(0.33)은 같이 올리지 않는다.** 체력은 「얼마나 오래 싸우나」, 공격은 「얼마나 위험한가」다.
-//   라운드 길이는 체력만으로 늘고, 공격까지 32배면 본부(체력 150)가 몇 초에 부서진다.
-const CAMP_FOE_HP0 = 1300, CAMP_FOE_ATK0 = 0.33;
+//   라운드 길이는 체력만으로 늘고, 공격까지 함께 올리면 본부(체력 150)가 몇 초에 부서진다.
+const CAMP_FOE_HP0 = 800, CAMP_FOE_ATK0 = 0.33;
 const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
   const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1));
@@ -608,8 +626,23 @@ function campBattleOpen(){
     if(bm !== 1){ S.me.base.maxHp = (S.me.base.maxHp || S.me.base.hp) * bm; S.me.base.hp = S.me.base.maxHp; } }
   CAMPB = S;
   campBuildStructs();                                  // 🏢 기지의 건물들을 전장에 올린다
+  campAdoptBaseUnits();                                // 🪖 캠프에서 뽑아 둔 병력을 그 자리로 데려온다
   return S;
 }
+// 🪖 **캠프(0단계)에서 뽑은 병력을 전장이 열릴 때 데려온다.**
+//   ⛔ 던전 밖에는 전장이 없어서(CAMPB=null) 생산 가로채기가 못 옮긴다 — 그동안은 기지에 선다.
+//     전장이 열리는 순간 **그 자리 그대로** 데려와야 한다.
+//   ⚠ 실측(2026-08-28)에서 이걸 빠뜨려 판이 통째로 멈췄다: 캠프에서 54기를 뽑아 두었는데
+//     던전에 들어가면 전장 병력이 0 이라 곧바로 패배 → 캠프 → 다시 입장이 2,583번 반복됐다.
+//   ⛔ 인구를 반환하지 않는다 — 옛 출격이 그걸 해서 인구 상한이 무력했다.
+function campAdoptBaseUnits(){
+  if(!CAMPB || typeof G === 'undefined' || !G.tech || typeof STK_UNITS === 'undefined') return 0;
+  const ents = G.tech.ents, take = [];
+  for(let i = ents.length - 1; i >= 0; i--){ const e = ents[i];
+    if(e.type !== 'unit' || !STK_UNITS[e.uid]) continue;
+    ents.splice(i, 1); take.push(e); }
+  for(const e of take) campDeploy(e.uid, e.x, e.y);
+  return take.length; }
 function campBattleClose(){ CAMPB = null; }
 
 // ══ 🏢 기지 건물을 전장에 올린다 (2026-08-27) ═══════════════════════════
@@ -717,6 +750,117 @@ function campW2G(sx, sy, W){
   return { gx: 0.5 + ((sx / W) - 0.5) * CAMP_LANE_W,
            gy: CAMP_LANE_TOP + t * (CAMP_LANE_BOT - CAMP_LANE_TOP) }; }
 
+// ── 🖐 전장 병력 배치 (3단계 · 2026-08-28 사용자 확정) ─────────────────
+// ⭐ **내가 지정해서 원하는 자리로 옮긴다.** 옮긴 자리가 곧 그 유닛의 자리(_post)다.
+// ⛔ 원본(건설 탭)의 탭 로직을 고치지 않는다 — 원본은 **기지 엔티티만** 안다.
+//   캠프가 up 에서 **먼저** 보고, 처리했으면 _btDown 을 비워 원본이 그 탭을 다시 안 쓰게 한다
+//   (17-build-cards.js 가 쓰는 것과 같은 규약이다).
+let _campSel = [];                 // 고른 전장 유닛 uid
+let _campBox = null;               // 캠프의 드래그 박스(원본 _btBox 와 별개 — 전장 유닛용)
+const CAMP_PICK_R = 0.022;         // 탭 히트 반경(격자 정규 좌표)
+const CAMP_BOX_MIN = 0.015;        // 이만큼 끌어야 박스로 본다(원본과 같은 값)
+function campSelList(){ if(!CAMPB) return [];
+  const out = []; for(const u of CAMPB.me.units){ if(!u.dead && _campSel.indexOf(u.uid) >= 0) out.push(u); } return out; }
+function campSelClear(){ if(!_campSel.length) return false; _campSel = []; return true; }
+function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.uid; });
+  if(_campSel.length && typeof G !== 'undefined' && G.tech){ G.tech.selU = []; G.tech.sel = null; G.tech.selRes = null; }
+  return _campSel.length; }
+// 화면 좌표 → 격자 좌표(기지와 같은 규약)
+function campScr2G(cx, cy){
+  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function') return null;
+  const r = _btRect(); if(!r || !r.width || !r.height) return null;
+  const sx = (cx - r.left) / r.width, sy = (cy - r.top) / r.height;
+  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return null;
+  if(sy < 0.13) return null;                       // 상단바 — techPtrDown 과 같은 규약
+  return _techS2W(sx, sy); }
+// 그 자리에 있는 **내** 전장 유닛 하나(가장 가까운 것)
+function campBattleAt(cx, cy){
+  if(!CAMPB || campDgN() <= 0) return null;
+  const g = campScr2G(cx, cy); if(!g) return null;
+  const W = CAMPB.world || 4800; let best = null, bd = CAMP_PICK_R * CAMP_PICK_R;
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const q = campW2G(u.x, u.y, W), dx = q.gx - g.x, dy = q.gy - g.y, d2 = dx * dx + dy * dy;
+    if(d2 <= bd){ bd = d2; best = u; } }
+  return best; }
+// 박스 안의 내 전장 유닛 전부
+function campBattleInBox(g0, g1){
+  if(!CAMPB) return [];
+  const W = CAMPB.world || 4800, out = [];
+  const x0 = Math.min(g0.x, g1.x), x1 = Math.max(g0.x, g1.x);
+  const y0 = Math.min(g0.y, g1.y), y1 = Math.max(g0.y, g1.y);
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const q = campW2G(u.x, u.y, W);
+    if(q.gx >= x0 && q.gx <= x1 && q.gy >= y0 && q.gy <= y1) out.push(u); }
+  return out; }
+// 🪧 고른 유닛들의 **자리를 옮긴다** — 한 점에 포개지지 않게 대형으로 편다.
+//   ⭐ 대형 슬롯은 기지 랠리가 쓰는 _ringSlotN 을 그대로 빌린다(새로 만들지 않는다).
+function campMoveSel(gx, gy){
+  const list = campSelList(); if(!list.length || !CAMPB) return 0;
+  const W = CAMPB.world || 4800, c = campG2W(gx, gy, W);
+  for(let i = 0; i < list.length; i++){ const u = list[i];
+    const sp = (u.size || 14) * 2.2;
+    const s = (typeof _ringSlotN === 'function') ? _ringSlotN(i, sp) : { dx:0, dy:0 };
+    const px = Math.max(0, Math.min(W, c.x + s.dx)), py = Math.max(0, Math.min(W, c.y + s.dy));
+    u._post = { x:px, y:py };
+    u.tgtUid = null; u._btgt = null; u._btT = 0;   // 표적을 놓고 자리로 간다(복귀가 손댈 수 있게)
+  }
+  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  return list.length; }
+
+// 🖐 up 에서 캠프가 **먼저** 판정한다. true 를 돌리면 원본은 이 탭을 쓰지 않는다.
+//   ⚠ 순서가 중요하다 — 박스가 먼저다(끌었으면 탭이 아니다).
+function campPtrUp(ev){
+  if(!_campOn || !CAMPB || campDgN() <= 0 || !ev) return false;
+  const box = _campBox; _campBox = null;
+  // ① 박스로 끌었다 = 여러 기 지정
+  if(box && box.on){
+    const g0 = campScr2G(box.cx0, box.cy0), g1 = campScr2G(ev.clientX, ev.clientY);
+    if(g0 && g1){ const hit = campBattleInBox(g0, g1);
+      if(hit.length){ campSelSet(hit);
+        if(typeof playSfx === 'function') playSfx('ui_tab');
+        return true; } }                      // 잡힌 게 있으면 원본 박스(기지 유닛)는 쓰지 않는다
+    return false; }
+  // ② 탭 — 원본이 아직 지우기 전에 읽는다
+  if(typeof _btDown === 'undefined' || !_btDown || _btMoved) return false;
+  const u = campBattleAt(ev.clientX, ev.clientY);
+  if(u){ campSelSet([u]); if(typeof playSfx === 'function') playSfx('ui_tab'); return true; }
+  // ③ 고른 병력이 있고 빈 바닥을 눌렀다 = 그 자리로 이동
+  if(_campSel.length && campEmptyAt(ev.clientX, ev.clientY)){
+    const g = campScr2G(ev.clientX, ev.clientY);
+    if(g){ campMoveSel(g.x, g.y); return true; } }
+  // ④ 그 밖의 탭 = 지정 해제하고 원본에 넘긴다
+  campSelClear();
+  return false; }
+
+// 격자(기지 정규 좌표) → 전장 좌표. **campW2G 의 역**이다.
+//   ⚠ 두 식은 반드시 짝이어야 한다 — 한쪽만 고치면 유닛이 다른 자리에 선다.
+//   ⚠ 레인 밖(본부·건물이 있는 아래쪽)은 레인 끝으로 자른다. 전장은 0.18~0.62 뿐이라
+//     그보다 아래에서 뽑힌 유닛은 **레인 맨 아래(건물 바로 앞)** 에 선다.
+function campG2W(gx, gy, W){
+  const t = Math.max(0, Math.min(1, (gy - CAMP_LANE_TOP) / (CAMP_LANE_BOT - CAMP_LANE_TOP)));
+  return { x: W * (0.5 + (gx - 0.5) / CAMP_LANE_W),
+           y: W * (0.14 + t * 0.72) }; }
+
+// ⭐ **유닛은 한 번만 태어난다** (2026-08-28 사용자 확정).
+//   ⛔ 예전엔 두 번 태어났다 — 생산하면 기지(G.tech.ents)에 서고, campSortie 가 3초 뒤
+//     그것을 **지우고 전장에 새로 만들었다**(스폰 지점에). 그래서 ①내가 둔 자리가 사라지고
+//     ②나갈 때 인구가 반환되어 인구 200 이 생산을 못 막았다(대기 병력 68기).
+//   지금은 생산이 끝나는 순간 **그 자리에 그대로** 전장 유닛이 된다.
+// ⚠ 이 함수는 「자리」의 단일 소스이기도 하다 — u._post 를 여기서 처음 준다.
+function campDeploy(id, gx, gy){
+  if(!CAMPB || typeof strikeSpawnUnit !== 'function') return null;
+  const W = CAMPB.world || 4800, p = campG2W(gx, gy, W);
+  const u = campWithStk(function(){
+    const b4 = CAMPB.me.units.length;
+    strikeSpawnUnit('me', id);
+    return (CAMPB.me.units.length > b4) ? CAMPB.me.units[CAMPB.me.units.length - 1] : null; });
+  if(!u) return null;
+  u.x = p.x; u.y = p.y;
+  u.wait = 0; u.rallied = true;            // ⚠ 집결지로 걸어가지 않는다 — 여기가 이미 제자리다
+  u._post = { x:p.x, y:p.y };              // 🪧 자리 — 내가 옮기면 갱신된다(2단계)
+  campScaleAllies([u]);                    // ⚔ 설계 능력치 + 🌳 트리 배수 + 👀 인식 거리
+  return u; }
+
 // 전투 유닛 → 기지 유닛과 **같은 규약**의 렌더 엔트리(scl·yoff·yawFix·z 를 맞춘다).
 //   ⚠ _cellK·_zOf 는 renderBuildTab 안의 지역값이라 못 쓴다 — 공개 헬퍼로 똑같이 다시 구한다.
 function campBattleList(){
@@ -735,6 +879,7 @@ function campBattleList(){
       const x = (g.gx - v.x) * v.zoom + 0.5, y = (g.gy - v.y) * v.zoom + 0.5;
       if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;   // ⚡ 화면 밖은 넘기지 않는다(오토배틀 STK_CULL 과 같은 뜻)
       out.push({ uid:'cb_' + side + '_' + u.uid, id:u.id, x:x, y:y,
+        sel:(side === 'me' && _campSel.indexOf(u.uid) >= 0),   // 🔵 지정 표시 = 3D 하단 링(기지 유닛과 같은 규약)
         face:(u.face || 0), moving:!!u.moving, yoff:yoff, yawFix:true, scl:scl,
         fireSeq:(u.fireSeq || 0), selCol:(side === 'ai') ? 0xff5c5c : undefined,
         z: -1000 + (Math.floor((g.gy - techY0()) / _techCH()) + 0.5) * zstep }); } }
@@ -752,38 +897,13 @@ function campWithBattleDraw(fn){
     return orig.apply(M, arguments); };
   try{ return fn(); } finally { M.syncBuild = orig; } }
 
-// 내 병력 출격 — 건설지(G.tech.ents)의 완성 유닛을 전장으로 옮긴다.
-//   ⭐ 이 다리는 오토배틀이 이미 갖고 있다(strikeSpawnForPlayer). 그대로 부른다.
-// 병력을 전장에 내보낸다.
-// ⛔ **라운드마다 부르지 말 것.** strikeSpawnForPlayer 는 건물 하나당 유닛을 새로 만드는데
-//   (18-strike.js:1091 — techBldgCount 만큼), 건물은 그대로 있으므로 **부를 때마다 증식**한다.
-//   실측(2026-08-27): 라운드 갭마다 불렀더니 던전 1 R50 에 병력 **623기 · DPS 12,415** 였다
-//   (인구 상한 200 을 훨씬 넘는다). 그 화력이면 적이 무슨 체력이든 즉사해서
-//   난이도 곡선이 아무 브레이크도 못 건다.
-// ⭐ 그래서 **전장이 비었을 때만** 부른다 — 첫 진입과 던전 전환이 그 자리다.
-//   라운드 사이에는 부활(campReviveStep)이 병력을 유지하므로 보충이 필요 없다.
-function campSortie(){ if(!CAMPB || typeof strikeSpawnForPlayer !== 'function') return 0;
-  const b4 = CAMPB.me.units.length;
-  const n = campWithStk(() => strikeSpawnForPlayer('me', { local:true, noEmit:true })) | 0;   // ⛔ 건물당 공짜 배출 금지(값을 내고 산 병력만)
-  campScaleAllies(CAMPB.me.units.slice(b4));   // 🌳 아군 강화 — 새로 나온 것만
-  campTrimArmy();                              // 👥 인구 상한을 전장에도 건다(아래 설명)
-  return n; }
-// 👥 **전장 병력도 인구 상한을 지킨다.**
-// ⚠ 전장 자체에는 제한이 없다 — STK_UNIT_CAP 이 0(무제한)이다(18-strike.js:504).
-//   캠프의 인구 200 은 **생산** 제한이라, 전장으로 나간 뒤에는 아무도 안 막는다.
-//   실측(2026-08-27): 던전 1 을 20기로 잘 돌다가 던전 2 로 넘어가며 **292기**가 됐다 —
-//   전환 때마다 strikeSpawnForPlayer 가 건물 수만큼 새로 만들고, 캠프에 쌓여 있던
-//   대기 병력(126기)까지 한꺼번에 쏟아져 들어간다.
-// ⛔ 여기를 안 막으면 적 체력을 아무리 올려도 병력 수로 뭉갠다(623기 때와 같은 일이다).
-function campTrimArmy(){
-  if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
-  const cap = Math.max(1, Math.min(200, G.tech.supCap || 200));
-  const live = CAMPB.me.units, down = (CAMPB._down || []).length;
-  const over = live.length + down - cap;
-  if(over <= 0) return 0;
-  live.splice(cap - down < 0 ? 0 : cap - down);   // 뒤(가장 최근에 나온 것)부터 걷는다
-  return over;
-}
+// ⛔ **출격·전장 트림은 없앴다** (2026-08-28 사용자 확정).
+//   유닛이 두 번 태어나던 구조를 걷어내면서 둘 다 필요가 없어졌다 —
+//     · campSortie   기지에 선 유닛을 전장으로 옮기던 다리. 지금은 생산될 때 이미 전장에 선다.
+//     · campTrimArmy 전장 병력을 인구 상한에서 잘라내던 것. 지금은 **생산에서** 막힌다
+//                    (출격이 인구를 반환하지 않으므로 G.tech.sup 이 실제로 쌓인다).
+//   ⭐ 둘 다 **원인이 아니라 증상을 막던 코드**였다. 원인이 사라져 함께 지운다.
+//   ⛔ 오토배틀의 strikeSpawnForPlayer 는 그대로다 — 캠프가 안 부를 뿐이다.
 
 // ⛔ **공중 전용 적은 뽑지 않는다.** hellfire·stinger·venom 은 SB_ATK_MODE 가 'air' 라
 //   지상 아군을 한 대도 못 때린다 — 그리고 지상만 있는 편성은 그 적을 못 때린다.
@@ -949,15 +1069,47 @@ function campAlertApply(){
     u.acq = (u._alertT > 0) ? CAMP_ACQ_ALERT : CAMP_ACQ_BASE; }
 }
 
-// 🪢 **목줄** — 집결지에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
+// ── 🪧 자리(post) — 내가 준 자리를 지킨다 (2026-08-28 사용자 확정) ─────
+// ⭐ 자리는 **내가 옮길 때마다 바뀐다**. 태어난 자리는 첫 값일 뿐이다(campDeploy).
+// ⭐ **싸우는 중이면 건드리지 않는다** — 표적이 있으면 그대로 두고, 표적이 없을 때만 돌아온다.
+//   그래서 **돌아오다가도 근처에서 싸움이 나면 그대로 합류한다**(발견 전파가 인식 거리를 넓히면
+//   strikeStepUnits 가 표적을 잡아 주고, 표적이 잡힌 유닛은 이 함수가 손대지 않는다).
+// ⚠ **왜 되돌렸다가 다시 미는가** — strikeStepUnits 는 표적 없는 유닛을 집결지로 보낸다.
+//   그 이동을 그대로 두고 위치만 덮어쓰면 **겹침 회피를 안 탄다**(유닛이 포개진다).
+//   그래서 프레임 시작 위치로 되돌린 뒤 **strikeMoveToward 로 다시 민다** — 그 함수가
+//   stepUnitMove(주변 회피·신전 회피)를 타므로 복귀도 전진과 똑같은 이동 규칙을 쓴다.
+function campPostSnap(){
+  if(!CAMPB || !CAMPB.me) return;
+  for(const u of CAMPB.me.units){ if(u.dead) continue; u._sx = u.x; u._sy = u.y; } }
+function campPostStep(dt){
+  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
+  const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
+  campWithStk(function(){
+    for(const u of CAMPB.me.units){ if(u.dead) continue;
+      if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
+      // ⚔ 싸우는 중이면 복귀보다 전투가 먼저다.
+      // ⛔ **표적 번호가 있다는 것만으로 판단하지 말 것.** 적이 죽어도 u.tgtUid 는 그대로 남는다 —
+      //   그러면 「싸우는 중」으로 오해해 **영영 자리로 안 돌아온다**(브라우저 실측 2026-08-28:
+      //   적을 다 없앤 뒤 20초를 굴려도 거리가 97·282 그대로였다). 살아 있는지까지 본다.
+      if(u.tgtUid && strikeFindUnit(CAMPB.ai.units, u.tgtUid)) continue;
+      const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
+      if(dx * dx + dy * dy <= R2){ u.moving = false; continue; }   // 이미 자리
+      if(u._sx != null){ u.x = u._sx; u.y = u._sy; }               // 집결지로 간 이동을 무르고
+      strikeMoveToward(u, p.x, p.y, dt); n++; }                     // 회피를 타는 이동으로 다시 민다
+    if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
+  });
+  return n; }
+
+// 🪢 **목줄** — **자기 자리**에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
 //   ⛔ 「인식 거리를 넓힌다」만 하고 이걸 빼면 적 본진까지 쫓아간다. 그러면 아군이 흩어져
 //     각개격파되고, 적이 건물을 때리는데 아군은 저 위에 있는 그림이 된다.
 //   ⚠ 속도를 깎지 않고 **위치만** 자른다 — 이동 로직(stepUnitMove)은 공용이라 건드리지 않는다.
 function campLeash(){
   if(!CAMPB || !CAMPB.me) return 0;
-  const r = campRallyPoint(); if(!r) return 0;
   const L2 = CAMP_LEASH * CAMP_LEASH; let n = 0;
+  const fb = campRallyPoint();                     // 자리가 아직 없는 유닛만 옛 기준을 쓴다
   for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const r = u._post || fb; if(!r) continue;
     const dx = u.x - r.x, dy = u.y - r.y, d2 = dx * dx + dy * dy;
     if(d2 <= L2) continue;
     const d = Math.sqrt(d2) || 1;
@@ -1136,6 +1288,8 @@ function campReviveStep(dt){
     u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
     u._collapseT = null; u.wait = 0;                 // 붕괴 대기·스폰 대기 흔적 정리
     u.tgtUid = null; u._btgt = null; u._btT = 0;     // 표적은 새로 고른다
+    if(u._post){ u.x = u._post.x; u.y = u._post.y; } // 🪧 자기 자리에서 일어난다(누운 곳이 아니라)
+    u._sx = u.x; u._sy = u.y;
     CAMPB.me.units.push(u);                          // 전장에 돌려놓는다
     CAMPB._down.splice(i, 1); up++; }
   return up; }
@@ -1145,6 +1299,22 @@ function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
 // 살아 있는 유닛 수
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;
   for(const u of CAMPB[side].units) if(!u.dead) n++; return n; }
+
+// 🏁 던전 전환 — **내 병력·자리·건물은 그대로 두고 적만 갈아 끼운다** (2026-08-28 사용자 확정).
+//   ⛔ 예전엔 campBattleOpen() 으로 전장을 통째로 새로 만들었다. 그러면 me.units 가 비워져
+//     **병력이 통째로 사라진다.** 지금까지는 campSortie 가 기지에서 곧바로 다시 채워 넣어
+//     가려져 있었을 뿐이다 — 유닛이 한 번만 태어나게 된 지금은 그대로 증발한다.
+//   ⭐ 전장을 새로 만들 이유는 **적 종족이 바뀌는 것 하나뿐**이었다. 나머지(본부 위치·신전
+//     없음·적 본부 없음)는 던전과 무관하게 늘 같다.
+//   ⭐ 건물 체력은 **채워 준다**(사용자 결정) — 다음 던전을 온전한 기지로 시작한다.
+function campDungeonSwap(){
+  if(!CAMPB) return false;
+  CAMPB.ai.race = campFoeRace(campDgN());
+  CAMPB.ai.units.length = 0;                       // 적만 비운다
+  if(CAMPB._wq) CAMPB._wq.length = 0;
+  CAMPB._wqTot = 0; CAMPB._wqT = 0;
+  campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
+  return true; }
 
 // 한 프레임 — 전투를 굴리고 승패를 본다.
 //   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
@@ -1168,36 +1338,28 @@ const CAMP_ACQ_ALERT = 1500;       // 전파받았을 때 보는 거리
 const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
-const CAMP_LEASH = 1300;           // 집결지에서 이보다 멀리는 못 나간다
+const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
+const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
 const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
-const CAMP_SORTIE_S = 3;           // 🚚 증원 간격(초) — 라운드 도중에도 이만큼마다 내보낸다
 function campCombatStep(dt){
   const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
   if(!CAMPB) campBattleOpen();
   if(!CAMPB) return;
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
     if(CAMPB._gapT <= 0){
-      // 👥 **인구 한도까지 계속 내보낸다** (2026-08-27 · sc-3 판단).
-      //   ⛔ 예전 규칙(전장이 비어야 출격)은 전장 병력을 17~18기에 묶었다 — 대기 68기가 놀았고
-      //     아군 총 DPS 가 335 에서 멎었다. 적이 100마리까지 나오는 판에서 그건 방어전이 아니다.
-      //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다 — 세는 곳이 둘이면 어긋난다.
-      campSortie();
+      // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
+      //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
       campBuildStructs();                                 // 🏢 그새 지은 건물을 전장에 반영(체력도 새로)
-      campTrimArmy();                                     // 👥 인구 상한 재확인(던전 전환에서 새는 자리)
       campSpawnFoes(); }
     return; }
-  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSortie(); campSpawnFoes(); return; }
-  // 🚚 **라운드 도중에도 증원을 내보낸다** (2026-08-27)
-  //   ⛔ 예전엔 라운드 갭에서만 출격했다. 그래서 판이 밀려 아군이 전멸하면 **그 라운드가
-  //     영원히 안 끝났다** — 기지에 57기가 대기 중인데 한 기도 못 나갔다(실측 D2R1).
-  //   ⚠ 상한은 campTrimArmy() 가 건다(인구 200). 여기서 세지 않는다.
-  CAMPB._soT = (CAMPB._soT || 0) - dt;
-  if(CAMPB._soT <= 0){ CAMPB._soT = CAMP_SORTIE_S; campSortie(); }
+  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campSpawnFoes(); return; }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
+  campPostSnap();       // 🪧 되돌리기 전 위치를 떠 둔다(아래 campPostStep 이 쓴다)
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
-  campLeash();          // 🪢 너무 멀리 나간 아군을 집결선 안으로 되돌린다
+  campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 돌아온다)
+  campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)
@@ -1235,8 +1397,8 @@ function campCombatStep(dt){
     if(CAMPB._wq) CAMPB._wq.length = 0;    // 아직 안 나온 무리는 그냥 안 나온다(기다리는 화면을 만들지 않는다)
     const dgWas = campDgN();
     campClearRound();
-    if(campDgN() !== dgWas){                                   // 던전이 바뀌면 전장을 새로 연다(적 종족이 바뀐다)
-      campBattleOpen(); campBarReset();
+    if(campDgN() !== dgWas){                                   // 던전이 바뀌면 **적만** 갈아 끼운다
+      campDungeonSwap(); campBarReset();
       campSay('🏁 던전 ' + dgWas + ' 완주 — 던전 ' + campDgN() + ' 진입', 'game_start'); }
     if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S; } }
 }
@@ -1629,6 +1791,7 @@ function campHideView(){
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
   campRestoreSkillCost();                                         // 🩸 스킬 체력 코스트 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
+  campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
   campClearSheet();
@@ -1661,6 +1824,7 @@ function campEnter(){
   //    ⚠ 환생 트리 「시작 미네랄」(startMin)이 구현되면 **여기에 그 값을 더한다** — 지금은 노드 정의만 있다.
   if(!had) G.tech.credit = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
+  campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
   campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
   campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
@@ -1683,6 +1847,7 @@ function campEnter(){
   campSyncSheet();                                     // 🗂 시트를 먼저 띄운다 — 맵 높이가 여기서 정해진다
   if(!had){ campLayBase(); campLayMinerals(); }        // 확정된 격자로 기지·광맥을 다시 잡는다
   campLayGas();                                        // ⛽ 가스는 광맥 자리를 보고 정한다 — 반드시 뒤
+  campCalcViewBot();                                   // ✂ 화면 아래 끝을 배치에서 잰다(반드시 광맥·가스 뒤)
   campZoom();                                          // 🔍 전체가 한눈에 들어오게
   campSkin();                                          // 🎨 바닥을 사냥터 던전 배경으로
   campStartFrame();                                    // ▶ 캠프 자기 루프(유즈맵 루프는 HOME 에서 멈춘다)
@@ -1762,10 +1927,15 @@ function campRaceSheet(){
       + '<div class="crRows"></div>'
       + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
     (document.getElementById('phone') || document.body).appendChild(ov); }
+  { const _ph=document.getElementById('phone'); if(_ph) _ph.classList.add('campPick'); }   // 옛 사냥터 UI 를 숨긴다(css 「campPick」)
+  // ⭐ display 해제와 `on` 을 **같은 프레임에** 한다. animation 은 클래스가 붙는 순간 처음부터 돌기 때문에
+  //    한 프레임 미룰 이유가 없다 — 미루면 그 사이 프레임에 판이 보여 검은 섬광이 된다(css 「기본값은 0」).
   ov.classList.remove('hide');
-  // ⚠ display 를 푼 **다음 프레임**에 켠다 — 같은 프레임에 붙이면 전이가 안 돌고 툭 나타난다.
   ov.classList.remove('closing');
-  requestAnimationFrame(function(){ ov.classList.add('on'); });
+  // 🎬 로딩에서 바로 넘어온 것이면 로딩과 **같은 길이로** 차오른다(css 「raceFx」)
+  { const _ph2=document.getElementById('phone');
+    ov.classList.toggle('raceFx', !!(_ph2 && _ph2.classList.contains('raceIn'))); }
+  ov.classList.add('on');
   campRaceRender(); campRacePrev(_campRacePick, true);
 }
 // 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
@@ -1803,13 +1973,12 @@ function campPickRace(){
   const C = campState(); if(!C || C.race) return;
   C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
-  // 🎬 종족 판을 페이드로 걷고 → **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
+  // 🎬 **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
   //    여기가 「게임이 실제로 시작되는 지점」이다(enterAfterWarm 의 _needRace 주석과 짝).
-  const ov = document.getElementById('campRaceOv');
-  if(ov){ ov.classList.add('closing');
-    clearTimeout(ov._closeT);
-    ov.classList.remove('on');   // 페이드아웃 시작(.on 이 빠지면 opacity 0 으로 전이)
-    ov._closeT = setTimeout(function(){ ov.classList.remove('closing'); ov.classList.add('hide'); }, _campMs('--campOvDur', .4)); }
+  //    ⛔ 여기서 종족 판을 걷지 않는다. 위에서 검은 판(z88)이 덮어 주므로 걷을 이유가 없고,
+  //       먼저 걷으면 **아직 반투명한 검은 판 아래로 캠프가 통째로 드러난다**
+  //       (2026-08-27 프레임 실측: 종족 선택 73.9 → **캠프 139** → 검은 화면 35.6 → 캠프 142.
+  //        캠프가 두 번 나온다). 걷는 일은 campRaceToCamp 이 다 덮은 뒤에 한다.
   campRaceToCamp();
 }
 
@@ -1824,9 +1993,32 @@ function campRaceToCamp(){
   const hasBlack = (typeof titleToBlack === 'function' && typeof titleOutroEnd === 'function' && ph);
   if(hasBlack) ph.classList.add('artMark');   // 로고를 다시 켠다 — titleOutroEnd 가 앞서 걷었다
   const black = hasBlack ? titleToBlack() : null;   // 검은 판이 덮이기 시작한다(기다리지 않는다)
-  campEnter();                                       // 그 아래에서 캠프가 선다
-  if(!black){ campEnterAnim(); return; }
-  black.then(function(){ campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
+  // ⛔ campEnter() 는 **즉시** 부른다. 검은 화면 뒤로 미뤄 봤더니(정지를 숨기려고) 캠프 상태를
+  //    바로 기대하는 코드가 여럿이라 스모크 6 개가 깨졌다(2026-08-27). 그 준비 비용 때문에
+  //    검은 판이 덮이는 도중 280ms 정도 얼어붙지만, 그 구간은 어차피 어두워지는 중이라 덜 띈다.
+  // ⚡ 검은 판이 **실제로 한 프레임 그려진 뒤에** 캠프를 세운다(2026-08-27).
+  //   캠프 화면을 처음 세우는 일은 메인 스레드를 230ms 잡는다(실기 GPU 에서도 그렇다 —
+  //   longtask 로 확인. 배경·3D 어느 하나가 아니라 전체에 퍼져 있어 걷어낼 수가 없다).
+  //   같은 태스크에서 부르면 그 정지가 **페이드아웃이 시작되기도 전에** 와서, 버튼을 누르고
+  //   0.56 초 동안 아무 반응이 없다. 검은 판을 먼저 그려 두면 0.1 초 만에 어두워지기 시작하고
+  //   정지는 어두워지는 중에 묻힌다.
+  //   ⛔ rAF **한 번**으로는 안 된다 — 그 콜백은 같은 렌더 직전에 돌아 결국 한 프레임에 합쳐진다.
+  //      setTimeout(0) 도 마찬가지다(렌더 전에 실행된다). 실측으로 둘 다 효과가 없었다.
+  //   ⛔ 더 미루지도 말 것 — black.then(0.7초)까지 미뤘더니 캠프 상태를 바로 쓰는 스모크가 6 개 깨졌다.
+  if(black) requestAnimationFrame(function(){ requestAnimationFrame(campEnter); });
+  else campEnter();
+  // 🎬 **다 덮인 뒤에** 치운다 — 종족 판·campPick 둘 다.
+  //    campPick 을 먼저 떼면 네비와 재화 바가 종족 선택 화면 위로 튀어나오고,
+  //    그 네비가 처음 그려지는 프레임에 165ms 를 써서 화면까지 얼어붙는다(DESIGN.md §5.5 ⑤).
+  const done = function(){
+    const ov = document.getElementById('campRaceOv');
+    if(ov){ clearTimeout(ov._closeT);
+      ov.classList.remove('on'); ov.classList.remove('raceFx'); ov.classList.remove('closing');
+      ov.classList.add('hide'); }
+    if(ph) ph.classList.remove('campPick');   // 캠프가 켜지면 campMode 가 이어받는다
+  };
+  if(!black){ done(); campEnterAnim(); return; }
+  black.then(function(){ done(); campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
 }
 
 // CSS 가 시간을 정한다 — JS 는 읽기만 한다(두 곳에 숫자를 두면 반드시 어긋난다).
@@ -1842,6 +2034,12 @@ function _campMs(name, def){
 //   ⚠ 끝나면 클래스를 뺀다. 남겨 두면 나중에 transform 을 쓰는 코드와 부딪힌다.
 function campEnterAnim(){
   const els = [document.getElementById('vBuild'), document.getElementById('cvMarine')];
+  // ✂ 확대가 하단 네비 자리를 넘지 않게 — 애니메이션 동안만 화면을 잘라 둔다(css 「campInClip」)
+  const hs = document.getElementById('homeScreen');
+  if(hs){ hs.classList.add('campInClip');
+    clearTimeout(hs._campClipT);
+    hs._campClipT = setTimeout(function(){ hs.classList.remove('campInClip'); },
+      _campMs('--campInDur', 2.3) + 400); }
   const ms = _campMs('--campInDur', 2.3);
   for(const e of els){ if(!e) continue;
     clearTimeout(e._campInT);
@@ -2394,7 +2592,26 @@ const CAMP_COLS = 48;
 // 어떤 줌에서도 밖이 안 보인다. ⛔ 여기에 여유를 더하면(예전 CAMP_PAN_FREE) 그만큼 밖이 뚫린다.
 // ⚠ 맞바꿈: zoom 1(=하한)에서는 m=0 이라 **화면 이동이 안 된다.** 밖을 안 보이게 하는 것과
 //   하한에서 움직이는 것은 양립하지 않는다 — 이동하려면 확대해야 한다(RTS 표준 동작).
-const CAMP_MIN_ZOOM = 1;   // = 바닥이 화면을 딱 덮는 배율. 더 줄이면 맵 밖이 뚫린다(위 설명)
+// ⭐ **축소 하한 = 기본 배율(CAMP_ZOOM)** — 진입 애니가 끝나면 나오는 바로 그 크기다(2026-08-27 사용자 확정).
+//   1 까지 줄일 수 있으면 기본 화면보다 더 멀어져, 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
+//   1 은 바닥이 화면을 딱 덮는 배율이라 밖이 뚫리지는 않았지만, 그보다 더 좁게 묶는 것이라 안전하다.
+const CAMP_MIN_ZOOM = CAMP_ZOOM;
+// ✂ **화면이 내려갈 수 있는 아래 끝**(월드 y) — 미네랄·가스 덩어리 바로 아래에서 멈춘다.
+//   그 아래는 아무것도 없는 여백이라, 보이면 「빈 땅이 드러난 화면」이 된다.
+//   ⭐ 상수로 박지 않고 **실제 배치에서 잰다** — CAMP_ROW_MINE 이나 광맥 줄 수가 바뀌면 같이 따라간다.
+let _campViewBot = null;
+const CAMP_VIEW_PAD = 2;   // 덩어리 아래로 남기는 여유(격자 칸 수)
+function campCalcViewBot(){
+  _campViewBot = null;
+  if(typeof G === 'undefined' || !G.tech) return null;
+  const ch = _techCH(); let bot = 0;
+  for(const m of (G.tech.minerals || [])) if(m && m.y > bot) bot = m.y;
+  try{ if(typeof TECH_GAS !== 'undefined')
+    bot = Math.max(bot, techY0() + (TECH_GAS.r0 + (TECH_GAS.h || 1)) * ch); }catch(e){}
+  if(!bot) return null;
+  _campViewBot = bot + ch * CAMP_VIEW_PAD;
+  return _campViewBot;
+}
 let _campZoomPatched = null;
 let _campRectC = null;
 let _campPanMode = false;   // 🖐 화면 이동 모드가 켜져 있나(롱프레스로 켜고 탭으로 끈다)
@@ -2471,6 +2688,9 @@ function campPatchZoom(){
         return;
       }
       const ret = oDown.apply(this, arguments);
+      // 🖐 캠프의 박스 시작점 — 원본 _btBox 는 기지 엔티티용이라 전장 유닛을 못 잡는다
+      if(_campOn && CAMPB && campDgN() > 0 && !_btPan && !_btCmd && !_btArm)
+        _campBox = { cx0:ev.clientX, cy0:ev.clientY, on:false };
       // 빈 바닥을 눌렀나 — **좌표로 직접 판정한다.**
       // ⛔ _btBox(원본의 드래그 박스)로 판별하면 안 된다. 캠프는 시트를 채우려고 늘 본부를
       //   자동 선택해 두는데(campSyncSheet), 그러면 빈 바닥 탭이 원본의 "건물 지정 해제"
@@ -2487,6 +2707,9 @@ function campPatchZoom(){
       // 끌기 시작하면 롱프레스 취소 — 끌었다는 건 박스 지정을 하겠다는 뜻이다
       if(_campLongT && ev && _campLongFrom && ev.pointerId === _campLongFrom.id
          && Math.hypot(ev.clientX - _campLongFrom.x, ev.clientY - _campLongFrom.y) > 8) campPanDisarm();
+      if(_campBox && ev && !_campBox.on){ const r = (typeof _btRect === 'function') ? _btRect() : null;
+        if(r && (Math.abs(ev.clientX - _campBox.cx0) / (r.width || 1) > CAMP_BOX_MIN
+              || Math.abs(ev.clientY - _campBox.cy0) / (r.height || 1) > CAMP_BOX_MIN)) _campBox.on = true; }
       return oMove.apply(this, arguments);
     };
 
@@ -2509,6 +2732,13 @@ function campPatchZoom(){
           return oUp.apply(this, arguments);
         }
       }
+      // 🖐 전장 병력 조작 — 원본보다 **먼저** 본다(원본은 기지 엔티티만 안다).
+      //   처리했으면 _btDown·_btBox 를 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
+      if(_campOn && !_campPanMode && campPtrUp(ev)){
+        if(typeof _btDown !== 'undefined') _btDown = null;
+        if(typeof _btBox !== 'undefined') _btBox = null;
+      }
+      _campBox = null;
       return oUp.apply(this, arguments);
     };
   }
@@ -2521,7 +2751,23 @@ function campPatchZoom(){
     // ⛔ 시트 몫으로 시점을 내리지 않는다 — **맵 뷰포트(#cstMain)가 이미 시트 위에서 끝난다**
     //   (campMountView 가 시트를 맵 밖으로 꺼내 그 순환을 풀었다). 여기서 또 내리면 두 벌이 된다.
     v.x = Math.max(0.5 - m, Math.min(0.5 + m, v.x));
-    v.y = Math.max(0.5 - m, Math.min(0.5 + m, v.y));
+    // ✂ **아래로 내려가는 한도만 기본 배율에 묶는다**(2026-08-27 사용자 확정).
+    //   하단 시트가 맵의 아래 21%(실측 162px)를 덮고 있다. 확대하면 세로 여지가 넓어져
+    //   그 시트 뒤 구역을 위로 끌어올려 볼 수 있었다 — 평소에는 볼 수 없는 자리라 어색하다.
+    //   여지를 **기본 배율(CAMP_ZOOM)의 값으로 고정**하면, 아무리 확대해도 처음 화면에서
+    //   보이던 것보다 아래는 드러나지 않는다.
+    //   ⚠ 위쪽(0.5-m)은 줌에 따라 그대로 넓어진다 — 확대해서 기지 위를 살피는 것은 정상 동작이다.
+    //   ⛔ **줌마다 같은 곳에서 멈춰야 한다.** 「기본 배율의 여지」로 상한을 고정해 봤더니
+    //      보이는 하단이 줌에 따라 달라졌다(실측: 축소 0.838 / 확대 0.709) — 축소하면 여백이 드러난다.
+    //      화면에서 시트에 가려지는 몫(sf)을 빼고 **월드 좌표에서** 맞춰야 어느 줌에서든 같은 자리다.
+    let yHi = 0.5 + m;
+    if(_campViewBot != null){
+      const sf = (typeof techSheetFrac === 'function') ? techSheetFrac() : 0;
+      // 시트 윗변(화면 1-sf 지점)이 닿는 월드 좌표 = _campViewBot 이 되는 v.y
+      yHi = Math.min(yHi, _campViewBot - (0.5 - sf) / v.zoom);
+    }
+    const yLo = 0.5 - m;
+    v.y = Math.max(yLo, Math.min(Math.max(yLo, yHi), v.y));
   };
 }
 // ── 🖱 휠 줌 — 전달 경로를 이중화한다 ─────────────────────────────────
@@ -2539,11 +2785,17 @@ function campPatchWheel(){
   if(_campWheel || typeof window === 'undefined') return;
   _campWheel = function(e){
     if(!_campOn || typeof techWheel !== 'function') return;
-    const sh = document.getElementById('btSheet');
     // ⚠ target 이 Element 일 때만 contains 를 쓴다 — Node 가 아닌 것(window 등)을 넘기면
     //   Node.contains 가 TypeError 를 던져 리스너가 통째로 죽는다.
     const tg = e.target;
-    if(sh && sh.classList.contains('open') && tg && tg.nodeType === 1 && sh.contains(tg)) return;   // 시트 스크롤 존중
+    const inside = (el) => !!(el && tg && tg.nodeType === 1 && el.contains(tg));
+    const sh = document.getElementById('btSheet');
+    if(sh && sh.classList.contains('open') && inside(sh)) return;   // 시트 스크롤 존중
+    // 🏕 **좌상단 재화 바 위(던전 드롭다운 포함)도 존중한다**(2026-08-27).
+    //   드롭다운의 라운드 칸은 자기 스크롤을 갖는데, 여기서 가로채면 그 위에서 휠을 돌릴 때
+    //   목록이 아니라 **뒤 캠프 화면이 확대·축소됐다**. 시트와 같은 이유·같은 처리다.
+    if(inside(document.getElementById('campDrop'))) return;
+    if(inside(document.getElementById('curBar'))) return;
     const r = _btRect(); if(!r || !r.width) return;
     if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     techWheel(e);
@@ -2559,6 +2811,7 @@ function campUnpatchZoom(){
   if(!_campZoomPatched) return;
   campUnpatchWheel();
   campPanDisarm(); campPanMode(false); _campPanDown = null; _campPanJustOn = false;   // 🖐 모드를 들고 나가지 않는다
+  campSelClear(); _campBox = null;                                                    // 🖐 전장 병력 지정도 들고 나가지 않는다
   for(const k in _campZoomPatched) window[k] = _campZoomPatched[k];
   _campZoomPatched = null;
 }
@@ -2827,6 +3080,31 @@ function campUnpatchArm(){
   if(!_campArmHome) return;
   window.techArm = _campArmHome; _campArmHome = null;
 }
+// 🏭 생산 완료 가로채기 — 기지에 선 전투 유닛을 **그 자리 그대로** 전장으로 옮긴다.
+//   ⭐ 원본을 먼저 부른다 — 보유 수·인구 상한·스폰 위치 계산이 전부 거기 있다.
+//     여기서 다시 계산하면 두 벌이 되어 반드시 어긋난다.
+//   ⛔ 일꾼·라바·알은 그대로 기지에 둔다(미네랄을 캐야 한다).
+//   ⚠ 공유 파일(16-build.js)의 함수라 **나갈 때 반드시 되돌린다** — 안 되돌리면
+//     관리자 탭에서 뽑은 유닛이 화면에서 사라진다.
+let _campFinHome = null;
+function campPatchFinish(){
+  if(_campFinHome || typeof window === 'undefined') return;
+  const o = window.techFinishProduce; if(typeof o !== 'function') return;
+  _campFinHome = o;
+  window.techFinishProduce = function(q, be){
+    const r = o.apply(this, arguments);
+    if(!_campOn || !CAMPB || !q || typeof STK_UNITS === 'undefined' || !STK_UNITS[q.id]) return r;
+    const ents = (typeof G !== 'undefined' && G.tech) ? G.tech.ents : null; if(!ents) return r;
+    for(let i = ents.length - 1; i >= 0; i--){ const e = ents[i];
+      if(e.type !== 'unit' || e.uid !== q.id) continue;
+      ents.splice(i, 1);                       // 기지에서 빼고
+      campDeploy(q.id, e.x, e.y);              // 같은 자리에 전장 유닛으로 세운다
+      break; }
+    return r; }; }
+function campUnpatchFinish(){
+  if(!_campFinHome) return;
+  window.techFinishProduce = _campFinHome; _campFinHome = null; }
+
 function campPatchProduce(){
   if(_campProdHome || typeof window === 'undefined') return;
   const o = window.techDoProduce; if(typeof o !== 'function') return;

@@ -104,7 +104,7 @@ function campChipInfo(){
   const inDg=(typeof campDgN==='function') ? campDgN()>0 : ((C.dg|0)>0);
   const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
   const d=(typeof hbDun==='function')?hbDun(dg):null;
-  if(!inDg) return { name:'🏕 캠프', lab:'단계', cur:0, max:CAMP_DG_MAX };
+  if(!inDg) return { name:CAMP_HOME_NAME, lab:'단계', cur:0, max:CAMP_DG_MAX };
   const rnd=(typeof campRoundN==='function')?campRoundN():1;
   const rmax=(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:50;
   return { name:(d&&d.name)||('던전 '+dg), lab:'라운드', cur:rnd, max:rmax }; }
@@ -133,7 +133,10 @@ function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) ret
 //    그건 **유니온에서만 맞다** — 병영에 해당하는 건물 키가 종족마다 다르다
 //    (union=barracks · swarm=pool · aetherial=gateway · feral=huntpen · colossus=assembly).
 //    표를 여기서 새로 지으면 두 벌이 된다. 규칙이 정해지면 이 함수 하나만 채운다.
-function campDgOpen(dg){ return dg>=1 && dg<=CAMP_DG_MAX; }
+// ⭐ **0 = 캠프**(안전 구역)도 목록의 한 칸이다(2026-08-27). 캠프는 늘 열려 있다 —
+//   던전에서 돌아오는 길이라 잠글 이유가 없다(지면 campFail 이 어차피 0 으로 되돌린다).
+const CAMP_HOME_NAME='🏕 캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다
+function campDgOpen(dg){ return dg>=0 && dg<=CAMP_DG_MAX; }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.
 //   ⛔ 두 벌로 들고 있지 말 것 — 드롭다운으로 옮긴 뒤 실제 라운드가 안 따라오던 원인이다.
@@ -148,7 +151,8 @@ function campDropToggle(){ _cdPick? campDropClose() : campDropOpen(); }
 function campDropOpen(){
   const o=campChipInfo(); if(!o) return;
   const C=campEnsureRnd(campState()); if(!C) return;
-  _cdPick={ dg:Math.max(1,Math.min(CAMP_DG_MAX,C.dg||1)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
+  // ⚠ 0(캠프)을 1 로 올리지 않는다 — 캠프에 있는데 드롭다운이 던전 1 을 가리키면 지금 자리를 못 읽는다.
+  _cdPick={ dg:Math.max(0,Math.min(CAMP_DG_MAX,C.dg|0)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
   campDropRender();
   const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
   if(typeof playSfx==='function') playSfx('ui_open');
@@ -178,17 +182,21 @@ function campDropRender(){
   d.style.left=(cr.left-br.left)+'px';
   d.style.top =(cr.bottom-br.top-1)+'px';    // 칩 아래 테두리와 1px 포개 한 줄로 보이게
   let L='';
-  for(let i=1;i<=CAMP_DG_MAX;i++){ const D=(typeof hbDun==='function')?hbDun(i):null;
+  // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
+  for(let i=0;i<=CAMP_DG_MAX;i++){ const D=(i>0 && typeof hbDun==='function')?hbDun(i):null;
     const open=campDgOpen(i), here=(i===_cdPick.dg);
-    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+'" data-dg="'+i+'"'
+    const nm=(i===0)?CAMP_HOME_NAME:((D&&D.name)||('던전 '+i));
+    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+(i===0?' home':'')+'" data-dg="'+i+'"'
       +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
-      +'<span class="cdRnm">'+escHtml((D&&D.name)||('던전 '+i))+'</span>'
-      +'<span class="cdMul">'+(open?('×'+campDgMul(i).toFixed(1)):'잠김')+'</span></button>'; }
+      +'<span class="cdRnm">'+escHtml(nm)+'</span>'
+      +'<span class="cdMul">'+(!open?'잠김':(i===0?'안전':('×'+campDgMul(i).toFixed(1))))+'</span></button>'; }
   let R='';
   for(let r=CAMP_RND_MAX;r>=1;r--) R+='<button class="cdRn'+(r===_cdPick.rnd?' on':'')+'" data-r="'+r+'">'+r+'</button>';
+  // ⚠ 캠프(0단계)에는 **라운드가 없다**(CAMP_MINE[0] 「배율 고정, 라운드 없음」) — 그 칸을 잠근다.
+  const noRnd=(_cdPick.dg===0);
   d.innerHTML='<div class="cdSec cdTwo">'
     +'<div class="cdL"><div class="cdSl">DUNGEON</div><div class="cdList uiScroll">'+L+'</div></div>'
-    +'<div class="cdR"><div class="cdSl">ROUND</div>'
+    +'<div class="cdR'+(noRnd?' off':'')+'"><div class="cdSl">ROUND</div>'
       // ⚠ 가운데 선은 **스크롤 상자 밖**에 둔다 — 안에 두면 absolute 라도 내용과 같이 굴러 화면 밖으로 나간다
       +'<div class="cdPickWrap"><i class="cdMid"></i>'
         +'<div class="cdPick uiScroll" id="cdPickBox"><div class="cdCol">'+R+'</div></div></div></div>'
@@ -201,8 +209,10 @@ function campDropRender(){
 
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
-  const d=document.getElementById('campDrop'); if(d)
+  const d=document.getElementById('campDrop'); if(d){
     for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
+    // 캠프를 고르면 라운드 칸이 잠기고, 던전으로 옮기면 풀린다
+    const R=d.querySelector('.cdR'); if(R) R.classList.toggle('off', dg===0); }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
 // 라운드 = 스크롤 피커. 큰 수가 위, 1 이 맨 아래 — 옛 사냥터 피커와 같은 방향이다.
@@ -222,7 +232,9 @@ function campRndTap(r){ if(!_cdPick) return; _cdPick.rnd=r; campRndMark(); campR
 function campDropGo(){ if(!_cdPick) return;
   const C=campEnsureRnd(campState()); if(!C){ campDropClose(); return; }
   // ⭐ 캠프 상태에 쓴다 — cleared 가 단일 소스이고 rnd 는 그것을 비춘다(라운드 n = 깬 수 n-1)
-  C.dg=_cdPick.dg; C.cleared=Math.max(0, _cdPick.rnd-1); C.rnd=_cdPick.rnd;
+  // 🏕 캠프(0)로 가면 라운드는 없다 — cleared·rnd 를 비운다(campRoundN 도 0 을 돌려준다)
+  const toHome=(_cdPick.dg===0);
+  C.dg=_cdPick.dg; C.cleared=toHome?0:Math.max(0, _cdPick.rnd-1); C.rnd=toHome?1:_cdPick.rnd;
   if(typeof campBattleClose==='function') campBattleClose();   // 던전이 바뀌면 전장을 새로 연다
   if(typeof campBarReset==='function') campBarReset();
   if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로
