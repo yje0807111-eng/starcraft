@@ -1991,6 +1991,24 @@ async function groupLobby(){
       assert(campDgN()===0,'누운 대공만 남았는데 패배가 안 났다: dg '+campDgN());
       // 패배가 되돌린 병력(기지 엔티티)을 걷는다 — 다음 검사 오염 방지
       for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1); }
+    // ②-2 ⛔ **전멸은 패배가 아니다**(2026-08-30 사용자 확정) — 「못 때린다」 규칙이 이걸 가로채면 안 된다.
+    //     campCanHitFoes 는 살아서 때릴 아군이 없으면 false 라, 전멸도 그 경우다.
+    //     그대로 두면 전멸 = 즉시 패배가 되어 「패배는 본부 파괴 하나뿐」이 무력해진다
+    //     (브라우저 실측 2026-08-30: 전멸 프레임에 곧바로 전장이 닫혔다).
+    { const C=campState(); C.dg=1; C.cleared=0; CAMPB=null; campCombatStep(0.05);
+      if(CAMPB){ campWipeField();
+        const u=campDeploy('marine', 0.5, 0.5);
+        campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });   // 지상 적 — 원리상 때릴 수 있다
+        CAMPB._started=true; if(CAMPB._wq) CAMPB._wq.length=0; CAMPB._gapT=0;
+        if(u){ const b4=CAMPB.me.units.slice();
+          for(const x of CAMPB.me.units) x.dead=true;
+          CAMPB.me.units.length=0; campCatchDown(b4); }
+        assert(campAlive('me')===0 && campDown()>=1,'전제가 바뀜: 전멸 상태가 아니다');
+        campCombatStep(0.05);
+        assert(campDgN()===1 && CAMPB,'전멸했다고 졌다 — 패배는 본부 파괴 하나뿐이다');
+        assert(CAMPB.me.base.hp>0,'전제가 바뀜: 본부가 이미 뚫렸다');
+        campWipeField();
+        for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1); } }
     // ③ 서든데스 면제 — 15분이 지나도 캠프 본부는 안 녹는다 (②의 패배로 닫혔으니 다시 연다)
     { const C=campState(); C.dg=1; C.cleared=0;
       CAMPB=null; campCombatStep(0.05);
