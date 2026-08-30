@@ -1423,7 +1423,9 @@ function campCombatStep(dt){
     campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
     campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
     campLeash();
-    campReviveStep(dt);                                   // 🩹 누운 아군도 이 사이에 일어난다
+    // ⛔ 여기서 부활시키지 않는다 — **부활은 라운드 단위**다(campRoundRevive · 2026-08-29).
+    //   숨 고르기 끝에서 한 번에 일으키므로, 여기서 또 부르면 두 벌이 된다.
+    //   ⚠ 옛 시간 부활(campReviveStep)은 없앴다 — 그게 후반 발산의 동력이었다.
     if(CAMPB._gapT <= 0){
       // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
       //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.

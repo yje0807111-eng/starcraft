@@ -2478,6 +2478,14 @@ async function groupLobby(){
         const u0=G.tech.units?JSON.stringify(G.tech.units):null;
         try{
           // ① 유닛이 없으면 비어 있다(그게 정상이다)
+          // ⚠ **전장 병력도 함께 비워야 한다**(2026-08-30). 유닛이 한 번만 태어나는 구조에서
+          //   생산된 유닛은 기지가 아니라 CAMPB.me.units 에 산다 — G.tech.units 만 비우면
+          //   앞 스텝이 전장에 남긴 병력이 그대로 「보유」로 잡힌다(실제로 그렇게 깨졌다).
+          //   ⚠ 전장이 이미 닫혔으면 병력은 **기지 엔티티**로 돌아가 있다(campBattleClose 가 되돌린다) —
+          //     그래서 전장·기지 양쪽을 다 비운다.
+          if(typeof campWipeField==='function') campWipeField();
+          for(let i=(G.tech.ents||[]).length-1;i>=0;i--)
+            if(G.tech.ents[i].type!=='bldg' && G.tech.ents[i].type!=='worker') G.tech.ents.splice(i,1);
           G.tech.units={}; campResSheet();
           assert(names().length===0,'유닛이 없는데 기술이 보인다: '+names().join(','));
           // ② 유닛을 가지면 **그 유닛의 기술만** 나타난다
