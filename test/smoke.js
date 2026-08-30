@@ -1775,6 +1775,47 @@ async function groupLobby(){
     return '전장 1기 · 자리 고정 · 인구 유지';
   });
 
+  // ⚔ **싸울 때는 빈자리를 찾아 파고든다** (2026-08-30 사용자 확정)
+  //    ⛔ 예전에는 표적이 있으면 strike 기본 이동에 맡겨서, 앞줄만 닿고 뒷줄은 겹침 회피에
+  //      밀려 뒤로만 갔다. 실측: 공격 가능 13기 중 **사거리 안이 2기**(실효 0.15).
+  //    ⭐ 고친 뒤 같은 조건에서 **0.83**. 근접은 둘러싸고, 원거리는 사거리 끝에 부채꼴로 선다.
+  await step('캠프: 싸울 때 빈자리를 찾아 파고든다 (근접=둘러싸기 · 원거리=부채꼴)', async()=>{
+    skipIf(typeof campEngageStep!=='function'||typeof campDeploy!=='function','파고들기 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWipeField();
+    // 뭉쳐 세운다 — 고치기 전이라면 뒷줄이 그대로 밀려 사거리 밖에 남는다
+    for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
+    for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
+    CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+    const rate=()=>{ const me=CAMPB.me.units.filter(u=>!u.dead), ai=CAMPB.ai.units.filter(u=>!u.dead);
+      let a=0,r=0; for(const u of me){ if((u.dmg||0)<=0) continue; a++;
+        let best=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<best) best=d; }
+        if(best<=u.rng) r++; }
+      return a?r/a:0; };
+    for(let i=0;i<500;i++) campCombatStep(0.05);      // 25초 — 붙고 자리잡을 시간
+    const got=rate();
+    assert(got>=0.5,'싸우는데 사거리 안에 든 아군이 너무 적다: '+(got*100).toFixed(0)+'% (기대 50%↑)');
+    // ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
+    { const ai=CAMPB.ai.units.filter(u=>!u.dead);
+      if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };
+        const mel=CAMPB.me.units.filter(u=>!u.dead&&u.melee), rng=CAMPB.me.units.filter(u=>!u.dead&&!u.melee&&(u.dmg||0)>0);
+        if(mel.length && rng.length){
+          const mA=mel.reduce((s,u)=>s+near(u),0)/mel.length, rA=rng.reduce((s,u)=>s+near(u),0)/rng.length;
+          assert(mA<rA,'근접이 원거리보다 멀리 서 있다 — 두 방식이 안 갈렸다: 근접 '+Math.round(mA)+' · 원거리 '+Math.round(rA)); } } }
+    // ⚠ 표적이 사라지면 **파고들기가 멈춘다** — 그래야 복귀(campPostStep)에 자리를 넘긴다.
+    //   ⛔ 여기서 campCombatStep 으로 복귀를 재지 말 것: 적을 지우면 라운드가 끝나고
+    //     **다음 라운드 적이 새로 나와** 다시 싸우러 간다(그렇게 한 번 헛짚었다).
+    //     복귀 자체는 바로 아래 step 「유닛이 자기 자리로 돌아온다」가 본다.
+    campWithStk(()=>{ STK.ai.units.length=0; });
+    for(const u of CAMPB.me.units) u.tgtUid=null;
+    assert(campEngageStep(0.05)===0,'표적이 없는데 파고들기가 계속 유닛을 민다');
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '사거리 안 '+(got*100).toFixed(0)+'% · 근접이 더 가까이 · 표적 없으면 멈춘다';
+  });
+
   // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
   //    복귀는 위치를 덮어쓰는 게 아니라 strikeMoveToward 로 **다시 미는** 방식이다 —
   //    그래야 겹침 회피(stepUnitMove)를 탄다.

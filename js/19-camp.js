@@ -1242,8 +1242,69 @@ function campPostStep(dt){
       const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
       if(dx * dx + dy * dy <= R2){ u.moving = false; continue; }   // 이미 자리
       if(u._sx != null){ u.x = u._sx; u.y = u._sy; }               // 집결지로 간 이동을 무르고
-      strikeMoveToward(u, p.x, p.y, dt); n++; }                     // 회피를 타는 이동으로 다시 민다
+      // ⭐ **복귀는 빠르게**(2026-08-30 사용자 확정) — 싸우러 나갔다 오는 길이라 굼뜨면
+      //   다음 무리가 올 때까지 자리를 못 잡는다. 속도 상수를 건드리지 않고 dt 를 키운다
+      //   (이동 로직은 공용이라 손대지 않는다 — campLeash 와 같은 원칙).
+      strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K); n++; }     // 회피를 타는 이동으로 다시 민다
     if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
+  });
+  return n; }
+
+// ⚔ **싸울 때는 빈자리를 찾아 파고든다** (2026-08-30 사용자 확정).
+//   ⛔ 예전에는 표적이 있으면 **아무것도 안 하고 strike 의 기본 이동에 맡겼다**(위 campPostStep 의
+//     `continue`). 그러면 앞줄만 적에게 닿고 뒷줄은 겹침 회피에 밀려 **뒤로만 밀린다.**
+//   ⚠ 실측(2026-08-30 · 아군 22기 · D1R15): 30초 시점에 공격 가능 13기 중 **사거리 안이 2기**였다.
+//     적까지 거리가 96·101·103·113 · 169 · **207·213·214·215·215·215·218** · 339 로,
+//     뒤쪽 6기가 사거리(마린 187) 밖에 뭉쳐 있었다. 실효 계수 0.15 의 정체가 이것이다.
+//   ⭐ 그래서 **자리를 나눠 준다.** 유닛 종류에 따라 두 방식을 갈라 쓴다(사용자 결정):
+//     ㉠ **근접**(melee) = 표적을 **둘러싸는 링** — 사방에서 붙어야 여럿이 동시에 때린다
+//     ㉡ **원거리**      = 자기 사거리 끝의 **부채꼴** — 뒤로 물러설 필요 없이 옆으로 벌려 선다
+//   ⚠ 슬롯은 **표적별로** 나눈다. 같은 적을 때리는 아군끼리만 자리를 다투기 때문이다.
+//   ⚠ 순서는 uid 로 고정한다 — 매 프레임 뒤바뀌면 자리가 흔들려 제자리걸음을 한다.
+const CAMP_ENG_MELEE = 0.90;      // 근접이 서는 거리 = 자기 사거리 × 이 값
+const CAMP_ENG_RANGED = 0.85;     // 원거리가 서는 거리 = 자기 사거리 × 이 값
+const CAMP_ENG_GAP = 38;          // 옆 유닛과 벌리는 간격(px) — 이만큼이면 겹침 회피가 안 밀어낸다
+const CAMP_ENG_ARC = Math.PI * 0.75;   // 원거리 부채꼴의 최대 폭(라디안)
+const CAMP_ENG_OK = 24;           // 목표 자리에 이만큼 붙으면 다 온 것으로 본다(떨림 방지)
+function campEngageStep(dt){
+  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
+  if(typeof strikeFindUnit !== 'function') return 0;
+  // ① 표적별로 붙은 아군을 모은다
+  const byTgt = new Map();
+  for(const u of CAMPB.me.units){
+    if(u.dead || !u.tgtUid) continue;
+    if(!byTgt.has(u.tgtUid)) byTgt.set(u.tgtUid, []);
+    byTgt.get(u.tgtUid).push(u); }
+  if(!byTgt.size) return 0;
+  let n = 0;
+  campWithStk(function(){
+    for(const pair of byTgt){
+      const list = pair[1];
+      const t = strikeFindUnit(CAMPB.ai.units, pair[0]);
+      if(!t || t.dead) continue;                       // 죽은 표적은 campPostStep 이 복귀로 처리한다
+      list.sort(function(a, b){ return (a.uid < b.uid) ? -1 : (a.uid > b.uid) ? 1 : 0; });
+      const cnt = list.length;
+      for(let i = 0; i < cnt; i++){
+        const u = list[i], rng = u.rng || 0;
+        if(rng <= 0) continue;                          // 안 때리는 유닛(의무병 등)은 건드리지 않는다
+        const want = rng * (u.melee ? CAMP_ENG_MELEE : CAMP_ENG_RANGED);
+        // 기준 각도 — **자기 자리 쪽**이다. 아군은 아래(자기 진영)에서 올려다보므로
+        // 원거리는 그 방향을 중심으로 벌려야 적 뒤로 돌아가지 않는다.
+        const home = u._post || u;
+        const base = Math.atan2(home.y - t.y, home.x - t.x);
+        let ang;
+        if(u.melee){
+          ang = base + (i - (cnt - 1) / 2) * (Math.PI * 2 / Math.max(1, cnt));   // ㉠ 둘러싸기
+        } else {
+          // ㉡ 부채꼴 — 간격이 각도로 얼마인지 거리에서 역산한다(멀수록 좁은 각도로 충분하다)
+          const step = Math.min(CAMP_ENG_ARC / Math.max(1, cnt), 2 * Math.asin(Math.min(0.9, CAMP_ENG_GAP / (2 * Math.max(1, want)))));
+          ang = base + (i - (cnt - 1) / 2) * step; }
+        const gx = t.x + Math.cos(ang) * want, gy = t.y + Math.sin(ang) * want;
+        const dx = gx - u.x, dy = gy - u.y;
+        if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
+        if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고
+        strikeMoveToward(u, gx, gy, dt); n++; } }
+    if(n && typeof strikeSeparate === 'function') strikeSeparate();
   });
   return n; }
 
@@ -1519,6 +1580,7 @@ const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 �
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
 const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
+const CAMP_RETURN_K = 1.8;         // 복귀 속도 배수(자리로 돌아올 때만) — 「빠르게 되돌아온다」
 const CAMP_ROUND_GAP_S = 4;        // 라운드·던전 사이 숨 고르기(초) — 자리로 걸어 돌아올 시간
   // ⭐ **라운드 사이와 던전 이동이 같은 값을 쓴다** — 여기 하나만 고치면 양쪽이 함께 움직인다.
   // ⚠ 실측: 자리에서 424 떨어진 유닛이 **2초에 35 까지** 붙는다(스모크 「걸어서 자리로」).
@@ -1566,7 +1628,8 @@ function campCombatStep(dt){
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campBldAmp(_bb);      // 💥 적이 건물에 넣은 만큼을 ×CAMP_FOE_BLD_MUL 로 키운다
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
-  campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 돌아온다)
+  campEngageStep(dt);   // ⚔ 싸우는 유닛은 **빈자리를 찾아 파고든다**(근접=둘러싸기 · 원거리=부채꼴)
+  campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 빠르게 돌아온다)
   campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
