@@ -1849,6 +1849,19 @@ async function groupLobby(){
       u.hp -= 5; campBunkerStep(0.05);
       assert(Math.abs(u.hp-uhp)<1e-6,'탄 유닛이 직접 피해를 받았다: '+u.hp+' (전 '+uhp+')');
       assert(Math.abs((bhp-5)-bunk.hp)<1e-6,'벙커가 대신 안 받았다: '+bunk.hp+' (기대 '+(bhp-5)+')'); }
+    // ③-2 🎯 **사거리 보너스** — 탄 동안만 +2칸, 내리면 원래대로
+    //   ⚠ 벙커는 못 움직이는데 전선은 판마다 다른 자리에 생긴다. 보너스가 그 어긋남을 메운다.
+    { const u=CAMPB.me.units.find(x=>!x.dead&&campInBunker(x));
+      assert(u,'탄 유닛이 없다');
+      assert(u._rng0!=null,'탄 유닛에 보너스가 안 걸렸다');
+      assert(Math.abs(u.rng-(u._rng0+campBunkRng()))<1e-6,
+        '보너스 값이 다르다: '+Math.round(u.rng)+' (기대 '+Math.round(u._rng0+campBunkRng())+')');
+      const base=u._rng0;
+      u._bunk=null; campBunkerStep(0.05);                  // 내리면
+      assert(u._rng0==null && Math.abs(u.rng-base)<1e-6,
+        '내렸는데 보너스가 안 풀렸다: '+Math.round(u.rng)+' (원래 '+Math.round(base)+')');
+      // 다시 태워 다음 검사를 잇는다
+      campBoard([u], bunk); campBunkerStep(0.05); }
     // ④ 벙커가 무너지면 밖에서 싸운다 — 그리고 **기록은 남아** 복구되면 다시 탄다
     { const u=CAMPB.me.units.find(x=>!x.dead&&x._bunk!=null);
       bunk.hp=0; bunk.dead=true;
@@ -1883,6 +1896,14 @@ async function groupLobby(){
     for(let i=0;i<500;i++) campCombatStep(0.05);      // 25초 — 붙고 자리잡을 시간
     const got=rate();
     assert(got>=0.5,'싸우는데 사거리 안에 든 아군이 너무 적다: '+(got*100).toFixed(0)+'% (기대 50%↑)');
+    // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정 · 실측으로 500 확정)
+    //   ⛔ 그냥 두면 적을 따라 들어가 자리가 무너지고 전선이 계속 움직인다 —
+    //     그러면 벙커·포탑 같은 **고정 방어가 아무 뜻이 없어진다.**
+    //   ⚠ 값은 실측으로 골랐다(25분 벤치): 250 은 너무 좁아 적을 못 만나고(D1R3 · 실효 0.28),
+    //     무제한은 자리가 무너진다(D1R8). **500 이 D1R9 로 가장 좋았다**(실효 1.0~1.25).
+    { const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
+        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > CAMP_ENG_OUT*1.5);
+      assert(!out.length,'자리에서 너무 멀리 나갔다(적을 따라 들어갔다): '+out.length+'기 · 상한 '+CAMP_ENG_OUT); }
     // ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
     { const ai=CAMPB.ai.units.filter(u=>!u.dead);
       if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };
