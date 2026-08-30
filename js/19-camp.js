@@ -1863,6 +1863,7 @@ function campEnter(){
   campAutoGather();                                    // ⑥ 놀고 있는 일꾼을 광맥에 붙인다(즉시 1회)
   campStartTimer();
   if(typeof techUIRender === 'function') techUIRender();
+  campMineBtnPaint();                                  // ⛏ 채굴 모드 버튼
   campAutoSave(true);
 }
 // 이번 체류에서 **실제로 번 것**을 재 둔다 — 자리 비움 정산이 이 속도를 쓴다.
@@ -1877,6 +1878,7 @@ function campNoteStay(){
 //   관리자 건설 탭이나 오토배틀에서 온 경우 G.tech 는 그쪽 판이다. 무턱대고 저장하면
 //   남의 판을 캠프 저장에 덮어써 기지가 통째로 바뀐다.
 function campExit(){ if(!_campOn) return;
+  campMineModeSet(false);   // ⛏ 채굴 모드는 캠프 밖으로 들고 나가지 않는다
   campBattleClose();   // 🧹 전장은 화면을 떠날 때 지운다(공용 STK 를 빌려 쓴 것이라 남기면 샌다)
   campBarReset();      // 🧹 배지 캐시도 비운다(다음 진입에서 옛 값이 남지 않게)
   campNoteStay();                                      // 이번 체류의 수급 속도를 재고
@@ -2119,8 +2121,13 @@ const CAMP_TAP_STEP = 1;        // 탭 레벨당 +1
 const CAMP_GAT_STEP = 0.025;    // 효율 레벨당 +2.5% (왕복 1회당)
 const CAMP_TAP_COST0 = 70;      // 탭 0→1레벨 비용
 const CAMP_GAT_COST0 = 210;     // 효율 0→1레벨 비용
-const CAMP_COST_R0 = { tap:1.09, gather:1.12 };   // 무릎 전 비용 계단
-const CAMP_COST_R1 = { tap:1.15, gather:1.20 };   // 무릎 후(Lv10~)
+// ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
+//   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
+const CAMP_HOLD_COST0 = 500;    // 홀드 0→1레벨 비용
+//   ⚠ **함수여야 한다** — CAMP_HOLD_MS0 는 아래 채굴 모드 블록에서 선언된다(const 는 TDZ).
+function campHoldLvMax(){ return Math.round((CAMP_HOLD_MS0 - CAMP_HOLD_MIN) / CAMP_HOLD_STEP); }   // = 10
+const CAMP_COST_R0 = { tap:1.09, gather:1.12, hold:1.35 };   // 무릎 전 비용 계단
+const CAMP_COST_R1 = { tap:1.15, gather:1.20, hold:1.35 };   // 무릎 후(Lv10~)
 const CAMP_COST_KNEE = 10;
 // 마일스톤 — 20, 50, 100, 200, 400 … (50 부터 2배씩) · 넘을 때마다 효과 ×2
 const CAMP_MILE_FIRST = 20, CAMP_MILE_SECOND = 50;
@@ -2141,7 +2148,7 @@ function campUpgCost(k){
   const lv = campUpgLv(k);
   // ⛽ 정제소는 계단이 하나다(무릎 없음) — §2-3-1
   if(k === 'refinery') return Math.max(1, Math.ceil(CAMP_REF_COST0 * Math.pow(CAMP_REF_R, campRefLv()) * campUpgDisc()));
-  const base = (k === 'tap') ? CAMP_TAP_COST0 : CAMP_GAT_COST0;
+  const base = (k === 'tap') ? CAMP_TAP_COST0 : (k === 'hold') ? CAMP_HOLD_COST0 : CAMP_GAT_COST0;
   const r0 = CAMP_COST_R0[k] || CAMP_COST_R0.gather, r1 = CAMP_COST_R1[k] || CAMP_COST_R1.gather;
   const knee = Math.min(lv, CAMP_COST_KNEE);                    // Lv10 까지는 완만하게, 그 뒤로 가팔라진다
   const cost = base * Math.pow(r0, knee) * Math.pow(r1, Math.max(0, lv - CAMP_COST_KNEE));
@@ -2197,6 +2204,86 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   const lv = campUpgLv('gather');
   return (1 + CAMP_GAT_STEP * lv) * campMileMul(lv)
     * campMineMul() * campRebMul() * campRtMul('gather'); }
+// ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
+// 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).
+//   ⭐ 왜 모드인가 — 광맥은 화면의 5% 뿐이라 손끝이 자꾸 일꾼·건물·바닥을 눌렀다.
+//     과녁을 화면 전체로 넓히면 그 문제가 통째로 사라진다. 대신 유닛·건물 조작과 겹치므로 모드로 가른다.
+//   ⭐ 왜 홀드인가 — 연타는 손이 아프다. 누르고만 있어도 벌 수 있는 길을 둔다(느린 대신 편하다).
+const CAMP_TAP_MIN_MS = 90;      // 연타 **상한**(초당 11회) — 사람 손은 여기 거의 안 닿는다
+const CAMP_HOLD_MS0   = 800;     // 홀드 간격 0레벨
+const CAMP_HOLD_STEP  = 50;      // 레벨당 −50ms
+const CAMP_HOLD_MIN   = 300;     // 하한 — 연타(≈초당 6회)보다 느려야 「편한 대신 느린」 선택지가 된다
+// ⛏ 홀드 1회의 획득량 배수. **1 = 탭과 같다**(사용자 확정 2026-08-27).
+//   ⭐ 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이라, 간격만으로 차이를 낸다 —
+//     하한 0.3초 = 실효 초당 3.3탭으로 **연타(≈6탭)의 절반**이다(실측 30분 56만 vs 127만).
+//   ⚠ 장치는 살려 둔다 — 나중에 조이거나 풀 자리가 여기 하나여야 한다.
+const CAMP_HOLD_MUL   = 1;
+function campHoldMs(){
+  const lv = (typeof campUpgLv === 'function') ? campUpgLv('hold') : 0;
+  return Math.max(CAMP_HOLD_MIN, CAMP_HOLD_MS0 - CAMP_HOLD_STEP * lv); }
+let _campMineMode = false;       // 채굴 모드가 켜져 있나
+let _campHoldT = null, _campHoldPt = null, _campLastTap = 0;
+function campMineModeOn(){ return _campMineMode; }
+function campMineModeSet(on){
+  _campMineMode = !!on;
+  campHoldStop();
+  const ph = document.getElementById('phone');
+  if(ph) ph.classList.toggle('mineMode', _campMineMode);
+  // 🖐 채굴 모드와 화면 이동 모드는 **같이 켤 수 없다** — 한 손가락에 두 뜻을 주지 않는다.
+  if(_campMineMode && typeof campPanMode === 'function') campPanMode(false);
+  if(typeof playSfx === 'function') playSfx(_campMineMode ? 'ui_open' : 'ui_close');
+  campMineBtnPaint();
+}
+function campMineModeToggle(){ campMineModeSet(!_campMineMode); }
+// 한 번 캔다 — 맵 어디서 눌렀든 같다(모드가 켜져 있을 때만 불린다).
+//   ⛔ 획득량 수식을 여기서 만들지 말 것 — campTapGain 하나가 단일 소스다.
+function campMineOnce(clientX, clientY, human, mul){
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  let gain = ((typeof campTapGain === 'function') ? campTapGain() : 1) * (mul || 1);
+  // 🤖 2차 방어선은 그대로 둔다 — 상한만으로는 매크로가 사람의 2배를 번다(설계 대화 2026-08-27).
+  if(human && typeof campTapHuman === 'function')
+    gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY)));
+  G.tech.credit = (G.tech.credit || 0) + gain;
+  const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
+  if(typeof updateCurBar === 'function') updateCurBar();
+  campMineFloatMap(gain, clientX, clientY);
+  if(typeof dqNote === 'function') try{ dqNote('tap', 1); }catch(e){}
+  return gain;
+}
+// 캔 만큼 숫자가 **누른 자리에서** 튀어오른다 — 눌렀다는 것이 눈으로 돌아오는 유일한 신호다.
+function campMineFloatMap(n, clientX, clientY){
+  const host = document.getElementById('cstMain'); if(!host) return;
+  const r = host.getBoundingClientRect();
+  const el = document.createElement('i'); el.className = 'cmPop mapPop';
+  el.textContent = '+' + ((typeof campNum === 'function') ? campNum(n) : n);
+  el.style.left = Math.max(6, Math.min(r.width - 6, (clientX || r.width/2) - r.left)) + 'px';
+  el.style.top  = Math.max(6, Math.min(r.height - 6, (clientY || r.height/2) - r.top)) + 'px';
+  host.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 900);
+}
+// ⏱ 홀드 — 누르고 있는 동안 간격마다 한 번. 손을 떼면 멈춘다.
+function campHoldStart(clientX, clientY){
+  campHoldStop();
+  _campHoldPt = { x: clientX, y: clientY };
+  _campHoldT = setInterval(function(){
+    if(!_campMineMode || !_campOn || !_campHoldPt){ campHoldStop(); return; }
+    // ⚠ 홀드는 **손가락이 멈춰 있는 것이 정상**이다 — 여기서 리듬 감쇠를 재면 늘 기계로 보인다.
+    //   그래서 human=false 로 부른다(간격이 고정이라 매크로가 얻을 이득도 없다).
+    campMineOnce(_campHoldPt.x, _campHoldPt.y, false, CAMP_HOLD_MUL);   // ⛏ 홀드 1회 = 탭 CAMP_HOLD_MUL 회분(지금 1)
+  }, campHoldMs());
+}
+function campHoldStop(){ if(_campHoldT){ clearInterval(_campHoldT); _campHoldT = null; } _campHoldPt = null; }
+// ⛏ 모드 버튼은 **「MY BASE」 요약판 안**에 있다(js/20-camp-research.js · 2026-08-27 사용자 확정).
+//   ⛔ 맵 위에 띄우지 말 것 — 늘 보여서 화면을 가린다. 요약판은 아무것도 안 골랐을 때만 뜨는 자리다.
+function campMineBtnPaint(){
+  const b = document.getElementById('campMineBtn');
+  if(b && b.parentNode) b.parentNode.removeChild(b);   // 옛 버튼이 남아 있으면 걷는다
+  // 요약판을 다시 그리게 한다 — 서명만 보면 모드 변화를 못 잡는다
+  const body = document.getElementById('btSheetBody');
+  if(body) body._gSig = null;
+  if(typeof renderCampIdleSheet === 'function' && !(typeof _resSec !== 'undefined' && _resSec)) renderCampIdleSheet();
+}
+
 // ── 🤖 매크로 방지 (HUNT_R1 §1-1-3 · 2026-08-27) ────────────────────────
 // ⛔ 탭에 **상한을 두지 않기로** 했다. 그러면 매크로가 초당 10회를 누를 수 있고,
 //   그 순간 일꾼·보급소·인구 200 이 통째로 장식이 된다(설계 추정: 손 수입의 98%).
@@ -2272,10 +2359,34 @@ if(typeof document !== 'undefined'){
     // 💎 **광맥을 누르면 캐지 않고 판을 연다**(2026-08-27). 캐는 것은 그 판의 넓은 과녁이 맡는다.
     //   ⛔ 여기서 바로 campTapAt 을 부르게 되돌리지 말 것 — 광맥이 화면의 5% 뿐이라 손끝이
     //     일꾼·건물·바닥을 자꾸 눌렀다. campTapAt 은 남겨 둔다(벤치·스모크가 직접 부른다).
+    // ⛏ **채굴 모드면 맵 어디를 눌러도 캔다**(2026-08-27 · A안). 광맥을 겨냥할 필요가 없다.
+    if(_campMineMode){
+      const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+      // 🤖 연타 **상한** — 사람 손(초당 5~8회)은 여기 거의 안 닿고, 매크로의 폭주만 잘린다.
+      //   ⛔ 이것만으로 막힌다고 보지 말 것: 0.09초여도 기계는 초당 11회다(사람의 약 2배).
+      //     실제로 가르는 것은 2차 감쇠(campTapHuman)다 — 벽에 붙은 리듬은 완벽히 일정해서 더 잘 걸린다.
+      if(now - _campLastTap >= CAMP_TAP_MIN_MS){
+        _campLastTap = now;
+        campMineOnce(ev.clientX, ev.clientY, ev.isTrusted !== false);
+      }
+      campHoldStart(ev.clientX, ev.clientY);   // ⏱ 누르고 있으면 이어서 캔다
+      ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault();
+      return;
+    }
+    // 💎 모드가 꺼져 있을 때 광맥을 누르면 **채굴 모드를 켜 준다** — 옛 팝업을 여는 자리였다.
+    //   ⛔ openCampMine 은 지우지 않았다(업그레이드는 연구 구역으로 갔다 · 유보 규칙).
     if(campMineHit(ev.clientX, ev.clientY)){
       campPanMode(false);   // 🖐 광맥을 눌렀다 = '조작'이다(빈 바닥 탭·유닛/건물 탭과 같은 규칙)
-      openCampMine();
+      campMineModeSet(true);
       ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault(); }
+  }, true);
+  // ⏱ 손을 떼면 홀드를 멈춘다 — 창 밖으로 나가거나 취소돼도 마찬가지다.
+  for(const t of ['pointerup','pointercancel','pointerleave','blur'])
+    document.addEventListener(t, function(){ campHoldStop(); }, true);
+  // 🖐 손가락이 크게 움직이면 = 화면을 밀려는 것이다. 홀드를 멈춘다(제자리 홀드만 인정).
+  document.addEventListener('pointermove', function(ev){
+    if(!_campHoldPt) return;
+    if(Math.hypot(ev.clientX - _campHoldPt.x, ev.clientY - _campHoldPt.y) > 24) campHoldStop();
   }, true);
 }
 
@@ -2303,6 +2414,8 @@ function campMineHit(clientX, clientY){
 // 업그레이드 구매 — **값은 campUpgCost 하나가 정한다**(여기서 다시 계산하지 않는다).
 function campUpgBuy(k){
   const C = campState(); if(!C || typeof G === 'undefined' || !G.tech) return false;
+  // ⛏ 홀드는 **끝이 있는 축이다** — 하한(CAMP_HOLD_MIN)에 닿으면 더 팔지 않는다.
+  if(k === 'hold' && campUpgLv('hold') >= campHoldLvMax()) return false;
   const cost = campUpgCost(k);
   if((G.tech.credit || 0) < cost) return false;
   G.tech.credit -= cost;
@@ -2682,6 +2795,19 @@ function campPatchZoom(){
     _campZoomPatched.techPtrUp = oUp;
 
     window.techPtrDown = function(ev){
+      // 🤏 **두 손가락은 언제나 확대·축소**다(2026-08-27 사용자 확정) — 팬 모드에서도 그대로 잡힌다.
+      //   ⛔ 두 손가락으로 **화면을 옮기지는 않는다**. 이동은 롱프레스 팬 모드 하나가 맡는다
+      //     — 한 제스처에 두 뜻을 주면 확대하려다 화면이 밀린다.
+      if(_campOn && ev && ev.button !== 1){
+        _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+        if(_btPtrs.size >= 2){
+          const r = (typeof _btRect === 'function') ? _btRect() : null;
+          if(r){ const p = [..._btPtrs.values()], v = techViewT();
+            _btPan = null; _campPanDown = null; campPanDisarm();   // 팬·롱프레스를 접는다
+            _btPinch = { d:Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y) || 1, zoom:v.zoom,
+                         cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height };
+            _btMoved = true; return; } }
+      }
       if(_campOn && _campPanMode && ev && ev.button !== 1 && typeof techPanStart === 'function'){
         // ⭐ **대상 판별은 여기(down)서 한다.** 유닛·건물·자원을 눌렀으면 모드를 끄고 원본에 넘긴다
         //   — 그러면 선택·채집이 원본 규칙 그대로 일어난다(재전달 같은 잔재주가 필요 없다).
@@ -2712,6 +2838,17 @@ function campPatchZoom(){
     };
 
     window.techPtrMove = function(ev){
+      // 🤏 두 손가락 = **확대·축소만**. 원본은 같은 제스처로 화면도 함께 옮기는데(17-build-cards.js),
+      //   캠프에서는 그것을 빼서 손이 미끄러져도 화면이 밀리지 않게 한다.
+      if(_campOn && _btPinch && _btPtrs.size >= 2 && ev){
+        _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
+        const p = [..._btPtrs.values()];
+        const d = Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
+        const z = Math.max(techMinZoom(), Math.min(techMaxZoom(), _btPinch.zoom * d / _btPinch.d));
+        const t = techViewT(); t.zoom = z;
+        // ⛔ t.x·t.y 는 건드리지 않는다 — 그것이 「두 손가락 화면 이동」이었다.
+        _techClampView(t); _btMoved = true; return;
+      }
       // 끌기 시작하면 롱프레스 취소 — 끌었다는 건 박스 지정을 하겠다는 뜻이다
       if(_campLongT && ev && _campLongFrom && ev.pointerId === _campLongFrom.id
          && Math.hypot(ev.clientX - _campLongFrom.x, ev.clientY - _campLongFrom.y) > 8) campPanDisarm();

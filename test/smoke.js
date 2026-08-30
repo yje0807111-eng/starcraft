@@ -68,10 +68,13 @@ function pump(frames){ for(let f=0;f<frames;f++){ stepCmdMove(0.016); separateUn
 //   승패 규칙 검사는 진짜 규칙을 봐야 한다 — 켠 채로 돌리면 「탈락인데 캠프로 안 돌아감」 셋이 깨진다.
 //   ⚠ 그 플래그가 사라지면(원래 계획인 「병력 없으면 이동 금지」로 바뀌면) 이 줄도 지운다.
 function campDevFailOff(){ try{ if(typeof CAMP_DEV_NOFAIL!=='undefined') CAMP_DEV_NOFAIL=false; }catch(e){} }
+// 💰 **재화 굴리기도 끈다.** 헤드리스는 rAF 가 멈춰 있어 굴리기가 끝나지 않는다 —
+//   재화를 읽는 검사가 전부 중간값(대개 0)을 본다. 굴리기 자체는 전용 step 이 따로 잰다.
+function curRollOff(){ try{ if(typeof CUR_ROLL_ON!=='undefined') CUR_ROLL_ON=false; }catch(e){} }
 
 // ── 그룹: lobby ──
 async function groupLobby(){
-  campDevFailOff();
+  campDevFailOff(); curRollOff();
   await step('부트: 전역/탭 존재', ()=>{ assert(typeof G!=='undefined','G 없음'); assert(typeof USEMAPS!=='undefined','USEMAPS 없음');
     assert($('tabs'),'#tabs 없음'); return 'phase='+G.phase; });
   // 로그인/회원가입 화면은 반드시 거친다(자동 로그인 금지). 아이디를 비우고 로그인하면 바로 게임 선택으로.
@@ -1166,14 +1169,15 @@ async function groupLobby(){
               +' | selU='+JSON.stringify(G.tech.selU)+' sel='+G.tech.sel); }
           wk.x=bak.x; wk.y=bak.y; wk.tx=bak.tx; wk.ty=bak.ty; wk._wp=bak.wp;
           wk._gKind=bak.gk; wk._gTgt=bak.gt; wk._working=bak.working; }   // 🧹 원복 — 뒤 step 의 채취 검사가 이 흔적을 물려받지 않게
-        // 💎 광맥 탭은 **그 자리에서 캐지 않고 채굴 판을 연다**(2026-08-27). 캐는 것은 그 판의 과녁이 맡는다.
+        // ⛏ 광맥 탭은 **채굴 모드를 켠다**(2026-08-27 · A+F 확정). 켜지면 맵 전체가 과녁이라
+        //   광맥을 겨냥할 필요가 없다 — 광맥이 화면의 5% 뿐이라 손끝이 자꾸 빗나가던 문제를 그렇게 푼다.
+        //   ⛔ 옛 채굴 판(campMineSheet)을 여는 것으로 되돌리지 말 것 — 업그레이드는 연구 구역으로 갔다.
         { await arm(); const q=at(mnn.x,mnn.y);
           if(onMap(q)){ pid++;
             fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 광맥을 탭했는데 모드가 안 꺼진다');
-            const _sh=document.getElementById('campMineSheet');
-            assert(_sh && !_sh.classList.contains('hide'),'광맥을 탭했는데 채굴 판이 안 열린다');
-            if(typeof closeCampMine==='function') closeCampMine();   // 🧹 뒤 step 에 열린 판을 물려주지 않는다
+            assert(campMineModeOn(),'광맥을 탭했는데 채굴 모드가 안 켜진다');
+            campMineModeSet(false);   // 🧹 뒤 step 에 모드를 물려주지 않는다
           } }
         { await arm(); const q=at(bd.x,bd.y);
           if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
@@ -2210,6 +2214,101 @@ async function groupLobby(){
       return '넉넉하면 지급 · 고갈이면 0 · 무제한(inf)은 안 줄고 계속 준다';
     } finally { G.tech=keep; } });
 
+  // 💰 재화 숫자는 **굴러서** 오른다(2026-08-27 사용자 확정) — 큰 보상이 툭 바뀌면 무엇이 들어왔는지 안 보인다.
+  //   ⚠ 이 그룹은 굴리기를 꺼 두고 돈다(curRollOff · 헤드리스는 rAF 가 멈춰 끝나지 않는다).
+  //     그래서 여기서만 잠깐 켜서 **장치가 살아 있는지** 본다.
+  await step('재화 숫자: 큰 값은 굴러서 오르고 작은 값은 즉시', async()=>{
+    skipIf(typeof CUR_ROLL_ON==='undefined' || typeof _curRoll!=='function','굴리기 없음');
+    const el=document.createElement('b'); document.body.appendChild(el);
+    const had=CUR_ROLL_ON;
+    try{
+      CUR_ROLL_ON=true;
+      // ① 큰 변화 — 첫 프레임에 **목표값이 아니어야** 한다(굴러가는 중)
+      _curRoll(el, 0); const zero=el.textContent;
+      _curRoll(el, 1250000);
+      assert(el.textContent===zero,
+        '큰 값이 들어왔는데 곧바로 최종값이다 — 굴리지 않는다: '+el.textContent);
+      if(el._rollRaf) cancelAnimationFrame(el._rollRaf);
+      // ② 작은 변화 — **즉시** 바뀌어야 한다(탭 한 번에 1 씩 버는 것까지 굴리면 늘 흔들린다)
+      _curRoll(el, 100); if(el._rollRaf) cancelAnimationFrame(el._rollRaf); el._curV=100; el.textContent=fmtCur(100);
+      _curRoll(el, 103);
+      assert(el.textContent===fmtCur(103),'작은 변화까지 굴린다 — 숫자가 늘 흔들린다: '+el.textContent);
+      assert(CUR_ROLL_MIN>0 && CUR_ROLL_MIN<=50,'즉시 처리 기준이 범위를 벗어났다: '+CUR_ROLL_MIN);
+      return '굴림 '+CUR_ROLL_MS+'ms · 즉시 기준 '+CUR_ROLL_MIN;
+    } finally { CUR_ROLL_ON=had; if(el._rollRaf) cancelAnimationFrame(el._rollRaf); el.remove(); }
+  });
+
+  // 🏷 프로필 제목(.cgKick) — 시트 **위쪽 가장자리**라 뒤로 맵이 비친다.
+  //   ⛔ 색만 바꾸지 말 것: 배경이 캠프(밝은 돌바닥)일 수도 던전(어두움)일 수도 있어
+  //     흰색은 밝은 쪽에서, 검은색은 어두운 쪽에서 묻힌다(docs/mock/camp-kick-4.html 로 네 안을 비교했다).
+  //   ⇒ 밝은 글자 + **그림자로 배경과 끊는다**(A안 · 2026-08-27 사용자 확정).
+  await step('프로필 제목: 배경이 밝든 어둡든 읽힌다', async()=>{
+    const host=$('btSheetBody')||$('unitCmd'); skipIf(!host,'프로필 호스트 없음');
+    const probe=document.createElement('div');
+    probe.className='cmdG'; probe.innerHTML='<div class="cgKick">TEST</div>';
+    probe.style.position='absolute'; probe.style.left='-9999px';
+    document.body.appendChild(probe);
+    try{
+      const cs=getComputedStyle(probe.querySelector('.cgKick'));
+      const rgb=(cs.color.match(/[0-9]+/g)||[]).map(Number);
+      const lum=rgb.length>=3 ? (0.2126*rgb[0]+0.7152*rgb[1]+0.0722*rgb[2]) : 0;
+      assert(lum>170,'제목이 밝은 글자가 아니다 — 어두운 던전 배경에서 묻힌다 ('+cs.color+')');
+      assert(cs.textShadow && cs.textShadow!=='none',
+        '제목에 그림자가 없다 — 밝은 캠프 바닥에서 흰 글자가 묻힌다');
+      return '밝기 '+Math.round(lum)+' · 그림자 있음';
+    } finally { probe.remove(); }
+  });
+
+  // ══ ⛏ 채굴 모드 (2026-08-27 · A+F 확정) ══
+  //   켜면 **맵 전체가 과녁**이고(A), 누르고 있으면 간격마다 캔다(F).
+  //   ⭐ 광맥이 화면의 5% 뿐이라 손끝이 자꾸 빗나가던 문제를 「과녁을 화면 전체로」로 푼 것이다.
+  await step('채굴 모드: 맵 전체가 과녁 · 홀드로 이어 캔다 · 연타 상한', async()=>{
+    skipIf(typeof campMineModeSet!=='function' || !campIsOn(),'채굴 모드 없음');
+    const on0=campMineModeOn(), cr0=G.tech.credit;
+    try{
+      // ① 꺼져 있으면 광맥이 아닌 곳을 눌러도 안 캔다(유닛·건물 조작이 살아 있어야 한다)
+      campMineModeSet(false);
+      assert(!campMineModeOn(),'모드가 안 꺼진다');
+      // ② 켜면 **광맥이 아닌 자리에서도** 캔다 — 이것이 A안의 전부다
+      campMineModeSet(true);
+      G.tech.credit=0;
+      const g=campMineOnce(100, 300, false);
+      assert(g>0 && G.tech.credit===g,'채굴 모드인데 안 캐진다: '+g);
+      assert(g===campTapGain(),'획득량이 campTapGain 과 다르다 — 수식이 두 벌이다: '+g+' vs '+campTapGain());
+      // ③ 연타 **상한** — 사람 손은 거의 안 닿지만 매크로의 폭주는 잘린다
+      assert(CAMP_TAP_MIN_MS>=60 && CAMP_TAP_MIN_MS<=150,
+        '연타 상한이 범위를 벗어났다('+CAMP_TAP_MIN_MS+'ms) — 너무 낮으면 매크로가, 너무 높으면 손맛이 죽는다');
+      // ④ 홀드 간격 — **연타보다 느려야** 「편한 대신 느린」 선택지가 된다
+      assert(campHoldMs()>=CAMP_HOLD_MIN,'홀드 간격이 하한 아래다: '+campHoldMs());
+      assert(CAMP_HOLD_MIN > CAMP_TAP_MIN_MS*2,
+        '홀드 하한이 연타 상한에 너무 가깝다 — 홀드가 연타를 대체해 버린다');
+      // ⑤ 업그레이드로 줄어들고, **끝이 있다**
+      { const C=campState(); const u0=C.upg?JSON.stringify(C.upg):'{}';
+        const m0=campHoldMs();
+        C.upg=C.upg||{}; C.upg.hold=1;
+        assert(campHoldMs()<m0,'채굴 속도를 올렸는데 간격이 그대로다: '+m0+' → '+campHoldMs());
+        C.upg.hold=campHoldLvMax();
+        assert(campHoldMs()===CAMP_HOLD_MIN,'최대 레벨인데 하한이 아니다: '+campHoldMs());
+        G.tech.credit=1e9;
+        assert(!campUpgBuy('hold'),'최대 레벨인데 더 팔린다 — 연타보다 빨라진다');
+        C.upg=JSON.parse(u0); }
+      // ⑤-2 ⛏ 홀드는 **간격으로만** 차이를 낸다(배수 1 · 사용자 확정).
+      //     ⭐ 그래도 **최대치가 연타에 못 미쳐야** 한다: 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이다.
+      //       실측(2026-08-27 · 30분): 연타 6탭 127만 / 홀드 최대(실효 3.3탭) 56만 = 44%.
+      // ⚠ 배수 **장치**는 2 로 재야 한다 — 지금 설정값이 1 이라 그대로 재면 늘 통과하는 헛검사가 된다.
+      { const g1=campMineOnce(10,10,false), gM=campMineOnce(10,10,false,2);
+        assert(gM===g1*2,'홀드 배수 장치가 안 걸린다: '+g1+' → '+gM);
+        // 최대까지 올려도 연타(초당 ~6회)를 넘지 않는다
+        const holdPerSec=(1000/CAMP_HOLD_MIN)*CAMP_HOLD_MUL;
+        assert(holdPerSec < 6,
+          '홀드 최대가 연타를 넘어선다(실효 초당 '+holdPerSec.toFixed(1)+'탭) — 연타할 이유가 사라진다'); }
+      // ⑥ 캠프를 나가면 모드도 꺼진다 — 다른 화면으로 들고 나가지 않는다
+      campMineModeSet(true);
+      { const ph=$('phone'); assert(ph.classList.contains('mineMode'),'모드 표시(mineMode)가 화면에 안 붙는다'); }
+      return '상한 '+CAMP_TAP_MIN_MS+'ms · 홀드 '+CAMP_HOLD_MS0+'→'+CAMP_HOLD_MIN+'ms(Lv'+campHoldLvMax()+')';
+    } finally { campMineModeSet(on0); try{ G.tech.credit=cr0; }catch(e){} }
+  });
+
   // ══ 🔬 연구 구역 「자원」 칸 (2026-08-27 · js/20-camp-research.js) ══
   //   하단 네비 연구 > 자원 = 터치·채취·정제소를 **한 자리에서** 올린다.
   //   ⭐ 이 화면의 핵심은 **사기 전에 얼마나 오르는지**를 보여 주는 것이다(옛 채굴 팝업은 비용만 보여 줬다).
@@ -2224,10 +2323,14 @@ async function groupLobby(){
       G.tech.credit=5e4;
       campResEnter('res');
       const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
-      // ① 세 줄 — 터치·채취·정제소. ⛔ 정제소가 빠지면 자원 성장 셋 중 하나만 자리가 달라진다(이번 이동의 이유).
+      // ① 네 줄 — 터치·채취·**채굴 속도**·정제소.
+      //   ⛔ 정제소가 빠지면 자원 성장 중 하나만 자리가 달라진다(건물을 골라야만 올릴 수 있던 그 자리).
+      //   ⛏ 채굴 속도 = 누르고 있을 때의 간격(2026-08-27 · A+F).
       const nms=slots().map(x=>(x.querySelector('.cgName')||{}).textContent);
-      assert(nms.length===3,'자원 칸이 세 줄이 아니다: '+nms.join(','));
-      assert(nms.indexOf('정제소')>=0,'정제소가 자원 칸에 없다 — 건물을 골라야만 올릴 수 있던 그 자리로 되돌아간다');
+      assert(nms.length===4,'자원 칸이 네 줄이 아니다: '+nms.join(','));
+      for(const need of ['정제소','채굴 속도'])
+        assert(nms.indexOf(need)>=0,need+' 가 자원 칸에 없다: '+nms.join(','));
+
       // ② 정보판이 **현재 ▸ 다음**을 보여 준다
       { const v=body.querySelector('.cgVal');
         assert(v,'오를 값 미리보기(cgVal)가 없다 — 비용만 보여 주면 살지 말지를 감으로 고르게 된다');
@@ -2242,6 +2345,35 @@ async function groupLobby(){
       { const ref=slots().find(x=>(x.querySelector('.cgName')||{}).textContent==='정제소');
         if(ref && typeof campHasRefinery==='function' && !campHasRefinery())
           assert(ref.classList.contains('dim'),'정제소를 안 지었는데 살 수 있어 보인다'); }
+      // ④-1 💰 **재화가 커도 살 수 있어야 한다.**
+      //    ⛔ 재화에 `| 0` 을 쓰지 말 것 — 32비트로 잘려 **21억을 넘으면 음수**가 된다.
+      //      캠프 미네랄은 던전 배수가 70만배까지 가서 금방 그 선을 넘는다(fmtCur 이 1e56 까지 다룬다).
+      //      실측 2026-08-27: 미네랄 30억인데 「부족」으로 판정돼 업그레이드가 안 됐다.
+      { const cr=G.tech.credit; const lv0=campUpgLv('tap');
+        G.tech.credit=3e9; campResSheet();
+        const d=(body.querySelector('.cgDd')||{}).textContent||'';
+        assert(d.indexOf('필요')<0,'재화가 30억인데 부족하다고 한다 — 32비트로 잘렸다: '+d);
+        campResTap('tap');
+        assert(campUpgLv('tap')>lv0,'재화가 30억인데 안 사진다 — 32비트로 잘렸다');
+        G.tech.credit=cr; campResSheet(); }
+      // ④-2 💸 **못 사는 이유가 화면에 보여야 한다.**
+      //    ⛔ toast() 에 기대지 말 것 — 그것은 채팅으로 간다(addChat). 캠프에는 채팅바가 없어서
+      //      (CLAUDE.md 「유즈맵 안 전 구역 · 캠프만 제외」) **아무 데도 안 보인다**.
+      //      실측 2026-08-27: 미네랄 0 에서 눌러도 아무 말이 없어 「눌러도 안 된다」로 읽혔다.
+      { const cr=G.tech.credit; G.tech.credit=0;
+        campResSheet();
+        const d=(body.querySelector('.cgDd')||{}).textContent||'';
+        assert(d.indexOf('필요')>=0,'미네랄이 0 인데 정보판이 이유를 말하지 않는다: '+d);
+        G.tech.credit=cr; campResSheet(); }
+      // ④-3 🔙 **아무것도 안 사고** 나가도 하단이 기지 요약으로 돌아온다.
+      //    renderCampIdleSheet 는 값이 그대로면 다시 안 그리는데, 연구 그리드를 요약으로 오인해
+      //    시트에 그대로 남았다(실측: 뒤로 갔는데 제목이 「자원」).
+      { campResEnter('res');
+        campResExit();
+        if(typeof renderCampIdleSheet==='function') renderCampIdleSheet();
+        const t=(body.querySelector('.cgKick')||body.querySelector('.cgN')||{}).textContent||'';
+        assert(t.indexOf('MY BASE')>=0,'아무것도 안 사고 나갔더니 하단이 안 돌아온다: '+t);
+        campResEnter('res'); }
       // ⑤ 🚪 네비로 들어오고 나가기 — **화면은 그대로, 하단만 바뀐다**
       { campResExit();
         const scr=$('researchScreen');
@@ -2286,7 +2418,8 @@ async function groupLobby(){
           const cmd=G.tech.ents.find(e=>e.type==='bldg');
           const fake={eid:G.tech.eseq++, type:'bldg', bk:bd.k, x:cmd.x+0.05, y:cmd.y, bt:0};
           G.tech.ents.push(fake);
-          campArmBuy(rk);
+          // ⚠ **두 번 눌러 산다**(2026-08-27 사용자 확정) — 첫 탭은 설명 보기다.
+          campArmBuy(rk); campArmBuy(rk);
           // ⚠ 연구는 **시간이 걸릴 수 있다** — 그때는 레벨 대신 건물에 작업(_rj)이 걸린다.
           //   둘 중 하나면 「샀다」가 성립한다(구매 경로는 techDoResearch 하나다).
           const started=(G.tech.ents||[]).some(e=>e._rj && e._rj.rk===rk);
@@ -7189,8 +7322,11 @@ async function groupLobby(){
       renderCampIdleSheet(box);
       assert(box.querySelector('.cmdG'),'요약 카드가 안 그려짐');
       assert(box.querySelectorAll('.cgStat').length===m.info.stats.length,'요약 줄 수가 다름');
-      // ③-2 안쪽 **전체**를 쓴다 — 빈 슬롯 4칸은 이 카드에서 의미가 없다
-      assert(!box.querySelector('.cgGrid'),'요약 카드에 빈 슬롯 그리드가 남았다');
+      // ③-2 ⛏ **채굴 토글 한 칸**이 오른쪽에 선다(2026-08-27 사용자 확정).
+      //    빈 칸 셋은 CSS 로 감춰 「한 칸만 있는」 모습이 된다 — 새 컴포넌트를 만들지 않고 슬롯을 빌린다.
+      { const real=[...box.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
+        assert(real.length===1,'요약 카드의 칸이 하나가 아니다: '+real.length);
+        assert(real[0].hasAttribute('data-minemode'),'그 한 칸이 채굴 토글이 아니다'); }
       { const k=box.querySelector('.cgKick');
         assert(k,'머리줄이 작은 라벨로 안 그려짐');
         const cs=getComputedStyle(k);
@@ -8780,7 +8916,7 @@ async function groupLobby(){
 
 // ── 그룹: game (솔로 무한) ──
 async function groupGame(){
-  campDevFailOff();
+  campDevFailOff(); curRollOff();
   await step('솔로 시작', async()=>{ skipIf(!USEMAPS.nemo_inf,'nemo_inf 맵 없음'); startSoloInfinite(); await sleep(400); G.loading=false;
     assert(G.phase==='playing','phase='+G.phase); return 'ok'; });
   await step('첫 진입 = 유닛뽑기 섹션', ()=>{ assert(G.mainSheet==='gacha','초기 섹션='+G.mainSheet);
@@ -10323,7 +10459,7 @@ async function groupGame(){
 
 // ── 그룹: sandbox (관리자) ──
 async function groupSandbox(){
-  campDevFailOff();
+  campDevFailOff(); curRollOff();
   await step('샌드박스 진입', async()=>{ skipIf(typeof enterSandbox!=='function','없음'); enterSandbox(); await sleep(300);
     assert(G.sandbox===true,'sandbox 플래그'); return 'units='+G.units.length; });
   await step('샌드박스 탭 구성(전투실험·건설 표시, 보스 숨김)', ()=>{ updatePbossFab();

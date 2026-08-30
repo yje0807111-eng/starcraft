@@ -1006,6 +1006,20 @@
   .cdRow.lock{color:#5c646f;cursor:default}
   .cdRow.lock .cdMul{color:#4d545e}
   /* 라운드 = 굴리는 피커. 큰 수가 위, 1 이 맨 아래(옛 사냥터 피커와 같은 방향) */
+  /* ⛏ 채굴 토글 — 「MY BASE」 요약판의 **그리드 한 칸**(사용자 확정 2026-08-27).
+     생김새는 공용 슬롯(.cgSlot)이 그대로 갖는다 — 여기서는 「한 칸만 보이게」와 「켜짐」만 정한다. */
+  #phone.campMode #btSheetBody .cgSlot.empty{display:none}          /* 빈 칸 셋을 감춘다 = 한 칸만 */
+  /* ⚠ 슬롯이 옆에 서면서 왼쪽 통계 판이 좁아진다 — 4열 그대로 두면 글자가 줄바꿈돼 깨진다.
+     통계 판은 전폭(wide)일 때처럼 넓게 두고, 격자만 3열로 줄인다. */
+  #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgInfo{flex:1 1 auto;max-width:none;min-width:0}
+  #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgStats.cgWide{grid-template-columns:repeat(3,1fr)}
+  /* 한 칸만 남으므로 격자도 **1열**로 — 4열 그대로 두면 칸이 1/4 폭으로 쪼그라든다. */
+  #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgCol{flex:none}
+  #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgGrid{grid-template-columns:62px;grid-template-rows:1fr}
+  #phone.campMode #btSheetBody .cmbSlot.on{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32)}
+  #phone.campMode #btSheetBody .cmbSlot.on .cgName{color:#fff}
+  /* 캔 만큼 숫자가 튀어오른다 — 맵 위에 뜨는 판(팝업 안의 .cmPop 과 같은 어법) */
+  #cstMain .cmPop.mapPop{position:absolute;z-index:6;pointer-events:none;transform:translate(-50%,-50%)}
   /* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
   .cdR.off{opacity:.3;pointer-events:none}
   /* 첫 칸(캠프)은 던전과 성격이 달라 살짝 갈라 둔다 — 아래로 1px 선 */

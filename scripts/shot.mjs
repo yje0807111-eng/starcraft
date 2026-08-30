@@ -519,6 +519,175 @@ try {
         return out; }, kill);
       console.log('REFCHAIN '+JSON.stringify(r));
     }
+    else if (WHAT === 'roll') {   // 💰 큰 재화가 들어올 때 숫자가 굴러서 오르나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const r = await page.evaluate(() => new Promise(res=>{
+        const el=document.getElementById('curMin');
+        G.tech.credit = 0; updateCurBar();
+        const seen=[];
+        const t0=performance.now();
+        const tick=()=>{ seen.push({ ms:Math.round(performance.now()-t0), tx:el.textContent });
+          if(performance.now()-t0 < 800) requestAnimationFrame(tick);
+          else res({ 시작:seen[0], 표본:seen.filter((_,i)=>i%6===0).slice(0,8).map(x=>x.ms+':'+x.tx),
+                     끝:seen[seen.length-1], 값:Math.round(G.tech.credit) }); };
+        // 한 번에 큰 값이 들어온다(자리 비움 정산 같은 상황)
+        G.tech.credit = 1250000; updateCurBar();
+        requestAnimationFrame(tick); }));
+      console.log('ROLL '+JSON.stringify(r,null,1));
+      // 작은 변화는 즉시여야 한다(탭 한 번)
+      const s2 = await page.evaluate(()=>{ const el=document.getElementById('curMin');
+        const was=el.textContent; G.tech.credit += 3; updateCurBar();
+        return { was, now:el.textContent }; });
+      console.log('SMALL '+JSON.stringify(s2));
+    }
+    else if (WHAT === 'pinch') {   // 🤏 두 손가락 — 줌만 되고 화면은 안 밀리나 · 팬 모드에서도 되나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const cdp4 = await page.createCDPSession();
+      const tp = async (type, pts) => cdp4.send('Input.dispatchTouchEvent', {
+        type, touchPoints: type==='touchEnd' ? [] : pts.map((p,i)=>({ x:p[0], y:p[1], radiusX:8, radiusY:8, force:1, id:i+1 })) });
+      const read = () => page.evaluate(()=>({ zoom:+techViewT().zoom.toFixed(3),
+        x:+techViewT().x.toFixed(4), y:+techViewT().y.toFixed(4), pan:(typeof _campPanMode!=='undefined')?_campPanMode:'-' }));
+      const mid = await page.evaluate(()=>{ const m=document.getElementById('cstMain').getBoundingClientRect();
+        return { cx:Math.round(m.left+m.width/2), cy:Math.round(m.top+m.height*0.42) }; });
+      const out={};
+      // ① 팬 모드 꺼짐 — 두 손가락 벌리기(가운데를 옆으로 옮기며 = 이동 유발 시도)
+      out.전 = await read();
+      await tp('touchStart', [[mid.cx-40, mid.cy],[mid.cx+40, mid.cy]]);
+      for(let i=1;i<=6;i++){ const g=40+i*12, off=i*10;   // 벌리면서 **가운데도 옆으로** 민다
+        await tp('touchMove', [[mid.cx-g+off, mid.cy],[mid.cx+g+off, mid.cy]]);
+        await new Promise(r=>setTimeout(r,26)); }
+      await tp('touchEnd', []); await new Promise(r=>setTimeout(r,400));
+      out.핀치후 = await read();
+      // ② 팬 모드를 켜고 다시 핀치
+      await page.evaluate(()=>{ campPanMode(true); });
+      out.팬켬 = await read();
+      await tp('touchStart', [[mid.cx-40, mid.cy],[mid.cx+40, mid.cy]]);
+      for(let i=1;i<=6;i++){ const g=40-i*4;
+        await tp('touchMove', [[mid.cx-g, mid.cy],[mid.cx+g, mid.cy]]);
+        await new Promise(r=>setTimeout(r,26)); }
+      await tp('touchEnd', []); await new Promise(r=>setTimeout(r,400));
+      out.팬중핀치후 = await read();
+      await page.evaluate(()=>{ campPanMode(false); });
+      console.log('PINCH '+JSON.stringify(out));
+    }
+    else if (WHAT === 'kickbg') {   // 🏷 제목(.cgKick) 자리 실측 + 그 구간 배경 저장
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const r = await page.evaluate(()=>{
+        const k=document.querySelector('#btSheetBody .cgKick');
+        const sh=document.getElementById('btSheet');
+        const kr=k?k.getBoundingClientRect():null, sr=sh.getBoundingClientRect();
+        const cs=k?getComputedStyle(k):null;
+        return { kick:kr?{x:Math.round(kr.left),y:Math.round(kr.top),w:Math.round(kr.width),h:Math.round(kr.height)}:null,
+          sheet:{x:Math.round(sr.left),y:Math.round(sr.top),w:Math.round(sr.width),h:Math.round(sr.height)},
+          색:cs?cs.color:'-', 글자:k?k.textContent:'-' }; });
+      // 제목이 얹히는 띠(시트 위 60px)를 통째로 저장 — 목업의 배경으로 쓴다
+      const y0=Math.max(0, r.sheet.y-6);
+      const px = await page.screenshot({ clip:{ x:r.sheet.x, y:y0, width:r.sheet.w, height:70 } });
+      fs.writeFileSync(path.join(ROOT,'docs/mock/_kick-bg.png'), px);
+      console.log('KICKBG '+JSON.stringify(r)+' · 띠 y0='+y0);
+    }
+    else if (WHAT === 'minetog') {   // ⛏ 채굴 토글이 「MY BASE」 판 안에 있고 눌리나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const b = await page.evaluate(()=>{
+        const body=document.getElementById('btSheetBody');
+        const t=body.querySelector('[data-minemode]');
+        const r=t?t.getBoundingClientRect():null;
+        return { 있나:!!t, 글자:t?t.textContent.trim():'-', 켜짐:campMineModeOn(),
+          제목:(body.querySelector('.cgKick')||{}).textContent,
+          맵버튼남음:!!document.getElementById('campMineBtn'),
+          x:r?Math.round(r.left+r.width/2):0, y:r?Math.round(r.top+r.height/2):0,
+          w:r?Math.round(r.width):0, h:r?Math.round(r.height):0 }; });
+      if(b.있나){
+        // 사람처럼 200ms 누른다
+        await page.mouse.move(b.x, b.y); await page.mouse.down();
+        await new Promise(r=>setTimeout(r,200)); await page.mouse.up();
+        await new Promise(r=>setTimeout(r,300));
+        b.누른뒤 = await page.evaluate(()=>({ 켜짐:campMineModeOn(),
+          글자:(document.querySelector('[data-minemode]')||{}).textContent }));
+      }
+      const px = await page.screenshot({ clip:{x:0,y:600,width:430,height:250} });
+      fs.writeFileSync(path.join(ROOT,'scratch_minetog.png'), px);
+      console.log('MINETOG '+JSON.stringify(b));
+    }
+    else if (WHAT === 'minemode') {   // ⛏ 채굴 모드 — 맵 아무 데나 눌러도 캐나 · 홀드가 도나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const info = await page.evaluate(() => {
+        const b=document.getElementById('campMineBtn');
+        if(b){ const r=b.getBoundingClientRect(), cs=getComputedStyle(b);
+          const tx=b.querySelector('.cmbTx'), ic=b.querySelector('.cmbIco');
+          window.__btn={ w:Math.round(r.width), h:Math.round(r.height), l:Math.round(r.left), r2:Math.round(r.right),
+            ws:cs.whiteSpace, ov:cs.overflow, disp:cs.display, pos:cs.position,
+            tx:tx?{ w:Math.round(tx.getBoundingClientRect().width), sw:tx.scrollWidth, txt:tx.textContent }:null,
+            ic:ic?{ w:Math.round(ic.getBoundingClientRect().width) }:null,
+            host:Math.round(document.getElementById('homeScreen').getBoundingClientRect().width) }; }
+        const m=document.getElementById('cstMain').getBoundingClientRect();
+        return { btn:!!b, btnTx:b?b.textContent.trim():'-', on:campMineModeOn(),
+          hold:campHoldMs(), min:CAMP_TAP_MIN_MS,
+          // 광맥이 **아닌** 빈 자리를 고른다 — 거기서도 캐지는지 본다
+          spot:{ x:Math.round(m.left+m.width*0.25), y:Math.round(m.top+m.height*0.30) },
+          btn2:window.__btn,
+          credit:Math.round(G.tech.credit||0) }; });
+      // ① 모드가 꺼져 있으면 빈 바닥을 눌러도 안 캔다
+      await page.mouse.click(info.spot.x, info.spot.y);
+      await new Promise(r=>setTimeout(r,120));
+      const off = await page.evaluate(()=>({ credit:Math.round(G.tech.credit||0), on:campMineModeOn() }));
+      // ② 버튼으로 켠다
+      await page.evaluate(()=>{ document.getElementById('campMineBtn').click(); });
+      await new Promise(r=>setTimeout(r,80));
+      // ③ 빈 바닥을 눌러도 캔다
+      await page.mouse.click(info.spot.x, info.spot.y);
+      await new Promise(r=>setTimeout(r,120));
+      const tap = await page.evaluate(()=>({ credit:Math.round(G.tech.credit||0), on:campMineModeOn(),
+        pops:document.querySelectorAll('#cstMain .cmPop.mapPop').length }));
+      // ④ 누르고 있으면 간격마다 이어서 캔다
+      await page.mouse.move(info.spot.x, info.spot.y);
+      await page.mouse.down();
+      await new Promise(r=>setTimeout(r, 2600));
+      const held = await page.evaluate(()=>({ credit:Math.round(G.tech.credit||0) }));
+      await page.mouse.up();
+      await new Promise(r=>setTimeout(r, 900));
+      const after = await page.evaluate(()=>({ credit:Math.round(G.tech.credit||0) }));
+      // 📸 켠 상태 · 캐는 순간을 찍는다
+      await page.evaluate(()=>{ if(!campMineModeOn()) document.getElementById('campMineBtn').click(); });
+      await page.mouse.move(info.spot.x, info.spot.y);
+      await page.mouse.down();
+      await new Promise(r=>setTimeout(r, 850));
+      const b1 = await page.screenshot({ clip:{x:0,y:0,width:430,height:880} });
+      fs.writeFileSync(path.join(ROOT,'scratch_mine_on.png'), b1);
+      await page.mouse.up();
+      // 연구 > 자원 칸(채굴 속도 줄)도
+      await page.evaluate(()=>{ campMineModeSet(false); G.tech.credit=5e4; campResEnter('res'); });
+      await new Promise(r=>setTimeout(r,200));
+      const b2 = await page.screenshot({ clip:{x:0,y:560,width:430,height:290} });
+      fs.writeFileSync(path.join(ROOT,'scratch_mine_upg.png'), b2);
+      console.log('MINEMODE '+JSON.stringify({ info, off, tap, held, after,
+        heldGain:held.credit-tap.credit, afterStop:after.credit-held.credit }));
+    }
     else if (WHAT === 'tech') {   // 🔬 기술 칸 — 보유 유닛으로 걸러지나
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
       await new Promise(r=>setTimeout(r,900));
@@ -556,6 +725,215 @@ try {
         out.noU=miss;
         return out; });
       console.log('TECH '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'slowclick') {   // 🖱 **사람처럼 눌렀다 떼는** 클릭(150ms) — 도구의 즉시 클릭과 다르다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const b = await page.evaluate(()=>{
+        const C=campState(); C.upg=C.upg||{}; C.upg.tap=0; G.tech.credit=500;
+        campResEnter('res');
+        window.__ev=[];
+        for(const t of ['pointerdown','mousedown','pointerup','mouseup','click'])
+          document.addEventListener(t, function(ev){ if(window.__ev.length<20)
+            window.__ev.push(t+':'+(((ev.target&&ev.target.className)||'')+'').slice(0,12)); }, true);
+        const body=document.getElementById('btSheetBody');
+        const sl=[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))[0];
+        const r=sl.getBoundingClientRect();
+        return { lv:campUpgLv('tap'), x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2) }; });
+      // 🔍 위임이 왜 안 걸리나 — pointerup 시점의 실제 값을 본다
+      await page.evaluate(()=>{
+        window.__dg=[];
+        const body=document.getElementById('btSheetBody');
+        const sl=[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))[0];
+        window.__dg.push('슬롯HTML: '+sl.outerHTML.slice(0,120));
+        document.addEventListener('pointerdown', function(ev){
+          if(window.__dg.length>12) return;
+          window.__dg.push('DOWN target='+(((ev.target&&ev.target.className)||'')+'').slice(0,14)
+            +' inBody='+!!(ev.target.closest&&ev.target.closest('#btSheetBody'))
+            +' sec='+(typeof _resSec!=='undefined'?_resSec:'?')); }, true);
+        document.addEventListener('pointerup', function(ev){
+          if(window.__dg.length>12) return;
+          const t=ev.target;
+          const hit=t&&t.closest?t.closest('#btSheetBody [data-res],#btSheetBody [data-arm],#btSheetBody [data-armbuy],#btSheetBody [data-tech]'):null;
+          window.__dg.push('UP target='+(((t&&t.className)||'')+'').slice(0,14)
+            +' hit='+(hit?(hit.getAttribute('data-res')||'있음'):'없음')
+            +' inBody='+!!(t&&t.closest&&t.closest('#btSheetBody'))
+            +' 연결='+(t&&t.isConnected)
+            +' 슬롯속성='+((t&&t.closest&&t.closest('.cgSlot'))?(t.closest('.cgSlot').getAttribute('data-res')||'없음'):'슬롯아님')
+            +' downPt='+(typeof _resDownPt!=='undefined'&&_resDownPt?'있음':'없음')); }, true);
+      });
+      // 🔍 누르고 있는 동안 **무엇이** DOM 을 갈아치우나 — 관찰자를 붙인다
+      await page.evaluate(()=>{
+        window.__mut=[]; window.__guard=[];
+        const body=document.getElementById('btSheetBody');
+        new MutationObserver(ms=>{ for(const m of ms){ if(window.__mut.length>40) return;
+          if(m.type==='childList' && (m.addedNodes.length||m.removedNodes.length))
+            window.__mut.push('갈림:'+((m.target.id||m.target.className||'')+'').slice(0,18)
+              +' +'+m.addedNodes.length+' -'+m.removedNodes.length); } })
+          .observe(body,{childList:true,subtree:true});
+        // 내 가드가 실제로 걸리는지
+        const o1=window.campResSheet;
+        window.campResSheet=function(){ window.__guard.push('campResSheet 호출'+(window.__resHoldPeek?'(hold)':'')); return o1.apply(this,arguments); };
+        const o2=window.renderCmdGrid;
+        window.renderCmdGrid=function(host,m){ if(window.__mut.length<40)
+          window.__guard.push('renderCmdGrid('+((host&&host.id)||'?')+')'); return o2.apply(this,arguments); };
+      });
+      const HOLD=+(process.env.SHOT_HOLD||150);
+      await page.mouse.move(b.x, b.y);
+      await page.mouse.down();
+      await new Promise(r=>setTimeout(r, HOLD));
+      await page.mouse.up();
+      await new Promise(r=>setTimeout(r, 300));
+      const diag = await page.evaluate(()=>({ mut:window.__mut.slice(0,10), guard:window.__guard.slice(0,10),
+        mutN:window.__mut.length, guardN:window.__guard.length }));
+      const dg = await page.evaluate(()=>window.__dg||[]);
+      console.log('DELEG'); for(const x of dg) console.log('  '+x);
+      console.log('MUT '+JSON.stringify(diag,null,1));
+      const a = await page.evaluate(()=>({ lv:campUpgLv('tap'), cr:Math.round(G.tech.credit),
+        ev:window.__ev.slice(0,12), click:window.__ev.filter(x=>x.indexOf('click')===0).length }));
+      console.log('SLOWCLICK hold='+HOLD+'ms · lv '+b.lv+'→'+a.lv+' · click '+a.click+'회');
+      console.log('  '+a.ev.join('  '));
+    }
+    else if (WHAT === 'restouch') {   // 📱 연구 슬롯을 **손가락으로** 누르면 되나(마우스는 된다)
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const b = await page.evaluate(()=>{
+        G.tech.credit=500; const C=campState(); C.upg=C.upg||{}; C.upg.tap=0;
+        campResEnter('res');
+        window.__ev=[];
+        for(const t of ['pointerdown','pointerup','click','touchstart','touchend'])
+          document.addEventListener(t, function(ev){ if(window.__ev.length<20)
+            window.__ev.push(t+(ev.isTrusted?'[T]':'[F]')+(ev.defaultPrevented?'[PD]':'')
+              +':'+(((ev.target&&ev.target.className)||'')+'').slice(0,14)); }, true);
+        const body=document.getElementById('btSheetBody');
+        const sl=[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))[0];
+        const r=sl.getBoundingClientRect();
+        return { lv:campUpgLv('tap'), cr:G.tech.credit,
+          ta:getComputedStyle(sl).touchAction,
+          x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2) }; });
+      const cdp3 = await page.createCDPSession();
+      const tp = async (type, x, y) => cdp3.send('Input.dispatchTouchEvent', {
+        type, touchPoints: type==='touchEnd' ? [] : [{ x, y, radiusX:10, radiusY:10, force:1, id:1 }] });
+      // ① 제자리 탭
+      await tp('touchStart', b.x, b.y); await new Promise(r=>setTimeout(r,60));
+      await tp('touchEnd', b.x, b.y); await new Promise(r=>setTimeout(r,300));
+      const t1 = await page.evaluate(()=>({ lv:campUpgLv('tap'), cr:G.tech.credit, ev:window.__ev.slice(0,10) }));
+      // ② 살짝 움직이는 탭(사람 손가락)
+      await page.evaluate(()=>{ window.__ev=[]; const C=campState(); C.upg.tap=0; G.tech.credit=500; campResSheet(); });
+      await tp('touchStart', b.x, b.y); await new Promise(r=>setTimeout(r,40));
+      await tp('touchMove', b.x+3, b.y+2); await new Promise(r=>setTimeout(r,40));
+      await tp('touchEnd', b.x+3, b.y+2); await new Promise(r=>setTimeout(r,300));
+      const t2 = await page.evaluate(()=>({ lv:campUpgLv('tap'), cr:G.tech.credit, ev:window.__ev.slice(0,10) }));
+      console.log('RESTOUCH '+JSON.stringify({ b, 제자리탭:t1, 흔들린탭:t2 }, null, 1));
+    }
+    else if (WHAT === 'navres') {   // 🔍 **네비를 실제로 눌러** 연구에 들어가고 나온다(함수 직접 호출 금지)
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      // ⚠ **실제 판과 같게** — 미네랄 0 · 채굴 모드 켠 상태에서 재현한다
+      const errs=[];
+      page.on('pageerror', e=>errs.push('ERR:'+String(e.message).slice(0,80)));
+      page.on('console', m=>{ if(m.type()==='error') errs.push('CON:'+m.text().slice(0,80)); });
+      await page.evaluate((c)=>{ G.tech.credit = c; campMineModeSet(true); }, +(process.env.SHOT_CR||0));
+      const out={ errs };
+      // toast 가 실제로 화면에 뜨나
+      const nav = async (label) => page.evaluate((L)=>{
+        const b=[...document.querySelectorAll('#navBar .navIt')].find(x=>x.textContent.trim().indexOf(L)>=0);
+        if(!b) return 'no:'+L; b.click(); return 'ok'; }, label);
+      out.navResearch = await nav('연구');
+      await new Promise(r=>setTimeout(r,300));
+      out.afterNav = await page.evaluate(()=>({ sec:(typeof _resSec!=='undefined')?_resSec:'-',
+        drill:(typeof _navDrill!=='undefined')?_navDrill:'-',
+        cells:[...document.querySelectorAll('#navBar .navIt')].map(x=>x.textContent.trim()),
+        sheet:(document.querySelector('#btSheetBody .cgKick')||document.querySelector('#btSheetBody .cgN')||{}).textContent }));
+      // 슬롯을 **진짜로** 누른다
+      const sl = await page.evaluate(()=>{
+        const b=document.getElementById('btSheetBody');
+        const x=[...b.querySelectorAll('.cgSlot')].filter(e=>!e.classList.contains('empty'))[0];
+        if(!x) return null; const r=x.getBoundingClientRect();
+        return { x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2),
+          inMap:!!x.closest('#cstMain'), lv:campUpgLv('tap'), mine:campMineModeOn(),
+          top:(function(){ const e=document.elementFromPoint(Math.round(r.left+r.width/2), Math.round(r.top+r.height/2));
+            let n=e,o=[]; while(n&&n!==document.body&&o.length<4){ o.push((n.id||n.className||'').toString().slice(0,18)); n=n.parentElement; } return o.join('|'); })() }; });
+      out.slot=sl;
+      if(sl){ await page.mouse.click(sl.x, sl.y); await new Promise(r=>setTimeout(r,250));
+        out.afterClick = await page.evaluate(()=>{
+          // toast 를 넓게 찾는다 — 어떤 요소로 뜨는지 모른다
+          const cand=[...document.querySelectorAll('body *')].filter(e=>{
+            const t=(e.className||'').toString(); return /toast|tst|snack/i.test(t); });
+          return { lv:campUpgLv('tap'), credit:Math.round(G.tech.credit),
+            toastEls:cand.map(e=>((e.className||'')+'').slice(0,24)+':'+(e.textContent||'').trim().slice(0,30)
+              +':'+getComputedStyle(e).display+':op'+getComputedStyle(e).opacity).slice(0,4) }; }); }
+      // 네비 「뒤로」를 진짜로 누른다
+      out.navBack = await page.evaluate(()=>{
+        const b=document.querySelector('#navBar .navBk'); if(!b) return 'no-back'; b.click(); return 'ok'; });
+      await new Promise(r=>setTimeout(r,400));
+      out.afterBack = await page.evaluate(()=>{ const b=document.getElementById('btSheetBody');
+        return { sec:(typeof _resSec!=='undefined')?_resSec:'-',
+          title:(b.querySelector('.cgKick')||b.querySelector('.cgN')||{}).textContent,
+          stats:!!b.querySelector('.cgStats'),
+          cells:[...document.querySelectorAll('#navBar .navIt')].map(x=>x.textContent.trim()) }; });
+      console.log('NAVRES '+JSON.stringify(out,null,1));
+    }
+    else if (WHAT === 'resclick') {   // 🔍 연구 슬롯을 **진짜로 눌러** 업그레이드가 되나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const b = await page.evaluate(() => {
+        G.tech.credit=5e4; campResEnter('res');
+        const body=document.getElementById('btSheetBody');
+        const sl=[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))[0];
+        const r=sl.getBoundingClientRect();
+        return { lv0:campUpgLv('tap'), pick:(typeof _resPick!=='undefined')?_resPick:'-',
+          onclick:sl.getAttribute('onclick')||sl.outerHTML.slice(0,90),
+          x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2) }; });
+      // 첫 클릭(고르기) → 둘째 클릭(구매)
+      await page.mouse.click(b.x, b.y);
+      await new Promise(r=>setTimeout(r,200));
+      const c1 = await page.evaluate(()=>({ lv:campUpgLv('tap'), pick:_resPick,
+        html:(document.querySelector('#btSheetBody .cgSlot')||{}).outerHTML|| '' }));
+      await page.mouse.click(b.x, b.y);
+      await new Promise(r=>setTimeout(r,200));
+      const c2 = await page.evaluate(()=>({ lv:campUpgLv('tap'), pick:_resPick, credit:Math.round(G.tech.credit) }));
+      // 🔁 시트가 초당 몇 번 다시 그려지나 — 그리는 도중 클릭이 씹히는지 본다
+      const redraw = await page.evaluate(() => new Promise(res=>{
+        const body=document.getElementById('btSheetBody');
+        let n=0; const mo=new MutationObserver(()=>n++);
+        mo.observe(body,{childList:true,subtree:true});
+        setTimeout(()=>{ mo.disconnect(); res(n); }, 1000); }));
+      // 🖱 10번 연속 눌러 몇 번 먹히나
+      const lvA = await page.evaluate(()=>campUpgLv('tap'));
+      for(let i=0;i<10;i++){ await page.mouse.click(b.x, b.y); await new Promise(r=>setTimeout(r,110)); }
+      const lvB = await page.evaluate(()=>campUpgLv('tap'));
+      console.log('REDRAW '+redraw+'/초 · 클릭 10회 → 레벨 +'+(lvB-lvA));
+      // 💸 **미네랄이 모자랄 때** 한 번만 눌러도 이유를 말하나
+      const poor = await page.evaluate(async () => {
+        G.tech.credit = 0; _resPick = 'gather'; campResSheet();
+        const body=document.getElementById('btSheetBody');
+        const sl=[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))[0];
+        const before=_resPick;
+        sl.click();   // 한 번만
+        const t=document.querySelector('.toast,#toast,.toastWrap');
+        return { was:before, now:_resPick, lv:campUpgLv('tap'),
+          toast:t?t.textContent.trim().slice(0,40):'(없음)' }; });
+      console.log('POOR '+JSON.stringify(poor));
+      console.log('RESCLICK '+JSON.stringify({ b:{lv0:b.lv0,pick:b.pick,x:b.x,y:b.y,onclick:(b.onclick||'').slice(0,80)},
+        after1:{lv:c1.lv,pick:c1.pick}, after2:c2 }));
+      console.log('SLOT '+(c1.html||'').slice(0,200));
     }
     else if (WHAT === 'arm') {   // ⚔ 무장 칸 — 계열 3 → 공격·방어 2단
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
