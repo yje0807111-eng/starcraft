@@ -1313,3 +1313,159 @@ desert    sandy desert ground with fine sand texture, subtle wind ripple pattern
 2. 나머지는 그 이미지를 **첨부**하고 장면 줄만 바꾼다.
 
 ⛔ **스타일을 말로 다시 설명하지 말 것** — 레퍼런스가 정한다(§9-2 · §11-1 에서 같은 결론).
+
+## 13. 오토배틀 전장 — 타일 계열 (2026-08-30)
+
+> ⛔ **§12(통짜)와 정반대다.** 섞으면 둘 다 망가진다.
+
+| | §12 네모네모 | **§13 오토배틀** |
+|---|---|---|
+| 월드 | 화면에 딱 맞는 판 하나 | **4800 × 4800px** |
+| 카메라 | 고정 | **자유 이동 + 줌 1.2~2.5** |
+| 방법 | **통짜 한 장** | **타일 반복** |
+| 왜 | 판이 안 움직이니 한 장이면 된다 | 통짜면 2,300만 픽셀 — **불가능** |
+
+### 13-1. 규격
+
+| 항목 | 값 |
+|---|---|
+| 모델 | `gpt_image_2` · `1:1` · 1024~2048 · `high` |
+| 지면 타일 | **1024 이상** — 화면에 460×scale 로 깔리고 줌 2.5·DPR 3 이면 517px 이 필요하다 |
+| 데코 | 2×2 네 변형 · 잘라서 512 시트(칸 256)로 |
+
+### 13-2. ⭐ 타일용 공통 블록 — §12 와 두 줄이 다르다
+
+```
+seamless tileable texture, edges match perfectly on all four sides,
+perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
+flat even ambient lighting with no directional shadows and no visible light source,
+fine small-scale surface detail, nothing larger than a fist,
+muted earthy palette, low contrast, evenly lit, nothing glows,
+no characters, no objects, no units, no structures, no text, no user interface,
+highly detailed photorealistic PBR game texture, AAA game environment asset,
+3D render, square tile
+```
+
+| | §12 통짜 | **§13 타일** |
+|---|---|---|
+| 첫 줄 | 없음 | **`seamless tileable texture`** |
+| 끝 줄 | `tall vertical composition` | **`square tile`** |
+| 형태·위치 지시 | 판의 비율·자리를 못박는다 | ⛔ **전부 뺀다** — 형태를 말하면 무늬가 깨진다 |
+
+### 13-3. ⭐ 반복을 숨기는 법 — 이게 타일의 전부다
+
+타일은 반드시 되풀이된다. **주기가 안 보이게** 만드는 것이 목표다.
+
+#### ⛔ 벽돌 패턴은 쓰지 말 것 (2026-08-30 실패)
+
+첫 시도는 벽돌식 석판이었는데 **가로 줄이 이어져 주기가 그대로 읽혔다.**
+불규칙 판석(crazy paving)으로 바꾸니 사라졌다. 프롬프트에 넣은 세 줄이 결정적이었다:
+
+| 넣은 말 | 왜 |
+|---|---|
+| `no rows, no grid and no long straight joints` | 줄이 있으면 눈이 주기를 바로 잡는다 |
+| `no single stone should be memorable enough to notice when the texture repeats` | 눈에 띄는 돌 하나면 그것만 세어도 주기가 보인다 |
+| `evenly distributed with no dominant feature and no directional bias` | 밝은 덩어리·한쪽 흐름이 있으면 격자처럼 읽힌다 |
+
+#### ⭐ 매크로 오버레이 — 월드 전체에 얹는 얼룩 지도
+
+타일만으로는 넓게 볼 때 균일해서 반복이 읽힌다. **월드 전체 크기의 부드러운 얼룩**을
+`soft-light` 로 얹으면 지형에 지역성이 생긴다(`strikeDrawGround`).
+
+⭐ 오버레이는 4800px 로 늘어나므로 **일부러 흐리게** 뽑는다 — 768px 이면 충분하다.
+선명하면 타일과 싸워 지저분해진다. 프롬프트 핵심: `no small detail at all` · `softly blurred`.
+
+### 13-4. 데코 스프라이트 — 배경색으로 자른다
+
+바위·풀·뼈를 월드에 흩뿌린다(`strikeGenScenery` · 80개). 옛 선 그리기는 폴백으로 남아 있다.
+
+#### ⭐ 배경은 **채도 높은 단색**, 물체마다 다르게
+
+흙·돌·마른 풀·뼈는 전부 **채도가 낮다.** 그래서 「채도 높은 픽셀 = 배경」 한 줄로 갈린다.
+⛔ 흰 배경은 쓰지 말 것 — 뼈·밝은 돌이 같이 날아가고 접지 그림자가 깎인다.
+
+| 물체 | 물체 색 | 배경 | 왜 |
+|---|---|---|---|
+| 풀숲 | 짚노랑·올리브 | **마젠타** (255,0,255) | 노랑의 정반대 — 가장 까다로운 쪽에 최적을 준다 |
+| 바위 | 회갈색 | **시안** (0,255,255) | 채도로 갈린다 |
+| 뼈 | 회백색 | **파랑** (0,80,255) | 같은 이유 |
+
+⭐ 셋을 다르게 두면 물체에 우연히 그 색이 섞여도 **다른 파일은 안 다친다.**
+
+#### ⭐ 지면과 어울리게 하는 세 문장
+
+색만 맞추면 **오려 붙인 것처럼** 보인다(2026-08-30 실제로 그랬다). 스타일까지 맞춰야 한다:
+
+| 말 | 무엇을 고치나 |
+|---|---|
+| `part of the same photograph as the dry brown earth` | 오려 붙인 느낌 — **가장 센 한 줄** |
+| `very low relief, half sunk into the soil with dirt banked up against its lower edge` | 얹힌 소품 → **박힌 것** |
+| `the same fine dust film covers it that covers the ground` | 데코만 선명하던 것을 지면 쪽으로 끌어내린다 |
+
+⛔ **crater 는 뺐다** — `radial streaks of ejected dust` 가 「털 난 구멍」으로 나왔다.
+
+### 13-5. ⚠ 넣기 전에 **이음을 재라**
+
+AI 는 `seamless` 를 말해도 자주 어긋난다. 눈으로는 잘 안 보이고 게임에서 줄로 나타난다.
+
+**재는 법** — 왼끝↔오른끝(위끝↔아래끝) 픽셀 차이를 **내부 인접 열/행의 차이**와 비교한다:
+
+| 이음 / 내부 | 판정 |
+|---|---|
+| < 2.2배 | ✅ 이어짐 |
+| < 4배 | ⚠ 살짝 보임 |
+| 그 이상 | ❌ 끊긴다 |
+
+⭐ **끊겼으면 다시 뽑지 말고 잘라라.** 폭·높이를 조금씩 줄이며 이음이 최소인 지점을 찾으면
+대개 맞는 크기가 나온다(벽돌 타일: 세로 33.9 → **995×820 으로 자르니 10.8**).
+타일은 정사각일 필요가 없다 — 패턴은 가로 기준 균등 배율이라 비정사각도 정상 동작한다.
+
+### 13-6. 채택된 프롬프트 전문
+
+#### ① 통로 포장 — 불규칙 판석 (화면의 대부분)
+
+```
+A seamless square texture of an ancient courtyard paved with irregular flagstones, seen from
+directly above. The stones are all different — some large and roughly square, some long and
+narrow, some small wedges filling the gaps between bigger ones — fitted together in a random
+interlocking pattern with no rows, no grid and no long straight joints running across the
+surface. Every joint is short and changes direction, the way dry-laid crazy paving does.
+
+The stone is grey-brown, weathered and dry, each slab a slightly different tone from cool
+ash-grey through dun to a faint warm ochre, so no stone stands out as brighter or darker than
+the rest. The joints between them are packed with dark soil and thin dry moss, and fine grit
+and dust have settled along the edges. A few slabs are cracked or chipped, a few worn smooth,
+but nothing is dramatic — no single stone should be memorable enough to notice when the
+texture repeats.
+
+In the background art style of StarCraft 1 from 1998 — flat even lighting, visible surface
+grain, low contrast, no gloss and nothing that glows.
+
+seamless tileable texture, edges match perfectly on all four sides,
+the pattern is evenly distributed with no dominant feature and no directional bias,
+perfectly flat top-down orthographic view straight from above, no perspective, no horizon,
+flat even ambient lighting with no directional shadows and no visible light source,
+fine small-scale surface detail, nothing larger than a fist,
+muted earthy palette, low contrast, evenly lit, nothing glows,
+no characters, no objects, no units, no structures, no text, no user interface,
+highly detailed photorealistic PBR game texture, AAA game environment asset,
+3D render, square tile
+```
+
+#### ② 바깥 지형 · ③ 매크로 오버레이
+
+⭐ 지면은 §13-2 블록 + 「마른 흙 + 성긴 마른 풀」 장면 줄.
+오버레이는 §13-3 의 원칙대로 **디테일 없이 부드러운 얼룩만** — 전문은
+`docs/mock/` 가 아니라 이 문서가 단일 소스이므로, 다시 뽑을 때 §13-3 표를 보고 쓴다.
+
+### 13-7. 코드가 쓰는 자리
+
+| 파일 | 무엇 |
+|---|---|
+| `js/17-build-cards.js` | `strikeAssetsReady()` — **부팅 때 받지 않는다**(§12-6 과 같은 이유) · `STRIKE_DECO` 시트 |
+| `js/18-strike.js` | `strikeDrawGround`(지형+오버레이) · `strikeDrawLane`(포장) · `strikeDrawScenery`(데코) |
+| 타일 크기 | `STK_PAVE_TILE=460` — **단일 소스**(레인·소환 구역이 같이 쓴다) |
+
+⛔ **레인·소환 구역에 어두운 seam 을 다시 긋지 말 것**(2026-08-30 제거). 레인은 `lineCap:'round'` 라
+끝이 반원인데, 그 위를 같은 석판인 소환 구역이 덮으면서 **포장 한가운데 검은 곡선**만 남았다.
+포장과 지형은 색·무늬가 달라 테두리 없이도 경계가 읽힌다.
