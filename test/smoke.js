@@ -1853,6 +1853,49 @@ async function groupLobby(){
     return '탭 지정 · 링 · 자리 이동 · 대형 · 박스 ok';
   });
 
+  // 🎨 **던전을 옮기면 바닥 그림도 따라 바뀐다** (2026-08-30)
+  //    ⛔ campSkin 은 오래도록 **캠프 화면 진입 때 한 번**만 불렸다. 50라운드를 채워 자동으로
+  //      넘어가도 바닥은 옛 그림 그대로였다 — 그림 11장을 넣어 두고 한 장만 보고 있었다.
+  await step('캠프: 던전을 옮기면 바닥 그림도 바뀐다', async()=>{
+    skipIf(typeof campEnterDungeon!=='function'||typeof campSkin!=='function','캠프 없음');
+    const ph=document.getElementById('phone'); skipIf(!ph,'#phone 없음');
+    const bgOf=()=>(ph.style.getPropertyValue('--campBg')||'').trim();
+    campEnterDungeon(1); const a=bgOf();
+    campEnterDungeon(3); const b=bgOf();
+    assert(a && b, '--campBg 가 안 걸렸다');
+    assert(a!==b, '던전을 옮겼는데 바닥 그림이 그대로다: '+a.slice(-28));
+    assert(/dg3/.test(b), '던전 3 인데 dg3 그림이 아니다: '+b.slice(-28));
+    { const C=campState(); C.dg=3; C.cleared=CAMP_ROUND_MAX-1; campSkin(); const c0=bgOf();
+      campClearRound();                                  // 50 을 채운다 → dg4 로 자동 이동
+      assert(campDgN()===4,'자동 이동이 안 됐다: '+campDgN());
+      assert(bgOf()!==c0,'자동 이동인데 바닥이 그대로다'); }
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } campSkin(); }
+    return 'dg1 ≠ dg3 · 자동 이동에서도 갱신';
+  });
+
+  // 🚪 **적은 화면 위 밖에서 태어난다** (2026-08-30 사용자 확정)
+  //    ⛔ 옛 자리는 오토배틀 스폰 패드 둘이었다 — 패드 ② 가 y 19.9~30.7% 라 화면(28.2~83.8%)과
+  //      겹쳐 적이 눈앞에서 튀어나왔다. 게다가 두 점에서만 나와 「두 덩이」로 보였다.
+  await step('캠프: 적은 화면 위 밖에서 한 줄로 태어난다', async()=>{
+    skipIf(typeof campPlaceFoes!=='function'||typeof CAMP_VIEW_Y==='undefined','캠프 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.ai.units.length=0; });
+    campWithStk(()=>{ for(let i=0;i<12;i++) strikeSpawnUnit('ai','marine'); });
+    const fresh=CAMPB.ai.units.slice(); assert(fresh.length>=6,'적이 안 나왔다: '+fresh.length);
+    campPlaceFoes(fresh);
+    const W=CAMPB.world;
+    const top = CAMP_VIEW_Y - 0.5/CAMP_ZOOM;          // 보이는 세로의 위 끝
+    const worst = Math.max(...fresh.map(u=>u.y/W));
+    assert(worst < top - 0.02, '적이 화면 안에서 태어난다: 가장 아래 '+(worst*100).toFixed(1)+'% vs 화면 상단 '+(top*100).toFixed(1)+'%');
+    const xs=fresh.map(u=>u.x/W), spread=Math.max(...xs)-Math.min(...xs);
+    assert(spread > CAMP_FOE_SPAWN_W*0.5, '가로로 안 퍼졌다: '+(spread*100).toFixed(1)+'%p');
+    campWithStk(()=>{ STK.ai.units.length=0; });
+    { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+    campBattleClose();
+    return '위 '+(worst*100).toFixed(1)+'% (화면 '+(top*100).toFixed(1)+'% 위) · 가로 '+(spread*100).toFixed(0)+'%p 퍼짐';
+  });
+
   // 🚶 **숨 고르기 동안 걸어서 자기 자리로 돌아온다** (2026-08-30 사용자 확정)
   //    ⛔ 예전엔 _gapT>0 이면 곧바로 return 해서 **6초 동안 한 발짝도 안 움직였다.**
   //      「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 늘려도 소용없었다.

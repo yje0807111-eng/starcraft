@@ -1055,6 +1055,26 @@ const CAMP_WAVE_MAX = 6;        // 라운드 하나를 최대 몇 번에 나눠 
 //   무시하고 다음 무리를 곧바로 낸다. 그래서 이제 간격을 「연출」로 길게 잡아도 안전하다.
 //   ⛔ 그 한 줄을 지우면 아래 값이 곧바로 라운드 길이가 된다. 같이 봐야 하는 짝이다.
 const CAMP_WAVE_GAP_S = 1.5;    // 웨이브 사이 간격(초) — 6무리가 7.5초에 걸쳐 밀려온다
+// 🚪 **적은 화면 위 밖에서 태어나 걸어 내려온다** (2026-08-30 사용자 확정)
+//   ⛔ 옛 자리는 오토배틀의 스폰 패드 둘(strikeSpawnPads)이었다 — 적 본진 좌우 두 점이다.
+//     실측: 패드 ② 가 y 19.9~30.7% 라 **화면(28.2~83.8%)과 겹쳐** 적이 눈앞에서 튀어나왔다.
+//     게다가 두 점에서만 나와 「몰려온다」가 아니라 「두 덩이가 생긴다」로 보였다.
+//   ⭐ 그래서 스폰 **직후에 좌표만 다시 잡는다.** `strikeSpawnUnit`(18-strike.js)은 공유 파일이라
+//     건드리지 않는다 — `campScaleFoes` 가 체력을 후처리하는 것과 같은 수법이다.
+//   ⚠ 화면까지 걸어오는 만큼 **라운드가 조금 길어진다.** 웨이브 간격 때와 달리 「대기」가 아니라
+//     「이동」이라 화면이 죽지는 않지만, 벤치 값을 이 커밋 전후로 섞지 말 것.
+const CAMP_FOE_SPAWN_Y = 0.18;   // 스폰 줄(세로 비율) — 화면 상단보다 확실히 위
+const CAMP_FOE_SPAWN_J = 0.05;   // 그 줄에서 위아래로 흩는 폭 — 한 줄로 딱 서면 기계 같다
+const CAMP_FOE_SPAWN_W = 0.62;   // 가로로 퍼뜨리는 폭(가운데 통로만큼)
+function campPlaceFoes(list){
+  if(!CAMPB || !list || !list.length) return 0;
+  const W = CAMPB.world;
+  for(const u of list){
+    u.x = W * (0.5 + (Math.random() - 0.5) * CAMP_FOE_SPAWN_W);
+    u.y = W * (CAMP_FOE_SPAWN_Y + (Math.random() - 0.5) * CAMP_FOE_SPAWN_J);
+    u._sx = u.x; u._sy = u.y;                      // 보간 잔상 제거(안 하면 옛 자리에서 미끄러진다)
+  }
+  return list.length; }
 function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
   const n = campFoeCount(campRoundN());
   const w = Math.max(1, Math.min(CAMP_WAVE_MAX, n));
@@ -1074,7 +1094,9 @@ function campSpawnWave(){
   const share = (CAMPB._wqTot > 0) ? (k / CAMPB._wqTot) : 1;
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
     for(let i = 0; i < k; i++) strikeSpawnUnit('ai', campFoeId());   // ⛔ 공중 전용은 뽑지 않는다
-    campScaleFoes(CAMPB.ai.units.slice(b4), share);
+    const fresh = CAMPB.ai.units.slice(b4);
+    campPlaceFoes(fresh);                          // 🚪 화면 위 밖에 한 줄로 세운다(아래)
+    campScaleFoes(fresh, share);
     return CAMPB.ai.units.length - b4; }) | 0; }
 // 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
 function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }

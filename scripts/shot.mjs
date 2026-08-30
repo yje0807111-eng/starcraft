@@ -1184,6 +1184,7 @@ try {
           if(NF>0){ CAMPB.ai.units.length=0; if(CAMPB._wq) CAMPB._wq.length=0; CAMPB._wqTot=0; CAMPB._gapT=0;
             campWithStk(()=>{ for(let i=0;i<NF;i++) strikeSpawnUnit('ai', campFoeId()); }); }
           out.round=(typeof campRoundN==='function')?campRoundN():null; out.foe0=CAMPB.ai.units.length;
+          { const ph=document.getElementById('phone'); out.bg=(ph?ph.style.getPropertyValue('--campBg'):'').slice(-30); }
         }catch(e){ out.err=String(e).slice(0,120); }
         return out; }, process.env.SHOT_DG||'1');
       console.log('SETUP '+JSON.stringify(setup));
