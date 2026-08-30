@@ -633,7 +633,26 @@ function campAdoptBaseUnits(){
     ents.splice(i, 1); take.push(e); }
   for(const e of take) campDeploy(e.uid, e.x, e.y);
   return take.length; }
-function campBattleClose(){ CAMPB = null; }
+// 🧳 전장을 닫을 때 **병력을 기지 엔티티로 되돌린다** (2026-08-29 · 페이블 점검에서 발견).
+//   ⛔ 유닛이 한 번만 태어나는 구조에서 전장 유닛은 CAMPB 에만 있는 **유일본**이다.
+//     그냥 CAMPB=null 로 버리면 패배·화면 이탈에서 병력이 통째로 증발하고,
+//     campSave 는 G.tech.ents 만 직렬화하므로 **앱을 껐다 켜도 사라진다.**
+//   ⭐ 자리(_post)를 격자 좌표로 역변환해 담는다 — 재입장 시 campAdoptBaseUnits 가
+//     그 자리 그대로 데려오고, campDeploy 가 새로 세우므로 체력도 가득 찬다.
+//     「패배하여 다시 시작할 때 부활 + 전체 회복」(사용자 규칙)이 이 경로로 이루어진다.
+//   ⚠ 누운 병력(_down)도 담는다 — uid 만 있으면 되살릴 수 있다.
+function campBattleClose(){
+  if(CAMPB && typeof G !== 'undefined' && G.tech){
+    const W = CAMPB.world || 4800, all = [];
+    for(const u of CAMPB.me.units){ if(u && !u.dead) all.push(u); }
+    for(const d of (CAMPB._down || [])){ if(d && d.u) all.push(d.u); }
+    for(const u of all){
+      const p = u._post || { x:u.x, y:u.y };
+      const g = campW2G(p.x, p.y, W);
+      G.tech.ents.push({ eid:G.tech.eseq++, type:'unit', uid:(u.gm || u.id), x:g.gx, y:g.gy });
+    }
+  }
+  CAMPB = null; }
 
 // ══ 🏢 기지 건물을 전장에 올린다 (2026-08-27) ═══════════════════════════
 // **패배 = 내 건물이 전부 부서지는 것**이다. 예전에는 전장에 본부 하나뿐이라
@@ -976,8 +995,10 @@ function campCanHitFoes(){
   // ⚠ 공격을 못 하는 유닛은 세지 않는다 — 의무병은 사거리 0 · 공격력 0 이라 아무리 많아도 못 죽인다.
   //   ⭐ _sbAtkMode 가 비전투(FXLAB_NOATK)를 {air:false,gnd:false} 로 돌려주므로 그것도 함께 걸린다.
   const canFight = function(u){ if((u.dmg || 0) <= 0) return false; const a = atkOf(u); return !!(a.air || a.gnd); };
-  const mine = CAMPB.me.units.filter(function(u){ return !u.dead && canFight(u); })
-    .concat((CAMPB._down || []).map(function(d){ return d.u; }).filter(function(u){ return u && canFight(u); }));
+  // ⛔ 누운 병력은 세지 않는다(2026-08-29) — 라운드 부활로 바뀐 뒤 **이번 라운드에는 못 일어난다.**
+  //   옛 주석의 「곧 일어나므로 센다」는 30초 부활 시절의 전제다. 그대로 두면 대공이 전부
+  //   누웠을 때 「때릴 수 있다」고 판단해 라운드가 영영 안 끝난다.
+  const mine = CAMPB.me.units.filter(function(u){ return !u.dead && canFight(u); });
   if(!mine.length) return false;                // 때릴 수 있는 병력이 하나도 없다 = 끝이 없다
   for(const f of foes){
     const fa = isAir(f);

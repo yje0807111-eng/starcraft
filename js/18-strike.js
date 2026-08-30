@@ -771,6 +771,10 @@ function _stkApplySpot(u, c, sk, key, foe){
   return true; }
 const STK_SD_AT=900, STK_SD_DPS=12, STK_SD_RAMP=0.02;   // 15분 후 시작 · 초당 피해(시간이 지날수록 가속)
 function strikeSuddenDeath(dt){ const S=STK; if(!S||S.over||S.stress) return;   // 🧪 관측 모드는 서든 데스 없음(끝나면 안 됨)
+  // 🏕 캠프 전장도 서든 데스 없음(strikeCheckOver 의 S.camp 가드와 같은 예외 · 2026-08-29).
+  //   캠프는 S.t 가 전장 수명 내내 누적되어(라운드마다 리셋되지 않는다) 15분이 넘으면
+  //   내 본부가 저절로 녹는다 — 실측(던전 2 R26)에서 「본부 HP 0」의 원인이 이것이었다.
+  if(S.camp) return;
   const t=(S.t||0)-STK_SD_AT; if(t<=0) return;
   if(!S._sdMsg){ S._sdMsg=true; if(typeof strikeToast==='function') strikeToast('☠ 서든 데스 — 양 진영 메인 신전이 무너지기 시작합니다'); }
   const d=(STK_SD_DPS+t*STK_SD_RAMP)*dt;
