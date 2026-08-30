@@ -637,6 +637,12 @@ function campBattleOpen(){
   //   (적 본부 HP 가 -7298 이었다. 이미 부순 것을 계속 붙잡고 있었다.)
   // ⚠ 위치는 남겨 둔다 — 적 유닛이 그 자리에서 스폰된다.
   S.ai.base.dead = true; S.ai.base.hp = 0;
+  // 🏛 **내 본부도 설계 스케일로 낮춘다** — 엔진 기본값 7500 은 오토배틀(신전)용이다.
+  //   ⛔ 이게 빠져 있어서 「전멸 뒤 적이 건물을 부수며 밀고 들어온다」(2026-08-30 패배 규칙)가
+  //     실제로는 **작동하지 않았다.** 실측(2026-08-30 · D1R1): 적 총 DPS 0.137 → 본부 7500 을
+  //     부수는 데 **909분**. 벤치가 「D1R1 를 30분째 못 깸」으로 멈춘 벽의 정체가 이것이다.
+  //   ⭐ 일반 건물(CAMP_BLD_HP = 1200/10)과 **같은 방식**으로 1/10 스케일을 적용한다.
+  S.me.base.maxHp = S.me.base.hp = CAMP_BASE_HP;
   S.me.units.length = 0; S.ai.units.length = 0;
   // 🌳 「건물 강화」 — 내 건물 전체의 체력에 얹는다(HUNT_R1 §4-5-3)
   { const bm = campRtMul('bldg');
@@ -696,7 +702,44 @@ function campBattleClose(){
 //   판에서 1200 을 두면 아군 하나가 건물을 부수는 데 수백 초가 걸린다(전에 그 값이었다).
 //   전함(체력 47)의 25배 = 한 채를 레인저(공격 1) 넷이 5분쯤 두드리는 크기다.
 //   ⛔ 설계표(§6-6 본부 체력)가 나오면 그 값으로 바꿀 것 — 지금은 잠정이다.
-const CAMP_BLD_HP = 1200 / 10;     // 건물 한 채의 기본 체력(본부는 전장 기본값을 쓴다)
+const CAMP_BLD_HP = 1200 / 10;     // 건물 한 채의 기본 체력
+// 🏛 본부 — 엔진 기본(mapCfg('baseHp') = 7500 · 오토배틀 신전용)을 **같은 1/10 스케일**로 내린 값.
+//   ⚠ 본부는 마지막 보루라 일반 건물의 6.25배다. campBattleOpen 에서 덮어쓴다.
+const CAMP_BASE_HP = 7500 / 10;
+
+// 💥 **적이 건물을 칠 때만 곱하는 배율** (2026-08-30 · sc-3 계산 · HUNT_R1 §6-2-5).
+//   ⛔ 어긋난 것은 「적 공격」이 아니라 **건물 체력과 유닛 체력 사이의 스케일**이다.
+//     유닛 체력이 4~47 인데 건물은 120 · 본부 750 — 유닛의 **150배**다. 그래서 유닛 전투는
+//     멀쩡히 돌아가는데(라운드마다 아군 3~12기가 눕는다) 건물만 안 부서졌다.
+//   ⛔ **CAMP_FOE_ATK0 을 올려서 고치지 말 것** — 그러면 유닛 전투가 통째로 무너진다.
+//     체력 5 짜리 아군이 20~35배 센 공격에 즉사한다.
+//   ⭐ 실측(D1R1 · 전멸 뒤 라운드가 끝나기까지):
+//        ×1(전) 본부만 1829초 · +5채 3293초   →   ×40 본부만 46초 · +5채 82초 · +10채 119초
+//     목표는 「전멸 뒤 60~120초」이고 ×40 이 건물 3~10채 구간을 68~119초로 덮는다.
+//   ⚠ 후반은 빨라진다(본부+5채: R1 82초 · R10 45 · R25 16 · R50 3). **의도된 것이다** —
+//     후반에 전멸했다면 이미 진 판이라 빨리 끝나는 편이 낫다.
+//   ⚠ **방어 건물(포탑류)이 생기면 예외가 필요하다** — 40배로 맞으면 무용지물이 된다.
+//     지금 캠프 건물은 전부 「맞기만 하는」 것이라 예외가 없다.
+const CAMP_FOE_BLD_MUL = 40;
+// 프레임 전 건물 체력을 떠 둔다 → strikeStepUnits 뒤에 깎인 만큼을 배율로 증폭한다.
+//   ⭐ 이 방식인 이유: 적이 구조물에 넣는 피해는 18-strike.js 안에서 `front.hp -= …` 로
+//     직접 빠져 가로챌 훅이 없다. ⛔ 18-strike.js 는 고치지 않는다(오토배틀 공유).
+//   ⚠ 내 건물을 때리는 것은 적뿐이다(아군은 같은 편을 안 친다) — 그래서 감소분 = 적 피해다.
+function campBldSnap(){
+  if(!CAMPB || !CAMPB._bld) return null;
+  const m = new Map();
+  for(const b of CAMPB._bld) if(b && !b.dead) m.set(b, b.hp);
+  return m; }
+function campBldAmp(snap){
+  if(!snap || CAMP_FOE_BLD_MUL === 1) return 0;
+  let hit = 0;
+  for(const [b, hp0] of snap){
+    const d = hp0 - b.hp;                       // 이번 프레임에 깎인 양
+    if(!(d > 0)) continue;
+    hit += d;
+    b.hp = hp0 - d * CAMP_FOE_BLD_MUL;
+    if(b.hp <= 0){ b.hp = 0; b.dead = true; } }
+  return hit; }
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
@@ -709,7 +752,12 @@ function campBuildStructs(){
     if(e.type !== 'bldg' || (e.bt || 0) > 0) continue;          // 짓는 중인 건물은 아직 없다
     const isMain = (e.bk === mainK);
     const hp = Math.round((isMain ? (CAMPB.me.base.maxHp || CAMPB.me.base.hp) : CAMP_BLD_HP) * (isMain ? 1 : bm));
-    if(isMain){ CAMPB.me.base.x = sx(e.x); CAMPB.me.base.y = sy(e.y); CAMPB.me.base.eid = e.eid; out.push(CAMPB.me.base); continue; }
+    // 🏛 본부는 **객체를 새로 만들지 않는다**(전장 판정이 me.base 를 본다) — 그래서 체력을 손으로 채운다.
+    //   ⛔ 이게 없으면 「건물을 다시 올린다 = 체력이 가득 찬다」가 일반 건물에만 걸린다.
+    if(isMain){ const b = CAMPB.me.base;
+      b.x = sx(e.x); b.y = sy(e.y); b.eid = e.eid;
+      b.hp = b.maxHp = b.max = hp; b.dead = false;
+      out.push(b); continue; }
     out.push({ x:sx(e.x), y:sy(e.y), hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
   }
   CAMPB._bld = out;
@@ -1450,7 +1498,9 @@ function campCombatStep(dt){
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
     campPostSnap();                                       // 🪧 되돌리기 전 위치(campPostStep 이 쓴다)
     const _g4 = CAMPB.me.units.slice();                   // 🩹 걷히기 전 명부(아래 campCatchDown)
+    const _gb = campBldSnap();                            // 💥 건물 피해 배율(아래 campBldAmp)
     campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+    campBldAmp(_gb);
     // ⛔ **여기에도 campCatchDown 이 있어야 한다** (2026-08-30 · 병력 누수의 원인).
     //   strikeStepUnits 는 끝에서 죽은 유닛을 배열에서 **걷어낸다**(18-strike.js). 그걸 붙잡지
     //   않으면 그 유닛은 _down 에도 안 들어가 **명부에서 통째로 사라진다** — 부활도 못 하고
@@ -1476,7 +1526,9 @@ function campCombatStep(dt){
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   campPostSnap();       // 🪧 되돌리기 전 위치를 떠 둔다(아래 campPostStep 이 쓴다)
+  const _bb = campBldSnap();   // 💥 건물 피해 배율 — 프레임 전 체력을 떠 둔다
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+  campBldAmp(_bb);      // 💥 적이 건물에 넣은 만큼을 ×CAMP_FOE_BLD_MUL 로 키운다
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
   campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 돌아온다)
   campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다

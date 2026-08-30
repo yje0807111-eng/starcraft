@@ -1992,6 +1992,39 @@ async function groupLobby(){
     return '병력·자리 유지 · 제자리 집결 · 적만 교체 · 건물 체력 회복';
   });
 
+  // 💥 **적이 건물을 칠 때만 배율이 걸린다** (2026-08-30 · sc-3 계산 · HUNT_R1 §6-2-5)
+  //    ⛔ 이게 없으면 「전멸 = 패배가 아니다 · 적이 건물을 부수며 밀고 들어온다」가 작동하지 않는다.
+  //      실측(고치기 전): 본부 7500 · 적 총 DPS 0.41 → 부수는 데 **909분**. 벤치의 D1R1 벽이 이것이었다.
+  //    ⚠ 유닛 전투에는 걸리면 안 된다 — 체력 5 짜리 아군이 40배 공격에 즉사한다.
+  await step('캠프: 적이 건물을 칠 때만 40배 · 유닛 전투는 그대로', async()=>{
+    skipIf(typeof campBldAmp!=='function'||typeof campBldSnap!=='function','건물 배율 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    const live=campBldAlive();
+    skipIf(!live.length,'전장에 건물이 없다');
+    // ① 깎인 만큼이 배율로 커진다
+    const b=live[0], hp0=b.hp, snap=campBldSnap();
+    b.hp = hp0 - 1;                                   // 적이 1 을 넣었다고 치고
+    campBldAmp(snap);
+    const got = hp0 - b.hp;
+    assert(Math.abs(got - CAMP_FOE_BLD_MUL) < 1e-6,
+      '건물 피해가 안 커졌다: 1 → '+got.toFixed(2)+' (기대 '+CAMP_FOE_BLD_MUL+')');
+    // ② 안 맞은 건물은 안 건드린다
+    b.hp = hp0; { const s2=campBldSnap(); campBldAmp(s2);
+      assert(Math.abs(b.hp-hp0)<1e-6,'안 맞은 건물의 체력이 변했다: '+b.hp+' (전 '+hp0+')'); }
+    // ③ 본부 체력이 설계 스케일이다(엔진 기본 7500 이 새어 들어오면 15시간이 걸린다)
+    assert(CAMPB.me.base.maxHp <= CAMP_BASE_HP*4+1e-6,
+      '본부 체력이 설계 스케일을 벗어났다: '+CAMPB.me.base.maxHp+' (기준 '+CAMP_BASE_HP+' · 트리 배수 허용)');
+    // ④ 유닛에는 안 걸린다 — 배율 대상은 _bld 뿐이다
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45);
+    if(u){ const uhp=u.hp, s3=campBldSnap(); u.hp = uhp - 1; campBldAmp(s3);
+      assert(Math.abs((uhp-1)-u.hp)<1e-6,'유닛 체력에 건물 배율이 걸렸다: '+u.hp+' (기대 '+(uhp-1)+')'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    campBattleClose();
+    return '건물 피해 1→'+CAMP_FOE_BLD_MUL+' · 본부 '+CAMP_BASE_HP+' · 유닛에는 안 걸린다';
+  });
+
   // 🧳 **전장을 닫아도 병력은 증발하지 않는다** (2026-08-29 · 페이블 점검에서 발견한 구멍 셋)
   //    ① 유일본인 전장 유닛이 기지 엔티티로 돌아와 저장·재입장을 탄다
   //    ② 누운 유닛은 「때릴 수 있다」에 안 세인다(라운드 부활 뒤의 규칙)
