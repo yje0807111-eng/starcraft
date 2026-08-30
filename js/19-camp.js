@@ -82,18 +82,13 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 // 졌다 → **캠프(0단계)로 돌아간다.** 몇 라운드를 깼든 그 판은 끝이다.
 //   ⭐ 1라운드도 못 깼으면 보너스 0 — 배율이 base 인 채로 끝난다(HUNT_R1 §6-1-0-3).
 //   ⚠ best 는 지우지 않는다. 다시 내려갈 때의 목표가 된다.
-// 🛠 **개발용 — 져도 캠프로 끌려오지 않는다**(2026-08-27 사용자 요청 · 임시).
-//   왜 필요했나: 좌상단 드롭다운으로 던전을 골라도 **291ms 만에 되돌아왔다**. 새 회차는 병력이 0 이라
-//   도착하자마자 패배 조건(병력 0 · 쓰러진 것 0 · 적 있음)에 걸린다 — 드롭다운은 멀쩡했다.
-//   ⚠ **원래 계획은 「병력이 없으면 이동을 막는다」**(사용자 확정). 그것이 들어오면 이 플래그와
-//     아래 분기를 **지운다** — 두 장치를 함께 두면 어느 쪽이 막는지 헷갈린다.
-//   ⛔ 배포 전에 반드시 false 로 돌리거나 지울 것.
-let CAMP_DEV_NOFAIL = true;
+// 🗑 **개발용 플래그 CAMP_DEV_NOFAIL 은 없앴다**(2026-08-30). 그것이 메우던 자리에
+//   설계대로 **「병력이 없으면 던전에 못 들어간다」**(campCanEnterDungeon)가 들어왔다.
+//   ⚠ 그 플래그가 필요했던 이유는 **던전을 골라도 291ms 만에 되돌아오던 것**이었다 —
+//     병력 0 으로 들어가니 도착하자마자 졌다. 이제 애초에 못 들어간다.
+//   ⛔ 두 장치를 함께 두지 말 것 — 어느 쪽이 막는지 헷갈린다.
 function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared() };
-  // 개발 모드에서는 **아무것도 되돌리지 않는다** — 고른 던전·라운드 그대로 계속 볼 수 있다.
-  //   (메시지는 그대로 뜬다 — 졌다는 사실 자체는 알려야 한다.)
-  if(CAMP_DEV_NOFAIL) return was;
   C.dg = 0; C.cleared = 0; campSave(); return was; }
 
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
@@ -658,6 +653,24 @@ function campBattleOpen(){
 //   ⚠ 실측(2026-08-28)에서 이걸 빠뜨려 판이 통째로 멈췄다: 캠프에서 54기를 뽑아 두었는데
 //     던전에 들어가면 전장 병력이 0 이라 곧바로 패배 → 캠프 → 다시 입장이 2,583번 반복됐다.
 //   ⛔ 인구를 반환하지 않는다 — 옛 출격이 그걸 해서 인구 상한이 무력했다.
+// 🚪 **병력이 없으면 던전에 못 들어간다** (2026-08-30 구현 · 설계는 사용자 확정분).
+//   ⛔ 이것이 없어서 맨몸으로 던전에 들어가 계속 졌다 — 30분 벤치에서 **패배 9번**,
+//     「D1R1 10분 · D1R2 17.4분」짜리 이상한 라운드가 그 자리다.
+//   ⭐ 초반 9.4분이 병력 0 인 것은 **설계대로다**(시작 미네랄 0 → 탭 → 일꾼 140 → 마린 5,000).
+//     그 시간은 캠프(0단계)에서 보내야 한다 — 거긴 적이 없다.
+//   ⚠ 누운 병력도 센다 — 라운드가 시작되면 일어나므로 「데리고 들어갈 수 있는 병력」이다.
+//   ⚠ 일꾼은 안 센다 — STK_UNITS 에 없는 것이 일꾼이다(campAdoptBaseUnits 와 같은 잣대).
+function campCombatCount(){
+  let n = 0;
+  if(typeof G !== 'undefined' && G.tech && typeof STK_UNITS !== 'undefined')
+    for(const e of (G.tech.ents || [])) if(e && e.type === 'unit' && STK_UNITS[e.uid]) n++;
+  if(typeof CAMPB !== 'undefined' && CAMPB){
+    for(const u of (CAMPB.me.units || [])) if(u && !u.dead) n++;
+    for(const d of (CAMPB._down || [])) if(d && d.u) n++; }
+  return n; }
+// 캠프(0)로 돌아가는 것은 **언제나 된다** — 막는 것은 던전으로 내려가는 쪽뿐이다.
+function campCanEnterDungeon(dg){ return ((dg | 0) <= 0) || campCombatCount() > 0; }
+
 function campAdoptBaseUnits(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech || typeof STK_UNITS === 'undefined') return 0;
   const ents = G.tech.ents, take = [];

@@ -231,6 +231,13 @@ function campRndTap(r){ if(!_cdPick) return; _cdPick.rnd=r; campRndMark(); campR
 // [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
 function campDropGo(){ if(!_cdPick) return;
   const C=campEnsureRnd(campState()); if(!C){ campDropClose(); return; }
+  // 🚪 **병력이 없으면 던전에 못 내려간다** (2026-08-30 사용자 확정 · 판정은 19-camp.js).
+  //   ⛔ 막고 **드롭다운은 열어 둔다** — 닫아 버리면 왜 안 갔는지 모른 채 화면만 사라진다.
+  //   ⚠ 캠프(0)로 돌아오는 것은 언제나 된다(campCanEnterDungeon 이 갈라 본다).
+  if(typeof campCanEnterDungeon==='function' && !campCanEnterDungeon(_cdPick.dg)){
+    if(typeof toast==='function') toast('병력이 있어야 던전에 갈 수 있다 — 캠프에서 병영을 짓고 뽑자');
+    if(typeof playSfx==='function') playSfx('ui_denied');
+    return; }
   // ⭐ 캠프 상태에 쓴다 — cleared 가 단일 소스이고 rnd 는 그것을 비춘다(라운드 n = 깬 수 n-1)
   // 🏕 캠프(0)로 가면 라운드는 없다 — cleared·rnd 를 비운다(campRoundN 도 0 을 돌려준다)
   const toHome=(_cdPick.dg===0);

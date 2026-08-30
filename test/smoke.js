@@ -25,6 +25,22 @@ function campWipeField(){
   if(CAMPB._wq) CAMPB._wq.length=0;
 }
 
+// 🚪 **던전 이동의 문을 열어 둔다** (2026-08-30).
+//   병력이 없으면 던전에 못 간다 — 맞는 규칙이지만, **드롭다운 UI 를 검사하는 step** 은
+//   그 규칙의 대상이 아니다(칩·정렬·확정 버튼을 본다). 병력을 하나 세워 주고,
+//   그럴 수 없는 화면이면 판정 함수만 잠시 연다. 규칙 자체는 전용 step 이 따로 지킨다.
+//   ⚠ 돌려주는 함수를 finally 에서 부를 것 — 안 부르면 다음 step 까지 문이 열린 채로 남는다.
+function campGateOpen(){
+  if(typeof G!=='undefined' && G.tech && G.tech.ents && typeof STK_UNITS!=='undefined'
+     && !G.tech.ents.some(e=>e&&e.type==='unit'&&STK_UNITS[e.uid]))
+    G.tech.ents.push({ type:'unit', uid:'marine', eid:'gate'+G.tech.ents.length, x:0.4, y:0.5 });
+  if(typeof campCanEnterDungeon==='function' && !campCanEnterDungeon(1)){
+    const o=window.campCanEnterDungeon;
+    window.campCanEnterDungeon=()=>true;
+    return ()=>{ window.campCanEnterDungeon=o; }; }
+  return ()=>{};
+}
+
 // 🤖 매크로 방지 1차(event.isTrusted)의 **테스트 전용 문**.
 //   스모크는 포인터 이벤트를 프로그램으로 쏘므로 isTrusted 가 false 다 — 열어 두지 않으면
 //   캠프 채집 관련 step 이 통째로 깨진다(js/19-camp.js 의 리스너 참고).
@@ -2010,6 +2026,52 @@ async function groupLobby(){
     { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
     campBattleClose();
     return '병력·자리 유지 · 제자리 집결 · 적만 교체 · 건물 체력 회복';
+  });
+
+  // 🚪 **병력이 없으면 던전에 못 들어간다** (2026-08-30 사용자 확정)
+  //    ⛔ 이게 없어서 맨몸으로 던전에 들어가 계속 졌다 — 30분 벤치에서 패배 9번,
+  //      「D1R1 10분 · D1R2 17.4분」짜리 라운드가 그 자리였다.
+  //    ⚠ 개발용 플래그 CAMP_DEV_NOFAIL 은 이것으로 대체하고 **없앴다** — 되살아나면 여기서 잡는다.
+  await step('캠프: 병력이 없으면 던전에 못 간다 · 캠프 복귀는 언제나 된다', async()=>{
+    skipIf(typeof campCanEnterDungeon!=='function'||typeof campCombatCount!=='function','문 없음');
+    // ① 옛 개발 플래그가 되살아나지 않았다
+    assert(typeof CAMP_DEV_NOFAIL==='undefined',
+      'CAMP_DEV_NOFAIL 이 되살아났다 — 문과 플래그가 둘 다 있으면 어느 쪽이 막는지 모른다');
+    // ② 병력 0 → 던전 ✕ · 캠프(0) ○
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWipeField();
+    // ⚠ 기지에 남은 유닛도 「데리고 갈 수 있는 병력」이라 함께 비운다(campWipeField 는 전장만 비운다)
+    if(G && G.tech && G.tech.ents)
+      for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i];
+        if(e && e.type==='unit' && STK_UNITS[e.uid]) G.tech.ents.splice(i,1); }
+    assert(campCombatCount()===0,'비웠는데 병력이 남았다: '+campCombatCount());
+    assert(!campCanEnterDungeon(1),'병력 0 인데 던전 1 에 들어갈 수 있다');
+    assert(!campCanEnterDungeon(5),'병력 0 인데 던전 5 에 들어갈 수 있다');
+    assert(campCanEnterDungeon(0),'캠프(0)로 돌아가는 것까지 막혔다');
+    // ③ 한 기라도 있으면 열린다
+    const u=campDeploy('marine', 0.4, 0.45); assert(u,'배치 실패');
+    assert(campCombatCount()===1,'세운 병력이 안 세어진다: '+campCombatCount());
+    assert(campCanEnterDungeon(1),'병력이 있는데 던전이 막혔다');
+    // ④ 누운 병력도 「데리고 갈 수 있는 병력」이다(라운드 시작에 일어난다)
+    { const b4=CAMPB.me.units.slice(); u.dead=true;
+      CAMPB.me.units.length=0; campCatchDown(b4);
+      assert(campCombatCount()===1,'누운 병력이 안 세어진다: '+campCombatCount());
+      assert(campCanEnterDungeon(1),'누운 병력만 있을 때 던전이 막혔다'); }
+    // ⑤ **드롭다운도 실제로 막는다** — 판정 함수만 맞고 UI 가 그냥 가면 아무 소용이 없다
+    if(typeof campDropOpen==='function' && typeof campDropGo==='function'){
+      campWipeField();
+      if(G && G.tech && G.tech.ents)
+        for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i];
+          if(e && e.type==='unit' && STK_UNITS[e.uid]) G.tech.ents.splice(i,1); }
+      const C=campState(); C.dg=0; C.cleared=0;
+      campDropOpen(); campDropPickDg(1); campDropGo(); await sleep(30);
+      assert(campState().dg===0,'병력 0 인데 드롭다운이 던전으로 옮겼다: dg='+campState().dg);
+      campDropClose(); }
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '병력 0 → 막힘 · 1기(누운 것 포함) → 열림 · 캠프 복귀는 자유';
   });
 
   // 💥 **적이 건물을 칠 때만 배율이 걸린다** (2026-08-30 · sc-3 계산 · HUNT_R1 §6-2-5)
@@ -7616,6 +7678,7 @@ async function groupLobby(){
     skipIf(typeof guideNote!=='function','가이드 함수 없음');
     const prof=PROF(), g0=prof.guide, camp0=prof.camp;
     const on0=window.campIsOn, st0=window.campState;
+    let gateOff=()=>{};                // 🚪 던전 이동 문(아래 campGateOpen)
     const _barWas=$('curBar').classList.contains('hide'); if(_barWas) curShow(true);
     try{
       delete prof.guide;
@@ -7666,10 +7729,12 @@ async function groupLobby(){
       updateCurBar();
       assert(guideCur().kind==='dg:2','8번째 단계가 던전 2 가 아님: '+guideCur().kind);
       window.campSkin=()=>{};
+      gateOff=campGateOpen();          // 🚪 이 step 은 가이드 계측을 보는 것이라 병력 문의 대상이 아니다
       campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
       assert(guideState().i===8,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i);
       return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 가드 · 던전 이동 계측';
     } finally {
+      gateOff();
       campDropClose(); closeGuide();
       window.campIsOn=on0; window.campState=st0;
       if(g0) prof.guide=g0; else delete prof.guide;
@@ -7686,8 +7751,10 @@ async function groupLobby(){
     const t=$('curTitle'); assert(t,'#curTitle 이 없음');
     const on0=window.campIsOn, st0=window.campState, sk0=window.campSkin, prof=PROF();
     const camp0=prof?prof.camp:null;
-    let skin=0;
+    let skin=0, gateOff=()=>{};
     try{
+      // 🚪 이 step 은 **드롭다운 UI** 를 보는 것이라 「병력이 있어야 던전에 간다」의 대상이 아니다
+      gateOff=campGateOpen();
       prof.camp=Object.assign({}, camp0||{}, {dg:3, cleared:26});   // 라운드 27 = 깬 수 26 (rnd 는 비추는 값)
       window.campIsOn=()=>true; window.campState=()=>PROF().camp; window.campSkin=()=>{skin++;};
       curShow(true); updateCurBar();
@@ -7808,6 +7875,7 @@ async function groupLobby(){
       campDropClose();
       return '캠프 0 + 던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 캠프 왕복 확인';
     } finally {
+      gateOff();
       campDropClose();
       window.campIsOn=on0; window.campState=st0; window.campSkin=sk0;
       if(prof){ if(camp0) prof.camp=camp0; else delete prof.camp; }
