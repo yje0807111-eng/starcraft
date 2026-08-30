@@ -1892,6 +1892,26 @@ async function groupLobby(){
     return 'dg1 ≠ dg3 · 자동 이동에서도 갱신';
   });
 
+  // ✨ **초반에 적 수가 깜빡이지 않는다** (2026-08-30)
+  //    ⛔ 옛 식(w = min(6, n))은 R1 의 적 3마리를 **3무리로 1마리씩** 쪼갰다.
+  //      거기에 「다 잡으면 즉시 다음 무리」가 겹쳐 적 1 → 0 → 1 → 0 이 반복돼 배지가 깜빡였다.
+  await step('캠프: 초반 라운드는 무리를 쪼개지 않는다', async()=>{
+    skipIf(typeof campFoeCount!=='function'||typeof CAMP_WAVE_MIN_N==='undefined','캠프 없음');
+    const split=n=>{ const w=Math.max(1,Math.min(CAMP_WAVE_MAX,Math.ceil(n/CAMP_WAVE_MIN_N)));
+      const per=Math.floor(n/w), rem=n%w, q=[];
+      for(let i=0;i<w;i++) q.push(per+(i<rem?1:0)); return q; };
+    const bad=[];
+    for(let r=1;r<=12;r++){
+      const q=split(campFoeCount(r));
+      if(q.length>1 && Math.min(...q)<2) bad.push('R'+r+' ['+q.join(',')+']');
+    }
+    assert(!bad.length,'무리 하나가 1마리뿐이다 — 적 수가 0↔1 로 깜빡인다: '+bad.join(' '));
+    // 후반은 여전히 여러 무리로 나뉜다(밀려오는 느낌이 사라지면 안 된다)
+    const late=split(campFoeCount(25));
+    assert(late.length>=4,'후반이 안 쪼개진다: '+late.join(','));
+    return 'R1~12 무리당 2마리 이상 · R25 는 '+late.length+'무리';
+  });
+
   // 🚪 **적은 화면 위 밖에서 태어난다** (2026-08-30 사용자 확정)
   //    ⛔ 옛 자리는 오토배틀 스폰 패드 둘이었다 — 패드 ② 가 y 19.9~30.7% 라 화면(28.2~83.8%)과
   //      겹쳐 적이 눈앞에서 튀어나왔다. 게다가 두 점에서만 나와 「두 덩이」로 보였다.
@@ -2347,6 +2367,8 @@ async function groupLobby(){
             other[0].hp=0; other[0].dead=true;
             campCombatStep(0.05);
             assert(campDgN()>0,'본부가 아닌 건물이 부서졌다고 탈락했다 — 패배는 본부 파괴뿐이다'); }
+          // ⚠ 앞 스텝에서 라운드가 클리어됐으면 숨 고르기 중이라 승패 판정까지 못 간다 — 풀고 잰다
+          CAMPB._gapT=0; CAMPB._started=true;
           base.hp=0; base.dead=true;
           campCombatStep(0.05);
           assert(campDgN()===0,'본부가 무너졌는데 캠프로 안 감: '+campDgN()); } }
