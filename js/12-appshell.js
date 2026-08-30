@@ -267,15 +267,46 @@ function fmtCur(n){ n=Math.floor(n||0);
   let t2=t, x=n/Math.pow(10,t2*3);
   if(x>=999.5 && t2+1<CUR_SUF.length){ t2++; x=n/Math.pow(10,t2*3); }   // 999,999 가 "1000K"로 새던 경계
   return x.toFixed(1)+CUR_SUF[t2]; }   // ⭐ 소수 한 자리 고정 — 자릿수가 들쭉날쭉하면 표에서 줄이 흔들린다
+// ══ 💰 재화 숫자는 **굴러서** 오른다 (2026-08-27 사용자 확정) ═══════════
+// 한 번에 큰 값이 들어오면(자리 비움 정산·던전 보상) 숫자가 툭 바뀌는 대신 쭈루룩 올라간다.
+//   ⭐ 작은 변화는 **즉시** 바꾼다 — 탭 한 번에 1 씩 버는 것까지 굴리면 늘 흔들려 읽기 어렵다.
+//   ⚠ 표기는 fmtCur 그대로다(1e56 까지 축약한다) — 굴리는 것은 **값**이고 표기기는 하나뿐이다.
+//   ⚠ 줄어들 때도 같이 굴린다. 살 때만 툭 떨어지면 눈에 걸린다.
+const CUR_ROLL_MS  = 520;   // 굴러가는 시간
+const CUR_ROLL_MIN = 12;    // 이보다 작게 변하면 즉시(탭 한 번은 툭 올라가는 것이 맞다)
+// ⚠ **끌 수 있어야 한다** — 헤드리스 스모크는 rAF 가 멈춰 있어 굴리기가 시작만 하고 끝나지 않는다.
+//   그러면 재화를 읽는 검사가 전부 중간값(대개 0)을 본다. 스모크는 이 스위치를 끄고 잰다.
+//   ⛔ 실제 화면에서는 끄지 말 것 — 큰 보상이 툭 바뀌어 무엇이 들어왔는지 안 보인다.
+let CUR_ROLL_ON = true;
+function _curRoll(el, to){
+  if(!el) return;
+  if(!isFinite(to)){ el.textContent = fmtCur(to); return; }
+  const shown = (el._curV != null && isFinite(el._curV)) ? el._curV : to;
+  if(el._rollRaf){ cancelAnimationFrame(el._rollRaf); el._rollRaf = 0; }
+  if(!CUR_ROLL_ON || Math.abs(to - shown) < CUR_ROLL_MIN){ el._curV = to; el.textContent = fmtCur(to); return; }
+  const from = shown, t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const step = function(){
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const p = Math.min(1, (now - t0) / CUR_ROLL_MS);
+    const e = 1 - Math.pow(1 - p, 3);            // easeOutCubic — 처음 빠르고 끝에서 잦아든다
+    const v = from + (to - from) * e;
+    el._curV = v; el.textContent = fmtCur(v);
+    if(p < 1) el._rollRaf = requestAnimationFrame(step);
+    else { el._rollRaf = 0; el._curV = to; el.textContent = fmtCur(to); }
+  };
+  el._rollRaf = requestAnimationFrame(step);
+}
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  // 💰 숫자 재화는 굴린다(위 설명). 인구처럼 「3/10」 꼴은 그대로 쓴다.
+  const setN=(id,v)=>{ _curRoll(document.getElementById(id), v); };
   // 🏕 캠프에서는 **캠프 재화**를 보여 준다 — 관리자 재화 줄(.bres)을 숨겼으므로 이 줄이 유일한 표시다.
   //    ⛔ 줄을 두 개 두지 않는다(어느 쪽이 진짜인지 알 수 없어진다).
   const _camp = (typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech) ? G.tech : null;
-  set('curMin', fmtCur(_camp ? (_camp.credit||0) : profMineral()));
-  set('curGas', fmtCur(_camp ? (_camp.energy||0) : profGas()));
+  setN('curMin', _camp ? (_camp.credit||0) : profMineral());
+  setN('curGas', _camp ? (_camp.energy||0) : profGas());
   if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
-  set('curGem', fmtCur(profGem()));
+  setN('curGem', profGem());
   curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
   if(typeof guidePaint==='function') guidePaint(); }   // 🧭 가이드 띠도 같은 박자로
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
