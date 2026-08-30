@@ -502,10 +502,20 @@ function campTechUsers(r) {
   return Array.isArray(u) ? u : [u];
 }
 // 내가 그 유닛을 갖고 있나 — 전장에 있거나 생산한 적이 있으면 「보유」다.
+// ⚠ **전장 병력을 반드시 함께 센다.** 유닛이 한 번만 태어나는 구조(2026-08-28)에서
+//   생산된 유닛은 기지가 아니라 `CAMPB.me.units` 에 산다 — `G.tech.units` 만 보면
+//   던전에 들어간 순간 기술 목록이 통째로 비어 버린다.
+//   ⭐ 반복 구매(`campUnitOwned`)가 이미 같은 기준을 쓴다. 여기도 맞춘다.
 function campHasUnit(uid) {
   const T = (typeof G !== 'undefined') ? G.tech : null; if (!T) return false;
   if ((T.units && (T.units[uid] | 0) > 0)) return true;
-  return (T.ents || []).some(e => e && e.type !== 'bldg' && (e.uid === uid || e.gmodel === uid));
+  if ((T.ents || []).some(e => e && e.type !== 'bldg' && (e.uid === uid || e.gmodel === uid))) return true;
+  if (typeof CAMPB !== 'undefined' && CAMPB && CAMPB.me) {
+    const hit = (u) => u && (u.gm === uid || u.id === uid);
+    if (CAMPB.me.units.some(hit)) return true;
+    if ((CAMPB._down || []).some(d => d && hit(d.u))) return true;   // ⚠ _down 은 {u,t} 껍데기다
+  }
+  return false;
 }
 // 이 기술을 화면에 보일 것인가
 function campTechShow(r) {

@@ -1536,6 +1536,61 @@ try {
       console.log('CAMPIN '+JSON.stringify(info));
       await new Promise(r=>setTimeout(r,150));
     }
+    else if (WHAT === 'dgfight') {   // ⚔ 던전 전투 — 적이 몰려와 싸우는 장면을 여러 시점으로 담는다
+      //   SHOT_DG=n 던전 번호(기본 1) · SHOT_AT=초 목록(쉼표) 예: 2,6,12,20
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
+      await new Promise(r=>setTimeout(r,1200));
+      await page.evaluate(()=>{ const ov=document.getElementById('campRaceOv');
+        if(ov && !ov.classList.contains('hide')){ const b=[...ov.querySelectorAll('button')].find(x=>/시작/.test(x.textContent||'')); if(b) b.click(); } });
+      await new Promise(r=>setTimeout(r,2600));
+      // 던전 진입 + 병력 배치(맨손이면 볼 게 없다)
+      const setup = await page.evaluate((arg)=>{
+        const dg=arg.dg, R=+arg.round||0;
+        const out={};
+        try{
+          if(typeof campEnterDungeon==='function') campEnterDungeon(+dg||1);
+          CAMPB=null; campCombatStep(0.05);
+          if(!CAMPB) return {err:'전장이 안 열림'};
+          const ids=['marine','machinegun','ghost','tank'];
+          let k=0;
+          for(let r=0;r<3;r++) for(let c=0;c<6;c++){
+            const u=campDeploy(ids[(r+c)%ids.length], 0.22+c*0.112, 0.60+r*0.055); if(u) k++; }
+          out.deployed=k; out.race=CAMPB.ai.race; out.dg=(typeof campDgN==='function')?campDgN():null;
+          // ⚠ 라운드는 **배치 뒤에** 올린다 — 병력 0 인 채로 스텝을 돌리면 패배 판정에 걸려 리셋된다
+          // ⚔ SHOT_FOE=n → 적을 그만큼 **직접** 내보낸다(몰려오는 그림을 보려는 것 · 라운드 수치와 무관)
+          const NF=+arg.foe||0;
+          if(NF>0){ CAMPB.ai.units.length=0; if(CAMPB._wq) CAMPB._wq.length=0; CAMPB._wqTot=0; CAMPB._gapT=0;
+            campWithStk(()=>{ for(let i=0;i<NF;i++) strikeSpawnUnit('ai', campFoeId()); }); }
+          out.round=(typeof campRoundN==='function')?campRoundN():null; out.foe0=CAMPB.ai.units.length;
+          { const ph=document.getElementById('phone'); out.bg=(ph?ph.style.getPropertyValue('--campBg'):'').slice(-30); }
+        }catch(e){ out.err=String(e).slice(0,120); }
+        return out; }, process.env.SHOT_DG||'1');
+      console.log('SETUP '+JSON.stringify(setup));
+      // ⚠ 뷰는 **목표값(techViewT)** 으로 보간되므로 v.zoom 만 바꾸면 곧바로 되돌아온다.
+      //   camp 장면이 setInterval 로 붙들고 있는 것도 같은 이유다 — 여기서는 목표까지 같이 맞춘다.
+      if(process.env.SHOT_CY) await page.evaluate((c)=>{ globalThis.__SHOT_CY=+c; }, process.env.SHOT_CY);
+      if(process.env.SHOT_ZOOM) await page.evaluate((z)=>{ try{
+        const v=G.tech.view; v.zoom=+z;
+        const t=(typeof techViewT==='function')?techViewT():null; if(t) t.zoom=+z;
+        const cy=+(globalThis.__SHOT_CY||0); if(cy>0){ v.y=cy; if(t) t.y=cy; }
+        if(typeof _techClampView==='function') _techClampView(v);
+      }catch(e){} }, process.env.SHOT_ZOOM);
+      const marks=(process.env.SHOT_AT||'2,6,12,22').split(',').map(x=>+x.trim()).filter(x=>x>0);
+      let t=0;
+      for(const [i,mk] of marks.entries()){
+        const need=mk-t;
+        if(need>0) await page.evaluate((sec)=>{ for(let k=0;k<Math.round(sec/0.05);k++) campCombatStep(0.05); }, need);
+        t=mk;
+        const st=await page.evaluate(()=>({ t:+(CAMPB?CAMPB.t:0).toFixed(1), gap:+((CAMPB&&CAMPB._gapT)||0).toFixed(1),
+          me:CAMPB?CAMPB.me.units.length:0, foe:CAMPB?CAMPB.ai.units.length:0,
+          down:(typeof campDown==='function')?campDown():0, r:(typeof campRoundN==='function')?campRoundN():0 }));
+        console.log('  '+mk+'초 → '+JSON.stringify(st));
+        await new Promise(r=>setTimeout(r,260));
+        await page.screenshot({ path: OUT.replace('.png','_'+(i+1)+'.png') });
+      }
+      console.log('dgfight → '+path.basename(OUT).replace('.png','_1~'+marks.length+'.png'));
+      await browser.close(); server.close(); process.exit(0);
+    }
     else if (WHAT === 'camp') {   // 캠프(HOME 메인) — 맵 확대율·배경 해상도 측정
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); openHome(); });
       await new Promise(r=>setTimeout(r,1200));

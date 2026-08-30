@@ -357,7 +357,7 @@ campCombatStep(dt)            ← campFrame 이 매 프레임 부른다(0단계�
 
 | 규칙 | |
 |---|---|
-| ⛔ **`18-strike.js` 를 고치지 말 것** | 오토배틀 본체와 공유한다 (예외: 아래 `S.camp` 가드 한 곳) |
+| ⛔ **`18-strike.js` 를 고치지 말 것** | 오토배틀 본체와 공유한다 (예외: `S.camp` 가드 두 곳 — strikeCheckOver · strikeSuddenDeath) |
 | ⛔ **`CAMPB.camp = true` 를 지우지 말 것** | `strikeCheckOver()` 가 이걸 보고 빠진다. 없으면 적 본진을 부순 순간 「오토배틀 승리」 결과창 → 자동 진행 → `G=newGame()` 으로 **캠프 판이 통째로 사라진다**(실측으로 잡았다 · `BALANCE.md` §3-2) |
 | ⚠ **`STK` 는 `let`** (`14-input-fx.js`) | `const` 로 바꾸면 빌릴 수 없다 |
 | ⚠ **`campWithStk` 는 `finally` 로 반납한다** | 안 돌려놓으면 오토배틀이 캠프 전장을 본다 |
