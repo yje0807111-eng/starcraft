@@ -18,6 +18,10 @@ const POL=(process.argv[4]||'A').toUpperCase();
 // ⛽ 정제소 레벨 상한(비교 실험용 · 2026-08-29) — 「연구 무한 누적」이 시간 지수 축이 되는지
 //   상한 유/무로 갈라 재기 위한 것. 0 = 상한 없음(지금 게임 그대로).
 const REFCAP=+(process.argv[5]||0);
+// 🔁 환생 손익 실측(2026-08-29 · sc-3 요청) — argv[6]='reb' 이면:
+//   던전 3 에 처음 닿는 순간(= D2 완주) 환생하고, 다시 D3 에 닿을 때까지 시간을 잰다.
+//   「환생 안 하고 T분」 vs 「환생하고 T'분」 한 쌍이 첫 환생 손익의 실측값이다.
+const REB=(process.argv[6]||'')==='reb';
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp3':'audio/mpeg','.woff2':'font/woff2'};
 const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.url,'http://x').pathname);
  let f=path.join(ROOT,p==='/'?'sc-ums-web.html':p); if(!f.startsWith(ROOT)){s.writeHead(403);return s.end();}
@@ -35,13 +39,13 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0 };
-}, DG0, POL, REFCAP);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0 };
+}, DG0, POL, REFCAP, REB);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -299,7 +303,15 @@ await pg.evaluate(()=>{
           round:campRoundN(), ore:Math.round(G.tech.minerals.reduce((a,m)=>a+(m.amount||0),0)),
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
-      { const d=campDgN(); if(d>0 && !__CB.dgFirst[d]) __CB.dgFirst[d]={ run:__CB.runs, t:+(__CB.t/60).toFixed(1) }; }
+      { const d=campDgN(); if(d>0 && !__CB.dgFirst[d]) __CB.dgFirst[d]={ run:__CB.runs, t:+(__CB.t/60).toFixed(1) };
+        // 🔁 환생 손익 — D3 에 처음 닿는 순간 환생하고, 다시 닿을 때까지 잰다
+        if(__CB.rebMode && d===3){
+          if(!__CB.rebGot){                                       // 1단계 — 지금 환생한다
+            const got=(typeof campRebirth==='function') ? campRebirth() : null;
+            __CB.rebGot={ t1:+(__CB.t/60).toFixed(1), mul:got?got.mul:null, pts:got?got.pts:null };
+          } else if(!__CB.rebGot.t2){                             // 2단계 — 환생 후 재도달
+            __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
+          } } }
       if((i%20)===0){ __CB.tap(); const w=campWealth();
         if(!__CB.gateT && w>=1e6) __CB.gateT=__CB.t;
         if(__CB.t-(__CB.lastSample||0) >= 15){ __CB.lastSample=__CB.t;
@@ -409,8 +421,9 @@ while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
     return { t:__CB.t, dg:campDgN(), round:campRoundN(), earn:Math.round(campWealth()),
       foe:campAlive('ai'), me:campAlive('me'), rounds:__CB.log.length, stuck:__CB.stuck, army:__CB.army,
-      cr:Math.round((G.tech&&G.tech.credit)||0) }; }, CH);
+      cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2) }; }, CH);
   ran=st.t;
+  if(st.rebDone){ process.stdout.write('\n🔁 환생 후 재도달 완료 — 조기 종료\n'); break; }
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);
   if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 15분 넘게 안 넘어감 — 중단\n'); break; }
 }
@@ -429,7 +442,13 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     for(const k in R){ const kk=k.replace(T.race+'_',''), v=(R[k]===true?1:(R[k]|0));
       if(tierK.has(kk)) tierN+=v; else if(oneK[kk]) one.push(oneK[kk]); else if(kk!=='gasup') one.push(kk); }
     return { tier:tierN, one:one }; })() }));
-{ const R=await pg.evaluate(()=>({ runs:__CB.runs, log:__CB.runLog||[], first:__CB.dgFirst||{}, cap:__CB.refCap|0, ref:(typeof campRefLv==='function')?campRefLv():-1 }));
+{ const R=await pg.evaluate(()=>({ runs:__CB.runs, log:__CB.runLog||[], first:__CB.dgFirst||{}, cap:__CB.refCap|0, ref:(typeof campRefLv==='function')?campRefLv():-1, reb:__CB.rebGot||null }));
+  if(R.reb){ console.log('');
+    console.log('■ 🔁 첫 환생 손익 (D3 첫 도달 시 환생 → 재도달)');
+    console.log('  환생 없이 D3 까지: '+R.reb.t1+'분 · 환생 보상 배수 +'+R.reb.mul+' · 포인트 +'+R.reb.pts);
+    console.log(R.reb.t2!=null
+      ? ('  환생 후 다시 D3 까지: '+(R.reb.t2-R.reb.t1).toFixed(1)+'분 (누적 '+R.reb.t2+'분)')
+      : '  ⚠ 시간 안에 재도달 못 함'); }
   console.log('');
   console.log('■ 🔁 회차 — 정제소 상한 '+(R.cap>0?('L'+R.cap):'없음')+' · 최종 정제소 L'+R.ref);
   for(const d in R.first) console.log('  던전 '+d+' 첫 진입: '+R.first[d].run+'회차 · '+R.first[d].t+'분');
