@@ -1028,9 +1028,24 @@ function campFoeMix(r){
 }
 // ⛔ **공중 전용은 적 풀에서 뺀다**(hellfire · stinger · venom — SB_ATK_MODE 가 'air').
 //   아군 지상군을 한 대도 못 때려서, 하나만 남아도 라운드가 영원히 안 끝난다(실측 R12).
+// ⛔ **때릴 수 없는 적은 풀에서 뺀다.** 걸러야 할 것이 셋인데, 예전에는 ①만 걸렀다.
+//   ① 공중 전용(SB_ATK_MODE='air') — 아군 지상군을 한 대도 못 때린다
+//   ② **아예 공격을 안 하는 유닛**(FXLAB_NOATK — 메두사·감시자·수송기 따위)
+//   ③ 캠프 설계표(CAMP_UNIT_STAT)에서 **공격을 안 주기로 한 유닛**(a 가 없다)
+//   ⚠ ②③이 빠져 있어서 **60분 벤치가 D1R26 에서 51분을 멈췄다**(2026-08-30 실측):
+//     남은 적이 **메두사 3기**였는데 셋 다 공격력 0 이라, 적은 아군을 안 때리고
+//     아군은 제자리 방어라 안 올라가서 **아무도 움직이지 않았다**(거리 381 · 사거리 187).
+//   ⭐ 라운드는 「적을 다 잡으면 끝」이므로, **아무도 안 움직이는 무리 = 영원히 안 끝나는 라운드**다.
 function campFoePool(ids){
   const mode = (typeof SB_ATK_MODE !== 'undefined') ? SB_ATK_MODE : {};
-  return (ids || []).filter(function(id){ return (mode[id] || 'both') !== 'air'; });
+  const noAtk = (typeof FXLAB_NOATK !== 'undefined') ? FXLAB_NOATK : null;
+  return (ids || []).filter(function(id){
+    if((mode[id] || 'both') === 'air') return false;              // ①
+    if(noAtk && noAtk.has && noAtk.has(id)) return false;         // ②
+    const d = CAMP_UNIT_STAT[id];
+    if(d && d.a == null) return false;                            // ③
+    return true;
+  });
 }
 // 이 id 가 몇 티어인가 — 없으면 0. (구성이 실제로 지켜지는지 재는 데 쓴다)
 function campFoeTierOf(id){
@@ -2671,6 +2686,14 @@ function campAutoGather(){
 const CAMP_TICK_MS = 250;
 const CAMP_SLOW_EVERY = 8;      // 250ms × 8 = 2초
 let _campTimer = 0, _campSlow = 0, _campLastCr = 0, _campTapAcc = 0;
+// 📊 **수입 내역** — 번 돈이 어디서 왔는지 나눠 센다(2026-08-30 · sc-3 요청).
+//   ⭐ 왜 필요한가: 실측 100만 도달이 **27분**인데 설계 추정은 10시간이다(22배). 설계표(§1-1)를
+//     그냥 깎으면 엉뚱한 축을 깎게 된다 — **무엇이 그 돈을 벌었는지** 먼저 봐야 한다.
+//   ⚠ 여기가 캠프 수입의 **유일한 관문**이다(C.earn 을 늘리는 곳이 이 함수뿐이다).
+//   tap    = 터치 — 배수를 안 먹는다
+//   gather = 일꾼이 실제로 캐 온 몫(배수 먹기 전)
+//   mul    = 채취 배수로 불어난 몫 ← ⚠ 이것이 크면 §1-1 표에 없는 지수 축이 있다는 뜻이다
+const CAMP_INC = { tap:0, gather:0, mul:0 };
 function campApplyGatherMul(){
   if(typeof G === 'undefined' || !G.tech) return;
   const cur = G.tech.credit || 0;
@@ -2678,8 +2701,11 @@ function campApplyGatherMul(){
   if(delta > 0){
     const tapPart = Math.min(delta, _campTapAcc);   // 터치 몫은 배수 대상이 아니다
     _campTapAcc -= tapPart; delta -= tapPart;
+    CAMP_INC.tap += tapPart;
     const m = campGatherMul();
-    if(delta > 0 && m > 1) G.tech.credit = cur + Math.round(delta * (m - 1));
+    if(delta > 0){ CAMP_INC.gather += delta;
+      if(m > 1){ const add = Math.round(delta * (m - 1));
+        CAMP_INC.mul += add; G.tech.credit = cur + add; } }
   } else if(delta < 0){ _campTapAcc = 0; }          // 건물을 샀다 = 지출. 누적을 흘려보낸다
   // 🔁 환생 기준이 되는 **번 돈**을 여기서 센다 — 배수를 다 먹인 뒤의 실제 증가분이다.
   //    ⛔ 지출은 빼지 않는다. '얼마나 벌었나'가 기준이지 '지금 얼마 있나'가 아니다.

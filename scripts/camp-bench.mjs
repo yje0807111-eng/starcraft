@@ -63,7 +63,13 @@ await new Promise(r=>setTimeout(r,800));
 
 await pg.evaluate(()=>{
   campStopFrame(); campStopTimer();          // 시계를 끄고 직접 민다
-  const C=campState(); C.dg=__CB.dg0; C.cleared=0; C.earn=0; C.earnGas=0;
+  // 🏕 **캠프(0)에서 시작한다** — 병력이 없으면 던전에 못 들어간다(2026-08-30).
+  //   ⛔ 예전엔 여기서 곧장 __CB.dg0 에 넣었다. 그러면 맨몸으로 던전에 들어가 계속 지고,
+  //     「D1R1 10분 · D1R2 17.4분 · 패배 9번」 같은 오염된 초반이 찍힌다.
+  //   ⭐ 병력 __CB.enter 기가 모이면 아래(391행 근처)에서 __CB.dg0 으로 내려간다 —
+  //     dg0=2 로 줘도 D1 을 안 거치고 바로 D2 로 간다.
+  const C=campState(); C.dg=0; C.cleared=0; C.earn=0; C.earnGas=0;
+  if(typeof CAMP_INC!=='undefined'){ CAMP_INC.tap=0; CAMP_INC.gather=0; CAMP_INC.mul=0; }   // 📊 수입 내역
   campBattleClose();
   __CB.log=[]; __CB.t=0; __CB.lastRound=campRoundN(); __CB.roundT=0; __CB.stuck=0;
   // ⚠ 상한은 **설계값**을 쓴다(HUNT_R1 §1). 12기로 묶어 두면 일꾼 축을 잰 것이 아니게 된다 —
@@ -142,8 +148,14 @@ await pg.evaluate(()=>{
       const cd=u.cdMax||u.cd||0; if(cd>0) d+=(u.dmg||0)/cd; }
     return Math.round(d*10)/10; };
   __CB.pol=__CB.pol||'A';
-  __CB.tap=function(){ const m=(G.tech&&G.tech.minerals||[])[0]; if(!m) return;
-    for(let i=0;i<__CB.taps;i++) G.tech.credit=(G.tech.credit||0)+campTapGain(); };
+  // ⛔ **탭은 진짜 경로로 넣는다** (2026-08-30 고침). 예전엔 여기서 `credit += campTapGain()` 만
+  //   했는데, 진짜 탭(campMineTap)은 **_campTapAcc 도 함께 늘린다.** 그 표시가 없으면
+  //   campApplyGatherMul 이 탭 몫을 **일꾼이 캔 것으로 착각해 채취 배수를 먹인다** —
+  //   「100만 도달이 설계 추정의 22배」의 유력한 원인이 이것이다(자[尺]가 틀렸던 쪽).
+  //   ⚠ C.tapped(탭 횟수)도 이 경로라야 센다.
+  __CB.tapN=0;
+  __CB.tap=function(){ if(typeof campMineTap!=='function') return;
+    for(let i=0;i<__CB.taps;i++){ campMineTap(null); __CB.tapN++; } };
   __CB.RESERVE=600;   // 건물·유닛 몫으로 남겨 두는 미네랄
   // ⭐ **투자 대비 수익(ROI)으로 산다.** 「가장 싼 것」은 성격이 같은 업그레이드가 줄지어 있던
   //   옛 사냥터용 규약이라 캠프에서는 왜곡된다 — 실측(camp-econ-bench): 값만 보면 일꾼(3만)이
@@ -478,6 +490,13 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
     return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
+  // 📊 수입 내역 — 번 돈이 어디서 왔는가(sc-3 요청 2026-08-30 · 100만 22배 건)
+  inc:(typeof CAMP_INC!=='undefined')?{ tap:Math.round(CAMP_INC.tap), gather:Math.round(CAMP_INC.gather),
+       mul:Math.round(CAMP_INC.mul), gmul:(typeof campGatherMul==='function')?campGatherMul():1 }:null,
+  taps:Math.round(__CB.tapN||0), tapGain:(typeof campTapGain==='function')?campTapGain():0,
+  // ⚠ 일꾼은 type:'unit' 이 아니라 **type:'worker'** 다(campWorkerN 과 같은 잣대).
+  wk:(function(){ let n=0; for(const e of (G.tech.ents||[])) if(e&&e.type==='worker') n++;
+      return { n:n, effLv:((campState()||{}).upg||{}).eff|0, tapLv:((campState()||{}).upg||{}).tap|0 }; })(),
   // 🔬 연구 내역 — 계열(레벨)과 단발(해금)을 갈라 본다. ⚠ 합계만 보면 둘을 못 가른다.
   resBreak:(function(){ const T=G.tech, R=(T&&T.research)||{}, t=TECH_TREE[T.race]||{};
     const tierK=new Set(), oneK={};
@@ -564,6 +583,20 @@ if(fin.vanish) console.log('\n⛔ 일꾼이 통째로 사라진 순간: '+JSON.s
 
 if(fin.resBreak) console.log(`\n■ 🔬 연구 내역 — 계열 업그레이드 ${fin.resBreak.tier}레벨 · 단발 해금 ${fin.resBreak.one.length}개`
   + (fin.resBreak.one.length?('\n  '+fin.resBreak.one.join(' · ')):''));
+// 📊 수입 내역 — 그 돈이 어디서 왔는가(sc-3 요청 · 100만 22배 건)
+if(fin.inc){
+  const I=fin.inc, tot=I.tap+I.gather+I.mul || 1;
+  const pct=(v)=>((v/tot)*100).toFixed(1).padStart(5)+'%';
+  console.log('\n■ 📊 수입 내역 — 번 돈이 어디서 왔는가');
+  console.log(`  터치        ${F(I.tap).padStart(12)}  ${pct(I.tap)}   · 탭 ${fin.taps}회 · 지금 1탭 ${F(fin.tapGain)}`);
+  console.log(`  일꾼 채취    ${F(I.gather).padStart(12)}  ${pct(I.gather)}   · 일꾼 ${fin.wk.n}기`);
+  console.log(`  채취 배수    ${F(I.mul).padStart(12)}  ${pct(I.mul)}   · 지금 배수 ×${(fin.inc.gmul||1).toFixed(2)}`);
+  console.log(`  합계        ${F(tot).padStart(12)}          (번 돈 ${F(fin.earn)} 과 맞아야 한다)`);
+  console.log(`  업그레이드   탭 Lv${fin.wk.tapLv} · 효율 Lv${fin.wk.effLv}`);
+  if(I.mul > I.gather) console.log('  ⚠ **채취 배수가 원본보다 크다** — §1-1 표에 없는 지수 축이다');
+  if(Math.abs(tot-fin.earn) > fin.earn*0.05)
+    console.log(`  ⚠ 내역 합계와 번 돈이 5% 넘게 어긋난다 — 표에 없는 수입원이 있다는 뜻이다`);
+}
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();

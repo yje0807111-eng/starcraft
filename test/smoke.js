@@ -2370,7 +2370,23 @@ async function groupLobby(){
           assert(c.t1===0,'R45 에 T1 이 나왔다: '+JSON.stringify(c));
           assert(c.t3>c.t2,'R45 에서 T3 가 T2 보다 많아야 한다: '+JSON.stringify(c)); }
         // ⛔ 어느 구간에서도 공중 전용은 안 나온다
-        assert(campFoePool(['hellfire','marine']).indexOf('hellfire')<0,'공중 전용이 풀에 남아 있다'); }
+        assert(campFoePool(['hellfire','marine']).indexOf('hellfire')<0,'공중 전용이 풀에 남아 있다');
+        // ⛔ **공격을 아예 안 하는 유닛도 안 나온다** (2026-08-30 · 60분 벤치가 여기서 51분 멈췄다)
+        //   남은 적이 메두사 3기였는데 셋 다 공격력 0 이라 적은 아군을 안 때리고
+        //   아군은 제자리 방어라 안 올라가서 **아무도 움직이지 않았다** → 라운드가 영원히 안 끝난다.
+        assert(campFoePool(['medusa','marine']).indexOf('medusa')<0,'공격 못 하는 유닛이 풀에 남아 있다');
+        // ⚠ 걸러낸 뒤에도 **티어가 비면 안 된다** — 그 구간에서 적이 아예 안 나온다
+        { const bad=[];
+          for(const race in CAMP_FOE_TIER){ const T=CAMP_FOE_TIER[race];
+            for(const k of ['t1','t2','t3']) if(campFoePool(T[k]).length===0) bad.push(race+'.'+k); }
+          assert(!bad.length,'걸러내고 나니 빈 티어가 생겼다: '+bad.join(' / ')); }
+        // ⚠ 남은 것들은 전부 실제로 때릴 수 있어야 한다
+        { const bad=[];
+          for(const race in CAMP_FOE_TIER){ const T=CAMP_FOE_TIER[race];
+            for(const k of ['t1','t2','t3']) for(const id of campFoePool(T[k])){
+              const d=CAMP_UNIT_STAT[id];
+              if(d && d.a == null) bad.push(race+'.'+k+':'+id); } }
+          assert(!bad.length,'설계표에서 공격이 없는 적이 남아 있다: '+bad.join(' / ')); } }
       // ⚔ **캠프 전용 능력치** — §3-1/§3-A/§3-B 가 단일 소스. 인구만 코드가 이긴다.
       //    ⛔ U · STK_UNITS · TECH_SPEC 을 고치면 멀티 대전과 오각형 상성이 같이 바뀐다.
       //      소환된 개체 값만 덮어야 한다.
