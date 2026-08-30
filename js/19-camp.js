@@ -719,6 +719,10 @@ const CAMP_BLD_HP = 1200 / 10;     // 건물 한 채의 기본 체력
 // 🏛 본부 — 엔진 기본(mapCfg('baseHp') = 7500 · 오토배틀 신전용)을 **같은 1/10 스케일**로 내린 값.
 //   ⚠ 본부는 마지막 보루라 일반 건물의 6.25배다. campBattleOpen 에서 덮어쓴다.
 const CAMP_BASE_HP = 7500 / 10;
+// 🛡 **방어 건물** — 전선에 서야 뜻이 있는 건물들. 유닛과 같은 좌표계(campG2W)를 쓴다.
+//   ⚠ 여기 넣는 순간 그 건물은 **격자 위쪽에 지으면 전장 맨 앞**에 선다 — 적이 먼저 만난다.
+//   ⛔ 생산·연구 건물을 넣지 말 것. 앞에 나가면 곧바로 부서지고 기지가 멎는다.
+const CAMP_DEF_BLD = { bunker:1, turret:1 };
 
 // 💥 **적이 건물을 칠 때만 곱하는 배율** (2026-08-30 · sc-3 계산 · HUNT_R1 §6-2-5).
 //   ⛔ 어긋난 것은 「적 공격」이 아니라 **건물 체력과 유닛 체력 사이의 스케일**이다.
@@ -771,7 +775,17 @@ function campBuildStructs(){
       b.x = sx(e.x); b.y = sy(e.y); b.eid = e.eid;
       b.hp = b.maxHp = b.max = hp; b.dead = false;
       out.push(b); continue; }
-    out.push({ x:sx(e.x), y:sy(e.y), hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
+    // 🛡 **방어 건물은 전선에 선다** (2026-08-30 사용자 확정).
+    //   ⛔ 일반 매핑(sy)은 격자 전체를 전장 **62~92%** 로 눌러 담는다. 그런데 전투는
+    //     **50~60%** 에서 벌어진다 — 벙커를 어디에 지어도 전선 뒤였다(실측 828 떨어짐 ·
+    //     화력병 사거리 70 → 벙커 체력이 120/120 그대로였다).
+    //   ⭐ 그래서 방어 건물만 **유닛과 같은 좌표계**(campG2W)를 쓴다. 격자 위쪽에 지으면
+    //     전장 앞(14%), 아래쪽이면 뒤(86%) — 플레이어가 방어선을 직접 고를 수 있다.
+    //   ⚠ campG2W 는 campW2G 의 역이라 **화면과 어긋나지 않는다** — 전장 유닛을 그릴 때
+    //     쓰는 역변환이 그대로 원래 격자 자리를 돌려준다.
+    //   ⚠ 일반 건물은 그대로 둔다(전투에 거의 안 나오고, 매핑을 바꾸면 기지 그림이 흔들린다).
+    const p = CAMP_DEF_BLD[e.bk] ? campG2W(e.x, e.y, W) : { x:sx(e.x), y:sy(e.y) };
+    out.push({ x:p.x, y:p.y, hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
   }
   CAMPB._bld = out;
   return out.length;
