@@ -22,6 +22,10 @@ const REFCAP=+(process.argv[5]||0);
 //   던전 3 에 처음 닿는 순간(= D2 완주) 환생하고, 다시 D3 에 닿을 때까지 시간을 잰다.
 //   「환생 안 하고 T분」 vs 「환생하고 T'분」 한 쌍이 첫 환생 손익의 실측값이다.
 const REB=(process.argv[6]||'')==='reb';
+// 🧱 벽 탐색(2026-08-29 · sc-3 요청) — 환생 없이 어디서 막히는가.
+//   판정 기준은 sc-3 §: 한 라운드를 **10분** 넘게 못 깨면 벽 후보 · **30분**이면 벽으로 보고 멈춘다.
+//   ⚠ 정체 문턱(stallS)과는 다른 것이다 — 그건 「측정을 계속할까」이고, 이건 「벽을 만났나」다.
+const WALL_WARN=600, WALL_STOP=1800;
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp3':'audio/mpeg','.woff2':'font/woff2'};
 const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.url,'http://x').pathname);
  let f=path.join(ROOT,p==='/'?'sc-ums-web.html':p); if(!f.startsWith(ROOT)){s.writeHead(403);return s.end();}
@@ -39,13 +43,13 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0 };
-}, DG0, POL, REFCAP, REB);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -71,6 +75,11 @@ await pg.evaluate(()=>{
   //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
   __CB.stallS=900;
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
+  // 🧱 벽 — 라운드가 wallWarn(10분) 넘으면 후보로 적고, wallStop(30분)이면 벽으로 보고 멈춘다.
+  __CB.wallWarnLog=[]; __CB.wall=null;
+  // ⏱ 30분 간격 요약 — 「한 던전에 머물 때 화력이 시간의 몇 제곱으로 자라는가」를 재는 표.
+  //   ⚠ 15초 표본과 별개다. 그건 구간 평균용이고 이건 **성장 지수**용이다.
+  __CB.slow=[]; __CB.lastSlow=0;
   // 🔮 스킬 자동 시전 계측 — 어떤 스킬이 **실제로 효과를 냈는지**만 센다(시도 X).
   //   ⚠ 효과 함수가 false 를 돌리면 시전 자체가 취소되므로, 여기서 세는 것이 곧 「진짜 나간 횟수」다.
   __CB.sk={}; __CB.healHp=0; __CB.medHp=0;
@@ -281,6 +290,31 @@ await pg.evaluate(()=>{
       if(typeof campSyncUnitCost==='function') campSyncUnitCost();
       campCombatStep(dt);
       __CB.t+=dt; __CB.roundT+=dt;
+      // 🧱 벽 판정 — 지금 라운드가 얼마나 오래 안 넘어가는가(라운드가 바뀌면 roundT 가 0 이 된다)
+      if(campDgN()>0 && !__CB.wall){
+        if(__CB.roundT>__CB.wallStop){
+          __CB.wall={ dg:campDgN(), r:campRoundN(), sec:Math.round(__CB.roundT), t:+(__CB.t/60).toFixed(1),
+            me:(typeof campAlive==='function'?campAlive('me'):0),
+            dn:(typeof campDown==='function'?campDown():0),
+            dps:__CB.dps(), refLv:(typeof campRefLv==='function'?campRefLv():0),
+            res:(function(){ const R=(G.tech&&G.tech.research)||{}; let n=0;
+              for(const k in R) n+=(R[k]===true?1:(R[k]|0)); return n; })(),
+            cr:Math.round((G.tech&&G.tech.credit)||0), gas:Math.round((G.tech&&G.tech.energy)||0),
+            diff:Math.round(typeof campFoeDiff==='function'?campFoeDiff(campDgN(),campCleared()):0) };
+        } else if(__CB.roundT>__CB.wallWarn){
+          const k=campDgN()+':'+campRoundN();
+          if(!__CB.wallWarnLog.some(x=>x.k===k))
+            __CB.wallWarnLog.push({ k:k, dg:campDgN(), r:campRoundN(), t:+(__CB.t/60).toFixed(1) });
+        } }
+      // ⏱ 30분 요약
+      if(__CB.t-(__CB.lastSlow||0) >= 1800){ __CB.lastSlow=__CB.t;
+        __CB.slow.push({ t:Math.round(__CB.t/60), dg:campDgN(), r:campRoundN(),
+          w:Math.round(campWealth()),
+          min:Math.round((campState()||{}).earn||0), gas:Math.round((campState()||{}).earnGas||0),
+          refLv:(typeof campRefLv==='function'?campRefLv():0),
+          res:(function(){ const R=(G.tech&&G.tech.research)||{}; let n=0;
+            for(const k in R) n+=(R[k]===true?1:(R[k]|0)); return n; })(),
+          dps:__CB.dps(), me:(typeof campAlive==='function'?campAlive('me'):0) }); }
       if((i%20)===0 && typeof campAutoGather==='function'){ try{ campAutoGather(); }catch(e){} }
       if((i%10)===0){
         if(!__CB.techRef) __CB.techRef=G.tech;
@@ -421,9 +455,11 @@ while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
     return { t:__CB.t, dg:campDgN(), round:campRoundN(), earn:Math.round(campWealth()),
       foe:campAlive('ai'), me:campAlive('me'), rounds:__CB.log.length, stuck:__CB.stuck, army:__CB.army,
-      cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2) }; }, CH);
+      cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2),
+      wall:__CB.wall||null }; }, CH);
   ran=st.t;
   if(st.rebDone){ process.stdout.write('\n🔁 환생 후 재도달 완료 — 조기 종료\n'); break; }
+  if(st.wall){ process.stdout.write('\n🧱 벽 — D'+st.wall.dg+'R'+st.wall.r+' 를 '+Math.round(st.wall.sec/60)+'분째 못 깸 · 종료\n'); break; }
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);
   if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 15분 넘게 안 넘어감 — 중단\n'); break; }
 }
@@ -443,6 +479,21 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
       if(tierK.has(kk)) tierN+=v; else if(oneK[kk]) one.push(oneK[kk]); else if(kk!=='gasup') one.push(kk); }
     return { tier:tierN, one:one }; })() }));
 { const R=await pg.evaluate(()=>({ runs:__CB.runs, log:__CB.runLog||[], first:__CB.dgFirst||{}, cap:__CB.refCap|0, ref:(typeof campRefLv==='function')?campRefLv():-1, reb:__CB.rebGot||null }));
+  { const W=await pg.evaluate(()=>({ wall:__CB.wall||null, warn:__CB.wallWarnLog||[], slow:__CB.slow||[] }));
+    console.log('');
+    console.log('■ 🧱 벽 — 환생 없이 어디서 막히는가');
+    if(W.wall){ const w=W.wall;
+      console.log('  막힌 곳: **던전 '+w.dg+' R'+w.r+'** · '+w.t+'분 경과 · 그 라운드를 '+Math.round(w.sec/60)+'분째 못 깸');
+      console.log('  그때 상태: 병력 '+w.me+'(누움 '+w.dn+') · 명목 DPS '+w.dps+' · 연구 총Lv '+w.res+' · 정제소 L'+w.refLv);
+      console.log('             보유 미네랄 '+w.cr+' · 가스 '+w.gas+' · 적 난이도 '+w.diff);
+    } else console.log('  ⚠ 주어진 시간 안에는 벽을 못 만났다(계속 진행 중이었다)');
+    if(W.warn.length) console.log('  10분 넘긴 라운드: '+W.warn.map(x=>'D'+x.dg+'R'+x.r+'('+x.t+'분)').join(' · '));
+    console.log('');
+    console.log('■ ⏱ 30분 간격 — 한 던전에 머물 때의 성장');
+    console.log('경과분 | 던전R  | 미네랄누적 | 가스누적 | 연구Lv | 정제소 | 명목DPS | 병력');
+    for(const x of W.slow) console.log(String(x.t).padStart(5)+'  | D'+x.dg+'R'+String(x.r).padEnd(3)
+      +'| '+String(x.min).padStart(10)+' | '+String(x.gas).padStart(7)+' | '+String(x.res).padStart(6)
+      +' | '+String(x.refLv).padStart(6)+' | '+String(x.dps).padStart(7)+' | '+x.me); }
   if(R.reb){ console.log('');
     console.log('■ 🔁 첫 환생 손익 (D3 첫 도달 시 환생 → 재도달)');
     console.log('  환생 없이 D3 까지: '+R.reb.t1+'분 · 환생 보상 배수 +'+R.reb.mul+' · 포인트 +'+R.reb.pts);
