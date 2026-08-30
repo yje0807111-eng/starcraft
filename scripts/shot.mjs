@@ -279,6 +279,45 @@ try {
       }));
       console.log('SLOW '+JSON.stringify(r));
     }
+    else if (WHAT === 'predec') {   // 🔍 캠프 바닥 그림을 미리 디코드하면 실제로 빨라지나
+      // ⚠ 브라우저를 새로 띄운 실행끼리만 비교해야 한다 — 같은 페이지에서 두 번 재면
+      //    두 번째는 이미 캐시·디코드가 끝나 있어 무조건 빠르다.
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1400); }));
+      const r = await page.evaluate(async (pre) => {
+        const out={ pre };
+        if(pre==='1'){
+          const a=performance.now();
+          try{ const im=new Image();
+            out.url=new URL(CAMP_BG_DIR+CAMP_BG_HOME, document.baseURI).href;
+            im.src=out.url;
+            await im.decode(); out.decodeMs=+(performance.now()-a).toFixed(1);
+            out.px=im.naturalWidth+'x'+im.naturalHeight; }
+          catch(e){ out.decodeMs='ERR'; }
+          await new Promise(r=>setTimeout(r,200));   // 디코드가 프레임에 남긴 여파를 흘려보낸다
+        }
+        // camp.webp 를 누가 언제 받았나
+        try{ out.res=performance.getEntriesByType('resource')
+          .filter(e=>e.name.indexOf('camp.webp')>=0)
+          .map(e=>({at:+e.startTime.toFixed(0), dur:+e.duration.toFixed(1), size:e.transferSize})); }catch(e){}
+        try{ out.imgs=[...document.images].filter(i=>i.src.indexOf('camp.webp')>=0).length; }catch(e){}
+        return await new Promise(res=>{
+          const C=campState(); C.race=_campRacePick||CAMP_RACE_ORDER[0];
+          out.long=[];
+          try{ new PerformanceObserver(l=>{ for(const e of l.getEntries())
+            out.long.push(+e.duration.toFixed(0)); }).observe({entryTypes:['longtask']}); }catch(e){}
+          const t0=performance.now();
+          try{ campEnter(); }catch(e){ out.err=String(e).slice(0,60); }
+          out.sync=+(performance.now()-t0).toFixed(1);
+          let n=0; const fr=[]; const tick=()=>{ fr.push(+(performance.now()-t0).toFixed(0));
+            if(++n<4) requestAnimationFrame(tick); else { out.frames=fr; res(out); } };
+          requestAnimationFrame(tick); }); }, process.env.SHOT_PRE||'0');
+      console.log('PREDEC '+JSON.stringify(r));
+    }
     else if (WHAT === 'slow8') {   // 🔍 그 240ms 가 JS 인가 렌더인가 — longtask 로 가른다
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
       await new Promise(r=>setTimeout(r,900));
