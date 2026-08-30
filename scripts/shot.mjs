@@ -637,7 +637,7 @@ try {
         try{ openHome(); }catch(e){}
         setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
       const info = await page.evaluate(() => {
-        const b=document.getElementById('campMineBtn');
+        const b=document.querySelector('[data-minemode]');
         if(b){ const r=b.getBoundingClientRect(), cs=getComputedStyle(b);
           const tx=b.querySelector('.cmbTx'), ic=b.querySelector('.cmbIco');
           window.__btn={ w:Math.round(r.width), h:Math.round(r.height), l:Math.round(r.left), r2:Math.round(r.right),
@@ -657,7 +657,7 @@ try {
       await new Promise(r=>setTimeout(r,120));
       const off = await page.evaluate(()=>({ credit:Math.round(G.tech.credit||0), on:campMineModeOn() }));
       // ② 버튼으로 켠다
-      await page.evaluate(()=>{ document.getElementById('campMineBtn').click(); });
+      await page.evaluate(()=>{ campMineModeToggle(); });
       await new Promise(r=>setTimeout(r,80));
       // ③ 빈 바닥을 눌러도 캔다
       await page.mouse.click(info.spot.x, info.spot.y);
@@ -673,7 +673,7 @@ try {
       await new Promise(r=>setTimeout(r, 900));
       const after = await page.evaluate(()=>({ credit:Math.round(G.tech.credit||0) }));
       // 📸 켠 상태 · 캐는 순간을 찍는다
-      await page.evaluate(()=>{ if(!campMineModeOn()) document.getElementById('campMineBtn').click(); });
+      await page.evaluate(()=>{ if(!campMineModeOn()) campMineModeToggle(); });
       await page.mouse.move(info.spot.x, info.spot.y);
       await page.mouse.down();
       await new Promise(r=>setTimeout(r, 850));
