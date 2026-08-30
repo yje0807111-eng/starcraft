@@ -1037,7 +1037,25 @@ function techDemolish(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!
   if(typeof playSfx==='function') playSfx('ui_confirm'); if(typeof toast==='function') toast('🗑 '+b.name+' 철거 — 해금 유닛 재잠금'); techUIRender(); }
 function strikeRandomRace(){ return STK_RACE_ORDER[Math.floor(Math.random()*STK_RACE_ORDER.length)]; }
    // 그 진영 종족의 소환 가능 유닛 id
-// 직스 타일 에셋(기존 assets/tiles 재사용)
-const STRIKE_GROUND=new Image(); STRIKE_GROUND.src='assets/tiles/desert.webp?v=1';        // 전장 지형(사막)
-const STRIKE_PAVE=new Image(); STRIKE_PAVE.src='assets/tiles/protoss_floor.webp?v=1';     // 신전 잇는 포장 길(프로토스 테크)
-const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.webp?v=1';  // 건설 보드(깔끔한 금속)
+// ── ⚔️ 오토배틀 전장 에셋 (2026-08-30 교체) ────────────────────────────────
+// ⛔ **부팅 때 받지 않는다.** 합쳐 800KB 라 스크립트 로드 시점에 src 를 박으면 디코딩이 rAF 를 밀어
+//    부팅 로딩 막대가 멈춘다(네모네모 바닥에서 실제로 겪었다 · js/10-engine.js 의 SLAB_IMG 설명 참조).
+//    ⭐ strikeAssetsReady() 가 **오토배틀 전장을 처음 그릴 때** src 를 채운다.
+// ⛔ 월드가 4800×4800 이고 카메라가 자유롭게 돌아다녀서 **통짜 한 장은 불가능**하다(2300만 픽셀).
+//    그래서 여기는 타일 반복이 맞다 — 대신 반복감은 매크로 오버레이(auto/macro.webp)가 깬다.
+const STRIKE_GROUND=new Image();     // 전장 지형(마른 흙) — 맵 바깥쪽
+const STRIKE_PAVE=new Image();       // 신전 잇는 포장 길(석판) — 화면의 대부분을 차지한다
+const STRIKE_MACRO=new Image();      // 월드 전체 얼룩 지도 — 타일 위에 soft-light 로 얹어 반복감을 깬다
+const STRIKE_BUILDTILE=new Image(); STRIKE_BUILDTILE.src='assets/tiles/terran_tile_light.webp?v=1';  // 건설 보드(깔끔한 금속 · 작아서 부팅 로드해도 된다)
+// 데코 스프라이트 — 512×512 시트에 2×2(칸 256)로 네 변형. 종류마다 한 장.
+const STRIKE_DECO={ rock:new Image(), crater:new Image(), tuft:new Image(), bone:new Image() };
+const STK_DECO_CELL=256;
+let _stkAssetsAsked=false;
+function strikeAssetsReady(){
+  if(!_stkAssetsAsked){ _stkAssetsAsked=true;
+    STRIKE_GROUND.src='assets/tiles/auto/ground.webp';
+    STRIKE_PAVE.src  ='assets/tiles/auto/pave.webp';
+    STRIKE_MACRO.src ='assets/tiles/auto/macro.webp';
+    for(const k in STRIKE_DECO) STRIKE_DECO[k].src='assets/tiles/auto/deco_'+k+'.webp'; }
+  return !!(STRIKE_GROUND.complete && STRIKE_GROUND.naturalWidth); }
+function _imgOk(im){ return !!(im && im.complete && im.naturalWidth); }

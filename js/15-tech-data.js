@@ -23,11 +23,11 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {id:'ghost', name:'저격수', m:25, g:75, pop:1, req:['scifac','covert']} ] },
   { k:'academy', name:'훈련소', ico:'🎓', m:150, g:0, req:['barracks'],
     research:[
-      {k:'u238', name:'강화 탄환', desc:'레인저 사거리 +1', m:150, g:150},
-      {k:'stim', name:'광폭화', desc:'레인저·화력병 이속·공속↑(체력 소모)', m:100, g:100},
-      {k:'flare', name:'섬광탄', desc:'의무병 실명 섬광 스킬', m:100, g:100},
-      {k:'restore', name:'정화', desc:'의무병 디버프 해제', m:100, g:100},
-      {k:'caduceus', name:'마나 증폭', desc:'의무병 최대 에너지 +50', m:150, g:150} ] },
+      {k:'u238', u:'marine', name:'강화 탄환', desc:'레인저 사거리 +1', m:150, g:150},
+      {k:'stim', u:['marine','machinegun'], name:'광폭화', desc:'레인저·화력병 이속·공속↑(체력 소모)', m:100, g:100},
+      {k:'flare', u:'medic', name:'섬광탄', desc:'의무병 실명 섬광 스킬', m:100, g:100},
+      {k:'restore', u:'medic', name:'정화', desc:'의무병 디버프 해제', m:100, g:100},
+      {k:'caduceus', u:'medic', name:'마나 증폭', desc:'의무병 최대 에너지 +50', m:150, g:150} ] },
   { k:'engbay', name:'공학소', ico:'⚙️', m:125, g:0, req:['command'], lift:true,
     research:[
       {k:'inf_atk', name:'보병 공격력', desc:'레인저·화력병·저격수 공격 +1/티어', tier:[[100,100],[175,175],[250,250]]},
@@ -42,10 +42,10 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {id:'goliath', name:'기갑병', m:100, g:50, pop:2, req:['armory']} ] },
   { k:'machshop', name:'정비소', ico:'🛠', m:50, g:50, addonTo:'factory',
     research:[
-      {k:'ion', name:'이동 강화', desc:'레이서 이동속도↑', m:100, g:100},
-      {k:'mine', name:'지뢰', desc:'레이서 지뢰 3개 사용', m:100, g:100},
-      {k:'siege', name:'공성 모드', desc:'공성전차 장거리 포격 모드', m:150, g:150},
-      {k:'charon', name:'대공 강화', desc:'기갑병 대공 사거리↑', m:150, g:150} ] },
+      {k:'ion', u:'racer', name:'이동 강화', desc:'레이서 이동속도↑', m:100, g:100},
+      {k:'mine', u:'racer', name:'지뢰', desc:'레이서 지뢰 3개 사용', m:100, g:100},
+      {k:'siege', u:'tank', name:'공성 모드', desc:'공성전차 장거리 포격 모드', m:150, g:150},
+      {k:'charon', u:'goliath', name:'대공 강화', desc:'기갑병 대공 사거리↑', m:150, g:150} ] },
   { k:'armory', name:'무기고', ico:'⚔️', m:100, g:50, req:['factory'],
     research:[
       {k:'veh_atk', name:'차량 공격력', desc:'레이서·공성전차·기갑병 +/티어', tier:[[100,100],[175,175],[250,250]]},
@@ -61,24 +61,24 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {id:'dreadnought', name:'전함', m:400, g:300, pop:6, req:['control','physics']} ] },// 배틀크루저
   { k:'control', name:'관제탑', ico:'🗼', m:50, g:50, addonTo:'starport',
     research:[
-      {k:'cloak_w', name:'은신', desc:'전투기 은신 스킬', m:150, g:150},
-      {k:'apollo', name:'마나 증폭', desc:'전투기 최대 에너지 +50', m:150, g:150} ] },
+      {k:'cloak_w', u:'skyguard', name:'은신', desc:'전투기 은신 스킬', m:150, g:150},
+      {k:'apollo', u:'skyguard', name:'마나 증폭', desc:'전투기 최대 에너지 +50', m:150, g:150} ] },
   // ── 고급 기술 ──
   { k:'scifac', name:'연구소', ico:'🔬', m:100, g:150, req:['starport'], lift:true,
     research:[
-      {k:'emp', name:'EMP', desc:'대상 지역 에너지·보호막 소거', m:200, g:200},
-      {k:'irradiate', name:'방사능', desc:'생체 유닛 지속 방사능 피해', m:200, g:200},
-      {k:'titan', name:'마나 증폭', desc:'지원 정찰기 최대 에너지 +50', m:150, g:150} ] },
+      {k:'emp', u:'aegis', name:'EMP', desc:'대상 지역 에너지·보호막 소거', m:200, g:200},
+      {k:'irradiate', u:'aegis', name:'방사능', desc:'생체 유닛 지속 방사능 피해', m:200, g:200},
+      {k:'titan', u:'aegis', name:'마나 증폭', desc:'지원 정찰기 최대 에너지 +50', m:150, g:150} ] },
   { k:'covert', name:'특수 작전실', ico:'👁️', m:50, g:50, addonTo:'scifac',
     research:[
-      {k:'lockdown', name:'봉쇄', desc:'기계 유닛 일정시간 마비', m:200, g:200},
-      {k:'cloak_g', name:'은신', desc:'저격수 은신 스킬', m:100, g:100},
-      {k:'ocular', name:'시야 강화', desc:'저격수 시야·사거리 +1', m:100, g:100},
-      {k:'moebius', name:'마나 증폭', desc:'저격수 최대 에너지 +50', m:150, g:150} ] },
+      {k:'lockdown', u:'ghost', name:'봉쇄', desc:'기계 유닛 일정시간 마비', m:200, g:200},
+      {k:'cloak_g', u:'ghost', name:'은신', desc:'저격수 은신 스킬', m:100, g:100},
+      {k:'ocular', u:'ghost', name:'시야 강화', desc:'저격수 시야·사거리 +1', m:100, g:100},
+      {k:'moebius', u:'ghost', name:'마나 증폭', desc:'저격수 최대 에너지 +50', m:150, g:150} ] },
   { k:'physics', name:'화력 연구소', ico:'🌌', m:50, g:50, addonTo:'scifac',
     research:[
-      {k:'yamato', name:'집중포', desc:'전함 단일 대상 강력 포격', m:200, g:200},
-      {k:'colossus', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
+      {k:'yamato', u:'dreadnought', name:'집중포', desc:'전함 단일 대상 강력 포격', m:200, g:200},
+      {k:'colossus', u:'dreadnought', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
   { k:'comsat', name:'통신소', ico:'📡', m:50, g:50, addonTo:'command', req:['academy'], detector:true },
   { k:'nuke', name:'핵 격납고', ico:'☢️', m:50, g:50, addonTo:'command', req:['covert'],
     produces:[{id:'nuke', name:'핵미사일', m:200, g:200, pop:8}] },
@@ -95,12 +95,12 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {id:'stinger', name:'자폭충', m:25, g:75, pop:1, req:['spire']},
       {id:'medusa', name:'군단여왕', m:100, g:100, pop:2, req:['queensnest']},
       {id:'ultralisk', name:'돌격괴수', m:200, g:200, pop:4, req:['ultracavern']}],
-    research:[{k:'burrow', name:'매복', desc:'지상 유닛 잠복', m:100, g:100}] },
+    research:[{k:'burrow', u:'*', name:'매복', desc:'지상 유닛 잠복', m:100, g:100}] },
   { k:'extractor', name:'채취기', ico:'🛢', m:50, g:0, gas:true, req:['hatchery'] },
   { k:'pool', name:'번식지', ico:'🧫', m:150, g:0, req:['hatchery'], unlocks:['snapper'],   // 저글링 해금(생산=해처리)
     research:[
-      {k:'metabolic', name:'이속 강화', desc:'척후병 이동속도↑', m:100, g:100},
-      {k:'adrenal', name:'광폭화', desc:'척후병 공격속도↑', m:200, g:200, req:['hive']} ] },
+      {k:'metabolic', u:'snapper', name:'이속 강화', desc:'척후병 이동속도↑', m:100, g:100},
+      {k:'adrenal', u:'snapper', name:'광폭화', desc:'척후병 공격속도↑', m:200, g:200, req:['hive']} ] },
   { k:'evochamber', name:'진화장', ico:'🧬', m:50, g:0, req:['hatchery'],
     research:[
       {k:'melee_atk', name:'근접 공격력', desc:'척후병·스웜링·돌격괴수 +/티어', tier:[[100,100],[150,150],[200,200]]},
@@ -108,39 +108,39 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {k:'gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'hydraden', name:'스파이크 굴', ico:'🐍', m:100, g:50, req:['pool'], unlocks:['hydra','thornqueen'],   // 리퍼·럴커 해금
     research:[
-      {k:'muscle', name:'이속 강화', desc:'스파이크 이동속도↑', m:150, g:150},
-      {k:'grooved', name:'사거리 강화', desc:'스파이크 사거리 +1', m:150, g:150},
-      {k:'lurker', name:'여왕 변태', desc:'스파이크→가시여왕 변태 가능', m:200, g:200, req:['lair']} ] },
+      {k:'muscle', u:'hydra', name:'이속 강화', desc:'스파이크 이동속도↑', m:150, g:150},
+      {k:'grooved', u:'hydra', name:'사거리 강화', desc:'스파이크 사거리 +1', m:150, g:150},
+      {k:'lurker', u:'hydra', name:'여왕 변태', desc:'스파이크→가시여왕 변태 가능', m:200, g:200, req:['lair']} ] },
   { k:'creep', name:'점막탑', ico:'🩸', m:75, g:0, req:['hatchery'], evolveTo:['sunken','spore'] },
   { k:'sunken', name:'가시탑', ico:'🦑', m:50, g:0, req:['pool'], evolveOnly:true },
   { k:'spore', name:'포자탑', ico:'🍄', m:50, g:0, req:['evochamber'], detector:true, evolveOnly:true },
   // ── 2티어(레어 단계) ──
   { k:'lair', name:'소굴', ico:'👁️', m:150, g:100, req:['pool'], evolveOnly:true, evolveTo:'hive',
     research:[
-      {k:'pneuma', name:'비행 가속', desc:'수송충 이동속도↑', m:150, g:150},
-      {k:'antennae', name:'시야 강화', desc:'수송충 시야↑', m:150, g:150},
-      {k:'ventral', name:'수송 능력 개발', desc:'수송충 수송(드랍) 가능', m:200, g:200} ] },
+      {k:'pneuma', u:'overlord', name:'비행 가속', desc:'수송충 이동속도↑', m:150, g:150},
+      {k:'antennae', u:'overlord', name:'시야 강화', desc:'수송충 시야↑', m:150, g:150},
+      {k:'ventral', u:'overlord', name:'수송 능력 개발', desc:'수송충 수송(드랍) 가능', m:200, g:200} ] },
   { k:'spire', name:'첨탑', ico:'🦇', m:200, g:150, req:['lair'], unlocks:['wyvern','stinger'], evolveTo:'gspire',   // 와이번·스팅어 해금 · 거대 첨탑로 진화
     research:[
       {k:'fly_atk', name:'비행 공격력', desc:'비행충·자폭충·포격충 +/티어', tier:[[100,100],[175,175],[250,250]]},
       {k:'fly_def', name:'비행 방어력', desc:'비행 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'queensnest', name:'여왕 둥지', ico:'👑', m:150, g:150, req:['lair'], unlocks:['medusa'],   // 메두사(퀸) 해금
     research:[
-      {k:'ensnare', name:'점착 가스', desc:'적 이동·공속 감소', m:100, g:100},
-      {k:'broodling', name:'유충 폭발', desc:'적 생체 즉사+스웜링 생성', m:100, g:100},
-      {k:'gamete', name:'마나 증폭', desc:'군단여왕 최대 에너지 +50', m:150, g:150} ] },
+      {k:'ensnare', u:'medusa', name:'점착 가스', desc:'적 이동·공속 감소', m:100, g:100},
+      {k:'broodling', u:'broodling', name:'유충 폭발', desc:'적 생체 즉사+스웜링 생성', m:100, g:100},
+      {k:'gamete', u:'medusa', name:'마나 증폭', desc:'군단여왕 최대 에너지 +50', m:150, g:150} ] },
   // ── 3티어(하이브 단계) ──
   { k:'hive', name:'대군락', ico:'🌋', m:200, g:150, req:['queensnest'], evolveOnly:true },
   { k:'gspire', name:'거대 첨탑', ico:'🦅', m:100, g:150, req:['hive','spire'], unlocks:['behemoth'], evolveOnly:true },   // 가디언 해금 · 첨탑에서 진화
   { k:'defilermound', name:'오염 둥지', ico:'🦂', m:100, g:100, req:['hive'], unlocks:['venom'],   // 디파일러 해금
     research:[
-      {k:'consume', name:'포식', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
-      {k:'plague', name:'역병', desc:'광역 지속 체력 감소', m:200, g:200},
-      {k:'metasynaptic', name:'마나 증폭', desc:'산성충 최대 에너지 +50', m:150, g:150} ] },
+      {k:'consume', u:'defiler', name:'포식', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
+      {k:'plague', u:'defiler', name:'역병', desc:'광역 지속 체력 감소', m:200, g:200},
+      {k:'metasynaptic', u:'venom', name:'마나 증폭', desc:'산성충 최대 에너지 +50', m:150, g:150} ] },
   { k:'ultracavern', name:'돌격괴수 굴', ico:'🦏', m:150, g:200, req:['hive'], unlocks:['ultralisk'],   // 저거너트 해금
     research:[
-      {k:'anabolic', name:'이속 강화', desc:'돌격괴수 이동속도↑', m:200, g:200},
-      {k:'chitinous', name:'방어 강화', desc:'돌격괴수 방어력 +2', m:150, g:150} ] },
+      {k:'anabolic', u:'ultralisk', name:'이속 강화', desc:'돌격괴수 이동속도↑', m:200, g:200},
+      {k:'chitinous', u:'ultralisk', name:'방어 강화', desc:'돌격괴수 방어력 +2', m:150, g:150} ] },
   { k:'nydus', name:'땅굴', ico:'🕳', m:150, g:0, req:['hive'] },
 ]};
 TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, buildings:[
@@ -163,7 +163,7 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
   { k:'cannon', name:'에너지 타워', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
   { k:'cyber', name:'사이버 코어', ico:'⚙️', m:200, g:0, req:['gateway'],
     research:[
-      {k:'singularity', name:'사거리 강화', desc:'센티넬 사거리↑', m:150, g:150},
+      {k:'singularity', u:'dragoon', name:'사거리 강화', desc:'센티넬 사거리↑', m:150, g:150},
       {k:'air_wpn', name:'공중 무기', desc:'팔콘·요격기·모함·전함 +/티어', tier:[[100,100],[175,175],[250,250]]},
       {k:'air_arm', name:'공중 방어', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'battery', name:'쉴드 충전', ico:'🔋', m:100, g:0, req:['gateway'] },
@@ -176,16 +176,16 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {id:'kronos', name:'전함', m:100, g:350, pop:4, req:['tribunal']}] },         // 아비터
   { k:'fleet', name:'함대 관제', ico:'📡', m:300, g:200, req:['stargate'],
     research:[
-      {k:'apial', name:'시야 강화', desc:'요격기 시야↑', m:100, g:100},
-      {k:'gravitic_scout', name:'이속 강화', desc:'요격기 이동속도↑', m:200, g:200},
-      {k:'carrier_cap', name:'요격기 증설', desc:'요격기 최대 4→8', m:100, g:100},
-      {k:'disruption', name:'교란 결계', desc:'팔콘: 지상 공격 무력화 그물', m:200, g:200},
-      {k:'argus_jewel', name:'마나 증폭', desc:'팔콘 최대 에너지 +50', m:100, g:100} ] },
+      {k:'apial', u:'skydancer', name:'시야 강화', desc:'요격기 시야↑', m:100, g:100},
+      {k:'gravitic_scout', u:'skydancer', name:'이속 강화', desc:'요격기 이동속도↑', m:200, g:200},
+      {k:'carrier_cap', u:'skydancer', name:'요격기 증설', desc:'요격기 최대 4→8', m:100, g:100},
+      {k:'disruption', u:'falcon', name:'교란 결계', desc:'팔콘: 지상 공격 무력화 그물', m:200, g:200},
+      {k:'argus_jewel', u:'falcon', name:'마나 증폭', desc:'팔콘 최대 에너지 +50', m:100, g:100} ] },
   { k:'tribunal', name:'심판정', ico:'💎', m:200, g:150, req:['stargate','archives'],
     research:[
-      {k:'recall', name:'순간이동', desc:'아군 대규모 순간이동', m:150, g:150},
-      {k:'stasis', name:'빙결', desc:'범위 유닛 무적·행동불가', m:150, g:150},
-      {k:'khaydarin_core', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
+      {k:'recall', u:'kronos', name:'순간이동', desc:'아군 대규모 순간이동', m:150, g:150},
+      {k:'stasis', u:'kronos', name:'빙결', desc:'범위 유닛 무적·행동불가', m:150, g:150},
+      {k:'khaydarin_core', u:'kronos', name:'마나 증폭', desc:'전함 최대 에너지 +50', m:150, g:150} ] },
   // ── 로보틱스 ──
   { k:'robo', name:'로봇 제작소', ico:'🤖', m:200, g:200, req:['cyber'],
     produces:[
@@ -194,22 +194,22 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
       {id:'reaver', name:'공성체', m:200, g:100, pop:4, req:['robobay']}] },               // 리버(스캐럽 내부 큐)
   { k:'robobay', name:'로봇 정비소', ico:'🔧', m:150, g:100, req:['robo'],
     research:[
-      {k:'gravitic_shuttle', name:'이속 강화', desc:'수송선 이동속도↑', m:200, g:200},
-      {k:'reaver_cap', name:'탄약 증설', desc:'공성체 스캐럽 최대 5→10', m:200, g:200} ] },
+      {k:'gravitic_shuttle', u:'seraph', name:'이속 강화', desc:'수송선 이동속도↑', m:200, g:200},
+      {k:'reaver_cap', u:'larva', name:'탄약 증설', desc:'공성체 스캐럽 최대 5→10', m:200, g:200} ] },
   { k:'observatory', name:'관측소', ico:'🔭', m:50, g:100, req:['robo'],
     research:[
-      {k:'gravitic_obs', name:'이속 강화', desc:'정찰기 이동속도↑', m:150, g:150},
-      {k:'sensor', name:'시야 강화', desc:'정찰기 시야↑', m:150, g:150} ] },
+      {k:'gravitic_obs', u:'observer', name:'이속 강화', desc:'정찰기 이동속도↑', m:150, g:150},
+      {k:'sensor', u:'observer', name:'시야 강화', desc:'정찰기 시야↑', m:150, g:150} ] },
   { k:'citadel', name:'성채', ico:'🏯', m:150, g:100, req:['cyber'],
-    research:[{k:'legs', name:'이속 강화', desc:'광전사 이동속도↑ (발업)', m:150, g:150}] },
+    research:[{k:'legs', u:'blade', name:'이속 강화', desc:'광전사 이동속도↑ (발업)', m:150, g:150}] },
   { k:'archives', name:'기록 보관소', ico:'📚', m:150, g:200, req:['citadel'],
     research:[
-      {k:'storm', name:'번개 폭풍', desc:'하이세이지 범위 번개', m:200, g:200},
-      {k:'hallucination', name:'환영', desc:'가짜 유닛 생성', m:150, g:150},
-      {k:'khaydarin', name:'마나 증폭', desc:'하이세이지 최대 에너지 +50', m:150, g:150},
-      {k:'mindcontrol', name:'정신 지배', desc:'적 유닛 영구 탈취', m:200, g:200},
-      {k:'maelstrom', name:'마비 폭풍', desc:'생체 유닛 일정시간 마비', m:100, g:100},
-      {k:'argus', name:'마나 증폭', desc:'다크보이드 최대 에너지 +50', m:150, g:150} ] },
+      {k:'storm', u:'high_templar', name:'번개 폭풍', desc:'하이세이지 범위 번개', m:200, g:200},
+      {k:'hallucination', u:'high_templar', name:'환영', desc:'가짜 유닛 생성', m:150, g:150},
+      {k:'khaydarin', u:'high_templar', name:'마나 증폭', desc:'하이세이지 최대 에너지 +50', m:150, g:150},
+      {k:'mindcontrol', u:'dark_archon', name:'정신 지배', desc:'적 유닛 영구 탈취', m:200, g:200},
+      {k:'maelstrom', u:'dark_archon', name:'마비 폭풍', desc:'생체 유닛 일정시간 마비', m:100, g:100},
+      {k:'argus', u:'dark_archon', name:'마나 증폭', desc:'다크보이드 최대 에너지 +50', m:150, g:150} ] },
 ]};
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🐺 페럴(수인) — RACES.md §2 건물표를 코드로 확정 (2026-08-20)

@@ -79,13 +79,39 @@ const FAMILY = {
     label: '맵 · 1~10번 던전 템플릿(§11-4)',
     need: [
       ['레퍼런스 선언',  /Use the attached image as the reference/],
-      ['하단 유지',      /Keep its bottom section exactly as it is/],
+      // ⭐ 하단을 붙드는 것은 문구 셋이다(§11-4) — 숫자·생김새·금지. 하나라도 빠지면 하단이 제각각이 된다.
+      ['하단 잠금',      /THE BOTTOM 62% OF THE FRAME IS LOCKED/],
+      ['경계 위치',      /crossing the frame at about 38% down/],
+      ['재그리기 금지',  /do not redraw it, do not restyle it, do not move it up or down/i],
       ['스타일 일치',    /Match the reference exactly in art style/],
       ['위쪽만 교체',    /Replace only the area above that band/],
       ['구조② 열린 통로', /runs up the centre to the top edge, clear of every obstacle/],
       ['구조③ 가장자리',  /banked along the left and right margins and into the upper corners/],
       ['잔해만',        /Nothing intact is standing anywhere/],
       ['E 금지',        /No text, no logos, no user interface, no characters, no watermark.$/]],
+  },
+  // 🟩 유즈맵 바닥(§12) — **통짜 한 장**. 판 위에 유닛이 서므로 요구가 다르다:
+  //   평평해야 하고(솟은 것 금지) · 길처럼 읽힐 것이 없어야 하고 · 타일 전용 문구가 섞이면 판이 사라진다.
+  //   ⛔ 'seamless tileable' 이 들어가면 「사방이 이어지는 무늬」와 「떠 있는 판 하나」가 모순돼
+  //      판·테두리·우주가 통째로 사라진다(2026-08-28 실제로 물어본 함정).
+  floor: {
+    label: '유즈맵 바닥(§12)',
+    need: [
+      ['시점(정투영)', /perfectly flat top-down orthographic view straight from above, no perspective, no horizon/],
+      ['조명(무방향)', /flat even ambient lighting with no directional shadows and no visible light source/],
+      ['디테일 상한',  /fine small-scale surface detail, nothing larger than a fist/],
+      // 채도 줄은 장면이 고른다(§12-2) — 어두운 흙 / 밝은 인공물 / 살아 있는 초록. 셋 다 허용한다.
+      ['채도',        /palette.{0,60}?(dark tones|bright and evenly lit|low contrast)/],
+      ['여백',        /(central 80% of the width|clear of the outer edges of the frame)/],
+      ['금지',        /no characters, no objects, no units, no structures, no text, no user interface/],
+      ['품질 어휘',   /highly detailed photorealistic PBR game texture, AAA game environment asset/],
+      ['세로 구도',   /(tall vertical composition|vertical portrait composition)/],
+      ['평평·걸을 수 있음', /stays flat and walkable/],
+      ['솟은 것 금지', /never in raised obstacles/],
+      ['길 금지',     /no paths, no markings/],
+      // ⚠ 프롬프트는 여러 줄이라 낱말 사이가 공백일 수도 개행일 수도 있다 — \s+ 로 잡는다
+      ['테두리 두께', /one\s+twentieth\s+of\s+(the\s+slab|its\s+height)/]],
+    ban: [['타일 전용 문구', /seamless|tileable|square tile/i]],
   },
   // 🐺 유닛 참고 아트(§9) — 환경 계열의 COMMON(안개·탈채도·명암분리)을 쓰지 않는다. 목적이 8방향 스프라이트 원본이라
   //   지켜야 할 것이 다르다: 배경이 흰 단색인가 · 그림자가 발밑인가 · 조명이 고정인가 · 금지줄이 있는가.
@@ -113,7 +139,7 @@ const BANNED = [
 ];
 
 // ── 프롬프트를 계열별로 모은다(어느 ## 아래에 있는가) ──────────────
-const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [] };
+const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [], floor: [] };
 {
   let fam = null;
   // 환경 계열은 한 줄 프롬프트(Moody…), 유닛 계열은 여러 문단이라 블록 전체를 담는다.
@@ -122,7 +148,7 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
   const re = /^## (\d+)\.|^```([a-z]*)\n([\s\S]*?)\n```/gm;
   let m;
   while ((m = re.exec(art))) {
-    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : null)))); continue; }
+    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : (m[1] === '12' ? 'floor' : null))))); continue; }
     if (m[2] || !fam) continue;   // 언어 태그가 있으면 프롬프트가 아니다(bash 등)
     const body = m[3];
     if (/[가-힣]/.test(body)) continue;   // 한글이 있으면 프롬프트가 아니다(설명용 도표 등)
@@ -131,18 +157,22 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
     // §11 은 둘로 갈린다: 레퍼런스를 쓰는 던전 템플릿과, 레퍼런스 없이 뽑는 0번 캠프.
     else if (fam === 'camp') { if (/^Use the attached/.test(body)) prompts.dungeonmap.push(body);
                                else if (/^A tall vertical top-down/.test(body)) prompts.campmap.push(body); }
+    // §12 는 조각(형태·테두리·우주 블록)도 펜스라 **전문만** 고른다: 형태 문장으로 시작하고 공통 블록 끝줄까지 있는 것
+    // ⚠ 줄바꿈을 공백으로 눌러서 담는다 — 문장이 여러 줄에 걸쳐 있어 낱말 사이에 개행이 끼고,
+    //    그대로 두면 'stays flat and\nwalkable' 같은 곳에서 정규식이 헛돈다(두 번 겪었다).
+    else if (fam === 'floor') { if (/^A single vast rectangular slab/.test(body) && /composition/.test(body)) prompts.floor.push(body.replace(/\s+/g, ' ')); }
     else if (/^Moody/.test(body)) prompts[fam].push(body);
   }
 }
 
-for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap']) {
+for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap', 'floor']) {
   const F = FAMILY[key], list = prompts[key];
   console.log(`${F.label} 프롬프트 ${list.length}개`);
   if (!list.length) bad(`${F.label} 프롬프트를 하나도 못 찾았다 — ART.md 형식이 바뀌었나?`);
   list.forEach((p, i) => {
     const need = F.need.concat((F.needIfCamera && /\bdegrees?\b/i.test(p)) ? F.needIfCamera : []);
     const miss = need.filter(([, re]) => !re.test(p)).map(([n]) => n);
-    const hit = BANNED.filter(([, re]) => re.test(p)).map(([n]) => n);
+    const hit = BANNED.concat(F.ban || []).filter(([, re]) => re.test(p)).map(([n]) => n);
     if (miss.length || hit.length) {
       bad(`#${i + 1} ${miss.length ? '빠진 고정블록: ' + miss.join(', ') : ''}${hit.length ? '  금지 표현: ' + hit.join(', ') : ''}`);
     } else {

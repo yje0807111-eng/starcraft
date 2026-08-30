@@ -1,0 +1,433 @@
+/* ══ 🔬 캠프 연구 구역 (2026-08-27) ═══════════════════════════════════════
+ *
+ * 하단 네비 「연구」를 누르면 2단 네비로 내려가고, 고른 요소가 **캠프 하단 시트**에 뜬다.
+ * 설계는 sc-2 세션에서 사용자와 확정했다 — 요지 셋:
+ *   ① 자리는 캠프 하단 시트(#btSheet) 하나. 건물 프로필과 **같은 자리**를 쓴다.
+ *   ② 하위 칸 셋 — 자원(미네랄) · 무장(가스) · 기술(가스).
+ *   ③ 그리는 것은 **renderCmdGrid 하나**다. 건물 프로필과 같은 함수라 생김새가 저절로 같고,
+ *      5칸을 넘으면 페이지네이션도 알아서 붙는다.
+ *
+ * ⭐ **왜 새 파일인가** — js/19-camp.js 는 이미 2,700줄이 넘고 다른 세션이 전투를 만지고 있다.
+ *    연구는 거기에 기대기만 할 뿐(값·상태를 읽는다) 캠프 내부를 고치지 않으므로 갈라 둔다.
+ *    ⚠ 로드 순서상 **19 뒤**여야 한다(campUpgCost 같은 것을 쓴다). 태그를 옮기지 말 것.
+ *
+ * ⛔ 값을 여기서 새로 계산하지 않는다 — 전부 캠프의 기존 함수에서 꺼낸다.
+ *    두 벌이 되는 순간 화면과 실제가 어긋난다(이 저장소에서 여러 번 겪었다).
+ */
+
+// ── 상태 ────────────────────────────────────────────────────────────────
+// _resSec = 지금 열린 연구 칸. null 이면 연구 모드가 아니다(시트는 건물 프로필이 쓴다).
+let _resSec = null;
+// 자원 칸에서 지금 고른 항목(정보판에 「얼마나 오르는지」를 띄우는 대상)
+let _resPick = 'tap';
+
+const CAMP_RES_SECS = ['res', 'arm', 'tech'];
+
+// ── 🧮 「다음 레벨 값」 — 레벨을 잠깐 올려 두고 **같은 함수**로 잰다 ────────
+// ⛔ 다음 값을 위한 수식을 따로 쓰지 말 것. 캠프의 성장 곡선은 마일스톤·환생·던전 배수가
+//   겹겹이 걸려 있어(campMileMul · campRebMul · campRtMul · campMineMul) 손으로 옮기면 반드시 틀린다.
+//   ⚠ 동기 코드 안에서만 올렸다 되돌린다 — 그 사이 다른 코드가 끼어들 틈이 없다.
+function _campPeekNext(k, fn) {
+  const C = (typeof campState === 'function') ? campState() : null;
+  if (!C) return null;
+  C.upg = C.upg || {};
+  const had = C.upg[k] | 0;
+  C.upg[k] = had + 1;
+  let v = null;
+  try { v = fn(); } catch (e) { v = null; }
+  C.upg[k] = had;
+  return v;
+}
+
+// ── 📋 자원 칸 항목 표 ───────────────────────────────────────────────────
+// ⭐ **한 줄이 곧 슬롯 하나**다. 값·다음값·설명을 전부 여기서 정하고, 그리는 쪽은 이 표만 읽는다.
+//   ⚠ 정제소가 여기 있는 것이 이번 이동의 핵심이다 — 예전엔 정제소 **건물**의 연구 카드였다.
+//     건물을 고르지 않으면 올릴 수 없어서, 자원 성장 셋 중 하나만 자리가 달랐다.
+const CAMP_RES_ITEMS = [
+  { k: 'tap', nm: '터치 강화', ico: 'upgrades/up_mineral_up',
+    why: '한 번 누를 때 캐는 양',
+    now: () => (typeof campTapGain === 'function') ? campTapGain() : 0,
+    next: () => _campPeekNext('tap', () => campTapGain()),
+    unit: '/탭' },
+  { k: 'gather', nm: '채취 강화', ico: 'upgrades/up_speed',
+    why: '일꾼이 한 번 다녀올 때 캐는 양',
+    now: () => (typeof campGatherMul === 'function') ? campGatherMul() : 1,
+    next: () => _campPeekNext('gather', () => campGatherMul()),
+    unit: '배', dec: 2 },
+  { k: 'refinery', nm: '정제소', ico: 'buildings/bld_refinery',
+    why: '정제소가 스스로 캐는 가스',
+    now: () => (typeof campGasPerMin === 'function') ? campGasPerMin() : 0,
+    // ⚠ 정제소 레벨은 C.upg 와 연구 칸(G.tech.research) 중 **큰 쪽**이다(campRefLv).
+    //   그래서 C.upg 만 올려 보는 _campPeekNext 로는 안 움직일 수 있다 — 값에서 직접 한 칸 올린다.
+    next: () => {
+      if (typeof campGasPerMin !== 'function' || typeof campRefLv !== 'function') return null;
+      const cur = campGasPerMin();
+      if (!(typeof campHasRefinery === 'function' && campHasRefinery())) return null;   // 안 지었으면 다음 값도 0
+      const lv = campRefLv();
+      const base = CAMP_REF_BASE + CAMP_REF_STEP * lv;
+      if (base <= 0) return null;
+      return cur * ((CAMP_REF_BASE + CAMP_REF_STEP * (lv + 1)) / base);
+    },
+    unit: '/분', dec: 1,
+    lv: () => (typeof campRefLv === 'function') ? campRefLv() : 0,
+    // ⛽ 정제소를 아직 안 지었으면 올려도 나오는 것이 없다 — 그 사실을 슬롯에 적는다.
+    lock: () => !(typeof campHasRefinery === 'function' && campHasRefinery()),
+    lockWhy: '정제소를 먼저 지으세요' }
+];
+
+function campResItem(k) { return CAMP_RES_ITEMS.find(x => x.k === k) || null; }
+function campResItemLv(it) { return it.lv ? it.lv() : ((typeof campUpgLv === 'function') ? campUpgLv(it.k) : 0); }
+
+// 숫자 표기 — 큰 수는 캠프·HUD 와 같은 축약기(fmtCur)를 쓴다. ⛔ 새 표기기를 만들지 말 것.
+function _campResNum(v, dec) {
+  if (v == null || !isFinite(v)) return '—';
+  if (dec) return (+v).toFixed(dec);
+  return (typeof fmtCur === 'function') ? fmtCur(v) : String(Math.round(v));
+}
+
+// ── 🎛 자원 칸 모델 → renderCmdGrid ──────────────────────────────────────
+function campResModelRes() {
+  const have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit | 0) : 0;
+  const items = CAMP_RES_ITEMS.map(it => {
+    const lv = campResItemLv(it);
+    const cost = (typeof campUpgCost === 'function') ? campUpgCost(it.k) : 0;
+    const locked = it.lock ? it.lock() : false;
+    const poor = have < cost;
+    return {
+      k: it.k,
+      pro: (typeof _icoPathImg === 'function') ? _icoPathImg(it.ico, '🔧') : '',
+      sn: it.nm,
+      tr: 'Lv.' + lv,
+      cr: cost,
+      state: (locked || poor) ? 'dim' : '',
+      sel: (_resPick === it.k),
+      act: 'onclick="campResTap(\'' + it.k + '\')"'
+    };
+  });
+  const it = campResItem(_resPick) || CAMP_RES_ITEMS[0];
+  const lv = campResItemLv(it);
+  const cost = (typeof campUpgCost === 'function') ? campUpgCost(it.k) : 0;
+  const locked = it.lock ? it.lock() : false;
+  const cur = it.now(), nxt = it.next();
+  return {
+    mode: 'upg', compact: true, title: '자원',
+    kicker: true,
+    info: {
+      eb: 'Lv.' + lv,
+      name: it.nm,
+      desc: locked ? (it.lockWhy || '아직 올릴 수 없습니다') : it.why,
+      // ⭐ 이 화면의 핵심 — **사기 전에 얼마나 오르는지** 보여 준다.
+      //   (옛 채굴 팝업은 비용만 보여 줘서, 살지 말지를 값이 아니라 감으로 골라야 했다.)
+      val: (nxt != null && !locked)
+        ? { cur: _campResNum(cur, it.dec), nxt: _campResNum(nxt, it.dec), unit: it.unit || '' }
+        : null,
+      cr: cost
+    },
+    items: items
+  };
+}
+
+// 슬롯 탭 = 고르기 + **한 번 더 누르면 산다**(건물 프로필의 생산 카드와 같은 어법)
+function campResTap(k) {
+  const it = campResItem(k); if (!it) return;
+  if (_resPick !== k) {                       // 처음 누름 = 고르기(정보판이 값을 보여 준다)
+    _resPick = k;
+    if (typeof playSfx === 'function') playSfx('ui_tab');
+    campResSheet();
+    return;
+  }
+  if (it.lock && it.lock()) {                 // 잠긴 것은 사지 못한다
+    if (typeof toast === 'function') toast(it.lockWhy || '아직 올릴 수 없습니다');
+    return;
+  }
+  const ok = (typeof campUpgBuy === 'function') ? campUpgBuy(k) : false;
+  if (!ok && typeof toast === 'function') toast('미네랄이 모자랍니다');
+  campResSheet();
+}
+
+// ── 🗂 시트에 그린다 ─────────────────────────────────────────────────────
+// ⛔ 여기서 시트 마크업을 만들지 않는다 — 건물 프로필과 **같은 호스트·같은 렌더러**를 쓴다.
+//   그래야 카드 높이·페이지네이션·비용 표기가 저절로 같아진다.
+let _campResDrawing = false;
+function campResSheet() {
+  if (!_resSec || _campResDrawing) return;   // ⚠ campSyncSheet 이 다시 이 함수로 돌아온다 — 한 겹만 그린다
+  const body = document.getElementById('btSheetBody'), sheet = document.getElementById('btSheet');
+  if (!body || !sheet) return;
+  let model = null;
+  if (_resSec === 'res') model = campResModelRes();
+  else if (_resSec === 'arm') model = (_armPick == null) ? campArmModelTop() : campArmModelOne();
+  else model = campTechModel();
+  sheet.classList.add('open');
+  if (typeof G !== 'undefined' && G.tech) { G.tech.sheet = G.tech.sheet || {}; G.tech.sheet.open = true; G.tech.sheet.sec = 'research'; }
+  _campResDrawing = true;
+  try {
+    if (typeof renderCmdGrid === 'function') renderCmdGrid(body, model);
+    if (typeof campSyncSheet === 'function') campSyncSheet();
+  } finally { _campResDrawing = false; }
+}
+
+// ── 🚪 들고 나기 ─────────────────────────────────────────────────────────
+// 연구는 네비 **최상위**라 캠프 밖(유즈맵·상점)에서도 눌린다. 거기엔 하단 시트가 없다.
+// ⭐ 토벌 입구와 같은 규칙 — 먼저 캠프로 들어간 뒤에 내려간다(CLAUDE.md 레지스트리에 선례).
+function campResEnter(sec) {
+  if (typeof campIsOn !== 'function' || !campIsOn()) {
+    if (typeof openHome === 'function') openHome();
+  }
+  setResSec(sec || 'res');
+}
+function setResSec(k) {
+  if (CAMP_RES_SECS.indexOf(k) < 0) k = 'res';
+  if (_resSec !== k) _armPick = null;   // 칸을 옮기면 계열 고르기부터
+  _resSec = k;
+  // 🗺 **한 자리에 두 주인을 두지 않는다** — 연구를 열면 맵 선택은 해제한다.
+  //   (반대 방향은 campResPatch 가 맡는다: 맵에서 뭘 고르면 연구 모드가 풀린다.)
+  campResClearMapSel();
+  campResSheet();
+}
+function campResClearMapSel() {
+  if (typeof G === 'undefined' || !G.tech) return;
+  G.tech.sel = null; G.tech.selU = []; G.tech.selRes = null;
+}
+// 연구 모드에서 빠져나온다 — 맵에서 뭘 고르거나, 다른 구역으로 갈 때.
+function campResExit() {
+  if (!_resSec) return;
+  _resSec = null;
+  if (typeof G !== 'undefined' && G.tech && G.tech.sheet && G.tech.sheet.sec === 'research') {
+    G.tech.sheet.open = false; G.tech.sheet.sec = null;
+  }
+}
+
+// ── 🔧 패치 — 시트의 주인을 가른다 ───────────────────────────────────────
+// techPanelRender 는 건물·유닛·자원 프로필을 그리는 **공유 함수**다(관리자 탭·오토배틀도 쓴다).
+// ⛔ 그 안에 캠프 전용 분기를 넣지 않는다 — 캠프가 감싸서 자기 차례만 가로챈다
+//   (campPatchZoom·campPatchRefinery 와 같은 방식).
+let _campResPatched = null;
+function campPatchResearch() {
+  if (_campResPatched || typeof window === 'undefined') return;
+  const o = window.techPanelRender;
+  if (typeof o !== 'function') return;
+  // 🏕 **입구가 둘이다.** 건물·유닛 프로필은 techPanelRender 가, 「아무것도 안 골랐을 때」 요약은
+  //   renderCampIdleSheet 가 그린다(js/11-cmdcard.js). 캠프는 매 프레임 뒤엣것을 부르므로
+  //   그쪽을 안 잡으면 **연구 그리드를 그려 놓아도 다음 프레임에 요약이 덮어쓴다**(2026-08-27 실측).
+  const oi = window.renderCampIdleSheet;
+  _campResPatched = { techPanelRender: o, renderCampIdleSheet: oi };
+  if (typeof oi === 'function') window.renderCampIdleSheet = function (host) {
+    if (_resSec && typeof campIsOn === 'function' && campIsOn() && !host) { campResSheet(); return; }
+    return oi.apply(this, arguments); };
+  window.techPanelRender = function () {
+    if (_resSec && typeof campIsOn === 'function' && campIsOn()) {
+      // 🗺 맵에서 무언가를 고르면 **연구가 자리를 내준다**. 네비도 최상위로 올린다.
+      const T = (typeof G !== 'undefined') ? G.tech : null;
+      const picked = !!(T && (T.sel != null || (T.selU && T.selU.length) || T.selRes));
+      if (picked) { campResExit(); if (typeof navBack === 'function') navBack(); return o.apply(this, arguments); }
+      campResSheet();
+      return;
+    }
+    return o.apply(this, arguments);
+  };
+}
+function campUnpatchResearch() {
+  if (!_campResPatched) return;
+  window.techPanelRender = _campResPatched.techPanelRender;
+  if (_campResPatched.renderCampIdleSheet) window.renderCampIdleSheet = _campResPatched.renderCampIdleSheet;
+  _campResPatched = null;
+}
+
+// ══ ⚔ 무장 칸 — 계열 강화 (2026-08-27) ═══════════════════════════════════
+// 2단이다: [보병][차량][함선] → 고르면 [🔙][공격][방어].
+// ⭐ **테란 기준 구조를 세 종족에 그대로 쓴다**(사용자 확정). 계열 구성이 종족마다 달라서
+//   (테란 6 · 저그 5 · 프로토스 5) 자동으로 묶을 수가 없다 — 자리를 표에 못박는다.
+//   ⚠ 저그는 근접·원거리가 **지상 방어를 함께 쓴다**(gnd_def 가 두 자리에 온다). 레벨은 하나이므로
+//     어느 쪽에서 올리든 같은 값이다 — 빈 칸을 두는 것보다 낫다.
+//   ⚠ 프로토스의 가운데 자리는 **실드**다(공격이 없다) — 그 칸은 방어 하나만 선다.
+// ⛔ 표에 없는 계열 연구가 생기면 **스모크가 실패한다**(아래 검사). 조용히 사라지는 것이 제일 나쁘다.
+const CAMP_ARM_TREE = {
+  union:     [ { nm:'보병', atk:'inf_atk',   def:'inf_def' },
+               { nm:'차량', atk:'veh_atk',   def:'veh_def' },
+               { nm:'함선', atk:'air_atk',   def:'air_def' } ],
+  swarm:     [ { nm:'근접', atk:'melee_atk', def:'gnd_def' },
+               { nm:'원거리', atk:'range_atk', def:'gnd_def' },
+               { nm:'비행', atk:'fly_atk',   def:'fly_def' } ],
+  aetherial: [ { nm:'지상', atk:'gnd_wpn',   def:'gnd_arm' },
+               { nm:'보호막', atk:null,      def:'shield'  },
+               { nm:'공중', atk:'air_wpn',   def:'air_arm' } ]
+};
+let _armPick = null;    // 고른 계열(0~2) · null = 계열 고르는 화면
+
+function campArmTree() {
+  const T = (typeof G !== 'undefined') ? G.tech : null;
+  return (T && CAMP_ARM_TREE[T.race]) || [];
+}
+// 연구가 어느 건물에 있나 — techDoResearch 가 건물 키를 요구한다.
+// ⛔ 표를 따로 만들지 않는다. 트리에서 찾는다(연구가 옮겨 가도 따라온다).
+function campArmBldgOf(rk) {
+  const T = (typeof G !== 'undefined') ? G.tech : null;
+  if (!T || typeof TECH_TREE === 'undefined') return null;
+  const t = TECH_TREE[T.race]; if (!t) return null;
+  for (const b of (t.buildings || [])) if ((b.research || []).some(x => x.k === rk)) return b;
+  return null;
+}
+function campArmRes(rk) {
+  const b = campArmBldgOf(rk); if (!b) return null;
+  return (b.research || []).find(x => x.k === rk) || null;
+}
+function campArmLv(rk) {
+  const T = (typeof G !== 'undefined') ? G.tech : null;
+  return (T && T.research && (T.research[T.race + '_' + rk] | 0)) || 0;
+}
+// 살 수 있나 — 건물이 서 있어야 한다(techDoResearch 와 같은 조건).
+function campArmReady(rk) {
+  const b = campArmBldgOf(rk); const T = (typeof G !== 'undefined') ? G.tech : null;
+  if (!b || !T) return false;
+  return !!((T.built && T.built[b.k] > 0) || (T.addon && T.addon[b.k]));
+}
+
+// ── 계열 고르는 화면 ─────────────────────────────────────────────────────
+function campArmModelTop() {
+  const rows = campArmTree();
+  const items = rows.map((g, i) => {
+    const keys = [g.atk, g.def].filter(Boolean);
+    const lv = keys.reduce((a, k) => a + campArmLv(k), 0);
+    const ready = keys.some(campArmReady);
+    return {
+      pro: (typeof _icoPathImg === 'function') ? _icoPathImg('upgrades/up_' + (g.atk ? 'gnd_wpn' : 'shield'), '⚔') : '',
+      sn: g.nm, tr: 'Lv.' + lv,
+      bottom: '<div class="cgCost"></div>',
+      state: ready ? '' : 'dim',
+      act: 'onclick="campArmPick(' + i + ')"'
+    };
+  });
+  return { mode:'upg', compact:true, title:'무장', kicker:true,
+    info:{ eb:'계열', name:'', hideName:true,
+           desc:'강화할 계열을 고르세요 — 공격과 방어를 따로 올립니다' },
+    items: items };
+}
+// ── 고른 계열의 [공격][방어] ─────────────────────────────────────────────
+function campArmModelOne() {
+  const rows = campArmTree(), g = rows[_armPick]; if (!g) return campArmModelTop();
+  const T = G.tech;
+  const mk = (rk, label) => {
+    if (!rk) return { state:'empty' };
+    const r = campArmRes(rk), lv = campArmLv(rk);
+    const cc = (typeof campResearchCost === 'function') ? campResearchCost(r, lv) : null;
+    const ready = campArmReady(rk);
+    const poor = cc ? ((T.energy || 0) < cc[1]) : true;
+    return {
+      k: rk,
+      pro: (typeof _icoPathImg === 'function') ? _icoPathImg('upgrades/up_' + rk, '⚔') : '',
+      sn: (r && r.name) || label, tr: 'Lv.' + lv,
+      cr: cc ? cc[0] : 0, en: cc ? cc[1] : 0,
+      state: (!ready || poor) ? 'dim' : '',
+      act: 'onclick="campArmBuy(\'' + rk + '\')"'
+    };
+  };
+  const items = [ mk(g.atk, '공격'), mk(g.def, '방어') ];
+  // 🔙 되돌아가기는 **건설 탭이 쓰는 그 자리**(m.back)다 — 새 버튼을 만들지 않는다.
+  const first = g.atk || g.def, r0 = campArmRes(first), lv0 = campArmLv(first);
+  const cc0 = (typeof campResearchCost === 'function') ? campResearchCost(r0, lv0) : null;
+  const bld = campArmBldgOf(first);
+  return { mode:'upg', compact:true, title:g.nm, kicker:true,
+    back:'<button class="cgBack" onclick="campArmPick(null)" title="계열 고르기로">🔙</button>',
+    info:{ eb:'Lv.' + lv0, name:(r0 && r0.name) || g.nm,
+           desc: campArmReady(first) ? ((r0 && r0.desc) || '') : ('🔒 ' + ((bld && bld.name) || '건물') + ' 필요'),
+           cr: cc0 ? cc0[0] : 0, en: cc0 ? cc0[1] : 0 },
+    items: items };
+}
+function campArmPick(i) {
+  _armPick = (i == null) ? null : (i | 0);
+  if (typeof playSfx === 'function') playSfx('ui_tab');
+  campResSheet();
+}
+function campArmBuy(rk) {
+  const b = campArmBldgOf(rk);
+  if (!b) return;
+  if (!campArmReady(rk)) { if (typeof toast === 'function') toast('🔒 ' + b.name + ' 을 먼저 지으세요'); return; }
+  // ⛔ 구매 경로를 새로 만들지 않는다 — 건물 카드가 쓰는 techDoResearch 그대로다
+  //   (선행 조건·비용 차감·연구 시간·환불이 전부 거기 있다).
+  if (typeof techDoResearch === 'function') techDoResearch(b.k, rk);
+  campResSheet();
+}
+
+// ══ 🔬 기술 칸 — 단발 연구 (2026-08-27) ══════════════════════════════════
+// 보이는 조건 둘 — **그 기술을 쓰는 유닛을 보유**했고, **아직 안 산 것**(sc-2 확정).
+//   ⭐ 이 두 조건이 이 화면의 전부다. 20개를 그냥 늘어놓으면 5페이지가 되어 아무도 안 본다 —
+//     초반(병영만 있을 때)에는 두어 개만 보이는 것이 목적이다.
+// 정렬 — **지금 가스가 되는 것이 앞**(= 첫 페이지) → 그다음 트리 순서.
+//
+// ⭐ 「어느 유닛 것인가」는 **연구 데이터가 갖는다**(js/15-tech-data.js 의 `u:` · 사용자 확정 ⓐ).
+//   ⛔ 여기에 매핑 표를 따로 두지 말 것 — 두 벌이 되면 연구가 늘 때 반드시 어긋난다.
+//   ⚠ u 는 문자열 또는 배열이고, '*' 는 **전 유닛 대상**이다(예: 저그 매복).
+//   ⚠ u 가 없는 단발 연구가 생기면 **스모크가 실패한다** — 조용히 사라지는 것이 제일 나쁘다.
+function campTechUsers(r) {
+  const u = r && r.u;
+  if (!u) return null;                       // 표에 없다 — 스모크가 잡는다
+  return Array.isArray(u) ? u : [u];
+}
+// 내가 그 유닛을 갖고 있나 — 전장에 있거나 생산한 적이 있으면 「보유」다.
+function campHasUnit(uid) {
+  const T = (typeof G !== 'undefined') ? G.tech : null; if (!T) return false;
+  if ((T.units && (T.units[uid] | 0) > 0)) return true;
+  return (T.ents || []).some(e => e && e.type !== 'bldg' && (e.uid === uid || e.gmodel === uid));
+}
+// 이 기술을 화면에 보일 것인가
+function campTechShow(r) {
+  if (!r || r.tier) return false;                        // 계열은 무장 칸이 맡는다
+  const T = (typeof G !== 'undefined') ? G.tech : null; if (!T) return false;
+  if (T.research && T.research[T.race + '_' + r.k]) return false;   // 이미 샀다
+  const us = campTechUsers(r);
+  if (!us) return false;
+  if (us.indexOf('*') >= 0) return true;                 // 전 유닛 대상
+  return us.some(campHasUnit);
+}
+function campTechList() {
+  const T = (typeof G !== 'undefined') ? G.tech : null;
+  if (!T || typeof TECH_TREE === 'undefined') return [];
+  const t = TECH_TREE[T.race]; if (!t) return [];
+  const out = [];
+  for (const b of (t.buildings || [])) for (const r of (b.research || []))
+    if (campTechShow(r)) out.push({ r: r, b: b });
+  // 💰 **지금 살 수 있는 것이 앞으로** — 첫 페이지에 「누를 수 있는 것」이 오게 한다.
+  //   ⚠ 그 안에서는 **트리 순서를 지킨다**(안 그러면 가스가 찰 때마다 카드가 뛰어다닌다).
+  const gas = (T.energy || 0);
+  const cost = (o) => { const c = (typeof campResearchCost === 'function')
+      ? campResearchCost(o.r, 0) : null; return c ? c[1] : 0; };
+  out.forEach((o, i) => { o._i = i; o._afford = (gas >= cost(o)) ? 0 : 1; });
+  out.sort((a, b2) => (a._afford - b2._afford) || (a._i - b2._i));
+  return out;
+}
+function campTechModel() {
+  const T = G.tech;
+  const list = campTechList();
+  const items = list.map(o => {
+    const c = (typeof campResearchCost === 'function') ? campResearchCost(o.r, 0) : null;
+    const ready = !!((T.built && T.built[o.b.k] > 0) || (T.addon && T.addon[o.b.k]));
+    const poor = c ? ((T.energy || 0) < c[1]) : true;
+    return {
+      pro: (typeof _icoPathImg === 'function') ? _icoPathImg('skills/sk_' + o.r.k, '✨') : '',
+      sn: o.r.name || o.r.k,
+      cr: c ? c[0] : 0, en: c ? c[1] : 0,
+      state: (!ready || poor) ? 'dim' : '',
+      act: 'onclick="campTechBuy(\'' + o.r.k + '\')"'
+    };
+  });
+  const first = list[0];
+  const c0 = first ? ((typeof campResearchCost === 'function') ? campResearchCost(first.r, 0) : null) : null;
+  return { mode:'upg', compact:true, title:'기술', kicker:true,
+    info: first
+      ? { eb:first.b.name, name:first.r.name, desc:first.r.desc || '',
+          cr:c0 ? c0[0] : 0, en:c0 ? c0[1] : 0 }
+      // ⭐ 비어 있는 것이 **정상**이다 — 유닛을 뽑아야 그 유닛의 기술이 나타난다.
+      : { eb:'기술', name:'', hideName:true,
+          desc:'유닛을 갖추면 그 유닛의 기술이 여기 나타납니다' },
+    items: items };
+}
+function campTechBuy(rk) {
+  const list = campTechList(), o = list.find(x => x.r.k === rk);
+  if (!o) return;
+  const T = G.tech;
+  if (!((T.built && T.built[o.b.k] > 0) || (T.addon && T.addon[o.b.k]))) {
+    if (typeof toast === 'function') toast('🔒 ' + o.b.name + ' 을 먼저 지으세요'); return; }
+  // ⛔ 구매 경로는 건물 카드가 쓰는 techDoResearch 하나다(무장 칸과 같다)
+  if (typeof techDoResearch === 'function') techDoResearch(o.b.k, rk);
+  campResSheet();
+}

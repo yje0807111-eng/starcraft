@@ -7,13 +7,19 @@
 // 패턴 캐시(모바일 성능) — createPattern은 1회만, 매 프레임엔 setTransform만
 const _stkPat={}, _stkVig={};
 function strikePattern(ctx,img){ if(!img||!img.complete||!img.naturalWidth) return null; const k=img.src; if(!_stkPat[k]) _stkPat[k]=ctx.createPattern(img,'repeat'); return _stkPat[k]; }
-function strikeDrawGround(ctx,W,H,S,scale){ const img=STRIKE_GROUND, tilePx=460*scale;
+function strikeDrawGround(ctx,W,H,S,scale){ strikeAssetsReady();   // 여기서 처음 받기 시작한다(부팅에 안 건다)
+  const img=STRIKE_GROUND, tilePx=460*scale;
   const _wx=(0-S.cam.x)*scale+W/2, _wy=(0-S.cam.y)*scale+H/2, _wp=S.world*scale;   // 월드 사각형(화면 좌표) — 바깥은 여백
   ctx.fillStyle='#05080c'; ctx.fillRect(0,0,W,H);   // 맵 바깥 여백(빈 공간)
   ctx.save(); ctx.beginPath(); ctx.rect(_wx,_wy,_wp,_wp); ctx.clip();   // 지형·진영 워시는 맵 안쪽에만
   const ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2, p=strikePattern(ctx,img);
   if(p&&tilePx>4){ const s=tilePx/img.naturalWidth; if(p.setTransform) p.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); ctx.fillStyle=p; } else ctx.fillStyle='#1a1d14';
   ctx.fillRect(0,0,W,H);
+  // ⭐ 매크로 오버레이 — 월드 전체 크기의 부드러운 얼룩 지도를 얹어 **타일 반복감을 깬다**(2026-08-30).
+  //    타일은 어디를 봐도 같아서 넓게 보면 되풀이가 그대로 읽힌다. 이 한 장이 지형에 지역성을 준다.
+  //    soft-light 라 밝기만 흔들고 색은 타일이 갖는다 — 그래서 오버레이는 흐릿해도 된다(768px).
+  if(_imgOk(STRIKE_MACRO)){ ctx.save(); ctx.globalCompositeOperation='soft-light'; ctx.globalAlpha=0.85;
+    ctx.drawImage(STRIKE_MACRO,_wx,_wy,_wp,_wp); ctx.restore(); }
   // 영역 워시: 좌하(유니온/파랑) ↔ 우상(적/빨강) 진영색으로 은은히 물듦(전황 감각)
   const gw=ctx.createLinearGradient(0,H,W,0);
   gw.addColorStop(0,'rgba(70,150,230,.11)'); gw.addColorStop(0.5,'rgba(0,0,0,0)'); gw.addColorStop(1,'rgba(230,80,92,.11)');
@@ -34,13 +40,28 @@ function strikeTileRect(ctx,x,y,w,h,img,tilePx){ ctx.save(); ctx.beginPath(); ct
 function _stkRnd(seed){ let s=seed>>>0; return function(){ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
 function strikeGenScenery(world){ const rnd=_stkRnd(20260701), props=[];
   for(let i=0;i<80;i++){ const rx=rnd(), ry=rnd(); if(Math.abs(rx+ry-1)<0.30) continue;   // 중앙 레인(반대각선) 밴드 회피 → 빈 코너만 채움
-    const kk=rnd(), t=kk<0.4?'rock':(kk<0.68?'crater':(kk<0.87?'tuft':'bone'));
-    props.push({x:rx*world, y:ry*world, r:0.6+rnd()*1.3, t:t, a:rnd()*6.28}); }
+    // ⛔ crater 는 뺐다(2026-08-30 사용자) — 스프라이트가 「털 난 구멍」처럼 보였다.
+    //    폴백 그리기 코드와 분기는 남겨 둔다(되살리려면 여기 분포만 되돌리면 된다).
+    const kk=rnd(), t=kk<0.5?'rock':(kk<0.82?'tuft':'bone');
+    // v = 스프라이트 시트의 어느 칸(2×2 네 변형). 같은 그림이 수십 개 깔리면 눈에 띄어서 넷을 돌린다.
+    props.push({x:rx*world, y:ry*world, r:0.6+rnd()*1.3, t:t, a:rnd()*6.28, v:Math.floor(rnd()*4)}); }
   const motes=[]; for(let i=0;i<34;i++) motes.push({x:rnd()*world, y:rnd()*world, ph:rnd()*6.28, sp:0.3+rnd()*0.5, amp:60+rnd()*90});
   return {props:props, motes:motes}; }
+// 데코 스프라이트의 화면 크기 — 옛 선 그리기의 반지름(rock 13·crater 17·tuft 9·bone 8)에서 따왔고,
+// 그림이 칸을 꽉 채우지 않아 1.3배쯤 키웠다. 값 = 반지름(=span), 최종 지름은 그 두 배.
+const STK_DECO_SPAN={ rock:17, crater:22, tuft:12, bone:11 };
+const STK_DECO_MIN ={ rock:4,  crater:6,  tuft:3,  bone:3  };   // 아주 멀 때도 안 사라지게 하는 최소치(px)
 function strikeDrawScenery(ctx,w2s,scale,S,W,H){ if(!S.dec) S.dec=strikeGenScenery(S.world); const D=S.dec, t=S.t||0;
   ctx.save();
   for(const o of D.props){ const p=w2s(o.x,o.y); if(p.x<-50||p.x>W+50||p.y<-50||p.y>H+50) continue; const s=o.r*scale;
+    // ⭐ 스프라이트가 있으면 그것으로 그린다(2026-08-30). 아래 선 그리기는 **폴백**이다 —
+    //    이미지가 아직 안 왔거나 못 받았을 때만 쓰인다. 지우지 말 것.
+    const _im=STRIKE_DECO[o.t];
+    if(_imgOk(_im)){ const span=(STK_DECO_SPAN[o.t]||26)*s+STK_DECO_MIN[o.t];
+      const sx=(o.v%2)*STK_DECO_CELL, sy=((o.v>>1)&1)*STK_DECO_CELL;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(o.a);
+      ctx.drawImage(_im, sx,sy,STK_DECO_CELL,STK_DECO_CELL, -span,-span, span*2,span*2);
+      ctx.restore(); continue; }
     if(o.t==='rock'){ const R=13*s+3; ctx.fillStyle='rgba(78,69,52,.72)'; ctx.strokeStyle='rgba(28,24,16,.55)'; ctx.lineWidth=1;
       ctx.beginPath(); for(let k=0;k<6;k++){ const a=o.a+k*1.047, rr=R*(0.78+0.22*Math.sin(o.a*3+k)); const xx=p.x+Math.cos(a)*rr, yy=p.y+Math.sin(a)*rr*0.72; k?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy); } ctx.closePath(); ctx.fill(); ctx.stroke();
       ctx.fillStyle='rgba(126,113,86,.5)'; ctx.beginPath(); ctx.ellipse(p.x-R*0.24,p.y-R*0.22,R*0.42,R*0.28,0,0,6.28); ctx.fill(); }
@@ -1660,14 +1681,20 @@ function strikeGlowUnderlay(ctx,w2s,scale,S,W,H,nodes){ ctx.save(); ctx.lineCap=
   plat(S.me.base.x,S.me.base.y,'rgba(127,224,255,.9)','rgba(127,224,255,.32)'); plat(S.ai.base.x,S.ai.base.y,'rgba(255,130,145,.9)','rgba(255,130,145,.32)');
   ctx.restore(); }
 // 신전 잇는 포장 길 — 솔리드 포장 + 양옆만 은은한 외곽(끝은 메인 플랫폼이 딱 덮음)
+// 포장(석판) 타일을 화면에 몇 px 로 깔 것인가 — **단일 소스**(레인·소환 구역이 같이 쓴다).
+// ⚠ 값을 키우면 돌이 커 보이고 반복 주기가 짧아진다. 460 = 바깥 지형 타일과 같은 크기라
+//    두 지면의 「알갱이 크기」가 맞는다(2026-08-30 · 300 일 때 판석이 자갈처럼 잘게 보였다).
+const STK_PAVE_TILE=460;
 function strikeDrawLane(ctx, pts, scale, S, W, H){ if(!pts||pts.length<2) return; ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round';
   const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y); };
   const img=STRIKE_PAVE; let pat=strikePattern(ctx,img);
-  if(pat&&pat.setTransform&&S){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
-  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(28,1580*scale), edge=Math.max(3,9*scale);
-  path(); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=base; ctx.stroke();              // 어두운 테두리(정사각과 동일 seam)
-  path(); ctx.strokeStyle=stroke; ctx.lineWidth=base-edge; ctx.stroke();                        // 포장 코어
-  path(); ctx.globalAlpha=0.16; ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base-edge; ctx.stroke(); ctx.globalAlpha=1;  // 톤 통일
+  if(pat&&pat.setTransform&&S){ const tilePx=Math.max(8,STK_PAVE_TILE*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
+  const stroke=pat||'rgba(150,140,120,.5)', base=Math.max(28,1580*scale);
+  // ⛔ 어두운 테두리(seam)를 없앴다(2026-08-30 사용자). 레인 끝이 lineCap:'round' 라 굵기 절반짜리
+  //    **큰 원호**가 되는데, 그 위를 소환 구역(같은 포장)이 덮으면서 **석판 한가운데에 검은 곡선**만 남았다.
+  //    포장(석판)과 지형(마른 흙)은 색·무늬가 충분히 달라 테두리 없이도 경계가 읽힌다.
+  path(); ctx.strokeStyle=stroke; ctx.lineWidth=base; ctx.stroke();                             // 포장 코어
+  path(); ctx.globalAlpha=0.16; ctx.strokeStyle='rgba(18,26,34,1)'; ctx.lineWidth=base; ctx.stroke(); ctx.globalAlpha=1;  // 톤 통일
   ctx.restore(); }
 // 바닥 진격 화살표 — 넓게 벌어진 V, 띄엄띄엄, 매우 은은
 function strikeLaneArrows(ctx, pts, scale, centerIdx){ const gap=Math.max(48,500*scale), size=Math.max(6,80*scale);
@@ -1692,7 +1719,7 @@ function strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,wx,wy,wWorld,hWorld,glow){
   _strkRR(ctx,x-3,y-2,pw+6,ph+8,rad); ctx.fillStyle='rgba(0,0,0,.28)'; ctx.fill();   // 접지 그림자
   _strkRR(ctx,x,y,pw,ph,rad); ctx.save(); ctx.clip();
   const img=STRIKE_PAVE, pat=strikePattern(ctx,img); if(pat){
-    if(pat.setTransform){ const tilePx=Math.max(8,300*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
+    if(pat.setTransform){ const tilePx=Math.max(8,STK_PAVE_TILE*scale), s=tilePx/img.naturalWidth, ox=(0-S.cam.x)*scale+W/2, oy=(0-S.cam.y)*scale+H/2; pat.setTransform(new DOMMatrix([s,0,0,s,ox,oy])); }
     ctx.fillStyle=pat; } else ctx.fillStyle='#3a4a52';
   ctx.fillRect(x,y,pw,ph);
   ctx.fillStyle='rgba(16,24,30,.26)'; ctx.fillRect(x,y,pw,ph);   // 톤 통일
@@ -1701,7 +1728,8 @@ function strikeDrawSpawnZone(ctx,w2s,scale,S,W,H,wx,wy,wWorld,hWorld,glow){
   for(let ix=x+gx; ix<x+pw; ix+=gx){ ctx.beginPath(); ctx.moveTo(ix,y); ctx.lineTo(ix,y+ph); ctx.stroke(); }
   for(let iy=y+gx; iy<y+ph; iy+=gx){ ctx.beginPath(); ctx.moveTo(x,iy); ctx.lineTo(x+pw,iy); ctx.stroke(); }
   ctx.restore();   // unclip
-  _strkRR(ctx,x,y,pw,ph,rad); ctx.strokeStyle='rgba(10,16,20,.88)'; ctx.lineWidth=Math.max(3,9*scale); ctx.stroke();   // 어두운 seam(네온은 외곽 언더레이가 담당)
+  // ⛔ 여기도 어두운 seam 을 뺐다(2026-08-30 · 위 strikeDrawLane 과 같은 이유) — 소환 구역은 레인과
+  //    **같은 석판**이라 경계를 그으면 포장 한가운데에 사각 테두리만 남는다. 네온 언더레이가 자리를 알려 준다.
   ctx.restore(); }
 // 유닛 생성 패드 — 메인신전 왼쪽위/오른쪽아래. 바닥 타일을 살짝만 어둡게(자연스럽게)
 function strikeDrawSpawnPad(ctx,w2s,scale,wx,wy,sw){ const c=w2s(wx,wy), s=Math.max(10,sw*scale), x=c.x-s/2, y=c.y-s/2, rad=s*0.12;

@@ -78,8 +78,18 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 // 졌다 → **캠프(0단계)로 돌아간다.** 몇 라운드를 깼든 그 판은 끝이다.
 //   ⭐ 1라운드도 못 깼으면 보너스 0 — 배율이 base 인 채로 끝난다(HUNT_R1 §6-1-0-3).
 //   ⚠ best 는 지우지 않는다. 다시 내려갈 때의 목표가 된다.
+// 🛠 **개발용 — 져도 캠프로 끌려오지 않는다**(2026-08-27 사용자 요청 · 임시).
+//   왜 필요했나: 좌상단 드롭다운으로 던전을 골라도 **291ms 만에 되돌아왔다**. 새 회차는 병력이 0 이라
+//   도착하자마자 패배 조건(병력 0 · 쓰러진 것 0 · 적 있음)에 걸린다 — 드롭다운은 멀쩡했다.
+//   ⚠ **원래 계획은 「병력이 없으면 이동을 막는다」**(사용자 확정). 그것이 들어오면 이 플래그와
+//     아래 분기를 **지운다** — 두 장치를 함께 두면 어느 쪽이 막는지 헷갈린다.
+//   ⛔ 배포 전에 반드시 false 로 돌리거나 지울 것.
+let CAMP_DEV_NOFAIL = true;
 function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared() };
+  // 개발 모드에서는 **아무것도 되돌리지 않는다** — 고른 던전·라운드 그대로 계속 볼 수 있다.
+  //   (메시지는 그대로 뜬다 — 졌다는 사실 자체는 알려야 한다.)
+  if(CAMP_DEV_NOFAIL) return was;
   C.dg = 0; C.cleared = 0; campSave(); return was; }
 
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
@@ -546,8 +556,21 @@ function campWithStk(fn){
 }
 
 // 적 종족 — 단계마다 돌아가며 나온다(1단계부터. 0단계=캠프에는 적이 없다)
-function campFoeRace(dg){ const o = (typeof STK_RACE_ORDER !== 'undefined') ? STK_RACE_ORDER : ['terran'];
-  return o[Math.max(0, (dg | 0) - 1) % o.length]; }
+// 던전 → 적 종족. ⭐ **`HB_DUNGEONS`(js/08-hunt.js)가 단일 소스**다 — 던전 이름·배경 그림과 맞춘다.
+//   ⛔ 옛 코드는 STK_RACE_ORDER 를 그냥 돌려서 이름·그림과 어긋나 있었다(2026-08-30 발견):
+//     「감염된 둥지」에 유니온이, 「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로
+//     그림에 알집이 깔린 산란장에 야수가 걸어 나오는 상태였다.
+//   ⚠ 표의 이름(union/swarm/aetherial)과 엔진 키(terran/zerg/protoss)가 달라 한 번 옮긴다.
+const CAMP_DG_RACE = { union:'terran', swarm:'zerg', aetherial:'protoss', feral:'feral', colossus:'colossus',
+  abyss:'colossus' };   // 심연(10)은 전용 종족이 없다 — 가장 무거운 콜로서스로 대신한다
+function campFoeRace(dg){
+  const n = dg | 0;
+  if(n <= 0) return 'terran';                        // 0단계 캠프는 유니온
+  const d = (typeof hbDun === 'function') ? hbDun(n) : null;
+  const r = d && CAMP_DG_RACE[d.race];
+  if(r && typeof STK_RACES !== 'undefined' && STK_RACES[r]) return r;
+  const o = (typeof STK_RACE_ORDER !== 'undefined') ? STK_RACE_ORDER : ['terran'];
+  return o[Math.max(0, n - 1) % o.length]; }         // 폴백 — 표가 없거나 그 종족이 엔진에 없을 때
 
 // ══ 📈 적 난이도 곡선 — HUNT_R1.md §6-1 (2026-08-25 · 4단계) ══════════
 //   라운드 밑   = 1.07 + (던전-1) × 0.003          ← 깊을수록 라운드가 무겁다
@@ -1338,7 +1361,26 @@ function campDungeonSwap(){
   CAMPB._wqTot = 0; CAMPB._wqT = 0;
   campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
   campRoundRevive();                               // 🩹 던전이 바뀌어도 온전한 상태로 시작한다
+  campRegroup();                                   // 🧭 표적을 풀어 자기 자리로 돌아가게 (아래)
+  // ⏸ **던전이 바뀔 때도 숨 고르기를 준다**(2026-08-30 사용자 확정) — 라운드 사이와 같은 6초.
+  //   그 사이 병력이 걸어서 자리를 잡고, 다 모인 뒤에 새 던전의 적이 나온다.
+  //   ⛔ 0 으로 두면 적이 곧바로 쏟아져 흩어진 채로 첫 라운드를 맞는다.
+  CAMPB._gapT = CAMP_ROUND_GAP_S;
   return true; }
+
+// 🧭 **제 자리로 걸어 돌아가게 한다** (2026-08-30 사용자 확정).
+//   ⛔ 순간이동시키지 말 것 — 처음엔 즉시 옮겼는데, 사용자가 **걸어서 오는 쪽**으로 정했다.
+//   ⛔ _post 를 새로 잡지도 말 것 — 플레이어가 공들여 옮긴 배치가 통째로 리셋된다.
+//     「전열로 정렬」안은 그래서 쓰지 않는다.
+//   ⭐ 여기서 하는 일은 **표적을 푸는 것뿐**이다. 표적이 없으면 campPostStep 이 자기 자리로
+//     걸려 보낸다 — 그 걸어올 시간은 숨 고르기(CAMP_ROUND_GAP_S)가 대준다.
+function campRegroup(){
+  if(!CAMPB || !CAMPB.me) return 0;
+  let n = 0;
+  for(const u of CAMPB.me.units){
+    u.tgtUid = null; u._btgt = null; u._btT = 0;    // 표적 해제 — 없어진 적을 쫓지 않는다
+    if(u._post) n++; }
+  return n; }
 
 // 한 프레임 — 전투를 굴리고 승패를 본다.
 //   ⭐ 승패 판정은 **여기 한 곳**이다. campClearRound()/campFail() 을 다른 데서 부르지 말 것.
@@ -1364,12 +1406,24 @@ const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 �
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
 const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
-const CAMP_ROUND_GAP_S = 6;        // 라운드 사이 숨 고르기 — 자리로 돌아올 시간(옛 1.5초)
+const CAMP_ROUND_GAP_S = 4;        // 라운드·던전 사이 숨 고르기(초) — 자리로 걸어 돌아올 시간
+  // ⭐ **라운드 사이와 던전 이동이 같은 값을 쓴다** — 여기 하나만 고치면 양쪽이 함께 움직인다.
+  // ⚠ 실측: 자리에서 424 떨어진 유닛이 **2초에 35 까지** 붙는다(스모크 「걸어서 자리로」).
+  //   4초면 판 반대편에서도 도착한다. ⛔ 0 으로 두면 흩어진 채로 다음 라운드를 맞는다.
 function campCombatStep(dt){
   const C = campState(); if(!C || campDgN() <= 0) return;      // 0단계(캠프)에는 전투가 없다
   if(!CAMPB) campBattleOpen();
   if(!CAMPB) return;
+  // ⏸ 숨 고르기 — 적이 안 나오는 동안 **걸어서 자기 자리로 돌아온다**.
+  //   ⛔ 예전엔 여기서 곧바로 return 해서 **6초 동안 유닛이 한 발짝도 안 움직였다**(2026-08-30 발견).
+  //     「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 아무리 늘려도 소용없었다.
+  //   ⭐ 그래서 이동·복귀·부활만 굴린다. 적이 없으니 전투는 저절로 일어나지 않는다.
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
+    campPostSnap();                                       // 🪧 되돌리기 전 위치(campPostStep 이 쓴다)
+    campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+    campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
+    campLeash();
+    campReviveStep(dt);                                   // 🩹 누운 아군도 이 사이에 일어난다
     if(CAMPB._gapT <= 0){
       // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
       //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
@@ -1856,7 +1910,15 @@ function campEnter(){
   if(!had) G.tech.credit = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
-  campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
+  // ⛽ **정제소 카드는 연구 구역 「자원」 칸이 갖는다**(2026-08-27 · js/20-camp-research.js).
+  //   건물을 골라야만 올릴 수 있어서 자원 성장 셋 중 하나만 자리가 달랐다.
+  //   ⚠ 뺐을 때 스모크 넷이 깨져 한 번 되돌렸는데, 재 보니 **연쇄가 아니라 테스트 간 오염**이었다:
+  //     카드를 검사하던 두 step 이 실패로 중간에 끊기면서 정리를 못 해 뒤 step 들이 넘어졌다.
+  //     같은 조건을 프로브로 직접 재현했더니 격자·시트·광맥·일꾼이 **완전히 같았다**
+  //     (카드 유무 둘 다 rows 81 · 광맥 y 0.6836 · 60초에 256 획득).
+  //   ⛔ campPatchRefinery·CAMP_REF_RES 는 지우지 않았다 — 되살릴 땐 이 줄을 되돌린다(유보 규칙).
+  //   campPatchRefinery();
+  campPatchResearch();                                 // 🔬 연구 구역이 시트를 쓸 차례를 가로챈다
   campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
@@ -1878,6 +1940,7 @@ function campEnter(){
   campSyncSheet();                                     // 🗂 시트를 먼저 띄운다 — 맵 높이가 여기서 정해진다
   if(!had){ campLayBase(); campLayMinerals(); }        // 확정된 격자로 기지·광맥을 다시 잡는다
   campLayGas();                                        // ⛽ 가스는 광맥 자리를 보고 정한다 — 반드시 뒤
+  campCalcViewBot();                                   // ✂ 화면 아래 끝을 배치에서 잰다(반드시 광맥·가스 뒤)
   campZoom();                                          // 🔍 전체가 한눈에 들어오게
   campSkin();                                          // 🎨 바닥을 사냥터 던전 배경으로
   campStartFrame();                                    // ▶ 캠프 자기 루프(유즈맵 루프는 HOME 에서 멈춘다)
@@ -1957,10 +2020,15 @@ function campRaceSheet(){
       + '<div class="crRows"></div>'
       + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
     (document.getElementById('phone') || document.body).appendChild(ov); }
+  { const _ph=document.getElementById('phone'); if(_ph) _ph.classList.add('campPick'); }   // 옛 사냥터 UI 를 숨긴다(css 「campPick」)
+  // ⭐ display 해제와 `on` 을 **같은 프레임에** 한다. animation 은 클래스가 붙는 순간 처음부터 돌기 때문에
+  //    한 프레임 미룰 이유가 없다 — 미루면 그 사이 프레임에 판이 보여 검은 섬광이 된다(css 「기본값은 0」).
   ov.classList.remove('hide');
-  // ⚠ display 를 푼 **다음 프레임**에 켠다 — 같은 프레임에 붙이면 전이가 안 돌고 툭 나타난다.
   ov.classList.remove('closing');
-  requestAnimationFrame(function(){ ov.classList.add('on'); });
+  // 🎬 로딩에서 바로 넘어온 것이면 로딩과 **같은 길이로** 차오른다(css 「raceFx」)
+  { const _ph2=document.getElementById('phone');
+    ov.classList.toggle('raceFx', !!(_ph2 && _ph2.classList.contains('raceIn'))); }
+  ov.classList.add('on');
   campRaceRender(); campRacePrev(_campRacePick, true);
 }
 // 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
@@ -1998,13 +2066,12 @@ function campPickRace(){
   const C = campState(); if(!C || C.race) return;
   C.race = _campRacePick || CAMP_RACE_ORDER[0];
   if(typeof saveMeta === 'function') saveMeta();
-  // 🎬 종족 판을 페이드로 걷고 → **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
+  // 🎬 **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
   //    여기가 「게임이 실제로 시작되는 지점」이다(enterAfterWarm 의 _needRace 주석과 짝).
-  const ov = document.getElementById('campRaceOv');
-  if(ov){ ov.classList.add('closing');
-    clearTimeout(ov._closeT);
-    ov.classList.remove('on');   // 페이드아웃 시작(.on 이 빠지면 opacity 0 으로 전이)
-    ov._closeT = setTimeout(function(){ ov.classList.remove('closing'); ov.classList.add('hide'); }, _campMs('--campOvDur', .4)); }
+  //    ⛔ 여기서 종족 판을 걷지 않는다. 위에서 검은 판(z88)이 덮어 주므로 걷을 이유가 없고,
+  //       먼저 걷으면 **아직 반투명한 검은 판 아래로 캠프가 통째로 드러난다**
+  //       (2026-08-27 프레임 실측: 종족 선택 73.9 → **캠프 139** → 검은 화면 35.6 → 캠프 142.
+  //        캠프가 두 번 나온다). 걷는 일은 campRaceToCamp 이 다 덮은 뒤에 한다.
   campRaceToCamp();
 }
 
@@ -2019,9 +2086,32 @@ function campRaceToCamp(){
   const hasBlack = (typeof titleToBlack === 'function' && typeof titleOutroEnd === 'function' && ph);
   if(hasBlack) ph.classList.add('artMark');   // 로고를 다시 켠다 — titleOutroEnd 가 앞서 걷었다
   const black = hasBlack ? titleToBlack() : null;   // 검은 판이 덮이기 시작한다(기다리지 않는다)
-  campEnter();                                       // 그 아래에서 캠프가 선다
-  if(!black){ campEnterAnim(); return; }
-  black.then(function(){ campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
+  // ⛔ campEnter() 는 **즉시** 부른다. 검은 화면 뒤로 미뤄 봤더니(정지를 숨기려고) 캠프 상태를
+  //    바로 기대하는 코드가 여럿이라 스모크 6 개가 깨졌다(2026-08-27). 그 준비 비용 때문에
+  //    검은 판이 덮이는 도중 280ms 정도 얼어붙지만, 그 구간은 어차피 어두워지는 중이라 덜 띈다.
+  // ⚡ 검은 판이 **실제로 한 프레임 그려진 뒤에** 캠프를 세운다(2026-08-27).
+  //   캠프 화면을 처음 세우는 일은 메인 스레드를 230ms 잡는다(실기 GPU 에서도 그렇다 —
+  //   longtask 로 확인. 배경·3D 어느 하나가 아니라 전체에 퍼져 있어 걷어낼 수가 없다).
+  //   같은 태스크에서 부르면 그 정지가 **페이드아웃이 시작되기도 전에** 와서, 버튼을 누르고
+  //   0.56 초 동안 아무 반응이 없다. 검은 판을 먼저 그려 두면 0.1 초 만에 어두워지기 시작하고
+  //   정지는 어두워지는 중에 묻힌다.
+  //   ⛔ rAF **한 번**으로는 안 된다 — 그 콜백은 같은 렌더 직전에 돌아 결국 한 프레임에 합쳐진다.
+  //      setTimeout(0) 도 마찬가지다(렌더 전에 실행된다). 실측으로 둘 다 효과가 없었다.
+  //   ⛔ 더 미루지도 말 것 — black.then(0.7초)까지 미뤘더니 캠프 상태를 바로 쓰는 스모크가 6 개 깨졌다.
+  if(black) requestAnimationFrame(function(){ requestAnimationFrame(campEnter); });
+  else campEnter();
+  // 🎬 **다 덮인 뒤에** 치운다 — 종족 판·campPick 둘 다.
+  //    campPick 을 먼저 떼면 네비와 재화 바가 종족 선택 화면 위로 튀어나오고,
+  //    그 네비가 처음 그려지는 프레임에 165ms 를 써서 화면까지 얼어붙는다(DESIGN.md §5.5 ⑤).
+  const done = function(){
+    const ov = document.getElementById('campRaceOv');
+    if(ov){ clearTimeout(ov._closeT);
+      ov.classList.remove('on'); ov.classList.remove('raceFx'); ov.classList.remove('closing');
+      ov.classList.add('hide'); }
+    if(ph) ph.classList.remove('campPick');   // 캠프가 켜지면 campMode 가 이어받는다
+  };
+  if(!black){ done(); campEnterAnim(); return; }
+  black.then(function(){ done(); campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
 }
 
 // CSS 가 시간을 정한다 — JS 는 읽기만 한다(두 곳에 숫자를 두면 반드시 어긋난다).
@@ -2037,6 +2127,12 @@ function _campMs(name, def){
 //   ⚠ 끝나면 클래스를 뺀다. 남겨 두면 나중에 transform 을 쓰는 코드와 부딪힌다.
 function campEnterAnim(){
   const els = [document.getElementById('vBuild'), document.getElementById('cvMarine')];
+  // ✂ 확대가 하단 네비 자리를 넘지 않게 — 애니메이션 동안만 화면을 잘라 둔다(css 「campInClip」)
+  const hs = document.getElementById('homeScreen');
+  if(hs){ hs.classList.add('campInClip');
+    clearTimeout(hs._campClipT);
+    hs._campClipT = setTimeout(function(){ hs.classList.remove('campInClip'); },
+      _campMs('--campInDur', 2.3) + 400); }
   const ms = _campMs('--campInDur', 2.3);
   for(const e of els){ if(!e) continue;
     clearTimeout(e._campInT);
@@ -2589,7 +2685,26 @@ const CAMP_COLS = 48;
 // 어떤 줌에서도 밖이 안 보인다. ⛔ 여기에 여유를 더하면(예전 CAMP_PAN_FREE) 그만큼 밖이 뚫린다.
 // ⚠ 맞바꿈: zoom 1(=하한)에서는 m=0 이라 **화면 이동이 안 된다.** 밖을 안 보이게 하는 것과
 //   하한에서 움직이는 것은 양립하지 않는다 — 이동하려면 확대해야 한다(RTS 표준 동작).
-const CAMP_MIN_ZOOM = 1;   // = 바닥이 화면을 딱 덮는 배율. 더 줄이면 맵 밖이 뚫린다(위 설명)
+// ⭐ **축소 하한 = 기본 배율(CAMP_ZOOM)** — 진입 애니가 끝나면 나오는 바로 그 크기다(2026-08-27 사용자 확정).
+//   1 까지 줄일 수 있으면 기본 화면보다 더 멀어져, 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
+//   1 은 바닥이 화면을 딱 덮는 배율이라 밖이 뚫리지는 않았지만, 그보다 더 좁게 묶는 것이라 안전하다.
+const CAMP_MIN_ZOOM = CAMP_ZOOM;
+// ✂ **화면이 내려갈 수 있는 아래 끝**(월드 y) — 미네랄·가스 덩어리 바로 아래에서 멈춘다.
+//   그 아래는 아무것도 없는 여백이라, 보이면 「빈 땅이 드러난 화면」이 된다.
+//   ⭐ 상수로 박지 않고 **실제 배치에서 잰다** — CAMP_ROW_MINE 이나 광맥 줄 수가 바뀌면 같이 따라간다.
+let _campViewBot = null;
+const CAMP_VIEW_PAD = 2;   // 덩어리 아래로 남기는 여유(격자 칸 수)
+function campCalcViewBot(){
+  _campViewBot = null;
+  if(typeof G === 'undefined' || !G.tech) return null;
+  const ch = _techCH(); let bot = 0;
+  for(const m of (G.tech.minerals || [])) if(m && m.y > bot) bot = m.y;
+  try{ if(typeof TECH_GAS !== 'undefined')
+    bot = Math.max(bot, techY0() + (TECH_GAS.r0 + (TECH_GAS.h || 1)) * ch); }catch(e){}
+  if(!bot) return null;
+  _campViewBot = bot + ch * CAMP_VIEW_PAD;
+  return _campViewBot;
+}
 let _campZoomPatched = null;
 let _campRectC = null;
 let _campPanMode = false;   // 🖐 화면 이동 모드가 켜져 있나(롱프레스로 켜고 탭으로 끈다)
@@ -2729,7 +2844,23 @@ function campPatchZoom(){
     // ⛔ 시트 몫으로 시점을 내리지 않는다 — **맵 뷰포트(#cstMain)가 이미 시트 위에서 끝난다**
     //   (campMountView 가 시트를 맵 밖으로 꺼내 그 순환을 풀었다). 여기서 또 내리면 두 벌이 된다.
     v.x = Math.max(0.5 - m, Math.min(0.5 + m, v.x));
-    v.y = Math.max(0.5 - m, Math.min(0.5 + m, v.y));
+    // ✂ **아래로 내려가는 한도만 기본 배율에 묶는다**(2026-08-27 사용자 확정).
+    //   하단 시트가 맵의 아래 21%(실측 162px)를 덮고 있다. 확대하면 세로 여지가 넓어져
+    //   그 시트 뒤 구역을 위로 끌어올려 볼 수 있었다 — 평소에는 볼 수 없는 자리라 어색하다.
+    //   여지를 **기본 배율(CAMP_ZOOM)의 값으로 고정**하면, 아무리 확대해도 처음 화면에서
+    //   보이던 것보다 아래는 드러나지 않는다.
+    //   ⚠ 위쪽(0.5-m)은 줌에 따라 그대로 넓어진다 — 확대해서 기지 위를 살피는 것은 정상 동작이다.
+    //   ⛔ **줌마다 같은 곳에서 멈춰야 한다.** 「기본 배율의 여지」로 상한을 고정해 봤더니
+    //      보이는 하단이 줌에 따라 달라졌다(실측: 축소 0.838 / 확대 0.709) — 축소하면 여백이 드러난다.
+    //      화면에서 시트에 가려지는 몫(sf)을 빼고 **월드 좌표에서** 맞춰야 어느 줌에서든 같은 자리다.
+    let yHi = 0.5 + m;
+    if(_campViewBot != null){
+      const sf = (typeof techSheetFrac === 'function') ? techSheetFrac() : 0;
+      // 시트 윗변(화면 1-sf 지점)이 닿는 월드 좌표 = _campViewBot 이 되는 v.y
+      yHi = Math.min(yHi, _campViewBot - (0.5 - sf) / v.zoom);
+    }
+    const yLo = 0.5 - m;
+    v.y = Math.max(yLo, Math.min(Math.max(yLo, yHi), v.y));
   };
 }
 // ── 🖱 휠 줌 — 전달 경로를 이중화한다 ─────────────────────────────────
@@ -2747,11 +2878,17 @@ function campPatchWheel(){
   if(_campWheel || typeof window === 'undefined') return;
   _campWheel = function(e){
     if(!_campOn || typeof techWheel !== 'function') return;
-    const sh = document.getElementById('btSheet');
     // ⚠ target 이 Element 일 때만 contains 를 쓴다 — Node 가 아닌 것(window 등)을 넘기면
     //   Node.contains 가 TypeError 를 던져 리스너가 통째로 죽는다.
     const tg = e.target;
-    if(sh && sh.classList.contains('open') && tg && tg.nodeType === 1 && sh.contains(tg)) return;   // 시트 스크롤 존중
+    const inside = (el) => !!(el && tg && tg.nodeType === 1 && el.contains(tg));
+    const sh = document.getElementById('btSheet');
+    if(sh && sh.classList.contains('open') && inside(sh)) return;   // 시트 스크롤 존중
+    // 🏕 **좌상단 재화 바 위(던전 드롭다운 포함)도 존중한다**(2026-08-27).
+    //   드롭다운의 라운드 칸은 자기 스크롤을 갖는데, 여기서 가로채면 그 위에서 휠을 돌릴 때
+    //   목록이 아니라 **뒤 캠프 화면이 확대·축소됐다**. 시트와 같은 이유·같은 처리다.
+    if(inside(document.getElementById('campDrop'))) return;
+    if(inside(document.getElementById('curBar'))) return;
     const r = _btRect(); if(!r || !r.width) return;
     if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     techWheel(e);
