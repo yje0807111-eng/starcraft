@@ -60,7 +60,9 @@ await pg.evaluate(()=>{
   { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1)) __CB.want[b.k]=1;
   }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
-  __CB.stallS=300;             // 이보다 오래 안 넘어가면 정체로 본다(설계 최장 R50 175초의 약 1.7배)
+  // ⚠ **설계 라운드 길이보다 넉넉해야 한다.** 던전 2 후반은 실측 330초이고 R50 은 10분대로
+  //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
+  __CB.stallS=900;
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
   // 🔮 스킬 자동 시전 계측 — 어떤 스킬이 **실제로 효과를 냈는지**만 센다(시도 X).
   //   ⚠ 효과 함수가 false 를 돌리면 시전 자체가 취소되므로, 여기서 세는 것이 곧 「진짜 나간 횟수」다.
@@ -395,7 +397,7 @@ while(ran<MINS*60){
       cr:Math.round((G.tech&&G.tech.credit)||0) }; }, CH);
   ran=st.t;
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);
-  if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 5분 넘게 안 넘어감 — 중단\n'); break; }
+  if(st.stuck>3){ process.stdout.write('\n⚠ 라운드가 15분 넘게 안 넘어감 — 중단\n'); break; }
 }
 const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.race], out=[];
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
