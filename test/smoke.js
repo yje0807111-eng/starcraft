@@ -1597,6 +1597,211 @@ async function groupLobby(){
     return out.join(' · ');
   });
 
+  // 🏭 **유닛은 한 번만 태어난다** (2026-08-28 사용자 확정)
+  //    ⛔ 예전엔 생산하면 기지에 서고, 3초 뒤 campSortie 가 그것을 **지우고 전장에 새로 만들었다.**
+  //      그래서 내가 둔 자리가 사라지고, 나갈 때 인구가 반환되어 인구 200 이 생산을 못 막았다.
+  await step('캠프: 생산한 유닛이 그 자리에서 바로 전장에 선다', async()=>{
+    skipIf(typeof campPatchFinish!=='function'||typeof campEnterDungeon!=='function','1단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const ents=G.tech.ents, uOf=()=>ents.filter(e=>e.type==='unit').length;
+    const n0=uOf(), sup0=G.tech.sup|0;
+    // ① 생산이 끝나면 기지에 안 남고 전장에 선다
+    techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+    assert(uOf()===n0,'기지에 유닛이 남았다 — 전장으로 안 갔다: '+uOf()+' vs '+n0);
+    assert(CAMPB.me.units.length===1,'전장에 안 섰다: '+CAMPB.me.units.length);
+    // ② 자리(_post)가 생기고, 그 자리가 선 자리다
+    const u=CAMPB.me.units[0];
+    assert(u._post,'자리(_post)가 없다');
+    assert(Math.abs(u._post.x-u.x)<1e-6 && Math.abs(u._post.y-u.y)<1e-6,'자리와 선 위치가 다르다');
+    assert(u.rallied===true,'집결지로 걸어가려 한다 — 여기가 이미 제자리다');
+    // ③ 좌표 변환이 짝이다(campG2W 는 campW2G 의 역)
+    { const W=CAMPB.world, g=campW2G(u.x,u.y,W), b=campG2W(g.gx,g.gy,W);
+      assert(Math.hypot(b.x-u.x,b.y-u.y)<1,'campG2W 가 campW2G 의 역이 아니다'); }
+    // ④ ⛔ 인구를 돌려주지 않는다 — 출격이 인구를 반환하던 것이 무한 생산의 원인이었다
+    for(let i=0;i<4;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘겨 본다
+    assert((G.tech.sup|0)===sup0,'인구가 반환됐다: '+G.tech.sup+' → '+sup0);
+    assert(CAMPB.me.units.length===1,'라운드를 넘기며 병력이 또 생겼다: '+CAMPB.me.units.length);
+    // ⑤ 🪖 **캠프(0단계)에서 뽑아 둔 병력은 전장이 열릴 때 그 자리로 데려온다.**
+    //    ⛔ 던전 밖에는 전장이 없어 생산 가로채기가 못 옮긴다 — 그동안은 기지에 선다.
+    //    ⚠ 실측(2026-08-28)에서 이걸 빠뜨려 판이 멈췄다: 캠프에서 54기를 뽑아 뒀는데 던전에
+    //      들어가면 전장 병력이 0 이라 곧바로 패배 → 캠프 → 재입장이 2,583번 반복됐다.
+    { const C=campState(); const dgWas=C.dg, clWas=C.cleared;
+      campBattleClose(); C.dg=0; C.cleared=0;                       // 캠프(0단계)로 내려온다
+      const sup1=G.tech.sup|0;
+      techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+      assert(ents.filter(e=>e.type==='unit').length===1,'0단계에서는 기지에 서야 한다');
+      C.dg=1; C.cleared=0; CAMPB=null; campCombatStep(0.05);        // 던전 입장 = 전장이 열린다
+      assert(CAMPB,'전장이 안 열림');
+      assert(ents.filter(e=>e.type==='unit').length===0,'기지에 병력이 남았다 — 못 데려왔다');
+      assert(CAMPB.me.units.length>=1,'전장으로 못 데려왔다: '+CAMPB.me.units.length);
+      assert((G.tech.sup|0)===sup1,'데려오며 인구를 반환했다');
+      C.dg=dgWas; C.cleared=clWas; }
+    // ⑥ 일꾼은 그대로 기지에 (미네랄을 캐야 한다)
+    { const w0=ents.filter(e=>e.type==='worker').length;
+      techFinishProduce({ id:TECH_WORKER[G.tech.race], pop:1, bk:'command' }, null);
+      assert(ents.filter(e=>e.type==='worker').length===w0+1,'일꾼이 기지에서 사라졌다'); }
+    // ⑦ ⛔ 공유 함수다 — 되돌리면 기지에 서야 한다
+    campUnpatchFinish();
+    techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+    assert(uOf()===n0+1,'원복했는데도 전장으로 갔다 — 관리자 탭이 깨진다');
+    campPatchFinish();
+    { const i=ents.findIndex(e=>e.type==='unit'); if(i>=0) ents.splice(i,1); }   // 정리
+    campWithStk(()=>{ STK.me.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '전장 1기 · 자리 고정 · 인구 유지';
+  });
+
+  // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
+  //    복귀는 위치를 덮어쓰는 게 아니라 strikeMoveToward 로 **다시 미는** 방식이다 —
+  //    그래야 겹침 회피(stepUnitMove)를 탄다.
+  await step('캠프: 유닛이 자기 자리로 돌아온다 (겹침 회피 · 싸울 땐 안 돌아감)', async()=>{
+    skipIf(typeof campPostStep!=='function'||typeof campEnterDungeon!=='function','2단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const W=CAMPB.world;
+    const mk=(id,x,y)=>campWithStk(()=>{ strikeSpawnUnit('me',id);
+      const z=STK.me.units[STK.me.units.length-1];
+      if(z){ z.x=x; z.y=y; z.wait=0; z.rallied=true; z._post={x:x,y:y}; z._sx=x; z._sy=y; } return z; });
+    // ① 자리에서 밀려나면 돌아온다
+    const a=mk('marine', W*0.5, W*0.70);
+    assert(a,'레인저를 못 만들었다');
+    campScaleAllies([a]);
+    a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y;      // 자리에서 멀리 떼어 놓는다
+    const d0=Math.hypot(a.x-a._post.x, a.y-a._post.y);
+    for(let i=0;i<40;i++){ campPostSnap(); campPostStep(0.05); }
+    const d1=Math.hypot(a.x-a._post.x, a.y-a._post.y);
+    assert(d1<d0,'자리로 안 돌아온다: '+Math.round(d0)+' → '+Math.round(d1));
+    // ② ⚔ **살아 있는** 표적이 있으면 복귀보다 전투가 먼저다 — 돌아오다 싸움이 나면 합류한다
+    { const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+        const z=STK.ai.units[STK.ai.units.length-1]; if(z){ z.x=W*0.5; z.y=W*0.38; } return z; });
+      a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y; a.tgtUid=foe?foe.uid:'x';
+      const bx=a.x, by=a.y;
+      campPostSnap(); campPostStep(0.05);
+      assert(a.x===bx && a.y===by,'싸우는 유닛을 복귀시켰다');
+      // ⛔ **적이 죽으면 표적 번호가 남아도 돌아와야 한다.**
+      //   실측(2026-08-28): 이걸 안 보고 tgtUid 만 봤더니 적을 다 없앤 뒤 20초를 굴려도
+      //   유닛이 제자리에 붙박여 있었다. 스모크가 가짜 표적을 써서 못 잡았다.
+      if(foe) foe.dead=true;
+      campWithStk(()=>{ STK.ai.units.length=0; });
+      campPostSnap(); campPostStep(0.05);
+      assert(a.x!==bx || a.y!==by,'적이 죽었는데 표적 번호 때문에 안 돌아온다');
+      a.tgtUid=null; }
+    // ③ 겹침 회피 — 같은 자리를 준 둘이 포개지지 않는다
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const px=W*0.5, py=W*0.60;
+      const u1=mk('marine', W*0.45, W*0.45), u2=mk('marine', W*0.55, W*0.45);
+      if(u1&&u2){ campScaleAllies([u1,u2]);
+        u1._post={x:px,y:py}; u2._post={x:px,y:py};        // 일부러 같은 자리
+        for(let i=0;i<80;i++){ campPostSnap(); campPostStep(0.05); }
+        const gap=Math.hypot(u1.x-u2.x, u1.y-u2.y);
+        const need=((u1.size||14)+(u2.size||14))*0.5;
+        assert(gap>=need*0.8,'둘이 포개졌다 — 회피가 안 걸렸다: 간격 '+Math.round(gap)+' (최소 '+Math.round(need*0.8)+')'); } }
+    // ④ 🪢 목줄 기준이 **자기 자리**다(집결지가 아니다)
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const u=mk('marine', W*0.30, W*0.55);
+      if(u){ u._post={x:W*0.30,y:W*0.55};
+        u.x=u._post.x; u.y=u._post.y-CAMP_LEASH*3;
+        campLeash();
+        const d=Math.hypot(u.x-u._post.x, u.y-u._post.y);
+        assert(d<=CAMP_LEASH+1e-6,'자기 자리 기준 목줄이 안 걸렸다: '+Math.round(d)); } }
+    // ⑤ 부활하면 자기 자리에서 일어난다
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const u=mk('marine', W*0.5, W*0.60);
+      if(u){ const px=u._post.x, py=u._post.y;
+        u.x=W*0.5; u.y=W*0.25;                            // 멀리서 죽은 셈
+        u.dead=true; CAMPB._down=[{u:u, t:0}];
+        CAMPB.me.units.length=0;
+        campReviveStep(1);
+        assert(Math.abs(u.x-px)<1e-6 && Math.abs(u.y-py)<1e-6,'누운 자리에서 일어났다 — 자기 자리여야 한다'); } }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    CAMPB._down=[];
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '복귀 · 회피 · 목줄 · 부활 자리 ok';
+  });
+
+  // 🖐 **내가 지정해서 원하는 자리로 옮긴다** (2026-08-28 사용자 확정)
+  //    ⛔ 원본(건설 탭)의 탭 로직은 기지 엔티티만 안다 — 캠프가 up 에서 먼저 보고,
+  //      처리했으면 _btDown 을 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
+  await step('캠프: 전장 병력을 골라 원하는 자리로 옮긴다', async()=>{
+    skipIf(typeof campBattleAt!=='function'||typeof campMoveSel!=='function','3단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const W=CAMPB.world, r=_btRect(); skipIf(!r||!r.width,'맵 사각을 못 잼');
+    const mk=(gx,gy)=>{ const u=campDeploy('marine', gx, gy); return u; };
+    // 화면 좌표로 바꾸는 도우미 — 격자 → 화면
+    const scr=(wx,wy)=>{ const sp=_techW2S(wx,wy); return { x:r.left+sp.x*r.width, y:r.top+sp.y*r.height }; };
+    // ① 탭으로 고른다
+    const a=mk(0.5,0.55); assert(a,'유닛 배치 실패');
+    { const g=campW2G(a.x,a.y,W), pt=scr(g.gx,g.gy);
+      const hit=campBattleAt(pt.x, pt.y);
+      assert(hit===a,'탭으로 유닛을 못 골랐다');
+      campSelSet([a]);
+      assert(campSelList().length===1,'지정이 안 됐다'); }
+    // ② 지정 표시가 렌더 엔트리에 실린다(3D 하단 링)
+    { const e=campBattleList().find(x=>x.uid==='cb_me_'+a.uid);
+      assert(e && e.sel===true,'지정 링이 안 붙었다'); }
+    // ③ 빈 자리로 옮기면 **그 자리가 새 자리**가 된다
+    { const gx=0.35, gy=0.30, want=campG2W(gx,gy,W);
+      campMoveSel(gx,gy);
+      assert(Math.hypot(a._post.x-want.x, a._post.y-want.y)<40,'자리가 안 옮겨졌다');
+      assert(!a.tgtUid,'표적을 놓지 않았다 — 복귀가 못 움직인다'); }
+    // ④ 여러 기를 옮기면 **한 점에 포개지지 않는다**
+    { campWithStk(()=>{ STK.me.units.length=0; }); _campSel=[];
+      const us=[mk(0.4,0.5), mk(0.5,0.5), mk(0.6,0.5)].filter(Boolean);
+      if(us.length===3){ campSelSet(us); campMoveSel(0.5,0.35);
+        const d01=Math.hypot(us[0]._post.x-us[1]._post.x, us[0]._post.y-us[1]._post.y);
+        const d02=Math.hypot(us[0]._post.x-us[2]._post.x, us[0]._post.y-us[2]._post.y);
+        assert(d01>1 && d02>1,'세 기의 자리가 같다 — 대형으로 안 펴졌다'); } }
+    // ⑤ 박스로 여러 기 고르기
+    { const g0={x:0.2,y:0.2}, g1={x:0.9,y:0.9};
+      const hit=campBattleInBox(g0,g1);
+      assert(hit.length>=1,'박스 안 유닛을 못 찾았다: '+hit.length); }
+    // ⑥ ⛔ 나가면 지정을 들고 나가지 않는다
+    { campSelSet(campSelList()); assert(campSelList().length>0,'전제가 바뀜');
+      campSelClear(); assert(campSelList().length===0,'지정이 안 풀렸다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '탭 지정 · 링 · 자리 이동 · 대형 · 박스 ok';
+  });
+
+  // 🏁 **던전이 바뀌어도 병력·자리·건물은 그대로** (2026-08-28 사용자 확정)
+  //    ⛔ 예전엔 campBattleOpen() 으로 전장을 통째로 새로 만들어 me.units 를 비웠다.
+  //      campSortie 가 곧바로 다시 채워서 가려져 있었을 뿐이라, 출격을 없앤 지금은 증발한다.
+  await step('캠프: 던전이 바뀌어도 병력과 자리가 그대로다', async()=>{
+    skipIf(typeof campDungeonSwap!=='function'||typeof campDeploy!=='function','4단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45); assert(u,'배치 실패');
+    const px=u._post.x, py=u._post.y, uid=u.uid;
+    campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
+    const raceWas=CAMPB.ai.race, bldWas=(CAMPB._bld||[]).length;
+    const C=campState(); C.cleared=(C.cleared|0)+1; C.dg=(C.dg|0)+1;   // 던전을 넘긴 셈
+    campDungeonSwap();
+    // ① 내 병력과 자리가 남는다
+    const still=CAMPB.me.units.find(x=>x.uid===uid);
+    assert(still,'던전이 바뀌며 병력이 사라졌다');
+    assert(Math.abs(still._post.x-px)<1e-6 && Math.abs(still._post.y-py)<1e-6,'자리가 초기화됐다');
+    // ② 적은 비워지고 종족이 갈린다
+    assert(CAMPB.ai.units.length===0,'적이 안 비워졌다: '+CAMPB.ai.units.length);
+    assert(CAMPB.ai.race===campFoeRace(campDgN()),'적 종족이 안 바뀌었다: '+CAMPB.ai.race+' (전 '+raceWas+')');
+    // ③ 건물은 그대로 있고 체력이 가득 찬다(사용자 결정)
+    assert((CAMPB._bld||[]).length>=bldWas,'건물이 사라졌다: '+(CAMPB._bld||[]).length+' (전 '+bldWas+')');
+    { const live=campBldAlive();
+      if(live.length) assert(live.every(b=>b.hp>=(b.max||b.maxHp||b.hp)-1e-6),'건물 체력이 안 찼다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+    campBattleClose();
+    return '병력·자리 유지 · 적만 교체 · 건물 체력 회복';
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
@@ -1673,30 +1878,17 @@ async function groupLobby(){
       campCombatStep(0.05);
       assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
       assert(!(CAMPB._wq && CAMPB._wq.length),'라운드가 넘어갔는데 안 나온 무리가 남아 있다');
-      // ⑤ **인구 한도까지 계속 출격하되, 상한은 절대 넘지 않는다** (2026-08-27 규칙 변경)
-      //    ⛔ 옛 규칙은 「전장이 비어야 출격」이었다. 그러면 전장 병력이 17~18기에 묶여
-      //      대기 병력 68기가 놀았다 — 적이 100마리 나오는 판에서 그건 방어전이 아니다.
-      //    ⚠ 그때 이 규칙이 있었던 이유는 **건물 하나당 공짜로 유닛이 나왔기 때문**이다
-      //      (strikeSpawnForPlayer 의 _emit · 실측 R50 에 623기). 지금은 캠프가 그 배출을
-      //      꺼서(noEmit) 값을 내고 산 병력만 나온다 — 그래서 갭마다 출격해도 안전하다.
-      //    ⭐ 상한을 지키는 곳은 campTrimArmy() **한 곳**이다.
+      // ⑤ ⛔ **출격이 없다** (2026-08-28) — 유닛은 생산될 때 이미 전장에 선다.
+      //    라운드가 넘어가도 **병력이 저절로 불어나지 않고, 있던 것이 그대로 남는다.**
+      //    ⚠ 옛 규칙(campSortie · campTrimArmy)은 「유닛이 두 번 태어나던 구조」의 증상을
+      //      막던 것이라 함께 지웠다. 되살아나면 여기서 실패한다.
+      assert(typeof campSortie==='undefined','campSortie 가 되살아났다 — 유닛이 두 번 태어난다');
+      assert(typeof campTrimArmy==='undefined','campTrimArmy 가 되살아났다 — 생산에서 막아야 한다');
       { campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
-        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
+        const n0=CAMPB.me.units.length+campDown();
         for(let i=0;i<8;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘긴다
         const n1=CAMPB.me.units.length+campDown();
-        assert(n1>0,'갭을 넘기고 나니 병력이 통째로 사라졌다');
-        assert(n1<=cap,'갭마다 병력이 불어나 인구 상한을 넘는다: '+n1+' > '+cap); }
-      // 👥 **전장 병력도 인구 상한을 넘지 않는다.**
-      //    ⚠ 전장 자체엔 제한이 없다(STK_UNIT_CAP=0) — 캠프의 200 은 생산 제한일 뿐이라
-      //      던전 전환에서 샌다. 실측: 던전 1 은 20기였는데 던전 2 로 넘어가며 292기가 됐다.
-      { assert(typeof campTrimArmy==='function','인구 상한 트림이 없다');
-        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
-        // 상한을 넘겨 억지로 채운 뒤 트림이 도는지 본다
-        const proto=CAMPB.me.units[0];
-        if(proto){ for(let i=0;i<cap+30;i++) CAMPB.me.units.push(Object.assign({},proto,{uid:'x'+i}));
-          campTrimArmy();
-          const tot=CAMPB.me.units.length+campDown();
-          assert(tot<=cap,'전장 병력이 인구 상한을 넘는다: '+tot+' > '+cap); } }
+        assert(n1===n0,'라운드를 넘길 때마다 병력이 바뀐다: '+n0+' → '+n1); }
       // ⑥ ✈ **때릴 수 없는 적만 남으면 진다** — 안 그러면 라운드가 영원히 안 끝난다.
       //    실측(2026-08-27): 던전 1 R12 에서 hellfire(공중 전용) 하나가 남았는데 아군이
       //    화력병 20기(지상 전용)뿐이라 서로 한 대도 못 때렸다. 적 본부는 이미 부순 뒤였다.
