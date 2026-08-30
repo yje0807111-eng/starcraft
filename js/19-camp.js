@@ -61,7 +61,12 @@ function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
   const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
   C.dg = n; C.cleared = 0; campSave();
   if(typeof campBarReset === 'function') campBarReset();
+  campSkin();                                        // 🎨 바닥을 그 던전 그림으로 (아래 ⛔)
   return n; }
+// ⛔ **던전이 바뀌면 campSkin() 을 반드시 부를 것**(2026-08-30 발견).
+//   campSkin 은 오래도록 **캠프 화면에 처음 들어올 때 한 번**만 불렸다. 그래서 던전을 옮겨도
+//   바닥은 옛 그림 그대로였고, 화면을 나갔다 들어와야 바뀌었다 — 그림 11장을 넣어 두고도
+//   실제로는 한 장만 보고 있었다. 부르는 곳은 셋이다: 진입 · 던전 이동 · 50라운드 자동 이동.
 
 // 라운드 하나를 깼다. 50을 채우면 **다음 던전으로 자동으로** 넘어간다.
 //   ⚠ 전투(2단계)가 부를 입구다. 여기 말고 다른 곳에서 C.cleared 를 만지지 말 것.
@@ -70,7 +75,7 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
   if(!C.best) C.best = {};
   C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.cleared);
   if(C.cleared >= CAMP_ROUND_MAX){
-    if(C.dg < CAMP_DG_MAX){ C.dg++; C.cleared = 0; }   // 자동 이동 — 방치형이라 손이 안 가는 게 맞다
+    if(C.dg < CAMP_DG_MAX){ C.dg++; C.cleared = 0; campSkin(); }   // 자동 이동 — 방치형이라 손이 안 가는 게 맞다
     else C.cleared = CAMP_ROUND_MAX;                    // 마지막 던전은 끝에 머문다
   }
   campSave(); return true; }
@@ -1023,10 +1028,13 @@ function campCanHitFoes(){
 //       못 가린다.** 실제로 그랬다(난이도가 11배 올라도 18초 고정 = 전부 대기 시간이었다).
 //     라운드를 길게 하고 싶으면 **적 체력만** 만진다.
 const CAMP_WAVE_MAX = 6;        // 라운드 하나를 최대 몇 번에 나눠 내보내나
-// ⚠ 간격은 **짧게** 둔다. 이건 연출이지 라운드 길이를 만드는 장치가 아니다 —
-//   길게 잡으면 화면의 적을 다 잡아도 다음 무리를 기다리느라 라운드가 안 끝나고,
-//   그 대기가 곧 라운드 길이가 되어 「적 총 체력 ÷ 아군 DPS」 규칙이 깨진다(실측 18초 고정).
-const CAMP_WAVE_GAP_S = 0.3;    // 웨이브 사이 간격(초) — 6무리가 1.8초 안에 다 나온다
+// ⚠ 옛 규칙은 「간격은 짧게」였다 — 길게 잡으면 화면의 적을 다 잡아도 다음 무리를 기다리느라
+//   라운드가 안 끝나고, 그 대기가 곧 라운드 길이가 되어 「적 총 체력 ÷ 아군 DPS」 규칙이
+//   깨졌다(실측: 난이도가 11배 올라도 18초 고정 = 전부 대기 시간).
+// ⭐ **그 위험을 campCombatStep 에서 없앴다**(2026-08-30) — 화면의 적을 다 잡으면 간격을
+//   무시하고 다음 무리를 곧바로 낸다. 그래서 이제 간격을 「연출」로 길게 잡아도 안전하다.
+//   ⛔ 그 한 줄을 지우면 아래 값이 곧바로 라운드 길이가 된다. 같이 봐야 하는 짝이다.
+const CAMP_WAVE_GAP_S = 1.5;    // 웨이브 사이 간격(초) — 6무리가 7.5초에 걸쳐 밀려온다
 function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') return 0;
   const n = campFoeCount(campRoundN());
   const w = Math.max(1, Math.min(CAMP_WAVE_MAX, n));
@@ -1274,8 +1282,16 @@ const CAMP_REV_S = 30;            // 부활 시간(초) — 유닛 종류와 무
 // 🌳 「자동 재생산」(rebuild) — 설계의 「죽은 유닛 n% 자동 재구매」를 **부활 단축**으로 읽는다.
 //   재구매는 '미네랄을 깎나'가 계속 애매했다. 부활 시간은 적 갈래의 「적 부활 시간」과 대칭이고
 //   §6-6 의 가동률(생존÷사이클)에 곧바로 붙어 효과가 읽힌다.
+// 🗄 **아래 셋은 다락 후보다**(2026-08-30) — 부활이 라운드 단위가 되면서 쓰이지 않는다.
+//   ⛔ 아직 지우지 않는다: 트리 표(위 300행)에 'rebuild' 갈래가 남아 있어, 그 갈래를
+//     endure(버팀)로 바꾸는 작업과 **함께** 치워야 한다(HUNT_R1 §4-5-7).
+//   ⚠ 그때까지 rebuild 갈래는 **효과가 없다** — 사도 아무 일도 일어나지 않는다.
 const CAMP_RT_REV = [0, 0.25, 0.50, 0.75, 0.90, 1.00];   // 단축률 — HUNT_R1 §4-5-3 의 25/50/75/90/100
 const CAMP_REV_MIN = 3;           // ⛔ 0 으로 만들지 않는다 — 즉시 부활이면 눕는 것이 무의미해진다
+// ⏳ **설계는 바뀌었는데 코드는 아직 옛것이다**(2026-08-30 확인 · HUNT_R1 §4-5-7).
+//   확정: 부활은 **라운드 시작에 전원**이고, 트리 갈래는 rebuild(부활 단축) → endure(버팀).
+//   지금: 아래처럼 **30초 타이머**이고 rebuild 를 읽는다. sc-2 가 구현하면 이 함수가 사라진다.
+//   ⛔ 그때까지 이 주석을 지우지 말 것 — 문서만 보고 「이미 라운드 부활」이라 읽으면 틀린다.
 function campReviveSec(){ const n = campRtHas('rebuild');
   const cut = n > 0 ? CAMP_RT_REV[Math.min(5, n)] : 0;
   return Math.max(CAMP_REV_MIN, CAMP_REV_S * (1 - cut)); }
@@ -1288,14 +1304,21 @@ function campCatchDown(before){
   const now = CAMPB.me.units, keep = new Set(now);
   let n = 0;
   for(const u of before){ if(keep.has(u) || !u) continue;
-    CAMPB._down.push({ u:u, t:campReviveSec() }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것
+    CAMPB._down.push({ u:u }); n++; }                     // 걷힌 것 = 이번 프레임에 누운 것
+  // ⛔ 부활 시각(t)은 더 넣지 않는다 — 라운드 시작에 **전원** 일어나므로 개별 타이머가 필요 없다.
   return n; }
-function campReviveStep(dt){
+// 🩹 **라운드 시작에 전원 부활** (2026-08-30 사용자 확정 · HUNT_R1 §4-5-7)
+//   ⛔ 옛 방식은 **30초 타이머**였다 — 라운드 도중에도 하나씩 일어나서
+//     「그 라운드는 그 병력으로 싸운다」가 성립하지 않았다. 배치를 짜 둔 뜻도 흐려진다.
+//   ⭐ 지금은 **라운드 안에서는 못 일어난다.** 숨 고르기가 시작될 때 한꺼번에 일으키고,
+//     그 4초 동안 각자 제자리를 잡는다. 체력·실드도 가득 채운다.
+//   ⚠ 부르는 곳은 **라운드 클리어 한 곳뿐**이다(campCombatStep ②). 늘리지 말 것 —
+//     라운드 도중에 부르면 옛 문제로 되돌아간다.
+function campReviveAll(){
   if(!CAMPB || !CAMPB._down || !CAMPB._down.length) return 0;
   let up = 0;
   for(let i = CAMPB._down.length - 1; i >= 0; i--){
     const d = CAMPB._down[i];
-    if((d.t -= dt) > 0) continue;
     const u = d.u;
     u.dead = false;
     u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
@@ -1389,7 +1412,7 @@ function campCombatStep(dt){
     campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
     campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
     campLeash();
-    campReviveStep(dt);                                   // 🩹 누운 아군도 이 사이에 일어난다
+    // 🩹 부활은 라운드 클리어에서 한꺼번에 한다(campReviveAll) — 여기서는 걷기만 한다
     if(CAMPB._gapT <= 0){
       // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
       //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
@@ -1406,10 +1429,14 @@ function campCombatStep(dt){
   campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
-  campReviveStep(dt);   // 🩹 누운 아군을 일으킨다(승패 판정보다 먼저 — 일어난 프레임에 지면 안 된다)
+  // 🩹 ⛔ 라운드 **도중에는 일으키지 않는다**(2026-08-30). 옛 campReviveStep(30초 타이머)이
+  //   여기 있었다 — 그것 때문에 라운드 중간에 하나씩 살아나 병력이 계속 흔들렸다.
   if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
     CAMPB._wqT -= dt;
-    if(CAMPB._wqT <= 0){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
+    // ⭐ **화면의 적을 다 잡았으면 기다리지 않는다**(2026-08-30). 이 한 줄이 있어야
+    //   간격을 늘려도 「대기가 곧 라운드 길이」가 되지 않는다 — 위 CAMP_WAVE_GAP_S 경고 참조.
+    //   평소엔 천천히 밀려오고, 밀어내면 곧바로 다음 무리가 온다.
+    if(CAMPB._wqT <= 0 || !CAMPB.ai.units.length){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
   { const sk = campRtMul('skCd');
     if(sk !== 1){ const extra = dt * (sk - 1);
       for(const u of CAMPB.me.units){ if(u.dead || !u.skillCd) continue;
@@ -1421,15 +1448,20 @@ function campCombatStep(dt){
   // ⛔ **때릴 수 없는 적만 남았으면 진다.** 안 그러면 라운드가 영원히 안 끝난다(실측: R12 hellfire).
   //   ⚠ 아직 안 나온 무리가 있으면 그중에 때릴 수 있는 것이 있을 수 있으므로 기다린다.
   const _noHit = CAMPB._started && !campFoesPending() && !campCanHitFoes();
-  // 🏢 **패배 = 내 건물이 전부 부서지는 것**(2026-08-27 확정). 본부 하나가 아니라 기지 전체다.
-  //    ⚠ 건물 목록이 비어 있으면(아직 안 세웠으면) 본부 체력으로 판정한다 — 옛 규칙 폴백.
-  const _bld = campBldAlive();
-  const _allDown = (CAMPB._bld && CAMPB._bld.length) ? (_bld.length === 0) : (CAMPB.me.base.hp <= 0);
-  if(_allDown || _noHit
-     || (CAMPB._started && CAMPB.me.units.length === 0 && campDown() === 0 && campAlive('ai') > 0)){
+  // 🏢 **패배 = 본부 파괴 하나뿐**(2026-08-30 사용자 확정).
+  //    ⭐ 전멸은 패배가 아니다. 병력이 다 누우면 적이 **길목의 건물을 차례로 부수며 밀고 들어오고**,
+  //      마지막에 본부가 무너질 때 진다. 그 사이 건물들이 시간을 벌어 준다.
+  //      (적이 내 건물을 때리는 경로는 campPatchFront → campFrontBld 가 만든다.)
+  //    ⛔ 「전멸 = 패배」로 되돌리지 말 것 — 2026-08-30 에 잠깐 그렇게 했다가 사용자가 되돌렸다.
+  //    ⛔ 「건물 전부 파괴」로도 되돌리지 말 것(옛 2026-08-27 규칙) — 지금은 **본부 하나**다.
+  //    ⚠ 전멸해도 판이 멈추지 않는 이유가 여기 있다: 부활은 라운드 시작뿐이라 그동안 못 일어나지만,
+  //      적이 본부를 부수면서 **게임은 계속 나아간다.** 그 둘이 짝이다.
+  const _base = CAMPB.me.base;
+  const _lost = !_base || _base.dead || (_base.hp || 0) <= 0;
+  if(_lost || _noHit){
     const was = campFail(); campBattleClose(); campBarReset();
-    campSay(_allDown
-      ? ('🏢 기지가 무너졌습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
+    campSay(_lost
+      ? ('🏢 본부가 무너졌습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
       : _noHit
       ? ('✈ 공중을 칠 수 없어 탈락 — 대공이 되는 병력을 섞으세요(던전 ' + was.dg + ' ' + was.cleared + '라운드)')
       : (was.cleared > 0
@@ -1444,7 +1476,8 @@ function campCombatStep(dt){
     if(campDgN() !== dgWas){                                   // 던전이 바뀌면 **적만** 갈아 끼운다
       campDungeonSwap(); campBarReset();
       campSay('🏁 던전 ' + dgWas + ' 완주 — 던전 ' + campDgN() + ' 진입', 'game_start'); }
-    if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S; } }
+    if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S;
+      campReviveAll(); } }                                     // 🩹 여기서 전원이 일어난다(라운드 시작)
 }
 
 // ══ 🗺 단계·라운드 배지 (2026-08-25 · 3단계) ═══════════════════════════
@@ -2632,7 +2665,15 @@ function campSkin(){
 //   (js/14-input-fx.js). 상수를 바꾸면 기준선도 같이 움직여 _cellK 가 1 로 남고
 //   건물만 작아지고 **유닛은 그대로**인 어긋난 화면이 된다.
 //   techCols() 만 감싸면 분모가 20 으로 남아 유닛도 같은 비율로 줄어든다(실측 _cellK 0.417).
-const CAMP_ZOOM = 1.3;
+// 🔍 캠프 기본 시점 (2026-08-30 사용자 확정 · 눈으로 네 단계를 비교해 골랐다)
+//   ⭐ 1.3 → **1.8** — 유닛이 점처럼 작아 전투가 안 읽혔다. 2.3 부터는 아군 기지가
+//     하단 시트에 가려서, 건설도 하는 화면에는 과했다.
+//   ⭐ y 0.5 → **0.56** — 확대만 하면 위쪽(적이 오는 곳)이 남고 아래(내 기지)가 잘린다.
+//     조금 내려야 기지와 전투가 같이 보인다. 0.62 는 위가 잘려 「적이 어디서 오는지」가 사라졌다.
+//   ⚠ 줌을 바꾸면 이 y 도 다시 봐야 한다 — 잘리는 자리가 함께 움직인다.
+//     확인: SHOT_DG=1 SHOT_ZOOM=1.8 SHOT_CY=0.56 node scripts/shot.mjs dgfight
+const CAMP_ZOOM = 1.8;
+const CAMP_VIEW_Y = 0.56;
 const CAMP_COLS = 48;
 // 🚧 **맵 밖이 화면에 보이지 않게 하는 한도.**
 // 바닥(.bmapFloor)은 inset:0 이지만 **뷰 변환을 함께 받는다**(_techViewCSS). 그래서
@@ -2872,8 +2913,9 @@ function campZoom(){
   const v = G.tech.view || (G.tech.view = { x:0.5, y:0.5, zoom:1 });
   // 축소 상태에서는 클램프가 x·y 를 0.5 로 고정한다(전체가 보이므로 팬 여지가 없다).
   //   기지가 아래쪽에 오는 것은 시점이 아니라 **배치**가 만든다(campLayBase).
-  v.zoom = CAMP_ZOOM; v.x = 0.5; v.y = 0.5;
+  v.zoom = CAMP_ZOOM; v.x = 0.5; v.y = CAMP_VIEW_Y;
   if(typeof _techClampView === 'function') _techClampView(v);   // 줌 하한 등 규칙을 즉시 반영
+  // ⚠ **목표값(techViewT)까지 맞춰야** 한다 — 여기를 빼면 보간이 곧바로 옛 값으로 되돌린다.
   if(typeof techViewT === 'function'){ const t = techViewT(); if(t){ t.zoom = v.zoom; t.x = v.x; t.y = v.y; } }
 }
 
