@@ -15,6 +15,9 @@ const MINS=+(process.argv[2]||10), DG0=+(process.argv[3]||1);
 // 🧭 구매 정책 — HUNT_R1 §6-7-0 의 세 갈래를 그대로 옵션으로 둔다(대조용)
 //   A 살 수 있는 것 중 ROI 1위   B 인구가 막히면 보급소만 모은다   C ROI 1위가 비싸면 모은다
 const POL=(process.argv[4]||'A').toUpperCase();
+// ⛽ 정제소 레벨 상한(비교 실험용 · 2026-08-29) — 「연구 무한 누적」이 시간 지수 축이 되는지
+//   상한 유/무로 갈라 재기 위한 것. 0 = 상한 없음(지금 게임 그대로).
+const REFCAP=+(process.argv[5]||0);
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp3':'audio/mpeg','.woff2':'font/woff2'};
 const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.url,'http://x').pathname);
  let f=path.join(ROOT,p==='/'?'sc-ums-web.html':p); if(!f.startsWith(ROOT)){s.writeHead(403);return s.end();}
@@ -32,13 +35,13 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol)=>{
+await pg.evaluate((dg0,pol,refCap0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol };
-}, DG0, POL);
+  window.__CB={ dg0, pol, refCap:refCap0 };
+}, DG0, POL, REFCAP);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -67,6 +70,14 @@ await pg.evaluate(()=>{
   // 🔮 스킬 자동 시전 계측 — 어떤 스킬이 **실제로 효과를 냈는지**만 센다(시도 X).
   //   ⚠ 효과 함수가 false 를 돌리면 시전 자체가 취소되므로, 여기서 세는 것이 곧 「진짜 나간 횟수」다.
   __CB.sk={}; __CB.healHp=0; __CB.medHp=0;
+  // 🔁 회차 — 패배(campFail)마다 하나씩 센다. 「몇 회차에 어디까지 갔나」가 새 밸런스 단위다.
+  __CB.runs=1; __CB.runLog=[];
+  if(typeof window.campFail==='function'){ const o=window.campFail;
+    window.campFail=function(){ const was=o.apply(this,arguments);
+      if(was && was.dg>0){ __CB.runLog.push({ run:__CB.runs, dg:was.dg, r:was.cleared, t:+( __CB.t/60).toFixed(1) }); __CB.runs++; }
+      return was; }; }
+  // 던전을 처음 넘은 순간 — {dg, 회차, 분}
+  __CB.dgFirst={};
   // ⚔ **이번 라운드에 실제로 나온 적**의 체력 합과 마리 수. ⛔ 「총량이 맞겠거니」 가정하지 않는다 —
   //   무리가 덜 나오거나(안 나온 무리는 버려진다) 티어·공중 제외로 마리 수가 달라질 수 있다.
   __CB.roundHp=0; __CB.roundFoe=0;
@@ -191,6 +202,9 @@ await pg.evaluate(()=>{
       let best=null;
       for(const r of b.research){
         const key=T.race+'_'+r.k, lv=T.research[key]|0;
+        // ⛽ 비교 실험 — 정제소 레벨 상한(0 = 없음)
+        if(__CB.refCap>0 && typeof CAMP_REF_KEY!=='undefined' && r.k===CAMP_REF_KEY
+           && typeof campRefLv==='function' && campRefLv()>=__CB.refCap) continue;
         if(!r.tier && lv) continue;                        // 단발은 한 번뿐
         if(typeof _techReqMet==='function' && !_techReqMet(r.req)) continue;
         const c=(typeof campResearchCost==='function' && campResearchCost(r,lv))||[r.m||0,r.g||0];
@@ -285,6 +299,7 @@ await pg.evaluate(()=>{
           round:campRoundN(), ore:Math.round(G.tech.minerals.reduce((a,m)=>a+(m.amount||0),0)),
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
+      { const d=campDgN(); if(d>0 && !__CB.dgFirst[d]) __CB.dgFirst[d]={ run:__CB.runs, t:+(__CB.t/60).toFixed(1) }; }
       if((i%20)===0){ __CB.tap(); const w=campWealth();
         if(!__CB.gateT && w>=1e6) __CB.gateT=__CB.t;
         if(__CB.t-(__CB.lastSample||0) >= 15){ __CB.lastSample=__CB.t;
@@ -414,6 +429,11 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     for(const k in R){ const kk=k.replace(T.race+'_',''), v=(R[k]===true?1:(R[k]|0));
       if(tierK.has(kk)) tierN+=v; else if(oneK[kk]) one.push(oneK[kk]); else if(kk!=='gasup') one.push(kk); }
     return { tier:tierN, one:one }; })() }));
+{ const R=await pg.evaluate(()=>({ runs:__CB.runs, log:__CB.runLog||[], first:__CB.dgFirst||{}, cap:__CB.refCap|0, ref:(typeof campRefLv==='function')?campRefLv():-1 }));
+  console.log('');
+  console.log('■ 🔁 회차 — 정제소 상한 '+(R.cap>0?('L'+R.cap):'없음')+' · 최종 정제소 L'+R.ref);
+  for(const d in R.first) console.log('  던전 '+d+' 첫 진입: '+R.first[d].run+'회차 · '+R.first[d].t+'분');
+  console.log('  패배 '+R.log.length+'번 · 마지막 5번: '+R.log.slice(-5).map(x=>x.run+'회차 D'+x.dg+'R'+x.r).join(' · ')); }
 const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
   return String(Math.round(n)); };

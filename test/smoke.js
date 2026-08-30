@@ -1307,6 +1307,42 @@ async function groupLobby(){
       assert(typeof campReviveSec==='undefined','campReviveSec 이 되살아났다');
       return '라운드 중 부활 없음 · 라운드 시작 시 전원 회복 · 전멸=패배';
     } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField(); { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } } campBattleClose(); } });
+  // 🛡 버팀(endure · 구 rebuild) — 치명 피해 1회 무시 · 체력 1 · 유닛당 라운드 1회 (sc-3 §4-5-7)
+  await step('캠프: 버팀 — 치명타를 라운드당 1회 버틴다', async()=>{
+    skipIf(typeof campEndureP!=='function'||typeof campCatchDown!=='function','버팀 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      // ① 사다리 값 — 0차 0% · 5차 75% (⛔ 100% 금지 — 전멸이 안 난다)
+      C.rbTree={}; assert(campEndureP()===0,'0차인데 버팀이 있다: '+campEndureP());
+      C.rbTree={endure:5}; assert(campEndureP()===0.75,'5차가 75%가 아니다: '+campEndureP());
+      assert(CAMP_RT_END[5]<1,'T5 가 100% 다 — 전멸이 안 나고 체력 축과 겹친다');
+      // ② 5차·주사위 고정으로 — 죽어 걷힌 유닛이 체력 1 로 그 자리에서 되살아난다
+      const u=campDeploy('marine', 0.5, 0.5); assert(u,'배치 실패');
+      const rnd=Math.random; Math.random=()=>0;   // 항상 버팀
+      try{
+        const b4=CAMPB.me.units.slice();
+        u.dead=true; CAMPB.me.units.length=0;      // strikeStepUnits 가 걷은 셈
+        campCatchDown(b4);
+        assert(CAMPB.me.units.indexOf(u)>=0,'버팀이 안 됐다 — 누웠다');
+        assert(!u.dead && u.hp===1,'체력 1 로 버텨야 한다: hp '+u.hp+' dead '+u.dead);
+        assert(campDown()===0,'버텼는데 누움 목록에도 들어갔다');
+        // ③ 같은 라운드 두 번째 치명타 = 눕는다(라운드당 1회)
+        const b5=CAMPB.me.units.slice();
+        u.dead=true; CAMPB.me.units.length=0;
+        campCatchDown(b5);
+        assert(campDown()===1,'라운드당 1회를 안 지켰다 — 두 번 버텼다');
+        // ④ 라운드가 시작되면 버팀 횟수가 다시 찬다
+        campRoundRevive();
+        assert(u._endured===false,'라운드 리셋에서 버팀 횟수가 안 찼다');
+      } finally { Math.random=rnd; }
+      return '0→75% · 체력 1 버팀 · 라운드당 1회 · 리셋 ok';
+    } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField();
+      campBattleClose(); const S=campState(); if(S){ S.dg=0; S.cleared=0; } } });
+
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{
     skipIf(typeof campScaleAllies!=='function'||typeof campState!=='function','아군 강화 배선 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');

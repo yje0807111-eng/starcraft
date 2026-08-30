@@ -282,7 +282,7 @@ const CAMP_RT_LINES = [
   {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul'},
   {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한',      f:'supAdd'},
   {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc'},
-  {k:'rebuild',  br:'army',  grp:'다', gr:'귀함', nm:'자동 재생산',    f:'autoRebuild'},
+  {k:'endure',   br:'army',  grp:'다', gr:'귀함', nm:'버팀',          f:'endure'},   // 구 rebuild — 로드 시 포인트 이관
   {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul'},
   {k:'skCd',     br:'army',  grp:'라', gr:'보통', nm:'스킬 쿨다운',    f:'skillCd'},
   // ── 갈래 ④ 적 약화 — ⚠ 상한이 있다. 다른 셋과 곱해지므로 반드시 막혀 있어야 한다
@@ -1274,9 +1274,12 @@ function campScaleAllies(list){
 //   ⛔ **결과 하나가 딸려 온다: 전멸 = 패배.** 라운드 도중에는 못 일어나므로 서 있는 병력이
 //     0 이 되면 그 라운드를 깰 방법이 없다. 예전에는 「다 누워도 30초 뒤 일어난다」라
 //     전멸이 패배가 아니었다 — 그 전제가 사라졌다.
-// 🌳 「자동 재생산」(rebuild) 갈래는 이제 **부활 시간**이 아니라 다른 것에 걸어야 한다 —
-//   시간이라는 축이 없어졌기 때문이다. ⚠ 지금은 효과가 없다(sc-3 재설계 필요).
-const CAMP_RT_REV = [0, 0.25, 0.50, 0.75, 0.90, 1.00];   // ⚠ 미사용 — 갈래 재설계 전까지 남겨 둔다
+// 🌳 「버팀」(endure · 구 rebuild) — 치명 피해를 **1회 무시하고 체력 1로 버틴다**(유닛당 라운드 1회).
+//   라운드 부활 규칙에서 「한 대 더 버틴다 = 그 라운드를 더 싸운다」라, 옛 부활 단축과 역할이 같다.
+//   ⛔ T5 를 100% 로 올리지 말 것 — 전멸이 안 나고, 실질 체력 ×2 라 체력 축과 겹친다(sc-3 §4-5-7).
+//   ⛔ 「라운드 도중 부활」로 되돌리지 말 것 — 버팀은 죽기 **전에** 작동하는 것이다.
+const CAMP_RT_END = [0, 0.15, 0.30, 0.45, 0.60, 0.75];   // 그 라운드에 버티는 유닛 비율
+function campEndureP(){ const n = campRtHas('endure'); return n > 0 ? CAMP_RT_END[Math.min(5, n)] : 0; }
 //   ⚠ **죽은 유닛은 배열에 남지 않는다** — strikeStepUnits 끝에서 `me.units=me.units.filter(u=>!u.dead)`
 //     로 걷어낸다(18-strike.js:1301, 공유 파일이라 못 고침). 그래서 **걷히기 전후를 비교해** 붙잡는다.
 //     객체는 살아 있으므로(배열에서 빠졌을 뿐) 그대로 들고 있다가 되살려 배열에 돌려놓는다.
@@ -1285,7 +1288,13 @@ function campCatchDown(before){
   if(!CAMPB._down) CAMPB._down = [];
   const now = CAMPB.me.units, keep = new Set(now);
   let n = 0;
+  const endP = campEndureP();
   for(const u of before){ if(keep.has(u) || !u) continue;
+    // 🛡 버팀 — 치명타를 1회 무시하고 체력 1로 그 자리에서 계속 싸운다(유닛당 라운드 1회).
+    //   걷힌 직후 되살리는 것이라 겉보기에 「죽기 전에 버틴」 것과 같다 — 자리·표적이 그대로다.
+    if(endP > 0 && !u._endured && Math.random() < endP){
+      u._endured = true; u.dead = false; u.hp = 1;
+      CAMPB.me.units.push(u); continue; }
     CAMPB._down.push({ u:u, t:0 }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것 (⏱ 타이머 없음 — 라운드가 끝나야 일어난다)
   return n; }
 // 🩹 **라운드 리셋** — 누운 병력을 전원 일으키고, 서 있는 병력도 체력을 가득 채운다.
@@ -1304,7 +1313,8 @@ function campRoundRevive(){
   if(CAMPB._down) CAMPB._down.length = 0;
   // ⭐ **서 있던 병력도 가득 채운다** — 라운드가 온전한 상태로 시작해야 화력이 줄지 않는다.
   for(const u of CAMPB.me.units){ if(u.dead) continue;
-    u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0; }
+    u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
+    u._endured = false; }                            // 🛡 버팀은 라운드당 1회 — 새 라운드에 다시 찬다
   return up; }
 // 누워 있는(부활 대기) 유닛 수 — 승패 판정이 쓴다
 function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
@@ -1465,6 +1475,9 @@ function campState(){
   if(typeof p.camp.rebMul !== 'number') p.camp.rebMul = 0;     // 환생 배수 — 합산 누적
   if(typeof p.camp.rbPts !== 'number') p.camp.rbPts = 0;       // 환생 포인트 — 트리에 쓴다(6단계)
   if(!p.camp.best || typeof p.camp.best !== 'object') p.camp.best = {};
+  // 🛡 rebuild → endure 이관(2026-08-29) — 갈래 키가 바뀌었다. 옛 세이브의 포인트를 옮긴다.
+  if(p.camp.rbTree && p.camp.rbTree.rebuild && !p.camp.rbTree.endure){
+    p.camp.rbTree.endure = p.camp.rbTree.rebuild; delete p.camp.rbTree.rebuild; }
   return p.camp;
 }
 function campHasRace(){ const C = campState(); return !!(C && C.race); }
