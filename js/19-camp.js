@@ -1825,7 +1825,15 @@ function campEnter(){
   if(!had) G.tech.credit = 0;
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
-  campPatchRefinery();                                 // ⛽ 정제소에 「가스 생산」 연구 카드를 꽂는다
+  // ⛽ **정제소 카드는 연구 구역 「자원」 칸이 갖는다**(2026-08-27 · js/20-camp-research.js).
+  //   건물을 골라야만 올릴 수 있어서 자원 성장 셋 중 하나만 자리가 달랐다.
+  //   ⚠ 뺐을 때 스모크 넷이 깨져 한 번 되돌렸는데, 재 보니 **연쇄가 아니라 테스트 간 오염**이었다:
+  //     카드를 검사하던 두 step 이 실패로 중간에 끊기면서 정리를 못 해 뒤 step 들이 넘어졌다.
+  //     같은 조건을 프로브로 직접 재현했더니 격자·시트·광맥·일꾼이 **완전히 같았다**
+  //     (카드 유무 둘 다 rows 81 · 광맥 y 0.6836 · 60초에 256 획득).
+  //   ⛔ campPatchRefinery·CAMP_REF_RES 는 지우지 않았다 — 되살릴 땐 이 줄을 되돌린다(유보 규칙).
+  //   campPatchRefinery();
+  campPatchResearch();                                 // 🔬 연구 구역이 시트를 쓸 차례를 가로챈다
   campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④

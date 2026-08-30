@@ -790,14 +790,16 @@ async function groupLobby(){
         assert(Math.abs(c0/campUpgDisc()-CAMP_REF_COST0)<1,'정제소 0→1 비용이 기준값과 다르다: '+c0);
         assert(Math.abs(c1/c0-CAMP_REF_R)<0.01,'정제소 비용 계단이 상수와 다르다: '+(c1/c0).toFixed(3));
         assert(CAMP_REF_R>1.05,'정제소 계단이 너무 눕다 — 가스가 폭주한다: '+CAMP_REF_R);
-        // ⛽ **정제소 안에서 산다**(§2-3-1) — 캠프에서만 정제소에 연구 카드가 꽂힌다.
+        // ⛽ **올릴 자리는 연구 구역 「자원」 칸이다**(2026-08-27 · 옛 자리는 정제소 건물의 연구 카드였다).
         //   ⛔ 이게 없으면 화면에서 가스 생산을 **올릴 방법이 아예 없다**(2026-08-27 실측으로 걸렸다).
-        { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
-          const ent=(rb.research||[]).find(x=>x.k===CAMP_REF_KEY);
-          assert(ent,'정제소에 「가스 생산」 연구 카드가 없다 — 올릴 방법이 없다');
-          const cc=campResearchCost(ent,campRefLv());
-          assert(cc && cc[1]===0,'정제소 업그레이드에 가스가 붙었다 — 가스를 가스로 사는 셈이다');
-          assert(cc[0]===campUpgCost('refinery'),'정제소 카드 값이 campUpgCost 와 다르다: '+cc[0]);
+        //   ⚠ 건물 카드로 되돌아가지 않았는지도 함께 본다 — 두 곳에 있으면 어느 쪽이 진짜인지 흐려진다.
+        { skipIf(typeof CAMP_RES_ITEMS==='undefined','연구 구역 없음');
+          const it=CAMP_RES_ITEMS.find(x=>x.k==='refinery');
+          assert(it,'연구 구역 「자원」 칸에 정제소가 없다 — 가스 생산을 올릴 방법이 없다');
+          const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+          assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),
+            '정제소 카드가 건물에도 남아 있다 — 자리가 둘이면 어느 쪽이 진짜인지 흐려진다');
+          assert(campUpgCost('refinery')>0,'정제소 값이 안 나온다');
           // 레벨은 **연구 칸**에도 쌓인다(카드로 사므로) — 둘이 어긋나면 값이 안 오른다
           const before=campRefLv();
           G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]=before+3;
@@ -1485,8 +1487,9 @@ async function groupLobby(){
           '캠프를 나갔는데 정제소 카드가 남아 있다 — 관리자 탭이 터진다'); }
       openHome(); await sleep(420);
       assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
+      // ⛽ 정제소는 이제 **건물 카드가 아니라 연구 구역**에 있다 — 캠프 안팎에서 붙었다 떨어지지 않는다.
       { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
-        assert((rb.research||[]).some(x=>x.k===CAMP_REF_KEY),'캠프로 돌아왔는데 정제소 카드가 없다'); }
+        assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),'정제소 카드가 건물로 되돌아왔다'); }
       void wasOn;
       return '계열 가스 1→'+campResearchCost(tierR,7)[1]+'(Lv7) · 단발 10/15/20 · 미네랄 0';
     } finally {
@@ -2206,6 +2209,144 @@ async function groupLobby(){
       node.inf=false;
       return '넉넉하면 지급 · 고갈이면 0 · 무제한(inf)은 안 줄고 계속 준다';
     } finally { G.tech=keep; } });
+
+  // ══ 🔬 연구 구역 「자원」 칸 (2026-08-27 · js/20-camp-research.js) ══
+  //   하단 네비 연구 > 자원 = 터치·채취·정제소를 **한 자리에서** 올린다.
+  //   ⭐ 이 화면의 핵심은 **사기 전에 얼마나 오르는지**를 보여 주는 것이다(옛 채굴 팝업은 비용만 보여 줬다).
+  await step('연구 자원: 세 줄 · 오를 값 미리보기 · 구매 반영', async()=>{
+    skipIf(typeof campResEnter!=='function' || typeof campIsOn!=='function','연구 구역 없음');
+    skipIf(!campIsOn(),'캠프가 안 켜져 있다');
+    const body=$('btSheetBody'); skipIf(!body,'캠프 하단 시트 없음');
+    // ⚠ **산 것을 되돌린다.** 여기서 터치 레벨을 올려 두면 뒤 step 이 Lv.0 을 전제로 재다가 깨진다
+    //    (실측: 「업그레이드 1레벨인데 획득량이 그대로: 2→2」 — 이미 2레벨이었던 것).
+    const cr0=G.tech.credit, C0=campState(), upg0=JSON.stringify((C0&&C0.upg)||{});
+    try{
+      G.tech.credit=5e4;
+      campResEnter('res');
+      const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
+      // ① 세 줄 — 터치·채취·정제소. ⛔ 정제소가 빠지면 자원 성장 셋 중 하나만 자리가 달라진다(이번 이동의 이유).
+      const nms=slots().map(x=>(x.querySelector('.cgName')||{}).textContent);
+      assert(nms.length===3,'자원 칸이 세 줄이 아니다: '+nms.join(','));
+      assert(nms.indexOf('정제소')>=0,'정제소가 자원 칸에 없다 — 건물을 골라야만 올릴 수 있던 그 자리로 되돌아간다');
+      // ② 정보판이 **현재 ▸ 다음**을 보여 준다
+      { const v=body.querySelector('.cgVal');
+        assert(v,'오를 값 미리보기(cgVal)가 없다 — 비용만 보여 주면 살지 말지를 감으로 고르게 된다');
+        const cur=(v.querySelector('.cur')||{}).textContent, nxt=(v.querySelector('.nxt')||{}).textContent;
+        assert(cur && nxt && cur!==nxt,'현재와 다음 값이 같다: '+cur+' → '+nxt); }
+      // ③ 사면 레벨과 실제 값이 함께 오른다(표시만 바뀌는 게 아니다)
+      { const lv0=campUpgLv('tap'), g0=campTapGain();
+        campResTap('tap');   // 이미 골라져 있으므로 곧바로 구매
+        assert(campUpgLv('tap')===lv0+1,'샀는데 레벨이 안 올랐다: '+lv0+' → '+campUpgLv('tap'));
+        assert(campTapGain()>g0,'레벨은 올랐는데 실제 획득량이 그대로다: '+g0+' → '+campTapGain()); }
+      // ④ 정제소를 안 지었으면 잠긴다 — 올려도 나오는 것이 없다
+      { const ref=slots().find(x=>(x.querySelector('.cgName')||{}).textContent==='정제소');
+        if(ref && typeof campHasRefinery==='function' && !campHasRefinery())
+          assert(ref.classList.contains('dim'),'정제소를 안 지었는데 살 수 있어 보인다'); }
+      // ⑤ 🚪 네비로 들어오고 나가기 — **화면은 그대로, 하단만 바뀐다**
+      { campResExit();
+        const scr=$('researchScreen');
+        openResearch(); await sleep(60);
+        assert(!scr || getComputedStyle(scr).display==='none',
+          '연구가 전용 화면을 연다 — 캠프가 닫혔다 다시 열려 화면이 튕긴다');
+        assert(_resSec==='res','연구 칸이 안 열렸다: '+_resSec);
+        assert(campIsOn(),'연구를 눌렀는데 캠프가 꺼졌다');
+        // 뒤로가기 = 연구를 접고 **기존 요약 시트**로 돌아간다
+        navBack(); await sleep(60);
+        assert(!_resSec,'뒤로 갔는데 연구가 시트를 계속 쥐고 있다 — 하단이 안 바뀐다');
+        const st=$('btSheetBody').querySelector('.cgStats');
+        assert(st,'뒤로 갔는데 기지 요약(MY BASE)이 안 돌아왔다');
+        campResEnter('res'); }
+      // ⚔ 무장 칸 — [보병][차량][함선] → 고르면 [🔙][공격][방어]
+      { campResEnter('arm');
+        assert(_resSec==='arm','무장 칸이 안 열렸다');
+        const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
+        assert(slots().length===3,'계열이 셋이 아니다: '+slots().length);
+        // ⛔ **표에 없는 계열 연구가 있으면 안 된다** — 조용히 사라지는 것이 제일 나쁘다.
+        //    종족마다 계열 구성이 달라(테란 6 · 저그 5 · 프로토스 5) 자동으로 못 묶는다.
+        { const inTree=new Set();
+          for(const g of campArmTree()){ if(g.atk) inTree.add(g.atk); if(g.def) inTree.add(g.def); }
+          const all=[];
+          for(const b of (TECH_TREE[G.tech.race].buildings||[]))
+            for(const r of (b.research||[])) if(r.tier) all.push(r.k);
+          const miss=all.filter(k=>!inTree.has(k));
+          assert(!miss.length,'무장 표에 없는 계열 연구가 있다 — 화면에서 사라진다: '+miss.join(',')); }
+        // 계열을 고르면 2단으로 · 되돌아가기가 있다
+        campArmPick(0);
+        assert(body.querySelector('.cgBack'),'계열 안에서 되돌아가기가 없다 — 나갈 길이 막힌다');
+        assert(slots().length>=1,'공격·방어 칸이 없다');
+        // 건물이 없으면 잠기고, 세우면 실제로 사진다(구매 경로는 techDoResearch 하나다)
+        { const g=campArmTree()[0], rk=g.atk, bd=campArmBldgOf(rk);
+          assert(bd,'계열 연구가 어느 건물 것인지 못 찾는다: '+rk);
+          const b0=G.tech.built[bd.k]|0, lv0=campArmLv(rk), en0=G.tech.energy;
+          // ⚠ 앞 step 이 그 건물을 지어 뒀을 수 있다 — **확실히 없앤 상태**에서 잠김을 본다
+          G.tech.built[bd.k]=0;
+          assert(!campArmReady(rk),'건물이 없는데 살 수 있다고 나온다');
+          G.tech.built[bd.k]=1; G.tech.energy=5e5;
+          // ⚠ techDoResearch 는 **실제 건물 엔티티**도 찾는다 — 하나 세워 준다
+          const cmd=G.tech.ents.find(e=>e.type==='bldg');
+          const fake={eid:G.tech.eseq++, type:'bldg', bk:bd.k, x:cmd.x+0.05, y:cmd.y, bt:0};
+          G.tech.ents.push(fake);
+          campArmBuy(rk);
+          // ⚠ 연구는 **시간이 걸릴 수 있다** — 그때는 레벨 대신 건물에 작업(_rj)이 걸린다.
+          //   둘 중 하나면 「샀다」가 성립한다(구매 경로는 techDoResearch 하나다).
+          const started=(G.tech.ents||[]).some(e=>e._rj && e._rj.rk===rk);
+          assert(campArmLv(rk)>lv0 || started,
+            '건물을 세웠는데도 계열이 안 걸렸다: Lv '+lv0+' → '+campArmLv(rk)+' · 작업 '+started
+            +' · 가스 '+Math.round(G.tech.energy));
+          for(const e of (G.tech.ents||[])) if(e._rj && e._rj.rk===rk) e._rj=null;   // 뒤 step 을 위해 걷는다
+          G.tech.ents=G.tech.ents.filter(e=>e!==fake);
+          G.tech.built[bd.k]=b0; G.tech.energy=en0;
+          delete G.tech.research[G.tech.race+'_'+rk]; }
+        campArmPick(null);
+        campResEnter('res'); }
+      // 🔬 기술 칸 — **보유 유닛으로 거른다**. 20개를 늘어놓으면 5페이지가 되어 아무도 안 본다.
+      { campResEnter('tech');
+        const en0=G.tech.energy; G.tech.energy=5e4;
+        const names=()=>[...body.querySelectorAll('.cgName')].map(x=>x.textContent);
+        // ⛔ **u 가 없는 단발 연구가 있으면 안 된다** — 화면에서 조용히 사라진다.
+        //    「어느 유닛 것인가」는 연구 데이터가 갖는다(js/15-tech-data.js 의 u:).
+        { const miss=[];
+          for(const rk of CAMP_RACE_ORDER){ const tr=campTechRace(rk), t=TECH_TREE[tr]; if(!t) continue;
+            for(const b of (t.buildings||[])) for(const r of (b.research||[]))
+              if(!r.tier && !r.u) miss.push(tr+':'+r.k); }
+          assert(!miss.length,'u 가 없는 단발 연구가 있다 — 기술 칸에서 조용히 사라진다: '+miss.join(',')); }
+        const u0=G.tech.units?JSON.stringify(G.tech.units):null;
+        try{
+          // ① 유닛이 없으면 비어 있다(그게 정상이다)
+          G.tech.units={}; campResSheet();
+          assert(names().length===0,'유닛이 없는데 기술이 보인다: '+names().join(','));
+          // ② 유닛을 가지면 **그 유닛의 기술만** 나타난다
+          const g=campArmTree(); void g;
+          const uid=(G.tech.race==='union')?'marine':(G.tech.race==='swarm'?'hydra':'blade');
+          G.tech.units[uid]=1; campResSheet();
+          const shown=campTechList();
+          assert(shown.length>0,'유닛을 가졌는데 기술이 하나도 안 뜬다 ('+uid+')');
+          for(const o of shown){ const us=campTechUsers(o.r);
+            assert(us && (us.indexOf('*')>=0 || us.some(campHasUnit)),
+              '안 가진 유닛의 기술이 떠 있다: '+o.r.k+' → '+(us||[]).join(',')); }
+          // ③ 이미 산 것은 사라진다
+          const k0=shown[0].r.k;
+          G.tech.research[G.tech.race+'_'+k0]=true; campResSheet();
+          assert(!campTechList().some(o=>o.r.k===k0),'이미 산 기술이 아직 목록에 있다: '+k0);
+          delete G.tech.research[G.tech.race+'_'+k0];
+          // ④ 정렬 — **지금 살 수 있는 것이 앞**(첫 페이지에 누를 수 있는 것이 온다)
+          { G.tech.energy=5e5; const rich=campTechList().map(o=>o.r.k);
+            G.tech.energy=0;   const poor=campTechList().map(o=>o.r.k);
+            assert(rich.length===poor.length,'가스에 따라 목록 자체가 달라진다 — 거르는 조건에 가스가 섞였다'); }
+        } finally { G.tech.energy=en0; if(u0) G.tech.units=JSON.parse(u0); else G.tech.units={}; }
+        campResEnter('res'); }
+      // ⑥ 🗺 **한 자리에 두 주인을 두지 않는다** — 맵에서 뭘 고르면 연구가 자리를 내준다
+      { const b=(G.tech.ents||[]).find(e=>e.type==='bldg');
+        if(b){ G.tech.sel=b.eid; techPanelRender();
+          assert(typeof _resSec==='undefined' || !_resSec,
+            '맵에서 건물을 골랐는데 연구가 시트를 계속 쥐고 있다 — 한 자리를 둘이 쓴다'); } }
+      return '세 줄 · 미리보기 · 구매 반영 · 자리 양보';
+    } finally {
+      try{ if(typeof campResExit==='function') campResExit(); }catch(e){}
+      try{ G.tech.credit=cr0; G.tech.sel=null; }catch(e){}
+      try{ const C=campState(); if(C) C.upg=JSON.parse(upg0);
+        if(typeof saveMeta==='function') saveMeta(); }catch(e){}   // ⚠ 저장까지 되돌린다(campUpgBuy 가 저장했다)
+    } });
 
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
@@ -6866,11 +7007,18 @@ async function groupLobby(){
     skipIf(typeof NAV_TREE==='undefined','네비 표 없음');
     const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.label);
     assert(cells.join(',')==='연구,임무,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
-    // 두 칸이 실제로 열리는가 — APP_SCREENS 누락이면 여기서 걸린다
-    for(const [fn,id,label] of [[()=>openResearch(),'researchScreen','연구'],[()=>openQuest(),'questScreen','임무']]){
-      fn(); await sleep(60);
-      assert(visible($(id)), label+' 화면이 안 열림(APP_SCREENS 에 빠졌는지 볼 것)');
-      assert($(id).querySelector('.setSoon'), label+' 화면 본문이 없음'); }
+    // 임무는 아직 껍데기 화면이다 — APP_SCREENS 누락이면 여기서 걸린다
+    { openQuest(); await sleep(60);
+      assert(visible($('questScreen')),'임무 화면이 안 열림(APP_SCREENS 에 빠졌는지 볼 것)');
+      assert($('questScreen').querySelector('.setSoon'),'임무 화면 본문이 없음'); }
+    // 🔬 **연구는 화면이 아니라 캠프 하단 시트로 간다**(2026-08-27 · js/20-camp-research.js).
+    //   ⛔ 화면을 갈아치우면 캠프가 닫혔다 다시 열려 **전체가 한 번 튕긴다** — 바뀌는 것은 하단뿐이어야 한다.
+    //   ⚠ 여기서는 **부르지 않는다** — openResearch 는 캠프를 켜는데, 그러면 뒤 step(좌상단 칩·드롭다운)이
+    //     자기가 심어 둔 던전·라운드를 못 찾는다(실측으로 두 번 밟았다).
+    //     실제 동작은 캠프가 이미 켜져 있는 step 「연구 자원」에서 잰다.
+    { const src=openResearch.toString();
+      assert(src.indexOf('campResEnter')>=0,'연구가 캠프 시트로 안 간다 — 전용 화면을 연다');
+      assert(src.indexOf('campIsOn')>=0,'캠프에 있는지 안 보고 화면을 갈아치운다 — 전체가 튕긴다'); }
     // 네비 아이콘이 실제로 칠해지는가(ICO 표에 없는 키를 쓰면 빈 칸이 된다)
     { const bad=[];
       for(const x of NAV_TREE){ if(x.noCell) continue; if(typeof ICO==='undefined') break;

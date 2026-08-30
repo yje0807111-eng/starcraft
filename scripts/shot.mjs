@@ -391,6 +391,253 @@ try {
       }
       const _skip = () => {};
     }
+    else if (WHAT === 'techmap') {   // 🔍 단발 연구 → 유닛 매핑 후보를 뽑는다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate(() => {
+        const out={ ok:[], amb:[], none:[] };
+        // 스킬 경로 — UNIT_SKILLS + SKILL_RESEARCH 를 이으면 연구→유닛이 나온다
+        const bySkill={};
+        for(const uid in UNIT_SKILLS) for(const sk of UNIT_SKILLS[uid]){
+          const rk=SKILL_RESEARCH[sk]; if(rk) (bySkill[rk]=bySkill[rk]||[]).push(uid); }
+        // 이름 경로 — 설명글에 나오는 유닛 이름
+        const names=[]; for(const id in U) if(U[id] && U[id].name) names.push([id, U[id].name]);
+        for(const rk of CAMP_RACE_ORDER){
+          const tr=campTechRace(rk); const t=TECH_TREE[tr]; if(!t) continue;
+          for(const b of (t.buildings||[])) for(const r2 of (b.research||[])){
+            if(r2.tier) continue;
+            const ds=(r2.desc||'')+' '+(r2.name||'');
+            // ⚠ **종족으로 거른다** — 이름이 같은 유닛이 다른 종족에도 있다(전함=dreadnought/kronos).
+            const sameRace=(id)=>(typeof RACE_OF==='undefined') || !RACE_OF[id] || RACE_OF[id]===tr;
+            const hit=names.filter(n=>ds.indexOf(n[1])>=0).map(n=>n[0]).filter(sameRace);
+            const sk=(bySkill[r2.k]||[]).filter(sameRace);
+            const rec={ race:tr, k:r2.k, nm:r2.name, ds:r2.desc, byName:hit, bySkill:sk };
+            const all=[...new Set([...sk, ...hit])];
+            if(all.length===1) out.ok.push(rec.race+'|'+rec.k+'|'+all[0]+'|'+rec.ds);
+            else if(all.length>1) out.amb.push(rec.race+'|'+rec.k+'|'+all.join(',')+'|'+rec.ds);
+            else out.none.push(rec.race+'|'+rec.k+'|'+rec.nm+'|'+rec.ds);
+          } }
+        out.n={ ok:out.ok.length, amb:out.amb.length, none:out.none.length };
+        return out; });
+      fs.writeFileSync(path.join(ROOT,'scratch_techmap.json'), JSON.stringify(r,null,1));
+      console.log('TECHMAP '+JSON.stringify(r.n));
+      console.log('AMB'); for(const x of r.amb) console.log('  '+x);
+      console.log('NONE'); for(const x of r.none) console.log('  '+x);
+    }
+    else if (WHAT === 'techdata') {   // 🔍 기술 칸 — 단발 연구가 어느 유닛 것인지 자동으로 이어지나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate(() => {
+        const out={};
+        // 유닛 → 스킬 목록이 어디 있나
+        out.probe={ SKILLS:(typeof SKILLS!=='undefined'), SKILL_RESEARCH:(typeof SKILL_RESEARCH!=='undefined'),
+          UNIT_SKILLS:(typeof UNIT_SKILLS!=='undefined'), U:(typeof U!=='undefined') };
+        if(typeof U!=='undefined'){ const k=Object.keys(U)[0]; out.uSample={ id:k, keys:Object.keys(U[k]||{}).slice(0,14) }; }
+        // 스킬 → 연구 역표
+        if(typeof SKILL_RESEARCH!=='undefined'){
+          out.skillRes=Object.keys(SKILL_RESEARCH).length;
+          out.skillResSample=Object.keys(SKILL_RESEARCH).slice(0,6).map(k=>k+'→'+SKILL_RESEARCH[k]); }
+        for(const rk of CAMP_RACE_ORDER){
+          const tr=campTechRace(rk); const t=TECH_TREE[tr]; if(!t) continue;
+          const list=[];
+          for(const b of (t.buildings||[])) for(const r2 of (b.research||[]))
+            if(!r2.tier) list.push({ k:r2.k, nm:r2.name, ds:r2.desc||'', b:b.name, u:r2.u||null });
+          out[rk]={ n:list.length, items:list.map(x=>x.k+'|'+x.nm+'|'+x.ds+'|'+x.b+(x.u?('|u='+x.u):'')) };
+        }
+        return out; });
+      console.log('TECHDATA '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'armdata') {   // 🔍 무장 칸 — 캠프 3종족의 계열 연구가 실제로 무엇인가
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const r = await page.evaluate(() => {
+        const out={};
+        for(const rk of CAMP_RACE_ORDER){
+          const tr=(typeof campTechRace==='function')?campTechRace(rk):rk;
+          const t=TECH_TREE[tr]; if(!t){ out[rk]='트리 없음'; continue; }
+          const list=[];
+          for(const b of (t.buildings||[])) for(const r2 of (b.research||[]))
+            if(r2.tier) list.push({ k:r2.k, nm:r2.name, b:b.name, n:r2.tier.length });
+          // 그 연구를 쓰는 유닛도 함께 — 계열을 유닛으로 묶을 수 있는지 본다
+          const users={};
+          for(const uid in UNIT_UPG){ const m=UNIT_UPG[uid];
+            for(const kk of ['atk','def','sh']) if(m[kk]){ (users[m[kk]]=users[m[kk]]||[]).push(uid); } }
+          out[rk]={ tech:tr, n:list.length,
+            items:list.map(x=>x.k+'|'+x.nm+'|'+x.b+'|t'+x.n+'|u:'+((users[x.k]||[]).length)) };
+        }
+        return out; });
+      console.log('ARMDATA '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'refchain') {   // 🔍 정제소 카드를 빼면 왜 격자·채취까지 달라지나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const kill = process.env.SHOT_NOREF === '1';
+      await page.evaluate((k) => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        // ⭐ 카드를 붙이는 일 자체를 **진입 전에** 막는다(campEnter 안에서 불린다)
+        if(k){ try{ window.campPatchRefinery=function(){}; }catch(e){} }
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3500); }, 1400); }), kill);
+      const r = await page.evaluate((k) => {
+        const T=G.tech, out={ noRef:k };
+        const b=(TECH_TREE[T.race].buildings||[]).find(x=>x.gas);
+        out.card=!!(b && (b.research||[]).some(x=>x.k===CAMP_REF_KEY));
+        out.grid={ rows:_techRows(), cols:techCols(), ch:+_techCH().toFixed(5),
+                   y0:+techY0().toFixed(4), y1:+techY1().toFixed(4) };
+        const sh=document.getElementById('btSheet');
+        const sr=sh?sh.getBoundingClientRect():null;
+        out.sheet=sr?{ top:Math.round(sr.top), h:Math.round(sr.height), open:sh.classList.contains('open') }:null;
+        const map=document.getElementById('cstMain');
+        const mr=map?map.getBoundingClientRect():null;
+        out.map=mr?{ top:Math.round(mr.top), h:Math.round(mr.height) }:null;
+        const ms=(T.minerals||[]);
+        out.mine=ms.length?{ n:ms.length, y:+ms[0].y.toFixed(4) }:null;
+        try{ out.gas={ r0:TECH_GAS.r0, c0:TECH_GAS.c0 }; }catch(e){}
+        const wk=(T.ents||[]).filter(e=>e.type==='worker');
+        out.workers={ n:wk.length, mining:wk.filter(e=>e.mine!=null||e.gather!=null).length };
+        out.credit=Math.round(T.credit||0);
+        // ⭐ 스모크 「일꾼이 60초 동안…」와 **같은 일**을 한다 — 오염인지 진짜 연쇄인지 여기서 갈린다
+        try{
+          const b=T.ents.find(e=>e.type==='bldg');
+          if(!(T.ents||[]).some(e=>e.type==='worker'))
+            T.ents.push({eid:T.eseq++, type:'worker', x:b.x, y:b.y+0.03});
+          if(typeof campAutoGather==='function') campAutoGather();
+          for(let i=0;i<40;i++) techTick(0.05);
+          out.gathering=(T.ents||[]).filter(w=>w.type==='worker'&&w._gKind==='mineral').length;
+          const c0=T.credit, DT=1/30;
+          for(let i=0;i<60/DT;i++) techTick(DT);
+          out.earned=Math.round(T.credit-c0);
+        }catch(e){ out.tickErr=String(e).slice(0,70); }
+        return out; }, kill);
+      console.log('REFCHAIN '+JSON.stringify(r));
+    }
+    else if (WHAT === 'tech') {   // 🔬 기술 칸 — 보유 유닛으로 걸러지나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const r = await page.evaluate(() => {
+        const out={};
+        G.tech.energy=5e4;
+        const body=document.getElementById('btSheetBody');
+        const read=()=>({ n:[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty')).length,
+          names:[...body.querySelectorAll('.cgName')].map(x=>x.textContent),
+          desc:(body.querySelector('.cgDd')||{}).textContent });
+        campResEnter('tech');
+        out.none=read();   // 유닛이 없으면 비어 있어야 한다
+        // 레인저를 갖게 하면 그 기술이 나타난다
+        G.tech.units=G.tech.units||{}; G.tech.units.marine=1;
+        campResSheet();
+        out.marine=read();
+        // 이미 산 것은 사라진다
+        const before=campTechList().map(o=>o.r.k);
+        G.tech.research[G.tech.race+'_stim']=true;
+        campResSheet();
+        out.afterBuy={ was:before, now:campTechList().map(o=>o.r.k) };
+        // 정렬 — 살 수 있는 것이 앞
+        G.tech.energy=1;
+        out.poorFirst=campTechList().slice(0,3).map(o=>o.r.k);
+        delete G.tech.research[G.tech.race+'_stim']; delete G.tech.units.marine; G.tech.energy=5e4;
+        // u 가 없는 단발 연구가 있나
+        const miss=[];
+        for(const rk of CAMP_RACE_ORDER){ const tr=campTechRace(rk); const t=TECH_TREE[tr]; if(!t) continue;
+          for(const b of (t.buildings||[])) for(const r2 of (b.research||[]))
+            if(!r2.tier && !r2.u) miss.push(tr+':'+r2.k); }
+        out.noU=miss;
+        return out; });
+      console.log('TECH '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'arm') {   // ⚔ 무장 칸 — 계열 3 → 공격·방어 2단
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const r = await page.evaluate(() => {
+        const out={};
+        try{ G.tech.energy = 5e4; G.tech.credit = 5e4; }catch(e){}
+        campResEnter('arm');
+        const body=document.getElementById('btSheetBody');
+        const read=()=>({ title:(body.querySelector('.cgKick')||body.querySelector('.cgN')||{}).textContent,
+          back:!!body.querySelector('.cgBack'),
+          slots:[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))
+            .map(x=>({ nm:(x.querySelector('.cgName')||{}).textContent,
+                       lv:(x.querySelector('.cgMeta')||{}).textContent,
+                       cost:(x.querySelector('.cgCost')||{}).textContent,
+                       dim:x.classList.contains('dim') })),
+          desc:(body.querySelector('.cgDd')||{}).textContent });
+        out.top=read();
+        campArmPick(0);
+        out.one=read();
+        // 실제로 사지나 — 건물이 있어야 한다
+        const g=campArmTree()[0];
+        out.ready={ atk:campArmReady(g.atk), bldg:(campArmBldgOf(g.atk)||{}).name };
+        const lv0=campArmLv(g.atk);
+        try{ campArmBuy(g.atk); }catch(e){ out.buyErr=String(e).slice(0,60); }
+        out.buy={ lvUp:campArmLv(g.atk)-lv0 };
+        campArmPick(null);
+        out.backTo=read().title;
+        // 표에 없는 계열 연구가 있나(조용히 사라지면 안 된다)
+        const inTree=new Set(); for(const x of campArmTree()){ if(x.atk) inTree.add(x.atk); if(x.def) inTree.add(x.def); }
+        const all=[]; for(const b of TECH_TREE[G.tech.race].buildings||[]) for(const r2 of (b.research||[])) if(r2.tier) all.push(r2.k);
+        out.missing=all.filter(k=>!inTree.has(k));
+        return out; });
+      await new Promise(r=>setTimeout(r,200));
+      const b = await page.screenshot({ clip:{x:0,y:560,width:430,height:290} });
+      fs.writeFileSync(path.join(ROOT,'scratch_arm.png'), b);
+      console.log('ARM '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'research') {   // 🔬 연구 구역 「자원」 칸이 하단 시트에 제대로 뜨나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const r = await page.evaluate(() => {
+        const out={};
+        try{ G.tech.credit = 5e4; }catch(e){}
+        // ⭐ **네비로 들어간다** — 화면이 갈아치워지는지(튕김) 여기서 갈린다
+        const scr=document.getElementById('researchScreen');
+        const home0=getComputedStyle(document.getElementById('homeScreen')).display;
+        try{ openResearch(); }catch(e){ out.err=String(e).slice(0,80); }
+        out.enter={ research:scr?getComputedStyle(scr).display:'-',
+                    home:getComputedStyle(document.getElementById('homeScreen')).display,
+                    home0, campOn:(typeof campIsOn==='function')?campIsOn():'-' };
+        const body=document.getElementById('btSheetBody');
+        out.sec=(typeof _resSec!=='undefined')?_resSec:'-';
+        out.slots=[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'))
+          .map(x=>({ nm:(x.querySelector('.cgName')||{}).textContent,
+                     lv:(x.querySelector('.cgMeta')||{}).textContent,
+                     cost:(x.querySelector('.cgCost')||{}).textContent,
+                     dim:x.classList.contains('dim'), sel:x.classList.contains('sel') }));
+        out.info={ eb:(body.querySelector('.cgEb')||{}).textContent,
+                   nm:(body.querySelector('.cgDn')||{}).textContent,
+                   desc:(body.querySelector('.cgDd')||{}).textContent,
+                   val:(body.querySelector('.cgVal')||{}).textContent };
+        const lv0=campUpgLv('tap'), g0=campTapGain();
+        try{ campResTap('tap'); }catch(e){ out.buyErr=String(e).slice(0,60); }
+        out.buy={ lvUp:campUpgLv('tap')-lv0, gainUp:campTapGain()-g0 };
+        out.valAfter=(body.querySelector('.cgVal')||{}).textContent;
+        // 뒤로가기 → 기존 요약이 돌아오나
+        const hs0=getComputedStyle(document.getElementById('homeScreen')).display;
+        const cls0=document.getElementById('phone').className;
+        try{ navBack(); }catch(e){ out.backErr=String(e).slice(0,60); }
+        out.backScreen={ home0:hs0, home:getComputedStyle(document.getElementById('homeScreen')).display,
+          cls0, cls:document.getElementById('phone').className,
+          campOn:(typeof campIsOn==='function')?campIsOn():'-' };
+        out.back={ sec:(typeof _resSec!=='undefined')?_resSec:'-',
+                   stats:!!body.querySelector('.cgStats'),
+                   title:(body.querySelector('.cgKick')||body.querySelector('.cgN')||{}).textContent };
+        return out; });
+      await new Promise(r=>setTimeout(r,200));
+      const b = await page.screenshot({ clip:{x:0,y:560,width:430,height:290} });
+      fs.writeFileSync(path.join(ROOT,'scratch_research.png'), b);
+      console.log('RESEARCH '+JSON.stringify(r,null,1));
+    }
     else if (WHAT === 'dgdrop') {   // 🏕 던전 드롭다운을 열어 찍는다(0단계 포함)
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
       await new Promise(r=>setTimeout(r,900));
