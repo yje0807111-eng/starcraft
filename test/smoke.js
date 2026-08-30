@@ -63,8 +63,15 @@ function spawnMany(n){ const gids=Object.keys(GACHA_UNITS); let c=0;
 function pump(frames){ for(let f=0;f<frames;f++){ stepCmdMove(0.016); separateUnits();
   if(window.M3D&&M3D.ready&&M3D.ready()) M3D.sync(G.units,GW,GH,0.016,G.sel,G.enemies,null,null,G.view); } }
 
+// 🛠 **개발용 패배 끄기는 테스트에서 끈다.**
+//   실제 플레이에서는 던전을 둘러보려고 켜 두지만(js/19-camp.js CAMP_DEV_NOFAIL),
+//   승패 규칙 검사는 진짜 규칙을 봐야 한다 — 켠 채로 돌리면 「탈락인데 캠프로 안 돌아감」 셋이 깨진다.
+//   ⚠ 그 플래그가 사라지면(원래 계획인 「병력 없으면 이동 금지」로 바뀌면) 이 줄도 지운다.
+function campDevFailOff(){ try{ if(typeof CAMP_DEV_NOFAIL!=='undefined') CAMP_DEV_NOFAIL=false; }catch(e){} }
+
 // ── 그룹: lobby ──
 async function groupLobby(){
+  campDevFailOff();
   await step('부트: 전역/탭 존재', ()=>{ assert(typeof G!=='undefined','G 없음'); assert(typeof USEMAPS!=='undefined','USEMAPS 없음');
     assert($('tabs'),'#tabs 없음'); return 'phase='+G.phase; });
   // 로그인/회원가입 화면은 반드시 거친다(자동 로그인 금지). 아이디를 비우고 로그인하면 바로 게임 선택으로.
@@ -1193,7 +1200,26 @@ async function groupLobby(){
             assert(covered(),'맵 밖이 화면에 보인다 — 줌 '+z+' 시점 '+px+','+py
               +' → 실제 줌 '+techView().zoom.toFixed(2)+' 시점 '
               +techView().x.toFixed(2)+','+techView().y.toFixed(2)); } }
-        assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom()); }
+        assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom());
+        // ⭐ **가장 축소한 화면 = 진입 애니가 끝나면 나오는 그 화면**(2026-08-27 사용자 확정).
+        //    더 줄일 수 있으면 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
+        assert(Math.abs(techMinZoom()-CAMP_ZOOM)<1e-6,
+          '축소 하한이 기본 배율과 다르다 — 기본보다 더 멀어질 수 있다 ('+techMinZoom()+' vs '+CAMP_ZOOM+')');
+        // ✂ **가장 아래로 내리면 미네랄·가스가 하단 시트 바로 위에 붙는다 — 줌과 무관하게 같은 자리.**
+        //    그 아래는 아무것도 없는 여백이라 보이면 「빈 땅이 드러난 화면」이 된다.
+        //    ⚠ 화면 비율이 아니라 **월드 좌표**로 재야 한다 — 「기본 배율의 여지」로 상한을 고정했더니
+        //      보이는 하단이 줌마다 달랐다(실측 축소 0.838 / 확대 0.709).
+        { const sf=(typeof techSheetFrac==='function')?techSheetFrac():0;
+          const seen=z=>{ const t={x:.5,y:99,zoom:z}; _techClampView(t); return (0.5-sf)/z + t.y; };
+          const base=seen(CAMP_ZOOM); const got=[];
+          for(const z of [CAMP_ZOOM, 1.7, 2, 3, techMaxZoom()]){ const w=seen(z); got.push(z+':'+w.toFixed(3));
+            assert(Math.abs(w-base)<0.004,
+              '줌마다 아래 끝이 다르다 ('+got.join(' ')+') — 축소하면 미네랄 아래 여백이 드러난다'); }
+          // 그 아래 끝이 실제로 광맥·가스 바로 아래여야 한다(여백을 크게 잡으면 검사가 헛돈다)
+          const ms=(G.tech.minerals||[]); assert(ms.length,'광맥이 없다');
+          const mBot=Math.max(...ms.map(m=>m.y));
+          assert(base>mBot && base<mBot+_techCH()*6,
+            '아래 끝('+base.toFixed(3)+')이 광맥 줄('+mBot.toFixed(3)+') 바로 아래가 아니다'); } }
       campZoom(); spin(20); }   // 뒤 검사들을 위해 기본 배율로 되돌린다
     // 🔍 화면 배율 — 폰에서 관리자 기본(20칸)은 너무 확대돼 보인다.
     //   ⛔ **zoom 을 낮춰서 줄이지 않는다.** zoom 을 낮추면 격자가 화면을 못 채워 좌우가 빈 배경이
@@ -5369,9 +5395,19 @@ async function groupLobby(){
       const op=(t)=>parseFloat(t.slice(t.indexOf('|')+1));
       assert(op(v0)>0.98 && op(v1)>0.98,'줌 애니가 스스로 페이드한다('+op(v0)+'→'+op(v1)+') — 검은 판과 이중으로 보인다');
       assert(sc(v1)>1.05,'400ms 에 줌이 거의 끝났다('+sc(v1).toFixed(3)+') — 연출이 짧아 보인다');
+      // ✂ 확대(1.18배)가 **하단 네비 자리를 넘지 않아야** 한다.
+      //    맵은 평소 네비 윗변에 딱 맞닿아 있어서(밑변 802 = 네비 윗변 802), 확대하면 841 까지 뻗어
+      //    39px 을 넘는다. 네비는 위에 있지만 배경 윗부분이 투명해 그 아래로 맵이 그대로 비친다
+      //    (실측 2026-08-27: 네비 띠 밝기 51.5 → 잘라 낸 뒤 26.3).
+      { const hs=document.getElementById('homeScreen');
+        assert(hs.classList.contains('campInClip'),
+          '진입 확대 중에 화면을 안 자른다 — 맵이 하단 네비 자리로 넘어온다');
+        const cp=getComputedStyle(hs).clipPath;
+        assert(cp && cp!=='none','campInClip 인데 clip-path 가 없다: '+cp); }
       // (종족 판 페이드 검사는 campPickRace 직후로 옮겼다 — 0.4초면 closing 이 끝난다)
       return '맵·3D 동일 · '+v0.slice(0,26)+' → '+v1.slice(0,26);
-    } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} try{ const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('closing'); o.classList.add('hide'); } }catch(e){}
+    } finally { try{ const hs=document.getElementById('homeScreen'); if(hs){ clearTimeout(hs._campClipT); hs.classList.remove('campInClip'); } }catch(e){}
+      try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} try{ const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('closing'); o.classList.add('hide'); } }catch(e){}
       try{ ['vBuild','cvMarine'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.classList.remove('campIn'); (e.getAnimations?e.getAnimations():[]).forEach(a=>{try{a.cancel();}catch(_){}}); } }); }catch(e){}
       openHome(); await sleep(60); } });
   // 💎 미네랄 채굴 판 — 광맥은 화면의 5% 뿐이라 손끝이 일꾼·건물을 자꾸 눌렀다. 넓은 과녁을 따로 둔다.
@@ -7194,7 +7230,14 @@ async function groupLobby(){
       assert(d(),'칩을 눌렀는데 드롭다운이 안 열림');
       assert(t.classList.contains('open'),'열렸는데 칩에 open 표시가 없음(⌄ 가 안 뒤집힌다)');
       // ② 담긴 것 — 던전 열 줄 · 라운드 99칸 · 현재 값이 잡힌다
-      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX,'던전 줄이 '+CAMP_DG_MAX+'개가 아님');
+      // ⭐ **0단계(캠프)가 첫 칸이다**(2026-08-27) — 그래서 줄이 CAMP_DG_MAX+1 개다.
+      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX+1,
+        '던전 줄이 '+(CAMP_DG_MAX+1)+'개(캠프 0 + 던전 '+CAMP_DG_MAX+')가 아님: '+d().querySelectorAll('.cdRow').length);
+      { const first=d().querySelector('.cdRow');
+        assert(first.dataset.dg==='0','첫 칸이 0단계가 아니다: '+first.dataset.dg);
+        assert(!first.disabled && !first.classList.contains('lock'),'캠프가 잠겨 있다 — 돌아갈 길이 막힌다');
+        assert(first.querySelector('.cdRnm').textContent===CAMP_HOME_NAME,
+          '캠프 이름이 칩과 다르다: '+first.querySelector('.cdRnm').textContent+' vs '+CAMP_HOME_NAME); }
       assert(d().querySelectorAll('.cdRn').length===CAMP_RND_MAX,'라운드 칸이 '+CAMP_RND_MAX+'개가 아님');
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='잊혀진 회랑','현재 던전이 안 잡힘');
       assert((d().querySelector('.cdRn.on')||{}).textContent==='27','현재 라운드가 안 잡힘');
@@ -7244,7 +7287,56 @@ async function groupLobby(){
       { const bar=$('curBar'); const had=bar.classList.contains('bare'); bar.classList.add('bare');
         const pe=getComputedStyle(t).pointerEvents; if(!had) bar.classList.remove('bare');
         assert(pe!=='none','.curBar.bare 에서 칩이 눌리지 않는다(뒤 화면이 대신 반응한다)'); }
-      return '던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 밑선 정렬 · 고르기≠이동 · 닫힘 확인';
+      // ⑩-2 🖱 **판 위에서 돌린 휠이 뒤 화면으로 새면 안 된다.**
+      //     캠프는 window 캡처 단계에서 휠을 받아 맵을 확대·축소한다(campPatchWheel).
+      //     드롭다운의 라운드 칸은 자기 스크롤을 갖는데, 가로채이면 목록 대신 **뒤 캠프가 확대됐다**
+      //     (2026-08-27 실측). 시트(#btSheet)와 같은 이유·같은 처리다.
+      //     ⚠ 여기서는 **행동으로 못 잰다** — 이 step 은 campIsOn/campState 를 스텁으로 바꿔
+      //       캠프가 실제로 안 켜져 있고, 그래서 휠 핸들러 자체가 걸려 있지 않다
+      //       (실측: 격리를 빼도 합성 휠 검사가 통과했다 — 헛도는 검사였다).
+      //       그래서 **핸들러가 그 구역을 빼는지**를 소스에서 확인한다.
+      { const src=(typeof campPatchWheel==='function')?campPatchWheel.toString():'';
+        skipIf(!src,'캠프 휠 패치 없음');
+        assert(src.indexOf('campDrop')>=0 || src.indexOf('curBar')>=0,
+          '캠프 휠 처리가 좌상단 판을 안 빼낸다 — 판 위에서 돌리면 뒤 화면이 확대·축소된다');
+        assert(src.indexOf('btSheet')>=0,'하단 시트 존중이 사라졌다(같은 규칙이다)'); }
+      // ⑩-3 🛠 **개발용 패배 끄기**(CAMP_DEV_NOFAIL) — 켜면 져도 고른 던전·라운드를 지킨다.
+      //     드롭다운으로 옮겨도 291ms 만에 캠프로 끌려오던 것을 이걸로 막았다(2026-08-27 · 임시).
+      //     ⚠ 원래 계획은 「병력이 없으면 이동을 막는다」다 — 그것이 들어오면 이 검사와 플래그를 함께 지운다.
+      { skipIf(typeof CAMP_DEV_NOFAIL==='undefined','개발 플래그 없음');
+        const had=CAMP_DEV_NOFAIL, C=campState();
+        const save={ dg:C.dg, cleared:C.cleared };
+        C.dg=4; C.cleared=7;
+        CAMP_DEV_NOFAIL=true;  campFail();
+        assert(C.dg===4 && C.cleared===7,
+          '개발 모드인데 졌다고 자리를 잃었다: dg '+C.dg+' cleared '+C.cleared);
+        CAMP_DEV_NOFAIL=false; campFail();
+        assert(C.dg===0 && C.cleared===0,
+          '개발 모드를 껐는데도 캠프로 안 돌아간다 — 진짜 규칙이 죽었다: dg '+C.dg);
+        CAMP_DEV_NOFAIL=had; C.dg=save.dg; C.cleared=save.cleared; }
+      // ⑪ 🏕 **캠프(0단계)로 돌아간다** — 던전과 같은 길로 오갈 수 있어야 한다(2026-08-27).
+      t.click(); await sleep(40);
+      d().querySelector('.cdRow[data-dg="0"]').click();
+      // 캠프에는 라운드가 없다 — 그 칸이 잠긴다
+      { const R=d().querySelector('.cdR');
+        assert(R.classList.contains('off'),'캠프를 골랐는데 라운드 칸이 살아 있다 — 캠프엔 라운드가 없다');
+        assert(getComputedStyle(R).pointerEvents==='none','라운드 칸이 잠겼는데 눌린다'); }
+      const skin0=skin;
+      d().querySelector('.cdGo').click(); await sleep(40);
+      assert(PROF().camp.dg===0,'캠프로 이동이 상태에 반영 안 됨: dg '+PROF().camp.dg);
+      assert(PROF().camp.cleared===0,'캠프로 갔는데 라운드가 남아 있다: cleared '+PROF().camp.cleared);
+      assert(skin>skin0,'캠프로 옮겼는데 바닥 그림을 안 갈았다');
+      assert((t.querySelector('.cdNm')||{}).textContent===CAMP_HOME_NAME,'칩이 캠프로 안 바뀜');
+      assert((t.querySelector('.cdLab')||{}).textContent==='단계','캠프인데 칩이 라운드를 보여준다');
+      // 다시 열면 **캠프가 지금 자리로 잡힌다**(0 을 1 로 올려 버리면 여기가 어긋난다)
+      t.click(); await sleep(40);
+      assert((d().querySelector('.cdRow.here')||{}).dataset.dg==='0',
+        '캠프에 있는데 드롭다운이 다른 칸을 가리킨다: '+((d().querySelector('.cdRow.here')||{}).dataset||{}).dg);
+      // 던전으로 되돌아가면 라운드 칸이 풀린다
+      d().querySelector('.cdRow[data-dg="2"]').click();
+      assert(!d().querySelector('.cdR').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
+      campDropClose();
+      return '캠프 0 + 던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 캠프 왕복 확인';
     } finally {
       campDropClose();
       window.campIsOn=on0; window.campState=st0; window.campSkin=sk0;
@@ -8540,6 +8632,7 @@ async function groupLobby(){
 
 // ── 그룹: game (솔로 무한) ──
 async function groupGame(){
+  campDevFailOff();
   await step('솔로 시작', async()=>{ skipIf(!USEMAPS.nemo_inf,'nemo_inf 맵 없음'); startSoloInfinite(); await sleep(400); G.loading=false;
     assert(G.phase==='playing','phase='+G.phase); return 'ok'; });
   await step('첫 진입 = 유닛뽑기 섹션', ()=>{ assert(G.mainSheet==='gacha','초기 섹션='+G.mainSheet);
@@ -10082,6 +10175,7 @@ async function groupGame(){
 
 // ── 그룹: sandbox (관리자) ──
 async function groupSandbox(){
+  campDevFailOff();
   await step('샌드박스 진입', async()=>{ skipIf(typeof enterSandbox!=='function','없음'); enterSandbox(); await sleep(300);
     assert(G.sandbox===true,'sandbox 플래그'); return 'units='+G.units.length; });
   await step('샌드박스 탭 구성(전투실험·건설 표시, 보스 숨김)', ()=>{ updatePbossFab();

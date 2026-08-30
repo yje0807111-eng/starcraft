@@ -1006,6 +1006,10 @@
   .cdRow.lock{color:#5c646f;cursor:default}
   .cdRow.lock .cdMul{color:#4d545e}
   /* 라운드 = 굴리는 피커. 큰 수가 위, 1 이 맨 아래(옛 사냥터 피커와 같은 방향) */
+  /* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
+  .cdR.off{opacity:.3;pointer-events:none}
+  /* 첫 칸(캠프)은 던전과 성격이 달라 살짝 갈라 둔다 — 아래로 1px 선 */
+  .cdRow.home{border-bottom:1px solid rgba(255,255,255,.09);padding-bottom:6px;margin-bottom:3px}
   .cdPickWrap{position:relative}
   /* 위아래를 흐려 준다 — 안 그러면 맨 위 칸이 반쯤 잘린 채 딱 끊겨 보인다 */
   .cdPick{height:104px;overflow-y:auto;scroll-snap-type:y mandatory;
@@ -1944,6 +1948,14 @@
   /* ⚠ will-change 를 켜 두면 브라우저가 **확대된 크기로 래스터**해 애니 내내 선명도가 같다.
      없으면 원본 크기로 래스터한 것을 늘려 그리다가 끝나는 순간 다시 그려서 **선명도가 확 바뀐다**
      — 그게 「마지막에 뚝 끊긴다」의 정체였다(2026-08-27 · 차이가 석판 이음매 선 전체에 깔렸다). */
+  /* ✂ 진입 확대(1.18배)가 **하단 네비 자리를 넘지 않게** 잘라 낸다(2026-08-27).
+     맵은 평소 네비 윗변에 정확히 맞닿아 있는데(실측 밑변 802 = 네비 윗변 802),
+     확대하면 841 까지 뻗어 **39px 을 넘는다**. 네비는 #phone 직속(z62)이라 맵(z60 안) 위에 있지만,
+     네비 배경은 위쪽이 투명한 그라데이션이라 그 아래로 맵이 그대로 비친다.
+     ⭐ #homeScreen 을 자르면 된다 — 네비는 그 밖(#phone 직속)이라 안 잘린다.
+       평소에는 맵이 네비 윗변에서 끝나므로 잘릴 것이 없다. 확대 중에만 넘치는 만큼 사라진다.
+     ⛔ 요소 자신에 clip-path 를 걸지 말 것 — transform 과 함께 스케일돼 같이 커진다(소용없다). */
+  #homeScreen.campInClip{clip-path:inset(0 0 var(--navH) 0)}
   #vBuild.campIn,#cvMarine.campIn{
     will-change:transform,opacity;backface-visibility:hidden;
     transform-origin:50% 72%;   /* 아래쪽 기준 = 본진을 향한 시선 */

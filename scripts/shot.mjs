@@ -49,7 +49,11 @@ const browser = await puppeteer.launch({ executablePath: CHROME, headless: HEADF
 try {
   const page = await browser.newPage();
   const isPage = WHAT.endsWith('.html');   // 임의의 페이지를 통째로 찍는 모드(시안 비교용)
-  await page.setViewport(isPage ? { width: 1640, height: 1030, deviceScaleFactor: 1 } : { width: 430, height: 880, deviceScaleFactor: +(process.env.SHOT_DPR||1) });
+  // 📱 SHOT_MOBILE=1 이면 **터치 기기로 흉내낸다** — 터치 스크롤·제스처는 이 모드라야 실제처럼 돈다.
+  const MOBILE = process.env.SHOT_MOBILE === '1';
+  await page.setViewport(isPage ? { width: 1640, height: 1030, deviceScaleFactor: 1 }
+    : { width: 430, height: 880, deviceScaleFactor: +(process.env.SHOT_DPR||1),
+        hasTouch: MOBILE, isMobile: MOBILE });
   await page.goto('http://127.0.0.1:' + PORT + '/' + (isPage ? WHAT : 'sc-ums-web.html'), { waitUntil: 'domcontentloaded' });
   if (isPage) { await new Promise(r => setTimeout(r, 1200)); await page.screenshot({ path: OUT, fullPage: true });
     console.log(WHAT + ' → ' + path.basename(OUT)); await browser.close(); server.close(); process.exit(0); }
@@ -278,6 +282,283 @@ try {
         }, 250);
       }));
       console.log('SLOW '+JSON.stringify(r));
+    }
+    else if (WHAT === 'droptouch') {   // 📱 드롭다운 위를 **손으로 밀면** 목록이 굴러가나(뒤 화면이 아니라)
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      // ⚠ 열면 campRndCenter 가 라운드 칸을 제자리로 굴린다 — **그것이 끝난 뒤**를 기준으로 삼아야
+      //    스와이프가 실제로 움직였는지 갈린다(안 그러면 초기 센터링 값과 겹쳐 판별이 안 된다).
+      await page.evaluate(() => { document.getElementById('curTitle').click(); });
+      await new Promise(r=>setTimeout(r,300));
+      // ⚠ **던전을 먼저 고른다.** 캠프(0단계)에 있으면 라운드 칸은 일부러 잠겨 있다
+      //    (pointer-events:none) — 그 상태로 재면 「터치가 안 먹는다」로 잘못 읽힌다.
+      await page.evaluate(() => { const d=document.getElementById('campDrop');
+        const r=d&&d.querySelector('.cdRow[data-dg="3"]'); if(r) r.click(); });
+      await new Promise(r=>setTimeout(r,300));
+      const b = await page.evaluate(() => {
+        const d=document.getElementById('campDrop'); if(!d) return null;
+        const p=d.querySelector('#cdPickBox'), l=d.querySelector('.cdList');
+        const pr=p.getBoundingClientRect(), lr=l.getBoundingClientRect();
+        return { zoom0:+G.tech.view.zoom.toFixed(4), vy0:+G.tech.view.y.toFixed(4),
+          pick:{x:Math.round(pr.left+pr.width/2), y:Math.round(pr.top+pr.height/2), top:Math.round(p.scrollTop)},
+          list:{x:Math.round(lr.left+lr.width/2), y:Math.round(lr.top+lr.height/2), top:Math.round(l.scrollTop)} }; });
+      if(!b){ console.log('DROPTOUCH {"no":"campDrop"}'); }
+      else {
+        const cdp2 = await page.createCDPSession();
+        const touch = async (type, x, y) => cdp2.send('Input.dispatchTouchEvent', {
+          type, touchPoints: type==='touchEnd' ? [] : [{ x, y, radiusX:8, radiusY:8, force:1, id:1 }] });
+        const swipe = async (x, y, dy) => { await touch('touchStart', x, y);
+          for(let i=1;i<=6;i++){ await touch('touchMove', x, y + Math.round(dy*i/6));
+            await new Promise(r=>setTimeout(r,22)); }
+          await touch('touchEnd', x, y+dy); await new Promise(r=>setTimeout(r,320)); };
+        // 스와이프 도중의 scrollTop 을 기록한다 — 움직였다 되돌아오는지(스냅) 가르려면 중간을 봐야 한다
+        await page.evaluate(() => { const p=document.querySelector('#cdPickBox');
+          window.__trace=[]; window.__t0=performance.now();
+          p.addEventListener('scroll', ()=>window.__trace.push(Math.round(p.scrollTop)), {passive:true});
+          const el=document.querySelector('#cdPickBox');
+          window.__ta=getComputedStyle(el).touchAction+' | '+getComputedStyle(el).overflowY
+            +' | snap='+getComputedStyle(el).scrollSnapType
+            +' | parentTA='+getComputedStyle(el.parentElement).touchAction
+            +' | curBarParent='+(document.getElementById('curBar').parentNode.id||'-');
+          // 터치 이벤트가 취소되는지
+          window.__pd=[];
+          for(const t of ['touchstart','touchmove']) document.addEventListener(t,
+            (e)=>{ if(window.__pd.length<8) window.__pd.push(t+(e.defaultPrevented?':PREVENTED':':ok')
+              +'@'+((e.target&&e.target.className)||'').toString().slice(0,18)); }, true); });
+        await swipe(b.pick.x, b.pick.y, +(process.env.SHOT_DY||110));   // 라운드 칸을 민다(+ = 아래로)
+        const diag = await page.evaluate((bb)=>{
+          const d=document.getElementById('campDrop');
+          const p=d.querySelector('#cdPickBox'), pr=p.getBoundingClientRect();
+          const at=(x,y)=>{ const e=document.elementFromPoint(x,y); let n=e,o=[];
+            while(n&&n!==document.body&&o.length<4){ o.push((n.id||n.className||'').toString().slice(0,20)); n=n.parentElement; }
+            return o.join('|'); };
+          return { ta:window.__ta, trace:window.__trace, pd:window.__pd,
+            pickRect:{l:Math.round(pr.left),t:Math.round(pr.top),w:Math.round(pr.width),h:Math.round(pr.height)},
+            scrollH:p.scrollHeight, clientH:p.clientHeight,
+            atCenter:at(bb.pick.x, bb.pick.y),
+            atTop:at(bb.pick.x, Math.round(pr.top+8)),
+            atBot:at(bb.pick.x, Math.round(pr.bottom-8)) }; }, b);
+        console.log('DIAG '+JSON.stringify(diag));
+        const mid = await page.evaluate((bb)=>{ const d=document.getElementById('campDrop');
+          const p=d&&d.querySelector('#cdPickBox');
+          return { pickTop:p?Math.round(p.scrollTop):'-', zoom:+G.tech.view.zoom.toFixed(4),
+            vy:+G.tech.view.y.toFixed(4), rnd:(d&&d.querySelector('.cdRn.on')||{}).textContent }; }, b);
+        await swipe(b.list.x, b.list.y, -90);    // 던전 목록도
+        const end = await page.evaluate(()=>{ const d=document.getElementById('campDrop');
+          const l=d&&d.querySelector('.cdList');
+          return { listTop:l?Math.round(l.scrollTop):'-', zoom:+G.tech.view.zoom.toFixed(4),
+            vy:+G.tech.view.y.toFixed(4), open:!!d }; });
+        console.log('DROPTOUCH '+JSON.stringify({ before:b, afterPick:mid, afterList:end }));
+      }
+    }
+    else if (WHAT === 'dropscroll') {   // 🔍 드롭다운 위에서 휠·터치가 뒤 화면으로 새나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      // ⭐ **진짜 마우스 휠**을 보낸다 — 합성 WheelEvent 는 브라우저가 스크롤로 처리하지 않는다.
+      const box = await page.evaluate(() => {
+        const t=document.getElementById('curTitle'); t.click();
+        const d=document.getElementById('campDrop'); if(!d) return null;
+        const p=d.querySelector('#cdPickBox'), l=d.querySelector('.cdList');
+        const pr=p.getBoundingClientRect(), lr=l.getBoundingClientRect();
+        return { zoom0:+G.tech.view.zoom.toFixed(4),
+          pick:{x:Math.round(pr.left+pr.width/2), y:Math.round(pr.top+pr.height/2), top:Math.round(p.scrollTop)},
+          list:{x:Math.round(lr.left+lr.width/2), y:Math.round(lr.top+lr.height/2), top:Math.round(l.scrollTop),
+                h:Math.round(lr.height), sh:l.scrollHeight} }; });
+      if(!box){ console.log('DROPSCROLL {"no":"campDrop"}'); }
+      else {
+        await page.mouse.move(box.pick.x, box.pick.y);
+        await page.mouse.wheel({ deltaY: 300 });
+        await new Promise(r=>setTimeout(r,260));
+        await page.mouse.move(box.list.x, box.list.y);
+        await page.mouse.wheel({ deltaY: 300 });
+        await new Promise(r=>setTimeout(r,260));
+        const r = await page.evaluate((b) => {
+          const d=document.getElementById('campDrop');
+          const p=d&&d.querySelector('#cdPickBox'), l=d&&d.querySelector('.cdList');
+          return { zoom0:b.zoom0, zoomNow:+G.tech.view.zoom.toFixed(4), zoomT:+techViewT().zoom.toFixed(4),
+            pickTop:{ was:b.pick.top, now:p?Math.round(p.scrollTop):'-' },
+            listTop:{ was:b.list.top, now:l?Math.round(l.scrollTop):'-', h:b.list.h, sh:b.list.sh },
+            rnd:(d&&d.querySelector('.cdRn.on')||{}).textContent }; }, box);
+        console.log('DROPSCROLL '+JSON.stringify(r));
+      }
+      const _skip = () => {};
+    }
+    else if (WHAT === 'dgdrop') {   // 🏕 던전 드롭다운을 열어 찍는다(0단계 포함)
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      // 던전 3 · 라운드 12 로 옮겨 보고, 잠시 뒤까지 그대로인지 본다
+      const move = await page.evaluate(() => new Promise(res=>{
+        const out={};
+        const t=document.getElementById('curTitle'); if(!t) return res({no:'curTitle'});
+        t.click();
+        const d=document.getElementById('campDrop'); if(!d) return res({no:'campDrop'});
+        const row=d.querySelector('.cdRow[data-dg="3"]'); if(!row) return res({no:'row3'});
+        row.click();
+        const rn=d.querySelector('.cdRn[data-r="12"]'); if(rn) rn.click();
+        // 🔍 dg 를 되돌리는 범인을 잡는다 — 값이 바뀌는 순간의 호출 스택을 기록
+        out.who=[];
+        try{ const C=campState(); let _dg=C.dg;
+          Object.defineProperty(C,'dg',{ configurable:true,
+            get(){ return _dg; },
+            set(v){ if(v!==_dg && out.who.length<6){
+                out.who.push({ from:_dg, to:v, at:Math.round(performance.now()),
+                  stack:(new Error().stack||String()).split(String.fromCharCode(10)).slice(1,5)
+                    .map(function(x){ x=x.trim(); if(x.slice(0,3)==='at ') x=x.slice(3); return x.split(' ')[0]; }).join(' < ') }); }
+              _dg=v; } });
+        }catch(e){ out.hookErr=String(e).slice(0,60); }
+        out.picked={ dg:(d.querySelector('.cdRow.here')||{}).dataset&&d.querySelector('.cdRow.here').dataset.dg,
+                     rnd:(d.querySelector('.cdRn.on')||{}).textContent };
+        d.querySelector('.cdGo').click();
+        const read=(tag)=>{ const C=campState()||{}; const c=document.getElementById('curTitle');
+          return { tag, dg:C.dg, cleared:C.cleared, rnd:C.rnd,
+            nm:(c.querySelector('.cdNm')||{}).textContent,
+            lab:(c.querySelector('.cdLab')||{}).textContent,
+            n:(c.querySelector('.cdN')||{}).textContent }; };
+        out.at0=read('직후');
+        setTimeout(()=>{ out.at300=read('300ms'); 
+          setTimeout(()=>{ out.at1500=read('1.5s'); res(out); }, 1200); }, 300);
+      }));
+      console.log('MOVE '+JSON.stringify(move,null,1));
+      const r = await page.evaluate(() => {
+        const t=document.getElementById('curTitle'); if(!t) return {no:'curTitle'};
+        t.click();
+        const d=document.getElementById('campDrop');
+        return { open:!!d, rows:d?[...d.querySelectorAll('.cdRow')].map(b=>b.dataset.dg+':'+
+          (b.querySelector('.cdRnm')||{}).textContent+':'+(b.querySelector('.cdMul')||{}).textContent):[],
+          here:(d&&d.querySelector('.cdRow.here')||{}).dataset }; });
+      await new Promise(r=>setTimeout(r,300));
+      const b = await page.screenshot({ clip:{x:0,y:0,width:430,height:520} });
+      fs.writeFileSync(path.join(ROOT,'scratch_dgdrop.png'), b);
+      console.log('DGDROP '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'camppan') {   // 🔍 캠프 하단이 시트에 얼마나 가려지나 · 확대하면 어디까지 내려가나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        // ⚠ openHome() 이 loadMeta() 로 저장분을 다시 읽는다 — race 는 **그 뒤에** 정해야 남는다.
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(()=>{ try{ campPickRace(); }catch(e){} setTimeout(res, 3000); }, 1400); }));
+      const r = await page.evaluate(() => {
+        const out={ race:(campState()||{}).race, hasTech:!!(typeof G!=='undefined'&&G.tech) };
+        if(!out.hasTech) return out;
+        const map=document.querySelector('#cstMain')||document.getElementById('vBuild');
+        const sh=document.getElementById('btSheet');
+        const mr=map?map.getBoundingClientRect():null, sr=sh?sh.getBoundingClientRect():null;
+        out.map=mr?{top:Math.round(mr.top),bot:Math.round(mr.bottom),h:Math.round(mr.height)}:null;
+        out.sheet=sr?{top:Math.round(sr.top),bot:Math.round(sr.bottom),h:Math.round(sr.height),
+          open:sh.classList.contains('open')}:null;
+        out.covered = (mr&&sr)? Math.max(0, Math.round(mr.bottom - sr.top)) : '-';
+        out.sheetFrac = (typeof techSheetFrac==='function')? +techSheetFrac().toFixed(3) : '-';
+        out.minZoom = (typeof techMinZoom==='function')? techMinZoom() : '-';
+        out.maxZoom = (typeof techMaxZoom==='function')? techMaxZoom() : '-';
+        // 줌별로 y 가 어디까지 갈 수 있나
+        const v=G.tech.view; const keep={x:v.x,y:v.y,zoom:v.zoom};
+        out.range=[];
+        for(const z of [1, 1.3, 2, 3, 3.1]){
+          v.zoom=z; v.y=99; _techClampView(v); const hi=+v.y.toFixed(3);
+          v.y=-99; _techClampView(v); const lo=+v.y.toFixed(3);
+          out.range.push({ z, lo, hi }); }
+        Object.assign(v, keep); _techClampView(v);
+        out.now={ x:+v.x.toFixed(3), y:+v.y.toFixed(3), zoom:+v.zoom.toFixed(3) };
+        // 미네랄·가스의 실제 월드 y · 격자 범위
+        const ms=(G.tech.minerals||[]);
+        out.mine = ms.length? { n:ms.length, minY:+Math.min(...ms.map(m=>m.y)).toFixed(3),
+          maxY:+Math.max(...ms.map(m=>m.y)).toFixed(3) } : null;
+        out.grid = { y0:+techY0().toFixed(3), y1:+techY1().toFixed(3), ch:+_techCH().toFixed(4),
+          rows:_techRows(), rowMine:campRow(CAMP_ROW_MINE) };
+        try{ out.gas = { r0:TECH_GAS.r0, y:+(techY0()+TECH_GAS.r0*_techCH()).toFixed(3), h:TECH_GAS.h }; }catch(e){}
+        // 각 줌에서 **가장 아래로 내렸을 때** 시트 윗변에 오는 월드 좌표
+        const sf2=(typeof techSheetFrac==='function')?techSheetFrac():0;
+        out.bottomSeen=[];
+        for(const z of [1.3, 2, 3, 3.1]){
+          v.zoom=z; v.y=99; _techClampView(v);
+          out.bottomSeen.push({ z, y:+v.y.toFixed(3),
+            wSheetTop:+(((1-sf2)-0.5)/z + v.y).toFixed(3),
+            wScreenBot:+((0.5)/z + v.y).toFixed(3) }); }
+        Object.assign(v, keep); _techClampView(v);
+        return out; });
+      console.log('CAMPPAN '+JSON.stringify(r,null,1));
+    }
+    else if (WHAT === 'navclip') {   // 🔍 진입 확대가 하단 네비 띠에 비치나 — 확대가 가장 클 때 찍는다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1400); }));
+      await page.evaluate(() => { try{ campPickRace(); }catch(e){} });
+      const at = +(process.env.SHOT_AT || 1250);
+      await new Promise(r=>setTimeout(r, at));
+      const info = await page.evaluate(() => { const vb=document.getElementById('vBuild');
+        const cs=vb?getComputedStyle(vb):null; const hs=document.getElementById('homeScreen');
+        return { scale: cs?(cs.transform+'').split(',')[0].replace('matrix(',''):'-',
+                 bot: vb?Math.round(vb.getBoundingClientRect().bottom):'-',
+                 clip: hs?getComputedStyle(hs).clipPath:'-' }; });
+      const tag = process.env.SHOT_TAG || 'now';
+      const b = await page.screenshot({ clip:{x:0,y:792,width:430,height:60} });
+      fs.writeFileSync(path.join(ROOT,'scratch_nav_'+tag+'.png'), b);
+      console.log('NAVCLIP '+JSON.stringify(info)+' → scratch_nav_'+tag+'.png');
+    }
+    else if (WHAT === 'zoomover') {   // 🔍 캠프 진입 확대가 하단 네비 구역을 넘어오나
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      await page.evaluate(() => new Promise(res=>{
+        try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
+        try{ openHome(); }catch(e){}
+        setTimeout(res, 1400); }));
+      const shots=[];
+      const grab=async(tag)=>{ const b=await page.screenshot({ clip:{x:0,y:790,width:430,height:90} });
+        fs.writeFileSync(path.join(ROOT,'scratch_nav_'+tag+'.png'), b); shots.push(tag); };
+      const r = await page.evaluate(() => new Promise(res=>{
+        const out={ rows:[] };
+        try{ campPickRace(); }catch(e){ out.err=String(e).slice(0,60); }
+        const t0=performance.now();
+        const snap=()=>{ const g=id=>{ const e=document.getElementById(id); if(!e) return null;
+            const r=e.getBoundingClientRect(); const cs=getComputedStyle(e);
+            return { top:Math.round(r.top), bot:Math.round(r.bottom), h:Math.round(r.height),
+                     anim:cs.animationName, tr:(cs.transform+'').split(',')[0].replace('matrix(','') }; };
+          const nb=document.querySelector('.navBar');
+          const nr=nb?nb.getBoundingClientRect():null;
+          const bp=document.querySelector('#btSheet,.bp');
+          const br=bp?bp.getBoundingClientRect():null;
+          out.rows.push({ ms:Math.round(performance.now()-t0), vb:g('vBuild'), mc:g('cvMarine'),
+            nav: nr?{top:Math.round(nr.top),bot:Math.round(nr.bottom),disp:getComputedStyle(nb).display}:null,
+            sheet: br?{top:Math.round(br.top)}:null,
+            winH: Math.round(innerHeight) }); };
+        // 층 구조 — 확대된 맵이 왜 네비 위로 오나
+        setTimeout(()=>{ const nb=document.querySelector('.navBar');
+          const vb=document.getElementById('vBuild');
+          out.layer={ navParent: nb?(nb.parentNode.id||nb.parentNode.className):'-',
+            navZ: nb?getComputedStyle(nb).zIndex:'-', navPos: nb?getComputedStyle(nb).position:'-',
+            vbParent: vb?(vb.parentNode.id||vb.parentNode.className):'-',
+            vbZ: vb?getComputedStyle(vb).zIndex:'-', vbPos: vb?getComputedStyle(vb).position:'-',
+            hsOverflow: getComputedStyle(document.getElementById('homeScreen')).overflow,
+            // 화면 맨 아래 근처에서 실제로 무엇이 보이나
+            atNav:(function(){ const el=document.elementFromPoint(Math.round(innerWidth*.5), 820);
+              let n=el,o=[]; while(n&&n!==document.body&&o.length<4){ o.push(n.id||n.className||''); n=n.parentElement; }
+              return o.join('|'); })() }; }, 1250);
+        const times=[100,400,800,1200,1700,2200,2800,3400];
+        let i=0; const next=()=>{ if(i>=times.length) return res(out);
+          const w=times[i++]-(performance.now()-t0);
+          setTimeout(()=>{ snap(); next(); }, Math.max(0,w)); };
+        next(); }));
+      await grab('done');
+      console.log('SHOTS '+shots.join(','));
+      console.log('ZOOMOVER-layer '+JSON.stringify(r.layer||{}));
+      console.log('ZOOMOVER rows='+(r.rows||[]).length);
     }
     else if (WHAT === 'predec') {   // 🔍 캠프 바닥 그림을 미리 디코드하면 실제로 빨라지나
       // ⚠ 브라우저를 새로 띄운 실행끼리만 비교해야 한다 — 같은 페이지에서 두 번 재면

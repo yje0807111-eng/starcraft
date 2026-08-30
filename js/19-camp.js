@@ -78,8 +78,18 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 // 졌다 → **캠프(0단계)로 돌아간다.** 몇 라운드를 깼든 그 판은 끝이다.
 //   ⭐ 1라운드도 못 깼으면 보너스 0 — 배율이 base 인 채로 끝난다(HUNT_R1 §6-1-0-3).
 //   ⚠ best 는 지우지 않는다. 다시 내려갈 때의 목표가 된다.
+// 🛠 **개발용 — 져도 캠프로 끌려오지 않는다**(2026-08-27 사용자 요청 · 임시).
+//   왜 필요했나: 좌상단 드롭다운으로 던전을 골라도 **291ms 만에 되돌아왔다**. 새 회차는 병력이 0 이라
+//   도착하자마자 패배 조건(병력 0 · 쓰러진 것 0 · 적 있음)에 걸린다 — 드롭다운은 멀쩡했다.
+//   ⚠ **원래 계획은 「병력이 없으면 이동을 막는다」**(사용자 확정). 그것이 들어오면 이 플래그와
+//     아래 분기를 **지운다** — 두 장치를 함께 두면 어느 쪽이 막는지 헷갈린다.
+//   ⛔ 배포 전에 반드시 false 로 돌리거나 지울 것.
+let CAMP_DEV_NOFAIL = true;
 function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared() };
+  // 개발 모드에서는 **아무것도 되돌리지 않는다** — 고른 던전·라운드 그대로 계속 볼 수 있다.
+  //   (메시지는 그대로 뜬다 — 졌다는 사실 자체는 알려야 한다.)
+  if(CAMP_DEV_NOFAIL) return was;
   C.dg = 0; C.cleared = 0; campSave(); return was; }
 
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
@@ -1837,6 +1847,7 @@ function campEnter(){
   campSyncSheet();                                     // 🗂 시트를 먼저 띄운다 — 맵 높이가 여기서 정해진다
   if(!had){ campLayBase(); campLayMinerals(); }        // 확정된 격자로 기지·광맥을 다시 잡는다
   campLayGas();                                        // ⛽ 가스는 광맥 자리를 보고 정한다 — 반드시 뒤
+  campCalcViewBot();                                   // ✂ 화면 아래 끝을 배치에서 잰다(반드시 광맥·가스 뒤)
   campZoom();                                          // 🔍 전체가 한눈에 들어오게
   campSkin();                                          // 🎨 바닥을 사냥터 던전 배경으로
   campStartFrame();                                    // ▶ 캠프 자기 루프(유즈맵 루프는 HOME 에서 멈춘다)
@@ -2023,6 +2034,12 @@ function _campMs(name, def){
 //   ⚠ 끝나면 클래스를 뺀다. 남겨 두면 나중에 transform 을 쓰는 코드와 부딪힌다.
 function campEnterAnim(){
   const els = [document.getElementById('vBuild'), document.getElementById('cvMarine')];
+  // ✂ 확대가 하단 네비 자리를 넘지 않게 — 애니메이션 동안만 화면을 잘라 둔다(css 「campInClip」)
+  const hs = document.getElementById('homeScreen');
+  if(hs){ hs.classList.add('campInClip');
+    clearTimeout(hs._campClipT);
+    hs._campClipT = setTimeout(function(){ hs.classList.remove('campInClip'); },
+      _campMs('--campInDur', 2.3) + 400); }
   const ms = _campMs('--campInDur', 2.3);
   for(const e of els){ if(!e) continue;
     clearTimeout(e._campInT);
@@ -2575,7 +2592,26 @@ const CAMP_COLS = 48;
 // 어떤 줌에서도 밖이 안 보인다. ⛔ 여기에 여유를 더하면(예전 CAMP_PAN_FREE) 그만큼 밖이 뚫린다.
 // ⚠ 맞바꿈: zoom 1(=하한)에서는 m=0 이라 **화면 이동이 안 된다.** 밖을 안 보이게 하는 것과
 //   하한에서 움직이는 것은 양립하지 않는다 — 이동하려면 확대해야 한다(RTS 표준 동작).
-const CAMP_MIN_ZOOM = 1;   // = 바닥이 화면을 딱 덮는 배율. 더 줄이면 맵 밖이 뚫린다(위 설명)
+// ⭐ **축소 하한 = 기본 배율(CAMP_ZOOM)** — 진입 애니가 끝나면 나오는 바로 그 크기다(2026-08-27 사용자 확정).
+//   1 까지 줄일 수 있으면 기본 화면보다 더 멀어져, 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
+//   1 은 바닥이 화면을 딱 덮는 배율이라 밖이 뚫리지는 않았지만, 그보다 더 좁게 묶는 것이라 안전하다.
+const CAMP_MIN_ZOOM = CAMP_ZOOM;
+// ✂ **화면이 내려갈 수 있는 아래 끝**(월드 y) — 미네랄·가스 덩어리 바로 아래에서 멈춘다.
+//   그 아래는 아무것도 없는 여백이라, 보이면 「빈 땅이 드러난 화면」이 된다.
+//   ⭐ 상수로 박지 않고 **실제 배치에서 잰다** — CAMP_ROW_MINE 이나 광맥 줄 수가 바뀌면 같이 따라간다.
+let _campViewBot = null;
+const CAMP_VIEW_PAD = 2;   // 덩어리 아래로 남기는 여유(격자 칸 수)
+function campCalcViewBot(){
+  _campViewBot = null;
+  if(typeof G === 'undefined' || !G.tech) return null;
+  const ch = _techCH(); let bot = 0;
+  for(const m of (G.tech.minerals || [])) if(m && m.y > bot) bot = m.y;
+  try{ if(typeof TECH_GAS !== 'undefined')
+    bot = Math.max(bot, techY0() + (TECH_GAS.r0 + (TECH_GAS.h || 1)) * ch); }catch(e){}
+  if(!bot) return null;
+  _campViewBot = bot + ch * CAMP_VIEW_PAD;
+  return _campViewBot;
+}
 let _campZoomPatched = null;
 let _campRectC = null;
 let _campPanMode = false;   // 🖐 화면 이동 모드가 켜져 있나(롱프레스로 켜고 탭으로 끈다)
@@ -2715,7 +2751,23 @@ function campPatchZoom(){
     // ⛔ 시트 몫으로 시점을 내리지 않는다 — **맵 뷰포트(#cstMain)가 이미 시트 위에서 끝난다**
     //   (campMountView 가 시트를 맵 밖으로 꺼내 그 순환을 풀었다). 여기서 또 내리면 두 벌이 된다.
     v.x = Math.max(0.5 - m, Math.min(0.5 + m, v.x));
-    v.y = Math.max(0.5 - m, Math.min(0.5 + m, v.y));
+    // ✂ **아래로 내려가는 한도만 기본 배율에 묶는다**(2026-08-27 사용자 확정).
+    //   하단 시트가 맵의 아래 21%(실측 162px)를 덮고 있다. 확대하면 세로 여지가 넓어져
+    //   그 시트 뒤 구역을 위로 끌어올려 볼 수 있었다 — 평소에는 볼 수 없는 자리라 어색하다.
+    //   여지를 **기본 배율(CAMP_ZOOM)의 값으로 고정**하면, 아무리 확대해도 처음 화면에서
+    //   보이던 것보다 아래는 드러나지 않는다.
+    //   ⚠ 위쪽(0.5-m)은 줌에 따라 그대로 넓어진다 — 확대해서 기지 위를 살피는 것은 정상 동작이다.
+    //   ⛔ **줌마다 같은 곳에서 멈춰야 한다.** 「기본 배율의 여지」로 상한을 고정해 봤더니
+    //      보이는 하단이 줌에 따라 달라졌다(실측: 축소 0.838 / 확대 0.709) — 축소하면 여백이 드러난다.
+    //      화면에서 시트에 가려지는 몫(sf)을 빼고 **월드 좌표에서** 맞춰야 어느 줌에서든 같은 자리다.
+    let yHi = 0.5 + m;
+    if(_campViewBot != null){
+      const sf = (typeof techSheetFrac === 'function') ? techSheetFrac() : 0;
+      // 시트 윗변(화면 1-sf 지점)이 닿는 월드 좌표 = _campViewBot 이 되는 v.y
+      yHi = Math.min(yHi, _campViewBot - (0.5 - sf) / v.zoom);
+    }
+    const yLo = 0.5 - m;
+    v.y = Math.max(yLo, Math.min(Math.max(yLo, yHi), v.y));
   };
 }
 // ── 🖱 휠 줌 — 전달 경로를 이중화한다 ─────────────────────────────────
@@ -2733,11 +2785,17 @@ function campPatchWheel(){
   if(_campWheel || typeof window === 'undefined') return;
   _campWheel = function(e){
     if(!_campOn || typeof techWheel !== 'function') return;
-    const sh = document.getElementById('btSheet');
     // ⚠ target 이 Element 일 때만 contains 를 쓴다 — Node 가 아닌 것(window 등)을 넘기면
     //   Node.contains 가 TypeError 를 던져 리스너가 통째로 죽는다.
     const tg = e.target;
-    if(sh && sh.classList.contains('open') && tg && tg.nodeType === 1 && sh.contains(tg)) return;   // 시트 스크롤 존중
+    const inside = (el) => !!(el && tg && tg.nodeType === 1 && el.contains(tg));
+    const sh = document.getElementById('btSheet');
+    if(sh && sh.classList.contains('open') && inside(sh)) return;   // 시트 스크롤 존중
+    // 🏕 **좌상단 재화 바 위(던전 드롭다운 포함)도 존중한다**(2026-08-27).
+    //   드롭다운의 라운드 칸은 자기 스크롤을 갖는데, 여기서 가로채면 그 위에서 휠을 돌릴 때
+    //   목록이 아니라 **뒤 캠프 화면이 확대·축소됐다**. 시트와 같은 이유·같은 처리다.
+    if(inside(document.getElementById('campDrop'))) return;
+    if(inside(document.getElementById('curBar'))) return;
     const r = _btRect(); if(!r || !r.width) return;
     if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     techWheel(e);
