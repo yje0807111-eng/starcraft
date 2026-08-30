@@ -1449,7 +1449,17 @@ function campCombatStep(dt){
   //   ⭐ 그래서 이동·복귀·부활만 굴린다. 적이 없으니 전투는 저절로 일어나지 않는다.
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
     campPostSnap();                                       // 🪧 되돌리기 전 위치(campPostStep 이 쓴다)
+    const _g4 = CAMPB.me.units.slice();                   // 🩹 걷히기 전 명부(아래 campCatchDown)
     campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
+    // ⛔ **여기에도 campCatchDown 이 있어야 한다** (2026-08-30 · 병력 누수의 원인).
+    //   strikeStepUnits 는 끝에서 죽은 유닛을 배열에서 **걷어낸다**(18-strike.js). 그걸 붙잡지
+    //   않으면 그 유닛은 _down 에도 안 들어가 **명부에서 통째로 사라진다** — 부활도 못 하고
+    //   campBattleClose 가 기지로 되돌리지도 못한다.
+    //   ⚠ 「숨 고르기엔 적이 없으니 안 죽는다」가 아니다 — 지속 피해(역병·방사능)와 붕괴
+    //     대기(_collapseT)가 이 구간에서도 계속 굴러간다.
+    //   ⭐ 실측(2026-08-30 브라우저): 숨 고르기 중 한 기를 죽였더니 명부가 4 → 3 이 됐고
+    //     라운드가 시작돼도 3 그대로였다. 벽 측정에서 병력이 88 → 85 로 줄던 것이 이것이다.
+    campCatchDown(_g4);
     campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
     campLeash();
     // ⛔ 여기서 부활시키지 않는다 — **부활은 라운드 단위**다(campRoundRevive · 2026-08-29).

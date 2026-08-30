@@ -1328,6 +1328,25 @@ async function groupLobby(){
       assert(campDown()===0,'라운드 부활에서 안 일어났다: '+campDown());
       assert(CAMPB.me.units.length===n0,'부활 뒤 인원이 다름: '+CAMPB.me.units.length+'/'+n0);
       for(const u of CAMPB.me.units) assert(!u.dead && u.hp===u.maxHp,'체력이 안 찼다: '+u.hp+'/'+u.maxHp);
+      // ②-2 ⛔ **숨 고르기 중에 죽어도 명부에서 사라지면 안 된다** (2026-08-30 · 병력 누수).
+      //     strikeStepUnits 가 죽은 유닛을 배열에서 걷어내므로 그 구간에도 campCatchDown 이
+      //     있어야 한다. 없으면 _down 에도 못 들어가 **부활도 복귀도 못 하고 증발**한다.
+      //     ⭐ 실측(브라우저)에서 명부가 4 → 3 으로 줄었고, 벽 측정의 「병력 88 → 85」가 이것이다.
+      { campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+        if(CAMPB){ campWipeField();
+          for(let i=0;i<4;i++) campDeploy('marine', 0.4+i*0.05, 0.5);
+          const roster=()=>CAMPB.me.units.length+campDown();
+          const n0=roster(); assert(n0===4,'전제가 바뀜: 배치가 4기가 아니다 — '+n0);
+          CAMPB._gapT=3; CAMPB._started=true;
+          if(CAMPB._wq) CAMPB._wq.length=0;
+          campWithStk(()=>{ STK.ai.units.length=0; });
+          CAMPB.me.units[0].dead=true;                 // 숨 고르기 **중** 사망
+          campCombatStep(0.05);                        // gap 분기를 탄다
+          assert(campDown()===1,'숨 고르기 중 죽은 유닛을 못 붙잡았다 — 증발한다');
+          assert(roster()===n0,'명부가 줄었다: '+roster()+'/'+n0);
+          for(let i=0;i<80;i++) campCombatStep(0.05);  // 숨 고르기 끝 → 라운드 부활
+          assert(roster()===n0,'라운드가 시작됐는데 명부가 줄어 있다: '+roster()+'/'+n0);
+          campWipeField(); } }
       // ③ ⭐ **전멸은 패배가 아니다**(2026-08-30 사용자 확정 · 옛 「전멸=패배」를 뒤집었다).
       //    적이 길목의 건물을 부수며 밀고 들어와 **본부가 무너져야** 진다.
       //    ⚠ 그래도 판이 안 멈추는 이유: 부활은 라운드 시작뿐이지만 적이 계속 나아간다.
