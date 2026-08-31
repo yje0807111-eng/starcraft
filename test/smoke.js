@@ -6503,6 +6503,33 @@ async function groupLobby(){
     } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });
   // 🏕 종족 전장 그림은 **예열에서 미리 받아야 한다.** 로딩이 걷힌 자리에 종족 판이 오는데,
   //    그림을 그때 처음 받으면 어두운 그라데이션만 보이다 뒤늦게 채워진다 = 검은 깜빡임.
+  // 🪞 캠프 자원 구역은 **좌우 대칭**이어야 한다(2026-08-27). 실측으로 한 칸(13px) 어긋나 있었다.
+  //    ⛔ 미네랄은 칸 중심에 **점으로** 앉으므로 시각 중심이 `c0+(COLS-1)/2` 다 — 가장자리 기준으로
+  //       놓으면 반드시 어긋난다. 여기서는 **화면 픽셀로** 잰다(계산을 다시 하지 않는다).
+  await step('캠프 자원: 미네랄을 가운데 두고 가스 둘이 좌우 대칭', async()=>{
+    skipIf(typeof campState!=='function' || typeof campLayGas!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      if(!C.race) C.race=CAMP_RACE_ORDER[0];
+      openHome(); await sleep(400);
+      const mid=e=>{ const r=e.getBoundingClientRect(); return r.x+r.width/2; };
+      const gz=[...document.querySelectorAll('#cstMain .bGasZone')];
+      const mn=[...document.querySelectorAll('#cstMain .bMineral')];
+      skipIf(gz.length<2 || !mn.length,'자원 구역이 아직 안 그려졌다');
+      assert(gz.length===2,'가스 구역이 둘이 아니다: '+gz.length);
+      const mL=Math.min(...mn.map(e=>e.getBoundingClientRect().x));
+      const mR=Math.max(...mn.map(e=>e.getBoundingClientRect().right));
+      const mc=(mL+mR)/2, c=gz.map(mid).sort((a,b)=>a-b);
+      const dL=mc-c[0], dR=c[1]-mc;
+      assert(dL>4 && dR>4,'가스가 미네랄에 붙었다: '+dL.toFixed(1)+' / '+dR.toFixed(1));
+      assert(Math.abs(dL-dR)<=1.5,'좌우가 대칭이 아니다: 왼 '+dL.toFixed(1)+'px · 오른 '+dR.toFixed(1)+'px');
+      // 둘은 **같은 부품**이어야 한다 — 오른쪽만 아이콘이 빠져 좌우가 달라 보였다
+      const html=gz.map(e=>e.innerHTML.replace(/\s+/g,''));
+      assert(html[0]===html[1],'두 가스 구역의 내용이 다르다 — 왼쪽 것을 복제해야 한다');
+      assert(gz.every(e=>!e.className.split(' ').includes('hot')),'평소인데 가스 구역이 강조(hot) 상태다');
+      return '좌우 '+dL.toFixed(1)+'px 대칭 · 내용 동일';
+    } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} } });
   await step('예열: 종족 전장 그림을 미리 받아 둔다(종족 판이 검게 뜨지 않게)', async()=>{
     skipIf(typeof warmAll!=='function' || typeof campRaceArt!=='function','예열·종족 그림 없음');
     skipIf(typeof CAMP_RACE_ORDER==='undefined','종족 목록 없음');

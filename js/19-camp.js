@@ -2177,6 +2177,13 @@ const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 function campRow(f){ return Math.max(0, Math.round(_techRows() * f)); }
 function campRowY(f){ return techY0() + campRow(f) * _techCH(); }
 function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); }
+// ⭐ 미네랄 덩어리는 **칸 중심에 점으로** 앉는다(transform: translate(-50%,-50%)).
+//   그래서 시각 중심은 `c0 + (COLS-1)/2` 이지 `c0 + COLS/2` 가 **아니다** — 반 칸 차이다.
+//   ⛔ 가스를 미네랄 「가장자리」 기준으로 놓으면 좌우가 한 칸 어긋난다 — 실측으로 그랬다
+//      (미네랄 중심에서 왼 51px / 오른 64px · 정확히 한 칸 13px).
+//      가스 구역은 **사각형**이라 중심이 `c0 + w/2` 다. 그 두 중심을 맞춘다.
+const CAMP_GAS_GAP = 4;   // 미네랄 시각 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
+function campMineMidCol(){ return campMineCol() + (CAMP_MINE_COLS - 1) / 2; }
 function campLayMinerals(){
   if(typeof G === 'undefined' || !G.tech) return;
   const cw = _techCW(), ch = _techCH();
@@ -2205,9 +2212,11 @@ let _campGasHome = null;
 function campLayGas(){
   if(typeof TECH_GAS === 'undefined') return;
   if(!_campGasHome) _campGasHome = { c0:TECH_GAS.c0, r0:TECH_GAS.r0 };
-  TECH_GAS.c0 = Math.max(0, campMineCol() - TECH_GAS.w - 1);   // 광맥 바로 왼쪽
+  // 🪞 좌우 대칭 — 미네랄 **시각 중심**에서 같은 거리에 놓는다(위 campMineMidCol 설명)
+  const mid = campMineMidCol(), half = TECH_GAS.w / 2;
+  TECH_GAS.c0  = Math.max(0, Math.round(mid - CAMP_GAS_GAP - half));                       // 왼쪽
+  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + CAMP_GAS_GAP - half)); // 오른쪽
   TECH_GAS.r0 = campRow(CAMP_ROW_MINE);                       // 광맥과 **같은 행**
-  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, campMineCol() + CAMP_MINE_COLS + 1);   // 광맥 바로 오른쪽
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -2307,12 +2316,17 @@ function campGas2Built(){
 function campDrawGas2(){
   const host = document.getElementById('cstMain'); if(!host || !_campOn) return;
   let el = document.getElementById('campGas2');
-  if(!el){ el = document.createElement('div'); el.id = 'campGas2';
-    el.innerHTML = '<span class="gzLbl">에너지 광산</span>';   // 왼쪽 구역과 같은 라벨
-    host.appendChild(el); }
-  // 왼쪽이 3D 로 그려지면(.d3) 오른쪽도 같은 클래스를 달아 겉모습을 맞춘다
+  if(!el){ el = document.createElement('div'); el.id = 'campGas2'; host.appendChild(el); }
+  // 🧩 **왼쪽 것을 그대로 복제한다**(CLAUDE.md 「재구현·복사 금지」).
+  //   손으로 라벨만 베껴 뒀더니 왼쪽에만 💨 아이콘이 있고 오른쪽엔 없어 좌우가 달라 보였다.
+  //   ⛔ 여기서 마크업을 다시 쓰지 말 것 — 왼쪽 렌더러가 바뀌면 오른쪽이 저절로 따라와야 한다.
   const left = document.querySelector('#cstMain .bmap .bGasZone');
-  el.className = left ? left.className.replace(/hot/, '').trim() : 'bGasZone';
+  // ⚠ 'hot'(배치 중 강조)만 뺀다. 예전엔 정규식으로 지웠는데 \b 가 **백스페이스 문자로**
+  //   박혀 있어(/\x08hot\x08/) 한 번도 안 맞았다 — 오른쪽이 왼쪽을 따라 같이 강조됐다.
+  el.className = left ? left.className.split(' ').filter(function(c){ return c && c !== 'hot'; }).join(' ')
+                      : 'bGasZone';
+  { const html = left ? left.innerHTML : '<span class="gzLbl">에너지 광산</span>';
+    if(el._campHtml !== html){ el._campHtml = html; el.innerHTML = html; } }
   if(campGas2Built()){ el.style.display = 'none'; el._campSig = null; return; }   // 서명을 비워 다시 나타날 때 갱신되게
   const cw = _techCW(), ch = _techCH();
   const tl = _techW2S(TECH_GRID.x0 + CAMP_GAS2.c0 * cw, techY0() + CAMP_GAS2.r0 * ch);
