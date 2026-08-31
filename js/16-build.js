@@ -1127,9 +1127,17 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   { const H=TECH_HILL, tl=_techW2S(H.x0,H.y0), br=_techW2S(H.x1,H.y1);
     hillZ='<div class="bHill" style="left:'+(tl.x*100).toFixed(2)+'%;top:'+(tl.y*100).toFixed(2)+'%;width:'+((br.x-tl.x)*100).toFixed(2)+'%;height:'+((br.y-tl.y)*100).toFixed(2)+'%"><span class="hillLbl">⛰ 고지</span></div>'; }
   let mineZ='';   // 💎 미네랄 덩어리(1×1) 6개 클러스터 — 채취=크레딧
-  { const _mcw=_techCW(), _mch=_techCH(); for(const m of (G.tech.minerals||[])){
-    const _mtl=_techW2S(m.x-0.6*_mcw, m.y-0.6*_mch), _mbr=_techW2S(m.x+0.6*_mcw, m.y+0.6*_mch);
-    mineZ+='<div class="bMineral'+(_res3d?' d3':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="mnIco">💎</span>')+'</div>'; } }   // 수치 텍스트 제거 → 클릭 시 프로필에서만 잔량 표시 · 선택 표시는 3D 하단 링
+  // 🏕 캠프는 **그림 스프라이트**로 그린다(2026-08-31). 3D 노드(res_cn)는 6칸이 전부 같은 모델·같은
+  //   각도(face:Math.PI)라 격자무늬로 보였다 — 칸마다 다른 그림을 쓰면 그 자리에서 풀린다.
+  //   ⛔ 관리자 건설 탭·오토배틀은 그대로 3D 다(mineSprite 가 캠프에서만 값을 준다).
+  { const _mcw=_techCW(), _mch=_techCH(); let _mi=0; for(const m of (G.tech.minerals||[])){
+    const _spr=(typeof campMineSprite==='function') ? campMineSprite(m, _mi) : '';
+    // ⚠ 스프라이트는 칸보다 크다 — 결정이 칸 밖으로 자라는 것이 자연스럽다. 아래(발치)를 칸에 맞춘다.
+    const _k=_spr?1.34:1.2, _dy=_spr?0.30:0;
+    const _mtl=_techW2S(m.x-_k/2*_mcw, m.y-(_k/2+_dy)*_mch), _mbr=_techW2S(m.x+_k/2*_mcw, m.y+(_k/2-_dy)*_mch);
+    mineZ+='<div class="bMineral'+(_res3d&&!_spr?' d3':'')+(_spr?' spr':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'
+      +(_spr ? '<img class="mnSpr" src="'+_spr+'" alt="">' : (_res3d?'':'<span class="mnIco">💎</span>'))+'</div>';
+    _mi++; } }   // 수치 텍스트 제거 → 클릭 시 프로필에서만 잔량 표시 · 선택 표시는 3D 하단 링
   let rallyZ='';   // 🚩 랠리 포인트 — 선택된 건물의 랠리 위치 깃발 + 건물→랠리 점선(지정 모드=강조)
   { const _rb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;
     if(_rb && _rb._rally){ const _bs=_techW2S(_rb.x,_rb.y), _rs=_techW2S(_rb._rally.x,_rb._rally.y), _hot=(G.tech.rallySet===_rb.eid);

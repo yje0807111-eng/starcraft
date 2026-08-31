@@ -1130,6 +1130,11 @@
   .bMineral .mnIco{font-size:16px;line-height:1;filter:drop-shadow(0 0 5px rgba(120,200,255,.6));animation:mnGlint 2.2s ease-in-out infinite}
   
   .bMineral.d3{border:none!important;background:none!important;box-shadow:none!important;justify-content:flex-end}   /* 3D 노드 표시 시 2D 사각 박스 숨김(수량 라벨만) */
+  /* 🏕 캠프 광맥 = 그림 스프라이트. 판·테두리를 걷고 그림만 남긴다(칸보다 크게 자라도 된다). */
+  .bMineral.spr{border:none!important;background:none!important;box-shadow:none!important;
+    display:flex;align-items:flex-end;justify-content:center;overflow:visible}
+  .bMineral.spr .mnSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
+    display:block;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
   .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
   .bGasZone.d3 .gzLbl{display:none}
   @keyframes mnGlint{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}

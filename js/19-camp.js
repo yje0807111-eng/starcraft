@@ -2177,6 +2177,18 @@ const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 function campRow(f){ return Math.max(0, Math.round(_techRows() * f)); }
 function campRowY(f){ return techY0() + campRow(f) * _techCH(); }
 function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); }
+// ── 💎 광맥 그림 ─────────────────────────────────────────────────────────
+// 여섯 칸에 **서로 다른 그림**을 쓴다. 3D 노드는 6칸이 같은 모델·같은 각도라 격자무늬로 보였다.
+// ⭐ 뒤(윗줄)가 크고 앞(아랫줄)이 작다 — 그래야 한 광맥으로 읽히고 깊이가 생긴다.
+//   `CAMP_MINE_COLS = 3` 이므로 인덱스 0~2 가 윗줄, 3~5 가 아랫줄이다(campLayMinerals 의 배치 순서).
+// ⚠ 그림은 고갈 6단계로 뽑아 뒀지만 **캠프 광맥은 마르지 않는다**(inf) — 지금은 「크기 변주」로만 쓴다.
+//   고갈을 실제로 넣게 되면 campMineStage() 가 잔량으로 단계를 고르게 바꾸면 된다.
+const CAMP_MINE_SPRITE = ['1','3','2','4','6','5'];   // 뒷줄 큰 것 · 앞줄 작은 것(좌우도 안 겹치게 섞음)
+function campMineSprite(m, i){
+  if(!_campOn) return '';                                   // ⛔ 관리자 탭·오토배틀은 3D 그대로
+  const k = CAMP_MINE_SPRITE[i % CAMP_MINE_SPRITE.length];
+  return 'assets/props/mineral/stage' + k + '.webp';
+}
 // ⭐ 미네랄 덩어리는 **칸 중심에 점으로** 앉는다(transform: translate(-50%,-50%)).
 //   그래서 시각 중심은 `c0 + (COLS-1)/2` 이지 `c0 + COLS/2` 가 **아니다** — 반 칸 차이다.
 //   ⛔ 가스를 미네랄 「가장자리」 기준으로 놓으면 좌우가 한 칸 어긋난다 — 실측으로 그랬다

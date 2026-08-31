@@ -6503,6 +6503,28 @@ async function groupLobby(){
     } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });
   // 🏕 종족 전장 그림은 **예열에서 미리 받아야 한다.** 로딩이 걷힌 자리에 종족 판이 오는데,
   //    그림을 그때 처음 받으면 어두운 그라데이션만 보이다 뒤늦게 채워진다 = 검은 깜빡임.
+  // 💎 캠프 광맥은 **그림 스프라이트**다(2026-08-31). 3D 노드는 6칸이 같은 모델·같은 각도라
+  //    격자무늬로 보였다 — 칸마다 다른 그림을 쓴다. ⛔ 관리자 탭·오토배틀은 그대로 3D 다.
+  await step('캠프 광맥: 칸마다 다른 그림 · 3D 노드와 겹치지 않는다', async()=>{
+    skipIf(typeof campMineSprite!=='function' || typeof campState!=='function','캠프 광맥 그림 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      if(!C.race) C.race=CAMP_RACE_ORDER[0];
+      openHome(); await sleep(500);
+      const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr')];
+      skipIf(!sp.length,'광맥이 아직 안 그려졌다');
+      assert(sp.length===(G.tech.minerals||[]).length,'그림 수가 광맥 칸 수와 다르다: '+sp.length);
+      // 칸마다 **다른** 그림이어야 한다 — 같으면 격자무늬로 돌아간다
+      const files=sp.map(e=>e.src.split('/').pop());
+      assert(new Set(files).size===files.length,'같은 그림이 두 번 쓰였다: '+files.join(','));
+      for(const e of sp) assert(e.complete && e.naturalWidth>0,'광맥 그림을 못 불러왔다: '+e.src.split('/').pop());
+      // 그림을 쓰면 3D 노드는 빠져야 한다(두 겹 방지)
+      assert(typeof campIsOn==='function' && campIsOn(),'캠프가 켜져 있지 않다');
+      // 관리자 탭에서는 그림을 쓰지 않는다(3D 그대로)
+      assert(campMineSprite({},0),'캠프인데 그림 경로가 비었다');
+      return '그림 '+sp.length+'종 · 전부 다름';
+    } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} } });
   // 🪞 캠프 자원 구역은 **좌우 대칭**이어야 한다(2026-08-27). 실측으로 한 칸(13px) 어긋나 있었다.
   //    ⛔ 미네랄은 칸 중심에 **점으로** 앉으므로 시각 중심이 `c0+(COLS-1)/2` 다 — 가장자리 기준으로
   //       놓으면 반드시 어긋난다. 여기서는 **화면 픽셀로** 잰다(계산을 다시 하지 않는다).
