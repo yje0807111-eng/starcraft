@@ -1224,7 +1224,13 @@
   .shopRow .twRowInfo{flex:1 1 auto;min-width:0}
   .shopRow .twBtn{flex:0 0 auto}
   /* 젬 팩 — 3열 */
-  .shopGems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  /* 💎 충전 칸 — 관례대로 5단계다(2026-08-31). 3열이면 마지막 줄에 둘만 남아 어색하므로
+     **자동 채움**으로 바꾼다. 좁은 화면에서도 최소 폭(88px)을 지키며 줄을 나눈다. */
+  .shopGems{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+  /* 보너스 뱃지 — 「크게 사면 이득」을 숫자로 보여 준다(관례). 액센트는 금색 하나만. */
+  .shopGem em .shopBn{font-style:normal;font-family:var(--font-num);font-size:9px;font-weight:800;
+    line-height:1;padding:2px 4px;margin-left:2px;border-radius:var(--r-bar,3px);
+    color:#141414;background:var(--gold,#ffd24a)}
   .shopGem{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 6px;
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .shopGem em{display:flex;align-items:center;gap:4px;font-style:normal;font-family:var(--font-num);

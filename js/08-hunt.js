@@ -2891,7 +2891,16 @@ const SHOP_DEAL_POOL=[
   {id:'mega',  tag:'특급 꾸러미', art:'📦', gem:90,  give:{pcoin:6000, gas:400, ticket_gear:3}},
 ];
 // 💎 젬 = 현질 재화(실제 결제로만 얻는다). 특가는 이 젬으로 산다.
-const SHOP_GEM_PACKS=[ {n:60,won:'₩1,500'}, {n:220,won:'₩5,500'}, {n:800,won:'₩19,000'} ];
+// 💎 젬 충전 — **모바일 관례 5단계**(2026-08-31). 앞의 3단계는 크게 사도 5% 밖에 안 싸서
+//   「많이 사면 이득」이 안 읽혔다. 관례는 최소↔최대 사이에 **30~40% 차이**를 둔다.
+//   가격대도 앱마켓 표준(₩1,100 / 5,500 / 11,000 / 22,000 / 55,000)으로 맞췄다.
+const SHOP_GEM_PACKS=[
+  {n:50,   won:'₩1,100'},                 // 젬당 22.0원 — 기준
+  {n:280,  won:'₩5,500',  bonus:'+12%'},  // 19.6원
+  {n:600,  won:'₩11,000', bonus:'+20%'},  // 18.3원
+  {n:1300, won:'₩22,000', bonus:'+30%'},  // 16.9원
+  {n:3500, won:'₩55,000', bonus:'+40%'},  // 15.7원
+];
 // 지급 내용 라벨 — 아이콘은 resIco()가 이름으로 자동 매칭(임의 이모지 금지)
 const SHOP_GIVE_LABEL={ pcoin:'미네랄', gas:'가스', gem:'젬',
   ticket_gear:'장비 뽑기권', ticket_pet:'펫 뽑기권', ticket_ally:'동료 뽑기권' };
@@ -2960,7 +2969,8 @@ function _shopGemHTML(){ let h='';
   h+='<div class="shopNote">젬은 <b>현금 결제</b>로만 얻습니다 · 특가 구매에 사용</div>';
   h+='<div class="shopGems">';
   for(const g of SHOP_GEM_PACKS)
-    h+='<div class="shopGem"><em>'+resIco('gem','gi')+' '+g.n+'</em>'
+    h+='<div class="shopGem"><em>'+resIco('gem','gi')+' '+g.n
+      +(g.bonus?('<i class="shopBn">'+g.bonus+'</i>'):'')+'</em>'
       +'<button class="shopBuy" onclick="shopGemSoon()">'+g.won+'</button></div>';
   h+='</div></div></div>';
   return h; }
@@ -2982,14 +2992,41 @@ function _shopSoonHTML(t){ return '<div class="shopPanel"><div class="shopHead">
 //   회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 아무 의미가 없어진다.
 //   양은 campTimeAmt(초, 종류) 가 **실측 속도에서 계산하고 유효숫자 두 자리로 반올림**한다.
 // ⚠ 캠프에 5초 이상 머문 적이 없으면 속도가 0 이라 팔지 않는다 — 화면이 그 이유를 말한다.
+// 🔬 **젬 값과 한도는 실측으로 정했다** (2026-08-31 · 40분 벤치 · GIFT_S 옵션)
+//   | 20분 시점에 준 것 | 그때 부의 | 40분 최종 | 라운드 |
+//   |---|---|---|---|
+//   | 없음(대조군) | — | 70.9만 | D1R19 |
+//   | 8시간치 | **23.8배** | 1,450만 | D1R25 (환생 가능) |
+//   | 24시간치 | **71.4배** | 4,263만 | D1R35 (환생 가능) |
+//   ⛔ **어떤 시간치든 「논 시간」보다 길면 게임을 통째로 건너뛴다.** 8시간치조차 그랬다.
+//   ⇒ 안전장치 둘을 건다:
+//     ① **플레이 상한** — 이 회차에 논 시간(campPlayS)보다 긴 시간치는 **못 산다**
+//     ② **하루 한도** — 상한을 넘겼어도 반복 구매로는 못 부순다(모바일 관례이기도 하다)
 const SHOP_GEM_BUY=[
-  {id:'min30', nm:'미네랄', kind:'min', secs:1800,  gem:15},
-  {id:'min4h', nm:'미네랄', kind:'min', secs:14400, gem:60},
-  {id:'min24', nm:'미네랄', kind:'min', secs:86400, gem:220},
-  {id:'gas4h', nm:'가스',   kind:'gas', secs:14400, gem:25},
-  {id:'gas24', nm:'가스',   kind:'gas', secs:86400, gem:90},
+  {id:'min30', nm:'미네랄', kind:'min', secs:1800,  gem:20,  cap:3},
+  {id:'min4h', nm:'미네랄', kind:'min', secs:14400, gem:60,  cap:2},
+  {id:'min24', nm:'미네랄', kind:'min', secs:86400, gem:180, cap:1},
+  {id:'gas4h', nm:'가스',   kind:'gas', secs:14400, gem:30,  cap:2},
+  {id:'gas24', nm:'가스',   kind:'gas', secs:86400, gem:90,  cap:1},
   {id:'boost', nm:'부스터', soon:true, desc:'시간제 강화 — 시스템이 아직 없습니다'},
 ];
+// 하루 한도 — 날짜가 바뀌면 스스로 비워진다(shopState 와 같은 날짜 키를 쓴다)
+function shopDayBuys(){ const p=PROF(); const dk=(typeof _dgDayKey==='function')?_dgDayKey():0;
+  if(!p.shopBuy || p.shopBuy.day!==dk) p.shopBuy={day:dk, n:{}};
+  return p.shopBuy.n; }
+function shopLeft(d){ if(!d.cap) return 99; return Math.max(0, d.cap - (shopDayBuys()[d.id]|0)); }
+// 아직 못 사는 이유 — 있으면 그 문장을 돌려준다(없으면 '')
+function shopWhyLock(d){
+  if(d.soon) return d.desc||'준비 중';
+  const play=(typeof campPlayS==='function')?campPlayS():0;
+  if(play < d.secs){
+    // ⚠ 남은 시간을 늘 「시간」으로 올리면 **30분치인데 「1시간 더」**가 되어 앞뒤가 안 맞는다.
+    const rem=d.secs-play;
+    const need = rem>=3600 ? (Math.ceil(rem/3600)+'시간') : (Math.max(1,Math.ceil(rem/60))+'분');
+    return need+' 더 플레이하면 열립니다'; }
+  if(shopLeft(d)<=0) return '오늘 한도를 다 썼습니다';
+  if(!(shopGemAmt(d)>0)) return '수입을 아직 못 쟀습니다';
+  return ''; }
 // 「30분치」 · 「24시간치」 — 사람이 읽는 이름
 // ⚠ 24시간을 「1일치」로 줄이지 않는다(사용자 표현이 「24시간치」다) — 30분·4시간과
 //   **같은 단위**로 읽혀야 셋이 한 줄에서 비교된다.
@@ -3006,11 +3043,13 @@ function shopAmtTx(n){
   return t.split('.0만').join('만').split('.0억').join('억'); }
 function shopBuyGemRes(id){
   const d=SHOP_GEM_BUY.find(x=>x.id===id); if(!d||d.soon) return;
+  const why=shopWhyLock(d); if(why){ showTownToast(why); return; }
   const amt=shopGemAmt(d);
-  if(!(amt>0)){ showTownToast('캠프에서 잠시 벌어야 수입이 잡힙니다'); return; }
   if(profGem()<d.gem){ showTownToast('💎 젬이 부족합니다'); return; }
   const p=PROF(); p.gem=(p.gem||0)-d.gem;
+  shopDayBuys()[d.id]=(shopDayBuys()[d.id]|0)+1;   // 하루 한도 차감
   campAddRes(d.kind==='gas'?0:amt, d.kind==='gas'?amt:0);
+  if(typeof saveMeta==='function') saveMeta();
   if(typeof playSfx==='function') playSfx('hero_merge');
   renderShop(); showTownToast('💠 '+d.nm+' '+shopAmtTx(amt)+' 지급'); }
 function shopBuyPack(id){
@@ -3039,15 +3078,15 @@ function _shopGemShopHTML(){
   let h=_shopGemHTML();   // 충전 줄은 기존 것을 그대로 쓴다(단일 소스)
   h+='<div class="shopPanel"><div class="shopHead">젬으로 구매<em>캠프 재화</em></div><div class="shopBody">';
   h+='<div class="shopNote">구매한 재화는 <b>캠프 지갑</b>으로 들어갑니다</div>';
-  // ⚠ 속도가 0 이면(캠프에 머문 적이 없다) 팔 수 없다 — **왜인지**를 한 줄로 말한다.
-  const noRate=(typeof campRateOf==='function') && !(campRateOf('min')>0);
-  if(noRate) h+='<div class="shopNote">캠프에서 잠시 벌면 <b>지금 수입</b>이 잡히고 값이 나옵니다</div>';
+  // ⚠ 못 사는 칸은 **왜인지**를 그 자리에 적는다(잠긴 채 이유가 없으면 버그처럼 보인다).
   for(const d of SHOP_GEM_BUY){
-    const amt=shopGemAmt(d);
-    const can=!d.soon && amt>0 && profGem()>=d.gem;
+    const why=shopWhyLock(d), amt=shopGemAmt(d);
+    const can=!why && profGem()>=d.gem;
     const nm=d.soon? d.nm : (d.nm+' '+shopSpanName(d.secs));
-    const sub=d.soon? d.desc
-      : (amt>0 ? ('약 '+shopAmtTx(amt)+' — 지금 수입 기준') : '수입을 아직 못 쟀습니다');
+    const left=(!d.soon && d.cap) ? shopLeft(d) : -1;
+    const sub=why ? why
+      : ('약 '+shopAmtTx(amt)+' — 지금 수입 기준'
+         + (left>=0 ? (' · 오늘 '+left+'/'+d.cap) : ''));
     h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+nm+'</div>'
       +'<div class="twRowSub'+(can?'':' lock')+'">'+sub+'</div></div>'
       +'<button class="twBtn" onclick="shopBuyGemRes(&#39;'+d.id+'&#39;)"'+(can?'':' disabled')+'>'

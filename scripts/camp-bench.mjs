@@ -30,6 +30,11 @@ const WALL_WARN=600, WALL_STOP=1800;
 //   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
 //   ⚠ 벙커 건설 자체는 원래부터 한다(__CB.want 가 모든 생산 건물을 연다) — 다른 것은 탑승뿐이다.
 const BUNK=(process.env.BUNK==null) ? 1 : (+process.env.BUNK ? 1 : 0);
+// 💠 선물 실험(2026-08-31 · sc-3) — 상점의 「n 시간치」가 **실제로 몇 분을 앞당기는가**.
+//   GIFT_AT=분 시점에 GIFT_S 초치(= 그때까지의 평균 수입 속도 × GIFT_S)를 한 번 준다.
+//   ⭐ 대조군(GIFT_S 없음)과 「같은 부에 도달한 시각」을 견주면 그것이 상품의 진짜 가치다.
+//   ⚠ 지수 성장이라 「24시간치 자원」이 24시간을 앞당기지 않는다 — 그 어긋남을 재려는 것이다.
+const GIFT_S=+(process.env.GIFT_S||0), GIFT_AT=+(process.env.GIFT_AT||10);
 // 🧭 배치 모드(2026-08-30) — RALLY=none|wide|bunker · RALLYW=가로 폭(전장 비율)
 const RALLY=process.env.RALLY||"none";
 const RALLYW=+(process.env.RALLYW||0.40);
@@ -556,7 +561,7 @@ await pg.evaluate(()=>{
 
 // ⚠ 한 번에 미는 시뮬 초. 짧을수록 evaluate 하나가 가벼워 타임아웃에 안전하다
 //   (병력 100기대에서 30초는 무거웠다 — 10초로 줄였다. 총 실행 시간은 거의 같다).
-const CH=10; let ran=0;
+const CH=10; let ran=0; let giftDone=false, giftInfo=null;
 process.stdout.write(`⏱  캠프 시뮬 ${MINS}분 · 던전 ${DG0} 시작\n`);
 while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
@@ -565,6 +570,19 @@ while(ran<MINS*60){
       cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2),
       wall:__CB.wall||null }; }, CH);
   ran=st.t;
+  // 💠 선물 — GIFT_AT 분을 지나는 첫 순간 한 번만
+  if(GIFT_S>0 && !giftDone && st.t>=GIFT_AT*60){
+    giftDone=true;
+    const g=await pg.evaluate(secs=>{
+      const rate=(campWealth()||0)/Math.max(1,__CB.t);   // 지금까지의 평균 수입 속도(초당)
+      const amt=Math.floor(rate*secs);
+      if(amt>0 && G.tech) G.tech.credit=(G.tech.credit||0)+amt;
+      return { rate:Math.round(rate), amt, wealth:Math.round(campWealth()) }; }, GIFT_S);
+    giftInfo=g;
+    console.log('');
+    console.log('💠 선물 '+(GIFT_S/3600).toFixed(1)+'시간치 = '+g.amt
+      +' (그때 속도 '+g.rate+'/s · 그때 부 '+g.wealth+' · 부의 '+(g.amt/Math.max(1,g.wealth)).toFixed(1)+'배)');
+  }
   if(st.rebDone){ process.stdout.write('\n🔁 환생 후 재도달 완료 — 조기 종료\n'); break; }
   if(st.wall){ process.stdout.write('\n🧱 벽 — D'+st.wall.dg+'R'+st.wall.r+' 를 '+Math.round(st.wall.sec/60)+'분째 못 깸 · 종료\n'); break; }
   process.stdout.write(`\r   ${(st.t/60).toFixed(1)}분 · D${st.dg}R${st.round} · 번돈 ${st.earn} · 보유 ${st.cr} · 적 ${st.foe} 아군 ${st.me}(대기 ${st.army}) · 깬라운드 ${st.rounds}   `);

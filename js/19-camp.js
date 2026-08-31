@@ -209,17 +209,20 @@ function campCanRebirth(){ return campWealth() >= CAMP_REB_COST; }
 //
 // ⚠ 값은 **초안이다** — 회수 시간·손익분기를 아직 안 쟀다(BALANCE.md §4 방식으로 잴 것).
 //   이 프로젝트에서 해석적 추정은 여러 번 크게 빗나갔다.
+// 💳 가격은 **젬 팩과 같은 가격대**로 맞췄다(2026-08-31) — 앱마켓 표준 구간이라
+//   「이 팩이 젬 얼마어치인가」가 한눈에 견줘진다. 딸려 오는 젬도 그 구간의 젬 수와 같다.
+//   ⭐ 스타터만 일부러 **가장 싸고 이득이 크다** — 첫 결제 문턱을 낮추는 것이 관례다.
 const CAMP_PACKS = [
-  { id:'ads',     nm:'광고 제거',   won:'₩4,900',  soon:true,
+  { id:'ads',     nm:'광고 제거',   won:'₩5,500',  soon:true,
     desc:'광고 시스템이 아직 없습니다' },
-  { id:'starter', nm:'스타터 팩',   won:'₩1,500',  gem:60,   gather:0.5,
-    desc:'재화 획득 +50%' },
-  { id:'epic',    nm:'에픽 팩',     won:'₩5,500',  gem:220,  gather:1.5,
-    desc:'재화 획득 +150%' },
-  { id:'unique',  nm:'유니크 팩',   won:'₩19,000', gem:800,  gather:3.0,
-    desc:'재화 획득 +300%' },
-  { id:'reb',     nm:'환생 팩',     won:'₩9,900',  gem:400,  rebMul:1.5, rebPt:1.5,
-    desc:'환생 배수·포인트 획득 ×1.5' },
+  { id:'starter', nm:'스타터 팩',   won:'₩1,100',  gem:50,   gather:0.5,
+    desc:'재화 획득 +50% · 젬 50' },
+  { id:'epic',    nm:'에픽 팩',     won:'₩11,000', gem:600,  gather:1.5,
+    desc:'재화 획득 +150% · 젬 600' },
+  { id:'unique',  nm:'유니크 팩',   won:'₩33,000', gem:2000, gather:3.0,
+    desc:'재화 획득 +300% · 젬 2,000' },
+  { id:'reb',     nm:'환생 팩',     won:'₩22,000', gem:1300, rebMul:1.5, rebPt:1.5,
+    desc:'환생 배수·포인트 ×1.5 · 젬 1,300' },
 ];
 // 산 팩은 **프로필**에 남는다 — 환생해도 되감기지 않아야 한다(campRebirth 는 C 만 되감는다).
 function campPacks(){ const p = (typeof PROF === 'function') ? PROF() : null;
@@ -249,11 +252,29 @@ function campAddRes(min, gas){
                 && typeof G !== 'undefined' && G.tech);
   if(live){ if(min) G.tech.credit = (G.tech.credit || 0) + min;
             if(gas) G.tech.energy = (G.tech.energy || 0) + gas; }
-  else    { if(min) C.credit = (C.credit || 0) + min;
-            if(gas) C.energy = (C.energy || 0) + gas; }
+  else {
+    // ⛔ **C.credit 에 직접 넣지 않는다.** 캠프가 켜질 때 저장분이 없으면 새 판으로 시작하며
+    //   credit 을 0 으로 덮는다 — 실측(2026-08-31): 상점에서 3,400만을 샀는데 캠프로
+    //   돌아오니 G.tech.credit 이 0 이었다. **산 돈이 사라진다.**
+    // ⇒ 보류함에 담아 두고 캠프가 실제로 켜진 뒤에 넣는다(campFlushPend).
+    C.pend = C.pend || { m:0, g:0 };
+    C.pend.m = (C.pend.m || 0) + (min || 0);
+    C.pend.g = (C.pend.g || 0) + (gas || 0);
+  }
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof updateCurBar === 'function') updateCurBar();
   return true; }
+// 캠프가 켜진 **뒤에** 보류함을 비운다 — 새 판이든 복원이든 그 뒤라야 안 덮인다.
+function campFlushPend(){
+  const C = campState(); if(!C || !C.pend) return 0;
+  const m = C.pend.m || 0, g = C.pend.g || 0;
+  C.pend = null;
+  if(typeof G !== 'undefined' && G.tech){
+    if(m) G.tech.credit = (G.tech.credit || 0) + m;
+    if(g) G.tech.energy = (G.tech.energy || 0) + g; }
+  if(m > 0 && typeof toast === 'function') toast('💠 상점에서 산 재화가 들어왔습니다');
+  if(typeof saveMeta === 'function') saveMeta();
+  return m; }
 
 // ① 획득 배수 — 기존 배수에 **더한다**(곱이 아니다). 로그라 난이도가 1만 배 올라도 +3.2 만 붙는다.
 function campRebMulGain(){
@@ -281,7 +302,7 @@ function campRebirth(){
   C.built = {}; C.addon = {}; C.units = {}; C.research = {};
   C.sup = 0; C.supCap = 0; C.eseq = 1; C.ents = []; C.minerals = [];
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
-  C.rate = 0; C.leftAt = 0; C.tapped = 0;
+  C.rate = 0; C.rateGas = 0; C.leftAt = 0; C.tapped = 0; C.playS = 0;
   // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree 는 지우지 않는다 — 그게 환생의 값이다
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
@@ -2349,6 +2370,7 @@ function campEnter(){
   if(!had){ campLayBase(); campLayMinerals(); }        // 확정된 격자로 기지·광맥을 다시 잡는다
   campLayGas();                                        // ⛽ 가스는 광맥 자리를 보고 정한다 — 반드시 뒤
   campCalcViewBot();                                   // ✂ 화면 아래 끝을 배치에서 잰다(반드시 광맥·가스 뒤)
+  campFlushPend();                                     // 💠 상점에서 산 재화 — 판이 선 뒤에 넣는다
   campZoom();                                          // 🔍 전체가 한눈에 들어오게
   campSkin();                                          // 🎨 바닥을 사냥터 던전 배경으로
   campStartFrame();                                    // ▶ 캠프 자기 루프(유즈맵 루프는 HOME 에서 멈춘다)
@@ -2365,6 +2387,12 @@ function campNoteStay(){
   if(!_campT0 || typeof G === 'undefined' || !G.tech) return;
   const secs = (Date.now() - _campT0) / 1000, gained = (G.tech.credit || 0) - _campC0;
   if(secs >= 5 && gained > 0) campNoteRate(gained, secs);   // 5초 미만은 표본이 안 된다
+  // ⏱ 이 회차에 실제로 **논 시간**을 쌓는다 — 상점이 「n 시간치」를 팔지 말지 여기서 가른다.
+  //   ⛔ 실측(2026-08-31)으로 드러난 것: 20분 플레이 시점에 「8시간치」는 그때 부의 **23.8배**,
+  //     「24시간치」는 **71.4배**였다. 40분 벤치에서 대조군 D1R19·70.9만 이 각각 D1R25·1450만,
+  //     D1R35·4263만 이 됐다 — **한 회차를 통째로 건너뛴다.**
+  //   ⇒ 플레이한 시간보다 긴 시간치는 팔지 않는다(campPlayS 가 그 자[尺]다).
+  { const C = campState(); if(C && secs > 0) C.playS = (C.playS || 0) + secs; }
   // ⛽ 가스도 같은 방식으로 잰다 — 상점의 「n시간치 가스」가 이 값을 쓴다.
   //   ⚠ 미네랄과 **따로** 재야 한다. CAMP_GAS_RATE(환산비)로 미루어 짐작하면
   //     정제소를 안 지었을 때도 가스가 나오는 것처럼 보인다.
@@ -3027,6 +3055,8 @@ function campNoteRate(gained, secs, kind){
 // ⭐ 속도는 **이미 재고 있던 것을 그대로 쓴다**(campNoteRate) — 자리 비움 정산이 쓰는 그 값이다.
 //   ⛔ "일꾼 n기 × 초당 k" 같은 식을 새로 만들지 말 것. 두 벌이 되면 반드시 어긋난다.
 // ⚠ 캠프에 5초 이상 머문 적이 없으면 0 이다 — 그때는 팔지 않는다(화면이 안내한다).
+// 이 회차에 논 시간(초). 상점의 「n 시간치」 상한이자, 「아직 못 산다」의 이유다.
+function campPlayS(){ const C = campState(); return (C && C.playS > 0) ? C.playS : 0; }
 function campRateOf(kind){ const C = campState(); if(!C) return 0;
   const v = (kind === 'gas') ? C.rateGas : C.rate;
   return (v > 0) ? v : 0; }

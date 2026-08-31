@@ -1352,6 +1352,38 @@ async function groupLobby(){
       assert(Math.round(w1-w0)===1234,'캠프 지갑에 안 들어갔다 ('+Math.round(w1-w0)+')');
       assert(Math.abs((p.pcoin||0)-pc0)<0.5,'옛 프로필 지갑(pcoin)이 같이 움직였다 — 지갑이 섞였다');
       if(live) G.tech.credit=w0; else C.credit=w0;
+      // ⛔ **캠프 밖에서 산 것은 보류함에 담긴다.** C.credit 에 직접 넣으면 캠프가 켜질 때
+      //    새 판이 credit 을 0 으로 덮어 **산 돈이 사라진다**(실측 2026-08-31: 3,400만이 0 이 됐다).
+      // ⚠ _campOn 은 파일 스코프 let 이라 **검사에서 못 바꾼다**(window 에 안 붙는다).
+      //    그래서 「캠프 밖에서 담긴다」가 아니라 **보류함이 실제로 지갑에 꽂히는가**를 잰다.
+      if(typeof campFlushPend==='function'){
+        const pend0=C.pend;
+        try{
+          C.pend={m:5555,g:77};
+          const wA=(typeof G!=='undefined'&&G.tech)?(G.tech.credit||0):0;
+          const eA=(typeof G!=='undefined'&&G.tech)?(G.tech.energy||0):0;
+          campFlushPend();
+          const wB=(typeof G!=='undefined'&&G.tech)?(G.tech.credit||0):0;
+          const eB=(typeof G!=='undefined'&&G.tech)?(G.tech.energy||0):0;
+          assert(!C.pend,'보류함이 안 비워졌다 — 다음 진입 때 또 준다');
+          assert(Math.round(wB-wA)===5555,'보류분(미네랄)이 캠프 지갑에 안 들어왔다 ('+Math.round(wB-wA)+')');
+          assert(Math.round(eB-eA)===77,'보류분(가스)이 캠프 지갑에 안 들어왔다 ('+Math.round(eB-eA)+')');
+          if(typeof G!=='undefined'&&G.tech){ G.tech.credit=wA; G.tech.energy=eA; }
+        } finally { C.pend=pend0; }
+      }
+      // ⏱ **논 시간보다 긴 시간치는 못 산다.** 실측: 20분 시점의 8시간치가 그때 부의 23.8배,
+      //    24시간치는 71.4배 — 한 회차를 통째로 건너뛴다.
+      if(typeof shopWhyLock==='function' && typeof SHOP_GEM_BUY!=='undefined'){
+        const play0=C.playS;
+        try{
+          C.playS=60;                                  // 1분만 놀았다
+          const big=SHOP_GEM_BUY.find(x=>x.secs===86400);
+          assert(big && shopWhyLock(big),'1분 놀았는데 24시간치를 살 수 있다');
+          C.playS=30*3600;                             // 30시간 놀았다
+          assert(!shopWhyLock(big) || shopWhyLock(big).indexOf('플레이')<0,
+            '30시간 놀았는데 아직 플레이 시간으로 막힌다: '+shopWhyLock(big));
+        } finally { C.playS=play0; }
+      }
       // ③ 젬 상점은 **고정 숫자가 아니라 「n 시간치」를 판다.**
     //    ⭐ 회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 무의미해진다.
     //    ⚠ 속도는 **이미 재고 있던 것**(camp.rate · 자리 비움 정산이 쓰는 값)을 그대로 쓴다.
