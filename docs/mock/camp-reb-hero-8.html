@@ -1,0 +1,198 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 화면 — 히어로형 8안</title>
+<style>
+/* ⚠ 값은 DESIGN.md 확정 규칙에서 그대로 가져왔다(목업이라 옮겨 적었다).
+   라운드 0/3/6/9 만 · 8·10~16px 금지 · 간격 4/8/12/20 · 액센트는 역할별
+   (금색=재화·보상·포인트 / 시안=지금 선택된 것, 화면당 1곳) */
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:rgba(255,255,255,.14);
+  --gold:#ffd24a; --cy:#5cd6ff; --dim:#8a94a6; --mute:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 6px;font-size:19px}
+.lead{margin:0 0 14px;font-size:12.5px;color:var(--dim);line-height:1.7;max-width:1200px}
+.lead b{color:#ececec}.lead em{font-style:normal;color:#9fd0ff}
+.grid{display:grid;grid-template-columns:repeat(4,392px);gap:14px}
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--dim);line-height:1.5}
+.ph{width:390px;height:760px;position:relative;overflow:hidden;background:#05080c;
+  display:flex;flex-direction:column}
+/* 배경 아트 + 스크림 — 로딩·로그인이 쓰는 방식 그대로(아래를 덮는다) */
+.bg{position:absolute;inset:0;background-size:cover;background-position:center}
+.bg::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(5,8,12,.55) 0%,rgba(5,8,12,.30) 30%,rgba(5,8,12,.88) 72%,#05080c 100%)}
+.top{position:relative;z-index:1;flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:44px 16px 4px}
+.top .ttl{flex:1;font-size:21px;font-weight:800;color:#fff;text-shadow:0 2px 12px #000}
+.top .x{color:#8b95a3;font-size:13px;font-weight:700}
+.body{position:relative;z-index:1;flex:1;min-height:0;padding:0 20px 20px;display:flex;flex-direction:column}
+.sp{flex:1}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+/* 히어로 — 받는 것 하나를 크게 */
+.hero{text-align:center}
+.hero .k{font-family:var(--font-num);font-size:11px;color:#8f9aa8;letter-spacing:.32em}
+.hero .big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:66px;line-height:1;color:#fff;margin-top:6px;text-shadow:0 3px 22px #000}
+.hero .big u{text-decoration:none;font-size:28px;color:var(--gold)}
+.hero .from{font-family:var(--font-num);font-size:13px;color:var(--mute);margin-top:4px;letter-spacing:.06em}
+/* 값 두 칸 — 볼륨 1(1px 금속 테두리) · 라운드 9 */
+.kv{display:flex;gap:8px;margin-top:20px}
+.kv div{flex:1;padding:8px 4px 10px;text-align:center;border-radius:var(--r-lg);
+  border:1px solid var(--metal-edge);background:rgba(255,255,255,.035)}
+.kv .k{font-size:10.5px;color:#8f9aa8;letter-spacing:.14em}
+.kv .n{font-family:var(--font-num);font-size:20px;font-weight:800;color:#fff;margin-top:4px}
+.kv .n em{font-style:normal;color:var(--gold)}
+/* 조건 — 얇은 바(라운드 3) */
+.cond{margin-top:20px}
+.cond .bar{height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.cond .bar i{display:block;height:100%;background:var(--cy);box-shadow:0 0 6px rgba(92,214,255,.5)}
+.cond .t{display:flex;justify-content:space-between;font-family:var(--font-num);
+  font-size:11.5px;color:var(--mute);margin-top:4px}
+/* 주 버튼 — 각진 6px · 금색 테두리 + 밑변 광원(보상이라 금색) */
+.go{position:relative;display:block;width:100%;min-height:52px;border-radius:var(--r-md);cursor:pointer;
+  font-family:inherit;font-size:16px;font-weight:800;letter-spacing:.16em;color:#fff;
+  border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+.go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+.tree{display:block;width:100%;margin-top:12px;border:none;background:none;color:#8b95a3;
+  font-family:inherit;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:4px}
+/* 모서리 컷 판(큰 패널 규칙: 라운드 0 + clip-path) */
+.cut{--ch:10px;border-radius:0;
+  clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+    calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+</style>
+<h1>환생 화면 — 히어로형(②안) 8변주</h1>
+<p class="lead">② 를 <b>집 규칙</b>에 맞춰 다시 그렸다: 라운드 <b>0/3/6/9만</b>(8·10~16px 금지) · 간격 4/8/12/20 · 볼륨1(1px 금속 테두리) ·
+<em>주 버튼은 채운 색 대신 금색 테두리 + 밑변 광원</em>.<br>
+⭐ 액센트를 <b>시안 → 금색</b>으로 바꿨다 — 규칙상 <b>금색은 재화·보상·포인트</b>이고 시안은 「지금 선택된 것」이라 여기엔 안 맞는다.<br>
+변주 축 셋: <b>세로 위치</b>(위/가운데/아래) · <b>배경</b>(없음/키아트/캠프/종족/던전) · <b>히어로 표현</b>.</p>
+<div class="grid">
+
+<!-- ① 배경 없음 · 위 -->
+<div class="cell"><div class="cap"><b>① 배경 없음 · 위</b><i>지금 위치. 아래가 비어 허전하다</i></div>
+<div class="ph"><div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="hero" style="padding-top:12px"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ② 배경 없음 · 가운데 -->
+<div class="cell"><div class="cap"><b>② 배경 없음 · 가운데</b><i>수치 덩어리를 세로 중앙에. 위아래가 고르게 빈다</i></div>
+<div class="ph"><div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ③ 키 아트 · 가운데 -->
+<div class="cell"><div class="cap"><b>③ 키 아트(boot) · 가운데</b><i>로딩·로그인과 같은 그림 — 한 장면으로 이어진다</i></div>
+<div class="ph"><div class="bg" style="background-image:url(/assets/backgrounds/title/boot.webp)"></div>
+<div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ④ 캠프 아트 · 가운데 -->
+<div class="cell"><div class="cap"><b>④ 캠프 아트 · 가운데</b><i>지우고 다시 시작하는 그 터를 배경으로</i></div>
+<div class="ph"><div class="bg" style="background-image:url(/assets/backgrounds/camp/camp.webp)"></div>
+<div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ⑤ 종족 아트 · 가운데 -->
+<div class="cell"><div class="cap"><b>⑤ 종족 아트 · 가운데</b><i>내 종족 그림. 회차가 바뀔 때마다 그림도 바뀐다</i></div>
+<div class="ph"><div class="bg" style="background-image:url(/assets/backgrounds/races/union.webp)"></div>
+<div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ⑥ 도달 던전 아트 · 가운데 -->
+<div class="cell"><div class="cap"><b>⑥ 도달 던전 아트 · 가운데</b><i>이번 회차에 간 가장 깊은 곳. 「여기까지 왔다」</i></div>
+<div class="ph"><div class="bg" style="background-image:url(/assets/backgrounds/dungeons/dg2.webp)"></div>
+<div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">던전 2 · 라운드 17 도달</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ⑦ 키 아트 · 가운데 · 판 위에 얹음 -->
+<div class="cell"><div class="cap"><b>⑦ 키 아트 + 모서리 컷 판</b><i>수치만 판 위에. 그림이 강해도 숫자가 안 묻힌다</i></div>
+<div class="ph"><div class="bg" style="background-image:url(/assets/backgrounds/title/boot.webp)"></div>
+<div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="cut" style="padding:20px 16px;border:1px solid var(--metal-edge);
+    background:linear-gradient(180deg,rgba(12,16,23,.92),rgba(7,10,15,.96))">
+    <div class="hero"><div class="k">획 득 배 수</div>
+      <div class="big" style="font-size:58px"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+    <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+      <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+    <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+      <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  </div>
+  <div class="sp"></div><button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<!-- ⑧ 키 아트 · 아래 정렬(로그인과 같은 자리) -->
+<div class="cell"><div class="cap"><b>⑧ 키 아트 · 아래 정렬</b><i>로그인이 블록을 아래에 두는 그 자리. 그림을 가장 많이 보여 준다</i></div>
+<div class="ph"><div class="bg" style="background-image:url(/assets/backgrounds/title/boot.webp)"></div>
+<div class="top"><span class="ttl">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div>
+    <div class="big"><u>×</u>2.95</div><div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n"><em>+2</em></div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>이번 회차</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:20px">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+</div>

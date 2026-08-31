@@ -2403,10 +2403,12 @@ function tw3dDetach(){ const cv=document.getElementById('cvMarine');
 // ── 🏘 마을(메인 화면) UI ──
 // 🚪 메인(마을) 뒤로가기 = 로그아웃 확인 — 되돌아갈 곳이 로그인뿐이다
 function askLogout(){ const p=document.getElementById('logoutPanel'); if(!p) return;
-  p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.cpCard'));
+  p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard'));
   if(typeof paintIcons==='function') paintIcons(p); if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeLogout(){ const p=document.getElementById('logoutPanel'); if(p) p.classList.add('hide'); }
-function doLogoutNow(){ closeLogout(); if(typeof doLogout==='function') doLogout(); else openAuth(); }
+function doLogoutNow(){ closeLogout();
+  if(typeof closeSettings==='function') closeSettings();   // 확인창 뒤에 설정창이 열린 채로 남는다 — 함께 닫는다
+  if(typeof doLogout==='function') doLogout(); else openAuth(); }
 // ▶ 즉시 플레이 — 모드/난이도 선택 없이 기본값으로 바로 시작(멀티 전용 맵은 모드 선택으로 넘긴다)
 // ── 하단 소셜: 친구 목록 + DM(현재 데모 데이터 — 실제 친구/프레즌스 연동은 별도 백엔드) ──
 //   status: active(초록) / away(빨강=게임 내 5분+ 무터치 자리비움) / offline(회색) · close=친한친구 · act.type=usemap|rpg|off

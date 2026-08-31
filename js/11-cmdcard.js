@@ -959,14 +959,14 @@ const SKILLS={
   // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
   stim:{ key:'stim', name:'광폭화', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
   // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
-  ensnare:{ key:'ensnare', name:'점착 가스', kind:'target_ground', energy:0, enSc:75, cd:10, dur:8, radius:0.11, slow:0.5,
+  ensnare:{ key:'ensnare', name:'점착 가스', kind:'target_ground', energy:0, enSc:75, cd:60, dur:10, radius:0.11, slow:0.5,
     arm:'🕸 점착 가스: 퍼뜨릴 지점을 클릭하세요.' },
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
   spider_mine:{ key:'spider_mine', name:'지뢰', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
     arm:'💣 지뢰: 매설 지점을 클릭하세요.' },
   // ── 유니온 배치 ──
   // 팬텀(고스트): 락다운 — 지정 적 정지(기계 무력화). 훅: e.stunT
-  lockdown:{ key:'lockdown', name:'봉쇄', kind:'target_enemy', energy:0, enSc:100, cd:9, dur:6, arm:'🔒 봉쇄: 정지시킬 적을 클릭하세요.' },
+  lockdown:{ key:'lockdown', name:'봉쇄', kind:'target_enemy', energy:0, enSc:100, cd:30, dur:5, arm:'🔒 봉쇄: 정지시킬 적을 클릭하세요.' },
   // 팬텀(고스트): 핵 공격 — 지정 지점에 지연 후 대형 폭발
   nuke:{ key:'nuke', name:'핵 폭격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵 폭격: 투하 지점을 클릭하세요.' },
   // 브레이커(탱크): 시즈 모드 — 토글(사거리·공격↑, 정지). 훅: 이동불가
@@ -980,14 +980,14 @@ const SKILLS={
   // ── 🔮 에테리얼(프로토스) 마법 — 관리자=SC 마나(enSc), 네모 게임=0(제외) ──
   hallucination:{ key:'hallucination', name:'환영', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 환영: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
   feedback:{ key:'feedback', name:'마나 소각', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 마나 소각: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
-  maelstrom:{ key:'maelstrom', name:'마비 폭풍', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🌀 마비 폭풍: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
+  maelstrom:{ key:'maelstrom', name:'마비 폭풍', kind:'target_ground', energy:0, enSc:100, cd:60, dur:5, radius:0.1, arm:'🌀 마비 폭풍: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
   mind_control:{ key:'mind_control', name:'정신 지배', kind:'target_enemy', energy:0, enSc:150, cd:15, arm:'🧠 정신 지배: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
-  disruption_web:{ key:'disruption_web', name:'교란 결계', kind:'target_ground', energy:0, enSc:125, cd:10, dur:8, radius:0.11, arm:'🕸️ 교란 결계: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
-  stasis:{ key:'stasis', name:'빙결', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 빙결: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
+  disruption_web:{ key:'disruption_web', name:'교란 결계', kind:'target_ground', energy:0, enSc:125, cd:20, dur:3, radius:0.11, arm:'🕸️ 교란 결계: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
+  stasis:{ key:'stasis', name:'빙결', kind:'target_ground', energy:0, enSc:100, cd:30, dur:3, radius:0.1, arm:'🧊 빙결: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
   recall:{ key:'recall', name:'순간이동', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 순간이동: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
   // ── 🦎 스웜(저그) 마법 — 메두사(군단여왕) ──
   parasite:{ key:'parasite', name:'감염', kind:'target_enemy', energy:0, enSc:75, cd:6, arm:'🦠 감염: 기생시킬 적을 클릭하세요.' },   // 적 기생 → 시야 공유(영구)
-  dark_swarm:{ key:'dark_swarm', name:'암흑 장막', kind:'target_ground', energy:0, enSc:100, cd:12, dur:8, radius:0.13, arm:'☁️ 암흑 장막: 지점을 클릭하세요.' },   // 범위 내 아군 = 원거리 피해 0
+  dark_swarm:{ key:'dark_swarm', name:'암흑 장막', kind:'target_ground', energy:0, enSc:100, cd:80, dur:8, radius:0.13, arm:'☁️ 암흑 장막: 지점을 클릭하세요.' },   // 범위 내 아군 = 원거리 피해 0
   plague:{ key:'plague', name:'역병', kind:'target_ground', energy:0, enSc:150, cd:12, dur:6, radius:0.11, dps:18, arm:'🩸 역병: 지점을 클릭하세요.' },   // 범위 HP 지속 감소(체력 1까지, 쉴드 무시 안 함)
   consume:{ key:'consume', name:'포식', kind:'target_unit', energy:0, enSc:0, cd:2, gain:50, arm:'🍽 포식: 잡아먹을 아군 유닛을 클릭하세요.' },   // 아군 잡아먹어 마나 +50
   // ── 🛡 유니온(테란) 마법 — 이지스(사이언스 베슬)·메딕 ──
@@ -997,7 +997,10 @@ const SKILLS={
   optical_flare:{ key:'optical_flare', name:'섬광탄', kind:'target_enemy', energy:0, enSc:75, cd:6, dur:20, arm:'👁 섬광탄: 실명시킬 적을 클릭하세요.' },   // 적 시야 축소+디텍터 무력화
   // ── 🏢 건물 스킬 ──
   scan:{ key:'scan', name:'스캐너 스윕', kind:'target_ground', energy:0, enSc:50, cd:1, radius:0.15, dur:5, arm:'📡 스캐너 스윕: 밝힐 지점을 클릭하세요.', bldg:1 },   // 컴셋 = 지점 시야+탐지(일시)
-  recharge:{ key:'recharge', name:'쉴드 충전', kind:'target_unit', energy:0, enSc:0, cd:0, rate:2, arm:'🔋 쉴드 충전: 충전할 아군을 클릭하세요.', bldg:1 },   // 쉴드 배터리 = 마나1→쉴드2
+  // 🔋 쉴드 충전 — ⚠ **캠프에서는 체력 회복이다**(사용자 확정 2026-08-28).
+  //   캠프 설계 능력치가 실드를 체력에 합쳐 `sh=0` 으로 만들어(에테리얼도 마찬가지) 충전할 실드가 없다.
+  //   `healPct` 가 있으면 최대 체력의 그만큼을 회복한다. `rate`(실드 충전)는 캠프 밖 전용이다.
+  recharge:{ key:'recharge', name:'쉴드 충전', kind:'target_unit', energy:0, enSc:0, cd:300, rate:2, healPct:0.25, arm:'🔋 쉴드 충전: 충전할 아군을 클릭하세요.', bldg:1 },   // 쉴드 배터리 = 마나1→쉴드2
 };
 const BLDG_EN={ comsat:200, battery:200 };   // ⚡ 마나 보유 건물(생산 직후 50 · 자연 회복)
 const BLDG_SKILLS={ comsat:['scan'], battery:['recharge'] };   // 건물별 스킬(프로필 카드)

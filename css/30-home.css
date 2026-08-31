@@ -1421,8 +1421,6 @@
   /* 입력 바 — 판을 걷고 청록을 뺀다. ⛔ 시안은 DESIGN §2 에서 '지금 선택된 것' 전용(화면당 1곳)인데
      전송 버튼과 범위 라벨 둘이 쓰고 있었다. 범위는 색이 아니라 **글자('전체'·'파티'·'친구')**가 말한다. */
   #msSocialDock .msChatBar{border-top:1px solid rgba(255,255,255,.07);background:none}
-  #msSocialDock .msChatSend{color:#cfd8e3}
-  #msSocialDock .msChatSend:active{background:rgba(255,255,255,.07)}
   #msSocialDock .msScopeLbl{color:#aeb7c1}
   #msSocialDock .msScopeTrig{border-radius:var(--r-bar)}
   /* 친구 — 카드 판을 걷고 헤어라인 목록으로 · **한 줄 조밀형**(2026-08-18 확정)
@@ -1898,15 +1896,99 @@
   border:1px solid rgba(255,59,59,.35);background:rgba(14,18,26,.82)}
 #campBar .cbFoe:empty{display:none}
 /* 🌳 트리 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살린다 */
-#campBar .cbTree{pointer-events:auto;flex:0 0 auto;
+#campBar :is(.cbTree,.cbReb){pointer-events:auto;flex:0 0 auto;
   border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
   background:rgba(20,26,36,.9);color:#cfd8e6;font-size:var(--fs-sm);font-weight:700;padding:3px 8px}
 #campBar .cbTree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--gold,#ffd24a)}
+#campBar .cbReb b{color:#5cd6ff}   /* 환생 = 시안(트리의 금색과 갈라 읽힌다) */
 
 /* ══ 🌳 환생 포인트 트리 — 마인드맵 (2026-08-25 · 6단계-b) ═══════════════
    전체 화면 위에 덮는 판. 가운데는 밀고 확대하는 SVG, 위아래에 얇은 줄 둘.
    값은 DESIGN.md §2 표 — 라운드 0(큰 패널)/3(얇은 표시)/6(버튼) · 간격 8/12/20.
    ⛔ 갈래 색은 JS(CAMP_TREE_BR)가 단일 소스다 — 여기에 다시 적지 말 것. */
+/* ══ 🔁 환생 화면 ═══════════════════════════════════════════════════════
+   ⭐ 언어는 로딩·로그인과 같다: 배경 아트 + 아래를 덮는 스크림 · 판을 안 쓴다 ·
+      값이 주인공 · 주 동작 하나에만 밑변 광원.
+   ⭐ 라운드는 0/3/6/9 만(DESIGN.md · 8·10~16px 금지) · 간격 4/8/12/20.
+   ⭐ 액센트는 **역할별**: 금색 = 재화·보상(배수·포인트) · 시안 = 조건 진행 · 보라 = 현질(×2).
+   ⛔ 문장을 넣지 말 것 — 라벨과 값이 전부다.                                   */
+#campReb{position:absolute;inset:0;z-index:120;display:none;flex-direction:column}
+#campReb.on{display:flex}
+/* 배경 아트 — ⛔ **여기서 그림을 그리지 않는다.** 키 아트는 공유 층(#titleBg) 한 장뿐이다.
+   화면마다 자기 그림을 그리면 전환할 때 호흡 애니가 0% 부터 다시 시작해 그림이 툭 튄다
+   (스모크 「배경은 한 장으로 깔린다」가 잡는다 — 실제로 잡혔다).
+   대신 campRebOpen() 이 그 층을 켜고 #campReb 위로 끌어올린다. 여기는 **스크림만** 깐다. */
+#campReb{background:none}
+#campReb .crBg{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(5,8,12,.55) 0%,rgba(5,8,12,.28) 24%,rgba(5,8,12,.90) 62%,#05080c 100%)}
+#campReb .crTop{position:relative;z-index:1;flex:0 0 auto;display:flex;align-items:center;padding:44px 14px 4px}
+#campReb .crTitle{flex:1;font-size:21px;font-weight:800;color:#fff;text-shadow:0 2px 12px #000}
+#campReb .crX{width:32px;height:32px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(0,0,0,.35);color:#c3ccd8;font-family:inherit;font-size:15px;cursor:pointer;padding:0}
+#campReb .crX:active{background:rgba(255,255,255,.08)}
+#campReb .crBody{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;
+  padding:0 18px 18px;display:flex;flex-direction:column}
+/* 히어로 = 획득 배수 */
+/* ⚠ 글자가 놓일 자리에 **국소 스크림**을 깐다 — 로그인이 쓰는 그 방법이다.
+   전체 스크림을 더 어둡게 하면 그림이 죽는다. 밝은 하늘 위에서 「현재 ×1.00」이 안 읽혔다. */
+#campReb .crHero{position:relative;text-align:center;margin-top:auto;padding-top:12px}
+#campReb .crHero::before{content:'';position:absolute;left:-18px;right:-18px;top:-14px;bottom:-18px;
+  z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 70% at 50% 55%,rgba(5,8,12,.72),rgba(5,8,12,0) 72%)}
+#campReb .crK{font-family:var(--font-num);font-size:11px;color:#a7b2c0;letter-spacing:.32em;
+  text-shadow:0 1px 6px #000}
+#campReb .crBig{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:64px;line-height:1;color:#fff;margin-top:4px;text-shadow:0 3px 22px #000}
+#campReb .crNow{font-family:var(--font-num);font-size:13px;color:#9aa5b3;margin-top:2px;
+  letter-spacing:.05em;text-shadow:0 1px 6px #000}
+/* 포인트 + 계산 근거 */
+#campReb .crPt{text-align:center;margin-top:16px}
+#campReb .crPv{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:30px;font-weight:800;color:var(--gold,#ffd24a);line-height:1.1;margin-top:2px}
+#campReb .crFx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:4px}
+#campReb .crFx b{color:#a9b4c2;font-weight:700}
+/* 이번 회차 지표 — 세로 목록(②안) */
+#campReb .crSt{margin-top:20px}
+#campReb .crH{font-family:var(--font-num);font-size:10.5px;color:#7b8593;letter-spacing:.28em;
+  text-align:center;margin-bottom:8px}
+#campReb .crLi{display:flex;justify-content:space-between;align-items:baseline;padding:7px 2px}
+#campReb .crLi+.crLi{border-top:1px solid rgba(255,255,255,.07)}
+#campReb .crLi span{font-size:12px;color:#9aa5b3}
+#campReb .crLi b{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:15px;font-weight:800;color:#e9eff7}
+/* 조건 — 얇은 바(라운드 3) */
+#campReb .crCond{margin-top:16px}
+#campReb .crBar{height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+#campReb .crBar i{display:block;height:100%;background:rgba(255,255,255,.5)}
+#campReb .crBar.ok i{background:#5cd6ff;box-shadow:0 0 6px rgba(92,214,255,.5)}
+#campReb .crT{display:flex;justify-content:space-between;font-family:var(--font-num);
+  font-size:11.5px;color:#69737f;margin-top:4px}
+/* 주 동작 — 면을 채우지 않는다. 테두리 + 밑변 광원이 서명이다 */
+#campReb .crGo{position:relative;display:block;width:100%;min-height:50px;margin-top:16px;
+  border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:16px;font-weight:800;
+  letter-spacing:.16em;color:#fff;border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+#campReb .crGo::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+#campReb .crGo:active{background:rgba(255,210,74,.18)}
+/* ⛔ 잠김에서 광원을 빼지 않으면 못 누르는데 주 동작으로 읽힌다 */
+#campReb .crGo:disabled{border-color:rgba(255,255,255,.14);color:#69737f;
+  background:none;cursor:default}
+#campReb .crGo:disabled::after{display:none}
+/* 💳 환생 팩 — **조용한 한 줄**이다. 주 동작은 위 「환생」 하나뿐이라
+   여기에 두 번째 판·테두리를 주지 않는다. 현질이므로 보라(금색=보상과 갈라 둔다) */
+#campReb .crPk{margin-top:10px;text-align:center;font-size:11.5px;color:#8b93a3;cursor:pointer}
+#campReb .crPk b{color:#c9a6ff;font-weight:800}
+#campReb .crPk u{text-decoration:none;color:#c9a6ff;margin-left:6px}
+#campReb .crPk.on{color:#c9a6ff;cursor:default;letter-spacing:.06em}
+/* 확인창 — 화면 안에 겹친다 */
+#campRebOk{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+  background:var(--ov-dim);backdrop-filter:blur(2px)}
+#campRebOk.hide{display:none}
+#campRebOk .ecMsg i{font-style:normal;display:inline-block;margin-top:6px;color:#c9a6ff}
+/* 🔁 맵 띠 칩 */
+#campBar .cbReb.hide{display:none}
+
 #campTree{position:absolute;inset:0;z-index:120;display:none;
   background:radial-gradient(120% 90% at 50% 42%,rgba(18,24,34,.97),rgba(6,9,13,.99))}
 #campTree.on{display:block}

@@ -15,6 +15,8 @@
 - Deliverable: a static file set — `sc-ums-web.html` (markup only, ~900 lines) + **`css/` 5 files** + **`js/` 19 files** — a mobile StarCraft-style usemap (vanilla JS, Three.js 3D, Supabase realtime). No build step and **no test framework**.
   - **Find the right file first: `ARCHITECTURE.md` §1 파일 지도.** Don't grep the HTML for logic — it holds only markup now.
   - `js/*.js` are **classic scripts** sharing one global scope, executed in tag order. ⛔ Never reorder the `<script>` tags, never convert them to `type="module"`, and remember declarations hoist **within a file only**.
+- ⚔ **캠프 전투는 `js/21-camp-battle.js` 가 소유한다**(2026-08-31). `campStepUnits(dt)` 한 함수가 표적 선정·자리·이동·사격을 다 한다. ⛔ `js/18-strike.js`(유즈맵 오토배틀)를 고치지 말 것 — 거기서는 **부품만** 가져온다(`strikeHit`·`strikeMoveToward`·`strikeSeparate`·`strikeSkillTick` …). ⛔ 옛 이동 장치 넷(`campPostSnap`·`campPostStep`·`campEngageStep`·`campLeash`)은 `19-camp.js` 에 남아 있지만 **배선이 끊겼다** — 되살리면 미는 주체가 둘이 되어 유닛이 덜덜 떤다(실측 96회/유닛 → 6.5회). 구조·실측은 `ARCHITECTURE.md` §「⚔ 캠프 전투」.
+  - 🎬 **전투 움직임을 만졌으면 `node scripts/camp-trace.mjs` 로 눈으로 볼 것** — 궤적 그림 + 떨림·사거리 수치. 이 프로젝트는 움직임을 숫자로만 좇다가 네 번 헛짚고 전부 되돌렸다. 그다음 `scripts/camp-bench.mjs` 로 밸런스를 다시 잰다(이동이 바뀌면 화력이 바뀐다).
 - 🏕 **HOME 메인은 「캠프」다**(`js/19-camp.js` · 2026-08-23). 옛 **사냥터(웨이브 방어)를 대체했다** — 새로 만든 게 아니라 관리자 건설 시스템을 빌려 쓴다. 구조는 `ARCHITECTURE.md` §「🏕 캠프」.
   - ⛔ `js/08-hunt.js`(2953줄)는 **던전 1~10 데이터·마을 때문에 남아 있을 뿐**이다. HOME 게임플레이를 여기서 고치지 말 것 — 화면에 안 나온다.
   - ⚠ 문서·코드의 **「사냥터」는 대부분 옛 이름**이다(102곳). 다만 화면의 **「사냥터 업그레이드」(`.hmUpg`)와 `UM_*` 경제 상수는 살아 있는 이름**이라 일괄 치환 금지.
@@ -70,12 +72,14 @@
 | 생산 진행 | 파랑 바 `.cgBar`(앞 유닛 %) + 얇은 대기열 선 `.cgQBar`(수량·흰→빨강) | 연구도 동일: 남은 초 = 라벨 옆 `progTime` |
 | 지정(선택) 표시 | 3D 하단 링 | 유닛·건물·라바·중립 자원(미네랄/가스) 전부 이것으로 통일 |
 | 지정 해제 버튼 | 금지(⊘) SVG — 메인 `#deselTop` = 건설 `#btDesel` = 일시정지 카드 | 새 해제/중단 UI도 이 아이콘 재사용 |
+| **확인 팝업(정말 하시겠습니까)** | **`.ecCard` + `.ecTitle`/`.ecMsg`/`.ecBtns` + `.ecCancel`/`.ecGo`** | 게임 나가기(`#exitConfirm`) = 로그아웃(`#logoutPanel`) — 한 컴포넌트(2026-08-27) · 되돌릴 수 없는 주 동작은 **붉은 글자**(`.ecGo`) · ⛔ 확인창을 새로 만들지 말 것 · ⚠ 설정에서 부르는 확인은 **`#phone` 직속 + z-index 97**(설정이 게임 밖에서 95라 그 아래면 통째로 가려진다) |
 | 확정/취소 플로팅 버튼 | `.bArmBtns` (▶ ok / ✕ cancel) | 배치 확정·재개·철거 공용 |
 | 게임 진입 로딩 | `#gsRoot` + `gameStartCountdown()` · `.teamed`(팀전) / `.solo`(개인) | 카드 덱 한 화면이 협동·팀전·개인을 다 맡는다 · 팀 색=카드 윗변 / 준비=밑변 · 초록은 '준비 완료' 전용 · 초상 `avatarHTML()` · 버튼 `.actBtn` |
 | **액션 버튼(확정·취소·시작)** | **`.actBtn`** + `.pri`(주 동작) / 기본(하위) / `:disabled`(잠김) | **옅은 면 + 1px**(2026-08-26 · B4안) · 위계는 **면과 테두리의 밝기**(부 5%/.1 · 주 14%/.32 + 흰 글자) · ⛔ 볼록한 판·밑변 광원·`--font-ti`(Jua) 를 되돌리지 말 것 · 새 버튼에 면·테두리를 따로 쓰지 말고 클래스만 붙일 것(화면이 덮는 건 크기뿐) · `.cpBtns` 안에서 취소는 `.sub` · **팝업 버튼(`#ovBtn`/`#ovBtn2`/`.ecGo`/`.ecCancel`)도 같은 얼굴**(36px) — 로그인 `.authBtn`/`.authGuest` 만 제 디자인을 갖는다 |
 | 유닛 초상 | `_techUnitPortrait(uid)` | 카드·헤더·대기열 공용 |
 | 프리뷰 패널 | `#cstPrev` + `techHidePreview()` | (구 cstHidePreview는 삭제됨) |
 | 알림/사운드 | `toast()` / `playSfx()`·`playSfxT()` | |
+| **채팅 입력줄** | **`.msChatBar` + `.msChatSend`** (`css/40-social.css`) | 유즈맵 하단 도크 = 대기실 — 한 컴포넌트(2026-08-27 통일 · 옛 사본 `.lbChatBar` 는 없앴다) · 범위 배지(`.msScopeDD`)는 **선택 슬롯**이다(대기실은 고를 범위가 하나뿐이라 뺐다) · 전송은 **중립 밝은 회색** — ⛔ 빨강으로 되돌리지 말 것(대기실의 빨강은 「시작」 주 동작의 색) · ⚠ 인게임 `#chatBar` 는 **다른 것**이다(전장 위에 떠서 접히는 말풍선) |
 | **인게임 채팅바** | `#chatBar` + `chatToggle()`/`chatOpenBar()`/`chatFoldBar()` | 접힘(말풍선 44px) ↔ 열림(`[∨｜입력｜전송]` 한 상자) · **유즈맵 안 전 구역**에 있다(캠프만 제외) · ⛔ 열려도 왼쪽 ∨ 를 없애지 말 것(접을 방법이 사라진다) · 상시 청록·붉은 밑변 광원 금지 · ⚠ 구역마다 시트가 다른 요소다(`.bp` ↔ 건설 `#btSheet`) — `_syncSheetLift()` 가 갈라 잰다 |
 | 세로 스크롤바 | `.uiScroll` (CSS 공용) | 스크롤 영역에 클래스만 추가 · `::-webkit-scrollbar`를 새로 정의하지 말 것 (Chrome 최신은 웹킷 의사요소를 무시하고 표준 `scrollbar-width`/`scrollbar-color`만 적용 → 화면마다 굵기가 달라지는 원인이었음) |
 | **재화 아이콘**(미네랄·가스·젬·인구) | **`resIco(key, cls)`** → `assets/icons/res_*.webp` | ⛔ **이모지를 임의로 넣지 말 것.** 한글 이름으로도 찾는다(`resIco('미네랄')`=`resIco('mineral')`) · 새 UI에서 재화를 표시할 땐 무조건 이 함수 · 상단 재화 바(`#curBar`)·인게임 HUD와 같은 그림이 나온다 |
@@ -96,6 +100,7 @@
 | 오토배틀 대전 설정 | `STK_OPTS`(상하한 표) + `STK_PRESETS` + `renderCpMode()` | 상하한·기본값은 표 한 곳에서만 · 엔진 반영은 `MAP_CFG_OVR` → `mapCfg` 한 입구(시작 때 심고 로비 복귀 때 반납) |
 | 목록 고르는 판(방 찾기·파티 찾기) | `.rmCard` + `.rmHead`/`.rmNum`/`.rmList`+`.roomItem`/`.rmBtns` | 방 찾기(`#rooms`)가 원본 · 파티 찾기는 이 컴포넌트를 그대로 빌린다(딤만 `.pfOv`) · **새 목록 판을 만들지 말 것** · 행 밑변 광원 = `--dc`(난이도 색, 없으면 중립) · 하단은 `.actBtn`(주 동작 길게 + `.sq` 38px 둘) |
 | **캠프 단계·라운드 표시** | `#curTitle` 칩(`curPaintChip()` · `js/12-appshell.js`) | 던전 이름·라운드 n/50·진행 막대·이동 드롭다운 · ⛔ 맵 띠(`#campBar`)에 다시 두지 말 것 — 거긴 **적 수와 🌳 트리 입구만** · 상태는 `campDgN()`/`campRoundN()` 이 단일 소스(칩은 읽기만) |
+| **환생 화면** | **`#campReb`** + `campRebOpen()` · 내용은 `campRebRender()` | `#phone` 직속 전체 화면(z-index 120) · 입구는 **하단 네비 「환생」**과 **캠프 맵 띠 🔁 칩**(조건 충족 시 등장) · 실행 확인은 `.ecCard` 공용 확인창 · 배경은 **제 그림을 갖지 않는다** — 공용 키 아트 `#titleBg` 를 `#phone.artLift` 로 끌어올려 쓰고 그 위에 스크림(`.crBg`)만 얹는다(⛔ `boot.webp` 를 두 번째로 그리지 말 것 · 스모크가 잡는다) · 아래 넷은 빼지 말 것: ⭐ **히어로 = 환생 뒤 획득 배수**(`.crBig` · 「먼 목표」의 자리 — 없으면 첫 환생을 손해로 판단한다 · HUNT_R1 §4-2-0) · **포인트 계산 근거**(`.crFx` · 재화×던전×라운드 세 값) · **이번 회차 지표 다섯 줄**(`.crLi` · 터치 / 터치로 번 미네랄 / 자동으로 번 미네랄 / 가스 / 플레이 시간) · 💳 **환생 팩 줄**(`.crPk` · 조용한 한 줄 · 산 뒤엔 「적용 중」 · ⛔ 젬 1회권으로 되돌리지 말 것 — 결제 팩 영구 ×2 다 · GEM.md §4-1) |
 | **환생 트리(마인드맵)** | `#campTree` + `campTreeOpen()` · 노드는 `campTreeSvg()` | `#phone` 직속 전체 화면 · 밀고 확대 · 입구는 캠프 배지(`#campBar`)의 🌳 칩 · 갈래 색은 `CAMP_TREE_BR` 한 곳 |
 | **일일 퀘스트** | `openDaily()` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 퀘스트 · 하루 5개 + 주간 25개 |
 | **출석** | `openAtt()` → `#hbAttSheet` + `renderAtt()` | 더보기 ☰ > 출석 · **퀘스트와 화면이 다르다**(같은 판에 탭으로 묶지 말 것 — 2026-08-14 분리) |

@@ -24,6 +24,19 @@ const CHROME_CANDIDATES=[
 const CHROME=CHROME_CANDIDATES.find(p=>fs.existsSync(p));
 if(!CHROME){ console.error('크롬을 찾을 수 없습니다. CHROME_PATH 환경변수로 지정하세요.'); process.exit(2); }
 
+// 🚪 브라우저를 켜기 전에 **정적 검사** 한 번 — 「여는 함수는 있는데 부르는 곳이 없는 것」을 잡는다.
+//    선례: 마을을 다락으로 보내자 로그아웃 확인창이 고아가 됐다(화면은 멀쩡한데 들어갈 길이 사라짐 · 2026-08-27).
+//    스모크는 화면을 직접 열어 검사하므로 이런 「입구만 사라진 것」을 못 잡는다.
+{ const { execFileSync }=await import('node:child_process');
+  try{ const out=execFileSync(process.execPath, [path.join(ROOT,'scripts','attic-orphans.mjs')],
+        { cwd:ROOT, encoding:'utf8' });
+    console.log(out.trim().split('\n').map(l=>'  '+l).join('\n'));
+  }catch(e){
+    console.log((e.stdout||'').trim().split('\n').map(l=>'  '+l).join('\n'));
+    console.error('\n❌ 고아 입구 검사 실패 — 위 목록을 먼저 보세요.');
+    process.exit(1); }
+}
+
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json',
   '.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary',
   '.mp3':'audio/mpeg','.ogg':'audio/ogg','.wav':'audio/wav','.woff':'font/woff','.woff2':'font/woff2'};
