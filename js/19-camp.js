@@ -297,7 +297,7 @@ function campRebirth(){
   C.reb    = (C.reb | 0) + 1;
   // ── 되감기 ──
   C.dg = 0; C.cleared = 0;
-  C.earn = 0; C.earnGas = 0;
+  C.earn = 0; C.earnGas = 0; C.earnTap = 0; C.earnAuto = 0;
   C.credit = 0; C.energy = 0;
   C.built = {}; C.addon = {}; C.units = {}; C.research = {};
   C.sup = 0; C.supCap = 0; C.eseq = 1; C.ents = []; C.minerals = [];
@@ -315,7 +315,8 @@ function campRebirth(){
   { const C2 = campState();          // 판을 다시 깔면서 저장을 읽었을 수 있다 — 남길 것을 다시 얹는다
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
       C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
-      C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0; C2.upg = {}; } }
+      C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
+      C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   campSave();
   return got; }
 
@@ -2192,7 +2193,7 @@ function campState(){
   if(!p) return null;
   if(!p.camp) p.camp = { ver:CAMP_VER, race:null, dg:0, cleared:0, best:{}, credit:0, energy:0,
     built:{}, addon:{}, units:{}, research:{}, sup:0, supCap:0, eseq:1, ents:[], minerals:[],
-    upg:{}, rate:0, leftAt:0, tapped:0 };   // dg=0 은 캠프 · upg=캠프 업그레이드 · rate=실측 수급속도 · leftAt=나간 시각
+    upg:{}, rate:0, leftAt:0, tapped:0, earnTap:0, earnAuto:0, playS:0 };   // dg=0 은 캠프 · upg=캠프 업그레이드 · rate=실측 수급속도 · leftAt=나간 시각
   // 🔄 ver1 → ver2 : 단계 번호가 한 칸 내려갔다. 옛 「던전 1(적 없음)」이 지금의 0단계(캠프)다.
   //    ⛔ 그냥 두면 옛 저장이 곧장 던전 1(적이 나오는 곳)에 서 있게 된다.
   if((p.camp.ver | 0) < 2){ p.camp.dg = Math.max(0, (p.camp.dg | 0) - 1); p.camp.ver = CAMP_VER; }
@@ -3033,6 +3034,7 @@ function campMineOnce(clientX, clientY, human, mul){
   if(human && typeof campTapHuman === 'function')
     gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY)));
   G.tech.credit = (G.tech.credit || 0) + gain;
+  _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
   if(typeof updateCurBar === 'function') updateCurBar();
   campMineFloatMap(gain, clientX, clientY);
@@ -3126,6 +3128,7 @@ function campTapAt(clientX, clientY, human){
   m.amount -= gain;
   G.tech.credit = (G.tech.credit || 0) + gain;
   _campTapAcc += gain;                              // 이 몫에는 채취 배수를 걸지 않는다(위 참고)
+  _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;   // 실측용 — 손 축이 얼마나 쓰였나
   if(typeof updateCurBar === "function") updateCurBar();
   else if(typeof techUIRender === 'function') techUIRender();
@@ -3227,6 +3230,7 @@ function campMineTap(ev){
   if(ev && ev.isTrusted !== false) gain = Math.max(1, Math.floor(gain * campTapHuman(ev.clientX, ev.clientY)));
   G.tech.credit = (G.tech.credit || 0) + gain;
   _campTapAcc += gain;
+  _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
   if(typeof updateCurBar === 'function') updateCurBar();
   campMineFloat(gain, ev);
@@ -3386,6 +3390,12 @@ function campAutoGather(){
 const CAMP_TICK_MS = 250;
 const CAMP_SLOW_EVERY = 8;      // 250ms × 8 = 2초
 let _campTimer = 0, _campSlow = 0, _campLastCr = 0, _campTapAcc = 0;
+// 📊 **표시 전용** 탭 누적 — 경제용 `_campTapAcc` 와 **따로 둔다.**
+//   ⚠ 왜 따로인가: `_campTapAcc` 는 「채취 배수를 안 먹일 몫」이라 경제 계산에 쓰인다.
+//     거기에 맵 탭(campMineOnce)을 끼워 넣으면 **획득량이 바뀐다**(그 몫이 배수를 못 받게 된다).
+//     환생 화면의 「터치로 번 미네랄」은 표시일 뿐이라 경제를 건드리면 안 된다.
+//   ⚠ 그래서 맵 탭이 `_campTapAcc` 에 안 들어가는 문제는 **여기서 고치지 않는다**(BALANCE 문제).
+let _campTapEarn = 0;
 // 📊 **수입 내역** — 번 돈이 어디서 왔는지 나눠 센다(2026-08-30 · sc-3 요청).
 //   ⭐ 왜 필요한가: 실측 100만 도달이 **27분**인데 설계 추정은 10시간이다(22배). 설계표(§1-1)를
 //     그냥 깎으면 엉뚱한 축을 깎게 된다 — **무엇이 그 돈을 벌었는지** 먼저 봐야 한다.
@@ -3410,7 +3420,16 @@ function campApplyGatherMul(){
   // 🔁 환생 기준이 되는 **번 돈**을 여기서 센다 — 배수를 다 먹인 뒤의 실제 증가분이다.
   //    ⛔ 지출은 빼지 않는다. '얼마나 벌었나'가 기준이지 '지금 얼마 있나'가 아니다.
   { const gained = (G.tech.credit || 0) - _campLastCr;
-    if(gained > 0){ const C = campState(); if(C) C.earn = (C.earn || 0) + gained; } }
+    const C = campState();
+    if(gained > 0 && C){ C.earn = (C.earn || 0) + gained;
+      // 📊 어디서 번 돈인가 — 환생 화면이 이 둘을 보여 준다.
+      //   터치 몫은 이 프레임에 실제로 탭으로 들어온 만큼까지만 인정한다(나머지는 자동).
+      const tp = Math.min(gained, _campTapEarn);
+      C.earnTap  = (C.earnTap  || 0) + tp;
+      C.earnAuto = (C.earnAuto || 0) + (gained - tp); }
+    _campTapEarn = 0;   // ⚠ 매 틱 비운다 — 안 비우면 지출이 끼었을 때 다음 틱에 잘못 붙는다
+    // ⏱ 이 회차를 얼마나 붙잡고 있었나. 캠프가 켜져 있는 동안만 센다(틱 자체가 _campOn 가드 안이다).
+    if(C) C.playS = (C.playS || 0) + CAMP_TICK_MS / 1000; }
   _campLastCr = G.tech.credit || 0;
 }
 // ── 캠프 전용 프레임 루프 ────────────────────────────────────────────────

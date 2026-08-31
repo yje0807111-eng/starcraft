@@ -327,6 +327,57 @@ async function groupLobby(){
     assert(so[0].closest('#msSocialDock'),'소셜 DOM 이 도크 밖에 있음');
     assert(document.getElementById('msChat') && document.getElementById('msChatInput'),'유즈맵 채팅 알맹이가 없어졌다');
     return '다락 18개 없음 · 소셜/환생 본문은 살아 있음'; });
+  // 📊 회차 지표 — 환생 화면이 「이번 회차에 뭘 했나」를 보여 주려면 먼저 **기록**돼야 한다.
+  //    ⚠ 셋 다 없던 것을 새로 붙였다(2026-08-31): 터치/자동 미네랄 구분 · 회차 플레이 시간.
+  await step('회차 지표: 터치·자동 미네랄이 갈려 쌓이고 · 시간이 흐른다', async()=>{
+    skipIf(typeof campApplyGatherMul!=='function','캠프 수입 관문 없음');
+    if(typeof openHome==='function') openHome(); await sleep(60);
+    if(typeof campHasRace==='function' && !campHasRace() && typeof campPickRace==='function') campPickRace();
+    await sleep(200);
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // ⚠ **관문 함수를 직접 부른다.** 원래는 캠프 틱(250ms)이 부르는데, 스모크에서는 앞 스텝이
+    //   남긴 화면 상태 때문에 캠프가 켜졌다 꺼져 틱이 멎는다(campIsOn=false 로 실측됨).
+    //   여기서 재려는 것은 **갈라 세는 규칙**이지 타이머가 도는지가 아니다.
+    const tick=()=>campApplyGatherMul();
+    const cr0=(G.tech&&G.tech.credit)||0;     // ⚠ 끝에 되돌린다 — 부풀린 채 나가면 뒷 스텝이 어지러워진다
+    tick();                                   // 기준값(_campLastCr)을 지금 잔액에 맞춘다
+    C.earn=0; C.earnTap=0; C.earnAuto=0; C.playS=0; C.tapped=0;
+    // ① 탭 — 터치 몫으로 쌓인다
+    window._campTapForce=1;
+    for(let i=0;i<10;i++) campMineOnce(200,400,false,1);
+    tick();
+    { const c=campState();
+      assert((c.tapped|0)===10,'터치 횟수가 안 쌓임: '+(c.tapped|0));
+      assert((c.earnTap||0)>0,'터치로 번 미네랄이 안 쌓임');
+      assert((c.earnAuto||0)===0,'탭만 했는데 자동 몫이 생김: '+(c.earnAuto||0)); }
+    // ② 자동 — 탭 없이 크레딧만 늘면 자동 몫으로 간다
+    const tap0=campState().earnTap||0;
+    G.tech.credit=(G.tech.credit||0)+500; tick();
+    { const c=campState();
+      assert(Math.round(c.earnAuto||0)===500,'자동 몫이 안 맞음: '+Math.round(c.earnAuto||0));
+      assert(Math.round(c.earnTap||0)===Math.round(tap0),'자동 수입이 터치 몫으로 샜다'); }
+    // ③ 섞여 들어와도 갈린다 — 같은 틱에 탭과 자동이 함께
+    { const t1=campState().earnTap||0, a1=campState().earnAuto||0;
+      G.tech.credit=(G.tech.credit||0)+300; campMineOnce(200,400,false,1); tick();
+      const c=campState();
+      assert((c.earnTap||0)>t1,'섞였을 때 터치 몫이 안 늘었다');
+      assert(Math.round((c.earnAuto||0)-a1)===300,'섞였을 때 자동 몫이 안 맞음: '+Math.round((c.earnAuto||0)-a1)); }
+    // ④ 둘의 합이 번 돈과 같아야 한다 — 어느 한쪽으로 새면 여기서 걸린다
+    { const c=campState();
+      assert(Math.abs(((c.earnTap||0)+(c.earnAuto||0)) - (c.earn||0)) <= 1,
+        '터치+자동이 번 돈과 다름: '+Math.round((c.earnTap||0)+(c.earnAuto||0))+' vs '+Math.round(c.earn||0)); }
+    // ⑤ 시간이 흐른다 — 관문 한 번이 한 틱이다
+    { const t0=campState().playS||0; tick();
+      assert((campState().playS||0) > t0,'회차 플레이 시간이 안 흐른다: '+t0); }
+    // ⛔ 「환생하면 되감긴다」는 여기서 재지 않는다 — 환생을 실행하면 캠프가 통째로 리셋돼
+    //    바로 뒤 「환생 화면」 스텝이 자기가 심어 둔 값을 잃는다. 그 검사는 그 스텝이 한다.
+    // ⚠ 뒷 스텝에 아무것도 남기지 않는다 — 크레딧을 원래대로 돌리고 기준값까지 맞춘 뒤 카운터를 비운다.
+    //   (부풀린 크레딧을 두고 나갔더니 다음 스텝의 환생 되감기 검사가 넘어졌다)
+    if(G.tech) G.tech.credit=cr0;
+    tick();
+    { const c=campState(); c.earn=0; c.earnTap=0; c.earnAuto=0; c.playS=0; c.tapped=0; }
+    return '터치·자동·섞임·시간 ok'; });
+
   // 🔁 환생 화면 — HUNT_R1.md §4-2-0 이 요구한 것이 실제로 화면에 있는가.
   //    ⭐ 「먼 목표」 줄은 장식이 아니다. 없으면 첫 환생을 손해로 판단하고 두 번 다시 안 누른다.
   await step('환생 화면: 받을 것 · 조건 · 먼 목표 · 되돌릴 수 없는 확인', async()=>{
@@ -374,12 +425,16 @@ async function groupLobby(){
     assert((campState().reb|0)===before,'취소했는데 환생이 실행됨');
     // ⑥ 실행하면 배수·포인트가 실제로 남는다
     const mul0=campRebMul(), pts0=campState().rbPts||0;
-    campRebAsk(); campRebGo(); await sleep(160);
-    { const C2=campState();
-      assert((C2.reb|0)===before+1,'환생 횟수가 안 올랐다');
-      assert(campRebMul()>mul0,'배수가 안 올랐다: '+mul0+' → '+campRebMul());
-      assert((C2.rbPts||0)>pts0,'포인트가 안 올랐다');
-      assert((C2.dg|0)===0 && (C2.earn||0)===0,'회차가 안 되감겼다'); }
+    campRebAsk(); campRebGo();
+    // ⚠ **되감긴 그 순간을 찍어서 잰다.** await 를 끼우면 캠프 틱(250ms)이 그 사이에 끼어들어
+    //   막 비운 earn 에 다시 수입을 얹는다 — 그래서 검사가 흔들렸다(2026-08-31).
+    const snap=(function(){ const c=campState();
+      return { reb:(c.reb|0), dg:(c.dg|0), earn:(c.earn||0), pts:(c.rbPts||0), mul:campRebMul() }; })();
+    await sleep(160);
+    { assert(snap.reb===before+1,'환생 횟수가 안 올랐다');
+      assert(snap.mul>mul0,'배수가 안 올랐다: '+mul0+' → '+snap.mul);
+      assert(snap.pts>pts0,'포인트가 안 올랐다');
+      assert(snap.dg===0 && snap.earn===0,'회차가 안 되감겼다: dg='+snap.dg+' earn='+Math.round(snap.earn)); }
     return '조건·공식·먼 목표·확인 ok';
     }finally{ campRebCancel(); campRebClose(); } });
   // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
