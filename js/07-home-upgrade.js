@@ -475,12 +475,12 @@ const NAV_TREE=[
       { k:'chat',   label:'채팅', ico:'chat',   act:()=>mapOpenSocial('chat') },
       { k:'friend', label:'친구', ico:'friend', act:()=>mapOpenSocial('friend') },
       { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') } ] },
-  { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, reset:()=>setShopSec('deal'), subs:[
-      { k:'deal', label:'한정구매', ico:'flag',  act:()=>setShopSec('deal') },
-      { k:'draw', label:'뽑기',    ico:'gift',  act:()=>setShopSec('draw') },
-      { k:'res',  label:'재화',    ico:'coin',  act:()=>setShopSec('res') },
-      { k:'pack', label:'패키지',  ico:'box',   act:()=>setShopSec('pack') },
-      { k:'gem',  label:'충전',    ico:'boost', act:()=>setShopSec('gem') } ] },
+  // 🏕 캠프 상점 = **두 칸**(2026-08-31 재편). 앞의 다섯 칸은 옛 사냥터 기준이라
+  //   파는 것이 캠프에 하나도 안 닿았다 — 자세한 것은 08-hunt.js 「캠프 상점」 절.
+  //   ⛔ 옛 구역(한정구매·뽑기·재화·패키지)의 코드는 남아 있다. 길만 닫았다.
+  { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, reset:()=>setShopSec('reco'), subs:[
+      { k:'reco', label:'추천',    ico:'flag',  act:()=>setShopSec('reco') },
+      { k:'gem',  label:'젬 상점', ico:'boost', act:()=>setShopSec('gem') } ] },
 ];
 // 🔬📋 두 칸을 여는 함수 — 옛 openUpgScreen()/openGear() 와 **같은 순서**를 따른다
 //   (메타 다시 읽기 → 마을 루프 정리 → 화면 켜기 → 네비 표시 → 아이콘 칠하기).
