@@ -350,12 +350,18 @@ async function groupLobby(){
       const tx=$('crBody').textContent;
       assert(tx.indexOf('+'+campNum(campRebPtGain()))>=0,'받을 포인트가 공식과 다름');
       assert(tx.indexOf('×'+(campRebMul()+campRebMulGain()).toFixed(2))>=0,'환생 뒤 배수가 공식과 다름'); }
-    // ③ ⭐ 먼 목표 — 「환생하면 더 빠르다」가 눈에 보여야 한다
-    { const rows=[...document.querySelectorAll('#campReb .crFarRow b')];
-      assert(rows.length===2,'먼 목표 줄이 두 줄이 아님: '+rows.length);
-      const h=t=>parseFloat(t.replace(/[^0-9.]/g,''));
-      assert(h(rows[1].textContent) < h(rows[0].textContent),
-        '환생 뒤가 더 빠르게 안 나온다: '+rows[0].textContent+' → '+rows[1].textContent); }
+    // ③ ⭐ 먼 목표 — 「환생하면 더 빠르다」가 눈에 보여야 한다.
+    //   ⚠ 클래스가 아니라 **라벨로 찾는다** — 디자인을 다시 짤 때 클래스는 바뀌지만 이 줄의 뜻은 안 바뀐다
+    //     (실제로 2026-08-31 재디자인에서 .crFarRow 가 사라져 검사가 헛돌았다).
+    { const far=[...document.querySelectorAll('#campReb .crB')]
+        .find(b=>/던전\s*10/.test((b.querySelector('.crL')||{}).textContent||''));
+      assert(far,'「던전 10까지」 줄이 없다 — 먼 목표를 안 보여 주면 첫 환생을 손해로 판단한다');
+      const v=far.querySelector('.crV'), em=v.querySelector('em');
+      assert(em,'환생 뒤 값이 없다(→ 뒤가 비었다)');
+      const h=t=>parseFloat(String(t).replace(/[^0-9.]/g,''));
+      const after=h(em.textContent), before=h(v.textContent.replace(em.textContent,''));
+      assert(before>0 && after>0,'먼 목표 값을 못 읽음: '+v.textContent);
+      assert(after<before,'환생 뒤가 더 빠르게 안 나온다: '+before+' → '+after); }
     // ④ 되돌릴 수 없으므로 확인을 거친다 — 나가기·로그아웃과 같은 껍데기
     campRebAsk(); await sleep(80);
     const ok=$('campRebOk'); assert(visible(ok),'환생 확인창이 안 뜸');

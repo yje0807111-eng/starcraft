@@ -564,34 +564,24 @@ function campRebRender(){
   const pct = Math.max(0, Math.min(100, wealth / need * 100));
   const gMul = campRebMulGain(), gPts = campRebPtGain();
   const now = campRebMul(), next = now + gMul;                 // 배수는 **합**이다(곱이 아니다)
-  const hNow = campRebHours(now), hNext = campRebHours(next);
-  const row = (k, v) => '<div class="crRow"><span>' + k + '</span><b>' + v + '</b></div>';
+  // ⛔ 문장을 쓰지 말 것. 라벨 한 줄 + 값 한 줄이 전부다 —
+  //    로딩·로그인과 같은 언어(판 없음 · 짧은 가운데 선 · 넓은 자간 라벨 · 값이 주인공).
+  const blk = (lab, val, extra) =>
+    '<div class="crB"><div class="crL">' + lab + '</div><div class="crV">' + val + '</div>'
+    + (extra || '') + '</div>';
   box.innerHTML =
-    '<div class="crCard">'
-    + '<div class="crLbl">지금</div>'
-    + row('환생 횟수', (C.reb | 0) + '회')
-    + row('획득 배수', '×' + now.toFixed(2))
-    + row('보유 포인트', campNum(C.rbPts || 0))
-    + '</div>'
-    + '<div class="crCard' + (can ? ' ok' : '') + '">'
-    + '<div class="crLbl">환생하면</div>'
-    + row('배수', '×' + now.toFixed(2) + ' → <em>×' + next.toFixed(2) + '</em>')
-    + row('포인트', '+' + campNum(gPts))
-    + '<div class="crBar"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
-    + '<div class="crNeed">' + (can ? '조건을 채웠습니다'
-        : ('이번 회차 재화 ' + campNum(wealth) + ' / ' + campNum(need)))
-    + '</div></div>'
-    // ⭐ 먼 목표 — 이 줄이 없으면 첫 환생이 손해로 보인다(§4-2-0)
-    + '<div class="crFar">'
-    + '<div class="crLbl">던전 10 까지 (어림)</div>'
-    + '<div class="crFarRow"><span>지금 배수로</span><b>' + campRebHourTx(hNow) + '</b></div>'
-    + '<div class="crFarRow now"><span>환생하면</span><b>' + campRebHourTx(hNext) + '</b></div>'
-    + '<div class="crHint">환생은 <b>막는 장치가 아니라 빠른 길</b>입니다. '
-    + '가까운 목표만 보면 손해로 보이지만, 끝까지 보면 훨씬 빠릅니다.</div>'
-    + '</div>'
-    + '<button class="actBtn pri crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>'
-    + (can ? '환생하기' : '조건 미달') + '</button>'
-    + '<button class="actBtn crTree" type="button" onclick="campRebClose();campTreeOpen()">🌳 환생 트리</button>';
+    // 회차·보유 — 제목 아래 조용한 한 줄
+    '<div class="crMeta">' + ((C.reb | 0) + 1) + '회차 · 포인트 ' + campNum(C.rbPts || 0) + '</div>'
+    + blk('이번 회차', campNum(wealth) + '<i>/ ' + campNum(need) + '</i>',
+        '<div class="crBar' + (can ? ' ok' : '') + '"><i style="width:' + pct.toFixed(1) + '%"></i></div>')
+    + blk('배수', '×' + now.toFixed(2) + ' <em>→ ×' + next.toFixed(2) + '</em>')
+    + blk('포인트', '<em>+' + campNum(gPts) + '</em>')
+    // ⭐ 먼 목표 — 이 두 값이 없으면 첫 환생이 손해로 보인다(HUNT_R1 §4-2-0).
+    //    설명 문장은 두지 않는다. 「96시간 → 70시간」이 스스로 말한다.
+    + blk('던전 10까지', campRebHourTx(campRebHours(now))
+        + ' <em>→ ' + campRebHourTx(campRebHours(next)) + '</em>')
+    + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>환생</button>'
+    + '<button class="crTree" type="button" onclick="campRebClose();campTreeOpen()">환생 트리</button>';
 }
 
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
