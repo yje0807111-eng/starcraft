@@ -41,6 +41,9 @@ const RES = (process.env.RES == null) ? 45 : +process.env.RES;
 //   ⚠ 옛 구조에서 잰 「500 이 최적」은 **그 제한이 실제로는 안 지켜지던** 판의 값이다
 //     (오토배틀의 무제한 추격이 남아 있었다). 미는 주체가 하나가 된 지금은 다시 재야 한다.
 const OUTLIM = +(process.env.OUTLIM || 0);
+// 👀 인식 거리 상한을 갈아 끼워 잰다 — 0 이면 게임 값 그대로(혼자 900 · 전파받으면 1500).
+//   ⚠ 실효 인식은 여기에 STK_ACQ_FAR(1.4) 이 곱해진다 — 900 이면 1260, 1500 이면 2100.
+const ACQCAP = +(process.env.ACQ || 0);
 const OUT = process.env.OUT || path.join(ROOT, 'docs', 'mock');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -82,7 +85,7 @@ await pg.evaluate(() => { campStopFrame(); campStopTimer(); });   // 시계를 �
  *   (30분 벤치에서 던전 진입이 20.6분이었다), 그러면 「움직임을 본다」는 목적에 비해 너무 비싸다.
  *   ⭐ 대신 자리는 실제 생산과 같은 경로를 지난다 — campDeploy 가 campLayerPost 까지 부른다.  */
 async function record(seed){
-  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, seed) => {
+  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, acqcap, seed) => {
     const FPS = 30, dt = 1 / FPS, N = Math.round(secs * FPS);
     // 🔬 연구 — 계열 업그레이드 전 항목을 res 레벨로. campResLv 가 읽는 그 자리에 직접 넣는다.
     if(res > 0 && typeof UNIT_UPG !== 'undefined' && G.tech){
@@ -124,6 +127,14 @@ async function record(seed){
       const af = (tgt ? (tgt.hp || 0) + (tgt.sh || 0) : 0), d = Math.max(0, b4 - af);
       if(tgt && tgt.side === 'ai'){ dmgOut += d; shotOut++; } else dmgIn += d;
       return r; };
+    // 👀 인식 상한 — campAlertTick 이 **매 틱 u.acq 를 다시 쓴다.** 그래서 프레임 앞에서
+    //   조여 봐야 소용없고(그렇게 한 번 헛짚었다 — 상한 350 인데 알아챈 거리가 1844 로 그대로였다),
+    //   그 함수가 끝난 **직후** 조여야 그 프레임의 표적 선정에 반영된다.
+    const _alt = window.campAlertTick;
+    if(acqcap > 0 && typeof _alt === 'function') window.campAlertTick = function(dt2){
+      const r = _alt.apply(this, arguments);
+      if(CAMPB) for(const u of CAMPB.me.units) if(u.acq > acqcap) u.acq = acqcap;
+      return r; };
     const _lea = window.campLeash;
     window.campLeash = function(){ const n = _lea.apply(this, arguments); leash += n || 0; return n; };
     const _en2 = window.campEngageStep;
@@ -148,7 +159,7 @@ async function record(seed){
       const hp = (arr) => arr.reduce((a, u) => a + (u.dead ? 0 : (u.hp || 0) + (u.sh || 0)), 0);
       frames.push({ t: +(f * dt).toFixed(2), me, ai,
         hpMe: Math.round(hp(CAMPB.me.units)), hpAi: Math.round(hp(CAMPB.ai.units)) }); }
-    window.campLeash = _lea; window.campEngageStep = _eng; window.strikeHit = _hit;
+    window.campLeash = _lea; window.campEngageStep = _eng; window.strikeHit = _hit; window.campAlertTick = _alt;
     const secsRan = frames.length / FPS;
 
     // ── 수치 ────────────────────────────────────────────────────────────
@@ -161,6 +172,9 @@ async function record(seed){
     let flips = 0, tele = 0, teleMax = 0, tgtSw = 0, inR = 0, inRn = 0, moved = 0;
     // 🔍 「표적을 못 찾는다」와 「표적은 있는데 못 닿는다」를 가른다 — 둘의 처방이 다르다.
     let hasT = 0, hasTn = 0, gap = 0, gapN = 0;
+    // 🏃 「돌격하는 느낌」의 자[尺] — 자리에서 얼마나 벗어나 있나, 얼마나 멀리서 표적을 잡나.
+    //   ⭐ 인식 거리가 이동 제한보다 크면 「적이 나오자마자 제한 끝까지 우르르」가 된다.
+    let away = 0, awayN = 0, awayMax = 0; const acqAt = [];
     const uids = new Set();
     for(const fr of frames){
       let alive = 0, hit = 0, withT = 0;
@@ -183,13 +197,21 @@ async function record(seed){
             prev.set(m.u, { x: vx, y: vy }); } }
         last.set(m.u, { x: m.x, y: m.y });
         const t0 = tgtPrev.get(m.u); if(t0 != null && t0 !== m.tgt && m.tgt) tgtSw++;
-        tgtPrev.set(m.u, m.tgt); }
+        // 표적이 **없다가 생긴** 순간의 거리 = 「얼마나 멀리서 알아채나」
+        if(!t0 && m.tgt){ let best = 1e9;
+          for(const a of fr.ai){ const d = Math.hypot(a.x - m.x, a.y - m.y); if(d < best) best = d; }
+          if(best < 1e9) acqAt.push(best); }
+        tgtPrev.set(m.u, m.tgt);
+        if(m.px != null){ const ad = Math.hypot(m.x - m.px, m.y - m.py);
+          away += ad; awayN++; if(ad > awayMax) awayMax = ad; } }
       if(alive){ inR += hit / alive; inRn++; hasT += withT / alive; hasTn++; } }
     const nU = Math.max(1, uids.size);
     const stat = { frames: frames.length, units: uids.size,
       flips: +(flips / nU).toFixed(1), tele, teleMax: Math.round(teleMax), tgtSw: +(tgtSw / nU).toFixed(1),
       inRange: +(100 * inR / Math.max(1, inRn)).toFixed(1),
       hasTgt: +(100 * hasT / Math.max(1, hasTn)).toFixed(1),
+      awayAvg: Math.round(away / Math.max(1, awayN)), awayMax: Math.round(awayMax),
+      acqAt: acqAt.length ? Math.round(acqAt.slice().sort((a,b)=>a-b)[Math.floor(acqAt.length/2)]) : 0,
       gapMul: +(gap / Math.max(1, gapN)).toFixed(2),
       moveAvg: +(moved / nU / Math.max(1, frames.length)).toFixed(2),
       leash, engPush,
@@ -321,7 +343,7 @@ async function record(seed){
       g.fillText(fr.t.toFixed(1) + 's · 아군 ' + fr.me.filter(m => !m.dead).length + ' · 적 ' + fr.ai.length,
         ox + 2, oy + cellH + 14); }
     return { stat, ok: true };
-  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, seed);
+  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, ACQCAP, seed);
 }
 
 const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -339,16 +361,19 @@ for(let i = 0; i < RUNS; i++){
 }
 
 const K = ['inRange', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
-  'dmgOut', 'dmgIn', 'shotOut', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi'];
+  'dmgOut', 'dmgIn', 'shotOut', 'awayAvg', 'awayMax', 'acqAt', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi'];
 const M = {}; for(const k of K) M[k] = med(runs.map(r => r[k]));
 console.log('');
 console.log('🎬 캠프 전투 궤적 — ' + SECS + '초 · 던전 ' + DG + ' · ' + SQUAD + ' · 연구 Lv' + RES
-  + (OUTLIM ? ' · 자리제한 ' + OUTLIM : '') + ' · ' + RUNS + '판 중앙값' + (ENGAGE ? '' : '  ⚙ campEngageStep 끔(대조군)'));
+  + (OUTLIM ? ' · 자리제한 ' + OUTLIM : '') + (ACQCAP ? ' · 인식상한 ' + ACQCAP : '') + ' · ' + RUNS + '판 중앙값' + (ENGAGE ? '' : '  ⚙ campEngageStep 끔(대조군)'));
 console.log('   유닛 ' + runs[0].units + '기 · 프레임 ' + runs[0].frames + ' · 첫 적 ' + runs[0].foe0 + '마리');
 console.log('');
 console.log('  ⚔ 사거리 안 비율      ' + M.inRange + '%      ← 전투가 실제로 이루어지는가 (낮으면 대부분 논다)');
 console.log('  🎯 표적을 가진 비율    ' + M.hasTgt + '%      ← 낮으면 「못 찾는다」 · 높은데 위가 낮으면 「못 닿는다」');
 console.log('  📐 못 닿는 정도        ×' + M.gapMul + '      ← 표적까지 거리 ÷ 사거리 (1.0 = 딱 사거리 끝)');
+console.log('  🏃 자리에서 벗어난 거리  평균 ' + M.awayAvg + ' · 최대 ' + M.awayMax
+  + '   ← 「돌격하는 느낌」의 자 (제한 = campEngageOut)');
+console.log('  👀 표적을 알아챈 거리    ' + M.acqAt + '      ← 이게 이동 제한보다 크면 「나오자마자 우르르」');
 console.log('  💫 방향 뒤집힘        ' + M.flips + '회/유닛   ← 덜덜 떠는 정도 (순수 오토배틀 기준 0.9)');
 console.log('  🎯 표적 바뀜          ' + M.tgtSw + '회/유닛   ← 떨림이 표적 흔들림 때문인지 가른다');
 console.log('  ⚡ 순간이동(>60px)    ' + M.tele + '회 (최대 ' + M.teleMax + 'px)');
