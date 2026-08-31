@@ -1224,7 +1224,13 @@
   .shopRow .twRowInfo{flex:1 1 auto;min-width:0}
   .shopRow .twBtn{flex:0 0 auto}
   /* 젬 팩 — 3열 */
-  .shopGems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  /* 💎 충전 칸 — 관례대로 5단계다(2026-08-31). 3열이면 마지막 줄에 둘만 남아 어색하므로
+     **자동 채움**으로 바꾼다. 좁은 화면에서도 최소 폭(88px)을 지키며 줄을 나눈다. */
+  .shopGems{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+  /* 보너스 뱃지 — 「크게 사면 이득」을 숫자로 보여 준다(관례). 액센트는 금색 하나만. */
+  .shopGem em .shopBn{font-style:normal;font-family:var(--font-num);font-size:9px;font-weight:800;
+    line-height:1;padding:2px 4px;margin-left:2px;border-radius:var(--r-bar,3px);
+    color:#141414;background:var(--gold,#ffd24a)}
   .shopGem{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 6px;
     background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
   .shopGem em{display:flex;align-items:center;gap:4px;font-style:normal;font-family:var(--font-num);
@@ -1995,8 +2001,16 @@
      그래서 상태를 판 자신에게 둔다 — 시트가 닫힐 때까지 유지되고 phone 쪽 클래스와 무관하다. */
   /* ⭐ **지연이 핵심이다.** 앞판(로딩·로고)이 다 걷힌 뒤에 들어와야 두 화면이 안 겹친다.
      지연 = 나가는 시간(--t-race-out) 과 같은 값. 그동안 판은 opacity 0 으로 기다린다(both). */
+  /* ⚠ 지연은 나가는 시간과 **정확히 같다**(겹치지 않는다 — 2026-08-27 확정).
+     ⭐ 그래도 화면이 멎어 보이던 것은 지연이 아니라 **곡선** 탓이었다(2026-08-31 실측):
+        앞판 ease 의 느린 끝 꼬리와 이 판 ease 의 느린 시작 꼬리가 만나 70ms 동안 밝기가
+        멈췄고, 그 사이 배경 그림만 덩그러니 남았다. 곡선을 바꿔 17ms 로 줄였다.
+     ⛔ ease 로 되돌리지 말 것 — 지연을 아무리 맞춰도 그 멎는 구간이 되살아난다. */
   #campRaceOv.raceFx{animation-duration:var(--t-race-in,.24s) !important;
-    animation-delay:var(--t-race-out,.20s) !important}
+    animation-delay:var(--t-race-out,.20s) !important;
+    /* ⚠ 곡선도 ease 가 아니라 **ease-out**(시작이 빠르다). ease 는 시작 꼬리가 느려서,
+       앞판 페이드아웃의 느린 끝 꼬리와 만나 화면이 몇 프레임 멎은 것처럼 보였다. */
+    animation-timing-function:ease-out !important}
   /* 🎬 **디졸브 동안 홈 화면을 비워 둔다** — 이것이 그 「깜박임」의 진짜 원인이었다(2026-08-27).
      로딩 화면의 밝은 그림은 #opening(z90) 이 아니라 **#titleBg(z40)** 가 깐다. #opening 자체는 투명하다.
      그런데 #homeScreen 은 z60 — 키 아트보다 **위**다. 그래서 홈이 켜지는 순간 밝은 그림이
@@ -2042,3 +2056,37 @@
   .cmBuy{flex:0 0 auto;display:flex;align-items:center;gap:5px;min-height:38px;padding:0 12px;
     font-family:var(--font-num);font-size:var(--fs-md)}
   .cmBuy .cmC{width:14px;height:14px}
+
+  /* ══ 🎬 패널 셔터 등장 (2026-08-31) ══════════════════════════════════════
+     좌상단 던전 이동(.cdDrop) · 우상단 더보기(.hbMoreBox) — 버튼 아래로 열리는 판 둘.
+     목업 docs/mock/panel-anim-6.html 의 ④ 셔터. 위에서 아래로 잘려 나온다.
+     ⭐ **높이·크기를 건드리지 않는다**(clip-path 만 움직인다). 그래서
+        던전 판이 열리자마자 하는 「지금 라운드로 스크롤」 계산이 어긋나지 않는다 —
+        펼침(scaleY)·높이 애니로 하면 그 계산이 깨진다(12-appshell.js campRndCenter).
+     ⭐ 글자가 눌리지 않는 것도 이 방식을 고른 이유다(scaleY 는 안의 글자까지 납작해진다).
+     ⚠ 닫기는 열기보다 **짧다**(.13s vs .22s) — 사라지는 것을 기다리게 하지 않는다.
+     🔬 **이징은 재서 골랐다**(정지 프레임으로 열린 비율을 뽑아 비교):
+       · ease-out 계열 (.25,.8,.3,1) → 15% 시점에 벌써 **46% 열림**. 급하게 튀어나오고
+         뒤 절반은 87→100% 뿐이라 **셔터가 안 읽힌다**(처음 넣었던 값이다).
+       · linear → 기계적이고 끝이 딱 끊긴다.
+       · 순수 S자 (.4,0,.2,1) → 15%에 7%. 셔터는 잘 읽히지만 **처음 30ms 가 죽어**
+         「눌렀는데 반응이 없다」로 느껴진다.
+       ⭐ (.33,.1,.2,1) = S자에 **출발만 살린 것**. 누르는 즉시 움직이면서 중반에 내려온다. */
+  @keyframes panShutIn{ from{ clip-path:inset(0 0 100% 0) } to{ clip-path:inset(0 0 0 0) } }
+  .cdDrop{ animation:panShutIn .22s cubic-bezier(.33,.1,.2,1) both }
+  .hbMoreWrap:not(.hide) .hbMoreBox{ animation:panShutIn .22s cubic-bezier(.33,.1,.2,1) both }
+  /* 닫히는 중 — 판은 아직 DOM 에 있다(애니가 끝나야 지운다). 그동안 터치를 먹지 않게 한다.
+     ⚠ 명시도를 열기 규칙보다 높여야 한다 — `.hbMoreBox.hbmOut` 만으로는 위 규칙에 진다.
+     ⛔ **닫기는 열기와 이름이 달라야 한다**(2026-08-31 실측). 처음에는 같은 panShutIn 을
+        `reverse` 로 되감으려 했는데 — **애니가 하나도 안 돌고 끝값으로 즉시 점프했다.**
+        clip 이 0% → **한 프레임에 100%**. 열기는 잘 보이는데 닫기만 툭 사라져 보인 이유다.
+        animation-name 이 같으면 브라우저는 「같은 애니가 이어서 돈다」로 보고, 이미 끝난
+        (fill:both) 애니의 방향만 뒤집어 **그 자리에서 결과값**을 낸다. 이름을 갈라야 재시작한다.
+     ⚠ 되감기(reverse)로는 이징도 거울이 되지 않는다 — 닫기 곡선은 여기서 따로 정한다. */
+  @keyframes panShutOut{ from{ clip-path:inset(0 0 0 0) } to{ clip-path:inset(0 0 100% 0) } }
+  .cdDrop.cdOut{ animation:panShutOut .15s cubic-bezier(.45,.05,.7,.95) both; pointer-events:none }
+  .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:panShutOut .15s cubic-bezier(.45,.05,.7,.95) both; pointer-events:none }
+  @media (prefers-reduced-motion:reduce){
+    .cdDrop,.cdDrop.cdOut,.hbMoreWrap:not(.hide) .hbMoreBox,
+    .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:none }
+  }

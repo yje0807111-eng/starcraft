@@ -668,7 +668,7 @@ async function groupLobby(){
     assert(visible($('gearScreen')),'네비 정비가 화면을 안 엶');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 3칸이 아님');
     navGo('shop'); await sleep(60);
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===2,'상점 하위가 2칸이 아님(추천·젬 상점)');
     // 구역에 '들어올 때'는 늘 첫 하위로 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙(2026-08-14).
     //   펫을 보다 나갔다 다시 들어와도 펫이 열려 있으면 구역 이름과 내용이 어긋난다.
     { const cur=()=>{ const e=document.querySelector('#navBar .navIt.cur'); return e?e.dataset.sub:null; };
@@ -1233,10 +1233,12 @@ async function groupLobby(){
               +' → 실제 줌 '+techView().zoom.toFixed(2)+' 시점 '
               +techView().x.toFixed(2)+','+techView().y.toFixed(2)); } }
         assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom());
-        // ⭐ **가장 축소한 화면 = 진입 애니가 끝나면 나오는 그 화면**(2026-08-27 사용자 확정).
-        //    더 줄일 수 있으면 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
-        assert(Math.abs(techMinZoom()-CAMP_ZOOM)<1e-6,
-          '축소 하한이 기본 배율과 다르다 — 기본보다 더 멀어질 수 있다 ('+techMinZoom()+' vs '+CAMP_ZOOM+')');
+        // ⭐ **축소가 실제로 된다**(2026-08-31 사용자 요청 — 「처음 화면이 너무 확대돼 있다」).
+        //    ⛔ 앞서는 하한 = 기본 배율이라 **축소가 아예 안 됐다**("가장 축소한 화면 = 처음 화면",
+        //      2026-08-27). 써 보니 답답하다고 하여 뒤집었다. 위 covered() 가 뚫림을 막으므로
+        //      여기서는 「줄어들 여지가 남아 있는가」만 지킨다.
+        assert(techMinZoom() < CAMP_ZOOM - 1e-6,
+          '축소가 안 된다 — 하한이 기본 배율 이상이다 ('+techMinZoom()+' vs '+CAMP_ZOOM+')');
         // ✂ **가장 아래로 내리면 미네랄·가스가 하단 시트 바로 위에 붙는다 — 줌과 무관하게 같은 자리.**
         //    그 아래는 아무것도 없는 여백이라 보이면 「빈 땅이 드러난 화면」이 된다.
         //    ⚠ 화면 비율이 아니라 **월드 좌표**로 재야 한다 — 「기본 배율의 여지」로 상한을 고정했더니
@@ -1324,6 +1326,157 @@ async function groupLobby(){
   //   ⛔ 옛 규칙(30초 시간 부활)이 후반 발산의 동력이었다 — 실측(던전 2): 누운 병력이 6 → 34 로
   //     쌓이며 꽂힌 화력이 R9 정점 891 → R24 487 로 **떨어졌고**, 난이도는 계속 올라 R24 가 11.4분.
   //   ⚠ strikeStepUnits 가 죽은 유닛을 배열에서 걷어낸다(18-strike.js:1301) — '남아 있다'고 가정하면 안 된다.
+  // 🏕 상점을 캠프 기준으로 다시 짰다(2026-08-31). 여기서 잠그는 것은 화면이 아니라 **경제**다.
+  await step('캠프 상점: 팩 배수는 합이고 · 산 재화는 캠프 지갑으로 간다', async()=>{
+    skipIf(typeof CAMP_PACKS==='undefined'||typeof campGatherMul!=='function','팩 시스템 없음');
+    skipIf(!campState(),'캠프 상태 없음');
+    const p=PROF(), keep=JSON.parse(JSON.stringify(p.packs||{}));
+    try{
+      // ① **합산이어야 한다.** ⛔ 곱으로 바꾸면 곱 항이 하나 더 늘어 후반이 터진다
+      //    (BALANCE §0 · 실측 5회 만에 ×1,900만). 팩 셋 = 곱이면 ×8, 합이면 ×4.5 대.
+      p.packs={}; const m0=campGatherMul();
+      assert(m0>0,'기본 배수가 0 이다');
+      const g=CAMP_PACKS.filter(x=>x.gather);
+      p.packs={}; g.forEach(x=>p.packs[x.id]=1);
+      const mAll=campGatherMul();
+      const sum=g.reduce((a,x)=>a+x.gather,0), prod=g.reduce((a,x)=>a*(1+x.gather),1);
+      const gotR=mAll/m0, sumR=(1+sum), prodR=prod;
+      assert(Math.abs(gotR-sumR)<0.05,
+        '팩 배수가 합산이 아니다 — 얻은 비 '+gotR.toFixed(2)+' · 합이면 '+sumR.toFixed(2)+' · 곱이면 '+prodR.toFixed(2));
+      // ①-2 **팩은 탭에도 걸려야 한다.** ⛔ 채취에만 걸었더니 배수 4.0 인데 실제 수입은
+      //     ×1.89 뿐이었다 — 수입의 66% 가 탭인데 거기 안 걸렸다. 「재화 획득 +300%」가 거짓말이 된다.
+      if(typeof campTapGain==='function'){
+        p.packs={}; const t0=campTapGain();
+        p.packs={}; CAMP_PACKS.filter(x=>x.gather).forEach(x=>p.packs[x.id]=1);
+        const t1=campTapGain();
+        const gotT=t1/Math.max(1,t0), wantT=1+CAMP_PACKS.filter(x=>x.gather).reduce((a,x)=>a+x.gather,0);
+        assert(Math.abs(gotT-wantT)<0.15,
+          '팩이 탭 수입에 안 걸린다 — 탭 배수 '+gotT.toFixed(2)+' · 기대 '+wantT.toFixed(2));
+      }
+      // ② **캠프 지갑**에 들어가야 한다. ⛔ PROF().pcoin 은 옛 사냥터 지갑이라 캠프와 안 통한다.
+      p.packs={};
+      const C=campState(), live=(typeof _campOn!=='undefined'&&_campOn&&typeof G!=='undefined'&&G.tech);
+      const pc0=p.pcoin||0, w0=live? (G.tech.credit||0) : (C.credit||0);
+      campAddRes(1234,0);
+      const w1=live? (G.tech.credit||0) : (C.credit||0);
+      assert(Math.round(w1-w0)===1234,'캠프 지갑에 안 들어갔다 ('+Math.round(w1-w0)+')');
+      assert(Math.abs((p.pcoin||0)-pc0)<0.5,'옛 프로필 지갑(pcoin)이 같이 움직였다 — 지갑이 섞였다');
+      if(live) G.tech.credit=w0; else C.credit=w0;
+      // ⛔ **캠프 밖에서 산 것은 보류함에 담긴다.** C.credit 에 직접 넣으면 캠프가 켜질 때
+      //    새 판이 credit 을 0 으로 덮어 **산 돈이 사라진다**(실측 2026-08-31: 3,400만이 0 이 됐다).
+      // ⚠ _campOn 은 파일 스코프 let 이라 **검사에서 못 바꾼다**(window 에 안 붙는다).
+      //    그래서 「캠프 밖에서 담긴다」가 아니라 **보류함이 실제로 지갑에 꽂히는가**를 잰다.
+      if(typeof campFlushPend==='function'){
+        const pend0=C.pend;
+        try{
+          C.pend={m:5555,g:77};
+          const wA=(typeof G!=='undefined'&&G.tech)?(G.tech.credit||0):0;
+          const eA=(typeof G!=='undefined'&&G.tech)?(G.tech.energy||0):0;
+          campFlushPend();
+          const wB=(typeof G!=='undefined'&&G.tech)?(G.tech.credit||0):0;
+          const eB=(typeof G!=='undefined'&&G.tech)?(G.tech.energy||0):0;
+          assert(!C.pend,'보류함이 안 비워졌다 — 다음 진입 때 또 준다');
+          assert(Math.round(wB-wA)===5555,'보류분(미네랄)이 캠프 지갑에 안 들어왔다 ('+Math.round(wB-wA)+')');
+          assert(Math.round(eB-eA)===77,'보류분(가스)이 캠프 지갑에 안 들어왔다 ('+Math.round(eB-eA)+')');
+          if(typeof G!=='undefined'&&G.tech){ G.tech.credit=wA; G.tech.energy=eA; }
+        } finally { C.pend=pend0; }
+      }
+      // ⏱ **논 시간보다 긴 시간치는 못 산다.** 실측: 20분 시점의 8시간치가 그때 부의 23.8배,
+      //    24시간치는 71.4배 — 한 회차를 통째로 건너뛴다.
+      if(typeof shopWhyLock==='function' && typeof SHOP_GEM_BUY!=='undefined'){
+        const play0=C.playS;
+        try{
+          C.playS=60;                                  // 1분만 놀았다
+          const big=SHOP_GEM_BUY.find(x=>x.secs===86400);
+          assert(big && shopWhyLock(big),'1분 놀았는데 24시간치를 살 수 있다');
+          C.playS=30*3600;                             // 30시간 놀았다
+          assert(!shopWhyLock(big) || shopWhyLock(big).indexOf('플레이')<0,
+            '30시간 놀았는데 아직 플레이 시간으로 막힌다: '+shopWhyLock(big));
+        } finally { C.playS=play0; }
+      }
+      // ③ 젬 상점은 **고정 숫자가 아니라 「n 시간치」를 판다.**
+    //    ⭐ 회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 무의미해진다.
+    //    ⚠ 속도는 **이미 재고 있던 것**(camp.rate · 자리 비움 정산이 쓰는 값)을 그대로 쓴다.
+    //       ⛔ "일꾼 n기 × 초당 k" 같은 식을 새로 만들면 두 벌이 되어 어긋난다.
+    if(typeof campTimeAmt==='function'){
+      const C2=campState(), r0=C2.rate, rg0=C2.rateGas;
+      try{
+        C2.rate=0; assert(campTimeAmt(1800,'min')===0,'수입을 못 쟀는데 값이 나온다 — 팔면 안 된다');
+        C2.rate=397;                                   // 실측 규모(60분 143만 = 초당 397)
+        const half=campTimeAmt(1800,'min'), day=campTimeAmt(86400,'min');
+        assert(half>0 && day>half,'시간이 길수록 많아야 한다: 30분 '+half+' · 24시간 '+day);
+        // 시간에 비례한다(반올림 오차 5% 안)
+        assert(Math.abs(day/half - 48) < 48*0.05,'24시간치가 30분치의 48배가 아니다: '+(day/half).toFixed(1));
+        // **반올림**: 유효숫자 두 자리 — 뒤가 0 으로 떨어져야 「이만큼 준다」가 읽힌다
+        const raw=Math.floor(397*86400);
+        assert(day!==raw,'반올림을 안 했다(원본 그대로): '+day);
+        assert(String(day).slice(2).split('').every(c=>c==='0'),'유효숫자 두 자리가 아니다: '+day);
+      } finally { C2.rate=r0; C2.rateGas=rg0; }
+    }
+    // ④ 상점은 **두 칸**이다(옛 다섯 칸은 캠프에 안 닿아 화면에서 뺐다)
+      assert(typeof SHOP_SECS!=='undefined','SHOP_SECS 없음');
+      const secs=Object.keys(SHOP_SECS);
+      assert(secs.length===2 && secs.indexOf('reco')>=0 && secs.indexOf('gem')>=0,
+        '상점 구역이 추천·젬 상점 둘이 아니다: '+secs.join(','));
+      return '합산 확인(×'+gotR.toFixed(2)+' · 곱이면 ×'+prodR.toFixed(2)+') · 캠프 지갑 ok · 2칸';
+    } finally { p.packs=keep; }
+  });
+
+  // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
+  //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
+  //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)
+  //     ② 닫을 때 **애니가 끝난 뒤에** 지운다(즉시 지우면 사라지는 연출이 없다)
+  //     ③ 닫는 중에 다시 눌러도 열린다 ← **실제로 겪은 버그**. 앞선 닫기의 뒷정리가
+  //        뒤늦게 와서 방금 연 판에 .hide 를 붙였다. 세대(_hbMoreGen)로 막는다.
+  await step('패널 셔터: 던전 이동·더보기가 같은 연출로 열리고 닫힌다', async()=>{
+    skipIf(typeof campDropOpen!=='function'||typeof hbOpenMore!=='function','패널 함수 없음');
+    skipIf(!campChipInfo(),'캠프 밖 — 던전 칩이 없다');
+    const ani=el=>getComputedStyle(el).animationName;
+    // ① 같은 애니
+    campDropOpen(); await sleep(30);
+    const dd=document.getElementById('campDrop');
+    assert(!!dd,'던전 판이 안 열렸다');
+    assert(ani(dd)==='panShutIn','던전 판에 셔터가 안 걸렸다: '+ani(dd));
+    const _ddDur=getComputedStyle(dd).animationDuration;   // 판이 지워지기 전에 담아 둔다
+    // ⛔ **닫기는 열기와 이름이 달라야 한다.** 같은 이름을 reverse 로 되감으려 했더니
+    //    애니가 하나도 안 돌고 **끝값으로 즉시 점프**했다(clip 0% → 한 프레임에 100%).
+    //    「지워지긴 지워진다」만 재던 앞 검사는 이걸 못 잡았다 — 그래서 여기서 이름을 잠근다.
+    const _openAni = ani(dd);
+    campDropClose();
+    const _closeAni = ani(document.querySelector('.cdDrop')||dd);
+    assert(_closeAni && _closeAni!=='none', '닫기에 애니가 없다');
+    assert(_closeAni !== _openAni,
+      '닫기가 열기와 같은 애니 이름이다 ('+_closeAni+') — 되감기가 안 돌고 끝값으로 점프한다');
+    // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다 — 그리고 **중간 모습이 실제로 있어야 한다**
+    assert(!!document.querySelector('.cdDrop'),'던전 판이 애니 없이 즉시 지워졌다');
+    let _mid=false;
+    for(let i=0;i<6;i++){ await sleep(25);
+      const x=document.querySelector('.cdDrop'); if(!x) break;
+      // ⚠ 정규식을 쓰지 않는다 — 이 파일을 heredoc 으로 고칠 때 역슬래시가 벗겨져 깨진다.
+      const seg=(getComputedStyle(x).clipPath||'').split(' ').pop().replace(')','');  // "41.2%"
+      const left = seg.slice(-1)==='%' ? 100-parseFloat(seg) : -1;
+      if(left>3 && left<97) _mid=true; }
+    assert(_mid,'닫는 중 중간 모습이 한 번도 안 잡혔다 — 접히지 않고 툭 사라진다');
+    await sleep(420);
+    assert(!document.querySelector('.cdDrop'),'던전 판이 애니 뒤에도 안 지워졌다');
+    // 더보기도 같은 애니여야 한다 — 둘이 다르면 단일 소스가 깨진 것
+    hbOpenMore(); await sleep(30);
+    const bx=document.getElementById('hbMoreBox');
+    assert(!!bx && ani(bx)==='panShutIn','더보기 판에 셔터가 안 걸렸다: '+(bx?ani(bx):'판 없음'));
+    const _dur=getComputedStyle(bx).animationDuration;
+    assert(_dur===_ddDur,'두 판의 연출 길이가 다르다 — 한 곳에서 정해야 한다 ('+_dur+' vs '+_ddDur+')');
+    // ③ 닫는 중에 다시 눌러도 열린다
+    hbCloseMore(); await sleep(50);
+    assert(!hbMoreOn(),'닫는 중인데 아직 열린 것으로 센다 — 다시 누르면 또 닫기가 돈다');
+    hudTopMenu();                                   // 셔터가 되감기는 중에 ☰ 를 다시 눌렀다
+    await sleep(500);                               // 앞선 닫기의 뒷정리가 올 시간을 충분히 준다
+    assert(!document.getElementById('hbMoreSheet').classList.contains('hide'),
+      '닫는 중에 다시 눌렀더니 안 열린다 — 지난 닫기의 뒷정리가 새로 연 판을 덮었다');
+    hbCloseMore(true); await sleep(40);
+    assert(document.getElementById('hbMoreSheet').classList.contains('hide'),'즉시 닫기가 안 먹는다');
+    return '열기 '+_dur+' 셔터 · 닫기는 이름이 다른 애니로 접힌다 · 두 판 공용 · 닫는 중 재클릭 ok';
+  });
+
   await step('캠프: 라운드가 시작될 때 전원 부활 + 체력 회복', async()=>{
     skipIf(typeof campRoundRevive!=='function'||typeof campEnterDungeon!=='function','라운드 부활 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
@@ -6065,6 +6218,19 @@ async function groupLobby(){
       // ⭐ **겹치면 안 된다.** 종족 판은 앞판이 다 걷힌 뒤에 들어온다 — 지연 ≥ 나가는 시간.
       assert(Math.round(parseFloat(cs2.animationDelay)*1000)>=out,
         '종족 판이 앞판과 겹친다 (지연 '+cs2.animationDelay+' < 나감 '+out+'ms)');
+    // 🎬 **곡선도 잠근다**(2026-08-31). 지연이 맞아도 양쪽이 ease 면 앞판의 느린 끝 꼬리와
+    //   이 판의 느린 시작 꼬리가 만나 70ms 동안 화면이 멎고, 그 사이 배경 그림만 덩그러니 남는다.
+    //   ⛔ ease 로 되돌리지 말 것 — 지연을 아무리 맞춰도 그 구간이 되살아난다.
+    { const ph=$('phone'), had=ph.classList.contains('raceIn');
+      ph.classList.add('raceIn');
+      const out=getComputedStyle($('opening')).animationTimingFunction;
+      if(!had) ph.classList.remove('raceIn');
+      assert(out.indexOf('ease-in')>=0,'앞판이 ease-in 이 아니다(끝 꼬리가 느리다): '+out);
+      const ov=$('campRaceOv');
+      if(ov){ const was=ov.classList.contains('raceFx'); ov.classList.add('raceFx');
+        const inn=getComputedStyle(ov).animationTimingFunction;
+        if(!was) ov.classList.remove('raceFx');
+        assert(inn.indexOf('ease-out')>=0,'종족 판이 ease-out 이 아니다(시작 꼬리가 느리다): '+inn); } }
       ov.className=before; }
     let bad=[];
     for(const sh of document.styleSheets){ let rs; try{ rs=sh.cssRules; }catch(e){ continue; }
@@ -6146,7 +6312,9 @@ async function groupLobby(){
     assert(getComputedStyle(bar,'::before').display==='none','윗변 광선이 남아 있다 — 면이 없으면 가를 경계도 없다');
     navGo('shop'); await sleep(140);
     const cells=[...bar.querySelectorAll('.navIt')].filter(e=>!e.classList.contains('navBk'));
-    assert(cells.length>=4,'칸이 없다: '+cells.length);
+    // ⚠ 개수를 세지 않는다 — 상점 하위는 캠프 재편으로 5칸 → **2칸**(추천·젬 상점)이 됐다.
+    //   이 검사가 보는 것은 「네비가 실제로 칸을 그리는가」다.
+    assert(cells.length>=2,'칸이 없다: '+cells.length);
     for(const c of cells){ const cs=getComputedStyle(c);
       assert(cs.flexDirection==='row','칸이 아직 세로로 쌓인다 — 42px 이 안 나온다');
       assert(cs.borderTopWidth==='0px'||cs.borderTopStyle==='none','칸에 테두리(금속 링)가 남아 있다');
@@ -6848,15 +7016,17 @@ async function groupLobby(){
     { const face=[]; for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
         const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
       assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
-    // 🎬 넘어올 때 **앞 팝업이 먼저 사라지면 안 된다** — 그 순간 뒤 로비가 드러나 화면이 튄다
+    // 🎬 **넘어갈 때 겹치지 않는다 — 한 프레임에 뚝 끊긴다**(2026-08-31 사용자 확정).
+    //   ⛔ 예전의 「덮고 나서 치운다」(340ms 겹침)로 되돌리지 말 것 — 두 화면이 함께 비쳐
+    //     어지럽다는 판단이었다. 로딩 경로 전체(난이도·로딩·게임 진입·나가기)가 같은 규칙이다.
     closeSoloDiff(); await sleep(40);
     openMapSelect(); await sleep(40); openModeSheet(USEMAPS.nemo); await sleep(120);
     chooseSolo(); await sleep(120);
-    assert(!$('modeSheet').classList.contains('hide'),
-      '새 화면이 덮기 전에 앞 팝업이 사라졌다 — 그 사이 뒤 로비가 비쳐 화면이 튄다');
+    assert($('modeSheet').classList.contains('hide'),
+      '앞 팝업이 남아 두 화면이 겹쳤다 — 로딩 경로는 컷이어야 한다');
     assert(!$('soloDiffPanel').classList.contains('hide'),'새 화면이 안 떴다');
-    await sleep(420);
-    assert($('modeSheet').classList.contains('hide'),'다 덮은 뒤에도 앞 팝업이 남아 있다');
+    assert(getComputedStyle($('soloDiffPanel')).animationName==='none',
+      '난이도 판이 페이드로 뜬다 — 즉시 떠야 한다');
     closeSoloDiff(); await sleep(40);
     return '사다리 '+dots.length+'칸(무한 포함) · 잠금 분리 · 전환 이어짐 ok'; });
   // 🧬 종족 선택 팝업 = 캠프의 행 문법 + 「고른 행을 종족색이 물들인다」(2026-08-27 · S3안).
@@ -6976,6 +7146,23 @@ async function groupLobby(){
     // 버튼은 공용 액션 버튼이다 — 이 화면 전용 버튼을 만들지 말 것
     assert($('opStart').classList.contains('actBtn')&&$('opStart').classList.contains('pri'),'시작 버튼이 공용 .actBtn.pri 가 아님');
     assert($('opQuit').classList.contains('actBtn'),'나가기가 공용 .actBtn 이 아님');
+    // ⏳ **막대가 다 차야 시작이 열린다.** 예전엔 막대에 css 전이(width .3s)가 걸려 있어
+    //   숫자가 100% 가 되어 버튼이 열리는 순간 막대는 58% 였다(2026-08-31 실측).
+    //   ⛔ 로딩 단계에서 전이를 되살리지 말 것 — 30ms 마다 다시 그리므로 전이 없이도 매끄럽다.
+    { const fill=$('gsBarFill'), sb=$('opStart');
+      const was=_gsLoading, wasPct=_gsSoloPct;
+      _gsLoading=true; _gsSoloPct=0.5; _gsPaintCount();
+      assert(getComputedStyle(fill).transitionProperty==='none' || getComputedStyle(fill).transitionDuration==='0s',
+        '로딩 막대에 전이가 걸려 있다 — 막대가 진행률보다 늦게 찬다');
+      _gsSoloPct=1; _gsPaintCount();
+      assert(fill.style.width==='100%','막대가 100% 로 안 찬다: '+fill.style.width);
+      _gsLoading=was; _gsSoloPct=wasPct; _gsPaintCount(); }
+    // 🎬 **로딩 → 게임은 뚝 끊긴다**(2026-08-31 사용자 확정). 워프(흐려지며 확대되는 디졸브)를 껐다.
+    //   ⛔ .warp 를 다시 붙이지 말 것 — 두 화면이 겹쳐 보여 어지럽다는 판단이었다.
+    //   ⚠ 「기다렸다가 감춘다」로도 되돌리지 말 것: 그림은 그대로인 채 0.75초 멎어 버린다.
+    _gsFinish();
+    assert(op.classList.contains('hide'),'로딩이 곧바로 사라지지 않았다 — 게임 진입은 컷이어야 한다');
+    assert(!op.classList.contains('warp'),'워프 디졸브가 되살아났다');
     restore(); await sleep(40);
     return '협동 8 · 팀전 4v4 · 개인 진행률 ok'; });
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
@@ -8613,25 +8800,31 @@ async function groupLobby(){
     assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
     assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
     assert($('curTitle').textContent==='상점','상점 제목이 재화 바 왼쪽에 없음: "'+$('curTitle').textContent+'"');
-    // 구역 5개를 하단 네비로 나눴다(2026-08-14) — 화면에는 고른 구역 하나만 그린다
+    // 🏕 구역은 **둘**이다(2026-08-31 캠프 재편). 앞의 다섯(한정구매·뽑기·재화·패키지·충전)은
+    //   옛 사냥터 기준이라 파는 것이 캠프에 하나도 안 닿았다 — 화면에서만 뺐고 코드는 남아 있다.
     assert(document.querySelectorAll('#shopBody .shopPanel').length>=1,'상점 구역이 안 그려짐');
     { const seen=[];
-      for(const k of ['deal','draw','res','pack','gem']){ setShopSec(k);
+      for(const k of ['reco','gem']){ setShopSec(k);
         const hd=document.querySelector('#shopBody .shopHead');
         assert(hd,'상점 구역 '+k+' 이 안 그려짐'); seen.push(hd.textContent.slice(0,4)); }
-      setShopSec('deal');
-      assert(new Set(seen).size===5,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
-    assert(document.querySelectorAll('#shopBody .shopDeal').length===3,'오늘의 특가가 3개가 아님');
-    setShopSec('draw');   // 뽑기 행은 '뽑기' 구역에 있다(구역별로 나뉜 뒤)
-    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'상점 내용(뽑기 행)이 비어 있음');
-    assert(document.querySelector('#shopBody .petRow, #shopBody .shopPanel'),'뽑기 구역에 보유 펫이 안 붙음');
-    setShopSec('deal');
-    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
+      setShopSec('reco');
+      assert(new Set(seen).size===2,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
+    // ① 추천 = 팩 목록. CAMP_PACKS 와 **행 수가 같아야** 한다(한 곳에서 정한다).
+    setShopSec('reco');
+    if(typeof CAMP_PACKS!=='undefined')
+      assert(document.querySelectorAll('#shopBody .shopRow').length===CAMP_PACKS.length,
+        '추천 행이 CAMP_PACKS 와 다르다: '+document.querySelectorAll('#shopBody .shopRow').length+' vs '+CAMP_PACKS.length);
+    // ② 젬 상점 = 충전 + 젬으로 구매. 판이 둘이어야 한 화면에 다 있다.
+    setShopSec('gem');
+    assert(document.querySelectorAll('#shopBody .shopPanel').length>=2,'젬 상점에 충전·구매 두 판이 없다');
+    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'젬으로 살 것이 비어 있음');
+    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 실제 아이콘이 들어갔는지
     assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
+    setShopSec('reco');
     // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
     for(const sel of ['.curTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===2,'상점 하위가 2칸이 아님(추천·젬 상점)');
     // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
     openHome(); await sleep(40); openShop(); await sleep(60);   // ⚠ 마을 팝업 경로는 다락으로 갔다 — 상점 전용 화면으로 연다
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
@@ -9951,7 +10144,69 @@ async function groupGame(){
     assert(G.enemies.length>b || (G.pendSpawn||[]).length>bp,'적/대기열 미증가'); return pt.name; });
   await step('포인트 강화 팝업', ()=>{ skipIf(typeof openPointUpgrade!=='function','없음'); openPointUpgrade();
     assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
-  await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
+  // ⚙ 설정 아이콘 = **톱니 한 벌**(ICO.gear). 로그인·유즈맵 재화바·게임 HUD 가 같은 것을 쓴다.
+  //   ⛔ 세 줄(☰)로 되돌리거나 SVG 를 마크업에 다시 붙여 넣지 말 것 — 세 곳이 조용히 갈라진다.
+  await step('설정 아이콘: 톱니 한 벌 · 상자 가운데', ()=>{
+    const hosts=[...document.querySelectorAll('#settingsBtn .icoBars,#curSettingsBtn .icoBars,.authGear span[data-ico]')];
+    assert(hosts.length>=3,'톱니를 쓰는 자리가 3곳이 아니다: '+hosts.length);
+    hosts.forEach(h=>{ assert(h.dataset.ico==='gear','data-ico 가 gear 가 아니다: '+h.dataset.ico);
+      assert(h.querySelector('svg'),'아이콘이 안 칠해졌다(paintIcons 미적용)'); });
+    // 아이콘은 제 상자 한가운데 — 인라인 span 이면 라인박스 여백만큼 위로 뜬다
+    for(const id of ['settingsBtn','curSettingsBtn']){ const b=$(id); if(!b) continue;
+      const sv=b.querySelector('.icoBars svg'); if(!sv) continue;
+      const r=b.getBoundingClientRect(), s=sv.getBoundingClientRect();
+      assert(Math.abs((s.top+s.height/2)-(r.top+r.height/2))<0.6,
+        id+' 톱니가 상자 가운데가 아니다: '+((s.top+s.height/2)-(r.top+r.height/2)).toFixed(2)+'px');
+      assert(Math.abs((s.left+s.width/2)-(r.left+r.width/2))<0.6,id+' 톱니가 가로 가운데가 아니다'); }
+    // ☰ 는 **캠프에서만** 남는다 — 거긴 설정이 아니라 '더보기'다(2026-08-31 사용자 확정).
+    //   같은 버튼 하나가 모습만 갈아 끼운다 — 캠프용 버튼을 새로 만들지 말 것.
+    { const ph=$('phone'), b=$('curSettingsBtn');
+      const g=b.querySelector('.icoBars'), m=b.querySelector('.icoMenu');
+      assert(g&&m,'톱니·세줄 두 모습이 한 버튼 안에 있어야 한다');
+      const vis=e=>getComputedStyle(e).display!=='none';
+      const had=ph.classList.contains('campMode');
+      ph.classList.remove('campMode');
+      assert(vis(g)&&!vis(m),'캠프가 아닌데 세 줄이 보인다');
+      ph.classList.add('campMode');
+      assert(!vis(g)&&vis(m),'캠프인데 톱니가 보인다');
+      if(!had) ph.classList.remove('campMode'); }
+    return '3곳 · 상자 가운데'; });
+  // 🎬 설정 카드는 scale(--setScale) 로 줄여 놓은 카드다. 공용 팝업 애니(fxPopOn)는 그 배율을 모른 채
+  //   scale(1) 로 끝내서, 1.25배로 꽉 찬 카드가 떴다가 애니가 끝나며 툭 줄었다(2026-08-31 실측).
+  //   ⛔ .setCard 를 fxPopOn 목록이나 fxPop() 호출에 다시 넣지 말 것 — 등장 애니는 setCardIn 하나다.
+  await step('설정 팝업 · 등장 애니가 카드 배율을 지킨다', async ()=>{ openSettings();
+    assert(visible($('settingsPop')),'settingsPop 안 보임');
+    const c=$('settingsPop').querySelector('.setCard');
+    const an=getComputedStyle(c).animationName;
+    assert(an.indexOf('fxPopOn')<0,'설정 카드에 공용 팝업 애니가 걸렸다 — 카드가 커졌다 줄어든다: '+an);
+    const w0=c.getBoundingClientRect().width;
+    await sleep(_cssMs('--t-swap',.22)+120);
+    const w1=c.getBoundingClientRect().width;
+    assert(Math.abs(w1-w0)<1,'등장 중에 카드 폭이 변한다(튄다): '+w0.toFixed(1)+' → '+w1.toFixed(1));
+    const sc=new DOMMatrix(getComputedStyle(c).transform).a;
+    // ⚠ 값을 여기 박지 말 것 — 배율은 css 변수 한 곳이 단일 소스다(바꿀 때 두 군데를 고치게 된다)
+    const want=parseFloat(getComputedStyle(c).getPropertyValue('--setScale'))||1;
+    assert(Math.abs(sc-want)<0.02,'카드 배율이 --setScale('+want+')이 아니다: '+sc.toFixed(3));
+    // 터치 타겟은 **배율이 걸린 뒤** 기준으로 지킨다(DESIGN §0 권고 44px).
+    //   ⚠ 높이를 44px 로 박아 두면 배율만큼 작아진다 — 행들은 1/배율로 키워 쓴다.
+    { const rows=[...c.querySelectorAll('.setItem,.setQRow,.setPause,.setExit,.setLogout')].filter(e=>e.offsetHeight>0);
+      assert(rows.length,'설정 행을 하나도 못 찾았다 — 선택자가 낡았다');
+      rows.forEach(r=>{ const h=r.getBoundingClientRect().height;
+        assert(h>=43.5,'설정 행이 44px 미만: '+(r.id||r.className.split(' ')[0])+' '+h.toFixed(1)+'px'); }); }
+    // 🌑 하위 팝업(비디오 설정·임무 목표…)은 **뒤가 거의 안 보이게** 덮는다 —
+    //   .5 였을 때 설정 목록 글자가 그대로 비쳐 두 화면이 겹쳐 읽혔다(2026-08-31 사용자 요청).
+    { openSetSub('vid'); await sleep(80);
+      const sp=$('setSubPop');
+      assert(sp && !sp.classList.contains('hide'),'하위 팝업이 안 열린다');
+      const parts=getComputedStyle(sp).backgroundColor.replace(/[^0-9.,]/g,'').split(',');
+      const a=(parts.length>3)?parseFloat(parts[3]):1;
+      assert(a>=0.85,'하위 팝업 딤이 옅다 — 뒤 목록이 비친다: '+a);
+      // ⚠ 하위 팝업은 **설정보다 항상 위**여야 한다. 게임 밖은 설정이 95 로 올라가는데 하위가 73 에
+      //   머물러, 유즈맵에서 비디오 설정을 열면 설정 목록 뒤로 깔렸다(2026-08-31).
+      assert(+getComputedStyle(sp).zIndex > +getComputedStyle($('settingsPop')).zIndex,
+        '하위 팝업이 설정보다 아래다: '+getComputedStyle(sp).zIndex+' vs '+getComputedStyle($('settingsPop')).zIndex);
+      closeSetSub(); await sleep(40); }
+    closeSettings(); return '폭 '+w1.toFixed(0)+'px · 배율 '+sc.toFixed(2)+' 고정'; });
   // DESIGN.md 규칙 — 게임 안 팝업(설정 · 나가기 확인 · 결과)만. 게임 밖(#settingsPop.appCtx)은 대상 아님
 
   await step('설정: 상단 스위치 + 리스트 → 하위 팝업', ()=>{
@@ -10056,6 +10311,36 @@ async function groupGame(){
         return getComputedStyle($('rsTtl')).color; };
       const tw=cw('win'), tl=cw('lose');
       assert(tw!==tl,'승/패 제목 색이 같음: '+tw);
+      // 📋 **통계는 이 화면 안에 있다**(2026-08-31 · 옛 #resultScreen 을 여기로 합쳤다).
+      //   ⛔ 두 화면으로 다시 가르지 말 것 — 같은 값을 두 번 보여 주던 구조였다.
+      { const lab=[...document.querySelectorAll('#rsRows .rsRow b')].map(b=>b.textContent);
+        assert(lab.indexOf('보유 포인트')>=0,'옛 통계 화면의 줄(보유 포인트)이 안 옮겨졌다: '+lab.join('/')); }
+      // 통계로 가는 입구가 옛 창을 열면 안 된다 — 같은 결과 화면이 다시 떠야 한다
+      openResultScreen();
+      assert(!$('resultScreen'),'옛 통계 창(#resultScreen)이 되살아났다 — 마크업째 지운 화면이다');
+      assert(typeof window.resultToLobby==='undefined' && typeof window.ovStatRow==='undefined',
+        '옛 통계 창의 함수가 되살아났다(resultToLobby / ovStatRow)');
+      assert(ov.classList.contains('rsOn'),'통계 입구가 결과 화면을 안 띄운다');
+      // 나가기 = 곧바로 로비(다음 단계가 없다). ⚠ 실제로 부르면 화면이 로비로 가므로 경로만 본다.
+      assert(_ovConfirm.toString().indexOf('overlayToLobby')>=0 && _ovConfirm.toString().indexOf('openResultScreen')<0,
+        '나가기가 아직 옛 통계 단계를 거친다');
+      // 🎬 결과 화면 → **유즈맵으로 곧장**. 로딩 화면을 거치지 않는다(2026-08-31 사용자 확정).
+      //   ⛔ showLoading 을 다시 끼우지 말 것 — 그 화면이 키 아트와 타이틀 로고를 켜는데,
+      //     둘은 화면과 따로 0.42초에 걸쳐 꺼져 유즈맵 목록 위로 비쳤다.
+      { const t=overlayToLobby.toString();
+        assert(t.indexOf('openMapSelect()')>=0,'로비로 안 돌아간다');
+        assert(t.indexOf('showLoading')<0,'로비 복귀가 다시 로딩 화면을 거친다'); }
+      // 🧹 잔상 금지 — 로비로 돌아갈 때 게임 크롬과 3D 를 **지우고 한 번 더 그린다**
+      //   (지우기만 하면 캔버스에 마지막 프레임이 박제돼 로딩 화면에 미네랄이 떠 있었다).
+      { const t=overlayToLobby.toString();
+        assert(t.indexOf('setInGame(false)')>=0,'로비로 나갈 때 게임 크롬을 안 끈다 — 전장이 그대로 드러난다');
+        assert(t.indexOf('clearGameModels')>=0 && t.indexOf('clearIdlePools')>=0,'3D 잔상을 안 지운다');
+        assert(t.indexOf('M3D.sync([]')>=0,'지운 뒤 다시 그리지 않는다 — 캔버스에 마지막 프레임이 남는다'); }
+      // ⚔ 오토배틀도 나갈 때 통계를 보여 준다(캠프는 제외 — 판이 끝난 게 아니다)
+      { const s=exitGame.toString();
+        assert(s.indexOf('openResultScreen')>=0,'오토배틀 나가기가 통계를 건너뛴다');
+        assert(s.indexOf('STK.camp')>=0,'캠프에서 나갈 때도 통계가 뜬다'); }
+      rsSkip();
       rsHide(); _ovClearAuto(); ov.classList.add('hide');
       G.phase=was; G._runSum=savedSum;
       assert($('ovBtns').parentNode===ov.querySelector('.ovCard'),'결과를 걷은 뒤 버튼을 안 돌려놓음');

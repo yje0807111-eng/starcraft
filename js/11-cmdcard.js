@@ -1934,7 +1934,8 @@ function tickVote(dt){}   // 배속은 내 선택만 — 봇 투표 제거
 // ── 설정 팝업(소리/비디오/임무목표/배속) ──
 function openSettings(){ const p=document.getElementById('settingsPop'); if(!p) return;
   clearTimeout(p._closeT); p.classList.remove('hide','closing','appCtx');   // ⚠ 밖과 같은 처리 — 닫는 중에 다시 열면 예약된 감추기를 취소한다
-  if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
+  // ⛔ fxPop 을 부르지 말 것 — .fxPop 의 fxPopOn 은 카드 배율(--setScale=.8)을 모른 채
+  //   scale(1) 로 끝내, 꽉 찬 카드가 떴다가 툭 줄어든다. 등장 애니는 setCardIn 하나다.
   if(typeof syncSndUI==='function') syncSndUI();
   if(typeof applyVideo==='function') applyVideo();
   if(typeof updatePauseBtn==='function') updatePauseBtn();
@@ -1952,7 +1953,8 @@ function _renderMission(){ const box=document.getElementById('body-mission'); if
 function openAppSettings(){ const p=document.getElementById('settingsPop'); if(!p) return;
   clearTimeout(p._closeT); p.classList.remove('hide','closing');   // ⚠ 닫는 중에 다시 열면 예약된 감추기를 취소한다
   p.classList.add('appCtx');
-  if(typeof fxPop==='function') fxPop(p.querySelector('.setCard'));
+  // ⛔ fxPop 을 부르지 말 것 — .fxPop 의 fxPopOn 은 카드 배율(--setScale=.8)을 모른 채
+  //   scale(1) 로 끝내, 꽉 찬 카드가 떴다가 툭 줄어든다. 등장 애니는 setCardIn 하나다.
   const lo=document.getElementById('setLogout'); if(lo) lo.style.display=(typeof AUTH!=='undefined'&&AUTH.user)?'':'none';   // 로그인 상태에서만 로그아웃
   // 계정 연결은 '클라우드에 올라간 게스트'만 할 수 있다(로컬 게스트는 붙일 uid 가 없다)
   const lk=document.getElementById('setLink'); if(lk) lk.style.display=(typeof authCanLink==='function'&&authCanLink())?'':'none';
@@ -2083,7 +2085,13 @@ function updatePauseBtn(){
   if(ico) ico.innerHTML = (G.paused?MSG_ICO['▶']:MSG_ICO['⏸']).d; }
 function exitGame(){
   if(typeof closeSettings==='function') closeSettings();   // 설정 팝업 닫기(확인창이 위에 뜨도록)
-  if(G && G.strike){ strikeEnd(); return; }   // 컴퓨터가 싸운다: 즉시 로비로
+  // ⚔ 오토배틀도 **나갈 때 통계를 보여 준다**(2026-08-31 · 네모네모와 같은 흐름).
+  //   ⛔ 캠프(STK.camp)는 제외 — 캠프는 오토배틀 엔진을 빌려 쓸 뿐이라 판이 끝난 것이 아니다.
+  if(G && G.strike){
+    if(typeof STK!=='undefined' && STK && STK.camp){ strikeEnd(); return; }
+    G.phase='quit'; if(typeof bgmStop==='function') bgmStop();
+    if(typeof openResultScreen==='function'){ openResultScreen(); return; }
+    strikeEnd(); return; }
   const p=document.getElementById('exitConfirm'); if(p){ p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard')); }   // 진행 중이든 아니든 확인부터
 }
 function confirmExitGame(){ closeExitConfirm();
@@ -2223,7 +2231,6 @@ function _syncSheetLift(){ const B=document.body, ph=document.getElementById('ph
     document.documentElement.style.setProperty('--sheetH', h+'px'); }
   else document.documentElement.style.setProperty('--sheetH', '0px'); }   // 닫힘 = 0(사이드 배너 원위치)
 function closeSheet(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); document.body.classList.remove('sheetOpen'); _syncSheetLift(); }   // 빈-탭 → 하단 시트 닫힘
-function ovStatRow(label,val){ return '<div class="ovStat"><span class="osL">'+label+'</span><span class="osV">'+val+'</span></div>'; }
 // 이번 판 획득 요약 1회 계산(해금 감지 포함)
 function _runSummary(){ if(G._runSum) return G._runSum;
   // 📅 일일 — 유즈맵 1판 종료. 이 함수는 판당 1회만 계산되므로 여기가 유일한 계측 지점이다(중도 나가기는 제외).
@@ -2247,16 +2254,6 @@ function _runSummary(){ if(G._runSum) return G._runSum;
   if(G.phase==='won' && !mapCfg('infinite') && typeof umFirstClaim==='function')
     G._runSum.first=umFirstClaim(MAP&&MAP.id, G.strike?UM_STK_FIRST:G.difficulty);
   return G._runSum; }
-// 판 보상 줄 — 네모·오토배틀 통계 화면 공용. 표기를 두 벌로 만들지 말 것.
-function _umRwRows(S){ let h='';
-  if(S.prof) h+=ovStatRow('내 캐릭터 XP','<b class="osNew">+'+S.prof.xp+'</b>'+(S.prof.ups?' · Lv.'+S.prof.level:''))
-    +ovStatRow('미네랄','<b class="osNew">+'+fmtCur(S.prof.pc)+'</b>')
-    +ovStatRow('가스','<b class="osNew">+'+fmtCur(S.prof.gas)+'</b>');
-  if(S.prof && S.prof.dayMul<1) h+=ovStatRow('오늘 '+S.prof.day+'판째','<span class="osDim">보상 '+Math.round(S.prof.dayMul*100)+'% — 하루 '+UM_DAY_FULL+'판까지 전액</span>');
-  if(S.first){ const f=S.first, tk=[['gear','장비'],['pet','펫'],['ally','동료']].filter(t=>f[t[0]]).map(t=>t[1]+' ×'+f[t[0]]).join(' · ');
-    h+=ovStatRow('<b class="osNew">🏁 첫 클리어</b>','<b class="osNew">'+fmtCur(f.pcoin)+' M · '+fmtCur(f.gas)+' G</b>')
-      +ovStatRow('첫 클리어 보너스','<b class="osNew">💎 '+f.gem+(tk?(' · '+tk):'')+'</b>'); }
-  return h; }
 function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return (m<10?'0':'')+m+':'+(s<10?'0':'')+s; }
 function _ovBtnTx(btn,txt){ const t=btn&&btn.querySelector('.ovBtnTx'); if(t) t.textContent=txt; }   // 라벨만 교체(진행 바 유지)
 // ══════════════════════════════════════════════════════════════
@@ -2318,10 +2315,26 @@ function rsShow(kind){ const ov=document.getElementById('ov'); if(!ov) return;
   // 게임 안에서 벌어진 것 + 게임 내 포인트
   //   ⚠ 값은 전부 이미 있는 것만 쓴다(_runSummary / G). 없는 값을 지어내지 말 것.
   const rounds=inf?String(G.round||0):((G.round||0)+' / '+mapCfg('rounds',TOTAL_ROUNDS));
-  let rows=_rsRow('라운드', rounds)
-    + _rsRow('처치','<span data-cnt="kills">0</span>')
-    + _rsRow('획득 포인트','<span data-cnt="coins">0</span>','hi');
+  // ⚔ 오토배틀은 라운드·포인트가 없다 — 승패와 최종 자원으로 읽는다(옛 #resultScreen 의 직스 분기와 같은 줄).
+  let rows = (G.strike)
+    ? (_rsRow('결과', quit?'중도 종료':(won?'승리':'패배'))   // ⚠ 나가기는 승패가 아니다 — '패배'로 적으면 이긴 판도 진 것처럼 읽힌다
+     + _rsRow('처치','<span data-cnt="kills">0</span>')
+     + _rsRow('최종 자원', fmtCur(S.gold||0),'hi'))
+    : (_rsRow('라운드', rounds)
+     + _rsRow('처치','<span data-cnt="kills">0</span>')
+     + _rsRow('획득 포인트','<span data-cnt="coins">0</span>','hi'));
   if(S.prof) rows+=_rsRow('내 캐릭터 XP','<span data-cnt="xp">0</span>'+(S.prof.ups?(' · Lv.'+S.prof.level):''));
+  // 📋 아래 줄들은 **옛 통계 화면(#resultScreen)이 갖고 있던 것**이다 — 화면을 한 장으로 합치면서
+  //   여기로 옮겼다(2026-08-31). ⛔ 다시 두 화면으로 가르지 말 것: 같은 값을 두 번 보여 주게 된다.
+  if(S.newDiff) rows+=_rsRow('난이도 해금', escHtml(S.newDiff),'hi');
+  if(S.infNew)  rows+=_rsRow('모드 해금','무한 모드','hi');
+  if(!G.strike) rows+=_rsRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0));
+  if(S.prof && S.prof.dayMul<1)
+    rows+=_rsRow('오늘 '+S.prof.day+'판째','보상 '+Math.round(S.prof.dayMul*100)+'% — 하루 '+UM_DAY_FULL+'판까지 전액');
+  if(S.first){ const f=S.first,
+      tk=[['gear','장비'],['pet','펫'],['ally','동료']].filter(t=>f[t[0]]).map(t=>t[1]+' ×'+f[t[0]]).join(' · ');
+    rows+=_rsRow('🏁 첫 클리어', fmtCur(f.pcoin)+' M · '+fmtCur(f.gas)+' G','hi')
+        + _rsRow('첫 클리어 보너스','💎 '+f.gem+(tk?(' · '+tk):''),'hi'); }
   document.getElementById('rsRows').innerHTML=rows;
   document.getElementById('rsCur').innerHTML=_rsCur('min','미네랄','rsCurMin')+_rsCur('gas','가스','rsCurGas');
   if(typeof paintIcons==='function') paintIcons(document.getElementById('rsCard'));
@@ -2371,65 +2384,54 @@ function showOverlay(){ const ov=document.getElementById('ov'),tt=document.getEl
   } else {   // 승/패/종료 = **결과 화면**(판 없는 전면 · 진입 화면의 짝). 확인 → 통계 전체 화면
     ov.classList.remove('spaceBg');   // 자체 배경 제거 → 뒤로 게임이 비침
     const ovc=ov.querySelector('.ovCard'); if(ovc) ovc.classList.remove('win','lose');
-    _ovBtnTx(bt,'확인');                                          // ⚠ 자동 진행은 rsShow 가 **애니메이션이 끝난 뒤** 시작한다
+    _ovBtnTx(bt,'나가기');                                        // 이 화면이 곧 통계다 — 다음 단계가 없으므로 '확인'이 아니라 '나가기'
+                                                                  // ⚠ 자동 진행은 rsShow 가 **애니메이션이 끝난 뒤** 시작한다
     bt2.style.display=''; bt2.textContent='관전하기';              // 확인 옆 = 창을 닫고 최종 전장 보기(멀티는 팀 관전)
     rsShow(G.phase);                                              // 제목 → 기록 줄 → 캠프 재화 순서로 등장 + 수치 카운트업
   }
 }
-// 통계 창(전체 화면) — 게임 진입 로딩 창과 같은 구조: 미니맵 + 맵 이름 + 기록 패널 + 나가기
-function openResultScreen(){ const sc=document.getElementById('resultScreen'); if(!sc||(!mapCfg('stats')&&!G.strike)){ overlayToLobby(); return; }   // 통계는 쓰는 맵 + 직스에서만
-  const S=_runSummary(), inf=mapCfg('infinite');
-  document.getElementById('ov').classList.add('hide');
-  { const ac=(typeof MAP_ACCENT!=='undefined'&&MAP&&MAP_ACCENT[MAP.id])||'#7f93b0'; sc.style.setProperty('--mapAccent', ac); }
-  _mapThumbInto(document.getElementById('rsThumb'), MAP, 'opThumb');
-  document.getElementById('rsName').textContent=(MAP&&MAP.name)||'';
-  if(G.strike){ document.getElementById('rsStats').innerHTML=   // 직스 통계: 결과·처치·플레이타임·최종 자원
-      ovStatRow('결과', S.result==='win'?'<b class="osNew">승리</b>':'<b style="color:#ff6b7a">패배</b>')
-     +ovStatRow('처치', (S.kills||0).toLocaleString())
-     +ovStatRow('플레이타임', fmtTime(S.time))
-     +ovStatRow('최종 자원', '⛁ '+(S.gold||0).toLocaleString())
-     +_umRwRows(S);
-    if(typeof setInGame==='function') setInGame(false);
-    sc.classList.remove('hide'); _rsStartAuto(); return; }
-  document.getElementById('rsStats').innerHTML=
-    ovStatRow('받은 포인트','<b class="osCoin">◎ '+S.coins+'</b>')
-   +ovStatRow('처치', (S.kills||0).toLocaleString())
-   +ovStatRow('도달 라운드', inf?(S.round+'  (최고 '+((PLAYER_META&&PLAYER_META.highestRound)||S.round)+')'):(S.round+' / '+mapCfg('rounds',TOTAL_ROUNDS)))
-   +ovStatRow('플레이타임', fmtTime(S.time))
-   +(S.newDiff?ovStatRow('난이도 해금','<b class="osNew">'+S.newDiff+'</b>'):'')
-   +(S.infNew?ovStatRow('모드 해금','<b class="osNew">무한 모드</b>'):'')
-   +ovStatRow('보유 포인트','◎ '+(((typeof PLAYER_META!=='undefined')&&PLAYER_META.coins)||0))
-   +_umRwRows(S);
-  if(typeof setInGame==='function') setInGame(false);   // 게임 크롬(하단 콘솔) 정리
-  sc.classList.remove('hide'); _rsStartAuto(); }        // 10초 뒤 자동으로 로비
-function resultToLobby(){ _rsClearAuto(); const sc=document.getElementById('resultScreen'); if(sc) sc.classList.add('hide');
-  if(typeof playSfx==='function') playSfx('ui_close');
-  overlayToLobby(); }
+// 통계 화면 = **결과 화면 한 장**(P7안 · #ov + rsShow). 2026-08-31 사용자 확정.
+//   ⛔ 통계를 위한 **두 번째 화면을 다시 만들지 말 것.** 옛 창(#resultScreen · ovStatRow ·
+//     resultToLobby)은 같은 값을 두 번 보여 주던 구조라 마크업·CSS·함수까지 통째로 지웠다.
+//   ⚠ 여기서 화면을 새로 그리지 않는다 — 그리는 곳은 showOverlay() 하나다(단일 소스).
+function openResultScreen(){ if(!mapCfg('stats') && !(typeof G!=='undefined'&&G&&G.strike)){ overlayToLobby(); return; }
+  if(typeof showOverlay==='function') showOverlay(); else overlayToLobby(); }
 function overlayToLobby(){
   if(typeof clearRun==='function') clearRun();   // 판이 끝났다 = 저장본 폐기(끝난 판을 복구하면 안 된다)
   MAP_CFG_OVR=null;   // 로비 복귀 = 방 설정 반납(다음 판에 새면 밸런스가 조용히 어긋난다)
-  _ovClearAuto(); _rsClearAuto(); document.getElementById('ov').classList.add('hide');   // 로비로 돌아가기(승/패 공통)
+  _ovClearAuto(); document.getElementById('ov').classList.add('hide');   // 로비로 돌아가기(승/패 공통)
   if(typeof G!=='undefined'&&G&&G.strike && typeof STK!=='undefined') STK=null;
+  // 🖥 게임 크롬을 여기서 끈다 — **결과 화면이 떠 있는 동안은 켜 둔 채**다(뒤로 전장이 비치는 것이 P7안의 의도).
+  //   ⚠ 빠지면 로비로 나가는 순간 전장·하단 탭이 그대로 드러난 채 로딩 막대만 뜬다(실측 프레임으로 확인).
+  if(typeof setInGame==='function') setInGame(false);
+  // 🧹 잔상 금지 — 3D 는 화면들이 **공유**한다. 돌려줄 때 지우지 않으면 로딩·유즈맵 배경에
+  //   이 판의 미네랄·유닛이 그대로 떠 있다(실측 프레임: 로딩 화면에 미네랄 6덩이가 남았다).
+  //   ⛔ 숨기지 말고 **지운다** — 숨긴 것은 어딘가에서 다시 켜지면 도로 나타난다.
+  //   ⚠ 지우기는 **지운 뒤 한 번 더 그려야** 완성된다 — clearGameModels 는 scene 에서 빼기만 하고
+  //     캔버스에는 마지막 프레임이 박제된 채 남는다(js/08-hunt.js 예열 정리와 같은 처방).
+  if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels();
+    if(M3D.sync) M3D.sync([], 300, 300, .016, [], [], null, null); }catch(e){} }
+  if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} }
   if(typeof resetGameChrome==='function') resetGameChrome();   // 크롬 원복은 단일 소스로
   if(typeof stopGameCoop==='function') stopGameCoop(); if(typeof rtRoomClose==='function') rtRoomClose();
-  G=newGame(); showLoading(openMapSelect); }   // 시간은 LOAD_FILL 하나가 갖는다(옛 1100ms 타이머 폐지)
+  // 🎬 결과 화면 → **유즈맵으로 곧장**(2026-08-31 사용자 확정).
+  //   ⛔ 로딩 화면을 다시 끼우지 말 것 — 그 화면은 키 아트(#titleBg)와 STAR WAR 로고
+  //     (#titleMark)를 켜는데, 그 둘은 화면과 따로 0.42초에 걸쳐 꺼져 유즈맵 목록 위로 비쳤다.
+  //     여기서 기다릴 것도 없다 — openMapSelect() 는 동기다(막대는 순전히 연출이었다).
+  G=newGame(); openMapSelect(); }
 function overlaySpectate(){ _ovClearAuto(); document.getElementById('ov').classList.add('hide'); setInGame(true);   // 관전하기 = 창을 닫고 전장 보기(자동 진행 취소)
   if(typeof coopActive==='function' && coopActive()){ const pt=document.querySelector('.tab[data-tab="Players"]'); if(pt) pt.click(); } }   // 멀티만 팀 관전 탭으로
-// ── 결과 → 통계 → 로비 자동 진행(상호작용 없으면 스스로 넘어감) ──
-const OV_AUTO_MS=5000;    // 결과 카드 → 다음 단계
-const RS_AUTO_MS=10000;   // 통계 화면 → 로비
+// ── 결과 화면 → 로비 자동 진행(상호작용 없으면 스스로 넘어감) ──
+const OV_AUTO_MS=10000;   // ⚠ 5초였다 — 통계가 이 화면 안으로 들어오며 읽을 양이 늘어 옛 통계 창과 같은 10초로 맞췄다
 function _barRun(el, ms, on){ if(!el) return;
   el.classList.remove('run'); el.style.animation='none'; void el.offsetWidth; el.style.animation='';
   if(on){ el.style.setProperty('--autoDur',(ms/1000)+'s'); el.classList.add('run'); } }
-let _ovAutoT=null, _rsAutoT=null;
+let _ovAutoT=null;
 function _ovClearAuto(){ if(_ovAutoT){ clearTimeout(_ovAutoT); _ovAutoT=null; } _barRun(document.getElementById('ovAutoBar'),0,false); }
-function _rsClearAuto(){ if(_rsAutoT){ clearTimeout(_rsAutoT); _rsAutoT=null; } _barRun(document.getElementById('rsAutoBar'),0,false); }
 function _ovStartAuto(){ _ovClearAuto(); _barRun(document.getElementById('ovAutoBar'), OV_AUTO_MS, true);
   _ovAutoT=setTimeout(function(){ _ovAutoT=null; _ovConfirm(); }, OV_AUTO_MS); }
-function _rsStartAuto(){ _rsClearAuto(); _barRun(document.getElementById('rsAutoBar'), RS_AUTO_MS, true);
-  _rsAutoT=setTimeout(function(){ _rsAutoT=null; resultToLobby(); }, RS_AUTO_MS); }
-// 확인 = 통계 쓰는 맵이면 통계 화면, 아니면 바로 로비
-function _ovConfirm(){ _ovClearAuto(); if(mapCfg('stats')||G.strike) openResultScreen(); else overlayToLobby(); }
+// 나가기 = 곧바로 로비. 통계가 이 화면 안으로 들어왔으므로 다음 단계가 없다(2026-08-31).
+function _ovConfirm(){ _ovClearAuto(); overlayToLobby(); }
 // 결과 화면을 한 번 누르면 등장 애니메이션을 건너뛰고 즉시 최종값으로 간다.
 // ⚠ 캡처 단계로 잡지 말 것 — 버튼을 눌렀을 때 버튼이 먼저 동작해야 한다.
 document.getElementById('ov').addEventListener('click', function(e){

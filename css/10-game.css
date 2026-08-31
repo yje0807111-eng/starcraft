@@ -40,6 +40,17 @@
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));transition:color .15s,border-color .15s}
   .hudSet:hover{color:#fff;border-color:rgba(255,255,255,.45)}
   .hudSet svg{display:block;width:18px;height:18px}
+  /* ⚙ 아이콘은 data-ico 로 채우므로 한 겹(span)이 더 있다 — 인라인으로 두면 라인박스
+     아래 여백이 생겨 아이콘이 상자 가운데에서 위로 뜬다(2026-08-31). */
+  .hudSet .icoBars{display:block;line-height:0}
+  .hudSet.on .icoBars{display:none}
+  /* ☰ 는 **캠프에서만**. 같은 버튼 하나가 유즈맵·상점·캠프를 다 맡으므로 모습만 갈아 끼운다.
+     ⛔ 버튼을 새로 만들지 말 것 — 두 벌이 되면 반드시 어긋난다(단일 소스 규칙). */
+  .hudSet .icoMenu{display:none;line-height:0}
+  #phone.campMode .curBar .hudSet .icoBars{display:none}
+  #phone.campMode .curBar .hudSet .icoMenu{display:block}
+  #phone.campMode .curBar .hudSet.on .icoMenu{display:none}   /* 열리면 ✕ — 위 규칙보다 특이도가 높아야 이긴다 */
+  .authGear span[data-ico]{display:block;line-height:0}
   .hudSet .icoX{display:none}                      /* 열려 있으면 ☰ 가 X 로 바뀐다 */
   .hudSet.on .icoBars{display:none}
   .hudSet.on .icoX{display:block}   /* block — inline이면 라인박스 하단 여백이 생겨 아이콘이 위로 뜬다 */
@@ -487,7 +498,7 @@
     color:#dfe7f0;border:1px solid transparent;border-radius:var(--r-bar);
     background:var(--nav-plate) padding-box,var(--metal-ring) border-box}
   .setNickSave:active{transform:translateY(1px)}
-  .setLogout{margin-top:8px;width:100%;height:44px;padding:0;border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
+  .setLogout{margin-top:8px;width:100%;height:calc(44px / var(--setScale,1));padding:0;   /* 배율 보상 — .setPause 위 주석 참고 */border-radius:var(--r-md);font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;cursor:pointer;
     color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:background .16s,border-color .16s}
   .setLogout:active{transform:translateY(1px);background:rgba(255,255,255,.1)}
   /* 로그인 화면 우상단 설정 — **글리프만**(2026-08-23). 판·테두리 없음.
@@ -533,7 +544,10 @@
   .setCard::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .setCard::-webkit-scrollbar-track{background:transparent}
   /* 일시정지(상단) / 나가기(하단) */
-  .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:10px 0 0;height:44px;padding:0;cursor:pointer;
+  /* ⛔ 높이를 44px 로 고정하지 말 것 — 카드에 scale(--setScale)이 걸려 화면에서는 그만큼 작아진다
+     (배율 .8 일 때 35.2px 로 §0 권고 44px 을 깨고 있었다 · 2026-08-31 실측).
+     행(.setItem/.setQRow)이 여백을 1/배율로 키워 쓰는 것과 같은 처방이다. */
+  .setPause{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:10px 0 0;height:calc(44px / var(--setScale,1));padding:0;cursor:pointer;
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#dfe7f0;
     /* 하단 네비 '선택 안 된 칸'과 같은 면·테두리 */
     border:1px solid transparent;border-radius:var(--r-bar);
@@ -564,7 +578,12 @@
   /* 리스트 화살표는 오른쪽을 가리킨다(펼침이 아니라 다음 화면) */
   .setSoon{padding:34px 0;text-align:center;color:var(--txt-mute);font-size:var(--fs-lg)}
   #setSubPop{position:absolute;inset:0;z-index:73;   /* 설정(72) 위에 한 겹 더 */
-    display:flex;align-items:center;justify-content:center;background-color:rgba(2,3,6,.5)}
+    display:flex;align-items:center;justify-content:center;
+    /* 🌑 뒤가 **거의 안 보이게** 덮는다(2026-08-31 사용자 요청). .5 였을 때는 설정 목록의
+       글자가 그대로 비쳐 두 화면이 겹쳐 읽혔다 — 무엇을 만지는 중인지 흐려진다.
+       ⛔ #settingsPop::after 스크림을 여기에 같이 걸지 말 것 — 두 겹이 되어 새카매진다. */
+    background-color:rgba(2,3,6,.90);
+    backdrop-filter:blur(3px) saturate(.9);-webkit-backdrop-filter:blur(3px) saturate(.9)}
   #setSubPop.hide{display:none}
   .setSubBody{min-height:0;overflow-y:auto;padding:2px 0 2px;
     scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
@@ -594,7 +613,7 @@
     font-size:var(--fs-sm);font-weight:700;letter-spacing:.3px;color:var(--txt-mute);border-top:1px solid rgba(255,255,255,.07)}
   .voteResult b{color:var(--setAcc,var(--neon));font-family:var(--font-num);font-size:15px;margin-left:0}
   /* 위험 액션 = 채움 대신 붉은 글자·테두리만(차분하게) */
-  .setExit{display:block;width:100%;margin:8px 0 0;height:44px;padding:0;cursor:pointer;
+  .setExit{display:block;width:100%;margin:8px 0 0;height:calc(44px / var(--setScale,1));padding:0;cursor:pointer;   /* 배율 보상 — .setPause 위 주석 참고 */
     font-family:inherit;font-size:var(--fs-lg);font-weight:800;letter-spacing:.3px;color:#ff9a9a;
     /* 하단 네비 '선택된 칸'과 같은 면·테두리 — 주의를 끌어야 하는 동작 */
     border:1px solid transparent;border-radius:var(--r-bar);
@@ -636,6 +655,9 @@
     font-family:inherit;font-size:var(--fs-md);font-weight:800;letter-spacing:.3px;
     display:flex;align-items:center;justify-content:center;box-shadow:none;transition:background .16s,border-color .16s}
   /* 이중 테두리 = 바깥 border 1px + inset 1px 어두운 틈 + inset 2px 안쪽 선. 선을 굵히지 않는다 */
+  /* ⛔ 눌리는 버튼은 **줄어들지 않는다** — .setCard 가 세로 flex 라 내용이 많으면 flex-shrink 가
+     이것들부터 깎아 §0 권고(44px)를 조용히 깬다(게임 밖 설정에서 43.1px 이 나왔다 · 2026-08-31). */
+  .setPause,.setExit,.setLogout{flex:none}
   .setPause,.setExit,.setLogout,.twBtn{
     box-shadow:inset 0 0 0 1px rgba(0,0,0,.55),inset 0 0 0 2px var(--btnIn,rgba(255,255,255,.1))}
   /* ⚠ 위 이중 인셋은 새 테두리 위에 옆 링을 한 겹 더 긋는다 — 네비 물성을 쓰는 둘만 끌다 */
@@ -710,6 +732,10 @@
         붙이는 순간 특이도가 갈려 두 화면이 도로 달라진다. 문맥 차이(항목 숨김·z-index)만 위에 있다.
      ⚠ #setSubPop 에도 같이 건다 — openSetSub 가 부모 문맥을 옮겨 붙이는데, 게임 안에는 .appCtx 가 없다. */
   #settingsPop.appCtx{background:rgba(2,3,6,.72);z-index:95}   /* 밖 전용: 배경이 단순해 덜 눌러도 되고, 타이틀 로고(89)보다 위여야 한다 */
+  /* ⚠ 하위 팝업은 **설정보다 항상 한 겹 위**여야 한다. 게임 밖에서는 설정이 95 로 올라가는데
+     하위는 73 에 머물러, 비디오 설정·임무 목표를 열면 설정 목록 **뒤로 깔렸다**(2026-08-31).
+     ⛔ 한쪽 z 만 고치지 말 것 — 두 문맥(안 72/73 · 밖 95/96)이 짝을 이룬다. */
+  #setSubPop.appCtx{z-index:96}
   /* 🎬 여닫기 — 로그인 안의 전환과 같은 박자(--t-swap). 뚝 나타나지 않게. */
   #settingsPop{animation:setPopIn var(--t-swap) ease both}
   #settingsPop.closing{animation:setPopOut var(--t-swap) ease both;pointer-events:none}
@@ -733,16 +759,18 @@
     background:none;border:none;box-shadow:none;clip-path:none;
     /* ⛔ 배율은 이 변수 한 곳에서만 바꾼다 — 아래 setCardIn 키프레임이 같은 값을 쓴다.
        키프레임이 transform 을 건드리므로 여기에만 scale 을 쓰면 애니메이션 끝에 지워진다. */
-    --setScale:.8;transform:scale(var(--setScale))}
+    --setScale:.9;transform:scale(var(--setScale))}   /* .8 → .9 (2026-08-31 사용자 요청: 「딱 중간정도로」) */
   :is(#settingsPop,#setSubPop) .setCard::before{display:none}   /* 이중 테두리 프레임도 뺀다 */
   /* 묶음(빠른 조작·메뉴) → 판 없이 행만 */
   :is(#settingsPop,#setSubPop) .setQuick,:is(#settingsPop,#setSubPop) .setMenu{padding:0;margin:0;border:none;
     background:none;border-radius:0;clip-path:none}
   /* ⛔ 터치 타겟(§0 권고 44px)은 **배율이 걸린 뒤** 기준으로 지킨다.
-     카드에 scale(--setScale)이 걸리므로 여기 여백은 1/배율 만큼 키워 둔다 —
-     17px → 행 55px → 화면에서 44px. ⚠ 배율을 바꾸면 이 값도 같이 봐야 한다.
-     (11px 로 좁혔더니 화면에서 43.4px 이 나와 권고를 깬 적이 있다 — 2026-08-26 실측) */
-  :is(#settingsPop,#setSubPop) .setQRow,:is(#settingsPop,#setSubPop) .setItem{padding:17px 0;border-top:none;
+     ⭐ 여백으로 지키지 말고 **min-height 로 지킨다**(2026-08-31). 예전엔 padding:17px 하나로
+        높이를 만들어, 글자가 큰 행은 필요 이상으로 두꺼웠다(51.3px · 44 면 충분한데).
+        이제 여백은 12px 로 줄이고 하한만 못 박는다 — 내용이 큰 행만 그만큼 커진다.
+     ⚠ 값은 배율(--setScale)로 나눈다. 배율을 바꿔도 화면에서 44px 이 유지된다. */
+  :is(#settingsPop,#setSubPop) .setQRow,:is(#settingsPop,#setSubPop) .setItem{padding:12px 0;border-top:none;
+    min-height:calc(44px / var(--setScale,1));box-sizing:border-box;
     border-bottom:1px solid rgba(255,255,255,.16)}
   /* 제목 — 로그인처럼 글자만. 밑줄 액센트는 이 화면에서 유일한 색 덩어리라 뺀다. */
   :is(#settingsPop,#setSubPop) .setTitle,#setSubPop .setTitle{padding-bottom:10px;font-weight:700}
@@ -1832,17 +1860,6 @@
   /* 본문 = 별도 상자 없이 카드 안에 그대로 */
   .ovPanel{padding:2px 2px 0}
   #ovDesc{font-size:var(--fs-sm);font-weight:500;color:var(--txt-mute);line-height:1.5;margin:0;letter-spacing:.2px;white-space:pre-line;word-break:keep-all}
-  /* 결과 통계(플레이타임·도달 라운드·받은 포인트) */
-  /* 결과 통계 = 하나의 글래스 패널 + 구분선(방 만들기 폼·대기실과 통일) */
-  .ovStats{display:flex;flex-direction:column;gap:0;margin:0 0 12px;text-align:left;padding:0 12px;border-radius:var(--r-lg);
-    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.016));border:1px solid var(--metal-edge)}
-  .ovStat{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;
-    background:none;border:none;border-bottom:1px solid rgba(255,255,255,.07)}
-  .ovStat:last-child{border-bottom:none}
-  .ovStat .osL{font-size:var(--fs-sm);font-weight:700;color:var(--txt-mute);letter-spacing:.3px}
-  .ovStat .osV{font-family:var(--font-num);font-size:15px;font-weight:800;color:#eaf0f8;text-shadow:0 1px 2px #000;white-space:nowrap}
-  .ovStat .osCoin{font-family:var(--font-num);font-size:18px;font-weight:800;color:#ffd24a;text-shadow:0 0 10px rgba(255,210,74,.35)}   /* 핵심 보상 강조 */
-  .ovStat .osNew{font-size:11px;font-weight:800;color:#7ee081;background:rgba(126,224,129,.13);border:1px solid rgba(126,224,129,.34);border-radius:6px;padding:2px 7px}
   
   /* 하단 액션 = 설정 버튼과 같은 규격(44px · 라운드 11 · 중립 글래스) — 왼쪽 관전하기 / 오른쪽 확인 */
   .ovBtns{display:flex;gap:8px;align-items:stretch;justify-content:center;margin-top:10px}
