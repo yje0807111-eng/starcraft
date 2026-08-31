@@ -445,9 +445,14 @@ function _stkCampSk(){ return !!(typeof STK !== 'undefined' && STK && STK.camp);
 function strikeSkillCost(sk){ if(_stkCampSk()) return 0;
   return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.energy)||0); }   // 오토배틀 = 원본 SC 마나(enSc)
 function strikeSkillHpCost(sk){ return _stkCampSk() ? 0 : ((sk && sk.hpCost) || 0); }
+// ⏱ **캠프는 「지속이 끝난 뒤부터」 쿨을 센다**(사용자 확정 2026-08-28).
+//   ⭐ 스킬을 쓰면 `dur` 만큼 효과가 이어지고, **그것이 끝나야** 쿨이 돌기 시작한다.
+//     그래서 실제 주기는 `dur + cd` 다 — 광폭화면 6초 지속 + 10초 쿨 = 16초마다 한 번.
+//   ⛔ 쿨을 시전 순간부터 세지 말 것 — 지속이 쿨보다 길면 **효과가 끊기지 않고 겹친다.**
+//   ⚠ 오토배틀은 원본 그대로(시전 순간부터) 센다. 여기서 갈린다.
 function strikeSkillCd(sk, dflt){ const c = (sk && sk.cd) || 0;
-  if(c > 0) return c;
-  return _stkCampSk() ? STK_SK_CD_DEF : (dflt || 0); }
+  if(!_stkCampSk()) return c > 0 ? c : (dflt || 0);
+  return (c > 0 ? c : STK_SK_CD_DEF) + ((sk && sk.dur) || 0); }
 function strikeSkillDrain(sk){ return _stkCampSk() ? 0 : ((sk && sk.drain) || 0); }
 function strikeSkillAtkMul(u){ let m=1; const b=u.buff||{}, on=u.skillOn||{};
   if(b.stim>0) m*=(SKILLS.stim.atkMul||1); if(on.siege) m*=(SKILLS.siege.atkMul||1); return m; }

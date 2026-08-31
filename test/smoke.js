@@ -1801,7 +1801,14 @@ async function groupLobby(){
         let on2=0; for(let i=0;i<200 && !on2;i++){ campCombatStep(0.05);
           if((u.buff.stim||0)>0) on2=1; }
         assert(on2,'마나가 0 인데 스킬이 안 나갔다 — 아직 마나가 문이다'); }
-      return '스팀팩 자동 시전 ok · 비용은 쿨 '+SKILLS.stim.cd+'초 하나';
+      // ⑤ ⏱ **쿨은 지속이 끝난 뒤부터** 센다(사용자 확정 2026-08-28) — 주기 = dur + cd
+      //    ⛔ 시전 순간부터 세면 지속이 쿨보다 길 때 효과가 끊기지 않고 겹친다.
+      { const want=(SKILLS.stim.cd||0)+(SKILLS.stim.dur||0);
+        const got=campWithStk(()=>strikeSkillCd(SKILLS.stim,0));
+        assert(got===want,'광폭화 쿨이 「지속+쿨」이 아니다: '+got+' (기대 '+want+')');
+        // 캠프 밖(오토배틀)은 원본 그대로 — 지속을 더하지 않는다
+        assert(strikeSkillCd(SKILLS.stim,0)===SKILLS.stim.cd,'캠프 밖인데 지속이 더해졌다 — 오토배틀이 바뀐다'); }
+      return '스팀팩 자동 시전 ok · 비용은 쿨 하나 · 주기 '+((SKILLS.stim.cd||0)+(SKILLS.stim.dur||0))+'초(지속+쿨)';
     } finally { if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
