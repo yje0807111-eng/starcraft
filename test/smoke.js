@@ -1891,6 +1891,72 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 💣☢ 매설 · 지연 폭격 — 지뢰는 가서 심고 돌아온다 · 핵은 제자리(사용자 확정 2026-08-28)
+  await step('캠프 스킬: 지뢰는 가서 심고 · 핵은 제자리에서', async()=>{
+    skipIf(typeof campMineOrder!=='function'||typeof campNukeStep!=='function','매설 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      for(const k of ['spider_mine','nuke']) assert(!STK_SK_DEAD[k],k+' 가 아직 미구현 목록에 있다');
+      assert(SKILLS.spider_mine.cd===30,'지뢰 쿨이 30이 아니다: '+SKILLS.spider_mine.cd);
+      assert(SKILLS.nuke.cd===300,'핵 쿨이 300이 아니다: '+SKILLS.nuke.cd);
+      assert(CAMP_MINE_LIFE===180,'지뢰 수명이 180초가 아니다: '+CAMP_MINE_LIFE);
+      campWipeField();
+      // ① 시전 = 그 자리에 심는 게 아니라 **임무를 받는다**
+      campWithStk(()=>{ strikeSpawnUnit('me','racer'); });
+      const u=CAMPB.me.units[0]; skipIf(!u,'레이서를 못 세움');
+      u.x=1000; u.y=1000; u.wait=0; u.rallied=true; u._post={x:1000,y:1000};
+      CAMPB._mines=null;
+      assert(campMineOrder(u,{x:1000,y:2000},SKILLS.spider_mine),'매설 임무를 못 받았다');
+      assert(u._mine && !((CAMPB._mines||[]).length),'시전하자마자 그 자리에 심었다 — 가서 심어야 한다');
+      // ② 걸어간다 → 도착하면 심고 임무가 끝난다
+      const y0=u.y;
+      campWithStk(()=>{ for(let i=0;i<400 && u._mine;i++) campMineTrip(u,0.05); });
+      assert(u.y>y0+300,'매설 지점 쪽으로 안 걸어갔다: '+Math.round(u.y)+' (시작 '+Math.round(y0)+')');
+      assert(!u._mine,'도착했는데 임무가 안 끝났다');
+      assert((CAMPB._mines||[]).length===1,'지뢰가 안 심겼다: '+(CAMPB._mines||[]).length);
+      // ③ 지상 적이 가까이 오면 터지고 사라진다 · 공중은 안 밟는다
+      { const z=CAMPB._mines[0];
+        CAMPB.ai.units.length=0;
+        const airId=[...FXLAB_AIR][0];
+        CAMPB.ai.units.push({x:z.x,y:z.y,dead:false,hp:9999,maxHp:9999,id:airId,gm:airId});
+        campMineStep(0.05);
+        assert((CAMPB._mines||[]).length===1,'공중 유닛이 지뢰를 밟았다');
+        CAMPB.ai.units.length=0;
+        const g={x:z.x,y:z.y,dead:false,hp:9999,maxHp:9999,id:'marine',gm:'marine'};
+        CAMPB.ai.units.push(g);
+        campWithStk(()=>campMineStep(0.05));
+        assert(!(CAMPB._mines||[]).length,'지상 적이 붙었는데 안 터졌다');
+        assert(g.hp<9999,'터졌는데 피해가 없다: '+g.hp); }
+      // ④ 수명이 끝나면 저절로 사라진다
+      { CAMPB.ai.units.length=0;
+        CAMPB._mines=[{x:1,y:1,left:CAMP_MINE_LIFE,r:10,trig:5,dmg:60,src:u}];
+        campMineStep(CAMP_MINE_LIFE-1);
+        assert((CAMPB._mines||[]).length===1,'수명 전에 사라졌다');
+        campMineStep(2);
+        assert(!(CAMPB._mines||[]).length,'수명이 끝났는데 남아 있다'); }
+      // ⑤ ☢ 핵 — 제자리에서 유도(움직이지 않는다) · delay 뒤에 터진다
+      { CAMPB._nukes=null; CAMPB.ai.units.length=0;
+        const g={x:1000,y:2000,dead:false,hp:99999,maxHp:99999,id:'marine',gm:'marine'};
+        CAMPB.ai.units.push(g);
+        const nx=u.x, ny=u.y;
+        campWithStk(()=>{ assert(campNukeOrder(u,{x:1000,y:2000},SKILLS.nuke),'핵 유도를 못 했다'); });
+        assert(!u._mine,'핵이 매설 임무를 만들었다 — 핵은 제자리다');
+        assert(u.x===nx && u.y===ny,'핵을 쓰면서 움직였다');
+        assert((CAMPB._nukes||[]).length===1,'핵이 예약되지 않았다');
+        const half=(SKILLS.nuke.delay||3.5)/2;
+        campWithStk(()=>campNukeStep(half));
+        assert(g.hp===99999,'지연 전에 터졌다');
+        campWithStk(()=>campNukeStep(half+0.1));
+        assert(g.hp<99999,'지연이 지났는데 안 터졌다');
+        assert(!(CAMPB._nukes||[]).length,'터졌는데 예약이 남아 있다'); }
+      return '지뢰 쿨 30·수명 '+CAMP_MINE_LIFE+'초 · 핵 쿨 300·지연 '+SKILLS.nuke.delay+'초';
+    } finally { if(typeof CAMPB!=='undefined'&&CAMPB){ CAMPB._mines=null; CAMPB._nukes=null; }
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🏢 건물 시전 — 전투 시작 3초 뒤 첫 발 · 그 뒤 120초마다(사용자 확정 2026-08-28).
   //   ⛔ strikeSkillTick 은 me.units 만 돈다 — 건물은 유닛이 아니라 영영 안 쓴다.
   await step('캠프: 건물이 스킬을 쓴다(쉴드 배터리)', async()=>{

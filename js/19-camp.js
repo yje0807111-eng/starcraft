@@ -870,6 +870,70 @@ function campBuildStructs(){
   CAMPB._bld = out;
   return out.length;
 }
+// ══ 💣 매설 · ☢ 지연 폭격 (사용자 확정 2026-08-28 · HUNT_R1 §3-4-4) ═══════════
+//   ⭐ **지뢰는 가서 심고 돌아온다.** 핵은 **제자리에서 유도**한다(원본 SC 와 같다) —
+//     300초짜리 스킬을 쓰러 저격수가 적진으로 걸어 들어가 죽으면 안 된다.
+//   ⭐ 가는 동안은 **표적을 안 잡는다**(벙커 탑승과 같은 방식). 맞아 죽을 수 있는 것이 대가다.
+//   ⭐ **복귀는 새로 만들지 않는다** — 이미 있는 「자기 자리로 돌아가기」(`u._post`)가 데려온다.
+//   ⚠ 길이(`r`·`trig`·`radius`)는 **정규 좌표**다. `_stkSkLen` 이 월드 크기를 곱한다 —
+//     안 곱하면 반경이 0.06픽셀이 되어 아무에게도 안 닿는다.
+const CAMP_MINE_LIFE = 180;      // 지뢰 수명(초) — 안 밟히면 사라진다
+const CAMP_MINE_ARR = 40;        // 매설 지점에 이만큼 붙으면 「도착」(px)
+// 시전 = 임무를 준다(그 자리에서 심지 않는다)
+function campMineOrder(u, c, sk){
+  if(!u || !c || u._mine) return false;
+  u._mine = { x:c.x, y:c.y, sk:sk };
+  return true; }
+// 임무 진행 — **벙커 탑승과 같은 자리**에서 부른다(그 프레임의 표적·이동을 건너뛴다)
+function campMineTrip(u, dt){
+  const m = u._mine; if(!m) return;
+  const dx = m.x - u.x, dy = m.y - u.y;
+  if(dx*dx + dy*dy > CAMP_MINE_ARR*CAMP_MINE_ARR){
+    if(typeof strikeMoveToward === 'function') strikeMoveToward(u, m.x, m.y, dt);
+    return; }
+  const sk = m.sk || {};
+  (CAMPB._mines || (CAMPB._mines = [])).push({
+    x:m.x, y:m.y, left:CAMP_MINE_LIFE,
+    r:_stkSkLen(sk.r || 0.06), trig:_stkSkLen(sk.trig || 0.045), dmg:sk.dmg || 60, src:u });
+  u._mine = null; u.moving = false; }
+// 심어 둔 지뢰 — ⛔ **공중은 안 밟는다**(원본과 같다). 밟히면 터지고 사라진다.
+function campMineStep(dt){
+  const L = CAMPB && CAMPB._mines; if(!L || !L.length) return 0;
+  const air = (typeof FXLAB_AIR !== 'undefined') ? FXLAB_AIR : null;
+  let boom = 0;
+  for(let i = L.length - 1; i >= 0; i--){ const z = L[i];
+    z.left -= dt;
+    let step = false;
+    for(const e of CAMPB.ai.units){ if(e.dead) continue;
+      if(air && air.has(e.gm || e.id)) continue;
+      const dx = e.x - z.x, dy = e.y - z.y;
+      if(dx*dx + dy*dy <= z.trig*z.trig){ step = true; break; } }
+    if(step){ const r2 = z.r*z.r;
+      for(const e of CAMPB.ai.units){ if(e.dead) continue;
+        const dx = e.x - z.x, dy = e.y - z.y; if(dx*dx + dy*dy > r2) continue;
+        strikeHit(e, z.dmg, z.src); if(e.hp <= 0) e.dead = true; }
+      L.splice(i, 1); boom++; continue; }
+    if(z.left <= 0) L.splice(i, 1); }
+  return boom; }
+// ☢ 핵 — 제자리에서 유도하고 `delay` 뒤에 터진다
+function campNukeOrder(u, c, sk){
+  if(!u || !c) return false;
+  (CAMPB._nukes || (CAMPB._nukes = [])).push({
+    x:c.x, y:c.y, left:(sk && sk.delay) || 3.5,
+    r:_stkSkLen((sk && sk.radius) || 0.15), dmg:(sk && sk.dmg) || 400, src:u });
+  return true; }
+function campNukeStep(dt){
+  const L = CAMPB && CAMPB._nukes; if(!L || !L.length) return 0;
+  let boom = 0;
+  for(let i = L.length - 1; i >= 0; i--){ const z = L[i];
+    z.left -= dt; if(z.left > 0) continue;
+    const r2 = z.r*z.r;
+    for(const e of CAMPB.ai.units){ if(e.dead) continue;
+      const dx = e.x - z.x, dy = e.y - z.y; if(dx*dx + dy*dy > r2) continue;
+      strikeHit(e, z.dmg, z.src); if(e.hp <= 0) e.dead = true; }
+    L.splice(i, 1); boom++; }
+  return boom; }
+
 // ══ 🏢 **건물이 스킬을 쓴다** (사용자 확정 2026-08-28 · HUNT_R1 §3-4-4) ═════════
 //   ⭐ 전투가 시작되면 **`first` 초 뒤 첫 발**, 그 뒤로는 **`every` 초마다 한 번** —
 //     라운드가 끝날 때까지. 초는 **건물마다 따로** 정한다(아래 표가 단일 소스).
