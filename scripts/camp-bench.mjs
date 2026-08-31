@@ -7,6 +7,8 @@
  *   E  환생 관문 100만이 후반에 몇 초 만에 채워지는가 (§5 E)
  *
  * 사용: CHROME_PATH=... node scripts/camp-bench.mjs [시뮬분] [시작던전]
+ *   FREEZE_MIN=n  번 돈이 n 시뮬분 동안 그대로면 중단하고 「얼어붙음」으로 표시(기본 5)
+ *   ⚠ **벤치는 단독으로 돌릴 것** — 다른 무거운 작업과 겹치면 판이 중간에 멎는 사례가 있다.
  * ========================================================================== */
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 import url from 'node:url'; import puppeteer from 'puppeteer-core';
@@ -588,6 +590,18 @@ await pg.evaluate(()=>{
 // ⚠ 한 번에 미는 시뮬 초. 짧을수록 evaluate 하나가 가벼워 타임아웃에 안전하다
 //   (병력 100기대에서 30초는 무거웠다 — 10초로 줄였다. 총 실행 시간은 거의 같다).
 const CH=10; let ran=0; let giftDone=false, giftInfo=null;
+// 🧊 **얼어붙은 판을 「정상 종료」로 위장하지 않는다** (2026-08-31)
+//   ⛔ 실측으로 드러난 것: 다섯 판에 한 판꼴로 판이 중간에 멎는데도 `최종 30.2분 · D0R0 · 번 돈 4144`
+//     처럼 멀쩡한 모양으로 끝났다. 그 총수입은 정상 판의 **6분 지점**과 같다 — 30분을 돈 것이
+//     아니라 6분쯤에서 멎고 시계만 흐른 것이다. 그런 판이 표본에 섞이면 밸런스 수치가 조용히 오염된다.
+//   ⭐ 그래서 「번 돈이 이만큼(시뮬 분) 그대로면」 중단하고, **최종 줄에 무효 표시를 남긴다.**
+//   ⚠ 「지금까지의 최대」와 견주면 안 된다 — 환생하면 부가 리셋돼 정상 판이 무효로 찍힌다.
+//     **직전 표본과 값이 같은지**만 본다(얼어붙은 판은 아예 안 변한다).
+//   ⚠ 원인은 아직 미특정이다. 관찰된 두 번 다 **다른 무거운 작업과 동시에** 돌리던 중이었다 —
+//     벤치는 단독으로 돌릴 것. 이 가드는 원인을 고치는 것이 아니라 **표본을 지키는 것**이다.
+//   FREEZE_MIN=n 으로 문턱을 바꾼다(기본 5 시뮬분).
+const FREEZE_MIN = +(process.env.FREEZE_MIN || 5);
+let _frzEarn = null, _frzT = 0, froze = null;
 process.stdout.write(`⏱  캠프 시뮬 ${MINS}분 · 던전 ${DG0} 시작\n`);
 while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
@@ -596,6 +610,14 @@ while(ran<MINS*60){
       cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2),
       wall:__CB.wall||null }; }, CH);
   ran=st.t;
+  // 🧊 얼어붙음 감시 — 값이 **바뀌기만** 하면 시계를 되감는다(환생 리셋도 「바뀜」이다)
+  if(_frzEarn === null || st.earn !== _frzEarn){ _frzEarn = st.earn; _frzT = st.t; }
+  else if(st.t - _frzT > FREEZE_MIN * 60){
+    froze = { at:+(_frzT/60).toFixed(1), min:+((st.t-_frzT)/60).toFixed(1),
+              earn:st.earn, dg:st.dg, round:st.round };
+    process.stdout.write('\n🧊 얼어붙음 — 번 돈이 ' + froze.min + '분째 ' + froze.earn
+      + ' 에서 그대로다(D' + froze.dg + 'R' + froze.round + ' · ' + froze.at + '분부터). 중단한다.\n');
+    break; }
   // 💠 선물 — GIFT_AT 분을 지나는 첫 순간 한 번만
   if(GIFT_S>0 && !giftDone && st.t>=GIFT_AT*60){
     giftDone=true;
@@ -757,6 +779,13 @@ if(fin.inc){
   if(Math.abs(tot-fin.earn) > fin.earn*0.05)
     console.log(`  ⚠ 내역 합계와 번 돈이 5% 넘게 어긋난다 — 표에 없는 수입원이 있다는 뜻이다`);
 }
-console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);
+// ⚠ **무효 표시는 `최종` 줄 자체에 붙인다.** 위에만 적으면 `grep '^최종'` 으로 표를 모으는 사람이
+//   그대로 표본에 넣는다 — 실제로 그렇게 오염된 판을 두 번 세었다.
+console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`
+  + (froze ? '  🧊 얼어붙음 — 표본으로 쓰지 말 것' : ''));
+if(froze){
+  console.log('   ⛔ 이 판은 ' + froze.at + '분에 멎었다. 번 돈이 ' + froze.min + '분 동안 '
+    + froze.earn + ' 에서 안 움직였다.');
+  console.log('   ⚠ 원인 미특정 — 관찰된 사례는 모두 **다른 무거운 작업과 동시에** 돌릴 때였다.'); }
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();

@@ -434,7 +434,29 @@ const STK_SKILL_OFF={ recall:1, hallucination:1, nuke:1 };
 const STK_EN_REGEN=1/1.2;   // 원본 SC 마나 재생(1.2초당 1)
 function strikeSkillKeys(u){ if(typeof unitSkillKeys!=='function') return [];
   return unitSkillKeys({id:u.id, gmodel:u.gm||u.id}).filter(k=>!STK_SKILL_OFF[k] && (typeof SKILLS!=='undefined') && SKILLS[k]); }
-function strikeSkillCost(sk){ return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.energy)||0); }   // 오토배틀 = 원본 SC 마나(enSc)
+// ⏱ **캠프 전장은 스킬 비용이 쿨타임 하나다**(HUNT_R1 §3-4-3 · 2026-08-28 확정).
+//   ⭐ 캠프는 방치형 자동 전투라 누가 마나를 보고 있지 않다 — 마나·체력을 **무시**하고
+//     「쿨이 돌면 쓴다」로 판단한다. 오토배틀은 그대로 원본 SC 마나를 쓴다.
+//   ⛔ `SKILLS` 표를 캠프에서 덮어쓰는 방식으로 되돌리지 말 것 — 표는 관리자 탭·오토배틀과
+//     **공유**라, 캠프에 들어갔다 나오기 전에 오토배틀이 돌면 **마나 없이 난사**한다.
+//     여기서 `S.camp` 를 보는 것이 새는 길이 없는 유일한 방법이다(`strikeCheckOver` 와 같은 방식).
+const STK_SK_CD_DEF = 5;   // 🏕 캠프에서 쿨이 없는 스킬의 기본 쿨(초) — 없으면 판정 주기(0.4초)마다 계속 나간다
+function _stkCampSk(){ return !!(typeof STK !== 'undefined' && STK && STK.camp); }
+// 🐌 둔화 배수 — 둔화 중이면 이동이 느려진다. ⛔ 공격 속도에는 걸지 않는다(원본 SC 인스네어와 다름).
+const STK_SLOW_MUL = 0.5;
+function strikeSlowMul(u){ return (u && u.slowT > 0) ? STK_SLOW_MUL : 1; }
+function strikeSkillCost(sk){ if(_stkCampSk()) return 0;
+  return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.energy)||0); }   // 오토배틀 = 원본 SC 마나(enSc)
+function strikeSkillHpCost(sk){ return _stkCampSk() ? 0 : ((sk && sk.hpCost) || 0); }
+// ⏱ **캠프는 「지속이 끝난 뒤부터」 쿨을 센다**(사용자 확정 2026-08-28).
+//   ⭐ 스킬을 쓰면 `dur` 만큼 효과가 이어지고, **그것이 끝나야** 쿨이 돌기 시작한다.
+//     그래서 실제 주기는 `dur + cd` 다 — 광폭화면 6초 지속 + 10초 쿨 = 16초마다 한 번.
+//   ⛔ 쿨을 시전 순간부터 세지 말 것 — 지속이 쿨보다 길면 **효과가 끊기지 않고 겹친다.**
+//   ⚠ 오토배틀은 원본 그대로(시전 순간부터) 센다. 여기서 갈린다.
+function strikeSkillCd(sk, dflt){ const c = (sk && sk.cd) || 0;
+  if(!_stkCampSk()) return c > 0 ? c : (dflt || 0);
+  return (c > 0 ? c : STK_SK_CD_DEF) + ((sk && sk.dur) || 0); }
+function strikeSkillDrain(sk){ return _stkCampSk() ? 0 : ((sk && sk.drain) || 0); }
 function strikeSkillAtkMul(u){ let m=1; const b=u.buff||{}, on=u.skillOn||{};
   if(b.stim>0) m*=(SKILLS.stim.atkMul||1); if(on.siege) m*=(SKILLS.siege.atkMul||1); return m; }
 function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngMul||1):1; }
@@ -471,6 +493,9 @@ function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   return { hp:Math.round((d.hp||40)*3*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산 × 종족배율
     color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng), minRng:minRng, dep:dep }; }
 function strikeHit(tgt, rawAtk, atk){   // 표준 데미지 적용: 실드 먼저(상성 무시) → 체력((공격−방어)×상성)
+  // 🕸 원거리 무효 장판(교란 결계·암흑 장막) — 원거리 공격은 장판 안 대상에 안 닿는다.
+  //   ⛔ 여기 한 곳에서만 막는다. 사격·광역·도트가 전부 이 함수를 거치므로 새는 길이 없다.
+  if(strikeWebBlocks(tgt, atk)) return;
   if(tgt.sh>0){ const d=Math.max(0.5, rawAtk-(tgt.shArmor||0));   // 실드 상태: 상성 무시 · 실드 전용 방어
     if(d<=tgt.sh){ tgt.sh-=d; return; } tgt.hp-=(d-tgt.sh); tgt.sh=0; return; }   // 실드 초과분만 체력으로
   tgt.hp -= Math.max(0.5, rawAtk-(tgt.armor||0)) * _sbTypeMul(atk, tgt); }   // (공격−방어) 먼저, 상성은 그 뒤
@@ -501,13 +526,31 @@ function strikeIsAir(u){ if(!u) return false;
 // 💉 무공격 지원 유닛(HEALER=의무병) — 스스로 표적을 잡지 않고 부상 아군 바이오닉을 따라다니며 치유한다.
 //   치유 대상이 없으면 가장 가까운 전투 아군을 따라 전진해 본대에서 떨어지지 않는다.
 const STK_HEAL_HPS=22, STK_HEAL_RNG=110, STK_HEAL_SEEK=900, STK_HEAL_EN=0.5;   // 초당 회복 · 치유 사거리 · 탐색 반경 · 회복 1당 에너지
+// ⏱ **캠프의 치유는 「3초 치유 → 5초 쉬기」다**(사용자 확정 2026-08-28).
+//   ⭐ 원래는 **마나가 닳을 때까지** 이어지는 방식이었다. 캠프는 마나를 안 보므로
+//     그대로 두면 무한 치유가 된다 — 다른 스킬과 같은 규칙(지속 뒤 쿨)으로 맞춘다.
+//   ⚠ 이 경로는 **의무병 전용**이다(`SKILLS.heal` 은 `_stkApplyAlly` 에서 의무병을 빼고 있다).
+//     둘을 헷갈리지 말 것 — 화면에서 도는 치유는 이쪽이다.
+//   ⚠ 남은 시간을 `u.buff`/`u.skillCd` 에 두지 않는다 — 거기는 `strikeSkillTick` 이
+//     따로 깎아서 **두 번 깎인다**. 여기서만 쓰는 `_healDur`/`_healCd` 로 둔다.
+const STK_HEAL_DUR = 3;      // 🏕 한 번 시작하면 이어지는 시간(초)
+const STK_HEAL_CD  = 5;      // 🏕 지속이 끝난 뒤 쉬는 시간(초)
 function strikeHealStep(u, me, dt){
+  const camp = _stkCampSk();
+  if(camp){                                  // ⏱ 마나가 아니라 쿨로 돈다
+    if((u._healCd||0) > 0) u._healCd = Math.max(0, u._healCd - dt);
+    else if((u._healDur||0) > 0){ u._healDur = Math.max(0, u._healDur - dt);
+      if(u._healDur <= 0) u._healCd = STK_HEAL_CD; } }   // ⛔ 지속이 끝나야 쿨이 돈다
   let t=null, td=Infinity;   // ① 가장 가까운 부상 바이오닉
   for(const a of me.units){ if(a===u || a.dead || a.hp>=a.maxHp || !BIONIC[a.gm||a.id]) continue;
     const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy; if(d2<td){ td=d2; t=a; } }
   if(t && td<=STK_HEAL_SEEK*STK_HEAL_SEEK){
     if(td>STK_HEAL_RNG*STK_HEAL_RNG){ strikeMoveToward(u, t.x, t.y, dt); return; }
     u.moving=false; u.face=Math.atan2(t.x-u.x, t.y-u.y);
+    if(camp){
+      if((u._healCd||0) > 0) return;                            // 쉬는 중 — 곁에 붙어만 있는다
+      if((u._healDur||0) <= 0) u._healDur = STK_HEAL_DUR;       // 새로 시작
+      t.hp = Math.min(t.maxHp, t.hp + STK_HEAL_HPS*dt); return; }
     let amt=STK_HEAL_HPS*dt;
     if(u.maxEn>0){ amt=Math.min(amt, (u.en||0)/STK_HEAL_EN); u.en=Math.max(0,(u.en||0)-amt*STK_HEAL_EN); }   // 에너지 소진 시 치유 중단
     t.hp=Math.min(t.maxHp, t.hp+amt); return; }
@@ -632,7 +675,7 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; if(!S) return;
     u.x+=dx/d*u.spd*dt; u.y+=dy/d*u.spd*dt; u.face=Math.atan2(dx,dy); u.moving=true; return; }
   const SP=STK_MOVE_SPAN, key=u.gm||u.id;
   if(u.skillOn&&u.skillOn.siege){ u.moving=false; return; }   // 공성 모드 = 고정
-  const p=u._mvp||(u._mvp={}); p.x=u.x/SP; p.y=u.y/SP; p.vx=u._vx||0; p.vy=u._vy||0; p.face=u.face; p._skSpdMul=(1/((typeof MOVE_MUL!=='undefined')?MOVE_MUL:1))*((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1)*strikeFrzSpdMul(u, S[u.side]);   // 공용 함수는 def.moveSpd×MOVE_MUL로 달린다 → 오토배틀 기준 속도(moveSpd×1800)로 환산 · 🐺 광폭화 이속
+  const p=u._mvp||(u._mvp={}); p.x=u.x/SP; p.y=u.y/SP; p.vx=u._vx||0; p.vy=u._vy||0; p.face=u.face; p._skSpdMul=(1/((typeof MOVE_MUL!=='undefined')?MOVE_MUL:1))*((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1)*strikeFrzSpdMul(u, S[u.side])*strikeSlowMul(u);   // 🐌 둔화(점착 가스)도 여기서 곱한다   // 공용 함수는 def.moveSpd×MOVE_MUL로 달린다 → 오토배틀 기준 속도(moveSpd×1800)로 환산 · 🐺 광폭화 이속
   const R=(u.size+46)*7, R2=R*R, staticN=[];
   { const _nb=strikeNear(u.x, u.y, R, u._nbBuf||(u._nbBuf=[]));   // ⚡ 격자 근접 질의(전체 순회 제거)
     for(let i=0;i<_nb.length;i++){ const o=_nb[i]; if(o===u||o.dead||o.moving) continue;   // 멈춰 있는 유닛만 회피 대상
@@ -655,6 +698,7 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; if(!S) return;
 // 🔮 마나·쿨다운·자기 강화 — 관리자 SKILLS 데이터를 그대로 사용(자기강화/오라만 1단계 적용)
 function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') return;
   _stkDotTick(S, dt);   // ⏳ 지속 피해 장판·도트 먼저 굴린다
+  _stkWebTick(S, dt);   // 🕸 원거리 무효 장판 수명
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'];
     for(const u of me.units){ if(u.dead) continue;
       if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+STK_EN_REGEN*dt);   // 원본 SC 재생률
@@ -673,13 +717,13 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
         if((u.skillCd&&u.skillCd[k]>0)) continue;
         if(sk.kind==='self'){          // 광폭화 — 교전 시작 시 on
           if(!inFight || (u.buff&&u.buff[k]>0)) continue;
-          if(sk.hpCost && u.hp<=sk.hpCost*2) continue;
-          u.buff[k]=sk.dur||5; if(sk.hpCost) u.hp-=sk.hpCost;
-          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||0; }
+          { const _hc=strikeSkillHpCost(sk); if(_hc && u.hp<=_hc*2) continue;
+            u.buff[k]=sk.dur||5; if(_hc) u.hp-=_hc; }
+          if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,0); }
         else if(sk.kind==='toggle'){   // 공성 모드 — 사거리 안에 적이 있으면 on, 없으면 off
           const want=!!(nearFoe && nd<=Math.pow(u.rng*(sk.rngMul||1),2));
           if(!!u.skillOn[k]===want) continue;
-          u.skillOn[k]=want; u.skillCd[k]=sk.cd||1; }
+          u.skillOn[k]=want; u.skillCd[k]=(sk.cd||1); }
         else if(sk.kind==='aura'){ u.skillOn[k]=true; }   // 은신 장막 — 상시
         // ⭐ **대상을 고르는 스킬** (HUNT_R1 §3-4-2, 2026-08-27)
         //   ⚠ 예전에는 self/toggle/aura 만 처리했다. 그래서 마법 유닛 대부분이 **에너지만 채운 채 서 있었다.**
@@ -689,20 +733,25 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
         //     아무 일도 안 일어나는 것이 아무것도 안 하는 것보다 나쁘다. 목록은 STK_SK_DEAD.
         else if(sk.kind==='target_unit'){ const t=_stkPickAlly(u, me, sk, k); if(!t) continue;
           if(!_stkApplyAlly(u, t, sk, k, dt)) continue;
-          if(cost>0) u.en-=cost; if(sk.cd) u.skillCd[k]=sk.cd; }
+          if(cost>0) u.en-=cost; { const _cd=strikeSkillCd(sk,0); if(_cd) u.skillCd[k]=_cd; } }
         else if(sk.kind==='target_enemy'){ const t=_stkPickFoe(u, foe, sk); if(!t) continue;
           if(!_stkApplyFoe(u, t, sk, k)) continue;
-          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||1; }
-        else if(sk.kind==='target_ground'){ const c=_stkPickSpot(u, foe, sk); if(!c) continue;
+          if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,1); }
+        else if(sk.kind==='target_ground'){
+          // 🕸 방어 장판은 **아군 쪽**을 본다 — 공격 장판과 자리 고르는 법이 반대다
+          const c=_stkIsWeb(k) ? _stkPickWebSpot(u, me, foe, sk) : _stkPickSpot(u, foe, sk); if(!c) continue;
           if(!_stkApplySpot(u, c, sk, k, foe)) continue;
-          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||1; }
+          if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,1); }
       } } } }
 // ── 🔮 자동 시전 ────────────────────────────────────────────────────────
 // ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬.** 둔화·기절·실명·은신은 이동/사격 코드가 읽는 값이 없고,
 //    순간이동·환영·정신지배는 유닛을 만들거나 진영을 옮겨야 하며, 핵·지뢰는 설치물 시스템이 필요하다.
 //    ⚠ 나중에 훅을 만들면 여기서 빼면 된다 — 시전 코드는 이미 준비돼 있다.
-const STK_SK_DEAD={ ensnare:1, lockdown:1, nuke:1, spider_mine:1, maelstrom:1, mind_control:1,
-  disruption_web:1, stasis:1, recall:1, hallucination:1, parasite:1, dark_swarm:1,
+// ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬** — 마나만 태우고 아무 일도 안 일어나는 것이
+//   아무것도 안 하는 것보다 나쁘다. 기능이 생기면 여기서 뺀다.
+//   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
+const STK_SK_DEAD={ nuke:1, spider_mine:1, mind_control:1,
+  recall:1, hallucination:1, parasite:1,
   optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
 const STK_SK_SPOT_MIN=3;       // 광역 = 적이 이만큼 뭉쳤을 때만(한두 기에 쓰면 낭비)
@@ -723,6 +772,23 @@ function _stkDotTick(S, dt){ const D=S._dots; if(!D||!D.length) return;
         strikeHit(e, z.dps*dt, z.src); if(e.hp<=0) e.dead=true; } }
     if(z.left<=0) D.splice(i,1); } }
 function _stkDotAdd(S, z){ (S._dots||(S._dots=[])).push(z); }
+// ══ 🕸 **원거리 무효 장판** — 교란 결계 · 암흑 장막 (HUNT_R1 §3-4-4 · 2026-08-28) ═══
+//   ⭐ 장판 안에 있는 유닛은 **원거리 공격에 안 맞는다.** 근접은 그대로 맞는다.
+//   ⭐ **원거리 = 사거리 3칸 이상**(사용자 확정). 유닛별 표를 두지 않는다 — 값 하나로 자른다.
+//   ⚠ 칸은 캠프 설계 단위다(`CAMP_STAT_TILE` ≈ 46.75px). 여기서는 픽셀로 환산해 둔다.
+//   ⛔ 장판을 진영별로 두지 않는다 — **자리에 있는 모두**를 보호한다(원본 SC 암흑 장막과 같다).
+//     그래서 적이 깐 장막에 내 유닛이 들어가면 내 유닛도 원거리에 안 맞는다.
+const STK_RANGED_TILES = 3;                       // 이 칸 수 이상이면 '원거리'
+const STK_TILE_PX = 850 * 0.22 / 4;               // 칸 → 픽셀(캠프 설계 단위와 같은 값)
+function strikeIsRanged(u){ return !!(u && (u.rng||0) >= STK_RANGED_TILES * STK_TILE_PX); }
+function _stkWebAdd(S, w){ (S._webs||(S._webs=[])).push(w); }
+function _stkWebTick(S, dt){ const W=S._webs; if(!W||!W.length) return;
+  for(let i=W.length-1;i>=0;i--){ W[i].left-=dt; if(W[i].left<=0) W.splice(i,1); } }
+function strikeInWeb(t){ const S=STK, W=S&&S._webs; if(!W||!W.length||!t) return false;
+  for(const w of W){ const dx=t.x-w.x, dy=t.y-w.y; if(dx*dx+dy*dy<=w.r2) return true; }
+  return false; }
+// 이 공격이 장판에 막히는가 — **원거리 공격자**가 **장판 안 대상**을 때릴 때만 막힌다.
+function strikeWebBlocks(tgt, atk){ return !!(atk && strikeIsRanged(atk) && strikeInWeb(tgt)); }
 // ── 🔮 대상 고르기 ──────────────────────────────────────────────────────
 // 사거리 안에서 **가장 많이 다친 아군**. ⚠ 포식만 예외 — 아군을 잡아먹으므로 **가장 값싼 아군**을 고른다
 //   (체력으로 고르면 다친 전함을 먹는다).
@@ -754,6 +820,28 @@ function _stkPickSpot(u, foe, sk){
     for(const e of near){ const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy<=rad2) n++; }
     if(n>bn){ bn=n; best=c; } }
   return (bn>=STK_SK_SPOT_MIN) ? {x:best.x, y:best.y, n:bn} : null; }
+// 🕸 **방어 장판 자리** — 교란 결계 · 암흑 장막(2026-08-28 사용자 확정).
+//   ⛔ 공격 장판(`_stkPickSpot`)과 **반대**다. 그쪽은 「적이 뭉친 곳」인데 이쪽은
+//     **「원거리에 맞고 있는 아군이 가장 많은 곳」** 이다. 같은 함수를 쓰면 장판을
+//     적진 한복판에 깔아 **적을 보호한다**(장판은 진영을 안 가린다).
+//   ⚠ 「맞고 있다」 = 그 아군을 사거리 안에 둔 **원거리** 적이 하나라도 있다.
+//     근접만 붙어 있는 아군은 장판이 못 지켜 주므로 세지 않는다.
+const STK_SK_WEB_MIN = 2;    // 이만큼은 지켜야 깐다(한 기 지키려고 쓰면 낭비)
+function _stkPickWebSpot(u, me, foe, sk){
+  const R=_stkSkRange(u, sk), R2=R*R, rad=_stkSkLen(sk.radius||0.08), rad2=rad*rad;
+  const hurt=[];
+  for(const a of me.units){ if(a.dead) continue;
+    const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy>R2) continue;      // 시전 사거리 안
+    for(const e of foe.units){ if(e.dead || !strikeIsRanged(e)) continue;
+      const ex=a.x-e.x, ey=a.y-e.y, er=e.rng||0;
+      if(ex*ex+ey*ey<=er*er){ hurt.push(a); break; } } }
+  if(hurt.length<STK_SK_WEB_MIN) return null;
+  let best=null, bn=0;
+  for(const c of hurt){ let n=0;
+    for(const a of hurt){ const dx=a.x-c.x, dy=a.y-c.y; if(dx*dx+dy*dy<=rad2) n++; }
+    if(n>bn){ bn=n; best=c; } }
+  return (bn>=STK_SK_WEB_MIN) ? {x:best.x, y:best.y, n:bn} : null; }
+function _stkIsWeb(key){ return key==='disruption_web' || key==='dark_swarm'; }
 // ── 🔮 효과 내기 ────────────────────────────────────────────────────────
 //   ⛔ 낼 수 없으면 false 를 돌려 **시전 자체를 취소**한다(에너지를 쓰지 않는다).
 function _stkApplyAlly(u, t, sk, key, dt){
@@ -761,10 +849,15 @@ function _stkApplyAlly(u, t, sk, key, dt){
   if(sk.hps){ if(HEALER[u.gm||u.id]) return false;   // 💉 의무병은 strikeHealStep 이 이미 치유한다(두 번 걸지 않는다)
     if((t.hp||0)>=(t.maxHp||0)) return false;
     t.hp=Math.min(t.maxHp||t.hp, (t.hp||0)+sk.hps*dt);
-    if(sk.drain) u.en=Math.max(0,(u.en||0)-sk.drain*dt);
+    { const _dr=strikeSkillDrain(sk); if(_dr) u.en=Math.max(0,(u.en||0)-_dr*dt); }
     return true; }
   if(sk.absorb){ if((t.sh||0)>0) return false;       // 🛡 보호막 — 실드로 얹는다(strikeHit 이 실드를 먼저 깎는다)
     t.sh=sk.absorb; t.maxSh=Math.max(t.maxSh||0, sk.absorb); return true; }
+  // 🔋 쉴드 충전 — 🏕 **캠프에서는 체력 회복**이다(HUNT_R1 §3-4-4).
+  //   ⛔ 캠프는 실드를 체력에 합쳐 `sh=0` 이라(에테리얼도 그렇다) 실드 충전이 아무 일도 안 한다.
+  //     그래서 캠프에서만 최대 체력의 `healPct` 만큼 회복으로 읽는다. 캠프 밖은 원본(실드) 그대로.
+  if(sk.healPct && _stkCampSk()){ const mx=t.maxHp||0; if(mx<=0 || (t.hp||0)>=mx) return false;
+    t.hp=Math.min(mx, (t.hp||0)+mx*sk.healPct); return true; }
   if(sk.rate){ if((t.sh||0)>=(t.maxSh||0)) return false;   // 🔋 쉴드 충전 — 마나 1 → 실드 2
     const add=Math.min(sk.rate*10, (t.maxSh||0)-(t.sh||0)); if(add<=0) return false;
     t.sh=(t.sh||0)+add; return true; }
@@ -777,6 +870,8 @@ function _stkApplyFoe(u, t, sk, key){
   if(key==='broodling'){ t.hp=0; t.sh=0; t.dead=true; return true; }        // 🐛 즉사(스웜링 2기 소환은 미구현)
   if(key==='feedback'){ const en=t.en||0; if(en<=0) return false;           // 💥 마나 소각 — 남은 마나만큼 피해
     t.en=0; strikeHit(t, en, u); if(t.hp<=0) t.dead=true; return true; }
+  if(key==='lockdown'){ if((t.stunT||0)>0) return false;                   // ⛔ 봉쇄 — 이미 멎은 적에 겹치지 않는다
+    t.stunT=sk.dur||5; return true; }
   if(sk.dps){ _stkDotAdd(STK, {tgt:t, dps:sk.dps, left:sk.dur||1, src:u}); return true; }   // ☢ 방사능
   if(sk.dmg){ strikeHit(t, sk.dmg, u); if(t.hp<=0) t.dead=true; return true; }               // 💥 집중포
   return false; }
@@ -786,6 +881,23 @@ function _stkApplySpot(u, c, sk, key, foe){
   if(key==='emp'){ let n=0;                                   // ⚡ EMP — 범위 안 마나·실드 소거
     for(const e of foe.units){ if(e.dead) continue; const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
       if((e.en||0)>0||(e.sh||0)>0){ e.en=0; e.sh=0; n++; } }
+    return n>0; }
+  // ⛔ **정지** — 빙결·마비 폭풍. 범위 안 적이 그 자리에 멎는다.
+  //   ⚠ 이미 멎어 있는 적에게는 겹치지 않는다 — 두 시전이 겹치면 사실상 영구 정지가 된다.
+  if(key==='stasis' || key==='maelstrom'){ let n=0;
+    for(const e of foe.units){ if(e.dead || (e.stunT||0)>0) continue;
+      const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
+      e.stunT=sk.dur||3; n++; }
+    return n>0; }
+  // 🕸 **원거리 무효 장판** — 교란 결계 · 암흑 장막. 지점에 깔고 지속 동안 유지된다.
+  //   ⚠ 적이 없어도 깐다 — 「막는 것」이 목적이라 뭉친 적을 기다릴 이유가 없다.
+  if(key==='disruption_web' || key==='dark_swarm'){
+    _stkWebAdd(STK, {x:c.x, y:c.y, r2:r2, left:sk.dur||3}); return true; }
+  // 🐌 **둔화** — 점착 가스. 느려질 뿐 계속 싸운다(정지와 다르다).
+  if(key==='ensnare'){ let n=0;
+    for(const e of foe.units){ if(e.dead) continue;
+      const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
+      e.slowT=Math.max(e.slowT||0, sk.dur||8); n++; }
     return n>0; }
   const dps=sk.dps||sk.dmg; if(!dps) return false;
   _stkDotAdd(STK, {x:c.x, y:c.y, r2:r2, dps:dps, left:sk.dur||1, src:u, foe:foe===STK.me?'me':'ai'});   // ⚡ 번개 폭풍 · 🩸 역병
@@ -1329,6 +1441,15 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           FX.death(S.fx, u.x, u.y, {unitSize:(u.size||14)*1.7, color:'#ffca4a', parts:STK_DEATH_PARTS+8}); }   // 큰 폭발 이펙트
         continue; }
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
+      // ⛔ **정지(stun)** — 봉쇄·빙결·마비 폭풍이 거는 상태(HUNT_R1 §3-4-4).
+      //   움직이지도 때리지도 못한다. `u.wait` 와 같은 자리에 두는 이유는 그 아래 전부
+      //   (표적 선정·이동·사격)를 통째로 건너뛰어야 하기 때문이다.
+      //   ⚠ 지속 시간은 **여기서만** 깎는다. `strikeSkillTick` 의 `u.buff` 루프에 넣으면
+      //     두 번 깎여 절반이 된다(치유에서 이미 밟은 함정이다).
+      if(u.stunT>0){ u.stunT=Math.max(0,u.stunT-dt); u.moving=false; continue; }
+      // 🐌 **둔화(slow)** — 점착 가스가 거는 상태. 정지와 달리 **느려질 뿐** 계속 싸운다.
+      //   배수는 `strikeSlowMul` 이 낸다(이동에만 건다 · 공격 속도는 안 건드린다).
+      if(u.slowT>0) u.slowT=Math.max(0,u.slowT-dt);
       if(u._btT>0){ u._btT-=dt; if(u._btT<=0) u._btgt=null; }   // 포기했던 표적의 재선정 금지 시간
       if(!u._atk) u._atk=(typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id, gmodel:u.gm}):{air:true,gnd:true};   // 공격 가능 레이어(관리자 전투실험과 동일 규칙)
       const _canHit=(o)=>{ const k=o.gm||o.id, air=(typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(k)); return air?u._atk.air:u._atk.gnd; };
