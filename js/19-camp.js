@@ -2627,6 +2627,7 @@ function campNoteStay(){
 //   관리자 건설 탭이나 오토배틀에서 온 경우 G.tech 는 그쪽 판이다. 무턱대고 저장하면
 //   남의 판을 캠프 저장에 덮어써 기지가 통째로 바뀐다.
 function campExit(){ if(!_campOn) return;
+  _campHidden = false;      // 🔌 숨김 표시를 되돌린다(다음 진입의 campOnShow 가 헛돌지 않게)
   campMineModeSet(false);   // ⛏ 채굴 모드는 캠프 밖으로 들고 나가지 않는다
   campBattleClose();   // 🧹 전장은 화면을 떠날 때 지운다(공용 STK 를 빌려 쓴 것이라 남기면 샌다)
   campBarReset();      // 🧹 배지 캐시도 비운다(다음 진입에서 옛 값이 남지 않게)
@@ -2635,6 +2636,42 @@ function campExit(){ if(!_campOn) return;
   campStopTimer(); campStopFrame();
   campSave(); campHideView(); }
 function campIsOn(){ return _campOn; }
+
+// ══ 🔌 앱이 숨거나 꺼질 때 — campExit 이 **안 불리는 경로** (2026-08-31) ═══════
+//   ⛔ 예전엔 나간 시각(leftAt)을 campExit 에서만 찍었다. 그런데 모바일에서 앱을 스와이프로
+//     닫거나 홈으로 나가면 campExit 이 안 불린다 — 그게 가장 흔한 이탈 경로다. 결과:
+//       · 자리 비움 보상이 **0**(leftAt 이 안 찍혀 campSettleAway 가 그냥 빠진다)
+//       · 마지막 자동 저장(30초 주기) 이후의 진행이 **날아간다**
+//   ⭐ 프로젝트에 이미 같은 규약이 있다 — 12-appshell.js 의 `pagehide → saveRun` ·
+//     `visibilitychange → profStampSeen`. 캠프만 빠져 있었다.
+//   ⚠ 숨는 동안 수입은 거의 0 이다(rAF 가 멈춰 일꾼이 안 캔다). 그래서 그 시간은
+//     **자리 비움 정산**으로 돌려주는 것이 맞다 — 여기서 leftAt 을 찍는 이유가 그것이다.
+let _campHidden = false;
+function campOnHide(){
+  if(!_campOn || _campHidden) return 0;     // ⚠ visibilitychange 와 pagehide 가 잇달아 온다
+  _campHidden = true;
+  campNoteStay();                            // 이번 체류의 수급 속도·논 시간을 기록
+  const C = campState(); if(C) C.leftAt = Date.now();
+  campSave();
+  return 1; }
+function campOnShow(){
+  if(!_campOn || !_campHidden) return 0;
+  _campHidden = false;
+  const got = campSettleAway();              // 숨어 있던 동안을 정산
+  if(got > 0 && typeof toast === 'function') toast('💠 자리를 비운 동안 미네랄 ' + got);
+  // ⚠ **정산한 뒤에 기준점을 다시 잡는다.** 안 그러면 campApplyGatherMul 이 그 보상을
+  //   「일꾼이 캔 것」으로 보고 채취 배수를 한 번 더 먹인다(campEnter 도 같은 순서다).
+  if(typeof G !== 'undefined' && G.tech){
+    _campT0 = Date.now(); _campC0 = G.tech.credit || 0; _campE0 = G.tech.energy || 0;
+    _campLastCr = G.tech.credit || 0; _campTapAcc = 0; }
+  _campLastDraw = 0; _campLastT = 0;          // 프레임 기준 시각도 새로 잡는다(숨은 동안이 dt 로 들어오지 않게)
+  return got; }
+if(typeof document !== 'undefined' && typeof window !== 'undefined'){
+  document.addEventListener('visibilitychange', function(){
+    try{ if(document.hidden) campOnHide(); else campOnShow(); }catch(e){} });
+  // ⚠ pagehide 는 visibilitychange 가 **안 오는** 경로(앱 종료·탭 정리)를 맡는다.
+  window.addEventListener('pagehide', function(){ try{ campOnHide(); }catch(e){} });
+}
 // HOME 진입점 — 05-home.js 의 openHome() 이 부른다(옛 hbStart() 자리).
 function campOpen(){ const C = campState(); if(!C) return;
   if(!C.race) campRaceSheet(); else campEnter(); }

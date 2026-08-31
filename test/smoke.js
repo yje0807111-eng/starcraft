@@ -1302,6 +1302,47 @@ async function groupLobby(){
     assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
+  // 🔌 **앱을 그냥 죽여도 진행이 남는다** (2026-08-31)
+  //    ⛔ 예전엔 나간 시각(leftAt)을 campExit 에서만 찍었다. 모바일에서 앱을 스와이프로 닫거나
+  //      홈으로 나가면 campExit 이 **안 불린다** — 가장 흔한 이탈 경로다. 결과:
+  //        · 자리 비움 보상 **0**(leftAt 이 없어 campSettleAway 가 그냥 빠진다)
+  //        · 마지막 자동 저장(30초 주기) 이후 진행이 **날아간다**
+  //    ⭐ 프로젝트에 이미 같은 규약이 있다 — 12-appshell.js 의 pagehide → saveRun.
+  await step('캠프: 앱이 숨거나 꺼져도 나간 시각을 남기고 저장한다', async()=>{
+    skipIf(typeof campIsOn!=='function'||!campIsOn(),'캠프가 안 열려 있다');
+    // ⛔ **여기서 skipIf 를 쓰지 말 것.** 함수 이름으로 건너뛰면 훅을 지워도 검사가 조용히
+    //   넘어간다(2026-08-31 에 그렇게 한 번 헛통과했다). 없으면 **실패**해야 계약이 산다.
+    assert(typeof campOnHide==='function' && typeof campOnShow==='function',
+      '숨김/복귀 훅이 없다 — 앱을 그냥 죽이면 자리 비움 보상과 진행이 통째로 사라진다');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // ① 숨으면 나간 시각을 찍는다
+    C.leftAt=0;
+    assert(campOnHide()===1,'숨김 처리가 안 걸렸다');
+    assert(C.leftAt>0,'나간 시각(leftAt)이 안 찍혔다 — 자리 비움 보상이 통째로 사라진다');
+    // ② 잇달아 와도 두 번 처리하지 않는다(visibilitychange 뒤에 pagehide 가 온다)
+    assert(campOnHide()===0,'숨김 처리가 두 번 걸렸다');
+    // ③ 돌아오면 그동안을 정산한다
+    C.rate=10; C.leftAt=Date.now()-60000;              // 초당 10 · 60초 자리 비움
+    const cr0=G.tech.credit||0;
+    const got=campOnShow();
+    assert(got>0,'돌아왔는데 자리 비움 정산이 0 이다');
+    assert((G.tech.credit||0)>cr0,'정산했는데 미네랄이 안 늘었다');
+    assert(!C.leftAt,'정산하고도 나간 시각이 남아 있다 — 다음에 또 준다');
+    // ④ ⚠ 정산분에 채취 배수를 **또** 먹이지 않는다 — 기준점을 다시 잡아야 한다
+    //    (campApplyGatherMul 이 증가분을 「일꾼이 캔 것」으로 보면 배수가 두 번 걸린다)
+    { const before=G.tech.credit||0;
+      if(typeof campApplyGatherMul==='function') campApplyGatherMul();
+      assert((G.tech.credit||0)===before,
+        '자리 비움 보상에 채취 배수가 또 걸렸다: '+before+' → '+(G.tech.credit||0)); }
+    // ⑤ ⭐ **훅이 실제로 달려 있다** — 함수만 만들고 안 달면 아무 일도 안 일어난다.
+    //    그래서 진짜 이벤트를 쏴서 확인한다(함수를 직접 부르는 것으로는 못 잡는다).
+    { C.leftAt=0;
+      window.dispatchEvent(new Event('pagehide'));
+      assert(C.leftAt>0,'pagehide 훅이 안 달려 있다 — 앱 종료 경로가 그대로 샌다');
+      C.leftAt=0; campOnShow(); }
+    C.rate=0; C.leftAt=0;
+    return '숨김 → leftAt 기록 + 저장 · 복귀 → 정산 · 중복 방지 · 배수 이중 적용 없음'; });
+
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
   // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
   //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.

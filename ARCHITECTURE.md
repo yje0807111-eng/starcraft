@@ -60,6 +60,27 @@
 **초기화하고 캠프 규칙으로 덮을** 뿐이다 — 오토배틀(`18-strike.js:188`)과 같은 관계다.
 ⛔ `16/17-build.js` 를 고치지 말 것(관리자 탭·오토배틀과 공유).
 
+#### 🔌 앱이 숨거나 꺼질 때 — `campOnHide` / `campOnShow` (2026-08-31)
+
+⛔ 나간 시각(`leftAt`)을 `campExit` 에서만 찍고 있었다. 그런데 **모바일에서 앱을 스와이프로 닫거나
+홈으로 나가면 `campExit` 이 안 불린다** — 가장 흔한 이탈 경로다. 결과 둘:
+- 자리 비움 보상이 **0**(`leftAt` 이 없어 `campSettleAway` 가 그냥 빠진다)
+- 마지막 자동 저장(30초 주기) 이후의 진행이 **날아간다**
+
+⭐ 프로젝트에 이미 같은 규약이 있었다 — `js/12-appshell.js` 의 `pagehide → saveRun` ·
+`visibilitychange → profStampSeen`. **캠프만 빠져 있었다.**
+
+| | 하는 일 |
+|---|---|
+| `campOnHide()` | `campNoteStay()`(수급 속도·논 시간) → `leftAt` 기록 → `campSave()` |
+| `campOnShow()` | `campSettleAway()` → **그 뒤에** 기준점(`_campLastCr`·`_campT0`) 재설정 |
+
+⚠ **순서가 중요하다** — 정산한 뒤에 `_campLastCr` 을 다시 잡아야 한다. 안 그러면
+`campApplyGatherMul` 이 그 보상을 「일꾼이 캔 것」으로 보고 **채취 배수를 한 번 더 먹인다**
+(`campEnter` 도 같은 순서다). 스모크가 이 이중 적용을 잰다.
+⚠ `visibilitychange` 뒤에 `pagehide` 가 잇달아 온다 — `_campHidden` 으로 한 번만 처리한다.
+⛔ 스모크에서 **함수 이름으로 `skipIf` 하지 말 것** — 훅을 지워도 조용히 건너뛴다(헛통과 전력 2회).
+
 #### ⚖ 승패 판정 — 「병력이 있다」는 **싸울 수 있는 병력**이다 (2026-08-31)
 
 ⛔ 두 판정이 어긋나 있었다. 승패 가드는 `campAlive('me') > 0`(**모든** 살아있는 유닛)을 쓰고,
