@@ -327,6 +327,35 @@ async function groupLobby(){
     assert(so[0].closest('#msSocialDock'),'소셜 DOM 이 도크 밖에 있음');
     assert(document.getElementById('msChat') && document.getElementById('msChatInput'),'유즈맵 채팅 알맹이가 없어졌다');
     return '다락 18개 없음 · 소셜/환생 본문은 살아 있음'; });
+  // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
+  //    도달 불가가 됐다 — 설정 > 로그아웃이 그 자리를 잇는다(2026-08-27).
+  await step('로그아웃: 확인창을 거친다 · 설정 위에 뜬다 · 나가기와 같은 얼굴', async()=>{
+    skipIf(typeof askLogout!=='function','로그아웃 확인창 없음');
+    // ① 설정의 로그아웃은 바로 나가지 않는다
+    const lo=$('setLogout'); assert(lo,'설정에 로그아웃 줄이 없음');
+    assert(/askLogout/.test(lo.getAttribute('onclick')||''),'설정 로그아웃이 확인 없이 바로 나간다: '+lo.getAttribute('onclick'));
+    // ② 껍데기는 「나가기 확인」과 같은 컴포넌트여야 한다
+    const card=document.querySelector('#logoutPanel .ecCard');
+    assert(card,'로그아웃 확인창이 공용 확인 껍데기(.ecCard)가 아님');
+    assert(card.querySelector('.ecTitle') && card.querySelector('.ecMsg')
+        && card.querySelector('.ecCancel') && card.querySelector('.ecGo'),'확인창 구성(제목·문구·취소·주동작)이 빠짐');
+    assert(!document.querySelector('#logoutPanel .cpCard'),'옛 껍데기(.cpCard)가 아직 남아 있음');
+    // ③ 설정창 위에 떠야 한다 — 아래 깔리면 아무것도 안 보인다
+    if(typeof openMapSelect==='function') openMapSelect();
+    if(typeof AUTH!=='undefined' && !AUTH.user) AUTH.user={id:'smoke',nick:'스모크'};
+    openAppSettings(); await sleep(120); askLogout(); await sleep(160);
+    const lp=$('logoutPanel'), sp=$('settingsPop');
+    assert(lp.parentElement.id==='phone','확인창이 #phone 직속이 아님: '+lp.parentElement.id);
+    assert(+getComputedStyle(lp).zIndex > +getComputedStyle(sp).zIndex,
+      '확인창이 설정창 아래에 깔린다: 확인 '+getComputedStyle(lp).zIndex+' vs 설정 '+getComputedStyle(sp).zIndex);
+    { const r=card.getBoundingClientRect();
+      const top=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
+      assert(top && top.closest('#logoutPanel'),'확인창 가운데가 다른 것에 가려짐: '+(top&&(top.id||top.className))); }
+    // ④ 주 동작은 붉은 글자 — 나가기 확인과 같은 규칙
+    { const c=getComputedStyle(card.querySelector('.ecGo')).color.match(/\d+/g).map(Number);
+      assert(c[0]>180 && c[0]>c[1]+60,'로그아웃 버튼이 붉은 글자가 아님: '+c.join(',')); }
+    closeLogout(); closeSettings();
+    return '확인 → 로그아웃 · 나가기와 같은 껍데기'; });
   // 💬 채팅 입력줄도 하나뿐 — 유즈맵 도크와 대기실이 같은 컴포넌트(.msChatBar)를 쓴다(2026-08-27 통일).
   //    옛 사본 .lbChatBar 는 없앴다(전송이 빨강이라 「시작」 주 동작과 색이 겹쳤다).
   await step('채팅 입력줄 단일 소스: 대기실 = 유즈맵 도크', ()=>{

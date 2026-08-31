@@ -269,16 +269,7 @@
       </div>
     </div>
     <!-- 로그아웃 확인 — 기존 .cpCard 다이얼로그 구조 재사용 -->
-    <div id="logoutPanel" class="hide">
-      <div class="cpCard">
-        <div class="cpTitle"><span data-ico="user"></span>로그아웃</div>
-        <div class="cpHint" style="text-align:center;margin:2px 0 10px">로그아웃하시겠습니까?</div>
-        <div class="cpBtns">
-          <button class="actBtn sub" onclick="closeLogout()">취소</button>
-          <button class="actBtn pri" onclick="doLogoutNow()">로그아웃</button>
-        </div>
-      </div>
-    </div>
+    
     <div id="pwPanel" class="hide">
       <div class="cpCard">
         <div class="cpTitle"><span data-ico="lock"></span>비공개 방</div>
@@ -764,7 +755,23 @@
       <button class="setPause" id="setPauseBtn" onclick="togglePause()"><span class="pIco"><svg class="mIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5v11M14.5 6.5v11"/></svg></span><span id="pauseLbl">일시정지</span></button>
       <button class="setExit" id="setExit" data-sfx="ui_open" onclick="exitGame()">게임에서 나가기</button>
       <button class="setLogout" id="setLink" onclick="closeSettings();openAuthLink()">계정 연결 (진행도 지키기)</button>
-      <button class="setLogout" id="setLogout" onclick="closeSettings();doLogout()">로그아웃</button>
+      <!-- ⚠ 바로 로그아웃하지 않는다 — 확인을 한 번 받는다(#logoutPanel · z-index 73 이라 설정창 72 위에 겹친다).
+           취소하면 설정창이 그대로 있어야 하므로 여기서 설정을 닫지 않는다. -->
+      <button class="setLogout" id="setLogout" onclick="askLogout()">로그아웃</button>
+    </div>
+  </div>
+  <!-- ⚠ #phone 직속이어야 한다. 원래 #gameArea 안에 있었는데, 설정창(#settingsPop)이 #phone 직속이라
+       z-index 73 을 줘도 쌓임 순서에서 져 확인창이 설정 뒤에 깔렸다(2026-08-27). -->
+  <div id="logoutPanel" class="hide" onclick="if(event.target===this)closeLogout()">
+    <!-- 껍데기 = 「나가기 확인」과 **같은 컴포넌트**(.ecCard/.ecTitle/.ecMsg/.ecBtns).
+         ⛔ 확인 팝업을 새로 만들지 말 것 — 같은 「정말 하시겠습니까」인데 얼굴이 갈리면 안 된다(2026-08-27). -->
+    <div class="ecCard">
+      <div class="ecTitle">로그아웃</div>
+      <div class="ecMsg">로그아웃하시겠습니까?</div>
+      <div class="ecBtns">
+        <button class="ecCancel" onclick="closeLogout()">취소</button>
+        <button class="ecGo" onclick="doLogoutNow()">로그아웃</button>
+      </div>
     </div>
   </div>
   <!-- 설정 하위 팝업 — 리스트 항목을 누르면 설정 위에 한 겹 더 열린다 -->
