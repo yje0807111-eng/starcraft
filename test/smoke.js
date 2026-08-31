@@ -2405,6 +2405,16 @@ async function groupLobby(){
     for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
     for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
     CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+    // ⓐ-2 🧹 **캠프를 나갈 때 패치를 전부 되돌린다.** 하나라도 남으면 관리자 건설 탭·오토배틀이
+    //    캠프 규칙을 물려받는다(TECH_TREE·M3D·techPanelRender 를 공유한다).
+    //    ⛔ campUnpatchResearch 가 실제로 빠져 있었다(2026-08-31) — 나머지 9개는 되돌리는데
+    //      그 하나만 없어 래퍼가 영영 남았다. 지금은 campIsOn() 가드가 막아 무해했지만,
+    //      그 가드를 지우는 순간 관리자 탭이 캠프 연구 카드로 오염된다.
+    { const src=String(campHideView).replace(/\/\/[^\n]*/g,'').replace(/\/\*[\s\S]*?\*\//g,'');
+      const need=['campUnpatchGas','campUnpatchZoom','campUnpatchProduce','campUnpatchArm',
+                  'campUnpatchFinish','campUnpatchFront','campUnpatchResearch'];
+      const miss=need.filter(k=>typeof window[k]==='function' && !new RegExp('(^|[^\\w.])'+k+'\\s*\\(').test(src));
+      assert(!miss.length,'캠프를 나갈 때 안 돌려주는 패치가 있다: '+miss.join(' · ')); }
     // ⓑ 💫 **떨림을 실제로 잰다** — 연속한 이동 벡터의 각이 90°를 넘으면 한 번 뒤집힌 것이다.
     //    ⭐ 이것이 이 구조가 사는 이유다. 비율·거리는 판마다 흔들리지만 떨림은 구조가 정한다.
     //    ⚠ 문턱은 넉넉히 둔다(브라우저 실측 6.5회/30초 · 옛 구조 96.4회). 20회를 넘으면

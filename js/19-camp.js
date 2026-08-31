@@ -1092,7 +1092,8 @@ function campLayerPost(u, W){
 //     결과적으로 **모두 718~800 으로 늘어났고**, 500 이 최적이라던 실측을 뒤집은 꼴이 됐다.
 //     벤치 D1R18 → **D1R13**, 실효 0.87 → 0.50. 라운드가 R6 115초 · R12 110초로 늘어졌다.
 //   ⭐ 자리 제한은 「너무 멀리 쫓아가지 마라」는 **안전장치**일 뿐이다. 어느 거리에서 쏠지는
-//     campEngageStep 의 `want`(= 사거리 × 0.85)가 이미 정한다 — 거기에 층까지 얹을 이유가 없다.
+//     campGoalFor 의 `want`(= 사거리 × 0.85)가 이미 정한다 — 거기에 층까지 얹을 이유가 없다.
+//     ⚠ 옛 주석은 campEngageStep 을 가리켰다 — 2026-08-31 에 배선이 끊긴 함수다.
 //   ⭐ 「짧은 사거리 유닛이 앞으로 나가야 한다」는 **배치(campLayerPost)로 푼다** — 애초에
 //     앞줄에 세우면 500 으로 충분하다. 제한을 늘려 푸는 문제가 아니었다.
 function campEngageOut(u){ return CAMP_ENG_OUT; }
@@ -1965,8 +1966,9 @@ function campDungeonSwap(){
 //   ⛔ 순간이동시키지 말 것 — 처음엔 즉시 옮겼는데, 사용자가 **걸어서 오는 쪽**으로 정했다.
 //   ⛔ _post 를 새로 잡지도 말 것 — 플레이어가 공들여 옮긴 배치가 통째로 리셋된다.
 //     「전열로 정렬」안은 그래서 쓰지 않는다.
-//   ⭐ 여기서 하는 일은 **표적을 푸는 것뿐**이다. 표적이 없으면 campPostStep 이 자기 자리로
-//     걸려 보낸다 — 그 걸어올 시간은 숨 고르기(CAMP_ROUND_GAP_S)가 대준다.
+//   ⭐ 여기서 하는 일은 **표적을 푸는 것뿐**이다. 표적이 없으면 campStepUnits 의 복귀 분기가
+//     자기 자리로 걸려 보낸다 — 그 걸어올 시간은 숨 고르기(CAMP_ROUND_GAP_S)가 대준다.
+//     ⚠ 옛 주석은 campPostStep 을 가리켰다 — 2026-08-31 에 배선이 끊긴 함수다.
 function campRegroup(){
   if(!CAMPB || !CAMPB.me) return 0;
   let n = 0;
@@ -2520,6 +2522,11 @@ function campHideView(){
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
+  // 🔬 연구 구역 원복 — ⛔ **이것만 빠져 있었다**(2026-08-31). 나머지 9개는 전부 여기서 되돌리는데
+  //   이 하나가 없어 techPanelRender·renderCampIdleSheet 래퍼가 영영 남았다.
+  //   ⚠ 지금은 래퍼가 campIsOn() 으로 스스로 빠져서 무해하지만, 그 가드를 지우는 순간
+  //     **관리자 건설 탭이 캠프 연구 카드로 오염된다.** 규약을 맞춰 둔다.
+  if(typeof campUnpatchResearch === 'function') campUnpatchResearch();
   { const g2=document.getElementById('campGas2'); if(g2) g2.remove(); }
   campClearSheet();
   campTapReset();                                          // 🤖 탭 리듬 기록을 비운다(다음 입장과 섞이면 오판한다)
