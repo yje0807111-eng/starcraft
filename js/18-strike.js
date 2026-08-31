@@ -737,7 +737,9 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
         else if(sk.kind==='target_enemy'){ const t=_stkPickFoe(u, foe, sk); if(!t) continue;
           if(!_stkApplyFoe(u, t, sk, k)) continue;
           if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,1); }
-        else if(sk.kind==='target_ground'){ const c=_stkPickSpot(u, foe, sk); if(!c) continue;
+        else if(sk.kind==='target_ground'){
+          // 🕸 방어 장판은 **아군 쪽**을 본다 — 공격 장판과 자리 고르는 법이 반대다
+          const c=_stkIsWeb(k) ? _stkPickWebSpot(u, me, foe, sk) : _stkPickSpot(u, foe, sk); if(!c) continue;
           if(!_stkApplySpot(u, c, sk, k, foe)) continue;
           if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,1); }
       } } } }
@@ -818,6 +820,28 @@ function _stkPickSpot(u, foe, sk){
     for(const e of near){ const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy<=rad2) n++; }
     if(n>bn){ bn=n; best=c; } }
   return (bn>=STK_SK_SPOT_MIN) ? {x:best.x, y:best.y, n:bn} : null; }
+// 🕸 **방어 장판 자리** — 교란 결계 · 암흑 장막(2026-08-28 사용자 확정).
+//   ⛔ 공격 장판(`_stkPickSpot`)과 **반대**다. 그쪽은 「적이 뭉친 곳」인데 이쪽은
+//     **「원거리에 맞고 있는 아군이 가장 많은 곳」** 이다. 같은 함수를 쓰면 장판을
+//     적진 한복판에 깔아 **적을 보호한다**(장판은 진영을 안 가린다).
+//   ⚠ 「맞고 있다」 = 그 아군을 사거리 안에 둔 **원거리** 적이 하나라도 있다.
+//     근접만 붙어 있는 아군은 장판이 못 지켜 주므로 세지 않는다.
+const STK_SK_WEB_MIN = 2;    // 이만큼은 지켜야 깐다(한 기 지키려고 쓰면 낭비)
+function _stkPickWebSpot(u, me, foe, sk){
+  const R=_stkSkRange(u, sk), R2=R*R, rad=_stkSkLen(sk.radius||0.08), rad2=rad*rad;
+  const hurt=[];
+  for(const a of me.units){ if(a.dead) continue;
+    const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy>R2) continue;      // 시전 사거리 안
+    for(const e of foe.units){ if(e.dead || !strikeIsRanged(e)) continue;
+      const ex=a.x-e.x, ey=a.y-e.y, er=e.rng||0;
+      if(ex*ex+ey*ey<=er*er){ hurt.push(a); break; } } }
+  if(hurt.length<STK_SK_WEB_MIN) return null;
+  let best=null, bn=0;
+  for(const c of hurt){ let n=0;
+    for(const a of hurt){ const dx=a.x-c.x, dy=a.y-c.y; if(dx*dx+dy*dy<=rad2) n++; }
+    if(n>bn){ bn=n; best=c; } }
+  return (bn>=STK_SK_WEB_MIN) ? {x:best.x, y:best.y, n:bn} : null; }
+function _stkIsWeb(key){ return key==='disruption_web' || key==='dark_swarm'; }
 // ── 🔮 효과 내기 ────────────────────────────────────────────────────────
 //   ⛔ 낼 수 없으면 false 를 돌려 **시전 자체를 취소**한다(에너지를 쓰지 않는다).
 function _stkApplyAlly(u, t, sk, key, dt){

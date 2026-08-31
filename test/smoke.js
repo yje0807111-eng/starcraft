@@ -1796,7 +1796,49 @@ async function groupLobby(){
         h=inw.hp; strikeHit(inw, 50, rngAtk);
         assert(inw.hp<h,'장판이 끝났는데 원거리가 여전히 막힌다');
         STK._webs=null; });
-      // ⑥ 🔋 쉴드 충전 — 캠프에서는 **체력** 25% 회복
+      // ⑥ 🕸 **자리는 아군 쪽에서 고른다** — 공격 장판과 반대다(2026-08-28).
+      //    ⛔ 적 뭉친 곳에 깔면 장판이 진영을 안 가리므로 **적을 보호한다.**
+      campWithStk(()=>{
+        const me=STK.me, foe=STK.ai;
+        me.units.length=0; foe.units.length=0;
+        const caster={x:1000,y:1000,rng:0,id:'falcon',gm:'falcon'};
+        // 아군 셋 — 왼쪽 둘은 원거리 적에게 맞고 있고, 오른쪽 하나는 근접만 붙어 있다
+        const a1={x:1000,y:1000,dead:false}, a2={x:1030,y:1000,dead:false}, a3={x:1600,y:1000,dead:false};
+        me.units.push(a1,a2,a3);
+        const px=STK_RANGED_TILES*STK_TILE_PX;
+        foe.units.push({x:1000,y:1200,dead:false,rng:px+400});   // 원거리 — a1·a2 를 때린다
+        foe.units.push({x:1600,y:1010,dead:false,rng:px-50});    // 근접 — a3 에 붙어 있다
+        // 적이 뭉친 곳(오른쪽)이 아니라 맞고 있는 아군 쪽(왼쪽)을 골라야 한다
+        const c=_stkPickWebSpot(caster, me, foe, SKILLS.dark_swarm);
+        assert(c,'맞고 있는 아군이 둘인데 자리를 못 골랐다');
+        assert(Math.abs(c.x-1015)<60,'자리를 아군 쪽에서 안 골랐다: x='+c.x+' (기대 1000~1030)');
+        assert(c.n===2,'세어야 할 아군 수가 다르다: '+c.n+' (근접만 붙은 아군은 안 센다)');
+        // 근접 적만 남기면 지킬 것이 없어 안 깐다
+        foe.units.length=0; foe.units.push({x:1000,y:1010,dead:false,rng:px-50});
+        assert(!_stkPickWebSpot(caster, me, foe, SKILLS.dark_swarm),'근접만 붙었는데 장판을 깔았다');
+        me.units.length=0; foe.units.length=0; });
+      // ⑥-2 **실제 시전 경로**로도 확인한다 — 위 검사는 자리 고르는 함수만 직접 부른다.
+      //   ⛔ 갈래(방어 장판이면 아군 쪽 함수를 쓴다)를 안 거치면 그 줄을 되돌려도 안 터진다.
+      //     실제로 레드 테스트가 안 터져서 알았다.
+      campWithStk(()=>{
+        const me=STK.me, foe=STK.ai;
+        me.units.length=0; foe.units.length=0; STK._webs=null;
+        const px=STK_RANGED_TILES*STK_TILE_PX;
+        // 시전자(팔콘 — 교란 결계) + 아군 하나를 왼쪽에
+        const cast={uid:'w1',x:1000,y:1000,id:'falcon',gm:'falcon',dead:false,
+          en:999,maxEn:999,skillCd:{},skillOn:{},buff:{},_skT:0,rng:0,side:'me'};
+        me.units.push(cast, {x:1030,y:1000,dead:false});
+        // 멀리서 쏘는 원거리 적(시전 사거리 밖 · 아군은 사거리 안) → 아군이 「맞고 있다」
+        foe.units.push({x:1000,y:2000,dead:false,rng:1200});
+        // 적 셋이 오른쪽에 뭉쳐 있다(근접) — 공격 장판 규칙이면 여기를 고른다
+        for(let i=0;i<3;i++) foe.units.push({x:1550+i*10,y:1000,dead:false,rng:px-50});
+        strikeSkillTick(0.5);
+        const W=STK._webs||[];
+        assert(W.length===1,'실제 시전으로 장판이 안 깔렸다: '+W.length);
+        assert(Math.abs(W[0].x-1015)<80,
+          '장판이 적 뭉친 쪽에 깔렸다 — 방어 장판인데 적을 지킨다: x='+Math.round(W[0].x));
+        me.units.length=0; foe.units.length=0; STK._webs=null; });
+      // ⑦ 🔋 쉴드 충전 — 캠프에서는 **체력** 25% 회복
       assert(SKILLS.recharge.healPct===0.25,'쉴드 충전 회복량이 25%가 아니다: '+SKILLS.recharge.healPct);
       assert(SKILLS.recharge.cd===300,'쉴드 충전 쿨이 300초가 아니다: '+SKILLS.recharge.cd);
       { const t={hp:20,maxHp:100,sh:0,maxSh:0};
