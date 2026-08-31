@@ -1444,17 +1444,36 @@ async function groupLobby(){
       // 격자가 화면 가로를 채운다(양옆 빈 배경이 남지 않는다)
       const gl=_techW2S(TECH_GRID.x0,0.5).x, gr=_techW2S(TECH_GRID.x1,0.5).x;
       assert(gl<0.1&&gr>0.9,'격자가 화면 가로를 못 채운다: '+gl.toFixed(2)+'~'+gr.toFixed(2));
-      // 💎 미네랄·운반물은 renderBuildTab 이 fitW·scl 없이 넣는다 — 캠프가 셀 축소를 얹어야 한다
+      // 💎 **캠프 미네랄은 3D 가 아니라 그림 스프라이트다**(2026-08-31). 3D 노드(res_cn)는 여섯 칸이
+      //   전부 같은 모델·같은 각도라 격자무늬로 보여서, 칸마다 다른 그림(stage1~6)으로 바꿨다.
+      //   ⛔ 캠프에서 3D 미네랄(mn_*)을 다시 넣지 말 것 — 스프라이트와 두 벌로 겹쳐 보인다.
+      //   ⚠ 관리자 건설 탭·오토배틀은 그대로 3D 다(campMineSprite 가 캠프에서만 값을 준다).
       if(window.M3D && typeof M3D.syncBuild==='function'){ let cap=null; const o=_campSyncOrig;
         _campSyncOrig=function(l){ if(!cap) cap=l.slice(); return o.apply(this,arguments); };
         campFrame(performance.now()); _campSyncOrig=o;
-        const mn=(cap||[]).filter(i=>i&&/^mn_/.test(i.uid||''));
-        assert(mn.length&&mn.every(i=>i.scl!=null&&i.scl<0.7),
-          '미네랄 3D 가 셀 축소를 안 따른다 — 광맥이 서로 뭉개져 보인다');
+        assert(!(cap||[]).some(i=>i&&/^mn_/.test(i.uid||'')),
+          '캠프에 3D 미네랄이 다시 들어왔다 — 그림 스프라이트와 두 벌로 겹친다');
         const gz=(cap||[]).filter(i=>i&&/^gz_/.test(i.uid||''));
         assert(gz.length===2&&gz.every(i=>i.fitW>0),
-          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' ')); } }
-    // 🎨 바닥은 사냥터 던전 배경 — ⚠ CSS 변수 안 상대경로는 **쓰는 곳(css/)** 기준으로 풀린다.
+          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' '));
+        // 🎒 운반 청크는 아직 3D 다 — 그쪽은 셀 축소를 따라야 한다(안 따르면 일꾼보다 커진다)
+        const cr=(cap||[]).filter(i=>i&&/^carry_/.test(i.uid||''));
+        assert(cr.every(i=>i.scl!=null&&i.scl<0.999),
+          '운반 청크가 셀 축소를 안 따른다: '+cr.map(i=>i.uid+'='+i.scl).join(' ')); }
+      // 스프라이트가 **셀 크기를 따라간다** — 안 따르면 광맥 여섯이 서로 뭉개져 보인다.
+      // ⚠ 먼저 다시 그린다 — 앞 검사들이 배율을 바꿔 놓아, 화면에 남은 스프라이트는 옛 셀 크기로
+      //   그려진 것이다 — 안 그리고 재면 칸 대비 1.34 를 1.86 으로 읽는다(실측).
+      { if(typeof techMapRender==='function') techMapRender(); }
+      { const sp=[...document.querySelectorAll('.bMineral.spr')].filter(e=>e.getBoundingClientRect().width>0);
+        assert(sp.length,'캠프 광맥이 그림 스프라이트로 안 그려진다(.bMineral.spr 없음)');
+        assert(sp.every(e=>e.querySelector('img.mnSpr')),'스프라이트 칸에 그림이 없다');
+        // 스프라이트는 부모 폭 대비 **%** 로 놓인다 — 같은 % 좌표계에서 재야 배율이 맞는다.
+        const cw=_techCW();
+        const cellPct=(_techW2S(0.5+cw/2,0.5).x-_techW2S(0.5-cw/2,0.5).x)*100;   // 셀 한 칸의 폭(%)
+        const wide=sp.map(e=>parseFloat(e.style.width)/cellPct);
+        // 칸보다 조금 큰 것이 정상이다(결정이 칸 밖으로 자란다). 두 배 넘게 크면 서로 뭉갠다.
+        assert(wide.every(r=>r>0.6&&r<1.8),
+          '광맥 그림이 칸 대비 너무 크거나 작다(셀 축소를 안 따른다): '+wide.map(r=>r.toFixed(2)).join(' ')); } }
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
