@@ -237,10 +237,16 @@ function campStepUnits(dt){
   const S = (typeof STK !== 'undefined') ? STK : null;
   if(!S || !CAMPB) return;
   strikeGridBuild();                                   // ⚡ 프레임 1회 격자 — 아래 질의가 재사용
-  // 👹 적이 치러 갈 건물 — **프레임당 한 번** 고른다(적 전원이 같은 것을 본다).
+  // 👹 적이 치러 갈 건물 — **앞에서부터 차례로** 하나씩(campFrontBld = y 가 가장 작은 것).
   //   ⚠ 유닛마다 최근접을 고르게 하면 무리가 갈라져 건물 여럿을 동시에 갉는다.
-  //     지금 규칙은 「앞에서부터 차례로」다(campFrontBld = y 가 가장 작은 것).
-  const frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
+  //   ⛔ **프레임 처음에 한 번만 고르면 안 된다**(2026-08-31). 그 건물이 프레임 **중간에**
+  //     부서지면, 뒤에 오는 적들이 이미 죽은 건물을 계속 때려 그만큼의 피해가 버려진다.
+  //     ⭐ 그래서 부서진 것이 확인되면 그 자리에서 다음 건물로 갈아탄다(아래 nextBld).
+  let frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
+  const nextBld = function(){
+    if(frontBld && !frontBld.dead && (frontBld.hp || 0) > 0) return frontBld;
+    frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
+    return frontBld; };
   for(const side of ['me', 'ai']){
     const me = S[side], foe = S[side === 'me' ? 'ai' : 'me'];
     const col = (side === 'me') ? '#7fd0ff' : '#ff8a96';
@@ -350,7 +356,7 @@ function campStepUnits(dt){
         // 👹 적은 표적이 없으면 **내 건물**을 치러 내려온다. 앞(y 가 작은) 건물부터.
         //   ⛔ 오토배틀의 신전 분기를 쓰지 않는다 — 캠프에는 신전 형상이 없다.
         u._goalX = null; u._goalTgt = null;
-        const b = frontBld;                               // 앞(y 가 작은) 건물 — 프레임당 한 번 고른다
+        const b = nextBld();                              // 앞(y 가 작은) 건물 — 부서졌으면 그 자리에서 다음 것으로
         if(!b){ u.moving = false; continue; }             // 부술 것이 없으면 선다
         const bd2 = Math.hypot(b.x - u.x, b.y - u.y) - CAMP_BLD_R;
         if(!u._atk.gnd){ u.moving = false; continue; }     // 지상을 못 때리면 건물도 못 때린다

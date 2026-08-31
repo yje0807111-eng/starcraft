@@ -1302,6 +1302,41 @@ async function groupLobby(){
     assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
+  // 🏢 **부서진 건물에 헛방을 쏘지 않는다** (2026-08-31)
+  //    ⛔ 적이 칠 건물을 프레임 **처음에 한 번만** 골랐다. 그 건물이 프레임 중간에 부서지면
+  //      뒤에 오는 적들이 **이미 죽은 건물**을 계속 때려 그만큼의 피해가 버려졌다.
+  //    ⭐ 지금은 부서진 것이 확인되면 그 자리에서 다음 건물로 갈아탄다.
+  //    ⚠ 재는 것은 **발사 수**다 — 죽은 건물의 체력은 어차피 0 으로 잘려 눈에 안 보인다.
+  await step('캠프: 적이 부서진 건물에 헛방을 쏘지 않는다', async()=>{
+    skipIf(typeof campStepUnits!=='function'||typeof campFrontBld!=='function','캠프 전투 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWipeField();
+    if(CAMPB._wq) CAMPB._wq.length=0;
+    const W=CAMPB.world;
+    // 앞 건물은 한 방에 부서지고, 뒤 건물은 멀리 둔다(같은 프레임에 못 닿는다)
+    CAMPB._bld=[{ x:W*0.5, y:W*0.55, hp:1, max:1, maxHp:1, dead:false, eid:9001, bk:'t1' },
+                { x:W*0.5, y:W*0.85, hp:9999, max:9999, maxHp:9999, dead:false, eid:9002, bk:'t2' }];
+    const front=campFrontBld();
+    assert(front && Math.abs(front.y-W*0.55)<1,'전제가 바뀜 — 앞 건물을 못 골랐다');
+    // 적 둘을 앞 건물 바로 옆에 세운다(둘 다 쏠 수 있는 자리)
+    const foes=[];
+    for(let i=0;i<2;i++) foes.push(campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+      const z=STK.ai.units[STK.ai.units.length-1];
+      if(z){ z.x=W*0.5+i*10; z.y=W*0.55-20; z.wait=0; z.cd=0; z.depT=0; z.dep=0;
+             z.dmg=1; z.cdMax=1; z.rng=60; z.fireSeq=0; }
+      return z; }));
+    skipIf(foes.some(f=>!f),'적을 못 만들었다');
+    CAMPB._started=true; CAMPB._gapT=0;
+    campWithStk(()=>{ campStepUnits(0.02); });
+    const shots=foes.reduce((a,f)=>a+(f.fireSeq||0),0);
+    assert(CAMPB._bld[0].dead,'앞 건물이 안 부서졌다 — 전제가 깨졌다');
+    assert(shots===1,'부서진 건물에 헛방을 쐈다 — 같은 프레임에 '+shots+'발(1발이어야 한다)');
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '앞 건물 파괴 뒤 남은 적은 다음 건물로 — 헛방 0'; });
+
   // 🛟 **프레임에서 예외가 나도 화면이 멈추지 않는다** (2026-08-31)
   //    ⛔ 예전엔 재예약(requestAnimationFrame)이 try 밖 **아래**에 있어서, 안에서 예외가 한 번
   //      나면 그 줄에 도달을 못 했다 → 캠프가 그대로 굳는다. 그런데 250ms 타이머는 계속 돌아
