@@ -412,13 +412,28 @@ async function groupLobby(){
       const names=li.map(e=>e.querySelector('span').textContent);
       for(const k of ['터치','터치로 번 미네랄','자동으로 번 미네랄','가스','플레이 시간'])
         assert(names.indexOf(k)>=0,'회차 지표에 빠짐: '+k); }
-    // ⑤ ×2 환생 — 젬을 쓰는 1회권. ⛔ 영구가 아니다(GEM.md §4)
-    { const x2=document.querySelector('#campReb .crX2');
-      assert(x2,'×2 환생 버튼이 없다');
-      assert(/campRebAsk\(1\)/.test(x2.getAttribute('onclick')||''),'×2 버튼이 ×2 경로를 안 부른다');
-      assert(x2.textContent.indexOf(String(CAMP_REB_X2_GEM))>=0,'×2 에 젬 값이 안 보임'); }
+    // ⑤ 💳 ×2 는 **환생 팩**이다 — 젬 1회권이 아니다(2026-08-31 · GEM.md §4 · BALANCE §4-C)
+    { const pk=document.querySelector('#campReb .crPk');
+      assert(pk,'환생 팩 줄이 없다');
+      assert(!campRebPackOn(),'스모크 시작 상태에서 팩을 이미 갖고 있다');
+      assert(pk.textContent.indexOf('2')>=0,'팩 줄에 배수가 안 보임');
+      assert(/campRebToShop/.test(pk.getAttribute('onclick')||''),'팩 줄이 상점으로 안 보낸다');
+      // ⛔ 두 번째 큰 버튼을 만들지 말 것 — 주 동작은 「환생」 하나다
+      assert(document.querySelectorAll('#campReb .crGo').length===1,'주 버튼이 하나가 아님');
+      // ⭐ 팩을 사면 **위의 두 숫자가 실제로 2배**가 되어야 한다 — 곱이 배선돼 있는지 잰다
+      const m0=campRebMulGain(), p0=campRebPtGain();
+      const packs=(typeof campPacks==='function')?campPacks():null;
+      assert(packs,'팩 보관함이 없다');
+      packs.reb=true;
+      const m1=campRebMulGain(), p1=campRebPtGain();
+      assert(Math.abs(m1/m0-2)<1e-6,'팩을 사도 배수가 2배가 안 됨: ×'+(m1/m0).toFixed(3));
+      assert(Math.abs(p1/p0-2)<1e-6,'팩을 사도 포인트가 2배가 안 됨: ×'+(p1/p0).toFixed(3));
+      campRebRender(); await sleep(40);
+      { const on=document.querySelector('#campReb .crPk.on');
+        assert(on,'팩을 샀는데 「적용 중」으로 안 바뀐다'); }
+      delete packs.reb; campRebRender(); await sleep(40); }
     // ④ 되돌릴 수 없으므로 확인을 거친다 — 나가기·로그아웃과 같은 껍데기
-    campRebAsk(0); await sleep(80);
+    campRebAsk(); await sleep(80);
     const ok=$('campRebOk'); assert(visible(ok),'환생 확인창이 안 뜸');
     assert(ok.querySelector('.ecCard'),'확인창이 공용 껍데기(.ecCard)가 아님');
     { const c=getComputedStyle(ok.querySelector('.ecGo')).color.match(/\d+/g).map(Number);
@@ -429,7 +444,7 @@ async function groupLobby(){
     assert((campState().reb|0)===before,'취소했는데 환생이 실행됨');
     // ⑥ 실행하면 배수·포인트가 실제로 남는다
     const mul0=campRebMul(), pts0=campState().rbPts||0;
-    campRebAsk(0); campRebGo();
+    campRebAsk(); campRebGo();
     // ⚠ **되감긴 그 순간을 찍어서 잰다.** await 를 끼우면 캠프 틱(250ms)이 그 사이에 끼어들어
     //   막 비운 earn 에 다시 수입을 얹는다 — 그래서 검사가 흔들렸다(2026-08-31).
     const snap=(function(){ const c=campState();

@@ -142,6 +142,42 @@ const out=await pg.evaluate((N,STEP)=>{
     say(`   수입 ×2 ≈ 라운드 ${(Math.log(2)/Math.log(rb)).toFixed(1)}칸(D1) ~ ${(Math.log(2)/Math.log(rb10)).toFixed(1)}칸(D10) 어치`);
     say(`   던전 문턱 ×${CAMP_DG_STEP} 이므로, 수입 ×2 로는 던전 하나를 못 건넌다(그게 안전판이다).`); }
 
+  // ══ ⑤ 되먹임 — 수입이 2배면 더 깊이 가고, 그럼 배수를 더 받는다. 발산하나? ══
+  //  ⚠ 여기 하나만 **탄력도 가정**을 쓴다: 수입 X배 = 라운드 log(X)/log(라운드밑) 칸.
+  //     그 환산은 실제 난이도 함수(campRBase)로 하고, 나머지는 전부 실제 함수다.
+  //     ⭐ 재는 것은 절대값이 아니라 **격차가 벌어지는가 멎는가**다.
+  say('');
+  say('=== ⑤ 되먹임 — 격차가 벌어지나 멎나 ===');
+  //  ⛔ 격차는 **같은 회차의 「팩 없음」과 견준다**(직전 회차와 견주면 늘 0 이 나온다 — 한 번 헛짚었다).
+  function loopFB(packMul, depth, ref){
+    const C=fresh(); const rows=[];
+    for(let i=1;i<=N;i++){
+      // 지금 내 배수가 「팩 없음」의 같은 회차보다 몇 배인가 → 그만큼 라운드를 더 간다
+      const cur=campRebMul(), base=ref?Math.max(1,ref[i-1].mulBefore):cur;
+      const rb=campRBase(depth(i).d);
+      const extra=Math.max(0, Math.log(Math.max(1,cur/base))/Math.log(rb));
+      let d=depth(i).d, r=depth(i).r+extra;
+      while(r>=CAMP_ROUND_MAX && d<CAMP_DG_MAX){ r-=CAMP_ROUND_MAX; d++; }
+      r=Math.min(CAMP_ROUND_MAX-1,r);
+      C.dg=d; C.cleared=Math.round(r);
+      C.earn=CAMP_REB_COST*campFoeDiff(d,C.cleared); C.earnGas=0;
+      C.rebMul=(C.rebMul||0)+campRebMulGain()*packMul;
+      C.rbPts=(C.rbPts||0)+campRebPtGain()*packMul; C.reb=i;
+      rows.push({i,d,r,extra,mul:campRebMul(),mulBefore:cur});
+    }
+    return rows; }
+  { const F0=loopFB(1,depth,null), F2=loopFB(2,depth,F0);
+    say('회차  팩없음 깊이   팩×2 깊이    깊이 격차(라운드)  배수 비율');
+    for(const i of [1,2,5,10,20,30,40].filter(x=>x<=N)){
+      const a=F0[i-1], c=F2[i-1];
+      const gap=(c.d-a.d)*CAMP_ROUND_MAX+(c.r-a.r);
+      say(`${P(i,5)} ${P('D'+a.d+'R'+a.r.toFixed(0),12)} ${P('D'+c.d+'R'+c.r.toFixed(0),12)} ${P(gap.toFixed(1),18)} ×${(c.mul/a.mul).toFixed(3)}`); }
+    const g=k=>{const a=F0[k-1],c=F2[k-1];return (c.d-a.d)*CAMP_ROUND_MAX+(c.r-a.r);};
+    const mid=g(Math.min(N,20)), end=g(N);
+    say(`⭐ 격차 ${Math.min(N,20)}회차 ${mid.toFixed(1)}칸 → ${N}회차 ${end.toFixed(1)}칸 : ` +
+        (end>mid*1.5 ? '⛔ 벌어진다(발산)' : '✅ 멎는다(수렴) — 되먹임이 폭주로 안 간다'));
+    say(`   던전 하나 = ${CAMP_ROUND_MAX}칸 + 문턱 ×${CAMP_DG_STEP} · 격차가 그보다 작으면 던전을 못 건넌다`); }
+
   const last=A[N-1], lastB=B[N-1];
   say('');
   say(`${N}회차 끝 — 기본 노드 ${last.nodes}/${CAMP_RT_LINES.length*5} · ×2 노드 ${lastB.nodes}/${CAMP_RT_LINES.length*5}`);

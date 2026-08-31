@@ -194,9 +194,14 @@ function campCanRebirth(){ return campWealth() >= CAMP_REB_COST; }
 //   팩 셋을 다 사도 곱이면 ×8, 합이면 ×4 다. 체감은 비슷하고 뒤가 안 터진다.
 //   ⛔ gather 값을 campGatherMul 의 **곱 항으로 옮기지 말 것.** 합산 항에만 더한다.
 //
-// ⚠ 환생 팩만은 「획득량」에 곱한다 — 이것은 안전하다.
-//   환생 배수 자체(C.rebMul)가 **합산으로 쌓이므로**(campRebirth 참고), 한 회차에 쌓이는
-//   양이 1.5배가 되어도 지수가 되지 않는다. 회차마다 조금 더 쌓일 뿐이다.
+// ⚠ 환생 팩만은 「획득량」에 곱한다 — 🔬 **실측으로 안전을 확인했다**(2026-08-31 · BALANCE §4-C).
+//   ×2 를 영구로 걸어도 폭주하지 않는다. 이유 셋:
+//     ① 배수는 **합산 누적**(C.rebMul)이라 2배가 되어도 지수가 안 된다
+//     ② 배수 자체가 로그(0.8×log₁₀)라 회차당 +3~4 로 묶여 있다
+//     ③ 트리는 **유한**하다(161노드 · 9.7조) — 포인트가 2배여도 천장은 안 올라가고 앞당길 뿐
+//   되먹임(수입↑ → 더 깊이 → 배수↑ → …)도 **수렴한다**: 깊이 격차가 10회차 11칸에서
+//   40회차 8.4칸으로 **줄어든다.** 던전 하나가 50칸 + 문턱 ×3 이라 던전을 못 건넌다.
+//   ⛔ 그래도 **곱 항으로 옮기지는 말 것** — 안전한 이유가 ① 합산 누적이기 때문이다.
 //
 // ⚠ 값은 **초안이다** — 회수 시간·손익분기를 아직 안 쟀다(BALANCE.md §4 방식으로 잴 것).
 //   이 프로젝트에서 해석적 추정은 여러 번 크게 빗나갔다.
@@ -212,8 +217,8 @@ const CAMP_PACKS = [
     desc:'재화 획득 +150% · 젬 600' },
   { id:'unique',  nm:'유니크 팩',   won:'₩33,000', gem:2000, gather:3.0,
     desc:'재화 획득 +300% · 젬 2,000' },
-  { id:'reb',     nm:'환생 팩',     won:'₩22,000', gem:1300, rebMul:1.5, rebPt:1.5,
-    desc:'환생 배수·포인트 ×1.5 · 젬 1,300' },
+  { id:'reb',     nm:'환생 팩',     won:'₩22,000', gem:1300, rebMul:2, rebPt:2,
+    desc:'환생 배수·포인트 ×2 (영구) · 젬 1,300' },
 ];
 // 산 팩은 **프로필**에 남는다 — 환생해도 되감기지 않아야 한다(campRebirth 는 C 만 되감는다).
 function campPacks(){ const p = (typeof PROF === 'function') ? PROF() : null;
@@ -540,49 +545,35 @@ function campRebClose(){ const el = document.getElementById('campReb'); if(el) e
 function campRebIsOn(){ const el = document.getElementById('campReb'); return !!(el && el.classList.contains('on')); }
 
 // 환생 실행 — ⚠ 되돌릴 수 없으므로 확인을 한 번 받는다(.ecCard 공용 확인 껍데기).
-//   x2 = 젬을 내고 이번 환생의 **배수와 포인트를 둘 다 2배**로 받는다(GEM.md §4).
-//   ⛔ 영구 효과가 아니다 — 그 환생 1회에만 걸린다. 영구로 팔면 지수 축이 둘이 된다.
-let _campRebX2 = false;
-function campRebAsk(x2){
+//   💳 **×2 는 젬 1회권이 아니라 「환생 팩」(결제)이다**(2026-08-31 사용자 확정 · GEM.md §4).
+//     사면 그 뒤로 **계속** 배수·포인트가 2배다 — 실행 경로에 분기가 없고,
+//     campRebMulGain / campRebPtGain 안의 campPackRebMul / campPackRebPt 가 알아서 곱한다.
+//   ⛔ 젬으로 회차마다 사는 형태로 되돌리지 말 것 — 「1회권」이라는 이름과 달리 횟수를 못 막아
+//     결국 같은 영구 2배가 되면서 값만 여러 번 받는 꼴이 된다(그래서 팩으로 옮겼다).
+function campRebAsk(){
   if(!campCanRebirth()) return;
-  _campRebX2 = !!x2;
-  if(_campRebX2 && !campRebX2Can()){ campRebToShop(); return; }   // 젬이 모자라면 상점으로
   const p = document.getElementById('campRebOk'); if(!p) return;
-  const k = _campRebX2 ? 2 : 1;
-  const g = { mul: campRebMulGain() * k, pts: campRebPtGain() * k };
-  const t = p.querySelector('.ecTitle'); if(t) t.textContent = _campRebX2 ? '×2 환생' : '환생';
+  const g = { mul: campRebMulGain(), pts: campRebPtGain() };
+  const t = p.querySelector('.ecTitle'); if(t) t.textContent = '환생';
   const m = p.querySelector('.ecMsg');
   if(m) m.innerHTML = '지금까지 지은 것이 <b>전부 사라집니다</b>.<br>대신 <b>배수 +' + g.mul.toFixed(2)
-    + '</b> 와 <b>포인트 ' + campNum(g.pts) + '</b> 을 영구히 받습니다.'
-    + (_campRebX2 ? '<br><i>젬 ' + CAMP_REB_X2_GEM + ' 을 씁니다</i>' : '');
-  const go = p.querySelector('.ecGo'); if(go) go.textContent = _campRebX2 ? '×2 로 환생' : '환생하기';
+    + '</b> 와 <b>포인트 ' + campNum(g.pts) + '</b> 을 영구히 받습니다.';
+  const go = p.querySelector('.ecGo'); if(go) go.textContent = '환생하기';
   p.classList.remove('hide');
   if(typeof playSfx === 'function') playSfx('ui_open'); }
 function campRebCancel(){ const p = document.getElementById('campRebOk'); if(p) p.classList.add('hide'); }
 function campRebGo(){
   campRebCancel();
-  const x2 = _campRebX2; _campRebX2 = false;
-  // ⚠ 젬은 **환생이 실제로 일어난 뒤에** 뺀다 — 먼저 빼면 환생이 실패했을 때 젬만 사라진다
-  if(x2 && !campRebX2Can()){ campRebToShop(); return; }
   const got = campRebirth(); if(!got) return;
-  if(x2){ const p = (typeof PROF === 'function') ? PROF() : null;
-    if(p){ p.gem = Math.max(0, (p.gem || 0) - CAMP_REB_X2_GEM); }
-    // 배수·포인트를 한 번 더 얹는다 = ×2 (campRebirth 가 이미 1배를 넣었다)
-    const C2 = campState();
-    if(C2){ C2.rebMul = (C2.rebMul || 0) + got.mul; C2.rbPts = (C2.rbPts || 0) + got.pts; }
-    got.mul *= 2; got.pts *= 2;
-    if(typeof saveMeta === 'function') saveMeta(); }
   campRebRender();
   if(typeof updateCurBar === 'function') updateCurBar();
-  if(typeof toast === 'function') toast((x2 ? '🔁×2 ' : '🔁 ') + '환생했습니다 — 배수 +'
+  if(typeof toast === 'function') toast('🔁 환생했습니다 — 배수 +'
     + got.mul.toFixed(2) + ' · 포인트 ' + campNum(got.pts));
   if(typeof playSfx === 'function') playSfx('ui_confirm'); }
 
-// 💎 ×2 환생권 — 그 환생 1회에만 걸린다. ⛔ 영구 효과를 젬으로 팔지 말 것(GEM.md §4).
-//   ⚠ 값은 아직 실측이 아니다. 미네랄 24시간치(180젬)보다 조금 아래로 잡았다 —
-//     환생은 하루에 몇 번 없는 사건이라 부스트보다 싸야 손이 간다.
-const CAMP_REB_X2_GEM = 150;
-function campRebX2Can(){ return (typeof profGem === 'function') && profGem() >= CAMP_REB_X2_GEM; }
+// 💳 환생 팩을 샀나 — 화면이 「적용 중」과 「사면 2배」를 갈라 보여 주는 데 쓴다
+function campRebPackOn(){ return (typeof campPackOwn === 'function') && campPackOwn('reb'); }
+function campRebPackX(){ return (typeof campPackRebMul === 'function') ? campPackRebMul() : 1; }
 
 // ⏱ 초 → 「3시간 12분」
 function campRebPlayTx(sec){ sec = Math.max(0, Math.floor(sec || 0));
@@ -627,15 +618,18 @@ function campRebRender(){
     + '<i style="width:' + pct.toFixed(1) + '%"></i></div>'
     + '<div class="crT"><span>환생 조건</span><span>' + campNum(wealth) + ' / ' + campNum(need) + '</span></div></div>'
     // ── 버튼 ──
-    + '<button class="crGo" type="button" onclick="campRebAsk(0)"' + (can ? '' : ' disabled') + '>환 생</button>'
-    + '<button class="crX2" type="button" onclick="campRebAsk(1)"' + (can ? '' : ' disabled') + '>'
-    + resIco('gem', 'crGem') + '×2 환생 <em>' + CAMP_REB_X2_GEM + '</em></button>'
-    + (campRebX2Can() ? '' : '<div class="crX2s">젬이 모자랍니다 · <u onclick="campRebToShop()">환생 팩</u></div>');
+    + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>환 생</button>'
+    // ── 💳 환생 팩 — 사면 **그 뒤로 계속** 2배. 위 두 숫자에 이미 반영돼 있다 ──
+    //    ⛔ 두 번째 큰 버튼을 만들지 말 것 — 주 동작은 「환생」 하나다(조용한 줄로 둔다).
+    + (campRebPackOn()
+        ? '<div class="crPk on">환생 팩 ×' + campRebPackX().toFixed(0) + ' 적용 중</div>'
+        : '<div class="crPk" onclick="campRebToShop()">환생 팩 — 배수·포인트가 <b>계속 2배</b>'
+          + '<u>보러 가기</u></div>');
 }
-// 젬이 모자랄 때 — 상점으로 보낸다(패키지가 거기 있다)
+// 환생 팩을 보러 상점으로 — 팩은 **추천 칸**에 있다(젬 칸이 아니다)
 function campRebToShop(){ campRebClose();
   if(typeof openShop === 'function') openShop();
-  if(typeof setShopSec === 'function') setShopSec('gem'); }
+  if(typeof setShopSec === 'function') setShopSec('reco'); }
 
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
 function campTreeOpen(){
