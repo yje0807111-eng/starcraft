@@ -392,6 +392,17 @@ await pg.evaluate(()=>{
       if(typeof campSyncUnitCost==='function') campSyncUnitCost();
       campCombatStep(dt);
       __CB.t+=dt; __CB.roundT+=dt;
+      // ⏱ **전투 시간과 대기 시간을 갈라 잰다** (2026-08-31).
+      //   ⛔ 예전 실효(eff)는 분모가 roundT(벽시계)라 **전투가 아닌 시간이 통째로** 들어갔다:
+      //     라운드 텀 4초 + 적이 화면 밖(y 0.18)에서 걸어 내려오는 시간이 **웨이브마다 한 번씩**.
+      //     웨이브 수는 R1 1개 → R20 5개 → R23 6개(상한)로 느는데 라운드 총 체력은 +7%/라운드다.
+      //   ⭐ 그래서 「병력을 늘려도 화력이 안 나온다」로 보였던 것이 실은
+      //     **전투가 빨리 끝나 고정 오버헤드의 비중이 커진 것**이었다.
+      //   ⚠ roundT 는 지우지 않는다 — 「한 라운드에 실제로 몇 초 걸리나」는 플레이어 체감이다.
+      //     두 값을 나란히 찍어야 「싸우느라」인지 「기다리느라」인지 갈린다.
+      { const _foe=(typeof campAlive==='function')?campAlive('ai'):0;
+        if(_foe>0) __CB.fightT=(__CB.fightT||0)+dt;
+        else       __CB.idleT =(__CB.idleT ||0)+dt; }
       // 🧱 벽 판정 — 지금 라운드가 얼마나 오래 안 넘어가는가(라운드가 바뀌면 roundT 가 0 이 된다)
       if(campDgN()>0 && !__CB.wall){
         if(__CB.roundT>__CB.wallStop){
@@ -496,19 +507,25 @@ await pg.evaluate(()=>{
         //   eff  = hit ÷ dps — 제자리 방어라 앞줄만 닿는 탓에 1 이 안 된다.
         { const _d=campFoeDiff(campDgN(), Math.max(0,__CB.lastRound-1));
           const _sec=+__CB.roundT.toFixed(1), _dps=__CB.dps();
+          // ⏱ 전투/대기 — eff 는 **싸운 시간**으로만 나눈다(위 주석 참고)
+          const _ft=+((__CB.fightT||0).toFixed(1)), _it=+((__CB.idleT||0).toFixed(1));
           // ⭐ **설계 총량이 아니라 실제로 나온 체력**으로 잰다. 둘이 다르면 want/got 로 드러난다.
           const _want=(typeof CAMP_FOE_HP0!=='undefined'?CAMP_FOE_HP0:0)*_d
                     *((typeof campRtFoeMul==='function')?campRtFoeMul():1);
           const _hp=__CB.roundHp||0;
-          const _hit=_sec>0 ? _hp/_sec : 0;
-          __CB.log.push({ dg:campDgN(), round:__CB.lastRound, sec:_sec,
+          const _hit=_ft>0 ? _hp/_ft : 0;                // ⭐ **싸운 시간**으로 나눈다(옛 값은 _sec)
+          const _hitW=_sec>0 ? _hp/_sec : 0;             // 옛 정의 — 비교용으로 남긴다
+          __CB.log.push({ dg:campDgN(), round:__CB.lastRound, sec:_sec, ft:_ft, it:_it,
             earn:Math.round(campWealth()), diff:_d,
             dps:Math.round(_dps*10)/10, hit:Math.round(_hit*10)/10,
+            hitW:Math.round(_hitW*10)/10,
             want:Math.round(_want), got:Math.round(_hp), foe:__CB.roundFoe|0,
             eff:_dps>0 ? Math.round(_hit/_dps*1000)/1000 : 0,
+            effW:_dps>0 ? Math.round(_hitW/_dps*1000)/1000 : 0,
             me:(typeof campAlive==='function'?campAlive('me'):0),
             dn:(typeof campDown==='function'?campDown():0) }); }
         __CB.lastRound=r; __CB.roundT=0; __CB.stallT=0; __CB.stuck=0;
+        __CB.fightT=0; __CB.idleT=0;
         __CB.roundHp=0; __CB.roundFoe=0;
         if(!__CB.gateT && campWealth()>=1e6) __CB.gateT=__CB.t;
       // ⚠ **정체 판정 문턱은 설계 라운드 길이보다 길어야 한다.** 적 체력 1,300 확정 뒤
@@ -631,13 +648,27 @@ const F=n=>{ if(n<1e4) return String(Math.round(n));
   for(const [u,v] of [['해',1e20],['경',1e16],['조',1e12],['억',1e8],['만',1e4]]) if(n>=v) return (n/v).toFixed(1)+u;
   return String(Math.round(n)); };
 console.log('\n\n■ 라운드별 (전 구간에서 고르게 뽑음)');
-console.log('던전-라운드 | 걸린 초 | 적난이도 | 적체력(설계→실제) | 적수 | 명목DPS | 꽂힌화력 | 실효 | 병력(선+누움)');
+// ⏱ **전투 초 / 대기 초를 함께 찍는다**(2026-08-31) — 라운드가 길어진 것이
+//   「싸우느라」인지 「기다리느라」(라운드 텀 + 웨이브마다 적이 걸어 내려오는 시간)인지 가른다.
+//   실효(eff) = 꽂힌화력 ÷ 명목DPS 이고, **꽂힌화력은 전투 초로만 나눈다.**
+//   옛정의(벽시계로 나눈 값)는 effW 로 함께 남긴다 — 두 값의 차이가 곧 오버헤드의 크기다.
+console.log('던전-라운드 | 걸린 초 | 전투 초 | 대기 초 | 적난이도 | 적체력(설계→실제) | 적수 | 명목DPS | 꽂힌화력 | 실효 | 옛실효 | 병력(선+누움)');
 // ⚠ 라운드 곡선을 보려면 **전부** 찍어야 한다 — 22개 표본으로는 R1~50 곡선이 안 나온다.
 { const L=fin.log, step=(L.length<=60) ? 1 : Math.max(1, Math.floor(L.length/22));
-  for(let i=0;i<L.length;i+=step){ const r=L[i];
-    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${String(r.diff).padEnd(9)}| ${(F(r.want||0)+'→'+F(r.got||0)).padEnd(18)}| ${String(r.foe==null?'-':r.foe).padEnd(5)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}`); }
-  if(L.length){ const r=L[L.length-1];
-    console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${String(r.diff).padEnd(9)}| ${(F(r.want||0)+'→'+F(r.got||0)).padEnd(18)}| ${String(r.foe==null?'-':r.foe).padEnd(5)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${(r.me|0)+'+'+(r.dn|0)}  ← 끝`); } }
+  const row=(r,tail)=>console.log(`D${r.dg}R${String(r.round).padEnd(3)}| ${String(r.sec).padEnd(8)}| ${String(r.ft==null?'-':r.ft).padEnd(8)}| ${String(r.it==null?'-':r.it).padEnd(8)}| ${String(r.diff).padEnd(9)}| ${(F(r.want||0)+'→'+F(r.got||0)).padEnd(18)}| ${String(r.foe==null?'-':r.foe).padEnd(5)}| ${String(r.dps==null?'-':r.dps).padEnd(8)}| ${String(r.hit==null?'-':r.hit).padEnd(9)}| ${String(r.eff==null?'-':r.eff).padEnd(5)}| ${String(r.effW==null?'-':r.effW).padEnd(6)}| ${(r.me|0)+'+'+(r.dn|0)}${tail||''}`);
+  for(let i=0;i<L.length;i+=step) row(L[i]);
+  if(L.length) row(L[L.length-1], '  ← 끝');
+  // ⭐ 오버헤드가 실제로 얼마나 되는가 — 전반/후반을 갈라 본다
+  if(L.length>=6){ const h=Math.floor(L.length/2);
+    const avg=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0)/Math.max(1,a.length);
+    const A=L.slice(0,h), B=L.slice(h);
+    const pct=(a)=>{ const f=avg(a,'ft'), i=avg(a,'it'); const t=f+i; return t>0?(i/t*100).toFixed(0)+'%':'-'; };
+    console.log(`\n□ 대기 시간 비중 — 전반 ${pct(A)} · 후반 ${pct(B)}`
+      + `   (전반 전투 ${avg(A,'ft').toFixed(1)}초/대기 ${avg(A,'it').toFixed(1)}초`
+      + ` · 후반 전투 ${avg(B,'ft').toFixed(1)}초/대기 ${avg(B,'it').toFixed(1)}초)`);
+    console.log(`□ 실효 — 전투 기준 전반 ${avg(A,'eff').toFixed(2)} → 후반 ${avg(B,'eff').toFixed(2)}`
+      + `  ·  옛 정의(벽시계) 전반 ${avg(A,'effW').toFixed(2)} → 후반 ${avg(B,'effW').toFixed(2)}`);
+  } }
 // D 가정 검사 — 번돈÷난이도가 일정한가
 { const L=fin.log.filter(r=>r.earn>0 && r.diff>0);
   if(L.length>4){ const q=L.map(r=>r.earn/r.diff).sort((a,b)=>a-b);
