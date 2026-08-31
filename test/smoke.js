@@ -1753,6 +1753,70 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🕸 원거리 무효 장판 · 🔋 쉴드 충전(체력 회복) — HUNT_R1 §3-4-4 (2026-08-28)
+  await step('캠프 스킬: 원거리 무효 장판 · 쉴드 충전은 체력 회복', async()=>{
+    skipIf(typeof strikeWebBlocks!=='function'||typeof _stkApplySpot!=='function','장판 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      // ① 미구현 목록에서 빠졌는가 — 안 빠지면 시전 자체가 막힌다
+      for(const k of ['disruption_web','dark_swarm'])
+        assert(!STK_SK_DEAD[k],k+' 가 아직 미구현 목록에 있다');
+      // ② 확정값
+      assert(SKILLS.disruption_web.cd===20 && SKILLS.disruption_web.dur===3,
+        '교란 결계가 20/3 이 아니다: '+SKILLS.disruption_web.cd+'/'+SKILLS.disruption_web.dur);
+      assert(SKILLS.dark_swarm.cd===80 && SKILLS.dark_swarm.dur===8,
+        '암흑 장막이 80/8 이 아니다: '+SKILLS.dark_swarm.cd+'/'+SKILLS.dark_swarm.dur);
+      // ③ 원거리 기준 = 3칸. 경계 바로 아래는 근접이어야 한다
+      const px=STK_RANGED_TILES*STK_TILE_PX;
+      assert(strikeIsRanged({rng:px}),'딱 3칸인데 근접으로 봤다');
+      assert(!strikeIsRanged({rng:px-1}),'3칸 미만인데 원거리로 봤다');
+      // ④ 장판이 실제로 막는다 — 원거리는 막히고 근접은 안 막힌다
+      campWipeField();
+      campWithStk(()=>{
+        STK._webs=null;
+        const far={x:9000,y:9000,hp:100,maxHp:100,rng:px+50};        // 장판 밖 대상
+        const inw={x:1000,y:1000,hp:100,maxHp:100};                  // 장판 안 대상
+        const rngAtk={rng:px+50, id:'marine', gm:'marine'};          // 원거리 공격자
+        const melAtk={rng:px-50, id:'marine', gm:'marine'};          // 근접 공격자
+        _stkApplySpot({x:1000,y:1000}, {x:1000,y:1000}, SKILLS.dark_swarm, 'dark_swarm', STK.ai);
+        assert((STK._webs||[]).length===1,'장판이 안 깔렸다');
+        // 원거리 → 막힌다
+        let h=inw.hp; strikeHit(inw, 50, rngAtk);
+        assert(inw.hp===h,'장판 안인데 원거리 공격이 들어갔다: '+inw.hp+' (전 '+h+')');
+        // 근접 → 들어간다
+        h=inw.hp; strikeHit(inw, 50, melAtk);
+        assert(inw.hp<h,'장판 안이라고 근접까지 막았다 — 근접은 통해야 한다');
+        // 장판 밖 → 원거리도 들어간다
+        h=far.hp; strikeHit(far, 50, rngAtk);
+        assert(far.hp<h,'장판 밖인데 원거리가 막혔다');
+        // ⑤ 지속이 끝나면 다시 맞는다
+        _stkWebTick(STK, (SKILLS.dark_swarm.dur||8)+0.1);
+        assert(!(STK._webs||[]).length,'지속이 끝났는데 장판이 남아 있다');
+        h=inw.hp; strikeHit(inw, 50, rngAtk);
+        assert(inw.hp<h,'장판이 끝났는데 원거리가 여전히 막힌다');
+        STK._webs=null; });
+      // ⑥ 🔋 쉴드 충전 — 캠프에서는 **체력** 25% 회복
+      assert(SKILLS.recharge.healPct===0.25,'쉴드 충전 회복량이 25%가 아니다: '+SKILLS.recharge.healPct);
+      assert(SKILLS.recharge.cd===300,'쉴드 충전 쿨이 300초가 아니다: '+SKILLS.recharge.cd);
+      { const t={hp:20,maxHp:100,sh:0,maxSh:0};
+        const ok=campWithStk(()=>_stkApplyAlly({}, t, SKILLS.recharge, 'recharge', 0.05));
+        assert(ok,'쉴드 충전이 아무 일도 안 했다');
+        assert(Math.abs(t.hp-45)<1e-6,'체력을 25% 만큼 안 채웠다: '+t.hp+' (기대 45)');
+        // 만체력이면 안 쓴다
+        t.hp=100;
+        assert(!campWithStk(()=>_stkApplyAlly({}, t, SKILLS.recharge, 'recharge', 0.05)),'만체력인데 썼다');
+        // ⛔ 캠프 밖은 원본(실드)이라 체력이 안 움직여야 한다
+        const t2={hp:20,maxHp:100,sh:0,maxSh:0};
+        _stkApplyAlly({}, t2, SKILLS.recharge, 'recharge', 0.05);
+        assert(t2.hp===20,'캠프 밖인데 체력이 회복됐다 — 오토배틀이 바뀐다: '+t2.hp); }
+      return '3칸('+Math.round(px)+'px) 이상=원거리 · 장막 8초 · 쉴드 충전 체력 +25%';
+    } finally { if(typeof CAMPB!=='undefined'&&CAMPB) CAMPB._webs=null;
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 💉 의무병 치유 — 「3초 치유 → 5초 쉬기」(사용자 확정 2026-08-28).
   //   ⚠ 화면에서 도는 치유는 `strikeHealStep`(의무병 전용)이다. `SKILLS.heal` 은
   //     `_stkApplyAlly` 가 의무병을 빼고 있어 안 탄다 — 둘을 헷갈리지 말 것.

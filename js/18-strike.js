@@ -493,6 +493,9 @@ function strikeUnitStats(id){ const s=STK_UNITS[id], d=U[id]||{};
   return { hp:Math.round((d.hp||40)*3*rs), dmg:dmg, rng:rng, cdMax:cd, spd:spd, armor:armor, shield:shield, sharmor:sharmor,   // 폴백(오토배틀 전용값 없는 유닛) — 체력만 U에서 환산 × 종족배율
     color:d.color||'#cfd6e2', size:d.size||13, splash:0, melee:false, acq:strikeAcq(rng), minRng:minRng, dep:dep }; }
 function strikeHit(tgt, rawAtk, atk){   // 표준 데미지 적용: 실드 먼저(상성 무시) → 체력((공격−방어)×상성)
+  // 🕸 원거리 무효 장판(교란 결계·암흑 장막) — 원거리 공격은 장판 안 대상에 안 닿는다.
+  //   ⛔ 여기 한 곳에서만 막는다. 사격·광역·도트가 전부 이 함수를 거치므로 새는 길이 없다.
+  if(strikeWebBlocks(tgt, atk)) return;
   if(tgt.sh>0){ const d=Math.max(0.5, rawAtk-(tgt.shArmor||0));   // 실드 상태: 상성 무시 · 실드 전용 방어
     if(d<=tgt.sh){ tgt.sh-=d; return; } tgt.hp-=(d-tgt.sh); tgt.sh=0; return; }   // 실드 초과분만 체력으로
   tgt.hp -= Math.max(0.5, rawAtk-(tgt.armor||0)) * _sbTypeMul(atk, tgt); }   // (공격−방어) 먼저, 상성은 그 뒤
@@ -695,6 +698,7 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; if(!S) return;
 // 🔮 마나·쿨다운·자기 강화 — 관리자 SKILLS 데이터를 그대로 사용(자기강화/오라만 1단계 적용)
 function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') return;
   _stkDotTick(S, dt);   // ⏳ 지속 피해 장판·도트 먼저 굴린다
+  _stkWebTick(S, dt);   // 🕸 원거리 무효 장판 수명
   for(const side of ['me','ai']){ const me=S[side], foe=S[side==='me'?'ai':'me'];
     for(const u of me.units){ if(u.dead) continue;
       if(u.maxEn>0) u.en=Math.min(u.maxEn,(u.en||0)+STK_EN_REGEN*dt);   // 원본 SC 재생률
@@ -745,7 +749,7 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
 //   아무것도 안 하는 것보다 나쁘다. 기능이 생기면 여기서 뺀다.
 //   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
 const STK_SK_DEAD={ nuke:1, spider_mine:1, mind_control:1,
-  disruption_web:1, recall:1, hallucination:1, parasite:1, dark_swarm:1,
+  recall:1, hallucination:1, parasite:1,
   optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
 const STK_SK_SPOT_MIN=3;       // 광역 = 적이 이만큼 뭉쳤을 때만(한두 기에 쓰면 낭비)
@@ -766,6 +770,23 @@ function _stkDotTick(S, dt){ const D=S._dots; if(!D||!D.length) return;
         strikeHit(e, z.dps*dt, z.src); if(e.hp<=0) e.dead=true; } }
     if(z.left<=0) D.splice(i,1); } }
 function _stkDotAdd(S, z){ (S._dots||(S._dots=[])).push(z); }
+// ══ 🕸 **원거리 무효 장판** — 교란 결계 · 암흑 장막 (HUNT_R1 §3-4-4 · 2026-08-28) ═══
+//   ⭐ 장판 안에 있는 유닛은 **원거리 공격에 안 맞는다.** 근접은 그대로 맞는다.
+//   ⭐ **원거리 = 사거리 3칸 이상**(사용자 확정). 유닛별 표를 두지 않는다 — 값 하나로 자른다.
+//   ⚠ 칸은 캠프 설계 단위다(`CAMP_STAT_TILE` ≈ 46.75px). 여기서는 픽셀로 환산해 둔다.
+//   ⛔ 장판을 진영별로 두지 않는다 — **자리에 있는 모두**를 보호한다(원본 SC 암흑 장막과 같다).
+//     그래서 적이 깐 장막에 내 유닛이 들어가면 내 유닛도 원거리에 안 맞는다.
+const STK_RANGED_TILES = 3;                       // 이 칸 수 이상이면 '원거리'
+const STK_TILE_PX = 850 * 0.22 / 4;               // 칸 → 픽셀(캠프 설계 단위와 같은 값)
+function strikeIsRanged(u){ return !!(u && (u.rng||0) >= STK_RANGED_TILES * STK_TILE_PX); }
+function _stkWebAdd(S, w){ (S._webs||(S._webs=[])).push(w); }
+function _stkWebTick(S, dt){ const W=S._webs; if(!W||!W.length) return;
+  for(let i=W.length-1;i>=0;i--){ W[i].left-=dt; if(W[i].left<=0) W.splice(i,1); } }
+function strikeInWeb(t){ const S=STK, W=S&&S._webs; if(!W||!W.length||!t) return false;
+  for(const w of W){ const dx=t.x-w.x, dy=t.y-w.y; if(dx*dx+dy*dy<=w.r2) return true; }
+  return false; }
+// 이 공격이 장판에 막히는가 — **원거리 공격자**가 **장판 안 대상**을 때릴 때만 막힌다.
+function strikeWebBlocks(tgt, atk){ return !!(atk && strikeIsRanged(atk) && strikeInWeb(tgt)); }
 // ── 🔮 대상 고르기 ──────────────────────────────────────────────────────
 // 사거리 안에서 **가장 많이 다친 아군**. ⚠ 포식만 예외 — 아군을 잡아먹으므로 **가장 값싼 아군**을 고른다
 //   (체력으로 고르면 다친 전함을 먹는다).
@@ -808,6 +829,11 @@ function _stkApplyAlly(u, t, sk, key, dt){
     return true; }
   if(sk.absorb){ if((t.sh||0)>0) return false;       // 🛡 보호막 — 실드로 얹는다(strikeHit 이 실드를 먼저 깎는다)
     t.sh=sk.absorb; t.maxSh=Math.max(t.maxSh||0, sk.absorb); return true; }
+  // 🔋 쉴드 충전 — 🏕 **캠프에서는 체력 회복**이다(HUNT_R1 §3-4-4).
+  //   ⛔ 캠프는 실드를 체력에 합쳐 `sh=0` 이라(에테리얼도 그렇다) 실드 충전이 아무 일도 안 한다.
+  //     그래서 캠프에서만 최대 체력의 `healPct` 만큼 회복으로 읽는다. 캠프 밖은 원본(실드) 그대로.
+  if(sk.healPct && _stkCampSk()){ const mx=t.maxHp||0; if(mx<=0 || (t.hp||0)>=mx) return false;
+    t.hp=Math.min(mx, (t.hp||0)+mx*sk.healPct); return true; }
   if(sk.rate){ if((t.sh||0)>=(t.maxSh||0)) return false;   // 🔋 쉴드 충전 — 마나 1 → 실드 2
     const add=Math.min(sk.rate*10, (t.maxSh||0)-(t.sh||0)); if(add<=0) return false;
     t.sh=(t.sh||0)+add; return true; }
@@ -839,6 +865,10 @@ function _stkApplySpot(u, c, sk, key, foe){
       const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
       e.stunT=sk.dur||3; n++; }
     return n>0; }
+  // 🕸 **원거리 무효 장판** — 교란 결계 · 암흑 장막. 지점에 깔고 지속 동안 유지된다.
+  //   ⚠ 적이 없어도 깐다 — 「막는 것」이 목적이라 뭉친 적을 기다릴 이유가 없다.
+  if(key==='disruption_web' || key==='dark_swarm'){
+    _stkWebAdd(STK, {x:c.x, y:c.y, r2:r2, left:sk.dur||3}); return true; }
   // 🐌 **둔화** — 점착 가스. 느려질 뿐 계속 싸운다(정지와 다르다).
   if(key==='ensnare'){ let n=0;
     for(const e of foe.units){ if(e.dead) continue;
