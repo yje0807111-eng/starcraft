@@ -1891,6 +1891,35 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🧬 마법 유닛 셋을 캠프 명단에 넣었다(2026-08-28) — 오염술사(생산) · 다크보이드·산성충(변태).
+  //   ⛔ 캠프 설계표에 없으면 **원본 SC 능력치 그대로** 싸운다(오염술사 체력 80 vs 마린 5).
+  await step('캠프 명단: 오염술사·다크보이드·산성충', async()=>{
+    skipIf(typeof CAMP_UNIT_STAT==='undefined'||typeof campDesignStat!=='function','캠프 설계표 없음');
+    // ① 오염술사는 오염 둥지에서 뽑는다 — 예전엔 나올 방법이 아예 없었다
+    { const b=(TECH_TREE.swarm.buildings||[]).find(x=>x.k==='defilermound');
+      assert(b,'오염 둥지가 없다');
+      assert((b.produces||[]).some(p=>p.id==='defiler'),'오염 둥지가 오염술사를 안 뽑는다 — 나올 방법이 없다'); }
+    // ② 셋 다 캠프 설계 능력치·가격이 있다
+    for(const u of ['defiler','dark_archon','venom']){
+      assert(CAMP_UNIT_STAT[u],u+' 가 캠프 설계표에 없다 — SC 능력치로 싸운다');
+      assert(campUnitBase(u,50)>0,u+' 가격이 없다'); }
+    // ③ 무공격 마법 유닛은 공격을 안 준다(의무병·지원 정찰기와 같은 규약)
+    for(const u of ['defiler','dark_archon'])
+      assert(CAMP_UNIT_STAT[u].a==null,u+' 에 공격이 붙었다 — 무공격 마법 유닛이다');
+    assert(CAMP_UNIT_STAT.venom.a>0,'산성충은 공격 유닛인데 공격이 없다');
+    // ④ 설계 능력치가 **실제로** 씌워진다 — SC 값(오염술사 80)이 남으면 안 된다
+    { const u={ id:'defiler', gm:'defiler', hp:80, maxHp:80 };
+      assert(campDesignStat(u),'오염술사에 설계 능력치가 안 씌워졌다');
+      assert(u.maxHp<40,'SC 체력이 그대로 남았다: '+u.maxHp);
+      assert(Math.abs(u.maxHp-CAMP_UNIT_STAT.defiler.h*CAMP_STAT_HPK)<1e-6,
+        '설계표 값과 다르다: '+u.maxHp); }
+    // ⑤ 스킬은 그대로 붙어 있다 — 유닛이 생겼으니 이제 실제로 쓸 수 있다
+    assert(unitSkillKeys({id:'defiler'}).length===3,'오염술사 스킬이 3개가 아니다');
+    assert(unitSkillKeys({id:'dark_archon'}).length===3,'다크보이드 스킬이 3개가 아니다');
+    return '오염술사 h'+CAMP_UNIT_STAT.defiler.h+' · 다크보이드 h'+CAMP_UNIT_STAT.dark_archon.h
+      +' · 산성충 a'+CAMP_UNIT_STAT.venom.a+'/h'+CAMP_UNIT_STAT.venom.h;
+  });
+
   // 💣☢ 매설 · 지연 폭격 — 지뢰는 가서 심고 돌아온다 · 핵은 제자리(사용자 확정 2026-08-28)
   await step('캠프 스킬: 지뢰는 가서 심고 · 핵은 제자리에서', async()=>{
     skipIf(typeof campMineOrder!=='function'||typeof campNukeStep!=='function','매설 배선 없음');

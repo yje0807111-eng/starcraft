@@ -1903,6 +1903,10 @@ const CAMP_UNIT_STAT = {
   hellfire:{a:10,h:28,r:6.5,c:1.6}, dreadnought:{a:31,h:47,r:7.0,c:2.0},
   // 스웜 §3-A
   snapper:{a:1.2,h:4,r:1.0,c:0.8}, hydra:{a:1.8,h:6,r:4.0,c:1.0}, stinger:{a:6.5,h:2,r:1.0,c:2.5},
+  // 🧬 **변태·상위 유닛**(2026-08-28) — 오염술사는 오염 둥지에서 뽑고, 나머지 둘은 변태로만 나온다.
+  //   ⚠ 이 표에 없으면 **원본 SC 능력치 그대로** 싸운다(오염술사 체력 80 vs 캠프 마린 5).
+  //   ⚠ 무공격 마법 유닛은 `a` 를 주지 않는다(의무병·지원 정찰기와 같은 규약).
+  defiler:{h:14,r:2.0}, dark_archon:{h:12,r:2.0}, venom:{a:6,h:20,r:3.5,c:1.2},
   wyvern:{a:3,h:12,r:3.0,c:1.0}, medusa:{h:14}, ultralisk:{a:14,h:38,r:1.0,c:1.4}, overlord:{h:20},
   // 에테리얼 §3-B — ⭐ 실드를 체력에 합쳐 본다(그래서 실드는 0 으로 만든다)
   blade:{a:3,h:16,r:1.0,c:0.9}, dragoon:{a:4,h:18,r:4.0,c:1.2}, dark_templar:{a:6.5,h:12,r:1.0,c:1.3},
@@ -4046,9 +4050,11 @@ const CAMP_UNIT_PRICE = {
   pelican:25000, aegis:20000, tank:35000, skyguard:35000, hellfire:50000, dreadnought:100000,
   // 스웜 (§3-A) — ⭐ 싸고 얇다. 인구 1짜리가 둘이라 머릿수로 민다
   snapper:4000, hydra:6000, stinger:8000, wyvern:16000, medusa:18000, ultralisk:55000, overlord:10000,
+  defiler:20000, venom:25000,                                   // 🧬 오염술사(생산) · 산성충(변태)
   // 에테리얼 (§3-B) — ⭐ 비싸고 두껍다(실드를 체력에 합쳐 본다)
   blade:12000, dragoon:18000, dark_templar:25000, falcon:22000, skydancer:30000, reaver:45000,
-  kronos:50000, archangel:90000, high_templar:20000, seraph:25000, observer:12000 };
+  kronos:50000, archangel:90000, high_templar:20000, seraph:25000, observer:12000,
+  dark_archon:25000 };                                          // 🧬 다크보이드(변태)
 // ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
 //   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
 const CAMP_UNIT_PRICE_MUL = 200;

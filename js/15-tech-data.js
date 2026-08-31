@@ -132,7 +132,11 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
   // ── 3티어(하이브 단계) ──
   { k:'hive', name:'대군락', ico:'🌋', m:200, g:150, req:['queensnest'], evolveOnly:true },
   { k:'gspire', name:'거대 첨탑', ico:'🦅', m:100, g:150, req:['hive','spire'], unlocks:['behemoth'], evolveOnly:true },   // 가디언 해금 · 첨탑에서 진화
+  // ⚠ **오염술사는 여기서 뽑는다**(2026-08-28 사용자 확정). 예전엔 생산 칸이 없어
+  //   `defiler` 가 데이터에만 있고 **게임에 나올 방법이 없었다** — 그 스킬 셋(역병·포식·암흑 장막)이
+  //   통째로 죽은 항목이었다. `unlocks:['venom']` 은 와이번 → 베놈 **변태** 해금이라 별개다.
   { k:'defilermound', name:'오염 둥지', ico:'🦂', m:100, g:100, req:['hive'], unlocks:['venom'],   // 디파일러 해금
+    produces:[ {id:'defiler', name:'오염술사', m:50, g:150, pop:2} ],
     research:[
       {k:'consume', u:'defiler', name:'포식', desc:'아군 잡아먹어 에너지 +50', m:100, g:100},
       {k:'plague', u:'defiler', name:'역병', desc:'광역 지속 체력 감소', m:200, g:200},
