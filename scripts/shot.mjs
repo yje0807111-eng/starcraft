@@ -519,6 +519,90 @@ try {
         return out; }, kill);
       console.log('REFCHAIN '+JSON.stringify(r));
     }
+    else if (WHAT === 'flick3') {   // 🎬 유즈맵 → 난이도 → 로딩 → 게임 : 전환을 프레임으로 본다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      // ⚠ 부팅이 덜 끝나면 맵 클릭이 _selMap 을 못 세운다 — HOME 을 먼저 거친다
+      //   ⚠ 종족 선택 판(z64)이 떠 있으면 그 위를 녹화하게 된다 — 먼저 종족을 정한다.
+      await page.evaluate(() => { try{ openHome(); }catch(e){} });
+      await new Promise(r=>setTimeout(r,1400));
+      await page.evaluate(() => { try{ if(campState() && !campState().race) campPickRace(); }catch(e){} });
+      await new Promise(r=>setTimeout(r,3000));
+      // ⭐ 사용자가 말한 구간은 **난이도 판 → 로딩 → 게임**이다. 거기서부터 탄다.
+      //   ⚠ 유즈맵 목록에서 맵을 고르는 단계는 이 프로브 환경에서 _selMap 이 안 잡혀 건너뛴다
+      //     (실제 브라우저에서는 정상이다 — 부팅 직후 상태 차이).
+      const nav = await page.evaluate(() => new Promise(res=>{
+        twGoMap();
+        setTimeout(()=>{
+          const it=[...document.querySelectorAll("#mapSelect .mapItem")][0];
+          if(it) it.click();
+          setTimeout(()=>{
+            if(typeof _selMap==="undefined" || !_selMap){        // 목록 클릭이 안 잡혔으면 직접 고른다
+              try{ _selMap = USEMAPS.find(m=>m.id==="nemo") || USEMAPS[0]; }catch(e){}
+            }
+            try{ closeModeSheet(); }catch(e){}
+            try{ openSoloDiff(); }catch(e){}
+            setTimeout(()=>{
+              const p=document.getElementById("soloDiffPanel");
+              res({ sel:(typeof _selMap!=="undefined"&&_selMap)?_selMap.id:"-",
+                    난이도판:!!(p && !p.classList.contains("hide")) });
+            }, 700); }, 700); }, 900); }));
+      console.log('NAV '+JSON.stringify(nav));
+      // 여기서부터 녹화 — [시작]을 누르고 게임까지
+      const cdp5 = await page.createCDPSession();
+      const frames = [];
+      cdp5.on('Page.screencastFrame', async (f) => { frames.push({ t:f.metadata.timestamp, d:f.data });
+        try{ await cdp5.send('Page.screencastFrameAck', { sessionId:f.sessionId }); }catch(e){} });
+      await cdp5.send('Page.startScreencast', { format:'jpeg', quality:70, everyNthFrame:1 });
+      await new Promise(r=>setTimeout(r,300));
+      await page.evaluate(()=>{ const g=document.querySelector('#soloDiffPanel .sdGo'); if(g) g.click(); });
+      await new Promise(r=>setTimeout(r, +(process.env.SHOT_MS||9000)));
+      try{ await cdp5.send('Page.stopScreencast'); }catch(e){}
+      const lum = await page.evaluate(async (list) => {
+        const out=[];
+        for(const it of list){ const img=new Image();
+          await new Promise(r=>{ img.onload=r; img.onerror=r; img.src='data:image/jpeg;base64,'+it.d; });
+          if(!img.width){ out.push({t:it.t,L:null}); continue; }
+          const c=document.createElement('canvas'); c.width=64; c.height=128;
+          const x=c.getContext('2d'); x.drawImage(img,0,0,64,128);
+          const d=x.getImageData(0,0,64,128).data; let s2=0;
+          for(let i=0;i<d.length;i+=4) s2 += .2126*d[i]+.7152*d[i+1]+.0722*d[i+2];
+          out.push({ t:it.t, L:+(s2/(d.length/4)).toFixed(1) }); }
+        return out; }, frames);
+      const t0 = lum.length?lum[0].t:0;
+      const rows = lum.map(v=>({ ms:Math.round((v.t-t0)*1000), L:v.L }));
+      if(process.env.SHOT_SAVE){ const from=+(process.env.SHOT_FROM||0), to=+(process.env.SHOT_TO||99999), st=+(process.env.SHOT_STEP||1);
+        let k=0,n=0; for(let i=0;i<rows.length;i++){ if(rows[i].ms<from||rows[i].ms>to) continue; if((k++)%st) continue;
+          fs.writeFileSync(path.join(ROOT,'scratch_f3_'+String(rows[i].ms).padStart(5,'0')+'.jpg'), Buffer.from(frames[i].d,'base64')); n++; }
+        console.log('SAVED '+n); }
+      console.log('FLICK3 frames='+rows.length);
+      console.log(rows.map(r=>r.ms+':'+r.L).join(' '));
+    }
+    else if (WHAT === 'sologo') {   // 🔍 유즈맵 → 개인 플레이 → 난이도 → 로딩 → 게임 : 실제 경로를 찾는다
+      await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
+      await new Promise(r=>setTimeout(r,900));
+      const step = async (label, fn) => { const r = await page.evaluate(fn); await new Promise(x=>setTimeout(x,500)); return label+': '+JSON.stringify(r); };
+      const out=[];
+      out.push(await step('유즈맵 열기', ()=>{ if(typeof twGoMap==='function') twGoMap();
+        return { screen:[...document.querySelectorAll('.appScreen')].filter(e=>!e.classList.contains('hide')).map(e=>e.id) }; }));
+      out.push(await step('맵 목록', ()=>{
+        const rows=[...document.querySelectorAll('#mapSelect .msRow,#mapSelect .msItem,#mapSelect [data-map]')];
+        return { n:rows.length, ids:rows.slice(0,4).map(r=>r.dataset.map||r.className.slice(0,20)) }; }));
+      out.push(await step('맵 고르기', ()=>{
+        const r=document.querySelector('#mapSelect [data-map="nemo"]')
+              || [...document.querySelectorAll('#mapSelect [data-map]')][0];
+        if(r) r.click();
+        return { 열림:!document.getElementById('modeSheet').classList.contains('hide'),
+                 sel:(typeof _selMap!=='undefined'&&_selMap)?_selMap.id:'-' }; }));
+      out.push(await step('개인 플레이', ()=>{
+        const b=[...document.querySelectorAll('#modeSheet button')].find(x=>x.textContent.indexOf('개인')>=0);
+        if(b) b.click();
+        return { 난이도판:!document.getElementById('soloDiffPanel').classList.contains('hide') }; }));
+      out.push(await step('난이도 판 안', ()=>{
+        const p=document.getElementById('soloDiffPanel');
+        return { btns:[...p.querySelectorAll('button')].map(b=>b.className.slice(0,16)+':'+b.textContent.trim().slice(0,10)).slice(0,8) }; }));
+      for(const x of out) console.log('SOLO '+x);
+    }
     else if (WHAT === 'roll') {   // 💰 큰 재화가 들어올 때 숫자가 굴러서 오르나
       await page.evaluate(() => { if(typeof CHAR==='function' && !CHAR()) profCreateChar('ranger','샷'); });
       await new Promise(r=>setTimeout(r,900));

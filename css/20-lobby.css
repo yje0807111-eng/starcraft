@@ -653,7 +653,12 @@
   /* 팝업 등장 = 모든 팝업에 자동 적용. fxPop()을 손으로 부르지 않아도 카드가 뜨는 순간 애니메이션이 붙는다.
      ⚠ 새 팝업을 만들면 카드 클래스를 이 목록에 한 줄 추가할 것 — 그래야 다른 팝업과 같은 느낌이 난다. */
   :root{--fxPopT:.13s}
-  .hbModal:not(.hide) .hbmCard,#settingsPop:not(.hide) .setCard,#exitConfirm:not(.hide) .setCard,#dgSheet:not(.hide) .dgSheetCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+  /* ⛔ 설정 카드(#settingsPop·#setSubPop .setCard)는 여기 목록에 넣지 말 것 —
+     그 카드는 scale(--setScale) 로 줄여 놓았는데 fxPopOn 은 그 배율을 모른 채
+     scale(1) 로 끝낸다. 그래서 1.25배로 꽉 찬 카드가 떴다가 애니가 끝나며 툭 줄었다
+     (2026-08-31 실측). 설정은 제 애니(setCardIn · css/10-game.css)가 따로 있고 그쪽은
+     --setScale 을 지킨다. */
+  .hbModal:not(.hide) .hbmCard,#exitConfirm:not(.hide) .setCard,#dgSheet:not(.hide) .dgSheetCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
   /* ⛔ 제외 — 방 만들기(#createPanel)·난이도 선택(#soloDiffPanel)은 즉시 뜬다(요청) */
   #createPanel .cpCard, #soloDiffPanel .cpCard, #soloDiffPanel .msPanel{animation:none!important}
   @keyframes fxPopOn{0%{opacity:0;transform:translateY(7px) scale(.965)}100%{opacity:1;transform:translateY(0) scale(1)}}
@@ -661,7 +666,9 @@
   #modeSheet:not(.hide){animation:ovDimIn .22s ease-out}
   /* 🎬 전체 화면 두 장은 **디졸브로 들어온다** — 앞 팝업 위에 겹쳐 떠오른다(앞은 다 덮인 뒤에 치운다).
      ⚠ 시간을 바꾸면 js 의 SD_HANDOFF 도 같이 바꿀 것 — 그게 짧으면 앞이 먼저 사라져 다시 튄다. */
-  #soloDiffPanel:not(.hide),#raceSelPanel:not(.hide){animation:ovDimIn .32s ease-out}
+  /* 🎬 난이도 판(#soloDiffPanel)은 **페이드 없이 즉시** 뜬다(2026-08-31 사용자 확정).
+     로딩 경로 전체를 컷으로 통일했다 — 여기만 흐리게 들어오면 그 뒤가 튀어 보인다. */
+  #raceSelPanel:not(.hide){animation:ovDimIn .32s ease-out}
   @keyframes ovDimIn{from{opacity:0}to{opacity:1}}
   /* 화면전환(개인 플레이→난이도): 배경 딤은 끊김 없이 유지(페이드 생략), 새 카드가 오른쪽에서 슬라이드 인 */
   #soloDiffPanel.noDim:not(.hide){animation:none}
@@ -670,7 +677,7 @@
   /* 오프닝 로딩 */
   #opening{z-index:90;align-items:center;justify-content:center;text-align:center}
   /* ══ 부팅 로딩 = 시네마틱 (2026-08-20) ══════════════════════════════════════
-     ⚠ .opWrap 은 통계 창(#resultScreen)과 공용이다 — 부팅 값은 전부 #opening 안에 가둔다. */
+     ⚠ .opWrap 은 부팅 오프닝과 공용이다 — 부팅 값은 전부 #opening 안에 가둔다. */
   .opWrap{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px}
   /* ⚠ align-items:stretch — 공용 .opWrap 은 center 라 하단 도크가 내용 폭(87px)으로 쪼그라든다.
      ⚠ overflow:hidden — 아트가 숨쉬는 동안(scale 1.06) 안쪽 여백이 프레임 밖으로 8px 샜다. */
@@ -715,17 +722,8 @@
   .opLoading{font-family:var(--font-num);font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:0}
   .opLoading s{text-decoration:none;font-size:14px;color:#7d8792}
   /* 게임 시작 로딩 = 카드 덱(H안) — 부팅 오프닝(.opWrap)은 통째로 감추고 #gsRoot 만 띄운다.
-     ⚠ .opWrap/.opMap/.opBtns 는 통계 창(#resultScreen)과 공용이다 — 여기서 덮지 말 것. */
+     ⚠ .opWrap 은 부팅 오프닝과 공용이다 — 여기서 덮지 말 것. */
   #opening.counting .opWrap{display:none}
-  #resultScreen .opWrap{flex:1;min-height:0;width:100%;box-sizing:border-box;justify-content:flex-start;gap:10px;padding:8% 24px 0;
-    overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
-  #resultScreen .opWrap::-webkit-scrollbar{width:0;height:0}
-  .opMap{display:none;flex-direction:column;align-items:center;gap:11px}
-  #resultScreen .opMap{display:flex}
-  /* 썸네일·제목·정보 패널 = 유즈맵 팝업 컴포넌트 재사용(.moThumb / .moMap / .moInfo) — 크기만 이 화면에 맞게 조정 */
-  .moThumb.opThumb{width:150px;height:150px;margin:0}
-  .opMapName{margin:0}
-  .opPanel{width:290px;max-width:84vw}
   .opPanel.moInfo{margin:0}
   #opening .moFeat .mfTx{color:#b3c0cf}
   #opening .moFeat .mfTx b{color:#f0f4fa}
@@ -800,20 +798,6 @@
   .gsBtns{display:flex;gap:8px;margin-top:13px}
   .gsBtns .actBtn{flex:0 0 34%}
   .gsBtns .actBtn.pri{flex:1}
-  /* 하단 액션(통계 창 전용) = 중립 글래스 한 개 */
-  .opBtns{display:none;width:290px;max-width:84vw;gap:9px;align-items:stretch;position:relative;z-index:2}
-  #resultScreen .opBtns{display:flex;flex:0 0 auto;margin:0 auto;padding:12px 0 5%}
-  /* 통계 창 = 게임 진입 로딩 창과 같은 전체 화면 구조(팝업 아님) */
-  #resultScreen{z-index:88;align-items:center;justify-content:center;text-align:center}
-  #resultScreen.hide{display:none}
-  #resultScreen .ovStats{margin:0;width:290px;max-width:84vw}
-  /* 통계 창(#resultScreen)의 나가기 — 게임 진입 로딩은 공용 .actBtn 을 쓴다 */
-  .opQuit{flex:1 1 0;min-width:0;height:48px;padding:0 8px;border-radius:13px;font-family:inherit;
-    font-size:var(--fs-lg);font-weight:800;letter-spacing:.2px;cursor:pointer;white-space:nowrap;
-    display:flex;align-items:center;justify-content:center;gap:7px;position:relative;overflow:hidden;
-    color:#dfe7f0;background:rgba(255,255,255,.07);border:1px solid var(--glass-edge);transition:transform .1s}
-  .opQuit:active{transform:translateY(1px) scale(.99)}
-  .gsBtns .opQuit{flex:0 0 34%}
   /* 남은 시간 = 준비 버튼을 왼→오른쪽으로 채우는 빛(뒤는 은은하게, 선단만 또렷하게) */
   .opStartBar{position:absolute;left:0;top:0;bottom:0;width:0;pointer-events:none;z-index:0;
     background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.05) 42%,rgba(255,255,255,.12) 78%,rgba(255,255,255,.22) 100%)}
@@ -827,7 +811,8 @@
   #opStart .opChk{width:19px;height:19px;animation:opChkIn .34s cubic-bezier(.2,.9,.25,1)}
   @keyframes opChkIn{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
   #opStartTxt{position:relative;z-index:1;display:inline-flex;align-items:center;gap:7px}
-  /* ── 게임 전환: 화면이 서서히 흐려지며 안으로 들어가는 디졸브(길이 = JS의 GS_WARP_MS) ── */
+  /* ── 🗄 게임 전환 워프(흐려지며 확대) — **지금은 아무도 .warp 를 붙이지 않는다**(2026-08-31 컷 전환).
+        지우지 않고 남겨 둔다: 되살리려면 js _gsFinish 에서 .warp 를 붙이고 GS_WARP_MS 만큼 기다리면 된다. ── */
   #opening.warp{transform-origin:center 46%;animation:opOut var(--gsWarp,.75s) cubic-bezier(.33,0,.2,1) forwards}
   @keyframes opOut{0%{transform:scale(1);opacity:1;filter:blur(0)}
     45%{opacity:.72;filter:blur(3px)}

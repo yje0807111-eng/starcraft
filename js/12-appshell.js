@@ -552,7 +552,13 @@ function _gsPaintCount(list){ const op=document.getElementById('opening');
   list=list||_gsList();
   // ① 로딩 단계 — 혼자든 여럿이든 막대는 **로딩 진행률**이다. 다 차야 시작 버튼이 열린다(2026-08-19)
   if(_gsLoading){ const pc=Math.round((_gsSoloPct||0)*100);
+    // ⛔ 로딩 막대에는 전이(css .gsBar i 의 width .3s)를 걸지 않는다 — 30ms 마다 다시 그리므로
+    //   전이가 없어도 매끄럽고, 있으면 **막대가 진행률보다 0.3초 뒤처진다.**
+    //   그래서 숫자가 100% 가 되어 시작 버튼이 열리는 순간 막대는 58% 였다(2026-08-31 실측).
+    //   ⚠ 준비 단계(아래)에서는 되돌린다 — 거긴 값이 띄엄띄엄 뛰어 전이가 있어야 부드럽다.
+    fill.style.transition='none';
     if(lb) lb.textContent='LOADING'; n.innerHTML=pc+'<s>%</s>'; fill.style.width=pc+'%'; return; }
+  fill.style.transition='';   // 로딩이 끝났다 — 막대를 css 기본(부드러운 전이)으로 돌려놓는다
   // ② 로딩이 끝난 뒤 — 혼자면 '누르면 들어간다', 여럿이면 준비 인원
   if(_gsSolo()){ if(lb) lb.textContent='준비 완료 — 시작을 누르세요'; n.innerHTML='100<s>%</s>'; fill.style.width='100%'; return; }
   const rdy=list.filter(function(p){ return _gsReady&&_gsReady.has(p); }).length;
@@ -571,7 +577,7 @@ const GS_LOAD_MS=800;     // 진입 로딩 막대의 **최소** 시간(ms) — �
 const GS_LOAD_MAX=15000;  // 안전판 — 실제 로딩이 이 시간을 넘으면 막대를 100% 로 열어 준다(사용자를 가두지 않는다)
 const GS_READY_MS=5000;   // 준비 대기 시간(단일 소스) — 시작 버튼 진행 표시·자동 시작·상대 준비 시차가 모두 이 값을 따름
 const GS_HOLD_MS=500;     // 전원 준비 → 전환 시작까지 잠깐 머무는 시간
-const GS_WARP_MS=750;     // 서서히 흐려지며 게임으로 들어가는 전환 길이(CSS --gsWarp와 동일)
+const GS_WARP_MS=750;     // 🗄 지금은 안 쓴다 — 로딩→게임을 컷으로 바꾸며 워프를 껐다(2026-08-31). 되살릴 때의 길이.
 // 진행 표시가 다 차면 자동 준비완료 → 1초 뒤 게임 시작
 function _gsAutoReady(){ if(typeof G==='undefined'||!_gsReady) return; const me=(G.myPlayer||1);
   if(!_gsReady.has(me)){ _gsReady.add(me); _gsMarkMeReadyUI(); _renderGsPlayers(); }   // 자동 준비완료(즉시 종료 X)
@@ -632,6 +638,10 @@ function _gsEnterReady(){ const op=document.getElementById('opening'); op.classL
 function gsQuitToMaps(){ const op=document.getElementById('opening'); if(!op) return;
   clearTimeout(op._loadT); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; _gsClearTimers(); op._finished=false; _gsDone=null;
   _gsLoading=false; { const sb=document.getElementById('opStart'); if(sb) sb.disabled=false; }   // 잠금이 남으면 다음 진입에서 못 누른다
+  // 🎬 나가기도 뚝 끊는다 — **감추고 나서 클래스를 뗀다**.
+  //   ⚠ 순서를 뒤집지 말 것: counting 이 먼저 사라지면 screenFadeOut 이 「자기 연출 있음」 판정을
+  //     놓쳐 로딩 화면을 0.28초 페이드로 내린다(#opening.fxOut).
+  op.classList.add('hide');
   op.classList.remove('counting','ready','timing','warp');
   if(typeof G!=='undefined'&&G) G.loading=false;
   if(typeof G!=='undefined'&&G&&G.strike){ G.strike=false; STK=null; }   // 직스: 카운트다운 중 나가기(크롬 원복은 overlayToLobby의 resetGameChrome이 담당)
@@ -678,12 +688,13 @@ function gameStartCountdown(done){ const op=document.getElementById('opening');
 // 준비 완료(전원 또는 5초 자동) → 워프 전환 후 게임 진행
 function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._finished) return; op._finished=true; _gsLoading=false;
   _gsTimers.forEach(function(t){ if(t&&t.__iv) clearInterval(t.__iv); else clearTimeout(t); }); _gsTimers=[];
-  op.style.setProperty('--gsWarp', (GS_WARP_MS/1000)+'s');   // CSS 전환 길이 = JS 대기 시간과 동일
-  op.classList.add('warp');   // 'ready' 유지한 채 서서히 흐려지며 게임 안으로
-  op._cdEnd=setTimeout(function(){ op.classList.add('hide'); op.classList.remove('warp','counting','ready','timing'); op._finished=false;
-    if(typeof G!=='undefined'&&G) G.loading=false;                     // 로딩 종료 → 게임 타이머 10초부터 진행
-    if(typeof bgmStart==='function') bgmStart('ingame');               // 라운드 시작 → 인게임 BGM(로비 BGM 정지)
-    if(typeof _gsDone==='function') _gsDone(); }, GS_WARP_MS); }
+  // 🎬 **로딩 → 게임도 뚝 끊는다**(2026-08-31 사용자 확정).
+  //   ⛔ 워프(흐려지며 확대되는 디졸브)를 되살리지 말 것 — 두 화면이 겹쳐 보여 어지럽다는 판단.
+  //   ⚠ 그래서 GS_WARP_MS 만큼 기다리지도 않는다: 기다리면 그림은 그대로인 채 0.75초 멎어 버린다.
+  op.classList.add('hide'); op.classList.remove('warp','counting','ready','timing'); op._finished=false;
+  if(typeof G!=='undefined'&&G) G.loading=false;                     // 로딩 종료 → 게임 타이머 10초부터 진행
+  if(typeof bgmStart==='function') bgmStart('ingame');               // 라운드 시작 → 인게임 BGM(로비 BGM 정지)
+  if(typeof _gsDone==='function') _gsDone(); }
 // ── 부팅 흐름: 오프닝 → 로그인 화면 ──
 //   저장된 세션이 있어도 화면은 반드시 거친다(자동 로그인 안 함). 빈 칸으로 로그인 = 그 세션 그대로 입장.
 async function bootApp(){
@@ -914,6 +925,13 @@ const MAPS=Object.values(USEMAPS);   // 맵 선택 화면 목록(레지스트리
 // ── 라인아트 아이콘(인게임과 동일 스타일: viewBox 24, stroke=currentColor) ──
 const _svg=(b,extra)=>'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"'+(extra||'')+'>'+b+'</svg>';
 const ICO={
+  // ⚙ 설정 — **톱니 한 벌**이 로그인(.authGear)·유즈맵 재화바·게임 HUD 를 다 맡는다(2026-08-31).
+  //   ⛔ 이 SVG 를 마크업에 다시 붙여 넣지 말 것. 쓰는 곳은 data-ico="gear" 만 적는다.
+  //   ⚠ 다른 아이콘과 달리 면(fill)으로 그린다 — 선으로 그리면 톱니가 뭉개진다.
+  gear:'<svg class="ic" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg>',
+  // ☰ 더보기 — **캠프(#phone.campMode)의 오른쪽 위만** 이 모습을 쓴다(2026-08-31 사용자 확정).
+  //   거긴 설정이 아니라 판을 모아 둔 '더보기'라 톱니가 아니다. 다른 화면은 gear 다.
+  bars:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg>',
   user:_svg('<circle cx="12" cy="8" r="3.3"/><path d="M5.5 20c0-3.6 2.9-6.3 6.5-6.3s6.5 2.7 6.5 6.3"/>'),
   fav:_svg('<path d="M12 3.7l2.5 5.1 5.6.8-4.1 4 1 5.6L12 16.6 7 19.2l1-5.6-4.1-4 5.6-.8z"/>'),
   pop:_svg('<path d="M12 3.4c2.9 3.1 5.3 5.4 5.3 9.1A5.3 5.3 0 0 1 12 17.9a5.3 5.3 0 0 1-5.3-5.4c0-1.7.7-3.1 1.9-4.4.4 1 1.1 1.6 2.1 1.8-.6-2.3.2-4.6 1.6-6.4z"/><path d="M12 18a2.7 2.7 0 0 0 2.7-2.8c0-1.4-1-2.3-1.8-3.2-.6.8-1.5 1-1.9 1.9-.5-.3-.7-.8-.7-1.4-.7.7-1 1.6-1 2.6A2.7 2.7 0 0 0 12 18z"/>'),
@@ -1884,7 +1902,8 @@ function _handoff(fn){ setTimeout(fn, SD_HANDOFF); }
 function chooseSolo(){ if(_selMap && _selMap.soloOff){ if(typeof lobbyToast==='function') lobbyToast('이 유즈맵은 멀티플레이 전용입니다'); return; }   // 멀티 전용 맵 = 개인 플레이 차단
   if(typeof inPartyNow==='function' && inPartyNow()){ if(typeof lobbyToast==='function') lobbyToast('파티 중에는 멀티플레이만 가능합니다'); return; }
   const m=_selMap;
-  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ openSoloDiff(); _handoff(closeModeSheet); return; }   // 난이도 선택은 네모네모 디펜스 전용
+  // 🎬 난이도 선택은 **겹치지 않는다 — 뚝 끊는다**(2026-08-31 사용자 확정 · 아래 로딩 경로와 같은 규칙)
+  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ closeModeSheet(); openSoloDiff(); return; }   // 난이도 선택은 네모네모 디펜스 전용
   if(m && m.cfg && m.cfg.mode==='strike'){ openRaceSelect(); _handoff(closeModeSheet); return; }       // 컴퓨터가 싸운다(오토 배틀): 종족만 선택 후 시작
   closeModeSheet(); _startSoloNow(); }                                        // 관리자 테스트(샌드박스)·기타: 난이도 없이 바로 시작
 // ── 종족 선택 팝업(재사용): 솔로(맵→종족→난이도) + 멀티 대기실(카드 칩→팝업) 공용 ──
@@ -2065,6 +2084,9 @@ function startSoloInfinite(){ if(!USEMAPS.nemo_inf) return; _selMap=USEMAPS.nemo
 function startSoloWithDiff(d){ if(DIFFICULTY[d]) _selDiff=d;
   // 난이도 → 종족도 같다 — 종족 화면이 덮은 뒤에 난이도를 치운다(그 사이 배경이 이어진다)
   if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); _handoff(closeSoloDiff); return; }
+  // 🎬 **로딩 진입은 겹치지 않는다 — 뚝 끊는다**(2026-08-31 사용자 확정).
+  //   난이도 판을 먼저 닫고 로딩을 바로 켠다. 크로스페이드는 두 화면이 함께 비쳐
+  //   오히려 어지럽다는 판단(한 번 넣었다가 뺐다).
   closeSoloDiff(); _startSoloNow(); }
 function _startSoloNow(){ if(_selMap&&_selMap.id&&typeof _lsSet==='function') try{ _lsSet('nm_recentMap', _selMap.id); }catch(e){}   // 허브 '최근 플레이' 표시용
   if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); hideAppScreens(); if(typeof playSfx==='function') playSfx('ui_confirm'); startGameNow([1],1); }
