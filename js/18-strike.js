@@ -808,7 +808,7 @@ function strikeTempleAlpha(o){ if(!o||!o.dead) return 1;   // 1=멀쩡 … 0=사
 function strikeCheckOver(){ const S=STK; if(S.over) return;
   // ⛔ **캠프 전장(S.camp)은 오토배틀 승패 처리를 타지 않는다.**
   //    캠프는 strikeStepUnits 를 빌려 쓰는데, 그 안의 이 함수가 오토배틀의 게임오버를 돌린다:
-  //      승리 오버레이 → 5초 뒤 결과 화면 → 10초 뒤 resultToLobby → overlayToLobby → G=newGame()
+  //      결과 화면 → 10초 뒤 overlayToLobby → G=newGame()
   //    실측에서 캠프 6분에 G 가 통째로 갈려 판이 사라졌다(BALANCE.md §3-2).
   //    캠프의 승패는 campCombatStep 이 따로 본다(적 전멸 / 본부 관통).
   if(S.camp) return;

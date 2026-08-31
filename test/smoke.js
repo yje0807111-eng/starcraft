@@ -6779,15 +6779,17 @@ async function groupLobby(){
     { const face=[]; for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
         const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
       assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
-    // 🎬 넘어올 때 **앞 팝업이 먼저 사라지면 안 된다** — 그 순간 뒤 로비가 드러나 화면이 튄다
+    // 🎬 **넘어갈 때 겹치지 않는다 — 한 프레임에 뚝 끊긴다**(2026-08-31 사용자 확정).
+    //   ⛔ 예전의 「덮고 나서 치운다」(340ms 겹침)로 되돌리지 말 것 — 두 화면이 함께 비쳐
+    //     어지럽다는 판단이었다. 로딩 경로 전체(난이도·로딩·게임 진입·나가기)가 같은 규칙이다.
     closeSoloDiff(); await sleep(40);
     openMapSelect(); await sleep(40); openModeSheet(USEMAPS.nemo); await sleep(120);
     chooseSolo(); await sleep(120);
-    assert(!$('modeSheet').classList.contains('hide'),
-      '새 화면이 덮기 전에 앞 팝업이 사라졌다 — 그 사이 뒤 로비가 비쳐 화면이 튄다');
+    assert($('modeSheet').classList.contains('hide'),
+      '앞 팝업이 남아 두 화면이 겹쳤다 — 로딩 경로는 컷이어야 한다');
     assert(!$('soloDiffPanel').classList.contains('hide'),'새 화면이 안 떴다');
-    await sleep(420);
-    assert($('modeSheet').classList.contains('hide'),'다 덮은 뒤에도 앞 팝업이 남아 있다');
+    assert(getComputedStyle($('soloDiffPanel')).animationName==='none',
+      '난이도 판이 페이드로 뜬다 — 즉시 떠야 한다');
     closeSoloDiff(); await sleep(40);
     return '사다리 '+dots.length+'칸(무한 포함) · 잠금 분리 · 전환 이어짐 ok'; });
   // 🧬 종족 선택 팝업 = 캠프의 행 문법 + 「고른 행을 종족색이 물들인다」(2026-08-27 · S3안).
@@ -6907,6 +6909,23 @@ async function groupLobby(){
     // 버튼은 공용 액션 버튼이다 — 이 화면 전용 버튼을 만들지 말 것
     assert($('opStart').classList.contains('actBtn')&&$('opStart').classList.contains('pri'),'시작 버튼이 공용 .actBtn.pri 가 아님');
     assert($('opQuit').classList.contains('actBtn'),'나가기가 공용 .actBtn 이 아님');
+    // ⏳ **막대가 다 차야 시작이 열린다.** 예전엔 막대에 css 전이(width .3s)가 걸려 있어
+    //   숫자가 100% 가 되어 버튼이 열리는 순간 막대는 58% 였다(2026-08-31 실측).
+    //   ⛔ 로딩 단계에서 전이를 되살리지 말 것 — 30ms 마다 다시 그리므로 전이 없이도 매끄럽다.
+    { const fill=$('gsBarFill'), sb=$('opStart');
+      const was=_gsLoading, wasPct=_gsSoloPct;
+      _gsLoading=true; _gsSoloPct=0.5; _gsPaintCount();
+      assert(getComputedStyle(fill).transitionProperty==='none' || getComputedStyle(fill).transitionDuration==='0s',
+        '로딩 막대에 전이가 걸려 있다 — 막대가 진행률보다 늦게 찬다');
+      _gsSoloPct=1; _gsPaintCount();
+      assert(fill.style.width==='100%','막대가 100% 로 안 찬다: '+fill.style.width);
+      _gsLoading=was; _gsSoloPct=wasPct; _gsPaintCount(); }
+    // 🎬 **로딩 → 게임은 뚝 끊긴다**(2026-08-31 사용자 확정). 워프(흐려지며 확대되는 디졸브)를 껐다.
+    //   ⛔ .warp 를 다시 붙이지 말 것 — 두 화면이 겹쳐 보여 어지럽다는 판단이었다.
+    //   ⚠ 「기다렸다가 감춘다」로도 되돌리지 말 것: 그림은 그대로인 채 0.75초 멎어 버린다.
+    _gsFinish();
+    assert(op.classList.contains('hide'),'로딩이 곧바로 사라지지 않았다 — 게임 진입은 컷이어야 한다');
+    assert(!op.classList.contains('warp'),'워프 디졸브가 되살아났다');
     restore(); await sleep(40);
     return '협동 8 · 팀전 4v4 · 개인 진행률 ok'; });
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
@@ -9882,7 +9901,69 @@ async function groupGame(){
     assert(G.enemies.length>b || (G.pendSpawn||[]).length>bp,'적/대기열 미증가'); return pt.name; });
   await step('포인트 강화 팝업', ()=>{ skipIf(typeof openPointUpgrade!=='function','없음'); openPointUpgrade();
     assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
-  await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
+  // ⚙ 설정 아이콘 = **톱니 한 벌**(ICO.gear). 로그인·유즈맵 재화바·게임 HUD 가 같은 것을 쓴다.
+  //   ⛔ 세 줄(☰)로 되돌리거나 SVG 를 마크업에 다시 붙여 넣지 말 것 — 세 곳이 조용히 갈라진다.
+  await step('설정 아이콘: 톱니 한 벌 · 상자 가운데', ()=>{
+    const hosts=[...document.querySelectorAll('#settingsBtn .icoBars,#curSettingsBtn .icoBars,.authGear span[data-ico]')];
+    assert(hosts.length>=3,'톱니를 쓰는 자리가 3곳이 아니다: '+hosts.length);
+    hosts.forEach(h=>{ assert(h.dataset.ico==='gear','data-ico 가 gear 가 아니다: '+h.dataset.ico);
+      assert(h.querySelector('svg'),'아이콘이 안 칠해졌다(paintIcons 미적용)'); });
+    // 아이콘은 제 상자 한가운데 — 인라인 span 이면 라인박스 여백만큼 위로 뜬다
+    for(const id of ['settingsBtn','curSettingsBtn']){ const b=$(id); if(!b) continue;
+      const sv=b.querySelector('.icoBars svg'); if(!sv) continue;
+      const r=b.getBoundingClientRect(), s=sv.getBoundingClientRect();
+      assert(Math.abs((s.top+s.height/2)-(r.top+r.height/2))<0.6,
+        id+' 톱니가 상자 가운데가 아니다: '+((s.top+s.height/2)-(r.top+r.height/2)).toFixed(2)+'px');
+      assert(Math.abs((s.left+s.width/2)-(r.left+r.width/2))<0.6,id+' 톱니가 가로 가운데가 아니다'); }
+    // ☰ 는 **캠프에서만** 남는다 — 거긴 설정이 아니라 '더보기'다(2026-08-31 사용자 확정).
+    //   같은 버튼 하나가 모습만 갈아 끼운다 — 캠프용 버튼을 새로 만들지 말 것.
+    { const ph=$('phone'), b=$('curSettingsBtn');
+      const g=b.querySelector('.icoBars'), m=b.querySelector('.icoMenu');
+      assert(g&&m,'톱니·세줄 두 모습이 한 버튼 안에 있어야 한다');
+      const vis=e=>getComputedStyle(e).display!=='none';
+      const had=ph.classList.contains('campMode');
+      ph.classList.remove('campMode');
+      assert(vis(g)&&!vis(m),'캠프가 아닌데 세 줄이 보인다');
+      ph.classList.add('campMode');
+      assert(!vis(g)&&vis(m),'캠프인데 톱니가 보인다');
+      if(!had) ph.classList.remove('campMode'); }
+    return '3곳 · 상자 가운데'; });
+  // 🎬 설정 카드는 scale(--setScale) 로 줄여 놓은 카드다. 공용 팝업 애니(fxPopOn)는 그 배율을 모른 채
+  //   scale(1) 로 끝내서, 1.25배로 꽉 찬 카드가 떴다가 애니가 끝나며 툭 줄었다(2026-08-31 실측).
+  //   ⛔ .setCard 를 fxPopOn 목록이나 fxPop() 호출에 다시 넣지 말 것 — 등장 애니는 setCardIn 하나다.
+  await step('설정 팝업 · 등장 애니가 카드 배율을 지킨다', async ()=>{ openSettings();
+    assert(visible($('settingsPop')),'settingsPop 안 보임');
+    const c=$('settingsPop').querySelector('.setCard');
+    const an=getComputedStyle(c).animationName;
+    assert(an.indexOf('fxPopOn')<0,'설정 카드에 공용 팝업 애니가 걸렸다 — 카드가 커졌다 줄어든다: '+an);
+    const w0=c.getBoundingClientRect().width;
+    await sleep(_cssMs('--t-swap',.22)+120);
+    const w1=c.getBoundingClientRect().width;
+    assert(Math.abs(w1-w0)<1,'등장 중에 카드 폭이 변한다(튄다): '+w0.toFixed(1)+' → '+w1.toFixed(1));
+    const sc=new DOMMatrix(getComputedStyle(c).transform).a;
+    // ⚠ 값을 여기 박지 말 것 — 배율은 css 변수 한 곳이 단일 소스다(바꿀 때 두 군데를 고치게 된다)
+    const want=parseFloat(getComputedStyle(c).getPropertyValue('--setScale'))||1;
+    assert(Math.abs(sc-want)<0.02,'카드 배율이 --setScale('+want+')이 아니다: '+sc.toFixed(3));
+    // 터치 타겟은 **배율이 걸린 뒤** 기준으로 지킨다(DESIGN §0 권고 44px).
+    //   ⚠ 높이를 44px 로 박아 두면 배율만큼 작아진다 — 행들은 1/배율로 키워 쓴다.
+    { const rows=[...c.querySelectorAll('.setItem,.setQRow,.setPause,.setExit,.setLogout')].filter(e=>e.offsetHeight>0);
+      assert(rows.length,'설정 행을 하나도 못 찾았다 — 선택자가 낡았다');
+      rows.forEach(r=>{ const h=r.getBoundingClientRect().height;
+        assert(h>=43.5,'설정 행이 44px 미만: '+(r.id||r.className.split(' ')[0])+' '+h.toFixed(1)+'px'); }); }
+    // 🌑 하위 팝업(비디오 설정·임무 목표…)은 **뒤가 거의 안 보이게** 덮는다 —
+    //   .5 였을 때 설정 목록 글자가 그대로 비쳐 두 화면이 겹쳐 읽혔다(2026-08-31 사용자 요청).
+    { openSetSub('vid'); await sleep(80);
+      const sp=$('setSubPop');
+      assert(sp && !sp.classList.contains('hide'),'하위 팝업이 안 열린다');
+      const parts=getComputedStyle(sp).backgroundColor.replace(/[^0-9.,]/g,'').split(',');
+      const a=(parts.length>3)?parseFloat(parts[3]):1;
+      assert(a>=0.85,'하위 팝업 딤이 옅다 — 뒤 목록이 비친다: '+a);
+      // ⚠ 하위 팝업은 **설정보다 항상 위**여야 한다. 게임 밖은 설정이 95 로 올라가는데 하위가 73 에
+      //   머물러, 유즈맵에서 비디오 설정을 열면 설정 목록 뒤로 깔렸다(2026-08-31).
+      assert(+getComputedStyle(sp).zIndex > +getComputedStyle($('settingsPop')).zIndex,
+        '하위 팝업이 설정보다 아래다: '+getComputedStyle(sp).zIndex+' vs '+getComputedStyle($('settingsPop')).zIndex);
+      closeSetSub(); await sleep(40); }
+    closeSettings(); return '폭 '+w1.toFixed(0)+'px · 배율 '+sc.toFixed(2)+' 고정'; });
   // DESIGN.md 규칙 — 게임 안 팝업(설정 · 나가기 확인 · 결과)만. 게임 밖(#settingsPop.appCtx)은 대상 아님
 
   await step('설정: 상단 스위치 + 리스트 → 하위 팝업', ()=>{
@@ -9987,6 +10068,36 @@ async function groupGame(){
         return getComputedStyle($('rsTtl')).color; };
       const tw=cw('win'), tl=cw('lose');
       assert(tw!==tl,'승/패 제목 색이 같음: '+tw);
+      // 📋 **통계는 이 화면 안에 있다**(2026-08-31 · 옛 #resultScreen 을 여기로 합쳤다).
+      //   ⛔ 두 화면으로 다시 가르지 말 것 — 같은 값을 두 번 보여 주던 구조였다.
+      { const lab=[...document.querySelectorAll('#rsRows .rsRow b')].map(b=>b.textContent);
+        assert(lab.indexOf('보유 포인트')>=0,'옛 통계 화면의 줄(보유 포인트)이 안 옮겨졌다: '+lab.join('/')); }
+      // 통계로 가는 입구가 옛 창을 열면 안 된다 — 같은 결과 화면이 다시 떠야 한다
+      openResultScreen();
+      assert(!$('resultScreen'),'옛 통계 창(#resultScreen)이 되살아났다 — 마크업째 지운 화면이다');
+      assert(typeof window.resultToLobby==='undefined' && typeof window.ovStatRow==='undefined',
+        '옛 통계 창의 함수가 되살아났다(resultToLobby / ovStatRow)');
+      assert(ov.classList.contains('rsOn'),'통계 입구가 결과 화면을 안 띄운다');
+      // 나가기 = 곧바로 로비(다음 단계가 없다). ⚠ 실제로 부르면 화면이 로비로 가므로 경로만 본다.
+      assert(_ovConfirm.toString().indexOf('overlayToLobby')>=0 && _ovConfirm.toString().indexOf('openResultScreen')<0,
+        '나가기가 아직 옛 통계 단계를 거친다');
+      // 🎬 결과 화면 → **유즈맵으로 곧장**. 로딩 화면을 거치지 않는다(2026-08-31 사용자 확정).
+      //   ⛔ showLoading 을 다시 끼우지 말 것 — 그 화면이 키 아트와 타이틀 로고를 켜는데,
+      //     둘은 화면과 따로 0.42초에 걸쳐 꺼져 유즈맵 목록 위로 비쳤다.
+      { const t=overlayToLobby.toString();
+        assert(t.indexOf('openMapSelect()')>=0,'로비로 안 돌아간다');
+        assert(t.indexOf('showLoading')<0,'로비 복귀가 다시 로딩 화면을 거친다'); }
+      // 🧹 잔상 금지 — 로비로 돌아갈 때 게임 크롬과 3D 를 **지우고 한 번 더 그린다**
+      //   (지우기만 하면 캔버스에 마지막 프레임이 박제돼 로딩 화면에 미네랄이 떠 있었다).
+      { const t=overlayToLobby.toString();
+        assert(t.indexOf('setInGame(false)')>=0,'로비로 나갈 때 게임 크롬을 안 끈다 — 전장이 그대로 드러난다');
+        assert(t.indexOf('clearGameModels')>=0 && t.indexOf('clearIdlePools')>=0,'3D 잔상을 안 지운다');
+        assert(t.indexOf('M3D.sync([]')>=0,'지운 뒤 다시 그리지 않는다 — 캔버스에 마지막 프레임이 남는다'); }
+      // ⚔ 오토배틀도 나갈 때 통계를 보여 준다(캠프는 제외 — 판이 끝난 게 아니다)
+      { const s=exitGame.toString();
+        assert(s.indexOf('openResultScreen')>=0,'오토배틀 나가기가 통계를 건너뛴다');
+        assert(s.indexOf('STK.camp')>=0,'캠프에서 나갈 때도 통계가 뜬다'); }
+      rsSkip();
       rsHide(); _ovClearAuto(); ov.classList.add('hide');
       G.phase=was; G._runSum=savedSum;
       assert($('ovBtns').parentNode===ov.querySelector('.ovCard'),'결과를 걷은 뒤 버튼을 안 돌려놓음');

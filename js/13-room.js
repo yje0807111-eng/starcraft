@@ -154,6 +154,7 @@ function lobbyStart(){ const players=_lobbySlots.filter(Boolean); if(players.len
     try{ if(RTROOM.chan) RTROOM.chan.send({type:'broadcast', event:'start',
       payload:{slots:slots, names:names, diff:_lobbyRoom.diff, inf:!!_lobbyRoom.inf, opts:_lobbyRoom.opts||null, from:myUid()}}); }catch(e){ toast('⚠️ 시작 신호 전송 실패'); RTROOM.started=false; return; }
     if(RTROOM.meta){ RTROOM.meta.status='playing'; RTROOM.meta.round=1; rtRoomPublish(RTROOM.meta); }   // 목록에 '게임중' 표시
+    // 🎬 로딩 진입은 겹치지 않는다 — 대기실을 먼저 숨기고 로딩을 켠다(솔로와 같은 규칙).
     document.getElementById('lobby').classList.add('hide');
     startGameNow(slots.map(x=>x.num), myNum, names);
     startGameCoop(slots);
