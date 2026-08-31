@@ -396,6 +396,9 @@ function campStepUnits(dt){
   // ⛔ strikeSuddenDeath 를 부르지 않는다 — 오토배틀의 장기전 방지책이고, 캠프의 라운드는
   //   「적을 다 잡으면 끝」이라 해당이 없다.
   if(typeof strikeSkillTick === 'function') strikeSkillTick(dt);   // 🔮 마나·쿨다운·자동 시전
+  // 🏢 **건물 시전** — strikeSkillTick 은 me.units 만 돈다(건물은 유닛이 아니다).
+  //   값·주기는 js/19-camp.js 의 CAMP_BLD_SKILL 이 단일 소스다.
+  if(typeof campBldSkillStep === 'function') campBldSkillStep(dt);
   if(typeof strikeSeparate === 'function') strikeSeparate();       // 겹침 회피
   if(S.fx && typeof FX !== 'undefined') FX.advance(S.fx, dt);
 }

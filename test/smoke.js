@@ -1891,6 +1891,62 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🏢 건물 시전 — 전투 시작 3초 뒤 첫 발 · 그 뒤 120초마다(사용자 확정 2026-08-28).
+  //   ⛔ strikeSkillTick 은 me.units 만 돈다 — 건물은 유닛이 아니라 영영 안 쓴다.
+  await step('캠프: 건물이 스킬을 쓴다(쉴드 배터리)', async()=>{
+    skipIf(typeof campBldSkillStep!=='function'||typeof campEnterDungeon!=='function','건물 시전 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      const cfg=CAMP_BLD_SKILL.battery; skipIf(!cfg,'쉴드 배터리 설정이 없다');
+      assert(cfg.sk==='recharge' && cfg.first===3 && cfg.every===120,
+        '쉴드 배터리 설정이 3초/120초가 아니다: '+JSON.stringify(cfg));
+      campWipeField();
+      // 건물 하나(배터리)와 다친 아군 하나를 세운다
+      CAMPB._bld=[{x:1000,y:1000,hp:100,max:100,maxHp:100,dead:false,eid:'__b1',bk:'battery'}];
+      const bat=CAMPB._bld[0];
+      campWithStk(()=>{ strikeSpawnUnit('me','marine'); });
+      const pt=CAMPB.me.units[0]; skipIf(!pt,'환자를 못 세움');
+      pt.x=1000; pt.y=1000; pt.maxHp=100; pt.hp=20;
+      // ① 3초 전에는 안 쓴다
+      let fired=0;
+      for(let i=0;i<58;i++) fired+=campBldSkillStep(0.05);          // 2.9초
+      assert(fired===0,'3초 전에 벌써 썼다');
+      assert(pt.hp===20,'3초 전인데 체력이 올랐다: '+pt.hp);
+      // ② 3초를 넘기면 한 번 쓴다 — 체력 25% 회복
+      for(let i=0;i<4 && !fired;i++) fired+=campBldSkillStep(0.05);
+      assert(fired===1,'3초가 지났는데 안 썼다');
+      assert(Math.abs(pt.hp-45)<1e-6,'체력을 25% 만큼 안 채웠다: '+pt.hp);
+      // ③ 바로 또 쓰지 않는다 — 다음은 120초 뒤
+      pt.hp=20; let again=0;
+      for(let i=0;i<200;i++) again+=campBldSkillStep(0.05);          // 10초
+      assert(again===0,'쓴 직후 10초 안에 또 썼다 — 주기가 안 걸렸다');
+      assert(bat._bsT>100,'다음 주기가 120초 근처가 아니다: '+bat._bsT);
+      // ④ 대상이 없으면 120초를 버리지 않는다(짧게 다시 본다)
+      { const b2={x:1000,y:1000,hp:100,max:100,maxHp:100,dead:false,eid:'__b2',bk:'battery'};
+        CAMPB._bld=[b2]; pt.hp=pt.maxHp;                            // 멀쩡한 아군뿐
+        for(let i=0;i<70;i++) campBldSkillStep(0.05);
+        assert(b2._bsT<=CAMP_BLD_RETRY+1e-6,'대상이 없는데 120초를 통째로 버렸다: '+b2._bsT); }
+      // ⑤ 죽은 건물은 안 쓴다
+      { const b3={x:1000,y:1000,hp:0,max:100,maxHp:100,dead:true,eid:'__b3',bk:'battery'};
+        CAMPB._bld=[b3]; pt.hp=20;
+        let n=0; for(let i=0;i<200;i++) n+=campBldSkillStep(0.05);
+        assert(n===0,'죽은 건물이 스킬을 썼다');
+        assert(pt.hp===20,'죽은 건물이 아군을 회복시켰다'); }
+      // ⑥ 라운드가 다시 서면 주기가 초기화된다
+      //   ⚠ **본부로 잰다.** campBuildStructs 는 일반 건물을 매번 **새 객체**로 만들어서
+      //     초기화 줄이 없어도 _bsT 가 없다 — 그쪽으로 재면 헛검사가 된다(실제로 그랬다).
+      //     본부(CAMPB.me.base)만 객체를 **재사용**하므로 손으로 지워야 하고, 그래서 여기서 잰다.
+      { CAMPB.me.base._bsT=99;
+        campBuildStructs();
+        assert(CAMPB.me.base._bsT==null,
+          '라운드를 다시 세웠는데 본부의 주기가 남아 있다 — 「전투 시작 3초」가 안 성립한다: '+CAMPB.me.base._bsT); }
+      return '3초 뒤 첫 발 · 그 뒤 '+cfg.every+'초 · 대상 없으면 '+CAMP_BLD_RETRY+'초 뒤 재시도';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 💉 의무병 치유 — 「3초 치유 → 5초 쉬기」(사용자 확정 2026-08-28).
   //   ⚠ 화면에서 도는 치유는 `strikeHealStep`(의무병 전용)이다. `SKILLS.heal` 은
   //     `_stkApplyAlly` 가 의무병을 빼고 있어 안 탄다 — 둘을 헷갈리지 말 것.

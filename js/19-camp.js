@@ -866,9 +866,40 @@ function campBuildStructs(){
     const p = CAMP_DEF_BLD[e.bk] ? campG2W(e.x, e.y, W) : { x:sx(e.x), y:sy(e.y) };
     out.push({ x:p.x, y:p.y, hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
   }
+  for(const b of out) b._bsT = null;   // 🏢 건물 시전 주기는 **라운드마다** 다시 센다(본부는 객체를 재사용하므로 손으로 지운다)
   CAMPB._bld = out;
   return out.length;
 }
+// ══ 🏢 **건물이 스킬을 쓴다** (사용자 확정 2026-08-28 · HUNT_R1 §3-4-4) ═════════
+//   ⭐ 전투가 시작되면 **`first` 초 뒤 첫 발**, 그 뒤로는 **`every` 초마다 한 번** —
+//     라운드가 끝날 때까지. 초는 **건물마다 따로** 정한다(아래 표가 단일 소스).
+//   ⛔ `strikeSkillTick` 은 `me.units` 만 돈다 — 건물은 유닛이 아니라서 영영 안 쓴다.
+//     그래서 캠프가 제 스텝을 따로 돌린다.
+//   ⚠ 주기는 **라운드마다 초기화된다** — `campBuildStructs()` 가 라운드 시작에만 불리고
+//     그때 `_bsT` 를 지우기 때문이다. 「전투 시작 후 3초」가 그래서 성립한다.
+//   ⚠ 대상이 없으면 120초를 통째로 버리지 않는다 — 짧게(`CAMP_BLD_RETRY`) 다시 본다.
+const CAMP_BLD_SKILL = {
+  battery: { sk:'recharge', first:3, every:120 }   // 🔋 에테리얼 쉴드 배터리 — 체력 25% 회복
+};
+const CAMP_BLD_RETRY = 1;    // 대상이 없을 때 다시 보는 간격(초)
+function campBldSkillStep(dt){
+  if(!CAMPB || !CAMPB._bld || typeof SKILLS === 'undefined') return 0;
+  let n = 0;
+  for(const b of CAMPB._bld){
+    if(!b || b.dead || (b.hp || 0) <= 0) continue;
+    const cfg = CAMP_BLD_SKILL[b.bk]; if(!cfg) continue;
+    const sk = SKILLS[cfg.sk]; if(!sk) continue;
+    if(b._bsT == null) b._bsT = cfg.first;          // 전장에 선 순간부터 첫 발까지
+    b._bsT -= dt; if(b._bsT > 0) continue;
+    let hit = false;
+    campWithStk(function(){
+      const t = (typeof _stkPickAlly === 'function') ? _stkPickAlly(b, CAMPB.me, sk, cfg.sk) : null;
+      if(!t) return;
+      hit = (typeof _stkApplyAlly === 'function') && _stkApplyAlly(b, t, sk, cfg.sk, dt); });
+    b._bsT = hit ? cfg.every : CAMP_BLD_RETRY;
+    if(hit) n++; }
+  return n; }
+
 // 살아 있는 내 건물들 — 패배 판정과 표적 선택이 같은 목록을 본다(단일 소스)
 function campBldAlive(){
   if(!CAMPB || !CAMPB._bld) return [];
