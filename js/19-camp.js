@@ -537,7 +537,10 @@ function campTreeRender(){
   const pt = el.querySelector('.ctPts'); if(pt) pt.textContent = campNum(C ? (C.rbPts || 0) : 0);
   campTreeInfo();
 }
-// 큰 수 표기 — 재화 바와 같은 규칙이 있으면 그것을 쓴다
+// 큰 수 표기 — **재화 바와 같은 규칙**을 쓴다(`fmtCur` · js/12-appshell.js).
+// ⛔ 여기서 억/만 같은 표기를 다시 짜지 말 것 — 표기가 두 벌이 되면 화면마다 달라진다.
+//   실제로 병합 중에 사본이 하나 더 생겨 파일이 통째로 죽었다(2026-08-28 · campNum 중복 선언).
+//   ⚠ 그 사본은 `fmtNum`/`numAbbr` 를 먼저 찾았는데 **이 저장소에 없는 이름**이었다.
 function campNum(n){ if(typeof fmtCur === 'function') return fmtCur(n);
   return Math.floor(n).toLocaleString('en-US'); }
 
@@ -3182,14 +3185,6 @@ if(typeof document !== 'undefined'){
 }
 
 function campMineOpen(){ openCampMine(); }   // 별칭 — 호출부가 어느 이름을 쓰든 통하게
-
-// 큰 수를 읽히게 — 이미 있는 것이 있으면 그것을 쓴다(표기가 두 벌이 되면 화면마다 달라진다)
-function campNum(n){
-  if(typeof fmtNum === 'function') return fmtNum(n);
-  if(typeof numAbbr === 'function') return numAbbr(n);
-  n = Math.floor(n || 0);
-  return n >= 1e8 ? (n/1e8).toFixed(1)+'억' : n >= 1e4 ? (n/1e4).toFixed(1)+'만' : n.toLocaleString();
-}
 
 const CAMP_MINE_UPGS = [
   { k:'tap',    nm:'터치 강화', why:'한 번 누를 때 캐는 양' },
