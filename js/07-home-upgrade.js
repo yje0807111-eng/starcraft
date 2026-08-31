@@ -481,7 +481,7 @@ const NAV_TREE=[
   { k:'reb', label:'환생', ico:'upg', go:()=>campRebEnter('info'),
     cur:()=>(campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null)),
     reset:()=>campRebEnter('info'), subs:[
-      { k:'info', label:'정보',      ico:'upg',  act:()=>campRebEnter('info') },
+      { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
       { k:'tree', label:'업그레이드', ico:'flag', act:()=>campRebEnter('tree') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.

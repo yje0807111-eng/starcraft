@@ -378,11 +378,11 @@ async function groupLobby(){
     { const c=campState(); c.earn=0; c.earnTap=0; c.earnAuto=0; c.playS=0; c.tapped=0; }
     return '터치·자동·섞임·시간 ok'; });
 
-  // 🔁 **환생 구역은 하위 둘 — 정보 · 업그레이드** (2026-08-31 사용자 확정)
+  // 🔁 **환생 구역은 하위 둘 — 환생 · 업그레이드** (2026-08-31 사용자 확정)
   //    ⭐ 둘 다 **하단 네비가 보인 채**로 열린다. 그래야 탭을 오갈 수 있다.
   //    ⛔ 예전엔 두 화면이 `inset:0 · z-index:120` 이라 네비(62)를 통째로 덮었다 —
   //      트리에 들어가면 나올 길이 「닫기」뿐이었다.
-  await step('환생 구역: 정보·업그레이드 두 탭 · 네비 자리를 비운다', async()=>{
+  await step('환생 구역: 환생·업그레이드 두 탭 · 네비 자리를 비운다', async()=>{
     skipIf(typeof campRebEnter!=='function'||typeof navGo!=='function','환생 구역 없음');
     const nb=document.getElementById('navBar');
     skipIf(!nb,'네비가 없음');
@@ -407,8 +407,8 @@ async function groupLobby(){
     // ① 네비에서 들어가면 하위 둘이 뜬다
     navGo('reb');
     { const c=cells();
-      assert(c.indexOf('정보')>=0 && c.indexOf('업그레이드')>=0,
-        '하위가 정보·업그레이드가 아니다: '+c.join('|')); }
+      assert(c.indexOf('환생')>=0 && c.indexOf('업그레이드')>=0,
+        '하위가 환생·업그레이드가 아니다: '+c.join('|')); }
     assert(campRebIsOn(),'정보 탭인데 환생 화면이 안 열렸다');
     // ② 업그레이드 = 환생 트리 · 서로 배타
     navSub('tree');
@@ -437,7 +437,7 @@ async function groupLobby(){
     assert(document.getElementById('phone').classList.contains('artBg'),
       '환생 화면이 키 아트를 안 켠다');
     campRebClose(); campTreeClose();
-    return '정보·업그레이드 · 네비 자리 '+gap('campReb')+' · 서로 배타';
+    return '환생·업그레이드 · 네비 자리 '+gap('campReb')+' · 서로 배타';
   });
 
   // 🔁 환생 화면 — HUNT_R1.md §4-2-0 이 요구한 것이 실제로 화면에 있는가.
@@ -8682,8 +8682,8 @@ async function groupLobby(){
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
       assert(reb && reb.subs.length===2,'환생 하위 칸(정보·업그레이드)이 없음');
-      // ⭐ 2026-08-31 사용자 확정 — 「정보」(지금 환생하면 어떻게 되나) · 「업그레이드」(환생 트리)
-      assert(reb.subs.map(x=>x.label).join(',')==='정보,업그레이드','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「업그레이드」(환생 트리)
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,업그레이드','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.
