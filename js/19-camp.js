@@ -641,11 +641,13 @@ function campRebRender(){
     // ── 버튼 ──
     + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>환 생</button>'
     // ── 💳 환생 팩 — 사면 **그 뒤로 계속** 2배. 위 두 숫자에 이미 반영돼 있다 ──
-    //    ⛔ 두 번째 큰 버튼을 만들지 말 것 — 주 동작은 「환생」 하나다(조용한 줄로 둔다).
+    //    ⭐ **버튼 구역**이다(2026-08-31 사용자 확정 · 옛 「조용한 한 줄」에서 승격).
+    //      위계는 「환생」보다 한 단 아래 — 같은 얼굴이되 낮고 작다. 색은 보라(현질)를 지킨다.
+    //    ⚠ 산 뒤(`.on`)는 **버튼이 아니라 상태 표시**다 — 누를 것이 없으니 button 을 쓰지 않는다.
     + (campRebPackOn()
         ? '<div class="crPk on">환생 팩 ×' + campRebPackX().toFixed(0) + ' 적용 중</div>'
-        : '<div class="crPk" onclick="campRebToShop()">환생 팩 — 배수·포인트가 <b>계속 2배</b>'
-          + '<u>보러 가기</u></div>');
+        : '<button class="crPk" type="button" onclick="campRebToShop()">'
+          + '환생 팩 — 배수·포인트가 <b>계속 2배</b><u>보러 가기</u></button>');
 }
 // 환생 팩을 보러 상점으로 — 팩은 **추천 칸**에 있다(젬 칸이 아니다)
 function campRebToShop(){ campRebClose();

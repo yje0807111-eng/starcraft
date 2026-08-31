@@ -462,8 +462,13 @@ async function groupLobby(){
       assert(!campRebPackOn(),'스모크 시작 상태에서 팩을 이미 갖고 있다');
       assert(pk.textContent.indexOf('2')>=0,'팩 줄에 배수가 안 보임');
       assert(/campRebToShop/.test(pk.getAttribute('onclick')||''),'팩 줄이 상점으로 안 보낸다');
-      // ⛔ 두 번째 큰 버튼을 만들지 말 것 — 주 동작은 「환생」 하나다
+      // ⭐ 팩은 **버튼 구역**이다(2026-08-31 사용자 확정) — 다만 위계는 「환생」보다 한 단 아래.
+      //   ⛔ 주 동작이 둘로 보이면 안 된다: 높이가 「환생」보다 낮아야 한다.
       assert(document.querySelectorAll('#campReb .crGo').length===1,'주 버튼이 하나가 아님');
+      { const go=document.querySelector('#campReb .crGo');
+        const hp=pk.getBoundingClientRect().height, hg=go?go.getBoundingClientRect().height:0;
+        if(hp>0 && hg>0) assert(hp < hg,
+          '팩 버튼이 주 동작만큼 크다: 팩 '+Math.round(hp)+'px · 환생 '+Math.round(hg)+'px'); }
       // ⭐ 팩을 사면 **위의 두 숫자가 실제로 2배**가 되어야 한다 — 곱이 배선돼 있는지 잰다
       const m0=campRebMulGain(), p0=campRebPtGain();
       const packs=(typeof campPacks==='function')?campPacks():null;
