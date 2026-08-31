@@ -2551,12 +2551,41 @@ async function groupLobby(){
         assert(m.maxHp===5 && m.hp===5,'레인저 체력이 설계값(5)이 아니다: '+m.maxHp);
         assert(m.dmg===1,'레인저 공격이 설계값(1)이 아니다: '+m.dmg);
         assert(Math.abs(m.cdMax-1.0)<1e-9,'레인저 주기가 설계값(1.0)이 아니다: '+m.cdMax);
-        assert(Math.abs(m.rng-4*CAMP_STAT_TILE)<1e-6,'레인저 사거리가 설계값(4칸)이 아니다: '+m.rng);
+        // 🪜 사거리는 **표에서 읽어** 검사한다 — 값을 손으로 박으면 계단을 조정할 때마다 여기가 깨진다
+        assert(Math.abs(m.rng-CAMP_UNIT_STAT.marine.r*CAMP_STAT_TILE)<1e-6,
+          '레인저 사거리가 설계표('+CAMP_UNIT_STAT.marine.r+'칸)와 다르다: '+m.rng);
         assert(!campDesignStat(m),'같은 유닛에 두 번 걸렸다');
         // ⛔ 공용 표는 그대로여야 한다
         assert(U.marine.dmg===uDmg0 && U.marine.hp===uHp0,'U 표를 건드렸다 — 멀티 대전이 바뀐다');
         // §3-1-1 조정분이 들어 있는가
         assert(CAMP_UNIT_STAT.racer.a===2.5 && CAMP_UNIT_STAT.racer.c===0.8,'레이서 조정분(2.5·0.8)이 없다');
+        // 🪜 **사거리 = 테크 계단** (2026-08-31 사용자 확정)
+        //   ⛔ 예전엔 T1 레인저 4.0 이 T2 레이서 3.5 보다 길었다 — 테크를 올릴 이유가 없었다.
+        //   ⚠ 티어는 코드에 표가 없다(TECH_TREE 의 produces[].req 사슬이 티어다).
+        //     여기서는 **그 사슬을 손으로 옮겨 적은 목록**으로 지킨다 — 유닛이 추가되면 같이 넣을 것.
+        //   ⛔ 근접·비전투·공성전차(예외)는 계단 밖이다.
+        { const LADDER=[ ['marine',1], ['racer',2], ['skyguard',3], ['goliath',3],
+                         ['hellfire',4], ['dreadnought',5], ['ghost',5] ];
+          let prevT=0, prevR=0, prevId='';
+          for(const [id,t] of LADDER){
+            const d=CAMP_UNIT_STAT[id];
+            assert(d && d.r>0, id+' 이 설계표에 없거나 사거리가 없다');
+            if(t>prevT) assert(d.r>=prevR,
+              '계단이 거꾸로다: T'+t+' '+id+' '+d.r+'칸 < T'+prevT+' '+prevId+' '+prevR+'칸');
+            if(d.r>prevR){ prevR=d.r; prevId=id; }
+            prevT=t; }
+          // 계단이 실제로 **오르막**인지 (같기만 하면 계단이 아니다)
+          assert(CAMP_UNIT_STAT.ghost.r > CAMP_UNIT_STAT.marine.r,
+            '최종 테크가 T1 보다 사거리가 길지 않다');
+          // 공성전차는 계단 밖 예외 — 그래도 최장이어야 한다(원작 감각)
+          assert(CAMP_UNIT_STAT.tank.r >= CAMP_UNIT_STAT.ghost.r,
+            '공성전차가 최장이 아니다: '+CAMP_UNIT_STAT.tank.r+' vs 저격수 '+CAMP_UNIT_STAT.ghost.r);
+          // ⛔ 근접은 계단에 딸려 올라가면 안 된다
+          for(const id of ['machinegun','snapper','blade','dark_templar','ultralisk','stinger'])
+            assert(CAMP_UNIT_STAT[id].r<=1.5, '근접 유닛의 사거리가 늘었다: '+id+' '+CAMP_UNIT_STAT[id].r); }
+        // 🎯 적 사거리 상한의 예비값이 **표에서 유도**되는가(손으로 박은 168 이 되살아나지 않았나)
+        assert(Math.abs(campFoeRngFb()-CAMP_UNIT_STAT.marine.r*CAMP_STAT_TILE*CAMP_FOE_RNG_K)<1e-6,
+          '적 사거리 예비값이 레인저 표와 어긋난다: '+campFoeRngFb());
         assert(CAMP_UNIT_STAT.ghost.a===4,'저격수 조정분(4)이 없다');
         m.dead=true; }
       // 🎯 **적 사거리는 아군 최소 사거리보다 짧다** (2026-08-27 · 캠프 전용)
