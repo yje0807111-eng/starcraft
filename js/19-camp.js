@@ -2415,6 +2415,12 @@ function campMountView(){
   if(mc){
     if(!_campMarine) _campMarine = { parent: mc.parentNode, next: mc.nextSibling };
     if(mc.parentNode !== hs) hs.insertBefore(mc, vb.nextSibling);   // 맵 바로 위(건물이 바닥 위에 선다)
+    // 🧹 **빌린 것은 보이는 상태로 되돌려 놓고 시작한다**(CLAUDE.md 「잔상 금지」).
+    //   앞 화면이 style.display='none' 로 꺼 두면(renderEmptySlot·strikeHideNemoChrome·setModel3d)
+    //   캠프에서도 꺼진 채다 — 3D 건물이 안 보이고, **진입 줌 애니도 안 돈다**
+    //   (display:none 요소에는 CSS 애니메이션이 안 걸린다 — 실제로 그렇게 깨졌다).
+    //   ⚠ 3D 를 끈 설정(G.opt.model3d===false)은 존중한다.
+    if(!(typeof G !== 'undefined' && G && G.opt && G.opt.model3d === false)) mc.style.display = '';
   }
   // ⭐ **하단 시트도 맵 밖으로 꺼낸다.** #btSheet 은 원래 #vBuild 의 자식이라, 맵 높이를
   //   시트만큼 줄이면 시트도 맵 기준이라 같이 끌려 올라간다 — 서로 밀어내는 순환이다
@@ -2752,6 +2758,11 @@ function campEnterAnim(){
       _campMs('--campInDur', 2.3) + 400); }
   const ms = _campMs('--campInDur', 2.3);
   for(const e of els){ if(!e) continue;
+    // ⛔ display:none 요소에는 CSS 애니메이션이 **안 걸린다.** 공용 3D 캔버스(#cvMarine)는
+    //    프레임 루프(renderBuildTab)가 3D 준비 전이면 꺼 두므로, 여기서 켜 두지 않으면
+    //    **맵만 다가오고 3D 는 가만히 있는다**(3D 가 늦게 뜨면 건물이 도중에 뚝 나타난다).
+    //    ⚠ 3D 를 끈 설정은 존중한다 — 그땐 어차피 그릴 것이 없다.
+    if(!(typeof G !== 'undefined' && G && G.opt && G.opt.model3d === false)) e.style.display = '';
     clearTimeout(e._campInT);
     if(e._campInEnd){ e.removeEventListener('animationend', e._campInEnd); e._campInEnd = null; }
     e.classList.remove('campIn'); void e.offsetWidth;   // 재생 중이어도 처음부터 다시

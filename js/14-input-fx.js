@@ -934,7 +934,9 @@ function renderBuildTab(dt){
         for(const e of (G.tech.ents||[])){ if(e.type==='worker'&&e._carry&&!e._inGas){ const _cf=e.face||0, _cd=0.014; list.push({uid:'carry_'+e.eid, id:((e._cKind||e._gKind)==='gas'?'res_ec':'res_cc'), x:((e.x+Math.sin(_cf)*_cd)-_v.x)*_v.zoom+0.5, y:((e.y+Math.cos(_cf)*_cd)-_v.y)*_v.zoom+0.5, yoff:-3, hidden:techFogHidden(e.x,e.y), z:_zOf(e.y,false)+1}); } }   // 운반 청크 = 일꾼 정면(진행 방향) 앞·손 높이 — 앞에서 들고 가는 느낌
       }
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
-    } else if(mcv) mcv.style.display='none';
+    // ⛔ 캠프 진입 애니(.campIn) 중에는 끄지 않는다 — 끄는 순간 그 프레임에 애니가 죽어
+    //    맵만 다가오고 3D 층은 멈춘 채로 남는다(3D 가 늦게 뜨면 건물이 도중에 뚝 나타난다).
+    } else if(mcv && !mcv.classList.contains('campIn')) mcv.style.display='none';
     const _fcv=document.getElementById('cvFx');   // 이동 트레일(메인과 동일 이펙트) — 3D 표시 중일 때만
     if(_fcv){ if(mcv.style.display==='block' && typeof techMoveTrails==='function'){ _fcv.style.display='block'; techMoveTrails(dt); } else _fcv.style.display='none'; }
   }
