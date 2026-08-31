@@ -391,6 +391,16 @@ async function groupLobby(){
     //   두 화면이  여야 네비 자리가 빈다. 0px 이면 네비를 통째로 덮는다.
     const gap=(id)=>{ const el=document.getElementById(id); if(!el) return null;
       const b=getComputedStyle(el).bottom; return (b==='auto') ? '0px' : b; };
+    // ⭐ **키 아트가 네비를 덮지 않는다**(2026-08-31 사용자 신고: 「어두워지면서 하단까지 가려진다」).
+    //   #titleBg 는 inset:0 이고 artLift 로 z-index 119 가 된다 — 네비(62)가 그 아래로 잠기고
+    //   ::after 의 딤까지 얹혀 어두워진다. pointer-events:none 이라 **눌리기는 하지만 안 보인다.**
+    //   ⛔ 키 아트를 bottom 으로 자르는 것으로는 안 된다 — 호흡 애니메이션이 scale 을 걸어 8px 이 남는다.
+    { const ph=document.getElementById('phone'), tb=document.getElementById('titleBg');
+      if(ph && tb){ const had=ph.classList.contains('artLift');
+        ph.classList.add('artLift');
+        const nz=+getComputedStyle(nb).zIndex, tz=+getComputedStyle(tb).zIndex;
+        if(!had) ph.classList.remove('artLift');
+        assert(nz > tz, '키 아트(z '+tz+')가 네비(z '+nz+') 위에 있다 — 네비가 어둠에 잠긴다'); } }
     for(const id of ['campReb','campTree']){
       const g=gap(id);
       assert(g && g!=='0px', id+' 이 네비 자리를 안 비운다(bottom '+g+') — 네비가 통째로 가려진다'); }
