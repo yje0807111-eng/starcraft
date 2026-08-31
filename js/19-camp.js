@@ -1214,6 +1214,25 @@ function campFoeId(){
 }
 // 지금 있는 적을 내 병력이 때릴 수 있나 — 하나도 못 때리면 그 판은 끝이 없다.
 // ⚠ 누운(부활 대기) 병력도 센다 — 곧 일어나므로 성급하게 지면 안 된다.
+// ⚔ **싸울 수 있는 아군** — 살아 있고, 공격력이 있고, 때릴 수 있는 레이어가 하나라도 있는 것.
+//   ⭐ **판정을 여기 한 곳에 모은다**(2026-08-31). 예전엔 campCanHitFoes 안에만 있었고
+//     승패 판정은 `campAlive('me') > 0`(**모든** 살아있는 유닛)을 따로 썼다. 둘이 어긋나서
+//     **전투 유닛이 다 눕고 의무병만 서 있으면 본부가 멀쩡한데도 즉시 탈락**했다
+//     (재현: 본부 750/750 · 적 1 · 의무병 1 → 한 프레임 만에 던전 0 으로 탈락).
+//     게다가 뜨는 말이 「✈ 공중을 칠 수 없어 탈락」이라 원인을 가리켰다.
+//   ⚠ 공격을 못 하는 유닛은 세지 않는다 — 의무병은 사거리 0 · 공격력 0 이라 아무리 많아도 못 죽인다.
+//     ⭐ _sbAtkMode 가 비전투(FXLAB_NOATK)를 {air:false,gnd:false} 로 돌려주므로 그것도 함께 걸린다.
+//   ⛔ 누운 병력은 세지 않는다(2026-08-29) — 라운드 부활로 바뀐 뒤 **이번 라운드에는 못 일어난다.**
+//     옛 주석의 「곧 일어나므로 센다」는 30초 부활 시절의 전제다.
+function campArmedUnits(){
+  if(!CAMPB || !CAMPB.me) return [];
+  const atk = function(u){
+    if(u._atk) return u._atk;
+    return (typeof _sbAtkMode === 'function') ? _sbAtkMode({ id:u.id, gmodel:u.gm }) : { air:true, gnd:true }; };
+  return CAMPB.me.units.filter(function(u){
+    if(u.dead || (u.dmg || 0) <= 0) return false;
+    const a = atk(u); return !!(a.air || a.gnd); }); }
+
 function campCanHitFoes(){
   if(!CAMPB) return true;
   const foes = CAMPB.ai.units.filter(function(u){ return !u.dead; });
@@ -1234,13 +1253,7 @@ function campCanHitFoes(){
       ? _sbAtkMode({ id:u.id, gmodel:u.gm })
       : { air:true, gnd:true };
   };
-  // ⚠ 공격을 못 하는 유닛은 세지 않는다 — 의무병은 사거리 0 · 공격력 0 이라 아무리 많아도 못 죽인다.
-  //   ⭐ _sbAtkMode 가 비전투(FXLAB_NOATK)를 {air:false,gnd:false} 로 돌려주므로 그것도 함께 걸린다.
-  const canFight = function(u){ if((u.dmg || 0) <= 0) return false; const a = atkOf(u); return !!(a.air || a.gnd); };
-  // ⛔ 누운 병력은 세지 않는다(2026-08-29) — 라운드 부활로 바뀐 뒤 **이번 라운드에는 못 일어난다.**
-  //   옛 주석의 「곧 일어나므로 센다」는 30초 부활 시절의 전제다. 그대로 두면 대공이 전부
-  //   누웠을 때 「때릴 수 있다」고 판단해 라운드가 영영 안 끝난다.
-  const mine = CAMPB.me.units.filter(function(u){ return !u.dead && canFight(u); });
+  const mine = campArmedUnits();
   if(!mine.length) return false;                // 때릴 수 있는 병력이 하나도 없다 = 끝이 없다
   for(const f of foes){
     const fa = isAir(f);
@@ -1364,6 +1377,13 @@ function campAlertApply(){
 //   그 이동을 그대로 두고 위치만 덮어쓰면 **겹침 회피를 안 탄다**(유닛이 포개진다).
 //   그래서 프레임 시작 위치로 되돌린 뒤 **strikeMoveToward 로 다시 민다** — 그 함수가
 //   stepUnitMove(주변 회피·신전 회피)를 타므로 복귀도 전진과 똑같은 이동 규칙을 쓴다.
+/* ⛔⛔ 아래 넷은 **더 이상 배선돼 있지 않다** (2026-08-31 · `js/21-camp-battle.js` 로 옮겼다).
+ *   campPostSnap · campPostStep · campEngageStep · campLeash — 셋이 오토배틀 이동과
+ *   매 프레임 싸워 유닛이 덜덜 떨던 구조다(방향 뒤집힘 96회/유닛 · 순수 오토배틀 0.9회).
+ *   지금은 표적 선정·자리·이동·사격이 campStepUnits 한 곳에 있고 아무도 위치를 덮어쓰지 않는다.
+ *   ⚠ **되살리지 말 것.** 되살리면 미는 주체가 다시 둘이 된다 —
+ *     스모크 「캠프: 미는 주체가 하나다」가 campCombatStep 소스를 훑어 막는다.
+ *   ⚠ 지우지 않고 남겨 둔 것은 유보 규칙 때문이다(CLAUDE.md 🗄 다락). 옛 값·주석에 실측 근거가 있다. */
 function campPostSnap(){
   if(!CAMPB || !CAMPB.me) return;
   for(const u of CAMPB.me.units){ if(u.dead) continue; u._sx = u.x; u._sy = u.y; } }
@@ -1551,7 +1571,23 @@ const CAMP_ENG_TICK = 0.4;
 //   ⭐ 작을수록 제자리 방어에 가깝고(고정 방어가 뜻을 갖는다), 클수록 적을 따라 들어간다.
 //   ⚠ 목줄(CAMP_LEASH 1300)과 다른 것이다 — 목줄은 「끌려간 뒤 잘라내는」 안전장치이고
 //     이건 애초에 **그만큼만 나가게 하는** 규칙이다.
-const CAMP_ENG_OUT = 500;
+// ⭐ **미는 주체가 하나가 된 뒤 다시 잰 값**(2026-08-31 · 500 → 1200).
+//   ⛔ 옛 「500 이 최적」은 **그 제한이 실제로는 안 지켜지던** 판에서 나온 값이다 —
+//     오토배틀(strikeStepUnits)의 **무제한 추격**이 매 프레임 먼저 돌았고, campEngageStep 이
+//     그것을 무르지 않고 넘긴 유닛(목표에 이미 도착한 유닛)은 그대로 계속 나갔다.
+//     그러니 화면에서는 500 을 훌쩍 넘어 싸우고 있었고, 「500」은 이름뿐이었다.
+//   ⭐ 이제는 목표를 정할 때 한 번 자르고 아무도 덮어쓰지 않으므로 **글자 그대로 지켜진다.**
+//     그래서 같은 500 을 두면 병력이 자리에 묶여 화력이 반토막 났다(벤치 D1R10 → D1R5).
+//   📊 30분 벤치 실측 (던전 1 · 같은 조건):
+//        500 → D1R5 · 800 → D1R7 · **1200 → R13·R9·R8** · 1800 → D1R7
+//      옛 구조의 기준선은 R10·R8·R9·R8(4판) 이다 — 1200 이 그 자리를 되찾는 값이다.
+//      ⚠ 1800 에서 도로 떨어진다 — 너무 나가면 흩어져 서로 지원 사격이 안 된다.
+//   ⛔ **한 판으로 고르지 말 것.** 같은 1200 에서 R8~R13 이 나온다. 처음에 기준선을 한 판만
+//     (R10) 재고 「1200 이 더 좋다」고 읽었다가, 네 판을 재니 기준선도 R8~R10 이었다.
+//     화력은 기준선과 **같고**, 달라진 것은 떨림(96.4 → 6.5회/유닛)이다.
+//   ⚠ 이 값은 **방어 건물의 뜻과 맞바꾼 것이다** — 전선이 넓게 움직일수록 벙커·포탑이
+//     서 있는 자리의 의미가 옅어진다. 줄이려면 화력 손실을 다른 축에서 메워야 한다.
+const CAMP_ENG_OUT = 1200;
 function campEngageStep(dt){
   if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
   if(typeof strikeFindUnit !== 'function') return 0;
@@ -1956,8 +1992,17 @@ function campRegroup(){
 //   ⭐ 그래서 **발견자에게서 먼 아군은 자기 자리를 지킨다** — 한쪽으로 우르르 몰리지 않고
 //     싸움이 난 구역의 병력만 거든다.
 //   ⛔ 전원에게 넓은 인식을 주면(옛 방식) 판 전체가 한 덩어리로 움직여, 반대쪽이 통째로 빈다.
-const CAMP_ACQ_BASE = 900;         // 혼자 볼 수 있는 거리(엔진 기본 560~900 의 위끝)
-const CAMP_ACQ_ALERT = 1500;       // 전파받았을 때 보는 거리
+// ⭐ **인식은 「나갈 수 있는 거리」보다 작아야 한다** (2026-08-31 사용자 지적 · 실측으로 확정).
+//   ⛔ 옛 값(900 / 1500)은 **실효 1260 / 2100** 이었다(STK_ACQ_FAR 1.4 가 곱해진다).
+//     이동 제한(1200)보다 커서 **적이 화면에 나타나는 순간 전군이 표적을 잡고 제한 끝까지
+//     우르르 올라갔다** — 「지키다가 맞으러 나간다」가 아니라 「생성되자마자 돌격」이었다.
+//   📊 실측(30초 · 11기): 알아챈 거리 1822 · 자리에서 벗어난 거리 평균 590 · 최대 1353.
+//     인식을 조이면 → 알아챈 거리 601 · 벗어난 거리 평균 **149** · 최대 590.
+//   ⭐ 그래서 인식이 곧 실질 제한이 된다. CAMP_ENG_OUT 은 이제 「최후의 안전선」이다.
+//   ⚠ 전파(campAlertTick)는 그대로 둔다 — 「같이 싸우는 느낌」이 거기서 나온다.
+//     다만 전파받은 인식도 함께 조여야 뜻이 있다(안 그러면 한 명이 보는 순간 전원이 멀리 본다).
+const CAMP_ACQ_BASE = 450;         // 혼자 볼 수 있는 거리 (실효 ×1.4 = 630)
+const CAMP_ACQ_ALERT = 750;        // 전파받았을 때 보는 거리 (실효 ×1.4 = 1050)
 const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
@@ -1983,13 +2028,10 @@ function campCombatStep(dt){
   //     「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 아무리 늘려도 소용없었다.
   //   ⭐ 그래서 이동·복귀·부활만 굴린다. 적이 없으니 전투는 저절로 일어나지 않는다.
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
-    campPostSnap();                                       // 🪧 되돌리기 전 위치(campPostStep 이 쓴다)
     const _g4 = CAMPB.me.units.slice();                   // 🩹 걷히기 전 명부(아래 campCatchDown)
-    const _gb = campBldSnap();                            // 💥 건물 피해 배율(아래 campBldAmp)
-    campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
-    campBldAmp(_gb);
+    campWithStk(() => { campStepUnits(dt); CAMPB.t += dt; });
     // ⛔ **여기에도 campCatchDown 이 있어야 한다** (2026-08-30 · 병력 누수의 원인).
-    //   strikeStepUnits 는 끝에서 죽은 유닛을 배열에서 **걷어낸다**(18-strike.js). 그걸 붙잡지
+    //   campStepUnits 는 끝에서 죽은 유닛을 배열에서 **걷어낸다**. 그걸 붙잡지
     //   않으면 그 유닛은 _down 에도 안 들어가 **명부에서 통째로 사라진다** — 부활도 못 하고
     //   campBattleClose 가 기지로 되돌리지도 못한다.
     //   ⚠ 「숨 고르기엔 적이 없으니 안 죽는다」가 아니다 — 지속 피해(역병·방사능)와 붕괴
@@ -1997,9 +2039,7 @@ function campCombatStep(dt){
     //   ⭐ 실측(2026-08-30 브라우저): 숨 고르기 중 한 기를 죽였더니 명부가 4 → 3 이 됐고
     //     라운드가 시작돼도 3 그대로였다. 벽 측정에서 병력이 88 → 85 로 줄던 것이 이것이다.
     campCatchDown(_g4);
-    campPostStep(dt);                                     // 🪧 자기 자리로 (회피를 타고 걸어온다)
     campBunkerStep(dt);                                   // 🧱 벙커에 탄 유닛은 그 자리에 (숨 고르기에도 유지)
-    campLeash();
     // ⛔ 여기서 부활시키지 않는다 — **부활은 라운드 단위**다(campRoundRevive · 2026-08-29).
     //   숨 고르기 끝에서 한 번에 일으키므로, 여기서 또 부르면 두 벌이 된다.
     //   ⚠ 옛 시간 부활(campReviveStep)은 없앴다 — 그게 후반 발산의 동력이었다.
@@ -2012,19 +2052,17 @@ function campCombatStep(dt){
     return; }
   if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campRoundRevive(); campSpawnFoes(); return; }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
-  const _b4 = CAMPB.me.units.slice();   // 🩹 strikeStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
-  campPostSnap();       // 🪧 되돌리기 전 위치를 떠 둔다(아래 campPostStep 이 쓴다)
-  const _bb = campBldSnap();   // 💥 건물 피해 배율 — 프레임 전 체력을 떠 둔다
-  campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
-  campBldAmp(_bb);      // 💥 적이 건물에 넣은 만큼을 ×CAMP_FOE_BLD_MUL 로 키운다
+  const _b4 = CAMPB.me.units.slice();   // 🩹 campStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
+  // ⚔ **캠프가 제 프레임을 통째로 소유한다**(`js/21-camp-battle.js` · 2026-08-31).
+  //   ⛔ 예전엔 strikeStepUnits 를 돌린 **뒤에** 그 결과를 되돌리고 다시 밀었다 —
+  //     campEngageStep(되돌리기) · campPostStep(복귀) · campLeash(위치 자르기) 셋이
+  //     오토배틀 이동과 매 프레임 싸워 유닛이 덜덜 떨었다(방향 뒤집힘 96회/유닛 ·
+  //     순수 오토배틀은 0.9회). 상수로 네 번 고쳐 보고 네 번 다 되돌렸다.
+  //   ⭐ 지금은 표적 선정·자리·이동·사격이 campStepUnits 한 곳에 있다. 자리 제약은
+  //     「목표를 정할 때」 걸리고, 이동은 프레임당 한 번뿐이라 무를 것이 없다.
+  campWithStk(() => { campStepUnits(dt); CAMPB.t += dt; });
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
-  // ⚔ 싸우는 유닛의 자리 잡기 — **CAMP_ENG_TICK 마다 한 번만** 민다(매 프레임이 아니다).
-  //   ⛔ 매 프레임이면 오토배틀 이동과 싸워 떨렸고(29.9회/유닛), 아예 끄면 앞줄만 닿아
-  //     화력이 반토막 났다(D1R18 → D1R11). 간격을 두는 것이 그 사이다.
-  campEngageStep(dt);
-  campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 빠르게 돌아온다)
   campBunkerStep(dt);   // 🧱 벙커에 탄 유닛은 그 자리에 붙들고, 맞은 만큼을 벙커가 대신 받는다
-  campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
@@ -2048,8 +2086,10 @@ function campCombatStep(dt){
   //     무력해진다(브라우저 실측 2026-08-30: 전멸 프레임에 곧바로 전장이 닫혔다).
   //   ⭐ 이 규칙의 뜻은 「**때릴 병력은 있는데** 원리상 안 닿는다」(공중 전용 적)이다.
   //     병력이 0 이면 적이 건물·본부를 부수며 판이 나아가므로 멈추지 않는다.
+  // ⛔ **`campAlive('me') > 0` 을 쓰지 말 것** — 그러면 의무병 하나가 「병력이 있다」로 세어져
+  //   전투 유닛이 다 누운 판이 곧바로 탈락으로 간다(2026-08-31 재현). 두 판정은 **같은 자**를 써야 한다.
   const _noHit = CAMPB._started && !campFoesPending()
-    && campAlive('me') > 0 && !campCanHitFoes();
+    && campArmedUnits().length > 0 && !campCanHitFoes();
   // 🏢 **패배 = 본부 파괴 하나뿐**(2026-08-30 사용자 확정).
   //    ⭐ 전멸은 패배가 아니다. 병력이 다 누우면 적이 **길목의 건물을 차례로 부수며** 밀고
   //      들어오고, 마지막에 본부가 무너질 때 진다. 그 사이 건물들이 시간을 벌어 준다.
