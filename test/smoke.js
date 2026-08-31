@@ -1302,6 +1302,31 @@ async function groupLobby(){
     assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
+  // 🛟 **프레임에서 예외가 나도 화면이 멈추지 않는다** (2026-08-31)
+  //    ⛔ 예전엔 재예약(requestAnimationFrame)이 try 밖 **아래**에 있어서, 안에서 예외가 한 번
+  //      나면 그 줄에 도달을 못 했다 → 캠프가 그대로 굳는다. 그런데 250ms 타이머는 계속 돌아
+  //      재화 바 숫자만 올라가서 **살아 있는 것처럼 보였다** — 그게 더 나쁘다.
+  //    ⚠ 예외를 삼키는 것이 아니다 — 비동기로 다시 던져 window.onerror 가 그대로 본다.
+  //      이 검사에서만 `__campErrQuiet` 로 그 되던짐을 막는다(_campTapForce 와 같은 시험용 문).
+  await step('캠프: 프레임에서 예외가 나도 루프가 안 끊긴다', async()=>{
+    skipIf(typeof campFrame!=='function'||typeof campIsOn!=='function'||!campIsOn(),'캠프가 안 열려 있다');
+    assert(typeof CAMP_ERR_GIVEUP!=='undefined','프레임 예외 복구가 없다 — 한 번의 예외로 화면이 영구 정지한다');
+    const oBar=window.campBarRender; let thrown=0;
+    window.__campErrQuiet=1;
+    try{
+      window.campBarRender=function(){ thrown++; throw new Error('__camp_frame_test__'); };
+      campStopFrame();
+      const t0=(typeof performance!=='undefined'?performance.now():0)+1e6;
+      campFrame(t0);                                  // ① 예외가 나는 프레임
+      assert(thrown>0,'검사가 예외를 못 냈다 — 전제가 깨졌다');
+      assert(_campRAF,'예외가 나자 프레임 루프가 끊겼다 — 화면이 영구 정지한다');
+      // ② 다음 프레임이 정상이면 실패 카운터가 풀린다
+      window.campBarRender=oBar;
+      campFrame(t0+1000);
+      assert(_campRAF,'정상 프레임인데 루프가 끊겼다');
+    } finally { window.campBarRender=oBar; window.__campErrQuiet=0; campStopFrame(); campStartFrame(); }
+    return '예외 1회 → 루프 유지 · 연속 '+CAMP_ERR_GIVEUP+'회면 접는다'; });
+
   // 🔌 **앱을 그냥 죽여도 진행이 남는다** (2026-08-31)
   //    ⛔ 예전엔 나간 시각(leftAt)을 campExit 에서만 찍었다. 모바일에서 앱을 스와이프로 닫거나
   //      홈으로 나가면 campExit 이 **안 불린다** — 가장 흔한 이탈 경로다. 결과:

@@ -3421,6 +3421,9 @@ let _campRAF = 0, _campLastT = 0;
 //   프레임을 건너뛰어 계측이 어긋난다. 실제 rAF(16.7ms)에서는 두 번에 한 번 그려 ~33fps 가 된다.
 const CAMP_FRAME_MS = 30;
 let _campLastDraw = 0;
+// 🛟 프레임 예외 복구 — 연속 실패가 이만큼(약 4초)이면 루프를 접는다. 위 campFrame 참고.
+const CAMP_ERR_GIVEUP = 120;
+let _campErrN = 0;
 function campFrame(now){
   if(!_campOn){ _campRAF = 0; return; }
   const t = now || (typeof performance !== 'undefined' ? performance.now() : 0);
@@ -3434,6 +3437,7 @@ function campFrame(now){
   _campLastT = t;
   // ⚡ **한 프레임 안에서 맵 rect 를 한 번만 잰다.** 아래 campPatchRect 설명 참고.
   _campRectC = null;
+  let _ok = false;
   try{
     // 기지 렌더(단일 소스 그대로) — 던전 중이면 전투 유닛을 같은 sync 에 얹어 보낸다
     if(typeof renderBuildTab === 'function') campWithBattleDraw(() => renderBuildTab(dt));
@@ -3443,7 +3447,24 @@ function campFrame(now){
     campGasTick(dt);                                              // ⛽ 정제소 자동 생산
     campSyncHire(); campSyncSupply(); campSyncUnitCost();          // 👷🏠⚔ 일꾼·보급소·전투 유닛 다음 가격(보유 수에 따라)
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
+    _ok = true;
+  } catch(err){
+    // ⛔ **한 번의 예외로 화면이 영구 정지하면 안 된다** (2026-08-31).
+    //   예전엔 재예약(requestAnimationFrame)이 try 밖 **아래**에 있어서, 안에서 예외가 나면
+    //   그 줄에 도달을 못 했다 → 캠프가 그대로 굳는다. 그런데 250ms 타이머는 계속 돌아
+    //   재화 바 숫자만 올라가서 **살아 있는 것처럼 보였다** — 그게 더 나쁘다.
+    // ⚠ **삼키지 않는다.** 비동기로 다시 던져 window.onerror·스모크 pageerror 가 그대로 본다.
+    //   ⛔ 매 프레임 던지면 콘솔이 넘치므로 **연속 실패의 첫 번째만** 알린다.
+    _campErrN++;
+    if(_campErrN === 1 && !(typeof window !== 'undefined' && window.__campErrQuiet))
+      setTimeout(function(){ throw err; }, 0);
   } finally { _campRectC = null; }   // ⛔ 프레임 밖으로 캐시를 들고 나가지 않는다(이벤트 핸들러가 낡은 값을 본다)
+  if(_ok) _campErrN = 0;
+  // ⚠ 계속 실패하면 접는다 — 초당 30번 터지는 화면을 그대로 돌리지 않는다.
+  else if(_campErrN >= CAMP_ERR_GIVEUP){
+    _campRAF = 0;
+    if(typeof toast === 'function') toast('⚠ 화면이 멈췄습니다 — 캠프를 다시 열어 주세요');
+    return; }
   _campRAF = requestAnimationFrame(campFrame);
 }
 function campStartFrame(){ if(_campRAF) return; _campLastT = 0; _campLastDraw = 0; _campRAF = requestAnimationFrame(campFrame); }
