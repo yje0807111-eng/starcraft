@@ -35,6 +35,10 @@ const BUNK=(process.env.BUNK==null) ? 1 : (+process.env.BUNK ? 1 : 0);
 //   ⭐ 대조군(GIFT_S 없음)과 「같은 부에 도달한 시각」을 견주면 그것이 상품의 진짜 가치다.
 //   ⚠ 지수 성장이라 「24시간치 자원」이 24시간을 앞당기지 않는다 — 그 어긋남을 재려는 것이다.
 const GIFT_S=+(process.env.GIFT_S||0), GIFT_AT=+(process.env.GIFT_AT||10);
+// 💳 결제 팩 실측(2026-08-31 · sc-3) — PACK=starter|epic|unique|reb (쉼표로 여러 개)
+//   처음부터 켜고 돌려 대조군과 견준다. 팩 배수는 **합산**이라 초반에 세고 후반에 묽어질 것으로
+//   보이는데, 그 어긋남이 얼마인지를 재려는 것이다.
+const PACKS=(process.env.PACK||"").split(",").map(x=>x.trim()).filter(Boolean);
 // 🧭 배치 모드(2026-08-30) — RALLY=none|wide|bunker · RALLYW=가로 폭(전장 비율)
 const RALLY=process.env.RALLY||"none";
 const RALLYW=+(process.env.RALLYW||0.40);
@@ -66,6 +70,11 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   const C=campState(); C.race='terran'; saveMeta(); openHome();
   window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
 }, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW);
+if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
+  for(const k of list) p.packs[k]=1; saveMeta();
+  return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
+           mul:(typeof campGatherMul==="function")?campGatherMul():null }; }, PACKS);
+  console.log("💳 팩 "+got.on.join(",")+" · 합산 보너스 +"+got.gather+" · 지금 채취배수 "+(got.mul||0).toFixed(2)); }
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.

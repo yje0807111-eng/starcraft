@@ -2719,7 +2719,13 @@ function campTapGain(){
   const add = campRtHas('tap') > 0 ? CAMP_RT_LADDER[Math.min(5, campRtHas('tap'))] : 0;
   const lv = campUpgLv('tap');
   const base = (CAMP_TAP_BASE + CAMP_TAP_STEP * lv) * campMileMul(lv);   // 선형 × 마일스톤(HUNT_R1 §1)
-  return Math.max(1, Math.round((base + add)
+  // 💳 결제 팩 — **탭에도 걸어야 「재화 획득 +N%」가 참말이 된다.**
+  //   ⛔ 실측(2026-08-31)으로 드러난 것: 채취에만 걸었더니 배수 1.5/2.5/4.0 인데 실제 수입은
+  //     ×1.16 / ×1.46 / ×1.89 뿐이었다. 수입의 **66% 가 탭**인데 거기 안 걸렸기 때문이다.
+  //     「재화 획득 +300%」라고 팔면서 실제로는 +89% 였다 — 표기와 실제가 달랐다.
+  //   ⚠ 여기서도 **합이다**(곱이 아니다) — campGatherMul 과 같은 규칙(GEM.md §5-2).
+  const packA = (typeof campPackGather === 'function') ? campPackGather() : 0;
+  return Math.max(1, Math.round((base + add) * (1 + packA)
     * campMineMul() * campRebMul() * campRtMul('tapMul')));
 }
 // 일꾼 효율 — **왕복 1회당** 배수(HUNT_R1 §1). Lv0 = 1.0 이라 기준선이 바뀌지 않는다.

@@ -1343,6 +1343,16 @@ async function groupLobby(){
       const gotR=mAll/m0, sumR=(1+sum), prodR=prod;
       assert(Math.abs(gotR-sumR)<0.05,
         '팩 배수가 합산이 아니다 — 얻은 비 '+gotR.toFixed(2)+' · 합이면 '+sumR.toFixed(2)+' · 곱이면 '+prodR.toFixed(2));
+      // ①-2 **팩은 탭에도 걸려야 한다.** ⛔ 채취에만 걸었더니 배수 4.0 인데 실제 수입은
+      //     ×1.89 뿐이었다 — 수입의 66% 가 탭인데 거기 안 걸렸다. 「재화 획득 +300%」가 거짓말이 된다.
+      if(typeof campTapGain==='function'){
+        p.packs={}; const t0=campTapGain();
+        p.packs={}; CAMP_PACKS.filter(x=>x.gather).forEach(x=>p.packs[x.id]=1);
+        const t1=campTapGain();
+        const gotT=t1/Math.max(1,t0), wantT=1+CAMP_PACKS.filter(x=>x.gather).reduce((a,x)=>a+x.gather,0);
+        assert(Math.abs(gotT-wantT)<0.15,
+          '팩이 탭 수입에 안 걸린다 — 탭 배수 '+gotT.toFixed(2)+' · 기대 '+wantT.toFixed(2));
+      }
       // ② **캠프 지갑**에 들어가야 한다. ⛔ PROF().pcoin 은 옛 사냥터 지갑이라 캠프와 안 통한다.
       p.packs={};
       const C=campState(), live=(typeof _campOn!=='undefined'&&_campOn&&typeof G!=='undefined'&&G.tech);
