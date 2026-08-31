@@ -46,7 +46,7 @@
           <span class="res pop"><img class="ri" src="assets/icons/res_pop.webp" alt=""><b id="hPop">0/16</b></span>
         </div>
       </div>
-        <div class="hudSet" id="settingsBtn" data-sfx="ui_open" onclick="hudTopMenu()" title="더보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></div>
+        <div class="hudSet" id="settingsBtn" data-sfx="ui_open" onclick="hudTopMenu()" title="설정"><span class="icoBars" data-ico="gear"></span><svg class="icoX" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.2 6.2 17.8 17.8M17.8 6.2 6.2 17.8"/></svg></div>
       </div>
     </div>
     <div id="zoneLabel">📍 내 디펜스 구역</div>
@@ -295,7 +295,7 @@
 
     <!-- ===== 신규: 로그인 / 회원가입 ===== -->
     <div id="auth" class="appScreen spaceBg hide">
-      <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg></button>
+      <button class="authGear" data-sfx="ui_open" onclick="openAppSettings()" title="설정" aria-label="설정"><span data-ico="gear"></span></button>
       <div class="authCard">
         <div class="authIn">
         <!-- ① 방식 선택 허브 — 첫 화면. 아이디/이메일을 고르면 아래 ② 폼으로 바뀐다.
@@ -503,18 +503,6 @@
     </div>
   </div>
 
-  <!-- 통계 창 = 게임 진입 로딩 창과 같은 전체 화면(모달 아님) -->
-  <div id="resultScreen" class="appScreen spaceBg hide">
-    <div class="opWrap">
-      <div class="opMap">
-        <div class="opMapThumb" id="rsThumb"></div>
-        <div class="opMapName moMap" id="rsName"></div>
-        <div class="ovStats" id="rsStats"></div>
-      </div>
-    </div>
-    <div class="opBtns"><button class="opQuit" id="rsQuit" onclick="resultToLobby()"><i class="autoBar" id="rsAutoBar"></i><span class="ovBtnTx">나가기</span></button></div>
-  </div>
-
     <!-- 친구 시트 — 허브 소셜을 그대로 옮겨온 것(id 유지 → renderFriends/setFriendFilter 그대로 동작) -->
     <!-- 캐릭터 정보 — 스탯이 어디서 오는지(직업/배분/레벨/진화/장비/펫) 한눈에 -->
     
@@ -542,6 +530,17 @@
     
     <!-- 📅 일일 퀘스트 — 하루 5개 + 주간 25개. 껍데기는 라운드 팝업과 같은 .hbModal -->
     <!-- 🧭 가이드 퀘스트 — 일일 퀘스트와 **같은 껍데기**를 쓴다(.hbModal/.hbmCard/.hbRows) -->
+    <!-- 💎 미네랄 채굴 — 광맥을 누르면 열린다. 껍데기는 공용(.hbModal/.hbmCard/.hbmHead/.hbmX) -->
+    <div class="hbModal hide" id="campMineSheet" onclick="if(event.target===this)closeCampMine()">
+      <div class="hbmCard">
+        <div class="hbmHead"><b>미네랄 채굴</b><em id="campMineHead"></em>
+          <button class="hbmX" onclick="closeCampMine()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
+        </div>
+        <!-- 과녁 — 여기가 넓어야 하는 이유가 이 판의 존재 이유다 -->
+        <button type="button" class="cmTap" id="campMineTap" aria-label="미네랄 캐기"></button>
+        <div class="cmUpg uiScroll" id="campMineUpg"></div>
+      </div>
+    </div>
     <div class="hbModal hide" id="hbGuideSheet" onclick="if(event.target===this)closeGuide()">
       <div class="hbmCard">
         <div class="hbmHead"><b>가이드</b><em id="hbGuideHead"></em>
@@ -590,7 +589,7 @@
       <!-- 🏕 인구 — 캠프 전용. 관리자 재화 줄(.bres)을 걷었으므로 인구를 볼 곳이 여기뿐이다.
            ⛔ 이모지를 쓰지 말 것 — 재화 아이콘은 assets/icons/res_*.webp 가 단일 소스(CLAUDE.md). -->
       <span class="res curPop"><img class="ri" src="assets/icons/res_pop.webp" alt=""><b id="curPop">0/0</b></span>
-      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><svg class="icoBars" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg><svg class="icoX" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.2 6.2 17.8 17.8M17.8 6.2 6.2 17.8"/></svg></div>
+      <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><span class="icoBars" data-ico="gear"></span><span class="icoMenu" data-ico="bars"></span><svg class="icoX" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.2 6.2 17.8 17.8M17.8 6.2 6.2 17.8"/></svg></div>
     </span>
   </div>
   <!-- 💬 친구 DM 채팅(허브 소셜) -->
@@ -791,8 +790,7 @@
   <div id="opening" class="appScreen spaceBg">
     <!-- 부팅 로딩 = 시네마틱(2026-08-20). 아트가 화면을 채우고 정보는 하단 도크로 모인다 —
          유즈맵 진입 화면(#gsRoot)과 같은 골격이라 두 로딩이 한 세트로 읽힌다.
-         ⚠ .opWrap 은 통계 창(#resultScreen)과 공용이다. 여기 자식(.opMid/.opDock)만 부팅 전용이고
-           .opWrap 자체에는 #opening 안에서만 값을 덮는다. -->
+         ⚠ .opWrap 자체에는 #opening 안에서만 값을 덮는다. -->
     <div class="opArt" aria-hidden="true"></div>
     <div class="opWrap">
       <!-- 🏷 로고는 #titleMark 한 벌이 맡는다(로그인과 공유) — 여기서 또 그리면 간격이 달라 어긋난다. -->
@@ -802,7 +800,7 @@
       </div>
     </div>
     <!-- 게임 진입 로딩 = 카드 덱(H안, 2026-08-19). 부팅 오프닝(.opWrap)과 **별개 층**이다 —
-         .opWrap/.opMap/.opBtns 는 통계 창(#resultScreen)과 공용이라 여기서 건드리면 그쪽이 같이 바뀐다. -->
+         .opWrap 은 부팅 오프닝과 공용이라 여기서 건드리면 그쪽이 같이 바뀐다. -->
     <div class="gsWrap" id="gsRoot">
       <div class="gsArt" id="gsArt"></div>
       <div class="gsHead">
@@ -847,6 +845,7 @@
 <script src="js/17-build-cards.js"></script>
 <script src="js/18-strike.js"></script>
 <script src="js/19-camp.js"></script>
+<script src="js/20-camp-research.js"></script>   <!-- 🔬 캠프 연구 구역 — 19 의 값·상태를 읽는다(순서가 뒤여야 한다) -->
 <!-- 🗄 다락(휴지통) — 지금 화면에서 도달할 수 없는 코드. 무엇이 왜 여기 있는지는 ATTIC.md.
      ⚠ **맨 마지막**이다: 아무도 여기 것을 부르지 않으므로 순서가 무의미하고, 거꾸로 여기 것이
      살아 있는 코드를 부르는 것은 런타임이라 문제가 없다. ⛔ 위 순서는 건드리지 않았다. -->

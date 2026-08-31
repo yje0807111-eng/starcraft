@@ -1,0 +1,207 @@
+<title>패널 등장 6안</title>
+<style>
+:root{
+  --bg:#070a0f; --panel:#0a0e14; --line:rgba(0,229,255,.42); --txt:#d6e2f0;
+  --dim:#8a97a8; --acc:#00e5ff; --gold:#ffd24a; --card:#0e131b;
+  --ff:'Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--ff);
+  font-size:13px;line-height:1.6;padding:22px 16px 60px}
+.wrap{max-width:1160px;margin:0 auto}
+h1{font-size:19px;margin:0 0 4px;letter-spacing:.4px}
+.sub{color:var(--dim);font-size:12px;margin:0 0 20px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 22px;
+  padding:10px 12px;background:var(--card);border:1px solid rgba(255,255,255,.09)}
+.bar b{font-weight:600;font-size:11.5px;letter-spacing:.5px;color:var(--dim)}
+button.t{appearance:none;background:rgba(255,255,255,.05);color:var(--txt);
+  border:1px solid rgba(255,255,255,.14);padding:5px 11px;font:inherit;font-size:12px;
+  cursor:pointer;border-radius:0}
+button.t.on{background:rgba(0,229,255,.14);border-color:var(--line);color:#fff}
+button.t:hover{border-color:rgba(255,255,255,.3)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.cell{background:var(--card);border:1px solid rgba(255,255,255,.09);padding:0 0 12px}
+.chd{display:flex;align-items:baseline;gap:8px;padding:11px 13px 9px;
+  border-bottom:1px solid rgba(255,255,255,.07)}
+.cnum{font-size:11px;color:var(--acc);letter-spacing:1px;font-weight:600}
+.cnm{font-size:14px;font-weight:600}
+.cwhy{padding:8px 13px 10px;color:var(--dim);font-size:11.5px;min-height:52px}
+.stage{position:relative;height:250px;margin:0 13px;background:#05080c;
+  border:1px solid rgba(255,255,255,.06);overflow:hidden}
+/* ── 폰 상단 흉내 ── */
+.top{position:absolute;left:0;right:0;top:0;height:30px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 7px;background:#0b1017;
+  border-bottom:1px solid rgba(255,255,255,.07);z-index:3}
+.chip{display:flex;flex-direction:column;justify-content:center;height:22px;padding:0 7px;
+  border:1px solid var(--line);background:rgba(10,14,20,.62);font-size:8.5px;line-height:1.15}
+.chip i{font-style:normal;color:var(--acc);font-weight:600}
+.chip b{font-weight:400;color:var(--dim);font-size:7.5px}
+.ham{width:22px;height:22px;display:flex;flex-direction:column;justify-content:center;
+  align-items:center;gap:3px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04)}
+.ham s{display:block;width:11px;height:1px;background:var(--txt);text-decoration:none}
+/* ── 열리는 판 ── */
+.pan{position:absolute;z-index:2;background:var(--panel);border:1px solid var(--line);
+  box-shadow:0 8px 22px rgba(0,0,0,.55);will-change:transform,opacity,clip-path}
+.pan.drop{left:6px;top:29px;width:176px;padding:6px 0 7px;border-radius:0 3px 3px 3px}
+.pan.more{right:6px;top:29px;width:132px;padding:5px;border-radius:3px 0 3px 3px}
+.row{display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:10px;color:var(--txt)}
+.row i{font-style:normal;width:13px;color:var(--dim);font-size:9px}
+.row s{flex:1;text-decoration:none;color:var(--dim);font-size:9px;text-align:right}
+.row.here{background:rgba(0,229,255,.12);color:#fff}
+.row.here s{color:var(--acc)}
+.row.lock{opacity:.34}
+.mrow{display:flex;align-items:center;gap:7px;padding:6px 7px;font-size:10px;
+  border-bottom:1px solid rgba(255,255,255,.05)}
+.mrow:last-child{border-bottom:0}
+.mrow em{font-style:normal;width:15px;height:15px;display:grid;place-items:center;
+  background:rgba(255,255,255,.07);font-size:8px;color:var(--acc)}
+.mrow u{text-decoration:none;display:block;font-size:8px;color:var(--dim)}
+.hint{position:absolute;left:0;right:0;bottom:0;padding:5px 8px;font-size:10px;color:var(--dim);
+  background:linear-gradient(transparent,#05080c 55%);text-align:center;z-index:4}
+.dur{font-variant-numeric:tabular-nums;color:var(--acc)}
+.note{margin:24px 0 0;padding:13px 15px;background:var(--card);
+  border:1px solid rgba(255,255,255,.09);border-left:2px solid var(--gold);font-size:12px}
+.note b{color:var(--gold)}
+.note ul{margin:7px 0 0;padding-left:17px;color:var(--dim)}
+.note li{margin:3px 0}
+/* ════ 안별 애니 ════ */
+/* 1 펼침 */
+.a1 .pan{transform-origin:top center}
+.a1 .pan.in{animation:a1in .19s cubic-bezier(.2,.9,.3,1) both}
+.a1 .pan.out{animation:a1in .13s ease-in reverse both}
+@keyframes a1in{from{transform:scaleY(.02);opacity:.4}to{transform:scaleY(1);opacity:1}}
+/* 2 미끄러짐 */
+.a2 .pan.in{animation:a2in .17s cubic-bezier(.2,.9,.3,1) both}
+.a2 .pan.out{animation:a2in .12s ease-in reverse both}
+@keyframes a2in{from{transform:translateY(-9px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* 3 팝 */
+.a3 .pan.drop{transform-origin:top left}
+.a3 .pan.more{transform-origin:top right}
+.a3 .pan.in{animation:a3in .19s cubic-bezier(.16,1.05,.3,1) both}
+.a3 .pan.out{animation:a3in .12s ease-in reverse both}
+@keyframes a3in{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+/* 4 셔터 */
+.a4 .pan.in{animation:a4in .22s cubic-bezier(.25,.8,.3,1) both}
+.a4 .pan.out{animation:a4in .14s ease-in reverse both}
+@keyframes a4in{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+/* 5 계단식 */
+.a5 .pan.in{animation:a5box .13s ease-out both}
+.a5 .pan.out{animation:a5box .11s ease-in reverse both}
+@keyframes a5box{from{transform:translateY(-5px);opacity:0}to{transform:translateY(0);opacity:1}}
+.a5 .pan.in .row,.a5 .pan.in .mrow{animation:a5row .17s ease-out both;
+  animation-delay:calc(var(--i) * .028s + .05s)}
+@keyframes a5row{from{transform:translateY(-6px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* 6 셔터 + 계단식 */
+.a6 .pan.in{animation:a4in .2s cubic-bezier(.25,.8,.3,1) both}
+.a6 .pan.out{animation:a4in .13s ease-in reverse both}
+.a6 .pan.in .row,.a6 .pan.in .mrow{animation:a6row .2s ease-out both;
+  animation-delay:calc(var(--i) * .022s + .04s)}
+@keyframes a6row{from{opacity:0}to{opacity:1}}
+/* 0 지금(없음) */
+.a0 .pan.in,.a0 .pan.out{animation:none}
+.hide{display:none}
+</style>
+
+<div class="wrap">
+<h1>패널 등장 6안</h1>
+<p class="sub">좌상단 던전 이동 · 우상단 더보기 — 버튼 아래로 열리는 판. 카드를 누르면 열고 닫습니다.</p>
+
+<div class="bar">
+  <b>보기</b>
+  <button class="t on" data-w="both">둘 다</button>
+  <button class="t" data-w="drop">던전 이동만</button>
+  <button class="t" data-w="more">더보기만</button>
+  <b style="margin-left:10px">속도</b>
+  <button class="t" data-s="0.35">0.35×(느리게)</button>
+  <button class="t on" data-s="1">1×</button>
+  <b style="margin-left:10px"><button class="t" id="all">전부 한 번에</button></b>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="note">
+  <b>⚠ 넣기 전에 알아 둘 것 둘</b>
+  <ul>
+    <li><b>던전 판은 라운드 50칸을 매번 새로 그립니다.</b> 판을 여는 순간이 무거워서, 애니가 시작하자마자
+      한 번 얼어붙을 수 있습니다 — 실측으로 확인하고 넣습니다.</li>
+    <li><b>4·6안(셔터)은 높이를 안 건드립니다</b> — 던전 판은 열자마자 「지금 라운드」로 스크롤을 맞추는데,
+      높이를 바꾸는 방식(펼침·높이 애니)은 그 계산을 어긋나게 할 수 있습니다.</li>
+  </ul>
+</div>
+</div>
+
+<script>
+const ANIS=[
+ {k:'a0',n:'지금 (없음)',why:'툭 나타나고 툭 사라집니다. 비교 기준입니다.'},
+ {k:'a1',n:'① 아래로 펼침',why:'버튼에 붙은 위쪽을 축으로 아래로 자랍니다. 「버튼에서 나왔다」가 가장 분명합니다. 다만 안의 글자가 세로로 눌렸다 펴집니다.'},
+ {k:'a2',n:'② 미끄러져 내림',why:'살짝 위에서 내려오며 밝아집니다. 가장 무난하고 어디에 써도 어색하지 않습니다. 대신 특징이 없습니다.'},
+ {k:'a3',n:'③ 팝',why:'버튼 모서리에서 작게 시작해 커집니다. 경쾌하지만 판이 커서 조금 요란할 수 있습니다.'},
+ {k:'a4',n:'④ 셔터',why:'판이 위에서 아래로 잘려 나옵니다. 글자가 안 눌리고, 각진 SF 톤과 가장 잘 맞습니다.'},
+ {k:'a5',n:'⑤ 계단식',why:'판은 바로 뜨고 안의 줄이 순서대로 내려앉습니다. 목록이라는 게 읽힙니다. 줄이 많으면 늘어집니다.'},
+ {k:'a6',n:'⑥ 셔터 + 계단식',why:'④로 판이 열리는 동안 줄이 차례로 켜집니다. 가장 공들인 느낌이지만 가장 깁니다.'},
+];
+const DGS=[['0','캠프','안전'],['1','감염된 둥지','×1.0'],['2','잿빛 능선','×1.4'],['3','붕괴한 전초','×2.0'],['4','메마른 균사','잠김']];
+const MRS=[['旗','가이드','무엇을 할지 순서대로'],['日','출석','4주 캘린더'],['⚡','부스트','일시 강화'],['⚙','설정','']];
+
+const dropHTML=()=>'<div class="pan drop">'+DGS.map((d,i)=>
+  '<div class="row'+(i===1?' here':'')+(d[2]==='잠김'?' lock':'')+'" style="--i:'+i+'">'+
+  '<i>'+d[0]+'</i>'+d[1]+'<s>'+d[2]+'</s></div>').join('')+'</div>';
+const moreHTML=()=>'<div class="pan more">'+MRS.map((m,i)=>
+  '<div class="mrow" style="--i:'+i+'"><em>'+m[0]+'</em><span>'+m[1]+
+  (m[2]?'<u>'+m[2]+'</u>':'')+'</span></div>').join('')+'</div>';
+
+const grid=document.getElementById('grid');
+grid.innerHTML=ANIS.map(a=>
+ '<div class="cell '+a.k+'" data-k="'+a.k+'">'+
+ '<div class="chd"><span class="cnum">'+a.k.toUpperCase()+'</span><span class="cnm">'+a.n+'</span></div>'+
+ '<div class="stage">'+
+   '<div class="top"><div class="chip"><i>감염된 둥지</i><b>라운드 1/50</b></div>'+
+     '<div class="ham"><s></s><s></s><s></s></div></div>'+
+   dropHTML()+moreHTML()+
+   '<div class="hint">눌러서 열고 닫기</div>'+
+ '</div>'+
+ '<div class="cwhy">'+a.why+'</div></div>').join('');
+
+let WHICH='both', SPD=1;
+function panes(cell){ return [...cell.querySelectorAll('.pan')]
+  .filter(p=>WHICH==='both' || p.classList.contains(WHICH)); }
+function setHidden(){ document.querySelectorAll('.pan').forEach(p=>{
+  const show = WHICH==='both' || p.classList.contains(WHICH);
+  p.style.display = show ? '' : 'none'; }); }
+
+function toggle(cell){
+  const ps=panes(cell), open=ps[0] && ps[0].classList.contains('in');
+  ps.forEach(p=>{
+    p.style.animationDuration='';
+    p.classList.remove('in','out');
+    void p.offsetWidth;                      // 애니 재시작
+    p.classList.add(open?'out':'in');
+    if(SPD!==1) p.querySelectorAll('*').forEach(()=>{});
+    p.style.setProperty('animation-duration', null);
+  });
+  cell.style.setProperty('--sp', SPD);
+  // 속도: 애니 시간을 직접 늘린다(자식 지연도 같이 늘리려 style 로 준다)
+  ps.forEach(p=>{
+    const d=getComputedStyle(p).animationDuration;
+    if(SPD!==1 && d && d!=='0s'){ p.style.animationDuration=(parseFloat(d)/SPD)+'s'; }
+    p.querySelectorAll('.row,.mrow').forEach(r=>{
+      const rd=getComputedStyle(r).animationDuration, rl=getComputedStyle(r).animationDelay;
+      if(SPD!==1 && rd && rd!=='0s'){ r.style.animationDuration=(parseFloat(rd)/SPD)+'s';
+        r.style.animationDelay=(parseFloat(rl)/SPD)+'s'; }
+      else { r.style.animationDuration=''; r.style.animationDelay=''; }
+    });
+  });
+  const h=cell.querySelector('.hint'); if(h) h.textContent = open?'눌러서 열기':'눌러서 닫기';
+}
+grid.addEventListener('click',e=>{ const c=e.target.closest('.cell'); if(c) toggle(c); });
+
+document.querySelectorAll('[data-w]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-w]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); WHICH=b.dataset.w; setHidden(); }));
+document.querySelectorAll('[data-s]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-s]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); SPD=+b.dataset.s; }));
+document.getElementById('all').addEventListener('click',()=>{
+  document.querySelectorAll('.cell').forEach(c=>toggle(c)); });
+setHidden();
+</script>

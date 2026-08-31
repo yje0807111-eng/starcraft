@@ -254,8 +254,14 @@ function hbBuildStart(){ if(!_hb) return;
 //    (한쪽만 고치면 "눌러도 설정만 나온다"가 된다 — 실제로 그랬다)
 // fb: 사냥터가 아닐 때의 갈 곳 — 'app'이면 앱 화면 설정, 아니면 유즈맵 설정.
 // 열려 있으면 같은 자리가 X 다 — 그 X 만이 닫는 유일한 방법이다
+// 🎬 「움직임 줄이기」를 켠 기기 — 연출을 건너뛰고 즉시 닫는다(css 도 animation:none 이라
+//    animationend 가 아예 안 온다 → 기다리면 판이 남는다).
+function _uiReduced(){ try{ return !!(window.matchMedia
+  && window.matchMedia('(prefers-reduced-motion:reduce)').matches); }catch(e){ return false; } }
+// ⚠ **닫히는 중(.closing)도 「닫혔다」로 센다.** 셔터가 끝나야 .hide 가 붙으므로, 그 사이에
+//    ☰ 를 다시 누르면 '열려 있다'로 읽혀 또 닫기가 돌고 **영영 안 열린다**(실제로 그랬다).
 function hbMoreOn(){ const el=document.getElementById('hbMoreSheet');
-  return !!(el && !el.classList.contains('hide')); }
+  return !!(el && !el.classList.contains('hide') && !el.classList.contains('closing')); }
 function hbMoreBtns(){ return ['curSettingsBtn','settingsBtn']
   .map(function(id){ return document.getElementById(id); }).filter(Boolean); }
 function hudTopMenu(fb){ const hs=document.getElementById('homeScreen');
@@ -263,7 +269,15 @@ function hudTopMenu(fb){ const hs=document.getElementById('homeScreen');
   if(hs && !hs.classList.contains('hide') && typeof hbOpenMore==='function') return hbOpenMore();
   if(fb==='app' && typeof openAppSettings==='function') return openAppSettings();
   openSettings(); }
+// 🎬 여닫은 **횟수**. 닫기의 뒷정리(animationend·보험 타이머)가 자기 차례인지 이걸로 가린다.
+// ⛔ 없으면 이렇게 된다: 닫는 중에 ☰ 를 다시 눌러 열었는데, **앞선 닫기의 뒷정리가 뒤늦게 와서
+//    방금 연 판에 .hide 를 붙인다** → 눌러도 안 열린다(실제로 그랬다).
+let _hbMoreGen = 0;
 function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) return;
+  _hbMoreGen++;                                   // 지난 닫기의 뒷정리를 무효로 만든다
+  // 닫히는 중이었으면 그 상태를 걷고 새로 연다(셔터가 되감기다 말고 다시 내려온다)
+  el.classList.remove('closing');
+  { const b=document.getElementById('hbMoreBox'); if(b) b.classList.remove('hbmOut'); }
   renderHbMore(); el.classList.remove('hide');
   { const box=document.getElementById('hbMoreBox'), ph=document.getElementById('phone');
     // 실제로 눌린 ☰ 아래에 붙인다 — 두 개가 겹쳐 있으므로 보이는 쪽을 고른다
@@ -275,11 +289,24 @@ function hbOpenMore(){ const el=document.getElementById('hbMoreSheet'); if(!el) 
       box.style.right=Math.round(p.right-r.right)+'px'; } }
   hbMoreBtns().forEach(function(b){ b.classList.add('on'); b.title='닫기'; });
   if(typeof playSfx==='function') playSfx('ui_open'); }
-function hbCloseMore(){ const el=document.getElementById('hbMoreSheet'); if(el) el.classList.add('hide');
+// now=true → 연출 없이 즉시 닫는다(다른 화면으로 넘어가는 길에는 사라지는 연출이 방해만 된다)
+function hbCloseMore(now){ const el=document.getElementById('hbMoreSheet');
+  if(el){ const box=document.getElementById('hbMoreBox');
+    if(box && !now && !_uiReduced()){
+      const gen = ++_hbMoreGen;
+      el.classList.add('closing'); box.classList.add('hbmOut');
+      const done=function(){
+        if(gen !== _hbMoreGen) return;            // 그 사이 다시 열렸다 — 내 뒷정리가 아니다
+        el.classList.add('hide'); el.classList.remove('closing');
+        box.classList.remove('hbmOut'); };
+      box.addEventListener('animationend', done, { once:true });
+      setTimeout(done, 400);   // 애니가 안 돌았을 때의 보험 — 판이 남는 것보다 낫다
+    } else { _hbMoreGen++; el.classList.remove('closing'); el.classList.add('hide');
+             if(box) box.classList.remove('hbmOut'); } }
   hbMoreBtns().forEach(function(b){ b.classList.remove('on'); b.title='더보기'; });
   if(typeof playSfx==='function') playSfx('ui_close'); }
 // 시트를 닫고 나서 연다 — 배치(건설)처럼 필드를 눌러야 하는 것이 시트에 가리면 안 된다
-function hbMoreGo(fn){ hbCloseMore(); setTimeout(function(){ try{ fn(); }catch(e){} }, 60); }
+function hbMoreGo(fn){ hbCloseMore(true); setTimeout(function(){ try{ fn(); }catch(e){} }, 60); }
 // ☰ 더보기 칸 (2026-08-25 정리) — 캠프에서 **실제로 도는 것**만 남겼다.
 // ⛔ 뺀 것의 코드는 지우지 않았다(유보는 삭제가 아니다 · GAME_DIRECTION §5). 길만 닫았다:
 //   · 마을(town)   — 5구역 중 상점은 하단 네비와 같은 화면 · 캐릭터/장비는 §5-B 유보 · 관문은 토벌(§5-D)

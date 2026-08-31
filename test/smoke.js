@@ -15,6 +15,32 @@
 (function(){
 'use strict';
 
+// 🧹 전장 정리 — ⚠ campBattleClose 는 이제 **병력을 기지로 되돌린다**(유일본 보존).
+//   테스트가 만든 임시 유닛까지 기지로 흘러가 다음 스텝을 오염시키므로,
+//   정리로 닫을 때는 이걸 먼저 불러 전장을 비운다.
+function campWipeField(){
+  if(typeof CAMPB==='undefined' || !CAMPB) return;
+  if(typeof campWithStk==='function') campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+  if(CAMPB._down) CAMPB._down.length=0;
+  if(CAMPB._wq) CAMPB._wq.length=0;
+}
+
+// 🚪 **던전 이동의 문을 열어 둔다** (2026-08-30).
+//   병력이 없으면 던전에 못 간다 — 맞는 규칙이지만, **드롭다운 UI 를 검사하는 step** 은
+//   그 규칙의 대상이 아니다(칩·정렬·확정 버튼을 본다). 병력을 하나 세워 주고,
+//   그럴 수 없는 화면이면 판정 함수만 잠시 연다. 규칙 자체는 전용 step 이 따로 지킨다.
+//   ⚠ 돌려주는 함수를 finally 에서 부를 것 — 안 부르면 다음 step 까지 문이 열린 채로 남는다.
+function campGateOpen(){
+  if(typeof G!=='undefined' && G.tech && G.tech.ents && typeof STK_UNITS!=='undefined'
+     && !G.tech.ents.some(e=>e&&e.type==='unit'&&STK_UNITS[e.uid]))
+    G.tech.ents.push({ type:'unit', uid:'marine', eid:'gate'+G.tech.ents.length, x:0.4, y:0.5 });
+  if(typeof campCanEnterDungeon==='function' && !campCanEnterDungeon(1)){
+    const o=window.campCanEnterDungeon;
+    window.campCanEnterDungeon=()=>true;
+    return ()=>{ window.campCanEnterDungeon=o; }; }
+  return ()=>{};
+}
+
 // 🤖 매크로 방지 1차(event.isTrusted)의 **테스트 전용 문**.
 //   스모크는 포인터 이벤트를 프로그램으로 쏘므로 isTrusted 가 false 다 — 열어 두지 않으면
 //   캠프 채집 관련 step 이 통째로 깨진다(js/19-camp.js 의 리스너 참고).
@@ -63,8 +89,18 @@ function spawnMany(n){ const gids=Object.keys(GACHA_UNITS); let c=0;
 function pump(frames){ for(let f=0;f<frames;f++){ stepCmdMove(0.016); separateUnits();
   if(window.M3D&&M3D.ready&&M3D.ready()) M3D.sync(G.units,GW,GH,0.016,G.sel,G.enemies,null,null,G.view); } }
 
+// 🛠 **개발용 패배 끄기는 테스트에서 끈다.**
+//   실제 플레이에서는 던전을 둘러보려고 켜 두지만(js/19-camp.js CAMP_DEV_NOFAIL),
+//   승패 규칙 검사는 진짜 규칙을 봐야 한다 — 켠 채로 돌리면 「탈락인데 캠프로 안 돌아감」 셋이 깨진다.
+//   ⚠ 그 플래그가 사라지면(원래 계획인 「병력 없으면 이동 금지」로 바뀌면) 이 줄도 지운다.
+function campDevFailOff(){ try{ if(typeof CAMP_DEV_NOFAIL!=='undefined') CAMP_DEV_NOFAIL=false; }catch(e){} }
+// 💰 **재화 굴리기도 끈다.** 헤드리스는 rAF 가 멈춰 있어 굴리기가 끝나지 않는다 —
+//   재화를 읽는 검사가 전부 중간값(대개 0)을 본다. 굴리기 자체는 전용 step 이 따로 잰다.
+function curRollOff(){ try{ if(typeof CUR_ROLL_ON!=='undefined') CUR_ROLL_ON=false; }catch(e){} }
+
 // ── 그룹: lobby ──
 async function groupLobby(){
+  campDevFailOff(); curRollOff();
   await step('부트: 전역/탭 존재', ()=>{ assert(typeof G!=='undefined','G 없음'); assert(typeof USEMAPS!=='undefined','USEMAPS 없음');
     assert($('tabs'),'#tabs 없음'); return 'phase='+G.phase; });
   // 로그인/회원가입 화면은 반드시 거친다(자동 로그인 금지). 아이디를 비우고 로그인하면 바로 게임 선택으로.
@@ -648,7 +684,7 @@ async function groupLobby(){
     assert(visible($('gearScreen')),'네비 정비가 화면을 안 엶');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 3칸이 아님');
     navGo('shop'); await sleep(60);
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===2,'상점 하위가 2칸이 아님(추천·젬 상점)');
     // 구역에 '들어올 때'는 늘 첫 하위로 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙(2026-08-14).
     //   펫을 보다 나갔다 다시 들어와도 펫이 열려 있으면 구역 이름과 내용이 어긋난다.
     { const cur=()=>{ const e=document.querySelector('#navBar .navIt.cur'); return e?e.dataset.sub:null; };
@@ -751,7 +787,9 @@ async function groupLobby(){
     // 경고 문구는 뺐다(사용자 결정 2026-08-24) — 되살리려면 확정 단계에 붙일 것
     assert(!/바꿀 수 없/.test(ov.textContent),'제거하기로 한 경고 문구가 살아 있다');
     // ② 고르면 본부·일꾼·광맥이 깔린다
-    campRaceSel('terran'); campPickRace(); await sleep(420);
+    // ⚠ 종족 판은 **검은 판이 다 덮은 뒤에** 걷힌다(js/19-camp.js campRaceToCamp).
+    //    그 전에 재면 화면 가운데를 종족 판이 짚는다 — 전환이 끝나기를 기다린다.
+    campRaceSel('terran'); campPickRace(); await sleep(_cssMs('--t-screen',.7)+700);
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
     assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
     assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
@@ -797,14 +835,16 @@ async function groupLobby(){
         assert(Math.abs(c0/campUpgDisc()-CAMP_REF_COST0)<1,'정제소 0→1 비용이 기준값과 다르다: '+c0);
         assert(Math.abs(c1/c0-CAMP_REF_R)<0.01,'정제소 비용 계단이 상수와 다르다: '+(c1/c0).toFixed(3));
         assert(CAMP_REF_R>1.05,'정제소 계단이 너무 눕다 — 가스가 폭주한다: '+CAMP_REF_R);
-        // ⛽ **정제소 안에서 산다**(§2-3-1) — 캠프에서만 정제소에 연구 카드가 꽂힌다.
+        // ⛽ **올릴 자리는 연구 구역 「자원」 칸이다**(2026-08-27 · 옛 자리는 정제소 건물의 연구 카드였다).
         //   ⛔ 이게 없으면 화면에서 가스 생산을 **올릴 방법이 아예 없다**(2026-08-27 실측으로 걸렸다).
-        { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
-          const ent=(rb.research||[]).find(x=>x.k===CAMP_REF_KEY);
-          assert(ent,'정제소에 「가스 생산」 연구 카드가 없다 — 올릴 방법이 없다');
-          const cc=campResearchCost(ent,campRefLv());
-          assert(cc && cc[1]===0,'정제소 업그레이드에 가스가 붙었다 — 가스를 가스로 사는 셈이다');
-          assert(cc[0]===campUpgCost('refinery'),'정제소 카드 값이 campUpgCost 와 다르다: '+cc[0]);
+        //   ⚠ 건물 카드로 되돌아가지 않았는지도 함께 본다 — 두 곳에 있으면 어느 쪽이 진짜인지 흐려진다.
+        { skipIf(typeof CAMP_RES_ITEMS==='undefined','연구 구역 없음');
+          const it=CAMP_RES_ITEMS.find(x=>x.k==='refinery');
+          assert(it,'연구 구역 「자원」 칸에 정제소가 없다 — 가스 생산을 올릴 방법이 없다');
+          const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
+          assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),
+            '정제소 카드가 건물에도 남아 있다 — 자리가 둘이면 어느 쪽이 진짜인지 흐려진다');
+          assert(campUpgCost('refinery')>0,'정제소 값이 안 나온다');
           // 레벨은 **연구 칸**에도 쌓인다(카드로 사므로) — 둘이 어긋나면 값이 안 오른다
           const before=campRefLv();
           G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]=before+3;
@@ -1171,11 +1211,16 @@ async function groupLobby(){
               +' | selU='+JSON.stringify(G.tech.selU)+' sel='+G.tech.sel); }
           wk.x=bak.x; wk.y=bak.y; wk.tx=bak.tx; wk.ty=bak.ty; wk._wp=bak.wp;
           wk._gKind=bak.gk; wk._gTgt=bak.gt; wk._working=bak.working; }   // 🧹 원복 — 뒤 step 의 채취 검사가 이 흔적을 물려받지 않게
+        // ⛏ 광맥 탭은 **채굴 모드를 켠다**(2026-08-27 · A+F 확정). 켜지면 맵 전체가 과녁이라
+        //   광맥을 겨냥할 필요가 없다 — 광맥이 화면의 5% 뿐이라 손끝이 자꾸 빗나가던 문제를 그렇게 푼다.
+        //   ⛔ 옛 채굴 판(campMineSheet)을 여는 것으로 되돌리지 말 것 — 업그레이드는 연구 구역으로 갔다.
         { await arm(); const q=at(mnn.x,mnn.y);
-          if(onMap(q)){ const c0=G.tech.credit; pid++;
+          if(onMap(q)){ pid++;
             fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 광맥을 탭했는데 모드가 안 꺼진다');
-            assert(G.tech.credit>c0,'모드 중 광맥 탭이 채집을 못 한다'); } }
+            assert(campMineModeOn(),'광맥을 탭했는데 채굴 모드가 안 켜진다');
+            campMineModeSet(false);   // 🧹 뒤 step 에 모드를 물려주지 않는다
+          } }
         { await arm(); const q=at(bd.x,bd.y);
           if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 건물을 탭했는데 모드가 안 꺼진다');
@@ -1203,7 +1248,32 @@ async function groupLobby(){
             assert(covered(),'맵 밖이 화면에 보인다 — 줌 '+z+' 시점 '+px+','+py
               +' → 실제 줌 '+techView().zoom.toFixed(2)+' 시점 '
               +techView().x.toFixed(2)+','+techView().y.toFixed(2)); } }
-        assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom()); }
+        assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom());
+        // ⭐ **축소가 실제로 된다**(2026-08-31 사용자 요청 — 「처음 화면이 너무 확대돼 있다」).
+        //    ⛔ 앞서는 하한 = 기본 배율이라 **축소가 아예 안 됐다**("가장 축소한 화면 = 처음 화면",
+        //      2026-08-27). 써 보니 답답하다고 하여 뒤집었다. 위 covered() 가 뚫림을 막으므로
+        //      여기서는 「줄어들 여지가 남아 있는가」만 지킨다.
+        assert(techMinZoom() < CAMP_ZOOM - 1e-6,
+          '축소가 안 된다 — 하한이 기본 배율 이상이다 ('+techMinZoom()+' vs '+CAMP_ZOOM+')');
+        // ✂ **가장 아래로 내리면 미네랄·가스가 하단 시트 바로 위에 붙는다 — 줌과 무관하게 같은 자리.**
+        //    그 아래는 아무것도 없는 여백이라 보이면 「빈 땅이 드러난 화면」이 된다.
+        //    ⚠ 화면 비율이 아니라 **월드 좌표**로 재야 한다 — 「기본 배율의 여지」로 상한을 고정했더니
+        //      보이는 하단이 줌마다 달랐다(실측 축소 0.838 / 확대 0.709).
+        { const sf=(typeof techSheetFrac==='function')?techSheetFrac():0;
+          const seen=z=>{ const t={x:.5,y:99,zoom:z}; _techClampView(t); return (0.5-sf)/z + t.y; };
+          const base=seen(CAMP_ZOOM); const got=[];
+          // ⚠ **축소 하한(=CAMP_ZOOM) 미만은 넣지 말 것** — 도달할 수 없는 배율이라
+          //   클램프가 zoom 을 하한으로 올려 버리고, seen() 의 (0.5-sf)/z 와 어긋나 헛돈다.
+          //   옛 목록은 1.7 이 박혀 있어서 CAMP_ZOOM 을 1.3 → 1.8 로 올리자 그대로 터졌다(2026-08-30).
+          const zs=[CAMP_ZOOM, (CAMP_ZOOM+techMaxZoom())/2, techMaxZoom()].filter(z=>z>=CAMP_ZOOM-1e-9);
+          for(const z of zs){ const w=seen(z); got.push(z.toFixed(2)+':'+w.toFixed(3));
+            assert(Math.abs(w-base)<0.004,
+              '줌마다 아래 끝이 다르다 ('+got.join(' ')+') — 축소하면 미네랄 아래 여백이 드러난다'); }
+          // 그 아래 끝이 실제로 광맥·가스 바로 아래여야 한다(여백을 크게 잡으면 검사가 헛돈다)
+          const ms=(G.tech.minerals||[]); assert(ms.length,'광맥이 없다');
+          const mBot=Math.max(...ms.map(m=>m.y));
+          assert(base>mBot && base<mBot+_techCH()*6,
+            '아래 끝('+base.toFixed(3)+')이 광맥 줄('+mBot.toFixed(3)+') 바로 아래가 아니다'); } }
       campZoom(); spin(20); }   // 뒤 검사들을 위해 기본 배율로 되돌린다
     // 🔍 화면 배율 — 폰에서 관리자 기본(20칸)은 너무 확대돼 보인다.
     //   ⛔ **zoom 을 낮춰서 줄이지 않는다.** zoom 을 낮추면 격자가 화면을 못 채워 좌우가 빈 배경이
@@ -1268,54 +1338,259 @@ async function groupLobby(){
       C.minerals=bk;
       return '광맥 '+M.length+'덩이 전부 무제한 · 복원해도 유지';
     } finally { G.tech=keep; } });
-  // 🩹 아군 부활 — HUNT_R1 §6-5「죽지 않는다. 빈사로 누웠다가 부활」
+  // 🩹 아군 부활 — **라운드 단위**(2026-08-29 사용자 확정). HUNT_R1 §6-5
+  //   ⛔ 옛 규칙(30초 시간 부활)이 후반 발산의 동력이었다 — 실측(던전 2): 누운 병력이 6 → 34 로
+  //     쌓이며 꽂힌 화력이 R9 정점 891 → R24 487 로 **떨어졌고**, 난이도는 계속 올라 R24 가 11.4분.
   //   ⚠ strikeStepUnits 가 죽은 유닛을 배열에서 걷어낸다(18-strike.js:1301) — '남아 있다'고 가정하면 안 된다.
-  await step('캠프: 아군은 죽지 않고 누웠다가 부활한다', async()=>{
-    skipIf(typeof campReviveStep!=='function'||typeof campEnterDungeon!=='function','부활 없음');
+  // 🏕 상점을 캠프 기준으로 다시 짰다(2026-08-31). 여기서 잠그는 것은 화면이 아니라 **경제**다.
+  await step('캠프 상점: 팩 배수는 합이고 · 산 재화는 캠프 지갑으로 간다', async()=>{
+    skipIf(typeof CAMP_PACKS==='undefined'||typeof campGatherMul!=='function','팩 시스템 없음');
+    skipIf(!campState(),'캠프 상태 없음');
+    const p=PROF(), keep=JSON.parse(JSON.stringify(p.packs||{}));
+    try{
+      // ① **합산이어야 한다.** ⛔ 곱으로 바꾸면 곱 항이 하나 더 늘어 후반이 터진다
+      //    (BALANCE §0 · 실측 5회 만에 ×1,900만). 팩 셋 = 곱이면 ×8, 합이면 ×4.5 대.
+      p.packs={}; const m0=campGatherMul();
+      assert(m0>0,'기본 배수가 0 이다');
+      const g=CAMP_PACKS.filter(x=>x.gather);
+      p.packs={}; g.forEach(x=>p.packs[x.id]=1);
+      const mAll=campGatherMul();
+      const sum=g.reduce((a,x)=>a+x.gather,0), prod=g.reduce((a,x)=>a*(1+x.gather),1);
+      const gotR=mAll/m0, sumR=(1+sum), prodR=prod;
+      assert(Math.abs(gotR-sumR)<0.05,
+        '팩 배수가 합산이 아니다 — 얻은 비 '+gotR.toFixed(2)+' · 합이면 '+sumR.toFixed(2)+' · 곱이면 '+prodR.toFixed(2));
+      // ①-2 **팩은 탭에도 걸려야 한다.** ⛔ 채취에만 걸었더니 배수 4.0 인데 실제 수입은
+      //     ×1.89 뿐이었다 — 수입의 66% 가 탭인데 거기 안 걸렸다. 「재화 획득 +300%」가 거짓말이 된다.
+      if(typeof campTapGain==='function'){
+        p.packs={}; const t0=campTapGain();
+        p.packs={}; CAMP_PACKS.filter(x=>x.gather).forEach(x=>p.packs[x.id]=1);
+        const t1=campTapGain();
+        const gotT=t1/Math.max(1,t0), wantT=1+CAMP_PACKS.filter(x=>x.gather).reduce((a,x)=>a+x.gather,0);
+        assert(Math.abs(gotT-wantT)<0.15,
+          '팩이 탭 수입에 안 걸린다 — 탭 배수 '+gotT.toFixed(2)+' · 기대 '+wantT.toFixed(2));
+      }
+      // ② **캠프 지갑**에 들어가야 한다. ⛔ PROF().pcoin 은 옛 사냥터 지갑이라 캠프와 안 통한다.
+      p.packs={};
+      const C=campState(), live=(typeof _campOn!=='undefined'&&_campOn&&typeof G!=='undefined'&&G.tech);
+      const pc0=p.pcoin||0, w0=live? (G.tech.credit||0) : (C.credit||0);
+      campAddRes(1234,0);
+      const w1=live? (G.tech.credit||0) : (C.credit||0);
+      assert(Math.round(w1-w0)===1234,'캠프 지갑에 안 들어갔다 ('+Math.round(w1-w0)+')');
+      assert(Math.abs((p.pcoin||0)-pc0)<0.5,'옛 프로필 지갑(pcoin)이 같이 움직였다 — 지갑이 섞였다');
+      if(live) G.tech.credit=w0; else C.credit=w0;
+      // ⛔ **캠프 밖에서 산 것은 보류함에 담긴다.** C.credit 에 직접 넣으면 캠프가 켜질 때
+      //    새 판이 credit 을 0 으로 덮어 **산 돈이 사라진다**(실측 2026-08-31: 3,400만이 0 이 됐다).
+      // ⚠ _campOn 은 파일 스코프 let 이라 **검사에서 못 바꾼다**(window 에 안 붙는다).
+      //    그래서 「캠프 밖에서 담긴다」가 아니라 **보류함이 실제로 지갑에 꽂히는가**를 잰다.
+      if(typeof campFlushPend==='function'){
+        const pend0=C.pend;
+        try{
+          C.pend={m:5555,g:77};
+          const wA=(typeof G!=='undefined'&&G.tech)?(G.tech.credit||0):0;
+          const eA=(typeof G!=='undefined'&&G.tech)?(G.tech.energy||0):0;
+          campFlushPend();
+          const wB=(typeof G!=='undefined'&&G.tech)?(G.tech.credit||0):0;
+          const eB=(typeof G!=='undefined'&&G.tech)?(G.tech.energy||0):0;
+          assert(!C.pend,'보류함이 안 비워졌다 — 다음 진입 때 또 준다');
+          assert(Math.round(wB-wA)===5555,'보류분(미네랄)이 캠프 지갑에 안 들어왔다 ('+Math.round(wB-wA)+')');
+          assert(Math.round(eB-eA)===77,'보류분(가스)이 캠프 지갑에 안 들어왔다 ('+Math.round(eB-eA)+')');
+          if(typeof G!=='undefined'&&G.tech){ G.tech.credit=wA; G.tech.energy=eA; }
+        } finally { C.pend=pend0; }
+      }
+      // ⏱ **논 시간보다 긴 시간치는 못 산다.** 실측: 20분 시점의 8시간치가 그때 부의 23.8배,
+      //    24시간치는 71.4배 — 한 회차를 통째로 건너뛴다.
+      if(typeof shopWhyLock==='function' && typeof SHOP_GEM_BUY!=='undefined'){
+        const play0=C.playS;
+        try{
+          C.playS=60;                                  // 1분만 놀았다
+          const big=SHOP_GEM_BUY.find(x=>x.secs===86400);
+          assert(big && shopWhyLock(big),'1분 놀았는데 24시간치를 살 수 있다');
+          C.playS=30*3600;                             // 30시간 놀았다
+          assert(!shopWhyLock(big) || shopWhyLock(big).indexOf('플레이')<0,
+            '30시간 놀았는데 아직 플레이 시간으로 막힌다: '+shopWhyLock(big));
+        } finally { C.playS=play0; }
+      }
+      // ③ 젬 상점은 **고정 숫자가 아니라 「n 시간치」를 판다.**
+    //    ⭐ 회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 무의미해진다.
+    //    ⚠ 속도는 **이미 재고 있던 것**(camp.rate · 자리 비움 정산이 쓰는 값)을 그대로 쓴다.
+    //       ⛔ "일꾼 n기 × 초당 k" 같은 식을 새로 만들면 두 벌이 되어 어긋난다.
+    if(typeof campTimeAmt==='function'){
+      const C2=campState(), r0=C2.rate, rg0=C2.rateGas;
+      try{
+        C2.rate=0; assert(campTimeAmt(1800,'min')===0,'수입을 못 쟀는데 값이 나온다 — 팔면 안 된다');
+        C2.rate=397;                                   // 실측 규모(60분 143만 = 초당 397)
+        const half=campTimeAmt(1800,'min'), day=campTimeAmt(86400,'min');
+        assert(half>0 && day>half,'시간이 길수록 많아야 한다: 30분 '+half+' · 24시간 '+day);
+        // 시간에 비례한다(반올림 오차 5% 안)
+        assert(Math.abs(day/half - 48) < 48*0.05,'24시간치가 30분치의 48배가 아니다: '+(day/half).toFixed(1));
+        // **반올림**: 유효숫자 두 자리 — 뒤가 0 으로 떨어져야 「이만큼 준다」가 읽힌다
+        const raw=Math.floor(397*86400);
+        assert(day!==raw,'반올림을 안 했다(원본 그대로): '+day);
+        assert(String(day).slice(2).split('').every(c=>c==='0'),'유효숫자 두 자리가 아니다: '+day);
+      } finally { C2.rate=r0; C2.rateGas=rg0; }
+    }
+    // ④ 상점은 **두 칸**이다(옛 다섯 칸은 캠프에 안 닿아 화면에서 뺐다)
+      assert(typeof SHOP_SECS!=='undefined','SHOP_SECS 없음');
+      const secs=Object.keys(SHOP_SECS);
+      assert(secs.length===2 && secs.indexOf('reco')>=0 && secs.indexOf('gem')>=0,
+        '상점 구역이 추천·젬 상점 둘이 아니다: '+secs.join(','));
+      return '합산 확인(×'+gotR.toFixed(2)+' · 곱이면 ×'+prodR.toFixed(2)+') · 캠프 지갑 ok · 2칸';
+    } finally { p.packs=keep; }
+  });
+
+  // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
+  //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
+  //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)
+  //     ② 닫을 때 **애니가 끝난 뒤에** 지운다(즉시 지우면 사라지는 연출이 없다)
+  //     ③ 닫는 중에 다시 눌러도 열린다 ← **실제로 겪은 버그**. 앞선 닫기의 뒷정리가
+  //        뒤늦게 와서 방금 연 판에 .hide 를 붙였다. 세대(_hbMoreGen)로 막는다.
+  await step('패널 셔터: 던전 이동·더보기가 같은 연출로 열리고 닫힌다', async()=>{
+    skipIf(typeof campDropOpen!=='function'||typeof hbOpenMore!=='function','패널 함수 없음');
+    skipIf(!campChipInfo(),'캠프 밖 — 던전 칩이 없다');
+    const ani=el=>getComputedStyle(el).animationName;
+    // ① 같은 애니
+    campDropOpen(); await sleep(30);
+    const dd=document.getElementById('campDrop');
+    assert(!!dd,'던전 판이 안 열렸다');
+    assert(ani(dd)==='panShutIn','던전 판에 셔터가 안 걸렸다: '+ani(dd));
+    const _ddDur=getComputedStyle(dd).animationDuration;   // 판이 지워지기 전에 담아 둔다
+    // ⛔ **닫기는 열기와 이름이 달라야 한다.** 같은 이름을 reverse 로 되감으려 했더니
+    //    애니가 하나도 안 돌고 **끝값으로 즉시 점프**했다(clip 0% → 한 프레임에 100%).
+    //    「지워지긴 지워진다」만 재던 앞 검사는 이걸 못 잡았다 — 그래서 여기서 이름을 잠근다.
+    const _openAni = ani(dd);
+    campDropClose();
+    const _closeAni = ani(document.querySelector('.cdDrop')||dd);
+    assert(_closeAni && _closeAni!=='none', '닫기에 애니가 없다');
+    assert(_closeAni !== _openAni,
+      '닫기가 열기와 같은 애니 이름이다 ('+_closeAni+') — 되감기가 안 돌고 끝값으로 점프한다');
+    // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다 — 그리고 **중간 모습이 실제로 있어야 한다**
+    assert(!!document.querySelector('.cdDrop'),'던전 판이 애니 없이 즉시 지워졌다');
+    let _mid=false;
+    for(let i=0;i<6;i++){ await sleep(25);
+      const x=document.querySelector('.cdDrop'); if(!x) break;
+      // ⚠ 정규식을 쓰지 않는다 — 이 파일을 heredoc 으로 고칠 때 역슬래시가 벗겨져 깨진다.
+      const seg=(getComputedStyle(x).clipPath||'').split(' ').pop().replace(')','');  // "41.2%"
+      const left = seg.slice(-1)==='%' ? 100-parseFloat(seg) : -1;
+      if(left>3 && left<97) _mid=true; }
+    assert(_mid,'닫는 중 중간 모습이 한 번도 안 잡혔다 — 접히지 않고 툭 사라진다');
+    await sleep(420);
+    assert(!document.querySelector('.cdDrop'),'던전 판이 애니 뒤에도 안 지워졌다');
+    // 더보기도 같은 애니여야 한다 — 둘이 다르면 단일 소스가 깨진 것
+    hbOpenMore(); await sleep(30);
+    const bx=document.getElementById('hbMoreBox');
+    assert(!!bx && ani(bx)==='panShutIn','더보기 판에 셔터가 안 걸렸다: '+(bx?ani(bx):'판 없음'));
+    const _dur=getComputedStyle(bx).animationDuration;
+    assert(_dur===_ddDur,'두 판의 연출 길이가 다르다 — 한 곳에서 정해야 한다 ('+_dur+' vs '+_ddDur+')');
+    // ③ 닫는 중에 다시 눌러도 열린다
+    hbCloseMore(); await sleep(50);
+    assert(!hbMoreOn(),'닫는 중인데 아직 열린 것으로 센다 — 다시 누르면 또 닫기가 돈다');
+    hudTopMenu();                                   // 셔터가 되감기는 중에 ☰ 를 다시 눌렀다
+    await sleep(500);                               // 앞선 닫기의 뒷정리가 올 시간을 충분히 준다
+    assert(!document.getElementById('hbMoreSheet').classList.contains('hide'),
+      '닫는 중에 다시 눌렀더니 안 열린다 — 지난 닫기의 뒷정리가 새로 연 판을 덮었다');
+    hbCloseMore(true); await sleep(40);
+    assert(document.getElementById('hbMoreSheet').classList.contains('hide'),'즉시 닫기가 안 먹는다');
+    return '열기 '+_dur+' 셔터 · 닫기는 이름이 다른 애니로 접힌다 · 두 판 공용 · 닫는 중 재클릭 ok';
+  });
+
+  await step('캠프: 라운드가 시작될 때 전원 부활 + 체력 회복', async()=>{
+    skipIf(typeof campRoundRevive!=='function'||typeof campEnterDungeon!=='function','라운드 부활 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keep=JSON.parse(JSON.stringify(C.rbTree||{}));
     try{
       C.rbTree={};
-      assert(campReviveSec()===30,'기본 부활이 30초가 아님: '+campReviveSec());
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
       skipIf(!CAMPB,'전장이 안 열림');
-      campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me'); });
+      campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
       const n0=CAMPB.me.units.length; assert(n0>0,'아군이 없음');
-      // 적 하나만 남겨 라운드가 끝나지 않게 한다(전멸시키면 클리어로 빠진다)
       CAMPB.ai.units.forEach((u,i)=>{ if(i>0){ u.dead=true; return; } u.dmg=0; u.hp=1e9; u.maxHp=1e9; });
+      // ① 라운드 도중에 죽으면 **그 라운드 내내 못 일어난다**
+      CAMPB.me.units.forEach((u,i)=>{ if(i===0) return; u.dead=true; u.hp=0; });
+      campCombatStep(0.05);
+      const down0=campDown();
+      assert(down0===n0-1,'누운 유닛을 못 붙잡았다: '+down0+'/'+(n0-1));
+      for(let i=0;i<800;i++) campCombatStep(0.05);
+      assert(campDown()===down0,'라운드 도중에 일어났다 — 시간 부활이 남아 있다: '+campDown());
+      // ② 라운드가 시작되면 전원 부활 + 체력 전체 회복
+      { const u=CAMPB.me.units[0]; if(u) u.hp=1; }
+      campRoundRevive();
+      assert(campDown()===0,'라운드 부활에서 안 일어났다: '+campDown());
+      assert(CAMPB.me.units.length===n0,'부활 뒤 인원이 다름: '+CAMPB.me.units.length+'/'+n0);
+      for(const u of CAMPB.me.units) assert(!u.dead && u.hp===u.maxHp,'체력이 안 찼다: '+u.hp+'/'+u.maxHp);
+      // ②-2 ⛔ **숨 고르기 중에 죽어도 명부에서 사라지면 안 된다** (2026-08-30 · 병력 누수).
+      //     strikeStepUnits 가 죽은 유닛을 배열에서 걷어내므로 그 구간에도 campCatchDown 이
+      //     있어야 한다. 없으면 _down 에도 못 들어가 **부활도 복귀도 못 하고 증발**한다.
+      //     ⭐ 실측(브라우저)에서 명부가 4 → 3 으로 줄었고, 벽 측정의 「병력 88 → 85」가 이것이다.
+      { campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+        if(CAMPB){ campWipeField();
+          for(let i=0;i<4;i++) campDeploy('marine', 0.4+i*0.05, 0.5);
+          const roster=()=>CAMPB.me.units.length+campDown();
+          const n0=roster(); assert(n0===4,'전제가 바뀜: 배치가 4기가 아니다 — '+n0);
+          CAMPB._gapT=3; CAMPB._started=true;
+          if(CAMPB._wq) CAMPB._wq.length=0;
+          campWithStk(()=>{ STK.ai.units.length=0; });
+          CAMPB.me.units[0].dead=true;                 // 숨 고르기 **중** 사망
+          campCombatStep(0.05);                        // gap 분기를 탄다
+          assert(campDown()===1,'숨 고르기 중 죽은 유닛을 못 붙잡았다 — 증발한다');
+          assert(roster()===n0,'명부가 줄었다: '+roster()+'/'+n0);
+          for(let i=0;i<80;i++) campCombatStep(0.05);  // 숨 고르기 끝 → 라운드 부활
+          assert(roster()===n0,'라운드가 시작됐는데 명부가 줄어 있다: '+roster()+'/'+n0);
+          campWipeField(); } }
+      // ③ ⭐ **전멸은 패배가 아니다**(2026-08-30 사용자 확정 · 옛 「전멸=패배」를 뒤집었다).
+      //    적이 길목의 건물을 부수며 밀고 들어와 **본부가 무너져야** 진다.
+      //    ⚠ 그래도 판이 안 멈추는 이유: 부활은 라운드 시작뿐이지만 적이 계속 나아간다.
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me','marine'); });
+      CAMPB._started=true;
+      CAMPB.ai.units.forEach((u,i)=>{ if(i>0){ u.dead=true; return; } u.dmg=0; u.hp=1e9; u.maxHp=1e9; });
+      if(!CAMPB.ai.units.length) campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
       CAMPB.me.units.forEach(u=>{ u.dead=true; u.hp=0; });
       campCombatStep(0.05);
-      // ① 전멸해도 지지 않는다 — 패배는 본부 파괴뿐(부활이 생긴 뒤의 규칙)
-      assert(campDgN()>0 && CAMPB,'전멸했다고 졌다 — 부활이 있으면 전멸은 패배가 아니다');
-      assert(campDown()===n0,'누운 유닛을 못 붙잡았다: '+campDown()+'/'+n0);
-      assert(CAMPB.me.units.length===0,'죽은 유닛이 전장 배열에 남아 있다');
-      // ② 시간이 지나면 체력 만땅으로 일어나 전장으로 돌아온다
-      // ⚠ 부활 '직후'에 잰다 — 더 굴리면 장기전 방지(strikeSuddenDeath) 등이 체력을 깎아 헛돈다
-      let step=0; while(campDown()>0 && step<900){ campCombatStep(0.05); step++; }
-      assert(campDown()===0,'부활 대기가 안 비워짐: '+campDown());
-      assert(step>500 && step<700,'30초쯤에 일어나야 한다 — 걸린 틱: '+step);
-      assert(CAMPB.me.units.length===n0,'부활 뒤 인원이 다름: '+CAMPB.me.units.length+'/'+n0);
-      { const u=CAMPB.me.units[0];
-        assert(!u.dead && u.hp===u.maxHp,'부활했는데 빈사거나 체력이 안 찼다'); }
-      // ③ 트리 rebuild = 부활 단축. ⛔ 0초가 되면 눕는 것이 무의미하므로 하한이 있다
-      const base=campReviveSec();
-      C.rbTree={rebuild:1}; const s1=campReviveSec();
-      C.rbTree={rebuild:5}; const s5=campReviveSec();
-      assert(s1<base && s5<s1,'rebuild 가 부활을 안 줄인다: '+base+' → '+s1+' → '+s5);
-      assert(s5>=CAMP_REV_MIN,'부활 하한을 뚫었다: '+s5);
-      // ④ 되살릴 것이 하나도 없으면 그때는 진다(끝이 없어지므로)
-      C.rbTree={};
+      assert(CAMPB && campDgN()>0,'전멸했다고 졌다 — 패배는 본부 파괴뿐이다');
+      { const base=CAMPB.me.base; base.hp=0; base.dead=true;
+        campCombatStep(0.05);
+        assert(campDgN()===0,'본부가 무너졌는데 안 졌다'); }
+      // ④ ⛔ 시간 부활은 되살아나지 않았다
+      assert(typeof campReviveStep==='undefined','campReviveStep 이 되살아났다 — 시간 부활은 없앴다');
+      assert(typeof campReviveSec==='undefined','campReviveSec 이 되살아났다');
+      return '라운드 중 부활 없음 · 라운드 시작 시 전원 회복 · 전멸은 패배 아님(본부 파괴만)';
+    } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField(); { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } } campBattleClose(); } });
+  // 🛡 버팀(endure · 구 rebuild) — 치명 피해 1회 무시 · 체력 1 · 유닛당 라운드 1회 (sc-3 §4-5-7)
+  await step('캠프: 버팀 — 치명타를 라운드당 1회 버틴다', async()=>{
+    skipIf(typeof campEndureP!=='function'||typeof campCatchDown!=='function','버팀 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
-      CAMPB.me.units.length=0; if(CAMPB._down) CAMPB._down.length=0; CAMPB._started=true;
-      campCombatStep(0.05);
-      assert(campDgN()===0,'출격 병력이 0인데 안 짐');
-      return '30초 부활 · 단축 '+s1+'→'+s5+'초 · 전멸≠패배';
-    } finally { C.rbTree=keep; if(typeof campBattleClose==='function') campBattleClose();
-      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
-  });
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      // ① 사다리 값 — 0차 0% · 5차 75% (⛔ 100% 금지 — 전멸이 안 난다)
+      C.rbTree={}; assert(campEndureP()===0,'0차인데 버팀이 있다: '+campEndureP());
+      C.rbTree={endure:5}; assert(campEndureP()===0.75,'5차가 75%가 아니다: '+campEndureP());
+      assert(CAMP_RT_END[5]<1,'T5 가 100% 다 — 전멸이 안 나고 체력 축과 겹친다');
+      // ② 5차·주사위 고정으로 — 죽어 걷힌 유닛이 체력 1 로 그 자리에서 되살아난다
+      const u=campDeploy('marine', 0.5, 0.5); assert(u,'배치 실패');
+      const rnd=Math.random; Math.random=()=>0;   // 항상 버팀
+      try{
+        const b4=CAMPB.me.units.slice();
+        u.dead=true; CAMPB.me.units.length=0;      // strikeStepUnits 가 걷은 셈
+        campCatchDown(b4);
+        assert(CAMPB.me.units.indexOf(u)>=0,'버팀이 안 됐다 — 누웠다');
+        assert(!u.dead && u.hp===1,'체력 1 로 버텨야 한다: hp '+u.hp+' dead '+u.dead);
+        assert(campDown()===0,'버텼는데 누움 목록에도 들어갔다');
+        // ③ 같은 라운드 두 번째 치명타 = 눕는다(라운드당 1회)
+        const b5=CAMPB.me.units.slice();
+        u.dead=true; CAMPB.me.units.length=0;
+        campCatchDown(b5);
+        assert(campDown()===1,'라운드당 1회를 안 지켰다 — 두 번 버텼다');
+        // ④ 라운드가 시작되면 버팀 횟수가 다시 찬다
+        campRoundRevive();
+        assert(u._endured===false,'라운드 리셋에서 버팀 횟수가 안 찼다');
+      } finally { Math.random=rnd; }
+      return '0→75% · 체력 1 버팀 · 라운드당 1회 · 리셋 ok';
+    } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField();
+      campBattleClose(); const S=campState(); if(S){ S.dg=0; S.cleared=0; } } });
 
-  // 🌳 아군 강화 갈래 — 트리를 찍으면 실제로 값이 움직이는가(2026-08-25 · 6/8 배선).
-  //   ⚠ campRtMul 은 **계열 키**를 받는다(f 가 아니다). 'atk' 이지 'unitAtk' 가 아니다.
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{
     skipIf(typeof campScaleAllies!=='function'||typeof campState!=='function','아군 강화 배선 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
@@ -1360,7 +1635,7 @@ async function groupLobby(){
       const cut0=10-t.skillCd.probe;
       assert(cut5>cut0*5,'스킬 쿨다운 감소가 트리를 안 탄다: '+cut5.toFixed(3)+' vs '+cut0.toFixed(3));
       return '공격·체력·건물 ×25 · 비용 −80% · 인구 +500 · 스킬쿨 '+cut5.toFixed(2)+'/틱';
-    } finally { C.rbTree=keep; if(typeof campBattleClose==='function') campBattleClose();
+    } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField(); if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
@@ -1469,8 +1744,9 @@ async function groupLobby(){
           '캠프를 나갔는데 정제소 카드가 남아 있다 — 관리자 탭이 터진다'); }
       openHome(); await sleep(420);
       assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
+      // ⛽ 정제소는 이제 **건물 카드가 아니라 연구 구역**에 있다 — 캠프 안팎에서 붙었다 떨어지지 않는다.
       { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
-        assert((rb.research||[]).some(x=>x.k===CAMP_REF_KEY),'캠프로 돌아왔는데 정제소 카드가 없다'); }
+        assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),'정제소 카드가 건물로 되돌아왔다'); }
       void wasOn;
       return '계열 가스 1→'+campResearchCost(tierR,7)[1]+'(Lv7) · 단발 10/15/20 · 미네랄 0';
     } finally {
@@ -1491,6 +1767,9 @@ async function groupLobby(){
     try{
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
       skipIf(!CAMPB,'전장이 안 열림');
+      // ⚠ 재입장(adopt)이 앞 스텝의 잔류 유닛을 데려올 수 있다 — units[0] 을 마린으로
+      //   단정하기 전에 전장을 깨끗이 한다(실제로 racer 가 [0] 을 차지해 깨졌다).
+      campWipeField();
       campWithStk(()=>{ for(let i=0;i<8;i++) strikeSpawnUnit('me','marine'); });
       // ⛔ **설계 능력치를 반드시 씌운다.** 안 씌우면 유닛이 SC 체력(40)을 그대로 갖고 있어
       //   테스트가 **가짜로 통과한다** — 실제 캠프 마린은 체력 5 라 광폭화의 hpCost(10)에 막혔다
@@ -1511,7 +1790,8 @@ async function groupLobby(){
       assert(SKILLS.stim.hpCost*2 < u0.maxHp,
         '광폭화 체력값이 캠프 체력보다 크다 — 조건에 늘 걸린다: hpCost '+SKILLS.stim.hpCost+' vs hp '+u0.maxHp);
       return '스팀팩 자동 시전 ok · hpCost '+SKILLS.stim.hpCost+' vs 체력 '+u0.maxHp;
-    } finally { if(typeof campBattleClose==='function') campBattleClose();
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
@@ -1607,6 +1887,661 @@ async function groupLobby(){
     return out.join(' · ');
   });
 
+  // 🏭 **유닛은 한 번만 태어난다** (2026-08-28 사용자 확정)
+  //    ⛔ 예전엔 생산하면 기지에 서고, 3초 뒤 campSortie 가 그것을 **지우고 전장에 새로 만들었다.**
+  //      그래서 내가 둔 자리가 사라지고, 나갈 때 인구가 반환되어 인구 200 이 생산을 못 막았다.
+  await step('캠프: 생산한 유닛이 그 자리에서 바로 전장에 선다', async()=>{
+    skipIf(typeof campPatchFinish!=='function'||typeof campEnterDungeon!=='function','1단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const ents=G.tech.ents, uOf=()=>ents.filter(e=>e.type==='unit').length;
+    const n0=uOf(), sup0=G.tech.sup|0;
+    // ① 생산이 끝나면 기지에 안 남고 전장에 선다
+    techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+    assert(uOf()===n0,'기지에 유닛이 남았다 — 전장으로 안 갔다: '+uOf()+' vs '+n0);
+    assert(CAMPB.me.units.length===1,'전장에 안 섰다: '+CAMPB.me.units.length);
+    // ② 자리(_post)가 생기고, 그 자리가 선 자리다
+    const u=CAMPB.me.units[0];
+    assert(u._post,'자리(_post)가 없다');
+    assert(Math.abs(u._post.x-u.x)<1e-6 && Math.abs(u._post.y-u.y)<1e-6,'자리와 선 위치가 다르다');
+    assert(u.rallied===true,'집결지로 걸어가려 한다 — 여기가 이미 제자리다');
+    // ③ 좌표 변환이 짝이다(campG2W 는 campW2G 의 역)
+    { const W=CAMPB.world, g=campW2G(u.x,u.y,W), b=campG2W(g.gx,g.gy,W);
+      assert(Math.hypot(b.x-u.x,b.y-u.y)<1,'campG2W 가 campW2G 의 역이 아니다'); }
+    // ④ ⛔ 인구를 돌려주지 않는다 — 출격이 인구를 반환하던 것이 무한 생산의 원인이었다
+    for(let i=0;i<4;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘겨 본다
+    assert((G.tech.sup|0)===sup0,'인구가 반환됐다: '+G.tech.sup+' → '+sup0);
+    assert(CAMPB.me.units.length===1,'라운드를 넘기며 병력이 또 생겼다: '+CAMPB.me.units.length);
+    // ⑤ 🪖 **캠프(0단계)에서 뽑아 둔 병력은 전장이 열릴 때 그 자리로 데려온다.**
+    //    ⛔ 던전 밖에는 전장이 없어 생산 가로채기가 못 옮긴다 — 그동안은 기지에 선다.
+    //    ⚠ 실측(2026-08-28)에서 이걸 빠뜨려 판이 멈췄다: 캠프에서 54기를 뽑아 뒀는데 던전에
+    //      들어가면 전장 병력이 0 이라 곧바로 패배 → 캠프 → 재입장이 2,583번 반복됐다.
+    { const C=campState(); const dgWas=C.dg, clWas=C.cleared;
+      if(typeof campWipeField==='function') campWipeField(); campBattleClose(); C.dg=0; C.cleared=0;               // 캠프(0단계)로 내려온다 (⚠ 비우고 닫는다 — 안 그러면 전장 병력이 기지로 돌아와 아래 수 검사가 흔들린다)
+      const sup1=G.tech.sup|0;
+      techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+      assert(ents.filter(e=>e.type==='unit').length===1,'0단계에서는 기지에 서야 한다');
+      C.dg=1; C.cleared=0; CAMPB=null; campCombatStep(0.05);        // 던전 입장 = 전장이 열린다
+      assert(CAMPB,'전장이 안 열림');
+      assert(ents.filter(e=>e.type==='unit').length===0,'기지에 병력이 남았다 — 못 데려왔다');
+      assert(CAMPB.me.units.length>=1,'전장으로 못 데려왔다: '+CAMPB.me.units.length);
+      assert((G.tech.sup|0)===sup1,'데려오며 인구를 반환했다');
+      C.dg=dgWas; C.cleared=clWas; }
+    // ⑥ 일꾼은 그대로 기지에 (미네랄을 캐야 한다)
+    { const w0=ents.filter(e=>e.type==='worker').length;
+      techFinishProduce({ id:TECH_WORKER[G.tech.race], pop:1, bk:'command' }, null);
+      assert(ents.filter(e=>e.type==='worker').length===w0+1,'일꾼이 기지에서 사라졌다'); }
+    // ⑦ ⛔ 공유 함수다 — 되돌리면 기지에 서야 한다
+    campUnpatchFinish();
+    techFinishProduce({ id:'marine', pop:1, bk:'barracks' }, null);
+    assert(uOf()===n0+1,'원복했는데도 전장으로 갔다 — 관리자 탭이 깨진다');
+    campPatchFinish();
+    { const i=ents.findIndex(e=>e.type==='unit'); if(i>=0) ents.splice(i,1); }   // 정리
+    campWithStk(()=>{ STK.me.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '전장 1기 · 자리 고정 · 인구 유지';
+  });
+
+  // 🛡 **방어 건물은 전선에 지을 수 있다** (2026-08-30 사용자 확정)
+  //    ⛔ 일반 매핑은 격자 전체를 전장 62~92% 로 눌러 담는데 전투는 50~60% 에서 벌어진다.
+  //      그래서 벙커를 어디에 지어도 전선 뒤였다 — 실측 벙커 체력이 **120/120 그대로**였다.
+  //    ⭐ 방어 건물만 유닛과 같은 좌표계(campG2W)를 쓴다 → 격자 위쪽 = 전장 앞.
+  await step('캠프: 방어 건물만 전선에 선다 (일반 건물은 뒤 그대로)', async()=>{
+    skipIf(typeof CAMP_DEF_BLD==='undefined'||typeof campBuildStructs!=='function','방어 건물 매핑 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    const W=CAMPB.world;
+    // 같은 격자 자리(위쪽)에 벙커와 일반 건물을 하나씩
+    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='_probe')));
+    G.tech.built['bunker']=1;
+    const gy=0.25;
+    G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'bunker', x:0.5, y:gy, w:2,h:2, bt:0 });
+    G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'barracks', x:0.4, y:gy, w:2,h:2, bt:0 });
+    campBuildStructs();
+    const bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
+    const barr=(CAMPB._bld||[]).find(b=>b&&b.bk==='barracks');
+    assert(bunk&&barr,'건물이 전장에 안 올라왔다');
+    // ① 같은 격자인데 벙커가 훨씬 앞(y 가 작다)
+    assert(bunk.y < barr.y - W*0.15,
+      '방어 건물이 앞으로 안 나갔다: 벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'%');
+    // ② 벙커는 전선(전장 50~60%)보다 앞이다 — 적을 먼저 만난다
+    assert(bunk.y <= W*0.60,
+      '벙커가 전선보다 뒤다: '+Math.round(bunk.y/W*100)+'% (전선은 50~60%)');
+    // ③ 일반 건물은 예전 구간(62~92%)에 그대로 — 앞에 나가면 기지가 곧바로 부서진다
+    assert(barr.y >= W*0.60,
+      '일반 건물까지 앞으로 나갔다: '+Math.round(barr.y/W*100)+'%');
+    // ④ 좌표계가 유닛과 같아야 화면과 안 어긋난다 — 역변환이 원래 격자를 돌려준다
+    { const g=campW2G(bunk.x, bunk.y, W);
+      assert(Math.abs(g.gy-gy)<0.01 && Math.abs(g.gx-0.5)<0.01,
+        '방어 건물 좌표가 유닛 좌표계와 안 맞는다 — 화면에서 어긋나 보인다: '+g.gx.toFixed(3)+','+g.gy.toFixed(3)); }
+    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'% · 유닛 좌표계와 일치';
+  });
+
+  // 🧱 **벙커 — 화력병을 살리는 자리** (2026-08-30 사용자 확정)
+  //    ⚠ 왜: 화력병 사거리 70 vs 적(스웜 T1) 34~47 — **적 사거리 안까지 들어가야 때린다.**
+  //      실측: 의무병을 8기까지 늘려도 마린은 2/8 → 7/8 인데 **화력병은 5/8 에서 안 변했다.**
+  //    ⭐ 탄 유닛은 벙커 자리에서 쏘고, 맞은 만큼은 **벙커가 대신 받는다.**
+  await step('캠프: 벙커에 태우면 그 자리에서 쏘고 피해는 벙커가 받는다', async()=>{
+    skipIf(typeof campBunkerStep!=='function'||typeof campBoard!=='function','벙커 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    // 벙커를 기지에 심는다(전장 앞쪽 = 격자 위쪽)
+    const hq=(G.tech.ents||[]).find(e=>e&&e.type==='bldg');
+    skipIf(!hq,'본부가 없다');
+    G.tech.built['bunker']=(G.tech.built['bunker']|0)+1;
+    const bEid=G.tech.eseq++;
+    G.tech.ents.push({ eid:bEid, type:'bldg', bk:'bunker', x:hq.x, y:Math.max(0.05,hq.y-0.18), w:2, h:2, bt:0 });
+    CAMPB=null; campCombatStep(0.05);
+    campWipeField();
+    const bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
+    assert(bunk,'벙커가 전장에 안 올라왔다 — campBuildStructs 가 못 봤다');
+    const crew=[]; for(let i=0;i<6;i++) crew.push(campDeploy('machinegun', 0.34+(i%3)*0.03, 0.50));
+    CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+    // ① 정원 4기 — 넘치면 안 탄다
+    assert(campBoard(crew.slice(0,4), bunk)===4,'4기가 안 탔다');
+    assert(campBoard(crew.slice(4,6), bunk)===0,'정원(4)을 넘겨 태웠다: 지금 '+campBunkCrew(bunk.eid));
+    // ② 탄 유닛은 벙커 자리에 붙어 있다
+    for(let i=0;i<200;i++) campCombatStep(0.05);
+    { const inB=CAMPB.me.units.filter(u=>!u.dead&&campInBunker(u));
+      assert(inB.length>0,'10초 만에 탑승이 풀렸다');
+      const far=inB.filter(u=>Math.hypot(u.x-bunk.x,u.y-bunk.y)>80);
+      assert(!far.length,'탄 유닛이 벙커에서 떨어져 나갔다: '+far.length+'기'); }
+    // ③ 피해는 벙커가 받는다 — 탄 유닛을 때려도 체력이 안 줄고 벙커가 준다
+    { const u=CAMPB.me.units.find(x=>!x.dead&&campInBunker(x));
+      assert(u,'탄 유닛이 없다');
+      const uhp=u.hp, bhp=bunk.hp;
+      u.hp -= 5; campBunkerStep(0.05);
+      assert(Math.abs(u.hp-uhp)<1e-6,'탄 유닛이 직접 피해를 받았다: '+u.hp+' (전 '+uhp+')');
+      assert(Math.abs((bhp-5)-bunk.hp)<1e-6,'벙커가 대신 안 받았다: '+bunk.hp+' (기대 '+(bhp-5)+')'); }
+    // ③-2 🎯 **사거리 보너스** — 탄 동안만 +2칸, 내리면 원래대로
+    //   ⚠ 벙커는 못 움직이는데 전선은 판마다 다른 자리에 생긴다. 보너스가 그 어긋남을 메운다.
+    { const u=CAMPB.me.units.find(x=>!x.dead&&campInBunker(x));
+      assert(u,'탄 유닛이 없다');
+      assert(u._rng0!=null,'탄 유닛에 보너스가 안 걸렸다');
+      assert(Math.abs(u.rng-(u._rng0+campBunkRng()))<1e-6,
+        '보너스 값이 다르다: '+Math.round(u.rng)+' (기대 '+Math.round(u._rng0+campBunkRng())+')');
+      const base=u._rng0;
+      u._bunk=null; campBunkerStep(0.05);                  // 내리면
+      assert(u._rng0==null && Math.abs(u.rng-base)<1e-6,
+        '내렸는데 보너스가 안 풀렸다: '+Math.round(u.rng)+' (원래 '+Math.round(base)+')');
+      // 다시 태워 다음 검사를 잇는다
+      campBoard([u], bunk); campBunkerStep(0.05); }
+    // ④ 벙커가 무너지면 밖에서 싸운다 — 그리고 **기록은 남아** 복구되면 다시 탄다
+    { const u=CAMPB.me.units.find(x=>!x.dead&&x._bunk!=null);
+      bunk.hp=0; bunk.dead=true;
+      assert(!campInBunker(u),'무너진 벙커에 아직 타 있다');
+      assert(u._bunk!=null,'탑승 기록까지 지웠다 — 라운드가 새로 시작해도 다시 못 탄다');
+      bunk.hp=bunk.maxHp||bunk.max||100; bunk.dead=false;      // 라운드 시작 = 건물 체력 복구
+      assert(campInBunker(u),'벙커가 복구됐는데 다시 안 탔다'); }
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '정원 4 · 자리 고정 · 피해 전가 · 무너지면 나갔다 복구되면 다시 탄다';
+  });
+
+  // ⚔ **전투는 오토배틀이 맡는다 — 캠프는 손을 뗀다** (2026-08-31 사용자 확정)
+  //    ⛔ 예전에는 campEngageStep 이 매 프레임 「빈자리를 찾아 파고들게」 했다. 사거리 안에
+  //      드는 비율은 높았지만(60~100%), 오토배틀 이동을 되돌리고 다시 미느라 **덜덜 떨렸다** —
+  //      실측 방향 뒤집힘 **29.9회/유닛** vs 순수 오토배틀 **0.9회**(33배).
+  //    ⭐ 지금은 다가가 싸우는 것을 오토배틀에 맡기고, 캠프는 **자리 복귀만** 한다.
+  //      대가로 사거리 안 비율이 20~40% 로 떨어진다(뭉치면 앞줄만 닿는다) — 알고 받는 값이다.
+  //    ⚠ 그래서 이 step 은 **비율을 재지 않는다.** 대신 「캠프가 전투에 안 끼어든다」를 지킨다.
+  await step('캠프: 자리 잡기는 가끔만 민다 (매 프레임이면 떨린다)', async()=>{
+    skipIf(typeof campEngageStep!=='function'||typeof campDeploy!=='function','파고들기 없음');
+    // ⛔ **매 프레임 밀면 안 된다** — 오토배틀 이동을 되돌리고 다시 미느라 덜덜 떨린다
+    //   (실측: 방향 뒤집힘 29.9회/유닛 vs 순수 오토배틀 0.9회).
+    // ⛔ 그렇다고 0 이어도 안 된다 — 뭉친 부대에서 앞줄만 닿아 화력이 반토막 난다
+    //   (35분 벤치: D1R18 → D1R11 · 실효 0.87 → 0.55).
+    // ⭐ 그래서 **실제로 민 횟수**를 본다(함수 호출 횟수가 아니다 — 안에서 유닛별로 간격을 둔다).
+    { campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      const N=6; for(let i=0;i<N;i++) campDeploy('marine', 0.36+i*0.03, 0.46);
+      CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+      let pushed=0; const F=40;                       // 40프레임 = 2초
+      for(let i=0;i<F;i++){ campCombatStep(0.05); pushed+=campEngageStep(0.05); }
+      const perUnit=pushed/N;
+      // 2초 · 간격 CAMP_ENG_TICK 이면 유닛당 대략 2/TICK 회. 매 프레임이면 40회가 된다.
+      assert(perUnit < F*0.5,
+        '자리 잡기를 너무 자주 민다: 유닛당 '+perUnit.toFixed(1)+'회/2초 (매 프레임이면 '+F+'회) — 떨린다'); }
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    // ⭐ 비율은 안 잰다(위 주석 참고). 대신 부대를 세워 두고 아래 검사들을 잇는다.
+    campWipeField();
+    for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
+    for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
+    CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+    for(let i=0;i<500;i++) campCombatStep(0.05);
+    // 마지막 판을 그대로 두고 아래 검사를 잇는다
+    for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
+    for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
+    for(let i=0;i<200;i++) campCombatStep(0.05);
+    // 🚧 **자리에서 멀리 나가지 않는다** — 이제 지키는 것은 **목줄(CAMP_LEASH)** 하나다.
+    //   ⛔ 예전에는 campEngageStep 이 목표를 잘라 제한했는데, 전투를 오토배틀에 넘기면서
+    //     그 장치가 사라졌다. 그대로 두니 유닛이 적을 따라 **750** 까지 나갔다(이 계약이 잡았다).
+    //   ⭐ 그래서 목줄을 1300 → 600 으로 조였다. 목줄은 위치를 **직접 자르므로** 초과분이 없다.
+    { const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
+        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > CAMP_LEASH*1.05);
+      assert(!out.length,'자리에서 목줄(' +CAMP_LEASH+ ')보다 멀리 나갔다: '+out.length+'기'); }
+    // ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
+    { const ai=CAMPB.ai.units.filter(u=>!u.dead);
+      if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };
+        const mel=CAMPB.me.units.filter(u=>!u.dead&&u.melee), rng=CAMPB.me.units.filter(u=>!u.dead&&!u.melee&&(u.dmg||0)>0);
+        if(mel.length && rng.length){
+          const mA=mel.reduce((s,u)=>s+near(u),0)/mel.length, rA=rng.reduce((s,u)=>s+near(u),0)/rng.length;
+          assert(mA<rA,'근접이 원거리보다 멀리 서 있다 — 두 방식이 안 갈렸다: 근접 '+Math.round(mA)+' · 원거리 '+Math.round(rA)); } } }
+    // ⚠ 표적이 사라지면 **파고들기가 멈춘다** — 그래야 복귀(campPostStep)에 자리를 넘긴다.
+    //   ⛔ 여기서 campCombatStep 으로 복귀를 재지 말 것: 적을 지우면 라운드가 끝나고
+    //     **다음 라운드 적이 새로 나와** 다시 싸우러 간다(그렇게 한 번 헛짚었다).
+    //     복귀 자체는 바로 아래 step 「유닛이 자기 자리로 돌아온다」가 본다.
+    campWithStk(()=>{ STK.ai.units.length=0; });
+    for(const u of CAMPB.me.units) u.tgtUid=null;
+    assert(campEngageStep(0.05)===0,'표적이 없는데 파고들기가 계속 유닛을 민다');
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '자리 잡기 간격 '+CAMP_ENG_TICK+'초 · 목줄 '+CAMP_LEASH+' · 근접이 더 가까이 · 표적 없으면 멈춘다';
+  });
+
+  // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
+  //    복귀는 위치를 덮어쓰는 게 아니라 strikeMoveToward 로 **다시 미는** 방식이다 —
+  //    그래야 겹침 회피(stepUnitMove)를 탄다.
+  await step('캠프: 유닛이 자기 자리로 돌아온다 (겹침 회피 · 싸울 땐 안 돌아감)', async()=>{
+    skipIf(typeof campPostStep!=='function'||typeof campEnterDungeon!=='function','2단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const W=CAMPB.world;
+    const mk=(id,x,y)=>campWithStk(()=>{ strikeSpawnUnit('me',id);
+      const z=STK.me.units[STK.me.units.length-1];
+      if(z){ z.x=x; z.y=y; z.wait=0; z.rallied=true; z._post={x:x,y:y}; z._sx=x; z._sy=y; } return z; });
+    // ① 자리에서 밀려나면 돌아온다
+    const a=mk('marine', W*0.5, W*0.70);
+    assert(a,'레인저를 못 만들었다');
+    campScaleAllies([a]);
+    a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y;      // 자리에서 멀리 떼어 놓는다
+    const d0=Math.hypot(a.x-a._post.x, a.y-a._post.y);
+    for(let i=0;i<40;i++){ campPostSnap(); campPostStep(0.05); }
+    const d1=Math.hypot(a.x-a._post.x, a.y-a._post.y);
+    assert(d1<d0,'자리로 안 돌아온다: '+Math.round(d0)+' → '+Math.round(d1));
+    // ② ⚔ **살아 있는** 표적이 있으면 복귀보다 전투가 먼저다 — 돌아오다 싸움이 나면 합류한다
+    { const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+        const z=STK.ai.units[STK.ai.units.length-1]; if(z){ z.x=W*0.5; z.y=W*0.38; } return z; });
+      a.x=W*0.5; a.y=W*0.40; a._sx=a.x; a._sy=a.y; a.tgtUid=foe?foe.uid:'x';
+      const bx=a.x, by=a.y;
+      campPostSnap(); campPostStep(0.05);
+      assert(a.x===bx && a.y===by,'싸우는 유닛을 복귀시켰다');
+      // ⛔ **적이 죽으면 표적 번호가 남아도 돌아와야 한다.**
+      //   실측(2026-08-28): 이걸 안 보고 tgtUid 만 봤더니 적을 다 없앤 뒤 20초를 굴려도
+      //   유닛이 제자리에 붙박여 있었다. 스모크가 가짜 표적을 써서 못 잡았다.
+      if(foe) foe.dead=true;
+      campWithStk(()=>{ STK.ai.units.length=0; });
+      // ⏳ **바로는 안 돌아온다** — 전투가 CAMP_RETURN_DELAY(0.8초) 동안 없어야 복귀를 건다
+      //   (2026-08-31 · 적이 곧 다시 붙는데 매번 되돌아가면 왔다 갔다 한다).
+      campPostSnap(); campPostStep(0.05);
+      assert(a.x===bx && a.y===by,'전투가 끝나자마자 곧바로 복귀했다 — 지연('+CAMP_RETURN_DELAY+'초)이 없다');
+      for(let k=0;k<24;k++){ campPostSnap(); campPostStep(0.05); }   // 1.2초 — 지연을 넘긴다
+      assert(a.x!==bx || a.y!==by,'적이 죽었는데 표적 번호 때문에 안 돌아온다');
+      a.tgtUid=null; }
+    // ③ 겹침 회피 — 같은 자리를 준 둘이 포개지지 않는다
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const px=W*0.5, py=W*0.60;
+      const u1=mk('marine', W*0.45, W*0.45), u2=mk('marine', W*0.55, W*0.45);
+      if(u1&&u2){ campScaleAllies([u1,u2]);
+        u1._post={x:px,y:py}; u2._post={x:px,y:py};        // 일부러 같은 자리
+        for(let i=0;i<80;i++){ campPostSnap(); campPostStep(0.05); }
+        const gap=Math.hypot(u1.x-u2.x, u1.y-u2.y);
+        const need=((u1.size||14)+(u2.size||14))*0.5;
+        assert(gap>=need*0.8,'둘이 포개졌다 — 회피가 안 걸렸다: 간격 '+Math.round(gap)+' (최소 '+Math.round(need*0.8)+')'); } }
+    // ④ 🪢 목줄 기준이 **자기 자리**다(집결지가 아니다)
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const u=mk('marine', W*0.30, W*0.55);
+      if(u){ u._post={x:W*0.30,y:W*0.55};
+        u.x=u._post.x; u.y=u._post.y-CAMP_LEASH*3;
+        campLeash();
+        const d=Math.hypot(u.x-u._post.x, u.y-u._post.y);
+        assert(d<=CAMP_LEASH+1e-6,'자기 자리 기준 목줄이 안 걸렸다: '+Math.round(d)); } }
+    // ⑤ 부활하면 자기 자리에서 일어난다
+    { campWithStk(()=>{ STK.me.units.length=0; });
+      const u=mk('marine', W*0.5, W*0.60);
+      if(u){ const px=u._post.x, py=u._post.y;
+        u.x=W*0.5; u.y=W*0.25;                            // 멀리서 죽은 셈
+        u.dead=true; CAMPB._down=[{u:u, t:0}];
+        CAMPB.me.units.length=0;
+        campRoundRevive();
+        assert(Math.abs(u.x-px)<1e-6 && Math.abs(u.y-py)<1e-6,'누운 자리에서 일어났다 — 자기 자리여야 한다'); } }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    CAMPB._down=[];
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '복귀 · 회피 · 목줄 · 부활 자리 ok';
+  });
+
+  // 🖐 **내가 지정해서 원하는 자리로 옮긴다** (2026-08-28 사용자 확정)
+  //    ⛔ 원본(건설 탭)의 탭 로직은 기지 엔티티만 안다 — 캠프가 up 에서 먼저 보고,
+  //      처리했으면 _btDown 을 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
+  await step('캠프: 전장 병력을 골라 원하는 자리로 옮긴다', async()=>{
+    skipIf(typeof campBattleAt!=='function'||typeof campMoveSel!=='function','3단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const W=CAMPB.world, r=_btRect(); skipIf(!r||!r.width,'맵 사각을 못 잼');
+    const mk=(gx,gy)=>{ const u=campDeploy('marine', gx, gy); return u; };
+    // 화면 좌표로 바꾸는 도우미 — 격자 → 화면
+    const scr=(wx,wy)=>{ const sp=_techW2S(wx,wy); return { x:r.left+sp.x*r.width, y:r.top+sp.y*r.height }; };
+    // ① 탭으로 고른다
+    const a=mk(0.5,0.55); assert(a,'유닛 배치 실패');
+    { const g=campW2G(a.x,a.y,W), pt=scr(g.gx,g.gy);
+      const hit=campBattleAt(pt.x, pt.y);
+      assert(hit===a,'탭으로 유닛을 못 골랐다');
+      campSelSet([a]);
+      assert(campSelList().length===1,'지정이 안 됐다'); }
+    // ② 지정 표시가 렌더 엔트리에 실린다(3D 하단 링)
+    { const e=campBattleList().find(x=>x.uid==='cb_me_'+a.uid);
+      assert(e && e.sel===true,'지정 링이 안 붙었다'); }
+    // ③ 빈 자리로 옮기면 **그 자리가 새 자리**가 된다
+    { const gx=0.35, gy=0.30, want=campG2W(gx,gy,W);
+      campMoveSel(gx,gy);
+      assert(Math.hypot(a._post.x-want.x, a._post.y-want.y)<40,'자리가 안 옮겨졌다');
+      assert(!a.tgtUid,'표적을 놓지 않았다 — 복귀가 못 움직인다'); }
+    // ④ 여러 기를 옮기면 **한 점에 포개지지 않는다**
+    { campWithStk(()=>{ STK.me.units.length=0; }); _campSel=[];
+      const us=[mk(0.4,0.5), mk(0.5,0.5), mk(0.6,0.5)].filter(Boolean);
+      if(us.length===3){ campSelSet(us); campMoveSel(0.5,0.35);
+        const d01=Math.hypot(us[0]._post.x-us[1]._post.x, us[0]._post.y-us[1]._post.y);
+        const d02=Math.hypot(us[0]._post.x-us[2]._post.x, us[0]._post.y-us[2]._post.y);
+        assert(d01>1 && d02>1,'세 기의 자리가 같다 — 대형으로 안 펴졌다'); } }
+    // ⑤ 박스로 여러 기 고르기
+    { const g0={x:0.2,y:0.2}, g1={x:0.9,y:0.9};
+      const hit=campBattleInBox(g0,g1);
+      assert(hit.length>=1,'박스 안 유닛을 못 찾았다: '+hit.length); }
+    // ⑥ ⛔ 나가면 지정을 들고 나가지 않는다
+    { campSelSet(campSelList()); assert(campSelList().length>0,'전제가 바뀜');
+      campSelClear(); assert(campSelList().length===0,'지정이 안 풀렸다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '탭 지정 · 링 · 자리 이동 · 대형 · 박스 ok';
+  });
+
+  // 🎨 **던전을 옮기면 바닥 그림도 따라 바뀐다** (2026-08-30)
+  //    ⛔ campSkin 은 오래도록 **캠프 화면 진입 때 한 번**만 불렸다. 50라운드를 채워 자동으로
+  //      넘어가도 바닥은 옛 그림 그대로였다 — 그림 11장을 넣어 두고 한 장만 보고 있었다.
+  await step('캠프: 던전을 옮기면 바닥 그림도 바뀐다', async()=>{
+    skipIf(typeof campEnterDungeon!=='function'||typeof campSkin!=='function','캠프 없음');
+    const ph=document.getElementById('phone'); skipIf(!ph,'#phone 없음');
+    const bgOf=()=>(ph.style.getPropertyValue('--campBg')||'').trim();
+    campEnterDungeon(1); const a=bgOf();
+    campEnterDungeon(3); const b=bgOf();
+    assert(a && b, '--campBg 가 안 걸렸다');
+    assert(a!==b, '던전을 옮겼는데 바닥 그림이 그대로다: '+a.slice(-28));
+    assert(/dg3/.test(b), '던전 3 인데 dg3 그림이 아니다: '+b.slice(-28));
+    { const C=campState(); C.dg=3; C.cleared=CAMP_ROUND_MAX-1; campSkin(); const c0=bgOf();
+      campClearRound();                                  // 50 을 채운다 → dg4 로 자동 이동
+      assert(campDgN()===4,'자동 이동이 안 됐다: '+campDgN());
+      assert(bgOf()!==c0,'자동 이동인데 바닥이 그대로다'); }
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } campSkin(); }
+    return 'dg1 ≠ dg3 · 자동 이동에서도 갱신';
+  });
+
+  // ✨ **초반에 적 수가 깜빡이지 않는다** (2026-08-30)
+  //    ⛔ 옛 식(w = min(6, n))은 R1 의 적 3마리를 **3무리로 1마리씩** 쪼갰다.
+  //      거기에 「다 잡으면 즉시 다음 무리」가 겹쳐 적 1 → 0 → 1 → 0 이 반복돼 배지가 깜빡였다.
+  await step('캠프: 초반 라운드는 무리를 쪼개지 않는다', async()=>{
+    skipIf(typeof campFoeCount!=='function'||typeof CAMP_WAVE_MIN_N==='undefined','캠프 없음');
+    const split=n=>{ const w=Math.max(1,Math.min(CAMP_WAVE_MAX,Math.ceil(n/CAMP_WAVE_MIN_N)));
+      const per=Math.floor(n/w), rem=n%w, q=[];
+      for(let i=0;i<w;i++) q.push(per+(i<rem?1:0)); return q; };
+    const bad=[];
+    for(let r=1;r<=12;r++){
+      const q=split(campFoeCount(r));
+      if(q.length>1 && Math.min(...q)<2) bad.push('R'+r+' ['+q.join(',')+']');
+    }
+    assert(!bad.length,'무리 하나가 1마리뿐이다 — 적 수가 0↔1 로 깜빡인다: '+bad.join(' '));
+    // 후반은 여전히 여러 무리로 나뉜다(밀려오는 느낌이 사라지면 안 된다)
+    const late=split(campFoeCount(25));
+    assert(late.length>=4,'후반이 안 쪼개진다: '+late.join(','));
+    return 'R1~12 무리당 2마리 이상 · R25 는 '+late.length+'무리';
+  });
+
+  // 🚪 **적은 화면 위 밖에서 태어난다** (2026-08-30 사용자 확정)
+  //    ⛔ 옛 자리는 오토배틀 스폰 패드 둘이었다 — 패드 ② 가 y 19.9~30.7% 라 화면(28.2~83.8%)과
+  //      겹쳐 적이 눈앞에서 튀어나왔다. 게다가 두 점에서만 나와 「두 덩이」로 보였다.
+  await step('캠프: 적은 화면 위 밖에서 한 줄로 태어난다', async()=>{
+    skipIf(typeof campPlaceFoes!=='function'||typeof CAMP_VIEW_Y==='undefined','캠프 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.ai.units.length=0; });
+    campWithStk(()=>{ for(let i=0;i<12;i++) strikeSpawnUnit('ai','marine'); });
+    const fresh=CAMPB.ai.units.slice(); assert(fresh.length>=6,'적이 안 나왔다: '+fresh.length);
+    campPlaceFoes(fresh);
+    const W=CAMPB.world;
+    const top = CAMP_VIEW_Y - 0.5/CAMP_ZOOM;          // 보이는 세로의 위 끝
+    const worst = Math.max(...fresh.map(u=>u.y/W));
+    assert(worst < top - 0.02, '적이 화면 안에서 태어난다: 가장 아래 '+(worst*100).toFixed(1)+'% vs 화면 상단 '+(top*100).toFixed(1)+'%');
+    const xs=fresh.map(u=>u.x/W), spread=Math.max(...xs)-Math.min(...xs);
+    assert(spread > CAMP_FOE_SPAWN_W*0.5, '가로로 안 퍼졌다: '+(spread*100).toFixed(1)+'%p');
+    campWithStk(()=>{ STK.ai.units.length=0; });
+    { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+    campBattleClose();
+    return '위 '+(worst*100).toFixed(1)+'% (화면 '+(top*100).toFixed(1)+'% 위) · 가로 '+(spread*100).toFixed(0)+'%p 퍼짐';
+  });
+
+  // 🚶 **숨 고르기 동안 걸어서 자기 자리로 돌아온다** (2026-08-30 사용자 확정)
+  //    ⛔ 예전엔 _gapT>0 이면 곧바로 return 해서 **6초 동안 한 발짝도 안 움직였다.**
+  //      「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 늘려도 소용없었다.
+  //    ⛔ 순간이동으로 옮기지도 않는다(사용자가 걸어서 오는 쪽으로 정했다).
+  await step('캠프: 숨 고르기 동안 걸어서 자리로 돌아온다', async()=>{
+    skipIf(typeof campDeploy!=='function'||typeof CAMP_ROUND_GAP_S==='undefined','캠프 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45); assert(u&&u._post,'배치 실패');
+    const px=u._post.x, py=u._post.y;
+    u.x = px + 300; u.y = py + 300;                   // 자리에서 멀찍이 떼어 놓는다
+    const d0 = Math.hypot(u.x-px, u.y-py);
+    CAMPB._gapT = CAMP_ROUND_GAP_S;                   // 숨 고르기 중으로 만든다
+    CAMPB.ai.units.length = 0;
+    for(let i=0;i<40;i++) campCombatStep(0.05);       // 2초 — 아직 숨 고르기 안이다
+    assert(CAMPB._gapT>0,'테스트가 숨 고르기를 다 써 버렸다(간격을 줄일 것)');
+    const d1 = Math.hypot(u.x-px, u.y-py);
+    assert(d1 < d0-1, '숨 고르기 동안 자리로 안 걸어온다: '+d0.toFixed(0)+' → '+d1.toFixed(0));
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    campBattleClose();
+    return '2초에 '+d0.toFixed(0)+' → '+d1.toFixed(0)+' (자리 쪽으로)';
+  });
+
+  // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
+  //    ⛔ 옛 campFoeRace 는 STK_RACE_ORDER 를 그냥 돌려서, 「감염된 둥지」에 유니온이,
+  //      「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로 그림과 적이 어긋났다.
+  //    ⭐ HB_DUNGEONS 표가 단일 소스다 — 표를 고치면 적도 따라와야 한다.
+  await step('캠프: 던전 이름과 적 종족이 맞는다', async()=>{
+    skipIf(typeof campFoeRace!=='function'||typeof HB_DUNGEONS==='undefined','던전 표 없음');
+    const KEY={ union:'terran', swarm:'zerg', aetherial:'protoss', feral:'feral', colossus:'colossus', abyss:'colossus' };
+    const bad=[];
+    for(const d of HB_DUNGEONS){
+      const want=KEY[d.race];
+      if(!want){ bad.push('dg'+d.dg+' 표의 race="'+d.race+'" 를 엔진 종족으로 못 옮긴다'); continue; }
+      const got=campFoeRace(d.dg);
+      if(got!==want) bad.push('dg'+d.dg+' '+d.name+': 표 '+want+' ≠ 실제 '+got);
+    }
+    assert(!bad.length, bad.join(' / '));
+    assert(campFoeRace(0)==='terran','0단계 캠프의 종족이 바뀌었다: '+campFoeRace(0));
+    return HB_DUNGEONS.length+'개 던전 전부 표와 일치';
+  });
+
+  // 🏁 **던전이 바뀌어도 병력·자리·건물은 그대로** (2026-08-28 사용자 확정)
+  //    ⛔ 예전엔 campBattleOpen() 으로 전장을 통째로 새로 만들어 me.units 를 비웠다.
+  //      campSortie 가 곧바로 다시 채워서 가려져 있었을 뿐이라, 출격을 없앤 지금은 증발한다.
+  await step('캠프: 던전이 바뀌어도 병력과 자리가 그대로다', async()=>{
+    skipIf(typeof campDungeonSwap!=='function'||typeof campDeploy!=='function','4단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45); assert(u,'배치 실패');
+    const px=u._post.x, py=u._post.y, uid=u.uid;
+    campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
+    const raceWas=CAMPB.ai.race, bldWas=(CAMPB._bld||[]).length;
+    const C=campState(); C.cleared=(C.cleared|0)+1; C.dg=(C.dg|0)+1;   // 던전을 넘긴 셈
+    campDungeonSwap();
+    // ① 내 병력과 자리가 남는다
+    const still=CAMPB.me.units.find(x=>x.uid===uid);
+    assert(still,'던전이 바뀌며 병력이 사라졌다');
+    assert(Math.abs(still._post.x-px)<1e-6 && Math.abs(still._post.y-py)<1e-6,'자리가 초기화됐다');
+    // ② 적은 비워지고 종족이 갈린다
+    assert(CAMPB.ai.units.length===0,'적이 안 비워졌다: '+CAMPB.ai.units.length);
+    assert(CAMPB.ai.race===campFoeRace(campDgN()),'적 종족이 안 바뀌었다: '+CAMPB.ai.race+' (전 '+raceWas+')');
+    // ③ 건물은 그대로 있고 체력이 가득 찬다(사용자 결정)
+    assert((CAMPB._bld||[]).length>=bldWas,'건물이 사라졌다: '+(CAMPB._bld||[]).length+' (전 '+bldWas+')');
+    { const live=campBldAlive();
+      if(live.length) assert(live.every(b=>b.hp>=(b.max||b.maxHp||b.hp)-1e-6),'건물 체력이 안 찼다'); }
+    // ④ 표적이 풀리고 **숨 고르기**가 걸린다(2026-08-30) — 그 사이 걸어서 자리로 돌아온다
+    assert(!still.tgtUid,'표적이 안 풀렸다 — 사라진 적을 계속 쫓는다');
+    assert(CAMPB._gapT>0,'던전이 바뀌었는데 숨 고르기가 없다 — 적이 곧바로 쏟아진다');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+    campBattleClose();
+    return '병력·자리 유지 · 제자리 집결 · 적만 교체 · 건물 체력 회복';
+  });
+
+  // 🚪 **병력이 없으면 던전에 못 들어간다** (2026-08-30 사용자 확정)
+  //    ⛔ 이게 없어서 맨몸으로 던전에 들어가 계속 졌다 — 30분 벤치에서 패배 9번,
+  //      「D1R1 10분 · D1R2 17.4분」짜리 라운드가 그 자리였다.
+  //    ⚠ 개발용 플래그 CAMP_DEV_NOFAIL 은 이것으로 대체하고 **없앴다** — 되살아나면 여기서 잡는다.
+  await step('캠프: 병력이 없으면 던전에 못 간다 · 캠프 복귀는 언제나 된다', async()=>{
+    skipIf(typeof campCanEnterDungeon!=='function'||typeof campCombatCount!=='function','문 없음');
+    // ① 옛 개발 플래그가 되살아나지 않았다
+    assert(typeof CAMP_DEV_NOFAIL==='undefined',
+      'CAMP_DEV_NOFAIL 이 되살아났다 — 문과 플래그가 둘 다 있으면 어느 쪽이 막는지 모른다');
+    // ② 병력 0 → 던전 ✕ · 캠프(0) ○
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWipeField();
+    // ⚠ 기지에 남은 유닛도 「데리고 갈 수 있는 병력」이라 함께 비운다(campWipeField 는 전장만 비운다)
+    if(G && G.tech && G.tech.ents)
+      for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i];
+        if(e && e.type==='unit' && STK_UNITS[e.uid]) G.tech.ents.splice(i,1); }
+    assert(campCombatCount()===0,'비웠는데 병력이 남았다: '+campCombatCount());
+    assert(!campCanEnterDungeon(1),'병력 0 인데 던전 1 에 들어갈 수 있다');
+    assert(!campCanEnterDungeon(5),'병력 0 인데 던전 5 에 들어갈 수 있다');
+    assert(campCanEnterDungeon(0),'캠프(0)로 돌아가는 것까지 막혔다');
+    // ③ 한 기라도 있으면 열린다
+    const u=campDeploy('marine', 0.4, 0.45); assert(u,'배치 실패');
+    assert(campCombatCount()===1,'세운 병력이 안 세어진다: '+campCombatCount());
+    assert(campCanEnterDungeon(1),'병력이 있는데 던전이 막혔다');
+    // ④ 누운 병력도 「데리고 갈 수 있는 병력」이다(라운드 시작에 일어난다)
+    { const b4=CAMPB.me.units.slice(); u.dead=true;
+      CAMPB.me.units.length=0; campCatchDown(b4);
+      assert(campCombatCount()===1,'누운 병력이 안 세어진다: '+campCombatCount());
+      assert(campCanEnterDungeon(1),'누운 병력만 있을 때 던전이 막혔다'); }
+    // ⑤ **드롭다운도 실제로 막는다** — 판정 함수만 맞고 UI 가 그냥 가면 아무 소용이 없다
+    if(typeof campDropOpen==='function' && typeof campDropGo==='function'){
+      campWipeField();
+      if(G && G.tech && G.tech.ents)
+        for(let i=G.tech.ents.length-1;i>=0;i--){ const e=G.tech.ents[i];
+          if(e && e.type==='unit' && STK_UNITS[e.uid]) G.tech.ents.splice(i,1); }
+      const C=campState(); C.dg=0; C.cleared=0;
+      campDropOpen(); campDropPickDg(1); campDropGo(); await sleep(30);
+      assert(campState().dg===0,'병력 0 인데 드롭다운이 던전으로 옮겼다: dg='+campState().dg);
+      campDropClose(); }
+    campWipeField();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    return '병력 0 → 막힘 · 1기(누운 것 포함) → 열림 · 캠프 복귀는 자유';
+  });
+
+  // 💥 **적이 건물을 칠 때만 배율이 걸린다** (2026-08-30 · sc-3 계산 · HUNT_R1 §6-2-5)
+  //    ⛔ 이게 없으면 「전멸 = 패배가 아니다 · 적이 건물을 부수며 밀고 들어온다」가 작동하지 않는다.
+  //      실측(고치기 전): 본부 7500 · 적 총 DPS 0.41 → 부수는 데 **909분**. 벤치의 D1R1 벽이 이것이었다.
+  //    ⚠ 유닛 전투에는 걸리면 안 된다 — 체력 5 짜리 아군이 40배 공격에 즉사한다.
+  await step('캠프: 적이 건물을 칠 때만 40배 · 유닛 전투는 그대로', async()=>{
+    skipIf(typeof campBldAmp!=='function'||typeof campBldSnap!=='function','건물 배율 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    const live=campBldAlive();
+    skipIf(!live.length,'전장에 건물이 없다');
+    // ① 깎인 만큼이 배율로 커진다
+    const b=live[0], hp0=b.hp, snap=campBldSnap();
+    b.hp = hp0 - 1;                                   // 적이 1 을 넣었다고 치고
+    campBldAmp(snap);
+    const got = hp0 - b.hp;
+    assert(Math.abs(got - CAMP_FOE_BLD_MUL) < 1e-6,
+      '건물 피해가 안 커졌다: 1 → '+got.toFixed(2)+' (기대 '+CAMP_FOE_BLD_MUL+')');
+    // ② 안 맞은 건물은 안 건드린다
+    b.hp = hp0; { const s2=campBldSnap(); campBldAmp(s2);
+      assert(Math.abs(b.hp-hp0)<1e-6,'안 맞은 건물의 체력이 변했다: '+b.hp+' (전 '+hp0+')'); }
+    // ③ 본부 체력이 설계 스케일이다(엔진 기본 7500 이 새어 들어오면 15시간이 걸린다)
+    assert(CAMPB.me.base.maxHp <= CAMP_BASE_HP*4+1e-6,
+      '본부 체력이 설계 스케일을 벗어났다: '+CAMPB.me.base.maxHp+' (기준 '+CAMP_BASE_HP+' · 트리 배수 허용)');
+    // ④ 유닛에는 안 걸린다 — 배율 대상은 _bld 뿐이다
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    const u=campDeploy('marine', 0.4, 0.45);
+    if(u){ const uhp=u.hp, s3=campBldSnap(); u.hp = uhp - 1; campBldAmp(s3);
+      assert(Math.abs((uhp-1)-u.hp)<1e-6,'유닛 체력에 건물 배율이 걸렸다: '+u.hp+' (기대 '+(uhp-1)+')'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    campBattleClose();
+    return '건물 피해 1→'+CAMP_FOE_BLD_MUL+' · 본부 '+CAMP_BASE_HP+' · 유닛에는 안 걸린다';
+  });
+
+  // 🧳 **전장을 닫아도 병력은 증발하지 않는다** (2026-08-29 · 페이블 점검에서 발견한 구멍 셋)
+  //    ① 유일본인 전장 유닛이 기지 엔티티로 돌아와 저장·재입장을 탄다
+  //    ② 누운 유닛은 「때릴 수 있다」에 안 세인다(라운드 부활 뒤의 규칙)
+  //    ③ 서든데스가 캠프 본부를 안 녹인다(S.t 는 전장 수명 내내 누적된다)
+  await step('캠프: 패배·이탈해도 병력이 남는다 · 누운 대공은 못 세운다 · 서든데스 면제', async()=>{
+    skipIf(typeof campBattleClose!=='function'||typeof campDeploy!=='function','대상 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWipeField();
+    const ents=G.tech.ents;
+    // ⚠ 앞 스텝이 기지에 흘린 유닛이 있으면 아래 「uid==='marine' 이 1기」 단정이 깨진다 — 걷는다
+    for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1);
+    // ① 닫으면 기지로 — 자리(격자 좌표) 보존 · 재입장하면 그 자리로 되돌아온다
+    { const u=campDeploy('marine', 0.37, 0.44); assert(u,'배치 실패');
+      const g=campW2G(u._post.x, u._post.y, CAMPB.world);
+      campBattleClose();
+      const back=ents.filter(e=>e.type==='unit'&&e.uid==='marine');
+      assert(back.length===1,'닫았는데 기지로 안 돌아왔다: '+back.length);
+      assert(Math.abs(back[0].x-g.gx)<1e-6 && Math.abs(back[0].y-g.gy)<1e-6,'자리가 어긋났다');
+      CAMPB=null; campCombatStep(0.05);                     // 재입장 = 전장이 다시 열린다
+      assert(CAMPB && CAMPB.me.units.length===1,'재입장에서 못 데려왔다');
+      assert(ents.filter(e=>e.type==='unit').length===0,'기지에 사본이 남았다 — 유일본이 둘이 됐다');
+      const v=CAMPB.me.units[0];
+      assert(!v.dead && v.hp===v.maxHp,'재입장 부활인데 체력이 안 찼다');
+      // 누운 것도 돌아온다.
+      // ⚠ **동료를 하나 세워 두고 눕힌다** — 유일한 유닛을 눕히면 「전멸 = 패배」(새 규칙)가
+      //   정확히 발동해 던전이 0 으로 내려가고, 이 검사와 ②의 전제가 통째로 무너진다.
+      //   (실제로 그렇게 깨졌다 — 게임이 아니라 이 시나리오가 새 규칙과 충돌한 것.)
+      const buddy=campDeploy('marine', 0.6, 0.5); assert(buddy,'동료 배치 실패');
+      v.dead=true; campCombatStep(0.05);
+      assert(campDgN()===1,'전멸이 아닌데 패배 처리됐다: dg '+campDgN());
+      assert(campDown()===1,'전제가 바뀜: 안 누웠다');
+      campWithStk(()=>{ STK.me.units.length=0; });          // buddy 는 걷고(눕지 않게) 누운 v 만 남긴다
+      campBattleClose();
+      assert(ents.filter(e=>e.type==='unit').length===1,'누운 병력이 증발했다');
+      for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1); }
+    // ⚠ ①에서 패배·클리어가 났어도 ②는 스스로 전제를 세운다
+    { const C=campState(); C.dg=1; C.cleared=0; }
+    // ② 누운 유닛은 canHit 에 안 세인다 — 대공이 전부 누우면 **그 라운드는 진다**(끝까지 검증)
+    { CAMPB=null; campCombatStep(0.05);
+      campWipeField();
+      const aa=campDeploy('marine', 0.5, 0.5);              // 대공 가능
+      const gnd=campDeploy('machinegun', 0.6, 0.5);         // 지상 전용
+      skipIf(!aa||!gnd,'배치 실패');
+      campWithStk(()=>{ strikeSpawnUnit('ai','skyguard'); });// 공중이며 지상을 치는 적
+      const foe=CAMPB.ai.units[0]; skipIf(!foe,'적 소환 실패');
+      assert(campCanHitFoes()===true,'대공이 서 있는데 못 때린다고 한다');
+      // ⚠ **눕힘과 판정을 갈라 밟는다.** campCombatStep 은 판정과 동시에 패배까지 진행시켜
+      //   전장을 닫아 버린다(실제로 그렇게 검사가 무너졌다) — 눕힘은 수동으로 만든다.
+      aa.dead=true;
+      { const b4=CAMPB.me.units.slice();
+        campWithStk(()=>{ strikeStepUnits(0.05); });
+        campCatchDown(b4); }
+      assert(campDown()>=1,'전제가 바뀜: 안 누웠다');
+      assert(campCanHitFoes()===false,'누운 대공을 세고 있다 — 라운드가 영영 안 끝난다');
+      // ⭐ 규칙의 끝 — 못 때리는 적만 남았으니 다음 프레임에 **패배**해야 한다
+      CAMPB._started=true; if(CAMPB._wq) CAMPB._wq.length=0;
+      campCombatStep(0.05);
+      assert(campDgN()===0,'누운 대공만 남았는데 패배가 안 났다: dg '+campDgN());
+      // 패배가 되돌린 병력(기지 엔티티)을 걷는다 — 다음 검사 오염 방지
+      for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1); }
+    // ②-2 ⛔ **전멸은 패배가 아니다**(2026-08-30 사용자 확정) — 「못 때린다」 규칙이 이걸 가로채면 안 된다.
+    //     campCanHitFoes 는 살아서 때릴 아군이 없으면 false 라, 전멸도 그 경우다.
+    //     그대로 두면 전멸 = 즉시 패배가 되어 「패배는 본부 파괴 하나뿐」이 무력해진다
+    //     (브라우저 실측 2026-08-30: 전멸 프레임에 곧바로 전장이 닫혔다).
+    { const C=campState(); C.dg=1; C.cleared=0; CAMPB=null; campCombatStep(0.05);
+      if(CAMPB){ campWipeField();
+        const u=campDeploy('marine', 0.5, 0.5);
+        campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });   // 지상 적 — 원리상 때릴 수 있다
+        CAMPB._started=true; if(CAMPB._wq) CAMPB._wq.length=0; CAMPB._gapT=0;
+        if(u){ const b4=CAMPB.me.units.slice();
+          for(const x of CAMPB.me.units) x.dead=true;
+          CAMPB.me.units.length=0; campCatchDown(b4); }
+        assert(campAlive('me')===0 && campDown()>=1,'전제가 바뀜: 전멸 상태가 아니다');
+        campCombatStep(0.05);
+        assert(campDgN()===1 && CAMPB,'전멸했다고 졌다 — 패배는 본부 파괴 하나뿐이다');
+        assert(CAMPB.me.base.hp>0,'전제가 바뀜: 본부가 이미 뚫렸다');
+        campWipeField();
+        for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1); } }
+    // ③ 서든데스 면제 — 15분이 지나도 캠프 본부는 안 녹는다 (②의 패배로 닫혔으니 다시 연다)
+    { const C=campState(); C.dg=1; C.cleared=0;
+      CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'재입장 실패');
+      CAMPB.t=1200; const hp0=CAMPB.me.base.hp;
+      campWithStk(()=>{ CAMPB.t=1200; STK.t=1200; strikeSuddenDeath(5); });
+      assert(CAMPB.me.base.hp===hp0,'서든데스가 캠프 본부를 녹였다: '+CAMPB.me.base.hp+'/'+hp0); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+    campBattleClose();
+    // 정리 — 위에서 되돌아온 유닛이 있으면 걷는다(다음 스텝 오염 방지)
+    for(let i=ents.length-1;i>=0;i--) if(ents[i].type==='unit') ents.splice(i,1);
+    return '유일본 보존 · 누운 대공 제외 · 서든데스 면제';
+  });
+
   await step('캠프 던전: 단계·라운드·미네랄 배율', async()=>{
     skipIf(typeof campMineMul!=='function','캠프 던전 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared, best:C.best};
@@ -1683,30 +2618,17 @@ async function groupLobby(){
       campCombatStep(0.05);
       assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
       assert(!(CAMPB._wq && CAMPB._wq.length),'라운드가 넘어갔는데 안 나온 무리가 남아 있다');
-      // ⑤ **인구 한도까지 계속 출격하되, 상한은 절대 넘지 않는다** (2026-08-27 규칙 변경)
-      //    ⛔ 옛 규칙은 「전장이 비어야 출격」이었다. 그러면 전장 병력이 17~18기에 묶여
-      //      대기 병력 68기가 놀았다 — 적이 100마리 나오는 판에서 그건 방어전이 아니다.
-      //    ⚠ 그때 이 규칙이 있었던 이유는 **건물 하나당 공짜로 유닛이 나왔기 때문**이다
-      //      (strikeSpawnForPlayer 의 _emit · 실측 R50 에 623기). 지금은 캠프가 그 배출을
-      //      꺼서(noEmit) 값을 내고 산 병력만 나온다 — 그래서 갭마다 출격해도 안전하다.
-      //    ⭐ 상한을 지키는 곳은 campTrimArmy() **한 곳**이다.
+      // ⑤ ⛔ **출격이 없다** (2026-08-28) — 유닛은 생산될 때 이미 전장에 선다.
+      //    라운드가 넘어가도 **병력이 저절로 불어나지 않고, 있던 것이 그대로 남는다.**
+      //    ⚠ 옛 규칙(campSortie · campTrimArmy)은 「유닛이 두 번 태어나던 구조」의 증상을
+      //      막던 것이라 함께 지웠다. 되살아나면 여기서 실패한다.
+      assert(typeof campSortie==='undefined','campSortie 가 되살아났다 — 유닛이 두 번 태어난다');
+      assert(typeof campTrimArmy==='undefined','campTrimArmy 가 되살아났다 — 생산에서 막아야 한다');
       { campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
-        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
+        const n0=CAMPB.me.units.length+campDown();
         for(let i=0;i<8;i++) campCombatStep(CAMP_ROUND_GAP_S);   // 갭을 몇 번 넘긴다
         const n1=CAMPB.me.units.length+campDown();
-        assert(n1>0,'갭을 넘기고 나니 병력이 통째로 사라졌다');
-        assert(n1<=cap,'갭마다 병력이 불어나 인구 상한을 넘는다: '+n1+' > '+cap); }
-      // 👥 **전장 병력도 인구 상한을 넘지 않는다.**
-      //    ⚠ 전장 자체엔 제한이 없다(STK_UNIT_CAP=0) — 캠프의 200 은 생산 제한일 뿐이라
-      //      던전 전환에서 샌다. 실측: 던전 1 은 20기였는데 던전 2 로 넘어가며 292기가 됐다.
-      { assert(typeof campTrimArmy==='function','인구 상한 트림이 없다');
-        const cap=Math.max(1,Math.min(200,G.tech.supCap||200));
-        // 상한을 넘겨 억지로 채운 뒤 트림이 도는지 본다
-        const proto=CAMPB.me.units[0];
-        if(proto){ for(let i=0;i<cap+30;i++) CAMPB.me.units.push(Object.assign({},proto,{uid:'x'+i}));
-          campTrimArmy();
-          const tot=CAMPB.me.units.length+campDown();
-          assert(tot<=cap,'전장 병력이 인구 상한을 넘는다: '+tot+' > '+cap); } }
+        assert(n1===n0,'라운드를 넘길 때마다 병력이 바뀐다: '+n0+' → '+n1); }
       // ⑥ ✈ **때릴 수 없는 적만 남으면 진다** — 안 그러면 라운드가 영원히 안 끝난다.
       //    실측(2026-08-27): 던전 1 R12 에서 hellfire(공중 전용) 하나가 남았는데 아군이
       //    화력병 20기(지상 전용)뿐이라 서로 한 대도 못 때렸다. 적 본부는 이미 부순 뒤였다.
@@ -1734,6 +2656,78 @@ async function groupLobby(){
       { if(typeof campFoeId==='function' && typeof SB_ATK_MODE!=='undefined'){
           for(let i=0;i<40;i++){ const id=campFoeId();
             if(id) assert(SB_ATK_MODE[id]!=='air','공중 전용 적이 뽑혔다: '+id); } } }
+      // ⚔ **마중 나가 싸우고 자리로 돌아온다** (2026-08-28) — 인식 거리는 넓히되 목줄을 건다.
+      //    ⛔ 목줄이 없으면 적 본진까지 쫓아가 「제자리 방어」가 무너진다(정체를 네 번 겪었다).
+      if(typeof campLeash==='function'){
+        const u=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return STK.me.units[STK.me.units.length-1]; });
+        assert(u,'레인저를 못 만들었다');
+        campScaleAllies([u]);
+        assert(u.acq===CAMP_ACQ_BASE,'혼자인데 인식이 기본이 아니다: '+u.acq);
+        assert(u.rng<CAMP_ACQ_ALERT,'사거리까지 늘렸다 — 상성이 바뀐다: '+u.rng);
+        const r=campRallyPoint();
+        u.x=r.x; u.y=r.y-CAMP_LEASH*3;                     // 적진 쪽으로 멀리 밀어 놓는다
+        campLeash();
+        const d=Math.hypot(u.x-r.x, u.y-r.y);
+        assert(d<=CAMP_LEASH+1e-6,'목줄 밖으로 나갔다: '+Math.round(d)+' > '+CAMP_LEASH);
+        u.x=r.x; u.y=r.y-10; const y0=u.y; campLeash();
+        assert(u.y===y0,'목줄 안인데 위치를 건드렸다');
+        u.dead=true; }
+      // 👀 **발견 전파** (2026-08-28) — 한 명이 보면 **그 주변만** 같이 달려든다.
+      //    ⭐ 발견자에게서 먼 아군은 자기 자리를 지킨다 — 판 전체가 한 덩어리로 몰리지 않게.
+      if(typeof campAlertTick==='function'){
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+        const mk=(side,id,x,y)=>campWithStk(()=>{ strikeSpawnUnit(side,id);
+          const z=STK[side].units[STK[side].units.length-1]; if(z){ z.x=x; z.y=y; z._alertT=0; } return z; });
+        const r=campRallyPoint();
+        const near=mk('me','marine', r.x, r.y);                            // 발견자
+        const mid =mk('me','marine', r.x + CAMP_ALERT_R*0.5, r.y);         // 발견자 곁 — 전파됨
+        const far =mk('me','marine', r.x + CAMP_ALERT_R*3,   r.y);         // 멀리 — 전파 안 됨
+        const foe =mk('ai','marine', r.x, r.y - CAMP_ACQ_BASE*0.5);        // 발견자 사정권 안
+        if(near&&mid&&far&&foe){
+          campScaleAllies([near,mid,far]);
+          CAMPB._alT=0; campAlertTick(0.05);
+          assert(near.acq===CAMP_ACQ_ALERT,'발견자가 안 넓어졌다: '+near.acq);
+          assert(mid.acq===CAMP_ACQ_ALERT,'곁의 아군에게 전파가 안 됐다: '+mid.acq);
+          assert(far.acq===CAMP_ACQ_BASE,'멀리 있는 아군까지 전파됐다 — 판 전체가 몰린다: '+far.acq);
+          // ⏳ 적이 사라지면 풀린다(지속 시간 뒤 제자리로)
+          foe.dead=true; CAMPB._alT=0; campAlertTick(CAMP_ALERT_S+0.1);
+          assert(near.acq===CAMP_ACQ_BASE,'적이 없는데 인식이 안 풀렸다: '+near.acq);
+          assert(mid.acq===CAMP_ACQ_BASE,'전파가 안 풀렸다: '+mid.acq); }
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
+      // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
+      //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).
+      if(typeof campFoeTierOf==='function'){
+        const S=campState(), keep=S.cleared|0;
+        const sample=(r,n)=>{ S.cleared=Math.max(0,r-1); const c={t1:0,t2:0,t3:0,x:0};
+          for(let i=0;i<n;i++){ const id=campFoeId(); const t=campFoeTierOf(id); c[t?('t'+t):'x']++; }
+          S.cleared=keep; return c; };
+        { const c=sample(5,120);
+          assert(c.t1===120,'R5 는 T1 만 나와야 한다: '+JSON.stringify(c)); }
+        { const c=sample(20,300);   // T1 60 / T2 40
+          assert(c.t3===0,'R20 에 T3 가 나왔다: '+JSON.stringify(c));
+          assert(c.t1>c.t2,'R20 에서 T1 이 T2 보다 많아야 한다: '+JSON.stringify(c));
+          assert(c.t2>300*0.25,'R20 에 T2 가 너무 적다(40% 여야): '+JSON.stringify(c)); }
+        { const c=sample(45,300);   // T2 40 / T3 60
+          assert(c.t1===0,'R45 에 T1 이 나왔다: '+JSON.stringify(c));
+          assert(c.t3>c.t2,'R45 에서 T3 가 T2 보다 많아야 한다: '+JSON.stringify(c)); }
+        // ⛔ 어느 구간에서도 공중 전용은 안 나온다
+        assert(campFoePool(['hellfire','marine']).indexOf('hellfire')<0,'공중 전용이 풀에 남아 있다');
+        // ⛔ **공격을 아예 안 하는 유닛도 안 나온다** (2026-08-30 · 60분 벤치가 여기서 51분 멈췄다)
+        //   남은 적이 메두사 3기였는데 셋 다 공격력 0 이라 적은 아군을 안 때리고
+        //   아군은 제자리 방어라 안 올라가서 **아무도 움직이지 않았다** → 라운드가 영원히 안 끝난다.
+        assert(campFoePool(['medusa','marine']).indexOf('medusa')<0,'공격 못 하는 유닛이 풀에 남아 있다');
+        // ⚠ 걸러낸 뒤에도 **티어가 비면 안 된다** — 그 구간에서 적이 아예 안 나온다
+        { const bad=[];
+          for(const race in CAMP_FOE_TIER){ const T=CAMP_FOE_TIER[race];
+            for(const k of ['t1','t2','t3']) if(campFoePool(T[k]).length===0) bad.push(race+'.'+k); }
+          assert(!bad.length,'걸러내고 나니 빈 티어가 생겼다: '+bad.join(' / ')); }
+        // ⚠ 남은 것들은 전부 실제로 때릴 수 있어야 한다
+        { const bad=[];
+          for(const race in CAMP_FOE_TIER){ const T=CAMP_FOE_TIER[race];
+            for(const k of ['t1','t2','t3']) for(const id of campFoePool(T[k])){
+              const d=CAMP_UNIT_STAT[id];
+              if(d && d.a == null) bad.push(race+'.'+k+':'+id); } }
+          assert(!bad.length,'설계표에서 공격이 없는 적이 남아 있다: '+bad.join(' / ')); } }
       // ⚔ **캠프 전용 능력치** — §3-1/§3-A/§3-B 가 단일 소스. 인구만 코드가 이긴다.
       //    ⛔ U · STK_UNITS · TECH_SPEC 을 고치면 멀티 대전과 오각형 상성이 같이 바뀐다.
       //      소환된 개체 값만 덮어야 한다.
@@ -1745,12 +2739,41 @@ async function groupLobby(){
         assert(m.maxHp===5 && m.hp===5,'레인저 체력이 설계값(5)이 아니다: '+m.maxHp);
         assert(m.dmg===1,'레인저 공격이 설계값(1)이 아니다: '+m.dmg);
         assert(Math.abs(m.cdMax-1.0)<1e-9,'레인저 주기가 설계값(1.0)이 아니다: '+m.cdMax);
-        assert(Math.abs(m.rng-4*CAMP_STAT_TILE)<1e-6,'레인저 사거리가 설계값(4칸)이 아니다: '+m.rng);
+        // 🪜 사거리는 **표에서 읽어** 검사한다 — 값을 손으로 박으면 계단을 조정할 때마다 여기가 깨진다
+        assert(Math.abs(m.rng-CAMP_UNIT_STAT.marine.r*CAMP_STAT_TILE)<1e-6,
+          '레인저 사거리가 설계표('+CAMP_UNIT_STAT.marine.r+'칸)와 다르다: '+m.rng);
         assert(!campDesignStat(m),'같은 유닛에 두 번 걸렸다');
         // ⛔ 공용 표는 그대로여야 한다
         assert(U.marine.dmg===uDmg0 && U.marine.hp===uHp0,'U 표를 건드렸다 — 멀티 대전이 바뀐다');
         // §3-1-1 조정분이 들어 있는가
         assert(CAMP_UNIT_STAT.racer.a===2.5 && CAMP_UNIT_STAT.racer.c===0.8,'레이서 조정분(2.5·0.8)이 없다');
+        // 🪜 **사거리 = 테크 계단** (2026-08-31 사용자 확정)
+        //   ⛔ 예전엔 T1 레인저 4.0 이 T2 레이서 3.5 보다 길었다 — 테크를 올릴 이유가 없었다.
+        //   ⚠ 티어는 코드에 표가 없다(TECH_TREE 의 produces[].req 사슬이 티어다).
+        //     여기서는 **그 사슬을 손으로 옮겨 적은 목록**으로 지킨다 — 유닛이 추가되면 같이 넣을 것.
+        //   ⛔ 근접·비전투·공성전차(예외)는 계단 밖이다.
+        { const LADDER=[ ['marine',1], ['racer',2], ['skyguard',3], ['goliath',3],
+                         ['hellfire',4], ['dreadnought',5], ['ghost',5] ];
+          let prevT=0, prevR=0, prevId='';
+          for(const [id,t] of LADDER){
+            const d=CAMP_UNIT_STAT[id];
+            assert(d && d.r>0, id+' 이 설계표에 없거나 사거리가 없다');
+            if(t>prevT) assert(d.r>=prevR,
+              '계단이 거꾸로다: T'+t+' '+id+' '+d.r+'칸 < T'+prevT+' '+prevId+' '+prevR+'칸');
+            if(d.r>prevR){ prevR=d.r; prevId=id; }
+            prevT=t; }
+          // 계단이 실제로 **오르막**인지 (같기만 하면 계단이 아니다)
+          assert(CAMP_UNIT_STAT.ghost.r > CAMP_UNIT_STAT.marine.r,
+            '최종 테크가 T1 보다 사거리가 길지 않다');
+          // 공성전차는 계단 밖 예외 — 그래도 최장이어야 한다(원작 감각)
+          assert(CAMP_UNIT_STAT.tank.r >= CAMP_UNIT_STAT.ghost.r,
+            '공성전차가 최장이 아니다: '+CAMP_UNIT_STAT.tank.r+' vs 저격수 '+CAMP_UNIT_STAT.ghost.r);
+          // ⛔ 근접은 계단에 딸려 올라가면 안 된다
+          for(const id of ['machinegun','snapper','blade','dark_templar','ultralisk','stinger'])
+            assert(CAMP_UNIT_STAT[id].r<=1.5, '근접 유닛의 사거리가 늘었다: '+id+' '+CAMP_UNIT_STAT[id].r); }
+        // 🎯 적 사거리 상한의 예비값이 **표에서 유도**되는가(손으로 박은 168 이 되살아나지 않았나)
+        assert(Math.abs(campFoeRngFb()-CAMP_UNIT_STAT.marine.r*CAMP_STAT_TILE*CAMP_FOE_RNG_K)<1e-6,
+          '적 사거리 예비값이 레인저 표와 어긋난다: '+campFoeRngFb());
         assert(CAMP_UNIT_STAT.ghost.a===4,'저격수 조정분(4)이 없다');
         m.dead=true; }
       // 🎯 **적 사거리는 아군 최소 사거리보다 짧다** (2026-08-27 · 캠프 전용)
@@ -1784,13 +2807,19 @@ async function groupLobby(){
         //   건물 규칙을 잰 것이 아니게 된다(공짜 배출을 끈 뒤로 실제로 그랬다).
         campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
         CAMPB._gapT=0; CAMPB._started=true;
-        if(live.length>1){                       // 한 채만 부숴도 지면 안 된다
-          live[0].hp=0; live[0].dead=true;
+        // ⭐ **패배는 본부 파괴 하나뿐**(2026-08-30 사용자 확정) — 다른 건물은 길목에서 시간만 번다.
+        //    ⛔ 옛 규칙(건물 전부 파괴)으로 되돌리지 말 것.
+        { const base=CAMPB.me.base;
+          const other=campBldAlive().filter(b=>b!==base);
+          if(other.length){                      // 본부가 아닌 건물은 부서져도 지지 않는다
+            other[0].hp=0; other[0].dead=true;
+            campCombatStep(0.05);
+            assert(campDgN()>0,'본부가 아닌 건물이 부서졌다고 탈락했다 — 패배는 본부 파괴뿐이다'); }
+          // ⚠ 앞 스텝에서 라운드가 클리어됐으면 숨 고르기 중이라 승패 판정까지 못 간다 — 풀고 잰다
+          CAMPB._gapT=0; CAMPB._started=true;
+          base.hp=0; base.dead=true;
           campCombatStep(0.05);
-          assert(campDgN()>0,'건물 한 채가 부서졌다고 탈락했다 — 전부 부서져야 진다'); }
-        for(const b of campBldAlive()){ b.hp=0; b.dead=true; }
-        campCombatStep(0.05);
-        assert(campDgN()===0,'건물이 전부 부서졌는데 캠프로 안 감: '+campDgN()); }
+          assert(campDgN()===0,'본부가 무너졌는데 캠프로 안 감: '+campDgN()); } }
       assert(CAMPB===null,'탈락인데 전장이 안 닫힘');
       // ⑥ ⭐ 캠프 전장은 오토배틀 승패 처리를 타지 않는다
       //    안 막으면 적 본진을 부순 순간 「오토배틀 승리」 결과창이 뜨고,
@@ -1845,6 +2874,15 @@ async function groupLobby(){
       assert(Math.abs(td/(CAMP_FOE_ATK0*want)-1)<1e-6,'무리 총 공격이 목표와 다름: '+td);
       assert(Math.abs(mob[1].maxHp/mob[0].maxHp-r0)<1e-6,'유닛별 체력 차이가 사라졌다 — 통째로 덮어썼나');
       assert(mob[0].hp===mob[0].maxHp,'현재 체력이 상한과 다름');
+      // ⛔ **무리로 쪼개도 라운드 총량은 그대로다.** 예전엔 무리마다 총량을 통째로 줘서
+      //    6무리면 라운드 체력이 6배였다 — R24 가 설계 16초 대신 193초였다(실측 2026-08-28).
+      { const mk=()=>[{maxHp:40,maxSh:0,dmg:6},{maxHp:400,maxSh:0,dmg:30}];
+        const full=mk(); campScaleFoes(full, 1);
+        const whole=full.reduce((a,u)=>a+u.maxHp,0);
+        let split=0;
+        for(const sh of [0.5,0.25,0.25]){ const m=mk(); campScaleFoes(m, sh);
+          split+=m.reduce((a,u)=>a+u.maxHp,0); }
+        assert(Math.abs(split/whole-1)<1e-6,'쪼개서 낸 총 체력이 한 번에 낸 것과 다르다: '+split+' vs '+whole); }
       // ⑥ 0단계(캠프)에는 난이도가 없다
       assert(campFoeDiff(0,0)===1,'캠프에 난이도가 붙었다: '+campFoeDiff(0,0));
       return '문턱 ×'+CAMP_DG_STEP+' · 라운드밑 '+campRBase(1).toFixed(3)+'→'+campRBase(10).toFixed(3)
@@ -1933,6 +2971,281 @@ async function groupLobby(){
       node.inf=false;
       return '넉넉하면 지급 · 고갈이면 0 · 무제한(inf)은 안 줄고 계속 준다';
     } finally { G.tech=keep; } });
+
+  // 💰 재화 숫자는 **굴러서** 오른다(2026-08-27 사용자 확정) — 큰 보상이 툭 바뀌면 무엇이 들어왔는지 안 보인다.
+  //   ⚠ 이 그룹은 굴리기를 꺼 두고 돈다(curRollOff · 헤드리스는 rAF 가 멈춰 끝나지 않는다).
+  //     그래서 여기서만 잠깐 켜서 **장치가 살아 있는지** 본다.
+  await step('재화 숫자: 큰 값은 굴러서 오르고 작은 값은 즉시', async()=>{
+    skipIf(typeof CUR_ROLL_ON==='undefined' || typeof _curRoll!=='function','굴리기 없음');
+    const el=document.createElement('b'); document.body.appendChild(el);
+    const had=CUR_ROLL_ON;
+    try{
+      CUR_ROLL_ON=true;
+      // ① 큰 변화 — 첫 프레임에 **목표값이 아니어야** 한다(굴러가는 중)
+      _curRoll(el, 0); const zero=el.textContent;
+      _curRoll(el, 1250000);
+      assert(el.textContent===zero,
+        '큰 값이 들어왔는데 곧바로 최종값이다 — 굴리지 않는다: '+el.textContent);
+      if(el._rollRaf) cancelAnimationFrame(el._rollRaf);
+      // ② 작은 변화 — **즉시** 바뀌어야 한다(탭 한 번에 1 씩 버는 것까지 굴리면 늘 흔들린다)
+      _curRoll(el, 100); if(el._rollRaf) cancelAnimationFrame(el._rollRaf); el._curV=100; el.textContent=fmtCur(100);
+      _curRoll(el, 103);
+      assert(el.textContent===fmtCur(103),'작은 변화까지 굴린다 — 숫자가 늘 흔들린다: '+el.textContent);
+      assert(CUR_ROLL_MIN>0 && CUR_ROLL_MIN<=50,'즉시 처리 기준이 범위를 벗어났다: '+CUR_ROLL_MIN);
+      return '굴림 '+CUR_ROLL_MS+'ms · 즉시 기준 '+CUR_ROLL_MIN;
+    } finally { CUR_ROLL_ON=had; if(el._rollRaf) cancelAnimationFrame(el._rollRaf); el.remove(); }
+  });
+
+  // 🏷 프로필 제목(.cgKick) — 시트 **위쪽 가장자리**라 뒤로 맵이 비친다.
+  //   ⛔ 색만 바꾸지 말 것: 배경이 캠프(밝은 돌바닥)일 수도 던전(어두움)일 수도 있어
+  //     흰색은 밝은 쪽에서, 검은색은 어두운 쪽에서 묻힌다(docs/mock/camp-kick-4.html 로 네 안을 비교했다).
+  //   ⇒ 밝은 글자 + **그림자로 배경과 끊는다**(A안 · 2026-08-27 사용자 확정).
+  await step('프로필 제목: 배경이 밝든 어둡든 읽힌다', async()=>{
+    const host=$('btSheetBody')||$('unitCmd'); skipIf(!host,'프로필 호스트 없음');
+    const probe=document.createElement('div');
+    probe.className='cmdG'; probe.innerHTML='<div class="cgKick">TEST</div>';
+    probe.style.position='absolute'; probe.style.left='-9999px';
+    document.body.appendChild(probe);
+    try{
+      const cs=getComputedStyle(probe.querySelector('.cgKick'));
+      const rgb=(cs.color.match(/[0-9]+/g)||[]).map(Number);
+      const lum=rgb.length>=3 ? (0.2126*rgb[0]+0.7152*rgb[1]+0.0722*rgb[2]) : 0;
+      assert(lum>170,'제목이 밝은 글자가 아니다 — 어두운 던전 배경에서 묻힌다 ('+cs.color+')');
+      assert(cs.textShadow && cs.textShadow!=='none',
+        '제목에 그림자가 없다 — 밝은 캠프 바닥에서 흰 글자가 묻힌다');
+      return '밝기 '+Math.round(lum)+' · 그림자 있음';
+    } finally { probe.remove(); }
+  });
+
+  // ══ ⛏ 채굴 모드 (2026-08-27 · A+F 확정) ══
+  //   켜면 **맵 전체가 과녁**이고(A), 누르고 있으면 간격마다 캔다(F).
+  //   ⭐ 광맥이 화면의 5% 뿐이라 손끝이 자꾸 빗나가던 문제를 「과녁을 화면 전체로」로 푼 것이다.
+  await step('채굴 모드: 맵 전체가 과녁 · 홀드로 이어 캔다 · 연타 상한', async()=>{
+    skipIf(typeof campMineModeSet!=='function' || !campIsOn(),'채굴 모드 없음');
+    const on0=campMineModeOn(), cr0=G.tech.credit;
+    try{
+      // ① 꺼져 있으면 광맥이 아닌 곳을 눌러도 안 캔다(유닛·건물 조작이 살아 있어야 한다)
+      campMineModeSet(false);
+      assert(!campMineModeOn(),'모드가 안 꺼진다');
+      // ② 켜면 **광맥이 아닌 자리에서도** 캔다 — 이것이 A안의 전부다
+      campMineModeSet(true);
+      G.tech.credit=0;
+      const g=campMineOnce(100, 300, false);
+      assert(g>0 && G.tech.credit===g,'채굴 모드인데 안 캐진다: '+g);
+      assert(g===campTapGain(),'획득량이 campTapGain 과 다르다 — 수식이 두 벌이다: '+g+' vs '+campTapGain());
+      // ③ 연타 **상한** — 사람 손은 거의 안 닿지만 매크로의 폭주는 잘린다
+      assert(CAMP_TAP_MIN_MS>=60 && CAMP_TAP_MIN_MS<=150,
+        '연타 상한이 범위를 벗어났다('+CAMP_TAP_MIN_MS+'ms) — 너무 낮으면 매크로가, 너무 높으면 손맛이 죽는다');
+      // ④ 홀드 간격 — **연타보다 느려야** 「편한 대신 느린」 선택지가 된다
+      assert(campHoldMs()>=CAMP_HOLD_MIN,'홀드 간격이 하한 아래다: '+campHoldMs());
+      assert(CAMP_HOLD_MIN > CAMP_TAP_MIN_MS*2,
+        '홀드 하한이 연타 상한에 너무 가깝다 — 홀드가 연타를 대체해 버린다');
+      // ⑤ 업그레이드로 줄어들고, **끝이 있다**
+      { const C=campState(); const u0=C.upg?JSON.stringify(C.upg):'{}';
+        const m0=campHoldMs();
+        C.upg=C.upg||{}; C.upg.hold=1;
+        assert(campHoldMs()<m0,'채굴 속도를 올렸는데 간격이 그대로다: '+m0+' → '+campHoldMs());
+        C.upg.hold=campHoldLvMax();
+        assert(campHoldMs()===CAMP_HOLD_MIN,'최대 레벨인데 하한이 아니다: '+campHoldMs());
+        G.tech.credit=1e9;
+        assert(!campUpgBuy('hold'),'최대 레벨인데 더 팔린다 — 연타보다 빨라진다');
+        C.upg=JSON.parse(u0); }
+      // ⑤-2 ⛏ 홀드는 **간격으로만** 차이를 낸다(배수 1 · 사용자 확정).
+      //     ⭐ 그래도 **최대치가 연타에 못 미쳐야** 한다: 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이다.
+      //       실측(2026-08-27 · 30분): 연타 6탭 127만 / 홀드 최대(실효 3.3탭) 56만 = 44%.
+      // ⚠ 배수 **장치**는 2 로 재야 한다 — 지금 설정값이 1 이라 그대로 재면 늘 통과하는 헛검사가 된다.
+      { const g1=campMineOnce(10,10,false), gM=campMineOnce(10,10,false,2);
+        assert(gM===g1*2,'홀드 배수 장치가 안 걸린다: '+g1+' → '+gM);
+        // 최대까지 올려도 연타(초당 ~6회)를 넘지 않는다
+        const holdPerSec=(1000/CAMP_HOLD_MIN)*CAMP_HOLD_MUL;
+        assert(holdPerSec < 6,
+          '홀드 최대가 연타를 넘어선다(실효 초당 '+holdPerSec.toFixed(1)+'탭) — 연타할 이유가 사라진다'); }
+      // ⑥ 캠프를 나가면 모드도 꺼진다 — 다른 화면으로 들고 나가지 않는다
+      campMineModeSet(true);
+      { const ph=$('phone'); assert(ph.classList.contains('mineMode'),'모드 표시(mineMode)가 화면에 안 붙는다'); }
+      return '상한 '+CAMP_TAP_MIN_MS+'ms · 홀드 '+CAMP_HOLD_MS0+'→'+CAMP_HOLD_MIN+'ms(Lv'+campHoldLvMax()+')';
+    } finally { campMineModeSet(on0); try{ G.tech.credit=cr0; }catch(e){} }
+  });
+
+  // ══ 🔬 연구 구역 「자원」 칸 (2026-08-27 · js/20-camp-research.js) ══
+  //   하단 네비 연구 > 자원 = 터치·채취·정제소를 **한 자리에서** 올린다.
+  //   ⭐ 이 화면의 핵심은 **사기 전에 얼마나 오르는지**를 보여 주는 것이다(옛 채굴 팝업은 비용만 보여 줬다).
+  await step('연구 자원: 세 줄 · 오를 값 미리보기 · 구매 반영', async()=>{
+    skipIf(typeof campResEnter!=='function' || typeof campIsOn!=='function','연구 구역 없음');
+    skipIf(!campIsOn(),'캠프가 안 켜져 있다');
+    const body=$('btSheetBody'); skipIf(!body,'캠프 하단 시트 없음');
+    // ⚠ **산 것을 되돌린다.** 여기서 터치 레벨을 올려 두면 뒤 step 이 Lv.0 을 전제로 재다가 깨진다
+    //    (실측: 「업그레이드 1레벨인데 획득량이 그대로: 2→2」 — 이미 2레벨이었던 것).
+    const cr0=G.tech.credit, C0=campState(), upg0=JSON.stringify((C0&&C0.upg)||{});
+    try{
+      G.tech.credit=5e4;
+      campResEnter('res');
+      const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
+      // ① 네 줄 — 터치·채취·**채굴 속도**·정제소.
+      //   ⛔ 정제소가 빠지면 자원 성장 중 하나만 자리가 달라진다(건물을 골라야만 올릴 수 있던 그 자리).
+      //   ⛏ 채굴 속도 = 누르고 있을 때의 간격(2026-08-27 · A+F).
+      const nms=slots().map(x=>(x.querySelector('.cgName')||{}).textContent);
+      assert(nms.length===4,'자원 칸이 네 줄이 아니다: '+nms.join(','));
+      for(const need of ['정제소','채굴 속도'])
+        assert(nms.indexOf(need)>=0,need+' 가 자원 칸에 없다: '+nms.join(','));
+
+      // ② 정보판이 **현재 ▸ 다음**을 보여 준다
+      { const v=body.querySelector('.cgVal');
+        assert(v,'오를 값 미리보기(cgVal)가 없다 — 비용만 보여 주면 살지 말지를 감으로 고르게 된다');
+        const cur=(v.querySelector('.cur')||{}).textContent, nxt=(v.querySelector('.nxt')||{}).textContent;
+        assert(cur && nxt && cur!==nxt,'현재와 다음 값이 같다: '+cur+' → '+nxt); }
+      // ③ 사면 레벨과 실제 값이 함께 오른다(표시만 바뀌는 게 아니다)
+      { const lv0=campUpgLv('tap'), g0=campTapGain();
+        campResTap('tap');   // 이미 골라져 있으므로 곧바로 구매
+        assert(campUpgLv('tap')===lv0+1,'샀는데 레벨이 안 올랐다: '+lv0+' → '+campUpgLv('tap'));
+        assert(campTapGain()>g0,'레벨은 올랐는데 실제 획득량이 그대로다: '+g0+' → '+campTapGain()); }
+      // ④ 정제소를 안 지었으면 잠긴다 — 올려도 나오는 것이 없다
+      { const ref=slots().find(x=>(x.querySelector('.cgName')||{}).textContent==='정제소');
+        if(ref && typeof campHasRefinery==='function' && !campHasRefinery())
+          assert(ref.classList.contains('dim'),'정제소를 안 지었는데 살 수 있어 보인다'); }
+      // ④-1 💰 **재화가 커도 살 수 있어야 한다.**
+      //    ⛔ 재화에 `| 0` 을 쓰지 말 것 — 32비트로 잘려 **21억을 넘으면 음수**가 된다.
+      //      캠프 미네랄은 던전 배수가 70만배까지 가서 금방 그 선을 넘는다(fmtCur 이 1e56 까지 다룬다).
+      //      실측 2026-08-27: 미네랄 30억인데 「부족」으로 판정돼 업그레이드가 안 됐다.
+      { const cr=G.tech.credit; const lv0=campUpgLv('tap');
+        G.tech.credit=3e9; campResSheet();
+        const d=(body.querySelector('.cgDd')||{}).textContent||'';
+        assert(d.indexOf('필요')<0,'재화가 30억인데 부족하다고 한다 — 32비트로 잘렸다: '+d);
+        campResTap('tap');
+        assert(campUpgLv('tap')>lv0,'재화가 30억인데 안 사진다 — 32비트로 잘렸다');
+        G.tech.credit=cr; campResSheet(); }
+      // ④-2 💸 **못 사는 이유가 화면에 보여야 한다.**
+      //    ⛔ toast() 에 기대지 말 것 — 그것은 채팅으로 간다(addChat). 캠프에는 채팅바가 없어서
+      //      (CLAUDE.md 「유즈맵 안 전 구역 · 캠프만 제외」) **아무 데도 안 보인다**.
+      //      실측 2026-08-27: 미네랄 0 에서 눌러도 아무 말이 없어 「눌러도 안 된다」로 읽혔다.
+      { const cr=G.tech.credit; G.tech.credit=0;
+        campResSheet();
+        const d=(body.querySelector('.cgDd')||{}).textContent||'';
+        assert(d.indexOf('필요')>=0,'미네랄이 0 인데 정보판이 이유를 말하지 않는다: '+d);
+        G.tech.credit=cr; campResSheet(); }
+      // ④-3 🔙 **아무것도 안 사고** 나가도 하단이 기지 요약으로 돌아온다.
+      //    renderCampIdleSheet 는 값이 그대로면 다시 안 그리는데, 연구 그리드를 요약으로 오인해
+      //    시트에 그대로 남았다(실측: 뒤로 갔는데 제목이 「자원」).
+      { campResEnter('res');
+        campResExit();
+        if(typeof renderCampIdleSheet==='function') renderCampIdleSheet();
+        const t=(body.querySelector('.cgKick')||body.querySelector('.cgN')||{}).textContent||'';
+        assert(t.indexOf('MY BASE')>=0,'아무것도 안 사고 나갔더니 하단이 안 돌아온다: '+t);
+        campResEnter('res'); }
+      // ⑤ 🚪 네비로 들어오고 나가기 — **화면은 그대로, 하단만 바뀐다**
+      { campResExit();
+        const scr=$('researchScreen');
+        openResearch(); await sleep(60);
+        assert(!scr || getComputedStyle(scr).display==='none',
+          '연구가 전용 화면을 연다 — 캠프가 닫혔다 다시 열려 화면이 튕긴다');
+        assert(_resSec==='res','연구 칸이 안 열렸다: '+_resSec);
+        assert(campIsOn(),'연구를 눌렀는데 캠프가 꺼졌다');
+        // 뒤로가기 = 연구를 접고 **기존 요약 시트**로 돌아간다
+        navBack(); await sleep(60);
+        assert(!_resSec,'뒤로 갔는데 연구가 시트를 계속 쥐고 있다 — 하단이 안 바뀐다');
+        const st=$('btSheetBody').querySelector('.cgStats');
+        assert(st,'뒤로 갔는데 기지 요약(MY BASE)이 안 돌아왔다');
+        campResEnter('res'); }
+      // ⚔ 무장 칸 — [보병][차량][함선] → 고르면 [🔙][공격][방어]
+      { campResEnter('arm');
+        assert(_resSec==='arm','무장 칸이 안 열렸다');
+        const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
+        assert(slots().length===3,'계열이 셋이 아니다: '+slots().length);
+        // ⛔ **표에 없는 계열 연구가 있으면 안 된다** — 조용히 사라지는 것이 제일 나쁘다.
+        //    종족마다 계열 구성이 달라(테란 6 · 저그 5 · 프로토스 5) 자동으로 못 묶는다.
+        { const inTree=new Set();
+          for(const g of campArmTree()){ if(g.atk) inTree.add(g.atk); if(g.def) inTree.add(g.def); }
+          const all=[];
+          for(const b of (TECH_TREE[G.tech.race].buildings||[]))
+            for(const r of (b.research||[])) if(r.tier) all.push(r.k);
+          const miss=all.filter(k=>!inTree.has(k));
+          assert(!miss.length,'무장 표에 없는 계열 연구가 있다 — 화면에서 사라진다: '+miss.join(',')); }
+        // 계열을 고르면 2단으로 · 되돌아가기가 있다
+        campArmPick(0);
+        assert(body.querySelector('.cgBack'),'계열 안에서 되돌아가기가 없다 — 나갈 길이 막힌다');
+        assert(slots().length>=1,'공격·방어 칸이 없다');
+        // 건물이 없으면 잠기고, 세우면 실제로 사진다(구매 경로는 techDoResearch 하나다)
+        { const g=campArmTree()[0], rk=g.atk, bd=campArmBldgOf(rk);
+          assert(bd,'계열 연구가 어느 건물 것인지 못 찾는다: '+rk);
+          const b0=G.tech.built[bd.k]|0, lv0=campArmLv(rk), en0=G.tech.energy;
+          // ⚠ 앞 step 이 그 건물을 지어 뒀을 수 있다 — **확실히 없앤 상태**에서 잠김을 본다
+          G.tech.built[bd.k]=0;
+          assert(!campArmReady(rk),'건물이 없는데 살 수 있다고 나온다');
+          G.tech.built[bd.k]=1; G.tech.energy=5e5;
+          // ⚠ techDoResearch 는 **실제 건물 엔티티**도 찾는다 — 하나 세워 준다
+          const cmd=G.tech.ents.find(e=>e.type==='bldg');
+          const fake={eid:G.tech.eseq++, type:'bldg', bk:bd.k, x:cmd.x+0.05, y:cmd.y, bt:0};
+          G.tech.ents.push(fake);
+          // ⚠ **두 번 눌러 산다**(2026-08-27 사용자 확정) — 첫 탭은 설명 보기다.
+          campArmBuy(rk); campArmBuy(rk);
+          // ⚠ 연구는 **시간이 걸릴 수 있다** — 그때는 레벨 대신 건물에 작업(_rj)이 걸린다.
+          //   둘 중 하나면 「샀다」가 성립한다(구매 경로는 techDoResearch 하나다).
+          const started=(G.tech.ents||[]).some(e=>e._rj && e._rj.rk===rk);
+          assert(campArmLv(rk)>lv0 || started,
+            '건물을 세웠는데도 계열이 안 걸렸다: Lv '+lv0+' → '+campArmLv(rk)+' · 작업 '+started
+            +' · 가스 '+Math.round(G.tech.energy));
+          for(const e of (G.tech.ents||[])) if(e._rj && e._rj.rk===rk) e._rj=null;   // 뒤 step 을 위해 걷는다
+          G.tech.ents=G.tech.ents.filter(e=>e!==fake);
+          G.tech.built[bd.k]=b0; G.tech.energy=en0;
+          delete G.tech.research[G.tech.race+'_'+rk]; }
+        campArmPick(null);
+        campResEnter('res'); }
+      // 🔬 기술 칸 — **보유 유닛으로 거른다**. 20개를 늘어놓으면 5페이지가 되어 아무도 안 본다.
+      { campResEnter('tech');
+        const en0=G.tech.energy; G.tech.energy=5e4;
+        const names=()=>[...body.querySelectorAll('.cgName')].map(x=>x.textContent);
+        // ⛔ **u 가 없는 단발 연구가 있으면 안 된다** — 화면에서 조용히 사라진다.
+        //    「어느 유닛 것인가」는 연구 데이터가 갖는다(js/15-tech-data.js 의 u:).
+        { const miss=[];
+          for(const rk of CAMP_RACE_ORDER){ const tr=campTechRace(rk), t=TECH_TREE[tr]; if(!t) continue;
+            for(const b of (t.buildings||[])) for(const r of (b.research||[]))
+              if(!r.tier && !r.u) miss.push(tr+':'+r.k); }
+          assert(!miss.length,'u 가 없는 단발 연구가 있다 — 기술 칸에서 조용히 사라진다: '+miss.join(',')); }
+        const u0=G.tech.units?JSON.stringify(G.tech.units):null;
+        try{
+          // ① 유닛이 없으면 비어 있다(그게 정상이다)
+          // ⚠ **전장 병력도 함께 비워야 한다**(2026-08-30). 유닛이 한 번만 태어나는 구조에서
+          //   생산된 유닛은 기지가 아니라 CAMPB.me.units 에 산다 — G.tech.units 만 비우면
+          //   앞 스텝이 전장에 남긴 병력이 그대로 「보유」로 잡힌다(실제로 그렇게 깨졌다).
+          //   ⚠ 전장이 이미 닫혔으면 병력은 **기지 엔티티**로 돌아가 있다(campBattleClose 가 되돌린다) —
+          //     그래서 전장·기지 양쪽을 다 비운다.
+          if(typeof campWipeField==='function') campWipeField();
+          for(let i=(G.tech.ents||[]).length-1;i>=0;i--)
+            if(G.tech.ents[i].type!=='bldg' && G.tech.ents[i].type!=='worker') G.tech.ents.splice(i,1);
+          G.tech.units={}; campResSheet();
+          assert(names().length===0,'유닛이 없는데 기술이 보인다: '+names().join(','));
+          // ② 유닛을 가지면 **그 유닛의 기술만** 나타난다
+          const g=campArmTree(); void g;
+          const uid=(G.tech.race==='union')?'marine':(G.tech.race==='swarm'?'hydra':'blade');
+          G.tech.units[uid]=1; campResSheet();
+          const shown=campTechList();
+          assert(shown.length>0,'유닛을 가졌는데 기술이 하나도 안 뜬다 ('+uid+')');
+          for(const o of shown){ const us=campTechUsers(o.r);
+            assert(us && (us.indexOf('*')>=0 || us.some(campHasUnit)),
+              '안 가진 유닛의 기술이 떠 있다: '+o.r.k+' → '+(us||[]).join(',')); }
+          // ③ 이미 산 것은 사라진다
+          const k0=shown[0].r.k;
+          G.tech.research[G.tech.race+'_'+k0]=true; campResSheet();
+          assert(!campTechList().some(o=>o.r.k===k0),'이미 산 기술이 아직 목록에 있다: '+k0);
+          delete G.tech.research[G.tech.race+'_'+k0];
+          // ④ 정렬 — **지금 살 수 있는 것이 앞**(첫 페이지에 누를 수 있는 것이 온다)
+          { G.tech.energy=5e5; const rich=campTechList().map(o=>o.r.k);
+            G.tech.energy=0;   const poor=campTechList().map(o=>o.r.k);
+            assert(rich.length===poor.length,'가스에 따라 목록 자체가 달라진다 — 거르는 조건에 가스가 섞였다'); }
+        } finally { G.tech.energy=en0; if(u0) G.tech.units=JSON.parse(u0); else G.tech.units={}; }
+        campResEnter('res'); }
+      // ⑥ 🗺 **한 자리에 두 주인을 두지 않는다** — 맵에서 뭘 고르면 연구가 자리를 내준다
+      { const b=(G.tech.ents||[]).find(e=>e.type==='bldg');
+        if(b){ G.tech.sel=b.eid; techPanelRender();
+          assert(typeof _resSec==='undefined' || !_resSec,
+            '맵에서 건물을 골랐는데 연구가 시트를 계속 쥐고 있다 — 한 자리를 둘이 쓴다'); } }
+      return '세 줄 · 미리보기 · 구매 반영 · 자리 양보';
+    } finally {
+      try{ if(typeof campResExit==='function') campResExit(); }catch(e){}
+      try{ G.tech.credit=cr0; G.tech.sel=null; }catch(e){}
+      try{ const C=campState(); if(C) C.upg=JSON.parse(upg0);
+        if(typeof saveMeta==='function') saveMeta(); }catch(e){}   // ⚠ 저장까지 되돌린다(campUpgBuy 가 저장했다)
+    } });
 
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
@@ -4870,6 +6183,97 @@ async function groupLobby(){
     if(typeof authShowHub==='function'){ authShowHub(); await sleep(_cssMs('--t-swap',.22)+240); }
     openHome(); await sleep(40);
     return '디졸브 '+_cssMs('--t-swap',.22)+'ms'; });
+  // 🎬 로딩 → 종족 선택 : **짧은 디졸브 하나**로 두 화면을 잇는다.
+  //   길이를 바꿔 가며 여러 번 만들었다 — 1.1초는 로고와 종족 목록이 오래 겹쳐 어색했고, 컷은 뚝 끊겼다.
+  await step('로딩 → 종족 선택: 앞판이 다 걷힌 뒤에 종족 판이 든다(안 겹친다)', async()=>{
+    skipIf(typeof RACE_FADE_MS==='undefined','전환 상수 없음');
+    assert(RACE_HOLD_MS>0,'100% 를 보여주는 시간이 없다');
+    const out=_cssMs('--t-race-out',.20), inn=_cssMs('--t-race-in',.24), race=_cssMs('--t-race',.44);
+    assert(race===out+inn,'--t-race 가 두 토막의 합이 아니다 ('+race+' ≠ '+out+'+'+inn+')');
+    assert(race===RACE_FADE_MS,'js 와 css 의 전환 길이가 다르다 ('+RACE_FADE_MS+' vs '+race+')');
+    assert(race>0 && race<=700,'전환이 너무 길다 — '+race+'ms');
+    const ph=$('phone'), had=ph.classList.contains('raceIn');
+    ph.classList.add('raceIn');
+    // ① 앞판(로딩·로고)은 **같은 길이로 함께** 걷힌다 — 하나만 달라도 화면이 조각나 보인다.
+    for(const id of ['opening','titleMark']){
+      const cs=getComputedStyle($(id));
+      assert(Math.round(parseFloat(cs.transitionDuration)*1000)===out
+        && Math.round(parseFloat(cs.animationDuration)*1000)===out,
+        id+' 의 길이가 다르다 ('+cs.transitionDuration+' / '+cs.animationDuration+')'); }
+    // ②ᐟ **배경은 버틴다.** 로딩↔로그인이 자연스러운 원리가 이것이다 — 키 아트를 공유하고 앞판만 바꾼다.
+    //    키 아트까지 흐려지면 홈이 비어 있는 동안 **맨바닥**이 드러나 화면이 툭 꺼졌다 돌아온다
+    //    (실측 2026-08-27: 밝기 곡선에 4.7 짜리 골 → 고친 뒤 0.4).
+    //    ⚠ 실제 전환은 **로딩 화면에서** 시작하므로 키 아트가 이미 켜져 있다(artBg). 그 상태로 재야 한다
+    //      — 꺼진 상태에서 클래스만 붙이면 0→1 전이가 막 시작한 값이 읽혀 헛되이 실패한다.
+    { const hadA=ph.classList.contains('artBg'); ph.classList.add('artBg');
+      await sleep(_cssMs('--t-screen',.7)+60);
+      assert(+getComputedStyle($('titleBg')).opacity===1,'전환 중에 키 아트가 흐려진다 — 맨바닥이 드러난다');
+      if(!hadA) ph.classList.remove('artBg'); }
+    // ⛔ **호흡을 죽이면 안 된다.** animation 을 끄면 raceIn 이 걷히는 순간 titleBreath 가 0% 부터
+    //    다시 시작해 그림이 툭 작아진다 — 위 호흡 주석이 경고하는 그 버그를 2026-08-27 에 재발시켰다.
+    assert(getComputedStyle($('titleBg')).animationName!=='none',
+      '전환 중에 키 아트 호흡이 멈춰 있다 — 걷힐 때 그림이 처음 크기로 튄다');
+    // 로딩 화면에 없던 UI 가 튀어나오면 안 된다 — 상단 재화 바는 종족 선택 중 숨긴다.
+    { const had4=ph.classList.contains('campPick'); ph.classList.add('campPick');
+      const cb=document.querySelector('.curBar');
+      if(cb) assert(getComputedStyle(cb).display==='none','종족 선택 중에 상단 재화 바가 보인다');
+      if(!had4) ph.classList.remove('campPick'); }
+    // 막대는 로딩 판이 다 걷힌 뒤에 되돌린다 — 100% 가 보이는 채로 0% 가 되면 화면이 튄다.
+    assert(enterAfterWarm.toString().indexOf('setTimeout(opBarReset')>=0,
+      '막대 되돌리기가 즉시다 — 로딩 100% 가 눈앞에서 0% 로 떨어진다');
+    if(!had) ph.classList.remove('raceIn');
+    // ② 종족 판도 **같은 길이**로 차오른다. 그 상태는 **판 자신**이 들고 있어야 한다.
+    //    ⛔ #phone.raceIn 을 조건으로 쓰면 그 클래스를 떼는 순간 애니메이션이 처음부터 되살아난다.
+    const ov=$('campRaceOv');
+    if(ov){
+      const before=ov.className;
+      ov.classList.add('raceFx');
+      const cs2=getComputedStyle(ov);
+      assert(Math.round(parseFloat(cs2.animationDuration)*1000)===inn,
+        '종족 판이 드는 시간이 다르다 — '+cs2.animationDuration);
+      // ⭐ **겹치면 안 된다.** 종족 판은 앞판이 다 걷힌 뒤에 들어온다 — 지연 ≥ 나가는 시간.
+      assert(Math.round(parseFloat(cs2.animationDelay)*1000)>=out,
+        '종족 판이 앞판과 겹친다 (지연 '+cs2.animationDelay+' < 나감 '+out+'ms)');
+    // 🎬 **곡선도 잠근다**(2026-08-31). 지연이 맞아도 양쪽이 ease 면 앞판의 느린 끝 꼬리와
+    //   이 판의 느린 시작 꼬리가 만나 70ms 동안 화면이 멎고, 그 사이 배경 그림만 덩그러니 남는다.
+    //   ⛔ ease 로 되돌리지 말 것 — 지연을 아무리 맞춰도 그 구간이 되살아난다.
+    { const ph=$('phone'), had=ph.classList.contains('raceIn');
+      ph.classList.add('raceIn');
+      const out=getComputedStyle($('opening')).animationTimingFunction;
+      if(!had) ph.classList.remove('raceIn');
+      assert(out.indexOf('ease-in')>=0,'앞판이 ease-in 이 아니다(끝 꼬리가 느리다): '+out);
+      const ov=$('campRaceOv');
+      if(ov){ const was=ov.classList.contains('raceFx'); ov.classList.add('raceFx');
+        const inn=getComputedStyle(ov).animationTimingFunction;
+        if(!was) ov.classList.remove('raceFx');
+        assert(inn.indexOf('ease-out')>=0,'종족 판이 ease-out 이 아니다(시작 꼬리가 느리다): '+inn); } }
+      ov.className=before; }
+    let bad=[];
+    for(const sh of document.styleSheets){ let rs; try{ rs=sh.cssRules; }catch(e){ continue; }
+      for(const r of rs||[]) if(r.selectorText && r.selectorText.indexOf('raceIn')>=0
+        && r.selectorText.indexOf('campRaceOv')>=0) bad.push(r.selectorText); }
+    assert(!bad.length,'종족 판을 phone.raceIn 으로 제어한다 — 재페이드 버그가 돌아온다: '+bad.join(' / '));
+    // ③ 디졸브 중에 **어두운 것이 끼어들면 안 된다**. 두 곳에서 샜다(둘 다 실측으로 잡았다):
+    //    · 종족 판(거의 검정)이 display 풀린 프레임에 통째로 보였다 → 기본 opacity 를 0 으로.
+    //    · 홈 화면(z60)이 키 아트(z40)보다 **위**라, 켜지는 순간 밝은 그림이 한 프레임에 가려졌다.
+    //      화면 밝기 68.4 → 35.4 → 65.8. opacity 를 맞춰도 안 고쳐지는 z 축 문제다.
+    if(ov){ const was=ov.className; ov.className='';
+      assert(+getComputedStyle(ov).opacity===0,'종족 판 기본 opacity 가 0 이 아니다 — 검은 섬광이 돌아온다');
+      ov.className=was; }
+    { const hs=$('homeScreen'), had2=ph.classList.contains('raceIn');
+      ph.classList.add('raceIn');
+      assert(+getComputedStyle(hs).opacity===0,'디졸브 중에 홈 화면이 켜져 있다 — 키 아트를 덮어 화면이 어두워진다');
+      if(!had2) ph.classList.remove('raceIn'); }
+    // ④ 디졸브가 **끊기지 않아야** 한다. 종족 선택 중에 네비가 켜져 있으면 그 프레임의 래스터에
+    //    130ms 를 써서 화면이 얼어붙고, 디졸브의 절반이 그 뒤에서 흘러가 버린다(2026-08-27 프레임 녹화).
+    //    ⛔ visibility/opacity 로는 안 된다 — 안 보여도 그려진다.
+    { const had3=ph.classList.contains('campPick');
+      ph.classList.add('campPick');
+      const nb=document.querySelector('.navBar');
+      if(nb) assert(getComputedStyle(nb).display==='none',
+        '종족 선택 중에 네비가 살아 있다 — 전환이 얼어붙는다 ('+getComputedStyle(nb).display+')');
+      if(!had3) ph.classList.remove('campPick'); }
+    return '머묾 '+RACE_HOLD_MS+'ms → 나감 '+out+'ms → 듦 '+inn+'ms'; });
   // 🎬 게임으로 들어가는 마무리 — 로딩 → **로고만 남은 검은 화면** → 게임 화면이 드러나며 로고도 함께 사라진다.
   await step('게임 진입: 검은 화면에 로고만 남았다가 게임과 함께 걷힌다', async()=>{
     skipIf(typeof titleToBlack!=='function' || typeof titleOutroEnd!=='function','진입 연출 없음');
@@ -4924,7 +6328,9 @@ async function groupLobby(){
     assert(getComputedStyle(bar,'::before').display==='none','윗변 광선이 남아 있다 — 면이 없으면 가를 경계도 없다');
     navGo('shop'); await sleep(140);
     const cells=[...bar.querySelectorAll('.navIt')].filter(e=>!e.classList.contains('navBk'));
-    assert(cells.length>=4,'칸이 없다: '+cells.length);
+    // ⚠ 개수를 세지 않는다 — 상점 하위는 캠프 재편으로 5칸 → **2칸**(추천·젬 상점)이 됐다.
+    //   이 검사가 보는 것은 「네비가 실제로 칸을 그리는가」다.
+    assert(cells.length>=2,'칸이 없다: '+cells.length);
     for(const c of cells){ const cs=getComputedStyle(c);
       assert(cs.flexDirection==='row','칸이 아직 세로로 쌓인다 — 42px 이 안 나온다');
       assert(cs.borderTopWidth==='0px'||cs.borderTopStyle==='none','칸에 테두리(금속 링)가 남아 있다');
@@ -4984,6 +6390,176 @@ async function groupLobby(){
     assert(Math.abs(floorZ-vz)<0.03,
       '손가락 중 맵이 다시 안 그려졌다 — 바닥 ×'+floorZ.toFixed(3)+' vs 뷰 ×'+vz.toFixed(3)+' (3D 만 움직여 선택링이 어긋난다)');
     return '뷰 ×'+vz.toFixed(2)+' · 바닥 ×'+floorZ.toFixed(2)+' 동기'; });
+  // 🎬 종족을 고르고 캠프로 들어올 때 살짝 물러난 자리에서 본진 쪽으로 다가간다.
+  //    ⭐ 맵(#vBuild)과 3D(#cvMarine)는 **형제**다 — 둘에 같은 애니를 걸어야 배경과 건물이 같이 온다.
+  //    ⛔ 뷰(CAMP_ZOOM)로 연출하지 말 것 — 그건 격자·배치·전투 계산에 얽혀 있다(2026-08-27 실패).
+  await step('캠프 진입: 맵과 3D 가 같은 애니로 다가온다 · 종족 판은 페이드로 걷힌다', async()=>{
+    skipIf(typeof campPickRace!=='function' || typeof campEnterAnim!=='function','캠프 진입 연출 없음');
+    skipIf(typeof campState!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      openHome(); await sleep(160);
+      // ⚠ race 는 openHome 뒤에 비운다 — 앞에서 비우면 openHome 이 상태를 다시 만들며 되돌린다
+      const C2=campState(); assert(C2,'캠프 상태 없음(재조회)');
+      C2.race=null;
+      if(typeof campRaceSheet==='function') campRaceSheet();
+      await sleep(80);
+      const ov=document.getElementById('campRaceOv');
+      skipIf(!ov,'종족 판이 안 떴다');
+      // ⚠ 판이 **다 차오른 뒤에** 고른다. 뜨자마자 누르면 campOvIn 이 아직 도는 중이라
+      //    아래의 「검은 판보다 먼저 걷혔나」 검사가 그 초기값(op 0.09)을 걷히는 것으로 오해한다.
+      await sleep(_cssMs('--t-screen',.7)+90);
+      campPickRace();
+      // ⭐ 종족은 **즉시** 정해진다. 캠프를 세우는 일만 **두 프레임** 뒤다(검은 판을 먼저 그리려고).
+      //    ⛔ 그보다 더 미루면 캠프 상태를 바로 쓰는 코드가 어긋난다 — 0.7초까지 미뤘다가
+      //       스모크 여섯 군데가 깨졌다(2026-08-27).
+      assert(C2.race,'campPickRace 가 종족을 정하지 않았다');
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+      assert(typeof G!=='undefined' && G.tech && G.tech.ents,
+        '세 프레임이 지났는데 캠프가 안 섰다 — campEnter 가 너무 늦다');
+      // 🎬 화면은 **검은 판이 먼저 덮는다** — 캠프가 잠깐 보였다 덮이면 그게 「깜빡임」이다
+      assert(document.getElementById('phone').classList.contains('artBlack'),
+        '검은 판이 안 올라온다 — 캠프가 그대로 드러나 깜빡인다');
+      // ⭐ 종족 판은 **검은 판이 다 덮을 때까지 그대로 버틴다**(2026-08-27 재설계).
+      //    예전엔 여기서 자체 페이드로 걷었는데, 검은 판(0.7초)보다 먼저 사라져
+      //    **캠프가 통째로 한 번 노출됐다**(프레임 실측: 종족 선택 73.9 → 캠프 139 → 검은 화면 35.6).
+      //    걷는 일은 검은 판이 다 덮은 뒤 campRaceToCamp 의 done() 이 한다.
+      assert(!ov.classList.contains('hide') && +getComputedStyle(ov).opacity > .9,
+        '종족 판이 검은 판보다 먼저 걷혔다 — 그 틈으로 캠프가 드러난다 (op '
+        +getComputedStyle(ov).opacity+' / hide '+ov.classList.contains('hide')+')');
+      await sleep(1350);   // 다 덮인 뒤(--t-screen + 유지) 걷히며 줌이 시작되기를 기다린다
+      const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
+      assert(vb&&mc,'맵·3D 요소를 못 찾았다');
+      const av=vb.getAnimations?vb.getAnimations():[], am=mc.getAnimations?mc.getAnimations():[];
+      assert(av.length&&am.length,'맵('+av.length+')·3D('+am.length+') 중 애니가 빠진 쪽이 있다 — vb.cls='+vb.className+' mc.cls='+mc.className+' race='+C2.race+' vbDisp='+getComputedStyle(vb).display+' mcDisp='+getComputedStyle(mc).display);
+      // 같은 시각에 같은 값이어야 한다
+      const at=(t)=>{ [...av,...am].forEach(a=>{ try{ a.pause(); a.currentTime=t; }catch(e){} });
+        return [getComputedStyle(vb).transform+'|'+(+getComputedStyle(vb).opacity).toFixed(2),
+                getComputedStyle(mc).transform+'|'+(+getComputedStyle(mc).opacity).toFixed(2)]; };
+      const [v0,m0]=at(0), [v1,m1]=at(400), [v2]=at(1200);
+      assert(v0===m0,'시작 시점에 맵과 3D 가 다르다: '+v0+' vs '+m0);
+      assert(v1===m1,'중간 시점에 맵과 3D 가 다르다: '+v1+' vs '+m1);
+      assert(v0!==v1,'애니가 진행되지 않는다(값이 같다) — 연출이 없는 것과 같다');
+      const sc=(t)=>parseFloat(t.slice(t.indexOf('(')+1));
+      // ⚠ **확대에서 시작한다.** 1 보다 작게 시작하면 맵 바깥의 빈 자리가 위·좌우에 드러난다.
+      assert(sc(v0)>1.08,'시작 배율이 '+sc(v0).toFixed(3)+' — 확대에서 시작해야 맵 바깥이 안 드러난다');
+      assert(Math.abs(sc(v2)-1)<0.001===false || sc(v2)>1.0001,'1.2초에 이미 끝났다 — 연출이 짧아 보인다');
+      // ⚠ **줌 애니는 페이드하지 않는다** — 화면이 드러나는 일은 검은 판이 맡는다.
+      //    둘 다 페이드하면 어두워졌다 밝아지고 또 밝아지는 이중으로 보인다.
+      const op=(t)=>parseFloat(t.slice(t.indexOf('|')+1));
+      assert(op(v0)>0.98 && op(v1)>0.98,'줌 애니가 스스로 페이드한다('+op(v0)+'→'+op(v1)+') — 검은 판과 이중으로 보인다');
+      assert(sc(v1)>1.05,'400ms 에 줌이 거의 끝났다('+sc(v1).toFixed(3)+') — 연출이 짧아 보인다');
+      // ✂ 확대(1.18배)가 **하단 네비 자리를 넘지 않아야** 한다.
+      //    맵은 평소 네비 윗변에 딱 맞닿아 있어서(밑변 802 = 네비 윗변 802), 확대하면 841 까지 뻗어
+      //    39px 을 넘는다. 네비는 위에 있지만 배경 윗부분이 투명해 그 아래로 맵이 그대로 비친다
+      //    (실측 2026-08-27: 네비 띠 밝기 51.5 → 잘라 낸 뒤 26.3).
+      { const hs=document.getElementById('homeScreen');
+        assert(hs.classList.contains('campInClip'),
+          '진입 확대 중에 화면을 안 자른다 — 맵이 하단 네비 자리로 넘어온다');
+        const cp=getComputedStyle(hs).clipPath;
+        assert(cp && cp!=='none','campInClip 인데 clip-path 가 없다: '+cp); }
+      // (종족 판 페이드 검사는 campPickRace 직후로 옮겼다 — 0.4초면 closing 이 끝난다)
+      return '맵·3D 동일 · '+v0.slice(0,26)+' → '+v1.slice(0,26);
+    } finally { try{ const hs=document.getElementById('homeScreen'); if(hs){ clearTimeout(hs._campClipT); hs.classList.remove('campInClip'); } }catch(e){}
+      try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} try{ const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('closing'); o.classList.add('hide'); } }catch(e){}
+      try{ ['vBuild','cvMarine'].forEach(id=>{ const e=document.getElementById(id); if(e){ e.classList.remove('campIn'); (e.getAnimations?e.getAnimations():[]).forEach(a=>{try{a.cancel();}catch(_){}}); } }); }catch(e){}
+      openHome(); await sleep(60); } });
+  // 💎 미네랄 채굴 판 — 광맥은 화면의 5% 뿐이라 손끝이 일꾼·건물을 자꾸 눌렀다. 넓은 과녁을 따로 둔다.
+  //    ⛔ 값은 campTapGain / campUpgCost 하나가 정한다 — 판에서 따로 계산하면 두 벌이 되어 어긋난다.
+  await step('미네랄 채굴 판: 과녁 탭으로 캐고 · 업그레이드를 산다 · 시작 미네랄은 0', async()=>{
+    skipIf(typeof openCampMine!=='function' || typeof campUpgBuy!=='function','채굴 판 없음');
+    skipIf(typeof campState!=='function' || typeof G==='undefined' || !G.tech,'캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const c0=G.tech.credit, u0=JSON.parse(JSON.stringify(C.upg||{}));
+    const force0=window._campTapForce;
+    try{
+      openCampMine();
+      const sh=document.getElementById('campMineSheet');
+      assert(sh && !sh.classList.contains('hide'),'판이 안 열린다');
+      // ① 과녁이 넓어야 한다 — 그게 이 판의 존재 이유다
+      const tgt=document.getElementById('campMineTap');
+      assert(tgt,'과녁이 없다');
+      const tr=tgt.getBoundingClientRect();
+      assert(tr.height>=120,'과녁이 좁다('+Math.round(tr.height)+'px) — 판을 만든 뜻이 사라진다');
+      // ② 탭하면 campTapGain 만큼 는다
+      window._campTapForce=1;
+      G.tech.credit=0;
+      const g=campTapGain();
+      campMineTap({isTrusted:false});
+      assert(G.tech.credit===g,'과녁 탭이 campTapGain('+g+') 과 다르게 준다: '+G.tech.credit);
+      // ③ 돈이 모자라면 못 산다
+      G.tech.credit=0;
+      assert(campUpgBuy('tap')===false,'돈이 0 인데 업그레이드가 팔렸다');
+      // ④ 사면 값이 빠지고 레벨이 오른다
+      const cost=campUpgCost('tap'), lv=campUpgLv('tap');
+      G.tech.credit=cost;
+      assert(campUpgBuy('tap')===true,'돈이 딱 맞는데 안 팔린다');
+      assert(campUpgLv('tap')===lv+1,'레벨이 안 올랐다');
+      assert(G.tech.credit===0,'값이 안 빠졌다: '+G.tech.credit);
+      // ⑤ 레벨이 오르면 탭 수확도 는다(값이 한 소스에서 온다는 증거)
+      assert(campTapGain()>g,'레벨을 올렸는데 탭 수확이 그대로다');
+      return '과녁 '+Math.round(tr.height)+'px · 탭 +'+g+' → +'+campTapGain()+' · '+cost+' 로 Lv'+lv+'→'+campUpgLv('tap');
+    } finally {
+      window._campTapForce=force0;
+      G.tech.credit=c0; C.upg=u0;
+      if(typeof closeCampMine==='function') closeCampMine(); } });
+
+  // 시작 미네랄 0 — 첫 미네랄은 탭으로 번다(일꾼 0기와 같은 규칙 · HUNT_R1 §1)
+  await step('캠프 시작: 미네랄 0 에서 출발한다', async()=>{
+    skipIf(typeof campEnter!=='function' || typeof campState!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep=C.ents; const kc=C.credit; const race0=C.race;
+    try{
+      C.ents=null;                        // 새 판으로 들어간다 — campRestore 는 C.ents 가 있으면 그것으로 덮는다
+      campEnter();
+      assert((G.tech.credit|0)===0,'새 판인데 미네랄이 '+G.tech.credit+' 이다 — 탭으로 벌기 전에 이미 부자다');
+      assert((G.tech.energy|0)===0,'새 판인데 가스가 '+G.tech.energy+' 이다');
+      return '미네랄 0 · 가스 0';
+    } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });
+  // 🏕 종족 전장 그림은 **예열에서 미리 받아야 한다.** 로딩이 걷힌 자리에 종족 판이 오는데,
+  //    그림을 그때 처음 받으면 어두운 그라데이션만 보이다 뒤늦게 채워진다 = 검은 깜빡임.
+  await step('예열: 종족 전장 그림을 미리 받아 둔다(종족 판이 검게 뜨지 않게)', async()=>{
+    skipIf(typeof warmAll!=='function' || typeof campRaceArt!=='function','예열·종족 그림 없음');
+    skipIf(typeof CAMP_RACE_ORDER==='undefined','종족 목록 없음');
+    _warmDone=false; _warmRun=null;
+    await warmAll(()=>{});
+    // 브라우저 캐시에 들어왔는가 — 새 Image 가 즉시 complete 면 이미 받은 것이다
+    const miss=[];
+    for(const k of CAMP_RACE_ORDER){
+      const im=new Image(); im.src=campRaceArt(k);
+      if(!im.complete) miss.push(k);
+    }
+    assert(!miss.length,'예열이 종족 그림을 안 받았다: '+miss.join(',')+' — 종족 판이 검게 떴다가 채워진다');
+    return CAMP_RACE_ORDER.length+'종 미리 받음'; });
+  // 🏕 종족을 고르는 동안 옛 사냥터 UI(#hmScroll 업그레이드 카드)가 판 뒤로 비치면 두 화면이
+  //    겹쳐 보인다. openHome → renderHome 이 이미 그려 놨기 때문이다.
+  await step('종족 선택 중: 옛 사냥터 UI 가 판 뒤로 비치지 않는다', async()=>{
+    skipIf(typeof campRaceSheet!=='function' || typeof campState!=='function','종족 판 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race, ents0=C.ents;
+    try{
+      openHome(); await sleep(140);
+      const C2=campState(); C2.race=null;
+      campRaceSheet(); await sleep(80);
+      const ov=document.getElementById('campRaceOv');
+      skipIf(!ov || ov.classList.contains('hide'),'종족 판이 안 떴다');
+      const ph=document.getElementById('phone');
+      // ⚠ 종족을 고르는 시점엔 **아직 캠프가 아니다** — campMode 를 떼고 재야 campPick 만으로
+      //    숨는지 확인된다(안 그러면 campMode 덕에 통과해 회귀를 못 잡는다).
+      ph.classList.remove('campMode');
+      assert(ph.classList.contains('campPick'),'campPick 이 안 붙는다 — 옛 UI 를 숨길 방법이 없다');
+      const sc=document.getElementById('hmScroll');
+      if(sc) assert(getComputedStyle(sc).display==='none',
+        '사냥터 업그레이드 본문이 보인다 — 종족 판 뒤로 비쳐 두 화면이 겹친다');
+      // 판이 다 차기 전에도 안 보여야 한다(페이드 중이 문제였다)
+      const mid=document.querySelector('.hbMid');
+      if(mid) assert(getComputedStyle(mid).display==='none','사냥터 중단 UI 가 보인다');
+      return 'campPick · #hmScroll 숨김';
+    } finally { const CC=campState(); if(CC){ CC.race=race0; CC.ents=ents0; }
+      const ph=document.getElementById('phone'); if(ph) ph.classList.remove('campPick');
+      const o=document.getElementById('campRaceOv'); if(o){ o.classList.remove('on','closing'); o.classList.add('hide'); }
+      openHome(); await sleep(60); } });
   await step('폰 바깥 여백: 화면 안보다 밝아 폰의 윤곽이 경계가 된다', ()=>{
     // 정규식 없이 판다 — 'rgb(201, 192, 172)' 의 괄호 안을 콤마로 자른다
     const lum=(c)=>{ const i=(c||'').indexOf('('), j=(c||'').indexOf(')');
@@ -5456,15 +7032,17 @@ async function groupLobby(){
     { const face=[]; for(let i=0;i<SD.length;i++){ sdPick(i); await sleep(50);
         const g=$('sdGo'); if(!g.disabled) face.push(getComputedStyle(g).backgroundImage); }
       assert(face.length && face.every(f=>f===face[0]),'난이도마다 시작 버튼 색이 다름'); }
-    // 🎬 넘어올 때 **앞 팝업이 먼저 사라지면 안 된다** — 그 순간 뒤 로비가 드러나 화면이 튄다
+    // 🎬 **넘어갈 때 겹치지 않는다 — 한 프레임에 뚝 끊긴다**(2026-08-31 사용자 확정).
+    //   ⛔ 예전의 「덮고 나서 치운다」(340ms 겹침)로 되돌리지 말 것 — 두 화면이 함께 비쳐
+    //     어지럽다는 판단이었다. 로딩 경로 전체(난이도·로딩·게임 진입·나가기)가 같은 규칙이다.
     closeSoloDiff(); await sleep(40);
     openMapSelect(); await sleep(40); openModeSheet(USEMAPS.nemo); await sleep(120);
     chooseSolo(); await sleep(120);
-    assert(!$('modeSheet').classList.contains('hide'),
-      '새 화면이 덮기 전에 앞 팝업이 사라졌다 — 그 사이 뒤 로비가 비쳐 화면이 튄다');
+    assert($('modeSheet').classList.contains('hide'),
+      '앞 팝업이 남아 두 화면이 겹쳤다 — 로딩 경로는 컷이어야 한다');
     assert(!$('soloDiffPanel').classList.contains('hide'),'새 화면이 안 떴다');
-    await sleep(420);
-    assert($('modeSheet').classList.contains('hide'),'다 덮은 뒤에도 앞 팝업이 남아 있다');
+    assert(getComputedStyle($('soloDiffPanel')).animationName==='none',
+      '난이도 판이 페이드로 뜬다 — 즉시 떠야 한다');
     closeSoloDiff(); await sleep(40);
     return '사다리 '+dots.length+'칸(무한 포함) · 잠금 분리 · 전환 이어짐 ok'; });
   // 🧬 종족 선택 팝업 = 캠프의 행 문법 + 「고른 행을 종족색이 물들인다」(2026-08-27 · S3안).
@@ -5584,6 +7162,23 @@ async function groupLobby(){
     // 버튼은 공용 액션 버튼이다 — 이 화면 전용 버튼을 만들지 말 것
     assert($('opStart').classList.contains('actBtn')&&$('opStart').classList.contains('pri'),'시작 버튼이 공용 .actBtn.pri 가 아님');
     assert($('opQuit').classList.contains('actBtn'),'나가기가 공용 .actBtn 이 아님');
+    // ⏳ **막대가 다 차야 시작이 열린다.** 예전엔 막대에 css 전이(width .3s)가 걸려 있어
+    //   숫자가 100% 가 되어 버튼이 열리는 순간 막대는 58% 였다(2026-08-31 실측).
+    //   ⛔ 로딩 단계에서 전이를 되살리지 말 것 — 30ms 마다 다시 그리므로 전이 없이도 매끄럽다.
+    { const fill=$('gsBarFill'), sb=$('opStart');
+      const was=_gsLoading, wasPct=_gsSoloPct;
+      _gsLoading=true; _gsSoloPct=0.5; _gsPaintCount();
+      assert(getComputedStyle(fill).transitionProperty==='none' || getComputedStyle(fill).transitionDuration==='0s',
+        '로딩 막대에 전이가 걸려 있다 — 막대가 진행률보다 늦게 찬다');
+      _gsSoloPct=1; _gsPaintCount();
+      assert(fill.style.width==='100%','막대가 100% 로 안 찬다: '+fill.style.width);
+      _gsLoading=was; _gsSoloPct=wasPct; _gsPaintCount(); }
+    // 🎬 **로딩 → 게임은 뚝 끊긴다**(2026-08-31 사용자 확정). 워프(흐려지며 확대되는 디졸브)를 껐다.
+    //   ⛔ .warp 를 다시 붙이지 말 것 — 두 화면이 겹쳐 보여 어지럽다는 판단이었다.
+    //   ⚠ 「기다렸다가 감춘다」로도 되돌리지 말 것: 그림은 그대로인 채 0.75초 멎어 버린다.
+    _gsFinish();
+    assert(op.classList.contains('hide'),'로딩이 곧바로 사라지지 않았다 — 게임 진입은 컷이어야 한다');
+    assert(!op.classList.contains('warp'),'워프 디졸브가 되살아났다');
     restore(); await sleep(40);
     return '협동 8 · 팀전 4v4 · 개인 진행률 ok'; });
   await step('유즈맵 설정: 프로필 머리줄 · 붉은 선 · 44px ✕ · 중립 ON', async ()=>{
@@ -6345,11 +7940,18 @@ async function groupLobby(){
     skipIf(typeof NAV_TREE==='undefined','네비 표 없음');
     const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.label);
     assert(cells.join(',')==='연구,임무,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
-    // 두 칸이 실제로 열리는가 — APP_SCREENS 누락이면 여기서 걸린다
-    for(const [fn,id,label] of [[()=>openResearch(),'researchScreen','연구'],[()=>openQuest(),'questScreen','임무']]){
-      fn(); await sleep(60);
-      assert(visible($(id)), label+' 화면이 안 열림(APP_SCREENS 에 빠졌는지 볼 것)');
-      assert($(id).querySelector('.setSoon'), label+' 화면 본문이 없음'); }
+    // 임무는 아직 껍데기 화면이다 — APP_SCREENS 누락이면 여기서 걸린다
+    { openQuest(); await sleep(60);
+      assert(visible($('questScreen')),'임무 화면이 안 열림(APP_SCREENS 에 빠졌는지 볼 것)');
+      assert($('questScreen').querySelector('.setSoon'),'임무 화면 본문이 없음'); }
+    // 🔬 **연구는 화면이 아니라 캠프 하단 시트로 간다**(2026-08-27 · js/20-camp-research.js).
+    //   ⛔ 화면을 갈아치우면 캠프가 닫혔다 다시 열려 **전체가 한 번 튕긴다** — 바뀌는 것은 하단뿐이어야 한다.
+    //   ⚠ 여기서는 **부르지 않는다** — openResearch 는 캠프를 켜는데, 그러면 뒤 step(좌상단 칩·드롭다운)이
+    //     자기가 심어 둔 던전·라운드를 못 찾는다(실측으로 두 번 밟았다).
+    //     실제 동작은 캠프가 이미 켜져 있는 step 「연구 자원」에서 잰다.
+    { const src=openResearch.toString();
+      assert(src.indexOf('campResEnter')>=0,'연구가 캠프 시트로 안 간다 — 전용 화면을 연다');
+      assert(src.indexOf('campIsOn')>=0,'캠프에 있는지 안 보고 화면을 갈아치운다 — 전체가 튕긴다'); }
     // 네비 아이콘이 실제로 칠해지는가(ICO 표에 없는 키를 쓰면 빈 칸이 된다)
     { const bad=[];
       for(const x of NAV_TREE){ if(x.noCell) continue; if(typeof ICO==='undefined') break;
@@ -6520,8 +8122,11 @@ async function groupLobby(){
       renderCampIdleSheet(box);
       assert(box.querySelector('.cmdG'),'요약 카드가 안 그려짐');
       assert(box.querySelectorAll('.cgStat').length===m.info.stats.length,'요약 줄 수가 다름');
-      // ③-2 안쪽 **전체**를 쓴다 — 빈 슬롯 4칸은 이 카드에서 의미가 없다
-      assert(!box.querySelector('.cgGrid'),'요약 카드에 빈 슬롯 그리드가 남았다');
+      // ③-2 ⛏ **채굴 토글 한 칸**이 오른쪽에 선다(2026-08-27 사용자 확정).
+      //    빈 칸 셋은 CSS 로 감춰 「한 칸만 있는」 모습이 된다 — 새 컴포넌트를 만들지 않고 슬롯을 빌린다.
+      { const real=[...box.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
+        assert(real.length===1,'요약 카드의 칸이 하나가 아니다: '+real.length);
+        assert(real[0].hasAttribute('data-minemode'),'그 한 칸이 채굴 토글이 아니다'); }
       { const k=box.querySelector('.cgKick');
         assert(k,'머리줄이 작은 라벨로 안 그려짐');
         const cs=getComputedStyle(k);
@@ -6625,6 +8230,7 @@ async function groupLobby(){
     skipIf(typeof guideNote!=='function','가이드 함수 없음');
     const prof=PROF(), g0=prof.guide, camp0=prof.camp;
     const on0=window.campIsOn, st0=window.campState;
+    let gateOff=()=>{};                // 🚪 던전 이동 문(아래 campGateOpen)
     const _barWas=$('curBar').classList.contains('hide'); if(_barWas) curShow(true);
     try{
       delete prof.guide;
@@ -6675,10 +8281,12 @@ async function groupLobby(){
       updateCurBar();
       assert(guideCur().kind==='dg:2','8번째 단계가 던전 2 가 아님: '+guideCur().kind);
       window.campSkin=()=>{};
+      gateOff=campGateOpen();          // 🚪 이 step 은 가이드 계측을 보는 것이라 병력 문의 대상이 아니다
       campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
       assert(guideState().i===8,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i);
       return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 가드 · 던전 이동 계측';
     } finally {
+      gateOff();
       campDropClose(); closeGuide();
       window.campIsOn=on0; window.campState=st0;
       if(g0) prof.guide=g0; else delete prof.guide;
@@ -6695,8 +8303,10 @@ async function groupLobby(){
     const t=$('curTitle'); assert(t,'#curTitle 이 없음');
     const on0=window.campIsOn, st0=window.campState, sk0=window.campSkin, prof=PROF();
     const camp0=prof?prof.camp:null;
-    let skin=0;
+    let skin=0, gateOff=()=>{};
     try{
+      // 🚪 이 step 은 **드롭다운 UI** 를 보는 것이라 「병력이 있어야 던전에 간다」의 대상이 아니다
+      gateOff=campGateOpen();
       prof.camp=Object.assign({}, camp0||{}, {dg:3, cleared:26});   // 라운드 27 = 깬 수 26 (rnd 는 비추는 값)
       window.campIsOn=()=>true; window.campState=()=>PROF().camp; window.campSkin=()=>{skin++;};
       curShow(true); updateCurBar();
@@ -6709,7 +8319,14 @@ async function groupLobby(){
       assert(d(),'칩을 눌렀는데 드롭다운이 안 열림');
       assert(t.classList.contains('open'),'열렸는데 칩에 open 표시가 없음(⌄ 가 안 뒤집힌다)');
       // ② 담긴 것 — 던전 열 줄 · 라운드 99칸 · 현재 값이 잡힌다
-      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX,'던전 줄이 '+CAMP_DG_MAX+'개가 아님');
+      // ⭐ **0단계(캠프)가 첫 칸이다**(2026-08-27) — 그래서 줄이 CAMP_DG_MAX+1 개다.
+      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX+1,
+        '던전 줄이 '+(CAMP_DG_MAX+1)+'개(캠프 0 + 던전 '+CAMP_DG_MAX+')가 아님: '+d().querySelectorAll('.cdRow').length);
+      { const first=d().querySelector('.cdRow');
+        assert(first.dataset.dg==='0','첫 칸이 0단계가 아니다: '+first.dataset.dg);
+        assert(!first.disabled && !first.classList.contains('lock'),'캠프가 잠겨 있다 — 돌아갈 길이 막힌다');
+        assert(first.querySelector('.cdRnm').textContent===CAMP_HOME_NAME,
+          '캠프 이름이 칩과 다르다: '+first.querySelector('.cdRnm').textContent+' vs '+CAMP_HOME_NAME); }
       assert(d().querySelectorAll('.cdRn').length===CAMP_RND_MAX,'라운드 칸이 '+CAMP_RND_MAX+'개가 아님');
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='잊혀진 회랑','현재 던전이 안 잡힘');
       assert((d().querySelector('.cdRn.on')||{}).textContent==='27','현재 라운드가 안 잡힘');
@@ -6759,8 +8376,58 @@ async function groupLobby(){
       { const bar=$('curBar'); const had=bar.classList.contains('bare'); bar.classList.add('bare');
         const pe=getComputedStyle(t).pointerEvents; if(!had) bar.classList.remove('bare');
         assert(pe!=='none','.curBar.bare 에서 칩이 눌리지 않는다(뒤 화면이 대신 반응한다)'); }
-      return '던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 밑선 정렬 · 고르기≠이동 · 닫힘 확인';
+      // ⑩-2 🖱 **판 위에서 돌린 휠이 뒤 화면으로 새면 안 된다.**
+      //     캠프는 window 캡처 단계에서 휠을 받아 맵을 확대·축소한다(campPatchWheel).
+      //     드롭다운의 라운드 칸은 자기 스크롤을 갖는데, 가로채이면 목록 대신 **뒤 캠프가 확대됐다**
+      //     (2026-08-27 실측). 시트(#btSheet)와 같은 이유·같은 처리다.
+      //     ⚠ 여기서는 **행동으로 못 잰다** — 이 step 은 campIsOn/campState 를 스텁으로 바꿔
+      //       캠프가 실제로 안 켜져 있고, 그래서 휠 핸들러 자체가 걸려 있지 않다
+      //       (실측: 격리를 빼도 합성 휠 검사가 통과했다 — 헛도는 검사였다).
+      //       그래서 **핸들러가 그 구역을 빼는지**를 소스에서 확인한다.
+      { const src=(typeof campPatchWheel==='function')?campPatchWheel.toString():'';
+        skipIf(!src,'캠프 휠 패치 없음');
+        assert(src.indexOf('campDrop')>=0 || src.indexOf('curBar')>=0,
+          '캠프 휠 처리가 좌상단 판을 안 빼낸다 — 판 위에서 돌리면 뒤 화면이 확대·축소된다');
+        assert(src.indexOf('btSheet')>=0,'하단 시트 존중이 사라졌다(같은 규칙이다)'); }
+      // ⑩-3 🛠 **개발용 패배 끄기**(CAMP_DEV_NOFAIL) — 켜면 져도 고른 던전·라운드를 지킨다.
+      //     드롭다운으로 옮겨도 291ms 만에 캠프로 끌려오던 것을 이걸로 막았다(2026-08-27 · 임시).
+      //     ⚠ 원래 계획은 「병력이 없으면 이동을 막는다」다 — 그것이 들어오면 이 검사와 플래그를 함께 지운다.
+      { skipIf(typeof CAMP_DEV_NOFAIL==='undefined','개발 플래그 없음');
+        const had=CAMP_DEV_NOFAIL, C=campState();
+        const save={ dg:C.dg, cleared:C.cleared };
+        C.dg=4; C.cleared=7;
+        CAMP_DEV_NOFAIL=true;  campFail();
+        assert(C.dg===4 && C.cleared===7,
+          '개발 모드인데 졌다고 자리를 잃었다: dg '+C.dg+' cleared '+C.cleared);
+        CAMP_DEV_NOFAIL=false; campFail();
+        assert(C.dg===0 && C.cleared===0,
+          '개발 모드를 껐는데도 캠프로 안 돌아간다 — 진짜 규칙이 죽었다: dg '+C.dg);
+        CAMP_DEV_NOFAIL=had; C.dg=save.dg; C.cleared=save.cleared; }
+      // ⑪ 🏕 **캠프(0단계)로 돌아간다** — 던전과 같은 길로 오갈 수 있어야 한다(2026-08-27).
+      t.click(); await sleep(40);
+      d().querySelector('.cdRow[data-dg="0"]').click();
+      // 캠프에는 라운드가 없다 — 그 칸이 잠긴다
+      { const R=d().querySelector('.cdR');
+        assert(R.classList.contains('off'),'캠프를 골랐는데 라운드 칸이 살아 있다 — 캠프엔 라운드가 없다');
+        assert(getComputedStyle(R).pointerEvents==='none','라운드 칸이 잠겼는데 눌린다'); }
+      const skin0=skin;
+      d().querySelector('.cdGo').click(); await sleep(40);
+      assert(PROF().camp.dg===0,'캠프로 이동이 상태에 반영 안 됨: dg '+PROF().camp.dg);
+      assert(PROF().camp.cleared===0,'캠프로 갔는데 라운드가 남아 있다: cleared '+PROF().camp.cleared);
+      assert(skin>skin0,'캠프로 옮겼는데 바닥 그림을 안 갈았다');
+      assert((t.querySelector('.cdNm')||{}).textContent===CAMP_HOME_NAME,'칩이 캠프로 안 바뀜');
+      assert((t.querySelector('.cdLab')||{}).textContent==='단계','캠프인데 칩이 라운드를 보여준다');
+      // 다시 열면 **캠프가 지금 자리로 잡힌다**(0 을 1 로 올려 버리면 여기가 어긋난다)
+      t.click(); await sleep(40);
+      assert((d().querySelector('.cdRow.here')||{}).dataset.dg==='0',
+        '캠프에 있는데 드롭다운이 다른 칸을 가리킨다: '+((d().querySelector('.cdRow.here')||{}).dataset||{}).dg);
+      // 던전으로 되돌아가면 라운드 칸이 풀린다
+      d().querySelector('.cdRow[data-dg="2"]').click();
+      assert(!d().querySelector('.cdR').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
+      campDropClose();
+      return '캠프 0 + 던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 캠프 왕복 확인';
     } finally {
+      gateOff();
       campDropClose();
       window.campIsOn=on0; window.campState=st0; window.campSkin=sk0;
       if(prof){ if(camp0) prof.camp=camp0; else delete prof.camp; }
@@ -7149,25 +8816,31 @@ async function groupLobby(){
     assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
     assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
     assert($('curTitle').textContent==='상점','상점 제목이 재화 바 왼쪽에 없음: "'+$('curTitle').textContent+'"');
-    // 구역 5개를 하단 네비로 나눴다(2026-08-14) — 화면에는 고른 구역 하나만 그린다
+    // 🏕 구역은 **둘**이다(2026-08-31 캠프 재편). 앞의 다섯(한정구매·뽑기·재화·패키지·충전)은
+    //   옛 사냥터 기준이라 파는 것이 캠프에 하나도 안 닿았다 — 화면에서만 뺐고 코드는 남아 있다.
     assert(document.querySelectorAll('#shopBody .shopPanel').length>=1,'상점 구역이 안 그려짐');
     { const seen=[];
-      for(const k of ['deal','draw','res','pack','gem']){ setShopSec(k);
+      for(const k of ['reco','gem']){ setShopSec(k);
         const hd=document.querySelector('#shopBody .shopHead');
         assert(hd,'상점 구역 '+k+' 이 안 그려짐'); seen.push(hd.textContent.slice(0,4)); }
-      setShopSec('deal');
-      assert(new Set(seen).size===5,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
-    assert(document.querySelectorAll('#shopBody .shopDeal').length===3,'오늘의 특가가 3개가 아님');
-    setShopSec('draw');   // 뽑기 행은 '뽑기' 구역에 있다(구역별로 나뉜 뒤)
-    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'상점 내용(뽑기 행)이 비어 있음');
-    assert(document.querySelector('#shopBody .petRow, #shopBody .shopPanel'),'뽑기 구역에 보유 펫이 안 붙음');
-    setShopSec('deal');
-    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
+      setShopSec('reco');
+      assert(new Set(seen).size===2,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
+    // ① 추천 = 팩 목록. CAMP_PACKS 와 **행 수가 같아야** 한다(한 곳에서 정한다).
+    setShopSec('reco');
+    if(typeof CAMP_PACKS!=='undefined')
+      assert(document.querySelectorAll('#shopBody .shopRow').length===CAMP_PACKS.length,
+        '추천 행이 CAMP_PACKS 와 다르다: '+document.querySelectorAll('#shopBody .shopRow').length+' vs '+CAMP_PACKS.length);
+    // ② 젬 상점 = 충전 + 젬으로 구매. 판이 둘이어야 한 화면에 다 있다.
+    setShopSec('gem');
+    assert(document.querySelectorAll('#shopBody .shopPanel').length>=2,'젬 상점에 충전·구매 두 판이 없다');
+    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'젬으로 살 것이 비어 있음');
+    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 실제 아이콘이 들어갔는지
     assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
+    setShopSec('reco');
     // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
     for(const sel of ['.curTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===2,'상점 하위가 2칸이 아님(추천·젬 상점)');
     // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
     openHome(); await sleep(40); openShop(); await sleep(60);   // ⚠ 마을 팝업 경로는 다락으로 갔다 — 상점 전용 화면으로 연다
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');
@@ -8055,6 +9728,7 @@ async function groupLobby(){
 
 // ── 그룹: game (솔로 무한) ──
 async function groupGame(){
+  campDevFailOff(); curRollOff();
   await step('솔로 시작', async()=>{ skipIf(!USEMAPS.nemo_inf,'nemo_inf 맵 없음'); startSoloInfinite(); await sleep(400); G.loading=false;
     assert(G.phase==='playing','phase='+G.phase); return 'ok'; });
   await step('첫 진입 = 유닛뽑기 섹션', ()=>{ assert(G.mainSheet==='gacha','초기 섹션='+G.mainSheet);
@@ -8486,7 +10160,69 @@ async function groupGame(){
     assert(G.enemies.length>b || (G.pendSpawn||[]).length>bp,'적/대기열 미증가'); return pt.name; });
   await step('포인트 강화 팝업', ()=>{ skipIf(typeof openPointUpgrade!=='function','없음'); openPointUpgrade();
     assert(visible(document.querySelector('#pointPanel .ptTitle, #pointPanel .ppHead')),'공학소 팝업 헤더 안 보임'); closePointUpgrade(); return 'ok'; });
-  await step('설정 팝업', ()=>{ openSettings(); assert(visible($('settingsPop')),'settingsPop 안 보임'); closeSettings(); return 'ok'; });
+  // ⚙ 설정 아이콘 = **톱니 한 벌**(ICO.gear). 로그인·유즈맵 재화바·게임 HUD 가 같은 것을 쓴다.
+  //   ⛔ 세 줄(☰)로 되돌리거나 SVG 를 마크업에 다시 붙여 넣지 말 것 — 세 곳이 조용히 갈라진다.
+  await step('설정 아이콘: 톱니 한 벌 · 상자 가운데', ()=>{
+    const hosts=[...document.querySelectorAll('#settingsBtn .icoBars,#curSettingsBtn .icoBars,.authGear span[data-ico]')];
+    assert(hosts.length>=3,'톱니를 쓰는 자리가 3곳이 아니다: '+hosts.length);
+    hosts.forEach(h=>{ assert(h.dataset.ico==='gear','data-ico 가 gear 가 아니다: '+h.dataset.ico);
+      assert(h.querySelector('svg'),'아이콘이 안 칠해졌다(paintIcons 미적용)'); });
+    // 아이콘은 제 상자 한가운데 — 인라인 span 이면 라인박스 여백만큼 위로 뜬다
+    for(const id of ['settingsBtn','curSettingsBtn']){ const b=$(id); if(!b) continue;
+      const sv=b.querySelector('.icoBars svg'); if(!sv) continue;
+      const r=b.getBoundingClientRect(), s=sv.getBoundingClientRect();
+      assert(Math.abs((s.top+s.height/2)-(r.top+r.height/2))<0.6,
+        id+' 톱니가 상자 가운데가 아니다: '+((s.top+s.height/2)-(r.top+r.height/2)).toFixed(2)+'px');
+      assert(Math.abs((s.left+s.width/2)-(r.left+r.width/2))<0.6,id+' 톱니가 가로 가운데가 아니다'); }
+    // ☰ 는 **캠프에서만** 남는다 — 거긴 설정이 아니라 '더보기'다(2026-08-31 사용자 확정).
+    //   같은 버튼 하나가 모습만 갈아 끼운다 — 캠프용 버튼을 새로 만들지 말 것.
+    { const ph=$('phone'), b=$('curSettingsBtn');
+      const g=b.querySelector('.icoBars'), m=b.querySelector('.icoMenu');
+      assert(g&&m,'톱니·세줄 두 모습이 한 버튼 안에 있어야 한다');
+      const vis=e=>getComputedStyle(e).display!=='none';
+      const had=ph.classList.contains('campMode');
+      ph.classList.remove('campMode');
+      assert(vis(g)&&!vis(m),'캠프가 아닌데 세 줄이 보인다');
+      ph.classList.add('campMode');
+      assert(!vis(g)&&vis(m),'캠프인데 톱니가 보인다');
+      if(!had) ph.classList.remove('campMode'); }
+    return '3곳 · 상자 가운데'; });
+  // 🎬 설정 카드는 scale(--setScale) 로 줄여 놓은 카드다. 공용 팝업 애니(fxPopOn)는 그 배율을 모른 채
+  //   scale(1) 로 끝내서, 1.25배로 꽉 찬 카드가 떴다가 애니가 끝나며 툭 줄었다(2026-08-31 실측).
+  //   ⛔ .setCard 를 fxPopOn 목록이나 fxPop() 호출에 다시 넣지 말 것 — 등장 애니는 setCardIn 하나다.
+  await step('설정 팝업 · 등장 애니가 카드 배율을 지킨다', async ()=>{ openSettings();
+    assert(visible($('settingsPop')),'settingsPop 안 보임');
+    const c=$('settingsPop').querySelector('.setCard');
+    const an=getComputedStyle(c).animationName;
+    assert(an.indexOf('fxPopOn')<0,'설정 카드에 공용 팝업 애니가 걸렸다 — 카드가 커졌다 줄어든다: '+an);
+    const w0=c.getBoundingClientRect().width;
+    await sleep(_cssMs('--t-swap',.22)+120);
+    const w1=c.getBoundingClientRect().width;
+    assert(Math.abs(w1-w0)<1,'등장 중에 카드 폭이 변한다(튄다): '+w0.toFixed(1)+' → '+w1.toFixed(1));
+    const sc=new DOMMatrix(getComputedStyle(c).transform).a;
+    // ⚠ 값을 여기 박지 말 것 — 배율은 css 변수 한 곳이 단일 소스다(바꿀 때 두 군데를 고치게 된다)
+    const want=parseFloat(getComputedStyle(c).getPropertyValue('--setScale'))||1;
+    assert(Math.abs(sc-want)<0.02,'카드 배율이 --setScale('+want+')이 아니다: '+sc.toFixed(3));
+    // 터치 타겟은 **배율이 걸린 뒤** 기준으로 지킨다(DESIGN §0 권고 44px).
+    //   ⚠ 높이를 44px 로 박아 두면 배율만큼 작아진다 — 행들은 1/배율로 키워 쓴다.
+    { const rows=[...c.querySelectorAll('.setItem,.setQRow,.setPause,.setExit,.setLogout')].filter(e=>e.offsetHeight>0);
+      assert(rows.length,'설정 행을 하나도 못 찾았다 — 선택자가 낡았다');
+      rows.forEach(r=>{ const h=r.getBoundingClientRect().height;
+        assert(h>=43.5,'설정 행이 44px 미만: '+(r.id||r.className.split(' ')[0])+' '+h.toFixed(1)+'px'); }); }
+    // 🌑 하위 팝업(비디오 설정·임무 목표…)은 **뒤가 거의 안 보이게** 덮는다 —
+    //   .5 였을 때 설정 목록 글자가 그대로 비쳐 두 화면이 겹쳐 읽혔다(2026-08-31 사용자 요청).
+    { openSetSub('vid'); await sleep(80);
+      const sp=$('setSubPop');
+      assert(sp && !sp.classList.contains('hide'),'하위 팝업이 안 열린다');
+      const parts=getComputedStyle(sp).backgroundColor.replace(/[^0-9.,]/g,'').split(',');
+      const a=(parts.length>3)?parseFloat(parts[3]):1;
+      assert(a>=0.85,'하위 팝업 딤이 옅다 — 뒤 목록이 비친다: '+a);
+      // ⚠ 하위 팝업은 **설정보다 항상 위**여야 한다. 게임 밖은 설정이 95 로 올라가는데 하위가 73 에
+      //   머물러, 유즈맵에서 비디오 설정을 열면 설정 목록 뒤로 깔렸다(2026-08-31).
+      assert(+getComputedStyle(sp).zIndex > +getComputedStyle($('settingsPop')).zIndex,
+        '하위 팝업이 설정보다 아래다: '+getComputedStyle(sp).zIndex+' vs '+getComputedStyle($('settingsPop')).zIndex);
+      closeSetSub(); await sleep(40); }
+    closeSettings(); return '폭 '+w1.toFixed(0)+'px · 배율 '+sc.toFixed(2)+' 고정'; });
   // DESIGN.md 규칙 — 게임 안 팝업(설정 · 나가기 확인 · 결과)만. 게임 밖(#settingsPop.appCtx)은 대상 아님
 
   await step('설정: 상단 스위치 + 리스트 → 하위 팝업', ()=>{
@@ -8591,6 +10327,36 @@ async function groupGame(){
         return getComputedStyle($('rsTtl')).color; };
       const tw=cw('win'), tl=cw('lose');
       assert(tw!==tl,'승/패 제목 색이 같음: '+tw);
+      // 📋 **통계는 이 화면 안에 있다**(2026-08-31 · 옛 #resultScreen 을 여기로 합쳤다).
+      //   ⛔ 두 화면으로 다시 가르지 말 것 — 같은 값을 두 번 보여 주던 구조였다.
+      { const lab=[...document.querySelectorAll('#rsRows .rsRow b')].map(b=>b.textContent);
+        assert(lab.indexOf('보유 포인트')>=0,'옛 통계 화면의 줄(보유 포인트)이 안 옮겨졌다: '+lab.join('/')); }
+      // 통계로 가는 입구가 옛 창을 열면 안 된다 — 같은 결과 화면이 다시 떠야 한다
+      openResultScreen();
+      assert(!$('resultScreen'),'옛 통계 창(#resultScreen)이 되살아났다 — 마크업째 지운 화면이다');
+      assert(typeof window.resultToLobby==='undefined' && typeof window.ovStatRow==='undefined',
+        '옛 통계 창의 함수가 되살아났다(resultToLobby / ovStatRow)');
+      assert(ov.classList.contains('rsOn'),'통계 입구가 결과 화면을 안 띄운다');
+      // 나가기 = 곧바로 로비(다음 단계가 없다). ⚠ 실제로 부르면 화면이 로비로 가므로 경로만 본다.
+      assert(_ovConfirm.toString().indexOf('overlayToLobby')>=0 && _ovConfirm.toString().indexOf('openResultScreen')<0,
+        '나가기가 아직 옛 통계 단계를 거친다');
+      // 🎬 결과 화면 → **유즈맵으로 곧장**. 로딩 화면을 거치지 않는다(2026-08-31 사용자 확정).
+      //   ⛔ showLoading 을 다시 끼우지 말 것 — 그 화면이 키 아트와 타이틀 로고를 켜는데,
+      //     둘은 화면과 따로 0.42초에 걸쳐 꺼져 유즈맵 목록 위로 비쳤다.
+      { const t=overlayToLobby.toString();
+        assert(t.indexOf('openMapSelect()')>=0,'로비로 안 돌아간다');
+        assert(t.indexOf('showLoading')<0,'로비 복귀가 다시 로딩 화면을 거친다'); }
+      // 🧹 잔상 금지 — 로비로 돌아갈 때 게임 크롬과 3D 를 **지우고 한 번 더 그린다**
+      //   (지우기만 하면 캔버스에 마지막 프레임이 박제돼 로딩 화면에 미네랄이 떠 있었다).
+      { const t=overlayToLobby.toString();
+        assert(t.indexOf('setInGame(false)')>=0,'로비로 나갈 때 게임 크롬을 안 끈다 — 전장이 그대로 드러난다');
+        assert(t.indexOf('clearGameModels')>=0 && t.indexOf('clearIdlePools')>=0,'3D 잔상을 안 지운다');
+        assert(t.indexOf('M3D.sync([]')>=0,'지운 뒤 다시 그리지 않는다 — 캔버스에 마지막 프레임이 남는다'); }
+      // ⚔ 오토배틀도 나갈 때 통계를 보여 준다(캠프는 제외 — 판이 끝난 게 아니다)
+      { const s=exitGame.toString();
+        assert(s.indexOf('openResultScreen')>=0,'오토배틀 나가기가 통계를 건너뛴다');
+        assert(s.indexOf('STK.camp')>=0,'캠프에서 나갈 때도 통계가 뜬다'); }
+      rsSkip();
       rsHide(); _ovClearAuto(); ov.classList.add('hide');
       G.phase=was; G._runSum=savedSum;
       assert($('ovBtns').parentNode===ov.querySelector('.ovCard'),'결과를 걷은 뒤 버튼을 안 돌려놓음');
@@ -9597,6 +11363,7 @@ async function groupGame(){
 
 // ── 그룹: sandbox (관리자) ──
 async function groupSandbox(){
+  campDevFailOff(); curRollOff();
   await step('샌드박스 진입', async()=>{ skipIf(typeof enterSandbox!=='function','없음'); enterSandbox(); await sleep(300);
     assert(G.sandbox===true,'sandbox 플래그'); return 'units='+G.units.length; });
   await step('샌드박스 탭 구성(전투실험·건설 표시, 보스 숨김)', ()=>{ updatePbossFab();

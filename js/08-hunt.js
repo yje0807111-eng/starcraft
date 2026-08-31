@@ -2198,6 +2198,18 @@ function warmAll(onStep){
     for(let i=0;i<200 && !(window.M3D&&M3D.ready&&M3D.ready()); i++) await new Promise(r=>setTimeout(r,50));
     if(!(window.M3D&&M3D.ready&&M3D.ready())){ _warmDone=true; return 0; }   // 3D가 없으면 데울 것도 없다
     try{ hbBgImg((typeof hbHunt==='function' && hbHunt().dg)||1); }catch(e){}   // 배경 그림도 미리 받아 둔다
+    // 🏕 **종족 전장 그림도 미리 받는다.** 로딩이 걷힌 자리에 종족 판이 오는데, 그림을 그때
+    //    처음 받으면 어두운 그라데이션(.crPrev)만 보이다가 뒤늦게 채워진다 — 그것이
+    //    「검게 한 번 깜빡인다」의 정체였다(2026-08-27).
+    // ⛔ 캠프 바닥 그림(camp.webp)은 여기서 미리 디코드하지 **않는다** — 넣어 봤다가 뺐다(2026-08-27).
+//    종족 선택 화면에 닿는 시점이면 그 그림은 **이미 로드·디코드가 끝나 있다**(실측 decode 0.2ms).
+//    미리 해 봐야 캠프 첫 프레임은 그대로였다: 안 함 255~262ms / 미리 함 256~259ms — 차이 없음.
+//    (페이지를 막 연 직후라면 47ms 가 나오지만, 그 상태로 캠프에 들어가는 경로가 없다.)
+try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function')
+      for(const _rk of CAMP_RACE_ORDER){
+        const _a=new Image(); _a.src=campRaceArt(_rk);
+        if(typeof campRaceIcon === 'function'){ const _i=new Image(); _i.src=campRaceIcon(_rk); } }
+    }catch(e){}
     const ids=warmIds(); let n=0;
     for(const id of ids){
       await new Promise(r=>requestAnimationFrame(()=>r()));
@@ -2218,6 +2230,9 @@ function warmAll(onStep){
   return _warmRun; }
 // 로그인/게스트 → 로딩 화면(#opening 재사용)에서 데우기를 끝낸 뒤 HOME으로.
 // 새 로딩 UI를 만들지 않는다 — 부팅 때 쓰는 그 화면의 막대와 문구를 그대로 쓴다.
+// 🎬 로딩 → 종족 선택 : 머무는 시간과 디졸브 길이(css 「raceIn」 과 **같은 값**이어야 한다)
+const RACE_HOLD_MS = 420;    // 100% 를 잠깐 보여준다
+const RACE_FADE_MS = 440;    // 앞판이 걷히고(200) → 종족 판이 든다(240) · css 「--t-race」 와 같은 값
 async function enterAfterWarm(){
   const op=document.getElementById('opening');
   showAppScreen('opening');
@@ -2229,10 +2244,31 @@ async function enterAfterWarm(){
   if(!cont) opBarStart();
   await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
   await opBarDone();
-  // 🎬 그림·막대를 걷어 **로고만 남은 검은 화면**으로. 게임 화면은 그 뒤에 서고,
-  //    검은 판과 로고가 함께 사라지며 드러난다(titleOutroEnd).
-  if(typeof titleToBlack==='function') await titleToBlack();
-  opBarReset();
+  // 🎬 **검은 화면 + 로고는 「게임이 실제로 시작되는 지점」에 쓴다.**
+  //    종족을 아직 안 골랐으면 여기가 그 지점이 아니다 — 로딩에서 종족 선택으로 **바로 디졸브**하고,
+  //    검은 화면은 종족을 고른 뒤(campPickRace)가 맡는다. 안 그러면 검은 화면이 두 번 나온다:
+  //    로딩→검정→종족선택→(다시)캠프 — 그 사이가 깜빡이는 것처럼 보였다(2026-08-27).
+  // 🎬 **종족 선택으로 가는 길은 단순 디졸브 하나다**(2026-08-27 재작성).
+  //   로딩이 100% 로 잠깐 머문 뒤(RACE_HOLD_MS) 앞판이 걷히고, 그 다음 종족 판이 든다(RACE_FADE_MS).
+  //   ⚠ **겹치지 않는다** — 크로스페이드를 여러 길이로 만들어 봤지만 겹치는 구간이 계속 거슬렸다(2026-08-27).
+  //   ⛔ 검은 화면을 끼우지 말 것 — 그건 「게임이 실제로 시작되는 지점」(종족을 고른 뒤)의 몫이다.
+  //   ⛔ 로딩만 먼저 걷고 기다리지 말 것 — 그 사이 키 아트만 남아 「배경이 깜빡」인다.
+  //   ⛔ 로고·키 아트를 따로따로 다른 속도로 걷지 말 것 — 한 화면이 조각나 보인다.
+  //   ⭐ 실제로 걷는 일은 openHome() → showAppScreen 이 이미 다 한다(로딩 fadeOut +
+  //     titleArtShow(false) 로 키 아트·로고). 여기서는 **잠깐 머무는 것**만 맡는다.
+  const _needRace = (function(){ try{ return typeof campState==='function' && campState() && !campState().race; }catch(e){ return false; } })();
+  if(_needRace){
+    if(typeof _sleep==='function') await _sleep(RACE_HOLD_MS);   // ① 100% 를 잠깐 보여준다
+    const _ph0=document.getElementById('phone');
+    if(_ph0) _ph0.classList.add('raceIn');            // ② 이 전환만 짧게(css 「raceIn」)
+    // ⛔ 여기서 로딩을 직접 hide 하지 말 것 — 걷는 일은 openHome() → showAppScreen 이 한다.
+    //    직접 감추면 그 판만 전이 없이 사라져 나머지와 어긋난다(= 컷 시절의 코드).
+  }
+  else if(typeof titleToBlack==='function') await titleToBlack();
+  // ⛔ 막대는 **로딩 판이 다 걷힌 뒤에** 되돌린다. 여기서 바로 부르면 100% 이던 막대가
+  //    아직 화면에 보이는 채로 0% 로 뚝 떨어진다(2026-08-27 프레임 확인: 1648ms 에 「LOADING 0%」).
+  if(_needRace) setTimeout(opBarReset, RACE_FADE_MS + 60);
+  else opBarReset();
   // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
   //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
   //    setInGame(false) 가 걸려 하단 콘솔(#bot)이 통째로 사라진다(스모크가 간헐 실패했다).
@@ -2245,6 +2281,17 @@ async function enterAfterWarm(){
   // ⛔ 부팅 경로다 — 여기서 예외가 나면 사용자가 HOME 에 영영 못 간다. 한 겹 더 감싼다.
   try{ if(typeof tryRestoreRun==='function' && tryRestoreRun()){ if(typeof titleOutroEnd==='function') titleOutroEnd(); return; } }catch(e){ console.warn('tryRestoreRun', e); }
   openHome();
+  // 🎨 **종족 선택으로 갈 때는 키 아트를 조금 더 남긴다.**
+  //    openHome → showAppScreen 이 titleArtShow(false) 로 키 아트를 로딩과 **같은 시간에** 걷는데,
+  //    그때 종족 판은 아직 반투명이라 그 아래 키 아트(boot.webp — 전투 장면)가 그대로 드러난다.
+  //    「그 사이에 사냥터 배경이 스친다」가 그것이었다(2026-08-27).
+  //    종족 판이 다 찬 뒤에 걷으면 그때는 가려져 있어 보이지 않는다.
+  // 🎬 느린 전환 클래스는 다 걷힌 뒤에 뗀다(다음 화면 전환이 느려지지 않게)
+  //   ⚠ 넉넉히 기다렸다 뗀다. 로딩 판을 걷는 애니메이션(fxOut)은 기본 길이(--t-screen .7s)로 잡혀 있어서,
+  //     그 시간이 지나기 전에 클래스를 떼면 남은 구간이 다시 계산돼 **다 사라진 판이 살짝 돌아온다**(실측 0.01).
+  if(_needRace){ const _ph=document.getElementById('phone');
+    if(_ph){ clearTimeout(window._raceInT);
+      window._raceInT=setTimeout(function(){ _ph.classList.remove('raceIn'); }, RACE_FADE_MS+700); } }
   if(typeof titleOutroEnd==='function') titleOutroEnd(); }   // 게임 화면이 선 뒤 — 검은 판과 로고가 함께 걷힌다
 function hb3dAttach(){ const cv=document.getElementById('cvMarine'), host=document.getElementById('homeScreen');
   if(!cv||!host||_hb3dHome) return;
@@ -2844,7 +2891,16 @@ const SHOP_DEAL_POOL=[
   {id:'mega',  tag:'특급 꾸러미', art:'📦', gem:90,  give:{pcoin:6000, gas:400, ticket_gear:3}},
 ];
 // 💎 젬 = 현질 재화(실제 결제로만 얻는다). 특가는 이 젬으로 산다.
-const SHOP_GEM_PACKS=[ {n:60,won:'₩1,500'}, {n:220,won:'₩5,500'}, {n:800,won:'₩19,000'} ];
+// 💎 젬 충전 — **모바일 관례 5단계**(2026-08-31). 앞의 3단계는 크게 사도 5% 밖에 안 싸서
+//   「많이 사면 이득」이 안 읽혔다. 관례는 최소↔최대 사이에 **30~40% 차이**를 둔다.
+//   가격대도 앱마켓 표준(₩1,100 / 5,500 / 11,000 / 22,000 / 55,000)으로 맞췄다.
+const SHOP_GEM_PACKS=[
+  {n:50,   won:'₩1,100'},                 // 젬당 22.0원 — 기준
+  {n:280,  won:'₩5,500',  bonus:'+12%'},  // 19.6원
+  {n:600,  won:'₩11,000', bonus:'+20%'},  // 18.3원
+  {n:1300, won:'₩22,000', bonus:'+30%'},  // 16.9원
+  {n:3500, won:'₩55,000', bonus:'+40%'},  // 15.7원
+];
 // 지급 내용 라벨 — 아이콘은 resIco()가 이름으로 자동 매칭(임의 이모지 금지)
 const SHOP_GIVE_LABEL={ pcoin:'미네랄', gas:'가스', gem:'젬',
   ticket_gear:'장비 뽑기권', ticket_pet:'펫 뽑기권', ticket_ally:'동료 뽑기권' };
@@ -2913,16 +2969,133 @@ function _shopGemHTML(){ let h='';
   h+='<div class="shopNote">젬은 <b>현금 결제</b>로만 얻습니다 · 특가 구매에 사용</div>';
   h+='<div class="shopGems">';
   for(const g of SHOP_GEM_PACKS)
-    h+='<div class="shopGem"><em>'+resIco('gem','gi')+' '+g.n+'</em>'
+    h+='<div class="shopGem"><em>'+resIco('gem','gi')+' '+g.n
+      +(g.bonus?('<i class="shopBn">'+g.bonus+'</i>'):'')+'</em>'
       +'<button class="shopBuy" onclick="shopGemSoon()">'+g.won+'</button></div>';
   h+='</div></div></div>';
   return h; }
 // 아직 내용이 없는 구역 — 자리는 만들되 있는 척하지 않는다(설정 하위 팝업과 같은 표기)
 function _shopSoonHTML(t){ return '<div class="shopPanel"><div class="shopHead">'+t+'</div>'
   +'<div class="shopBody"><div class="setSoon">준비 중입니다</div></div></div>'; }
-const SHOP_SECS={ deal:_shopDealHTML, draw:_shopDrawHTML,
-  res:()=>_shopSoonHTML('재화'), pack:()=>_shopSoonHTML('패키지'), gem:_shopGemHTML };
-let _shopSec='deal';
+
+// ══ 🏕 캠프 상점 (2026-08-31 재편) ═══════════════════════════════════════
+// ⛔ 앞의 상점은 **옛 사냥터 기준**이었다. 파는 것 전부가 캠프에 안 닿았다:
+//   · 펫·장비·동료 꾸러미 → 그 시스템들이 유보(GAME_DIRECTION §5-B)라 쓸 데가 없다
+//   · 자원·가스 꾸러미   → **다른 지갑**(PROF().pcoin)에 들어갔다. 캠프는 자기 지갑을 쓴다.
+//     실측(2026-08-31): 프로필 지갑 +5555 → 캠프 재화 그대로. 사도 캠프에서 못 썼다.
+// ⭐ 그래서 **파는 것을 캠프에 실제로 닿는 것만** 남기고 두 칸으로 줄였다.
+// ⛔ 옛 구역 코드(_shopDealHTML·_shopDrawHTML·SHOP_DEAL_POOL)는 **지우지 않았다** —
+//    화면에서만 뺐다(GEM.md §5 「⑤ 를 지우지 말 것」). 펫·장비·동료가 되살아나면 함께 살아난다.
+
+// 💎 젬으로 사는 것 — **캠프 지갑**으로 들어간다(campAddRes 가 유일한 입구).
+// ⭐ **고정 숫자를 팔지 않는다**(2026-08-31 사용자 확정). 파는 단위는 「지금 내 수입의 n 시간치」다.
+//   회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 아무 의미가 없어진다.
+//   양은 campTimeAmt(초, 종류) 가 **실측 속도에서 계산하고 유효숫자 두 자리로 반올림**한다.
+// ⚠ 캠프에 5초 이상 머문 적이 없으면 속도가 0 이라 팔지 않는다 — 화면이 그 이유를 말한다.
+// 🔬 **젬 값과 한도는 실측으로 정했다** (2026-08-31 · 40분 벤치 · GIFT_S 옵션)
+//   | 20분 시점에 준 것 | 그때 부의 | 40분 최종 | 라운드 |
+//   |---|---|---|---|
+//   | 없음(대조군) | — | 70.9만 | D1R19 |
+//   | 8시간치 | **23.8배** | 1,450만 | D1R25 (환생 가능) |
+//   | 24시간치 | **71.4배** | 4,263만 | D1R35 (환생 가능) |
+//   ⛔ **어떤 시간치든 「논 시간」보다 길면 게임을 통째로 건너뛴다.** 8시간치조차 그랬다.
+//   ⇒ 안전장치 둘을 건다:
+//     ① **플레이 상한** — 이 회차에 논 시간(campPlayS)보다 긴 시간치는 **못 산다**
+//     ② **하루 한도** — 상한을 넘겼어도 반복 구매로는 못 부순다(모바일 관례이기도 하다)
+const SHOP_GEM_BUY=[
+  {id:'min30', nm:'미네랄', kind:'min', secs:1800,  gem:20,  cap:3},
+  {id:'min4h', nm:'미네랄', kind:'min', secs:14400, gem:60,  cap:2},
+  {id:'min24', nm:'미네랄', kind:'min', secs:86400, gem:180, cap:1},
+  {id:'gas4h', nm:'가스',   kind:'gas', secs:14400, gem:30,  cap:2},
+  {id:'gas24', nm:'가스',   kind:'gas', secs:86400, gem:90,  cap:1},
+  {id:'boost', nm:'부스터', soon:true, desc:'시간제 강화 — 시스템이 아직 없습니다'},
+];
+// 하루 한도 — 날짜가 바뀌면 스스로 비워진다(shopState 와 같은 날짜 키를 쓴다)
+function shopDayBuys(){ const p=PROF(); const dk=(typeof _dgDayKey==='function')?_dgDayKey():0;
+  if(!p.shopBuy || p.shopBuy.day!==dk) p.shopBuy={day:dk, n:{}};
+  return p.shopBuy.n; }
+function shopLeft(d){ if(!d.cap) return 99; return Math.max(0, d.cap - (shopDayBuys()[d.id]|0)); }
+// 아직 못 사는 이유 — 있으면 그 문장을 돌려준다(없으면 '')
+function shopWhyLock(d){
+  if(d.soon) return d.desc||'준비 중';
+  const play=(typeof campPlayS==='function')?campPlayS():0;
+  if(play < d.secs){
+    // ⚠ 남은 시간을 늘 「시간」으로 올리면 **30분치인데 「1시간 더」**가 되어 앞뒤가 안 맞는다.
+    const rem=d.secs-play;
+    const need = rem>=3600 ? (Math.ceil(rem/3600)+'시간') : (Math.max(1,Math.ceil(rem/60))+'분');
+    return need+' 더 플레이하면 열립니다'; }
+  if(shopLeft(d)<=0) return '오늘 한도를 다 썼습니다';
+  if(!(shopGemAmt(d)>0)) return '수입을 아직 못 쟀습니다';
+  return ''; }
+// 「30분치」 · 「24시간치」 — 사람이 읽는 이름
+// ⚠ 24시간을 「1일치」로 줄이지 않는다(사용자 표현이 「24시간치」다) — 30분·4시간과
+//   **같은 단위**로 읽혀야 셋이 한 줄에서 비교된다.
+function shopSpanName(secs){
+  return secs < 3600 ? Math.round(secs/60)+'분치' : Math.round(secs/3600)+'시간치'; }
+function shopGemAmt(d){
+  if(d.soon || typeof campTimeAmt!=='function') return 0;
+  return campTimeAmt(d.secs, d.kind==='gas'?'gas':'min'); }
+// 표기 — campNum 은 늘 소수 한 자리를 붙이는데(「1300.0만」), 여기 값은 이미
+// **유효숫자 두 자리로 반올림된 것**이라 소수점이 거짓 정밀도로 보인다. 「.0」만 뗀다.
+// ⛔ campNum 자체를 고치지 않는다 — 게임 전역 표기라 다른 화면이 함께 바뀐다.
+function shopAmtTx(n){
+  const t=(typeof campNum==='function') ? campNum(n) : Math.floor(n).toLocaleString('en-US');
+  return t.split('.0만').join('만').split('.0억').join('억'); }
+function shopBuyGemRes(id){
+  const d=SHOP_GEM_BUY.find(x=>x.id===id); if(!d||d.soon) return;
+  const why=shopWhyLock(d); if(why){ showTownToast(why); return; }
+  const amt=shopGemAmt(d);
+  if(profGem()<d.gem){ showTownToast('💎 젬이 부족합니다'); return; }
+  const p=PROF(); p.gem=(p.gem||0)-d.gem;
+  shopDayBuys()[d.id]=(shopDayBuys()[d.id]|0)+1;   // 하루 한도 차감
+  campAddRes(d.kind==='gas'?0:amt, d.kind==='gas'?amt:0);
+  if(typeof saveMeta==='function') saveMeta();
+  if(typeof playSfx==='function') playSfx('hero_merge');
+  renderShop(); showTownToast('💠 '+d.nm+' '+shopAmtTx(amt)+' 지급'); }
+function shopBuyPack(id){
+  const d=(typeof campPackDef==='function')?campPackDef(id):null; if(!d) return;
+  if(d.soon){ showTownToast('준비 중입니다'); return; }
+  if(typeof campPackOwn==='function' && campPackOwn(id)){ showTownToast('이미 보유 중입니다'); return; }
+  showTownToast('💳 결제는 준비 중입니다');   // ⚠ 실제 결제 연동 전 — 지급도 하지 않는다
+}
+// ① 추천 — 현금 결제 팩. 젬이 함께 들어 있다.
+function _shopRecoHTML(){
+  if(typeof CAMP_PACKS==='undefined') return _shopSoonHTML('추천');
+  let h='<div class="shopPanel"><div class="shopHead">추천<em>한 번만 구매</em></div><div class="shopBody">';
+  h+='<div class="shopNote">재화 획득 배수는 <b>서로 더해집니다</b> — 곱하지 않아 후반이 안정적입니다</div>';
+  for(const P of CAMP_PACKS){
+    const own=(typeof campPackOwn==='function') && campPackOwn(P.id);
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+P.nm
+      +(P.gem?(' <span class="twStars">'+resIco('gem','gi')+' '+P.gem+'</span>'):'')+'</div>'
+      +'<div class="twRowSub'+((P.soon||own)?' lock':'')+'">'+(P.desc||'')+'</div></div>'
+      +'<button class="twBtn" onclick="shopBuyPack(&#39;'+P.id+'&#39;)"'+((P.soon||own)?' disabled':'')+'>'
+      +(own?'보유 중':(P.soon?'준비 중':P.won))+'</button></div>';
+  }
+  h+='</div></div>';
+  return h; }
+// ② 젬 상점 — 충전 + 그 젬으로 캠프 재화를 산다(한 화면에 둔다)
+function _shopGemShopHTML(){
+  let h=_shopGemHTML();   // 충전 줄은 기존 것을 그대로 쓴다(단일 소스)
+  h+='<div class="shopPanel"><div class="shopHead">젬으로 구매<em>캠프 재화</em></div><div class="shopBody">';
+  h+='<div class="shopNote">구매한 재화는 <b>캠프 지갑</b>으로 들어갑니다</div>';
+  // ⚠ 못 사는 칸은 **왜인지**를 그 자리에 적는다(잠긴 채 이유가 없으면 버그처럼 보인다).
+  for(const d of SHOP_GEM_BUY){
+    const why=shopWhyLock(d), amt=shopGemAmt(d);
+    const can=!why && profGem()>=d.gem;
+    const nm=d.soon? d.nm : (d.nm+' '+shopSpanName(d.secs));
+    const left=(!d.soon && d.cap) ? shopLeft(d) : -1;
+    const sub=why ? why
+      : ('약 '+shopAmtTx(amt)+' — 지금 수입 기준'
+         + (left>=0 ? (' · 오늘 '+left+'/'+d.cap) : ''));
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+nm+'</div>'
+      +'<div class="twRowSub'+(can?'':' lock')+'">'+sub+'</div></div>'
+      +'<button class="twBtn" onclick="shopBuyGemRes(&#39;'+d.id+'&#39;)"'+(can?'':' disabled')+'>'
+      +(d.soon?'준비 중':(resIco('gem','gi')+' '+d.gem))+'</button></div>';
+  }
+  h+='</div></div>';
+  return h; }
+const SHOP_SECS={ reco:_shopRecoHTML, gem:_shopGemShopHTML };
+let _shopSec='reco';
 function setShopSec(k){ if(!SHOP_SECS[k]) return; _shopSec=k;
   if(typeof renderShop==='function') renderShop();
   if(typeof navPaint==='function') navPaint(); }

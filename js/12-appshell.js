@@ -104,7 +104,7 @@ function campChipInfo(){
   const inDg=(typeof campDgN==='function') ? campDgN()>0 : ((C.dg|0)>0);
   const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
   const d=(typeof hbDun==='function')?hbDun(dg):null;
-  if(!inDg) return { name:'🏕 캠프', lab:'단계', cur:0, max:CAMP_DG_MAX };
+  if(!inDg) return { name:CAMP_HOME_NAME, lab:'단계', cur:0, max:CAMP_DG_MAX };
   const rnd=(typeof campRoundN==='function')?campRoundN():1;
   const rmax=(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:50;
   return { name:(d&&d.name)||('던전 '+dg), lab:'라운드', cur:rnd, max:rmax }; }
@@ -133,7 +133,10 @@ function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) ret
 //    그건 **유니온에서만 맞다** — 병영에 해당하는 건물 키가 종족마다 다르다
 //    (union=barracks · swarm=pool · aetherial=gateway · feral=huntpen · colossus=assembly).
 //    표를 여기서 새로 지으면 두 벌이 된다. 규칙이 정해지면 이 함수 하나만 채운다.
-function campDgOpen(dg){ return dg>=1 && dg<=CAMP_DG_MAX; }
+// ⭐ **0 = 캠프**(안전 구역)도 목록의 한 칸이다(2026-08-27). 캠프는 늘 열려 있다 —
+//   던전에서 돌아오는 길이라 잠글 이유가 없다(지면 campFail 이 어차피 0 으로 되돌린다).
+const CAMP_HOME_NAME='🏕 캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다
+function campDgOpen(dg){ return dg>=0 && dg<=CAMP_DG_MAX; }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.
 //   ⛔ 두 벌로 들고 있지 말 것 — 드롭다운으로 옮긴 뒤 실제 라운드가 안 따라오던 원인이다.
@@ -148,7 +151,8 @@ function campDropToggle(){ _cdPick? campDropClose() : campDropOpen(); }
 function campDropOpen(){
   const o=campChipInfo(); if(!o) return;
   const C=campEnsureRnd(campState()); if(!C) return;
-  _cdPick={ dg:Math.max(1,Math.min(CAMP_DG_MAX,C.dg||1)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
+  // ⚠ 0(캠프)을 1 로 올리지 않는다 — 캠프에 있는데 드롭다운이 던전 1 을 가리키면 지금 자리를 못 읽는다.
+  _cdPick={ dg:Math.max(0,Math.min(CAMP_DG_MAX,C.dg|0)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
   campDropRender();
   const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
   if(typeof playSfx==='function') playSfx('ui_open');
@@ -160,7 +164,14 @@ function campDropOpen(){
 function campDropClose(){
   if(!_cdPick) return;
   _cdPick=null; clearTimeout(_cdRndT); _cdRndT=null;
-  const d=document.getElementById('campDrop'); if(d) d.remove();
+  // 🎬 셔터를 되감고 **끝난 뒤에** 지운다. id 를 먼저 떼어, 그동안 다시 열어도
+  //    새 판이 깨끗하게 만들어지게 한다(같은 id 가 둘이 되지 않는다).
+  const d=document.getElementById('campDrop');
+  if(d){ if(_uiReduced()) d.remove();
+         else { d.id=''; d.classList.add('cdOut');
+                const kill=function(){ if(d.parentNode) d.remove(); };
+                d.addEventListener('animationend', kill, { once:true });
+                setTimeout(kill, 400); } }   // 보험 — 애니가 안 돌면 판이 남는다
   const t=document.getElementById('curTitle'); if(t) t.classList.remove('open');
   document.removeEventListener('pointerdown', _cdOutside, true); }
 // 바깥을 누르면 닫힌다. 칩 자신은 토글이 맡으므로 제외한다.
@@ -178,17 +189,21 @@ function campDropRender(){
   d.style.left=(cr.left-br.left)+'px';
   d.style.top =(cr.bottom-br.top-1)+'px';    // 칩 아래 테두리와 1px 포개 한 줄로 보이게
   let L='';
-  for(let i=1;i<=CAMP_DG_MAX;i++){ const D=(typeof hbDun==='function')?hbDun(i):null;
+  // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
+  for(let i=0;i<=CAMP_DG_MAX;i++){ const D=(i>0 && typeof hbDun==='function')?hbDun(i):null;
     const open=campDgOpen(i), here=(i===_cdPick.dg);
-    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+'" data-dg="'+i+'"'
+    const nm=(i===0)?CAMP_HOME_NAME:((D&&D.name)||('던전 '+i));
+    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+(i===0?' home':'')+'" data-dg="'+i+'"'
       +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
-      +'<span class="cdRnm">'+escHtml((D&&D.name)||('던전 '+i))+'</span>'
-      +'<span class="cdMul">'+(open?('×'+campDgMul(i).toFixed(1)):'잠김')+'</span></button>'; }
+      +'<span class="cdRnm">'+escHtml(nm)+'</span>'
+      +'<span class="cdMul">'+(!open?'잠김':(i===0?'안전':('×'+campDgMul(i).toFixed(1))))+'</span></button>'; }
   let R='';
   for(let r=CAMP_RND_MAX;r>=1;r--) R+='<button class="cdRn'+(r===_cdPick.rnd?' on':'')+'" data-r="'+r+'">'+r+'</button>';
+  // ⚠ 캠프(0단계)에는 **라운드가 없다**(CAMP_MINE[0] 「배율 고정, 라운드 없음」) — 그 칸을 잠근다.
+  const noRnd=(_cdPick.dg===0);
   d.innerHTML='<div class="cdSec cdTwo">'
     +'<div class="cdL"><div class="cdSl">DUNGEON</div><div class="cdList uiScroll">'+L+'</div></div>'
-    +'<div class="cdR"><div class="cdSl">ROUND</div>'
+    +'<div class="cdR'+(noRnd?' off':'')+'"><div class="cdSl">ROUND</div>'
       // ⚠ 가운데 선은 **스크롤 상자 밖**에 둔다 — 안에 두면 absolute 라도 내용과 같이 굴러 화면 밖으로 나간다
       +'<div class="cdPickWrap"><i class="cdMid"></i>'
         +'<div class="cdPick uiScroll" id="cdPickBox"><div class="cdCol">'+R+'</div></div></div></div>'
@@ -201,8 +216,10 @@ function campDropRender(){
 
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
-  const d=document.getElementById('campDrop'); if(d)
+  const d=document.getElementById('campDrop'); if(d){
     for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
+    // 캠프를 고르면 라운드 칸이 잠기고, 던전으로 옮기면 풀린다
+    const R=d.querySelector('.cdR'); if(R) R.classList.toggle('off', dg===0); }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
 // 라운드 = 스크롤 피커. 큰 수가 위, 1 이 맨 아래 — 옛 사냥터 피커와 같은 방향이다.
@@ -221,8 +238,17 @@ function campRndTap(r){ if(!_cdPick) return; _cdPick.rnd=r; campRndMark(); campR
 // [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
 function campDropGo(){ if(!_cdPick) return;
   const C=campEnsureRnd(campState()); if(!C){ campDropClose(); return; }
+  // 🚪 **병력이 없으면 던전에 못 내려간다** (2026-08-30 사용자 확정 · 판정은 19-camp.js).
+  //   ⛔ 막고 **드롭다운은 열어 둔다** — 닫아 버리면 왜 안 갔는지 모른 채 화면만 사라진다.
+  //   ⚠ 캠프(0)로 돌아오는 것은 언제나 된다(campCanEnterDungeon 이 갈라 본다).
+  if(typeof campCanEnterDungeon==='function' && !campCanEnterDungeon(_cdPick.dg)){
+    if(typeof toast==='function') toast('병력이 있어야 던전에 갈 수 있다 — 캠프에서 병영을 짓고 뽑자');
+    if(typeof playSfx==='function') playSfx('ui_denied');
+    return; }
   // ⭐ 캠프 상태에 쓴다 — cleared 가 단일 소스이고 rnd 는 그것을 비춘다(라운드 n = 깬 수 n-1)
-  C.dg=_cdPick.dg; C.cleared=Math.max(0, _cdPick.rnd-1); C.rnd=_cdPick.rnd;
+  // 🏕 캠프(0)로 가면 라운드는 없다 — cleared·rnd 를 비운다(campRoundN 도 0 을 돌려준다)
+  const toHome=(_cdPick.dg===0);
+  C.dg=_cdPick.dg; C.cleared=toHome?0:Math.max(0, _cdPick.rnd-1); C.rnd=toHome?1:_cdPick.rnd;
   if(typeof campBattleClose==='function') campBattleClose();   // 던전이 바뀌면 전장을 새로 연다
   if(typeof campBarReset==='function') campBarReset();
   if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로
@@ -255,15 +281,46 @@ function fmtCur(n){ n=Math.floor(n||0);
   let t2=t, x=n/Math.pow(10,t2*3);
   if(x>=999.5 && t2+1<CUR_SUF.length){ t2++; x=n/Math.pow(10,t2*3); }   // 999,999 가 "1000K"로 새던 경계
   return x.toFixed(1)+CUR_SUF[t2]; }   // ⭐ 소수 한 자리 고정 — 자릿수가 들쭉날쭉하면 표에서 줄이 흔들린다
+// ══ 💰 재화 숫자는 **굴러서** 오른다 (2026-08-27 사용자 확정) ═══════════
+// 한 번에 큰 값이 들어오면(자리 비움 정산·던전 보상) 숫자가 툭 바뀌는 대신 쭈루룩 올라간다.
+//   ⭐ 작은 변화는 **즉시** 바꾼다 — 탭 한 번에 1 씩 버는 것까지 굴리면 늘 흔들려 읽기 어렵다.
+//   ⚠ 표기는 fmtCur 그대로다(1e56 까지 축약한다) — 굴리는 것은 **값**이고 표기기는 하나뿐이다.
+//   ⚠ 줄어들 때도 같이 굴린다. 살 때만 툭 떨어지면 눈에 걸린다.
+const CUR_ROLL_MS  = 520;   // 굴러가는 시간
+const CUR_ROLL_MIN = 12;    // 이보다 작게 변하면 즉시(탭 한 번은 툭 올라가는 것이 맞다)
+// ⚠ **끌 수 있어야 한다** — 헤드리스 스모크는 rAF 가 멈춰 있어 굴리기가 시작만 하고 끝나지 않는다.
+//   그러면 재화를 읽는 검사가 전부 중간값(대개 0)을 본다. 스모크는 이 스위치를 끄고 잰다.
+//   ⛔ 실제 화면에서는 끄지 말 것 — 큰 보상이 툭 바뀌어 무엇이 들어왔는지 안 보인다.
+let CUR_ROLL_ON = true;
+function _curRoll(el, to){
+  if(!el) return;
+  if(!isFinite(to)){ el.textContent = fmtCur(to); return; }
+  const shown = (el._curV != null && isFinite(el._curV)) ? el._curV : to;
+  if(el._rollRaf){ cancelAnimationFrame(el._rollRaf); el._rollRaf = 0; }
+  if(!CUR_ROLL_ON || Math.abs(to - shown) < CUR_ROLL_MIN){ el._curV = to; el.textContent = fmtCur(to); return; }
+  const from = shown, t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const step = function(){
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    const p = Math.min(1, (now - t0) / CUR_ROLL_MS);
+    const e = 1 - Math.pow(1 - p, 3);            // easeOutCubic — 처음 빠르고 끝에서 잦아든다
+    const v = from + (to - from) * e;
+    el._curV = v; el.textContent = fmtCur(v);
+    if(p < 1) el._rollRaf = requestAnimationFrame(step);
+    else { el._rollRaf = 0; el._curV = to; el.textContent = fmtCur(to); }
+  };
+  el._rollRaf = requestAnimationFrame(step);
+}
 function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  // 💰 숫자 재화는 굴린다(위 설명). 인구처럼 「3/10」 꼴은 그대로 쓴다.
+  const setN=(id,v)=>{ _curRoll(document.getElementById(id), v); };
   // 🏕 캠프에서는 **캠프 재화**를 보여 준다 — 관리자 재화 줄(.bres)을 숨겼으므로 이 줄이 유일한 표시다.
   //    ⛔ 줄을 두 개 두지 않는다(어느 쪽이 진짜인지 알 수 없어진다).
   const _camp = (typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech) ? G.tech : null;
-  set('curMin', fmtCur(_camp ? (_camp.credit||0) : profMineral()));
-  set('curGas', fmtCur(_camp ? (_camp.energy||0) : profGas()));
+  setN('curMin', _camp ? (_camp.credit||0) : profMineral());
+  setN('curGas', _camp ? (_camp.energy||0) : profGas());
   if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
-  set('curGem', fmtCur(profGem()));
+  setN('curGem', profGem());
   curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
   if(typeof guidePaint==='function') guidePaint(); }   // 🧭 가이드 띠도 같은 박자로
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
@@ -356,6 +413,10 @@ function showAppScreen(id){ setInGame(false);
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
+  // 🧭 가이드 띠는 #phone 직속이라 **화면을 바꿔도 남는다.** 여기서 다시 그려 걷어 낸다
+  //    (위 campExit() 로 캠프가 이미 꺼졌으므로 guidePaint 가 스스로 지운다).
+  //    ⛔ 없으면 상점·정비 화면에서 띠가 첫 패널 머리줄을 덮는다(실측 2026-08-31).
+  if(typeof guidePaint==='function') guidePaint();
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
   // 🏕 캠프도 같은 이유로 여기서 걷는다 — 캠프는 공용 3D 캔버스(#cvMarine)를 HOME 안으로 **빌려 간다.**
@@ -491,7 +552,13 @@ function _gsPaintCount(list){ const op=document.getElementById('opening');
   list=list||_gsList();
   // ① 로딩 단계 — 혼자든 여럿이든 막대는 **로딩 진행률**이다. 다 차야 시작 버튼이 열린다(2026-08-19)
   if(_gsLoading){ const pc=Math.round((_gsSoloPct||0)*100);
+    // ⛔ 로딩 막대에는 전이(css .gsBar i 의 width .3s)를 걸지 않는다 — 30ms 마다 다시 그리므로
+    //   전이가 없어도 매끄럽고, 있으면 **막대가 진행률보다 0.3초 뒤처진다.**
+    //   그래서 숫자가 100% 가 되어 시작 버튼이 열리는 순간 막대는 58% 였다(2026-08-31 실측).
+    //   ⚠ 준비 단계(아래)에서는 되돌린다 — 거긴 값이 띄엄띄엄 뛰어 전이가 있어야 부드럽다.
+    fill.style.transition='none';
     if(lb) lb.textContent='LOADING'; n.innerHTML=pc+'<s>%</s>'; fill.style.width=pc+'%'; return; }
+  fill.style.transition='';   // 로딩이 끝났다 — 막대를 css 기본(부드러운 전이)으로 돌려놓는다
   // ② 로딩이 끝난 뒤 — 혼자면 '누르면 들어간다', 여럿이면 준비 인원
   if(_gsSolo()){ if(lb) lb.textContent='준비 완료 — 시작을 누르세요'; n.innerHTML='100<s>%</s>'; fill.style.width='100%'; return; }
   const rdy=list.filter(function(p){ return _gsReady&&_gsReady.has(p); }).length;
@@ -510,7 +577,7 @@ const GS_LOAD_MS=800;     // 진입 로딩 막대의 **최소** 시간(ms) — �
 const GS_LOAD_MAX=15000;  // 안전판 — 실제 로딩이 이 시간을 넘으면 막대를 100% 로 열어 준다(사용자를 가두지 않는다)
 const GS_READY_MS=5000;   // 준비 대기 시간(단일 소스) — 시작 버튼 진행 표시·자동 시작·상대 준비 시차가 모두 이 값을 따름
 const GS_HOLD_MS=500;     // 전원 준비 → 전환 시작까지 잠깐 머무는 시간
-const GS_WARP_MS=750;     // 서서히 흐려지며 게임으로 들어가는 전환 길이(CSS --gsWarp와 동일)
+const GS_WARP_MS=750;     // 🗄 지금은 안 쓴다 — 로딩→게임을 컷으로 바꾸며 워프를 껐다(2026-08-31). 되살릴 때의 길이.
 // 진행 표시가 다 차면 자동 준비완료 → 1초 뒤 게임 시작
 function _gsAutoReady(){ if(typeof G==='undefined'||!_gsReady) return; const me=(G.myPlayer||1);
   if(!_gsReady.has(me)){ _gsReady.add(me); _gsMarkMeReadyUI(); _renderGsPlayers(); }   // 자동 준비완료(즉시 종료 X)
@@ -571,6 +638,10 @@ function _gsEnterReady(){ const op=document.getElementById('opening'); op.classL
 function gsQuitToMaps(){ const op=document.getElementById('opening'); if(!op) return;
   clearTimeout(op._loadT); clearTimeout(op._cdEnd); clearTimeout(op._holdT); op._holdT=null; _gsClearTimers(); op._finished=false; _gsDone=null;
   _gsLoading=false; { const sb=document.getElementById('opStart'); if(sb) sb.disabled=false; }   // 잠금이 남으면 다음 진입에서 못 누른다
+  // 🎬 나가기도 뚝 끊는다 — **감추고 나서 클래스를 뗀다**.
+  //   ⚠ 순서를 뒤집지 말 것: counting 이 먼저 사라지면 screenFadeOut 이 「자기 연출 있음」 판정을
+  //     놓쳐 로딩 화면을 0.28초 페이드로 내린다(#opening.fxOut).
+  op.classList.add('hide');
   op.classList.remove('counting','ready','timing','warp');
   if(typeof G!=='undefined'&&G) G.loading=false;
   if(typeof G!=='undefined'&&G&&G.strike){ G.strike=false; STK=null; }   // 직스: 카운트다운 중 나가기(크롬 원복은 overlayToLobby의 resetGameChrome이 담당)
@@ -617,12 +688,13 @@ function gameStartCountdown(done){ const op=document.getElementById('opening');
 // 준비 완료(전원 또는 5초 자동) → 워프 전환 후 게임 진행
 function _gsFinish(){ const op=document.getElementById('opening'); if(!op||op._finished) return; op._finished=true; _gsLoading=false;
   _gsTimers.forEach(function(t){ if(t&&t.__iv) clearInterval(t.__iv); else clearTimeout(t); }); _gsTimers=[];
-  op.style.setProperty('--gsWarp', (GS_WARP_MS/1000)+'s');   // CSS 전환 길이 = JS 대기 시간과 동일
-  op.classList.add('warp');   // 'ready' 유지한 채 서서히 흐려지며 게임 안으로
-  op._cdEnd=setTimeout(function(){ op.classList.add('hide'); op.classList.remove('warp','counting','ready','timing'); op._finished=false;
-    if(typeof G!=='undefined'&&G) G.loading=false;                     // 로딩 종료 → 게임 타이머 10초부터 진행
-    if(typeof bgmStart==='function') bgmStart('ingame');               // 라운드 시작 → 인게임 BGM(로비 BGM 정지)
-    if(typeof _gsDone==='function') _gsDone(); }, GS_WARP_MS); }
+  // 🎬 **로딩 → 게임도 뚝 끊는다**(2026-08-31 사용자 확정).
+  //   ⛔ 워프(흐려지며 확대되는 디졸브)를 되살리지 말 것 — 두 화면이 겹쳐 보여 어지럽다는 판단.
+  //   ⚠ 그래서 GS_WARP_MS 만큼 기다리지도 않는다: 기다리면 그림은 그대로인 채 0.75초 멎어 버린다.
+  op.classList.add('hide'); op.classList.remove('warp','counting','ready','timing'); op._finished=false;
+  if(typeof G!=='undefined'&&G) G.loading=false;                     // 로딩 종료 → 게임 타이머 10초부터 진행
+  if(typeof bgmStart==='function') bgmStart('ingame');               // 라운드 시작 → 인게임 BGM(로비 BGM 정지)
+  if(typeof _gsDone==='function') _gsDone(); }
 // ── 부팅 흐름: 오프닝 → 로그인 화면 ──
 //   저장된 세션이 있어도 화면은 반드시 거친다(자동 로그인 안 함). 빈 칸으로 로그인 = 그 세션 그대로 입장.
 async function bootApp(){
@@ -853,6 +925,13 @@ const MAPS=Object.values(USEMAPS);   // 맵 선택 화면 목록(레지스트리
 // ── 라인아트 아이콘(인게임과 동일 스타일: viewBox 24, stroke=currentColor) ──
 const _svg=(b,extra)=>'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"'+(extra||'')+'>'+b+'</svg>';
 const ICO={
+  // ⚙ 설정 — **톱니 한 벌**이 로그인(.authGear)·유즈맵 재화바·게임 HUD 를 다 맡는다(2026-08-31).
+  //   ⛔ 이 SVG 를 마크업에 다시 붙여 넣지 말 것. 쓰는 곳은 data-ico="gear" 만 적는다.
+  //   ⚠ 다른 아이콘과 달리 면(fill)으로 그린다 — 선으로 그리면 톱니가 뭉개진다.
+  gear:'<svg class="ic" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.49.49 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.49.49 0 00.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg>',
+  // ☰ 더보기 — **캠프(#phone.campMode)의 오른쪽 위만** 이 모습을 쓴다(2026-08-31 사용자 확정).
+  //   거긴 설정이 아니라 판을 모아 둔 '더보기'라 톱니가 아니다. 다른 화면은 gear 다.
+  bars:'<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg>',
   user:_svg('<circle cx="12" cy="8" r="3.3"/><path d="M5.5 20c0-3.6 2.9-6.3 6.5-6.3s6.5 2.7 6.5 6.3"/>'),
   fav:_svg('<path d="M12 3.7l2.5 5.1 5.6.8-4.1 4 1 5.6L12 16.6 7 19.2l1-5.6-4.1-4 5.6-.8z"/>'),
   pop:_svg('<path d="M12 3.4c2.9 3.1 5.3 5.4 5.3 9.1A5.3 5.3 0 0 1 12 17.9a5.3 5.3 0 0 1-5.3-5.4c0-1.7.7-3.1 1.9-4.4.4 1 1.1 1.6 2.1 1.8-.6-2.3.2-4.6 1.6-6.4z"/><path d="M12 18a2.7 2.7 0 0 0 2.7-2.8c0-1.4-1-2.3-1.8-3.2-.6.8-1.5 1-1.9 1.9-.5-.3-.7-.8-.7-1.4-.7.7-1 1.6-1 2.6A2.7 2.7 0 0 0 12 18z"/>'),
@@ -1823,7 +1902,8 @@ function _handoff(fn){ setTimeout(fn, SD_HANDOFF); }
 function chooseSolo(){ if(_selMap && _selMap.soloOff){ if(typeof lobbyToast==='function') lobbyToast('이 유즈맵은 멀티플레이 전용입니다'); return; }   // 멀티 전용 맵 = 개인 플레이 차단
   if(typeof inPartyNow==='function' && inPartyNow()){ if(typeof lobbyToast==='function') lobbyToast('파티 중에는 멀티플레이만 가능합니다'); return; }
   const m=_selMap;
-  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ openSoloDiff(); _handoff(closeModeSheet); return; }   // 난이도 선택은 네모네모 디펜스 전용
+  // 🎬 난이도 선택은 **겹치지 않는다 — 뚝 끊는다**(2026-08-31 사용자 확정 · 아래 로딩 경로와 같은 규칙)
+  if(m && (m.id==='nemo' || m.id==='nemo_inf')){ closeModeSheet(); openSoloDiff(); return; }   // 난이도 선택은 네모네모 디펜스 전용
   if(m && m.cfg && m.cfg.mode==='strike'){ openRaceSelect(); _handoff(closeModeSheet); return; }       // 컴퓨터가 싸운다(오토 배틀): 종족만 선택 후 시작
   closeModeSheet(); _startSoloNow(); }                                        // 관리자 테스트(샌드박스)·기타: 난이도 없이 바로 시작
 // ── 종족 선택 팝업(재사용): 솔로(맵→종족→난이도) + 멀티 대기실(카드 칩→팝업) 공용 ──
@@ -2004,6 +2084,9 @@ function startSoloInfinite(){ if(!USEMAPS.nemo_inf) return; _selMap=USEMAPS.nemo
 function startSoloWithDiff(d){ if(DIFFICULTY[d]) _selDiff=d;
   // 난이도 → 종족도 같다 — 종족 화면이 덮은 뒤에 난이도를 치운다(그 사이 배경이 이어진다)
   if(_selMap && _selMap.cfg && _selMap.cfg.mode==='strike'){ openRaceSelect(); _handoff(closeSoloDiff); return; }
+  // 🎬 **로딩 진입은 겹치지 않는다 — 뚝 끊는다**(2026-08-31 사용자 확정).
+  //   난이도 판을 먼저 닫고 로딩을 바로 켠다. 크로스페이드는 두 화면이 함께 비쳐
+  //   오히려 어지럽다는 판단(한 번 넣었다가 뺐다).
   closeSoloDiff(); _startSoloNow(); }
 function _startSoloNow(){ if(_selMap&&_selMap.id&&typeof _lsSet==='function') try{ _lsSet('nm_recentMap', _selMap.id); }catch(e){}   // 허브 '최근 플레이' 표시용
   if(typeof rtSetStatus==='function') rtSetStatus('ingame', _selMap&&_selMap.name); hideAppScreens(); if(typeof playSfx==='function') playSfx('ui_confirm'); startGameNow([1],1); }

@@ -22,6 +22,11 @@
 - 🗄 **안 쓰는 코드는 `js/99-attic.js`(다락)에 있다 — 목록은 `ATTIC.md`.** 옛 화면·옛 디자인을 되살리기 전에 거기부터 볼 것. ⛔ 지우지는 않는다(유보는 삭제가 아니다). 되살아나면 스모크 「다락」이 잡는다.
 - **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
 - **Read `DESIGN.md` before any visual change** — 확정된 스타일 규칙(각진 SF · 볼륨 3단 · 라운드 0/3/6/9 · 역할별 액센트). 값은 고민하지 말고 표에서 꺼낼 것. **일괄 치환 금지** — 화면을 만지는 김에 그 화면만 체크리스트를 통과시킨다(touch-it-fix-it).
+  - 🎬 **화면 전환(페이드·디졸브·줌)을 만진다면 `DESIGN.md` §5.5 체크리스트를 먼저 읽을 것.**
+    로딩→종족 선택 전환 하나에 몇 시간을 썼고, 같은 자리에서 네 번 넘어졌다(2026-08-27).
+    요지: **연출은 프레임을 저장해서 눈으로 본다**(`SHOT_SAVE=1 node scripts/shot.mjs flick`) —
+    평균 밝기·시점 표본은 배경 크기 변화·작은 UI·한 프레임짜리 섬광을 **전부 놓친다**.
+    그리고 투명도로 안 고쳐지는 전환 버그는 대개 **z 축(가림 순서)** 이다.
 - **Read `ART.md` before generating any image asset** — 장면 이미지(유즈맵 키 아트·배경)의 모델·비율·프롬프트 템플릿·후처리 규격. **프롬프트를 새로 쓰지 말 것**: 고정 블록 4개를 그대로 복사하고 장면 한 칸만 바꾼다. 세션이 바뀌어도 같은 스타일이 나와야 하므로 이 문서가 단일 소스다. 계열이 셋이다(유즈맵 키 아트 §2~§7 · 타이틀 배경 §8 · **유닛 참고 아트 §9**) — 어느 계열인지 먼저 정할 것. 새로 뽑았으면 그 계열 절에 전문을 추가하고 **`node scripts/art-lint.mjs`** 로 규격(고정 블록·금지 표현·맵 표↔`UMAP_BG` 일치)을 확인할 것.
 - **Read `RACES.md` before touching any race/unit/building number** — 5종족 오각형 상성의 단일 소스(설계·실수치·상수·측정 결과). ⚠ 상성은 **모델로 추정하지 말고** `node test/race-matchup.mjs` 로 실제 엔진을 돌려 잰다 — 여기서 자체 웨이브 모델을 네 번 짰다가 전부 폐기했다. 종족을 오토배틀에 넣을 땐 `ARCHITECTURE.md` §1 의 "조용히 빠지는 표" 목록(`SB_ATK_MODE`·`UNIT_COMBAT_CLASS`·`FXLAB_AIR`·`TECH_BLDG_UNIT`)을 체크리스트로 쓸 것.
 - **Read `GEM.md` before touching 젬·상점·부스트·환생 증폭** — 현질 재화의 자리(정체·획득·용도 둘·안전장치). ⛔ 젬으로 **영구 능력**을 팔거나 배율을 **곱해서 중첩**하면 지수 축이 둘이 되어 폭주한다. 상점의 장비·펫·동료 꾸러미는 **화면에서만 빼고 코드는 남긴다**(유보 규칙).
@@ -75,7 +80,7 @@
 | **인게임 채팅바** | `#chatBar` + `chatToggle()`/`chatOpenBar()`/`chatFoldBar()` | 접힘(말풍선 44px) ↔ 열림(`[∨｜입력｜전송]` 한 상자) · **유즈맵 안 전 구역**에 있다(캠프만 제외) · ⛔ 열려도 왼쪽 ∨ 를 없애지 말 것(접을 방법이 사라진다) · 상시 청록·붉은 밑변 광원 금지 · ⚠ 구역마다 시트가 다른 요소다(`.bp` ↔ 건설 `#btSheet`) — `_syncSheetLift()` 가 갈라 잰다 |
 | 세로 스크롤바 | `.uiScroll` (CSS 공용) | 스크롤 영역에 클래스만 추가 · `::-webkit-scrollbar`를 새로 정의하지 말 것 (Chrome 최신은 웹킷 의사요소를 무시하고 표준 `scrollbar-width`/`scrollbar-color`만 적용 → 화면마다 굵기가 달라지는 원인이었음) |
 | **재화 아이콘**(미네랄·가스·젬·인구) | **`resIco(key, cls)`** → `assets/icons/res_*.webp` | ⛔ **이모지를 임의로 넣지 말 것.** 한글 이름으로도 찾는다(`resIco('미네랄')`=`resIco('mineral')`) · 새 UI에서 재화를 표시할 땐 무조건 이 함수 · 상단 재화 바(`#curBar`)·인게임 HUD와 같은 그림이 나온다 |
-| 상점 | `#shopScreen` + `renderProfGacha()` | 전용 화면(팝업 아님) · 마을 '상점' 구역도 같은 화면으로 이동(`TOWN_ZONES.gacha.screen='shop'`) · 젬 = 유일한 현질 재화 |
+| 상점 | `#shopScreen` + `SHOP_SECS` (추천 · 젬 상점 **두 칸**) | 캠프 기준 재편 2026-08-31 · 옛 5칸(한정구매·뽑기·재화·패키지·충전)은 사냥터 기준이라 **화면에서만 뺐다**(코드는 남음) · 캠프 지갑에 넣는 유일한 입구는 `campAddRes()` — ⛔ `PROF().pcoin` 은 옛 지갑이라 캠프와 안 통한다 · 팩 배수는 **합**(GEM.md §5-2) · 젬 = 유일한 현질 재화 |
 | 정비(장비·펫·동료) | `#gearScreen` + `renderGear()` | 전용 화면 · 내용은 **전부 기존 렌더러 호출**: 장비=`renderProfGear()`(마을 장비창과 같은 함수) · 펫=`_shopPetPanel()`(상점 '보유 펫'과 같은 함수) · 동료=아직 시스템 없음(HOME 건설로 안내) |
 | 보유 펫 목록 | `_shopPetPanel(note)` | 상점 ④ 구역 = 정비 '펫' 탭 — 한 함수 |
 | 토벌 입구 | HOME 스킬 바(`renderHbBar()`)의 **토벌** 버튼 → `openDungeonHub()` 팝업 | 네비에서 뺐다(2번 칸은 정비) · 다른 화면에서 부르면 먼저 `openHome()` |
