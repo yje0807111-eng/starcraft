@@ -475,6 +475,12 @@ await pg.evaluate(()=>{
           if(!__CB.rebGot){                                       // 1단계 — 지금 환생한다
             const got=(typeof campRebirth==='function') ? campRebirth() : null;
             __CB.rebGot={ t1:+(__CB.t/60).toFixed(1), mul:got?got.mul:null, pts:got?got.pts:null };
+            // ⛔ **누적 지출을 같이 되감는다** (2026-08-31 실측으로 잡았다).
+            //   買·生 관문이 `spent >= campWealth()*0.5` 인데 환생은 campWealth() 를 0 으로
+            //   되감는다. 안 지우면 「수백만 >= 0」 이 영영 참이 되어 **구매와 생산이 통째로 멎는다** —
+            //   연구·건설은 이 관문 밖이라 계속 돌아서 「돈은 쓰는데 안 크는」 모습으로 보였다.
+            //   실측: 환생 뒤 500 시뮬분 동안 탭 Lv0 · 일꾼 1기 · 초당 22 로 굳었다.
+            __CB.spentE=0; __CB.spentU=0;
           } else if(!__CB.rebGot.t2){                             // 2단계 — 환생 후 재도달
             __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
           } } }
