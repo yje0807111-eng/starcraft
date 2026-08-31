@@ -418,6 +418,24 @@ async function groupLobby(){
     { const c=cells();
       assert(c.indexOf('업그레이드')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
     assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
+    // ④ ✕ 를 없앴다 — **나가는 길은 하단 네비 하나**다(2026-08-31 사용자 확정)
+    assert(!document.querySelector('#campReb .crX'),'환생 화면에 ✕ 가 남아 있다');
+    // ⑤ 다른 구역으로 가면 닫힌다 — ✕ 가 없으니 이게 유일한 출구다
+    navGo('reb');
+    assert(campRebIsOn(),'환생이 안 열렸다');
+    navGo('shop');
+    assert(!campRebIsOn() && !campTreeIsOn(),'다른 구역으로 갔는데 환생 창이 남아 있다');
+    navGo('reb'); navSub('tree');
+    assert(campTreeIsOn(),'트리가 안 열렸다');
+    navBack();
+    assert(!campTreeIsOn() && !campRebIsOn(),'「뒤로」를 눌렀는데 창이 남아 있다');
+    // ⑥ 🏷 타이틀 로고를 켜지 않는다 — titleArtShow(true) 는 그림과 **로고를 함께** 켠다.
+    //   #titleMark 는 부팅 로딩·로그인의 것이라, 환생에서 뜨면 엉뚱한 연출이 된다.
+    navGo('reb');
+    assert(!document.getElementById('phone').classList.contains('artMark'),
+      '환생 화면이 타이틀 로고(artMark)까지 켠다');
+    assert(document.getElementById('phone').classList.contains('artBg'),
+      '환생 화면이 키 아트를 안 켠다');
     campRebClose(); campTreeClose();
     return '정보·업그레이드 · 네비 자리 '+gap('campReb')+' · 서로 배타';
   });

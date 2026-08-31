@@ -534,9 +534,12 @@ function campRebOpen(){
   el.classList.add('on'); campRebRender();
   // 🖼 키 아트는 **공유 층(#titleBg) 한 장**이다. 여기서 그리지 않고 그것을 켜서 위로 올린다.
   //   ⛔ 화면마다 자기 그림을 그리면 전환할 때 호흡 애니가 리셋돼 그림이 툭 튄다.
+  //   ⛔ **titleArtShow(true) 를 쓰지 않는다** — 그 함수는 그림(artBg)과 **타이틀 로고(artMark)를
+  //     함께** 켠다. 로고(#titleMark)는 부팅 로딩·로그인이 쓰는 것이라, 환생 화면에서는
+  //     페이드인하며 게임 로고가 떠오르는 엉뚱한 연출이 된다(2026-08-31 사용자 지적).
+  //   ⭐ 그림만 켠다. 끄는 쪽(campRebClose)은 titleArtShow(false) 로 둘 다 꺼도 무해하다.
   { const ph = document.getElementById('phone');
-    if(ph){ ph.classList.add('artLift'); }
-    if(typeof titleArtShow === 'function') titleArtShow(true); }
+    if(ph){ ph.classList.add('artLift', 'artBg'); ph.classList.remove('artMark'); } }
   if(typeof playSfx === 'function') playSfx('ui_open'); }
 function campRebClose(){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on');
   // 빌린 배경을 돌려준다 — 안 그러면 캠프로 돌아가도 키 아트가 남는다(잔상 금지)

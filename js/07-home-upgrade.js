@@ -545,6 +545,14 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   // ⚠ null 은 '숨김'일 뿐 '구역을 떠남'이 아니다 — 여기서 상태를 지우면
   //   showAppScreen 이 항상 navShow(null) 을 먼저 부르므로 내려간 상태가 매번 풀린다(마을 진입에서 밟았다).
   if(!tab) return;
+  // 🔁 **환생 구역을 떠나면 그 화면을 닫는다** (2026-08-31 사용자 확정).
+  //   ⭐ 환생 화면의 ✕ 를 없앴으므로 **나가는 길은 하단 네비 하나**다 — 다른 구역으로 가거나
+  //     「뒤로」를 누르면 여기서 닫힌다(navBack 도 결국 navShow 를 거친다).
+  //   ⛔ tab 이 null 일 때는 닫지 않는다 — 그건 「숨김」이지 「구역을 떠남」이 아니다
+  //     (showAppScreen 이 매번 navShow(null) 을 부른다 · 위 주석과 같은 이유).
+  if(tab!=='reb'){
+    if(typeof campRebClose==='function') campRebClose();
+    if(typeof campTreeClose==='function') campTreeClose(); }
   if(_navSec!==tab){ _navSec=tab; _navDrill=''; }   // 다른 구역으로 갔다 = 최상위로
   navPaint(); }
 // 최상위 칸 — 화면으로 이동하고, 하위가 있으면 그 구역 네비로 내려간다
