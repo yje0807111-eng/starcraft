@@ -1534,6 +1534,38 @@ async function groupLobby(){
       { const base=CAMPB.me.base; base.hp=0; base.dead=true;
         campCombatStep(0.05);
         assert(campDgN()===0,'본부가 무너졌는데 안 졌다'); }
+      // ③-2 ⛔ **의무병만 서 있어도 「병력이 있다」가 아니다** (2026-08-31 재현으로 잡은 버그).
+      //     ⛔ 승패 가드가 `campAlive('me') > 0`(모든 살아있는 유닛)을 쓰고 있었다. 그런데
+      //       「때릴 수 있나」(campCanHitFoes)는 의무병을 뺀다 — 두 판정이 어긋나서
+      //       **전투 유닛이 다 눕고 의무병만 서 있으면 본부가 멀쩡한데 즉시 탈락**했다.
+      //       재현: 본부 750/750 · 적 1 · 의무병 1 → 한 프레임 만에 던전 0.
+      //       게다가 뜨는 말이 「✈ 공중을 칠 수 없어 탈락」이라 원인을 가렸다.
+      //     ⭐ 지금은 둘 다 campArmedUnits() 를 본다. 이 검사는 그 규약을 지킨다.
+      //     ⚠ 가드를 **새 함수 이름으로 걸지 말 것** — 옛 코드에는 그 함수가 없어 검사가
+      //       통째로 건너뛰어진다(그렇게 한 번 헛통과했다). 양쪽에 다 있는 것으로 건다.
+      { campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+        if(CAMPB && typeof campCanHitFoes==='function'){ campWipeField();
+          if(CAMPB._wq) CAMPB._wq.length=0;
+          const m1=campDeploy('marine',0.40,0.45), md=campDeploy('medic',0.42,0.48);
+          if(m1&&md){
+            CAMPB._started=true; CAMPB._gapT=0;
+            campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+              const z=STK.ai.units[STK.ai.units.length-1];
+              if(z){ z.x=CAMPB.world*0.5; z.y=CAMPB.world*0.30; z.wait=0; z.dmg=0; } });
+            // 전투 유닛만 눕힌다 — 의무병은 서 있다
+            const before=CAMPB.me.units.slice();
+            m1.dead=true;
+            campWithStk(()=>{ STK.me.units = STK.me.units.filter(u=>!u.dead); });
+            campCatchDown(before);
+            assert(campAlive('me')===1,'전제가 바뀜 — 의무병 하나만 서 있어야 한다: '+campAlive('me'));
+            assert(!campCanHitFoes(),'전제가 바뀜 — 때릴 수 있는 병력이 없어야 한다');
+            if(typeof campArmedUnits==='function')
+              assert(campArmedUnits().length===0,'의무병이 「싸울 수 있는 병력」으로 세어졌다');
+            const baseHp=CAMPB.me.base.hp;
+            campCombatStep(0.05);
+            assert(CAMPB && campDgN()>0,
+              '의무병만 남았다고 졌다 — 본부가 멀쩡한데(체력 '+Math.round(baseHp)+') 탈락했다'); }
+          campWipeField(); } }
       // ④ ⛔ 시간 부활은 되살아나지 않았다
       assert(typeof campReviveStep==='undefined','campReviveStep 이 되살아났다 — 시간 부활은 없앴다');
       assert(typeof campReviveSec==='undefined','campReviveSec 이 되살아났다');

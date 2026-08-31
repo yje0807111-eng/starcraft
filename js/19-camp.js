@@ -1223,6 +1223,25 @@ function campFoeId(){
 }
 // 지금 있는 적을 내 병력이 때릴 수 있나 — 하나도 못 때리면 그 판은 끝이 없다.
 // ⚠ 누운(부활 대기) 병력도 센다 — 곧 일어나므로 성급하게 지면 안 된다.
+// ⚔ **싸울 수 있는 아군** — 살아 있고, 공격력이 있고, 때릴 수 있는 레이어가 하나라도 있는 것.
+//   ⭐ **판정을 여기 한 곳에 모은다**(2026-08-31). 예전엔 campCanHitFoes 안에만 있었고
+//     승패 판정은 `campAlive('me') > 0`(**모든** 살아있는 유닛)을 따로 썼다. 둘이 어긋나서
+//     **전투 유닛이 다 눕고 의무병만 서 있으면 본부가 멀쩡한데도 즉시 탈락**했다
+//     (재현: 본부 750/750 · 적 1 · 의무병 1 → 한 프레임 만에 던전 0 으로 탈락).
+//     게다가 뜨는 말이 「✈ 공중을 칠 수 없어 탈락」이라 원인을 가리켰다.
+//   ⚠ 공격을 못 하는 유닛은 세지 않는다 — 의무병은 사거리 0 · 공격력 0 이라 아무리 많아도 못 죽인다.
+//     ⭐ _sbAtkMode 가 비전투(FXLAB_NOATK)를 {air:false,gnd:false} 로 돌려주므로 그것도 함께 걸린다.
+//   ⛔ 누운 병력은 세지 않는다(2026-08-29) — 라운드 부활로 바뀐 뒤 **이번 라운드에는 못 일어난다.**
+//     옛 주석의 「곧 일어나므로 센다」는 30초 부활 시절의 전제다.
+function campArmedUnits(){
+  if(!CAMPB || !CAMPB.me) return [];
+  const atk = function(u){
+    if(u._atk) return u._atk;
+    return (typeof _sbAtkMode === 'function') ? _sbAtkMode({ id:u.id, gmodel:u.gm }) : { air:true, gnd:true }; };
+  return CAMPB.me.units.filter(function(u){
+    if(u.dead || (u.dmg || 0) <= 0) return false;
+    const a = atk(u); return !!(a.air || a.gnd); }); }
+
 function campCanHitFoes(){
   if(!CAMPB) return true;
   const foes = CAMPB.ai.units.filter(function(u){ return !u.dead; });
@@ -1243,13 +1262,7 @@ function campCanHitFoes(){
       ? _sbAtkMode({ id:u.id, gmodel:u.gm })
       : { air:true, gnd:true };
   };
-  // ⚠ 공격을 못 하는 유닛은 세지 않는다 — 의무병은 사거리 0 · 공격력 0 이라 아무리 많아도 못 죽인다.
-  //   ⭐ _sbAtkMode 가 비전투(FXLAB_NOATK)를 {air:false,gnd:false} 로 돌려주므로 그것도 함께 걸린다.
-  const canFight = function(u){ if((u.dmg || 0) <= 0) return false; const a = atkOf(u); return !!(a.air || a.gnd); };
-  // ⛔ 누운 병력은 세지 않는다(2026-08-29) — 라운드 부활로 바뀐 뒤 **이번 라운드에는 못 일어난다.**
-  //   옛 주석의 「곧 일어나므로 센다」는 30초 부활 시절의 전제다. 그대로 두면 대공이 전부
-  //   누웠을 때 「때릴 수 있다」고 판단해 라운드가 영영 안 끝난다.
-  const mine = CAMPB.me.units.filter(function(u){ return !u.dead && canFight(u); });
+  const mine = campArmedUnits();
   if(!mine.length) return false;                // 때릴 수 있는 병력이 하나도 없다 = 끝이 없다
   for(const f of foes){
     const fa = isAir(f);
@@ -2082,8 +2095,10 @@ function campCombatStep(dt){
   //     무력해진다(브라우저 실측 2026-08-30: 전멸 프레임에 곧바로 전장이 닫혔다).
   //   ⭐ 이 규칙의 뜻은 「**때릴 병력은 있는데** 원리상 안 닿는다」(공중 전용 적)이다.
   //     병력이 0 이면 적이 건물·본부를 부수며 판이 나아가므로 멈추지 않는다.
+  // ⛔ **`campAlive('me') > 0` 을 쓰지 말 것** — 그러면 의무병 하나가 「병력이 있다」로 세어져
+  //   전투 유닛이 다 누운 판이 곧바로 탈락으로 간다(2026-08-31 재현). 두 판정은 **같은 자**를 써야 한다.
   const _noHit = CAMPB._started && !campFoesPending()
-    && campAlive('me') > 0 && !campCanHitFoes();
+    && campArmedUnits().length > 0 && !campCanHitFoes();
   // 🏢 **패배 = 본부 파괴 하나뿐**(2026-08-30 사용자 확정).
   //    ⭐ 전멸은 패배가 아니다. 병력이 다 누우면 적이 **길목의 건물을 차례로 부수며** 밀고
   //      들어오고, 마지막에 본부가 무너질 때 진다. 그 사이 건물들이 시간을 벌어 준다.
