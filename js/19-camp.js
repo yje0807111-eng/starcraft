@@ -536,27 +536,69 @@ function campRebHourTx(h){ return (h >= 10) ? (Math.round(h) + '시간') : (h.to
 function campRebOpen(){
   const el = document.getElementById('campReb'); if(!el) return;
   el.classList.add('on'); campRebRender();
+  // 🖼 키 아트는 **공유 층(#titleBg) 한 장**이다. 여기서 그리지 않고 그것을 켜서 위로 올린다.
+  //   ⛔ 화면마다 자기 그림을 그리면 전환할 때 호흡 애니가 리셋돼 그림이 툭 튄다.
+  { const ph = document.getElementById('phone');
+    if(ph){ ph.classList.add('artLift'); }
+    if(typeof titleArtShow === 'function') titleArtShow(true); }
   if(typeof playSfx === 'function') playSfx('ui_open'); }
-function campRebClose(){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on'); }
+function campRebClose(){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on');
+  // 빌린 배경을 돌려준다 — 안 그러면 캠프로 돌아가도 키 아트가 남는다(잔상 금지)
+  { const ph = document.getElementById('phone'); if(ph) ph.classList.remove('artLift'); }
+  if(typeof titleArtShow === 'function') titleArtShow(false); }
 function campRebIsOn(){ const el = document.getElementById('campReb'); return !!(el && el.classList.contains('on')); }
 
 // 환생 실행 — ⚠ 되돌릴 수 없으므로 확인을 한 번 받는다(.ecCard 공용 확인 껍데기).
-function campRebAsk(){
+//   x2 = 젬을 내고 이번 환생의 **배수와 포인트를 둘 다 2배**로 받는다(GEM.md §4).
+//   ⛔ 영구 효과가 아니다 — 그 환생 1회에만 걸린다. 영구로 팔면 지수 축이 둘이 된다.
+let _campRebX2 = false;
+function campRebAsk(x2){
   if(!campCanRebirth()) return;
+  _campRebX2 = !!x2;
+  if(_campRebX2 && !campRebX2Can()){ campRebToShop(); return; }   // 젬이 모자라면 상점으로
   const p = document.getElementById('campRebOk'); if(!p) return;
-  const g = { mul: campRebMulGain(), pts: campRebPtGain() };
+  const k = _campRebX2 ? 2 : 1;
+  const g = { mul: campRebMulGain() * k, pts: campRebPtGain() * k };
+  const t = p.querySelector('.ecTitle'); if(t) t.textContent = _campRebX2 ? '×2 환생' : '환생';
   const m = p.querySelector('.ecMsg');
   if(m) m.innerHTML = '지금까지 지은 것이 <b>전부 사라집니다</b>.<br>대신 <b>배수 +' + g.mul.toFixed(2)
-    + '</b> 와 <b>포인트 ' + campNum(g.pts) + '</b> 을 영구히 받습니다.';
+    + '</b> 와 <b>포인트 ' + campNum(g.pts) + '</b> 을 영구히 받습니다.'
+    + (_campRebX2 ? '<br><i>젬 ' + CAMP_REB_X2_GEM + ' 을 씁니다</i>' : '');
+  const go = p.querySelector('.ecGo'); if(go) go.textContent = _campRebX2 ? '×2 로 환생' : '환생하기';
   p.classList.remove('hide');
   if(typeof playSfx === 'function') playSfx('ui_open'); }
 function campRebCancel(){ const p = document.getElementById('campRebOk'); if(p) p.classList.add('hide'); }
 function campRebGo(){
   campRebCancel();
+  const x2 = _campRebX2; _campRebX2 = false;
+  // ⚠ 젬은 **환생이 실제로 일어난 뒤에** 뺀다 — 먼저 빼면 환생이 실패했을 때 젬만 사라진다
+  if(x2 && !campRebX2Can()){ campRebToShop(); return; }
   const got = campRebirth(); if(!got) return;
+  if(x2){ const p = (typeof PROF === 'function') ? PROF() : null;
+    if(p){ p.gem = Math.max(0, (p.gem || 0) - CAMP_REB_X2_GEM); }
+    // 배수·포인트를 한 번 더 얹는다 = ×2 (campRebirth 가 이미 1배를 넣었다)
+    const C2 = campState();
+    if(C2){ C2.rebMul = (C2.rebMul || 0) + got.mul; C2.rbPts = (C2.rbPts || 0) + got.pts; }
+    got.mul *= 2; got.pts *= 2;
+    if(typeof saveMeta === 'function') saveMeta(); }
   campRebRender();
-  if(typeof toast === 'function') toast('🔁 환생했습니다 — 배수 +' + got.mul.toFixed(2) + ' · 포인트 ' + campNum(got.pts));
+  if(typeof updateCurBar === 'function') updateCurBar();
+  if(typeof toast === 'function') toast((x2 ? '🔁×2 ' : '🔁 ') + '환생했습니다 — 배수 +'
+    + got.mul.toFixed(2) + ' · 포인트 ' + campNum(got.pts));
   if(typeof playSfx === 'function') playSfx('ui_confirm'); }
+
+// 💎 ×2 환생권 — 그 환생 1회에만 걸린다. ⛔ 영구 효과를 젬으로 팔지 말 것(GEM.md §4).
+//   ⚠ 값은 아직 실측이 아니다. 미네랄 24시간치(180젬)보다 조금 아래로 잡았다 —
+//     환생은 하루에 몇 번 없는 사건이라 부스트보다 싸야 손이 간다.
+const CAMP_REB_X2_GEM = 150;
+function campRebX2Can(){ return (typeof profGem === 'function') && profGem() >= CAMP_REB_X2_GEM; }
+
+// ⏱ 초 → 「3시간 12분」
+function campRebPlayTx(sec){ sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+  if(h > 0) return h + '시간' + (m ? ' ' + m + '분' : '');
+  if(m > 0) return m + '분';
+  return sec + '초'; }
 
 function campRebRender(){
   const box = document.getElementById('crBody'); if(!box) return;
@@ -564,26 +606,45 @@ function campRebRender(){
   const wealth = campWealth(), need = CAMP_REB_COST, can = campCanRebirth();
   const pct = Math.max(0, Math.min(100, wealth / need * 100));
   const gMul = campRebMulGain(), gPts = campRebPtGain();
-  const now = campRebMul(), next = now + gMul;                 // 배수는 **합**이다(곱이 아니다)
-  // ⛔ 문장을 쓰지 말 것. 라벨 한 줄 + 값 한 줄이 전부다 —
-  //    로딩·로그인과 같은 언어(판 없음 · 짧은 가운데 선 · 넓은 자간 라벨 · 값이 주인공).
-  const blk = (lab, val, extra) =>
-    '<div class="crB"><div class="crL">' + lab + '</div><div class="crV">' + val + '</div>'
-    + (extra || '') + '</div>';
+  const next = campRebMul() + gMul;                 // 배수는 **합**이다(곱이 아니다)
+  // 📐 포인트가 어디서 왔는지 — 식을 그대로 쓰지 않고 **곱하는 세 값**으로 쪼갠다.
+  //    식을 쓰면 결과(2.96)와 표시(+2 · 바닥내림)가 어긋나 오히려 헷갈린다.
+  const fW = Math.sqrt(Math.max(0, wealth) / need);
+  const fD = Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1));
+  const fR = Math.pow(CAMP_RP_RD, campCleared());
+  const li = (k, v) => '<div class="crLi"><span>' + k + '</span><b>' + v + '</b></div>';
   box.innerHTML =
-    // 회차·보유 — 제목 아래 조용한 한 줄
-    '<div class="crMeta">' + ((C.reb | 0) + 1) + '회차 · 포인트 ' + campNum(C.rbPts || 0) + '</div>'
-    + blk('이번 회차', campNum(wealth) + '<i>/ ' + campNum(need) + '</i>',
-        '<div class="crBar' + (can ? ' ok' : '') + '"><i style="width:' + pct.toFixed(1) + '%"></i></div>')
-    + blk('배수', '×' + now.toFixed(2) + ' <em>→ ×' + next.toFixed(2) + '</em>')
-    + blk('포인트', '<em>+' + campNum(gPts) + '</em>')
-    // ⭐ 먼 목표 — 이 두 값이 없으면 첫 환생이 손해로 보인다(HUNT_R1 §4-2-0).
-    //    설명 문장은 두지 않는다. 「96시간 → 70시간」이 스스로 말한다.
-    + blk('던전 10까지', campRebHourTx(campRebHours(now))
-        + ' <em>→ ' + campRebHourTx(campRebHours(next)) + '</em>')
-    + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>환생</button>'
-    + '<button class="crTree" type="button" onclick="campRebClose();campTreeOpen()">환생 트리</button>';
+    // ── 히어로 = 획득 배수 ──
+    '<div class="crHero"><div class="crK">획 득 배 수</div>'
+    + '<div class="crBig">' + next.toFixed(2) + '</div>'
+    + '<div class="crNow">현재 ×' + campRebMul().toFixed(2) + '</div></div>'
+    // ── 포인트 + 계산 근거 ──
+    + '<div class="crPt"><div class="crK">획 득 포 인 트</div>'
+    + '<div class="crPv">+' + campNum(gPts) + '</div>'
+    + '<div class="crFx">재화 <b>' + fW.toFixed(2) + '</b> × 던전 <b>' + fD.toFixed(2)
+    + '</b> × 라운드 <b>' + fR.toFixed(2) + '</b></div></div>'
+    // ── 이번 회차 지표(②안 · 세로 목록) ──
+    + '<div class="crSt"><div class="crH">이 번 회 차</div>'
+    + li('터치', campNum(C.tapped || 0) + '회')
+    + li('터치로 번 미네랄', campNum(C.earnTap || 0))
+    + li('자동으로 번 미네랄', campNum(C.earnAuto || 0))
+    + li('가스', campNum(C.earnGas || 0))
+    + li('플레이 시간', campRebPlayTx(C.playS))
+    + '</div>'
+    // ── 조건 ──
+    + '<div class="crCond"><div class="crBar' + (can ? ' ok' : '') + '">'
+    + '<i style="width:' + pct.toFixed(1) + '%"></i></div>'
+    + '<div class="crT"><span>환생 조건</span><span>' + campNum(wealth) + ' / ' + campNum(need) + '</span></div></div>'
+    // ── 버튼 ──
+    + '<button class="crGo" type="button" onclick="campRebAsk(0)"' + (can ? '' : ' disabled') + '>환 생</button>'
+    + '<button class="crX2" type="button" onclick="campRebAsk(1)"' + (can ? '' : ' disabled') + '>'
+    + resIco('gem', 'crGem') + '×2 환생 <em>' + CAMP_REB_X2_GEM + '</em></button>'
+    + (campRebX2Can() ? '' : '<div class="crX2s">젬이 모자랍니다 · <u onclick="campRebToShop()">환생 팩</u></div>');
 }
+// 젬이 모자랄 때 — 상점으로 보낸다(패키지가 거기 있다)
+function campRebToShop(){ campRebClose();
+  if(typeof openShop === 'function') openShop();
+  if(typeof setShopSec === 'function') setShopSec('gem'); }
 
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
 function campTreeOpen(){

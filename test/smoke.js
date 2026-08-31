@@ -400,21 +400,25 @@ async function groupLobby(){
       assert(go && !go.disabled,'조건을 채웠는데 환생 버튼이 잠겨 있다');
       const tx=$('crBody').textContent;
       assert(tx.indexOf('+'+campNum(campRebPtGain()))>=0,'받을 포인트가 공식과 다름');
-      assert(tx.indexOf('×'+(campRebMul()+campRebMulGain()).toFixed(2))>=0,'환생 뒤 배수가 공식과 다름'); }
-    // ③ ⭐ 먼 목표 — 「환생하면 더 빠르다」가 눈에 보여야 한다.
-    //   ⚠ 클래스가 아니라 **라벨로 찾는다** — 디자인을 다시 짤 때 클래스는 바뀌지만 이 줄의 뜻은 안 바뀐다
-    //     (실제로 2026-08-31 재디자인에서 .crFarRow 가 사라져 검사가 헛돌았다).
-    { const far=[...document.querySelectorAll('#campReb .crB')]
-        .find(b=>/던전\s*10/.test((b.querySelector('.crL')||{}).textContent||''));
-      assert(far,'「던전 10까지」 줄이 없다 — 먼 목표를 안 보여 주면 첫 환생을 손해로 판단한다');
-      const v=far.querySelector('.crV'), em=v.querySelector('em');
-      assert(em,'환생 뒤 값이 없다(→ 뒤가 비었다)');
-      const h=t=>parseFloat(String(t).replace(/[^0-9.]/g,''));
-      const after=h(em.textContent), before=h(v.textContent.replace(em.textContent,''));
-      assert(before>0 && after>0,'먼 목표 값을 못 읽음: '+v.textContent);
-      assert(after<before,'환생 뒤가 더 빠르게 안 나온다: '+before+' → '+after); }
+      assert(tx.indexOf((campRebMul()+campRebMulGain()).toFixed(2))>=0,'환생 뒤 배수가 공식과 다름'); }
+    // ③ 포인트에 **계산 근거**가 있어야 한다 — 「왜 2 인가」를 못 읽으면 숫자를 못 믿는다
+    { const fx=document.querySelector('#campReb .crFx');
+      assert(fx,'포인트 계산 근거 줄이 없다');
+      for(const k of ['재화','던전','라운드']) assert(fx.textContent.indexOf(k)>=0,'계산 근거에 '+k+' 가 없음');
+      assert(fx.querySelectorAll('b').length===3,'계산 근거의 값이 셋이 아님'); }
+    // ④ 이번 회차 지표 다섯 — 「내가 얼마나 했나」
+    { const li=[...document.querySelectorAll('#campReb .crLi')];
+      assert(li.length===5,'회차 지표가 다섯 줄이 아님: '+li.length);
+      const names=li.map(e=>e.querySelector('span').textContent);
+      for(const k of ['터치','터치로 번 미네랄','자동으로 번 미네랄','가스','플레이 시간'])
+        assert(names.indexOf(k)>=0,'회차 지표에 빠짐: '+k); }
+    // ⑤ ×2 환생 — 젬을 쓰는 1회권. ⛔ 영구가 아니다(GEM.md §4)
+    { const x2=document.querySelector('#campReb .crX2');
+      assert(x2,'×2 환생 버튼이 없다');
+      assert(/campRebAsk\(1\)/.test(x2.getAttribute('onclick')||''),'×2 버튼이 ×2 경로를 안 부른다');
+      assert(x2.textContent.indexOf(String(CAMP_REB_X2_GEM))>=0,'×2 에 젬 값이 안 보임'); }
     // ④ 되돌릴 수 없으므로 확인을 거친다 — 나가기·로그아웃과 같은 껍데기
-    campRebAsk(); await sleep(80);
+    campRebAsk(0); await sleep(80);
     const ok=$('campRebOk'); assert(visible(ok),'환생 확인창이 안 뜸');
     assert(ok.querySelector('.ecCard'),'확인창이 공용 껍데기(.ecCard)가 아님');
     { const c=getComputedStyle(ok.querySelector('.ecGo')).color.match(/\d+/g).map(Number);
@@ -425,7 +429,7 @@ async function groupLobby(){
     assert((campState().reb|0)===before,'취소했는데 환생이 실행됨');
     // ⑥ 실행하면 배수·포인트가 실제로 남는다
     const mul0=campRebMul(), pts0=campState().rbPts||0;
-    campRebAsk(); campRebGo();
+    campRebAsk(0); campRebGo();
     // ⚠ **되감긴 그 순간을 찍어서 잰다.** await 를 끼우면 캠프 틱(250ms)이 그 사이에 끼어들어
     //   막 비운 earn 에 다시 수입을 얹는다 — 그래서 검사가 흔들렸다(2026-08-31).
     const snap=(function(){ const c=campState();

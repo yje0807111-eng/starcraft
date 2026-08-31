@@ -843,6 +843,9 @@
   /* 값은 --loadDim(00-base.css) 이 갖는다 — 유즈맵 하단 시트(.bp)도 같은 것을 쓴다 */
   #titleBg::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
   #phone.artBg #titleBg{opacity:1}
+  /* 🔁 환생 화면(z-index 120)이 열리면 공유 키 아트를 그 **바로 아래**로 끌어올린다.
+     ⛔ 환생 화면이 자기 그림을 그리면 안 된다 — 키 아트를 칠하는 요소는 한 장뿐이어야 한다. */
+  #phone.artLift #titleBg{z-index:119}
   /* 🎬 화면 전환 — 로딩(#opening)만 흐려지며 들고 난다.
      ⚠ .appScreen.hide 가 display:none 이라 그냥 두면 전환이 뚝 끊긴다. 로딩을
         var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
