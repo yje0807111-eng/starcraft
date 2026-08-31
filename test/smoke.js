@@ -1883,19 +1883,31 @@ async function groupLobby(){
     skipIf(typeof campEngageStep!=='function'||typeof campDeploy!=='function','파고들기 없음');
     campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
     skipIf(!CAMPB,'전장이 안 열림');
-    campWipeField();
-    // 뭉쳐 세운다 — 고치기 전이라면 뒷줄이 그대로 밀려 사거리 밖에 남는다
-    for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
-    for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
-    CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
     const rate=()=>{ const me=CAMPB.me.units.filter(u=>!u.dead), ai=CAMPB.ai.units.filter(u=>!u.dead);
       let a=0,r=0; for(const u of me){ if((u.dmg||0)<=0) continue; a++;
         let best=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<best) best=d; }
         if(best<=u.rng) r++; }
       return a?r/a:0; };
-    for(let i=0;i<500;i++) campCombatStep(0.05);      // 25초 — 붙고 자리잡을 시간
-    const got=rate();
-    assert(got>=0.5,'싸우는데 사거리 안에 든 아군이 너무 적다: '+(got*100).toFixed(0)+'% (기대 50%↑)');
+    // ⚠ **한 번만 재면 난수에 걸린다** (2026-08-31). 같은 코드가 45% 와 100% 를 오갔다 —
+    //   적 구성·스킬에 난수가 있어 판마다 크게 흔들린다. 브라우저 8회 실측: 50~100% (중앙값 63%).
+    //   ⭐ 그래서 **3회 재서 중앙값**으로 판정한다. 계약을 느슨하게 하는 게 아니라 자[尺]를 안정시킨다.
+    const runs=[];
+    for(let k=0;k<3;k++){
+      campWipeField();
+      // 뭉쳐 세운다 — 고치기 전이라면 뒷줄이 그대로 밀려 사거리 밖에 남는다
+      for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
+      for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
+      CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+      for(let i=0;i<500;i++) campCombatStep(0.05);    // 25초 — 붙고 자리잡을 시간
+      runs.push(rate()); }
+    runs.sort((a,b)=>a-b);
+    const got=runs[1];                                 // 중앙값
+    assert(got>=0.5,'싸우는데 사거리 안에 든 아군이 너무 적다(3회 중앙값): '
+      +(got*100).toFixed(0)+'% (기대 50%↑) · 3회 '+runs.map(x=>(x*100).toFixed(0)+'%').join('/'));
+    // 마지막 판을 그대로 두고 아래 검사를 잇는다
+    for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
+    for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
+    for(let i=0;i<200;i++) campCombatStep(0.05);
     // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정 · 실측으로 500 확정)
     //   ⛔ 그냥 두면 적을 따라 들어가 자리가 무너지고 전선이 계속 움직인다 —
     //     그러면 벙커·포탑 같은 **고정 방어가 아무 뜻이 없어진다.**
