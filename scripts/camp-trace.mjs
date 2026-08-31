@@ -37,6 +37,10 @@ const ENGAGE = (process.env.ENGAGE == null) ? 1 : (+process.env.ENGAGE ? 1 : 0);
 //   고쳐도 못 이긴다 — 그건 설계가 그런 것이고(연구로 키우라는 뜻), **움직임의 문제가 아니다.**
 //   30분 벤치의 실제 판은 계열 업그레이드 91레벨이었다. 기본값은 그 언저리로 둔다.
 const RES = (process.env.RES == null) ? 45 : +process.env.RES;
+// 🚧 자리 제한(CAMP_ENG_OUT) 을 갈아 끼워 잰다 — 0 이면 게임 값 그대로.
+//   ⚠ 옛 구조에서 잰 「500 이 최적」은 **그 제한이 실제로는 안 지켜지던** 판의 값이다
+//     (오토배틀의 무제한 추격이 남아 있었다). 미는 주체가 하나가 된 지금은 다시 재야 한다.
+const OUTLIM = +(process.env.OUTLIM || 0);
 const OUT = process.env.OUT || path.join(ROOT, 'docs', 'mock');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -78,7 +82,7 @@ await pg.evaluate(() => { campStopFrame(); campStopTimer(); });   // 시계를 �
  *   (30분 벤치에서 던전 진입이 20.6분이었다), 그러면 「움직임을 본다」는 목적에 비해 너무 비싸다.
  *   ⭐ 대신 자리는 실제 생산과 같은 경로를 지난다 — campDeploy 가 campLayerPost 까지 부른다.  */
 async function record(seed){
-  return await pg.evaluate((dg, squad, secs, shots, engage, res, seed) => {
+  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, seed) => {
     const FPS = 30, dt = 1 / FPS, N = Math.round(secs * FPS);
     // 🔬 연구 — 계열 업그레이드 전 항목을 res 레벨로. campResLv 가 읽는 그 자리에 직접 넣는다.
     if(res > 0 && typeof UNIT_UPG !== 'undefined' && G.tech){
@@ -86,6 +90,7 @@ async function record(seed){
       const race = G.tech.race;
       for(const uid in UNIT_UPG){ const m = UNIT_UPG[uid];
         for(const k of [m.atk, m.def]) if(k) G.tech.research[race + '_' + k] = res; } }
+    if(outlim > 0) window.campEngageOut = function(){ return outlim; };
     // ── 부대 세우기
     campEnterDungeon(dg); CAMPB = null; campCombatStep(dt);
     if(!CAMPB) return { err: '전장이 안 열림' };
@@ -111,13 +116,13 @@ async function record(seed){
     // 💥 **실제로 오간 피해** — strikeHit 이 유일한 피해 경로다(18-strike.js §473).
     //   ⭐ 「사거리 안 몇 %」는 자세일 뿐이다. 진짜 물음은 **때렸는가**이고, 그 답은 여기서만 나온다.
     //   ⚠ 체력 총합 차이로 재면 안 된다 — 새 무리가 들어오면 총합이 늘어 피해가 가려진다.
-    let dmgOut = 0, dmgIn = 0;
+    let dmgOut = 0, dmgIn = 0, shotOut = 0;
     const _hit = window.strikeHit;
     window.strikeHit = function(tgt, rawAtk, atk){
       const b4 = (tgt ? (tgt.hp || 0) + (tgt.sh || 0) : 0);
       const r = _hit.apply(this, arguments);
       const af = (tgt ? (tgt.hp || 0) + (tgt.sh || 0) : 0), d = Math.max(0, b4 - af);
-      if(tgt && tgt.side === 'ai') dmgOut += d; else dmgIn += d;
+      if(tgt && tgt.side === 'ai'){ dmgOut += d; shotOut++; } else dmgIn += d;
       return r; };
     const _lea = window.campLeash;
     window.campLeash = function(){ const n = _lea.apply(this, arguments); leash += n || 0; return n; };
@@ -154,15 +159,20 @@ async function record(seed){
     // ④ 표적 바뀜 — 떨림의 원인이 표적 흔들림인지 거리 유지인지 가른다.
     const prev = new Map(), last = new Map(), tgtPrev = new Map(), flipBy = new Map();
     let flips = 0, tele = 0, teleMax = 0, tgtSw = 0, inR = 0, inRn = 0, moved = 0;
+    // 🔍 「표적을 못 찾는다」와 「표적은 있는데 못 닿는다」를 가른다 — 둘의 처방이 다르다.
+    let hasT = 0, hasTn = 0, gap = 0, gapN = 0;
     const uids = new Set();
     for(const fr of frames){
-      let alive = 0, hit = 0;
+      let alive = 0, hit = 0, withT = 0;
       for(const m of fr.me){
         if(m.dead) continue;
         alive++; uids.add(m.u);
+        if(m.tgt) withT++;
         if(m.r > 0){ let best = 1e9;
           for(const a of fr.ai){ const d = Math.hypot(a.x - m.x, a.y - m.y); if(d < best) best = d; }
-          if(best <= m.r) hit++; }
+          if(best <= m.r) hit++;
+          // 표적이 있는데 사거리 밖이면 「얼마나 모자라는가」 — 사거리 배수로 잰다
+          if(m.tgt && best < 1e9 && best > m.r){ gap += best / Math.max(1, m.r); gapN++; } }
         const p = last.get(m.u);
         if(p){ const vx = m.x - p.x, vy = m.y - p.y, sp = Math.hypot(vx, vy);
           if(sp > 60){ tele++; if(sp > teleMax) teleMax = sp; }
@@ -174,18 +184,20 @@ async function record(seed){
         last.set(m.u, { x: m.x, y: m.y });
         const t0 = tgtPrev.get(m.u); if(t0 != null && t0 !== m.tgt && m.tgt) tgtSw++;
         tgtPrev.set(m.u, m.tgt); }
-      if(alive){ inR += hit / alive; inRn++; } }
+      if(alive){ inR += hit / alive; inRn++; hasT += withT / alive; hasTn++; } }
     const nU = Math.max(1, uids.size);
     const stat = { frames: frames.length, units: uids.size,
       flips: +(flips / nU).toFixed(1), tele, teleMax: Math.round(teleMax), tgtSw: +(tgtSw / nU).toFixed(1),
       inRange: +(100 * inR / Math.max(1, inRn)).toFixed(1),
+      hasTgt: +(100 * hasT / Math.max(1, hasTn)).toFixed(1),
+      gapMul: +(gap / Math.max(1, gapN)).toFixed(2),
       moveAvg: +(moved / nU / Math.max(1, frames.length)).toFixed(2),
       leash, engPush,
       aliveEnd: frames.length ? frames[frames.length - 1].me.filter(m => !m.dead).length : 0,
       foeEnd: frames.length ? frames[frames.length - 1].ai.length : 0,
       foe0: frames.length ? frames[0].ai.length : 0,
       // 💥 실효 — 「낼 수 있었던 피해 중 실제로 낸 비율」. 이것이 전투가 도는가의 최종 답이다.
-      dmgOut: Math.round(dmgOut), dmgIn: Math.round(dmgIn),
+      dmgOut: Math.round(dmgOut), dmgIn: Math.round(dmgIn), shotOut,
       dpsMe: Math.round(dpsMe0), dpsAi: Math.round(dpsAi0), hpMe0, hpAi0,
       effMe: +(dmgOut / Math.max(1, dpsMe0 * secsRan)).toFixed(2),
       effAi: +(dmgIn / Math.max(1, dpsAi0 * secsRan)).toFixed(2) };
@@ -309,7 +321,7 @@ async function record(seed){
       g.fillText(fr.t.toFixed(1) + 's · 아군 ' + fr.me.filter(m => !m.dead).length + ' · 적 ' + fr.ai.length,
         ox + 2, oy + cellH + 14); }
     return { stat, ok: true };
-  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, seed);
+  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, seed);
 }
 
 const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -326,15 +338,17 @@ for(let i = 0; i < RUNS; i++){
     await el.screenshot({ path: shotPath }); }
 }
 
-const K = ['inRange', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
-  'dmgOut', 'dmgIn', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi'];
+const K = ['inRange', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
+  'dmgOut', 'dmgIn', 'shotOut', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi'];
 const M = {}; for(const k of K) M[k] = med(runs.map(r => r[k]));
 console.log('');
 console.log('🎬 캠프 전투 궤적 — ' + SECS + '초 · 던전 ' + DG + ' · ' + SQUAD + ' · 연구 Lv' + RES
-  + ' · ' + RUNS + '판 중앙값' + (ENGAGE ? '' : '  ⚙ campEngageStep 끔(대조군)'));
+  + (OUTLIM ? ' · 자리제한 ' + OUTLIM : '') + ' · ' + RUNS + '판 중앙값' + (ENGAGE ? '' : '  ⚙ campEngageStep 끔(대조군)'));
 console.log('   유닛 ' + runs[0].units + '기 · 프레임 ' + runs[0].frames + ' · 첫 적 ' + runs[0].foe0 + '마리');
 console.log('');
 console.log('  ⚔ 사거리 안 비율      ' + M.inRange + '%      ← 전투가 실제로 이루어지는가 (낮으면 대부분 논다)');
+console.log('  🎯 표적을 가진 비율    ' + M.hasTgt + '%      ← 낮으면 「못 찾는다」 · 높은데 위가 낮으면 「못 닿는다」');
+console.log('  📐 못 닿는 정도        ×' + M.gapMul + '      ← 표적까지 거리 ÷ 사거리 (1.0 = 딱 사거리 끝)');
 console.log('  💫 방향 뒤집힘        ' + M.flips + '회/유닛   ← 덜덜 떠는 정도 (순수 오토배틀 기준 0.9)');
 console.log('  🎯 표적 바뀜          ' + M.tgtSw + '회/유닛   ← 떨림이 표적 흔들림 때문인지 가른다');
 console.log('  ⚡ 순간이동(>60px)    ' + M.tele + '회 (최대 ' + M.teleMax + 'px)');
@@ -343,6 +357,7 @@ console.log('  🚚 자리잡기 밀기      ' + M.engPush + '회');
 console.log('  📏 프레임당 이동      ' + M.moveAvg + 'px/유닛');
 console.log('  💀 끝: 아군 ' + M.aliveEnd + '기 살아있음 · 적 ' + M.foeEnd + '마리 남음');
 console.log('');
+console.log('  🔫 아군이 쏜 횟수      ' + M.shotOut + '회      ← 위치 문제인지 표적 문제인지 가른다');
 console.log('  💥 실제로 준 피해      ' + M.dmgOut + '  (설계 DPS ' + M.dpsMe + ' × ' + SECS + '초 = '
   + Math.round(M.dpsMe * SECS) + ')  → 실효 ' + M.effMe);
 console.log('  🩸 실제로 받은 피해    ' + M.dmgIn + '  (적 DPS ' + M.dpsAi + ' × ' + SECS + '초 = '
