@@ -936,7 +936,10 @@
       --t-race-out(나감) → --t-race-in(들어옴) 두 토막이고, 종족 판의 지연이 곧 나가는 시간이다. */
 :root{--t-race-out:.20s;--t-race-in:.24s;--t-race:.44s}   /* --t-race = 두 토막의 합(js RACE_FADE_MS) */
 #phone.raceIn #opening,
-#phone.raceIn #titleMark{transition-duration:var(--t-race-out) !important;animation-duration:var(--t-race-out) !important}
+#phone.raceIn #titleMark{transition-duration:var(--t-race-out) !important;animation-duration:var(--t-race-out) !important;
+  /* ⚠ 곡선은 ease-in(끝이 빠르다). 기본 ease 는 마지막 20% 가 거의 안 변해서, 눈에는 이미
+     사라졌는데 종족 판은 아직 안 올라온 **멎은 구간**이 생겼다(실측 70ms · 2026-08-31). */
+  transition-timing-function:ease-in !important;animation-timing-function:ease-in !important}
 /* 배경은 전환 내내 **켜진 채로 버틴다**. 종족 판이 다 차서 덮은 뒤(raceIn 이 걷힐 때) 조용히 꺼진다.
    ⛔ **opacity 만 잡는다.** animation 을 끄면 키 아트 호흡(titleBreath)이 멈췄다가 raceIn 이 걷히는 순간
       **0% 부터 다시 시작해 그림이 툭 작아진다** — 위 호흡 주석이 경고하는 바로 그 버그다(2026-08-27 재발).

@@ -6074,6 +6074,19 @@ async function groupLobby(){
       // ⭐ **겹치면 안 된다.** 종족 판은 앞판이 다 걷힌 뒤에 들어온다 — 지연 ≥ 나가는 시간.
       assert(Math.round(parseFloat(cs2.animationDelay)*1000)>=out,
         '종족 판이 앞판과 겹친다 (지연 '+cs2.animationDelay+' < 나감 '+out+'ms)');
+    // 🎬 **곡선도 잠근다**(2026-08-31). 지연이 맞아도 양쪽이 ease 면 앞판의 느린 끝 꼬리와
+    //   이 판의 느린 시작 꼬리가 만나 70ms 동안 화면이 멎고, 그 사이 배경 그림만 덩그러니 남는다.
+    //   ⛔ ease 로 되돌리지 말 것 — 지연을 아무리 맞춰도 그 구간이 되살아난다.
+    { const ph=$('phone'), had=ph.classList.contains('raceIn');
+      ph.classList.add('raceIn');
+      const out=getComputedStyle($('opening')).animationTimingFunction;
+      if(!had) ph.classList.remove('raceIn');
+      assert(out.indexOf('ease-in')>=0,'앞판이 ease-in 이 아니다(끝 꼬리가 느리다): '+out);
+      const ov=$('campRaceOv');
+      if(ov){ const was=ov.classList.contains('raceFx'); ov.classList.add('raceFx');
+        const inn=getComputedStyle(ov).animationTimingFunction;
+        if(!was) ov.classList.remove('raceFx');
+        assert(inn.indexOf('ease-out')>=0,'종족 판이 ease-out 이 아니다(시작 꼬리가 느리다): '+inn); } }
       ov.className=before; }
     let bad=[];
     for(const sh of document.styleSheets){ let rs; try{ rs=sh.cssRules; }catch(e){ continue; }
