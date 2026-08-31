@@ -367,6 +367,12 @@ function guideNote(kind, n){ try{
 function guidePaint(){
   const ph=document.getElementById('phone'); if(!ph) return;
   let el=document.getElementById('guideBar');
+  // ⚠ 조건은 campIsOn() **하나뿐이다.** 화면을 옮기면 campExit() 가 캠프를 걷으므로 이것으로 충분하다.
+  //   ⛔ 여기에 「#homeScreen 이 보이는가」를 더하지 말 것 — 스모크는 3D 를 못 띄워
+  //     **화면 없이 상태만 흉내 내므로**(campIsOn 을 가짜로 true), 그 조건을 넣으면 검사가 깨진다.
+  //   ⭐ 띠가 상점 머리줄을 덮던 문제(실측 2026-08-31: 배너 top 105 · 상점 헤더 top 106)는
+  //     조건이 아니라 **타이밍**이었다 — 화면을 옮겨도 이 함수가 안 불려 옛 띠가 남았다.
+  //     showAppScreen() 이 마지막에 부르게 고쳤다(12-appshell.js).
   const show=guideOn() && (typeof campIsOn==='function') && campIsOn();
   if(!show){ if(el) el.remove(); return; }
   const g=guideCur(), S=guideState(); if(!g) { if(el) el.remove(); return; }

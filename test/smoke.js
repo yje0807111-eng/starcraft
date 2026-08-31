@@ -668,7 +668,7 @@ async function groupLobby(){
     assert(visible($('gearScreen')),'네비 정비가 화면을 안 엶');
     assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===3,'정비 하위가 3칸이 아님');
     navGo('shop'); await sleep(60);
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===2,'상점 하위가 2칸이 아님(추천·젬 상점)');
     // 구역에 '들어올 때'는 늘 첫 하위로 — 유즈맵 하단 탭바(gtabDrill)와 같은 규칙(2026-08-14).
     //   펫을 보다 나갔다 다시 들어와도 펫이 열려 있으면 구역 이름과 내용이 어긋난다.
     { const cur=()=>{ const e=document.querySelector('#navBar .navIt.cur'); return e?e.dataset.sub:null; };
@@ -1326,6 +1326,41 @@ async function groupLobby(){
   //   ⛔ 옛 규칙(30초 시간 부활)이 후반 발산의 동력이었다 — 실측(던전 2): 누운 병력이 6 → 34 로
   //     쌓이며 꽂힌 화력이 R9 정점 891 → R24 487 로 **떨어졌고**, 난이도는 계속 올라 R24 가 11.4분.
   //   ⚠ strikeStepUnits 가 죽은 유닛을 배열에서 걷어낸다(18-strike.js:1301) — '남아 있다'고 가정하면 안 된다.
+  // 🏕 상점을 캠프 기준으로 다시 짰다(2026-08-31). 여기서 잠그는 것은 화면이 아니라 **경제**다.
+  await step('캠프 상점: 팩 배수는 합이고 · 산 재화는 캠프 지갑으로 간다', async()=>{
+    skipIf(typeof CAMP_PACKS==='undefined'||typeof campGatherMul!=='function','팩 시스템 없음');
+    skipIf(!campState(),'캠프 상태 없음');
+    const p=PROF(), keep=JSON.parse(JSON.stringify(p.packs||{}));
+    try{
+      // ① **합산이어야 한다.** ⛔ 곱으로 바꾸면 곱 항이 하나 더 늘어 후반이 터진다
+      //    (BALANCE §0 · 실측 5회 만에 ×1,900만). 팩 셋 = 곱이면 ×8, 합이면 ×4.5 대.
+      p.packs={}; const m0=campGatherMul();
+      assert(m0>0,'기본 배수가 0 이다');
+      const g=CAMP_PACKS.filter(x=>x.gather);
+      p.packs={}; g.forEach(x=>p.packs[x.id]=1);
+      const mAll=campGatherMul();
+      const sum=g.reduce((a,x)=>a+x.gather,0), prod=g.reduce((a,x)=>a*(1+x.gather),1);
+      const gotR=mAll/m0, sumR=(1+sum), prodR=prod;
+      assert(Math.abs(gotR-sumR)<0.05,
+        '팩 배수가 합산이 아니다 — 얻은 비 '+gotR.toFixed(2)+' · 합이면 '+sumR.toFixed(2)+' · 곱이면 '+prodR.toFixed(2));
+      // ② **캠프 지갑**에 들어가야 한다. ⛔ PROF().pcoin 은 옛 사냥터 지갑이라 캠프와 안 통한다.
+      p.packs={};
+      const C=campState(), live=(typeof _campOn!=='undefined'&&_campOn&&typeof G!=='undefined'&&G.tech);
+      const pc0=p.pcoin||0, w0=live? (G.tech.credit||0) : (C.credit||0);
+      campAddRes(1234,0);
+      const w1=live? (G.tech.credit||0) : (C.credit||0);
+      assert(Math.round(w1-w0)===1234,'캠프 지갑에 안 들어갔다 ('+Math.round(w1-w0)+')');
+      assert(Math.abs((p.pcoin||0)-pc0)<0.5,'옛 프로필 지갑(pcoin)이 같이 움직였다 — 지갑이 섞였다');
+      if(live) G.tech.credit=w0; else C.credit=w0;
+      // ③ 상점은 **두 칸**이다(옛 다섯 칸은 캠프에 안 닿아 화면에서 뺐다)
+      assert(typeof SHOP_SECS!=='undefined','SHOP_SECS 없음');
+      const secs=Object.keys(SHOP_SECS);
+      assert(secs.length===2 && secs.indexOf('reco')>=0 && secs.indexOf('gem')>=0,
+        '상점 구역이 추천·젬 상점 둘이 아니다: '+secs.join(','));
+      return '합산 확인(×'+gotR.toFixed(2)+' · 곱이면 ×'+prodR.toFixed(2)+') · 캠프 지갑 ok · 2칸';
+    } finally { p.packs=keep; }
+  });
+
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
   //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
   //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)
@@ -6155,7 +6190,9 @@ async function groupLobby(){
     assert(getComputedStyle(bar,'::before').display==='none','윗변 광선이 남아 있다 — 면이 없으면 가를 경계도 없다');
     navGo('shop'); await sleep(140);
     const cells=[...bar.querySelectorAll('.navIt')].filter(e=>!e.classList.contains('navBk'));
-    assert(cells.length>=4,'칸이 없다: '+cells.length);
+    // ⚠ 개수를 세지 않는다 — 상점 하위는 캠프 재편으로 5칸 → **2칸**(추천·젬 상점)이 됐다.
+    //   이 검사가 보는 것은 「네비가 실제로 칸을 그리는가」다.
+    assert(cells.length>=2,'칸이 없다: '+cells.length);
     for(const c of cells){ const cs=getComputedStyle(c);
       assert(cs.flexDirection==='row','칸이 아직 세로로 쌓인다 — 42px 이 안 나온다');
       assert(cs.borderTopWidth==='0px'||cs.borderTopStyle==='none','칸에 테두리(금속 링)가 남아 있다');
@@ -8622,25 +8659,31 @@ async function groupLobby(){
     assert(visible($('shopScreen')),'네비 상점이 전용 화면을 안 엶');
     assert(!visible($('townPanel')),'상점이 아직 팝업으로 열림');
     assert($('curTitle').textContent==='상점','상점 제목이 재화 바 왼쪽에 없음: "'+$('curTitle').textContent+'"');
-    // 구역 5개를 하단 네비로 나눴다(2026-08-14) — 화면에는 고른 구역 하나만 그린다
+    // 🏕 구역은 **둘**이다(2026-08-31 캠프 재편). 앞의 다섯(한정구매·뽑기·재화·패키지·충전)은
+    //   옛 사냥터 기준이라 파는 것이 캠프에 하나도 안 닿았다 — 화면에서만 뺐고 코드는 남아 있다.
     assert(document.querySelectorAll('#shopBody .shopPanel').length>=1,'상점 구역이 안 그려짐');
     { const seen=[];
-      for(const k of ['deal','draw','res','pack','gem']){ setShopSec(k);
+      for(const k of ['reco','gem']){ setShopSec(k);
         const hd=document.querySelector('#shopBody .shopHead');
         assert(hd,'상점 구역 '+k+' 이 안 그려짐'); seen.push(hd.textContent.slice(0,4)); }
-      setShopSec('deal');
-      assert(new Set(seen).size===5,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
-    assert(document.querySelectorAll('#shopBody .shopDeal').length===3,'오늘의 특가가 3개가 아님');
-    setShopSec('draw');   // 뽑기 행은 '뽑기' 구역에 있다(구역별로 나뉜 뒤)
-    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'상점 내용(뽑기 행)이 비어 있음');
-    assert(document.querySelector('#shopBody .petRow, #shopBody .shopPanel'),'뽑기 구역에 보유 펫이 안 붙음');
-    setShopSec('deal');
-    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 카드 안에 실제 아이콘이 들어갔는지
+      setShopSec('reco');
+      assert(new Set(seen).size===2,'상점 구역이 서로 다르지 않음: '+seen.join(',')); }
+    // ① 추천 = 팩 목록. CAMP_PACKS 와 **행 수가 같아야** 한다(한 곳에서 정한다).
+    setShopSec('reco');
+    if(typeof CAMP_PACKS!=='undefined')
+      assert(document.querySelectorAll('#shopBody .shopRow').length===CAMP_PACKS.length,
+        '추천 행이 CAMP_PACKS 와 다르다: '+document.querySelectorAll('#shopBody .shopRow').length+' vs '+CAMP_PACKS.length);
+    // ② 젬 상점 = 충전 + 젬으로 구매. 판이 둘이어야 한 화면에 다 있다.
+    setShopSec('gem');
+    assert(document.querySelectorAll('#shopBody .shopPanel').length>=2,'젬 상점에 충전·구매 두 판이 없다');
+    assert(document.querySelectorAll('#shopBody .shopRow').length>0,'젬으로 살 것이 비어 있음');
+    // 재화 아이콘은 resIco 공용(이모지 임의 사용 금지) — 실제 아이콘이 들어갔는지
     assert(document.querySelectorAll('#shopBody img.gi[src*="res_"]').length>0,'상점에 공용 재화 아이콘이 없음');
+    setShopSec('reco');
     // IBM Plex Sans KR은 700이 최대 — 800/900은 가짜 볼드가 된다(DESIGN.md §2)
     for(const sel of ['.curTitle','.shopHead','.shopTag','.shopBuy']){ const e=document.querySelector('#shopBody '+sel)||document.querySelector(sel);
       if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
-    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===5,'상점 하위가 5칸이 아님');
+    assert(document.querySelectorAll('#navBar .navIt[data-sub]').length===2,'상점 하위가 2칸이 아님(추천·젬 상점)');
     // 마을 구역(뽑기집)도 팝업이 아니라 같은 화면으로
     openHome(); await sleep(40); openShop(); await sleep(60);   // ⚠ 마을 팝업 경로는 다락으로 갔다 — 상점 전용 화면으로 연다
     assert(visible($('shopScreen')) && !visible($('townPanel')),'마을 구역이 아직 팝업으로 열림');

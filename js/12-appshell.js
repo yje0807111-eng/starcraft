@@ -413,6 +413,10 @@ function showAppScreen(id){ setInGame(false);
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
+  // 🧭 가이드 띠는 #phone 직속이라 **화면을 바꿔도 남는다.** 여기서 다시 그려 걷어 낸다
+  //    (위 campExit() 로 캠프가 이미 꺼졌으므로 guidePaint 가 스스로 지운다).
+  //    ⛔ 없으면 상점·정비 화면에서 띠가 첫 패널 머리줄을 덮는다(실측 2026-08-31).
+  if(typeof guidePaint==='function') guidePaint();
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
   // 🏕 캠프도 같은 이유로 여기서 걷는다 — 캠프는 공용 3D 캔버스(#cvMarine)를 HOME 안으로 **빌려 간다.**

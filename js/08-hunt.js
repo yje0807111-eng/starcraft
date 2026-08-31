@@ -2967,9 +2967,76 @@ function _shopGemHTML(){ let h='';
 // 아직 내용이 없는 구역 — 자리는 만들되 있는 척하지 않는다(설정 하위 팝업과 같은 표기)
 function _shopSoonHTML(t){ return '<div class="shopPanel"><div class="shopHead">'+t+'</div>'
   +'<div class="shopBody"><div class="setSoon">준비 중입니다</div></div></div>'; }
-const SHOP_SECS={ deal:_shopDealHTML, draw:_shopDrawHTML,
-  res:()=>_shopSoonHTML('재화'), pack:()=>_shopSoonHTML('패키지'), gem:_shopGemHTML };
-let _shopSec='deal';
+
+// ══ 🏕 캠프 상점 (2026-08-31 재편) ═══════════════════════════════════════
+// ⛔ 앞의 상점은 **옛 사냥터 기준**이었다. 파는 것 전부가 캠프에 안 닿았다:
+//   · 펫·장비·동료 꾸러미 → 그 시스템들이 유보(GAME_DIRECTION §5-B)라 쓸 데가 없다
+//   · 자원·가스 꾸러미   → **다른 지갑**(PROF().pcoin)에 들어갔다. 캠프는 자기 지갑을 쓴다.
+//     실측(2026-08-31): 프로필 지갑 +5555 → 캠프 재화 그대로. 사도 캠프에서 못 썼다.
+// ⭐ 그래서 **파는 것을 캠프에 실제로 닿는 것만** 남기고 두 칸으로 줄였다.
+// ⛔ 옛 구역 코드(_shopDealHTML·_shopDrawHTML·SHOP_DEAL_POOL)는 **지우지 않았다** —
+//    화면에서만 뺐다(GEM.md §5 「⑤ 를 지우지 말 것」). 펫·장비·동료가 되살아나면 함께 살아난다.
+
+// 💎 젬으로 사는 것 — **캠프 지갑**으로 들어간다(campAddRes 가 유일한 입구).
+// ⚠ 값은 초안이다. 실측(60분 143만 · 1탭 282)에 견주면 규모가 안 맞을 수 있다.
+//   ⭐ **시간 기반이 더 맞을 수 있다**(「지금 수입의 30분치」) — 회차가 돌며 절대값이
+//     무의미해지기 때문이다. C.rate(실측 수급속도)가 이미 있으니 그때 갈아 끼운다.
+const SHOP_GEM_BUY=[
+  {id:'min1', nm:'미네랄', gem:15,  min:50000},
+  {id:'min2', nm:'미네랄', gem:60,  min:250000},
+  {id:'min3', nm:'미네랄', gem:220, min:1200000},
+  {id:'gas1', nm:'가스',   gem:25,  gas:3000},
+  {id:'gas2', nm:'가스',   gem:90,  gas:15000},
+  {id:'boost',nm:'부스터', soon:true, desc:'시간제 강화 — 시스템이 아직 없습니다'},
+];
+function shopBuyGemRes(id){
+  const d=SHOP_GEM_BUY.find(x=>x.id===id); if(!d||d.soon) return;
+  if(profGem()<d.gem){ showTownToast('💎 젬이 부족합니다'); return; }
+  if(typeof campAddRes!=='function'){ showTownToast('캠프를 한 번 열어 주세요'); return; }
+  const p=PROF(); p.gem=(p.gem||0)-d.gem;
+  campAddRes(d.min||0, d.gas||0);
+  if(typeof playSfx==='function') playSfx('hero_merge');
+  renderShop(); showTownToast('💠 '+d.nm+' 지급 완료');
+}
+function shopBuyPack(id){
+  const d=(typeof campPackDef==='function')?campPackDef(id):null; if(!d) return;
+  if(d.soon){ showTownToast('준비 중입니다'); return; }
+  if(typeof campPackOwn==='function' && campPackOwn(id)){ showTownToast('이미 보유 중입니다'); return; }
+  showTownToast('💳 결제는 준비 중입니다');   // ⚠ 실제 결제 연동 전 — 지급도 하지 않는다
+}
+// ① 추천 — 현금 결제 팩. 젬이 함께 들어 있다.
+function _shopRecoHTML(){
+  if(typeof CAMP_PACKS==='undefined') return _shopSoonHTML('추천');
+  let h='<div class="shopPanel"><div class="shopHead">추천<em>한 번만 구매</em></div><div class="shopBody">';
+  h+='<div class="shopNote">재화 획득 배수는 <b>서로 더해집니다</b> — 곱하지 않아 후반이 안정적입니다</div>';
+  for(const P of CAMP_PACKS){
+    const own=(typeof campPackOwn==='function') && campPackOwn(P.id);
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+P.nm
+      +(P.gem?(' <span class="twStars">'+resIco('gem','gi')+' '+P.gem+'</span>'):'')+'</div>'
+      +'<div class="twRowSub'+((P.soon||own)?' lock':'')+'">'+(P.desc||'')+'</div></div>'
+      +'<button class="twBtn" onclick="shopBuyPack(&#39;'+P.id+'&#39;)"'+((P.soon||own)?' disabled':'')+'>'
+      +(own?'보유 중':(P.soon?'준비 중':P.won))+'</button></div>';
+  }
+  h+='</div></div>';
+  return h; }
+// ② 젬 상점 — 충전 + 그 젬으로 캠프 재화를 산다(한 화면에 둔다)
+function _shopGemShopHTML(){
+  let h=_shopGemHTML();   // 충전 줄은 기존 것을 그대로 쓴다(단일 소스)
+  h+='<div class="shopPanel"><div class="shopHead">젬으로 구매<em>캠프 재화</em></div><div class="shopBody">';
+  h+='<div class="shopNote">구매한 재화는 <b>캠프 지갑</b>으로 들어갑니다</div>';
+  for(const d of SHOP_GEM_BUY){
+    const can=!d.soon && profGem()>=d.gem;
+    const amt=d.soon?'':(d.min? d.min.toLocaleString('en-US')+' 미네랄'
+                                 : d.gas.toLocaleString('en-US')+' 가스');
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+d.nm+'</div>'
+      +'<div class="twRowSub'+(can?'':' lock')+'">'+(d.desc||amt)+'</div></div>'
+      +'<button class="twBtn" onclick="shopBuyGemRes(&#39;'+d.id+'&#39;)"'+(can?'':' disabled')+'>'
+      +(d.soon?'준비 중':(resIco('gem','gi')+' '+d.gem))+'</button></div>';
+  }
+  h+='</div></div>';
+  return h; }
+const SHOP_SECS={ reco:_shopRecoHTML, gem:_shopGemShopHTML };
+let _shopSec='reco';
 function setShopSec(k){ if(!SHOP_SECS[k]) return; _shopSec=k;
   if(typeof renderShop==='function') renderShop();
   if(typeof navPaint==='function') navPaint(); }
