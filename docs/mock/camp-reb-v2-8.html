@@ -1,0 +1,266 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 화면 v2 — 8안</title>
+<style>
+/* DESIGN.md 확정 규칙: 라운드 0/3/6/9 만(8·10~16px 금지) · 간격 4/8/12/20 ·
+   볼륨1=1px 금속 테두리 · 액센트는 역할별(금색=재화·보상·포인트 / 시안=선택됨) */
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --metal-edge:rgba(255,255,255,.14);
+  --gold:#ffd24a; --cy:#5cd6ff; --dim:#8a94a6; --mute:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 6px;font-size:19px}
+.lead{margin:0 0 14px;font-size:12.5px;color:var(--dim);line-height:1.7;max-width:1250px}
+.lead b{color:#ececec}.lead em{font-style:normal;color:#9fd0ff}
+.grid{display:grid;grid-template-columns:repeat(4,392px);gap:14px}
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--dim);line-height:1.5}
+.ph{width:390px;height:760px;position:relative;overflow:hidden;background:#05080c;display:flex;flex-direction:column}
+.bg{position:absolute;inset:0;background-size:cover;background-position:center;
+  background-image:url(/assets/backgrounds/title/boot.webp)}
+.bg::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(5,8,12,.55) 0%,rgba(5,8,12,.28) 26%,rgba(5,8,12,.90) 66%,#05080c 100%)}
+.top{position:relative;z-index:1;flex:0 0 auto;display:flex;align-items:center;padding:42px 14px 4px}
+.top .ttl{flex:1;font-size:21px;font-weight:800;color:#fff;text-shadow:0 2px 12px #000}
+/* ✕ 닫기 — 각진 6px · 1px 테두리 */
+.xb{width:32px;height:32px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(0,0,0,.35);color:#c3ccd8;font-size:15px;line-height:30px;text-align:center}
+.body{position:relative;z-index:1;flex:1;min-height:0;padding:0 18px 18px;display:flex;flex-direction:column}
+.sp{flex:1}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+/* 히어로 = 획득 배수 */
+.hero{text-align:center}
+.hero .k{font-family:var(--font-num);font-size:11px;color:#95a0ad;letter-spacing:.32em}
+.hero .big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:64px;line-height:1;color:#fff;margin-top:4px;text-shadow:0 3px 22px #000}
+.hero .now{font-family:var(--font-num);font-size:13px;color:var(--mute);margin-top:2px;letter-spacing:.05em}
+/* 포인트 — 값 + 계산 근거 */
+.pt{text-align:center;margin-top:16px}
+.pt .k{font-family:var(--font-num);font-size:11px;color:#95a0ad;letter-spacing:.24em}
+.pt .v{font-family:var(--font-num);font-size:30px;font-weight:800;color:var(--gold);line-height:1.1;margin-top:2px}
+.pt .fx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:4px;letter-spacing:.02em}
+.pt .fx b{color:#a9b4c2;font-weight:700}
+/* 이번 회차 지표 */
+.st .h{font-family:var(--font-num);font-size:10.5px;color:#7b8593;letter-spacing:.28em;
+  text-align:center;margin-bottom:8px}
+.g22{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g22 div{padding:8px 8px 9px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);
+  background:rgba(255,255,255,.035)}
+.g22 .k{font-size:10.5px;color:#8f9aa8}
+.g22 .n{font-family:var(--font-num);font-size:17px;font-weight:800;color:#e9eff7;margin-top:2px}
+/* 목록형 지표 */
+.list .li{display:flex;justify-content:space-between;align-items:baseline;padding:7px 2px}
+.list .li+.li{border-top:1px solid rgba(255,255,255,.07)}
+.list .li span{font-size:12px;color:#9aa5b3}
+.list .li b{font-family:var(--font-num);font-size:15px;font-weight:800;color:#e9eff7}
+/* 한 줄 압축 */
+.row5{display:flex;gap:6px}
+.row5 div{flex:1;text-align:center;padding:7px 2px;border:1px solid var(--metal-edge);
+  border-radius:var(--r-md);background:rgba(255,255,255,.03)}
+.row5 .k{font-size:9.5px;color:#8f9aa8}
+.row5 .n{font-family:var(--font-num);font-size:13px;font-weight:800;color:#e9eff7;margin-top:1px}
+/* 조건 */
+.cond{margin-top:16px}
+.cond .bar{height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.cond .bar i{display:block;height:100%;background:var(--cy);box-shadow:0 0 6px rgba(92,214,255,.5)}
+.cond .t{display:flex;justify-content:space-between;font-family:var(--font-num);
+  font-size:11.5px;color:var(--mute);margin-top:4px}
+/* 버튼 */
+.go{position:relative;display:block;width:100%;min-height:50px;border-radius:var(--r-md);
+  font-family:inherit;font-size:16px;font-weight:800;letter-spacing:.16em;color:#fff;
+  border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+.go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+/* ×2 — 젬으로 사는 1회권. 금색이 아니라 **보라(현질)** 로 갈라 둔다 */
+.x2{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;min-height:44px;margin-top:8px;border-radius:var(--r-md);
+  font-family:inherit;font-size:13.5px;font-weight:800;color:#e5d6ff;
+  border:1px solid rgba(178,124,255,.5);background:rgba(178,124,255,.10)}
+.x2 .gm{width:15px;height:15px;vertical-align:-2px}
+.x2 em{font-style:normal;font-family:var(--font-num);color:#fff}
+.x2s{font-size:11px;color:#8b93a3;text-align:center;margin-top:6px}
+.x2s u{text-decoration:none;color:#c9a6ff}
+</style>
+<h1>환생 화면 v2 — 8안</h1>
+<p class="lead">요청 반영: <b>✕ 닫기</b> · 배수는 <b>2.95 + 현재 ×1.00</b> · 포인트에 <b>계산 근거</b> · 오른쪽을 <b>이번 회차 지표</b>로 교체 · 조건 유지 ·
+하단 <b>환생 + ×2 환생</b>(젬/패키지) · <em>환생 트리는 뺐다</em>(네비 다른 칸으로).<br>
+⚠ 지표 다섯 중 <b>터치/자동 미네랄 구분</b>과 <b>회차 소요시간</b>은 아직 기록하지 않는다 — 적용할 때 계측을 붙여야 한다.<br>
+변주 축: <b>지표 배치</b>(2×2 / 목록 / 한 줄 / 접기) · <b>계산 근거 표기</b> · <b>×2 자리</b>.</p>
+<div class="grid">
+
+<!-- ① 2×2 격자 · 식 한 줄 · ×2 아래 -->
+<div class="cell"><div class="cap"><b>① 지표 2×2 · 식 한 줄</b><i>기본안. 지표 넷을 칸으로, 소요시간은 조건 줄에</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div class="st" style="margin-top:20px"><div class="h">이 번 회 차</div>
+    <div class="g22">
+      <div><div class="k">터치</div><div class="n">1,284회</div></div>
+      <div><div class="k">터치 미네랄</div><div class="n">45.2만</div></div>
+      <div><div class="k">자동 미네랄</div><div class="n">274.8만</div></div>
+      <div><div class="k">가스</div><div class="n">1.2만</div></div>
+    </div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>3시간 12분 플레이</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:16px">환 생</button>
+  <button class="x2"><img class="gm" src="/assets/icons/res_gem.webp">×2 환생 <em>150</em></button>
+</div></div></div>
+
+<!-- ② 목록형 지표 -->
+<div class="cell"><div class="cap"><b>② 지표 목록형</b><i>다섯을 세로로. 소요시간까지 한 자리에</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div class="st list" style="margin-top:18px"><div class="h">이 번 회 차</div>
+    <div class="li"><span>터치</span><b>1,284회</b></div>
+    <div class="li"><span>터치로 번 미네랄</span><b>45.2만</b></div>
+    <div class="li"><span>자동으로 번 미네랄</span><b>274.8만</b></div>
+    <div class="li"><span>가스</span><b>1.2만</b></div>
+    <div class="li"><span>플레이 시간</span><b>3시간 12분</b></div>
+  </div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>환생 조건</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:14px">환 생</button>
+  <button class="x2"><img class="gm" src="/assets/icons/res_gem.webp">×2 환생 <em>150</em></button>
+</div></div></div>
+
+<!-- ③ 한 줄 압축 -->
+<div class="cell"><div class="cap"><b>③ 지표 한 줄 압축</b><i>다섯을 한 줄에. 그림을 가장 많이 남긴다</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div class="st" style="margin-top:20px"><div class="h">이 번 회 차</div>
+    <div class="row5">
+      <div><div class="k">터치</div><div class="n">1,284</div></div>
+      <div><div class="k">터치</div><div class="n">45.2만</div></div>
+      <div><div class="k">자동</div><div class="n">274.8만</div></div>
+      <div><div class="k">가스</div><div class="n">1.2만</div></div>
+      <div><div class="k">시간</div><div class="n">3:12</div></div>
+    </div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>환생 조건</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:16px">환 생</button>
+  <button class="x2"><img class="gm" src="/assets/icons/res_gem.webp">×2 환생 <em>150</em></button>
+</div></div></div>
+
+<!-- ④ 배수·포인트를 좌우로 -->
+<div class="cell"><div class="cap"><b>④ 배수·포인트 좌우</b><i>받는 것 둘을 나란히. 세로가 짧아진다</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div style="display:flex;gap:10px;align-items:flex-end">
+    <div class="hero" style="flex:1"><div class="k">배 수</div>
+      <div class="big" style="font-size:50px">2.95</div><div class="now">현재 ×1.00</div></div>
+    <div class="hero" style="flex:1"><div class="k">포 인 트</div>
+      <div class="big" style="font-size:50px;color:var(--gold)">+2</div><div class="now">이번 획득</div></div>
+  </div>
+  <div class="fx" style="text-align:center;font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:8px">
+    포인트 = 재화 <b style="color:#a9b4c2">1.79</b> × 던전 <b style="color:#a9b4c2">1.35</b> × 라운드 <b style="color:#a9b4c2">1.22</b></div>
+  <div class="st" style="margin-top:20px"><div class="h">이 번 회 차</div>
+    <div class="g22">
+      <div><div class="k">터치</div><div class="n">1,284회</div></div>
+      <div><div class="k">터치 미네랄</div><div class="n">45.2만</div></div>
+      <div><div class="k">자동 미네랄</div><div class="n">274.8만</div></div>
+      <div><div class="k">가스</div><div class="n">1.2만</div></div>
+    </div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>3시간 12분 플레이</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:14px">환 생</button>
+  <button class="x2"><img class="gm" src="/assets/icons/res_gem.webp">×2 환생 <em>150</em></button>
+</div></div></div>
+
+<!-- ⑤ ×2 를 주 버튼과 나란히 -->
+<div class="cell"><div class="cap"><b>⑤ 환생 · ×2 나란히</b><i>둘을 같은 줄에. ×2 를 고르는 것이 한 번에 보인다</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div class="st" style="margin-top:20px"><div class="h">이 번 회 차</div>
+    <div class="g22">
+      <div><div class="k">터치</div><div class="n">1,284회</div></div>
+      <div><div class="k">터치 미네랄</div><div class="n">45.2만</div></div>
+      <div><div class="k">자동 미네랄</div><div class="n">274.8만</div></div>
+      <div><div class="k">가스</div><div class="n">1.2만</div></div>
+    </div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>3시간 12분 플레이</span><span>320.0만 / 100.0만</span></div></div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="go" style="flex:1.35">환 생</button>
+    <button class="x2" style="flex:1;margin-top:0"><img class="gm" src="/assets/icons/res_gem.webp">×2 <em>150</em></button>
+  </div>
+</div></div></div>
+
+<!-- ⑥ ×2 를 배너로(패키지 유도) -->
+<div class="cell"><div class="cap"><b>⑥ ×2 배너 + 패키지</b><i>젬이 모자라면 패키지로 넘어가는 길까지</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div class="st" style="margin-top:18px"><div class="h">이 번 회 차</div>
+    <div class="g22">
+      <div><div class="k">터치</div><div class="n">1,284회</div></div>
+      <div><div class="k">터치 미네랄</div><div class="n">45.2만</div></div>
+      <div><div class="k">자동 미네랄</div><div class="n">274.8만</div></div>
+      <div><div class="k">가스</div><div class="n">1.2만</div></div>
+    </div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>3시간 12분 플레이</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="x2" style="margin-top:14px;min-height:48px">
+    <img class="gm" src="/assets/icons/res_gem.webp">×2 로 받기 — 배수 <em>5.90</em> · 포인트 <em>+4</em></button>
+  <div class="x2s">젬 150 · 부족하면 <u>환생 팩</u></div>
+  <button class="go" style="margin-top:10px">그냥 환 생</button>
+</div></div></div>
+
+<!-- ⑦ 지표를 접는다 -->
+<div class="cell"><div class="cap"><b>⑦ 지표 접기</b><i>기본은 요약 한 줄. 눌러야 다섯이 펼쳐진다</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body"><div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div style="margin-top:22px;padding:11px 12px;border:1px solid var(--metal-edge);border-radius:var(--r-lg);
+    background:rgba(255,255,255,.035);display:flex;justify-content:space-between;align-items:center">
+    <span style="font-size:12px;color:#9aa5b3">이번 회차 · 3시간 12분 · 터치 1,284회</span>
+    <span style="color:#8f9aa8;font-size:12px">자세히 ▾</span></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>환생 조건</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:16px">환 생</button>
+  <button class="x2"><img class="gm" src="/assets/icons/res_gem.webp">×2 환생 <em>150</em></button>
+</div></div></div>
+
+<!-- ⑧ 지표를 위로(그림 아래 바로) -->
+<div class="cell"><div class="cap"><b>⑧ 지표를 위로</b><i>기록 먼저 보고 → 받을 것 → 버튼. 「돌아보기」 흐름</i></div>
+<div class="ph"><div class="bg"></div><div class="top"><span class="ttl">환생</span><span class="xb">✕</span></div>
+<div class="body">
+  <div class="st" style="margin-top:14px"><div class="h">이 번 회 차</div>
+    <div class="g22">
+      <div><div class="k">터치</div><div class="n">1,284회</div></div>
+      <div><div class="k">터치 미네랄</div><div class="n">45.2만</div></div>
+      <div><div class="k">자동 미네랄</div><div class="n">274.8만</div></div>
+      <div><div class="k">가스</div><div class="n">1.2만</div></div>
+    </div></div>
+  <div class="sp"></div>
+  <div class="hero"><div class="k">획 득 배 수</div><div class="big">2.95</div><div class="now">현재 ×1.00</div></div>
+  <div class="pt"><div class="k">획 득 포 인 트</div><div class="v">+2</div>
+    <div class="fx">재화 <b>1.79</b> × 던전 <b>1.35</b> × 라운드 <b>1.22</b></div></div>
+  <div class="cond"><div class="bar"><i style="width:100%"></i></div>
+    <div class="t"><span>3시간 12분 플레이</span><span>320.0만 / 100.0만</span></div></div>
+  <button class="go" style="margin-top:16px">환 생</button>
+  <button class="x2"><img class="gm" src="/assets/icons/res_gem.webp">×2 환생 <em>150</em></button>
+</div></div></div>
+
+</div>
