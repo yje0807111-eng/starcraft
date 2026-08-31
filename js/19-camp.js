@@ -2339,6 +2339,32 @@ const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 function campRow(f){ return Math.max(0, Math.round(_techRows() * f)); }
 function campRowY(f){ return techY0() + campRow(f) * _techCH(); }
 function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); }
+// ── 💎 광맥 그림 ─────────────────────────────────────────────────────────
+// 여섯 칸에 **서로 다른 그림**을 쓴다. 3D 노드는 6칸이 같은 모델·같은 각도라 격자무늬로 보였다.
+// ⭐ 뒤(윗줄)가 크고 앞(아랫줄)이 작다 — 그래야 한 광맥으로 읽히고 깊이가 생긴다.
+//   `CAMP_MINE_COLS = 3` 이므로 인덱스 0~2 가 윗줄, 3~5 가 아랫줄이다(campLayMinerals 의 배치 순서).
+// ⚠ 그림은 고갈 6단계로 뽑아 뒀지만 **캠프 광맥은 마르지 않는다**(inf) — 지금은 「크기 변주」로만 쓴다.
+//   고갈을 실제로 넣게 되면 campMineStage() 가 잔량으로 단계를 고르게 바꾸면 된다.
+// 지금은 **1번 하나로 여섯 칸을 통일**한다.
+// ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다(캠프 광맥은 마르지 않는다).
+//   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 고르게 바꾼다.
+const CAMP_MINE_SPRITE = ['1','1','1', '1','1','1'];
+// 🪞 오른쪽 열은 좌우를 뒤집는다 — 같은 그림 넷이 나란히 서면 울타리처럼 반복돼 보인다.
+//   뒤집기만 해도 같은 파일로 다른 실루엣이 나온다(에셋을 늘리지 않는다).
+const CAMP_MINE_FLIP = [false, false, true, true, false, false];
+function campMineFlip(i){ return !!CAMP_MINE_FLIP[i % CAMP_MINE_FLIP.length]; }
+function campMineSprite(m, i){
+  if(!_campOn) return '';                                   // ⛔ 관리자 탭·오토배틀은 3D 그대로
+  const k = CAMP_MINE_SPRITE[i % CAMP_MINE_SPRITE.length];
+  return 'assets/props/mineral/stage' + k + '.webp';
+}
+// ⭐ 미네랄 덩어리는 **칸 중심에 점으로** 앉는다(transform: translate(-50%,-50%)).
+//   그래서 시각 중심은 `c0 + (COLS-1)/2` 이지 `c0 + COLS/2` 가 **아니다** — 반 칸 차이다.
+//   ⛔ 가스를 미네랄 「가장자리」 기준으로 놓으면 좌우가 한 칸 어긋난다 — 실측으로 그랬다
+//      (미네랄 중심에서 왼 51px / 오른 64px · 정확히 한 칸 13px).
+//      가스 구역은 **사각형**이라 중심이 `c0 + w/2` 다. 그 두 중심을 맞춘다.
+const CAMP_GAS_GAP = 4;   // 미네랄 시각 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
+function campMineMidCol(){ return campMineCol() + (CAMP_MINE_COLS - 1) / 2; }
 function campLayMinerals(){
   if(typeof G === 'undefined' || !G.tech) return;
   const cw = _techCW(), ch = _techCH();
@@ -2367,9 +2393,11 @@ let _campGasHome = null;
 function campLayGas(){
   if(typeof TECH_GAS === 'undefined') return;
   if(!_campGasHome) _campGasHome = { c0:TECH_GAS.c0, r0:TECH_GAS.r0 };
-  TECH_GAS.c0 = Math.max(0, campMineCol() - TECH_GAS.w - 1);   // 광맥 바로 왼쪽
+  // 🪞 좌우 대칭 — 미네랄 **시각 중심**에서 같은 거리에 놓는다(위 campMineMidCol 설명)
+  const mid = campMineMidCol(), half = TECH_GAS.w / 2;
+  TECH_GAS.c0  = Math.max(0, Math.round(mid - CAMP_GAS_GAP - half));                       // 왼쪽
+  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + CAMP_GAS_GAP - half)); // 오른쪽
   TECH_GAS.r0 = campRow(CAMP_ROW_MINE);                       // 광맥과 **같은 행**
-  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, campMineCol() + CAMP_MINE_COLS + 1);   // 광맥 바로 오른쪽
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -2469,12 +2497,17 @@ function campGas2Built(){
 function campDrawGas2(){
   const host = document.getElementById('cstMain'); if(!host || !_campOn) return;
   let el = document.getElementById('campGas2');
-  if(!el){ el = document.createElement('div'); el.id = 'campGas2';
-    el.innerHTML = '<span class="gzLbl">에너지 광산</span>';   // 왼쪽 구역과 같은 라벨
-    host.appendChild(el); }
-  // 왼쪽이 3D 로 그려지면(.d3) 오른쪽도 같은 클래스를 달아 겉모습을 맞춘다
+  if(!el){ el = document.createElement('div'); el.id = 'campGas2'; host.appendChild(el); }
+  // 🧩 **왼쪽 것을 그대로 복제한다**(CLAUDE.md 「재구현·복사 금지」).
+  //   손으로 라벨만 베껴 뒀더니 왼쪽에만 💨 아이콘이 있고 오른쪽엔 없어 좌우가 달라 보였다.
+  //   ⛔ 여기서 마크업을 다시 쓰지 말 것 — 왼쪽 렌더러가 바뀌면 오른쪽이 저절로 따라와야 한다.
   const left = document.querySelector('#cstMain .bmap .bGasZone');
-  el.className = left ? left.className.replace(/hot/, '').trim() : 'bGasZone';
+  // ⚠ 'hot'(배치 중 강조)만 뺀다. 예전엔 정규식으로 지웠는데 \b 가 **백스페이스 문자로**
+  //   박혀 있어(/\x08hot\x08/) 한 번도 안 맞았다 — 오른쪽이 왼쪽을 따라 같이 강조됐다.
+  el.className = left ? left.className.split(' ').filter(function(c){ return c && c !== 'hot'; }).join(' ')
+                      : 'bGasZone';
+  { const html = left ? left.innerHTML : '<span class="gzLbl">에너지 광산</span>';
+    if(el._campHtml !== html){ el._campHtml = html; el.innerHTML = html; } }
   if(campGas2Built()){ el.style.display = 'none'; el._campSig = null; return; }   // 서명을 비워 다시 나타날 때 갱신되게
   const cw = _techCW(), ch = _techCH();
   const tl = _techW2S(TECH_GRID.x0 + CAMP_GAS2.c0 * cw, techY0() + CAMP_GAS2.r0 * ch);

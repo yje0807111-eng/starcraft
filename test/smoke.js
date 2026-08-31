@@ -1444,17 +1444,36 @@ async function groupLobby(){
       // 격자가 화면 가로를 채운다(양옆 빈 배경이 남지 않는다)
       const gl=_techW2S(TECH_GRID.x0,0.5).x, gr=_techW2S(TECH_GRID.x1,0.5).x;
       assert(gl<0.1&&gr>0.9,'격자가 화면 가로를 못 채운다: '+gl.toFixed(2)+'~'+gr.toFixed(2));
-      // 💎 미네랄·운반물은 renderBuildTab 이 fitW·scl 없이 넣는다 — 캠프가 셀 축소를 얹어야 한다
+      // 💎 **캠프 미네랄은 3D 가 아니라 그림 스프라이트다**(2026-08-31). 3D 노드(res_cn)는 여섯 칸이
+      //   전부 같은 모델·같은 각도라 격자무늬로 보여서, 칸마다 다른 그림(stage1~6)으로 바꿨다.
+      //   ⛔ 캠프에서 3D 미네랄(mn_*)을 다시 넣지 말 것 — 스프라이트와 두 벌로 겹쳐 보인다.
+      //   ⚠ 관리자 건설 탭·오토배틀은 그대로 3D 다(campMineSprite 가 캠프에서만 값을 준다).
       if(window.M3D && typeof M3D.syncBuild==='function'){ let cap=null; const o=_campSyncOrig;
         _campSyncOrig=function(l){ if(!cap) cap=l.slice(); return o.apply(this,arguments); };
         campFrame(performance.now()); _campSyncOrig=o;
-        const mn=(cap||[]).filter(i=>i&&/^mn_/.test(i.uid||''));
-        assert(mn.length&&mn.every(i=>i.scl!=null&&i.scl<0.7),
-          '미네랄 3D 가 셀 축소를 안 따른다 — 광맥이 서로 뭉개져 보인다');
+        assert(!(cap||[]).some(i=>i&&/^mn_/.test(i.uid||'')),
+          '캠프에 3D 미네랄이 다시 들어왔다 — 그림 스프라이트와 두 벌로 겹친다');
         const gz=(cap||[]).filter(i=>i&&/^gz_/.test(i.uid||''));
         assert(gz.length===2&&gz.every(i=>i.fitW>0),
-          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' ')); } }
-    // 🎨 바닥은 사냥터 던전 배경 — ⚠ CSS 변수 안 상대경로는 **쓰는 곳(css/)** 기준으로 풀린다.
+          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' '));
+        // 🎒 운반 청크는 아직 3D 다 — 그쪽은 셀 축소를 따라야 한다(안 따르면 일꾼보다 커진다)
+        const cr=(cap||[]).filter(i=>i&&/^carry_/.test(i.uid||''));
+        assert(cr.every(i=>i.scl!=null&&i.scl<0.999),
+          '운반 청크가 셀 축소를 안 따른다: '+cr.map(i=>i.uid+'='+i.scl).join(' ')); }
+      // 스프라이트가 **셀 크기를 따라간다** — 안 따르면 광맥 여섯이 서로 뭉개져 보인다.
+      // ⚠ 먼저 다시 그린다 — 앞 검사들이 배율을 바꿔 놓아, 화면에 남은 스프라이트는 옛 셀 크기로
+      //   그려진 것이다 — 안 그리고 재면 칸 대비 1.34 를 1.86 으로 읽는다(실측).
+      { if(typeof techMapRender==='function') techMapRender(); }
+      { const sp=[...document.querySelectorAll('.bMineral.spr')].filter(e=>e.getBoundingClientRect().width>0);
+        assert(sp.length,'캠프 광맥이 그림 스프라이트로 안 그려진다(.bMineral.spr 없음)');
+        assert(sp.every(e=>e.querySelector('img.mnSpr')),'스프라이트 칸에 그림이 없다');
+        // 스프라이트는 부모 폭 대비 **%** 로 놓인다 — 같은 % 좌표계에서 재야 배율이 맞는다.
+        const cw=_techCW();
+        const cellPct=(_techW2S(0.5+cw/2,0.5).x-_techW2S(0.5-cw/2,0.5).x)*100;   // 셀 한 칸의 폭(%)
+        const wide=sp.map(e=>parseFloat(e.style.width)/cellPct);
+        // 칸보다 조금 큰 것이 정상이다(결정이 칸 밖으로 자란다). 두 배 넘게 크면 서로 뭉갠다.
+        assert(wide.every(r=>r>0.6&&r<1.8),
+          '광맥 그림이 칸 대비 너무 크거나 작다(셀 축소를 안 따른다): '+wide.map(r=>r.toFixed(2)).join(' ')); } }
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
@@ -7120,6 +7139,57 @@ async function groupLobby(){
     } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });
   // 🏕 종족 전장 그림은 **예열에서 미리 받아야 한다.** 로딩이 걷힌 자리에 종족 판이 오는데,
   //    그림을 그때 처음 받으면 어두운 그라데이션만 보이다 뒤늦게 채워진다 = 검은 깜빡임.
+  // 💎 캠프 광맥은 **그림 스프라이트**다(2026-08-31). 3D 노드는 6칸이 같은 모델·같은 각도라
+  //    격자무늬로 보였다 — 칸마다 다른 그림을 쓴다. ⛔ 관리자 탭·오토배틀은 그대로 3D 다.
+  await step('캠프 광맥: 그림 스프라이트 · 일부는 뒤집어 반복을 지운다', async()=>{
+    skipIf(typeof campMineSprite!=='function' || typeof campState!=='function','캠프 광맥 그림 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      if(!C.race) C.race=CAMP_RACE_ORDER[0];
+      openHome(); await sleep(500);
+      const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr')];
+      skipIf(!sp.length,'광맥이 아직 안 그려졌다');
+      assert(sp.length===(G.tech.minerals||[]).length,'그림 수가 광맥 칸 수와 다르다: '+sp.length);
+      // 지금은 1번 하나로 통일한다 — 반복 느낌은 좌우 뒤집기(CAMP_MINE_FLIP)가 푼다
+      const files=sp.map(e=>e.src.split('/').pop());
+      assert(files.every(f=>f==='stage1.webp'),'1번 외의 그림이 쓰였다: '+files.join(','));
+      const flip=sp.filter(e=>e.classList.contains('flip')).length;
+      assert(flip>0 && flip<sp.length,'좌우 뒤집기가 안 걸렸다 — 같은 그림이 그대로 반복된다 (뒤집힘 '+flip+'/'+sp.length+')');
+      for(const e of sp) assert(e.complete && e.naturalWidth>0,'광맥 그림을 못 불러왔다: '+e.src.split('/').pop());
+      // 그림을 쓰면 3D 노드는 빠져야 한다(두 겹 방지)
+      assert(typeof campIsOn==='function' && campIsOn(),'캠프가 켜져 있지 않다');
+      // 관리자 탭에서는 그림을 쓰지 않는다(3D 그대로)
+      assert(campMineSprite({},0),'캠프인데 그림 경로가 비었다');
+      return files.length+'칸 · 1번 통일 · '+flip+'칸 뒤집음';
+    } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} } });
+  // 🪞 캠프 자원 구역은 **좌우 대칭**이어야 한다(2026-08-27). 실측으로 한 칸(13px) 어긋나 있었다.
+  //    ⛔ 미네랄은 칸 중심에 **점으로** 앉으므로 시각 중심이 `c0+(COLS-1)/2` 다 — 가장자리 기준으로
+  //       놓으면 반드시 어긋난다. 여기서는 **화면 픽셀로** 잰다(계산을 다시 하지 않는다).
+  await step('캠프 자원: 미네랄을 가운데 두고 가스 둘이 좌우 대칭', async()=>{
+    skipIf(typeof campState!=='function' || typeof campLayGas!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      if(!C.race) C.race=CAMP_RACE_ORDER[0];
+      openHome(); await sleep(400);
+      const mid=e=>{ const r=e.getBoundingClientRect(); return r.x+r.width/2; };
+      const gz=[...document.querySelectorAll('#cstMain .bGasZone')];
+      const mn=[...document.querySelectorAll('#cstMain .bMineral')];
+      skipIf(gz.length<2 || !mn.length,'자원 구역이 아직 안 그려졌다');
+      assert(gz.length===2,'가스 구역이 둘이 아니다: '+gz.length);
+      const mL=Math.min(...mn.map(e=>e.getBoundingClientRect().x));
+      const mR=Math.max(...mn.map(e=>e.getBoundingClientRect().right));
+      const mc=(mL+mR)/2, c=gz.map(mid).sort((a,b)=>a-b);
+      const dL=mc-c[0], dR=c[1]-mc;
+      assert(dL>4 && dR>4,'가스가 미네랄에 붙었다: '+dL.toFixed(1)+' / '+dR.toFixed(1));
+      assert(Math.abs(dL-dR)<=1.5,'좌우가 대칭이 아니다: 왼 '+dL.toFixed(1)+'px · 오른 '+dR.toFixed(1)+'px');
+      // 둘은 **같은 부품**이어야 한다 — 오른쪽만 아이콘이 빠져 좌우가 달라 보였다
+      const html=gz.map(e=>e.innerHTML.replace(/\s+/g,''));
+      assert(html[0]===html[1],'두 가스 구역의 내용이 다르다 — 왼쪽 것을 복제해야 한다');
+      assert(gz.every(e=>!e.className.split(' ').includes('hot')),'평소인데 가스 구역이 강조(hot) 상태다');
+      return '좌우 '+dL.toFixed(1)+'px 대칭 · 내용 동일';
+    } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} } });
   await step('예열: 종족 전장 그림을 미리 받아 둔다(종족 판이 검게 뜨지 않게)', async()=>{
     skipIf(typeof warmAll!=='function' || typeof campRaceArt!=='function','예열·종족 그림 없음');
     skipIf(typeof CAMP_RACE_ORDER==='undefined','종족 목록 없음');
