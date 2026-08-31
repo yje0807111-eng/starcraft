@@ -164,7 +164,14 @@ function campDropOpen(){
 function campDropClose(){
   if(!_cdPick) return;
   _cdPick=null; clearTimeout(_cdRndT); _cdRndT=null;
-  const d=document.getElementById('campDrop'); if(d) d.remove();
+  // 🎬 셔터를 되감고 **끝난 뒤에** 지운다. id 를 먼저 떼어, 그동안 다시 열어도
+  //    새 판이 깨끗하게 만들어지게 한다(같은 id 가 둘이 되지 않는다).
+  const d=document.getElementById('campDrop');
+  if(d){ if(_uiReduced()) d.remove();
+         else { d.id=''; d.classList.add('cdOut');
+                const kill=function(){ if(d.parentNode) d.remove(); };
+                d.addEventListener('animationend', kill, { once:true });
+                setTimeout(kill, 400); } }   // 보험 — 애니가 안 돌면 판이 남는다
   const t=document.getElementById('curTitle'); if(t) t.classList.remove('open');
   document.removeEventListener('pointerdown', _cdOutside, true); }
 // 바깥을 누르면 닫힌다. 칩 자신은 토글이 맡으므로 제외한다.

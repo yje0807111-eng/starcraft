@@ -1326,6 +1326,45 @@ async function groupLobby(){
   //   ⛔ 옛 규칙(30초 시간 부활)이 후반 발산의 동력이었다 — 실측(던전 2): 누운 병력이 6 → 34 로
   //     쌓이며 꽂힌 화력이 R9 정점 891 → R24 487 로 **떨어졌고**, 난이도는 계속 올라 R24 가 11.4분.
   //   ⚠ strikeStepUnits 가 죽은 유닛을 배열에서 걷어낸다(18-strike.js:1301) — '남아 있다'고 가정하면 안 된다.
+  // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
+  //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
+  //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)
+  //     ② 닫을 때 **애니가 끝난 뒤에** 지운다(즉시 지우면 사라지는 연출이 없다)
+  //     ③ 닫는 중에 다시 눌러도 열린다 ← **실제로 겪은 버그**. 앞선 닫기의 뒷정리가
+  //        뒤늦게 와서 방금 연 판에 .hide 를 붙였다. 세대(_hbMoreGen)로 막는다.
+  await step('패널 셔터: 던전 이동·더보기가 같은 연출로 열리고 닫힌다', async()=>{
+    skipIf(typeof campDropOpen!=='function'||typeof hbOpenMore!=='function','패널 함수 없음');
+    skipIf(!campChipInfo(),'캠프 밖 — 던전 칩이 없다');
+    const ani=el=>getComputedStyle(el).animationName;
+    // ① 같은 애니
+    campDropOpen(); await sleep(30);
+    const dd=document.getElementById('campDrop');
+    assert(!!dd,'던전 판이 안 열렸다');
+    assert(ani(dd)==='panShutIn','던전 판에 셔터가 안 걸렸다: '+ani(dd));
+    const _ddDur=getComputedStyle(dd).animationDuration;   // 판이 지워지기 전에 담아 둔다
+    campDropClose();
+    // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다
+    assert(!!document.querySelector('.cdDrop'),'던전 판이 애니 없이 즉시 지워졌다');
+    await sleep(420);
+    assert(!document.querySelector('.cdDrop'),'던전 판이 애니 뒤에도 안 지워졌다');
+    // 더보기도 같은 애니여야 한다 — 둘이 다르면 단일 소스가 깨진 것
+    hbOpenMore(); await sleep(30);
+    const bx=document.getElementById('hbMoreBox');
+    assert(!!bx && ani(bx)==='panShutIn','더보기 판에 셔터가 안 걸렸다: '+(bx?ani(bx):'판 없음'));
+    const _dur=getComputedStyle(bx).animationDuration;
+    assert(_dur===_ddDur,'두 판의 연출 길이가 다르다 — 한 곳에서 정해야 한다 ('+_dur+' vs '+_ddDur+')');
+    // ③ 닫는 중에 다시 눌러도 열린다
+    hbCloseMore(); await sleep(50);
+    assert(!hbMoreOn(),'닫는 중인데 아직 열린 것으로 센다 — 다시 누르면 또 닫기가 돈다');
+    hudTopMenu();                                   // 셔터가 되감기는 중에 ☰ 를 다시 눌렀다
+    await sleep(500);                               // 앞선 닫기의 뒷정리가 올 시간을 충분히 준다
+    assert(!document.getElementById('hbMoreSheet').classList.contains('hide'),
+      '닫는 중에 다시 눌렀더니 안 열린다 — 지난 닫기의 뒷정리가 새로 연 판을 덮었다');
+    hbCloseMore(true); await sleep(40);
+    assert(document.getElementById('hbMoreSheet').classList.contains('hide'),'즉시 닫기가 안 먹는다');
+    return '셔터 '+_dur+' · 두 판 같은 애니 · 애니 뒤 제거 · 닫는 중 재클릭 ok';
+  });
+
   await step('캠프: 라운드가 시작될 때 전원 부활 + 체력 회복', async()=>{
     skipIf(typeof campRoundRevive!=='function'||typeof campEnterDungeon!=='function','라운드 부활 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
