@@ -520,13 +520,31 @@ function strikeIsAir(u){ if(!u) return false;
 // 💉 무공격 지원 유닛(HEALER=의무병) — 스스로 표적을 잡지 않고 부상 아군 바이오닉을 따라다니며 치유한다.
 //   치유 대상이 없으면 가장 가까운 전투 아군을 따라 전진해 본대에서 떨어지지 않는다.
 const STK_HEAL_HPS=22, STK_HEAL_RNG=110, STK_HEAL_SEEK=900, STK_HEAL_EN=0.5;   // 초당 회복 · 치유 사거리 · 탐색 반경 · 회복 1당 에너지
+// ⏱ **캠프의 치유는 「3초 치유 → 5초 쉬기」다**(사용자 확정 2026-08-28).
+//   ⭐ 원래는 **마나가 닳을 때까지** 이어지는 방식이었다. 캠프는 마나를 안 보므로
+//     그대로 두면 무한 치유가 된다 — 다른 스킬과 같은 규칙(지속 뒤 쿨)으로 맞춘다.
+//   ⚠ 이 경로는 **의무병 전용**이다(`SKILLS.heal` 은 `_stkApplyAlly` 에서 의무병을 빼고 있다).
+//     둘을 헷갈리지 말 것 — 화면에서 도는 치유는 이쪽이다.
+//   ⚠ 남은 시간을 `u.buff`/`u.skillCd` 에 두지 않는다 — 거기는 `strikeSkillTick` 이
+//     따로 깎아서 **두 번 깎인다**. 여기서만 쓰는 `_healDur`/`_healCd` 로 둔다.
+const STK_HEAL_DUR = 3;      // 🏕 한 번 시작하면 이어지는 시간(초)
+const STK_HEAL_CD  = 5;      // 🏕 지속이 끝난 뒤 쉬는 시간(초)
 function strikeHealStep(u, me, dt){
+  const camp = _stkCampSk();
+  if(camp){                                  // ⏱ 마나가 아니라 쿨로 돈다
+    if((u._healCd||0) > 0) u._healCd = Math.max(0, u._healCd - dt);
+    else if((u._healDur||0) > 0){ u._healDur = Math.max(0, u._healDur - dt);
+      if(u._healDur <= 0) u._healCd = STK_HEAL_CD; } }   // ⛔ 지속이 끝나야 쿨이 돈다
   let t=null, td=Infinity;   // ① 가장 가까운 부상 바이오닉
   for(const a of me.units){ if(a===u || a.dead || a.hp>=a.maxHp || !BIONIC[a.gm||a.id]) continue;
     const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy; if(d2<td){ td=d2; t=a; } }
   if(t && td<=STK_HEAL_SEEK*STK_HEAL_SEEK){
     if(td>STK_HEAL_RNG*STK_HEAL_RNG){ strikeMoveToward(u, t.x, t.y, dt); return; }
     u.moving=false; u.face=Math.atan2(t.x-u.x, t.y-u.y);
+    if(camp){
+      if((u._healCd||0) > 0) return;                            // 쉬는 중 — 곁에 붙어만 있는다
+      if((u._healDur||0) <= 0) u._healDur = STK_HEAL_DUR;       // 새로 시작
+      t.hp = Math.min(t.maxHp, t.hp + STK_HEAL_HPS*dt); return; }
     let amt=STK_HEAL_HPS*dt;
     if(u.maxEn>0){ amt=Math.min(amt, (u.en||0)/STK_HEAL_EN); u.en=Math.max(0,(u.en||0)-amt*STK_HEAL_EN); }   // 에너지 소진 시 치유 중단
     t.hp=Math.min(t.maxHp, t.hp+amt); return; }

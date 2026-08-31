@@ -1684,6 +1684,46 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 💉 의무병 치유 — 「3초 치유 → 5초 쉬기」(사용자 확정 2026-08-28).
+  //   ⚠ 화면에서 도는 치유는 `strikeHealStep`(의무병 전용)이다. `SKILLS.heal` 은
+  //     `_stkApplyAlly` 가 의무병을 빼고 있어 안 탄다 — 둘을 헷갈리지 말 것.
+  await step('캠프 치유: 3초 치유하고 5초 쉰다', async()=>{
+    skipIf(typeof strikeHealStep!=='function'||typeof campEnterDungeon!=='function','치유/캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      campWithStk(()=>{ strikeSpawnUnit('me','medic'); strikeSpawnUnit('me','marine'); });
+      campScaleAllies(CAMPB.me.units);
+      const md=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+      const pt=CAMPB.me.units.find(u=>(u.gm||u.id)==='marine');
+      skipIf(!md||!pt,'의무병·환자를 못 세움');
+      md.x=pt.x; md.y=pt.y; md.en=0;                 // ⛔ 마나 0 — 캠프는 마나를 안 본다
+      pt.hp=1;                                        // 다친 환자
+      // ① 마나가 0인데도 치유가 된다 · 3초가 지나면 멎는다
+      let healed=0, stopAt=-1;
+      for(let i=0;i<200;i++){ const h0=pt.hp; pt.hp=1;   // 매 틱 환자를 도로 1로 — 회복량만 본다
+        campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
+        if(pt.hp>1){ healed++; } else if(healed>0 && stopAt<0){ stopAt=i*0.05; break; }
+        void h0; }
+      assert(healed>0,'마나가 0인데 치유가 아예 안 됐다 — 아직 마나가 문이다');
+      assert(stopAt>0,'3초가 지나도 치유가 안 멎었다 — 무한 치유다');
+      assert(Math.abs(stopAt-STK_HEAL_DUR)<0.4,'치유 지속이 '+STK_HEAL_DUR+'초가 아니다: '+stopAt.toFixed(2));
+      // ② 멎은 뒤에는 쿨이 걸려 있다 — 지속이 끝나야 쿨이 돈다
+      assert((md._healCd||0)>STK_HEAL_CD-0.5,'지속이 끝났는데 쿨이 안 걸렸다: '+(md._healCd||0));
+      // ③ 쿨이 다 돌면 다시 치유한다
+      md._healCd=0; md._healDur=0; pt.hp=1;
+      let again=0;
+      for(let i=0;i<20 && !again;i++){ pt.hp=1;
+        campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
+        if(pt.hp>1) again=1; }
+      assert(again,'쿨이 끝났는데 다시 치유하지 않는다');
+      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초 · 마나 0에서도 돈다';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // ⛽ 연구 값 — 캠프는 **가스만** 받는다(HUNT_R1 §2-3 · §3-4 · 2026-08-27).
   //   ⛔ 미네랄이 다시 붙으면 「비싼 미네랄」로 되돌아간다 — 두 번째 자원을 둔 뜻이 사라진다.
   //   ⚠ 16/17-build.js 는 관리자 탭·오토배틀과 공유다. **캠프 밖은 원본 값 그대로**여야 한다.
