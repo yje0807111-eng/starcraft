@@ -981,7 +981,42 @@ function campDeploy(id, gx, gy){
   u.wait = 0; u.rallied = true;            // ⚠ 집결지로 걸어가지 않는다 — 여기가 이미 제자리다
   u._post = { x:p.x, y:p.y };              // 🪧 자리 — 내가 옮기면 갱신된다(2단계)
   campScaleAllies([u]);                    // ⚔ 설계 능력치 + 🌳 트리 배수 + 👀 인식 거리
+  campLayerPost(u, W);                     // 🪜 사거리가 길수록 뒤에 세운다(아래) — 능력치 뒤라야 rng 을 안다
   return u; }
+
+// 🪜 **사거리가 길수록 뒤에 선다** (2026-08-31 사용자 확정).
+//   ⛔ 교전 이동(campEngageStep)으로 층을 만들려다 **두 번 실패했다** — 앞줄이 멈추면
+//     뒷줄이 갈 곳이 없어서 사거리 안에 드는 아군이 0~33% 로 떨어졌다.
+//   ⭐ 원인은 **자리**였다. 뭉쳐 세운 부대는 앞줄이 서는 순간 뒷줄이 막힌다 —
+//     사거리별로 **애초에 다른 줄에 서 있어야** 층이 유지된다.
+//   ⚠ **생산될 때의 기본 자리만** 손댄다. 플레이어가 직접 옮기면(campMoveSel) 그 자리가 이긴다.
+//   ⚠ 뒤로 미는 것이지 앞으로 당기지 않는다 — 앞줄(근접)은 원래 자리 그대로다.
+//     lane 은 전장 14~86% 라 300px 은 그 폭(3456)의 8.7% 다. 층은 지되 부대가 갈라지진 않는다.
+const CAMP_LAYER_R0 = 100;         // 이 사거리까지는 앞줄(안 민다) — 화력병 70 은 여기
+const CAMP_LAYER_R1 = 420;         // 이 사거리면 최대로 민다 — 공성전차 421 은 여기
+const CAMP_LAYER_MAX = 300;        // 가장 긴 유닛이 앞줄보다 이만큼 뒤에 선다(px)
+function campLayerBack(u){
+  const rng = (u && u.rng) || 0;
+  if(rng <= CAMP_LAYER_R0) return 0;                       // 근접·단거리는 앞줄(안 민다)
+  const t = Math.min(1, (rng - CAMP_LAYER_R0) / Math.max(1, CAMP_LAYER_R1 - CAMP_LAYER_R0));
+  return t * CAMP_LAYER_MAX; }
+function campLayerPost(u, W){
+  if(!u || !u._post) return 0;
+  const back = campLayerBack(u);
+  if(back <= 0) return 0;
+  const lim = W || (CAMPB && CAMPB.world) || 4800;
+  u._post.y = Math.min(lim, u._post.y + back);
+  u.y = u._post.y;                                         // 갓 태어났으니 그 자리에 바로 선다
+  return back; }
+// 🚧 자리에서 나갈 수 있는 거리 — **모두 같다**(CAMP_ENG_OUT).
+//   ⛔ 층에 따라 다르게 줘 봤다가 되돌렸다(2026-08-31). `500 + (300 − 층)` 으로 계산해서
+//     결과적으로 **모두 718~800 으로 늘어났고**, 500 이 최적이라던 실측을 뒤집은 꼴이 됐다.
+//     벤치 D1R18 → **D1R13**, 실효 0.87 → 0.50. 라운드가 R6 115초 · R12 110초로 늘어졌다.
+//   ⭐ 자리 제한은 「너무 멀리 쫓아가지 마라」는 **안전장치**일 뿐이다. 어느 거리에서 쏠지는
+//     campEngageStep 의 `want`(= 사거리 × 0.85)가 이미 정한다 — 거기에 층까지 얹을 이유가 없다.
+//   ⭐ 「짧은 사거리 유닛이 앞으로 나가야 한다」는 **배치(campLayerPost)로 푼다** — 애초에
+//     앞줄에 세우면 500 으로 충분하다. 제한을 늘려 푸는 문제가 아니었다.
+function campEngageOut(u){ return CAMP_ENG_OUT; }
 
 // 전투 유닛 → 기지 유닛과 **같은 규약**의 렌더 엔트리(scl·yoff·yawFix·z 를 맞춘다).
 //   ⚠ _cellK·_zOf 는 renderBuildTab 안의 지역값이라 못 쓴다 — 공개 헬퍼로 똑같이 다시 구한다.
@@ -1443,10 +1478,12 @@ function campEngageStep(dt){
         //     그래서 목표 자리를 **_post 로부터 CAMP_ENG_OUT 안**으로 자른다.
         //   ⚠ 사거리가 안 닿으면 그냥 안 닿는 채로 둔다 — 그것이 「자리를 지킨다」의 뜻이다.
         //     적이 결국 자리 쪽으로 오므로 기다리면 만난다(적은 내 건물을 치러 내려온다).
-        { const home = u._post;
+        //   ⭐ 상한은 **층마다 다르다**(campEngageOut) — 뒤로 밀린 긴 사거리 유닛은 덜 나가고,
+        //     앞줄의 짧은 사거리 유닛은 더 나간다. 그래야 긴 유닛이 앞을 막아도 짧은 유닛이 닿는다.
+        { const home = u._post, lim = campEngageOut(u);
           if(home){ const ox = gx - home.x, oy = gy - home.y, od = Math.hypot(ox, oy);
-            if(od > CAMP_ENG_OUT){ gx = home.x + ox / od * CAMP_ENG_OUT;
-                                   gy = home.y + oy / od * CAMP_ENG_OUT; } } }
+            if(od > lim){ gx = home.x + ox / od * lim;
+                          gy = home.y + oy / od * lim; } } }
         const dx = gx - u.x, dy = gy - u.y;
         if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
         if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고

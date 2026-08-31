@@ -1902,8 +1902,9 @@ async function groupLobby(){
     //   ⚠ 값은 실측으로 골랐다(25분 벤치): 250 은 너무 좁아 적을 못 만나고(D1R3 · 실효 0.28),
     //     무제한은 자리가 무너진다(D1R8). **500 이 D1R9 로 가장 좋았다**(실효 1.0~1.25).
     { const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
-        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > CAMP_ENG_OUT*1.5);
-      assert(!out.length,'자리에서 너무 멀리 나갔다(적을 따라 들어갔다): '+out.length+'기 · 상한 '+CAMP_ENG_OUT); }
+        // ⚠ 상한은 **층마다 다르다**(campEngageOut) — 뒤로 밀린 유닛은 덜, 앞줄은 더 나간다.
+        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > campEngageOut(u)*1.5);
+      assert(!out.length,'자리에서 너무 멀리 나갔다(적을 따라 들어갔다): '+out.length+'기'); }
     // ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
     { const ai=CAMPB.ai.units.filter(u=>!u.dead);
       if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };
