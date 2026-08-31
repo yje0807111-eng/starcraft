@@ -137,24 +137,15 @@ function campPatchRefinery(){
   const b = (t.buildings || []).find(function(x){ return x.gas; }); if(!b) return;
   _campRefHome = { b: b, had: b.research || null };
   b.research = (b.research || []).concat([CAMP_REF_RES]); }
-// 🩸 **스킬의 체력 코스트를 캠프 자릿수로 낮춘다** (2026-08-27).
-//   ⛔ 캠프 설계 체력은 SC 의 약 1/8 이다(레인저 5 vs SC 마린 40). 원본 `hpCost:10` 을 그대로 두면
-//     `strikeSkillTick` 의 `u.hp <= sk.hpCost*2` 가 **늘 참**이라 광폭화가 영영 안 나간다
-//     (실측 2026-08-27: 16분 동안 strikeSkillTick 5,139회 · 시전 0회).
-//   ⚠ `SKILLS` 는 관리자 탭·오토배틀과 **공유**다 — 캠프에서만 바꾸고 나갈 때 되돌린다.
-//   ⚠ 지금 hpCost 를 쓰는 스킬은 광폭화 하나뿐이지만, 표를 훑어 **전부** 바꾼다(새로 생겨도 따라온다).
-const CAMP_SK_HP_K = 0.125;      // 캠프 체력 ÷ SC 체력 (설계표 레인저 5 ÷ SC 마린 40)
-let _campSkHome = null;
-function campPatchSkillCost(){
-  if(_campSkHome || typeof SKILLS === 'undefined') return;
-  _campSkHome = [];
-  for(const k in SKILLS){ const sk = SKILLS[k];
-    if(sk && sk.hpCost > 0){ _campSkHome.push([sk, sk.hpCost]);
-      sk.hpCost = Math.max(0.1, sk.hpCost * CAMP_SK_HP_K); } } }
-function campRestoreSkillCost(){
-  if(!_campSkHome) return;
-  for(const pair of _campSkHome) pair[0].hpCost = pair[1];
-  _campSkHome = null; }
+// ⏱ **캠프의 스킬 비용은 쿨타임 하나다** (2026-08-28 사용자 확정).
+//   ⭐ 캠프는 방치형 자동 전투다 — 누가 마나를 보고 있지 않다. 그래서 **마나·체력 소모를
+//     전부 무시하고 쿨타임 하나로** 판단한다. 「쿨이 돌면 쓴다」가 규칙의 전부다.
+//   ⛔ **`SKILLS` 표를 고쳐서 하지 말 것.** 처음엔 캠프 진입 때 마나·체력을 0 으로 덮고
+//     나갈 때 되돌렸는데, 그 사이에 오토배틀이 돌면 **마나 없이 스킬을 난사한다.**
+//     스모크 「오토배틀: 마법 유닛이 스킬을 알아서 쓴다」가 바로 잡아냈다.
+//     ⭐ 표를 건드리지 않고 **판정하는 쪽(`js/18-strike.js`)에 캠프 문을 단다** —
+//       `S.camp` 를 보는 한 줄짜리 문이라 새는 길이 없다(`strikeCheckOver` 와 같은 방식).
+//   → 실제 값은 `strikeSkillCost` · `strikeSkillCd` · `strikeSkillHpCost` 세 함수가 낸다.
 function campRestoreRefinery(){
   if(!_campRefHome) return;
   const h = _campRefHome; _campRefHome = null;
@@ -2486,7 +2477,6 @@ function campHideView(){
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
-  campRestoreSkillCost();                                         // 🩸 스킬 체력 코스트 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
@@ -2531,7 +2521,6 @@ function campEnter(){
   //   ⛔ campPatchRefinery·CAMP_REF_RES 는 지우지 않았다 — 되살릴 땐 이 줄을 되돌린다(유보 규칙).
   //   campPatchRefinery();
   campPatchResearch();                                 // 🔬 연구 구역이 시트를 쓸 차례를 가로챈다
-  campPatchSkillCost();                                // 🩸 스킬 체력 코스트를 캠프 자릿수로
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,

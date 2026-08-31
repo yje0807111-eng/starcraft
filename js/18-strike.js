@@ -434,7 +434,21 @@ const STK_SKILL_OFF={ recall:1, hallucination:1, nuke:1 };
 const STK_EN_REGEN=1/1.2;   // 원본 SC 마나 재생(1.2초당 1)
 function strikeSkillKeys(u){ if(typeof unitSkillKeys!=='function') return [];
   return unitSkillKeys({id:u.id, gmodel:u.gm||u.id}).filter(k=>!STK_SKILL_OFF[k] && (typeof SKILLS!=='undefined') && SKILLS[k]); }
-function strikeSkillCost(sk){ return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.energy)||0); }   // 오토배틀 = 원본 SC 마나(enSc)
+// ⏱ **캠프 전장은 스킬 비용이 쿨타임 하나다**(HUNT_R1 §3-4-3 · 2026-08-28 확정).
+//   ⭐ 캠프는 방치형 자동 전투라 누가 마나를 보고 있지 않다 — 마나·체력을 **무시**하고
+//     「쿨이 돌면 쓴다」로 판단한다. 오토배틀은 그대로 원본 SC 마나를 쓴다.
+//   ⛔ `SKILLS` 표를 캠프에서 덮어쓰는 방식으로 되돌리지 말 것 — 표는 관리자 탭·오토배틀과
+//     **공유**라, 캠프에 들어갔다 나오기 전에 오토배틀이 돌면 **마나 없이 난사**한다.
+//     여기서 `S.camp` 를 보는 것이 새는 길이 없는 유일한 방법이다(`strikeCheckOver` 와 같은 방식).
+const STK_SK_CD_DEF = 5;   // 🏕 캠프에서 쿨이 없는 스킬의 기본 쿨(초) — 없으면 판정 주기(0.4초)마다 계속 나간다
+function _stkCampSk(){ return !!(typeof STK !== 'undefined' && STK && STK.camp); }
+function strikeSkillCost(sk){ if(_stkCampSk()) return 0;
+  return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.energy)||0); }   // 오토배틀 = 원본 SC 마나(enSc)
+function strikeSkillHpCost(sk){ return _stkCampSk() ? 0 : ((sk && sk.hpCost) || 0); }
+function strikeSkillCd(sk, dflt){ const c = (sk && sk.cd) || 0;
+  if(c > 0) return c;
+  return _stkCampSk() ? STK_SK_CD_DEF : (dflt || 0); }
+function strikeSkillDrain(sk){ return _stkCampSk() ? 0 : ((sk && sk.drain) || 0); }
 function strikeSkillAtkMul(u){ let m=1; const b=u.buff||{}, on=u.skillOn||{};
   if(b.stim>0) m*=(SKILLS.stim.atkMul||1); if(on.siege) m*=(SKILLS.siege.atkMul||1); return m; }
 function strikeRngMul(u){ return (u.skillOn&&u.skillOn.siege)?(SKILLS.siege.rngMul||1):1; }
@@ -673,13 +687,13 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
         if((u.skillCd&&u.skillCd[k]>0)) continue;
         if(sk.kind==='self'){          // 광폭화 — 교전 시작 시 on
           if(!inFight || (u.buff&&u.buff[k]>0)) continue;
-          if(sk.hpCost && u.hp<=sk.hpCost*2) continue;
-          u.buff[k]=sk.dur||5; if(sk.hpCost) u.hp-=sk.hpCost;
-          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||0; }
+          { const _hc=strikeSkillHpCost(sk); if(_hc && u.hp<=_hc*2) continue;
+            u.buff[k]=sk.dur||5; if(_hc) u.hp-=_hc; }
+          if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,0); }
         else if(sk.kind==='toggle'){   // 공성 모드 — 사거리 안에 적이 있으면 on, 없으면 off
           const want=!!(nearFoe && nd<=Math.pow(u.rng*(sk.rngMul||1),2));
           if(!!u.skillOn[k]===want) continue;
-          u.skillOn[k]=want; u.skillCd[k]=sk.cd||1; }
+          u.skillOn[k]=want; u.skillCd[k]=(sk.cd||1); }
         else if(sk.kind==='aura'){ u.skillOn[k]=true; }   // 은신 장막 — 상시
         // ⭐ **대상을 고르는 스킬** (HUNT_R1 §3-4-2, 2026-08-27)
         //   ⚠ 예전에는 self/toggle/aura 만 처리했다. 그래서 마법 유닛 대부분이 **에너지만 채운 채 서 있었다.**
@@ -689,13 +703,13 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
         //     아무 일도 안 일어나는 것이 아무것도 안 하는 것보다 나쁘다. 목록은 STK_SK_DEAD.
         else if(sk.kind==='target_unit'){ const t=_stkPickAlly(u, me, sk, k); if(!t) continue;
           if(!_stkApplyAlly(u, t, sk, k, dt)) continue;
-          if(cost>0) u.en-=cost; if(sk.cd) u.skillCd[k]=sk.cd; }
+          if(cost>0) u.en-=cost; { const _cd=strikeSkillCd(sk,0); if(_cd) u.skillCd[k]=_cd; } }
         else if(sk.kind==='target_enemy'){ const t=_stkPickFoe(u, foe, sk); if(!t) continue;
           if(!_stkApplyFoe(u, t, sk, k)) continue;
-          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||1; }
+          if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,1); }
         else if(sk.kind==='target_ground'){ const c=_stkPickSpot(u, foe, sk); if(!c) continue;
           if(!_stkApplySpot(u, c, sk, k, foe)) continue;
-          if(cost>0) u.en-=cost; u.skillCd[k]=sk.cd||1; }
+          if(cost>0) u.en-=cost; u.skillCd[k]=strikeSkillCd(sk,1); }
       } } } }
 // ── 🔮 자동 시전 ────────────────────────────────────────────────────────
 // ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬.** 둔화·기절·실명·은신은 이동/사격 코드가 읽는 값이 없고,
@@ -761,7 +775,7 @@ function _stkApplyAlly(u, t, sk, key, dt){
   if(sk.hps){ if(HEALER[u.gm||u.id]) return false;   // 💉 의무병은 strikeHealStep 이 이미 치유한다(두 번 걸지 않는다)
     if((t.hp||0)>=(t.maxHp||0)) return false;
     t.hp=Math.min(t.maxHp||t.hp, (t.hp||0)+sk.hps*dt);
-    if(sk.drain) u.en=Math.max(0,(u.en||0)-sk.drain*dt);
+    { const _dr=strikeSkillDrain(sk); if(_dr) u.en=Math.max(0,(u.en||0)-_dr*dt); }
     return true; }
   if(sk.absorb){ if((t.sh||0)>0) return false;       // 🛡 보호막 — 실드로 얹는다(strikeHit 이 실드를 먼저 깎는다)
     t.sh=sk.absorb; t.maxSh=Math.max(t.maxSh||0, sk.absorb); return true; }

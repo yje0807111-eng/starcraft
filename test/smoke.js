@@ -1726,6 +1726,7 @@ async function groupLobby(){
       { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
         assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),
           '캠프를 나갔는데 정제소 카드가 남아 있다 — 관리자 탭이 터진다'); }
+
       openHome(); await sleep(420);
       assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
       // ⛽ 정제소는 이제 **건물 카드가 아니라 연구 구역**에 있다 — 캠프 안팎에서 붙었다 떨어지지 않는다.
@@ -1770,10 +1771,37 @@ async function groupLobby(){
       for(let i=0;i<600 && !on;i++){ campCombatStep(0.05);
         for(const x of CAMPB.me.units){ if(x.buff && (x.buff.stim||0)>0){ on=1; break; } } }
       assert(on,'30초를 싸웠는데 스팀팩이 한 번도 안 걸렸다 — 캠프에서 스킬이 안 나간다');
-      // ③ 체력 코스트가 캠프 자릿수여야 한다 — 원본(10)이면 체력 5 짜리가 영영 못 쓴다
-      assert(SKILLS.stim.hpCost*2 < u0.maxHp,
-        '광폭화 체력값이 캠프 체력보다 크다 — 조건에 늘 걸린다: hpCost '+SKILLS.stim.hpCost+' vs hp '+u0.maxHp);
-      return '스팀팩 자동 시전 ok · hpCost '+SKILLS.stim.hpCost+' vs 체력 '+u0.maxHp;
+      // ③ ⏱ **캠프의 스킬 비용은 쿨타임 하나다**(2026-08-28 확정).
+      //    ⛔ 마나·체력이 하나라도 남아 있으면 「왜 안 나가지」를 셋 중 어디서 막혔는지
+      //      매번 다시 찾아야 한다 — 실제로 그렇게 두 번 헛돌았다.
+      //    ⛔ **SKILLS 표를 덮어쓰는 방식으로 되돌리지 말 것** — 표는 오토배틀과 공유라
+      //      캠프에서 나오기 전에 오토배틀이 돌면 마나 없이 난사한다(실제로 그렇게 깨졌다).
+      //      값은 strikeSkillCost/Cd/HpCost 가 S.camp 를 보고 낸다.
+      { const bad=[];
+        campWithStk(()=>{ for(const k in SKILLS){ const sk=SKILLS[k]; if(!sk) continue;
+          if(strikeSkillCost(sk)>0) bad.push(k+' 마나 '+strikeSkillCost(sk));
+          if(strikeSkillHpCost(sk)>0) bad.push(k+' 체력 '+strikeSkillHpCost(sk));
+          if(strikeSkillDrain(sk)>0) bad.push(k+' 소모 '+strikeSkillDrain(sk));
+          // 쿨이 없으면 판정 주기(0.4초)마다 계속 나간다 — 상시형·토글은 예외
+          if(sk.kind!=='aura' && sk.kind!=='toggle' && !(strikeSkillCd(sk,0)>0)) bad.push(k+' 쿨 없음'); } });
+        assert(!bad.length,'캠프인데 쿨타임 말고 다른 비용이 남아 있다: '+bad.slice(0,5).join(' · '));
+        // ⛔ 그리고 표 자체는 **안 건드려져 있어야** 한다(오토배틀이 같은 표를 본다)
+        assert((SKILLS.psi_storm||{}).energy>0,'SKILLS 표의 마나가 0 이 됐다 — 오토배틀이 오염된다');
+        assert((SKILLS.stim||{}).hpCost>0,'SKILLS 표의 체력 코스트가 0 이 됐다'); }
+      // ④ 시전 조건이 실제로 **쿨**이다 — 마나를 0 으로 만들어도 나간다
+      //    ⚠ 광폭화(self)는 **교전 중**에만 켠다. ②에서 적이 다 죽었을 수 있으니
+      //      안 죽는 적을 하나 세워 두고 잰다 — 안 그러면 「마나 탓」으로 오독한다.
+      { campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','marine'); strikeSpawnUnit('ai','marine'); });
+        campScaleAllies(CAMPB.me.units);
+        const u=CAMPB.me.units[0], e=CAMPB.ai.units[0];
+        skipIf(!u||!e,'대결 유닛을 못 세움');
+        e.x=u.x; e.y=u.y+20; e.hp=e.maxHp=1e6; e.dmg=0;   // 안 죽고 안 때리는 표적
+        u.en=0; u.buff.stim=0; u.skillCd.stim=0;
+        let on2=0; for(let i=0;i<200 && !on2;i++){ campCombatStep(0.05);
+          if((u.buff.stim||0)>0) on2=1; }
+        assert(on2,'마나가 0 인데 스킬이 안 나갔다 — 아직 마나가 문이다'); }
+      return '스팀팩 자동 시전 ok · 비용은 쿨 '+SKILLS.stim.cd+'초 하나';
     } finally { if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
@@ -1834,10 +1862,12 @@ async function groupLobby(){
     // ① 💥 집중포(드레드노트) — 사거리 안 **체력이 가장 높은 적**을 때린다
     { const s=setup('dreadnought', ['tank','tank']);
       if(s && s.foes.length===2){ s.foes[0].hp=s.foes[0].maxHp=900; s.foes[1].hp=s.foes[1].maxHp=300;
-        const en0=s.u.en; campWithStk(()=>strikeSkillTick(0.5));
+        campWithStk(()=>strikeSkillTick(0.5));
         assert(s.foes[0].hp<900,'집중포가 안 나갔다 — 체력 1위 적이 멀쩡하다');
         assert(s.foes[1].hp===300,'체력 낮은 쪽을 때렸다 — 대상 선택이 틀렸다');
-        assert(s.u.en<en0,'마나를 안 썼다 — 시전 판정이 헛돌았다');
+        // ⏱ 여기는 **캠프 전장**이다(campWithStk) — 비용은 마나가 아니라 쿨타임 하나다.
+        //   ⛔ 마나가 줄었는지로 재지 말 것: 캠프에서는 안 줄어드는 것이 정상이다.
+        assert((s.u.skillCd&&s.u.skillCd.yamato>0),'쿨이 안 걸렸다 — 시전 판정이 헛돌았다: '+JSON.stringify(s.u.skillCd));
         out.push('집중포 -'+Math.round(900-s.foes[0].hp)); } }
     // ② ⚡ 번개 폭풍(하이템플러) — **적이 3기 이상 뭉쳤을 때만**. 2기면 안 쓴다.
     { const s2=setup('high_templar', ['machinegun','machinegun']);   // ⚠ marine 은 스스로 광폭화하며 체력을 깎는다 — 광역과 헷갈리므로 스킬 없는 유닛으로 잰다
@@ -1862,8 +1892,10 @@ async function groupLobby(){
         out.push('보호막 '+Math.round(a.sh)); } }
     // ④ ⛔ 엔진에 걸 곳이 없는 스킬은 **마나를 태우지 않는다**(고스트 봉쇄·핵)
     { const s=setup('ghost', ['tank','tank','tank']);
-      if(s){ const en0=s.u.en; campWithStk(()=>strikeSkillTick(0.5));
-        assert(s.u.en===en0,'미구현 스킬(봉쇄·핵)에 마나를 썼다 — 헛시전');
+      if(s){ campWithStk(()=>strikeSkillTick(0.5));
+        // ⏱ 캠프 전장이라 마나가 아니라 **쿨이 안 걸려야** 헛시전이 아니다
+        const cd=s.u.skillCd||{};
+        assert(!(cd.lockdown>0) && !(cd.nuke>0),'미구현 스킬(봉쇄·핵)에 쿨이 걸렸다 — 헛시전');
         out.push('미구현 무시 ok'); } }
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null; });
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
