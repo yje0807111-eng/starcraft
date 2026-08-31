@@ -2337,7 +2337,7 @@ function campEnter(){
   campPatchZoom();
   const got = campSettleAway();                        // ⑤ 자리 비운 동안 번 것
   if(got > 0 && typeof toast === 'function') toast('💠 자리를 비운 동안 미네랄 ' + got);
-  _campT0 = Date.now(); _campC0 = G.tech.credit || 0;  // 수급 속도 측정 시작점
+  _campT0 = Date.now(); _campC0 = G.tech.credit || 0; _campE0 = G.tech.energy || 0;  // 수급 속도 측정 시작점
   // ⚠ **격자 크기(_techRows)는 맵 요소의 실제 크기에 달렸다.** 맵이 최종 크기가 되기 전에
   //   재면 다른 값이 나온다. 맵 크기를 정하는 것이 둘이다:
   //     ① campShowView()  — #vBuild 를 HOME 안으로 옮긴다(실측 30행 → 35행)
@@ -2360,11 +2360,16 @@ function campEnter(){
   campAutoSave(true);
 }
 // 이번 체류에서 **실제로 번 것**을 재 둔다 — 자리 비움 정산이 이 속도를 쓴다.
-let _campT0 = 0, _campC0 = 0;
+let _campT0 = 0, _campC0 = 0, _campE0 = 0;
 function campNoteStay(){
   if(!_campT0 || typeof G === 'undefined' || !G.tech) return;
   const secs = (Date.now() - _campT0) / 1000, gained = (G.tech.credit || 0) - _campC0;
   if(secs >= 5 && gained > 0) campNoteRate(gained, secs);   // 5초 미만은 표본이 안 된다
+  // ⛽ 가스도 같은 방식으로 잰다 — 상점의 「n시간치 가스」가 이 값을 쓴다.
+  //   ⚠ 미네랄과 **따로** 재야 한다. CAMP_GAS_RATE(환산비)로 미루어 짐작하면
+  //     정제소를 안 지었을 때도 가스가 나오는 것처럼 보인다.
+  { const gg = (G.tech.energy || 0) - _campE0;
+    if(secs >= 5 && gg > 0) campNoteRate(gg, secs, 'gas'); }
   _campT0 = 0;
 }
 // ⚠ **캠프가 켜져 있을 때만 저장한다.** showAppScreen() 이 화면을 옮길 때마다 이걸 부르는데,
@@ -3009,11 +3014,32 @@ function campMineRender(){
 //   대신 **화면 안에서 실제로 번 속도**를 재 두고(campNoteRate), 자리를 비운 동안 그 속도로 채운다.
 const CAMP_AWAY_CAP_S = 8 * 3600;   // 정산 상한 8시간 — 무한정 쌓이면 접속할 이유가 사라진다
 const CAMP_AWAY_EFF = 0.5;          // 자리 비움 효율 — 보고 있을 때보다 덜 번다(들어올 이유를 남긴다)
-function campNoteRate(gained, secs){
+function campNoteRate(gained, secs, kind){
   const C = campState(); if(!C || !(secs > 0)) return;
+  const k = (kind === 'gas') ? 'rateGas' : 'rate';
   const r = gained / secs;
-  C.rate = (C.rate > 0) ? (C.rate * 0.7 + r * 0.3) : r;   // EMA — 한 판의 운에 휘둘리지 않게
+  C[k] = (C[k] > 0) ? (C[k] * 0.7 + r * 0.3) : r;   // EMA — 한 판의 운에 휘둘리지 않게
 }
+
+// ── 💠 「n 시간치」 — 상점이 파는 단위 ───────────────────────────────────
+// ⭐ **고정 숫자를 팔지 않는다**(2026-08-31 사용자 확정). 회차가 돌면 수입이 몇 배씩 뛰어
+//   「미네랄 5만」 같은 값이 곧 무의미해진다. 대신 **지금 내 수입의 30분치·24시간치**를 판다.
+// ⭐ 속도는 **이미 재고 있던 것을 그대로 쓴다**(campNoteRate) — 자리 비움 정산이 쓰는 그 값이다.
+//   ⛔ "일꾼 n기 × 초당 k" 같은 식을 새로 만들지 말 것. 두 벌이 되면 반드시 어긋난다.
+// ⚠ 캠프에 5초 이상 머문 적이 없으면 0 이다 — 그때는 팔지 않는다(화면이 안내한다).
+function campRateOf(kind){ const C = campState(); if(!C) return 0;
+  const v = (kind === 'gas') ? C.rateGas : C.rate;
+  return (v > 0) ? v : 0; }
+// 보기 좋게 — **유효숫자 두 자리**로 반올림한다(1,234,567 → 1,200,000 → 「120.0만」).
+//   딱 떨어지는 수가 아니면 「이만큼 준다」가 눈에 안 들어온다.
+function campRoundNice(n){
+  n = Math.floor(n || 0); if(n <= 0) return 0;
+  if(n < 100) return n;
+  const d = Math.pow(10, Math.floor(Math.log10(n)) - 1);
+  return Math.round(n / d) * d; }
+// secs 초치 = 지금 속도 × secs, 보기 좋게 반올림한 값
+function campTimeAmt(secs, kind){ const r = campRateOf(kind);
+  return (r > 0) ? campRoundNice(r * secs) : 0; }
 function campSettleAway(){
   const C = campState(); if(!C || !C.leftAt || !(C.rate > 0)) return 0;
   const secs = Math.min(CAMP_AWAY_CAP_S, Math.max(0, (Date.now() - C.leftAt) / 1000));

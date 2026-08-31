@@ -1352,7 +1352,26 @@ async function groupLobby(){
       assert(Math.round(w1-w0)===1234,'캠프 지갑에 안 들어갔다 ('+Math.round(w1-w0)+')');
       assert(Math.abs((p.pcoin||0)-pc0)<0.5,'옛 프로필 지갑(pcoin)이 같이 움직였다 — 지갑이 섞였다');
       if(live) G.tech.credit=w0; else C.credit=w0;
-      // ③ 상점은 **두 칸**이다(옛 다섯 칸은 캠프에 안 닿아 화면에서 뺐다)
+      // ③ 젬 상점은 **고정 숫자가 아니라 「n 시간치」를 판다.**
+    //    ⭐ 회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 무의미해진다.
+    //    ⚠ 속도는 **이미 재고 있던 것**(camp.rate · 자리 비움 정산이 쓰는 값)을 그대로 쓴다.
+    //       ⛔ "일꾼 n기 × 초당 k" 같은 식을 새로 만들면 두 벌이 되어 어긋난다.
+    if(typeof campTimeAmt==='function'){
+      const C2=campState(), r0=C2.rate, rg0=C2.rateGas;
+      try{
+        C2.rate=0; assert(campTimeAmt(1800,'min')===0,'수입을 못 쟀는데 값이 나온다 — 팔면 안 된다');
+        C2.rate=397;                                   // 실측 규모(60분 143만 = 초당 397)
+        const half=campTimeAmt(1800,'min'), day=campTimeAmt(86400,'min');
+        assert(half>0 && day>half,'시간이 길수록 많아야 한다: 30분 '+half+' · 24시간 '+day);
+        // 시간에 비례한다(반올림 오차 5% 안)
+        assert(Math.abs(day/half - 48) < 48*0.05,'24시간치가 30분치의 48배가 아니다: '+(day/half).toFixed(1));
+        // **반올림**: 유효숫자 두 자리 — 뒤가 0 으로 떨어져야 「이만큼 준다」가 읽힌다
+        const raw=Math.floor(397*86400);
+        assert(day!==raw,'반올림을 안 했다(원본 그대로): '+day);
+        assert(String(day).slice(2).split('').every(c=>c==='0'),'유효숫자 두 자리가 아니다: '+day);
+      } finally { C2.rate=r0; C2.rateGas=rg0; }
+    }
+    // ④ 상점은 **두 칸**이다(옛 다섯 칸은 캠프에 안 닿아 화면에서 뺐다)
       assert(typeof SHOP_SECS!=='undefined','SHOP_SECS 없음');
       const secs=Object.keys(SHOP_SECS);
       assert(secs.length===2 && secs.indexOf('reco')>=0 && secs.indexOf('gem')>=0,

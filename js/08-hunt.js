@@ -2978,26 +2978,41 @@ function _shopSoonHTML(t){ return '<div class="shopPanel"><div class="shopHead">
 //    화면에서만 뺐다(GEM.md §5 「⑤ 를 지우지 말 것」). 펫·장비·동료가 되살아나면 함께 살아난다.
 
 // 💎 젬으로 사는 것 — **캠프 지갑**으로 들어간다(campAddRes 가 유일한 입구).
-// ⚠ 값은 초안이다. 실측(60분 143만 · 1탭 282)에 견주면 규모가 안 맞을 수 있다.
-//   ⭐ **시간 기반이 더 맞을 수 있다**(「지금 수입의 30분치」) — 회차가 돌며 절대값이
-//     무의미해지기 때문이다. C.rate(실측 수급속도)가 이미 있으니 그때 갈아 끼운다.
+// ⭐ **고정 숫자를 팔지 않는다**(2026-08-31 사용자 확정). 파는 단위는 「지금 내 수입의 n 시간치」다.
+//   회차가 돌면 수입이 몇 배씩 뛰어 「미네랄 5만」 같은 값은 곧 아무 의미가 없어진다.
+//   양은 campTimeAmt(초, 종류) 가 **실측 속도에서 계산하고 유효숫자 두 자리로 반올림**한다.
+// ⚠ 캠프에 5초 이상 머문 적이 없으면 속도가 0 이라 팔지 않는다 — 화면이 그 이유를 말한다.
 const SHOP_GEM_BUY=[
-  {id:'min1', nm:'미네랄', gem:15,  min:50000},
-  {id:'min2', nm:'미네랄', gem:60,  min:250000},
-  {id:'min3', nm:'미네랄', gem:220, min:1200000},
-  {id:'gas1', nm:'가스',   gem:25,  gas:3000},
-  {id:'gas2', nm:'가스',   gem:90,  gas:15000},
-  {id:'boost',nm:'부스터', soon:true, desc:'시간제 강화 — 시스템이 아직 없습니다'},
+  {id:'min30', nm:'미네랄', kind:'min', secs:1800,  gem:15},
+  {id:'min4h', nm:'미네랄', kind:'min', secs:14400, gem:60},
+  {id:'min24', nm:'미네랄', kind:'min', secs:86400, gem:220},
+  {id:'gas4h', nm:'가스',   kind:'gas', secs:14400, gem:25},
+  {id:'gas24', nm:'가스',   kind:'gas', secs:86400, gem:90},
+  {id:'boost', nm:'부스터', soon:true, desc:'시간제 강화 — 시스템이 아직 없습니다'},
 ];
+// 「30분치」 · 「24시간치」 — 사람이 읽는 이름
+// ⚠ 24시간을 「1일치」로 줄이지 않는다(사용자 표현이 「24시간치」다) — 30분·4시간과
+//   **같은 단위**로 읽혀야 셋이 한 줄에서 비교된다.
+function shopSpanName(secs){
+  return secs < 3600 ? Math.round(secs/60)+'분치' : Math.round(secs/3600)+'시간치'; }
+function shopGemAmt(d){
+  if(d.soon || typeof campTimeAmt!=='function') return 0;
+  return campTimeAmt(d.secs, d.kind==='gas'?'gas':'min'); }
+// 표기 — campNum 은 늘 소수 한 자리를 붙이는데(「1300.0만」), 여기 값은 이미
+// **유효숫자 두 자리로 반올림된 것**이라 소수점이 거짓 정밀도로 보인다. 「.0」만 뗀다.
+// ⛔ campNum 자체를 고치지 않는다 — 게임 전역 표기라 다른 화면이 함께 바뀐다.
+function shopAmtTx(n){
+  const t=(typeof campNum==='function') ? campNum(n) : Math.floor(n).toLocaleString('en-US');
+  return t.split('.0만').join('만').split('.0억').join('억'); }
 function shopBuyGemRes(id){
   const d=SHOP_GEM_BUY.find(x=>x.id===id); if(!d||d.soon) return;
+  const amt=shopGemAmt(d);
+  if(!(amt>0)){ showTownToast('캠프에서 잠시 벌어야 수입이 잡힙니다'); return; }
   if(profGem()<d.gem){ showTownToast('💎 젬이 부족합니다'); return; }
-  if(typeof campAddRes!=='function'){ showTownToast('캠프를 한 번 열어 주세요'); return; }
   const p=PROF(); p.gem=(p.gem||0)-d.gem;
-  campAddRes(d.min||0, d.gas||0);
+  campAddRes(d.kind==='gas'?0:amt, d.kind==='gas'?amt:0);
   if(typeof playSfx==='function') playSfx('hero_merge');
-  renderShop(); showTownToast('💠 '+d.nm+' 지급 완료');
-}
+  renderShop(); showTownToast('💠 '+d.nm+' '+shopAmtTx(amt)+' 지급'); }
 function shopBuyPack(id){
   const d=(typeof campPackDef==='function')?campPackDef(id):null; if(!d) return;
   if(d.soon){ showTownToast('준비 중입니다'); return; }
@@ -3024,12 +3039,17 @@ function _shopGemShopHTML(){
   let h=_shopGemHTML();   // 충전 줄은 기존 것을 그대로 쓴다(단일 소스)
   h+='<div class="shopPanel"><div class="shopHead">젬으로 구매<em>캠프 재화</em></div><div class="shopBody">';
   h+='<div class="shopNote">구매한 재화는 <b>캠프 지갑</b>으로 들어갑니다</div>';
+  // ⚠ 속도가 0 이면(캠프에 머문 적이 없다) 팔 수 없다 — **왜인지**를 한 줄로 말한다.
+  const noRate=(typeof campRateOf==='function') && !(campRateOf('min')>0);
+  if(noRate) h+='<div class="shopNote">캠프에서 잠시 벌면 <b>지금 수입</b>이 잡히고 값이 나옵니다</div>';
   for(const d of SHOP_GEM_BUY){
-    const can=!d.soon && profGem()>=d.gem;
-    const amt=d.soon?'':(d.min? d.min.toLocaleString('en-US')+' 미네랄'
-                                 : d.gas.toLocaleString('en-US')+' 가스');
-    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+d.nm+'</div>'
-      +'<div class="twRowSub'+(can?'':' lock')+'">'+(d.desc||amt)+'</div></div>'
+    const amt=shopGemAmt(d);
+    const can=!d.soon && amt>0 && profGem()>=d.gem;
+    const nm=d.soon? d.nm : (d.nm+' '+shopSpanName(d.secs));
+    const sub=d.soon? d.desc
+      : (amt>0 ? ('약 '+shopAmtTx(amt)+' — 지금 수입 기준') : '수입을 아직 못 쟀습니다');
+    h+='<div class="shopRow"><div class="twRowInfo"><div class="twRowName">'+nm+'</div>'
+      +'<div class="twRowSub'+(can?'':' lock')+'">'+sub+'</div></div>'
       +'<button class="twBtn" onclick="shopBuyGemRes(&#39;'+d.id+'&#39;)"'+(can?'':' disabled')+'>'
       +(d.soon?'준비 중':(resIco('gem','gi')+' '+d.gem))+'</button></div>';
   }
