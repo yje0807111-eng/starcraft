@@ -1875,48 +1875,50 @@ async function groupLobby(){
     return '정원 4 · 자리 고정 · 피해 전가 · 무너지면 나갔다 복구되면 다시 탄다';
   });
 
-  // ⚔ **싸울 때는 빈자리를 찾아 파고든다** (2026-08-30 사용자 확정)
-  //    ⛔ 예전에는 표적이 있으면 strike 기본 이동에 맡겨서, 앞줄만 닿고 뒷줄은 겹침 회피에
-  //      밀려 뒤로만 갔다. 실측: 공격 가능 13기 중 **사거리 안이 2기**(실효 0.15).
-  //    ⭐ 고친 뒤 같은 조건에서 **0.83**. 근접은 둘러싸고, 원거리는 사거리 끝에 부채꼴로 선다.
-  await step('캠프: 싸울 때 빈자리를 찾아 파고든다 (근접=둘러싸기 · 원거리=부채꼴)', async()=>{
+  // ⚔ **전투는 오토배틀이 맡는다 — 캠프는 손을 뗀다** (2026-08-31 사용자 확정)
+  //    ⛔ 예전에는 campEngageStep 이 매 프레임 「빈자리를 찾아 파고들게」 했다. 사거리 안에
+  //      드는 비율은 높았지만(60~100%), 오토배틀 이동을 되돌리고 다시 미느라 **덜덜 떨렸다** —
+  //      실측 방향 뒤집힘 **29.9회/유닛** vs 순수 오토배틀 **0.9회**(33배).
+  //    ⭐ 지금은 다가가 싸우는 것을 오토배틀에 맡기고, 캠프는 **자리 복귀만** 한다.
+  //      대가로 사거리 안 비율이 20~40% 로 떨어진다(뭉치면 앞줄만 닿는다) — 알고 받는 값이다.
+  //    ⚠ 그래서 이 step 은 **비율을 재지 않는다.** 대신 「캠프가 전투에 안 끼어든다」를 지킨다.
+  await step('캠프: 자리 잡기는 가끔만 민다 (매 프레임이면 떨린다)', async()=>{
     skipIf(typeof campEngageStep!=='function'||typeof campDeploy!=='function','파고들기 없음');
+    // ⛔ **매 프레임 밀면 안 된다** — 오토배틀 이동을 되돌리고 다시 미느라 덜덜 떨린다
+    //   (실측: 방향 뒤집힘 29.9회/유닛 vs 순수 오토배틀 0.9회).
+    // ⛔ 그렇다고 0 이어도 안 된다 — 뭉친 부대에서 앞줄만 닿아 화력이 반토막 난다
+    //   (35분 벤치: D1R18 → D1R11 · 실효 0.87 → 0.55).
+    // ⭐ 그래서 **실제로 민 횟수**를 본다(함수 호출 횟수가 아니다 — 안에서 유닛별로 간격을 둔다).
+    { campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      const N=6; for(let i=0;i<N;i++) campDeploy('marine', 0.36+i*0.03, 0.46);
+      CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+      let pushed=0; const F=40;                       // 40프레임 = 2초
+      for(let i=0;i<F;i++){ campCombatStep(0.05); pushed+=campEngageStep(0.05); }
+      const perUnit=pushed/N;
+      // 2초 · 간격 CAMP_ENG_TICK 이면 유닛당 대략 2/TICK 회. 매 프레임이면 40회가 된다.
+      assert(perUnit < F*0.5,
+        '자리 잡기를 너무 자주 민다: 유닛당 '+perUnit.toFixed(1)+'회/2초 (매 프레임이면 '+F+'회) — 떨린다'); }
     campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
     skipIf(!CAMPB,'전장이 안 열림');
-    const rate=()=>{ const me=CAMPB.me.units.filter(u=>!u.dead), ai=CAMPB.ai.units.filter(u=>!u.dead);
-      let a=0,r=0; for(const u of me){ if((u.dmg||0)<=0) continue; a++;
-        let best=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<best) best=d; }
-        if(best<=u.rng) r++; }
-      return a?r/a:0; };
-    // ⚠ **한 번만 재면 난수에 걸린다** (2026-08-31). 같은 코드가 45% 와 100% 를 오갔다 —
-    //   적 구성·스킬에 난수가 있어 판마다 크게 흔들린다. 브라우저 8회 실측: 50~100% (중앙값 63%).
-    //   ⭐ 그래서 **3회 재서 중앙값**으로 판정한다. 계약을 느슨하게 하는 게 아니라 자[尺]를 안정시킨다.
-    const runs=[];
-    for(let k=0;k<3;k++){
-      campWipeField();
-      // 뭉쳐 세운다 — 고치기 전이라면 뒷줄이 그대로 밀려 사거리 밖에 남는다
-      for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
-      for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
-      CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
-      for(let i=0;i<500;i++) campCombatStep(0.05);    // 25초 — 붙고 자리잡을 시간
-      runs.push(rate()); }
-    runs.sort((a,b)=>a-b);
-    const got=runs[1];                                 // 중앙값
-    assert(got>=0.5,'싸우는데 사거리 안에 든 아군이 너무 적다(3회 중앙값): '
-      +(got*100).toFixed(0)+'% (기대 50%↑) · 3회 '+runs.map(x=>(x*100).toFixed(0)+'%').join('/'));
+    // ⭐ 비율은 안 잰다(위 주석 참고). 대신 부대를 세워 두고 아래 검사들을 잇는다.
+    campWipeField();
+    for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
+    for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
+    CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+    for(let i=0;i<500;i++) campCombatStep(0.05);
     // 마지막 판을 그대로 두고 아래 검사를 잇는다
     for(let i=0;i<8;i++) campDeploy('marine', 0.34+(i%4)*0.03, 0.44+Math.floor(i/4)*0.03);
     for(let i=0;i<4;i++) campDeploy('machinegun', 0.34+(i%4)*0.03, 0.52);
     for(let i=0;i<200;i++) campCombatStep(0.05);
-    // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정 · 실측으로 500 확정)
-    //   ⛔ 그냥 두면 적을 따라 들어가 자리가 무너지고 전선이 계속 움직인다 —
-    //     그러면 벙커·포탑 같은 **고정 방어가 아무 뜻이 없어진다.**
-    //   ⚠ 값은 실측으로 골랐다(25분 벤치): 250 은 너무 좁아 적을 못 만나고(D1R3 · 실효 0.28),
-    //     무제한은 자리가 무너진다(D1R8). **500 이 D1R9 로 가장 좋았다**(실효 1.0~1.25).
+    // 🚧 **자리에서 멀리 나가지 않는다** — 이제 지키는 것은 **목줄(CAMP_LEASH)** 하나다.
+    //   ⛔ 예전에는 campEngageStep 이 목표를 잘라 제한했는데, 전투를 오토배틀에 넘기면서
+    //     그 장치가 사라졌다. 그대로 두니 유닛이 적을 따라 **750** 까지 나갔다(이 계약이 잡았다).
+    //   ⭐ 그래서 목줄을 1300 → 600 으로 조였다. 목줄은 위치를 **직접 자르므로** 초과분이 없다.
     { const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
-        // ⚠ 상한은 **층마다 다르다**(campEngageOut) — 뒤로 밀린 유닛은 덜, 앞줄은 더 나간다.
-        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > campEngageOut(u)*1.5);
-      assert(!out.length,'자리에서 너무 멀리 나갔다(적을 따라 들어갔다): '+out.length+'기'); }
+        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > CAMP_LEASH*1.05);
+      assert(!out.length,'자리에서 목줄(' +CAMP_LEASH+ ')보다 멀리 나갔다: '+out.length+'기'); }
     // ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
     { const ai=CAMPB.ai.units.filter(u=>!u.dead);
       if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };
@@ -1934,7 +1936,7 @@ async function groupLobby(){
     campWipeField();
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
     campBattleClose();
-    return '사거리 안 '+(got*100).toFixed(0)+'% · 근접이 더 가까이 · 표적 없으면 멈춘다';
+    return '자리 잡기 간격 '+CAMP_ENG_TICK+'초 · 목줄 '+CAMP_LEASH+' · 근접이 더 가까이 · 표적 없으면 멈춘다';
   });
 
   // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
@@ -1970,7 +1972,11 @@ async function groupLobby(){
       //   유닛이 제자리에 붙박여 있었다. 스모크가 가짜 표적을 써서 못 잡았다.
       if(foe) foe.dead=true;
       campWithStk(()=>{ STK.ai.units.length=0; });
+      // ⏳ **바로는 안 돌아온다** — 전투가 CAMP_RETURN_DELAY(0.8초) 동안 없어야 복귀를 건다
+      //   (2026-08-31 · 적이 곧 다시 붙는데 매번 되돌아가면 왔다 갔다 한다).
       campPostSnap(); campPostStep(0.05);
+      assert(a.x===bx && a.y===by,'전투가 끝나자마자 곧바로 복귀했다 — 지연('+CAMP_RETURN_DELAY+'초)이 없다');
+      for(let k=0;k<24;k++){ campPostSnap(); campPostStep(0.05); }   // 1.2초 — 지연을 넘긴다
       assert(a.x!==bx || a.y!==by,'적이 죽었는데 표적 번호 때문에 안 돌아온다');
       a.tgtUid=null; }
     // ③ 겹침 회피 — 같은 자리를 준 둘이 포개지지 않는다

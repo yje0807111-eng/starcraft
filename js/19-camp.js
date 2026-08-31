@@ -1288,6 +1288,25 @@ function campAlertApply(){
 function campPostSnap(){
   if(!CAMPB || !CAMPB.me) return;
   for(const u of CAMPB.me.units){ if(u.dead) continue; u._sx = u.x; u._sy = u.y; } }
+// 🏠 **자리 복귀 — 「한 번만 명령한다」** (2026-08-31 사용자 확정).
+//   ⛔ 예전에는 **매 프레임** 복귀를 다시 밀었다. 그러면 오토배틀 이동과 매 순간 싸운다:
+//     ① strikeStepUnits 가 적 쪽으로 한 걸음 옮긴다
+//     ② 캠프가 그걸 되돌린다(u.x = u._sx)
+//     ③ 캠프가 자기 목표로 다시 민다
+//     운전대를 둘이 잡고 반대로 돌리는 꼴이라 **덜덜 떨린다.**
+//   ⭐ 실측(2026-08-31 · 마린 10기 30초): 방향 뒤집힘이
+//     **순수 오토배틀 0.9회/유닛** vs **캠프 덧씌우기 29.9회** — **33배**다.
+//     떨림은 오토배틀 탓이 아니라 전적으로 이 덧씌우기 탓이었다.
+//   ⭐ 그래서 규칙을 바꾼다(사용자 설계):
+//     · 전투 중에는 **손을 뗀다** — 오토배틀이 알아서 다가가 싸운다.
+//     · 적과의 전투가 **CAMP_RETURN_DELAY 초** 동안 없으면 그때 복귀를 건다.
+//     · 복귀 명령은 **CAMP_RETURN_TICK 마다 한 번**이다(매 프레임이 아니다).
+//   ⚠ 오토배틀은 `u.rallied=false` 인 동안에도 **사거리 안에 적이 있으면 그대로 교전한다**
+//     (18-strike.js:1336~ `_eng` 분기) — 되돌아가다 적을 만나면 자연스럽게 싸운다.
+//     다만 집결지는 strikeRallyPoint(side) 가 정하고 **side 만 받아 유닛별 값을 못 준다.**
+//     그래서 자리까지의 이동은 캠프가 밀되 **한 번만** 민다.
+const CAMP_RETURN_DELAY = 0.8;     // 전투가 이만큼 없으면 자리로 돌아간다
+const CAMP_RETURN_TICK = 0.5;      // 복귀 명령을 다시 거는 최소 간격(길 막힘 대비 · 매 프레임 금지)
 function campPostStep(dt){
   if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
   const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
@@ -1297,16 +1316,21 @@ function campPostStep(dt){
       if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
       // ⚔ 싸우는 중이면 복귀보다 전투가 먼저다.
       // ⛔ **표적 번호가 있다는 것만으로 판단하지 말 것.** 적이 죽어도 u.tgtUid 는 그대로 남는다 —
-      //   그러면 「싸우는 중」으로 오해해 **영영 자리로 안 돌아온다**(브라우저 실측 2026-08-28:
-      //   적을 다 없앤 뒤 20초를 굴려도 거리가 97·282 그대로였다). 살아 있는지까지 본다.
-      if(u.tgtUid && strikeFindUnit(CAMPB.ai.units, u.tgtUid)) continue;
+      //   그러면 「싸우는 중」으로 오해해 **영영 자리로 안 돌아온다**(브라우저 실측 2026-08-28).
+      if(u.tgtUid && strikeFindUnit(CAMPB.ai.units, u.tgtUid)){
+        u._idleT = 0; u._homeT = 0; continue; }    // 전투 중 — 시계를 되감고 손을 뗀다
+      // ⏳ 전투가 없어진 지 얼마나 됐나 — 바로 돌아가지 않는다(적이 곧 다시 붙을 수 있다)
+      u._idleT = (u._idleT || 0) + dt;
+      if(u._idleT < CAMP_RETURN_DELAY) continue;
       const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
-      if(dx * dx + dy * dy <= R2){ u.moving = false; continue; }   // 이미 자리
-      if(u._sx != null){ u.x = u._sx; u.y = u._sy; }               // 집결지로 간 이동을 무르고
+      if(dx * dx + dy * dy <= R2){ u.moving = false; u._homeT = 0; continue; }   // 이미 자리
+      // ⭐ **한 번만 민다.** CAMP_RETURN_TICK 안에 또 걸지 않는다 — 그것이 떨림의 원인이었다.
+      u._homeT = (u._homeT || 0) - dt;
+      if(u._homeT > 0) continue;
+      u._homeT = CAMP_RETURN_TICK;
       // ⭐ **복귀는 빠르게**(2026-08-30 사용자 확정) — 싸우러 나갔다 오는 길이라 굼뜨면
-      //   다음 무리가 올 때까지 자리를 못 잡는다. 속도 상수를 건드리지 않고 dt 를 키운다
-      //   (이동 로직은 공용이라 손대지 않는다 — campLeash 와 같은 원칙).
-      strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K); n++; }     // 회피를 타는 이동으로 다시 민다
+      //   다음 무리가 올 때까지 자리를 못 잡는다. 속도 상수를 건드리지 않고 dt 를 키운다.
+      strikeMoveToward(u, p.x, p.y, CAMP_RETURN_TICK * CAMP_RETURN_K); n++; }
     if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
   });
   return n; }
@@ -1440,7 +1464,11 @@ const CAMP_ENG_ARC = Math.PI * 0.75;   // 원거리 부채꼴의 최대 폭(라�
 //     · 「뒤로는 안 간다」 → 앞줄이 멈춰 뒷줄이 막혔다(사거리 안 33%)
 //     · 「목표를 안쪽으로 당긴다」(0.60) → 적이 조금만 와도 물러나 **더** 뒤집혔다(40.5회)
 //   ⭐ 넓히면 그 안에서는 아예 안 움직인다 — 적이 다가와도 사거리 안이면 가만히 쏜다.
-const CAMP_ENG_OK = 90;           // 목표 자리에 이만큼 붙으면 다 온 것으로 본다(떨림 방지)
+const CAMP_ENG_OK = 90;
+// ⏱ **파고들기를 거는 간격(초)** — 매 프레임이 아니다.
+//   ⭐ 매 프레임이면 오토배틀 이동과 싸워 떨리고, 아예 끄면 앞줄만 닿아 화력이 반토막 난다.
+//     그 사이를 이 값이 정한다: 작을수록 캠프가 자주 끼어들고, 클수록 오토배틀에 맡긴다.
+const CAMP_ENG_TICK = 0.4;
 // 🚧 **자리에서 나갈 수 있는 최대 거리**(px). 이 값이 「전선이 얼마나 움직이나」를 정한다.
 //   ⭐ 작을수록 제자리 방어에 가깝고(고정 방어가 뜻을 갖는다), 클수록 적을 따라 들어간다.
 //   ⚠ 목줄(CAMP_LEASH 1300)과 다른 것이다 — 목줄은 「끌려간 뒤 잘라내는」 안전장치이고
@@ -1511,8 +1539,24 @@ function campEngageStep(dt){
                           gy = home.y + oy / od * lim; } } }
         const dx = gx - u.x, dy = gy - u.y;
         if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
+        // ⏱ **가끔만 민다** (2026-08-31 사용자 설계 — 「한 번만 걸어놓으면 되는 것 아닐까」).
+        //   ⛔ 매 프레임 밀면 오토배틀 이동과 매 순간 싸워 **덜덜 떨린다**
+        //     (실측: 방향 뒤집힘 29.9회/유닛 vs 순수 오토배틀 0.9회).
+        //   ⛔ 그렇다고 아예 끄면 **뭉친 부대에서 앞줄만 닿아** 화력이 반토막 난다
+        //     (실측 35분 벤치: D1R18 → **D1R11** · 실효 0.87 → 0.55).
+        //   ⭐ 그래서 **간격을 둔다.** 그 사이에는 오토배틀이 자유롭게 움직이고,
+        //     캠프는 CAMP_ENG_TICK 마다 한 번 「저기로 가라」고 일러 준다.
+        u._engT = (u._engT || 0) - dt;
+        if(u._engT > 0) continue;
+        u._engT = CAMP_ENG_TICK;
+        // ⚠ **되돌리기(u.x = u._sx)가 떨림의 원인은 아니다** — 빼고 재봤더니 26.5회로 같았다
+        //   (되돌릴 때 26.1). 오히려 이동이 두 번 얹혀 사거리 안이 57% 로 떨어진 판이 있었다.
+        //   ⭐ 떨림의 정체는 **캠프가 미는 방향과 오토배틀이 미는 방향이 다른 것**이다:
+        //     오토배틀은 적에게 직진하고, 캠프는 적 주위 부채꼴 자리(옆)로 민다.
+        //     간격을 벌려도(0.4초) 26.1회로 거의 안 줄었다 — 아예 끄면 7.7회다.
+        //   ⛔ 즉 **떨림과 화력은 맞바꿈이다.** 자리를 잡아주면 화력이 오르고 떨린다.
         if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고
-        strikeMoveToward(u, gx, gy, dt); n++; } }
+        strikeMoveToward(u, gx, gy, CAMP_ENG_TICK); n++; } }
     if(n && typeof strikeSeparate === 'function') strikeSeparate();
   });
   return n; }
@@ -1843,7 +1887,13 @@ const CAMP_ACQ_ALERT = 1500;       // 전파받았을 때 보는 거리
 const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
-const CAMP_LEASH = 1300;           // **자기 자리**에서 이보다 멀리는 못 나간다
+// 🪢 **자기 자리에서 이보다 멀리는 못 나간다** — 이제 이것이 **자리 제한의 유일한 장치**다.
+//   ⛔ 예전에는 campEngageStep 이 목표를 CAMP_ENG_OUT(500) 안으로 잘라 제한했다. 전투를
+//     오토배틀에 넘기면서 그 장치가 사라졌고, 유닛이 적을 따라 **750 까지** 나갔다(스모크가 잡았다).
+//   ⭐ 그래서 옛 500 과 비슷한 수준으로 조인다. 목줄은 「최후의 선」이라 조금 여유를 둔다.
+//   ⚠ 목줄은 위치를 **직접 자른다**(순간이동). 그래서 경계에 붙어 있으면 툭툭 끊겨 보인다 —
+//     값을 더 줄일 때는 그 점을 함께 볼 것.
+const CAMP_LEASH = 600;
 const CAMP_POST_R = 45;            // 자리 도착 판정 반경 — 이 안이면 다 온 것으로 본다
 const CAMP_RETURN_K = 1.8;         // 복귀 속도 배수(자리로 돌아올 때만) — 「빠르게 되돌아온다」
 const CAMP_ROUND_GAP_S = 4;        // 라운드·던전 사이 숨 고르기(초) — 자리로 걸어 돌아올 시간
@@ -1894,7 +1944,10 @@ function campCombatStep(dt){
   campWithStk(() => { if(typeof strikeStepUnits === 'function') strikeStepUnits(dt); CAMPB.t += dt; });
   campBldAmp(_bb);      // 💥 적이 건물에 넣은 만큼을 ×CAMP_FOE_BLD_MUL 로 키운다
   campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
-  campEngageStep(dt);   // ⚔ 싸우는 유닛은 **빈자리를 찾아 파고든다**(근접=둘러싸기 · 원거리=부채꼴)
+  // ⚔ 싸우는 유닛의 자리 잡기 — **CAMP_ENG_TICK 마다 한 번만** 민다(매 프레임이 아니다).
+  //   ⛔ 매 프레임이면 오토배틀 이동과 싸워 떨렸고(29.9회/유닛), 아예 끄면 앞줄만 닿아
+  //     화력이 반토막 났다(D1R18 → D1R11). 간격을 두는 것이 그 사이다.
+  campEngageStep(dt);
   campPostStep(dt);     // 🪧 싸울 일이 없는 유닛은 자기 자리로 (회피를 타고 빠르게 돌아온다)
   campBunkerStep(dt);   // 🧱 벙커에 탄 유닛은 그 자리에 붙들고, 맞은 만큼을 벙커가 대신 받는다
   campLeash();          // 🪢 자기 자리에서 너무 멀리 나간 아군을 끌어당긴다
