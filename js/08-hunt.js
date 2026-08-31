@@ -2195,21 +2195,31 @@ function warmAll(onStep){
   if(_warmDone) return Promise.resolve(0);
   if(_warmRun) return _warmRun;
   _warmRun=(async()=>{
-    for(let i=0;i<200 && !(window.M3D&&M3D.ready&&M3D.ready()); i++) await new Promise(r=>setTimeout(r,50));
-    if(!(window.M3D&&M3D.ready&&M3D.ready())){ _warmDone=true; return 0; }   // 3D가 없으면 데울 것도 없다
-    try{ hbBgImg((typeof hbHunt==='function' && hbHunt().dg)||1); }catch(e){}   // 배경 그림도 미리 받아 둔다
-    // 🏕 **종족 전장 그림도 미리 받는다.** 로딩이 걷힌 자리에 종족 판이 오는데, 그림을 그때
-    //    처음 받으면 어두운 그라데이션(.crPrev)만 보이다가 뒤늦게 채워진다 — 그것이
-    //    「검게 한 번 깜빡인다」의 정체였다(2026-08-27).
+    // 🖼 **그림 미리 받기는 3D 와 무관하다 — 3D 대기보다 먼저 한다.**
+    //    ⛔ 이걸 아래 3D 대기 뒤에 두지 말 것. 3D 가 없는 기기·환경에서는 그 앞의 early return 에
+    //       걸려 **그림을 한 장도 안 받는다** — 정작 3D 가 없을수록 종족 판이 검게 뜬다.
+    //       (헤드리스에서 실제로 그랬다: M3D 자체가 없어 예열이 통째로 건너뛰어졌다.)
+    // 🏕 로딩이 걷힌 자리에 종족 판이 오는데, 그림을 그때 처음 받으면 어두운 그라데이션(.crPrev)만
+    //    보이다가 뒤늦게 채워진다 — 그것이 「검게 한 번 깜빡인다」의 정체였다(2026-08-27).
     // ⛔ 캠프 바닥 그림(camp.webp)은 여기서 미리 디코드하지 **않는다** — 넣어 봤다가 뺐다(2026-08-27).
-//    종족 선택 화면에 닿는 시점이면 그 그림은 **이미 로드·디코드가 끝나 있다**(실측 decode 0.2ms).
-//    미리 해 봐야 캠프 첫 프레임은 그대로였다: 안 함 255~262ms / 미리 함 256~259ms — 차이 없음.
-//    (페이지를 막 연 직후라면 47ms 가 나오지만, 그 상태로 캠프에 들어가는 경로가 없다.)
-try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function')
+    //    종족 선택 화면에 닿는 시점이면 그 그림은 **이미 로드·디코드가 끝나 있다**(실측 decode 0.2ms).
+    //    미리 해 봐야 캠프 첫 프레임은 그대로였다: 안 함 255~262ms / 미리 함 256~259ms — 차이 없음.
+    // ⚠ **받을 때까지 기다린다.** src 만 걸고 지나가면 예열이 끝난 뒤에도 아직 오는 중이라
+    //    종족 판이 여전히 검게 떴다 채워진다(실측: 세 장 중 한둘이 미완).
+    //    ⛔ 그렇다고 무한정 기다리지 말 것 — 한 장이 실패하면 부팅이 멎는다. 3초로 끊는다.
+    try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function'){
+      const _ims=[];
       for(const _rk of CAMP_RACE_ORDER){
-        const _a=new Image(); _a.src=campRaceArt(_rk);
-        if(typeof campRaceIcon === 'function'){ const _i=new Image(); _i.src=campRaceIcon(_rk); } }
-    }catch(e){}
+        const _a=new Image(); _a.src=campRaceArt(_rk); _ims.push(_a);
+        if(typeof campRaceIcon === 'function'){ const _i=new Image(); _i.src=campRaceIcon(_rk); _ims.push(_i); } }
+      await Promise.race([
+        Promise.all(_ims.map(function(im){ return im.complete ? null
+          : new Promise(function(r){ im.addEventListener('load',r,{once:true}); im.addEventListener('error',r,{once:true}); }); })),
+        new Promise(function(r){ setTimeout(r,3000); })]);
+    } }catch(e){}
+    for(let i=0;i<200 && !(window.M3D&&M3D.ready&&M3D.ready()); i++) await new Promise(r=>setTimeout(r,50));
+    if(!(window.M3D&&M3D.ready&&M3D.ready())){ _warmDone=true; return 0; }   // 3D가 없으면 **모델은** 데울 것도 없다
+    try{ hbBgImg((typeof hbHunt==='function' && hbHunt().dg)||1); }catch(e){}   // 배경 그림도 미리 받아 둔다
     const ids=warmIds(); let n=0;
     for(const id of ids){
       await new Promise(r=>requestAnimationFrame(()=>r()));
