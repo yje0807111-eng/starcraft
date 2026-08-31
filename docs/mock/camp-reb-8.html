@@ -1,0 +1,265 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 화면 8안</title>
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  --font-num:'Rajdhani','IBM Plex Sans KR','Apple SD Gothic Neo',sans-serif;
+  --cy:#5cd6ff; --gold:#ffd24a; --dim:#8a94a6; --mute:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 60px;background:#08090c;color:#ececec;font-family:var(--font-ko)}
+h1{margin:0 0 6px;font-size:19px}
+.lead{margin:0 0 14px;font-size:12.5px;color:var(--dim);line-height:1.7;max-width:1100px}
+.lead b{color:#ececec}
+.grid{display:grid;grid-template-columns:repeat(4,392px);gap:14px}
+@media(max-width:1650px){.grid{grid-template-columns:repeat(2,392px)}}
+.cell{border:1px solid #22252c;border-radius:8px;overflow:hidden;background:#0b0c10}
+.cap{padding:9px 11px 8px;border-bottom:1px solid #1b1e24;background:#0e1015}
+.cap b{display:block;font-size:12.5px}
+.cap i{display:block;margin-top:3px;font-style:normal;font-size:11px;color:var(--dim);line-height:1.5}
+/* 폰 = 실제 뷰포트와 같은 390×760 */
+.ph{width:390px;height:760px;position:relative;overflow:hidden;
+  background:radial-gradient(130% 95% at 50% 34%,#0d121a,#05080c);
+  font-family:var(--font-ko);display:flex;flex-direction:column}
+.top{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:44px 16px 6px}
+.top .t{flex:1;font-family:var(--font-ti,var(--font-ko));font-size:21px;font-weight:800;color:#fff}
+.top .x{color:#8b95a3;font-size:13px;font-weight:700}
+.body{flex:1;min-height:0;padding:0 18px 20px;display:flex;flex-direction:column}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.sp{flex:1}
+/* 공용 주 버튼 */
+.go{display:block;width:100%;min-height:50px;border:none;cursor:pointer;
+  font-family:inherit;font-size:16px;font-weight:800;color:#fff}
+.tree{display:block;width:100%;margin-top:12px;border:none;background:none;color:#8b95a3;
+  font-family:inherit;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:4px}
+
+/* ══ ① 지금 것(비교용) — 판 없음 · 가운데 ══ */
+.v1 .body{text-align:center}
+.v1 .meta{font-size:11.5px;color:#7d8794;padding:0 0 14px}
+.v1 .b{position:relative;padding:14px 0 15px}
+.v1 .b+.b::before{content:'';position:absolute;left:50%;top:0;width:56px;height:1px;transform:translateX(-50%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+.v1 .l{font-family:var(--font-num);font-size:10.5px;color:#7f8b99;letter-spacing:.34em;margin-bottom:6px}
+.v1 .v{font-family:var(--font-num);font-size:26px;font-weight:800;color:#8e99a8}
+.v1 .v em{font-style:normal;color:#fff}
+.v1 .go{margin-top:20px;background:none;border:1px solid rgba(92,214,255,.5);letter-spacing:.28em;position:relative}
+.v1 .go::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(92,214,255,.9),transparent);box-shadow:0 0 5px rgba(92,214,255,.3)}
+
+/* ══ ② 큰 배수 히어로 — 받는 것 하나를 크게 ══ */
+.v2 .body{text-align:center;padding-top:6px}
+.v2 .hero{padding:26px 0 6px}
+.v2 .hero .cap2{font-size:11.5px;color:#7f8b99;letter-spacing:.2em}
+.v2 .hero .big{font-family:var(--font-num);font-size:62px;font-weight:800;line-height:1;color:#fff;
+  text-shadow:0 0 24px rgba(92,214,255,.35)}
+.v2 .hero .big small{font-size:26px;color:var(--cy)}
+.v2 .hero .from{font-family:var(--font-num);font-size:14px;color:var(--mute);margin-top:4px}
+.v2 .kv{display:flex;gap:8px;margin-top:18px}
+.v2 .kv div{flex:1;padding:11px 8px;background:rgba(255,255,255,.045);border-radius:10px}
+.v2 .kv .k{font-size:10.5px;color:#7f8b99;letter-spacing:.12em}
+.v2 .kv .n{font-family:var(--font-num);font-size:19px;font-weight:800;color:#fff;margin-top:3px}
+.v2 .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.09);margin-top:20px;overflow:hidden}
+.v2 .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#2aa8d8,var(--cy))}
+.v2 .bt{font-family:var(--font-num);font-size:11.5px;color:var(--mute);margin-top:7px}
+.v2 .go{margin-top:auto;border-radius:12px;background:linear-gradient(180deg,#41c8f5,#1789bd);
+  box-shadow:0 6px 18px -6px rgba(65,200,245,.7)}
+
+/* ══ ③ 카드 두 장 — 지금 / 환생 뒤 ══ */
+.v3 .body{padding-top:8px}
+.v3 .row{display:flex;gap:10px;align-items:stretch}
+.v3 .c{flex:1;padding:14px 12px;border-radius:12px;background:rgba(255,255,255,.04);text-align:center}
+.v3 .c.next{background:linear-gradient(180deg,rgba(92,214,255,.14),rgba(92,214,255,.05));
+  outline:1px solid rgba(92,214,255,.4)}
+.v3 .c .k{font-size:10.5px;color:#7f8b99;letter-spacing:.14em}
+.v3 .c .n{font-family:var(--font-num);font-size:30px;font-weight:800;color:#e8eef7;margin-top:5px}
+.v3 .c.next .n{color:#fff}
+.v3 .arw{align-self:center;color:var(--cy);font-size:20px}
+.v3 .li{display:flex;justify-content:space-between;align-items:baseline;padding:13px 2px;
+  border-bottom:1px solid rgba(255,255,255,.07)}
+.v3 .li span{font-size:12.5px;color:var(--dim)}
+.v3 .li b{font-family:var(--font-num);font-size:17px;color:#fff}
+.v3 .go{margin-top:auto;border-radius:12px;background:linear-gradient(180deg,#41c8f5,#1789bd)}
+
+/* ══ ④ 게이지 원형 — 조건이 주인공 ══ */
+.v4 .body{text-align:center;padding-top:10px}
+.v4 .ring{width:186px;height:186px;margin:12px auto 0;border-radius:50%;position:relative;
+  background:conic-gradient(var(--cy) 0turn .82turn,rgba(255,255,255,.07) .82turn 1turn)}
+.v4 .ring::after{content:'';position:absolute;inset:11px;border-radius:50%;background:#0a0e14}
+.v4 .ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;z-index:1}
+.v4 .ring .p{font-family:var(--font-num);font-size:38px;font-weight:800;color:#fff;line-height:1}
+.v4 .ring .s{font-size:11px;color:#7f8b99;margin-top:4px;letter-spacing:.1em}
+.v4 .kv{display:flex;gap:8px;margin-top:22px}
+.v4 .kv div{flex:1;padding:11px 6px}
+.v4 .kv .k{font-size:10.5px;color:#7f8b99;letter-spacing:.12em}
+.v4 .kv .n{font-family:var(--font-num);font-size:21px;font-weight:800;color:#fff;margin-top:3px}
+.v4 .kv .n em{font-style:normal;color:var(--cy)}
+.v4 .go{margin-top:auto;border-radius:999px;background:linear-gradient(180deg,#41c8f5,#1789bd)}
+
+/* ══ ⑤ 영수증형 — 왼쪽 라벨 · 오른쪽 값 ══ */
+.v5 .body{padding-top:10px}
+.v5 .sec{font-family:var(--font-num);font-size:10.5px;color:#6f7a88;letter-spacing:.3em;
+  padding:14px 2px 6px}
+.v5 .li{display:flex;justify-content:space-between;align-items:baseline;padding:11px 2px;
+  border-bottom:1px solid rgba(255,255,255,.06)}
+.v5 .li span{font-size:13px;color:#aab4c2}
+.v5 .li b{font-family:var(--font-num);font-size:18px;font-weight:800;color:#fff}
+.v5 .li b i{font-style:normal;color:var(--mute);font-size:14px}
+.v5 .li.hi b{color:var(--cy)}
+.v5 .go{margin-top:auto;border-radius:8px;background:linear-gradient(180deg,#41c8f5,#1789bd)}
+
+/* ══ ⑥ 배너형 — 위 아트 · 아래 정보(유즈맵 모드 팝업 결) ══ */
+.v6 .art{height:190px;position:relative;flex:0 0 auto;
+  background:radial-gradient(80% 120% at 50% 20%,rgba(92,214,255,.30),transparent 70%),
+    linear-gradient(180deg,#132030,#0a0e14)}
+.v6 .art::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(180deg,transparent 40%,#0a0e14)}
+.v6 .art .sym{position:absolute;left:0;right:0;top:52px;text-align:center;font-size:60px;opacity:.9}
+.v6 .art .ttl{position:absolute;left:0;right:0;bottom:14px;text-align:center;z-index:1;
+  font-size:22px;font-weight:800;color:#fff}
+.v6 .body{padding-top:6px}
+.v6 .li{display:flex;justify-content:space-between;align-items:baseline;padding:12px 2px}
+.v6 .li+.li{border-top:1px solid rgba(255,255,255,.06)}
+.v6 .li span{font-size:12.5px;color:var(--dim)}
+.v6 .li b{font-family:var(--font-num);font-size:18px;color:#fff}
+.v6 .li b em{font-style:normal;color:var(--cy)}
+.v6 .go{margin-top:auto;border-radius:10px;background:linear-gradient(180deg,#41c8f5,#1789bd)}
+
+/* ══ ⑦ 칩 격자 — 값 4개를 같은 무게로 ══ */
+.v7 .body{padding-top:12px}
+.v7 .g{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.v7 .tl{padding:15px 12px;border-radius:14px;background:rgba(255,255,255,.05);text-align:center}
+.v7 .tl.wide{grid-column:1/-1;background:linear-gradient(180deg,rgba(92,214,255,.15),rgba(92,214,255,.04));
+  outline:1px solid rgba(92,214,255,.32)}
+.v7 .tl .k{font-size:10.5px;color:#7f8b99;letter-spacing:.12em}
+.v7 .tl .n{font-family:var(--font-num);font-size:25px;font-weight:800;color:#fff;margin-top:4px}
+.v7 .tl.wide .n{font-size:32px}
+.v7 .tl .n small{font-size:15px;color:var(--mute)}
+.v7 .go{margin-top:auto;border-radius:14px;background:linear-gradient(180deg,#41c8f5,#1789bd)}
+
+/* ══ ⑧ 비포/애프터 대비 — 두 줄이 전부 ══ */
+.v8 .body{text-align:center;padding-top:14px}
+.v8 .ba{padding:20px 0}
+.v8 .ba .k{font-size:11px;color:#7f8b99;letter-spacing:.22em;margin-bottom:10px}
+.v8 .ba .pair{display:flex;align-items:center;justify-content:center;gap:14px}
+.v8 .ba .old{font-family:var(--font-num);font-size:30px;font-weight:800;color:#5d6773;
+  text-decoration:line-through;text-decoration-color:rgba(255,255,255,.25)}
+.v8 .ba .new{font-family:var(--font-num);font-size:40px;font-weight:800;color:#fff}
+.v8 .ba.cy .new{color:var(--cy);text-shadow:0 0 18px rgba(92,214,255,.4)}
+.v8 .sep{height:1px;margin:0 auto;width:120px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent)}
+.v8 .need{font-family:var(--font-num);font-size:12px;color:var(--mute);margin-top:6px}
+.v8 .go{margin-top:auto;border-radius:12px;background:linear-gradient(180deg,#41c8f5,#1789bd)}
+</style>
+<h1>환생 화면 — 8안</h1>
+<p class="lead">지금 값 그대로: 1회차 · 이번 회차 <b>320만/100만</b> · 배수 <b>×1.00 → ×2.95</b> · 포인트 <b>+2</b> · 던전 10까지 <b>96시간 → 70시간</b>.<br>
+①은 지금 화면(비교용). ②~⑧은 모바일 게임에서 흔한 프레스티지 화면 형태다.</p>
+<div class="grid">
+
+<div class="cell"><div class="cap"><b>① 지금 것 (비교용)</b><i>판 없음 · 가운데 정렬 · 로그인 언어</i></div>
+<div class="ph v1"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="meta">1회차 · 포인트 0</div>
+  <div class="b"><div class="l">이 번 회 차</div><div class="v">320.0만 <span style="font-size:15px;color:#69737f">/ 100.0만</span></div></div>
+  <div class="b"><div class="l">배 수</div><div class="v">×1.00 <em>→ ×2.95</em></div></div>
+  <div class="b"><div class="l">포 인 트</div><div class="v"><em>+2</em></div></div>
+  <div class="b"><div class="l">던 전 1 0 까 지</div><div class="v">96시간 <em>→ 70시간</em></div></div>
+  <button class="go">환 생</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>② 큰 배수 히어로</b><i>받는 것 하나를 크게 · 나머지는 작게 · 채운 버튼</i></div>
+<div class="ph v2"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="hero"><div class="cap2">획득 배수</div>
+    <div class="big"><small>×</small>2.95</div>
+    <div class="from">지금 ×1.00</div></div>
+  <div class="kv"><div><div class="k">포인트</div><div class="n">+2</div></div>
+    <div><div class="k">던전 10까지</div><div class="n">70시간</div></div></div>
+  <div class="bar"><i></i></div><div class="bt">320.0만 / 100.0만</div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>③ 카드 두 장</b><i>지금 → 환생 뒤. 바뀌는 것만 카드로</i></div>
+<div class="ph v3"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="row"><div class="c"><div class="k">지금</div><div class="n">×1.00</div></div>
+    <div class="arw">→</div>
+    <div class="c next"><div class="k">환생 뒤</div><div class="n">×2.95</div></div></div>
+  <div style="height:14px"></div>
+  <div class="li"><span>환생 포인트</span><b>+2</b></div>
+  <div class="li"><span>던전 10까지</span><b>96시간 → 70시간</b></div>
+  <div class="li"><span>이번 회차</span><b>320.0만 / 100.0만</b></div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>④ 원형 게이지</b><i>조건이 주인공 · 방치형에서 흔한 형태</i></div>
+<div class="ph v4"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="ring"><div class="in"><div class="p">100%</div><div class="s">환생 가능</div></div></div>
+  <div class="kv"><div><div class="k">배수</div><div class="n">×1.00<em>→2.95</em></div></div>
+    <div><div class="k">포인트</div><div class="n">+2</div></div></div>
+  <div class="kv" style="margin-top:2px"><div style="flex:1"><div class="k">던전 10까지</div>
+    <div class="n">96시간 <em>→ 70시간</em></div></div></div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>⑤ 영수증형</b><i>왼쪽 이름 · 오른쪽 값. 정보가 많아도 안 무너진다</i></div>
+<div class="ph v5"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="sec">지 금</div>
+  <div class="li"><span>회차</span><b>1회차</b></div>
+  <div class="li"><span>획득 배수</span><b>×1.00</b></div>
+  <div class="li"><span>보유 포인트</span><b>0</b></div>
+  <div class="sec">환 생 하 면</div>
+  <div class="li hi"><span>획득 배수</span><b>×2.95 <i>(+1.95)</i></b></div>
+  <div class="li hi"><span>환생 포인트</span><b>+2</b></div>
+  <div class="li hi"><span>던전 10까지</span><b>70시간 <i>(-26)</i></b></div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>⑥ 배너형</b><i>위는 그림 · 아래는 정보. 유즈맵 모드 팝업과 같은 결</i></div>
+<div class="ph v6"><div class="art"><div class="sym">🔁</div><div class="ttl">환생</div></div>
+<div class="body">
+  <div class="li"><span>획득 배수</span><b>×1.00 <em>→ ×2.95</em></b></div>
+  <div class="li"><span>환생 포인트</span><b><em>+2</em></b></div>
+  <div class="li"><span>던전 10까지</span><b>96시간 <em>→ 70시간</em></b></div>
+  <div class="li"><span>이번 회차</span><b>320.0만 / 100.0만</b></div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>⑦ 칩 격자</b><i>값 넷을 타일로 · 가장 모바일 게임다운 배치</i></div>
+<div class="ph v7"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="g">
+    <div class="tl wide"><div class="k">획득 배수</div><div class="n">×1.00 <small>→</small> ×2.95</div></div>
+    <div class="tl"><div class="k">포인트</div><div class="n">+2</div></div>
+    <div class="tl"><div class="k">회차</div><div class="n">1</div></div>
+    <div class="tl wide"><div class="k">던전 10까지</div><div class="n">96시간 <small>→</small> 70시간</div></div>
+    <div class="tl wide"><div class="k">이번 회차</div><div class="n">320.0만 <small>/ 100.0만</small></div></div>
+  </div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+<div class="cell"><div class="cap"><b>⑧ 비포/애프터</b><i>바뀌는 것만. 옛 값은 취소선으로 죽인다</i></div>
+<div class="ph v8"><div class="top"><span class="t">환생</span><span class="x">닫기</span></div>
+<div class="body">
+  <div class="ba cy"><div class="k">획 득 배 수</div>
+    <div class="pair"><span class="old">×1.00</span><span class="new">×2.95</span></div></div>
+  <div class="sep"></div>
+  <div class="ba"><div class="k">포 인 트</div>
+    <div class="pair"><span class="new">+2</span></div></div>
+  <div class="sep"></div>
+  <div class="ba"><div class="k">던 전 1 0 까 지</div>
+    <div class="pair"><span class="old">96시간</span><span class="new">70시간</span></div></div>
+  <div class="need">이번 회차 320.0만 / 100.0만</div>
+  <div class="sp"></div>
+  <button class="go">환생하기</button><button class="tree">환생 트리</button>
+</div></div></div>
+
+</div>
