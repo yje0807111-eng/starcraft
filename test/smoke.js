@@ -1891,6 +1891,59 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🧬 던전 안 변태 — 전장 유닛을 지정하면 프로필이 뜨고, 거기서 변태한다(2026-08-28).
+  //   ⚠ 던전 안에서는 유닛이 전장(CAMPB.me.units)에 있고 **기지 엔티티가 없다** —
+  //     techPanelRender·techDoMorph 는 기지만 알아서, 캠프가 가짜 엔티티로 비추고 직접 변태한다.
+  await step('캠프 던전: 전장 유닛 지정 프로필 · 변태', async()=>{
+    skipIf(typeof campFieldMorph!=='function'||typeof campFieldSheet!=='function','전장 변태 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      // 에테리얼로 바꿔 다크세이지 → 다크보이드 융합을 잰다
+      C.race='protoss'; campEnter(); await sleep(500);
+      skipIf(G.tech.race!=='aetherial','에테리얼로 못 바꿈');
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      G.tech.credit=1e9; G.tech.energy=1e6;
+      campWithStk(()=>{ strikeSpawnUnit('me','dark_templar'); strikeSpawnUnit('me','dark_templar'); });
+      const us=CAMPB.me.units.filter(u=>(u.gm||u.id)==='dark_templar');
+      skipIf(us.length<2,'다크세이지 둘을 못 세움');
+      // ① 기지에는 유닛 엔티티가 없다 — 이 테스트의 전제
+      assert(!(G.tech.ents||[]).some(e=>e.type==='unit'),'던전인데 기지에 유닛 엔티티가 있다 — 전제가 깨졌다');
+      // ② 지정하면 전장 유닛이 가짜 엔티티로 비친다
+      campSelSet([us[0]]);
+      const ents=campFieldEnts();
+      assert(ents.length===1,'지정한 전장 유닛이 안 비친다: '+ents.length);
+      assert(ents[0].uid==='dark_templar','종류 키가 아니라 개체 번호가 들어갔다: '+ents[0].uid);
+      // ③ 시트가 실제로 그려지고 변태 카드가 들어 있다
+      assert(campFieldSheet(),'전장 프로필 시트를 못 그렸다');
+      { const b=document.getElementById('btSheetBody');
+        assert(b && /다크보이드/.test(b.innerHTML),'시트에 변태 카드가 없다'); }
+      // ④ 변태 — 둘이 사라지고 다크보이드 하나가 그 자리에 선다
+      const n0=CAMPB.me.units.length, x0=us[0].x, y0=us[0].y;
+      assert(campFieldMorph('dark_archon')===1,'변태가 안 됐다');
+      const left=CAMPB.me.units.filter(u=>(u.gm||u.id)==='dark_templar').length;
+      const born=CAMPB.me.units.find(u=>(u.gm||u.id)==='dark_archon');
+      assert(left===0,'다크세이지가 남아 있다: '+left);
+      assert(born,'다크보이드가 안 생겼다');
+      assert(CAMPB.me.units.length===n0-1,'둘이 하나가 안 됐다: '+CAMPB.me.units.length+' (전 '+n0+')');
+      assert(Math.abs(born.x-x0)<1 && Math.abs(born.y-y0)<1,'그 자리에 안 섰다');
+      // ⑤ 설계 능력치가 씌워졌다 — SC 값(체력 25)이 남으면 안 된다
+      assert(Math.abs(born.maxHp-CAMP_UNIT_STAT.dark_archon.h*CAMP_STAT_HPK)<1e-6,
+        '설계 능력치가 안 씌워졌다: '+born.maxHp);
+      // ⑥ 한 기뿐이면 융합하지 않는다
+      campWithStk(()=>{ strikeSpawnUnit('me','dark_templar'); });
+      const one=CAMPB.me.units.find(u=>(u.gm||u.id)==='dark_templar');
+      campSelSet([one]);
+      assert(campFieldMorph('dark_archon')===0,'한 기뿐인데 융합했다');
+      return '전장 지정 → 프로필 → 융합 2→1 · 설계 체력 '+born.maxHp;
+    } finally { if(typeof campSelClear==='function') campSelClear();
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; S.race=race0; }
+      campEnter(); await sleep(400); }
+  });
+
   // 🧬 마법 유닛 셋을 캠프 명단에 넣었다(2026-08-28) — 오염술사(생산) · 다크보이드·산성충(변태).
   //   ⛔ 캠프 설계표에 없으면 **원본 SC 능력치 그대로** 싸운다(오염술사 체력 80 vs 마린 5).
   await step('캠프 명단: 오염술사·다크보이드·산성충', async()=>{

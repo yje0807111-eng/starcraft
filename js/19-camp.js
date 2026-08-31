@@ -1050,6 +1050,86 @@ function campSelClear(){ if(!_campSel.length) return false; _campSel = []; retur
 function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.uid; });
   if(_campSel.length && typeof G !== 'undefined' && G.tech){ G.tech.selU = []; G.tech.sel = null; G.tech.selRes = null; }
   return _campSel.length; }
+// ══ 🗂 **지정한 전장 유닛의 프로필 시트** (2026-08-28) ═══════════════════
+//   ⭐ 던전 안에서는 유닛이 **전장(CAMPB.me.units)** 에 있고 기지 엔티티가 없다.
+//     `techPanelRender` 는 `G.tech.ents` 만 보므로 지정해도 시트가 안 뜬다 —
+//     **가짜 기지 엔티티로 비춰 준다.** 모델·렌더는 기존 것을 그대로 쓴다(UI 를 두 번 만들지 않는다).
+//   ⚠ 전장 유닛의 `uid` 는 **개체 번호**(su12)고, 기지 엔티티의 `uid` 는 **종류 키**(marine)다.
+//     비출 때 `gm||id` 를 uid 로 넣어야 카드가 종류를 제대로 읽는다.
+//   ⚠ 연구 구역도 `techPanelRender` 를 감싼다 — 이 패치를 **그 뒤에** 걸어야 바깥이 된다.
+function campFieldEnts(){
+  return campSelList().map(function(u){
+    return { eid:'cf_' + u.uid, type:'unit', uid:(u.gm || u.id), x:u.x, y:u.y, _fu:u }; }); }
+function campFieldSheet(){
+  const body = document.getElementById('btSheetBody'), sheet = document.getElementById('btSheet');
+  if(!body || !sheet || typeof techUnitPanelModel !== 'function' || typeof renderCmdGrid !== 'function') return false;
+  const ents = campFieldEnts(); if(!ents.length) return false;
+  let model = null;
+  try{ model = techUnitPanelModel(ents); }catch(e){ return false; }
+  if(!model) return false;
+  model.compact = true; model.build = true;
+  sheet.classList.add('open', 'simple');
+  renderCmdGrid(body, model);
+  return true; }
+// 🧬 **전장 유닛 변태** — `techDoMorph` 는 기지 엔티티만 안다. 전장에서는 캠프가 직접 한다.
+//   ⭐ 규칙은 원본과 같다 — 에테리얼은 **같은 유닛 2기 융합**, 스웜은 1기 변태.
+//   ⛔ 즉시 바꾼다(융합 연출 없음) — 전장에는 `_fuseP` 같은 진행 상태를 둘 자리가 없다.
+//   ⚠ 비용은 `campCost('unit', …)` 가 아니라 **TECH_MORPH 의 m/g** 다(원본과 같은 값).
+function campFieldMorph(to){
+  if(!CAMPB || typeof TECH_MORPH === 'undefined' || typeof G === 'undefined' || !G.tech) return 0;
+  const sel = campSelList(); if(!sel.length) return 0;
+  const src = sel[0], key = src.gm || src.id;
+  const rule = (TECH_MORPH[key] || []).find(function(m){ return m.to === to; }); if(!rule) return 0;
+  if(typeof _techMorphOK === 'function'){ const ok = _techMorphOK(rule);
+    if(!ok.ok){ if(typeof toast === 'function') toast('⛔ ' + ok.why); return 0; } }
+  const need = (G.tech.race === 'aetherial') ? 2 : 1;     // 🔮 융합은 같은 유닛 둘
+  const pool = CAMPB.me.units.filter(function(u){ return !u.dead && (u.gm || u.id) === key; });
+  if(pool.length < need){ if(typeof toast === 'function') toast('⛔ ' + rule.name + ' — 같은 유닛 ' + need + '기 필요'); return 0; }
+  const m = rule.m || 0, g = rule.g || 0;
+  if((G.tech.credit || 0) < m || (G.tech.energy || 0) < g){
+    if(typeof toast === 'function') toast('⛔ 자원이 모자람'); return 0; }
+  G.tech.credit -= m; G.tech.energy -= g;
+  const gone = pool.slice(0, need);
+  const at = { x:gone[0].x, y:gone[0].y }, post = gone[0]._post || at;
+  for(const u of gone) u.dead = true;
+  CAMPB.me.units = CAMPB.me.units.filter(function(u){ return !u.dead; });
+  campSelClear();
+  const born = campWithStk(function(){
+    const b4 = CAMPB.me.units.length;
+    strikeSpawnUnit('me', to);
+    return (CAMPB.me.units.length > b4) ? CAMPB.me.units[CAMPB.me.units.length - 1] : null; });
+  if(born){ born.x = at.x; born.y = at.y; born.wait = 0; born.rallied = true;
+    born._post = { x:post.x, y:post.y };
+    campScaleAllies([born]); campSelSet([born]); }
+  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  if(typeof toast === 'function') toast('🧬 ' + rule.name);
+  return born ? 1 : 0; }
+// 카드의 onclick 은 `techDoMorph(event, to)` 다 — 전장 지정 중이면 캠프가 가로챈다.
+let _campMorphHome = null;
+function campPatchMorph(){
+  if(_campMorphHome || typeof window === 'undefined') return;
+  const o = window.techDoMorph; if(typeof o !== 'function') return;
+  _campMorphHome = o;
+  window.techDoMorph = function(ev, to){
+    if(ev && ev.stopPropagation) ev.stopPropagation();
+    if(_campOn && _campSel.length){ campFieldMorph(to); return; }
+    return o.apply(this, arguments); }; }
+function campUnpatchMorph(){
+  if(!_campMorphHome) return;
+  window.techDoMorph = _campMorphHome; _campMorphHome = null; }
+
+let _campFieldSheetHome = null;
+function campPatchFieldSheet(){
+  if(_campFieldSheetHome || typeof window === 'undefined') return;
+  const o = window.techPanelRender; if(typeof o !== 'function') return;
+  _campFieldSheetHome = o;
+  window.techPanelRender = function(){
+    if(_campOn && _campSel.length && campFieldSheet()) return;
+    return o.apply(this, arguments); }; }
+function campUnpatchFieldSheet(){
+  if(!_campFieldSheetHome) return;
+  window.techPanelRender = _campFieldSheetHome; _campFieldSheetHome = null; }
+
 // 화면 좌표 → 격자 좌표(기지와 같은 규약)
 function campScr2G(cx, cy){
   if(typeof _btRect !== 'function' || typeof _techS2W !== 'function') return null;
@@ -2616,6 +2696,8 @@ function campHideView(){
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
+  campUnpatchFieldSheet();                                        // 🗂 전장 프로필 감싸기 원복
+  campUnpatchMorph();                                             // 🧬 변태 감싸기 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
@@ -2660,6 +2742,8 @@ function campEnter(){
   //   ⛔ campPatchRefinery·CAMP_REF_RES 는 지우지 않았다 — 되살릴 땐 이 줄을 되돌린다(유보 규칙).
   //   campPatchRefinery();
   campPatchResearch();                                 // 🔬 연구 구역이 시트를 쓸 차례를 가로챈다
+  campPatchFieldSheet();                               // 🗂 지정한 전장 유닛 프로필(⚠ 연구 구역 **뒤에** 걸어야 바깥이 된다)
+  campPatchMorph();                                    // 🧬 전장 유닛 변태(기지 유닛은 원본 그대로)
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
