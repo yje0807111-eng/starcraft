@@ -1912,7 +1912,8 @@
    ⭐ 라운드는 0/3/6/9 만(DESIGN.md · 8·10~16px 금지) · 간격 4/8/12/20.
    ⭐ 액센트는 **역할별**: 금색 = 재화·보상(배수·포인트) · 시안 = 조건 진행 · 보라 = 현질(×2).
    ⛔ 문장을 넣지 말 것 — 라벨과 값이 전부다.                                   */
-#campReb{position:absolute;inset:0;z-index:120;display:none;flex-direction:column}
+/* 🔁 환생 「정보」 탭 — 하단 네비를 **가리지 않는다**(2026-08-31 사용자 확정 · #campTree 와 같은 규칙). */
+#campReb{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;flex-direction:column}
 #campReb.on{display:flex}
 /* 배경 아트 — ⛔ **여기서 그림을 그리지 않는다.** 키 아트는 공유 층(#titleBg) 한 장뿐이다.
    화면마다 자기 그림을 그리면 전환할 때 호흡 애니가 0% 부터 다시 시작해 그림이 툭 튄다
@@ -1989,7 +1990,10 @@
 /* 🔁 맵 띠 칩 */
 #campBar .cbReb.hide{display:none}
 
-#campTree{position:absolute;inset:0;z-index:120;display:none;
+/* 🔁 환생 「업그레이드」 탭 — 하단 네비를 **가리지 않는다**(2026-08-31 사용자 확정).
+   ⛔ inset:0 이면 z-index 120 이 네비(62)를 통째로 덮어 탭을 못 바꾼다.
+   ⭐ z-index 를 낮추는 대신 **바닥만 네비 높이만큼 비운다** — 낮추면 키 아트·시트류와 층이 꼬인다. */
+#campTree{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;
   background:radial-gradient(120% 90% at 50% 42%,rgba(18,24,34,.97),rgba(6,9,13,.99))}
 #campTree.on{display:block}
 #campTree #ctSvg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}

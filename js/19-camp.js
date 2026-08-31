@@ -544,6 +544,27 @@ function campRebClose(){ const el = document.getElementById('campReb'); if(el) e
   if(typeof titleArtShow === 'function') titleArtShow(false); }
 function campRebIsOn(){ const el = document.getElementById('campReb'); return !!(el && el.classList.contains('on')); }
 
+// 🔁 **환생 구역의 유일한 입구** (2026-08-31 사용자 확정).
+//   ⭐ 네비 「환생」 칸의 하위 둘을 여기 한 곳에서 가른다:
+//     · 'info' — 지금 환생하면 어떻게 되나(#campReb)
+//     · 'tree' — 환생 트리(#campTree)
+//   ⛔ 밖에서 campRebOpen()/campTreeOpen() 을 직접 부르지 말 것 — **서로를 안 닫아서**
+//     둘 다 `.on` 이 되면 트리가 환생 화면을 덮어 어느 탭인지 알 수 없다.
+//   ⚠ 하단 네비는 **켜 둔 채**로 연다(두 화면 CSS 가 네비 높이만큼 자리를 비운다).
+function campRebEnter(sec){
+  const s = (sec === 'tree') ? 'tree' : 'info';
+  if(s === 'tree'){ campRebClose(); campTreeOpen(); }
+  else { campTreeClose(); campRebOpen(); }
+  // 🧭 네비를 「환생 구역의 하위」 상태로 맞춘다.
+  //   ⚠ navShow 만으로는 부족하다 — 그것은 **구역**을 켤 뿐이고, 하위 칸(정보·업그레이드)은
+  //     `_navDrill` 이 그 구역일 때만 그려진다(navPaint). 캠프 배지에서 바로 들어오면
+  //     _navDrill 이 비어 있어 하위가 통째로 안 나온다.
+  //   ⭐ 그래서 셋을 순서대로 부른다: 구역 켜기 → 하위로 내려가기 → 다시 그리기.
+  if(typeof navShow === 'function') navShow('reb');
+  if(typeof _navDrill !== 'undefined') _navDrill = 'reb';
+  if(typeof navPaint === 'function') navPaint();
+  return s; }
+
 // 환생 실행 — ⚠ 되돌릴 수 없으므로 확인을 한 번 받는다(.ecCard 공용 확인 껍데기).
 //   💳 **×2 는 젬 1회권이 아니라 「환생 팩」(결제)이다**(2026-08-31 사용자 확정 · GEM.md §4).
 //     사면 그 뒤로 **계속** 배수·포인트가 2배다 — 실행 경로에 분기가 없고,

@@ -378,6 +378,40 @@ async function groupLobby(){
     { const c=campState(); c.earn=0; c.earnTap=0; c.earnAuto=0; c.playS=0; c.tapped=0; }
     return '터치·자동·섞임·시간 ok'; });
 
+  // 🔁 **환생 구역은 하위 둘 — 정보 · 업그레이드** (2026-08-31 사용자 확정)
+  //    ⭐ 둘 다 **하단 네비가 보인 채**로 열린다. 그래야 탭을 오갈 수 있다.
+  //    ⛔ 예전엔 두 화면이 `inset:0 · z-index:120` 이라 네비(62)를 통째로 덮었다 —
+  //      트리에 들어가면 나올 길이 「닫기」뿐이었다.
+  await step('환생 구역: 정보·업그레이드 두 탭 · 네비 자리를 비운다', async()=>{
+    skipIf(typeof campRebEnter!=='function'||typeof navGo!=='function','환생 구역 없음');
+    const nb=document.getElementById('navBar');
+    skipIf(!nb,'네비가 없음');
+    const cells=()=>Array.from(nb.querySelectorAll('.navIt')).map(e=>e.textContent.trim());
+    // ⭐ **CSS 규칙으로 잰다** — 요소 높이는 헤드리스에서 화면 상태에 따라 0 이 되어 못 믿는다.
+    //   두 화면이  여야 네비 자리가 빈다. 0px 이면 네비를 통째로 덮는다.
+    const gap=(id)=>{ const el=document.getElementById(id); if(!el) return null;
+      const b=getComputedStyle(el).bottom; return (b==='auto') ? '0px' : b; };
+    for(const id of ['campReb','campTree']){
+      const g=gap(id);
+      assert(g && g!=='0px', id+' 이 네비 자리를 안 비운다(bottom '+g+') — 네비가 통째로 가려진다'); }
+    // ① 네비에서 들어가면 하위 둘이 뜬다
+    navGo('reb');
+    { const c=cells();
+      assert(c.indexOf('정보')>=0 && c.indexOf('업그레이드')>=0,
+        '하위가 정보·업그레이드가 아니다: '+c.join('|')); }
+    assert(campRebIsOn(),'정보 탭인데 환생 화면이 안 열렸다');
+    // ② 업그레이드 = 환생 트리 · 서로 배타
+    navSub('tree');
+    assert(campTreeIsOn() && !campRebIsOn(),'업그레이드 탭이 트리 하나만 열지 않는다');
+    // ③ 캠프 배지에서 바로 들어와도 하위가 뜬다(_navDrill 을 안 맞추면 통째로 안 나온다)
+    campRebEnter('info');
+    { const c=cells();
+      assert(c.indexOf('업그레이드')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
+    assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
+    campRebClose(); campTreeClose();
+    return '정보·업그레이드 · 네비 자리 '+gap('campReb')+' · 서로 배타';
+  });
+
   // 🔁 환생 화면 — HUNT_R1.md §4-2-0 이 요구한 것이 실제로 화면에 있는가.
   //    ⭐ 「먼 목표」 줄은 장식이 아니다. 없으면 첫 환생을 손해로 판단하고 두 번 다시 안 누른다.
   await step('환생 화면: 받을 것 · 조건 · 먼 목표 · 되돌릴 수 없는 확인', async()=>{
@@ -8614,11 +8648,16 @@ async function groupLobby(){
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
-      assert(reb && reb.subs.length===2,'환생 하위 칸(환생·트리)이 없음');
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,트리','환생 하위 칸이 다름');
-      assert(/campRebOpen/.test(String(reb.go)),'환생 칸이 환생 화면을 안 연다');
-      // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다
-      assert(/campTreeOpen/.test(String(reb.subs[1].act)),'트리 칸이 기존 트리를 안 부른다'); }
+      assert(reb && reb.subs.length===2,'환생 하위 칸(정보·업그레이드)이 없음');
+      // ⭐ 2026-08-31 사용자 확정 — 「정보」(지금 환생하면 어떻게 되나) · 「업그레이드」(환생 트리)
+      assert(reb.subs.map(x=>x.label).join(',')==='정보,업그레이드','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
+      assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
+      // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.
+      //   ⚠ 이제 campRebEnter('tree') 를 거친다 — 그 안에서 campTreeOpen 을 부르고,
+      //     환생 화면을 닫아 준다(둘 다 열리면 어느 탭인지 모른다).
+      assert(/campRebEnter/.test(String(reb.subs[1].act)),'업그레이드 칸이 campRebEnter 를 안 쓴다');
+      assert(/campTreeOpen/.test(String(campRebEnter)),'campRebEnter 가 기존 트리를 안 부른다'); }
     // 🔬 **연구는 화면이 아니라 캠프 하단 시트로 간다**(2026-08-27 · js/20-camp-research.js).
     //   ⛔ 화면을 갈아치우면 캠프가 닫혔다 다시 열려 **전체가 한 번 튕긴다** — 바뀌는 것은 하단뿐이어야 한다.
     //   ⚠ 여기서는 **부르지 않는다** — openResearch 는 캠프를 켜는데, 그러면 뒤 step(좌상단 칩·드롭다운)이

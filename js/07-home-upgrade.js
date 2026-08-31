@@ -473,10 +473,16 @@ const NAV_TREE=[
   //   ⭐ 환생을 네비에 올린 이유는 화면이 **설계 요구**이기 때문이다 — HUNT_R1.md §4-2-0 이
   //     「먼 목표를 화면에서 보여 줘야 한다」고 못박았다. 안 보이면 첫 환생을 손해로 판단한다.
   //   ⚠ 이 결정은 GAME_DIRECTION.md §5-A(환생 유보)를 뒤집는다 — 그 문서도 함께 고쳤다.
-  { k:'reb', label:'환생', ico:'upg', go:()=>campRebOpen(),
-    cur:()=>null, subs:[
-      { k:'reb',  label:'환생', ico:'upg',  act:()=>campRebOpen() },
-      { k:'tree', label:'트리', ico:'flag', act:()=>{ campRebClose(); campTreeOpen(); } } ] },
+  //   ⭐ 하위 둘 — **정보**(지금 환생하면 어떻게 되나)와 **업그레이드**(환생 트리).
+  //     ⚠ 둘 다 하단 네비가 **보인 채로** 열린다(사용자 확정 2026-08-31). 그래서 두 화면의
+  //       CSS 가 `bottom:var(--navH)` 로 네비 자리를 비운다 — z-index 를 낮추지 않는다
+  //       (낮추면 키 아트가 딸려 내려가고 시트류와 층이 꼬인다).
+  //     ⚠ 서로를 닫아 준다 — 둘 다 `.on` 이면 트리가 환생 화면을 덮어 어느 탭인지 모른다.
+  { k:'reb', label:'환생', ico:'upg', go:()=>campRebEnter('info'),
+    cur:()=>(campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null)),
+    reset:()=>campRebEnter('info'), subs:[
+      { k:'info', label:'정보',      ico:'upg',  act:()=>campRebEnter('info') },
+      { k:'tree', label:'업그레이드', ico:'flag', act:()=>campRebEnter('tree') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
   { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
