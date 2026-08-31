@@ -172,6 +172,7 @@ async function record(seed){
     let flips = 0, tele = 0, teleMax = 0, tgtSw = 0, inR = 0, inRn = 0, moved = 0;
     // 🔍 「표적을 못 찾는다」와 「표적은 있는데 못 닿는다」를 가른다 — 둘의 처방이 다르다.
     let hasT = 0, hasTn = 0, gap = 0, gapN = 0;
+    let inRf = 0, inRfn = 0, idleF = 0;   // 적이 살아 있는 프레임만 / 적이 없던 프레임 수
     // 🏃 「돌격하는 느낌」의 자[尺] — 자리에서 얼마나 벗어나 있나, 얼마나 멀리서 표적을 잡나.
     //   ⭐ 인식 거리가 이동 제한보다 크면 「적이 나오자마자 제한 끝까지 우르르」가 된다.
     let away = 0, awayN = 0, awayMax = 0; const acqAt = [];
@@ -204,11 +205,16 @@ async function record(seed){
         tgtPrev.set(m.u, m.tgt);
         if(m.px != null){ const ad = Math.hypot(m.x - m.px, m.y - m.py);
           away += ad; awayN++; if(ad > awayMax) awayMax = ad; } }
-      if(alive){ inR += hit / alive; inRn++; hasT += withT / alive; hasTn++; } }
+      if(alive){ inR += hit / alive; inRn++; hasT += withT / alive; hasTn++;
+        // ⚠ **적이 없는 프레임도 위에 섞인다** — 라운드를 깨고 다음 적을 기다리는 동안은
+        //   사거리 안일 수가 없다. 「전투 중에는 얼마나 닿는가」를 따로 낸다(2026-08-31 · sc-3).
+        if(fr.ai && fr.ai.some(a=>!a.dead)){ inRf += hit / alive; inRfn++; } else { idleF++; } } }
     const nU = Math.max(1, uids.size);
     const stat = { frames: frames.length, units: uids.size,
       flips: +(flips / nU).toFixed(1), tele, teleMax: Math.round(teleMax), tgtSw: +(tgtSw / nU).toFixed(1),
       inRange: +(100 * inR / Math.max(1, inRn)).toFixed(1),
+      inRangeFight: +(100 * inRf / Math.max(1, inRfn)).toFixed(1),
+      idlePct: +(100 * idleF / Math.max(1, inRn)).toFixed(1),
       hasTgt: +(100 * hasT / Math.max(1, hasTn)).toFixed(1),
       awayAvg: Math.round(away / Math.max(1, awayN)), awayMax: Math.round(awayMax),
       acqAt: acqAt.length ? Math.round(acqAt.slice().sort((a,b)=>a-b)[Math.floor(acqAt.length/2)]) : 0,
@@ -360,7 +366,7 @@ for(let i = 0; i < RUNS; i++){
     await el.screenshot({ path: shotPath }); }
 }
 
-const K = ['inRange', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
+const K = ['inRange', 'inRangeFight', 'idlePct', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
   'dmgOut', 'dmgIn', 'shotOut', 'awayAvg', 'awayMax', 'acqAt', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi'];
 const M = {}; for(const k of K) M[k] = med(runs.map(r => r[k]));
 console.log('');
@@ -369,6 +375,8 @@ console.log('🎬 캠프 전투 궤적 — ' + SECS + '초 · 던전 ' + DG + ' 
 console.log('   유닛 ' + runs[0].units + '기 · 프레임 ' + runs[0].frames + ' · 첫 적 ' + runs[0].foe0 + '마리');
 console.log('');
 console.log('  ⚔ 사거리 안 비율      ' + M.inRange + '%      ← 전투가 실제로 이루어지는가 (낮으면 대부분 논다)');
+console.log('  ⚔ 그중 **전투 중**만   ' + M.inRangeFight + '%      ← 적이 살아 있던 프레임만 (대기 시간을 뺀 값)');
+console.log('  💤 적이 없던 프레임    ' + M.idlePct + '%      ← 위 두 값의 차이를 만드는 것');
 console.log('  🎯 표적을 가진 비율    ' + M.hasTgt + '%      ← 낮으면 「못 찾는다」 · 높은데 위가 낮으면 「못 닿는다」');
 console.log('  📐 못 닿는 정도        ×' + M.gapMul + '      ← 표적까지 거리 ÷ 사거리 (1.0 = 딱 사거리 끝)');
 console.log('  🏃 자리에서 벗어난 거리  평균 ' + M.awayAvg + ' · 최대 ' + M.awayMax
