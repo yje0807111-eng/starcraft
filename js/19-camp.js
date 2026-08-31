@@ -1300,13 +1300,12 @@ function campPostSnap(){
 //   ⭐ 그래서 규칙을 바꾼다(사용자 설계):
 //     · 전투 중에는 **손을 뗀다** — 오토배틀이 알아서 다가가 싸운다.
 //     · 적과의 전투가 **CAMP_RETURN_DELAY 초** 동안 없으면 그때 복귀를 건다.
-//     · 복귀 명령은 **CAMP_RETURN_TICK 마다 한 번**이다(매 프레임이 아니다).
+//     · 복귀는 매 프레임 걸되 **목표가 _post 로 고정**이라 흔들리지 않는다.
 //   ⚠ 오토배틀은 `u.rallied=false` 인 동안에도 **사거리 안에 적이 있으면 그대로 교전한다**
 //     (18-strike.js:1336~ `_eng` 분기) — 되돌아가다 적을 만나면 자연스럽게 싸운다.
 //     다만 집결지는 strikeRallyPoint(side) 가 정하고 **side 만 받아 유닛별 값을 못 준다.**
 //     그래서 자리까지의 이동은 캠프가 밀되 **한 번만** 민다.
 const CAMP_RETURN_DELAY = 0.8;     // 전투가 이만큼 없으면 자리로 돌아간다
-const CAMP_RETURN_TICK = 0.5;      // 복귀 명령을 다시 거는 최소 간격(길 막힘 대비 · 매 프레임 금지)
 function campPostStep(dt){
   if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
   const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
@@ -1324,13 +1323,13 @@ function campPostStep(dt){
       if(u._idleT < CAMP_RETURN_DELAY) continue;
       const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
       if(dx * dx + dy * dy <= R2){ u.moving = false; u._homeT = 0; continue; }   // 이미 자리
-      // ⭐ **한 번만 민다.** CAMP_RETURN_TICK 안에 또 걸지 않는다 — 그것이 떨림의 원인이었다.
-      u._homeT = (u._homeT || 0) - dt;
-      if(u._homeT > 0) continue;
-      u._homeT = CAMP_RETURN_TICK;
+      // ⛔ **몰아서 밀지 않는다** (2026-08-31). 처음엔 0.5초치를 한 프레임에 밀었다가
+      //   유닛이 **308px 씩 순간이동**했다(실측 37회). 복귀 목표는 _post 로 고정이라
+      //   간격을 둘 이유도 없다 — 매 프레임 dt 만큼 정상 속도로 걸어온다.
       // ⭐ **복귀는 빠르게**(2026-08-30 사용자 확정) — 싸우러 나갔다 오는 길이라 굼뜨면
       //   다음 무리가 올 때까지 자리를 못 잡는다. 속도 상수를 건드리지 않고 dt 를 키운다.
-      strikeMoveToward(u, p.x, p.y, CAMP_RETURN_TICK * CAMP_RETURN_K); n++; }
+      //   ⚠ 배수는 1.8 이라 한 프레임 이동이 0.09초치 — 순간이동으로 보이지 않는다.
+      strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K); n++; }
     if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
   });
   return n; }
@@ -1539,24 +1538,20 @@ function campEngageStep(dt){
                           gy = home.y + oy / od * lim; } } }
         const dx = gx - u.x, dy = gy - u.y;
         if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
-        // ⏱ **가끔만 민다** (2026-08-31 사용자 설계 — 「한 번만 걸어놓으면 되는 것 아닐까」).
-        //   ⛔ 매 프레임 밀면 오토배틀 이동과 매 순간 싸워 **덜덜 떨린다**
-        //     (실측: 방향 뒤집힘 29.9회/유닛 vs 순수 오토배틀 0.9회).
-        //   ⛔ 그렇다고 아예 끄면 **뭉친 부대에서 앞줄만 닿아** 화력이 반토막 난다
-        //     (실측 35분 벤치: D1R18 → **D1R11** · 실효 0.87 → 0.55).
-        //   ⭐ 그래서 **간격을 둔다.** 그 사이에는 오토배틀이 자유롭게 움직이고,
-        //     캠프는 CAMP_ENG_TICK 마다 한 번 「저기로 가라」고 일러 준다.
+        // ⏱ **간격은 「목표 계산」에 건다 — 이동은 매 프레임 정상 속도로** (2026-08-31).
+        //   ⛔ 처음엔 이동 자체를 가끔만 하고 **0.4초치를 한 프레임에 몰아서** 밀었다.
+        //     그래서 유닛이 **훅훅 튀었다** — 실측: 자리 잡기에서 순간이동 236회(최대 203px).
+        //     사용자가 화면에서 「튕기면서 순간이동한다」고 본 것이 이것이다.
+        //   ⭐ 떨림의 원인은 **목표가 매 프레임 바뀌는 것**이지 이동이 잦은 게 아니다.
+        //     그러니 목표만 CAMP_ENG_TICK 마다 갱신하고, **이동은 매 프레임 dt 만큼** 한다.
+        //     → 이동량이 정상이라 안 튀고, 목표가 안정적이라 덜 떨린다.
         u._engT = (u._engT || 0) - dt;
-        if(u._engT > 0) continue;
-        u._engT = CAMP_ENG_TICK;
-        // ⚠ **되돌리기(u.x = u._sx)가 떨림의 원인은 아니다** — 빼고 재봤더니 26.5회로 같았다
-        //   (되돌릴 때 26.1). 오히려 이동이 두 번 얹혀 사거리 안이 57% 로 떨어진 판이 있었다.
-        //   ⭐ 떨림의 정체는 **캠프가 미는 방향과 오토배틀이 미는 방향이 다른 것**이다:
-        //     오토배틀은 적에게 직진하고, 캠프는 적 주위 부채꼴 자리(옆)로 민다.
-        //     간격을 벌려도(0.4초) 26.1회로 거의 안 줄었다 — 아예 끄면 7.7회다.
-        //   ⛔ 즉 **떨림과 화력은 맞바꿈이다.** 자리를 잡아주면 화력이 오르고 떨린다.
+        if(u._engT <= 0 || u._engGx == null){ u._engT = CAMP_ENG_TICK; u._engGx = gx; u._engGy = gy; }
+        const tx = u._engGx, ty = u._engGy;
+        const ddx = tx - u.x, ddy = ty - u.y;
+        if(ddx * ddx + ddy * ddy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
         if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고
-        strikeMoveToward(u, gx, gy, CAMP_ENG_TICK); n++; } }
+        strikeMoveToward(u, tx, ty, dt); n++; } }        // ⭐ dt — 몰아서 밀지 않는다
     if(n && typeof strikeSeparate === 'function') strikeSeparate();
   });
   return n; }
