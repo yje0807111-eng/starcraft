@@ -2062,9 +2062,16 @@
   .cdDrop{ animation:panShutIn .22s cubic-bezier(.33,.1,.2,1) both }
   .hbMoreWrap:not(.hide) .hbMoreBox{ animation:panShutIn .22s cubic-bezier(.33,.1,.2,1) both }
   /* 닫히는 중 — 판은 아직 DOM 에 있다(애니가 끝나야 지운다). 그동안 터치를 먹지 않게 한다.
-     ⚠ 명시도를 열기 규칙보다 높여야 한다 — `.hbMoreBox.hbmOut` 만으로는 위 규칙에 진다. */
-  .cdDrop.cdOut{ animation:panShutIn .13s ease-in reverse both; pointer-events:none }
-  .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:panShutIn .13s ease-in reverse both; pointer-events:none }
+     ⚠ 명시도를 열기 규칙보다 높여야 한다 — `.hbMoreBox.hbmOut` 만으로는 위 규칙에 진다.
+     ⛔ **닫기는 열기와 이름이 달라야 한다**(2026-08-31 실측). 처음에는 같은 panShutIn 을
+        `reverse` 로 되감으려 했는데 — **애니가 하나도 안 돌고 끝값으로 즉시 점프했다.**
+        clip 이 0% → **한 프레임에 100%**. 열기는 잘 보이는데 닫기만 툭 사라져 보인 이유다.
+        animation-name 이 같으면 브라우저는 「같은 애니가 이어서 돈다」로 보고, 이미 끝난
+        (fill:both) 애니의 방향만 뒤집어 **그 자리에서 결과값**을 낸다. 이름을 갈라야 재시작한다.
+     ⚠ 되감기(reverse)로는 이징도 거울이 되지 않는다 — 닫기 곡선은 여기서 따로 정한다. */
+  @keyframes panShutOut{ from{ clip-path:inset(0 0 0 0) } to{ clip-path:inset(0 0 100% 0) } }
+  .cdDrop.cdOut{ animation:panShutOut .15s cubic-bezier(.45,.05,.7,.95) both; pointer-events:none }
+  .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:panShutOut .15s cubic-bezier(.45,.05,.7,.95) both; pointer-events:none }
   @media (prefers-reduced-motion:reduce){
     .cdDrop,.cdDrop.cdOut,.hbMoreWrap:not(.hide) .hbMoreBox,
     .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:none }

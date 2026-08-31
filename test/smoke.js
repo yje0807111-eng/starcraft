@@ -1342,9 +1342,25 @@ async function groupLobby(){
     assert(!!dd,'던전 판이 안 열렸다');
     assert(ani(dd)==='panShutIn','던전 판에 셔터가 안 걸렸다: '+ani(dd));
     const _ddDur=getComputedStyle(dd).animationDuration;   // 판이 지워지기 전에 담아 둔다
+    // ⛔ **닫기는 열기와 이름이 달라야 한다.** 같은 이름을 reverse 로 되감으려 했더니
+    //    애니가 하나도 안 돌고 **끝값으로 즉시 점프**했다(clip 0% → 한 프레임에 100%).
+    //    「지워지긴 지워진다」만 재던 앞 검사는 이걸 못 잡았다 — 그래서 여기서 이름을 잠근다.
+    const _openAni = ani(dd);
     campDropClose();
-    // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다
+    const _closeAni = ani(document.querySelector('.cdDrop')||dd);
+    assert(_closeAni && _closeAni!=='none', '닫기에 애니가 없다');
+    assert(_closeAni !== _openAni,
+      '닫기가 열기와 같은 애니 이름이다 ('+_closeAni+') — 되감기가 안 돌고 끝값으로 점프한다');
+    // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다 — 그리고 **중간 모습이 실제로 있어야 한다**
     assert(!!document.querySelector('.cdDrop'),'던전 판이 애니 없이 즉시 지워졌다');
+    let _mid=false;
+    for(let i=0;i<6;i++){ await sleep(25);
+      const x=document.querySelector('.cdDrop'); if(!x) break;
+      // ⚠ 정규식을 쓰지 않는다 — 이 파일을 heredoc 으로 고칠 때 역슬래시가 벗겨져 깨진다.
+      const seg=(getComputedStyle(x).clipPath||'').split(' ').pop().replace(')','');  // "41.2%"
+      const left = seg.slice(-1)==='%' ? 100-parseFloat(seg) : -1;
+      if(left>3 && left<97) _mid=true; }
+    assert(_mid,'닫는 중 중간 모습이 한 번도 안 잡혔다 — 접히지 않고 툭 사라진다');
     await sleep(420);
     assert(!document.querySelector('.cdDrop'),'던전 판이 애니 뒤에도 안 지워졌다');
     // 더보기도 같은 애니여야 한다 — 둘이 다르면 단일 소스가 깨진 것
@@ -1362,7 +1378,7 @@ async function groupLobby(){
       '닫는 중에 다시 눌렀더니 안 열린다 — 지난 닫기의 뒷정리가 새로 연 판을 덮었다');
     hbCloseMore(true); await sleep(40);
     assert(document.getElementById('hbMoreSheet').classList.contains('hide'),'즉시 닫기가 안 먹는다');
-    return '셔터 '+_dur+' · 두 판 같은 애니 · 애니 뒤 제거 · 닫는 중 재클릭 ok';
+    return '열기 '+_dur+' 셔터 · 닫기는 이름이 다른 애니로 접힌다 · 두 판 공용 · 닫는 중 재클릭 ok';
   });
 
   await step('캠프: 라운드가 시작될 때 전원 부활 + 체력 회복', async()=>{
