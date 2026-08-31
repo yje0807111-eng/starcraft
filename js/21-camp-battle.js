@@ -54,6 +54,10 @@ const CAMP_ARRIVE_MAX = 46;        // 사거리가 긴 유닛의 상한
 const CAMP_ARRIVE_F   = 0.12;      // 사거리 대비 여유 비율 (0.85 + 0.12 < 1)
 function campArriveR(u){
   return Math.max(6, Math.min(CAMP_ARRIVE_MAX, (u.rng || 0) * CAMP_ARRIVE_F)); }
+// 💉 의무병이 본대를 따라갈 때의 도착 판정 — 치유 사거리(STK_HEAL_RNG 110) 안쪽으로 둔다.
+//   ⚠ 일반 도착 판정(campArriveR)을 쓰면 안 된다 — 의무병은 사거리가 0 이라 6px 이 나와
+//     제자리에서 미세 조정을 반복한다.
+const CAMP_HEAL_FOLLOW = 90;
 
 /* ── 목표 자리 ───────────────────────────────────────────────────────────
  * ⭐ **이 함수가 이 파일의 요점이다.** 「어디에 설 것인가」를 한 번에 정하고,
@@ -154,6 +158,30 @@ function _campPickTarget(u, foeUnits, load, dt){
   return best || (keep ? tgt : null);
 }
 
+// 💉 **치유할 대상이 있나** — 판정식은 `strikeHealStep`(18-strike.js §504) 의 ①과 같다.
+//   ⚠ 같은 조건이 두 곳에 있다. 저 함수는 「찾아서 치유까지」 하고 값을 안 돌려주므로 미리 물어볼
+//     길이 없어서 이렇게 뒀다. ⛔ 한쪽만 고치면 「따라가긴 하는데 치유는 안 하는」 상태가 된다.
+function _campHealNeed(u, me){
+  const S2 = STK_HEAL_SEEK * STK_HEAL_SEEK;
+  for(const a of me.units){
+    if(a === u || a.dead || a.hp >= a.maxHp) continue;
+    if(typeof BIONIC !== 'undefined' && !BIONIC[a.gm || a.id]) continue;
+    const dx = a.x - u.x, dy = a.y - u.y;
+    if(dx * dx + dy * dy <= S2) return a; }
+  return null; }
+// ⚔ **지금 싸우고 있는 아군** 중 가장 가까운 것 — 의무병이 따라붙을 곳.
+//   ⭐ 이게 있어야 「다친 사람은 없지만 전투 중」일 때 의무병이 집으로 가 버리지 않는다.
+//   ⚠ 표적 번호만 보지 말 것 — 적이 죽어도 u.tgtUid 는 남는다(2026-08-28 에 이걸로 한 번 물렸다).
+function _campBusyAlly(u, me){
+  let best = null, bd = Infinity;
+  for(const a of me.units){
+    if(a === u || a.dead || !a.tgtUid) continue;
+    if(typeof HEALER !== 'undefined' && HEALER[a.gm || a.id]) continue;
+    if(!strikeFindUnit(CAMPB.ai.units, a.tgtUid)) continue;      // 죽은 표적은 「싸우는 중」이 아니다
+    const dx = a.x - u.x, dy = a.y - u.y, d2 = dx * dx + dy * dy;
+    if(d2 < bd){ bd = d2; best = a; } }
+  return best; }
+
 /* ── 사격 ────────────────────────────────────────────────────────────────
  * ⭐ 피해·실드·상성·광역·반격은 전부 오토배틀 부품 그대로다(strikeHit).
  *   ⛔ 여기에 피해식을 다시 적지 말 것 — 두 벌이 되면 반드시 어긋난다.
@@ -236,10 +264,15 @@ function campStepUnits(dt){
       if(u.wait > 0){ u.wait -= dt; u.moving = false; continue; }
       if(!u._atk) u._atk = (typeof _sbAtkMode === 'function')
         ? _sbAtkMode({ id:u.id, gmodel:u.gm }) : { air:true, gnd:true };   // 공격 가능 레이어
-      // 💉 무공격 지원(의무병 등) — 표적 선정 전체를 건너뛴다
-      if(typeof HEALER !== 'undefined' && HEALER[u.gm || u.id]){
-        if(typeof strikeHealStep === 'function') strikeHealStep(u, me, dt);
-        continue; }
+      // 💉 무공격 지원(의무병 등) — 표적을 안 잡는다. 다만 **여기서 끝내지 않는다.**
+      //   ⛔ 예전엔 여기서 strikeHealStep 만 부르고 `continue` 했다. 그러면 의무병이
+      //     **복귀 분기를 영영 안 탄다** — 오토배틀의 치유 경로에는 「자기 자리」라는 개념이
+      //     없어서(다친 아군 → 없으면 가장 가까운 아군 → 110 안이면 정지) 전투가 끝나도
+      //     낙오한 아군 옆에 붙어 선 채로 남는다.
+      //     실측(60초): 의무병이 자리에서 평균 **572** 떨어져 있었고(마린 273 · 기관총병 422),
+      //     적이 하나도 없는 조용한 프레임에서도 598 에 **그대로 멈춰** 있었다.
+      //   ⭐ 그래서 패스 ② 로 넘겨 「치유 → 본대 따라가기 → 자기 자리」를 순서대로 태운다.
+      if(typeof HEALER !== 'undefined' && HEALER[u.gm || u.id]){ act.push({ u, tgt:null, heal:true }); continue; }
       const prev = u.tgtUid;
       const tgt = _campPickTarget(u, foe.units, load, dt);
       u.tgtUid = tgt ? tgt.uid : null;
@@ -264,6 +297,21 @@ function campStepUnits(dt){
      * ⭐ **이 블록이 유닛의 위치를 정하는 유일한 곳이다.** 뒤에서 무르거나 자르지 않는다.  */
     for(const a of act){
       const u = a.u, tgt = a.tgt;
+      // 💉 의무병 — ① 치유 ② 싸우는 본대 따라가기 ③ 자기 자리. 순서가 곧 우선순위다.
+      if(a.heal){
+        if(_campHealNeed(u, me)){ strikeHealStep(u, me, dt); u._idleT = 0; continue; }   // ① 다친 아군이 있다
+        const buddy = _campBusyAlly(u, me);
+        if(buddy){                                                     // ② 싸우는 아군 곁으로
+          u._idleT = 0;
+          let gx = buddy.x, gy = buddy.y;
+          if(u._post){ const ox = gx - u._post.x, oy = gy - u._post.y, od = Math.hypot(ox, oy);
+            const lim = (typeof campEngageOut === 'function') ? campEngageOut(u) : CAMP_ENG_OUT;
+            if(od > lim){ gx = u._post.x + ox / od * lim; gy = u._post.y + oy / od * lim; } }
+          const dx = gx - u.x, dy = gy - u.y;
+          if(dx * dx + dy * dy <= CAMP_HEAL_FOLLOW * CAMP_HEAL_FOLLOW){ u.moving = false; continue; }
+          strikeMoveToward(u, gx, gy, dt); continue; }
+        // ③ 아무도 안 싸운다 → 아래 일반 복귀와 **같은 규칙**으로 자기 자리로 (지연 포함)
+      }
       // 🧱 벙커에 탄 유닛은 움직이지 않는다 — 자리 고정·피해 전가는 campBunkerStep 이 맡는다.
       //   ⚠ 여기서 이동을 건너뛰어야 그 고정이 「덮어쓰기」가 아니라 「원래 안 움직임」이 된다.
       if(typeof campInBunker === 'function' && campInBunker(u)){

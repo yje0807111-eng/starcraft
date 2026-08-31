@@ -2154,6 +2154,33 @@ async function groupLobby(){
         const g=campGoalFor(u, far, 0, 1);
         const d=Math.hypot(g.x-u._post.x, g.y-u._post.y);
         assert(d<=CAMP_ENG_OUT+1e-6,'목표가 자리 제한('+CAMP_ENG_OUT+') 밖이다: '+Math.round(d)); } }
+    // ④-2 💉 **의무병도 자기 자리로 돌아온다** (2026-08-31 사용자 발견)
+    //    ⛔ 예전엔 의무병이 campStepUnits 패스 ① 에서 `continue` 로 빠져 **복귀 분기를 영영
+    //      안 탔다.** 오토배틀의 치유 경로(strikeHealStep)에는 「자기 자리」가 없다 —
+    //      다친 아군 → 없으면 가장 가까운 아군 → 110 안이면 정지. 그래서 전투가 끝나도
+    //      낙오한 아군 옆에 붙어 선 채로 남았다.
+    //    📊 실측(60초): 적이 하나도 없는 조용한 프레임 242개 중 **전원이 자리에 있는 프레임이 0개**
+    //      였고, 「딱 한 기만 낙오」 121회가 **전부 의무병**이었다(고친 뒤 41% / 0회).
+    //    ⭐ 우선순위는 셋이다: ① 다친 아군 치유 ② 싸우는 본대 따라가기 ③ 자기 자리.
+    { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      const med=mk('medic', W*0.5, W*0.60);
+      if(med && typeof HEALER!=='undefined' && HEALER[med.gm||med.id]){
+        campScaleAllies([med]);
+        med.x=W*0.5; med.y=W*0.40; med._sx=med.x; med._sy=med.y;   // 자리에서 멀리 떼어 놓는다
+        const d0=Math.hypot(med.x-med._post.x, med.y-med._post.y);
+        // 치유할 아군도, 싸우는 아군도 없다 → ③ 자기 자리
+        for(let i=0;i<60;i++) _step(0.05);                          // 3초(복귀 지연 0.8초 포함)
+        const d1=Math.hypot(med.x-med._post.x, med.y-med._post.y);
+        assert(d1<d0-20,'의무병이 자기 자리로 안 돌아온다: '+Math.round(d0)+' → '+Math.round(d1));
+        // ⭐ 그런데 **싸우는 아군이 있으면 따라가야 한다** — 집으로 가 버리면 치유가 못 붙는다
+        const buddy=mk('marine', W*0.5, W*0.36), foe2=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+          const z=STK.ai.units[STK.ai.units.length-1]; if(z){ z.x=W*0.5; z.y=W*0.34; } return z; });
+        if(buddy&&foe2){ campScaleAllies([buddy]); buddy.tgtUid=foe2.uid;
+          med.x=med._post.x; med.y=med._post.y;                     // 집에 있는 상태에서 시작
+          const b0=Math.hypot(med.x-buddy.x, med.y-buddy.y);
+          for(let i=0;i<40;i++) _step(0.05);
+          const b1=Math.hypot(med.x-buddy.x, med.y-buddy.y);
+          assert(b1<b0-20,'싸우는 아군이 있는데 의무병이 안 따라간다: '+Math.round(b0)+' → '+Math.round(b1)); } } }
     // ⑤ 부활하면 자기 자리에서 일어난다
     { campWithStk(()=>{ STK.me.units.length=0; });
       const u=mk('marine', W*0.5, W*0.60);
