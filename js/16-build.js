@@ -1136,7 +1136,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     const _k=_spr?1.34:1.2, _dy=_spr?0.30:0;
     const _mtl=_techW2S(m.x-_k/2*_mcw, m.y-(_k/2+_dy)*_mch), _mbr=_techW2S(m.x+_k/2*_mcw, m.y+(_k/2-_dy)*_mch);
     mineZ+='<div class="bMineral'+(_res3d&&!_spr?' d3':'')+(_spr?' spr':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'
-      +(_spr ? '<img class="mnSpr" src="'+_spr+'" alt="">' : (_res3d?'':'<span class="mnIco">💎</span>'))+'</div>';
+      +(_spr ? '<img class="mnSpr'+(((typeof campMineFlip==='function')&&campMineFlip(_mi))?' flip':'')+'" src="'+_spr+'" alt="">'
+             : (_res3d?'':'<span class="mnIco">💎</span>'))+'</div>';
     _mi++; } }   // 수치 텍스트 제거 → 클릭 시 프로필에서만 잔량 표시 · 선택 표시는 3D 하단 링
   let rallyZ='';   // 🚩 랠리 포인트 — 선택된 건물의 랠리 위치 깃발 + 건물→랠리 점선(지정 모드=강조)
   { const _rb=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;

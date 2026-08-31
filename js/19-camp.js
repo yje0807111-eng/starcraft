@@ -2183,7 +2183,17 @@ function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); 
 //   `CAMP_MINE_COLS = 3` 이므로 인덱스 0~2 가 윗줄, 3~5 가 아랫줄이다(campLayMinerals 의 배치 순서).
 // ⚠ 그림은 고갈 6단계로 뽑아 뒀지만 **캠프 광맥은 마르지 않는다**(inf) — 지금은 「크기 변주」로만 쓴다.
 //   고갈을 실제로 넣게 되면 campMineStage() 가 잔량으로 단계를 고르게 바꾸면 된다.
-const CAMP_MINE_SPRITE = ['1','3','2','4','6','5'];   // 뒷줄 큰 것 · 앞줄 작은 것(좌우도 안 겹치게 섞음)
+// 지금은 **1·2번만** 쓴다 — 가운데 두 칸이 1(가장 큼), 양 끝 네 칸이 2.
+// 배치 순서는 campLayMinerals 가 정한다: 0~2 = 뒷줄 왼·가운데·오른, 3~5 = 앞줄 왼·가운데·오른.
+//   뒷줄 2 1 2
+//   앞줄 2 1 2
+// ⚠ 3~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다(캠프 광맥은 마르지 않는다).
+//   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 고르게 바꾼다.
+const CAMP_MINE_SPRITE = ['2','1','2', '2','1','2'];
+// 🪞 오른쪽 열은 좌우를 뒤집는다 — 같은 그림 넷이 나란히 서면 울타리처럼 반복돼 보인다.
+//   뒤집기만 해도 같은 파일로 다른 실루엣이 나온다(에셋을 늘리지 않는다).
+const CAMP_MINE_FLIP = [false, false, true, true, false, false];
+function campMineFlip(i){ return !!CAMP_MINE_FLIP[i % CAMP_MINE_FLIP.length]; }
 function campMineSprite(m, i){
   if(!_campOn) return '';                                   // ⛔ 관리자 탭·오토배틀은 3D 그대로
   const k = CAMP_MINE_SPRITE[i % CAMP_MINE_SPRITE.length];
