@@ -959,14 +959,14 @@ const SKILLS={
   // 레인저(마린): 스팀팩 — 자기 강화(공속·이속↑, 체력 소모). 전투 유즈맵 훅: u.buff.stim
   stim:{ key:'stim', name:'광폭화', kind:'self', cd:10, dur:6, atkMul:1.5, spdMul:1.4, hpCost:10 },
   // 메두사(퀸): 인스네어 — 지정 지역 적 둔화(가스). 훅: e.slowT
-  ensnare:{ key:'ensnare', name:'점착 가스', kind:'target_ground', energy:0, enSc:75, cd:10, dur:8, radius:0.11, slow:0.5,
+  ensnare:{ key:'ensnare', name:'점착 가스', kind:'target_ground', energy:0, enSc:75, cd:60, dur:10, radius:0.11, slow:0.5,
     arm:'🕸 점착 가스: 퍼뜨릴 지점을 클릭하세요.' },
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
   spider_mine:{ key:'spider_mine', name:'지뢰', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
     arm:'💣 지뢰: 매설 지점을 클릭하세요.' },
   // ── 유니온 배치 ──
   // 팬텀(고스트): 락다운 — 지정 적 정지(기계 무력화). 훅: e.stunT
-  lockdown:{ key:'lockdown', name:'봉쇄', kind:'target_enemy', energy:0, enSc:100, cd:9, dur:6, arm:'🔒 봉쇄: 정지시킬 적을 클릭하세요.' },
+  lockdown:{ key:'lockdown', name:'봉쇄', kind:'target_enemy', energy:0, enSc:100, cd:30, dur:5, arm:'🔒 봉쇄: 정지시킬 적을 클릭하세요.' },
   // 팬텀(고스트): 핵 공격 — 지정 지점에 지연 후 대형 폭발
   nuke:{ key:'nuke', name:'핵 폭격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵 폭격: 투하 지점을 클릭하세요.' },
   // 브레이커(탱크): 시즈 모드 — 토글(사거리·공격↑, 정지). 훅: 이동불가
@@ -980,10 +980,10 @@ const SKILLS={
   // ── 🔮 에테리얼(프로토스) 마법 — 관리자=SC 마나(enSc), 네모 게임=0(제외) ──
   hallucination:{ key:'hallucination', name:'환영', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 환영: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
   feedback:{ key:'feedback', name:'마나 소각', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 마나 소각: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
-  maelstrom:{ key:'maelstrom', name:'마비 폭풍', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🌀 마비 폭풍: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
+  maelstrom:{ key:'maelstrom', name:'마비 폭풍', kind:'target_ground', energy:0, enSc:100, cd:60, dur:5, radius:0.1, arm:'🌀 마비 폭풍: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
   mind_control:{ key:'mind_control', name:'정신 지배', kind:'target_enemy', energy:0, enSc:150, cd:15, arm:'🧠 정신 지배: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
   disruption_web:{ key:'disruption_web', name:'교란 결계', kind:'target_ground', energy:0, enSc:125, cd:10, dur:8, radius:0.11, arm:'🕸️ 교란 결계: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
-  stasis:{ key:'stasis', name:'빙결', kind:'target_ground', energy:0, enSc:100, cd:12, dur:6, radius:0.1, arm:'🧊 빙결: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
+  stasis:{ key:'stasis', name:'빙결', kind:'target_ground', energy:0, enSc:100, cd:30, dur:3, radius:0.1, arm:'🧊 빙결: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
   recall:{ key:'recall', name:'순간이동', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 순간이동: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
   // ── 🦎 스웜(저그) 마법 — 메두사(군단여왕) ──
   parasite:{ key:'parasite', name:'감염', kind:'target_enemy', energy:0, enSc:75, cd:6, arm:'🦠 감염: 기생시킬 적을 클릭하세요.' },   // 적 기생 → 시야 공유(영구)

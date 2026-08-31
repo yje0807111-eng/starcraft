@@ -442,6 +442,9 @@ function strikeSkillKeys(u){ if(typeof unitSkillKeys!=='function') return [];
 //     여기서 `S.camp` 를 보는 것이 새는 길이 없는 유일한 방법이다(`strikeCheckOver` 와 같은 방식).
 const STK_SK_CD_DEF = 5;   // 🏕 캠프에서 쿨이 없는 스킬의 기본 쿨(초) — 없으면 판정 주기(0.4초)마다 계속 나간다
 function _stkCampSk(){ return !!(typeof STK !== 'undefined' && STK && STK.camp); }
+// 🐌 둔화 배수 — 둔화 중이면 이동이 느려진다. ⛔ 공격 속도에는 걸지 않는다(원본 SC 인스네어와 다름).
+const STK_SLOW_MUL = 0.5;
+function strikeSlowMul(u){ return (u && u.slowT > 0) ? STK_SLOW_MUL : 1; }
 function strikeSkillCost(sk){ if(_stkCampSk()) return 0;
   return (sk && sk.enSc!=null) ? sk.enSc : ((sk&&sk.energy)||0); }   // 오토배틀 = 원본 SC 마나(enSc)
 function strikeSkillHpCost(sk){ return _stkCampSk() ? 0 : ((sk && sk.hpCost) || 0); }
@@ -669,7 +672,7 @@ function strikeMoveToward(u,tx,ty,dt){ const S=STK; if(!S) return;
     u.x+=dx/d*u.spd*dt; u.y+=dy/d*u.spd*dt; u.face=Math.atan2(dx,dy); u.moving=true; return; }
   const SP=STK_MOVE_SPAN, key=u.gm||u.id;
   if(u.skillOn&&u.skillOn.siege){ u.moving=false; return; }   // 공성 모드 = 고정
-  const p=u._mvp||(u._mvp={}); p.x=u.x/SP; p.y=u.y/SP; p.vx=u._vx||0; p.vy=u._vy||0; p.face=u.face; p._skSpdMul=(1/((typeof MOVE_MUL!=='undefined')?MOVE_MUL:1))*((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1)*strikeFrzSpdMul(u, S[u.side]);   // 공용 함수는 def.moveSpd×MOVE_MUL로 달린다 → 오토배틀 기준 속도(moveSpd×1800)로 환산 · 🐺 광폭화 이속
+  const p=u._mvp||(u._mvp={}); p.x=u.x/SP; p.y=u.y/SP; p.vx=u._vx||0; p.vy=u._vy||0; p.face=u.face; p._skSpdMul=(1/((typeof MOVE_MUL!=='undefined')?MOVE_MUL:1))*((u.buff&&u.buff.stim>0)?(SKILLS.stim.spdMul||1):1)*strikeFrzSpdMul(u, S[u.side])*strikeSlowMul(u);   // 🐌 둔화(점착 가스)도 여기서 곱한다   // 공용 함수는 def.moveSpd×MOVE_MUL로 달린다 → 오토배틀 기준 속도(moveSpd×1800)로 환산 · 🐺 광폭화 이속
   const R=(u.size+46)*7, R2=R*R, staticN=[];
   { const _nb=strikeNear(u.x, u.y, R, u._nbBuf||(u._nbBuf=[]));   // ⚡ 격자 근접 질의(전체 순회 제거)
     for(let i=0;i<_nb.length;i++){ const o=_nb[i]; if(o===u||o.dead||o.moving) continue;   // 멈춰 있는 유닛만 회피 대상
@@ -738,8 +741,11 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
 // ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬.** 둔화·기절·실명·은신은 이동/사격 코드가 읽는 값이 없고,
 //    순간이동·환영·정신지배는 유닛을 만들거나 진영을 옮겨야 하며, 핵·지뢰는 설치물 시스템이 필요하다.
 //    ⚠ 나중에 훅을 만들면 여기서 빼면 된다 — 시전 코드는 이미 준비돼 있다.
-const STK_SK_DEAD={ ensnare:1, lockdown:1, nuke:1, spider_mine:1, maelstrom:1, mind_control:1,
-  disruption_web:1, stasis:1, recall:1, hallucination:1, parasite:1, dark_swarm:1,
+// ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬** — 마나만 태우고 아무 일도 안 일어나는 것이
+//   아무것도 안 하는 것보다 나쁘다. 기능이 생기면 여기서 뺀다.
+//   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
+const STK_SK_DEAD={ nuke:1, spider_mine:1, mind_control:1,
+  disruption_web:1, recall:1, hallucination:1, parasite:1, dark_swarm:1,
   optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
 const STK_SK_SPOT_MIN=3;       // 광역 = 적이 이만큼 뭉쳤을 때만(한두 기에 쓰면 낭비)
@@ -814,6 +820,8 @@ function _stkApplyFoe(u, t, sk, key){
   if(key==='broodling'){ t.hp=0; t.sh=0; t.dead=true; return true; }        // 🐛 즉사(스웜링 2기 소환은 미구현)
   if(key==='feedback'){ const en=t.en||0; if(en<=0) return false;           // 💥 마나 소각 — 남은 마나만큼 피해
     t.en=0; strikeHit(t, en, u); if(t.hp<=0) t.dead=true; return true; }
+  if(key==='lockdown'){ if((t.stunT||0)>0) return false;                   // ⛔ 봉쇄 — 이미 멎은 적에 겹치지 않는다
+    t.stunT=sk.dur||5; return true; }
   if(sk.dps){ _stkDotAdd(STK, {tgt:t, dps:sk.dps, left:sk.dur||1, src:u}); return true; }   // ☢ 방사능
   if(sk.dmg){ strikeHit(t, sk.dmg, u); if(t.hp<=0) t.dead=true; return true; }               // 💥 집중포
   return false; }
@@ -823,6 +831,19 @@ function _stkApplySpot(u, c, sk, key, foe){
   if(key==='emp'){ let n=0;                                   // ⚡ EMP — 범위 안 마나·실드 소거
     for(const e of foe.units){ if(e.dead) continue; const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
       if((e.en||0)>0||(e.sh||0)>0){ e.en=0; e.sh=0; n++; } }
+    return n>0; }
+  // ⛔ **정지** — 빙결·마비 폭풍. 범위 안 적이 그 자리에 멎는다.
+  //   ⚠ 이미 멎어 있는 적에게는 겹치지 않는다 — 두 시전이 겹치면 사실상 영구 정지가 된다.
+  if(key==='stasis' || key==='maelstrom'){ let n=0;
+    for(const e of foe.units){ if(e.dead || (e.stunT||0)>0) continue;
+      const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
+      e.stunT=sk.dur||3; n++; }
+    return n>0; }
+  // 🐌 **둔화** — 점착 가스. 느려질 뿐 계속 싸운다(정지와 다르다).
+  if(key==='ensnare'){ let n=0;
+    for(const e of foe.units){ if(e.dead) continue;
+      const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
+      e.slowT=Math.max(e.slowT||0, sk.dur||8); n++; }
     return n>0; }
   const dps=sk.dps||sk.dmg; if(!dps) return false;
   _stkDotAdd(STK, {x:c.x, y:c.y, r2:r2, dps:dps, left:sk.dur||1, src:u, foe:foe===STK.me?'me':'ai'});   // ⚡ 번개 폭풍 · 🩸 역병
@@ -1366,6 +1387,15 @@ function strikeStepUnits(dt){ const S=STK; if(!S||S.over) return;
           FX.death(S.fx, u.x, u.y, {unitSize:(u.size||14)*1.7, color:'#ffca4a', parts:STK_DEATH_PARTS+8}); }   // 큰 폭발 이펙트
         continue; }
       if(u.wait>0){ u.wait-=dt; u.moving=false; continue; }   // 스폰 후 0.5초 대기(중앙 응시 상태로 정지)
+      // ⛔ **정지(stun)** — 봉쇄·빙결·마비 폭풍이 거는 상태(HUNT_R1 §3-4-4).
+      //   움직이지도 때리지도 못한다. `u.wait` 와 같은 자리에 두는 이유는 그 아래 전부
+      //   (표적 선정·이동·사격)를 통째로 건너뛰어야 하기 때문이다.
+      //   ⚠ 지속 시간은 **여기서만** 깎는다. `strikeSkillTick` 의 `u.buff` 루프에 넣으면
+      //     두 번 깎여 절반이 된다(치유에서 이미 밟은 함정이다).
+      if(u.stunT>0){ u.stunT=Math.max(0,u.stunT-dt); u.moving=false; continue; }
+      // 🐌 **둔화(slow)** — 점착 가스가 거는 상태. 정지와 달리 **느려질 뿐** 계속 싸운다.
+      //   배수는 `strikeSlowMul` 이 낸다(이동에만 건다 · 공격 속도는 안 건드린다).
+      if(u.slowT>0) u.slowT=Math.max(0,u.slowT-dt);
       if(u._btT>0){ u._btT-=dt; if(u._btT<=0) u._btgt=null; }   // 포기했던 표적의 재선정 금지 시간
       if(!u._atk) u._atk=(typeof _sbAtkMode==='function')?_sbAtkMode({id:u.id, gmodel:u.gm}):{air:true,gnd:true};   // 공격 가능 레이어(관리자 전투실험과 동일 규칙)
       const _canHit=(o)=>{ const k=o.gm||o.id, air=(typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(k)); return air?u._atk.air:u._atk.gnd; };

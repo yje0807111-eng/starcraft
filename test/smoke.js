@@ -1684,6 +1684,75 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // ⛔🐌 정지·둔화 — 없던 기능 둘을 만들어 스킬 넷을 살렸다(HUNT_R1 §3-4-4 · 2026-08-28).
+  //   ⚠ 정지는 「움직이지도 때리지도 못한다」, 둔화는 「느려질 뿐 계속 싸운다」 — 다른 것이다.
+  await step('캠프 스킬: 정지·둔화가 실제로 걸린다', async()=>{
+    skipIf(typeof _stkApplyFoe!=='function'||typeof _stkApplySpot!=='function','효과 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      // ① 넷이 「미구현」 목록에서 빠졌는가 — 안 빠지면 시전 자체가 막힌다
+      for(const k of ['lockdown','stasis','maelstrom','ensnare'])
+        assert(!STK_SK_DEAD[k],k+' 가 아직 미구현 목록에 있다 — 시전이 막힌다');
+      // ② 확정값(HUNT_R1 §3-4-4)
+      const want={ lockdown:[30,5], stasis:[30,3], maelstrom:[60,5], ensnare:[60,10] };
+      for(const k in want){ const sk=SKILLS[k];
+        assert(sk.cd===want[k][0],k+' 쿨이 '+want[k][0]+'이 아니다: '+sk.cd);
+        assert(sk.dur===want[k][1],k+' 지속이 '+want[k][1]+'이 아니다: '+sk.dur); }
+      campWipeField();
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('ai','marine'); });
+      const foes=CAMPB.ai.units.filter(e=>!e.dead); skipIf(foes.length<3,'적을 못 세움');
+      // ⚠ **겹쳐 세우지 말 것** — 겹침 해소(1367행 근처)가 정지와 무관하게 밀어낸다.
+      //   그건 맞는 동작이라, 겹쳐 두면 「정지 중인데 움직였다」로 헛나온다(실제로 밟았다).
+      foes.forEach((e,i)=>{ e.x=2000+i*120; e.y=2000; e.stunT=0; e.slowT=0; });
+      const me0=CAMPB.me.units[0]||{x:2000,y:2000};
+      // ③ 봉쇄 — 적 하나가 멎는다 · 이미 멎은 적에는 안 겹친다
+      { const t=foes[0];
+        assert(campWithStk(()=>_stkApplyFoe(me0,t,SKILLS.lockdown,'lockdown')),'봉쇄가 안 걸렸다');
+        assert(t.stunT===5,'봉쇄 정지가 5초가 아니다: '+t.stunT);
+        assert(!campWithStk(()=>_stkApplyFoe(me0,t,SKILLS.lockdown,'lockdown')),'멎은 적에 봉쇄가 겹쳤다 — 영구 정지가 된다'); }
+      // ④ 빙결 — 지점 광역 정지
+      { for(const e of foes){ e.stunT=0; }
+        const c={x:2000,y:2000};
+        assert(campWithStk(()=>_stkApplySpot(me0,c,SKILLS.stasis,'stasis',CAMPB.ai)),'빙결이 안 걸렸다');
+        assert(foes.every(e=>e.stunT===3),'빙결이 범위 안 전부를 안 멈췄다: '+foes.map(e=>e.stunT).join(',')); }
+      // ⑤ 점착 가스 — 둔화는 겹쳐도 되고(길게), 정지와 달리 stunT 를 안 건드린다
+      { for(const e of foes){ e.stunT=0; e.slowT=0; }
+        const c={x:2000,y:2000};
+        assert(campWithStk(()=>_stkApplySpot(me0,c,SKILLS.ensnare,'ensnare',CAMPB.ai)),'점착 가스가 안 걸렸다');
+        assert(foes.every(e=>e.slowT===10),'둔화가 10초가 아니다: '+foes.map(e=>e.slowT).join(','));
+        assert(foes.every(e=>!(e.stunT>0)),'둔화가 적을 멈춰 세웠다 — 정지와 섞였다'); }
+      // ⑥ 정지한 유닛은 실제로 안 움직인다 · 시간이 지나면 풀린다
+      //   ⚠ **campCombatStep 을 쓰지 말 것** — 라운드·웨이브가 목록을 갈아치우고 전장을 닫아
+      //     잡아 둔 참조가 스텝을 안 탄다(정지가 영영 안 풀린 것처럼 보인다). 실제로 밟았다.
+      //     유닛 스텝만 직접 돌려 격리한다.
+      //   ⚠ **움직일 이유도 만들어 줘야 한다.** 그냥 세워 두면 정지가 없어도 안 움직여서
+      //     검사가 헛돈다(레드 테스트가 안 터져서 알았다).
+      { campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','marine'); strikeSpawnUnit('ai','marine'); strikeSpawnUnit('ai','marine'); });
+        const bait=CAMPB.me.units[0], a=CAMPB.ai.units[0], b=CAMPB.ai.units[1];
+        skipIf(!bait||!a||!b,'유닛을 못 세움');
+        bait.x=2000; bait.y=3200; bait.hp=bait.maxHp=1e6; bait.dmg=0; bait.wait=0; bait.rallied=true;
+        a.x=2000; b.x=2300; a.y=b.y=2000;
+        for(const e of [a,b]){ e.wait=0; e.rallied=true; e.stunT=0; e.dmg=0; }
+        const ox0=b.x, oy0=b.y;
+        campWithStk(()=>{ for(let i=0;i<30;i++) strikeStepUnits(0.05); });
+        assert(b.x!==ox0 || b.y!==oy0,'미끼가 있는데 적이 안 움직인다 — 이 검사는 헛돈다');
+        a.stunT=1.5; const x0=a.x, y0=a.y;
+        campWithStk(()=>{ for(let i=0;i<20;i++) strikeStepUnits(0.05); });
+        assert(a.x===x0 && a.y===y0,'정지 중인데 움직였다');
+        campWithStk(()=>{ for(let i=0;i<40;i++) strikeStepUnits(0.05); });
+        assert(!(a.stunT>0),'정지가 안 풀렸다: '+a.stunT); }
+      // ⑦ 둔화 배수는 이동에만 걸린다
+      { const t=foes[1]; t.slowT=5;
+        assert(strikeSlowMul(t)===STK_SLOW_MUL,'둔화 배수가 안 걸린다: '+strikeSlowMul(t));
+        t.slowT=0; assert(strikeSlowMul(t)===1,'둔화가 끝났는데 배수가 남았다'); }
+      return '봉쇄 5초 · 빙결 3초 · 마비 5초 · 둔화 10초 ×'+STK_SLOW_MUL;
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 💉 의무병 치유 — 「3초 치유 → 5초 쉬기」(사용자 확정 2026-08-28).
   //   ⚠ 화면에서 도는 치유는 `strikeHealStep`(의무병 전용)이다. `SKILLS.heal` 은
   //     `_stkApplyAlly` 가 의무병을 빼고 있어 안 탄다 — 둘을 헷갈리지 말 것.
@@ -1942,7 +2011,8 @@ async function groupLobby(){
       if(s){ campWithStk(()=>strikeSkillTick(0.5));
         // ⏱ 캠프 전장이라 마나가 아니라 **쿨이 안 걸려야** 헛시전이 아니다
         const cd=s.u.skillCd||{};
-        assert(!(cd.lockdown>0) && !(cd.nuke>0),'미구현 스킬(봉쇄·핵)에 쿨이 걸렸다 — 헛시전');
+        // ⚠ 봉쇄는 2026-08-28 에 구현됐다 — 이제 **나가는 것이 정상**이다. 핵만 미구현이다.
+        assert(!(cd.nuke>0),'미구현 스킬(핵)에 쿨이 걸렸다 — 헛시전');
         out.push('미구현 무시 ok'); } }
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null; });
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
