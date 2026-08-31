@@ -27,6 +27,12 @@ const REB=(process.argv[6]||'')==='reb';
 // 🔁 환생 모드가 노리는 던전 — 기본 3. ⭐ 얕게(2) 잡으면 같은 실험이 몇 배 빨리 끝난다.
 //   💳 환생 팩 값을 잴 때 이걸 2 로 두고 돌렸다(2026-08-31 · GEM.md §5-4-8).
 const REB_DG=+(process.env.REB_DG||3);
+// 🔁 시작 환생 배수 — 「이미 한 번 환생한 사람」으로 출발한다(C.rebMul 에 그대로 넣는다).
+//   ⭐ 💳 환생 팩 값을 이걸로 잰다. 팩은 **환생 전에는 아무것도 안 하므로**, 환생 전 구간을
+//     두 번 돌리면 무작위(전투에 Math.random 43곳)만 타고 결과가 갈린다 — 실제로 한 판은
+//     D1R48 벽에 걸려 못 넘어갔다. 그래서 **환생 이후만** 같은 출발점에서 배수만 바꿔 잰다.
+//   ⚠ 그래도 판마다 흔들린다. **한 팔을 여러 번 돌려 중앙값으로 볼 것.**
+const START_MUL=+(process.env.START_MUL||0);
 // 🧱 벽 탐색(2026-08-29 · sc-3 요청) — 환생 없이 어디서 막히는가.
 //   판정 기준은 sc-3 §: 한 라운드를 **10분** 넘게 못 깨면 벽 후보 · **30분**이면 벽으로 보고 멈춘다.
 //   ⚠ 정체 문턱(stallS)과는 다른 것이다 — 그건 「측정을 계속할까」이고, 이건 「벽을 만났나」다.
@@ -68,13 +74,15 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
-  const C=campState(); C.race='terran'; saveMeta(); openHome();
+  const C=campState(); C.race='terran';
+  if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
+  saveMeta(); openHome();
   window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG);
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
