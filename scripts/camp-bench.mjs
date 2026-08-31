@@ -30,6 +30,9 @@ const WALL_WARN=600, WALL_STOP=1800;
 //   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
 //   ⚠ 벙커 건설 자체는 원래부터 한다(__CB.want 가 모든 생산 건물을 연다) — 다른 것은 탑승뿐이다.
 const BUNK=(process.env.BUNK==null) ? 1 : (+process.env.BUNK ? 1 : 0);
+// 🧭 배치 모드(2026-08-30) — RALLY=none|wide|bunker · RALLYW=가로 폭(전장 비율)
+const RALLY=process.env.RALLY||"none";
+const RALLYW=+(process.env.RALLYW||0.40);
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.svg':'image/svg+xml','.glb':'model/gltf-binary','.mp3':'audio/mpeg','.woff2':'font/woff2'};
 const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.url,'http://x').pathname);
  let f=path.join(ROOT,p==='/'?'sc-ums-web.html':p); if(!f.startsWith(ROOT)){s.writeHead(403);return s.end();}
@@ -51,13 +54,13 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW);
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -261,6 +264,12 @@ await pg.evaluate(()=>{
       if((G.tech.credit||0) < (b.m||0) || (G.tech.energy||0) < (b.g||0)) continue;
       const wk=G.tech.ents.find(e=>e.type==='worker' && e.build==null); if(!wk) return;
       G.tech.arm=b.k; G.tech.selU=[wk.eid];
+      // ⛔ **방어 건물을 맨 앞에 짓지 않는다** (2026-08-30 되돌림).
+      //   앞에 세워 봤더니 **대조군까지 망가졌다**: 같은 조건이 D1R8 → D1R4 로 떨어졌다.
+      //   적이 최전선의 벙커에 붙어 시간을 끄는데, 아군은 자리 지키기(CAMP_ENG_OUT 500)
+      //   때문에 도우러 못 간다 — 때릴 사람이 없는 채로 라운드가 늘어진다.
+      //   ⭐ 게임 쪽 CAMP_DEF_BLD(방어 건물이 유닛 좌표계를 쓴다)는 **그대로 둔다.**
+      //     그건 「플레이어가 앞에 지을 수 있다」는 선택지이고, 문제는 벤치가 **늘** 앞에 지은 것이다.
       const c=0.30+Math.random()*0.40, r=0.20+Math.random()*0.22;
       try{ techPlace(c, r); }catch(e){}
       G.tech.arm=null; return; } };
@@ -269,18 +278,74 @@ await pg.evaluate(()=>{
   //   ⚠ 탑승은 유닛의 **자리**가 되므로 한 번만 넣으면 라운드마다 저절로 유지된다 —
   //     그래도 매번 부르는 이유는 새로 뽑힌 유닛과 새로 지은 벙커를 채우기 위해서다.
   //   ⚠ BUNK=0 이면 아무것도 안 한다(벙커는 짓되 태우지 않는 대조군).
+  //   ⛔ **전 병력을 가두지 말 것** (2026-08-30 고침). 예전에는 빈자리를 사거리 짧은 순으로
+  //     전부 채웠다 — 병력 8기가 벙커 3채에 통째로 갇혔고, 사람은 그렇게 하지 않는다.
+  //     그 판이 D1R3(실효 0.32) 이었다: 벙커를 평가한 게 아니라 **병력을 창고에 넣은 것**이다.
+  //   ⭐ 사람이 할 판단 둘을 규칙으로 못 박는다:
+  //     ① 사거리가 **짧은 유닛만** 태운다 — 마린(187)은 밖에서 쏘는 게 낫다
+  //     ② 전투 병력의 **1/3 을 넘기지 않는다** — 나머지는 밖에서 싸워야 라운드가 끝난다
+  __CB.bunkMaxR=100;                       // 이보다 사거리가 길면 안 태운다(화력병 70 ○ · 마린 187 ✕)
+  __CB.bunkShare=1/3;                      // 전투 병력 중 벙커에 넣는 최대 비율
   __CB.board=function(){
     if(!__CB.bunk) return;
     if(typeof campBoard!=='function' || typeof CAMPB==='undefined' || !CAMPB) return;
     const cap=(typeof CAMP_BUNK_CAP!=='undefined')?CAMP_BUNK_CAP:4;
+    const alive=CAMPB.me.units.filter(u=>!u.dead && (u.dmg||0)>0);
+    const inB=alive.filter(u=>u._bunk!=null).length;
+    let room=Math.floor(alive.length*__CB.bunkShare)-inB;      // ② 비율 상한
+    if(room<=0) return;
     for(const b of (CAMPB._bld||[])){
+      if(room<=0) break;
       if(!b || b.bk!=='bunker' || b.dead) continue;
-      const room=cap-((typeof campBunkCrew==='function')?campBunkCrew(b.eid):0);
-      if(room<=0) continue;
-      const cand=CAMPB.me.units
-        .filter(u=>!u.dead && u._bunk==null && (u.dmg||0)>0)
-        .sort((x,y)=>(x.rng||0)-(y.rng||0)).slice(0,room);     // 사거리 짧은 순
-      if(cand.length) campBoard(cand, b); } };
+      const free=cap-((typeof campBunkCrew==='function')?campBunkCrew(b.eid):0);
+      if(free<=0) continue;
+      const cand=alive
+        .filter(u=>u._bunk==null && (u.rng||0)<=__CB.bunkMaxR)  // ① 사거리 짧은 유닛만
+        .sort((x,y)=>(x.rng||0)-(y.rng||0)).slice(0, Math.min(free, room));
+      if(cand.length){ campBoard(cand, b); room-=cand.length; } } };
+  // 🛡 **벙커를 방어선의 기준으로 삼는다** (2026-08-30 사용자 확정).
+  //   ⭐ 사용자가 그리는 그림: 「벙커가 **방어막**처럼 가장 선두에서 대신 맞아 주고,
+  //     병력들은 그 근처에서 싸운다」. 화력병처럼 근접이라 손으로 체력 관리가 어려운 유닛을
+  //     벙커에 넣어 대신 버티게 하는 것이다.
+  //   ⛔ 이게 없어서 지금까지 벙커를 **엉뚱한 자리에 두고 쟀다** — 벙커는 격자 랜덤 위치인데
+  //     병력은 생산된 자리에 그대로 서 있었다. 다섯 판 내내 벙커 체력이 안 깎였던 이유다.
+  //   ⚠ 사람이 하는 조작(병력 지정 → 자리 옮기기)을 흉내내는 것이라 **벤치 쪽**에 둔다.
+  //     게임 규칙으로 만들 것인지는 이 측정 결과를 보고 정한다.
+  //   ⭐ **배치 모드**(2026-08-30) — 「전선 폭이 병목인가」를 재기 위한 스위치.
+  //     none   : 아무것도 안 한다(생산된 자리 그대로 = 지금까지의 기본)
+  //     wide   : 전장 가로로 **고르게 편다**(폭은 __CB.rallyW)
+  //     bunker : 가장 앞 벙커의 뒤쪽 반원(아래 기존 로직)
+  //   ⚠ 벤치 실측: R20 에서 병력을 80% 더 유지해도 **꽂힌 화력은 10% 만 늘었다**
+  //     (18기 48.1 vs 10기 43.8). 한 번에 적에게 닿는 수가 정해져 있다는 뜻이다.
+  __CB.rally=function(){
+    const mode=__CB.rallyMode||'none';
+    if(mode==='none' || typeof CAMPB==='undefined' || !CAMPB) return;
+    const W=CAMPB.world||4800;
+    if(mode==='wide'){
+      const us=CAMPB.me.units.filter(u=>!u.dead && u._bunk==null);
+      if(!us.length) return;
+      // y 는 한 번만 정한다 — 매번 평균을 다시 내면 전선이 야금야금 밀린다
+      if(__CB.rallyY==null){ let s=0; for(const u of us) s+=(u._post||u).y; __CB.rallyY=s/us.length; }
+      us.sort((a,b)=>(a.uid<b.uid?-1:a.uid>b.uid?1:0));   // uid 고정 순서 — 매 프레임 뒤바뀌면 자리가 흔들린다
+      const n=us.length, half=(__CB.rallyW||0.40)/2;
+      for(let i=0;i<n;i++){
+        const t=(n===1)?0.5:(i/(n-1));
+        us[i]._post={ x:W*(0.5-half+t*half*2), y:__CB.rallyY }; }
+      return; }
+    if(!__CB.bunk) return;
+    const bunks=(CAMPB._bld||[]).filter(b=>b && b.bk==='bunker' && !b.dead);
+    if(!bunks.length) return;
+    let f=bunks[0]; for(const b of bunks) if(b.y<f.y) f=b;      // 가장 앞(적 쪽) 벙커
+
+    let i=0;
+    for(const u of CAMPB.me.units){
+      if(u.dead || u._bunk!=null) continue;
+      if(u._rallyB===f.eid) continue;                          // 이미 이 벙커를 기준으로 섰다
+      u._rallyB=f.eid;
+      // 벙커보다 **뒤**(y 큰 쪽)에 반원으로 — 벙커가 먼저 맞고 병력이 뒤에서 쏜다
+      const a=(i%9)/8*Math.PI, r=130+((i/9)|0)*70; i++;
+      u._post={ x:Math.max(0,Math.min(W, f.x+Math.cos(a)*r)),
+                y:Math.max(0,Math.min(W, f.y+Math.abs(Math.sin(a))*r*0.6+60)) }; } };
   // 자동 생산 — 본부는 일꾼, 그 밖의 완성 건물은 첫 유닛을 계속
   __CB.produce=function(){ if(!G.tech) return;
     const race=G.tech.race, T=TECH_TREE[race]; if(!T) return;
@@ -418,7 +483,7 @@ await pg.evaluate(()=>{
               return m; })() });
           __CB.rate=Math.max(0,(w-(__CB.lastW||0))/15);   // ROI 판단에 쓰는 초당 수입
           __CB.lastW=w; } }
-      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy(); __CB.board();
+      if((i%40)===0){ __CB.build(); __CB.research(); __CB.produce(); __CB.buy(); __CB.board(); __CB.rally();
         // 캠프(0단계)에 있고 병력이 모였으면 던전으로
         const units=G.tech?G.tech.ents.filter(e=>e.type==='unit').length:0;
         __CB.army=units;

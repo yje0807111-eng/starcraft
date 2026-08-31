@@ -1290,6 +1290,16 @@ function campPostStep(dt){
 //     그 자리에 서긴 한다. 그때까지 이어 붙이는 것은 다음 일이다.
 const CAMP_BUNK_CAP = 4;          // 벙커 한 채의 정원 — 건설 시스템(_techBunkerable)과 같은 값
 const CAMP_BUNK_SLOT = 26;        // 벙커 안에서 서로 벌리는 간격(px) — 3D 로 겹쳐 보이지 않을 만큼
+// 🎯 **벙커 사거리 보너스 = +2칸** (2026-08-30 사용자 확정 · 스타크래프트 벙커와 같은 발상).
+//   ⚠ 왜 필요한가: 벙커는 한 번 지으면 못 움직이는데 전선은 판마다 다른 자리에 생긴다.
+//     실측(2026-08-30 · 벤치 25분 한 쌍): 태우면 라운드가 **2~3배 느려졌다**(R2 79.7초 vs 26.3초).
+//     벙커 체력은 94/120 — **거의 안 맞았다.** 탄 병력이 적을 못 만나고 그냥 논 것이다.
+//   ⭐ 보너스는 그 어긋남을 메운다 — 벙커가 전선보다 조금 뒤여도 안에서 쏠 수 있다.
+//   ⚠ 값은 설계표와 같은 **칸 단위**로 준다(CAMP_UNIT_STAT.r 이 칸이다).
+//   ⛔ const 로 두지 말 것 — CAMP_STAT_TILE 이 이 줄보다 **아래**에 선언돼 있어서
+//     평가 시점에 ReferenceError(TDZ)가 난다. 함수로 미루면 호출 때는 이미 있다.
+const CAMP_BUNK_TILES = 2;                  // +2칸
+function campBunkRng(){ return CAMP_BUNK_TILES * CAMP_STAT_TILE; }   // ≈ 94px
 function campBldFind(eid){
   if(!CAMPB || !CAMPB._bld || eid == null) return null;
   for(const b of CAMPB._bld) if(b && b.eid === eid) return b;
@@ -1339,8 +1349,18 @@ function campBunkerStep(dt){
   if(!CAMPB || !CAMPB.me) return 0;
   let n = 0;
   for(const u of CAMPB.me.units){
-    if(u.dead || u._bunk == null) continue;
+    if(u.dead) continue;
     const b = campInBunker(u);
+    // 🎯 사거리 보너스 — **탄 상태에 맞춰 매 프레임 맞춘다.**
+    //   ⭐ 이렇게 두면 탑승·하차·무너짐·복구가 전부 저절로 맞는다(각 지점에서 따로 안 만진다).
+    //   ⚠ 원래 사거리는 _rng0 에 보관한다. 그것이 있으면 「지금 보너스가 걸려 있다」는 뜻이다.
+    if(b && u._rng0 == null){
+      u._rng0 = u.rng; u.rng = u._rng0 + campBunkRng();
+      if(typeof strikeAcq === 'function') u.acq = Math.max(u.acq || 0, strikeAcq(u.rng)); }
+    else if(!b && u._rng0 != null){
+      u.rng = u._rng0; u._rng0 = null;
+      if(typeof strikeAcq === 'function') u.acq = CAMP_ACQ_BASE; }
+    if(u._bunk == null) continue;
     if(!b){ u._bhp = null; continue; }          // 🧱 무너져 있는 동안은 밖에서 싸운다(기록은 남긴다)
     const s = (typeof _ringSlotN === 'function') ? _ringSlotN(u._bslot | 0, CAMP_BUNK_SLOT) : { dx:0, dy:0 };
     u.x = b.x + s.dx; u.y = b.y + s.dy; u.moving = false;
@@ -1367,6 +1387,11 @@ const CAMP_ENG_RANGED = 0.85;     // 원거리가 서는 거리 = 자기 사거�
 const CAMP_ENG_GAP = 38;          // 옆 유닛과 벌리는 간격(px) — 이만큼이면 겹침 회피가 안 밀어낸다
 const CAMP_ENG_ARC = Math.PI * 0.75;   // 원거리 부채꼴의 최대 폭(라디안)
 const CAMP_ENG_OK = 24;           // 목표 자리에 이만큼 붙으면 다 온 것으로 본다(떨림 방지)
+// 🚧 **자리에서 나갈 수 있는 최대 거리**(px). 이 값이 「전선이 얼마나 움직이나」를 정한다.
+//   ⭐ 작을수록 제자리 방어에 가깝고(고정 방어가 뜻을 갖는다), 클수록 적을 따라 들어간다.
+//   ⚠ 목줄(CAMP_LEASH 1300)과 다른 것이다 — 목줄은 「끌려간 뒤 잘라내는」 안전장치이고
+//     이건 애초에 **그만큼만 나가게 하는** 규칙이다.
+const CAMP_ENG_OUT = 500;
 function campEngageStep(dt){
   if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
   if(typeof strikeFindUnit !== 'function') return 0;
@@ -1401,7 +1426,19 @@ function campEngageStep(dt){
           // ㉡ 부채꼴 — 간격이 각도로 얼마인지 거리에서 역산한다(멀수록 좁은 각도로 충분하다)
           const step = Math.min(CAMP_ENG_ARC / Math.max(1, cnt), 2 * Math.asin(Math.min(0.9, CAMP_ENG_GAP / (2 * Math.max(1, want)))));
           ang = base + (i - (cnt - 1) / 2) * step; }
-        const gx = t.x + Math.cos(ang) * want, gy = t.y + Math.sin(ang) * want;
+        let gx = t.x + Math.cos(ang) * want, gy = t.y + Math.sin(ang) * want;
+        // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정).
+        //   ⛔ 그냥 두면 적을 **따라 들어간다** — 표적이 멀수록 멀리 쫓아가서 자리가 무너지고,
+        //     전선이 계속 움직여 **벙커·포탑 같은 고정 방어가 아무 뜻이 없어진다**
+        //     (실측 2026-08-30: 벙커에 태운 판이 안 태운 판보다 늘 느렸다 · 실효 0.45 vs 1.4).
+        //   ⭐ 원하는 그림은 「제자리에서 조금만 나가 도와주고 자리를 지킨다」다.
+        //     그래서 목표 자리를 **_post 로부터 CAMP_ENG_OUT 안**으로 자른다.
+        //   ⚠ 사거리가 안 닿으면 그냥 안 닿는 채로 둔다 — 그것이 「자리를 지킨다」의 뜻이다.
+        //     적이 결국 자리 쪽으로 오므로 기다리면 만난다(적은 내 건물을 치러 내려온다).
+        { const home = u._post;
+          if(home){ const ox = gx - home.x, oy = gy - home.y, od = Math.hypot(ox, oy);
+            if(od > CAMP_ENG_OUT){ gx = home.x + ox / od * CAMP_ENG_OUT;
+                                   gy = home.y + oy / od * CAMP_ENG_OUT; } } }
         const dx = gx - u.x, dy = gy - u.y;
         if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
         if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고
@@ -3122,10 +3159,18 @@ const CAMP_COLS = 48;
 // 어떤 줌에서도 밖이 안 보인다. ⛔ 여기에 여유를 더하면(예전 CAMP_PAN_FREE) 그만큼 밖이 뚫린다.
 // ⚠ 맞바꿈: zoom 1(=하한)에서는 m=0 이라 **화면 이동이 안 된다.** 밖을 안 보이게 하는 것과
 //   하한에서 움직이는 것은 양립하지 않는다 — 이동하려면 확대해야 한다(RTS 표준 동작).
-// ⭐ **축소 하한 = 기본 배율(CAMP_ZOOM)** — 진입 애니가 끝나면 나오는 바로 그 크기다(2026-08-27 사용자 확정).
-//   1 까지 줄일 수 있으면 기본 화면보다 더 멀어져, 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
-//   1 은 바닥이 화면을 딱 덮는 배율이라 밖이 뚫리지는 않았지만, 그보다 더 좁게 묶는 것이라 안전하다.
-const CAMP_MIN_ZOOM = CAMP_ZOOM;
+// ⭐ **축소 하한 1.45** (2026-08-31 사용자 요청 · 「처음 화면이 너무 확대돼 있다」)
+//   ⛔ 앞서는 하한 = 기본 배율(1.8) 이었다 — 즉 **축소가 아예 안 됐다.** 「처음 본 화면이 가장 넓은
+//     화면이어야 한다」(2026-08-27)는 판단이었는데, 실제로 써 보니 답답하다고 하여 뒤집었다.
+//   ⭐ 1.45 → 기본(1.8) 보다 화면이 **1.24배 넓게** 보인다. 기본 시점은 그대로 1.8 이다.
+// 🔬 **뚫림 한계는 실측했다**(dgfight 샷 10단계 · 화면의 검은 픽셀 비율):
+//     1.8~1.0 = 0.2~0.4%(전부 유닛 그림자 · 맵이 화면 좌우 끝까지 닿음) · **0.85 = 13.8%** · 0.7 = 31.5%
+//   → **물리적 하한은 1.0** 이고(옛 주석의 「zoom 1 에서 화면을 덮는다」와 일치), 1.45 는 그보다
+//     한참 위라 어떤 팬에서도 밖이 안 보인다. 더 낮추고 싶으면 1.0 까지가 여유다.
+//   ⚠ 이 측정에서 자[尺]가 두 번 틀렸다: ① 폰 **바깥 여백**(201,192,172)을 구멍으로 세었다 —
+//     그 색은 1.8 에도 똑같이 있다 ② 눈으로 「좌우가 뚫렸다」고 본 것도 같은 착시였다.
+//     구멍의 진짜 색은 **검정**이다. 다시 잴 일이 있으면 검정으로 세고, 맵이 닿는 좌우 끝 px 를 함께 찍을 것.
+const CAMP_MIN_ZOOM = 1.45;
 // ✂ **화면이 내려갈 수 있는 아래 끝**(월드 y) — 미네랄·가스 덩어리 바로 아래에서 멈춘다.
 //   그 아래는 아무것도 없는 여백이라, 보이면 「빈 땅이 드러난 화면」이 된다.
 //   ⭐ 상수로 박지 않고 **실제 배치에서 잰다** — CAMP_ROW_MINE 이나 광맥 줄 수가 바뀌면 같이 따라간다.

@@ -1233,10 +1233,12 @@ async function groupLobby(){
               +' → 실제 줌 '+techView().zoom.toFixed(2)+' 시점 '
               +techView().x.toFixed(2)+','+techView().y.toFixed(2)); } }
         assert(techMinZoom()>=1,'축소 하한이 1 미만이다 — 바닥이 화면보다 작아진다: '+techMinZoom());
-        // ⭐ **가장 축소한 화면 = 진입 애니가 끝나면 나오는 그 화면**(2026-08-27 사용자 확정).
-        //    더 줄일 수 있으면 처음 본 화면이 「가장 넓은 화면」이 아니게 된다.
-        assert(Math.abs(techMinZoom()-CAMP_ZOOM)<1e-6,
-          '축소 하한이 기본 배율과 다르다 — 기본보다 더 멀어질 수 있다 ('+techMinZoom()+' vs '+CAMP_ZOOM+')');
+        // ⭐ **축소가 실제로 된다**(2026-08-31 사용자 요청 — 「처음 화면이 너무 확대돼 있다」).
+        //    ⛔ 앞서는 하한 = 기본 배율이라 **축소가 아예 안 됐다**("가장 축소한 화면 = 처음 화면",
+        //      2026-08-27). 써 보니 답답하다고 하여 뒤집었다. 위 covered() 가 뚫림을 막으므로
+        //      여기서는 「줄어들 여지가 남아 있는가」만 지킨다.
+        assert(techMinZoom() < CAMP_ZOOM - 1e-6,
+          '축소가 안 된다 — 하한이 기본 배율 이상이다 ('+techMinZoom()+' vs '+CAMP_ZOOM+')');
         // ✂ **가장 아래로 내리면 미네랄·가스가 하단 시트 바로 위에 붙는다 — 줌과 무관하게 같은 자리.**
         //    그 아래는 아무것도 없는 여백이라 보이면 「빈 땅이 드러난 화면」이 된다.
         //    ⚠ 화면 비율이 아니라 **월드 좌표**로 재야 한다 — 「기본 배율의 여지」로 상한을 고정했더니
@@ -1324,6 +1326,61 @@ async function groupLobby(){
   //   ⛔ 옛 규칙(30초 시간 부활)이 후반 발산의 동력이었다 — 실측(던전 2): 누운 병력이 6 → 34 로
   //     쌓이며 꽂힌 화력이 R9 정점 891 → R24 487 로 **떨어졌고**, 난이도는 계속 올라 R24 가 11.4분.
   //   ⚠ strikeStepUnits 가 죽은 유닛을 배열에서 걷어낸다(18-strike.js:1301) — '남아 있다'고 가정하면 안 된다.
+  // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
+  //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
+  //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)
+  //     ② 닫을 때 **애니가 끝난 뒤에** 지운다(즉시 지우면 사라지는 연출이 없다)
+  //     ③ 닫는 중에 다시 눌러도 열린다 ← **실제로 겪은 버그**. 앞선 닫기의 뒷정리가
+  //        뒤늦게 와서 방금 연 판에 .hide 를 붙였다. 세대(_hbMoreGen)로 막는다.
+  await step('패널 셔터: 던전 이동·더보기가 같은 연출로 열리고 닫힌다', async()=>{
+    skipIf(typeof campDropOpen!=='function'||typeof hbOpenMore!=='function','패널 함수 없음');
+    skipIf(!campChipInfo(),'캠프 밖 — 던전 칩이 없다');
+    const ani=el=>getComputedStyle(el).animationName;
+    // ① 같은 애니
+    campDropOpen(); await sleep(30);
+    const dd=document.getElementById('campDrop');
+    assert(!!dd,'던전 판이 안 열렸다');
+    assert(ani(dd)==='panShutIn','던전 판에 셔터가 안 걸렸다: '+ani(dd));
+    const _ddDur=getComputedStyle(dd).animationDuration;   // 판이 지워지기 전에 담아 둔다
+    // ⛔ **닫기는 열기와 이름이 달라야 한다.** 같은 이름을 reverse 로 되감으려 했더니
+    //    애니가 하나도 안 돌고 **끝값으로 즉시 점프**했다(clip 0% → 한 프레임에 100%).
+    //    「지워지긴 지워진다」만 재던 앞 검사는 이걸 못 잡았다 — 그래서 여기서 이름을 잠근다.
+    const _openAni = ani(dd);
+    campDropClose();
+    const _closeAni = ani(document.querySelector('.cdDrop')||dd);
+    assert(_closeAni && _closeAni!=='none', '닫기에 애니가 없다');
+    assert(_closeAni !== _openAni,
+      '닫기가 열기와 같은 애니 이름이다 ('+_closeAni+') — 되감기가 안 돌고 끝값으로 점프한다');
+    // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다 — 그리고 **중간 모습이 실제로 있어야 한다**
+    assert(!!document.querySelector('.cdDrop'),'던전 판이 애니 없이 즉시 지워졌다');
+    let _mid=false;
+    for(let i=0;i<6;i++){ await sleep(25);
+      const x=document.querySelector('.cdDrop'); if(!x) break;
+      // ⚠ 정규식을 쓰지 않는다 — 이 파일을 heredoc 으로 고칠 때 역슬래시가 벗겨져 깨진다.
+      const seg=(getComputedStyle(x).clipPath||'').split(' ').pop().replace(')','');  // "41.2%"
+      const left = seg.slice(-1)==='%' ? 100-parseFloat(seg) : -1;
+      if(left>3 && left<97) _mid=true; }
+    assert(_mid,'닫는 중 중간 모습이 한 번도 안 잡혔다 — 접히지 않고 툭 사라진다');
+    await sleep(420);
+    assert(!document.querySelector('.cdDrop'),'던전 판이 애니 뒤에도 안 지워졌다');
+    // 더보기도 같은 애니여야 한다 — 둘이 다르면 단일 소스가 깨진 것
+    hbOpenMore(); await sleep(30);
+    const bx=document.getElementById('hbMoreBox');
+    assert(!!bx && ani(bx)==='panShutIn','더보기 판에 셔터가 안 걸렸다: '+(bx?ani(bx):'판 없음'));
+    const _dur=getComputedStyle(bx).animationDuration;
+    assert(_dur===_ddDur,'두 판의 연출 길이가 다르다 — 한 곳에서 정해야 한다 ('+_dur+' vs '+_ddDur+')');
+    // ③ 닫는 중에 다시 눌러도 열린다
+    hbCloseMore(); await sleep(50);
+    assert(!hbMoreOn(),'닫는 중인데 아직 열린 것으로 센다 — 다시 누르면 또 닫기가 돈다');
+    hudTopMenu();                                   // 셔터가 되감기는 중에 ☰ 를 다시 눌렀다
+    await sleep(500);                               // 앞선 닫기의 뒷정리가 올 시간을 충분히 준다
+    assert(!document.getElementById('hbMoreSheet').classList.contains('hide'),
+      '닫는 중에 다시 눌렀더니 안 열린다 — 지난 닫기의 뒷정리가 새로 연 판을 덮었다');
+    hbCloseMore(true); await sleep(40);
+    assert(document.getElementById('hbMoreSheet').classList.contains('hide'),'즉시 닫기가 안 먹는다');
+    return '열기 '+_dur+' 셔터 · 닫기는 이름이 다른 애니로 접힌다 · 두 판 공용 · 닫는 중 재클릭 ok';
+  });
+
   await step('캠프: 라운드가 시작될 때 전원 부활 + 체력 회복', async()=>{
     skipIf(typeof campRoundRevive!=='function'||typeof campEnterDungeon!=='function','라운드 부활 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
@@ -1849,6 +1906,19 @@ async function groupLobby(){
       u.hp -= 5; campBunkerStep(0.05);
       assert(Math.abs(u.hp-uhp)<1e-6,'탄 유닛이 직접 피해를 받았다: '+u.hp+' (전 '+uhp+')');
       assert(Math.abs((bhp-5)-bunk.hp)<1e-6,'벙커가 대신 안 받았다: '+bunk.hp+' (기대 '+(bhp-5)+')'); }
+    // ③-2 🎯 **사거리 보너스** — 탄 동안만 +2칸, 내리면 원래대로
+    //   ⚠ 벙커는 못 움직이는데 전선은 판마다 다른 자리에 생긴다. 보너스가 그 어긋남을 메운다.
+    { const u=CAMPB.me.units.find(x=>!x.dead&&campInBunker(x));
+      assert(u,'탄 유닛이 없다');
+      assert(u._rng0!=null,'탄 유닛에 보너스가 안 걸렸다');
+      assert(Math.abs(u.rng-(u._rng0+campBunkRng()))<1e-6,
+        '보너스 값이 다르다: '+Math.round(u.rng)+' (기대 '+Math.round(u._rng0+campBunkRng())+')');
+      const base=u._rng0;
+      u._bunk=null; campBunkerStep(0.05);                  // 내리면
+      assert(u._rng0==null && Math.abs(u.rng-base)<1e-6,
+        '내렸는데 보너스가 안 풀렸다: '+Math.round(u.rng)+' (원래 '+Math.round(base)+')');
+      // 다시 태워 다음 검사를 잇는다
+      campBoard([u], bunk); campBunkerStep(0.05); }
     // ④ 벙커가 무너지면 밖에서 싸운다 — 그리고 **기록은 남아** 복구되면 다시 탄다
     { const u=CAMPB.me.units.find(x=>!x.dead&&x._bunk!=null);
       bunk.hp=0; bunk.dead=true;
@@ -1883,6 +1953,14 @@ async function groupLobby(){
     for(let i=0;i<500;i++) campCombatStep(0.05);      // 25초 — 붙고 자리잡을 시간
     const got=rate();
     assert(got>=0.5,'싸우는데 사거리 안에 든 아군이 너무 적다: '+(got*100).toFixed(0)+'% (기대 50%↑)');
+    // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정 · 실측으로 500 확정)
+    //   ⛔ 그냥 두면 적을 따라 들어가 자리가 무너지고 전선이 계속 움직인다 —
+    //     그러면 벙커·포탑 같은 **고정 방어가 아무 뜻이 없어진다.**
+    //   ⚠ 값은 실측으로 골랐다(25분 벤치): 250 은 너무 좁아 적을 못 만나고(D1R3 · 실효 0.28),
+    //     무제한은 자리가 무너진다(D1R8). **500 이 D1R9 로 가장 좋았다**(실효 1.0~1.25).
+    { const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
+        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > CAMP_ENG_OUT*1.5);
+      assert(!out.length,'자리에서 너무 멀리 나갔다(적을 따라 들어갔다): '+out.length+'기 · 상한 '+CAMP_ENG_OUT); }
     // ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
     { const ai=CAMPB.ai.units.filter(u=>!u.dead);
       if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };

@@ -2042,3 +2042,37 @@
   .cmBuy{flex:0 0 auto;display:flex;align-items:center;gap:5px;min-height:38px;padding:0 12px;
     font-family:var(--font-num);font-size:var(--fs-md)}
   .cmBuy .cmC{width:14px;height:14px}
+
+  /* ══ 🎬 패널 셔터 등장 (2026-08-31) ══════════════════════════════════════
+     좌상단 던전 이동(.cdDrop) · 우상단 더보기(.hbMoreBox) — 버튼 아래로 열리는 판 둘.
+     목업 docs/mock/panel-anim-6.html 의 ④ 셔터. 위에서 아래로 잘려 나온다.
+     ⭐ **높이·크기를 건드리지 않는다**(clip-path 만 움직인다). 그래서
+        던전 판이 열리자마자 하는 「지금 라운드로 스크롤」 계산이 어긋나지 않는다 —
+        펼침(scaleY)·높이 애니로 하면 그 계산이 깨진다(12-appshell.js campRndCenter).
+     ⭐ 글자가 눌리지 않는 것도 이 방식을 고른 이유다(scaleY 는 안의 글자까지 납작해진다).
+     ⚠ 닫기는 열기보다 **짧다**(.13s vs .22s) — 사라지는 것을 기다리게 하지 않는다.
+     🔬 **이징은 재서 골랐다**(정지 프레임으로 열린 비율을 뽑아 비교):
+       · ease-out 계열 (.25,.8,.3,1) → 15% 시점에 벌써 **46% 열림**. 급하게 튀어나오고
+         뒤 절반은 87→100% 뿐이라 **셔터가 안 읽힌다**(처음 넣었던 값이다).
+       · linear → 기계적이고 끝이 딱 끊긴다.
+       · 순수 S자 (.4,0,.2,1) → 15%에 7%. 셔터는 잘 읽히지만 **처음 30ms 가 죽어**
+         「눌렀는데 반응이 없다」로 느껴진다.
+       ⭐ (.33,.1,.2,1) = S자에 **출발만 살린 것**. 누르는 즉시 움직이면서 중반에 내려온다. */
+  @keyframes panShutIn{ from{ clip-path:inset(0 0 100% 0) } to{ clip-path:inset(0 0 0 0) } }
+  .cdDrop{ animation:panShutIn .22s cubic-bezier(.33,.1,.2,1) both }
+  .hbMoreWrap:not(.hide) .hbMoreBox{ animation:panShutIn .22s cubic-bezier(.33,.1,.2,1) both }
+  /* 닫히는 중 — 판은 아직 DOM 에 있다(애니가 끝나야 지운다). 그동안 터치를 먹지 않게 한다.
+     ⚠ 명시도를 열기 규칙보다 높여야 한다 — `.hbMoreBox.hbmOut` 만으로는 위 규칙에 진다.
+     ⛔ **닫기는 열기와 이름이 달라야 한다**(2026-08-31 실측). 처음에는 같은 panShutIn 을
+        `reverse` 로 되감으려 했는데 — **애니가 하나도 안 돌고 끝값으로 즉시 점프했다.**
+        clip 이 0% → **한 프레임에 100%**. 열기는 잘 보이는데 닫기만 툭 사라져 보인 이유다.
+        animation-name 이 같으면 브라우저는 「같은 애니가 이어서 돈다」로 보고, 이미 끝난
+        (fill:both) 애니의 방향만 뒤집어 **그 자리에서 결과값**을 낸다. 이름을 갈라야 재시작한다.
+     ⚠ 되감기(reverse)로는 이징도 거울이 되지 않는다 — 닫기 곡선은 여기서 따로 정한다. */
+  @keyframes panShutOut{ from{ clip-path:inset(0 0 0 0) } to{ clip-path:inset(0 0 100% 0) } }
+  .cdDrop.cdOut{ animation:panShutOut .15s cubic-bezier(.45,.05,.7,.95) both; pointer-events:none }
+  .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:panShutOut .15s cubic-bezier(.45,.05,.7,.95) both; pointer-events:none }
+  @media (prefers-reduced-motion:reduce){
+    .cdDrop,.cdDrop.cdOut,.hbMoreWrap:not(.hide) .hbMoreBox,
+    .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:none }
+  }
