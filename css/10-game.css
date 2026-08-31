@@ -679,8 +679,8 @@
   /* ⚠ 「나가기」는 **되돌릴 수 없는 동작**이라 여기만 붉다(2026-08-26 · E8).
      ⛔ 다른 주 동작(확인·만들기·시작)에 이 붉은색을 퍼뜨리지 말 것 — 위험 표시가 뜻을 잃는다. */
   /* 되돌릴 수 없는 주 동작(나가기·로그아웃) = 붉은 글자. 두 확인창이 같은 얼굴이어야 한다 */
-  :is(#exitConfirm,#logoutPanel) .ecGo{color:#ff8a94;border-color:rgba(255,107,122,.55);background:rgba(255,107,122,.1)}
-  :is(#exitConfirm,#logoutPanel) .ecGo:active{background:rgba(255,107,122,.22)}
+  :is(#exitConfirm,#logoutPanel,#campRebOk) .ecGo{color:#ff8a94;border-color:rgba(255,107,122,.55);background:rgba(255,107,122,.1)}
+  :is(#exitConfirm,#logoutPanel,#campRebOk) .ecGo:active{background:rgba(255,107,122,.22)}
   /* 누른 표시 = 눌려 들어가는 것이 아니라 면이 잠깐 밝아지는 것 */
   .ecCard .ecCancel:active,.hbModal .ecCancel:active,#ovBtn2.ghost:active{background:rgba(255,255,255,.12);box-shadow:none}
   .ecCard .ecGo:active,.hbModal .ecGo:active,#ovBtn:active{background:rgba(255,255,255,.22);box-shadow:none}

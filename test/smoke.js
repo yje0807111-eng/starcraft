@@ -327,6 +327,55 @@ async function groupLobby(){
     assert(so[0].closest('#msSocialDock'),'소셜 DOM 이 도크 밖에 있음');
     assert(document.getElementById('msChat') && document.getElementById('msChatInput'),'유즈맵 채팅 알맹이가 없어졌다');
     return '다락 18개 없음 · 소셜/환생 본문은 살아 있음'; });
+  // 🔁 환생 화면 — HUNT_R1.md §4-2-0 이 요구한 것이 실제로 화면에 있는가.
+  //    ⭐ 「먼 목표」 줄은 장식이 아니다. 없으면 첫 환생을 손해로 판단하고 두 번 다시 안 누른다.
+  await step('환생 화면: 받을 것 · 조건 · 먼 목표 · 되돌릴 수 없는 확인', async()=>{
+    skipIf(typeof campRebOpen!=='function','환생 화면 없음');
+    if(typeof openHome==='function') openHome(); await sleep(60);
+    if(typeof campHasRace==='function' && !campHasRace() && typeof campPickRace==='function') campPickRace();
+    await sleep(120);
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // ⚠ 실패해도 화면을 반드시 닫는다 — 열린 채로 죽으면 #campReb(z-index 120)이 뒤 스텝을 덮는다
+    //   (실제로 주입 시험에서 로그아웃 스텝까지 같이 넘어졌다).
+    try{
+    // ① 조건 미달이면 누를 수 없다
+    C.earn=0; C.earnGas=0; campRebOpen(); await sleep(80);
+    assert(visible($('campReb')),'환생 화면이 안 열림');
+    { const go=document.querySelector('#campReb .crGo');
+      assert(go && go.disabled,'조건 미달인데 환생 버튼이 눌린다'); }
+    // ② 조건을 채우면 열린다 + 받을 값이 실제 공식과 같다
+    C.earn=3.2e6; C.dg=2; C.cleared=17; campRebRender(); await sleep(60);
+    { const go=document.querySelector('#campReb .crGo');
+      assert(go && !go.disabled,'조건을 채웠는데 환생 버튼이 잠겨 있다');
+      const tx=$('crBody').textContent;
+      assert(tx.indexOf('+'+campNum(campRebPtGain()))>=0,'받을 포인트가 공식과 다름');
+      assert(tx.indexOf('×'+(campRebMul()+campRebMulGain()).toFixed(2))>=0,'환생 뒤 배수가 공식과 다름'); }
+    // ③ ⭐ 먼 목표 — 「환생하면 더 빠르다」가 눈에 보여야 한다
+    { const rows=[...document.querySelectorAll('#campReb .crFarRow b')];
+      assert(rows.length===2,'먼 목표 줄이 두 줄이 아님: '+rows.length);
+      const h=t=>parseFloat(t.replace(/[^0-9.]/g,''));
+      assert(h(rows[1].textContent) < h(rows[0].textContent),
+        '환생 뒤가 더 빠르게 안 나온다: '+rows[0].textContent+' → '+rows[1].textContent); }
+    // ④ 되돌릴 수 없으므로 확인을 거친다 — 나가기·로그아웃과 같은 껍데기
+    campRebAsk(); await sleep(80);
+    const ok=$('campRebOk'); assert(visible(ok),'환생 확인창이 안 뜸');
+    assert(ok.querySelector('.ecCard'),'확인창이 공용 껍데기(.ecCard)가 아님');
+    { const c=getComputedStyle(ok.querySelector('.ecGo')).color.match(/\d+/g).map(Number);
+      assert(c[0]>180 && c[0]>c[1]+60,'환생 버튼이 붉은 글자가 아님: '+c.join(',')); }
+    // ⑤ 취소하면 아무것도 안 일어난다
+    const before=(C.reb|0); campRebCancel(); await sleep(60);
+    assert(!visible($('campRebOk')),'확인창이 안 닫힘');
+    assert((campState().reb|0)===before,'취소했는데 환생이 실행됨');
+    // ⑥ 실행하면 배수·포인트가 실제로 남는다
+    const mul0=campRebMul(), pts0=campState().rbPts||0;
+    campRebAsk(); campRebGo(); await sleep(160);
+    { const C2=campState();
+      assert((C2.reb|0)===before+1,'환생 횟수가 안 올랐다');
+      assert(campRebMul()>mul0,'배수가 안 올랐다: '+mul0+' → '+campRebMul());
+      assert((C2.rbPts||0)>pts0,'포인트가 안 올랐다');
+      assert((C2.dg|0)===0 && (C2.earn||0)===0,'회차가 안 되감겼다'); }
+    return '조건·공식·먼 목표·확인 ok';
+    }finally{ campRebCancel(); campRebClose(); } });
   // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
   //    도달 불가가 됐다 — 설정 > 로그아웃이 그 자리를 잇는다(2026-08-27).
   await step('로그아웃: 확인창을 거친다 · 설정 위에 뜬다 · 나가기와 같은 얼굴', async()=>{
@@ -7965,14 +8014,18 @@ async function groupLobby(){
   // 🔬📋 하단 네비 개편(2026-08-25) — 옛 캐릭터·정비를 연구·임무로 갈아끼웠다.
   //   ⚠ 지금은 **껍데기**다(본문 '준비 중'). 그래도 칸·아이콘·화면 열림은 지금부터 지킨다 —
   //     APP_SCREENS 에 빠지면 화면이 영영 안 켜지는데, 눈으로만 보면 그걸 못 잡는다.
-  await step('하단 네비: 연구·임무·유즈맵·상점 네 칸', async()=>{
+  await step('하단 네비: 연구·환생·유즈맵·상점 네 칸', async()=>{
     skipIf(typeof NAV_TREE==='undefined','네비 표 없음');
     const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.label);
-    assert(cells.join(',')==='연구,임무,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
-    // 임무는 아직 껍데기 화면이다 — APP_SCREENS 누락이면 여기서 걸린다
-    { openQuest(); await sleep(60);
-      assert(visible($('questScreen')),'임무 화면이 안 열림(APP_SCREENS 에 빠졌는지 볼 것)');
-      assert($('questScreen').querySelector('.setSoon'),'임무 화면 본문이 없음'); }
+    assert(cells.join(',')==='연구,환생,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
+    // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
+    //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
+    { const reb=NAV_TREE.find(x=>x.k==='reb');
+      assert(reb && reb.subs.length===2,'환생 하위 칸(환생·트리)이 없음');
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,트리','환생 하위 칸이 다름');
+      assert(/campRebOpen/.test(String(reb.go)),'환생 칸이 환생 화면을 안 연다');
+      // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다
+      assert(/campTreeOpen/.test(String(reb.subs[1].act)),'트리 칸이 기존 트리를 안 부른다'); }
     // 🔬 **연구는 화면이 아니라 캠프 하단 시트로 간다**(2026-08-27 · js/20-camp-research.js).
     //   ⛔ 화면을 갈아치우면 캠프가 닫혔다 다시 열려 **전체가 한 번 튕긴다** — 바뀌는 것은 하단뿐이어야 한다.
     //   ⚠ 여기서는 **부르지 않는다** — openResearch 는 캠프를 켜는데, 그러면 뒤 step(좌상단 칩·드롭다운)이

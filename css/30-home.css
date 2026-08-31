@@ -1896,15 +1896,59 @@
   border:1px solid rgba(255,59,59,.35);background:rgba(14,18,26,.82)}
 #campBar .cbFoe:empty{display:none}
 /* 🌳 트리 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살린다 */
-#campBar .cbTree{pointer-events:auto;flex:0 0 auto;
+#campBar :is(.cbTree,.cbReb){pointer-events:auto;flex:0 0 auto;
   border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
   background:rgba(20,26,36,.9);color:#cfd8e6;font-size:var(--fs-sm);font-weight:700;padding:3px 8px}
 #campBar .cbTree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--gold,#ffd24a)}
+#campBar .cbReb b{color:#5cd6ff}   /* 환생 = 시안(트리의 금색과 갈라 읽힌다) */
 
 /* ══ 🌳 환생 포인트 트리 — 마인드맵 (2026-08-25 · 6단계-b) ═══════════════
    전체 화면 위에 덮는 판. 가운데는 밀고 확대하는 SVG, 위아래에 얇은 줄 둘.
    값은 DESIGN.md §2 표 — 라운드 0(큰 패널)/3(얇은 표시)/6(버튼) · 간격 8/12/20.
    ⛔ 갈래 색은 JS(CAMP_TREE_BR)가 단일 소스다 — 여기에 다시 적지 말 것. */
+/* ══ 🔁 환생 화면 — 트리(#campTree)와 같은 규격(#phone 직속 · z-index 120) ══════════ */
+#campReb{position:absolute;inset:0;z-index:120;display:none;flex-direction:column;
+  background:radial-gradient(120% 90% at 50% 38%,rgba(18,24,34,.97),rgba(6,9,13,.99))}
+#campReb.on{display:flex}
+#campReb .crTop{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 12px 8px}
+#campReb .crTitle{flex:1;font-size:var(--fs-lg);font-weight:800;color:#e8eef7}
+#campReb .crX{border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
+  background:rgba(255,255,255,.05);color:var(--txt);font-family:inherit;font-size:var(--fs-md);
+  font-weight:700;padding:6px 12px;cursor:pointer}
+#campReb .crBody{flex:1;min-height:0;overflow-y:auto;padding:4px 12px 16px;
+  display:flex;flex-direction:column;gap:10px}
+/* 판 = 각진 3px · 검정 면 · 밑변 광원(DESIGN.md 공용 규칙) */
+#campReb .crCard,#campReb .crFar{border-radius:3px;padding:11px 12px;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--metal-edge);box-shadow:inset 0 -1px 0 rgba(255,255,255,.06)}
+#campReb .crCard.ok{box-shadow:inset 0 -1px 0 rgba(92,214,255,.45)}   /* 조건 충족 = 밑변만 시안 */
+#campReb .crLbl{font-size:var(--fs-sm);font-weight:800;letter-spacing:.06em;color:#8fa0b4;margin-bottom:7px}
+#campReb .crRow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 0}
+#campReb .crRow span{font-size:var(--fs-md);color:var(--txt-mute)}
+#campReb .crRow b{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-lg);font-weight:800;color:#e8eef7}
+#campReb .crRow b em{font-style:normal;color:var(--gold,#ffd24a)}   /* 바뀔 값만 금색 */
+/* 조건 막대 — 얇게. 채워지면 시안 */
+#campReb .crBar{height:3px;margin:9px 0 6px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+#campReb .crBar i{display:block;height:100%;background:linear-gradient(90deg,rgba(92,214,255,.5),#5cd6ff)}
+#campReb .crNeed{font-size:var(--fs-sm);color:var(--txt-mute);font-variant-numeric:tabular-nums}
+/* ⭐ 먼 목표 — 첫 환생을 손해로 오해하지 않게 하는 줄(HUNT_R1 §4-2-0) */
+#campReb .crFarRow{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:4px 0}
+#campReb .crFarRow span{font-size:var(--fs-md);color:var(--txt-mute)}
+#campReb .crFarRow b{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-xl);font-weight:800;color:#8a94a2}
+#campReb .crFarRow.now b{color:#5cd6ff}                              /* 환생 뒤 = 밝게(이쪽이 빠르다) */
+#campReb .crHint{margin-top:8px;font-size:var(--fs-sm);line-height:1.5;color:var(--txt-mute);word-break:keep-all}
+#campReb .crHint b{color:#cfd8e3}
+#campReb .crGo{margin-top:2px}
+#campReb .crTree{margin-top:-4px}
+/* 확인창 — 화면 안에 겹친다(트리와 같은 120 위) */
+#campRebOk{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+  background:var(--ov-dim);backdrop-filter:blur(2px)}
+#campRebOk.hide{display:none}
+/* 🔁 맵 띠 칩 — 🌳 와 같은 얼굴 */
+#campBar .cbReb.hide{display:none}
+
 #campTree{position:absolute;inset:0;z-index:120;display:none;
   background:radial-gradient(120% 90% at 50% 42%,rgba(18,24,34,.97),rgba(6,9,13,.99))}
 #campTree.on{display:block}

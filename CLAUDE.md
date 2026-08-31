@@ -98,6 +98,7 @@
 | 오토배틀 대전 설정 | `STK_OPTS`(상하한 표) + `STK_PRESETS` + `renderCpMode()` | 상하한·기본값은 표 한 곳에서만 · 엔진 반영은 `MAP_CFG_OVR` → `mapCfg` 한 입구(시작 때 심고 로비 복귀 때 반납) |
 | 목록 고르는 판(방 찾기·파티 찾기) | `.rmCard` + `.rmHead`/`.rmNum`/`.rmList`+`.roomItem`/`.rmBtns` | 방 찾기(`#rooms`)가 원본 · 파티 찾기는 이 컴포넌트를 그대로 빌린다(딤만 `.pfOv`) · **새 목록 판을 만들지 말 것** · 행 밑변 광원 = `--dc`(난이도 색, 없으면 중립) · 하단은 `.actBtn`(주 동작 길게 + `.sq` 38px 둘) |
 | **캠프 단계·라운드 표시** | `#curTitle` 칩(`curPaintChip()` · `js/12-appshell.js`) | 던전 이름·라운드 n/50·진행 막대·이동 드롭다운 · ⛔ 맵 띠(`#campBar`)에 다시 두지 말 것 — 거긴 **적 수와 🌳 트리 입구만** · 상태는 `campDgN()`/`campRoundN()` 이 단일 소스(칩은 읽기만) |
+| **환생 화면** | **`#campReb`** + `campRebOpen()` · 내용은 `campRebRender()` | `#phone` 직속 전체 화면(트리와 같은 규격 · z-index 120) · 입구는 **하단 네비 「환생」**과 **캠프 맵 띠 🔁 칩**(조건 충족 시 등장) · ⭐ **「먼 목표」 줄(`.crFar`)을 빼지 말 것** — 없으면 첫 환생을 손해로 판단한다(HUNT_R1 §4-2-0 이 요구한 것) · 실행 확인은 `.ecCard` 공용 확인창 |
 | **환생 트리(마인드맵)** | `#campTree` + `campTreeOpen()` · 노드는 `campTreeSvg()` | `#phone` 직속 전체 화면 · 밀고 확대 · 입구는 캠프 배지(`#campBar`)의 🌳 칩 · 갈래 색은 `CAMP_TREE_BR` 한 곳 |
 | **일일 퀘스트** | `openDaily()` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 퀘스트 · 하루 5개 + 주간 25개 |
 | **출석** | `openAtt()` → `#hbAttSheet` + `renderAtt()` | 더보기 ☰ > 출석 · **퀘스트와 화면이 다르다**(같은 판에 탭으로 묶지 말 것 — 2026-08-14 분리) |

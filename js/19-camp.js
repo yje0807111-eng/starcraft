@@ -518,6 +518,82 @@ function campTreeSvg(){
           (gr === '극상' ? '★' : '◆') + '</text>'); } }
   return rows.join('');
 }
+// ══ 🔁 환생 화면 (2026-08-31) ═══════════════════════════════════════════
+//  ⭐ 왜 「먼 목표」를 보여 주는가 — HUNT_R1.md §4-2-0.
+//     첫 환생은 **가까운 목표만 보면 손해다**(던전 3까지만 보면 필요 배수 80.3 vs 실제 2.7).
+//     먼 목표(던전 10)를 보면 이득이다. 그 사실이 화면에 안 보이면 플레이어는 손해라고 판단하고
+//     두 번 다시 안 누른다 — 방치형의 가장 흔한 실패다. 그래서 이 줄은 장식이 아니라 설계 요구다.
+//
+//  ⚠ 시간 어림의 근거: sc-2 실측에서 화력 ∝ 시간^3.4 였다(§6-2-4). 뒤집으면 영구 배율 M 은
+//     걸리는 시간을 M^(-1/3.4) 배로 줄인다. 던전 1~2 실측을 외삽한 값이라 **어림**이다 —
+//     화면에도 「어림」이라고 적는다. 실측이 바뀌면 이 두 상수만 고치면 된다.
+const CAMP_REB_T10 = 96;      // 배수 없이 던전 10 까지(시간) · HUNT_R1 §4-2-0 표
+const CAMP_REB_TEXP = 1 / 3.4;   // 시간 = T10 × M^(-1/3.4)
+function campRebHours(mul){ return CAMP_REB_T10 * Math.pow(Math.max(1, mul), -CAMP_REB_TEXP); }
+function campRebHourTx(h){ return (h >= 10) ? (Math.round(h) + '시간') : (h.toFixed(1) + '시간'); }
+
+function campRebOpen(){
+  const el = document.getElementById('campReb'); if(!el) return;
+  el.classList.add('on'); campRebRender();
+  if(typeof playSfx === 'function') playSfx('ui_open'); }
+function campRebClose(){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on'); }
+function campRebIsOn(){ const el = document.getElementById('campReb'); return !!(el && el.classList.contains('on')); }
+
+// 환생 실행 — ⚠ 되돌릴 수 없으므로 확인을 한 번 받는다(.ecCard 공용 확인 껍데기).
+function campRebAsk(){
+  if(!campCanRebirth()) return;
+  const p = document.getElementById('campRebOk'); if(!p) return;
+  const g = { mul: campRebMulGain(), pts: campRebPtGain() };
+  const m = p.querySelector('.ecMsg');
+  if(m) m.innerHTML = '지금까지 지은 것이 <b>전부 사라집니다</b>.<br>대신 <b>배수 +' + g.mul.toFixed(2)
+    + '</b> 와 <b>포인트 ' + campNum(g.pts) + '</b> 을 영구히 받습니다.';
+  p.classList.remove('hide');
+  if(typeof playSfx === 'function') playSfx('ui_open'); }
+function campRebCancel(){ const p = document.getElementById('campRebOk'); if(p) p.classList.add('hide'); }
+function campRebGo(){
+  campRebCancel();
+  const got = campRebirth(); if(!got) return;
+  campRebRender();
+  if(typeof toast === 'function') toast('🔁 환생했습니다 — 배수 +' + got.mul.toFixed(2) + ' · 포인트 ' + campNum(got.pts));
+  if(typeof playSfx === 'function') playSfx('ui_confirm'); }
+
+function campRebRender(){
+  const box = document.getElementById('crBody'); if(!box) return;
+  const C = campState(); if(!C){ box.innerHTML = ''; return; }
+  const wealth = campWealth(), need = CAMP_REB_COST, can = campCanRebirth();
+  const pct = Math.max(0, Math.min(100, wealth / need * 100));
+  const gMul = campRebMulGain(), gPts = campRebPtGain();
+  const now = campRebMul(), next = now + gMul;                 // 배수는 **합**이다(곱이 아니다)
+  const hNow = campRebHours(now), hNext = campRebHours(next);
+  const row = (k, v) => '<div class="crRow"><span>' + k + '</span><b>' + v + '</b></div>';
+  box.innerHTML =
+    '<div class="crCard">'
+    + '<div class="crLbl">지금</div>'
+    + row('환생 횟수', (C.reb | 0) + '회')
+    + row('획득 배수', '×' + now.toFixed(2))
+    + row('보유 포인트', campNum(C.rbPts || 0))
+    + '</div>'
+    + '<div class="crCard' + (can ? ' ok' : '') + '">'
+    + '<div class="crLbl">환생하면</div>'
+    + row('배수', '×' + now.toFixed(2) + ' → <em>×' + next.toFixed(2) + '</em>')
+    + row('포인트', '+' + campNum(gPts))
+    + '<div class="crBar"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
+    + '<div class="crNeed">' + (can ? '조건을 채웠습니다'
+        : ('이번 회차 재화 ' + campNum(wealth) + ' / ' + campNum(need)))
+    + '</div></div>'
+    // ⭐ 먼 목표 — 이 줄이 없으면 첫 환생이 손해로 보인다(§4-2-0)
+    + '<div class="crFar">'
+    + '<div class="crLbl">던전 10 까지 (어림)</div>'
+    + '<div class="crFarRow"><span>지금 배수로</span><b>' + campRebHourTx(hNow) + '</b></div>'
+    + '<div class="crFarRow now"><span>환생하면</span><b>' + campRebHourTx(hNext) + '</b></div>'
+    + '<div class="crHint">환생은 <b>막는 장치가 아니라 빠른 길</b>입니다. '
+    + '가까운 목표만 보면 손해로 보이지만, 끝까지 보면 훨씬 빠릅니다.</div>'
+    + '</div>'
+    + '<button class="actBtn pri crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>'
+    + (can ? '환생하기' : '조건 미달') + '</button>'
+    + '<button class="actBtn crTree" type="button" onclick="campRebClose();campTreeOpen()">🌳 환생 트리</button>';
+}
+
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
 function campTreeOpen(){
   const el = document.getElementById('campTree'); if(!el) return;
@@ -2097,7 +2173,8 @@ function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
   const C = campState(); const pts = C ? Math.floor(C.rbPts || 0) : 0;
   const dg = campDgN(), foe = campAlive('ai');
-  const key = dg + '|' + foe + '|' + pts;
+  const canReb = (typeof campCanRebirth === 'function') && campCanRebirth();   // ⓒ 지금은 조건만 본다(종족별 건물은 나중에)
+  const key = dg + '|' + foe + '|' + pts + '|' + (canReb ? 1 : 0);
   if(key === _campBarS) return;
   _campBarS = key;
   // ⛔ 던전·라운드·진행은 여기 두지 말 것 — 재화 바 왼쪽 칩(#curTitle · js/12-appshell.js)이
@@ -2105,8 +2182,11 @@ function campBarRender(){
   const fo = el.querySelector('.cbFoe');
   if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
   { const tb = el.querySelector('.cbTree b'); if(tb) tb.textContent = campNum(pts); }
+  // 🔁 환생 칩 — 조건(누적 재화 100만)을 채우면 나타난다. 화면을 안 봐도 열리는 것이 아니라
+  //    일꾼을 사고 탭을 눌러야 채워지는 값이다(HUNT_R1 §4-1).
+  { const rb = el.querySelector('.cbReb'); if(rb) rb.classList.toggle('hide', !canReb); }
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && pts <= 0);
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && pts <= 0 && !canReb);
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; }
