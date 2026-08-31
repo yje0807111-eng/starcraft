@@ -1757,6 +1757,221 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // ⛔🐌 정지·둔화 — 없던 기능 둘을 만들어 스킬 넷을 살렸다(HUNT_R1 §3-4-4 · 2026-08-28).
+  //   ⚠ 정지는 「움직이지도 때리지도 못한다」, 둔화는 「느려질 뿐 계속 싸운다」 — 다른 것이다.
+  await step('캠프 스킬: 정지·둔화가 실제로 걸린다', async()=>{
+    skipIf(typeof _stkApplyFoe!=='function'||typeof _stkApplySpot!=='function','효과 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      // ① 넷이 「미구현」 목록에서 빠졌는가 — 안 빠지면 시전 자체가 막힌다
+      for(const k of ['lockdown','stasis','maelstrom','ensnare'])
+        assert(!STK_SK_DEAD[k],k+' 가 아직 미구현 목록에 있다 — 시전이 막힌다');
+      // ② 확정값(HUNT_R1 §3-4-4)
+      const want={ lockdown:[30,5], stasis:[30,3], maelstrom:[60,5], ensnare:[60,10] };
+      for(const k in want){ const sk=SKILLS[k];
+        assert(sk.cd===want[k][0],k+' 쿨이 '+want[k][0]+'이 아니다: '+sk.cd);
+        assert(sk.dur===want[k][1],k+' 지속이 '+want[k][1]+'이 아니다: '+sk.dur); }
+      campWipeField();
+      campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('ai','marine'); });
+      const foes=CAMPB.ai.units.filter(e=>!e.dead); skipIf(foes.length<3,'적을 못 세움');
+      // ⚠ **겹쳐 세우지 말 것** — 겹침 해소(1367행 근처)가 정지와 무관하게 밀어낸다.
+      //   그건 맞는 동작이라, 겹쳐 두면 「정지 중인데 움직였다」로 헛나온다(실제로 밟았다).
+      foes.forEach((e,i)=>{ e.x=2000+i*120; e.y=2000; e.stunT=0; e.slowT=0; });
+      const me0=CAMPB.me.units[0]||{x:2000,y:2000};
+      // ③ 봉쇄 — 적 하나가 멎는다 · 이미 멎은 적에는 안 겹친다
+      { const t=foes[0];
+        assert(campWithStk(()=>_stkApplyFoe(me0,t,SKILLS.lockdown,'lockdown')),'봉쇄가 안 걸렸다');
+        assert(t.stunT===5,'봉쇄 정지가 5초가 아니다: '+t.stunT);
+        assert(!campWithStk(()=>_stkApplyFoe(me0,t,SKILLS.lockdown,'lockdown')),'멎은 적에 봉쇄가 겹쳤다 — 영구 정지가 된다'); }
+      // ④ 빙결 — 지점 광역 정지
+      { for(const e of foes){ e.stunT=0; }
+        const c={x:2000,y:2000};
+        assert(campWithStk(()=>_stkApplySpot(me0,c,SKILLS.stasis,'stasis',CAMPB.ai)),'빙결이 안 걸렸다');
+        assert(foes.every(e=>e.stunT===3),'빙결이 범위 안 전부를 안 멈췄다: '+foes.map(e=>e.stunT).join(',')); }
+      // ⑤ 점착 가스 — 둔화는 겹쳐도 되고(길게), 정지와 달리 stunT 를 안 건드린다
+      { for(const e of foes){ e.stunT=0; e.slowT=0; }
+        const c={x:2000,y:2000};
+        assert(campWithStk(()=>_stkApplySpot(me0,c,SKILLS.ensnare,'ensnare',CAMPB.ai)),'점착 가스가 안 걸렸다');
+        assert(foes.every(e=>e.slowT===10),'둔화가 10초가 아니다: '+foes.map(e=>e.slowT).join(','));
+        assert(foes.every(e=>!(e.stunT>0)),'둔화가 적을 멈춰 세웠다 — 정지와 섞였다'); }
+      // ⑥ 정지한 유닛은 실제로 안 움직인다 · 시간이 지나면 풀린다
+      //   ⚠ **campCombatStep 을 쓰지 말 것** — 라운드·웨이브가 목록을 갈아치우고 전장을 닫아
+      //     잡아 둔 참조가 스텝을 안 탄다(정지가 영영 안 풀린 것처럼 보인다). 실제로 밟았다.
+      //     유닛 스텝만 직접 돌려 격리한다.
+      //   ⚠ **움직일 이유도 만들어 줘야 한다.** 그냥 세워 두면 정지가 없어도 안 움직여서
+      //     검사가 헛돈다(레드 테스트가 안 터져서 알았다).
+      { campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','marine'); strikeSpawnUnit('ai','marine'); strikeSpawnUnit('ai','marine'); });
+        const bait=CAMPB.me.units[0], a=CAMPB.ai.units[0], b=CAMPB.ai.units[1];
+        skipIf(!bait||!a||!b,'유닛을 못 세움');
+        bait.x=2000; bait.y=3200; bait.hp=bait.maxHp=1e6; bait.dmg=0; bait.wait=0; bait.rallied=true;
+        a.x=2000; b.x=2300; a.y=b.y=2000;
+        for(const e of [a,b]){ e.wait=0; e.rallied=true; e.stunT=0; e.dmg=0; }
+        const ox0=b.x, oy0=b.y;
+        campWithStk(()=>{ for(let i=0;i<30;i++) strikeStepUnits(0.05); });
+        assert(b.x!==ox0 || b.y!==oy0,'미끼가 있는데 적이 안 움직인다 — 이 검사는 헛돈다');
+        a.stunT=1.5; const x0=a.x, y0=a.y;
+        campWithStk(()=>{ for(let i=0;i<20;i++) strikeStepUnits(0.05); });
+        assert(a.x===x0 && a.y===y0,'정지 중인데 움직였다');
+        campWithStk(()=>{ for(let i=0;i<40;i++) strikeStepUnits(0.05); });
+        assert(!(a.stunT>0),'정지가 안 풀렸다: '+a.stunT); }
+      // ⑦ 둔화 배수는 이동에만 걸린다
+      { const t=foes[1]; t.slowT=5;
+        assert(strikeSlowMul(t)===STK_SLOW_MUL,'둔화 배수가 안 걸린다: '+strikeSlowMul(t));
+        t.slowT=0; assert(strikeSlowMul(t)===1,'둔화가 끝났는데 배수가 남았다'); }
+      return '봉쇄 5초 · 빙결 3초 · 마비 5초 · 둔화 10초 ×'+STK_SLOW_MUL;
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
+  // 🕸 원거리 무효 장판 · 🔋 쉴드 충전(체력 회복) — HUNT_R1 §3-4-4 (2026-08-28)
+  await step('캠프 스킬: 원거리 무효 장판 · 쉴드 충전은 체력 회복', async()=>{
+    skipIf(typeof strikeWebBlocks!=='function'||typeof _stkApplySpot!=='function','장판 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      // ① 미구현 목록에서 빠졌는가 — 안 빠지면 시전 자체가 막힌다
+      for(const k of ['disruption_web','dark_swarm'])
+        assert(!STK_SK_DEAD[k],k+' 가 아직 미구현 목록에 있다');
+      // ② 확정값
+      assert(SKILLS.disruption_web.cd===20 && SKILLS.disruption_web.dur===3,
+        '교란 결계가 20/3 이 아니다: '+SKILLS.disruption_web.cd+'/'+SKILLS.disruption_web.dur);
+      assert(SKILLS.dark_swarm.cd===80 && SKILLS.dark_swarm.dur===8,
+        '암흑 장막이 80/8 이 아니다: '+SKILLS.dark_swarm.cd+'/'+SKILLS.dark_swarm.dur);
+      // ③ 원거리 기준 = 3칸. 경계 바로 아래는 근접이어야 한다
+      const px=STK_RANGED_TILES*STK_TILE_PX;
+      assert(strikeIsRanged({rng:px}),'딱 3칸인데 근접으로 봤다');
+      assert(!strikeIsRanged({rng:px-1}),'3칸 미만인데 원거리로 봤다');
+      // ④ 장판이 실제로 막는다 — 원거리는 막히고 근접은 안 막힌다
+      campWipeField();
+      campWithStk(()=>{
+        STK._webs=null;
+        const far={x:9000,y:9000,hp:100,maxHp:100,rng:px+50};        // 장판 밖 대상
+        const inw={x:1000,y:1000,hp:100,maxHp:100};                  // 장판 안 대상
+        const rngAtk={rng:px+50, id:'marine', gm:'marine'};          // 원거리 공격자
+        const melAtk={rng:px-50, id:'marine', gm:'marine'};          // 근접 공격자
+        _stkApplySpot({x:1000,y:1000}, {x:1000,y:1000}, SKILLS.dark_swarm, 'dark_swarm', STK.ai);
+        assert((STK._webs||[]).length===1,'장판이 안 깔렸다');
+        // 원거리 → 막힌다
+        let h=inw.hp; strikeHit(inw, 50, rngAtk);
+        assert(inw.hp===h,'장판 안인데 원거리 공격이 들어갔다: '+inw.hp+' (전 '+h+')');
+        // 근접 → 들어간다
+        h=inw.hp; strikeHit(inw, 50, melAtk);
+        assert(inw.hp<h,'장판 안이라고 근접까지 막았다 — 근접은 통해야 한다');
+        // 장판 밖 → 원거리도 들어간다
+        h=far.hp; strikeHit(far, 50, rngAtk);
+        assert(far.hp<h,'장판 밖인데 원거리가 막혔다');
+        // ⑤ 지속이 끝나면 다시 맞는다
+        _stkWebTick(STK, (SKILLS.dark_swarm.dur||8)+0.1);
+        assert(!(STK._webs||[]).length,'지속이 끝났는데 장판이 남아 있다');
+        h=inw.hp; strikeHit(inw, 50, rngAtk);
+        assert(inw.hp<h,'장판이 끝났는데 원거리가 여전히 막힌다');
+        STK._webs=null; });
+      // ⑥ 🕸 **자리는 아군 쪽에서 고른다** — 공격 장판과 반대다(2026-08-28).
+      //    ⛔ 적 뭉친 곳에 깔면 장판이 진영을 안 가리므로 **적을 보호한다.**
+      campWithStk(()=>{
+        const me=STK.me, foe=STK.ai;
+        me.units.length=0; foe.units.length=0;
+        const caster={x:1000,y:1000,rng:0,id:'falcon',gm:'falcon'};
+        // 아군 셋 — 왼쪽 둘은 원거리 적에게 맞고 있고, 오른쪽 하나는 근접만 붙어 있다
+        const a1={x:1000,y:1000,dead:false}, a2={x:1030,y:1000,dead:false}, a3={x:1600,y:1000,dead:false};
+        me.units.push(a1,a2,a3);
+        const px=STK_RANGED_TILES*STK_TILE_PX;
+        foe.units.push({x:1000,y:1200,dead:false,rng:px+400});   // 원거리 — a1·a2 를 때린다
+        foe.units.push({x:1600,y:1010,dead:false,rng:px-50});    // 근접 — a3 에 붙어 있다
+        // 적이 뭉친 곳(오른쪽)이 아니라 맞고 있는 아군 쪽(왼쪽)을 골라야 한다
+        const c=_stkPickWebSpot(caster, me, foe, SKILLS.dark_swarm);
+        assert(c,'맞고 있는 아군이 둘인데 자리를 못 골랐다');
+        assert(Math.abs(c.x-1015)<60,'자리를 아군 쪽에서 안 골랐다: x='+c.x+' (기대 1000~1030)');
+        assert(c.n===2,'세어야 할 아군 수가 다르다: '+c.n+' (근접만 붙은 아군은 안 센다)');
+        // 근접 적만 남기면 지킬 것이 없어 안 깐다
+        foe.units.length=0; foe.units.push({x:1000,y:1010,dead:false,rng:px-50});
+        assert(!_stkPickWebSpot(caster, me, foe, SKILLS.dark_swarm),'근접만 붙었는데 장판을 깔았다');
+        me.units.length=0; foe.units.length=0; });
+      // ⑥-2 **실제 시전 경로**로도 확인한다 — 위 검사는 자리 고르는 함수만 직접 부른다.
+      //   ⛔ 갈래(방어 장판이면 아군 쪽 함수를 쓴다)를 안 거치면 그 줄을 되돌려도 안 터진다.
+      //     실제로 레드 테스트가 안 터져서 알았다.
+      campWithStk(()=>{
+        const me=STK.me, foe=STK.ai;
+        me.units.length=0; foe.units.length=0; STK._webs=null;
+        const px=STK_RANGED_TILES*STK_TILE_PX;
+        // 시전자(팔콘 — 교란 결계) + 아군 하나를 왼쪽에
+        const cast={uid:'w1',x:1000,y:1000,id:'falcon',gm:'falcon',dead:false,
+          en:999,maxEn:999,skillCd:{},skillOn:{},buff:{},_skT:0,rng:0,side:'me'};
+        me.units.push(cast, {x:1030,y:1000,dead:false});
+        // 멀리서 쏘는 원거리 적(시전 사거리 밖 · 아군은 사거리 안) → 아군이 「맞고 있다」
+        foe.units.push({x:1000,y:2000,dead:false,rng:1200});
+        // 적 셋이 오른쪽에 뭉쳐 있다(근접) — 공격 장판 규칙이면 여기를 고른다
+        for(let i=0;i<3;i++) foe.units.push({x:1550+i*10,y:1000,dead:false,rng:px-50});
+        strikeSkillTick(0.5);
+        const W=STK._webs||[];
+        assert(W.length===1,'실제 시전으로 장판이 안 깔렸다: '+W.length);
+        assert(Math.abs(W[0].x-1015)<80,
+          '장판이 적 뭉친 쪽에 깔렸다 — 방어 장판인데 적을 지킨다: x='+Math.round(W[0].x));
+        me.units.length=0; foe.units.length=0; STK._webs=null; });
+      // ⑦ 🔋 쉴드 충전 — 캠프에서는 **체력** 25% 회복
+      assert(SKILLS.recharge.healPct===0.25,'쉴드 충전 회복량이 25%가 아니다: '+SKILLS.recharge.healPct);
+      assert(SKILLS.recharge.cd===300,'쉴드 충전 쿨이 300초가 아니다: '+SKILLS.recharge.cd);
+      { const t={hp:20,maxHp:100,sh:0,maxSh:0};
+        const ok=campWithStk(()=>_stkApplyAlly({}, t, SKILLS.recharge, 'recharge', 0.05));
+        assert(ok,'쉴드 충전이 아무 일도 안 했다');
+        assert(Math.abs(t.hp-45)<1e-6,'체력을 25% 만큼 안 채웠다: '+t.hp+' (기대 45)');
+        // 만체력이면 안 쓴다
+        t.hp=100;
+        assert(!campWithStk(()=>_stkApplyAlly({}, t, SKILLS.recharge, 'recharge', 0.05)),'만체력인데 썼다');
+        // ⛔ 캠프 밖은 원본(실드)이라 체력이 안 움직여야 한다
+        const t2={hp:20,maxHp:100,sh:0,maxSh:0};
+        _stkApplyAlly({}, t2, SKILLS.recharge, 'recharge', 0.05);
+        assert(t2.hp===20,'캠프 밖인데 체력이 회복됐다 — 오토배틀이 바뀐다: '+t2.hp); }
+      return '3칸('+Math.round(px)+'px) 이상=원거리 · 장막 8초 · 쉴드 충전 체력 +25%';
+    } finally { if(typeof CAMPB!=='undefined'&&CAMPB) CAMPB._webs=null;
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
+  // 💉 의무병 치유 — 「3초 치유 → 5초 쉬기」(사용자 확정 2026-08-28).
+  //   ⚠ 화면에서 도는 치유는 `strikeHealStep`(의무병 전용)이다. `SKILLS.heal` 은
+  //     `_stkApplyAlly` 가 의무병을 빼고 있어 안 탄다 — 둘을 헷갈리지 말 것.
+  await step('캠프 치유: 3초 치유하고 5초 쉰다', async()=>{
+    skipIf(typeof strikeHealStep!=='function'||typeof campEnterDungeon!=='function','치유/캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      campWithStk(()=>{ strikeSpawnUnit('me','medic'); strikeSpawnUnit('me','marine'); });
+      campScaleAllies(CAMPB.me.units);
+      const md=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+      const pt=CAMPB.me.units.find(u=>(u.gm||u.id)==='marine');
+      skipIf(!md||!pt,'의무병·환자를 못 세움');
+      md.x=pt.x; md.y=pt.y; md.en=0;                 // ⛔ 마나 0 — 캠프는 마나를 안 본다
+      pt.hp=1;                                        // 다친 환자
+      // ① 마나가 0인데도 치유가 된다 · 3초가 지나면 멎는다
+      let healed=0, stopAt=-1;
+      for(let i=0;i<200;i++){ const h0=pt.hp; pt.hp=1;   // 매 틱 환자를 도로 1로 — 회복량만 본다
+        campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
+        if(pt.hp>1){ healed++; } else if(healed>0 && stopAt<0){ stopAt=i*0.05; break; }
+        void h0; }
+      assert(healed>0,'마나가 0인데 치유가 아예 안 됐다 — 아직 마나가 문이다');
+      assert(stopAt>0,'3초가 지나도 치유가 안 멎었다 — 무한 치유다');
+      assert(Math.abs(stopAt-STK_HEAL_DUR)<0.4,'치유 지속이 '+STK_HEAL_DUR+'초가 아니다: '+stopAt.toFixed(2));
+      // ② 멎은 뒤에는 쿨이 걸려 있다 — 지속이 끝나야 쿨이 돈다
+      assert((md._healCd||0)>STK_HEAL_CD-0.5,'지속이 끝났는데 쿨이 안 걸렸다: '+(md._healCd||0));
+      // ③ 쿨이 다 돌면 다시 치유한다
+      md._healCd=0; md._healDur=0; pt.hp=1;
+      let again=0;
+      for(let i=0;i<20 && !again;i++){ pt.hp=1;
+        campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
+        if(pt.hp>1) again=1; }
+      assert(again,'쿨이 끝났는데 다시 치유하지 않는다');
+      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초 · 마나 0에서도 돈다';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // ⛽ 연구 값 — 캠프는 **가스만** 받는다(HUNT_R1 §2-3 · §3-4 · 2026-08-27).
   //   ⛔ 미네랄이 다시 붙으면 「비싼 미네랄」로 되돌아간다 — 두 번째 자원을 둔 뜻이 사라진다.
   //   ⚠ 16/17-build.js 는 관리자 탭·오토배틀과 공유다. **캠프 밖은 원본 값 그대로**여야 한다.
@@ -1799,6 +2014,7 @@ async function groupLobby(){
       { const rb=TECH_TREE[G.tech.race].buildings.find(x=>x.gas);
         assert(!(rb.research||[]).some(x=>x.k===CAMP_REF_KEY),
           '캠프를 나갔는데 정제소 카드가 남아 있다 — 관리자 탭이 터진다'); }
+
       openHome(); await sleep(420);
       assert(campResearchCost(tierR,0)!==null,'캠프로 돌아왔는데 캠프 값이 안 나온다');
       // ⛽ 정제소는 이제 **건물 카드가 아니라 연구 구역**에 있다 — 캠프 안팎에서 붙었다 떨어지지 않는다.
@@ -1843,10 +2059,44 @@ async function groupLobby(){
       for(let i=0;i<600 && !on;i++){ campCombatStep(0.05);
         for(const x of CAMPB.me.units){ if(x.buff && (x.buff.stim||0)>0){ on=1; break; } } }
       assert(on,'30초를 싸웠는데 스팀팩이 한 번도 안 걸렸다 — 캠프에서 스킬이 안 나간다');
-      // ③ 체력 코스트가 캠프 자릿수여야 한다 — 원본(10)이면 체력 5 짜리가 영영 못 쓴다
-      assert(SKILLS.stim.hpCost*2 < u0.maxHp,
-        '광폭화 체력값이 캠프 체력보다 크다 — 조건에 늘 걸린다: hpCost '+SKILLS.stim.hpCost+' vs hp '+u0.maxHp);
-      return '스팀팩 자동 시전 ok · hpCost '+SKILLS.stim.hpCost+' vs 체력 '+u0.maxHp;
+      // ③ ⏱ **캠프의 스킬 비용은 쿨타임 하나다**(2026-08-28 확정).
+      //    ⛔ 마나·체력이 하나라도 남아 있으면 「왜 안 나가지」를 셋 중 어디서 막혔는지
+      //      매번 다시 찾아야 한다 — 실제로 그렇게 두 번 헛돌았다.
+      //    ⛔ **SKILLS 표를 덮어쓰는 방식으로 되돌리지 말 것** — 표는 오토배틀과 공유라
+      //      캠프에서 나오기 전에 오토배틀이 돌면 마나 없이 난사한다(실제로 그렇게 깨졌다).
+      //      값은 strikeSkillCost/Cd/HpCost 가 S.camp 를 보고 낸다.
+      { const bad=[];
+        campWithStk(()=>{ for(const k in SKILLS){ const sk=SKILLS[k]; if(!sk) continue;
+          if(strikeSkillCost(sk)>0) bad.push(k+' 마나 '+strikeSkillCost(sk));
+          if(strikeSkillHpCost(sk)>0) bad.push(k+' 체력 '+strikeSkillHpCost(sk));
+          if(strikeSkillDrain(sk)>0) bad.push(k+' 소모 '+strikeSkillDrain(sk));
+          // 쿨이 없으면 판정 주기(0.4초)마다 계속 나간다 — 상시형·토글은 예외
+          if(sk.kind!=='aura' && sk.kind!=='toggle' && !(strikeSkillCd(sk,0)>0)) bad.push(k+' 쿨 없음'); } });
+        assert(!bad.length,'캠프인데 쿨타임 말고 다른 비용이 남아 있다: '+bad.slice(0,5).join(' · '));
+        // ⛔ 그리고 표 자체는 **안 건드려져 있어야** 한다(오토배틀이 같은 표를 본다)
+        assert((SKILLS.psi_storm||{}).energy>0,'SKILLS 표의 마나가 0 이 됐다 — 오토배틀이 오염된다');
+        assert((SKILLS.stim||{}).hpCost>0,'SKILLS 표의 체력 코스트가 0 이 됐다'); }
+      // ④ 시전 조건이 실제로 **쿨**이다 — 마나를 0 으로 만들어도 나간다
+      //    ⚠ 광폭화(self)는 **교전 중**에만 켠다. ②에서 적이 다 죽었을 수 있으니
+      //      안 죽는 적을 하나 세워 두고 잰다 — 안 그러면 「마나 탓」으로 오독한다.
+      { campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','marine'); strikeSpawnUnit('ai','marine'); });
+        campScaleAllies(CAMPB.me.units);
+        const u=CAMPB.me.units[0], e=CAMPB.ai.units[0];
+        skipIf(!u||!e,'대결 유닛을 못 세움');
+        e.x=u.x; e.y=u.y+20; e.hp=e.maxHp=1e6; e.dmg=0;   // 안 죽고 안 때리는 표적
+        u.en=0; u.buff.stim=0; u.skillCd.stim=0;
+        let on2=0; for(let i=0;i<200 && !on2;i++){ campCombatStep(0.05);
+          if((u.buff.stim||0)>0) on2=1; }
+        assert(on2,'마나가 0 인데 스킬이 안 나갔다 — 아직 마나가 문이다'); }
+      // ⑤ ⏱ **쿨은 지속이 끝난 뒤부터** 센다(사용자 확정 2026-08-28) — 주기 = dur + cd
+      //    ⛔ 시전 순간부터 세면 지속이 쿨보다 길 때 효과가 끊기지 않고 겹친다.
+      { const want=(SKILLS.stim.cd||0)+(SKILLS.stim.dur||0);
+        const got=campWithStk(()=>strikeSkillCd(SKILLS.stim,0));
+        assert(got===want,'광폭화 쿨이 「지속+쿨」이 아니다: '+got+' (기대 '+want+')');
+        // 캠프 밖(오토배틀)은 원본 그대로 — 지속을 더하지 않는다
+        assert(strikeSkillCd(SKILLS.stim,0)===SKILLS.stim.cd,'캠프 밖인데 지속이 더해졌다 — 오토배틀이 바뀐다'); }
+      return '스팀팩 자동 시전 ok · 비용은 쿨 하나 · 주기 '+((SKILLS.stim.cd||0)+(SKILLS.stim.dur||0))+'초(지속+쿨)';
     } finally { if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
@@ -1907,10 +2157,12 @@ async function groupLobby(){
     // ① 💥 집중포(드레드노트) — 사거리 안 **체력이 가장 높은 적**을 때린다
     { const s=setup('dreadnought', ['tank','tank']);
       if(s && s.foes.length===2){ s.foes[0].hp=s.foes[0].maxHp=900; s.foes[1].hp=s.foes[1].maxHp=300;
-        const en0=s.u.en; campWithStk(()=>strikeSkillTick(0.5));
+        campWithStk(()=>strikeSkillTick(0.5));
         assert(s.foes[0].hp<900,'집중포가 안 나갔다 — 체력 1위 적이 멀쩡하다');
         assert(s.foes[1].hp===300,'체력 낮은 쪽을 때렸다 — 대상 선택이 틀렸다');
-        assert(s.u.en<en0,'마나를 안 썼다 — 시전 판정이 헛돌았다');
+        // ⏱ 여기는 **캠프 전장**이다(campWithStk) — 비용은 마나가 아니라 쿨타임 하나다.
+        //   ⛔ 마나가 줄었는지로 재지 말 것: 캠프에서는 안 줄어드는 것이 정상이다.
+        assert((s.u.skillCd&&s.u.skillCd.yamato>0),'쿨이 안 걸렸다 — 시전 판정이 헛돌았다: '+JSON.stringify(s.u.skillCd));
         out.push('집중포 -'+Math.round(900-s.foes[0].hp)); } }
     // ② ⚡ 번개 폭풍(하이템플러) — **적이 3기 이상 뭉쳤을 때만**. 2기면 안 쓴다.
     { const s2=setup('high_templar', ['machinegun','machinegun']);   // ⚠ marine 은 스스로 광폭화하며 체력을 깎는다 — 광역과 헷갈리므로 스킬 없는 유닛으로 잰다
@@ -1935,8 +2187,11 @@ async function groupLobby(){
         out.push('보호막 '+Math.round(a.sh)); } }
     // ④ ⛔ 엔진에 걸 곳이 없는 스킬은 **마나를 태우지 않는다**(고스트 봉쇄·핵)
     { const s=setup('ghost', ['tank','tank','tank']);
-      if(s){ const en0=s.u.en; campWithStk(()=>strikeSkillTick(0.5));
-        assert(s.u.en===en0,'미구현 스킬(봉쇄·핵)에 마나를 썼다 — 헛시전');
+      if(s){ campWithStk(()=>strikeSkillTick(0.5));
+        // ⏱ 캠프 전장이라 마나가 아니라 **쿨이 안 걸려야** 헛시전이 아니다
+        const cd=s.u.skillCd||{};
+        // ⚠ 봉쇄는 2026-08-28 에 구현됐다 — 이제 **나가는 것이 정상**이다. 핵만 미구현이다.
+        assert(!(cd.nuke>0),'미구현 스킬(핵)에 쿨이 걸렸다 — 헛시전');
         out.push('미구현 무시 ok'); } }
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null; });
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
