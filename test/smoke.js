@@ -1034,13 +1034,18 @@ async function groupLobby(){
           for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
         assert(n>0,'원복했는데 원본 가스값이 안 돌아왔다 — 오토배틀이 함께 망가진다'); }
       G.tech.units[q.id]=0; }
-    // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
+    // ③ 광맥은 **한 줄 일곱 칸**이고, 일직선이 아니라 **가운데가 처진 호**다(2026-08-31 사용자 확정).
+    //   ⛔ 두 줄(3×2)로 되돌리지 말 것 — 덩어리로 뭉쳐 보였다.
     const M=G.tech.minerals||[];
-    assert(M.length===6,'광맥이 6개가 아님: '+M.length);
-    const xs=new Set(M.map(m=>m.x.toFixed(4))), ys=new Set(M.map(m=>m.y.toFixed(4)));
-    assert(xs.size===CAMP_MINE_COLS && ys.size===CAMP_MINE_ROWS,
-      '광맥이 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' 이 아님: '+xs.size+'열 '+ys.size+'행');
-    // ⛽ 가스 광산은 광맥과 **같은 높이, 바로 옆**이다.
+    assert(M.length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥 수가 배치와 다름: '+M.length);
+    const xs=new Set(M.map(m=>m.x.toFixed(4)));
+    assert(xs.size===CAMP_MINE_COLS,'광맥이 한 줄 '+CAMP_MINE_COLS+'칸이 아님: '+xs.size+'열');
+    { const S=M.slice().sort((a,b)=>a.x-b.x), mid=S[(S.length-1)/2|0];
+      const ends=(S[0].y+S[S.length-1].y)/2;
+      assert(mid.y>ends+1e-6,'가운데가 안 처졌다 — 호가 아니라 일직선이다');
+      assert(Math.abs(S[0].y-S[S.length-1].y)<1e-6,'양 끝 높이가 다르다 — 호가 기울었다'); }
+    // ⛽ 가스 광산은 **본부 양옆**이다(2026-08-31 사용자 확정 · 광맥 옆에서 옮겼다).
+    //   광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
     //   ⚠ 격자 크기(_techRows)는 맵 요소의 실제 크기에 달렸다 — campShowView() 로 #vBuild 를
     //     HOME 안으로 옮기기 **전에** 재면 다른 값이 나온다(실측: 30행 vs 35행).
     //     그래서 가스를 뷰 전에 잡았더니 광맥보다 5행 위에 앉았다. 격자 계산은 뷰 뒤에 둘 것.
@@ -1049,14 +1054,16 @@ async function groupLobby(){
       const gx=sx(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*cw, 0);
       const gy=sy(0, techY0()+(TECH_GAS.r0+TECH_GAS.h/2)*ch);
       const mY=M.map(m=>sy(m.x,m.y)), mX=M.map(m=>sx(m.x,m.y));
-      assert(gy>=Math.min(...mY)-0.04 && gy<=Math.max(...mY)+0.04,
-        '가스 광산이 광맥과 같은 높이가 아님: 가스 '+gy.toFixed(2)+' vs 광맥 '+Math.min(...mY).toFixed(2));
-      assert(gx<Math.min(...mX),'가스 광산이 광맥 옆이 아님');
-      // ⛽⛽ 가스는 **둘**이다 — 광맥 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
+      const B=(G.tech.ents||[]).find(e=>e.type==='bldg'); assert(B,'본부가 없다');
+      const bY=sy(B.x,B.y), bX=sx(B.x,B.y);
+      assert(Math.abs(gy-bY)<0.05,'가스가 본부와 같은 높이가 아님: 가스 '+gy.toFixed(2)+' vs 본부 '+bY.toFixed(2));
+      assert(gy<Math.min(...mY),'가스가 광맥보다 아래다 — 본부 줄에 있어야 한다');
+      assert(gx<bX,'왼쪽 가스가 본부 왼쪽에 없다');
+      // ⛽⛽ 가스는 **둘**이다 — 본부 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
       //   캠프가 판정 함수를 감싸 좌표를 잠시 바꿔 한 번 더 묻는 방식으로 두 자리를 인정한다.
       //   ⛔ 로직을 복사하지 않는다(복사본은 원본이 바뀌면 낡는다).
       { const g2x=sx(TECH_GRID.x0+(CAMP_GAS2.c0+TECH_GAS.w/2)*cw, 0);
-        assert(g2x>Math.max(...mX),'오른쪽 가스가 광맥 오른쪽에 없다');
+        assert(g2x>bX,'오른쪽 가스가 본부 오른쪽에 없다');
         assert(CAMP_GAS2.r0===TECH_GAS.r0,'두 가스 광산의 행이 다르다');
         const save=G.tech.arm; G.tech.arm='refinery';
         const at=(c,r)=>techArmValid(TECH_GRID.x0+(c+TECH_GAS.w/2)*cw, techY0()+(r+TECH_GAS.h/2)*ch);
@@ -1065,17 +1072,15 @@ async function groupLobby(){
         assert(!at(Math.round(techCols()/2), campRow(0.45)),'가스 광산이 아닌 곳에도 정제소가 지어진다');
         G.tech.arm=save; }
       // ⛽ 오른쪽 가스도 **왼쪽과 같은 실물**이어야 한다 — 구역 표시만 있으면 빈 땅으로 보인다.
-      //   3D 노드는 renderBuildTab 이 목록에 하나만 넣으므로(14-input-fx.js:951) 캠프가
-      //   M3D.syncBuild 를 감싸 하나 더 얹는다. ⚠ 바깥에서 가로채면 안 보인다(패치보다 앞이다).
-      // ⚠ 3D 모듈(js/90-m3d.module.js)은 three.js 를 외부 CDN(esm.sh)에서 받는다. 오프라인·차단 환경에서는
-      //   window.M3D 가 아예 안 생기고, 그러면 campPatchSync 도 걸리지 않는 것이 정상이다(감쌀 대상이 없다).
-      //   그래서 3D 가 실제로 올라온 환경에서만 검사한다 — 다른 3D 스텝들의 '3D 미준비' 건너뜀과 같은 규칙.
+      //   ⭐ 2026-08-31: 그 실물이 3D 노드에서 **그림 스프라이트**로 바뀌었다(미네랄과 같은 규칙).
+      //     오른쪽은 왼쪽 마크업을 복제하므로 둘 다 저절로 그림이 된다.
+      //   ⛔ 캠프에서 3D 가스(res_en)를 다시 얹지 말 것 — 그림 위에 덩어리가 겹쳐 그쪽만 커 보인다.
       if(window.M3D && typeof M3D.syncBuild==='function'){ let seen=null; const inner=_campSyncOrig;
-        assert(typeof inner==='function','M3D.syncBuild 패치가 안 걸렸다 — 오른쪽 가스 3D 가 안 선다');
+        assert(typeof inner==='function','M3D.syncBuild 패치가 안 걸렸다');
         _campSyncOrig=function(list){ seen=(list||[]).filter(x=>x&&x.id==='res_en').map(x=>x.uid); return inner.apply(this,arguments); };
         for(let i=0;i<3;i++) campFrame(performance.now()+i*33);
         _campSyncOrig=inner;
-        assert(seen && seen.length===2,'가스 3D 노드가 2개가 아님: '+(seen?seen.join(','):'없음')); }
+        assert(seen && seen.length===0,'캠프에 3D 가스가 남아 있다(그림과 겹친다): '+(seen?seen.join(','):'-')); }
       // 겉모습(클래스·라벨)도 같아야 한다
       { const L=document.querySelector('#cstMain .bmap .bGasZone'), R2=$('campGas2');
         assert(L&&R2,'가스 구역 DOM 이 둘이 아니다');
@@ -1453,9 +1458,11 @@ async function groupLobby(){
         campFrame(performance.now()); _campSyncOrig=o;
         assert(!(cap||[]).some(i=>i&&/^mn_/.test(i.uid||'')),
           '캠프에 3D 미네랄이 다시 들어왔다 — 그림 스프라이트와 두 벌로 겹친다');
-        const gz=(cap||[]).filter(i=>i&&/^gz_/.test(i.uid||''));
-        assert(gz.length===2&&gz.every(i=>i.fitW>0),
-          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' '));
+        // ⛽ **가스도 그림 스프라이트다**(2026-08-31 · 미네랄과 같은 규칙). 3D 노드(res_en)는 좌우
+        //   두 구역이 같은 모델·같은 각도라 미네랄과 같은 「복사한 티」가 났다.
+        //   ⛔ 캠프에서 3D 가스(gz_*)를 다시 넣지 말 것 — 그림 위에 덩어리가 겹쳐 그쪽만 커 보인다.
+        assert(!(cap||[]).some(i=>i&&/^gz_/.test(i.uid||'')),
+          '캠프에 3D 가스가 다시 들어왔다 — 그림 스프라이트와 겹친다');
         // 🎒 운반 청크는 아직 3D 다 — 그쪽은 셀 축소를 따라야 한다(안 따르면 일꾼보다 커진다)
         const cr=(cap||[]).filter(i=>i&&/^carry_/.test(i.uid||''));
         assert(cr.every(i=>i.scl!=null&&i.scl<0.999),
@@ -1463,7 +1470,9 @@ async function groupLobby(){
       // 스프라이트가 **셀 크기를 따라간다** — 안 따르면 광맥 여섯이 서로 뭉개져 보인다.
       // ⚠ 먼저 다시 그린다 — 앞 검사들이 배율을 바꿔 놓아, 화면에 남은 스프라이트는 옛 셀 크기로
       //   그려진 것이다 — 안 그리고 재면 칸 대비 1.34 를 1.86 으로 읽는다(실측).
-      { if(typeof techMapRender==='function') techMapRender(); }
+      { if(typeof techMapRender==='function') techMapRender();
+        // ⚠ 오른쪽 가스(#campGas2)는 왼쪽을 복제해 만든다 — 다시 그린 뒤 한 번 불러야 따라온다.
+        if(typeof campDrawGas2==='function') campDrawGas2(); }
       { const sp=[...document.querySelectorAll('.bMineral.spr')].filter(e=>e.getBoundingClientRect().width>0);
         assert(sp.length,'캠프 광맥이 그림 스프라이트로 안 그려진다(.bMineral.spr 없음)');
         assert(sp.every(e=>e.querySelector('img.mnSpr')),'스프라이트 칸에 그림이 없다');
@@ -1474,6 +1483,22 @@ async function groupLobby(){
         // 칸보다 조금 큰 것이 정상이다(결정이 칸 밖으로 자란다). 두 배 넘게 크면 서로 뭉갠다.
         assert(wide.every(r=>r>0.6&&r<1.8),
           '광맥 그림이 칸 대비 너무 크거나 작다(셀 축소를 안 따른다): '+wide.map(r=>r.toFixed(2)).join(' ')); } }
+      // ⛽ 가스 두 구역도 그림이다 — 좌우가 **같은 파일**이고 오른쪽만 뒤집혀 있어야 한다.
+      //   ⛔ 오른쪽을 따로 그리지 말 것: 왼쪽 마크업을 복제하고 뒤집기는 css 가 맡는다.
+      { const gs=[...document.querySelectorAll('.bGasZone.spr')].filter(e=>e.getBoundingClientRect().width>0);
+        assert(gs.length===2,'가스 구역이 그림 스프라이트 둘이 아니다: '+gs.length);
+        const im=gs.map(e=>e.querySelector('img.gzSpr'));
+        assert(im.every(Boolean),'가스 구역에 그림이 없다');
+        assert(im[0].getAttribute('src')===im[1].getAttribute('src'),'좌우가 다른 파일을 쓴다 — 한 벌이어야 한다');
+        const tf=im.map(e=>getComputedStyle(e).transform);
+        // ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 같은 그림을 그대로 둘 놓는다.
+        assert(tf[0]===tf[1],'좌우가 다른 모습이다 — 뒤집기가 되살아났다: '+tf.join(' / '));
+        // 광맥을 덮으면 안 된다 — 눌러서 캐는 것이라 가려지면 못 캔다.
+        //   ⚠ **세로로** 잰다: 가스는 이제 본부 줄(광맥 위)이라 가로 범위는 겹치는 것이 정상이다.
+        const mn=[...document.querySelectorAll('.bMineral.spr')].map(e=>e.getBoundingClientRect());
+        if(mn.length){ const mTop=Math.min(...mn.map(b=>b.top));
+          const low=Math.max(...im.map(e=>e.getBoundingClientRect().bottom));
+          assert(low<=mTop+1,'가스 그림이 광맥을 덮는다: '+(low-mTop).toFixed(1)+'px 내려왔다'); } }
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
@@ -1492,7 +1517,7 @@ async function groupLobby(){
     campExit(); showAppScreen('mapScreen'); await sleep(140);
     openHome(); await sleep(420);
     assert((G.tech.ents||[]).length===n0,'복귀했더니 기지가 달라짐: '+(G.tech.ents||[]).length+' vs '+n0);
-    assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
+    assert((G.tech.minerals||[]).length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'복귀했더니 광맥이 달라짐: '+(G.tech.minerals||[]).length);
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
   // 🏢 **부서진 건물에 헛방을 쏘지 않는다** (2026-08-31)
@@ -3871,7 +3896,7 @@ async function groupLobby(){
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;
     openHome(); await sleep(420);
-    assert(G.tech && (G.tech.minerals||[]).length===6,'광맥이 안 깔림');
+    assert(G.tech && (G.tech.minerals||[]).length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥이 안 깔림');
     // ① 광맥을 누르면 캔다 — 화면 좌표로 실제 탭 경로를 탄다
     const r=_btRect(); assert(r && r.width>0,'건설 맵 사각형이 없음');
     const m=G.tech.minerals[0], sc=_techW2S(m.x,m.y);
@@ -7151,17 +7176,17 @@ async function groupLobby(){
       const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr')];
       skipIf(!sp.length,'광맥이 아직 안 그려졌다');
       assert(sp.length===(G.tech.minerals||[]).length,'그림 수가 광맥 칸 수와 다르다: '+sp.length);
-      // 지금은 1번 하나로 통일한다 — 반복 느낌은 좌우 뒤집기(CAMP_MINE_FLIP)가 푼다
+      // 지금은 1번 하나로 통일한다. ⛔ 좌우 뒤집기를 되살리지 말 것(2026-08-31 사용자 확정) —
+      //   뒤집으면 광원 방향이 칸마다 반대가 된다. 반복이 거슬리면 그림을 한 장 더 뽑는다.
       const files=sp.map(e=>e.src.split('/').pop());
       assert(files.every(f=>f==='stage1.webp'),'1번 외의 그림이 쓰였다: '+files.join(','));
-      const flip=sp.filter(e=>e.classList.contains('flip')).length;
-      assert(flip>0 && flip<sp.length,'좌우 뒤집기가 안 걸렸다 — 같은 그림이 그대로 반복된다 (뒤집힘 '+flip+'/'+sp.length+')');
+      assert(!sp.some(e=>e.classList.contains('flip')),'좌우 뒤집기가 되살아났다');
       for(const e of sp) assert(e.complete && e.naturalWidth>0,'광맥 그림을 못 불러왔다: '+e.src.split('/').pop());
       // 그림을 쓰면 3D 노드는 빠져야 한다(두 겹 방지)
       assert(typeof campIsOn==='function' && campIsOn(),'캠프가 켜져 있지 않다');
       // 관리자 탭에서는 그림을 쓰지 않는다(3D 그대로)
       assert(campMineSprite({},0),'캠프인데 그림 경로가 비었다');
-      return files.length+'칸 · 1번 통일 · '+flip+'칸 뒤집음';
+      return files.length+'칸 · 1번 통일 · 뒤집기 없음';
     } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} } });
   // 🪞 캠프 자원 구역은 **좌우 대칭**이어야 한다(2026-08-27). 실측으로 한 칸(13px) 어긋나 있었다.
   //    ⛔ 미네랄은 칸 중심에 **점으로** 앉으므로 시각 중심이 `c0+(COLS-1)/2` 다 — 가장자리 기준으로
