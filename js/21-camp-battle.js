@@ -198,6 +198,14 @@ function _campFireUnit(u, tgt, me, foe, dt, col){
   { const uAir = strikeIsAir(u);
     if(!tgt.tgtUid && (!tgt._atk || (uAir ? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid = u.uid;   // 반격
     tgt._acqT = 0; tgt._inrT = 0;                // 맞으면 즉시 재판단
+    // 🩸 **사거리 밖에서 맞았으면 그 적까지 눈을 넓힌다**(2026-09-01 사용자 확정).
+    //   맞고만 있지 않고 반격하러 들어간다. 넓어진 눈은 campAlertApply 가 CAMP_HIT_ACQ_S 초
+    //   동안 지켜 주고, 그 사이 곁의 아군에게 전파되어 **줄줄이** 들어간다.
+    //   ⚠ 양 진영이 이 함수를 지난다 — 적도 같은 규칙으로 반응한다(한쪽만 주면 상성이 틀어진다).
+    if(typeof campAcqBase === 'function'){
+      const hx = u.x - tgt.x, hy = u.y - tgt.y, hd = Math.hypot(hx, hy);
+      if(hd > campAcqBase(tgt) && hd > (tgt._hitAcq || 0)){ tgt._hitAcq = hd; }
+      if(hd > campAcqBase(tgt)) tgt._hitT = CAMP_HIT_ACQ_S; }
     if(typeof strikeAlert === 'function') strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, uAir); }
   if(u.splash > 0){ const sr2 = u.splash * u.splash, sd = u.dmg * 0.6;   // 광역: 표적 주변에 60%
     for(const e of foe.units){ if(e === tgt || e.dead) continue;

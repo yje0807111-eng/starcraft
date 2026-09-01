@@ -7,6 +7,8 @@ Thumbs.db
 # 던전 배경 작업용 원본(변환 후 .webp만 커밋)
 assets/backgrounds/dungeons/*.png
 assets/backgrounds/usemaps/*.png
+assets/backgrounds/reb/*.png
+assets/backgrounds/title/*.png
 assets/backgrounds/dungeons/*.mp4
 assets/backgrounds/dungeons/*.webm
 

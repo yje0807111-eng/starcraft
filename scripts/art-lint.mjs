@@ -59,6 +59,16 @@ const FAMILY = {
       ['좌상단 비움',    /the upper left corner is free of bright detail/],
       ['인물 실루엣',    /All figures are distant silhouettes, no close-up faces\./]],
   },
+  // 🌌 환생 구역 배경(§14) — 위에 별자리와 7~8px 라벨이 앉는다. 그래서 위 절반을 비우고,
+  //   인물은 아예 없다(E 고정 그대로 — 종족 전장처럼 실루엣을 두지 않는다).
+  reb: {
+    label: '환생 구역 배경',
+    need: [...COMMON,
+      ['시점(올려다봄)', /from a low three-quarter angle/],
+      ['C 근경',        /The haze is light in the foreground so nearby structures stay crisp and clearly legible/],
+      ['D 구도(위 절반)', /The upper half of the frame is calm open night sky/],
+      ['D 구도(가운데)', /The very center of the frame is calm and uncluttered./]],
+  },
   // 🗺 캠프·던전 맵(§11) — **유닛이 그 위를 걸어다니는 게임판**이라 다른 계열과 요구가 다르다.
   //   방법이 둘로 갈린다: 0번(캠프)은 레퍼런스 없이 뽑고, 1~10번(던전)은 그 0번을 첨부해 위쪽만 바꾼다.
   //   ⛔ 스타일을 형용사로 늘어놓지 말 것 — 던전은 레퍼런스가 스타일·색·조명을 다 정한다(§11-1).
@@ -139,7 +149,7 @@ const BANNED = [
 ];
 
 // ── 프롬프트를 계열별로 모은다(어느 ## 아래에 있는가) ──────────────
-const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [], floor: [] };
+const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [], floor: [], reb: [] };
 {
   let fam = null;
   // 환경 계열은 한 줄 프롬프트(Moody…), 유닛 계열은 여러 문단이라 블록 전체를 담는다.
@@ -148,7 +158,7 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
   const re = /^## (\d+)\.|^```([a-z]*)\n([\s\S]*?)\n```/gm;
   let m;
   while ((m = re.exec(art))) {
-    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : (m[1] === '12' ? 'floor' : null))))); continue; }
+    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : (m[1] === '12' ? 'floor' : (m[1] === '14' ? 'reb' : null)))))); continue; }
     if (m[2] || !fam) continue;   // 언어 태그가 있으면 프롬프트가 아니다(bash 등)
     const body = m[3];
     if (/[가-힣]/.test(body)) continue;   // 한글이 있으면 프롬프트가 아니다(설명용 도표 등)
@@ -165,7 +175,7 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
   }
 }
 
-for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap', 'floor']) {
+for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap', 'floor', 'reb']) {
   const F = FAMILY[key], list = prompts[key];
   console.log(`${F.label} 프롬프트 ${list.length}개`);
   if (!list.length) bad(`${F.label} 프롬프트를 하나도 못 찾았다 — ART.md 형식이 바뀌었나?`);

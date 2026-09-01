@@ -72,7 +72,7 @@
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <!-- 🗺 캠프 단계·라운드 배지 — campMode 에서만 보인다(css/30-home.css). 내용은 campBarRender() -->
       <!-- 던전·라운드는 재화 바 왼쪽 칩(#curTitle)이 단일 소스다 — 여기는 칩과 안 겹치는 것만 -->
-      <div id="campBar"><span class="cbFoe"></span><button class="cbReb hide" type="button" onclick="campRebOpen()">🔁 <b>환생</b></button><button class="cbTree" type="button" onclick="campTreeOpen()">🌳 <b>0</b></button></div>
+      <div id="campBar"><span class="cbFoe"></span><button class="cbReb hide" type="button" onclick="campRebEnter('info')">🔁 <b>환생</b></button></div>
       <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="techSkTip" class="hide"></div>   <!-- 🔮 스킬 롱프레스 설명 팝업(손 떼면 사라짐) -->
 
@@ -566,10 +566,28 @@
   <!-- 하단 네비(전역) — 화면이 아니라 #phone 위에 떠 있다. 칸은 NAV_TREE 를 보고 navPaint()가 만든다 -->
   <div id="navBar" class="navBar hide"></div>
   <!-- 💠 공용 재화 바 — 미네랄/가스/젬 (계정 영구). curShow()가 화면 전환 시 표시/숨김 -->
+  <!-- 🌌 환생 구역 배경 — **환생·업그레이드 두 화면이 함께 쓰는 한 장**(2026-09-01).
+       ⛔ 화면마다 제 그림을 그리지 말 것 — 탭을 오갈 때 그림이 다시 그려져 툭 튄다.
+       ⛔ 공용 키 아트(#titleBg)를 빌리던 옛 방식으로 되돌리지 말 것 — 그건 로그인·부팅의 그림이라
+          여기서 켜면 캠프·로그인 쪽과 서로 간섭한다(그래서 전용 그림을 뽑았다 · ART.md §10). -->
+  <div id="campRebBg" class="hide"><span class="crbScrim"></span></div>
   <!-- 🌳 환생 포인트 트리 — 마인드맵. 내용은 campTreeSvg() 가 #ctG 안에 넣는다 -->
-  <div id="campTree"><svg id="ctSvg" viewBox="-195 -300 390 600" preserveAspectRatio="xMidYMid meet"><g id="ctG"></g></svg>
-    <div class="ctTop"><span class="ctTitle">🌳 환생 트리</span><span class="ctPtsWrap">포인트 <b class="ctPts">0</b></span><button class="ctX" type="button">닫기</button></div>
-    <div class="ctInfo"><div class="ctInfoTx"><div class="ctInfoNm"></div><div class="ctInfoSub"></div></div><button class="ctBuy actBtn pri" type="button"></button></div>
+  <div id="campTree"><svg id="ctSvg" viewBox="-215 -420 430 840" preserveAspectRatio="xMidYMid meet">
+      <!-- 아직 안 산 별의 아이콘을 눌러 두는 필터 — 채도를 빼고 어둡게 -->
+      <defs><filter id="ctDim"><feColorMatrix type="saturate" values="0.15"/>
+        <feComponentTransfer><feFuncR type="linear" slope="0.42"/><feFuncG type="linear" slope="0.42"/>
+          <feFuncB type="linear" slope="0.46"/></feComponentTransfer></filter></defs>
+      <g id="ctG"></g></svg>
+    <!-- ? 도움말 — 트리 **전체에 공통인 규칙**은 별마다 적지 않고 여기 한 곳에 둔다 -->
+    <div class="ctTop">
+      <div class="ctTopRow"><span class="ctTitle">환생 트리</span>
+        <button class="ctQ" type="button" aria-label="도움말">?</button>
+        <span class="ctPtsWrap"><b class="ctPts">0</b> 포인트</span></div>
+      <div class="ctProg"><span class="ctBar"><i></i></span><span class="ctProgN">0 / 0</span></div>
+    </div>
+    <div class="ctHelp hide"><div class="ctHelpCard"></div></div>
+    <!-- 고른 별의 모든 정보 — 내용은 campTreeInfo() 가 채운다 -->
+    <div class="ctSheet"></div>
   </div>
   <!-- 🔁 환생 화면 — 트리(#campTree)와 같은 규격의 #phone 직속 전체 화면.
        ⭐ 「먼 목표」 줄이 여기 있는 이유: HUNT_R1.md §4-2-0 이 「가까운 목표만 보면 손해라고
@@ -577,8 +595,7 @@
        내용은 campRebRender() 가 채운다. -->
   <div id="campReb">
     <div class="crBg"></div>
-    <div class="crTop"><span class="crTitle">환생</span>
-      <button class="crX" type="button" onclick="campRebClose()" aria-label="닫기">✕</button></div>
+    <div class="crTop"><span class="crTitle">환생</span></div>
     <div class="crBody" id="crBody"></div>
     <!-- 확인 = 나가기·로그아웃과 **같은 컴포넌트**(.ecCard). ⛔ 새로 만들지 말 것 -->
     <div id="campRebOk" class="hide" onclick="if(event.target===this)campRebCancel()">

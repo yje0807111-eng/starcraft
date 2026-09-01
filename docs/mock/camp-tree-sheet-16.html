@@ -1,0 +1,353 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 하단 — 구조 16안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --sel:#5cd6ff; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1980px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1060px}
+  .lede b{color:#e8eef7}
+  .bad{font-size:12.5px;line-height:1.75;color:#c8b68d;margin:0 0 10px;max-width:1060px;
+    border-left:2px solid rgba(255,177,77,.5);padding:8px 0 8px 12px;background:rgba(255,177,77,.05)}
+  .bad b{color:#ffd9a3}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1060px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:22px}
+  .note{font-size:12px;line-height:1.55;color:#93a0b0;margin:8px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:430px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);background:#05070b}
+  .bg{position:absolute;inset:0;background:url('../../assets/backgrounds/reb/reb.webp') center 30% / cover no-repeat}
+  .bg::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(5,7,11,.30),rgba(5,7,11,.10) 26%,rgba(5,7,11,.55) 62%,rgba(5,7,11,.86))}
+  .S{position:absolute;left:0;right:0;bottom:0;z-index:2;
+    padding:14px 16px 16px;background:#080b11;border-top:1px solid rgba(255,255,255,.12)}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  /* ── 조각들: 안마다 **배치만** 다르고 생김새는 같다(구조를 비교하려면 마감이 같아야 한다) ── */
+  .k{font-size:9.5px;letter-spacing:.2em;color:#7b8593}      /* 라벨 */
+  .v{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#e8eef7}
+  .nm{font-size:17px;font-weight:700;color:#fff}
+  .meta{font-size:10.5px;letter-spacing:.14em;color:#8d9aa9}
+  .big{font-family:var(--font-num);font-weight:800;color:#fff;line-height:1}
+  .gold{color:var(--gold)}
+  .dots{display:flex;gap:4px}
+  .dots i{flex:1;height:3px;border-radius:var(--r-bar)}
+  .ico{flex:0 0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    border-radius:var(--r-md);border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05)}
+  .ico img{object-fit:contain;display:block}
+  .gate{font-size:11px;line-height:1.5;color:#c8b68d;
+    border-left:2px solid rgba(255,177,77,.5);padding:3px 0 3px 9px;background:rgba(255,177,77,.06)}
+  .gate b{color:#ffd9a3}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-md);
+    font:800 13px/1 inherit;letter-spacing:.1em;border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.04);color:#8d9aa9;min-height:44px;padding:0 16px}
+  .hr{height:1px;background:rgba(255,255,255,.09)}
+  .band{font-size:9.5px;letter-spacing:.24em;color:#69737f;display:flex;align-items:center;gap:8px}
+  .band::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+</style>
+<div class="wrap">
+<h1>환생 트리 하단 — 구조 16안</h1>
+<p class="lede">가시성 문제는 색이나 판이 아니라 <b>구조</b>다. 마감(글꼴·색·크기)은 열여섯 안 모두 같게 두고
+  <b>무엇을 어디에 놓는가</b>만 다르게 했다.</p>
+<p class="bad"><b>지금 구조가 어긋난 곳 넷.</b>
+  ① 왼쪽(정체성)과 오른쪽(거래)이 <b>대등한 두 기둥</b>이라 어디부터 읽을지 정해지지 않는다.
+  ② <b>진행도(4/5)는 왼쪽 아래, 값(×11)은 오른쪽</b> — 같은 이야기가 갈라져 있다.
+  ③ 오른쪽 안에서 다시 <b>메타 → 값 → 예고 → 조건 → 비용/잔여/버튼</b> 5단이 쌓인다.
+  ④ 「다음 ×25」(예고)가 지금 살 값 바로 아래라 <b>둘이 헷갈린다</b>.</p>
+<p class="rule"><b>정보는 세 덩어리다.</b> <b>무엇</b>(아이콘·이름·갈래·등급·차수·진행도) ·
+  <b>얻는 것</b>(지금값 → 다음값 · 그 다음 예고) · <b>내는 것</b>(비용 · 잔여 · 버튼 · 잠금 조건).
+  <i>열여섯 안은 이 셋을 어떻게 나누고 어떤 순서로 읽히게 하는가로 갈린다.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+const D={ nm:'일꾼 채취량', n:4, br:'재화 획득', col:'#ffd24a', gr:'흔함', tier:13,
+  ic:IC+'upgrades/up_mine.webp', now:'×5', next:'×11', after:'×25 · 4.3B',
+  cost:'16.8M', left:'−16.8M', have:3, sib:'가스 생산량', sibN:2, need:3, btn:'짝이 모자람' };
+function dots(h){ let o='';
+  for(let i=1;i<=5;i++) o+='<i style="background:'+(i<=D.have?D.col:(i===D.n?'rgba(255,255,255,.34)':'rgba(255,255,255,.08)'))+
+    (h?';height:'+h+'px':'')+'"></i>';
+  return o; }
+function ico(sz,box){ return '<span class="ico" style="width:'+box+'px;height:'+box+'px">'
+  +'<img src="'+D.ic+'" style="width:'+sz+'px;height:'+sz+'px"></span>'; }
+function ph(sheet){ return '<div class="ph"><div class="bg"></div><div class="S">'+sheet+'</div></div>'; }
+const gate='<div class="gate">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>';
+const meta='<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier;
+
+/* ①~④ — **읽는 순서**를 위에서 아래 한 줄기로 */
+const A1=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(34,44)
+ +'<div><div class="nm">'+D.nm+'</div><div class="meta" style="margin-top:2px">'+meta+'</div></div></div>'
+ +'<div class="dots" style="margin-top:10px">'+dots(4)+'</div>'
+ +'<div class="band" style="margin-top:13px">얻 는 것</div>'
+ +'<div style="display:flex;align-items:baseline;gap:9px;margin-top:6px">'
+ +'<span class="v" style="font-size:15px;color:#7b8593">'+D.now+'</span><span style="color:#5b6674;font-size:11px">▶</span>'
+ +'<span class="big" style="font-size:30px">'+D.next+'</span>'
+ +'<span class="num" style="margin-left:auto;font-size:10.5px;color:#69737f">그 다음 '+D.after+'</span></div>'
+ +'<div class="band" style="margin-top:13px">내 는 것</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:6px">'
+ +'<span class="big gold" style="font-size:22px">'+D.cost+'</span>'
+ +'<span class="num" style="font-size:11px;color:#69737f">잔여 '+D.left+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>'
+ +'<div style="margin-top:10px">'+gate+'</div>');
+
+const A2=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(34,44)
+ +'<div style="flex:1"><div class="nm">'+D.nm+'</div><div class="meta" style="margin-top:2px">'+meta+'</div></div>'
+ +'<span class="v" style="font-size:13px;color:#8d9aa9">'+D.n+' / 5</span></div>'
+ +'<div class="dots" style="margin-top:10px">'+dots(4)+'</div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:flex-end;gap:14px">'
+ +'<div><div class="k">이 단계</div>'
+ +'<div style="display:flex;align-items:baseline;gap:7px;margin-top:3px">'
+ +'<span class="v" style="font-size:14px;color:#7b8593">'+D.now+'</span><span style="color:#5b6674;font-size:10px">▶</span>'
+ +'<span class="big" style="font-size:28px">'+D.next+'</span></div></div>'
+ +'<div style="margin-left:auto;text-align:right"><div class="k">값</div>'
+ +'<div class="big gold" style="font-size:22px;margin-top:3px">'+D.cost+'</div></div></div>'
+ +'<div style="margin-top:11px">'+gate+'</div>'
+ +'<button class="btn" style="width:100%;margin-top:11px">'+D.btn+'</button>');
+
+const A3=()=>ph(
+ '<div class="gate" style="margin-bottom:11px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;align-items:center;gap:11px">'+ico(34,44)
+ +'<div style="flex:1"><div class="nm">'+D.nm+'</div><div class="meta" style="margin-top:2px">'+meta+'</div></div>'
+ +'<span class="big" style="font-size:28px">'+D.next+'</span></div>'
+ +'<div class="dots" style="margin-top:10px">'+dots(4)+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:12px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:21px">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const A4=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'
+ +'<button class="btn" style="flex:1;min-height:48px;font-size:14px">'+D.btn+'</button>'
+ +'<div style="text-align:right"><div class="k">비용</div>'
+ +'<div class="big gold" style="font-size:21px;margin-top:2px">'+D.cost+'</div></div></div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:11px">'+ico(30,38)
+ +'<div style="flex:1"><div class="nm" style="font-size:15px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+' · '+D.n+'/5</div></div>'
+ +'<span class="big" style="font-size:24px">'+D.next+'</span></div>'
+ +'<div class="dots" style="margin-top:9px">'+dots(3)+'</div>'
+ +'<div style="margin-top:10px">'+gate+'</div>');
+
+/* ⑤~⑧ — **셋을 가로로** 나눈다 */
+const A5=()=>ph(
+ '<div style="display:flex;gap:0;align-items:stretch">'
+ +'<div style="flex:1.15;padding-right:12px">'+ico(38,48)
+ +'<div class="nm" style="font-size:14px;margin-top:7px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+D.gr+' · T'+D.tier+'</div></div>'
+ +'<div style="flex:1;padding:0 12px;border-left:1px solid rgba(255,255,255,.09)">'
+ +'<div class="k">얻는 것</div><div class="big" style="font-size:26px;margin-top:4px">'+D.next+'</div>'
+ +'<div class="num" style="font-size:11px;color:#7b8593;margin-top:2px">'+D.now+' 에서</div></div>'
+ +'<div style="flex:1;padding-left:12px;border-left:1px solid rgba(255,255,255,.09)">'
+ +'<div class="k">내는 것</div><div class="big gold" style="font-size:20px;margin-top:4px">'+D.cost+'</div>'
+ +'<div class="num" style="font-size:11px;color:#7b8593;margin-top:2px">잔여 '+D.left+'</div></div></div>'
+ +'<div class="dots" style="margin-top:12px">'+dots(4)+'</div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:11px">'
+ +'<div style="flex:1">'+gate+'</div><button class="btn">'+D.btn+'</button></div>');
+
+const A6=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(32,40)
+ +'<div style="flex:1"><div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div></div>'
+ +'<div style="display:flex;gap:10px;margin-top:12px">'
+ +'<div style="flex:1;padding:10px 12px;border-radius:var(--r-md);background:rgba(255,255,255,.04)">'
+ +'<div class="k">'+D.now+' ▶ 다음</div><div class="big" style="font-size:26px;margin-top:3px">'+D.next+'</div></div>'
+ +'<div style="flex:1;padding:10px 12px;border-radius:var(--r-md);background:rgba(255,210,74,.07)">'
+ +'<div class="k" style="color:#c8b68d">비용</div><div class="big gold" style="font-size:22px;margin-top:3px">'+D.cost+'</div></div></div>'
+ +'<div class="dots" style="margin-top:11px">'+dots(4)+'</div>'
+ +'<div style="margin-top:11px">'+gate+'</div>'
+ +'<button class="btn" style="width:100%;margin-top:11px">'+D.btn+'</button>');
+
+const A7=()=>ph(
+ '<div style="display:flex;align-items:stretch;gap:12px">'
+ +'<div style="flex:0 0 96px;display:flex;flex-direction:column;align-items:center;justify-content:center">'
+ +ico(44,58)+'<div class="v" style="font-size:12px;color:#8d9aa9;margin-top:6px">'+D.n+' / 5</div></div>'
+ +'<div style="flex:1;min-width:0">'
+ +'<div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div>'
+ +'<div class="dots" style="margin-top:8px">'+dots(4)+'</div>'
+ +'<div style="display:flex;align-items:baseline;gap:8px;margin-top:9px">'
+ +'<span class="v" style="font-size:14px;color:#7b8593">'+D.now+'</span><span style="color:#5b6674;font-size:10px">▶</span>'
+ +'<span class="big" style="font-size:26px">'+D.next+'</span>'
+ +'<span class="big gold" style="margin-left:auto;font-size:19px">'+D.cost+'</span></div></div></div>'
+ +'<div style="margin-top:11px">'+gate+'</div>'
+ +'<button class="btn" style="width:100%;margin-top:11px">'+D.btn+'</button>');
+
+const A8=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(32,40)
+ +'<div style="flex:1"><div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div>'
+ +'<span class="v" style="font-size:12px;color:#8d9aa9">'+D.n+'/5</span></div>'
+ +'<div class="dots" style="margin-top:10px">'+dots(4)+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:11px 12px;'
+ +'border-radius:var(--r-md);border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)">'
+ +'<div><div class="k">얻는 것</div>'
+ +'<div style="display:flex;align-items:baseline;gap:6px;margin-top:2px">'
+ +'<span class="v" style="font-size:13px;color:#7b8593">'+D.now+'</span><span style="color:#5b6674;font-size:10px">▶</span>'
+ +'<span class="big" style="font-size:24px">'+D.next+'</span></div></div>'
+ +'<div style="margin-left:auto;text-align:right"><div class="k">내는 것</div>'
+ +'<div class="big gold" style="font-size:20px;margin-top:2px">'+D.cost+'</div></div></div>'
+ +'<div style="margin-top:10px">'+gate+'</div>'
+ +'<button class="btn" style="width:100%;margin-top:10px">'+D.btn+'</button>');
+
+/* ⑨~⑫ — **값을 주인공으로** 올리고 이름을 부제로 */
+const A9=()=>ph(
+ '<div style="display:flex;align-items:flex-start;gap:12px">'
+ +'<div><div class="k">'+D.now+' 에서</div>'
+ +'<div class="big" style="font-size:44px;margin-top:1px">'+D.next+'</div></div>'
+ +'<div style="flex:1;padding-top:3px"><div class="nm" style="font-size:15px">'+D.nm+' <span class="v" style="font-size:11px;color:#8d9aa9">'+D.n+'/5</span></div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div>'
+ +'<div class="dots" style="margin-top:8px">'+dots(3)+'</div></div>'
+ +ico(30,38)+'</div>'
+ +'<div style="margin-top:11px">'+gate+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:11px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:20px">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const A10=()=>ph(
+ '<div style="text-align:center"><div class="meta">'+meta+'</div>'
+ +'<div class="nm" style="font-size:15px;margin-top:3px">'+D.nm+' <span class="v" style="font-size:11px;color:#8d9aa9">'+D.n+'/5</span></div>'
+ +'<div style="display:flex;align-items:baseline;justify-content:center;gap:12px;margin-top:7px">'
+ +'<span class="v" style="font-size:17px;color:#7b8593">'+D.now+'</span><span style="color:#5b6674">▶</span>'
+ +'<span class="big" style="font-size:38px">'+D.next+'</span></div></div>'
+ +'<div class="dots" style="margin-top:11px">'+dots(4)+'</div>'
+ +'<div style="margin-top:11px">'+gate+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:11px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:20px">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const A11=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'
+ +'<div style="flex:1"><div class="nm" style="font-size:15px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div>'
+ +'<div style="text-align:right"><div class="big" style="font-size:34px">'+D.next+'</div>'
+ +'<div class="num" style="font-size:11px;color:#7b8593;margin-top:1px">'+D.now+' 에서</div></div></div>'
+ +'<div style="display:flex;align-items:center;gap:9px;margin-top:12px">'
+ +'<div style="flex:1"><div class="dots">'+dots(5)+'</div></div>'
+ +'<span class="v" style="font-size:11px;color:#8d9aa9">'+D.n+' / 5</span></div>'
+ +'<div class="hr" style="margin:12px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:12px">'
+ +'<div><div class="k">비용</div><div class="big gold" style="font-size:20px;margin-top:2px">'+D.cost+'</div></div>'
+ +'<div><div class="k">잔여</div><div class="v" style="font-size:15px;color:#8d9aa9;margin-top:4px">'+D.left+'</div></div>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>'
+ +'<div style="margin-top:10px">'+gate+'</div>');
+
+const A12=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'+ico(36,46)
+ +'<div style="flex:1;min-width:0"><div class="nm" style="font-size:15px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div></div>'
+ +'<div style="display:flex;align-items:flex-end;gap:8px;margin-top:12px">'
+ +'<div style="flex:1"><div class="k">다음 단계</div>'
+ +'<div class="big" style="font-size:32px;margin-top:2px">'+D.next+'</div></div>'
+ +'<div style="flex:1;text-align:right"><div class="k">비용</div>'
+ +'<div class="big gold" style="font-size:24px;margin-top:2px">'+D.cost+'</div></div></div>'
+ +'<div style="display:flex;justify-content:space-between;margin-top:5px">'
+ +'<span class="num" style="font-size:10.5px;color:#69737f">지금 '+D.now+'</span>'
+ +'<span class="num" style="font-size:10.5px;color:#69737f">잔여 '+D.left+'</span></div>'
+ +'<div class="dots" style="margin-top:11px">'+dots(4)+'</div>'
+ +'<div style="margin-top:11px">'+gate+'</div>'
+ +'<button class="btn" style="width:100%;margin-top:11px">'+D.btn+'</button>');
+
+/* ⑬~⑯ — **진행도를 이야기의 중심**으로(값·차수를 한 줄기에 묶는다) */
+const A13=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(32,40)
+ +'<div style="flex:1"><div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div></div>'
+ +'<div style="display:flex;align-items:center;gap:0;margin-top:13px">'
+ + [1,2,3,4,5].map(i=>'<div style="flex:1;text-align:center;position:relative">'
+   +'<div style="height:3px;background:'+(i<=D.have?D.col:(i===D.n?'rgba(255,255,255,.34)':'rgba(255,255,255,.08)'))+'"></div>'
+   +'<div class="num" style="font-size:'+(i===D.n?'17':'11')+'px;margin-top:5px;font-weight:'+(i===D.n?'800':'400')+';color:'
+   +(i<=D.have?'#8d9aa9':(i===D.n?'#fff':'#4d5764'))+'">'+['×1.5','×2.5','×5','×11','×25'][i-1]+'</div></div>').join('')
+ +'</div>'
+ +'<div style="margin-top:12px">'+gate+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:11px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:20px">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const A14=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(32,40)
+ +'<div style="flex:1"><div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div>'
+ +'<span class="big" style="font-size:26px">'+D.next+'</span></div>'
+ +'<div style="display:flex;align-items:center;gap:9px;margin-top:12px">'
+ +'<span class="num" style="font-size:11px;color:#8d9aa9">'+D.n+'</span>'
+ +'<div style="flex:1;height:8px;border-radius:var(--r-bar);background:rgba(255,255,255,.07);overflow:hidden">'
+ +'<i style="display:block;width:60%;height:100%;background:'+D.col+'"></i></div>'
+ +'<span class="num" style="font-size:11px;color:#4d5764">5</span></div>'
+ +'<div style="margin-top:12px">'+gate+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:11px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:20px">'+D.cost+'</span>'
+ +'<span class="num" style="font-size:11px;color:#69737f">잔여 '+D.left+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const A15=()=>ph(
+ '<div style="display:flex;align-items:baseline;gap:8px">'
+ +'<span class="nm" style="font-size:16px">'+D.nm+'</span>'
+ +'<span class="meta" style="margin-left:auto">'+meta+'</span></div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:12px">'
+ +'<div style="text-align:center"><div class="k">지금</div>'
+ +'<div class="v" style="font-size:20px;color:#8d9aa9;margin-top:3px">'+D.now+'</div>'
+ +'<div class="num" style="font-size:10px;color:#4d5764;margin-top:1px">'+D.have+'차</div></div>'
+ +'<div style="flex:1;height:1px;background:linear-gradient(90deg,rgba(255,255,255,.10),'+D.col+')"></div>'
+ +'<div style="text-align:center"><div class="k" style="color:#c8b68d">다음</div>'
+ +'<div class="big" style="font-size:30px;margin-top:2px">'+D.next+'</div>'
+ +'<div class="num" style="font-size:10px;color:#8d9aa9;margin-top:1px">'+D.n+'차</div></div>'
+ +'<div style="flex:.5;height:1px;background:rgba(255,255,255,.08)"></div>'
+ +'<div style="text-align:center;opacity:.5"><div class="k">그 뒤</div>'
+ +'<div class="v" style="font-size:15px;margin-top:4px">×25</div></div></div>'
+ +'<div style="margin-top:13px">'+gate+'</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:11px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:20px">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const A16=()=>ph(
+ '<div style="display:flex;align-items:center;gap:11px">'+ico(32,40)
+ +'<div style="flex:1"><div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<div class="meta" style="margin-top:2px">'+meta+'</div></div>'
+ +'<button class="btn" style="min-height:40px;padding:0 14px">'+D.btn+'</button></div>'
+ +'<div class="hr" style="margin:12px 0"></div>'
+ +'<div style="display:flex;justify-content:space-between;align-items:baseline">'
+ +'<span class="k">단계</span><span class="v" style="font-size:13px">'+D.n+' / 5</span></div>'
+ +'<div class="dots" style="margin-top:7px">'+dots(3)+'</div>'
+ +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:10px">'
+ +'<span class="k">채취량</span>'
+ +'<span><span class="v" style="font-size:13px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674;font-size:10px;margin:0 6px">▶</span>'
+ +'<span class="big" style="font-size:22px">'+D.next+'</span></span></div>'
+ +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:9px">'
+ +'<span class="k">비용</span><span class="big gold" style="font-size:19px">'+D.cost+'</span></div>'
+ +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:7px">'
+ +'<span class="k">잔여</span><span class="v" style="font-size:13px;color:#8d9aa9">'+D.left+'</span></div>'
+ +'<div style="margin-top:11px">'+gate+'</div>');
+
+const M=[
+ [A1,'① 세 덩어리를 <b>이름표로</b> 나눈다','「얻는 것 / 내는 것」 이라고 <b>대놓고 적는다</b>. 위에서 아래로 한 줄기라 읽는 순서가 정해진다. <i>가장 또렷하고 세로를 먹는다.</i>'],
+ [A2,'② 두 덩어리 + 전폭 버튼','정체성 → 선 → 거래. 버튼을 <b>맨 아래 전폭</b>으로 내려 「마지막에 누른다」가 된다.'],
+ [A3,'③ 조건이 맨 위','<b>못 사는 이유를 먼저</b> 보여 준다. 살 수 있을 땐 그 줄이 사라져 시트가 짧아진다. <i>실패를 먼저 말하는 구조.</i>'],
+ [A4,'④ 버튼이 맨 위','<b>할 일을 먼저</b>, 설명은 그 아래. 반복해서 사는 사람에게 가장 빠르다. <i>처음 보는 사람에겐 거꾸로다.</i>'],
+ [A5,'⑤ 셋을 가로 세 칸','무엇 · 얻는 것 · 내는 것을 <b>나란히</b>. 세로가 가장 짧다. <i>칸이 좁아 긴 이름이 접힌다.</i>'],
+ [A6,'⑥ 두 상자','얻는 것과 내는 것만 <b>상자 둘</b>로 짝지어 놓는다. 비용 상자만 금색. <i>거래가 한눈에 짝으로 읽힌다.</i>'],
+ [A7,'⑦ 왼쪽 고정 + 오른쪽 쌓기','아이콘·차수는 왼쪽에 <b>고정</b>, 나머지는 오른쪽에 쌓는다. 지금 구조를 정리한 형태.'],
+ [A8,'⑧ 거래만 상자에','정체성은 맨 위 한 줄, <b>거래는 상자 안</b>. 상자가 「여기가 사는 자리」를 말한다.'],
+ [A9,'⑨ 값이 제목','<b>×11 이 44px 로 제목</b>이 되고 이름이 부제로 내려간다. <i>「얼마가 되는가」를 보는 화면.</i>'],
+ [A10,'⑩ 가운데 정렬','모두 가운데. 갈래 → 이름 → 값 순으로 <b>위에서 아래로 커진다</b>.'],
+ [A11,'⑪ 값은 오른쪽 위','시선이 ↘ 로 흐른다 — 이름(왼쪽) → 값(오른쪽) → 비용(아래 왼쪽) → 버튼(아래 오른쪽).'],
+ [A12,'⑫ 다음값과 비용을 한 줄에','<b>얻는 것과 내는 것을 같은 높이</b>에 두고, 그 밑에 작은 글씨로 지금값·잔여. <i>맞바꿈이 가장 분명하다.</i>'],
+ [A13,'⑬ 다섯 칸 사다리','5차까지의 <b>값을 전부 보여 준다</b>(×1.5 → ×25). 지금 칸만 크게. <i>「어디까지 가는 길인가」가 보인다.</i>'],
+ [A14,'⑭ 굵은 막대','점 다섯 대신 <b>막대 하나</b>(8px). 값은 오른쪽 위. 거래는 한 줄.'],
+ [A15,'⑮ 지금 → 다음 → 그 뒤','세 지점을 <b>선으로 이어</b> 놓는다. 그 뒤(×25)는 흐리게. <i>단계가 이야기로 읽힌다.</i>'],
+ [A16,'⑯ 영수증','모든 값을 <b>라벨–값 우정렬</b> 행으로. 버튼은 맨 위 오른쪽. <i>빠짐없이 읽히고 가장 사무적이다.</i>'],
+];
+document.getElementById('g').innerHTML = M.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

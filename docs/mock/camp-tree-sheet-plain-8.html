@@ -1,0 +1,197 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 하단 — 8안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1980px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1060px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1060px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:22px}
+  .note{font-size:12px;line-height:1.55;color:#93a0b0;margin:8px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:400px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);background:#05070b}
+  .bg{position:absolute;inset:0;background:url('../../assets/backgrounds/reb/reb.webp') center 30% / cover no-repeat}
+  .bg::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(5,7,11,.30),rgba(5,7,11,.10) 26%,rgba(5,7,11,.55) 62%,rgba(5,7,11,.86))}
+  .S{position:absolute;left:0;right:0;bottom:0;z-index:2}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .nm{font-size:17px;font-weight:700;color:#f0f4f9}
+  .ds{font-size:12.5px;line-height:1.7;color:#a7b2c0}
+  .ds b{color:#f0f4f9;font-weight:700}
+  .ds.now{color:#69737f} .ds.now b{color:#8d9aa9;font-weight:400}
+  .cost{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--gold)}
+  .k{font-size:10px;letter-spacing:.18em;color:#69737f}
+  .dots{display:flex;gap:4px}
+  .dots i{flex:1;height:2px;border-radius:var(--r-bar)}
+  .ico{flex:0 0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    border-radius:var(--r-md);border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03)}
+  .ico img{object-fit:contain;display:block;opacity:.92}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-md);
+    font:700 13px/1 inherit;letter-spacing:.08em;border:1px solid rgba(255,255,255,.14);
+    background:none;color:#8d9aa9;min-height:42px;padding:0 18px}
+  .hr{height:1px;background:rgba(255,255,255,.07)}
+</style>
+<div class="wrap">
+<h1>환생 트리 하단 — 8안</h1>
+<p class="lede">두 가지를 <b>뺐다</b> — 「재화 획득 · 흔함 · T13」 메타 줄과
+  「가스 생산량을 먼저 올려야 합니다」 조건 줄. 남은 것은
+  <b>아이콘 · 이름 · 설명 · 단계 · 비용 · 버튼</b>뿐이다.</p>
+<p class="rule">여덟 안은 앞의 것들과 <b>형태 자체가 다르다</b> — 시트를 한 줄로 눕히거나,
+  버튼 안에 값을 넣거나, 원형 게이지를 쓰거나, 아예 아이콘을 빼고 글자만 남긴다.
+  <i>수치는 계속 문장 안에 있다: 「일꾼의 1회 채취량이 11배 증가합니다」.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+const D={ nm:'일꾼 채취량', n:4, ic:IC+'upgrades/up_mine.webp',
+  dsNow:'일꾼의 1회 채취량이 <b>5배</b> 증가합니다.',
+  dsNext:'일꾼의 1회 채취량이 <b>11배</b> 증가합니다.',
+  cost:'16.8M', left:'−16.8M', have:3, btn:'올리기' };
+function dots(){ let o='';
+  for(let i=1;i<=5;i++) o+='<i style="background:'+(i<=D.have?'rgba(255,210,74,.65)':(i===D.n?'rgba(255,255,255,.28)':'rgba(255,255,255,.07)'))+'"></i>';
+  return o; }
+function ico(sz,box){ return '<span class="ico" style="width:'+box+'px;height:'+box+'px">'
+  +'<img src="'+D.ic+'" style="width:'+sz+'px;height:'+sz+'px"></span>'; }
+function ph(s){ return '<div class="ph"><div class="bg"></div><div class="S">'+s+'</div></div>'; }
+const PAD='padding:16px 18px 18px;background:#080b11;border-top:1px solid rgba(255,255,255,.10)';
+
+/* ① 한 줄 바 — 시트를 눕힌다 */
+const A1=()=>ph('<div style="'+PAD+';padding-top:13px;padding-bottom:14px">'
+ +'<div style="display:flex;align-items:center;gap:12px">'+ico(28,36)
+ +'<div style="flex:1;min-width:0"><div class="nm" style="font-size:15px">'+D.nm+'</div>'
+ +'<div class="ds" style="font-size:11.5px;margin-top:2px">'+D.dsNext+'</div></div>'
+ +'<div style="text-align:right"><div class="cost">'+D.cost+'</div>'
+ +'<div class="k" style="margin-top:2px">'+D.n+' / 5</div></div>'
+ +'<button class="btn" style="min-height:46px">'+D.btn+'</button></div></div>');
+
+/* ② 버튼이 값을 품는다 */
+const A2=()=>ph('<div style="'+PAD+'">'
+ +'<div style="display:flex;align-items:center;gap:12px">'+ico(30,40)
+ +'<div class="nm">'+D.nm+'</div>'
+ +'<span class="k" style="margin-left:auto">'+D.n+' / 5</span></div>'
+ +'<div class="ds" style="margin-top:11px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div>'
+ +'<div class="dots" style="margin-top:13px">'+dots()+'</div>'
+ +'<button style="width:100%;margin-top:14px;min-height:52px;display:flex;align-items:center;'
+ +'gap:12px;padding:0 16px;border-radius:var(--r-md);border:1px solid rgba(255,210,74,.34);'
+ +'background:rgba(255,210,74,.06);font:inherit;cursor:pointer">'
+ +'<span style="font-size:14px;font-weight:700;color:#f0f4f9;letter-spacing:.08em">'+D.btn+'</span>'
+ +'<span class="cost" style="margin-left:auto;font-size:17px">'+D.cost+'</span></button></div>');
+
+/* ③ 원형 게이지 */
+const A3=()=>ph('<div style="'+PAD+'">'
+ +'<div style="display:flex;align-items:center;gap:14px">'
+ +'<div style="position:relative;flex:0 0 56px;height:56px">'
+ +'<svg viewBox="0 0 56 56" style="width:56px;height:56px;transform:rotate(-90deg)">'
+ +'<circle cx="28" cy="28" r="25" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>'
+ +'<circle cx="28" cy="28" r="25" fill="none" stroke="rgba(255,210,74,.7)" stroke-width="3"'
+ +' stroke-dasharray="'+(2*Math.PI*25)+'" stroke-dashoffset="'+(2*Math.PI*25*(1-D.have/5))+'" stroke-linecap="round"/></svg>'
+ +'<img src="'+D.ic+'" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);'
+ +'width:26px;height:26px;object-fit:contain;opacity:.9"></div>'
+ +'<div style="flex:1;min-width:0"><div class="nm">'+D.nm+'</div>'
+ +'<div class="k" style="margin-top:3px">'+D.n+' / 5 단계</div></div></div>'
+ +'<div class="ds" style="margin-top:13px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div>'
+ +'<div class="hr" style="margin:14px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div></div>');
+
+/* ④ 아이콘 없이 글자만 */
+const A4=()=>ph('<div style="'+PAD+'">'
+ +'<div style="display:flex;align-items:baseline;gap:10px">'
+ +'<span class="nm" style="font-size:19px">'+D.nm+'</span>'
+ +'<span class="k" style="margin-left:auto">'+D.n+' / 5</span></div>'
+ +'<div class="ds" style="margin-top:12px;font-size:13px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:3px;font-size:13px">'+D.dsNow+'</div>'
+ +'<div class="dots" style="margin-top:15px">'+dots()+'</div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:15px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div></div>');
+
+/* ⑤ 왼쪽 세로 단계 눈금 */
+const A5=()=>ph('<div style="'+PAD+'">'
+ +'<div style="display:flex;gap:14px">'
+ +'<div style="flex:0 0 20px;display:flex;flex-direction:column;justify-content:space-between;padding:3px 0">'
+ + [5,4,3,2,1].map(i=>'<span class="num" style="font-size:11px;text-align:center;color:'
+   +(i<=D.have?'rgba(255,210,74,.8)':(i===D.n?'#f0f4f9':'#3d4653'))
+   +';font-weight:'+(i===D.n?'800':'400')+'">'+i+'</span>').join('')
+ +'</div>'
+ +'<div style="flex:0 0 1px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,210,74,.4))"></div>'
+ +'<div style="flex:1;min-width:0">'
+ +'<div style="display:flex;align-items:center;gap:11px">'+ico(28,36)+'<div class="nm">'+D.nm+'</div></div>'
+ +'<div class="ds" style="margin-top:11px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:14px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div></div></div></div>');
+
+/* ⑥ 말풍선 — 별에서 뻗어 나온 꼴 */
+const A6=()=>ph('<div style="padding:0 12px 12px">'
+ +'<div style="position:relative;padding:15px 16px 16px;border-radius:var(--r-lg);'
+ +'background:rgba(10,13,19,.97);border:1px solid rgba(255,255,255,.13)">'
+ +'<span style="position:absolute;left:38px;top:-7px;width:12px;height:12px;transform:rotate(45deg);'
+ +'background:rgba(10,13,19,.97);border-left:1px solid rgba(255,255,255,.13);border-top:1px solid rgba(255,255,255,.13)"></span>'
+ +'<div style="display:flex;align-items:center;gap:11px">'+ico(28,36)
+ +'<div class="nm" style="font-size:16px">'+D.nm+'</div>'
+ +'<span class="k" style="margin-left:auto">'+D.n+' / 5</span></div>'
+ +'<div class="ds" style="margin-top:11px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div>'
+ +'<div class="dots" style="margin-top:12px">'+dots()+'</div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:13px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto;min-height:38px;padding:0 15px">'+D.btn+'</button></div></div></div>');
+
+/* ⑦ 설명이 주인공 — 이름은 위 작은 라벨 */
+const A7=()=>ph('<div style="'+PAD+'">'
+ +'<div class="k">'+D.nm+' · '+D.n+' / 5</div>'
+ +'<div class="ds" style="margin-top:8px;font-size:15px;line-height:1.6">'+D.dsNext+'</div>'
+ +'<div class="dots" style="margin-top:14px">'+dots()+'</div>'
+ +'<div class="ds now" style="margin-top:9px;font-size:12px">'+D.dsNow+'</div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<span class="k" style="margin-left:10px">잔여 '+D.left+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div></div>');
+
+/* ⑧ 두 층 — 위는 얇은 요약 줄, 아래는 넓은 버튼 */
+const A8=()=>ph('<div style="background:#080b11;border-top:1px solid rgba(255,255,255,.10)">'
+ +'<div style="display:flex;align-items:center;gap:12px;padding:13px 18px 12px">'+ico(28,36)
+ +'<div style="flex:1;min-width:0"><div class="nm" style="font-size:15px">'+D.nm+'</div>'
+ +'<div class="dots" style="margin-top:7px">'+dots()+'</div></div>'
+ +'<span class="k">'+D.n+' / 5</span></div>'
+ +'<div style="padding:0 18px 12px"><div class="ds">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div></div>'
+ +'<div style="display:flex;align-items:stretch;border-top:1px solid rgba(255,255,255,.08)">'
+ +'<div style="flex:1;padding:12px 18px"><div class="k">비용</div>'
+ +'<div class="cost" style="margin-top:3px">'+D.cost+'</div></div>'
+ +'<button style="flex:0 0 132px;border:0;border-left:1px solid rgba(255,255,255,.08);'
+ +'background:rgba(255,255,255,.03);color:#c3ccd8;font:700 14px/1 inherit;letter-spacing:.1em;cursor:pointer">'
+ +D.btn+'</button></div></div>');
+
+const M=[
+ [A1,'① 한 줄로 눕힌다','시트를 <b>한 줄</b>로. 이름 위에 설명이 붙고 오른쪽에 값·버튼. <i>세로 74px — 별자리를 거의 안 가린다.</i>'],
+ [A2,'② 버튼이 값을 품는다','비용을 따로 두지 않고 <b>버튼 안 오른쪽</b>에 넣는다. 「올리기 — 16.8M」이 한 덩어리.'],
+ [A3,'③ 원형 게이지','단계를 <b>아이콘 둘레의 고리</b>로 그린다. 점 다섯이 사라져 줄이 하나 준다.'],
+ [A4,'④ 글자만','아이콘을 <b>아예 뺀다</b>. 이름 19px · 설명 13px. <i>가장 정갈하고 무엇인지 알아보기는 느리다.</i>'],
+ [A5,'⑤ 왼쪽 세로 눈금','단계를 <b>왼쪽 세로 눈금</b>(5→1)으로 세운다. 지금 칸만 흰색. <i>계단을 오르는 느낌.</i>'],
+ [A6,'⑥ 말풍선','시트를 띄우고 <b>위쪽에 꼭지</b>를 달아 고른 별에서 나온 것처럼. <i>어느 별인지가 형태로 읽힌다.</i>'],
+ [A7,'⑦ 설명이 제목','이름을 <b>작은 라벨</b>로 올리고 설명을 15px 로 키워 주인공으로. <i>「무엇이 되는가」가 먼저 읽힌다.</i>'],
+ [A8,'⑧ 두 층 + 옆 버튼','요약 줄과 설명 줄을 위에, <b>비용과 버튼은 아래 한 층</b>에서 좌우로. <i>누르는 자리가 가장 분명하다.</i>'],
+];
+document.getElementById('g').innerHTML = M.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

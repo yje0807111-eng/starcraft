@@ -844,8 +844,22 @@
   #titleBg::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
   #phone.artBg #titleBg{opacity:1}
   /* 🔁 환생 화면(z-index 120)이 열리면 공유 키 아트를 그 **바로 아래**로 끌어올린다.
-     ⛔ 환생 화면이 자기 그림을 그리면 안 된다 — 키 아트를 칠하는 요소는 한 장뿐이어야 한다. */
-  #phone.artLift #titleBg{z-index:119}
+     ⛔ 환생 화면이 자기 그림을 그리면 안 된다 — 키 아트를 칠하는 요소는 한 장뿐이어야 한다.
+     ⚠ 그때 **하단 네비를 키 아트 위로 올린다**(2026-08-31 사용자 신고: 「어두워지면서 하단까지
+        가려진다」). #titleBg 는 inset:0 이라 화면을 통째로 덮는데, artLift 로 z-index 가 119 가
+        되면 네비(62)를 덮는다. pointer-events:none 이라 **눌리기는 하지만 눈에는 안 보이고**,
+        ::after 의 딤(--loadDim)까지 얹혀 네비가 어둠에 잠긴다.
+        ⛔ 키 아트 쪽을 `bottom:var(--navH)` 로 잘라 봤지만 **8px 이 남았다** — 호흡
+           애니메이션(titleBreath)이 scale 을 걸어 레이아웃보다 크게 그려지기 때문이다.
+        ⭐ 그래서 자르지 않고 **네비를 올린다.** 그림은 온전히 남고 네비는 제 배경으로 덮인다. */
+  #phone.artLift #titleBg{z-index:119;
+    /* 🎬 **배경이 UI 보다 먼저 선다**(2026-08-31 사용자 신고: 「번쩍 하고 이동이 된다」).
+       ⛔ 그림과 환생 화면이 **같은 시간에** 0→1 로 오르면 둘 다 반투명인 구간이 길어져
+         그 아래 캠프 전장이 내내 비친다 — 실측 프레임에서 뒤 화면 글자가 그대로 읽혔다.
+       ⭐ 배경만 먼저 채우면 그 뒤로는 아래가 완전히 가려지고, 위에서 UI 만 떠오른다.
+         값이 0 이면 「갑자기 어두워진다」로 돌아가므로 **짧게 겹치되 먼저**가 정답이다. */
+    transition-duration:calc(var(--t-screen) * .4)}
+  #phone.artLift .navBar{z-index:121}
   /* 🎬 화면 전환 — 로딩(#opening)만 흐려지며 들고 난다.
      ⚠ .appScreen.hide 가 display:none 이라 그냥 두면 전환이 뚝 끊긴다. 로딩을
         var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
