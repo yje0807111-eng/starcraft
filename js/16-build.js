@@ -1122,7 +1122,13 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   if(!_gasBuilt && !techWallet()){ const _gcw=_techCW(), _gch=_techCH();
     const _gtl=_techW2S(TECH_GRID.x0+TECH_GAS.c0*_gcw, techY0()+TECH_GAS.r0*_gch), _gbr=_techW2S(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w)*_gcw, techY0()+(TECH_GAS.r0+TECH_GAS.h)*_gch);
     const _gArm=!!(G.tech.arm && (techGetBldg(race,G.tech.arm)||{}).gas);
-    gasZone='<div class="bGasZone'+(_gArm?' hot':'')+(_res3d?' d3':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%">'+(_res3d?'':'<span class="gzIco">💨</span>')+'<span class="gzLbl">에너지 광산</span></div>'; }   // 선택 표시는 3D 하단 링
+    // 🏕 캠프는 **그림 스프라이트**로 그린다(미네랄과 같은 규칙 · 2026-08-31).
+    //   ⛔ 오른쪽 구역(#campGas2)을 따로 그리지 말 것 — 그쪽은 이 마크업을 **복제**한다(js/19-camp.js).
+    const _gspr=(typeof campGasSprite==='function') ? campGasSprite() : '';
+    gasZone='<div class="bGasZone'+(_gArm?' hot':'')+(_res3d&&!_gspr?' d3':'')+(_gspr?' spr':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%">'
+      +(_gspr ? '<img class="gzSpr" src="'+_gspr+'" alt="">'
+              : (_res3d?'':'<span class="gzIco">💨</span>'))
+      +'<span class="gzLbl">에너지 광산</span></div>'; }   // 선택 표시는 3D 하단 링
   let hillZ='';   // ⛰ 고지대(언덕) — 좌하단 테스트 지형. 저지→고지 시야 차단 확인용
   { const H=TECH_HILL, tl=_techW2S(H.x0,H.y0), br=_techW2S(H.x1,H.y1);
     hillZ='<div class="bHill" style="left:'+(tl.x*100).toFixed(2)+'%;top:'+(tl.y*100).toFixed(2)+'%;width:'+((br.x-tl.x)*100).toFixed(2)+'%;height:'+((br.y-tl.y)*100).toFixed(2)+'%"><span class="hillLbl">⛰ 고지</span></div>'; }
@@ -1136,7 +1142,7 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     const _k=_spr?1.34:1.2, _dy=_spr?0.30:0;
     const _mtl=_techW2S(m.x-_k/2*_mcw, m.y-(_k/2+_dy)*_mch), _mbr=_techW2S(m.x+_k/2*_mcw, m.y+(_k/2-_dy)*_mch);
     mineZ+='<div class="bMineral'+(_res3d&&!_spr?' d3':'')+(_spr?' spr':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'
-      +(_spr ? '<img class="mnSpr'+(((typeof campMineFlip==='function')&&campMineFlip(_mi))?' flip':'')+'" src="'+_spr+'" alt="">'
+      +(_spr ? '<img class="mnSpr" src="'+_spr+'" alt="">'
              : (_res3d?'':'<span class="mnIco">💎</span>'))+'</div>';
     _mi++; } }   // 수치 텍스트 제거 → 클릭 시 프로필에서만 잔량 표시 · 선택 표시는 3D 하단 링
   let rallyZ='';   // 🚩 랠리 포인트 — 선택된 건물의 랠리 위치 깃발 + 건물→랠리 점선(지정 모드=강조)

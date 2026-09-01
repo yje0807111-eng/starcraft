@@ -1134,13 +1134,18 @@ async function groupLobby(){
           for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
         assert(n>0,'원복했는데 원본 가스값이 안 돌아왔다 — 오토배틀이 함께 망가진다'); }
       G.tech.units[q.id]=0; }
-    // ③ 광맥은 2열 × 3행 — 눈이 아니라 좌표로 잰다
+    // ③ 광맥은 **한 줄 일곱 칸**이고, 일직선이 아니라 **가운데가 처진 호**다(2026-08-31 사용자 확정).
+    //   ⛔ 두 줄(3×2)로 되돌리지 말 것 — 덩어리로 뭉쳐 보였다.
     const M=G.tech.minerals||[];
-    assert(M.length===6,'광맥이 6개가 아님: '+M.length);
-    const xs=new Set(M.map(m=>m.x.toFixed(4))), ys=new Set(M.map(m=>m.y.toFixed(4)));
-    assert(xs.size===CAMP_MINE_COLS && ys.size===CAMP_MINE_ROWS,
-      '광맥이 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' 이 아님: '+xs.size+'열 '+ys.size+'행');
-    // ⛽ 가스 광산은 광맥과 **같은 높이, 바로 옆**이다.
+    assert(M.length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥 수가 배치와 다름: '+M.length);
+    const xs=new Set(M.map(m=>m.x.toFixed(4)));
+    assert(xs.size===CAMP_MINE_COLS,'광맥이 한 줄 '+CAMP_MINE_COLS+'칸이 아님: '+xs.size+'열');
+    { const S=M.slice().sort((a,b)=>a.x-b.x), mid=S[(S.length-1)/2|0];
+      const ends=(S[0].y+S[S.length-1].y)/2;
+      assert(mid.y>ends+1e-6,'가운데가 안 처졌다 — 호가 아니라 일직선이다');
+      assert(Math.abs(S[0].y-S[S.length-1].y)<1e-6,'양 끝 높이가 다르다 — 호가 기울었다'); }
+    // ⛽ 가스 광산은 **본부 양옆**이다(2026-08-31 사용자 확정 · 광맥 옆에서 옮겼다).
+    //   광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
     //   ⚠ 격자 크기(_techRows)는 맵 요소의 실제 크기에 달렸다 — campShowView() 로 #vBuild 를
     //     HOME 안으로 옮기기 **전에** 재면 다른 값이 나온다(실측: 30행 vs 35행).
     //     그래서 가스를 뷰 전에 잡았더니 광맥보다 5행 위에 앉았다. 격자 계산은 뷰 뒤에 둘 것.
@@ -1149,14 +1154,16 @@ async function groupLobby(){
       const gx=sx(TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*cw, 0);
       const gy=sy(0, techY0()+(TECH_GAS.r0+TECH_GAS.h/2)*ch);
       const mY=M.map(m=>sy(m.x,m.y)), mX=M.map(m=>sx(m.x,m.y));
-      assert(gy>=Math.min(...mY)-0.04 && gy<=Math.max(...mY)+0.04,
-        '가스 광산이 광맥과 같은 높이가 아님: 가스 '+gy.toFixed(2)+' vs 광맥 '+Math.min(...mY).toFixed(2));
-      assert(gx<Math.min(...mX),'가스 광산이 광맥 옆이 아님');
-      // ⛽⛽ 가스는 **둘**이다 — 광맥 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
+      const B=(G.tech.ents||[]).find(e=>e.type==='bldg'); assert(B,'본부가 없다');
+      const bY=sy(B.x,B.y), bX=sx(B.x,B.y);
+      assert(Math.abs(gy-bY)<0.05,'가스가 본부와 같은 높이가 아님: 가스 '+gy.toFixed(2)+' vs 본부 '+bY.toFixed(2));
+      assert(gy<Math.min(...mY),'가스가 광맥보다 아래다 — 본부 줄에 있어야 한다');
+      assert(gx<bX,'왼쪽 가스가 본부 왼쪽에 없다');
+      // ⛽⛽ 가스는 **둘**이다 — 본부 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
       //   캠프가 판정 함수를 감싸 좌표를 잠시 바꿔 한 번 더 묻는 방식으로 두 자리를 인정한다.
       //   ⛔ 로직을 복사하지 않는다(복사본은 원본이 바뀌면 낡는다).
       { const g2x=sx(TECH_GRID.x0+(CAMP_GAS2.c0+TECH_GAS.w/2)*cw, 0);
-        assert(g2x>Math.max(...mX),'오른쪽 가스가 광맥 오른쪽에 없다');
+        assert(g2x>bX,'오른쪽 가스가 본부 오른쪽에 없다');
         assert(CAMP_GAS2.r0===TECH_GAS.r0,'두 가스 광산의 행이 다르다');
         const save=G.tech.arm; G.tech.arm='refinery';
         const at=(c,r)=>techArmValid(TECH_GRID.x0+(c+TECH_GAS.w/2)*cw, techY0()+(r+TECH_GAS.h/2)*ch);
@@ -1165,17 +1172,15 @@ async function groupLobby(){
         assert(!at(Math.round(techCols()/2), campRow(0.45)),'가스 광산이 아닌 곳에도 정제소가 지어진다');
         G.tech.arm=save; }
       // ⛽ 오른쪽 가스도 **왼쪽과 같은 실물**이어야 한다 — 구역 표시만 있으면 빈 땅으로 보인다.
-      //   3D 노드는 renderBuildTab 이 목록에 하나만 넣으므로(14-input-fx.js:951) 캠프가
-      //   M3D.syncBuild 를 감싸 하나 더 얹는다. ⚠ 바깥에서 가로채면 안 보인다(패치보다 앞이다).
-      // ⚠ 3D 모듈(js/90-m3d.module.js)은 three.js 를 외부 CDN(esm.sh)에서 받는다. 오프라인·차단 환경에서는
-      //   window.M3D 가 아예 안 생기고, 그러면 campPatchSync 도 걸리지 않는 것이 정상이다(감쌀 대상이 없다).
-      //   그래서 3D 가 실제로 올라온 환경에서만 검사한다 — 다른 3D 스텝들의 '3D 미준비' 건너뜀과 같은 규칙.
+      //   ⭐ 2026-08-31: 그 실물이 3D 노드에서 **그림 스프라이트**로 바뀌었다(미네랄과 같은 규칙).
+      //     오른쪽은 왼쪽 마크업을 복제하므로 둘 다 저절로 그림이 된다.
+      //   ⛔ 캠프에서 3D 가스(res_en)를 다시 얹지 말 것 — 그림 위에 덩어리가 겹쳐 그쪽만 커 보인다.
       if(window.M3D && typeof M3D.syncBuild==='function'){ let seen=null; const inner=_campSyncOrig;
-        assert(typeof inner==='function','M3D.syncBuild 패치가 안 걸렸다 — 오른쪽 가스 3D 가 안 선다');
+        assert(typeof inner==='function','M3D.syncBuild 패치가 안 걸렸다');
         _campSyncOrig=function(list){ seen=(list||[]).filter(x=>x&&x.id==='res_en').map(x=>x.uid); return inner.apply(this,arguments); };
         for(let i=0;i<3;i++) campFrame(performance.now()+i*33);
         _campSyncOrig=inner;
-        assert(seen && seen.length===2,'가스 3D 노드가 2개가 아님: '+(seen?seen.join(','):'없음')); }
+        assert(seen && seen.length===0,'캠프에 3D 가스가 남아 있다(그림과 겹친다): '+(seen?seen.join(','):'-')); }
       // 겉모습(클래스·라벨)도 같아야 한다
       { const L=document.querySelector('#cstMain .bmap .bGasZone'), R2=$('campGas2');
         assert(L&&R2,'가스 구역 DOM 이 둘이 아니다');
@@ -1553,9 +1558,11 @@ async function groupLobby(){
         campFrame(performance.now()); _campSyncOrig=o;
         assert(!(cap||[]).some(i=>i&&/^mn_/.test(i.uid||'')),
           '캠프에 3D 미네랄이 다시 들어왔다 — 그림 스프라이트와 두 벌로 겹친다');
-        const gz=(cap||[]).filter(i=>i&&/^gz_/.test(i.uid||''));
-        assert(gz.length===2&&gz.every(i=>i.fitW>0),
-          '가스 광산 둘의 크기 규격이 다르다: '+gz.map(i=>i.uid+'='+i.fitW).join(' '));
+        // ⛽ **가스도 그림 스프라이트다**(2026-08-31 · 미네랄과 같은 규칙). 3D 노드(res_en)는 좌우
+        //   두 구역이 같은 모델·같은 각도라 미네랄과 같은 「복사한 티」가 났다.
+        //   ⛔ 캠프에서 3D 가스(gz_*)를 다시 넣지 말 것 — 그림 위에 덩어리가 겹쳐 그쪽만 커 보인다.
+        assert(!(cap||[]).some(i=>i&&/^gz_/.test(i.uid||'')),
+          '캠프에 3D 가스가 다시 들어왔다 — 그림 스프라이트와 겹친다');
         // 🎒 운반 청크는 아직 3D 다 — 그쪽은 셀 축소를 따라야 한다(안 따르면 일꾼보다 커진다)
         const cr=(cap||[]).filter(i=>i&&/^carry_/.test(i.uid||''));
         assert(cr.every(i=>i.scl!=null&&i.scl<0.999),
@@ -1563,7 +1570,9 @@ async function groupLobby(){
       // 스프라이트가 **셀 크기를 따라간다** — 안 따르면 광맥 여섯이 서로 뭉개져 보인다.
       // ⚠ 먼저 다시 그린다 — 앞 검사들이 배율을 바꿔 놓아, 화면에 남은 스프라이트는 옛 셀 크기로
       //   그려진 것이다 — 안 그리고 재면 칸 대비 1.34 를 1.86 으로 읽는다(실측).
-      { if(typeof techMapRender==='function') techMapRender(); }
+      { if(typeof techMapRender==='function') techMapRender();
+        // ⚠ 오른쪽 가스(#campGas2)는 왼쪽을 복제해 만든다 — 다시 그린 뒤 한 번 불러야 따라온다.
+        if(typeof campDrawGas2==='function') campDrawGas2(); }
       { const sp=[...document.querySelectorAll('.bMineral.spr')].filter(e=>e.getBoundingClientRect().width>0);
         assert(sp.length,'캠프 광맥이 그림 스프라이트로 안 그려진다(.bMineral.spr 없음)');
         assert(sp.every(e=>e.querySelector('img.mnSpr')),'스프라이트 칸에 그림이 없다');
@@ -1574,6 +1583,22 @@ async function groupLobby(){
         // 칸보다 조금 큰 것이 정상이다(결정이 칸 밖으로 자란다). 두 배 넘게 크면 서로 뭉갠다.
         assert(wide.every(r=>r>0.6&&r<1.8),
           '광맥 그림이 칸 대비 너무 크거나 작다(셀 축소를 안 따른다): '+wide.map(r=>r.toFixed(2)).join(' ')); } }
+      // ⛽ 가스 두 구역도 그림이다 — 좌우가 **같은 파일**이고 오른쪽만 뒤집혀 있어야 한다.
+      //   ⛔ 오른쪽을 따로 그리지 말 것: 왼쪽 마크업을 복제하고 뒤집기는 css 가 맡는다.
+      { const gs=[...document.querySelectorAll('.bGasZone.spr')].filter(e=>e.getBoundingClientRect().width>0);
+        assert(gs.length===2,'가스 구역이 그림 스프라이트 둘이 아니다: '+gs.length);
+        const im=gs.map(e=>e.querySelector('img.gzSpr'));
+        assert(im.every(Boolean),'가스 구역에 그림이 없다');
+        assert(im[0].getAttribute('src')===im[1].getAttribute('src'),'좌우가 다른 파일을 쓴다 — 한 벌이어야 한다');
+        const tf=im.map(e=>getComputedStyle(e).transform);
+        // ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 같은 그림을 그대로 둘 놓는다.
+        assert(tf[0]===tf[1],'좌우가 다른 모습이다 — 뒤집기가 되살아났다: '+tf.join(' / '));
+        // 광맥을 덮으면 안 된다 — 눌러서 캐는 것이라 가려지면 못 캔다.
+        //   ⚠ **세로로** 잰다: 가스는 이제 본부 줄(광맥 위)이라 가로 범위는 겹치는 것이 정상이다.
+        const mn=[...document.querySelectorAll('.bMineral.spr')].map(e=>e.getBoundingClientRect());
+        if(mn.length){ const mTop=Math.min(...mn.map(b=>b.top));
+          const low=Math.max(...im.map(e=>e.getBoundingClientRect().bottom));
+          assert(low<=mTop+1,'가스 그림이 광맥을 덮는다: '+(low-mTop).toFixed(1)+'px 내려왔다'); } }
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
@@ -1592,7 +1617,7 @@ async function groupLobby(){
     campExit(); showAppScreen('mapScreen'); await sleep(140);
     openHome(); await sleep(420);
     assert((G.tech.ents||[]).length===n0,'복귀했더니 기지가 달라짐: '+(G.tech.ents||[]).length+' vs '+n0);
-    assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
+    assert((G.tech.minerals||[]).length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'복귀했더니 광맥이 달라짐: '+(G.tech.minerals||[]).length);
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
 
@@ -3223,6 +3248,43 @@ async function groupLobby(){
     return '2초에 '+d0.toFixed(0)+' → '+d1.toFixed(0)+' (자리 쪽으로)';
   });
 
+  // 🪜 **사거리가 짧을수록 앞에 선다 — 기준선 하나에서 줄을 세운다** (2026-09-01 사용자 확정)
+  //    ⛔ 옛 방식은 「제 자리에서 뒤로 민다」였다 — 짧은 사거리 유닛이 뒤쪽 건물에서 나오면
+  //      **그대로 맨 뒤**에 남았다(앞으로 당기지 않았다). 게다가 R0=100 이라 레인저(147)조차
+  //      21px 밖에 안 밀려 층이라 부를 것이 없었다.
+  //    ⭐ 지금은 기준선(CAMP_LINE_GY)에서 사거리 순으로 **절대 정렬**한다. 적은 위에서
+  //      내려오므로 앞뒤가 곧 교전 순서다.
+  await step('캠프: 사거리가 짧을수록 앞에 선다', async()=>{
+    skipIf(typeof campDeploy!=='function'||typeof CAMP_LINE_GY==='undefined','캠프 배치 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    if(CAMPB._wq) CAMPB._wq.length=0;
+    // ⚠ **일부러 거꾸로 세운다** — 사거리 긴 것을 앞(위)에, 짧은 것을 뒤(아래)에.
+    //   옛 「뒤로만 민다」 방식이면 이 순서가 그대로 남는다.
+    const far = campDeploy('marine', 0.44, 0.40), near = campDeploy('machinegun', 0.50, 0.60);
+    const heal = campDeploy('medic', 0.56, 0.58);
+    assert(far&&near&&heal,'배치 실패');
+    assert(far.rng > heal.rng && heal.rng > near.rng,
+      '전제가 바뀜 — 레인저 > 의무병(치유 사거리) > 화력병 순이어야 한다: '
+      +far.rng.toFixed(0)+'/'+heal.rng.toFixed(0)+'/'+near.rng.toFixed(0));
+    // y 가 클수록 뒤(아래)다 — 적은 위에서 내려온다
+    assert(near._post.y < heal._post.y, '화력병(70)이 의무병(94)보다 앞이 아니다: '
+      +near._post.y.toFixed(0)+' vs '+heal._post.y.toFixed(0));
+    assert(heal._post.y < far._post.y, '의무병이 레인저보다 앞이 아니다 — 뒤로만 미는 옛 방식이다: '
+      +heal._post.y.toFixed(0)+' vs '+far._post.y.toFixed(0));
+    // 층은 촘촘하다 — 가장 먼 두 층의 간격이 CAMP_LAYER_MAX 안
+    assert(far._post.y - near._post.y <= CAMP_LAYER_MAX + 1,
+      '층이 CAMP_LAYER_MAX 보다 벌어졌다: '+(far._post.y-near._post.y).toFixed(0));
+    // 가로는 건드리지 않는다 — 넓게 펼치는 것이 맞다(campLanePost 를 만들었다가 없앴다)
+    const rawX = campG2W(0.44, 0.40, CAMPB.world).x;
+    assert(Math.abs(far._post.x - rawX) < 1, '가로 자리가 옮겨졌다 — 가로는 그대로 두어야 한다');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    campBattleClose();
+    return '화력병 '+near._post.y.toFixed(0)+' < 의무병 '+heal._post.y.toFixed(0)
+      +' < 레인저 '+far._post.y.toFixed(0)+' (폭 '+(far._post.y-near._post.y).toFixed(0)+'px)';
+  });
+
   // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
   //    ⛔ 옛 campFoeRace 는 STK_RACE_ORDER 를 그냥 돌려서, 「감염된 둥지」에 유니온이,
   //      「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로 그림과 적이 어긋났다.
@@ -3584,8 +3646,10 @@ async function groupLobby(){
         const u=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return STK.me.units[STK.me.units.length-1]; });
         assert(u,'레인저를 못 만들었다');
         campScaleAllies([u]);
-        assert(u.acq===CAMP_ACQ_BASE,'혼자인데 인식이 기본이 아니다: '+u.acq);
-        assert(u.rng<CAMP_ACQ_ALERT,'사거리까지 늘렸다 — 상성이 바뀐다: '+u.rng);
+        // 👀 인식은 **유닛마다 다르다 — 제 사거리 + PAD**(2026-09-01 사용자 확정).
+        //   ⛔ 고정값 하나로 되돌리지 말 것: 근접(사거리 47)과 공성전차(421)가 같은 눈을 갖는다.
+        assert(Math.abs(u.acq - (u.rng + CAMP_ACQ_PAD)) < 1e-6,
+          '혼자인데 인식이 사거리+'+CAMP_ACQ_PAD+' 가 아니다: '+u.acq+' (사거리 '+u.rng+')');
         // ⛔ 옛 목줄(campLeash)이 위치를 자르던 자리다 — 지금은 **목표를** 자른다.
         u._post={ x:u.x, y:u.y };
         const far={ x:u.x, y:u.y-CAMP_ENG_OUT*3, uid:'far', size:14 };
@@ -3593,27 +3657,46 @@ async function groupLobby(){
         const d=Math.hypot(g.x-u._post.x, g.y-u._post.y);
         assert(d<=CAMP_ENG_OUT+1e-6,'목표가 자리 제한 밖이다: '+Math.round(d)+' > '+CAMP_ENG_OUT);
         u.dead=true; }
-      // 👀 **발견 전파** (2026-08-28) — 한 명이 보면 **그 주변만** 같이 달려든다.
-      //    ⭐ 발견자에게서 먼 아군은 자기 자리를 지킨다 — 판 전체가 한 덩어리로 몰리지 않게.
+      // 👀 **전파는 곁(150)으로만 · 그리고 연쇄한다**(2026-09-01 사용자 확정).
+      //   ⛔ 반경을 넓히지 말 것(옛 900) — 한 명이 보면 판 전체가 몰렸다.
+      //   ⭐ 대신 전파받은 아군이 다음 틱의 전파원이 되어 줄줄이 번진다.
       if(typeof campAlertTick==='function'){
         campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
         const mk=(side,id,x,y)=>campWithStk(()=>{ strikeSpawnUnit(side,id);
-          const z=STK[side].units[STK[side].units.length-1]; if(z){ z.x=x; z.y=y; z._alertT=0; } return z; });
+          const z=STK[side].units[STK[side].units.length-1];
+          if(z){ z.x=x; z.y=y; z._alertT=0; z._alertAcq=0; z._hitT=0; z._hitAcq=0; } return z; });
         const r=campRallyPoint();
-        const near=mk('me','marine', r.x, r.y);                            // 발견자
-        const mid =mk('me','marine', r.x + CAMP_ALERT_R*0.5, r.y);         // 발견자 곁 — 전파됨
-        const far =mk('me','marine', r.x + CAMP_ALERT_R*3,   r.y);         // 멀리 — 전파 안 됨
-        const foe =mk('ai','marine', r.x, r.y - CAMP_ACQ_BASE*0.5);        // 발견자 사정권 안
-        if(near&&mid&&far&&foe){
-          campScaleAllies([near,mid,far]);
+        const a0=mk('me','marine', r.x, r.y);                          // 발견자
+        const a1=mk('me','marine', r.x + CAMP_ALERT_R*0.8, r.y);       // 곁 — 1틱에 전파
+        const a2=mk('me','marine', r.x + CAMP_ALERT_R*1.6, r.y);       // 그 옆 — 연쇄로 전파
+        const a3=mk('me','marine', r.x + CAMP_ALERT_R*9,   r.y);       // 멀리 — 안 닿는다
+        const foe=mk('ai','marine', r.x - 250, r.y);                   // 발견자만 볼 수 있는 거리
+        if(a0&&a1&&a2&&a3&&foe){
+          campScaleAllies([a0,a1,a2,a3]);
+          const base=campAcqBase(a0);
+          // ⚠ 적은 **발견자만 보이는 자리**여야 한다 — 곁의 아군도 제 눈으로 보면 전파가 뜻이 없다.
+          assert(Math.hypot(foe.x-a0.x, foe.y-a0.y) <= base,'적이 발견자 눈 밖이다 — 검사가 헛돈다');
+          assert(Math.hypot(foe.x-a1.x, foe.y-a1.y) > campAcqBase(a1),'적이 곁 아군 눈 안이다 — 전파 없이도 본다');
           CAMPB._alT=0; campAlertTick(0.05);
-          assert(near.acq===CAMP_ACQ_ALERT,'발견자가 안 넓어졌다: '+near.acq);
-          assert(mid.acq===CAMP_ACQ_ALERT,'곁의 아군에게 전파가 안 됐다: '+mid.acq);
-          assert(far.acq===CAMP_ACQ_BASE,'멀리 있는 아군까지 전파됐다 — 판 전체가 몰린다: '+far.acq);
-          // ⏳ 적이 사라지면 풀린다(지속 시간 뒤 제자리로)
+          assert(a1.acq>base,'곁의 아군에게 전파가 안 됐다: '+a1.acq+' (기본 '+base+')');
+          assert(Math.abs(a3.acq-campAcqBase(a3))<1e-6,'멀리 있는 아군까지 전파됐다: '+a3.acq);
+          // ⛓ 연쇄 — 한 틱 더 돌면 그 옆까지 번진다
+          CAMPB._alT=0; campAlertTick(0.05);
+          assert(a2.acq>campAcqBase(a2),'전파가 연쇄되지 않는다 — 그 옆 아군이 안 따라온다: '+a2.acq);
+          assert(Math.abs(a3.acq-campAcqBase(a3))<1e-6,'연쇄가 판 끝까지 번졌다: '+a3.acq);
+          // ⏳ 적이 사라지면 전부 풀린다
           foe.dead=true; CAMPB._alT=0; campAlertTick(CAMP_ALERT_S+0.1);
-          assert(near.acq===CAMP_ACQ_BASE,'적이 없는데 인식이 안 풀렸다: '+near.acq);
-          assert(mid.acq===CAMP_ACQ_BASE,'전파가 안 풀렸다: '+mid.acq); }
+          assert(Math.abs(a0.acq-campAcqBase(a0))<1e-6,'적이 없는데 인식이 안 풀렸다: '+a0.acq);
+          assert(Math.abs(a1.acq-campAcqBase(a1))<1e-6,'전파가 안 풀렸다: '+a1.acq); }
+        // 🩸 사거리 밖에서 맞으면 그 적까지 눈이 넓어진다
+        { const v=mk('me','marine', r.x, r.y);
+          if(v){ campScaleAllies([v]);
+            const d=campAcqBase(v)*2;
+            v._hitAcq=d; v._hitT=CAMP_HIT_ACQ_S;
+            campAlertApply();
+            assert(Math.abs(v.acq-d)<1e-6,'맞았는데 눈이 안 넓어졌다: '+v.acq+' (기대 '+d+')');
+            CAMPB._alT=0; campAlertTick(CAMP_HIT_ACQ_S+0.1);
+            assert(Math.abs(v.acq-campAcqBase(v))<1e-6,'맞아서 넓어진 눈이 안 풀린다: '+v.acq); } }
         campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
       // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
       //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).
@@ -3830,19 +3913,22 @@ async function groupLobby(){
       CAMPB.ai.units=[{dead:false},{dead:false},{dead:false}];
       campBarReset(); campBarRender();
       assert(el.querySelector('.cbFoe').textContent==='적 3','적 수가 안 맞음: '+el.querySelector('.cbFoe').textContent);
-      // ③ 트리 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살아 있어야 한다
-      { const bar=getComputedStyle(el).pointerEvents, chip=getComputedStyle(el.querySelector('.cbTree')).pointerEvents;
-        assert(bar==='none','띠가 맵 조작을 가로챈다');
-        assert(chip==='auto','트리 칩이 안 눌린다 — 트리에 들어갈 길이 사라진다'); }
-      C.rbPts=1234; campBarReset(); campBarRender();
-      assert(el.querySelector('.cbTree b').textContent.length>0,'포인트가 안 나옴');
+      // ③ 🌳 **트리 칩은 없다**(2026-09-01 사용자 확정) — 트리 입구는 하단 네비 「환생 › 트리」 하나다.
+      //   ⛔ 띠에 되돌리지 말 것: 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
+      assert(!el.querySelector('.cbTree'),'띠에 트리 칩이 되살아났다 — 입구가 둘이 된다');
+      // 🔁 환생 칩은 남는다 — 띠 전체는 pointer-events:none 이라 이 칩만 되살아 있어야 한다
+      { assert(getComputedStyle(el).pointerEvents==='none','띠가 맵 조작을 가로챈다');
+        C.rbPts=2e6; campBarReset(); campBarRender();
+        const rb=el.querySelector('.cbReb'); assert(rb,'환생 칩이 없다');
+        assert(getComputedStyle(rb).pointerEvents==='auto','환생 칩이 안 눌린다'); }
       // ④ 보여줄 게 없으면 띠가 숨는다(빈 판이 맵을 가리지 않게)
       C.dg=0; C.cleared=0; C.rbPts=0; campBattleClose(); campBarReset(); campBarRender();
       assert(el.classList.contains('empty'),'보여줄 게 없는데 띠가 남아 있다');
       // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다
-      C.dg=2; C.cleared=1; C.rbPts=5; campBarReset(); campBarRender();
-      { const b=el.querySelector('.cbTree b'); b.textContent='XX'; campBarRender();
-        assert(b.textContent==='XX','안 바뀌었는데 다시 그렸다 — 캐시가 안 먹는다'); }
+      // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다 — 적 수 칸으로 잰다(트리 칩은 없앴다)
+      C.dg=2; C.cleared=1; CAMPB && (CAMPB.ai.units=[{dead:false},{dead:false}]); campBarReset(); campBarRender();
+      { const b=el.querySelector('.cbFoe'); const was=b.textContent; b.textContent='XX'; campBarRender();
+        assert(b.textContent==='XX','안 바뀌었는데 다시 그렸다 — 캐시가 안 먹는다 (원래 "'+was+'")'); }
       // ⑥ 맵 밑에 깔리지 않는다 · 재화 바와 안 겹친다
       { const MAP=['cstMain','cstFog','techMap3d','cstLabels','cstPrev'];
         const mz=MAP.map(id=>{ const c=document.getElementById(id);
@@ -3971,6 +4057,27 @@ async function groupLobby(){
         G.tech.credit=1e9;
         assert(!campUpgBuy('hold'),'최대 레벨인데 더 팔린다 — 연타보다 빨라진다');
         C.upg=JSON.parse(u0); }
+      // ⑤-1 🖐 손가락 이동의 뜻은 **자동 채굴이 시작됐는가**로 갈린다(2026-09-01 사용자 확정).
+      //   시작 전에 밀면 = 화면 이동일 수 있다 → 접는다. 시작 뒤에 밀면 = 캐는 중이다 → 따라간다.
+      //   ⛔ 둘을 하나로 합치지 말 것: 늘 끊으면 손끝 흔들림에 수급이 죽고, 늘 따라가면
+      //     누르자마자 미는 동작까지 채굴로 세어진다.
+      { const pm=(x,y,id)=>document.dispatchEvent(Object.assign(new Event('pointermove',{bubbles:true}),
+          {clientX:x, clientY:y, pointerId:id}));
+        // ① 아직 안 캤다 → 크게 밀면 접힌다
+        campHoldStart(120, 300, 7);
+        assert(_campHoldPt && _campHoldPt.fired===false,'홀드가 안 걸렸거나 시작 표시가 없다');
+        pm(260, 380, 7);
+        assert(!_campHoldPt,'자동 채굴이 시작되기도 전인데 밀어도 홀드가 남아 있다');
+        // ② 한 번 캔 뒤 → 밀어도 따라간다
+        campHoldStart(120, 300, 7); _campHoldPt.fired=true;
+        pm(260, 380, 7);
+        assert(_campHoldPt,'채굴이 시작된 뒤인데 손가락을 움직였다고 끊겼다');
+        assert(Math.round(_campHoldPt.x)===260 && Math.round(_campHoldPt.y)===380,
+          '홀드가 손가락을 안 따라간다: '+_campHoldPt.x+','+_campHoldPt.y);
+        pm(10, 10, 9);   // 다른 손가락의 움직임은 무시
+        assert(Math.round(_campHoldPt.x)===260,'다른 손가락의 움직임까지 따라갔다');
+        assert(_campHoldPt.id===7,'홀드가 포인터 id 를 기억하지 않는다 — 두 손가락을 구분할 수 없다');
+        campHoldStop(); }
       // ⑤-2 ⛏ 홀드는 **간격으로만** 차이를 낸다(배수 1 · 사용자 확정).
       //     ⭐ 그래도 **최대치가 연타에 못 미쳐야** 한다: 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이다.
       //       실측(2026-08-27 · 30분): 연타 6탭 127만 / 홀드 최대(실효 3.3탭) 56만 = 44%.
@@ -4172,7 +4279,7 @@ async function groupLobby(){
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;
     openHome(); await sleep(420);
-    assert(G.tech && (G.tech.minerals||[]).length===6,'광맥이 안 깔림');
+    assert(G.tech && (G.tech.minerals||[]).length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥이 안 깔림');
     // ① 광맥을 누르면 캔다 — 화면 좌표로 실제 탭 경로를 탄다
     const r=_btRect(); assert(r && r.width>0,'건설 맵 사각형이 없음');
     const m=G.tech.minerals[0], sc=_techW2S(m.x,m.y);
@@ -7311,6 +7418,43 @@ async function groupLobby(){
     assert(Math.abs(floorZ-vz)<0.03,
       '손가락 중 맵이 다시 안 그려졌다 — 바닥 ×'+floorZ.toFixed(3)+' vs 뷰 ×'+vz.toFixed(3)+' (3D 만 움직여 선택링이 어긋난다)');
     return '뷰 ×'+vz.toFixed(2)+' · 바닥 ×'+floorZ.toFixed(2)+' 동기'; });
+  // 🤏 **두 손가락 = 확대·축소 + 화면 이동**(2026-09-01 사용자 확정).
+  //   ⛔ 이동을 다시 빼지 말 것 — 유닛을 지정한 채로 화면을 옮길 길이 그것뿐이다
+  //     (롱프레스 팬은 **빈 바닥에서만** 열려서, 지정 중에는 옮길 방법이 없었다).
+  //   ⛔ 계산식을 캠프에서 새로 짜지 말 것 — 원본(17-build-cards.js techPtrMove)과 같은 식이다.
+  await step('두 손가락: 확대하고 · 화면도 옮긴다 · 지정은 안 풀린다', async()=>{
+    skipIf(typeof campIsOn!=='function' || !campIsOn(),'캠프 아님');
+    skipIf(typeof techPtrDown!=='function' || typeof techPtrMove!=='function','포인터 핸들러 없음');
+    openHome(); await sleep(140);
+    const t=techViewT(); const x0=t.x, y0=t.y, z0=t.zoom;
+    // 지정을 걸어 둔다 — 두 손가락 조작이 그것을 풀면 안 된다
+    const es=(G.tech.ents||[]); const b=es.find(e=>e.type==='bldg');
+    const sel0=(b?(G.tech.sel=b.eid):null);
+    const pe=(type,x,y,id)=>{ const e=new Event(type,{bubbles:true});
+      Object.assign(e,{clientX:x, clientY:y, pointerId:id, button:0, pointerType:'touch'});
+      return e; };
+    try{
+      techPtrDown(pe('pointerdown',150,380,1));
+      techPtrDown(pe('pointerdown',260,380,2));
+      assert(_btPinch,'두 손가락인데 핀치가 안 잡혔다');
+      // ① 두 손가락을 **같은 방향으로** 옮긴다 = 화면 이동(거리가 그대로라 배율은 안 바뀐다)
+      techPtrMove(pe('pointermove',150+40,380+40,1));
+      techPtrMove(pe('pointermove',260+40,380+40,2));
+      const t1=techViewT();
+      assert(Math.abs(t1.x-x0)>0.005 || Math.abs(t1.y-y0)>0.005,
+        '두 손가락으로 밀었는데 화면이 안 움직인다: x '+x0.toFixed(4)+'→'+t1.x.toFixed(4)+' · y '+y0.toFixed(4)+'→'+t1.y.toFixed(4));
+      assert(Math.abs(t1.zoom-z0)<0.02,'거리가 그대로인데 배율이 변했다: '+z0+' → '+t1.zoom);
+      // ② 벌리면 확대
+      techPtrMove(pe('pointermove',150-60,380+40,1));
+      techPtrMove(pe('pointermove',260+60,380+40,2));
+      assert(techViewT().zoom>z0,'벌렸는데 확대가 안 된다: '+z0+' → '+techViewT().zoom);
+      // ③ 지정은 그대로
+      if(sel0!=null) assert(G.tech.sel===sel0,'두 손가락 조작에 지정이 풀렸다');
+      return '이동 ok · 확대 '+z0.toFixed(2)+'→'+techViewT().zoom.toFixed(2)+' · 지정 유지';
+    } finally {
+      if(typeof techPtrUp==='function'){ try{ techPtrUp(pe('pointerup',0,0,1)); techPtrUp(pe('pointerup',0,0,2)); }catch(e){} }
+      const tv=techViewT(); tv.x=x0; tv.y=y0; tv.zoom=z0;
+      if(typeof _techClampView==='function') _techClampView(tv); } });
   // 🎬 종족을 고르고 캠프로 들어올 때 살짝 물러난 자리에서 본진 쪽으로 다가간다.
   //    ⭐ 맵(#vBuild)과 3D(#cvMarine)는 **형제**다 — 둘에 같은 애니를 걸어야 배경과 건물이 같이 온다.
   //    ⛔ 뷰(CAMP_ZOOM)로 연출하지 말 것 — 그건 격자·배치·전투 계산에 얽혀 있다(2026-08-27 실패).
@@ -7452,17 +7596,17 @@ async function groupLobby(){
       const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr')];
       skipIf(!sp.length,'광맥이 아직 안 그려졌다');
       assert(sp.length===(G.tech.minerals||[]).length,'그림 수가 광맥 칸 수와 다르다: '+sp.length);
-      // 지금은 1번 하나로 통일한다 — 반복 느낌은 좌우 뒤집기(CAMP_MINE_FLIP)가 푼다
+      // 지금은 1번 하나로 통일한다. ⛔ 좌우 뒤집기를 되살리지 말 것(2026-08-31 사용자 확정) —
+      //   뒤집으면 광원 방향이 칸마다 반대가 된다. 반복이 거슬리면 그림을 한 장 더 뽑는다.
       const files=sp.map(e=>e.src.split('/').pop());
       assert(files.every(f=>f==='stage1.webp'),'1번 외의 그림이 쓰였다: '+files.join(','));
-      const flip=sp.filter(e=>e.classList.contains('flip')).length;
-      assert(flip>0 && flip<sp.length,'좌우 뒤집기가 안 걸렸다 — 같은 그림이 그대로 반복된다 (뒤집힘 '+flip+'/'+sp.length+')');
+      assert(!sp.some(e=>e.classList.contains('flip')),'좌우 뒤집기가 되살아났다');
       for(const e of sp) assert(e.complete && e.naturalWidth>0,'광맥 그림을 못 불러왔다: '+e.src.split('/').pop());
       // 그림을 쓰면 3D 노드는 빠져야 한다(두 겹 방지)
       assert(typeof campIsOn==='function' && campIsOn(),'캠프가 켜져 있지 않다');
       // 관리자 탭에서는 그림을 쓰지 않는다(3D 그대로)
       assert(campMineSprite({},0),'캠프인데 그림 경로가 비었다');
-      return files.length+'칸 · 1번 통일 · '+flip+'칸 뒤집음';
+      return files.length+'칸 · 1번 통일 · 뒤집기 없음';
     } finally { try{ const CC=campState(); if(CC) CC.race=race0; }catch(e){} } });
   // 🪞 캠프 자원 구역은 **좌우 대칭**이어야 한다(2026-08-27). 실측으로 한 칸(13px) 어긋나 있었다.
   //    ⛔ 미네랄은 칸 중심에 **점으로** 앉으므로 시각 중심이 `c0+(COLS-1)/2` 다 — 가장자리 기준으로

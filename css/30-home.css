@@ -1897,12 +1897,11 @@
   padding:3px 8px;border-radius:var(--r-md);
   border:1px solid rgba(255,59,59,.35);background:rgba(14,18,26,.82)}
 #campBar .cbFoe:empty{display:none}
-/* 🌳 트리 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살린다 */
-#campBar :is(.cbTree,.cbReb){pointer-events:auto;flex:0 0 auto;
+/* 🔁 환생 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살린다 */
+#campBar .cbReb{pointer-events:auto;flex:0 0 auto;
   border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
   background:rgba(20,26,36,.9);color:#cfd8e6;font-size:var(--fs-sm);font-weight:700;padding:3px 8px}
-#campBar .cbTree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--gold,#ffd24a)}
-#campBar .cbReb b{color:#5cd6ff}   /* 환생 = 시안(트리의 금색과 갈라 읽힌다) */
+#campBar .cbReb b{color:#5cd6ff}   /* 환생 = 시안 */
 
 /* ══ 🌳 환생 포인트 트리 — 마인드맵 (2026-08-25 · 6단계-b) ═══════════════
    전체 화면 위에 덮는 판. 가운데는 밀고 확대하는 SVG, 위아래에 얇은 줄 둘.

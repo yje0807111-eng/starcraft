@@ -1686,30 +1686,37 @@ function campDeploy(id, gx, gy){
   campLayerPost(u, W);                     // 🪜 사거리가 길수록 뒤에 세운다(아래) — 능력치 뒤라야 rng 을 안다
   return u; }
 
-// 🪜 **사거리가 길수록 뒤에 선다** (2026-08-31 사용자 확정).
+// 🪜 **사거리가 짧을수록 앞에 선다 — 한 줄로 촘촘히** (2026-09-01 사용자 확정).
 //   ⛔ 교전 이동(campEngageStep)으로 층을 만들려다 **두 번 실패했다** — 앞줄이 멈추면
 //     뒷줄이 갈 곳이 없어서 사거리 안에 드는 아군이 0~33% 로 떨어졌다.
-//   ⭐ 원인은 **자리**였다. 뭉쳐 세운 부대는 앞줄이 서는 순간 뒷줄이 막힌다 —
-//     사거리별로 **애초에 다른 줄에 서 있어야** 층이 유지된다.
+//   ⭐ 원인은 **자리**였다. 사거리별로 **애초에 다른 줄에 서 있어야** 층이 유지된다.
+//
+//   ⛔ **옛 방식은 「제 자리에서 뒤로 민다」였다 — 층이 생기지 않았다**(2026-09-01 실측).
+//     ① 기준이 생산 건물 자리라, 짧은 사거리 유닛이 뒤쪽 건물에서 나오면 **그대로 맨 뒤**에 남는다.
+//        「사거리가 짧으면 앞」이라 해 놓고 앞으로 **당기지는 않았기** 때문이다.
+//     ② R0=100 이라 화력병(70)·의무병(0)은 물론 레인저(147)조차 21px 밖에 안 밀렸다 —
+//        층이라 부를 것이 없었다. 궤적 그림의 4층은 전부 **테스트 배치**가 만든 것이었다.
+//   ⭐ 지금은 **기준선 하나에서 사거리 순으로 줄을 세운다**(절대 정렬). 그래야 어느 건물에서
+//     나오든 짧은 사거리가 앞이다. 적은 **위에서** 내려오므로 앞뒤가 곧 교전 순서다.
+//   ⚠ 세로는 촘촘하게, 가로는 넓게 — 여러 층이 **동시에** 때리려면 그 모양이어야 한다.
+//     ⛔ 가로를 가운데로 모으는 campLanePost 를 만들었다가 없앴다(같은 날) — 실효가 안 올랐고
+//       (0.29 → 0.29) 방향도 반대였다. 올린 것은 세로 간격 하나였다.
 //   ⚠ **생산될 때의 기본 자리만** 손댄다. 플레이어가 직접 옮기면(campMoveSel) 그 자리가 이긴다.
-//   ⚠ 뒤로 미는 것이지 앞으로 당기지 않는다 — 앞줄(근접)은 원래 자리 그대로다.
-//     lane 은 전장 14~86% 라 300px 은 그 폭(3456)의 8.7% 다. 층은 지되 부대가 갈라지진 않는다.
-const CAMP_LAYER_R0 = 100;         // 이 사거리까지는 앞줄(안 민다) — 화력병 70 은 여기
+const CAMP_LINE_GY  = 0.50;        // 부대 앞줄이 서는 격자 y — 여기서부터 사거리 순으로 뒤에 선다
 const CAMP_LAYER_R1 = 420;         // 이 사거리면 최대로 민다 — 공성전차 421 은 여기
-const CAMP_LAYER_MAX = 300;        // 가장 긴 유닛이 앞줄보다 이만큼 뒤에 선다(px)
+const CAMP_LAYER_MAX = 60;         // 가장 긴 유닛이 앞줄보다 이만큼 뒤에 선다(px) — 촘촘하게
 function campLayerBack(u){
-  const rng = (u && u.rng) || 0;
-  if(rng <= CAMP_LAYER_R0) return 0;                       // 근접·단거리는 앞줄(안 민다)
-  const t = Math.min(1, (rng - CAMP_LAYER_R0) / Math.max(1, CAMP_LAYER_R1 - CAMP_LAYER_R0));
+  const rng = (u && u.rng) || 0;   // ⚠ 0 부터 비례한다 — 의무병(0)·화력병(70)도 순서를 갖는다
+  const t = Math.min(1, Math.max(0, rng) / CAMP_LAYER_R1);
   return t * CAMP_LAYER_MAX; }
 function campLayerPost(u, W){
   if(!u || !u._post) return 0;
-  const back = campLayerBack(u);
-  if(back <= 0) return 0;
   const lim = W || (CAMPB && CAMPB.world) || 4800;
-  u._post.y = Math.min(lim, u._post.y + back);
-  u.y = u._post.y;                                         // 갓 태어났으니 그 자리에 바로 선다
-  return back; }
+  const front = (typeof campG2W === 'function') ? campG2W(0.5, CAMP_LINE_GY, lim).y : u._post.y;
+  const ny = Math.min(lim, front + campLayerBack(u)), d = ny - u._post.y;
+  u._post.y = ny;
+  u.y = ny;                                                // 갓 태어났으니 그 자리에 바로 선다
+  return d; }
 // 🚧 자리에서 나갈 수 있는 거리 — **유닛마다 다르게 주지 않는다**(모두 CAMP_ENG_OUT).
 //   ⚠ **지금 값은 1200 이다**(선언과 근거는 아래 `const CAMP_ENG_OUT` 자리에 있다).
 //     여기서 지키는 것은 값이 아니라 **「층에 따라 다르게 주지 않는다」는 규칙** 하나다.
@@ -1977,29 +1984,51 @@ function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 function campAlertTick(dt){
   if(!CAMPB || !CAMPB.me) return 0;
   const mine = CAMPB.me.units, foes = CAMPB.ai.units;
-  for(const u of mine){ if(u._alertT > 0) u._alertT = Math.max(0, u._alertT - dt); }
+  for(const u of mine){
+    if(u._alertT > 0){ u._alertT = Math.max(0, u._alertT - dt); if(u._alertT === 0) u._alertAcq = 0; }
+    if(u._hitT   > 0){ u._hitT   = Math.max(0, u._hitT   - dt); if(u._hitT   === 0) u._hitAcq   = 0; } }
   CAMPB._alT = (CAMPB._alT || 0) - dt;
   if(CAMPB._alT > 0){ campAlertApply(); return 0; }
   CAMPB._alT = CAMP_ALERT_TICK;
-  // ① 발견자 — 기본 인식 거리 안에 적이 있는 아군
-  const B2 = CAMP_ACQ_BASE * CAMP_ACQ_BASE, spot = [];
+  // ① 시드 = **지금 적을 보고 있는 아군**(제 눈 안에 적이 있다). 눈은 유닛마다 다르다.
+  //    ⚠ 여기서 쓰는 눈은 campAlertApply 가 이미 얹어 둔 값이다 — 맞아서 넓어진 것도,
+  //      지난 틱에 전파받은 것도 포함된다. 그래서 **연쇄**가 일어난다.
+  //    ⭐ 시드는 **자기가 본 적의 자리**를 함께 들고 온다 — 곁에 넘겨줄 것이 「눈의 크기」가
+  //      아니라 **「저기 적이 있다」** 이기 때문이다. 받는 쪽은 제 자리에서 그 적까지의
+  //      거리를 스스로 재서 눈을 넓힌다(멀리 있을수록 더 크게 뜬다).
+  const spot = [];
   for(const u of mine){ if(u.dead) continue;
+    const a = Math.max(u.acq || 0, campAcqBase(u)), A2 = a * a;
+    let bx = 0, by = 0, bd = Infinity;
     for(const e of foes){ if(e.dead) continue;
-      const dx = e.x - u.x, dy = e.y - u.y;
-      if(dx * dx + dy * dy <= B2){ spot.push(u); break; } } }
-  // ② 발견자 주변에만 전파 — ⭐ 멀리 있는 아군은 자기 자리를 지킨다
+      const dx = e.x - u.x, dy = e.y - u.y, d2 = dx * dx + dy * dy;
+      if(d2 <= A2 && d2 < bd){ bd = d2; bx = e.x; by = e.y; } }
+    if(bd < Infinity) spot.push({ u:u, x:bx, y:by }); }
+  // ② 시드 곁(150)의 아군에게 **그 눈을 그대로** 넘긴다.
+  //    ⭐ 넘겨받은 아군은 다음 틱의 시드가 되어 또 곁으로 넘긴다 — 줄줄이 번진다.
+  //    ⛔ 반경을 다시 넓히지 말 것(옛 900) — 한 명이 보면 판 전체가 몰렸다.
   if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R;
     for(const u of mine){ if(u.dead) continue;
-      for(const sp of spot){ const dx = sp.x - u.x, dy = sp.y - u.y;
-        if(dx * dx + dy * dy <= R2){ u._alertT = CAMP_ALERT_S; break; } } } }
+      for(const sp of spot){ if(sp.u === u) continue;
+        const dx = sp.u.x - u.x, dy = sp.u.y - u.y;
+        if(dx * dx + dy * dy > R2) continue;
+        // 내 자리에서 **그 적까지** 닿는 눈을 뜬다(여유 PAD 만큼 더)
+        const need = Math.hypot(sp.x - u.x, sp.y - u.y) + CAMP_ACQ_PAD;
+        u._alertT = CAMP_ALERT_S;
+        if(need > (u._alertAcq || 0)) u._alertAcq = need; } } }
   campAlertApply();
   return spot.length;
 }
-// 전파 상태를 실제 인식 거리로 옮긴다(발견자 자신도 전파 대상이라 함께 넓어진다)
+// 세 겹을 겹쳐 실제 인식 거리를 정한다 — 셋 중 **가장 넓은 것**이 이긴다.
+//   ① 기본 = 제 사거리 + PAD   ② 맞아서 넓어진 것   ③ 곁에서 전파받은 것
+//   ⚠ 지속이 끝나면 각각 스스로 꺼지고, 남는 것은 ① 뿐이다(자기 자리로 돌아간다).
 function campAlertApply(){
   if(!CAMPB || !CAMPB.me) return;
   for(const u of CAMPB.me.units){ if(u.dead) continue;
-    u.acq = (u._alertT > 0) ? CAMP_ACQ_ALERT : CAMP_ACQ_BASE; }
+    let a = campAcqBase(u);
+    if(u._hitT > 0 && (u._hitAcq || 0) > a) a = u._hitAcq;
+    if(u._alertT > 0 && (u._alertAcq || 0) > a) a = u._alertAcq;
+    u.acq = a; }
 }
 
 // ── 🪧 자리(post) — 내가 준 자리를 지킨다 (2026-08-28 사용자 확정) ─────
@@ -2150,7 +2179,7 @@ function campBunkerStep(dt){
       if(typeof strikeAcq === 'function') u.acq = Math.max(u.acq || 0, strikeAcq(u.rng)); }
     else if(!b && u._rng0 != null){
       u.rng = u._rng0; u._rng0 = null;
-      if(typeof strikeAcq === 'function') u.acq = CAMP_ACQ_BASE; }
+      u.acq = campAcqBase(u); }
     if(u._bunk == null) continue;
     if(!b){ u._bhp = null; continue; }          // 🧱 무너져 있는 동안은 밖에서 싸운다(기록은 남긴다)
     const s = (typeof _ringSlotN === 'function') ? _ringSlotN(u._bslot | 0, CAMP_BUNK_SLOT) : { dx:0, dy:0 };
@@ -2461,7 +2490,7 @@ function campDesignStat(u){
   if(d.a != null) u.dmg = d.a * CAMP_STAT_ATK;
   if(d.c != null) u.cdMax = Math.max(0.45, d.c);
   if(d.r != null){ u.rng = d.r * CAMP_STAT_TILE;
-    if(typeof strikeAcq === 'function') u.acq = strikeAcq(u.rng);
+    u.acq = campAcqBase(u);
     u.melee = d.r <= 1.0; }               // 1칸 = 근접
   // ⛔ 이동 속도는 여기서 안 덮는다 — `u.spd` 는 실제 이동에 안 쓰인다(위 표 주석 참고).
   return true;
@@ -2499,7 +2528,7 @@ function campScaleAllies(list){
   campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 배수는 그 위에 곱한다
   // 👀 기본 인식 거리만 맞춰 둔다 — 넓히는 것은 campAlertTick 이 **전파로만** 한다.
   //    ⛔ 사거리는 건드리지 않는다(늘리면 종족 상성이 바뀐다).
-  for(const u of list) if(u) u.acq = CAMP_ACQ_BASE;
+  for(const u of list) if(u) u.acq = campAcqBase(u);
   const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
   let n = 0;
   for(const u of list){
@@ -2623,9 +2652,11 @@ function campRegroup(){
 // ⚠ **목줄(leash)이 반드시 필요하다.** 인식만 넓히면 적 본진까지 쫓아가 「제자리 방어」가
 //   통째로 무너진다 — 예전에 그렇게 해서 라운드가 영영 안 끝나는 정체를 네 번 겪었다.
 // ⭐ **전파식 인식** (2026-08-28 사용자 확정) — 전원이 똑같이 넓게 보는 게 아니다.
-//   ① 혼자서는 CAMP_ACQ_BASE 만큼만 본다.
-//   ② 누군가 적을 발견하면 **그 아군 주변 CAMP_ALERT_R 안의 아군에게만** 전파된다.
-//   ③ 전파받은 아군은 CAMP_ACQ_ALERT 로 넓게 보며 마중 나간다. CAMP_ALERT_S 초 뒤 풀린다.
+//   ① 혼자서는 **제 사거리 + CAMP_ACQ_PAD** 만큼만 본다(유닛마다 다르다).
+//   ② 사거리 밖에서 맞으면 **그 적까지** 눈이 즉시 넓어진다(CAMP_HIT_ACQ_S 초 유지).
+//   ③ 눈이 넓어진 아군은 곁(CAMP_ALERT_R = 400) 의 아군에게 그 눈을 전파한다.
+//   ④ 전파받은 아군도 다음 틱에 전파원이 된다 — **연쇄**로 줄줄이 번진다.
+//      ⭐ 그래서 「사거리 긴 적이 뒤에서 때리면, 맞은 아군부터 그 옆까지 차례로 들어간다」.
 //   ⭐ 그래서 **발견자에게서 먼 아군은 자기 자리를 지킨다** — 한쪽으로 우르르 몰리지 않고
 //     싸움이 난 구역의 병력만 거든다.
 //   ⛔ 전원에게 넓은 인식을 주면(옛 방식) 판 전체가 한 덩어리로 움직여, 반대쪽이 통째로 빈다.
@@ -2638,9 +2669,19 @@ function campRegroup(){
 //   ⭐ 그래서 인식이 곧 실질 제한이 된다. CAMP_ENG_OUT 은 이제 「최후의 안전선」이다.
 //   ⚠ 전파(campAlertTick)는 그대로 둔다 — 「같이 싸우는 느낌」이 거기서 나온다.
 //     다만 전파받은 인식도 함께 조여야 뜻이 있다(안 그러면 한 명이 보는 순간 전원이 멀리 본다).
-const CAMP_ACQ_BASE = 450;         // 혼자 볼 수 있는 거리 (실효 ×1.4 = 630)
-const CAMP_ACQ_ALERT = 750;        // 전파받았을 때 보는 거리 (실효 ×1.4 = 1050)
-const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
+// ⭐ **인식은 유닛마다 다르다 — 제 사거리 + CAMP_ACQ_PAD**(2026-09-01 사용자 확정).
+//   고정값 하나(옛 450)는 근접(사거리 47)과 공성전차(421)에게 같은 눈을 줬다 —
+//   근접은 닿지도 못할 거리를 보고 달려 나가고, 장거리는 제 사거리도 못 채웠다.
+const CAMP_ACQ_PAD = 100;          // 기본 인식 = 자기 사거리 + 이만큼
+function campAcqBase(u){ return ((u && u.rng) || 0) + CAMP_ACQ_PAD; }
+// 🩸 **사거리 밖에서 맞으면 그 적까지 눈을 넓힌다** — 맞고만 있지 않고 반격하러 간다.
+const CAMP_HIT_ACQ_S = 3;          // 맞아서 넓어진 인식이 유지되는 시간(초)
+// ⚠ **진형 폭보다 좁으면 줄 끝까지 소식이 안 간다** (2026-09-01 실측).
+//   눈은 사거리+100(레인저 287)인데 진형은 840px 이라, 왼쪽 끝 유닛은 오른쪽 적을 못 본다.
+//   실측 표적을 가진 비율이 적이 끊이지 않는 던전에서도 **33~52%** 였다 — 절반이 논다.
+//   ⛔ 그렇다고 진형 폭(840)까지 주면 안 된다 — **어디에 두든 전군이 달려가 배치의 뜻이 사라진다**
+//     (2026-09-01 사용자 확정). 400 은 「곁의 두세 명 건너까지」에 해당한다.
+const CAMP_ALERT_R = 400;          // 옆 아군에게 전파되는 거리 — **연쇄한다**(아래 campAlertTick)
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 // 🪢 **자기 자리에서 이보다 멀리는 못 나간다** — 이제 이것이 **자리 제한의 유일한 장치**다.
@@ -2776,12 +2817,13 @@ function campBarRender(){
   //    이미 그걸 보여주고 거기에 이동 드롭다운까지 붙어 있다. 두 곳에 두면 반드시 어긋난다.
   const fo = el.querySelector('.cbFoe');
   if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
-  { const tb = el.querySelector('.cbTree b'); if(tb) tb.textContent = campNum(pts); }
+  // 🌳 트리 입구는 **하단 네비 「환생 › 트리」 하나**다(2026-09-01 사용자 확정).
+  //   ⛔ 띠에 트리 칩을 되돌리지 말 것 — 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
   // 🔁 환생 칩 — 조건(누적 재화 100만)을 채우면 나타난다. 화면을 안 봐도 열리는 것이 아니라
   //    일꾼을 사고 탭을 눌러야 채워지는 값이다(HUNT_R1 §4-1).
   { const rb = el.querySelector('.cbReb'); if(rb) rb.classList.toggle('hide', !canReb); }
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && pts <= 0 && !canReb);
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !canReb);
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; }
@@ -2839,13 +2881,20 @@ function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRa
 //   `cap` 은 16-build.js 가 읽는 캠프 표식이다(`inf` 와 같은 수법) — 관리자 탭·오토배틀은
 //   cap 이 없어 1로 동작하므로 영향이 없다. 설계 근거는 HUNT_R1.md §1.
 const CAMP_MINE_CAP = 5;
-const CAMP_MINE_COLS = 3, CAMP_MINE_ROWS = 2;   // 가로로 넓게 — 세로 화면에서 아래를 덜 먹는다
+// 💎 광맥은 **한 줄 일곱 칸**이다(2026-08-31 사용자 확정). 3×2 두 줄은 덩어리로 뭉쳐 보였다.
+//   ⭐ 일직선이 아니라 **가운데가 처진 호**다 — 본부(위)를 감싸 안는 모양이 되고, 일곱이
+//     한 줄로 서도 울타리처럼 딱딱해지지 않는다.
+//   ⚠ 칸 수를 바꾸면 가스와의 간격(CAMP_GAS_GAP)도 같이 봐야 한다 — 반폭이 그만큼 늘어난다.
+const CAMP_MINE_COLS = 7, CAMP_MINE_ROWS = 1;
+const CAMP_MINE_ARC = 0.8;   // 호의 깊이(칸) — 가운데가 이만큼 아래로 처진다
 // ⚠ 이 둘이 **기지가 하단 시트에 가리지 않게** 하는 유일한 장치다.
 //   맵은 화면 전체를 쓰고 시트가 그 위를 덮으므로(css/30-home.css 캠프 블록), 시트 상단보다
 //   위에 앉혀야 한다. 시트 상단 = 화면 세로의 0.77 지점(실측: 맵 701px 중 시트 161px + 네비).
 //   ⛔ 값을 바꿨으면 **가장 아래 요소인 가스**(광맥 행 + h-0.55)까지 재서 0.74 아래로
 //     내려가지 않는지 확인할 것 — 광맥만 보고 정했다가 가스가 시트에 물렸다.
-const CAMP_ROW_BASE = 0.58;   // 본부 중심(격자 세로 비율 0~1)
+// 🏠 본부는 **광맥 바로 위**다(2026-08-31 사용자 확정 · 0.58 → 0.63).
+//   위쪽을 비워 적이 내려오는 길을 길게 잡고, 손이 닿는 아래쪽에 본부·광맥·가스를 모은다.
+const CAMP_ROW_BASE = 0.63;   // 본부 중심(격자 세로 비율 0~1)
 const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 // ⚠ 행 번호는 **여기 한 곳에서만** 만든다. 광맥과 가스가 각자 round(rows*f) 를 하면
 //   호출 시점에 _techRows() 가 달라져 서로 다른 행에 앉는다(실측: 가스가 광맥보다 5행 위였다).
@@ -2862,10 +2911,18 @@ function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); 
 // ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다(캠프 광맥은 마르지 않는다).
 //   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 고르게 바꾼다.
 const CAMP_MINE_SPRITE = ['1','1','1', '1','1','1'];
-// 🪞 오른쪽 열은 좌우를 뒤집는다 — 같은 그림 넷이 나란히 서면 울타리처럼 반복돼 보인다.
-//   뒤집기만 해도 같은 파일로 다른 실루엣이 나온다(에셋을 늘리지 않는다).
-const CAMP_MINE_FLIP = [false, false, true, true, false, false];
-function campMineFlip(i){ return !!CAMP_MINE_FLIP[i % CAMP_MINE_FLIP.length]; }
+// ⛔ **좌우 뒤집기를 쓰지 않는다**(2026-08-31 사용자 확정). 같은 그림을 그대로 반복한다 —
+//   뒤집으면 광원 방향이 칸마다 반대가 되어 오히려 눈에 걸린다. 반복이 거슬리면 뒤집지 말고
+//   그림을 한 장 더 뽑는다(stage2…). 가스도 같은 규칙이다.
+// ⛽ 가스 구역도 같은 규칙 — **캠프에서만** 그림으로 바꾼다(2026-08-31).
+//   3D 노드(res_en)는 좌우 두 구역이 같은 모델·같은 각도라 미네랄과 같은 「격자무늬」가 났다.
+//   ⛔ 관리자 건설 탭·오토배틀은 3D 그대로 — 여기서 '' 를 돌려주면 옛 경로가 그대로 산다.
+//   ⚠ 그림은 4×2 칸(비율 2:1)에 맞춰 뽑았다(실측 320×151). 비율이 크게 다른 그림으로 갈면
+//     구역 사각형과 그림 발치가 어긋난다 — 바꿀 때 화면에서 다시 잴 것.
+function campGasSprite(){
+  if(!_campOn) return '';
+  return 'assets/props/gas/stage1.webp';
+}
 function campMineSprite(m, i){
   if(!_campOn) return '';                                   // ⛔ 관리자 탭·오토배틀은 3D 그대로
   const k = CAMP_MINE_SPRITE[i % CAMP_MINE_SPRITE.length];
@@ -2876,7 +2933,9 @@ function campMineSprite(m, i){
 //   ⛔ 가스를 미네랄 「가장자리」 기준으로 놓으면 좌우가 한 칸 어긋난다 — 실측으로 그랬다
 //      (미네랄 중심에서 왼 51px / 오른 64px · 정확히 한 칸 13px).
 //      가스 구역은 **사각형**이라 중심이 `c0 + w/2` 다. 그 두 중심을 맞춘다.
-const CAMP_GAS_GAP = 4;   // 미네랄 시각 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
+// ⚠ 가스는 **본부 양옆**이다(2026-08-31 사용자 확정). 광맥 옆이 아니라 한 줄 위다.
+//   본부 반폭(4/2 = 2칸) + 가스 반폭(4/2 = 2칸) = 4 가 안 겹치는 최소 — 한 칸 띄운다.
+const CAMP_GAS_GAP = 5;   // 가로 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
 function campMineMidCol(){ return campMineCol() + (CAMP_MINE_COLS - 1) / 2; }
 function campLayMinerals(){
   if(typeof G === 'undefined' || !G.tech) return;
@@ -2884,9 +2943,12 @@ function campLayMinerals(){
   const x0 = TECH_GRID.x0 + campMineCol() * cw;   // 가로 가운데(가스와 같은 문으로 계산)
   const y0 = campRowY(CAMP_ROW_MINE);
   G.tech.minerals = [];
+  // 🏹 가운데가 처진 호 — t 는 -1(왼끝) ~ +1(오른끝), 가운데에서 가장 깊다.
+  //   ⛔ 칸(행)으로 계단을 만들지 말 것 — 일곱이 계단처럼 꺾여 보인다. 연속 좌표로 부드럽게.
+  const _last = Math.max(1, CAMP_MINE_COLS - 1);
   for(let r = 0; r < CAMP_MINE_ROWS; r++) for(let c = 0; c < CAMP_MINE_COLS; c++)
     G.tech.minerals.push({ eid:G.tech.eseq++,
-      x: x0 + c * cw, y: y0 + r * ch,
+      x: x0 + c * cw, y: y0 + (r + (1 - Math.pow(c / _last * 2 - 1, 2)) * CAMP_MINE_ARC) * ch,
       // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
       //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
       //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.
@@ -2910,7 +2972,9 @@ function campLayGas(){
   const mid = campMineMidCol(), half = TECH_GAS.w / 2;
   TECH_GAS.c0  = Math.max(0, Math.round(mid - CAMP_GAS_GAP - half));                       // 왼쪽
   CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + CAMP_GAS_GAP - half)); // 오른쪽
-  TECH_GAS.r0 = campRow(CAMP_ROW_MINE);                       // 광맥과 **같은 행**
+  // ⛽ 가스는 **본부와 같은 높이**다 — 구역 높이(h)의 절반만큼 올려 본부 중심에 맞춘다.
+  //   ⛔ 광맥 행으로 되돌리지 말 것 — 광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
+  TECH_GAS.r0 = Math.max(0, campRow(CAMP_ROW_BASE) - Math.round(TECH_GAS.h / 2));
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -2968,7 +3032,10 @@ function campPatchSync(){
   _campSyncOrig = M3D.syncBuild;
   M3D.syncBuild = function(list, W, H, dt, zoom){
     try{
-      if(_campOn && Array.isArray(list) && !campGas2Built()){
+      // ⛔ 오른쪽 3D 가스 노드(gz_res2)는 더 얹지 않는다 — 캠프 가스는 **그림**이다(2026-08-31).
+      //   얹으면 그림 위에 3D 덩어리가 겹쳐 오른쪽만 커 보인다(실측 프레임으로 확인).
+      //   ⚠ 자리 계산(CAMP_GAS2.c0)과 campGas2Built() 는 그대로 살아 있다 — 오른쪽 DOM 이 그것을 쓴다.
+      if(false && _campOn && Array.isArray(list) && !campGas2Built()){
         const v = techView();
         const gx = TECH_GRID.x0 + (CAMP_GAS2.c0 + TECH_GAS.w / 2) * _techCW();
         const gy = techY0() + (CAMP_GAS2.r0 + TECH_GAS.h - 0.55) * _techCH();
@@ -3764,13 +3831,16 @@ function campMineFloatMap(n, clientX, clientY){
   setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 900);
 }
 // ⏱ 홀드 — 누르고 있는 동안 간격마다 한 번. 손을 떼면 멈춘다.
-function campHoldStart(clientX, clientY){
+function campHoldStart(clientX, clientY, pid){
   campHoldStop();
-  _campHoldPt = { x: clientX, y: clientY };
+  // ⚠ 어느 손가락이 누르고 있는지 기억한다 — 두 손가락이 오면 그때 멈추기 위해서다.
+  //   fired = **자동 채굴이 한 번이라도 돌았나.** 그 전과 후로 손가락 이동의 뜻이 갈린다.
+  _campHoldPt = { x: clientX, y: clientY, id: (pid==null ? null : pid), fired: false };
   _campHoldT = setInterval(function(){
     if(!_campMineMode || !_campOn || !_campHoldPt){ campHoldStop(); return; }
     // ⚠ 홀드는 **손가락이 멈춰 있는 것이 정상**이다 — 여기서 리듬 감쇠를 재면 늘 기계로 보인다.
     //   그래서 human=false 로 부른다(간격이 고정이라 매크로가 얻을 이득도 없다).
+    _campHoldPt.fired = true;   // 여기부터는 손가락이 움직여도 이어서 캔다(아래 pointermove)
     campMineOnce(_campHoldPt.x, _campHoldPt.y, false, CAMP_HOLD_MUL);   // ⛏ 홀드 1회 = 탭 CAMP_HOLD_MUL 회분(지금 1)
   }, campHoldMs());
 }
@@ -3872,7 +3942,7 @@ if(typeof document !== 'undefined'){
         _campLastTap = now;
         campMineOnce(ev.clientX, ev.clientY, ev.isTrusted !== false);
       }
-      campHoldStart(ev.clientX, ev.clientY);   // ⏱ 누르고 있으면 이어서 캔다
+      campHoldStart(ev.clientX, ev.clientY, ev.pointerId);   // ⏱ 누르고 있으면 이어서 캔다
       ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault();
       return;
     }
@@ -3886,10 +3956,22 @@ if(typeof document !== 'undefined'){
   // ⏱ 손을 떼면 홀드를 멈춘다 — 창 밖으로 나가거나 취소돼도 마찬가지다.
   for(const t of ['pointerup','pointercancel','pointerleave','blur'])
     document.addEventListener(t, function(){ campHoldStop(); }, true);
-  // 🖐 손가락이 크게 움직이면 = 화면을 밀려는 것이다. 홀드를 멈춘다(제자리 홀드만 인정).
+  // 🖐 손가락 이동의 뜻은 **자동 채굴이 시작됐는가**로 갈린다(2026-09-01 사용자 확정).
+  //   ① 시작 전(아직 한 번도 안 캠) — 누르자마자 미는 것은 **화면 이동이나 다른 조작**일 수 있다.
+  //      그래서 크게 움직이면 홀드를 접는다.
+  //   ② 시작 후 — 이미 「가만히 눌러 캐는 중」이라는 뜻이 섰다. 이제는 움직여도 **따라가며** 캔다.
+  //      ⛔ 여기서 다시 끊지 말 것 — 손끝이 조금만 흔들려도 수급이 뚝 끊겼다.
   document.addEventListener('pointermove', function(ev){
     if(!_campHoldPt) return;
-    if(Math.hypot(ev.clientX - _campHoldPt.x, ev.clientY - _campHoldPt.y) > 24) campHoldStop();
+    if(_campHoldPt.id != null && ev.pointerId !== _campHoldPt.id) return;   // 다른 손가락의 움직임은 무시
+    if(!_campHoldPt.fired){
+      if(Math.hypot(ev.clientX - _campHoldPt.x, ev.clientY - _campHoldPt.y) > 24) campHoldStop();
+      return; }
+    _campHoldPt.x = ev.clientX; _campHoldPt.y = ev.clientY;
+  }, true);
+  // 🤏 두 번째 손가락이 내려오면 = 확대·축소다. 그동안 캐면 손대지 않은 돈이 오른다.
+  document.addEventListener('pointerdown', function(ev){
+    if(_campHoldPt && _campHoldPt.id != null && ev.pointerId !== _campHoldPt.id) campHoldStop();
   }, true);
 }
 
@@ -4267,12 +4349,30 @@ function campSkin(){
 //   (js/14-input-fx.js). 상수를 바꾸면 기준선도 같이 움직여 _cellK 가 1 로 남고
 //   건물만 작아지고 **유닛은 그대로**인 어긋난 화면이 된다.
 //   techCols() 만 감싸면 분모가 20 으로 남아 유닛도 같은 비율로 줄어든다(실측 _cellK 0.417).
-// 🔍 캠프 기본 시점 (2026-08-30 사용자 확정 · 눈으로 네 단계를 비교해 골랐다)
-//   ⭐ 1.3 → **1.8** — 유닛이 점처럼 작아 전투가 안 읽혔다. 2.3 부터는 아군 기지가
+// 🔍 캠프 기본 시점 (2026-08-30 확정 → **2026-08-31 재조정**)
+//   ⭐ 1.3 → 1.8 — 유닛이 점처럼 작아 전투가 안 읽혔다. 2.3 부터는 아군 기지가
 //     하단 시트에 가려서, 건설도 하는 화면에는 과했다.
 //   ⭐ y 0.5 → **0.56** — 확대만 하면 위쪽(적이 오는 곳)이 남고 아래(내 기지)가 잘린다.
-//   ⚠ 줌을 바꾸면 이 y 도 다시 봐야 한다. 확인: SHOT_ZOOM=1.8 SHOT_CY=0.56 node scripts/shot.mjs dgfight
-const CAMP_ZOOM = 1.8;
+//
+// ⛔ **1.8 → 1.9** (2026-08-31 · 「건물이 타일에 비해 너무 작다」).
+//   화면을 재 보니 **위쪽 60% 가 아무것도 없는 땅**이었고, 본부는 화면 폭의 20% 뿐이었다.
+//
+// ⚠ **손잡이 둘이 다 막혀 있었다** — 다음에 같은 것을 시도하기 전에 읽을 것.
+//   ① **시점(CAMP_VIEW_Y)은 한 칸도 안 움직인다.** 0.56 / 0.62 / 0.68 / 0.74 를 넣어도
+//     실제 y 는 전부 **0.557** 이었다. _techClampView 의 상한이 이미 걸려 있다:
+//       yHi = _campViewBot − (0.5 − 시트비율) / zoom   → 0.71 − (0.5−0.225)/1.8 = 0.557
+//     즉 「광맥 아래 여백이 보이면 안 된다」는 규칙이 시점을 **아래 끝에 붙여 둔다.**
+//     ⛔ 시점 값을 올려 빈 땅을 줄이려는 시도는 **아무 효과가 없다.**
+//   ② **줌은 1.9 가 한계다.** 2.0 부터 스모크 둘이 깨진다(실측 2026-08-31):
+//       · 「배치 확정/취소 버튼이 없다」 — 격자 20행 아래가 **화면 밖**으로 나가 탭이 안 먹는다
+//       · 「띠가 재화 바와 겹친다」
+//     1.9 는 1.8 보다 **5.6% 클 뿐이라 체감이 거의 없다.**
+//
+// ⇒ ⭐ **「건물이 작다」는 시점·줌으로 못 푼다.** 남은 길은 둘이다:
+//     A 격자 칸 수를 줄여 건물·유닛을 키운다(실험: 48 → 34 면 1.4배 · ⚠ 광맥 배치가 어긋난다)
+//     C 광맥·건물을 세로로 펼쳐 빈 땅을 콘텐츠로 채운다
+//   ⚠ 줌을 바꾸면 이 y 도 다시 봐야 한다. 확인: SHOT_ZOOM=1.9 SHOT_CY=0.56 node scripts/shot.mjs dgfight
+const CAMP_ZOOM = 1.9;
 const CAMP_VIEW_Y = 0.56;
 const CAMP_COLS = 48;
 // 🚧 **맵 밖이 화면에 보이지 않게 하는 한도.**
@@ -4375,9 +4475,11 @@ function campPatchZoom(){
     _campZoomPatched.techPtrUp = oUp;
 
     window.techPtrDown = function(ev){
-      // 🤏 **두 손가락은 언제나 확대·축소**다(2026-08-27 사용자 확정) — 팬 모드에서도 그대로 잡힌다.
-      //   ⛔ 두 손가락으로 **화면을 옮기지는 않는다**. 이동은 롱프레스 팬 모드 하나가 맡는다
-      //     — 한 제스처에 두 뜻을 주면 확대하려다 화면이 밀린다.
+      // 🤏 **두 손가락은 언제나 확대·축소 + 화면 이동**이다(2026-09-01 사용자 확정).
+      //   팬 모드에서도, **유닛을 지정한 채로도** 그대로 잡힌다 — 지정을 풀지 않고 화면만 옮길 수 있다.
+      //   ⚠ 한때 이동을 뺐던 적이 있다(확대하려다 화면이 밀린다는 이유). 되살린 이유는
+      //     유닛을 지정한 상태에서 화면을 옮길 길이 롱프레스 팬뿐이었고, 그 팬은 빈 바닥에서만
+      //     열려서 **지정 중에는 옮길 방법이 없었다**. 두 손가락이 그 자리를 메운다.
       if(_campOn && ev && ev.button !== 1){
         _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
         if(_btPtrs.size >= 2){
@@ -4418,15 +4520,18 @@ function campPatchZoom(){
     };
 
     window.techPtrMove = function(ev){
-      // 🤏 두 손가락 = **확대·축소만**. 원본은 같은 제스처로 화면도 함께 옮기는데(17-build-cards.js),
-      //   캠프에서는 그것을 빼서 손이 미끄러져도 화면이 밀리지 않게 한다.
+      // 🤏 두 손가락 = **확대·축소 + 화면 이동**. 두 손가락의 중점이 움직인 만큼 뷰를 옮긴다.
+      //   ⛔ 계산식을 새로 짜지 말 것 — 원본(17-build-cards.js techPtrMove)과 **같은 식**이다.
+      //     한쪽만 고치면 관리자 건설 탭과 캠프의 손맛이 갈린다.
       if(_campOn && _btPinch && _btPtrs.size >= 2 && ev){
         _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
         const p = [..._btPtrs.values()];
         const d = Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
         const z = Math.max(techMinZoom(), Math.min(techMaxZoom(), _btPinch.zoom * d / _btPinch.d));
         const t = techViewT(); t.zoom = z;
-        // ⛔ t.x·t.y 는 건드리지 않는다 — 그것이 「두 손가락 화면 이동」이었다.
+        const cx = (p[0].x+p[1].x)/2, cy = (p[0].y+p[1].y)/2;
+        t.x = _btPinch.vx - (cx - _btPinch.cx) / (_btPinch.rw || 1) / z;
+        t.y = _btPinch.vy - (cy - _btPinch.cy) / (_btPinch.rh || 1) / z;
         _techClampView(t); _btMoved = true; return;
       }
       // 끌기 시작하면 롱프레스 취소 — 끌었다는 건 박스 지정을 하겠다는 뜻이다

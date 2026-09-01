@@ -21,9 +21,18 @@ const POL=(process.argv[4]||'A').toUpperCase();
 //   상한 유/무로 갈라 재기 위한 것. 0 = 상한 없음(지금 게임 그대로).
 const REFCAP=+(process.argv[5]||0);
 // 🔁 환생 손익 실측(2026-08-29 · sc-3 요청) — argv[6]='reb' 이면:
-//   던전 3 에 처음 닿는 순간(= D2 완주) 환생하고, 다시 D3 에 닿을 때까지 시간을 잰다.
+//   목표 던전(REB_DG · 기본 3)에 처음 닿는 순간 환생하고, 다시 닿을 때까지 시간을 잰다.
 //   「환생 안 하고 T분」 vs 「환생하고 T'분」 한 쌍이 첫 환생 손익의 실측값이다.
 const REB=(process.argv[6]||'')==='reb';
+// 🔁 환생 모드가 노리는 던전 — 기본 3. ⭐ 얕게(2) 잡으면 같은 실험이 몇 배 빨리 끝난다.
+//   💳 환생 팩 값을 잴 때 이걸 2 로 두고 돌렸다(2026-08-31 · GEM.md §5-4-8).
+const REB_DG=+(process.env.REB_DG||3);
+// 🔁 시작 환생 배수 — 「이미 한 번 환생한 사람」으로 출발한다(C.rebMul 에 그대로 넣는다).
+//   ⭐ 💳 환생 팩 값을 이걸로 잰다. 팩은 **환생 전에는 아무것도 안 하므로**, 환생 전 구간을
+//     두 번 돌리면 무작위(전투에 Math.random 43곳)만 타고 결과가 갈린다 — 실제로 한 판은
+//     D1R48 벽에 걸려 못 넘어갔다. 그래서 **환생 이후만** 같은 출발점에서 배수만 바꿔 잰다.
+//   ⚠ 그래도 판마다 흔들린다. **한 팔을 여러 번 돌려 중앙값으로 볼 것.**
+const START_MUL=+(process.env.START_MUL||0);
 // 🧱 벽 탐색(2026-08-29 · sc-3 요청) — 환생 없이 어디서 막히는가.
 //   판정 기준은 sc-3 §: 한 라운드를 **10분** 넘게 못 깨면 벽 후보 · **30분**이면 벽으로 보고 멈춘다.
 //   ⚠ 정체 문턱(stallS)과는 다른 것이다 — 그건 「측정을 계속할까」이고, 이건 「벽을 만났나」다.
@@ -65,13 +74,15 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
-  const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW);
+  const C=campState(); C.race='terran';
+  if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
+  saveMeta(); openHome();
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -467,11 +478,17 @@ await pg.evaluate(()=>{
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
       { const d=campDgN(); if(d>0 && !__CB.dgFirst[d]) __CB.dgFirst[d]={ run:__CB.runs, t:+(__CB.t/60).toFixed(1) };
-        // 🔁 환생 손익 — D3 에 처음 닿는 순간 환생하고, 다시 닿을 때까지 잰다
-        if(__CB.rebMode && d===3){
+        // 🔁 환생 손익 — 목표 던전에 처음 닿는 순간 환생하고, 다시 닿을 때까지 잰다
+        if(__CB.rebMode && d===__CB.rebDg){
           if(!__CB.rebGot){                                       // 1단계 — 지금 환생한다
             const got=(typeof campRebirth==='function') ? campRebirth() : null;
             __CB.rebGot={ t1:+(__CB.t/60).toFixed(1), mul:got?got.mul:null, pts:got?got.pts:null };
+            // ⛔ **누적 지출을 같이 되감는다** (2026-08-31 실측으로 잡았다).
+            //   買·生 관문이 `spent >= campWealth()*0.5` 인데 환생은 campWealth() 를 0 으로
+            //   되감는다. 안 지우면 「수백만 >= 0」 이 영영 참이 되어 **구매와 생산이 통째로 멎는다** —
+            //   연구·건설은 이 관문 밖이라 계속 돌아서 「돈은 쓰는데 안 크는」 모습으로 보였다.
+            //   실측: 환생 뒤 500 시뮬분 동안 탭 Lv0 · 일꾼 1기 · 초당 22 로 굳었다.
+            __CB.spentE=0; __CB.spentU=0;
           } else if(!__CB.rebGot.t2){                             // 2단계 — 환생 후 재도달
             __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
           } } }
@@ -684,10 +701,10 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
       +'| '+String(x.min).padStart(10)+' | '+String(x.gas).padStart(7)+' | '+String(x.res).padStart(6)
       +' | '+String(x.refLv).padStart(6)+' | '+String(x.dps).padStart(7)+' | '+x.me); }
   if(R.reb){ console.log('');
-    console.log('■ 🔁 첫 환생 손익 (D3 첫 도달 시 환생 → 재도달)');
-    console.log('  환생 없이 D3 까지: '+R.reb.t1+'분 · 환생 보상 배수 +'+R.reb.mul+' · 포인트 +'+R.reb.pts);
+    console.log('■ 🔁 첫 환생 손익 (D'+REB_DG+' 첫 도달 시 환생 → 재도달)');
+    console.log('  환생 없이 D'+REB_DG+' 까지: '+R.reb.t1+'분 · 환생 보상 배수 +'+R.reb.mul+' · 포인트 +'+R.reb.pts);
     console.log(R.reb.t2!=null
-      ? ('  환생 후 다시 D3 까지: '+(R.reb.t2-R.reb.t1).toFixed(1)+'분 (누적 '+R.reb.t2+'분)')
+      ? ('  환생 후 다시 D'+REB_DG+' 까지: '+(R.reb.t2-R.reb.t1).toFixed(1)+'분 (누적 '+R.reb.t2+'분)')
       : '  ⚠ 시간 안에 재도달 못 함'); }
   console.log('');
   console.log('■ 🔁 회차 — 정제소 상한 '+(R.cap>0?('L'+R.cap):'없음')+' · 최종 정제소 L'+R.ref);
