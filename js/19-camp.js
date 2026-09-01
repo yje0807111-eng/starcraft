@@ -2263,12 +2263,13 @@ function campBarRender(){
   //    이미 그걸 보여주고 거기에 이동 드롭다운까지 붙어 있다. 두 곳에 두면 반드시 어긋난다.
   const fo = el.querySelector('.cbFoe');
   if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
-  { const tb = el.querySelector('.cbTree b'); if(tb) tb.textContent = campNum(pts); }
+  // 🌳 트리 입구는 **하단 네비 「환생 › 트리」 하나**다(2026-09-01 사용자 확정).
+  //   ⛔ 띠에 트리 칩을 되돌리지 말 것 — 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
   // 🔁 환생 칩 — 조건(누적 재화 100만)을 채우면 나타난다. 화면을 안 봐도 열리는 것이 아니라
   //    일꾼을 사고 탭을 눌러야 채워지는 값이다(HUNT_R1 §4-1).
   { const rb = el.querySelector('.cbReb'); if(rb) rb.classList.toggle('hide', !canReb); }
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && pts <= 0 && !canReb);
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !canReb);
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; }
@@ -3242,13 +3243,16 @@ function campMineFloatMap(n, clientX, clientY){
   setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 900);
 }
 // ⏱ 홀드 — 누르고 있는 동안 간격마다 한 번. 손을 떼면 멈춘다.
-function campHoldStart(clientX, clientY){
+function campHoldStart(clientX, clientY, pid){
   campHoldStop();
-  _campHoldPt = { x: clientX, y: clientY };
+  // ⚠ 어느 손가락이 누르고 있는지 기억한다 — 두 손가락이 오면 그때 멈추기 위해서다.
+  //   fired = **자동 채굴이 한 번이라도 돌았나.** 그 전과 후로 손가락 이동의 뜻이 갈린다.
+  _campHoldPt = { x: clientX, y: clientY, id: (pid==null ? null : pid), fired: false };
   _campHoldT = setInterval(function(){
     if(!_campMineMode || !_campOn || !_campHoldPt){ campHoldStop(); return; }
     // ⚠ 홀드는 **손가락이 멈춰 있는 것이 정상**이다 — 여기서 리듬 감쇠를 재면 늘 기계로 보인다.
     //   그래서 human=false 로 부른다(간격이 고정이라 매크로가 얻을 이득도 없다).
+    _campHoldPt.fired = true;   // 여기부터는 손가락이 움직여도 이어서 캔다(아래 pointermove)
     campMineOnce(_campHoldPt.x, _campHoldPt.y, false, CAMP_HOLD_MUL);   // ⛏ 홀드 1회 = 탭 CAMP_HOLD_MUL 회분(지금 1)
   }, campHoldMs());
 }
@@ -3350,7 +3354,7 @@ if(typeof document !== 'undefined'){
         _campLastTap = now;
         campMineOnce(ev.clientX, ev.clientY, ev.isTrusted !== false);
       }
-      campHoldStart(ev.clientX, ev.clientY);   // ⏱ 누르고 있으면 이어서 캔다
+      campHoldStart(ev.clientX, ev.clientY, ev.pointerId);   // ⏱ 누르고 있으면 이어서 캔다
       ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault();
       return;
     }
@@ -3364,10 +3368,22 @@ if(typeof document !== 'undefined'){
   // ⏱ 손을 떼면 홀드를 멈춘다 — 창 밖으로 나가거나 취소돼도 마찬가지다.
   for(const t of ['pointerup','pointercancel','pointerleave','blur'])
     document.addEventListener(t, function(){ campHoldStop(); }, true);
-  // 🖐 손가락이 크게 움직이면 = 화면을 밀려는 것이다. 홀드를 멈춘다(제자리 홀드만 인정).
+  // 🖐 손가락 이동의 뜻은 **자동 채굴이 시작됐는가**로 갈린다(2026-09-01 사용자 확정).
+  //   ① 시작 전(아직 한 번도 안 캠) — 누르자마자 미는 것은 **화면 이동이나 다른 조작**일 수 있다.
+  //      그래서 크게 움직이면 홀드를 접는다.
+  //   ② 시작 후 — 이미 「가만히 눌러 캐는 중」이라는 뜻이 섰다. 이제는 움직여도 **따라가며** 캔다.
+  //      ⛔ 여기서 다시 끊지 말 것 — 손끝이 조금만 흔들려도 수급이 뚝 끊겼다.
   document.addEventListener('pointermove', function(ev){
     if(!_campHoldPt) return;
-    if(Math.hypot(ev.clientX - _campHoldPt.x, ev.clientY - _campHoldPt.y) > 24) campHoldStop();
+    if(_campHoldPt.id != null && ev.pointerId !== _campHoldPt.id) return;   // 다른 손가락의 움직임은 무시
+    if(!_campHoldPt.fired){
+      if(Math.hypot(ev.clientX - _campHoldPt.x, ev.clientY - _campHoldPt.y) > 24) campHoldStop();
+      return; }
+    _campHoldPt.x = ev.clientX; _campHoldPt.y = ev.clientY;
+  }, true);
+  // 🤏 두 번째 손가락이 내려오면 = 확대·축소다. 그동안 캐면 손대지 않은 돈이 오른다.
+  document.addEventListener('pointerdown', function(ev){
+    if(_campHoldPt && _campHoldPt.id != null && ev.pointerId !== _campHoldPt.id) campHoldStop();
   }, true);
 }
 
@@ -3853,9 +3869,11 @@ function campPatchZoom(){
     _campZoomPatched.techPtrUp = oUp;
 
     window.techPtrDown = function(ev){
-      // 🤏 **두 손가락은 언제나 확대·축소**다(2026-08-27 사용자 확정) — 팬 모드에서도 그대로 잡힌다.
-      //   ⛔ 두 손가락으로 **화면을 옮기지는 않는다**. 이동은 롱프레스 팬 모드 하나가 맡는다
-      //     — 한 제스처에 두 뜻을 주면 확대하려다 화면이 밀린다.
+      // 🤏 **두 손가락은 언제나 확대·축소 + 화면 이동**이다(2026-09-01 사용자 확정).
+      //   팬 모드에서도, **유닛을 지정한 채로도** 그대로 잡힌다 — 지정을 풀지 않고 화면만 옮길 수 있다.
+      //   ⚠ 한때 이동을 뺐던 적이 있다(확대하려다 화면이 밀린다는 이유). 되살린 이유는
+      //     유닛을 지정한 상태에서 화면을 옮길 길이 롱프레스 팬뿐이었고, 그 팬은 빈 바닥에서만
+      //     열려서 **지정 중에는 옮길 방법이 없었다**. 두 손가락이 그 자리를 메운다.
       if(_campOn && ev && ev.button !== 1){
         _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
         if(_btPtrs.size >= 2){
@@ -3896,15 +3914,18 @@ function campPatchZoom(){
     };
 
     window.techPtrMove = function(ev){
-      // 🤏 두 손가락 = **확대·축소만**. 원본은 같은 제스처로 화면도 함께 옮기는데(17-build-cards.js),
-      //   캠프에서는 그것을 빼서 손이 미끄러져도 화면이 밀리지 않게 한다.
+      // 🤏 두 손가락 = **확대·축소 + 화면 이동**. 두 손가락의 중점이 움직인 만큼 뷰를 옮긴다.
+      //   ⛔ 계산식을 새로 짜지 말 것 — 원본(17-build-cards.js techPtrMove)과 **같은 식**이다.
+      //     한쪽만 고치면 관리자 건설 탭과 캠프의 손맛이 갈린다.
       if(_campOn && _btPinch && _btPtrs.size >= 2 && ev){
         _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
         const p = [..._btPtrs.values()];
         const d = Math.hypot(p[0].x-p[1].x, p[0].y-p[1].y);
         const z = Math.max(techMinZoom(), Math.min(techMaxZoom(), _btPinch.zoom * d / _btPinch.d));
         const t = techViewT(); t.zoom = z;
-        // ⛔ t.x·t.y 는 건드리지 않는다 — 그것이 「두 손가락 화면 이동」이었다.
+        const cx = (p[0].x+p[1].x)/2, cy = (p[0].y+p[1].y)/2;
+        t.x = _btPinch.vx - (cx - _btPinch.cx) / (_btPinch.rw || 1) / z;
+        t.y = _btPinch.vy - (cy - _btPinch.cy) / (_btPinch.rh || 1) / z;
         _techClampView(t); _btMoved = true; return;
       }
       // 끌기 시작하면 롱프레스 취소 — 끌었다는 건 박스 지정을 하겠다는 뜻이다

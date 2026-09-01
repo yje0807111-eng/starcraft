@@ -3554,19 +3554,22 @@ async function groupLobby(){
       CAMPB.ai.units=[{dead:false},{dead:false},{dead:false}];
       campBarReset(); campBarRender();
       assert(el.querySelector('.cbFoe').textContent==='적 3','적 수가 안 맞음: '+el.querySelector('.cbFoe').textContent);
-      // ③ 트리 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살아 있어야 한다
-      { const bar=getComputedStyle(el).pointerEvents, chip=getComputedStyle(el.querySelector('.cbTree')).pointerEvents;
-        assert(bar==='none','띠가 맵 조작을 가로챈다');
-        assert(chip==='auto','트리 칩이 안 눌린다 — 트리에 들어갈 길이 사라진다'); }
-      C.rbPts=1234; campBarReset(); campBarRender();
-      assert(el.querySelector('.cbTree b').textContent.length>0,'포인트가 안 나옴');
+      // ③ 🌳 **트리 칩은 없다**(2026-09-01 사용자 확정) — 트리 입구는 하단 네비 「환생 › 트리」 하나다.
+      //   ⛔ 띠에 되돌리지 말 것: 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
+      assert(!el.querySelector('.cbTree'),'띠에 트리 칩이 되살아났다 — 입구가 둘이 된다');
+      // 🔁 환생 칩은 남는다 — 띠 전체는 pointer-events:none 이라 이 칩만 되살아 있어야 한다
+      { assert(getComputedStyle(el).pointerEvents==='none','띠가 맵 조작을 가로챈다');
+        C.rbPts=2e6; campBarReset(); campBarRender();
+        const rb=el.querySelector('.cbReb'); assert(rb,'환생 칩이 없다');
+        assert(getComputedStyle(rb).pointerEvents==='auto','환생 칩이 안 눌린다'); }
       // ④ 보여줄 게 없으면 띠가 숨는다(빈 판이 맵을 가리지 않게)
       C.dg=0; C.cleared=0; C.rbPts=0; campBattleClose(); campBarReset(); campBarRender();
       assert(el.classList.contains('empty'),'보여줄 게 없는데 띠가 남아 있다');
       // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다
-      C.dg=2; C.cleared=1; C.rbPts=5; campBarReset(); campBarRender();
-      { const b=el.querySelector('.cbTree b'); b.textContent='XX'; campBarRender();
-        assert(b.textContent==='XX','안 바뀌었는데 다시 그렸다 — 캐시가 안 먹는다'); }
+      // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다 — 적 수 칸으로 잰다(트리 칩은 없앴다)
+      C.dg=2; C.cleared=1; CAMPB && (CAMPB.ai.units=[{dead:false},{dead:false}]); campBarReset(); campBarRender();
+      { const b=el.querySelector('.cbFoe'); const was=b.textContent; b.textContent='XX'; campBarRender();
+        assert(b.textContent==='XX','안 바뀌었는데 다시 그렸다 — 캐시가 안 먹는다 (원래 "'+was+'")'); }
       // ⑥ 맵 밑에 깔리지 않는다 · 재화 바와 안 겹친다
       { const MAP=['cstMain','cstFog','techMap3d','cstLabels','cstPrev'];
         const mz=MAP.map(id=>{ const c=document.getElementById(id);
@@ -3695,6 +3698,27 @@ async function groupLobby(){
         G.tech.credit=1e9;
         assert(!campUpgBuy('hold'),'최대 레벨인데 더 팔린다 — 연타보다 빨라진다');
         C.upg=JSON.parse(u0); }
+      // ⑤-1 🖐 손가락 이동의 뜻은 **자동 채굴이 시작됐는가**로 갈린다(2026-09-01 사용자 확정).
+      //   시작 전에 밀면 = 화면 이동일 수 있다 → 접는다. 시작 뒤에 밀면 = 캐는 중이다 → 따라간다.
+      //   ⛔ 둘을 하나로 합치지 말 것: 늘 끊으면 손끝 흔들림에 수급이 죽고, 늘 따라가면
+      //     누르자마자 미는 동작까지 채굴로 세어진다.
+      { const pm=(x,y,id)=>document.dispatchEvent(Object.assign(new Event('pointermove',{bubbles:true}),
+          {clientX:x, clientY:y, pointerId:id}));
+        // ① 아직 안 캤다 → 크게 밀면 접힌다
+        campHoldStart(120, 300, 7);
+        assert(_campHoldPt && _campHoldPt.fired===false,'홀드가 안 걸렸거나 시작 표시가 없다');
+        pm(260, 380, 7);
+        assert(!_campHoldPt,'자동 채굴이 시작되기도 전인데 밀어도 홀드가 남아 있다');
+        // ② 한 번 캔 뒤 → 밀어도 따라간다
+        campHoldStart(120, 300, 7); _campHoldPt.fired=true;
+        pm(260, 380, 7);
+        assert(_campHoldPt,'채굴이 시작된 뒤인데 손가락을 움직였다고 끊겼다');
+        assert(Math.round(_campHoldPt.x)===260 && Math.round(_campHoldPt.y)===380,
+          '홀드가 손가락을 안 따라간다: '+_campHoldPt.x+','+_campHoldPt.y);
+        pm(10, 10, 9);   // 다른 손가락의 움직임은 무시
+        assert(Math.round(_campHoldPt.x)===260,'다른 손가락의 움직임까지 따라갔다');
+        assert(_campHoldPt.id===7,'홀드가 포인터 id 를 기억하지 않는다 — 두 손가락을 구분할 수 없다');
+        campHoldStop(); }
       // ⑤-2 ⛏ 홀드는 **간격으로만** 차이를 낸다(배수 1 · 사용자 확정).
       //     ⭐ 그래도 **최대치가 연타에 못 미쳐야** 한다: 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이다.
       //       실측(2026-08-27 · 30분): 연타 6탭 127만 / 홀드 최대(실효 3.3탭) 56만 = 44%.
@@ -7035,6 +7059,43 @@ async function groupLobby(){
     assert(Math.abs(floorZ-vz)<0.03,
       '손가락 중 맵이 다시 안 그려졌다 — 바닥 ×'+floorZ.toFixed(3)+' vs 뷰 ×'+vz.toFixed(3)+' (3D 만 움직여 선택링이 어긋난다)');
     return '뷰 ×'+vz.toFixed(2)+' · 바닥 ×'+floorZ.toFixed(2)+' 동기'; });
+  // 🤏 **두 손가락 = 확대·축소 + 화면 이동**(2026-09-01 사용자 확정).
+  //   ⛔ 이동을 다시 빼지 말 것 — 유닛을 지정한 채로 화면을 옮길 길이 그것뿐이다
+  //     (롱프레스 팬은 **빈 바닥에서만** 열려서, 지정 중에는 옮길 방법이 없었다).
+  //   ⛔ 계산식을 캠프에서 새로 짜지 말 것 — 원본(17-build-cards.js techPtrMove)과 같은 식이다.
+  await step('두 손가락: 확대하고 · 화면도 옮긴다 · 지정은 안 풀린다', async()=>{
+    skipIf(typeof campIsOn!=='function' || !campIsOn(),'캠프 아님');
+    skipIf(typeof techPtrDown!=='function' || typeof techPtrMove!=='function','포인터 핸들러 없음');
+    openHome(); await sleep(140);
+    const t=techViewT(); const x0=t.x, y0=t.y, z0=t.zoom;
+    // 지정을 걸어 둔다 — 두 손가락 조작이 그것을 풀면 안 된다
+    const es=(G.tech.ents||[]); const b=es.find(e=>e.type==='bldg');
+    const sel0=(b?(G.tech.sel=b.eid):null);
+    const pe=(type,x,y,id)=>{ const e=new Event(type,{bubbles:true});
+      Object.assign(e,{clientX:x, clientY:y, pointerId:id, button:0, pointerType:'touch'});
+      return e; };
+    try{
+      techPtrDown(pe('pointerdown',150,380,1));
+      techPtrDown(pe('pointerdown',260,380,2));
+      assert(_btPinch,'두 손가락인데 핀치가 안 잡혔다');
+      // ① 두 손가락을 **같은 방향으로** 옮긴다 = 화면 이동(거리가 그대로라 배율은 안 바뀐다)
+      techPtrMove(pe('pointermove',150+40,380+40,1));
+      techPtrMove(pe('pointermove',260+40,380+40,2));
+      const t1=techViewT();
+      assert(Math.abs(t1.x-x0)>0.005 || Math.abs(t1.y-y0)>0.005,
+        '두 손가락으로 밀었는데 화면이 안 움직인다: x '+x0.toFixed(4)+'→'+t1.x.toFixed(4)+' · y '+y0.toFixed(4)+'→'+t1.y.toFixed(4));
+      assert(Math.abs(t1.zoom-z0)<0.02,'거리가 그대로인데 배율이 변했다: '+z0+' → '+t1.zoom);
+      // ② 벌리면 확대
+      techPtrMove(pe('pointermove',150-60,380+40,1));
+      techPtrMove(pe('pointermove',260+60,380+40,2));
+      assert(techViewT().zoom>z0,'벌렸는데 확대가 안 된다: '+z0+' → '+techViewT().zoom);
+      // ③ 지정은 그대로
+      if(sel0!=null) assert(G.tech.sel===sel0,'두 손가락 조작에 지정이 풀렸다');
+      return '이동 ok · 확대 '+z0.toFixed(2)+'→'+techViewT().zoom.toFixed(2)+' · 지정 유지';
+    } finally {
+      if(typeof techPtrUp==='function'){ try{ techPtrUp(pe('pointerup',0,0,1)); techPtrUp(pe('pointerup',0,0,2)); }catch(e){} }
+      const tv=techViewT(); tv.x=x0; tv.y=y0; tv.zoom=z0;
+      if(typeof _techClampView==='function') _techClampView(tv); } });
   // 🎬 종족을 고르고 캠프로 들어올 때 살짝 물러난 자리에서 본진 쪽으로 다가간다.
   //    ⭐ 맵(#vBuild)과 3D(#cvMarine)는 **형제**다 — 둘에 같은 애니를 걸어야 배경과 건물이 같이 온다.
   //    ⛔ 뷰(CAMP_ZOOM)로 연출하지 말 것 — 그건 격자·배치·전투 계산에 얽혀 있다(2026-08-27 실패).
