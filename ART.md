@@ -1519,3 +1519,48 @@ highly detailed photorealistic PBR game texture, AAA game environment asset,
 ⛔ **레인·소환 구역에 어두운 seam 을 다시 긋지 말 것**(2026-08-30 제거). 레인은 `lineCap:'round'` 라
 끝이 반원인데, 그 위를 같은 석판인 소환 구역이 덮으면서 **포장 한가운데 검은 곡선**만 남았다.
 포장과 지형은 색·무늬가 달라 테두리 없이도 경계가 읽힌다.
+
+---
+
+## 14. 환생 구역 배경 계열 (2026-09-01)
+
+**세 번째 계열이다.** 앞의 둘과 목적이 또 다르다.
+
+| 항목 | 유즈맵 키 아트(§2) | 타이틀 배경(§8) | **환생 구역** |
+|---|---|---|---|
+| 위에 얹히는 것 | 팝업 + 미니맵 | 큰 로고 · 제목 | **별자리(발광하는 점) · 7~8px 값 라벨** |
+| 밝기 목표 | 55 | 72 | **44** — 가장 어둡다 |
+| 채도(색편차) | 45 (×1.4 까지 올림) | 40 (낮추기만) | **34 (낮추기만)** — 갈래 색이 넷이라 배경은 중립이어야 한다 |
+| 비율 | `3:4` | `9:16` | **`9:16`** (화면 전체를 덮는다) |
+| 크롭 | 디테일 띠를 찾아 자름 | 안 자름 | **안 자름** |
+| 보이는 구간 | 위쪽 50% | 위쪽 60% | **위쪽 70%** (아래 30% 는 하단 시트가 덮는다) |
+| 도구 | `usemap-bg.mjs` | `title-bg.mjs` | **`scripts/reb-bg.mjs`** |
+
+⭐ **왜 이렇게 어두운가** — 이 화면의 주인공은 배경이 아니라 **별자리**다. 별은 발광하는 작은 점이고
+값 라벨은 7~8px 이라, 배경이 밝으면 둘 다 묻힌다. 원래 이 화면은 거의 검정
+(`radial-gradient rgba(16,22,32,.98) → rgba(5,7,11,.99)` · 평균 10 남짓)이었다.
+
+⭐ **한 장을 두 화면이 나눠 쓴다** — 환생 화면(`#campReb`)과 업그레이드=트리 화면(`#campTree`)은
+같은 구역이라 배경이 같아야 한다. 그래서 `#phone` 직속 층 **`#campRebBg` 하나**를 두고 둘이 켠다.
+⛔ 화면마다 제 그림을 그리면 탭을 오갈 때 다시 그려져 툭 튄다.
+⛔ 공용 키 아트(`#titleBg`)를 빌리던 옛 방식으로 되돌리지 말 것 — 그건 로그인·부팅의 그림이라
+여기서 켜면 그쪽과 서로 간섭한다(그 간섭을 없애려고 전용 그림을 뽑았다).
+
+### 실제로 쓴 프롬프트 — `assets/backgrounds/reb/reb.webp`
+
+```
+Moody sci-fi game environment key art, clearly readable exposure with rich midtones, not underexposed, not pitch black. A vast field of ruined military structures under a wide star-filled night sky, broken antenna masts and collapsed hangars standing as low silhouettes along the horizon, faint distant campfires and pale standing lights among the wreckage, seen from a low three-quarter angle. Thin volumetric night haze fills the whole scene and catches the light, lifting the shadows into visible blue-grey midtones, the far structures receding softly into the haze. The haze is light in the foreground so nearby structures stay crisp and clearly legible, thickening only into the distance. Muted desaturated colour, the palette is a tint over neutral greys, not a monochrome wash. Dominant cool steel grey and deep blue palette with soft pale blue key light, strong value separation between structures and background, atmospheric perspective, layered depth. The upper half of the frame is calm open night sky. The very center of the frame is calm and uncluttered. Painterly concept art, cinematic, detailed environment clearly visible throughout the frame. No text, no logos, no user interface, no characters, no watermark.
+```
+
+> A(노출) · C(안개 + 대항 문장 셋) · D(가운데를 비운다) · E(금지)는 **§2 와 똑같다.**
+> 바뀐 것은 장면(B)과 시점(`low three-quarter angle` · §8 과 같다), 그리고
+> **`The upper half of the frame is calm open night sky`** 한 줄이다 — 별자리가 앉을 자리를 비운다.
+
+⚠ 후처리 실측: 밝기 ×1.59 (28→40) · 채도 ×1.00 (색편차 25→24) · 대비 ±24 · 25KB.
+  원본이 목표보다 어두워 밝기를 **올렸다**. 채도는 상한(1.0)에 걸려 더 못 올렸는데,
+  이 계열은 「낮추기만」이 규칙이라 **그대로 둔다** — 색이 옅은 편이 갈래 색 넷을 살린다.
+
+### 버린 것 — 얼어붙은 고원(오로라)
+
+같은 규격으로 한 장 더 뽑았는데 **왼쪽 아래에 서명 같은 낙서**가 들어왔다(E 가 금지하는 워터마크).
+구조물이 화면 전체에 퍼져 별자리가 앉을 조용한 자리도 적었다. 두 이유로 버렸다.
