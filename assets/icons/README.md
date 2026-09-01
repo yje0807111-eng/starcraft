@@ -700,3 +700,81 @@ units, scene, background scenery, ground, terrain, cute, rounded soft shapes, lo
 4. 32px 로 줄여 뭉개지면 — 프롬프트를 고치지 말고 **레퍼런스를 더 단순한 각도의 것으로** 바꾼다
 
 ⚠ 배선은 아직 없다 — `units/` 는 코드에 연결돼 있지 않다. 파일을 다 모은 뒤 한 줄 붙인다.
+
+---
+
+# 유닛 초상 계열 (`assets/portraits/` · 2026-09-01)
+
+아이콘(`units/`)과 **다른 계열**이다. 아이콘은 판 위의 강철 단색이고, 초상은 **투명 배경의 컬러**다.
+아이콘을 뽑을 때 레퍼런스로 쓰는 것이 이 초상이므로, 초상이 없는 유닛은 먼저 여기부터 만든다.
+
+| 항목 | 값 |
+|---|---|
+| 크기 | **512 × 512** PNG (구형 일부는 256) |
+| 배경 | **투명**(알파) — 판·바닥·그림자 없음 |
+| 색 | 컬러. 종족 팔레트를 따른다 |
+| 파일명 | `<유닛키>_portrait.webp` |
+
+## 종족 팔레트 — 초상은 이 색으로 갈린다
+| 종족 | 몸 | 발광·강조 |
+|---|---|---|
+| 유니온 | 청회색 장갑 · 무광 금속 | 주황 계기광 |
+| 스웜 | 보라빛 갈색 갑각 · 젖은 살 | **형광 연두**(산성) |
+| 에테리얼 | 금색 장갑 | **청록 에너지** |
+
+## 공통 블록 — 초상 (고정)
+
+```
+--- RENDER SPEC ---
+A single StarCraft-style unit portrait for a game UI. High-detail 3D game render look,
+painted over with hand finishing — the same treatment as a modern RTS unit preview.
+SUBJECT: [[SUBJECT]]
+FRAMING: the whole creature fits inside the square with a small margin. Seen from a
+slightly raised three-quarter angle so its silhouette reads clearly. Centered.
+MATERIAL: [[PALETTE]]
+LIGHT: strong key light from the upper left, cool rim light along the opposite edge to
+lift the silhouette off the empty background. Crisp specular highlights on hard surfaces,
+soft falloff on organic ones.
+BACKGROUND: fully transparent. Nothing behind the subject — no plate, no ground, no cast
+shadow, no glow halo, no scenery.
+OUTPUT: 512x512 PNG with alpha, square.
+--- NEGATIVE ---
+background, backdrop, scenery, ground, floor, terrain, cast shadow, drop shadow, vignette,
+frame, border, plate, icon plate, card, UI panel, text, letters, numbers, watermark, logo,
+multiple creatures, crowd, human face, cute, chibi, toy, plastic, flat vector, line art,
+low detail, blurry, grainy, motion blur, depth of field
+```
+
+## SUBJECT — 스웜링 (`broodling`)
+
+```
+[[SUBJECT]]
+a small four-legged swarm beast, low and fast — a wedge-shaped carapace head with a wide
+jaw of short interlocking fangs, two curved bone scythes rising from the shoulders, and a
+lean segmented body on four thin clawed legs braced to spring. Torn membrane frills trail
+from its back. A minion bred to be thrown away
+
+[[PALETTE]]
+purplish-brown chitin plates over wet dark flesh, veined with acidic yellow-green that
+glows faintly in the seams and inside the jaw. Wet organic sheen, no metal
+```
+
+## SUBJECT — 다크보이드 (`dark_archon`)
+
+```
+[[SUBJECT]]
+a floating psionic entity with no legs — a dense core of dark energy suspended between two
+broken halves of ornate armor that orbit it, and long ribbon-like tendrils of force curling
+out from the core. Where a face would be there is only a slit of pale light. A merged pair
+of dark templars, held together by will
+
+[[PALETTE]]
+tarnished dark gold armor shards, almost black in the shadows, around a violet-black core
+lit from within by cold blue-white psionic light. The light bleeds along the armor edges
+```
+
+⚠ **다크보이드는 「어두운 에테리얼」이다** — 금색을 빼면 종족이 안 읽히고, 그대로 밝게 두면
+보이드(`archon`)와 구분이 안 된다. **변색된 금 + 보라빛 검정 + 차가운 청백광**이 그 사이다.
+
+⚠ 뽑은 뒤 `assets/portraits/` 에 넣고, 그 초상을 레퍼런스로 「유닛 계열」 프롬프트를 돌려
+`units/un_broodling.webp` · `un_dark_archon.webp` 까지 만들면 두 자리가 모두 채워진다.
