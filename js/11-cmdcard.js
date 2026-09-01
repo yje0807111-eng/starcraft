@@ -850,11 +850,35 @@ const _PI_RAW={
   worker_human:PORTRAIT_DIR+'worker_human_portrait.webp', // 유니온 일꾼
   worker_light:PORTRAIT_DIR+'worker_light_portrait.webp', // 에테리얼 일꾼
   worker_swarm:PORTRAIT_DIR+'worker_swarm_portrait.webp', // 스웜 일꾼
+  // 🆕 2026-09-01 — 초상이 없어 아이콘 레퍼런스도 못 만들던 둘. 초상부터 새로 뽑았다.
+  broodling:  PORTRAIT_DIR+'broodling_portrait.webp',   // 스웜링(소환수)
+  dark_archon:PORTRAIT_DIR+'dark_archon_portrait.webp',  // 다크보이드
 };
 const PORTRAIT_IMG={}; for(const _k in _PI_RAW) PORTRAIT_IMG[_k]=_PI_RAW[_k]+PORTRAIT_VER;   // 캐시버스트 버전 부착(배경 제거 새 이미지 로드)
 (function(){ for(const _k in _PI_RAW){ const _pi=new Image(); _pi.src=_PI_RAW[_k]+PORTRAIT_VER; } })();   // 전체 초상화 프리로드(첫 표시 지연 없애기)
 // 프로필 초상화 HTML: 커스텀 이미지 있으면 <img>, 없으면 라인아트 SVG
-function unitPortraitHTML(id){ const u=PORTRAIT_IMG[id]; return u ? '<img class="portImg" src="'+u+'" alt="" draggable="false">' : unitSVG(id); }
+// 🎨 유닛 초상 = **판 아이콘 우선**(건물의 _techBldgPortrait 과 같은 규칙 · 2026-08-31).
+//   ⭐ 여기가 단일 소스다 — 게임 안 프로필·오토배틀·유닛 뽑기·이펙트 랩이 전부 이 함수를 부른다.
+//     그래서 아이콘 배선을 화면마다 넣지 않는다(넣으면 화면마다 갈린다).
+//   ⭐ 파일만 넣으면 뜬다 — `units/un_<키>.webp` 가 없으면 onerror 가 **기존 3D 초상**으로 되돌리고,
+//     초상도 없으면 라인 SVG 로 떨어진다. 아이콘이 없는 유닛도 화면이 비지 않는다.
+//   ⛔ 아이콘 유무 목록을 코드에 적지 말 것 — 파일을 넣고 빼는 것만으로 갈려야 한다.
+// 🔁 **같은 그림을 두 번 뽑지 않는다**(assets/icons/README.md 「기존 것부터 확인」).
+//   방어 포탑은 유닛이자 건물이라 건물 아이콘이 이미 있다 — 그것을 그대로 빌린다.
+//   ⛔ 파일을 복사해 두지 말 것: 한쪽만 고치면 둘이 갈린다.
+const UNIT_ICO_ALIAS={ turret:'buildings/bld_turret', photon:'buildings/bld_cannon' };
+function unitPortraitHTML(id){
+  if(!id) return unitSVG(id);
+  const p = PORTRAIT_IMG[id];
+  const rel = UNIT_ICO_ALIAS[id] || ('units/un_'+id);
+  return '<img class="portImg unIco" src="assets/icons/'+rel+'.webp" alt="" draggable="false"'
+    + (p ? (' data-p="'+p+'" onerror="_unIcoFb(this)"')
+         : ' data-uid="'+id+'" onerror="_unSvgFb(this)"') + '>'; }
+// 아이콘이 없다 → **초상으로 되돌린다**(이모지·SVG 로 떨어지지 않게)
+function _unIcoFb(im){ try{ im.classList.remove('unIco'); im.removeAttribute('onerror');
+  im.src=im.getAttribute('data-p'); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
+// 아이콘도 초상도 없다 → 원래 라인 SVG
+function _unSvgFb(im){ try{ im.outerHTML=unitSVG(im.getAttribute('data-uid')); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 초상화 칩 내부 HTML(박스+개수+이름)
 // (구 chipHTML/unitHpHTML 제거 — 종류 칩·유닛별 HP는 커맨드 그리드 모델이 담당)
 function selectAllOfTier(tier){ const ids=G.units.filter(u=>!u.fixed&&!u.atBoss&&u.gtier===tier).map(u=>u.uid);

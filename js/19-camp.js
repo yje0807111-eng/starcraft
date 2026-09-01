@@ -2326,13 +2326,20 @@ function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRa
 //   `cap` 은 16-build.js 가 읽는 캠프 표식이다(`inf` 와 같은 수법) — 관리자 탭·오토배틀은
 //   cap 이 없어 1로 동작하므로 영향이 없다. 설계 근거는 HUNT_R1.md §1.
 const CAMP_MINE_CAP = 5;
-const CAMP_MINE_COLS = 3, CAMP_MINE_ROWS = 2;   // 가로로 넓게 — 세로 화면에서 아래를 덜 먹는다
+// 💎 광맥은 **한 줄 일곱 칸**이다(2026-08-31 사용자 확정). 3×2 두 줄은 덩어리로 뭉쳐 보였다.
+//   ⭐ 일직선이 아니라 **가운데가 처진 호**다 — 본부(위)를 감싸 안는 모양이 되고, 일곱이
+//     한 줄로 서도 울타리처럼 딱딱해지지 않는다.
+//   ⚠ 칸 수를 바꾸면 가스와의 간격(CAMP_GAS_GAP)도 같이 봐야 한다 — 반폭이 그만큼 늘어난다.
+const CAMP_MINE_COLS = 7, CAMP_MINE_ROWS = 1;
+const CAMP_MINE_ARC = 0.8;   // 호의 깊이(칸) — 가운데가 이만큼 아래로 처진다
 // ⚠ 이 둘이 **기지가 하단 시트에 가리지 않게** 하는 유일한 장치다.
 //   맵은 화면 전체를 쓰고 시트가 그 위를 덮으므로(css/30-home.css 캠프 블록), 시트 상단보다
 //   위에 앉혀야 한다. 시트 상단 = 화면 세로의 0.77 지점(실측: 맵 701px 중 시트 161px + 네비).
 //   ⛔ 값을 바꿨으면 **가장 아래 요소인 가스**(광맥 행 + h-0.55)까지 재서 0.74 아래로
 //     내려가지 않는지 확인할 것 — 광맥만 보고 정했다가 가스가 시트에 물렸다.
-const CAMP_ROW_BASE = 0.58;   // 본부 중심(격자 세로 비율 0~1)
+// 🏠 본부는 **광맥 바로 위**다(2026-08-31 사용자 확정 · 0.58 → 0.63).
+//   위쪽을 비워 적이 내려오는 길을 길게 잡고, 손이 닿는 아래쪽에 본부·광맥·가스를 모은다.
+const CAMP_ROW_BASE = 0.63;   // 본부 중심(격자 세로 비율 0~1)
 const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 // ⚠ 행 번호는 **여기 한 곳에서만** 만든다. 광맥과 가스가 각자 round(rows*f) 를 하면
 //   호출 시점에 _techRows() 가 달라져 서로 다른 행에 앉는다(실측: 가스가 광맥보다 5행 위였다).
@@ -2349,10 +2356,18 @@ function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); 
 // ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다(캠프 광맥은 마르지 않는다).
 //   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 고르게 바꾼다.
 const CAMP_MINE_SPRITE = ['1','1','1', '1','1','1'];
-// 🪞 오른쪽 열은 좌우를 뒤집는다 — 같은 그림 넷이 나란히 서면 울타리처럼 반복돼 보인다.
-//   뒤집기만 해도 같은 파일로 다른 실루엣이 나온다(에셋을 늘리지 않는다).
-const CAMP_MINE_FLIP = [false, false, true, true, false, false];
-function campMineFlip(i){ return !!CAMP_MINE_FLIP[i % CAMP_MINE_FLIP.length]; }
+// ⛔ **좌우 뒤집기를 쓰지 않는다**(2026-08-31 사용자 확정). 같은 그림을 그대로 반복한다 —
+//   뒤집으면 광원 방향이 칸마다 반대가 되어 오히려 눈에 걸린다. 반복이 거슬리면 뒤집지 말고
+//   그림을 한 장 더 뽑는다(stage2…). 가스도 같은 규칙이다.
+// ⛽ 가스 구역도 같은 규칙 — **캠프에서만** 그림으로 바꾼다(2026-08-31).
+//   3D 노드(res_en)는 좌우 두 구역이 같은 모델·같은 각도라 미네랄과 같은 「격자무늬」가 났다.
+//   ⛔ 관리자 건설 탭·오토배틀은 3D 그대로 — 여기서 '' 를 돌려주면 옛 경로가 그대로 산다.
+//   ⚠ 그림은 4×2 칸(비율 2:1)에 맞춰 뽑았다(실측 320×151). 비율이 크게 다른 그림으로 갈면
+//     구역 사각형과 그림 발치가 어긋난다 — 바꿀 때 화면에서 다시 잴 것.
+function campGasSprite(){
+  if(!_campOn) return '';
+  return 'assets/props/gas/stage1.webp';
+}
 function campMineSprite(m, i){
   if(!_campOn) return '';                                   // ⛔ 관리자 탭·오토배틀은 3D 그대로
   const k = CAMP_MINE_SPRITE[i % CAMP_MINE_SPRITE.length];
@@ -2363,7 +2378,9 @@ function campMineSprite(m, i){
 //   ⛔ 가스를 미네랄 「가장자리」 기준으로 놓으면 좌우가 한 칸 어긋난다 — 실측으로 그랬다
 //      (미네랄 중심에서 왼 51px / 오른 64px · 정확히 한 칸 13px).
 //      가스 구역은 **사각형**이라 중심이 `c0 + w/2` 다. 그 두 중심을 맞춘다.
-const CAMP_GAS_GAP = 4;   // 미네랄 시각 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
+// ⚠ 가스는 **본부 양옆**이다(2026-08-31 사용자 확정). 광맥 옆이 아니라 한 줄 위다.
+//   본부 반폭(4/2 = 2칸) + 가스 반폭(4/2 = 2칸) = 4 가 안 겹치는 최소 — 한 칸 띄운다.
+const CAMP_GAS_GAP = 5;   // 가로 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
 function campMineMidCol(){ return campMineCol() + (CAMP_MINE_COLS - 1) / 2; }
 function campLayMinerals(){
   if(typeof G === 'undefined' || !G.tech) return;
@@ -2371,9 +2388,12 @@ function campLayMinerals(){
   const x0 = TECH_GRID.x0 + campMineCol() * cw;   // 가로 가운데(가스와 같은 문으로 계산)
   const y0 = campRowY(CAMP_ROW_MINE);
   G.tech.minerals = [];
+  // 🏹 가운데가 처진 호 — t 는 -1(왼끝) ~ +1(오른끝), 가운데에서 가장 깊다.
+  //   ⛔ 칸(행)으로 계단을 만들지 말 것 — 일곱이 계단처럼 꺾여 보인다. 연속 좌표로 부드럽게.
+  const _last = Math.max(1, CAMP_MINE_COLS - 1);
   for(let r = 0; r < CAMP_MINE_ROWS; r++) for(let c = 0; c < CAMP_MINE_COLS; c++)
     G.tech.minerals.push({ eid:G.tech.eseq++,
-      x: x0 + c * cw, y: y0 + r * ch,
+      x: x0 + c * cw, y: y0 + (r + (1 - Math.pow(c / _last * 2 - 1, 2)) * CAMP_MINE_ARC) * ch,
       // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
       //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
       //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.
@@ -2397,7 +2417,9 @@ function campLayGas(){
   const mid = campMineMidCol(), half = TECH_GAS.w / 2;
   TECH_GAS.c0  = Math.max(0, Math.round(mid - CAMP_GAS_GAP - half));                       // 왼쪽
   CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + CAMP_GAS_GAP - half)); // 오른쪽
-  TECH_GAS.r0 = campRow(CAMP_ROW_MINE);                       // 광맥과 **같은 행**
+  // ⛽ 가스는 **본부와 같은 높이**다 — 구역 높이(h)의 절반만큼 올려 본부 중심에 맞춘다.
+  //   ⛔ 광맥 행으로 되돌리지 말 것 — 광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
+  TECH_GAS.r0 = Math.max(0, campRow(CAMP_ROW_BASE) - Math.round(TECH_GAS.h / 2));
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -2455,7 +2477,10 @@ function campPatchSync(){
   _campSyncOrig = M3D.syncBuild;
   M3D.syncBuild = function(list, W, H, dt, zoom){
     try{
-      if(_campOn && Array.isArray(list) && !campGas2Built()){
+      // ⛔ 오른쪽 3D 가스 노드(gz_res2)는 더 얹지 않는다 — 캠프 가스는 **그림**이다(2026-08-31).
+      //   얹으면 그림 위에 3D 덩어리가 겹쳐 오른쪽만 커 보인다(실측 프레임으로 확인).
+      //   ⚠ 자리 계산(CAMP_GAS2.c0)과 campGas2Built() 는 그대로 살아 있다 — 오른쪽 DOM 이 그것을 쓴다.
+      if(false && _campOn && Array.isArray(list) && !campGas2Built()){
         const v = techView();
         const gx = TECH_GRID.x0 + (CAMP_GAS2.c0 + TECH_GAS.w / 2) * _techCW();
         const gy = techY0() + (CAMP_GAS2.r0 + TECH_GAS.h - 0.55) * _techCH();

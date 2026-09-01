@@ -1136,9 +1136,26 @@
     display:flex;align-items:flex-end;justify-content:center;overflow:visible}
   .bMineral.spr .mnSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
     display:block;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
-  .bMineral.spr .mnSpr.flip{transform:scaleX(-1)}   /* 🪞 같은 파일로 다른 실루엣 — 반복 느낌 제거 */
   .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
   .bGasZone.d3 .gzLbl{display:none}
+  /* ⛽ 캠프 가스 = 그림 스프라이트(미네랄 .bMineral.spr 과 같은 물성). 판·테두리·라벨을 걷고
+     그림 하나만 남긴다 — 그림이 곧 「여기가 가스 부지」라는 표시다. */
+  .bGasZone.spr{border:none!important;background:none!important;box-shadow:none!important;
+    display:flex;align-items:flex-end;justify-content:center;overflow:visible}
+  .bGasZone.spr .gzLbl,.bGasZone.spr .gzIco{display:none}
+  /* ⭐ 그림은 **부지 사각형보다 크다** — 미네랄 결정이 칸 밖으로 자라는 것과 같은 이치다.
+     ⛔ 부지 자체(TECH_GAS.w/h)를 키우지 말 것 — 건물 배치 판정이 같이 움직인다. 그림만 넘친다.
+     ⚠ 기준점은 아래(발치)다 — 위로만 자라야 바닥에 박힌 것처럼 보인다.
+     ⭐ 0.95 = 사용자가 「조금 더 줄여 달라」고 한 값(2026-08-31). 광맥이 일곱 칸으로 넓어지며
+        가스가 상대적으로 커 보였다. ⛔ 광맥을 덮을 만큼 키우지 말 것 — 눌러서 캐는 것이라 가려지면 못 캔다. */
+  .bGasZone.spr .gzSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
+    display:block;pointer-events:none;transform:scale(var(--gzK,0.95));transform-origin:center bottom;
+    filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+  /* ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 뒤집으면 광원 방향이 반대가 되어
+     오히려 눈에 걸린다. 반복이 거슬리면 그림을 한 장 더 뽑는다(stage2…). */
+  /* 배치 중 강조 — 판이 없으므로 그림 자체를 밝힌다(테두리를 되살리지 말 것) */
+  .bGasZone.spr.hot .gzSpr{filter:drop-shadow(0 3px 5px rgba(0,0,0,.45)) brightness(1.25)
+    drop-shadow(0 0 8px rgba(120,255,160,.65))}
   @keyframes mnGlint{0%,100%{transform:scale(1);opacity:.85}50%{transform:scale(1.08);opacity:1}}
   .bGasGlow{position:absolute;width:46px;height:46px;transform:translate(-50%,-58%);pointer-events:none;border-radius:50%;mix-blend-mode:screen;   /* ⛽ 가스 건물 활성 발광(작동 중) */
     background:radial-gradient(circle,rgba(120,255,160,.55),rgba(80,220,120,.22) 46%,transparent 70%);animation:bGasPulse 1.5s ease-in-out infinite}
@@ -1250,6 +1267,10 @@
   
   /* 커스텀 초상화 이미지(둥근 사각형 크롭) — 프로필 카드 공통 */
   .portImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1;transform:scale(1.14);transform-origin:center 44%}
+  /* 🎨 유닛 **판 아이콘**은 초상이 아니라 아이콘이다 — .portImg 의 확대·크롭(scale 1.14 · cover)을
+     그대로 타면 판 테두리와 모서리 리벳이 잘려 나간다. 원본 정사각 그대로 둔다.
+     ⚠ 아이콘이 없어 초상으로 되돌아가면 js 가 .unIco 를 떼므로 위 .portImg 규칙이 되살아난다. */
+  .portImg.unIco{object-fit:contain;transform:none}
   /* 생성 아이콘(건물·스킬·업그레이드) = 정사각 원본 그대로. 유닛 초상과 달리 크롭·확대하지 않는다 */
   .icoImg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;z-index:1;transform:none}
   .icoFb{position:absolute;inset:0;z-index:1}   /* 아이콘 파일이 없을 때의 라인SVG 폴백 — .icoImg와 같은 자리 */

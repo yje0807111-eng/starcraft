@@ -573,3 +573,208 @@ node scripts/icon-cutout.mjs <입력.png> <출력.webp> [knee=32]
 
 ⚠ 잠긴 칸의 자물쇠는 `.stIco` 기본값(21px)이 그 줄에서 크다 — `.mgSlot .mgIco .stIco{19px}` 로
 이모지였을 때와 같은 크기로 맞춘다. 스모크가 20px 상한으로 지킨다.
+
+---
+
+# 유닛 계열 (`units/` · 2026-08-31)
+
+건물·스킬과 달리 **유닛은 SUBJECT 를 글로 쓰지 않는다.** 이미 그 유닛의 그림이 있으므로
+**레퍼런스 두 장을 붙이고 공통 프롬프트 하나를 그대로 돌린다.** 유닛마다 바꿀 문장이 없다.
+
+⚠ **각도는 블록 A 와 다르다.** 블록 A 는 「정면·회전 없음」을 못 박지만 유닛은 **레퍼런스 각도를
+그대로 따른다**(2026-08-31 사용자 확정). 초상은 유닛마다 보기 좋은 각도로 잡혀 있는데, 그걸
+억지로 정면으로 돌리면 오히려 이상해진다 — 차량은 납작해지고 생물은 실루엣이 무너졌다.
+⛔ 그래서 NEGATIVE 에서 각도를 금지하던 줄(three-quarter view · rotated · tilted …)을 뺐다.
+   되살리면 3/4 초상까지 정면으로 펴진다.
+
+| 항목 | 값 |
+|---|---|
+| 폴더·파일명 | `units/un_<유닛키>.webp` |
+| 방식 | **i2i · 레퍼런스 2장** (① 배경판 ② 그 유닛 초상) |
+| 대상 | 캠프 3종족(유니온 11 · 스웜 7 · 에테리얼 7) + 일꾼 3 = **28종** |
+| 규격 | 위 「규격」 표와 같다(128×128 WebP · 알파 없음 · 512 PNG 로 뽑아 변환) |
+
+⚠ **레퍼런스를 붙이는 순서가 곧 역할이다.** 첫 장이 판, 둘째 장이 유닛이다.
+바꿔 붙이면 모델이 유닛을 배경으로 깔고 판을 기호로 올린다(실제로 그렇게 나온다).
+
+⭐ **크롭은 초상이 정한다.** 초상은 유닛마다 프레이밍이 다르다 — 광전사·화력병은 상반신
+클로즈업, 공성전차·포격충은 전체, 그 중간(하체가 조금 걸친 것)도 있다. 그래서 **IMAGE 2 가
+담고 있는 것을 그대로 다시 그리라**고만 말한다.
+⛔ **무엇이 보이는지·안 보이는지를 프롬프트에 적지 말 것.** 「상반신만」·「다리를 그리지 마라」
+처럼 부위를 지목하면 그 부위가 사라진다 — 하체가 조금 걸친 초상에서 다리가 통째로 잘려 나왔다
+(2026-08-31 · 위 「자주 하는 실수」의 부정 서술 함정과 같은 것이다).
+더 넓게/좁게 잡고 싶으면 프롬프트가 아니라 **초상을 다시 잘라** 넣는다.
+
+⚠ **색은 그대로 가져오지 않는다.** 초상은 금색·형광 초록처럼 화려한데, 아이콘은 건물·스킬과
+같은 **강철 단색**이라야 옆칸과 안 어긋난다. 가져오는 것은 형태와 크롭뿐이다.
+
+⛔ 아래 프롬프트를 유닛마다 고쳐 쓰지 말 것. 고치는 순간 28종의 시점·두께가 갈린다 —
+글로 쓴 SUBJECT 28개를 한 번 만들었다가 이 방식으로 되돌렸다(2026-08-31).
+
+## 공통 프롬프트 — 유닛 (고정 · 절대 수정 금지)
+
+```
+--- REFERENCE ---
+Two reference images are attached.
+IMAGE 1 is the background plate. Reproduce it unchanged — same metal tone, same rim, same
+rivets, same panel seams, same corner shading, same framing. Do not redesign, recolor,
+resize or re-texture the plate.
+IMAGE 2 is the unit. Use it as the shape source AND as the framing source. Redraw exactly
+what IMAGE 2 contains, at the same scale and the same crop — every part visible there stays
+visible here, ending at the same place along the body, and nothing beyond its edges is
+invented. Match its framing one to one.
+Do not copy its colors, its lighting or its background — those come from the spec below.
+--- RENDER SPEC ---
+A single StarCraft-style game unit icon. Hand-painted 90s RTS interface art.
+One unit only, centered, mounted on the reference plate.
+SUBJECT: the unit from IMAGE 2, at the same crop and the same viewing angle, rebuilt as a
+solid machined form.
+MATERIAL: the unit is machined from the same metal as the plate but a lighter, cleaner
+alloy — brushed steel, base #8a939c, ranging #b8c2ca on top-lit faces to #3a4046 on
+shadow sides. Slightly polished compared to the worn plate around it, with faint
+horizontal brush streaks along its faces and a few small nicks on the edges. Same
+hand-painted retro game art treatment as the plate, no color tint, no paint.
+CONSTRUCTION: the unit is a solid machined shape standing proud of the plate — broad flat
+faces where the reference shows broad surfaces, straight side walls showing its thickness,
+and a chamfered edge wherever two faces meet. The chamfer catches a bright specular line
+along every upper and left edge. Think of a part milled from steel and bolted on, not a
+painted marking.
+SIMPLIFY: rebuild everything IMAGE 2 shows as three or four large masses. Every mass present
+in IMAGE 2 is present here — simplify their shapes and merge neighbouring ones, but keep all
+of them, including whatever sits at the very bottom of the reference. Keep the one feature
+that names the unit at full size — the helmet crest, the gun barrel, the blades, the wings,
+the jaw — and let the rest read as plain blocks. Only surface detail goes away: greebles,
+panel lines, cables, small vents. Matching parts stay exactly the same size and thickness as
+each other.
+COMPOSITION: hold the same viewing angle and the same pose as IMAGE 2 — whatever direction
+it faces there, it faces here. A frontal reference stays frontal; a reference turned to
+three-quarter stays at that same three-quarter. Depth comes from that angle plus the
+machined side walls and chamfer. Centered, spanning about 80% of the frame height with
+empty plate left at the sides, so that a tall subject fits whole instead of being cut. The
+lowest part visible in IMAGE 2 stays visible here, sitting just above the lower rim.
+LIGHT: single hard key light from the upper left. Bright specular chamfer on upper and
+left edges, mid-tone front face, deep shadow on the lower and right side walls. A hard
+black cast shadow falls from the unit onto the plate, offset down and to the right.
+PLACEMENT: the unit sits inside the recessed inner field. It must never overlap or cover
+the raised rim, the corner rivets, or the double border line — those stay fully visible.
+READABILITY: bold and blocky enough to read clearly at 32 pixels. Few large forms, no
+fine detail. The unit must be instantly recognizable from its silhouette alone.
+OUTPUT: 512x512 PNG, square, crisp edges, retro game UI art.
+--- NEGATIVE ---
+different angle from the reference, re-posed, turned away from the reference pose,
+flattened depth, no thickness,
+re-framed, re-cropped, different crop, tighter crop than the reference, wider shot than the
+reference, zoomed in, zoomed out, parts of the reference missing, trimmed subject,
+copied colors from reference, original unit colors, colored tint, blue, green, gold, painted,
+photographic shading, soft shading, airbrush, blur, glow, bloom, neon, energy effect,
+varying line thickness, wobbly edges, sketchy, inconsistent thickness between matching
+parts, sticker, decal, engraved into the plate, flush with the surface, changed
+background, new background, altered plate, different texture, redesigned plate,
+line art, outline only, flat vector, minimal icon, modern flat design, transparent
+background, white background, photorealistic, 3D render, chrome, mirror reflection,
+text, letters, numbers, watermark, logo, ornate frame, decorative border, multiple
+units, scene, background scenery, ground, terrain, cute, rounded soft shapes, low contrast
+```
+
+## 대상 28종 — 레퍼런스로 쓸 그림
+
+| 종족 | 유닛 키 |
+|---|---|
+| 유니온 | `marine` `machinegun` `medic` `racer` `tank` `goliath` `skyguard` `hellfire` `aegis` `ghost` `dreadnought` |
+| 스웜 | `snapper` `hydra` `thornqueen` `stinger` `medusa` `ultralisk` `behemoth` |
+| 에테리얼 | `dragoon` `falcon` `blade` `skydancer` `archon` `dark_templar` `archangel` |
+| 일꾼 | `worker_human` `worker_swarm` `worker_light` |
+
+⚠ **초상(`assets/portraits/<키>_portrait.webp`)이 있는 것은 18종뿐이다.** 나머지 10종은
+초상이 없어 레퍼런스가 없다 — 3D 모델(`assets/models/`)을 정면에서 렌더해 쓰거나,
+그 유닛만 글로 SUBJECT 를 써야 한다.
+
+| 초상 있음(그대로 레퍼런스) | 초상 없음(따로 구해야 함) |
+|---|---|
+| `machinegun` `tank` `skyguard` `hellfire` `aegis` `dreadnought` `snapper` `thornqueen` `stinger` `medusa` `behemoth` `blade` `falcon` `skydancer` `archangel` `worker_human` `worker_swarm` `worker_light` | `marine` `medic` `racer` `goliath` `ghost` `hydra` `ultralisk` `dragoon` `archon` `dark_templar` |
+
+## 넣는 순서
+1. 레퍼런스 두 장(판 → 유닛)을 붙이고 위 프롬프트를 **그대로** 돌린다
+2. 512×512 PNG 를 `assets/icons/units/un_<키>.webp` 로 변환
+3. 건물 아이콘과 나란히 놓고 **시점·톤·두께**가 같은지 본다
+4. 32px 로 줄여 뭉개지면 — 프롬프트를 고치지 말고 **레퍼런스를 더 단순한 각도의 것으로** 바꾼다
+
+⚠ 배선은 아직 없다 — `units/` 는 코드에 연결돼 있지 않다. 파일을 다 모은 뒤 한 줄 붙인다.
+
+---
+
+# 유닛 초상 계열 (`assets/portraits/` · 2026-09-01)
+
+아이콘(`units/`)과 **다른 계열**이다. 아이콘은 판 위의 강철 단색이고, 초상은 **투명 배경의 컬러**다.
+아이콘을 뽑을 때 레퍼런스로 쓰는 것이 이 초상이므로, 초상이 없는 유닛은 먼저 여기부터 만든다.
+
+| 항목 | 값 |
+|---|---|
+| 크기 | **512 × 512** PNG (구형 일부는 256) |
+| 배경 | **투명**(알파) — 판·바닥·그림자 없음 |
+| 색 | 컬러. 종족 팔레트를 따른다 |
+| 파일명 | `<유닛키>_portrait.webp` |
+
+## 종족 팔레트 — 초상은 이 색으로 갈린다
+| 종족 | 몸 | 발광·강조 |
+|---|---|---|
+| 유니온 | 청회색 장갑 · 무광 금속 | 주황 계기광 |
+| 스웜 | 보라빛 갈색 갑각 · 젖은 살 | **형광 연두**(산성) |
+| 에테리얼 | 금색 장갑 | **청록 에너지** |
+
+## 공통 블록 — 초상 (고정)
+
+```
+--- RENDER SPEC ---
+A single StarCraft-style unit portrait for a game UI. High-detail 3D game render look,
+painted over with hand finishing — the same treatment as a modern RTS unit preview.
+SUBJECT: [[SUBJECT]]
+FRAMING: the whole creature fits inside the square with a small margin. Seen from a
+slightly raised three-quarter angle so its silhouette reads clearly. Centered.
+MATERIAL: [[PALETTE]]
+LIGHT: strong key light from the upper left, cool rim light along the opposite edge to
+lift the silhouette off the empty background. Crisp specular highlights on hard surfaces,
+soft falloff on organic ones.
+BACKGROUND: fully transparent. Nothing behind the subject — no plate, no ground, no cast
+shadow, no glow halo, no scenery.
+OUTPUT: 512x512 PNG with alpha, square.
+--- NEGATIVE ---
+background, backdrop, scenery, ground, floor, terrain, cast shadow, drop shadow, vignette,
+frame, border, plate, icon plate, card, UI panel, text, letters, numbers, watermark, logo,
+multiple creatures, crowd, human face, cute, chibi, toy, plastic, flat vector, line art,
+low detail, blurry, grainy, motion blur, depth of field
+```
+
+## SUBJECT — 스웜링 (`broodling`)
+
+```
+[[SUBJECT]]
+a small four-legged swarm beast, low and fast — a wedge-shaped carapace head with a wide
+jaw of short interlocking fangs, two curved bone scythes rising from the shoulders, and a
+lean segmented body on four thin clawed legs braced to spring. Torn membrane frills trail
+from its back. A minion bred to be thrown away
+
+[[PALETTE]]
+purplish-brown chitin plates over wet dark flesh, veined with acidic yellow-green that
+glows faintly in the seams and inside the jaw. Wet organic sheen, no metal
+```
+
+## SUBJECT — 다크보이드 (`dark_archon`)
+
+```
+[[SUBJECT]]
+a floating psionic entity with no legs — a dense core of dark energy suspended between two
+broken halves of ornate armor that orbit it, and long ribbon-like tendrils of force curling
+out from the core. Where a face would be there is only a slit of pale light. A merged pair
+of dark templars, held together by will
+
+[[PALETTE]]
+tarnished dark gold armor shards, almost black in the shadows, around a violet-black core
+lit from within by cold blue-white psionic light. The light bleeds along the armor edges
+```
+
+⚠ **다크보이드는 「어두운 에테리얼」이다** — 금색을 빼면 종족이 안 읽히고, 그대로 밝게 두면
+보이드(`archon`)와 구분이 안 된다. **변색된 금 + 보라빛 검정 + 차가운 청백광**이 그 사이다.
+
+⚠ 뽑은 뒤 `assets/portraits/` 에 넣고, 그 초상을 레퍼런스로 「유닛 계열」 프롬프트를 돌려
+`units/un_broodling.webp` · `un_dark_archon.webp` 까지 만들면 두 자리가 모두 채워진다.

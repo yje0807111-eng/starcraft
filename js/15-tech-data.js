@@ -520,6 +520,8 @@ function _techUnitStatList(spec,uid,ent){ const _spd=(spec.atk&&(typeof _sbBaseC
   const me=(ent&&ent.maxEn>0)?ent.maxEn:((typeof U!=='undefined'&&U[uid]&&U[uid].energy)||0);   // 🔮 마나 = 머리줄이 아니라 여기(왼쪽 정보 구역)
   if(me>0) out.push(['마나', Math.round((ent&&ent.en!=null)?ent.en:me)+'/'+Math.round(me)]);
   return out; }
+// 🎨 유닛 초상은 **unitPortraitHTML 하나**가 만든다(아이콘 우선 · js/11-cmdcard.js).
+//   ⛔ 여기서 다시 구현하지 말 것 — 건설 탭만 다른 그림이 나온다.
 function _techUnitPortrait(id){ return (typeof unitPortraitHTML==='function'&&unitPortraitHTML(id))||pIco('🔧'); }
 // 🏢 건물 초상 = 그 건물의 실제 3D 모델 렌더 이미지(M3D.bldgImage — key별 1회 캐시, 준비되면 techUIRender로 자동 갱신).
 // 유닛 초상(_techUnitPortrait)과 동일한 portImg 규격 · 모델 없음/미로드/3D 끔 = 기존 이모지 폴백
