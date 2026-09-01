@@ -1,0 +1,329 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 — 별자리 v3 4안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --info:#4aa8ff; --neon:#ff3b3b; --ok:#5dff8f; --sel:#5cd6ff;
+    --r-bar:3px; --r-md:6px; --r-lg:9px; --edge:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1900px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1020px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1020px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:26px}
+  .note{font-size:12px;line-height:1.6;color:#93a0b0;margin:10px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:760px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:radial-gradient(120% 90% at 50% 40%,rgba(16,22,32,.98),rgba(5,7,11,.99))}
+  .top{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:center;gap:12px;
+    padding:14px 14px 10px;background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,0))}
+  .tt{font-size:15px;font-weight:700;color:#e8eef7;flex:1}
+  .pt{font-family:var(--font-num);font-size:11px;color:#7b8593;letter-spacing:.22em}
+  .pt b{font-size:16px;font-weight:700;color:var(--gold);letter-spacing:0;margin-left:6px}
+  svg{display:block}
+  text{font-family:'IBM Plex Sans KR','Noto Sans KR',system-ui,sans-serif}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .desel{position:absolute;right:12px;top:52px;z-index:5;width:38px;height:38px;
+    display:flex;align-items:center;justify-content:center;color:#dfe8f3;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.85))}
+  /* ══ 하단 구역 — 고른 별의 **모든 정보**가 여기 모인다 ══ */
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:14px 14px 16px;
+    border-top:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c)}
+  .shHd{display:flex;align-items:baseline;gap:8px}
+  .shNm{font-size:18px;font-weight:700;color:#fff}
+  .shN{font-family:var(--font-num);font-size:13px;color:#8d9aa9}
+  .shBr{margin-left:auto;font-size:10.5px;letter-spacing:.14em}
+  /* 계열 진행도 — 이 별이 다섯 칸 중 어디인가 */
+  .shDots{display:flex;gap:4px;margin-top:9px}
+  .shDots i{flex:1;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.08)}
+  .shDesc{font-size:12.5px;line-height:1.6;color:#a7b2c0;margin-top:10px}
+  .shDesc b{color:#e8eef7;font-weight:700}
+  /* 지금 ▶ 다음 — 큰 숫자가 주인공 */
+  .shStep{display:flex;align-items:baseline;gap:9px;margin-top:11px;
+    padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+  .shNow{font-family:var(--font-num);font-size:16px;color:#7b8593}
+  .shArw{color:#5b6674;font-size:12px}
+  .shNext{font-family:var(--font-num);font-size:26px;font-weight:700;color:#fff;line-height:1}
+  .shAfter{margin-left:auto;font-size:10.5px;color:#69737f;text-align:right}
+  .shAfter b{font-family:var(--font-num);color:#8d9aa9;font-weight:700}
+  /* 지갑 — 비용과 남을 포인트 */
+  .shWal{display:flex;align-items:flex-end;gap:10px;margin-top:11px;
+    padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+  .shCol{min-width:74px}
+  .shCk{font-size:9.5px;color:#69737f;letter-spacing:.2em}
+  .shCv{font-family:var(--font-num);font-size:18px;font-weight:700;color:var(--gold);line-height:1.15}
+  .shCv.sub{font-size:14px;color:#8d9aa9}
+  .shGo{position:relative;margin-left:auto;min-width:116px;min-height:46px;padding:0 18px;
+    border-radius:var(--r-md);font:700 14px/1 inherit;letter-spacing:.1em;color:#fff;cursor:pointer;
+    border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+  .shGo::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+    box-shadow:0 0 4px rgba(255,210,74,.55)}
+  .shGo.off{border-color:rgba(255,255,255,.14);background:none;color:#69737f}
+  .shGo.off::after{display:none}
+  .hint{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:18px;text-align:center;
+    font-size:12px;color:#69737f;background:linear-gradient(180deg,rgba(6,9,13,0),rgba(6,9,13,.9) 60%)}
+</style>
+<div class="wrap">
+<h1>환생 트리 — 별자리 v3 4안</h1>
+<p class="lede">앞에서 고른 <b>흩뜨림 중(②)</b> + <b>주변을 물리는 선택(⑤)</b> 으로 갔다. 여기서 바뀐 것은
+  <b>해금 규칙</b>이다 — 앞 목업은 32계열의 첫 칸이 처음부터 다 열려 있어 화면이 붐볐다.</p>
+<p class="rule"><b>이제 부모가 켜져야 자식이 보인다.</b> 환생 → <b>갈래</b> → <b>묶음</b> → 계열 → 2·3·4·5차.
+  갈래와 묶음도 <b>사는 것</b>이라, 안 산 갈래 아래는 아예 안 그린다.
+  <i>그래서 첫 화면은 별 다섯 개다.</i> 숫자는 <b>아직 안 산 별(=지금 살 수 있는 것)</b>에만 붙는다 —
+  이미 산 별은 숫자 없이 <b>빛나는 점</b>으로만 남아 별자리로 읽힌다.</p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+/* ══ 실제 데이터 ══════════════════════════════════════════════════════ */
+const BR = {
+  enemy:{ a:-Math.PI*0.76, rk:1.34, nm:'적 약화',   col:'#ff3b3b' },   /* ↖ 멀리 */
+  econ: { a:-Math.PI*0.24, rk:0.82, nm:'재화 획득', col:'#ffd24a' },   /* ↗ 가까이 */
+  start:{ a: Math.PI*0.70, rk:0.88, nm:'시작 도움', col:'#5dff8f' },   /* ↙ 가까이 */
+  army: { a: Math.PI*0.30, rk:1.26, nm:'아군 강화', col:'#4aa8ff' },   /* ↘ 멀리 */
+};
+const LINES = [
+  {k:'tap',br:'start',grp:'가',gr:'흔함',nm:'탭당 미네랄'},
+  {k:'startMin',br:'start',grp:'가',gr:'보통',nm:'시작 미네랄'},
+  {k:'startWk',br:'start',grp:'나',gr:'흔함',nm:'시작 일꾼'},
+  {k:'startBld',br:'start',grp:'나',gr:'보통',nm:'시작 건물'},
+  {k:'earlyDc',br:'start',grp:'다',gr:'흔함',nm:'초반 건물 할인'},
+  {k:'startUp',br:'start',grp:'다',gr:'보통',nm:'시작 업그레이드'},
+  {k:'startUnit',br:'start',grp:'라',gr:'흔함',nm:'시작 유닛'},
+  {k:'skipRd',br:'start',grp:'라',gr:'귀함',nm:'라운드 건너뛰기'},
+  {k:'gather',br:'econ',grp:'가',gr:'흔함',nm:'일꾼 채취량'},
+  {k:'gas',br:'econ',grp:'가',gr:'보통',nm:'가스 생산량'},
+  {k:'wkCap',br:'econ',grp:'나',gr:'흔함',nm:'일꾼 상한'},
+  {k:'mine',br:'econ',grp:'나',gr:'귀함',nm:'광산 등급'},
+  {k:'idle',br:'econ',grp:'다',gr:'흔함',nm:'방치 수급'},
+  {k:'dgRw',br:'econ',grp:'다',gr:'보통',nm:'던전 보상'},
+  {k:'tapMul',br:'econ',grp:'라',gr:'흔함',nm:'탭 배수'},
+  {k:'gasEx',br:'econ',grp:'라',gr:'보통',nm:'가스 교환비'},
+  {k:'atk',br:'army',grp:'가',gr:'흔함',nm:'유닛 공격력'},
+  {k:'hp',br:'army',grp:'가',gr:'보통',nm:'유닛 체력'},
+  {k:'prod',br:'army',grp:'나',gr:'흔함',nm:'생산 속도'},
+  {k:'sup',br:'army',grp:'나',gr:'보통',nm:'인구 상한'},
+  {k:'upCost',br:'army',grp:'다',gr:'흔함',nm:'업그레이드 비용'},
+  {k:'endure',br:'army',grp:'다',gr:'귀함',nm:'버팀'},
+  {k:'bldg',br:'army',grp:'라',gr:'흔함',nm:'건물 강화'},
+  {k:'skCd',br:'army',grp:'라',gr:'보통',nm:'스킬 쿨다운'},
+  {k:'foeHp',br:'enemy',grp:'가',gr:'흔함',nm:'적 체력'},
+  {k:'foeN',br:'enemy',grp:'가',gr:'귀함',nm:'적 마리 수'},
+  {k:'foeAtk',br:'enemy',grp:'나',gr:'흔함',nm:'적 공격력'},
+  {k:'foeRes',br:'enemy',grp:'나',gr:'보통',nm:'적 부활 시간'},
+  {k:'foeSpd',br:'enemy',grp:'다',gr:'흔함',nm:'적 이동 속도'},
+  {k:'bossHp',br:'enemy',grp:'다',gr:'보통',nm:'보스 체력'},
+  {k:'foeRng',br:'enemy',grp:'라',gr:'흔함',nm:'적 사거리'},
+  {k:'foeDelay',br:'enemy',grp:'라',gr:'보통',nm:'적 등장 지연'},
+];
+const GRP={가:[1,5,9,13,17],나:[2,6,10,14,18],다:[3,7,11,15,19],라:[4,8,12,16,20]};
+const MILE={가:5,나:10,다:15,라:20};
+const GRADE={흔함:.5,보통:1,귀함:3,극상:10};
+const LADDER=[0,1.5,2.5,5,11,25];
+const CUT=[0,.12,.25,.33,.38,.40];
+const BASE=2, MUL=4, GK=['가','나','다','라'];
+const BR_COST=8, GP_COST=32;         // 🆕 갈래 마디 · 묶음 마디 값
+const L_=k=>LINES.find(x=>x.k===k);
+const tier=(k,n)=>GRP[L_(k).grp][Math.max(1,Math.min(5,n))-1];
+const grade=(k,n)=>(L_(k).gr==='귀함'&&tier(k,n)===MILE[L_(k).grp])?'극상':L_(k).gr;
+const cost=(k,n)=>BASE*Math.pow(MUL,tier(k,n)-1)*GRADE[grade(k,n)];
+const SUF=['','K','M','B','T','aa','ab','ac','ad'];
+function num(v){ if(v<1000) return (v%1?v.toFixed(1):String(v));
+  let i=0; while(v>=1000&&i<SUF.length-1){v/=1000;i++;}
+  return (v<10?v.toFixed(2):v<100?v.toFixed(1):Math.round(v))+SUF[i]; }
+const isCut=k=>L_(k).br==='enemy';
+const val=(k,n)=>n<=0?(isCut(k)?'0%':'×1')
+  :(isCut(k)?Math.round(CUT[Math.min(5,n)]*100)+'%':'×'+LADDER[Math.min(5,n)]);
+const desc=(k,n)=> isCut(k)
+  ? ('적을 <b>'+val(k,n)+'</b> 깎는다. 적 약화는 곱해서 쌓이되 <b>1/5 아래로는 안 내려간다</b>.')
+  : ('<b>'+val(k,n)+'</b> 로 오른다. 회차를 넘겨도 <b>남는</b> 영구 강화다.');
+const linesOf=b=>LINES.filter(x=>x.br===b);
+const inGrp=(b,g)=>LINES.filter(x=>x.br===b&&x.grp===g);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+/* ══ 🆕 해금 — 부모가 켜져야 자식이 보인다 ═════════════════════════════
+   저장은 그대로 한 자루(bag)다. 갈래는 'br:econ', 묶음은 'gp:econ가' 로 들어간다. */
+function W(bag,pts){
+  const has=k=>bag[k]|0;
+  const brOn=b=>has('br:'+b)>0, gpOn=(b,g)=>has('gp:'+b+g)>0;
+  /* 상태 — 'own'(샀다) · 'buy'(살 수 있다) · 'next'(열렸는데 포인트가 모자라다) · null(안 그린다) */
+  const stBr=b=>brOn(b)?'own':(has('root')? (pts>=BR_COST?'buy':'next') : null);
+  const stGp=(b,g)=>gpOn(b,g)?'own':(brOn(b)? (pts>=GP_COST?'buy':'next') : null);
+  const stN=(k,n)=>{ const L=L_(k);
+    if(!gpOn(L.br,L.grp)) return null;                 // ⭐ 묶음을 안 샀으면 계열은 존재하지 않는다
+    const h=has(k);
+    if(n<=h) return 'own';
+    if(n!==h+1) return null;
+    return pts>=cost(k,n)?'buy':'next'; };
+  const vis=k=>{ const o=[]; for(let n=1;n<=5;n++){ const s=stN(k,n); if(s) o.push({n,s}); } return o; };
+  return {has,brOn,gpOn,stBr,stGp,stN,vis,pts};
+}
+
+/* ══ 흩뜨림 — 키 해시라 매번 같은 자리에 선다 ══════════════════════ */
+function hash(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return ((h>>>0)%10000)/10000; }
+const jit=(k,n,seed)=>hash(k+':'+n+':'+seed)*2-1;
+const AMT=0.70;                                      // ← ②안에서 고른 값
+function tree(o){
+  const {rbr,rgp,rn1,rs,sp}=o, P={};
+  for(const bk in BR){ const B=BR[bk];
+    const rb=rbr*(B.rk||1);
+    P[bk]={x:Math.cos(B.a)*rb, y:Math.sin(B.a)*rb, g:{}};
+    GK.forEach((g,gi)=>{ const a=B.a+(gi-1.5)*(sp/3) + jit(bk+g,0,'g')*(sp/3)*0.16*AMT;
+      const rg=rgp*(0.72+(B.rk||1)*0.34)+jit(bk+g,0,'rg')*14*AMT;
+      P[bk].g[g]={x:Math.cos(a)*rg, y:Math.sin(a)*rg, l:{}};
+      inGrp(bk,g).forEach((L,li)=>{ P[bk].g[g].l[L.k]={ a:a+(li-0.5)*(sp/3)*0.42 }; }); }); }
+  const node=(k,n)=>{ const L=L_(k), q=P[L.br].g[L.grp].l[k];
+    const a=q.a + jit(k,n,'a')*(sp/3)*0.30*AMT;
+    const r=rn1*(0.80+(BR[L.br].rk||1)*0.22)+(n-1)*rs + jit(k,n,'r')*rs*0.34*AMT;
+    return {x:Math.cos(a)*r, y:Math.sin(a)*r}; };
+  return {P,node};
+}
+function glowDef(id,sd){ return '<defs><filter id="'+id+'" x="-90%" y="-90%" width="280%" height="280%">'
+  +'<feGaussianBlur stdDeviation="'+(sd||3)+'" result="b"/><feMerge><feMergeNode in="b"/>'
+  +'<feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>'; }
+function dust(n,R,seed){ let s=seed||7, o='';
+  const rnd=()=>{ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
+  for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, r=40+rnd()*R;
+    o+='<circle cx="'+(Math.cos(a)*r).toFixed(1)+'" cy="'+(Math.sin(a)*r).toFixed(1)
+      +'" r="'+(.4+rnd()*1.1).toFixed(2)+'" fill="#cfe0f2" opacity="'+(.06+rnd()*.20).toFixed(2)+'"/>'; }
+  return o; }
+function spark(x,y,r,col,op){ return '<path d="M'+(x-r)+' '+y+' L'+(x+r)+' '+y+' M'+x+' '+(y-r)+' L'+x+' '+(y+r)
+  +'" stroke="'+col+'" stroke-width=".7" opacity="'+(op||.5)+'"/>'; }
+function rootStar(r){ return '<circle cx="0" cy="0" r="'+(r*1.9)+'" fill="rgba(92,214,255,.05)"/>'
+  + spark(0,0,r*2.1,'#5cd6ff',.45)
+  + '<circle cx="0" cy="0" r="'+r+'" fill="rgba(92,214,255,.14)" stroke="#5cd6ff" stroke-width="1.2"/>'
+  + '<text x="0" y="'+(r*.34).toFixed(0)+'" text-anchor="middle" font-size="'+(r*.8).toFixed(0)+'" fill="#dff2ff">환생</text>'; }
+
+/* ══ 그리기 ══════════════════════════════════════════════════════════
+   숫자는 **아직 안 산 별에만** 붙는다. 산 별은 빛나는 점 — 그래야 별자리로 읽힌다. */
+function draw(T,w,opt){
+  const o=[], sel=opt.sel, dim=opt.dim||0, gid=opt.gid;
+  const F=me=>me?1:(1-dim*.78);                       // 물리는 정도
+  const isSel=(t,a,b)=>sel&&sel.t===t&&sel.a===a&&(b==null||sel.b===b);
+  /* 별 하나 — 산 것/살 것/고른 것 */
+  function star(x,y,col,state,label,me,rad){
+    const f=F(me), r=rad||9.5;
+    if(me){
+      o.push('<circle cx="'+x+'" cy="'+y+'" r="34" fill="rgba(92,214,255,.06)"/>');
+      o.push(spark(x,y,30,'#5cd6ff',.5));
+      o.push('<circle cx="'+x+'" cy="'+y+'" r="21" fill="rgba(7,10,15,.94)" stroke="'+col+'" stroke-width="1.6"/>');
+      o.push('<circle cx="'+x+'" cy="'+y+'" r="25" fill="none" stroke="#5cd6ff" stroke-width="1" opacity=".8"/>');
+      if(state==='own') o.push('<circle cx="'+x+'" cy="'+y+'" r="9" fill="'+col+'" filter="url(#'+gid+')"/>');
+      else o.push('<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-size="11" class="num" fill="'+col+'">'+label+'</text>');
+      return; }
+    if(state==='own'){ o.push(spark(x,y,9,col,.42*f));
+      o.push('<circle cx="'+x+'" cy="'+y+'" r="3.8" fill="'+col+'" filter="url(#'+gid+')" opacity="'+f.toFixed(2)+'"/>'); }
+    else{ const on=state==='buy';
+      o.push('<circle cx="'+x+'" cy="'+y+'" r="'+(on?r:r*0.62)+'" fill="rgba(7,10,15,.9)" stroke="'
+        +(on?col:'rgba(200,220,240,.26)')+'" stroke-width="1" opacity="'+f.toFixed(2)+'"/>');
+      if(on) o.push('<text x="'+x+'" y="'+(y+2.9)+'" text-anchor="middle" font-size="7.6" class="num" fill="'
+        +col+'" opacity="'+f.toFixed(2)+'">'+label+'</text>'); } }
+  function link(a,b,col,lit,me){ const f=F(me);
+    o.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)
+      +'" stroke="'+(lit?col:'rgba(200,220,240,.20)')+'" stroke-width="'+(lit?1.7:.9)+'" opacity="'
+      +((lit?.6:1)*f).toFixed(2)+'"'+(lit?'':' stroke-dasharray="2 3"')+'/>'); }
+  for(const bk in BR){ const B=BR[bk], p=T.P[bk], sb=w.stBr(bk);
+    if(!sb) continue;                                  // ⭐ 안 열린 갈래는 아예 없다
+    link({x:0,y:0},p,B.col,sb==='own',isSel('br',bk));
+    star(p.x.toFixed(1),p.y.toFixed(1),B.col,sb,num(BR_COST),isSel('br',bk),11);
+    if(sb!=='own') continue;
+    GK.forEach(g=>{ const q=p.g[g], sg=w.stGp(bk,g); if(!sg) return;
+      link(p,q,B.col,sg==='own',isSel('gp',bk,g));
+      star(q.x.toFixed(1),q.y.toFixed(1),B.col,sg,num(GP_COST),isSel('gp',bk,g),10.5);
+      if(sg!=='own') return;
+      inGrp(bk,g).forEach(L=>{ w.vis(L.k).forEach(v=>{
+        const b=T.node(L.k,v.n), a=(v.n===1)?q:T.node(L.k,v.n-1), me=isSel('n',L.k,v.n);
+        link(a,b,B.col,v.s==='own',me);
+        star(b.x.toFixed(1),b.y.toFixed(1),B.col,v.s,num(cost(L.k,v.n)),me); }); }); }); }
+  return o.join('');
+}
+function scene(o){
+  const T=tree({rbr:62,rgp:124,rn1:186,rs:40,sp:1.30}), w=o.w, sel=o.sel;
+  let s=o.scale||.86, tx=0, ty=0;
+  if(sel){ const p = sel.t==='n' ? T.node(sel.a,sel.b)
+      : sel.t==='gp' ? T.P[sel.a].g[sel.b] : T.P[sel.a];
+    s=o.zoom||1.62; tx=-p.x*s; ty=(o.up==null?-126:o.up)-p.y*s; }
+  let brn=''; for(const bk in BR){ const B=BR[bk]; if(!w.stBr(bk)) continue;
+    brn+='<text x="'+(Math.cos(B.a)*292).toFixed(0)+'" y="'+(Math.sin(B.a)*292).toFixed(0)
+      +'" text-anchor="middle" font-size="10" letter-spacing="3" fill="'+B.col
+      +'" opacity="'+(sel?.18:.5)+'">'+B.nm+'</text>'; }
+  const inner=glowDef(o.gid,3)+dust(o.dust==null?110:o.dust,310,o.seed||17)+brn
+    + draw(T,w,{gid:o.gid,sel,dim:o.dim}) + rootStar(21);
+  return '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;width:430px;height:630px">'
+    + '<g transform="translate('+tx.toFixed(1)+' '+ty.toFixed(1)+') scale('+s+')">'+inner+'</g></svg>';
+}
+const DESEL='<div class="desel"><svg viewBox="0 0 24 24" width="26" height="26">'
+  +'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+  +'<line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>';
+/* ══ 하단 구역 — 고른 별의 모든 정보 ══════════════════════════════ */
+function sheet(w,k,n){
+  const L=L_(k), B=BR[L.br], g=grade(k,n), c=cost(k,n), own=w.stN(k,n)==='own';
+  const left=w.pts-c, can=left>=0 && !own;
+  const dots=[1,2,3,4,5].map(i=>'<i style="background:'
+    +(i<=w.has(k)?B.col:(i===n?'rgba(255,255,255,.34)':'rgba(255,255,255,.08)'))+'"></i>').join('');
+  const nx = n<5 ? ('다음 <b>'+val(k,n+1)+'</b> · 비용 <b>'+num(cost(k,n+1))+'</b>') : '이 계열의 <b>마지막</b>';
+  return '<div class="sheet"><div class="shHd"><span class="shNm">'+esc(L.nm)+'</span>'
+    + '<span class="shN">'+n+'차 / 5</span>'
+    + '<span class="shBr" style="color:'+B.col+'">'+B.nm+' · '+g+' · T'+tier(k,n)+'</span></div>'
+    + '<div class="shDots">'+dots+'</div>'
+    + '<div class="shDesc">'+desc(k,n)+'</div>'
+    + '<div class="shStep"><span class="shNow">'+val(k,n-1)+'</span><span class="shArw">▶</span>'
+    + '<span class="shNext">'+val(k,n)+'</span>'
+    + '<span class="shAfter">'+nx+'</span></div>'
+    + '<div class="shWal">'
+    + '<div class="shCol"><div class="shCk num">비용</div><div class="shCv">'+num(c)+'</div></div>'
+    + '<div class="shCol"><div class="shCk num">사고 나면</div><div class="shCv sub">'
+      +(left>=0?num(left):'−'+num(-left))+'</div></div>'
+    + (own ? '<button class="shGo off">보유</button>'
+       : can ? '<button class="shGo">사 기</button>'
+             : '<button class="shGo off">포인트 부족</button>')
+    + '</div></div>'; }
+function frame(inner,tail){
+  return '<div class="ph"><div class="top"><span class="tt">환생 트리</span>'
+    + '<span class="pt num">포인트<b>'+num(PT)+'</b></span></div>' + inner + (tail||'') + '</div>'; }
+
+/* ══ 네 컷 — 진행도가 다르다 ══════════════════════════════════════ */
+let PT=0;
+function cut(bag,pts,opt){ PT=pts; const w=W(bag,pts);
+  return frame(scene(Object.assign({w},opt)), opt.tail); }
+
+/* ① 첫 환생 직후 — 별 다섯 */
+const B1={root:1};
+/* ② 갈래 하나 + 묶음 하나 + 계열 몇 칸 */
+const B2={root:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1};
+/* ③ 여러 회차 뒤 — 갈래 셋, 묶음 다섯, 계열 여럿 */
+const B3={root:1,'br:econ':1,'br:army':1,'br:enemy':1,
+  'gp:econ가':1,'gp:econ나':1,'gp:econ다':1,'gp:army가':1,'gp:enemy가':1,
+  gather:4,gas:2,wkCap:2,mine:1,idle:3,dgRw:1,atk:3,hp:1,foeHp:2,foeN:1};
+
+const MOCKS=[
+  [()=>cut(B1,12,{gid:'c1',seed:11,tail:'<div class="hint">갈래를 하나 사서 뻗어 나간다</div>'}),
+   '① 첫 환생 직후 — <b>별 다섯</b>','환생 하나와 <b>갈래 넷</b>뿐이다. 갈래를 사야 그 아래 묶음이 나타난다. '
+     +'<i>앞 목업이 여기서 32개를 깔고 있었다.</i>'],
+  [()=>cut(B2,900,{gid:'c2',seed:11,tail:'<div class="hint">별을 누르면 커지며 아래에 설명이 열린다</div>'}),
+   '② 조금 나아간 뒤','재화 갈래와 그 안 묶음 하나를 샀다. 산 별은 <b>숫자 없이 빛나는 점</b>, '
+     +'앞에 놓인 별에만 값이 붙는다. <i>선이 이어져 별자리로 읽힌다.</i>'],
+  [()=>cut(B3,12000,{gid:'c3',seed:11,tail:'<div class="hint">밀고 벌려서 본다</div>'}),
+   '③ 여러 회차 뒤','갈래 셋·묶음 다섯이 열렸다. 별이 많아져도 <b>산 별은 점</b>이라 숫자가 붐비지 않는다. '
+     +'<i>여기서 더 나아가면 밀고 확대해서 보게 된다.</i>'],
+  [()=>cut(B3,12000,{gid:'c4',seed:11,sel:{t:'n',a:'dgRw',b:2},zoom:1.62,up:-150,dim:1,
+     tail:DESEL+sheet(W(B3,12000),'dgRw',2)}),
+   '④ <b>눌렀을 때</b>','고른 별이 커지며 중앙 위로 오고 <b>주변은 물러난다</b>(⑤안). 아래에 모두 모았다 — '
+     +'<b>계열 진행도(5칸) · 설명 · 지금값 ▶ 다음값 · 그 다음 단계 예고 · 비용 · 사고 나면 남는 포인트 · 사기</b>. '
+     +'<i>⊘ 로 되돌린다.</i>'],
+];
+document.getElementById('g').innerHTML = MOCKS.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

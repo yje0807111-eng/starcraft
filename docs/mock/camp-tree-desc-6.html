@@ -1,0 +1,130 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 하단 — 설명 구역 6안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1980px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1060px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1060px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:22px}
+  .note{font-size:12px;line-height:1.55;color:#93a0b0;margin:8px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:380px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);background:#05070b}
+  .bg{position:absolute;inset:0;background:url('../../assets/backgrounds/reb/reb.webp') center 30% / cover no-repeat}
+  .bg::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(5,7,11,.30),rgba(5,7,11,.10) 26%,rgba(5,7,11,.55) 62%,rgba(5,7,11,.86))}
+  .S{position:absolute;left:0;right:0;bottom:0;z-index:2;
+    padding:16px 18px 18px;background:#080b11;border-top:1px solid rgba(255,255,255,.10)}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .nm{font-size:17px;font-weight:700;color:#f0f4f9}
+  .k{font-size:10px;letter-spacing:.18em;color:#69737f}
+  .ds{font-size:12.5px;line-height:1.7;color:#a7b2c0}
+  .ds b{color:#f0f4f9;font-weight:700}
+  .cost{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:16px;font-weight:700;color:var(--gold)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-md);
+    font:700 13px/1 inherit;letter-spacing:.08em;border:1px solid rgba(255,255,255,.14);
+    background:none;color:#8d9aa9;min-height:42px;padding:0 18px}
+  .hr{height:1px;background:rgba(255,255,255,.07)}
+</style>
+<div class="wrap">
+<h1>환생 트리 하단 — 설명 구역 6안</h1>
+<p class="lede">원형 게이지와 아래 줄(비용·버튼)은 <b>여섯 안 모두 같다</b>. 가운데 설명 구역만 다르다.</p>
+<p class="rule">지금 방식(①)의 약점은 <b>같은 문장을 두 번 쓴다</b>는 것이다 —
+  「…5배 증가합니다」 「…11배 증가합니다」. 눈이 두 줄을 다 읽고 나서야 <b>5 → 11</b> 을 스스로 계산한다.
+  <i>나머지 다섯은 그 계산을 화면이 대신해 준다.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+const D={ nm:'일꾼 채취량', n:4, ic:IC+'upgrades/up_mine.webp', have:3,
+  what:'일꾼의 1회 채취량', now:'5배', next:'11배', after:'25배',
+  cost:'16.8M', left:'−16.8M', btn:'올리기' };
+/* 원형 게이지 — 안에 무엇을 넣을지만 안마다 다르다 */
+function ring(inner, sz){
+  const R=(sz||56)/2-3, C=2*Math.PI*R;
+  return '<div style="position:relative;flex:0 0 '+(sz||56)+'px;height:'+(sz||56)+'px">'
+   +'<svg viewBox="0 0 '+(sz||56)+' '+(sz||56)+'" style="width:'+(sz||56)+'px;height:'+(sz||56)+'px;transform:rotate(-90deg)">'
+   +'<circle cx="'+((sz||56)/2)+'" cy="'+((sz||56)/2)+'" r="'+R+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>'
+   +'<circle cx="'+((sz||56)/2)+'" cy="'+((sz||56)/2)+'" r="'+R+'" fill="none" stroke="rgba(255,210,74,.7)" stroke-width="3"'
+   +' stroke-dasharray="'+C+'" stroke-dashoffset="'+(C*(1-D.have/5))+'" stroke-linecap="round"/></svg>'
+   +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">'+inner+'</div></div>'; }
+const ringIco = ring('<img src="'+D.ic+'" style="width:26px;height:26px;object-fit:contain;opacity:.9">');
+const ringNum = ring('<span class="num" style="font-size:15px;font-weight:800;color:#f0f4f9">'+D.n+'</span>'
+  +'<span class="num" style="font-size:10px;color:#69737f;margin-top:6px">/5</span>');
+function ph(mid, head){ return '<div class="ph"><div class="bg"></div><div class="S">'
+ + (head || ('<div style="display:flex;align-items:center;gap:14px">'+ringIco
+   +'<div style="flex:1;min-width:0"><div class="nm">'+D.nm+'</div>'
+   +'<div class="k" style="margin-top:3px">'+D.n+' / 5 단계</div></div></div>'))
+ + mid
+ + '<div class="hr" style="margin:14px 0"></div>'
+ + '<div style="display:flex;align-items:center;gap:10px">'
+ + '<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ + '<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>'
+ + '</div></div>'; }
+
+/* ① 지금 것 — 같은 문장 두 번 */
+const A1=()=>ph('<div class="ds" style="margin-top:13px;color:#69737f">'+D.what+'이 <b style="color:#8d9aa9;font-weight:400">'+D.now+'</b> 증가합니다.</div>'
+ +'<div class="ds" style="margin-top:2px">'+D.what+'이 <b>'+D.next+'</b> 증가합니다.</div>');
+
+/* ② 한 문장 안에서 값만 바뀐다 */
+const A2=()=>ph('<div class="ds" style="margin-top:13px;font-size:13px">'+D.what+'이 '
+ +'<b style="color:#7b8593;font-weight:400">'+D.now+'</b>'
+ +'<span style="color:#5b6674;margin:0 6px">→</span>'
+ +'<b>'+D.next+'</b> 증가합니다.</div>');
+
+/* ③ 문장 + 늘어나는 양을 따로 */
+const A3=()=>ph('<div class="ds" style="margin-top:13px">'+D.what+'이 <b>'+D.next+'</b> 증가합니다.</div>'
+ +'<div style="display:flex;align-items:center;gap:8px;margin-top:8px">'
+ +'<span class="k">지금보다</span>'
+ +'<span class="num" style="font-size:15px;font-weight:700;color:rgba(255,210,74,.9)">+6배</span>'
+ +'<span class="k" style="margin-left:6px">지금 '+D.now+'</span></div>');
+
+/* ④ 무엇을 / 얼마나 — 라벨과 값으로 가른다 */
+const A4=()=>ph('<div style="margin-top:13px">'
+ +'<div class="ds" style="color:#8d9aa9">'+D.what+'</div>'
+ +'<div style="display:flex;align-items:baseline;gap:9px;margin-top:5px">'
+ +'<span class="num" style="font-size:17px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674;font-size:12px">→</span>'
+ +'<span class="num" style="font-size:24px;font-weight:800;color:#f0f4f9;line-height:1">'+D.next+'</span>'
+ +'<span class="k" style="margin-left:auto">다음 '+D.after+'</span></div></div>');
+
+/* ⑤ 게이지 안에 단계, 문장은 하나만 */
+const A5=()=>ph('<div class="ds" style="margin-top:13px;font-size:13px">'+D.what+'이 <b>'+D.next+'</b> 증가합니다.</div>'
+ +'<div class="k" style="margin-top:6px">지금 '+D.now+' · 다음 단계 '+D.after+'</div>',
+ '<div style="display:flex;align-items:center;gap:14px">'+ringNum
+  +'<div style="flex:1;min-width:0"><div class="nm">'+D.nm+'</div>'
+  +'<div class="k" style="margin-top:3px">환생해도 남습니다</div></div></div>');
+
+/* ⑥ 문장을 두 조각으로 — 앞은 고정, 뒤만 바뀐다 */
+const A6=()=>ph('<div style="margin-top:13px;padding:11px 13px;border-radius:var(--r-md);'
+ +'background:rgba(255,255,255,.035)">'
+ +'<div class="ds" style="font-size:13px">'+D.what+'이</div>'
+ +'<div style="display:flex;align-items:baseline;gap:8px;margin-top:3px">'
+ +'<span class="num" style="font-size:26px;font-weight:800;color:#f0f4f9;line-height:1">'+D.next+'</span>'
+ +'<span class="ds" style="font-size:13px">증가합니다.</span>'
+ +'<span class="k" style="margin-left:auto">지금 '+D.now+'</span></div></div>');
+
+const M=[
+ [A1,'① 지금 것 — 같은 문장 두 번','두 줄을 다 읽어야 <b>5 → 11</b> 이 보인다. <i>가장 안전하고 가장 지루하다.</i>'],
+ [A2,'② 한 문장 안에서 값만 바뀐다','「…이 <b>5배 → 11배</b> 증가합니다」. 한 줄로 끝나고 <b>화살표가 변화를 말한다</b>. <i>가장 짧다.</i>'],
+ [A3,'③ 늘어나는 양을 따로','다음 값만 문장으로 두고, 아래에 <b>「+6배」</b> 를 따로 적는다. <i>「얼마나 이득인가」가 유일하게 숫자로 나온다.</i>'],
+ [A4,'④ 무엇을 / 얼마나','문장을 <b>대상(일꾼의 1회 채취량)</b> 과 <b>값(5배 → 11배)</b> 으로 가른다. 값이 커서 멀리서도 읽힌다.'],
+ [A5,'⑤ 게이지에 단계, 문장은 하나','고리 안에 <b>4/5</b> 를 넣어 단계를 옮기고, 아이콘 자리를 비운 만큼 <b>「환생해도 남습니다」</b> 를 적는다.'],
+ [A6,'⑥ 문장을 두 조각으로','「…이」 / <b>11배</b> / 「증가합니다」 로 끊어 <b>값이 문장 한가운데 서게</b> 한다. 옅은 판이 설명 구역을 묶는다.'],
+];
+document.getElementById('g').innerHTML = M.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

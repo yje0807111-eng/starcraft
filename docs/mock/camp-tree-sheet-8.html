@@ -1,0 +1,307 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 — 내부 디자인 8안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --info:#4aa8ff; --neon:#ff3b3b; --ok:#5dff8f; --sel:#5cd6ff;
+    --r-bar:3px; --r-md:6px; --r-lg:9px; --edge:rgba(255,255,255,.14);
+    --metal-edge:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1900px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1040px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1040px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:26px}
+  .note{font-size:12px;line-height:1.6;color:#93a0b0;margin:10px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:760px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:radial-gradient(120% 90% at 50% 40%,rgba(16,22,32,.98),rgba(5,7,11,.99))}
+  svg{display:block}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+
+  /* ── 공통 머리줄 ── */
+  .top{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:center;gap:12px;
+    padding:12px 12px 8px;background:linear-gradient(180deg,rgba(6,9,13,.92),rgba(6,9,13,0))}
+  .tt{font-size:12px;font-weight:800;color:#e8eef7}
+  .q{width:20px;height:20px;margin-left:-6px;border:1px solid rgba(255,255,255,.24);border-radius:50%;
+    background:rgba(255,255,255,.05);color:#9fb0c4;font:700 11px/1 var(--font-num);
+    display:flex;align-items:center;justify-content:center}
+  .pt{margin-left:auto;display:flex;align-items:baseline;gap:5px;font-size:10px;color:#9fb0c4;letter-spacing:.2em}
+  .pt b{font-family:var(--font-num);font-size:12px;font-weight:800;color:var(--gold);letter-spacing:0}
+  .desel{position:absolute;right:10px;top:40px;z-index:5;width:38px;height:38px;color:#dfe8f3;
+    display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 8px rgba(0,0,0,.85))}
+
+  /* ── 공통 조각 ── */
+  .dots{display:flex;gap:4px}
+  .dots i{flex:1;height:3px;border-radius:var(--r-bar)}
+  .ico{width:38px;height:38px;flex:0 0 auto;border-radius:var(--r-md);overflow:hidden;
+    border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);
+    display:flex;align-items:center;justify-content:center}
+  .ico img{width:32px;height:32px;object-fit:contain;display:block}
+  .gate{font-size:11px;line-height:1.5;color:#c8b68d;
+    border-left:2px solid rgba(255,177,77,.5);padding:3px 0 3px 9px;background:rgba(255,177,77,.05)}
+  .gate b{color:#ffd9a3}
+  /* 주 동작 — 로그인(.authBtn)의 서명: 면을 안 채우고 **밑변 1px 광원**만 */
+  .go{position:relative;display:inline-flex;align-items:center;justify-content:center;
+    min-height:44px;padding:0 20px;border:1px solid rgba(255,210,74,.5);border-radius:var(--r-md);
+    background:rgba(255,210,74,.09);color:#fff;font:800 14px/1 inherit;letter-spacing:.12em}
+  .go::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(255,210,74,.92),transparent);
+    box-shadow:0 0 4px rgba(255,210,74,.5)}
+  .go.off{border-color:rgba(255,255,255,.14);background:none;color:#69737f}
+  .go.off::after{display:none}
+  /* 로그인처럼 **판을 아예 벗은** 버튼 */
+  .goBare{position:relative;display:block;width:100%;min-height:46px;background:none;border:0;
+    color:#fff;font:800 15px/46px inherit;letter-spacing:.14em;text-align:center;
+    text-shadow:0 1px 2px rgba(0,0,0,.8)}
+  .goBare::after{content:'';position:absolute;left:11%;right:11%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
+      linear-gradient(90deg,transparent,rgba(255,210,74,.92),transparent)}
+  .goBare.off{color:#69737f}
+  .goBare.off::after{background:rgba(255,255,255,.12)}
+</style>
+<div class="wrap">
+<h1>환생 트리 — 내부 디자인 8안</h1>
+<p class="lede">지금 하단 구역은 <b>테두리 있는 판</b>이다. 그런데 이 게임의 다른 화면들은
+  대부분 <b>판을 벗고</b> 있다 — 로그인은 버튼조차 면이 없고(밑변 1px 광원만), 환생 화면도 판 없이
+  큰 숫자와 얇은 선으로만 서 있다. 그 어휘로 다시 짠 여덟 가지다.</p>
+<p class="rule"><b>참고한 것.</b> <b>로그인</b> — 판 없음 · 행 사이 헤어라인 · 밑변 1px 광원 버튼 ·
+  넓은 자간의 작은 부제. <b>환생 화면</b> — 큰 숫자가 주인공 · 국소 스크림으로 읽힘 확보 · 얇은 구분선.
+  <b>설정 창</b> — 모서리 컷(11px) · 1px 테두리 · 제목 아래 1px 선 · 깊은 그림자.
+  <i>여덟 안 모두 담는 정보는 같다 — 담는 그릇만 다르다.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+/* 보여 줄 별 하나 — 실제 값(관문에 걸린 상태) */
+const D = { nm:'일꾼 채취량', n:4, br:'재화 획득', col:'#ffd24a', gr:'흔함', tier:13,
+  ic:IC+'upgrades/up_mine.webp', now:'×5', next:'×11', after:'다음 ×25 · 4.3B',
+  cost:'16.8M', left:'−16.8M', have:3, sib:'가스 생산량', sibN:2, need:3, btn:'짝이 모자람', off:1 };
+const PT='12,000';
+
+function dots(col, have, n){ let o='';
+  for(let i=1;i<=5;i++) o += '<i style="background:'+(i<=have?col:(i===n?'rgba(255,255,255,.34)':'rgba(255,255,255,.08)'))+'"></i>';
+  return o; }
+/* 배경 별자리 — 안마다 같은 그림(그릇만 비교하기 위해) */
+function stars(dim){
+  let o='<defs><filter id="gg"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge>'
+    +'<feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  let s=9; const rnd=()=>{ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
+  for(let i=0;i<90;i++){ const a=rnd()*Math.PI*2, r=30+rnd()*300;
+    o+='<circle cx="'+(215+Math.cos(a)*r).toFixed(0)+'" cy="'+(300+Math.sin(a)*r*.8).toFixed(0)
+      +'" r="'+(.4+rnd()*1).toFixed(2)+'" fill="#cfe0f2" opacity="'+(.06+rnd()*.18).toFixed(2)+'"/>'; }
+  const P=[[215,300],[262,232],[300,180],[196,236],[150,196],[292,286],[336,258]];
+  const L=[[0,1],[1,2],[0,3],[3,4],[0,5],[5,6]];
+  const op = dim ? .30 : 1;
+  L.forEach(([a,b])=>{ o+='<line x1="'+P[a][0]+'" y1="'+P[a][1]+'" x2="'+P[b][0]+'" y2="'+P[b][1]
+    +'" stroke="#ffd24a" stroke-width="1.6" opacity="'+(.5*op).toFixed(2)+'"/>'; });
+  P.forEach((p,i)=>{ o+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i?3.4:5)+'" fill="'+(i?'#ffd24a':'#ff5a3c')
+    +'" filter="url(#gg)" opacity="'+op+'"/>'; });
+  // 고른 별 — 시안 고리
+  o+='<circle cx="300" cy="180" r="20" fill="rgba(7,10,15,.94)" stroke="#ffd24a" stroke-width="1.6" opacity="'+op+'"/>';
+  o+='<image href="'+D.ic+'" x="289" y="169" width="22" height="22" opacity="'+op+'"/>';
+  o+='<circle cx="300" cy="180" r="25" fill="none" stroke="#5cd6ff" stroke-width="1.1" opacity="'+(.85*op)+'"/>';
+  return '<svg viewBox="0 0 430 760" style="position:absolute;inset:0;width:430px;height:760px">'+o+'</svg>';
+}
+function head(){ return '<div class="top"><span class="tt">🌳 환생 트리</span>'
+  +'<span class="q">?</span><span class="pt">포인트<b>'+PT+'</b></span></div>'
+  +'<div class="desel"><svg viewBox="0 0 24 24" width="26" height="26">'
+  +'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+  +'<line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>'; }
+function ph(inner, dim){ return '<div class="ph">'+stars(dim)+head()+inner+'</div>'; }
+
+/* ════════════════════════════════════════════════════════════════════ */
+const sheetA = () => ('<div style="position:absolute;left:0;right:0;bottom:0;padding:18px 18px 20px;'
+ +'background:linear-gradient(180deg,rgba(6,9,13,0),rgba(6,9,13,.72) 22%,rgba(5,7,11,.96) 55%,#05070b)">'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="ico"><img src="'+D.ic+'"></span>'
+ +'<div style="min-width:0"><div style="font-size:18px;font-weight:700;color:#fff;text-shadow:0 2px 10px #000">'+D.nm
+ +'<span class="num" style="font-size:12px;color:#8d9aa9;margin-left:7px">'+D.n+' / 5</span></div>'
+ +'<div style="font-size:10px;letter-spacing:.18em;color:#8d9aa9;margin-top:3px">'
+ +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'</div></div></div>'
+ +'<div class="dots" style="margin-top:11px">'+dots(D.col,D.have,D.n)+'</div>'
+ +'<div class="gate" style="margin-top:11px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;align-items:baseline;gap:9px;margin-top:14px;padding-top:12px;'
+ +'border-top:1px solid rgba(255,255,255,.09)">'
+ +'<span class="num" style="font-size:16px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674;font-size:12px;align-self:center">▶</span>'
+ +'<span class="num" style="font-size:30px;font-weight:800;color:#fff;line-height:1;text-shadow:0 2px 14px #000">'+D.next+'</span>'
+ +'<span style="margin-left:auto;align-self:center;font-size:10px;color:#69737f">'+D.after+'</span></div>'
+ +'<div style="display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;'
+ +'border-top:1px solid rgba(255,255,255,.09)">'
+ +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">비용</div>'
+ +'<div class="num" style="font-size:19px;font-weight:800;color:var(--gold);line-height:22px">'+D.cost+'</div></div>'
+ +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">잔여</div>'
+ +'<div class="num" style="font-size:14px;color:#8d9aa9;line-height:22px">'+D.left+'</div></div>'
+ +'<button class="go off" style="margin-left:auto">'+D.btn+'</button></div></div>');
+const A = () => ph(sheetA());
+
+const B = () => ph('<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 16px 18px;'
+ +'background:linear-gradient(180deg,rgba(20,20,20,.92),rgba(12,12,12,.96));border:1px solid var(--metal-edge);'
+ +'border-bottom:0;clip-path:polygon(14px 0,100% 0,100% 100%,0 100%,0 14px);'
+ +'box-shadow:0 -16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)">'
+ +'<div style="position:relative;display:flex;align-items:center;gap:10px;padding-bottom:11px">'
+ +'<span class="ico"><img src="'+D.ic+'"></span>'
+ +'<div><div style="font-size:17px;font-weight:700;color:#fff">'+D.nm
+ +'<span class="num" style="font-size:12px;color:#8d9aa9;margin-left:7px">'+D.n+' / 5</span></div>'
+ +'<div style="font-size:10px;letter-spacing:.18em;color:#8d9aa9;margin-top:2px">'
+ +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'</div></div>'
+ +'<div style="position:absolute;left:0;right:0;bottom:0;height:1px;'
+ +'background:linear-gradient(90deg,rgba(255,255,255,.34),rgba(255,255,255,.05) 60%,transparent)"></div></div>'
+ +'<div class="dots" style="margin-top:11px">'+dots(D.col,D.have,D.n)+'</div>'
+ +'<div class="gate" style="margin-top:11px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;align-items:baseline;gap:9px;margin-top:12px">'
+ +'<span class="num" style="font-size:16px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674;font-size:12px;align-self:center">▶</span>'
+ +'<span class="num" style="font-size:28px;font-weight:800;color:#fff;line-height:1">'+D.next+'</span>'
+ +'<span style="margin-left:auto;align-self:center;font-size:10px;color:#69737f">'+D.after+'</span></div>'
+ +'<div style="display:flex;align-items:center;gap:14px;margin-top:12px;padding-top:11px;'
+ +'border-top:1px solid rgba(255,255,255,.08)">'
+ +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">비용</div>'
+ +'<div class="num" style="font-size:19px;font-weight:800;color:var(--gold);line-height:22px">'+D.cost+'</div></div>'
+ +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">잔여</div>'
+ +'<div class="num" style="font-size:14px;color:#8d9aa9;line-height:22px">'+D.left+'</div></div>'
+ +'<button class="go off" style="margin-left:auto">'+D.btn+'</button></div></div>');
+
+const C = () => ph('<div style="position:absolute;left:0;right:0;bottom:0;padding:0 20px 22px;'
+ +'background:linear-gradient(180deg,rgba(6,9,13,0),rgba(6,9,13,.80) 26%,#05070b 62%)">'
+ +'<div style="text-align:center;padding-top:26px">'
+ +'<div style="font-size:10px;letter-spacing:.34em;color:#a7b2c0;text-shadow:0 1px 6px #000">'+D.nm+' '+D.n+'차</div>'
+ +'<div class="num" style="font-size:62px;font-weight:800;color:#fff;line-height:1;margin-top:6px;'
+ +'text-shadow:0 3px 22px #000">'+D.next+'</div>'
+ +'<div class="num" style="font-size:13px;color:#9aa5b3;margin-top:3px">현재 '+D.now+'</div></div>'
+ +'<div class="dots" style="margin-top:16px">'+dots(D.col,D.have,D.n)+'</div>'
+ +'<div style="display:flex;justify-content:space-between;font-size:10px;letter-spacing:.14em;'
+ +'color:#69737f;margin-top:7px"><span style="color:'+D.col+'">'+D.br+' · '+D.gr+'</span><span>T'+D.tier+'</span></div>'
+ +'<div class="gate" style="margin-top:13px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;'
+ +'padding-top:11px;border-top:1px solid rgba(255,255,255,.09)">'
+ +'<span style="font-size:10px;letter-spacing:.2em;color:#69737f">비용</span>'
+ +'<span class="num" style="font-size:20px;font-weight:800;color:var(--gold)">'+D.cost+'</span></div>'
+ +'<button class="goBare off" style="margin-top:6px">'+D.btn+'</button></div>');
+
+const E = () => ph('<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 18px 20px;'
+ +'background:linear-gradient(180deg,rgba(6,9,13,0),rgba(5,7,11,.95) 34%,#05070b)">'
+ +'<div style="display:flex;gap:16px">'
+ +'<div style="flex:0 0 128px;text-align:center">'
+ +'<div style="width:64px;height:64px;margin:0 auto;border-radius:var(--r-lg);display:flex;'
+ +'align-items:center;justify-content:center;border:1px solid rgba(255,210,74,.34);background:rgba(255,210,74,.06)">'
+ +'<img src="'+D.ic+'" style="width:46px;height:46px;object-fit:contain"></div>'
+ +'<div style="font-size:13px;font-weight:700;color:#fff;margin-top:9px;line-height:1.3">'+D.nm+'</div>'
+ +'<div class="num" style="font-size:11px;color:#8d9aa9;margin-top:2px">'+D.n+' / 5</div>'
+ +'<div class="dots" style="margin-top:8px">'+dots(D.col,D.have,D.n)+'</div></div>'
+ +'<div style="flex:1;min-width:0;border-left:1px solid rgba(255,255,255,.09);padding-left:16px">'
+ +'<div style="font-size:10px;letter-spacing:.18em;color:#8d9aa9">'
+ +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'</div>'
+ +'<div style="display:flex;align-items:baseline;gap:8px;margin-top:9px">'
+ +'<span class="num" style="font-size:15px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674;font-size:11px;align-self:center">▶</span>'
+ +'<span class="num" style="font-size:30px;font-weight:800;color:#fff;line-height:1">'+D.next+'</span></div>'
+ +'<div style="font-size:10px;color:#69737f;margin-top:4px">'+D.after+'</div>'
+ +'<div class="gate" style="margin-top:11px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;align-items:flex-end;gap:12px;margin-top:12px">'
+ +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">비용</div>'
+ +'<div class="num" style="font-size:18px;font-weight:800;color:var(--gold);line-height:21px">'+D.cost+'</div></div>'
+ +'<button class="go off" style="margin-left:auto">'+D.btn+'</button></div></div></div></div>');
+
+const F = () => ph('<div style="position:absolute;inset:0;background:rgba(3,5,9,.62);backdrop-filter:blur(1px)"></div>'
+ +'<div style="position:absolute;left:22px;right:22px;top:50%;transform:translateY(-50%);padding:16px 16px 15px;'
+ +'background:linear-gradient(180deg,rgba(25,25,25,.94),rgba(14,14,14,.96));border:1px solid var(--metal-edge);'
+ +'clip-path:polygon(13px 0,100% 0,100% calc(100% - 13px),calc(100% - 13px) 100%,0 100%,0 13px);'
+ +'box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)">'
+ +'<div style="position:relative;display:flex;align-items:center;gap:10px;padding-bottom:11px">'
+ +'<span class="ico"><img src="'+D.ic+'"></span>'
+ +'<div><div style="font-size:16px;font-weight:700;color:#fff">'+D.nm
+ +'<span class="num" style="font-size:12px;color:#8d9aa9;margin-left:7px">'+D.n+' / 5</span></div>'
+ +'<div style="font-size:10px;letter-spacing:.18em;color:#8d9aa9;margin-top:2px">'
+ +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'</div></div>'
+ +'<div style="position:absolute;left:0;right:0;bottom:0;height:1px;'
+ +'background:linear-gradient(90deg,rgba(255,255,255,.34),rgba(255,255,255,.05) 60%,transparent)"></div></div>'
+ +'<div class="dots" style="margin-top:11px">'+dots(D.col,D.have,D.n)+'</div>'
+ +'<div style="display:flex;align-items:baseline;gap:9px;margin-top:12px">'
+ +'<span class="num" style="font-size:15px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674;font-size:11px;align-self:center">▶</span>'
+ +'<span class="num" style="font-size:28px;font-weight:800;color:#fff;line-height:1">'+D.next+'</span>'
+ +'<span style="margin-left:auto;align-self:center;font-size:10px;color:#69737f">'+D.after+'</span></div>'
+ +'<div class="gate" style="margin-top:11px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;align-items:center;gap:12px;margin-top:13px;padding-top:11px;'
+ +'border-top:1px solid rgba(255,255,255,.08)">'
+ +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">비용</div>'
+ +'<div class="num" style="font-size:18px;font-weight:800;color:var(--gold);line-height:21px">'+D.cost+'</div></div>'
+ +'<button class="go off" style="margin-left:auto">'+D.btn+'</button></div></div>');
+
+const G = () => ph('<div style="position:absolute;left:0;right:0;bottom:0;padding:14px 16px 18px;'
+ +'background:linear-gradient(180deg,rgba(6,9,13,0),rgba(5,7,11,.96) 40%,#05070b)">'
+ +'<div style="display:flex;align-items:center;gap:11px">'
+ +'<span class="ico" style="width:44px;height:44px"><img src="'+D.ic+'" style="width:36px;height:36px"></span>'
+ +'<div style="flex:1;min-width:0">'
+ +'<div style="display:flex;align-items:baseline;gap:7px">'
+ +'<span style="font-size:15px;font-weight:700;color:#fff">'+D.nm+'</span>'
+ +'<span class="num" style="font-size:11px;color:#8d9aa9">'+D.n+'/5</span>'
+ +'<span class="num" style="margin-left:auto;font-size:24px;font-weight:800;color:#fff;line-height:1">'+D.next+'</span></div>'
+ +'<div class="dots" style="margin-top:7px">'+dots(D.col,D.have,D.n)+'</div></div></div>'
+ +'<div class="gate" style="margin-top:11px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:12px">'
+ +'<div style="flex:1;font-size:10px;letter-spacing:.16em;color:#69737f">'
+ +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'<br>'
+ +'<span class="num" style="color:#8d9aa9">'+D.now+' ▶ '+D.next+'</span> · '+D.after+'</div>'
+ +'<div style="text-align:right"><div style="font-size:9px;color:#69737f;letter-spacing:.2em">비용</div>'
+ +'<div class="num" style="font-size:18px;font-weight:800;color:var(--gold);line-height:21px">'+D.cost+'</div></div></div>'
+ +'<button class="goBare off" style="margin-top:10px">'+D.btn+'</button></div>');
+
+const H = () => ph('<div style="position:absolute;left:0;right:0;bottom:0;padding:16px 18px 20px;'
+ +'background:linear-gradient(180deg,rgba(6,9,13,0),rgba(5,7,11,.95) 34%,#05070b)">'
+ +'<div style="text-align:center;font-size:10px;letter-spacing:.32em;color:#7b8593">'
+ +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'</div>'
+ +'<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:8px">'
+ +'<span class="ico" style="width:32px;height:32px;border:0;background:none">'
+ +'<img src="'+D.ic+'" style="width:30px;height:30px"></span>'
+ +'<span style="font-size:19px;font-weight:700;color:#fff">'+D.nm+'</span>'
+ +'<span class="num" style="font-size:12px;color:#8d9aa9">'+D.n+' / 5</span></div>'
+ +'<div class="dots" style="margin-top:12px">'+dots(D.col,D.have,D.n)+'</div>'
+ +'<div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px">'
+ +'<span class="num" style="font-size:17px;color:#7b8593">'+D.now+'</span>'
+ +'<span style="color:#5b6674">▶</span>'
+ +'<span class="num" style="font-size:40px;font-weight:800;color:#fff;line-height:1;text-shadow:0 3px 18px #000">'+D.next+'</span></div>'
+ +'<div style="text-align:center;font-size:10px;color:#69737f;margin-top:5px">'+D.after+'</div>'
+ +'<div class="gate" style="margin-top:13px">🔒 '+D.sib+' <b>'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+ +'<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;'
+ +'padding-top:11px;border-top:1px solid rgba(255,255,255,.09)">'
+ +'<span style="font-size:10px;letter-spacing:.2em;color:#69737f">비용</span>'
+ +'<span><span class="num" style="font-size:20px;font-weight:800;color:var(--gold)">'+D.cost+'</span>'
+ +'<span class="num" style="font-size:12px;color:#69737f;margin-left:8px">잔여 '+D.left+'</span></span></div>'
+ +'<button class="goBare off" style="margin-top:4px">'+D.btn+'</button></div>');
+
+const MOCKS=[
+  [A,'① 판을 벗는다 — <b>로그인의 어휘</b>','테두리와 면을 지우고 <b>스크림만</b> 깐다. 별자리가 시트 뒤로 이어져 '
+    +'화면이 끊기지 않는다. <i>이 게임의 다른 화면들과 가장 잘 맞는다.</i>'],
+  [B,'② 모서리 컷 — <b>설정 창의 어휘</b>','왼쪽 위를 자른 판(clip-path 14px) + 1px 테두리 + 제목 아래 헤어라인. '
+    +'<i>가장 「창」답고, 가장 무겁다.</i>'],
+  [C,'③ 큰 숫자 — <b>환생 화면의 어휘</b>','값을 <b>62px</b> 로 키워 주인공으로 올린다. 이름은 넓은 자간의 작은 글씨로 '
+    +'위에 얹는다. <i>사는 것이 아니라 「얼마가 되는가」를 보는 화면이 된다.</i>'],
+  [E,'④ 좌우로 가른다','왼쪽은 <b>정체성</b>(아이콘·이름·진행도), 오른쪽은 <b>거래</b>(값·비용·버튼). '
+    +'세로를 덜 먹어 별자리가 더 보인다. <i>아이콘을 크게 쓸 수 있다.</i>'],
+  [F,'⑤ 가운데 창','시트를 버리고 <b>화면 가운데</b>에 띄운다(설정 팝업과 같은 자리). 뒤는 흐려진다. '
+    +'<i>집중은 가장 세고, 별자리는 가장 안 보인다.</i>'],
+  [G,'⑥ 한 줄로 압축','이름과 값을 <b>한 줄</b>에 놓고 나머지는 작게 눕힌다. 세로 172px. '
+    +'<i>별자리를 가장 많이 남긴다 — 대신 읽을 것이 빽빽하다.</i>'],
+  [H,'⑦ 가운데 정렬','모든 것을 가운데로 모으고 값을 <b>40px</b> 로. 로그인 화면의 중앙 정렬 리듬을 그대로 쓴다. '
+    +'<i>차분하지만 세로를 많이 먹는다.</i>'],
+  [()=>ph(sheetA(), 1),'⑧ ①과 같되 — <b>뒤를 더 물린다</b>',
+    '①에서 별자리 쪽을 더 어둡게 눌렀다. 시트가 저절로 앞으로 나온다. '
+    +'<i>판을 안 쓰고도 「여기를 보라」가 된다 — 판을 벗는 대신 밝기로 층을 만든다.</i>'],
+];
+document.getElementById('g').innerHTML = MOCKS.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>
