@@ -295,9 +295,14 @@ const DPR=Math.min(devicePixelRatio||1,2);
 
 // 인게임 조명 구성(단일 소스) — 오프스크린 렌더 등 다른 씬에서도 같은 광원을 재현할 수 있게 함수로 둔다.
 function addGameLights(sc){
-  sc.add(new THREE.AmbientLight(0xffffff,1.25));   // 환경광이 채움 → 앰비언트 낮춰 대비 확보
-  const d1=new THREE.DirectionalLight(0xffffff,1.9); d1.position.set(0.5,1,0.9); sc.add(d1);
-  const d2=new THREE.DirectionalLight(0xbfe0ff,0.7); d2.position.set(-0.6,0.3,-0.5); sc.add(d2);
+  // ☀ 광원은 **오른쪽 위** — 그래서 모델의 **왼쪽 아래**가 그늘진다(2026-08-31 사용자 확정).
+  //   ⚠ DOM 접지 그림자도 같은 쪽(좌하단)으로 민다(SHD_DX/SHD_DY · 16-build.js). 둘이 어긋나면
+  //     한 화면에 광원이 둘 있는 것처럼 보인다.
+  //   ⭐ 환경광을 낮출수록 그늘이 깊어진다 — 1.25 → 0.95 (「건물이 더 그늘졌으면」 요청).
+  sc.add(new THREE.AmbientLight(0xffffff,0.95));
+  const d1=new THREE.DirectionalLight(0xffffff,2.05); d1.position.set(0.6,1,0.85); sc.add(d1);
+  // ⚠ 반대편 보강광이 세면 그늘이 도로 채워진다 — 0.7 → 0.45 로 낮춰 왼쪽 아래를 남긴다.
+  const d2=new THREE.DirectionalLight(0xbfe0ff,0.45); d2.position.set(-0.6,0.3,-0.5); sc.add(d2);
   const d3=new THREE.DirectionalLight(0xffffff,0.6); d3.position.set(0,0.4,-1); sc.add(d3); // 정면 보강광
 }
 function init(){

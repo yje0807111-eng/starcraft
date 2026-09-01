@@ -7173,7 +7173,9 @@ async function groupLobby(){
     try{
       if(!C.race) C.race=CAMP_RACE_ORDER[0];
       openHome(); await sleep(500);
-      const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr')];
+      // ⚠ .shade 는 **아래쪽 그늘용 사본**이다(같은 그림을 한 장 더 겹쳐 마스크로 아래만 남긴다).
+      //   세는 대상이 아니다 — 안 빼면 칸 수의 두 배가 나와 이 검사가 헛돈다(2026-08-31 에 그랬다).
+      const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr:not(.shade)')];
       skipIf(!sp.length,'광맥이 아직 안 그려졌다');
       assert(sp.length===(G.tech.minerals||[]).length,'그림 수가 광맥 칸 수와 다르다: '+sp.length);
       // 지금은 1번 하나로 통일한다. ⛔ 좌우 뒤집기를 되살리지 말 것(2026-08-31 사용자 확정) —

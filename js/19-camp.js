@@ -2356,6 +2356,12 @@ function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); 
 // ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다(캠프 광맥은 마르지 않는다).
 //   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 고르게 바꾼다.
 const CAMP_MINE_SPRITE = ['1','1','1', '1','1','1'];
+// 💎 결정 덩어리의 **크기와 간격**(2026-08-31 사용자 요청 — 「조금 키우고 간격을 아주 조금 벌리자」)
+//   ⚠ 둘은 함께 움직인다: 키우기만 하면 서로 겹치고, 벌리기만 하면 사이가 휑해진다.
+//   ⛔ 간격을 키울 때 x0(왼끝) 기준으로 곱하면 줄 전체가 오른쪽으로 밀린다 —
+//      **가운데를 축으로** 벌려야 제자리에 있다(campLayMinerals 참고).
+const CAMP_MINE_SCALE = 1.50;   // 스프라이트 크기(칸 대비) — 옛 1.34
+const CAMP_MINE_GAP   = 1.12;   // 이웃 간 간격 배수
 // ⛔ **좌우 뒤집기를 쓰지 않는다**(2026-08-31 사용자 확정). 같은 그림을 그대로 반복한다 —
 //   뒤집으면 광원 방향이 칸마다 반대가 되어 오히려 눈에 걸린다. 반복이 거슬리면 뒤집지 말고
 //   그림을 한 장 더 뽑는다(stage2…). 가스도 같은 규칙이다.
@@ -2391,9 +2397,12 @@ function campLayMinerals(){
   // 🏹 가운데가 처진 호 — t 는 -1(왼끝) ~ +1(오른끝), 가운데에서 가장 깊다.
   //   ⛔ 칸(행)으로 계단을 만들지 말 것 — 일곱이 계단처럼 꺾여 보인다. 연속 좌표로 부드럽게.
   const _last = Math.max(1, CAMP_MINE_COLS - 1);
+  const _mid = _last / 2;                       // 줄의 가운데(칸 단위) — 벌리기의 축
   for(let r = 0; r < CAMP_MINE_ROWS; r++) for(let c = 0; c < CAMP_MINE_COLS; c++)
     G.tech.minerals.push({ eid:G.tech.eseq++,
-      x: x0 + c * cw, y: y0 + (r + (1 - Math.pow(c / _last * 2 - 1, 2)) * CAMP_MINE_ARC) * ch,
+      // ⭐ 가운데를 축으로 벌린다 — x0 기준으로 곱하면 줄이 통째로 오른쪽으로 밀린다.
+      x: x0 + (_mid + (c - _mid) * CAMP_MINE_GAP) * cw,
+      y: y0 + (r + (1 - Math.pow(c / _last * 2 - 1, 2)) * CAMP_MINE_ARC) * ch,
       // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
       //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
       //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.

@@ -874,6 +874,13 @@ const CST_BLDG_CFG={
 };
 try{ if(typeof window!=='undefined') window.CST_BLDG_CFG=CST_BLDG_CFG; }catch(_e){}
 const CST_YSHIFT=34;   // 건설 건물 3D 전체를 화면 아래로 내리는 양(px). 키우면 더 아래로.
+// 🌑 접지 그림자의 **방향** — 광원을 좌상단에 두고 그림자를 우하단으로 민다(2026-08-31).
+//   ⛔ 정중앙 아래에 두면 「그냥 아래로 내려온 얼룩」으로 보인다 — 방향이 있어야 빛이 읽힌다.
+//   값은 **오브젝트 폭 대비 비율**이라 크기가 달라도 방향이 같게 유지된다.
+//   ⚠ 너무 키우면 그림자가 발에서 떨어져 따로 논다. 0.10~0.16 사이가 붙어 보이는 한계다.
+//   ⭐ DX 가 **음수**인 것은 광원이 오른쪽 위이기 때문이다 — 3D 주광(90-m3d.module.js d1)과
+//     같은 쪽을 봐야 한다. 한쪽만 뒤집으면 한 화면에 광원이 둘 있는 것처럼 보인다.
+const SHD_DX=-0.13, SHD_DY=0.09;
 const CST_YAW=-0.52;   // 유니온·에테리얼 정면 회전(라디안). -0.52≈왼쪽 30°.
 try{ if(typeof window!=='undefined') window.CST_YAW=CST_YAW; }catch(_e){}   // 업그레이드 탭 각도 통일용(모듈에서 참조)
 const TECH_WORKER={ union:'worker_human', swarm:'worker_swarm', aetherial:'worker_light', feral:'worker_feral', colossus:'worker_col' };   // 종족별 일꾼(모델 없으면 2D 폴백)
@@ -1021,6 +1028,26 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     if(e.type==='bldg'){ const _b=techGetBldg(race,e.bk)||{}; cls='bldg live3d'; inner='';
       const _bf=(typeof _techFoot==='function')?_techFoot(race,e.bk):{w:2,h:2}, _byB=e.y+(_bf.h/2)*_techCH(), _sb=_techW2S(e.x,_byB);
       const _hw=Math.max(0.05,_bf.w*_techCW()*techView().zoom), _ratio=(e.bt>0)?Math.max(0,Math.min(1,1-e.bt/(e.btMax||1))):1;   // 바 폭=발판 폭(줌) · 건설 중=진행도/완성=풀
+      // 🌑 접지 그림자 — 땅에 붙어 있는 동안만. 3D 가 그림자를 안 만들어 배경 위에 떠 보였다.
+      if(!e._lifted){
+        // 🌑 **건물만 3D 원형 그림자가 꺼져 있다** — m3d 는 fitW 를 받은 것(=격자 건물)의
+        //    shadow.visible 을 false 로 두고 「DOM 그림자로 대체」하라고 적어 두었는데
+        //    (90-m3d.module.js:1359), 그 DOM 그림자가 이제까지 **이륙 중일 때만** 있었다.
+        //    그래서 땅에 선 건물은 그림자가 하나도 없었다. 여기서 그 자리를 채운다.
+        // ⭐ 크기·자리는 **3D 그림자 규격 그대로**다: 모델 폭(발판×CST_BVIS)의 0.92배,
+        //    중심은 모델 base = 발판 하단(_sb). 그래야 유닛 그림자와 한 세계에 있다.
+        // ⛔ **CST_YSHIFT(34px)를 더하지 말 것** — 2026-08-31 에 넣었다가 되돌렸다.
+        //    _sb 는 이미 **발판 하단**이라 건물 밑동 근처다. 거기에 34px 을 또 더하니 그림자가
+        //    본부에서 한참 내려가 **미네랄 줄 근처**에 찍혔다. 기준은 _sb 하나로 충분하다.
+        const _gw=Math.max(0.06,_bf.w*_techCW()*techView().zoom*CST_BVIS*1.04);
+        // ⚠ 오프셋은 **폭에 비례**하므로 건물처럼 큰 것에서는 절대량이 커져 그림자가 발에서
+        //    떨어져 보인다(2026-08-31: 「바깥에 있는 느낌」). 큰 것일수록 덜 민다.
+        // 건물의 방향 오프셋 배수 — 눈으로 세 번 맞췄다(2026-08-31):
+        //   1.00 너무 바깥 · 0.45 너무 가운데 · 0.70 조금 왼쪽 · **0.58 이 자리**
+        const _gk=0.82;
+        ents+='<div class="bGndShadow" style="left:'+((_sb.x+_gw*SHD_DX*_gk)*100).toFixed(2)
+          +'%;top:'+((_sb.y-_gw*0.115+_gw*SHD_DY*_gk*0.42)*100).toFixed(2)
+          +'%;width:'+(_gw*100).toFixed(2)+'%;height:'+(_gw*0.42*100).toFixed(2)+'%"></div>'; }
       if(e._lifted){ const _sc=_sb, _sw=Math.max(0.07,_bf.w*_techCW()*techView().zoom*1.25);   // 🛫 지면 그림자(발판 하단) — 발판보다 넓게, 높이(_liftH)만큼 진해짐
         ents+='<div class="bLiftShadow" style="left:'+(_sc.x*100).toFixed(2)+'%;top:'+(_sc.y*100).toFixed(2)+'%;width:'+(_sw*100).toFixed(2)+'%;height:'+(_sw*0.46*100).toFixed(2)+'%;opacity:'+(0.15+0.4*(e._liftH||0)).toFixed(2)+'"></div>'; }
       if(e.bt>0) labels+='<div class="bldHp bld" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%;width:'+(_hw*100).toFixed(2)+'%"><i style="width:'+(_ratio*100).toFixed(1)+'%"></i></div>';   // 건설 중=진행도 바(실시간 차오름) · 완성+지정 = 아래 쉴드/HP/마나 바로 대체
@@ -1043,6 +1070,8 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       const _rep=(e.type==='worker'&&e._repairing)?'<span style="position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:13px">🔧</span>':'';   // 🔧 수리 중 표시
       inner=(_h3?_rep:(e.type==='worker'?'<span class="be-ico">👷</span>'+_rep:_techUnitPortrait(e.uid)))+_ore; }
     const _seld=(G.tech.sel===e.eid)||(G.tech.selU&&G.tech.selU.indexOf(e.eid)>=0);
+    // ⛔ 유닛에는 DOM 그림자를 넣지 않는다 — **3D 가 이미 원형 그림자를 그린다**
+    //    (90-m3d.module.js 의 shadow 메시 · 공중 유닛만 noShadow 로 끈다). 겹치면 두 겹이 된다.
     const _s=_techW2S(e.x,e.y); ents+='<div class="bent '+cls+(_seld?' sel':'')+(e._illusion?' illusion':'')+'" style="left:'+(_s.x*100).toFixed(2)+'%;top:'+(_s.y*100).toFixed(2)+'%;transform:translate(-50%,-50%) scale('+techView().zoom.toFixed(2)+')">'+inner+'</div>';
     if(_seld && e.type!=='egg' && e.type!=='larva' && !(e.type==='bldg'&&e.bt>0)){   // 🛡 지정 시 쉴드+HP(+마나) 바 — 건설탭도 표시(전투 아님=항상 가득)
       let _mHp=0,_mSh=0,_mEn=0,_bx=_s.x,_bTop,_bW;
@@ -1125,8 +1154,12 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     // 🏕 캠프는 **그림 스프라이트**로 그린다(미네랄과 같은 규칙 · 2026-08-31).
     //   ⛔ 오른쪽 구역(#campGas2)을 따로 그리지 말 것 — 그쪽은 이 마크업을 **복제**한다(js/19-camp.js).
     const _gspr=(typeof campGasSprite==='function') ? campGasSprite() : '';
+    // ⛽ 그림자는 **.bGasZone 안**에 넣는다 — 오른쪽 구역(#campGas2)이 이 innerHTML 을
+    //    통째로 복제하므로(campDrawGas2), 안에 있어야 오른쪽에도 저절로 생긴다.
+    //    ⛔ 바깥에 두면 왼쪽에만 그림자가 생겨 좌우가 달라 보인다(2026-08-31 에 그랬다).
+    //    자리는 부모 기준 % 라 절대 좌표 계산이 필요 없다(css/10-game.css .bGasZone .bGndShadow).
     gasZone='<div class="bGasZone'+(_gArm?' hot':'')+(_res3d&&!_gspr?' d3':'')+(_gspr?' spr':'')+'" style="left:'+(_gtl.x*100).toFixed(2)+'%;top:'+(_gtl.y*100).toFixed(2)+'%;width:'+((_gbr.x-_gtl.x)*100).toFixed(2)+'%;height:'+((_gbr.y-_gtl.y)*100).toFixed(2)+'%">'
-      +(_gspr ? '<img class="gzSpr" src="'+_gspr+'" alt="">'
+      +(_gspr ? '<div class="bGndShadow"></div><img class="gzSpr" src="'+_gspr+'" alt="">'
               : (_res3d?'':'<span class="gzIco">💨</span>'))
       +'<span class="gzLbl">에너지 광산</span></div>'; }   // 선택 표시는 3D 하단 링
   let hillZ='';   // ⛰ 고지대(언덕) — 좌하단 테스트 지형. 저지→고지 시야 차단 확인용
@@ -1139,10 +1172,19 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   { const _mcw=_techCW(), _mch=_techCH(); let _mi=0; for(const m of (G.tech.minerals||[])){
     const _spr=(typeof campMineSprite==='function') ? campMineSprite(m, _mi) : '';
     // ⚠ 스프라이트는 칸보다 크다 — 결정이 칸 밖으로 자라는 것이 자연스럽다. 아래(발치)를 칸에 맞춘다.
-    const _k=_spr?1.34:1.2, _dy=_spr?0.30:0;
+    // ⚠ 스프라이트 크기는 **캠프가 정한다**(CAMP_MINE_SCALE) — 여기 숫자를 박으면 두 벌이 된다.
+    const _k=_spr?((typeof CAMP_MINE_SCALE!=='undefined')?CAMP_MINE_SCALE:1.34):1.2, _dy=_spr?0.30:0;
     const _mtl=_techW2S(m.x-_k/2*_mcw, m.y-(_k/2+_dy)*_mch), _mbr=_techW2S(m.x+_k/2*_mcw, m.y+(_k/2-_dy)*_mch);
+    // 💎 **스프라이트일 때만** 깐다 — 3D 노드(res_cn)는 제 원형 그림자를 갖는다(겹치면 두 겹).
+    //    ⚠ 그림자는 스프라이트의 **발치**에 물려야 한다. 아래로 더 내리면 결정과 떨어져
+    //      「따로 떠 있는」 것으로 보인다(2026-08-31 실측). 발치 = m.y + (_k/2 − _dy)·칸높이.
+    if(_spr){ const _mby=m.y+(_k/2-_dy)*_mch, _msh=_techW2S(m.x, _mby-0.16*_mch);
+      const _msw=Math.max(0.035,_k*0.80*_mcw*techView().zoom);
+      mineZ+='<div class="bGndShadow" style="left:'+((_msh.x+_msw*SHD_DX)*100).toFixed(2)
+        +'%;top:'+((_msh.y+_msw*SHD_DY*0.40)*100).toFixed(2)
+        +'%;width:'+(_msw*100).toFixed(2)+'%;height:'+(_msw*0.40*100).toFixed(2)+'%"></div>'; }
     mineZ+='<div class="bMineral'+(_res3d&&!_spr?' d3':'')+(_spr?' spr':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'
-      +(_spr ? '<img class="mnSpr" src="'+_spr+'" alt="">'
+      +(_spr ? '<img class="mnSpr" src="'+_spr+'" alt=""><img class="mnSpr shade" src="'+_spr+'" alt="">'
              : (_res3d?'':'<span class="mnIco">💎</span>'))+'</div>';
     _mi++; } }   // 수치 텍스트 제거 → 클릭 시 프로필에서만 잔량 표시 · 선택 표시는 3D 하단 링
   let rallyZ='';   // 🚩 랠리 포인트 — 선택된 건물의 랠리 위치 깃발 + 건물→랠리 점선(지정 모드=강조)
