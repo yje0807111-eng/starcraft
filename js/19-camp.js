@@ -336,12 +336,13 @@ function campWipeBoard(){
 //      **산 노드에 붙어 있는 것만** 살 수 있다(사슬).
 //   ⛔ 비용 규칙을 여기 말고 다른 곳에 다시 적지 말 것 — campRtCost 하나가 단일 소스다.
 const CAMP_RT_TIERS = 20;
-const CAMP_RT_BASE = 2;                     // 시작점 노드 값 = 티어 1 기준값
+const CAMP_RT_BASE = 2;                     // 티어 1 기준값(비용 공식) — ⚠ root 값이 아니다(CAMP_RT_ROOT_COST)
 const CAMP_RT_MUL = 4;                      // 티어당 기준값 배수
 const CAMP_RT_GRADE = { 흔함:0.5, 보통:1, 귀함:3, 극상:10 };
 // 등장 티어 묶음 — 갈래마다 묶음당 계열 2개 → 티어 하나에 노드 8개가 자동으로 맞는다
 const CAMP_RT_GRP = { 가:[1,5,9,13,17], 나:[2,6,10,14,18], 다:[3,7,11,15,19], 라:[4,8,12,16,20] };
-const CAMP_RT_MILE = { 가:5, 나:10, 다:15, 라:20 };   // 그 묶음의 귀함 계열이 극상이 되는 티어
+const CAMP_RT_MILE = { 가:5, 나:10, 다:15, 라:20 };
+const CAMP_RT_GRP_KEYS = ['가','나','다','라'];   // 묶음 순서 — 마디·좌표가 함께 쓴다   // 그 묶음의 귀함 계열이 극상이 되는 티어
 
 // 효과 사다리 — HUNT_R1 §4-5. 배수형은 1~5차가 이 값(누적)이다.
 const CAMP_RT_LADDER = [0, 1.5, 2.5, 5, 11, 25];
@@ -350,41 +351,41 @@ const CAMP_RT_LADDER = [0, 1.5, 2.5, 5, 11, 25];
 //   ⚠ 묶음마다 흔함4 · 보통3 · 귀함1 이어야 티어당 등급 구성이 맞는다(스모크가 검사).
 const CAMP_RT_LINES = [
   // ── 갈래 ① 시작 도움 — 절대값이라 후반에는 저절로 희석된다
-  {k:'tap',      br:'start', grp:'가', gr:'흔함', nm:'탭당 미네랄',    f:'tapAdd'},
-  {k:'startMin', br:'start', grp:'가', gr:'보통', nm:'시작 미네랄',    f:'startMin'},
-  {k:'startWk',  br:'start', grp:'나', gr:'흔함', nm:'시작 일꾼',      f:'startWorker'},
-  {k:'startBld', br:'start', grp:'나', gr:'보통', nm:'시작 건물',      f:'startBldg'},
-  {k:'earlyDc',  br:'start', grp:'다', gr:'흔함', nm:'초반 건물 할인', f:'earlyDisc'},
-  {k:'startUp',  br:'start', grp:'다', gr:'보통', nm:'시작 업그레이드', f:'startUpg'},
-  {k:'startUnit',br:'start', grp:'라', gr:'흔함', nm:'시작 유닛',      f:'startUnit'},
-  {k:'skipRd',   br:'start', grp:'라', gr:'귀함', nm:'라운드 건너뛰기', f:'skipRound'},
+  {k:'tap',      br:'start', grp:'가', gr:'흔함', nm:'탭당 미네랄',    f:'tapAdd', ic:'res_mineral.webp', vk:'add', ds:'탭 한 번에 얻는 미네랄이 {} 늘어납니다.'},
+  {k:'startMin', br:'start', grp:'가', gr:'보통', nm:'시작 미네랄',    f:'startMin', ic:'upgrades/up_mineral_up.webp', vk:'mul', ds:'회차를 시작할 때 받는 미네랄이 {} 늘어납니다.'},
+  {k:'startWk',  br:'start', grp:'나', gr:'흔함', nm:'시작 일꾼',      f:'startWorker', ic:'buildings/bld_command.webp', vk:'mul', ds:'회차를 시작할 때 서 있는 일꾼이 {} 늘어납니다.'},
+  {k:'startBld', br:'start', grp:'나', gr:'보통', nm:'시작 건물',      f:'startBldg', ic:'buildings/bld_barracks.webp', vk:'mul', ds:'회차를 시작할 때 세워져 있는 건물이 {} 늘어납니다.'},
+  {k:'earlyDc',  br:'start', grp:'다', gr:'흔함', nm:'초반 건물 할인', f:'earlyDisc', ic:'buildings/bld_engbay.webp', vk:'disc', ds:'회차 초반의 건물 값이 {} 싸집니다.'},
+  {k:'startUp',  br:'start', grp:'다', gr:'보통', nm:'시작 업그레이드', f:'startUpg', ic:'upgrades/up_perm.webp', vk:'mul', ds:'회차를 시작할 때 이미 올라 있는 업그레이드가 {} 늘어납니다.'},
+  {k:'startUnit',br:'start', grp:'라', gr:'흔함', nm:'시작 유닛',      f:'startUnit', ic:'buildings/bld_bunker.webp', vk:'mul', ds:'회차를 시작할 때 함께 있는 유닛이 {} 늘어납니다.'},
+  {k:'skipRd',   br:'start', grp:'라', gr:'귀함', nm:'라운드 건너뛰기', f:'skipRound', ic:'skills/sk_recall.webp', vk:'mul', ds:'건너뛸 수 있는 라운드가 {} 늘어납니다.'},
   // ── 갈래 ② 재화 획득
-  {k:'gather',   br:'econ',  grp:'가', gr:'흔함', nm:'일꾼 채취량',    f:'gatherMul'},
-  {k:'gas',      br:'econ',  grp:'가', gr:'보통', nm:'가스 생산량',    f:'gasMul'},
-  {k:'wkCap',    br:'econ',  grp:'나', gr:'흔함', nm:'일꾼 상한',      f:'workerCap'},
-  {k:'mine',     br:'econ',  grp:'나', gr:'귀함', nm:'광산 등급',      f:'mineMul'},
-  {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul'},
-  {k:'dgRw',     br:'econ',  grp:'다', gr:'보통', nm:'던전 보상',      f:'dgRewardMul'},
-  {k:'tapMul',   br:'econ',  grp:'라', gr:'흔함', nm:'탭 배수',        f:'tapMul'},
-  {k:'gasEx',    br:'econ',  grp:'라', gr:'보통', nm:'가스 교환비',    f:'gasExMul'},
+  {k:'gather',   br:'econ',  grp:'가', gr:'흔함', nm:'일꾼 채취량',    f:'gatherMul', ic:'upgrades/up_mine.webp', vk:'mul', ds:'일꾼의 1회 채취량이 {} 증가합니다.'},
+  {k:'gas',      br:'econ',  grp:'가', gr:'보통', nm:'가스 생산량',    f:'gasMul', ic:'res_gas.webp', vk:'mul', ds:'정제소의 가스 생산량이 {} 증가합니다.'},
+  {k:'wkCap',    br:'econ',  grp:'나', gr:'흔함', nm:'일꾼 상한',      f:'workerCap', ic:'upgrades/up_transport.webp', vk:'mul', ds:'데리고 있을 수 있는 일꾼 수가 {} 늘어납니다.'},
+  {k:'mine',     br:'econ',  grp:'나', gr:'귀함', nm:'광산 등급',      f:'mineMul', ic:'buildings/bld_extractor.webp', vk:'mul', ds:'광산에서 얻는 미네랄이 {} 증가합니다.'},
+  {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul', ic:'skills/sk_recharge.webp', vk:'mul', ds:'자리를 비운 동안 쌓이는 수입이 {} 증가합니다.'},
+  {k:'dgRw',     br:'econ',  grp:'다', gr:'보통', nm:'던전 보상',      f:'dgRewardMul', ic:'res_gem.webp', vk:'mul', ds:'던전을 깨고 받는 보상이 {} 증가합니다.'},
+  {k:'tapMul',   br:'econ',  grp:'라', gr:'흔함', nm:'탭 배수',        f:'tapMul', ic:'skills/sk_nova.webp', vk:'mul', ds:'탭으로 얻는 미네랄이 {} 증가합니다.'},
+  {k:'gasEx',    br:'econ',  grp:'라', gr:'보통', nm:'가스 교환비',    f:'gasExMul', ic:'buildings/bld_assimilator.webp', vk:'mul', ds:'가스를 바꿀 때의 교환비가 {} 좋아집니다.'},
   // ── 갈래 ③ 아군 강화
-  {k:'atk',      br:'army',  grp:'가', gr:'흔함', nm:'유닛 공격력',    f:'unitAtk'},
-  {k:'hp',       br:'army',  grp:'가', gr:'보통', nm:'유닛 체력',      f:'unitHp'},
-  {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul'},
-  {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한',      f:'supAdd'},
-  {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc'},
-  {k:'endure',   br:'army',  grp:'다', gr:'귀함', nm:'버팀',          f:'endure'},   // 구 rebuild — 로드 시 포인트 이관
-  {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul'},
-  {k:'skCd',     br:'army',  grp:'라', gr:'보통', nm:'스킬 쿨다운',    f:'skillCd'},
+  {k:'atk',      br:'army',  grp:'가', gr:'흔함', nm:'유닛 공격력',    f:'unitAtk', ic:'upgrades/up_inf_atk.webp', vk:'mul', ds:'아군 유닛의 공격력이 {} 증가합니다.'},
+  {k:'hp',       br:'army',  grp:'가', gr:'보통', nm:'유닛 체력',      f:'unitHp', ic:'upgrades/up_gnd_arm.webp', vk:'mul', ds:'아군 유닛의 체력이 {} 증가합니다.'},
+  {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul', ic:'upgrades/up_speed.webp', vk:'mul', ds:'유닛과 건물의 생산 속도가 {} 빨라집니다.'},
+  {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한',      f:'supAdd', ic:'res_pop.webp', vk:'sup', ds:'인구 상한이 {} 늘어납니다.'},
+  {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc', ic:'buildings/bld_armory.webp', vk:'disc', ds:'업그레이드 비용이 {} 싸집니다.'},
+  {k:'endure',   br:'army',  grp:'다', gr:'귀함', nm:'버팀',          f:'endure', ic:'upgrades/up_shield.webp', vk:'mul', ds:'치명타를 맞아도 체력 1로 버티는 일이 {} 늘어납니다.'},   // 구 rebuild — 로드 시 포인트 이관
+  {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul', ic:'buildings/bld_cannon.webp', vk:'mul', ds:'아군 건물의 체력과 공격력이 {} 증가합니다.'},
+  {k:'skCd',     br:'army',  grp:'라', gr:'보통', nm:'스킬 쿨다운',    f:'skillCd', ic:'upgrades/up_mana.webp', vk:'mul', ds:'스킬 재사용 대기가 {} 빨리 찹니다.'},
   // ── 갈래 ④ 적 약화 — ⚠ 상한이 있다. 다른 셋과 곱해지므로 반드시 막혀 있어야 한다
-  {k:'foeHp',    br:'enemy', grp:'가', gr:'흔함', nm:'적 체력',        f:'cutHp'},
-  {k:'foeN',     br:'enemy', grp:'가', gr:'귀함', nm:'적 마리 수',     f:'cutCount'},
-  {k:'foeAtk',   br:'enemy', grp:'나', gr:'흔함', nm:'적 공격력',      f:'cutAtk'},
-  {k:'foeRes',   br:'enemy', grp:'나', gr:'보통', nm:'적 부활 시간',   f:'cutRes'},
-  {k:'foeSpd',   br:'enemy', grp:'다', gr:'흔함', nm:'적 이동 속도',   f:'cutSpd'},
-  {k:'bossHp',   br:'enemy', grp:'다', gr:'보통', nm:'보스 체력',      f:'cutBoss'},
-  {k:'foeRng',   br:'enemy', grp:'라', gr:'흔함', nm:'적 사거리',      f:'cutRng'},
-  {k:'foeDelay', br:'enemy', grp:'라', gr:'보통', nm:'적 등장 지연',   f:'foeDelay'},
+  {k:'foeHp',    br:'enemy', grp:'가', gr:'흔함', nm:'적 체력',        f:'cutHp', ic:'skills/sk_plague.webp', vk:'cut', ds:'적의 체력이 {} 감소합니다.'},
+  {k:'foeN',     br:'enemy', grp:'가', gr:'귀함', nm:'적 마리 수',     f:'cutCount', ic:'skills/sk_dark_swarm.webp', vk:'cut', ds:'한 번에 몰려오는 적의 수가 {} 줄어듭니다.'},
+  {k:'foeAtk',   br:'enemy', grp:'나', gr:'흔함', nm:'적 공격력',      f:'cutAtk', ic:'skills/sk_lockdown.webp', vk:'cut', ds:'적의 공격력이 {} 감소합니다.'},
+  {k:'foeRes',   br:'enemy', grp:'나', gr:'보통', nm:'적 부활 시간',   f:'cutRes', ic:'skills/sk_ensnare.webp', vk:'cut', ds:'적이 다시 나타나기까지가 {} 길어집니다.'},
+  {k:'foeSpd',   br:'enemy', grp:'다', gr:'흔함', nm:'적 이동 속도',   f:'cutSpd', ic:'skills/sk_slow.webp', vk:'cut', ds:'적의 이동 속도가 {} 느려집니다.'},
+  {k:'bossHp',   br:'enemy', grp:'다', gr:'보통', nm:'보스 체력',      f:'cutBoss', ic:'skills/sk_irradiate.webp', vk:'cut', ds:'보스의 체력이 {} 감소합니다.'},
+  {k:'foeRng',   br:'enemy', grp:'라', gr:'흔함', nm:'적 사거리',      f:'cutRng', ic:'skills/sk_optical_flare.webp', vk:'cut', ds:'적의 사거리가 {} 짧아집니다.'},
+  {k:'foeDelay', br:'enemy', grp:'라', gr:'보통', nm:'적 등장 지연',   f:'foeDelay', ic:'skills/sk_maelstrom.webp', vk:'cut', ds:'적이 처음 나타나기까지가 {} 늦춰집니다.'},
 ];
 function campRtLine(k){ for(const L of CAMP_RT_LINES) if(L.k === k) return L; return null; }
 // 계열의 n차 등장이 몇 티어인가 (n = 1~5)
@@ -397,34 +398,94 @@ function campRtGrade(k, n){ const L = campRtLine(k); if(!L) return '보통';
 function campRtCost(k, n){ const t = campRtTier(k, n); if(!t) return Infinity;
   return CAMP_RT_BASE * Math.pow(CAMP_RT_MUL, t - 1) * CAMP_RT_GRADE[campRtGrade(k, n)]; }
 
+// ── 🌌 마디 · 관문 (2026-09-01 사용자 확정 · 목업 docs/mock/camp-tree-star-v4-4.html) ──
+//   ⭐ **갈래와 묶음도 사는 것이다.** 예전에는 32계열의 1차가 처음부터 전부 열려 있어서
+//     첫 화면에 32개가 깔렸다 — 어떤 배치를 써도 이름과 값이 겹쳤다(실측).
+//     이제 환생 → 갈래 → 묶음 → 계열 순으로 열린다. 첫 화면은 **다섯 개**다.
+//   ⚠ 마디는 계열이 아니라서 `CAMP_RT_LINES` 에 없다. 자루(bag)에 `br:<갈래>` · `gp:<갈래><묶음>`
+//     키로 들어간다 — 계열 키와 섞이지 않게 접두사를 쓴다.
+// 🌟 **새로운 시작** — 가운데(root)는 트리를 여는 열쇠이자 **첫 환생의 보상**이다(2026-09-01 사용자 확정).
+//   ⛔ 값을 CAMP_RT_BASE 로 두면 안 된다 — 그것은 **비용 공식의 티어1 기준값**이라
+//     건드리면 160칸 전부의 값이 함께 움직인다. root 만의 상수를 따로 둔다.
+//   ⭐ 왜 1인가: 포인트 공식은 `√(번 재화 ÷ 100만)` 이라 **조건을 막 채운 첫 환생은 정확히 1** 이다.
+//     2 였을 때는 첫 환생으로 트리를 **열 수조차 없었다** — 눌렀는데 아무 일도 안 일어났다.
+//     HUNT_R1 §4-2-0 이 「첫 경험이 『눌렀더니 느려졌다』면 두 번 다시 안 누른다」고 못박은 자리다.
+const CAMP_RT_ROOT_COST = 1;
+//   ⭐ 보상은 **절대값**이다(자원·일꾼·건물). 배수로 주면 §4-5-5 의 곱셈 상한 표에 축이 하나 더
+//     늘어 폭주한다 — 절대값은 후반에 저절로 희석되므로 그 표를 건드리지 않는다.
+//   수치 근거: 캠프는 미네랄 0 · 일꾼 0 으로 시작하고(HUNT_R1 §1) 탭 0레벨이 1미네랄이다.
+//     ⚠ 일꾼 값은 `campHireCost` 다 — **첫 마리 140**, 그 뒤 ×1.65 씩(U.worker_human.cost 50 은
+//     샌드박스 값이라 캠프와 무관하다). 그래서 지금 꾸러미의 값어치는
+//     일꾼 1기(140) + 미네랄 100 = **240 미네랄**, 탭만으로 벌면 4분 남짓이다.
+//   ⚠ HUNT_R1 §4-2-0 ① 은 「첫 환생 보상을 **후하게**」라고 적었는데 이 값은 그보다 가볍다 —
+//     사용자가 2026-09-01 에 직접 정한 값이다(옛 200/3기/병영에서 내렸다). 실측 뒤 다시 볼 자리.
+const CAMP_ROOT_MIN = 100;          // 시작 미네랄
+const CAMP_ROOT_WK = 1;             // 시작 일꾼 — 한 기부터 자동 수급이 돈다
+//   🗄 시작 건물은 **화면에서만 뺐다**(유보 규칙) — null 이면 안 준다. 배선은 아래에 그대로 있다.
+const CAMP_ROOT_BLD = null;
+const CAMP_RT_BR_COST = 8;      // 갈래 마디 값 (티어 2 기준값)
+const CAMP_RT_GP_COST = 32;     // 묶음 마디 값 (티어 3 기준값)
+const CAMP_RT_BR_KEY = b => 'br:' + b;
+const CAMP_RT_GP_KEY = (b, g) => 'gp:' + b + g;
+//   ⛔ **짝 조건(관문)을 되살리지 말 것**(2026-09-01 제거). 「4차부터 같은 묶음의 짝도 3차 이상」이라는
+//     규칙이 있었다 — 한 줄만 파고드는 것을 막으려던 장치인데, 사는 사람에게는 「왜 못 사는지」를
+//     한 겹 더 읽게 만드는 부담이었다. 계열은 **제 앞 차수만** 보면 된다.
+function campRtBrOn(b){ return campRtHas(CAMP_RT_BR_KEY(b)) > 0; }
+function campRtGpOn(b, g){ return campRtHas(CAMP_RT_GP_KEY(b, g)) > 0; }
+
 // ── 보유 · 구매 ─────────────────────────────────────────────────────────
-//   저장은 C.rbTree = { root:1, '<계열>':<몇 차까지 샀나> }
+//   저장은 C.rbTree = { root:1, 'br:econ':1, 'gp:econ가':1, '<계열>':<몇 차까지 샀나> }
 function campRtBag(){ const C = campState(); if(!C) return null;
   if(!C.rbTree || typeof C.rbTree !== 'object') C.rbTree = {};
+  campRtMigrate(C.rbTree);
   return C.rbTree; }
+// 🕰 옛 저장본 잇기 — 마디가 없던 시절의 자루에는 계열만 들어 있다.
+//   ⛔ 그대로 두면 **이미 산 계열이 화면에서 사라진다**(부모 마디가 없어서 안 그려진다).
+//   ⭐ 산 계열이 있으면 그 갈래·묶음 마디를 **값 없이** 채워 준다 — 이미 낸 값이라 또 받지 않는다.
+function campRtMigrate(b){
+  if(!b || b._m2 || !b.root) return;
+  for(const L of CAMP_RT_LINES){ if(!(b[L.k] > 0)) continue;
+    b[CAMP_RT_BR_KEY(L.br)] = 1; b[CAMP_RT_GP_KEY(L.br, L.grp)] = 1; }
+  b._m2 = 1; }
 function campRtHas(k){ const b = campRtBag(); return b ? (b[k] | 0) : 0; }
 function campRtRootOn(){ return campRtHas('root') > 0; }
 // 다음으로 살 수 있는 차수 (없으면 0)
 function campRtNext(k){ const n = campRtHas(k) + 1; return n <= 5 ? n : 0; }
-// ⭐ 사슬 규칙 — 시작점 먼저, 그 다음은 그 계열의 앞 차수를 샀어야 한다
+// 살 것의 값 — 마디는 고정값, 계열은 차수 비용
+function campRtKeyCost(k){
+  if(k === 'root') return CAMP_RT_ROOT_COST;
+  if(k.indexOf('br:') === 0) return CAMP_RT_BR_COST;
+  if(k.indexOf('gp:') === 0) return CAMP_RT_GP_COST;
+  const n = campRtNext(k); return n ? campRtCost(k, n) : Infinity; }
+// ⭐ 사슬 규칙 — 환생 → 갈래 → 묶음 → 계열, 그 다음은 그 계열의 앞 차수.
 function campRtCanBuy(k){ const C = campState(); if(!C) return false;
-  if(k === 'root') return !campRtRootOn() && (C.rbPts || 0) >= CAMP_RT_BASE;
+  if(k === 'root') return !campRtRootOn() && (C.rbPts || 0) >= CAMP_RT_ROOT_COST;
   if(!campRtRootOn()) return false;
+  const pts = C.rbPts || 0;
+  if(k.indexOf('br:') === 0) return campRtHas(k) === 0 && pts >= CAMP_RT_BR_COST;
+  if(k.indexOf('gp:') === 0){ const b = k.slice(3, -1);
+    return campRtHas(k) === 0 && campRtBrOn(b) && pts >= CAMP_RT_GP_COST; }
+  const L = campRtLine(k); if(!L) return false;
+  if(!campRtGpOn(L.br, L.grp)) return false;             // 묶음을 안 샀으면 계열은 존재하지 않는다
   const n = campRtNext(k); if(!n) return false;
-  return (C.rbPts || 0) >= campRtCost(k, n); }
+  return pts >= campRtCost(k, n); }
 function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 0;
   const b = campRtBag();
-  const cost = (k === 'root') ? CAMP_RT_BASE : campRtCost(k, campRtNext(k));
+  const cost = campRtKeyCost(k);
   C.rbPts = (C.rbPts || 0) - cost;
   b[k] = (b[k] | 0) + 1;
   campSave(); return cost; }
 // 초기화 — 산 것을 전부 물리고 포인트를 100% 돌려받는다. 비용은 젬(GEM.md §4).
+//   ⚠ 마디 값도 함께 돌려준다 — 안 그러면 되돌릴수록 포인트가 샌다.
 function campRtReset(){ const C = campState(); if(!C) return 0;
   const b = campRtBag(); let back = 0;
-  if(b.root) back += CAMP_RT_BASE;
+  if(b.root) back += CAMP_RT_ROOT_COST;
+  for(const bk in CAMP_TREE_BR){
+    if(b[CAMP_RT_BR_KEY(bk)]) back += CAMP_RT_BR_COST;
+    for(const g of CAMP_RT_GRP_KEYS) if(b[CAMP_RT_GP_KEY(bk, g)]) back += CAMP_RT_GP_COST; }
   for(const L of CAMP_RT_LINES){ const n = b[L.k] | 0;
     for(let i = 1; i <= n; i++) back += campRtCost(L.k, i); }
-  C.rbTree = {}; C.rbPts = (C.rbPts || 0) + back; campSave(); return back; }
+  C.rbTree = { _m2:1 }; C.rbPts = (C.rbPts || 0) + back; campSave(); return back; }
 
 // ── 효과 ────────────────────────────────────────────────────────────────
 //   배수형 = 사다리 값(누적) · 감소형 = 계열마다 −40% 까지 수확 체감
@@ -440,79 +501,185 @@ function campRtFoeMul(){ let m = 1;
   for(const L of CAMP_RT_LINES){ if(L.br !== 'enemy') continue; m *= (1 - campRtCut(L.k)); }
   return Math.max(CAMP_RT_CUT_FLOOR, m); }
 
-// ══ 🌳 트리 화면 — 마인드맵 (2026-08-25 · 6단계-b) ═════════════════════
-//   시작점이 가운데, 갈래 넷이 사방으로. 계열 하나가 바깥으로 5칸 사슬을 이룬다.
-//   ⭐ 밀고(드래그) 확대(핀치)해서 본다 — 160노드를 세로 화면에 다 못 담기 때문이다.
+// ══ 🌌 트리 화면 — 별자리 (2026-09-01 · 목업 docs/mock/camp-tree-star-v4-4.html 확정) ═══
+//   가운데 붉은 마름모에서 **갈래 넷 → 묶음 넷 → 계열 → 5차** 로 갈라져 나간다.
+//   ⭐ 「퍼지는」 느낌은 **갈라짐**에서 온다. 중심에서 32개가 한꺼번에 뻗으면 그건 빗살이지
+//     별자리가 아니다 — 그래서 갈래·묶음 마디를 거친다(마디도 사는 것이다).
+//   ⭐ 보이는 것은 **산 것 + 그 바로 다음 한 칸**뿐이다. 그 너머는 자물쇠도 흐린 점도 없이
+//     아예 안 그린다. 숫자는 **지금 살 수 있는 별에만** 붙는다 — 그래야 후반에도 안 붐빈다.
 //   ⛔ 좌표를 화면 픽셀로 잡지 말 것. **월드 좌표(SVG viewBox)** 로 두고 변환만 바꾼다 —
 //      그래야 확대·이동이 노드 위치 계산과 섞이지 않는다.
 //   갈래 색은 DESIGN.md §2 액센트 **역할표**에서 그대로 꺼냈다(재화=금 · 위험=적 · 정보=청 · 긍정=녹).
-//   시안(--acc-sel)은 「지금 고른 노드」 전용으로 남긴다 — 화면당 한 곳 규칙.
+//   시안(--acc-sel)은 「지금 고른 별」 전용으로 남긴다 — 화면당 한 곳 규칙.
+//   ⚠ 갈래를 **대각선으로 돌리고 거리도 다르게** 준다. 상하좌우 축에 두면 좌우 갈래가
+//     같은 높이에 서서 중심 옆에 숫자가 한 줄로 겹친다(실측).
 const CAMP_TREE_BR = {
-  enemy:{ a:-Math.PI/2, nm:'적 약화',    col:'#ff3b3b' },   // 위
-  army: { a: Math.PI/2, nm:'아군 강화',  col:'#4aa8ff' },   // 아래
-  start:{ a: Math.PI,   nm:'시작 도움',  col:'#5dff8f' },   // 왼쪽
-  econ: { a: 0,         nm:'재화 획득',  col:'#ffd24a' },   // 오른쪽
+  enemy:{ a:-Math.PI*0.76, rk:1.34, nm:'적 약화',   col:'#ff3b3b' },   // ↖ 멀리
+  econ: { a:-Math.PI*0.24, rk:0.82, nm:'재화 획득', col:'#ffd24a' },   // ↗ 가까이
+  start:{ a: Math.PI*0.70, rk:0.88, nm:'시작 도움', col:'#5dff8f' },   // ↙ 가까이
+  army: { a: Math.PI*0.30, rk:1.26, nm:'아군 강화', col:'#4aa8ff' },   // ↘ 멀리
 };
-const CAMP_TREE_SPREAD = 1.45;      // 갈래 하나가 벌어지는 각(rad) — 8계열이 이 안에 부챗살로 선다
-const CAMP_TREE_R0 = 150, CAMP_TREE_RS = 86;   // 첫 칸까지 거리 · 칸 간격
-//   ⚠ R0 을 줄이지 말 것 — 8계열의 1차가 한 자리에 모여 **링처럼** 보인다(부챗살 느낌이 죽는다)
+const CAMP_TREE_SPREAD = 1.30;      // 갈래 하나가 벌어지는 각(rad)
+const CAMP_TREE_R_BR = 66, CAMP_TREE_R_GP = 132;   // 갈래 마디 · 묶음 마디까지 거리
+const CAMP_TREE_R0 = 206, CAMP_TREE_RS = 52;       // 계열 1차까지 거리 · 칸 간격
+//   ✨ 흩뜨림 — 같은 차수라도 자리를 조금씩 어긋나게 해 별자리처럼 보이게 한다.
+//   ⛔ 난수를 쓰지 말 것. 키로 만든 해시라 **매번 같은 자리**에 선다(별자리는 움직이면 안 된다).
+//   ⚠ 흔들림을 차수마다 **누적하지 않는다** — 누적하면 사슬이 제 갈래를 벗어나 얽힌다.
+const CAMP_TREE_JIT = 0.70;
+function campTreeHash(s){ let h = 2166136261;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 10000) / 10000; }
+function campTreeJit(k, n, seed){ return campTreeHash(k + ':' + n + ':' + seed) * 2 - 1; }
 
-// 계열 k 의 n차 노드가 월드 좌표 어디인가 (n=0 이면 시작점)
+// 갈래 마디의 자리
+function campTreeBrPos(bk){ const B = CAMP_TREE_BR[bk]; if(!B) return { x:0, y:0 };
+  const r = CAMP_TREE_R_BR * (B.rk || 1);
+  return { x: Math.cos(B.a) * r, y: Math.sin(B.a) * r }; }
+// 묶음 마디의 각·자리
+function campTreeGpAng(bk, g){ const B = CAMP_TREE_BR[bk];
+  const gi = CAMP_RT_GRP_KEYS.indexOf(g);
+  return B.a + (gi - 1.5) * (CAMP_TREE_SPREAD / 3)
+    + campTreeJit(bk + g, 0, 'g') * (CAMP_TREE_SPREAD / 3) * 0.16 * CAMP_TREE_JIT; }
+function campTreeGpPos(bk, g){ const B = CAMP_TREE_BR[bk], a = campTreeGpAng(bk, g);
+  const r = CAMP_TREE_R_GP * (0.72 + (B.rk || 1) * 0.34)
+    + campTreeJit(bk + g, 0, 'rg') * 14 * CAMP_TREE_JIT;
+  return { x: Math.cos(a) * r, y: Math.sin(a) * r }; }
+// 계열 k 의 n차가 월드 좌표 어디인가
 function campTreePos(k, n){
-  if(!k || n <= 0) return { x:0, y:0 };
-  const L = campRtLine(k); if(!L) return { x:0, y:0 };
+  const L = campRtLine(k); if(!L || n <= 0) return { x:0, y:0 };
   const B = CAMP_TREE_BR[L.br]; if(!B) return { x:0, y:0 };
-  const idx = CAMP_RT_LINES.filter(x => x.br === L.br).indexOf(L);   // 갈래 안 0~7
-  const a = B.a + (idx - 3.5) * (CAMP_TREE_SPREAD / 7);
-  const r = CAMP_TREE_R0 + (n - 1) * CAMP_TREE_RS;
+  const li = CAMP_RT_LINES.filter(x => x.br === L.br && x.grp === L.grp).indexOf(L);
+  const a = campTreeGpAng(L.br, L.grp) + (li - 0.5) * (CAMP_TREE_SPREAD / 3) * 0.46
+    + campTreeJit(k, n, 'a') * (CAMP_TREE_SPREAD / 3) * 0.30 * CAMP_TREE_JIT;
+  const r = CAMP_TREE_R0 * (0.80 + (B.rk || 1) * 0.22) + (n - 1) * CAMP_TREE_RS
+    + campTreeJit(k, n, 'r') * CAMP_TREE_RS * 0.34 * CAMP_TREE_JIT;
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
-// 노드 상태 — 'own'(샀다) · 'buy'(살 수 있다) · 'next'(앞 칸을 사면 열린다) · 'lock'
+// 어느 별이든 자리를 하나로 — 선택 이동이 이 함수 하나만 본다
+function campTreeSelPos(sel){ if(!sel) return null;
+  if(sel.t === 'root') return { x:0, y:0 };
+  if(sel.t === 'br') return campTreeBrPos(sel.a);
+  if(sel.t === 'gp') return campTreeGpPos(sel.a, sel.b);
+  return campTreePos(sel.a, sel.b); }
+
+// ── 상태 ────────────────────────────────────────────────────────────────
+//   'own'(샀다) · 'buy'(살 수 있다) · 'next'(열렸는데 포인트가 모자라다)
+//   · null(**그리지 않는다**)
+function campTreeBrState(bk){ if(campRtBrOn(bk)) return 'own';
+  if(!campRtRootOn()) return null;
+  const C = campState(); return ((C && C.rbPts || 0) >= CAMP_RT_BR_COST) ? 'buy' : 'next'; }
+function campTreeGpState(bk, g){ if(campRtGpOn(bk, g)) return 'own';
+  if(!campRtBrOn(bk)) return null;
+  const C = campState(); return ((C && C.rbPts || 0) >= CAMP_RT_GP_COST) ? 'buy' : 'next'; }
 function campTreeState(k, n){
+  const L = campRtLine(k); if(!L) return null;
+  if(!campRtGpOn(L.br, L.grp)) return null;
   const have = campRtHas(k);
   if(n <= have) return 'own';
-  if(n !== have + 1) return 'lock';
-  if(!campRtRootOn()) return 'lock';
+  if(n !== have + 1) return null;
   const C = campState();
   return ((C && C.rbPts || 0) >= campRtCost(k, n)) ? 'buy' : 'next';
 }
 
-let _campTreeSel = null;            // 지금 고른 노드 'k:n' — 시안은 여기 한 곳만
+let _campTreeSel = null;            // 지금 고른 별 {t:'br'|'gp'|'n', a, b} — 시안은 여기 한 곳만
 let _campTreeView = { x:0, y:0, z:1 };
-const CAMP_TREE_ZMIN = 0.35, CAMP_TREE_ZMAX = 2.2;
+const CAMP_TREE_ZMIN = 0.30, CAMP_TREE_ZMAX = 2.6;
+const CAMP_TREE_ZSEL = 1.55;        // 별을 골랐을 때의 배율
+const CAMP_TREE_SEL_Y = -150;       // 고른 별이 앉을 화면 높이(0=한가운데) — 아래 시트를 피한다
+function campTreeIsSel(t, a, b){ const s = _campTreeSel;
+  return !!(s && s.t === t && s.a === a && (b == null || s.b === b)); }
 
+// ── 그리기 ──────────────────────────────────────────────────────────────
+const CAMP_TREE_ICO = 'assets/icons/';
+// 👆 누르는 반경 — 계열 간격(CAMP_TREE_RS 52)의 절반보다 작게 잡아 옆 별을 훔치지 않게 한다
+function campTreeHitR(r){ return Math.min(Math.max(r + 10, 22), CAMP_TREE_RS * 0.46); }
+function campTreeSpark(x, y, r, col, op){
+  return '<path d="M' + (x - r) + ' ' + y + ' L' + (x + r) + ' ' + y +
+    ' M' + x + ' ' + (y - r) + ' L' + x + ' ' + (y + r) + '" class="ctSp" stroke="' + col +
+    '" opacity="' + (op || .5).toFixed(2) + '"/>'; }
+// ⭐ 별 하나 — 등급이 테두리로, 내용이 아이콘으로 읽힌다.
+//   흔함 가는 한 겹 · 보통 밝은 한 겹 · 귀함 금 두 겹 · 극상 금 두 겹 + 바깥 광륜
+function campTreeGem(o){
+  const x = (+o.x).toFixed(1), y = (+o.y).toFixed(1), r = o.r, col = o.col, f = o.f;
+  const own = o.state === 'own', buy = o.state === 'buy';
+  const s = [];
+  const ring = (own || buy) ? col : 'rgba(200,220,240,.30)';
+  if(o.me){ s.push('<circle cx="' + x + '" cy="' + y + '" r="' + (r * 2.4) + '" fill="rgba(92,214,255,.07)"/>');
+    s.push(campTreeSpark(x, y, r * 2.2, '#5cd6ff', .5)); }
+  // ⛔ 후광에 f 를 곱하지 않으면 흐려야 할 별들이 그대로 타올라 화면이 노란 구름이 된다(실측)
+  if(own){ s.push('<circle cx="' + x + '" cy="' + y + '" r="' + (r * 1.45) + '" fill="' + col +
+      '" opacity="' + (0.11 * f).toFixed(3) + '"/>');
+    s.push(campTreeSpark(x, y, r * 1.75, col, .34 * f)); }
+  if(o.gr === '극상') s.push('<circle cx="' + x + '" cy="' + y + '" r="' + (r + 6) +
+    '" class="ctHalo" opacity="' + (0.30 * f).toFixed(2) + '"/>');
+  s.push('<circle cx="' + x + '" cy="' + y + '" r="' + r + '" class="ctGem" stroke="' + ring +
+    '" stroke-width="' + (own ? 1.7 : 1.1) + '" opacity="' + f.toFixed(2) + '"/>');
+  if(o.gr === '귀함' || o.gr === '극상')
+    s.push('<circle cx="' + x + '" cy="' + y + '" r="' + (r - 2.6) + '" class="ctIn gold" opacity="' +
+      ((own ? .85 : .55) * f).toFixed(2) + '"/>');
+  else if(o.gr === '보통')
+    s.push('<circle cx="' + x + '" cy="' + y + '" r="' + (r - 2.6) + '" class="ctIn" opacity="' + f.toFixed(2) + '"/>');
+  if(o.ic){ const w = r * 1.46;
+    s.push('<image href="' + CAMP_TREE_ICO + o.ic + '" x="' + (o.x - w / 2).toFixed(1) + '" y="' +
+      (o.y - w / 2).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + w.toFixed(1) +
+      '" opacity="' + ((own ? 1 : (buy ? .92 : .6)) * f).toFixed(2) + '"' +
+      (own ? '' : ' filter="url(#ctDim)"') + ' pointer-events="none"/>'); }
+  if(o.label) s.push('<text x="' + x + '" y="' + (o.y + r + 4).toFixed(1) + '" class="ctTag' +
+    (buy ? ' on' : '') + '" style="' + (buy ? 'fill:' + col : '') + '" opacity="' + f.toFixed(2) + '">' +
+    o.label + '</text>');
+  if(o.me) s.push('<circle cx="' + x + '" cy="' + y + '" r="' + (r + 5) + '" class="ctSel"/>');
+  // 👆 누르는 면 — **맨 위에, 투명하게, 넉넉하게**. 이것만 data-k 를 갖는다.
+  if(o.k) s.push('<circle cx="' + x + '" cy="' + y + '" r="' + campTreeHitR(r) + '" class="ctHit"' +
+    ' data-k="' + o.k + '" data-n="' + (o.n == null ? 0 : o.n) + '"/>');
+  return s.join('');
+}
+function campTreeLink(a, b, col, lit, f){
+  return '<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) +
+    '" y2="' + b.y.toFixed(1) + '" stroke="' + (lit ? col : 'rgba(200,220,240,.20)') +
+    '" stroke-width="' + (lit ? 2 : .9) + '" opacity="' + ((lit ? .62 : 1) * f).toFixed(2) + '"' +
+    (lit ? '' : ' stroke-dasharray="2 3"') + '/>'; }
 function campTreeSvg(){
-  const rows = [];
-  // ① 선 — 시작점→1차, n차→n+1차. 노드보다 먼저 그려야 뒤에 깔린다
-  for(const L of CAMP_RT_LINES){ const B = CAMP_TREE_BR[L.br];
-    for(let n = 1; n <= 5; n++){
-      const a = campTreePos(L.k, n - 1), b = campTreePos(L.k, n);
-      const on = campRtHas(L.k) >= n;
-      rows.push('<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) +
-        '" x2="' + b.x.toFixed(1) + '" y2="' + b.y.toFixed(1) +
-        '" stroke="' + (on ? B.col : 'rgba(255,255,255,.10)') + '" stroke-width="' + (on ? 2.5 : 1.5) + '"/>'); } }
-  // ② 갈래 이름 — 부챗살 바깥에
+  const rows = [], sel = _campTreeSel;
+  // 고른 별이 있으면 나머지를 물린다 — 집중은 세지되 지도를 아주 잃지는 않는 정도
+  const dim = sel ? 1 : 0;
+  const F = me => me ? 1 : (1 - dim * .78);
   for(const bk in CAMP_TREE_BR){ const B = CAMP_TREE_BR[bk];
-    const r = CAMP_TREE_R0 + 2 * CAMP_TREE_RS;   // 사슬 중간 — 끝에 두면 기본 배율에서 화면 밖이다
-    rows.push('<text x="' + (Math.cos(B.a) * r).toFixed(0) + '" y="' + (Math.sin(B.a) * r).toFixed(0) +
-      '" class="ctBrNm" fill="' + B.col + '">' + B.nm + '</text>'); }
-  // ③ 시작점
-  const rootOn = campRtRootOn();
-  rows.push('<circle cx="0" cy="0" r="30" class="ctRoot' + (rootOn ? ' on' : '') + '" data-k="root" data-n="0"/>');
-  rows.push('<text x="0" y="4" class="ctRootTx">시작</text>');
-  // ④ 노드
-  for(const L of CAMP_RT_LINES){ const B = CAMP_TREE_BR[L.br];
-    for(let n = 1; n <= 5; n++){
-      const p = campTreePos(L.k, n), st = campTreeState(L.k, n);
-      const gr = campRtGrade(L.k, n);
-      const sel = (_campTreeSel === L.k + ':' + n);
-      const r = (gr === '극상') ? 20 : (gr === '귀함' ? 17 : 14);
-      rows.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r +
-        '" class="ctN ct-' + st + (sel ? ' sel' : '') + '" style="--bc:' + B.col +
-        '" data-k="' + L.k + '" data-n="' + n + '"/>');
-      if(gr === '극상' || gr === '귀함')
-        rows.push('<text x="' + p.x.toFixed(1) + '" y="' + (p.y + 4).toFixed(1) + '" class="ctNm">' +
-          (gr === '극상' ? '★' : '◆') + '</text>'); } }
+    const sb = campTreeBrState(bk); if(!sb) continue;
+    const p = campTreeBrPos(bk), meB = campTreeIsSel('br', bk);
+    rows.push(campTreeLink({ x:0, y:0 }, p, B.col, sb === 'own', F(meB)));
+    rows.push(campTreeGem({ x:p.x, y:p.y, r:13, col:B.col, state:sb, gr:'보통',
+      label: sb === 'own' ? '' : campNum(CAMP_RT_BR_COST), me:meB, f:F(meB),
+      k:CAMP_RT_BR_KEY(bk), n:0 }));
+    if(sb === 'own'){
+      for(const g of CAMP_RT_GRP_KEYS){ const sg = campTreeGpState(bk, g); if(!sg) continue;
+        const q = campTreeGpPos(bk, g), meG = campTreeIsSel('gp', bk, g);
+        rows.push(campTreeLink(p, q, B.col, sg === 'own', F(meG)));
+        rows.push(campTreeGem({ x:q.x, y:q.y, r:11, col:B.col, state:sg, gr:'흔함',
+          label: sg === 'own' ? '' : campNum(CAMP_RT_GP_COST), me:meG, f:F(meG),
+          k:CAMP_RT_GP_KEY(bk, g), n:0 }));
+        if(sg !== 'own') continue;
+        for(const L of CAMP_RT_LINES){ if(L.br !== bk || L.grp !== g) continue;
+          for(let n = 1; n <= 5; n++){ const st = campTreeState(L.k, n); if(!st) continue;
+            const b = campTreePos(L.k, n), a = (n === 1) ? q : campTreePos(L.k, n - 1);
+            const me = campTreeIsSel('n', L.k, n), f = F(me);
+            rows.push(campTreeLink(a, b, B.col, st === 'own', f));
+            rows.push(campTreeGem({ x:b.x, y:b.y, r: st === 'own' ? 13 : 15, col:B.col, state:st,
+              gr:campRtGrade(L.k, n), ic:L.ic, label: st === 'own' ? '' : campNum(campRtCost(L.k, n)),
+              me, f, k:L.k, n })); } } } }
+    // 갈래 이름 — 부챗살 바깥
+    rows.push('<text x="' + (Math.cos(B.a) * 300).toFixed(0) + '" y="' + (Math.sin(B.a) * 300).toFixed(0) +
+      '" class="ctBrNm" fill="' + B.col + '" opacity="' + (sel ? .18 : .5) + '">' + B.nm + '</text>');
+  }
+  // ⭐ 가운데 — **글씨 없이 붉은 마름모** 하나(2026-09-01 사용자 확정)
+  const rr = 13, on = campRtRootOn();
+  const dia = r => [[0, -r], [r, 0], [0, r], [-r, 0]].map(q => q[0] + ',' + q[1]).join(' ');
+  rows.push('<circle cx="0" cy="0" r="' + (rr * 3.2) + '" fill="rgba(255,70,60,.06)"/>');
+  rows.push(campTreeSpark(0, 0, rr * 3.4, '#ff6a4a', .42));
+  rows.push('<polygon points="' + dia(rr * 1.7) + '" class="ctCoreOut"/>');
+  rows.push('<polygon points="' + dia(rr) + '" class="ctCore' + (on ? ' on' : '') + '"/>');
+  rows.push('<circle cx="0" cy="0" r="' + campTreeHitR(rr) + '" class="ctHit" data-k="root" data-n="0"/>');
+  if(campTreeIsSel('root', 'root'))
+    rows.push('<circle cx="0" cy="0" r="' + (rr * 2.2) + '" class="ctSel"/>');
   return rows.join('');
 }
 // ══ 🔁 환생 화면 (2026-08-31) ═══════════════════════════════════════════
@@ -532,19 +699,33 @@ function campRebHourTx(h){ return (h >= 10) ? (Math.round(h) + '시간') : (h.to
 function campRebOpen(){
   const el = document.getElementById('campReb'); if(!el) return;
   el.classList.add('on'); campRebRender();
-  // 🖼 키 아트는 **공유 층(#titleBg) 한 장**이다. 여기서 그리지 않고 그것을 켜서 위로 올린다.
+  // 🖼 배경은 **환생 구역 전용 한 장**(#campRebBg)이다. 여기서 그리지 않고 그것을 켠다.
   //   ⛔ 화면마다 자기 그림을 그리면 전환할 때 호흡 애니가 리셋돼 그림이 툭 튄다.
   //   ⛔ **titleArtShow(true) 를 쓰지 않는다** — 그 함수는 그림(artBg)과 **타이틀 로고(artMark)를
   //     함께** 켠다. 로고(#titleMark)는 부팅 로딩·로그인이 쓰는 것이라, 환생 화면에서는
   //     페이드인하며 게임 로고가 떠오르는 엉뚱한 연출이 된다(2026-08-31 사용자 지적).
   //   ⭐ 그림만 켠다. 끄는 쪽(campRebClose)은 titleArtShow(false) 로 둘 다 꺼도 무해하다.
-  { const ph = document.getElementById('phone');
-    if(ph){ ph.classList.add('artLift', 'artBg'); ph.classList.remove('artMark'); } }
+  campRebArtOn();
   if(typeof playSfx === 'function') playSfx('ui_open'); }
-function campRebClose(){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on');
-  // 빌린 배경을 돌려준다 — 안 그러면 캠프로 돌아가도 키 아트가 남는다(잔상 금지)
-  { const ph = document.getElementById('phone'); if(ph) ph.classList.remove('artLift'); }
-  if(typeof titleArtShow === 'function') titleArtShow(false); }
+// 🖼 구역의 배경을 켠다 — **환생·업그레이드 두 화면이 함께 쓴다.**
+//   ⚠ 트리도 켜 둔다. 제 배경이 거의 불투명해서 안 보일 뿐인데, 안 켜 두면 환생 탭으로
+//     넘어오는 순간 그림이 그때부터 떠올라 번쩍인다(2026-08-31).
+function campRebArtOn(){
+  const bg = document.getElementById('campRebBg'); if(bg) bg.classList.remove('hide');
+  // ⚠ 네비를 배경 위로 올려 두는 규칙은 그대로 쓴다 — 배경이 화면을 통째로 덮기 때문이다
+  const ph = document.getElementById('phone'); if(ph) ph.classList.add('artLift'); }
+function campRebArtOff(){
+  const bg = document.getElementById('campRebBg'); if(bg) bg.classList.add('hide');
+  const ph = document.getElementById('phone'); if(ph) ph.classList.remove('artLift'); }
+// keepArt = **구역 안에서 탭만 바꾸는 중**이라는 뜻 — 그때는 배경을 돌려주지 않는다.
+//   ⛔ 무조건 돌려주면 환생 → 업그레이드 로 갈 때 키 아트가 꺼지고, 다시 환생으로 오면
+//     **화면은 즉시 뜨는데 그림만 뒤늦게 떠올라** 한 번 번쩍인다(2026-08-31 사용자 신고).
+//     트리는 제 배경이 거의 불투명해서 꺼진 것이 안 보였을 뿐이다.
+//   ⭐ 배경은 **구역의 것**이다 — 들어올 때 켜고 나갈 때만 돌려준다.
+function campRebClose(keepArt){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on', 'crIn');
+  if(keepArt) return;
+  campRebArtOff();   // 구역을 나갈 때만 끈다(잔상 금지)
+}
 function campRebIsOn(){ const el = document.getElementById('campReb'); return !!(el && el.classList.contains('on')); }
 
 // 🔁 **환생 구역의 유일한 입구** (2026-08-31 사용자 확정).
@@ -556,8 +737,17 @@ function campRebIsOn(){ const el = document.getElementById('campReb'); return !!
 //   ⚠ 하단 네비는 **켜 둔 채**로 연다(두 화면 CSS 가 네비 높이만큼 자리를 비운다).
 function campRebEnter(sec){
   const s = (sec === 'tree') ? 'tree' : 'info';
-  if(s === 'tree'){ campRebClose(); campTreeOpen(); }
+  // 🎬 페이드는 **구역에 들어올 때 한 번만**이다 (2026-08-31 사용자 지적).
+  //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 탭을 오갈 때마다 매번 다시 돈다 —
+  //     같은 구역 안에서 칸만 바꾸는 것인데 화면이 통째로 껌뻑여 이동이 무거워 보인다.
+  //   ⭐ 그래서 애니는 `.crIn` 이 가지고, 밖에서 들어온 경우에만 붙인다(안이었으면 즉시 교체).
+  const wasIn = (typeof campRebIsOn === 'function' && campRebIsOn()) ||
+                (typeof campTreeIsOn === 'function' && campTreeIsOn());
+  // ⚠ 닫는 쪽에 keepArt 를 준다 — 구역 안에서 칸만 바꾸는 것이라 배경은 그대로 둔다.
+  if(s === 'tree'){ campRebClose(true); campTreeOpen(); }
   else { campTreeClose(); campRebOpen(); }
+  { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
+    if(el) el.classList.toggle('crIn', !wasIn); }
   // 🧭 네비를 「환생 구역의 하위」 상태로 맞춘다.
   //   ⚠ navShow 만으로는 부족하다 — 그것은 **구역**을 켤 뿐이고, 하위 칸(정보·업그레이드)은
   //     `_navDrill` 이 그 구역일 때만 그려진다(navPaint). 캠프 배지에서 바로 들어오면
@@ -660,20 +850,211 @@ function campRebToShop(){ campRebClose();
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
 function campTreeOpen(){
   const el = document.getElementById('campTree'); if(!el) return;
-  _campTreeSel = null; _campTreeView = { x:0, y:0, z:0.55 };   // 처음엔 전체가 보이게
+  _campTreeSel = null;
   el.classList.add('on');
+  campRebArtOn();   // 🖼 구역 배경은 두 화면이 함께 쓴다 — 여기서 안 켜면 환생 탭으로 넘어갈 때 번쩍인다
   campTreeRender(); campTreeBind();
+  // ⚠ 배치를 재려면 화면에 **떠 있어야** 한다(display:none 이면 getBBox 가 0을 준다) — .on 뒤에 부른다
+  campTreeFit(true);
 }
-function campTreeClose(){ const el = document.getElementById('campTree'); if(el) el.classList.remove('on'); }
+function campTreeClose(){ const el = document.getElementById('campTree'); if(el) el.classList.remove('on', 'crIn'); }
 function campTreeIsOn(){ const el = document.getElementById('campTree'); return !!(el && el.classList.contains('on')); }
 
-// 다시 그리기 — SVG 통째로 갈고 아래 정보줄을 채운다
+// 고른 별의 모든 정보 — 이름 · 진행도 · 설명 · 지금값▶다음값 · 다음 단계 예고 ·
+//   비용 · 사고 나면 남는 포인트 · 사기. ⭐ 한 곳에 모은다(2026-09-01 사용자 확정).
+//   ⚠ 값·설명은 지어내지 않는다 — 효과 사다리(CAMP_RT_LADDER · CAMP_RT_CUT)에서 그대로 꺼낸다.
+function campTreeIsCut(k){ const L = campRtLine(k); return !!L && L.br === 'enemy'; }
+function campTreeVal(k, n){
+  const L = campRtLine(k), vk = (L && L.vk) || 'mul';
+  const i = Math.max(0, Math.min(5, n));
+  if(vk === 'cut')  return Math.round(CAMP_RT_CUT[i] * 100) + '%';
+  if(vk === 'disc') return Math.round(CAMP_RT_DISC[i] * 100) + '%';
+  if(vk === 'sup')  return '+' + CAMP_RT_SUP[i];
+  if(vk === 'add')  return '+' + (i ? CAMP_RT_LADDER[i] : 0);
+  return (i ? CAMP_RT_LADDER[i] : 1) + '배'; }
+// 📝 설명 한 줄 — 「…이 5배 → 11배 증가합니다」. 지금 값은 흐리게, 다음 값은 굵게.
+//   ⭐ 문장은 계열이 갖는다(ds) — 여기서 만들지 않는다. 값 자리만 채운다.
+function campTreeDesc(k, n){
+  const L = campRtLine(k); if(!L) return '';
+  const next = campTreeVal(k, n);
+  const v = (n <= 1) ? ('<b>' + next + '</b>')
+    : ('<span class="ctWas">' + campTreeVal(k, n - 1) + '</span><span class="ctTo">→</span><b>' + next + '</b>');
+  return (L.ds || (L.nm + ' {}')).replace('{}', v); }
+// 💠 필요 포인트 한 줄 — 값이 주인공(24px)이고 보유는 옆에 작게.
+function campTreePayHTML(cost, pts){
+  return '<div class="ctPay"><span class="ctPip"></span>' +
+    '<span class="ctCv">' + campNum(cost) + '</span>' +
+    '<span class="ctHave">필요 · 보유 ' + campNum(pts) + '</span></div>'; }
+function campTreeInfo(){
+  const el = document.getElementById('campTree'); if(!el) return;
+  const host = el.querySelector('.ctSheet'); if(!host) return;
+  const C = campState(), pts = (C && C.rbPts) || 0;
+  const sel = _campTreeSel;
+  el.classList.toggle('picked', !!sel);
+  if(!sel){ host.innerHTML = '<div class="ctHint">' +
+      (campRtRootOn() ? '별을 눌러 보세요' : '가운데를 눌러 시작') + '</div>';
+    return; }
+  // ── 🌟 가운데 — 트리의 열쇠이자 **첫 환생의 보상**
+  if(sel.t === 'root'){
+    const own = campRtRootOn(), can = campRtCanBuy('root'), left = pts - CAMP_RT_ROOT_COST;
+    const bldNm = (function(){ if(!CAMP_ROOT_BLD) return '';
+      const race = (typeof G !== 'undefined' && G.tech) ? G.tech.race : null;
+      const B = (typeof TECH_TREE !== 'undefined' && race && TECH_TREE[race] &&
+        (TECH_TREE[race].buildings || []).find(function(x){ return x.k === CAMP_ROOT_BLD; }));
+      return (B && B.name) || CAMP_ROOT_BLD; })();
+    host.innerHTML =
+      '<div class="ctHead"><span class="ctIco core">✦</span>' +
+      '<div class="ctHt"><div class="ctNm">새로운 시작</div></div></div>' +
+      '<div class="ctDesc">회차 시작 시 미네랄 <b>' + campNum(CAMP_ROOT_MIN) + '</b> · 일꾼 <b>' +
+      CAMP_ROOT_WK + '</b>' + (bldNm ? ' · ' + bldNm + ' <b>1</b>' : '') + '</div>' +
+
+      campTreePayHTML(CAMP_RT_ROOT_COST, pts) +
+      '<button class="ctBuy' + (own || !can ? ' off' : '') + '" type="button" data-key="root"' +
+        (own || !can ? ' disabled' : '') + '>' +
+        (own ? '보유' : (can ? '해 금' : '포인트가 모자랍니다')) + '</button>';
+    return; }
+  // ── 마디(갈래·묶음) — 계열이 아니라서 등급·차수가 없다
+  if(sel.t === 'br' || sel.t === 'gp'){
+    const bk = sel.a, B = CAMP_TREE_BR[bk];
+    const key = sel.t === 'br' ? CAMP_RT_BR_KEY(bk) : CAMP_RT_GP_KEY(bk, sel.b);
+    const cost = sel.t === 'br' ? CAMP_RT_BR_COST : CAMP_RT_GP_COST;
+    const own = campRtHas(key) > 0, can = campRtCanBuy(key), left = pts - cost;
+    const nm = sel.t === 'br' ? B.nm : (B.nm + ' · ' + sel.b + ' 묶음');
+    const tx = sel.t === 'br' ? '묶음 <b>4</b> 해금' : '계열 <b>2</b> 해금';
+    host.innerHTML =
+      '<div class="ctHead"><span class="ctDot" style="background:' + B.col + '"></span>' +
+      '<div class="ctHt"><div class="ctNm">' + nm + '</div></div></div>' +
+      '<div class="ctDesc">' + tx + '</div>' +
+      campTreePayHTML(cost, pts) +
+      '<button class="ctBuy' + (own || !can ? ' off' : '') + '" type="button" data-key="' + key + '"' +
+        (own || !can ? ' disabled' : '') + '>' +
+        (own ? '보유' : (can ? '해 금' : '포인트가 모자랍니다')) + '</button>';
+    return; }
+  // ── 계열 별
+  const k = sel.a, n = sel.b, L = campRtLine(k); if(!L) return;
+  const B = CAMP_TREE_BR[L.br], st = campTreeState(k, n);
+  const cost = campRtCost(k, n), have = campRtHas(k);
+  const own = st === 'own';
+  // 🎯 원형 게이지 + 설명 한 줄 + 필요 포인트(2026-09-01 사용자 확정).
+  //   ⛔ 「재화 획득 · 흔함 · T13」 메타 줄을 되살리지 말 것 — 두 번 빼라고 했다.
+  //   ⛔ 짝 조건(관문) 줄도 없다 — 규칙 자체를 걷어냈다.
+  //   ⭐ 값은 문장 안에 있다: 「일꾼의 1회 채취량이 5배 → 11배 증가합니다」.
+  const gR = 25, gC = 2 * Math.PI * gR;                    // 게이지 고리
+  const gauge = '<span class="ctRing">' +
+    '<svg viewBox="0 0 56 56"><circle class="ctRingBg" cx="28" cy="28" r="' + gR + '"/>' +
+    '<circle class="ctRingOn" cx="28" cy="28" r="' + gR + '" stroke-dasharray="' + gC.toFixed(1) +
+    '" stroke-dashoffset="' + (gC * (1 - have / 5)).toFixed(1) + '"/></svg>' +
+    '<img src="' + CAMP_TREE_ICO + L.ic + '" alt=""></span>';
+  const canBuy = (st === 'buy');
+  const label = own ? '보유'
+    : canBuy ? (n === 1 ? '해 금' : '강 화')
+    : (pts < cost ? '포인트가 모자랍니다' : '아직 열리지 않았습니다');
+  host.innerHTML =
+    '<div class="ctHead">' + gauge +
+    '<div class="ctHt"><div class="ctNm">' + L.nm + '</div>' +
+    '<div class="ctStage">' + n + ' / 5 단계</div></div></div>' +
+    '<div class="ctDesc">' + campTreeDesc(k, n) + '</div>' +
+    campTreePayHTML(cost, pts) +
+    '<button class="ctBuy' + (canBuy ? '' : ' off') + '" type="button" data-key="' + k + '"' +
+      (canBuy ? '' : ' disabled') + '>' + label + '</button>';
+}
+// ❓ 도움말 — 트리 **전체에 공통인 규칙**을 여기 한 곳에 모은다.
+//   ⛔ 별마다 「영구」·「회차마다」 같은 꼬리표를 달지 말 것 — 32계열 × 5차 = 160번 같은 말이 된다
+//     (2026-09-01 사용자 지적). 공통 규칙은 규칙을 읽는 자리에 두고, 별에는 그 별만의 값을 둔다.
+//   ⚠ 숫자는 상수에서 꺼낸다 — 손으로 적으면 값을 바꿀 때 문구만 옛말이 된다.
+function campTreeHelpHTML(){
+  const cut = Math.round(CAMP_RT_CUT_MAX * 100);
+  const floor = Math.round((1 - CAMP_RT_CUT_FLOOR) * 100);
+  return '<div class="ctHelpHd">환생 트리</div>' +
+    '<ul class="ctHelpLi">' +
+    '<li><b>환생 포인트</b>로 별을 해금합니다.</li>' +
+    '<li>해금한 것은 <b>환생해도 사라지지 않고</b> 계속 적용됩니다.</li>' +
+    '<li>가운데 → <b>갈래</b> → <b>묶음</b> → 계열 순으로 열립니다.</li>' +
+    '<li>두 손가락으로 <b>확대</b>, 끌어서 <b>이동</b>, 빈 곳을 <b>두 번</b> 누르면 전체가 보입니다.</li>' +
+    '<li>적 약화는 계열마다 최대 <b>−' + cut + '%</b>, 갈래 전체로는 <b>−' + floor + '%</b>까지입니다.</li>' +
+    '</ul><button class="ctHelpX" type="button">닫기</button>'; }
+function campTreeHelp(on){
+  const el = document.getElementById('campTree'); if(!el) return;
+  const h = el.querySelector('.ctHelp'); if(!h) return;
+  if(on){ h.querySelector('.ctHelpCard').innerHTML = campTreeHelpHTML(); h.classList.remove('hide'); }
+  else h.classList.add('hide'); }
+
+// 🔍 뷰 적용 — 고른 별이 있으면 그 자리가 화면 (0, CAMP_TREE_SEL_Y) 에 오도록 옮기고 확대한다.
+//   ⭐ 확대·이동은 **여기 한 곳**에서만 계산한다. 그리기(campTreeSvg)는 월드 좌표만 안다.
+function campTreeApplyView(){
+  const g = document.getElementById('ctG'); if(!g) return;
+  const v = _campTreeView;
+  g.setAttribute('transform', 'translate(' + v.x.toFixed(1) + ' ' + v.y.toFixed(1) +
+    ') scale(' + v.z.toFixed(3) + ')');
+}
+// ══ 🎬 뷰 이동 애니메이션 ═══════════════════════════════════════════════
+//   ⭐ 「천천히 출발 → 아주 빠르게 → 마지막에 살며시」(2026-09-01 사용자 지정).
+//     그 느낌은 5제곱 ease-in-out 이다 — 3제곱은 중간이 밋밋하고, 그 이상은 순간이동처럼 보인다.
+//   ⛔ 배율을 선형으로 보간하지 말 것. 확대는 **곱셈 축**이라 0.6→1.6 을 선형으로 끌면
+//     앞쪽이 훅 커지고 뒤쪽이 느려 보인다. 로그(등비)로 끌어야 눈에 일정하다.
+//   ⭐ 무엇을 보간하는가: **「어느 월드점(P)이 화면 어디(A)에 오는가」와 배율(z)** 셋이다.
+//     x·y 를 직접 끌면 확대와 이동이 따로 놀아 목표가 화면 밖으로 휘어 나간다.
+const CAMP_TREE_TWEEN_MS = 560;
+let _ctTween = null;
+function campTreeEase(t){ return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2; }
+// 지금 화면 한가운데에 있는 월드점 — 애니의 출발점이다
+function campTreeViewP(){ const v = _campTreeView;
+  return { x: -v.x / v.z, y: -v.y / v.z }; }
+function campTreeTweenStop(){ _ctTween = null; }
+//   to = { P:{x,y} 월드점 · A:{x,y} 그 점이 앉을 화면 자리 · z 배율 }
+function campTreeTweenTo(to, now){
+  const v = _campTreeView;
+  if(now){ _ctTween = null;
+    v.z = to.z; v.x = to.A.x - to.P.x * to.z; v.y = to.A.y - to.P.y * to.z;
+    campTreeApplyView(); return; }
+  _ctTween = { t0: (typeof performance !== 'undefined' ? performance.now() : Date.now()),
+    ms: CAMP_TREE_TWEEN_MS, z0: v.z, z1: to.z,
+    P0: campTreeViewP(), P1: { x:to.P.x, y:to.P.y },
+    A0: { x:0, y:0 }, A1: { x:to.A.x, y:to.A.y } };
+  campTreeTweenStep(); }
+function campTreeTweenStep(){
+  const w = _ctTween; if(!w) return;
+  const el = document.getElementById('campTree');
+  if(!el || !el.classList.contains('on')){ _ctTween = null; return; }   // 화면이 닫혔으면 그만둔다
+  const t = Math.min(1, ((typeof performance !== 'undefined' ? performance.now() : Date.now()) - w.t0) / w.ms);
+  const e = campTreeEase(t);
+  const z = w.z0 * Math.pow(w.z1 / w.z0, e);                            // 등비로 — 눈에 일정하다
+  const px = w.P0.x + (w.P1.x - w.P0.x) * e, py = w.P0.y + (w.P1.y - w.P0.y) * e;
+  const ax = w.A0.x + (w.A1.x - w.A0.x) * e, ay = w.A0.y + (w.A1.y - w.A0.y) * e;
+  _campTreeView.z = z; _campTreeView.x = ax - px * z; _campTreeView.y = ay - py * z;
+  campTreeApplyView();
+  if(t >= 1){ _ctTween = null; return; }
+  requestAnimationFrame(campTreeTweenStep); }
+
+// 고른 별로 뷰를 옮긴다(선택이 없으면 그대로 둔다)
+function campTreeFocus(now){ const sel = _campTreeSel; if(!sel) return;
+  const p = campTreeSelPos(sel); if(!p) return;
+  campTreeTweenTo({ P:p, A:{ x:0, y:CAMP_TREE_SEL_Y },
+    z: Math.max(_campTreeView.z, CAMP_TREE_ZSEL) }, now); }
+// 📊 해금 진행도 — 열 수 있는 칸 전부(가운데 1 + 갈래 4 + 묶음 16 + 계열 32×5)를 분모로 센다.
+//   ⚠ 숫자를 손으로 적지 말 것 — 계열이나 갈래가 늘면 저절로 따라와야 한다.
+function campTreeTotal(){
+  let n = 1;                                            // 가운데
+  for(const bk in CAMP_TREE_BR) n += 1 + CAMP_RT_GRP_KEYS.length;   // 갈래 + 그 안 묶음들
+  return n + CAMP_RT_LINES.length * 5; }
+function campTreeOwned(){
+  let n = campRtRootOn() ? 1 : 0;
+  for(const bk in CAMP_TREE_BR){ if(campRtBrOn(bk)) n++;
+    for(const g of CAMP_RT_GRP_KEYS) if(campRtGpOn(bk, g)) n++; }
+  for(const L of CAMP_RT_LINES) n += campRtHas(L.k);
+  return n; }
+function campTreeProg(){
+  const el = document.getElementById('campTree'); if(!el) return;
+  const have = campTreeOwned(), all = campTreeTotal();
+  const bar = el.querySelector('.ctBar i'); if(bar) bar.style.width = (have / all * 100).toFixed(1) + '%';
+  const tx = el.querySelector('.ctProgN'); if(tx) tx.textContent = have + ' / ' + all; }
 function campTreeRender(){
   const el = document.getElementById('campTree'); if(!el) return;
   const g = el.querySelector('#ctG'); if(g) g.innerHTML = campTreeSvg();
   campTreeApplyView();
   const C = campState();
   const pt = el.querySelector('.ctPts'); if(pt) pt.textContent = campNum(C ? (C.rbPts || 0) : 0);
+  campTreeProg();
   campTreeInfo();
 }
 // 큰 수 표기 — **재화 바와 같은 규칙**을 쓴다(`fmtCur` · js/12-appshell.js).
@@ -683,61 +1064,80 @@ function campTreeRender(){
 function campNum(n){ if(typeof fmtCur === 'function') return fmtCur(n);
   return Math.floor(n).toLocaleString('en-US'); }
 
-// 고른 노드 설명 + 사기 버튼
-function campTreeInfo(){
-  const el = document.getElementById('campTree'); if(!el) return;
-  const nm = el.querySelector('.ctInfoNm'), sub = el.querySelector('.ctInfoSub'), btn = el.querySelector('.ctBuy');
-  if(!_campTreeSel){
-    if(nm) nm.textContent = campRtRootOn() ? '노드를 고르세요' : '시작점부터 — 탭당 미네랄';
-    if(sub) sub.textContent = campRtRootOn() ? '' : ('비용 ' + campNum(CAMP_RT_BASE) + ' 포인트');
-    if(btn){ btn.textContent = campRtRootOn() ? '고르기' : '시작점 사기';
-      btn.disabled = campRtRootOn() || !campRtCanBuy('root');
-      btn.dataset.k = 'root'; btn.dataset.n = '0'; }
-    return; }
-  const [k, ns] = _campTreeSel.split(':'); const n = +ns;
-  const L = campRtLine(k); if(!L) return;
-  const st = campTreeState(k, n), cost = campRtCost(k, n), gr = campRtGrade(k, n);
-  if(nm) nm.textContent = L.nm + ' ' + n + '차';
-  if(sub) sub.textContent = CAMP_TREE_BR[L.br].nm + ' · ' + gr + ' · T' + campRtTier(k, n) +
-    ' · 비용 ' + campNum(cost);
-  if(btn){ btn.dataset.k = k; btn.dataset.n = String(n);
-    btn.textContent = st === 'own' ? '보유' : (st === 'buy' ? '사기' : (st === 'next' ? '포인트 부족' : '잠김'));
-    btn.disabled = (st !== 'buy'); }
-}
-function campTreeApplyView(){
-  const g = document.getElementById('ctG'); if(!g) return;
-  const v = _campTreeView;
-  g.setAttribute('transform', 'translate(' + v.x.toFixed(1) + ' ' + v.y.toFixed(1) + ') scale(' + v.z.toFixed(3) + ')');
-}
-// 노드를 누르면 고르고, 이미 고른 것을 다시 누르면 산다(두 번 누르기 = 구매)
+// 별을 누르면 고른다. 이미 고른 별을 다시 누르면 산다(두 번 누르기 = 구매).
+//   ⚠ 마디는 data-k 가 'br:econ' · 'gp:econ가' 로 온다 — 계열 키와 접두사로 갈린다.
 function campTreeTap(k, n){
-  const key = k + ':' + n;
-  if(k === 'root'){ if(!campRtRootOn() && campRtCanBuy('root')){ campRtBuy('root'); campTreeRender(); } 
-    _campTreeSel = null; campTreeInfo(); return; }
-  if(_campTreeSel === key && campTreeState(k, n) === 'buy'){ campTreeBuySel(); return; }
-  _campTreeSel = key; campTreeRender();
+  let sel;
+  if(k === 'root') sel = { t:'root', a:'root' };
+  else
+  if(k.indexOf('br:') === 0) sel = { t:'br', a:k.slice(3) };
+  else if(k.indexOf('gp:') === 0) sel = { t:'gp', a:k.slice(3, -1), b:k.slice(-1) };
+  else sel = { t:'n', a:k, b:+n };
+  const same = _campTreeSel && _campTreeSel.t === sel.t && _campTreeSel.a === sel.a &&
+    String(_campTreeSel.b) === String(sel.b);
+  if(same){ campTreeBuySel(); return; }
+  _campTreeSel = sel; campTreeRender(); campTreeFocus();
+}
+// ⊘ 지정 해제 — 고른 것을 놓고 원래 배율로 돌아간다(메인 #deselTop 과 같은 아이콘·같은 뜻)
+function campTreeDesel(){ _campTreeSel = null;
+  campTreeRender();
+  campTreeFit();          // 들어올 때와 같은 곡선으로 물러난다
 }
 function campTreeBuySel(){
   const el = document.getElementById('campTree'); if(!el) return;
   const btn = el.querySelector('.ctBuy'); if(!btn || btn.disabled) return;
-  const k = btn.dataset.k, n = +btn.dataset.n;
-  if(k === 'root'){ campRtBuy('root'); }
-  else { if(campTreeState(k, n) !== 'buy') return; campRtBuy(k); }
+  const key = btn.dataset.key; if(!key) return;
+  if(!campRtCanBuy(key)) return;
+  campRtBuy(key);
   if(typeof playSfx === 'function') playSfx('upgrade');
   campTreeRender();
 }
-
-// ── 밀고 확대 ───────────────────────────────────────────────────────────
+// ── 🔍 밀고 확대 ────────────────────────────────────────────────────────
 //   ⛔ 캠프 맵의 팬·줌(campPatchZoom)을 빌리지 말 것 — 그건 건설 격자 좌표계에 묶여 있다.
-//   여기는 SVG viewBox 하나뿐이라 훨씬 단순하다.
-let _ctBound = false, _ctPtrs = new Map(), _ctDrag = null, _ctPinch = null, _ctMoved = 0;
+//   여기는 SVG 변환 하나뿐이라 훨씬 단순하다: 화면점 = 월드점 × z + (x, y).
+//
+//   ⭐ **확대는 손가락(또는 커서) 자리를 붙잡고 한다**(2026-09-01). 화면 중심을 기준으로 키우면
+//     보고 있던 별이 옆으로 흘러가 버려서, 확대할수록 목표를 놓친다.
+//     붙잡는 식: 확대 전후로 그 점의 화면 좌표가 같아야 하므로
+//       new.x = px − (px − old.x) × (z2 / z1)
+//   ⚠ 화면 좌표는 SVG 의 **뷰포트 픽셀**이 아니라 viewBox 단위다 — 둘을 섞으면 손가락을 따라오지
+//     않는다(비율이 화면 크기마다 다르다). campTreeToView() 가 그 환산을 맡는다.
+let _ctBound = false, _ctPtrs = new Map(), _ctDrag = null, _ctPinch = null, _ctMoved = 0, _ctTapT = 0;
+let _ctDown = null, _ctDownXY = null;   // 👆 pointerdown 때 잡아 둔 별과 그 자리
+const CAMP_TREE_ZSTEP = 1.22;       // 휠 한 칸 · 두 번 누르기의 배율
+const CAMP_TREE_TAP_SLOP = 14;      // 이만큼까지는 「누른 것」 — 손가락은 가만히 못 있는다
+function campTreeClampZ(z){ return Math.max(CAMP_TREE_ZMIN, Math.min(CAMP_TREE_ZMAX, z)); }
+// 화면(클라이언트) 좌표 → SVG viewBox 좌표
+function campTreeToView(cx, cy){
+  const svg = document.getElementById('ctSvg'); if(!svg) return { x:0, y:0 };
+  const r = svg.getBoundingClientRect();
+  const vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(/\s+/).map(Number);
+  if(!r.width || !r.height) return { x:0, y:0 };
+  // preserveAspectRatio="xMidYMid meet" — 짧은 쪽에 맞춰 여백이 생긴다
+  const s = Math.min(r.width / vb[2], r.height / vb[3]);
+  const ox = (r.width - vb[2] * s) / 2, oy = (r.height - vb[3] * s) / 2;
+  return { x: vb[0] + (cx - r.left - ox) / s, y: vb[1] + (cy - r.top - oy) / s };
+}
+// ⭐ 한 점을 붙잡고 배율을 바꾼다 — 확대·축소의 유일한 입구
+function campTreeZoomAt(z2, cx, cy){
+  campTreeTweenStop();                 // 손으로 확대하면 진행 중인 연출은 멈춘다
+  const v = _campTreeView, z1 = v.z;
+  z2 = campTreeClampZ(z2); if(z2 === z1) return;
+  const p = (cx == null) ? { x:0, y:0 } : campTreeToView(cx, cy);
+  v.x = p.x - (p.x - v.x) * (z2 / z1);
+  v.y = p.y - (p.y - v.y) * (z2 / z1);
+  v.z = z2; campTreeApplyView();
+}
 function campTreeBind(){
   const el = document.getElementById('campTree'); if(!el || _ctBound) return;
   const svg = el.querySelector('#ctSvg'); if(!svg) return;
   _ctBound = true;
   svg.addEventListener('pointerdown', e => {
     svg.setPointerCapture(e.pointerId); _ctPtrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
-    _ctMoved = 0;
+    _ctMoved = 0; campTreeTweenStop();
+    // 👆 누른 별을 **여기서** 잡아 둔다. capture 뒤에는 target 이 <svg> 가 되어 알 수 없다.
+    _ctDown = (e.target.closest && e.target.closest('[data-k]')) || campTreeNearest(e.clientX, e.clientY);
+    _ctDownXY = { x:e.clientX, y:e.clientY };
     if(_ctPtrs.size === 1) _ctDrag = { x:e.clientX, y:e.clientY, vx:_campTreeView.x, vy:_campTreeView.y };
     else if(_ctPtrs.size === 2){ _ctDrag = null; _ctPinch = campTreePinch(); }
   });
@@ -745,26 +1145,101 @@ function campTreeBind(){
     if(!_ctPtrs.has(e.pointerId)) return;
     _ctPtrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
     if(_ctPinch && _ctPtrs.size === 2){ const now = campTreePinch();
-      if(now && _ctPinch.d > 0){ const z = _campTreeView.z * (now.d / _ctPinch.d);
-        _campTreeView.z = Math.max(CAMP_TREE_ZMIN, Math.min(CAMP_TREE_ZMAX, z)); _ctPinch = now; campTreeApplyView(); }
+      if(now && _ctPinch.d > 0){
+        // 두 손가락 **가운데를 붙잡고** 키운다 — 중심 기준으로 하면 보던 곳이 흘러간다
+        campTreeZoomAt(_campTreeView.z * (now.d / _ctPinch.d), now.cx, now.cy);
+        _ctMoved = 99;                 // 핀치 뒤 손을 뗄 때 별이 눌리지 않게
+        _ctPinch = now; }
       return; }
     if(_ctDrag){ const dx = e.clientX - _ctDrag.x, dy = e.clientY - _ctDrag.y;
       _ctMoved = Math.max(_ctMoved, Math.abs(dx) + Math.abs(dy));
-      _campTreeView.x = _ctDrag.vx + dx; _campTreeView.y = _ctDrag.vy + dy; campTreeApplyView(); }
+      // ⚠ 끄는 거리도 viewBox 단위로 바꿔야 손가락과 그림이 **같은 속도**로 움직인다
+      const a = campTreeToView(_ctDrag.x, _ctDrag.y), b = campTreeToView(e.clientX, e.clientY);
+      _campTreeView.x = _ctDrag.vx + (b.x - a.x); _campTreeView.y = _ctDrag.vy + (b.y - a.y);
+      campTreeApplyView(); }
   });
-  const up = e => { _ctPtrs.delete(e.pointerId); if(_ctPtrs.size < 2) _ctPinch = null; if(!_ctPtrs.size) _ctDrag = null; };
-  svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up);
-  // ⚠ 밀고 나서 손을 뗄 때 노드가 눌리면 안 된다 — 움직인 거리로 가른다
-  svg.addEventListener('click', e => {
-    if(_ctMoved > 8) return;
-    const t = e.target.closest && e.target.closest('[data-k]'); if(!t) return;
-    campTreeTap(t.dataset.k, +t.dataset.n);
+  svg.addEventListener('pointerup', e => {
+    const el = _ctDown, xy = _ctDownXY;
+    _ctPtrs.delete(e.pointerId); if(_ctPtrs.size < 2) _ctPinch = null; if(!_ctPtrs.size) _ctDrag = null;
+    _ctDown = null;
+    if(_ctMoved > CAMP_TREE_TAP_SLOP) return;         // 밀었으면 탭이 아니다
+    if(el){ _ctTapT = 0; campTreeTap(el.dataset.k, +el.dataset.n); return; }
+    // ⭐ 별을 고른 채로 **빈 하늘을 누르면 되돌아간다**(2026-09-01 사용자 확정 · ⊘ 를 없앤 자리).
+    //   ⛔ 별도의 해제 버튼을 다시 만들지 말 것 — 「고른 것 말고 다른 데를 누른다」가 곧 해제다.
+    if(_campTreeSel){ _ctTapT = 0; campTreeDesel(); return; }
+    // 빈 하늘을 **두 번 톡톡** = 전체 보기(연출은 campTreeFit 이 맡는다)
+    const now = Date.now();
+    if(now - _ctTapT < 320){ _ctTapT = 0; campTreeFit(); return; }
+    _ctTapT = now; });
+  svg.addEventListener('pointercancel', e => { _ctPtrs.delete(e.pointerId); _ctDown = null;
+    if(_ctPtrs.size < 2) _ctPinch = null; if(!_ctPtrs.size) _ctDrag = null; });
+  // 🖱 휠 — 커서 자리를 붙잡고 확대. ⚠ passive:false 여야 페이지가 같이 스크롤되지 않는다
+  svg.addEventListener('wheel', e => { e.preventDefault();
+    const k = e.deltaY < 0 ? CAMP_TREE_ZSTEP : 1 / CAMP_TREE_ZSTEP;
+    campTreeZoomAt(_campTreeView.z * k, e.clientX, e.clientY);
+  }, { passive:false });
+  // ⚠ 밀고 나서 손을 뗄 때 별이 눌리면 안 된다 — 움직인 거리로 가른다
+  // 시트의 버튼들 — 시트는 다시 그려지므로 **위임**으로 받는다(요소에 직접 걸면 한 번 쓰고 끊긴다)
+  el.addEventListener('click', e => {
+    const b = e.target.closest && e.target.closest('.ctBuy');
+    if(b && !b.disabled){ campTreeBuySel(); return; }
+    if(e.target.closest && e.target.closest('.ctQ')){ campTreeHelp(true); return; }
+    // 카드 밖(딤)이나 「닫기」를 누르면 접는다
+    if(e.target.closest && e.target.closest('.ctHelpX')){ campTreeHelp(false); return; }
+    if(e.target.classList && e.target.classList.contains('ctHelp')) campTreeHelp(false);
   });
-  el.querySelector('.ctBuy')?.addEventListener('click', campTreeBuySel);
-  el.querySelector('.ctX')?.addEventListener('click', campTreeClose);
+  // ⛔ 확대·축소 **버튼을 만들지 말 것**(2026-09-01 사용자 확정) — 손가락으로만 한다:
+  //   핀치(두 손가락) · 끌기 · 빈 하늘 두 번 톡톡. 데스크톱은 휠.
 }
+// 🔭 전체가 보이게 — 처음 열 때와 「전체」 버튼이 같은 자리로 돌려놓는다.
+//   ⭐ 배율을 상수로 박지 않는다. **지금 그려진 별들의 경계**를 재서 맞춘다 —
+//     첫 회차에는 별이 다섯이고 후반에는 수십 개라, 고정 배율이면 한쪽은 늘 어긋난다.
+//   ⚠ 재기 전에 변환을 1배로 되돌려야 한다. getBBox 는 그룹의 변환 **뒤** 좌표를 주므로,
+//     확대된 채로 재면 그 배율이 한 번 더 곱해진다.
+const CAMP_TREE_FIT_PAD = 30;        // 가장자리 여백(viewBox 단위)
+const CAMP_TREE_FIT_ZMAX = 1.35;     // ⚠ 「전체 보기」의 배율 상한 — 첫 회차엔 별이 다섯뿐이라
+                                     //   경계에 딱 맞추면 그 다섯이 화면을 꽉 채워 어색하다.
+const CAMP_TREE_FIT_LIFT = 26;       // 아래 시트를 피해 살짝 위로
+function campTreeFit(now){ _campTreeSel = null;
+  campTreeRender();
+  const svg = document.getElementById('ctSvg');
+  // ⛔ getBBox() 를 쓰지 말 것 — 갈래 이름표(반지름 300)와 후광까지 범위에 넣어서
+  //   별 무리는 위쪽에 뭉쳐 있는데 경계 중심은 원점이 된다(실측: 아래 절반이 통째로 비었다).
+  //   ⭐ **별의 자리만** 모은다. 이름표는 따라오면 되는 장식이지 맞출 대상이 아니다.
+  let x0 = 0, y0 = 0, x1 = 0, y1 = 0, n = 0;
+  document.querySelectorAll('#ctG .ctGem').forEach(e => {
+    const x = +e.getAttribute('cx'), y = +e.getAttribute('cy'), r = (+e.getAttribute('r') || 0) + 12;
+    if(!isFinite(x) || !isFinite(y)) return;
+    if(!n){ x0 = x - r; x1 = x + r; y0 = y - r; y1 = y + r; }
+    else { x0 = Math.min(x0, x - r); x1 = Math.max(x1, x + r);
+           y0 = Math.min(y0, y - r); y1 = Math.max(y1, y + r); }
+    n++; });
+  const w0 = x1 - x0, h0 = y1 - y0;
+  if(!n || !svg || !(w0 > 1) || !(h0 > 1)){
+    campTreeTweenTo({ P:{x:0,y:0}, A:{x:0,y:0}, z:0.62 }, now); return; }
+  const vb = (svg.getAttribute('viewBox') || '0 0 430 660').split(/\s+/).map(Number);
+  const w = vb[2] - CAMP_TREE_FIT_PAD * 2, h = vb[3] - CAMP_TREE_FIT_PAD * 2;
+  const z = campTreeClampZ(Math.min(w / w0, h / h0, CAMP_TREE_FIT_ZMAX));
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  campTreeTweenTo({ P:{x:cx,y:cy}, A:{x:0,y:-CAMP_TREE_FIT_LIFT}, z }, now); }
+// 👆 그 자리에서 가장 가까운 별 — 없으면 null.
+//   ⚠ 임계는 **화면 픽셀**이다(월드 좌표가 아니다). 축소하면 별이 촘촘해 보이므로
+//     화면 기준으로 재야 「눈에 보이는 만큼 가까운 것」을 고른다.
+const CAMP_TREE_NEAR_PX = 34;
+function campTreeNearest(cx, cy){
+  const g = document.getElementById('ctG'); if(!g) return null;
+  let best = null, bd = CAMP_TREE_NEAR_PX * CAMP_TREE_NEAR_PX;
+  const list = g.querySelectorAll('[data-k]');
+  for(let i = 0; i < list.length; i++){
+    const r = list[i].getBoundingClientRect();
+    if(!r.width) continue;
+    const dx = (r.left + r.width / 2) - cx, dy = (r.top + r.height / 2) - cy;
+    const d = dx * dx + dy * dy;
+    if(d < bd){ bd = d; best = list[i]; } }
+  return best; }
 function campTreePinch(){ const a = [..._ctPtrs.values()]; if(a.length < 2) return null;
-  return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) }; }
+  return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y),
+    cx: (a[0].x + a[1].x) / 2, cy: (a[0].y + a[1].y) / 2 }; }
 
 // ══ ⚔ 던전 전투 (2026-08-25 · 2단계) ═══════════════════════════════════
 //   ⭐ **전투를 새로 짜지 않는다 — 오토배틀(18-strike.js)의 것을 빌린다.**
@@ -1235,15 +1710,25 @@ function campLayerPost(u, W){
   u._post.y = Math.min(lim, u._post.y + back);
   u.y = u._post.y;                                         // 갓 태어났으니 그 자리에 바로 선다
   return back; }
-// 🚧 자리에서 나갈 수 있는 거리 — **모두 같다**(CAMP_ENG_OUT).
-//   ⛔ 층에 따라 다르게 줘 봤다가 되돌렸다(2026-08-31). `500 + (300 − 층)` 으로 계산해서
-//     결과적으로 **모두 718~800 으로 늘어났고**, 500 이 최적이라던 실측을 뒤집은 꼴이 됐다.
+// 🚧 자리에서 나갈 수 있는 거리 — **유닛마다 다르게 주지 않는다**(모두 CAMP_ENG_OUT).
+//   ⚠ **지금 값은 1200 이다**(선언과 근거는 아래 `const CAMP_ENG_OUT` 자리에 있다).
+//     여기서 지키는 것은 값이 아니라 **「층에 따라 다르게 주지 않는다」는 규칙** 하나다.
+//
+//   ── 📜 500 시절의 기록 (2026-08-31 · 옛 campEngageStep 구조) ──────────────
+//   ⛔ 그때 층에 따라 다르게 줘 봤다가 되돌렸다. `500 + (300 − 층)` 으로 계산해서
+//     결과적으로 **모두 718~800 으로 늘어났고**, 500 이 최적이라던 그때 실측을 뒤집은 꼴이 됐다.
 //     벤치 D1R18 → **D1R13**, 실효 0.87 → 0.50. 라운드가 R6 115초 · R12 110초로 늘어졌다.
-//   ⭐ 자리 제한은 「너무 멀리 쫓아가지 마라」는 **안전장치**일 뿐이다. 어느 거리에서 쏠지는
-//     campGoalFor 의 `want`(= 사거리 × 0.85)가 이미 정한다 — 거기에 층까지 얹을 이유가 없다.
-//     ⚠ 옛 주석은 campEngageStep 을 가리켰다 — 2026-08-31 에 배선이 끊긴 함수다.
-//   ⭐ 「짧은 사거리 유닛이 앞으로 나가야 한다」는 **배치(campLayerPost)로 푼다** — 애초에
-//     앞줄에 세우면 500 으로 충분하다. 제한을 늘려 푸는 문제가 아니었다.
+//   ⚠ **이 문단의 숫자를 지금 값과 견주지 말 것** — 미는 주체가 셋이던 옛 구조의 값이다.
+//     그 구조는 2026-08-31 에 `js/21-camp-battle.js` 로 대체됐고, 같은 이름의 상수가
+//     500 → 1200 으로 다시 측정됐다(옛 기준선 R10·R8·R9·R8 을 되찾는 값).
+//   ────────────────────────────────────────────────────────────────────
+//
+//   ⭐ 규칙이 남은 이유 — 자리 제한은 「너무 멀리 쫓아가지 마라」는 **안전장치**일 뿐이다.
+//     어느 거리에서 쏠지는 campGoalFor 의 `want`(= 사거리 × 0.85)가 이미 정한다.
+//     거기에 층까지 얹으면 두 장치가 같은 것을 두 번 정하게 된다.
+//   ⭐ 「짧은 사거리 유닛이 앞으로 나가야 한다」는 **배치(campLayerPost)로 푼다** —
+//     애초에 앞줄에 세우면 된다. 제한을 늘려 푸는 문제가 아니었다.
+//   ⚠ 이 함수는 배선이 끊긴 campEngageStep 쪽 것이다(2026-08-31) — 되살릴 때 위를 먼저 읽을 것.
 function campEngageOut(u){ return CAMP_ENG_OUT; }
 
 // 전투 유닛 → 기지 유닛과 **같은 규약**의 렌더 엔트리(scl·yoff·yawFix·z 를 맞춘다).
@@ -1925,12 +2410,14 @@ const CAMP_STAT_TILE = 850 * 0.22 / 4;             // 칸 → 월드 거리(46.7
 //   ⚠ 스웜·에테리얼은 아직 안 건드렸다(유니온 결과를 보고 정한다).
 //     페럴·콜로서스는 이 표에 **아예 없어서** 엔진 원본 사거리를 그대로 쓴다.
 //
-//   ⛔ **레인저 사거리는 자리 제한(CAMP_ENG_OUT 500)과 짝이다** (2026-08-31 실측).
-//     4칸 → 3칸 으로 내려 봤더니 **짧은 사거리 유닛이 적에게 영영 못 닿았다**:
-//     아군이 전부 자리에서 500(상한)까지 나가 굳고, 적까지는 342~375 였다(사거리 140).
-//     그 사이 아군만 12기 → 5기로 죽었다. 벤치로도 D1R18 → D1R14 로 나빠졌다.
-//     ⭐ 500 은 **레인저가 4칸일 때** 최적으로 측정된 값이다. 한쪽만 바꾸면 조합이 깨진다.
-//     → 레인저를 내리려면 **CAMP_ENG_OUT 도 함께** 다시 재야 한다.
+//   ⛔ **레인저 사거리는 자리 제한(CAMP_ENG_OUT)과 짝이다** — 한쪽만 바꾸면 조합이 깨진다.
+//     📜 500 시절의 기록 (2026-08-31 · 옛 campEngageStep 구조): 4칸 → 3칸 으로 내려 봤더니
+//       **짧은 사거리 유닛이 적에게 영영 못 닿았다** — 아군이 전부 자리에서 500(상한)까지
+//       나가 굳고, 적까지는 342~375 였다(사거리 140). 그 사이 아군만 12기 → 5기로 죽었다.
+//       벤치로도 D1R18 → D1R14 로 나빠졌다.
+//     ⚠ **그 500 은 지금 값이 아니다** — 같은 상수가 그 뒤 **1200** 으로 다시 측정됐다.
+//       위 숫자를 지금 값과 견주지 말 것. 짝이라는 사실만 남는다.
+//     → 레인저를 내리려면 **CAMP_ENG_OUT 도 함께** 다시 재야 한다(선언 자리의 표를 볼 것).
 //
 //   ⛔ **이동 속도는 여기서 못 바꾼다** (2026-08-31 · s 칸을 넣었다가 되돌림).
 //     `u.spd` 를 덮어도 **실제 이동 속도가 안 변한다.** 실측: u.spd 를 100 으로 하든 600 으로
@@ -2560,6 +3047,38 @@ function campLayBase(){
     w.tx = null; w.ty = null; }
 }
 
+// 🌟 새로운 시작 — root 를 산 뒤로는 **회차마다** 빈손이 아니게 시작한다.
+//   ⭐ 여기가 그 자리다: 위 초기화가 「시작 미네랄 0 · 일꾼 0」을 만들고, 그 **다음에** 얹는다.
+//     (옛 주석이 「startMin 이 구현되면 여기에 더한다」고 표시해 둔 자리 그대로다.)
+//   ⚠ **새 판일 때만** 부른다. 저장분을 복원한 판에 얹으면 캠프를 열 때마다 자원이 불어난다.
+//   ⛔ 여기서 배수를 곱하지 말 것 — 새로운 시작은 절대값이라 후반에 저절로 희석되는 것이 설계다.
+function campRootGrant(){
+  if(typeof G === 'undefined' || !G.tech || !campRtRootOn()) return null;
+  const got = { min:0, wk:0, bld:null };
+  G.tech.credit = (G.tech.credit || 0) + CAMP_ROOT_MIN;
+  got.min = CAMP_ROOT_MIN;
+  // 👷 일꾼 — 광맥 위에 나란히. 좌표는 campLayBase 의 첫 일꾼 자리를 기준으로 옆으로 벌린다.
+  const cw = (typeof _techCW === 'function') ? _techCW() : 0.02;
+  const ch = (typeof _techCH === 'function') ? _techCH() : 0.02;
+  const y0 = (typeof campRowY === 'function') ? campRowY(CAMP_ROW_MINE) - ch : 0.62;
+  for(let i = 0; i < CAMP_ROOT_WK; i++){
+    G.tech.ents.push({ eid:G.tech.eseq++, type:'worker', x: 0.5 + (i - 1) * cw * 2, y: y0 });
+    got.wk++; }
+  // 🏛 건물 — 이미 지어진 상태로 선다(bt:0). 테크도 함께 열어야 유닛 카드가 나온다.
+  const race = G.tech.race;
+  const B = !CAMP_ROOT_BLD ? null
+    : (typeof TECH_TREE !== 'undefined' && TECH_TREE[race] && TECH_TREE[race].buildings || [])
+      .find(function(x){ return x.k === CAMP_ROOT_BLD; });
+  if(B && typeof _techFoot === 'function' && typeof _techSnap === 'function' && !G.tech.built[B.k]){
+    const f = _techFoot(race, B.k);
+    const sn = _techSnap(0.5 + cw * 5, campRowY(CAMP_ROW_BASE), f.w, f.h);
+    G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:B.k, x:sn.cx, y:sn.cy, bt:0 });
+    G.tech.built[B.k] = 1;
+    if(typeof _techAddSupCap === 'function') _techAddSupCap(B.supply || 0);
+    got.bld = B.name || B.k; }
+  return got;
+}
+
 // ── 저장 ────────────────────────────────────────────────────────────────
 // ⚠ ents 에는 런타임 전용 필드가 붙는다(_rally · _lifted · _cKind · _gEid …).
 //   채취 왕복 상태·3D 표시 상태 같은 것들이라 저장하면 안 된다 —
@@ -2740,8 +3259,10 @@ function campEnter(){
   if(!had) G.tech.energy = 0;
   // 💎 **시작 미네랄 0**(2026-08-27) — 첫 미네랄은 탭으로 번다. 일꾼 0기와 같은 규칙이다.
   //    techUIInit 은 관리자 탭 기본값 1500 을 넣는다(16-build.js `TECH_START`).
-  //    ⚠ 환생 트리 「시작 미네랄」(startMin)이 구현되면 **여기에 그 값을 더한다** — 지금은 노드 정의만 있다.
+  //    ⚠ 환생 트리 「시작 미네랄」(startMin)은 **아직 미배선**이다 — 노드 정의만 있다.
   if(!had) G.tech.credit = 0;
+  // 🌟 새로운 시작 — 가운데(root)를 샀으면 빈손이 아니게 시작한다. **새 판일 때만** 얹는다.
+  if(!had) campRootGrant();
   campPatchProduce(); campPatchArm();                  // 일꾼 40기 · 보급소 24채 문지기
   campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
   // ⛽ **정제소 카드는 연구 구역 「자원」 칸이 갖는다**(2026-08-27 · js/20-camp-research.js).

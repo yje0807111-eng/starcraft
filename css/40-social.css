@@ -716,5 +716,5 @@
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
   #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead,
-  .curTitle,.mapName,#msSortLbl,.hbmHead{
+  .curTitle,.mapName,#msSortLbl,.hbmHead,#campTree .ctTitle,#campReb .crTitle{
     font-family:var(--font-ti);font-weight:700}

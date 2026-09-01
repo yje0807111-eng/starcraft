@@ -420,6 +420,8 @@ async function groupLobby(){
     assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
     // ④ ✕ 를 없앴다 — **나가는 길은 하단 네비 하나**다(2026-08-31 사용자 확정)
     assert(!document.querySelector('#campReb .crX'),'환생 화면에 ✕ 가 남아 있다');
+    //   ⚠ 트리 쪽 사본(.ctX 「닫기」)도 같이 없앴다 — 누르면 트리만 닫히고 배경이 남았다(잔상).
+    assert(!document.querySelector('#campTree .ctX'),'환생 트리에 「닫기」가 남아 있다');
     // ⑤ 다른 구역으로 가면 닫힌다 — ✕ 가 없으니 이게 유일한 출구다
     navGo('reb');
     assert(campRebIsOn(),'환생이 안 열렸다');
@@ -434,10 +436,41 @@ async function groupLobby(){
     navGo('reb');
     assert(!document.getElementById('phone').classList.contains('artMark'),
       '환생 화면이 타이틀 로고(artMark)까지 켠다');
-    assert(document.getElementById('phone').classList.contains('artBg'),
-      '환생 화면이 키 아트를 안 켠다');
+    // 🌌 배경은 **환생 구역 전용 한 장**이다 — 로그인·부팅의 키 아트를 빌리지 않는다
+    assert($('campRebBg') && !$('campRebBg').classList.contains('hide'),
+      '환생 구역 전용 배경이 안 켜진다');
+    { const bg=getComputedStyle($('campRebBg')).backgroundImage;
+      assert(bg.indexOf('backgrounds/reb/')>=0,'전용 배경 그림이 안 걸렸다: '+bg);
+      assert(bg.indexOf('boot.webp')<0,'부팅 키 아트를 여기서 또 그린다'); }
+    // ⑦ 🎬 **페이드는 들어올 때 한 번만** — 탭 이동은 즉시다(2026-08-31 사용자 지적).
+    //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 를 오갈 때마다 화면이 껌뻑인다.
+    //   ⭐ 애니는 `.crIn` 이 갖고, campRebEnter 가 **구역 밖에서 들어온 경우에만** 붙인다.
     campRebClose(); campTreeClose();
-    return '환생·업그레이드 · 네비 자리 '+gap('campReb')+' · 서로 배타';
+    campRebEnter('info');
+    assert($('campReb').classList.contains('crIn'),'밖에서 들어왔는데 페이드가 안 걸린다');
+    campRebEnter('tree');
+    assert(!$('campTree').classList.contains('crIn'),'탭만 바꿨는데 페이드가 다시 돈다(업그레이드)');
+    campRebEnter('info');
+    assert(!$('campReb').classList.contains('crIn'),'탭만 바꿨는데 페이드가 다시 돈다(환생)');
+    { const cs=getComputedStyle($('campReb'));
+      assert(cs.animationName==='none','페이드가 .on 에 붙어 있다 — 탭마다 다시 돈다: '+cs.animationName); }
+    // ⑧ 🖼 **배경은 구역의 것** — 탭을 오가는 동안 껐다 켜지 않는다(2026-08-31 「번쩍」 신고).
+    //   ⛔ 끄면 트리는 제 배경에 가려 멀쩡해 보이지만, 환생 탭으로 돌아올 때 그림만 뒤늦게 떠오른다.
+    { const art=()=>!$('campRebBg').classList.contains('hide');
+      campRebEnter('info'); assert(art(),'환생에 들어왔는데 배경이 안 켜진다');
+      campRebEnter('tree'); assert(art(),'업그레이드 탭으로 갔더니 배경이 꺼진다 — 돌아올 때 번쩍인다');
+      campRebEnter('info'); assert(art(),'환생 탭으로 돌아오니 배경이 꺼져 있다');
+      navGo('shop');        assert(!art(),'구역을 나갔는데 배경이 남는다(잔상)');
+      assert(!$('phone').classList.contains('artLift'),'구역을 나갔는데 네비 올림이 남는다'); }
+    // ⑨ 🎬 배경이 UI 보다 **먼저** 선다 — 둘이 같이 반투명이면 그 아래 캠프가 비친다
+    { const ph=$('phone'), had=ph.classList.contains('artLift'); ph.classList.add('artLift');
+      const a=parseFloat(getComputedStyle($('campRebBg')).transitionDuration)||0;
+      const u=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--t-screen'))||0;
+      if(!had) ph.classList.remove('artLift');
+      assert(a>0 && u>0 && a < u*0.75,
+        '배경이 UI 와 같은 속도로 뜬다 ('+a+'s vs '+u+'s) — 겹치는 동안 아래 화면이 새어 나온다'); }
+    campRebClose(); campTreeClose();
+    return '환생·업그레이드 · 네비 자리 '+gap('campReb')+' · 서로 배타 · 페이드는 진입 1회';
   });
 
   // 🔁 환생 화면 — HUNT_R1.md §4-2-0 이 요구한 것이 실제로 화면에 있는가.
@@ -1562,6 +1595,36 @@ async function groupLobby(){
     assert((G.tech.minerals||[]).length===6,'복귀했더니 광맥이 달라짐');
     assert(!$('campRaceOv') || $('campRaceOv').classList.contains('hide'),'종족을 이미 골랐는데 또 물어봄');
     return '종족 '+STK_RACE_ORDER.length+'종 · 본부·일꾼 · 광맥 '+CAMP_MINE_COLS+'×'+CAMP_MINE_ROWS+' · 가스 2 · 저장/복원 ok'; });
+
+  // 🌟 새로운 시작 — 가운데(root)를 산 회차는 **빈손이 아니게** 시작한다(2026-09-01 사용자 확정).
+  //   ⚠ 위 계약이 「시작 일꾼 0기 · 미네랄 0」을 지키는 이유는 root 를 **안 샀기 때문**이다.
+  //     그러니 여기서는 root 를 켜고 재고, 끝나면 얹은 것을 도로 걷는다(뒤 계약이 오염되면 안 된다).
+  await step('환생 트리: 새로운 시작이 실제로 캠프에 얹힌다', async()=>{
+    skipIf(typeof campRootGrant!=='function'||typeof G==='undefined'||!G.tech,'캠프가 안 떠 있음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    const c0=G.tech.credit|0, e0=(G.tech.ents||[]).slice(), b0=Object.assign({}, G.tech.built);
+    try{
+      const wk=()=>(G.tech.ents||[]).filter(e=>e.type==='worker').length;
+      const bar=()=>(G.tech.ents||[]).filter(e=>e.type==='bldg'&&e.bk===CAMP_ROOT_BLD).length;
+      // ① root 가 없으면 아무 일도 없다 — 지금 화면이 「빈손 시작」인 이유가 이것이다
+      const w0=wk(), r0=bar();
+      C.rbTree={};
+      assert(campRootGrant()===null,'root 없이도 새로운 시작이 얹힌다');
+      assert(wk()===w0&&(G.tech.credit|0)===c0,'root 없이 자원·일꾼이 늘었다');
+      // ② root 를 사면 자원·일꾼·건물이 함께 온다
+      C.rbTree={root:1,_m2:1};
+      const got=campRootGrant();
+      assert(got,'새로운 시작이 아무것도 안 줬다');
+      assert((G.tech.credit|0)===c0+CAMP_ROOT_MIN,'미네랄이 안 들어왔다: '+G.tech.credit);
+      assert(wk()-w0===CAMP_ROOT_WK,'일꾼이 '+CAMP_ROOT_WK+'기 안 늘었다: +'+(wk()-w0));
+      if(CAMP_ROOT_BLD) assert(bar()>r0,'시작 건물이 안 섰다');   // 유보 중이면 건너뛴다
+      if(CAMP_ROOT_BLD) assert(!!G.tech.built[CAMP_ROOT_BLD],'건물은 섰는데 테크가 안 열렸다');
+      // ③ 두 번 불러도 건물이 겹치지 않는다(캠프를 다시 열 때마다 쌓이면 안 된다)
+      const r1=bar(); campRootGrant();
+      assert(bar()===r1,'같은 건물이 또 섰다: '+r1+' → '+bar());
+      return '미네랄 +'+CAMP_ROOT_MIN+' · 일꾼 '+CAMP_ROOT_WK+'기'+(CAMP_ROOT_BLD?' · '+CAMP_ROOT_BLD+' 1채':' · 건물 유보');
+    } finally { C.rbTree=keepT; G.tech.credit=c0; G.tech.ents=e0; G.tech.built=b0; } });
   // 🏢 **부서진 건물에 헛방을 쏘지 않는다** (2026-08-31)
   //    ⛔ 적이 칠 건물을 프레임 **처음에 한 번만** 골랐다. 그 건물이 프레임 중간에 부서지면
   //      뒤에 오는 적들이 **이미 죽은 건물**을 계속 때려 그만큼의 피해가 버려졌다.
@@ -1967,6 +2030,177 @@ async function groupLobby(){
       return '0→75% · 체력 1 버팀 · 라운드당 1회 · 리셋 ok';
     } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField();
       campBattleClose(); const S=campState(); if(S){ S.dg=0; S.cleared=0; } } });
+
+  // 🌌 별자리 트리 — 해금 규칙 · 관문 · 아이콘 · 확대축소 (2026-09-01 사용자 확정)
+  await step('환생 트리: 부모가 켜져야 자식이 보인다 · 짝 조건은 없다', async()=>{
+    skipIf(typeof campTreeState!=='function'||typeof campRtBrOn!=='function','별자리 트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    try{
+      // ① 첫 환생 직후 — 갈래 넷만 보이고 계열은 **하나도** 안 그려진다
+      C.rbTree={root:1,_m2:1}; C.rbPts=1e9;
+      let shown=0; for(const L of CAMP_RT_LINES) for(let n=1;n<=5;n++) if(campTreeState(L.k,n)) shown++;
+      assert(shown===0,'갈래를 안 샀는데 계열이 '+shown+'칸 보인다 — 첫 화면이 32개로 붐빈다');
+      assert(campTreeBrState('econ')==='buy','갈래를 살 수 있어야 한다');
+      assert(campTreeGpState('econ','가')===null,'갈래를 안 샀는데 묶음이 보인다');
+      // ② 갈래를 사면 묶음이, 묶음을 사면 계열이 열린다
+      assert(campRtCanBuy('br:econ'),'갈래를 못 산다');
+      campRtBuy('br:econ');
+      assert(campTreeGpState('econ','가')==='buy','갈래를 샀는데 묶음이 안 열렸다');
+      assert(campTreeState('gather',1)===null,'묶음을 안 샀는데 계열이 보인다');
+      campRtBuy('gp:econ가');
+      assert(campTreeState('gather',1)==='buy','묶음을 샀는데 계열 1차가 안 열렸다');
+      assert(campTreeState('gather',2)===null,'1차를 안 샀는데 2차가 보인다 — 다음 한 칸만 보여야 한다');
+      // ③ ⛔ **짝 조건(관문)은 없앴다**(2026-09-01) — 계열은 제 앞 차수만 보면 된다.
+      //   되살리면 「왜 못 사는지」를 한 겹 더 읽어야 해서 걷어냈다.
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:3,gas:1};
+      assert(campTreeState('gather',4)==='buy','짝이 1차라고 4차가 막혔다 — 관문이 되살아났다');
+      assert(campRtCanBuy('gather'),'앞 차수를 샀는데 못 산다');
+      assert(typeof CAMP_RT_GATE_N==='undefined'&&typeof campRtGateOk==='undefined',
+        '관문 상수·함수가 남아 있다');
+      // ④ 🕰 옛 저장본 — 마디가 없던 자루도 살려낸다(안 그러면 산 계열이 화면에서 사라진다)
+      C.rbTree={root:1,gather:2};
+      assert(campRtBrOn('econ')&&campRtGpOn('econ','가'),'옛 저장본의 마디가 안 채워졌다');
+      // ⑤ 되돌리면 **마디 값도** 함께 돌아온다(안 그러면 되돌릴수록 포인트가 샌다)
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1}; C.rbPts=0;
+      const back=campRtReset();
+      assert(back===CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST,
+        '되돌린 값이 마디를 빠뜨렸다: '+back);
+      // ⑥ 🌟 새로운 시작 — **첫 환생이 딱 살 수 있어야** 한다.
+      //   포인트 공식은 √(번 재화÷100만) 이라 조건을 막 채운 첫 환생은 정확히 1 이다.
+      //   ⛔ root 가 그보다 비싸면 첫 환생으로는 트리를 **열 수조차 없다**(HUNT_R1 §4-2-0).
+      assert(CAMP_RT_ROOT_COST<=1,'가운데 값이 첫 환생 포인트(1)보다 비싸다: '+CAMP_RT_ROOT_COST);
+      assert(CAMP_RT_ROOT_COST!==CAMP_RT_BASE||CAMP_RT_BASE<=1,
+        '가운데 값이 비용 공식의 기준값과 묶여 있다 — 한쪽을 고치면 160칸이 함께 움직인다');
+      { C.rbTree={}; C.rbPts=1;
+        assert(campRtCanBuy('root'),'포인트 1로 가운데를 못 산다');
+        campRtBuy('root');
+        assert(campRtRootOn()&&(C.rbPts|0)===0,'가운데를 샀는데 값이 안 맞는다'); }
+      // 새로운 시작은 **절대값**이다 — 배수면 §4-5-5 곱셈 상한 표에 축이 하나 더 늘어 폭주한다
+      assert(typeof campRootGrant==='function','새로운 시작이 배선되지 않았다');
+      assert(CAMP_ROOT_MIN>0&&CAMP_ROOT_WK>0,'새로운 시작이 비어 있다');
+      return '갈래→묶음→계열 · 짝 조건 없음 · 옛 저장본 잇기 · 환급 '+back+
+        ' · 새로운 시작 '+CAMP_ROOT_MIN+'/'+CAMP_ROOT_WK+'기'+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
+    } finally { C.rbTree=keepT; C.rbPts=keepP; } });
+
+  await step('환생 트리: 계열마다 아이콘 · 밀고 확대가 한 점을 붙잡는다', async()=>{
+    skipIf(typeof campTreeZoomAt!=='function'||typeof campRebEnter!=='function','별자리 트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // 아이콘 — 32계열 전부에 있고, 같은 그림을 두 계열이 나눠 쓰지 않는다
+    { const ics=CAMP_RT_LINES.map(L=>L.ic);
+      assert(ics.every(Boolean),'아이콘이 없는 계열이 있다');
+      assert(new Set(ics).size===ics.length,'두 계열이 같은 아이콘을 쓴다'); }
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1}; C.rbPts=1e6;
+      campRebEnter('tree'); await sleep(60);
+      assert($('campTree').querySelectorAll('#ctG image').length>0,'별 안에 아이콘이 안 그려진다');
+      assert(!!$('campTree').querySelector('#ctG .ctCore'),'가운데 마름모가 없다');
+      assert(!$('campTree').querySelector('.ctRootTx'),'가운데에 글씨가 다시 들어왔다');
+      // 🔍 확대는 **붙잡은 점**을 제자리에 둔다 — 중심 기준이면 보던 별이 흘러간다
+      const svg=$('ctSvg'), r=svg.getBoundingClientRect();
+      const px=r.left+r.width*0.72, py=r.top+r.height*0.34;
+      const before=campTreeToView(px,py);
+      const wx=(before.x-_campTreeView.x)/_campTreeView.z, wy=(before.y-_campTreeView.y)/_campTreeView.z;
+      campTreeZoomAt(_campTreeView.z*1.6, px, py);
+      const sx=wx*_campTreeView.z+_campTreeView.x, sy=wy*_campTreeView.z+_campTreeView.y;
+      assert(Math.abs(sx-before.x)<0.6&&Math.abs(sy-before.y)<0.6,
+        '확대가 붙잡은 점을 놓쳤다 ('+(sx-before.x).toFixed(2)+', '+(sy-before.y).toFixed(2)+')');
+      // 상하한이 있고, 「전체」는 늘 그 사이로 돌아온다
+      campTreeZoomAt(1e6,null); const hi=_campTreeView.z;
+      campTreeZoomAt(1e-6,null); const lo=_campTreeView.z;
+      assert(hi===CAMP_TREE_ZMAX&&lo===CAMP_TREE_ZMIN,'확대 상하한이 안 걸린다: '+lo+'~'+hi);
+      campTreeFit(true);
+      assert(_campTreeView.z>=CAMP_TREE_ZMIN&&_campTreeView.z<=CAMP_TREE_ZMAX,'전체 보기 배율이 범위 밖');
+      // 별을 고르면 확대되고, **빈 하늘을 누르면** 되돌아간다(⊘ 는 없앴다)
+      campTreeTap('gather',3);
+      assert($('campTree').classList.contains('picked'),'별을 골랐는데 고른 상태가 아니다');
+      assert(!$('campTree').querySelector('.ctDesel'),'⊘ 가 되살아났다 — 빈 곳 탭이 해제다');
+      assert(!!$('campTree').querySelector('.ctSheet .ctBuy'),'하단에 사기 버튼이 없다');
+      assert(/campTreeDesel/.test(String(campTreeBind)),'빈 곳을 눌러도 해제되지 않는다');
+      campTreeDesel();
+      assert(!$('campTree').classList.contains('picked'),'해제했는데 고른 상태가 남는다');
+      // 🏷 화면 제목은 **한 규격** — 유즈맵 선택·상점과 같은 글꼴·크기·자간·굵기여야 한다
+      //   (2026-09-01 사용자 지시). 화면마다 따로 정하면 같은 자리가 화면마다 달라진다.
+      { const a=$('campTree').querySelector('.ctTitle'), b2=$('campReb').querySelector('.crTitle');
+        assert(a&&b2,'제목 요소가 없다');
+        const g=e=>{ const c=getComputedStyle(e); return { f:c.fontFamily, s:c.fontSize, l:c.letterSpacing, w:c.fontWeight }; };
+        const ti=getComputedStyle(document.documentElement).getPropertyValue('--font-ti').trim();
+        for(const [nm,e] of [['트리',a],['환생',b2]]){ const v=g(e);
+          assert(v.s==='16px',nm+' 제목 크기가 유즈맵·상점(16px)과 다르다: '+v.s);
+          assert(v.w==='700',nm+' 제목 굵기가 유즈맵·상점(700)과 다르다: '+v.w);
+          assert(parseFloat(v.l)>1.5,nm+' 제목 자간이 유즈맵·상점(.12em)과 다르다: '+v.l);
+          assert(ti&&ti.indexOf(v.f.split(',')[0].replace(/['\"]/g,''))>=0,
+            nm+' 제목이 제목 글꼴(--font-ti)을 안 쓴다: '+v.f); }
+        assert(g(a).f===g(b2).f&&g(a).s===g(b2).s,'트리와 환생의 제목이 서로 다르다');
+        assert(!/[🌀-🫿]/u.test(a.textContent),'제목에 이모지가 들어갔다 — 유즈맵·상점엔 없다'); }
+      // 📊 해금 진행도 — 분모는 셀 수 있는 전부(가운데+갈래+묶음+계열×5)
+      { assert(typeof campTreeTotal==='function'&&typeof campTreeOwned==='function','진행도 계산이 없다');
+        const all=campTreeTotal();
+        assert(all===1+Object.keys(CAMP_TREE_BR).length*(1+CAMP_RT_GRP_KEYS.length)+CAMP_RT_LINES.length*5,
+          '진행도 분모가 실제 칸 수와 다르다: '+all);
+        assert(campTreeOwned()>0&&campTreeOwned()<=all,'진행도 분자가 범위 밖: '+campTreeOwned());
+        const tx=$('campTree').querySelector('.ctProgN').textContent;
+        assert(tx.indexOf('/ '+all)>=0,'진행도 표시가 계산과 다르다: '+tx); }
+      // ❓ 공통 규칙은 **도움말 한 곳**에 있다 — 별마다 반복하면 32계열×5차 = 160번 같은 말이 된다
+      assert(!$('campTree').querySelector('.ctZoom'),
+        '확대·축소 버튼이 되살아났다 — 손가락으로만 한다');
+        { const src=String(campTreeBind);
+          assert(src.indexOf('campTreeFit()')>=0 && src.indexOf('_ctTapT')>=0,
+            '빈 곳을 두 번 눌러도 전체 보기로 안 간다');
+          assert(src.indexOf('CAMP_TREE_ZSTEP * 1.4')<0,
+            '두 번 누르기가 확대로 되돌아갔다 — 전체 보기여야 한다'); }
+      { const q=$('campTree').querySelector('.ctQ'); assert(q,'제목 옆 도움말(?) 이 없다');
+        const ti=$('campTree').querySelector('.ctTitle').getBoundingClientRect(), r=q.getBoundingClientRect();
+        assert(r.left>=ti.right-1 && r.left-ti.right<12,'도움말이 제목에서 떨어져 있다: '+Math.round(r.left-ti.right)+'px');
+        campTreeHelp(true);
+        const h=$('campTree').querySelector('.ctHelp');
+        assert(!h.classList.contains('hide'),'도움말이 안 열린다');
+        const tx=h.innerText||'';
+        assert(/환생 포인트/.test(tx)&&/사라지지 않/.test(tx),'도움말에 핵심 규칙이 없다');
+        // 숫자는 상수에서 꺼내야 한다 — 손으로 적으면 값을 바꿀 때 문구만 옛말이 된다
+        assert(tx.indexOf('−'+Math.round(CAMP_RT_CUT_MAX*100)+'%')>=0,'적 약화 상한이 상수와 다르다');
+        campTreeHelp(false);
+        assert(h.classList.contains('hide'),'도움말이 안 닫힌다'); }
+      campTreeTap('gather',3);
+      assert(!$('campTree').querySelector('.ctPerm'),
+        '별 시트에 공통 꼬리표가 되살아났다 — 규칙은 도움말(?)에 둔다');
+      campTreeDesel();
+      // 👆 **손가락으로 누를 수 있어야 한다** (2026-09-01 사용자 신고: 가운데가 안 눌림).
+      //   원인이 셋이었다: ① capture 때문에 click 의 target 이 <svg> 가 되어 어느 별인지 사라졌다
+      //   ② 별이 화면에서 15px 이라 6px 만 빗나가도 헛쳤다 ③ 「민 것」 임계 8px 이 손가락에 빡빡했다.
+      { const src = String(campTreeBind);
+        assert(!/svg\.addEventListener\('click'/.test(src),
+          'click 으로 별을 고른다 — capture 때문에 target 이 <svg> 가 되어 못 고른다');
+        assert(/pointerup/.test(src)&&/campTreeTap/.test(src),'pointerup 에서 별을 열지 않는다');
+        assert(CAMP_TREE_TAP_SLOP>=12,'「민 것」 임계가 손가락에 빡빡하다: '+CAMP_TREE_TAP_SLOP); }
+      // 🎬 뷰 이동은 **연출**이다 — 천천히 출발 → 아주 빠르게 → 마지막에 살며시(2026-09-01 사용자 지정)
+      { assert(typeof campTreeEase==='function','이징이 없다');
+        const e2=campTreeEase(.2), e5=campTreeEase(.5), e8=campTreeEase(.8);
+        assert(e2<.03,'앞이 안 느리다(20% 시점 '+(e2*100).toFixed(1)+'%)');
+        assert(e8>.97,'뒤가 안 느리다(80% 시점 '+(e8*100).toFixed(1)+'%)');
+        assert(Math.abs(e5-.5)<1e-6,'가운데가 절반이 아니다: '+e5);
+        assert(CAMP_TREE_TWEEN_MS>=380&&CAMP_TREE_TWEEN_MS<=900,'연출 길이가 이상하다: '+CAMP_TREE_TWEEN_MS);
+        // 즉시 배치는 now 인자로만 — 인자 없이 부르면 연출로 간다
+        campTreeFit(true); const zA=_campTreeView.z;
+        campTreeTap('gather',3); const zB=_campTreeView.z;
+        assert(Math.abs(zB-zA)<1e-6,'별을 골랐는데 배율이 즉시 튄다 — 연출이 아니다');
+        // ⚠ 손이 닿으면 연출은 멈춘다(안 그러면 미는 동안 화면이 저 혼자 흘러간다)
+        campTreeZoomAt(_campTreeView.z*1.1, null);
+        assert(!_ctTween,'손으로 확대했는데 연출이 계속 돈다');
+        campTreeFit(true); }
+      { // 보이는 별보다 **누르는 면이 커야** 한다
+        const gem=$('campTree').querySelector('#ctG .ctGem'), hit=$('campTree').querySelector('#ctG .ctHit');
+        assert(gem&&hit,'별에 누르는 면(.ctHit)이 없다');
+        assert(+hit.getAttribute('r') > +gem.getAttribute('r'),
+          '누르는 면이 보이는 별보다 작다: '+hit.getAttribute('r')+' vs '+gem.getAttribute('r'));
+        assert(getComputedStyle(gem).pointerEvents==='none','보이는 별이 눌림을 가로챈다');
+        // 그래도 빗나가면 가장 가까운 별을 잡아 준다
+        const r=hit.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+        assert(campTreeNearest(cx+10,cy+10)===hit,'조금 빗나갔는데 가까운 별을 못 찾는다');
+        assert(campTreeNearest(cx+400,cy+400)===null,'엉뚱하게 먼 곳에서도 별을 잡는다'); }
+      return '아이콘 32 · 확대 붙잡기 ok · 상하한 '+lo+'~'+hi+' · 규칙은 도움말 한 곳';
+    } finally { campTreeClose(); C.rbTree=keepT; C.rbPts=keepP; } });
 
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{
     skipIf(typeof campScaleAllies!=='function'||typeof campState!=='function','아군 강화 배선 없음');
