@@ -2947,6 +2947,43 @@ async function groupLobby(){
     return '2초에 '+d0.toFixed(0)+' → '+d1.toFixed(0)+' (자리 쪽으로)';
   });
 
+  // 🪜 **사거리가 짧을수록 앞에 선다 — 기준선 하나에서 줄을 세운다** (2026-09-01 사용자 확정)
+  //    ⛔ 옛 방식은 「제 자리에서 뒤로 민다」였다 — 짧은 사거리 유닛이 뒤쪽 건물에서 나오면
+  //      **그대로 맨 뒤**에 남았다(앞으로 당기지 않았다). 게다가 R0=100 이라 레인저(147)조차
+  //      21px 밖에 안 밀려 층이라 부를 것이 없었다.
+  //    ⭐ 지금은 기준선(CAMP_LINE_GY)에서 사거리 순으로 **절대 정렬**한다. 적은 위에서
+  //      내려오므로 앞뒤가 곧 교전 순서다.
+  await step('캠프: 사거리가 짧을수록 앞에 선다', async()=>{
+    skipIf(typeof campDeploy!=='function'||typeof CAMP_LINE_GY==='undefined','캠프 배치 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+    skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    if(CAMPB._wq) CAMPB._wq.length=0;
+    // ⚠ **일부러 거꾸로 세운다** — 사거리 긴 것을 앞(위)에, 짧은 것을 뒤(아래)에.
+    //   옛 「뒤로만 민다」 방식이면 이 순서가 그대로 남는다.
+    const far = campDeploy('marine', 0.44, 0.40), near = campDeploy('machinegun', 0.50, 0.60);
+    const heal = campDeploy('medic', 0.56, 0.58);
+    assert(far&&near&&heal,'배치 실패');
+    assert(far.rng > heal.rng && heal.rng > near.rng,
+      '전제가 바뀜 — 레인저 > 의무병(치유 사거리) > 화력병 순이어야 한다: '
+      +far.rng.toFixed(0)+'/'+heal.rng.toFixed(0)+'/'+near.rng.toFixed(0));
+    // y 가 클수록 뒤(아래)다 — 적은 위에서 내려온다
+    assert(near._post.y < heal._post.y, '화력병(70)이 의무병(94)보다 앞이 아니다: '
+      +near._post.y.toFixed(0)+' vs '+heal._post.y.toFixed(0));
+    assert(heal._post.y < far._post.y, '의무병이 레인저보다 앞이 아니다 — 뒤로만 미는 옛 방식이다: '
+      +heal._post.y.toFixed(0)+' vs '+far._post.y.toFixed(0));
+    // 층은 촘촘하다 — 가장 먼 두 층의 간격이 CAMP_LAYER_MAX 안
+    assert(far._post.y - near._post.y <= CAMP_LAYER_MAX + 1,
+      '층이 CAMP_LAYER_MAX 보다 벌어졌다: '+(far._post.y-near._post.y).toFixed(0));
+    // 가로는 건드리지 않는다 — 넓게 펼치는 것이 맞다(campLanePost 를 만들었다가 없앴다)
+    const rawX = campG2W(0.44, 0.40, CAMPB.world).x;
+    assert(Math.abs(far._post.x - rawX) < 1, '가로 자리가 옮겨졌다 — 가로는 그대로 두어야 한다');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    campBattleClose();
+    return '화력병 '+near._post.y.toFixed(0)+' < 의무병 '+heal._post.y.toFixed(0)
+      +' < 레인저 '+far._post.y.toFixed(0)+' (폭 '+(far._post.y-near._post.y).toFixed(0)+'px)';
+  });
+
   // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
   //    ⛔ 옛 campFoeRace 는 STK_RACE_ORDER 를 그냥 돌려서, 「감염된 둥지」에 유니온이,
   //      「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로 그림과 적이 어긋났다.
@@ -3308,8 +3345,10 @@ async function groupLobby(){
         const u=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return STK.me.units[STK.me.units.length-1]; });
         assert(u,'레인저를 못 만들었다');
         campScaleAllies([u]);
-        assert(u.acq===CAMP_ACQ_BASE,'혼자인데 인식이 기본이 아니다: '+u.acq);
-        assert(u.rng<CAMP_ACQ_ALERT,'사거리까지 늘렸다 — 상성이 바뀐다: '+u.rng);
+        // 👀 인식은 **유닛마다 다르다 — 제 사거리 + PAD**(2026-09-01 사용자 확정).
+        //   ⛔ 고정값 하나로 되돌리지 말 것: 근접(사거리 47)과 공성전차(421)가 같은 눈을 갖는다.
+        assert(Math.abs(u.acq - (u.rng + CAMP_ACQ_PAD)) < 1e-6,
+          '혼자인데 인식이 사거리+'+CAMP_ACQ_PAD+' 가 아니다: '+u.acq+' (사거리 '+u.rng+')');
         // ⛔ 옛 목줄(campLeash)이 위치를 자르던 자리다 — 지금은 **목표를** 자른다.
         u._post={ x:u.x, y:u.y };
         const far={ x:u.x, y:u.y-CAMP_ENG_OUT*3, uid:'far', size:14 };
@@ -3317,27 +3356,46 @@ async function groupLobby(){
         const d=Math.hypot(g.x-u._post.x, g.y-u._post.y);
         assert(d<=CAMP_ENG_OUT+1e-6,'목표가 자리 제한 밖이다: '+Math.round(d)+' > '+CAMP_ENG_OUT);
         u.dead=true; }
-      // 👀 **발견 전파** (2026-08-28) — 한 명이 보면 **그 주변만** 같이 달려든다.
-      //    ⭐ 발견자에게서 먼 아군은 자기 자리를 지킨다 — 판 전체가 한 덩어리로 몰리지 않게.
+      // 👀 **전파는 곁(150)으로만 · 그리고 연쇄한다**(2026-09-01 사용자 확정).
+      //   ⛔ 반경을 넓히지 말 것(옛 900) — 한 명이 보면 판 전체가 몰렸다.
+      //   ⭐ 대신 전파받은 아군이 다음 틱의 전파원이 되어 줄줄이 번진다.
       if(typeof campAlertTick==='function'){
         campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
         const mk=(side,id,x,y)=>campWithStk(()=>{ strikeSpawnUnit(side,id);
-          const z=STK[side].units[STK[side].units.length-1]; if(z){ z.x=x; z.y=y; z._alertT=0; } return z; });
+          const z=STK[side].units[STK[side].units.length-1];
+          if(z){ z.x=x; z.y=y; z._alertT=0; z._alertAcq=0; z._hitT=0; z._hitAcq=0; } return z; });
         const r=campRallyPoint();
-        const near=mk('me','marine', r.x, r.y);                            // 발견자
-        const mid =mk('me','marine', r.x + CAMP_ALERT_R*0.5, r.y);         // 발견자 곁 — 전파됨
-        const far =mk('me','marine', r.x + CAMP_ALERT_R*3,   r.y);         // 멀리 — 전파 안 됨
-        const foe =mk('ai','marine', r.x, r.y - CAMP_ACQ_BASE*0.5);        // 발견자 사정권 안
-        if(near&&mid&&far&&foe){
-          campScaleAllies([near,mid,far]);
+        const a0=mk('me','marine', r.x, r.y);                          // 발견자
+        const a1=mk('me','marine', r.x + CAMP_ALERT_R*0.8, r.y);       // 곁 — 1틱에 전파
+        const a2=mk('me','marine', r.x + CAMP_ALERT_R*1.6, r.y);       // 그 옆 — 연쇄로 전파
+        const a3=mk('me','marine', r.x + CAMP_ALERT_R*9,   r.y);       // 멀리 — 안 닿는다
+        const foe=mk('ai','marine', r.x - 250, r.y);                   // 발견자만 볼 수 있는 거리
+        if(a0&&a1&&a2&&a3&&foe){
+          campScaleAllies([a0,a1,a2,a3]);
+          const base=campAcqBase(a0);
+          // ⚠ 적은 **발견자만 보이는 자리**여야 한다 — 곁의 아군도 제 눈으로 보면 전파가 뜻이 없다.
+          assert(Math.hypot(foe.x-a0.x, foe.y-a0.y) <= base,'적이 발견자 눈 밖이다 — 검사가 헛돈다');
+          assert(Math.hypot(foe.x-a1.x, foe.y-a1.y) > campAcqBase(a1),'적이 곁 아군 눈 안이다 — 전파 없이도 본다');
           CAMPB._alT=0; campAlertTick(0.05);
-          assert(near.acq===CAMP_ACQ_ALERT,'발견자가 안 넓어졌다: '+near.acq);
-          assert(mid.acq===CAMP_ACQ_ALERT,'곁의 아군에게 전파가 안 됐다: '+mid.acq);
-          assert(far.acq===CAMP_ACQ_BASE,'멀리 있는 아군까지 전파됐다 — 판 전체가 몰린다: '+far.acq);
-          // ⏳ 적이 사라지면 풀린다(지속 시간 뒤 제자리로)
+          assert(a1.acq>base,'곁의 아군에게 전파가 안 됐다: '+a1.acq+' (기본 '+base+')');
+          assert(Math.abs(a3.acq-campAcqBase(a3))<1e-6,'멀리 있는 아군까지 전파됐다: '+a3.acq);
+          // ⛓ 연쇄 — 한 틱 더 돌면 그 옆까지 번진다
+          CAMPB._alT=0; campAlertTick(0.05);
+          assert(a2.acq>campAcqBase(a2),'전파가 연쇄되지 않는다 — 그 옆 아군이 안 따라온다: '+a2.acq);
+          assert(Math.abs(a3.acq-campAcqBase(a3))<1e-6,'연쇄가 판 끝까지 번졌다: '+a3.acq);
+          // ⏳ 적이 사라지면 전부 풀린다
           foe.dead=true; CAMPB._alT=0; campAlertTick(CAMP_ALERT_S+0.1);
-          assert(near.acq===CAMP_ACQ_BASE,'적이 없는데 인식이 안 풀렸다: '+near.acq);
-          assert(mid.acq===CAMP_ACQ_BASE,'전파가 안 풀렸다: '+mid.acq); }
+          assert(Math.abs(a0.acq-campAcqBase(a0))<1e-6,'적이 없는데 인식이 안 풀렸다: '+a0.acq);
+          assert(Math.abs(a1.acq-campAcqBase(a1))<1e-6,'전파가 안 풀렸다: '+a1.acq); }
+        // 🩸 사거리 밖에서 맞으면 그 적까지 눈이 넓어진다
+        { const v=mk('me','marine', r.x, r.y);
+          if(v){ campScaleAllies([v]);
+            const d=campAcqBase(v)*2;
+            v._hitAcq=d; v._hitT=CAMP_HIT_ACQ_S;
+            campAlertApply();
+            assert(Math.abs(v.acq-d)<1e-6,'맞았는데 눈이 안 넓어졌다: '+v.acq+' (기대 '+d+')');
+            CAMPB._alT=0; campAlertTick(CAMP_HIT_ACQ_S+0.1);
+            assert(Math.abs(v.acq-campAcqBase(v))<1e-6,'맞아서 넓어진 눈이 안 풀린다: '+v.acq); } }
         campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
       // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
       //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).

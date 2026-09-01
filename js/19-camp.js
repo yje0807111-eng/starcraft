@@ -1185,30 +1185,37 @@ function campDeploy(id, gx, gy){
   campLayerPost(u, W);                     // 🪜 사거리가 길수록 뒤에 세운다(아래) — 능력치 뒤라야 rng 을 안다
   return u; }
 
-// 🪜 **사거리가 길수록 뒤에 선다** (2026-08-31 사용자 확정).
+// 🪜 **사거리가 짧을수록 앞에 선다 — 한 줄로 촘촘히** (2026-09-01 사용자 확정).
 //   ⛔ 교전 이동(campEngageStep)으로 층을 만들려다 **두 번 실패했다** — 앞줄이 멈추면
 //     뒷줄이 갈 곳이 없어서 사거리 안에 드는 아군이 0~33% 로 떨어졌다.
-//   ⭐ 원인은 **자리**였다. 뭉쳐 세운 부대는 앞줄이 서는 순간 뒷줄이 막힌다 —
-//     사거리별로 **애초에 다른 줄에 서 있어야** 층이 유지된다.
+//   ⭐ 원인은 **자리**였다. 사거리별로 **애초에 다른 줄에 서 있어야** 층이 유지된다.
+//
+//   ⛔ **옛 방식은 「제 자리에서 뒤로 민다」였다 — 층이 생기지 않았다**(2026-09-01 실측).
+//     ① 기준이 생산 건물 자리라, 짧은 사거리 유닛이 뒤쪽 건물에서 나오면 **그대로 맨 뒤**에 남는다.
+//        「사거리가 짧으면 앞」이라 해 놓고 앞으로 **당기지는 않았기** 때문이다.
+//     ② R0=100 이라 화력병(70)·의무병(0)은 물론 레인저(147)조차 21px 밖에 안 밀렸다 —
+//        층이라 부를 것이 없었다. 궤적 그림의 4층은 전부 **테스트 배치**가 만든 것이었다.
+//   ⭐ 지금은 **기준선 하나에서 사거리 순으로 줄을 세운다**(절대 정렬). 그래야 어느 건물에서
+//     나오든 짧은 사거리가 앞이다. 적은 **위에서** 내려오므로 앞뒤가 곧 교전 순서다.
+//   ⚠ 세로는 촘촘하게, 가로는 넓게 — 여러 층이 **동시에** 때리려면 그 모양이어야 한다.
+//     ⛔ 가로를 가운데로 모으는 campLanePost 를 만들었다가 없앴다(같은 날) — 실효가 안 올랐고
+//       (0.29 → 0.29) 방향도 반대였다. 올린 것은 세로 간격 하나였다.
 //   ⚠ **생산될 때의 기본 자리만** 손댄다. 플레이어가 직접 옮기면(campMoveSel) 그 자리가 이긴다.
-//   ⚠ 뒤로 미는 것이지 앞으로 당기지 않는다 — 앞줄(근접)은 원래 자리 그대로다.
-//     lane 은 전장 14~86% 라 300px 은 그 폭(3456)의 8.7% 다. 층은 지되 부대가 갈라지진 않는다.
-const CAMP_LAYER_R0 = 100;         // 이 사거리까지는 앞줄(안 민다) — 화력병 70 은 여기
+const CAMP_LINE_GY  = 0.50;        // 부대 앞줄이 서는 격자 y — 여기서부터 사거리 순으로 뒤에 선다
 const CAMP_LAYER_R1 = 420;         // 이 사거리면 최대로 민다 — 공성전차 421 은 여기
-const CAMP_LAYER_MAX = 300;        // 가장 긴 유닛이 앞줄보다 이만큼 뒤에 선다(px)
+const CAMP_LAYER_MAX = 60;         // 가장 긴 유닛이 앞줄보다 이만큼 뒤에 선다(px) — 촘촘하게
 function campLayerBack(u){
-  const rng = (u && u.rng) || 0;
-  if(rng <= CAMP_LAYER_R0) return 0;                       // 근접·단거리는 앞줄(안 민다)
-  const t = Math.min(1, (rng - CAMP_LAYER_R0) / Math.max(1, CAMP_LAYER_R1 - CAMP_LAYER_R0));
+  const rng = (u && u.rng) || 0;   // ⚠ 0 부터 비례한다 — 의무병(0)·화력병(70)도 순서를 갖는다
+  const t = Math.min(1, Math.max(0, rng) / CAMP_LAYER_R1);
   return t * CAMP_LAYER_MAX; }
 function campLayerPost(u, W){
   if(!u || !u._post) return 0;
-  const back = campLayerBack(u);
-  if(back <= 0) return 0;
   const lim = W || (CAMPB && CAMPB.world) || 4800;
-  u._post.y = Math.min(lim, u._post.y + back);
-  u.y = u._post.y;                                         // 갓 태어났으니 그 자리에 바로 선다
-  return back; }
+  const front = (typeof campG2W === 'function') ? campG2W(0.5, CAMP_LINE_GY, lim).y : u._post.y;
+  const ny = Math.min(lim, front + campLayerBack(u)), d = ny - u._post.y;
+  u._post.y = ny;
+  u.y = ny;                                                // 갓 태어났으니 그 자리에 바로 선다
+  return d; }
 // 🚧 자리에서 나갈 수 있는 거리 — **모두 같다**(CAMP_ENG_OUT).
 //   ⛔ 층에 따라 다르게 줘 봤다가 되돌렸다(2026-08-31). `500 + (300 − 층)` 으로 계산해서
 //     결과적으로 **모두 718~800 으로 늘어났고**, 500 이 최적이라던 실측을 뒤집은 꼴이 됐다.
@@ -1466,29 +1473,51 @@ function campFoesPending(){ return !!(CAMPB && CAMPB._wq && CAMPB._wq.length); }
 function campAlertTick(dt){
   if(!CAMPB || !CAMPB.me) return 0;
   const mine = CAMPB.me.units, foes = CAMPB.ai.units;
-  for(const u of mine){ if(u._alertT > 0) u._alertT = Math.max(0, u._alertT - dt); }
+  for(const u of mine){
+    if(u._alertT > 0){ u._alertT = Math.max(0, u._alertT - dt); if(u._alertT === 0) u._alertAcq = 0; }
+    if(u._hitT   > 0){ u._hitT   = Math.max(0, u._hitT   - dt); if(u._hitT   === 0) u._hitAcq   = 0; } }
   CAMPB._alT = (CAMPB._alT || 0) - dt;
   if(CAMPB._alT > 0){ campAlertApply(); return 0; }
   CAMPB._alT = CAMP_ALERT_TICK;
-  // ① 발견자 — 기본 인식 거리 안에 적이 있는 아군
-  const B2 = CAMP_ACQ_BASE * CAMP_ACQ_BASE, spot = [];
+  // ① 시드 = **지금 적을 보고 있는 아군**(제 눈 안에 적이 있다). 눈은 유닛마다 다르다.
+  //    ⚠ 여기서 쓰는 눈은 campAlertApply 가 이미 얹어 둔 값이다 — 맞아서 넓어진 것도,
+  //      지난 틱에 전파받은 것도 포함된다. 그래서 **연쇄**가 일어난다.
+  //    ⭐ 시드는 **자기가 본 적의 자리**를 함께 들고 온다 — 곁에 넘겨줄 것이 「눈의 크기」가
+  //      아니라 **「저기 적이 있다」** 이기 때문이다. 받는 쪽은 제 자리에서 그 적까지의
+  //      거리를 스스로 재서 눈을 넓힌다(멀리 있을수록 더 크게 뜬다).
+  const spot = [];
   for(const u of mine){ if(u.dead) continue;
+    const a = Math.max(u.acq || 0, campAcqBase(u)), A2 = a * a;
+    let bx = 0, by = 0, bd = Infinity;
     for(const e of foes){ if(e.dead) continue;
-      const dx = e.x - u.x, dy = e.y - u.y;
-      if(dx * dx + dy * dy <= B2){ spot.push(u); break; } } }
-  // ② 발견자 주변에만 전파 — ⭐ 멀리 있는 아군은 자기 자리를 지킨다
+      const dx = e.x - u.x, dy = e.y - u.y, d2 = dx * dx + dy * dy;
+      if(d2 <= A2 && d2 < bd){ bd = d2; bx = e.x; by = e.y; } }
+    if(bd < Infinity) spot.push({ u:u, x:bx, y:by }); }
+  // ② 시드 곁(150)의 아군에게 **그 눈을 그대로** 넘긴다.
+  //    ⭐ 넘겨받은 아군은 다음 틱의 시드가 되어 또 곁으로 넘긴다 — 줄줄이 번진다.
+  //    ⛔ 반경을 다시 넓히지 말 것(옛 900) — 한 명이 보면 판 전체가 몰렸다.
   if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R;
     for(const u of mine){ if(u.dead) continue;
-      for(const sp of spot){ const dx = sp.x - u.x, dy = sp.y - u.y;
-        if(dx * dx + dy * dy <= R2){ u._alertT = CAMP_ALERT_S; break; } } } }
+      for(const sp of spot){ if(sp.u === u) continue;
+        const dx = sp.u.x - u.x, dy = sp.u.y - u.y;
+        if(dx * dx + dy * dy > R2) continue;
+        // 내 자리에서 **그 적까지** 닿는 눈을 뜬다(여유 PAD 만큼 더)
+        const need = Math.hypot(sp.x - u.x, sp.y - u.y) + CAMP_ACQ_PAD;
+        u._alertT = CAMP_ALERT_S;
+        if(need > (u._alertAcq || 0)) u._alertAcq = need; } } }
   campAlertApply();
   return spot.length;
 }
-// 전파 상태를 실제 인식 거리로 옮긴다(발견자 자신도 전파 대상이라 함께 넓어진다)
+// 세 겹을 겹쳐 실제 인식 거리를 정한다 — 셋 중 **가장 넓은 것**이 이긴다.
+//   ① 기본 = 제 사거리 + PAD   ② 맞아서 넓어진 것   ③ 곁에서 전파받은 것
+//   ⚠ 지속이 끝나면 각각 스스로 꺼지고, 남는 것은 ① 뿐이다(자기 자리로 돌아간다).
 function campAlertApply(){
   if(!CAMPB || !CAMPB.me) return;
   for(const u of CAMPB.me.units){ if(u.dead) continue;
-    u.acq = (u._alertT > 0) ? CAMP_ACQ_ALERT : CAMP_ACQ_BASE; }
+    let a = campAcqBase(u);
+    if(u._hitT > 0 && (u._hitAcq || 0) > a) a = u._hitAcq;
+    if(u._alertT > 0 && (u._alertAcq || 0) > a) a = u._alertAcq;
+    u.acq = a; }
 }
 
 // ── 🪧 자리(post) — 내가 준 자리를 지킨다 (2026-08-28 사용자 확정) ─────
@@ -1639,7 +1668,7 @@ function campBunkerStep(dt){
       if(typeof strikeAcq === 'function') u.acq = Math.max(u.acq || 0, strikeAcq(u.rng)); }
     else if(!b && u._rng0 != null){
       u.rng = u._rng0; u._rng0 = null;
-      if(typeof strikeAcq === 'function') u.acq = CAMP_ACQ_BASE; }
+      u.acq = campAcqBase(u); }
     if(u._bunk == null) continue;
     if(!b){ u._bhp = null; continue; }          // 🧱 무너져 있는 동안은 밖에서 싸운다(기록은 남긴다)
     const s = (typeof _ringSlotN === 'function') ? _ringSlotN(u._bslot | 0, CAMP_BUNK_SLOT) : { dx:0, dy:0 };
@@ -1948,7 +1977,7 @@ function campDesignStat(u){
   if(d.a != null) u.dmg = d.a * CAMP_STAT_ATK;
   if(d.c != null) u.cdMax = Math.max(0.45, d.c);
   if(d.r != null){ u.rng = d.r * CAMP_STAT_TILE;
-    if(typeof strikeAcq === 'function') u.acq = strikeAcq(u.rng);
+    u.acq = campAcqBase(u);
     u.melee = d.r <= 1.0; }               // 1칸 = 근접
   // ⛔ 이동 속도는 여기서 안 덮는다 — `u.spd` 는 실제 이동에 안 쓰인다(위 표 주석 참고).
   return true;
@@ -1986,7 +2015,7 @@ function campScaleAllies(list){
   campDesignStats(list);              // ⚔ 설계 능력치 먼저 — 배수는 그 위에 곱한다
   // 👀 기본 인식 거리만 맞춰 둔다 — 넓히는 것은 campAlertTick 이 **전파로만** 한다.
   //    ⛔ 사거리는 건드리지 않는다(늘리면 종족 상성이 바뀐다).
-  for(const u of list) if(u) u.acq = CAMP_ACQ_BASE;
+  for(const u of list) if(u) u.acq = campAcqBase(u);
   const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
   let n = 0;
   for(const u of list){
@@ -2110,9 +2139,11 @@ function campRegroup(){
 // ⚠ **목줄(leash)이 반드시 필요하다.** 인식만 넓히면 적 본진까지 쫓아가 「제자리 방어」가
 //   통째로 무너진다 — 예전에 그렇게 해서 라운드가 영영 안 끝나는 정체를 네 번 겪었다.
 // ⭐ **전파식 인식** (2026-08-28 사용자 확정) — 전원이 똑같이 넓게 보는 게 아니다.
-//   ① 혼자서는 CAMP_ACQ_BASE 만큼만 본다.
-//   ② 누군가 적을 발견하면 **그 아군 주변 CAMP_ALERT_R 안의 아군에게만** 전파된다.
-//   ③ 전파받은 아군은 CAMP_ACQ_ALERT 로 넓게 보며 마중 나간다. CAMP_ALERT_S 초 뒤 풀린다.
+//   ① 혼자서는 **제 사거리 + CAMP_ACQ_PAD** 만큼만 본다(유닛마다 다르다).
+//   ② 사거리 밖에서 맞으면 **그 적까지** 눈이 즉시 넓어진다(CAMP_HIT_ACQ_S 초 유지).
+//   ③ 눈이 넓어진 아군은 곁(CAMP_ALERT_R = 150) 의 아군에게 그 눈을 전파한다.
+//   ④ 전파받은 아군도 다음 틱에 전파원이 된다 — **연쇄**로 줄줄이 번진다.
+//      ⭐ 그래서 「사거리 긴 적이 뒤에서 때리면, 맞은 아군부터 그 옆까지 차례로 들어간다」.
 //   ⭐ 그래서 **발견자에게서 먼 아군은 자기 자리를 지킨다** — 한쪽으로 우르르 몰리지 않고
 //     싸움이 난 구역의 병력만 거든다.
 //   ⛔ 전원에게 넓은 인식을 주면(옛 방식) 판 전체가 한 덩어리로 움직여, 반대쪽이 통째로 빈다.
@@ -2125,9 +2156,14 @@ function campRegroup(){
 //   ⭐ 그래서 인식이 곧 실질 제한이 된다. CAMP_ENG_OUT 은 이제 「최후의 안전선」이다.
 //   ⚠ 전파(campAlertTick)는 그대로 둔다 — 「같이 싸우는 느낌」이 거기서 나온다.
 //     다만 전파받은 인식도 함께 조여야 뜻이 있다(안 그러면 한 명이 보는 순간 전원이 멀리 본다).
-const CAMP_ACQ_BASE = 450;         // 혼자 볼 수 있는 거리 (실효 ×1.4 = 630)
-const CAMP_ACQ_ALERT = 750;        // 전파받았을 때 보는 거리 (실효 ×1.4 = 1050)
-const CAMP_ALERT_R = 900;          // 발견자에게서 이 거리 안의 아군에게 전파
+// ⭐ **인식은 유닛마다 다르다 — 제 사거리 + CAMP_ACQ_PAD**(2026-09-01 사용자 확정).
+//   고정값 하나(옛 450)는 근접(사거리 47)과 공성전차(421)에게 같은 눈을 줬다 —
+//   근접은 닿지도 못할 거리를 보고 달려 나가고, 장거리는 제 사거리도 못 채웠다.
+const CAMP_ACQ_PAD = 100;          // 기본 인식 = 자기 사거리 + 이만큼
+function campAcqBase(u){ return ((u && u.rng) || 0) + CAMP_ACQ_PAD; }
+// 🩸 **사거리 밖에서 맞으면 그 적까지 눈을 넓힌다** — 맞고만 있지 않고 반격하러 간다.
+const CAMP_HIT_ACQ_S = 3;          // 맞아서 넓어진 인식이 유지되는 시간(초)
+const CAMP_ALERT_R = 150;          // 옆 아군에게 전파되는 거리 — **연쇄한다**(아래 campAlertTick)
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 // 🪢 **자기 자리에서 이보다 멀리는 못 나간다** — 이제 이것이 **자리 제한의 유일한 장치**다.
