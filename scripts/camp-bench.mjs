@@ -7,6 +7,8 @@
  *   E  환생 관문 100만이 후반에 몇 초 만에 채워지는가 (§5 E)
  *
  * 사용: CHROME_PATH=... node scripts/camp-bench.mjs [시뮬분] [시작던전]
+ *   FREEZE_MIN=n  번 돈이 n 시뮬분 동안 그대로면 중단하고 「얼어붙음」으로 표시(기본 5)
+ *   ⚠ **벤치는 단독으로 돌릴 것** — 다른 무거운 작업과 겹치면 판이 중간에 멎는 사례가 있다.
  * ========================================================================== */
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 import url from 'node:url'; import puppeteer from 'puppeteer-core';
@@ -19,9 +21,18 @@ const POL=(process.argv[4]||'A').toUpperCase();
 //   상한 유/무로 갈라 재기 위한 것. 0 = 상한 없음(지금 게임 그대로).
 const REFCAP=+(process.argv[5]||0);
 // 🔁 환생 손익 실측(2026-08-29 · sc-3 요청) — argv[6]='reb' 이면:
-//   던전 3 에 처음 닿는 순간(= D2 완주) 환생하고, 다시 D3 에 닿을 때까지 시간을 잰다.
+//   목표 던전(REB_DG · 기본 3)에 처음 닿는 순간 환생하고, 다시 닿을 때까지 시간을 잰다.
 //   「환생 안 하고 T분」 vs 「환생하고 T'분」 한 쌍이 첫 환생 손익의 실측값이다.
 const REB=(process.argv[6]||'')==='reb';
+// 🔁 환생 모드가 노리는 던전 — 기본 3. ⭐ 얕게(2) 잡으면 같은 실험이 몇 배 빨리 끝난다.
+//   💳 환생 팩 값을 잴 때 이걸 2 로 두고 돌렸다(2026-08-31 · GEM.md §5-4-8).
+const REB_DG=+(process.env.REB_DG||3);
+// 🔁 시작 환생 배수 — 「이미 한 번 환생한 사람」으로 출발한다(C.rebMul 에 그대로 넣는다).
+//   ⭐ 💳 환생 팩 값을 이걸로 잰다. 팩은 **환생 전에는 아무것도 안 하므로**, 환생 전 구간을
+//     두 번 돌리면 무작위(전투에 Math.random 43곳)만 타고 결과가 갈린다 — 실제로 한 판은
+//     D1R48 벽에 걸려 못 넘어갔다. 그래서 **환생 이후만** 같은 출발점에서 배수만 바꿔 잰다.
+//   ⚠ 그래도 판마다 흔들린다. **한 팔을 여러 번 돌려 중앙값으로 볼 것.**
+const START_MUL=+(process.env.START_MUL||0);
 // 🧱 벽 탐색(2026-08-29 · sc-3 요청) — 환생 없이 어디서 막히는가.
 //   판정 기준은 sc-3 §: 한 라운드를 **10분** 넘게 못 깨면 벽 후보 · **30분**이면 벽으로 보고 멈춘다.
 //   ⚠ 정체 문턱(stallS)과는 다른 것이다 — 그건 「측정을 계속할까」이고, 이건 「벽을 만났나」다.
@@ -63,13 +74,15 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
-  const C=campState(); C.race='terran'; saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW);
+  const C=campState(); C.race='terran';
+  if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
+  saveMeta(); openHome();
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -465,11 +478,17 @@ await pg.evaluate(()=>{
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
       { const d=campDgN(); if(d>0 && !__CB.dgFirst[d]) __CB.dgFirst[d]={ run:__CB.runs, t:+(__CB.t/60).toFixed(1) };
-        // 🔁 환생 손익 — D3 에 처음 닿는 순간 환생하고, 다시 닿을 때까지 잰다
-        if(__CB.rebMode && d===3){
+        // 🔁 환생 손익 — 목표 던전에 처음 닿는 순간 환생하고, 다시 닿을 때까지 잰다
+        if(__CB.rebMode && d===__CB.rebDg){
           if(!__CB.rebGot){                                       // 1단계 — 지금 환생한다
             const got=(typeof campRebirth==='function') ? campRebirth() : null;
             __CB.rebGot={ t1:+(__CB.t/60).toFixed(1), mul:got?got.mul:null, pts:got?got.pts:null };
+            // ⛔ **누적 지출을 같이 되감는다** (2026-08-31 실측으로 잡았다).
+            //   買·生 관문이 `spent >= campWealth()*0.5` 인데 환생은 campWealth() 를 0 으로
+            //   되감는다. 안 지우면 「수백만 >= 0」 이 영영 참이 되어 **구매와 생산이 통째로 멎는다** —
+            //   연구·건설은 이 관문 밖이라 계속 돌아서 「돈은 쓰는데 안 크는」 모습으로 보였다.
+            //   실측: 환생 뒤 500 시뮬분 동안 탭 Lv0 · 일꾼 1기 · 초당 22 로 굳었다.
+            __CB.spentE=0; __CB.spentU=0;
           } else if(!__CB.rebGot.t2){                             // 2단계 — 환생 후 재도달
             __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
           } } }
@@ -588,6 +607,18 @@ await pg.evaluate(()=>{
 // ⚠ 한 번에 미는 시뮬 초. 짧을수록 evaluate 하나가 가벼워 타임아웃에 안전하다
 //   (병력 100기대에서 30초는 무거웠다 — 10초로 줄였다. 총 실행 시간은 거의 같다).
 const CH=10; let ran=0; let giftDone=false, giftInfo=null;
+// 🧊 **얼어붙은 판을 「정상 종료」로 위장하지 않는다** (2026-08-31)
+//   ⛔ 실측으로 드러난 것: 다섯 판에 한 판꼴로 판이 중간에 멎는데도 `최종 30.2분 · D0R0 · 번 돈 4144`
+//     처럼 멀쩡한 모양으로 끝났다. 그 총수입은 정상 판의 **6분 지점**과 같다 — 30분을 돈 것이
+//     아니라 6분쯤에서 멎고 시계만 흐른 것이다. 그런 판이 표본에 섞이면 밸런스 수치가 조용히 오염된다.
+//   ⭐ 그래서 「번 돈이 이만큼(시뮬 분) 그대로면」 중단하고, **최종 줄에 무효 표시를 남긴다.**
+//   ⚠ 「지금까지의 최대」와 견주면 안 된다 — 환생하면 부가 리셋돼 정상 판이 무효로 찍힌다.
+//     **직전 표본과 값이 같은지**만 본다(얼어붙은 판은 아예 안 변한다).
+//   ⚠ 원인은 아직 미특정이다. 관찰된 두 번 다 **다른 무거운 작업과 동시에** 돌리던 중이었다 —
+//     벤치는 단독으로 돌릴 것. 이 가드는 원인을 고치는 것이 아니라 **표본을 지키는 것**이다.
+//   FREEZE_MIN=n 으로 문턱을 바꾼다(기본 5 시뮬분).
+const FREEZE_MIN = +(process.env.FREEZE_MIN || 5);
+let _frzEarn = null, _frzT = 0, froze = null;
 process.stdout.write(`⏱  캠프 시뮬 ${MINS}분 · 던전 ${DG0} 시작\n`);
 while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
@@ -596,6 +627,14 @@ while(ran<MINS*60){
       cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2),
       wall:__CB.wall||null }; }, CH);
   ran=st.t;
+  // 🧊 얼어붙음 감시 — 값이 **바뀌기만** 하면 시계를 되감는다(환생 리셋도 「바뀜」이다)
+  if(_frzEarn === null || st.earn !== _frzEarn){ _frzEarn = st.earn; _frzT = st.t; }
+  else if(st.t - _frzT > FREEZE_MIN * 60){
+    froze = { at:+(_frzT/60).toFixed(1), min:+((st.t-_frzT)/60).toFixed(1),
+              earn:st.earn, dg:st.dg, round:st.round };
+    process.stdout.write('\n🧊 얼어붙음 — 번 돈이 ' + froze.min + '분째 ' + froze.earn
+      + ' 에서 그대로다(D' + froze.dg + 'R' + froze.round + ' · ' + froze.at + '분부터). 중단한다.\n');
+    break; }
   // 💠 선물 — GIFT_AT 분을 지나는 첫 순간 한 번만
   if(GIFT_S>0 && !giftDone && st.t>=GIFT_AT*60){
     giftDone=true;
@@ -662,10 +701,10 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
       +'| '+String(x.min).padStart(10)+' | '+String(x.gas).padStart(7)+' | '+String(x.res).padStart(6)
       +' | '+String(x.refLv).padStart(6)+' | '+String(x.dps).padStart(7)+' | '+x.me); }
   if(R.reb){ console.log('');
-    console.log('■ 🔁 첫 환생 손익 (D3 첫 도달 시 환생 → 재도달)');
-    console.log('  환생 없이 D3 까지: '+R.reb.t1+'분 · 환생 보상 배수 +'+R.reb.mul+' · 포인트 +'+R.reb.pts);
+    console.log('■ 🔁 첫 환생 손익 (D'+REB_DG+' 첫 도달 시 환생 → 재도달)');
+    console.log('  환생 없이 D'+REB_DG+' 까지: '+R.reb.t1+'분 · 환생 보상 배수 +'+R.reb.mul+' · 포인트 +'+R.reb.pts);
     console.log(R.reb.t2!=null
-      ? ('  환생 후 다시 D3 까지: '+(R.reb.t2-R.reb.t1).toFixed(1)+'분 (누적 '+R.reb.t2+'분)')
+      ? ('  환생 후 다시 D'+REB_DG+' 까지: '+(R.reb.t2-R.reb.t1).toFixed(1)+'분 (누적 '+R.reb.t2+'분)')
       : '  ⚠ 시간 안에 재도달 못 함'); }
   console.log('');
   console.log('■ 🔁 회차 — 정제소 상한 '+(R.cap>0?('L'+R.cap):'없음')+' · 최종 정제소 L'+R.ref);
@@ -757,6 +796,13 @@ if(fin.inc){
   if(Math.abs(tot-fin.earn) > fin.earn*0.05)
     console.log(`  ⚠ 내역 합계와 번 돈이 5% 넘게 어긋난다 — 표에 없는 수입원이 있다는 뜻이다`);
 }
-console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`);
+// ⚠ **무효 표시는 `최종` 줄 자체에 붙인다.** 위에만 적으면 `grep '^최종'` 으로 표를 모으는 사람이
+//   그대로 표본에 넣는다 — 실제로 그렇게 오염된 판을 두 번 세었다.
+console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`
+  + (froze ? '  🧊 얼어붙음 — 표본으로 쓰지 말 것' : ''));
+if(froze){
+  console.log('   ⛔ 이 판은 ' + froze.at + '분에 멎었다. 번 돈이 ' + froze.min + '분 동안 '
+    + froze.earn + ' 에서 안 움직였다.');
+  console.log('   ⚠ 원인 미특정 — 관찰된 사례는 모두 **다른 무거운 작업과 동시에** 돌릴 때였다.'); }
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();

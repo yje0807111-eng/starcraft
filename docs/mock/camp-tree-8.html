@@ -1,0 +1,425 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 — 8안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --info:#4aa8ff; --neon:#ff3b3b; --ok:#5dff8f; --sel:#5cd6ff;
+    --r-bar:3px; --r-md:6px; --r-lg:9px; --edge:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1900px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1000px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 10px;max-width:1000px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5}
+  .warn{font-size:12.5px;line-height:1.75;color:#c8b68d;margin:0 0 24px;max-width:1000px;
+    border-left:2px solid rgba(255,177,77,.5);padding:8px 0 8px 12px;background:rgba(255,177,77,.05)}
+  .warn b{color:#ffd9a3}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:26px}
+  .note{font-size:12px;line-height:1.6;color:#93a0b0;margin:10px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:760px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:radial-gradient(120% 90% at 50% 42%,rgba(18,24,34,.97),rgba(6,9,13,.99))}
+  .top{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:12px;
+    padding:14px 14px 10px;background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,0))}
+  .tt{font-size:15px;font-weight:700;color:#e8eef7;flex:1}
+  .pt{font-family:var(--font-num);font-size:11px;color:#7b8593;letter-spacing:.22em}
+  .pt b{font-size:16px;font-weight:700;color:var(--gold);letter-spacing:0;margin-left:6px}
+  svg{display:block;width:100%;height:100%;touch-action:none}
+  text{font-family:'IBM Plex Sans KR','Noto Sans KR',system-ui,sans-serif}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .inf{position:absolute;left:10px;right:10px;bottom:10px;z-index:3;display:flex;align-items:center;gap:10px;
+    padding:11px 12px;border-radius:var(--r-lg);border:1px solid var(--edge);
+    background:linear-gradient(180deg,rgba(14,18,26,.96),rgba(8,11,16,.96))}
+  .inf .l{flex:1;min-width:0}
+  .inf .n{font-size:13px;font-weight:700;color:#e8eef7}
+  .inf .s{font-size:11px;color:#7b8593;margin-top:2px}
+  .inf .c{font-family:var(--font-num);font-size:15px;font-weight:700;color:var(--gold)}
+  .buy{border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10);color:#fff;
+    border-radius:var(--r-md);font:700 12px/1 inherit;padding:10px 14px;position:relative}
+  .buy::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent)}
+</style>
+<div class="wrap">
+<h1>환생 트리 — 8안</h1>
+<p class="lede">지금 트리는 <b>160칸이 한꺼번에</b> 깔린다(4갈래 × 8계열 × 5차). 잠긴 칸까지 전부 그려서
+  뭘 살 수 있는지가 안 읽히고 화면이 점으로 덮인다. 8안 모두 <b>환생 화면의 어휘</b>(판 없음 · 큰 숫자 ·
+  얇은 선 · 밑변 광원)를 따르고 아래 한 규칙을 공유한다.</p>
+<p class="rule"><b>보이는 것은 둘뿐이다.</b> ① <b>산 것</b> ② <b>그 바로 다음 한 칸</b>.
+  그 너머는 <b>그리지 않는다</b> — 자물쇠도, 흐린 점도 없다. 하나를 사면 거기서 갈래가 한 칸 더 뻗는다.</p>
+<p class="warn"><b>⚠ 숨기는 것만으로는 안 끝난다.</b> 잠긴 칸을 다 지워도 첫 화면에는
+  <b>32개가 동시에</b> 뜬다 — 계열이 32개고 저마다 첫 칸이 열려 있기 때문이다. 이름과 값을 32번 쓰면
+  어떤 배치를 써도 글자가 겹친다. 그래서 안마다 <b>그 32개를 어떻게 다루는지</b>가 갈린다:
+  값만 쓰고 이름은 눌러서 본다(①④) · 확대해서 본다(②) · <b>갈래도 하나의 칸으로 만들어 처음엔 5개만
+  띄운다</b>(③) · 갈래를 골라 8개만 본다(⑧) · 아예 목록으로 편다(⑦).</p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+/* ══ 실제 데이터 (js/19-camp.js 에서 그대로) ══════════════════════════ */
+const BR = {
+  enemy:{ a:-Math.PI/2, nm:'적 약화',   col:'#ff3b3b' },
+  army: { a: Math.PI/2, nm:'아군 강화', col:'#4aa8ff' },
+  start:{ a: Math.PI,   nm:'시작 도움', col:'#5dff8f' },
+  econ: { a: 0,         nm:'재화 획득', col:'#ffd24a' },
+};
+const LINES = [
+  {k:'tap',br:'start',grp:'가',gr:'흔함',nm:'탭당 미네랄'},
+  {k:'startMin',br:'start',grp:'가',gr:'보통',nm:'시작 미네랄'},
+  {k:'startWk',br:'start',grp:'나',gr:'흔함',nm:'시작 일꾼'},
+  {k:'startBld',br:'start',grp:'나',gr:'보통',nm:'시작 건물'},
+  {k:'earlyDc',br:'start',grp:'다',gr:'흔함',nm:'초반 건물 할인'},
+  {k:'startUp',br:'start',grp:'다',gr:'보통',nm:'시작 업그레이드'},
+  {k:'startUnit',br:'start',grp:'라',gr:'흔함',nm:'시작 유닛'},
+  {k:'skipRd',br:'start',grp:'라',gr:'귀함',nm:'라운드 건너뛰기'},
+  {k:'gather',br:'econ',grp:'가',gr:'흔함',nm:'일꾼 채취량'},
+  {k:'gas',br:'econ',grp:'가',gr:'보통',nm:'가스 생산량'},
+  {k:'wkCap',br:'econ',grp:'나',gr:'흔함',nm:'일꾼 상한'},
+  {k:'mine',br:'econ',grp:'나',gr:'귀함',nm:'광산 등급'},
+  {k:'idle',br:'econ',grp:'다',gr:'흔함',nm:'방치 수급'},
+  {k:'dgRw',br:'econ',grp:'다',gr:'보통',nm:'던전 보상'},
+  {k:'tapMul',br:'econ',grp:'라',gr:'흔함',nm:'탭 배수'},
+  {k:'gasEx',br:'econ',grp:'라',gr:'보통',nm:'가스 교환비'},
+  {k:'atk',br:'army',grp:'가',gr:'흔함',nm:'유닛 공격력'},
+  {k:'hp',br:'army',grp:'가',gr:'보통',nm:'유닛 체력'},
+  {k:'prod',br:'army',grp:'나',gr:'흔함',nm:'생산 속도'},
+  {k:'sup',br:'army',grp:'나',gr:'보통',nm:'인구 상한'},
+  {k:'upCost',br:'army',grp:'다',gr:'흔함',nm:'업그레이드 비용'},
+  {k:'endure',br:'army',grp:'다',gr:'귀함',nm:'버팀'},
+  {k:'bldg',br:'army',grp:'라',gr:'흔함',nm:'건물 강화'},
+  {k:'skCd',br:'army',grp:'라',gr:'보통',nm:'스킬 쿨다운'},
+  {k:'foeHp',br:'enemy',grp:'가',gr:'흔함',nm:'적 체력'},
+  {k:'foeN',br:'enemy',grp:'가',gr:'귀함',nm:'적 마리 수'},
+  {k:'foeAtk',br:'enemy',grp:'나',gr:'흔함',nm:'적 공격력'},
+  {k:'foeRes',br:'enemy',grp:'나',gr:'보통',nm:'적 부활 시간'},
+  {k:'foeSpd',br:'enemy',grp:'다',gr:'흔함',nm:'적 이동 속도'},
+  {k:'bossHp',br:'enemy',grp:'다',gr:'보통',nm:'보스 체력'},
+  {k:'foeRng',br:'enemy',grp:'라',gr:'흔함',nm:'적 사거리'},
+  {k:'foeDelay',br:'enemy',grp:'라',gr:'보통',nm:'적 등장 지연'},
+];
+const GRP={가:[1,5,9,13,17],나:[2,6,10,14,18],다:[3,7,11,15,19],라:[4,8,12,16,20]};
+const MILE={가:5,나:10,다:15,라:20};
+const GRADE={흔함:.5,보통:1,귀함:3,극상:10};
+const BASE=2, MUL=4;
+const L_=k=>LINES.find(x=>x.k===k);
+const tier=(k,n)=>GRP[L_(k).grp][Math.max(1,Math.min(5,n))-1];
+const grade=(k,n)=>(L_(k).gr==='귀함'&&tier(k,n)===MILE[L_(k).grp])?'극상':L_(k).gr;
+const cost=(k,n)=>BASE*Math.pow(MUL,tier(k,n)-1)*GRADE[grade(k,n)];
+const SUF=['','K','M','B','T','aa','ab','ac','ad','ae','af','ag'];
+function num(v){ if(v<1000) return (v%1?v.toFixed(1):String(v));
+  let i=0; while(v>=1000&&i<SUF.length-1){v/=1000;i++;}
+  return (v<10?v.toFixed(2):v<100?v.toFixed(1):Math.round(v))+SUF[i]; }
+
+/* ══ 목업 상태 — 「조금 사 둔」 회차. 들쭉날쭉해야 숨김 규칙이 드러난다 ══ */
+const BAG={root:1, tap:3, gather:2, atk:2, foeHp:1, startWk:1, gas:1, prod:1, idle:1};
+const PTS=41200;
+const has=k=>BAG[k]|0;
+function st(k,n){ const h=has(k);
+  if(n<=h) return 'own';
+  if(n!==h+1) return null;                 // ⭐ 규칙의 전부 — 그 너머는 존재하지 않는다
+  return PTS>=cost(k,n)?'buy':'next'; }
+function visible(k){ const out=[]; for(let n=1;n<=5;n++){ const s=st(k,n); if(s) out.push({n,s}); } return out; }
+const BRK=['start','econ','army','enemy'];
+const linesOf=b=>LINES.filter(x=>x.br===b);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+/* ══ 공용 조각 ══════════════════════════════════════════════════════ */
+function frame(title,inner,inf){
+  return '<div class="ph"><div class="top"><span class="tt">'+title+'</span>'
+    + '<span class="pt num">포인트<b>'+num(PTS)+'</b></span></div>'
+    + inner + (inf||'') + '</div>'; }
+function infoBar(nm,sub,c,btn){
+  return '<div class="inf"><div class="l"><div class="n">'+nm+'</div><div class="s">'+sub+'</div></div>'
+    + (c?'<div class="c num">'+c+'</div>':'')
+    + (btn?'<button class="buy">'+btn+'</button>':'') + '</div>'; }
+/* 갈래 이름표 — 부챗살 바깥 */
+function brLabels(r){ let o='';
+  for(const bk in BR){ const B=BR[bk];
+    o+='<text x="'+(Math.cos(B.a)*r).toFixed(0)+'" y="'+(Math.sin(B.a)*r).toFixed(0)
+      +'" text-anchor="middle" font-size="10" letter-spacing="2.5" fill="'+B.col+'" opacity=".65">'+B.nm+'</text>'; }
+  return o; }
+function root(r,tx){ return '<circle cx="0" cy="0" r="'+r+'" fill="rgba(92,214,255,.08)" stroke="#5cd6ff" stroke-width="1.2"/>'
+  + '<text x="0" y="'+(r*0.22).toFixed(0)+'" text-anchor="middle" font-size="'+(r*.42).toFixed(0)+'" fill="#cfe9f7">'+(tx||'시작')+'</text>'; }
+
+/* ════════════════════════════════════════════════════════════════════
+   ① 성좌 · 조망 — 32개가 다 보이므로 **값만** 쓴다. 이름은 눌러서 본다
+════════════════════════════════════════════════════════════════════ */
+function mockA(){
+  const R0=104, RS=40, SPREAD=1.66, o=[];
+  const pos=(k,n)=>{ if(n<=0) return {x:0,y:0}; const L=L_(k), B=BR[L.br];
+    const i=linesOf(L.br).indexOf(L); const a=B.a+(i-3.5)*(SPREAD/7);
+    const r=R0+(n-1)*RS; return {x:Math.cos(a)*r, y:Math.sin(a)*r}; };
+  o.push('<defs><filter id="gA" x="-80%" y="-80%" width="260%" height="260%">'
+    +'<feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>');
+  o.push(brLabels(238));
+  for(const L of LINES){ const B=BR[L.br];
+    for(const v of visible(L.k)){ const a=pos(L.k,v.n-1), b=pos(L.k,v.n), own=v.s==='own';
+      o.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)
+        +'" stroke="'+(own?B.col:'rgba(255,255,255,.17)')+'" stroke-width="'+(own?1.7:1)+'"'
+        +(own?' opacity=".7"':' stroke-dasharray="2.5 3.5"')+'/>'); } }
+  for(const L of LINES){ const B=BR[L.br];
+    for(const v of visible(L.k)){ const p=pos(L.k,v.n);
+      if(v.s==='own'){ o.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+B.col+'" filter="url(#gA)"/>'); }
+      else{ const on=v.s==='buy';
+        o.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="10" fill="rgba(8,11,16,.88)" stroke="'
+          +(on?B.col:'rgba(255,255,255,.26)')+'" stroke-width="1"/>');
+        o.push('<text x="'+p.x.toFixed(1)+'" y="'+(p.y+3).toFixed(1)+'" text-anchor="middle" font-size="8" class="num" fill="'
+          +(on?B.col:'#69737f')+'">'+num(cost(L.k,v.n))+'</text>'); } } }
+  o.push(root(20));
+  return frame('환생 트리', '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;height:630px">'+o.join('')+'</svg>',
+    infoBar('일꾼 채취량 <span style="color:#7b8593">3차</span>','재화 획득 · 보통 · T6','8.19K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ② 성좌 · 확대 — ①을 손가락으로 벌린 모습. 이제 이름이 들어간다
+════════════════════════════════════════════════════════════════════ */
+function mockB(){
+  const R0=74, RS=42, SPREAD=1.42, o=[], Z=2.4, CX=118, CY=-10;
+  const pos=(k,n)=>{ if(n<=0) return {x:0,y:0}; const L=L_(k), B=BR[L.br];
+    const i=linesOf(L.br).indexOf(L); const a=B.a+(i-3.5)*(SPREAD/7);
+    const r=R0+(n-1)*RS; return {x:Math.cos(a)*r, y:Math.sin(a)*r}; };
+  for(const L of LINES){ const B=BR[L.br];
+    for(const v of visible(L.k)){ const a=pos(L.k,v.n-1), b=pos(L.k,v.n), own=v.s==='own';
+      o.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)
+        +'" stroke="'+(own?B.col:'rgba(255,255,255,.17)')+'" stroke-width="'+(own?1.7:.9)+'"'
+        +(own?' opacity=".7"':' stroke-dasharray="2.5 3.5"')+'/>'); } }
+  for(const L of LINES){ const B=BR[L.br];
+    for(const v of visible(L.k)){ const p=pos(L.k,v.n);
+      if(v.s==='own'){ o.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3.6" fill="'+B.col+'"/>'); }
+      else{ const on=v.s==='buy';
+        o.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="5" fill="rgba(8,11,16,.9)" stroke="'
+          +(on?B.col:'rgba(255,255,255,.28)')+'" stroke-width=".9"/>');
+        const rt=p.x>=0, tx=p.x+(rt?9:-9);
+        o.push('<text x="'+tx.toFixed(1)+'" y="'+(p.y-.5).toFixed(1)+'" text-anchor="'+(rt?'start':'end')
+          +'" font-size="6.4" fill="'+(on?'#e6eef8':'#7b8593')+'">'+esc(L.nm)+'</text>');
+        o.push('<text x="'+tx.toFixed(1)+'" y="'+(p.y+6.4).toFixed(1)+'" text-anchor="'+(rt?'start':'end')
+          +'" font-size="6.4" class="num" fill="'+(on?B.col:'#5b6674')+'">'+num(cost(L.k,v.n))+'</text>'); } } }
+  o.push(root(20));
+  const w=430/Z, h=630/Z;
+  return frame('환생 트리',
+    '<svg viewBox="'+(CX-w/2).toFixed(0)+' '+(CY-h/2).toFixed(0)+' '+w.toFixed(0)+' '+h.toFixed(0)
+    +'" style="position:absolute;left:0;right:0;top:52px;height:630px">'+o.join('')+'</svg>',
+    infoBar('가스 생산량 <span style="color:#7b8593">2차</span>','재화 획득 · 보통 · T6','2.05K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ③ 두 단계 — **갈래도 하나의 칸**. 처음엔 시작점 + 갈래 넷뿐
+════════════════════════════════════════════════════════════════════ */
+function mockC(){
+  const o=[], OPEN='econ';                 // 재화 갈래만 열어 둔 상태
+  const BRR=92;
+  for(const bk in BR){ const B=BR[bk], open=bk===OPEN;
+    const bx=Math.cos(B.a)*BRR, by=Math.sin(B.a)*BRR;
+    o.push('<line x1="0" y1="0" x2="'+bx.toFixed(1)+'" y2="'+by.toFixed(1)+'" stroke="'+B.col
+      +'" stroke-width="'+(open?2:1)+'" opacity="'+(open?'.6':'.22')+'"'+(open?'':' stroke-dasharray="3 4"')+'/>');
+    o.push('<circle cx="'+bx.toFixed(1)+'" cy="'+by.toFixed(1)+'" r="26" fill="'
+      +(open?'rgba(255,210,74,.10)':'rgba(9,12,18,.9)')+'" stroke="'+B.col+'" stroke-width="1.2" opacity="'+(open?1:.75)+'"/>');
+    o.push('<text x="'+bx.toFixed(1)+'" y="'+(by-1).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="'
+      +(open?'#fff':'#c2ccd8')+'">'+B.nm.split(' ')[0]+'</text>');
+    o.push('<text x="'+bx.toFixed(1)+'" y="'+(by+10).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="'
+      +(open?'#fff':'#c2ccd8')+'">'+B.nm.split(' ')[1]+'</text>');
+    if(!open) o.push('<text x="'+bx.toFixed(1)+'" y="'+(by+38).toFixed(1)+'" text-anchor="middle" font-size="9" class="num" fill="'
+      +B.col+'" opacity=".8">128</text>');
+    if(open){ const ls=linesOf(bk);
+      ls.forEach((L,i)=>{ const a0=B.a+(i-3.5)*(1.30/7);
+        const vs=visible(L.k); const r0=BRR+26;
+        vs.forEach(v=>{ const r=r0+16+(v.n-1)*38, pr=r0+16+(v.n-2)*38;
+          const x=Math.cos(a0)*r, y=Math.sin(a0)*r;
+          const px=v.n===1?Math.cos(B.a)*BRR+Math.cos(a0)*26:Math.cos(a0)*pr;
+          const py=v.n===1?Math.sin(B.a)*BRR+Math.sin(a0)*26:Math.sin(a0)*pr;
+          o.push('<line x1="'+px.toFixed(1)+'" y1="'+py.toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)
+            +'" stroke="'+(v.s==='own'?B.col:'rgba(255,255,255,.16)')+'" stroke-width="'+(v.s==='own'?1.6:1)+'" opacity=".7"/>');
+          if(v.s==='own'){ o.push('<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4" fill="'+B.col+'"/>'); }
+          else{ const on=v.s==='buy';
+            o.push('<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="7" fill="rgba(8,11,16,.9)" stroke="'
+              +(on?B.col:'rgba(255,255,255,.26)')+'" stroke-width="1"/>');
+            o.push('<text x="'+(x+11).toFixed(1)+'" y="'+(y-1).toFixed(1)+'" font-size="8.5" fill="'
+              +(on?'#e6eef8':'#7b8593')+'">'+esc(L.nm)+'</text>');
+            o.push('<text x="'+(x+11).toFixed(1)+'" y="'+(y+8.5).toFixed(1)+'" font-size="8.5" class="num" fill="'
+              +(on?B.col:'#5b6674')+'">'+num(cost(L.k,v.n))+'</text>'); } }); }); } }
+  o.push(root(24));
+  return frame('환생 트리',
+    '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;height:630px">'+o.join('')+'</svg>',
+    infoBar('일꾼 채취량 <span style="color:#7b8593">3차</span>','재화 획득 · 보통 · T6','8.19K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ④ 동심 링 — 반지름 = 차수. 가운데에 회차를 크게
+════════════════════════════════════════════════════════════════════ */
+function mockD(){
+  const o=[], R=[126,164,202,240,278];
+  for(let n=1;n<=5;n++) o.push('<circle cx="0" cy="0" r="'+R[n-1]+'" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1"/>');
+  const A=i=>(-Math.PI/2)+((i+.5)/32)*Math.PI*2;
+  LINES.forEach((L,i)=>{ const B=BR[L.br], a=A(i), vs=visible(L.k); if(!vs.length) return;
+    const last=vs[vs.length-1];
+    o.push('<line x1="'+(Math.cos(a)*56).toFixed(1)+'" y1="'+(Math.sin(a)*56).toFixed(1)
+      +'" x2="'+(Math.cos(a)*R[last.n-1]).toFixed(1)+'" y2="'+(Math.sin(a)*R[last.n-1]).toFixed(1)
+      +'" stroke="'+B.col+'" stroke-width="1" opacity=".22"/>');
+    vs.forEach(v=>{ const r=R[v.n-1], x=Math.cos(a)*r, y=Math.sin(a)*r;
+      if(v.s==='own'){ o.push('<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4" fill="'+B.col+'"/>'); }
+      else{ const on=v.s==='buy';
+        o.push('<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="11" fill="rgba(8,11,16,.9)" stroke="'
+          +(on?B.col:'rgba(255,255,255,.26)')+'" stroke-width="1"/>');
+        o.push('<text x="'+x.toFixed(1)+'" y="'+(y+3).toFixed(1)+'" text-anchor="middle" font-size="8" class="num" fill="'
+          +(on?B.col:'#69737f')+'">'+num(cost(L.k,v.n))+'</text>'); } }); });
+  for(const bk in BR){ const B=BR[bk];
+    o.push('<text x="'+(Math.cos(B.a)*300).toFixed(0)+'" y="'+(Math.sin(B.a)*300).toFixed(0)
+      +'" text-anchor="middle" font-size="10" letter-spacing="2.5" fill="'+B.col+'" opacity=".6">'+B.nm+'</text>'); }
+  o.push('<circle cx="0" cy="0" r="42" fill="rgba(92,214,255,.06)" stroke="#5cd6ff" stroke-width="1"/>');
+  o.push('<text x="0" y="-6" text-anchor="middle" font-size="9" fill="#8fbfd8" letter-spacing="3">환 생</text>');
+  o.push('<text x="0" y="16" text-anchor="middle" font-size="22" class="num" font-weight="700" fill="#e9f3fa">6</text>');
+  return frame('환생 트리',
+    '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;height:630px">'+o.join('')+'</svg>',
+    infoBar('가스 생산량 <span style="color:#7b8593">2차</span>','재화 획득 · 보통 · T6','2.05K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ⑤ 기둥 — 갈래 넷이 세로 기둥, 계열이 좌우로 뻗는 가지
+════════════════════════════════════════════════════════════════════ */
+function mockE(){
+  const o=[], X=[-160,-54,54,160];
+  BRK.forEach((bk,bi)=>{ const B=BR[bk], cx=X[bi];
+    o.push('<text x="'+cx+'" y="-306" text-anchor="middle" font-size="9.5" letter-spacing="1.5" fill="'+B.col+'">'+B.nm+'</text>');
+    o.push('<line x1="'+cx+'" y1="-296" x2="'+cx+'" y2="270" stroke="'+B.col+'" stroke-width="1" opacity=".22"/>');
+    linesOf(bk).forEach((L,li)=>{ const y=-272+li*70, vs=visible(L.k); if(!vs.length) return;
+      const dir=(li%2)?1:-1;
+      o.push('<text x="'+(cx+dir*4)+'" y="'+(y-10)+'" text-anchor="'+(dir>0?'start':'end')
+        +'" font-size="8.5" fill="#8d9aa9">'+esc(L.nm)+'</text>');
+      let px=cx;
+      vs.forEach(v=>{ const x=cx+dir*(12+(v.n-1)*17);
+        o.push('<line x1="'+px+'" y1="'+y+'" x2="'+x+'" y2="'+y+'" stroke="'
+          +(v.s==='own'?B.col:'rgba(255,255,255,.16)')+'" stroke-width="'+(v.s==='own'?1.6:1)+'" opacity=".65"/>');
+        if(v.s==='own'){ o.push('<rect x="'+(x-3)+'" y="'+(y-3)+'" width="6" height="6" fill="'+B.col+'"/>'); }
+        else{ const on=v.s==='buy';
+          o.push('<rect x="'+(x-4)+'" y="'+(y-4)+'" width="8" height="8" fill="rgba(8,11,16,.9)" stroke="'
+            +(on?B.col:'rgba(255,255,255,.28)')+'" stroke-width="1"/>');
+          o.push('<text x="'+(x+dir*8)+'" y="'+(y+3)+'" text-anchor="'+(dir>0?'start':'end')+'" font-size="8" class="num" fill="'
+            +(on?B.col:'#69737f')+'">'+num(cost(L.k,v.n))+'</text>'); }
+        px=x; }); }); });
+  o.push('<rect x="-18" y="278" width="36" height="20" rx="3" fill="rgba(92,214,255,.08)" stroke="#5cd6ff" stroke-width="1"/>');
+  o.push('<text x="0" y="292" text-anchor="middle" font-size="9.5" fill="#cfe9f7">시작</text>');
+  return frame('환생 트리',
+    '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;height:630px">'+o.join('')+'</svg>',
+    infoBar('방치 수급 <span style="color:#7b8593">2차</span>','재화 획득 · 흔함 · T7','4.10K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ⑥ 벌집 — 산 칸은 색으로 채워지고, 다음 칸만 인접해 드러난다
+════════════════════════════════════════════════════════════════════ */
+function mockF(){
+  const o=[], S=15;
+  const hex=(x,y,r)=>{ const p=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-30);
+    p.push((x+Math.cos(a)*r).toFixed(1)+','+(y+Math.sin(a)*r).toFixed(1)); } return p.join(' '); };
+  const pos=(k,n)=>{ const L=L_(k), B=BR[L.br]; const i=linesOf(L.br).indexOf(L);
+    const a=B.a+(i-3.5)*(1.66/7); const r=112+(n-1)*40;
+    return {x:Math.cos(a)*r, y:Math.sin(a)*r}; };
+  o.push(brLabels(268));
+  for(const L of LINES){ const B=BR[L.br];
+    for(const v of visible(L.k)){ const a=pos(L.k,v.n-1), b=pos(L.k,v.n);
+      o.push('<line x1="'+(v.n===1?0:a.x.toFixed(1))+'" y1="'+(v.n===1?0:a.y.toFixed(1))+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)
+        +'" stroke="'+(v.s==='own'?B.col:'rgba(255,255,255,.12)')+'" stroke-width="1" opacity=".55"/>'); } }
+  for(const L of LINES){ const B=BR[L.br];
+    for(const v of visible(L.k)){ const p=pos(L.k,v.n);
+      if(v.s==='own'){
+        o.push('<polygon points="'+hex(p.x,p.y,S*.62)+'" fill="'+B.col+'" opacity=".34" stroke="'+B.col+'" stroke-width="1"/>');
+      }else{ const on=v.s==='buy';
+        o.push('<polygon points="'+hex(p.x,p.y,S)+'" fill="rgba(9,12,18,.92)" stroke="'
+          +(on?B.col:'rgba(255,255,255,.24)')+'" stroke-width="1"/>');
+        o.push('<text x="'+p.x.toFixed(1)+'" y="'+(p.y+3).toFixed(1)+'" text-anchor="middle" font-size="7.6" class="num" fill="'
+          +(on?B.col:'#69737f')+'">'+num(cost(L.k,v.n))+'</text>'); } } }
+  o.push('<polygon points="'+hex(0,0,26)+'" fill="rgba(92,214,255,.10)" stroke="#5cd6ff" stroke-width="1.2"/>');
+  o.push('<text x="0" y="4" text-anchor="middle" font-size="10" fill="#cfe9f7">시작</text>');
+  return frame('환생 트리',
+    '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;height:630px">'+o.join('')+'</svg>',
+    infoBar('생산 속도 <span style="color:#7b8593">2차</span>','아군 강화 · 흔함 · T10','512K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ⑦ 갈래 목록 — 마인드맵을 버린다. 밀지도 확대하지도 않는다
+════════════════════════════════════════════════════════════════════ */
+function mockG(){
+  let h='<div style="position:absolute;inset:52px 0 78px;overflow:hidden;padding:0 12px">';
+  BRK.forEach(bk=>{ const B=BR[bk];
+    h+='<div style="display:flex;align-items:center;gap:8px;margin:10px 2px 4px">'
+      +'<span style="width:3px;height:11px;background:'+B.col+'"></span>'
+      +'<span style="font-size:10.5px;font-weight:700;color:'+B.col+';letter-spacing:.18em">'+B.nm+'</span>'
+      +'<span style="flex:1;height:1px;background:rgba(255,255,255,.07)"></span></div>';
+    linesOf(bk).forEach(L=>{ const vs=visible(L.k); if(!vs.length) return;
+      const own=vs.filter(v=>v.s==='own').length, nx=vs.find(v=>v.s!=='own');
+      h+='<div style="display:flex;align-items:center;gap:10px;padding:4.5px 2px;border-top:1px solid rgba(255,255,255,.05)">'
+        +'<div style="flex:1;min-width:0">'
+        +'<div style="font-size:11px;color:'+(nx&&nx.s==='buy'?'#e8eef7':'#9aa5b3')+'">'+esc(L.nm)+'</div>'
+        +'<div style="display:flex;gap:3px;margin-top:3px">'
+        + [1,2,3,4,5].map(n=>'<i style="display:block;width:13px;height:3px;border-radius:var(--r-bar);background:'
+            +(n<=own?B.col:(nx&&n===nx.n?'rgba(255,255,255,.26)':'rgba(255,255,255,.07)'))+'"></i>').join('')
+        +'</div></div>'
+        + (nx ? '<div style="text-align:right"><div class="num" style="font-size:12.5px;font-weight:700;color:'
+            +(nx.s==='buy'?B.col:'#5b6674')+'">'+num(cost(L.k,nx.n))+'</div>'
+            +'<div style="font-size:8.5px;color:#69737f">'+nx.n+'차 · T'+tier(L.k,nx.n)+'</div></div>'
+          : '<div style="font-size:10px;color:#5b6674">끝</div>')
+        +'</div>'; }); });
+  h+='</div>';
+  return frame('환생 트리', h,
+    infoBar('일꾼 채취량 <span style="color:#7b8593">3차</span>','고른 줄을 눌러 올린다','8.19K','올리기'));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ⑧ 초점 — 갈래 하나를 고르고 그 8계열만 크게
+════════════════════════════════════════════════════════════════════ */
+function mockH(){
+  const B=BR.econ, ls=linesOf('econ'), o=[];
+  let h='<div style="position:absolute;left:0;right:0;top:52px;z-index:3;display:flex;gap:6px;padding:0 12px">';
+  BRK.forEach(bk=>{ const b=BR[bk], on=bk==='econ';
+    h+='<button style="flex:1;padding:9px 0;border-radius:var(--r-md);font:700 10.5px/1 inherit;'
+      +'border:1px solid '+(on?'rgba(255,210,74,.5)':'rgba(255,255,255,.10)')+';'
+      +'background:'+(on?'rgba(255,210,74,.10)':'rgba(255,255,255,.03)')+';color:'+(on?b.col:'#69737f')+'">'
+      +b.nm+'</button>'; });
+  h+='</div>';
+  ls.forEach((L,i)=>{ const y=-232+i*64, vs=visible(L.k); if(!vs.length) return;
+    o.push('<text x="-186" y="'+(y+3)+'" font-size="11" fill="#c2ccd8">'+esc(L.nm)+'</text>');
+    o.push('<line x1="-186" y1="'+(y+16)+'" x2="186" y2="'+(y+16)+'" stroke="rgba(255,255,255,.06)" stroke-width="1"/>');
+    vs.forEach(v=>{ const x=-4+(v.n-1)*46;
+      if(v.n>1||true){ const pxv=v.n===1?-30:(-4+(v.n-2)*46);
+        o.push('<line x1="'+pxv+'" y1="'+y+'" x2="'+x+'" y2="'+y+'" stroke="'
+          +(v.s==='own'?B.col:'rgba(255,255,255,.16)')+'" stroke-width="'+(v.s==='own'?2:1)+'" opacity=".6"/>'); }
+      if(v.s==='own'){ o.push('<circle cx="'+x+'" cy="'+y+'" r="6" fill="'+B.col+'"/>'); }
+      else{ const on=v.s==='buy';
+        o.push('<circle cx="'+x+'" cy="'+y+'" r="13" fill="rgba(8,11,16,.9)" stroke="'
+          +(on?B.col:'rgba(255,255,255,.26)')+'" stroke-width="1"/>');
+        o.push('<text x="'+x+'" y="'+(y+3.5)+'" text-anchor="middle" font-size="9" class="num" fill="'
+          +(on?B.col:'#7b8593')+'">'+num(cost(L.k,v.n))+'</text>');
+        o.push('<text x="'+x+'" y="'+(y+26)+'" text-anchor="middle" font-size="8" fill="#69737f">'+v.n+'차</text>'); } }); });
+  h+='<svg viewBox="-215 -290 430 560" style="position:absolute;left:0;right:0;top:100px;height:560px">'+o.join('')+'</svg>';
+  return frame('환생 트리', h,
+    infoBar('광산 등급 <span style="color:#7b8593">1차</span>','재화 획득 · 귀함 · T2','24','올리기'));
+}
+
+/* ══ 배치 ══════════════════════════════════════════════════════════ */
+const MOCKS=[
+  [mockA,'① 성좌 · 조망','지금 구조를 지키되 잠긴 칸을 지웠다. 산 것은 <b>발광하는 점</b>, 다음 칸은 <b>값을 담은 고리</b>. '
+    +'32개가 다 보이므로 <b>이름은 쓰지 않는다</b> — 누르면 아래 줄에 나온다. <i>고칠 코드가 가장 적다.</i>'],
+  [mockB,'② 성좌 · 확대','①과 같은 안을 손가락으로 벌린 모습. 이 배율부터 <b>이름과 값이 함께</b> 읽힌다. '
+    +'<i>①②는 한 안의 두 상태다 — 조망은 값, 확대는 이름.</i>'],
+  [mockC,'③ 두 단계','<b>갈래도 하나의 칸으로 만든다.</b> 첫 화면은 시작점 + 갈래 넷 = <b>다섯 개뿐</b>. '
+    +'갈래를 사야 그 안 8계열이 뻗는다. <i>32개가 동시에 뜨는 문제를 뿌리에서 없앤다 — 대신 데이터에 갈래 노드가 는다.</i>'],
+  [mockD,'④ 동심 링','<b>반지름 = 차수.</b> 가운데에 회차를 크게 둬 환생 화면의 큰 숫자와 이어진다. '
+    +'한 바퀴가 곧 진행도라 <b>얼마나 왔는지</b>가 한눈에 보인다. <i>계열 이름 자리가 없다.</i>'],
+  [mockE,'⑤ 기둥','갈래 넷이 세로 기둥, 계열은 좌우로 번갈아 뻗는 가지. <b>이름과 값이 겹치지 않는</b> '
+    +'유일한 전체 보기다. <i>마인드맵보다 도표에 가깝다.</i>'],
+  [mockF,'⑥ 벌집','육각 셀. 산 칸은 <b>색으로 채워지고</b> 다음 칸만 테두리 셀로 인접해 드러난다. '
+    +'<i>게임다운 인상이 가장 세다. 이름은 못 넣는다.</i>'],
+  [mockG,'⑦ 갈래 목록','<b>마인드맵을 버린다.</b> 밀지도 확대하지도 않는다. 계열마다 한 줄, 5칸 막대가 진행도, '
+    +'오른쪽이 다음 값. <i>가장 읽기 쉽고 가장 안 예쁘다.</i>'],
+  [mockH,'⑧ 초점','위에서 <b>갈래를 고르고</b> 그 8계열만 크게 본다. 한 화면에 8줄뿐이라 '
+    +'이름·값·차수를 다 쓸 수 있다. <i>전체 지도를 못 본다.</i>'],
+];
+document.getElementById('g').innerHTML = MOCKS.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

@@ -30,12 +30,9 @@
   .lbMsg b{font-weight:700}
   .lbMsg.sys{color:var(--txt-mute);font-style:italic;font-size:var(--fs-sm)}
   /* 입력줄 = 박스 내부에 붙고, 구분선으로만 분리(테두리 중복 제거) */
-  .lbChatBar{flex:0 0 auto;display:flex;align-items:stretch;gap:0;margin:0;border-top:1px solid rgba(255,255,255,.09)}
-  .lbChatBar input{flex:1;min-width:0;background:transparent;border:none;border-radius:0;color:#e0dcdc;font-size:var(--fs-md);padding:7px 10px;outline:none}
-  .lbChatBar input::placeholder{color:#7a7072}
-  .lbChatBar button{flex:0 0 auto;background:transparent;border:none;border-left:1px solid rgba(255,255,255,.09);border-radius:0;
-    color:#ff8a8a;padding:0 13px;font-size:var(--fs-md);font-weight:800;cursor:pointer;white-space:nowrap;transition:background .12s}
-  .lbChatBar button:active{background:rgba(255,90,90,.12)}
+  /* 대기실 입력줄 = 유즈맵 도크와 같은 컴포넌트(.msChatBar · css/40-social.css).
+     ⛔ 여기서 채팅바를 새로 만들지 말 것(2026-08-27 통일 — 옛 .lbChatBar 는 없앴다).
+        전송이 빨강이던 것도 함께 걷었다: 그 화면의 빨강은 「시작」 주 동작의 색이다. */
   .lbHead{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin-bottom:10px}
   .lbTitleWrap{display:flex;align-items:baseline;gap:6px;min-width:0}
   .lbTitle{font-family:var(--font-ti);font-size:17px;font-weight:400;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -263,7 +260,10 @@
   #pwPanel{position:absolute;inset:0;z-index:51;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #pwPanel.hide{display:none}
   /* 로그아웃 확인 — 허브(60) 위에 떠야 한다. 규칙이 없으면 문서 흐름에 그려져 보이지 않는다 */
-  #logoutPanel{position:absolute;inset:0;z-index:73;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  /* 로그아웃 확인 — 설정창 **위**에 떠야 한다(설정에서 부르므로).
+     ⚠ 설정은 게임 밖에서 z-index 95(#settingsPop.appCtx) · 하위 팝업 96 이다. 그 위인 97 을 쓴다.
+        73 이던 시절엔 설정 뒤에 깔려 아무것도 안 보였다(2026-08-27). */
+  #logoutPanel{position:absolute;inset:0;z-index:97;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #logoutPanel.hide{display:none}
   /* ══ 🎚 난이도 선택 = **전체 화면**(2026-08-27 · F2+D2+D8+A3+B5 확정) ══════════════
      로딩·로그인이 쓰는 공식을 그대로 빌린다: **맵 키 아트 한 장 + 국소 스크림 + --loadDim**.
@@ -843,6 +843,23 @@
   /* 값은 --loadDim(00-base.css) 이 갖는다 — 유즈맵 하단 시트(.bp)도 같은 것을 쓴다 */
   #titleBg::after{content:'';position:absolute;inset:0;background:var(--loadDim)}
   #phone.artBg #titleBg{opacity:1}
+  /* 🔁 환생 화면(z-index 120)이 열리면 공유 키 아트를 그 **바로 아래**로 끌어올린다.
+     ⛔ 환생 화면이 자기 그림을 그리면 안 된다 — 키 아트를 칠하는 요소는 한 장뿐이어야 한다.
+     ⚠ 그때 **하단 네비를 키 아트 위로 올린다**(2026-08-31 사용자 신고: 「어두워지면서 하단까지
+        가려진다」). #titleBg 는 inset:0 이라 화면을 통째로 덮는데, artLift 로 z-index 가 119 가
+        되면 네비(62)를 덮는다. pointer-events:none 이라 **눌리기는 하지만 눈에는 안 보이고**,
+        ::after 의 딤(--loadDim)까지 얹혀 네비가 어둠에 잠긴다.
+        ⛔ 키 아트 쪽을 `bottom:var(--navH)` 로 잘라 봤지만 **8px 이 남았다** — 호흡
+           애니메이션(titleBreath)이 scale 을 걸어 레이아웃보다 크게 그려지기 때문이다.
+        ⭐ 그래서 자르지 않고 **네비를 올린다.** 그림은 온전히 남고 네비는 제 배경으로 덮인다. */
+  #phone.artLift #titleBg{z-index:119;
+    /* 🎬 **배경이 UI 보다 먼저 선다**(2026-08-31 사용자 신고: 「번쩍 하고 이동이 된다」).
+       ⛔ 그림과 환생 화면이 **같은 시간에** 0→1 로 오르면 둘 다 반투명인 구간이 길어져
+         그 아래 캠프 전장이 내내 비친다 — 실측 프레임에서 뒤 화면 글자가 그대로 읽혔다.
+       ⭐ 배경만 먼저 채우면 그 뒤로는 아래가 완전히 가려지고, 위에서 UI 만 떠오른다.
+         값이 0 이면 「갑자기 어두워진다」로 돌아가므로 **짧게 겹치되 먼저**가 정답이다. */
+    transition-duration:calc(var(--t-screen) * .4)}
+  #phone.artLift .navBar{z-index:121}
   /* 🎬 화면 전환 — 로딩(#opening)만 흐려지며 들고 난다.
      ⚠ .appScreen.hide 가 display:none 이라 그냥 두면 전환이 뚝 끊긴다. 로딩을
         var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.

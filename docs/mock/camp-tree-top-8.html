@@ -1,0 +1,212 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 — 상단 8안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --sel:#5cd6ff; --r-bar:3px; --r-md:6px; --r-lg:9px;
+    --metal-edge:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1900px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1040px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1040px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:26px}
+  .note{font-size:12px;line-height:1.6;color:#93a0b0;margin:10px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:560px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:radial-gradient(120% 90% at 50% 40%,rgba(16,22,32,.98),rgba(5,7,11,.99))}
+  svg{display:block}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .desel{position:absolute;right:10px;z-index:5;width:38px;height:38px;color:#dfe8f3;
+    display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 8px rgba(0,0,0,.85))}
+  /* 확정된 하단(좌우 분할) — 상단만 비교하려고 여덟 칸 모두 같은 것을 깐다 */
+  .sheet{position:absolute;left:0;right:0;bottom:0;padding:16px 16px 18px;
+    border-top:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c);
+    display:flex;gap:16px}
+  .sL{flex:0 0 118px;text-align:center}
+  .sIco{width:60px;height:60px;margin:0 auto;display:flex;align-items:center;justify-content:center;
+    border-radius:var(--r-lg);border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04)}
+  .sIco img{width:44px;height:44px;object-fit:contain}
+  .sR{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;
+    border-left:1px solid rgba(255,255,255,.09);padding-left:16px}
+  .dots{display:flex;gap:4px;margin-top:8px}
+  .dots i{flex:1;height:3px;border-radius:var(--r-bar)}
+  .go{position:relative;margin-left:auto;display:inline-flex;align-items:center;justify-content:center;
+    min-height:44px;padding:0 16px;border:1px solid rgba(255,255,255,.14);border-radius:var(--r-md);
+    background:none;color:#69737f;font:800 13px/1 inherit;letter-spacing:.1em}
+
+  /* ══ 상단 후보들 ══ */
+  .t0{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:center;gap:12px;
+    padding:12px 12px 8px;background:linear-gradient(180deg,rgba(6,9,13,.92),rgba(6,9,13,0))}
+  .q{width:20px;height:20px;flex:0 0 auto;margin-left:-6px;border:1px solid rgba(255,255,255,.24);
+    border-radius:50%;background:rgba(255,255,255,.05);color:#9fb0c4;font:700 11px/1 var(--font-num);
+    display:flex;align-items:center;justify-content:center}
+  .qb{width:22px;height:22px;flex:0 0 auto;border:1px solid rgba(255,255,255,.2);border-radius:50%;
+    background:rgba(255,255,255,.05);color:#9fb0c4;font:700 12px/1 var(--font-num);
+    display:flex;align-items:center;justify-content:center}
+  .hair{position:absolute;left:0;right:0;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.22) 30%,rgba(255,255,255,.22) 70%,transparent)}
+</style>
+<div class="wrap">
+<h1>환생 트리 — 상단 8안</h1>
+<p class="lede">하단은 <b>확정된 좌우 분할</b>을 여덟 칸 모두에 그대로 깔았다 — 상단만 다르다.</p>
+<p class="rule">지금 상단은 <b>「🌳 환생 트리」 + ? + 포인트</b> 한 줄이다. 그런데 이 화면에서 가장 중요한 수치는
+  <b>환생 포인트</b>다 — 별을 살 수 있는지 없는지가 전부 여기서 갈린다. 그게 12px 로 구석에 있다.
+  <i>여덟 안의 축은 하나다: 포인트를 얼마나 세우고, 제목을 얼마나 눕히는가.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+const D={ nm:'일꾼 채취량', n:4, br:'재화 획득', col:'#ffd24a', gr:'흔함', tier:13,
+  ic:IC+'upgrades/up_mine.webp', now:'×5', next:'×11', after:'다음 ×25 · 4.3B',
+  cost:'16.8M', left:'−16.8M', have:3, sib:'가스 생산량', sibN:2, need:3, btn:'짝이 모자람' };
+const PT='12,000';
+function stars(){
+  let o='<defs><filter id="gg"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge>'
+    +'<feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  let s=9; const rnd=()=>{ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
+  for(let i=0;i<70;i++){ const a=rnd()*Math.PI*2, r=30+rnd()*250;
+    o+='<circle cx="'+(215+Math.cos(a)*r).toFixed(0)+'" cy="'+(230+Math.sin(a)*r*.7).toFixed(0)
+      +'" r="'+(.4+rnd()*1).toFixed(2)+'" fill="#cfe0f2" opacity="'+(.06+rnd()*.18).toFixed(2)+'"/>'; }
+  const P=[[215,250],[262,196],[300,152],[196,200],[150,166],[292,238],[336,214]];
+  [[0,1],[1,2],[0,3],[3,4],[0,5],[5,6]].forEach(([a,b])=>{
+    o+='<line x1="'+P[a][0]+'" y1="'+P[a][1]+'" x2="'+P[b][0]+'" y2="'+P[b][1]
+      +'" stroke="#ffd24a" stroke-width="1.6" opacity=".5"/>'; });
+  P.forEach((p,i)=>{ o+='<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(i?3.4:5)+'" fill="'+(i?'#ffd24a':'#ff5a3c')
+    +'" filter="url(#gg)"/>'; });
+  o+='<circle cx="300" cy="152" r="20" fill="rgba(7,10,15,.94)" stroke="#ffd24a" stroke-width="1.6"/>';
+  o+='<image href="'+D.ic+'" x="289" y="141" width="22" height="22"/>';
+  o+='<circle cx="300" cy="152" r="25" fill="none" stroke="#5cd6ff" stroke-width="1.1" opacity=".85"/>';
+  return '<svg viewBox="0 0 430 560" style="position:absolute;inset:0;width:430px;height:560px">'+o+'</svg>';
+}
+function dots(){ let o='';
+  for(let i=1;i<=5;i++) o+='<i style="background:'+(i<=D.have?D.col:(i===D.n?'rgba(255,255,255,.34)':'rgba(255,255,255,.08)'))+'"></i>';
+  return o; }
+function sheet(){ return '<div class="sheet"><div class="sL">'
+  +'<span class="sIco"><img src="'+D.ic+'"></span>'
+  +'<div style="font-size:13px;font-weight:700;color:#fff;margin-top:8px;line-height:1.3">'+D.nm+'</div>'
+  +'<div class="num" style="font-size:11px;color:#8d9aa9;margin-top:2px">'+D.n+' / 5</div>'
+  +'<div class="dots">'+dots()+'</div></div>'
+  +'<div class="sR"><div style="font-size:10px;letter-spacing:.16em;color:#8d9aa9">'
+  +'<span style="color:'+D.col+'">'+D.br+'</span> · '+D.gr+' · T'+D.tier+'</div>'
+  +'<div style="display:flex;align-items:baseline;gap:8px;margin-top:8px">'
+  +'<span class="num" style="font-size:15px;color:#7b8593">'+D.now+'</span>'
+  +'<span style="color:#5b6674;font-size:11px;align-self:center">▶</span>'
+  +'<span class="num" style="font-size:28px;font-weight:800;color:#fff;line-height:1">'+D.next+'</span></div>'
+  +'<div style="font-size:10px;color:#69737f;margin-top:4px">'+D.after+'</div>'
+  +'<div style="margin-top:9px;font-size:11px;line-height:1.5;color:#c8b68d;'
+  +'border-left:2px solid rgba(255,177,77,.5);padding:3px 0 3px 9px;background:rgba(255,177,77,.05)">'
+  +'🔒 '+D.sib+' <b style="color:#ffd9a3">'+D.need+'차</b> 필요 · 현재 '+D.sibN+'차</div>'
+  +'<div style="display:flex;align-items:center;gap:12px;margin-top:11px">'
+  +'<div><div style="font-size:9px;color:#69737f;letter-spacing:.2em">비용</div>'
+  +'<div class="num" style="font-size:18px;font-weight:800;color:var(--gold);line-height:21px">'+D.cost+'</div></div>'
+  +'<button class="go">'+D.btn+'</button></div>'
+  +'<div style="margin-top:7px;font-size:10px;color:#69737f;text-align:right">잔여 '
+  +'<b class="num" style="color:#8d9aa9">'+D.left+'</b></div></div></div>'; }
+function ph(top, deselTop){ return '<div class="ph">'+stars()+top
+  +'<div class="desel" style="top:'+(deselTop||40)+'px"><svg viewBox="0 0 24 24" width="26" height="26">'
+  +'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+  +'<line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>'
+  +sheet()+'</div>'; }
+
+/* ① 지금 것 */
+const T1 = () => ph('<div class="t0"><span style="font-size:12px;font-weight:800">🌳 환생 트리</span>'
+ +'<span class="q">?</span><span style="margin-left:auto;display:flex;align-items:baseline;gap:5px;'
+ +'font-size:10px;color:#9fb0c4;letter-spacing:.2em">포인트<b class="num" style="font-size:12px;'
+ +'font-weight:800;color:var(--gold);letter-spacing:0">'+PT+'</b></span></div>');
+
+/* ② 포인트를 세운다 */
+const T2 = () => ph('<div class="t0" style="align-items:flex-start;padding:14px 14px 10px">'
+ +'<div><div style="display:flex;align-items:center;gap:6px">'
+ +'<span style="font-size:11px;letter-spacing:.24em;color:#8d9aa9">환생 트리</span>'
+ +'<span class="qb" style="width:18px;height:18px;font-size:10px">?</span></div>'
+ +'<div style="display:flex;align-items:baseline;gap:7px;margin-top:3px">'
+ +'<span class="num" style="font-size:30px;font-weight:800;color:var(--gold);line-height:1">'+PT+'</span>'
+ +'<span style="font-size:10px;letter-spacing:.2em;color:#8d9aa9">포인트</span></div></div></div>', 66);
+
+/* ③ 가운데 정렬 — 로그인 리듬 */
+const T3 = () => ph('<div class="t0" style="flex-direction:column;align-items:center;gap:0;padding:16px 14px 12px">'
+ +'<div style="display:flex;align-items:center;gap:7px">'
+ +'<span style="font-size:10px;letter-spacing:.34em;color:#9fb0c4">환생 트리</span>'
+ +'<span class="qb" style="width:17px;height:17px;font-size:10px">?</span></div>'
+ +'<div class="num" style="font-size:34px;font-weight:800;color:var(--gold);line-height:1.1;margin-top:4px;'
+ +'text-shadow:0 2px 14px #000">'+PT+'</div>'
+ +'<div style="font-size:9.5px;letter-spacing:.3em;color:#69737f;margin-top:2px">P O I N T</div></div>', 74);
+
+/* ④ 얇은 띠 + 헤어라인 */
+const T4 = () => ph('<div class="t0" style="padding:11px 14px 10px;background:rgba(6,9,13,.88)">'
+ +'<span style="font-size:12px;font-weight:800">환생 트리</span><span class="q">?</span>'
+ +'<span style="margin-left:auto;display:flex;align-items:baseline;gap:6px">'
+ +'<span class="num" style="font-size:19px;font-weight:800;color:var(--gold)">'+PT+'</span>'
+ +'<span style="font-size:9.5px;letter-spacing:.2em;color:#8d9aa9">P</span></span>'
+ +'<div class="hair"></div></div>');
+
+/* ⑤ 진행도까지 */
+const T5 = () => ph('<div class="t0" style="flex-direction:column;align-items:stretch;gap:0;padding:12px 14px 10px">'
+ +'<div style="display:flex;align-items:baseline;gap:7px">'
+ +'<span style="font-size:12px;font-weight:800">환생 트리</span><span class="q" style="margin:0">?</span>'
+ +'<span class="num" style="margin-left:auto;font-size:20px;font-weight:800;color:var(--gold)">'+PT+'</span>'
+ +'<span style="font-size:9.5px;letter-spacing:.2em;color:#8d9aa9">포인트</span></div>'
+ +'<div style="display:flex;align-items:center;gap:8px;margin-top:8px">'
+ +'<div style="flex:1;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.09);overflow:hidden">'
+ +'<i style="display:block;width:23%;height:100%;background:var(--gold)"></i></div>'
+ +'<span class="num" style="font-size:10px;color:#69737f">37 / 160</span></div></div>', 74);
+
+/* ⑥ 재화 바처럼 — 칩 */
+const T6 = () => ph('<div class="t0" style="padding:12px 12px 8px">'
+ +'<span style="font-size:12px;font-weight:800">환생 트리</span><span class="q">?</span>'
+ +'<span style="margin-left:auto;display:flex;align-items:center;gap:6px;padding:5px 11px;'
+ +'border-radius:var(--r-md);border:1px solid rgba(255,210,74,.3);background:rgba(255,210,74,.08)">'
+ +'<span style="width:7px;height:7px;transform:rotate(45deg);background:var(--gold)"></span>'
+ +'<span class="num" style="font-size:15px;font-weight:800;color:var(--gold)">'+PT+'</span></span></div>');
+
+/* ⑦ 제목을 지운다 */
+const T7 = () => ph('<div class="t0" style="padding:14px 14px 10px">'
+ +'<span style="display:flex;align-items:baseline;gap:8px">'
+ +'<span class="num" style="font-size:28px;font-weight:800;color:var(--gold);line-height:1">'+PT+'</span>'
+ +'<span style="font-size:10px;letter-spacing:.24em;color:#8d9aa9">포인트</span></span>'
+ +'<span class="qb" style="margin-left:auto;align-self:center">?</span></div>', 62);
+
+/* ⑧ 둘로 나눈 띠 */
+const T8 = () => ph('<div class="t0" style="padding:0;background:none">'
+ +'<div style="flex:1;display:flex;align-items:center;gap:6px;padding:12px 14px 11px;'
+ +'background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,.72))">'
+ +'<span style="font-size:11px;letter-spacing:.2em;color:#c3ccd8">환생 트리</span>'
+ +'<span class="q" style="margin:0">?</span></div>'
+ +'<div style="display:flex;align-items:baseline;gap:6px;padding:12px 14px 11px;'
+ +'background:linear-gradient(180deg,rgba(255,210,74,.10),rgba(255,210,74,.02));'
+ +'border-left:1px solid rgba(255,210,74,.22)">'
+ +'<span class="num" style="font-size:20px;font-weight:800;color:var(--gold);line-height:1">'+PT+'</span>'
+ +'<span style="font-size:9.5px;letter-spacing:.2em;color:#c8b68d">P</span></div></div>');
+
+const M=[
+ [T1,'① 지금 것','제목이 주인공이고 포인트는 <b>12px</b> 로 구석에 있다. <i>비교를 위한 기준선.</i>'],
+ [T2,'② 포인트를 세운다','제목을 <b>넓은 자간의 작은 글씨</b>로 눕히고 포인트를 30px 로 올린다. '
+   +'<i>환생 화면의 「큰 숫자」 어휘 그대로.</i>'],
+ [T3,'③ 가운데 정렬','로그인 화면의 리듬 — 작은 부제 → 큰 값 → <b>P O I N T</b>. '
+   +'<i>가장 차분하고 세로를 가장 많이 먹는다(74px).</i>'],
+ [T4,'④ 얇은 띠','한 줄을 지키되 포인트만 19px 로 키우고 <b>밑변 헤어라인</b>을 넣어 트리와 가른다. '
+   +'<i>지금 것에서 가장 적게 바꾼다.</i>'],
+ [T5,'⑤ 진행도까지','포인트 아래에 <b>해금 진행도</b>(37/160)를 얇은 막대로. '
+   +'<i>「얼마나 왔나」가 보이지만 상단이 두 줄이 된다.</i>'],
+ [T6,'⑥ 칩으로','포인트를 <b>금색 칩</b>에 담는다 — 재화 바와 같은 문법. 마름모가 포인트의 표식. '
+   +'<i>가장 게임답고, 칩이 하나뿐이라 조금 외롭다.</i>'],
+ [T7,'⑦ 제목을 지운다','들어온 순간 어디인지는 안다 — 그래서 제목을 빼고 <b>포인트만</b> 남긴다. '
+   +'<i>가장 시원하다. 처음 온 사람에겐 불친절할 수 있다.</i>'],
+ [T8,'⑧ 둘로 나눈 띠','왼쪽은 <b>여기가 어디</b>, 오른쪽은 <b>지갑</b>. 금색 면으로 갈라 역할이 눈에 보인다. '
+   +'<i>가장 또렷하고, 상단이 가장 무겁다.</i>'],
+];
+document.getElementById('g').innerHTML = M.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

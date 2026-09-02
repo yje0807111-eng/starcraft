@@ -1,0 +1,140 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 하단 — 비용·버튼 6안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1980px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1060px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1060px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:22px}
+  .note{font-size:12px;line-height:1.55;color:#93a0b0;margin:8px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:360px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);background:#05070b}
+  .bg{position:absolute;inset:0;background:url('../../assets/backgrounds/reb/reb.webp') center 30% / cover no-repeat}
+  .bg::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(5,7,11,.30),rgba(5,7,11,.10) 26%,rgba(5,7,11,.55) 62%,rgba(5,7,11,.86))}
+  .S{position:absolute;left:0;right:0;bottom:0;z-index:2;
+    padding:16px 18px 18px;background:#080b11;border-top:1px solid rgba(255,255,255,.10)}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .nm{font-size:17px;font-weight:700;color:#f0f4f9}
+  .k{font-size:10px;letter-spacing:.18em;color:#69737f}
+  .ds{font-size:13px;line-height:1.7;color:#a7b2c0}
+  .ds b{color:#f0f4f9;font-weight:700}
+  .hr{height:1px;background:rgba(255,255,255,.07)}
+  /* 💠 포인트 표식 — 트리 한가운데 마름모와 같은 모양 */
+  .pip{display:inline-block;width:8px;height:8px;transform:rotate(45deg);background:var(--gold);
+    margin-right:7px;vertical-align:1px}
+  .pip.dim{background:rgba(255,210,74,.45)}
+</style>
+<div class="wrap">
+<h1>환생 트리 하단 — 비용·버튼 6안</h1>
+<p class="lede">설명은 <b>②안 확정</b>(「…이 5배 → 11배 증가합니다」). 이제 아래 줄만 고친다 —
+  <b>비용이 눈에 안 띄고</b>, 버튼의 <b>「올리기」가 안 어울린다</b>.</p>
+<p class="rule"><b>비용이 안 보이는 이유</b>는 크기가 아니라 자리다 — 「비용」이라는 작은 라벨 옆에
+  붙어 <b>왼쪽 구석</b>에 있고, 오른쪽 버튼이 시선을 다 가져간다.
+  <br><b>버튼 문구 후보</b>: 계열 별은 단계를 올리는 것이니 <b>「강화」</b>,
+  첫 칸이나 마디는 여는 것이니 <b>「해금」</b>. <i>안마다 다른 말을 넣어 뒀다 — 어느 말이 붙는지 보라.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+const D={ nm:'일꾼 채취량', n:4, ic:IC+'upgrades/up_mine.webp', have:3,
+  what:'일꾼의 1회 채취량', now:'5배', next:'11배', cost:'16.8M', pts:'12,000' };
+function ring(){ const sz=56,R=sz/2-3,C=2*Math.PI*R;
+  return '<div style="position:relative;flex:0 0 '+sz+'px;height:'+sz+'px">'
+   +'<svg viewBox="0 0 '+sz+' '+sz+'" style="width:'+sz+'px;height:'+sz+'px;transform:rotate(-90deg)">'
+   +'<circle cx="28" cy="28" r="'+R+'" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/>'
+   +'<circle cx="28" cy="28" r="'+R+'" fill="none" stroke="rgba(255,210,74,.7)" stroke-width="3"'
+   +' stroke-dasharray="'+C+'" stroke-dashoffset="'+(C*(1-D.have/5))+'" stroke-linecap="round"/></svg>'
+   +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">'
+   +'<img src="'+D.ic+'" style="width:26px;height:26px;object-fit:contain;opacity:.9"></div></div>'; }
+const HEAD='<div style="display:flex;align-items:center;gap:14px">'+ring()
+ +'<div style="flex:1;min-width:0"><div class="nm">'+D.nm+'</div>'
+ +'<div class="k" style="margin-top:3px">'+D.n+' / 5 단계</div></div></div>';
+const DESC='<div class="ds" style="margin-top:13px">'+D.what+'이 '
+ +'<b style="color:#7b8593;font-weight:400">'+D.now+'</b>'
+ +'<span style="color:#5b6674;margin:0 6px">→</span><b>'+D.next+'</b> 증가합니다.</div>';
+function ph(tail){ return '<div class="ph"><div class="bg"></div><div class="S">'+HEAD+DESC+tail+'</div></div>'; }
+
+/* ① 버튼이 비용을 품는다 */
+const A1=()=>ph('<button style="width:100%;margin-top:15px;min-height:54px;display:flex;align-items:center;'
+ +'gap:12px;padding:0 18px;border-radius:var(--r-md);border:1px solid rgba(255,210,74,.34);'
+ +'background:rgba(255,210,74,.07);font:inherit;cursor:pointer">'
+ +'<span style="font-size:15px;font-weight:700;color:#f0f4f9;letter-spacing:.1em">강 화</span>'
+ +'<span class="num" style="margin-left:auto;font-size:19px;font-weight:800;color:var(--gold)">'
+ +'<i class="pip"></i>'+D.cost+'</span></button>');
+
+/* ② 비용을 크게 왼쪽에, 버튼은 작게 */
+const A2=()=>ph('<div class="hr" style="margin:15px 0 13px"></div>'
+ +'<div style="display:flex;align-items:center;gap:12px">'
+ +'<div><div class="k">필요한 포인트</div>'
+ +'<div class="num" style="font-size:26px;font-weight:800;color:var(--gold);line-height:1.15;margin-top:2px">'
+ +'<i class="pip" style="width:10px;height:10px"></i>'+D.cost+'</div></div>'
+ +'<button style="margin-left:auto;min-height:46px;padding:0 20px;border-radius:var(--r-md);'
+ +'border:1px solid rgba(255,255,255,.16);background:none;color:#c3ccd8;font:700 14px/1 inherit;'
+ +'letter-spacing:.1em;cursor:pointer">강 화</button></div>');
+
+/* ③ 비용을 판에 담는다 */
+const A3=()=>ph('<div style="display:flex;align-items:stretch;gap:10px;margin-top:15px">'
+ +'<div style="flex:1;padding:10px 14px;border-radius:var(--r-md);border:1px solid rgba(255,210,74,.26);'
+ +'background:rgba(255,210,74,.06)">'
+ +'<div class="k" style="color:#c8b68d">필요</div>'
+ +'<div class="num" style="font-size:22px;font-weight:800;color:var(--gold);line-height:1.2;margin-top:1px">'+D.cost+'</div></div>'
+ +'<button style="flex:0 0 130px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.16);'
+ +'background:rgba(255,255,255,.03);color:#dfe8f3;font:700 15px/1 inherit;letter-spacing:.1em;cursor:pointer">'
+ +'강 화</button></div>');
+
+/* ④ 보유 대비로 보여 준다 */
+const A4=()=>ph('<div class="hr" style="margin:15px 0 13px"></div>'
+ +'<div style="display:flex;align-items:baseline;gap:8px">'
+ +'<span class="num" style="font-size:24px;font-weight:800;color:var(--gold)"><i class="pip" style="width:9px;height:9px"></i>'+D.cost+'</span>'
+ +'<span class="k">필요 · 보유 '+D.pts+'</span></div>'
+ +'<div style="height:4px;border-radius:var(--r-bar);background:rgba(255,255,255,.07);margin-top:9px;overflow:hidden">'
+ +'<i style="display:block;width:0.07%;min-width:3px;height:100%;background:rgba(255,210,74,.75)"></i></div>'
+ +'<button style="width:100%;margin-top:13px;min-height:46px;border-radius:var(--r-md);'
+ +'border:1px solid rgba(255,255,255,.16);background:none;color:#8d9aa9;font:700 14px/1 inherit;'
+ +'letter-spacing:.1em;cursor:pointer">포인트가 모자랍니다</button>');
+
+/* ⑤ 비용을 오른쪽으로, 버튼을 왼쪽으로 */
+const A5=()=>ph('<div class="hr" style="margin:15px 0 13px"></div>'
+ +'<div style="display:flex;align-items:center;gap:14px">'
+ +'<button style="min-height:48px;padding:0 24px;border-radius:var(--r-md);'
+ +'border:1px solid rgba(255,210,74,.4);background:rgba(255,210,74,.08);color:#fff;'
+ +'font:700 15px/1 inherit;letter-spacing:.12em;cursor:pointer">강 화</button>'
+ +'<div style="margin-left:auto;text-align:right"><div class="k">소모</div>'
+ +'<div class="num" style="font-size:25px;font-weight:800;color:var(--gold);line-height:1.15">'+D.cost+'</div></div></div>');
+
+/* ⑥ 비용이 버튼 위에 얹힌다 */
+const A6=()=>ph('<div style="margin-top:15px;border-radius:var(--r-md);overflow:hidden;'
+ +'border:1px solid rgba(255,255,255,.13)">'
+ +'<div style="display:flex;align-items:baseline;gap:8px;padding:10px 16px;background:rgba(255,210,74,.05)">'
+ +'<span class="k" style="color:#c8b68d">필요한 포인트</span>'
+ +'<span class="num" style="margin-left:auto;font-size:22px;font-weight:800;color:var(--gold);line-height:1">'+D.cost+'</span></div>'
+ +'<button style="width:100%;min-height:46px;border:0;border-top:1px solid rgba(255,255,255,.10);'
+ +'background:rgba(255,255,255,.03);color:#dfe8f3;font:700 15px/1 inherit;letter-spacing:.12em;cursor:pointer">'
+ +'해 금</button></div>');
+
+const M=[
+ [A1,'① 버튼이 비용을 품는다 — <b>강화</b>','「강화」와 값이 <b>한 버튼 안</b>에. 누르는 것과 내는 것이 붙어 있어 비용을 놓칠 수 없다. <i>가장 단순하다.</i>'],
+ [A2,'② 비용을 26px 로 — <b>강화</b>','「필요한 포인트」 아래 <b>26px 금색</b>. 버튼은 중립으로 물려 <b>비용이 주인공</b>이 된다.'],
+ [A3,'③ 비용을 판에 — <b>강화</b>','금색 테두리 판에 담아 <b>영역째로</b> 눈에 띄게. 버튼은 그 옆 같은 높이.'],
+ [A4,'④ 보유 대비 — <b>포인트가 모자랍니다</b>','필요 옆에 <b>보유</b>를 적고 얇은 막대로 <b>얼마나 모자란지</b>를 보여 준다. 버튼 문구가 곧 상태.'],
+ [A5,'⑤ 버튼 왼쪽 · 비용 오른쪽 — <b>강화</b>','읽는 순서를 뒤집는다 — <b>할 일 먼저, 값 나중</b>. 값은 25px 우정렬이라 여전히 크다.'],
+ [A6,'⑥ 비용이 버튼 위에 — <b>해금</b>','값과 버튼을 <b>한 덩어리</b>로 쌓는다. 위 칸이 금색이라 값이 먼저 읽힌다. <i>첫 칸에는 「해금」이 어울린다.</i>'],
+];
+document.getElementById('g').innerHTML = M.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

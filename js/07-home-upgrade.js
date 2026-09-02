@@ -468,7 +468,21 @@ const NAV_TREE=[
       { k:'res',  label:'자원', ico:'coin', act:()=>campResEnter('res') },
       { k:'arm',  label:'무장', ico:'upg',  act:()=>campResEnter('arm') },
       { k:'tech', label:'기술', ico:'flag', act:()=>campResEnter('tech') } ] },
-  { k:'quest',    label:'임무', ico:'flag', go:()=>openQuest(),    subs:[] },
+  // 🔁 환생 — 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 **더보기 ☰** 로 간다:
+  //   화면을 옮기지 않고 바로 보는 편이 낫다는 판단이다.
+  //   ⭐ 환생을 네비에 올린 이유는 화면이 **설계 요구**이기 때문이다 — HUNT_R1.md §4-2-0 이
+  //     「먼 목표를 화면에서 보여 줘야 한다」고 못박았다. 안 보이면 첫 환생을 손해로 판단한다.
+  //   ⚠ 이 결정은 GAME_DIRECTION.md §5-A(환생 유보)를 뒤집는다 — 그 문서도 함께 고쳤다.
+  //   ⭐ 하위 둘 — **정보**(지금 환생하면 어떻게 되나)와 **업그레이드**(환생 트리).
+  //     ⚠ 둘 다 하단 네비가 **보인 채로** 열린다(사용자 확정 2026-08-31). 그래서 두 화면의
+  //       CSS 가 `bottom:var(--navH)` 로 네비 자리를 비운다 — z-index 를 낮추지 않는다
+  //       (낮추면 키 아트가 딸려 내려가고 시트류와 층이 꼬인다).
+  //     ⚠ 서로를 닫아 준다 — 둘 다 `.on` 이면 트리가 환생 화면을 덮어 어느 탭인지 모른다.
+  { k:'reb', label:'환생', ico:'upg', go:()=>campRebEnter('info'),
+    cur:()=>(campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null)),
+    reset:()=>campRebEnter('info'), subs:[
+      { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
+      { k:'tree', label:'업그레이드', ico:'flag', act:()=>campRebEnter('tree') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
   { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
@@ -531,6 +545,14 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   // ⚠ null 은 '숨김'일 뿐 '구역을 떠남'이 아니다 — 여기서 상태를 지우면
   //   showAppScreen 이 항상 navShow(null) 을 먼저 부르므로 내려간 상태가 매번 풀린다(마을 진입에서 밟았다).
   if(!tab) return;
+  // 🔁 **환생 구역을 떠나면 그 화면을 닫는다** (2026-08-31 사용자 확정).
+  //   ⭐ 환생 화면의 ✕ 를 없앴으므로 **나가는 길은 하단 네비 하나**다 — 다른 구역으로 가거나
+  //     「뒤로」를 누르면 여기서 닫힌다(navBack 도 결국 navShow 를 거친다).
+  //   ⛔ tab 이 null 일 때는 닫지 않는다 — 그건 「숨김」이지 「구역을 떠남」이 아니다
+  //     (showAppScreen 이 매번 navShow(null) 을 부른다 · 위 주석과 같은 이유).
+  if(tab!=='reb'){
+    if(typeof campRebClose==='function') campRebClose();
+    if(typeof campTreeClose==='function') campTreeClose(); }
   if(_navSec!==tab){ _navSec=tab; _navDrill=''; }   // 다른 구역으로 갔다 = 최상위로
   navPaint(); }
 // 최상위 칸 — 화면으로 이동하고, 하위가 있으면 그 구역 네비로 내려간다

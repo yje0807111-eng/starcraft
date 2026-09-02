@@ -198,6 +198,14 @@ function _campFireUnit(u, tgt, me, foe, dt, col){
   { const uAir = strikeIsAir(u);
     if(!tgt.tgtUid && (!tgt._atk || (uAir ? tgt._atk.air : tgt._atk.gnd))) tgt.tgtUid = u.uid;   // 반격
     tgt._acqT = 0; tgt._inrT = 0;                // 맞으면 즉시 재판단
+    // 🩸 **사거리 밖에서 맞았으면 그 적까지 눈을 넓힌다**(2026-09-01 사용자 확정).
+    //   맞고만 있지 않고 반격하러 들어간다. 넓어진 눈은 campAlertApply 가 CAMP_HIT_ACQ_S 초
+    //   동안 지켜 주고, 그 사이 곁의 아군에게 전파되어 **줄줄이** 들어간다.
+    //   ⚠ 양 진영이 이 함수를 지난다 — 적도 같은 규칙으로 반응한다(한쪽만 주면 상성이 틀어진다).
+    if(typeof campAcqBase === 'function'){
+      const hx = u.x - tgt.x, hy = u.y - tgt.y, hd = Math.hypot(hx, hy);
+      if(hd > campAcqBase(tgt) && hd > (tgt._hitAcq || 0)){ tgt._hitAcq = hd; }
+      if(hd > campAcqBase(tgt)) tgt._hitT = CAMP_HIT_ACQ_S; }
     if(typeof strikeAlert === 'function') strikeAlert(foe.units, u.uid, tgt.x, tgt.y, 420, uAir); }
   if(u.splash > 0){ const sr2 = u.splash * u.splash, sd = u.dmg * 0.6;   // 광역: 표적 주변에 60%
     for(const e of foe.units){ if(e === tgt || e.dead) continue;
@@ -237,10 +245,16 @@ function campStepUnits(dt){
   const S = (typeof STK !== 'undefined') ? STK : null;
   if(!S || !CAMPB) return;
   strikeGridBuild();                                   // ⚡ 프레임 1회 격자 — 아래 질의가 재사용
-  // 👹 적이 치러 갈 건물 — **프레임당 한 번** 고른다(적 전원이 같은 것을 본다).
+  // 👹 적이 치러 갈 건물 — **앞에서부터 차례로** 하나씩(campFrontBld = y 가 가장 작은 것).
   //   ⚠ 유닛마다 최근접을 고르게 하면 무리가 갈라져 건물 여럿을 동시에 갉는다.
-  //     지금 규칙은 「앞에서부터 차례로」다(campFrontBld = y 가 가장 작은 것).
-  const frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
+  //   ⛔ **프레임 처음에 한 번만 고르면 안 된다**(2026-08-31). 그 건물이 프레임 **중간에**
+  //     부서지면, 뒤에 오는 적들이 이미 죽은 건물을 계속 때려 그만큼의 피해가 버려진다.
+  //     ⭐ 그래서 부서진 것이 확인되면 그 자리에서 다음 건물로 갈아탄다(아래 nextBld).
+  let frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
+  const nextBld = function(){
+    if(frontBld && !frontBld.dead && (frontBld.hp || 0) > 0) return frontBld;
+    frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
+    return frontBld; };
   for(const side of ['me', 'ai']){
     const me = S[side], foe = S[side === 'me' ? 'ai' : 'me'];
     const col = (side === 'me') ? '#7fd0ff' : '#ff8a96';
@@ -353,7 +367,7 @@ function campStepUnits(dt){
         // 👹 적은 표적이 없으면 **내 건물**을 치러 내려온다. 앞(y 가 작은) 건물부터.
         //   ⛔ 오토배틀의 신전 분기를 쓰지 않는다 — 캠프에는 신전 형상이 없다.
         u._goalX = null; u._goalTgt = null;
-        const b = frontBld;                               // 앞(y 가 작은) 건물 — 프레임당 한 번 고른다
+        const b = nextBld();                              // 앞(y 가 작은) 건물 — 부서졌으면 그 자리에서 다음 것으로
         if(!b){ u.moving = false; continue; }             // 부술 것이 없으면 선다
         const bd2 = Math.hypot(b.x - u.x, b.y - u.y) - CAMP_BLD_R;
         if(!u._atk.gnd){ u.moving = false; continue; }     // 지상을 못 때리면 건물도 못 때린다

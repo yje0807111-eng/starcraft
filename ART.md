@@ -624,7 +624,7 @@ BACKGROUND / NEGATIVE)은 공통 블록 C 그대로다.
 | 비율 | `3:4` | **`9:16`** — 맵 화면이 390×767(비 0.508) |
 | 모델 | `soul_location` | **`gpt_image_2` · `9:16` · `2k`~`4k` · `high`** |
 | 파일 | `assets/backgrounds/usemaps/` | `camp/camp.webp` · `dungeons/dg1~10.webp` |
-| 저장 | — | 폭 **1600** 으로 리사이즈 + WebP `q82`(11장 6.4MB) |
+| 저장 | — | 폭 **2400** 으로 리사이즈 + WebP `q82` (캠프 1.49MB · ⚠ 옛 값 1600 은 §11-7 참조) |
 
 ⚠ **모델을 `soul_location` 으로 되돌리지 말 것.** 같은 문장으로도 게임플레이 구조(기지 터·통로·
 가장자리)를 못 지켰다 — 세 판(9장)을 버렸다. `gpt_image_2` 는 한 번에 지켰다.
@@ -743,6 +743,64 @@ Match the reference exactly in art style, rendering, colour palette and lighting
 - `{EDGE}` 뒤에 한 줄 붙인다:
   `Shift the palette away from green: this map is <색>, and there is no vegetation, no moss and no foliage anywhere.`
   (4번 = `sickly bone-white and yellow-ochre over wet grey mud` · 6번 = `cool violet-grey stone with pale amber rune glow`)
+
+### 11-7. 확대해도 안 깨지게 — **4등분해서 각각 업스케일한다** (2026-09-02)
+
+⚠ 폭 1600 으로는 **게임에서 확대하면 깨진다.** 맵 화면은 최대 3.1배까지 확대되는데(`techMaxZoom()`),
+그러면 맵의 126px 구간이 화면 390px 에 펼쳐진다 — 원본 픽셀이 그대로 보인다.
+
+⛔ **통째로 업스케일하면 세부가 안 산다.** 그래서 **2×2 로 잘라 각각 뽑는다.**
+⭐ 1600×2844 는 정확히 9:16 이라 **반으로 갈라도 조각이 9:16 이다**(800×1422) — 모델에 그대로 넣힌다.
+
+#### 파이프라인 — 도구 둘
+
+```
+node scripts/map-quarter.mjs assets/backgrounds/camp/camp.webp --pad=48
+  → docs/mock/quarters/camp_1..4.png   (848×1507 · 안쪽으로 가로 48 세로 85 겹침)
+     ⚠ 세로 겹침은 가로에 **비례**해 늘린다. 가로만 겹치면 조각이 9:16 을 벗어나 모델이 찌그러뜨린다.
+
+  … 조각마다 AI 로 확대(9:16 · 4k · high) → docs/mock/quarters/up2/camp_N_up.png …
+
+node scripts/map-stitch.mjs --up=docs/mock/quarters/up2 --name=camp   --src=assets/backgrounds/camp/camp.webp --pad=48 --fade=0.35 --range=0 --noscale
+  → camp_stitched.png (4075×7243) → 폭 2400 으로 리사이즈 + WebP q82
+```
+
+#### ⭐ 프롬프트의 요점 셋 — 이것이 성패를 갈랐다
+
+1. **「다시 그리지 말고 선명하게만」**(`This is a SHARPENING task, not a redraw`)
+2. **직선의 위치를 % 로 못 박는다** — 콘크리트 판의 가로 이음선이 `8%, 23%, 46%, 68%, 92%` 에
+   있다고 적어 주었다. 이것이 가장 강력했다.
+3. **틀어졌던 것을 콕 집어 금지** — 「바위를 키우지 마라」「패치를 옮기지 마라」.
+
+| 원본과의 차이(작을수록 충실) | 1차 프롬프트 | **요점 셋을 넣은 뒤** |
+|---|---|---|
+| 조각1 | 19.6 | **9.3** |
+| 조각2 | 12.0 | **7.1** |
+| 조각3 | 23.3 | **11.7** |
+| 판 이음선 위치(조각3·4) | 9·24·47·70·95% | **8·23·46·68·93%**(원본 8·23·46·68·92%) |
+
+#### ⛔ 붙일 때 — **자동 정렬을 끄는 것이 맞았다**
+
+`map-stitch.mjs` 는 겹친 띠에서 위치·크기를 맞춰 준다. 그런데 **콘크리트가 평평해서 정렬 신호가
+없다** — 어디로 밀어도 차이가 비슷해 보인다. 그래서 조각4 를 60~140px 씩 엉뚱하게 밀었고,
+그것이 오히려 세로 판 이음선을 끊었다.
+⭐ `--range=0 --noscale`(아무것도 안 옮김)로 붙이니 **모든 선이 이어졌다.** 그림이 애초에 제자리에
+나왔기 때문이다. ⚠ 정렬은 **그림이 틀어졌을 때만** 쓸 것.
+⚠ `--fade` 는 섞는 폭이다. 넓으면 직선이 **두 겹**으로 보이고, 너무 좁으면 **끊긴 선**이 보인다.
+0.35 가 지금 값이다. 흙·풀처럼 무늬가 불규칙한 곳은 아무 값이나 안 보인다.
+
+#### 📐 크기는 2400 이 바닥이다
+
+| 폭 | 선명도(1600=1배) | 용량 |
+|---|---|---|
+| 1600 | 1.00 | 0.66MB |
+| **2400** | **2.1~2.6배** | **1.49MB** |
+| 3200 | 2.6~3.3배 | 2.30MB |
+| 4075(자른 그대로) | 3.8~5.5배 | 3.11MB |
+
+⭐ **1600 → 2400 에서 이득의 대부분을 얻는다.** 2400 과 3200 은 눈으로 구분되지 않는다(실측 비교
+`docs/mock/camp-zoom3.png`). 11장이면 2400 은 약 16MB · 3200 은 약 25MB 다.
+⚠ 이론상 필요한 폭은 `1600 × 3.1 = 4960` 이지만, 거기까지 갈 이유가 없다.
 
 ### 11-5. 화면 배선
 
@@ -1425,6 +1483,20 @@ highly detailed photorealistic PBR game texture, AAA game environment asset,
 ⭐ 오버레이는 4800px 로 늘어나므로 **일부러 흐리게** 뽑는다 — 768px 이면 충분하다.
 선명하면 타일과 싸워 지저분해진다. 프롬프트 핵심: `no small detail at all` · `softly blurred`.
 
+### 13-3-B. 이미 뽑힌 그림에서 배경 지우기 — `scripts/prop-cutout.mjs`
+
+배경색을 지정하지 **못한 채** 나온 그림(회갈색 판 위의 지형 소품)은 아래 절의 「채도로 가른다」를
+쓸 수 없다. 그때는 **배경색과의 거리**로 알파를 만든다.
+
+```bash
+node scripts/prop-cutout.mjs <입력.png> <출력.webp> [폭=320] [lo=18] [hi=45]
+```
+
+- 배경색은 **네 모서리의 중앙값**으로 잡는다(한 점만 보면 노이즈에 흔들린다).
+- ⚠ 가장자리는 배경색과 섞여 있다. 알파만 씌우면 **밝은 띠**가 남는다 — 배경 성분을 빼서 되돌린다.
+- 끝나면 투명 여백을 잘라(trim) 폭 기준으로 줄인다. 캠프 광맥(320×292)·가스(320×151)가 이 규격이다.
+- ⛔ 밝기 임계값으로 자르지 말 것 — 이 계열은 물체가 어둡고 배경이 밝아 반대로 잘린다.
+
 ### 13-4. 데코 스프라이트 — 배경색으로 자른다
 
 바위·풀·뼈를 월드에 흩뿌린다(`strikeGenScenery` · 80개). 옛 선 그리기는 폴백으로 남아 있다.
@@ -1519,3 +1591,48 @@ highly detailed photorealistic PBR game texture, AAA game environment asset,
 ⛔ **레인·소환 구역에 어두운 seam 을 다시 긋지 말 것**(2026-08-30 제거). 레인은 `lineCap:'round'` 라
 끝이 반원인데, 그 위를 같은 석판인 소환 구역이 덮으면서 **포장 한가운데 검은 곡선**만 남았다.
 포장과 지형은 색·무늬가 달라 테두리 없이도 경계가 읽힌다.
+
+---
+
+## 14. 환생 구역 배경 계열 (2026-09-01)
+
+**세 번째 계열이다.** 앞의 둘과 목적이 또 다르다.
+
+| 항목 | 유즈맵 키 아트(§2) | 타이틀 배경(§8) | **환생 구역** |
+|---|---|---|---|
+| 위에 얹히는 것 | 팝업 + 미니맵 | 큰 로고 · 제목 | **별자리(발광하는 점) · 7~8px 값 라벨** |
+| 밝기 목표 | 55 | 72 | **44** — 가장 어둡다 |
+| 채도(색편차) | 45 (×1.4 까지 올림) | 40 (낮추기만) | **34 (낮추기만)** — 갈래 색이 넷이라 배경은 중립이어야 한다 |
+| 비율 | `3:4` | `9:16` | **`9:16`** (화면 전체를 덮는다) |
+| 크롭 | 디테일 띠를 찾아 자름 | 안 자름 | **안 자름** |
+| 보이는 구간 | 위쪽 50% | 위쪽 60% | **위쪽 70%** (아래 30% 는 하단 시트가 덮는다) |
+| 도구 | `usemap-bg.mjs` | `title-bg.mjs` | **`scripts/reb-bg.mjs`** |
+
+⭐ **왜 이렇게 어두운가** — 이 화면의 주인공은 배경이 아니라 **별자리**다. 별은 발광하는 작은 점이고
+값 라벨은 7~8px 이라, 배경이 밝으면 둘 다 묻힌다. 원래 이 화면은 거의 검정
+(`radial-gradient rgba(16,22,32,.98) → rgba(5,7,11,.99)` · 평균 10 남짓)이었다.
+
+⭐ **한 장을 두 화면이 나눠 쓴다** — 환생 화면(`#campReb`)과 업그레이드=트리 화면(`#campTree`)은
+같은 구역이라 배경이 같아야 한다. 그래서 `#phone` 직속 층 **`#campRebBg` 하나**를 두고 둘이 켠다.
+⛔ 화면마다 제 그림을 그리면 탭을 오갈 때 다시 그려져 툭 튄다.
+⛔ 공용 키 아트(`#titleBg`)를 빌리던 옛 방식으로 되돌리지 말 것 — 그건 로그인·부팅의 그림이라
+여기서 켜면 그쪽과 서로 간섭한다(그 간섭을 없애려고 전용 그림을 뽑았다).
+
+### 실제로 쓴 프롬프트 — `assets/backgrounds/reb/reb.webp`
+
+```
+Moody sci-fi game environment key art, clearly readable exposure with rich midtones, not underexposed, not pitch black. A vast field of ruined military structures under a wide star-filled night sky, broken antenna masts and collapsed hangars standing as low silhouettes along the horizon, faint distant campfires and pale standing lights among the wreckage, seen from a low three-quarter angle. Thin volumetric night haze fills the whole scene and catches the light, lifting the shadows into visible blue-grey midtones, the far structures receding softly into the haze. The haze is light in the foreground so nearby structures stay crisp and clearly legible, thickening only into the distance. Muted desaturated colour, the palette is a tint over neutral greys, not a monochrome wash. Dominant cool steel grey and deep blue palette with soft pale blue key light, strong value separation between structures and background, atmospheric perspective, layered depth. The upper half of the frame is calm open night sky. The very center of the frame is calm and uncluttered. Painterly concept art, cinematic, detailed environment clearly visible throughout the frame. No text, no logos, no user interface, no characters, no watermark.
+```
+
+> A(노출) · C(안개 + 대항 문장 셋) · D(가운데를 비운다) · E(금지)는 **§2 와 똑같다.**
+> 바뀐 것은 장면(B)과 시점(`low three-quarter angle` · §8 과 같다), 그리고
+> **`The upper half of the frame is calm open night sky`** 한 줄이다 — 별자리가 앉을 자리를 비운다.
+
+⚠ 후처리 실측: 밝기 ×1.59 (28→40) · 채도 ×1.00 (색편차 25→24) · 대비 ±24 · 25KB.
+  원본이 목표보다 어두워 밝기를 **올렸다**. 채도는 상한(1.0)에 걸려 더 못 올렸는데,
+  이 계열은 「낮추기만」이 규칙이라 **그대로 둔다** — 색이 옅은 편이 갈래 색 넷을 살린다.
+
+### 버린 것 — 얼어붙은 고원(오로라)
+
+같은 규격으로 한 장 더 뽑았는데 **왼쪽 아래에 서명 같은 낙서**가 들어왔다(E 가 금지하는 워터마크).
+구조물이 화면 전체에 퍼져 별자리가 앉을 조용한 자리도 적었다. 두 이유로 버렸다.

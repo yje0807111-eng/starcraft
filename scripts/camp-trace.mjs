@@ -44,6 +44,10 @@ const OUTLIM = +(process.env.OUTLIM || 0);
 // 👀 인식 거리 상한을 갈아 끼워 잰다 — 0 이면 게임 값 그대로(혼자 900 · 전파받으면 1500).
 //   ⚠ 실효 인식은 여기에 STK_ACQ_FAR(1.4) 이 곱해진다 — 900 이면 1260, 1500 이면 2100.
 const ACQCAP = +(process.env.ACQ || 0);
+// 🔇 전파 인식만 끈다(대조군) — 기본 눈(사거리+PAD)과 피격 확장은 그대로 둔다.
+//   ⚠ campAlertTick 을 통째로 끄면 acq 자체가 안 갱신된다. **그 함수가 끝난 직후**
+//     _alertAcq/_alertT 만 0 으로 지워야 「전파만 없는」 상태가 된다.
+const NOALERT = process.env.NOALERT === '1';
 const OUT = process.env.OUT || path.join(ROOT, 'docs', 'mock');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -85,7 +89,7 @@ await pg.evaluate(() => { campStopFrame(); campStopTimer(); });   // 시계를 �
  *   (30분 벤치에서 던전 진입이 20.6분이었다), 그러면 「움직임을 본다」는 목적에 비해 너무 비싸다.
  *   ⭐ 대신 자리는 실제 생산과 같은 경로를 지난다 — campDeploy 가 campLayerPost 까지 부른다.  */
 async function record(seed){
-  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, acqcap, seed) => {
+  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, acqcap, noalert, seed) => {
     const FPS = 30, dt = 1 / FPS, N = Math.round(secs * FPS);
     // 🔬 연구 — 계열 업그레이드 전 항목을 res 레벨로. campResLv 가 읽는 그 자리에 직접 넣는다.
     if(res > 0 && typeof UNIT_UPG !== 'undefined' && G.tech){
@@ -106,8 +110,16 @@ async function record(seed){
     for(const part of squad.split(',')){
       const m = part.trim().split('*'); const id = m[0].trim(), n = +(m[1] || 1);
       for(let i = 0; i < n; i++) list.push(id); }
-    // 가로로 나란히 · 4열 — 실제 생산 자리와 비슷하게 뭉쳐 세운다
-    list.forEach((id, i) => campDeploy(id, 0.34 + (i % 4) * 0.035, 0.44 + Math.floor(i / 4) * 0.035));
+    // 🪖 **가로 한 줄로 넓게** — 적은 위에서 내려오므로 옆으로 펴야 동시에 때린다.
+    //   ⛔ 예전엔 4열 격자로 세웠다(세로 4행). 격자 0.035 는 전장으로 **275px** 이라
+    //     4행이면 세로 폭 825px — 인식(260)·전파(150) 어느 것도 층을 못 넘어
+    //     **앞의 두세 기만 싸웠다**(사거리 안 2/11). 배치가 결과를 만든 것이었다.
+    //   ⚠ 세로(gy)는 campLayerPost 가 사거리 순으로 다시 정렬하므로 여기 값은 뜻이 없다.
+    //   ⚠ 간격은 **어깨 맞댈 만큼**이다(격자 0.011 = 전장 60px · 유닛 크기 14 의 4배).
+    //     ⛔ 0.70 폭(전장 3818px)에 15기를 흩었더니 실효 0.26 으로 더 떨어졌다 — 적 세 마리가
+     //       한 곳에 오는데 부대가 그만큼 벌어지면 아무도 못 만난다. 넓게 = 흩어지게 가 아니다.
+    const _gap = 0.011, _x0 = 0.5 - _gap * (list.length - 1) / 2;
+    list.forEach((id, i) => campDeploy(id, _x0 + i * _gap, CAMP_LINE_GY));
     CAMPB._started = false; CAMPB._gapT = 0;
     // ⚙ 대조군 — campEngageStep 을 끄면 「캠프가 손을 뗀 상태」가 된다
     const _eng = window.campEngageStep;
@@ -131,9 +143,13 @@ async function record(seed){
     //   조여 봐야 소용없고(그렇게 한 번 헛짚었다 — 상한 350 인데 알아챈 거리가 1844 로 그대로였다),
     //   그 함수가 끝난 **직후** 조여야 그 프레임의 표적 선정에 반영된다.
     const _alt = window.campAlertTick;
-    if(acqcap > 0 && typeof _alt === 'function') window.campAlertTick = function(dt2){
+    if((acqcap > 0 || noalert) && typeof _alt === 'function') window.campAlertTick = function(dt2){
       const r = _alt.apply(this, arguments);
-      if(CAMPB) for(const u of CAMPB.me.units) if(u.acq > acqcap) u.acq = acqcap;
+      if(CAMPB) for(const u of CAMPB.me.units){
+        if(noalert){ u._alertAcq = 0; u._alertT = 0;
+          if(typeof campAcqBase === 'function'){ const b = Math.max(campAcqBase(u), u._hitAcq || 0);
+            if(u.acq > b) u.acq = b; } }
+        if(acqcap > 0 && u.acq > acqcap) u.acq = acqcap; }
       return r; };
     const _lea = window.campLeash;
     window.campLeash = function(){ const n = _lea.apply(this, arguments); leash += n || 0; return n; };
@@ -170,8 +186,10 @@ async function record(seed){
     // ④ 표적 바뀜 — 떨림의 원인이 표적 흔들림인지 거리 유지인지 가른다.
     const prev = new Map(), last = new Map(), tgtPrev = new Map(), flipBy = new Map();
     let flips = 0, tele = 0, teleMax = 0, tgtSw = 0, inR = 0, inRn = 0, moved = 0;
+    let flipIn = 0, flipOut = 0, flipNoT = 0, flipSw = 0;   // 꺾은 순간의 상태 내역
     // 🔍 「표적을 못 찾는다」와 「표적은 있는데 못 닿는다」를 가른다 — 둘의 처방이 다르다.
     let hasT = 0, hasTn = 0, gap = 0, gapN = 0;
+    let inRf = 0, inRfn = 0, idleF = 0;   // 적이 살아 있는 프레임만 / 적이 없던 프레임 수
     // 🏃 「돌격하는 느낌」의 자[尺] — 자리에서 얼마나 벗어나 있나, 얼마나 멀리서 표적을 잡나.
     //   ⭐ 인식 거리가 이동 제한보다 크면 「적이 나오자마자 제한 끝까지 우르르」가 된다.
     let away = 0, awayN = 0, awayMax = 0; const acqAt = [];
@@ -182,8 +200,9 @@ async function record(seed){
         if(m.dead) continue;
         alive++; uids.add(m.u);
         if(m.tgt) withT++;
-        if(m.r > 0){ let best = 1e9;
-          for(const a of fr.ai){ const d = Math.hypot(a.x - m.x, a.y - m.y); if(d < best) best = d; }
+        let best = 1e9;
+        for(const a of fr.ai){ const d = Math.hypot(a.x - m.x, a.y - m.y); if(d < best) best = d; }
+        if(m.r > 0){
           if(best <= m.r) hit++;
           // 표적이 있는데 사거리 밖이면 「얼마나 모자라는가」 — 사거리 배수로 잰다
           if(m.tgt && best < 1e9 && best > m.r){ gap += best / Math.max(1, m.r); gapN++; } }
@@ -193,7 +212,14 @@ async function record(seed){
           moved += sp;
           if(sp > 1.5){ const q = prev.get(m.u);
             if(q){ const dot = (vx * q.x + vy * q.y) / (sp * Math.hypot(q.x, q.y) || 1);
-              if(dot < 0){ flips++; flipBy.set(m.u, (flipBy.get(m.u) || 0) + 1); } }
+              if(dot < 0){ flips++; flipBy.set(m.u, (flipBy.get(m.u) || 0) + 1);
+                // 🔬 «꺾은 그 순간» 이 유닛은 어떤 상태였나 — 원인을 가른다.
+                //   ⭐ 사거리 안에서 꺾으면 「이미 쏠 수 있는데 흔들린다」,
+                //     밖에서 꺾으면 「아직 못 쏘고 **자리를 찾는 중**」이다. 처방이 정반대다.
+                if(m.r > 0 && best <= m.r) flipIn++; else flipOut++;
+                if(!m.tgt) flipNoT++;
+                const t0f = tgtPrev.get(m.u);
+                if(t0f != null && t0f !== m.tgt) flipSw++; } }
             prev.set(m.u, { x: vx, y: vy }); } }
         last.set(m.u, { x: m.x, y: m.y });
         const t0 = tgtPrev.get(m.u); if(t0 != null && t0 !== m.tgt && m.tgt) tgtSw++;
@@ -204,11 +230,76 @@ async function record(seed){
         tgtPrev.set(m.u, m.tgt);
         if(m.px != null){ const ad = Math.hypot(m.x - m.px, m.y - m.py);
           away += ad; awayN++; if(ad > awayMax) awayMax = ad; } }
-      if(alive){ inR += hit / alive; inRn++; hasT += withT / alive; hasTn++; } }
+      if(alive){ inR += hit / alive; inRn++; hasT += withT / alive; hasTn++;
+        // ⚠ **적이 없는 프레임도 위에 섞인다** — 라운드를 깨고 다음 적을 기다리는 동안은
+        //   사거리 안일 수가 없다. 「전투 중에는 얼마나 닿는가」를 따로 낸다(2026-08-31 · sc-3).
+        if(fr.ai && fr.ai.some(a=>!a.dead)){ inRf += hit / alive; inRfn++; } else { idleF++; } } }
+    /* 🔬 «자리를 잡는 중이었나, 끝내 못 잡았나» ────────────────────────────────
+     * ⭐ 꺾음(방향 전환)의 99% 가 사거리 **밖**에서 일어난다는 것까지는 알았다.
+     *   그 다음 물음은 둘이다 — ① 자리를 잡기까지 얼마나 걸리나 ② 결국 잡기는 하나.
+     * ⚠ 「잡는 중」과 「못 잡음」은 처방이 정반대다. 전자면 시간을 줄이는 문제고,
+     *   후자면 애초에 닿지 못하는 자리를 목표로 삼고 있다는 뜻이다.  */
+    const perU = new Map();
+    for(let fi = 0; fi < frames.length; fi++){
+      const fr = frames[fi];
+      for(const m of fr.me){
+        if(m.dead) continue;
+        let best = 1e9;
+        for(const a of fr.ai){ const d = Math.hypot(a.x - m.x, a.y - m.y); if(d < best) best = d; }
+        let arr = perU.get(m.u); if(!arr){ arr = []; perU.set(m.u, arr); }
+        arr.push({ x:m.x, y:m.y, r:m.r, tgt:m.tgt, inR:(m.r > 0 && best <= m.r), near:best,
+          foe:(fr.ai ? fr.ai.length : 0) }); } }
+    const settleT = [];              // 표적을 잡고 → 사거리 안에 들기까지(초)
+    let segDone = 0, segFail = 0, segCleared = 0;   // 든 구간 / 못 든 구간 / 적이 먼저 사라진 구간
+    let failClosing = 0;             // 못 든 구간 중 «그래도 가까워지고 있던» 것
+    let flipSolved = 0, flipTot2 = 0;   // 꺾은 뒤 3초 안에 사거리 안에 들었나
+    const SOLVE_F = Math.round(FPS * 3);
+    for(const arr of perU.values()){
+      // ① 표적 구간
+      let st = -1;
+      for(let i = 0; i < arr.length; i++){
+        const a = arr[i];
+        // ⚠ **이미 사거리 안이면 구간을 시작하지 않는다** — 안 그러면 쏘고 있는 동안
+        //   매 프레임 새 구간이 열렸다 즉시 닫혀 「0초 만에 자리 잡음」이 3191번 찍힌다.
+        if(a.tgt && !a.inR && st < 0){ st = i; continue; }
+        if(st >= 0){
+          if(a.inR){ settleT.push((i - st) / FPS); segDone++; st = -1; }
+          else if(!a.tgt){
+            // ⚠ 실패 사유를 가른다 — 「적을 다 죽여서 끝난 구간」은 실패가 아니다.
+            //   그것까지 실패로 세면 「표적을 잡고도 61% 는 못 닿는다」 같은 헛읽기가 나온다.
+            if(a.foe === 0) segCleared++;
+            else { segFail++;
+              if(arr[i-1] && arr[st] && arr[i-1].near < arr[st].near - 20) failClosing++; }
+            st = -1; } } }
+      if(st >= 0){ const last = arr[arr.length-1];
+        if(last && last.foe === 0) segCleared++;
+        else { segFail++;
+          if(last && arr[st] && last.near < arr[st].near - 20) failClosing++; } }
+      // ② 꺾은 뒤 실제로 자리를 잡았나
+      let pv = null;
+      for(let i = 1; i < arr.length; i++){
+        const vx = arr[i].x - arr[i-1].x, vy = arr[i].y - arr[i-1].y, sp = Math.hypot(vx, vy);
+        if(sp <= 1.5) continue;
+        if(pv){ const dot = (vx*pv.x + vy*pv.y) / (sp * Math.hypot(pv.x, pv.y) || 1);
+          if(dot < 0){ flipTot2++;
+            for(let k = i; k < Math.min(arr.length, i + SOLVE_F); k++)
+              if(arr[k].inR){ flipSolved++; break; } } }
+        pv = { x:vx, y:vy }; } }
+    settleT.sort((a,b) => a-b);
+    const settleMed = settleT.length ? settleT[Math.floor(settleT.length/2)] : -1;
+    const settleP90 = settleT.length ? settleT[Math.floor(settleT.length*0.9)] : -1;
     const nU = Math.max(1, uids.size);
     const stat = { frames: frames.length, units: uids.size,
       flips: +(flips / nU).toFixed(1), tele, teleMax: Math.round(teleMax), tgtSw: +(tgtSw / nU).toFixed(1),
+      flipTot: flips, flipInPct: +(flipIn / Math.max(1, flips) * 100).toFixed(0),
+      settleMed: +settleMed.toFixed(1), settleP90: +settleP90.toFixed(1),
+      segDone, segFail, segCleared, failClosePct: +(failClosing / Math.max(1, segFail) * 100).toFixed(0),
+      flipSolvedPct: +(flipSolved / Math.max(1, flipTot2) * 100).toFixed(0),
+      flipNoTPct: +(flipNoT / Math.max(1, flips) * 100).toFixed(0),
+      flipSwPct: +(flipSw / Math.max(1, flips) * 100).toFixed(0),
       inRange: +(100 * inR / Math.max(1, inRn)).toFixed(1),
+      inRangeFight: +(100 * inRf / Math.max(1, inRfn)).toFixed(1),
+      idlePct: +(100 * idleF / Math.max(1, inRn)).toFixed(1),
       hasTgt: +(100 * hasT / Math.max(1, hasTn)).toFixed(1),
       awayAvg: Math.round(away / Math.max(1, awayN)), awayMax: Math.round(awayMax),
       acqAt: acqAt.length ? Math.round(acqAt.slice().sort((a,b)=>a-b)[Math.floor(acqAt.length/2)]) : 0,
@@ -343,7 +434,7 @@ async function record(seed){
       g.fillText(fr.t.toFixed(1) + 's · 아군 ' + fr.me.filter(m => !m.dead).length + ' · 적 ' + fr.ai.length,
         ox + 2, oy + cellH + 14); }
     return { stat, ok: true };
-  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, ACQCAP, seed);
+  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, ACQCAP, NOALERT, seed);
 }
 
 const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -360,21 +451,33 @@ for(let i = 0; i < RUNS; i++){
     await el.screenshot({ path: shotPath }); }
 }
 
-const K = ['inRange', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
-  'dmgOut', 'dmgIn', 'shotOut', 'awayAvg', 'awayMax', 'acqAt', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi'];
+const K = ['inRange', 'inRangeFight', 'idlePct', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
+  'dmgOut', 'dmgIn', 'shotOut', 'awayAvg', 'awayMax', 'acqAt', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi',
+  'flipTot', 'flipInPct', 'flipNoTPct', 'flipSwPct',
+  'settleMed', 'settleP90', 'segDone', 'segFail', 'segCleared', 'failClosePct', 'flipSolvedPct'];
 const M = {}; for(const k of K) M[k] = med(runs.map(r => r[k]));
 console.log('');
 console.log('🎬 캠프 전투 궤적 — ' + SECS + '초 · 던전 ' + DG + ' · ' + SQUAD + ' · 연구 Lv' + RES
-  + (OUTLIM ? ' · 자리제한 ' + OUTLIM : '') + (ACQCAP ? ' · 인식상한 ' + ACQCAP : '') + ' · ' + RUNS + '판 중앙값' + (ENGAGE ? '' : '  ⚙ campEngageStep 끔(대조군)'));
+  + (OUTLIM ? ' · 자리제한 ' + OUTLIM : '') + (ACQCAP ? ' · 인식상한 ' + ACQCAP : '') + (NOALERT ? ' · 🔇 전파 끔' : '') + ' · ' + RUNS + '판 중앙값' + (ENGAGE ? '' : '  ⚙ campEngageStep 끔(대조군)'));
 console.log('   유닛 ' + runs[0].units + '기 · 프레임 ' + runs[0].frames + ' · 첫 적 ' + runs[0].foe0 + '마리');
 console.log('');
 console.log('  ⚔ 사거리 안 비율      ' + M.inRange + '%      ← 전투가 실제로 이루어지는가 (낮으면 대부분 논다)');
+console.log('  ⚔ 그중 **전투 중**만   ' + M.inRangeFight + '%      ← 적이 살아 있던 프레임만 (대기 시간을 뺀 값)');
+console.log('  💤 적이 없던 프레임    ' + M.idlePct + '%      ← 위 두 값의 차이를 만드는 것');
 console.log('  🎯 표적을 가진 비율    ' + M.hasTgt + '%      ← 낮으면 「못 찾는다」 · 높은데 위가 낮으면 「못 닿는다」');
 console.log('  📐 못 닿는 정도        ×' + M.gapMul + '      ← 표적까지 거리 ÷ 사거리 (1.0 = 딱 사거리 끝)');
 console.log('  🏃 자리에서 벗어난 거리  평균 ' + M.awayAvg + ' · 최대 ' + M.awayMax
   + '   ← 「돌격하는 느낌」의 자 (제한 = campEngageOut)');
 console.log('  👀 표적을 알아챈 거리    ' + M.acqAt + '      ← 이게 이동 제한보다 크면 「나오자마자 우르르」');
 console.log('  💫 방향 뒤집힘        ' + M.flips + '회/유닛   ← 덜덜 떠는 정도 (순수 오토배틀 기준 0.9)');
+console.log('     ├ 사거리 안에서 꺾음  ' + M.flipInPct + '%   ← 높으면 「쏠 수 있는데 흔들린다」');
+console.log('     ├ 사거리 밖에서 꺾음  ' + (100 - M.flipInPct) + '%   ← 높으면 「못 쏘고 **자리를 찾는 중**」');
+console.log('     ├ 표적이 없었다       ' + M.flipNoTPct + '%');
+console.log('     └ 표적이 방금 바뀌었다 ' + M.flipSwPct + '%');
+console.log('     ⤷ 꺾은 뒤 3초 안에 사거리 안에 듦  ' + M.flipSolvedPct + '%   ← 높으면 「자리 잡는 중이었다」');
+console.log('  🪑 자리 잡기          표적을 잡고 ' + M.settleMed + '초 만에 사거리 안 (느린 10% 는 ' + M.settleP90 + '초)');
+console.log('     └ 닿음 ' + M.segDone + ' / 못 닿음 ' + M.segFail + ' / 적이 먼저 죽음 ' + M.segCleared
+  + '   못 닿은 것 중 «가까워지곤 있었다» ' + M.failClosePct + '%');
 console.log('  🎯 표적 바뀜          ' + M.tgtSw + '회/유닛   ← 떨림이 표적 흔들림 때문인지 가른다');
 console.log('  ⚡ 순간이동(>60px)    ' + M.tele + '회 (최대 ' + M.teleMax + 'px)');
 console.log('  🪢 목줄 발동          ' + M.leash + '회');

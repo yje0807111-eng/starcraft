@@ -873,7 +873,9 @@
   .curBar.bare::after{display:none}
   .curBar .curRes{display:flex;align-items:center;gap:8px;margin-left:auto}   /* 설정 상자가 줄에 합류해 폭이 늘었다 — 간격을 좁혀 HOME 프로필과 겹치지 않게 */
   .curBar .hudSet{margin-left:1px;margin-right:-8px}   /* 오른쪽 끝에 거의 붙인다(.curBar padding 10px 상쇄) */
-  .curTitle{font-family:var(--font-ti);font-size:16px;color:#eef1f6;letter-spacing:.12em;
+  .curTitle,
+  #campTree .ctTitle,
+  #campReb .crTitle{font-family:var(--font-ti);font-size:16px;color:#eef1f6;letter-spacing:.12em;
     text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.5);white-space:nowrap}
   .curTitle:empty{display:none}
   /* 🏕 캠프 좌상단 던전 칩 — 목업 docs/mock/camp-dungeon-onechip-8.html 7안(왼쪽 광원 띠 + 두 줄).
@@ -1421,8 +1423,6 @@
   /* 입력 바 — 판을 걷고 청록을 뺀다. ⛔ 시안은 DESIGN §2 에서 '지금 선택된 것' 전용(화면당 1곳)인데
      전송 버튼과 범위 라벨 둘이 쓰고 있었다. 범위는 색이 아니라 **글자('전체'·'파티'·'친구')**가 말한다. */
   #msSocialDock .msChatBar{border-top:1px solid rgba(255,255,255,.07);background:none}
-  #msSocialDock .msChatSend{color:#cfd8e3}
-  #msSocialDock .msChatSend:active{background:rgba(255,255,255,.07)}
   #msSocialDock .msScopeLbl{color:#aeb7c1}
   #msSocialDock .msScopeTrig{border-radius:var(--r-bar)}
   /* 친구 — 카드 판을 걷고 헤어라인 목록으로 · **한 줄 조밀형**(2026-08-18 확정)
@@ -1897,56 +1897,300 @@
   padding:3px 8px;border-radius:var(--r-md);
   border:1px solid rgba(255,59,59,.35);background:rgba(14,18,26,.82)}
 #campBar .cbFoe:empty{display:none}
-/* 🌳 트리 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살린다 */
-#campBar .cbTree{pointer-events:auto;flex:0 0 auto;
+/* 🔁 환생 입구 — 띠 전체는 pointer-events:none 이라 이 칩만 되살린다 */
+#campBar .cbReb{pointer-events:auto;flex:0 0 auto;
   border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
   background:rgba(20,26,36,.9);color:#cfd8e6;font-size:var(--fs-sm);font-weight:700;padding:3px 8px}
-#campBar .cbTree b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--gold,#ffd24a)}
+#campBar .cbReb b{color:#5cd6ff}   /* 환생 = 시안 */
 
 /* ══ 🌳 환생 포인트 트리 — 마인드맵 (2026-08-25 · 6단계-b) ═══════════════
    전체 화면 위에 덮는 판. 가운데는 밀고 확대하는 SVG, 위아래에 얇은 줄 둘.
    값은 DESIGN.md §2 표 — 라운드 0(큰 패널)/3(얇은 표시)/6(버튼) · 간격 8/12/20.
    ⛔ 갈래 색은 JS(CAMP_TREE_BR)가 단일 소스다 — 여기에 다시 적지 말 것. */
-#campTree{position:absolute;inset:0;z-index:120;display:none;
-  background:radial-gradient(120% 90% at 50% 42%,rgba(18,24,34,.97),rgba(6,9,13,.99))}
-#campTree.on{display:block}
+/* ══ 🔁 환생 화면 ═══════════════════════════════════════════════════════
+   ⭐ 언어는 로딩·로그인과 같다: 배경 아트 + 아래를 덮는 스크림 · 판을 안 쓴다 ·
+      값이 주인공 · 주 동작 하나에만 밑변 광원.
+   ⭐ 라운드는 0/3/6/9 만(DESIGN.md · 8·10~16px 금지) · 간격 4/8/12/20.
+   ⭐ 액센트는 **역할별**: 금색 = 재화·보상(배수·포인트) · 시안 = 조건 진행 · 보라 = 현질(×2).
+   ⛔ 문장을 넣지 말 것 — 라벨과 값이 전부다.                                   */
+/* 🔁 환생 「정보」 탭 — 하단 네비를 **가리지 않는다**(2026-08-31 사용자 확정 · #campTree 와 같은 규칙). */
+#campReb{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;flex-direction:column}
+/* 🎬 **부드럽게 들어온다**(2026-08-31 사용자 지적: 「갑자기 어두워지는 느낌」).
+   ⛔ display:none → flex 는 전환이 안 걸린다 — 어두운 키 아트와 스크림이 **한 프레임에** 덮쳐서
+     화면이 툭 꺼지는 것처럼 보였다.
+   ⭐ 그래서 나타나는 동안만 애니메이션으로 겹쳐 넣는다. 배경(#titleBg)은 제 transition 으로
+     이미 페이드하므로, 여기까지 맞추면 둘이 같은 속도로 들어온다.
+   ⚠ 나갈 때는 안 건다 — 네비로 즉시 다른 구역으로 가므로 남아 있으면 오히려 늦게 사라져 보인다. */
+/*   ⛔ fill-mode 를 주지 말 것 — `both` 로 두면 애니메이션이 **안 도는 동안 opacity 0 에 멈춘다.**
+       실측(2026-08-31): 브라우저 탭이 백그라운드면 document.visibilityState='hidden' 이라
+       애니메이션이 currentTime 0 에서 정지하고, 화면이 통째로 안 보였다.
+     ⭐ fill-mode 없이 두면 애니메이션이 안 돌 때 **기본 상태(보임)** 가 그대로 남는다. */
+/* 🎬 ⛔ **애니를 `.on` 에 걸지 말 것** (2026-08-31 사용자 지적).
+     `.on` 은 「이 화면이 켜져 있다」는 뜻이라 환생 ↔ 업그레이드 **탭을 오갈 때마다** 다시 붙고,
+     그때마다 페이드가 처음부터 돌아 화면이 껌뻑였다. 같은 구역 안의 칸 이동은 즉시여야 한다.
+   ⭐ 애니는 `.crIn` 이 갖는다 — campRebEnter 가 **구역 밖에서 들어온 경우에만** 붙인다. */
+#campReb.on{display:flex}
+#campTree.on.crIn,
+#campReb.on.crIn{animation:crFadeIn var(--t-screen) ease}
+@keyframes crFadeIn{from{opacity:0}to{opacity:1}}
+/* 배경 아트 — ⛔ **여기서 그림을 그리지 않는다.** 키 아트는 공유 층(#titleBg) 한 장뿐이다.
+   화면마다 자기 그림을 그리면 전환할 때 호흡 애니가 0% 부터 다시 시작해 그림이 툭 튄다
+   (스모크 「배경은 한 장으로 깔린다」가 잡는다 — 실제로 잡혔다).
+   대신 campRebOpen() 이 그 층을 켜고 #campReb 위로 끌어올린다. 여기는 **스크림만** 깐다. */
+#campReb{background:none}
+/* ⚠ 배경이 전용 그림(#campRebBg)으로 바뀌며 이미 어두워졌다 — 여기서 또 깊게 누르면 그림이 사라진다 */
+#campReb .crBg{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(5,8,12,.20) 0%,rgba(5,8,12,.06) 24%,rgba(5,8,12,.62) 62%,rgba(5,8,12,.94) 100%)}
+#campReb .crTop{position:relative;z-index:1;flex:0 0 auto;display:flex;align-items:center;padding:44px 14px 4px}
+#campReb .crTitle{flex:1}   /* 크기·글꼴은 공용 화면 제목 규칙이 정한다(.curTitle 옆) */
+#campReb .crX{width:32px;height:32px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(0,0,0,.35);color:#c3ccd8;font-family:inherit;font-size:15px;cursor:pointer;padding:0}
+#campReb .crX:active{background:rgba(255,255,255,.08)}
+#campReb .crBody{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;
+  padding:0 18px 18px;display:flex;flex-direction:column}
+/* 히어로 = 획득 배수 */
+/* ⚠ 글자가 놓일 자리에 **국소 스크림**을 깐다 — 로그인이 쓰는 그 방법이다.
+   전체 스크림을 더 어둡게 하면 그림이 죽는다. 밝은 하늘 위에서 「현재 ×1.00」이 안 읽혔다. */
+#campReb .crHero{position:relative;text-align:center;margin-top:auto;padding-top:12px}
+#campReb .crHero::before{content:'';position:absolute;left:-18px;right:-18px;top:-14px;bottom:-18px;
+  z-index:-1;pointer-events:none;
+  background:radial-gradient(60% 70% at 50% 55%,rgba(5,8,12,.72),rgba(5,8,12,0) 72%)}
+#campReb .crK{font-family:var(--font-num);font-size:11px;color:#a7b2c0;letter-spacing:.32em;
+  text-shadow:0 1px 6px #000}
+#campReb .crBig{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:64px;line-height:1;color:#fff;margin-top:4px;text-shadow:0 3px 22px #000}
+#campReb .crNow{font-family:var(--font-num);font-size:13px;color:#9aa5b3;margin-top:2px;
+  letter-spacing:.05em;text-shadow:0 1px 6px #000}
+/* 포인트 + 계산 근거 */
+#campReb .crPt{text-align:center;margin-top:16px}
+#campReb .crPv{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:30px;font-weight:800;color:var(--gold,#ffd24a);line-height:1.1;margin-top:2px}
+#campReb .crFx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:4px}
+#campReb .crFx b{color:#a9b4c2;font-weight:700}
+/* 이번 회차 지표 — 세로 목록(②안) */
+#campReb .crSt{margin-top:20px}
+#campReb .crH{font-family:var(--font-num);font-size:10.5px;color:#7b8593;letter-spacing:.28em;
+  text-align:center;margin-bottom:8px}
+#campReb .crLi{display:flex;justify-content:space-between;align-items:baseline;padding:7px 2px}
+#campReb .crLi+.crLi{border-top:1px solid rgba(255,255,255,.07)}
+#campReb .crLi span{font-size:12px;color:#9aa5b3}
+#campReb .crLi b{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:15px;font-weight:800;color:#e9eff7}
+/* 조건 — 얇은 바(라운드 3) */
+#campReb .crCond{margin-top:16px}
+#campReb .crBar{height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+#campReb .crBar i{display:block;height:100%;background:rgba(255,255,255,.5)}
+#campReb .crBar.ok i{background:#5cd6ff;box-shadow:0 0 6px rgba(92,214,255,.5)}
+#campReb .crT{display:flex;justify-content:space-between;font-family:var(--font-num);
+  font-size:11.5px;color:#69737f;margin-top:4px}
+/* 주 동작 — 면을 채우지 않는다. 테두리 + 밑변 광원이 서명이다 */
+#campReb .crGo{position:relative;display:block;width:100%;min-height:50px;margin-top:16px;
+  border-radius:var(--r-md);cursor:pointer;font-family:inherit;font-size:16px;font-weight:800;
+  letter-spacing:.16em;color:#fff;border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+#campReb .crGo::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+#campReb .crGo:active{background:rgba(255,210,74,.18)}
+/* ⛔ 잠김에서 광원을 빼지 않으면 못 누르는데 주 동작으로 읽힌다 */
+#campReb .crGo:disabled{border-color:rgba(255,255,255,.14);color:#69737f;
+  background:none;cursor:default}
+#campReb .crGo:disabled::after{display:none}
+/* 💳 환생 팩 — **버튼 구역**(2026-08-31 사용자 확정 · 옛 「조용한 한 줄」에서 승격).
+   ⭐ 위계는 「환생」보다 **한 단 아래**다 — 같은 얼굴(면 + 테두리 + 밑변 광원)을 쓰되
+     높이를 낮추고(50 → 38) 글자를 작게 둔다. 주 동작이 둘로 보이면 안 된다.
+   ⭐ 색은 **보라**를 지킨다 — 현질이라 금색(=게임 안 보상)과 갈라 둔다. */
+#campReb .crPk{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;min-height:38px;margin-top:10px;box-sizing:border-box;padding:0 12px;
+  border-radius:var(--r-md);cursor:pointer;font-size:12px;font-weight:700;color:#c3bcd2;
+  border:1px solid rgba(201,166,255,.34);background:rgba(201,166,255,.08)}
+#campReb .crPk::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,166,255,.75),transparent)}
+#campReb .crPk:active{background:rgba(201,166,255,.16)}
+#campReb .crPk b{color:#c9a6ff;font-weight:800}
+#campReb .crPk u{text-decoration:none;color:#c9a6ff}
+/* 산 뒤 — 「적용 중」은 **상태 표시**다. 누를 것이 없으니 광원을 빼고 면도 지운다. */
+#campReb .crPk.on{cursor:default;letter-spacing:.06em;color:#c9a6ff;
+  border-color:rgba(201,166,255,.22);background:rgba(201,166,255,.04)}
+#campReb .crPk.on::after{display:none}
+/* 확인창 — 화면 안에 겹친다 */
+#campRebOk{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;
+  background:var(--ov-dim);backdrop-filter:blur(2px)}
+#campRebOk.hide{display:none}
+#campRebOk .ecMsg i{font-style:normal;display:inline-block;margin-top:6px;color:#c9a6ff}
+/* 🔁 맵 띠 칩 */
+#campBar .cbReb.hide{display:none}
+
+/* 🔁 환생 「업그레이드」 탭 — 하단 네비를 **가리지 않는다**(2026-08-31 사용자 확정).
+   ⛔ inset:0 이면 z-index 120 이 네비(62)를 통째로 덮어 탭을 못 바꾼다.
+   ⭐ z-index 를 낮추는 대신 **바닥만 네비 높이만큼 비운다** — 낮추면 키 아트·시트류와 층이 꼬인다. */
+/* 🌌 환생 구역 전용 배경 — 환생 화면과 업그레이드(트리) 화면이 **함께** 쓴다.
+   ⛔ 화면마다 제 그림을 그리지 말 것(탭 전환에서 다시 그려져 툭 튄다).
+   ⚠ z-index 는 두 화면(120) **바로 아래**, 네비(#phone.artLift .navBar = 121) 아래다. */
+#campRebBg{position:absolute;left:0;right:0;top:0;bottom:0;z-index:119;pointer-events:none;
+  background:url('../assets/backgrounds/reb/reb.webp') center center / cover no-repeat #05070b;
+  transition:opacity calc(var(--t-screen) * .4) ease}
+#campRebBg.hide{opacity:0}
+/* 스크림 — 위는 조금, 아래는 깊게. 하단 시트가 앉는 자리를 미리 눌러 둔다 */
+#campRebBg .crbScrim{position:absolute;inset:0;display:block;
+  background:linear-gradient(180deg,rgba(5,7,11,.30) 0%,rgba(5,7,11,.10) 26%,
+    rgba(5,7,11,.55) 62%,rgba(5,7,11,.86) 100%)}
+#campTree{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;
+  background:none}   /* 배경은 #campRebBg 한 장이 맡는다 */
+#campTree.on{display:block}   /* 🎬 페이드는 .crIn 이 갖는다(위 #campReb 옆 규칙) — 탭 이동은 즉시 */
 #campTree #ctSvg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
 #campTree .ctTop{position:absolute;left:0;right:0;top:0;z-index:2;
-  display:flex;align-items:center;gap:12px;padding:12px 12px 8px;
-  background:linear-gradient(180deg,rgba(6,9,13,.92),rgba(6,9,13,0))}
-#campTree .ctTitle{font-size:var(--fs-lg);font-weight:800;color:#e8eef7;flex:1}
-#campTree .ctPtsWrap{font-size:var(--fs-sm);color:#9fb0c4}
+  display:flex;flex-direction:column;gap:0;padding:12px 14px 10px;
+  background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,.62) 62%,rgba(6,9,13,0))}
+#campTree .ctTopRow{display:flex;align-items:baseline;gap:8px}
+/* 📊 해금 진행도 — 「얼마나 왔나」. 별이 181칸이라 숫자만으로는 감이 안 온다 */
+#campTree .ctProg{display:flex;align-items:center;gap:8px;margin-top:8px}
+#campTree .ctBar{flex:1;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.09);overflow:hidden}
+#campTree .ctBar i{display:block;height:100%;background:var(--gold,#ffd24a)}
+#campTree .ctProgN{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-sm);color:#69737f}
+/* ❓ 도움말 단추 — 제목 바로 옆. 남는 자리는 이 단추가 아니라 그 뒤가 가져간다 */
+#campTree .ctQ{flex:0 0 auto;width:20px;height:20px;padding:0;margin-left:-2px;
+  align-self:center;cursor:pointer;
+  border:1px solid rgba(255,255,255,.24);border-radius:50%;background:rgba(255,255,255,.05);
+  color:#9fb0c4;font:700 11px/1 var(--font-num);display:flex;align-items:center;justify-content:center}
+#campTree .ctQ:active{background:rgba(255,255,255,.14);color:#fff}
+#campTree .ctPtsWrap{margin-left:auto}
+/* 도움말 판 — 화면 **안에** 겹친다(#campRebOk 와 같은 방식). 물성은 하단 시트와 같은 것을 쓴다 */
+#campTree .ctHelp{position:absolute;inset:0;z-index:6;display:flex;align-items:center;
+  justify-content:center;padding:24px;background:var(--ov-dim,rgba(0,0,0,.6))}
+#campTree .ctHelp.hide{display:none}
+#campTree .ctHelpCard{width:100%;max-width:340px;padding:16px 16px 14px;
+  border-radius:var(--r-lg);border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(180deg,rgba(14,18,26,.98),rgba(8,11,16,.98));
+  box-shadow:0 10px 30px rgba(0,0,0,.6)}
+#campTree .ctHelpHd{font-size:15px;font-weight:700;color:#e8eef7}
+#campTree .ctHelpLi{margin:10px 0 0;padding:0 0 0 16px;font-size:var(--fs-lg);line-height:1.75;color:#a7b2c0}
+#campTree .ctHelpLi li+li{margin-top:5px}
+#campTree .ctHelpLi b{color:#e8eef7;font-weight:700}
+#campTree .ctHelpX{width:100%;min-height:38px;margin-top:14px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
+  background:rgba(255,255,255,.05);color:#c3ccd8;font:700 13px/1 inherit;
+  display:flex;align-items:center;justify-content:center}
+#campTree .ctHelpX:active{background:rgba(255,255,255,.12);color:#fff}
+#campTree .ctPtsWrap{margin-left:auto;display:flex;align-items:baseline;gap:5px;
+  font-size:var(--fs-sm);letter-spacing:.14em;color:#9fb0c4}
 #campTree .ctPts{font-family:var(--font-num);font-variant-numeric:tabular-nums;
-  font-size:var(--fs-lg);font-weight:800;color:var(--gold,#ffd24a)}
-#campTree .ctX{border:1px solid rgba(255,255,255,.16);border-radius:var(--r-md);
-  background:rgba(20,26,36,.9);color:#cfd8e6;font-size:var(--fs-sm);font-weight:700;padding:6px 12px}
-#campTree .ctInfo{position:absolute;left:8px;right:8px;bottom:12px;z-index:2;
-  display:flex;align-items:center;gap:12px;padding:12px;
-  border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.14);
-  background:linear-gradient(180deg,rgba(14,18,26,.96),rgba(8,11,16,.96));
-  box-shadow:0 6px 18px rgba(0,0,0,.5)}
-#campTree .ctInfoTx{flex:1;min-width:0}
-#campTree .ctInfoNm{font-size:var(--fs-md);font-weight:800;color:#e8eef7;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#campTree .ctInfoSub{font-size:var(--fs-xs);color:#9fb0c4;margin-top:4px;
-  font-family:var(--font-num);font-variant-numeric:tabular-nums}
-#campTree .ctBuy{flex:0 0 auto;min-width:88px}
-/* ── 노드 ── */
-#campTree .ctN{stroke-width:2;cursor:pointer}
-#campTree .ct-own{fill:var(--bc);stroke:var(--bc);opacity:1}
-#campTree .ct-buy{fill:rgba(10,14,20,.95);stroke:var(--bc)}
-#campTree .ct-next{fill:rgba(10,14,20,.95);stroke:rgba(255,255,255,.22)}
-#campTree .ct-lock{fill:rgba(10,14,20,.85);stroke:rgba(255,255,255,.10);opacity:.5}
+  font-size:20px;font-weight:800;color:var(--gold,#ffd24a);letter-spacing:0}
+
+/* ══ ⭐ 별 ══════════════════════════════════════════════════════════════
+   등급이 **테두리로** 읽힌다 — 흔함 한 겹 · 보통 밝은 한 겹 · 귀함 금 두 겹 · 극상 금 두 겹 + 광륜.
+   ⛔ 상태별로 색을 CSS 에 박지 말 것. 색은 **갈래**가 가지므로 JS 가 stroke 로 직접 준다
+     (여기서 또 정하면 갈래 색과 두 벌이 되어 언젠가 갈라진다). */
+#campTree .ctGem{fill:rgba(6,9,14,.94);pointer-events:none}
+/* 👆 누르는 면 — 보이지 않지만 **보이는 별보다 크다**. 별 하나에 이것 하나뿐이라
+   어디를 눌렀는지 헷갈릴 일이 없다(실측: 15px 짜리 별은 6px 만 빗나가도 헛쳤다). */
+#campTree .ctHit{fill:transparent;cursor:pointer}
+#campTree .ctIn{fill:none;stroke:rgba(220,232,246,.34);stroke-width:.8;pointer-events:none}
+#campTree .ctIn.gold{stroke:#ffcf5a;stroke-width:1}
+#campTree .ctHalo{fill:none;stroke:#ffcf5a;stroke-width:1;stroke-dasharray:2 4;pointer-events:none}
+#campTree .ctSp{stroke-width:.7;fill:none;pointer-events:none}
 /* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
-#campTree .ctN.sel{stroke:var(--acc-sel,#5cd6ff);stroke-width:4;
-  filter:drop-shadow(0 0 6px rgba(92,214,255,.9))}
-#campTree .ctRoot{fill:rgba(10,14,20,.95);stroke:rgba(255,255,255,.30);stroke-width:2;cursor:pointer}
-#campTree .ctRoot.on{fill:rgba(92,214,255,.18);stroke:var(--acc-sel,#5cd6ff)}
-#campTree .ctRootTx,#campTree .ctNm,#campTree .ctBrNm{text-anchor:middle;pointer-events:none;
-  font-family:var(--font-ui);font-weight:800}
-#campTree .ctRootTx{font-size:11px;fill:#e8eef7}
-#campTree .ctNm{font-size:12px;fill:#0b0f16}
-#campTree .ctBrNm{font-size:15px;paint-order:stroke;stroke:rgba(6,9,13,.9);stroke-width:4px}
+#campTree .ctSel{fill:none;stroke:var(--acc-sel,#5cd6ff);stroke-width:1.1;opacity:.85;pointer-events:none}
+/* 값·꼬리표 — 원 **밖 아래**에 매달린다(아이콘을 가리지 않는다).
+   ⚠ SVG 는 기본이 밑선 기준이라 hanging 을 JS 가 아니라 여기서 한 번에 준다 */
+#campTree .ctTag{text-anchor:middle;dominant-baseline:hanging;pointer-events:none;
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:7.8px;fill:#7b8593}
+#campTree .ctBrNm{text-anchor:middle;dominant-baseline:middle;pointer-events:none;
+  font-size:10px;letter-spacing:3px;font-weight:800}
+/* 가운데 — 글씨 없는 붉은 마름모(2026-09-01 사용자 확정) */
+#campTree .ctCore{fill:#ff5a3c;stroke:#ffd0be;stroke-width:1.1;pointer-events:none}
+#campTree .ctCore.on{fill:#ff5a3c}
+#campTree .ctCoreOut{fill:none;stroke:rgba(255,120,90,.42);stroke-width:1;pointer-events:none}
+
+/* ══ 하단 구역 — 고른 별의 모든 정보가 여기 모인다 ══════════════════════ */
+#campTree .ctSheet{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:14px 14px 16px;
+  border-top:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c)}
+#campTree .ctHint{padding:2px 0 4px;text-align:center;font-size:var(--fs-md);color:#69737f}
+#campTree:not(.picked) .ctSheet{border-top:none;background:linear-gradient(180deg,rgba(6,9,13,0),rgba(6,9,13,.9) 60%)}
+#campTree .ctHd{display:flex;align-items:center;gap:10px}
+/* 🎯 하단 구조(2026-09-01 사용자 확정) — 원형 게이지 · 설명 한 줄 · 필요 포인트 · 버튼.
+   ⛔ 좌우 분할로 되돌리지 말 것. ⛔ 메타 줄(갈래·등급·티어)과 짝 조건 줄을 다시 넣지 말 것. */
+#campTree .ctHead{display:flex;align-items:center;gap:14px}
+/* 마디는 아이콘이 없다 — 갈래 색 점 하나로 어디인지만 말한다 */
+#campTree .ctDot{flex:0 0 auto;width:10px;height:10px;border-radius:50%}
+#campTree .ctIco.core{width:44px;height:44px;flex:0 0 auto;display:flex;align-items:center;
+  justify-content:center;border-radius:var(--r-md);color:#ff8a6a;font-size:19px;line-height:1;
+  border:1px solid rgba(255,120,90,.42);background:rgba(255,90,60,.10)}
+/* 단계를 아이콘 둘레의 고리로 — 점 다섯을 대신한다 */
+#campTree .ctRing{position:relative;flex:0 0 56px;width:56px;height:56px;display:block}
+#campTree .ctRing svg{position:absolute;inset:0;width:56px;height:56px;transform:rotate(-90deg)}
+#campTree .ctRingBg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:3}
+#campTree .ctRingOn{fill:none;stroke:rgba(255,210,74,.7);stroke-width:3;stroke-linecap:round}
+#campTree .ctRing img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:26px;height:26px;object-fit:contain;opacity:.9}
+#campTree .ctHt{min-width:0}
+#campTree .ctStage{margin-top:3px;font-size:10px;letter-spacing:.14em;color:#69737f}
+/* 차수 로마숫자 — 부제와 폰트를 가른다(숫자 폰트에 한글을 태우면 자간이 어긋난다)
+   ⚠ 이름을 .ctStep 으로 지으면 아래 비용 줄(display:flex)에 먹힌다 — 실제로 한 번 겹쳤다 */
+#campTree .ctRom{font-family:var(--font-num);letter-spacing:.18em;color:#8b96a4;margin-right:7px}
+/* 설명 — 값은 문장 안에 있다(지금은 흐리게 · 다음은 굵게) */
+#campTree .ctDesc{margin-top:13px;font-size:13px;line-height:1.7;color:#a7b2c0}
+#campTree .ctDesc b{color:#f0f4f9;font-weight:700}
+#campTree .ctWas{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#7b8593}
+#campTree .ctTo{margin:0 6px;color:#5b6674}
+/* 필요 포인트 — 값이 주인공이라 24px. ⛔ 「비용」 라벨 옆 작은 글씨로 되돌리지 말 것(안 보였다) */
+#campTree .ctPay{display:flex;align-items:baseline;gap:8px;margin-top:15px;
+  padding-top:13px;border-top:1px solid rgba(255,255,255,.07)}
+#campTree .ctPip{width:9px;height:9px;transform:rotate(45deg);background:var(--gold,#ffd24a);
+  align-self:center;flex:0 0 auto}
+#campTree .ctCv{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:24px;font-weight:800;color:var(--gold,#ffd24a);line-height:1.1}
+#campTree .ctHave{font-size:10px;letter-spacing:.18em;color:#69737f}
+#campTree .ctIco{width:38px;height:38px;flex:0 0 auto;border-radius:var(--r-md);
+  border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+#campTree .ctIco img{width:32px;height:32px;object-fit:contain;display:block}
+/* 🌟 첫 자본 — 아이콘 대신 마름모와 같은 붉은 표식을 쓴다(가운데 별의 얼굴) */
+#campTree .ctIco.core{color:#ff8a6a;font-size:19px;line-height:1;
+  border-color:rgba(255,120,90,.42);background:rgba(255,90,60,.10)}
+#campTree .ctHt{min-width:0;display:flex;flex-direction:column;gap:2px}
+#campTree .ctNm{font-size:17px;font-weight:700;color:#fff;line-height:1.2}
+#campTree .ctN{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-lg);color:#8d9aa9;margin-left:6px}
+#campTree .ctMeta{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);
+  letter-spacing:.1em;color:#8d9aa9}
+#campTree .ctMeta i{font-style:normal;color:#5b6674}
+/* 계열 진행도 — 이 별이 다섯 칸 중 어디인가 */
+#campTree .ctDots{display:flex;gap:4px;margin-top:9px}
+#campTree .ctDots i{flex:1;height:3px;border-radius:var(--r-bar)}
+#campTree .ctDesc{font-size:var(--fs-lg);line-height:1.6;color:#a7b2c0;margin-top:10px}
+#campTree .ctDesc b{color:#e8eef7;font-weight:700}
+/* 지금 ▶ 다음 — 큰 숫자가 주인공. 크기가 다른 글자는 **밑선**을 맞추고, 예고만 가운데로 */
+#campTree .ctStep{display:flex;align-items:baseline;gap:9px;margin-top:11px;
+  padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+#campTree .ctNow{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:16px;color:#7b8593}
+#campTree .ctArw{color:#5b6674;font-size:12px;align-self:center;line-height:1}
+#campTree .ctNext{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:26px;font-weight:700;color:#fff;line-height:1}
+#campTree .ctAfter{margin-left:auto;align-self:center;font-size:var(--fs-sm);line-height:1.5;
+  color:#69737f;text-align:right}
+#campTree .ctAfter b{font-family:var(--font-num);color:#8d9aa9;font-weight:700}
+/* 지갑 — 두 열의 값 크기가 달라도 줄 높이를 고정해 라벨이 어긋나지 않게 한다 */
+#campTree .ctWal{display:flex;align-items:center;gap:10px;margin-top:11px;
+  padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+#campTree .ctCol{min-width:74px;display:flex;flex-direction:column;gap:2px}
+#campTree .ctCk{font-size:9.5px;color:#69737f;letter-spacing:.2em}
+#campTree .ctCv{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:18px;font-weight:700;color:var(--gold,#ffd24a);line-height:21px}
+#campTree .ctCv.sub{font-size:14px;color:#8d9aa9;line-height:21px}
+/* 주 동작 — 환생 화면의 서명(면을 채우지 않고 1px + 밑변 광원) */
+#campTree .ctBuy{position:relative;width:100%;margin-top:13px;min-height:46px;padding:0 18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r-md);font:700 14px/1 inherit;letter-spacing:.1em;color:#fff;cursor:pointer;
+  border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+#campTree .ctBuy::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+#campTree .ctBuy:active{background:rgba(255,210,74,.18)}
+/* ⛔ 잠김에서 광원을 빼지 않으면 못 누르는데 주 동작으로 읽힌다 */
+#campTree .ctBuy.off{border-color:rgba(255,255,255,.14);background:none;color:#69737f;cursor:default}
+#campTree .ctBuy.off::after{display:none}
 
   /* ══ 🎬 캠프 진입 연출 (2026-08-27) ══════════════════════════════════
      종족을 고르고 캠프로 들어올 때, 살짝 물러난 자리에서 **본진 쪽으로 다가간다**.

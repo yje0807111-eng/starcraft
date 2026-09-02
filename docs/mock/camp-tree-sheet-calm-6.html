@@ -1,0 +1,182 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 하단 — 차분한 6안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1980px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1060px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1060px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:22px}
+  .note{font-size:12px;line-height:1.55;color:#93a0b0;margin:8px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:430px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);background:#05070b}
+  .bg{position:absolute;inset:0;background:url('../../assets/backgrounds/reb/reb.webp') center 30% / cover no-repeat}
+  .bg::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(5,7,11,.30),rgba(5,7,11,.10) 26%,rgba(5,7,11,.55) 62%,rgba(5,7,11,.86))}
+  .S{position:absolute;left:0;right:0;bottom:0;z-index:2;
+    padding:16px 18px 18px;background:#080b11;border-top:1px solid rgba(255,255,255,.10)}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  /* ── 차분한 어휘 — 큰 숫자·색 면·상자를 쓰지 않는다 ── */
+  .nm{font-size:17px;font-weight:700;color:#f0f4f9;letter-spacing:.01em}
+  .sub{font-size:10.5px;letter-spacing:.16em;color:#7b8593}
+  .ds{font-size:12.5px;line-height:1.75;color:#a7b2c0}
+  .ds b{color:#f0f4f9;font-weight:700}
+  .ds.now{color:#69737f}
+  .ds.now b{color:#8d9aa9;font-weight:400}
+  .k{font-size:10px;letter-spacing:.18em;color:#69737f}
+  .v{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;color:#c3ccd8}
+  .cost{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:16px;
+    font-weight:700;color:var(--gold)}
+  .dots{display:flex;gap:4px}
+  .dots i{flex:1;height:2px;border-radius:var(--r-bar)}
+  .ico{flex:0 0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    border-radius:var(--r-md);border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.03)}
+  .ico img{object-fit:contain;display:block;opacity:.92}
+  .gate{font-size:11.5px;line-height:1.6;color:#96a0ad}
+  .gate b{color:#c3ccd8;font-weight:700}
+  .hr{height:1px;background:rgba(255,255,255,.07)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:var(--r-md);
+    font:700 13px/1 inherit;letter-spacing:.08em;border:1px solid rgba(255,255,255,.14);
+    background:none;color:#8d9aa9;min-height:42px;padding:0 18px}
+</style>
+<div class="wrap">
+<h1>환생 트리 하단 — 차분한 6안</h1>
+<p class="lede">앞의 안들은 <b>너무 까불었다</b> — 큰 숫자·금색 면·상자·색 띠가 서로 소리를 질렀다.
+  여섯 안은 그것들을 전부 걷고 <b>제목 + 설명 한 줄</b>을 중심으로 다시 짰다.</p>
+<p class="rule"><b>수치는 문장 안에 들어간다.</b> 「×11」을 크게 외치는 대신
+  <b>「일꾼의 1회 채취량이 11배 증가합니다」</b> 라고 적는다. 지금 값은 같은 문장을 회색으로 한 줄 더 둔다 —
+  <i>두 문장을 나란히 두면 무엇이 달라지는지가 저절로 읽힌다.</i>
+  <br>큰 글자는 <b>이름 하나</b>뿐이고, 색은 <b>비용의 금색 하나</b>뿐이다.</p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+const IC='../../assets/icons/';
+const D={ nm:'일꾼 채취량', n:4, br:'재화 획득', gr:'흔함', tier:13, col:'#ffd24a',
+  ic:IC+'upgrades/up_mine.webp',
+  dsNow:'일꾼의 1회 채취량이 <b>5배</b> 증가합니다.',
+  dsNext:'일꾼의 1회 채취량이 <b>11배</b> 증가합니다.',
+  after:'다음 단계 ×25 · 4.3B',
+  cost:'16.8M', left:'−16.8M', have:3, sib:'가스 생산량', sibN:2, need:3, btn:'짝이 모자람' };
+function dots(){ let o='';
+  for(let i=1;i<=5;i++) o+='<i style="background:'+(i<=D.have?'rgba(255,210,74,.65)':(i===D.n?'rgba(255,255,255,.28)':'rgba(255,255,255,.07)'))+'"></i>';
+  return o; }
+function ico(sz,box){ return '<span class="ico" style="width:'+box+'px;height:'+box+'px">'
+  +'<img src="'+D.ic+'" style="width:'+sz+'px;height:'+sz+'px"></span>'; }
+function ph(s){ return '<div class="ph"><div class="bg"></div><div class="S">'+s+'</div></div>'; }
+const meta = D.br+' · '+D.gr+' · T'+D.tier;
+const gate = '<div class="gate">🔒 <b>'+D.sib+' '+D.need+'차</b> 를 먼저 올려야 합니다 · 현재 '+D.sibN+'차</div>';
+
+/* ① 제목 → 설명 두 줄 → 값 */
+const A1=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'+ico(30,40)
+ +'<div><div class="nm">'+D.nm+'</div>'
+ +'<div class="sub" style="margin-top:3px">'+meta+' · '+D.n+' / 5</div></div></div>'
+ +'<div class="ds now" style="margin-top:13px">'+D.dsNow+'</div>'
+ +'<div class="ds" style="margin-top:3px">'+D.dsNext+'</div>'
+ +'<div class="dots" style="margin-top:13px">'+dots()+'</div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>'
+ +'<div style="margin-top:11px">'+gate+'</div>');
+
+/* ② 설명 한 줄만(다음 값) + 지금은 작은 꼬리 */
+const A2=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'+ico(30,40)
+ +'<div style="flex:1"><div class="nm">'+D.nm+'</div>'
+ +'<div class="sub" style="margin-top:3px">'+meta+'</div></div>'
+ +'<span class="v" style="font-size:13px;color:#7b8593">'+D.n+' / 5</span></div>'
+ +'<div class="ds" style="margin-top:13px">'+D.dsNext+'</div>'
+ +'<div class="sub" style="margin-top:5px">지금은 5배입니다</div>'
+ +'<div class="dots" style="margin-top:13px">'+dots()+'</div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<span class="sub" style="margin-left:10px">잔여 '+D.left+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>'
+ +'<div style="margin-top:11px">'+gate+'</div>');
+
+/* ③ 지금 → 다음을 라벨 붙여 나란히 */
+const A3=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'+ico(30,40)
+ +'<div><div class="nm">'+D.nm+'</div>'
+ +'<div class="sub" style="margin-top:3px">'+meta+'</div></div></div>'
+ +'<div style="display:flex;gap:10px;margin-top:14px">'
+ +'<span class="k" style="flex:0 0 30px;padding-top:3px">지금</span>'
+ +'<span class="ds now" style="flex:1">'+D.dsNow+'</span></div>'
+ +'<div style="display:flex;gap:10px;margin-top:6px">'
+ +'<span class="k" style="flex:0 0 30px;padding-top:3px;color:#96a0ad">다음</span>'
+ +'<span class="ds" style="flex:1">'+D.dsNext+'</span></div>'
+ +'<div class="dots" style="margin-top:14px">'+dots()+'</div>'
+ +'<div class="sub" style="margin-top:6px">'+D.n+' / 5 단계 · '+D.after+'</div>'
+ +'<div class="hr" style="margin:12px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+/* ④ 조건을 설명 바로 아래로(왜 못 사는지가 설명에 붙는다) */
+const A4=()=>ph(
+ '<div style="display:flex;align-items:center;gap:12px">'+ico(30,40)
+ +'<div style="flex:1"><div class="nm">'+D.nm+'</div>'
+ +'<div class="sub" style="margin-top:3px">'+meta+' · '+D.n+' / 5</div></div></div>'
+ +'<div class="ds" style="margin-top:13px">'+D.dsNext+'</div>'
+ +'<div class="gate" style="margin-top:7px">🔒 <b>'+D.sib+' '+D.need+'차</b> 를 먼저 올려야 합니다 · 현재 '+D.sibN+'차</div>'
+ +'<div class="dots" style="margin-top:13px">'+dots()+'</div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<span class="sub" style="margin-left:10px">잔여 '+D.left+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+/* ⑤ 아이콘을 왼쪽에 크게 두고 글은 오른쪽 한 덩어리 */
+const A5=()=>ph(
+ '<div style="display:flex;gap:14px">'+ico(40,54)
+ +'<div style="flex:1;min-width:0">'
+ +'<div class="nm">'+D.nm+'</div>'
+ +'<div class="sub" style="margin-top:3px">'+meta+' · '+D.n+' / 5</div>'
+ +'<div class="ds" style="margin-top:9px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div></div></div>'
+ +'<div class="dots" style="margin-top:13px">'+dots()+'</div>'
+ +'<div class="hr" style="margin:13px 0"></div>'
+ +'<div style="display:flex;align-items:center;gap:10px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>'
+ +'<div style="margin-top:11px">'+gate+'</div>');
+
+/* ⑥ 가장 조용하게 — 선 하나 없이 여백으로만 나눈다 */
+const A6=()=>ph(
+ '<div class="sub">'+meta+'</div>'
+ +'<div class="nm" style="font-size:18px;margin-top:4px">'+D.nm+'</div>'
+ +'<div class="ds" style="margin-top:11px">'+D.dsNext+'</div>'
+ +'<div class="ds now" style="margin-top:2px">'+D.dsNow+'</div>'
+ +'<div class="dots" style="margin-top:15px">'+dots()+'</div>'
+ +'<div class="sub" style="margin-top:6px">'+D.n+' / 5 단계</div>'
+ +'<div style="margin-top:15px">'+gate+'</div>'
+ +'<div style="display:flex;align-items:center;gap:10px;margin-top:15px">'
+ +'<span class="k">비용</span><span class="cost">'+D.cost+'</span>'
+ +'<button class="btn" style="margin-left:auto">'+D.btn+'</button></div>');
+
+const M=[
+ [A1,'① 제목 → 설명 두 줄 → 값','지금 문장(회색)과 다음 문장(흰색)을 <b>나란히</b> 둔다. 무엇이 달라지는지가 두 줄을 견주는 것만으로 읽힌다.'],
+ [A2,'② 다음 문장 하나만','설명은 <b>한 줄</b>. 지금 값은 그 아래 작은 꼬리(「지금은 5배입니다」)로. <i>가장 짧다.</i>'],
+ [A3,'③ 지금 / 다음 라벨','두 문장에 <b>라벨을 붙여</b> 표처럼 나란히. <i>가장 또렷하고 조금 사무적이다.</i>'],
+ [A4,'④ 조건이 설명 바로 아래','「이렇게 됩니다」 다음에 곧바로 <b>「그런데 아직 안 됩니다」</b>. 못 사는 이유가 값과 붙어 읽힌다.'],
+ [A5,'⑤ 아이콘을 크게','왼쪽 54px 아이콘 옆에 <b>이름·메타·두 문장</b>을 한 덩어리로. 세로가 짧아진다.'],
+ [A6,'⑥ 선 없이 여백으로만','구분선을 하나도 쓰지 않는다. <b>여백만으로</b> 나눈다. <i>가장 조용하다 — 대신 덩어리 경계가 흐리다.</i>'],
+];
+document.getElementById('g').innerHTML = M.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>

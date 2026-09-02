@@ -72,12 +72,14 @@
 | 생산 진행 | 파랑 바 `.cgBar`(앞 유닛 %) + 얇은 대기열 선 `.cgQBar`(수량·흰→빨강) | 연구도 동일: 남은 초 = 라벨 옆 `progTime` |
 | 지정(선택) 표시 | 3D 하단 링 | 유닛·건물·라바·중립 자원(미네랄/가스) 전부 이것으로 통일 |
 | 지정 해제 버튼 | 금지(⊘) SVG — 메인 `#deselTop` = 건설 `#btDesel` = 일시정지 카드 | 새 해제/중단 UI도 이 아이콘 재사용 |
+| **확인 팝업(정말 하시겠습니까)** | **`.ecCard` + `.ecTitle`/`.ecMsg`/`.ecBtns` + `.ecCancel`/`.ecGo`** | 게임 나가기(`#exitConfirm`) = 로그아웃(`#logoutPanel`) — 한 컴포넌트(2026-08-27) · 되돌릴 수 없는 주 동작은 **붉은 글자**(`.ecGo`) · ⛔ 확인창을 새로 만들지 말 것 · ⚠ 설정에서 부르는 확인은 **`#phone` 직속 + z-index 97**(설정이 게임 밖에서 95라 그 아래면 통째로 가려진다) |
 | 확정/취소 플로팅 버튼 | `.bArmBtns` (▶ ok / ✕ cancel) | 배치 확정·재개·철거 공용 |
 | 게임 진입 로딩 | `#gsRoot` + `gameStartCountdown()` · `.teamed`(팀전) / `.solo`(개인) | 카드 덱 한 화면이 협동·팀전·개인을 다 맡는다 · 팀 색=카드 윗변 / 준비=밑변 · 초록은 '준비 완료' 전용 · 초상 `avatarHTML()` · 버튼 `.actBtn` |
 | **액션 버튼(확정·취소·시작)** | **`.actBtn`** + `.pri`(주 동작) / 기본(하위) / `:disabled`(잠김) | **옅은 면 + 1px**(2026-08-26 · B4안) · 위계는 **면과 테두리의 밝기**(부 5%/.1 · 주 14%/.32 + 흰 글자) · ⛔ 볼록한 판·밑변 광원·`--font-ti`(Jua) 를 되돌리지 말 것 · 새 버튼에 면·테두리를 따로 쓰지 말고 클래스만 붙일 것(화면이 덮는 건 크기뿐) · `.cpBtns` 안에서 취소는 `.sub` · **팝업 버튼(`#ovBtn`/`#ovBtn2`/`.ecGo`/`.ecCancel`)도 같은 얼굴**(36px) — 로그인 `.authBtn`/`.authGuest` 만 제 디자인을 갖는다 |
 | 유닛 초상 | `_techUnitPortrait(uid)` | 카드·헤더·대기열 공용 |
 | 프리뷰 패널 | `#cstPrev` + `techHidePreview()` | (구 cstHidePreview는 삭제됨) |
 | 알림/사운드 | `toast()` / `playSfx()`·`playSfxT()` | |
+| **채팅 입력줄** | **`.msChatBar` + `.msChatSend`** (`css/40-social.css`) | 유즈맵 하단 도크 = 대기실 — 한 컴포넌트(2026-08-27 통일 · 옛 사본 `.lbChatBar` 는 없앴다) · 범위 배지(`.msScopeDD`)는 **선택 슬롯**이다(대기실은 고를 범위가 하나뿐이라 뺐다) · 전송은 **중립 밝은 회색** — ⛔ 빨강으로 되돌리지 말 것(대기실의 빨강은 「시작」 주 동작의 색) · ⚠ 인게임 `#chatBar` 는 **다른 것**이다(전장 위에 떠서 접히는 말풍선) |
 | **인게임 채팅바** | `#chatBar` + `chatToggle()`/`chatOpenBar()`/`chatFoldBar()` | 접힘(말풍선 44px) ↔ 열림(`[∨｜입력｜전송]` 한 상자) · **유즈맵 안 전 구역**에 있다(캠프만 제외) · ⛔ 열려도 왼쪽 ∨ 를 없애지 말 것(접을 방법이 사라진다) · 상시 청록·붉은 밑변 광원 금지 · ⚠ 구역마다 시트가 다른 요소다(`.bp` ↔ 건설 `#btSheet`) — `_syncSheetLift()` 가 갈라 잰다 |
 | 세로 스크롤바 | `.uiScroll` (CSS 공용) | 스크롤 영역에 클래스만 추가 · `::-webkit-scrollbar`를 새로 정의하지 말 것 (Chrome 최신은 웹킷 의사요소를 무시하고 표준 `scrollbar-width`/`scrollbar-color`만 적용 → 화면마다 굵기가 달라지는 원인이었음) |
 | **재화 아이콘**(미네랄·가스·젬·인구) | **`resIco(key, cls)`** → `assets/icons/res_*.webp` | ⛔ **이모지를 임의로 넣지 말 것.** 한글 이름으로도 찾는다(`resIco('미네랄')`=`resIco('mineral')`) · 새 UI에서 재화를 표시할 땐 무조건 이 함수 · 상단 재화 바(`#curBar`)·인게임 HUD와 같은 그림이 나온다 |
@@ -98,6 +100,7 @@
 | 오토배틀 대전 설정 | `STK_OPTS`(상하한 표) + `STK_PRESETS` + `renderCpMode()` | 상하한·기본값은 표 한 곳에서만 · 엔진 반영은 `MAP_CFG_OVR` → `mapCfg` 한 입구(시작 때 심고 로비 복귀 때 반납) |
 | 목록 고르는 판(방 찾기·파티 찾기) | `.rmCard` + `.rmHead`/`.rmNum`/`.rmList`+`.roomItem`/`.rmBtns` | 방 찾기(`#rooms`)가 원본 · 파티 찾기는 이 컴포넌트를 그대로 빌린다(딤만 `.pfOv`) · **새 목록 판을 만들지 말 것** · 행 밑변 광원 = `--dc`(난이도 색, 없으면 중립) · 하단은 `.actBtn`(주 동작 길게 + `.sq` 38px 둘) |
 | **캠프 단계·라운드 표시** | `#curTitle` 칩(`curPaintChip()` · `js/12-appshell.js`) | 던전 이름·라운드 n/50·진행 막대·이동 드롭다운 · ⛔ 맵 띠(`#campBar`)에 다시 두지 말 것 — 거긴 **적 수와 🌳 트리 입구만** · 상태는 `campDgN()`/`campRoundN()` 이 단일 소스(칩은 읽기만) |
+| **환생 구역** | **`campRebEnter(sec)` 가 유일한 입구** — `'info'`=`#campReb` · `'tree'`=`#campTree` · 내용은 `campRebRender()`/`campTreeRender()` | `#phone` 직속(z-index 120) · **하단 네비가 「환생 · 업그레이드」 두 칸으로 갈린다**(2026-08-31) · 열릴 때 var(--t-screen) 페이드인(⛔ animation-fill-mode 를 주지 말 것 — 탭이 백그라운드면 애니가 멈춰 화면이 통째로 안 보인다) · ⛔ `campRebOpen`/`campTreeOpen` 을 직접 부르지 말 것 — 서로를 안 닫아 둘 다 열린다(캠프 맵 띠 🔁·🌳 칩도 `campRebEnter` 로 온다) · **네비를 가리지 않는다**: 두 화면은 `bottom:var(--navH)` 로 자리를 비우고, 키 아트는 `#phone.artLift .navBar{z-index:121}` 로 네비를 그 위에 올린다(⛔ 키 아트를 `bottom` 으로 자르는 것으로는 안 된다 — 호흡 애니가 8px 더 그린다) · 실행 확인은 `.ecCard` 공용 확인창 · 배경은 **환생 구역 전용 한 장**이다(`#campRebBg` · `assets/backgrounds/reb/reb.webp` · ART.md §14) — 두 화면이 그 한 층을 함께 켠다(⛔ 화면마다 제 그림을 그리지 말 것 · ⛔ 공용 키 아트 `#titleBg` 를 빌리던 옛 방식으로 되돌리지 말 것 — 로그인·부팅과 서로 간섭한다 · 스모크가 잡는다) · 아래 넷은 빼지 말 것: ⭐ **히어로 = 환생 뒤 획득 배수**(`.crBig` · 「먼 목표」의 자리 — 없으면 첫 환생을 손해로 판단한다 · HUNT_R1 §4-2-0) · **포인트 계산 근거**(`.crFx` · 재화×던전×라운드 세 값) · **이번 회차 지표 다섯 줄**(`.crLi` · 터치 / 터치로 번 미네랄 / 자동으로 번 미네랄 / 가스 / 플레이 시간) · 💳 **환생 팩 버튼**(`.crPk` · **버튼 구역**이되 위계는 「환생」보다 한 단 아래 — 높이 38 vs 50 · 색은 보라(현질) · 산 뒤엔 `.on` = 「적용 중」 **상태 표시**라 버튼이 아니다 · ⛔ 젬 1회권으로 되돌리지 말 것 — 결제 팩 영구 ×2 다 · GEM.md §4-1) |
 | **환생 트리(마인드맵)** | `#campTree` + `campTreeOpen()` · 노드는 `campTreeSvg()` | `#phone` 직속 전체 화면 · 밀고 확대 · 입구는 캠프 배지(`#campBar`)의 🌳 칩 · 갈래 색은 `CAMP_TREE_BR` 한 곳 |
 | **일일 퀘스트** | `openDaily()` → `#hbDailySheet` + `renderDaily()` | 더보기 ☰ > 일일 퀘스트 · 하루 5개 + 주간 25개 |
 | **출석** | `openAtt()` → `#hbAttSheet` + `renderAtt()` | 더보기 ☰ > 출석 · **퀘스트와 화면이 다르다**(같은 판에 탭으로 묶지 말 것 — 2026-08-14 분리) |

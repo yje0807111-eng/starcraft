@@ -1,0 +1,369 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>환생 트리 — 별자리 v4 4안</title>
+<style>
+  :root{
+    --font-num:'Rajdhani','DIN Alternate','Bahnschrift',system-ui,sans-serif;
+    --gold:#ffd24a; --info:#4aa8ff; --neon:#ff3b3b; --ok:#5dff8f; --sel:#5cd6ff;
+    --r-bar:3px; --r-md:6px; --r-lg:9px; --edge:rgba(255,255,255,.14);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d12;color:#e8eef7;
+    font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif}
+  .wrap{max-width:1900px;margin:0 auto;padding:26px 22px 60px}
+  h1{font-size:22px;font-weight:700;margin:0 0 6px}
+  .lede{font-size:13px;line-height:1.7;color:#93a0b0;margin:0 0 10px;max-width:1020px}
+  .lede b{color:#e8eef7}
+  .rule{font-size:12.5px;line-height:1.75;color:#8d9aa9;margin:0 0 24px;max-width:1020px;
+    border-left:2px solid rgba(92,214,255,.4);padding:8px 0 8px 12px;background:rgba(92,214,255,.04)}
+  .rule b{color:#cfe6f5} .rule i{font-style:normal;color:#6f7b89}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:26px}
+  .note{font-size:12px;line-height:1.6;color:#93a0b0;margin:10px 2px 0}
+  .note b{color:#e8eef7;font-size:13px}
+  .note i{font-style:normal;color:#6f7b89}
+  .ph{position:relative;width:430px;height:760px;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid rgba(255,255,255,.10);
+    background:radial-gradient(120% 90% at 50% 40%,rgba(16,22,32,.98),rgba(5,7,11,.99))}
+  .top{position:absolute;left:0;right:0;top:0;z-index:4;display:flex;align-items:center;gap:12px;
+    padding:14px 14px 10px;background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,0))}
+  .tt{font-size:15px;font-weight:700;color:#e8eef7;flex:1}
+  .pt{display:flex;align-items:baseline;font-family:var(--font-num);font-size:11px;color:#7b8593;letter-spacing:.22em}
+  .pt b{font-size:16px;font-weight:700;color:var(--gold);letter-spacing:0;margin-left:6px}
+  svg{display:block}
+  text{font-family:'IBM Plex Sans KR','Noto Sans KR',system-ui,sans-serif}
+  .num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+  .desel{position:absolute;right:12px;top:52px;z-index:5;width:38px;height:38px;
+    display:flex;align-items:center;justify-content:center;color:#dfe8f3;
+    filter:drop-shadow(0 2px 8px rgba(0,0,0,.85))}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:14px 14px 16px;
+    border-top:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c)}
+  .shHd{display:flex;align-items:center;gap:10px}
+  .shHt{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .shMeta{display:flex;align-items:center;gap:6px;font-size:10.5px;letter-spacing:.1em;color:#8d9aa9}
+  .shMeta i{font-style:normal;color:#5b6674}
+  .shIco{width:38px;height:38px;flex:0 0 auto;border-radius:var(--r-md);
+    border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .shIco img{width:32px;height:32px;object-fit:contain;display:block}
+  .shNm{font-size:18px;font-weight:700;color:#fff;line-height:1.2}
+  .shN{font-family:var(--font-num);font-size:13px;color:#8d9aa9;margin-left:6px}
+  .shDots{display:flex;gap:4px;margin-top:9px}
+  .shDots i{flex:1;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.08)}
+  .shDesc{font-size:12.5px;line-height:1.6;color:#a7b2c0;margin-top:10px}
+  .shDesc b{color:#e8eef7;font-weight:700}
+  .shGate{margin-top:8px;font-size:11.5px;line-height:1.55;color:#c8b68d;
+    border-left:2px solid rgba(255,177,77,.5);padding:4px 0 4px 9px;background:rgba(255,177,77,.05)}
+  .shGate b{color:#ffd9a3}
+  .shStep{display:flex;align-items:baseline;gap:9px;margin-top:11px;
+    padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+  .shNow{font-family:var(--font-num);font-size:16px;color:#7b8593}
+  .shArw{color:#5b6674;font-size:12px;align-self:center;line-height:1}
+  .shNext{font-family:var(--font-num);font-size:26px;font-weight:700;color:#fff;line-height:1}
+  .shAfter{margin-left:auto;align-self:center;font-size:10.5px;line-height:1.5;color:#69737f;text-align:right}
+  .shAfter b{font-family:var(--font-num);color:#8d9aa9;font-weight:700}
+  .shWal{display:flex;align-items:center;gap:10px;margin-top:11px;
+    padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+  .shCol{min-width:74px;display:flex;flex-direction:column;gap:2px}
+  .shCk{font-size:9.5px;color:#69737f;letter-spacing:.2em}
+  .shCv{font-family:var(--font-num);font-size:18px;font-weight:700;color:var(--gold);line-height:21px}
+  .shCv.sub{font-size:14px;color:#8d9aa9;line-height:21px}
+  .shGo{position:relative;margin-left:auto;min-width:116px;min-height:46px;padding:0 18px;
+    display:inline-flex;align-items:center;justify-content:center;
+    border-radius:var(--r-md);font:700 14px/1 inherit;letter-spacing:.1em;color:#fff;cursor:pointer;
+    border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+  .shGo::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+    box-shadow:0 0 4px rgba(255,210,74,.55)}
+  .shGo.off{border-color:rgba(255,255,255,.14);background:none;color:#69737f}
+  .shGo.off::after{display:none}
+  .hint{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:18px;text-align:center;
+    font-size:12px;color:#69737f;background:linear-gradient(180deg,rgba(6,9,13,0),rgba(6,9,13,.9) 60%)}
+</style>
+<div class="wrap">
+<h1>환생 트리 — 별자리 v4 4안</h1>
+<p class="lede">넷을 고쳤다. ① 빈 원을 <b>등급이 보이는 성좌 보석</b>으로 — 안에 <b>진짜 아이콘</b>이 들어가고
+  테두리가 등급마다 다르다. ② 가운데 <b>「환생」 글씨를 뺐다</b>(붉은 마름모만). ③ 일부 별은
+  <b>두 갈래가 모두 열려야</b> 켜진다. ④ 값은 <b>원 밖 아래</b>로 내려 아이콘을 가리지 않는다.</p>
+<p class="rule"><b>등급이 테두리로 읽힌다.</b> 흔함 = 가는 한 겹 · 보통 = 밝은 한 겹 · <b>귀함 = 금색 두 겹</b> ·
+  <b>극상 = 금색 두 겹 + 바깥 광륜</b>. 산 별은 <b>갈래 색으로 타오르고</b> 선이 굵어진다.
+  <i>아이콘은 지어낸 것이 아니라 게임에 있는 것(assets/icons)에서 계열마다 하나씩 골랐다.</i></p>
+<div class="grid" id="g"></div>
+</div>
+
+<script>
+/* ══ 데이터 ══════════════════════════════════════════════════════════ */
+const BR = {
+  enemy:{ a:-Math.PI*0.76, rk:1.34, nm:'적 약화',   col:'#ff3b3b' },
+  econ: { a:-Math.PI*0.24, rk:0.82, nm:'재화 획득', col:'#ffd24a' },
+  start:{ a: Math.PI*0.70, rk:0.88, nm:'시작 도움', col:'#5dff8f' },
+  army: { a: Math.PI*0.30, rk:1.26, nm:'아군 강화', col:'#4aa8ff' },
+};
+const IC='../../assets/icons/';
+/* 🖼 계열 → 아이콘. **게임에 있는 파일만** 쓴다(존재를 확인했다). */
+const LINES = [
+  {k:'tap',br:'start',grp:'가',gr:'흔함',nm:'탭당 미네랄',   ic:IC+'res_mineral.webp'},
+  {k:'startMin',br:'start',grp:'가',gr:'보통',nm:'시작 미네랄',ic:IC+'upgrades/up_mineral_up.webp'},
+  {k:'startWk',br:'start',grp:'나',gr:'흔함',nm:'시작 일꾼',  ic:IC+'buildings/bld_command.webp'},
+  {k:'startBld',br:'start',grp:'나',gr:'보통',nm:'시작 건물', ic:IC+'buildings/bld_barracks.webp'},
+  {k:'earlyDc',br:'start',grp:'다',gr:'흔함',nm:'초반 건물 할인',ic:IC+'buildings/bld_engbay.webp'},
+  {k:'startUp',br:'start',grp:'다',gr:'보통',nm:'시작 업그레이드',ic:IC+'upgrades/up_perm.webp'},
+  {k:'startUnit',br:'start',grp:'라',gr:'흔함',nm:'시작 유닛',ic:IC+'buildings/bld_bunker.webp'},
+  {k:'skipRd',br:'start',grp:'라',gr:'귀함',nm:'라운드 건너뛰기',ic:IC+'skills/sk_recall.webp'},
+  {k:'gather',br:'econ',grp:'가',gr:'흔함',nm:'일꾼 채취량', ic:IC+'upgrades/up_mine.webp'},
+  {k:'gas',br:'econ',grp:'가',gr:'보통',nm:'가스 생산량',    ic:IC+'res_gas.webp'},
+  {k:'wkCap',br:'econ',grp:'나',gr:'흔함',nm:'일꾼 상한',    ic:IC+'upgrades/up_transport.webp'},
+  {k:'mine',br:'econ',grp:'나',gr:'귀함',nm:'광산 등급',     ic:IC+'buildings/bld_extractor.webp'},
+  {k:'idle',br:'econ',grp:'다',gr:'흔함',nm:'방치 수급',     ic:IC+'skills/sk_recharge.webp'},
+  {k:'dgRw',br:'econ',grp:'다',gr:'보통',nm:'던전 보상',     ic:IC+'res_gem.webp'},
+  {k:'tapMul',br:'econ',grp:'라',gr:'흔함',nm:'탭 배수',     ic:IC+'skills/sk_nova.webp'},
+  {k:'gasEx',br:'econ',grp:'라',gr:'보통',nm:'가스 교환비',  ic:IC+'buildings/bld_assimilator.webp'},
+  {k:'atk',br:'army',grp:'가',gr:'흔함',nm:'유닛 공격력',    ic:IC+'upgrades/up_inf_atk.webp'},
+  {k:'hp',br:'army',grp:'가',gr:'보통',nm:'유닛 체력',       ic:IC+'upgrades/up_gnd_arm.webp'},
+  {k:'prod',br:'army',grp:'나',gr:'흔함',nm:'생산 속도',     ic:IC+'upgrades/up_speed.webp'},
+  {k:'sup',br:'army',grp:'나',gr:'보통',nm:'인구 상한',      ic:IC+'res_pop.webp'},
+  {k:'upCost',br:'army',grp:'다',gr:'흔함',nm:'업그레이드 비용',ic:IC+'buildings/bld_armory.webp'},
+  {k:'endure',br:'army',grp:'다',gr:'귀함',nm:'버팀',        ic:IC+'upgrades/up_shield.webp'},
+  {k:'bldg',br:'army',grp:'라',gr:'흔함',nm:'건물 강화',     ic:IC+'buildings/bld_cannon.webp'},
+  {k:'skCd',br:'army',grp:'라',gr:'보통',nm:'스킬 쿨다운',   ic:IC+'upgrades/up_mana.webp'},
+  {k:'foeHp',br:'enemy',grp:'가',gr:'흔함',nm:'적 체력',     ic:IC+'skills/sk_plague.webp'},
+  {k:'foeN',br:'enemy',grp:'가',gr:'귀함',nm:'적 마리 수',   ic:IC+'skills/sk_dark_swarm.webp'},
+  {k:'foeAtk',br:'enemy',grp:'나',gr:'흔함',nm:'적 공격력',  ic:IC+'skills/sk_lockdown.webp'},
+  {k:'foeRes',br:'enemy',grp:'나',gr:'보통',nm:'적 부활 시간',ic:IC+'skills/sk_ensnare.webp'},
+  {k:'foeSpd',br:'enemy',grp:'다',gr:'흔함',nm:'적 이동 속도',ic:IC+'skills/sk_slow.webp'},
+  {k:'bossHp',br:'enemy',grp:'다',gr:'보통',nm:'보스 체력',  ic:IC+'skills/sk_irradiate.webp'},
+  {k:'foeRng',br:'enemy',grp:'라',gr:'흔함',nm:'적 사거리',  ic:IC+'skills/sk_optical_flare.webp'},
+  {k:'foeDelay',br:'enemy',grp:'라',gr:'보통',nm:'적 등장 지연',ic:IC+'skills/sk_maelstrom.webp'},
+];
+const GRP={가:[1,5,9,13,17],나:[2,6,10,14,18],다:[3,7,11,15,19],라:[4,8,12,16,20]};
+const MILE={가:5,나:10,다:15,라:20};
+const GRADE={흔함:.5,보통:1,귀함:3,극상:10};
+const LADDER=[0,1.5,2.5,5,11,25];
+const CUT=[0,.12,.25,.33,.38,.40];
+const BASE=2, MUL=4, GK=['가','나','다','라'];
+const BR_COST=8, GP_COST=32;
+const GATE_N=4;                       // ⭐ 이 차수부터 **형제 계열도 3차 이상**이어야 열린다
+const GATE_REQ=3;
+const L_=k=>LINES.find(x=>x.k===k);
+const tier=(k,n)=>GRP[L_(k).grp][Math.max(1,Math.min(5,n))-1];
+const grade=(k,n)=>(L_(k).gr==='귀함'&&tier(k,n)===MILE[L_(k).grp])?'극상':L_(k).gr;
+const cost=(k,n)=>BASE*Math.pow(MUL,tier(k,n)-1)*GRADE[grade(k,n)];
+const SUF=['','K','M','B','T','aa','ab','ac','ad'];
+function num(v){ if(v<1000) return (v%1?v.toFixed(1):String(v));
+  let i=0; while(v>=1000&&i<SUF.length-1){v/=1000;i++;}
+  return (v<10?v.toFixed(2):v<100?v.toFixed(1):Math.round(v))+SUF[i]; }
+const isCut=k=>L_(k).br==='enemy';
+const val=(k,n)=>n<=0?(isCut(k)?'0%':'×1')
+  :(isCut(k)?Math.round(CUT[Math.min(5,n)]*100)+'%':'×'+LADDER[Math.min(5,n)]);
+const desc=(k,n)=> isCut(k)
+  ? ('적을 <b>'+val(k,n)+'</b> 깎는다. 적 약화는 곱해서 쌓이되 <b>1/5 아래로는 안 내려간다</b>.')
+  : ('<b>'+val(k,n)+'</b> 로 오른다. 회차를 넘겨도 <b>남는</b> 영구 강화다.');
+const linesOf=b=>LINES.filter(x=>x.br===b);
+const inGrp=(b,g)=>LINES.filter(x=>x.br===b&&x.grp===g);
+const sib=k=>{ const L=L_(k); return inGrp(L.br,L.grp).find(x=>x.k!==k); };   // 같은 묶음의 짝
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+/* ══ 해금 — 부모가 켜져야 자식이 보인다 + 🔗 두 갈래가 모이는 관문 ══ */
+function W(bag,pts){
+  const has=k=>bag[k]|0;
+  const brOn=b=>has('br:'+b)>0, gpOn=(b,g)=>has('gp:'+b+g)>0;
+  const stBr=b=>brOn(b)?'own':(has('root')? (pts>=BR_COST?'buy':'next') : null);
+  const stGp=(b,g)=>gpOn(b,g)?'own':(brOn(b)? (pts>=GP_COST?'buy':'next') : null);
+  /* 🔗 4차부터는 **짝 계열도 3차 이상**이어야 한다 — 한 줄만 파고들 수 없게 */
+  const gateOk=(k,n)=>{ if(n<GATE_N) return true; const s=sib(k); return !s || has(s.k)>=GATE_REQ; };
+  const stN=(k,n)=>{ const L=L_(k);
+    if(!gpOn(L.br,L.grp)) return null;
+    const h=has(k);
+    if(n<=h) return 'own';
+    if(n!==h+1) return null;
+    if(!gateOk(k,n)) return 'gate';                    // 보이되 **잠겨 있다**(관문)
+    return pts>=cost(k,n)?'buy':'next'; };
+  const vis=k=>{ const o=[]; for(let n=1;n<=5;n++){ const s=stN(k,n); if(s) o.push({n,s}); } return o; };
+  return {has,brOn,gpOn,stBr,stGp,stN,vis,gateOk,pts};
+}
+
+/* ══ 흩뜨림 ══════════════════════════════════════════════════════════ */
+function hash(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return ((h>>>0)%10000)/10000; }
+const jit=(k,n,seed)=>hash(k+':'+n+':'+seed)*2-1;
+const AMT=0.70;
+function tree(o){
+  const {rbr,rgp,rn1,rs,sp}=o, P={};
+  for(const bk in BR){ const B=BR[bk]; const rb=rbr*(B.rk||1);
+    P[bk]={x:Math.cos(B.a)*rb, y:Math.sin(B.a)*rb, g:{}};
+    GK.forEach((g,gi)=>{ const a=B.a+(gi-1.5)*(sp/3) + jit(bk+g,0,'g')*(sp/3)*0.16*AMT;
+      const rg=rgp*(0.72+(B.rk||1)*0.34)+jit(bk+g,0,'rg')*14*AMT;
+      P[bk].g[g]={x:Math.cos(a)*rg, y:Math.sin(a)*rg, l:{}};
+      inGrp(bk,g).forEach((L,li)=>{ P[bk].g[g].l[L.k]={ a:a+(li-0.5)*(sp/3)*0.46 }; }); }); }
+  const node=(k,n)=>{ const L=L_(k), q=P[L.br].g[L.grp].l[k];
+    const a=q.a + jit(k,n,'a')*(sp/3)*0.30*AMT;
+    const r=rn1*(0.80+(BR[L.br].rk||1)*0.22)+(n-1)*rs + jit(k,n,'r')*rs*0.34*AMT;
+    return {x:Math.cos(a)*r, y:Math.sin(a)*r}; };
+  return {P,node};
+}
+function defs(gid){ return '<defs>'
+  + '<filter id="'+gid+'" x="-90%" y="-90%" width="280%" height="280%">'
+  + '<feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/>'
+  + '<feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+  /* 아직 안 산 별은 아이콘을 어둡게 — 채도를 빼고 눌러 둔다 */
+  + '<filter id="'+gid+'d"><feColorMatrix type="saturate" values="0.15"/>'
+  + '<feComponentTransfer><feFuncR type="linear" slope="0.42"/><feFuncG type="linear" slope="0.42"/>'
+  + '<feFuncB type="linear" slope="0.46"/></feComponentTransfer></filter>'
+  + '</defs>'; }
+function dust(n,R,seed){ let s=seed||7, o='';
+  const rnd=()=>{ s=(s*1103515245+12345)&0x7fffffff; return s/0x7fffffff; };
+  for(let i=0;i<n;i++){ const a=rnd()*Math.PI*2, r=40+rnd()*R;
+    o+='<circle cx="'+(Math.cos(a)*r).toFixed(1)+'" cy="'+(Math.sin(a)*r).toFixed(1)
+      +'" r="'+(.4+rnd()*1.1).toFixed(2)+'" fill="#cfe0f2" opacity="'+(.06+rnd()*.20).toFixed(2)+'"/>'; }
+  return o; }
+function spark(x,y,r,col,op){ return '<path d="M'+(x-r)+' '+y+' L'+(x+r)+' '+y+' M'+x+' '+(y-r)+' L'+x+' '+(y+r)
+  +'" stroke="'+col+'" stroke-width=".7" opacity="'+(op||.5)+'"/>'; }
+/* ⭐ 가운데 — 글씨 없이 **붉은 마름모** 하나 */
+function core(r){ const p=[[0,-r],[r,0],[0,r],[-r,0]].map(q=>q[0]+','+q[1]).join(' ');
+  const p2=[[0,-r*1.7],[r*1.7,0],[0,r*1.7],[-r*1.7,0]].map(q=>q[0]+','+q[1]).join(' ');
+  return '<circle cx="0" cy="0" r="'+(r*3.2)+'" fill="rgba(255,70,60,.06)"/>'
+    + spark(0,0,r*3.4,'#ff6a4a',.42)
+    + '<polygon points="'+p2+'" fill="none" stroke="rgba(255,120,90,.42)" stroke-width="1"/>'
+    + '<polygon points="'+p+'" fill="#ff5a3c" stroke="#ffd0be" stroke-width="1.1"/>'; }
+
+/* ══ ⭐ 별 하나 — 등급이 테두리로, 내용이 아이콘으로 ══════════════════
+   흔함 가는 한 겹 · 보통 밝은 한 겹 · 귀함 금 두 겹 · 극상 금 두 겹 + 광륜 */
+function gem(o){
+  const {x,y,r,col,state,gr,ic,label,me,f}=o, s=[];
+  const own=state==='own', buy=state==='buy', gate=state==='gate';
+  const ringCol = own?col : (buy?col : (gate?'rgba(255,177,77,.55)':'rgba(200,220,240,.30)'));
+  const gold='#ffcf5a';
+  if(me){ s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*2.4)+'" fill="rgba(92,214,255,.07)"/>');
+    s.push(spark(x,y,r*2.2,'#5cd6ff',.5)); }
+  if(own){ s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*1.45)+'" fill="'+col+'" opacity="'+(0.11*f).toFixed(3)+'"/>');
+    s.push(spark(x,y,r*1.75,col,.34*f)); }
+  if(gr==='극상') s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r+6)+'" fill="none" stroke="'+gold
+    +'" stroke-width="1" opacity="'+(0.30*f).toFixed(2)+'" stroke-dasharray="2 4"/>');
+  s.push('<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="rgba(6,9,14,.94)" stroke="'+ringCol
+    +'" stroke-width="'+(own?1.7:1.1)+'" opacity="'+f.toFixed(2)+'"/>');
+  if(gr==='귀함'||gr==='극상')
+    s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r-2.6)+'" fill="none" stroke="'+gold
+      +'" stroke-width="1" opacity="'+((own?.85:.55)*f).toFixed(2)+'"/>');
+  else if(gr==='보통')
+    s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r-2.6)+'" fill="none" stroke="rgba(220,232,246,.34)"'
+      +' stroke-width=".8" opacity="'+f.toFixed(2)+'"/>');
+  if(ic){ const w=r*1.46;
+    s.push('<image href="'+ic+'" x="'+(x-w/2).toFixed(1)+'" y="'+(y-w/2).toFixed(1)+'" width="'+w.toFixed(1)
+      +'" height="'+w.toFixed(1)+'" opacity="'+((own?1:(buy?.92:.6))*f).toFixed(2)+'"'
+      +(own?'':' filter="url(#'+o.gid+'d)"')+'/>'); }
+  if(gate && !me) s.push('<text x="'+x+'" y="'+(y+r+4)+'" text-anchor="middle" dominant-baseline="hanging" font-size="7.4" fill="#c8a86d"'
+    +' opacity="'+f.toFixed(2)+'">짝 필요</text>');
+  else if(label) s.push('<text x="'+x+'" y="'+(y+r+4)+'" text-anchor="middle" dominant-baseline="hanging" font-size="7.8" class="num" fill="'
+    +(buy?col:'#7b8593')+'" opacity="'+f.toFixed(2)+'">'+label+'</text>');
+  if(me) s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r+5)+'" fill="none" stroke="#5cd6ff" stroke-width="1.1" opacity=".85"/>');
+  return s.join('');
+}
+function draw(T,w,opt){
+  const o=[], sel=opt.sel, dim=opt.dim||0, gid=opt.gid;
+  const F=me=>me?1:(1-dim*.78);
+  const isSel=(t,a,b)=>sel&&sel.t===t&&sel.a===a&&(b==null||sel.b===b);
+  function link(a,b,col,lit,me,dash){ const f=F(me);
+    o.push('<line x1="'+a.x.toFixed(1)+'" y1="'+a.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)
+      +'" stroke="'+(lit?col:'rgba(200,220,240,.20)')+'" stroke-width="'+(lit?2:.9)+'" opacity="'
+      +((lit?.62:1)*f).toFixed(2)+'"'+(lit&&!dash?'':' stroke-dasharray="2 3"')+'/>'); }
+  for(const bk in BR){ const B=BR[bk], p=T.P[bk], sb=w.stBr(bk); if(!sb) continue;
+    link({x:0,y:0},p,B.col,sb==='own',isSel('br',bk));
+    o.push(gem({x:p.x.toFixed(1),y:p.y.toFixed(1),r:13,col:B.col,state:sb,gr:'보통',
+      label:sb==='own'?'':num(BR_COST),me:isSel('br',bk),f:F(isSel('br',bk)),gid}));
+    if(sb!=='own') continue;
+    GK.forEach(g=>{ const q=p.g[g], sg=w.stGp(bk,g); if(!sg) return;
+      link(p,q,B.col,sg==='own',isSel('gp',bk,g));
+      o.push(gem({x:q.x.toFixed(1),y:q.y.toFixed(1),r:11,col:B.col,state:sg,gr:'흔함',
+        label:sg==='own'?'':num(GP_COST),me:isSel('gp',bk,g),f:F(isSel('gp',bk,g)),gid}));
+      if(sg!=='own') return;
+      inGrp(bk,g).forEach(L=>{ w.vis(L.k).forEach(v=>{
+        const b=T.node(L.k,v.n), a=(v.n===1)?q:T.node(L.k,v.n-1), me=isSel('n',L.k,v.n);
+        link(a,b,B.col,v.s==='own',me);
+        /* 🔗 관문 — 짝 계열에서 오는 두 번째 줄. 두 갈래가 여기서 만난다 */
+        if(v.n>=GATE_N){ const s2=sib(L.k);
+          if(s2 && w.has(s2.k)>=1){ const q2=T.node(s2.k,Math.min(w.has(s2.k),GATE_REQ)), ok=w.gateOk(L.k,v.n), f2=F(me);
+            o.push('<line x1="'+q2.x.toFixed(1)+'" y1="'+q2.y.toFixed(1)+'" x2="'+b.x.toFixed(1)+'" y2="'+b.y.toFixed(1)
+              +'" stroke="'+(ok?'rgba(255,190,90,.75)':'rgba(255,177,77,.42)')+'" stroke-width="1.2"'
+              +' stroke-dasharray="4 4" opacity="'+f2.toFixed(2)+'"/>'); } }
+        o.push(gem({x:b.x.toFixed(1),y:b.y.toFixed(1),r:v.s==='own'?13:15,col:B.col,state:v.s,
+          gr:grade(L.k,v.n),ic:L.ic,label:v.s==='own'?'':num(cost(L.k,v.n)),me,f:F(me),gid})); }); }); }); }
+  return o.join('');
+}
+function scene(o){
+  const T=tree({rbr:66,rgp:132,rn1:206,rs:52,sp:1.30}), w=o.w, sel=o.sel;
+  let s=o.scale||.80, tx=0, ty=0;
+  if(sel){ const p = sel.t==='n' ? T.node(sel.a,sel.b)
+      : sel.t==='gp' ? T.P[sel.a].g[sel.b] : T.P[sel.a];
+    s=o.zoom||1.55; tx=-p.x*s; ty=(o.up==null?-140:o.up)-p.y*s; }
+  let brn=''; for(const bk in BR){ const B=BR[bk]; if(!w.stBr(bk)) continue;
+    brn+='<text x="'+(Math.cos(B.a)*300).toFixed(0)+'" y="'+(Math.sin(B.a)*300).toFixed(0)
+      +'" text-anchor="middle" dominant-baseline="middle" font-size="10" letter-spacing="3" fill="'+B.col
+      +'" opacity="'+(sel?.18:.5)+'">'+B.nm+'</text>'; }
+  const inner=defs(o.gid)+dust(o.dust==null?110:o.dust,310,o.seed||17)+brn
+    + draw(T,w,{gid:o.gid,sel,dim:o.dim}) + core(13);
+  return '<svg viewBox="-215 -328 430 630" style="position:absolute;left:0;right:0;top:52px;width:430px;height:630px">'
+    + '<g transform="translate('+tx.toFixed(1)+' '+ty.toFixed(1)+') scale('+s+')">'+inner+'</g></svg>';
+}
+const DESEL='<div class="desel"><svg viewBox="0 0 24 24" width="26" height="26">'
+  +'<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+  +'<line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></div>';
+function sheet(w,k,n){
+  const L=L_(k), B=BR[L.br], g=grade(k,n), c=cost(k,n);
+  const stt=w.stN(k,n), own=stt==='own', gate=stt==='gate';
+  const left=w.pts-c, can=left>=0 && !own && !gate;
+  const dots=[1,2,3,4,5].map(i=>'<i style="background:'
+    +(i<=w.has(k)?B.col:(i===n?'rgba(255,255,255,.34)':'rgba(255,255,255,.08)'))+'"></i>').join('');
+  const nx = n<5 ? ('다음 <b>'+val(k,n+1)+'</b> · 비용 <b>'+num(cost(k,n+1))+'</b>') : '이 계열의 <b>마지막</b>';
+  const s=sib(k);
+  const gateLine = (n>=GATE_N && s)
+    ? '<div class="shGate">🔗 <b>'+esc(s.nm)+'</b> 도 <b>'+GATE_REQ+'차</b> 이상이어야 열린다 — 지금 '
+      + w.has(s.k) + '차. <i>같은 묶음의 두 줄을 함께 키우라는 뜻이다.</i></div>' : '';
+  return '<div class="sheet"><div class="shHd">'
+    + '<span class="shIco"><img src="'+L.ic+'" alt=""></span>'
+    + '<span class="shHt"><span><span class="shNm">'+esc(L.nm)+'</span><span class="shN">'+n+'차 / 5</span></span>'
+    + '<span class="shMeta"><span style="color:'+B.col+'">'+B.nm+'</span><i>·</i>'+g+'<i>·</i>T'+tier(k,n)+'</span></span></div>'
+    + '<div class="shDots">'+dots+'</div>'
+    + '<div class="shDesc">'+desc(k,n)+'</div>'
+    + gateLine
+    + '<div class="shStep"><span class="shNow">'+val(k,n-1)+'</span><span class="shArw">▶</span>'
+    + '<span class="shNext">'+val(k,n)+'</span><span class="shAfter">'+nx+'</span></div>'
+    + '<div class="shWal">'
+    + '<div class="shCol"><div class="shCk num">비용</div><div class="shCv">'+num(c)+'</div></div>'
+    + '<div class="shCol"><div class="shCk num">사고 나면</div><div class="shCv sub">'
+      +(left>=0?num(left):'−'+num(-left))+'</div></div>'
+    + (own ? '<button class="shGo off">보유</button>'
+       : gate ? '<button class="shGo off">짝이 모자람</button>'
+       : can ? '<button class="shGo">사 기</button>'
+             : '<button class="shGo off">포인트 부족</button>')
+    + '</div></div>'; }
+let PT=0;
+function frame(inner,tail){
+  return '<div class="ph"><div class="top"><span class="tt">환생 트리</span>'
+    + '<span class="pt num">포인트<b>'+num(PT)+'</b></span></div>' + inner + (tail||'') + '</div>'; }
+function cut(bag,pts,opt){ PT=pts; const w=W(bag,pts);
+  return frame(scene(Object.assign({w},opt)), opt.tail); }
+
+/* ══ 네 컷 ══════════════════════════════════════════════════════════ */
+const B1={root:1};
+const B2={root:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1};
+const B3={root:1,'br:econ':1,'br:army':1,'br:enemy':1,
+  'gp:econ가':1,'gp:econ나':1,'gp:econ다':1,'gp:army가':1,'gp:enemy가':1,
+  gather:3,gas:2,wkCap:2,mine:1,idle:3,dgRw:1,atk:3,hp:1,foeHp:2,foeN:1};
+const MOCKS=[
+  [()=>cut(B1,12,{gid:'d1',seed:11,tail:'<div class="hint">갈래를 하나 사서 뻗어 나간다</div>'}),
+   '① 첫 환생 직후','가운데는 <b>붉은 마름모</b>뿐이다(글씨 없음). 갈래 넷은 아직 어두운 보석. '
+     +'<i>산 것이 없으니 아이콘도 눌려 있다.</i>'],
+  [()=>cut(B2,900,{gid:'d2',seed:11,tail:'<div class="hint">별을 누르면 커지며 아래에 설명이 열린다</div>'}),
+   '② 갈래 하나를 산 뒤','산 별은 <b>제 색으로 타오르고</b> 아이콘이 선명해진다. 앞에 놓인 별은 어두운 보석에 '
+     +'값만 아래 붙는다. <i>등급이 테두리로 갈린다 — 광산 등급(귀함)은 금색 두 겹이다.</i>'],
+  [()=>cut(B3,12000,{gid:'d3',seed:11,tail:'<div class="hint">밀고 벌려서 본다</div>'}),
+   '③ 여러 회차 뒤','아이콘이 있으니 <b>어느 별이 무엇인지</b>를 확대하지 않고도 짚는다. '
+     +'<i>주황 점선이 「짝이 있어야 열리는」 관문이다.</i>'],
+  [()=>cut(B3,12000,{gid:'d4',seed:11,sel:{t:'n',a:'gather',b:4},zoom:1.5,up:-176,dim:1,
+     tail:DESEL+sheet(W(B3,12000),'gather',4)}),
+   '④ <b>관문에 걸린 별</b>을 눌렀을 때','일꾼 채취량 4차는 <b>짝인 가스 생산량이 3차</b> 여야 열린다(지금 2차). '
+     +'그래서 <b>주황 점선</b>이 두 별을 잇고, 아래에도 그 조건이 뜬다. <i>한 줄만 파고들 수 없다.</i>'],
+];
+document.getElementById('g').innerHTML = MOCKS.map(([fn,t,d])=>
+  '<div><div>'+fn()+'</div><div class="note"><b>'+t+'</b><br>'+d+'</div></div>').join('');
+</script>
