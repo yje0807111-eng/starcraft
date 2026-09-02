@@ -42,27 +42,27 @@ const RUNE_GD = {
 //   ⛔ 감소형(쿨타임·비용 −%)을 넣지 말 것 — 합산이라 100% 를 넘으면 부호가 뒤집힌다.
 //     넣으려면 상한을 함께 설계해야 한다(지금은 전부 증가형이라 그 문제가 없다).
 const RUNE_LIST = [
-  // ── 일반 10종 ── (하급 : 중급 : 상급 ≈ 1 : 2.5 : 5)
+  // ── 일반 9종 ── 값은 아래 RUNE_VAL 이 정한다(하급 1% · 중급 2.5% · 상급 5%)
   { id:'gain',  nm:'재화의 룬',   kind:'norm', eff:'gain',  ico:'coin',
-    de:'캠프 재화 획득',   v:{ low:0.04, mid:0.10, high:0.20 } },
+    de:'캠프 재화 획득' },
   { id:'tap',   nm:'손끝의 룬',   kind:'norm', eff:'tap',   ico:'coin',
-    de:'탭 획득량',        v:{ low:0.05, mid:0.12, high:0.25 } },
+    de:'탭 획득량' },
   { id:'gas',   nm:'정제의 룬',   kind:'norm', eff:'gas',   ico:'box',
-    de:'가스 획득',        v:{ low:0.05, mid:0.12, high:0.25 } },
+    de:'가스 획득' },
   // ⭐ 이동속도 룬은 **일꾼 하나뿐**이다(사용자 확정 2026-09-02).
   //   ⛔ 「유닛 이동속도」를 다시 만들지 말 것 — 뺀 축이다. 전투 유닛은 공격력·체력·공격속도로 센다.
   { id:'wspd',  nm:'신속의 룬',   kind:'norm', eff:'wspd',  ico:'boost',
-    de:'일꾼 이동속도',    v:{ low:0.07, mid:0.18, high:0.35 } },
+    de:'일꾼 이동속도' },
   { id:'pop',   nm:'증원의 룬',   kind:'norm', eff:'pop',   ico:'user',
-    de:'인구 상한',        v:{ low:0.03, mid:0.08, high:0.15 } },
+    de:'인구 상한' },
   { id:'atk',   nm:'힘의 룬',     kind:'norm', eff:'atk',   ico:'upg',
-    de:'유닛 공격력',      v:{ low:0.04, mid:0.10, high:0.20 } },
+    de:'유닛 공격력' },
   { id:'aspd',  nm:'연타의 룬',   kind:'norm', eff:'aspd',  ico:'upg',
-    de:'유닛 공격속도',    v:{ low:0.04, mid:0.10, high:0.20 } },
+    de:'유닛 공격속도' },
   { id:'hp',    nm:'수호의 룬',   kind:'norm', eff:'hp',    ico:'armor',
-    de:'유닛 체력',        v:{ low:0.05, mid:0.12, high:0.25 } },
+    de:'유닛 체력' },
   { id:'heal',  nm:'치유의 룬',   kind:'norm', eff:'heal',  ico:'hero',
-    de:'회복량',           v:{ low:0.06, mid:0.15, high:0.30 } },
+    de:'회복량' },
   // ── 유니크 4종 — **다른 데서 못 사는 것**이라 칸이 셋뿐이다 ──
   // ⛔ **+10% 로 되돌리지 말 것**(실측 2026-09-02 · BALANCE §3-2-6).
   //   그 값은 45분 누적 수입을 **+60%** 로 만들었다 — 누적 증폭 4.9제곱으로,
@@ -72,19 +72,33 @@ const RUNE_LIST = [
   { id:'speed', nm:'가속의 룬',   kind:'uniq', eff:'speed', ico:'boost',
     de:'캠프 전체 진행 속도', v:0.025 },
   { id:'round', nm:'질주의 룬',   kind:'uniq', eff:'round', ico:'rec',
-    de:'라운드 진행 속도',    v:0.15 },
+    de:'라운드 진행 속도' },
   { id:'mapg',  nm:'전리품의 룬', kind:'uniq', eff:'mapGain', ico:'map',
-    de:'유즈맵 보상 재화',    v:0.20 },
+    de:'유즈맵 보상 재화' },
   // ⚠ 피버타임은 **다른 구역에서 만드는 중**이다(2026-09-02). 여기서는 칸만 잡아 둔다 —
   //   `campRuneEff('fever')` 를 그쪽이 부르면 그때 살아난다.
   { id:'fever', nm:'열기의 룬',   kind:'uniq', eff:'fever', ico:'new',
-    de:'피버 게이지 상승 확률', v:0.25 } ];
+    de:'피버 게이지 상승 확률' } ];
+
+// ── 📏 **효과 값 — 등급이 정한다** (2026-09-02 사용자 확정: 「전부 1~5% 로」) ──
+// ⭐ **룬은 게임을 심하게 바꾸면 안 된다.** 앞 값(상급 15~35%)은 다 갖추면 수입 ×1.47 ·
+//   라운드 +6 이었다(BALANCE §3-2-6). 그 폭이 「조금 도와주는 것」의 선을 넘었다.
+// ⭐ **룬마다 값을 다르게 두지 않는다.** 1~5% 안에서 룬끼리 1%p 를 다투게 만들어 봐야
+//   실측 흔들림(판마다 ±40%)에 묻힌다 — 고르는 이유는 **세기가 아니라 무슨 축이냐**여야 한다.
+// ⛔ 이 값을 두 자릿수로 되돌리지 말 것. 그러면 룬이 「연구 2」가 된다.
+const RUNE_VAL = { low:0.01, mid:0.025, high:0.05 };
+// 유니크 기본값. ⚠ **가속의 룬만 제 값(2.5%)을 갖는다** — 시간 자체를 늘리는 축이라
+//   같은 %가 다른 룬보다 훨씬 세다(실측: +10% 가 수입 +60%). 이유는 그 항목 주석에.
+const RUNE_VAL_UNIQ = 0.05;
 
 // ── 💎 값 — **등급이 정한다. 룬마다 따로 두지 않는다** ────────────────────
 // ⭐ **등급이 오를수록 %당 값이 비싸다**(10 → 13 → 20 젬/%). 손해처럼 보이지만 맞다 —
 //   여기서 진짜 귀한 것은 %가 아니라 **칸**이다. 상급은 같은 효과를 **한 칸으로** 낸다.
 //   ⛔ 「상급이 %당 싸게」 뒤집지 말 것. 그러면 하급을 살 이유가 사라져 등급이 셋일 뜻이 없어진다.
 // 관례 대조(GEM.md §5-4-4): 젬당 16~22원 → 상급 400젬 ≈ ₩7,000 · 유니크 1,200젬 ≈ ₩20,000.
+// ⚠ **효과 값이 4배 낮아졌는데 젬 값은 그대로다**(2026-09-02). 상급 400젬(≈₩7,000)에
+//   +5% 라 %당 값이 8,000원꼴이다 — 앞 표(+20% · 2,000원꼴)보다 네 배 비싸다.
+//   ⛔ 함부로 내리지 말 것 — **가격은 사용자 결정**이다. 다만 값을 정할 때 이 사실을 볼 것.
 const RUNE_GEM = { low:40, mid:130, high:400 };
 const RUNE_GEM_UNIQ = 1200;
 
@@ -137,8 +151,12 @@ function runeKey(id, gd){ const d = runeDef(id); if(!d) return '';
 function runeParse(key){ const s = String(key || '').split(':');
   const d = runeDef(s[0]); if(!d) return { def:null, gd:'' };
   return { def:d, gd:(d.kind === 'uniq') ? 'uniq' : (s[1] || '') }; }
+// 📏 효과 값도 **등급 표**가 정한다(RUNE_VAL). 룬이 제 값을 갖고 싶으면 def.v 로 덮는다.
+//   ⛔ 룬마다 값을 흩뿌리지 말 것 — 젬 값(runeGem)과 같은 원칙이다.
 function runeVal(key){ const p = runeParse(key); if(!p.def) return 0;
-  return (p.def.kind === 'uniq') ? (p.def.v || 0) : ((p.def.v && p.def.v[p.gd]) || 0); }
+  if(p.def.kind === 'uniq') return (p.def.v != null) ? p.def.v : RUNE_VAL_UNIQ;
+  if(p.def.v && p.def.v[p.gd] != null) return p.def.v[p.gd];
+  return RUNE_VAL[p.gd] || 0; }
 // 💎 값은 **등급 표**가 정한다(RUNE_GEM). 룬이 제 값을 갖고 싶으면 def.gem 으로 덮는다.
 //   ⛔ 룬마다 값을 흩뿌리지 말 것 — 값을 손볼 때 한 곳만 고치면 되게 둔다.
 function runeGem(key){ const p = runeParse(key); if(!p.def) return 0;
