@@ -54,6 +54,12 @@ const GIFT_S=+(process.env.GIFT_S||0), GIFT_AT=+(process.env.GIFT_AT||10);
 //   처음부터 켜고 돌려 대조군과 견준다. 팩 배수는 **합산**이라 초반에 세고 후반에 묽어질 것으로
 //   보이는데, 그 어긋남이 얼마인지를 재려는 것이다.
 const PACKS=(process.env.PACK||"").split(",").map(x=>x.trim()).filter(Boolean);
+// 💠 룬 실측(2026-09-02) — RUNES=all|eco|war|speed|round 또는 `gain:high,speed:uniq` 목록.
+//   ⭐ 칸은 **최대 도달 라운드**가 여는데 벤치는 새 판에서 시작하니 한 칸뿐이다 —
+//     그래서 룬을 켜는 순간 `C.best` 를 D10R50 으로 세워 **칸을 전부 연다**.
+//     ⚠ 그러므로 이 실측이 답하는 것은 「지금 열린 칸으로 얼마나 세지나」가 아니라
+//       **「다 갖춘 사람이 얼마나 세지나」**(천장)다. 둘을 헷갈리지 말 것.
+const RUNES=(process.env.RUNES||"").trim();
 // 🧭 배치 모드(2026-08-30) — RALLY=none|wide|bunker · RALLYW=가로 폭(전장 비율)
 const RALLY=process.env.RALLY||"none";
 const RALLYW=+(process.env.RALLYW||0.40);
@@ -94,6 +100,34 @@ if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
            mul:(typeof campGatherMul==="function")?campGatherMul():null }; }, PACKS);
   console.log("💳 팩 "+got.on.join(",")+" · 합산 보너스 +"+got.gather+" · 지금 채취배수 "+(got.mul||0).toFixed(2)); }
+if(RUNES){ const got=await pg.evaluate(spec=>{
+  if(typeof campRuneState!=="function") return { err:"룬 시스템이 없다" };
+  const C=campState();
+  C.best={10:50};                                  // 💠 칸을 전부 연다(천장을 잰다)
+  C.rune={}; const R=campRuneState();
+  const PRE={
+    // ⚠ 유니크는 넷인데 칸이 셋이다. 열기(fever)는 피버타임이 아직 없어 **아무 일도 안 한다** —
+    //   그래서 'all' 은 캠프에 실제로 닿는 셋(가속·질주·전리품)을 든다.
+    all:   ["gain:high","tap:high","wspd:high","atk:high","hp:high","speed:uniq","round:uniq","mapg:uniq"],
+    eco:   ["gain:high","tap:high","gas:high","wspd:high","pop:high"],
+    war:   ["atk:high","hp:high","aspd:high","heal:high","gain:high"],
+    speed: ["speed:uniq"],
+    round: ["round:uniq"] };
+  const list=PRE[spec] || spec.split(",").map(x=>x.trim()).filter(Boolean);
+  const on=[];
+  for(const it of list){ const a=it.split(":"), id=a[0], gd=a[1]||"high";
+    const k=runeKey(id,gd); const d=runeParse(k).def; if(!d) continue;
+    R.own[k]=(R.own[k]|0)+1;
+    const kind=(d.kind==="uniq")?"uniq":"norm", n=campRuneSlots(kind);
+    for(let i=0;i<n;i++){ if(!R[kind][i] && campRuneEquip(kind,i,k)){ on.push(k); break; } } }
+  if(typeof campRuneTouch==="function") campRuneTouch();
+  saveMeta();
+  const eff={}; for(const e of ["gain","tap","gas","wspd","pop","atk","hp","aspd","heal","speed","round","mapGain"]){
+    const v=campRuneEff(e); if(v) eff[e]=+(v*100).toFixed(0)+"%"; }
+  return { on, eff, norm:campRuneSlots("norm"), uniq:campRuneSlots("uniq") }; }, RUNES);
+  if(got.err) console.log("💠 룬: "+got.err);
+  else console.log("💠 룬 "+got.on.length+"개 장착(칸 "+got.norm+"+"+got.uniq+") — "
+    + Object.keys(got.eff).map(k=>k+" "+got.eff[k]).join(" · ")); }
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -412,7 +446,13 @@ await pg.evaluate(()=>{
     __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
       const c0=G.tech.credit||0; oB(); __CB.spentE=(__CB.spentE||0)+Math.max(0,c0-(G.tech.credit||0)); }; }
   __CB.tick=function(sec){
-    const dt=0.05, n=Math.round(sec/dt);
+    // ⏱ **실제 시간과 게임 시간을 가른다**(2026-09-02 · 💠 가속의 룬).
+    //   ⭐ 화면에서는 campFrame 이 rAF 로 **같은 횟수** 돌면서 dt 만 늘린다 —
+    //     즉 「같은 벽시계 시간에 게임이 더 나아간다」. 벤치도 그 모양이어야 한다.
+    //   ⛔ 프레임 수를 늘리는 것으로 흉내내지 말 것 — 그건 「더 오래 논 것」이라 딴 실험이 된다.
+    //   ⚠ 그래서 __CB.t / roundT / fightT 는 **RT(실제 시간)** 로 센다. 플레이어가 앉아 있는 시간이다.
+    const RT=0.05, spd=(typeof campDtMul==='function')?campDtMul():1;
+    const dt=RT*spd, n=Math.round(sec/RT);
     for(let i=0;i<n;i++){
       if(typeof renderBuildTab==='function'){ try{ renderBuildTab(dt); }catch(e){} }
       campApplyGatherMul();
@@ -424,7 +464,7 @@ await pg.evaluate(()=>{
       if(typeof campSyncSupply==='function') campSyncSupply();
       if(typeof campSyncUnitCost==='function') campSyncUnitCost();
       campCombatStep(dt);
-      __CB.t+=dt; __CB.roundT+=dt;
+      __CB.t+=RT; __CB.roundT+=RT;
       // ⏱ **전투 시간과 대기 시간을 갈라 잰다** (2026-08-31).
       //   ⛔ 예전 실효(eff)는 분모가 roundT(벽시계)라 **전투가 아닌 시간이 통째로** 들어갔다:
       //     라운드 텀 4초 + 적이 화면 밖(y 0.18)에서 걸어 내려오는 시간이 **웨이브마다 한 번씩**.
@@ -434,8 +474,8 @@ await pg.evaluate(()=>{
       //   ⚠ roundT 는 지우지 않는다 — 「한 라운드에 실제로 몇 초 걸리나」는 플레이어 체감이다.
       //     두 값을 나란히 찍어야 「싸우느라」인지 「기다리느라」인지 갈린다.
       { const _foe=(typeof campAlive==='function')?campAlive('ai'):0;
-        if(_foe>0) __CB.fightT=(__CB.fightT||0)+dt;
-        else       __CB.idleT =(__CB.idleT ||0)+dt; }
+        if(_foe>0) __CB.fightT=(__CB.fightT||0)+RT;
+        else       __CB.idleT =(__CB.idleT ||0)+RT; }
       // 🧱 벽 판정 — 지금 라운드가 얼마나 오래 안 넘어가는가(라운드가 바뀌면 roundT 가 0 이 된다)
       if(campDgN()>0 && !__CB.wall){
         if(__CB.roundT>__CB.wallStop){
