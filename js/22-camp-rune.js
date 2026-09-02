@@ -33,39 +33,65 @@ const RUNE_GD = {
 // kind:'norm' — 일반 칸에 끼운다. v/gem 은 **등급별 표**.
 // kind:'uniq' — 유니크 칸(3개)에만 끼운다. **다른 룬에 없는 능력**이라 등급이 하나다.
 // eff — 효과 키. `campRuneEff(eff)` 가 이 키로 합을 낸다.
+// ── 룬 표 (2026-09-02 값 확정) ──────────────────────────────────────────
+// ⭐ **종류가 칸보다 많아야 「고르는 것」이 된다.** 일반 10종 / 5칸 · 유니크 4종 / 3칸.
+//   ⛔ 종류 = 칸 이면 전부 끼워지므로 고를 것이 없어진다 — 그러면 이 시스템은 그냥 「연구 2」다.
+// kind:'norm' — 일반 칸에 끼운다. 하급·중급·상급 세 등급.
+// kind:'uniq' — 유니크 칸(3개)에만. **다른 룬에 없는 능력**이라 등급이 하나다.
+// eff — 효과 키. `campRuneEff(eff)` 가 이 키로 합을 낸다. 값은 전부 **더할 비율**이다.
+//   ⛔ 감소형(쿨타임·비용 −%)을 넣지 말 것 — 합산이라 100% 를 넘으면 부호가 뒤집힌다.
+//     넣으려면 상한을 함께 설계해야 한다(지금은 전부 증가형이라 그 문제가 없다).
 const RUNE_LIST = [
-  // ── 일반 ──
-  { id:'gain',  nm:'재화의 룬',   kind:'norm', eff:'gain',   ico:'coin',
-    de:'캠프 재화 획득',   v:{ low:0.05, mid:0.12, high:0.25 }, gem:{ low:60, mid:200, high:600 } },
-  { id:'tap',   nm:'손끝의 룬',   kind:'norm', eff:'tap',    ico:'coin',
-    de:'탭 획득량',        v:{ low:0.06, mid:0.15, high:0.30 }, gem:{ low:60, mid:200, high:600 } },
-  { id:'gas',   nm:'정제의 룬',   kind:'norm', eff:'gas',    ico:'coin',
-    de:'가스 획득',        v:{ low:0.05, mid:0.12, high:0.25 }, gem:{ low:60, mid:200, high:600 } },
-  { id:'atk',   nm:'힘의 룬',     kind:'norm', eff:'atk',    ico:'upg',
-    de:'유닛 공격력',      v:{ low:0.04, mid:0.10, high:0.20 }, gem:{ low:60, mid:200, high:600 } },
-  { id:'hp',    nm:'수호의 룬',   kind:'norm', eff:'hp',     ico:'flag',
-    de:'유닛 체력',        v:{ low:0.05, mid:0.12, high:0.25 }, gem:{ low:60, mid:200, high:600 } },
-  { id:'wspd',  nm:'발걸음의 룬', kind:'norm', eff:'wspd',   ico:'boost',
-    de:'일꾼 이동속도',    v:{ low:0.08, mid:0.18, high:0.35 }, gem:{ low:60, mid:200, high:600 } },
-  // ── 유니크 — 다른 룬에는 없는 능력 ──
-  { id:'speed', nm:'가속의 룬',   kind:'uniq', eff:'speed',  ico:'boost',
-    de:'캠프 전체 진행 속도', v:0.10, gem:1500 },
-  { id:'round', nm:'질주의 룬',   kind:'uniq', eff:'round',  ico:'flag',
-    de:'라운드 진행 속도',    v:0.15, gem:1500 },
+  // ── 일반 10종 ── (하급 : 중급 : 상급 ≈ 1 : 2.5 : 5)
+  { id:'gain',  nm:'재화의 룬',   kind:'norm', eff:'gain',  ico:'coin',
+    de:'캠프 재화 획득',   v:{ low:0.04, mid:0.10, high:0.20 } },
+  { id:'tap',   nm:'손끝의 룬',   kind:'norm', eff:'tap',   ico:'coin',
+    de:'탭 획득량',        v:{ low:0.05, mid:0.12, high:0.25 } },
+  { id:'gas',   nm:'정제의 룬',   kind:'norm', eff:'gas',   ico:'box',
+    de:'가스 획득',        v:{ low:0.05, mid:0.12, high:0.25 } },
+  { id:'wspd',  nm:'발걸음의 룬', kind:'norm', eff:'wspd',  ico:'boost',
+    de:'일꾼 이동속도',    v:{ low:0.07, mid:0.18, high:0.35 } },
+  { id:'pop',   nm:'증원의 룬',   kind:'norm', eff:'pop',   ico:'user',
+    de:'인구 상한',        v:{ low:0.03, mid:0.08, high:0.15 } },
+  { id:'atk',   nm:'힘의 룬',     kind:'norm', eff:'atk',   ico:'upg',
+    de:'유닛 공격력',      v:{ low:0.04, mid:0.10, high:0.20 } },
+  { id:'aspd',  nm:'연타의 룬',   kind:'norm', eff:'aspd',  ico:'upg',
+    de:'유닛 공격속도',    v:{ low:0.04, mid:0.10, high:0.20 } },
+  { id:'hp',    nm:'수호의 룬',   kind:'norm', eff:'hp',    ico:'armor',
+    de:'유닛 체력',        v:{ low:0.05, mid:0.12, high:0.25 } },
+  { id:'uspd',  nm:'신속의 룬',   kind:'norm', eff:'uspd',  ico:'flag',
+    de:'유닛 이동속도',    v:{ low:0.05, mid:0.12, high:0.25 } },
+  { id:'heal',  nm:'치유의 룬',   kind:'norm', eff:'heal',  ico:'hero',
+    de:'회복량',           v:{ low:0.06, mid:0.15, high:0.30 } },
+  // ── 유니크 4종 — **다른 데서 못 사는 것**이라 칸이 셋뿐이다 ──
+  { id:'speed', nm:'가속의 룬',   kind:'uniq', eff:'speed', ico:'boost',
+    de:'캠프 전체 진행 속도', v:0.10 },
+  { id:'round', nm:'질주의 룬',   kind:'uniq', eff:'round', ico:'rec',
+    de:'라운드 진행 속도',    v:0.15 },
   { id:'mapg',  nm:'전리품의 룬', kind:'uniq', eff:'mapGain', ico:'map',
-    de:'유즈맵 보상 재화',    v:0.20, gem:1500 },
+    de:'유즈맵 보상 재화',    v:0.20 },
   // ⚠ 피버타임은 **다른 구역에서 만드는 중**이다(2026-09-02). 여기서는 칸만 잡아 둔다 —
   //   `campRuneEff('fever')` 를 그쪽이 부르면 그때 살아난다.
-  { id:'fever', nm:'열기의 룬',   kind:'uniq', eff:'fever',  ico:'boost',
-    de:'피버 게이지 상승 확률', v:0.25, gem:1500 } ];
+  { id:'fever', nm:'열기의 룬',   kind:'uniq', eff:'fever', ico:'new',
+    de:'피버 게이지 상승 확률', v:0.25 } ];
+
+// ── 💎 값 — **등급이 정한다. 룬마다 따로 두지 않는다** ────────────────────
+// ⭐ **등급이 오를수록 %당 값이 비싸다**(10 → 13 → 20 젬/%). 손해처럼 보이지만 맞다 —
+//   여기서 진짜 귀한 것은 %가 아니라 **칸**이다. 상급은 같은 효과를 **한 칸으로** 낸다.
+//   ⛔ 「상급이 %당 싸게」 뒤집지 말 것. 그러면 하급을 살 이유가 사라져 등급이 셋일 뜻이 없어진다.
+// 관례 대조(GEM.md §5-4-4): 젬당 16~22원 → 상급 400젬 ≈ ₩7,000 · 유니크 1,200젬 ≈ ₩20,000.
+const RUNE_GEM = { low:40, mid:130, high:400 };
+const RUNE_GEM_UNIQ = 1200;
 
 // ── 슬롯 해금 — **최대 도달 라운드**가 연다 ───────────────────────────────
 // ⭐ 「최대」다. 환생으로 되감겨도 **한 번이라도 닿았으면 남는다**(사용자 확정 2026-09-02).
 //   그래서 기준은 `C.best`(환생이 지우지 않는 값)이지 지금 라운드가 아니다.
-// ⚠ 아래 라운드도 **임시다.** 던전 10 × 50라운드 = 통산 500 이 상한이다.
+// 던전 10 × 50라운드 = 통산 500 이 상한이다.
+//   ⭐ 일반 첫 칸은 처음부터 열려 있다 — 아무것도 못 끼우는 화면은 「준비 중」으로 읽힌다.
+//   ⭐ 유니크 첫 칸은 R120(던전 3 중반) — 유니크는 **후반의 물건**이라야 자리가 귀해진다.
 const RUNE_SLOT_R = {
-  norm: [0, 25, 60, 110, 175, 250],   // 일반 6칸 — 첫 칸은 처음부터 열려 있다
-  uniq: [150, 300, 450] };            // 유니크 3칸 — 늦게, 드물게
+  norm: [0, 30, 80, 150, 240],   // 일반 5칸 (종류는 10종 — 골라야 한다)
+  uniq: [120, 260, 400] };       // 유니크 3칸 (종류는 4종)
 
 // 통산 최대 도달 라운드. 던전이 넘어가면 라운드가 1로 돌아가므로 **한 줄로 펴서** 센다.
 //   D1 R50 = 50 · D2 R10 = 60 · D10 R50 = 500.
@@ -108,8 +134,12 @@ function runeParse(key){ const s = String(key || '').split(':');
   return { def:d, gd:(d.kind === 'uniq') ? 'uniq' : (s[1] || '') }; }
 function runeVal(key){ const p = runeParse(key); if(!p.def) return 0;
   return (p.def.kind === 'uniq') ? (p.def.v || 0) : ((p.def.v && p.def.v[p.gd]) || 0); }
+// 💎 값은 **등급 표**가 정한다(RUNE_GEM). 룬이 제 값을 갖고 싶으면 def.gem 으로 덮는다.
+//   ⛔ 룬마다 값을 흩뿌리지 말 것 — 값을 손볼 때 한 곳만 고치면 되게 둔다.
 function runeGem(key){ const p = runeParse(key); if(!p.def) return 0;
-  return (p.def.kind === 'uniq') ? (p.def.gem || 0) : ((p.def.gem && p.def.gem[p.gd]) || 0); }
+  if(p.def.kind === 'uniq') return p.def.gem || RUNE_GEM_UNIQ;
+  if(p.def.gem && p.def.gem[p.gd]) return p.def.gem[p.gd];
+  return RUNE_GEM[p.gd] || 0; }
 function runeName(key){ const p = runeParse(key); if(!p.def) return '';
   return (p.def.kind === 'uniq') ? p.def.nm : (RUNE_GD[p.gd] ? RUNE_GD[p.gd].tx + ' ' + p.def.nm : p.def.nm); }
 function runeGradeOf(key){ return runeParse(key).gd; }

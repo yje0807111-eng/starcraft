@@ -1978,6 +1978,14 @@ async function groupLobby(){
       const got=campRuneEff('gain'), sum=v1+v2, prod=(1+v1)*(1+v2)-1;
       assert(Math.abs(got-sum)<1e-9,
         '효과가 합이 아니다 — 얻은 값 '+got.toFixed(4)+' · 합이면 '+sum.toFixed(4)+' · 곱이면 '+prod.toFixed(4));
+      // ⭐ **종류가 칸보다 많아야 「고르는 것」이 된다.** 종류 = 칸 이면 전부 끼워지므로
+      //   고를 것이 없어지고, 이 시스템은 그냥 「연구 2」가 된다(2026-09-02 값 확정의 전제).
+      { const nN=RUNE_LIST.filter(x=>x.kind!=='uniq').length, nU=RUNE_LIST.length-nN;
+        assert(nN>RUNE_SLOT_R.norm.length,'일반 룬 종류('+nN+')가 칸('+RUNE_SLOT_R.norm.length+')보다 많지 않다 — 고를 것이 없다');
+        assert(nU>RUNE_SLOT_R.uniq.length,'유니크 종류('+nU+')가 칸('+RUNE_SLOT_R.uniq.length+')보다 많지 않다'); }
+      // 💎 값은 **등급 표 한 곳**에서 온다 — 룬마다 흩뿌리면 손볼 때 어긋난다
+      for(const gd of RUNE_GRADES) assert(runeGem(runeKey('gain',gd))===RUNE_GEM[gd],
+        gd+' 값이 등급 표와 다르다: '+runeGem(runeKey('gain',gd))+' / '+RUNE_GEM[gd]);
       // ② 다른 효과 키는 안 섞인다
       assert(campRuneEff('atk')===0,'끼우지도 않은 효과에 값이 있다: '+campRuneEff('atk'));
       // ③ 뺀 것은 안 세어진다 — 보유는 그대로인데 효과만 빠져야 한다
@@ -1986,7 +1994,7 @@ async function groupLobby(){
       assert(campRuneOwn(k2)===1,'뺐더니 보유까지 사라졌다');
       // ⚠ 「환생해도 남는가」는 **환생 스텝**이 잰다 — 실제 환생을 도는 곳이 거기 하나뿐이라
       //   여기서 또 돌리면 판이 두 번 되감겨 뒤 검사들이 흔들린다.
-      return '합 확인(' + sum.toFixed(2) + ' · 곱이면 ' + prod.toFixed(2) + ') · 효과 분리 ok';
+      return '합 ' + sum.toFixed(4) + '(곱이면 ' + prod.toFixed(4) + ') · 종류>칸 · 값은 등급 표';
     } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
   });
 
