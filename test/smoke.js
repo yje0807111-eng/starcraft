@@ -2202,6 +2202,31 @@ async function groupLobby(){
         assert(Math.abs(cy-want)<12,'고른 별이 시트 위 한가운데가 아니다: '+Math.round(cy)+' vs '+Math.round(want));
         campTreeDesel(); campTreeFit(true);
         assert(campTreeSheetH()===0,'해제했는데 시트가 자리를 남긴다'); }
+      // 🌌 갈래끼리 겹치지 않는다 (2026-09-02 사용자 지시 「각 구역이 안 겹치게」)
+      //   ⭐ 좌표 함수만 부른다 — 화면 상태에 안 흔들린다. 별 지름이 26~30 이라
+      //     중심 사이가 30 을 밑돌면 **동그라미가 서로 먹는다.**
+      //   ⛔ 각도·흔들림 상수를 눈대중으로 되돌리지 말 것 — 한쪽을 떼면 다른 쪽이 붙는다.
+      //     scripts/tree-gap.mjs 로 여섯 쌍을 함께 보고 고칠 것(실측 이력: 최악 4 → 31).
+      { const pts=[];
+        for(const Ln of CAMP_RT_LINES)
+          for(let n=1,mx=campRtMax(Ln.k); n<=mx; n++){ const q=campTreePos(Ln.k,n);
+            pts.push({br:Ln.br,k:Ln.k+':'+n,x:q.x,y:q.y}); }
+        for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue;
+          const q=campTreeBrPos(bk); pts.push({br:bk,k:'br',x:q.x,y:q.y});
+          for(const g of CAMP_RT_GRP_KEYS){ if(!campRtGpLive(bk,g)) continue;
+            const w=campTreeGpPos(bk,g); pts.push({br:bk,k:'gp'+g,x:w.x,y:w.y}); } }
+        let worst=1e9, who='';
+        for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+          const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+          if(d<worst){ worst=d; who=pts[i].br+' '+pts[i].k+' ↔ '+pts[j].br+' '+pts[j].k; } }
+        assert(worst>=30,'별끼리 겹친다(중심 사이 '+worst.toFixed(0)+' · 지름 26~30): '+who);
+        // 갈래끼리는 더 넉넉해야 한다 — 색이 다른 것이 섞이면 「구역」이 안 읽힌다
+        let cross=1e9, cw='';
+        for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+          if(pts[i].br===pts[j].br) continue;
+          const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+          if(d<cross){ cross=d; cw=pts[i].br+' ↔ '+pts[j].br; } }
+        assert(cross>=34,'다른 갈래가 겹친다(중심 사이 '+cross.toFixed(0)+'): '+cw); }
       // 🔗 선이 별 **안으로 파고들지 않는다** (2026-09-02 사용자 지적)
       //   ⛔ 중심에서 중심으로 긋지 말 것. 양 끝을 반지름 + 틈만큼 물린다.
       { const g=$('ctG'); const gems=[...g.querySelectorAll('.ctGem')].map(e=>({

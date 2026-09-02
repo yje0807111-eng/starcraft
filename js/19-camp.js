@@ -416,7 +416,7 @@ function campRtNodeOwn(key){ if(key === 'root') return campRtRootOn();
   const i = key.indexOf(':'); return campRtHas(key.slice(0, i)) >= +key.slice(i + 1); }
 // 🌌 사슬 좌표 — 부모에서 부채꼴로 뻗는다. 데이터가 정적이라 한 번 계산해 둔다.
 //   ⚠ 각도 폭을 **호 길이**(GAP)로 잡는다 — 멀어질수록 각도를 좁혀야 별 간격이 일정해진다.
-const CAMP_CH_R1 = 150, CAMP_CH_STEP = 74, CAMP_CH_GAP = 78;
+const CAMP_CH_R1 = 150, CAMP_CH_STEP = 74, CAMP_CH_GAP = 56;
 let _ctChain = null;
 function campRtChainMap(){
   if(_ctChain) return _ctChain;
@@ -582,8 +582,8 @@ function campRtFoeMul(){ let m = 1;
 //   ⚠ 갈래를 **대각선으로 돌리고 거리도 다르게** 준다. 상하좌우 축에 두면 좌우 갈래가
 //     같은 높이에 서서 중심 옆에 숫자가 한 줄로 겹친다(실측).
 const CAMP_TREE_BR = {
-  enemy:{ a:-Math.PI*0.76, rk:1.34, nm:'적 약화',   col:'#ff3b3b' },   // ↖ 멀리
-  econ: { a:-Math.PI*0.24, rk:0.82, nm:'재화 획득', col:'#ffd24a' },   // ↗ 가까이
+  enemy:{ a:-Math.PI*0.87, rk:1.34, nm:'적 약화',   col:'#ff3b3b' },   // ↖ 멀리
+  econ: { a:-Math.PI*0.30, rk:0.82, nm:'재화 획득', col:'#ffd24a' },   // ↗ 가까이
   start:{ a: Math.PI*0.70, rk:0.88, nm:'시작 도움', col:'#5dff8f' },   // ↙ 가까이
   army: { a: Math.PI*0.30, rk:1.26, nm:'아군 강화', col:'#4aa8ff' },   // ↘ 멀리
 };
@@ -621,10 +621,15 @@ function campTreePos(k, n){
   //   옛 `(li - 0.5)` 는 둘일 때만 가운데가 맞는다 — 셋이면 한쪽으로 쏠려 이웃 묶음을 침범한다.
   const sib = CAMP_RT_LINES.filter(x => x.br === L.br && x.grp === L.grp);
   const li = sib.indexOf(L);
-  const a = campTreeGpAng(L.br, L.grp) + (li - (sib.length - 1) / 2) * (CAMP_TREE_SPREAD / 3) * 0.46
-    + campTreeJit(k, n, 'a') * (CAMP_TREE_SPREAD / 3) * 0.30 * CAMP_TREE_JIT;
+  const a = campTreeGpAng(L.br, L.grp)
+    + (li - (sib.length - 1) / 2) / Math.max(1, sib.length - 1) * (CAMP_TREE_SPREAD / 3) * 0.58
+    + campTreeJit(k, n, 'a') * (CAMP_TREE_SPREAD / 3) * 0.14 * CAMP_TREE_JIT;
+  // ⭐ 같은 묶음의 형제는 **반지름도 어긋나게** 둔다(2026-09-02). 각도만으로 떼려면 묶음 폭을
+  //   넓혀야 하는데, 그러면 이웃 묶음을 침범한다 — 반지름은 이웃에게서 뺏어 오지 않는 자리다.
+  //   ⚠ 형제가 셋인 묶음(재화/라)이 생기면서 같은 차수끼리 14 까지 붙었다(실측).
   const r = CAMP_TREE_R0 * (0.80 + (B.rk || 1) * 0.22) + (n - 1) * CAMP_TREE_RS
-    + campTreeJit(k, n, 'r') * CAMP_TREE_RS * 0.34 * CAMP_TREE_JIT;
+    + (li - (sib.length - 1) / 2) * CAMP_TREE_RS * 0.50
+    + campTreeJit(k, n, 'r') * CAMP_TREE_RS * 0.16 * CAMP_TREE_JIT;
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
 // 어느 별이든 자리를 하나로 — 선택 이동이 이 함수 하나만 본다
