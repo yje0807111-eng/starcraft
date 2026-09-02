@@ -752,7 +752,7 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
 //   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
 const STK_SK_DEAD={
   recall:1, hallucination:1, parasite:1,
-  optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
+  optical_flare:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
 const STK_SK_SPOT_MIN=3;       // 광역 = 적이 이만큼 뭉쳤을 때만(한두 기에 쓰면 낭비)
 // ⚠ SKILLS 의 range/radius 는 **건설 화면의 0~1 정규 좌표**다. 오토배틀은 픽셀(world=4800)이라
@@ -793,15 +793,30 @@ function strikeWebBlocks(tgt, atk){ return !!(atk && strikeIsRanged(atk) && stri
 // 사거리 안에서 **가장 많이 다친 아군**. ⚠ 포식만 예외 — 아군을 잡아먹으므로 **가장 값싼 아군**을 고른다
 //   (체력으로 고르면 다친 전함을 먹는다).
 function _stkPickAlly(u, me, sk, key){
-  const R=_stkSkRange(u, sk), R2=R*R; let best=null, bv=Infinity;
+  const R=_stkSkRange(u, sk), R2=R*R;
+  let best=null, bv=(key==='restoration') ? -1 : Infinity;   // ✨ 정화만 「큰 것 고르기」다
   for(const a of me.units){ if(a.dead || a===u) continue;
     const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy>R2) continue;
     if(key==='consume'){ const c=(((typeof U!=='undefined')&&U[a.gm||a.id])||{}).cost||((a.maxHp||1)+(a.dmg||0)*10);
       if(c<bv){ bv=c; best=a; } continue; }
+    // ✨ **정화는 체력이 아니라 디버프를 본다** — 멀쩡해도 멎어 있으면 대상이다.
+    //   ⚠ 아래 「체력 90% 미만」 규칙을 타면 **디버프만 걸린 멀쩡한 아군을 영영 못 푼다.**
+    //   ⭐ 오래 걸린 것부터 — 남은 시간이 긴 쪽이 더 손해다.
+    if(key==='restoration'){ const d=strikeDebuffLeft(a);
+      if(d<=0) continue;
+      if(d>bv){ bv=d; best=a; } continue; }
     const r=(a.hp||0)/Math.max(1,a.maxHp||a.hp||1);
     if(r>=STK_SK_ALLY_HURT) continue;                 // 멀쩡하면 대상 아님
     if(r<bv){ bv=r; best=a; } }
   return best; }
+// ✨ **디버프가 얼마나 남았나** — 정화가 볼 대상을 여기 한 곳에서 정한다.
+//   ⛔ 새 디버프를 만들면 **반드시 여기에 더할 것.** 안 더하면 정화가 그것을 못 푼다.
+//   ⚠ 지금 디버프는 둘이다 — 정지(`stunT`) · 둔화(`slowT`).
+function strikeDebuffLeft(u){ if(!u) return 0;
+  return Math.max(u.stunT||0, u.slowT||0); }
+function strikeCleanse(u){ if(!u) return false;
+  if(strikeDebuffLeft(u)<=0) return false;
+  u.stunT=0; u.slowT=0; return true; }
 // 사거리 안에서 **체력이 가장 높은 적**
 function _stkPickFoe(u, foe, sk){
   const R=_stkSkRange(u, sk), R2=R*R; let best=null, bv=-1;
@@ -851,6 +866,7 @@ function _stkApplyAlly(u, t, sk, key, dt){
     t.hp=Math.min(t.maxHp||t.hp, (t.hp||0)+sk.hps*dt);
     { const _dr=strikeSkillDrain(sk); if(_dr) u.en=Math.max(0,(u.en||0)-_dr*dt); }
     return true; }
+  if(key==='restoration') return strikeCleanse(t);   // ✨ 정화 — 걸린 디버프를 지운다
   if(sk.absorb){ if((t.sh||0)>0) return false;       // 🛡 보호막 — 실드로 얹는다(strikeHit 이 실드를 먼저 깎는다)
     t.sh=sk.absorb; t.maxSh=Math.max(t.maxSh||0, sk.absorb); return true; }
   // 🔋 쉴드 충전 — 🏕 **캠프에서는 체력 회복**이다(HUNT_R1 §3-4-4).

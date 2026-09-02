@@ -1017,7 +1017,7 @@ const SKILLS={
   // ── 🛡 유니온(테란) 마법 — 이지스(사이언스 베슬)·메딕 ──
   irradiate:{ key:'irradiate', name:'방사능', kind:'target_enemy', energy:0, enSc:75, cd:8, dur:8, dps:30, arm:'☢ 방사능: 씌울 적을 클릭하세요.' },   // 대상 지속 피해(생체)
   defensive_matrix:{ key:'defensive_matrix', name:'보호막', kind:'target_unit', energy:0, enSc:100, cd:6, absorb:250, arm:'🛡 보호막: 보호할 아군을 클릭하세요.' },   // 아군에 250 흡수 보호막
-  restoration:{ key:'restoration', name:'정화', kind:'target_unit', energy:0, enSc:50, cd:4, arm:'✳ 정화: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
+  restoration:{ key:'restoration', name:'정화', kind:'target_unit', energy:0, enSc:50, cd:5, arm:'✳ 정화: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
   optical_flare:{ key:'optical_flare', name:'섬광탄', kind:'target_enemy', energy:0, enSc:75, cd:6, dur:20, arm:'👁 섬광탄: 실명시킬 적을 클릭하세요.' },   // 적 시야 축소+디텍터 무력화
   // ── 🏢 건물 스킬 ──
   scan:{ key:'scan', name:'스캐너 스윕', kind:'target_ground', energy:0, enSc:50, cd:1, radius:0.15, dur:5, arm:'📡 스캐너 스윕: 밝힐 지점을 클릭하세요.', bldg:1 },   // 컴셋 = 지점 시야+탐지(일시)

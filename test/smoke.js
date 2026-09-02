@@ -2537,6 +2537,60 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // ✨ 정화 — 적도 같은 스킬을 쓰고, 의무병이 그 디버프를 푼다(사용자 확정 2026-08-28).
+  await step('캠프 스킬: 적도 스킬을 쓴다 · 정화가 푼다', async()=>{
+    skipIf(typeof strikeCleanse!=='function','정화 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      assert(!STK_SK_DEAD.restoration,'정화가 아직 미구현 목록에 있다');
+      assert(SKILLS.restoration.cd===5,'정화 쿨이 5가 아니다: '+SKILLS.restoration.cd);
+      // ① **적도 같은 스킬을 쓴다** — 적 저격수가 내 유닛을 봉쇄한다
+      const r=campWithStk(()=>{
+        STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null; STK._webs=null;
+        STK.ai.race='union';
+        strikeSpawnUnit('ai','ghost'); strikeSpawnUnit('me','marine');
+        const e=STK.ai.units[0], m=STK.me.units[0];
+        if(!e||!m) return null;
+        e.x=1000; e.y=1000; e.wait=0; e._skT=0; e.skillCd={}; delete e._skKeys;
+        m.x=1050; m.y=1000; m.wait=0; m.hp=m.maxHp=999;
+        for(let i=0;i<30;i++) strikeSkillTick(0.5);
+        return { stun:m.stunT||0, m:m };
+      });
+      skipIf(!r,'유닛을 못 세움');
+      assert(r.stun>0,'적이 스킬을 안 썼다 — 내 유닛이 멀쩡하다');
+      // ② 디버프 판정은 한 곳에서 — 정지·둔화 둘 다 본다
+      { const x={stunT:2,slowT:0}; assert(strikeDebuffLeft(x)===2,'정지를 디버프로 안 본다');
+        const y={stunT:0,slowT:3}; assert(strikeDebuffLeft(y)===3,'둔화를 디버프로 안 본다');
+        assert(strikeDebuffLeft({})===0,'멀쩡한데 디버프가 있다고 본다'); }
+      // ③ 정화가 실제로 푼다 · 멀쩡한 아군에는 안 쓴다
+      //    ⚠ **`_stkApplyAlly` 로 잰다** — `strikeCleanse` 를 직접 부르면 갈래(배선)를 안 거쳐
+      //      그 줄을 되돌려도 안 터진다(레드 테스트가 안 터져서 알았다).
+      assert(campWithStk(()=>_stkApplyAlly({}, r.m, SKILLS.restoration, 'restoration', 0.05)),
+        '정화가 디버프를 못 풀었다');
+      assert(!(r.m.stunT>0) && !(r.m.slowT>0),'풀었는데 남아 있다');
+      assert(!campWithStk(()=>_stkApplyAlly({}, r.m, SKILLS.restoration, 'restoration', 0.05)),
+        '멀쩡한 아군에 정화를 썼다');
+      // ④ **대상 고르기가 체력이 아니라 디버프를 본다** — 멀쩡해도 멎어 있으면 고른다
+      campWithStk(()=>{
+        const me=STK.me;
+        me.units.length=0;
+        const medic={x:1000,y:1000,dead:false,id:'medic',gm:'medic',hp:10,maxHp:10};
+        const hurt={x:1010,y:1000,dead:false,hp:1,maxHp:100};        // 다쳤지만 디버프 없음
+        const stuck={x:1020,y:1000,dead:false,hp:100,maxHp:100,stunT:4};  // 멀쩡하지만 멎었다
+        me.units.push(medic,hurt,stuck);
+        const t=_stkPickAlly(medic, me, SKILLS.restoration, 'restoration');
+        assert(t===stuck,'정화가 「다친 아군」을 골랐다 — 디버프를 봐야 한다');
+        // 디버프가 아무에게도 없으면 안 고른다
+        stuck.stunT=0;
+        assert(!_stkPickAlly(medic, me, SKILLS.restoration, 'restoration'),'디버프가 없는데 대상을 골랐다');
+        me.units.length=0; });
+      return '적 봉쇄 '+r.stun+'초 → 정화가 푼다 · 쿨 '+SKILLS.restoration.cd+'초';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🧠 정신 지배 — 적을 뺏어 **소환수처럼** 쓴다(사용자 확정 2026-08-28).
   //   ⚠ 「소환수처럼」 = 적일 때 능력치 그대로 · 죽으면 즉시 사라진다(부활 없음).
   await step('캠프 스킬: 정신 지배 — 뺏은 적은 소환수다', async()=>{
