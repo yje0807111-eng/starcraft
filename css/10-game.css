@@ -1141,10 +1141,14 @@
      ⚠ 아래 opacity/filter 를 그늘에 물리지 않게, 새 규칙도 반드시 :not(.shade) 로 쓸 것. */
   .bMineral.spr .mnSpr:not(.shade){width:100%;height:100%;object-fit:contain;object-position:center bottom;
     display:block;pointer-events:none;
-    /* 💎 톤 — 연하고 아주 조금 투명하게(2026-09-02 사용자 요청). 채도를 낮추고 살짝 밝힌 뒤
-       바닥이 비칠 만큼만 투명하게 한다. ⛔ 더 내리면 유리처럼 떠 보여 「캘 것」으로 안 읽힌다. */
-    opacity:var(--mnOp,.88);
-    filter:saturate(var(--mnSat,.78)) brightness(var(--mnBr,1.1)) drop-shadow(0 3px 5px rgba(0,0,0,.38))}
+    /* 💎 톤 — **진짜 수정처럼**(2026-09-02 사용자 요청 2차 · .88 → .74).
+       유리는 뒤가 비치고, 비치는 만큼 색이 옅어지고, 옅어진 만큼 밝다 — 셋이 함께 움직여야
+       「연한 파랑」이 아니라 「투명한 결정」으로 읽힌다. 그래서 투명도만 내리지 않고
+       채도를 더 빼고(.78→.68) 밝기를 더 올렸다(1.1→1.16).
+       ⛔ 여기서 더 내리지 말 것 — 바닥 무늬가 결정 안에서 그대로 읽혀 유령처럼 보인다.
+       ⚠ 발치 그림자도 같이 연해져야 한다(.bGndShadow.mnShd) — 안 그러면 그림자만 남아 뜬다. */
+    opacity:var(--mnOp,.74);
+    filter:saturate(var(--mnSat,.68)) brightness(var(--mnBr,1.16)) drop-shadow(0 3px 4px rgba(0,0,0,.28))}
   .bMineral.spr .mnSpr.shade{width:100%;height:100%;object-fit:contain;object-position:center bottom;
     display:block;pointer-events:none}
   .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
@@ -1943,6 +1947,10 @@
       rgba(0,0,0,.90) 0%, rgba(0,0,0,.78) 24%, rgba(0,0,0,.54) 44%,
       rgba(0,0,0,.24) 66%, rgba(0,0,0,.08) 84%, rgba(0,0,0,0) 100%);
     pointer-events:none}
+  /* 💎 광맥 그림자만 **연하게**(2026-09-02 사용자 요청). 결정이 반투명해지자 발치의 짙은 타원만
+     남아 「그림자가 더 진해 보이는」 상태가 됐다 — 유리는 그림자도 옅다.
+     ⛔ .bGndShadow 자체를 내리지 말 것 — 유닛·건물·가스가 같이 쓴다(스티커처럼 뜨는 것을 막는 장치). */
+  .bGndShadow.mnShd{opacity:.42}
   /* ⛽ 가스 구역 안의 그림자 — 부모(.bGasZone) 기준 % 라 좌우 두 구역이 같은 자리를 갖는다.
      ⭐ 오른쪽 구역(#campGas2)은 왼쪽의 innerHTML 을 복제하므로 이 한 줄이 양쪽에 다 걸린다. */
   .bGasZone .bGndShadow{left:43%;top:74%;width:74%;height:30%}
@@ -1953,6 +1961,6 @@
      **처음으로 실제로 적용**됐다 — 진짜 검은 실루엣은 옛 「그림 한 장 더 겹치기」보다 훨씬 진하다.
      같은 .42 로 두면 밑이 새까매진다. */
   .mnSpr.shade{position:absolute;left:0;top:0;width:100%;height:100%;
-    filter:brightness(0);opacity:.24;pointer-events:none;
+    filter:brightness(0);opacity:.18;pointer-events:none;
     -webkit-mask-image:linear-gradient(to bottom,transparent 38%,#000 92%);
             mask-image:linear-gradient(to bottom,transparent 38%,#000 92%)}

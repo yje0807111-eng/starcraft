@@ -1186,7 +1186,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     //      「따로 떠 있는」 것으로 보인다(2026-08-31 실측). 발치 = m.y + (_k/2 − _dy)·칸높이.
     if(_spr){ const _mby=m.y+(_k/2-_dy)*_mch, _msh=_techW2S(m.x, _mby-0.16*_mch);
       const _msw=Math.max(0.035,_k*0.80*_mcw*techView().zoom);
-      mineZ+='<div class="bGndShadow" style="left:'+((_msh.x+_msw*SHD_DX)*100).toFixed(2)
+      // ⚠ `mnShd` 는 **광맥 전용 표식**이다 — .bGndShadow 는 유닛·건물·가스가 함께 쓰므로
+      //   여기만 연하게 하려면 자리표가 필요하다(css/10-game.css .bGndShadow.mnShd).
+      mineZ+='<div class="bGndShadow mnShd" style="left:'+((_msh.x+_msw*SHD_DX)*100).toFixed(2)
         +'%;top:'+((_msh.y+_msw*SHD_DY*0.40)*100).toFixed(2)
         +'%;width:'+(_msw*100).toFixed(2)+'%;height:'+(_msw*0.40*100).toFixed(2)+'%"></div>'; }
     mineZ+='<div class="bMineral'+(_res3d&&!_spr?' d3':'')+(_spr?' spr':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'
