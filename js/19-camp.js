@@ -650,7 +650,12 @@ function campTreeIsSel(t, a, b){ const s = _campTreeSel;
 const CAMP_TREE_ICO = 'assets/icons/';
 // 👆 누르는 반경 — 계열 간격(CAMP_TREE_RS 52)의 절반보다 작게 잡아 옆 별을 훔치지 않게 한다
 function campTreeHitR(r){ return Math.min(Math.max(r + 10, 22), CAMP_TREE_RS * 0.46); }
+// ⛔ **x·y 를 반드시 숫자로 되돌린다.** 부르는 쪽(campTreeGem)이 toFixed 한 **문자열**을 넘긴다 —
+//   그대로 두면 `x - r` 은 숫자인데 `x + r` 은 **문자열 이어붙이기**가 되어
+//   "67.3" + 22.75 → "67.322.75" 같은 값이 나오고, SVG 경로 파서가 그걸 두 수로 쪼개 읽어
+//   도형이 통째로 망가진다(실측 2026-09-02: 반짝임 하나가 12×216px 짜리 **긴 세로선**으로 그려졌다).
 function campTreeSpark(x, y, r, col, op){
+  x = +x; y = +y;
   return '<path d="M' + (x - r) + ' ' + y + ' L' + (x + r) + ' ' + y +
     ' M' + x + ' ' + (y - r) + ' L' + x + ' ' + (y + r) + '" class="ctSp" stroke="' + col +
     '" opacity="' + (op || .5).toFixed(2) + '"/>'; }
