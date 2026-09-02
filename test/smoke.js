@@ -1060,12 +1060,15 @@ async function groupLobby(){
     //    ⛔ techUIInit 이 깔아 두는 1기를 되살리지 말 것. 「일꾼을 사는 것」이 첫 목표다.
     assert((G.tech.ents||[]).filter(e=>e.type==='worker').length===0,
       '시작 일꾼이 0기가 아니다: '+(G.tech.ents||[]).filter(e=>e.type==='worker').length);
-    // 다음 마리 가격이 보유 수에 따라 오른다 — 140 × 1.65^n (31마리째부터 ×1.10 · 상한 40)
-    assert(campHireCost(0)===140,'첫 일꾼 가격이 140 이 아니다: '+campHireCost(0));
+    // 다음 마리 가격이 보유 수에 따라 오른다 — 50 × **2.5^n** (31마리째부터 ×1.10 · 상한 40)
+    //   ⭐ 첫 마리 **50**(2026-09-02 · 옛 140) — 첫 탭 강화(10) 뒤 탭당 2원이니 25탭이면 닿는다.
+    assert(campHireCost(0)===50,'첫 일꾼 가격이 50 이 아니다: '+campHireCost(0));
     assert(campHireCost(1)>campHireCost(0),'일꾼 가격이 안 오른다');
     { const c30=campHireCost(29), c40=campHireCost(39);
-      assert(c30>2.7e8&&c30<3.0e8,'30마리째가 설계(2.83억)와 다르다: '+c30);
-      assert(c40>7.0e8&&c40<7.8e8,'40마리째가 설계(7.4억)와 다르다: '+c40);
+      // ⭐ 계단이 ×1.65 → **×2.5** 로 가팔라졌다(2026-09-02) — 일꾼을 귀하게 만드는 것이 의도다.
+      //    곱셈이 30번 쌓여 옛 곡선의 16만 배가 된다: 30마리째 **17.3조** · 40마리째 **45.0조**.
+      assert(c30>16e12&&c30<19e12,'30마리째가 설계(17.3조)와 다르다: '+c30);
+      assert(c40>42e12&&c40<48e12,'40마리째가 설계(45.0조)와 다르다: '+c40);
       // ⭐ 31마리째부터 계단이 눕는다 — 안 그러면 40마리째가 424억이라 200회차에도 못 채운다
       assert(c40/c30 < 3,'후반 계단이 안 눕었다(×1.10 이어야): '+(c40/c30).toFixed(1)+'배'); }
     // ⛽ **가스는 정제소가 스스로 캔다** (§2-3-1) — ⛔ 일꾼을 빼서 배치하는 방식이 아니다.
@@ -2064,9 +2067,29 @@ async function groupLobby(){
     try{
       // ① 첫 환생 직후 — 갈래 넷만 보이고 계열은 **하나도** 안 그려진다
       C.rbTree={root:1,_m2:1}; C.rbPts=1e9;
-      let shown=0; for(const L of CAMP_RT_LINES) for(let n=1;n<=5;n++) if(campTreeState(L.k,n)) shown++;
+      // ⚠ 관문 갈래만 센다 — 사슬 갈래(⛓)는 관문이 없어 가운데를 사면 바로 첫 별이 보인다
+      let shown=0; for(const L of CAMP_RT_LINES){ if(campRtIsChain(L.br)) continue;
+        for(let n=1,mx=campRtMax(L.k);n<=mx;n++) if(campTreeState(L.k,n)) shown++; }
       assert(shown===0,'갈래를 안 샀는데 계열이 '+shown+'칸 보인다 — 첫 화면이 32개로 붐빈다');
       assert(campTreeBrState('econ')==='buy','갈래를 살 수 있어야 한다');
+      // ⛓ 사슬 갈래 — 관문이 없고, 별 하나가 **여러** 다음 별을 연다
+      { assert(campTreeBrState('start')===null,'사슬 갈래에 갈래 관문이 남아 있다');
+        assert(campTreeGpState('start','가')===null,'사슬 갈래에 묶음 관문이 남아 있다');
+        assert(campTreeState('startMin',1)==='buy','가운데를 샀는데 사슬 첫 별이 안 열렸다');
+        assert(campTreeState('tap',1)===null&&campTreeState('startWk',1)===null,
+          '부모를 안 샀는데 곁가지가 보인다');
+        assert(campTreeState('startMin',2)===null,'첫 별을 안 샀는데 다음 별이 보인다');
+        campRtBuy('startMin');
+        assert(campTreeState('startMin',2)==='buy'&&campTreeState('tap',1)==='buy'
+          &&campTreeState('startWk',1)==='buy','별 하나가 세 갈래를 열지 못한다');
+        assert(campTreeState('skipRd',1)===null,'먼 부모(3차)를 안 샀는데 열렸다');
+        campRtBuy('startMin'); campRtBuy('startMin');          // II · III
+        assert(campTreeState('skipRd',1)==='buy','3차를 샀는데 그 뒤가 안 열렸다');
+        // 좌표 — 사슬은 부모에서 뻗어 나간다(같은 자리에 겹치지 않는다)
+        const a=campTreePos('startMin',1), b=campTreePos('tap',1), c=campTreePos('startWk',1);
+        assert(Math.hypot(a.x-b.x,a.y-b.y)>40&&Math.hypot(b.x-c.x,b.y-c.y)>40,
+          '사슬 별들이 한자리에 겹친다');
+        C.rbTree={root:1,_m2:1}; C.rbPts=1e9; }
       assert(campTreeGpState('econ','가')===null,'갈래를 안 샀는데 묶음이 보인다');
       // ② 갈래를 사면 묶음이, 묶음을 사면 계열이 열린다
       assert(campRtCanBuy('br:econ'),'갈래를 못 산다');
@@ -2162,8 +2185,11 @@ async function groupLobby(){
       // 📊 해금 진행도 — 분모는 셀 수 있는 전부(가운데+갈래+묶음+계열×5)
       { assert(typeof campTreeTotal==='function'&&typeof campTreeOwned==='function','진행도 계산이 없다');
         const all=campTreeTotal();
-        assert(all===1+Object.keys(CAMP_TREE_BR).length*(1+CAMP_RT_GRP_KEYS.length)+CAMP_RT_LINES.length*5,
-          '진행도 분모가 실제 칸 수와 다르다: '+all);
+        // ⚠ 묶음은 **계열이 있는 것만** 센다(빈 묶음은 사도 아무것도 안 열린다) · 차수도 계열마다 다르다
+        let want=1; for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue; want++;
+          for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(bk,g)) want++; }
+        for(const L of CAMP_RT_LINES) want+=campRtMax(L.k);
+        assert(all===want,'진행도 분모가 실제 칸 수와 다르다: '+all+' ≠ '+want);
         assert(campTreeOwned()>0&&campTreeOwned()<=all,'진행도 분자가 범위 밖: '+campTreeOwned());
         const tx=$('campTree').querySelector('.ctProgN').textContent;
         assert(tx.indexOf('/ '+all)>=0,'진행도 표시가 계산과 다르다: '+tx); }
@@ -4358,19 +4384,47 @@ async function groupLobby(){
     // ⑤-b-2 효과는 **선형**, 비용은 **완만한 지수**, 곱셈은 **마일스톤**이 맡는다
     { const S=campState();
       const tap=(n)=>{ S.upg.tap=n; const v=campTapGain(); S.upg.tap=0; return v; };
-      // 마일스톤 사이(19→20 은 계단이라 제외)에서는 레벨당 +1 로 선형이다
-      assert(tap(5)-tap(4)===tap(9)-tap(8),'탭 효과가 선형이 아니다: '+(tap(5)-tap(4))+' vs '+(tap(9)-tap(8)));
-      // 마일스톤 20 을 넘는 순간 ×2 — 「계단이 목표를 만든다」
-      assert(Math.abs(tap(20)/((1+20)) - 2) < 0.01,'Lv20 마일스톤(×2)이 안 걸린다: '+tap(20));
+      // ⛏ 탭 마일스톤은 **10 · 25 · 50 · 100 · 500 · 1000**, 지날 때마다 레벨당 증가폭이
+      //    **2배**가 된다(2026-09-02 · 1→2→4→8→16→32→64). ⛔ 옛 「Lv20 에서 값이 ×2」가 아니다 —
+      //    값을 곱하면 뒤로 갈수록 계단이 무의미해져서, 증가폭을 키우는 쪽으로 바꿨다.
+      assert(tap(5)-tap(4)===1 && tap(9)-tap(8)===1,'마일스톤 전 증가폭이 1 이 아니다');
+      // ⛏ **채취도 「실제 수」다**(2026-09-02) — 왕복 1회당 1원 → 2원 → 3원, 탭과 같은 곡선.
+      //    ⛔ 옛 방식은 레벨당 +2.5% 배율이었다. 배율이면 「1원이 2원이 된다」가 화면에서 안 읽힌다.
+      if(typeof campGatRaw==='function'){
+        assert(campGatRaw(0)===1,'채취 0레벨이 1 이 아니다: '+campGatRaw(0));
+        assert(campGatRaw(1)===2,'채취 1레벨이 2 가 아니다: '+campGatRaw(1));
+        assert(campGatRaw(10)===12,'채취 Lv10 이 12 가 아니다(탭과 같은 마일스톤): '+campGatRaw(10));
+        // 💰 비용 50·150·300·500·750 — 차이가 50씩 늘어난다(25n(n+1) = 탭의 5배)
+        //    ⛔ 「두 레벨마다 ×10」 을 넣었다가 Lv10 이 250만이 되어 되돌렸다(2026-09-02).
+        const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
+        assert(g(0)===50 && g(1)===150 && g(2)===300 && g(3)===500 && g(4)===750,
+          '채취 비용이 50·150·300·500·750 이 아니다: '+[g(0),g(1),g(2),g(3),g(4)].join(','));
+        // ⭐ 두 축이 같은 꼴이다 — 채취는 탭의 정확히 5배
+        const t=(lv)=>{ S.upg.tap=lv; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
+        assert(g(0)/t(0)===5 && g(4)/t(4)===5,'채취가 탭의 5배가 아니다');
+      }
+      assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
+      assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
+      assert(tap(25)-tap(24)===4,'Lv25 에서 증가폭이 4 로 안 커진다: '+(tap(25)-tap(24)));
+      assert(tap(50)-tap(49)===8,'Lv50 에서 증가폭이 8 로 안 커진다: '+(tap(50)-tap(49)));
+      // ⚠ 마일스톤 레벨은 **사는 것도 비싸다** — 필요 탭이 +20 붙는다(Lv10 은 55 → 75)
+      { const t10=(function(){ S.upg.tap=9; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; })();
+        assert(t10===75,'Lv10 필요 탭이 75 가 아니다: '+t10); }
       assert(campMileMul(19)===1 && campMileMul(20)===2 && campMileMul(50)===4 && campMileMul(100)===8,
         '마일스톤 계단이 20/50/100 에서 안 오른다: '+[campMileMul(19),campMileMul(20),campMileMul(50),campMileMul(100)].join(','));
       // ⛔ 마일스톤 배수는 Lv 에 **선형**이어야 한다(간격이 2배씩 넓어지므로). 지수가 되면 축이 셋이 된다.
       const k1=campMileMul(100)/100, k2=campMileMul(800)/800, k3=campMileMul(6400)/6400;
       assert(Math.abs(k1-k2)<0.01 && Math.abs(k2-k3)<0.01,
         '마일스톤이 지수로 자란다 — 지수 축이 셋이 되어 폭주한다: '+[k1,k2,k3].map(v=>v.toFixed(3)).join(','));
-      // 비용 무릎 — Lv10 부터 가팔라진다
+      // ⛏ 탭 비용은 **횟수로 설계한 2차식**이다(2026-09-02 · 5n(n+1)) — 계단비로 재면 안 된다.
+      //   ⭐ 잠그는 것은 「Lv n 을 사는 데 몇 번 눌러야 하는가」다: 10 → 15 → 20 → 25 …(5씩)
+      //   ⛔ 옛 검사는 계단비 1.09 를 봤다. 지수 시절 값이라 지금은 뜻이 없다.
       const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
-      assert(Math.abs(c(5)/c(4)-1.09)<0.02,'무릎 전 비용 계단이 1.09 가 아니다: '+(c(5)/c(4)).toFixed(3));
+      const taps=(n)=>{ S.upg.tap=n; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; };
+      assert(c(0)===10,'첫 탭 강화가 10 이 아니다: '+c(0));
+      for(let lv=0; lv<5; lv++)
+        assert(taps(lv)===10+5*lv, 'Lv'+(lv+1)+' 에 필요한 탭이 '+(10+5*lv)+'번이 아니다: '+taps(lv));
+      // 무릎(Lv10) 뒤로는 지수로 넘어간다 — 2차식만 두면 후반에 탭이 공짜가 된다
       assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
     // 🤖 매크로 방지 (HUNT_R1 §1-1-3) — 탭에 상한이 없으므로 이것이 유일한 제동이다
     if(typeof campTapHuman==='function'){
