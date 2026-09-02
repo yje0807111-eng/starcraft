@@ -32,3 +32,7 @@ _bld/
 _*.png
 _probe.mjs
 _zoom.mjs
+
+# 맵 업스케일 중간 산출물 — 조각 원본·AI 결과·붙인 것(합쳐 139MB)
+#   ⚠ 결과물은 assets/backgrounds/ 에 들어간다. 여기는 다시 만들 수 있는 것뿐이다.
+docs/mock/quarters/
