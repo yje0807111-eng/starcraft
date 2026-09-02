@@ -3687,7 +3687,7 @@ function campCost(kind, key, lv){
 // ⛔ 마일스톤 간격을 좁혀 지수로 만들지 말 것(위 ③).
 const CAMP_TAP_BASE = 1;        // 탭 0레벨 = 1미네랄
 const CAMP_TAP_STEP = 1;        // 탭 레벨당 +1
-const CAMP_GAT_STEP = 0.025;    // 효율 레벨당 +2.5% (왕복 1회당)
+const CAMP_GAT_STEP = 0.025;    // ⛔ 옛 값(레벨당 +2.5%) — 지금은 campGatRaw 가 정수로 센다
 // ⛏ **탭 강화 비용은 「필요한 탭 수」로 설계한다** (2026-09-02 사용자 확정)
 //   ⛔ 옛 값은 첫 강화가 **70** 이었다 — 탭당 1원이니 **70번을 눌러야** 첫 성장이 왔다.
 //     게임을 처음 켠 사람에게 그 구간은 너무 길다. 던전 0(캠프)은 튜토리얼 자리다.
@@ -3726,7 +3726,19 @@ function campTapNeedTaps(n){
   for(const m of CAMP_TAP_MILES) if(n >= m) t += 20;
   return t;
 }
-const CAMP_GAT_COST0 = 210;     // 효율 0→1레벨 비용
+// ⛏ **채취도 배율이 아니라 「실제 수」다** (2026-09-02 사용자 확정)
+//   기본 일꾼은 왕복 1회에 **1원**, 강화하면 2원·3원 … 탭과 **같은 곡선**을 쓴다
+//   (마일스톤 10·25·50·100·500·1000 에서 증가폭이 2배 · Lv10 은 10 → 12).
+//   ⛔ 옛 방식은 「레벨당 +2.5% × campMileMul」 이었다 — 배율이라 「1원이 2원이 된다」가
+//     화면에서 안 읽혔다. 정수로 세면 무엇이 늘었는지 바로 보인다.
+//   ⚠ 비용은 **탭보다 훨씬 비싸다**(아래 campGatCost) — 일꾼은 수가 늘고 저절로 캐기 때문이다.
+function campGatRaw(lv){ return campTapRaw(lv); }
+// 💰 채취 강화 비용 — **두 레벨마다 10배**(×5 → ×2 교대). 50 · 250 · 500 · 2500 · 5000 …
+//   ⚠ 탭(Lv10 에 750)과 견주면 Lv10 이 **250만**이다 — 3,300배. 자동 수입이라 그만큼 무겁게 둔다.
+function campGatCost(n){
+  return CAMP_GAT_COST0 * Math.pow(5, Math.ceil((n - 1) / 2)) * Math.pow(2, Math.floor((n - 1) / 2));
+}
+const CAMP_GAT_COST0 = 50;      // 채취 0→1레벨 비용(옛 210) — 그 뒤 두 레벨마다 ×10
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
 const CAMP_HOLD_COST0 = 500;    // 홀드 0→1레벨 비용
@@ -3764,7 +3776,8 @@ function campUpgCost(k){
     const c = campTapNeedTaps(n) * campTapRaw(n - 1);
     return Math.max(1, Math.ceil(c * campUpgDisc()));
   }
-  const base = (k === 'hold') ? CAMP_HOLD_COST0 : CAMP_GAT_COST0;
+  if(k === 'gather') return Math.max(1, Math.ceil(campGatCost(lv + 1) * campUpgDisc()));
+  const base = CAMP_HOLD_COST0;
   const r0 = CAMP_COST_R0[k] || CAMP_COST_R0.gather, r1 = CAMP_COST_R1[k] || CAMP_COST_R1.gather;
   const knee = Math.min(lv, CAMP_COST_KNEE);                    // Lv10 까지는 완만하게, 그 뒤로 가팔라진다
   const cost = base * Math.pow(r0, knee) * Math.pow(r1, Math.max(0, lv - CAMP_COST_KNEE));
@@ -3828,7 +3841,10 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   const lv = campUpgLv('gather');
   // 💳 팩 보너스는 **첫 괄호 안**(합산 항)에 들어간다. ⛔ 곱 항으로 옮기지 말 것 —
   //    곱 항이 하나 더 늘면 지수 축이 늘어 후반이 터진다(위 CAMP_PACKS 설명).
-  return (1 + CAMP_GAT_STEP * lv + campPackGather()) * campMileMul(lv)
+  // ⛏ **정수 곡선**이다(campGatRaw) — 왕복 1회당 1원 → 2원 → 3원 …
+  //   ⛔ campMileMul 을 곱하지 말 것 — 계단은 campGatRaw 안에 이미 있다(두 겹이 된다).
+  //   💳 팩 보너스는 여기서도 **합**이다(GEM.md §5-2).
+  return (campGatRaw(lv) + campPackGather())
     * campMineMul() * campRebMul() * campRtMul('gather'); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).
