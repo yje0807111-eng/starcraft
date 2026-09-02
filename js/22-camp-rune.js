@@ -49,7 +49,9 @@ const RUNE_LIST = [
     de:'탭 획득량',        v:{ low:0.05, mid:0.12, high:0.25 } },
   { id:'gas',   nm:'정제의 룬',   kind:'norm', eff:'gas',   ico:'box',
     de:'가스 획득',        v:{ low:0.05, mid:0.12, high:0.25 } },
-  { id:'wspd',  nm:'발걸음의 룬', kind:'norm', eff:'wspd',  ico:'boost',
+  // ⭐ 이동속도 룬은 **일꾼 하나뿐**이다(사용자 확정 2026-09-02).
+  //   ⛔ 「유닛 이동속도」를 다시 만들지 말 것 — 뺀 축이다. 전투 유닛은 공격력·체력·공격속도로 센다.
+  { id:'wspd',  nm:'신속의 룬',   kind:'norm', eff:'wspd',  ico:'boost',
     de:'일꾼 이동속도',    v:{ low:0.07, mid:0.18, high:0.35 } },
   { id:'pop',   nm:'증원의 룬',   kind:'norm', eff:'pop',   ico:'user',
     de:'인구 상한',        v:{ low:0.03, mid:0.08, high:0.15 } },
@@ -59,8 +61,6 @@ const RUNE_LIST = [
     de:'유닛 공격속도',    v:{ low:0.04, mid:0.10, high:0.20 } },
   { id:'hp',    nm:'수호의 룬',   kind:'norm', eff:'hp',    ico:'armor',
     de:'유닛 체력',        v:{ low:0.05, mid:0.12, high:0.25 } },
-  { id:'uspd',  nm:'신속의 룬',   kind:'norm', eff:'uspd',  ico:'flag',
-    de:'유닛 이동속도',    v:{ low:0.05, mid:0.12, high:0.25 } },
   { id:'heal',  nm:'치유의 룬',   kind:'norm', eff:'heal',  ico:'hero',
     de:'회복량',           v:{ low:0.06, mid:0.15, high:0.30 } },
   // ── 유니크 4종 — **다른 데서 못 사는 것**이라 칸이 셋뿐이다 ──
@@ -161,7 +161,7 @@ function campRuneBuy(id, gd){
   const have = (typeof profGem === 'function') ? profGem() : 0;
   if(have < cost){ if(typeof toast === 'function') toast('💎 젬이 부족합니다'); return false; }
   p.gem = (p.gem || 0) - cost;
-  R.own[key] = (R.own[key] | 0) + 1;
+  R.own[key] = (R.own[key] | 0) + 1; campRuneTouch();
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof playSfx === 'function') playSfx('hero_merge');
   if(typeof toast === 'function') toast('💠 ' + runeName(key) + ' 획득');
@@ -181,14 +181,14 @@ function campRuneCanEquip(kind, i, key){
   return campRuneFree(key) > 0 || cur === key; }
 function campRuneEquip(kind, i, key){
   if(!campRuneCanEquip(kind, i, key)) return false;
-  const R = campRuneState(); R[kind][i] = key;
+  const R = campRuneState(); R[kind][i] = key; campRuneTouch();
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof playSfx === 'function') playSfx('ui_tab');
   campRuneRender(); return true; }
 function campRuneUnequip(kind, i){
   const R = campRuneState(); if(!R || i < 0 || i >= R[kind].length) return false;
   if(!R[kind][i]) return false;
-  R[kind][i] = null;
+  R[kind][i] = null; campRuneTouch();
   if(typeof saveMeta === 'function') saveMeta();
   campRuneRender(); return true; }
 // 끼워져 있는 것 — 열린 칸까지만 본다(칸이 줄어드는 일은 없지만, 표를 고치면 생길 수 있다)
@@ -200,11 +200,29 @@ function campRuneEq(kind){ const R = campRuneState(); if(!R) return [];
 // ── 효과 — **합이다** ───────────────────────────────────────────────────
 // ⛔ 곱하지 말 것(GEM.md §5-2). 부르는 쪽은 `1 + campRuneEff('gain')` 처럼 **합산 항**에 넣는다.
 // ⚠ 아직 아무도 부르지 않는다 — 배선은 다음 단계다.
-function campRuneEff(eff){ let s = 0;
+// ⚡ **매 프레임·일꾼마다 불린다** — 그래서 캐시한다. 장착이 바뀔 때만 다시 센다.
+//   ⛔ 캐시를 빼지 말 것: 일꾼 40기면 프레임당 40번 × 슬롯 8칸을 훑게 된다.
+let _runeVer = 0, _reCache = null, _reVer = -1, _reObj = null;
+const _RE_EMPTY = {};
+function campRuneTouch(){ _runeVer++; _reCache = null; }   // 장착·구매가 부른다
+function _runeEffAll(){
+  const R = campRuneState(); if(!R) return _RE_EMPTY;
+  // 세이브가 통째로 갈리면(로그인·환생) R 객체가 바뀐다 — 그때도 다시 센다
+  if(_reCache && _reVer === _runeVer && _reObj === R) return _reCache;
+  const out = {};
   for(const kind of ['norm', 'uniq']) for(const key of campRuneEq(kind)){
-    if(!key) continue; const p = runeParse(key);
-    if(!p.def || p.def.eff !== eff) continue; s += runeVal(key); }
-  return s; }
+    if(!key) continue; const p = runeParse(key); if(!p.def) continue;
+    out[p.def.eff] = (out[p.def.eff] || 0) + runeVal(key); }
+  _reCache = out; _reVer = _runeVer; _reObj = R; return out; }
+function campRuneEff(eff){ return _runeEffAll()[eff] || 0; }
+// 부르는 쪽이 쓰기 좋은 모양 — **합산 항을 배수 하나로 접어 준다**(1 + 합).
+//   ⛔ 배수끼리 다시 곱하지 말 것. 룬끼리는 이미 합으로 접혔다.
+function campRuneMul(eff){ return 1 + campRuneEff(eff); }
+// 🏕 **캠프 안에서만** 걸리는 것 — 건설 판(16-build.js)은 관리자 탭·오토배틀과 공유다.
+//   ⛔ 게이트를 빼면 관리자 건설 탭의 일꾼까지 빨라진다(스모크가 잡는다).
+function campRuneMulIn(eff){
+  const on = (typeof campIsOn === 'function') && campIsOn();
+  return on ? campRuneMul(eff) : 1; }
 
 // ══ 화면 ═════════════════════════════════════════════════════════════════
 // 규격은 환생 구역과 같다 — `#phone` 직속 · z-index 120 · `bottom:var(--navH)` 로 네비를 비운다.

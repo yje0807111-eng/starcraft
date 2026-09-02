@@ -566,7 +566,10 @@ function strikeHealStep(u, me, dt){
     if(camp){
       if((u._healCd||0) > 0) return;                            // 쉬는 중 — 곁에 붙어만 있는다
       if((u._healDur||0) <= 0) u._healDur = STK_HEAL_DUR;       // 새로 시작
-      t.hp = Math.min(t.maxHp, t.hp + (t.maxHp || 0)*STK_HEAL_PCT*dt); return; }   // 💚 비율 · dt 만큼 연속으로
+      // 💠 치유의 룬 — 회복 비율을 키운다(여기는 캠프 전용 갈래라 게이트가 이미 걸려 있다)
+      { const rm = (typeof campRuneMul === 'function') ? campRuneMul('heal') : 1;
+        t.hp = Math.min(t.maxHp, t.hp + (t.maxHp || 0)*STK_HEAL_PCT*rm*dt); }
+      return; }   // 💚 비율 · dt 만큼 연속으로
     let amt=STK_HEAL_HPS*dt;
     if(u.maxEn>0){ amt=Math.min(amt, (u.en||0)/STK_HEAL_EN); u.en=Math.max(0,(u.en||0)-amt*STK_HEAL_EN); }   // 에너지 소진 시 치유 중단
     t.hp=Math.min(t.maxHp, t.hp+amt); return; }
