@@ -2602,6 +2602,210 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🧬 던전 안 변태 — 전장 유닛을 지정하면 프로필이 뜨고, 거기서 변태한다(2026-08-28).
+  //   ⚠ 던전 안에서는 유닛이 전장(CAMPB.me.units)에 있고 **기지 엔티티가 없다** —
+  //     techPanelRender·techDoMorph 는 기지만 알아서, 캠프가 가짜 엔티티로 비추고 직접 변태한다.
+  await step('캠프 던전: 전장 유닛 지정 프로필 · 변태', async()=>{
+    skipIf(typeof campFieldMorph!=='function'||typeof campFieldSheet!=='function','전장 변태 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const race0=C.race;
+    try{
+      // 에테리얼로 바꿔 다크세이지 → 다크보이드 융합을 잰다
+      C.race='protoss'; campEnter(); await sleep(500);
+      skipIf(G.tech.race!=='aetherial','에테리얼로 못 바꿈');
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      G.tech.credit=1e9; G.tech.energy=1e6;
+      campWithStk(()=>{ strikeSpawnUnit('me','dark_templar'); strikeSpawnUnit('me','dark_templar'); });
+      const us=CAMPB.me.units.filter(u=>(u.gm||u.id)==='dark_templar');
+      skipIf(us.length<2,'다크세이지 둘을 못 세움');
+      // ① 기지에는 유닛 엔티티가 없다 — 이 테스트의 전제
+      assert(!(G.tech.ents||[]).some(e=>e.type==='unit'),'던전인데 기지에 유닛 엔티티가 있다 — 전제가 깨졌다');
+      // ② 지정하면 전장 유닛이 가짜 엔티티로 비친다
+      campSelSet([us[0]]);
+      const ents=campFieldEnts();
+      assert(ents.length===1,'지정한 전장 유닛이 안 비친다: '+ents.length);
+      assert(ents[0].uid==='dark_templar','종류 키가 아니라 개체 번호가 들어갔다: '+ents[0].uid);
+      // ③ 시트가 실제로 그려지고 변태 카드가 들어 있다
+      assert(campFieldSheet(),'전장 프로필 시트를 못 그렸다');
+      { const b=document.getElementById('btSheetBody');
+        assert(b && /다크보이드/.test(b.innerHTML),'시트에 변태 카드가 없다'); }
+      // ④ 변태 — 둘이 사라지고 다크보이드 하나가 그 자리에 선다
+      const n0=CAMPB.me.units.length, x0=us[0].x, y0=us[0].y;
+      assert(campFieldMorph('dark_archon')===1,'변태가 안 됐다');
+      const left=CAMPB.me.units.filter(u=>(u.gm||u.id)==='dark_templar').length;
+      const born=CAMPB.me.units.find(u=>(u.gm||u.id)==='dark_archon');
+      assert(left===0,'다크세이지가 남아 있다: '+left);
+      assert(born,'다크보이드가 안 생겼다');
+      assert(CAMPB.me.units.length===n0-1,'둘이 하나가 안 됐다: '+CAMPB.me.units.length+' (전 '+n0+')');
+      assert(Math.abs(born.x-x0)<1 && Math.abs(born.y-y0)<1,'그 자리에 안 섰다');
+      // ⑤ 설계 능력치가 씌워졌다 — SC 값(체력 25)이 남으면 안 된다
+      assert(Math.abs(born.maxHp-CAMP_UNIT_STAT.dark_archon.h*CAMP_STAT_HPK)<1e-6,
+        '설계 능력치가 안 씌워졌다: '+born.maxHp);
+      // ⑥ 한 기뿐이면 융합하지 않는다
+      campWithStk(()=>{ strikeSpawnUnit('me','dark_templar'); });
+      const one=CAMPB.me.units.find(u=>(u.gm||u.id)==='dark_templar');
+      campSelSet([one]);
+      assert(campFieldMorph('dark_archon')===0,'한 기뿐인데 융합했다');
+      return '전장 지정 → 프로필 → 융합 2→1 · 설계 체력 '+born.maxHp;
+    } finally { if(typeof campSelClear==='function') campSelClear();
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; S.race=race0; }
+      campEnter(); await sleep(400); }
+  });
+
+  // 🧬 마법 유닛 셋을 캠프 명단에 넣었다(2026-08-28) — 오염술사(생산) · 다크보이드·산성충(변태).
+  //   ⛔ 캠프 설계표에 없으면 **원본 SC 능력치 그대로** 싸운다(오염술사 체력 80 vs 마린 5).
+  await step('캠프 명단: 오염술사·다크보이드·산성충', async()=>{
+    skipIf(typeof CAMP_UNIT_STAT==='undefined'||typeof campDesignStat!=='function','캠프 설계표 없음');
+    // ① 오염술사는 오염 둥지에서 뽑는다 — 예전엔 나올 방법이 아예 없었다
+    { const b=(TECH_TREE.swarm.buildings||[]).find(x=>x.k==='defilermound');
+      assert(b,'오염 둥지가 없다');
+      assert((b.produces||[]).some(p=>p.id==='defiler'),'오염 둥지가 오염술사를 안 뽑는다 — 나올 방법이 없다'); }
+    // ② 셋 다 캠프 설계 능력치·가격이 있다
+    for(const u of ['defiler','dark_archon','venom']){
+      assert(CAMP_UNIT_STAT[u],u+' 가 캠프 설계표에 없다 — SC 능력치로 싸운다');
+      assert(campUnitBase(u,50)>0,u+' 가격이 없다'); }
+    // ③ 무공격 마법 유닛은 공격을 안 준다(의무병·지원 정찰기와 같은 규약)
+    for(const u of ['defiler','dark_archon'])
+      assert(CAMP_UNIT_STAT[u].a==null,u+' 에 공격이 붙었다 — 무공격 마법 유닛이다');
+    assert(CAMP_UNIT_STAT.venom.a>0,'산성충은 공격 유닛인데 공격이 없다');
+    // ④ 설계 능력치가 **실제로** 씌워진다 — SC 값(오염술사 80)이 남으면 안 된다
+    { const u={ id:'defiler', gm:'defiler', hp:80, maxHp:80 };
+      assert(campDesignStat(u),'오염술사에 설계 능력치가 안 씌워졌다');
+      assert(u.maxHp<40,'SC 체력이 그대로 남았다: '+u.maxHp);
+      assert(Math.abs(u.maxHp-CAMP_UNIT_STAT.defiler.h*CAMP_STAT_HPK)<1e-6,
+        '설계표 값과 다르다: '+u.maxHp); }
+    // ⑤ 스킬은 그대로 붙어 있다 — 유닛이 생겼으니 이제 실제로 쓸 수 있다
+    assert(unitSkillKeys({id:'defiler'}).length===3,'오염술사 스킬이 3개가 아니다');
+    assert(unitSkillKeys({id:'dark_archon'}).length===3,'다크보이드 스킬이 3개가 아니다');
+    return '오염술사 h'+CAMP_UNIT_STAT.defiler.h+' · 다크보이드 h'+CAMP_UNIT_STAT.dark_archon.h
+      +' · 산성충 a'+CAMP_UNIT_STAT.venom.a+'/h'+CAMP_UNIT_STAT.venom.h;
+  });
+
+  // 💣☢ 매설 · 지연 폭격 — 지뢰는 가서 심고 돌아온다 · 핵은 제자리(사용자 확정 2026-08-28)
+  await step('캠프 스킬: 지뢰는 가서 심고 · 핵은 제자리에서', async()=>{
+    skipIf(typeof campMineOrder!=='function'||typeof campNukeStep!=='function','매설 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      for(const k of ['spider_mine','nuke']) assert(!STK_SK_DEAD[k],k+' 가 아직 미구현 목록에 있다');
+      assert(SKILLS.spider_mine.cd===30,'지뢰 쿨이 30이 아니다: '+SKILLS.spider_mine.cd);
+      assert(SKILLS.nuke.cd===300,'핵 쿨이 300이 아니다: '+SKILLS.nuke.cd);
+      assert(CAMP_MINE_LIFE===180,'지뢰 수명이 180초가 아니다: '+CAMP_MINE_LIFE);
+      campWipeField();
+      // ① 시전 = 그 자리에 심는 게 아니라 **임무를 받는다**
+      campWithStk(()=>{ strikeSpawnUnit('me','racer'); });
+      const u=CAMPB.me.units[0]; skipIf(!u,'레이서를 못 세움');
+      u.x=1000; u.y=1000; u.wait=0; u.rallied=true; u._post={x:1000,y:1000};
+      CAMPB._mines=null;
+      assert(campMineOrder(u,{x:1000,y:2000},SKILLS.spider_mine),'매설 임무를 못 받았다');
+      assert(u._mine && !((CAMPB._mines||[]).length),'시전하자마자 그 자리에 심었다 — 가서 심어야 한다');
+      // ② 걸어간다 → 도착하면 심고 임무가 끝난다
+      const y0=u.y;
+      campWithStk(()=>{ for(let i=0;i<400 && u._mine;i++) campMineTrip(u,0.05); });
+      assert(u.y>y0+300,'매설 지점 쪽으로 안 걸어갔다: '+Math.round(u.y)+' (시작 '+Math.round(y0)+')');
+      assert(!u._mine,'도착했는데 임무가 안 끝났다');
+      assert((CAMPB._mines||[]).length===1,'지뢰가 안 심겼다: '+(CAMPB._mines||[]).length);
+      // ③ 지상 적이 가까이 오면 터지고 사라진다 · 공중은 안 밟는다
+      { const z=CAMPB._mines[0];
+        CAMPB.ai.units.length=0;
+        const airId=[...FXLAB_AIR][0];
+        CAMPB.ai.units.push({x:z.x,y:z.y,dead:false,hp:9999,maxHp:9999,id:airId,gm:airId});
+        campMineStep(0.05);
+        assert((CAMPB._mines||[]).length===1,'공중 유닛이 지뢰를 밟았다');
+        CAMPB.ai.units.length=0;
+        const g={x:z.x,y:z.y,dead:false,hp:9999,maxHp:9999,id:'marine',gm:'marine'};
+        CAMPB.ai.units.push(g);
+        campWithStk(()=>campMineStep(0.05));
+        assert(!(CAMPB._mines||[]).length,'지상 적이 붙었는데 안 터졌다');
+        assert(g.hp<9999,'터졌는데 피해가 없다: '+g.hp); }
+      // ④ 수명이 끝나면 저절로 사라진다
+      { CAMPB.ai.units.length=0;
+        CAMPB._mines=[{x:1,y:1,left:CAMP_MINE_LIFE,r:10,trig:5,dmg:60,src:u}];
+        campMineStep(CAMP_MINE_LIFE-1);
+        assert((CAMPB._mines||[]).length===1,'수명 전에 사라졌다');
+        campMineStep(2);
+        assert(!(CAMPB._mines||[]).length,'수명이 끝났는데 남아 있다'); }
+      // ⑤ ☢ 핵 — 제자리에서 유도(움직이지 않는다) · delay 뒤에 터진다
+      { CAMPB._nukes=null; CAMPB.ai.units.length=0;
+        const g={x:1000,y:2000,dead:false,hp:99999,maxHp:99999,id:'marine',gm:'marine'};
+        CAMPB.ai.units.push(g);
+        const nx=u.x, ny=u.y;
+        campWithStk(()=>{ assert(campNukeOrder(u,{x:1000,y:2000},SKILLS.nuke),'핵 유도를 못 했다'); });
+        assert(!u._mine,'핵이 매설 임무를 만들었다 — 핵은 제자리다');
+        assert(u.x===nx && u.y===ny,'핵을 쓰면서 움직였다');
+        assert((CAMPB._nukes||[]).length===1,'핵이 예약되지 않았다');
+        const half=(SKILLS.nuke.delay||3.5)/2;
+        campWithStk(()=>campNukeStep(half));
+        assert(g.hp===99999,'지연 전에 터졌다');
+        campWithStk(()=>campNukeStep(half+0.1));
+        assert(g.hp<99999,'지연이 지났는데 안 터졌다');
+        assert(!(CAMPB._nukes||[]).length,'터졌는데 예약이 남아 있다'); }
+      return '지뢰 쿨 30·수명 '+CAMP_MINE_LIFE+'초 · 핵 쿨 300·지연 '+SKILLS.nuke.delay+'초';
+    } finally { if(typeof CAMPB!=='undefined'&&CAMPB){ CAMPB._mines=null; CAMPB._nukes=null; }
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
+  // 🏢 건물 시전 — 전투 시작 3초 뒤 첫 발 · 그 뒤 120초마다(사용자 확정 2026-08-28).
+  //   ⛔ strikeSkillTick 은 me.units 만 돈다 — 건물은 유닛이 아니라 영영 안 쓴다.
+  await step('캠프: 건물이 스킬을 쓴다(쉴드 배터리)', async()=>{
+    skipIf(typeof campBldSkillStep!=='function'||typeof campEnterDungeon!=='function','건물 시전 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      const cfg=CAMP_BLD_SKILL.battery; skipIf(!cfg,'쉴드 배터리 설정이 없다');
+      assert(cfg.sk==='recharge' && cfg.first===3 && cfg.every===120,
+        '쉴드 배터리 설정이 3초/120초가 아니다: '+JSON.stringify(cfg));
+      campWipeField();
+      // 건물 하나(배터리)와 다친 아군 하나를 세운다
+      CAMPB._bld=[{x:1000,y:1000,hp:100,max:100,maxHp:100,dead:false,eid:'__b1',bk:'battery'}];
+      const bat=CAMPB._bld[0];
+      campWithStk(()=>{ strikeSpawnUnit('me','marine'); });
+      const pt=CAMPB.me.units[0]; skipIf(!pt,'환자를 못 세움');
+      pt.x=1000; pt.y=1000; pt.maxHp=100; pt.hp=20;
+      // ① 3초 전에는 안 쓴다
+      let fired=0;
+      for(let i=0;i<58;i++) fired+=campBldSkillStep(0.05);          // 2.9초
+      assert(fired===0,'3초 전에 벌써 썼다');
+      assert(pt.hp===20,'3초 전인데 체력이 올랐다: '+pt.hp);
+      // ② 3초를 넘기면 한 번 쓴다 — 체력 25% 회복
+      for(let i=0;i<4 && !fired;i++) fired+=campBldSkillStep(0.05);
+      assert(fired===1,'3초가 지났는데 안 썼다');
+      assert(Math.abs(pt.hp-45)<1e-6,'체력을 25% 만큼 안 채웠다: '+pt.hp);
+      // ③ 바로 또 쓰지 않는다 — 다음은 120초 뒤
+      pt.hp=20; let again=0;
+      for(let i=0;i<200;i++) again+=campBldSkillStep(0.05);          // 10초
+      assert(again===0,'쓴 직후 10초 안에 또 썼다 — 주기가 안 걸렸다');
+      assert(bat._bsT>100,'다음 주기가 120초 근처가 아니다: '+bat._bsT);
+      // ④ 대상이 없으면 120초를 버리지 않는다(짧게 다시 본다)
+      { const b2={x:1000,y:1000,hp:100,max:100,maxHp:100,dead:false,eid:'__b2',bk:'battery'};
+        CAMPB._bld=[b2]; pt.hp=pt.maxHp;                            // 멀쩡한 아군뿐
+        for(let i=0;i<70;i++) campBldSkillStep(0.05);
+        assert(b2._bsT<=CAMP_BLD_RETRY+1e-6,'대상이 없는데 120초를 통째로 버렸다: '+b2._bsT); }
+      // ⑤ 죽은 건물은 안 쓴다
+      { const b3={x:1000,y:1000,hp:0,max:100,maxHp:100,dead:true,eid:'__b3',bk:'battery'};
+        CAMPB._bld=[b3]; pt.hp=20;
+        let n=0; for(let i=0;i<200;i++) n+=campBldSkillStep(0.05);
+        assert(n===0,'죽은 건물이 스킬을 썼다');
+        assert(pt.hp===20,'죽은 건물이 아군을 회복시켰다'); }
+      // ⑥ 라운드가 다시 서면 주기가 초기화된다
+      //   ⚠ **본부로 잰다.** campBuildStructs 는 일반 건물을 매번 **새 객체**로 만들어서
+      //     초기화 줄이 없어도 _bsT 가 없다 — 그쪽으로 재면 헛검사가 된다(실제로 그랬다).
+      //     본부(CAMPB.me.base)만 객체를 **재사용**하므로 손으로 지워야 하고, 그래서 여기서 잰다.
+      { CAMPB.me.base._bsT=99;
+        campBuildStructs();
+        assert(CAMPB.me.base._bsT==null,
+          '라운드를 다시 세웠는데 본부의 주기가 남아 있다 — 「전투 시작 3초」가 안 성립한다: '+CAMPB.me.base._bsT); }
+      return '3초 뒤 첫 발 · 그 뒤 '+cfg.every+'초 · 대상 없으면 '+CAMP_BLD_RETRY+'초 뒤 재시도';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 💉 의무병 치유 — 「3초 치유 → 5초 쉬기」(사용자 확정 2026-08-28).
   //   ⚠ 화면에서 도는 치유는 `strikeHealStep`(의무병 전용)이다. `SKILLS.heal` 은
   //     `_stkApplyAlly` 가 의무병을 빼고 있어 안 탄다 — 둘을 헷갈리지 말 것.
@@ -4459,14 +4663,20 @@ async function groupLobby(){
         assert(campGatRaw(0)===1,'채취 0레벨이 1 이 아니다: '+campGatRaw(0));
         assert(campGatRaw(1)===2,'채취 1레벨이 2 가 아니다: '+campGatRaw(1));
         assert(campGatRaw(10)===12,'채취 Lv10 이 12 가 아니다(탭과 같은 마일스톤): '+campGatRaw(10));
-        // 💰 비용 50·150·300·500·750 — 차이가 50씩 늘어난다(25n(n+1) = 탭의 5배)
-        //    ⛔ 「두 레벨마다 ×10」 을 넣었다가 Lv10 이 250만이 되어 되돌렸다(2026-09-02).
+        // 💰 비용은 **세 레벨마다 ×10** (2026-09-02 사용자 확정)
+        //    50 · 150 · 300 · 500 · 1500 · 3000 · 5000 · 1.5만 · 3만 · 5만
+        //    ⭐ 노림수는 채취를 「끝없이 사는 축」에서 빼는 것 — 옛 제곱 곡선(25n(n+1))에서는
+        //      30분 판에서 채취 Lv61 까지 올라가 수입의 94.7% 를 먹었다(실측).
+        //    ⛔ 제곱 곡선으로 되돌리지 말 것.
         const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
-        assert(g(0)===50 && g(1)===150 && g(2)===300 && g(3)===500 && g(4)===750,
-          '채취 비용이 50·150·300·500·750 이 아니다: '+[g(0),g(1),g(2),g(3),g(4)].join(','));
-        // ⭐ 두 축이 같은 꼴이다 — 채취는 탭의 정확히 5배
+        const want=[50,150,300,500,1500,3000,5000,15000,30000,50000];
+        const got=want.map((_,i)=>g(i));
+        assert(want.every((v,i)=>got[i]===v),
+          '채취 비용이 세 레벨마다 ×10 이 아니다: '+got.join(','));
+        // ⭐ 성능은 탭과 같은 곡선을 그대로 쓴다(campGatRaw = campTapRaw) — 값만 갈랐다
         const t=(lv)=>{ S.upg.tap=lv; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
-        assert(g(0)/t(0)===5 && g(4)/t(4)===5,'채취가 탭의 5배가 아니다');
+        assert(g(0)/t(0)===5,'채취 첫 레벨이 탭의 5배가 아니다: '+g(0)+' vs '+t(0));
+        assert(g(9)/t(9)>50,'채취 Lv10 이 탭보다 충분히 비싸지 않다: '+g(9)+' vs '+t(9));
       }
       assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
       assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
