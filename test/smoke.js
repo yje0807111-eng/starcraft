@@ -2202,6 +2202,56 @@ async function groupLobby(){
         assert(Math.abs(cy-want)<12,'고른 별이 시트 위 한가운데가 아니다: '+Math.round(cy)+' vs '+Math.round(want));
         campTreeDesel(); campTreeFit(true);
         assert(campTreeSheetH()===0,'해제했는데 시트가 자리를 남긴다'); }
+      // ⚡ 피버 타임 (2026-09-02 사용자 확정)
+      //   ⛔ 「중첩 안 됨」만으로는 상한이 안 잡힌다 — 탭이 빨라지면 꺼진 시간이 0 으로 수렴해
+      //     상시 배수가 된다(실측 계산: 초당 50탭·5%·16초 = 시간의 97.6%). **재발동 대기가 상한이다.**
+      { const C=campState(); const t0=JSON.stringify(C.rbTree||{});
+        C.rbTree={}; campFevReset();
+        // ① 활성화를 안 샀으면 아무 일도 없다
+        assert(!campFevOn(),'안 샀는데 피버가 켜져 있다');
+        for(let i=0;i<500;i++) campFevRoll();
+        assert(!campFevActive(),'활성화 없이 피버가 터졌다');
+        // ② 선행 조건 — 활성화 없이는 확률·배수·시간을 **살 수 없고 보이지도 않는다**
+        C.rbPts=1e12; C.rbTree={root:1};
+        for(const b in CAMP_TREE_BR){ if(campRtIsChain(b)) continue; C.rbTree['br:'+b]=1;
+          for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(b,g)) C.rbTree['gp:'+b+g]=1; }
+        for(const k of ['fevPct','fevMul','fevSec']){
+          assert(!campRtCanBuy(k),k+' 를 활성화 없이 살 수 있다');
+          assert(campTreeState(k,1)===null,k+' 가 활성화 없이 화면에 보인다'); }
+        // ③ 활성화하면 셋이 열린다
+        campRtBuy('fever');
+        assert(campFevOn(),'활성화를 샀는데 안 켜진다');
+        for(const k of ['fevPct','fevMul','fevSec'])
+          assert(campRtCanBuy(k),k+' 가 활성화 뒤에도 안 열린다');
+        // ④ 값이 표에서 그대로 나온다
+        assert(Math.abs(campFevPct()-CAMP_FEV_PCT[0])<1e-9,'기본 확률이 표와 다르다');
+        assert(campFevMul()===CAMP_FEV_MUL[0]&&campFevSec()===CAMP_FEV_SEC[0],'기본 배수·시간이 표와 다르다');
+        campRtBuy('fevMul');
+        assert(campFevMul()===CAMP_FEV_MUL[1],'1차를 샀는데 배수가 안 오른다: '+campFevMul());
+        // ⑤ 피버가 켜지면 탭 획득이 **배수만큼** 는다 — 곱하는 곳이 campTapGain 한 곳이어야 한다
+        campFevReset();
+        const g0=campTapGain();
+        _campFevEnd=Date.now()+5000;
+        assert(campFevActive(),'심었는데 안 켜진다');
+        assert(Math.abs(campTapGain()/g0-campFevMul())<0.02,
+          '피버 배수가 탭에 안 걸린다: '+(campTapGain()/g0).toFixed(2)+' vs '+campFevMul());
+        // ⑥ ⛔ 중첩되지 않는다 — 켜져 있는 동안 굴려도 시간이 안 늘어난다
+        { const e0=_campFevEnd; for(let i=0;i<2000;i++) campFevRoll();
+          assert(_campFevEnd===e0,'켜져 있는데 다시 터져 시간이 늘었다'); }
+        // ⑦ ⏳ 끝나도 대기 동안은 안 걸린다 — **이것이 유일한 상한이다**
+        _campFevEnd=Date.now()-1; _campFevCd=Date.now()+CAMP_FEV_CD*1000;
+        assert(!campFevActive(),'끝났는데 아직 켜져 있다');
+        for(let i=0;i<3000;i++) campFevRoll();
+        assert(!campFevActive(),'대기 중인데 다시 터졌다 — 상한이 사라진다');
+        // ⑧ 대기가 끝나면 다시 걸린다
+        _campFevCd=0; let hit=false;
+        for(let i=0;i<5000 && !hit;i++) hit=campFevRoll();
+        assert(hit,'대기가 끝났는데 5000탭을 굴려도 안 터진다');
+        // ⑨ 머무는 비율에 **천장이 있다** — 지속 ÷ (지속 + 대기) 를 못 넘는다
+        { C.rbTree.fevSec=5; C.rbTree.fevPct=5;
+          const cap=campFevSec()/(campFevSec()+CAMP_FEV_CD);
+          assert(cap<0.5,'만렙 듀티가 절반을 넘는다('+(cap*100).toFixed(0)+'%) — 사건이 아니라 상시 배수다'); }
+        C.rbTree=JSON.parse(t0); campFevReset(); }
       // 🌌 갈래끼리 겹치지 않는다 (2026-09-02 사용자 지시 「각 구역이 안 겹치게」)
       //   ⭐ 좌표 함수만 부른다 — 화면 상태에 안 흔들린다. 별 지름이 26~30 이라
       //     중심 사이가 30 을 밑돌면 **동그라미가 서로 먹는다.**

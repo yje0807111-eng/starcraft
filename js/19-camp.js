@@ -299,6 +299,7 @@ function campRebirth(){
   C.sup = 0; C.supCap = 0; C.eseq = 1; C.ents = []; C.minerals = [];
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
   C.rate = 0; C.rateGas = 0; C.leftAt = 0; C.tapped = 0; C.playS = 0;
+  campFevReset();                                 // ⚡ 앞 회차의 피버가 이어지면 안 된다
   // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree 는 지우지 않는다 — 그게 환생의 값이다
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
@@ -358,6 +359,22 @@ const CAMP_RT_LINES = [
   // ── 갈래 ② 재화 획득
   {k:'gather',   br:'econ',  grp:'가', gr:'흔함', nm:'일꾼 채취량',    f:'gatherMul', ic:'upgrades/up_mine.webp', vk:'mul', ds:'일꾼의 1회 채취량이 {} 증가합니다.'},
   {k:'gas',      br:'econ',  grp:'가', gr:'보통', nm:'가스 생산량',    f:'gasMul', ic:'res_gas.webp', vk:'mul', ds:'정제소의 가스 생산량이 {} 증가합니다.'},
+  // ⚡ 피버 타임 — 활성화 하나가 나머지 셋을 연다(pa). ⛔ 활성화 없이 셋만 사지 못한다.
+  {k:'fever',    br:'econ',  grp:'가', gr:'귀함', nm:'피버 타임', tn:['각성'],
+   f:'fever', ic:'skills/sk_psi_storm.webp', vk:'on', mx:1, cs:[0, 200],
+   ds:'터치할 때 확률로 <b>피버 타임</b>이 터집니다. 그동안 터치 획득이 크게 늘어납니다.'},
+  {k:'fevPct',   br:'econ',  grp:'나', gr:'흔함', nm:'피버 확률', tn:['예감','징조','조짐','부름','필연'],
+   pa:'fever:1', f:'feverPct', ic:'skills/sk_scan.webp', vk:'pct',
+   cs:[0, 100, 1500, 20000, 300000, 4000000],
+   ds:'터치 한 번이 피버를 터뜨릴 확률이 {} 가 됩니다.'},
+  {k:'fevMul',   br:'econ',  grp:'다', gr:'귀함', nm:'피버 배수', tn:['불꽃','도가니','용광로','폭주','대폭발'],
+   pa:'fever:1', f:'feverMul', ic:'skills/sk_yamato.webp', vk:'fmul',
+   cs:[0, 300, 5000, 80000, 1200000, 20000000],
+   ds:'피버 동안 터치 획득이 {} 가 됩니다.'},
+  {k:'fevSec',   br:'econ',  grp:'라', gr:'보통', nm:'피버 시간', tn:['한숨','한때','한나절','긴 밤','영원'],
+   pa:'fever:1', f:'feverSec', ic:'skills/sk_stasis.webp', vk:'fsec',
+   cs:[0, 150, 2000, 30000, 450000, 6000000],
+   ds:'피버가 이어지는 시간이 {} 가 됩니다.'},
   {k:'wkCap',    br:'econ',  grp:'나', gr:'흔함', nm:'일꾼 상한',      f:'workerCap', ic:'upgrades/up_transport.webp', vk:'mul', ds:'데리고 있을 수 있는 일꾼 수가 {} 늘어납니다.'},
   {k:'mine',     br:'econ',  grp:'나', gr:'귀함', nm:'광산 등급',      f:'mineMul', ic:'buildings/bld_extractor.webp', vk:'mul', ds:'광산에서 얻는 미네랄이 {} 증가합니다.'},
   {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul', ic:'skills/sk_recharge.webp', vk:'mul', ds:'자리를 비운 동안 쌓이는 수입이 {} 증가합니다.'},
@@ -534,7 +551,11 @@ function campRtCanBuy(k){ const C = campState(); if(!C) return false;
   const L = campRtLine(k); if(!L) return false;
   const n = campRtNext(k); if(!n) return false;
   if(campRtIsChain(L.br)){ if(!campRtNodeOwn(campRtParent(k, n))) return false; }
-  else if(!campRtGpOn(L.br, L.grp)) return false;        // 묶음을 안 샀으면 계열은 존재하지 않는다
+  else {
+    if(!campRtGpOn(L.br, L.grp)) return false;           // 묶음을 안 샀으면 계열은 존재하지 않는다
+    // ⭐ **선행 조건은 사슬 갈래 밖에서도 지킨다**(2026-09-02). 예전엔 pa 를 사슬에서만 봤다 —
+    //   피버 확률·배수·시간이 「피버 활성화」 없이도 팔렸다.
+    if(L.pa && !campRtNodeOwn(L.pa)) return false; }
   return pts >= campRtCost(k, n); }
 function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 0;
   const b = campRtBag();
@@ -589,7 +610,7 @@ const CAMP_TREE_BR = {
 };
 const CAMP_TREE_SPREAD = 1.30;      // 갈래 하나가 벌어지는 각(rad)
 const CAMP_TREE_R_BR = 66, CAMP_TREE_R_GP = 132;   // 갈래 마디 · 묶음 마디까지 거리
-const CAMP_TREE_R0 = 206, CAMP_TREE_RS = 52;       // 계열 1차까지 거리 · 칸 간격
+const CAMP_TREE_R0 = 252, CAMP_TREE_RS = 58;       // 계열 1차까지 거리 · 칸 간격
 //   ✨ 흩뜨림 — 같은 차수라도 자리를 조금씩 어긋나게 해 별자리처럼 보이게 한다.
 //   ⛔ 난수를 쓰지 말 것. 키로 만든 해시라 **매번 같은 자리**에 선다(별자리는 움직이면 안 된다).
 //   ⚠ 흔들림을 차수마다 **누적하지 않는다** — 누적하면 사슬이 제 갈래를 벗어나 얽힌다.
@@ -623,13 +644,13 @@ function campTreePos(k, n){
   const li = sib.indexOf(L);
   const a = campTreeGpAng(L.br, L.grp)
     + (li - (sib.length - 1) / 2) / Math.max(1, sib.length - 1) * (CAMP_TREE_SPREAD / 3) * 0.58
-    + campTreeJit(k, n, 'a') * (CAMP_TREE_SPREAD / 3) * 0.14 * CAMP_TREE_JIT;
+    + campTreeJit(k, n, 'a') * (CAMP_TREE_SPREAD / 3) * 0.09 * CAMP_TREE_JIT;
   // ⭐ 같은 묶음의 형제는 **반지름도 어긋나게** 둔다(2026-09-02). 각도만으로 떼려면 묶음 폭을
   //   넓혀야 하는데, 그러면 이웃 묶음을 침범한다 — 반지름은 이웃에게서 뺏어 오지 않는 자리다.
   //   ⚠ 형제가 셋인 묶음(재화/라)이 생기면서 같은 차수끼리 14 까지 붙었다(실측).
   const r = CAMP_TREE_R0 * (0.80 + (B.rk || 1) * 0.22) + (n - 1) * CAMP_TREE_RS
     + (li - (sib.length - 1) / 2) * CAMP_TREE_RS * 0.50
-    + campTreeJit(k, n, 'r') * CAMP_TREE_RS * 0.16 * CAMP_TREE_JIT;
+    + campTreeJit(k, n, 'r') * CAMP_TREE_RS * 0.10 * CAMP_TREE_JIT;
   return { x: Math.cos(a) * r, y: Math.sin(a) * r };
 }
 // 어느 별이든 자리를 하나로 — 선택 이동이 이 함수 하나만 본다
@@ -654,6 +675,8 @@ function campTreeState(k, n){
   const L = campRtLine(k); if(!L) return null;
   if(campRtIsChain(L.br)){ if(!campRtNodeOwn(campRtParent(k, n))) return null; }
   else if(!campRtGpOn(L.br, L.grp)) return null;
+  // ⚡ 선행 조건이 안 채워졌으면 **아직 안 보인다** — 살 수 없는 별을 띄워 두면 헷갈린다
+  else if(L.pa && !campRtNodeOwn(L.pa)) return null;
   const have = campRtHas(k);
   if(n <= have) return 'own';
   if(n !== have + 1) return null;
@@ -998,6 +1021,11 @@ function campTreeVal(k, n){
   if(vk === 'disc') return Math.round(CAMP_RT_DISC[i] * 100) + '%';
   if(vk === 'sup')  return '+' + CAMP_RT_SUP[i];
   if(vk === 'sec')  return campRtLad(k)[i].toFixed(2) + '초';   // 간격 — **작을수록 좋다**
+  // ⚡ 피버 — 값은 CAMP_FEV_* 표에서 그대로 꺼낸다(지어내지 않는다)
+  if(vk === 'on')   return '켜짐';
+  if(vk === 'pct')  return (CAMP_FEV_PCT[i] * 100).toFixed(1) + '%';
+  if(vk === 'fmul') return '×' + CAMP_FEV_MUL[i];
+  if(vk === 'fsec') return CAMP_FEV_SEC[i] + '초';
   if(vk === 'add')  return '+' + (i ? CAMP_RT_LADDER[i] : 0);
   if(vk === 'cnt')  return String(campRtLad(k)[i]);          // 총량 — 계열이 제 사다리(lad)를 갖는다
   const lad = campRtLad(k);
@@ -2956,6 +2984,7 @@ function campBarRender(){
   const C = campState(); const pts = C ? Math.floor(C.rbPts || 0) : 0;
   const dg = campDgN(), foe = campAlive('ai');
   const canReb = (typeof campCanRebirth === 'function') && campCanRebirth();   // ⓒ 지금은 조건만 본다(종족별 건물은 나중에)
+  campFevPaint();                                  // ⚡ 남은 초는 캐시 밖에서 갱신한다
   const key = dg + '|' + foe + '|' + pts + '|' + (canReb ? 1 : 0);
   if(key === _campBarS) return;
   _campBarS = key;
@@ -2969,10 +2998,26 @@ function campBarRender(){
   //    일꾼을 사고 탭을 눌러야 채워지는 값이다(HUNT_R1 §4-1).
   { const rb = el.querySelector('.cbReb'); if(rb) rb.classList.toggle('hide', !canReb); }
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !canReb);
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !canReb && !campFevActive());
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
-function campBarReset(){ _campBarS = ''; }
+function campBarReset(){ _campBarS = ''; campFevPaint(); }
+
+// ⚡ 피버 칩 — 남은 초가 계속 바뀌므로 **campBarRender 의 캐시를 타지 않는다**(따로 그린다).
+//   ⛔ 새 팝업·새 배너를 만들지 말 것 — 맵 띠(#campBar)에 칩 하나를 얹는다(CLAUDE.md 레지스트리).
+let _campFevS = '';
+function campFevPaint(){
+  const el = document.getElementById('campBar'); if(!el) return;
+  const c = el.querySelector('.cbFev'); if(!c) return;
+  const on = campFevActive();
+  const key = on ? ('1|' + Math.ceil(campFevLeft()) + '|' + campFevMul()) : '0';
+  if(key === _campFevS) return;
+  _campFevS = key;
+  c.classList.toggle('hide', !on);
+  if(on) c.innerHTML = '⚡ <b>×' + campFevMul() + '</b> ' + Math.ceil(campFevLeft()) + '초';
+  el.classList.toggle('fev', on);
+  if(!on) _campBarS = '';                 // 꺼질 때 띠를 다시 재게 한다(빈 띠 숨김 판정)
+}
 
 // 진입·클리어·탈락 알림 — toast()/playSfx() 는 등록된 단일 소스다(CLAUDE.md 레지스트리)
 function campSay(msg, sfx){
@@ -3965,6 +4010,47 @@ function campResearchCost(r, lv){
     : (CAMP_RES_ONE[r.m | 0] || CAMP_RES_ONE_DEF);
   return [0, Math.max(1, Math.ceil(g * d))]; }
 
+// ══ ⚡ 피버 타임 (2026-09-02 사용자 확정) ═══════════════════════════════
+//   탭을 하다 보면 확률로 터지고, 터진 동안에는 탭 획득이 배수로 커진다.
+//   ⛔ **중첩되지 않는다** — 켜져 있는 동안에는 다시 안 걸린다(사용자 확정).
+//
+//   ⚠ **중첩 금지만으로는 상한이 안 잡힌다.** 꺼져 있는 평균 시간이 1/(탭속도×확률) 이라
+//     탭이 빨라지면 0 으로 수렴한다 — 실측 계산: 채굴 속도 5차(초당 50탭)·확률 5%·16초면
+//     시간의 **97.6% 가 피버**다. 그건 사건이 아니라 상시 배수이고, 지수 축이 하나 더 느는 것이다
+//     (GAME_DIRECTION §3-4 가 금지한 형태). ⇒ **재발동 대기(CAMP_FEV_CD)** 로 막는다.
+//     머무는 비율이 `지속 ÷ (지속 + 대기 + 1/발동률)` 로 **딱 잡힌다** — 탭이 아무리 빨라도
+//     `지속 ÷ (지속 + 대기)` 를 못 넘는다(만렙 13/(13+20) = 39%).
+//   ⛔ 대기(CAMP_FEV_CD)를 없애거나 계열로 팔지 말 것 — 그것이 이 축의 유일한 상한이다.
+const CAMP_FEV_CD  = 20;                                        // 끝난 뒤 재발동 대기(초)
+const CAMP_FEV_PCT = [0.010, 0.015, 0.022, 0.030, 0.040, 0.050];  // 탭 한 번의 발동 확률
+const CAMP_FEV_MUL = [3, 4, 6, 9, 13, 18];                      // 피버 동안 탭 배수
+const CAMP_FEV_SEC = [4, 5, 6.5, 8, 10, 13];                    // 지속(초)
+//   ⚠ 회차를 넘겨 저장하지 않는다 — 피버는 **지금 이 순간의 사건**이다.
+//     앱을 껐다 켜면 꺼져 있는 것이 맞다(저장하면 껐다 켜서 이어받는 놀이가 생긴다).
+let _campFevEnd = 0, _campFevCd = 0;
+function campFevOn(){ return (typeof campRtHas === 'function') && campRtHas('fever') > 0; }
+function campFevLv(k){ return Math.min(5, (typeof campRtHas === 'function') ? campRtHas(k) : 0); }
+function campFevPct(){ return CAMP_FEV_PCT[campFevLv('fevPct')]; }
+function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')]; }
+function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')]; }
+function campFevActive(){ return campFevOn() && Date.now() < _campFevEnd; }
+function campFevLeft(){ return Math.max(0, (_campFevEnd - Date.now()) / 1000); }
+// 🎲 탭 한 번의 판정 — **탭 경로 전부가 이걸 부른다**(campTapAt · campMineOnce · 과녁 탭)
+function campFevRoll(){
+  if(!campFevOn()) return false;
+  const t = Date.now();
+  if(t < _campFevEnd) return false;          // ⛔ 켜져 있는 동안은 다시 안 걸린다
+  if(t < _campFevCd)  return false;          // ⏳ 재발동 대기 중
+  if(Math.random() >= campFevPct()) return false;
+  _campFevEnd = t + campFevSec() * 1000;
+  _campFevCd  = _campFevEnd + CAMP_FEV_CD * 1000;
+  if(typeof campSay === 'function') campSay('⚡ 피버 타임 ×' + campFevMul(), 'game_start');
+  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  campFevPaint();
+  return true; }
+// 환생하면 꺼진다 — 회차가 바뀌었는데 앞 회차의 피버가 이어지면 안 된다
+function campFevReset(){ _campFevEnd = 0; _campFevCd = 0; campFevPaint(); }
+
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
@@ -3980,7 +4066,8 @@ function campTapGain(){
   //   ⚠ 여기서도 **합이다**(곱이 아니다) — campGatherMul 과 같은 규칙(GEM.md §5-2).
   const packA = (typeof campPackGather === 'function') ? campPackGather() : 0;
   return Math.max(1, Math.round(base * (1 + packA)
-    * campMineMul() * campRebMul() * campRtMul('tap') * campRtMul('tapMul')));
+    * campMineMul() * campRebMul() * campRtMul('tap') * campRtMul('tapMul')
+    * (campFevActive() ? campFevMul() : 1)));   // ⚡ 피버 — ⛔ 탭 경로마다 따로 곱하지 말 것
 }
 // 일꾼 효율 — **왕복 1회당** 배수(HUNT_R1 §1). Lv0 = 1.0 이라 기준선이 바뀌지 않는다.
 // ⚠ 일꾼 **수**로 올리는 축은 따로 산다 — 광맥 cap 을 5로 열어 두었다(CAMP_MINE_CAP).
@@ -4036,6 +4123,7 @@ function campMineModeToggle(){ campMineModeSet(!_campMineMode); }
 //   ⛔ 획득량 수식을 여기서 만들지 말 것 — campTapGain 하나가 단일 소스다.
 function campMineOnce(clientX, clientY, human, mul){
   if(typeof G === 'undefined' || !G.tech) return 0;
+  campFevRoll();                                    // ⚡ 이번 탭이 피버를 터뜨리나 — **획득을 재기 전에**
   let gain = ((typeof campTapGain === 'function') ? campTapGain() : 1) * (mul || 1);
   // 🤖 2차 방어선은 그대로 둔다 — 상한만으로는 매크로가 사람의 2배를 번다(설계 대화 2026-08-27).
   if(human && typeof campTapHuman === 'function')
@@ -4133,6 +4221,7 @@ function campTapAt(clientX, clientY, human){
   if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
   const w = _techS2W(sx, sy);
   const m = _techMineralAt(w.x, w.y); if(!m || m.amount <= 0) return false;
+  campFevRoll();                                    // ⚡ 광맥 탭도 같은 판정
   let gain = Math.min(campTapGain(), m.amount);     // 매장량보다 많이 캘 수는 없다
   if(human){ gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY))); }   // 🤖 리듬·좌표 감쇠
   m.amount -= gain;
@@ -4248,6 +4337,7 @@ function campUpgBuy(k){
 function campMineTap(ev){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return;
   if(ev && ev.isTrusted === false && !window._campTapForce) return;   // 🤖 1차 방어선(메인 탭과 같은 규칙)
+  campFevRoll();                                    // ⚡ 과녁 탭도 같은 판정
   let gain = campTapGain();
   if(ev && ev.isTrusted !== false) gain = Math.max(1, Math.floor(gain * campTapHuman(ev.clientX, ev.clientY)));
   G.tech.credit = (G.tech.credit || 0) + gain;
