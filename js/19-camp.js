@@ -642,7 +642,20 @@ let _campTreeSel = null;            // 지금 고른 별 {t:'br'|'gp'|'n', a, b}
 let _campTreeView = { x:0, y:0, z:1 };
 const CAMP_TREE_ZMIN = 0.30, CAMP_TREE_ZMAX = 2.6;
 const CAMP_TREE_ZSEL = 1.55;        // 별을 골랐을 때의 배율
-const CAMP_TREE_SEL_Y = -150;       // 고른 별이 앉을 화면 높이(0=한가운데) — 아래 시트를 피한다
+// 📏 하단 구역이 가리는 높이 — **월드 좌표(viewBox 단위)** 로 돌려준다.
+//   ⛔ 상수로 박지 말 것(옛 CAMP_TREE_SEL_Y = -150 이 그랬다). 시트 높이는 고른 별에 따라
+//     달라지고, **안 골랐을 때는 0** 이다 — 그때 트리는 화면 전체를 쓴다(2026-09-02 사용자 확정).
+function campTreeSheetH(){
+  const el = document.getElementById('campTree'); if(!el) return 0;
+  if(!el.classList.contains('picked')) return 0;      // 안 골랐으면 시트가 자리를 안 뺏는다
+  const svg = document.getElementById('ctSvg'), sh = el.querySelector('.ctSheet');
+  if(!svg || !sh) return 0;
+  const rs = svg.getBoundingClientRect(), rh = sh.getBoundingClientRect();
+  if(!(rs.height > 0) || !(rh.height > 0)) return 0;
+  const vb = (svg.getAttribute('viewBox') || '0 0 430 840').split(/\s+/).map(Number);
+  return rh.height / rs.height * vb[3]; }
+// 고른 별이 앉을 화면 높이 — **시트 위 영역의 한가운데**다(0 = 화면 한가운데)
+function campTreeSelY(){ return -campTreeSheetH() / 2; }
 function campTreeIsSel(t, a, b){ const s = _campTreeSel;
   return !!(s && s.t === t && s.a === a && (b == null || s.b === b)); }
 
@@ -695,9 +708,23 @@ function campTreeGem(o){
     ' data-k="' + o.k + '" data-n="' + (o.n == null ? 0 : o.n) + '"/>');
   return s.join('');
 }
-function campTreeLink(a, b, col, lit, f){
-  return '<line x1="' + a.x.toFixed(1) + '" y1="' + a.y.toFixed(1) + '" x2="' + b.x.toFixed(1) +
-    '" y2="' + b.y.toFixed(1) + '" stroke="' + (lit ? col : 'rgba(200,220,240,.20)') +
+// 별 하나의 반지름 — **그릴 때와 선을 물릴 때가 같은 값을 써야 한다.**
+//   ⛔ 여기 값을 바꾸면 campTreeSvg 의 gem 반지름도 같이 바꿀 것(둘이 어긋나면 선이 다시 파고든다).
+const CAMP_TREE_R_CORE = 13;                    // 가운데 마름모
+const CAMP_TREE_R_BRN = 13, CAMP_TREE_R_GPN = 11;   // 갈래 마디 · 묶음 마디
+function campTreeNodeR(k, n){ return campTreeState(k, n) === 'own' ? 13 : 15; }
+const CAMP_TREE_LINK_GAP = 3;                   // 별 테두리와 선 끝 사이 틈
+// ⛔ **중심에서 중심으로 긋지 말 것.** 그러면 선이 별 안으로 파고든다(2026-09-02 사용자 지적).
+//   양 끝을 각 별의 반지름 + 틈만큼 물린다. ⚠ 짧은 링크에서 선이 뒤집히지 않도록 거리의 45% 로 막는다.
+function campTreeLink(a, b, col, lit, f, ra, rb){
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+  const ux = dx / d, uy = dy / d;
+  const t0 = Math.min(d * .45, (ra || 0) + CAMP_TREE_LINK_GAP);
+  const t1 = Math.min(d * .45, (rb || 0) + CAMP_TREE_LINK_GAP);
+  const x1 = a.x + ux * t0, y1 = a.y + uy * t0;
+  const x2 = b.x - ux * t1, y2 = b.y - uy * t1;
+  return '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) +
+    '" y2="' + y2.toFixed(1) + '" stroke="' + (lit ? col : 'rgba(200,220,240,.20)') +
     '" stroke-width="' + (lit ? 2 : .9) + '" opacity="' + ((lit ? .62 : 1) * f).toFixed(2) + '"' +
     (lit ? '' : ' stroke-dasharray="2 3"') + '/>'; }
 function campTreeSvg(){
@@ -711,8 +738,9 @@ function campTreeSvg(){
         for(let n = 1, mx = campRtMax(L.k); n <= mx; n++){ const st = campTreeState(L.k, n); if(!st) continue;
           const b = campTreePos(L.k, n), pk = campRtParent(L.k, n), ci = pk.indexOf(':');
           const a = (ci < 0) ? { x:0, y:0 } : campTreePos(pk.slice(0, ci), +pk.slice(ci + 1));
+          const ra = (ci < 0) ? CAMP_TREE_R_CORE : campTreeNodeR(pk.slice(0, ci), +pk.slice(ci + 1));
           const me = campTreeIsSel('n', L.k, n), f = F(me);
-          rows.push(campTreeLink(a, b, B.col, st === 'own', f));
+          rows.push(campTreeLink(a, b, B.col, st === 'own', f, ra, st === 'own' ? 13 : 15));
           rows.push(campTreeGem({ x:b.x, y:b.y, r: st === 'own' ? 13 : 15, col:B.col, state:st,
             gr:campRtGrade(L.k, n), ic:L.ic, label: st === 'own' ? '' : campNum(campRtCost(L.k, n)),
             me, f, k:L.k, n })); } }
@@ -721,14 +749,14 @@ function campTreeSvg(){
       continue; }
     const sb = campTreeBrState(bk); if(!sb) continue;
     const p = campTreeBrPos(bk), meB = campTreeIsSel('br', bk);
-    rows.push(campTreeLink({ x:0, y:0 }, p, B.col, sb === 'own', F(meB)));
+    rows.push(campTreeLink({ x:0, y:0 }, p, B.col, sb === 'own', F(meB), CAMP_TREE_R_CORE, CAMP_TREE_R_BRN));
     rows.push(campTreeGem({ x:p.x, y:p.y, r:13, col:B.col, state:sb, gr:'보통',
       label: sb === 'own' ? '' : campNum(CAMP_RT_BR_COST), me:meB, f:F(meB),
       k:CAMP_RT_BR_KEY(bk), n:0 }));
     if(sb === 'own'){
       for(const g of CAMP_RT_GRP_KEYS){ const sg = campTreeGpState(bk, g); if(!sg) continue;
         const q = campTreeGpPos(bk, g), meG = campTreeIsSel('gp', bk, g);
-        rows.push(campTreeLink(p, q, B.col, sg === 'own', F(meG)));
+        rows.push(campTreeLink(p, q, B.col, sg === 'own', F(meG), CAMP_TREE_R_BRN, CAMP_TREE_R_GPN));
         rows.push(campTreeGem({ x:q.x, y:q.y, r:11, col:B.col, state:sg, gr:'흔함',
           label: sg === 'own' ? '' : campNum(CAMP_RT_GP_COST), me:meG, f:F(meG),
           k:CAMP_RT_GP_KEY(bk, g), n:0 }));
@@ -736,8 +764,9 @@ function campTreeSvg(){
         for(const L of CAMP_RT_LINES){ if(L.br !== bk || L.grp !== g) continue;
           for(let n = 1, mx = campRtMax(L.k); n <= mx; n++){ const st = campTreeState(L.k, n); if(!st) continue;
             const b = campTreePos(L.k, n), a = (n === 1) ? q : campTreePos(L.k, n - 1);
+            const ra = (n === 1) ? CAMP_TREE_R_GPN : campTreeNodeR(L.k, n - 1);
             const me = campTreeIsSel('n', L.k, n), f = F(me);
-            rows.push(campTreeLink(a, b, B.col, st === 'own', f));
+            rows.push(campTreeLink(a, b, B.col, st === 'own', f, ra, st === 'own' ? 13 : 15));
             rows.push(campTreeGem({ x:b.x, y:b.y, r: st === 'own' ? 13 : 15, col:B.col, state:st,
               gr:campRtGrade(L.k, n), ic:L.ic, label: st === 'own' ? '' : campNum(campRtCost(L.k, n)),
               me, f, k:L.k, n })); } } } }
@@ -1056,7 +1085,7 @@ function campTreeHelp(on){
   if(on){ h.querySelector('.ctHelpCard').innerHTML = campTreeHelpHTML(); h.classList.remove('hide'); }
   else h.classList.add('hide'); }
 
-// 🔍 뷰 적용 — 고른 별이 있으면 그 자리가 화면 (0, CAMP_TREE_SEL_Y) 에 오도록 옮기고 확대한다.
+// 🔍 뷰 적용 — 고른 별이 있으면 그 자리가 화면 (0, campTreeSelY()) 에 오도록 옮기고 확대한다.
 //   ⭐ 확대·이동은 **여기 한 곳**에서만 계산한다. 그리기(campTreeSvg)는 월드 좌표만 안다.
 function campTreeApplyView(){
   const g = document.getElementById('ctG'); if(!g) return;
@@ -1106,7 +1135,7 @@ function campTreeTweenStep(){
 // 고른 별로 뷰를 옮긴다(선택이 없으면 그대로 둔다)
 function campTreeFocus(now){ const sel = _campTreeSel; if(!sel) return;
   const p = campTreeSelPos(sel); if(!p) return;
-  campTreeTweenTo({ P:p, A:{ x:0, y:CAMP_TREE_SEL_Y },
+  campTreeTweenTo({ P:p, A:{ x:0, y:campTreeSelY() },
     z: Math.max(_campTreeView.z, CAMP_TREE_ZSEL) }, now); }
 // 📊 해금 진행도 — 열 수 있는 칸 전부(가운데 1 + 갈래 4 + 묶음 16 + 계열 32×5)를 분모로 센다.
 //   ⚠ 숫자를 손으로 적지 말 것 — 계열이나 갈래가 늘면 저절로 따라와야 한다.
@@ -1186,7 +1215,14 @@ let _ctBound = false, _ctPtrs = new Map(), _ctDrag = null, _ctPinch = null, _ctM
 let _ctDown = null, _ctDownXY = null;   // 👆 pointerdown 때 잡아 둔 별과 그 자리
 const CAMP_TREE_ZSTEP = 1.22;       // 휠 한 칸 · 두 번 누르기의 배율
 const CAMP_TREE_TAP_SLOP = 14;      // 이만큼까지는 「누른 것」 — 손가락은 가만히 못 있는다
-function campTreeClampZ(z){ return Math.max(CAMP_TREE_ZMIN, Math.min(CAMP_TREE_ZMAX, z)); }
+// 🔍 축소 한계는 **해금 정도에 따라 풀린다** (2026-09-02 사용자 확정)
+//   초반엔 별이 몇 개뿐이라 마음껏 축소하면 화면이 텅 빈다. 그래서 「전체 보기」 배율보다
+//   조금만 더 물러날 수 있게 막는다. 별이 늘면 전체 보기 배율이 저절로 내려가고 하한도
+//   따라 내려간다 — ⛔ 회차·개수로 표를 짜지 말 것(계열이 늘면 표가 곧 거짓말이 된다).
+const CAMP_TREE_ZOUT = 0.72;        // 전체 보기 배율의 몇 배까지 더 물러날 수 있나
+let _ctFitZ = 0;                    // 마지막 「전체 보기」 배율 — campTreeFit 이 적어 둔다
+function campTreeZMin(){ return Math.max(CAMP_TREE_ZMIN, (_ctFitZ || 0) * CAMP_TREE_ZOUT); }
+function campTreeClampZ(z){ return Math.max(campTreeZMin(), Math.min(CAMP_TREE_ZMAX, z)); }
 // 화면(클라이언트) 좌표 → SVG viewBox 좌표
 function campTreeToView(cx, cy){
   const svg = document.getElementById('ctSvg'); if(!svg) return { x:0, y:0 };
@@ -1279,7 +1315,6 @@ function campTreeBind(){
 const CAMP_TREE_FIT_PAD = 30;        // 가장자리 여백(viewBox 단위)
 const CAMP_TREE_FIT_ZMAX = 1.35;     // ⚠ 「전체 보기」의 배율 상한 — 첫 회차엔 별이 다섯뿐이라
                                      //   경계에 딱 맞추면 그 다섯이 화면을 꽉 채워 어색하다.
-const CAMP_TREE_FIT_LIFT = 26;       // 아래 시트를 피해 살짝 위로
 function campTreeFit(now){ _campTreeSel = null;
   campTreeRender();
   const svg = document.getElementById('ctSvg');
@@ -1296,12 +1331,19 @@ function campTreeFit(now){ _campTreeSel = null;
     n++; });
   const w0 = x1 - x0, h0 = y1 - y0;
   if(!n || !svg || !(w0 > 1) || !(h0 > 1)){
+    _ctFitZ = 0.62;
     campTreeTweenTo({ P:{x:0,y:0}, A:{x:0,y:0}, z:0.62 }, now); return; }
   const vb = (svg.getAttribute('viewBox') || '0 0 430 660').split(/\s+/).map(Number);
-  const w = vb[2] - CAMP_TREE_FIT_PAD * 2, h = vb[3] - CAMP_TREE_FIT_PAD * 2;
-  const z = campTreeClampZ(Math.min(w / w0, h / h0, CAMP_TREE_FIT_ZMAX));
+  // ⭐ 시트가 가리는 만큼을 **빼고** 맞춘다 — 안 골랐으면 0 이라 화면 전체를 쓴다.
+  const sheet = campTreeSheetH();
+  const w = vb[2] - CAMP_TREE_FIT_PAD * 2, h = vb[3] - sheet - CAMP_TREE_FIT_PAD * 2;
+  // ⚠ 하한(campTreeZMin)의 기준이 되는 값이라 **클램프 전** 값을 적어 둔다 — 클램프한 값을
+  //   넣으면 자기 자신을 기준으로 삼아 하한이 점점 올라간다.
+  const zRaw = Math.min(w / w0, h / h0, CAMP_TREE_FIT_ZMAX);
+  _ctFitZ = zRaw;
+  const z = campTreeClampZ(zRaw);
   const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-  campTreeTweenTo({ P:{x:cx,y:cy}, A:{x:0,y:-CAMP_TREE_FIT_LIFT}, z }, now); }
+  campTreeTweenTo({ P:{x:cx,y:cy}, A:{x:0,y:-sheet / 2}, z }, now); }
 // 👆 그 자리에서 가장 가까운 별 — 없으면 null.
 //   ⚠ 임계는 **화면 픽셀**이다(월드 좌표가 아니다). 축소하면 별이 촘촘해 보이므로
 //     화면 기준으로 재야 「눈에 보이는 만큼 가까운 것」을 고른다.

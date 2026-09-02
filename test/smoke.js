@@ -2157,9 +2157,22 @@ async function groupLobby(){
       // 상하한이 있고, 「전체」는 늘 그 사이로 돌아온다
       campTreeZoomAt(1e6,null); const hi=_campTreeView.z;
       campTreeZoomAt(1e-6,null); const lo=_campTreeView.z;
-      assert(hi===CAMP_TREE_ZMAX&&lo===CAMP_TREE_ZMIN,'확대 상하한이 안 걸린다: '+lo+'~'+hi);
+      assert(hi===CAMP_TREE_ZMAX,'확대 상한이 안 걸린다: '+hi);
+      // ⭐ **축소 하한은 해금 정도를 따라간다**(2026-09-02) — 상수가 아니라 「전체 보기」 배율에 묶여 있다.
+      //   초반엔 별이 몇 개뿐이라 마음껏 축소하면 화면이 텅 비기 때문이다.
+      assert(Math.abs(lo-campTreeZMin())<1e-9,'축소 하한이 campTreeZMin 과 다르다: '+lo+' vs '+campTreeZMin());
+      assert(lo>=CAMP_TREE_ZMIN-1e-9,'축소 하한이 절대 하한 아래로 내려갔다: '+lo);
       campTreeFit(true);
       assert(_campTreeView.z>=CAMP_TREE_ZMIN&&_campTreeView.z<=CAMP_TREE_ZMAX,'전체 보기 배율이 범위 밖');
+      // ⭐ 별이 적을 때가 많을 때보다 **덜 물러난다** — 그게 「안 비어 보이게」의 뜻이다.
+      { const C=campState(), keep=JSON.parse(JSON.stringify(C.rbTree||{})), kp=C.rbPts;
+        C.rbPts=1e12; C.rbTree={root:1};
+        for(const L of CAMP_RT_LINES) C.rbTree[L.k]=campRtMax(L.k);
+        for(const b in CAMP_TREE_BR){ if(campRtIsChain(b)) continue; C.rbTree['br:'+b]=1;
+          for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(b,g)) C.rbTree['gp:'+b+g]=1; }
+        campTreeRender(); campTreeFit(true); const loFull=campTreeZMin();
+        C.rbTree=keep; C.rbPts=kp; campTreeRender(); campTreeFit(true); const loFew=campTreeZMin();
+        assert(loFull<loFew-1e-9,'다 열어도 축소 한계가 안 풀린다: 적을때 '+loFew.toFixed(3)+' → 다열림 '+loFull.toFixed(3)); }
       // 별을 고르면 확대되고, **빈 하늘을 누르면** 되돌아간다(⊘ 는 없앴다)
       campTreeTap('gather',3);
       assert($('campTree').classList.contains('picked'),'별을 골랐는데 고른 상태가 아니다');
@@ -2168,6 +2181,41 @@ async function groupLobby(){
       assert(/campTreeDesel/.test(String(campTreeBind)),'빈 곳을 눌러도 해제되지 않는다');
       campTreeDesel();
       assert(!$('campTree').classList.contains('picked'),'해제했는데 고른 상태가 남는다');
+      // 🖼 하단 구역 ↔ 전체 화면 (2026-09-02 사용자 확정)
+      //   안 골랐으면 시트가 자리를 안 뺏고 트리가 화면 전체를 쓴다.
+      //   별을 고르면 시트가 올라오고, 고른 별은 **시트 위 영역 한가운데**에 앉는다.
+      //   ⛔ 옛 상수(CAMP_TREE_SEL_Y=-150 · FIT_LIFT=26)로 되돌리지 말 것 — 시트 높이는
+      //     고른 별에 따라 달라져서 상수로는 못 맞춘다(실측으로 190~250px 사이를 오간다).
+      { assert(campTreeSheetH()===0,'안 골랐는데 시트가 자리를 차지한다: '+campTreeSheetH());
+        const svg=$('ctSvg'), sh=$('campTree').querySelector('.ctSheet');
+        const hits=[...svg.querySelectorAll('.ctHit[data-k]')].filter(e=>e.getAttribute('data-k')!=='root');
+        assert(hits.length,'고를 별이 하나도 안 그려졌다');
+        const pk=hits[hits.length-1], kk=pk.getAttribute('data-k'), nn=+pk.getAttribute('data-n');
+        campTreeTap(kk,nn); campTreeFocus(true);            // ⚠ 애니를 기다리지 않고 곧장 끝 자리로
+        assert(campTreeSheetH()>0,'별을 골랐는데 시트 높이가 0 이다');
+        const rs=svg.getBoundingClientRect(), rh=sh.getBoundingClientRect();
+        const again=[...svg.querySelectorAll('.ctHit[data-k="'+kk+'"][data-n="'+nn+'"]')][0];
+        assert(again,'고른 별이 화면에서 사라졌다');
+        const rn=again.getBoundingClientRect(), cy=rn.top+rn.height/2;
+        assert(rn.bottom<=rh.top+1,'고른 별이 하단 구역에 가린다: 별 '+Math.round(rn.bottom)+' vs 시트 '+Math.round(rh.top));
+        const want=rs.top+(rh.top-rs.top)/2;
+        assert(Math.abs(cy-want)<12,'고른 별이 시트 위 한가운데가 아니다: '+Math.round(cy)+' vs '+Math.round(want));
+        campTreeDesel(); campTreeFit(true);
+        assert(campTreeSheetH()===0,'해제했는데 시트가 자리를 남긴다'); }
+      // 🔗 선이 별 **안으로 파고들지 않는다** (2026-09-02 사용자 지적)
+      //   ⛔ 중심에서 중심으로 긋지 말 것. 양 끝을 반지름 + 틈만큼 물린다.
+      { const g=$('ctG'); const gems=[...g.querySelectorAll('.ctGem')].map(e=>({
+          x:+e.getAttribute('cx'), y:+e.getAttribute('cy'), r:+e.getAttribute('r') }));
+        assert(gems.length>2,'별이 너무 적어 못 잰다');
+        let worst=1e9, bad=0;
+        for(const ln of g.querySelectorAll('line')){
+          const pts=[[+ln.getAttribute('x1'),+ln.getAttribute('y1')],[+ln.getAttribute('x2'),+ln.getAttribute('y2')]];
+          for(const [px,py] of pts){ let near=1e9, nr=0;
+            for(const m of gems){ const d=Math.hypot(px-m.x,py-m.y); if(d-m.r<near-nr){ near=d; nr=m.r; } }
+            const slack=near-nr; if(slack<worst) worst=slack;
+            if(slack<-0.5) bad++; } }
+        assert(!bad,'선 '+bad+'개가 별 안으로 파고든다(가장 깊이 '+worst.toFixed(1)+')');
+        assert(worst>0.5,'선 끝이 별 테두리에 붙어 있다(틈 '+worst.toFixed(1)+')'); }
       // 🏷 화면 제목은 **한 규격** — 유즈맵 선택·상점과 같은 글꼴·크기·자간·굵기여야 한다
       //   (2026-09-01 사용자 지시). 화면마다 따로 정하면 같은 자리가 화면마다 달라진다.
       { const a=$('campTree').querySelector('.ctTitle'), b2=$('campReb').querySelector('.crTitle');

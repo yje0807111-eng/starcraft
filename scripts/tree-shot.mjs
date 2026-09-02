@@ -53,6 +53,18 @@ await sleep(500); await shot('2-포인트40');
 const sel=await pg.evaluate(()=>{ campTreeTap('root',1); return JSON.stringify(_campTreeSel); });
 await sleep(900); await shot('3-별고름'); console.log('  고른 별: '+sel);
 
+// ③-b 별이 많을 때 고르면 — 시트가 트리를 가리지 않아야 한다
+await pg.evaluate(()=>{ const C=campState(); C.rbPts=1e6; C.rbTree={}; campRtBuy('root');
+  for(let i=0;i<40;i++){ let best=null,bc=Infinity;
+    for(const L of CAMP_RT_LINES){ if(!campRtCanBuy(L.k)) continue;
+      const c=campRtCost(L.k,campRtNext(L.k)); if(c<bc){bc=c;best=L.k;} }
+    for(const b of Object.keys(CAMP_TREE_BR)){ const k='br:'+b;
+      if(campRtCanBuy(k)&&campRtKeyCost(k)<bc){ bc=campRtKeyCost(k); best=k; } }
+    if(!best) break; campRtBuy(best); }
+  campTreeDesel(); campTreeRender(); campTreeFit(true); });
+await sleep(800);
+await pg.evaluate(()=>campTreeTap('gather',1)); await sleep(900); await shot('3b-고름-별많음');
+
 // ④ 시작점 + 갈래 몇 개를 산 뒤
 await pg.evaluate(()=>{ const C=campState(); C.rbPts=1e6; C.rbTree={};
   campRtBuy('root');
