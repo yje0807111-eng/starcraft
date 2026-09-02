@@ -2876,6 +2876,31 @@ async function groupLobby(){
         campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
         if(pt.hp>1) again=1; }
       assert(again,'쿨이 끝났는데 다시 치유하지 않는다');
+      // ④ 💚 **회복은 고정 수치가 아니라 비율이다** — 초당 최대 체력의 15% · 3초면 45%.
+      //    ⛔ 고정 수치로 되돌리면 체력 강화로 체력이 커질수록 회복이 반올림 오차가 된다.
+      const _healGain = (mx)=>{ campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','medic'); strikeSpawnUnit('me','marine'); });
+        const m=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+        const p=CAMPB.me.units.find(u=>(u.gm||u.id)==='marine');
+        if(!m||!p) return null;
+        m.x=p.x; m.y=p.y; m.en=0; m._healT=null; m._healDur=0; m._healCd=0;
+        p.maxHp=mx; p.hp=1;                             // 거의 죽은 환자 — 상한에 안 걸린다
+        const out=[];
+        campWithStk(()=>{ for(let i=0;i<60;i++){ strikeHealStep(m, CAMPB.me, 0.05);
+          if(i===19 || i===59) out.push(p.hp-1); } });   // 1초 시점 · 3초 시점
+        return out.length===2 ? out : null; };
+      let pctNote='';
+      { const g=_healGain(1000); skipIf(!g,'비율 측정용 유닛을 못 세움');
+        const one=g[0], three=g[1];
+        assert(Math.abs(one - 1000*STK_HEAL_PCT) < 15,
+          '1초 회복이 최대 체력의 '+Math.round(STK_HEAL_PCT*100)+'% 가 아니다: '+one.toFixed(1));
+        assert(Math.abs(three - 1000*STK_HEAL_PCT*STK_HEAL_DUR) < 40,
+          '3초 회복이 '+Math.round(STK_HEAL_PCT*STK_HEAL_DUR*100)+'% 가 아니다: '+three.toFixed(1));
+        // ⑤ 체력이 4배면 회복도 4배 — **이것이 비율로 바꾼 이유다**
+        const g4=_healGain(4000); skipIf(!g4,'비율 측정용 유닛을 못 세움');
+        const r=g4[1]/three;
+        assert(Math.abs(r-4) < 0.3,'체력이 4배인데 회복은 '+r.toFixed(2)+'배다 — 아직 고정 수치다');
+        pctNote=' · 3초 회복 '+Math.round(three/10)+'%(체력×4 → '+r.toFixed(2)+'배)'; }
       // ⑥ 🎯 **대상을 붙잡는다** — 비슷한 거리의 둘 사이에서 왔다갔다하지 않는다.
       //    ⛔ 의무병은 대상 쪽으로 걸어가므로, 흔들리면 그 자리에서 진동하며 아무도 못 고친다.
       { campWipeField();
@@ -2897,7 +2922,7 @@ async function groupLobby(){
           if(md2._healT && md2._healT!==last){ if(last) flips++; last=md2._healT; } } });
         assert(flips===0,'대상이 '+flips+'번 바뀌었다 — 왔다갔다한다');
         assert(md2._healT,'대상을 아예 안 잡았다'); }
-      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초 · 대상 붙잡기 ok';
+      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초'+pctNote+' · 대상 붙잡기 ok';
     } finally { if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }

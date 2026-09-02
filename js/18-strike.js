@@ -535,6 +535,13 @@ const STK_HEAL_HPS=22, STK_HEAL_RNG=110, STK_HEAL_SEEK=900, STK_HEAL_EN=0.5;   /
 //     따로 깎아서 **두 번 깎인다**. 여기서만 쓰는 `_healDur`/`_healCd` 로 둔다.
 const STK_HEAL_DUR = 3;      // 🏕 한 번 시작하면 이어지는 시간(초)
 const STK_HEAL_CD  = 5;      // 🏕 지속이 끝난 뒤 쉬는 시간(초)
+// 💚 **회복은 고정 수치가 아니라 비율이다**(사용자 확정 2026-09-02).
+//   ⭐ 체력 강화(연구·트리)로 체력이 커지면 **회복량도 같이 커진다.** 고정 수치면
+//     후반에 회복이 반올림 오차가 된다 — 그것이 「난이도가 오르면 의무병이 무의미해진다」의 정체다.
+//   ⭐ **끊기듯 차지 않는다** — `dt` 만큼 매 프레임 조금씩 붙어 실제로 차오르듯 보인다.
+//     ⛔ 「1초마다 +15%」처럼 뭉텅이로 넣지 말 것. 눈에 계단으로 보이고, 죽기 직전 1초를 못 버틴다.
+//   지속 3초 × 초당 15% = **한 번에 최대 체력의 45%**.
+const STK_HEAL_PCT = 0.15;   // 🏕 초당 회복 = 최대 체력의 이만큼
 function strikeHealStep(u, me, dt){
   const camp = _stkCampSk();
   if(camp){                                  // ⏱ 마나가 아니라 쿨로 돈다
@@ -559,7 +566,7 @@ function strikeHealStep(u, me, dt){
     if(camp){
       if((u._healCd||0) > 0) return;                            // 쉬는 중 — 곁에 붙어만 있는다
       if((u._healDur||0) <= 0) u._healDur = STK_HEAL_DUR;       // 새로 시작
-      t.hp = Math.min(t.maxHp, t.hp + STK_HEAL_HPS*dt); return; }
+      t.hp = Math.min(t.maxHp, t.hp + (t.maxHp || 0)*STK_HEAL_PCT*dt); return; }   // 💚 비율 · dt 만큼 연속으로
     let amt=STK_HEAL_HPS*dt;
     if(u.maxEn>0){ amt=Math.min(amt, (u.en||0)/STK_HEAL_EN); u.en=Math.max(0,(u.en||0)-amt*STK_HEAL_EN); }   // 에너지 소진 시 치유 중단
     t.hp=Math.min(t.maxHp, t.hp+amt); return; }
