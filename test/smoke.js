@@ -1148,12 +1148,24 @@ async function groupLobby(){
     const xs=new Set(M.map(m=>m.x.toFixed(4)));
     assert(xs.size===CAMP_MINE_COLS,'광맥이 한 줄 '+CAMP_MINE_COLS+'칸이 아님: '+xs.size+'열');
     { const S=M.slice().sort((a,b)=>a.x-b.x);
-      const ys=new Set(S.map(m=>m.y.toFixed(6)));
-      assert(ys.size===1,'광맥이 일직선이 아니다 — 높이가 '+ys.size+'가지: '+[...ys].join(' '));
+      // 🏹 **일직선이 아니라 「가운데가 처진 호 + 삐뚤빼뚤」이다**(2026-09-02 사용자 확정).
+      //   ⛔ 옛 검사는 높이가 한 가지인지 봤다 — 곡선을 넣는 순간 터진다.
+      //   ⭐ 지금 규약: ① 가운데가 양 끝보다 **아래**에 있다(처진 호) ② 흔들림은 한 칸 안이다.
+      const ch=_techCH(), yEdge=(S[0].y+S[S.length-1].y)/2, yMid=S[Math.floor(S.length/2)].y;
+      assert(yMid>yEdge, '광맥 줄이 안 처졌다 — 가운데('+yMid.toFixed(4)+')가 양 끝('+yEdge.toFixed(4)+')보다 위다');
+      const spanY=Math.max(...S.map(m=>m.y))-Math.min(...S.map(m=>m.y));
+      assert(spanY < ch*(CAMP_MINE_ARC+CAMP_MINE_JIT_Y+1),
+        '광맥 높이차가 너무 크다: '+(spanY/ch).toFixed(2)+'칸');
+      // 🪨 삐뚤빼뚤 — 완벽한 곡선이면 안 된다(사람이 놓은 것처럼 보인다)
+      const dx=[]; for(let i=1;i<S.length;i++) dx.push(S[i].x-S[i-1].x);
+      const uniq=new Set(dx.map(v=>v.toFixed(5)));
+      assert(uniq.size>1, '가로 간격이 전부 똑같다 — campMineJit 이 안 먹었다');
       // 🪞 줄의 가로 중심이 격자 한가운데인가(짝수 칸에서 반 칸 밀리던 버그의 회귀 감시)
-      const cw=_techCW(), midX=(S[0].x+S[S.length-1].x)/2;
+      // ⚠ 중심은 **전체 평균**으로 잰다 — 양 끝 두 개만 보면 그 둘의 삐뚤빼뚤이 그대로 오차가 된다.
+      //   허용 오차도 흔들림 폭(CAMP_MINE_JIT_X)만큼 준다(실측 0.5016 vs 0.5000).
+      const cw=_techCW(), midX=S.reduce((a,m)=>a+m.x,0)/S.length;
       const wantX=TECH_GRID.x0+techCols()/2*cw;
-      assert(Math.abs(midX-wantX)<cw*0.02,
+      assert(Math.abs(midX-wantX)<cw*(0.02+(typeof CAMP_MINE_JIT_X!=='undefined'?CAMP_MINE_JIT_X:0)),
         '광맥 줄이 격자 가운데가 아니다: '+midX.toFixed(4)+' vs '+wantX.toFixed(4)); }
     // ⛽ 가스 광산은 **광맥 줄의 양 끝**이다(2026-09-02 사용자 확정 · 본부 줄에서 내렸다).
     //   ⛔ 본부 양옆으로 되돌리지 말 것 — 「양 미네랄 사이드에 정확하게 일직선으로 붙여」가 요청이다.
@@ -1179,7 +1191,10 @@ async function groupLobby(){
         //   `.mnSpr` 만 세면 두 배가 나온다.
         const mimg=[...document.querySelectorAll('.bMineral.spr .mnSpr:not(.shade)')]
           .sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left);
-        assert(gimg.length===2,'가스 그림이 둘이 아니다: '+gimg.length);
+        // ⛽ 가스는 **왼쪽 하나뿐이다**(2026-09-02 사용자 확정 · CAMP_GAS2_ON=false).
+        //   ⛔ 「둘」로 박아 두지 말 것 — 플래그 하나로 되살릴 수 있어야 한다.
+        const wantGas=(typeof CAMP_GAS2_ON!=='undefined' && CAMP_GAS2_ON) ? 2 : 1;
+        assert(gimg.length===wantGas,'가스 그림 수가 CAMP_GAS2_ON 과 다르다: '+gimg.length+' vs '+wantGas);
         // 💎 **그늘이 진짜 검은 실루엣인가.** `.mnSpr.shade` 의 `filter:brightness(0)` 이
         //   더 센 `.bMineral.spr .mnSpr`(0,3,0) 에 **조용히 덮여** 있었다(2026-09-02) — 그러면
         //   그늘이 검정이 아니라 **같은 그림 한 장 더**가 되어 아래쪽 색이 두 배로 진해진다.
@@ -1194,21 +1209,34 @@ async function groupLobby(){
             '광맥 본체가 불투명하다 — 「연하고 아주 조금 투명하게」가 풀렸다'); }
         assert(mimg.length===CAMP_MINE_COLS,'광맥 그림 수가 다르다: '+mimg.length);
         const gb=gimg.map(e=>e.getBoundingClientRect()), mb=mimg.map(e=>e.getBoundingClientRect());
-        const 발치차=Math.max(...gb.map(r=>Math.abs(r.bottom-mb[0].bottom)));
-        assert(발치차<2,'가스와 광맥의 발치가 다른 선에 있다(일직선이 아니다): '+발치차.toFixed(1)+'px');
-        assert(Math.abs(gb[0].bottom-gb[1].bottom)<0.5,'좌우 가스의 높이가 다르다');
+        // ⛽ **가스는 본부와 같은 높이**다(2026-09-02 · 광맥 줄에서 올렸다).
+        //   ⛔ 「가스와 광맥의 발치가 같은 선」으로 되돌리지 말 것 — 규약이 바뀌었다.
+        assert(TECH_GAS.r0===Math.max(0,Math.round(campRow(CAMP_ROW_BASE)+CAMP_GAS_FOOT-TECH_GAS.h)),
+          '가스 행이 본부 줄 기준이 아니다: r0='+TECH_GAS.r0);
+        assert(gb[0].bottom < mb[0].bottom,
+          '가스가 광맥보다 아래에 있다 — 본부 줄이면 광맥보다 위여야 한다');
+        if(gb.length>1) assert(Math.abs(gb[0].bottom-gb[1].bottom)<0.5,'좌우 가스의 높이가 다르다');
         // 🤝 **양 끝에 붙어 있나** — 살짝 겹치는 것이 정상이다(그림이 부지 안쪽으로 물러나 있다).
         //   ⛔ 틈이 벌어지면 「붙여」가 깨진 것이고, 너무 겹치면 광맥을 가린다.
         //   ⚠ 자[尺]는 **화면 px** 다 — `_techCW()` 는 월드 비율(0~1)이라 여기 섞으면 안 된다.
         //     덩이 그림 한 폭(mb[0].width)을 자로 쓴다.
         //   ⚠ **딱 붙지는 않는다**(2026-09-02 사용자 요청 「아주 조금만 떨어뜨려」). 부지 c0 가
         //     정수라 한 칸(약 13px)씩 뛰므로 정확한 값은 못 고른다 — 「덩이 한 폭 안」이면 붙어 보인다.
+        // ⚠ 아래 좌우 검사는 **가스가 둘일 때만** 뜻이 있다.
+        if(gb.length>1){
         const 왼틈=mb[0].left-gb[0].right, 오른틈=gb[1].left-mb[mb.length-1].right, 덩이폭=mb[0].width;
         for(const [nm,v] of [['왼',왼틈],['오른',오른틈]])
           assert(Math.abs(v)<덩이폭,
             nm+'쪽 가스가 광맥에서 너무 멀거나 파고들었다(틈 '+v.toFixed(1)+'px · 덩이 한 폭('
             +덩이폭.toFixed(1)+'px) 안이어야 한다)');
-        assert(Math.abs(왼틈-오른틈)<2,'좌우 붙은 정도가 다르다: '+왼틈.toFixed(1)+' vs '+오른틈.toFixed(1)); }
+        // ⚠ 허용 오차는 **삐뚤빼뚤만큼** 준다. 가스 자리는 campMineHalfW() 가 흔들림 없이
+        //   계산하므로 **가스는 이미 좌우 대칭**이다 — 어긋나 보이는 것은 맞닿는 **광맥 끝 덩이**가
+        //   흔들렸기 때문이다(실측 왼 -1.2 / 오른 -4.0).
+        const jit=(typeof CAMP_MINE_JIT_X!=='undefined' && typeof CAMP_MINE_SCALE!=='undefined')
+          ? mb[0].width*CAMP_MINE_JIT_X/CAMP_MINE_SCALE*2 : 0;
+        assert(Math.abs(왼틈-오른틈)<Math.max(2, jit+1),
+          '좌우 붙은 정도가 다르다: '+왼틈.toFixed(1)+' vs '+오른틈.toFixed(1)
+          +' (허용 '+Math.max(2,jit+1).toFixed(1)+')'); } }
       // ⛽⛽ 가스는 **둘**이다 — 본부 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
       //   캠프가 판정 함수를 감싸 좌표를 잠시 바꿔 한 번 더 묻는 방식으로 두 자리를 인정한다.
       //   ⛔ 로직을 복사하지 않는다(복사본은 원본이 바뀌면 낡는다).
@@ -1233,9 +1261,14 @@ async function groupLobby(){
         assert(seen && seen.length===0,'캠프에 3D 가스가 남아 있다(그림과 겹친다): '+(seen?seen.join(','):'-')); }
       // 겉모습(클래스·라벨)도 같아야 한다
       { const L=document.querySelector('#cstMain .bmap .bGasZone'), R2=$('campGas2');
-        assert(L&&R2,'가스 구역 DOM 이 둘이 아니다');
-        assert(L.className.replace(' hot','')===R2.className,'두 가스 구역의 겉모습이 다르다: '+L.className+' vs '+R2.className);
-        assert((R2.querySelector('.gzLbl')||{}).textContent===(L.querySelector('.gzLbl')||{}).textContent,'라벨이 다르다'); } }
+        assert(L,'왼쪽 가스 구역이 없다');
+        if(typeof CAMP_GAS2_ON!=='undefined' && !CAMP_GAS2_ON){
+          // ⛔ 꺼졌으면 **DOM 도 남으면 안 된다** — 숨기지 말고 지운다(CLAUDE.md 「잔상 금지」).
+          assert(!R2,'오른쪽 가스를 껐는데 DOM 이 남아 있다(#campGas2)');
+        } else {
+          assert(R2,'가스 구역 DOM 이 둘이 아니다');
+          assert(L.className.replace(' hot','')===R2.className,'두 가스 구역의 겉모습이 다르다: '+L.className+' vs '+R2.className);
+          assert((R2.querySelector('.gzLbl')||{}).textContent===(L.querySelector('.gzLbl')||{}).textContent,'라벨이 다르다'); } } }
     // ③-b ⭐ **세로 화면 구성** — 적은 위에서 내려오고, 지킬 본부가 그 아래, 광맥은 더 뒤.
     //     자주 누르는 광맥은 **아래 절반**에 있어야 한다(GAME_DIRECTION §2-4 엄지 도달 범위).
     //     ⛔ 건설 탭 기본 자리를 그대로 쓰면 광맥이 화면 위쪽(sy 0.37)으로 가서 엄지가 안 닿는다.
@@ -1387,8 +1420,11 @@ async function groupLobby(){
       assert(G.tech.arm===bk,'배치 모드로 못 들어갔다: '+G.tech.arm);
       assert(!sh2.classList.contains('open'),'건물을 지을 때 하단 시트가 안 내려간다 — campSyncSheet 의 강제 열기가 덮어썼다');
       // ▶확정 / ✕취소 버튼이 실제로 화면에 뜨고 눌리는지 — #cstLabels 안에 들어간다
-      const mr=$('cstMain').getBoundingClientRect(), p=_techW2S(0.5, techY0()+20*_techCH());
-      const X=mr.left+p.x*mr.width, Y=mr.top+p.y*mr.height;
+      // ⚠ **화면 안**을 눌러야 한다 — 예전엔 격자 20행을 월드 좌표로 찍었는데, 셀이 커지자
+      //   (칸수 48 → 40 · 2026-09-02 「요소를 1.2배로」) 그 자리가 화면 밖으로 나가 탭이 안 먹었다.
+      //   ⭐ 어디를 누르든 격자 안이면 된다 — 이 검사의 뜻은 「배치 버튼이 뜨는가」다.
+      const mr=$('cstMain').getBoundingClientRect();
+      const X=mr.left+mr.width*0.5, Y=mr.top+mr.height*0.38;
       techPtrDown({pointerId:71,clientX:X,clientY:Y,preventDefault(){},pointerType:'mouse'});
       techPtrUp({pointerId:71,clientX:X,clientY:Y,preventDefault(){},pointerType:'mouse'});
       spin(3);
@@ -1594,11 +1630,16 @@ async function groupLobby(){
           for(const z of zs){ const w=seen(z); got.push(z.toFixed(2)+':'+w.toFixed(3));
             assert(Math.abs(w-base)<0.004,
               '줌마다 아래 끝이 다르다 ('+got.join(' ')+') — 축소하면 미네랄 아래 여백이 드러난다'); }
-          // 그 아래 끝이 실제로 광맥·가스 바로 아래여야 한다(여백을 크게 잡으면 검사가 헛돈다)
+          // 그 아래 끝이 **CAMP_VIEW_PAD 만큼** 광맥 아래여야 한다.
+          //   ⚠ 상수에 연동한다 — 예전엔 「광맥 아래 6칸 이내」로 박아 두어, 여유를 2 → 10 으로
+          //     넓히자(2026-09-02 · 축소했을 때 본부가 너무 아래였다) 그대로 터졌다.
+          //   ⭐ 검사의 뜻은 「아무 데나 열려 있지 않다」이지 「딱 붙어 있다」가 아니다.
           const ms=(G.tech.minerals||[]); assert(ms.length,'광맥이 없다');
           const mBot=Math.max(...ms.map(m=>m.y));
-          assert(base>mBot && base<mBot+_techCH()*6,
-            '아래 끝('+base.toFixed(3)+')이 광맥 줄('+mBot.toFixed(3)+') 바로 아래가 아니다'); } }
+          const pad=(typeof CAMP_VIEW_PAD!=='undefined')?CAMP_VIEW_PAD:2;
+          assert(base>mBot && base<mBot+_techCH()*(pad+4),
+            '아래 끝('+base.toFixed(3)+')이 광맥 줄('+mBot.toFixed(3)+')에서 '
+            +pad+'칸 남짓 떨어진 자리가 아니다'); } }
       campZoom(); spin(20); }   // 뒤 검사들을 위해 기본 배율로 되돌린다
     // 🔍 화면 배율 — 폰에서 관리자 기본(20칸)은 너무 확대돼 보인다.
     //   ⛔ **zoom 을 낮춰서 줄이지 않는다.** zoom 을 낮추면 격자가 화면을 못 채워 좌우가 빈 배경이
@@ -1642,31 +1683,37 @@ async function groupLobby(){
         const cw=_techCW();
         const cellPct=(_techW2S(0.5+cw/2,0.5).x-_techW2S(0.5-cw/2,0.5).x)*100;   // 셀 한 칸의 폭(%)
         const wide=sp.map(e=>parseFloat(e.style.width)/cellPct);
-        // 칸보다 조금 큰 것이 정상이다(결정이 칸 밖으로 자란다). 두 배 넘게 크면 서로 뭉갠다.
-        assert(wide.every(r=>r>0.6&&r<1.8),
-          '광맥 그림이 칸 대비 너무 크거나 작다(셀 축소를 안 따른다): '+wide.map(r=>r.toFixed(2)).join(' ')); } }
-      // ⛽ 가스 두 구역도 그림이다 — 좌우가 **같은 파일**이고 오른쪽만 뒤집혀 있어야 한다.
-      //   ⛔ 오른쪽을 따로 그리지 말 것: 왼쪽 마크업을 복제하고 뒤집기는 css 가 맡는다.
+        // 💎 **상수(CAMP_MINE_SCALE)와 실제 렌더가 같은가**를 본다 — 이 검사의 뜻은
+        //   「셀 축소를 따라오는가」이지 「특정 크기인가」가 아니다.
+        //   ⛔ 옛 검사는 상한 1.8 이 박혀 있어, 크기를 2.10 으로 키우자(2026-09-02) 그대로 터졌다.
+        assert(wide.every(r=>Math.abs(r-CAMP_MINE_SCALE)<0.08),
+          '광맥 그림이 CAMP_MINE_SCALE('+CAMP_MINE_SCALE+')과 다르다(셀 축소를 안 따른다): '
+          +wide.map(r=>r.toFixed(2)).join(' '));
+        // 🤝 크기와 간격은 **함께 움직인다** — 키우기만 하면 서로 파고들어 한 덩어리로 뭉친다.
+        assert(CAMP_MINE_SCALE < CAMP_MINE_GAP*2,
+          '덩이가 간격의 두 배를 넘는다 — 서로 뭉갠다: 크기 '+CAMP_MINE_SCALE+' vs 간격 '+CAMP_MINE_GAP); } }
+      // ⛽ 가스도 그림이다. **지금은 왼쪽 하나뿐**이다(CAMP_GAS2_ON=false · 2026-09-02).
+      //   ⛔ 「둘」로 박아 두지 말 것 — 플래그 하나로 되살릴 수 있어야 한다.
       { const gs=[...document.querySelectorAll('.bGasZone.spr')].filter(e=>e.getBoundingClientRect().width>0);
-        assert(gs.length===2,'가스 구역이 그림 스프라이트 둘이 아니다: '+gs.length);
+        const want=(typeof CAMP_GAS2_ON!=='undefined' && CAMP_GAS2_ON) ? 2 : 1;
+        assert(gs.length===want,'가스 그림 구역 수가 CAMP_GAS2_ON 과 다르다: '+gs.length+' vs '+want);
         const im=gs.map(e=>e.querySelector('img.gzSpr'));
         assert(im.every(Boolean),'가스 구역에 그림이 없다');
-        assert(im[0].getAttribute('src')===im[1].getAttribute('src'),'좌우가 다른 파일을 쓴다 — 한 벌이어야 한다');
-        const tf=im.map(e=>getComputedStyle(e).transform);
-        // ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 같은 그림을 그대로 둘 놓는다.
-        assert(tf[0]===tf[1],'좌우가 다른 모습이다 — 뒤집기가 되살아났다: '+tf.join(' / '));
-        // 광맥을 삼키면 안 된다 — 광맥 줄이 짧아 보이고, 끝 덩이를 골라 누를 수가 없다.
-        //   ⚠ **가로로** 잰다: 가스는 이제 광맥과 **같은 줄**이라(2026-09-02) 세로가 겹치는 것이
-        //     정상이다. ⛔ 옛 세로 검사(가스 밑변 ≤ 광맥 윗변)로 되돌리지 말 것 — 그건 가스가
-        //     본부 줄에 있던 시절의 자다.
-        //   규칙: 가스가 파고들어도 **끝에서 두 번째 덩이까지는 못 간다**(= 한 덩이 폭 안).
+        if(im.length>1){
+          assert(im[0].getAttribute('src')===im[1].getAttribute('src'),'좌우가 다른 파일을 쓴다 — 한 벌이어야 한다');
+          const tf=im.map(e=>getComputedStyle(e).transform);
+          // ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 같은 그림을 그대로 둘 놓는다.
+          assert(tf[0]===tf[1],'좌우가 다른 모습이다 — 뒤집기가 되살아났다: '+tf.join(' / ')); }
+        // 광맥을 삼키면 안 된다 — 끝 덩이를 골라 누를 수가 없다.
+        //   ⚠ 가스는 이제 **본부 줄**이라 광맥과 세로로 안 겹친다(2026-09-02). 가로만 본다.
         const mn=[...document.querySelectorAll('.bMineral.spr')].map(e=>e.getBoundingClientRect())
           .sort((a,b)=>a.left-b.left);
-        if(mn.length>=2){ const gr=im.map(e=>e.getBoundingClientRect()).sort((a,b)=>a.left-b.left);
+        if(mn.length>=2 && im.length){
+          const gr=im.map(e=>e.getBoundingClientRect()).sort((a,b)=>a.left-b.left);
           assert(gr[0].right<=mn[1].left,
             '왼쪽 가스가 광맥을 삼킨다 — 둘째 덩이까지 덮었다: '+(gr[0].right-mn[1].left).toFixed(1)+'px');
-          assert(gr[1].left>=mn[mn.length-2].right,
-            '오른쪽 가스가 광맥을 삼킨다 — 끝에서 둘째 덩이까지 덮었다: '+(mn[mn.length-2].right-gr[1].left).toFixed(1)+'px'); } }
+          if(gr.length>1) assert(gr[1].left>=mn[mn.length-2].right,
+            '오른쪽 가스가 광맥을 삼킨다: '+(mn[mn.length-2].right-gr[1].left).toFixed(1)+'px'); } }
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
@@ -8104,10 +8151,15 @@ async function groupLobby(){
       const sp=[...document.querySelectorAll('#cstMain .bMineral .mnSpr:not(.shade)')];
       skipIf(!sp.length,'광맥이 아직 안 그려졌다');
       assert(sp.length===(G.tech.minerals||[]).length,'그림 수가 광맥 칸 수와 다르다: '+sp.length);
-      // 지금은 1번 하나로 통일한다. ⛔ 좌우 뒤집기를 되살리지 말 것(2026-08-31 사용자 확정) —
-      //   뒤집으면 광원 방향이 칸마다 반대가 된다. 반복이 거슬리면 그림을 한 장 더 뽑는다.
+      // 💎 쓰는 그림은 **CAMP_MINE_SPRITE 목록이 단일 소스**다(2026-09-02 · 지금은 1·2 두 장).
+      //   ⛔ 옛 검사는 'stage1.webp' 만 허용했다 — 목록을 늘리는 순간 터진다.
+      //   ⛔ 좌우 뒤집기를 되살리지 말 것(2026-08-31 사용자 확정) — 광원 방향이 칸마다 반대가 된다.
       const files=sp.map(e=>e.src.split('/').pop());
-      assert(files.every(f=>f==='stage1.webp'),'1번 외의 그림이 쓰였다: '+files.join(','));
+      const okFiles=new Set(CAMP_MINE_SPRITE.map(k=>'stage'+k+'.webp'));
+      assert(files.every(f=>okFiles.has(f)),
+        'CAMP_MINE_SPRITE 에 없는 그림이 쓰였다: '+files.join(',')+' / 허용 '+[...okFiles].join(','));
+      if(CAMP_MINE_SPRITE.length>1) assert(new Set(files).size>1,
+        '그림을 여러 장 쓰기로 해 놓고 한 장만 나왔다: '+files.join(','));
       assert(!sp.some(e=>e.classList.contains('flip')),'좌우 뒤집기가 되살아났다');
       for(const e of sp) assert(e.complete && e.naturalWidth>0,'광맥 그림을 못 불러왔다: '+e.src.split('/').pop());
       // 그림을 쓰면 3D 노드는 빠져야 한다(두 겹 방지)
@@ -8130,13 +8182,19 @@ async function groupLobby(){
       const gz=[...document.querySelectorAll('#cstMain .bGasZone')];
       const mn=[...document.querySelectorAll('#cstMain .bMineral')];
       skipIf(gz.length<2 || !mn.length,'자원 구역이 아직 안 그려졌다');
-      assert(gz.length===2,'가스 구역이 둘이 아니다: '+gz.length);
+      const wantGz=(typeof CAMP_GAS2_ON!=='undefined' && CAMP_GAS2_ON) ? 2 : 1;
+      assert(gz.length===wantGz,'가스 구역 수가 CAMP_GAS2_ON 과 다르다: '+gz.length+' vs '+wantGz);
+      skipIf(gz.length<2,'가스가 하나뿐이라 좌우 비교를 건너뛴다');
       const mL=Math.min(...mn.map(e=>e.getBoundingClientRect().x));
       const mR=Math.max(...mn.map(e=>e.getBoundingClientRect().right));
       const mc=(mL+mR)/2, c=gz.map(mid).sort((a,b)=>a-b);
       const dL=mc-c[0], dR=c[1]-mc;
       assert(dL>4 && dR>4,'가스가 미네랄에 붙었다: '+dL.toFixed(1)+' / '+dR.toFixed(1));
-      assert(Math.abs(dL-dR)<=1.5,'좌우가 대칭이 아니다: 왼 '+dL.toFixed(1)+'px · 오른 '+dR.toFixed(1)+'px');
+      // ⚠ 허용 오차는 **삐뚤빼뚤(campMineJit)만큼** 준다 — 가스는 광맥 가장자리 기준으로 놓이는데,
+      //   그 가장자리가 흔들림으로 조금씩 움직인다(실측 왼 128.2 / 오른 125.9 = 2.3px 차).
+      const jitPx=(typeof CAMP_MINE_JIT_X!=='undefined') ? CAMP_MINE_JIT_X*_techCW()*_btRect().width : 0;
+      assert(Math.abs(dL-dR)<=Math.max(1.5, jitPx+1),
+        '좌우가 대칭이 아니다: 왼 '+dL.toFixed(1)+'px · 오른 '+dR.toFixed(1)+'px (허용 '+Math.max(1.5,jitPx+1).toFixed(1)+')');
       // 둘은 **같은 부품**이어야 한다 — 오른쪽만 아이콘이 빠져 좌우가 달라 보였다
       const html=gz.map(e=>e.innerHTML.replace(/\s+/g,''));
       assert(html[0]===html[1],'두 가스 구역의 내용이 다르다 — 왼쪽 것을 복제해야 한다');

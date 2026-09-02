@@ -1156,7 +1156,17 @@
           118 → 석판 안 / 132 → 좌우 경계석이 화면 밖).
           ⛔ 더 키우지 말 것: 118% 에서 이미 DPR 3 기기가 원본 해상도를 거의 다 쓴다
              (512 CSS px × 3 = 1536 ≈ 원본 1520). 옛 150% 는 원본의 34% 만 쓰던 값이었다. */
-    background-size:auto 118%;background-position:center bottom;background-repeat:no-repeat}
+    background-size:auto 118%;background-position:center bottom;background-repeat:no-repeat;
+    /* 🌑 **맵 톤을 낮춘다** (2026-09-02 사용자 확정 · 「건물이랑 어울리게」).
+       ⭐ 본부·광맥은 파란 회색인데 바닥이 밝은 베이지라 둘이 따로 놀았다. 바닥을 눌러
+         뒤로 물리면 그 위의 것들이 앞으로 나온다 — 게임판은 배경이지 주인공이 아니다.
+       📐 실측 비교(축소 끝까지 민 화면 · docs/mock/_camp-tone.png):
+           .88 거의 그대로 · .80 살짝 · **.60 여기** · .50 부터는 바닥이 「검은 여백」으로 읽힌다.
+       ⚠ 채도도 함께 내린다(.80) — 밝기만 내리면 누런 기가 남아 탁해 보인다.
+       ⛔ hue-rotate 로 파랗게 돌리지 말 것(사용자가 「차갑게」 안을 안 골랐다) — 흙의
+         따뜻한 기가 사라져 콘크리트만 남는다.
+       ⚠ 이 filter 는 **바닥 층에만** 걸린다(.bmapFloor). 그 위의 유닛·건물·자원은 영향이 없다. */
+    filter:brightness(.60) saturate(.80)}
   /* 맵 위에 얹힌 건설 장식·안내 */
   #phone.campMode #cstMain .bhint,     /* 「건물을 골라 배치」 같은 안내 문구 */
   #phone.campMode #cstMain .bHill{display:none}   /* 언덕 장식만 걷는다 — 가스 구역은 캠프도 쓴다 */
