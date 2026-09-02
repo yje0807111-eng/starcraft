@@ -1137,18 +1137,26 @@ async function groupLobby(){
           for(const x of (b.produces||[])){ if(x.id===wk) continue; if((x.g||0)>0) n++; }
         assert(n>0,'원복했는데 원본 가스값이 안 돌아왔다 — 오토배틀이 함께 망가진다'); }
       G.tech.units[q.id]=0; }
-    // ③ 광맥은 **한 줄 일곱 칸**이고, 일직선이 아니라 **가운데가 처진 호**다(2026-08-31 사용자 확정).
+    // ③ 광맥은 **한 줄 여덟 칸 · 일직선**이다(2026-09-02 사용자 확정 · 옛 일곱 칸 호).
     //   ⛔ 두 줄(3×2)로 되돌리지 말 것 — 덩어리로 뭉쳐 보였다.
+    //   ⛔ 여덟은 그림 취향이 아니라 **일꾼 천장**이다 — 8덩이 × cap 5 = 40 = CAMP_WORKER_MAX.
     const M=G.tech.minerals||[];
+    assert(CAMP_MINE_COLS*CAMP_MINE_CAP===CAMP_WORKER_MAX,
+      '광맥 수 × 덩이당 상한이 일꾼 상한과 다르다 — 일꾼이 남거나 자리가 남는다: '
+      +CAMP_MINE_COLS+'×'+CAMP_MINE_CAP+' vs '+CAMP_WORKER_MAX);
     assert(M.length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥 수가 배치와 다름: '+M.length);
     const xs=new Set(M.map(m=>m.x.toFixed(4)));
     assert(xs.size===CAMP_MINE_COLS,'광맥이 한 줄 '+CAMP_MINE_COLS+'칸이 아님: '+xs.size+'열');
-    { const S=M.slice().sort((a,b)=>a.x-b.x), mid=S[(S.length-1)/2|0];
-      const ends=(S[0].y+S[S.length-1].y)/2;
-      assert(mid.y>ends+1e-6,'가운데가 안 처졌다 — 호가 아니라 일직선이다');
-      assert(Math.abs(S[0].y-S[S.length-1].y)<1e-6,'양 끝 높이가 다르다 — 호가 기울었다'); }
+    { const S=M.slice().sort((a,b)=>a.x-b.x);
+      const ys=new Set(S.map(m=>m.y.toFixed(6)));
+      assert(ys.size===1,'광맥이 일직선이 아니다 — 높이가 '+ys.size+'가지: '+[...ys].join(' '));
+      // 🪞 줄의 가로 중심이 격자 한가운데인가(짝수 칸에서 반 칸 밀리던 버그의 회귀 감시)
+      const cw=_techCW(), midX=(S[0].x+S[S.length-1].x)/2;
+      const wantX=TECH_GRID.x0+techCols()/2*cw;
+      assert(Math.abs(midX-wantX)<cw*0.02,
+        '광맥 줄이 격자 가운데가 아니다: '+midX.toFixed(4)+' vs '+wantX.toFixed(4)); }
     // ⛽ 가스 광산은 **본부 양옆**이다(2026-08-31 사용자 확정 · 광맥 옆에서 옮겼다).
-    //   광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
+    //   광맥이 한 줄 여덟 칸으로 넓어져 그 옆에는 자리가 없다.
     //   ⚠ 격자 크기(_techRows)는 맵 요소의 실제 크기에 달렸다 — campShowView() 로 #vBuild 를
     //     HOME 안으로 옮기기 **전에** 재면 다른 값이 나온다(실측: 30행 vs 35행).
     //     그래서 가스를 뷰 전에 잡았더니 광맥보다 5행 위에 앉았다. 격자 계산은 뷰 뒤에 둘 것.
@@ -4472,8 +4480,22 @@ async function groupLobby(){
       assert(Math.abs(m0-1)<0.01,'효율 Lv0 은 배수 1 이어야 한다(기준선): '+m0.toFixed(3));
       assert(m40>m0,'효율 레벨이 채취 배수를 못 올린다');
       const mins=(G.tech&&G.tech.minerals)||[];
-      assert(mins.length&&mins.every(m=>(m.cap|0)>1),
-        '캠프 광맥에 cap 표식이 없다 — 일꾼 수 축이 다시 막힌다'); }
+      assert(mins.length&&mins.every(m=>(m.cap|0)===CAMP_MINE_CAP),
+        '캠프 광맥에 cap 표식이 없다 — 일꾼 수 축이 다시 막힌다');
+      // ⛏ **cap 은 이제 단단하다** — 5명이 차면 여섯째는 못 붙는다(2026-09-02 사용자 확정).
+      //    ⚠ 옛 규칙은 안 막고 느리게만 했다. 되돌아가면 「한 개당 최대 5마리」가 뜻을 잃는다.
+      //    ⚠ 가짜 eid 만 꽂으면 안 된다 — _techMinerFull 이 먼저 유령 찜을 걷어(_techMinerSweep)
+      //      전부 지워 버린다. **진짜로 캐는 중인 일꾼**(_gSt==='mine')을 세워야 한다.
+      { const m=mins[0], bakM=m._miners, bakE=G.tech.ents.slice();
+        m._miners=[];
+        for(let i=0;i<CAMP_MINE_CAP;i++){
+          assert(!_techMinerFull(m,7000+i),'아직 '+i+'명인데 자리가 없다고 한다');
+          G.tech.ents.push({ eid:7000+i, type:'worker', _gSt:'mine', _gEid:m.eid });
+          m._miners.push(7000+i); }
+        assert(_techMinerFull(m,7999),
+          'cap '+CAMP_MINE_CAP+'명이 찼는데 더 붙는다 — 연성 cap 으로 되돌아갔다');
+        assert(!_techMinerFull(m,7000),'이미 붙어 있는 일꾼이 쫓겨난다');
+        m._miners=bakM; G.tech.ents.splice(0,G.tech.ents.length,...bakE); } }
     // ⑥ 비용은 한 문으로만 조회한다 — 표를 갈아끼울 자리
     { const b=campCost('bldg','barracks',0);
       assert(b && b.m>0,'건물 비용 조회 실패'); assert('lv' in b,'campCost 가 레벨 인자를 안 받는다(무한 티어 대비)'); }
@@ -4487,7 +4509,7 @@ async function groupLobby(){
     //    ⚠ 광맥은 정해진 인원만 캘 수 있어 일꾼이 도착하면 자리를 「찜」한다. 북적일 때 찜한
     //      일꾼이 도착 판정(d<=0.008)을 놓치면 찜만 남아 **아무도 못 캔다** — 실측(2026-08-27):
     //      관리자 탭에서 일꾼 20기부터 수입이 **0** 이었다(광맥 6개 전부 찜, 찜한 6명 모두 'go').
-    //      캠프는 cap 5 라 자리가 남아 안 걸렸을 뿐이다.
+    //      캠프도 이제 cap 에서 **막으므로**(2026-09-02) 같은 교착이 날 수 있다 — 청소가 유일한 방벽이다.
     { assert(typeof _techMinerSweep==='function','유령 찜 청소가 없다');
       const m=(G.tech.minerals||[])[0];
       if(m){ const bak={ms:m._miners, mi:m.miner};
