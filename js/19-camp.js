@@ -3696,7 +3696,36 @@ const CAMP_GAT_STEP = 0.025;    // 효율 레벨당 +2.5% (왕복 1회당)
 //       Lv1 10(10탭) · Lv2 30(15탭) · Lv3 60(20탭) · Lv4 100(25탭) · Lv5 150(30탭)
 //   ⚠ 이것은 **2차식**이라 지수보다 완만하다. 후반까지 이대로 두면 탭이 공짜가 된다 —
 //     무릎(CAMP_COST_KNEE) 부터는 지수로 넘어간다. 후반 밸런스는 아직 안 쟀다(2026-09-02).
-const CAMP_TAP_COSTK = 5;       // 탭 비용 = K·n(n+1) · 필요 탭수 = 5n+5
+const CAMP_TAP_COSTK = 5;       // 탭 비용 = 필요탭수 × 그때 탭당 · 필요탭수 = 5n+5
+// ⛏ **탭 마일스톤** (2026-09-02 사용자 확정) — 여기를 지나면 **레벨당 증가폭이 2배**가 된다.
+//   1 → 2 → 4 → 8 → 16 → 32 → 64
+//   ⭐ Lv10 을 사면 탭당 **10 → 12**(+2) · Lv25 는 40 → 44(+4) · Lv50 은 140 → 148(+8) …
+//   ⚠ 증가폭을 **더하기(+1)로** 두는 안도 검토했는데, 그러면 Lv1000 에서 +7 이 전체의 0.1% 라
+//     **마일스톤이 시시해진다**(5,125탭을 눌러 도달했는데 아무것도 안 바뀐 느낌).
+//     배로 키우면 끝까지 「확 뛴다」가 유지된다 — Lv1000 탭당 5,315 → **2.3만**.
+//   ⚠ 마일스톤 레벨은 **사는 것도 비싸다**: 필요 탭이 +20 붙는다(Lv10 은 55 → **75탭**).
+//     성능이 뛰는 자리는 관문이기도 해야 한다.
+const CAMP_TAP_MILES = [10, 25, 50, 100, 500, 1000];
+// Lv 에서의 **기본** 탭당(배수 제외) — 구간마다 증가폭이 다르므로 구간별로 한 번에 더한다.
+//   ⛔ 레벨 하나씩 도는 루프를 쓰지 말 것 — Lv 가 수천이 되면 프레임마다 그만큼 돈다.
+function campTapRaw(lv){
+  let v = CAMP_TAP_BASE, step = CAMP_TAP_STEP, from = 1, mi = 0;
+  const ms = CAMP_TAP_MILES.concat([Infinity]);
+  while(from <= lv){
+    const m = ms[mi];
+    if(from >= m){ step *= 2; mi++; continue; }
+    const to = Math.min(lv, m - 1);
+    v += step * (to - from + 1);
+    from = to + 1;
+  }
+  return v;
+}
+// Lv n 을 사는 데 필요한 탭 수 — 5씩 늘고, 마일스톤에서 +20
+function campTapNeedTaps(n){
+  let t = 5 * n + 5;
+  for(const m of CAMP_TAP_MILES) if(n >= m) t += 20;
+  return t;
+}
 const CAMP_GAT_COST0 = 210;     // 효율 0→1레벨 비용
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
@@ -3728,11 +3757,11 @@ function campUpgCost(k){
   // ⛏ 탭은 **횟수로 설계한 2차식**이다(위 CAMP_TAP_COSTK 설명) — 무릎까지는 그 식을 그대로 쓰고,
   //    무릎을 넘으면 그때 값을 출발점 삼아 지수로 이어 붙인다(후반이 공짜가 되지 않게).
   if(k === 'tap'){
+    // ⭐ 비용은 **「몇 번 눌러야 하는가」로 정의한다**: 필요 탭 수 × 그 시점의 기본 탭당.
+    //    그래서 환생·팩 배수가 커지면 실제로 눌러야 하는 횟수가 줄어 성장이 체감된다.
+    //    ⛔ 옛 무릎(지수) 분기는 없앴다 — 탭당 자체가 마일스톤으로 계단을 밟으므로 비용도 함께 뛴다.
     const n = lv + 1;                                            // 지금 사려는 레벨
-    const kneeN = CAMP_COST_KNEE;
-    const q = (m) => CAMP_TAP_COSTK * m * (m + 1);               // 2차식
-    const c = (n <= kneeN) ? q(n)
-            : q(kneeN) * Math.pow(CAMP_COST_R1.tap, n - kneeN);  // 무릎 뒤 = 지수
+    const c = campTapNeedTaps(n) * campTapRaw(n - 1);
     return Math.max(1, Math.ceil(c * campUpgDisc()));
   }
   const base = (k === 'hold') ? CAMP_HOLD_COST0 : CAMP_GAT_COST0;
@@ -3779,7 +3808,9 @@ function campTapGain(){
   // 🌳 트리 — 「탭당 미네랄」은 절대값을 더하고(초반 단축), 「탭 배수」는 곱한다
   const add = campRtHas('tap') > 0 ? CAMP_RT_LADDER[Math.min(5, campRtHas('tap'))] : 0;
   const lv = campUpgLv('tap');
-  const base = (CAMP_TAP_BASE + CAMP_TAP_STEP * lv) * campMileMul(lv);   // 선형 × 마일스톤(HUNT_R1 §1)
+  // ⛏ 탭은 **제 마일스톤 곡선**을 쓴다(campTapRaw · 증가폭이 2배씩).
+  //   ⛔ campMileMul 을 곱하지 말 것 — 그것은 채취(gather)용이고, 여기 곱하면 계단이 두 겹이 된다.
+  const base = campTapRaw(lv);
   // 💳 결제 팩 — **탭에도 걸어야 「재화 획득 +N%」가 참말이 된다.**
   //   ⛔ 실측(2026-08-31)으로 드러난 것: 채취에만 걸었더니 배수 1.5/2.5/4.0 인데 실제 수입은
   //     ×1.16 / ×1.46 / ×1.89 뿐이었다. 수입의 **66% 가 탭**인데 거기 안 걸렸기 때문이다.
@@ -4799,7 +4830,15 @@ function campEmptyAt(cx, cy){
 // 👷 첫 일꾼 **50** (2026-09-02 사용자 확정 · 옛 140).
 //   ⭐ 첫 탭 강화(10)를 사고 탭당 2원이 된 뒤 **25탭**이면 닿는다 — 튜토리얼 구간의 두 번째 목표.
 //   ⚠ 두 마리째부터는 ×1.65 그대로다(50 → 82 → 136 → 225 …).
-const CAMP_HIRE0 = 50, CAMP_HIRE_R = 1.65;       // n마리 보유 → 다음 마리 가격
+// ⭐ 다음 마리 = **지금 값 + 지금 값의 1.5배** = **×2.5** (2026-09-02 사용자 확정 · 옛 ×1.65)
+//   50 → 125 → 313 → 781 → 1,953 …
+//   ⚠ 곱셈이 30번 쌓이면 옛 곡선의 **16만 배**가 된다: 30마리째 1.0억 → **17.3조**,
+//     40마리 전부 사는 총액 20.3억 → **333조**.
+//   ⛔ 그래도 이대로 간다 — 일꾼을 **귀하게** 만드는 것이 의도다. 초반 몇 마리가 분명한 목표가
+//     되고, 그 위는 **환생 배수(미네랄 획득)와 트리 포인트**가 열어 준다(사용자 판단 · §4).
+//   ⚠ 일꾼 = 자동 수입의 전부다. 여기를 만지면 회차 시간이 통째로 바뀐다 —
+//     초반이 확정되면 BALANCE.md §4 방식으로 회차 시간을 다시 잴 것.
+const CAMP_HIRE0 = 50, CAMP_HIRE_R = 2.5;        // n마리 보유 → 다음 마리 가격
 const CAMP_HIRE_KNEE = 30, CAMP_HIRE_R2 = 1.10;  // 31마리째부터 완만하게
 const CAMP_WORKER_MAX = 40;                      // 일꾼 상한
 function campHireCost(n){
