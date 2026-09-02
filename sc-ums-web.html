@@ -609,6 +609,14 @@
       </div>
     </div>
   </div>
+  <!-- 💠 룬 화면 — 환생 화면(#campReb)과 **같은 규격**의 #phone 직속 전체 화면.
+       ⛔ 환생 구역의 키 아트(#campRebBg)를 빌리지 않는다 — 그 그림은 그 구역의 것이다(잔상 금지).
+       내용은 campRuneRender() 가 채운다(장착 / 룬 상점 두 가지). -->
+  <div id="campRune">
+    <div class="rnBg"></div>
+    <div class="rnTop"><span class="rnTitle">룬</span></div>
+    <div class="rnBody" id="rnBody"></div>
+  </div>
   <div id="curBar" class="curBar hide">
     <span class="curTitle" id="curTitle"></span><!-- 화면 제목 슬롯(curSetTitle) — 비어 있으면 재화만 오른쪽 정렬 -->
     <span class="curRes">
@@ -892,6 +900,7 @@
 <script src="js/19-camp.js"></script>
 <script src="js/20-camp-research.js"></script>   <!-- 🔬 캠프 연구 구역 — 19 의 값·상태를 읽는다(순서가 뒤여야 한다) -->
 <script src="js/21-camp-battle.js"></script>   <!-- ⚔ 캠프 전투 — 캠프가 제 프레임을 소유한다(18-strike 는 부품으로만 쓴다 · 순서가 뒤여야 한다) -->
+<script src="js/22-camp-rune.js"></script>   <!-- 💠 룬 — 19 의 campState·CAMP_ROUND_MAX 를 읽는다(순서가 뒤여야 한다) -->
 <!-- 🗄 다락(휴지통) — 지금 화면에서 도달할 수 없는 코드. 무엇이 왜 여기 있는지는 ATTIC.md.
      ⚠ **맨 마지막**이다: 아무도 여기 것을 부르지 않으므로 순서가 무의미하고, 거꾸로 여기 것이
      살아 있는 코드를 부르는 것은 런타임이라 문제가 없다. ⛔ 위 순서는 건드리지 않았다. -->

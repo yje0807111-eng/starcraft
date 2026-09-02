@@ -2334,3 +2334,92 @@
     .cdDrop,.cdDrop.cdOut,.hbMoreWrap:not(.hide) .hbMoreBox,
     .hbMoreWrap:not(.hide) .hbMoreBox.hbmOut{ animation:none }
   }
+
+/* ══ 💠 룬 구역 (2026-09-02) ═══════════════════════════════════════════════
+   규격은 환생 화면(#campReb)과 **같다** — #phone 직속 · z-index 120 ·
+   bottom:var(--navH) 로 하단 네비 자리를 비운다(네비를 켜 둔 채 연다).
+   ⛔ 환생 구역의 키 아트를 빌리지 않는다 — 여기는 제 배경(불투명)을 갖는다.
+   ⛔ animation-fill-mode 를 주지 말 것 — 탭이 백그라운드면 애니가 0 에 멈춰
+      화면이 통째로 안 보인다(환생 화면에서 이미 밟은 함정). */
+#campRune{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;
+  display:none;flex-direction:column}
+#campRune.on{display:flex}
+#campRune.on.rnIn{animation:crFadeIn var(--t-screen) ease}
+#campRune .rnBg{position:absolute;inset:0;background:
+  radial-gradient(120% 70% at 50% 0%,rgba(84,64,128,.18) 0%,rgba(6,8,12,0) 62%),
+  linear-gradient(180deg,#0b0d13 0%,#07090d 100%)}
+#campRune .rnTop{position:relative;z-index:1;flex:0 0 auto;display:flex;align-items:center;
+  padding:44px 14px 4px}
+#campRune .rnTitle{flex:1}   /* 크기·글꼴은 공용 화면 제목 규칙이 정한다 */
+#campRune .rnBody{position:relative;z-index:1;flex:1 1 auto;overflow-y:auto;
+  padding:8px 12px 18px;display:flex;flex-direction:column;gap:10px}
+
+/* 머리줄 — 왼쪽 이름 / 오른쪽 값. 상점 탭에서는 보유 젬을 같은 자리에 쓴다 */
+#campRune .rnHead{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);font-size:12px;color:#98a2b3}
+#campRune .rnHead b{color:#eef1f6;font-size:14px}
+
+#campRune .rnSec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);padding:8px}
+#campRune .rnSecH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#campRune .rnSecT{font-size:12px;color:#c3ccd8;letter-spacing:.08em}
+#campRune .rnSecN{font-size:11px;color:#8b95a5}
+
+/* 칸 — 3열 격자. 잠긴 칸은 **왜 잠겼는지**(해금 라운드) 적는다 */
+#campRune .rnSlots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#campRune .rnSlot{position:relative;min-height:62px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;padding:6px 4px;cursor:pointer;
+  border:1px solid var(--metal-edge);border-radius:var(--r-sm);
+  background:rgba(0,0,0,.3);color:#c3ccd8;font-family:inherit;font-size:11px}
+#campRune .rnSlot.em{color:#5b6472;font-size:20px}
+#campRune .rnSlot.lk{cursor:default;opacity:.55}
+#campRune .rnSlot.lk .rnLk{font-style:normal;font-size:14px}
+#campRune .rnSlot.lk .rnLkR{font-size:10px;color:#8b95a5}
+#campRune .rnSlot.on{border-color:color-mix(in srgb,var(--rg) 55%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.35))}
+#campRune .rnSlot.on .ic{width:18px;height:18px}
+#campRune .rnSlN{color:#eef1f6}
+#campRune .rnSlV{color:var(--rg);font-size:10px}
+#campRune .rnSlot.sel{outline:1px solid var(--acc-sel);outline-offset:-2px}
+#campRune .rnNext{margin-top:6px;font-size:11px;color:#8b95a5;text-align:center}
+#campRune .rnNext b{color:#c3ccd8}
+
+/* 고르기 판 — 칸 바로 아래에 펼쳐진다(새 팝업을 만들지 않는다) */
+#campRune .rnPick{border:1px solid var(--acc-sel);border-radius:var(--r-md);
+  background:rgba(10,14,20,.85);padding:8px;display:flex;flex-direction:column;gap:5px}
+#campRune .rnPickH{display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;color:#c3ccd8}
+#campRune .rnOff{border:1px solid var(--metal-edge);border-radius:var(--r-sm);
+  background:rgba(0,0,0,.35);color:#ff8a94;font-family:inherit;font-size:11px;
+  padding:3px 10px;cursor:pointer}
+#campRune .rnCand{display:grid;grid-template-columns:20px 1fr auto auto;align-items:center;
+  gap:6px;padding:6px 8px;cursor:pointer;text-align:left;
+  border:1px solid var(--metal-edge);border-radius:var(--r-sm);
+  background:rgba(0,0,0,.3);color:#c3ccd8;font-family:inherit;font-size:12px}
+#campRune .rnCand:disabled{opacity:.4;cursor:default}
+#campRune .rnCand.cur{border-color:var(--acc-sel)}
+#campRune .rnCand .ic{width:16px;height:16px}
+#campRune .rnCn{color:var(--rg)}
+#campRune .rnCd{grid-column:2;grid-row:2;font-size:10px;color:#8b95a5}
+#campRune .rnCv{color:#eef1f6}
+#campRune .rnCo{font-size:10px;color:#8b95a5;min-width:26px;text-align:right}
+#campRune .rnEmp{font-size:11px;color:#8b95a5;text-align:center;padding:8px}
+
+/* 룬 상점 — 룬 한 줄 + 등급 버튼들 */
+#campRune .rnItem{border-top:1px solid rgba(255,255,255,.06);padding:8px 0 6px}
+#campRune .rnItem:first-child{border-top:0}
+#campRune .rnIH{display:grid;grid-template-columns:20px auto 1fr auto;align-items:center;gap:6px}
+#campRune .rnIH .ic{width:16px;height:16px}
+#campRune .rnIN{font-size:13px;color:#eef1f6}
+#campRune .rnID{font-size:11px;color:#8b95a5}
+#campRune .rnIO{font-size:11px;color:#c3ccd8}
+#campRune .rnBuys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+#campRune .rnBuys:has(> :only-child){grid-template-columns:1fr}
+#campRune .rnBuy{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;
+  cursor:pointer;border:1px solid color-mix(in srgb,var(--rg) 38%,transparent);
+  border-radius:var(--r-sm);background:rgba(255,255,255,.04);
+  color:#c3ccd8;font-family:inherit;font-size:11px}
+#campRune .rnBuy:disabled{opacity:.42;cursor:default}
+#campRune .rnBuy b{color:var(--rg);font-weight:600}
+#campRune .rnBuy u{text-decoration:none;color:#c98bff;font-size:11px}

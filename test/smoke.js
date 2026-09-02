@@ -544,6 +544,13 @@ async function groupLobby(){
     assert((campState().reb|0)===before,'취소했는데 환생이 실행됨');
     // ⑥ 실행하면 배수·포인트가 실제로 남는다
     const mul0=campRebMul(), pts0=campState().rbPts||0;
+    // 💠 **젬으로 산 룬도 남아야 한다**(2026-09-02). 되감기면 결제가 사라지는 것이다.
+    //   ⭐ 여기서 잰다 — 실제 환생을 도는 자리가 이 스텝 하나뿐이다.
+    let _rnKey='';
+    if(typeof campRuneState==='function'){ const R=campRuneState();
+      if(R){ _rnKey=runeKey('gain','low'); R.own[_rnKey]=(R.own[_rnKey]|0)+1;
+        C.best=Object.assign({}, C.best, {10:50});   // 칸을 열어 실제로 끼워 본다
+        campRuneEquip('norm',0,_rnKey); } }
     campRebAsk(); campRebGo();
     // ⚠ **되감긴 그 순간을 찍어서 잰다.** await 를 끼우면 캠프 틱(250ms)이 그 사이에 끼어들어
     //   막 비운 earn 에 다시 수입을 얹는다 — 그래서 검사가 흔들렸다(2026-08-31).
@@ -554,6 +561,10 @@ async function groupLobby(){
       assert(snap.mul>mul0,'배수가 안 올랐다: '+mul0+' → '+snap.mul);
       assert(snap.pts>pts0,'포인트가 안 올랐다');
       assert(snap.dg===0 && snap.earn===0,'회차가 안 되감겼다: dg='+snap.dg+' earn='+Math.round(snap.earn)); }
+    // 💠 룬은 살아남았는가 — 보유도, 끼워 둔 것도
+    if(_rnKey){ const R2=campRuneState();
+      assert(R2 && (R2.own[_rnKey]|0)>=1,'환생하니 젬으로 산 룬이 사라졌다');
+      assert(R2.norm && R2.norm[0]===_rnKey,'환생하니 끼워 둔 룬이 빠졌다'); }
     return '조건·공식·먼 목표·확인 ok';
     }finally{ campRebCancel(); campRebClose(); } });
   // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
@@ -1872,6 +1883,144 @@ async function groupLobby(){
         '상점 구역이 추천·젬 상점 둘이 아니다: '+secs.join(','));
       return '합산 확인(×'+gotR.toFixed(2)+' · 곱이면 ×'+prodR.toFixed(2)+') · 캠프 지갑 ok · 2칸';
     } finally { p.packs=keep; }
+  });
+
+  // ══ 💠 룬 (2026-09-02) ══════════════════════════════════════════════════
+  //   ⚠ 지금은 **뼈대**다 — 효과를 쓰는 곳에는 아직 배선하지 않았다. 여기서 잠그는 것은
+  //     구조 넷이다: ① 칸은 **최대 도달 라운드**가 연다(젬이 아니다) ② 칸이 한정이다
+  //     ③ 효과는 **합**이다 ④ 젬으로 산 것은 **환생해도 남는다**.
+  //   ⛔ 이 넷 중 하나라도 무너지면 젬이 곧 지수 축이 된다(GEM.md §6 · 이 시스템의 전제).
+  await step('룬: 칸은 최대 도달 라운드가 연다 (젬으로는 못 연다)', async()=>{
+    skipIf(typeof campRuneSlots!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const p=PROF(), keepG=p.gem||0;
+    try{
+      // ① 기록이 없으면 첫 칸만 열린다(표의 0)
+      C.best={};
+      assert(campRuneBestRound()===0,'기록이 없는데 도달 라운드가 0 이 아니다: '+campRuneBestRound());
+      const n0=campRuneSlots('norm');
+      assert(n0===1,'기록 0 인데 일반 칸이 '+n0+'개 열렸다 — 첫 칸 하나여야 한다');
+      assert(campRuneSlots('uniq')===0,'기록 0 인데 유니크 칸이 열렸다');
+      // ② 던전이 넘어가도 **한 줄로 펴서** 센다 — D2 R10 = 60 이지 10 이 아니다
+      C.best={2:10};
+      assert(campRuneBestRound()===60,'D2 R10 이 통산 60 이 아니다: '+campRuneBestRound());
+      // ③ 라운드가 오르면 칸이 는다 · ⛔ 젬으로는 **안 열린다**
+      C.best={}; p.gem=999999;
+      assert(campRuneSlots('norm')===1,'젬이 많으면 칸이 열린다 — 돈이 칸을 열면 안 된다');
+      C.best={1:30};
+      const n1=campRuneSlots('norm');
+      assert(n1>n0,'R30 인데 칸이 안 늘었다: '+n0+' → '+n1);
+      // ④ 상한까지 다 열린다 · 그 위로는 더 안 열린다
+      C.best={10:50};
+      assert(campRuneBestRound()===campRuneMaxRound(),'D10 R50 이 상한이 아니다');
+      assert(campRuneSlots('norm')===RUNE_SLOT_R.norm.length,'끝까지 갔는데 일반 칸이 다 안 열렸다');
+      assert(campRuneSlots('uniq')===RUNE_SLOT_R.uniq.length,'끝까지 갔는데 유니크 칸이 다 안 열렸다');
+      assert(campRuneNextAt('norm')===0,'다 열렸는데 다음 해금 라운드가 남아 있다');
+      return '통산 라운드 ok · 일반 '+RUNE_SLOT_R.norm.length+'칸 · 유니크 '+RUNE_SLOT_R.uniq.length+'칸';
+    } finally { C.best=keepB; p.gem=keepG; }
+  });
+
+  await step('룬: 젬으로만 사고 · 보유한 만큼만 끼운다', async()=>{
+    skipIf(typeof campRuneBuy!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    try{
+      C.rune={}; C.best={10:50};                    // 칸을 전부 열어 놓고 규칙만 본다
+      const key=runeKey('gain','low'), cost=runeGem(key);
+      assert(cost>0,'룬 값이 0 이다');
+      // ① 젬이 모자라면 못 산다 — **보유가 늘어서는 안 된다**
+      p.gem=cost-1;
+      assert(campRuneBuy('gain','low')===false,'젬이 모자란데 샀다');
+      assert(campRuneOwn(key)===0,'못 샀는데 보유가 늘었다');
+      // ② 사면 젬이 정확히 그만큼 깎인다
+      p.gem=cost*3;
+      assert(campRuneBuy('gain','low')===true,'젬이 있는데 못 샀다');
+      assert(profGem()===cost*2,'젬이 값만큼 안 깎였다: '+profGem()+' (기대 '+(cost*2)+')');
+      assert(campRuneOwn(key)===1,'보유가 안 늘었다');
+      // ③ 갈래가 맞아야 한다 — 일반 룬은 유니크 칸에 안 들어간다
+      assert(campRuneEquip('uniq',0,key)===false,'일반 룬이 유니크 칸에 들어갔다');
+      const uk=runeKey('speed','uniq');
+      p.gem=runeGem(uk); assert(campRuneBuy('speed','uniq')===true,'유니크 룬을 못 샀다');
+      assert(campRuneEquip('norm',0,uk)===false,'유니크 룬이 일반 칸에 들어갔다');
+      // ④ 보유한 만큼만 — 하나뿐인데 두 칸에 못 끼운다
+      assert(campRuneEquip('norm',0,key)===true,'산 룬을 못 끼웠다');
+      assert(campRuneEquip('norm',1,key)===false,'하나뿐인 룬이 두 칸에 끼워졌다');
+      // ⑤ 빼면 다시 끼울 수 있다
+      assert(campRuneUnequip('norm',0)===true,'못 뺐다');
+      assert(campRuneEquip('norm',1,key)===true,'뺀 뒤에도 못 끼운다');
+      // ⑥ 잠긴 칸에는 못 끼운다 — 이것이 「돈으로 못 앞당긴다」의 실제 장치다
+      //   ⚠ **먼저 빼 둔다.** 안 그러면 「보유를 다 썼다」에 먼저 걸려서 잠금을 안 재고도
+      //     통과한다(2026-09-02 레드 테스트로 잡은 헛검사).
+      campRuneUnequip('norm',1);
+      assert(campRuneFree(key)>0,'검사 준비 실패 — 뺐는데도 남는 룬이 없다');
+      C.best={}; p.gem=999999;
+      assert(campRuneSlots('norm')===1,'검사 준비 실패 — 기록을 지웠는데 칸이 여럿 열려 있다');
+      assert(campRuneEquip('norm',RUNE_SLOT_R.norm.length-1,key)===false,'잠긴 칸에 끼워졌다');
+      return '젬 결제 ok · 갈래·보유·잠금 규칙 ok';
+    } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
+  });
+
+  await step('룬: 효과는 합이다 (곱이 아니다)', async()=>{
+    skipIf(typeof campRuneEff!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    try{
+      C.rune={}; C.best={10:50};
+      const R=campRuneState();                       // 빈 칸을 채워 주는 유일한 입구
+      // ① **합이다.** ⛔ 곱이면 지수 축이 하나 더 늘어 후반이 터진다(GEM.md §5-2).
+      const k1=runeKey('gain','low'), k2=runeKey('gain','mid');
+      const v1=runeVal(k1), v2=runeVal(k2);
+      R.own[k1]=1; R.own[k2]=1;
+      campRuneEquip('norm',0,k1); campRuneEquip('norm',1,k2);
+      const got=campRuneEff('gain'), sum=v1+v2, prod=(1+v1)*(1+v2)-1;
+      assert(Math.abs(got-sum)<1e-9,
+        '효과가 합이 아니다 — 얻은 값 '+got.toFixed(4)+' · 합이면 '+sum.toFixed(4)+' · 곱이면 '+prod.toFixed(4));
+      // ② 다른 효과 키는 안 섞인다
+      assert(campRuneEff('atk')===0,'끼우지도 않은 효과에 값이 있다: '+campRuneEff('atk'));
+      // ③ 뺀 것은 안 세어진다 — 보유는 그대로인데 효과만 빠져야 한다
+      campRuneUnequip('norm',1);
+      assert(Math.abs(campRuneEff('gain')-v1)<1e-9,'뺀 룬이 아직 효과에 남아 있다');
+      assert(campRuneOwn(k2)===1,'뺐더니 보유까지 사라졌다');
+      // ⚠ 「환생해도 남는가」는 **환생 스텝**이 잰다 — 실제 환생을 도는 곳이 거기 하나뿐이라
+      //   여기서 또 돌리면 판이 두 번 되감겨 뒤 검사들이 흔들린다.
+      return '합 확인(' + sum.toFixed(2) + ' · 곱이면 ' + prod.toFixed(2) + ') · 효과 분리 ok';
+    } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
+  });
+
+  // 💠 룬 화면 — 네비 칸과 화면이 실제로 붙어 있는가(구조만 본다)
+  await step('룬 구역: 네비 다섯 칸 · 화면이 열리고 잠긴 칸에 이유가 있다', async()=>{
+    skipIf(typeof campRuneEnter!=='function'||typeof NAV_TREE==='undefined','룬 구역 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    try{
+      // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
+      const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
+      assert(cells.join(',')==='research,reb,rune,map,shop',
+        '네비 칸 순서가 다르다: '+cells.join(','));
+      // ② 화면이 열린다 · 하위 둘을 오간다
+      C.best={}; C.rune={};
+      campRuneEnter('slot'); await sleep(60);
+      const el=$('campRune'); assert(visible(el),'룬 화면이 안 열림');
+      assert(_runeSec==='slot','장착 탭이 아니다: '+_runeSec);
+      // ③ 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
+      const lk=el.querySelectorAll('.rnSlot.lk');
+      assert(lk.length>0,'기록 0 인데 잠긴 칸이 하나도 없다');
+      assert(/R\d+/.test(lk[0].textContent),'잠긴 칸에 해금 라운드가 안 적혀 있다: '+lk[0].textContent);
+      // ④ 룬 상점 탭 — 등급 버튼과 젬 값이 보인다
+      campRuneEnter('shop'); await sleep(60);
+      const buys=el.querySelectorAll('.rnBuy');
+      assert(buys.length>=RUNE_LIST.length,'룬 상점에 살 것이 없다: '+buys.length);
+      assert(/💎/.test(el.textContent),'룬 상점에 젬 값이 안 적혀 있다');
+      // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
+      navShow('map'); await sleep(40);
+      assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
+      return '네비 5칸 · 두 탭 · 잠금 이유 ok';
+    } finally { if(typeof campRuneClose==='function') campRuneClose();
+      C.best=keepB; C.rune=keepR; }
   });
 
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
@@ -9486,10 +9635,11 @@ async function groupLobby(){
   // 🔬📋 하단 네비 개편(2026-08-25) — 옛 캐릭터·정비를 연구·임무로 갈아끼웠다.
   //   ⚠ 지금은 **껍데기**다(본문 '준비 중'). 그래도 칸·아이콘·화면 열림은 지금부터 지킨다 —
   //     APP_SCREENS 에 빠지면 화면이 영영 안 켜지는데, 눈으로만 보면 그걸 못 잡는다.
-  await step('하단 네비: 연구·환생·유즈맵·상점 네 칸', async()=>{
+  await step('하단 네비: 연구·환생·룬·유즈맵·상점 다섯 칸', async()=>{
     skipIf(typeof NAV_TREE==='undefined','네비 표 없음');
     const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.label);
-    assert(cells.join(',')==='연구,환생,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
+    // 💠 룬이 환생과 유즈맵 사이에 들어왔다(2026-09-02) — 왼쪽 셋이 「내가 세지는 곳」이다.
+    assert(cells.join(',')==='연구,환생,룬,유즈맵,상점','하단 다섯 칸이 다름: '+cells.join(','));
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
