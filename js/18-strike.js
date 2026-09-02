@@ -750,7 +750,7 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
 // ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬** — 마나만 태우고 아무 일도 안 일어나는 것이
 //   아무것도 안 하는 것보다 나쁘다. 기능이 생기면 여기서 뺀다.
 //   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
-const STK_SK_DEAD={ mind_control:1,
+const STK_SK_DEAD={
   recall:1, hallucination:1, parasite:1,
   optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
@@ -865,6 +865,21 @@ function _stkApplyAlly(u, t, sk, key, dt){
     if((u.en||0)>=(u.maxEn||0)*0.6) return false;    //   마나가 넉넉하면 아군을 죽이지 않는다
     t.dead=true; u.en=Math.min(u.maxEn||0,(u.en||0)+(sk.gain||50)); return true; }
   return false; }
+// 🧠 적 하나를 내 편으로 옮긴다 — 정신 지배의 실제 동작.
+//   ⚠ **배열을 옮기는 것이 전부가 아니다.** `side` 와 표적(`tgtUid`)을 함께 갈아야
+//     옛 진영을 계속 때린다. `_post` 가 없으면 자리 복귀가 캠프 어딘가로 끌고 간다.
+function strikeMindControl(t, by){
+  const S=STK; if(!S||!S.me||!S.ai) return false;
+  const from = (t.side==='me') ? S.me : S.ai, to = (t.side==='me') ? S.ai : S.me;
+  const i = from.units.indexOf(t); if(i<0) return false;
+  from.units.splice(i,1);
+  t.side = (to===S.me) ? 'me' : 'ai';
+  t.tgtUid = null; t._btgt = null; t._btT = 0;      // 표적은 새로 고른다(옛 편을 계속 때리지 않게)
+  t._mc = true;                                     // 🧠 소환수 표식 — 죽으면 부활하지 않는다
+  t._post = { x:t.x, y:t.y };                       // 🪧 자리 — 없으면 복귀가 엉뚱한 곳으로 끈다
+  t.wait = 0; t.rallied = true;
+  to.units.push(t);
+  void by; return true; }
 function _stkApplyFoe(u, t, sk, key){
   if(STK_SK_DEAD[key]) return false;
   if(key==='broodling'){ t.hp=0; t.sh=0; t.dead=true; return true; }        // 🐛 즉사(스웜링 2기 소환은 미구현)
@@ -872,6 +887,13 @@ function _stkApplyFoe(u, t, sk, key){
     t.en=0; strikeHit(t, en, u); if(t.hp<=0) t.dead=true; return true; }
   if(key==='lockdown'){ if((t.stunT||0)>0) return false;                   // ⛔ 봉쇄 — 이미 멎은 적에 겹치지 않는다
     t.stunT=sk.dur||5; return true; }
+  // 🧠 **정신 지배** — 적을 뺏어 **소환수처럼** 쓴다(사용자 확정 2026-08-28).
+  //   ⭐ 능력치는 **적일 때 그대로** 가져온다 — 설계 능력치를 다시 씌우지 않는다.
+  //   ⭐ **죽으면 즉시 사라진다** — 부활 대기(`_down`)에 안 들어간다. 표식이 `u._mc` 다.
+  //   ⛔ 계속 남겨 두지 말 것 — 인구·부활·정산에 전부 얽혀 문제가 된다.
+  //   ⚠ 캠프 밖에서는 뺏지 않는다(오토배틀 균형을 건드리지 않는다).
+  if(key==='mind_control'){ if(!_stkCampSk() || !t || t._mc) return false;
+    return strikeMindControl(t, u); }
   if(sk.dps){ _stkDotAdd(STK, {tgt:t, dps:sk.dps, left:sk.dur||1, src:u}); return true; }   // ☢ 방사능
   if(sk.dmg){ strikeHit(t, sk.dmg, u); if(t.hp<=0) t.dead=true; return true; }               // 💥 집중포
   return false; }

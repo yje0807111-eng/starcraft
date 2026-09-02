@@ -2537,6 +2537,53 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // 🧠 정신 지배 — 적을 뺏어 **소환수처럼** 쓴다(사용자 확정 2026-08-28).
+  //   ⚠ 「소환수처럼」 = 적일 때 능력치 그대로 · 죽으면 즉시 사라진다(부활 없음).
+  await step('캠프 스킬: 정신 지배 — 뺏은 적은 소환수다', async()=>{
+    skipIf(typeof strikeMindControl!=='function','정신 지배 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      assert(!STK_SK_DEAD.mind_control,'정신 지배가 아직 미구현 목록에 있다');
+      assert(SKILLS.mind_control.cd===120,'정신 지배 쿨이 120이 아니다: '+SKILLS.mind_control.cd);
+      campWipeField();
+      campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
+      const foe=CAMPB.ai.units.find(u=>!u.dead); skipIf(!foe,'적을 못 세움');
+      foe.hp=3; foe.maxHp=7; foe.dmg=2.5;                 // 적일 때의 능력치
+      const aiN=CAMPB.ai.units.length, meN=CAMPB.me.units.length;
+      // ① 뺏는다 — 적에서 빠지고 내 편에 붙는다
+      assert(campWithStk(()=>_stkApplyFoe({},foe,SKILLS.mind_control,'mind_control')),'정신 지배가 안 걸렸다');
+      assert(CAMPB.ai.units.indexOf(foe)<0,'적 목록에 남아 있다');
+      assert(CAMPB.me.units.indexOf(foe)>=0,'내 편에 안 들어왔다');
+      assert(CAMPB.ai.units.length===aiN-1 && CAMPB.me.units.length===meN+1,'수가 안 맞다');
+      assert(foe.side==='me','진영이 안 바뀌었다: '+foe.side);
+      // ② 능력치는 **적일 때 그대로** — 설계 능력치를 다시 씌우지 않는다
+      assert(foe.hp===3 && foe.maxHp===7 && foe.dmg===2.5,
+        '능력치가 바뀌었다: hp'+foe.hp+'/'+foe.maxHp+' dmg'+foe.dmg);
+      assert(foe._mc,'소환수 표식이 없다 — 죽어도 부활한다');
+      // ③ 같은 유닛을 두 번 뺏지 않는다
+      assert(!campWithStk(()=>_stkApplyFoe({},foe,SKILLS.mind_control,'mind_control')),'이미 뺏은 유닛을 또 뺏었다');
+      // ④ 죽으면 **부활 대기에 안 들어간다**
+      { const b4=CAMPB.me.units.slice();
+        foe.dead=true; CAMPB.me.units=CAMPB.me.units.filter(u=>!u.dead);
+        const dn0=(CAMPB._down||[]).length;
+        campCatchDown(b4);
+        assert((CAMPB._down||[]).length===dn0,'뺏은 적이 부활 대기에 들어갔다 — 라운드마다 되살아난다'); }
+      // ⑤ 보통 아군은 그대로 부활 대기에 들어간다(④가 헛검사가 아니라는 증거)
+      { campWithStk(()=>{ strikeSpawnUnit('me','marine'); });
+        const mine=CAMPB.me.units[CAMPB.me.units.length-1];
+        const b4=CAMPB.me.units.slice();
+        mine.dead=true; CAMPB.me.units=CAMPB.me.units.filter(u=>!u.dead);
+        const dn0=(CAMPB._down||[]).length;
+        campCatchDown(b4);
+        assert((CAMPB._down||[]).length===dn0+1,'보통 아군이 부활 대기에 안 들어간다 — ④가 헛검사다'); }
+      return '적 1기 탈취 · 능력치 그대로 · 죽으면 소멸 · 쿨 '+SKILLS.mind_control.cd+'초';
+    } finally { if(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._down) CAMPB._down.length=0;
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🧬 던전 안 변태 — 전장 유닛을 지정하면 프로필이 뜨고, 거기서 변태한다(2026-08-28).
   //   ⚠ 던전 안에서는 유닛이 전장(CAMPB.me.units)에 있고 **기지 엔티티가 없다** —
   //     techPanelRender·techDoMorph 는 기지만 알아서, 캠프가 가짜 엔티티로 비추고 직접 변태한다.

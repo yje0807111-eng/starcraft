@@ -2830,6 +2830,9 @@ function campCatchDown(before){
     if(endP > 0 && !u._endured && Math.random() < endP){
       u._endured = true; u.dead = false; u.hp = 1;
       CAMPB.me.units.push(u); continue; }
+    // 🧠 **정신 지배로 뺏은 적은 소환수다** — 죽으면 그대로 사라진다(부활 대기에 안 넣는다).
+    //   ⛔ 넣으면 라운드마다 되살아나 적이 영영 줄어든다.
+    if(u._mc) continue;
     CAMPB._down.push({ u:u, t:0 }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것 (⏱ 타이머 없음 — 라운드가 끝나야 일어난다)
   return n; }
 // 🩹 **라운드 리셋** — 누운 병력을 전원 일으키고, 서 있는 병력도 체력을 가득 채운다.
