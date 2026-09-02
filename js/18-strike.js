@@ -541,9 +541,18 @@ function strikeHealStep(u, me, dt){
     if((u._healCd||0) > 0) u._healCd = Math.max(0, u._healCd - dt);
     else if((u._healDur||0) > 0){ u._healDur = Math.max(0, u._healDur - dt);
       if(u._healDur <= 0) u._healCd = STK_HEAL_CD; } }   // ⛔ 지속이 끝나야 쿨이 돈다
-  let t=null, td=Infinity;   // ① 가장 가까운 부상 바이오닉
-  for(const a of me.units){ if(a===u || a.dead || a.hp>=a.maxHp || !BIONIC[a.gm||a.id]) continue;
-    const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy; if(d2<td){ td=d2; t=a; } }
+  // ① 대상 = **가장 가까운 부상 아군**(가장 다친 아군이 아니다).
+  //   🎯 **한 번 잡으면 붙잡는다** — 다 낫거나 죽거나 멀어질 때까지 바꾸지 않는다.
+  //   ⛔ 매 프레임 다시 고르면 비슷한 거리의 둘 사이에서 **왔다갔다**한다(2026-08-28 사용자 지적).
+  //     의무병은 대상 쪽으로 걸어가므로, 흔들리면 그 자리에서 진동하며 아무도 못 고친다.
+  const _hOK = (a) => { if(!a || a === u || a.dead || a.hp >= a.maxHp || !BIONIC[a.gm||a.id]) return -1;
+    const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy;
+    return (d2 <= STK_HEAL_SEEK*STK_HEAL_SEEK) ? d2 : -1; };
+  let t = u._healT, td = _hOK(t);
+  if(td < 0){ t = null; td = Infinity;                       // 붙잡은 대상이 없으면 새로 고른다
+    for(const a of me.units){ const d = _hOK(a); if(d >= 0 && d < td){ td = d; t = a; } }
+    if(!t) td = Infinity;
+    u._healT = t; }
   if(t && td<=STK_HEAL_SEEK*STK_HEAL_SEEK){
     if(td>STK_HEAL_RNG*STK_HEAL_RNG){ strikeMoveToward(u, t.x, t.y, dt); return; }
     u.moving=false; u.face=Math.atan2(t.x-u.x, t.y-u.y);

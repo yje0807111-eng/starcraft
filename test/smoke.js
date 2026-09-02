@@ -2876,7 +2876,28 @@ async function groupLobby(){
         campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
         if(pt.hp>1) again=1; }
       assert(again,'쿨이 끝났는데 다시 치유하지 않는다');
-      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초 · 마나 0에서도 돈다';
+      // ⑥ 🎯 **대상을 붙잡는다** — 비슷한 거리의 둘 사이에서 왔다갔다하지 않는다.
+      //    ⛔ 의무병은 대상 쪽으로 걸어가므로, 흔들리면 그 자리에서 진동하며 아무도 못 고친다.
+      { campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','medic');
+          strikeSpawnUnit('me','marine'); strikeSpawnUnit('me','marine'); });
+        const md2=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+        const pts=CAMPB.me.units.filter(u=>(u.gm||u.id)==='marine');
+        skipIf(!md2||pts.length<2,'의무병·환자 둘을 못 세움');
+        md2.x=1000; md2.y=1000; md2._healT=null; md2._healDur=0; md2._healCd=0;
+        // 거의 같은 거리에 둘 — 매 프레임 다시 고르면 여기서 흔들린다
+        pts[0].x=1000; pts[0].y=1010; pts[0].hp=1; pts[0].maxHp=100;
+        pts[1].x=1000; pts[1].y=1011; pts[1].hp=1; pts[1].maxHp=100;
+        let flips=0, last=null;
+        campWithStk(()=>{ for(let i=0;i<60;i++){
+          // 둘의 거리를 매번 살짝 뒤집어 「가장 가까운」이 번갈아 바뀌게 만든다
+          pts[0].y = 1010 + ((i%2)?2:0);
+          pts[i%2].hp = 1;                       // 계속 다친 상태로
+          strikeHealStep(md2, CAMPB.me, 0.05);
+          if(md2._healT && md2._healT!==last){ if(last) flips++; last=md2._healT; } } });
+        assert(flips===0,'대상이 '+flips+'번 바뀌었다 — 왔다갔다한다');
+        assert(md2._healT,'대상을 아예 안 잡았다'); }
+      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초 · 대상 붙잡기 ok';
     } finally { if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
