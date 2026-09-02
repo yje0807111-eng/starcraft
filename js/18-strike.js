@@ -750,7 +750,7 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
 // ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬** — 마나만 태우고 아무 일도 안 일어나는 것이
 //   아무것도 안 하는 것보다 나쁘다. 기능이 생기면 여기서 뺀다.
 //   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
-const STK_SK_DEAD={ nuke:1, spider_mine:1, mind_control:1,
+const STK_SK_DEAD={ mind_control:1,
   recall:1, hallucination:1, parasite:1,
   optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
@@ -889,6 +889,11 @@ function _stkApplySpot(u, c, sk, key, foe){
       const dx=e.x-c.x, dy=e.y-c.y; if(dx*dx+dy*dy>r2) continue;
       e.stunT=sk.dur||3; n++; }
     return n>0; }
+  // 💣 **매설** · ☢ **지연 폭격** — 캠프가 맡는다(js/19-camp.js).
+  //   ⛔ 여기서 직접 처리하지 말 것 — 지뢰는 「가서 심고 돌아온다」라 캠프 이동 스텝이 필요하고,
+  //     지뢰·핵 엔티티도 캠프 전장(CAMPB)에 산다. 캠프 밖에서는 false = 시전하지 않는다.
+  if(key==='spider_mine') return (typeof campMineOrder==='function') && !!campMineOrder(u, c, sk);
+  if(key==='nuke')        return (typeof campNukeOrder==='function') && !!campNukeOrder(u, c, sk);
   // 🕸 **원거리 무효 장판** — 교란 결계 · 암흑 장막. 지점에 깔고 지속 동안 유지된다.
   //   ⚠ 적이 없어도 깐다 — 「막는 것」이 목적이라 뭉친 적을 기다릴 이유가 없다.
   if(key==='disruption_web' || key==='dark_swarm'){

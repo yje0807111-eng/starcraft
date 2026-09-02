@@ -286,6 +286,9 @@ function campStepUnits(dt){
       //     실측(60초): 의무병이 자리에서 평균 **572** 떨어져 있었고(마린 273 · 기관총병 422),
       //     적이 하나도 없는 조용한 프레임에서도 598 에 **그대로 멈춰** 있었다.
       //   ⭐ 그래서 패스 ② 로 넘겨 「치유 → 본대 따라가기 → 자기 자리」를 순서대로 태운다.
+      // 💣 **매설 임무 중** — 표적을 안 잡고 그 자리로 간다(사용자 확정 2026-08-28).
+      //   ⛔ 벙커 탑승과 같은 자리다. 이 위로 올리면 죽은 유닛도 걸어간다.
+      if(u._mine){ if(typeof campMineTrip === 'function') campMineTrip(u, dt); continue; }
       if(typeof HEALER !== 'undefined' && HEALER[u.gm || u.id]){ act.push({ u, tgt:null, heal:true }); continue; }
       const prev = u.tgtUid;
       const tgt = _campPickTarget(u, foe.units, load, dt);
@@ -410,6 +413,11 @@ function campStepUnits(dt){
   // ⛔ strikeSuddenDeath 를 부르지 않는다 — 오토배틀의 장기전 방지책이고, 캠프의 라운드는
   //   「적을 다 잡으면 끝」이라 해당이 없다.
   if(typeof strikeSkillTick === 'function') strikeSkillTick(dt);   // 🔮 마나·쿨다운·자동 시전
+  // 🏢 **건물 시전** — strikeSkillTick 은 me.units 만 돈다(건물은 유닛이 아니다).
+  //   값·주기는 js/19-camp.js 의 CAMP_BLD_SKILL 이 단일 소스다.
+  if(typeof campBldSkillStep === 'function') campBldSkillStep(dt);
+  if(typeof campMineStep === 'function') campMineStep(dt);   // 💣 심어 둔 지뢰(수명·밟힘)
+  if(typeof campNukeStep === 'function') campNukeStep(dt);   // ☢ 유도 중인 핵(지연 뒤 폭발)
   if(typeof strikeSeparate === 'function') strikeSeparate();       // 겹침 회피
   if(S.fx && typeof FX !== 'undefined') FX.advance(S.fx, dt);
 }
