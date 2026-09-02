@@ -1155,8 +1155,8 @@ async function groupLobby(){
       const wantX=TECH_GRID.x0+techCols()/2*cw;
       assert(Math.abs(midX-wantX)<cw*0.02,
         '광맥 줄이 격자 가운데가 아니다: '+midX.toFixed(4)+' vs '+wantX.toFixed(4)); }
-    // ⛽ 가스 광산은 **본부 양옆**이다(2026-08-31 사용자 확정 · 광맥 옆에서 옮겼다).
-    //   광맥이 한 줄 여덟 칸으로 넓어져 그 옆에는 자리가 없다.
+    // ⛽ 가스 광산은 **광맥 줄의 양 끝**이다(2026-09-02 사용자 확정 · 본부 줄에서 내렸다).
+    //   ⛔ 본부 양옆으로 되돌리지 말 것 — 「양 미네랄 사이드에 정확하게 일직선으로 붙여」가 요청이다.
     //   ⚠ 격자 크기(_techRows)는 맵 요소의 실제 크기에 달렸다 — campShowView() 로 #vBuild 를
     //     HOME 안으로 옮기기 **전에** 재면 다른 값이 나온다(실측: 30행 vs 35행).
     //     그래서 가스를 뷰 전에 잡았더니 광맥보다 5행 위에 앉았다. 격자 계산은 뷰 뒤에 둘 것.
@@ -1167,9 +1167,34 @@ async function groupLobby(){
       const mY=M.map(m=>sy(m.x,m.y)), mX=M.map(m=>sx(m.x,m.y));
       const B=(G.tech.ents||[]).find(e=>e.type==='bldg'); assert(B,'본부가 없다');
       const bY=sy(B.x,B.y), bX=sx(B.x,B.y);
-      assert(Math.abs(gy-bY)<0.05,'가스가 본부와 같은 높이가 아님: 가스 '+gy.toFixed(2)+' vs 본부 '+bY.toFixed(2));
-      assert(gy<Math.min(...mY),'가스가 광맥보다 아래다 — 본부 줄에 있어야 한다');
       assert(gx<bX,'왼쪽 가스가 본부 왼쪽에 없다');
+      assert(bY<Math.min(...mY),'본부가 광맥보다 아래다 — 광맥이 가장 뒤(아래)여야 한다');
+      // ⛽ **발치가 같은 선에 있나** — 「일직선」의 실질이다. 둘 다 바닥에 선 물건이라
+      //   상자 중심이 아니라 **발치**로 잰다. 광맥 스프라이트는 상자를 0.30칸 밀어 올려
+      //   발이 m.y 에 닿게 하므로 상자 밑변이 m.y + 0.45칸이다(16-build.js `_dy`).
+      //   ⚠ 부지 r0 는 격자 정수 행이라 반 칸이 남고, 그 반 칸은 CSS --gzDY 가 메운다.
+      //     그래서 계산이 아니라 **그려진 상자**를 재야 진짜 정렬을 본다.
+      { const gimg=[...document.querySelectorAll('.bGasZone.spr .gzSpr')];
+        // ⚠ 광맥 한 덩이는 그림을 **둘** 갖는다 — 본체와 그 위의 `.shade` 겹침(같은 상자다).
+        //   `.mnSpr` 만 세면 두 배가 나온다.
+        const mimg=[...document.querySelectorAll('.bMineral.spr .mnSpr:not(.shade)')]
+          .sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left);
+        assert(gimg.length===2,'가스 그림이 둘이 아니다: '+gimg.length);
+        assert(mimg.length===CAMP_MINE_COLS,'광맥 그림 수가 다르다: '+mimg.length);
+        const gb=gimg.map(e=>e.getBoundingClientRect()), mb=mimg.map(e=>e.getBoundingClientRect());
+        const 발치차=Math.max(...gb.map(r=>Math.abs(r.bottom-mb[0].bottom)));
+        assert(발치차<2,'가스와 광맥의 발치가 다른 선에 있다(일직선이 아니다): '+발치차.toFixed(1)+'px');
+        assert(Math.abs(gb[0].bottom-gb[1].bottom)<0.5,'좌우 가스의 높이가 다르다');
+        // 🤝 **양 끝에 붙어 있나** — 살짝 겹치는 것이 정상이다(그림이 부지 안쪽으로 물러나 있다).
+        //   ⛔ 틈이 벌어지면 「붙여」가 깨진 것이고, 너무 겹치면 광맥을 가린다.
+        //   ⚠ 자[尺]는 **화면 px** 다 — `_techCW()` 는 월드 비율(0~1)이라 여기 섞으면 안 된다.
+        //     덩이 그림 한 폭(mb[0].width)을 자로 쓴다.
+        const 왼틈=mb[0].left-gb[0].right, 오른틈=gb[1].left-mb[mb.length-1].right, 덩이폭=mb[0].width;
+        for(const [nm,v] of [['왼',왼틈],['오른',오른틈]])
+          assert(v<=0 && v>-덩이폭,
+            nm+'쪽 가스가 광맥에 안 붙었다(틈 '+v.toFixed(1)+'px · 0 이하 ~ 덩이 한 폭('
+            +덩이폭.toFixed(1)+'px) 안이어야 한다)');
+        assert(Math.abs(왼틈-오른틈)<2,'좌우 붙은 정도가 다르다: '+왼틈.toFixed(1)+' vs '+오른틈.toFixed(1)); }
       // ⛽⛽ 가스는 **둘**이다 — 본부 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,
       //   캠프가 판정 함수를 감싸 좌표를 잠시 바꿔 한 번 더 묻는 방식으로 두 자리를 인정한다.
       //   ⛔ 로직을 복사하지 않는다(복사본은 원본이 바뀌면 낡는다).
@@ -1485,16 +1510,28 @@ async function groupLobby(){
               +' | selU='+JSON.stringify(G.tech.selU)+' sel='+G.tech.sel); }
           wk.x=bak.x; wk.y=bak.y; wk.tx=bak.tx; wk.ty=bak.ty; wk._wp=bak.wp;
           wk._gKind=bak.gk; wk._gTgt=bak.gt; wk._working=bak.working; }   // 🧹 원복 — 뒤 step 의 채취 검사가 이 흔적을 물려받지 않게
-        // ⛏ 광맥 탭은 **채굴 모드를 켠다**(2026-08-27 · A+F 확정). 켜지면 맵 전체가 과녁이라
-        //   광맥을 겨냥할 필요가 없다 — 광맥이 화면의 5% 뿐이라 손끝이 자꾸 빗나가던 문제를 그렇게 푼다.
-        //   ⛔ 옛 채굴 판(campMineSheet)을 여는 것으로 되돌리지 말 것 — 업그레이드는 연구 구역으로 갔다.
-        { await arm(); const q=at(mnn.x,mnn.y);
+        // ⛏ **광맥을 탭해도 채굴 모드가 켜지지 않는다**(2026-09-02 사용자 확정).
+        //   들어가는 문은 「MY BASE」 요약판의 채굴 버튼(`[data-minemode]`) 하나뿐이다.
+        //   ⛔ 광맥 탭으로 켜지게 되돌리지 말 것 — 광맥을 **고르려고** 눌렀을 뿐인데 모드가 켜져서
+        //     그 뒤의 탭이 전부 채굴로 먹혔다. 켜는 문과 고르는 문을 갈라 둔다.
+        { campMineModeSet(false); await arm(); const q=at(mnn.x,mnn.y);
           if(onMap(q)){ pid++;
             fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 광맥을 탭했는데 모드가 안 꺼진다');
-            assert(campMineModeOn(),'광맥을 탭했는데 채굴 모드가 안 켜진다');
-            campMineModeSet(false);   // 🧹 뒤 step 에 모드를 물려주지 않는다
+            assert(!campMineModeOn(),'광맥을 탭했더니 채굴 모드가 켜졌다 — 버튼으로만 켜져야 한다');
           } }
+        // ⛏ 그 대신 **버튼은 켠다** — 문이 하나도 없으면 채굴을 아예 못 한다.
+        { campMineModeSet(false); renderCampIdleSheet(); spin(2);
+          const btn=document.querySelector('[data-minemode]');
+          assert(btn,'채굴 버튼이 없다 — 채굴 모드로 들어갈 문이 사라졌다');
+          //   ⚠ `fire` 는 pointerup 을 **document 에** 던진다 — 이 위임 처리기는 `ev.target.closest`
+          //     로 버튼인지 보는데 document 에는 closest 가 없어 그냥 빠진다. 버튼에 직접 던진다.
+          const r=btn.getBoundingClientRect(), bx=r.left+r.width/2, by=r.top+r.height/2;
+          pid++; btn.dispatchEvent(mk(pid,'pointerdown',bx,by));
+                 btn.dispatchEvent(mk(pid,'pointerup',bx,by)); spin(3);
+          assert(campMineModeOn(),'채굴 버튼을 눌렀는데 모드가 안 켜진다');
+          campMineModeSet(false);   // 🧹 뒤 step 에 모드를 물려주지 않는다
+        }
         { await arm(); const q=at(bd.x,bd.y);
           if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(!_campPanMode,'모드 중 건물을 탭했는데 모드가 안 꺼진다');
@@ -1604,12 +1641,18 @@ async function groupLobby(){
         const tf=im.map(e=>getComputedStyle(e).transform);
         // ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 같은 그림을 그대로 둘 놓는다.
         assert(tf[0]===tf[1],'좌우가 다른 모습이다 — 뒤집기가 되살아났다: '+tf.join(' / '));
-        // 광맥을 덮으면 안 된다 — 눌러서 캐는 것이라 가려지면 못 캔다.
-        //   ⚠ **세로로** 잰다: 가스는 이제 본부 줄(광맥 위)이라 가로 범위는 겹치는 것이 정상이다.
-        const mn=[...document.querySelectorAll('.bMineral.spr')].map(e=>e.getBoundingClientRect());
-        if(mn.length){ const mTop=Math.min(...mn.map(b=>b.top));
-          const low=Math.max(...im.map(e=>e.getBoundingClientRect().bottom));
-          assert(low<=mTop+1,'가스 그림이 광맥을 덮는다: '+(low-mTop).toFixed(1)+'px 내려왔다'); } }
+        // 광맥을 삼키면 안 된다 — 광맥 줄이 짧아 보이고, 끝 덩이를 골라 누를 수가 없다.
+        //   ⚠ **가로로** 잰다: 가스는 이제 광맥과 **같은 줄**이라(2026-09-02) 세로가 겹치는 것이
+        //     정상이다. ⛔ 옛 세로 검사(가스 밑변 ≤ 광맥 윗변)로 되돌리지 말 것 — 그건 가스가
+        //     본부 줄에 있던 시절의 자다.
+        //   규칙: 가스가 파고들어도 **끝에서 두 번째 덩이까지는 못 간다**(= 한 덩이 폭 안).
+        const mn=[...document.querySelectorAll('.bMineral.spr')].map(e=>e.getBoundingClientRect())
+          .sort((a,b)=>a.left-b.left);
+        if(mn.length>=2){ const gr=im.map(e=>e.getBoundingClientRect()).sort((a,b)=>a.left-b.left);
+          assert(gr[0].right<=mn[1].left,
+            '왼쪽 가스가 광맥을 삼킨다 — 둘째 덩이까지 덮었다: '+(gr[0].right-mn[1].left).toFixed(1)+'px');
+          assert(gr[1].left>=mn[mn.length-2].right,
+            '오른쪽 가스가 광맥을 삼킨다 — 끝에서 둘째 덩이까지 덮었다: '+(mn[mn.length-2].right-gr[1].left).toFixed(1)+'px'); } }
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');

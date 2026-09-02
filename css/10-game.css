@@ -1148,8 +1148,15 @@
      ⚠ 기준점은 아래(발치)다 — 위로만 자라야 바닥에 박힌 것처럼 보인다.
      ⭐ 0.95 = 사용자가 「조금 더 줄여 달라」고 한 값(2026-08-31). 광맥이 일곱 칸으로 넓어지며
         가스가 상대적으로 커 보였다. ⛔ 광맥을 덮을 만큼 키우지 말 것 — 눌러서 캐는 것이라 가려지면 못 캔다. */
+  /* ⬇ --gzDY = 그림만 내리는 **반 칸 보정**(2026-09-02). 부지(r0)는 격자 정수 행에만 앉을 수
+     있는데(정제소 배치 검사가 `s.r0===TECH_GAS.r0` 로 딱 비교한다) 광맥 발치는 마침 두 행의
+     **가운데**에 있다. 한 행 위면 6px 뜨고 한 행 아래면 7px 잠긴다 — 그래서 가까운 행에 놓고
+     그림만 내려 발치를 맞춘다. %는 제 높이 기준이라 **줌을 따라간다**(px 로 박지 말 것).
+     ⚠ 부지 사각형은 그대로다 — 눌러서 짓는 자리와 그림이 반 칸 어긋나지만 사람 손가락보다 작다.
+     실측: 보정 전 가스 발치 558.5 vs 광맥 발치 564.5. */
   .bGasZone.spr .gzSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
-    display:block;pointer-events:none;transform:scale(var(--gzK,0.95));transform-origin:center bottom;
+    display:block;pointer-events:none;
+    transform:translateY(var(--gzDY,23%)) scale(var(--gzK,0.95));transform-origin:center bottom;
     filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
   /* ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 뒤집으면 광원 방향이 반대가 되어
      오히려 눈에 걸린다. 반복이 거슬리면 그림을 한 장 더 뽑는다(stage2…). */

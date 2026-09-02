@@ -2970,9 +2970,11 @@ const CAMP_MINE_ARC = 0;
 //   위에 앉혀야 한다. 시트 상단 = 화면 세로의 0.77 지점(실측: 맵 701px 중 시트 161px + 네비).
 //   ⛔ 값을 바꿨으면 **가장 아래 요소인 가스**(광맥 행 + h-0.55)까지 재서 0.74 아래로
 //     내려가지 않는지 확인할 것 — 광맥만 보고 정했다가 가스가 시트에 물렸다.
-// 🏠 본부는 **광맥 바로 위**다(2026-08-31 사용자 확정 · 0.58 → 0.63).
+// 🏠 본부는 **광맥 바로 위**다(2026-09-02 사용자 확정 · 0.58 → 0.63 → **0.59**).
 //   위쪽을 비워 적이 내려오는 길을 길게 잡고, 손이 닿는 아래쪽에 본부·광맥·가스를 모은다.
-const CAMP_ROW_BASE = 0.63;   // 본부 중심(격자 세로 비율 0~1)
+//   ⚠ 0.59 로 올린 것은 가스가 **광맥 줄로 내려왔기** 때문이기도 하다 — 본부가 낮으면
+//     그 발치와 광맥·가스 줄이 붙어 한 덩어리로 뭉쳐 보인다.
+const CAMP_ROW_BASE = 0.59;   // 본부 중심(격자 세로 비율 0~1)
 const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 // ⚠ 행 번호는 **여기 한 곳에서만** 만든다. 광맥과 가스가 각자 round(rows*f) 를 하면
 //   호출 시점에 _techRows() 가 달라져 서로 다른 행에 앉는다(실측: 가스가 광맥보다 5행 위였다).
@@ -3022,11 +3024,23 @@ function campMineSprite(m, i){
 //      가스 구역은 **사각형**이라 중심이 `c0 + w/2` 다. 그 두 중심을 맞춘다.
 // ⚠ 가스는 **본부 양옆**이다(2026-08-31 사용자 확정). 광맥 옆이 아니라 한 줄 위다.
 //   본부 반폭(4/2 = 2칸) + 가스 반폭(4/2 = 2칸) = 4 가 안 겹치는 최소 — 한 칸 띄운다.
-// ⛽ 가로 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다).
-//   2026-09-02 사용자 요청으로 **5 → 8** 로 벌렸다(「조금 멀어도 괜찮아」). 격자는 48칸이고
-//   캠프 줌 1.9 에서 보이는 폭이 대략 9.7~38.3칸이라, 8이면 가스가 14~18 / 30~34 칸에 앉아
-//   양쪽에 4칸씩 여유가 남는다. ⛔ 12 를 넘기면 화면 밖으로 나간다 — 늘릴 거면 찍어서 볼 것.
-const CAMP_GAS_GAP = 8;
+// ⛽ **가스는 광맥 줄의 양 끝에 붙는다**(2026-09-02 사용자 확정 · 「양 미네랄 사이드에 정확하게
+//   일직선이 되도록 붙여」). 그래서 중심에서 몇 칸이 아니라 **광맥 줄의 시각 끝**에서 잰다 —
+//   칸 수(CAMP_MINE_COLS)나 간격·크기를 바꿔도 저절로 따라온다.
+//   ⛔ 옛 방식(중심에서 CAMP_GAS_GAP 칸)으로 되돌리지 말 것 — 광맥이 넓어지면 파고든다.
+// 광맥 줄 끝 ↔ 가스 구역 사이 틈(칸). **음수면 파고든다** — 그래야 붙어 보인다:
+//   가스 그림은 부지 안에서 `object-fit:contain` + `scale(.95)` 로 **안쪽으로 물러나 있고**,
+//   광맥 스프라이트도 가장자리가 투명하다. 부지끼리 딱 붙이면 그림 사이에 틈이 남는다.
+const CAMP_GAS_PAD = -0.5;
+// ⛽ 가스 그림의 **발치**를 광맥 발치에 맞춘다(칸). 광맥 스프라이트는 상자를 위로 0.30칸
+//   밀어 올려 발이 m.y 에 닿게 하므로(16-build.js `_dy`), 상자 밑변은 m.y + 0.45칸이다.
+//   가스는 `align-items:flex-end` 라 **부지 밑변이 곧 발치**다 — 그 둘을 맞춘다.
+//   ⛔ 부지 중심을 광맥 y 에 맞추던 옛 식으로 되돌리지 말 것 — 가스가 한 뼘 낮게 보인다.
+const CAMP_GAS_FOOT = 0.45;
+// 광맥 줄의 **시각 반폭**(칸) — 끝 덩이의 중심까지 + 스프라이트 반폭.
+//   ⚠ 덩이는 칸에 점으로 앉고 스프라이트가 그보다 크다(CAMP_MINE_SCALE). 중심 간 거리만
+//     재면 그림이 가스를 파고든다.
+function campMineHalfW(){ return (CAMP_MINE_COLS - 1) / 2 * CAMP_MINE_GAP + CAMP_MINE_SCALE / 2; }
 function campMineMidCol(){ return campMineCol() + (CAMP_MINE_COLS - 1) / 2; }
 function campLayMinerals(){
   if(typeof G === 'undefined' || !G.tech) return;
@@ -3062,13 +3076,17 @@ let _campGasHome = null;
 function campLayGas(){
   if(typeof TECH_GAS === 'undefined') return;
   if(!_campGasHome) _campGasHome = { c0:TECH_GAS.c0, r0:TECH_GAS.r0 };
-  // 🪞 좌우 대칭 — 미네랄 **시각 중심**에서 같은 거리에 놓는다(위 campMineMidCol 설명)
-  const mid = campMineMidCol(), half = TECH_GAS.w / 2;
-  TECH_GAS.c0  = Math.max(0, Math.round(mid - CAMP_GAS_GAP - half));                       // 왼쪽
-  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + CAMP_GAS_GAP - half)); // 오른쪽
-  // ⛽ 가스는 **본부와 같은 높이**다 — 구역 높이(h)의 절반만큼 올려 본부 중심에 맞춘다.
-  //   ⛔ 광맥 행으로 되돌리지 말 것 — 광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
-  TECH_GAS.r0 = Math.max(0, campRow(CAMP_ROW_BASE) - Math.round(TECH_GAS.h / 2));
+  // 🪞 좌우 대칭 — 광맥 줄의 **시각 중심**에서 양쪽으로 같은 거리(위 campMineMidCol 설명)
+  //   ⚠ c0 는 **정수여야 한다** — 정제소 배치 검사가 `s.c0===TECH_GAS.c0` 로 딱 비교하는데
+  //     고스트의 c0 는 격자에 스냅된 정수다(17-build-cards.js:857). 그래서 반올림한다.
+  const mid = campMineMidCol(), off = campMineHalfW() + CAMP_GAS_PAD;
+  TECH_GAS.c0  = Math.max(0, Math.round(mid - off - TECH_GAS.w));                 // 왼쪽 — 오른 변이 광맥 끝에 닿는다
+  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + off));        // 오른쪽 — 왼 변이 광맥 끝에 닿는다
+  // ⛽ 가스는 **광맥과 같은 줄**이다(2026-09-02 사용자 확정 · 본부 줄에서 내렸다).
+  //   맞추는 것은 중심이 아니라 **발치**다(CAMP_GAS_FOOT 설명) — 둘 다 바닥에 서 있는 물건이라
+  //   발이 같은 선에 있어야 한 줄로 읽힌다.
+  //   ⛔ 본부 행으로 되돌리지 말 것 — 「일직선으로 붙여」가 뜻을 잃는다.
+  TECH_GAS.r0 = Math.max(0, Math.round(campRow(CAMP_ROW_MINE) + CAMP_GAS_FOOT - TECH_GAS.h));
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -4105,12 +4123,11 @@ if(typeof document !== 'undefined'){
       ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault();
       return;
     }
-    // 💎 모드가 꺼져 있을 때 광맥을 누르면 **채굴 모드를 켜 준다** — 옛 팝업을 여는 자리였다.
-    //   ⛔ openCampMine 은 지우지 않았다(업그레이드는 연구 구역으로 갔다 · 유보 규칙).
-    if(campMineHit(ev.clientX, ev.clientY)){
-      campPanMode(false);   // 🖐 광맥을 눌렀다 = '조작'이다(빈 바닥 탭·유닛/건물 탭과 같은 규칙)
-      campMineModeSet(true);
-      ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault(); }
+    // 💎 **광맥을 눌러도 채굴 모드가 켜지지 않는다**(2026-09-02 사용자 확정).
+    //   들어가는 문은 「MY BASE」 요약판의 **채굴 버튼 하나뿐**이다(`[data-minemode]`).
+    //   ⛔ 여기서 campMineModeSet(true) 를 되살리지 말 것 — 광맥을 고르려고(3D 링) 눌렀을 뿐인데
+    //     모드가 켜져서, 그 뒤의 탭이 전부 채굴로 먹혔다. 켜는 문과 고르는 문을 갈라 둔다.
+    //   ⚠ 판정 함수 campMineHit 은 이걸로 유일한 호출자를 잃어 다락으로 갔다(ATTIC.md).
   }, true);
   // ⏱ 손을 떼면 홀드를 멈춘다 — 창 밖으로 나가거나 취소돼도 마찬가지다.
   for(const t of ['pointerup','pointercancel','pointerleave','blur'])
@@ -4134,20 +4151,6 @@ if(typeof document !== 'undefined'){
   }, true);
 }
 
-// 광맥을 눌렀나 — **판정만** 한다(캐지 않는다). campTapAt 의 앞부분과 같은 규약이다.
-// ⛔ 좌표 변환을 여기서 새로 짜지 말 것 — _btRect / _techS2W / _techMineralAt 를 그대로 쓴다.
-function campMineHit(clientX, clientY){
-  if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
-  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
-  if(G.tech.arm) return false;                      // 🧱 건물 배치 중에는 열지 않는다
-  const r = _btRect(); if(!r || !r.width || !r.height) return false;
-  const sx = (clientX - r.left) / r.width, sy = (clientY - r.top) / r.height;
-  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return false;
-  if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
-  const w = _techS2W(sx, sy);
-  const m = _techMineralAt(w.x, w.y);
-  return !!(m && m.amount > 0);
-}
 
 // ══ 💎 미네랄 채굴 판 (2026-08-27) ══════════════════════════════════════
 // 광맥을 누르면 **그 자리에서 캐지 않고** 이 판이 열린다.
