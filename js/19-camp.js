@@ -4301,7 +4301,16 @@ const CAMP_FEV_SEC = [4, 5, 6.5, 8, 10, 13];                    // 지속(초)
 let _campFevEnd = 0, _campFevCd = 0;
 function campFevOn(){ return (typeof campRtHas === 'function') && campRtHas('fever') > 0; }
 function campFevLv(k){ return Math.min(5, (typeof campRtHas === 'function') ? campRtHas(k) : 0); }
-function campFevPct(){ return CAMP_FEV_PCT[campFevLv('fevPct')]; }
+// 💠 **열기의 룬 — 발동 확률에 곱한다**(2026-09-02). ⛔ 거는 곳은 여기 하나뿐이다.
+//   ⭐ 지속·배수가 아니라 **확률**을 건드리는 이유: 지속·배수는 피버가 「사건」에서
+//     「상시 배수」로 바뀌는 축이라 상한(CAMP_FEV_CD)이 그걸 막고 있다(위 주석).
+//     확률만 올리면 피버가 **더 자주 오되 머무는 비율의 천장은 그대로**다.
+//   ⚠ 환생 트리에서 피버를 안 열었으면(`campFevOn()` false) 이 룬도 아무 일을 안 한다 —
+//     룬은 **있는 시스템을 도와주는 것**이지 새 시스템을 켜는 것이 아니다.
+//   ⛔ 확률이라 1 을 넘으면 안 된다. 지금 값(최대 5% × 1.05)으로는 닿지 않지만 막아 둔다.
+function campFevPct(){
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('fever') : 1;
+  return Math.min(1, CAMP_FEV_PCT[campFevLv('fevPct')] * rm); }
 function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')]; }
 function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')]; }
 function campFevActive(){ return campFevOn() && Date.now() < _campFevEnd; }

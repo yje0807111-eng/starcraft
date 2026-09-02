@@ -2244,6 +2244,26 @@ async function groupLobby(){
         chk(/campRoundMul\(\)/.test(String(campCombatStep)),
           'campCombatStep 이 campRoundMul 을 안 쓴다 — 질주의 룬이 어디에도 안 닿는다');
         clear(); }
+      // ⑥-3 ⚡ 열기의 룬 — 피버 **발동 확률**에 곱한다(지속·배수가 아니다).
+      //   ⚠ 환생 트리에서 피버를 안 열면 campFevOn() 이 false 라 룬도 아무 일을 안 한다 —
+      //     그래서 트리 노드를 잠시 세워 두고 잰다.
+      if(typeof campFevPct==='function' && typeof campFevRoll==='function'){
+        const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+        try{
+          C.rbTree=Object.assign({}, C.rbTree, { fever:1 });
+          const p0=campFevPct();
+          chk(p0>0,'피버를 열었는데 발동 확률이 0 이다 — 배선을 못 잰다');
+          put('fever','uniq'); const wF=1+runeVal(runeKey('fever','uniq'));
+          chk(Math.abs(campFevPct()/p0-wF)<0.01,
+            '열기의 룬이 피버 확률에 안 걸린다: ×'+(campFevPct()/p0).toFixed(3));
+          // ⛔ **지속·배수는 안 건드린다** — 그쪽을 키우면 피버가 상시 배수가 된다
+          chk(campFevMul()===CAMP_FEV_MUL[campFevLv('fevMul')],'열기의 룬이 피버 배수까지 건드렸다');
+          chk(campFevSec()===CAMP_FEV_SEC[campFevLv('fevSec')],'열기의 룬이 피버 지속까지 건드렸다');
+          // 자리도 잠근다 — 확률을 쓰는 곳은 campFevRoll 하나다
+          chk(/campFevPct\(\)/.test(String(campFevRoll)),
+            'campFevRoll 이 campFevPct 를 안 쓴다 — 열기의 룬이 어디에도 안 닿는다');
+        } finally { C.rbTree=keepT; }
+        clear(); }
       // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
       if(typeof umFirstRw==='function'){
         const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
@@ -2254,7 +2274,7 @@ async function groupLobby(){
         chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
         clear(); }
       assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
-      return '재화(합)·탭 전용·가스·인구·공격/체력/공속·일꾼(캠프만)·유즈맵(젬 제외)·회복 ok';
+      return '재화(합)·탭 전용·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·유즈맵(젬 제외)·회복 ok';
     } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
       if(typeof campRuneTouch==='function') campRuneTouch();
       if(typeof campWipeField==='function') campWipeField();
