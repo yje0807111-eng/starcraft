@@ -1060,12 +1060,15 @@ async function groupLobby(){
     //    ⛔ techUIInit 이 깔아 두는 1기를 되살리지 말 것. 「일꾼을 사는 것」이 첫 목표다.
     assert((G.tech.ents||[]).filter(e=>e.type==='worker').length===0,
       '시작 일꾼이 0기가 아니다: '+(G.tech.ents||[]).filter(e=>e.type==='worker').length);
-    // 다음 마리 가격이 보유 수에 따라 오른다 — 140 × 1.65^n (31마리째부터 ×1.10 · 상한 40)
-    assert(campHireCost(0)===140,'첫 일꾼 가격이 140 이 아니다: '+campHireCost(0));
+    // 다음 마리 가격이 보유 수에 따라 오른다 — 50 × 1.65^n (31마리째부터 ×1.10 · 상한 40)
+    //   ⭐ 첫 마리 **50**(2026-09-02 · 옛 140) — 첫 탭 강화(10) 뒤 탭당 2원이니 25탭이면 닿는다.
+    assert(campHireCost(0)===50,'첫 일꾼 가격이 50 이 아니다: '+campHireCost(0));
     assert(campHireCost(1)>campHireCost(0),'일꾼 가격이 안 오른다');
     { const c30=campHireCost(29), c40=campHireCost(39);
-      assert(c30>2.7e8&&c30<3.0e8,'30마리째가 설계(2.83억)와 다르다: '+c30);
-      assert(c40>7.0e8&&c40<7.8e8,'40마리째가 설계(7.4억)와 다르다: '+c40);
+      // ⭐ 첫 마리가 140 → **50** 으로 내려가면서 뒤 마리도 같은 비(2.8배)로 함께 내려왔다
+      //    (2026-09-02): 30마리째 2.83억 → **1.01억** · 40마리째 7.4억 → **2.63억**.
+      assert(c30>0.95e8&&c30<1.10e8,'30마리째가 설계(1.01억)와 다르다: '+c30);
+      assert(c40>2.5e8&&c40<2.8e8,'40마리째가 설계(2.63억)와 다르다: '+c40);
       // ⭐ 31마리째부터 계단이 눕는다 — 안 그러면 40마리째가 424억이라 200회차에도 못 채운다
       assert(c40/c30 < 3,'후반 계단이 안 눕었다(×1.10 이어야): '+(c40/c30).toFixed(1)+'배'); }
     // ⛽ **가스는 정제소가 스스로 캔다** (§2-3-1) — ⛔ 일꾼을 빼서 배치하는 방식이 아니다.
@@ -4341,9 +4344,15 @@ async function groupLobby(){
       const k1=campMileMul(100)/100, k2=campMileMul(800)/800, k3=campMileMul(6400)/6400;
       assert(Math.abs(k1-k2)<0.01 && Math.abs(k2-k3)<0.01,
         '마일스톤이 지수로 자란다 — 지수 축이 셋이 되어 폭주한다: '+[k1,k2,k3].map(v=>v.toFixed(3)).join(','));
-      // 비용 무릎 — Lv10 부터 가팔라진다
+      // ⛏ 탭 비용은 **횟수로 설계한 2차식**이다(2026-09-02 · 5n(n+1)) — 계단비로 재면 안 된다.
+      //   ⭐ 잠그는 것은 「Lv n 을 사는 데 몇 번 눌러야 하는가」다: 10 → 15 → 20 → 25 …(5씩)
+      //   ⛔ 옛 검사는 계단비 1.09 를 봤다. 지수 시절 값이라 지금은 뜻이 없다.
       const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
-      assert(Math.abs(c(5)/c(4)-1.09)<0.02,'무릎 전 비용 계단이 1.09 가 아니다: '+(c(5)/c(4)).toFixed(3));
+      const taps=(n)=>{ S.upg.tap=n; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; };
+      assert(c(0)===10,'첫 탭 강화가 10 이 아니다: '+c(0));
+      for(let lv=0; lv<5; lv++)
+        assert(taps(lv)===10+5*lv, 'Lv'+(lv+1)+' 에 필요한 탭이 '+(10+5*lv)+'번이 아니다: '+taps(lv));
+      // 무릎(Lv10) 뒤로는 지수로 넘어간다 — 2차식만 두면 후반에 탭이 공짜가 된다
       assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
     // 🤖 매크로 방지 (HUNT_R1 §1-1-3) — 탭에 상한이 없으므로 이것이 유일한 제동이다
     if(typeof campTapHuman==='function'){

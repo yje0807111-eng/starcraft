@@ -3688,7 +3688,15 @@ function campCost(kind, key, lv){
 const CAMP_TAP_BASE = 1;        // 탭 0레벨 = 1미네랄
 const CAMP_TAP_STEP = 1;        // 탭 레벨당 +1
 const CAMP_GAT_STEP = 0.025;    // 효율 레벨당 +2.5% (왕복 1회당)
-const CAMP_TAP_COST0 = 70;      // 탭 0→1레벨 비용
+// ⛏ **탭 강화 비용은 「필요한 탭 수」로 설계한다** (2026-09-02 사용자 확정)
+//   ⛔ 옛 값은 첫 강화가 **70** 이었다 — 탭당 1원이니 **70번을 눌러야** 첫 성장이 왔다.
+//     게임을 처음 켠 사람에게 그 구간은 너무 길다. 던전 0(캠프)은 튜토리얼 자리다.
+//   ⭐ 그래서 값이 아니라 **횟수**를 먼저 정했다: 10탭 → 15탭 → 20탭 → 25탭 …(5씩)
+//     Lv n 을 살 시점의 탭당 획득은 n 이므로  비용 = (5n+5) × n = **5n(n+1)**.
+//       Lv1 10(10탭) · Lv2 30(15탭) · Lv3 60(20탭) · Lv4 100(25탭) · Lv5 150(30탭)
+//   ⚠ 이것은 **2차식**이라 지수보다 완만하다. 후반까지 이대로 두면 탭이 공짜가 된다 —
+//     무릎(CAMP_COST_KNEE) 부터는 지수로 넘어간다. 후반 밸런스는 아직 안 쟀다(2026-09-02).
+const CAMP_TAP_COSTK = 5;       // 탭 비용 = K·n(n+1) · 필요 탭수 = 5n+5
 const CAMP_GAT_COST0 = 210;     // 효율 0→1레벨 비용
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
@@ -3717,7 +3725,17 @@ function campUpgCost(k){
   const lv = campUpgLv(k);
   // ⛽ 정제소는 계단이 하나다(무릎 없음) — §2-3-1
   if(k === 'refinery') return Math.max(1, Math.ceil(CAMP_REF_COST0 * Math.pow(CAMP_REF_R, campRefLv()) * campUpgDisc()));
-  const base = (k === 'tap') ? CAMP_TAP_COST0 : (k === 'hold') ? CAMP_HOLD_COST0 : CAMP_GAT_COST0;
+  // ⛏ 탭은 **횟수로 설계한 2차식**이다(위 CAMP_TAP_COSTK 설명) — 무릎까지는 그 식을 그대로 쓰고,
+  //    무릎을 넘으면 그때 값을 출발점 삼아 지수로 이어 붙인다(후반이 공짜가 되지 않게).
+  if(k === 'tap'){
+    const n = lv + 1;                                            // 지금 사려는 레벨
+    const kneeN = CAMP_COST_KNEE;
+    const q = (m) => CAMP_TAP_COSTK * m * (m + 1);               // 2차식
+    const c = (n <= kneeN) ? q(n)
+            : q(kneeN) * Math.pow(CAMP_COST_R1.tap, n - kneeN);  // 무릎 뒤 = 지수
+    return Math.max(1, Math.ceil(c * campUpgDisc()));
+  }
+  const base = (k === 'hold') ? CAMP_HOLD_COST0 : CAMP_GAT_COST0;
   const r0 = CAMP_COST_R0[k] || CAMP_COST_R0.gather, r1 = CAMP_COST_R1[k] || CAMP_COST_R1.gather;
   const knee = Math.min(lv, CAMP_COST_KNEE);                    // Lv10 까지는 완만하게, 그 뒤로 가팔라진다
   const cost = base * Math.pow(r0, knee) * Math.pow(r1, Math.max(0, lv - CAMP_COST_KNEE));
@@ -4778,7 +4796,10 @@ function campEmptyAt(cx, cy){
 //   눕혀서 7.4억(약 19회차)으로 만들었다. 일꾼 수가 「며칠짜리 벽」이 아니라 「중기 목표」다.
 // ⛔ 비용은 TECH_TREE 의 produces[].m 에 들어 있고 그건 관리자 탭·오토배틀과 **공유**다.
 //   캠프가 값을 갈아 끼우되 나갈 때 **반드시 되돌린다**(TECH_GAS 와 같은 규약).
-const CAMP_HIRE0 = 140, CAMP_HIRE_R = 1.65;      // n마리 보유 → 다음 마리 가격
+// 👷 첫 일꾼 **50** (2026-09-02 사용자 확정 · 옛 140).
+//   ⭐ 첫 탭 강화(10)를 사고 탭당 2원이 된 뒤 **25탭**이면 닿는다 — 튜토리얼 구간의 두 번째 목표.
+//   ⚠ 두 마리째부터는 ×1.65 그대로다(50 → 82 → 136 → 225 …).
+const CAMP_HIRE0 = 50, CAMP_HIRE_R = 1.65;       // n마리 보유 → 다음 마리 가격
 const CAMP_HIRE_KNEE = 30, CAMP_HIRE_R2 = 1.10;  // 31마리째부터 완만하게
 const CAMP_WORKER_MAX = 40;                      // 일꾼 상한
 function campHireCost(n){
