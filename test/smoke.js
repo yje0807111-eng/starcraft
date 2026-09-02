@@ -1180,6 +1180,18 @@ async function groupLobby(){
         const mimg=[...document.querySelectorAll('.bMineral.spr .mnSpr:not(.shade)')]
           .sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left);
         assert(gimg.length===2,'가스 그림이 둘이 아니다: '+gimg.length);
+        // 💎 **그늘이 진짜 검은 실루엣인가.** `.mnSpr.shade` 의 `filter:brightness(0)` 이
+        //   더 센 `.bMineral.spr .mnSpr`(0,3,0) 에 **조용히 덮여** 있었다(2026-09-02) — 그러면
+        //   그늘이 검정이 아니라 **같은 그림 한 장 더**가 되어 아래쪽 색이 두 배로 진해진다.
+        //   ⛔ 본체 규칙에서 `:not(.shade)` 를 빼지 말 것. 눈으로는 잘 안 보이니 여기서 잡는다.
+        { const sh=document.querySelector('.bMineral.spr .mnSpr.shade');
+          assert(sh,'광맥 그늘 층이 없다');
+          const f=getComputedStyle(sh).filter||'';
+          assert(/brightness\(0\)/.test(f),
+            '광맥 그늘이 검은 실루엣이 아니다 — 본체 규칙이 덮었다(특이도): '+f.slice(0,60));
+          const body=document.querySelector('.bMineral.spr .mnSpr:not(.shade)');
+          assert(body && +getComputedStyle(body).opacity<1,
+            '광맥 본체가 불투명하다 — 「연하고 아주 조금 투명하게」가 풀렸다'); }
         assert(mimg.length===CAMP_MINE_COLS,'광맥 그림 수가 다르다: '+mimg.length);
         const gb=gimg.map(e=>e.getBoundingClientRect()), mb=mimg.map(e=>e.getBoundingClientRect());
         const 발치차=Math.max(...gb.map(r=>Math.abs(r.bottom-mb[0].bottom)));
@@ -1189,10 +1201,12 @@ async function groupLobby(){
         //   ⛔ 틈이 벌어지면 「붙여」가 깨진 것이고, 너무 겹치면 광맥을 가린다.
         //   ⚠ 자[尺]는 **화면 px** 다 — `_techCW()` 는 월드 비율(0~1)이라 여기 섞으면 안 된다.
         //     덩이 그림 한 폭(mb[0].width)을 자로 쓴다.
+        //   ⚠ **딱 붙지는 않는다**(2026-09-02 사용자 요청 「아주 조금만 떨어뜨려」). 부지 c0 가
+        //     정수라 한 칸(약 13px)씩 뛰므로 정확한 값은 못 고른다 — 「덩이 한 폭 안」이면 붙어 보인다.
         const 왼틈=mb[0].left-gb[0].right, 오른틈=gb[1].left-mb[mb.length-1].right, 덩이폭=mb[0].width;
         for(const [nm,v] of [['왼',왼틈],['오른',오른틈]])
-          assert(v<=0 && v>-덩이폭,
-            nm+'쪽 가스가 광맥에 안 붙었다(틈 '+v.toFixed(1)+'px · 0 이하 ~ 덩이 한 폭('
+          assert(Math.abs(v)<덩이폭,
+            nm+'쪽 가스가 광맥에서 너무 멀거나 파고들었다(틈 '+v.toFixed(1)+'px · 덩이 한 폭('
             +덩이폭.toFixed(1)+'px) 안이어야 한다)');
         assert(Math.abs(왼틈-오른틈)<2,'좌우 붙은 정도가 다르다: '+왼틈.toFixed(1)+' vs '+오른틈.toFixed(1)); }
       // ⛽⛽ 가스는 **둘**이다 — 본부 좌우. 건설 탭은 전역 하나(TECH_GAS)만 알지만,

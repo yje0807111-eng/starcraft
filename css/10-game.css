@@ -1134,8 +1134,19 @@
   /* 🏕 캠프 광맥 = 그림 스프라이트. 판·테두리를 걷고 그림만 남긴다(칸보다 크게 자라도 된다). */
   .bMineral.spr{border:none!important;background:none!important;box-shadow:none!important;
     display:flex;align-items:flex-end;justify-content:center;overflow:visible}
-  .bMineral.spr .mnSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
-    display:block;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+  /* ⛔ `:not(.shade)` 가 **필수**다. 그늘(.mnSpr.shade)도 같은 .mnSpr 이라 이 선택자에 걸리는데,
+     이쪽이 (0,3,0) 으로 더 세서 그늘의 `filter:brightness(0)` 을 **덮어 버렸다**(2026-09-02 발견).
+     그 결과 그늘이 「검은 실루엣」이 아니라 **같은 그림 한 장을 더 겹친 것**이 되어, 아래쪽이
+     색까지 두 배로 진해졌다 — 「미네랄 톤이 너무 진하다」의 진짜 원인이다.
+     ⚠ 아래 opacity/filter 를 그늘에 물리지 않게, 새 규칙도 반드시 :not(.shade) 로 쓸 것. */
+  .bMineral.spr .mnSpr:not(.shade){width:100%;height:100%;object-fit:contain;object-position:center bottom;
+    display:block;pointer-events:none;
+    /* 💎 톤 — 연하고 아주 조금 투명하게(2026-09-02 사용자 요청). 채도를 낮추고 살짝 밝힌 뒤
+       바닥이 비칠 만큼만 투명하게 한다. ⛔ 더 내리면 유리처럼 떠 보여 「캘 것」으로 안 읽힌다. */
+    opacity:var(--mnOp,.88);
+    filter:saturate(var(--mnSat,.78)) brightness(var(--mnBr,1.1)) drop-shadow(0 3px 5px rgba(0,0,0,.38))}
+  .bMineral.spr .mnSpr.shade{width:100%;height:100%;object-fit:contain;object-position:center bottom;
+    display:block;pointer-events:none}
   .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
   .bGasZone.d3 .gzLbl{display:none}
   /* ⛽ 캠프 가스 = 그림 스프라이트(미네랄 .bMineral.spr 과 같은 물성). 판·테두리·라벨을 걷고
@@ -1938,7 +1949,10 @@
   /* 💎 결정의 **아래쪽 그늘** (2026-08-31) — 같은 그림을 한 장 더 겹쳐 새까맣게 만든 뒤
      마스크로 아래쪽만 남긴다. 사각 그라데이션을 덮으면 결정 밖까지 어두워져 네모가 비친다.
      ⭐ 이렇게 하면 **실루엣 모양 그대로** 아래로 갈수록 어두워진다. */
+  /* ⚠ opacity 를 .42 → .24 로 내렸다(2026-09-02). 위 :not(.shade) 를 고치면서 이 규칙이
+     **처음으로 실제로 적용**됐다 — 진짜 검은 실루엣은 옛 「그림 한 장 더 겹치기」보다 훨씬 진하다.
+     같은 .42 로 두면 밑이 새까매진다. */
   .mnSpr.shade{position:absolute;left:0;top:0;width:100%;height:100%;
-    filter:brightness(0);opacity:.42;pointer-events:none;
+    filter:brightness(0);opacity:.24;pointer-events:none;
     -webkit-mask-image:linear-gradient(to bottom,transparent 38%,#000 92%);
             mask-image:linear-gradient(to bottom,transparent 38%,#000 92%)}
