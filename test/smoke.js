@@ -3285,6 +3285,33 @@ async function groupLobby(){
       +' < 레인저 '+far._post.y.toFixed(0)+' (폭 '+(far._post.y-near._post.y).toFixed(0)+'px)';
   });
 
+  // 🖐 **손가락으로 끄는 동안에는 프레임 제한을 푼다** (2026-09-02 사용자 확정)
+  //    ⚠ 평소 30ms(≈30fps)는 충분하지만 화면을 끌 때는 다르다 — rAF 가 16.7ms 간격이라
+  //      30ms 제한은 **두 프레임에 한 번**만 그린다는 뜻이고, 손가락을 따라오는 움직임이
+  //      뚝뚝 끊겨 보인다(실측 31fps → 54fps).
+  //    ⛔ CAMP_FRAME_MS 를 통째로 낮추지 말 것 — 평소 부담이 그대로 두 배가 된다.
+  await step('캠프: 화면을 끄는 동안에만 프레임 제한을 푼다', async()=>{
+    skipIf(typeof campFrameMs!=='function'||typeof techPanStart!=='function','캠프 프레임 제한 없음');
+    campEnterDungeon(0);
+    const idle = campFrameMs();
+    assert(idle === CAMP_FRAME_MS, '평소에는 제한이 걸려 있어야 한다: '+idle+' vs '+CAMP_FRAME_MS);
+    // 끄는 중 — techPanStart 가 _btPan 을 세운다(실제 드래그와 같은 경로)
+    const r = (typeof _btRect==='function') ? _btRect() : null;
+    skipIf(!r,'맵 rect 없음');
+    techPanStart({ clientX: r.left + r.width/2, clientY: r.top + r.height/2 });
+    const pan = campFrameMs();
+    assert(pan === 0, '끄는 동안에도 제한이 걸려 있다: '+pan);
+    if(typeof _btPan !== 'undefined') _btPan = null;
+    // 손을 뗀 뒤 따라오는 중(보간) 에도 풀려 있어야 한다
+    const v = techView(), t = techViewT();
+    const keep = t.x; t.x = v.x + 0.05;
+    const glide = campFrameMs();
+    t.x = keep;
+    assert(glide === 0, '따라오는 중에 제한이 걸려 있다: '+glide);
+    assert(campFrameMs() === CAMP_FRAME_MS, '다 멈춘 뒤에는 제한이 돌아와야 한다');
+    return '평소 '+CAMP_FRAME_MS+'ms · 끄는 중 0 · 따라오는 중 0';
+  });
+
   // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
   //    ⛔ 옛 campFoeRace 는 STK_RACE_ORDER 를 그냥 돌려서, 「감염된 둥지」에 유니온이,
   //      「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로 그림과 적이 어긋났다.

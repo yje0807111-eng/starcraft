@@ -4242,6 +4242,22 @@ let _campRAF = 0, _campLastT = 0;
 // ⚠ 30ms 인 이유: 스모크가 33ms 간격으로 campFrame 을 직접 부른다 — 그보다 크면 테스트가
 //   프레임을 건너뛰어 계측이 어긋난다. 실제 rAF(16.7ms)에서는 두 번에 한 번 그려 ~33fps 가 된다.
 const CAMP_FRAME_MS = 30;
+// 🖐 **손가락으로 미는 동안에는 제한을 푼다** (2026-09-02 사용자 확정).
+//   ⚠ 평소 30ms(≈30fps)는 자원이 자라고 유닛이 걷는 화면에는 충분하지만,
+//     **화면을 끌 때는 다르다** — 손가락을 따라오는 움직임이 30fps 면 뚝뚝 끊겨 보인다.
+//     rAF 는 16.7ms 간격이라 30ms 제한은 사실상 **두 프레임에 한 번**만 그린다는 뜻이다.
+//   ⭐ 그래서 「끄는 중」과 「따라오는 중」에만 0 으로 낮춘다. 손을 떼고 보간이 끝나면
+//     저절로 30 으로 돌아가므로 평소 부담은 그대로다.
+//   ⚠ _btPan·_btPinch 는 17-build-cards.js 의 값이다(같은 전역을 공유한다) —
+//     ⛔ 그 파일을 고치지 않는다. 여기서 **읽기만** 한다.
+function campFrameMs(){
+  try{
+    if((typeof _btPan !== 'undefined' && _btPan) || (typeof _btPinch !== 'undefined' && _btPinch)) return 0;
+    if(typeof techView === 'function' && typeof techViewT === 'function'){
+      const v = techView(), t = techViewT();
+      if(v && t && (v.x !== t.x || v.y !== t.y || v.zoom !== t.zoom)) return 0; }
+  }catch(_e){}
+  return CAMP_FRAME_MS; }
 let _campLastDraw = 0;
 // 🛟 프레임 예외 복구 — 연속 실패가 이만큼(약 4초)이면 루프를 접는다. 위 campFrame 참고.
 const CAMP_ERR_GIVEUP = 120;
@@ -4253,7 +4269,7 @@ function campFrame(now){
   //   campFrame 을 가짜 시각으로 직접 부른다 — 앞선 호출이 기준을 먼 미래로 밀어 두면
   //   그 뒤의 모든 프레임이 통째로 스킵된다(실제로 휠·일꾼 검사가 그렇게 죽었다).
   if(t < _campLastDraw) _campLastDraw = 0;
-  if(t - _campLastDraw < CAMP_FRAME_MS){ _campRAF = requestAnimationFrame(campFrame); return; }   // 너무 이르면 건너뛴다
+  if(t - _campLastDraw < campFrameMs()){ _campRAF = requestAnimationFrame(campFrame); return; }   // 너무 이르면 건너뛴다(끄는 중이면 안 건너뛴다)
   _campLastDraw = t;
   const dt = Math.min(0.05, Math.max(0, (t - (_campLastT || t)) / 1000));   // ⚠ 건너뛴 시간도 dt 에 담긴다(_campLastT 는 그릴 때만 갱신)
   _campLastT = t;
