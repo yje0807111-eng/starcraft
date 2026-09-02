@@ -164,7 +164,8 @@ function campHasRefinery(){
 }
 function campGasPerMin(){
   if(!campHasRefinery()) return 0;                // 정제소를 지어야 나온다
-  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gasMul');
+  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gasMul')
+    * ((typeof campRuneMul === 'function') ? campRuneMul('gas') : 1);   // 💠 정제의 룬
 }
 // ⚠ **campFrame 이 민다.** 프레임을 끄고 직접 미는 코드(벤치)는 이것도 같이 불러야 한다 —
 //   안 부르면 가스가 영영 0 이고, 가스가 드는 유닛을 한 기도 못 산다(실측으로 겪었다).
@@ -281,6 +282,12 @@ function campRebPtGain(){
   const base = Math.sqrt(campWealth() / CAMP_REB_COST);
   return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
     * campPackRebPt(); }   // 💳 환생 팩
+// 💠 **가속의 룬 — 프레임 시간 배수.** ⛔ 부르는 곳은 `campFrame` 한 곳뿐이다.
+//   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
+//   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
+function campDtMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('speed') : 1; }
+// 💠 **질주의 룬 — 웨이브 대기 배수.** 다음 무리가 빨리 오면 라운드가 짧아진다.
+function campRoundMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('round') : 1; }
 // 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
 function campRebMul(){ const C = campState(); return 1 + ((C && C.rebMul) || 0); }
 
@@ -300,11 +307,13 @@ function campRebirth(){
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
   C.rate = 0; C.rateGas = 0; C.leftAt = 0; C.tapped = 0; C.playS = 0;
   campFevReset();                                 // ⚡ 앞 회차의 피버가 이어지면 안 된다
-  // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree 는 지우지 않는다 — 그게 환생의 값이다
+  // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree · C.rune 은 지우지 않는다 — 그게 환생의 값이다
+  //    💠 룬은 **젬으로 산 것**이다. 회차가 되감긴다고 사라지면 결제가 사라지는 것이라 절대 안 된다.
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
   //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
-  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb, rbTree:C.rbTree };
+  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb, rbTree:C.rbTree,
+                 rune:C.rune };
   campBattleClose(); campBarReset();
   // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
   //    저장 상태만 되감고 저장하면 **방금 지운 것이 그대로 되살아난다**(스모크가 잡았다).
@@ -312,6 +321,7 @@ function campRebirth(){
   { const C2 = campState();          // 판을 다시 깔면서 저장을 읽었을 수 있다 — 남길 것을 다시 얹는다
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
       C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
+      if(keep.rune) C2.rune = keep.rune;   // 💠 젬으로 산 것 — 되감기면 안 된다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   campSave();
@@ -2883,17 +2893,23 @@ function campScaleAllies(list){
   //    ⛔ 사거리는 건드리지 않는다(늘리면 종족 상성이 바뀐다).
   for(const u of list) if(u) u.acq = campAcqBase(u);
   const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
+  // 💠 룬 — 트리와 **같은 자리**(전 유닛 공통 배수). 룬끼리는 이미 합으로 접혀 왔다.
+  //   ⚠ 공격속도는 `u.cdMax`(발사 간격)라 **나눈다** — 곱하면 느려진다.
+  const R = (typeof campRuneMul === 'function');
+  const rAtk = R ? campRuneMul('atk') : 1, rHp = R ? campRuneMul('hp') : 1;
+  const rAs  = R ? campRuneMul('aspd') : 1;
   let n = 0;
   for(const u of list){
     if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
     const uid = u.gm || u.id;
-    const atk = tAtk * campResMul(uid, 'atk');   // 🌳 트리 × 🔬 연구(계열별)
-    const hp  = tHp  * campResMul(uid, 'hp');
-    if(atk === 1 && hp === 1) continue;          // 얹을 것이 없으면 표시도 남기지 않는다
+    const atk = tAtk * rAtk * campResMul(uid, 'atk');   // 🌳 트리 × 💠 룬 × 🔬 연구(계열별)
+    const hp  = tHp  * rHp  * campResMul(uid, 'hp');
+    if(atk === 1 && hp === 1 && rAs === 1) continue;    // 얹을 것이 없으면 표시도 남기지 않는다
     u._campRtOn = 1;
     if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
       u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }
     if(atk !== 1) u.dmg = (u.dmg || 0) * atk;
+    if(rAs !== 1 && u.cdMax > 0) u.cdMax = u.cdMax / rAs;   // 💠 연타의 룬 — 발사 간격을 줄인다
     n++; }
   return n; }
 
@@ -2929,6 +2945,9 @@ function campCatchDown(before){
     if(endP > 0 && !u._endured && Math.random() < endP){
       u._endured = true; u.dead = false; u.hp = 1;
       CAMPB.me.units.push(u); continue; }
+    // 🧠 **정신 지배로 뺏은 적은 소환수다** — 죽으면 그대로 사라진다(부활 대기에 안 넣는다).
+    //   ⛔ 넣으면 라운드마다 되살아나 적이 영영 줄어든다.
+    if(u._mc) continue;
     CAMPB._down.push({ u:u, t:0 }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것 (⏱ 타이머 없음 — 라운드가 끝나야 일어난다)
   return n; }
 // 🩹 **라운드 리셋** — 누운 병력을 전원 일으키고, 서 있는 병력도 체력을 가득 채운다.
@@ -3097,7 +3116,8 @@ function campCombatStep(dt){
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
-    CAMPB._wqT -= dt;
+    // 💠 질주의 룬 — 다음 무리가 더 빨리 온다(= 라운드가 짧아진다)
+    CAMPB._wqT -= dt * campRoundMul();
     // ⭐ **화면의 적을 다 잡았으면 기다리지 않는다**(2026-08-30). 이 한 줄이 있어야
     //   간격을 늘려도 「대기가 곧 라운드 길이」가 되지 않는다 — 위 CAMP_WAVE_GAP_S 경고 참조.
     if(CAMPB._wqT <= 0 || !CAMPB.ai.units.length){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
@@ -3627,7 +3647,11 @@ const CAMP_RT_SUP = [0, 50, 100, 200];
 function campSupAdd(){ const n = campRtHas('sup');
   return n > 0 ? CAMP_RT_SUP[Math.min(CAMP_RT_SUP.length - 1, n)] : 0; }
 function campApplySupCap(){ const add = campSupAdd();
-  if(add > 0 && typeof G !== 'undefined' && G.tech) G.tech.supCap = (G.tech.supCap || 0) + add; }
+  if(typeof G === 'undefined' || !G.tech) return;
+  if(add > 0) G.tech.supCap = (G.tech.supCap || 0) + add;
+  // 💠 증원의 룬 — **트리 몫을 더한 뒤**에 비율을 얹는다(순서를 바꾸면 트리가 안 늘어난다)
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('pop') : 1;
+  if(rm !== 1) G.tech.supCap = Math.floor((G.tech.supCap || 0) * rm); }
 
 // ── 화면 층 ─────────────────────────────────────────────────────────────
 // 건설 맵 #vBuild 는 .gview(인게임 층)이고 HOME 은 .appScreen 이다. 층이 다르다.
@@ -4312,7 +4336,10 @@ function campTapGain(){
   //     「재화 획득 +300%」라고 팔면서 실제로는 +89% 였다 — 표기와 실제가 달랐다.
   //   ⚠ 여기서도 **합이다**(곱이 아니다) — campGatherMul 과 같은 규칙(GEM.md §5-2).
   const packA = (typeof campPackGather === 'function') ? campPackGather() : 0;
-  return Math.max(1, Math.round(base * (1 + packA)
+  // 💠 룬도 **같은 합산 항**이다(GEM.md §5-2). ⛔ 곱 항으로 옮기지 말 것.
+  //   재화의 룬은 채취·탭 양쪽에, 손끝의 룬은 탭에만 걸린다.
+  const runeA = (typeof campRuneEff === 'function') ? (campRuneEff('gain') + campRuneEff('tap')) : 0;
+  return Math.max(1, Math.round(base * (1 + packA + runeA)
     * campMineMul() * campRebMul() * campRtMul('tap') * campRtMul('tapMul')
     * (campFevActive() ? campFevMul() : 1)));   // ⚡ 피버 — ⛔ 탭 경로마다 따로 곱하지 말 것
 }
@@ -4327,7 +4354,9 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   // ⛏ **정수 곡선**이다(campGatRaw) — 왕복 1회당 1원 → 2원 → 3원 …
   //   ⛔ campMileMul 을 곱하지 말 것 — 계단은 campGatRaw 안에 이미 있다(두 겹이 된다).
   //   💳 팩 보너스는 여기서도 **합**이다(GEM.md §5-2).
-  return (campGatRaw(lv) + campPackGather())
+  //   💠 룬도 여기서 **합**이다 — 재화의 룬만(손끝의 룬은 탭 전용).
+  const runeA = (typeof campRuneEff === 'function') ? campRuneEff('gain') : 0;
+  return (campGatRaw(lv) + campPackGather() + runeA)
     * campMineMul() * campRebMul() * campRtMul('gather'); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).
@@ -4813,8 +4842,15 @@ function campFrame(now){
   if(t < _campLastDraw) _campLastDraw = 0;
   if(t - _campLastDraw < campFrameMs()){ _campRAF = requestAnimationFrame(campFrame); return; }   // 너무 이르면 건너뛴다(끄는 중이면 안 건너뛴다)
   _campLastDraw = t;
-  const dt = Math.min(0.05, Math.max(0, (t - (_campLastT || t)) / 1000));   // ⚠ 건너뛴 시간도 dt 에 담긴다(_campLastT 는 그릴 때만 갱신)
+  let dt = Math.min(0.05, Math.max(0, (t - (_campLastT || t)) / 1000));   // ⚠ 건너뛴 시간도 dt 에 담긴다(_campLastT 는 그릴 때만 갱신)
   _campLastT = t;
+  // 💠 **가속의 룬 — 캠프 전체가 빨라진다**(사용자 확정 2026-09-02: 「게임속도는 캠프 전체」).
+  //   ⭐ 여기 한 줄이 단일 소스다. 일꾼·건설·전투·정제소가 전부 이 dt 를 타므로
+  //     아래 어느 곳에도 따로 걸지 않는다(두 겹이 되면 표기가 거짓말이 된다).
+  //   ⚠ **250ms 정산 타이머(자리 비움)는 여기 안 걸린다.** 켜 놓고 보는 동안만 빨라진다 —
+  //     그게 「진행 속도」의 뜻이고, 방치 수입까지 배가 되면 축이 하나 더 늘어난다.
+  //   ⛔ 이 배수를 수입 공식에도 또 곱하지 말 것. 빨라진 만큼 왕복이 늘어 이미 반영된다.
+  dt *= campDtMul();
   // ⚡ **한 프레임 안에서 맵 rect 를 한 번만 잰다.** 아래 campPatchRect 설명 참고.
   _campRectC = null;
   let _ok = false;

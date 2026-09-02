@@ -544,6 +544,13 @@ async function groupLobby(){
     assert((campState().reb|0)===before,'취소했는데 환생이 실행됨');
     // ⑥ 실행하면 배수·포인트가 실제로 남는다
     const mul0=campRebMul(), pts0=campState().rbPts||0;
+    // 💠 **젬으로 산 룬도 남아야 한다**(2026-09-02). 되감기면 결제가 사라지는 것이다.
+    //   ⭐ 여기서 잰다 — 실제 환생을 도는 자리가 이 스텝 하나뿐이다.
+    let _rnKey='';
+    if(typeof campRuneState==='function'){ const R=campRuneState();
+      if(R){ _rnKey=runeKey('gain','low'); R.own[_rnKey]=(R.own[_rnKey]|0)+1;
+        C.best=Object.assign({}, C.best, {10:50});   // 칸을 열어 실제로 끼워 본다
+        campRuneEquip('norm',0,_rnKey); } }
     campRebAsk(); campRebGo();
     // ⚠ **되감긴 그 순간을 찍어서 잰다.** await 를 끼우면 캠프 틱(250ms)이 그 사이에 끼어들어
     //   막 비운 earn 에 다시 수입을 얹는다 — 그래서 검사가 흔들렸다(2026-08-31).
@@ -554,6 +561,10 @@ async function groupLobby(){
       assert(snap.mul>mul0,'배수가 안 올랐다: '+mul0+' → '+snap.mul);
       assert(snap.pts>pts0,'포인트가 안 올랐다');
       assert(snap.dg===0 && snap.earn===0,'회차가 안 되감겼다: dg='+snap.dg+' earn='+Math.round(snap.earn)); }
+    // 💠 룬은 살아남았는가 — 보유도, 끼워 둔 것도
+    if(_rnKey){ const R2=campRuneState();
+      assert(R2 && (R2.own[_rnKey]|0)>=1,'환생하니 젬으로 산 룬이 사라졌다');
+      assert(R2.norm && R2.norm[0]===_rnKey,'환생하니 끼워 둔 룬이 빠졌다'); }
     return '조건·공식·먼 목표·확인 ok';
     }finally{ campRebCancel(); campRebClose(); } });
   // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
@@ -1986,6 +1997,304 @@ async function groupLobby(){
     } finally { p.packs=keep; }
   });
 
+  // ══ 💠 룬 (2026-09-02) ══════════════════════════════════════════════════
+  //   ⚠ 지금은 **뼈대**다 — 효과를 쓰는 곳에는 아직 배선하지 않았다. 여기서 잠그는 것은
+  //     구조 넷이다: ① 칸은 **최대 도달 라운드**가 연다(젬이 아니다) ② 칸이 한정이다
+  //     ③ 효과는 **합**이다 ④ 젬으로 산 것은 **환생해도 남는다**.
+  //   ⛔ 이 넷 중 하나라도 무너지면 젬이 곧 지수 축이 된다(GEM.md §6 · 이 시스템의 전제).
+  await step('룬: 칸은 최대 도달 라운드가 연다 (젬으로는 못 연다)', async()=>{
+    skipIf(typeof campRuneSlots!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const p=PROF(), keepG=p.gem||0;
+    try{
+      // ① 기록이 없으면 첫 칸만 열린다(표의 0)
+      C.best={};
+      assert(campRuneBestRound()===0,'기록이 없는데 도달 라운드가 0 이 아니다: '+campRuneBestRound());
+      const n0=campRuneSlots('norm');
+      assert(n0===1,'기록 0 인데 일반 칸이 '+n0+'개 열렸다 — 첫 칸 하나여야 한다');
+      assert(campRuneSlots('uniq')===0,'기록 0 인데 유니크 칸이 열렸다');
+      // ② 던전이 넘어가도 **한 줄로 펴서** 센다 — D2 R10 = 60 이지 10 이 아니다
+      C.best={2:10};
+      assert(campRuneBestRound()===60,'D2 R10 이 통산 60 이 아니다: '+campRuneBestRound());
+      // ③ 라운드가 오르면 칸이 는다 · ⛔ 젬으로는 **안 열린다**
+      C.best={}; p.gem=999999;
+      assert(campRuneSlots('norm')===1,'젬이 많으면 칸이 열린다 — 돈이 칸을 열면 안 된다');
+      C.best={1:30};
+      const n1=campRuneSlots('norm');
+      assert(n1>n0,'R30 인데 칸이 안 늘었다: '+n0+' → '+n1);
+      // ④ 상한까지 다 열린다 · 그 위로는 더 안 열린다
+      C.best={10:50};
+      assert(campRuneBestRound()===campRuneMaxRound(),'D10 R50 이 상한이 아니다');
+      assert(campRuneSlots('norm')===RUNE_SLOT_R.norm.length,'끝까지 갔는데 일반 칸이 다 안 열렸다');
+      assert(campRuneSlots('uniq')===RUNE_SLOT_R.uniq.length,'끝까지 갔는데 유니크 칸이 다 안 열렸다');
+      assert(campRuneNextAt('norm')===0,'다 열렸는데 다음 해금 라운드가 남아 있다');
+      return '통산 라운드 ok · 일반 '+RUNE_SLOT_R.norm.length+'칸 · 유니크 '+RUNE_SLOT_R.uniq.length+'칸';
+    } finally { C.best=keepB; p.gem=keepG; }
+  });
+
+  await step('룬: 젬으로만 사고 · 보유한 만큼만 끼운다', async()=>{
+    skipIf(typeof campRuneBuy!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    try{
+      C.rune={}; C.best={10:50};                    // 칸을 전부 열어 놓고 규칙만 본다
+      const key=runeKey('gain','low'), cost=runeGem(key);
+      assert(cost>0,'룬 값이 0 이다');
+      // ① 젬이 모자라면 못 산다 — **보유가 늘어서는 안 된다**
+      p.gem=cost-1;
+      assert(campRuneBuy('gain','low')===false,'젬이 모자란데 샀다');
+      assert(campRuneOwn(key)===0,'못 샀는데 보유가 늘었다');
+      // ② 사면 젬이 정확히 그만큼 깎인다
+      p.gem=cost*3;
+      assert(campRuneBuy('gain','low')===true,'젬이 있는데 못 샀다');
+      assert(profGem()===cost*2,'젬이 값만큼 안 깎였다: '+profGem()+' (기대 '+(cost*2)+')');
+      assert(campRuneOwn(key)===1,'보유가 안 늘었다');
+      // ③ 갈래가 맞아야 한다 — 일반 룬은 유니크 칸에 안 들어간다
+      assert(campRuneEquip('uniq',0,key)===false,'일반 룬이 유니크 칸에 들어갔다');
+      const uk=runeKey('speed','uniq');
+      p.gem=runeGem(uk); assert(campRuneBuy('speed','uniq')===true,'유니크 룬을 못 샀다');
+      assert(campRuneEquip('norm',0,uk)===false,'유니크 룬이 일반 칸에 들어갔다');
+      // ④ 보유한 만큼만 — 하나뿐인데 두 칸에 못 끼운다
+      assert(campRuneEquip('norm',0,key)===true,'산 룬을 못 끼웠다');
+      assert(campRuneEquip('norm',1,key)===false,'하나뿐인 룬이 두 칸에 끼워졌다');
+      // ⑤ 빼면 다시 끼울 수 있다
+      assert(campRuneUnequip('norm',0)===true,'못 뺐다');
+      assert(campRuneEquip('norm',1,key)===true,'뺀 뒤에도 못 끼운다');
+      // ⑥ 잠긴 칸에는 못 끼운다 — 이것이 「돈으로 못 앞당긴다」의 실제 장치다
+      //   ⚠ **먼저 빼 둔다.** 안 그러면 「보유를 다 썼다」에 먼저 걸려서 잠금을 안 재고도
+      //     통과한다(2026-09-02 레드 테스트로 잡은 헛검사).
+      campRuneUnequip('norm',1);
+      assert(campRuneFree(key)>0,'검사 준비 실패 — 뺐는데도 남는 룬이 없다');
+      C.best={}; p.gem=999999;
+      assert(campRuneSlots('norm')===1,'검사 준비 실패 — 기록을 지웠는데 칸이 여럿 열려 있다');
+      assert(campRuneEquip('norm',RUNE_SLOT_R.norm.length-1,key)===false,'잠긴 칸에 끼워졌다');
+      return '젬 결제 ok · 갈래·보유·잠금 규칙 ok';
+    } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
+  });
+
+  await step('룬: 효과는 합이다 (곱이 아니다)', async()=>{
+    skipIf(typeof campRuneEff!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    try{
+      C.rune={}; C.best={10:50};
+      const R=campRuneState();                       // 빈 칸을 채워 주는 유일한 입구
+      // ① **합이다.** ⛔ 곱이면 지수 축이 하나 더 늘어 후반이 터진다(GEM.md §5-2).
+      const k1=runeKey('gain','low'), k2=runeKey('gain','mid');
+      const v1=runeVal(k1), v2=runeVal(k2);
+      R.own[k1]=1; R.own[k2]=1;
+      campRuneEquip('norm',0,k1); campRuneEquip('norm',1,k2);
+      const got=campRuneEff('gain'), sum=v1+v2, prod=(1+v1)*(1+v2)-1;
+      assert(Math.abs(got-sum)<1e-9,
+        '효과가 합이 아니다 — 얻은 값 '+got.toFixed(4)+' · 합이면 '+sum.toFixed(4)+' · 곱이면 '+prod.toFixed(4));
+      // ⭐ **종류가 칸보다 많아야 「고르는 것」이 된다.** 종류 = 칸 이면 전부 끼워지므로
+      //   고를 것이 없어지고, 이 시스템은 그냥 「연구 2」가 된다(2026-09-02 값 확정의 전제).
+      { const nN=RUNE_LIST.filter(x=>x.kind!=='uniq').length, nU=RUNE_LIST.length-nN;
+        assert(nN>RUNE_SLOT_R.norm.length,'일반 룬 종류('+nN+')가 칸('+RUNE_SLOT_R.norm.length+')보다 많지 않다 — 고를 것이 없다');
+        assert(nU>RUNE_SLOT_R.uniq.length,'유니크 종류('+nU+')가 칸('+RUNE_SLOT_R.uniq.length+')보다 많지 않다'); }
+      // 💎 값은 **등급 표 한 곳**에서 온다 — 룬마다 흩뿌리면 손볼 때 어긋난다
+      for(const gd of RUNE_GRADES) assert(runeGem(runeKey('gain',gd))===RUNE_GEM[gd],
+        gd+' 값이 등급 표와 다르다: '+runeGem(runeKey('gain',gd))+' / '+RUNE_GEM[gd]);
+      // ② 다른 효과 키는 안 섞인다
+      assert(campRuneEff('atk')===0,'끼우지도 않은 효과에 값이 있다: '+campRuneEff('atk'));
+      // ③ 뺀 것은 안 세어진다 — 보유는 그대로인데 효과만 빠져야 한다
+      campRuneUnequip('norm',1);
+      assert(Math.abs(campRuneEff('gain')-v1)<1e-9,'뺀 룬이 아직 효과에 남아 있다');
+      assert(campRuneOwn(k2)===1,'뺐더니 보유까지 사라졌다');
+      // ⚠ 「환생해도 남는가」는 **환생 스텝**이 잰다 — 실제 환생을 도는 곳이 거기 하나뿐이라
+      //   여기서 또 돌리면 판이 두 번 되감겨 뒤 검사들이 흔들린다.
+      return '합 ' + sum.toFixed(4) + '(곱이면 ' + prod.toFixed(4) + ') · 종류>칸 · 값은 등급 표';
+    } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
+  });
+
+  // 💠 **효과 배선** — 끼운 룬이 실제로 게임에 닿는가(2026-09-02).
+  //   ⛔ 여기서 잠그는 것은 「값이 바뀐다」가 아니라 **「어디에 어떻게 닿는가」**다:
+  //     ① 재화는 **합산 항**에 들어간다(곱이면 지수 축이 는다)
+  //     ② 손끝의 룬은 **탭에만** · 재화의 룬은 **탭·채취 둘 다**
+  //     ③ 일꾼 속도는 **캠프에서만**(건설 판은 관리자 탭과 공유다)
+  //     ④ 유즈맵 보상은 재화만 — **젬에는 안 걸린다**(젬으로 산 룬이 젬을 찍으면 인쇄기다)
+  await step('룬 배선: 끼운 룬이 수입·전투·속도에 실제로 닿는다', async()=>{
+    skipIf(typeof campRuneEff!=='function'||typeof campRuneMul!=='function','룬 시스템 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepR=JSON.parse(JSON.stringify(C.rune||{})), keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepU=JSON.parse(JSON.stringify(C.upg||{}));
+    // ⚠ **기준값을 크게 잡아 둔다.** 탭 수입은 정수로 반올림되므로 Lv0(=1원)에서는
+    //   +20% 가 반올림에 먹혀 1 → 1 로 보인다(2026-09-02 이 검사가 실제로 그렇게 죽었다).
+    C.upg=Object.assign({}, C.upg, { tap:60, gather:40 });
+    // 끼우고 → 재고 → 빼고 → 다시 잰다. 두 값의 **비**가 기대 배수여야 한다.
+    const bad=[];
+    // ⭐ **모아서 한 번에 알린다.** 배선이 여럿이라 첫 줄에서 멈추면 나머지는 재지도 못한다 —
+    //   레드 테스트 한 번으로 전부 덮으려면 실패를 모아야 한다.
+    const chk=(ok,msg)=>{ if(!ok) bad.push(msg); };
+    const put=(id,gd)=>{ const k=runeKey(id,gd); const R=campRuneState();
+      R.own[k]=(R.own[k]|0)+1;
+      const kind=(runeParse(k).def.kind==='uniq')?'uniq':'norm';
+      const n=campRuneSlots(kind); for(let i=0;i<n;i++) if(!R[kind][i]) return campRuneEquip(kind,i,k)&&k;
+      return false; };
+    const clear=()=>{ C.rune={}; campRuneState(); if(typeof campRuneTouch==='function') campRuneTouch(); };
+    try{
+      C.best={10:50}; clear();
+      // ① 💰 재화의 룬 — **탭과 채취 둘 다**에 걸리고, 그 자리는 **합산 항**이다
+      if(typeof campTapGain==='function' && typeof campGatherMul==='function'){
+        const t0=campTapGain(), g0=campGatherMul();
+        chk(t0>0&&g0>0,'기준 수입이 0 이다');
+        put('gain','high'); const v=runeVal(runeKey('gain','high'));
+        const t1=campTapGain(), g1=campGatherMul();
+        chk(t1>t0,'재화의 룬이 탭에 안 걸린다: '+t0+' → '+t1);
+        chk(g1>g0,'재화의 룬이 채취에 안 걸린다: '+g0+' → '+g1);
+        // 두 번째를 끼우면 **합**이라 증가분이 같아야 한다(곱이면 커진다)
+        const d1=t1-t0;
+        put('gain','high'); const t2=campTapGain();
+        const d2=t2-t1;
+        chk(Math.abs(d2-d1)<=Math.max(2,d1*0.06),
+          '재화의 룬이 합이 아니다 — 첫 장 +'+Math.round(d1)+' · 둘째 장 +'+Math.round(d2)+'(곱이면 더 크다)');
+        void v; clear(); }
+      // ② 👆 손끝의 룬 — **탭에만**. 채취는 그대로여야 한다
+      if(typeof campTapGain==='function' && typeof campGatherMul==='function'){
+        const t0=campTapGain(), g0=campGatherMul();
+        put('tap','high');
+        chk(campTapGain()>t0,'손끝의 룬이 탭에 안 걸린다');
+        chk(Math.abs(campGatherMul()-g0)<1e-9,'손끝의 룬이 채취까지 건드렸다 — 탭 전용이다');
+        clear(); }
+      // ③ ⛽ 정제의 룬 — 가스 산출.
+      //   ⚠ 정제소가 **서 있어야** 값이 나온다(campHasRefinery). 여기서 재는 것은 그 판정이
+      //     아니라 **룬이 산출에 곱해지는가**라, 판정만 잠시 참으로 세워 두고 잰다.
+      if(typeof campGasPerMin==='function' && typeof campHasRefinery==='function'){
+        const realHas=window.campHasRefinery;
+        try{
+          window.campHasRefinery=function(){ return true; };
+          const r0=campGasPerMin();
+          chk(r0>0,'정제소를 세웠는데 가스 산출이 0 이다 — 배선을 못 잰다');
+          put('gas','high');
+          const want=r0*(1+runeVal(runeKey('gas','high')));
+          chk(Math.abs(campGasPerMin()-want)<Math.max(1e-6,want*0.01),
+            '정제의 룬이 가스에 안 걸린다: '+r0.toFixed(3)+' → '+campGasPerMin().toFixed(3)+'(기대 '+want.toFixed(3)+')');
+        } finally { window.campHasRefinery=realHas; }
+        clear(); }
+      // ④ 👥 증원의 룬 — 인구 상한. **트리 몫을 더한 뒤** 비율이 얹혀야 한다
+      if(typeof campApplySupCap==='function' && typeof G!=='undefined' && G.tech){
+        const c0=G.tech.supCap||0;
+        try{ G.tech.supCap=100; campApplySupCap(); const base=G.tech.supCap;
+          G.tech.supCap=100; put('pop','high'); campApplySupCap();
+          const want=Math.floor(base*(1+runeVal(runeKey('pop','high'))));
+          chk(G.tech.supCap===want,'증원의 룬이 인구 상한에 안 걸린다: '+G.tech.supCap+' (기대 '+want+')');
+        } finally { G.tech.supCap=c0; }
+        clear(); }
+      // ⑤⑧ ⚔💚 전장이 있어야 재는 것들 — 유닛 스탯과 회복량
+      if(typeof campEnterDungeon==='function' && typeof campScaleAllies==='function'){
+        campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+        skipIf(!CAMPB,'전장이 안 열림');
+        const mkM=()=>{ campWipeField();
+          campWithStk(()=>{ strikeSpawnUnit('me','marine'); });
+          const u=CAMPB.me.units.find(x=>(x.gm||x.id)==='marine');
+          if(u){ u._campRtOn=0; campScaleAllies([u]); }
+          return u; };
+        // ⑤ 힘·수호·연타 — 공격속도는 **간격이라 나눈다**
+        clear(); const a=mkM(); skipIf(!a,'유닛을 못 세움');
+        const a0={ dmg:a.dmg, hp:a.maxHp, cd:a.cdMax };
+        put('atk','high'); put('hp','high'); put('aspd','high');
+        const b=mkM();
+        const rA=1+runeVal(runeKey('atk','high')), rH=1+runeVal(runeKey('hp','high'));
+        const rS=1+runeVal(runeKey('aspd','high'));
+        chk(Math.abs(b.dmg/a0.dmg-rA)<0.02,'힘의 룬이 공격력에 안 걸린다: ×'+(b.dmg/a0.dmg).toFixed(3));
+        chk(Math.abs(b.maxHp/a0.hp-rH)<0.02,'수호의 룬이 체력에 안 걸린다: ×'+(b.maxHp/a0.hp).toFixed(3));
+        chk(a0.cd>0 && Math.abs(a0.cd/b.cdMax-rS)<0.02,
+          '연타의 룬이 공격속도에 안 걸린다 — 간격 '+a0.cd.toFixed(3)+' → '+b.cdMax.toFixed(3)+'(기대 ÷'+rS.toFixed(2)+')');
+        clear();
+        // ⑧ 💚 치유의 룬 — 회복 비율
+        const heal=()=>{ campWipeField();
+          campWithStk(()=>{ strikeSpawnUnit('me','medic'); strikeSpawnUnit('me','marine'); });
+          const m=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+          const q=CAMPB.me.units.find(u=>(u.gm||u.id)==='marine');
+          if(!m||!q) return 0;
+          m.x=q.x; m.y=q.y; m.en=0; m._healT=null; m._healDur=0; m._healCd=0;
+          q.maxHp=100000; q.hp=1;
+          campWithStk(()=>{ for(let i=0;i<20;i++) strikeHealStep(m, CAMPB.me, 0.05); });
+          return q.hp-1; };
+        const h0=heal();
+        chk(h0>0,'치유가 아예 안 됐다 — 회복 배선을 못 잰다');
+        put('heal','high'); const h1=heal();
+        const wantH=1+runeVal(runeKey('heal','high'));
+        chk(Math.abs(h1/h0-wantH)<0.03,'치유의 룬이 회복량에 안 걸린다: ×'+(h1/h0).toFixed(3));
+        clear(); }
+      // ⑥ 🚶 신속의 룬 — **일꾼만·캠프에서만**. ⛔ 건설 판은 관리자 탭과 공유다
+      if(typeof campRuneMulIn==='function'){
+        put('wspd','high'); const want=1+runeVal(runeKey('wspd','high'));
+        const on=(typeof campIsOn==='function')&&campIsOn();
+        if(on) assert(Math.abs(campRuneMulIn('wspd')-want)<1e-9,'캠프인데 일꾼 속도가 안 걸린다');
+        else assert(campRuneMulIn('wspd')===1,'캠프 밖인데 일꾼 속도가 걸린다 — 관리자 탭까지 빨라진다');
+        chk(campRuneMul('wspd')>1,'신속의 룬 값이 0 이다');
+        // ⭐ **자리도 잠근다.** 값만 재면 「함수는 맞는데 아무도 안 부른다」를 못 잡는다 —
+        //   이동은 techTick 의 stepUnitMove 한 줄이 다 한다(2026-09-02 레드 테스트로 드러난 구멍).
+        chk(typeof techTick==='function' && /_techWkSpd\(/.test(String(techTick)),
+          'techTick 이 _techWkSpd 를 안 쓴다 — 신속의 룬이 일꾼에 안 닿는다');
+        clear(); }
+      // ⑥-2 🏃 가속·질주의 룬 — **부르는 자리가 하나뿐**이라 값과 자리를 함께 잠근다.
+      //   ⭐ 값만 재면 「함수는 맞는데 아무도 안 부른다」를 못 잡는다 — 그래서 호출부까지 본다.
+      if(typeof campDtMul==='function' && typeof campRoundMul==='function'){
+        put('speed','uniq'); put('round','uniq');
+        const wS=1+runeVal(runeKey('speed','uniq')), wR=1+runeVal(runeKey('round','uniq'));
+        chk(Math.abs(campDtMul()-wS)<1e-9,'가속의 룬 값이 안 붙는다: ×'+campDtMul().toFixed(3));
+        chk(Math.abs(campRoundMul()-wR)<1e-9,'질주의 룬 값이 안 붙는다: ×'+campRoundMul().toFixed(3));
+        chk(/campDtMul\(\)/.test(String(campFrame)),
+          'campFrame 이 campDtMul 을 안 쓴다 — 가속의 룬이 어디에도 안 닿는다');
+        chk(/campRoundMul\(\)/.test(String(campCombatStep)),
+          'campCombatStep 이 campRoundMul 을 안 쓴다 — 질주의 룬이 어디에도 안 닿는다');
+        clear(); }
+      // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
+      if(typeof umFirstRw==='function'){
+        const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
+        put('mapg','uniq'); const r1=umFirstRw('normal');
+        const want=1+runeVal(runeKey('mapg','uniq'));
+        chk(r1.pcoin>r0.pcoin,'전리품의 룬이 유즈맵 재화에 안 걸린다');
+        chk(Math.abs(r1.pcoin/r0.pcoin-want)<0.02,'유즈맵 재화 배수가 다르다: ×'+(r1.pcoin/r0.pcoin).toFixed(3));
+        chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
+        clear(); }
+      assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
+      return '재화(합)·탭 전용·가스·인구·공격/체력/공속·일꾼(캠프만)·유즈맵(젬 제외)·회복 ok';
+    } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
+      if(typeof campRuneTouch==='function') campRuneTouch();
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      { const S=campState(); if(S){ S.dg=0; S.cleared=0; } } }
+  });
+
+  // 💠 룬 화면 — 네비 칸과 화면이 실제로 붙어 있는가(구조만 본다)
+  await step('룬 구역: 네비 다섯 칸 · 화면이 열리고 잠긴 칸에 이유가 있다', async()=>{
+    skipIf(typeof campRuneEnter!=='function'||typeof NAV_TREE==='undefined','룬 구역 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    try{
+      // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
+      const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
+      assert(cells.join(',')==='research,reb,rune,map,shop',
+        '네비 칸 순서가 다르다: '+cells.join(','));
+      // ② 화면이 열린다 · 하위 둘을 오간다
+      C.best={}; C.rune={};
+      campRuneEnter('slot'); await sleep(60);
+      const el=$('campRune'); assert(visible(el),'룬 화면이 안 열림');
+      assert(_runeSec==='slot','장착 탭이 아니다: '+_runeSec);
+      // ③ 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
+      const lk=el.querySelectorAll('.rnSlot.lk');
+      assert(lk.length>0,'기록 0 인데 잠긴 칸이 하나도 없다');
+      assert(/R\d+/.test(lk[0].textContent),'잠긴 칸에 해금 라운드가 안 적혀 있다: '+lk[0].textContent);
+      // ④ 룬 상점 탭 — 등급 버튼과 젬 값이 보인다
+      campRuneEnter('shop'); await sleep(60);
+      const buys=el.querySelectorAll('.rnBuy');
+      assert(buys.length>=RUNE_LIST.length,'룬 상점에 살 것이 없다: '+buys.length);
+      assert(/💎/.test(el.textContent),'룬 상점에 젬 값이 안 적혀 있다');
+      // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
+      navShow('map'); await sleep(40);
+      assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
+      return '네비 5칸 · 두 탭 · 잠금 이유 ok';
+    } finally { if(typeof campRuneClose==='function') campRuneClose();
+      C.best=keepB; C.rune=keepR; }
+  });
+
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
   //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
   //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)
@@ -2778,6 +3087,107 @@ async function groupLobby(){
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
 
+  // ✨ 정화 — 적도 같은 스킬을 쓰고, 의무병이 그 디버프를 푼다(사용자 확정 2026-08-28).
+  await step('캠프 스킬: 적도 스킬을 쓴다 · 정화가 푼다', async()=>{
+    skipIf(typeof strikeCleanse!=='function','정화 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      assert(!STK_SK_DEAD.restoration,'정화가 아직 미구현 목록에 있다');
+      assert(SKILLS.restoration.cd===5,'정화 쿨이 5가 아니다: '+SKILLS.restoration.cd);
+      // ① **적도 같은 스킬을 쓴다** — 적 저격수가 내 유닛을 봉쇄한다
+      const r=campWithStk(()=>{
+        STK.me.units.length=0; STK.ai.units.length=0; STK._dots=null; STK._webs=null;
+        STK.ai.race='union';
+        strikeSpawnUnit('ai','ghost'); strikeSpawnUnit('me','marine');
+        const e=STK.ai.units[0], m=STK.me.units[0];
+        if(!e||!m) return null;
+        e.x=1000; e.y=1000; e.wait=0; e._skT=0; e.skillCd={}; delete e._skKeys;
+        m.x=1050; m.y=1000; m.wait=0; m.hp=m.maxHp=999;
+        for(let i=0;i<30;i++) strikeSkillTick(0.5);
+        return { stun:m.stunT||0, m:m };
+      });
+      skipIf(!r,'유닛을 못 세움');
+      assert(r.stun>0,'적이 스킬을 안 썼다 — 내 유닛이 멀쩡하다');
+      // ② 디버프 판정은 한 곳에서 — 정지·둔화 둘 다 본다
+      { const x={stunT:2,slowT:0}; assert(strikeDebuffLeft(x)===2,'정지를 디버프로 안 본다');
+        const y={stunT:0,slowT:3}; assert(strikeDebuffLeft(y)===3,'둔화를 디버프로 안 본다');
+        assert(strikeDebuffLeft({})===0,'멀쩡한데 디버프가 있다고 본다'); }
+      // ③ 정화가 실제로 푼다 · 멀쩡한 아군에는 안 쓴다
+      //    ⚠ **`_stkApplyAlly` 로 잰다** — `strikeCleanse` 를 직접 부르면 갈래(배선)를 안 거쳐
+      //      그 줄을 되돌려도 안 터진다(레드 테스트가 안 터져서 알았다).
+      assert(campWithStk(()=>_stkApplyAlly({}, r.m, SKILLS.restoration, 'restoration', 0.05)),
+        '정화가 디버프를 못 풀었다');
+      assert(!(r.m.stunT>0) && !(r.m.slowT>0),'풀었는데 남아 있다');
+      assert(!campWithStk(()=>_stkApplyAlly({}, r.m, SKILLS.restoration, 'restoration', 0.05)),
+        '멀쩡한 아군에 정화를 썼다');
+      // ④ **대상 고르기가 체력이 아니라 디버프를 본다** — 멀쩡해도 멎어 있으면 고른다
+      campWithStk(()=>{
+        const me=STK.me;
+        me.units.length=0;
+        const medic={x:1000,y:1000,dead:false,id:'medic',gm:'medic',hp:10,maxHp:10};
+        const hurt={x:1010,y:1000,dead:false,hp:1,maxHp:100};        // 다쳤지만 디버프 없음
+        const stuck={x:1020,y:1000,dead:false,hp:100,maxHp:100,stunT:4};  // 멀쩡하지만 멎었다
+        me.units.push(medic,hurt,stuck);
+        const t=_stkPickAlly(medic, me, SKILLS.restoration, 'restoration');
+        assert(t===stuck,'정화가 「다친 아군」을 골랐다 — 디버프를 봐야 한다');
+        // 디버프가 아무에게도 없으면 안 고른다
+        stuck.stunT=0;
+        assert(!_stkPickAlly(medic, me, SKILLS.restoration, 'restoration'),'디버프가 없는데 대상을 골랐다');
+        me.units.length=0; });
+      return '적 봉쇄 '+r.stun+'초 → 정화가 푼다 · 쿨 '+SKILLS.restoration.cd+'초';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
+  // 🧠 정신 지배 — 적을 뺏어 **소환수처럼** 쓴다(사용자 확정 2026-08-28).
+  //   ⚠ 「소환수처럼」 = 적일 때 능력치 그대로 · 죽으면 즉시 사라진다(부활 없음).
+  await step('캠프 스킬: 정신 지배 — 뺏은 적은 소환수다', async()=>{
+    skipIf(typeof strikeMindControl!=='function','정신 지배 배선 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      assert(!STK_SK_DEAD.mind_control,'정신 지배가 아직 미구현 목록에 있다');
+      assert(SKILLS.mind_control.cd===120,'정신 지배 쿨이 120이 아니다: '+SKILLS.mind_control.cd);
+      campWipeField();
+      campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
+      const foe=CAMPB.ai.units.find(u=>!u.dead); skipIf(!foe,'적을 못 세움');
+      foe.hp=3; foe.maxHp=7; foe.dmg=2.5;                 // 적일 때의 능력치
+      const aiN=CAMPB.ai.units.length, meN=CAMPB.me.units.length;
+      // ① 뺏는다 — 적에서 빠지고 내 편에 붙는다
+      assert(campWithStk(()=>_stkApplyFoe({},foe,SKILLS.mind_control,'mind_control')),'정신 지배가 안 걸렸다');
+      assert(CAMPB.ai.units.indexOf(foe)<0,'적 목록에 남아 있다');
+      assert(CAMPB.me.units.indexOf(foe)>=0,'내 편에 안 들어왔다');
+      assert(CAMPB.ai.units.length===aiN-1 && CAMPB.me.units.length===meN+1,'수가 안 맞다');
+      assert(foe.side==='me','진영이 안 바뀌었다: '+foe.side);
+      // ② 능력치는 **적일 때 그대로** — 설계 능력치를 다시 씌우지 않는다
+      assert(foe.hp===3 && foe.maxHp===7 && foe.dmg===2.5,
+        '능력치가 바뀌었다: hp'+foe.hp+'/'+foe.maxHp+' dmg'+foe.dmg);
+      assert(foe._mc,'소환수 표식이 없다 — 죽어도 부활한다');
+      // ③ 같은 유닛을 두 번 뺏지 않는다
+      assert(!campWithStk(()=>_stkApplyFoe({},foe,SKILLS.mind_control,'mind_control')),'이미 뺏은 유닛을 또 뺏었다');
+      // ④ 죽으면 **부활 대기에 안 들어간다**
+      { const b4=CAMPB.me.units.slice();
+        foe.dead=true; CAMPB.me.units=CAMPB.me.units.filter(u=>!u.dead);
+        const dn0=(CAMPB._down||[]).length;
+        campCatchDown(b4);
+        assert((CAMPB._down||[]).length===dn0,'뺏은 적이 부활 대기에 들어갔다 — 라운드마다 되살아난다'); }
+      // ⑤ 보통 아군은 그대로 부활 대기에 들어간다(④가 헛검사가 아니라는 증거)
+      { campWithStk(()=>{ strikeSpawnUnit('me','marine'); });
+        const mine=CAMPB.me.units[CAMPB.me.units.length-1];
+        const b4=CAMPB.me.units.slice();
+        mine.dead=true; CAMPB.me.units=CAMPB.me.units.filter(u=>!u.dead);
+        const dn0=(CAMPB._down||[]).length;
+        campCatchDown(b4);
+        assert((CAMPB._down||[]).length===dn0+1,'보통 아군이 부활 대기에 안 들어간다 — ④가 헛검사다'); }
+      return '적 1기 탈취 · 능력치 그대로 · 죽으면 소멸 · 쿨 '+SKILLS.mind_control.cd+'초';
+    } finally { if(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._down) CAMPB._down.length=0;
+      if(typeof campWipeField==='function') campWipeField();
+      if(typeof campBattleClose==='function') campBattleClose();
+      const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
+  });
+
   // 🧬 던전 안 변태 — 전장 유닛을 지정하면 프로필이 뜨고, 거기서 변태한다(2026-08-28).
   //   ⚠ 던전 안에서는 유닛이 전장(CAMPB.me.units)에 있고 **기지 엔티티가 없다** —
   //     techPanelRender·techDoMorph 는 기지만 알아서, 캠프가 가짜 엔티티로 비추고 직접 변태한다.
@@ -3016,7 +3426,53 @@ async function groupLobby(){
         campWithStk(()=>strikeHealStep(md, CAMPB.me, 0.05));
         if(pt.hp>1) again=1; }
       assert(again,'쿨이 끝났는데 다시 치유하지 않는다');
-      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초 · 마나 0에서도 돈다';
+      // ④ 💚 **회복은 고정 수치가 아니라 비율이다** — 초당 최대 체력의 15% · 3초면 45%.
+      //    ⛔ 고정 수치로 되돌리면 체력 강화로 체력이 커질수록 회복이 반올림 오차가 된다.
+      const _healGain = (mx)=>{ campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','medic'); strikeSpawnUnit('me','marine'); });
+        const m=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+        const p=CAMPB.me.units.find(u=>(u.gm||u.id)==='marine');
+        if(!m||!p) return null;
+        m.x=p.x; m.y=p.y; m.en=0; m._healT=null; m._healDur=0; m._healCd=0;
+        p.maxHp=mx; p.hp=1;                             // 거의 죽은 환자 — 상한에 안 걸린다
+        const out=[];
+        campWithStk(()=>{ for(let i=0;i<60;i++){ strikeHealStep(m, CAMPB.me, 0.05);
+          if(i===19 || i===59) out.push(p.hp-1); } });   // 1초 시점 · 3초 시점
+        return out.length===2 ? out : null; };
+      let pctNote='';
+      { const g=_healGain(1000); skipIf(!g,'비율 측정용 유닛을 못 세움');
+        const one=g[0], three=g[1];
+        assert(Math.abs(one - 1000*STK_HEAL_PCT) < 15,
+          '1초 회복이 최대 체력의 '+Math.round(STK_HEAL_PCT*100)+'% 가 아니다: '+one.toFixed(1));
+        assert(Math.abs(three - 1000*STK_HEAL_PCT*STK_HEAL_DUR) < 40,
+          '3초 회복이 '+Math.round(STK_HEAL_PCT*STK_HEAL_DUR*100)+'% 가 아니다: '+three.toFixed(1));
+        // ⑤ 체력이 4배면 회복도 4배 — **이것이 비율로 바꾼 이유다**
+        const g4=_healGain(4000); skipIf(!g4,'비율 측정용 유닛을 못 세움');
+        const r=g4[1]/three;
+        assert(Math.abs(r-4) < 0.3,'체력이 4배인데 회복은 '+r.toFixed(2)+'배다 — 아직 고정 수치다');
+        pctNote=' · 3초 회복 '+Math.round(three/10)+'%(체력×4 → '+r.toFixed(2)+'배)'; }
+      // ⑥ 🎯 **대상을 붙잡는다** — 비슷한 거리의 둘 사이에서 왔다갔다하지 않는다.
+      //    ⛔ 의무병은 대상 쪽으로 걸어가므로, 흔들리면 그 자리에서 진동하며 아무도 못 고친다.
+      { campWipeField();
+        campWithStk(()=>{ strikeSpawnUnit('me','medic');
+          strikeSpawnUnit('me','marine'); strikeSpawnUnit('me','marine'); });
+        const md2=CAMPB.me.units.find(u=>(u.gm||u.id)==='medic');
+        const pts=CAMPB.me.units.filter(u=>(u.gm||u.id)==='marine');
+        skipIf(!md2||pts.length<2,'의무병·환자 둘을 못 세움');
+        md2.x=1000; md2.y=1000; md2._healT=null; md2._healDur=0; md2._healCd=0;
+        // 거의 같은 거리에 둘 — 매 프레임 다시 고르면 여기서 흔들린다
+        pts[0].x=1000; pts[0].y=1010; pts[0].hp=1; pts[0].maxHp=100;
+        pts[1].x=1000; pts[1].y=1011; pts[1].hp=1; pts[1].maxHp=100;
+        let flips=0, last=null;
+        campWithStk(()=>{ for(let i=0;i<60;i++){
+          // 둘의 거리를 매번 살짝 뒤집어 「가장 가까운」이 번갈아 바뀌게 만든다
+          pts[0].y = 1010 + ((i%2)?2:0);
+          pts[i%2].hp = 1;                       // 계속 다친 상태로
+          strikeHealStep(md2, CAMPB.me, 0.05);
+          if(md2._healT && md2._healT!==last){ if(last) flips++; last=md2._healT; } } });
+        assert(flips===0,'대상이 '+flips+'번 바뀌었다 — 왔다갔다한다');
+        assert(md2._healT,'대상을 아예 안 잡았다'); }
+      return '3초 치유(실측 '+stopAt.toFixed(1)+'초) → 쿨 '+STK_HEAL_CD+'초'+pctNote+' · 대상 붙잡기 ok';
     } finally { if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
@@ -9618,10 +10074,11 @@ async function groupLobby(){
   // 🔬📋 하단 네비 개편(2026-08-25) — 옛 캐릭터·정비를 연구·임무로 갈아끼웠다.
   //   ⚠ 지금은 **껍데기**다(본문 '준비 중'). 그래도 칸·아이콘·화면 열림은 지금부터 지킨다 —
   //     APP_SCREENS 에 빠지면 화면이 영영 안 켜지는데, 눈으로만 보면 그걸 못 잡는다.
-  await step('하단 네비: 연구·환생·유즈맵·상점 네 칸', async()=>{
+  await step('하단 네비: 연구·환생·룬·유즈맵·상점 다섯 칸', async()=>{
     skipIf(typeof NAV_TREE==='undefined','네비 표 없음');
     const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.label);
-    assert(cells.join(',')==='연구,환생,유즈맵,상점','하단 네 칸이 다름: '+cells.join(','));
+    // 💠 룬이 환생과 유즈맵 사이에 들어왔다(2026-09-02) — 왼쪽 셋이 「내가 세지는 곳」이다.
+    assert(cells.join(',')==='연구,환생,룬,유즈맵,상점','하단 다섯 칸이 다름: '+cells.join(','));
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
