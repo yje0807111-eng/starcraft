@@ -4344,10 +4344,14 @@ async function groupLobby(){
         assert(campGatRaw(0)===1,'채취 0레벨이 1 이 아니다: '+campGatRaw(0));
         assert(campGatRaw(1)===2,'채취 1레벨이 2 가 아니다: '+campGatRaw(1));
         assert(campGatRaw(10)===12,'채취 Lv10 이 12 가 아니다(탭과 같은 마일스톤): '+campGatRaw(10));
-        // 💰 비용은 **두 레벨마다 10배**(×5 → ×2 교대) — 자동 수입이라 탭보다 훨씬 무겁다
+        // 💰 비용 50·150·300·500·750 — 차이가 50씩 늘어난다(25n(n+1) = 탭의 5배)
+        //    ⛔ 「두 레벨마다 ×10」 을 넣었다가 Lv10 이 250만이 되어 되돌렸다(2026-09-02).
         const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
-        assert(g(0)===50 && g(1)===250 && g(2)===500 && g(3)===2500 && g(4)===5000,
-          '채취 비용이 50·250·500·2500·5000 이 아니다: '+[g(0),g(1),g(2),g(3),g(4)].join(','));
+        assert(g(0)===50 && g(1)===150 && g(2)===300 && g(3)===500 && g(4)===750,
+          '채취 비용이 50·150·300·500·750 이 아니다: '+[g(0),g(1),g(2),g(3),g(4)].join(','));
+        // ⭐ 두 축이 같은 꼴이다 — 채취는 탭의 정확히 5배
+        const t=(lv)=>{ S.upg.tap=lv; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
+        assert(g(0)/t(0)===5 && g(4)/t(4)===5,'채취가 탭의 5배가 아니다');
       }
       assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
       assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
