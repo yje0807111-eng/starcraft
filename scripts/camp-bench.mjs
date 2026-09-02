@@ -37,6 +37,13 @@ const START_MUL=+(process.env.START_MUL||0);
 //   판정 기준은 sc-3 §: 한 라운드를 **10분** 넘게 못 깨면 벽 후보 · **30분**이면 벽으로 보고 멈춘다.
 //   ⚠ 정체 문턱(stallS)과는 다른 것이다 — 그건 「측정을 계속할까」이고, 이건 「벽을 만났나」다.
 const WALL_WARN=600, WALL_STOP=1800;
+// 💰 **들고 있는 돈**(지갑)이 100만에 닿는 시각도 잰다 (2026-09-02 사용자 요청).
+//   ⚠ 게임의 환생 관문 campCanRebirth() 는 **누적**(campWealth = C.earn + 가스×8)이다 —
+//     이건 그것과 다른 잣대다. 「모아서 100만을 들고 있는 시점」을 따로 본다.
+//   HOARD=n : 채취 레벨이 n 에 닿으면 **경제 업그레이드 구매를 멈추고 모은다**(0 = 안 함).
+//     병력 생산·건설·연구는 그대로 둔다 — 안 그러면 던전이 안 내려가 수입이 같이 멎는다.
+const HOARD=+(process.env.HOARD||0);
+const HOLD_GATE=+(process.env.HOLD_GATE||1e6);
 // 🧱 벙커 탑승(2026-08-30) — 환경변수 BUNK=0 이면 **짓기는 하되 태우지 않는다.**
 //   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
 //   ⚠ 벙커 건설 자체는 원래부터 한다(__CB.want 가 모든 생산 건물을 연다) — 다른 것은 탑승뿐이다.
@@ -74,15 +81,15 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0)=>{
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
   const C=campState(); C.race='terran';
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -119,6 +126,7 @@ await pg.evaluate(()=>{
   //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
   __CB.stallS=900;
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
+  __CB.holdT=0; __CB.holdMax=0;   // 💰 지갑이 관문에 닿은 시각 · 지갑 최고치
   // 🧱 벽 — 라운드가 wallWarn(10분) 넘으면 후보로 적고, wallStop(30분)이면 벽으로 보고 멈춘다.
   __CB.wallWarnLog=[]; __CB.wall=null;
   // ⏱ 30분 간격 요약 — 「한 던전에 머물 때 화력이 시간의 몇 제곱으로 자라는가」를 재는 표.
@@ -404,6 +412,8 @@ await pg.evaluate(()=>{
     __CB.produce=function(){ if((__CB.spentU||0) >= campWealth()*0.5) return;
       const c0=G.tech.credit||0; oP(); __CB.spentU=(__CB.spentU||0)+Math.max(0,c0-(G.tech.credit||0)); };
     __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
+      // 💰 모으기 모드 — 채취가 목표 레벨에 닿으면 경제 구매를 멈춘다(HOARD)
+      if(__CB.hoard && campUpgLv('gather') >= __CB.hoard) return;
       const c0=G.tech.credit||0; oB(); __CB.spentE=(__CB.spentE||0)+Math.max(0,c0-(G.tech.credit||0)); }; }
   __CB.tick=function(sec){
     const dt=0.05, n=Math.round(sec/dt);
@@ -494,9 +504,13 @@ await pg.evaluate(()=>{
           } } }
       if((i%20)===0){ __CB.tap(); const w=campWealth();
         if(!__CB.gateT && w>=1e6) __CB.gateT=__CB.t;
+        // 💰 지갑(들고 있는 돈) — 누적과 달리 쓰면 줄어든다
+        { const cash=(G.tech&&G.tech.credit)||0;
+          if(cash>__CB.holdMax) __CB.holdMax=cash;
+          if(!__CB.holdT && cash>=__CB.holdGate) __CB.holdT=__CB.t; }
         if(__CB.t-(__CB.lastSample||0) >= 15){ __CB.lastSample=__CB.t;
           __CB.wealth.push({ t:+__CB.t.toFixed(0), w:Math.round(w), dg:campDgN(), r:campRoundN(),
-            gl:campUpgLv('gather'), tl:campUpgLv('tap'), rate:Math.round((w-(__CB.lastW||0))/15),
+            gl:campUpgLv('gather'), tl:campUpgLv('tap'), hold:Math.round((G.tech&&G.tech.credit)||0), rate:Math.round((w-(__CB.lastW||0))/15),
             ore:Math.round((G.tech&&G.tech.minerals||[]).reduce((a,m)=>a+(m.amount||0),0)),
             wk:(G.tech&&G.tech.ents||[]).filter(e=>e.type==='worker').length,
             // 👥 인구 — ⚠ **기수(병력 수)와 함께 봐야 한다.** 기수만 보면 「병력이 준다」가
@@ -657,7 +671,7 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
-    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, earn:Math.round(campWealth()),
+    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
   // 🧱 벙커 — 몇 채이고 몇 기가 탔고 실제로 얼마나 맞았나
   bunk:(function(){ const on=!!__CB.bunk;
@@ -743,11 +757,16 @@ console.log('던전-라운드 | 걸린 초 | 전투 초 | 대기 초 | 적난이
 // E 검사 — 관문 100만을 언제 넘겼나
 console.log(fin.gateT ? `\n□ E 관문 100만 도달: 시작 후 **${(fin.gateT/60).toFixed(1)}분** (설계 추정 10시간)`
                      : `\n□ E 관문 100만: ${(fin.t/60).toFixed(1)}분 안에 못 넘음(번 돈 ${F(fin.earn)})`);
+// 💰 F 검사 — **들고 있는 돈**(지갑)이 관문에 닿는가. 누적(E)과 다른 잣대다.
+console.log(fin.holdT ? `□ F 지갑 ${F(HOLD_GATE)} 도달: 시작 후 **${(fin.holdT/60).toFixed(1)}분**`
+                      : `□ F 지갑 ${F(HOLD_GATE)}: ${(fin.t/60).toFixed(1)}분 안에 못 모음`
+                        + ` (지금 지갑 ${F(fin.hold)} · 최고 ${F(fin.holdMax)})`
+                        + (HOARD ? '' : '  ⚠ 모으기 모드 꺼짐 — HOARD=n 으로 채취 Lv n 부터 모은다'));
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
-console.log('초    | 던전R  | 번돈      | 초당    | 효율 | 탭  | 일꾼 | 인구     | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
+console.log('초    | 던전R  | 번돈      | 지갑      | 초당    | 효율 | 탭  | 일꾼 | 인구     | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
   for(let i=0;i<W.length;i+=step){ const w=W[i];
-    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.sup|0)+"/"+(w.supCap|0)).padEnd(7)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String(w.res|0).padEnd(6)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
+    console.log(`${String(w.t).padEnd(6)}| D${w.dg}R${String(w.r).padEnd(3)}| ${F(w.w).padEnd(9)}| ${F(w.hold||0).padEnd(9)}| ${F(w.rate).padEnd(8)}| ${String(w.gl).padEnd(4)}| ${String(w.tl).padEnd(4)}| ${String(w.wk).padEnd(4)}| ${String((w.sup|0)+"/"+(w.supCap|0)).padEnd(7)}| ${String((w.gas|0)+'/L'+(w.rl|0)).padEnd(9)}| ${String(w.res|0).padEnd(6)}| ${String((w.me|0)+'+'+(w.dn|0)).padEnd(7)}| ${String(w.dps).padEnd(8)}| ${String((w.bld|0)+'/'+(w.bldAll|0)+' '+(w.bldHp|0)+'%').padEnd(11)}| ${String(w.dif).padEnd(8)}| ${Object.entries(w.mix||{}).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>k+' '+v).join(', ')}`); } }
 if(probes.length){ console.log('\n■ 판을 건드린 호출 (전부 '+probes.length+'건 · 마지막 12건)');
   for(const p of probes.slice(-12)) console.log('  '+p.replace(/https?:\/\/[^ )]+/g,'').slice(0,200)); }
 if(fin.jam){ const J=fin.jam;
