@@ -17,6 +17,10 @@ const MINS=+(process.argv[2]||10), DG0=+(process.argv[3]||1);
 // 🧭 구매 정책 — HUNT_R1 §6-7-0 의 세 갈래를 그대로 옵션으로 둔다(대조용)
 //   A 살 수 있는 것 중 ROI 1위   B 인구가 막히면 보급소만 모은다   C ROI 1위가 비싸면 모은다
 const POL=(process.argv[4]||'A').toUpperCase();
+// 🔮 **스킬을 끄고 재는 모드** — `SKILLS_OFF=1` (2026-08-28).
+//   ⭐ 스킬이 밸런스에 얼마나 기여하는지는 **껐다 켠 두 판을 비교해야** 알 수 있다 —
+//     한 판만 보면 그 사이 들어온 다른 변경과 구분이 안 된다(실제로 그래서 못 갈랐다).
+const NOSK=!!process.env.SKILLS_OFF;
 // ⛽ 정제소 레벨 상한(비교 실험용 · 2026-08-29) — 「연구 무한 누적」이 시간 지수 축이 되는지
 //   상한 유/무로 갈라 재기 위한 것. 0 = 상한 없음(지금 게임 그대로).
 const REFCAP=+(process.argv[5]||0);
@@ -74,7 +78,9 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,nosk)=>{
+  // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
+  if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
@@ -82,7 +88,7 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
   window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL);
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, NOSK);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
