@@ -2064,9 +2064,29 @@ async function groupLobby(){
     try{
       // ① 첫 환생 직후 — 갈래 넷만 보이고 계열은 **하나도** 안 그려진다
       C.rbTree={root:1,_m2:1}; C.rbPts=1e9;
-      let shown=0; for(const L of CAMP_RT_LINES) for(let n=1;n<=5;n++) if(campTreeState(L.k,n)) shown++;
+      // ⚠ 관문 갈래만 센다 — 사슬 갈래(⛓)는 관문이 없어 가운데를 사면 바로 첫 별이 보인다
+      let shown=0; for(const L of CAMP_RT_LINES){ if(campRtIsChain(L.br)) continue;
+        for(let n=1,mx=campRtMax(L.k);n<=mx;n++) if(campTreeState(L.k,n)) shown++; }
       assert(shown===0,'갈래를 안 샀는데 계열이 '+shown+'칸 보인다 — 첫 화면이 32개로 붐빈다');
       assert(campTreeBrState('econ')==='buy','갈래를 살 수 있어야 한다');
+      // ⛓ 사슬 갈래 — 관문이 없고, 별 하나가 **여러** 다음 별을 연다
+      { assert(campTreeBrState('start')===null,'사슬 갈래에 갈래 관문이 남아 있다');
+        assert(campTreeGpState('start','가')===null,'사슬 갈래에 묶음 관문이 남아 있다');
+        assert(campTreeState('startMin',1)==='buy','가운데를 샀는데 사슬 첫 별이 안 열렸다');
+        assert(campTreeState('tap',1)===null&&campTreeState('startWk',1)===null,
+          '부모를 안 샀는데 곁가지가 보인다');
+        assert(campTreeState('startMin',2)===null,'첫 별을 안 샀는데 다음 별이 보인다');
+        campRtBuy('startMin');
+        assert(campTreeState('startMin',2)==='buy'&&campTreeState('tap',1)==='buy'
+          &&campTreeState('startWk',1)==='buy','별 하나가 세 갈래를 열지 못한다');
+        assert(campTreeState('skipRd',1)===null,'먼 부모(3차)를 안 샀는데 열렸다');
+        campRtBuy('startMin'); campRtBuy('startMin');          // II · III
+        assert(campTreeState('skipRd',1)==='buy','3차를 샀는데 그 뒤가 안 열렸다');
+        // 좌표 — 사슬은 부모에서 뻗어 나간다(같은 자리에 겹치지 않는다)
+        const a=campTreePos('startMin',1), b=campTreePos('tap',1), c=campTreePos('startWk',1);
+        assert(Math.hypot(a.x-b.x,a.y-b.y)>40&&Math.hypot(b.x-c.x,b.y-c.y)>40,
+          '사슬 별들이 한자리에 겹친다');
+        C.rbTree={root:1,_m2:1}; C.rbPts=1e9; }
       assert(campTreeGpState('econ','가')===null,'갈래를 안 샀는데 묶음이 보인다');
       // ② 갈래를 사면 묶음이, 묶음을 사면 계열이 열린다
       assert(campRtCanBuy('br:econ'),'갈래를 못 산다');
@@ -2162,8 +2182,11 @@ async function groupLobby(){
       // 📊 해금 진행도 — 분모는 셀 수 있는 전부(가운데+갈래+묶음+계열×5)
       { assert(typeof campTreeTotal==='function'&&typeof campTreeOwned==='function','진행도 계산이 없다');
         const all=campTreeTotal();
-        assert(all===1+Object.keys(CAMP_TREE_BR).length*(1+CAMP_RT_GRP_KEYS.length)+CAMP_RT_LINES.length*5,
-          '진행도 분모가 실제 칸 수와 다르다: '+all);
+        // ⚠ 묶음은 **계열이 있는 것만** 센다(빈 묶음은 사도 아무것도 안 열린다) · 차수도 계열마다 다르다
+        let want=1; for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue; want++;
+          for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(bk,g)) want++; }
+        for(const L of CAMP_RT_LINES) want+=campRtMax(L.k);
+        assert(all===want,'진행도 분모가 실제 칸 수와 다르다: '+all+' ≠ '+want);
         assert(campTreeOwned()>0&&campTreeOwned()<=all,'진행도 분자가 범위 밖: '+campTreeOwned());
         const tx=$('campTree').querySelector('.ctProgN').textContent;
         assert(tx.indexOf('/ '+all)>=0,'진행도 표시가 계산과 다르다: '+tx); }

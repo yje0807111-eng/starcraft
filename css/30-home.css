@@ -2125,8 +2125,10 @@
 #campTree .ctRing img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   width:26px;height:26px;object-fit:contain;opacity:.9}
 #campTree .ctHt{min-width:0}
-#campTree .ctStage{margin-top:3px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-  font-size:10px;letter-spacing:.18em;color:#69737f}
+#campTree .ctStage{margin-top:3px;font-size:10px;letter-spacing:.14em;color:#69737f}
+/* 차수 로마숫자 — 부제와 폰트를 가른다(숫자 폰트에 한글을 태우면 자간이 어긋난다)
+   ⚠ 이름을 .ctStep 으로 지으면 아래 비용 줄(display:flex)에 먹힌다 — 실제로 한 번 겹쳤다 */
+#campTree .ctRom{font-family:var(--font-num);letter-spacing:.18em;color:#8b96a4;margin-right:7px}
 /* 설명 — 값은 문장 안에 있다(지금은 흐리게 · 다음은 굵게) */
 #campTree .ctDesc{margin-top:13px;font-size:13px;line-height:1.7;color:#a7b2c0}
 #campTree .ctDesc b{color:#f0f4f9;font-weight:700}
