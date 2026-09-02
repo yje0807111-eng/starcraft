@@ -64,8 +64,13 @@ const RUNE_LIST = [
   { id:'heal',  nm:'치유의 룬',   kind:'norm', eff:'heal',  ico:'hero',
     de:'회복량',           v:{ low:0.06, mid:0.15, high:0.30 } },
   // ── 유니크 4종 — **다른 데서 못 사는 것**이라 칸이 셋뿐이다 ──
+  // ⛔ **+10% 로 되돌리지 말 것**(실측 2026-09-02 · BALANCE §3-2-6).
+  //   그 값은 45분 누적 수입을 **+60%** 로 만들었다 — 누적 증폭 4.9제곱으로,
+  //   결제 팩(1.63제곱)보다 3배 가파르다. 다른 룬은 축 하나를 키우지만
+  //   이것은 **시간 자체**라 모든 축에 곱해진다.
+  //   ⭐ 사용자 확정: 「룬은 게임을 심하게 바꾸면 안 된다」 → **2.5%**.
   { id:'speed', nm:'가속의 룬',   kind:'uniq', eff:'speed', ico:'boost',
-    de:'캠프 전체 진행 속도', v:0.10 },
+    de:'캠프 전체 진행 속도', v:0.025 },
   { id:'round', nm:'질주의 룬',   kind:'uniq', eff:'round', ico:'rec',
     de:'라운드 진행 속도',    v:0.15 },
   { id:'mapg',  nm:'전리품의 룬', kind:'uniq', eff:'mapGain', ico:'map',
@@ -144,7 +149,11 @@ function runeName(key){ const p = runeParse(key); if(!p.def) return '';
   return (p.def.kind === 'uniq') ? p.def.nm : (RUNE_GD[p.gd] ? RUNE_GD[p.gd].tx + ' ' + p.def.nm : p.def.nm); }
 function runeGradeOf(key){ return runeParse(key).gd; }
 // 표기 — 값은 전부 「+n%」다(합산 항이므로)
-function runeValTx(key){ const v = runeVal(key); return (v > 0 ? '+' : '') + Math.round(v * 100) + '%'; }
+// ⚠ **소수점을 반올림해 버리지 말 것.** 2.5% 를 「3%」로 적으면 표기와 실제가 어긋난다.
+//   딱 떨어지는 값(20%)에는 소수점을 안 붙인다 — 거짓 정밀도로 보인다.
+function runeValTx(key){ const v = runeVal(key), p = v * 100;
+  const t = (Math.abs(p - Math.round(p)) < 0.05) ? String(Math.round(p)) : p.toFixed(1);
+  return (v > 0 ? '+' : '') + t + '%'; }
 
 // ── 보유 · 구매 ──────────────────────────────────────────────────────────
 function campRuneOwn(key){ const R = campRuneState(); return R ? ((R.own[key] | 0)) : 0; }
