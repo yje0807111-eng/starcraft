@@ -23,43 +23,48 @@ const CHROME=['C:/Program Files/Google/Chrome/Application/chrome.exe',
   'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
   process.env.CHROME_PATH||''].filter(Boolean).find(p=>fs.existsSync(p));
 if(!CHROME){ console.error('크롬 없음'); process.exit(2); }
-const b=await puppeteer.launch({executablePath:CHROME,headless:'new',
+// ⚠ protocolTimeout 기본 180초로는 모자란다 — 표 한 줄이 실시간 몇 십 초씩 걸린다.
+const b=await puppeteer.launch({executablePath:CHROME,headless:'new',protocolTimeout:900000,
   args:['--mute-audio','--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const pg=await b.newPage(); await pg.setViewport({width:390,height:844,deviceScaleFactor:1});
 pg.on('pageerror',e=>console.error('  ⚠ '+String(e.message).slice(0,120)));
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campState==="function"',{timeout:30000});
-const res=await pg.evaluate(async()=>{
+// ⚠ **조합마다 따로 evaluate 한다.** 옛 판은 8조합 × 150초를 한 호출 안에서 돌려
+//   `protocolTimeout` 을 넘겼다(900초로 올려도 못 끝냈다). 나눠 부르면 각 호출이 짧아 잘 끝난다.
+await pg.evaluate(async()=>{
   authGuest(); await new Promise(r=>setTimeout(r,2500));
   const C=campState(); C.race=null; C.ents=[]; C.minerals=[]; saveMeta();
   openHome(); await new Promise(r=>setTimeout(r,300));
   campRaceSel('terran'); campPickRace(); await new Promise(r=>setTimeout(r,1500));
-  const T=G.tech, base=T.ents.find(e=>e.type==='bldg');
-  const cw=_techCW(), ch=_techCH();
-  const setW=n=>{ T.ents=T.ents.filter(e=>e.type!=='worker');
+  window.__setW=n=>{ const T=G.tech, base=T.ents.find(e=>e.type==='bldg'), cw=_techCW(), ch=_techCH();
+    T.ents=T.ents.filter(e=>e.type!=='worker');
     for(let i=0;i<n;i++) T.ents.push({eid:T.eseq++,type:'worker',   // ⚠ 셀 간격 이상으로 벌린다(겹치면 서로 밀어내느라 못 간다)
       x:base.x+((i%8)-4)*cw*1.2, y:base.y+ch*3+Math.floor(i/8)*ch*1.2});
     if(typeof campAutoGather==='function') campAutoGather(); };
-  const run=s=>{ const c0=T.credit; for(let t=0;t<s;t+=0.05) techTick(0.05); return (T.credit-c0)/s; };
-  const rows=[]; let jam=null;
-  for(const cap of [1,5]) for(const n of [6,12,20,40]){
-    setW(n); for(const m of T.minerals) m.cap=cap;
-    run(90); const _r=+run(60).toFixed(1); rows.push({cap,n,rate:_r});
-    if(_r===0 && !jam){                       // 🩺 수입 0 = 관리자 탭 버그 — 그 순간 일꾼 상태를 찍는다
-      const st={};
-      for(const w of T.ents){ if(w.type!=='worker') continue;
-        const k=(w._gKind||'none')+'/'+(w._gSt||'-')+(w._carry?'+carry':''); st[k]=(st[k]||0)+1; }
-      jam={ cap, n, states:st,
-        nodes:T.minerals.map(m=>({ miner:m.miner==null?'-':m.miner, n:(m._miners&&m._miners.length)|0 })),
-        sample:T.ents.filter(w=>w.type==='worker').slice(0,3).map(w=>({
-          kind:w._gKind, st:w._gSt, carry:!!w._carry, working:!!w._working,
-          pos:(+w.x.toFixed(3))+','+(+w.y.toFixed(3)),
-          spot:w._gSpot?((+w._gSpot.x.toFixed(3))+','+(+w._gSpot.y.toFixed(3))):null,
-          dist:w._gSpot?+Math.hypot(w._gSpot.x-w.x, w._gSpot.y-w.y).toFixed(4):null })) };
-    }
-  }
-  return { jam, 광맥:T.minerals.length, cap상수:(typeof CAMP_MINE_CAP!=='undefined'?CAMP_MINE_CAP:null), rows };
+  window.__run=s=>{ const c0=G.tech.credit; for(let t=0;t<s;t+=0.05) techTick(0.05); return (G.tech.credit-c0)/s; };
+  window.__jam=(cap,n)=>{ const T=G.tech, st={};   // 🩺 수입 0 = 관리자 탭 버그 — 그 순간 일꾼 상태를 찍는다
+    for(const w of T.ents){ if(w.type!=='worker') continue;
+      const k=(w._gKind||'none')+'/'+(w._gSt||'-')+(w._carry?'+carry':''); st[k]=(st[k]||0)+1; }
+    return { cap, n, states:st,
+      nodes:T.minerals.map(m=>({ miner:m.miner==null?'-':m.miner, n:(m._miners&&m._miners.length)|0 })),
+      sample:T.ents.filter(w=>w.type==='worker').slice(0,3).map(w=>({
+        kind:w._gKind, st:w._gSt, carry:!!w._carry, working:!!w._working,
+        pos:(+w.x.toFixed(3))+','+(+w.y.toFixed(3)),
+        spot:w._gSpot?((+w._gSpot.x.toFixed(3))+','+(+w._gSpot.y.toFixed(3))):null,
+        dist:w._gSpot?+Math.hypot(w._gSpot.x-w.x, w._gSpot.y-w.y).toFixed(4):null })) }; };
 });
+const rows=[]; let jam=null;
+for(const cap of [1,5]) for(const n of [6,12,20,40]){
+  await pg.evaluate((c,k)=>{ __setW(k); for(const m of G.tech.minerals) m.cap=c; }, cap, n);
+  await pg.evaluate(()=>__run(90));                      // 워밍업 — 줄서기가 안정될 때까지
+  const _r=await pg.evaluate(()=>+__run(60).toFixed(1));
+  rows.push({cap,n,rate:_r});
+  if(_r===0 && !jam) jam=await pg.evaluate((c,k)=>__jam(c,k), cap, n);
+}
+const res=await pg.evaluate(rw=>({ 광맥:G.tech.minerals.length,
+  cap상수:(typeof CAMP_MINE_CAP!=='undefined'?CAMP_MINE_CAP:null), rows:rw }), rows);
+res.jam=jam;
 console.log('광맥 '+res.광맥+'덩이 · CAMP_MINE_CAP='+res.cap상수+'\n');
 console.log('cap  일꾼   초당수입   일꾼당');
 for(const r of res.rows) console.log(String(r.cap).padStart(3)+String(r.n).padStart(6)

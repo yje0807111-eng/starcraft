@@ -1134,8 +1134,23 @@
   /* 🏕 캠프 광맥 = 그림 스프라이트. 판·테두리를 걷고 그림만 남긴다(칸보다 크게 자라도 된다). */
   .bMineral.spr{border:none!important;background:none!important;box-shadow:none!important;
     display:flex;align-items:flex-end;justify-content:center;overflow:visible}
-  .bMineral.spr .mnSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
-    display:block;pointer-events:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+  /* ⛔ `:not(.shade)` 가 **필수**다. 그늘(.mnSpr.shade)도 같은 .mnSpr 이라 이 선택자에 걸리는데,
+     이쪽이 (0,3,0) 으로 더 세서 그늘의 `filter:brightness(0)` 을 **덮어 버렸다**(2026-09-02 발견).
+     그 결과 그늘이 「검은 실루엣」이 아니라 **같은 그림 한 장을 더 겹친 것**이 되어, 아래쪽이
+     색까지 두 배로 진해졌다 — 「미네랄 톤이 너무 진하다」의 진짜 원인이다.
+     ⚠ 아래 opacity/filter 를 그늘에 물리지 않게, 새 규칙도 반드시 :not(.shade) 로 쓸 것. */
+  .bMineral.spr .mnSpr:not(.shade){width:100%;height:100%;object-fit:contain;object-position:center bottom;
+    display:block;pointer-events:none;
+    /* 💎 톤 — **진짜 수정처럼**(2026-09-02 사용자 요청 2차 · .88 → .74).
+       유리는 뒤가 비치고, 비치는 만큼 색이 옅어지고, 옅어진 만큼 밝다 — 셋이 함께 움직여야
+       「연한 파랑」이 아니라 「투명한 결정」으로 읽힌다. 그래서 투명도만 내리지 않고
+       채도를 더 빼고(.78→.68) 밝기를 더 올렸다(1.1→1.16).
+       ⛔ 여기서 더 내리지 말 것 — 바닥 무늬가 결정 안에서 그대로 읽혀 유령처럼 보인다.
+       ⚠ 발치 그림자도 같이 연해져야 한다(.bGndShadow.mnShd) — 안 그러면 그림자만 남아 뜬다. */
+    opacity:var(--mnOp,.74);
+    filter:saturate(var(--mnSat,.68)) brightness(var(--mnBr,1.16)) drop-shadow(0 3px 4px rgba(0,0,0,.28))}
+  .bMineral.spr .mnSpr.shade{width:100%;height:100%;object-fit:contain;object-position:center bottom;
+    display:block;pointer-events:none}
   .bGasZone.d3{border:none!important;background:none!important;box-shadow:none!important}   /* 3D 가스 노드 표시 시 하단 사각 박스 숨김 */
   .bGasZone.d3 .gzLbl{display:none}
   /* ⛽ 캠프 가스 = 그림 스프라이트(미네랄 .bMineral.spr 과 같은 물성). 판·테두리·라벨을 걷고
@@ -1148,8 +1163,15 @@
      ⚠ 기준점은 아래(발치)다 — 위로만 자라야 바닥에 박힌 것처럼 보인다.
      ⭐ 0.95 = 사용자가 「조금 더 줄여 달라」고 한 값(2026-08-31). 광맥이 일곱 칸으로 넓어지며
         가스가 상대적으로 커 보였다. ⛔ 광맥을 덮을 만큼 키우지 말 것 — 눌러서 캐는 것이라 가려지면 못 캔다. */
+  /* ⬇ --gzDY = 그림만 내리는 **반 칸 보정**(2026-09-02). 부지(r0)는 격자 정수 행에만 앉을 수
+     있는데(정제소 배치 검사가 `s.r0===TECH_GAS.r0` 로 딱 비교한다) 광맥 발치는 마침 두 행의
+     **가운데**에 있다. 한 행 위면 6px 뜨고 한 행 아래면 7px 잠긴다 — 그래서 가까운 행에 놓고
+     그림만 내려 발치를 맞춘다. %는 제 높이 기준이라 **줌을 따라간다**(px 로 박지 말 것).
+     ⚠ 부지 사각형은 그대로다 — 눌러서 짓는 자리와 그림이 반 칸 어긋나지만 사람 손가락보다 작다.
+     실측: 보정 전 가스 발치 558.5 vs 광맥 발치 564.5. */
   .bGasZone.spr .gzSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
-    display:block;pointer-events:none;transform:scale(var(--gzK,0.95));transform-origin:center bottom;
+    display:block;pointer-events:none;
+    transform:translateY(var(--gzDY,23%)) scale(var(--gzK,0.95));transform-origin:center bottom;
     filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
   /* ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 뒤집으면 광원 방향이 반대가 되어
      오히려 눈에 걸린다. 반복이 거슬리면 그림을 한 장 더 뽑는다(stage2…). */
@@ -1925,13 +1947,20 @@
       rgba(0,0,0,.90) 0%, rgba(0,0,0,.78) 24%, rgba(0,0,0,.54) 44%,
       rgba(0,0,0,.24) 66%, rgba(0,0,0,.08) 84%, rgba(0,0,0,0) 100%);
     pointer-events:none}
+  /* 💎 광맥 그림자만 **연하게**(2026-09-02 사용자 요청). 결정이 반투명해지자 발치의 짙은 타원만
+     남아 「그림자가 더 진해 보이는」 상태가 됐다 — 유리는 그림자도 옅다.
+     ⛔ .bGndShadow 자체를 내리지 말 것 — 유닛·건물·가스가 같이 쓴다(스티커처럼 뜨는 것을 막는 장치). */
+  .bGndShadow.mnShd{opacity:.42}
   /* ⛽ 가스 구역 안의 그림자 — 부모(.bGasZone) 기준 % 라 좌우 두 구역이 같은 자리를 갖는다.
      ⭐ 오른쪽 구역(#campGas2)은 왼쪽의 innerHTML 을 복제하므로 이 한 줄이 양쪽에 다 걸린다. */
   .bGasZone .bGndShadow{left:43%;top:74%;width:74%;height:30%}
   /* 💎 결정의 **아래쪽 그늘** (2026-08-31) — 같은 그림을 한 장 더 겹쳐 새까맣게 만든 뒤
      마스크로 아래쪽만 남긴다. 사각 그라데이션을 덮으면 결정 밖까지 어두워져 네모가 비친다.
      ⭐ 이렇게 하면 **실루엣 모양 그대로** 아래로 갈수록 어두워진다. */
+  /* ⚠ opacity 를 .42 → .24 로 내렸다(2026-09-02). 위 :not(.shade) 를 고치면서 이 규칙이
+     **처음으로 실제로 적용**됐다 — 진짜 검은 실루엣은 옛 「그림 한 장 더 겹치기」보다 훨씬 진하다.
+     같은 .42 로 두면 밑이 새까매진다. */
   .mnSpr.shade{position:absolute;left:0;top:0;width:100%;height:100%;
-    filter:brightness(0);opacity:.42;pointer-events:none;
+    filter:brightness(0);opacity:.18;pointer-events:none;
     -webkit-mask-image:linear-gradient(to bottom,transparent 38%,#000 92%);
             mask-image:linear-gradient(to bottom,transparent 38%,#000 92%)}

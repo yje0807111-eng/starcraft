@@ -986,13 +986,13 @@ const SKILLS={
   ensnare:{ key:'ensnare', name:'점착 가스', kind:'target_ground', energy:0, enSc:75, cd:60, dur:10, radius:0.11, slow:0.5,
     arm:'🕸 점착 가스: 퍼뜨릴 지점을 클릭하세요.' },
   // 레이서(벌처): 스파이더 마인 — 매설 후 적 접근 시 폭발(광역). 훅: 근접 적 감지
-  spider_mine:{ key:'spider_mine', name:'지뢰', kind:'target_ground', energy:0, cd:3, r:0.06, trig:0.045, dmg:60,
+  spider_mine:{ key:'spider_mine', name:'지뢰', kind:'target_ground', energy:0, cd:30, r:0.06, trig:0.045, dmg:60,
     arm:'💣 지뢰: 매설 지점을 클릭하세요.' },
   // ── 유니온 배치 ──
   // 팬텀(고스트): 락다운 — 지정 적 정지(기계 무력화). 훅: e.stunT
   lockdown:{ key:'lockdown', name:'봉쇄', kind:'target_enemy', energy:0, enSc:100, cd:30, dur:5, arm:'🔒 봉쇄: 정지시킬 적을 클릭하세요.' },
   // 팬텀(고스트): 핵 공격 — 지정 지점에 지연 후 대형 폭발
-  nuke:{ key:'nuke', name:'핵 폭격', kind:'target_ground', energy:0, cd:22, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵 폭격: 투하 지점을 클릭하세요.' },
+  nuke:{ key:'nuke', name:'핵 폭격', kind:'target_ground', energy:0, cd:300, delay:3.5, radius:0.15, dmg:400, arm:'☢ 핵 폭격: 투하 지점을 클릭하세요.' },
   // 브레이커(탱크): 시즈 모드 — 토글(사거리·공격↑, 정지). 훅: 이동불가
   siege:{ key:'siege', name:'공성 모드', kind:'toggle', energy:0, atkMul:1.8, rngMul:1.6 },
   // 드레드노트: 야마토 포 — 지정 적에 고정 대형 피해(즉발)

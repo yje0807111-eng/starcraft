@@ -430,13 +430,19 @@ function _techMinerSweep(res){
 function _techMinerFull(res, eid){
   if(_techMinerHas(res, eid)) return false;                       // 이미 붙어 있으면 자리 있음
   if(_techMinerN(res) > 0) _techMinerSweep(res);                  // 🧹 막혀 보이면 먼저 유령 찜을 걷는다
-  // ⭐ cap 이 붙은 광맥(캠프)은 **막지 않는다** — cap 을 넘으면 대기가 아니라 **왕복이 느려진다**
-  //   (HUNT_R1 §1: 덩이당 5기까지 제 속도, 초과분마다 +5%). 막아 버리면 일꾼 상한이
-  //   6덩이×5=30 으로 굳어 설계의 40마리가 뜻을 잃는다.
-  if(_techMinerCap(res) > 1) return false;
-  return _techMinerN(res) >= 1;                                   // 관리자 탭·오토배틀 = 기존 1명 락 그대로
+  // ⛏ **cap 명이 차면 막는다**(2026-09-02 사용자 확정 — 「미네랄 한 개당 최대 5마리」).
+  //   cap 표식이 없으면 1 이라 관리자 탭·오토배틀은 **기존 1명 락 그대로**다.
+  //   ⚠ 옛 규칙은 **연성**이었다 — 안 막고 초과분마다 왕복 +5%(HUNT_R1 §1 · _techMinerSlow).
+  //     바꾼 이유: 「몇 명까지 붙나」가 눈에 보이는 규칙이라야 일꾼을 몇 마리 뽑을지 판단이 선다.
+  //   ⚠ 그래서 이제 **일꾼 천장 = 광맥 수 × cap** 이다. 지금은 8덩이 × 5 = 40 이고
+  //     CAMP_WORKER_MAX 도 40 이라 딱 맞는다. ⛔ 환생 연구 `wkCap`(일꾼 상한 +5~+250)을
+  //     실제로 배선할 때 **광맥 수를 같이 늘리지 않으면 남는 일꾼이 광맥 옆에 서서 논다**
+  //     (막힌 일꾼은 아래 도착 처리의 else 갈래로 빠져 겹쳐 대기한다 — 멈추지는 않는다).
+  return _techMinerN(res) >= _techMinerCap(res);
 }
 // 초과 인원만큼 채취가 느려진다 — cap 이하면 1.0
+// ⚠ _techMinerFull 이 cap 에서 **막는** 지금은 초과가 안 생겨 사실상 항상 1.0 이다.
+//   연성 cap 으로 되돌리면 다시 살아나므로 남겨 둔다(HUNT_R1 §1 의 혼잡 규칙).
 function _techMinerSlow(res){
   const over = _techMinerN(res) - _techMinerCap(res);
   return over > 0 ? (1 + TECH_MINE_CROWD * over) : 1;
@@ -1180,7 +1186,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
     //      「따로 떠 있는」 것으로 보인다(2026-08-31 실측). 발치 = m.y + (_k/2 − _dy)·칸높이.
     if(_spr){ const _mby=m.y+(_k/2-_dy)*_mch, _msh=_techW2S(m.x, _mby-0.16*_mch);
       const _msw=Math.max(0.035,_k*0.80*_mcw*techView().zoom);
-      mineZ+='<div class="bGndShadow" style="left:'+((_msh.x+_msw*SHD_DX)*100).toFixed(2)
+      // ⚠ `mnShd` 는 **광맥 전용 표식**이다 — .bGndShadow 는 유닛·건물·가스가 함께 쓰므로
+      //   여기만 연하게 하려면 자리표가 필요하다(css/10-game.css .bGndShadow.mnShd).
+      mineZ+='<div class="bGndShadow mnShd" style="left:'+((_msh.x+_msw*SHD_DX)*100).toFixed(2)
         +'%;top:'+((_msh.y+_msw*SHD_DY*0.40)*100).toFixed(2)
         +'%;width:'+(_msw*100).toFixed(2)+'%;height:'+(_msw*0.40*100).toFixed(2)+'%"></div>'; }
     mineZ+='<div class="bMineral'+(_res3d&&!_spr?' d3':'')+(_spr?' spr':'')+'" style="left:'+(_mtl.x*100).toFixed(2)+'%;top:'+(_mtl.y*100).toFixed(2)+'%;width:'+((_mbr.x-_mtl.x)*100).toFixed(2)+'%;height:'+((_mbr.y-_mtl.y)*100).toFixed(2)+'%">'

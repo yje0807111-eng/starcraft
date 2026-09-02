@@ -441,3 +441,20 @@ function twPtrUp(e){ if(!_twPtr || e.pointerId!==_twPtr.id) return;
 
 // ── [js/08-hunt.js] renderTownIdle
 function renderTownIdle(){ renderTownBar(); const tp=document.getElementById('townPanel'); if(_twZone==='gym' && tp && !tp.classList.contains('hide')) refreshTownPanel(); }
+
+// ── [js/19-camp.js] campMineHit — 광맥을 눌렀나(판정만)
+// 광맥 탭으로 채굴 모드에 들어가던 시절의 판정기다. 2026-09-02 사용자 확정으로 그 문을 닫아
+// (채굴은 「MY BASE」 요약판의 채굴 버튼으로만 켠다) 호출자가 사라졌다.
+// ⛔ 되살리려면 ATTIC.md 를 먼저 읽을 것 — 켜는 문이 둘이 되면 광맥을 고르려는 탭이 채굴로 먹힌다.
+function campMineHit(clientX, clientY){
+  if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
+  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
+  if(G.tech.arm) return false;                      // 🧱 건물 배치 중에는 열지 않는다
+  const r = _btRect(); if(!r || !r.width || !r.height) return false;
+  const sx = (clientX - r.left) / r.width, sy = (clientY - r.top) / r.height;
+  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return false;
+  if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
+  const w = _techS2W(sx, sy);
+  const m = _techMineralAt(w.x, w.y);
+  return !!(m && m.amount > 0);
+}

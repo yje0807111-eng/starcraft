@@ -1663,9 +1663,104 @@ function campBuildStructs(){
     const p = CAMP_DEF_BLD[e.bk] ? campG2W(e.x, e.y, W) : { x:sx(e.x), y:sy(e.y) };
     out.push({ x:p.x, y:p.y, hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
   }
+  for(const b of out) b._bsT = null;   // 🏢 건물 시전 주기는 **라운드마다** 다시 센다(본부는 객체를 재사용하므로 손으로 지운다)
   CAMPB._bld = out;
   return out.length;
 }
+// ══ 💣 매설 · ☢ 지연 폭격 (사용자 확정 2026-08-28 · HUNT_R1 §3-4-4) ═══════════
+//   ⭐ **지뢰는 가서 심고 돌아온다.** 핵은 **제자리에서 유도**한다(원본 SC 와 같다) —
+//     300초짜리 스킬을 쓰러 저격수가 적진으로 걸어 들어가 죽으면 안 된다.
+//   ⭐ 가는 동안은 **표적을 안 잡는다**(벙커 탑승과 같은 방식). 맞아 죽을 수 있는 것이 대가다.
+//   ⭐ **복귀는 새로 만들지 않는다** — 이미 있는 「자기 자리로 돌아가기」(`u._post`)가 데려온다.
+//   ⚠ 길이(`r`·`trig`·`radius`)는 **정규 좌표**다. `_stkSkLen` 이 월드 크기를 곱한다 —
+//     안 곱하면 반경이 0.06픽셀이 되어 아무에게도 안 닿는다.
+const CAMP_MINE_LIFE = 180;      // 지뢰 수명(초) — 안 밟히면 사라진다
+const CAMP_MINE_ARR = 40;        // 매설 지점에 이만큼 붙으면 「도착」(px)
+// 시전 = 임무를 준다(그 자리에서 심지 않는다)
+function campMineOrder(u, c, sk){
+  if(!u || !c || u._mine) return false;
+  u._mine = { x:c.x, y:c.y, sk:sk };
+  return true; }
+// 임무 진행 — **벙커 탑승과 같은 자리**에서 부른다(그 프레임의 표적·이동을 건너뛴다)
+function campMineTrip(u, dt){
+  const m = u._mine; if(!m) return;
+  const dx = m.x - u.x, dy = m.y - u.y;
+  if(dx*dx + dy*dy > CAMP_MINE_ARR*CAMP_MINE_ARR){
+    if(typeof strikeMoveToward === 'function') strikeMoveToward(u, m.x, m.y, dt);
+    return; }
+  const sk = m.sk || {};
+  (CAMPB._mines || (CAMPB._mines = [])).push({
+    x:m.x, y:m.y, left:CAMP_MINE_LIFE,
+    r:_stkSkLen(sk.r || 0.06), trig:_stkSkLen(sk.trig || 0.045), dmg:sk.dmg || 60, src:u });
+  u._mine = null; u.moving = false; }
+// 심어 둔 지뢰 — ⛔ **공중은 안 밟는다**(원본과 같다). 밟히면 터지고 사라진다.
+function campMineStep(dt){
+  const L = CAMPB && CAMPB._mines; if(!L || !L.length) return 0;
+  const air = (typeof FXLAB_AIR !== 'undefined') ? FXLAB_AIR : null;
+  let boom = 0;
+  for(let i = L.length - 1; i >= 0; i--){ const z = L[i];
+    z.left -= dt;
+    let step = false;
+    for(const e of CAMPB.ai.units){ if(e.dead) continue;
+      if(air && air.has(e.gm || e.id)) continue;
+      const dx = e.x - z.x, dy = e.y - z.y;
+      if(dx*dx + dy*dy <= z.trig*z.trig){ step = true; break; } }
+    if(step){ const r2 = z.r*z.r;
+      for(const e of CAMPB.ai.units){ if(e.dead) continue;
+        const dx = e.x - z.x, dy = e.y - z.y; if(dx*dx + dy*dy > r2) continue;
+        strikeHit(e, z.dmg, z.src); if(e.hp <= 0) e.dead = true; }
+      L.splice(i, 1); boom++; continue; }
+    if(z.left <= 0) L.splice(i, 1); }
+  return boom; }
+// ☢ 핵 — 제자리에서 유도하고 `delay` 뒤에 터진다
+function campNukeOrder(u, c, sk){
+  if(!u || !c) return false;
+  (CAMPB._nukes || (CAMPB._nukes = [])).push({
+    x:c.x, y:c.y, left:(sk && sk.delay) || 3.5,
+    r:_stkSkLen((sk && sk.radius) || 0.15), dmg:(sk && sk.dmg) || 400, src:u });
+  return true; }
+function campNukeStep(dt){
+  const L = CAMPB && CAMPB._nukes; if(!L || !L.length) return 0;
+  let boom = 0;
+  for(let i = L.length - 1; i >= 0; i--){ const z = L[i];
+    z.left -= dt; if(z.left > 0) continue;
+    const r2 = z.r*z.r;
+    for(const e of CAMPB.ai.units){ if(e.dead) continue;
+      const dx = e.x - z.x, dy = e.y - z.y; if(dx*dx + dy*dy > r2) continue;
+      strikeHit(e, z.dmg, z.src); if(e.hp <= 0) e.dead = true; }
+    L.splice(i, 1); boom++; }
+  return boom; }
+
+// ══ 🏢 **건물이 스킬을 쓴다** (사용자 확정 2026-08-28 · HUNT_R1 §3-4-4) ═════════
+//   ⭐ 전투가 시작되면 **`first` 초 뒤 첫 발**, 그 뒤로는 **`every` 초마다 한 번** —
+//     라운드가 끝날 때까지. 초는 **건물마다 따로** 정한다(아래 표가 단일 소스).
+//   ⛔ `strikeSkillTick` 은 `me.units` 만 돈다 — 건물은 유닛이 아니라서 영영 안 쓴다.
+//     그래서 캠프가 제 스텝을 따로 돌린다.
+//   ⚠ 주기는 **라운드마다 초기화된다** — `campBuildStructs()` 가 라운드 시작에만 불리고
+//     그때 `_bsT` 를 지우기 때문이다. 「전투 시작 후 3초」가 그래서 성립한다.
+//   ⚠ 대상이 없으면 120초를 통째로 버리지 않는다 — 짧게(`CAMP_BLD_RETRY`) 다시 본다.
+const CAMP_BLD_SKILL = {
+  battery: { sk:'recharge', first:3, every:120 }   // 🔋 에테리얼 쉴드 배터리 — 체력 25% 회복
+};
+const CAMP_BLD_RETRY = 1;    // 대상이 없을 때 다시 보는 간격(초)
+function campBldSkillStep(dt){
+  if(!CAMPB || !CAMPB._bld || typeof SKILLS === 'undefined') return 0;
+  let n = 0;
+  for(const b of CAMPB._bld){
+    if(!b || b.dead || (b.hp || 0) <= 0) continue;
+    const cfg = CAMP_BLD_SKILL[b.bk]; if(!cfg) continue;
+    const sk = SKILLS[cfg.sk]; if(!sk) continue;
+    if(b._bsT == null) b._bsT = cfg.first;          // 전장에 선 순간부터 첫 발까지
+    b._bsT -= dt; if(b._bsT > 0) continue;
+    let hit = false;
+    campWithStk(function(){
+      const t = (typeof _stkPickAlly === 'function') ? _stkPickAlly(b, CAMPB.me, sk, cfg.sk) : null;
+      if(!t) return;
+      hit = (typeof _stkApplyAlly === 'function') && _stkApplyAlly(b, t, sk, cfg.sk, dt); });
+    b._bsT = hit ? cfg.every : CAMP_BLD_RETRY;
+    if(hit) n++; }
+  return n; }
+
 // 살아 있는 내 건물들 — 패배 판정과 표적 선택이 같은 목록을 본다(단일 소스)
 function campBldAlive(){
   if(!CAMPB || !CAMPB._bld) return [];
@@ -1752,6 +1847,86 @@ function campSelClear(){ if(!_campSel.length) return false; _campSel = []; retur
 function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.uid; });
   if(_campSel.length && typeof G !== 'undefined' && G.tech){ G.tech.selU = []; G.tech.sel = null; G.tech.selRes = null; }
   return _campSel.length; }
+// ══ 🗂 **지정한 전장 유닛의 프로필 시트** (2026-08-28) ═══════════════════
+//   ⭐ 던전 안에서는 유닛이 **전장(CAMPB.me.units)** 에 있고 기지 엔티티가 없다.
+//     `techPanelRender` 는 `G.tech.ents` 만 보므로 지정해도 시트가 안 뜬다 —
+//     **가짜 기지 엔티티로 비춰 준다.** 모델·렌더는 기존 것을 그대로 쓴다(UI 를 두 번 만들지 않는다).
+//   ⚠ 전장 유닛의 `uid` 는 **개체 번호**(su12)고, 기지 엔티티의 `uid` 는 **종류 키**(marine)다.
+//     비출 때 `gm||id` 를 uid 로 넣어야 카드가 종류를 제대로 읽는다.
+//   ⚠ 연구 구역도 `techPanelRender` 를 감싼다 — 이 패치를 **그 뒤에** 걸어야 바깥이 된다.
+function campFieldEnts(){
+  return campSelList().map(function(u){
+    return { eid:'cf_' + u.uid, type:'unit', uid:(u.gm || u.id), x:u.x, y:u.y, _fu:u }; }); }
+function campFieldSheet(){
+  const body = document.getElementById('btSheetBody'), sheet = document.getElementById('btSheet');
+  if(!body || !sheet || typeof techUnitPanelModel !== 'function' || typeof renderCmdGrid !== 'function') return false;
+  const ents = campFieldEnts(); if(!ents.length) return false;
+  let model = null;
+  try{ model = techUnitPanelModel(ents); }catch(e){ return false; }
+  if(!model) return false;
+  model.compact = true; model.build = true;
+  sheet.classList.add('open', 'simple');
+  renderCmdGrid(body, model);
+  return true; }
+// 🧬 **전장 유닛 변태** — `techDoMorph` 는 기지 엔티티만 안다. 전장에서는 캠프가 직접 한다.
+//   ⭐ 규칙은 원본과 같다 — 에테리얼은 **같은 유닛 2기 융합**, 스웜은 1기 변태.
+//   ⛔ 즉시 바꾼다(융합 연출 없음) — 전장에는 `_fuseP` 같은 진행 상태를 둘 자리가 없다.
+//   ⚠ 비용은 `campCost('unit', …)` 가 아니라 **TECH_MORPH 의 m/g** 다(원본과 같은 값).
+function campFieldMorph(to){
+  if(!CAMPB || typeof TECH_MORPH === 'undefined' || typeof G === 'undefined' || !G.tech) return 0;
+  const sel = campSelList(); if(!sel.length) return 0;
+  const src = sel[0], key = src.gm || src.id;
+  const rule = (TECH_MORPH[key] || []).find(function(m){ return m.to === to; }); if(!rule) return 0;
+  if(typeof _techMorphOK === 'function'){ const ok = _techMorphOK(rule);
+    if(!ok.ok){ if(typeof toast === 'function') toast('⛔ ' + ok.why); return 0; } }
+  const need = (G.tech.race === 'aetherial') ? 2 : 1;     // 🔮 융합은 같은 유닛 둘
+  const pool = CAMPB.me.units.filter(function(u){ return !u.dead && (u.gm || u.id) === key; });
+  if(pool.length < need){ if(typeof toast === 'function') toast('⛔ ' + rule.name + ' — 같은 유닛 ' + need + '기 필요'); return 0; }
+  const m = rule.m || 0, g = rule.g || 0;
+  if((G.tech.credit || 0) < m || (G.tech.energy || 0) < g){
+    if(typeof toast === 'function') toast('⛔ 자원이 모자람'); return 0; }
+  G.tech.credit -= m; G.tech.energy -= g;
+  const gone = pool.slice(0, need);
+  const at = { x:gone[0].x, y:gone[0].y }, post = gone[0]._post || at;
+  for(const u of gone) u.dead = true;
+  CAMPB.me.units = CAMPB.me.units.filter(function(u){ return !u.dead; });
+  campSelClear();
+  const born = campWithStk(function(){
+    const b4 = CAMPB.me.units.length;
+    strikeSpawnUnit('me', to);
+    return (CAMPB.me.units.length > b4) ? CAMPB.me.units[CAMPB.me.units.length - 1] : null; });
+  if(born){ born.x = at.x; born.y = at.y; born.wait = 0; born.rallied = true;
+    born._post = { x:post.x, y:post.y };
+    campScaleAllies([born]); campSelSet([born]); }
+  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  if(typeof toast === 'function') toast('🧬 ' + rule.name);
+  return born ? 1 : 0; }
+// 카드의 onclick 은 `techDoMorph(event, to)` 다 — 전장 지정 중이면 캠프가 가로챈다.
+let _campMorphHome = null;
+function campPatchMorph(){
+  if(_campMorphHome || typeof window === 'undefined') return;
+  const o = window.techDoMorph; if(typeof o !== 'function') return;
+  _campMorphHome = o;
+  window.techDoMorph = function(ev, to){
+    if(ev && ev.stopPropagation) ev.stopPropagation();
+    if(_campOn && _campSel.length){ campFieldMorph(to); return; }
+    return o.apply(this, arguments); }; }
+function campUnpatchMorph(){
+  if(!_campMorphHome) return;
+  window.techDoMorph = _campMorphHome; _campMorphHome = null; }
+
+let _campFieldSheetHome = null;
+function campPatchFieldSheet(){
+  if(_campFieldSheetHome || typeof window === 'undefined') return;
+  const o = window.techPanelRender; if(typeof o !== 'function') return;
+  _campFieldSheetHome = o;
+  window.techPanelRender = function(){
+    if(_campOn && _campSel.length && campFieldSheet()) return;
+    return o.apply(this, arguments); }; }
+function campUnpatchFieldSheet(){
+  if(!_campFieldSheetHome) return;
+  window.techPanelRender = _campFieldSheetHome; _campFieldSheetHome = null; }
+
 // 화면 좌표 → 격자 좌표(기지와 같은 규약)
 function campScr2G(cx, cy){
   if(typeof _btRect !== 'function' || typeof _techS2W !== 'function') return null;
@@ -2647,6 +2822,10 @@ const CAMP_UNIT_STAT = {
   hellfire:{a:10,h:28,r:6.5,c:1.6}, dreadnought:{a:31,h:47,r:7.0,c:2.0},
   // 스웜 §3-A
   snapper:{a:1.2,h:4,r:1.0,c:0.8}, hydra:{a:1.8,h:6,r:4.0,c:1.0}, stinger:{a:6.5,h:2,r:1.0,c:2.5},
+  // 🧬 **변태·상위 유닛**(2026-08-28) — 오염술사는 오염 둥지에서 뽑고, 나머지 둘은 변태로만 나온다.
+  //   ⚠ 이 표에 없으면 **원본 SC 능력치 그대로** 싸운다(오염술사 체력 80 vs 캠프 마린 5).
+  //   ⚠ 무공격 마법 유닛은 `a` 를 주지 않는다(의무병·지원 정찰기와 같은 규약).
+  defiler:{h:14,r:2.0}, dark_archon:{h:12,r:2.0}, venom:{a:6,h:20,r:3.5,c:1.2},
   wyvern:{a:3,h:12,r:3.0,c:1.0}, medusa:{h:14}, ultralisk:{a:14,h:38,r:1.0,c:1.4}, overlord:{h:20},
   // 에테리얼 §3-B — ⭐ 실드를 체력에 합쳐 본다(그래서 실드는 0 으로 만든다)
   blade:{a:3,h:16,r:1.0,c:0.9}, dragoon:{a:4,h:18,r:4.0,c:1.2}, dark_templar:{a:6.5,h:12,r:1.0,c:1.3},
@@ -3065,43 +3244,51 @@ function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRa
 //        ├── 교전 · 방어선(플레이어가 터렛·벙커를 짓는 곳)
 //        │
 //        ├── 본부      CAMP_ROW_BASE
-//        └── 광맥 2×3  CAMP_ROW_MINE   ← 엄지 범위
+//        └── 광맥 1×8  CAMP_ROW_MINE   ← 엄지 범위
 // ⛏ **광맥 한 덩이에 붙는 일꾼 수.** 건설 탭 기본은 1이라(res.miner 단일 락) 광맥 6덩이 =
 //   동시 6명이 상한이었고, 그래서 일꾼을 아무리 뽑아도 수입이 안 늘었다
 //   (실측: 12기 26.8/초 · 300기도 26.8 — 나머지는 줄을 선다). 일꾼 축이 통째로 죽어 있었다.
 //   `cap` 은 16-build.js 가 읽는 캠프 표식이다(`inf` 와 같은 수법) — 관리자 탭·오토배틀은
 //   cap 이 없어 1로 동작하므로 영향이 없다. 설계 근거는 HUNT_R1.md §1.
 const CAMP_MINE_CAP = 5;
-// 💎 광맥은 **한 줄 일곱 칸**이다(2026-08-31 사용자 확정). 3×2 두 줄은 덩어리로 뭉쳐 보였다.
-//   ⭐ 일직선이 아니라 **가운데가 처진 호**다 — 본부(위)를 감싸 안는 모양이 되고, 일곱이
-//     한 줄로 서도 울타리처럼 딱딱해지지 않는다.
+// 💎 광맥은 **한 줄 여덟 칸 · 일직선**이다(2026-09-02 사용자 확정). 3×2 두 줄은 덩어리로 뭉쳐 보였다.
+//   ⭐ 여덟인 이유는 그림만이 아니다 — **일꾼 천장과 맞물린다.** 덩이당 5기(CAMP_MINE_CAP)를
+//     이제 **막으므로**(16-build.js _techMinerFull) 8 × 5 = 40 = CAMP_WORKER_MAX 다.
+//     ⛔ 칸 수를 줄이면 일꾼을 다 뽑아도 붙을 자리가 없어 남는다.
 //   ⚠ 칸 수를 바꾸면 가스와의 간격(CAMP_GAS_GAP)도 같이 봐야 한다 — 반폭이 그만큼 늘어난다.
-const CAMP_MINE_COLS = 7, CAMP_MINE_ROWS = 1;
-const CAMP_MINE_ARC = 0.8;   // 호의 깊이(칸) — 가운데가 이만큼 아래로 처진다
+const CAMP_MINE_COLS = 8, CAMP_MINE_ROWS = 1;
+// 🏹 호의 깊이(칸) — 가운데가 이만큼 아래로 처진다. **0 이면 일직선**(지금 값 · 사용자 확정).
+//   ⚠ 식은 남겨 둔다 — 호로 되돌리고 싶으면 이 숫자 하나만 올리면 된다(옛 값 0.8).
+const CAMP_MINE_ARC = 0;
 // ⚠ 이 둘이 **기지가 하단 시트에 가리지 않게** 하는 유일한 장치다.
 //   맵은 화면 전체를 쓰고 시트가 그 위를 덮으므로(css/30-home.css 캠프 블록), 시트 상단보다
 //   위에 앉혀야 한다. 시트 상단 = 화면 세로의 0.77 지점(실측: 맵 701px 중 시트 161px + 네비).
 //   ⛔ 값을 바꿨으면 **가장 아래 요소인 가스**(광맥 행 + h-0.55)까지 재서 0.74 아래로
 //     내려가지 않는지 확인할 것 — 광맥만 보고 정했다가 가스가 시트에 물렸다.
-// 🏠 본부는 **광맥 바로 위**다(2026-08-31 사용자 확정 · 0.58 → 0.63).
+// 🏠 본부는 **광맥 바로 위**다(2026-09-02 사용자 확정 · 0.58 → 0.63 → **0.59**).
 //   위쪽을 비워 적이 내려오는 길을 길게 잡고, 손이 닿는 아래쪽에 본부·광맥·가스를 모은다.
-const CAMP_ROW_BASE = 0.63;   // 본부 중심(격자 세로 비율 0~1)
+//   ⚠ 0.59 로 올린 것은 가스가 **광맥 줄로 내려왔기** 때문이기도 하다 — 본부가 낮으면
+//     그 발치와 광맥·가스 줄이 붙어 한 덩어리로 뭉쳐 보인다.
+const CAMP_ROW_BASE = 0.59;   // 본부 중심(격자 세로 비율 0~1)
 const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
 // ⚠ 행 번호는 **여기 한 곳에서만** 만든다. 광맥과 가스가 각자 round(rows*f) 를 하면
 //   호출 시점에 _techRows() 가 달라져 서로 다른 행에 앉는다(실측: 가스가 광맥보다 5행 위였다).
 function campRow(f){ return Math.max(0, Math.round(_techRows() * f)); }
 function campRowY(f){ return techY0() + campRow(f) * _techCH(); }
-function campMineCol(){ return Math.round(techCols() / 2 - CAMP_MINE_COLS / 2); }
+// ⭐ 광맥 줄의 **왼쪽 첫 덩이가 앉는 칸**(소수 허용).
+//   ⚠ 덩이는 칸에 **점으로** 앉으므로(칸을 채우는 게 아니다) 줄의 시각 중심은
+//     `campMineCol() + (COLS-1)/2` 다 — 그래서 반폭도 `COLS/2` 가 아니라 `(COLS-1)/2` 다.
+//   ⛔ 옛 식(`round(cols/2 - COLS/2)`)은 반 칸 어긋나 있었고, 홀수 7칸에서 반올림이 그 반 칸을
+//     우연히 메워 줘서 안 보였을 뿐이다. 짝수(8칸)로 가면 그대로 반 칸 밀린다.
+//   ⛔ 반올림하지 말 것 — 광맥은 격자에 물리지 않는다. 반올림하면 칸 수에 따라 또 밀린다.
+function campMineCol(){ return techCols() / 2 - (CAMP_MINE_COLS - 1) / 2; }
 // ── 💎 광맥 그림 ─────────────────────────────────────────────────────────
-// 여섯 칸에 **서로 다른 그림**을 쓴다. 3D 노드는 6칸이 같은 모델·같은 각도라 격자무늬로 보였다.
-// ⭐ 뒤(윗줄)가 크고 앞(아랫줄)이 작다 — 그래야 한 광맥으로 읽히고 깊이가 생긴다.
-//   `CAMP_MINE_COLS = 3` 이므로 인덱스 0~2 가 윗줄, 3~5 가 아랫줄이다(campLayMinerals 의 배치 순서).
-// ⚠ 그림은 고갈 6단계로 뽑아 뒀지만 **캠프 광맥은 마르지 않는다**(inf) — 지금은 「크기 변주」로만 쓴다.
-//   고갈을 실제로 넣게 되면 campMineStage() 가 잔량으로 단계를 고르게 바꾸면 된다.
-// 지금은 **1번 하나로 여섯 칸을 통일**한다.
-// ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다(캠프 광맥은 마르지 않는다).
-//   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 고르게 바꾼다.
-const CAMP_MINE_SPRITE = ['1','1','1', '1','1','1'];
+// 3D 노드는 여러 칸이 같은 모델·같은 각도라 격자무늬로 보였다 — 그림으로 바꿨다.
+// 지금은 **1번 한 장으로 전 칸을 통일**한다(2026-08-31 사용자 확정).
+// ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다 — 캠프 광맥은 마르지 않는다(inf).
+//   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 단계를 고르게 바꾼다.
+// ⚠ 이 배열은 칸 수와 길이가 달라도 된다 — campMineSprite 가 **나머지 연산으로 돌려 쓴다**.
+const CAMP_MINE_SPRITE = ['1'];
 // 💎 결정 덩어리의 **크기와 간격**(2026-08-31 사용자 요청 — 「조금 키우고 간격을 아주 조금 벌리자」)
 //   ⚠ 둘은 함께 움직인다: 키우기만 하면 서로 겹치고, 벌리기만 하면 사이가 휑해진다.
 //   ⛔ 간격을 키울 때 x0(왼끝) 기준으로 곱하면 줄 전체가 오른쪽으로 밀린다 —
@@ -3132,7 +3319,25 @@ function campMineSprite(m, i){
 //      가스 구역은 **사각형**이라 중심이 `c0 + w/2` 다. 그 두 중심을 맞춘다.
 // ⚠ 가스는 **본부 양옆**이다(2026-08-31 사용자 확정). 광맥 옆이 아니라 한 줄 위다.
 //   본부 반폭(4/2 = 2칸) + 가스 반폭(4/2 = 2칸) = 4 가 안 겹치는 최소 — 한 칸 띄운다.
-const CAMP_GAS_GAP = 5;   // 가로 중심 ↔ 가스 구역 중심 사이 칸 수(좌우 같다)
+// ⛽ **가스는 광맥 줄의 양 끝에 붙는다**(2026-09-02 사용자 확정 · 「양 미네랄 사이드에 정확하게
+//   일직선이 되도록 붙여」). 그래서 중심에서 몇 칸이 아니라 **광맥 줄의 시각 끝**에서 잰다 —
+//   칸 수(CAMP_MINE_COLS)나 간격·크기를 바꿔도 저절로 따라온다.
+//   ⛔ 옛 방식(중심에서 CAMP_GAS_GAP 칸)으로 되돌리지 말 것 — 광맥이 넓어지면 파고든다.
+// 광맥 줄 끝 ↔ 가스 구역 사이 틈(칸). **음수면 파고든다** — 그래야 붙어 보인다:
+//   가스 그림은 부지 안에서 `object-fit:contain` + `scale(.95)` 로 **안쪽으로 물러나 있고**,
+//   광맥 스프라이트도 가장자리가 투명하다. 부지끼리 딱 붙이면 그림 사이에 틈이 남는다.
+//   2026-09-02 사용자 요청으로 **겹침 → 아주 조금 떨어뜨림**(-0.5 → 0). 부지 c0 는 정수라
+//   한 칸(약 13px)씩 뛴다 — -0.5 는 그림이 7.5px 겹쳤고, 0 은 5.7px 떨어진다. 그 사이는 없다.
+const CAMP_GAS_PAD = 0;
+// ⛽ 가스 그림의 **발치**를 광맥 발치에 맞춘다(칸). 광맥 스프라이트는 상자를 위로 0.30칸
+//   밀어 올려 발이 m.y 에 닿게 하므로(16-build.js `_dy`), 상자 밑변은 m.y + 0.45칸이다.
+//   가스는 `align-items:flex-end` 라 **부지 밑변이 곧 발치**다 — 그 둘을 맞춘다.
+//   ⛔ 부지 중심을 광맥 y 에 맞추던 옛 식으로 되돌리지 말 것 — 가스가 한 뼘 낮게 보인다.
+const CAMP_GAS_FOOT = 0.45;
+// 광맥 줄의 **시각 반폭**(칸) — 끝 덩이의 중심까지 + 스프라이트 반폭.
+//   ⚠ 덩이는 칸에 점으로 앉고 스프라이트가 그보다 크다(CAMP_MINE_SCALE). 중심 간 거리만
+//     재면 그림이 가스를 파고든다.
+function campMineHalfW(){ return (CAMP_MINE_COLS - 1) / 2 * CAMP_MINE_GAP + CAMP_MINE_SCALE / 2; }
 function campMineMidCol(){ return campMineCol() + (CAMP_MINE_COLS - 1) / 2; }
 function campLayMinerals(){
   if(typeof G === 'undefined' || !G.tech) return;
@@ -3168,13 +3373,17 @@ let _campGasHome = null;
 function campLayGas(){
   if(typeof TECH_GAS === 'undefined') return;
   if(!_campGasHome) _campGasHome = { c0:TECH_GAS.c0, r0:TECH_GAS.r0 };
-  // 🪞 좌우 대칭 — 미네랄 **시각 중심**에서 같은 거리에 놓는다(위 campMineMidCol 설명)
-  const mid = campMineMidCol(), half = TECH_GAS.w / 2;
-  TECH_GAS.c0  = Math.max(0, Math.round(mid - CAMP_GAS_GAP - half));                       // 왼쪽
-  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + CAMP_GAS_GAP - half)); // 오른쪽
-  // ⛽ 가스는 **본부와 같은 높이**다 — 구역 높이(h)의 절반만큼 올려 본부 중심에 맞춘다.
-  //   ⛔ 광맥 행으로 되돌리지 말 것 — 광맥이 한 줄 일곱 칸으로 넓어져 그 옆에는 자리가 없다.
-  TECH_GAS.r0 = Math.max(0, campRow(CAMP_ROW_BASE) - Math.round(TECH_GAS.h / 2));
+  // 🪞 좌우 대칭 — 광맥 줄의 **시각 중심**에서 양쪽으로 같은 거리(위 campMineMidCol 설명)
+  //   ⚠ c0 는 **정수여야 한다** — 정제소 배치 검사가 `s.c0===TECH_GAS.c0` 로 딱 비교하는데
+  //     고스트의 c0 는 격자에 스냅된 정수다(17-build-cards.js:857). 그래서 반올림한다.
+  const mid = campMineMidCol(), off = campMineHalfW() + CAMP_GAS_PAD;
+  TECH_GAS.c0  = Math.max(0, Math.round(mid - off - TECH_GAS.w));                 // 왼쪽 — 오른 변이 광맥 끝에 닿는다
+  CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + off));        // 오른쪽 — 왼 변이 광맥 끝에 닿는다
+  // ⛽ 가스는 **광맥과 같은 줄**이다(2026-09-02 사용자 확정 · 본부 줄에서 내렸다).
+  //   맞추는 것은 중심이 아니라 **발치**다(CAMP_GAS_FOOT 설명) — 둘 다 바닥에 서 있는 물건이라
+  //   발이 같은 선에 있어야 한 줄로 읽힌다.
+  //   ⛔ 본부 행으로 되돌리지 말 것 — 「일직선으로 붙여」가 뜻을 잃는다.
+  TECH_GAS.r0 = Math.max(0, Math.round(campRow(CAMP_ROW_MINE) + CAMP_GAS_FOOT - TECH_GAS.h));
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -3493,6 +3702,8 @@ function campHideView(){
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
   campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
+  campUnpatchFieldSheet();                                        // 🗂 전장 프로필 감싸기 원복
+  campUnpatchMorph();                                             // 🧬 변태 감싸기 원복
   campUnpatchProduce(); campUnpatchArm();                  // 상한 문지기 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
@@ -3544,6 +3755,8 @@ function campEnter(){
   //   ⛔ campPatchRefinery·CAMP_REF_RES 는 지우지 않았다 — 되살릴 땐 이 줄을 되돌린다(유보 규칙).
   //   campPatchRefinery();
   campPatchResearch();                                 // 🔬 연구 구역이 시트를 쓸 차례를 가로챈다
+  campPatchFieldSheet();                               // 🗂 지정한 전장 유닛 프로필(⚠ 연구 구역 **뒤에** 걸어야 바깥이 된다)
+  campPatchMorph();                                    // 🧬 전장 유닛 변태(기지 유닛은 원본 그대로)
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
@@ -3927,13 +4140,21 @@ function campTapNeedTaps(n){
 //     화면에서 안 읽혔다. 정수로 세면 무엇이 늘었는지 바로 보인다.
 //   ⚠ 비용은 **탭보다 훨씬 비싸다**(아래 campGatCost) — 일꾼은 수가 늘고 저절로 캐기 때문이다.
 function campGatRaw(lv){ return campTapRaw(lv); }
-// 💰 채취 강화 비용 — **50 · 150 · 300 · 500 · 750 …** (2026-09-02 사용자 확정)
-//   ⭐ 차이가 100 · 150 · 200 … **50씩** 늘어난다 → 식은 **25n(n+1)**,
-//     즉 탭 비용(5n(n+1))의 **정확히 5배**다. 두 축이 같은 꼴이라 견주기 쉽다.
-//   ⛔ 앞서 「두 레벨마다 ×10」(50·250·500·2500·5000)을 넣었다가 **Lv10 이 250만**이 되어
-//     되돌렸다(2026-09-02) — 탭의 3,300배라 초반에 손도 못 댄다.
-function campGatCost(n){ return CAMP_GAT_COST0 * n * (n + 1) / 2; }
-const CAMP_GAT_COST0 = 50;      // 채취 0→1레벨 비용(옛 210) — 비용 = 25n(n+1) = COST0·n(n+1)/2
+// 💰 채취 강화 비용 — **세 레벨마다 ×10** (2026-09-02 사용자 확정)
+//   50 · 150 · 300 · 500 · 1500 · 3000 · 5000 · 1.5만 · 3만 · 5만 · 15만 …
+//   ⭐ Lv1 만 예외(50)이고, **Lv2 부터는 [150·300·500] 세 칸이 한 묶음**으로 묶음마다 ×10.
+//     레벨당 평균 ×2.15 — 옛 제곱 곡선(25n(n+1))보다 훨씬 가파르다.
+//   ⭐ 노림수는 **채취를 「끝없이 사는 축」에서 빼는 것**이다. 옛 곡선에서는 30분 판의
+//     수입 94.7% 가 채취 배수였고 레벨이 61 까지 올라갔다(실측 2026-09-02).
+//     성장은 터치 마일스톤(CAMP_TAP_MILES)과 던전 배수(CAMP_MINE)가 맡는다.
+//   ⛔ 「25n(n+1)」(제곱)으로 되돌리지 말 것 — 되돌리면 다시 채취 한 축이 판을 먹는다.
+//   ⚠ 성능 곡선(campGatRaw)은 **안 건드렸다** — 탭과 공유하므로 여기서 만지면 탭도 움직인다.
+const CAMP_GAT_COST0 = 50;              // 채취 0→1레벨 비용
+const CAMP_GAT_CYC = [150, 300, 500];   // Lv2 부터 세 칸 한 묶음 — 묶음이 넘어갈 때마다 ×10
+function campGatCost(n){
+  if(n <= 1) return CAMP_GAT_COST0;
+  const i = n - 2;
+  return CAMP_GAT_CYC[i % 3] * Math.pow(10, Math.floor(i / 3)); }
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
 const CAMP_HOLD_COST0 = 500;    // 홀드 0→1레벨 비용
@@ -4264,12 +4485,11 @@ if(typeof document !== 'undefined'){
       ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault();
       return;
     }
-    // 💎 모드가 꺼져 있을 때 광맥을 누르면 **채굴 모드를 켜 준다** — 옛 팝업을 여는 자리였다.
-    //   ⛔ openCampMine 은 지우지 않았다(업그레이드는 연구 구역으로 갔다 · 유보 규칙).
-    if(campMineHit(ev.clientX, ev.clientY)){
-      campPanMode(false);   // 🖐 광맥을 눌렀다 = '조작'이다(빈 바닥 탭·유닛/건물 탭과 같은 규칙)
-      campMineModeSet(true);
-      ev.stopPropagation(); if(ev.preventDefault) ev.preventDefault(); }
+    // 💎 **광맥을 눌러도 채굴 모드가 켜지지 않는다**(2026-09-02 사용자 확정).
+    //   들어가는 문은 「MY BASE」 요약판의 **채굴 버튼 하나뿐**이다(`[data-minemode]`).
+    //   ⛔ 여기서 campMineModeSet(true) 를 되살리지 말 것 — 광맥을 고르려고(3D 링) 눌렀을 뿐인데
+    //     모드가 켜져서, 그 뒤의 탭이 전부 채굴로 먹혔다. 켜는 문과 고르는 문을 갈라 둔다.
+    //   ⚠ 판정 함수 campMineHit 은 이걸로 유일한 호출자를 잃어 다락으로 갔다(ATTIC.md).
   }, true);
   // ⏱ 손을 떼면 홀드를 멈춘다 — 창 밖으로 나가거나 취소돼도 마찬가지다.
   for(const t of ['pointerup','pointercancel','pointerleave','blur'])
@@ -4293,20 +4513,6 @@ if(typeof document !== 'undefined'){
   }, true);
 }
 
-// 광맥을 눌렀나 — **판정만** 한다(캐지 않는다). campTapAt 의 앞부분과 같은 규약이다.
-// ⛔ 좌표 변환을 여기서 새로 짜지 말 것 — _btRect / _techS2W / _techMineralAt 를 그대로 쓴다.
-function campMineHit(clientX, clientY){
-  if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
-  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
-  if(G.tech.arm) return false;                      // 🧱 건물 배치 중에는 열지 않는다
-  const r = _btRect(); if(!r || !r.width || !r.height) return false;
-  const sx = (clientX - r.left) / r.width, sy = (clientY - r.top) / r.height;
-  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return false;
-  if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
-  const w = _techS2W(sx, sy);
-  const m = _techMineralAt(w.x, w.y);
-  return !!(m && m.amount > 0);
-}
 
 // ══ 💎 미네랄 채굴 판 (2026-08-27) ══════════════════════════════════════
 // 광맥을 누르면 **그 자리에서 캐지 않고** 이 판이 열린다.
@@ -5191,9 +5397,11 @@ const CAMP_UNIT_PRICE = {
   pelican:25000, aegis:20000, tank:35000, skyguard:35000, hellfire:50000, dreadnought:100000,
   // 스웜 (§3-A) — ⭐ 싸고 얇다. 인구 1짜리가 둘이라 머릿수로 민다
   snapper:4000, hydra:6000, stinger:8000, wyvern:16000, medusa:18000, ultralisk:55000, overlord:10000,
+  defiler:20000, venom:25000,                                   // 🧬 오염술사(생산) · 산성충(변태)
   // 에테리얼 (§3-B) — ⭐ 비싸고 두껍다(실드를 체력에 합쳐 본다)
   blade:12000, dragoon:18000, dark_templar:25000, falcon:22000, skydancer:30000, reaver:45000,
-  kronos:50000, archangel:90000, high_templar:20000, seraph:25000, observer:12000 };
+  kronos:50000, archangel:90000, high_templar:20000, seraph:25000, observer:12000,
+  dark_archon:25000 };                                          // 🧬 다크보이드(변태)
 // ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
 //   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
 const CAMP_UNIT_PRICE_MUL = 200;
