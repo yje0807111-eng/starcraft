@@ -363,12 +363,27 @@ const CAMP_RT_LINES = [
   {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul', ic:'skills/sk_recharge.webp', vk:'mul', ds:'자리를 비운 동안 쌓이는 수입이 {} 증가합니다.'},
   {k:'dgRw',     br:'econ',  grp:'다', gr:'보통', nm:'던전 보상',      f:'dgRewardMul', ic:'res_gem.webp', vk:'mul', ds:'던전을 깨고 받는 보상이 {} 증가합니다.'},
   {k:'tapMul',   br:'econ',  grp:'라', gr:'흔함', nm:'탭 배수',        f:'tapMul', ic:'skills/sk_nova.webp', vk:'mul', ds:'탭으로 얻는 미네랄이 {} 증가합니다.'},
+  // ⛏ 채굴 속도 — **옛 캠프 업그레이드('hold')를 여기로 옮겼다**(2026-09-02 사용자 확정).
+  //   값은 초 단위 **간격**이라 작을수록 좋다 — 사다리 0번은 「안 샀을 때」(0.8초)다.
+  //   ⛔ 옛 업그레이드 축(campUpgLv('hold') · CAMP_HOLD_STEP)으로 되돌리지 말 것. 두 벌이 되면 어긋난다.
+  //   ⚠ **「홀드는 연타보다 느려야 한다」는 옛 규칙이 여기서 폐기됐다**(사용자 확정) — 5차 0.02초는
+  //     초당 50회로, 연타 상한(CAMP_TAP_MIN_MS 90ms ≈ 초당 11회)의 4.5배다. 손으로 연타할 이유가 사라진다.
+  //     탭이 수입의 66% 라(HUNT_R1 §1-2-1) 밸런스를 다시 재야 한다 — BALANCE.md §5-A7.
+  {k:'holdMs',   br:'econ',  grp:'라', gr:'보통', nm:'채굴 속도', tn:['빠른 손','숙련공','기계식','자동화','완전 자동'],
+   f:'holdMs', ic:'skills/sk_stim.webp', vk:'sec',
+   lad:[0.8, 0.5, 0.3, 0.1, 0.06, 0.02], cs:[0, 50, 2500, 100000, 2500000, 10000000],
+   ds:'누르고 있을 때 캐는 간격이 {} 가 됩니다.'},
   {k:'gasEx',    br:'econ',  grp:'라', gr:'보통', nm:'가스 교환비',    f:'gasExMul', ic:'buildings/bld_assimilator.webp', vk:'mul', ds:'가스를 바꿀 때의 교환비가 {} 좋아집니다.'},
   // ── 갈래 ③ 아군 강화
   {k:'atk',      br:'army',  grp:'가', gr:'흔함', nm:'유닛 공격력',    f:'unitAtk', ic:'upgrades/up_inf_atk.webp', vk:'mul', ds:'아군 유닛의 공격력이 {} 증가합니다.'},
   {k:'hp',       br:'army',  grp:'가', gr:'보통', nm:'유닛 체력',      f:'unitHp', ic:'upgrades/up_gnd_arm.webp', vk:'mul', ds:'아군 유닛의 체력이 {} 증가합니다.'},
   {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul', ic:'upgrades/up_speed.webp', vk:'mul', ds:'유닛과 건물의 생산 속도가 {} 빨라집니다.'},
-  {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한',      f:'supAdd', ic:'res_pop.webp', vk:'sup', ds:'인구 상한이 {} 늘어납니다.'},
+  // 🏠 인구 상한 — 3차 · +50/+100/+200 (2026-09-02 사용자 확정). **보급소를 안 지어도 되게** 하는 축이다.
+  //   ⚠ 옛 값은 5차 10/30/80/200/500 에 공식 비용(8 → 52만)이었다. 사용자가 「초반에 바로 손이
+  //     닿아야 한다」고 보아 3차로 줄이고 값을 10/50/100 으로 **크게 낮췄다** — 최대치는 500 → 200 으로 내려갔다.
+  {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한', tn:['가건물','병영단지','주둔지'],
+   f:'supAdd', ic:'res_pop.webp', vk:'sup', mx:3, cs:[0,10,50,100],
+   ds:'보급소를 짓지 않아도 인구 상한이 {} 늘어납니다.'},
   {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc', ic:'buildings/bld_armory.webp', vk:'disc', ds:'업그레이드 비용이 {} 싸집니다.'},
   {k:'endure',   br:'army',  grp:'다', gr:'귀함', nm:'버팀',          f:'endure', ic:'upgrades/up_shield.webp', vk:'mul', ds:'치명타를 맞아도 체력 1로 버티는 일이 {} 늘어납니다.'},   // 구 rebuild — 로드 시 포인트 이관
   {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul', ic:'buildings/bld_cannon.webp', vk:'mul', ds:'아군 건물의 체력과 공격력이 {} 증가합니다.'},
@@ -602,8 +617,11 @@ function campTreePos(k, n){
   const L = campRtLine(k); if(!L || n <= 0) return { x:0, y:0 };
   const B = CAMP_TREE_BR[L.br]; if(!B) return { x:0, y:0 };
   if(campRtIsChain(L.br)){ const c = campRtChainPos(k + ':' + n); if(c) return c; }
-  const li = CAMP_RT_LINES.filter(x => x.br === L.br && x.grp === L.grp).indexOf(L);
-  const a = campTreeGpAng(L.br, L.grp) + (li - 0.5) * (CAMP_TREE_SPREAD / 3) * 0.46
+  // ⚠ 묶음 안 계열 수가 **둘로 고정이 아니다**(2026-09-02 에 econ/라 가 셋이 됐다).
+  //   옛 `(li - 0.5)` 는 둘일 때만 가운데가 맞는다 — 셋이면 한쪽으로 쏠려 이웃 묶음을 침범한다.
+  const sib = CAMP_RT_LINES.filter(x => x.br === L.br && x.grp === L.grp);
+  const li = sib.indexOf(L);
+  const a = campTreeGpAng(L.br, L.grp) + (li - (sib.length - 1) / 2) * (CAMP_TREE_SPREAD / 3) * 0.46
     + campTreeJit(k, n, 'a') * (CAMP_TREE_SPREAD / 3) * 0.30 * CAMP_TREE_JIT;
   const r = CAMP_TREE_R0 * (0.80 + (B.rk || 1) * 0.22) + (n - 1) * CAMP_TREE_RS
     + campTreeJit(k, n, 'r') * CAMP_TREE_RS * 0.34 * CAMP_TREE_JIT;
@@ -974,6 +992,7 @@ function campTreeVal(k, n){
   if(vk === 'cut')  return Math.round(CAMP_RT_CUT[i] * 100) + '%';
   if(vk === 'disc') return Math.round(CAMP_RT_DISC[i] * 100) + '%';
   if(vk === 'sup')  return '+' + CAMP_RT_SUP[i];
+  if(vk === 'sec')  return campRtLad(k)[i].toFixed(2) + '초';   // 간격 — **작을수록 좋다**
   if(vk === 'add')  return '+' + (i ? CAMP_RT_LADDER[i] : 0);
   if(vk === 'cnt')  return String(campRtLad(k)[i]);          // 총량 — 계열이 제 사다리(lad)를 갖는다
   const lad = campRtLad(k);
@@ -3317,8 +3336,11 @@ function campRestore(){
 // 🌳 「업그레이드 비용」 −20~−80% — 캠프가 값을 매기는 두 곳(campUpgCost · campCost)에 함께 건다.
 const CAMP_RT_DISC = [0, 0.20, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
 function campUpgDisc(){ const n = campRtHas('upCost'); return n > 0 ? (1 - CAMP_RT_DISC[Math.min(5, n)]) : 1; }
-const CAMP_RT_SUP = [0, 10, 30, 80, 200, 500];   // HUNT_R1 §4-5-3 — 공식이 아니라 표다
-function campSupAdd(){ const n = campRtHas('sup'); return n > 0 ? CAMP_RT_SUP[Math.min(5, n)] : 0; }
+// 🏠 인구 상한 사다리 — **3차가 끝이다**(2026-09-02 사용자 확정 · 옛 5차 10/30/80/200/500).
+//   ⛔ 길이를 바꾸면 CAMP_RT_LINES 의 sup 계열 mx·cs 도 같이 바꿀 것 — 어긋나면 살 수 있는데 값이 없다.
+const CAMP_RT_SUP = [0, 50, 100, 200];
+function campSupAdd(){ const n = campRtHas('sup');
+  return n > 0 ? CAMP_RT_SUP[Math.min(CAMP_RT_SUP.length - 1, n)] : 0; }
 function campApplySupCap(){ const add = campSupAdd();
   if(add > 0 && typeof G !== 'undefined' && G.tech) G.tech.supCap = (G.tech.supCap || 0) + add; }
 
@@ -3982,9 +4004,15 @@ const CAMP_HOLD_MIN   = 300;     // 하한 — 연타(≈초당 6회)보다 느�
 //     하한 0.3초 = 실효 초당 3.3탭으로 **연타(≈6탭)의 절반**이다(실측 30분 56만 vs 127만).
 //   ⚠ 장치는 살려 둔다 — 나중에 조이거나 풀 자리가 여기 하나여야 한다.
 const CAMP_HOLD_MUL   = 1;
+// ⛏ 홀드 간격 — **환생 트리 계열 'holdMs' 하나가 정한다**(2026-09-02 사용자 확정).
+//   ⛔ 옛 캠프 업그레이드('hold')로 되돌리지 말 것 — 값을 정하는 곳이 둘이 되면 반드시 어긋난다.
+//     옛 상수(CAMP_HOLD_STEP · CAMP_HOLD_MIN · campHoldLvMax)와 카드는 **유보로 남겨 두었다**.
+//   ⚠ 회차가 바뀌어도 안 지워진다 — 트리는 환생을 넘어 남는다(C.rbTree).
 function campHoldMs(){
-  const lv = (typeof campUpgLv === 'function') ? campUpgLv('hold') : 0;
-  return Math.max(CAMP_HOLD_MIN, CAMP_HOLD_MS0 - CAMP_HOLD_STEP * lv); }
+  const t = (typeof campRtHas === 'function') ? campRtHas('holdMs') : 0;
+  if(t > 0){ const lad = campRtLad('holdMs');
+    return lad[Math.min(lad.length - 1, t)] * 1000; }
+  return CAMP_HOLD_MS0; }
 let _campMineMode = false;       // 채굴 모드가 켜져 있나
 let _campHoldT = null, _campHoldPt = null, _campLastTap = 0;
 function campMineModeOn(){ return _campMineMode; }

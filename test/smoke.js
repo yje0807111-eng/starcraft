@@ -2309,11 +2309,17 @@ async function groupLobby(){
       // ① 비용 — 업그레이드·건물 둘 다 캠프가 값을 매긴다
       C.rbTree={};
       const up0=campUpgCost('tap'), bd0=campCost('bldg','barracks',0).m, sup0=campSupAdd();
-      C.rbTree={upCost:5, sup:5};
+      C.rbTree={upCost:5, sup:3};      // 🏠 인구 상한은 **3차가 끝**이다(2026-09-02)
       assert(Math.abs(campUpgDisc()-0.2)<1e-6,'업그레이드 할인 5차가 −80%가 아님: '+campUpgDisc());
       assert(campUpgCost('tap')<up0,'업그레이드 비용이 안 내려감');
       assert(campCost('bldg','barracks',0).m<bd0,'건물 비용이 안 내려감');
-      assert(sup0===0 && campSupAdd()===500,'인구 상한 5차가 +500이 아님: '+campSupAdd());
+      // 🏠 3차 · +50/+100/+200 (2026-09-02 사용자 확정 · 옛 5차 10/30/80/200/500)
+      //   ⭐ 「보급소를 안 지어도 되게」가 이 축의 뜻이라, 초반에 손이 닿는 값으로 낮췄다.
+      assert(sup0===0 && campSupAdd()===200,'인구 상한 3차가 +200이 아님: '+campSupAdd());
+      assert(campRtMax('sup')===3,'인구 상한이 3차가 아님: '+campRtMax('sup'));
+      { const c=[1,2,3].map(i=>campRtCost('sup',i));
+        assert(c.join(',')==='10,50,100','인구 상한 비용이 10/50/100 이 아님: '+c.join(','));
+        assert(campRtCost('sup',4)===Infinity,'3차 위를 살 수 있다'); }
       // ② 전투 값 — 공격력·체력·본부는 사다리 5차에서 ×25
       skipIf(typeof campEnterDungeon!=='function'||typeof campCombatStep!=='function','캠프 던전 없음');
       C.rbTree={};
@@ -4145,19 +4151,26 @@ async function groupLobby(){
       assert(CAMP_TAP_MIN_MS>=60 && CAMP_TAP_MIN_MS<=150,
         '연타 상한이 범위를 벗어났다('+CAMP_TAP_MIN_MS+'ms) — 너무 낮으면 매크로가, 너무 높으면 손맛이 죽는다');
       // ④ 홀드 간격 — **연타보다 느려야** 「편한 대신 느린」 선택지가 된다
-      assert(campHoldMs()>=CAMP_HOLD_MIN,'홀드 간격이 하한 아래다: '+campHoldMs());
-      assert(CAMP_HOLD_MIN > CAMP_TAP_MIN_MS*2,
-        '홀드 하한이 연타 상한에 너무 가깝다 — 홀드가 연타를 대체해 버린다');
-      // ⑤ 업그레이드로 줄어들고, **끝이 있다**
-      { const C=campState(); const u0=C.upg?JSON.stringify(C.upg):'{}';
-        const m0=campHoldMs();
-        C.upg=C.upg||{}; C.upg.hold=1;
-        assert(campHoldMs()<m0,'채굴 속도를 올렸는데 간격이 그대로다: '+m0+' → '+campHoldMs());
-        C.upg.hold=campHoldLvMax();
-        assert(campHoldMs()===CAMP_HOLD_MIN,'최대 레벨인데 하한이 아니다: '+campHoldMs());
-        G.tech.credit=1e9;
-        assert(!campUpgBuy('hold'),'최대 레벨인데 더 팔린다 — 연타보다 빨라진다');
-        C.upg=JSON.parse(u0); }
+      // ⑤ ⛏ 홀드 간격은 **환생 트리 계열 'holdMs' 하나가 정한다**(2026-09-02 사용자 확정)
+      //   ⛔ 옛 캠프 업그레이드('hold')로 되돌리지 말 것 — 정하는 곳이 둘이면 반드시 어긋난다.
+      //   ⚠ 「홀드는 연타보다 느려야 한다」는 옛 규칙은 **사용자 결정으로 폐기**됐다.
+      //     5차 0.02초 = 초당 50회로 연타 상한(초당 11회)의 4.5배다. 탭 밸런스를 다시 재야 한다.
+      { const C=campState(); const t0=JSON.stringify(C.rbTree||{}), u0=JSON.stringify(C.upg||{});
+        C.rbTree={}; C.upg={};
+        assert(campHoldMs()===CAMP_HOLD_MS0,'안 샀을 때 간격이 기본(0.8초)이 아니다: '+campHoldMs());
+        // ⛔ 옛 축을 올려도 **아무 일도 안 일어나야** 한다 — 그래야 단일 소스다
+        C.upg.hold=5;
+        assert(campHoldMs()===CAMP_HOLD_MS0,'옛 업그레이드가 아직 홀드 간격을 바꾼다: '+campHoldMs());
+        C.upg={};
+        const want=[800,500,300,100,60,20];
+        for(let i=1;i<=5;i++){ C.rbTree={holdMs:i};
+          assert(campHoldMs()===want[i],i+'차 간격이 '+want[i]+'ms 가 아님: '+campHoldMs()); }
+        C.rbTree={holdMs:5};
+        assert(campHoldMs()<CAMP_TAP_MIN_MS,'5차인데 연타보다 안 빠르다 — 사용자가 그렇게 정했다');
+        C.rbTree=JSON.parse(t0); C.upg=JSON.parse(u0); }
+      // 🗄 옛 카드는 **지우지 않고 유보**로 남아 있다(GAME_DIRECTION §5)
+      assert(typeof CAMP_RES_ATTIC!=='undefined' && CAMP_RES_ATTIC.some(x=>x.k==='hold'),
+        '옛 채굴 속도 카드를 지웠다 — 유보는 삭제가 아니다');
       // ⑤-1 🖐 손가락 이동의 뜻은 **자동 채굴이 시작됐는가**로 갈린다(2026-09-01 사용자 확정).
       //   시작 전에 밀면 = 화면 이동일 수 있다 → 접는다. 시작 뒤에 밀면 = 캐는 중이다 → 따라간다.
       //   ⛔ 둘을 하나로 합치지 말 것: 늘 끊으면 손끝 흔들림에 수급이 죽고, 늘 따라가면
@@ -4210,13 +4223,13 @@ async function groupLobby(){
       G.tech.credit=5e4;
       campResEnter('res');
       const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
-      // ① 네 줄 — 터치·채취·**채굴 속도**·정제소.
+      // ① 세 줄 — 터치·채취·정제소.
       //   ⛔ 정제소가 빠지면 자원 성장 중 하나만 자리가 달라진다(건물을 골라야만 올릴 수 있던 그 자리).
-      //   ⛏ 채굴 속도 = 누르고 있을 때의 간격(2026-08-27 · A+F).
+      //   ⛏ **채굴 속도는 2026-09-02 에 환생 트리로 옮겼다**(계열 'holdMs'). 여기 되돌리지 말 것.
       const nms=slots().map(x=>(x.querySelector('.cgName')||{}).textContent);
-      assert(nms.length===4,'자원 칸이 네 줄이 아니다: '+nms.join(','));
-      for(const need of ['정제소','채굴 속도'])
-        assert(nms.indexOf(need)>=0,need+' 가 자원 칸에 없다: '+nms.join(','));
+      assert(nms.length===3,'자원 칸이 세 줄이 아니다: '+nms.join(','));
+      assert(nms.indexOf('정제소')>=0,'정제소가 자원 칸에 없다: '+nms.join(','));
+      assert(nms.indexOf('채굴 속도')<0,'채굴 속도가 자원 칸에 되살아났다 — 트리로 옮겼다');
 
       // ② 정보판이 **현재 ▸ 다음**을 보여 준다
       { const v=body.querySelector('.cgVal');

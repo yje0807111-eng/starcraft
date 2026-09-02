@@ -39,6 +39,22 @@ function _campPeekNext(k, fn) {
   return v;
 }
 
+// 🗄 유보 — ⛏ 「채굴 속도」는 **환생 트리 계열 'holdMs' 로 옮겼다**(2026-09-02 사용자 확정).
+//   ⛔ 지우지 않는다(GAME_DIRECTION §5 「유보는 삭제가 아니다」). 화면에서만 뺐다.
+//   ⛔ 되살리지 말 것 — 되살리면 홀드 간격을 정하는 곳이 둘이 되어 반드시 어긋난다.
+//     되살리려면 js/19-camp.js 의 campHoldMs 도 같이 되돌려야 한다.
+const CAMP_RES_ATTIC = [
+  { k: 'hold', nm: '채굴 속도', ico: 'upgrades/up_mine',
+    why: '누르고 있을 때 캐는 간격',
+    now: () => (typeof campHoldMs === 'function') ? campHoldMs() / 1000 : 0.8,
+    next: () => { if(typeof campHoldMs !== 'function') return null;
+      if(campUpgLv('hold') >= campHoldLvMax()) return null;
+      return _campPeekNext('hold', () => campHoldMs()) / 1000; },
+    unit: '초', dec: 2,
+    lock: () => (typeof campHoldLvMax === 'function') && campUpgLv('hold') >= campHoldLvMax(),
+    lockWhy: '최대 — 더 줄이면 연타보다 빨라집니다' },
+];
+
 // ── 📋 자원 칸 항목 표 ───────────────────────────────────────────────────
 // ⭐ **한 줄이 곧 슬롯 하나**다. 값·다음값·설명을 전부 여기서 정하고, 그리는 쪽은 이 표만 읽는다.
 //   ⚠ 정제소가 여기 있는 것이 이번 이동의 핵심이다 — 예전엔 정제소 **건물**의 연구 카드였다.
@@ -54,17 +70,6 @@ const CAMP_RES_ITEMS = [
     now: () => (typeof campGatherMul === 'function') ? campGatherMul() : 1,
     next: () => _campPeekNext('gather', () => campGatherMul()),
     unit: '배', dec: 2 },
-  // ⛏ 채굴 속도 — 누르고 있을 때의 간격을 줄인다(js/19-camp.js campHoldMs).
-  //   ⚠ **끝이 있는 축**이다: 하한 300ms 에 닿으면 「최대」로 잠긴다(연타보다 빨라지면 안 된다).
-  { k: 'hold', nm: '채굴 속도', ico: 'upgrades/up_mine',
-    why: '누르고 있을 때 캐는 간격',
-    now: () => (typeof campHoldMs === 'function') ? campHoldMs() / 1000 : 0.8,
-    next: () => { if(typeof campHoldMs !== 'function') return null;
-      if(campUpgLv('hold') >= campHoldLvMax()) return null;
-      return _campPeekNext('hold', () => campHoldMs()) / 1000; },
-    unit: '초', dec: 2,
-    lock: () => (typeof campHoldLvMax === 'function') && campUpgLv('hold') >= campHoldLvMax(),
-    lockWhy: '최대 — 더 줄이면 연타보다 빨라집니다' },
   { k: 'refinery', nm: '정제소', ico: 'buildings/bld_refinery',
     why: '정제소가 스스로 캐는 가스',
     now: () => (typeof campGasPerMin === 'function') ? campGasPerMin() : 0,
