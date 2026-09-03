@@ -1,0 +1,64 @@
+<!doctype html><meta charset="utf-8"><title>룬 색 3군</title>
+<style>
+  body{margin:0;background:#07090d;color:#cdd6e2;font:12px/1.5 system-ui,'Malgun Gothic',sans-serif;padding:18px}
+  h1{font-size:14px;color:#8b95a5;letter-spacing:.1em;margin:0 0 4px;font-weight:600}
+  .sub{font-size:11px;color:#6f7986;margin-bottom:16px}
+  h2{font-size:11px;color:#6f7986;letter-spacing:.14em;margin:20px 0 8px;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .cell{background:#000;border:1px solid #1b2129;border-radius:3px;padding:9px 5px 7px;text-align:center}
+  .nm{margin-top:5px;font-size:10.5px;color:#e6ecf4}
+  .de{font-size:9.5px;color:#7e8896}
+  .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+  .small{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:4px}
+</style>
+<h1>룬 색 — 효과군 3색으로 좁힌 안</h1>
+<div class="sub">경제 <span class="sw" style="background:#7effc9"></span>민트 &nbsp;·&nbsp; 전투 <span class="sw" style="background:#ffa3b8"></span>분홍 &nbsp;·&nbsp; 구조·속도 <span class="sw" style="background:#e6eef8"></span>은백</div>
+<h2>11종</h2><div class="grid" id="g1"></div>
+<h2>판 4색 × 군 3색 — 궁합 확인</h2><div class="grid" id="g2"></div>
+<h2>실제 칸 크기(36px)로 줄이면</h2><div class="grid" id="g3"></div>
+<script>
+const G = {
+  // 🔹 범주를 강제로 벌린다 — 같은 범주가 둘이면 24px 에서 합쳐진다
+  tap:   `<path d="M32 10 v22 M23 25 l9 11 9-11"/><path d="M20 45 h24 M25 52 h14"/>`,
+  gas:   `<path d="M21 24 h9 v28 h-9z M34 24 h9 v28 h-9z"/><path d="M25 18 v-7 M38 18 v-7"/>`,
+  pop:   `<path d="M32 10 l9 11 h-18z"/><path d="M17 27 l7 9 h-14z M47 27 l7 9 h-14z"/><path d="M12 48 h40"/>`,
+  atk:   `<path d="M32 8 l8 13 -8 9 -8-9z"/><path d="M32 30 v22"/><path d="M19 35 h26"/>`,
+  aspd:  `<path d="M14 20 v24 M24 14 v36 M34 20 v24 M44 14 v36 M54 24 v16"/>`,
+  hp:    `<path d="M32 8 l18 9 v13 l-18 26 -18-26V17z"/>`,
+  heal:  `<path d="M26 12 h12 v14 h14 v12 h-14 v14 h-12 v-14 h-14 v-12 h14z"/>`,
+  speed: `<path d="M14 10 h36 l-18 22 18 22 h-36 l18-22z"/>`,
+  wspd:  `<path d="M22 32 h24 M34 20 l12 12 -12 12"/><path d="M8 24 h10 M6 32 h10 M8 40 h10"/>`,
+  fever: `<path d="M32 54 v-18"/><path d="M32 34 l-14-14 M32 34 l14-14"/><path d="M18 20 l-6-8 M46 20 l6-8"/>`,
+  mapg:  `<path d="M32 8 l15 15 -15 15 -15-15z"/><path d="M32 40 l11 11 -11 11 -11-11z"/>`
+};
+const C = { tap:"#7effc9", gas:"#7effc9", mapg:"#7effc9", fever:"#7effc9",
+            atk:"#ffa3b8", aspd:"#ffa3b8", hp:"#ffa3b8", heal:"#ffa3b8",
+            pop:"#e6eef8", speed:"#e6eef8", wspd:"#e6eef8" };
+const N = { tap:["손끝","탭 획득"], gas:["정제","가스"], pop:["증원","인구"],
+  atk:["힘","공격력"], aspd:["연타","공속"], hp:["수호","체력"], heal:["치유","회복"],
+  speed:["가속","진행속도"], wspd:["신속","일꾼속도"], mapg:["전리품","유즈맵"], fever:["열기","피버"] };
+const glyph = (k,s) => `<svg viewBox="0 0 64 64" width="${s}" height="${s}">
+  <g fill="none" stroke="${C[k]}" stroke-width="4.5" stroke-linecap="square" stroke-linejoin="miter"
+     style="filter:drop-shadow(0 0 4px ${C[k]})">${G[k]}</g></svg>`;
+document.getElementById("g1").innerHTML = Object.keys(N).map(k =>
+  `<div class="cell">${glyph(k,58)}<div class="nm">${N[k][0]}의 룬</div><div class="de">${N[k][1]}</div></div>`).join("");
+const hexPts = (cx,cy,r) => { const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((cx+r*Math.cos(a)).toFixed(1)+","+(cy+r*Math.sin(a)).toFixed(1)); } return q.join(" "); };
+const BAND = [["#9aa4b0","#20242a","하급"],["#5cd6ff","#16242e","중급"],["#ffcf6b","#2a2318","상급"],["#c98bff","#241a2e","유니크"]];
+const tile = (bi,k,S) => { const [col,face,tx]=BAND[bi]; return `<svg viewBox="0 0 100 100" width="${S}" height="${S}">
+   <polygon points="${hexPts(50,50,46)}" fill="#12161c" stroke="#3b444f" stroke-width="3.5"/>
+   <polygon points="${hexPts(50,50,37)}" fill="${face}" stroke="${col}" stroke-width="3.5"
+     style="filter:drop-shadow(0 0 5px ${col})"/>
+   <g transform="translate(50 50) scale(0.72) translate(-32 -32)" fill="none" stroke="${C[k]}"
+      stroke-width="5" stroke-linecap="square" stroke-linejoin="miter"
+      style="filter:drop-shadow(0 0 3px ${C[k]})">${G[k]}</g></svg>`; };
+document.getElementById("g2").innerHTML = [0,1,2,3].map(bi => {
+  const ks=["tap","atk","pop","fever"];
+  return `<div class="cell">${ks.map(k=>tile(bi,k,44)).join("")}<div class="nm">${BAND[bi][2]}</div>
+    <div class="de">민트·분홍·은백·민트</div></div>`; }).join("");
+document.getElementById("g3").innerHTML = [0,1,2,3].map(bi => {
+  const ks=["tap","gas","atk","aspd","hp","pop","speed","fever"];
+  return `<div class="cell"><div class="small">${ks.slice(0,4).map(k=>tile(bi,k,36)).join("")}</div>
+    <div class="small">${ks.slice(4).map(k=>tile(bi,k,36)).join("")}</div>
+    <div class="nm">${BAND[bi][2]}</div></div>`; }).join("");
+</script>

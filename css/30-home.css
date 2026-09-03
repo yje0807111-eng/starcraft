@@ -2403,7 +2403,10 @@
 #campRune .rnHead{display:flex;align-items:center;justify-content:space-between;
   padding:8px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
   background:rgba(255,255,255,.03);font-size:12px;color:#98a2b3}
-#campRune .rnHead b{color:#eef1f6;font-size:14px}
+#campRune .rnHead b{color:#eef1f6;font-size:14px;display:inline-flex;align-items:center;gap:4px}
+/* 💠 재화 아이콘(resIco)은 **쓰는 자리가 크기를 준다** — .ri 자체에는 기본 크기가 없다.
+   ⛔ 크기를 안 주면 폭 100% 로 부풀어 판을 통째로 덮는다(2026-09-04 실측). 숫자 높이에 맞춘다. */
+#campRune .rnHead b .ri{width:14px;height:14px;flex:none;display:block;object-fit:contain}
 
 #campRune .rnSec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
   background:rgba(255,255,255,.03);padding:8px}
@@ -2506,4 +2509,13 @@
   color:#c3ccd8;font-family:inherit;font-size:11px}
 #campRune .rnBuy:disabled{opacity:.42;cursor:default}
 #campRune .rnBuy b{color:var(--rg);font-weight:600}
-#campRune .rnBuy u{text-decoration:none;color:#c98bff;font-size:11px}
+#campRune .rnBuy u{text-decoration:none;color:#c98bff;font-size:11px;
+  display:inline-flex;align-items:center;gap:3px}
+#campRune .rnBuy u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
+
+/* 🔷 룬 그림 — 판(등급 색)까지 들어 있는 한 장이다(assets/icons/rune/ · 2026-09-04).
+   ⛔ 여기에 테두리·배경·둥근 모서리를 주지 말 것 — 그림이 이미 육각 판을 갖고 있다.
+   ⚠ 크기는 **쓰는 자리가 정한다**(재화 아이콘과 같은 규칙). */
+#campRune .rnBi{width:34px;height:34px;display:block;margin:0 auto 2px;object-fit:contain}
+#campRune .rnBuyI{width:30px;height:30px;display:block;margin:0 auto 1px;object-fit:contain}
+#campRune .rnIi{width:26px;height:26px;flex:none;object-fit:contain}

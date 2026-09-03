@@ -2089,6 +2089,10 @@ async function groupLobby(){
   //     ③ 효과는 **합**이다 ④ 젬으로 산 것은 **환생해도 남는다**.
   //   ⛔ 이 넷 중 하나라도 무너지면 젬이 곧 지수 축이 된다(GEM.md §6 · 이 시스템의 전제).
   await step('룬: 칸은 최대 도달 라운드가 연다 (젬으로는 못 연다)', async()=>{
+    // 🔧 **확인용 스위치를 끈다** — CAMP_RUNE_FREE 는 「룬을 다 갖고 칸도 다 열린」 문이라,
+    //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
+    //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
+    if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
     skipIf(typeof campRuneSlots!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
@@ -2120,6 +2124,10 @@ async function groupLobby(){
   });
 
   await step('룬: 젬으로만 사고 · 보유한 만큼만 끼운다', async()=>{
+    // 🔧 **확인용 스위치를 끈다** — CAMP_RUNE_FREE 는 「룬을 다 갖고 칸도 다 열린」 문이라,
+    //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
+    //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
+    if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
     skipIf(typeof campRuneBuy!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
@@ -2161,6 +2169,10 @@ async function groupLobby(){
   });
 
   await step('룬: 효과는 합이다 (곱이 아니다)', async()=>{
+    // 🔧 **확인용 스위치를 끈다** — CAMP_RUNE_FREE 는 「룬을 다 갖고 칸도 다 열린」 문이라,
+    //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
+    //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
+    if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
     skipIf(typeof campRuneEff!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
@@ -2211,6 +2223,10 @@ async function groupLobby(){
   //     ③ 일꾼 속도는 **캠프에서만**(건설 판은 관리자 탭과 공유다)
   //     ④ 유즈맵 보상은 재화만 — **젬에는 안 걸린다**(젬으로 산 룬이 젬을 찍으면 인쇄기다)
   await step('룬 배선: 끼운 룬이 수입·전투·속도에 실제로 닿는다', async()=>{
+    // 🔧 **확인용 스위치를 끈다** — CAMP_RUNE_FREE 는 「룬을 다 갖고 칸도 다 열린」 문이라,
+    //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
+    //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
+    if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
     skipIf(typeof campRuneEff!=='function'||typeof campRuneMul!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepR=JSON.parse(JSON.stringify(C.rune||{})), keepB=JSON.parse(JSON.stringify(C.best||{}));
@@ -2223,10 +2239,12 @@ async function groupLobby(){
     // ⭐ **모아서 한 번에 알린다.** 배선이 여럿이라 첫 줄에서 멈추면 나머지는 재지도 못한다 —
     //   레드 테스트 한 번으로 전부 덮으려면 실패를 모아야 한다.
     const chk=(ok,msg)=>{ if(!ok) bad.push(msg); };
+    // ⚠ **칸마다 들어갈 갈래가 정해져 있다**(2026-09-04) — 아무 빈 칸이나 잡으면 안 끼워진다.
     const put=(id,gd)=>{ const k=runeKey(id,gd); const R=campRuneState();
       R.own[k]=(R.own[k]|0)+1;
       const kind=(runeParse(k).def.kind==='uniq')?'uniq':'norm';
-      const n=campRuneSlots(kind); for(let i=0;i<n;i++) if(!R[kind][i]) return campRuneEquip(kind,i,k)&&k;
+      const n=campRuneSlots(kind);
+      for(let i=0;i<n;i++) if(!R[kind][i] && campRuneCanEquip(kind,i,k)) return campRuneEquip(kind,i,k)&&k;
       return false; };
     const clear=()=>{ C.rune={}; campRuneState(); if(typeof campRuneTouch==='function') campRuneTouch(); };
     try{
@@ -2263,14 +2281,42 @@ async function groupLobby(){
             '정제의 룬이 가스에 안 걸린다: '+r0.toFixed(3)+' → '+campGasPerMin().toFixed(3)+'(기대 '+want.toFixed(3)+')');
         } finally { window.campHasRefinery=realHas; }
         clear(); }
-      // ④ 👥 증원의 룬 — 인구 상한. **트리 몫을 더한 뒤** 비율이 얹혀야 한다
-      if(typeof campApplySupCap==='function' && typeof G!=='undefined' && G.tech){
-        const c0=G.tech.supCap||0;
-        try{ G.tech.supCap=100; campApplySupCap(); const base=G.tech.supCap;
-          G.tech.supCap=100; put('pop','high'); campApplySupCap();
-          const want=Math.floor(base*(1+runeVal(runeKey('pop','high'))));
-          chk(G.tech.supCap===want,'증원의 룬이 인구 상한에 안 걸린다: '+G.tech.supCap+' (기대 '+want+')');
-        } finally { G.tech.supCap=c0; }
+      // ④ 🆕 **2026-09-04 에 들어온 넷** — 채굴 · 윤회 · 열정 · 절약.
+      //   ⚠ 「증원의 룬」(인구 상한)은 같은 날 뺐다 — 환생 구역에서 200 을 그냥 찍을 수 있어
+      //     룬으로 1~5% 를 더하는 것이 의미가 없었다.
+      // ⛏ 채굴의 룬 — 일꾼이 한 번에 캐는 양(손끝의 룬과 **다른 자리**다)
+      if(typeof campGatherMul==='function'){
+        const g0=campGatherMul();
+        put('mine','high'); const wM=1+runeVal(runeKey('mine','high'));
+        chk(Math.abs(campGatherMul()/g0-wM)<1e-9,
+          '채굴의 룬이 채취량에 안 걸린다: ×'+(campGatherMul()/g0).toFixed(3));
+        clear(); }
+      // 🔁 윤회의 룬 — 환생 포인트 획득
+      if(typeof campRebPtGain==='function'){
+        const q0=campRebPtGain();
+        skipIf(!(q0>0),'번 재화가 0 이라 환생 포인트를 못 잰다');
+        put('reb','high'); const wR=1+runeVal(runeKey('reb','high'));
+        chk(Math.abs(campRebPtGain()/q0-wR)<1e-6,
+          '윤회의 룬이 환생 포인트에 안 걸린다: ×'+(campRebPtGain()/q0).toFixed(3));
+        clear(); }
+      // ⚡ 열정의 룬 — 피버 **획득량(배수)**. ⚠ 열기의 룬(확률)과 **다른 자리**여야 한다.
+      if(typeof campFevMul==='function'){
+        const m0=campFevMul();
+        put('fevg','high'); const wV=1+runeVal(runeKey('fevg','high'));
+        chk(Math.abs(campFevMul()/m0-wV)<1e-9,
+          '열정의 룬이 피버 배수에 안 걸린다: ×'+(campFevMul()/m0).toFixed(3));
+        // ⛔ 확률까지 함께 오르면 두 자리에 걸린 것이다(표기가 거짓말이 된다)
+        clear(); }
+      // 💰 절약의 룬 — **유일한 감소형**이라 뚜껑이 있다(RUNE_COST_CAP)
+      if(typeof campUpgDisc==='function' && typeof RUNE_COST_CAP!=='undefined'){
+        const d0=campUpgDisc();
+        put('cost','uniq');
+        const d1=campUpgDisc();
+        chk(d1<d0,'절약의 룬이 비용에 안 걸린다: '+d0.toFixed(4)+' → '+d1.toFixed(4));
+        // ⛔ 뚜껑을 넘지 않는다 — 유니크 칸을 다 절약으로 채워도
+        put('cost','uniq'); put('cost','uniq'); put('cost','uniq');
+        chk(campRuneEff('costCut')<=RUNE_COST_CAP+1e-9,
+          '비용 감소가 뚜껑을 넘었다: '+campRuneEff('costCut')+' > '+RUNE_COST_CAP);
         clear(); }
       // ⑤⑧ ⚔💚 전장이 있어야 재는 것들 — 유닛 스탯과 회복량
       if(typeof campEnterDungeon==='function' && typeof campScaleAllies==='function'){
@@ -2354,8 +2400,8 @@ async function groupLobby(){
       // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
       if(typeof umFirstRw==='function'){
         const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
-        put('mapg','uniq'); const r1=umFirstRw('normal');
-        const want=1+runeVal(runeKey('mapg','uniq'));
+        put('mapg','high'); const r1=umFirstRw('normal');
+        const want=1+runeVal(runeKey('mapg','high'));   // ⚠ 2026-09-04 에 유니크 → 일반(성장 갈래)
         chk(r1.pcoin>r0.pcoin,'전리품의 룬이 유즈맵 재화에 안 걸린다');
         chk(Math.abs(r1.pcoin/r0.pcoin-want)<0.02,'유즈맵 재화 배수가 다르다: ×'+(r1.pcoin/r0.pcoin).toFixed(3));
         chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
@@ -2371,6 +2417,10 @@ async function groupLobby(){
 
   // 💠 룬 화면 — 네비 칸과 화면이 실제로 붙어 있는가(구조만 본다)
   await step('룬 구역: 네비 다섯 칸 · 화면이 열리고 잠긴 칸에 이유가 있다', async()=>{
+    // 🔧 **확인용 스위치를 끈다** — CAMP_RUNE_FREE 는 「룬을 다 갖고 칸도 다 열린」 문이라,
+    //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
+    //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
+    if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
     skipIf(typeof campRuneEnter!=='function'||typeof NAV_TREE==='undefined','룬 구역 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
@@ -2466,12 +2516,23 @@ async function groupLobby(){
         campRuneBagTap(k);
         assert(campRuneState().norm[1]===k,'두 번째도 빈 칸을 찾아 끼워야 한다');
         // 👆 칸을 고르면 **그 칸에** 끼운다(자동이 아니라)
-        R.own[runeKey('hp','low')]=1;
+        // ⚠ 칸 4 는 **첫 성좌(경제)** 다 — 갈래가 맞는 룬을 골라야 들어간다(아래 ⑤ 에서 잠근다)
+        R.own[runeKey('gas','low')]=1;
         campRunePick('norm',4); await sleep(30);
         assert(_runePickKind==='norm'&&_runePick===4,'칸이 안 골라진다');
-        campRuneBagTap(runeKey('hp','low'));
-        assert(campRuneState().norm[4]===runeKey('hp','low'),
+        campRuneBagTap(runeKey('gas','low'));
+        assert(campRuneState().norm[4]===runeKey('gas','low'),
           '고른 칸에 안 끼워졌다: '+campRuneState().norm[4]);
+        // ⑤ 🗺 **성좌마다 들어갈 갈래가 정해져 있다**(2026-09-04 사용자 확정).
+        //   ⛔ 아무 칸에나 아무 룬을 끼우게 되돌리지 말 것 — 한 성좌 안에서 색이 섞인다.
+        { R.own[runeKey('atk','low')]=1;
+          assert(!campRuneCanEquip('norm',4,runeKey('atk','low')),
+            '경제 성좌에 전투 룬이 들어간다 — 갈래 제약이 풀렸다');
+          const iw = RUNE_GRPS.indexOf('war')*RUNE_CONS;
+          assert(campRuneCanEquip('norm',iw,runeKey('atk','low')),
+            '전투 성좌에 전투 룬이 안 들어간다: 칸 '+iw);
+          assert(runeSlotGrp(4)==='eco' && runeSlotGrp(iw)==='war',
+            '성좌 갈래 순서가 어긋났다'); }
         // ⛔ 갈래가 다르면 안 들어간다
         R.own[runeKey('speed','uniq')]=1; campRunePick('norm',5); await sleep(20);
         campRuneBagTap(runeKey('speed','uniq'));
@@ -2481,7 +2542,26 @@ async function groupLobby(){
       campRuneEnter('shop'); await sleep(60);
       const buys=el.querySelectorAll('.rnBuy');
       assert(buys.length>=RUNE_LIST.length,'룬 상점에 살 것이 없다: '+buys.length);
-      assert(/💎/.test(el.textContent),'룬 상점에 젬 값이 안 적혀 있다');
+      // 💠 **젬은 공용 아이콘이다**(2026-09-04 사용자 확정 · CLAUDE.md 「재화 아이콘」).
+      //   ⛔ 💎 이모지로 되돌리지 말 것 — 상단 재화 바·상점과 그림이 달라진다.
+      { const box=document.getElementById('rnBody');
+        const gi=box.querySelectorAll('img.ri[src*="res_gem"]');
+        assert(gi.length>=buys.length,'젬 아이콘이 모자라다(resIco 를 안 쓴 자리가 있다): '
+          +gi.length+' / 버튼 '+buys.length);
+        assert(!/💎/.test(box.textContent),'룬 상점에 💎 이모지가 남아 있다 — resIco 로 바꿀 것');
+        // 📜 **스크롤은 젬 상점과 같은 규격**이다(2026-09-04 사용자 확정 · CLAUDE.md 「세로 스크롤바」).
+        //   ⛔ 전용 스크롤바나 드래그 장치를 새로 만들지 말 것 — 화면마다 굵기가 달라진다.
+        //   ⚠ 이 클래스가 빠지면 브라우저 기본 막대가 **굵게** 뜬다(그게 원래 증상이었다).
+        assert(box.classList.contains('uiScroll'),
+          '룬 상점이 공용 스크롤바를 안 쓴다 — 굵은 기본 막대가 뜬다');
+        { const gem=document.querySelector('#shopBody');
+          if(gem) assert(gem.classList.contains('uiScroll'),
+            '젬 상점이 .uiScroll 을 안 쓴다 — 두 상점의 규격이 갈라졌다'); }
+        assert(getComputedStyle(box).overflowY==='auto',
+          '룬 상점이 안 넘어간다(휠·손가락 둘 다 죽는다): '+getComputedStyle(box).overflowY); }
+      // 🖱 휠은 목록의 것이다 — ⛔ 뒤 캠프 맵이 확대·축소되면 안 된다(시트·드롭다운과 같은 규칙)
+      assert(/campRune/.test(String(campPatchWheel)),
+        '캠프 휠 캡처가 구역 화면을 안 비켜 준다 — 룬 상점에서 굴리면 뒤 맵이 확대된다');
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');

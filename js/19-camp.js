@@ -287,7 +287,8 @@ function campRebMulGain(){
 function campRebPtGain(){
   const base = Math.sqrt(campWealth() / CAMP_REB_COST);
   return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
-    * campPackRebPt(); }   // 💳 환생 팩
+    * campPackRebPt()                                     // 💳 환생 팩
+    * ((typeof campRuneMul === 'function') ? campRuneMul('rebPts') : 1); }   // 💠 윤회의 룬
 // 💠 **가속의 룬 — 프레임 시간 배수.** ⛔ 부르는 곳은 `campFrame` 한 곳뿐이다.
 //   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
 //   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
@@ -3918,9 +3919,14 @@ function campRestore(){
 // 🌳 「업그레이드 비용」 −20~−80% — 캠프가 값을 매기는 두 곳(campUpgCost · campCost)에 함께 건다.
 const CAMP_RT_DISC = [0, 0.20, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
 // 🚪 마디 몫은 **할인율에 곱한다**. ⛔ 0.95 를 넘기지 말 것 — 1 이면 업그레이드가 공짜가 된다.
-function campUpgDisc(){ const n = campRtHas('upCost'); if(n <= 0) return 1;
-  const d = Math.min(0.95, CAMP_RT_DISC[Math.min(5, n)] * campRtNodeMul('upCost'));
-  return 1 - d; }
+// 💰 업그레이드 할인 — **깎아 주는 것은 전부 여기 한 곳을 지난다.**
+//   💠 절약의 룬(costCut)이 여기 얹힌다. ⚠ 그 룬은 **유일한 감소형**이라 뚜껑이 있다
+//     (RUNE_COST_CAP · 유니크 3칸 × 0.5% = 1.5%). ⛔ 다른 곳에서 같은 축을 또 깎지 말 것.
+function campUpgDisc(){
+  const rc = (typeof campRuneEff === 'function') ? campRuneEff('costCut') : 0;
+  const n = campRtHas('upCost');
+  const d0 = (n > 0) ? Math.min(0.95, CAMP_RT_DISC[Math.min(5, n)] * campRtNodeMul('upCost')) : 0;
+  return 1 - Math.min(0.95, d0 + rc); }
 // 🏠 인구 상한 사다리 — **3차가 끝이다**(2026-09-02 사용자 확정 · 옛 5차 10/30/80/200/500).
 //   ⛔ 길이를 바꾸면 CAMP_RT_LINES 의 sup 계열 mx·cs 도 같이 바꿀 것 — 어긋나면 살 수 있는데 값이 없다.
 const CAMP_RT_SUP = [0, 50, 100, 200];
@@ -4617,7 +4623,12 @@ function campFevPct(){
   const rm = (typeof campRuneMul === 'function') ? campRuneMul('fever') : 1;
   return Math.min(1, CAMP_FEV_PCT[campFevLv('fevPct')] * rm * campRtNodeMul('fevPct')); }
 // 🚪 마디 몫은 **곱**이다(campRtNodeMul) — 배수·초는 기준이 1 이 아니다
-function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')] * campRtNodeMul('fevMul'); }
+// ⚡ 피버 배수 — 💠 **열정의 룬**이 여기 곱해진다(2026-09-04 사용자 확정).
+//   ⚠ 예전엔 「배수에 룬을 걸면 피버가 상시 배수가 된다」고 막아 두었다. 지금 여는 전제는
+//     **피버를 짧게·약하게·확률 낮게·쿨 길게** 유지한다는 것이다.
+//     ⛔ 그 전제가 깨지면(피버가 길어지거나 흔해지면) 이 곱부터 다시 잰다.
+function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')] * campRtNodeMul('fevMul')
+  * ((typeof campRuneMul === 'function') ? campRuneMul('fevGain') : 1); }
 function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')] * campRtNodeMul('fevSec'); }
 function campFevActive(){ return campFevOn() && Date.now() < _campFevEnd; }
 function campFevLeft(){ return Math.max(0, (_campFevEnd - Date.now()) / 1000); }
@@ -4672,8 +4683,13 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   //   💠 ⚠ **채취에 걸리는 룬은 이제 없다**(2026-09-03). 「재화의 룬」이 여기 합산 항으로
   //     들어왔는데, 손끝의 룬을 품고 있어서 지웠다. 채취를 올리는 룬을 새로 만들 거라면
   //     ⛔ 탭까지 겹치게 만들지 말 것 — 같은 실수를 되풀이한다.
+  // 💠 **채굴의 룬**(2026-09-04) — 위 주석이 「채취에 걸리는 룬은 이제 없다」고 했던 자리다.
+  //   ⭐ 되살린 것이 아니라 **다른 룬**이다: 옛 「재화의 룬」은 탭까지 품어서 지웠고,
+   //     이것은 일꾼 왕복에만 닿는다(손끝의 룬과 겹치지 않는다).
+  //   ⚠ 곱 항으로 들어간다 — 합산 항(campGatRaw)은 **정수 곡선**이라 1~5% 를 더할 수 없다.
   return (campGatRaw(lv) + campPackGather())
-    * campMineMul() * campRebMul() * campRtMul('gather'); }
+    * campMineMul() * campRebMul() * campRtMul('gather')
+    * ((typeof campRuneMul === 'function') ? campRuneMul('mine') : 1); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).
 //   ⭐ 왜 모드인가 — 광맥은 화면의 5% 뿐이라 손끝이 자꾸 일꾼·건물·바닥을 눌렀다.
@@ -5725,6 +5741,11 @@ function campPatchWheel(){
     //   목록이 아니라 **뒤 캠프 화면이 확대·축소됐다**. 시트와 같은 이유·같은 처리다.
     if(inside(document.getElementById('campDrop'))) return;
     if(inside(document.getElementById('curBar'))) return;
+    // 🔁🌳💠 **캠프 위에 덮이는 구역 화면들도 존중한다**(2026-09-04 · 시트·드롭다운과 같은 이유).
+    //   이 화면들은 #phone 직속(z-index 120)이라 맵 위를 덮는데, 좌표는 맵 안이다.
+    //   그래서 여기서 안 빠지면 **룬 상점에서 휠을 굴릴 때 목록이 아니라 뒤 캠프가 확대됐다.**
+    for(const id of ['campRune', 'campReb', 'campTree'])
+      if(inside(document.getElementById(id))) return;
     const r = _btRect(); if(!r || !r.width) return;
     if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     techWheel(e);
