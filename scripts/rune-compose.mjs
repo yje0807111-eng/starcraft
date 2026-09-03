@@ -34,7 +34,9 @@ const has = k => argv.includes('--' + k);
 const SRC   = path.resolve(ROOT, 'docs/mock/rune');
 const OUT   = path.resolve(ROOT, 'assets/icons/rune');
 const SIZE  = +opt('size', 128);
-const SCALE = +opt('scale', 0.44);          // **잘라낸 문양**의 폭 ÷ 판 폭
+// 📐 0.44 → 0.64 (2026-09-04 사용자 지적: 「룬과 칸 사이 검은 여백」 — 문양이 판에 비해 작아 안쪽 검은 면이
+//   넓게 남았다. 성좌 칸 실제 크기(44px)에서 0.44/0.56/0.66 을 나란히 보고 정했다 — 0.66 도 테두리에 안 닿는다).
+const SCALE = +opt('scale', 0.64);          // **잘라낸 문양**의 폭 ÷ 판 폭
 // ⬆ **눈으로 보는 가운데는 기하학적 가운데보다 조금 위다.**
 //   문양을 픽셀 단위로 정확히 중앙에 놓아도(실측 위 36 / 아래 36) 아래로 처져 보인다 —
 //   손끝의 룬처럼 아래쪽에 가로줄이 있는 글리프는 무게가 아래에 쏠리기 때문이다.
@@ -50,7 +52,7 @@ const ONLY  = opt('only', '');
 const TWEAK = {
   hp:    { dy: +0.014 },   // 역삼각이라 무게가 위에 쏠려 떠 보였다 — 오히려 내린다
   fever: { dy: +0.014 },   // Y 자도 같은 이유
-  speed: { scale: 0.38 }   // 모래시계는 꽉 찬 사각이라 같은 값에서도 커 보인다
+  speed: { scale: 0.55 }   // 모래시계는 꽉 찬 사각이라 같은 값에서도 커 보인다(기본의 0.86 배)
 };
 // ⚠ 갈래 순서 = RUNE_GRPS(경제·전투·성장). 표는 js/22-camp-rune.js 가 단일 소스다.
 const NORM = ['tap', 'gas', 'mine', 'reb',      // 💠 경제

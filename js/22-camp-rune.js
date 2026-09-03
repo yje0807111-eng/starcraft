@@ -424,7 +424,10 @@ function _runeTopSync(){
 //   ⚠ 칸을 고르면 **그 성좌로 들어간다**. 고른 칸만 밀어 올리면 아래쪽 성좌를 골랐을 때
 //     판이 통째로 도망가 화면이 텅 빈다(실측 2026-09-03).
 const RUNE_PICK_SC = 1.35;
-const RUNE_ZLIM = { min:0.45, max:2.8, out:0.72 };
+// 🔍 **최대 확대는 성좌 하나가 꽉 차는 자리까지다**(2026-09-04 사용자 확정 · 스크린샷 기준).
+//   ⛔ 2.6~2.8 을 되살리지 말 것 — 손가락으로 더 밀면 칸 한두 개만 남아 더 확대할 이유가 없다.
+//   ⭐ RUNE_PICK_SC 와 같은 값을 쓴다 — 「칸을 골라 들어간 자리」가 곧 최대치라 숫자가 둘일 이유가 없다.
+const RUNE_ZLIM = { min:0.45, max:RUNE_PICK_SC, out:0.72 };
 let _rnView = null;
 function _runeG(){ return document.getElementById('rnG'); }
 function _runeSvg(){ return document.getElementById('rnSvg'); }
@@ -440,6 +443,9 @@ function campRuneFit(now){
   //   ⭐ 덮는 크기를 **실제 높이에서 잰다** — CSS 를 고쳐도 저절로 따라온다(숫자를 두 곳에 두지 않는다).
   const mp = document.querySelector('#campRune .rnMap');
   const H = mp ? mp.getBoundingClientRect().height : 0;
+  // ⚠ 아직 레이아웃 전(높이 0)이면 **다음 프레임에 다시** — 지금 재면 가방·상단 띠를 0 으로 보고
+  //   판을 너무 크게 맞춰 아래 두 성좌가 가방 뒤에 숨는다(실측 2026-09-04: z 1.1, 맞는 값 0.7).
+  if(!H){ requestAnimationFrame(() => { if(_runeAlive()) campRuneFit(now); }); return; }
   const rt = e => { const q = document.querySelector(e);
     return (H && q) ? Math.min(0.4, q.getBoundingClientRect().height / H) : 0; };
   svvFit(_rnView, _runeSvg(), _runeG, _runePts(),
