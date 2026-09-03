@@ -2661,6 +2661,32 @@ async function groupLobby(){
       assert(campRtCut('foeHp')<=CAMP_RT_CUT_MAX+1e-9,'마디 몫이 계열 상한을 넘겼다: '+campRtCut('foeHp'));
       // ⑧ 사슬 갈래(시작 도움)에는 마디가 없다
       assert(campRtNodeAdd('tap')===0,'사슬 갈래에 마디 몫이 붙는다');
+      // ⑨ 🚪 **기준이 1 이 아닌 축은 곱으로 받는다**(2026-09-02) — 확률·시간·간격·할인·인구.
+      //   ⛔ 여기에 더하기로 붙이지 말 것: 확률 5% 에 0.1 을 더하면 15% 가 된다(3배).
+      { const K=JSON.parse(JSON.stringify(C.rbTree||{}));
+        // 피버 셋 — 활성화까지 켜야 값이 나온다
+        C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,fever:1};
+        const p0=campFevPct(), m0=campFevMul(), s0=campFevSec(), h0=campHoldMs();
+        C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,'gp:econ나':1,'gp:econ다':1,'gp:econ라':1,fever:1};
+        assert(campFevPct()>p0,'마디가 피버 확률을 안 올린다: '+p0+'→'+campFevPct());
+        assert(campFevMul()>m0,'마디가 피버 배수를 안 올린다: '+m0+'→'+campFevMul());
+        assert(campFevSec()>s0,'마디가 피버 시간을 안 올린다: '+s0+'→'+campFevSec());
+        // ⛏ 간격은 **짧아져야** 한다 — 곱하면 마디를 살수록 느려진다
+        assert(campHoldMs()<h0,'마디가 채굴 간격을 짧게 안 한다: '+h0+'→'+campHoldMs());
+        // 아군 — 기준이 0 인 축은 **계열을 사야** 마디가 일한다
+        C.rbTree={root:1,_m2:1,'br:army':1,'gp:army다':1,upCost:1,endure:1,sup:1};
+        const d1=campUpgDisc(), e1=campEndureP(), u1=campSupAdd();
+        C.rbTree={root:1,_m2:1,upCost:1,endure:1,sup:1};
+        assert(d1<campUpgDisc(),'마디가 업그레이드 할인을 안 키운다: '+campUpgDisc()+'→'+d1);
+        assert(e1>campEndureP(),'마디가 버팀 확률을 안 키운다: '+campEndureP()+'→'+e1);
+        assert(u1>campSupAdd(),'마디가 인구 상한을 안 키운다: '+campSupAdd()+'→'+u1);
+        // ⛔ 상한 — 뚫리면 게임이 깨진다(공짜 업그레이드 · 안 죽는 유닛 · 상시 피버)
+        C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ나':1,fever:1,fevPct:campRtMax('fevPct')};
+        assert(campFevPct()<=1,'피버 확률이 1 을 넘었다: '+campFevPct());
+        C.rbTree={root:1,_m2:1,'br:army':1,'gp:army다':1,upCost:campRtMax('upCost'),endure:campRtMax('endure')};
+        assert(campUpgDisc()>=0.05,'업그레이드가 공짜에 가까워졌다: '+campUpgDisc());
+        assert(campEndureP()<=1,'버팀 확률이 1 을 넘었다: '+campEndureP());
+        C.rbTree=K; }
       return '갈래 +'+Math.round(CAMP_RT_NODE_BR*100)+'% · 묶음 +'+Math.round(CAMP_RT_NODE_GP*100)
         +'% · 합으로 얹힘 · 갈래/묶음 밖으로 안 샘 · 적 약화 상한 지킴';
     } finally { C.rbTree=keepT; }
@@ -2829,10 +2855,16 @@ async function groupLobby(){
         for(const k of ['fevPct','fevMul','fevSec'])
           assert(campRtCanBuy(k),k+' 가 활성화 뒤에도 안 열린다');
         // ④ 값이 표에서 그대로 나온다
-        assert(Math.abs(campFevPct()-CAMP_FEV_PCT[0])<1e-9,'기본 확률이 표와 다르다');
-        assert(campFevMul()===CAMP_FEV_MUL[0]&&campFevSec()===CAMP_FEV_SEC[0],'기본 배수·시간이 표와 다르다');
+        // ⚠ **마디 몫이 곱해진다**(2026-09-02) — 피버를 사려면 묶음 마디를 먼저 사야 하므로
+        //   여기서는 늘 마디가 켜져 있다. 표값만 기대하면 넘어진다.
+        const NM = k => (typeof campRtNodeMul==='function') ? campRtNodeMul(k) : 1;
+        assert(Math.abs(campFevPct()-CAMP_FEV_PCT[0]*NM('fevPct'))<1e-9,
+          '기본 확률이 표와 다르다: '+campFevPct()+' vs '+(CAMP_FEV_PCT[0]*NM('fevPct')));
+        assert(Math.abs(campFevMul()-CAMP_FEV_MUL[0]*NM('fevMul'))<1e-9
+            && Math.abs(campFevSec()-CAMP_FEV_SEC[0]*NM('fevSec'))<1e-9,'기본 배수·시간이 표와 다르다');
         campRtBuy('fevMul');
-        assert(campFevMul()===CAMP_FEV_MUL[1],'1차를 샀는데 배수가 안 오른다: '+campFevMul());
+        assert(Math.abs(campFevMul()-CAMP_FEV_MUL[1]*NM('fevMul'))<1e-9,
+          '1차를 샀는데 배수가 안 오른다: '+campFevMul());
         // ⑤ 피버가 켜지면 탭 획득이 **배수만큼** 는다 — 곱하는 곳이 campTapGain 한 곳이어야 한다
         campFevReset();
         const g0=campTapGain();
@@ -2842,9 +2874,12 @@ async function groupLobby(){
         //   탭당이 1~2 인 초반에는 반올림 오차 1 이 비율 5배로 보인다(마디 능력이 붙어 내부값이
         //   1.00 → 1.15 가 되자 이 줄이 「5.00 vs 4」로 넘어졌다 · 2026-09-02).
         //   반올림 오차는 최대 1 이므로 **절대 오차 1**(큰 값에서는 2%)로 잰다.
-        { const want=g0*campFevMul(), got=campTapGain();
-          assert(Math.abs(got-want) <= Math.max(1, want*0.02),
-            '피버 배수가 탭에 안 걸린다: '+got+' vs '+want+' (배수 '+campFevMul()+')'); }
+        //   ⚠ 오차 한도는 **배수만큼 증폭된다.** got=round(base×mul) 인데 want=round(base)×mul 이라,
+        //     base 반올림 오차 0.5 가 곱에서 0.5×mul 로 커진다(실측: 배수 4.6 에서 차이 1.4).
+        { const mul=campFevMul(), want=g0*mul, got=campTapGain();
+          const tol=Math.max(0.5 + 0.5*mul, want*0.02);
+          assert(Math.abs(got-want) <= tol,
+            '피버 배수가 탭에 안 걸린다: '+got+' vs '+want.toFixed(1)+' (배수 '+mul.toFixed(2)+' · 허용 '+tol.toFixed(1)+')'); }
         // ⑥ ⛔ 중첩되지 않는다 — 켜져 있는 동안 굴려도 시간이 안 늘어난다
         { const e0=_campFevEnd; for(let i=0;i<2000;i++) campFevRoll();
           assert(_campFevEnd===e0,'켜져 있는데 다시 터져 시간이 늘었다'); }

@@ -622,6 +622,12 @@ function campRtNodeAdd(k){
   if(campRtHas(CAMP_RT_GP_KEY(L.br, L.grp)) > 0) a += CAMP_RT_NODE_GP;
   return a; }
 // ⭐ 계열을 **아직 안 샀어도** 마디 몫은 산다 — 그게 「문을 열면 그 안이 뭔지 미리 맛본다」는 뜻이다.
+// ⭐ **기준값이 1 이 아닌 축**(확률·시간·간격·할인·인구)은 더하기가 아니라 **곱**으로 받는다.
+//   campRtMul 형 계열은 기준이 1 이라 +0.10 이 곧 +10% 지만, 확률 5%·할인 20%·인구 +50 같은
+//   값에 0.10 을 더하면 뜻이 완전히 달라진다. 그래서 그런 계열은 이 함수를 지난다.
+//   ⚠ 기준이 **0** 인 축(할인·버팀·인구)은 계열을 사야 마디가 일한다 — 0 × 1.15 는 0 이다.
+//     그 자리에서 「미리 맛본다」는 성립하지 않는다. 대신 「산 것을 더 세게」가 된다.
+function campRtNodeMul(k){ return 1 + campRtNodeAdd(k); }
 function campRtMul(k){ const n = campRtHas(k), add = campRtNodeAdd(k);
   if(n <= 0) return 1 + add;
   const lad = campRtLad(k); return lad[Math.min(campRtMax(k), n)] + add; }
@@ -3031,7 +3037,9 @@ function campScaleAllies(list){
 //   ⛔ T5 를 100% 로 올리지 말 것 — 전멸이 안 나고, 실질 체력 ×2 라 체력 축과 겹친다(sc-3 §4-5-7).
 //   ⛔ 「라운드 도중 부활」로 되돌리지 말 것 — 버팀은 죽기 **전에** 작동하는 것이다.
 const CAMP_RT_END = [0, 0.15, 0.30, 0.45, 0.60, 0.75];   // 그 라운드에 버티는 유닛 비율
-function campEndureP(){ const n = campRtHas('endure'); return n > 0 ? CAMP_RT_END[Math.min(5, n)] : 0; }
+// 🚪 마디 몫은 **확률에 곱한다**. ⛔ 1 을 넘기지 말 것 — 전 유닛이 늘 버티면 죽지 않는다.
+function campEndureP(){ const n = campRtHas('endure'); if(n <= 0) return 0;
+  return Math.min(1, CAMP_RT_END[Math.min(5, n)] * campRtNodeMul('endure')); }
 //   ⚠ **죽은 유닛은 배열에 남지 않는다** — strikeStepUnits 끝에서 `me.units=me.units.filter(u=>!u.dead)`
 //     로 걷어낸다(18-strike.js:1301, 공유 파일이라 못 고침). 그래서 **걷히기 전후를 비교해** 붙잡는다.
 //     객체는 살아 있으므로(배열에서 빠졌을 뿐) 그대로 들고 있다가 되살려 배열에 돌려놓는다.
@@ -3742,12 +3750,16 @@ function campRestore(){
 //   그 상한은 관리자·오토배틀 것이라 건드리지 않고, 캠프에서 트리 몫을 **위에 더한다**.
 // 🌳 「업그레이드 비용」 −20~−80% — 캠프가 값을 매기는 두 곳(campUpgCost · campCost)에 함께 건다.
 const CAMP_RT_DISC = [0, 0.20, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
-function campUpgDisc(){ const n = campRtHas('upCost'); return n > 0 ? (1 - CAMP_RT_DISC[Math.min(5, n)]) : 1; }
+// 🚪 마디 몫은 **할인율에 곱한다**. ⛔ 0.95 를 넘기지 말 것 — 1 이면 업그레이드가 공짜가 된다.
+function campUpgDisc(){ const n = campRtHas('upCost'); if(n <= 0) return 1;
+  const d = Math.min(0.95, CAMP_RT_DISC[Math.min(5, n)] * campRtNodeMul('upCost'));
+  return 1 - d; }
 // 🏠 인구 상한 사다리 — **3차가 끝이다**(2026-09-02 사용자 확정 · 옛 5차 10/30/80/200/500).
 //   ⛔ 길이를 바꾸면 CAMP_RT_LINES 의 sup 계열 mx·cs 도 같이 바꿀 것 — 어긋나면 살 수 있는데 값이 없다.
 const CAMP_RT_SUP = [0, 50, 100, 200];
-function campSupAdd(){ const n = campRtHas('sup');
-  return n > 0 ? CAMP_RT_SUP[Math.min(CAMP_RT_SUP.length - 1, n)] : 0; }
+// 🚪 마디 몫은 **더해 주는 인구 수에 곱한다** — 절대값이라 반올림한다
+function campSupAdd(){ const n = campRtHas('sup'); if(n <= 0) return 0;
+  return Math.round(CAMP_RT_SUP[Math.min(CAMP_RT_SUP.length - 1, n)] * campRtNodeMul('sup')); }
 function campApplySupCap(){ const add = campSupAdd();
   if(typeof G === 'undefined' || !G.tech) return;
   if(add > 0) G.tech.supCap = (G.tech.supCap || 0) + add;
@@ -4412,9 +4424,10 @@ function campFevLv(k){ return Math.min(5, (typeof campRtHas === 'function') ? ca
 //   ⛔ 확률이라 1 을 넘으면 안 된다. 지금 값(최대 5% × 1.05)으로는 닿지 않지만 막아 둔다.
 function campFevPct(){
   const rm = (typeof campRuneMul === 'function') ? campRuneMul('fever') : 1;
-  return Math.min(1, CAMP_FEV_PCT[campFevLv('fevPct')] * rm); }
-function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')]; }
-function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')]; }
+  return Math.min(1, CAMP_FEV_PCT[campFevLv('fevPct')] * rm * campRtNodeMul('fevPct')); }
+// 🚪 마디 몫은 **곱**이다(campRtNodeMul) — 배수·초는 기준이 1 이 아니다
+function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')] * campRtNodeMul('fevMul'); }
+function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')] * campRtNodeMul('fevSec'); }
 function campFevActive(){ return campFevOn() && Date.now() < _campFevEnd; }
 function campFevLeft(){ return Math.max(0, (_campFevEnd - Date.now()) / 1000); }
 // 🎲 탭 한 번의 판정 — **탭 경로 전부가 이걸 부른다**(campTapAt · campMineOnce · 과녁 탭)
@@ -4487,11 +4500,13 @@ const CAMP_HOLD_MUL   = 1;
 //   ⛔ 옛 캠프 업그레이드('hold')로 되돌리지 말 것 — 값을 정하는 곳이 둘이 되면 반드시 어긋난다.
 //     옛 상수(CAMP_HOLD_STEP · CAMP_HOLD_MIN · campHoldLvMax)와 카드는 **유보로 남겨 두었다**.
 //   ⚠ 회차가 바뀌어도 안 지워진다 — 트리는 환생을 넘어 남는다(C.rbTree).
+// 🚪 마디 몫은 **나눈다** — 간격은 작을수록 좋다. ⛔ 곱하면 마디를 살수록 느려진다.
 function campHoldMs(){
   const t = (typeof campRtHas === 'function') ? campRtHas('holdMs') : 0;
+  const nm = campRtNodeMul('holdMs');
   if(t > 0){ const lad = campRtLad('holdMs');
-    return lad[Math.min(lad.length - 1, t)] * 1000; }
-  return CAMP_HOLD_MS0; }
+    return lad[Math.min(lad.length - 1, t)] * 1000 / nm; }
+  return CAMP_HOLD_MS0 / nm; }
 let _campMineMode = false;       // 채굴 모드가 켜져 있나
 let _campHoldT = null, _campHoldPt = null, _campLastTap = 0;
 function campMineModeOn(){ return _campMineMode; }
