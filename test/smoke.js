@@ -1040,8 +1040,26 @@ async function groupLobby(){
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','재화'); saveMeta(); }
     const p=PROF(); p.pcoin=12345; p.gas=67; p.gem=8; saveMeta();
     openHome(); assert(shown(),'HOME에 재화 바가 없음');
-    assert($('curMin').textContent.replace(/,/g,'')==='12345','미네랄이 pcoin과 다름: '+$('curMin').textContent);
-    assert($('curGas').textContent==='67' && $('curGem').textContent==='8','가스/젬 표시 불일치');
+    // 🏕 **캠프 세션이 살아 있으면 캠프 재화**를 보여 준다(2026-09-03 사용자 확정).
+    //   ⛔ 「HOME 이면 pcoin」으로 되돌리지 말 것 — 지금 HOME 은 캠프다. 유즈맵 선택·상점으로
+    //     나가도 같은 값이 이어져야 한다(예전엔 「1.0M → 0」으로 뚝 떨어졌다).
+    //   ⚠ 젬은 언제나 프로필 지갑이다(현질 재화라 캠프와 무관하다).
+    { const eco = (typeof campEcoOn==='function' && campEcoOn() && typeof G!=='undefined' && G.tech);
+      const wantMin = eco ? Math.round(G.tech.credit||0) : 12345;
+      const wantGas = eco ? Math.round(G.tech.energy||0) : 67;
+      const gotMin = +$('curMin').textContent.replace(/,/g,'').replace(/[KMB]$/,'');
+      assert(eco || String(gotMin)===String(wantMin),
+        '미네랄이 pcoin과 다름: '+$('curMin').textContent);
+      if(eco) assert($('curMin').textContent!=='0' && $('curMin').textContent!=='',
+        '캠프 세션인데 재화 바가 비었다: '+$('curMin').textContent);
+      assert($('curGem').textContent==='8','젬 표시 불일치: '+$('curGem').textContent);
+      if(!eco) assert($('curGas').textContent==='67','가스 표시 불일치: '+$('curGas').textContent); }
+    // 💠 **어느 화면으로 가도 같은 값**이어야 한다 — 캠프 세션이 살아 있으면 그 값이 이어진다
+    { const before=$('curMin').textContent;
+      navGo('map');
+      assert($('curMin').textContent===before,
+        '유즈맵 선택으로 가니 재화가 달라졌다: '+before+' → '+$('curMin').textContent);
+      openHome(); }
     navGo('map'); assert(shown(),'유즈맵 선택에 재화 바가 없음');
     mapToHub(); navGo('town'); assert(shown(),'마을에 재화 바가 없음');
     if(typeof dgEnter==='function'){ dgEnter(1); assert(shown(),'던전에 재화 바가 없음'); openHome(); }
@@ -1897,6 +1915,54 @@ async function groupLobby(){
     C.rate=0; C.leftAt=0;
     return '숨김 → leftAt 기록 + 저장 · 복귀 → 정산 · 중복 방지 · 배수 이중 적용 없음'; });
 
+  // 🌱 **캠프 경제는 화면을 떠나도 실시간으로 돈다** (2026-09-03 사용자 확정)
+  //    유즈맵 선택·상점·정비에 있는 동안에도 일꾼이 계속 왕복하고 재화 바가 오른다.
+  //    ⚠ 여기서 잡는 것이 넷이다 — 넷 다 실제로 깨져 봤다:
+  //      ① 화면을 떠날 때 **멈추지 않는다**(예전엔 campExit 이 타이머·프레임을 껐다)
+  //      ② 떠날 때 나간 시각(leftAt)을 **안 찍는다** — 찍으면 밖에서 번 것 위에
+  //        자리 비움 몫이 얹혀 **이중 지급**이 된다
+  //      ③ 좌표계(격자·맵 종횡비)가 **세션 내내 같다** — 캠프 밖에서 원본으로 돌아가면
+  //        셀이 2배로 부풀어 본진 발판이 커지고 왕복이 짧아진다 → **밖에서 더 많이 번다**
+  //        (실측 2026-09-03: 캠프 분당 928 vs 밖 1376 = 148%. 고친 뒤 103%)
+  //      ④ 그런데 **남의 화면은 건드리지 않는다** — 캠프 시뮬레이션 구간 밖에서는 원본 그대로
+  await step('캠프: 화면을 떠나도 멈추지 않는다 (좌표계 유지 · 이중 지급 없음)', async()=>{
+    skipIf(typeof campIsOn!=='function'||!campIsOn(),'캠프가 안 열려 있다');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // ⛔ 이름으로 건너뛰지 않는다 — 없으면 실패해야 계약이 산다
+    assert(typeof campEcoOn==='function','campEcoOn 이 없다 — 세션 판정이 사라졌다');
+    assert(typeof campPatchWorld==='function',
+      'campPatchWorld 가 없다 — 좌표계 패치가 줌 패치에 다시 묶였다(밖에서 셀이 부푼다)');
+    const cols0=techCols(), cw0=+_techCW().toFixed(5), ch0=+_techCH().toFixed(5);
+    const back={leftAt:C.leftAt, earn:C.earn, earnGas:C.earnGas};
+    try{
+      // ① 캠프를 떠난다 — 화면은 닫히지만 경제는 살아 있어야 한다
+      C.leftAt=0;
+      campExit();
+      assert(!campIsOn(),'campExit 했는데 캠프 화면이 그대로다');
+      assert(campEcoOn(),'캠프를 나가니 세션이 죽었다 — 밖에서 아무것도 안 번다');
+      assert(!C.leftAt,'화면을 떠났다고 나간 시각을 찍었다 — 밖에서 번 것 위에 또 준다(이중 지급)');
+      assert(_campTimer,'캠프를 나가니 타이머가 멈췄다');
+      // ② 좌표계가 그대로다 — campFrame 이 도는 동안의 값으로 잰다
+      { let seen=null;
+        const oRB=window.renderBuildTab;
+        window.renderBuildTab=function(){ if(!seen) seen={cols:techCols(), cw:+_techCW().toFixed(5), ch:+_techCH().toFixed(5)};
+          return oRB.apply(this, arguments); };
+        try{ campFrame(performance.now()+1000); } finally { window.renderBuildTab=oRB; }
+        assert(seen,'캠프 밖에서 프레임이 한 걸음도 안 걸었다 — 밖에서 수입이 0 이 된다');
+        assert(seen.cols===cols0,'밖에서 격자 열 수가 바뀌었다: '+cols0+' → '+seen.cols);
+        assert(seen.cw===cw0 && seen.ch===ch0,
+          '밖에서 셀 크기가 바뀌었다(왕복 거리가 달라져 수입이 어긋난다): '
+          +cw0+'×'+ch0+' → '+seen.cw+'×'+seen.ch); }
+      // ③ ⛔ **남의 화면은 캠프 격자로 그리지 않는다** — 시뮬레이션 구간 밖에서는 원본이다
+      assert(techCols()!==CAMP_COLS || cols0===CAMP_COLS,
+        '캠프 밖인데도 캠프 격자를 쓴다 — 관리자 건설 탭·오토배틀이 캠프 격자로 그려진다');
+      // ④ 실제로 번다 — 걸음을 여러 번 걸어 미네랄이 느는지 본다
+      { const cr0=G.tech.credit||0; let t=performance.now();
+        for(let i=0;i<40;i++){ t+=250; campFrame(t); }
+        assert((G.tech.credit||0)>=cr0,'밖에서 걸었는데 미네랄이 줄었다'); }
+    } finally { C.leftAt=back.leftAt; C.earn=back.earn; C.earnGas=back.earnGas;
+      if(typeof openHome==='function') openHome(); }
+    return '떠나도 계속 돈다 · 좌표계 유지 · leftAt 안 찍음 · 남의 화면은 원본'; });
   // 💠 캠프 2단계 — 광맥을 눌러 캐는 손 축 · 비용 조회 단일 문 · 자리 비움 정산
   // 🗺 0단계=캠프 · 1단계부터 던전 · 던전 하나 = 50라운드 (HUNT_R1.md §6-1)
   //    ⛔ 미네랄 표를 공식으로 바꾸지 말 것 — 옛 ×2^(단계-1) 은 단계 5부터 문턱에서 배율이 내려갔다.
@@ -4592,6 +4658,123 @@ async function groupLobby(){
     return '평소 '+CAMP_FRAME_MS+'ms · 끄는 중 0 · 따라오는 중 0';
   });
 
+  // ⏸ **채굴은 어디서든 끌 수 있다** (2026-09-03 사용자 확정)
+  //    ⚠ 켜는 버튼은 「MY BASE」 요약판 안에 있는데, 연구·환생으로 하단이 바뀌면 그 판이 사라져
+  //      **끌 방법이 없었다.** 그래서 채굴 중일 때만 뜨는 정지 버튼을 #phone 직속에 둔다.
+  //    ⛔ 늘 띄우지 말 것 — 그러면 화면을 가린다(켜는 버튼을 요약판에 둔 이유가 그것이다).
+  await step('캠프: 채굴 정지 버튼은 어디서든 뜬다', async()=>{
+    skipIf(typeof campMineModeSet!=='function'||typeof campMineModeOn!=='function','채굴 모드 없음');
+    campEnterDungeon(0);
+    campMineModeSet(false);
+    assert(!$('campMineStop'),'채굴 중이 아닌데 정지 버튼이 있다');
+    campMineModeSet(true);
+    const b=$('campMineStop');
+    assert(b,'채굴 중인데 정지 버튼이 없다');
+    assert(b.parentNode===$('phone'),'정지 버튼이 #phone 직속이 아니다 — 하단이 바뀌면 사라진다');
+    // 하단을 연구로 바꿔도 남아 있어야 한다
+    if(typeof setResSec==='function') setResSec('res');
+    assert($('campMineStop'),'연구 화면으로 바꾸니 정지 버튼이 사라졌다');
+    // 눌러서 꺼지고, 버튼도 지워진다(숨김이 아니라 삭제 — 잔상 금지)
+    b.click();
+    assert(!campMineModeOn(),'정지 버튼을 눌렀는데 채굴이 안 꺼졌다');
+    assert(!$('campMineStop'),'채굴을 껐는데 버튼이 남아 있다(숨기지 말고 지울 것)');
+    return '켜면 뜨고 · 연구로 가도 남고 · 누르면 꺼진다';
+  });
+
+  // 👷 **대기열에 몰아 넣어 싸게 사는 구멍** (2026-09-03 사용자 발견 · 고침)
+  //    ⛔ 값(campHireCost)을 **완성된 일꾼 수**로만 재면, 대기열에 다섯을 몰아 넣을 때
+  //      다섯 다 「첫 마리 값」으로 들어간다(50 × 5). 값이 ×2.5 씩 오르는 규칙이 무력해진다.
+  //    ⭐ campWorkerNPlanned() = 서 있는 것 + 뽑는 중인 것. 값·상한·표기가 전부 이것을 본다.
+  await step('캠프: 일꾼 값은 대기열까지 세어 오른다', async()=>{
+    skipIf(typeof campWorkerNPlanned!=='function'||typeof campHireCost!=='function','일꾼 값 함수 없음');
+    campEnterDungeon(0);
+    const keep=G.tech.credit; G.tech.credit=1e9;
+    const bk=(typeof campWorkerBldg==='function')?campWorkerBldg():null;
+    const wk=TECH_WORKER[G.tech.race];
+    skipIf(!bk||!wk,'일꾼을 뽑을 건물이 없다');
+    const n0=campWorkerNPlanned(), got=[], want=[];
+    for(let i=0;i<3;i++){
+      campSyncHire();
+      const before=G.tech.credit, plan=campWorkerNPlanned();
+      want.push(campHireCost(plan));
+      techDoProduce(wk, bk);
+      got.push(before-G.tech.credit);
+    }
+    assert(campWorkerQueued()>=3,'대기열에 안 들어갔다: '+campWorkerQueued());
+    assert(campWorkerNPlanned()===n0+3,
+      '「이미 정해진 수」가 안 늘었다: '+n0+' → '+campWorkerNPlanned());
+    for(let i=0;i<3;i++) assert(got[i]===want[i],
+      (i+1)+'번째 값이 대기열을 안 셌다: '+got[i]+' vs '+want[i]);
+    assert(got[1]>got[0] && got[2]>got[1],
+      '연달아 예약했는데 값이 안 올랐다: '+got.join(' → '));
+    // ⏱ 일꾼은 3초에 나온다 — 스펙(t=20)이 아니라 캠프 패치가 이긴다
+    assert(_techProdTime(G.tech.race, wk)===CAMP_WORKER_SEC,
+      '일꾼 생산 시간이 '+CAMP_WORKER_SEC+'초가 아니다: '+_techProdTime(G.tech.race, wk));
+    // 뒷정리 — 대기열을 비우고 돈을 돌려놓는다
+    for(const e of (G.tech.ents||[])) if(e.type==='bldg'&&e._pq) e._pq.length=0;
+    G.tech.credit=keep;
+    return '값 '+got.join(' → ')+' · 생산 '+CAMP_WORKER_SEC+'초';
+  });
+
+  // 🕐 **생산 중 표시 = 건물 위 유닛 얼굴 + 시계방향으로 걷히는 덮개** (2026-09-03 사용자 확정)
+  //    ⛔ 옛 가로 막대(.bprog.prod)로 되돌리지 말 것 — 건물 **한가운데를 가로질러**(147×19px)
+  //      그려서 건물 그림에 묻혔고, 무엇을 뽑는지도 알 수 없었다.
+  //    ⚠ 얼굴은 labels 레이어에 둔다 — 건물 안(inner)에 두면 뷰 변환을 함께 받아
+  //      확대할 때 같이 커진다(실측 30px 로 짰는데 줌 3.2 에서 96px 이 됐다).
+  await step('캠프: 생산 중이면 건물 위에 유닛 얼굴과 진행 덮개', async()=>{
+    skipIf(typeof campWorkerBldg!=='function'||typeof techDoProduce!=='function','생산 경로 없음');
+    campEnterDungeon(0);
+    const keep=G.tech.credit; G.tech.credit=1e9;
+    for(const e of (G.tech.ents||[])) if(e.type==='bldg'&&e._pq) e._pq.length=0;
+    techMapRender();
+    assert(!document.querySelector('.bprodIco'),'생산 중이 아닌데 표시가 있다');
+    const bk=campWorkerBldg(), wk=TECH_WORKER[G.tech.race];
+    skipIf(!bk||!wk,'일꾼을 뽑을 건물이 없다');
+    techDoProduce(wk, bk); techDoProduce(wk, bk);
+    const be=(G.tech.ents||[]).find(e=>e.type==='bldg'&&e._pq&&e._pq.length);
+    assert(be,'대기열이 안 생겼다');
+    // ① 반쯤 진행 → 덮개가 절반쯤 걷혀 있어야 한다
+    be._pq[0].t = be._pq[0].tMax * 0.5;
+    techMapRender();
+    const el=document.querySelector('.bprodIco');
+    assert(el,'생산 중인데 표시가 없다');
+    const sp0=el.querySelector('span');
+    const pct=parseFloat(el.style.getPropertyValue('--p'));
+    assert(Math.abs(pct-50)<4,'진행이 절반(50%)이 아니다: '+pct+'%');
+    // 🩶 덮개가 **얼굴 위에** 있어야 한다 — 얼굴 filter 가 새 층을 만들어 아래로 깔린 적이 있다
+    assert(+getComputedStyle(sp0,'::after').zIndex>=1,
+      '덮개에 z-index 가 없다 — 얼굴 filter 층 아래로 깔린다');
+    // ② 얼굴은 **색이 있는 초상**이다(PORTRAIT_IMG) — 회색 프로필(un_*)은 작게 뜨면 안 읽힌다
+    //    ⛔ 새 그림표를 만들지 말 것 — unitFaceColorHTML 이 PORTRAIT_IMG 를 그대로 쓴다.
+    const im=el.querySelector('img.portImg');
+    assert(im,'유닛 얼굴이 없다');
+    assert(im.src.indexOf(wk)>=0,'다른 유닛 얼굴이 나온다: '+im.src.split('/').pop());
+    assert(im.src.indexOf('portraits/')>=0,
+      '색 있는 초상이 아니다(회색 프로필로 되돌아갔다): '+im.src.split('/').pop());
+    // ③ 안쪽 원이 바깥보다 작아야 한다 — 초상이 absolute 라 relative 가 빠지면 덮개를 덮는다
+    const sp=sp0;
+    assert(getComputedStyle(sp).position==='relative',
+      '안쪽 원이 relative 가 아니다 — 초상이 덮개 위로 삐져나온다');
+    // ④ **건물과 같은 비율로** 커지고 작아진다(2026-09-03 사용자 확정)
+    //    ⛔ 고정 크기로 되돌리지 말 것 — 확대할수록 건물에 견줘 작아 보여 비율이 흔들린다.
+    { const v=techView(), t=techViewT(), z0=v.zoom, rats=[];
+      const eb=(G.tech.ents||[]).find(x=>x.type==='bldg'), bf=_techFoot(G.tech.race, eb.bk);
+      for(const z of [CAMP_MIN_ZOOM, techMaxZoom()]){
+        t.zoom=z; _techClampView(t); v.zoom=t.zoom; v.x=t.x; v.y=t.y; techMapRender();
+        const e2=document.querySelector('.bprodIco'); if(!e2) continue;
+        const bw=bf.w*_techCW()*v.zoom*_btRect().width;
+        rats.push(e2.getBoundingClientRect().width/bw); }
+      assert(rats.length===2 && Math.abs(rats[0]-rats[1])<0.03,
+        '줌에 따라 건물 대비 비율이 달라진다: '+rats.map(r=>r.toFixed(3)).join(' vs '));
+      v.zoom=z0; t.zoom=z0; techMapRender(); }
+    // ⑤ 대기열이 둘 이상이면 개수를 적는다
+    assert((document.querySelector('.bprodIco b')||{}).textContent==='2',
+      '대기 수 배지가 안 맞는다');
+    for(const e of (G.tech.ents||[])) if(e.type==='bldg'&&e._pq) e._pq.length=0;
+    G.tech.credit=keep; techMapRender();
+    return '얼굴 '+im.src.split('/').pop()+' · 절반에서 '+pct.toFixed(0)+'% · 건물 대비 비율 일정';
+  });
+
   // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
   //    ⛔ 옛 campFoeRace 는 STK_RACE_ORDER 를 그냥 돌려서, 「감염된 둥지」에 유니온이,
   //      「산란장」에 페럴이 나왔다. 배경 그림은 이름 기준으로 그렸으므로 그림과 적이 어긋났다.
@@ -5207,7 +5390,10 @@ async function groupLobby(){
     skipIf(typeof campBarRender!=='function','띠 없음');
     const el=document.getElementById('campBar');
     assert(el,'#campBar 가 마크업에 없다');
-    const C=campState(); const back={dg:C.dg, cleared:C.cleared, rbPts:C.rbPts};
+    // ⚠ 누적 획득(earn)도 되돌린다 — **캠프는 화면 밖에서도 계속 번다**(2026-09-03).
+    //   그대로 두면 스모크가 도는 동안 100만을 넘겨 환생 칩이 켜지고, ④ 「빈 띠」가 깨진다.
+    const C=campState(); const back={dg:C.dg, cleared:C.cleared, rbPts:C.rbPts,
+      earn:C.earn, earnGas:C.earnGas};
     try{
       // ① ⭐ 중복 금지 — 던전 이름·라운드·진행 바가 여기 있으면 안 된다
       for(const cls of ['.cbNm','.cbRd','.cbTrk','.cbFil'])
@@ -5229,8 +5415,11 @@ async function groupLobby(){
         const rb=el.querySelector('.cbReb'); assert(rb,'환생 칩이 없다');
         assert(getComputedStyle(rb).pointerEvents==='auto','환생 칩이 안 눌린다'); }
       // ④ 보여줄 게 없으면 띠가 숨는다(빈 판이 맵을 가리지 않게)
-      C.dg=0; C.cleared=0; C.rbPts=0; campBattleClose(); campBarReset(); campBarRender();
-      assert(el.classList.contains('empty'),'보여줄 게 없는데 띠가 남아 있다');
+      //   ⚠ 환생 칩은 rbPts 가 아니라 **누적 획득**(campWealth)으로 켜진다 — 그것도 비워야 한다.
+      C.dg=0; C.cleared=0; C.rbPts=0; C.earn=0; C.earnGas=0;
+      campBattleClose(); campBarReset(); campBarRender();
+      assert(!campCanRebirth(),'누적을 비웠는데 환생 조건이 켜져 있다 — 조건이 딴 데서 온다');
+      assert(el.classList.contains('empty'),'보여줄 게 없는데 띠가 남아 있다: '+el.className+' / '+el.innerHTML.slice(0,160));
       // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다
       // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다 — 적 수 칸으로 잰다(트리 칩은 없앴다)
       C.dg=2; C.cleared=1; CAMPB && (CAMPB.ai.units=[{dead:false},{dead:false}]); campBarReset(); campBarRender();
@@ -5247,6 +5436,7 @@ async function groupLobby(){
           assert(a.y >= b.y+b.height-0.5,'띠가 재화 바와 겹친다'); } }
       return '적 수 + 트리 칩만 · 던전/라운드는 칩이 맡는다 · 빈 띠는 숨는다';
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.rbPts=back.rbPts;
+      C.earn=back.earn; C.earnGas=back.earnGas;
       campBattleClose(); campBarReset(); campSave(); } });
 
   // ⛏ 채취 — 남아 있는 만큼만 준다. 무한 자원이 되던 자리다(BALANCE.md §3-2 실측).
@@ -5423,12 +5613,16 @@ async function groupLobby(){
       G.tech.credit=5e4;
       campResEnter('res');
       const slots=()=>[...body.querySelectorAll('.cgSlot')].filter(x=>!x.classList.contains('empty'));
-      // ① 세 줄 — 터치·채취·정제소.
+      // ① **자원을 늘리는 방법이 한 자리에** — 터치·채취·정제소·일꾼(2026-09-03 일꾼 추가).
       //   ⛔ 정제소가 빠지면 자원 성장 중 하나만 자리가 달라진다(건물을 골라야만 올릴 수 있던 그 자리).
+      //   👷 일꾼도 같은 이유로 들어왔다 — 그것만 본부를 골라 생산 카드에서 뽑아야 했다.
       //   ⛏ **채굴 속도는 2026-09-02 에 환생 트리로 옮겼다**(계열 'holdMs'). 여기 되돌리지 말 것.
+      //   ⚠ 개수를 박지 말 것 — 표(CAMP_RES_ITEMS)가 단일 소스다.
       const nms=slots().map(x=>(x.querySelector('.cgName')||{}).textContent);
-      assert(nms.length===3,'자원 칸이 세 줄이 아니다: '+nms.join(','));
-      assert(nms.indexOf('정제소')>=0,'정제소가 자원 칸에 없다: '+nms.join(','));
+      assert(nms.length===CAMP_RES_ITEMS.length,
+        '자원 칸 수가 표와 다르다: '+nms.join(',')+' vs '+CAMP_RES_ITEMS.length);
+      for(const need of ['터치 강화','채취 강화','정제소','일꾼 생산'])
+        assert(nms.indexOf(need)>=0, need+' 가 자원 칸에 없다: '+nms.join(','));
       assert(nms.indexOf('채굴 속도')<0,'채굴 속도가 자원 칸에 되살아났다 — 트리로 옮겼다');
 
       // ② 정보판이 **현재 ▸ 다음**을 보여 준다
