@@ -352,34 +352,34 @@ const CAMP_RT_LADDER = [0, 1.5, 2.5, 5, 11, 25];
 //   ⚠ 묶음마다 흔함4 · 보통3 · 귀함1 이어야 티어당 등급 구성이 맞는다(스모크가 검사).
 const CAMP_RT_LINES = [
   // ── 갈래 ① 시작 도움 — 절대값이라 후반에는 저절로 희석된다
-  {k:'tap',      br:'start', grp:'가', gr:'흔함', nm:'Show Me The Money', tn:['잔돈','주머니','금고','광맥','노다지'], pa:'startMin:1', f:'tapMulS', ic:'res_mineral.webp', vk:'mul', lad:[1,2,5,20,50,200], cs:[0,5,100,5000,1000000,500000000], ds:'탭 한 번에 얻는 미네랄이 {} 늘어납니다.'},
-  {k:'startMin', br:'start', grp:'가', gr:'보통', nm:"What's Mine Is Mine", tn:['첫 삽','종잣돈','밑천'], pa:'root', f:'startMin', ic:'upgrades/up_mineral_up.webp', vk:'cnt', mx:3, lad:[0,500,1000,5000], cs:[0,2,50,200], ds:'회차를 시작할 때 미네랄 {} 을 갖고 시작합니다.'},
-  {k:'startWk',  br:'start', grp:'나', gr:'흔함', nm:'Operation CWAL', tn:['선발대','작업반','교대조','광부단','채굴군'], pa:'startMin:1', f:'startWorker', ic:'buildings/bld_command.webp', vk:'cnt', lad:[0,1,3,5,7,9], cs:[0,10,2500,75000,250000,5000000], ds:'회차를 시작할 때 일꾼 {} 기와 함께 시작합니다.'},
-  {k:'skipRd',   br:'start', grp:'라', gr:'귀함', nm:'There Is No Cow Level', tn:['지나온 길','익숙한 땅','밟아본 전선','정복한 전역','무혈입성'], pa:'startMin:3', f:'skipRound', ic:'skills/sk_recall.webp', vk:'cnt', lad:[0,2,4,6,8,10], cs:[0,500,7500,100000,2500000,50000000], ds:'환생하면 던전 {} 까지의 모든 라운드가 열린 채로 시작합니다.'},
+  {k:'tap',      br:'start', grp:'가', gr:'흔함', nm:'Show Me The Money', tn:['잔돈','주머니','금고','광맥','노다지'], pa:'startMin:1', f:'tapMulS', ic:'tree/tap.webp', vk:'mul', lad:[1,2,5,20,50,200], cs:[0,5,100,5000,1000000,500000000], ds:'탭 한 번에 얻는 미네랄이 {} 늘어납니다.'},
+  {k:'startMin', br:'start', grp:'가', gr:'보통', nm:"What's Mine Is Mine", tn:['첫 삽','종잣돈','밑천'], pa:'root', f:'startMin', ic:'tree/startMin.webp', vk:'cnt', mx:3, lad:[0,500,1000,5000], cs:[0,2,50,200], ds:'회차를 시작할 때 미네랄 {} 을 갖고 시작합니다.'},
+  {k:'startWk',  br:'start', grp:'나', gr:'흔함', nm:'Operation CWAL', tn:['선발대','작업반','교대조','광부단','채굴군'], pa:'startMin:1', f:'startWorker', ic:'tree/startWk.webp', vk:'cnt', lad:[0,1,3,5,7,9], cs:[0,10,2500,75000,250000,5000000], ds:'회차를 시작할 때 일꾼 {} 기와 함께 시작합니다.'},
+  {k:'skipRd',   br:'start', grp:'라', gr:'귀함', nm:'There Is No Cow Level', tn:['지나온 길','익숙한 땅','밟아본 전선','정복한 전역','무혈입성'], pa:'startMin:3', f:'skipRound', ic:'tree/skipRd.webp', vk:'cnt', lad:[0,2,4,6,8,10], cs:[0,500,7500,100000,2500000,50000000], ds:'환생하면 던전 {} 까지의 모든 라운드가 열린 채로 시작합니다.'},
   // ── 갈래 ② 재화 획득
-  {k:'gather',   br:'econ',  grp:'가', gr:'흔함', nm:'일꾼 채취량',    f:'gatherMul', ic:'upgrades/up_mine.webp', vk:'mul', ds:'일꾼의 1회 채취량이 {} 증가합니다.'},
-  {k:'gas',      br:'econ',  grp:'가', gr:'보통', nm:'가스 생산량',    f:'gasMul', ic:'res_gas.webp', vk:'mul', ds:'정제소의 가스 생산량이 {} 증가합니다.'},
+  {k:'gather',   br:'econ',  grp:'가', gr:'흔함', nm:'일꾼 채취량',    f:'gatherMul', ic:'tree/gather.webp', vk:'mul', ds:'일꾼의 1회 채취량이 {} 증가합니다.'},
+  {k:'gas',      br:'econ',  grp:'가', gr:'보통', nm:'가스 생산량',    f:'gasMul', ic:'tree/gas.webp', vk:'mul', ds:'정제소의 가스 생산량이 {} 증가합니다.'},
   // ⚡ 피버 타임 — 활성화 하나가 나머지 셋을 연다(pa). ⛔ 활성화 없이 셋만 사지 못한다.
   {k:'fever',    br:'econ',  grp:'가', gr:'귀함', nm:'피버 타임', tn:['각성'],
-   f:'fever', ic:'skills/sk_psi_storm.webp', vk:'on', mx:1, cs:[0, 200],
+   f:'fever', ic:'tree/fever.webp', vk:'on', mx:1, cs:[0, 200],
    ds:'터치할 때 확률로 <b>피버 타임</b>이 터집니다. 그동안 터치 획득이 크게 늘어납니다.'},
   {k:'fevPct',   br:'econ',  grp:'나', gr:'흔함', nm:'피버 확률', tn:['예감','징조','조짐','부름','필연'],
-   pa:'fever:1', f:'feverPct', ic:'skills/sk_scan.webp', vk:'pct',
+   pa:'fever:1', f:'feverPct', ic:'tree/fevPct.webp', vk:'pct',
    cs:[0, 100, 1500, 20000, 300000, 4000000],
    ds:'터치 한 번이 피버를 터뜨릴 확률이 {} 가 됩니다.'},
   {k:'fevMul',   br:'econ',  grp:'다', gr:'귀함', nm:'피버 배수', tn:['불꽃','도가니','용광로','폭주','대폭발'],
-   pa:'fever:1', f:'feverMul', ic:'skills/sk_yamato.webp', vk:'fmul',
+   pa:'fever:1', f:'feverMul', ic:'tree/fevMul.webp', vk:'fmul',
    cs:[0, 300, 5000, 80000, 1200000, 20000000],
    ds:'피버 동안 터치 획득이 {} 가 됩니다.'},
   {k:'fevSec',   br:'econ',  grp:'라', gr:'보통', nm:'피버 시간', tn:['한숨','한때','한나절','긴 밤','영원'],
-   pa:'fever:1', f:'feverSec', ic:'skills/sk_stasis.webp', vk:'fsec',
+   pa:'fever:1', f:'feverSec', ic:'tree/fevSec.webp', vk:'fsec',
    cs:[0, 150, 2000, 30000, 450000, 6000000],
    ds:'피버가 이어지는 시간이 {} 가 됩니다.'},
-  {k:'wkCap',    br:'econ',  grp:'나', gr:'흔함', nm:'일꾼 상한',      f:'workerCap', ic:'upgrades/up_transport.webp', vk:'mul', ds:'데리고 있을 수 있는 일꾼 수가 {} 늘어납니다.'},
-  {k:'mine',     br:'econ',  grp:'나', gr:'귀함', nm:'광산 등급',      f:'mineMul', ic:'buildings/bld_extractor.webp', vk:'mul', ds:'광산에서 얻는 미네랄이 {} 증가합니다.'},
-  {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul', ic:'skills/sk_recharge.webp', vk:'mul', ds:'자리를 비운 동안 쌓이는 수입이 {} 증가합니다.'},
-  {k:'dgRw',     br:'econ',  grp:'다', gr:'보통', nm:'던전 보상',      f:'dgRewardMul', ic:'res_gem.webp', vk:'mul', ds:'던전을 깨고 받는 보상이 {} 증가합니다.'},
-  {k:'tapMul',   br:'econ',  grp:'라', gr:'흔함', nm:'탭 배수',        f:'tapMul', ic:'skills/sk_nova.webp', vk:'mul', ds:'탭으로 얻는 미네랄이 {} 증가합니다.'},
+  {k:'wkCap',    br:'econ',  grp:'나', gr:'흔함', nm:'일꾼 상한',      f:'workerCap', ic:'tree/wkCap.webp', vk:'mul', ds:'데리고 있을 수 있는 일꾼 수가 {} 늘어납니다.'},
+  {k:'mine',     br:'econ',  grp:'나', gr:'귀함', nm:'광산 등급',      f:'mineMul', ic:'tree/mine.webp', vk:'mul', ds:'광산에서 얻는 미네랄이 {} 증가합니다.'},
+  {k:'idle',     br:'econ',  grp:'다', gr:'흔함', nm:'방치 수급',      f:'awayMul', ic:'tree/idle.webp', vk:'mul', ds:'자리를 비운 동안 쌓이는 수입이 {} 증가합니다.'},
+  {k:'dgRw',     br:'econ',  grp:'다', gr:'보통', nm:'던전 보상',      f:'dgRewardMul', ic:'tree/dgRw.webp', vk:'mul', ds:'던전을 깨고 받는 보상이 {} 증가합니다.'},
+  {k:'tapMul',   br:'econ',  grp:'라', gr:'흔함', nm:'탭 배수',        f:'tapMul', ic:'tree/tapMul.webp', vk:'mul', ds:'탭으로 얻는 미네랄이 {} 증가합니다.'},
   // ⛏ 채굴 속도 — **옛 캠프 업그레이드('hold')를 여기로 옮겼다**(2026-09-02 사용자 확정).
   //   값은 초 단위 **간격**이라 작을수록 좋다 — 사다리 0번은 「안 샀을 때」(0.8초)다.
   //   ⛔ 옛 업그레이드 축(campUpgLv('hold') · CAMP_HOLD_STEP)으로 되돌리지 말 것. 두 벌이 되면 어긋난다.
@@ -387,33 +387,33 @@ const CAMP_RT_LINES = [
   //     초당 50회로, 연타 상한(CAMP_TAP_MIN_MS 90ms ≈ 초당 11회)의 4.5배다. 손으로 연타할 이유가 사라진다.
   //     탭이 수입의 66% 라(HUNT_R1 §1-2-1) 밸런스를 다시 재야 한다 — BALANCE.md §5-A7.
   {k:'holdMs',   br:'econ',  grp:'라', gr:'보통', nm:'채굴 속도', tn:['빠른 손','숙련공','기계식','자동화','완전 자동'],
-   f:'holdMs', ic:'skills/sk_stim.webp', vk:'sec',
+   f:'holdMs', ic:'tree/holdMs.webp', vk:'sec',
    lad:[0.8, 0.5, 0.3, 0.1, 0.06, 0.02], cs:[0, 50, 2500, 100000, 2500000, 10000000],
    ds:'누르고 있을 때 캐는 간격이 {} 가 됩니다.'},
-  {k:'gasEx',    br:'econ',  grp:'라', gr:'보통', nm:'가스 교환비',    f:'gasExMul', ic:'buildings/bld_assimilator.webp', vk:'mul', ds:'가스를 바꿀 때의 교환비가 {} 좋아집니다.'},
+  {k:'gasEx',    br:'econ',  grp:'라', gr:'보통', nm:'가스 교환비',    f:'gasExMul', ic:'tree/gasEx.webp', vk:'mul', ds:'가스를 바꿀 때의 교환비가 {} 좋아집니다.'},
   // ── 갈래 ③ 아군 강화
-  {k:'atk',      br:'army',  grp:'가', gr:'흔함', nm:'유닛 공격력',    f:'unitAtk', ic:'upgrades/up_inf_atk.webp', vk:'mul', ds:'아군 유닛의 공격력이 {} 증가합니다.'},
-  {k:'hp',       br:'army',  grp:'가', gr:'보통', nm:'유닛 체력',      f:'unitHp', ic:'upgrades/up_gnd_arm.webp', vk:'mul', ds:'아군 유닛의 체력이 {} 증가합니다.'},
-  {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul', ic:'upgrades/up_speed.webp', vk:'mul', ds:'유닛과 건물의 생산 속도가 {} 빨라집니다.'},
+  {k:'atk',      br:'army',  grp:'가', gr:'흔함', nm:'유닛 공격력',    f:'unitAtk', ic:'tree/atk.webp', vk:'mul', ds:'아군 유닛의 공격력이 {} 증가합니다.'},
+  {k:'hp',       br:'army',  grp:'가', gr:'보통', nm:'유닛 체력',      f:'unitHp', ic:'tree/hp.webp', vk:'mul', ds:'아군 유닛의 체력이 {} 증가합니다.'},
+  {k:'prod',     br:'army',  grp:'나', gr:'흔함', nm:'생산 속도',      f:'prodMul', ic:'tree/prod.webp', vk:'mul', ds:'유닛과 건물의 생산 속도가 {} 빨라집니다.'},
   // 🏠 인구 상한 — 3차 · +50/+100/+200 (2026-09-02 사용자 확정). **보급소를 안 지어도 되게** 하는 축이다.
   //   ⚠ 옛 값은 5차 10/30/80/200/500 에 공식 비용(8 → 52만)이었다. 사용자가 「초반에 바로 손이
   //     닿아야 한다」고 보아 3차로 줄이고 값을 10/50/100 으로 **크게 낮췄다** — 최대치는 500 → 200 으로 내려갔다.
   {k:'sup',      br:'army',  grp:'나', gr:'보통', nm:'인구 상한', tn:['가건물','병영단지','주둔지'],
-   f:'supAdd', ic:'res_pop.webp', vk:'sup', mx:3, cs:[0,10,50,100],
+   f:'supAdd', ic:'tree/sup.webp', vk:'sup', mx:3, cs:[0,10,50,100],
    ds:'보급소를 짓지 않아도 인구 상한이 {} 늘어납니다.'},
-  {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc', ic:'buildings/bld_armory.webp', vk:'disc', ds:'업그레이드 비용이 {} 싸집니다.'},
-  {k:'endure',   br:'army',  grp:'다', gr:'귀함', nm:'버팀',          f:'endure', ic:'upgrades/up_shield.webp', vk:'mul', ds:'치명타를 맞아도 체력 1로 버티는 일이 {} 늘어납니다.'},   // 구 rebuild — 로드 시 포인트 이관
-  {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul', ic:'buildings/bld_cannon.webp', vk:'mul', ds:'아군 건물의 체력과 공격력이 {} 증가합니다.'},
-  {k:'skCd',     br:'army',  grp:'라', gr:'보통', nm:'스킬 쿨다운',    f:'skillCd', ic:'upgrades/up_mana.webp', vk:'mul', ds:'스킬 재사용 대기가 {} 빨리 찹니다.'},
+  {k:'upCost',   br:'army',  grp:'다', gr:'흔함', nm:'업그레이드 비용', f:'upgDisc', ic:'tree/upCost.webp', vk:'disc', ds:'업그레이드 비용이 {} 싸집니다.'},
+  {k:'endure',   br:'army',  grp:'다', gr:'귀함', nm:'버팀',          f:'endure', ic:'tree/endure.webp', vk:'mul', ds:'치명타를 맞아도 체력 1로 버티는 일이 {} 늘어납니다.'},   // 구 rebuild — 로드 시 포인트 이관
+  {k:'bldg',     br:'army',  grp:'라', gr:'흔함', nm:'건물 강화',      f:'bldgMul', ic:'tree/bldg.webp', vk:'mul', ds:'아군 건물의 체력과 공격력이 {} 증가합니다.'},
+  {k:'skCd',     br:'army',  grp:'라', gr:'보통', nm:'스킬 쿨다운',    f:'skillCd', ic:'tree/skCd.webp', vk:'mul', ds:'스킬 재사용 대기가 {} 빨리 찹니다.'},
   // ── 갈래 ④ 적 약화 — ⚠ 상한이 있다. 다른 셋과 곱해지므로 반드시 막혀 있어야 한다
-  {k:'foeHp',    br:'enemy', grp:'가', gr:'흔함', nm:'적 체력',        f:'cutHp', ic:'skills/sk_plague.webp', vk:'cut', ds:'적의 체력이 {} 감소합니다.'},
-  {k:'foeN',     br:'enemy', grp:'가', gr:'귀함', nm:'적 마리 수',     f:'cutCount', ic:'skills/sk_dark_swarm.webp', vk:'cut', ds:'한 번에 몰려오는 적의 수가 {} 줄어듭니다.'},
-  {k:'foeAtk',   br:'enemy', grp:'나', gr:'흔함', nm:'적 공격력',      f:'cutAtk', ic:'skills/sk_lockdown.webp', vk:'cut', ds:'적의 공격력이 {} 감소합니다.'},
-  {k:'foeRes',   br:'enemy', grp:'나', gr:'보통', nm:'적 부활 시간',   f:'cutRes', ic:'skills/sk_ensnare.webp', vk:'cut', ds:'적이 다시 나타나기까지가 {} 길어집니다.'},
-  {k:'foeSpd',   br:'enemy', grp:'다', gr:'흔함', nm:'적 이동 속도',   f:'cutSpd', ic:'skills/sk_slow.webp', vk:'cut', ds:'적의 이동 속도가 {} 느려집니다.'},
-  {k:'bossHp',   br:'enemy', grp:'다', gr:'보통', nm:'보스 체력',      f:'cutBoss', ic:'skills/sk_irradiate.webp', vk:'cut', ds:'보스의 체력이 {} 감소합니다.'},
-  {k:'foeRng',   br:'enemy', grp:'라', gr:'흔함', nm:'적 사거리',      f:'cutRng', ic:'skills/sk_optical_flare.webp', vk:'cut', ds:'적의 사거리가 {} 짧아집니다.'},
-  {k:'foeDelay', br:'enemy', grp:'라', gr:'보통', nm:'적 등장 지연',   f:'foeDelay', ic:'skills/sk_maelstrom.webp', vk:'cut', ds:'적이 처음 나타나기까지가 {} 늦춰집니다.'},
+  {k:'foeHp',    br:'enemy', grp:'가', gr:'흔함', nm:'적 체력',        f:'cutHp', ic:'tree/foeHp.webp', vk:'cut', ds:'적의 체력이 {} 감소합니다.'},
+  {k:'foeN',     br:'enemy', grp:'가', gr:'귀함', nm:'적 마리 수',     f:'cutCount', ic:'tree/foeN.webp', vk:'cut', ds:'한 번에 몰려오는 적의 수가 {} 줄어듭니다.'},
+  {k:'foeAtk',   br:'enemy', grp:'나', gr:'흔함', nm:'적 공격력',      f:'cutAtk', ic:'tree/foeAtk.webp', vk:'cut', ds:'적의 공격력이 {} 감소합니다.'},
+  {k:'foeRes',   br:'enemy', grp:'나', gr:'보통', nm:'적 부활 시간',   f:'cutRes', ic:'tree/foeRes.webp', vk:'cut', ds:'적이 다시 나타나기까지가 {} 길어집니다.'},
+  {k:'foeSpd',   br:'enemy', grp:'다', gr:'흔함', nm:'적 이동 속도',   f:'cutSpd', ic:'tree/foeSpd.webp', vk:'cut', ds:'적의 이동 속도가 {} 느려집니다.'},
+  {k:'bossHp',   br:'enemy', grp:'다', gr:'보통', nm:'보스 체력',      f:'cutBoss', ic:'tree/bossHp.webp', vk:'cut', ds:'보스의 체력이 {} 감소합니다.'},
+  {k:'foeRng',   br:'enemy', grp:'라', gr:'흔함', nm:'적 사거리',      f:'cutRng', ic:'tree/foeRng.webp', vk:'cut', ds:'적의 사거리가 {} 짧아집니다.'},
+  {k:'foeDelay', br:'enemy', grp:'라', gr:'보통', nm:'적 등장 지연',   f:'foeDelay', ic:'tree/foeDelay.webp', vk:'cut', ds:'적이 처음 나타나기까지가 {} 늦춰집니다.'},
 ];
 function campRtLine(k){ for(const L of CAMP_RT_LINES) if(L.k === k) return L; return null; }
 const CAMP_RT_ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
@@ -540,11 +540,20 @@ function campRtKeyCost(k){
   if(k.indexOf('br:') === 0) return CAMP_RT_BR_COST;
   if(k.indexOf('gp:') === 0) return CAMP_RT_GP_COST;
   const n = campRtNext(k); return n ? campRtCost(k, n) : Infinity; }
+// 🔧 **환생 포인트 무제한** (2026-09-02 사용자 요청) — 트리를 게임 안에서 눈으로 보려는 스위치다.
+//   ⭐ 포인트 잔액을 **읽는 곳은 전부 이 함수 하나**를 지난다. ⛔ `C.rbPts` 를 직접 읽어 비교하지 말 것.
+//   ⚠ 켜져 있으면 사도 줄지 않는다 — **밸런스를 재기 전에 반드시 끌 것**(회수 시간·손익분기가 통째로 무의미해진다).
+//   ⚠ 값은 최고 티어 비용(극상 20티어 ≈ 5.5조)보다 훨씬 커야 한다. 모자라면 끝 노드만 조용히 안 사진다.
+//   ⛔ 적립(campRebirth)·환급(campRtReset)은 그대로 `C.rbPts` 에 쓴다 — 스위치를 끄면 그동안 번 것이 그대로 남는다.
+const CAMP_RT_PTS_FREE = true;
+const CAMP_RT_PTS_FREE_N = 1e18;
+function campRtPts(){ if(CAMP_RT_PTS_FREE) return CAMP_RT_PTS_FREE_N;
+  const C = campState(); return (C && C.rbPts) || 0; }
 // ⭐ 사슬 규칙 — 환생 → 갈래 → 묶음 → 계열, 그 다음은 그 계열의 앞 차수.
 function campRtCanBuy(k){ const C = campState(); if(!C) return false;
-  if(k === 'root') return !campRtRootOn() && (C.rbPts || 0) >= CAMP_RT_ROOT_COST;
+  if(k === 'root') return !campRtRootOn() && campRtPts() >= CAMP_RT_ROOT_COST;
   if(!campRtRootOn()) return false;
-  const pts = C.rbPts || 0;
+  const pts = campRtPts();
   if(k.indexOf('br:') === 0) return campRtHas(k) === 0 && pts >= CAMP_RT_BR_COST;
   if(k.indexOf('gp:') === 0){ const b = k.slice(3, -1), g = k.slice(-1);
     return campRtGpLive(b, g) && campRtHas(k) === 0 && campRtBrOn(b) && pts >= CAMP_RT_GP_COST; }
@@ -560,7 +569,7 @@ function campRtCanBuy(k){ const C = campState(); if(!C) return false;
 function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 0;
   const b = campRtBag();
   const cost = campRtKeyCost(k);
-  C.rbPts = (C.rbPts || 0) - cost;
+  if(!CAMP_RT_PTS_FREE) C.rbPts = (C.rbPts || 0) - cost;   // 🔧 무제한이면 깎지 않는다
   b[k] = (b[k] | 0) + 1;
   campSave(); return cost; }
 // 초기화 — 산 것을 전부 물리고 포인트를 100% 돌려받는다. 비용은 젬(GEM.md §4).
@@ -666,11 +675,11 @@ function campTreeSelPos(sel){ if(!sel) return null;
 function campTreeBrState(bk){ if(campRtIsChain(bk)) return null;       // 사슬 갈래엔 관문이 없다
   if(campRtBrOn(bk)) return 'own';
   if(!campRtRootOn()) return null;
-  const C = campState(); return ((C && C.rbPts || 0) >= CAMP_RT_BR_COST) ? 'buy' : 'next'; }
+  return (campRtPts() >= CAMP_RT_BR_COST) ? 'buy' : 'next'; }
 function campTreeGpState(bk, g){ if(!campRtGpLive(bk, g)) return null;   // 계열이 없는 묶음
   if(campRtGpOn(bk, g)) return 'own';
   if(!campRtBrOn(bk)) return null;
-  const C = campState(); return ((C && C.rbPts || 0) >= CAMP_RT_GP_COST) ? 'buy' : 'next'; }
+  return (campRtPts() >= CAMP_RT_GP_COST) ? 'buy' : 'next'; }
 function campTreeState(k, n){
   const L = campRtLine(k); if(!L) return null;
   if(campRtIsChain(L.br)){ if(!campRtNodeOwn(campRtParent(k, n))) return null; }
@@ -680,8 +689,7 @@ function campTreeState(k, n){
   const have = campRtHas(k);
   if(n <= have) return 'own';
   if(n !== have + 1) return null;
-  const C = campState();
-  return ((C && C.rbPts || 0) >= campRtCost(k, n)) ? 'buy' : 'next';
+  return (campRtPts() >= campRtCost(k, n)) ? 'buy' : 'next';
 }
 
 let _campTreeSel = null;            // 지금 고른 별 {t:'br'|'gp'|'n', a, b} — 시안은 여기 한 곳만
@@ -790,9 +798,11 @@ function campTreeSvg(){
           rows.push(campTreeGem({ x:b.x, y:b.y, r: st === 'own' ? 13 : 15, col:B.col, state:st,
             gr:campRtGrade(L.k, n), ic:L.ic, label: st === 'own' ? '' : campNum(campRtCost(L.k, n)),
             me, f, k:L.k, n })); } }
-      rows.push('<text x="' + (Math.cos(B.a) * 300).toFixed(0) + '" y="' + (Math.sin(B.a) * 300).toFixed(0) +
-        '" class="ctBrNm" fill="' + B.col + '" opacity="' + (sel ? .18 : .5) + '">' + B.nm + '</text>');
       continue; }
+    // ⚠ **마디(갈래·묶음)는 지금 그림도 효과도 없다** — 아래 campTreeGem 호출에 ic 가 없는 것이 그 뜻이다.
+    //   빠뜨린 게 아니라 마디가 순수한 **관문**이라 그렇다(「무엇이 세지는가」가 없으면 그릴 것도 없다).
+    //   🔜 여기에 **그 갈래·묶음의 가장 기본이 되는 능력**을 넣기로 했다(2026-09-02 사용자 방향).
+    //      그때 아이콘도 함께 생긴다 — ART.md §15-7.
     const sb = campTreeBrState(bk); if(!sb) continue;
     const p = campTreeBrPos(bk), meB = campTreeIsSel('br', bk);
     rows.push(campTreeLink({ x:0, y:0 }, p, B.col, sb === 'own', F(meB), CAMP_TREE_R_CORE, CAMP_TREE_R_BRN));
@@ -816,9 +826,8 @@ function campTreeSvg(){
             rows.push(campTreeGem({ x:b.x, y:b.y, r: st === 'own' ? 13 : 15, col:B.col, state:st,
               gr:campRtGrade(L.k, n), ic:L.ic, label: st === 'own' ? '' : campNum(campRtCost(L.k, n)),
               me, f, k:L.k, n })); } } } }
-    // 갈래 이름 — 부챗살 바깥
-    rows.push('<text x="' + (Math.cos(B.a) * 300).toFixed(0) + '" y="' + (Math.sin(B.a) * 300).toFixed(0) +
-      '" class="ctBrNm" fill="' + B.col + '" opacity="' + (sel ? .18 : .5) + '">' + B.nm + '</text>');
+    // ⛔ 갈래 이름을 맵 위에 그리지 않는다 (2026-09-02 사용자 확정) — 갈래는 **색**으로 읽는다.
+    //   이름이 필요한 자리는 고른 별의 상세 시트뿐이라 CAMP_TREE_BR.nm 은 거기서 계속 쓴다.
   }
   // ⭐ 가운데 — **글씨 없이 붉은 마름모** 하나(2026-09-01 사용자 확정)
   const rr = 13, on = campRtRootOn();
@@ -1046,11 +1055,13 @@ function campTreePayHTML(cost, pts){
 function campTreeInfo(){
   const el = document.getElementById('campTree'); if(!el) return;
   const host = el.querySelector('.ctSheet'); if(!host) return;
-  const C = campState(), pts = (C && C.rbPts) || 0;
+  const C = campState(), pts = campRtPts();
   const sel = _campTreeSel;
   el.classList.toggle('picked', !!sel);
-  if(!sel){ host.innerHTML = '<div class="ctHint">' +
-      (campRtRootOn() ? '별을 눌러 보세요' : '가운데를 눌러 시작') + '</div>';
+  // ⛔ 트리를 연 뒤에는 힌트를 띄우지 않는다 (2026-09-02 사용자 확정) — 별을 누르라는 말은 한 번이면 족하다.
+  //   ⚠ 「가운데를 눌러 시작」은 남긴다 — 아직 트리를 안 열었을 때 무엇을 눌러야 하는지 알려 주는 유일한 줄이다.
+  if(!sel){ host.innerHTML = campRtRootOn() ? '' :
+      '<div class="ctHint">가운데를 눌러 시작</div>';
     return; }
   // ── 🌟 가운데 — 트리의 열쇠이자 **첫 환생의 보상**
   if(sel.t === 'root'){
@@ -1214,7 +1225,7 @@ function campTreeRender(){
   const g = el.querySelector('#ctG'); if(g) g.innerHTML = campTreeSvg();
   campTreeApplyView();
   const C = campState();
-  const pt = el.querySelector('.ctPts'); if(pt) pt.textContent = campNum(C ? (C.rbPts || 0) : 0);
+  const pt = el.querySelector('.ctPts'); if(pt) pt.textContent = campNum(campRtPts());
   campTreeProg();
   campTreeInfo();
 }
@@ -3160,7 +3171,7 @@ function campCombatStep(dt){
 let _campBarS = '';
 function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
-  const C = campState(); const pts = C ? Math.floor(C.rbPts || 0) : 0;
+  const C = campState(); const pts = Math.floor(campRtPts());
   const dg = campDgN(), foe = campAlive('ai');
   const canReb = (typeof campCanRebirth === 'function') && campCanRebirth();   // ⓒ 지금은 조건만 본다(종족별 건물은 나중에)
   campFevPaint();                                  // ⚡ 남은 초는 캐시 밖에서 갱신한다

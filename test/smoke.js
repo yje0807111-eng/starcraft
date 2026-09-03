@@ -2188,7 +2188,11 @@ async function groupLobby(){
       { C.rbTree={}; C.rbPts=1;
         assert(campRtCanBuy('root'),'포인트 1로 가운데를 못 산다');
         campRtBuy('root');
-        assert(campRtRootOn()&&(C.rbPts|0)===0,'가운데를 샀는데 값이 안 맞는다'); }
+        assert(campRtRootOn(),'가운데를 샀는데 안 켜졌다');
+        // 🔧 **포인트 무제한 스위치**(CAMP_RT_PTS_FREE)가 켜져 있으면 사도 안 깎인다 — 그게 정상이다.
+        //   ⚠ 차감 규칙 자체는 스위치가 꺼졌을 때만 잴 수 있다. 아래 「개발 스위치」 스텝이 켜짐을 매번 알린다.
+        if(typeof CAMP_RT_PTS_FREE==='undefined' || !CAMP_RT_PTS_FREE)
+          assert((C.rbPts|0)===0,'가운데를 샀는데 포인트가 안 깎였다: '+C.rbPts); }
       // 새로운 시작은 **절대값**이다 — 배수면 §4-5-5 곱셈 상한 표에 축이 하나 더 늘어 폭주한다
       assert(typeof campRootGrant==='function','새로운 시작이 배선되지 않았다');
       assert(CAMP_ROOT_MIN>0&&CAMP_ROOT_WK>0,'새로운 시작이 비어 있다');
@@ -2196,13 +2200,37 @@ async function groupLobby(){
         ' · 새로운 시작 '+CAMP_ROOT_MIN+'/'+CAMP_ROOT_WK+'기'+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
     } finally { C.rbTree=keepT; C.rbPts=keepP; } });
 
+  // 🔧 개발 스위치가 켜진 채 남아 있나 — 켜져 있으면 회수 시간·손익분기 같은 밸런스 수치가 전부 무의미하다.
+  //   ⭐ **막지 않고 알린다.** 지금은 사용자가 트리를 눈으로 보려고 일부러 켜 둔 상태다(2026-09-02).
+  await step('🔧 개발 스위치: 환생 포인트 무제한이 켜져 있는지', async()=>{
+    skipIf(typeof CAMP_RT_PTS_FREE==='undefined','스위치 없음');
+    assert(typeof campRtPts==='function','포인트를 읽는 단일 소스 함수가 없다');
+    assert(campRtPts()>0,'포인트 함수가 값을 안 준다');
+    if(!CAMP_RT_PTS_FREE) return '꺼져 있다(정상)';
+    // 무제한이면 **가장 비싼 노드도** 살 수 있어야 한다 — 모자라면 끝 노드만 조용히 안 사진다
+    let top=0;
+    for(const L of CAMP_RT_LINES){ const mx=campRtMax(L.k);
+      for(let n=1;n<=mx;n++){ const c=campRtCost(L.k,n); if(isFinite(c)&&c>top) top=c; } }
+    assert(campRtPts()>top*10,'무제한 값이 최고 비용('+top+')에 비해 넉넉하지 않다: '+campRtPts());
+    return '⚠ 켜져 있다 — 포인트가 줄지 않는다 · 최고 비용 '+top.toExponential(1)+' · 밸런스를 재기 전에 js/19-camp.js 의 CAMP_RT_PTS_FREE 를 false 로';
+  });
+
   await step('환생 트리: 계열마다 아이콘 · 밀고 확대가 한 점을 붙잡는다', async()=>{
     skipIf(typeof campTreeZoomAt!=='function'||typeof campRebEnter!=='function','별자리 트리 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    // 아이콘 — 32계열 전부에 있고, 같은 그림을 두 계열이 나눠 쓰지 않는다
+    // 아이콘 — 계열마다 전용 그림 한 장(2026-09-02 · ART.md §15). 이름은 **계열키와 같다**.
+    //   ⚠ 한 장만 빠져도 그 별 하나가 빈 원이 된다 — 33개 중 하나를 눈으로는 못 찾는다.
+    //   ⛔ 계열키와 파일명이 어긋나면 엉뚱한 그림이 붙는데 화면은 멀쩡해 보인다.
     { const ics=CAMP_RT_LINES.map(L=>L.ic);
       assert(ics.every(Boolean),'아이콘이 없는 계열이 있다');
-      assert(new Set(ics).size===ics.length,'두 계열이 같은 아이콘을 쓴다'); }
+      assert(new Set(ics).size===ics.length,'두 계열이 같은 아이콘을 쓴다');
+      const bad=CAMP_RT_LINES.filter(L=>L.ic!=='tree/'+L.k+'.webp')
+        .map(L=>L.k+' → '+L.ic);
+      assert(bad.length===0,'계열키와 아이콘 이름이 어긋난다: '+bad.join(' · '));
+      const miss=(await Promise.all(CAMP_RT_LINES.map(function(L){
+        return fetch('assets/icons/'+L.ic).then(function(r){ return r.ok?null:L.k; })
+          .catch(function(){ return L.k; }); }))).filter(Boolean);
+      assert(miss.length===0,'아이콘 파일이 없다: '+miss.join(',')); }
     const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
     try{
       C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1}; C.rbPts=1e6;
@@ -2438,7 +2466,7 @@ async function groupLobby(){
         const r=hit.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
         assert(campTreeNearest(cx+10,cy+10)===hit,'조금 빗나갔는데 가까운 별을 못 찾는다');
         assert(campTreeNearest(cx+400,cy+400)===null,'엉뚱하게 먼 곳에서도 별을 잡는다'); }
-      return '아이콘 32 · 확대 붙잡기 ok · 상하한 '+lo+'~'+hi+' · 규칙은 도움말 한 곳';
+      return '아이콘 '+CAMP_RT_LINES.length+'(계열키와 1:1) · 확대 붙잡기 ok · 상하한 '+lo+'~'+hi+' · 규칙은 도움말 한 곳';
     } finally { campTreeClose(); C.rbTree=keepT; C.rbPts=keepP; } });
 
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{
