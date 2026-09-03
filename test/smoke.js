@@ -2929,7 +2929,24 @@ async function groupLobby(){
         // ⛔ 계열 아이콘과 겹치지 않아야 한다 — 같은 폴더를 쓰되 이름이 br_/gp_ 로 갈린다
         const lineIco=CAMP_RT_LINES.map(L=>L.ic);
         const dup=want.map(campRtNodeIco).filter(p=>lineIco.indexOf(p)>=0);
-        assert(dup.length===0,'마디가 계열 그림을 쓴다: '+dup.join(',')); }
+        assert(dup.length===0,'마디가 계열 그림을 쓴다: '+dup.join(','));
+        // 🌟 가운데(새로운 시작)도 제 그림을 갖는다 — 「점화 코어」(2026-09-03)
+        const rk=await fetch('assets/icons/tree/root.webp').then(r=>r.ok).catch(()=>false);
+        assert(rk,'가운데 그림(tree/root.webp)이 없다');
+        assert(lineIco.indexOf('tree/root.webp')<0,'계열이 가운데 그림을 쓴다'); }
+      // ⑦-c 📊 해금 진행도 — **분자가 분모를 넘지 않는다**(2026-09-03).
+      //   ⚠ 「178 / 173」이 실제로 화면에 떴다. 분모는 사슬 갈래의 마디와 죽은 묶음을 빼는데
+      //     분자는 안 빼고 있었다. 자루에는 그런 키가 들어갈 수 있다(옛 저장본·테스트가 심은 값).
+      { const K2=JSON.parse(JSON.stringify(C.rbTree||{}));
+        // 있을 수 있는 쓰레기를 일부러 심는다 — 사슬 갈래 마디 · 죽은 묶음 · 상한 초과 차수
+        C.rbTree={ root:1, _m2:1, 'br:start':1, 'gp:start가':1 };
+        for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue;
+          C.rbTree[CAMP_RT_BR_KEY(bk)]=1;
+          for(const g of CAMP_RT_GRP_KEYS) C.rbTree[CAMP_RT_GP_KEY(bk,g)]=1; }
+        for(const L of CAMP_RT_LINES) C.rbTree[L.k]=campRtMax(L.k)+3;
+        const have=campTreeOwned(), all=campTreeTotal();
+        assert(have<=all,'해금 진행도의 분자가 분모를 넘는다: '+have+' / '+all);
+        C.rbTree=K2; }
       // ⑧ 사슬 갈래(시작 도움)에는 마디가 없다
       assert(campRtNodeAdd('tap')===0,'사슬 갈래에 마디 몫이 붙는다');
       // ⑨ 🚪 **기준이 1 이 아닌 축은 곱으로 받는다**(2026-09-02) — 확률·시간·간격·할인·인구.
@@ -2961,6 +2978,159 @@ async function groupLobby(){
       return '갈래 +'+Math.round(CAMP_RT_NODE_BR*100)+'% · 묶음 +'+Math.round(CAMP_RT_NODE_GP*100)
         +'% · 합으로 얹힘 · 갈래/묶음 밖으로 안 샘 · 적 약화 상한 지킴';
     } finally { C.rbTree=keepT; }
+  });
+
+  // ✨ **해금 연출이 실제로 걸리나** (2026-09-03) — 선이 자라고, 별이 떠오른다.
+  //   ⚠ 두 번 속았다: 「마디를 살 때만 걸리고 계열을 살 때는 안 걸렸다」. 마디 키('gp:army가')는 선의 키와
+  //     같지만 계열의 버튼 키('atk')는 선이 찾는 'atk:1' 과 달랐다. 눈으로는 「선이 빠르다」로만 보였다.
+  //   ⭐ 그래서 **마디와 계열 둘 다** 산 직후 DOM 을 본다. 하나만 재면 다시 속는다.
+  await step('환생 트리: 해금하면 선이 자라고 별이 떠오른다 — 마디·계열 둘 다', async()=>{
+    skipIf(typeof campTreeBuySel!=='function'||typeof campTreeNewKind!=='function','해금 연출 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepSel=_campTreeSel;
+    const buy=function(tree, sel){
+      C.rbTree=tree; _ctNew={}; campRebEnter('tree'); campTreeRender();
+      _campTreeSel=sel; campTreeRender();
+      const btn=document.querySelector('#campTree .ctBuy');
+      if(!btn||btn.disabled) return null;
+      campTreeBuySel();
+      const g=document.getElementById('ctG');
+      return { grow:g.querySelectorAll('.ctGrow').length, dash:g.querySelectorAll('.ctGrowDash').length,
+               pop:g.querySelectorAll('.ctPop').length, lit:g.querySelectorAll('.ctLit').length,
+               keys:Object.keys(_ctNew) }; };
+    try{
+      C.rbPts=1e12;
+      // ① 마디(묶음)를 산다 — 자기 실선이 자라고(lit), 안 계열들이 점선으로 자라며 떠오른다(spawn)
+      const a=buy({root:1,_m2:1,'br:army':1},{t:'gp',a:'army',b:'가'});
+      assert(a,'묶음을 못 산다');
+      assert(a.grow>0,'묶음을 샀는데 실선이 안 자란다');
+      assert(a.dash>0,'묶음을 샀는데 안 계열로 가는 점선이 안 자란다');
+      assert(a.pop>0,'묶음을 샀는데 새 별이 안 떠오른다');
+      // ② 계열 1차를 산다 — **여기가 어긋났던 자리**. 실선이 자라야 한다.
+      const b=buy({root:1,_m2:1,'br:army':1,'gp:army가':1},{t:'n',a:'atk',b:1});
+      assert(b,'계열을 못 산다');
+      assert(b.keys.indexOf('atk:1')>=0,'산 계열의 키가 선과 다른 꼴이다: '+b.keys.join(','));
+      assert(b.grow>0,'계열을 샀는데 실선이 안 자란다 — 키 형식이 어긋났다');
+      assert(b.lit>0,'계열을 샀는데 색이 안 차오른다');
+      assert(b.dash>0,'계열을 샀는데 다음 차수로 가는 점선이 안 자란다');
+      // ②-b ⏱ **차례** — 실선 도착 → 색 차오름 → 점선 출발 → 새 별 (2026-09-03 사용자 확정).
+      //   ⛔ 전부 0초에 시작하면 순서가 뒤죽박죽이다. 시작·끝 시각으로 앞뒤를 잰다.
+      { const T=function(sel){ const e=document.querySelector('#ctG '+sel); if(!e) return null;
+          const cs=getComputedStyle(e), d0=parseFloat(cs.animationDelay), du=parseFloat(cs.animationDuration);
+          return { s:d0, e:d0+du }; };
+        const L1=T('.ctGrow'), LT=T('.ctLit'), L2=T('.ctGrowDash'), PP=T('.ctPop');
+        assert(L1&&LT&&L2&&PP,'해금 연출 조각이 빠졌다: '+[!!L1,!!LT,!!L2,!!PP].join(','));
+        assert(LT.s>=L1.e-0.01,'색이 실선 도착 전에 든다: 색 '+LT.s+' vs 선 끝 '+L1.e);
+        assert(L2.s>LT.s,'점선이 색 차오름보다 먼저 출발한다: 점선 '+L2.s+' vs 색 '+LT.s);
+        assert(PP.s>=L2.e-0.01,'새 별이 점선 도착 전에 뜬다: 별 '+PP.s+' vs 점선 끝 '+L2.e); }
+      // ③ 시간 — **모든 선이 같은 시간**(2026-09-03 재확정 · 등속을 접었다). 길이와 무관해야 한다.
+      const durs=[].map.call(document.querySelectorAll('#ctG .ctGrow, #ctG .ctGrowDash'),
+        function(e){ return parseFloat(getComputedStyle(e).animationDuration); });
+      assert(durs.length>0,'자라는 선이 없다');
+      assert(durs.every(function(d){ return Math.abs(d-CAMP_TREE_GROW_S)<0.011; }),
+        '선 시간이 상수와 다르다: '+durs.join(',')+' vs '+CAMP_TREE_GROW_S);
+      // ④ 점선은 대기 중에 **안 보여야** 한다(backwards) — 없으면 튀어나왔다 사라진다
+      const dd=document.querySelector('#ctG .ctGrowDash');
+      assert(/backwards/.test(getComputedStyle(dd).animationFillMode),
+        '점선 애니에 backwards 가 없다 — 대기 중에 원래 점선이 먼저 보인다');
+      return '묶음: 실선 '+a.grow+' 점선 '+a.dash+' 떠오름 '+a.pop+' · 계열: 실선 '+b.grow+' 점선 '+b.dash+' · 선 '+CAMP_TREE_GROW_S+'s 고정';
+    } finally { C.rbTree=keepT; C.rbPts=keepP; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
+  });
+
+  // 🚧 팬 경계 (2026-09-03 사용자 요청) — 양옆·위아래로 끝없이 밀리지 않는다.
+  //   ⭐ 목표 뷰에 걸린다. 아주 멀리 밀어도 별 무리의 가장자리가 화면 안 KEEP 까지는 남아야 한다.
+  await step('환생 트리: 아무리 밀어도 별 무리가 화면 밖으로 다 나가지 않는다', async()=>{
+    skipIf(typeof campTreeClampT!=='function','팬 경계 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2}; campRebEnter('tree'); campTreeRender();
+      const B=campTreeBounds(); assert(B&&B.n>0,'별 범위를 못 구했다');
+      const svg=document.getElementById('ctSvg'), vb=svg.getAttribute('viewBox').split(/\s+/).map(Number);
+      const hw=vb[2]/2, hh=vb[3]/2;
+      const K=campTreePanKeep(hw,hh,campTreeSheetH());
+      // 여백은 화면 비율이다 — 별 무리가 화면의 80% 안쪽까지만 나간다(빈 하늘 금지)
+      assert(K.x>=hw*0.5&&K.yTop>=hh*0.5,'여백이 너무 작다 — 밀면 빈 하늘이 된다: '+JSON.stringify(K));
+      const tv=campTreeViewT();
+      // 네 방향으로 엄청 멀리 민다 → 경계가 잡아야 한다
+      const far=[[1e5,0],[-1e5,0],[0,1e5],[0,-1e5]], bad=[];
+      for(const [dx,dy] of far){ tv.x=dx; tv.y=dy; campTreeClampT();
+        const sx0=B.x0*tv.z+tv.x, sx1=B.x1*tv.z+tv.x, sy0=B.y0*tv.z+tv.y, sy1=B.y1*tv.z+tv.y;
+        const inX = sx1 >= -hw+K.x-0.5 && sx0 <= hw-K.x+0.5;
+        const inY = sy1 >= -hh+K.yTop-0.5 && sy0 <= hh-K.yBot+0.5;
+        if(!(inX&&inY)) bad.push('('+dx+','+dy+')→x '+tv.x.toFixed(0)+' y '+tv.y.toFixed(0)); }
+      assert(bad.length===0,'경계를 뚫었다: '+bad.join(' · '));
+      // 가운데 근처에서는 손대지 않는다 — 경계는 먼 곳만 막는다
+      tv.x=0; tv.y=0; campTreeClampT();
+      assert(Math.abs(tv.x)<1&&Math.abs(tv.y)<1,'가운데인데 경계가 밀었다: '+tv.x+','+tv.y);
+      return '네 방향 1e5 → 전부 붙잡힘 · 여백 x '+K.x.toFixed(0)+' / 아래 '+K.yBot.toFixed(0)+' · 가운데는 그대로';
+    } finally { C.rbTree=keepT; campTreeViewSync(); }
+  });
+
+  // 📍 해제하면 **지금 배율은 그대로 두고**, 방금 해제한 별을 화면 가운데로 옮긴다 (2026-09-03 재확정).
+  //   ⛔ 「고르기 전의 자리로 되돌아간다」가 아니다 — 그건 방금 보던 별과 무관한 옛 자리로 튄다.
+  //   ⛔ 전체 보기로 물러나지도 않는다 — 축소가 너무 세다.
+  await step('환생 트리: 해제하면 고르기 전 배율로 줄어들며 그 별이 가운데로 온다', async()=>{
+    skipIf(typeof campTreeDesel!=='function'||typeof campTreeTap!=='function','트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2}; campRebEnter('tree'); campTreeRender();
+      campTreeFit(true); campTreeViewSync();
+      const fitZ=campTreeViewT().z;
+      // 「지금 보고 있는 배율」에서 출발한다 — 전체 보기보다 이미 확대돼 있는 상태
+      campTreeZoomAt(fitZ*1.1,null); campTreeViewSettle();
+      const zBefore=campTreeViewT().z;
+      // 별을 고른다 → 화면이 그 별로 가며 **더 확대**된다(campTreeFocus 가 CAMP_TREE_ZSEL 이상으로 키운다)
+      campTreeTap('gather',1); campTreeViewSettle();
+      const zDuring=campTreeViewT().z;
+      assert(zDuring>zBefore+0.01,'고르면 더 확대돼야 예시(1.95→2.29)와 같은 상황이 된다: '+zBefore+' → '+zDuring);
+      const p=campTreeSelPos(_campTreeSel);
+      assert(p,'고른 별의 좌표를 못 구했다');
+      // 해제 → 배율은 **고르기 전(zBefore)** 으로 되돌아가고, 그 별이 정확히 가운데(0,0)로
+      campTreeDesel(); campTreeViewSettle();
+      const after=campTreeViewT();
+      assert(Math.abs(after.z-zBefore)<0.001,
+        '해제해도 고르기 전 배율로 안 돌아온다: '+after.z+' vs 고르기 전 '+zBefore+' (고른 동안 '+zDuring+' · 전체 보기 '+fitZ+')');
+      const sx=p.x*after.z+after.x, sy=p.y*after.z+after.y;
+      assert(Math.abs(sx)<0.6&&Math.abs(sy)<0.6,
+        '해제한 별이 가운데로 안 온다: 화면좌표 '+sx.toFixed(1)+','+sy.toFixed(1));
+      return '배율 '+zBefore.toFixed(2)+'(전체 '+fitZ.toFixed(2)+') → 고름 '+zDuring.toFixed(2)+' → 해제 → '+after.z.toFixed(2)+' 복귀 · 그 별이 가운데';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
+  // ⏱ **재렌더에도 해금 애니가 되감기지 않고 이어진다** (2026-09-03 사용자 지적).
+  //   ⛔ 애니 도중에 다른 별을 고르거나 화면을 확대·해제하면 campTreeRender() 가 SVG 를
+  //     통째로 다시 그린다. 그때 delay 를 0 부터 다시 매기면 진행 중이던 애니가 처음부터
+  //     반복 재생된다 — 그게 이 검사가 잡는 회귀다.
+  await step('환생 트리: 도중에 다른 걸 눌러도 해금 애니가 되감기지 않는다', async()=>{
+    skipIf(typeof campTreeNewElapsed!=='function'||typeof campRtBuy!=='function','해금 연출 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepSel=_campTreeSel;
+    try{
+      C.rbPts=1e12; C.rbTree={root:1,_m2:1,'br:army':1,'gp:army가':1};
+      _ctNew={}; campRebEnter('tree'); campTreeRender();
+      _campTreeSel={t:'n',a:'atk',b:1}; campTreeRender();
+      const btn=document.querySelector('#campTree .ctBuy');
+      skipIf(!btn||btn.disabled,'못 산다');
+      campTreeBuySel();
+      const read=function(){ var g=function(e){ return e?parseFloat(getComputedStyle(e).animationDelay):null; };
+        return { grow:g(document.querySelector('#campTree .ctGrow')),
+                 pop:g(document.querySelector('#campTree .ctPop')) }; };
+      const before=read();
+      assert(before.grow!=null&&before.pop!=null,'애니 요소가 없다');
+      // 「다른 작업」 — 애니 도중 다른 별을 고르는 재렌더를 흉내낸다
+      await sleep(120);
+      const t0=Date.now();
+      _campTreeSel={t:'n',a:'hp',b:1}; campTreeRender();
+      _campTreeSel={t:'n',a:'atk',b:1}; campTreeRender();
+      const elapsed=(Date.now()-t0+120)/1000;
+      const after=read();
+      // ⛔ 되감겼다면 after.grow 가 다시 0 근처로 돌아온다 — 그러면 실패해야 한다
+      assert(after.grow < before.grow - elapsed + 0.05,
+        '재렌더 뒤 애니가 되감겼다: 전 '+before.grow+' → 후 '+after.grow+' (지난 시간 '+elapsed.toFixed(2)+')');
+      return '재렌더 전 delay '+before.grow.toFixed(2)+' → 후 '+after.grow.toFixed(2)+' (경과 '+elapsed.toFixed(2)+'s만큼 줄어듦 · 이어서 진행)';
+    } finally { C.rbTree=keepT; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
   });
 
   // 🔌 **산 계열이 실제로 수치를 움직이나** (2026-09-02).
@@ -11214,7 +11384,7 @@ async function groupLobby(){
 
   // 🏕 던전·라운드 드롭다운(2026-08-25) — 칩을 누르면 칩 아래로 자란다.
   //   ⚠ 캠프 화면은 3D 라 여기서 못 띄운다 → 캠프 상태만 흉내 내고 **판 자체**를 검사한다.
-  await step('캠프 좌상단: 던전·라운드 드롭다운(칩 아래로)', async()=>{
+  await step('캠프 좌상단: 던전 선택 전체 화면(칩이 머리줄 · ◀▶ + 슬라이더)', async()=>{
     skipIf(typeof campDropOpen!=='function','드롭다운 함수 없음');
     const t=$('curTitle'); assert(t,'#curTitle 이 없음');
     const on0=window.campIsOn, st0=window.campState, sk0=window.campSkin, prof=PROF();
@@ -11243,35 +11413,81 @@ async function groupLobby(){
         assert(!first.disabled && !first.classList.contains('lock'),'캠프가 잠겨 있다 — 돌아갈 길이 막힌다');
         assert(first.querySelector('.cdRnm').textContent===CAMP_HOME_NAME,
           '캠프 이름이 칩과 다르다: '+first.querySelector('.cdRnm').textContent+' vs '+CAMP_HOME_NAME); }
-      assert(d().querySelectorAll('.cdRn').length===CAMP_RND_MAX,'라운드 칸이 '+CAMP_RND_MAX+'개가 아님');
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='잊혀진 회랑','현재 던전이 안 잡힘');
-      assert((d().querySelector('.cdRn.on')||{}).textContent==='27','현재 라운드가 안 잡힘');
-      // ③ 자리 — 칩 아래에 1px 포개 붙는다(왼쪽 변도 맞는다)
-      { const cr=t.getBoundingClientRect(), dr=d().getBoundingClientRect();
-        assert(Math.abs(dr.left-cr.left)<1.5,'판 왼쪽 변이 칩과 안 맞음: '+(dr.left-cr.left).toFixed(1));
-        assert(Math.abs(dr.top-(cr.bottom-1))<1.5,'판이 칩 아래에 안 붙음: 칩밑 '+cr.bottom.toFixed(1)+' / 판위 '+dr.top.toFixed(1)); }
-      // ④ 판은 **불투명**이다 — 큰 판이라 3% 만 비쳐도 뒤 글자가 읽힌다(.94·.97 둘 다 비쳤다)
-      { const bg=getComputedStyle(d()).backgroundColor, a=bg.match(/[\d.]+/g)||[];
-        const alpha=(a.length===4)? parseFloat(a[3]) : 1;
-        assert(alpha>=0.995,'드롭다운 판이 비친다(불투명이어야 한다): '+bg); }
-      // ⑤ 「지금 여기」 띠가 스크롤 상자에 잘리지 않는다
-      //    (overflow-y:auto 는 x 도 auto 로 만든다 — 띠를 음수 left 에 두면 통째로 잘린다)
-      { const row=d().querySelector('.cdRow.here'); const bf=getComputedStyle(row,'::before');
-        assert(bf.content!=='none','현재 던전 띠(::before)가 없음');
-        assert(parseFloat(bf.left)>=0,'현재 던전 띠가 스크롤 상자 왼쪽 밖에 있어 잘린다: left '+bf.left); }
-      // ⑥ 라운드 가운데 선은 스크롤 상자 **밖**에 있다(안에 두면 내용과 같이 굴러 사라진다)
-      { const mid=d().querySelector('.cdMid'), box=d().querySelector('#cdPickBox');
-        assert(mid && box,'라운드 피커 조각이 없음');
-        assert(!box.contains(mid),'가운데 선이 스크롤 상자 안에 있다 — 굴리면 같이 사라진다');
-        const mr=mid.getBoundingClientRect(), br=box.getBoundingClientRect();
-        assert(mr.top>=br.top-1 && mr.bottom<=br.bottom+1,'가운데 선이 피커 밖으로 나갔다'); }
-      // ⑥-2 던전 줄도 **밑선 정렬**이다 — 번호(Rajdhani)와 이름(NotoKR)은 글자 상자가 12 vs 16px 이라
-      //     가운데로 맞추면 글자가 서로 다른 높이에 앉는다. ⚠ rect 로는 못 잰다(칩 라운드 줄과 같은 이유).
+      // 라운드 = 큰 숫자 + ◀▶(2026-09-03) — 굴림 피커(.cdRn 50칸)는 없앴다
+      assert(!d().querySelector('.cdRn') && !d().querySelector('#cdPickBox'),'옛 굴림 피커가 되살아났다');
+      { const n=d().querySelector('.cdRnN'); assert(n,'라운드 숫자(.cdRnN)가 없음');
+        assert(n.firstChild && n.firstChild.textContent==='27','현재 라운드가 안 잡힘: '+n.textContent);
+        assert(n.querySelector('em') && n.querySelector('em').textContent==='/'+CAMP_RND_MAX,'라운드 상한 표기가 없음'); }
+      assert(d().querySelectorAll('.cdArw').length===2,'◀▶ 가 둘이 아님');
+      // ◀▶ 는 **공용 방향 버튼**(.arwBtn + data-arw)이다 — 새 화살표를 만들지 않는다(CLAUDE.md 레지스트리)
+      for(const b of d().querySelectorAll('.cdArw'))
+        assert(b.classList.contains('arwBtn') && b.dataset.arw,'◀▶ 가 공용 .arwBtn 이 아니다: '+b.className);
+      // [이동] = 공용 .actBtn.pri — 제 버튼을 따로 만들지 않는다
+      { const g=d().querySelector('.cdGo');
+        assert(g.classList.contains('actBtn') && g.classList.contains('pri'),'[이동]이 공용 .actBtn.pri 가 아니다: '+g.className); }
+      // ⛔ 청록 금지 — 판 테두리·현재 칸·라운드 숫자 어디에도 청록(--hud)이 없어야 한다(하단 구역과 갈리던 원인)
+      { const cyan=(c)=>{ const a=(c.match(/[\d.]+/g)||[]).map(Number); return a.length>=3 && a[1]>120 && a[2]>150 && a[1]>a[0]+60 && a[2]>a[0]+60; };
+        assert(!cyan(getComputedStyle(d()).borderTopColor),'드롭다운 테두리가 청록이다: '+getComputedStyle(d()).borderTopColor);
+        assert(!cyan(getComputedStyle(d().querySelector('.cdRow.here .cdIx')).color),'현재 던전 번호가 청록이다');
+        assert(!cyan(getComputedStyle(d().querySelector('.cdRnN')).color),'라운드 숫자가 청록이다'); }
+      // 라벨(DUNGEON/ROUND)은 하단 시트 머리줄(.cgKick)과 같은 서명 — 자간이 같아야 한다
+      { const sl=getComputedStyle(d().querySelector('.cdSl'));
+        assert(Math.abs(parseFloat(sl.letterSpacing)-9*0.24)<0.2,'라벨 자간이 .cgKick(.24em) 과 다르다: '+sl.letterSpacing); }
+      // ③ 자리 — **전체 화면**이다(2026-09-03 사용자 확정 · 목업 camp-dgpick-full-8 1안). 재화 바와 하단 네비 사이를
+      //    통째로 덮고, 칩은 그 위에 남아 머리줄이자 닫는 손잡이가 된다. ⛔ 칩 아래 작은 판으로 되돌리지 말 것.
+      { const ph=$('phone').getBoundingClientRect(), dr=d().getBoundingClientRect(), cr=t.getBoundingClientRect();
+        assert(Math.abs(dr.left-ph.left)<1.5 && Math.abs(dr.right-ph.right)<1.5,'던전 선택이 전폭이 아니다: '+dr.width.toFixed(0)+' / '+ph.width.toFixed(0));
+        assert(dr.top<=ph.top+1,'던전 선택이 화면 위까지 안 덮는다: '+(dr.top-ph.top).toFixed(1));
+        const nav=document.querySelector('.navBar'); if(nav){ const nr=nav.getBoundingClientRect();
+          assert(Math.abs(dr.bottom-nr.top)<=2,'던전 선택이 네비 자리를 안 비운다: 판밑 '+dr.bottom.toFixed(1)+' / 네비위 '+nr.top.toFixed(1)); }
+        assert(d().parentElement===$('phone'),'던전 선택이 #phone 직속이 아니다(재화 바 안에 갇힌다)');
+        // 칩이 위에 남아 있어야 닫을 수 있다 — z 순서로 잰다(칩 가운데를 찍으면 칩이 잡혀야 한다)
+        const hit=document.elementFromPoint(cr.left+cr.width/2, cr.top+cr.height/2);
+        assert(hit && t.contains(hit),'던전 선택이 칩을 덮었다 — 닫을 손잡이가 사라진다: '+(hit?hit.className:'없음')); }
+      // ④ ⛔ **판이 아니라 글자다**(2026-09-03 사용자 확정) — 좌상단 칩과 같은 어법. 불투명 검정 판은 너무 진해서
+      //    판 없이 띄운 칩과 안 어울렸다. 옅은 그늘 한 겹 + 글자 그림자, 테두리·박스 그림자 없음.
+      { const cs=getComputedStyle(d()); const a=(cs.backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+        assert(a.length<4 || a[3]<=0.05,'드롭다운에 불투명 면이 생겼다 — 칩처럼 그늘 위 글자여야 한다: '+cs.backgroundColor);
+        assert(parseFloat(cs.borderTopWidth)===0,'드롭다운에 테두리가 생겼다');
+        assert(cs.boxShadow==='none','드롭다운에 박스 그림자가 생겼다(판처럼 보인다): '+cs.boxShadow);
+        assert(/px/.test(cs.textShadow||''),'드롭다운 글자에 그림자가 없다 — 밝은 바닥에서 묻힌다'); }
+      // ⑤ 「지금 여기」= 카드 **붉은 테두리 + 붉은 번호**(발광 없음) · 부제 줄이 있다
+      { const row=d().querySelector('.cdRow.here'); const cs=getComputedStyle(row);
+        const bc=(cs.borderTopColor.match(/[\d.]+/g)||[]).map(Number);
+        assert(bc[0]>200 && bc[0]>bc[1]+80,'현재 던전 카드 테두리가 붉은색이 아니다: '+cs.borderTopColor);
+        assert(row.querySelector('.cdSub') && row.querySelector('.cdSub').textContent,'던전 카드에 부제(배수) 줄이 없다'); }
+      // ⑥ 🎚 슬라이더 — 채움/손잡이 = (r-1)/(max-1) · 붉은 채움 · **누르고 끌면** 라운드가 따라온다
+      { const sl=d().querySelector('.cdSld'), f=d().querySelector('.cdFill'), k=d().querySelector('.cdKnob');
+        assert(sl && f && k,'라운드 슬라이더 조각이 없음');
+        const want=((27-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
+        assert(f.style.width===want && k.style.left===want,'슬라이더 위치가 27 이 아님: 채움 '+f.style.width+' 손잡이 '+k.style.left);
+        const c=(getComputedStyle(f).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+        assert(c[0]>200 && c[0]>c[1]+80 && c[0]>c[2]+80,'슬라이더 채움이 붉은색이 아니다: '+getComputedStyle(f).backgroundColor);
+        assert(sl.getBoundingClientRect().height>=24,'슬라이더 누르는 높이가 손가락에 좁다: '+sl.getBoundingClientRect().height.toFixed(0)+'px');
+        // 트랙 80% 지점을 누르면 ≈ 40, 끌어서 20% 로 가면 ≈ 11
+        const r=sl.getBoundingClientRect(), pe=(t,x)=>sl.dispatchEvent(new PointerEvent(t,{pointerId:7,clientX:r.left+r.width*x,clientY:r.top+r.height/2,bubbles:true,cancelable:true,isPrimary:true}));
+        pe('pointerdown',.8); const a=+d().querySelector('.cdRnN').firstChild.textContent;
+        pe('pointermove',.2);  const b=+d().querySelector('.cdRnN').firstChild.textContent; pe('pointerup',.2);
+        assert(Math.abs(a-40)<=1,'슬라이더 80% 를 눌렀는데 라운드가 40 근처가 아님: '+a);
+        assert(Math.abs(b-11)<=1,'슬라이더를 20% 로 끌었는데 라운드가 11 근처가 아님: '+b);
+        campRndTap(27); }
+      // ⑥-1 ◀▶ — pointerdown 으로 한 칸(캠프 화면은 click 을 안 만들 수 있다) · 끝에서는 잠긴다
+      { const fw=d().querySelector('.cdArw[data-d="1"]');
+        fw.dispatchEvent(new PointerEvent('pointerdown',{pointerId:1,bubbles:true,cancelable:true,isPrimary:true}));
+        fw.dispatchEvent(new PointerEvent('pointerup',{pointerId:1,bubbles:true,cancelable:true,isPrimary:true}));
+        assert(d().querySelector('.cdRnN').firstChild.textContent==='28','▶ 를 눌렀는데 라운드가 한 칸 안 움직임');
+        campRndTap(CAMP_RND_MAX);
+        assert(fw.disabled,'상한(50)인데 ▶ 가 안 잠김');
+        assert(!d().querySelector('.cdArw[data-d="-1"]').disabled,'상한인데 ◀ 까지 잠겼다');
+        campRndTap(27); }
+      // ⑥-2 카드는 **세로 가운데** 정렬이다(2026-09-03) — 이름·부제 두 줄 블록을 큰 번호(22px)와 블록으로 맞춘다.
+      //     ⚠ 옛 한 줄 목록은 밑선 정렬이었다(번호 12px vs 이름 16px 상자). 두 줄이 되면서 규칙이 바뀐 것이지 빠진 게 아니다.
       { const ai=getComputedStyle(d().querySelector('.cdRow')).alignItems;
-        assert(ai==='baseline','던전 줄이 밑선 정렬이 아니다 — 번호와 이름이 어긋나 보인다: '+ai); }
+        assert(ai==='center','던전 카드가 세로 가운데 정렬이 아니다 — 번호와 두 줄 블록이 어긋나 보인다: '+ai); }
       // ⑦ 고르기만 해서는 **안 바뀐다** — 확정 버튼이 있는 이유다
       d().querySelector('.cdRow[data-dg="5"]').click();
-      d().querySelector('.cdRn[data-r="40"]').click();
+      campRndTap(40);
       assert(PROF().camp.dg===3 && PROF().camp.cleared===26,
         '고르기만 했는데 실제 값이 바뀌었다(확정 버튼이 무의미해진다): '+PROF().camp.dg+'/'+PROF().camp.cleared);
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='폐쇄된 시설','고른 것이 표시에 안 반영됨');
@@ -11325,7 +11541,7 @@ async function groupLobby(){
       t.click(); await sleep(40);
       d().querySelector('.cdRow[data-dg="0"]').click();
       // 캠프에는 라운드가 없다 — 그 칸이 잠긴다
-      { const R=d().querySelector('.cdR');
+      { const R=d().querySelector('.cdRnd');
         assert(R.classList.contains('off'),'캠프를 골랐는데 라운드 칸이 살아 있다 — 캠프엔 라운드가 없다');
         assert(getComputedStyle(R).pointerEvents==='none','라운드 칸이 잠겼는데 눌린다'); }
       const skin0=skin;
@@ -11343,9 +11559,9 @@ async function groupLobby(){
         '캠프에 있는데 드롭다운이 다른 칸을 가리킨다: '+((d().querySelector('.cdRow.here')||{}).dataset||{}).dg);
       // 던전으로 되돌아가면 라운드 칸이 풀린다
       d().querySelector('.cdRow[data-dg="2"]').click();
-      assert(!d().querySelector('.cdR').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
+      assert(!d().querySelector('.cdRnd').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
       campDropClose();
-      return '캠프 0 + 던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 캠프 왕복 확인';
+      return '전체 화면(재화 바~네비) · 칩이 머리줄 · 카드 '+(CAMP_DG_MAX+1)+' · ◀▶+슬라이더(80%→40 · 끌기→11) · 공용 .actBtn/.arwBtn · 고르기≠이동 · 캠프 왕복';
     } finally {
       gateOff();
       campDropClose();

@@ -1,0 +1,171 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>던전 선택 전체 화면 — 슬라이더+◀▶ 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 확정된 방향(2026-09-03): 칩을 누르면 **전체 화면**으로 던전을 고른다. 라운드는 **◀▶ 와 슬라이더 둘 다** —
+     ◀▶ 로 정확히 한 칸, 슬라이더로 한 번에 멀리. 여덟 안은 그 두 조작을 **어디에 어떻게 놓나**만 다르다.
+     재질: 어두운 페이지(맵을 덮는다) · 카드는 흰 4% 면 · 「지금 여기」는 붉은 테두리/글자 · Rajdhani 숫자 ·
+     버튼은 공용 .actBtn.pri · ◀▶ 는 공용 .arwBtn 글리프 · 슬라이더 = 붉은 채움 + 흰 손잡이(칩 밑선 어휘).
+     ⛔ 청록·발광 없음. */
+:root{--ko:'IBM Plex Sans KR',sans-serif;--num:'Rajdhani',sans-serif;--red:#ff7676;--ink:#e6eefc;--dim:rgba(214,226,240,.55);--mute:rgba(214,226,240,.35);--hair:rgba(255,255,255,.12);--card:rgba(255,255,255,.04)}
+*{box-sizing:border-box}
+body{margin:0;background:#101317;color:#dfe5ee;font-family:var(--ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--num)}
+.sub{margin:0 0 10px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:62px}.sub b{color:#c3ccd8;font-weight:700}
+.phone{width:390px;height:600px;position:relative;overflow:hidden;font-size:11px;color:#d6e2f0;
+  background:linear-gradient(180deg,#121316 0%,#0b0c0e 60%,#080809 100%)}
+.appbar{height:44px;display:flex;align-items:center;gap:10px;padding:0 10px;font-size:14px;font-weight:800;color:#fff}
+.appbar .sp{flex:1}.appbar .res{font-family:var(--num);font-weight:700;color:#8d97a6;font-size:11px}
+.num{font-family:var(--num);font-weight:700}
+.kick{font-family:var(--num);font-size:9px;font-weight:800;letter-spacing:.24em;color:var(--dim)}
+.arw{width:32px;height:32px;display:grid;place-items:center;color:#c3ccd8;flex:none}
+.arw svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.go{display:flex;align-items:center;justify-content:center;height:44px;font-size:13px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:3px;background:rgba(255,255,255,.14)}
+.pad{padding:0 14px}
+/* 던전 카드(목록) */
+.card{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:3px;background:var(--card);margin-top:6px;border:1px solid transparent;position:relative}
+.card .big{font-family:var(--num);font-size:22px;color:#c3ccd8;min-width:26px;text-align:center}
+.card .t{flex:1;min-width:0}.card .t b{display:block;font-size:12.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.card .t span{font-size:10px;color:var(--dim)}
+.card .mul{font-family:var(--num);color:var(--dim)}
+.card.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}.card.here .big{color:var(--red)}
+.card.lock{opacity:.38}
+/* 슬라이더 부품 */
+.sld{position:relative;height:28px;display:flex;align-items:center}
+.sld::before{content:'';position:absolute;left:0;right:0;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
+.sld .fill{position:absolute;left:0;height:3px;border-radius:2px;background:var(--red);width:60%}
+.sld .knob{position:absolute;left:60%;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 3px rgba(255,118,118,.25)}
+.ticks{display:flex;justify-content:space-between;font-family:var(--num);font-size:9px;color:var(--mute);margin-top:2px}
+.ticks span{width:1ch;text-align:center}
+.stp{display:flex;align-items:center;gap:2px}
+.stp .val{flex:1;text-align:center;font-family:var(--num);font-size:30px;font-weight:700;line-height:1;color:#fff}
+.stp .val em{font-style:normal;font-size:13px;color:var(--mute);margin-left:3px}
+.qk{display:flex;gap:6px}.qk span{flex:1;height:26px;display:grid;place-items:center;border-radius:3px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-family:var(--num);font-weight:700;color:#c3ccd8;font-size:11px}
+.foot{position:absolute;left:0;right:0;bottom:0;padding:10px 14px 14px;background:linear-gradient(180deg,rgba(8,8,9,0),rgba(8,8,9,.96) 30%)}
+.hr{border-top:1px solid var(--hair)}
+
+/* ① 하단 고정 라운드 패널 — 목록은 위에서 굴리고, 라운드(◀▶+슬라이더)·이동은 아래 고정 */
+.v1 .list{position:absolute;top:44px;left:0;right:0;bottom:168px;overflow:hidden;padding:0 14px}
+.v1 .foot .stp{margin-bottom:2px}
+
+/* ② 상단 라운드 — 앱바 바로 아래에 라운드가 먼저, 던전 목록은 그 아래 */
+.v2 .top{padding:6px 14px 10px;border-bottom:1px solid var(--hair)}
+.v2 .list{padding:4px 14px 0}
+.v2 .foot{padding-top:14px}
+
+/* ③ 카드 안 라운드 — 고른 카드가 펼쳐져 슬라이더가 안에 나온다 */
+.v3 .card.here{flex-wrap:wrap}
+.v3 .card.here .ext{flex-basis:100%;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,118,118,.2)}
+.v3 .card.here .ext .stp .val{font-size:24px}
+.v3 .card.here .ext .arw{width:28px;height:28px}
+
+/* ④ 큰 숫자 히어로 — 위에 라운드가 주인공, 던전은 아래 촘촘한 줄 */
+.v4 .hero{padding:10px 14px 12px;text-align:center}
+.v4 .hero .nm{font-size:13px;font-weight:800;color:var(--ink)}
+.v4 .hero .stp .val{font-size:56px}
+.v4 .hero .stp .arw{width:40px;height:40px}
+.v4 .row{display:flex;align-items:baseline;gap:8px;padding:7px 14px;border-top:1px solid var(--hair);font-weight:700;color:#b9c4d2}
+.v4 .row .ix{font-family:var(--num);color:var(--mute);min-width:12px;text-align:right}
+.v4 .row .nm{flex:1}.v4 .row .mul{font-family:var(--num);color:var(--mute);font-size:10.5px}
+.v4 .row.here{color:#fff}.v4 .row.here .ix{color:var(--red)}
+.v4 .row.lock{color:rgba(214,226,240,.28)}
+
+/* ⑤ 좌 타임라인 + 우 상세 — 왼쪽에 던전 세로선, 오른쪽에 고른 던전과 라운드 */
+.v5 .cols{display:flex;position:absolute;top:44px;left:0;right:0;bottom:74px}
+.v5 .tl{width:150px;flex:none;padding:8px 0 0 22px;position:relative;border-right:1px solid var(--hair)}
+.v5 .tl::before{content:'';position:absolute;left:12px;top:16px;bottom:16px;width:1px;background:var(--hair)}
+.v5 .pt{position:relative;padding:7px 8px 7px 8px;font-weight:700;color:#b9c4d2;font-size:11.5px}
+.v5 .pt::before{content:'';position:absolute;left:-13.5px;top:11px;width:7px;height:7px;border-radius:50%;background:#3a4048;border:1px solid var(--hair)}
+.v5 .pt.done::before{background:#8a94a6}
+.v5 .pt.here{color:#fff}.v5 .pt.here::before{background:var(--red);border-color:var(--red);box-shadow:0 0 0 3px rgba(255,118,118,.2)}
+.v5 .pt.lock{color:rgba(214,226,240,.28)}
+.v5 .det{flex:1;padding:12px 14px}
+.v5 .det .big{font-family:var(--num);font-size:40px;color:var(--red);line-height:1}
+.v5 .det .nm{font-size:15px;font-weight:800;color:#fff;margin:4px 0 2px}
+.v5 .det .d{font-size:10px;color:var(--dim)}
+.v5 .det .stp .val{font-size:28px}
+.v5 .det .stp .arw{width:28px;height:28px}
+
+/* ⑥ 타일 격자 + 하단 슬라이더 */
+.v6 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px 14px 0}
+.v6 .tile{aspect-ratio:1.25;border-radius:3px;background:var(--card);border:1px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative}
+.v6 .tile .big{font-family:var(--num);font-size:22px;color:#c3ccd8}
+.v6 .tile .nm{font-size:9.5px;color:var(--dim);max-width:92%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v6 .tile .mul{position:absolute;top:5px;right:6px;font-family:var(--num);font-size:9px;color:var(--mute)}
+.v6 .tile.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}.v6 .tile.here .big{color:var(--red)}.v6 .tile.here .nm{color:#fff}
+.v6 .tile.lock{opacity:.35}
+
+/* ⑦ 던전 가로 캐러셀 + 라운드 크게 가운데 */
+.v7 .car{display:flex;gap:8px;padding:6px 0 0 14px;overflow:hidden}
+.v7 .cd{flex:none;width:150px;height:96px;border-radius:3px;background:var(--card);border:1px solid transparent;padding:10px 12px;position:relative}
+.v7 .cd .big{font-family:var(--num);font-size:26px;color:#c3ccd8;line-height:1}
+.v7 .cd .nm{font-size:12px;font-weight:800;color:var(--ink);margin-top:6px}
+.v7 .cd .mul{position:absolute;right:12px;top:12px;font-family:var(--num);color:var(--dim)}
+.v7 .cd.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}.v7 .cd.here .big{color:var(--red)}
+.v7 .cd.lock{opacity:.35}
+.v7 .dots{display:flex;justify-content:center;gap:5px;margin:10px 0 0}.v7 .dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.22)}.v7 .dots i.on{background:var(--red);width:14px;border-radius:3px}
+.v7 .mid{padding:26px 14px 0;text-align:center}
+.v7 .mid .stp .val{font-size:64px}.v7 .mid .stp .arw{width:44px;height:44px}
+.v7 .mid .sld{margin-top:14px}
+
+/* ⑧ 정보형 — 카드에 적 수·최고 기록, 슬라이더에 마일스톤 표식과 ±10 빠른 버튼 */
+.v8 .card .t span b{display:inline;font-size:10px;color:var(--dim);font-weight:700}
+.v8 .card .best{font-family:var(--num);font-size:10px;color:var(--mute);text-align:right}
+.v8 .card .best b{display:block;font-size:13px;color:#c3ccd8}
+.v8 .mile{position:absolute;top:8px;width:1px;height:12px;background:rgba(255,255,255,.28)}
+.v8 .mile.on{background:rgba(255,255,255,.55)}
+.v8 .qk{margin-top:8px}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const L='<svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>', R='<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>';
+const A=(d)=>'<span class="arw">'+(d==='l'?L:R)+'</span>';
+const DG=[['0','캠프','안전','안전 구역 · 라운드 없음',0],['1','감염된 둥지','×1.0','적 8 · 최고 50',50],['2','버려진 전초기지','×3.0','적 12 · 최고 50',50],
+  ['3','잊혀진 회랑','×10.0','적 16 · 최고 30',30],['4','산란장','×30.0','적 20 · 최고 —',0],['5','폐쇄된 시설','×100','적 26 · 최고 —',0],['6','심연의 관문','잠김','던전 5 를 깨면 열린다',0]];
+const HERE=3, OPEN=5, st=(i)=>i===HERE?' here':(i>OPEN?' lock':'');
+const bar=(t)=>'<div class="appbar">'+A('l')+'<span>'+(t||'던전 선택')+'</span><span class="sp"></span><span class="res">1.6M · 755 · 0 · 0/10</span></div>';
+const card=([i,nm,m,d])=>'<div class="card'+st(+i)+'"><span class="big">'+i+'</span><span class="t"><b>'+nm+'</b><span>'+d+'</span></span><span class="mul">'+m+'</span></div>';
+const STP=()=>'<div class="stp">'+A('l')+'<span class="val">30<em>/50</em></span>'+A('r')+'</div>';
+const SLD=(extra)=>'<div class="sld">'+(extra||'')+'<span class="fill"></span><span class="knob"></span></div><div class="ticks"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div>';
+const KICK=(t)=>'<div class="kick" style="margin-bottom:4px">'+t+'</div>';
+
+const V={
+ 1: bar()+'<div class="list">'+KICK('DUNGEON')+DG.slice(0,6).map(card).join('')+'</div>'
+   +'<div class="foot">'+KICK('ROUND')+STP()+SLD()+'<div class="go" style="margin-top:12px">이동</div></div>',
+ 2: bar()+'<div class="top">'+KICK('ROUND')+STP()+SLD()+'</div><div class="list">'+KICK('DUNGEON')+DG.slice(0,5).map(card).join('')+'</div>'
+   +'<div class="foot"><div class="go">이동</div></div>',
+ 3: bar()+'<div class="pad">'+KICK('DUNGEON')+DG.slice(0,3).map(card).join('')
+   +'<div class="card here"><span class="big">3</span><span class="t"><b>잊혀진 회랑</b><span>적 16 · 최고 30</span></span><span class="mul">×10.0</span>'
+   +'<div class="ext">'+KICK('ROUND')+STP()+SLD()+'</div></div>'+DG.slice(4,6).map(card).join('')+'</div>'
+   +'<div class="foot"><div class="go">이동</div></div>',
+ 4: bar()+'<div class="hero"><div class="kick">ROUND · 잊혀진 회랑</div>'+STP()+SLD()+'</div>'
+   +'<div class="kick" style="padding:6px 14px 4px">DUNGEON</div>'
+   +DG.slice(0,7).map(([i,nm,m])=>'<div class="row'+st(+i)+'"><span class="ix">'+i+'</span><span class="nm">'+nm+'</span><span class="mul">'+m+'</span></div>').join('')
+   +'<div class="foot"><div class="go">이동</div></div>',
+ 5: bar()+'<div class="cols"><div class="tl">'+DG.slice(0,7).map(([i,nm])=>'<div class="pt'+(+i<HERE?' done':'')+st(+i)+'">'+nm+'</div>').join('')+'</div>'
+   +'<div class="det"><div class="kick">DUNGEON 3</div><div class="big">03</div><div class="nm">잊혀진 회랑</div><div class="d">배수 ×10.0 · 적 16 · 최고 30 라운드</div>'
+   +'<div class="kick" style="margin:22px 0 4px">ROUND</div>'+STP()+SLD()+'</div></div>'
+   +'<div class="foot"><div class="go">이동</div></div>',
+ 6: bar()+KICK('DUNGEON').replace('class="kick"','class="kick pad"')+'<div class="grid">'+DG.slice(0,6).map(([i,nm,m])=>'<div class="tile'+st(+i)+'"><span class="mul">'+(+i>OPEN?'':m)+'</span><span class="big">'+i+'</span><span class="nm">'+nm+'</span></div>').join('')+'</div>'
+   +'<div class="foot">'+KICK('ROUND')+STP()+SLD()+'<div class="go" style="margin-top:12px">이동</div></div>',
+ 7: bar()+'<div class="car">'+DG.slice(2,6).map(([i,nm,m])=>'<div class="cd'+st(+i)+'"><span class="big">'+i.padStart(2,'0')+'</span><span class="mul">'+m+'</span><div class="nm">'+nm+'</div></div>').join('')+'</div>'
+   +'<div class="dots">'+DG.map(([i])=>'<i class="'+(+i===HERE?'on':'')+'"></i>').join('')+'</div>'
+   +'<div class="mid"><div class="kick">ROUND</div>'+STP()+SLD()+'</div>'
+   +'<div class="foot"><div class="go">이동</div></div>',
+ 8: bar()+'<div class="pad">'+KICK('DUNGEON')+DG.slice(0,5).map(([i,nm,m,d,best])=>'<div class="card'+st(+i)+'"><span class="big">'+i+'</span><span class="t"><b>'+nm+'</b><span>'+d.split(' · ')[0]+' · <b>'+m+'</b></span></span><span class="best">최고<b>'+(best||'—')+'</b></span></div>').join('')+'</div>'
+   +'<div class="foot">'+KICK('ROUND')+STP()+SLD([10,20,30,40].map(r=>'<i class="mile'+(r<=30?' on':'')+'" style="left:'+((r-1)/49*100).toFixed(1)+'%"></i>').join(''))
+   +'<div class="qk"><span>−10</span><span>−5</span><span>최고 30</span><span>+5</span><span>+10</span></div><div class="go" style="margin-top:10px">이동</div></div>',
+};
+const ANS=[
+ ['하단 고정 라운드 패널','던전 목록은 위에서 굴리고, <b>라운드(◀▶ + 슬라이더)와 이동은 아래에 고정</b>. 손가락이 닿는 자리에 조작이 다 있다 — 모바일 기본형.'],
+ ['상단 라운드','앱바 바로 아래 <b>라운드가 먼저</b>, 던전 목록은 그 아래. 「몇 라운드로 갈까」를 먼저 정하고 던전을 고르는 순서.'],
+ ['카드 안 라운드','고른 던전 카드가 <b>펼쳐져 슬라이더가 안에</b> 나온다. 어느 던전의 라운드인지 모호하지 않고, 다른 카드를 누르면 그쪽이 펼쳐진다.'],
+ ['큰 숫자 히어로','위에 <b>라운드 숫자가 주인공</b>(56px)으로, 던전은 아래 촘촘한 줄. 「지금 30 라운드」가 화면에서 가장 먼저 읽힌다.'],
+ ['좌 타임라인 + 우 상세','왼쪽 <b>세로 타임라인</b>에서 던전을 고르면 오른쪽에 그 던전의 큰 번호·설명·라운드 슬라이더. 진행 감각이 가장 살아 있다.'],
+ ['타일 격자','던전을 <b>3열 타일</b>로 — 열한 칸이 한눈에, 잠긴 곳까지 즉시 읽힌다. 라운드는 아래 고정 패널.'],
+ ['가로 캐러셀 + 라운드 크게','위는 던전 카드를 옆으로 넘기고, <b>가운데 라운드가 64px</b>로 크게. 슬라이더도 가장 넓다 — 손가락으로 끌기 가장 편하다.'],
+ ['정보형 + 빠른 버튼','카드에 <b>적 수·배수·최고 기록</b>, 슬라이더에 <b>10 단위 마일스톤 표식</b>, 아래 <b>−10 · −5 · 최고 · +5 · +10</b> 빠른 버튼. 가장 많이 담고 가장 빨리 간다.'],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d],i)=>'<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p><div class="phone v'+(i+1)+'">'+V[i+1]+'</div></div>').join('');
+</script></body></html>
