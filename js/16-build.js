@@ -19,10 +19,17 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
   techFogInit(keep.fog); }   // 🌫️ 건설 안개(토글 상태는 종족 전환에도 유지)
 const TECH_MINE_START=1500, TECH_GAS_START=5000, TECH_GATHER_AMT=8, TECH_MINE_T=1.2, TECH_GAS_T=1.2;   // 채취 상수: 매장량 · 1회 채취량 · 채취 소요시간
 function _techGasRemain(){ if(!G.tech) return TECH_GAS_START; if(G.tech.gasAmt==null) G.tech.gasAmt=TECH_GAS_START; return G.tech.gasAmt; }   // ⛽ 가스 광산(지형) 잔량 = 지속값. 건물 파괴돼도 유지(캐고 남은 만큼 그대로)
+// ⚡ **생산 속도** — 환생 트리 「생산 속도」 계열(2026-09-02 배선 · HUNT_R1 §4-5-3).
+//   ⭐ 시간을 **나눈다**(배수가 오를수록 짧아진다). 세 곳이 함께 걸린다: 건물 건설 · 유닛 생산 · 업그레이드.
+//   ⛔ 캠프 밖에서는 걸지 않는다 — 유즈맵·오토배틀은 트리와 무관한 전장이라
+//     여기에 환생 값이 새면 대전 균형이 사람마다 달라진다.
+function _techProdSpd(){
+  if(typeof campIsOn !== 'function' || !campIsOn()) return 1;
+  return (typeof campRtMul === 'function') ? campRtMul('prod') : 1; }
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; if(techWallet()) return STK_TECH_BUILD_T;   // 오토배틀: 건물 종류와 무관하게 동일 시간
-  return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
-function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
-function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL; }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
+  return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL/_techProdSpd(); }
+function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL/_techProdSpd(); }
+function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL/_techProdSpd(); }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
 const TECH_DEF_BLDG={ union:['bunker','turret'], swarm:['sunken','spore'], aetherial:['cannon'], feral:['thornburrow'], colossus:['bastion'] };   // 🛡 방어 건물(공격형)
 function _techIsDef(bk){ return (TECH_DEF_BLDG[G.tech.race]||[]).indexOf(bk)>=0; }
 function _techBldgKind(b){ if(!b) return '건물'; if(b.produces) return '생산'; if(_techResList(b).length) return '업그레이드'; if(b.gas) return '에너지 채취'; if(_techIsDef(b.k)) return '방어'; if(b.supply) return '인구 공급'; if(b.unlocks) return '해금'; return '건물'; }

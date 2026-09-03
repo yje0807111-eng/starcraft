@@ -2673,7 +2673,11 @@ async function groupLobby(){
       { C.rbTree={}; C.rbPts=1;
         assert(campRtCanBuy('root'),'포인트 1로 가운데를 못 산다');
         campRtBuy('root');
-        assert(campRtRootOn()&&(C.rbPts|0)===0,'가운데를 샀는데 값이 안 맞는다'); }
+        assert(campRtRootOn(),'가운데를 샀는데 안 켜졌다');
+        // 🔧 **포인트 무제한 스위치**(CAMP_RT_PTS_FREE)가 켜져 있으면 사도 안 깎인다 — 그게 정상이다.
+        //   ⚠ 차감 규칙 자체는 스위치가 꺼졌을 때만 잴 수 있다. 아래 「개발 스위치」 스텝이 켜짐을 매번 알린다.
+        if(typeof CAMP_RT_PTS_FREE==='undefined' || !CAMP_RT_PTS_FREE)
+          assert((C.rbPts|0)===0,'가운데를 샀는데 포인트가 안 깎였다: '+C.rbPts); }
       // 새로운 시작은 **절대값**이다 — 배수면 §4-5-5 곱셈 상한 표에 축이 하나 더 늘어 폭주한다
       assert(typeof campRootGrant==='function','새로운 시작이 배선되지 않았다');
       assert(CAMP_ROOT_MIN>0&&CAMP_ROOT_WK>0,'새로운 시작이 비어 있다');
@@ -2681,13 +2685,172 @@ async function groupLobby(){
         ' · 새로운 시작 '+CAMP_ROOT_MIN+'/'+CAMP_ROOT_WK+'기'+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
     } finally { C.rbTree=keepT; C.rbPts=keepP; } });
 
+  // ⛽→💠 가스를 미네랄로 (2026-09-02 사용자 요청)
+  //   ⭐ 고정 교환비가 **아니다** — 지금 미네랄 수입의 몇 초치를 준다(회차가 돌아도 체감이 같다).
+  //   ⚠ 수입을 아직 못 쟀으면 0 이다. 그때 바꾸면 가스만 잃으므로 **막혀 있어야** 한다.
+  await step('가스 교환: 남는 가스를 미네랄로 · 수입을 못 쟀으면 막힌다', async()=>{
+    skipIf(typeof campGasExAll!=='function','가스 교환 없음');
+    const C=campState(); skipIf(!C||typeof G==='undefined'||!G.tech,'캠프 상태 없음');
+    const kR=C.rate, kE=G.tech.energy, kC=G.tech.credit, kT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={};
+      // ① 수입을 못 쟀으면 아무 일도 안 일어난다 — 가스가 그대로 남아야 한다
+      C.rate=0; G.tech.energy=50; G.tech.credit=0;
+      assert(campGasExAll()===0,'수입을 못 쟀는데 교환이 됐다');
+      assert((G.tech.energy|0)===50,'교환이 안 됐는데 가스가 줄었다: '+G.tech.energy);
+      // ② 수입이 있으면 가스가 미네랄이 된다 — 값은 **수입 × 초치 × 가스 수**
+      C.rate=100; G.tech.energy=50; G.tech.credit=0;
+      const want=Math.floor(50*100*CAMP_GASEX_SEC);
+      const got=campGasExAll();
+      assert(got===want,'교환값이 다르다: '+got+' ≠ '+want);
+      assert((G.tech.energy|0)===0,'가스가 안 빠졌다: '+G.tech.energy);
+      assert((G.tech.credit|0)>=want,'미네랄이 안 들어왔다: '+G.tech.credit);
+      // ③ 트리 「가스 교환비」가 실제로 값을 키운다
+      C.rbTree={gasEx:campRtMax('gasEx')};
+      C.rate=100; G.tech.energy=50; G.tech.credit=0;
+      const big=campGasExAll();
+      assert(big>want,'교환비 계열이 값을 안 키운다: '+big+' ≤ '+want);
+      // ④ 가스가 없으면 막힌다
+      C.rbTree={}; C.rate=100; G.tech.energy=0;
+      assert(campGasExAll()===0,'가스가 없는데 교환이 됐다');
+      // ⑤ 🏭 **자리** — 정제소 프로필에 카드로 붙는다(2026-09-02 사용자 확정).
+      //   ⛔ 캠프 채굴 시트(미네랄 판)에 얹혀 있던 옛 자리로 되돌리지 말 것.
+      //   ⛔ 캠프 밖(유즈맵·오토배틀)의 정제소에는 붙지 않아야 한다 — 환생 값이 대전에 새면 안 된다.
+      const keepOn=campIsOn;
+      try{
+        const fake={ k:'refinery', name:'정제소', gas:true };
+        campIsOn=function(){ return true; };  C.rate=100; G.tech.energy=50;
+        const inCamp=techBldgPlainModel(fake, null);
+        const card=(inCamp.items||[]).filter(Boolean).find(function(x){ return x && x.sn==='가스 교환'; });
+        assert(card,'정제소 프로필에 가스 교환 카드가 없다');
+        assert(card.state==='ok','가스가 있는데 카드가 잠겨 있다: '+card.state);
+        assert((inCamp.info.stats||[]).some(function(r){ return r[0]==='교환비'; }),
+          '프로필 정보에 교환비 줄이 없다');
+        campIsOn=function(){ return false; };
+        const outCamp=techBldgPlainModel(fake, null);
+        assert(!(outCamp.items||[]).filter(Boolean).some(function(x){ return x && x.sn==='가스 교환'; }),
+          '캠프 밖 정제소에도 교환 카드가 붙는다');
+      } finally { campIsOn=keepOn; }
+      return '수입 0 이면 막힘 · 50가스 → '+want+' · 교환비 5차 → '+big+' · 자리=정제소 프로필(캠프에서만)';
+    } finally { C.rate=kR; G.tech.energy=kE; G.tech.credit=kC; C.rbTree=kT; }
+  });
+
+  // 🚪 **마디 능력** (2026-09-02 사용자 확정) — 관문이 문만 여는 게 아니라 작게 세진다.
+  //   ⭐ 새 효과 종류를 만들지 않는 것이 요점이다 — campRtMul/campRtCut 한 곳에만 더한다.
+  //   ⛔ 마디 전용 f 를 만들어 곱셈 축을 늘리지 말 것(BALANCE §0 의 ×1,900만).
+  await step('환생 트리: 마디가 그 안 계열들과 같은 축에 얹힌다', async()=>{
+    skipIf(typeof campRtNodeAdd!=='function','마디 능력 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      // ① 아무것도 없으면 덤도 없다
+      C.rbTree={};
+      assert(campRtMul('gather')===1,'마디도 계열도 없는데 배수가 1 이 아니다: '+campRtMul('gather'));
+      // ② 갈래 마디만 사도 **계열을 안 샀는데** 조금 세진다 — 그게 「문을 열면 미리 맛본다」는 뜻
+      C.rbTree={root:1,'br:econ':1};
+      const brOnly=campRtMul('gather');
+      assert(Math.abs(brOnly-(1+CAMP_RT_NODE_BR))<1e-9,'갈래 마디 몫이 안 붙는다: '+brOnly);
+      // ③ 묶음 마디까지 사면 **더해진다**(곱이 아니다)
+      C.rbTree={root:1,'br:econ':1,'gp:econ가':1};
+      const both=campRtMul('gather');
+      assert(Math.abs(both-(1+CAMP_RT_NODE_BR+CAMP_RT_NODE_GP))<1e-9,'마디 둘이 합으로 안 붙는다: '+both);
+      // ④ 계열을 산 값에도 그대로 더해진다
+      C.rbTree={root:1,'br:econ':1,'gp:econ가':1,gather:1};
+      const lad=campRtLad('gather')[1];
+      assert(Math.abs(campRtMul('gather')-(lad+CAMP_RT_NODE_BR+CAMP_RT_NODE_GP))<1e-9,
+        '계열 값에 마디 몫이 안 얹힌다: '+campRtMul('gather'));
+      // ⑤ 다른 갈래에는 안 샌다
+      assert(campRtMul('atk')===1,'재화 마디가 아군 갈래까지 세게 한다: '+campRtMul('atk'));
+      // ⑥ 다른 묶음에도 안 샌다 — 묶음 마디는 제 묶음까지만
+      C.rbTree={root:1,'br:econ':1,'gp:econ가':1};
+      const other=campRtMul('idle');   // econ 다 묶음
+      assert(Math.abs(other-(1+CAMP_RT_NODE_BR))<1e-9,'묶음 마디가 남의 묶음까지 간다: '+other);
+      // ⑦ 적 약화는 **상한을 안 넘는다** — 넘기면 갈래 하한이 뚫린다
+      C.rbTree={root:1,'br:enemy':1,'gp:enemy가':1,foeHp:campRtMax('foeHp')};
+      assert(campRtCut('foeHp')<=CAMP_RT_CUT_MAX+1e-9,'마디 몫이 계열 상한을 넘겼다: '+campRtCut('foeHp'));
+      // ⑧ 사슬 갈래(시작 도움)에는 마디가 없다
+      assert(campRtNodeAdd('tap')===0,'사슬 갈래에 마디 몫이 붙는다');
+      return '갈래 +'+Math.round(CAMP_RT_NODE_BR*100)+'% · 묶음 +'+Math.round(CAMP_RT_NODE_GP*100)
+        +'% · 합으로 얹힘 · 갈래/묶음 밖으로 안 샘 · 적 약화 상한 지킴';
+    } finally { C.rbTree=keepT; }
+  });
+
+  // 🔌 **산 계열이 실제로 수치를 움직이나** (2026-09-02).
+  //   ⚠ 이 검사가 없어서 계열 7개가 「표에 있고 살 수 있고 화면에 뜨는데 아무 일이 안 나는」 채로
+  //     오래 남아 있었다. 화면만 보면 멀쩡해 보이고, 다른 스모크는 전부 통과한다.
+  //   ⭐ 재는 법: 자루를 비운 값과 5차까지 채운 값을 **직접 부딪쳐** 본다. 안 변하면 배선이 없는 것이다.
+  await step('환생 트리: 산 계열이 실제로 수치를 움직인다', async()=>{
+    skipIf(typeof campRtBag!=='function'||typeof campState!=='function','트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // 배선된 계열 ↔ 그 값이 나타나는 자리. ⭐ 새 계열을 배선하면 여기 한 줄을 같이 넣는다.
+    const PROBE={
+      gather: function(){ return campGatherMul(); },
+      tap:    function(){ return campTapGain(); },
+      tapMul: function(){ return campTapGain(); },
+      mine:   function(){ return campMineMul(); },
+      prod:   function(){ return 1/_techProdTime('union','marine'); },
+      atk:    function(){ return campRtMul('atk'); },
+      hp:     function(){ return campRtMul('hp'); },
+      bldg:   function(){ return campRtMul('bldg'); },
+      skCd:   function(){ return campRtMul('skCd'); },
+      upCost: function(){ return 1/campUpgDisc(); },
+      foeHp:  function(){ return 1/campRtFoeMul(); },
+      gasEx:  function(){ const C=campState(); const k=C.rate; C.rate=100;
+                          const v=campGasExRate(); C.rate=k; return v; }
+    };
+    // ⛔ 아직 소비처가 없는 계열 — **알고 있다는 표시**다(HUNT_R1 §4-5 의 「배선됨」 목록과 짝).
+    //   여기서 빼려면 먼저 배선하고 PROBE 에 한 줄을 넣을 것.
+    //   · wkCap — ⛔ **일부러 안 배선한다.** 일꾼 상한은 40 고정이다(2026-09-02 사용자 확정).
+    //     광맥 8칸 × 덩이당 5 = 40 이라 상한만 올리면 남는 일꾼이 광맥 옆에 서서 논다.
+    //   · dgRw — 던전 클리어 보상 **시스템이 아직 없다**(계열보다 시스템이 먼저다).
+    const NOTYET=['wkCap','dgRw'];
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    const dead=[];
+    try{
+      for(const k in PROBE){
+        C.rbTree={}; const lo=PROBE[k]();
+        C.rbTree={}; C.rbTree[k]=campRtMax(k); const hi=PROBE[k]();
+        if(!(hi>lo)) dead.push(k+'('+lo+'→'+hi+')');
+      }
+    } finally { C.rbTree=keepT; C.rbPts=keepP; }
+    assert(dead.length===0,'샀는데 수치가 안 변한다 — 배선이 끊겼다: '+dead.join(' · '));
+    // 미배선 목록이 실제로 미배선인지도 확인한다 — 배선했는데 목록에 남아 있으면 헷갈린다
+    for(const k of NOTYET) assert(campRtLine(k),'미배선 목록에 없는 계열이 적혀 있다: '+k);
+    return PROBE_N(PROBE)+'계열이 실제로 움직인다 · 아직 소비처 없음 '+NOTYET.length+'('+NOTYET.join(',')+')';
+    function PROBE_N(o){ let n=0; for(const _ in o) n++; return n; }
+  });
+
+  // 🔧 개발 스위치가 켜진 채 남아 있나 — 켜져 있으면 회수 시간·손익분기 같은 밸런스 수치가 전부 무의미하다.
+  //   ⭐ **막지 않고 알린다.** 지금은 사용자가 트리를 눈으로 보려고 일부러 켜 둔 상태다(2026-09-02).
+  await step('🔧 개발 스위치: 환생 포인트 무제한이 켜져 있는지', async()=>{
+    skipIf(typeof CAMP_RT_PTS_FREE==='undefined','스위치 없음');
+    assert(typeof campRtPts==='function','포인트를 읽는 단일 소스 함수가 없다');
+    assert(campRtPts()>0,'포인트 함수가 값을 안 준다');
+    if(!CAMP_RT_PTS_FREE) return '꺼져 있다(정상)';
+    // 무제한이면 **가장 비싼 노드도** 살 수 있어야 한다 — 모자라면 끝 노드만 조용히 안 사진다
+    let top=0;
+    for(const L of CAMP_RT_LINES){ const mx=campRtMax(L.k);
+      for(let n=1;n<=mx;n++){ const c=campRtCost(L.k,n); if(isFinite(c)&&c>top) top=c; } }
+    assert(campRtPts()>top*10,'무제한 값이 최고 비용('+top+')에 비해 넉넉하지 않다: '+campRtPts());
+    return '⚠ 켜져 있다 — 포인트가 줄지 않는다 · 최고 비용 '+top.toExponential(1)+' · 밸런스를 재기 전에 js/19-camp.js 의 CAMP_RT_PTS_FREE 를 false 로';
+  });
+
   await step('환생 트리: 계열마다 아이콘 · 밀고 확대가 한 점을 붙잡는다', async()=>{
     skipIf(typeof campTreeZoomAt!=='function'||typeof campRebEnter!=='function','별자리 트리 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    // 아이콘 — 32계열 전부에 있고, 같은 그림을 두 계열이 나눠 쓰지 않는다
+    // 아이콘 — 계열마다 전용 그림 한 장(2026-09-02 · ART.md §15). 이름은 **계열키와 같다**.
+    //   ⚠ 한 장만 빠져도 그 별 하나가 빈 원이 된다 — 33개 중 하나를 눈으로는 못 찾는다.
+    //   ⛔ 계열키와 파일명이 어긋나면 엉뚱한 그림이 붙는데 화면은 멀쩡해 보인다.
     { const ics=CAMP_RT_LINES.map(L=>L.ic);
       assert(ics.every(Boolean),'아이콘이 없는 계열이 있다');
-      assert(new Set(ics).size===ics.length,'두 계열이 같은 아이콘을 쓴다'); }
+      assert(new Set(ics).size===ics.length,'두 계열이 같은 아이콘을 쓴다');
+      const bad=CAMP_RT_LINES.filter(L=>L.ic!=='tree/'+L.k+'.webp')
+        .map(L=>L.k+' → '+L.ic);
+      assert(bad.length===0,'계열키와 아이콘 이름이 어긋난다: '+bad.join(' · '));
+      const miss=(await Promise.all(CAMP_RT_LINES.map(function(L){
+        return fetch('assets/icons/'+L.ic).then(function(r){ return r.ok?null:L.k; })
+          .catch(function(){ return L.k; }); }))).filter(Boolean);
+      assert(miss.length===0,'아이콘 파일이 없다: '+miss.join(',')); }
     const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
     try{
       C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1}; C.rbPts=1e6;
@@ -2700,13 +2863,14 @@ async function groupLobby(){
       const px=r.left+r.width*0.72, py=r.top+r.height*0.34;
       const before=campTreeToView(px,py);
       const wx=(before.x-_campTreeView.x)/_campTreeView.z, wy=(before.y-_campTreeView.y)/_campTreeView.z;
-      campTreeZoomAt(_campTreeView.z*1.6, px, py);
+      // ⚠ 팬·줌은 이제 **부드럽게 따라간다**(2026-09-02) — 즉시 값을 읽으려면 보간을 끝내야 한다.
+      campTreeZoomAt(_campTreeView.z*1.6, px, py); campTreeViewSettle();
       const sx=wx*_campTreeView.z+_campTreeView.x, sy=wy*_campTreeView.z+_campTreeView.y;
       assert(Math.abs(sx-before.x)<0.6&&Math.abs(sy-before.y)<0.6,
         '확대가 붙잡은 점을 놓쳤다 ('+(sx-before.x).toFixed(2)+', '+(sy-before.y).toFixed(2)+')');
       // 상하한이 있고, 「전체」는 늘 그 사이로 돌아온다
-      campTreeZoomAt(1e6,null); const hi=_campTreeView.z;
-      campTreeZoomAt(1e-6,null); const lo=_campTreeView.z;
+      campTreeZoomAt(1e6,null); campTreeViewSettle(); const hi=_campTreeView.z;
+      campTreeZoomAt(1e-6,null); campTreeViewSettle(); const lo=_campTreeView.z;
       assert(hi===CAMP_TREE_ZMAX,'확대 상한이 안 걸린다: '+hi);
       // ⭐ **축소 하한은 해금 정도를 따라간다**(2026-09-02) — 상수가 아니라 「전체 보기」 배율에 묶여 있다.
       //   초반엔 별이 몇 개뿐이라 마음껏 축소하면 화면이 텅 비기 때문이다.
@@ -2783,8 +2947,13 @@ async function groupLobby(){
         const g0=campTapGain();
         _campFevEnd=Date.now()+5000;
         assert(campFevActive(),'심었는데 안 켜진다');
-        assert(Math.abs(campTapGain()/g0-campFevMul())<0.02,
-          '피버 배수가 탭에 안 걸린다: '+(campTapGain()/g0).toFixed(2)+' vs '+campFevMul());
+        // ⚠ **비율로 재지 말 것** — campTapGain 은 Math.round 로 정수화한다.
+        //   탭당이 1~2 인 초반에는 반올림 오차 1 이 비율 5배로 보인다(마디 능력이 붙어 내부값이
+        //   1.00 → 1.15 가 되자 이 줄이 「5.00 vs 4」로 넘어졌다 · 2026-09-02).
+        //   반올림 오차는 최대 1 이므로 **절대 오차 1**(큰 값에서는 2%)로 잰다.
+        { const want=g0*campFevMul(), got=campTapGain();
+          assert(Math.abs(got-want) <= Math.max(1, want*0.02),
+            '피버 배수가 탭에 안 걸린다: '+got+' vs '+want+' (배수 '+campFevMul()+')'); }
         // ⑥ ⛔ 중첩되지 않는다 — 켜져 있는 동안 굴려도 시간이 안 늘어난다
         { const e0=_campFevEnd; for(let i=0;i<2000;i++) campFevRoll();
           assert(_campFevEnd===e0,'켜져 있는데 다시 터져 시간이 늘었다'); }
@@ -2927,7 +3096,7 @@ async function groupLobby(){
         const r=hit.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
         assert(campTreeNearest(cx+10,cy+10)===hit,'조금 빗나갔는데 가까운 별을 못 찾는다');
         assert(campTreeNearest(cx+400,cy+400)===null,'엉뚱하게 먼 곳에서도 별을 잡는다'); }
-      return '아이콘 32 · 확대 붙잡기 ok · 상하한 '+lo+'~'+hi+' · 규칙은 도움말 한 곳';
+      return '아이콘 '+CAMP_RT_LINES.length+'(계열키와 1:1) · 확대 붙잡기 ok · 상하한 '+lo+'~'+hi+' · 규칙은 도움말 한 곳';
     } finally { campTreeClose(); C.rbTree=keepT; C.rbPts=keepP; } });
 
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{

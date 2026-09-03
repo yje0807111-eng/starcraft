@@ -67,6 +67,10 @@ const PACKS=(process.env.PACK||"").split(",").map(x=>x.trim()).filter(Boolean);
 //     ⚠ 그러므로 이 실측이 답하는 것은 「지금 열린 칸으로 얼마나 세지나」가 아니라
 //       **「다 갖춘 사람이 얼마나 세지나」**(천장)다. 둘을 헷갈리지 말 것.
 const RUNES=(process.env.RUNES||"").trim();
+// 🌳 환생 트리 실측(2026-09-02) — TREE=mine:5,prod:5 처럼 **계열:차수** 목록.
+//   ⚠ 트리는 자루(C.rbTree)가 전부다. 포인트를 쓰지 않고 **직접 심는다** — 여기서 재려는 것은
+//     「그 계열이 수치를 얼마나 움직이나」이지 「그걸 살 수 있나」가 아니다.
+const TREE=(process.env.TREE||"").trim();
 // 🧭 배치 모드(2026-08-30) — RALLY=none|wide|bunker · RALLYW=가로 폭(전장 비율)
 const RALLY=process.env.RALLY||"none";
 const RALLYW=+(process.env.RALLYW||0.40);
@@ -135,6 +139,23 @@ if(RUNES){ const got=await pg.evaluate(spec=>{
   if(got.err) console.log("💠 룬: "+got.err);
   else console.log("💠 룬 "+got.on.length+"개 장착(칸 "+got.norm+"+"+got.uniq+") — "
     + Object.keys(got.eff).map(k=>k+" "+got.eff[k]).join(" · ")); }
+if(TREE){ const got=await pg.evaluate(spec=>{
+  const C=campState(); if(!C) return { err:"캠프 상태가 없다" };
+  C.rbTree={ root:1, _m2:1 };
+  const on=[];
+  for(const it of spec.split(",")){ const a=it.trim().split(":"); const k=a[0], n=+(a[1]||1);
+    const L=campRtLine(k); if(!L){ on.push(k+"(없는 계열)"); continue; }
+    C.rbTree[k]=Math.min(n, campRtMax(k));
+    // 마디도 켠다 — 안 그러면 화면에서 안 보이고, 마디에 능력이 붙는 날 값이 어긋난다
+    if(typeof campRtIsChain==="function" && !campRtIsChain(L.br)){
+      C.rbTree[CAMP_RT_BR_KEY(L.br)]=1; C.rbTree[CAMP_RT_GP_KEY(L.br,L.grp)]=1; }
+    on.push(k+" "+C.rbTree[k]+"차"); }
+  saveMeta();
+  return { on, mine:campRtMul("mine"), gather:campRtMul("gather"), prod:campRtMul("prod"),
+           mineMul:(typeof campMineMul==="function")?campMineMul():null }; }, TREE);
+  if(got.err) console.log("🌳 트리: "+got.err);
+  else console.log("🌳 트리 "+got.on.join(" · ")+" — 광산×"+got.mine+" 채취×"+got.gather
+    +" 생산×"+got.prod+" · campMineMul "+(got.mineMul||0).toFixed(2)); }
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
