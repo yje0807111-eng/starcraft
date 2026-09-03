@@ -107,20 +107,26 @@ function campChipInfo(){
   const inDg=(typeof campDgN==='function') ? campDgN()>0 : ((C.dg|0)>0);
   const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
   const d=(typeof hbDun==='function')?hbDun(dg):null;
-  if(!inDg) return { name:CAMP_HOME_NAME, lab:'단계', cur:0, max:CAMP_DG_MAX };
+  // 🏕 캠프도 던전과 **같은 자리**를 쓴다(2026-09-03) — 숫자를 빼 봤더니 너무 밋밋했다.
+  //   상한은 던전과 같은 라운드 상한(50)이다 — 단계 개수(10)를 쓰면 다른 구역과 자릿수가 갈려 보인다.
+  if(!inDg) return { name:CAMP_HOME_NAME, lab:'라운드',
+    cur:0, max:(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:CAMP_RND_MAX };
   const rnd=(typeof campRoundN==='function')?campRoundN():1;
   const rmax=(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:50;
   return { name:(d&&d.name)||('던전 '+dg), lab:'라운드', cur:rnd, max:rmax }; }
-// 칩 마크업 — 왼쪽 광원 띠 + 두 줄(이름 / 라벨·숫자·진행 막대)
+// 칩 마크업 — **한 줄 · 가운뎃점**(2026-09-03 사용자 확정 · 목업 docs/mock/camp-chip-cmd-8.html 5안).
+//   ⛔ 판(면·테두리)을 되돌리지 말 것 — 좌상단은 맵 위에 얹히는 **글자**다.
+//   ⛔ 청록(--hud)을 되돌리지 말 것 — 좌상단만 색이 갈려 하단 구역과 안 어울리던 것이 이유다.
+//     지금 어휘는 전부 하단 커맨드 카드에서 왔다(Rajdhani 숫자 · 붉은 진행선 · 흰 글자).
+//   ⚠ 라벨(o.lab)은 화면에 안 쓴다 — 한 줄에 자리가 없다. 읽어 주는 말로만 남긴다(aria-label).
 function curChipHTML(o){
   const pct=Math.max(0, Math.min(100, (o.cur/o.max)*100));
-  return '<i class="cdRail"></i><span class="cdBody">'
-    +'<span class="cdNm">'+escHtml(o.name)+'</span>'
-    +'<span class="cdSub"><i class="cdLab">'+escHtml(o.lab)+'</i>'
+  return '<span class="cdNm">'+escHtml(o.name)+'</span>'
+    +'<i class="cdSep">·</i>'
     +'<b class="cdN">'+o.cur+'</b><i class="cdDim">/'+o.max+'</i>'
-    +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span></span></span>'
-    // ⌄ 는 **오른쪽 위 모서리**에 앉힌다 — 두 줄짜리 칩이라 글자 줄에 끼우면 어느 줄의 표시인지 모호해진다
-    +'<i class="cdCv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>'; }
+    +'<i class="cdCv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>'
+    // 진행 = **밑선 하나**. 막대를 따로 두지 않는다(줄을 더 쓰지 않게 absolute 로 앉힌다).
+    +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span>'; }
 // 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
   // 🏕 캠프 **구역**(환생·업그레이드·룬)이 열려 있으면 던전 칩 대신 그 이름을 쓴다(2026-09-03).
@@ -131,6 +137,7 @@ function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) ret
   const o=campChipInfo();
   if(!o){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip'); e.textContent=''; } return; }
   e.classList.add('asChip'); e.innerHTML=curChipHTML(o);
+  e.setAttribute('aria-label', o.name+' · '+o.lab+' '+o.cur+'/'+o.max);
   if(!e._cdWired){ e._cdWired=1; e.setAttribute('role','button'); e.onclick=campDropToggle; }
   e.classList.toggle('open', !!_cdPick); }
 // ── 🏕 던전·라운드 드롭다운 (2026-08-25) ────────────────────────────────
@@ -143,7 +150,7 @@ function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) ret
 //    표를 여기서 새로 지으면 두 벌이 된다. 규칙이 정해지면 이 함수 하나만 채운다.
 // ⭐ **0 = 캠프**(안전 구역)도 목록의 한 칸이다(2026-08-27). 캠프는 늘 열려 있다 —
 //   던전에서 돌아오는 길이라 잠글 이유가 없다(지면 campFail 이 어차피 0 으로 되돌린다).
-const CAMP_HOME_NAME='🏕 캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다
+const CAMP_HOME_NAME='캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다 · ⛔ 왼쪽 아이콘 되돌리지 말 것(2026-09-03)
 function campDgOpen(dg){ return dg>=0 && dg<=CAMP_DG_MAX; }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.

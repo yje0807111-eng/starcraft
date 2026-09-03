@@ -27,12 +27,13 @@ const CAMP_RES_SECS = ['res', 'arm', 'tech'];
 // ⛔ 다음 값을 위한 수식을 따로 쓰지 말 것. 캠프의 성장 곡선은 마일스톤·환생·던전 배수가
 //   겹겹이 걸려 있어(campMileMul · campRebMul · campRtMul · campMineMul) 손으로 옮기면 반드시 틀린다.
 //   ⚠ 동기 코드 안에서만 올렸다 되돌린다 — 그 사이 다른 코드가 끼어들 틈이 없다.
-function _campPeekNext(k, fn) {
+// ⏫ n = 몇 칸 뒤를 볼 것인가(기본 1 · 자원 칸의 ×5 / MAX 가 넘긴다)
+function _campPeekNext(k, fn, n) {
   const C = (typeof campState === 'function') ? campState() : null;
   if (!C) return null;
   C.upg = C.upg || {};
   const had = C.upg[k] | 0;
-  C.upg[k] = had + 1;
+  C.upg[k] = had + Math.max(1, n | 0);
   let v = null;
   try { v = fn(); } catch (e) { v = null; }
   C.upg[k] = had;
@@ -63,26 +64,26 @@ const CAMP_RES_ITEMS = [
   { k: 'tap', nm: '터치 강화', ico: 'upgrades/up_mineral_up',
     why: '한 번 누를 때 캐는 양',
     now: () => (typeof campTapGain === 'function') ? campTapGain() : 0,
-    next: () => _campPeekNext('tap', () => campTapGain()),
+    next: (n) => _campPeekNext('tap', () => campTapGain(), n),
     unit: '/탭' },
   { k: 'gather', nm: '채취 강화', ico: 'upgrades/up_speed',
     why: '일꾼이 한 번 다녀올 때 캐는 양',
     now: () => (typeof campGatherMul === 'function') ? campGatherMul() : 1,
-    next: () => _campPeekNext('gather', () => campGatherMul()),
+    next: (n) => _campPeekNext('gather', () => campGatherMul(), n),
     unit: '배', dec: 2 },
   { k: 'refinery', nm: '정제소', ico: 'buildings/bld_refinery',
     why: '정제소가 스스로 캐는 가스',
     now: () => (typeof campGasPerMin === 'function') ? campGasPerMin() : 0,
     // ⚠ 정제소 레벨은 C.upg 와 연구 칸(G.tech.research) 중 **큰 쪽**이다(campRefLv).
     //   그래서 C.upg 만 올려 보는 _campPeekNext 로는 안 움직일 수 있다 — 값에서 직접 한 칸 올린다.
-    next: () => {
+    next: (n) => {
       if (typeof campGasPerMin !== 'function' || typeof campRefLv !== 'function') return null;
       const cur = campGasPerMin();
       if (!(typeof campHasRefinery === 'function' && campHasRefinery())) return null;   // 안 지었으면 다음 값도 0
-      const lv = campRefLv();
+      const lv = campRefLv(), _n = Math.max(1, n | 0);
       const base = CAMP_REF_BASE + CAMP_REF_STEP * lv;
       if (base <= 0) return null;
-      return cur * ((CAMP_REF_BASE + CAMP_REF_STEP * (lv + 1)) / base);
+      return cur * ((CAMP_REF_BASE + CAMP_REF_STEP * (lv + _n)) / base);
     },
     unit: '/분', dec: 1,
     lv: () => (typeof campRefLv === 'function') ? campRefLv() : 0,
@@ -101,16 +102,38 @@ const CAMP_RES_ITEMS = [
     // ⚠ 여기 넷은 전부 **뽑는 중인 것까지** 센다(campWorkerNPlanned) — 안 그러면 대기열에
     //   몰아 넣어 첫 마리 값으로 다섯을 사는 구멍이 난다(2026-09-03 사용자 발견).
     now: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
-    next: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() + 1 : null,
+    next: (n) => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() + Math.max(1, n | 0) : null,
     unit: '기',
     lv: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
     lvTx: () => ((typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0)
             + '/' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40),
     cost: () => (typeof campHireCost === 'function' && typeof campWorkerNPlanned === 'function')
             ? campHireCost(campWorkerNPlanned()) : 0,
+    // ⏫ n 기를 한 번에 — 값은 **마리마다 다르다**(campHireCost 가 지금 마릿수를 본다).
+    costN: (n) => { if(typeof campHireCost !== 'function' || typeof campWorkerNPlanned !== 'function') return 0;
+      const b = campWorkerNPlanned(); let s = 0;
+      for(let i = 0; i < Math.max(1, n | 0); i++) s += campHireCost(b + i);
+      return s; },
+    // MAX = 미네랄과 **상한(40기)** 이 함께 정한다 — 업그레이드 사다리와 다른 규칙이다.
+    maxN: () => { if(typeof campHireCost !== 'function' || typeof campWorkerNPlanned !== 'function') return 1;
+      const cap = (typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40;
+      const step = (typeof CAMP_UPG_MAX_STEP !== 'undefined') ? CAMP_UPG_MAX_STEP : 99;
+      const b = campWorkerNPlanned();
+      let have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0, n = 0;
+      for(; n < step && b + n < cap; n++){ const c = campHireCost(b + n); if(c > have) break; have -= c; }
+      return n; },
     buy: () => { const bk = campWorkerBldg();
       if(bk && typeof techDoProduce === 'function' && typeof TECH_WORKER !== 'undefined')
         techDoProduce(TECH_WORKER[G.tech.race], bk); },
+    // ⏫ n 기를 한 번에 — ⚠ **넣기 직전에 값을 다시 잰다.**
+    //   본부 생산 카드의 값(q.m)은 campSyncHire 가 **프레임마다 한 번** 갱신한다. 그래서 한 프레임에
+    //   다섯을 몰아 넣으면 다섯 다 첫 마리 값으로 나간다(실측 250 · 제값 3,224 · 2026-09-03).
+    //   ⛔ 여기서 값을 따로 계산해 차감하지 말 것 — campHireCost 가 단일 소스다.
+    buyN: (n) => { const bk = campWorkerBldg(); if(!bk) return;
+      for(let i = 0; i < Math.max(1, n | 0); i++){
+        if(typeof campSyncHire === 'function') campSyncHire();
+        if(typeof techDoProduce === 'function' && typeof TECH_WORKER !== 'undefined')
+          techDoProduce(TECH_WORKER[G.tech.race], bk); } },
     lock: () => (typeof campWorkerNPlanned === 'function' && typeof CAMP_WORKER_MAX !== 'undefined')
             && campWorkerNPlanned() >= CAMP_WORKER_MAX,
     lockWhy: '일꾼은 ' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40) + '기까지' }
@@ -146,11 +169,31 @@ function _campResNum(v, dec) {
 }
 
 // ── 🎛 자원 칸 모델 → renderCmdGrid ──────────────────────────────────────
+// ⏫ 이 칸을 한 번 눌러 오를 레벨 수 — 무장 칸과 **같은 배수 상태(_armMul)** 를 쓴다.
+//   ⛔ 자원용 배수를 따로 두지 말 것: 두 칸을 오갈 때마다 값이 달라 보이면 그게 버그로 읽힌다.
+//   ⚠ MAX 는 **지금 미네랄로 살 수 있는 만큼**이다(무장 칸의 MAX 는 가스 기준).
+//   ⚠ 항목이 **제 값을 갖고 있으면**(일꾼의 costN/maxN) 그것을 쓴다 — 일꾼은 레벨이 아니라
+//     생산 대기열이고 상한(40기)도 있어서, 업그레이드 사다리로는 못 센다.
+function campResMulN(it) {
+  const o = (typeof it === 'string') ? campResItem(it) : it;
+  if (_armMul !== 'max') return _armMul;
+  if (o && o.maxN) return Math.max(1, o.maxN() | 0);
+  return Math.max(1, (typeof campUpgAfford === 'function') ? campUpgAfford(o ? o.k : it) : 1);
+}
+// n 칸의 비용 합 — ⛔ 여기서 식을 다시 쓰지 말 것(값은 항목이나 campUpgDry 가 갖는다)
+function campResCostN(it, n) {
+  const o = (typeof it === 'string') ? campResItem(it) : it;
+  if (n <= 1) return campResItemCost(o);
+  if (o && o.costN) return o.costN(n);
+  if (typeof campUpgDry !== 'function') return campResItemCost(o);
+  return campUpgDry(o ? o.k : it, n)[0];
+}
 function campResModelRes() {
   const have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0;   // ⛔ | 0 금지 — 21억을 넘으면 음수가 된다
   const items = CAMP_RES_ITEMS.map(it => {
     const lv = campResItemLv(it);
-    const cost = campResItemCost(it);
+    const nMul = campResMulN(it);
+    const cost = campResCostN(it, nMul);
     const locked = it.lock ? it.lock() : false;
     const poor = have < cost;
     return {
@@ -159,9 +202,9 @@ function campResModelRes() {
         ? _icoPathImg((typeof it.ico === 'function') ? it.ico() : it.ico, '🔧') : '',
       sn: it.nm,
       // ⭐ 누르기 **전에** 얼마나 오르는지 슬롯에서 바로 보인다(정보판은 고른 것만 보여 준다)
-      sub: (function(){ const c = it.now(), x = it.next();
+      sub: (function(){ const c = it.now(), x = it.next(nMul);
         return (x != null && !locked) ? (_campResNum(c, it.dec) + ' ▸ ' + _campResNum(x, it.dec)) : ''; })(),
-      tr: campResItemTr(it),
+      tr: campResItemTr(it) + (nMul > 1 ? ' +' + nMul : ''),
       cr: cost,
       state: (locked || poor) ? 'dim' : '',
       sel: (_resPick === it.k),
@@ -170,14 +213,17 @@ function campResModelRes() {
   });
   const it = campResItem(_resPick) || CAMP_RES_ITEMS[0];
   const lv = campResItemLv(it);
-  const cost = campResItemCost(it);
+  const nSel = campResMulN(it);
+  const cost = campResCostN(it, nSel);
   const locked = it.lock ? it.lock() : false;
-  const cur = it.now(), nxt = it.next();
+  const cur = it.now(), nxt = it.next(nSel);
   return {
     mode: 'upg', compact: true, title: '자원',
     kicker: true,
+    // ⏫ 배수 칸 — 무장 칸과 **같은 껍데기·같은 위임**이다(⛔ onclick 으로 달지 말 것)
+    topRight: campArmMulHTML(),
     info: {
-      eb: campResItemTr(it),
+      eb: campResItemTr(it) + (nSel > 1 ? ' +' + nSel : ''),
       name: it.nm,
       // ⛔ **toast 에 기대지 말 것** — toast() 는 채팅으로 간다(addChat). 캠프에는 채팅바가 없어서
       //   (CLAUDE.md: 「유즈맵 안 전 구역 · 캠프만 제외」) 그 알림은 **아무 데도 안 보인다**.
@@ -217,7 +263,8 @@ function campResTap(k) {
     campResSheet(); return;
   }
   const have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0;   // ⛔ | 0 금지 — 21억을 넘으면 음수가 된다
-  const cost = campResItemCost(it);
+  const nBuy = campResMulN(it);
+  const cost = campResCostN(it, nBuy);
   if (have < cost) {
     // 얼마가 모자란지까지 말한다 — 「안 된다」가 아니라 「얼마가 더 필요하다」로 읽히게
     if (typeof toast === 'function')
@@ -225,8 +272,12 @@ function campResTap(k) {
     if (typeof playSfx === 'function') playSfx('ui_tab');
     campResSheet(); return;
   }
-  // 👷 일꾼은 「올리기」가 아니라 「생산」이다 — 항목이 제 손(buy)을 갖고 있으면 그것을 부른다.
-  if (it.buy) it.buy();
+  // ⏫ 배수만큼 한 번에.
+  //   👷 일꾼은 「올리기」가 아니라 「생산」이다 — 항목이 제 손(buy)을 갖고 있으면 그것을 n 번 부른다.
+  //   ⛏ 그 밖은 campUpgBuyN 이 묶어 산다(소리·저장은 한 번만 낸다).
+  if (it.buyN) it.buyN(nBuy);
+  else if (it.buy) { for (let i = 0; i < nBuy; i++) it.buy(); }
+  else if (typeof campUpgBuyN === 'function') campUpgBuyN(k, nBuy);
   else if (typeof campUpgBuy === 'function') campUpgBuy(k);
   campResSheet();
 }
@@ -310,8 +361,12 @@ if (typeof document !== 'undefined') {
     //   **이미 DOM 에서 떨어져 나간 옛 요소**에 온다(실측 2026-08-27: isConnected=false).
     //   그 요소는 문서 밖이라 `#btSheetBody …` 셀렉터가 통째로 실패한다 — 손으로는 영영 안 눌렸다.
     //   ⭐ 떨어져 나간 트리 안에서도 closest 는 동작한다. 슬롯 자신의 표식만 보면 된다.
-    const sl = t.closest('[data-res],[data-arm],[data-armbuy],[data-tech]');
+    const sl = t.closest('[data-res],[data-arm],[data-armbuy],[data-tech],[data-armmul],[data-armback]');
     if (!sl) return;
+    // 🎛 트레이 두 버튼도 **여기로** 온다(2026-09-03). onclick 으로 두면 손가락에서 안 눌린다 —
+    //   칸은 이 위임을 타는데 트레이만 click 을 기다려 경로가 둘로 갈려 있었다.
+    if (sl.hasAttribute('data-armmul'))      { campArmMulCycle(); return; }
+    if (sl.hasAttribute('data-armback'))     { campArmPick(null); return; }
     if (sl.hasAttribute('data-res'))         campResTap(sl.getAttribute('data-res'));
     else if (sl.hasAttribute('data-arm'))    campArmPick(+sl.getAttribute('data-arm'));
     else if (sl.hasAttribute('data-armbuy')) campArmBuy(sl.getAttribute('data-armbuy'));
@@ -422,17 +477,66 @@ function campUnpatchResearch() {
 //     어느 쪽에서 올리든 같은 값이다 — 빈 칸을 두는 것보다 낫다.
 //   ⚠ 프로토스의 가운데 자리는 **실드**다(공격이 없다) — 그 칸은 방어 하나만 선다.
 // ⛔ 표에 없는 계열 연구가 생기면 **스모크가 실패한다**(아래 검사). 조용히 사라지는 것이 제일 나쁘다.
+// ⭐ **네 칸이다**(2026-09-03 사용자 확정): 공격력 · 공격속도 · 체력 · 방어력.
+//   ⚠ `def` 는 이름이 「방어력」이지만 캠프에서 하는 일은 **체력**이다(HUNT_R1 §3-4 —
+//     방어구 자리를 체력이 대신한다). 그래서 화면 라벨은 「체력」이라 쓴다.
+//   ⭐ `as`(공격속도) · `dr`(방어력)는 **캠프 전용 연구**다 — 아래 CAMP_ARM_ADD 가 주입한다.
+//   ⚠ 저그는 근접·원거리가 지상 체력·방어를 **함께 쓴다**(gnd_def · gnd_dr 이 두 자리에 온다).
+//   ⚠ 에테리얼 가운데(보호막)는 공격이 없다 — 체력 한 칸만 선다.
 const CAMP_ARM_TREE = {
-  union:     [ { nm:'보병', atk:'inf_atk',   def:'inf_def' },
-               { nm:'차량', atk:'veh_atk',   def:'veh_def' },
-               { nm:'함선', atk:'air_atk',   def:'air_def' } ],
-  swarm:     [ { nm:'근접', atk:'melee_atk', def:'gnd_def' },
-               { nm:'원거리', atk:'range_atk', def:'gnd_def' },
-               { nm:'비행', atk:'fly_atk',   def:'fly_def' } ],
-  aetherial: [ { nm:'지상', atk:'gnd_wpn',   def:'gnd_arm' },
-               { nm:'보호막', atk:null,      def:'shield'  },
-               { nm:'공중', atk:'air_wpn',   def:'air_arm' } ]
+  union:     [ { nm:'보병', atk:'inf_atk',   as:'inf_as',   def:'inf_def', dr:'inf_dr' },
+               { nm:'차량', atk:'veh_atk',   as:'veh_as',   def:'veh_def', dr:'veh_dr' },
+               { nm:'함선', atk:'air_atk',   as:'air_as',   def:'air_def', dr:'air_dr' } ],
+  swarm:     [ { nm:'근접', atk:'melee_atk', as:'melee_as', def:'gnd_def', dr:'gnd_dr' },
+               { nm:'원거리', atk:'range_atk', as:'range_as', def:'gnd_def', dr:'gnd_dr' },
+               { nm:'비행', atk:'fly_atk',   as:'fly_as',   def:'fly_def', dr:'fly_dr' } ],
+  aetherial: [ { nm:'지상', atk:'gnd_wpn',   as:'gnd_as',   def:'gnd_arm', dr:'gnd_dr' },
+               { nm:'보호막', atk:null,      as:null,       def:'shield',  dr:null     },
+               { nm:'공중', atk:'air_wpn',   as:'air_as',   def:'air_arm', dr:'air_dr' } ]
 };
+// ── ⚔ 캠프 전용 계열 연구 주입 ──────────────────────────────────────────
+//   ⛔ `js/15-tech-data.js` 를 직접 고치지 않는다 — 그 표는 **관리자 건설과 공유**다.
+//     여기서 밀어 넣고, 건물 카드 노출은 `_techResList`(16-build.js)가 `camp` 플래그로 거른다.
+//     ⚠ 오토배틀은 원래 연구를 안 쓴다(techWallet() 이면 빈 목록) — 대전 밸런스는 안 움직인다.
+//   ⚠ 값·건물은 **같은 계열의 기존 연구를 따라간다**(공격력이 있는 건물에 함께 선다).
+const CAMP_ARM_ADD = {
+  union: { engbay:[['inf_as','보병 공격속도'], ['inf_dr','보병 방어력']],
+           armory:[['veh_as','차량 공격속도'], ['veh_dr','차량 방어력'],
+                   ['air_as','함선 공격속도'], ['air_dr','함선 방어력']] },
+  swarm: { evochamber:[['melee_as','근접 공격속도'], ['range_as','원거리 공격속도'],
+                       ['gnd_dr','지상 방어력']],
+           spire:[['fly_as','비행 공격속도'], ['fly_dr','비행 방어력']] },
+  aetherial: { forge:[['gnd_as','지상 공격속도'], ['gnd_dr','지상 방어력']],
+               cyber:[['air_as','공중 공격속도'], ['air_dr','공중 방어력']] }
+};
+const CAMP_ARM_TIER = [[100,100],[175,175],[250,250]];   // 기존 계열 연구와 같은 자
+// 🎨 아이콘 — 계열 연구는 upgrades/up_<키>.webp 를 쓴다.
+//   ⚠ 캠프 전용 연구(as·dr)는 제 그림이 아직 없다 — **뜻이 같은 기존 것**을 빌린다
+//     (CLAUDE.md 아이콘 원칙: 있으면 그것을 쓰고, 없을 때만 새로 뽑는다 · ART.md §15).
+//   ⛔ 이모지 폴백으로 두지 말 것 — 다른 칸은 전부 그림이라 한 칸만 글자면 눈에 튄다.
+//   ⚠ 계열(보병·차량·함선)마다 같은 그림이 된다 — 계열별로 뽑으면 그때 표를 늘린다.
+const CAMP_ARM_ICO = { as:'up_atkspd', dr:'up_carapace' };
+function campArmIco(rk){
+  if(!rk) return 'up_perm';
+  const t = rk.slice(-3);
+  if(t === '_as') return CAMP_ARM_ICO.as;
+  if(t === '_dr') return CAMP_ARM_ICO.dr;
+  return 'up_' + rk; }
+function campArmInstall(){
+  if(typeof TECH_TREE === 'undefined') return 0; let n = 0;
+  for(const race in CAMP_ARM_ADD){ const t = TECH_TREE[race]; if(!t) continue;
+    for(const bk in CAMP_ARM_ADD[race]){
+      const b = (t.buildings || []).find(x => x.k === bk); if(!b) continue;
+      b.research = b.research || [];
+      for(const [k, nm] of CAMP_ARM_ADD[race][bk]){
+        if(b.research.some(r => r.k === k)) continue;       // 두 번 넣지 않는다
+        const as = k.slice(-3) === '_as';
+        b.research.push({ k, camp:true, name:nm,
+          desc: as ? '공격 간격 −3%/레벨' : '받는 피해 −1.5%/레벨 (최대 −60%)',
+          tier: CAMP_ARM_TIER });
+        n++; } } }
+  return n; }
+campArmInstall();
 let _armPick = null;    // 고른 계열(0~2) · null = 계열 고르는 화면
 
 function campArmTree() {
@@ -467,7 +571,7 @@ function campArmReady(rk) {
 function campArmModelTop() {
   const rows = campArmTree();
   const items = rows.map((g, i) => {
-    const keys = [g.atk, g.def].filter(Boolean);
+    const keys = [g.atk, g.as, g.def, g.dr].filter(Boolean);
     const lv = keys.reduce((a, k) => a + campArmLv(k), 0);
     const ready = keys.some(campArmReady);
     return {
@@ -480,38 +584,53 @@ function campArmModelTop() {
   });
   return { mode:'upg', compact:true, title:'무장', kicker:true,
     info:{ eb:'계열', name:'', hideName:true,
-           desc:'강화할 계열을 고르세요 — 공격과 방어를 따로 올립니다' },
+           desc:'강화할 계열을 고르세요 — 공격력·공격속도·체력·방어력을 따로 올립니다' },
     items: items };
 }
 // ── 고른 계열의 [공격][방어] ─────────────────────────────────────────────
 function campArmModelOne() {
   const rows = campArmTree(), g = rows[_armPick]; if (!g) return campArmModelTop();
   const T = G.tech;
-  const mk = (rk, label) => {
+  const mk = (rk, label, override) => {
     if (!rk) return { state:'empty' };
     const r = campArmRes(rk), lv = campArmLv(rk);
-    const cc = (typeof campResearchCost === 'function') ? campResearchCost(r, lv) : null;
+    // ⏫ 배수가 걸려 있으면 **그만큼의 값**을 보여 준다 — 누르기 전에 얼마인지 알아야 한다.
+    const nMul = campArmMulN(rk);
+    let cc = (typeof campResearchCost === 'function') ? campResearchCost(r, lv) : null;
+    if(cc && nMul > 1){ let m = 0, g = 0;
+      for(let i = 0; i < nMul; i++){ const c = campResearchCost(r, lv + i); if(!c) break;
+        m += c[0] || 0; g += c[1] || 0; }
+      cc = [m, g]; }
     const ready = campArmReady(rk);
     const poor = cc ? ((T.energy || 0) < cc[1]) : true;
     return {
       k: rk,
-      pro: (typeof _icoPathImg === 'function') ? _icoPathImg('upgrades/up_' + rk, '⚔') : '',
-      sn: (r && r.name) || label, tr: 'Lv.' + lv,
+      pro: (typeof _icoPathImg === 'function') ? _icoPathImg('upgrades/' + campArmIco(rk), '⚔') : '',
+      sn: override || (r && r.name) || label,
+      tr: 'Lv.' + lv + (nMul > 1 ? ' +' + nMul : ''),
       cr: cc ? cc[0] : 0, en: cc ? cc[1] : 0,
       state: (!ready || poor) ? 'dim' : '',
       sel: (_armSel === rk),
       act: 'data-armbuy="' + rk + '"'
     };
   };
-  const items = [ mk(g.atk, '공격'), mk(g.def, '방어') ];
+  // ⭐ 네 칸 — 공격력 · 공격속도 · 체력 · 방어력.
+  //   ⚠ `def` 의 표 이름은 「…방어력」이지만 캠프에서 하는 일은 체력이다 — 여기서 라벨을 덮는다.
+  // ⚠ 칸 이름은 **짧게** — 제목이 이미 계열(보병·차량…)이라 앞에 또 붙이면 잘린다.
+  //   전체 이름(「보병 공격속도」)은 아래 정보 줄이 보여 준다.
+  const items = [ mk(g.atk, '공격력', '공격력'), mk(g.as, '공격속도', '공격속도'),
+                  mk(g.def, '체력', '체력'), mk(g.dr, '방어력', '방어력') ];
   // 🔙 되돌아가기는 **건설 탭이 쓰는 그 자리**(m.back)다 — 새 버튼을 만들지 않는다.
   // 고른 것이 있으면 그것을, 없으면 첫 줄을 보여 준다(첫 탭 = 설명 보기)
-  const first = ((_armSel === g.atk || _armSel === g.def) ? _armSel : null) || g.atk || g.def;
+  const keys4 = [g.atk, g.as, g.def, g.dr].filter(Boolean);
+  const first = (keys4.indexOf(_armSel) >= 0 ? _armSel : null) || keys4[0];
   const r0 = campArmRes(first), lv0 = campArmLv(first);
   const cc0 = (typeof campResearchCost === 'function') ? campResearchCost(r0, lv0) : null;
   const bld = campArmBldgOf(first);
   return { mode:'upg', compact:true, title:g.nm, kicker:true,
-    back:'<button class="cgBack" onclick="campArmPick(null)" title="계열 고르기로">🔙</button>',
+    topRight: campArmMulHTML()
+      + '<button class="cgGly cgGlySq cgBack" data-armback="1" title="계열 고르기로">'
+      + ((typeof uiIco === 'function') ? uiIco('back') : '‹') + '</button>',
     info:{ eb:'Lv.' + lv0, name:(r0 && r0.name) || g.nm,
            desc: campArmReady(first) ? ((r0 && r0.desc) || '') : ('🔒 ' + ((bld && bld.name) || '건물') + ' 필요'),
            cr: cc0 ? cc0[0] : 0, en: cc0 ? cc0[1] : 0 },
@@ -523,6 +642,38 @@ function campArmPick(i) {
   campResSheet();
 }
 let _armSel = null;   // 무장 칸에서 고른 항목(자원 칸의 _resPick 과 같은 어법)
+// ⏫ 한 번에 올릴 레벨 — ×1 · ×5 · MAX (2026-09-03 사용자 확정 · 트레이 오른쪽 위).
+//   ⭐ 클릭 수를 줄이는 장치다. **시간은 안 줄인다** — n 레벨이면 연구 시간도 n 배다
+//     (돈만 내고 즉시가 되면 시간 축이 통째로 사라진다 · techDoResearch 가 그렇게 짠다).
+const CAMP_ARM_MULS = [1, 5, 'max'];
+let _armMul = 1;
+// 🔁 **한 칸을 눌러 돌린다** — ×1 → ×5 → MAX → ×1 (2026-09-03 사용자 확정).
+//   ⛔ 버튼 셋을 나란히 두지 말 것: 트레이는 판 밖에 떠 있어 칸이 늘수록 전장을 더 가린다.
+//   ⭐ 사냥터 수량 토글(hmUpgQtyCycle · 1→10→MAX)과 **같은 어법**이고 껍데기도 그것을 그대로 쓴다.
+function campArmMulCycle(){
+  const i = CAMP_ARM_MULS.indexOf(_armMul);
+  _armMul = CAMP_ARM_MULS[(i + 1) % CAMP_ARM_MULS.length];
+  if(typeof playSfx === 'function') playSfx('ui_tab');
+  campResSheet(); }
+// 지금 가스로 살 수 있는 최대 레벨 — MAX 가 쓴다. ⚠ 레벨마다 값이 다르므로 한 칸씩 더해 본다.
+const CAMP_ARM_MAX_STEP = 99;          // 한 번에 이 이상은 안 올린다(무한 루프·과금 사고 방지)
+function campArmAfford(rk){
+  const r = campArmRes(rk); if(!r) return 0;
+  const T = (typeof G !== 'undefined') ? G.tech : null; if(!T) return 0;
+  let lv = campArmLv(rk), gas = T.energy || 0, min = T.credit || 0, n = 0;
+  for(; n < CAMP_ARM_MAX_STEP; n++){
+    const c = (typeof campResearchCost === 'function') ? campResearchCost(r, lv + n) : null;
+    if(!c) break;
+    if((c[0] || 0) > min || (c[1] || 0) > gas) break;
+    min -= (c[0] || 0); gas -= (c[1] || 0); }
+  return n; }
+function campArmMulN(rk){ return (_armMul === 'max') ? Math.max(1, campArmAfford(rk)) : _armMul; }
+// 🎛 트레이 오른쪽 위 — 되돌아가기(🔙)와 같은 줄. **칸은 하나**다.
+//   ⛔ 껍데기를 새로 만들지 말 것 — 사냥터 수량 버튼(.hmUpQty/.hmUpQ)이 단일 소스다.
+function campArmMulHTML(){
+  return '<button class="cgGly cgGlyN" type="button" data-armmul="1"'
+    + ' title="한 번에 올릴 레벨 — 눌러서 바꿉니다">'
+    + (_armMul === 'max' ? 'MAX' : '×' + _armMul) + '</button>'; }
 function campArmBuy(rk) {
   const b = campArmBldgOf(rk);
   if (!b) return;
@@ -534,7 +685,7 @@ function campArmBuy(rk) {
   if (!campArmReady(rk)) { if (typeof toast === 'function') toast('🔒 ' + b.name + ' 을 먼저 지으세요'); return; }
   // ⛔ 구매 경로를 새로 만들지 않는다 — 건물 카드가 쓰는 techDoResearch 그대로다
   //   (선행 조건·비용 차감·연구 시간·환불이 전부 거기 있다).
-  if (typeof techDoResearch === 'function') techDoResearch(b.k, rk);
+  if (typeof techDoResearch === 'function') techDoResearch(b.k, rk, campArmMulN(rk));
   campResSheet();
 }
 

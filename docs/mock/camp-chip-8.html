@@ -1,0 +1,217 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>캠프 좌상단 칩 — 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 실측 조건(2026-09-03 · 폰 390px)
+     재화 바 390×34 · 재화 구역 248.6px → **칩에 남는 폭은 95px 안팎**이다.
+     칩 높이는 32.5px 로 이미 바(34px)를 거의 채웠다 — 줄을 더 쓸 자리가 없다.
+     그래서 8안 전부 **95px · 34px 안에서** 그린다. 넘치면 ☰ 가 화면 밖으로 밀린다. */
+:root{
+  --font-ko:'IBM Plex Sans KR',sans-serif; --font-num:'Rajdhani',sans-serif;
+  --hud:#00e5ff; --hud-glow:rgba(0,229,255,.45);
+  --ink:#d6e2f0; --r-bar:3px;
+  --cut:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#12151a;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}
+.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 10px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:62px}
+.sub b{color:#c3ccd8;font-weight:700}
+
+/* ── 무대 = 캠프 맵 위에 얹힌 재화 바(폰 390px) ─────────────────────── */
+.phone{width:390px;height:150px;position:relative;overflow:hidden;
+  background:radial-gradient(120% 90% at 30% 0%,#243040 0%,#161b23 45%,#0d1116 100%)}
+.phone::after{content:'';position:absolute;inset:34px 0 0;
+  background:
+    radial-gradient(38px 22px at 78px 74px,rgba(90,140,190,.28),transparent 70%),
+    radial-gradient(30px 18px at 300px 108px,rgba(190,110,80,.22),transparent 70%),
+    repeating-linear-gradient(56deg,rgba(255,255,255,.018) 0 2px,transparent 2px 9px)}
+.bar{position:absolute;left:0;top:0;right:0;height:34px;display:flex;align-items:center;
+  gap:8px;padding:0 10px;z-index:2}
+/* 오른쪽 재화 더미 — 실제 248.6px 를 그대로 흉내 낸다(칩이 쓸 수 있는 폭을 보여 주려고) */
+.res{margin-left:auto;display:flex;align-items:center;gap:8px;
+  font-family:var(--font-num);font-weight:700;font-size:12px;color:#cfd8e6}
+.res span{display:flex;align-items:center;gap:3px}
+.res u{width:12px;height:12px;border-radius:2px;text-decoration:none;display:block}
+.res .m u{background:linear-gradient(180deg,#7fd8ff,#2b7fae)}
+.res .g u{background:linear-gradient(180deg,#7ff0b0,#25865a)}
+.res .p u{background:linear-gradient(180deg,#c9b6ff,#6a4fd0)}
+.set{width:22px;height:22px;border-radius:3px;border:1px solid rgba(255,255,255,.16);
+  display:grid;place-items:center;color:#aab6c6}
+.set svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+/* 칩 자리 — 폭 상한을 실제와 같게 못 박는다 */
+.slot{max-width:112px;min-width:0;flex:0 1 auto}
+.mm{margin:8px 0 0;color:#6f7887;font-size:10.5px;font-family:var(--font-num);letter-spacing:.04em}
+
+/* ══ 공통 부품 ═══════════════════════════════════════════════════════ */
+.chip{position:relative;display:inline-flex;min-width:0;max-width:100%;cursor:pointer;
+  font-size:11px;letter-spacing:.2px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.nm{font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.n{font-family:var(--font-num);font-weight:800;color:var(--hud);text-shadow:0 0 6px var(--hud-glow)}
+.dim{font-style:normal;font-family:var(--font-num);color:rgba(214,226,240,.5)}
+.lab{font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:1px;color:rgba(214,226,240,.62)}
+.cv{width:11px;height:11px;color:rgba(214,226,240,.66);flex:none}
+.cv svg{display:block;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;
+  stroke-linecap:round;stroke-linejoin:round}
+
+/* ① 지금 것 — 왼쪽 광원 띠 + 두 줄 (기준선) */
+.v1{align-items:stretch;padding:0 15px 0 0;border-radius:var(--r-bar);
+  background:rgba(8,12,18,.62);border:1px solid rgba(0,229,255,.42)}
+.v1 .rail{width:2px;flex:none;margin-right:7px;border-radius:2px 0 0 2px;
+  background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+.v1 .body{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:1px 0 6px}
+.v1 .nm{line-height:1.05}
+.v1 .row{display:flex;align-items:baseline;gap:5px;line-height:1}
+.v1 .n{font-size:12px}.v1 .dim{font-size:11px}
+.v1 .bar2{position:absolute;left:6px;right:6px;bottom:2.5px;height:2px;border-radius:1px;
+  background:rgba(120,140,170,.30);overflow:hidden}
+.v1 .bar2 i{display:block;height:100%;background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+.v1 .cv{position:absolute;right:3px;top:2px}
+
+/* ② 한 줄 — 이름 · 숫자를 같은 줄에, 진행은 밑변 광원 하나 */
+.v2{align-items:center;gap:6px;height:24px;padding:0 7px;border-radius:var(--r-bar);
+  background:rgba(8,12,18,.66);border:1px solid rgba(255,255,255,.10)}
+.v2 .nm{font-size:11px}
+.v2 .n{font-size:12px}.v2 .dim{font-size:10px}
+.v2 .glow{position:absolute;left:5px;right:5px;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,var(--hud) 0 60%,rgba(120,140,170,.25) 60%);
+  box-shadow:0 0 6px -1px var(--hud-glow)}
+
+/* ③ 모서리 컷 — DESIGN 의 각진 문법. 진행은 테두리 밑변을 물들인다 */
+.v3{align-items:stretch;padding:0 14px 0 8px;clip-path:var(--cut);
+  background:rgba(10,14,20,.72);border:1px solid rgba(0,229,255,.30)}
+.v3 .body{display:flex;flex-direction:column;justify-content:center;min-width:0;padding:2px 0 5px}
+.v3 .nm{line-height:1.05;font-size:11px}
+.v3 .row{display:flex;align-items:baseline;gap:4px;line-height:1}
+.v3 .n{font-size:12px}.v3 .dim{font-size:10px}
+.v3 .bar2{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(120,140,170,.22)}
+.v3 .bar2 i{display:block;height:100%;background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
+.v3 .cv{position:absolute;right:3px;top:50%;margin-top:-5.5px}
+
+/* ④ 판 없음 — 글자만. 전장을 가장 안 가린다 */
+.v4{align-items:stretch;padding:0 14px 0 0;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}
+.v4 .body{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.v4 .nm{line-height:1.1;font-size:11.5px}
+.v4 .row{display:flex;align-items:baseline;gap:4px;line-height:1}
+.v4 .n{font-size:12px}.v4 .dim{font-size:10px}
+.v4 .bar2{position:absolute;left:0;width:52px;bottom:1px;height:1.5px;border-radius:1px;
+  background:rgba(120,140,170,.28);overflow:hidden}
+.v4 .bar2 i{display:block;height:100%;background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+.v4 .cv{position:absolute;right:1px;top:50%;margin-top:-5.5px}
+
+/* ⑤ 진행 링 — 왼쪽에 작은 원형 게이지가 라운드를 대신 말한다 */
+.v5{align-items:center;gap:6px;padding:0 13px 0 0;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+.v5 .ring{width:24px;height:24px;flex:none;position:relative;display:grid;place-items:center}
+.v5 .ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.v5 .ring circle{fill:none;stroke-width:2.4}
+.v5 .ring .bg{stroke:rgba(120,140,170,.28)}
+.v5 .ring .fg{stroke:var(--hud);stroke-linecap:round;filter:drop-shadow(0 0 3px var(--hud-glow))}
+.v5 .ring b{position:relative;font-family:var(--font-num);font-size:10px;font-weight:800;color:var(--hud)}
+.v5 .body{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.v5 .nm{font-size:11px;line-height:1.1}
+.v5 .lab{font-size:9px}
+.v5 .cv{position:absolute;right:0;top:50%;margin-top:-5.5px}
+
+/* ⑥ 두 칸 세그먼트 — [이름][30/50] 이 맞붙는다 */
+.v6{align-items:stretch;height:24px;border-radius:var(--r-bar);overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);background:rgba(8,12,18,.66)}
+.v6 .a{display:flex;align-items:center;padding:0 7px;min-width:0}
+.v6 .b2{display:flex;align-items:center;gap:2px;padding:0 16px 0 7px;position:relative;
+  background:rgba(0,229,255,.10);border-left:1px solid rgba(0,229,255,.28)}
+.v6 .n{font-size:12px}.v6 .dim{font-size:10px}
+.v6 .cv{position:absolute;right:3px;top:50%;margin-top:-5.5px}
+.v6 .bar2{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(120,140,170,.20)}
+.v6 .bar2 i{display:block;height:100%;background:var(--hud)}
+
+/* ⑦ 숫자 우선 — 라운드가 먼저 읽히고 이름이 작게 얹힌다 */
+.v7{align-items:center;gap:6px;padding:0 13px 0 0;filter:drop-shadow(0 1px 3px rgba(0,0,0,.9))}
+.v7 .big{font-family:var(--font-num);font-size:19px;font-weight:700;line-height:1;color:var(--hud);
+  text-shadow:0 0 8px var(--hud-glow);flex:none}
+.v7 .body{display:flex;flex-direction:column;justify-content:center;min-width:0;gap:1px}
+.v7 .nm{font-size:10.5px;line-height:1.05}
+.v7 .dim{font-size:9.5px;letter-spacing:.4px}
+.v7 .bar2{position:absolute;left:0;right:12px;bottom:2px;height:1.5px;border-radius:1px;
+  background:rgba(120,140,170,.26);overflow:hidden}
+.v7 .bar2 i{display:block;height:100%;background:var(--hud);box-shadow:0 0 5px var(--hud-glow)}
+.v7 .cv{position:absolute;right:0;top:50%;margin-top:-5.5px}
+
+/* ⑧ 밑변 광원만 — 면을 지우고 한 줄 + 아래 선. 진행이 그 선의 길이다 */
+.v8{align-items:stretch;padding:0 14px 0 0}
+.v8 .body{display:flex;flex-direction:column;justify-content:center;min-width:0;padding-bottom:4px}
+.v8 .nm{font-size:11px;line-height:1.1}
+.v8 .row{display:flex;align-items:baseline;gap:4px;line-height:1}
+.v8 .n{font-size:11.5px}.v8 .dim{font-size:10px}
+.v8 .base{position:absolute;left:0;right:0;bottom:0;height:1px;background:rgba(120,140,170,.22)}
+.v8 .base i{display:block;height:100%;background:var(--hud);
+  box-shadow:0 0 7px -1px var(--hud-glow)}
+.v8 .cv{position:absolute;right:0;top:50%;margin-top:-5.5px}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const CV = '<i class="cv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>';
+const NAME = '잊혀진 회랑', CUR = 30, MAX = 50, PCT = (CUR/MAX*100).toFixed(1);
+
+/* 오른쪽 재화 더미 — 실측 248.6px 자리를 그대로 차지한다 */
+const RES = '<div class="res">'
+  + '<span class="m"><u></u>248,310</span><span class="g"><u></u>1,842</span>'
+  + '<span class="p"><u></u>36</span><span class="m"><u></u>12/40</span>'
+  + '<i class="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/>'
+  + '<path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg></i></div>';
+
+const V = {
+  1: '<div class="chip v1"><i class="rail"></i><span class="body"><span class="nm">'+NAME+'</span>'
+     + '<span class="row"><i class="lab">라운드</i><b class="n">'+CUR+'</b><i class="dim">/'+MAX+'</i></span></span>'
+     + '<span class="bar2"><i style="width:'+PCT+'%"></i></span>'+CV+'</div>',
+  2: '<div class="chip v2"><span class="nm">'+NAME+'</span><b class="n">'+CUR+'</b>'
+     + '<i class="dim">/'+MAX+'</i>'+CV+'<span class="glow"></span></div>',
+  3: '<div class="chip v3"><span class="body"><span class="nm">'+NAME+'</span>'
+     + '<span class="row"><i class="lab">R</i><b class="n">'+CUR+'</b><i class="dim">/'+MAX+'</i></span></span>'
+     + '<span class="bar2"><i style="width:'+PCT+'%"></i></span>'+CV+'</div>',
+  4: '<div class="chip v4"><span class="body"><span class="nm">'+NAME+'</span>'
+     + '<span class="row"><i class="lab">라운드</i><b class="n">'+CUR+'</b><i class="dim">/'+MAX+'</i></span></span>'
+     + '<span class="bar2"><i style="width:'+PCT+'%"></i></span>'+CV+'</div>',
+  5: '<div class="chip v5"><span class="ring"><svg viewBox="0 0 24 24">'
+     + '<circle class="bg" cx="12" cy="12" r="10"/>'
+     + '<circle class="fg" cx="12" cy="12" r="10" stroke-dasharray="'+(2*Math.PI*10).toFixed(1)+'" '
+     + 'stroke-dashoffset="'+(2*Math.PI*10*(1-CUR/MAX)).toFixed(1)+'"/></svg><b>'+CUR+'</b></span>'
+     + '<span class="body"><span class="nm">'+NAME+'</span>'
+     + '<span class="lab">라운드 '+CUR+'/'+MAX+'</span></span>'+CV+'</div>',
+  6: '<div class="chip v6"><span class="a"><span class="nm">'+NAME+'</span></span>'
+     + '<span class="b2"><b class="n">'+CUR+'</b><i class="dim">/'+MAX+'</i>'+CV
+     + '<span class="bar2"><i style="width:'+PCT+'%"></i></span></span></div>',
+  7: '<div class="chip v7"><b class="big">'+CUR+'</b><span class="body">'
+     + '<span class="nm">'+NAME+'</span><i class="dim">라운드 / '+MAX+'</i></span>'
+     + '<span class="bar2"><i style="width:'+PCT+'%"></i></span>'+CV+'</div>',
+  8: '<div class="chip v8"><span class="body"><span class="nm">'+NAME+'</span>'
+     + '<span class="row"><i class="lab">라운드</i><b class="n">'+CUR+'</b><i class="dim">/'+MAX+'</i></span></span>'
+     + '<span class="base"><i style="width:'+PCT+'%"></i></span>'+CV+'</div>',
+};
+
+const ANS = [
+  ['지금 것 (기준선)', '왼쪽 <b>광원 띠 + 두 줄</b>. 지금 화면에 있는 것 그대로다. 담는 것이 가장 많고, 판이 있어 어떤 배경에서도 읽힌다. 대신 폭 95px 을 거의 다 쓰고 높이도 32.5/34 로 꽉 찬다.'],
+  ['한 줄', '이름과 숫자를 <b>한 줄</b>에 놓고 진행은 밑변 광원 하나로 줄인다. 높이가 24px 로 내려가 바에 여유가 생기고, 이름이 길면 말줄임이 먼저 걸린다.'],
+  ['모서리 컷', '두 줄은 그대로 두고 껍데기를 <b>모서리 깎은 각진 판</b>으로 — 커맨드 카드·트레이와 같은 문법. 라벨을 「R」로 줄여 폭을 벌었다.'],
+  ['판 없음', '면과 테두리를 지우고 <b>글자와 그림자만</b>. 전장을 가장 안 가린다. 밝은 배경(사막·설원)에서 읽히는지가 관건이다.'],
+  ['진행 링', '라운드를 <b>원형 게이지</b>가 말한다. 숫자가 링 안에 들어가 가로폭을 아낀다 — 이름에 줄 수 있는 폭이 가장 넓다.'],
+  ['두 칸 세그먼트', '[이름][30/50] <b>두 칸이 맞붙는다</b>. 오른쪽 칸에 옅은 청록 면을 깔아 「누르는 곳」이 분명하다. 탭 띠·세그먼트와 같은 어법.'],
+  ['숫자 우선', '<b>큰 라운드 숫자</b>가 먼저 읽히고 이름이 작게 얹힌다. 「지금 몇 라운드냐」가 이 화면의 핵심이라면 이것이 맞다. 던전 이름은 부제가 된다.'],
+  ['밑변 광원만', '면을 지우고 <b>아래 선 하나</b>만 남긴다. 그 선의 길이가 곧 진행이다 — 막대를 따로 두지 않는다. 이 프로젝트의 버튼 서명과 같은 어휘.'],
+];
+
+document.getElementById('wrap').innerHTML = ANS.map(([t,d],i)=>
+  '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'
+  + '<div class="phone"><div class="bar"><div class="slot">'+V[i+1]+'</div>'+RES+'</div></div>'
+  + '<p class="mm" id="mm'+(i+1)+'"></p></div>').join('');
+
+/* 📐 실제로 몇 px 을 쓰는지 찍는다 — 95px 을 넘으면 ☰ 가 화면 밖으로 밀린다 */
+/* ⚠ rAF 로는 이르다 — 웹폰트가 아직 안 붙어 폭이 달라진다. 폰트를 기다렸다 잰다. */
+const measure = () => { document.querySelectorAll('.cell').forEach((c, i) => {
+  const r = c.querySelector('.chip').getBoundingClientRect();
+  c.querySelector('.mm').textContent =
+    '폭 ' + r.width.toFixed(1) + 'px · 높이 ' + r.height.toFixed(1) + 'px'
+    + (r.width >= 112 ? '   ⚠ 자리를 다 써서 이름이 잘린다' : ''); }); };
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(measure); else setTimeout(measure, 300);
+</script></body></html>

@@ -287,7 +287,8 @@ function campRebMulGain(){
 function campRebPtGain(){
   const base = Math.sqrt(campWealth() / CAMP_REB_COST);
   return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
-    * campPackRebPt(); }   // 💳 환생 팩
+    * campPackRebPt()                                     // 💳 환생 팩
+    * ((typeof campRuneMul === 'function') ? campRuneMul('rebPts') : 1); }   // 💠 윤회의 룬
 // 💠 **가속의 룬 — 프레임 시간 배수.** ⛔ 부르는 곳은 `campFrame` 한 곳뿐이다.
 //   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
 //   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
@@ -2072,7 +2073,17 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
 //     줄이려면 적 난이도를 구간별로 두어야 하는데(손잡이가 둘이 된다) 사용자 결정이 필요하다.
 // ⚠ **공격(0.33)은 같이 올리지 않는다.** 체력은 「얼마나 오래 싸우나」, 공격은 「얼마나 위험한가」다.
 //   라운드 길이는 체력만으로 늘고, 공격까지 함께 올리면 본부(체력 150)가 몇 초에 부서진다.
-const CAMP_FOE_HP0 = 800, CAMP_FOE_ATK0 = 0.33;
+// ⭐ **800 → 30 으로 내렸다** (2026-09-03 사용자 확정 — 「적이 말도 안 되게 세다」).
+//   위 표의 마지막 줄(800)은 **R50 을 2~4분에 두려고** 역산한 값이라 초반이 3~6배 길었다.
+//   그 사실은 위 주석에 이미 적혀 있었고 「사용자 결정이 필요하다」로 남아 있었다 — 그 결정이다.
+//   ⭐ 새 기준은 **아군과 같은 자**다: 아군 T1 은 체력 5~9 · 공격력 1~4(CAMP_UNIT_STAT).
+//     적도 그 자를 써야 R1 이 「몇 대 때리면 죽는」 크기가 된다 — 30 이면 3기에 척후병 11.8 ·
+//     스웜링 6.5 로, 레인저(체력 5)와 같은 눈금이다.
+//   ⚠ **후반이 함께 내려간다.** 난이도 배수는 그대로 곱해지므로 R50 도 26.7배 쉬워진다
+//     (총 체력 826 → 31). 후반을 되살리려면 **라운드 곡선(campRBase)** 이나 구간별 난이도로
+//     손잡이를 따로 두어야 한다 — ⛔ 이 상수 하나로 초반과 후반을 같이 맞추려 들지 말 것
+//     (그래서 값이 네 번 바뀌었다).
+const CAMP_FOE_HP0 = 30, CAMP_FOE_ATK0 = 0.33;
 const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
   const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1));
@@ -3421,9 +3432,11 @@ const CAMP_UNIT_STAT = {
   //   ⚠ 무공격 마법 유닛은 `a` 를 주지 않는다(의무병·지원 정찰기와 같은 규약).
   defiler:{h:14,r:2.0}, dark_archon:{h:12,r:2.0}, venom:{a:6,h:20,r:3.5,c:1.2},
   wyvern:{a:3,h:12,r:3.0,c:1.0}, medusa:{h:14}, ultralisk:{a:14,h:38,r:1.0,c:1.4}, overlord:{h:20},
+  broodling:{a:0.6,h:2.2,r:1.0,c:0.9}, thornqueen:{a:2.4,h:9.8,r:4.0,c:1.2}, matron:{a:11,h:20,r:1.0,c:1.05},
   // 에테리얼 §3-B — ⭐ 실드를 체력에 합쳐 본다(그래서 실드는 0 으로 만든다)
   blade:{a:3,h:16,r:1.0,c:0.9}, dragoon:{a:4,h:18,r:4.0,c:1.2}, dark_templar:{a:6.5,h:12,r:1.0,c:1.3},
   falcon:{a:3.5,h:20,r:4.0,c:1.0}, skydancer:{a:3,h:20,r:5.0,c:0.8}, reaver:{a:20,h:18,r:8.0,c:3.0},
+  archon:{a:5.2,h:38,r:2.5,c:1.1},
   kronos:{a:8,h:35,r:5.0,c:1.4}, archangel:{a:6,h:45,r:8.0,c:0.9}, high_templar:{h:8},
   seraph:{h:14}, observer:{h:6} };
 // 소환된 개체 하나에 설계값을 얹는다. ⚠ **한 번만** 걸어야 한다(_campStat 표시).
@@ -3464,11 +3477,21 @@ const CAMP_RES_STEP = 1.03;       // 계열 업그레이드 한 레벨당(HUNT_R
 function campResLv(uid, kind){    // kind: 'atk' | 'hp'
   if(typeof G === 'undefined' || !G.tech || typeof UNIT_UPG === 'undefined') return 0;
   const m = UNIT_UPG[uid]; if(!m) return 0;
-  const k = (kind === 'atk') ? m.atk : m.def;
+  // ⚔ 네 축 — atk 공격력 · as 공격속도 · hp 체력(옛 def 키) · dr 방어력
+  const k = (kind === 'atk') ? m.atk : (kind === 'as') ? m.as : (kind === 'dr') ? m.dr : m.def;
   if(!k) return 0;
   return (G.tech.research && (G.tech.research[G.tech.race + '_' + k] | 0)) || 0; }
 function campResMul(uid, kind){ const lv = campResLv(uid, kind);
   return lv ? Math.pow(CAMP_RES_STEP, lv) : 1; }
+// 🛡 방어력 — **받는 피해 −1.5%/레벨**(최대 −60%).
+//   ⛔ 엔진의 armor 는 **감산**이라 캠프의 작은 공격력(1~31)에서는 저공격 유닛이 통째로
+//     무력화된다 — HUNT_R1 §3-1 이 방어를 뺀 이유가 그것이다.
+//   ⭐ 그래서 **비율**로 두고 **체력 배수로 환산해** 얹는다: 피해 ×(1−c) = 버티는 시간 ×1/(1−c).
+//     수학적으로 같고 strikeHit(18-strike.js · 수정 금지)을 안 건드린다.
+//   ⚠ 그래서 화면의 체력 숫자에는 방어력 몫이 섞여 보인다 — 「실효 체력」이라 읽으면 맞다.
+const CAMP_RES_DR = 0.015, CAMP_RES_DR_MAX = 0.60;
+function campResDrMul(uid){ const lv = campResLv(uid, 'dr'); if(!lv) return 1;
+  return 1 / (1 - Math.min(CAMP_RES_DR_MAX, CAMP_RES_DR * lv)); }
 
 function campScaleAllies(list){
   if(!list || !list.length) return 0;
@@ -3487,13 +3510,14 @@ function campScaleAllies(list){
     if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
     const uid = u.gm || u.id;
     const atk = tAtk * rAtk * campResMul(uid, 'atk');   // 🌳 트리 × 💠 룬 × 🔬 연구(계열별)
-    const hp  = tHp  * rHp  * campResMul(uid, 'hp');
-    if(atk === 1 && hp === 1 && rAs === 1) continue;    // 얹을 것이 없으면 표시도 남기지 않는다
+    const hp  = tHp  * rHp  * campResMul(uid, 'hp') * campResDrMul(uid);   // 🛡 방어력은 체력으로 환산
+    const asp = rAs * campResMul(uid, 'as');            // ⚡ 공격속도 — 💠 룬 × 🔬 연구
+    if(atk === 1 && hp === 1 && asp === 1) continue;    // 얹을 것이 없으면 표시도 남기지 않는다
     u._campRtOn = 1;
     if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
       u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }
     if(atk !== 1) u.dmg = (u.dmg || 0) * atk;
-    if(rAs !== 1 && u.cdMax > 0) u.cdMax = u.cdMax / rAs;   // 💠 연타의 룬 — 발사 간격을 줄인다
+    if(asp !== 1 && u.cdMax > 0) u.cdMax = u.cdMax / asp;  // 발사 **간격**이라 나눈다(곱하면 느려진다)
     n++; }
   return n; }
 
@@ -3768,22 +3792,19 @@ function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
   const C = campState(); const pts = Math.floor(campRtPts());
   const dg = campDgN(), foe = campAlive('ai');
-  const canReb = (typeof campCanRebirth === 'function') && campCanRebirth();   // ⓒ 지금은 조건만 본다(종족별 건물은 나중에)
   campFevPaint();                                  // ⚡ 남은 초는 캐시 밖에서 갱신한다
-  const key = dg + '|' + foe + '|' + pts + '|' + (canReb ? 1 : 0);
+  const key = dg + '|' + foe + '|' + pts;
   if(key === _campBarS) return;
   _campBarS = key;
   // ⛔ 던전·라운드·진행은 여기 두지 말 것 — 재화 바 왼쪽 칩(#curTitle · js/12-appshell.js)이
   //    이미 그걸 보여주고 거기에 이동 드롭다운까지 붙어 있다. 두 곳에 두면 반드시 어긋난다.
   const fo = el.querySelector('.cbFoe');
   if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
-  // 🌳 트리 입구는 **하단 네비 「환생 › 트리」 하나**다(2026-09-01 사용자 확정).
-  //   ⛔ 띠에 트리 칩을 되돌리지 말 것 — 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
-  // 🔁 환생 칩 — 조건(누적 재화 100만)을 채우면 나타난다. 화면을 안 봐도 열리는 것이 아니라
-  //    일꾼을 사고 탭을 눌러야 채워지는 값이다(HUNT_R1 §4-1).
-  { const rb = el.querySelector('.cbReb'); if(rb) rb.classList.toggle('hide', !canReb); }
+  // 🚪 **띠에 화면 입구를 두지 않는다**(2026-09-03 사용자 확정).
+  //   🌳 트리도(2026-09-01) 🔁 환생도 하단 네비에 제 칸이 있다 — 띠에 또 두면 입구가 둘이 된다.
+  //   ⛔ 되돌리지 말 것. 띠에 남는 것은 **읽는 것**뿐이다(적 수 · 피버).
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !canReb && !campFevActive());
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !campFevActive());
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; campFevPaint(); }
@@ -4227,9 +4248,14 @@ function campRestore(){
 // 🌳 「업그레이드 비용」 −20~−80% — 캠프가 값을 매기는 두 곳(campUpgCost · campCost)에 함께 건다.
 const CAMP_RT_DISC = [0, 0.20, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
 // 🚪 마디 몫은 **할인율에 곱한다**. ⛔ 0.95 를 넘기지 말 것 — 1 이면 업그레이드가 공짜가 된다.
-function campUpgDisc(){ const n = campRtHas('upCost'); if(n <= 0) return 1;
-  const d = Math.min(0.95, CAMP_RT_DISC[Math.min(5, n)] * campRtNodeMul('upCost'));
-  return 1 - d; }
+// 💰 업그레이드 할인 — **깎아 주는 것은 전부 여기 한 곳을 지난다.**
+//   💠 절약의 룬(costCut)이 여기 얹힌다. ⚠ 그 룬은 **유일한 감소형**이라 뚜껑이 있다
+//     (RUNE_COST_CAP · 유니크 3칸 × 0.5% = 1.5%). ⛔ 다른 곳에서 같은 축을 또 깎지 말 것.
+function campUpgDisc(){
+  const rc = (typeof campRuneEff === 'function') ? campRuneEff('costCut') : 0;
+  const n = campRtHas('upCost');
+  const d0 = (n > 0) ? Math.min(0.95, CAMP_RT_DISC[Math.min(5, n)] * campRtNodeMul('upCost')) : 0;
+  return 1 - Math.min(0.95, d0 + rc); }
 // 🏠 인구 상한 사다리 — **3차가 끝이다**(2026-09-02 사용자 확정 · 옛 5차 10/30/80/200/500).
 //   ⛔ 길이를 바꾸면 CAMP_RT_LINES 의 sup 계열 mx·cs 도 같이 바꿀 것 — 어긋나면 살 수 있는데 값이 없다.
 const CAMP_RT_SUP = [0, 50, 100, 200];
@@ -4926,7 +4952,12 @@ function campFevPct(){
   const rm = (typeof campRuneMul === 'function') ? campRuneMul('fever') : 1;
   return Math.min(1, CAMP_FEV_PCT[campFevLv('fevPct')] * rm * campRtNodeMul('fevPct')); }
 // 🚪 마디 몫은 **곱**이다(campRtNodeMul) — 배수·초는 기준이 1 이 아니다
-function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')] * campRtNodeMul('fevMul'); }
+// ⚡ 피버 배수 — 💠 **열정의 룬**이 여기 곱해진다(2026-09-04 사용자 확정).
+//   ⚠ 예전엔 「배수에 룬을 걸면 피버가 상시 배수가 된다」고 막아 두었다. 지금 여는 전제는
+//     **피버를 짧게·약하게·확률 낮게·쿨 길게** 유지한다는 것이다.
+//     ⛔ 그 전제가 깨지면(피버가 길어지거나 흔해지면) 이 곱부터 다시 잰다.
+function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')] * campRtNodeMul('fevMul')
+  * ((typeof campRuneMul === 'function') ? campRuneMul('fevGain') : 1); }
 function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')] * campRtNodeMul('fevSec'); }
 function campFevActive(){ return campFevOn() && Date.now() < _campFevEnd; }
 function campFevLeft(){ return Math.max(0, (_campFevEnd - Date.now()) / 1000); }
@@ -4981,8 +5012,13 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   //   💠 ⚠ **채취에 걸리는 룬은 이제 없다**(2026-09-03). 「재화의 룬」이 여기 합산 항으로
   //     들어왔는데, 손끝의 룬을 품고 있어서 지웠다. 채취를 올리는 룬을 새로 만들 거라면
   //     ⛔ 탭까지 겹치게 만들지 말 것 — 같은 실수를 되풀이한다.
+  // 💠 **채굴의 룬**(2026-09-04) — 위 주석이 「채취에 걸리는 룬은 이제 없다」고 했던 자리다.
+  //   ⭐ 되살린 것이 아니라 **다른 룬**이다: 옛 「재화의 룬」은 탭까지 품어서 지웠고,
+   //     이것은 일꾼 왕복에만 닿는다(손끝의 룬과 겹치지 않는다).
+  //   ⚠ 곱 항으로 들어간다 — 합산 항(campGatRaw)은 **정수 곡선**이라 1~5% 를 더할 수 없다.
   return (campGatRaw(lv) + campPackGather())
-    * campMineMul() * campRebMul() * campRtMul('gather'); }
+    * campMineMul() * campRebMul() * campRtMul('gather')
+    * ((typeof campRuneMul === 'function') ? campRuneMul('mine') : 1); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).
 //   ⭐ 왜 모드인가 — 광맥은 화면의 5% 뿐이라 손끝이 자꾸 일꾼·건물·바닥을 눌렀다.
@@ -5226,6 +5262,56 @@ if(typeof document !== 'undefined'){
 // ⭐ 껍데기는 공용(.hbModal/.hbmCard) — 새 팝업 컴포넌트를 만들지 않는다(CLAUDE.md 레지스트리).
 
 // 업그레이드 구매 — **값은 campUpgCost 하나가 정한다**(여기서 다시 계산하지 않는다).
+// ⏫ 여러 칸을 한 번에 — 자원 칸의 ×5 / MAX 가 쓴다(2026-09-03).
+//   ⭐ 비용은 **레벨마다 다르다.** 그래서 식을 새로 쓰지 않고 **C.upg 를 임시로 올려 가며**
+//     campUpgCost 를 그대로 물어본다 — 두 벌이 되면 반드시 어긋난다(정제소는 연구 레벨과
+//     큰 쪽을 쓰므로 그 규칙까지 저절로 따라온다).
+//   ⚠ 끝나면 **반드시 원래 값으로 되돌린다** — 여기서 새는 순간 공짜 레벨이 된다.
+function campUpgDry(k, n){
+  const C = campState(); if(!C) return [0, 0];
+  C.upg = C.upg || {};
+  const back = C.upg[k] | 0;
+  let sum = 0, got = 0;
+  try {
+    for(let i = 0; i < n; i++){
+      if(k === 'hold' && (C.upg[k] | 0) >= campHoldLvMax()) break;
+      sum += campUpgCost(k); got++; C.upg[k] = (C.upg[k] | 0) + 1;
+    }
+  } finally { C.upg[k] = back; }
+  return [sum, got];
+}
+// 지금 미네랄로 살 수 있는 칸 수(상한 CAMP_UPG_MAX_STEP)
+const CAMP_UPG_MAX_STEP = 99;
+function campUpgAfford(k){
+  const C = campState(); if(!C || typeof G === 'undefined' || !G.tech) return 0;
+  C.upg = C.upg || {};
+  const back = C.upg[k] | 0;
+  let have = G.tech.credit || 0, n = 0;                 // ⛔ | 0 금지 — 21억을 넘으면 음수가 된다
+  try {
+    for(; n < CAMP_UPG_MAX_STEP; n++){
+      if(k === 'hold' && (C.upg[k] | 0) >= campHoldLvMax()) break;
+      const c = campUpgCost(k);
+      if(c > have) break;
+      have -= c; C.upg[k] = (C.upg[k] | 0) + 1;
+    }
+  } finally { C.upg[k] = back; }
+  return n;
+}
+// n 칸을 조용히 산다 — 소리·저장·다시 그리기는 **한 번만**(n번 울리면 귀가 아프다)
+function campUpgBuyN(k, n){
+  let got = 0;
+  _campUpgQuiet = true;
+  try { for(let i = 0; i < Math.max(1, n | 0); i++){ if(!campUpgBuy(k)) break; got++; } }
+  finally { _campUpgQuiet = false; }
+  if(got){
+    if(typeof saveMeta === 'function') saveMeta();
+    if(typeof updateCurBar === 'function') updateCurBar();
+    if(typeof playSfx === 'function') playSfx('ui_confirm');
+    campMineRender();
+  }
+  return got;
+}
+let _campUpgQuiet = false;   // 위 campUpgBuyN 이 켠다 — 켜져 있으면 campUpgBuy 가 뒷정리를 미룬다
 function campUpgBuy(k){
   const C = campState(); if(!C || typeof G === 'undefined' || !G.tech) return false;
   // ⛏ 홀드는 **끝이 있는 축이다** — 하한(CAMP_HOLD_MIN)에 닿으면 더 팔지 않는다.
@@ -5235,10 +5321,11 @@ function campUpgBuy(k){
   G.tech.credit -= cost;
   C.upg = C.upg || {};
   C.upg[k] = (C.upg[k] | 0) + 1;
+  if(typeof dqNote === 'function') try{ dqNote('upg:' + k, 1); }catch(e){}   // 일일 퀘스트 계측(공용 입구)
+  if(_campUpgQuiet) return true;              // ⏫ 묶어 살 때는 뒷정리를 campUpgBuyN 이 한 번에 한다
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof updateCurBar === 'function') updateCurBar();
   if(typeof playSfx === 'function') playSfx('ui_confirm');
-  if(typeof dqNote === 'function') try{ dqNote('upg:' + k, 1); }catch(e){}   // 일일 퀘스트 계측(공용 입구)
   campMineRender();
   return true;
 }
@@ -6034,6 +6121,11 @@ function campPatchWheel(){
     //   목록이 아니라 **뒤 캠프 화면이 확대·축소됐다**. 시트와 같은 이유·같은 처리다.
     if(inside(document.getElementById('campDrop'))) return;
     if(inside(document.getElementById('curBar'))) return;
+    // 🔁🌳💠 **캠프 위에 덮이는 구역 화면들도 존중한다**(2026-09-04 · 시트·드롭다운과 같은 이유).
+    //   이 화면들은 #phone 직속(z-index 120)이라 맵 위를 덮는데, 좌표는 맵 안이다.
+    //   그래서 여기서 안 빠지면 **룬 상점에서 휠을 굴릴 때 목록이 아니라 뒤 캠프가 확대됐다.**
+    for(const id of ['campRune', 'campReb', 'campTree'])
+      if(inside(document.getElementById(id))) return;
     const r = _btRect(); if(!r || !r.width) return;
     if(e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
     techWheel(e);

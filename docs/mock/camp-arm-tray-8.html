@@ -1,0 +1,114 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>무장 칸 트레이 — 배수 + 뒤로 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR',sans-serif; --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --metal-edge:#3c3e46;
+  --bpFace:linear-gradient(180deg,#0a0a0a,#000);
+  --trayPanel:linear-gradient(180deg,#191919,#0e0e0e);
+  --metal-ring:linear-gradient(180deg,#585b66 0%,#3c3e46 38%,#2a2c33 72%,#45474f 100%);
+  --metal-ring-n:linear-gradient(180deg,#5c5c5c 0%,#404040 38%,#2d2d2d 72%,#494949 100%);
+  --trayEdge:linear-gradient(180deg,rgba(255,59,59,.40) 0%,rgba(255,59,59,.26) 34%,rgba(255,59,59,.15) 68%,rgba(255,59,59,.09) 100%);
+  --trayEdgeOn:linear-gradient(180deg,rgba(255,59,59,.72) 0%,rgba(255,59,59,.48) 34%,rgba(255,59,59,.30) 68%,rgba(255,59,59,.18) 100%);
+  --cut:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:360px}
+.cap{margin:0 0 6px;font-weight:700;font-size:13px}
+.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 10px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:50px}
+/* 실제 맥락 — 어두운 시트 위에 카드가 있고, 트레이는 카드 **밖 위**에 뜬다 */
+.stage{position:relative;background:linear-gradient(180deg,#0d1015,#080a0e);padding:34px 12px 12px;
+  border-top:1px solid #24272e}
+.tray{position:absolute;right:12px;bottom:calc(100% - 34px + 10px);display:flex;align-items:stretch;gap:3px;
+  padding:3px;z-index:3;background:var(--trayPanel);border:1px solid var(--metal-edge);
+  border-radius:var(--r-bar);clip-path:var(--cut)}
+.tray.bare{background:none;border:0;padding:0;clip-path:none}
+.card{background:linear-gradient(180deg,rgba(24,26,32,.96),rgba(14,16,20,.96));
+  border:1px solid #24272e;border-radius:3px;padding:8px 10px}
+.kick{font-size:10px;letter-spacing:.18em;color:#8d97a6;margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.slot{height:62px;border:1px solid #2a2d35;border-radius:3px;background:rgba(255,255,255,.02);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:9px;color:#8d97a6}
+.slot b{font-family:var(--font-num);font-size:10px;color:#c3ccd8;font-weight:700}
+/* ── 버튼 어휘들 ─────────────────────────────────────────────── */
+.btn{flex:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;
+  color:#ececec;border:1px solid transparent;padding:0}
+/* A. 트레이 칸(.cgLift) 그대로 */
+.a{width:30px;height:30px;border-radius:var(--r-bar);clip-path:var(--cut);
+  background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
+  box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
+.a.wide{width:auto;min-width:40px;padding:0 8px;font-family:var(--font-num);font-size:12px;font-weight:700}
+.a.on{background:var(--bpFace) padding-box,var(--trayEdgeOn) border-box,var(--metal-ring-n) border-box;
+  box-shadow:0 0 9px -3px rgba(255,59,59,.65);color:#fff}
+/* B. 사냥터 수량 상자(.hmUpQty) */
+.qbox{flex:none;display:flex;align-self:center;padding:2px;border-radius:var(--r-bar);
+  border:1px solid transparent;background:var(--trayPanel) padding-box,var(--metal-ring) border-box}
+.q{flex:1;height:24px;min-width:40px;padding:0 8px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;font-family:var(--font-ko);font-size:10.5px;font-weight:700;color:#fff;
+  background:rgba(0,0,0,.66);border:none;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.10)}
+/* C. 글리프만(.arwBtn 문법) */
+.g{width:30px;height:30px;background:none;border:0;color:#c3ccd8;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+.g.wide{width:auto;min-width:38px;padding:0 6px;font-family:var(--font-num);font-size:13px;font-weight:700}
+/* D. 각진 캡슐 + 밑변 광원 */
+.d{height:30px;min-width:38px;padding:0 9px;border-radius:var(--r-bar);clip-path:var(--cut);
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+  font-family:var(--font-num);font-size:12px;font-weight:700;position:relative}
+.d::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,59,59,.55),transparent)}
+.d.sq{min-width:30px;width:30px;padding:0}
+/* E. 한 상자 안에 둘 */
+.seg{flex:none;display:flex;align-items:stretch;padding:2px;gap:2px;border-radius:var(--r-bar);
+  clip-path:var(--cut);border:1px solid transparent;
+  background:var(--trayPanel) padding-box,var(--metal-ring) border-box}
+.seg .s{height:24px;min-width:38px;padding:0 8px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#dfe5ee;background:rgba(0,0,0,.55);border:0;
+  font-family:var(--font-num);font-size:12px;font-weight:700}
+.seg .s.ic{min-width:26px;font-size:14px;font-family:var(--font-ko)}
+.seg .div{width:1px;background:rgba(255,255,255,.07);align-self:stretch}
+/* F. 얇은 외곽선만 */
+.f{height:30px;min-width:38px;padding:0 9px;border-radius:var(--r-bar);
+  background:rgba(0,0,0,.34);border:1px solid rgba(160,185,215,.22);
+  font-family:var(--font-num);font-size:12px;font-weight:700;color:#c3ccd8}
+.f.sq{min-width:30px;width:30px;padding:0;font-family:var(--font-ko);font-size:14px}
+/* 뒤로 아이콘(SVG ‹) */
+.bk svg{width:15px;height:15px;display:block;fill:none;stroke:currentColor;stroke-width:2.4;
+  stroke-linecap:round;stroke-linejoin:round}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const BK = '<svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>';
+const CARD = '<div class="card"><div class="kick">보병</div><div class="grid">'
+  + [['공격력','Lv.3'],['공격속도','Lv.1'],['체력','Lv.2'],['방어력','Lv.0']]
+      .map(([n,l])=>'<div class="slot"><b>'+l+'</b>'+n+'</div>').join('')
+  + '</div></div>';
+
+/* ⚠ 순서는 **배수 → 뒤로**(뒤로가 오른쪽 끝) — 2026-09-03 사용자 지정 */
+const ANS = [
+  ['트레이 칸 그대로', '둘 다 <b>트레이 칸(.cgLift)</b> 껍데기 — 모서리 컷 + 금속 테두리 + 붉은 실선. 다른 화면의 랠리·부양 버튼과 <b>이미 같은 얼굴</b>이라 새로 정할 것이 없다.',
+   '<div class="tray"><button class="btn a wide on">×5</button><button class="btn a bk">'+BK+'</button></div>'],
+  ['트레이 칸 · 배수만 강조', '같은 껍데기지만 <b>배수만 켜짐(붉은 발광)</b>으로 둔다. 지금 몇 배인지가 먼저 읽히고, 뒤로는 조용한 보조가 된다.',
+   '<div class="tray"><button class="btn a wide on">×5</button><button class="btn a bk" style="box-shadow:none">'+BK+'</button></div>'],
+  ['사냥터 수량 상자', '지금 쓰는 <b>.hmUpQty</b> 어휘를 둘 다에. 어두운 상자에 글자만 — 판이 얇아 트레이가 가장 낮아진다. 대신 다른 트레이 칸과 재질이 다르다.',
+   '<div class="tray bare"><span class="qbox"><button class="q">×5</button></span><span class="qbox"><button class="q bk" style="min-width:30px">'+BK+'</button></span></div>'],
+  ['한 상자 안에 둘', '한 덩어리 안에서 <b>얇은 선으로 나눈다</b>. 칸이 둘이 아니라 하나로 읽혀 트레이가 가장 조용하다. 두 기능이 붙어 보이는 것이 단점.',
+   '<div class="tray bare"><span class="seg"><button class="s">×5</button><i class="div"></i><button class="s ic bk">'+BK+'</button></span></div>'],
+  ['글리프만', '판을 없애고 <b>글자와 화살표만</b>(.arwBtn 문법). 전장을 가장 안 가린다. 대신 누를 수 있다는 신호가 약하다.',
+   '<div class="tray bare"><button class="btn g wide">×5</button><button class="btn g bk">'+BK+'</button></div>'],
+  ['각진 캡슐 + 밑변 광원', '옅은 면 + 1px 테두리에 <b>밑변 광원</b>(.actBtn 어휘). 이 프로젝트의 버튼 서명을 트레이에 가져온 안.',
+   '<div class="tray bare"><button class="btn d">×5</button><button class="btn d sq bk">'+BK+'</button></div>'],
+  ['얇은 외곽선', '면을 거의 없애고 <b>선 하나</b>로. 가장 가볍고 카드 위에서 튀지 않는다. 트레이가 있는지 모를 수도 있다.',
+   '<div class="tray bare"><button class="btn f">×5</button><button class="btn f sq bk">'+BK+'</button></div>'],
+  ['위계 차 — 배수는 넓게', '배수는 <b>넓은 칸</b>, 뒤로는 <b>정사각</b>. 자주 누르는 쪽이 크다는 규칙(트레이의 일꾼 수 칸과 같은 어법).',
+   '<div class="tray"><button class="btn a wide on" style="min-width:56px">×5</button><button class="btn a bk">'+BK+'</button></div>'],
+];
+document.getElementById('wrap').innerHTML = ANS.map(([t,d,tray],i)=>
+  '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'+
+  '<div class="stage">'+tray+CARD+'</div></div>').join('');
+</script></body></html>

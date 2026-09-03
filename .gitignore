@@ -37,3 +37,7 @@ _zoom.mjs
 #   ⚠ 결과물은 assets/backgrounds/ 에 들어간다. 여기는 다시 만들 수 있는 것뿐이다.
 docs/mock/quarters/
 docs/mock/visible/
+
+# 룬 아이콘 재료 원본(판 4장·문양 종류별) — scripts/rune-compose.mjs 가 여기서 25장을 만든다.
+#   결과물은 assets/icons/rune/ 에 들어간다. 원본은 다시 뽑을 수 있는 것뿐이다(ART.md §16).
+docs/mock/rune/

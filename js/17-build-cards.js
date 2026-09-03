@@ -1000,11 +1000,16 @@ function techCancelAmmo(ev, key, j){ if(ev&&ev.stopPropagation) ev.stopPropagati
   const e=_techChargerEnt(key); if(!e||!e._chq||!e._chq[j]) return; const it=e._chq[j];
   techRefund(it.m,it.g); if(it.pop) G.tech.sup=Math.max(0,G.tech.sup-it.pop); e._chq.splice(j,1);
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
-function techApplyResearch(be, rj){ if(!rj) return; if(rj.tier) G.tech.research[rj.key]=(G.tech.research[rj.key]||0)+1; else G.tech.research[rj.key]=true; }
+// ⏫ rj.n = 이 연구 한 건이 올리는 레벨 수(기본 1). 캠프 무장 칸의 ×5 / MAX 가 쓴다.
+//   ⛔ 기본값을 빼지 말 것 — 관리자 건설 탭은 n 을 안 넣는다(그때는 1 이어야 한다).
+function techApplyResearch(be, rj){ if(!rj) return; if(rj.tier) G.tech.research[rj.key]=(G.tech.research[rj.key]||0)+Math.max(1, rj.n|0); else G.tech.research[rj.key]=true; }
 function techCancelResearch(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 연구 취소 = 100% 환불
   const be=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null; if(!be||!be._rj) return;
   const rj=be._rj; techRefund(rj.cost[0],rj.cost[1]); be._rj=null; if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
-function techDoResearch(bk, rk){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b||!b.research) return; const r=b.research.find(x=>x.k===rk); if(!r) return;
+// ⏫ n = 한 번에 올릴 레벨 수(기본 1 · 캠프 무장 칸의 ×5 / MAX).
+//   ⭐ 비용은 **레벨마다 달라서** 한 칸씩 더해 합친다 — 한 번에 내고 한 건으로 예약한다.
+//   ⚠ 연구 시간도 n 배다. 「돈만 내고 즉시」가 아니다 — 그러면 시간 축이 통째로 사라진다.
+function techDoResearch(bk, rk, n){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b||!b.research) return; const r=b.research.find(x=>x.k===rk); if(!r) return;
   if(!((G.tech.built[bk]>0)||G.tech.addon[bk])){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const be=_techSelBldgOf(bk); if(!be){ if(typeof toast==='function') toast('⛔ 건물 없음'); return; }
   if(be._rj){ if(typeof toast==='function') toast('⛔ 연구 중 — 완료 후'); return; }   // 단일 연구(순차)
@@ -1014,9 +1019,16 @@ function techDoResearch(bk, rk){ const race=G.tech.race, b=techGetBldg(race,bk);
   const _cc=(typeof campResearchCost==='function')?campResearchCost(r,_lv):null;
   if(r.tier){ if(!_cc && _lv>=r.tier.length){ if(typeof toast==='function') toast('최대 레벨'); return; } cost=_cc||r.tier[_lv]; }
   else { if(_lv){ if(typeof toast==='function') toast('이미 연구됨'); return; } cost=_cc||[r.m||0, r.g||0]; }
+  // ⏫ 여러 레벨을 한 건으로 — 티어형에서만. 상한(캠프 밖 r.tier.length)을 넘지 않는다.
+  let _n=Math.max(1, n|0);
+  if(!r.tier) _n=1;
+  else { if(!_cc) _n=Math.min(_n, r.tier.length-_lv);
+    if(_n>1){ let m=0,g=0;
+      for(let i=0;i<_n;i++){ const c=_cc?campResearchCost(r,_lv+i):r.tier[_lv+i]; if(!c){ _n=i; break; } m+=c[0]||0; g+=c[1]||0; }
+      if(_n>1) cost=[m,g]; } }
   if(_techFailRes(cost[0],cost[1])) return;
   _techSpend(cost[0],cost[1]);   // 선차감 — 취소 시 100% 환불
-  const t=_techResearchTime(r); be._rj={ rk:rk, key:key, name:r.name||'', t:t, tMax:t, tier:!!r.tier, cost:[cost[0]||0,cost[1]||0] };
+  const t=_techResearchTime(r)*_n; be._rj={ rk:rk, key:key, name:r.name||'', t:t, tMax:t, tier:!!r.tier, n:_n, cost:[cost[0]||0,cost[1]||0] };
   if(t<=0){ techApplyResearch(be, be._rj); be._rj=null; }
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
 function techRace(ev,r){ if(ev&&ev.stopPropagation) ev.stopPropagation(); techUIInit(r); techUIRender(); }

@@ -230,6 +230,27 @@ const SKILL_ICO={ nuke:'bomb' };
 >
 > **계열은 '무엇을 그리느냐'가 아니라 '옆칸이 무엇이냐'로 고른다.**
 
+### SUBJECT — 공격속도 (블록 B · `upgrades/up_atkspd.webp` · 2026-09-03)
+
+캠프 무장 칸이 **네 축**(공격력·공격속도·체력·방어력)으로 늘며 필요해졌다.
+⛔ `up_speed` 를 쓰지 말 것 — 그것은 **부츠**(이동 강화)다. 한 번 잘못 넣었다.
+⭐ 기존 `up_inf_atk` 가 단발 소총이라 **실루엣이 갈리게** 다관 회전 총열로 잡았다.
+⚠ 계열(보병·차량·함선…)마다 나누지 않고 **한 장을 공용**으로 쓴다 — 방어력(`up_carapace`)도 그렇다.
+
+```
+a single rotary multi-barrel gun angled diagonally across the frame, barrels toward the
+upper right, seen from three-quarter above — four slim barrels bundled in a ring around a
+thick central spindle, a flat toothed rotation collar behind the bundle, and a squared
+breech housing at the lower left with a short side crank. Two spent shell casings tumble
+away below the breech, clearly separated from the housing with a visible gap
+```
+
+NEGATIVE 끝에 이 넷을 덧붙였다 — 옆 아이콘과 겹치지 않게 이름으로 막는다:
+`no assault rifle, no single straight barrel, no magazine, no boot, no shoe`
+
+모델은 **`nano_banana_pro`**(1:1 · 참조 이미지 role `image_references`)를 썼다.
+참조로는 기존 `up_inf_atk.webp` 를 512px PNG 로 키워 넣었다 — 판이 그대로 재현됐다.
+
 ### SUBJECT — 광산 (블록 B · `upgrades/up_mine.webp`)
 ```
 a heavy mining pickaxe — one straight handle bar of constant width running the full
