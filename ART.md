@@ -1654,26 +1654,46 @@ Moody sci-fi game environment key art, clearly readable exposure with rich midto
 | 장수 | 33 (`CAMP_RT_LINES` 와 1:1) |
 | 용량 | 합계 252KB · 평균 7.6KB |
 
-### 15-2. ⭐ 공통 블록 — 그대로 붙인다
+### 15-2. ⭐ 공통 블록 — **원문 그대로** 붙인다
+
+⛔ **한 글자도 고쳐 쓰지 말 것.** 여기 적힌 것이 33장을 실제로 뽑은 원문이다.
+⚠ 2026-09-02 에 이 절을 **요약해서 다시 쓴** 적이 있다. 그 요약본으로 새 아이콘을 뽑으면
+재질·광택·글로우가 미묘하게 달라져 **한 화면에서 바로 티가 난다** — 사용자가 그것을 잡아냈다.
+세션이 바뀌어도 같은 그림이 나와야 하므로 이 절은 **원문 보관소**다. 다듬지 말 것.
 
 ```
 --- RENDER SPEC ---
-Single game UI icon, 512x512, centered, isolated on a PURE BLACK background.
-Stylized 3D game-asset look: chamfered bevels, hard angular silhouette,
-brushed-metal frame with crisp highlight edges, emissive inner panels.
-Vivid high-contrast colours, three clear value steps (dark base / mid body /
-bright emissive core). Key light from the upper left, warm rim light opposite.
-Clean edges, no texture noise, no grime. Readable at 32px.
+A single mobile game HUD currency icon. One object only, centered, near-front view
+tilted 10 degrees from above. Even margin on all four sides.
+FORM: hard-surface and angular. Corners are CHAMFERED — cut off at 45 degrees rather
+than rounded. Bold readable silhouette at 24 pixels. Few large shapes, no clutter.
+TREATMENT: bright, vivid and high-contrast — the icon must pop against a black
+background. Rich saturated color across the body is expected. Add crisp bright edge
+highlights along facet and rim edges, and a soft glow hugging the outline so the
+shape stays legible when small.
+SHADING: clean stylized shading with three clear value steps plus edge highlights.
+No muddy midtones, no ambient occlusion, no texture noise, no photoreal material.
+Translucent materials may show light passing through the interior.
+LIGHT: single key light upper-left. Bright rim light along upper-right chamfers.
+Emissive areas glow outward with a tight falloff, no wide hazy bloom.
+BACKGROUND: flat solid pure black #000000 filling the entire frame, completely empty.
+No gradient, no vignette, no stars, no ground plane, no cast shadow, no pedestal,
+no frame, no border.
+OUTPUT: 512x512 PNG, crisp vector-like edges, no outline stroke.
 --- NEGATIVE ---
-no text, no letters, no numbers, no watermark, no signature, no frame,
-no border, no drop shadow on the background, no photo realism, no clutter,
-no busy background, no gradient background, not flat 2D, no outline stroke
+white background, light background, grey background, gradient background, transparent
+checkerboard, vignette, stars, photorealistic, soft shadows, drop shadow, ground shadow,
+floor, pedestal, text, letters, numbers, watermark, logo, frame, border, multiple
+objects, scene, character, cute, rounded corners, soft rounded shapes, glossy plastic,
+chrome, lens flare, wide bloom, bokeh, grain, thick outline, dark desaturated body,
+low contrast, muddy colors
 --- SUBJECT ---
-{SYMBOL}, colour accent {ACCENT}.
+{SYMBOL}
 ```
 
-`{ACCENT}` 는 갈래 색이다 — 시작 도움 `#5dff8f` · 재화 획득 `#ffd24a` · 아군 강화 `#4aa8ff` · 적 약화 `#ff3b3b`.
-갈래 색이 원 테두리와 같아서 **24px 로 줄어도 어느 갈래인지가 색으로 먼저 읽힌다**.
+`{SYMBOL}` 한 칸만 바꾼다. 갈래 색은 그 줄 끝에 `Colour accent #5dff8f` 처럼 붙인다 —
+시작 도움 `#5dff8f` · 재화 획득 `#ffd24a` · 아군 강화 `#4aa8ff` · 적 약화 `#ff3b3b`.
+갈래 색이 트리 노드의 테두리 색과 같아서 **24px 로 줄어도 어느 갈래인지가 색으로 먼저 읽힌다**.
 
 ### 15-3. ⛔ 한 모티프는 한 아이콘에만
 
@@ -1752,13 +1772,39 @@ node scripts/icon-cutout.mjs <입력.png> assets/icons/tree/<계열키>.webp
 `CAMP_RT_LINES` 의 `ic:` 한 곳뿐이다(`js/19-camp.js`). 트리 노드(`campTreeSvg`)와
 상세 카드가 같은 값을 읽는다. ⛔ 아이콘 경로를 다른 곳에 다시 적지 말 것.
 
-### 15-7. 마디 20개는 아직 비어 있다 (2026-09-02)
+### 15-7. 🚪 마디 아이콘 15장 (2026-09-02)
 
-트리의 검은 빈 원 20개는 **마디**다 — 갈래 관문 4 + 묶음 관문 16.
-지금은 효과가 없는 순수한 관문이라 「무엇이 세지는가」를 그릴 대상이 없어 아이콘도 없다.
+트리의 검은 빈 원 20개(실제로는 **15개** — 시작 도움은 사슬 갈래라 마디가 없다)에
+능력이 붙으면서 그림도 함께 붙였다. 갈래 관문 3 + 묶음 관문 12.
 
-⚠ 화면만 보면 「33장 중 몇 장이 안 들어갔다」로 읽힌다(실제로 그렇게 보고됐다).
-코드에서는 `campTreeGem` 호출에 `ic` 를 안 넘기는 것이 그 뜻이다.
+⭐ **계열 33장과 범주를 갈랐다.** 마디는 전부 **관문**이다 —
+갈래 셋은 큰 **문**(금고 문 · 쌍여닫이 문 · 갈라진 봉인석), 묶음 열둘은 **팔각 링**이 상징을 감싼다.
+작게 줄어도 「이건 관문이구나」가 먼저 읽히고, 그 다음에 안쪽이 읽힌다.
 
-🔜 **여기에 그 갈래·묶음의 가장 기본이 되는 능력을 넣기로 했다**(사용자 방향).
-능력이 정해지면 아이콘 20장도 이 절의 규격으로 함께 뽑는다 — 그때 이 절을 다시 쓴다.
+| 마디 | 파일 | 그림 |
+|---|---|---|
+| 재화 갈래 | `br_econ` | 살짝 열린 금고 문 |
+| 아군 갈래 | `br_army` | 활짝 열린 쌍여닫이 문 |
+| 적 갈래 | `br_enemy` | 가운데가 갈라진 봉인석 |
+| 재화 가 | `gp_econ_a` | 원석에서 흘러내리는 금 두 줄기 |
+| 재화 나 | `gp_econ_b` | 세 층 광맥 단면 · 가운데만 금빛 |
+| 재화 다 | `gp_econ_c` | 넘치는 저장고 |
+| 재화 라 | `gp_econ_d` | 맞물린 톱니 둘 |
+| 아군 가 | `gp_army_a` | 코어가 박힌 흉갑 |
+| 아군 나 | `gp_army_b` | 활주로가 뻗은 격납고 입구 |
+| 아군 다 | `gp_army_c` | 모루와 망치 |
+| 아군 라 | `gp_army_d` | 에너지 셀이 박힌 성벽 |
+| 적 가 | `gp_enemy_a` | 큰 낫 |
+| 적 나 | `gp_enemy_b` | 봉인된 석관 |
+| 적 다 | `gp_enemy_c` | 매달린 추 |
+| 적 라 | `gp_enemy_d` | 밀려 나가는 충격파 |
+
+⛔ **파일명에 한글을 쓰지 않는다** — 묶음 기호 가·나·다·라를 `a`~`d` 로 바꾼다.
+경로는 `campRtNodeIco(key)` 가 **키에서 바로 만든다**(표를 따로 두면 조용히 어긋난다).
+
+⚠ **겹침 방지는 SUBJECT 안에 넣었다** — 공통 블록(§15-2)은 원문이라 손대지 않는다.
+각 SUBJECT 끝에 `No pickaxe, no mine cart, no crystals.` 처럼 33장이 이미 쓴 모티프를 적었다.
+이 방식으로 15장이 **한 번에** 나왔다.
+
+⭐ 스모크가 잡는다 — 마디 15개의 경로가 비지 않았는지, 파일이 실제로 받아지는지,
+**계열 그림을 빌려 쓰지 않는지**까지 본다.

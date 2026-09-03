@@ -2768,6 +2768,22 @@ async function groupLobby(){
       // ⑦ 적 약화는 **상한을 안 넘는다** — 넘기면 갈래 하한이 뚫린다
       C.rbTree={root:1,'br:enemy':1,'gp:enemy가':1,foeHp:campRtMax('foeHp')};
       assert(campRtCut('foeHp')<=CAMP_RT_CUT_MAX+1e-9,'마디 몫이 계열 상한을 넘겼다: '+campRtCut('foeHp'));
+      // ⑦-b 🚪 **마디도 제 그림을 갖는다**(2026-09-02) — 빈 검은 원이던 자리다.
+      //   ⚠ 한 장만 빠져도 그 마디 하나가 다시 빈 원이 된다 — 15개 중 하나를 눈으로는 못 찾는다.
+      { const want=[];
+        for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue;
+          want.push(CAMP_RT_BR_KEY(bk));
+          for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(bk,g)) want.push(CAMP_RT_GP_KEY(bk,g)); }
+        const bad=want.filter(k=>!campRtNodeIco(k));
+        assert(bad.length===0,'마디 아이콘 경로가 비었다: '+bad.join(','));
+        const miss=(await Promise.all(want.map(function(k){
+          return fetch('assets/icons/'+campRtNodeIco(k)).then(function(r){ return r.ok?null:k; })
+            .catch(function(){ return k; }); }))).filter(Boolean);
+        assert(miss.length===0,'마디 아이콘 파일이 없다: '+miss.join(','));
+        // ⛔ 계열 아이콘과 겹치지 않아야 한다 — 같은 폴더를 쓰되 이름이 br_/gp_ 로 갈린다
+        const lineIco=CAMP_RT_LINES.map(L=>L.ic);
+        const dup=want.map(campRtNodeIco).filter(p=>lineIco.indexOf(p)>=0);
+        assert(dup.length===0,'마디가 계열 그림을 쓴다: '+dup.join(',')); }
       // ⑧ 사슬 갈래(시작 도움)에는 마디가 없다
       assert(campRtNodeAdd('tap')===0,'사슬 갈래에 마디 몫이 붙는다');
       // ⑨ 🚪 **기준이 1 이 아닌 축은 곱으로 받는다**(2026-09-02) — 확률·시간·간격·할인·인구.

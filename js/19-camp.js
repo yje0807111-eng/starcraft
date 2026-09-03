@@ -760,6 +760,16 @@ function campRtNodeAdd(k){
 //   ⚠ 기준이 **0** 인 축(할인·버팀·인구)은 계열을 사야 마디가 일한다 — 0 × 1.15 는 0 이다.
 //     그 자리에서 「미리 맛본다」는 성립하지 않는다. 대신 「산 것을 더 세게」가 된다.
 function campRtNodeMul(k){ return 1 + campRtNodeAdd(k); }
+// 🚪 마디 아이콘 — **키에서 바로 만든다**(표를 따로 두면 계열이 늘 때 조용히 어긋난다).
+//   묶음 기호는 파일명에서 a~d 로 바꾼다 — 한글 파일명은 서버·zip 을 지나며 깨진 적이 있다.
+//   ⚠ 계열 아이콘(tree/<계열키>.webp)과 **같은 폴더**를 쓰되 이름이 br_/gp_ 로 갈린다.
+const CAMP_RT_GRP_ABC = { '가':'a', '나':'b', '다':'c', '라':'d' };
+function campRtNodeIco(key){
+  if(!key) return '';
+  if(key.indexOf('br:') === 0) return 'tree/br_' + key.slice(3) + '.webp';
+  if(key.indexOf('gp:') === 0){ const b = key.slice(3, -1), g = key.slice(-1);
+    return 'tree/gp_' + b + '_' + (CAMP_RT_GRP_ABC[g] || g) + '.webp'; }
+  return ''; }
 function campRtMul(k){ const n = campRtHas(k), add = campRtNodeAdd(k);
   if(n <= 0) return 1 + add;
   const lad = campRtLad(k); return lad[Math.min(campRtMax(k), n)] + add; }
@@ -983,6 +993,7 @@ function campTreeSvg(){
     const p = campTreeBrPos(bk), meB = campTreeIsSel('br', bk);
     rows.push(campTreeLink({ x:0, y:0 }, p, B.col, sb === 'own', F(meB), CAMP_TREE_R_CORE, CAMP_TREE_R_BRN));
     rows.push(campTreeGem({ x:p.x, y:p.y, r:13, col:B.col, state:sb, gr:'보통',
+      ic:campRtNodeIco(CAMP_RT_BR_KEY(bk)),
       label: sb === 'own' ? '' : campNum(CAMP_RT_BR_COST), me:meB, f:F(meB),
       k:CAMP_RT_BR_KEY(bk), n:0 }));
     if(sb === 'own'){
@@ -990,6 +1001,7 @@ function campTreeSvg(){
         const q = campTreeGpPos(bk, g), meG = campTreeIsSel('gp', bk, g);
         rows.push(campTreeLink(p, q, B.col, sg === 'own', F(meG), CAMP_TREE_R_BRN, CAMP_TREE_R_GPN));
         rows.push(campTreeGem({ x:q.x, y:q.y, r:11, col:B.col, state:sg, gr:'흔함',
+          ic:campRtNodeIco(CAMP_RT_GP_KEY(bk, g)),
           label: sg === 'own' ? '' : campNum(CAMP_RT_GP_COST), me:meG, f:F(meG),
           k:CAMP_RT_GP_KEY(bk, g), n:0 }));
         if(sg !== 'own') continue;
@@ -1300,7 +1312,8 @@ function campTreeInfo(){
       + ' · ' + (sel.t === 'br' ? '이 갈래' : '이 묶음') + ' 전부 <b>+'
       + Math.round(nAdd * 100) + '%</b>';
     host.innerHTML =
-      '<div class="ctHead"><span class="ctDot" style="background:' + B.col + '"></span>' +
+      '<div class="ctHead"><span class="ctIco"><img src="' + CAMP_TREE_ICO +
+        campRtNodeIco(key) + '" alt=""></span>' +
       '<div class="ctHt"><div class="ctNm">' + nm + '</div></div></div>' +
       '<div class="ctDesc">' + tx + '</div>' +
       campTreePayHTML(cost, pts) +
