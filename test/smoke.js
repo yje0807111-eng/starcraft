@@ -2576,6 +2576,101 @@ async function groupLobby(){
         ' · 새로운 시작 '+CAMP_ROOT_MIN+'/'+CAMP_ROOT_WK+'기'+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
     } finally { C.rbTree=keepT; C.rbPts=keepP; } });
 
+  // ⛽→💠 가스를 미네랄로 (2026-09-02 사용자 요청)
+  //   ⭐ 고정 교환비가 **아니다** — 지금 미네랄 수입의 몇 초치를 준다(회차가 돌아도 체감이 같다).
+  //   ⚠ 수입을 아직 못 쟀으면 0 이다. 그때 바꾸면 가스만 잃으므로 **막혀 있어야** 한다.
+  await step('가스 교환: 남는 가스를 미네랄로 · 수입을 못 쟀으면 막힌다', async()=>{
+    skipIf(typeof campGasExAll!=='function','가스 교환 없음');
+    const C=campState(); skipIf(!C||typeof G==='undefined'||!G.tech,'캠프 상태 없음');
+    const kR=C.rate, kE=G.tech.energy, kC=G.tech.credit, kT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={};
+      // ① 수입을 못 쟀으면 아무 일도 안 일어난다 — 가스가 그대로 남아야 한다
+      C.rate=0; G.tech.energy=50; G.tech.credit=0;
+      assert(campGasExAll()===0,'수입을 못 쟀는데 교환이 됐다');
+      assert((G.tech.energy|0)===50,'교환이 안 됐는데 가스가 줄었다: '+G.tech.energy);
+      // ② 수입이 있으면 가스가 미네랄이 된다 — 값은 **수입 × 초치 × 가스 수**
+      C.rate=100; G.tech.energy=50; G.tech.credit=0;
+      const want=Math.floor(50*100*CAMP_GASEX_SEC);
+      const got=campGasExAll();
+      assert(got===want,'교환값이 다르다: '+got+' ≠ '+want);
+      assert((G.tech.energy|0)===0,'가스가 안 빠졌다: '+G.tech.energy);
+      assert((G.tech.credit|0)>=want,'미네랄이 안 들어왔다: '+G.tech.credit);
+      // ③ 트리 「가스 교환비」가 실제로 값을 키운다
+      C.rbTree={gasEx:campRtMax('gasEx')};
+      C.rate=100; G.tech.energy=50; G.tech.credit=0;
+      const big=campGasExAll();
+      assert(big>want,'교환비 계열이 값을 안 키운다: '+big+' ≤ '+want);
+      // ④ 가스가 없으면 막힌다
+      C.rbTree={}; C.rate=100; G.tech.energy=0;
+      assert(campGasExAll()===0,'가스가 없는데 교환이 됐다');
+      // ⑤ 🏭 **자리** — 정제소 프로필에 카드로 붙는다(2026-09-02 사용자 확정).
+      //   ⛔ 캠프 채굴 시트(미네랄 판)에 얹혀 있던 옛 자리로 되돌리지 말 것.
+      //   ⛔ 캠프 밖(유즈맵·오토배틀)의 정제소에는 붙지 않아야 한다 — 환생 값이 대전에 새면 안 된다.
+      const keepOn=campIsOn;
+      try{
+        const fake={ k:'refinery', name:'정제소', gas:true };
+        campIsOn=function(){ return true; };  C.rate=100; G.tech.energy=50;
+        const inCamp=techBldgPlainModel(fake, null);
+        const card=(inCamp.items||[]).filter(Boolean).find(function(x){ return x && x.sn==='가스 교환'; });
+        assert(card,'정제소 프로필에 가스 교환 카드가 없다');
+        assert(card.state==='ok','가스가 있는데 카드가 잠겨 있다: '+card.state);
+        assert((inCamp.info.stats||[]).some(function(r){ return r[0]==='교환비'; }),
+          '프로필 정보에 교환비 줄이 없다');
+        campIsOn=function(){ return false; };
+        const outCamp=techBldgPlainModel(fake, null);
+        assert(!(outCamp.items||[]).filter(Boolean).some(function(x){ return x && x.sn==='가스 교환'; }),
+          '캠프 밖 정제소에도 교환 카드가 붙는다');
+      } finally { campIsOn=keepOn; }
+      return '수입 0 이면 막힘 · 50가스 → '+want+' · 교환비 5차 → '+big+' · 자리=정제소 프로필(캠프에서만)';
+    } finally { C.rate=kR; G.tech.energy=kE; G.tech.credit=kC; C.rbTree=kT; }
+  });
+
+  // 🔌 **산 계열이 실제로 수치를 움직이나** (2026-09-02).
+  //   ⚠ 이 검사가 없어서 계열 7개가 「표에 있고 살 수 있고 화면에 뜨는데 아무 일이 안 나는」 채로
+  //     오래 남아 있었다. 화면만 보면 멀쩡해 보이고, 다른 스모크는 전부 통과한다.
+  //   ⭐ 재는 법: 자루를 비운 값과 5차까지 채운 값을 **직접 부딪쳐** 본다. 안 변하면 배선이 없는 것이다.
+  await step('환생 트리: 산 계열이 실제로 수치를 움직인다', async()=>{
+    skipIf(typeof campRtBag!=='function'||typeof campState!=='function','트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    // 배선된 계열 ↔ 그 값이 나타나는 자리. ⭐ 새 계열을 배선하면 여기 한 줄을 같이 넣는다.
+    const PROBE={
+      gather: function(){ return campGatherMul(); },
+      tap:    function(){ return campTapGain(); },
+      tapMul: function(){ return campTapGain(); },
+      mine:   function(){ return campMineMul(); },
+      prod:   function(){ return 1/_techProdTime('union','marine'); },
+      atk:    function(){ return campRtMul('atk'); },
+      hp:     function(){ return campRtMul('hp'); },
+      bldg:   function(){ return campRtMul('bldg'); },
+      skCd:   function(){ return campRtMul('skCd'); },
+      upCost: function(){ return 1/campUpgDisc(); },
+      foeHp:  function(){ return 1/campRtFoeMul(); },
+      gasEx:  function(){ const C=campState(); const k=C.rate; C.rate=100;
+                          const v=campGasExRate(); C.rate=k; return v; }
+    };
+    // ⛔ 아직 소비처가 없는 계열 — **알고 있다는 표시**다(HUNT_R1 §4-5 의 「배선됨」 목록과 짝).
+    //   여기서 빼려면 먼저 배선하고 PROBE 에 한 줄을 넣을 것.
+    //   · wkCap — ⛔ **일부러 안 배선한다.** 일꾼 상한은 40 고정이다(2026-09-02 사용자 확정).
+    //     광맥 8칸 × 덩이당 5 = 40 이라 상한만 올리면 남는 일꾼이 광맥 옆에 서서 논다.
+    //   · dgRw — 던전 클리어 보상 **시스템이 아직 없다**(계열보다 시스템이 먼저다).
+    const NOTYET=['wkCap','dgRw'];
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    const dead=[];
+    try{
+      for(const k in PROBE){
+        C.rbTree={}; const lo=PROBE[k]();
+        C.rbTree={}; C.rbTree[k]=campRtMax(k); const hi=PROBE[k]();
+        if(!(hi>lo)) dead.push(k+'('+lo+'→'+hi+')');
+      }
+    } finally { C.rbTree=keepT; C.rbPts=keepP; }
+    assert(dead.length===0,'샀는데 수치가 안 변한다 — 배선이 끊겼다: '+dead.join(' · '));
+    // 미배선 목록이 실제로 미배선인지도 확인한다 — 배선했는데 목록에 남아 있으면 헷갈린다
+    for(const k of NOTYET) assert(campRtLine(k),'미배선 목록에 없는 계열이 적혀 있다: '+k);
+    return PROBE_N(PROBE)+'계열이 실제로 움직인다 · 아직 소비처 없음 '+NOTYET.length+'('+NOTYET.join(',')+')';
+    function PROBE_N(o){ let n=0; for(const _ in o) n++; return n; }
+  });
+
   // 🔧 개발 스위치가 켜진 채 남아 있나 — 켜져 있으면 회수 시간·손익분기 같은 밸런스 수치가 전부 무의미하다.
   //   ⭐ **막지 않고 알린다.** 지금은 사용자가 트리를 눈으로 보려고 일부러 켜 둔 상태다(2026-09-02).
   await step('🔧 개발 스위치: 환생 포인트 무제한이 켜져 있는지', async()=>{

@@ -44,9 +44,13 @@ function campDgN(){ const C = campState(); return Math.max(0, Math.min(CAMP_DG_M
 function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))];
   return t.base * (t.x - 1) / CAMP_ROUND_MAX; }
 // 지금 미네랄 배율 — 탭과 일꾼 **양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
+// ⛏ 던전 기준값 × 클리어 보정 × **환생 트리 「광산 등급」**(2026-09-02 배선).
+//   ⭐ 이 함수가 탭·자동 채취·가스 셋의 공통 입구라, 여기 한 곳에 곱하면 셋 다에 닿는다
+//     (HUNT_R1 §4-5-2 「적용 대상: 터치 수급·자동 수급 둘 다」).
+//   ⚠ 배선 전에는 계열을 5차까지 사도 아무 일이 없었다 — 표에만 있고 소비처가 없었다.
 function campMineMul(){ const C = campState(); if(!C) return 1;
   const dg = campDgN(), t = CAMP_MINE[dg];
-  return t.base + campCleared() * campMineInc(dg); }
+  return (t.base + campCleared() * campMineInc(dg)) * campRtMul('mine'); }
 function campCleared(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) return 0;
   return Math.max(0, Math.min(CAMP_ROUND_MAX, C.cleared | 0)); }
 // 지금 도전 중인 라운드 = 클리어한 수 + 1 (0단계에는 라운드가 없다)
@@ -164,7 +168,9 @@ function campHasRefinery(){
 }
 function campGasPerMin(){
   if(!campHasRefinery()) return 0;                // 정제소를 지어야 나온다
-  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gasMul')
+  // ⚠ campRtMul 은 **계열 키**를 받는다 — 효과 종류(f:'gasMul')가 아니다(2026-09-02 고침).
+  //   'gasMul' 은 자루에 절대 안 들어가는 이름이라 가스 생산량 계열이 몇 차든 배수 1 이었다.
+  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gas')
     * ((typeof campRuneMul === 'function') ? campRuneMul('gas') : 1);   // 💠 정제의 룬
 }
 // ⚠ **campFrame 이 민다.** 프레임을 끄고 직접 미는 코드(벤치)는 이것도 같이 불러야 한다 —
@@ -4710,6 +4716,43 @@ function campPlayS(){ const C = campState(); return (C && C.playS > 0) ? C.playS
 function campRateOf(kind){ const C = campState(); if(!C) return 0;
   const v = (kind === 'gas') ? C.rateGas : C.rate;
   return (v > 0) ? v : 0; }
+// ── ⛽→💠 가스를 미네랄로 (2026-09-02 사용자 요청) ──────────────────────
+// ⭐ **고정 교환비를 두지 않는다.** 회차가 돌면 미네랄 수입만 몇 배씩 뛰어
+//   「가스 1 = 미네랄 250」 같은 값이 곧 무의미해진다(상점의 「n 시간치」와 같은 이유 · GEM.md §5-4).
+//   대신 **지금 내 미네랄 수입의 몇 초치**를 준다 — 회차가 돌아도 체감이 그대로다.
+//
+// ⚠ 값의 근거(2026-09-02 실측 · camp-bench 20분): 미네랄 분당 1.3만 · 가스 분당 12.
+//   같은 시간 가치로 치면 가스 1 = 미네랄 1,100 = **수입 5초치**다.
+//   ⛔ 그 값을 그대로 주면 안 된다 — 가스는 연구의 유일한 재화이고 「가스는 늘 모자란다」가
+//     설계다(BALANCE §3-2-2 실측: 잔량이 0~8 을 오가며 나오는 족족 쓰인다).
+//     시간 가치대로 바꿔 주면 가스를 미네랄로 흘려도 손해가 아니게 되어 연구 축이 죽는다.
+//   ⭐ 그래서 **1초치**(시간 가치의 1/5)로 둔다 — 여기는 「남는 가스를 처분하는 자리」이지
+//     「가스로 미네랄을 버는 자리」가 아니다. 트리 「가스 교환비」가 ×25 까지 올리면
+//     그때는 25초치가 되어 시간 가치를 넘는다 — 성장이 체감되는 지점이 거기다.
+//   🔜 임시값이다. 던전·후반 밸런스를 재고 나면 이 상수 하나만 바꾸면 된다.
+const CAMP_GASEX_SEC = 1;              // 가스 1개 = 미네랄 수입 몇 초치인가
+const CAMP_GASEX_MIN = 1;              // 이만큼은 있어야 바꾼다
+// 가스 1개가 지금 얼마인가. ⚠ 수입을 아직 못 쟀으면(막 시작) 0 이다 — 그때는 버튼이 잠긴다.
+function campGasExRate(){
+  return campRateOf('credit') * CAMP_GASEX_SEC * campRtMul('gasEx'); }
+function campGasHave(){
+  return (typeof G !== 'undefined' && G.tech) ? Math.floor(G.tech.energy || 0) : 0; }
+function campGasExGain(g){ return Math.floor(Math.max(0, g) * campGasExRate()); }
+// 전부 바꾼다. 돌려주는 값은 **받은 미네랄**(0 이면 아무 일도 없었다는 뜻).
+//   ⛔ 지갑에 직접 쓰지 말 것 — campAddRes 가 캠프 밖(대기 상자)까지 맡는 유일한 입구다.
+function campGasExAll(){
+  const g = campGasHave(); if(g < CAMP_GASEX_MIN) return 0;
+  const got = campGasExGain(g); if(got <= 0) return 0;
+  if(typeof G !== 'undefined' && G.tech) G.tech.energy = (G.tech.energy || 0) - g;
+  if(typeof campAddRes === 'function') campAddRes(got, 0);
+  else if(typeof G !== 'undefined' && G.tech) G.tech.credit = (G.tech.credit || 0) + got;
+  if(typeof campSave === 'function') campSave();
+  if(typeof toast === 'function') toast('💠 가스 ' + campNum(g) + ' → 미네랄 ' + campNum(got));
+  if(typeof playSfx === 'function') playSfx('ui_buy');
+  // 🔄 프로필을 다시 그린다 — 교환 카드의 「받을 미네랄」이 그 자리에서 0 으로 바뀌어야 한다.
+  if(typeof techUIRender === 'function') techUIRender();
+  return got; }
+
 // 보기 좋게 — **유효숫자 두 자리**로 반올림한다(1,234,567 → 1,200,000 → 「120.0만」).
 //   딱 떨어지는 수가 아니면 「이만큼 준다」가 눈에 안 들어온다.
 function campRoundNice(n){
@@ -4724,7 +4767,8 @@ function campSettleAway(){
   const C = campState(); if(!C || !C.leftAt || !(C.rate > 0)) return 0;
   const secs = Math.min(CAMP_AWAY_CAP_S, Math.max(0, (Date.now() - C.leftAt) / 1000));
   C.leftAt = 0;
-  const got = Math.floor(C.rate * secs * CAMP_AWAY_EFF);
+  // 🌙 **방치 수급** 계열(2026-09-02 배선) — 자리를 비운 동안 쌓이는 몫만 늘린다.
+  const got = Math.floor(C.rate * secs * CAMP_AWAY_EFF * campRtMul('idle'));
   if(got > 0 && typeof G !== 'undefined' && G.tech) G.tech.credit = (G.tech.credit || 0) + got;
   return got;
 }

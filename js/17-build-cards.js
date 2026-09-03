@@ -135,6 +135,24 @@ function techBldgPlainModel(b, e){ const race=G.tech.race, bs=techBldgSpec(race,
   if(e && typeof BLDG_SKILLS!=='undefined' && BLDG_SKILLS[b.k]){ for(const _k of BLDG_SKILLS[b.k]){ const sk=SKILLS[_k]; if(!sk) continue;   // 🏢 건물 스킬 카드(컴셋 스캐너·쉴드배터리 충전)
     const armed=!!(G.tech.skillArm&&G.tech.skillArm.eid===e.eid&&G.tech.skillArm.key===_k), cost=_skCost(sk), lowE=cost>0&&(_techSkEn(e)<cost);   // 쿨다운 없음(SC식) — 마나만
     items.push({ pro:skillIcoHTML(_k, '<span class="skPro">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON[_k])||pIco('✨'))+'</span>'), sn:sk.name, meta:'', metaCls:'lv', sel:armed, state:lowE?'dim':'ok', bottom:'<div class="cgCost">'+_skCostHTML(sk)+'</div>', act:'onclick="techCastBldgSkill(event,\''+_k+'\')"' }); } }
+  // ⛽→💠 **가스 교환 카드** — 정제소를 지정하면 그 프로필에 붙는다(2026-09-02 사용자 확정).
+  //   ⭐ 자리가 여기인 이유: 가스를 만드는 건물이 가스를 처분하는 자리도 갖는 것이 제일 짧다.
+  //     (옛 자리는 캠프 채굴 시트였다 — 미네랄 판이라 가스가 남의 집에 얹혀 있었다.)
+  //   ⛔ **캠프에서만** 붙인다 — 유즈맵·오토배틀의 정제소는 환생 트리와 무관한 전장이다.
+  //   ⚠ 수입을 아직 못 쟀으면 교환값이 0 이라 카드를 잠근다(dim) — 0 을 받고 가스만 잃으면 안 된다.
+  if(b.gas && typeof campIsOn==='function' && campIsOn() && typeof campGasExAll==='function'){
+    const _gv=campGasHave(), _got=campGasExGain(_gv), _gok=_gv>=CAMP_GASEX_MIN && _got>0;
+    const _sec=(CAMP_GASEX_SEC*campRtMul('gasEx'));
+    // ⚠ 비용줄은 **`.cc.en` 으로 감싸야** 아이콘 크기·색이 잡힌다(맨 아이콘만 넣으면 세로로 길쭉해진다 · 실측).
+    //   받는 쪽(미네랄)은 **우상단 배지 `tr`** 이다 — meta 는 이 카드 꼴에서 안 보인다.
+    items.push({ pro:(typeof resIco==='function'?resIco('mineral','cgPro'):pIco('💠')), sn:'가스 교환',
+      tr:'+'+campNum(_got), metaCls:'lv', state:_gok?'ok':'dim',
+      bottom:'<div class="cgCost"><span class="cc en">'+(typeof resIco==='function'?resIco('gas'):'')
+        +((typeof _cgFmt==='function')?_cgFmt(_gv):campNum(_gv))+'</span></div>',
+      act:'onclick="campGasExAll()"' });
+    // ⚠ 왼쪽 정보 구역은 칸이 좁다 — 라벨도 값도 잘린다. 값은 짧게.
+    stats.push(['교환비', _sec.toFixed(0)+'초치/개']);
+  }
   const _def=_techIsDef(b.k);
   const _bMx=(typeof BLDG_EN!=='undefined'&&BLDG_EN[b.k])||0;   // 🏢 건물 마나(컴셋·쉴드배터리) = 실시간 현재/최대(선택 당시 고정 아님)
   const _bEn=(_bMx>0)?((e&&e.en!=null)?(Math.round(e.en)+'/'+Math.round(e.maxEn||_bMx)):(_bMx+'/'+_bMx)):0;
