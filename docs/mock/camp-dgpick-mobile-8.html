@@ -1,0 +1,189 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>던전 선택 — 칩과 한 몸으로 · 모바일 관용구 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 이번 벌은 **좌상단 칩과 열린 상태를 한 몸으로** 그린다 — 칩이 어떻게 생겼고, 누르면 어디가 어떻게 열리나를
+     한 화면에서 본다. 여덟 안 전부 **모바일에서 흔히 쓰는 방식**(바텀 시트 · 세그먼트+슬라이더 · 전체 화면 ·
+     휠 피커 · 인라인 스텝퍼 · 카드 캐러셀 · 그리드 팝오버 · 스크러버) 하나씩이다.
+     재질은 지금 좌상단 칩과 같은 어법(판 없이 글자 · 옅은 그늘 · 붉은색은 「지금 여기」와 진행에만 · Rajdhani 숫자 ·
+     버튼은 공용 .actBtn · ◀▶ 는 공용 .arwBtn 글리프). ⛔ 청록·발광 없음. */
+:root{--ko:'IBM Plex Sans KR',sans-serif;--num:'Rajdhani',sans-serif;--red:#ff7676;--ink:#e6eefc;--dim:rgba(214,226,240,.55);--mute:rgba(214,226,240,.35);--hair:rgba(255,255,255,.12)}
+*{box-sizing:border-box}
+body{margin:0;background:#101317;color:#dfe5ee;font-family:var(--ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--num)}
+.sub{margin:0 0 10px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:62px}.sub b{color:#c3ccd8;font-weight:700}
+.phone{width:390px;height:480px;position:relative;overflow:hidden;background:#8f8672;font-size:11px;color:#d6e2f0;
+  text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.map{position:absolute;inset:0;background:radial-gradient(120% 60% at 30% 0%,rgba(0,0,0,.20),transparent 55%),
+  repeating-linear-gradient(0deg,#948b76 0 68px,#8a8168 68px 70px),repeating-linear-gradient(90deg,#948b76 0 68px,#8a8168 68px 70px)}
+.bar{position:absolute;left:0;top:0;right:0;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;z-index:6;background:linear-gradient(180deg,rgba(0,0,0,.32),transparent)}
+.res{margin-left:auto;font-family:var(--num);font-weight:700;color:#cfd8e6}
+.num{font-family:var(--num);font-weight:700}
+.go{display:flex;align-items:center;justify-content:center;height:34px;font-weight:800;color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:3px;background:rgba(255,255,255,.14)}
+.arw{width:30px;height:30px;display:grid;place-items:center;color:#c3ccd8;flex:none}
+.arw svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.kick{font-family:var(--num);font-size:9px;font-weight:800;letter-spacing:.24em;color:var(--dim)}
+.dim{color:var(--dim)}.mute{color:var(--mute)}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:4}
+.line{height:2px;background:var(--hair);position:relative}.line i{position:absolute;left:0;top:0;height:100%;width:60%;background:var(--red)}
+.knob{position:absolute;top:-5px;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(0,0,0,.6)}
+/* 칩 기본(지금 것) */
+.chip{display:flex;align-items:baseline;font-size:11.5px;font-weight:800;color:var(--ink);position:relative;padding-right:12px}
+.chip i{font-style:normal;color:var(--mute);margin:0 4px}.chip b{font-family:var(--num);font-size:13px}
+.chip .d{font-family:var(--num);font-size:11px;color:var(--dim)}
+.chip .cv{position:absolute;right:0;bottom:0;width:10px;height:10px}
+.chip .cv svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;color:var(--dim)}
+.chip .ul{position:absolute;left:0;right:11px;bottom:-4px;height:2px;background:var(--hair)}.chip .ul i{display:block;height:100%;width:60%;background:var(--red)}
+/* 시트 공통(아래에서 올라오는 판) */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:10px 14px 14px;
+  background:linear-gradient(180deg,rgba(8,9,11,.86),rgba(4,4,5,.96));clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% 100%,0 100%,0 7px)}
+.grab{width:36px;height:3px;border-radius:2px;background:rgba(255,255,255,.22);margin:0 auto 10px}
+.row{display:flex;align-items:baseline;gap:8px;padding:8px 2px;border-bottom:1px solid var(--hair);font-weight:700;color:#b9c4d2}
+.row .ix{font-family:var(--num);font-size:11px;color:var(--mute);min-width:12px;text-align:right}
+.row .nm{flex:1}.row .mul{font-family:var(--num);font-size:10.5px;color:var(--mute)}
+.row.here{color:#fff}.row.here .ix{color:var(--red)}
+.row.lock{color:rgba(214,226,240,.28)}
+
+/* ① 바텀 시트 */
+.v1 .sheet .rl{display:flex;align-items:center;gap:4px;margin:10px 0 4px}
+.v1 .sheet .rl .num{flex:1;text-align:center;font-size:26px;color:#fff}.v1 .sheet .rl .num em{font-style:normal;font-size:12px;color:var(--mute)}
+.v1 .go{margin-top:12px}
+
+/* ② 세그먼트 + 슬라이더 — 칩이 제자리에서 **전폭 띠**로 펴진다 */
+.v2 .strip{position:absolute;left:0;right:0;top:34px;z-index:5;padding:8px 10px 12px;background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.22))}
+.v2 .seg{display:flex;gap:4px;overflow:hidden;margin:4px 0 12px}
+.v2 .sg{flex:none;padding:6px 10px;border-radius:14px;font-weight:700;color:#b9c4d2;background:rgba(255,255,255,.06);display:flex;gap:5px;align-items:baseline;white-space:nowrap}
+.v2 .sg .num{font-size:10px;color:var(--mute)}
+.v2 .sg.here{color:#fff;background:rgba(255,118,118,.16);box-shadow:inset 0 0 0 1px rgba(255,118,118,.45)}.v2 .sg.here .num{color:var(--red)}
+.v2 .sg.lock{color:rgba(214,226,240,.28)}
+.v2 .sl{display:flex;align-items:center;gap:10px}.v2 .sl .line{flex:1}
+.v2 .sl .num{font-size:15px;color:#fff;min-width:46px;text-align:right}.v2 .sl .num em{font-style:normal;color:var(--mute);font-size:11px}
+.v2 .go{height:28px;width:60px;font-size:11px}
+.v2 .ticks{display:flex;justify-content:space-between;font-family:var(--num);font-size:8.5px;color:var(--mute);margin-top:4px;padding-right:130px}
+
+/* ③ 전체 화면(페이지) — 칩은 앱바 제목 + ⌄, 누르면 던전 선택 화면으로 */
+.v3 .bar{display:none}   /* 전체 화면이 재화 바까지 덮는다 — 칩 자리에는 앱바 제목이 온다 */
+.v3 .page{position:absolute;inset:0;z-index:5;background:linear-gradient(180deg,rgba(14,15,18,.97),rgba(8,8,10,.99));padding:0 14px 14px}
+.v3 .appbar{height:44px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:800;color:#fff}
+.v3 .card{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:3px;background:rgba(255,255,255,.04);margin-top:6px;border:1px solid transparent}
+.v3 .card .big{font-family:var(--num);font-size:22px;color:#c3ccd8;min-width:26px;text-align:center}
+.v3 .card .t{flex:1}.v3 .card .t b{display:block;font-size:12.5px;color:#e6eefc}.v3 .card .t span{font-size:10px;color:var(--dim)}
+.v3 .card .mul{font-family:var(--num);color:var(--dim)}
+.v3 .card.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}.v3 .card.here .big{color:var(--red)}
+.v3 .card.lock{opacity:.38}
+.v3 .rnd{display:flex;align-items:center;gap:4px;margin-top:12px;padding-top:10px;border-top:1px solid var(--hair)}
+.v3 .rnd .num{flex:1;text-align:center;font-size:24px;color:#fff}.v3 .rnd .num em{font-style:normal;font-size:12px;color:var(--mute)}
+.v3 .go{margin-top:12px}
+
+/* ④ 휠 피커(iOS) — 두 통 · 위아래 흐림 · 가운데 띠 */
+.v4 .wheels{display:flex;gap:0;height:130px;position:relative;margin:6px 0 12px}
+.v4 .wheel{flex:1;position:relative;overflow:hidden;
+  -webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent)}
+.v4 .wheel div{height:26px;line-height:26px;text-align:center;font-weight:700;color:var(--mute);font-size:12px}
+.v4 .wheel div.on{color:#fff;font-size:14px}
+.v4 .wheel.r div{font-family:var(--num);font-size:14px}.v4 .wheel.r div.on{font-size:19px;color:var(--red)}
+.v4 .mid{position:absolute;left:0;right:0;top:52px;height:26px;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair);pointer-events:none}
+.v4 .heads{display:flex}.v4 .heads .kick{flex:1;text-align:center}
+.v4 .sheet .top{display:flex;justify-content:space-between;align-items:center;font-weight:800;color:#fff;margin-bottom:6px}
+.v4 .sheet .top .go{height:26px;padding:0 12px;font-size:11px}
+
+/* ⑤ 인라인 스텝퍼 — 칩이 제자리에서 **두 카운터**로 펴진다. 목록 없음 */
+.v5 .inl{position:absolute;left:10px;top:44px;z-index:5;display:flex;flex-direction:column;gap:6px;padding:6px 6px 8px;
+  background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.26));border-radius:0 3px 3px 3px}
+.v5 .ctr{display:flex;align-items:center;gap:2px}
+.v5 .ctr .lab{width:54px;font-size:9px;font-weight:800;letter-spacing:.24em;color:var(--dim);font-family:var(--num)}
+.v5 .ctr .val{min-width:118px;text-align:center;font-weight:800;color:#fff;font-size:12.5px}
+.v5 .ctr .val .num{font-size:16px}.v5 .ctr .val em{font-style:normal;color:var(--mute);font-size:11px;font-family:var(--num)}
+.v5 .ctr .val small{display:block;font-weight:700;font-size:9.5px;color:var(--dim)}
+.v5 .go{height:26px;font-size:11px;margin:2px 4px 0}
+
+/* ⑥ 카드 캐러셀 — 던전 하나가 카드 하나, 옆으로 넘긴다 */
+.v6 .car{position:absolute;left:0;right:0;top:44px;z-index:5;display:flex;gap:10px;padding:0 0 0 24px;overflow:hidden}
+.v6 .cd{flex:none;width:250px;height:150px;border-radius:4px;padding:12px 14px;position:relative;
+  background:linear-gradient(180deg,rgba(10,11,13,.9),rgba(6,6,7,.95));border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column}
+.v6 .cd .big{font-family:var(--num);font-size:34px;line-height:1;color:#c3ccd8}
+.v6 .cd .nm{font-size:14px;font-weight:800;color:#fff;margin-top:4px}
+.v6 .cd .mul{font-family:var(--num);color:var(--dim);position:absolute;right:14px;top:14px}
+.v6 .cd .rl{margin-top:auto;display:flex;align-items:center;gap:4px}
+.v6 .cd .rl .num{flex:1;text-align:center;font-size:18px;color:#fff}.v6 .cd .rl .num em{font-style:normal;font-size:11px;color:var(--mute)}
+.v6 .cd .line{margin-top:6px}
+.v6 .cd.here .big{color:var(--red)}.v6 .cd.here{border-color:rgba(255,118,118,.4)}
+.v6 .cd.next{opacity:.6}
+.v6 .dots{position:absolute;left:0;right:0;top:206px;z-index:5;display:flex;justify-content:center;gap:5px}
+.v6 .dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.25)}.v6 .dots i.on{background:var(--red);width:14px;border-radius:3px}
+.v6 .go{position:absolute;left:24px;width:250px;top:222px;z-index:5;height:30px}
+
+/* ⑦ 그리드 팝오버 — 앱 런처처럼 던전 타일, 라운드는 아래 한 줄 */
+.v7 .pop{position:absolute;left:10px;top:44px;width:300px;z-index:5;padding:10px;border-radius:0 6px 6px 6px;
+  background:linear-gradient(180deg,rgba(0,0,0,.46),rgba(0,0,0,.3))}
+.v7 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 10px}
+.v7 .tile{aspect-ratio:1;border-radius:8px;background:rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.v7 .tile .num{font-size:18px;color:#c3ccd8}.v7 .tile .nm{font-size:8.5px;color:var(--dim);max-width:92%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v7 .tile.here{background:rgba(255,118,118,.16);box-shadow:inset 0 0 0 1px rgba(255,118,118,.45)}.v7 .tile.here .num{color:var(--red)}.v7 .tile.here .nm{color:#fff}
+.v7 .tile.lock{opacity:.3}
+.v7 .rl{display:flex;align-items:center;gap:4px;padding-top:8px;border-top:1px solid var(--hair)}
+.v7 .rl .kick{width:52px}.v7 .rl .num{flex:1;text-align:center;font-size:18px;color:#fff}.v7 .rl .num em{font-style:normal;font-size:11px;color:var(--mute)}
+.v7 .rl .go{width:60px;height:28px;font-size:11px}
+
+/* ⑧ 스크러버 — 재화 바 아래 한 줄, 던전 표식이 있는 긴 줄을 끌어서 고른다(영상 챕터 바) */
+.v8 .scr{position:absolute;left:0;right:0;top:34px;z-index:5;padding:10px 14px 12px;background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.2))}
+.v8 .track{position:relative;height:28px}
+.v8 .track::before{content:'';position:absolute;left:0;right:0;top:13px;height:2px;background:var(--hair)}
+.v8 .track .fill{position:absolute;left:0;width:30%;top:13px;height:2px;background:var(--red)}
+.v8 .mk{position:absolute;top:8px;width:2px;height:12px;background:rgba(255,255,255,.35)}
+.v8 .mk.here{background:#fff;top:4px;height:20px;width:2px}
+.v8 .mk.lock{background:rgba(255,255,255,.14)}
+.v8 .lbl{position:absolute;top:30px;font-family:var(--num);font-size:9px;color:var(--mute);transform:translateX(-50%)}
+.v8 .lbl.here{color:var(--red)}
+.v8 .now{display:flex;align-items:baseline;gap:8px;margin-top:22px;font-weight:800;color:#fff;font-size:13px}
+.v8 .now .num{font-size:20px}.v8 .now em{font-style:normal;color:var(--mute);font-size:11px;font-family:var(--num)}
+.v8 .fine{margin-left:auto;display:flex;align-items:center;gap:2px}
+.v8 .fine .num{font-size:15px;min-width:36px;text-align:center}
+.v8 .go{height:28px;width:60px;font-size:11px;margin-left:8px}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const L='<svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></svg>', R='<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>', CV='<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+const A=(d)=>'<span class="arw">'+(d==='l'?L:R)+'</span>';
+const DG=[['0','캠프','안전'],['1','감염된 둥지','×1.0'],['2','버려진 전초기지','×3.0'],['3','잊혀진 회랑','×10.0'],['4','산란장','×30.0'],['5','폐쇄된 시설','×100'],['6','심연의 관문','잠김'],['7','—','잠김']];
+const HERE=3, OPEN=5, st=(i)=>i===HERE?' here':(i>OPEN?' lock':'');
+const chip=(extra)=>'<div class="chip">잊혀진 회랑<i>·</i><b>30</b><span class="d">/50</span><span class="cv">'+CV+'</span><span class="ul"><i></i></span></div>';
+const bar=(c)=>'<div class="bar">'+(c||chip())+'<span class="res">1.6M&nbsp;&nbsp;755&nbsp;&nbsp;0&nbsp;&nbsp;0/10</span></div>';
+const rows=(n,cls)=>DG.slice(0,n).map(([i,nm,m])=>'<div class="row'+st(+i)+'"><i class="ix">'+i+'</i><span class="nm">'+nm+'</span><span class="mul">'+m+'</span></div>').join('');
+const RL=(sz)=>'<div class="rl">'+A('l')+'<span class="num">30<em>/50</em></span>'+A('r')+'</div>';
+
+const V={
+ 1: bar()+'<div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="kick">DUNGEON</div>'+rows(6)+'<div class="kick" style="margin-top:10px">ROUND</div>'+RL()+'<div class="line"><i></i></div><div class="go">이동</div></div>',
+ 2: bar()+'<div class="strip"><div class="kick">DUNGEON</div><div class="seg">'+DG.slice(0,6).map(([i,nm,m])=>'<span class="sg'+st(+i)+'"><span class="num">'+i+'</span>'+nm+'</span>').join('')+'</div>'
+   +'<div class="kick">ROUND</div><div class="sl" style="margin-top:8px"><span class="line"><i></i><b class="knob" style="left:60%"></b></span><span class="num">30<em>/50</em></span><span class="go">이동</span></div><div class="ticks"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span></div></div>',
+ 3: bar()+'<div class="page"><div class="appbar">'+A('l')+'던전 선택</div>'
+   +DG.slice(0,5).map(([i,nm,m])=>'<div class="card'+st(+i)+'"><span class="big">'+i+'</span><span class="t"><b>'+nm+'</b><span>'+(+i===0?'안전 구역 · 라운드 없음':'배수 '+m+' · 최고 '+(+i<HERE?'50':+i===HERE?'30':'—')+' 라운드')+'</span></span><span class="mul">'+m+'</span></div>').join('')
+   +'<div class="rnd"><span class="kick" style="width:52px">ROUND</span>'+A('l')+'<span class="num">30<em>/50</em></span>'+A('r')+'</div><div class="go">이동</div></div>',
+ 4: bar()+'<div class="scrim"></div><div class="sheet"><div class="top"><span>던전 · 라운드</span><span class="go">완료</span></div><div class="heads"><span class="kick">DUNGEON</span><span class="kick">ROUND</span></div>'
+   +'<div class="wheels"><div class="wheel">'+['감염된 둥지','버려진 전초기지','잊혀진 회랑','산란장','폐쇄된 시설'].map((n,i)=>'<div class="'+(i===2?'on':'')+'">'+n+'</div>').join('')+'</div>'
+   +'<div class="wheel r">'+[28,29,30,31,32].map(n=>'<div class="'+(n===30?'on':'')+'">'+n+'</div>').join('')+'</div><i class="mid"></i></div></div>',
+ 5: bar()+'<div class="inl"><div class="ctr"><span class="lab">DUNGEON</span>'+A('l')+'<span class="val"><span class="num">3</span> 잊혀진 회랑<small>배수 ×10.0</small></span>'+A('r')+'</div>'
+   +'<div class="ctr"><span class="lab">ROUND</span>'+A('l')+'<span class="val"><span class="num">30</span><em>/50</em></span>'+A('r')+'</div><div class="go">이동</div></div>',
+ 6: bar()+'<div class="car"><div class="cd here"><span class="big">03</span><span class="nm">잊혀진 회랑</span><span class="mul">×10.0</span>'+RL()+'<div class="line"><i></i></div></div>'
+   +'<div class="cd next"><span class="big">04</span><span class="nm">산란장</span><span class="mul">×30.0</span></div></div>'
+   +'<div class="dots">'+DG.slice(0,8).map(([i])=>'<i class="'+(+i===HERE?'on':'')+'"></i>').join('')+'</div><div class="go">이동</div>',
+ 7: bar()+'<div class="pop"><div class="kick">DUNGEON</div><div class="grid">'+DG.slice(0,8).map(([i,nm])=>'<div class="tile'+st(+i)+'"><span class="num">'+i+'</span><span class="nm">'+nm+'</span></div>').join('')+'</div>'
+   +'<div class="rl"><span class="kick">ROUND</span>'+A('l')+'<span class="num">30<em>/50</em></span>'+A('r')+'<span class="go">이동</span></div></div>',
+ 8: bar()+'<div class="scr"><div class="kick">DUNGEON · ROUND</div><div class="track" style="margin-top:6px"><span class="fill"></span>'
+   +DG.slice(0,8).map(([i,nm],k)=>{const x=(k/7*100).toFixed(1);return '<i class="mk'+st(+i)+'" style="left:'+x+'%"></i><span class="lbl'+(+i===HERE?' here':'')+'" style="left:'+x+'%">'+i+'</span>';}).join('')+'</div>'
+   +'<div class="now"><span>잊혀진 회랑</span><span class="mute">·</span><span class="num">30</span><em>/50</em><span class="fine">'+A('l')+'<span class="num">30</span>'+A('r')+'</span><span class="go">이동</span></div></div>',
+};
+const ANS=[
+ ['바텀 시트','모바일의 기본 관용구. 칩은 그대로, 누르면 <b>아래에서 시트가 올라온다</b>(손잡이·딤). 목록이 넓게 보이고 손가락 닿는 자리(아래)에 라운드·이동이 온다. 맵은 딤으로 한 단 물러난다.'],
+ ['세그먼트 + 슬라이더','칩이 제자리에서 <b>전폭 띠</b>로 펴진다. 던전은 가로 세그먼트(둥근 칩), 라운드는 슬라이더 — 둘 다 모바일에서 손가락으로 가장 익숙한 조작이다. 목록을 굴리지 않는다.'],
+ ['전체 화면','칩은 앱바 제목처럼(이름 + ⌄), 누르면 <b>던전 선택 화면</b>으로 넘어간다. 카드에 배수·최고 라운드까지 적을 자리가 생긴다. 가장 정보가 많고, 가장 큰 전환이다.'],
+ ['휠 피커','iOS 날짜 피커 방식 — <b>두 통(던전 | 라운드)</b>을 굴려 맞추고 [완료]. 라운드 50칸을 빠르게 훑기에 좋고 손에 익다. 단, 던전 이름이 통 안에 갇혀 좁게 보인다.'],
+ ['인라인 스텝퍼','칩이 제자리에서 <b>두 카운터(◀ 던전 ▶ · ◀ 라운드 ▶)</b>로 펴진다. 목록이 아예 없다 — 가장 작고 조용하다. 던전이 11개뿐이라 ◀▶로 충분하고, 길게 누르면 빨리 간다.'],
+ ['카드 캐러셀','던전 하나가 <b>카드 하나</b>, 옆으로 넘긴다(점 표시). 카드 안에 큰 번호·이름·배수·라운드가 한 번에 있다. 「어디로 갈까」를 훑는 느낌이 가장 게임답다.'],
+ ['그리드 팝오버','앱 런처처럼 <b>던전 타일 4열</b>, 라운드는 아래 한 줄. 열한 칸이 한눈에 다 보이고 잠긴 곳이 어디까지인지 즉시 읽힌다.'],
+ ['스크러버','영상 챕터 바 — <b>던전 표식이 있는 긴 줄을 끌어서</b> 고르고 ◀▶로 라운드를 미세 조정. 칩의 진행 밑선을 그대로 키운 것이라 위아래 어휘가 가장 이어진다.'],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d],i)=>'<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p><div class="phone v'+(i+1)+'"><div class="map"></div>'+V[i+1]+'</div></div>').join('');
+</script></body></html>

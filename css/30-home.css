@@ -974,37 +974,54 @@
      ⚠ 칩의 자식이 아니라 **형제**다 — 칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아간다.
      ⚠ 넓어지는 것은 이 판뿐이고 칩은 내용 폭 그대로다 — 칩까지 넓히면 오른쪽 재화 숫자를 덮는다
         (실측: 재화 왼끝 185px · 자릿수가 커지면 165px). 이 판은 칩 아래라 재화와 세로로 안 겹친다. */
-  .cdDrop{position:absolute;z-index:5;width:250px;padding:8px 0 9px;
-    border:1px solid rgba(0,229,255,.42);border-radius:0 3px 3px 3px;
-    background:#0a0e14;   /* ⚠ 불투명이다. 큰 판이라 3% 만 비쳐도 뒤 글자가 읽힌다(.94·.97 둘 다 비쳤다).
-                             떠 있는 느낌은 테두리와 그림자가 낸다 — 칩(.62)과 달리 여기서는 반투명을 쓰지 않는다. */font-size:11px;color:var(--txt,#d6e2f0);
-    box-shadow:0 8px 22px rgba(0,0,0,.55)}
-  .cdSec{padding:0 9px}
-  .cdSec+.cdSec{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.09)}
-  /* 구역 라벨 = 로딩창의 LOADING 과 같은 문법(자간 넓은 작은 글자) */
-  .cdSl{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c;margin-bottom:5px}
-  .cdTwo{display:flex}
-  .cdL{flex:1;min-width:0;padding-right:8px}
-  .cdR{width:84px;flex:none;padding-left:9px;border-left:1px solid rgba(255,255,255,.09)}
-  .cdList{max-height:104px;overflow-y:auto}
+  /* 🎨 2026-09-03 재설계 — 목업 docs/mock/camp-dgdrop-layout-8.html ★ 추천안.
+     껍데기는 **하단 커맨드 카드의 칸(.cgSlot)과 같은 재질**: 검정 면(--bpFace) · 흰 7% 테두리 · 윗변 헤어라인.
+     ⛔ 청록(--hud) 테두리·발광을 되돌리지 말 것 — 칩·트레이·하단 카드가 전부 붉은색/무채로 갈아탄 뒤
+        이 판만 청록으로 남아 다른 앱처럼 보였다(사용자 지적). 붉은색은 「지금 여기」와 진행 밑선에만.
+     ⚠ 불투명이다. 큰 판이라 3% 만 비쳐도 뒤 글자가 읽힌다(.94·.97 둘 다 비쳤다) — 스모크가 잰다.
+     왼쪽 위 모서리는 칩에 물려 각지게(0 3px 3px 3px) — 칩 아래에서 자란다는 뜻이 형태로 남는다. */
+  /* ⚠ 2026-09-03 두 번째 손질 — 검정 판(#000)은 **너무 진해서** 판 없이 글자만 띄운 좌상단 칩과 안 어울렸다
+     (사용자 지적). 칩과 같은 어법으로 간다: **판이 아니라 글자다** — 옅은 그늘 한 겹 위에 글자를 그림자로
+     띄우고, 선은 헤어라인만. ⛔ 불투명 판·테두리·박스 그림자를 되돌리지 말 것(스모크가 잰다). */
+  /* 🖥 2026-09-03 세 번째 손질 — **전체 화면**(목업 docs/mock/camp-dgpick-full-8.html 1안 · 사용자 확정).
+     칩 아래 작은 판은 목록도 라운드도 손가락에 좁았다. 재화 바(z 62)와 하단 네비 **사이**를 통째로 덮는다 —
+     환생·룬 구역과 같은 자리(#phone 직속 · bottom:var(--navH)). 칩이 머리줄이라 별도 앱바를 두지 않는다.
+     위: 던전 카드 목록(굴림) · 아래 고정(.cdFoot): ROUND ◀▶ + 슬라이더 · [이동].
+     ⛔ 청록·발광 없음. ⛔ 칩 아래 드롭다운(width 256 · 칩 rect 기준 left/top)으로 되돌리지 말 것. */
+  .cdDrop{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:61;   /* 재화 바(62) 바로 아래 — 칩이 위에 남아 닫는 손잡이가 된다 */
+    display:flex;flex-direction:column;
+    padding:calc(var(--topPad) + var(--curH) + 6px) 14px 0;
+    background:linear-gradient(180deg,#121316 0%,#0b0c0e 60%,#080809 100%);
+    font-size:11px;color:var(--txt,#d6e2f0);border:0;box-shadow:none;
+    text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .cdSec.cdTop{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:0}
+  /* 구역 라벨 = 하단 시트 머리줄(.cgKick)과 **같은 서명**(Rajdhani 9px · 자간 .24em) + 아래 헤어라인.
+     오른쪽 <em> 은 범위(0 – 10 · 1 – 50) — 옅게. */
+  .cdSl{display:flex;justify-content:space-between;align-items:baseline;flex:none;
+    font-family:var(--font-num);font-size:9px;font-weight:800;letter-spacing:.24em;color:rgba(232,237,245,.62);
+    padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid rgba(255,255,255,.12)}
+  .cdSl em{font-style:normal;font-size:9px;letter-spacing:.06em;font-weight:700;color:rgba(214,226,240,.4)}
+  .cdList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:8px}
   /* 던전 줄 — 판 없이 글자만. 「지금 여기」는 왼쪽 청록 띠 하나로 말한다 */
   /* ⚠ **밑선 정렬**이다. 번호(Rajdhani)와 이름(NotoKR)은 글자 상자 높이가 12 vs 16px 이라,
      상자를 가운데 맞춰도 글자는 서로 다른 높이에 앉는다(칩의 라운드 줄과 같은 문제).
      min-height 대신 위아래 padding 으로 줄 높이를 만든다 — baseline 정렬은 남는 공간을
      아래로 몰아 글자가 위로 붙기 때문이다. */
-  .cdRow{position:relative;display:flex;align-items:baseline;gap:7px;width:100%;
-    padding:5.5px 3px 5.5px 8px;background:none;border:none;cursor:pointer;text-align:left;
-    font-family:inherit;font-size:11.5px;font-weight:700;color:#b9c4d2}
-  .cdRow .cdIx{font-style:normal;font-family:var(--font-num);font-size:11px;color:#6f7a88;
-    min-width:11px;text-align:right}
-  .cdRow .cdRnm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .cdRow .cdMul{font-family:var(--font-num);font-size:10.5px;color:#6f7a88}
-  .cdRow.here{color:#fff}
-  .cdRow.here .cdIx{color:var(--hud);text-shadow:0 0 6px var(--hud-glow)}
-  .cdRow.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;
-    background:var(--hud);box-shadow:0 0 6px var(--hud-glow)}
-  .cdRow.lock{color:#5c646f;cursor:default}
-  .cdRow.lock .cdMul{color:#4d545e}
+  /* 던전 **카드** — 흰 4% 면, 큰 번호(Rajdhani 22px) · 이름/부제 · 배수. 「지금 여기」= 붉은 테두리 + 붉은 번호.
+     ⚠ 이름 줄은 밑선 정렬이 아니라 **세로 가운데**다 — 카드가 두 줄(이름·부제)이라 번호와 블록으로 맞춘다. */
+  .cdRow{position:relative;display:flex;align-items:center;gap:12px;width:100%;margin-top:6px;
+    padding:10px 12px;background:rgba(255,255,255,.04);border:1px solid transparent;border-radius:var(--r-bar,3px);
+    cursor:pointer;text-align:left;font-family:inherit;color:#b9c4d2}
+  .cdRow .cdIx{font-style:normal;font-family:var(--font-num);font-size:22px;font-weight:700;color:#c3ccd8;
+    min-width:26px;text-align:center;line-height:1}
+  .cdRow .cdTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .cdRow .cdRnm{font-size:12.5px;font-weight:800;color:#e6eefc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cdRow .cdSub{font-size:10px;color:rgba(214,226,240,.55)}
+  .cdRow .cdMul{font-family:var(--font-num);font-size:11px;color:rgba(214,226,240,.55)}
+  .cdRow.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}
+  .cdRow.here .cdIx{color:#ff7676}                              /* 칩 진행선과 같은 붉은색 · 발광 없음 */
+  .cdRow.done .cdIx{color:#6f7a88}                              /* 지나온 던전 — 번호를 옅게 */
+  .cdRow.lock{opacity:.38;cursor:default}
   /* 라운드 = 굴리는 피커. 큰 수가 위, 1 이 맨 아래(옛 사냥터 피커와 같은 방향) */
   /* ⛏ 채굴 토글 — 「MY BASE」 요약판의 **그리드 한 칸**(사용자 확정 2026-08-27).
      생김새는 공용 슬롯(.cgSlot)이 그대로 갖는다 — 여기서는 「한 칸만 보이게」와 「켜짐」만 정한다. */
@@ -1021,31 +1038,32 @@
   /* 캔 만큼 숫자가 튀어오른다 — 맵 위에 뜨는 판(팝업 안의 .cmPop 과 같은 어법) */
   #cstMain .cmPop.mapPop{position:absolute;z-index:6;pointer-events:none;transform:translate(-50%,-50%)}
   /* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
-  .cdR.off{opacity:.3;pointer-events:none}
+  .cdRnd.off{opacity:.3;pointer-events:none}
   /* 첫 칸(캠프)은 던전과 성격이 달라 살짝 갈라 둔다 — 아래로 1px 선 */
-  .cdRow.home{border-bottom:1px solid rgba(255,255,255,.09);padding-bottom:6px;margin-bottom:3px}
-  .cdPickWrap{position:relative}
-  /* 위아래를 흐려 준다 — 안 그러면 맨 위 칸이 반쯤 잘린 채 딱 끊겨 보인다 */
-  .cdPick{height:104px;overflow-y:auto;scroll-snap-type:y mandatory;
-    -webkit-mask-image:linear-gradient(180deg,transparent,#000 24%,#000 76%,transparent);
-    mask-image:linear-gradient(180deg,transparent,#000 24%,#000 76%,transparent);
-    padding:39px 0;                                   /* (104-26)/2 — 첫·마지막 칸도 가운데에 설 수 있다 */
-    -webkit-overflow-scrolling:touch}
-  .cdPickWrap .cdMid{position:absolute;left:0;right:0;top:39px;height:26px;z-index:1;pointer-events:none;
-    border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
-  .cdPick .cdCol{display:flex;flex-direction:column;align-items:center}
-  .cdRn{height:26px;flex:none;scroll-snap-align:center;background:none;border:none;cursor:pointer;
-    font-family:var(--font-num);font-size:13px;font-weight:700;color:#5f6874;line-height:26px;padding:0}
-  .cdRn.on{color:var(--hud);font-size:18px;text-shadow:0 0 8px var(--hud-glow)}
-  /* 주 동작 — 면을 채우지 않는다. 1px 테두리 + 밑변 광원(로그인 버튼과 같은 서명) */
-  .cdGo{position:relative;display:block;width:100%;min-height:32px;background:none;
-    border:1px solid rgba(255,255,255,.2);border-radius:0;cursor:pointer;
-    font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.4px;color:#fff}
-  .cdGo::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),
-      linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent);
-    box-shadow:0 0 2px rgba(255,59,59,.6),0 0 5px rgba(255,59,59,.24)}
-  .cdGo:active{background:rgba(255,255,255,.06)}
+  .cdRow.home{margin-top:0}
+  /* 라운드 = **큰 숫자 + ◀▶**(공용 .arwBtn 글리프) + 아래 붉은 진행 밑선(칩과 같은 어휘).
+     ⛔ 굴림 피커(.cdPick/.cdRn/.cdMid)로 되돌리지 말 것 — 무겁고, 막대는 손가락으로 정확히 안 잡힌다. */
+  /* 아래 고정 패널 — ROUND ◀▶ + 슬라이더 + [이동]. 목록이 그 위에서 굴러 들어간다(그라데로 경계를 흐린다). */
+  .cdFoot{flex:none;margin:0 -14px;padding:10px 14px 14px;
+    background:linear-gradient(180deg,rgba(8,8,9,0),rgba(8,8,9,.96) 30%)}
+  .cdRnd .cdSl{border-bottom:0;margin-bottom:0;padding-bottom:2px}
+  .cdRl{display:flex;align-items:center;gap:2px;padding:4px 0 2px}
+  .cdRl .cdArw{width:32px;height:32px;flex:none}
+  .cdRl .cdArw:disabled{opacity:.25;pointer-events:none}
+  .cdRnN{flex:1;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;line-height:1;color:#fff}
+  .cdRnN em{font-style:normal;font-size:13px;color:rgba(214,226,240,.35);margin-left:3px}
+  /* 🎚 슬라이더 = 붉은 채움 + 흰 손잡이(칩 밑선 어휘를 키운 것). 트랙은 3px 이지만 **누르는 높이는 28px** —
+     손가락이 트랙 위아래 어디를 눌러도 잡힌다. 손잡이 위치는 (r-1)/(max-1) — 1·50 이 눈금 위에 정확히 선다. */
+  .cdSld{position:relative;height:28px;margin:0 9px;cursor:pointer;touch-action:none}
+  .cdSld::before{content:'';position:absolute;left:0;right:0;top:12.5px;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
+  .cdSld .cdFill{position:absolute;left:0;top:12.5px;height:3px;border-radius:2px;background:#ff7676}
+  .cdSld .cdKnob{position:absolute;top:5px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 3px rgba(255,118,118,.25);transition:box-shadow .12s}
+  .cdSld.drag .cdKnob{box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 6px rgba(255,118,118,.3)}
+  .cdTicks{display:flex;justify-content:space-between;margin:0 9px;font-family:var(--font-num);font-size:9px;color:rgba(214,226,240,.35)}
+  .cdTicks span{width:2ch;text-align:center}
+  /* [이동] = 공용 .actBtn.pri 그대로(옅은 흰 면 .14 + 1px .32). 여기서 덮는 건 **크기뿐**. ⛔ 제 버튼을 만들지 말 것. */
+  .cdFoot .cdGo{width:100%;height:44px;font-size:13px;margin-top:12px}
   .curBar .res{display:flex;align-items:center;gap:4px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:12.5px;color:#f2f6fb;white-space:nowrap;
     text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.6)}
   .curBar .ri{width:14px;height:14px;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}

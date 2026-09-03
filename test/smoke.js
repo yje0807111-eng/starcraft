@@ -11134,7 +11134,7 @@ async function groupLobby(){
 
   // 🏕 던전·라운드 드롭다운(2026-08-25) — 칩을 누르면 칩 아래로 자란다.
   //   ⚠ 캠프 화면은 3D 라 여기서 못 띄운다 → 캠프 상태만 흉내 내고 **판 자체**를 검사한다.
-  await step('캠프 좌상단: 던전·라운드 드롭다운(칩 아래로)', async()=>{
+  await step('캠프 좌상단: 던전 선택 전체 화면(칩이 머리줄 · ◀▶ + 슬라이더)', async()=>{
     skipIf(typeof campDropOpen!=='function','드롭다운 함수 없음');
     const t=$('curTitle'); assert(t,'#curTitle 이 없음');
     const on0=window.campIsOn, st0=window.campState, sk0=window.campSkin, prof=PROF();
@@ -11163,35 +11163,81 @@ async function groupLobby(){
         assert(!first.disabled && !first.classList.contains('lock'),'캠프가 잠겨 있다 — 돌아갈 길이 막힌다');
         assert(first.querySelector('.cdRnm').textContent===CAMP_HOME_NAME,
           '캠프 이름이 칩과 다르다: '+first.querySelector('.cdRnm').textContent+' vs '+CAMP_HOME_NAME); }
-      assert(d().querySelectorAll('.cdRn').length===CAMP_RND_MAX,'라운드 칸이 '+CAMP_RND_MAX+'개가 아님');
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='잊혀진 회랑','현재 던전이 안 잡힘');
-      assert((d().querySelector('.cdRn.on')||{}).textContent==='27','현재 라운드가 안 잡힘');
-      // ③ 자리 — 칩 아래에 1px 포개 붙는다(왼쪽 변도 맞는다)
-      { const cr=t.getBoundingClientRect(), dr=d().getBoundingClientRect();
-        assert(Math.abs(dr.left-cr.left)<1.5,'판 왼쪽 변이 칩과 안 맞음: '+(dr.left-cr.left).toFixed(1));
-        assert(Math.abs(dr.top-(cr.bottom-1))<1.5,'판이 칩 아래에 안 붙음: 칩밑 '+cr.bottom.toFixed(1)+' / 판위 '+dr.top.toFixed(1)); }
-      // ④ 판은 **불투명**이다 — 큰 판이라 3% 만 비쳐도 뒤 글자가 읽힌다(.94·.97 둘 다 비쳤다)
-      { const bg=getComputedStyle(d()).backgroundColor, a=bg.match(/[\d.]+/g)||[];
-        const alpha=(a.length===4)? parseFloat(a[3]) : 1;
-        assert(alpha>=0.995,'드롭다운 판이 비친다(불투명이어야 한다): '+bg); }
-      // ⑤ 「지금 여기」 띠가 스크롤 상자에 잘리지 않는다
-      //    (overflow-y:auto 는 x 도 auto 로 만든다 — 띠를 음수 left 에 두면 통째로 잘린다)
-      { const row=d().querySelector('.cdRow.here'); const bf=getComputedStyle(row,'::before');
-        assert(bf.content!=='none','현재 던전 띠(::before)가 없음');
-        assert(parseFloat(bf.left)>=0,'현재 던전 띠가 스크롤 상자 왼쪽 밖에 있어 잘린다: left '+bf.left); }
-      // ⑥ 라운드 가운데 선은 스크롤 상자 **밖**에 있다(안에 두면 내용과 같이 굴러 사라진다)
-      { const mid=d().querySelector('.cdMid'), box=d().querySelector('#cdPickBox');
-        assert(mid && box,'라운드 피커 조각이 없음');
-        assert(!box.contains(mid),'가운데 선이 스크롤 상자 안에 있다 — 굴리면 같이 사라진다');
-        const mr=mid.getBoundingClientRect(), br=box.getBoundingClientRect();
-        assert(mr.top>=br.top-1 && mr.bottom<=br.bottom+1,'가운데 선이 피커 밖으로 나갔다'); }
-      // ⑥-2 던전 줄도 **밑선 정렬**이다 — 번호(Rajdhani)와 이름(NotoKR)은 글자 상자가 12 vs 16px 이라
-      //     가운데로 맞추면 글자가 서로 다른 높이에 앉는다. ⚠ rect 로는 못 잰다(칩 라운드 줄과 같은 이유).
+      // 라운드 = 큰 숫자 + ◀▶(2026-09-03) — 굴림 피커(.cdRn 50칸)는 없앴다
+      assert(!d().querySelector('.cdRn') && !d().querySelector('#cdPickBox'),'옛 굴림 피커가 되살아났다');
+      { const n=d().querySelector('.cdRnN'); assert(n,'라운드 숫자(.cdRnN)가 없음');
+        assert(n.firstChild && n.firstChild.textContent==='27','현재 라운드가 안 잡힘: '+n.textContent);
+        assert(n.querySelector('em') && n.querySelector('em').textContent==='/'+CAMP_RND_MAX,'라운드 상한 표기가 없음'); }
+      assert(d().querySelectorAll('.cdArw').length===2,'◀▶ 가 둘이 아님');
+      // ◀▶ 는 **공용 방향 버튼**(.arwBtn + data-arw)이다 — 새 화살표를 만들지 않는다(CLAUDE.md 레지스트리)
+      for(const b of d().querySelectorAll('.cdArw'))
+        assert(b.classList.contains('arwBtn') && b.dataset.arw,'◀▶ 가 공용 .arwBtn 이 아니다: '+b.className);
+      // [이동] = 공용 .actBtn.pri — 제 버튼을 따로 만들지 않는다
+      { const g=d().querySelector('.cdGo');
+        assert(g.classList.contains('actBtn') && g.classList.contains('pri'),'[이동]이 공용 .actBtn.pri 가 아니다: '+g.className); }
+      // ⛔ 청록 금지 — 판 테두리·현재 칸·라운드 숫자 어디에도 청록(--hud)이 없어야 한다(하단 구역과 갈리던 원인)
+      { const cyan=(c)=>{ const a=(c.match(/[\d.]+/g)||[]).map(Number); return a.length>=3 && a[1]>120 && a[2]>150 && a[1]>a[0]+60 && a[2]>a[0]+60; };
+        assert(!cyan(getComputedStyle(d()).borderTopColor),'드롭다운 테두리가 청록이다: '+getComputedStyle(d()).borderTopColor);
+        assert(!cyan(getComputedStyle(d().querySelector('.cdRow.here .cdIx')).color),'현재 던전 번호가 청록이다');
+        assert(!cyan(getComputedStyle(d().querySelector('.cdRnN')).color),'라운드 숫자가 청록이다'); }
+      // 라벨(DUNGEON/ROUND)은 하단 시트 머리줄(.cgKick)과 같은 서명 — 자간이 같아야 한다
+      { const sl=getComputedStyle(d().querySelector('.cdSl'));
+        assert(Math.abs(parseFloat(sl.letterSpacing)-9*0.24)<0.2,'라벨 자간이 .cgKick(.24em) 과 다르다: '+sl.letterSpacing); }
+      // ③ 자리 — **전체 화면**이다(2026-09-03 사용자 확정 · 목업 camp-dgpick-full-8 1안). 재화 바와 하단 네비 사이를
+      //    통째로 덮고, 칩은 그 위에 남아 머리줄이자 닫는 손잡이가 된다. ⛔ 칩 아래 작은 판으로 되돌리지 말 것.
+      { const ph=$('phone').getBoundingClientRect(), dr=d().getBoundingClientRect(), cr=t.getBoundingClientRect();
+        assert(Math.abs(dr.left-ph.left)<1.5 && Math.abs(dr.right-ph.right)<1.5,'던전 선택이 전폭이 아니다: '+dr.width.toFixed(0)+' / '+ph.width.toFixed(0));
+        assert(dr.top<=ph.top+1,'던전 선택이 화면 위까지 안 덮는다: '+(dr.top-ph.top).toFixed(1));
+        const nav=document.querySelector('.navBar'); if(nav){ const nr=nav.getBoundingClientRect();
+          assert(Math.abs(dr.bottom-nr.top)<=2,'던전 선택이 네비 자리를 안 비운다: 판밑 '+dr.bottom.toFixed(1)+' / 네비위 '+nr.top.toFixed(1)); }
+        assert(d().parentElement===$('phone'),'던전 선택이 #phone 직속이 아니다(재화 바 안에 갇힌다)');
+        // 칩이 위에 남아 있어야 닫을 수 있다 — z 순서로 잰다(칩 가운데를 찍으면 칩이 잡혀야 한다)
+        const hit=document.elementFromPoint(cr.left+cr.width/2, cr.top+cr.height/2);
+        assert(hit && t.contains(hit),'던전 선택이 칩을 덮었다 — 닫을 손잡이가 사라진다: '+(hit?hit.className:'없음')); }
+      // ④ ⛔ **판이 아니라 글자다**(2026-09-03 사용자 확정) — 좌상단 칩과 같은 어법. 불투명 검정 판은 너무 진해서
+      //    판 없이 띄운 칩과 안 어울렸다. 옅은 그늘 한 겹 + 글자 그림자, 테두리·박스 그림자 없음.
+      { const cs=getComputedStyle(d()); const a=(cs.backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+        assert(a.length<4 || a[3]<=0.05,'드롭다운에 불투명 면이 생겼다 — 칩처럼 그늘 위 글자여야 한다: '+cs.backgroundColor);
+        assert(parseFloat(cs.borderTopWidth)===0,'드롭다운에 테두리가 생겼다');
+        assert(cs.boxShadow==='none','드롭다운에 박스 그림자가 생겼다(판처럼 보인다): '+cs.boxShadow);
+        assert(/px/.test(cs.textShadow||''),'드롭다운 글자에 그림자가 없다 — 밝은 바닥에서 묻힌다'); }
+      // ⑤ 「지금 여기」= 카드 **붉은 테두리 + 붉은 번호**(발광 없음) · 부제 줄이 있다
+      { const row=d().querySelector('.cdRow.here'); const cs=getComputedStyle(row);
+        const bc=(cs.borderTopColor.match(/[\d.]+/g)||[]).map(Number);
+        assert(bc[0]>200 && bc[0]>bc[1]+80,'현재 던전 카드 테두리가 붉은색이 아니다: '+cs.borderTopColor);
+        assert(row.querySelector('.cdSub') && row.querySelector('.cdSub').textContent,'던전 카드에 부제(배수) 줄이 없다'); }
+      // ⑥ 🎚 슬라이더 — 채움/손잡이 = (r-1)/(max-1) · 붉은 채움 · **누르고 끌면** 라운드가 따라온다
+      { const sl=d().querySelector('.cdSld'), f=d().querySelector('.cdFill'), k=d().querySelector('.cdKnob');
+        assert(sl && f && k,'라운드 슬라이더 조각이 없음');
+        const want=((27-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
+        assert(f.style.width===want && k.style.left===want,'슬라이더 위치가 27 이 아님: 채움 '+f.style.width+' 손잡이 '+k.style.left);
+        const c=(getComputedStyle(f).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+        assert(c[0]>200 && c[0]>c[1]+80 && c[0]>c[2]+80,'슬라이더 채움이 붉은색이 아니다: '+getComputedStyle(f).backgroundColor);
+        assert(sl.getBoundingClientRect().height>=24,'슬라이더 누르는 높이가 손가락에 좁다: '+sl.getBoundingClientRect().height.toFixed(0)+'px');
+        // 트랙 80% 지점을 누르면 ≈ 40, 끌어서 20% 로 가면 ≈ 11
+        const r=sl.getBoundingClientRect(), pe=(t,x)=>sl.dispatchEvent(new PointerEvent(t,{pointerId:7,clientX:r.left+r.width*x,clientY:r.top+r.height/2,bubbles:true,cancelable:true,isPrimary:true}));
+        pe('pointerdown',.8); const a=+d().querySelector('.cdRnN').firstChild.textContent;
+        pe('pointermove',.2);  const b=+d().querySelector('.cdRnN').firstChild.textContent; pe('pointerup',.2);
+        assert(Math.abs(a-40)<=1,'슬라이더 80% 를 눌렀는데 라운드가 40 근처가 아님: '+a);
+        assert(Math.abs(b-11)<=1,'슬라이더를 20% 로 끌었는데 라운드가 11 근처가 아님: '+b);
+        campRndTap(27); }
+      // ⑥-1 ◀▶ — pointerdown 으로 한 칸(캠프 화면은 click 을 안 만들 수 있다) · 끝에서는 잠긴다
+      { const fw=d().querySelector('.cdArw[data-d="1"]');
+        fw.dispatchEvent(new PointerEvent('pointerdown',{pointerId:1,bubbles:true,cancelable:true,isPrimary:true}));
+        fw.dispatchEvent(new PointerEvent('pointerup',{pointerId:1,bubbles:true,cancelable:true,isPrimary:true}));
+        assert(d().querySelector('.cdRnN').firstChild.textContent==='28','▶ 를 눌렀는데 라운드가 한 칸 안 움직임');
+        campRndTap(CAMP_RND_MAX);
+        assert(fw.disabled,'상한(50)인데 ▶ 가 안 잠김');
+        assert(!d().querySelector('.cdArw[data-d="-1"]').disabled,'상한인데 ◀ 까지 잠겼다');
+        campRndTap(27); }
+      // ⑥-2 카드는 **세로 가운데** 정렬이다(2026-09-03) — 이름·부제 두 줄 블록을 큰 번호(22px)와 블록으로 맞춘다.
+      //     ⚠ 옛 한 줄 목록은 밑선 정렬이었다(번호 12px vs 이름 16px 상자). 두 줄이 되면서 규칙이 바뀐 것이지 빠진 게 아니다.
       { const ai=getComputedStyle(d().querySelector('.cdRow')).alignItems;
-        assert(ai==='baseline','던전 줄이 밑선 정렬이 아니다 — 번호와 이름이 어긋나 보인다: '+ai); }
+        assert(ai==='center','던전 카드가 세로 가운데 정렬이 아니다 — 번호와 두 줄 블록이 어긋나 보인다: '+ai); }
       // ⑦ 고르기만 해서는 **안 바뀐다** — 확정 버튼이 있는 이유다
       d().querySelector('.cdRow[data-dg="5"]').click();
-      d().querySelector('.cdRn[data-r="40"]').click();
+      campRndTap(40);
       assert(PROF().camp.dg===3 && PROF().camp.cleared===26,
         '고르기만 했는데 실제 값이 바뀌었다(확정 버튼이 무의미해진다): '+PROF().camp.dg+'/'+PROF().camp.cleared);
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='폐쇄된 시설','고른 것이 표시에 안 반영됨');
@@ -11245,7 +11291,7 @@ async function groupLobby(){
       t.click(); await sleep(40);
       d().querySelector('.cdRow[data-dg="0"]').click();
       // 캠프에는 라운드가 없다 — 그 칸이 잠긴다
-      { const R=d().querySelector('.cdR');
+      { const R=d().querySelector('.cdRnd');
         assert(R.classList.contains('off'),'캠프를 골랐는데 라운드 칸이 살아 있다 — 캠프엔 라운드가 없다');
         assert(getComputedStyle(R).pointerEvents==='none','라운드 칸이 잠겼는데 눌린다'); }
       const skin0=skin;
@@ -11263,9 +11309,9 @@ async function groupLobby(){
         '캠프에 있는데 드롭다운이 다른 칸을 가리킨다: '+((d().querySelector('.cdRow.here')||{}).dataset||{}).dg);
       // 던전으로 되돌아가면 라운드 칸이 풀린다
       d().querySelector('.cdRow[data-dg="2"]').click();
-      assert(!d().querySelector('.cdR').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
+      assert(!d().querySelector('.cdRnd').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
       campDropClose();
-      return '캠프 0 + 던전 '+CAMP_DG_MAX+'줄 · 라운드 '+CAMP_RND_MAX+'칸 · 고르기≠이동 · 캠프 왕복 확인';
+      return '전체 화면(재화 바~네비) · 칩이 머리줄 · 카드 '+(CAMP_DG_MAX+1)+' · ◀▶+슬라이더(80%→40 · 끌기→11) · 공용 .actBtn/.arwBtn · 고르기≠이동 · 캠프 왕복';
     } finally {
       gateOff();
       campDropClose();

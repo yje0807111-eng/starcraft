@@ -159,8 +159,7 @@ function campEnsureRnd(C){ if(!C) return C;
   C.rnd=(typeof campRoundN==='function' && (C.dg|0)>0) ? campRoundN() : 1;
   return C; }
 let _cdPick=null;            // 드롭다운이 열려 있는 동안의 **임시** 선택 {dg,rnd} — [이동]을 눌러야 진짜가 된다
-const CAMP_RND_H=26;         // 라운드 칸 높이(px) — CSS 와 한 값이어야 스크롤 계산이 맞는다
-let _cdRndT=null;
+let _cdRndT=null;            // ◀▶ 를 누르고 있을 때의 반복 타이머(campRndHold)
 
 function campDropToggle(){ _cdPick? campDropClose() : campDropOpen(); }
 function campDropOpen(){
@@ -172,10 +171,7 @@ function campDropOpen(){
   const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
   if(typeof playSfx==='function') playSfx('ui_open');
   document.addEventListener('pointerdown', _cdOutside, true);
-  // 고른 라운드를 가운데로 — 보인 뒤에 해야 높이가 잡힌다
-  // ⚠ requestAnimationFrame(campRndCenter) 로 넘기지 말 것 — rAF 가 timestamp 를 인자로 주는 바람에
-  //    smooth 가 켜져 열 때마다 라운드가 주르륵 굴러 내려온다(실제로 그랬다). 열 때는 즉시 제자리.
-  requestAnimationFrame(()=>campRndCenter(false)); }
+  }
 function campDropClose(){
   if(!_cdPick) return;
   _cdPick=null; clearTimeout(_cdRndT); _cdRndT=null;
@@ -193,62 +189,98 @@ function campDropClose(){
 function _cdOutside(ev){ const d=document.getElementById('campDrop'), t=document.getElementById('curTitle');
   if(!d) return; if(d.contains(ev.target)) return; if(t && t.contains(ev.target)) return; campDropClose(); }
 
+// 🖥 **전체 화면**이다(2026-09-03 사용자 확정 · 목업 docs/mock/camp-dgpick-full-8.html 1안).
+//   칩 아래 작은 판이 아니라 재화 바와 하단 네비 **사이**를 통째로 덮는다(#phone 직속 · 환생/룬 구역과 같은 자리).
+//   재화 바(z 62)와 네비는 그대로 위에 남는다 — **칩이 곧 머리줄**(이름 · 라운드 · ⌃)이고 다시 누르면 닫힌다.
+//   위: 던전 카드 목록(굴림) · 아래 고정: ROUND(◀▶ + **슬라이더**) · [이동]. 손가락 닿는 자리에 조작이 모인다.
+//   ⛔ 청록·발광 없음. 버튼은 공용 .actBtn.pri, ◀▶ 는 공용 .arwBtn — 제 것을 만들지 않는다(CLAUDE.md 레지스트리).
+//   ⛔ 칩 아래 드롭다운으로 되돌리지 말 것 — 굴림 피커·목록 스크롤이 좁아 손가락에 안 맞았다.
 function campDropRender(){
-  const bar=document.getElementById('curBar'), chip=document.getElementById('curTitle');
-  if(!bar||!chip||!_cdPick) return;
+  const ph=document.getElementById('phone'); if(!ph||!_cdPick) return;
   let d=document.getElementById('campDrop');
-  if(!d){ d=document.createElement('div'); d.id='campDrop'; d.className='cdDrop'; bar.appendChild(d); }
-  // ⚠ 드롭다운은 **칩의 형제**다(칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아간다).
-  //    자리는 칩을 실제로 재서 박는다 — 칩 높이가 바뀌어도 따라온다.
-  const cr=chip.getBoundingClientRect(), br=bar.getBoundingClientRect();
-  d.style.left=(cr.left-br.left)+'px';
-  d.style.top =(cr.bottom-br.top-1)+'px';    // 칩 아래 테두리와 1px 포개 한 줄로 보이게
+  // ⚠ #phone 직속이다 — 칩 안에 두면 updateCurBar 가 칩을 다시 그릴 때 통째로 날아가고,
+  //   재화 바 안에 두면 바 높이(34px)에 갇힌다. 환생·룬 구역과 같은 층(#phone)에 얹는다.
+  if(!d){ d=document.createElement('div'); d.id='campDrop'; d.className='cdDrop'; ph.appendChild(d); }
   let L='';
   // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
+  //   지나온 던전(here 보다 앞)은 번호를 옅게 — 「어디까지 왔나」가 목록에서 읽힌다.
   for(let i=0;i<=CAMP_DG_MAX;i++){ const D=(i>0 && typeof hbDun==='function')?hbDun(i):null;
-    const open=campDgOpen(i), here=(i===_cdPick.dg);
+    const open=campDgOpen(i), here=(i===_cdPick.dg), done=(i>0 && i<_cdPick.dg);
     const nm=(i===0)?CAMP_HOME_NAME:((D&&D.name)||('던전 '+i));
-    L+='<button class="cdRow'+(here?' here':'')+(open?'':' lock')+(i===0?' home':'')+'" data-dg="'+i+'"'
+    const sub=(i===0)?'안전 구역 · 라운드 없음':(!open?'아직 열리지 않았다':('배수 ×'+campDgMul(i).toFixed(1)));
+    L+='<button class="cdRow'+(here?' here':'')+(done?' done':'')+(open?'':' lock')+(i===0?' home':'')+'" data-dg="'+i+'"'
       +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
-      +'<span class="cdRnm">'+escHtml(nm)+'</span>'
+      +'<span class="cdTx"><span class="cdRnm">'+escHtml(nm)+'</span><span class="cdSub">'+sub+'</span></span>'
       +'<span class="cdMul">'+(!open?'잠김':(i===0?'안전':('×'+campDgMul(i).toFixed(1))))+'</span></button>'; }
-  let R='';
-  for(let r=CAMP_RND_MAX;r>=1;r--) R+='<button class="cdRn'+(r===_cdPick.rnd?' on':'')+'" data-r="'+r+'">'+r+'</button>';
   // ⚠ 캠프(0단계)에는 **라운드가 없다**(CAMP_MINE[0] 「배율 고정, 라운드 없음」) — 그 칸을 잠근다.
   const noRnd=(_cdPick.dg===0);
-  d.innerHTML='<div class="cdSec cdTwo">'
-    +'<div class="cdL"><div class="cdSl">DUNGEON</div><div class="cdList uiScroll">'+L+'</div></div>'
-    +'<div class="cdR'+(noRnd?' off':'')+'"><div class="cdSl">ROUND</div>'
-      // ⚠ 가운데 선은 **스크롤 상자 밖**에 둔다 — 안에 두면 absolute 라도 내용과 같이 굴러 화면 밖으로 나간다
-      +'<div class="cdPickWrap"><i class="cdMid"></i>'
-        +'<div class="cdPick uiScroll" id="cdPickBox"><div class="cdCol">'+R+'</div></div></div></div>'
-    +'</div>'
-    +'<div class="cdSec cdFoot"><button class="cdGo">이동</button></div>';
+  d.innerHTML='<div class="cdSec cdTop">'
+      +'<div class="cdSl">DUNGEON<em>0 – '+CAMP_DG_MAX+'</em></div><div class="cdList uiScroll">'+L+'</div></div>'
+    +'<div class="cdFoot">'
+      +'<div class="cdRnd'+(noRnd?' off':'')+'"><div class="cdSl">ROUND<em>1 – '+CAMP_RND_MAX+'</em></div>'
+        +'<div class="cdRl">'
+          +'<button class="arwBtn cdArw" data-arw="l" data-d="-1" type="button" aria-label="이전 라운드"></button>'
+          +'<b class="cdRnN"></b>'
+          +'<button class="arwBtn cdArw" data-arw="r" data-d="1" type="button" aria-label="다음 라운드"></button>'
+        +'</div>'
+        // 🎚 슬라이더 — 한 번에 멀리. ◀▶ 는 한 칸씩 정확히. 둘 다 campRndTap 하나로 모인다.
+        +'<div class="cdSld" role="slider" aria-label="라운드" aria-valuemin="1" aria-valuemax="'+CAMP_RND_MAX+'">'
+          +'<i class="cdFill"></i><i class="cdKnob"></i></div>'
+        +'<div class="cdTicks">'+[1,10,20,30,40,50].map(v=>'<span>'+v+'</span>').join('')+'</div>'
+      +'</div>'
+      +'<button class="actBtn pri cdGo" type="button">이동</button></div>';
   for(const b of d.querySelectorAll('.cdRow')) b.onclick=()=>campDropPickDg(+b.dataset.dg);
-  for(const b of d.querySelectorAll('.cdRn'))  b.onclick=()=>campRndTap(+b.dataset.r);
+  for(const b of d.querySelectorAll('.cdArw')) campRndHold(b, +b.dataset.d);
+  campRndSlider(d.querySelector('.cdSld'));
   d.querySelector('.cdGo').onclick=campDropGo;
-  const box=d.querySelector('#cdPickBox'); if(box) box.onscroll=campRndScrolled; }
+  if(typeof paintIcons==='function') paintIcons(d);   // .arwBtn[data-arw] 글리프를 채운다(공용 · CLAUDE.md 「방향 버튼」)
+  campRndMark(); }
 
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
   const d=document.getElementById('campDrop'); if(d){
     for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
     // 캠프를 고르면 라운드 칸이 잠기고, 던전으로 옮기면 풀린다
-    const R=d.querySelector('.cdR'); if(R) R.classList.toggle('off', dg===0); }
+    const R=d.querySelector('.cdRnd'); if(R) R.classList.toggle('off', dg===0); }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
-// 라운드 = 스크롤 피커. 큰 수가 위, 1 이 맨 아래 — 옛 사냥터 피커와 같은 방향이다.
-function campRndCenter(smooth){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
-  box.scrollTo({ top:(CAMP_RND_MAX-_cdPick.rnd)*CAMP_RND_H, behavior:smooth?'smooth':'auto' }); }
-function campRndScrolled(){ clearTimeout(_cdRndT); _cdRndT=setTimeout(campRndSettle, 110); }
-function campRndSettle(){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
-  const i=Math.max(0, Math.min(CAMP_RND_MAX-1, Math.round(box.scrollTop/CAMP_RND_H)));
-  const r=CAMP_RND_MAX-i; if(r===_cdPick.rnd) return;
-  _cdPick.rnd=r; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function campRndMark(){ const box=document.getElementById('cdPickBox'); if(!box||!_cdPick) return;
-  for(const b of box.querySelectorAll('.cdRn')) b.classList.toggle('on', +b.dataset.r===_cdPick.rnd); }
-function campRndTap(r){ if(!_cdPick) return; _cdPick.rnd=r; campRndMark(); campRndCenter(true);
-  if(typeof playSfx==='function') playSfx('ui_tab'); }
+// 라운드 = **큰 숫자 + ◀▶**(2026-09-03). 굴림 피커는 무겁고 막대는 손가락으로 정확히 안 잡혀서 버렸다.
+//   눌러서 정확히 고르고, 아래 붉은 밑선(.cdProg)이 「50 중 어디쯤」을 읽어 준다 — 칩의 밑선과 같은 어휘.
+function campRndMark(){ const d=document.getElementById('campDrop'); if(!d||!_cdPick) return;
+  const n=d.querySelector('.cdRnN'), f=d.querySelector('.cdFill'), k=d.querySelector('.cdKnob'), sl=d.querySelector('.cdSld');
+  if(n) n.innerHTML=_cdPick.rnd+'<em>/'+CAMP_RND_MAX+'</em>';
+  // 슬라이더 위치 = (r-1)/(max-1) — 1 이 왼끝, 50 이 오른끝(손잡이가 눈금 1·50 위에 정확히 선다)
+  const pct=((_cdPick.rnd-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
+  if(f) f.style.width=pct; if(k) k.style.left=pct;
+  if(sl) sl.setAttribute('aria-valuenow', _cdPick.rnd);
+  // 끝에 닿은 쪽 화살표는 잠근다(1 아래·50 위는 없다)
+  for(const b of d.querySelectorAll('.cdArw')){ const dd=+b.dataset.d;
+    b.disabled=(dd<0 && _cdPick.rnd<=1)||(dd>0 && _cdPick.rnd>=CAMP_RND_MAX); } }
+function campRndTap(r){ if(!_cdPick) return;
+  const v=Math.max(1, Math.min(CAMP_RND_MAX, r|0)); if(v===_cdPick.rnd) return;
+  _cdPick.rnd=v; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+function campRndStep(dir){ if(_cdPick) campRndTap(_cdPick.rnd+dir); }
+// 🎚 슬라이더 — 누른 자리·끄는 자리를 라운드로 바꾼다. pointer capture 로 손가락이 트랙을 벗어나도 따라온다.
+//   ⚠ 여기서 값을 따로 들지 않는다 — campRndTap 이 유일한 입구(◀▶ 와 같은 길).
+function campRndSlider(el){ if(!el) return;
+  const at=(ev)=>{ const r=el.getBoundingClientRect(); if(r.width<=0) return;
+    const x=Math.max(0, Math.min(1, (ev.clientX-r.left)/r.width));
+    campRndTap(1+Math.round(x*(CAMP_RND_MAX-1))); };
+  el.addEventListener('pointerdown', (ev)=>{ ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+    el.classList.add('drag'); at(ev); });
+  el.addEventListener('pointermove', (ev)=>{ if(el.classList.contains('drag')) at(ev); });
+  for(const t of ['pointerup','pointercancel']) el.addEventListener(t, ()=>el.classList.remove('drag')); }
+// ◀▶ 를 **누르고 있으면 반복**한다(0.35초 뒤부터 70ms 마다) — 50칸을 한 칸씩 눌러 가는 건 고문이다.
+//   ⚠ click 이 아니라 pointerdown 으로 첫 칸을 움직인다 — 캠프 화면은 터치 처리가 click 을 안 만들 수 있다
+//     (무장 트레이가 그래서 안 눌렸다 · CLAUDE.md 무장 칸 항목). 그래서 click 은 막는다(두 번 가지 않게).
+function campRndHold(btn, dir){
+  const stop=()=>{ clearTimeout(_cdRndT); clearInterval(_cdRndT); _cdRndT=null; };
+  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); if(btn.disabled) return;
+    campRndStep(dir); stop();
+    _cdRndT=setTimeout(()=>{ _cdRndT=setInterval(()=>{ if(btn.disabled){ stop(); return; } campRndStep(dir); }, 70); }, 350); });
+  for(const t of ['pointerup','pointercancel','pointerleave']) btn.addEventListener(t, stop);
+  btn.onclick=(e)=>e.preventDefault();
+}
 
 // [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
 function campDropGo(){ if(!_cdPick) return;
