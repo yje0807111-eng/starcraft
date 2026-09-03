@@ -19,10 +19,17 @@ function techUIInit(race){ if(!TECH_TREE[race]) race='union'; _techEnsureRoster(
   techFogInit(keep.fog); }   // 🌫️ 건설 안개(토글 상태는 종족 전환에도 유지)
 const TECH_MINE_START=1500, TECH_GAS_START=5000, TECH_GATHER_AMT=8, TECH_MINE_T=1.2, TECH_GAS_T=1.2;   // 채취 상수: 매장량 · 1회 채취량 · 채취 소요시간
 function _techGasRemain(){ if(!G.tech) return TECH_GAS_START; if(G.tech.gasAmt==null) G.tech.gasAmt=TECH_GAS_START; return G.tech.gasAmt; }   // ⛽ 가스 광산(지형) 잔량 = 지속값. 건물 파괴돼도 유지(캐고 남은 만큼 그대로)
+// ⚡ **생산 속도** — 환생 트리 「생산 속도」 계열(2026-09-02 배선 · HUNT_R1 §4-5-3).
+//   ⭐ 시간을 **나눈다**(배수가 오를수록 짧아진다). 세 곳이 함께 걸린다: 건물 건설 · 유닛 생산 · 업그레이드.
+//   ⛔ 캠프 밖에서는 걸지 않는다 — 유즈맵·오토배틀은 트리와 무관한 전장이라
+//     여기에 환생 값이 새면 대전 균형이 사람마다 달라진다.
+function _techProdSpd(){
+  if(typeof campIsOn !== 'function' || !campIsOn()) return 1;
+  return (typeof campRtMul === 'function') ? campRtMul('prod') : 1; }
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; if(techWallet()) return STK_TECH_BUILD_T;   // 오토배틀: 건물 종류와 무관하게 동일 시간
-  return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL; }
-function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL; }
-function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL; }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
+  return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL/_techProdSpd(); }
+function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL/_techProdSpd(); }
+function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL/_techProdSpd(); }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
 const TECH_DEF_BLDG={ union:['bunker','turret'], swarm:['sunken','spore'], aetherial:['cannon'], feral:['thornburrow'], colossus:['bastion'] };   // 🛡 방어 건물(공격형)
 function _techIsDef(bk){ return (TECH_DEF_BLDG[G.tech.race]||[]).indexOf(bk)>=0; }
 function _techBldgKind(b){ if(!b) return '건물'; if(b.produces) return '생산'; if(_techResList(b).length) return '업그레이드'; if(b.gas) return '에너지 채취'; if(_techIsDef(b.k)) return '방어'; if(b.supply) return '인구 공급'; if(b.unlocks) return '해금'; return '건물'; }
@@ -680,6 +687,11 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
     if(!_frozen) active=true; } }   // 얼어붙은 건물은 active 제외 → 영구 매프레임 재렌더(=클릭 먹힘 방지) 차단. 진행·일꾼대기만 재렌더
   const _gath=_techGatherTick(dt); if(_gath.any) active=true; if(_gath.dep) done=true;   // 💎⚡ 자원 채취 FSM(이동 목표 지정 → 아래 이동 루프가 수행)
   { G.tech._gaT=(G.tech._gaT||0)+dt; if(G.tech._gaT>=1.2){ G.tech._gaT=0; _techRebalanceMinerals(); } }   // 🔄 주기적 미네랄 균형(빈 덩어리 자동 채움)
+  // 💠 **일꾼만·캠프에서만** 빨라진다(신속의 룬 · 2026-09-02).
+  //   ⛔ 게이트를 빼지 말 것 — 이 파일은 관리자 건설 탭·오토배틀과 **공유**다.
+  //     캠프 밖에서도 걸리면 관리자 탭 일꾼까지 빨라진다(스모크가 잡는다).
+  const _techWkSpd = (e) => (e && e.type === 'worker' && typeof campRuneMulIn === 'function')
+    ? campRuneMulIn('wspd') : 1;
   // 🚶 유닛 이동 — 공용 stepUnitMove(관성·유닛회피·감속·정착·응시) + 🧭 경유점(waypoint) 추종. 건물 회피 조향 없음(경로가 이미 우회) → 벽 비비기/틱틱 걸림 제거
   const _clamp=(x,y)=>({x:Math.max(techBX0(),Math.min(techBX1(),x)), y:Math.max(techBY0(),Math.min(techBY1(),y))});   // 이동 한계 = 건설 가능 구역(매 프레임 위치 보정도 동일 기준)
   const _staticN=[]; for(const o of G.tech.ents){ if((o.type!=='unit'&&o.type!=='worker')||o.tx!=null||o._ghost) continue; const k=_techEntKey(o); _staticN.push({ref:o, x:o.x, y:o.y, sizeKey:k, airKey:k}); }   // 정지 유닛만(이동 중·채취 유령 제외 — 유령은 통과 가능)
@@ -690,7 +702,7 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
       if(_dw>0.018 && !_techSegClear(e, e.x, e.y, e._wp[1].x, e._wp[1].y)) break;   // 아직 코너 못 돌았고 다음 구간 막힘 → 유지(단 피벗 초근접(≤0.018)이면 강제 전환 — 감속 정지 방지)
       e._wp.shift(); const _n=e._wp[0]; e.tx=_n.x; e.ty=_n.y; e._mvStuck=0; e._mvPrevD=null; }   // 🏃 경유점 선행 전환: 모퉁이마다 멈췄다 가는 현상 제거 + 좁은 통로에선 지름길 금지
     e._pfx=e.x; e._pfy=e.y;   // 이번 프레임 이동 전 위치(쐐기 판정 시 되돌림용)
-    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:(e._ghost?[]:_staticN), avoidMul:0.22, noSlow:(e._wp&&e._wp.length>1), ay:(1/_techGA()), spdMul:TECH_SPD_MUL });   // 채취 유령=유닛 회피 없음(통과) / avoidMul 0.22=슬롯 간격 미만 최대
+    const r=stepUnitMove(e, {x:e.tx,y:e.ty}, key, key, dt, { GW:GW||390, GH:GH||390, clamp:_clamp, staticN:(e._ghost?[]:_staticN), avoidMul:0.22, noSlow:(e._wp&&e._wp.length>1), ay:(1/_techGA()), spdMul:TECH_SPD_MUL*_techWkSpd(e) });   // 채취 유령=유닛 회피 없음(통과) / avoidMul 0.22=슬롯 간격 미만 최대
     if(r.done){ const _far=Math.hypot(e.tx-e.x, e.ty-e.y)>0.035;   // 도착이 아니라 막혀서 멈춤(관성 정체)
       if(e._wp && e._wp.length>1){   // 경유점 남음 → 다음 경유점으로(막혔으면 현재 위치 기준 경로 재계산)
         if(_far && (e._rr||0)<4){ e._rr=(e._rr||0)+1; const _fin=e._wp[e._wp.length-1]; e._wp=_techFindPath(e,_fin.x,_fin.y); }

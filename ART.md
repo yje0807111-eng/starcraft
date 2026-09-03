@@ -1636,3 +1636,129 @@ Moody sci-fi game environment key art, clearly readable exposure with rich midto
 
 같은 규격으로 한 장 더 뽑았는데 **왼쪽 아래에 서명 같은 낙서**가 들어왔다(E 가 금지하는 워터마크).
 구조물이 화면 전체에 퍼져 별자리가 앉을 조용한 자리도 적었다. 두 이유로 버렸다.
+
+---
+
+## 15. UI 아이콘 계열 — 환생 트리 33 (2026-09-02)
+
+⭐ **다른 계열과 규격이 다르다.** 장면(§2~§14)은 가로로 긴 배경 그림이지만 이건 **정사각 아이콘**이다.
+같은 규격을 상점 재화 아이콘(`assets/icons/res_*.webp`)이 먼저 썼고, 트리가 그걸 그대로 물려받았다.
+
+### 15-1. 규격
+
+| 항목 | 값 |
+|---|---|
+| 뽑는 크기 | 1024×1024 (프롬프트에는 512 라 적어도 이 크기로 나온다) |
+| 배경 | **순수 검정** — 판·테두리·그림자 없이 |
+| 넣는 크기 | 128×128 WebP (알파) · `assets/icons/tree/<계열키>.webp` |
+| 장수 | 33 (`CAMP_RT_LINES` 와 1:1) |
+| 용량 | 합계 252KB · 평균 7.6KB |
+
+### 15-2. ⭐ 공통 블록 — 그대로 붙인다
+
+```
+--- RENDER SPEC ---
+Single game UI icon, 512x512, centered, isolated on a PURE BLACK background.
+Stylized 3D game-asset look: chamfered bevels, hard angular silhouette,
+brushed-metal frame with crisp highlight edges, emissive inner panels.
+Vivid high-contrast colours, three clear value steps (dark base / mid body /
+bright emissive core). Key light from the upper left, warm rim light opposite.
+Clean edges, no texture noise, no grime. Readable at 32px.
+--- NEGATIVE ---
+no text, no letters, no numbers, no watermark, no signature, no frame,
+no border, no drop shadow on the background, no photo realism, no clutter,
+no busy background, no gradient background, not flat 2D, no outline stroke
+--- SUBJECT ---
+{SYMBOL}, colour accent {ACCENT}.
+```
+
+`{ACCENT}` 는 갈래 색이다 — 시작 도움 `#5dff8f` · 재화 획득 `#ffd24a` · 아군 강화 `#4aa8ff` · 적 약화 `#ff3b3b`.
+갈래 색이 원 테두리와 같아서 **24px 로 줄어도 어느 갈래인지가 색으로 먼저 읽힌다**.
+
+### 15-3. ⛔ 한 모티프는 한 아이콘에만
+
+두 번 실패하고 얻은 규칙이다.
+
+- 1차 — 「일꾼 채취량」과 「방치 수급」이 **둘 다 크리스탈**이라 구분이 안 됐다.
+- 2차 — 「채굴 속도」와 피버 넷이 **전부 빛나는 코어 덩어리**라 다섯이 한 덩어리로 보였다.
+
+고친 방식은 색이나 디테일이 아니라 **실루엣의 종류를 서로 다른 범주로 벌린 것**이다.
+
+- 3차 — 뽑기가 **옛 프롬프트 판본**으로 돌아가 피버 셋과 「버팀」이 갈라지기 전 모양으로 나왔다.
+  게다가 「버팀」에 번개가 들어와 **「스킬 쿨다운」과 겹쳤고**, 「적 마리 수」의 실루엣 셋은 판 하나로 뭉쳤다.
+  ⭐ 다시 뽑을 때 `NEGATIVE` 에 **다른 아이콘이 이미 쓴 모티프를 이름으로 적어 막았다**
+  (`no flame, no hourglass, no lightning bolt, no X shape, no shield, no single centred object` …).
+  이게 지금까지 중 가장 확실했다 — 다섯 장이 한 번에 의도대로 나왔다.
+  ⚠ 그리고 **이름표를 붙인 대조판**(`node scripts/tree-sheet.mjs`)이 아니었으면 「적 마리 수」가
+  어긋난 것을 못 찾았다. 아이콘만 늘어놓은 판에서는 33개 중 하나가 틀려도 눈에 안 띈다.
+피버 넷은 **세로 불꽃 / 삼거리 화살 / 크기 대비 두 블록 / 긴 심지**로, 채굴 속도는 33개 중 **유일한 원형**(초시계)으로 갈랐다.
+
+### 15-4. 계열 ↔ 모티프 표 (단일 소스)
+
+| 갈래 | 계열키 | 이름 | 그림 |
+|---|---|---|---|
+| 시작 | `tap` | Show Me The Money | 쪼개지는 초록 결정 + 사이에 튀는 번개 |
+| 시작 | `startMin` | What's Mine Is Mine | 파우치에서 쏟아지는 결정 |
+| 시작 | `skipRd` | There Is No Cow Level | 결정 더미에 꽂힌 깃발 |
+| 시작 | `startWk` | Operation CWAL | 곡괭이를 든 작업복 인부 |
+| 재화 | `gather` | 일꾼 채취량 | 광석을 수북이 실은 광차 |
+| 재화 | `gas` | 가스 생산량 | 세워 둔 가스통 둘 |
+| 재화 | `fever` | 피버 타임 | 세로로 솟는 불꽃 |
+| 재화 | `fevPct` | 피버 확률 | 삼거리 화살 — 가운데 갈래만 켜짐 |
+| 재화 | `fevMul` | 피버 배수 | 작은 블록 → 큰 발광 블록 |
+| 재화 | `fevSec` | 피버 시간 | 길게 남은 심지 + 끝의 불꽃 |
+| 재화 | `wkCap` | 일꾼 상한 | 줄지어 선 인부 헬멧 셋 |
+| 재화 | `mine` | 광산 등급 | 갱도 입구 아치 |
+| 재화 | `idle` | 방치 수급 | 초승달 + 별 (결정 없음) |
+| 재화 | `dgRw` | 던전 보상 | 열린 보물상자 |
+| 재화 | `tapMul` | 탭 배수 | 겹쳐 쌓인 판 셋 |
+| 재화 | `holdMs` | 채굴 속도 | 초시계 — **33개 중 유일한 원형** |
+| 재화 | `gasEx` | 가스 교환비 | 각진 순환 화살 고리 |
+| 아군 | `atk` | 유닛 공격력 | 판을 뚫는 화살촉 |
+| 아군 | `hp` | 유닛 체력 | 방패 |
+| 아군 | `prod` | 생산 속도 | 블록이 실려 가는 컨베이어 |
+| 아군 | `sup` | 인구 상한 | 막사 |
+| 아군 | `upCost` | 업그레이드 비용 | 값표 + 아래를 가리키는 화살 |
+| 아군 | `endure` | 버팀 | 금 간 육각 + 리벳 클램프 셋(번개 없음) |
+| 아군 | `bldg` | 건물 강화 | 포탑 |
+| 아군 | `skCd` | 스킬 쿨다운 | 번개 + 차오르는 게이지 막대 |
+| 적 | `foeHp` | 적 체력 | 갈라진 심장 |
+| 적 | `foeN` | 적 마리 수 | 벌레형 적 셋 — 오른쪽 하나가 조각남 |
+| 적 | `foeAtk` | 적 공격력 | 부러진 발톱 |
+| 적 | `foeRes` | 적 부활 시간 | 사슬로 묶인 묘비 |
+| 적 | `foeSpd` | 적 이동 속도 | 발목 족쇄 |
+| 적 | `bossHp` | 보스 체력 | 금 간 왕관 |
+| 적 | `foeRng` | 적 사거리 | 조준선 + 짧아진 화살 |
+| 적 | `foeDelay` | 적 등장 지연 | 반쯤 내려온 창살문 |
+
+### 15-5. ⭐ 배경 지우는 법 — `scripts/icon-cutout.mjs` 를 쓴다
+
+```bash
+node scripts/icon-cutout.mjs <입력.png> assets/icons/tree/<계열키>.webp
+```
+
+⛔ **직접 짜지 말 것.** 이 자리에서 한 번 새로 짰다가 두 가지를 놓쳤다.
+
+1. **가장자리에서 BFS 로 검정을 퍼뜨리는 방식은 실패한다.** 아이콘 둘레에 **글로우**가 깔려 있어
+   BFS 가 그 밝은 링에서 막히고, 링 안쪽의 검정이 사각으로 남는다. 배경이 순수 `0,0,0` 이어도 그렇다.
+   → 정답은 알파를 밝기에 **비례**시키는 것이다(`alpha = clamp(lum / 32, 0, 1)`).
+2. **un-premultiply 를 빼먹으면 밝은 배경에서 테두리에 검은 띠가 돈다.** 검정과 섞여 어두워진
+   가장자리 색을 알파로 나눠 되돌려야 한다. 도구는 이미 한다.
+
+확인은 **밝은 판 위에 얹어 본다** — 어두운 판에서는 두 실수가 다 안 보인다.
+
+### 15-6. 코드가 쓰는 자리
+
+`CAMP_RT_LINES` 의 `ic:` 한 곳뿐이다(`js/19-camp.js`). 트리 노드(`campTreeSvg`)와
+상세 카드가 같은 값을 읽는다. ⛔ 아이콘 경로를 다른 곳에 다시 적지 말 것.
+
+### 15-7. 마디 20개는 아직 비어 있다 (2026-09-02)
+
+트리의 검은 빈 원 20개는 **마디**다 — 갈래 관문 4 + 묶음 관문 16.
+지금은 효과가 없는 순수한 관문이라 「무엇이 세지는가」를 그릴 대상이 없어 아이콘도 없다.
+
+⚠ 화면만 보면 「33장 중 몇 장이 안 들어갔다」로 읽힌다(실제로 그렇게 보고됐다).
+코드에서는 `campTreeGem` 호출에 `ic` 를 안 넘기는 것이 그 뜻이다.
+
+🔜 **여기에 그 갈래·묶음의 가장 기본이 되는 능력을 넣기로 했다**(사용자 방향).
+능력이 정해지면 아이콘 20장도 이 절의 규격으로 함께 뽑는다 — 그때 이 절을 다시 쓴다.

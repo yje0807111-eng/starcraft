@@ -535,22 +535,41 @@ const STK_HEAL_HPS=22, STK_HEAL_RNG=110, STK_HEAL_SEEK=900, STK_HEAL_EN=0.5;   /
 //     따로 깎아서 **두 번 깎인다**. 여기서만 쓰는 `_healDur`/`_healCd` 로 둔다.
 const STK_HEAL_DUR = 3;      // 🏕 한 번 시작하면 이어지는 시간(초)
 const STK_HEAL_CD  = 5;      // 🏕 지속이 끝난 뒤 쉬는 시간(초)
+// 💚 **회복은 고정 수치가 아니라 비율이다**(사용자 확정 2026-09-02).
+//   ⭐ 체력 강화(연구·트리)로 체력이 커지면 **회복량도 같이 커진다.** 고정 수치면
+//     후반에 회복이 반올림 오차가 된다 — 그것이 「난이도가 오르면 의무병이 무의미해진다」의 정체다.
+//   ⭐ **끊기듯 차지 않는다** — `dt` 만큼 매 프레임 조금씩 붙어 실제로 차오르듯 보인다.
+//     ⛔ 「1초마다 +15%」처럼 뭉텅이로 넣지 말 것. 눈에 계단으로 보이고, 죽기 직전 1초를 못 버틴다.
+//   지속 3초 × 초당 15% = **한 번에 최대 체력의 45%**.
+const STK_HEAL_PCT = 0.15;   // 🏕 초당 회복 = 최대 체력의 이만큼
 function strikeHealStep(u, me, dt){
   const camp = _stkCampSk();
   if(camp){                                  // ⏱ 마나가 아니라 쿨로 돈다
     if((u._healCd||0) > 0) u._healCd = Math.max(0, u._healCd - dt);
     else if((u._healDur||0) > 0){ u._healDur = Math.max(0, u._healDur - dt);
       if(u._healDur <= 0) u._healCd = STK_HEAL_CD; } }   // ⛔ 지속이 끝나야 쿨이 돈다
-  let t=null, td=Infinity;   // ① 가장 가까운 부상 바이오닉
-  for(const a of me.units){ if(a===u || a.dead || a.hp>=a.maxHp || !BIONIC[a.gm||a.id]) continue;
-    const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy; if(d2<td){ td=d2; t=a; } }
+  // ① 대상 = **가장 가까운 부상 아군**(가장 다친 아군이 아니다).
+  //   🎯 **한 번 잡으면 붙잡는다** — 다 낫거나 죽거나 멀어질 때까지 바꾸지 않는다.
+  //   ⛔ 매 프레임 다시 고르면 비슷한 거리의 둘 사이에서 **왔다갔다**한다(2026-08-28 사용자 지적).
+  //     의무병은 대상 쪽으로 걸어가므로, 흔들리면 그 자리에서 진동하며 아무도 못 고친다.
+  const _hOK = (a) => { if(!a || a === u || a.dead || a.hp >= a.maxHp || !BIONIC[a.gm||a.id]) return -1;
+    const dx=a.x-u.x, dy=a.y-u.y, d2=dx*dx+dy*dy;
+    return (d2 <= STK_HEAL_SEEK*STK_HEAL_SEEK) ? d2 : -1; };
+  let t = u._healT, td = _hOK(t);
+  if(td < 0){ t = null; td = Infinity;                       // 붙잡은 대상이 없으면 새로 고른다
+    for(const a of me.units){ const d = _hOK(a); if(d >= 0 && d < td){ td = d; t = a; } }
+    if(!t) td = Infinity;
+    u._healT = t; }
   if(t && td<=STK_HEAL_SEEK*STK_HEAL_SEEK){
     if(td>STK_HEAL_RNG*STK_HEAL_RNG){ strikeMoveToward(u, t.x, t.y, dt); return; }
     u.moving=false; u.face=Math.atan2(t.x-u.x, t.y-u.y);
     if(camp){
       if((u._healCd||0) > 0) return;                            // 쉬는 중 — 곁에 붙어만 있는다
       if((u._healDur||0) <= 0) u._healDur = STK_HEAL_DUR;       // 새로 시작
-      t.hp = Math.min(t.maxHp, t.hp + STK_HEAL_HPS*dt); return; }
+      // 💠 치유의 룬 — 회복 비율을 키운다(여기는 캠프 전용 갈래라 게이트가 이미 걸려 있다)
+      { const rm = (typeof campRuneMul === 'function') ? campRuneMul('heal') : 1;
+        t.hp = Math.min(t.maxHp, t.hp + (t.maxHp || 0)*STK_HEAL_PCT*rm*dt); }
+      return; }   // 💚 비율 · dt 만큼 연속으로
     let amt=STK_HEAL_HPS*dt;
     if(u.maxEn>0){ amt=Math.min(amt, (u.en||0)/STK_HEAL_EN); u.en=Math.max(0,(u.en||0)-amt*STK_HEAL_EN); }   // 에너지 소진 시 치유 중단
     t.hp=Math.min(t.maxHp, t.hp+amt); return; }
@@ -750,9 +769,9 @@ function strikeSkillTick(dt){ const S=STK; if(!S||typeof SKILLS==='undefined') r
 // ⛔ **엔진에 걸 곳이 없어 시전하지 않는 스킬** — 마나만 태우고 아무 일도 안 일어나는 것이
 //   아무것도 안 하는 것보다 나쁘다. 기능이 생기면 여기서 뺀다.
 //   ✅ 뺀 것 — 봉쇄·빙결·마비 폭풍(정지) · 점착 가스(둔화) : 2026-08-28, HUNT_R1 §3-4-4
-const STK_SK_DEAD={ mind_control:1,
+const STK_SK_DEAD={
   recall:1, hallucination:1, parasite:1,
-  optical_flare:1, restoration:1, scan:1, psi_cloak:0 };
+  optical_flare:1, scan:1, psi_cloak:0 };
 const STK_SK_ALLY_HURT=0.9;    // 아군 대상 = 체력 비율이 이보다 낮을 때만(멀쩡한 아군에 쓰지 않는다)
 const STK_SK_SPOT_MIN=3;       // 광역 = 적이 이만큼 뭉쳤을 때만(한두 기에 쓰면 낭비)
 // ⚠ SKILLS 의 range/radius 는 **건설 화면의 0~1 정규 좌표**다. 오토배틀은 픽셀(world=4800)이라
@@ -793,15 +812,30 @@ function strikeWebBlocks(tgt, atk){ return !!(atk && strikeIsRanged(atk) && stri
 // 사거리 안에서 **가장 많이 다친 아군**. ⚠ 포식만 예외 — 아군을 잡아먹으므로 **가장 값싼 아군**을 고른다
 //   (체력으로 고르면 다친 전함을 먹는다).
 function _stkPickAlly(u, me, sk, key){
-  const R=_stkSkRange(u, sk), R2=R*R; let best=null, bv=Infinity;
+  const R=_stkSkRange(u, sk), R2=R*R;
+  let best=null, bv=(key==='restoration') ? -1 : Infinity;   // ✨ 정화만 「큰 것 고르기」다
   for(const a of me.units){ if(a.dead || a===u) continue;
     const dx=a.x-u.x, dy=a.y-u.y; if(dx*dx+dy*dy>R2) continue;
     if(key==='consume'){ const c=(((typeof U!=='undefined')&&U[a.gm||a.id])||{}).cost||((a.maxHp||1)+(a.dmg||0)*10);
       if(c<bv){ bv=c; best=a; } continue; }
+    // ✨ **정화는 체력이 아니라 디버프를 본다** — 멀쩡해도 멎어 있으면 대상이다.
+    //   ⚠ 아래 「체력 90% 미만」 규칙을 타면 **디버프만 걸린 멀쩡한 아군을 영영 못 푼다.**
+    //   ⭐ 오래 걸린 것부터 — 남은 시간이 긴 쪽이 더 손해다.
+    if(key==='restoration'){ const d=strikeDebuffLeft(a);
+      if(d<=0) continue;
+      if(d>bv){ bv=d; best=a; } continue; }
     const r=(a.hp||0)/Math.max(1,a.maxHp||a.hp||1);
     if(r>=STK_SK_ALLY_HURT) continue;                 // 멀쩡하면 대상 아님
     if(r<bv){ bv=r; best=a; } }
   return best; }
+// ✨ **디버프가 얼마나 남았나** — 정화가 볼 대상을 여기 한 곳에서 정한다.
+//   ⛔ 새 디버프를 만들면 **반드시 여기에 더할 것.** 안 더하면 정화가 그것을 못 푼다.
+//   ⚠ 지금 디버프는 둘이다 — 정지(`stunT`) · 둔화(`slowT`).
+function strikeDebuffLeft(u){ if(!u) return 0;
+  return Math.max(u.stunT||0, u.slowT||0); }
+function strikeCleanse(u){ if(!u) return false;
+  if(strikeDebuffLeft(u)<=0) return false;
+  u.stunT=0; u.slowT=0; return true; }
 // 사거리 안에서 **체력이 가장 높은 적**
 function _stkPickFoe(u, foe, sk){
   const R=_stkSkRange(u, sk), R2=R*R; let best=null, bv=-1;
@@ -851,6 +885,7 @@ function _stkApplyAlly(u, t, sk, key, dt){
     t.hp=Math.min(t.maxHp||t.hp, (t.hp||0)+sk.hps*dt);
     { const _dr=strikeSkillDrain(sk); if(_dr) u.en=Math.max(0,(u.en||0)-_dr*dt); }
     return true; }
+  if(key==='restoration') return strikeCleanse(t);   // ✨ 정화 — 걸린 디버프를 지운다
   if(sk.absorb){ if((t.sh||0)>0) return false;       // 🛡 보호막 — 실드로 얹는다(strikeHit 이 실드를 먼저 깎는다)
     t.sh=sk.absorb; t.maxSh=Math.max(t.maxSh||0, sk.absorb); return true; }
   // 🔋 쉴드 충전 — 🏕 **캠프에서는 체력 회복**이다(HUNT_R1 §3-4-4).
@@ -865,6 +900,21 @@ function _stkApplyAlly(u, t, sk, key, dt){
     if((u.en||0)>=(u.maxEn||0)*0.6) return false;    //   마나가 넉넉하면 아군을 죽이지 않는다
     t.dead=true; u.en=Math.min(u.maxEn||0,(u.en||0)+(sk.gain||50)); return true; }
   return false; }
+// 🧠 적 하나를 내 편으로 옮긴다 — 정신 지배의 실제 동작.
+//   ⚠ **배열을 옮기는 것이 전부가 아니다.** `side` 와 표적(`tgtUid`)을 함께 갈아야
+//     옛 진영을 계속 때린다. `_post` 가 없으면 자리 복귀가 캠프 어딘가로 끌고 간다.
+function strikeMindControl(t, by){
+  const S=STK; if(!S||!S.me||!S.ai) return false;
+  const from = (t.side==='me') ? S.me : S.ai, to = (t.side==='me') ? S.ai : S.me;
+  const i = from.units.indexOf(t); if(i<0) return false;
+  from.units.splice(i,1);
+  t.side = (to===S.me) ? 'me' : 'ai';
+  t.tgtUid = null; t._btgt = null; t._btT = 0;      // 표적은 새로 고른다(옛 편을 계속 때리지 않게)
+  t._mc = true;                                     // 🧠 소환수 표식 — 죽으면 부활하지 않는다
+  t._post = { x:t.x, y:t.y };                       // 🪧 자리 — 없으면 복귀가 엉뚱한 곳으로 끈다
+  t.wait = 0; t.rallied = true;
+  to.units.push(t);
+  void by; return true; }
 function _stkApplyFoe(u, t, sk, key){
   if(STK_SK_DEAD[key]) return false;
   if(key==='broodling'){ t.hp=0; t.sh=0; t.dead=true; return true; }        // 🐛 즉사(스웜링 2기 소환은 미구현)
@@ -872,6 +922,13 @@ function _stkApplyFoe(u, t, sk, key){
     t.en=0; strikeHit(t, en, u); if(t.hp<=0) t.dead=true; return true; }
   if(key==='lockdown'){ if((t.stunT||0)>0) return false;                   // ⛔ 봉쇄 — 이미 멎은 적에 겹치지 않는다
     t.stunT=sk.dur||5; return true; }
+  // 🧠 **정신 지배** — 적을 뺏어 **소환수처럼** 쓴다(사용자 확정 2026-08-28).
+  //   ⭐ 능력치는 **적일 때 그대로** 가져온다 — 설계 능력치를 다시 씌우지 않는다.
+  //   ⭐ **죽으면 즉시 사라진다** — 부활 대기(`_down`)에 안 들어간다. 표식이 `u._mc` 다.
+  //   ⛔ 계속 남겨 두지 말 것 — 인구·부활·정산에 전부 얽혀 문제가 된다.
+  //   ⚠ 캠프 밖에서는 뺏지 않는다(오토배틀 균형을 건드리지 않는다).
+  if(key==='mind_control'){ if(!_stkCampSk() || !t || t._mc) return false;
+    return strikeMindControl(t, u); }
   if(sk.dps){ _stkDotAdd(STK, {tgt:t, dps:sk.dps, left:sk.dur||1, src:u}); return true; }   // ☢ 방사능
   if(sk.dmg){ strikeHit(t, sk.dmg, u); if(t.hp<=0) t.dead=true; return true; }               // 💥 집중포
   return false; }

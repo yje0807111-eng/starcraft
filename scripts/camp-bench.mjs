@@ -17,6 +17,10 @@ const MINS=+(process.argv[2]||10), DG0=+(process.argv[3]||1);
 // 🧭 구매 정책 — HUNT_R1 §6-7-0 의 세 갈래를 그대로 옵션으로 둔다(대조용)
 //   A 살 수 있는 것 중 ROI 1위   B 인구가 막히면 보급소만 모은다   C ROI 1위가 비싸면 모은다
 const POL=(process.argv[4]||'A').toUpperCase();
+// 🔮 **스킬을 끄고 재는 모드** — `SKILLS_OFF=1` (2026-08-28).
+//   ⭐ 스킬이 밸런스에 얼마나 기여하는지는 **껐다 켠 두 판을 비교해야** 알 수 있다 —
+//     한 판만 보면 그 사이 들어온 다른 변경과 구분이 안 된다(실제로 그래서 못 갈랐다).
+const NOSK=!!process.env.SKILLS_OFF;
 // ⛽ 정제소 레벨 상한(비교 실험용 · 2026-08-29) — 「연구 무한 누적」이 시간 지수 축이 되는지
 //   상한 유/무로 갈라 재기 위한 것. 0 = 상한 없음(지금 게임 그대로).
 const REFCAP=+(process.argv[5]||0);
@@ -57,6 +61,16 @@ const GIFT_S=+(process.env.GIFT_S||0), GIFT_AT=+(process.env.GIFT_AT||10);
 //   처음부터 켜고 돌려 대조군과 견준다. 팩 배수는 **합산**이라 초반에 세고 후반에 묽어질 것으로
 //   보이는데, 그 어긋남이 얼마인지를 재려는 것이다.
 const PACKS=(process.env.PACK||"").split(",").map(x=>x.trim()).filter(Boolean);
+// 💠 룬 실측(2026-09-02) — RUNES=all|eco|war|speed|round 또는 `gain:high,speed:uniq` 목록.
+//   ⭐ 칸은 **최대 도달 라운드**가 여는데 벤치는 새 판에서 시작하니 한 칸뿐이다 —
+//     그래서 룬을 켜는 순간 `C.best` 를 D10R50 으로 세워 **칸을 전부 연다**.
+//     ⚠ 그러므로 이 실측이 답하는 것은 「지금 열린 칸으로 얼마나 세지나」가 아니라
+//       **「다 갖춘 사람이 얼마나 세지나」**(천장)다. 둘을 헷갈리지 말 것.
+const RUNES=(process.env.RUNES||"").trim();
+// 🌳 환생 트리 실측(2026-09-02) — TREE=mine:5,prod:5 처럼 **계열:차수** 목록.
+//   ⚠ 트리는 자루(C.rbTree)가 전부다. 포인트를 쓰지 않고 **직접 심는다** — 여기서 재려는 것은
+//     「그 계열이 수치를 얼마나 움직이나」이지 「그걸 살 수 있나」가 아니다.
+const TREE=(process.env.TREE||"").trim();
 // 🧭 배치 모드(2026-08-30) — RALLY=none|wide|bunker · RALLYW=가로 폭(전장 비율)
 const RALLY=process.env.RALLY||"none";
 const RALLYW=+(process.env.RALLYW||0.40);
@@ -81,7 +95,9 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk)=>{
+  // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
+  if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
@@ -89,12 +105,57 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
   window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE);
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
            mul:(typeof campGatherMul==="function")?campGatherMul():null }; }, PACKS);
   console.log("💳 팩 "+got.on.join(",")+" · 합산 보너스 +"+got.gather+" · 지금 채취배수 "+(got.mul||0).toFixed(2)); }
+if(RUNES){ const got=await pg.evaluate(spec=>{
+  if(typeof campRuneState!=="function") return { err:"룬 시스템이 없다" };
+  const C=campState();
+  C.best={10:50};                                  // 💠 칸을 전부 연다(천장을 잰다)
+  C.rune={}; const R=campRuneState();
+  const PRE={
+    // ⚠ 유니크는 넷인데 칸이 셋이다. 열기(fever)는 피버타임이 아직 없어 **아무 일도 안 한다** —
+    //   그래서 'all' 은 캠프에 실제로 닿는 셋(가속·질주·전리품)을 든다.
+    all:   ["gain:high","tap:high","wspd:high","atk:high","hp:high","speed:uniq","round:uniq","mapg:uniq"],
+    eco:   ["gain:high","tap:high","gas:high","wspd:high","pop:high"],
+    war:   ["atk:high","hp:high","aspd:high","heal:high","gain:high"],
+    speed: ["speed:uniq"],
+    round: ["round:uniq"] };
+  const list=PRE[spec] || spec.split(",").map(x=>x.trim()).filter(Boolean);
+  const on=[];
+  for(const it of list){ const a=it.split(":"), id=a[0], gd=a[1]||"high";
+    const k=runeKey(id,gd); const d=runeParse(k).def; if(!d) continue;
+    R.own[k]=(R.own[k]|0)+1;
+    const kind=(d.kind==="uniq")?"uniq":"norm", n=campRuneSlots(kind);
+    for(let i=0;i<n;i++){ if(!R[kind][i] && campRuneEquip(kind,i,k)){ on.push(k); break; } } }
+  if(typeof campRuneTouch==="function") campRuneTouch();
+  saveMeta();
+  const eff={}; for(const e of ["gain","tap","gas","wspd","pop","atk","hp","aspd","heal","speed","round","mapGain"]){
+    const v=campRuneEff(e); if(v) eff[e]=+(v*100).toFixed(0)+"%"; }
+  return { on, eff, norm:campRuneSlots("norm"), uniq:campRuneSlots("uniq") }; }, RUNES);
+  if(got.err) console.log("💠 룬: "+got.err);
+  else console.log("💠 룬 "+got.on.length+"개 장착(칸 "+got.norm+"+"+got.uniq+") — "
+    + Object.keys(got.eff).map(k=>k+" "+got.eff[k]).join(" · ")); }
+if(TREE){ const got=await pg.evaluate(spec=>{
+  const C=campState(); if(!C) return { err:"캠프 상태가 없다" };
+  C.rbTree={ root:1, _m2:1 };
+  const on=[];
+  for(const it of spec.split(",")){ const a=it.trim().split(":"); const k=a[0], n=+(a[1]||1);
+    const L=campRtLine(k); if(!L){ on.push(k+"(없는 계열)"); continue; }
+    C.rbTree[k]=Math.min(n, campRtMax(k));
+    // 마디도 켠다 — 안 그러면 화면에서 안 보이고, 마디에 능력이 붙는 날 값이 어긋난다
+    if(typeof campRtIsChain==="function" && !campRtIsChain(L.br)){
+      C.rbTree[CAMP_RT_BR_KEY(L.br)]=1; C.rbTree[CAMP_RT_GP_KEY(L.br,L.grp)]=1; }
+    on.push(k+" "+C.rbTree[k]+"차"); }
+  saveMeta();
+  return { on, mine:campRtMul("mine"), gather:campRtMul("gather"), prod:campRtMul("prod"),
+           mineMul:(typeof campMineMul==="function")?campMineMul():null }; }, TREE);
+  if(got.err) console.log("🌳 트리: "+got.err);
+  else console.log("🌳 트리 "+got.on.join(" · ")+" — 광산×"+got.mine+" 채취×"+got.gather
+    +" 생산×"+got.prod+" · campMineMul "+(got.mineMul||0).toFixed(2)); }
 await pg.waitForFunction(
   "typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech "
   // ⚠ 본부만 확인한다 — **시작 일꾼은 0기**다(HUNT_R1 §1). ents>=2 로 기다리면 영영 안 온다.
@@ -416,7 +477,13 @@ await pg.evaluate(()=>{
       if(__CB.hoard && campUpgLv('gather') >= __CB.hoard) return;
       const c0=G.tech.credit||0; oB(); __CB.spentE=(__CB.spentE||0)+Math.max(0,c0-(G.tech.credit||0)); }; }
   __CB.tick=function(sec){
-    const dt=0.05, n=Math.round(sec/dt);
+    // ⏱ **실제 시간과 게임 시간을 가른다**(2026-09-02 · 💠 가속의 룬).
+    //   ⭐ 화면에서는 campFrame 이 rAF 로 **같은 횟수** 돌면서 dt 만 늘린다 —
+    //     즉 「같은 벽시계 시간에 게임이 더 나아간다」. 벤치도 그 모양이어야 한다.
+    //   ⛔ 프레임 수를 늘리는 것으로 흉내내지 말 것 — 그건 「더 오래 논 것」이라 딴 실험이 된다.
+    //   ⚠ 그래서 __CB.t / roundT / fightT 는 **RT(실제 시간)** 로 센다. 플레이어가 앉아 있는 시간이다.
+    const RT=0.05, spd=(typeof campDtMul==='function')?campDtMul():1;
+    const dt=RT*spd, n=Math.round(sec/RT);
     for(let i=0;i<n;i++){
       if(typeof renderBuildTab==='function'){ try{ renderBuildTab(dt); }catch(e){} }
       campApplyGatherMul();
@@ -428,7 +495,7 @@ await pg.evaluate(()=>{
       if(typeof campSyncSupply==='function') campSyncSupply();
       if(typeof campSyncUnitCost==='function') campSyncUnitCost();
       campCombatStep(dt);
-      __CB.t+=dt; __CB.roundT+=dt;
+      __CB.t+=RT; __CB.roundT+=RT;
       // ⏱ **전투 시간과 대기 시간을 갈라 잰다** (2026-08-31).
       //   ⛔ 예전 실효(eff)는 분모가 roundT(벽시계)라 **전투가 아닌 시간이 통째로** 들어갔다:
       //     라운드 텀 4초 + 적이 화면 밖(y 0.18)에서 걸어 내려오는 시간이 **웨이브마다 한 번씩**.
@@ -438,8 +505,8 @@ await pg.evaluate(()=>{
       //   ⚠ roundT 는 지우지 않는다 — 「한 라운드에 실제로 몇 초 걸리나」는 플레이어 체감이다.
       //     두 값을 나란히 찍어야 「싸우느라」인지 「기다리느라」인지 갈린다.
       { const _foe=(typeof campAlive==='function')?campAlive('ai'):0;
-        if(_foe>0) __CB.fightT=(__CB.fightT||0)+dt;
-        else       __CB.idleT =(__CB.idleT ||0)+dt; }
+        if(_foe>0) __CB.fightT=(__CB.fightT||0)+RT;
+        else       __CB.idleT =(__CB.idleT ||0)+RT; }
       // 🧱 벽 판정 — 지금 라운드가 얼마나 오래 안 넘어가는가(라운드가 바뀌면 roundT 가 0 이 된다)
       if(campDgN()>0 && !__CB.wall){
         if(__CB.roundT>__CB.wallStop){

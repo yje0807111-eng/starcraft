@@ -1017,7 +1017,7 @@ const SKILLS={
   hallucination:{ key:'hallucination', name:'환영', kind:'target_unit', energy:0, enSc:100, cd:10, count:2, arm:'👥 환영: 환영을 만들 아군을 클릭하세요.' },   // 하이세이지 — 대상 환영 2기
   feedback:{ key:'feedback', name:'마나 소각', kind:'target_enemy', energy:0, enSc:50, cd:8, arm:'💥 마나 소각: 마나를 태울 대상을 클릭하세요.' },   // 다크보이드 — 대상 마나 소각+피해
   maelstrom:{ key:'maelstrom', name:'마비 폭풍', kind:'target_ground', energy:0, enSc:100, cd:60, dur:5, radius:0.1, arm:'🌀 마비 폭풍: 지점을 클릭하세요.' },   // 다크보이드 — 범위 마비
-  mind_control:{ key:'mind_control', name:'정신 지배', kind:'target_enemy', energy:0, enSc:150, cd:15, arm:'🧠 정신 지배: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
+  mind_control:{ key:'mind_control', name:'정신 지배', kind:'target_enemy', energy:0, enSc:150, cd:120, arm:'🧠 정신 지배: 장악할 대상을 클릭하세요.' },   // 다크보이드 — 장악(자신 쉴드 0)
   disruption_web:{ key:'disruption_web', name:'교란 결계', kind:'target_ground', energy:0, enSc:125, cd:20, dur:3, radius:0.11, arm:'🕸️ 교란 결계: 지점을 클릭하세요.' },   // 팔콘 — 지상 결계
   stasis:{ key:'stasis', name:'빙결', kind:'target_ground', energy:0, enSc:100, cd:30, dur:3, radius:0.1, arm:'🧊 빙결: 지점을 클릭하세요.' },   // 크로노스 — 범위 정지+무적
   recall:{ key:'recall', name:'순간이동', kind:'target_ground', energy:0, enSc:150, cd:12, radius:0.18, arm:'↩️ 순간이동: 소환할 지점을 클릭하세요.' },   // 크로노스 — 근처 아군 순간이동
@@ -1029,7 +1029,7 @@ const SKILLS={
   // ── 🛡 유니온(테란) 마법 — 이지스(사이언스 베슬)·메딕 ──
   irradiate:{ key:'irradiate', name:'방사능', kind:'target_enemy', energy:0, enSc:75, cd:8, dur:8, dps:30, arm:'☢ 방사능: 씌울 적을 클릭하세요.' },   // 대상 지속 피해(생체)
   defensive_matrix:{ key:'defensive_matrix', name:'보호막', kind:'target_unit', energy:0, enSc:100, cd:6, absorb:250, arm:'🛡 보호막: 보호할 아군을 클릭하세요.' },   // 아군에 250 흡수 보호막
-  restoration:{ key:'restoration', name:'정화', kind:'target_unit', energy:0, enSc:50, cd:4, arm:'✳ 정화: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
+  restoration:{ key:'restoration', name:'정화', kind:'target_unit', energy:0, enSc:50, cd:5, arm:'✳ 정화: 해로운 효과를 치료할 아군을 클릭하세요.' },   // 아군 디버프 해제
   optical_flare:{ key:'optical_flare', name:'섬광탄', kind:'target_enemy', energy:0, enSc:75, cd:6, dur:20, arm:'👁 섬광탄: 실명시킬 적을 클릭하세요.' },   // 적 시야 축소+디텍터 무력화
   // ── 🏢 건물 스킬 ──
   scan:{ key:'scan', name:'스캐너 스윕', kind:'target_ground', energy:0, enSc:50, cd:1, radius:0.15, dur:5, arm:'📡 스캐너 스윕: 밝힐 지점을 클릭하세요.', bldg:1 },   // 컴셋 = 지점 시야+탐지(일시)

@@ -1,0 +1,234 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 판 배치 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ko:'IBM Plex Sans KR',sans-serif; --font-num:'Rajdhani',sans-serif;
+  --low:#8b95a5; --mid:#5cd6ff; --high:#ffcf6b; --uniq:#c98bff;
+  --gold:#ffd24a; --ink:#0a0d12;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:26px;padding:26px;justify-content:center;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 8px;font-weight:700;font-size:13px;letter-spacing:.02em}
+.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 9px;color:#8d97a6;font-size:11px;line-height:1.6}
+.pane{position:relative;width:390px;height:695px;overflow:hidden;background:
+   radial-gradient(120% 90% at 50% 8%,#1b2029 0%,#0e1116 62%,#080a0e 100%)}
+.pane::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(70% 50% at 50% 45%,rgba(120,150,200,.05),transparent 70%)}
+svg{position:absolute;inset:0;width:100%;height:100%}
+/* 머리 */
+.hd{position:absolute;left:0;right:0;top:0;height:52px;display:flex;align-items:center;
+  gap:9px;padding:0 14px;z-index:3}
+.hd .t{font-weight:700;font-size:16px;letter-spacing:.12em;color:#eef1f6}
+.hd .n{margin-left:auto;font-family:var(--font-num);font-size:13px;color:#8d97a6}
+.hd .n b{color:var(--gold);font-weight:700}
+/* 아래 안내 */
+.ft{position:absolute;left:0;right:0;bottom:0;height:46px;display:flex;align-items:center;
+  justify-content:center;color:#69737f;font-size:11px;z-index:3}
+/* 육각 공통 */
+.hx{stroke-width:1.2}
+.hx.em{fill:rgba(150,175,205,.045);stroke:rgba(160,185,215,.20)}
+.hx.lk{fill:rgba(120,140,165,.025);stroke:rgba(140,160,185,.09)}
+.lkT{fill:#4d5763;font-family:var(--font-num);font-size:9px;text-anchor:middle}
+.pl{fill:rgba(180,205,235,.34);font-size:13px;text-anchor:middle;font-family:var(--font-num)}
+.nm{fill:#c3ccd8;font-size:8.5px;text-anchor:middle}
+.vl{fill:#eef2f8;font-family:var(--font-num);font-size:9.5px;text-anchor:middle;font-weight:700}
+.link{stroke:rgba(170,195,225,.14);stroke-width:1;fill:none}
+.link.on{stroke:rgba(180,210,245,.30)}
+.uq{font-size:10px;text-anchor:middle;font-weight:700}
+</style></head><body>
+<div class="wrap" id="wrap"></div>
+<script>
+/* ── 데이터 — 실제 표(js/22-camp-rune.js)에서 옮긴 것 ───────────────── */
+const GD = { low:{tx:'하급',c:'#8b95a5'}, mid:{tx:'중급',c:'#5cd6ff'},
+             high:{tx:'상급',c:'#ffcf6b'}, uniq:{tx:'유니크',c:'#c98bff'} };
+const VAL = { low:1, mid:2.5, high:5 };
+const NORM = ['재화','손끝','정제','신속','증원','힘','연타','수호','치유'];
+const UNIQ = ['가속','질주','전리품'];
+const N_SLOT = 24, U_SLOT = 3;
+/* 지금 상태 가정 — 일반 24칸 중 13칸 열림 · 8칸 장착 / 유니크 3칸 중 2칸 열림 · 1칸 장착 */
+const OPEN_N = 13, OPEN_U = 2;
+const EQ = { 0:['재화','high'], 1:['손끝','high'], 3:['증원','mid'], 4:['힘','mid'],
+             6:['치유','low'], 7:['재화','mid'], 9:['수호','low'], 11:['연타','low'] };
+const EQU = { 0:['가속','uniq'] };
+const LOCK_R = i => 30 + i * 22;                 // 잠긴 칸에 적는 라운드(보이기용)
+
+/* ── 육각 ─────────────────────────────────────────────────────────────
+   ⚠ 뾰족한 쪽이 위(pointy-top). 벌집으로 붙일 때 세로 간격이 예뻐진다. */
+function hexPts(x, y, r){
+  let p = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    p.push((x + r * Math.cos(a)).toFixed(1) + ',' + (y + r * Math.sin(a)).toFixed(1)); }
+  return p.join(' '); }
+
+function slot(x, y, r, st){
+  // st = {kind:'norm'|'uniq', open, eq:[이름,등급]}
+  const g = [];
+  if(!st.open){
+    g.push('<polygon class="hx lk" points="' + hexPts(x, y, r) + '"/>');
+    g.push('<text class="lkT" x="' + x + '" y="' + (y + 3) + '">R' + st.at + '</text>');
+    return g.join(''); }
+  if(!st.eq){
+    g.push('<polygon class="hx em" points="' + hexPts(x, y, r) + '"/>');
+    g.push('<text class="pl" x="' + x + '" y="' + (y + 4.5) + '">+</text>');
+    return g.join(''); }
+  const c = GD[st.eq[1]].c, uq = st.eq[1] === 'uniq';
+  g.push('<polygon points="' + hexPts(x, y, r) + '" fill="' + c + '" fill-opacity="' + (uq ? .17 : .12) +
+    '" stroke="' + c + '" stroke-opacity="' + (uq ? .85 : .62) + '" stroke-width="' + (uq ? 1.8 : 1.3) + '"/>');
+  if(uq) g.push('<polygon points="' + hexPts(x, y, r - 5) + '" fill="none" stroke="' + c +
+    '" stroke-opacity=".30" stroke-width="1"/>');
+  const big = r > 26;
+  g.push('<text class="' + (uq ? 'uq' : 'nm') + '" x="' + x + '" y="' + (y - (big ? 4 : 2)) +
+    '" fill="' + (uq ? c : '#c3ccd8') + '" style="font-size:' + (big ? 10 : 8.5) + 'px">' + st.eq[0] + '</text>');
+  if(!uq) g.push('<text class="vl" x="' + x + '" y="' + (y + 9) + '" fill="' + c + '">+' + VAL[st.eq[1]] + '%</text>');
+  else g.push('<text class="vl" x="' + x + '" y="' + (y + 11) + '" fill="' + c + '">+2.5%</text>');
+  return g.join(''); }
+
+/* 일반 i번 칸의 상태 */
+const nSt = i => ({ kind:'norm', open:i < OPEN_N, eq:EQ[i] || null, at:LOCK_R(i) });
+const uSt = i => ({ kind:'uniq', open:i < OPEN_U, eq:EQU[i] || null, at:[120,260,400][i] });
+
+/* ── 배치 8안 ─────────────────────────────────────────────────────── */
+const W = 390, H = 695, CX = W / 2, CY = 350;   // 머리 52 · 발 46 을 뺀 가운데
+
+/* ① 벌집 대륙 — 빈틈없이 붙은 한 덩어리. 유니크는 큰 육각으로 박혀 있다 */
+function a1(){
+  const r = 27, dx = r * Math.sqrt(3), dy = r * 1.5, s = [];
+  const rows = [4,5,6,5,4];                       // 24칸
+  const uq = [[CX, CY - 232], [CX - 116, CY + 232], [CX + 116, CY + 232]];
+  let i = 0, y = CY - 128;
+  rows.forEach((n, ri) => {
+    const x0 = CX - (n - 1) * dx / 2;
+    for(let c = 0; c < n; c++) s.push(slot(x0 + c * dx, y + ri * dy, r, nSt(i++)));
+  });
+  uq.forEach((p, k) => s.push(slot(p[0], p[1], 40, uSt(k))));
+  return s.join(''); }
+
+/* ② 세 성좌 — 유니크가 중심, 작은 칸이 고리로 둘러싼다 */
+function a2(){
+  const s = [], cs = [[CX, CY - 208], [CX - 104, CY + 62], [CX + 104, CY + 228]];
+  let i = 0;
+  cs.forEach((c, k) => {
+    const n = [8,8,8][k];
+    for(let j = 0; j < n; j++){ const a = -Math.PI / 2 + j / n * Math.PI * 2;
+      const x = c[0] + Math.cos(a) * 74, y = c[1] + Math.sin(a) * 74;
+      s.push('<line class="link' + (i < OPEN_N ? ' on' : '') + '" x1="' + c[0] + '" y1="' + c[1] +
+        '" x2="' + x + '" y2="' + y + '"/>');
+      s.push(slot(x, y, 22, nSt(i++))); } });
+  cs.forEach((c, k) => s.push(slot(c[0], c[1], 36, uSt(k))));
+  return s.join(''); }
+
+/* ③ 회로 기판 — 격자 + 직교 선로. 각진 SF 톤 */
+function a3(){
+  const s = [], r = 23, gx = 66, gy = 80;
+  const cols = 4, rows = 6, x0 = CX - (cols - 1) * gx / 2, y0 = CY - 218;
+  let i = 0;
+  for(let ry = 0; ry < rows; ry++) for(let cx = 0; cx < cols; cx++){
+    const x = x0 + cx * gx, y = y0 + ry * gy;
+    if(cx < cols - 1) s.push('<line class="link" x1="' + (x + r) + '" y1="' + y + '" x2="' + (x + gx - r) + '" y2="' + y + '"/>');
+    if(ry < rows - 1) s.push('<line class="link" x1="' + x + '" y1="' + (y + r) + '" x2="' + x + '" y2="' + (y + gy - r) + '"/>');
+    s.push(slot(x, y, r, nSt(i++))); }
+  [[CX - 152, CY - 276], [CX + 152, CY + 4], [CX - 152, CY + 268]].forEach((p, k) =>
+    s.push(slot(p[0], p[1], 34, uSt(k))));
+  return s.join(''); }
+
+/* ④ 갈라진 세 대륙 — 무리마다 유니크 하나 */
+function a4(){
+  const s = [], r = 23;
+  const grp = [{ c:[CX - 80, CY - 222], n:8 }, { c:[CX + 84, CY + 4], n:8 }, { c:[CX - 72, CY + 230], n:8 }];
+  let i = 0;
+  grp.forEach((G, k) => {
+    const dx = r * Math.sqrt(3), dy = r * 1.5, rows = [3,3,2];
+    let y = G.c[1] - 34;
+    rows.forEach((n, ri) => { const x0 = G.c[0] - (n - 1) * dx / 2;
+      for(let c = 0; c < n; c++) s.push(slot(x0 + c * dx, y + ri * dy, r, nSt(i++))); });
+    s.push(slot(G.c[0] + (k === 1 ? -104 : 104), G.c[1] + 8, 33, uSt(k))); });
+  return s.join(''); }
+
+/* ⑤ 사슬 확장 — 가운데에서 밖으로. 자리가 곧 해금 순서다(환생 트리와 같은 문법) */
+function a5(){
+  const s = [], rings = [{ n:6, R:86, r:22 }, { n:8, R:166, r:21 }, { n:10, R:246, r:20 }];
+  let i = 0;
+  rings.forEach((G, gi) => { for(let j = 0; j < G.n; j++){
+    const a = -Math.PI / 2 + j / G.n * Math.PI * 2 + gi * .22;
+    const x = CX + Math.cos(a) * G.R * .62, y = CY + Math.sin(a) * G.R;
+    if(gi) { const pa = -Math.PI / 2 + Math.round(j * rings[gi-1].n / G.n) / rings[gi-1].n * Math.PI * 2 + (gi-1) * .22;
+      s.push('<line class="link" x1="' + (CX + Math.cos(pa) * rings[gi-1].R * .62).toFixed(1) + '" y1="' +
+        (CY + Math.sin(pa) * rings[gi-1].R).toFixed(1) + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '"/>'); }
+    s.push(slot(x, y, G.r, nSt(i++))); } });
+  const up = [[CX + 152, CY - 214], [CX - 152, CY - 62], [CX + 152, CY + 158]];
+  up.forEach((p, k) => s.push(slot(p[0], p[1], 34, uSt(k))));
+  return s.join(''); }
+
+/* ⑥ 층계 — 위에서 아래로 세 단, 단마다 유니크 하나 */
+function a6(){
+  const s = [], r = 23, dx = 54;
+  const tiers = [{ y:CY - 200, n:8 }, { y:CY - 10, n:8 }, { y:CY + 180, n:8 }];
+  let i = 0;
+  tiers.forEach((T, k) => {
+    const per = 4, y0 = T.y;
+    for(let j = 0; j < T.n; j++){ const rr = Math.floor(j / per), cc = j % per;
+      s.push(slot(CX - 78 + cc * dx + (rr ? 27 : 0), y0 + rr * 42, r, nSt(i++))); }
+    s.push(slot(CX + 140, T.y + 20, 32, uSt(k))); });
+  return s.join(''); }
+
+/* ⑦ 흩뿌린 성운 — 자유 배치 + 얇은 연결선(참조에 가장 가깝다) */
+function a7(){
+  const s = [], r = 22;
+  const seed = x => { let h = 2166136261; const t = 'r' + x;
+    for(let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 1000) / 1000; };
+  const cl = [[CX - 96, CY - 216], [CX + 98, CY - 128], [CX - 44, CY + 34], [CX + 90, CY + 196], [CX - 112, CY + 224]];
+  let i = 0;
+  cl.forEach((c, k) => { const n = [5,5,5,5,4][k];
+    for(let j = 0; j < n; j++){
+      const a = seed(k * 10 + j) * Math.PI * 2, R = 26 + seed(k * 10 + j + 99) * 42;
+      const x = c[0] + Math.cos(a) * R, y = c[1] + Math.sin(a) * R;
+      if(j) s.push('<line class="link" x1="' + c[0] + '" y1="' + c[1] + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '"/>');
+      s.push(slot(x, y, r, nSt(i++))); } });
+  [[CX + 26, CY - 282], [CX - 138, CY - 44], [CX + 148, CY + 62]].forEach((p, k) =>
+    s.push(slot(p[0], p[1], 35, uSt(k))));
+  return s.join(''); }
+
+/* ⑧ 방사 대칭 — 가운데 유니크 하나, 좌우에 둘. 좌우가 거울이다 */
+function a8(){
+  const s = [], r = 22;
+  let i = 0;
+  const put = (x, y) => s.push(slot(x, y, r, nSt(i++)));
+  const col = (x, ys) => ys.forEach(y => put(x, y));
+  col(CX - 118, [CY - 190, CY - 122, CY - 54, CY + 14]);
+  col(CX - 58,  [CY - 156, CY - 88, CY - 20, CY + 48]);
+  col(CX + 58,  [CY - 156, CY - 88, CY - 20, CY + 48]);
+  col(CX + 118, [CY - 190, CY - 122, CY - 54, CY + 14]);
+  col(CX - 88,  [CY + 120, CY + 188]);
+  col(CX,       [CY + 152, CY + 220]);
+  col(CX + 88,  [CY + 120, CY + 188]);
+  col(CX - 30,  [CY + 88]);
+  col(CX + 30,  [CY + 88]);
+  s.push(slot(CX, CY - 258, 38, uSt(0)));
+  s.push(slot(CX - 152, CY + 78, 32, uSt(1)));
+  s.push(slot(CX + 152, CY + 78, 32, uSt(2)));
+  return s.join(''); }
+
+const ANS = [
+  ['벌집 대륙', '육각을 빈틈없이 붙여 한 덩어리로. 유니크 셋이 큰 육각으로 <b>바깥에</b> 박힌다. 판이 가장 꽉 차 보이지만, 칸이 균일해 「어디부터 열리는지」가 안 읽힌다.', a1],
+  ['세 성좌', '유니크가 <b>중심</b>이고 작은 칸이 고리로 둘러싼다. 유니크가 셋인 이유가 그림으로 설명된다. 다만 칸 위치에 성격이 없는데 무리는 지어 보인다.', a2],
+  ['회로 기판', '격자 + 직교 선로. 각진 SF 톤과 가장 잘 맞고 정렬이 깔끔하다. 대신 「지도」라기보다 <b>표</b>에 가까워 지금 화면과 크게 다르지 않을 수 있다.', a3],
+  ['갈라진 세 대륙', '무리 셋으로 갈라 각각에 유니크 하나. 성좌안보다 판이 넓게 쓰이고, 나중에 <b>구역별 성격</b>을 주고 싶어지면 자리는 이미 나뉘어 있다.', a4],
+  ['사슬 확장', '가운데에서 바깥으로 — <b>자리가 곧 해금 순서</b>다. 환생 트리와 같은 문법이라 배우는 비용이 없다. 대신 두 화면이 비슷해 보인다.', a5],
+  ['층계', '위에서 아래로 세 단, 단마다 유니크 하나. 「어디까지 왔나」가 한눈에 보인다. 판을 세로로 길게 쓰므로 폰 화면과 잘 맞는다.', a6],
+  ['흩뿌린 성운', '무리 지어 흩어진 자유 배치 — <b>참조 이미지에 가장 가깝다</b>. 손으로 그린 판 같은 맛이 있지만, 규칙이 없어 「왜 저기 있나」를 설명할 수 없다.', a7],
+  ['방사 대칭', '좌우가 거울이고 유니크가 위·좌·우 셋. 정돈돼 보이고 어느 칸이 유니크인지 즉시 읽힌다. 대신 대칭이라 <b>성장의 방향</b>이 안 느껴진다.', a8],
+];
+
+document.getElementById('wrap').innerHTML = ANS.map(([t, d, fn], i) =>
+  '<div class="cell"><p class="cap"><i>' + (i + 1) + '</i>' + t + '</p><p class="sub">' + d + '</p>' +
+  '<div class="pane"><div class="hd"><span class="t">룬</span>' +
+  '<span class="n">일반 <b>' + OPEN_N + '</b>/' + N_SLOT + ' · 유니크 <b>' + OPEN_U + '</b>/' + U_SLOT + '</span></div>' +
+  '<svg viewBox="0 0 390 695">' + fn() + '</svg>' +
+  '<div class="ft">빈 칸을 눌러 룬을 끼웁니다</div></div></div>').join('');
+</script></body></html>

@@ -875,6 +875,7 @@
   .curBar .hudSet{margin-left:1px;margin-right:-8px}   /* 오른쪽 끝에 거의 붙인다(.curBar padding 10px 상쇄) */
   .curTitle,
   #campTree .ctTitle,
+  #campRune .rnTitle,
   #campReb .crTitle{font-family:var(--font-ti);font-size:16px;color:#eef1f6;letter-spacing:.12em;
     text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.5);white-space:nowrap}
   .curTitle:empty{display:none}
@@ -1114,7 +1115,10 @@
   #phone.campPick .curBar{display:none}
   /* 인구 칸은 캠프에서만 — 다른 화면의 재화 바는 미네랄·가스·젬 셋 그대로다. */
   .curBar .curPop{display:none}
-  #phone.campMode .curBar .curPop{display:flex}   /* ⚠ 다른 칸(.curBar .res)이 flex 다 — 맞춘다 */
+  /* ⚠ 다른 칸(.curBar .res)이 flex 다 — 맞춘다.
+     🧍 캠프 밖에서도 보여 줄 화면은 POP_SCREENS(12-appshell.js)가 정한다 — 여기 목록을 또 두지 말 것. */
+  #phone.campMode .curBar .curPop,
+  #phone.popBar .curBar .curPop{display:flex}
   /* 🧹 건설 탭에서 딸려온 UI 는 전부 걷는다 — 캠프는 자기 UI 를 따로 갖는다.
      ⛔ DOM 을 지우지 말 것. 관리자 건설 탭·오토배틀이 같은 요소를 쓴다 —
         여기서는 **캠프일 때만** 숨긴다(#phone.campMode 특이도로 이긴다). */
@@ -2060,7 +2064,7 @@
 #campTree.on{display:block}   /* 🎬 페이드는 .crIn 이 갖는다(위 #campReb 옆 규칙) — 탭 이동은 즉시 */
 #campTree #ctSvg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
 #campTree .ctTop{position:absolute;left:0;right:0;top:0;z-index:2;
-  display:flex;flex-direction:column;gap:0;padding:12px 14px 10px;
+  display:flex;flex-direction:column;gap:0;padding:44px 14px 10px;   /* 위 44px = 재화 바 자리(--topPad + --curH) */
   background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,.62) 62%,rgba(6,9,13,0))}
 #campTree .ctTopRow{display:flex;align-items:baseline;gap:8px}
 /* 📊 해금 진행도 — 「얼마나 왔나」. 별이 181칸이라 숫자만으로는 감이 안 온다 */
@@ -2366,3 +2370,140 @@
 #campBar .cbFev.hide{display:none}
 @keyframes cbFevPulse{0%,100%{box-shadow:0 0 0 rgba(124,214,255,0)}
   50%{box-shadow:0 0 10px rgba(124,214,255,.45)}}
+/* ══ 💠 룬 구역 (2026-09-02) ═══════════════════════════════════════════════
+   규격은 환생 화면(#campReb)과 **같다** — #phone 직속 · z-index 120 ·
+   bottom:var(--navH) 로 하단 네비 자리를 비운다(네비를 켜 둔 채 연다).
+   ⛔ 환생 구역의 키 아트를 빌리지 않는다 — 여기는 제 배경(불투명)을 갖는다.
+   ⛔ animation-fill-mode 를 주지 말 것 — 탭이 백그라운드면 애니가 0 에 멈춰
+      화면이 통째로 안 보인다(환생 화면에서 이미 밟은 함정). */
+#campRune{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
+#campRune.on{display:block}
+#campRune.on.rnIn{animation:crFadeIn var(--t-screen) ease}
+/* 🖼 그림은 #campRebBg 한 장이다(환생·업그레이드·룬 공용) — 여기는 그 위에 얹는 어둠뿐.
+   ⛔ 룬만의 그림·색조를 여기 다시 넣지 말 것. 구역을 오갈 때 배경이 바뀌면 그때마다 번쩍인다. */
+#campRune .rnBg{position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(5,8,12,.20) 0%,rgba(5,8,12,.06) 24%,rgba(5,8,12,.62) 62%,rgba(5,8,12,.94) 100%)}
+#campRune .rnTop{position:absolute;left:0;right:0;top:0;z-index:3;
+  display:flex;align-items:baseline;gap:9px;padding:44px 14px 14px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,.62) 62%,rgba(6,9,13,0))}
+/* 진행 수치 — 제목과 **한 줄**이다(판 위에 또 한 줄을 띄우지 않는다) */
+#campRune .rnRound{margin-left:auto;font-size:11px;color:#8d97a6;letter-spacing:.04em}
+#campRune .rnRound b{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:13px;color:var(--gold);font-weight:700}
+/* 🏷 화면 이름은 **재화 바 왼쪽(#curTitle)** 이 맡는다(2026-09-03 사용자 확정 · 유즈맵 선택과 같은 자리).
+   ⛔ 화면 안에 제목을 다시 띄우지 말 것 — 같은 이름이 두 층에 뜬다.
+   ⚠ 요소는 남겨 둔다(공용 제목 규격 계약이 이 선택자를 잰다). */
+#campRune .rnTitle,#campTree .ctTitle,#campReb .crTitle{display:none}
+/* 장착 탭 = 판이 전체를 채운다 · 상점 탭(.shop)만 흐르는 목록이라 제목 아래에서 시작한다 */
+#campRune .rnBody{position:absolute;inset:0;z-index:1}
+#campRune .rnBody.shop{overflow-y:auto;padding:86px 12px 18px;
+  display:flex;flex-direction:column;gap:10px}
+
+/* 머리줄 — 왼쪽 이름 / 오른쪽 값. 상점 탭에서는 보유 젬을 같은 자리에 쓴다 */
+#campRune .rnHead{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);font-size:12px;color:#98a2b3}
+#campRune .rnHead b{color:#eef1f6;font-size:14px}
+
+#campRune .rnSec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);padding:8px}
+#campRune .rnSecH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+#campRune .rnSecT{font-size:12px;color:#c3ccd8;letter-spacing:.08em}
+#campRune .rnSecN{font-size:11px;color:#8b95a5}
+
+/* 칸 — 3열 격자. 잠긴 칸은 **왜 잠겼는지**(해금 라운드) 적는다 */
+/* 🌌 성좌 판 (2026-09-03 · 목업 ②안) — 유니크가 중심, 일반 8칸이 고리로 둘러싼다.
+   ⚠ 판은 SVG 한 장이다. 칸 크기·자리는 viewBox 안 좌표(22-camp-rune.js)가 정하고,
+     여기서는 **색과 굵기만** 정한다 — 두 곳에서 자리를 만지면 반드시 어긋난다. */
+#campRune .rnMap{position:absolute;inset:0}
+#campRune .rnMap svg{display:block;width:100%;height:100%}
+/* ⚠ 옛 .rnMapHd(판 위에 뜨던 머리줄)는 상단 제목 옆(.rnRound)으로 합쳤다(2026-09-03) */
+#campRune .rnMapHd b{font-family:var(--font-num);font-size:13px;color:var(--gold);font-weight:700}
+/* ⭐ 이중 테두리 — 낀 칸은 바깥에 얇은 겹을 하나 더 두른다(2026-09-03 · 목업 tri-6 ②안).
+   ⛔ 십자 반짝임·후광 원을 되살리지 말 것 — 환생 트리의 어휘라 룬 판에서는 시끄러웠다. */
+#campRune .rnHx{stroke-width:1.2}
+#campRune .rnHx.lk{fill:rgba(120,140,165,.018);stroke:rgba(140,160,185,.10);stroke-width:1}
+#campRune .rnHx.em{fill:rgba(150,175,205,.03);stroke:rgba(160,185,215,.18);stroke-width:1}
+#campRune .rnHx.on{fill:rgba(8,11,16,.9);
+  stroke:color-mix(in srgb,var(--rg) 72%,transparent);stroke-width:1.2}
+#campRune .rnHxOut{fill:none;stroke:color-mix(in srgb,var(--rg) 22%,transparent);stroke-width:1}
+#campRune .rnHxIn{fill:none;stroke:color-mix(in srgb,var(--rg) 28%,transparent);stroke-width:1}
+/* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
+#campRune .rnHxSel{fill:none;stroke:var(--acc-sel);stroke-width:1.1;opacity:.9}
+#campRune .rnLkT{fill:#49525d;font-family:var(--font-num);font-size:7.5px;text-anchor:middle}
+#campRune .rnPl{fill:rgba(175,200,232,.30);font-family:var(--font-num);font-size:12px;text-anchor:middle}
+#campRune .rnNm{fill:#c3ccd8;font-size:8px;text-anchor:middle}
+#campRune .rnNm.uq{font-size:9.5px;font-weight:700}
+/* 값 — 칸 **밖 아래**에 매달린다(이름을 가리지 않는다) */
+#campRune .rnVl{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:8px;text-anchor:middle;dominant-baseline:hanging}
+#campRune .rnLink{stroke:rgba(190,212,240,.07);stroke-width:.8;stroke-dasharray:2 3}
+#campRune .rnLink.on{stroke:rgba(190,212,240,.20);stroke-width:1;stroke-dasharray:none}
+#campRune .rnHit{fill:transparent;cursor:pointer}
+#campRune #rnG{will-change:transform}
+/* 🎒 상시 가방 — 위=판 / 아래=가방. 프로필 장비창(아바타/가방)과 같은 나눔이다.
+   ⛔ 칸을 눌러야 뜨는 임시 시트로 되돌리지 말 것(2026-09-03 사용자 확정). */
+#campRune .rnBag{position:absolute;left:0;right:0;bottom:0;z-index:2;
+  display:flex;flex-direction:column;gap:7px;padding:9px 12px 12px;
+  border-top:1px solid var(--metal-edge);
+  background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
+#campRune .rnBagH{display:flex;align-items:center;gap:8px;min-height:22px}
+#campRune .rnBagT{font-size:12px;color:#c3ccd8;letter-spacing:.04em}
+#campRune .rnBagN{margin-left:auto;font-size:10.5px;color:#69737f}
+#campRune .rnBagG{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  max-height:172px;overflow-y:auto;padding-bottom:2px}
+#campRune .rnB{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;min-height:56px;padding:5px 4px;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--rg) 45%,transparent);border-radius:var(--r-lg);
+  background:color-mix(in srgb,var(--rg) 8%,rgba(12,15,20,.7));color:#eef1f6;font:inherit}
+#campRune .rnB .ic{width:18px;height:18px}
+#campRune .rnBn{font-size:10px;color:#c3ccd8}
+#campRune .rnBv{font-family:var(--font-num);font-size:10px;font-weight:700;color:var(--rg)}
+#campRune .rnBc{position:absolute;right:4px;top:3px;font-family:var(--font-num);
+  font-size:10px;color:#eef1f6}
+#campRune .rnBc i{font-style:normal;color:#69737f}
+#campRune .rnB.full{opacity:.5}                    /* 남은 것이 없다 — 다 끼웠다 */
+#campRune .rnB.off{opacity:.28;pointer-events:none} /* 고른 칸에는 못 들어간다 */
+#campRune .rnEmp{grid-column:1/-1;padding:16px 8px;text-align:center;font-size:11px;color:#69737f}
+#campRune .rnSlots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#campRune .rnSlot{position:relative;min-height:62px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;padding:6px 4px;cursor:pointer;
+  border:1px solid var(--metal-edge);border-radius:var(--r-sm);
+  background:rgba(0,0,0,.3);color:#c3ccd8;font-family:inherit;font-size:11px}
+#campRune .rnSlot.em{color:#5b6472;font-size:20px}
+#campRune .rnSlot.lk{cursor:default;opacity:.55}
+#campRune .rnSlot.lk .rnLk{font-style:normal;font-size:14px}
+#campRune .rnSlot.lk .rnLkR{font-size:10px;color:#8b95a5}
+#campRune .rnSlot.on{border-color:color-mix(in srgb,var(--rg) 55%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.35))}
+#campRune .rnSlot.on .ic{width:18px;height:18px}
+#campRune .rnSlN{color:#eef1f6}
+#campRune .rnSlV{color:var(--rg);font-size:10px}
+#campRune .rnSlot.sel{outline:1px solid var(--acc-sel);outline-offset:-2px}
+#campRune .rnNext{margin-top:6px;font-size:11px;color:#8b95a5;text-align:center}
+#campRune .rnNext b{color:#c3ccd8}
+
+/* 고르기 판 — 칸 바로 아래에 펼쳐진다(새 팝업을 만들지 않는다) */
+#campRune .rnPick{border:1px solid var(--acc-sel);border-radius:var(--r-md);
+  background:rgba(10,14,20,.85);padding:8px;display:flex;flex-direction:column;gap:5px}
+#campRune .rnOff{margin-left:auto;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.05);color:#c3ccd8;font-family:inherit;font-size:11px;
+  padding:3px 10px;cursor:pointer}
+
+/* 룬 상점 — 룬 한 줄 + 등급 버튼들 */
+#campRune .rnItem{border-top:1px solid rgba(255,255,255,.06);padding:8px 0 6px}
+#campRune .rnItem:first-child{border-top:0}
+#campRune .rnIH{display:grid;grid-template-columns:20px auto 1fr auto;align-items:center;gap:6px}
+#campRune .rnIH .ic{width:16px;height:16px}
+#campRune .rnIN{font-size:13px;color:#eef1f6}
+#campRune .rnID{font-size:11px;color:#8b95a5}
+#campRune .rnIO{font-size:11px;color:#c3ccd8}
+#campRune .rnBuys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+#campRune .rnBuys:has(> :only-child){grid-template-columns:1fr}
+#campRune .rnBuy{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;
+  cursor:pointer;border:1px solid color-mix(in srgb,var(--rg) 38%,transparent);
+  border-radius:var(--r-sm);background:rgba(255,255,255,.04);
+  color:#c3ccd8;font-family:inherit;font-size:11px}
+#campRune .rnBuy:disabled{opacity:.42;cursor:default}
+#campRune .rnBuy b{color:var(--rg);font-weight:600}
+#campRune .rnBuy u{text-decoration:none;color:#c98bff;font-size:11px}

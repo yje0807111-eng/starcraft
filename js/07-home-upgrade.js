@@ -483,6 +483,16 @@ const NAV_TREE=[
     reset:()=>campRebEnter('info'), subs:[
       { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
       { k:'tree', label:'업그레이드', ico:'flag', act:()=>campRebEnter('tree') } ] },
+  // 💠 룬 — 환생과 유즈맵 사이(2026-09-02 사용자 확정: 연구·환생·**룬**·유즈맵·상점).
+  //   ⭐ 자리가 여기인 이유: 왼쪽 셋이 「내가 세지는 곳」이고 오른쪽 둘이 「밖으로 나가는 곳」이다.
+  //   하위 둘 — **장착**(칸에 끼우기)과 **룬 상점**(젬으로 사기).
+  //   ⚠ 상점 구역(#shopScreen)에 넣지 않았다 — 칸과 후보를 **한 화면에서** 봐야 바꿔 끼우는
+  //     판단이 되기 때문이다. 젬 상점은 재화만 판다.
+  { k:'rune', label:'룬', ico:'boost', go:()=>campRuneEnter('slot'),
+    cur:()=>(campRuneIsOn() ? _runeSec : null),
+    reset:()=>campRuneEnter('slot'), subs:[
+      { k:'slot', label:'장착',    ico:'upg',  act:()=>campRuneEnter('slot') },
+      { k:'shop', label:'룬 상점', ico:'gift', act:()=>campRuneEnter('shop') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
   { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
@@ -553,6 +563,8 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   if(tab!=='reb'){
     if(typeof campRebClose==='function') campRebClose();
     if(typeof campTreeClose==='function') campTreeClose(); }
+  // 💠 룬 구역도 같은 규칙 — 나가는 길이 하단 네비뿐이라 여기서 닫는다(2026-09-02).
+  if(tab!=='rune'){ if(typeof campRuneClose==='function') campRuneClose(); }
   if(_navSec!==tab){ _navSec=tab; _navDrill=''; }   // 다른 구역으로 갔다 = 최상위로
   navPaint(); }
 // 최상위 칸 — 화면으로 이동하고, 하위가 있으면 그 구역 네비로 내려간다
