@@ -610,11 +610,12 @@
     </div>
   </div>
   <!-- 💠 룬 화면 — 환생 화면(#campReb)과 **같은 규격**의 #phone 직속 전체 화면.
-       ⛔ 환생 구역의 키 아트(#campRebBg)를 빌리지 않는다 — 그 그림은 그 구역의 것이다(잔상 금지).
+       🖼 배경 그림은 #campRebBg 한 장을 환생·업그레이드와 **함께 쓴다**(2026-09-03 사용자 확정).
+       🗺 상단은 판 **위에 떠 있다** — 판이 화면 맨 위까지 차오른다(캠프 메인과 같은 규칙).
        내용은 campRuneRender() 가 채운다(장착 / 룬 상점 두 가지). -->
   <div id="campRune">
     <div class="rnBg"></div>
-    <div class="rnTop"><span class="rnTitle">룬</span></div>
+    <div class="rnTop"><span class="rnTitle">룬</span><span class="rnRound" id="rnRound"></span></div>
     <div class="rnBody" id="rnBody"></div>
   </div>
   <div id="curBar" class="curBar hide">

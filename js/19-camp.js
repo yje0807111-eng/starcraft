@@ -286,8 +286,6 @@ function campRebPtGain(){
 //   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
 //   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
 function campDtMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('speed') : 1; }
-// 💠 **질주의 룬 — 웨이브 대기 배수.** 다음 무리가 빨리 오면 라운드가 짧아진다.
-function campRoundMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('round') : 1; }
 // 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
 function campRebMul(){ const C = campState(); return 1 + ((C && C.rebMul) || 0); }
 
@@ -340,6 +338,140 @@ function campWipeBoard(){
   T.credit = 0; T.energy = 0; T.built = {}; T.addon = {}; T.units = {}; T.research = {};
   T.sup = 0; T.supCap = 0; T.ents = []; T.minerals = [];
   return false; }
+
+// ══ 🔍 SVG 뷰 — 밀고 확대하는 판 (공용 · 2026-09-03) ═══════════════════
+//   ⭐ **캠프 메인 화면과 같은 이동 방식이다**(2026-09-03 사용자 확정).
+//     손가락은 **목표 뷰(t*)만** 바꾸고, 매 프레임 지금 뷰가 그 목표로 다가간다 —
+//     `k = min(1, dt × SVV_FOLLOW)`. 메인맵 `nemoViewTick` · 건설 `techViewTick` 과 같은 식이다.
+//     ⛔ **관성(손을 떼면 미끄러지는 것)을 넣지 말 것.** 한 번 넣었다가 되돌렸다 — 이 게임의
+//       다른 화면은 전부 「목표를 따라간다」라 혼자만 미끄러지면 조작감이 갈라진다.
+//     ⛔ 이징 곡선을 따로 만들지 말 것. 가속·감속은 이 보간 하나가 전부 만든다.
+//   ⚠ 쓰는 곳: 💠 룬 성좌 판(22-camp-rune.js).
+//   ⛔ **환생 트리(campTree*)는 아직 제 사본을 쓴다** — 먼저 만들어져 실측으로 다듬어진
+//     코드라 이번엔 손대지 않았다. 트리를 손볼 일이 생기면 **이리로 옮길 것**(이관 부채).
+const SVV_FOLLOW = 9;           // 목표를 따라가는 속도 — 메인맵·건설과 **같은 값**이어야 한다
+const SVV_SNAP_P = 0.6, SVV_SNAP_Z = 0.002;   // 이만큼 가까우면 목표에 붙인다(떨림 방지)
+const SVV_TAP_SLOP = 14;        // 이만큼까지는 「누른 것」 — 손가락은 가만히 못 있는다
+const SVV_ZSTEP = 1.22;         // 휠 한 칸
+const SVV_DTAP_MS = 320;        // 두 번 톡톡으로 치는 간격
+function svvNew(){ return { x:0, y:0, z:1, tx:0, ty:0, tz:1, fitZ:0, run:0 }; }
+// 화면(클라이언트) 좌표 → viewBox 좌표. ⚠ preserveAspectRatio="xMidYMid meet" 전제 —
+//   짧은 쪽에 맞춰 여백이 생기므로 그 여백을 빼야 손가락과 그림이 같은 자리를 가리킨다.
+function svvToView(svg, cx, cy){
+  if(!svg) return { x:0, y:0 };
+  const r = svg.getBoundingClientRect();
+  const vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(/\s+/).map(Number);
+  if(!r.width || !r.height) return { x:0, y:0 };
+  const k = Math.min(r.width / vb[2], r.height / vb[3]);
+  const ox = (r.width - vb[2] * k) / 2, oy = (r.height - vb[3] * k) / 2;
+  return { x: vb[0] + (cx - r.left - ox) / k, y: vb[1] + (cy - r.top - oy) / k }; }
+function svvApply(v, g){ if(!g) return;
+  g.setAttribute('transform', 'translate(' + v.x.toFixed(1) + ' ' + v.y.toFixed(1) +
+    ') scale(' + v.z.toFixed(3) + ')'); }
+// 🔍 축소 한계는 **「전체 보기」 배율을 따라 풀린다** — 초반엔 별이 적어 마음껏 축소하면
+//   화면이 텅 빈다(트리에서 겪은 것과 같다). lim = {min, max, out}
+function svvClampZ(v, z, lim){
+  const L = lim || {};
+  const lo = Math.max(L.min || 0.3, (v.fitZ || 0) * (L.out || 0.72));
+  return Math.max(lo, Math.min(L.max || 2.6, z)); }
+// ── 한 프레임 보간 — 지금 뷰가 목표로 다가간다 ─────────────────────────
+function svvTick(v, dt){
+  if(v.x === v.tx && v.y === v.ty && v.z === v.tz) return false;
+  const k = Math.min(1, dt * SVV_FOLLOW);
+  v.x += (v.tx - v.x) * k; v.y += (v.ty - v.y) * k; v.z += (v.tz - v.z) * k;
+  if(Math.abs(v.x - v.tx) < SVV_SNAP_P && Math.abs(v.y - v.ty) < SVV_SNAP_P
+     && Math.abs(v.z - v.tz) < SVV_SNAP_Z){ v.x = v.tx; v.y = v.ty; v.z = v.tz; }
+  return true; }
+function svvNow(){ return (typeof performance !== 'undefined') ? performance.now() : Date.now(); }
+// 🎬 따라가기 루프 — 목표에 닿으면 스스로 멈춘다(화면이 조용하면 프레임을 안 먹는다)
+function svvKick(v, g, alive){
+  if(v.run) return; v.run = 1; let t0 = svvNow();
+  const step = () => {
+    if(alive && !alive()){ v.run = 0; return; }
+    const now = svvNow(), dt = Math.min(0.064, (now - t0) / 1000); t0 = now;
+    const moving = svvTick(v, dt);
+    svvApply(v, typeof g === 'function' ? g() : g);
+    if(!moving){ v.run = 0; return; }
+    requestAnimationFrame(step); };
+  requestAnimationFrame(step); }
+// 목표를 정한다. now=true 면 지금 뷰도 함께 옮긴다(연출 없이 즉시).
+function svvGoto(v, g, to, now, alive){
+  if(to.x != null) v.tx = to.x;
+  if(to.y != null) v.ty = to.y;
+  if(to.z != null) v.tz = to.z;
+  if(now){ v.x = v.tx; v.y = v.ty; v.z = v.tz; v.run = 0;
+    svvApply(v, typeof g === 'function' ? g() : g); return; }
+  svvKick(v, g, alive); }
+// ⭐ 한 점을 붙잡고 배율을 바꾼다 — 확대·축소의 유일한 입구.
+//   ⚠ **목표 좌표계**에서 계산한다. 지금 뷰로 계산하면 보간 중에 앵커가 흘러간다.
+function svvZoomAt(v, svg, g, z2, cx, cy, lim, now, alive){
+  const z1 = v.tz; z2 = svvClampZ(v, z2, lim); if(z2 === z1) return;
+  const q = (cx == null) ? { x:0, y:0 } : svvToView(svg, cx, cy);
+  svvGoto(v, g, { x: q.x - (q.x - v.tx) * (z2 / z1),
+                  y: q.y - (q.y - v.ty) * (z2 / z1), z: z2 }, now, alive); }
+// 어떤 월드점(P)을 화면 어디(A)에 놓을지로 목표를 정한다
+function svvLookAt(v, g, P, A, z, now, alive){
+  svvGoto(v, g, { x: A.x - P.x * z, y: A.y - P.y * z, z }, now, alive); }
+// 📐 전체 보기 — 점 목록이 화면에 다 들어오는 배율·자리로.
+//   ⚠ getBBox 를 쓰지 말 것: 글자·후광까지 재서 실제 별보다 훨씬 넓게 잡힌다(트리에서 겪었다).
+//   ⚠ 판 위에 뭔가 떠 있으면(상단 띠·아래 가방) 그만큼은 **보이는 곳이 아니다** —
+//     hideT / hideB(위·아래로 가려지는 비율)를 받아 남는 자리 한가운데에 맞춘다.
+//     ⛔ 이걸 빼면 아래 성좌가 가방 뒤에 숨는다(실측 2026-09-03).
+function svvFit(v, svg, g, pts, opt, now, alive){
+  if(!svg || !pts || !pts.length) return;
+  const O = opt || {}, pad = O.pad || 40;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for(const q of pts){ if(q.x < x0) x0 = q.x; if(q.x > x1) x1 = q.x;
+    if(q.y < y0) y0 = q.y; if(q.y > y1) y1 = q.y; }
+  const vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(/\s+/).map(Number);
+  const yA = vb[1] + vb[3] * (O.hideT || 0), yB = vb[1] + vb[3] * (1 - (O.hideB || 0));
+  const w = Math.max(1, x1 - x0 + pad * 2), h = Math.max(1, y1 - y0 + pad * 2);
+  const z = Math.min(O.zmax || 1.35, Math.min(vb[2] / w, Math.max(1, yB - yA) / h));
+  v.fitZ = z;
+  svvLookAt(v, g, { x:(x0 + x1) / 2, y:(y0 + y1) / 2 },
+    { x: vb[0] + vb[2] / 2, y: (yA + yB) / 2 }, z, now, alive); }
+// 👆 배선 — 끌면 밀고, 두 손가락이면 확대하고, 빈 곳을 두 번 치면 전체 보기.
+//   ⭐ 손가락은 **목표만** 바꾼다 — 그림은 보간이 따라오게 둔다(캠프 메인과 같은 규칙).
+//   ctx = { v, g:()=>요소, lim, alive, hit:(e)=>요소|null, onTap(el), onEmpty(), onDouble() }
+function svvBind(svg, ctx){
+  if(!svg || svg._svvBound) return; svg._svvBound = true;
+  const P = new Map(); let drag = null, pinch = null, moved = 0, down = null, tapT = 0;
+  const two = () => { const a = [...P.values()]; if(a.length < 2) return null;
+    return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y),
+             cx:(a[0].x + a[1].x) / 2, cy:(a[0].y + a[1].y) / 2 }; };
+  svg.addEventListener('pointerdown', e => {
+    svg.setPointerCapture(e.pointerId); P.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    moved = 0;
+    // 👆 누른 것을 **여기서** 잡아 둔다 — capture 뒤에는 target 이 <svg> 가 되어 알 수 없다.
+    down = ctx.hit ? ctx.hit(e) : null;
+    if(P.size === 1) drag = { x:e.clientX, y:e.clientY, vx:ctx.v.tx, vy:ctx.v.ty };
+    else if(P.size === 2){ drag = null; pinch = two(); } });
+  svg.addEventListener('pointermove', e => {
+    if(!P.has(e.pointerId)) return;
+    P.set(e.pointerId, { x:e.clientX, y:e.clientY });
+    if(pinch && P.size === 2){ const n = two();
+      if(n && pinch.d > 0){
+        // 두 손가락 **가운데를 붙잡고** 키운다 — 중심 기준이면 보던 곳이 흘러간다
+        svvZoomAt(ctx.v, svg, ctx.g, ctx.v.tz * (n.d / pinch.d), n.cx, n.cy, ctx.lim, false, ctx.alive);
+        moved = 99; pinch = n; }
+      return; }
+    if(drag){ const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+      // ⚠ 끄는 거리도 viewBox 단위로 바꿔야 손가락과 그림이 **같은 속도**로 움직인다
+      const a = svvToView(svg, drag.x, drag.y), b = svvToView(svg, e.clientX, e.clientY);
+      svvGoto(ctx.v, ctx.g, { x: drag.vx + (b.x - a.x), y: drag.vy + (b.y - a.y) }, false, ctx.alive); } });
+  svg.addEventListener('pointerup', () => {
+    const el = down; down = null; P.clear(); pinch = null; drag = null;
+    if(moved > SVV_TAP_SLOP) return;                       // 밀었으면 탭이 아니다
+    if(el){ tapT = 0; if(ctx.onTap) ctx.onTap(el); return; }
+    const t = Date.now();
+    if(t - tapT < SVV_DTAP_MS){ tapT = 0; if(ctx.onDouble) ctx.onDouble(); return; }
+    tapT = t; if(ctx.onEmpty) ctx.onEmpty(); });
+  svg.addEventListener('pointercancel', () => { P.clear(); pinch = null; drag = null; down = null; });
+  // 🖱 휠 — 커서 자리를 붙잡고 확대. ⚠ passive:false 여야 페이지가 같이 스크롤되지 않는다
+  svg.addEventListener('wheel', e => { e.preventDefault();
+    svvZoomAt(ctx.v, svg, ctx.g, ctx.v.tz * (e.deltaY < 0 ? SVV_ZSTEP : 1 / SVV_ZSTEP),
+      e.clientX, e.clientY, ctx.lim, false, ctx.alive); }, { passive:false }); }
 
 // ══ 🌳 환생 포인트 트리 (2026-08-25 · 6단계) ═══════════════════════════
 //   설계 단일 소스: HUNT_R1.md §4-4(구조·비용) · §4-5(32계열 내용).
@@ -871,10 +1003,22 @@ function campRebOpen(){
 //   ⚠ 트리도 켜 둔다. 제 배경이 거의 불투명해서 안 보일 뿐인데, 안 켜 두면 환생 탭으로
 //     넘어오는 순간 그림이 그때부터 떠올라 번쩍인다(2026-08-31).
 function campRebArtOn(){
+  if(_rebArtT){ clearTimeout(_rebArtT); _rebArtT = 0; }     // 끄려던 것을 취소한다
   const bg = document.getElementById('campRebBg'); if(bg) bg.classList.remove('hide');
   // ⚠ 네비를 배경 위로 올려 두는 규칙은 그대로 쓴다 — 배경이 화면을 통째로 덮기 때문이다
   const ph = document.getElementById('phone'); if(ph) ph.classList.add('artLift'); }
+// 🖼 이 배경은 **환생·업그레이드·룬 세 화면이 함께 쓴다**(2026-09-03).
+//   ⛔ 바로 끄지 말 것 — 구역을 오갈 때는 「닫고 → 연다」 순서라 그 사이에 꺼지면 한 번 번쩍인다.
+//   ⭐ 한 박자 미뤘다가, 그때까지도 셋 다 닫혀 있으면 그제야 끈다.
+let _rebArtT = 0;
+function _rebArtAnyOn(){
+  return (typeof campRebIsOn === 'function' && campRebIsOn())
+      || (typeof campTreeIsOn === 'function' && campTreeIsOn())
+      || (typeof campRuneIsOn === 'function' && campRuneIsOn()); }
 function campRebArtOff(){
+  if(_rebArtT) return;
+  _rebArtT = setTimeout(() => { _rebArtT = 0; if(_rebArtAnyOn()) return; _campRebArtOff0(); }, 0); }
+function _campRebArtOff0(){
   const bg = document.getElementById('campRebBg'); if(bg) bg.classList.add('hide');
   const ph = document.getElementById('phone'); if(ph) ph.classList.remove('artLift'); }
 // keepArt = **구역 안에서 탭만 바꾸는 중**이라는 뜻 — 그때는 배경을 돌려주지 않는다.
@@ -886,6 +1030,15 @@ function campRebClose(keepArt){ const el = document.getElementById('campReb'); i
   if(keepArt) return;
   campRebArtOff();   // 구역을 나갈 때만 끈다(잔상 금지)
 }
+// 🏷 **지금 열려 있는 캠프 구역의 이름** — 재화 바 왼쪽(#curTitle)에 그대로 쓴다.
+//   ⭐ 유즈맵 선택·상점과 같은 자리다 — ⛔ 화면 안에 제목을 또 두지 말 것(층이 둘이 된다).
+//   ⚠ 룬은 탭에 따라 이름이 갈린다(장착 / 룬 상점).
+function campZoneTitle(){
+  if(typeof campRuneIsOn === 'function' && campRuneIsOn())
+    return (typeof _runeSec !== 'undefined' && _runeSec === 'shop') ? '룬 상점' : '룬';
+  if(typeof campTreeIsOn === 'function' && campTreeIsOn()) return '환생 트리';
+  if(typeof campRebIsOn === 'function' && campRebIsOn()) return '환생';
+  return ''; }
 function campRebIsOn(){ const el = document.getElementById('campReb'); return !!(el && el.classList.contains('on')); }
 
 // 🔁 **환생 구역의 유일한 입구** (2026-08-31 사용자 확정).
@@ -908,6 +1061,7 @@ function campRebEnter(sec){
   else { campTreeClose(); campRebOpen(); }
   { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
     if(el) el.classList.toggle('crIn', !wasIn); }
+  if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(환생 / 환생 트리)
   // 🧭 네비를 「환생 구역의 하위」 상태로 맞춘다.
   //   ⚠ navShow 만으로는 부족하다 — 그것은 **구역**을 켤 뿐이고, 하위 칸(정보·업그레이드)은
   //     `_navDrill` 이 그 구역일 때만 그려진다(navPaint). 캠프 배지에서 바로 들어오면
@@ -3117,7 +3271,7 @@ function campCombatStep(dt){
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
     // 💠 질주의 룬 — 다음 무리가 더 빨리 온다(= 라운드가 짧아진다)
-    CAMPB._wqT -= dt * campRoundMul();
+    CAMPB._wqT -= dt;                       // ⚠ 「질주의 룬」이 곱하던 자리다(2026-09-03 삭제 · 다락)
     // ⭐ **화면의 적을 다 잡았으면 기다리지 않는다**(2026-08-30). 이 한 줄이 있어야
     //   간격을 늘려도 「대기가 곧 라운드 길이」가 되지 않는다 — 위 CAMP_WAVE_GAP_S 경고 참조.
     if(CAMPB._wqT <= 0 || !CAMPB.ai.units.length){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
@@ -4347,7 +4501,7 @@ function campTapGain(){
   const packA = (typeof campPackGather === 'function') ? campPackGather() : 0;
   // 💠 룬도 **같은 합산 항**이다(GEM.md §5-2). ⛔ 곱 항으로 옮기지 말 것.
   //   재화의 룬은 채취·탭 양쪽에, 손끝의 룬은 탭에만 걸린다.
-  const runeA = (typeof campRuneEff === 'function') ? (campRuneEff('gain') + campRuneEff('tap')) : 0;
+  const runeA = (typeof campRuneEff === 'function') ? campRuneEff('tap') : 0;   // 💠 손끝의 룬(탭 전용)
   return Math.max(1, Math.round(base * (1 + packA + runeA)
     * campMineMul() * campRebMul() * campRtMul('tap') * campRtMul('tapMul')
     * (campFevActive() ? campFevMul() : 1)));   // ⚡ 피버 — ⛔ 탭 경로마다 따로 곱하지 말 것
@@ -4363,9 +4517,10 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   // ⛏ **정수 곡선**이다(campGatRaw) — 왕복 1회당 1원 → 2원 → 3원 …
   //   ⛔ campMileMul 을 곱하지 말 것 — 계단은 campGatRaw 안에 이미 있다(두 겹이 된다).
   //   💳 팩 보너스는 여기서도 **합**이다(GEM.md §5-2).
-  //   💠 룬도 여기서 **합**이다 — 재화의 룬만(손끝의 룬은 탭 전용).
-  const runeA = (typeof campRuneEff === 'function') ? campRuneEff('gain') : 0;
-  return (campGatRaw(lv) + campPackGather() + runeA)
+  //   💠 ⚠ **채취에 걸리는 룬은 이제 없다**(2026-09-03). 「재화의 룬」이 여기 합산 항으로
+  //     들어왔는데, 손끝의 룬을 품고 있어서 지웠다. 채취를 올리는 룬을 새로 만들 거라면
+  //     ⛔ 탭까지 겹치게 만들지 말 것 — 같은 실수를 되풀이한다.
+  return (campGatRaw(lv) + campPackGather())
     * campMineMul() * campRebMul() * campRtMul('gather'); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).

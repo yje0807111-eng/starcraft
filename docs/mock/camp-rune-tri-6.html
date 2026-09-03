@@ -1,0 +1,184 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 판 — 삼각 배치 · 빛을 걷어낸 6안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --low:#8b95a5;--mid:#5cd6ff;--high:#ffcf6b;--uniq:#c98bff;--gold:#ffd24a;--sel:#5cd6ff}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:24px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 6px;font-weight:700;font-size:13px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:56px}
+.pane{position:relative;width:390px;height:560px;overflow:hidden;
+  background:radial-gradient(120% 90% at 50% 6%,#161b23 0%,#0d1015 60%,#07090c 100%)}
+svg{position:absolute;inset:0;width:100%;height:100%}
+.hd{position:absolute;left:14px;top:10px;z-index:3;font-size:11px;color:#69737f;letter-spacing:.04em}
+.hd b{font-family:var(--font-num);font-size:13px;color:var(--gold)}
+.tag{text-anchor:middle;dominant-baseline:hanging;font-family:var(--font-num);
+  font-variant-numeric:tabular-nums;font-size:8px}
+.nm{text-anchor:middle;font-size:8px;fill:#c3ccd8}
+.lkT{fill:#49525d;font-family:var(--font-num);font-size:7.5px;text-anchor:middle}
+.pl{text-anchor:middle;font-family:var(--font-num);font-size:12px;fill:rgba(175,200,232,.30)}
+.cnm{text-anchor:middle;dominant-baseline:middle;font-size:9px;letter-spacing:3px;
+  font-weight:800;fill:#5c6675}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+/* ── 데이터 ─────────────────────────────────────────────────────────── */
+const GD = { low:'#8b95a5', mid:'#5cd6ff', high:'#ffcf6b', uniq:'#c98bff' };
+const VAL = { low:'+1%', mid:'+2.5%', high:'+5%', uniq:'+5%' };
+const CONS=8, NSLOT=24, USLOT=3;
+const SLOT_R=[0,15,30,45,60,75,90,105, 140,155,170,185,200,215,230,245,
+              280,295,310,325,340,355,370,385];
+const USLOT_R=[120,260,400];
+const OPEN_N=14, OPEN_U=1;
+const EQ={0:['손끝','high'],1:['정제','mid'],3:['증원','mid'],5:['힘','high'],
+          6:['수호','low'],9:['연타','mid'],11:['치유','low']};
+const EQU={0:['가속','uniq']};
+const SEL=4;
+
+/* 🔺 삼각 배치 — 위 하나 · 아래 둘 (2026-09-03 사용자 지정) */
+const W=440, H=560, CT=[[220,130],[92,400],[348,400]], RING=72, RN=21, RU=33;
+const nPos=i=>{ const c=CT[Math.floor(i/CONS)], a=-Math.PI/2+(i%CONS)/CONS*Math.PI*2;
+  return [c[0]+Math.cos(a)*RING, c[1]+Math.sin(a)*RING]; };
+const uPos=i=>CT[i];
+/* 육각 — 뾰족한 쪽이 위 */
+const hpt=(x,y,r)=>{ const p=[];
+  for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+    p.push([x+r*Math.cos(a), y+r*Math.sin(a)]); } return p; };
+const hex=(x,y,r)=>hpt(x,y,r).map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+/* ⭐ 밑변 광원 — 이 프로젝트의 서명(.actBtn·.pdSeg 와 같은 문법)을 육각에 옮긴 것.
+   아래쪽 두 변만 밝은 선으로 덧그린다. 후광·십자 없이도 「켜져 있다」가 읽힌다. */
+const underline=(x,y,r,c,o,w)=>{ const p=hpt(x,y,r);
+  return '<path d="M'+p[2][0].toFixed(1)+' '+p[2][1].toFixed(1)+
+    ' L'+p[3][0].toFixed(1)+' '+p[3][1].toFixed(1)+
+    ' L'+p[4][0].toFixed(1)+' '+p[4][1].toFixed(1)+
+    '" fill="none" stroke="'+c+'" stroke-opacity="'+o+'" stroke-width="'+(w||1.6)+
+    '" stroke-linecap="round" stroke-linejoin="round"/>'; };
+/* 윗변 하이라이트 — 볼륨 3단의 「위에서 오는 빛」 */
+const topline=(x,y,r,c,o)=>{ const p=hpt(x,y,r);
+  return '<path d="M'+p[5][0].toFixed(1)+' '+p[5][1].toFixed(1)+
+    ' L'+p[0][0].toFixed(1)+' '+p[0][1].toFixed(1)+
+    ' L'+p[1][0].toFixed(1)+' '+p[1][1].toFixed(1)+
+    '" fill="none" stroke="'+c+'" stroke-opacity="'+o+'" stroke-width="1"/>'; };
+const st=i=>({open:i<OPEN_N, eq:EQ[i]||null, at:SLOT_R[i], sel:i===SEL});
+const ust=i=>({open:i<OPEN_U, eq:EQU[i]||null, at:USLOT_R[i], uq:true});
+
+/* 잠긴 칸 · 빈 칸은 여섯 안이 함께 쓴다 */
+function shell(x,y,r,s,body){
+  if(!s.open) return '<polygon points="'+hex(x,y,r)+'" fill="rgba(120,140,165,.018)"'
+    +' stroke="rgba(140,160,185,.10)" stroke-width="1"/>'
+    +'<text class="lkT" x="'+x+'" y="'+(y+2.5)+'">R'+s.at+'</text>';
+  return body(); }
+function selRing(x,y,r){ return '<polygon points="'+hex(x,y,r+4.5)+'" fill="none" stroke="var(--sel)"'
+  +' stroke-width="1.1" opacity=".9"/>'; }
+function label(x,y,r,s,c){
+  return '<text class="nm" x="'+x+'" y="'+(y+3)+'"'+(s.uq?' style="font-size:9.5px;font-weight:700;fill:'+c+'"':'')+'>'
+    +s.eq[0]+'</text><text class="tag" x="'+x+'" y="'+(y+r+3.5)+'" fill="'+c+'">'+VAL[s.eq[1]]+'</text>'; }
+
+/* ── ① 밑변 광원 ─────────────────────────────────────────────────── */
+function c1(x,y,r,s){ return shell(x,y,r,s,()=>{ const g=[];
+  if(!s.eq){ g.push('<polygon points="'+hex(x,y,r)+'" fill="rgba(150,175,205,.035)" stroke="rgba(160,185,215,.20)" stroke-width="1"/>');
+    g.push('<text class="pl" x="'+x+'" y="'+(y+4.5)+'">+</text>'); }
+  else { const c=GD[s.eq[1]];
+    g.push('<polygon points="'+hex(x,y,r)+'" fill="'+c+'" fill-opacity=".07" stroke="'+c+'" stroke-opacity=".45" stroke-width="1"/>');
+    g.push(underline(x,y,r,c,.9,1.8));
+    g.push(label(x,y,r,s,c)); }
+  if(s.sel) g.push(selRing(x,y,r));
+  return g.join(''); }); }
+
+/* ── ② 이중 테두리 ───────────────────────────────────────────────── */
+function c2(x,y,r,s){ return shell(x,y,r,s,()=>{ const g=[];
+  if(!s.eq){ g.push('<polygon points="'+hex(x,y,r)+'" fill="rgba(150,175,205,.03)" stroke="rgba(160,185,215,.18)" stroke-width="1"/>');
+    g.push('<text class="pl" x="'+x+'" y="'+(y+4.5)+'">+</text>'); }
+  else { const c=GD[s.eq[1]];
+    g.push('<polygon points="'+hex(x,y,r+3)+'" fill="none" stroke="'+c+'" stroke-opacity=".22" stroke-width="1"/>');
+    g.push('<polygon points="'+hex(x,y,r)+'" fill="rgba(8,11,16,.9)" stroke="'+c+'" stroke-opacity=".72" stroke-width="1.2"/>');
+    g.push(label(x,y,r,s,c)); }
+  if(s.sel) g.push(selRing(x,y,r+3));
+  return g.join(''); }); }
+
+/* ── ③ 위 하이라이트 + 아래 광원(볼륨 3단) ───────────────────────── */
+function c3(x,y,r,s){ return shell(x,y,r,s,()=>{ const g=[];
+  const c=s.eq?GD[s.eq[1]]:'#93a3b8';
+  g.push('<polygon points="'+hex(x,y,r)+'" fill="'+(s.eq?c:'#93a3b8')+'" fill-opacity="'+(s.eq?.08:.03)+
+    '" stroke="'+c+'" stroke-opacity="'+(s.eq?.38:.16)+'" stroke-width="1"/>');
+  g.push(topline(x,y,r,'#ffffff',s.eq?.16:.07));
+  if(s.eq){ g.push(underline(x,y,r,c,.75,1.5)); g.push(label(x,y,r,s,c)); }
+  else g.push('<text class="pl" x="'+x+'" y="'+(y+4.5)+'">+</text>');
+  if(s.sel) g.push(selRing(x,y,r));
+  return g.join(''); }); }
+
+/* ── ④ 모서리 컷(각진 금속) ──────────────────────────────────────── */
+function c4(x,y,r,s){ return shell(x,y,r,s,()=>{ const g=[];
+  const c=s.eq?GD[s.eq[1]]:'#93a3b8', p=hpt(x,y,r), k=.78;
+  // 육각의 각을 잘라 12각으로 — 「각진 SF」의 모서리 컷을 육각에 적용
+  const cut=[]; for(let i=0;i<6;i++){ const a=p[i], b=p[(i+1)%6];
+    cut.push([a[0]+(b[0]-a[0])*(1-k)/2, a[1]+(b[1]-a[1])*(1-k)/2]);
+    cut.push([a[0]+(b[0]-a[0])*(1+k)/2, a[1]+(b[1]-a[1])*(1+k)/2]); }
+  const pts=cut.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ');
+  g.push('<polygon points="'+pts+'" fill="'+c+'" fill-opacity="'+(s.eq?.07:.025)+
+    '" stroke="'+c+'" stroke-opacity="'+(s.eq?.55:.18)+'" stroke-width="1"/>');
+  if(s.eq){ g.push(underline(x,y,r*.92,c,.8,1.5)); g.push(label(x,y,r,s,c)); }
+  else g.push('<text class="pl" x="'+x+'" y="'+(y+4.5)+'">+</text>');
+  if(s.sel) g.push(selRing(x,y,r+3));
+  return g.join(''); }); }
+
+/* ── ⑤ 얇은 외곽 · 여백(미니멀) ──────────────────────────────────── */
+function c5(x,y,r,s){ return shell(x,y,r,s,()=>{ const g=[];
+  if(!s.eq){ g.push('<polygon points="'+hex(x,y,r*.86)+'" fill="none" stroke="rgba(160,185,215,.16)" stroke-width="1"/>'); }
+  else { const c=GD[s.eq[1]];
+    g.push('<polygon points="'+hex(x,y,r*.86)+'" fill="none" stroke="'+c+'" stroke-opacity=".62" stroke-width="1"/>');
+    g.push(underline(x,y,r*.86,c,.85,1.4));
+    g.push(label(x,y,r*.86,s,c)); }
+  if(s.sel) g.push(selRing(x,y,r*.86+2));
+  return g.join(''); }); }
+
+/* ── ⑥ 등급을 테두리 두께로만 ────────────────────────────────────── */
+function c6(x,y,r,s){ return shell(x,y,r,s,()=>{ const g=[];
+  const W_={low:1, mid:1.7, high:2.6, uniq:2.6};
+  if(!s.eq){ g.push('<polygon points="'+hex(x,y,r)+'" fill="rgba(150,175,205,.03)" stroke="rgba(160,185,215,.18)" stroke-width="1"/>');
+    g.push('<text class="pl" x="'+x+'" y="'+(y+4.5)+'">+</text>'); }
+  else { const c=GD[s.eq[1]];
+    g.push('<polygon points="'+hex(x,y,r)+'" fill="'+c+'" fill-opacity=".05" stroke="'+c+
+      '" stroke-opacity=".8" stroke-width="'+W_[s.eq[1]]+'"/>');
+    g.push(label(x,y,r,s,c)); }
+  if(s.sel) g.push(selRing(x,y,r));
+  return g.join(''); }); }
+
+/* 유니크 — 여섯 안이 함께 쓴다(안쪽에 한 겹 더) */
+function uCell(cell){ return (x,y,r,s)=>{
+  if(!s.open) return cell(x,y,r,s);
+  return cell(x,y,r,s) + '<polygon points="'+hex(x,y,r-5.5)+'" fill="none" stroke="'+GD.uniq+
+    '" stroke-opacity=".28" stroke-width="1"/>'; }; }
+
+/* ── 판 ─────────────────────────────────────────────────────────── */
+function board(cell){
+  const rows=[];
+  for(let i=0;i<NSLOT;i++){
+    const c=CT[Math.floor(i/CONS)], q=nPos(i), on=i<OPEN_N;
+    rows.push('<line x1="'+c[0]+'" y1="'+c[1]+'" x2="'+q[0].toFixed(1)+'" y2="'+q[1].toFixed(1)+
+      '" stroke="rgba(190,212,240,'+(on?.20:.07)+')" stroke-width="'+(on?1:.8)+'"'+
+      (on?'':' stroke-dasharray="2 3"')+'/>'); }
+  for(let i=0;i<NSLOT;i++){ const q=nPos(i); rows.push(cell(q[0],q[1],RN,st(i))); }
+  const u=uCell(cell);
+  for(let i=0;i<USLOT;i++){ const q=uPos(i); rows.push(u(q[0],q[1],RU,ust(i))); }
+  CT.forEach((c,k)=>rows.push('<text class="cnm" x="'+c[0]+'" y="'+(c[1]-RING-20)+
+    '" opacity="'+(k<1?.7:.4)+'">성좌 '+'ⅠⅡⅢ'[k]+'</text>'));
+  return rows.join(''); }
+
+const ANS=[
+  ['밑변 광원', '십자·후광 대신 <b>아래 두 변만 밝게</b> — 이 프로젝트의 서명(.actBtn·탭 띠의 밑변 1px 광원)을 육각에 옮겼다. 다른 구역과 가장 통일감이 크다.', c1],
+  ['이중 테두리', '바깥에 <b>얇은 겹</b>을 하나 더 두른다. 낀 칸이 한 겹 더 커 보여 무리 속에서 즉시 읽히고, 색은 조용하게 남는다.', c2],
+  ['위 하이라이트 + 아래 광원', '볼륨 3단의 「위에서 오는 빛」 그대로 — <b>윗변은 흰 실선</b>, 아랫변은 등급색. 빈 칸에도 약하게 걸려 판 전체가 한 재질로 보인다.', c3],
+  ['모서리 컷', '육각의 <b>각을 잘라 12각</b>으로. DESIGN 의 각진 SF(clip-path 모서리 컷)를 그대로 옮긴 형태라 금속판 느낌이 난다.', c4],
+  ['얇은 외곽 · 여백', '면을 없애고 <b>선 하나</b>만. 칸을 살짝 줄여 사이 여백을 벌렸다 — 가장 조용하고 별자리에 가깝다.', c5],
+  ['테두리 두께로 등급', '색은 같고 <b>굵기</b>가 등급이다(하급 1 · 중급 1.7 · 상급 2.6). 색이 넷 도는 것을 피하고 싶을 때.', c6],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d,fn],i)=>
+  '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'+
+  '<div class="pane"><div class="hd">최대 도달 라운드 <b>230</b> / 500</div>'+
+  '<svg viewBox="0 0 '+W+' '+H+'">'+board(fn)+'</svg></div></div>').join('');
+</script></body></html>

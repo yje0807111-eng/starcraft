@@ -460,7 +460,27 @@ async function groupLobby(){
       campRebEnter('info'); assert(art(),'환생에 들어왔는데 배경이 안 켜진다');
       campRebEnter('tree'); assert(art(),'업그레이드 탭으로 갔더니 배경이 꺼진다 — 돌아올 때 번쩍인다');
       campRebEnter('info'); assert(art(),'환생 탭으로 돌아오니 배경이 꺼져 있다');
-      navGo('shop');        assert(!art(),'구역을 나갔는데 배경이 남는다(잔상)');
+      // 💠 **재화와 설정은 구역 위에서도 보인다**(2026-09-03 사용자 확정).
+      //   ⭐ 새 바를 만들지 않는다 — 공용 재화 바(#curBar)를 그대로 올린다(단일 소스).
+      //   ⛔ 던전 칩은 캠프 맵의 것이라 구역 안에서는 감춘다.
+      { const cb=$('curBar');
+        assert(!cb.classList.contains('hide'),'구역에서 재화 바가 꺼져 있다');
+        assert(+getComputedStyle(cb).zIndex>120,'재화 바가 구역 화면 아래에 깔린다: '+getComputedStyle(cb).zIndex);
+        assert(cb.querySelector('.hudSet'),'설정 버튼이 없다');
+        assert(!$('curTitle').classList.contains('asChip'),'구역 안에 던전 칩이 남아 있다');
+        assert(/^환생( 트리)?$/.test($('curTitle').textContent),
+          '좌상단에 구역 이름이 안 뜬다: '+$('curTitle').textContent);
+        // 상단 제목이 재화 바에 안 가린다
+        const t=$('campTree').querySelector('.ctTitle');
+        assert(t.getBoundingClientRect().top>=cb.getBoundingClientRect().bottom-1,
+          '업그레이드 제목이 재화 바에 가린다'); }
+      // 💠 룬 구역도 **같은 배경**을 쓴다(2026-09-03) — 오갈 때 안 꺼져야 한다
+      if(typeof campRuneEnter==='function'){
+        campRuneEnter('slot'); await sleep(20); assert(art(),'룬 구역으로 갔더니 배경이 꺼진다');
+        campRebEnter('tree');  await sleep(20); assert(art(),'룬 → 업그레이드 로 오니 배경이 꺼져 있다'); }
+      // ⚠ 끄기는 **한 박자 뒤**다 — 「닫고 → 연다」 순서에서 그 사이에 꺼지면 번쩍이기 때문이다.
+      navGo('shop'); await sleep(20);
+      assert(!art(),'구역을 나갔는데 배경이 남는다(잔상)');
       assert(!$('phone').classList.contains('artLift'),'구역을 나갔는데 네비 올림이 남는다'); }
     // ⑨ 🎬 배경이 UI 보다 **먼저** 선다 — 둘이 같이 반투명이면 그 아래 캠프가 비친다
     { const ph=$('phone'), had=ph.classList.contains('artLift'); ph.classList.add('artLift');
@@ -548,7 +568,7 @@ async function groupLobby(){
     //   ⭐ 여기서 잰다 — 실제 환생을 도는 자리가 이 스텝 하나뿐이다.
     let _rnKey='';
     if(typeof campRuneState==='function'){ const R=campRuneState();
-      if(R){ _rnKey=runeKey('gain','low'); R.own[_rnKey]=(R.own[_rnKey]|0)+1;
+      if(R){ _rnKey=runeKey('tap','low'); R.own[_rnKey]=(R.own[_rnKey]|0)+1;
         C.best=Object.assign({}, C.best, {10:50});   // 칸을 열어 실제로 끼워 본다
         campRuneEquip('norm',0,_rnKey); } }
     campRebAsk(); campRebGo();
@@ -2040,15 +2060,15 @@ async function groupLobby(){
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
     try{
       C.rune={}; C.best={10:50};                    // 칸을 전부 열어 놓고 규칙만 본다
-      const key=runeKey('gain','low'), cost=runeGem(key);
+      const key=runeKey('tap','low'), cost=runeGem(key);
       assert(cost>0,'룬 값이 0 이다');
       // ① 젬이 모자라면 못 산다 — **보유가 늘어서는 안 된다**
       p.gem=cost-1;
-      assert(campRuneBuy('gain','low')===false,'젬이 모자란데 샀다');
+      assert(campRuneBuy('tap','low')===false,'젬이 모자란데 샀다');
       assert(campRuneOwn(key)===0,'못 샀는데 보유가 늘었다');
       // ② 사면 젬이 정확히 그만큼 깎인다
       p.gem=cost*3;
-      assert(campRuneBuy('gain','low')===true,'젬이 있는데 못 샀다');
+      assert(campRuneBuy('tap','low')===true,'젬이 있는데 못 샀다');
       assert(profGem()===cost*2,'젬이 값만큼 안 깎였다: '+profGem()+' (기대 '+(cost*2)+')');
       assert(campRuneOwn(key)===1,'보유가 안 늘었다');
       // ③ 갈래가 맞아야 한다 — 일반 룬은 유니크 칸에 안 들어간다
@@ -2083,26 +2103,34 @@ async function groupLobby(){
       C.rune={}; C.best={10:50};
       const R=campRuneState();                       // 빈 칸을 채워 주는 유일한 입구
       // ① **합이다.** ⛔ 곱이면 지수 축이 하나 더 늘어 후반이 터진다(GEM.md §5-2).
-      const k1=runeKey('gain','low'), k2=runeKey('gain','mid');
+      const k1=runeKey('tap','low'), k2=runeKey('tap','mid');
       const v1=runeVal(k1), v2=runeVal(k2);
       R.own[k1]=1; R.own[k2]=1;
       campRuneEquip('norm',0,k1); campRuneEquip('norm',1,k2);
-      const got=campRuneEff('gain'), sum=v1+v2, prod=(1+v1)*(1+v2)-1;
+      const got=campRuneEff('tap'), sum=v1+v2, prod=(1+v1)*(1+v2)-1;
       assert(Math.abs(got-sum)<1e-9,
         '효과가 합이 아니다 — 얻은 값 '+got.toFixed(4)+' · 합이면 '+sum.toFixed(4)+' · 곱이면 '+prod.toFixed(4));
-      // ⭐ **종류가 칸보다 많아야 「고르는 것」이 된다.** 종류 = 칸 이면 전부 끼워지므로
-      //   고를 것이 없어지고, 이 시스템은 그냥 「연구 2」가 된다(2026-09-02 값 확정의 전제).
-      { const nN=RUNE_LIST.filter(x=>x.kind!=='uniq').length, nU=RUNE_LIST.length-nN;
-        assert(nN>RUNE_SLOT_R.norm.length,'일반 룬 종류('+nN+')가 칸('+RUNE_SLOT_R.norm.length+')보다 많지 않다 — 고를 것이 없다');
-        assert(nU>RUNE_SLOT_R.uniq.length,'유니크 종류('+nU+')가 칸('+RUNE_SLOT_R.uniq.length+')보다 많지 않다'); }
+      // ⭐ **일반은 칸(24)이 종류(9)보다 많다**(2026-09-03 사용자 확정 · 성좌 판).
+      //   그래서 선택은 「무엇을 끼우나」가 아니라 **「어느 축에 몇 칸을 주나」**다.
+      //   ⛔ 같은 룬의 중복 장착을 막지 말 것 — 막으면 9종이 그냥 다 끼워져 고를 것이 사라진다.
+      //   ⛔ 유니크는 반대다 — 종류(4)가 칸(3)보다 많아야 하나를 버리는 선택이 남는다.
+      { const nU=RUNE_LIST.filter(x=>x.kind==='uniq').length;
+        assert(nU>RUNE_SLOT_R.uniq.length,'유니크 종류('+nU+')가 칸('+RUNE_SLOT_R.uniq.length+')보다 많지 않다');
+        // 같은 룬을 두 칸에 — 보유한 만큼 끼워지고 효과도 그만큼 쌓인다
+        R.norm=[]; R.own={}; R.own[k1]=2;
+        assert(campRuneEquip('norm',0,k1)&&campRuneEquip('norm',1,k1),'같은 룬을 두 칸에 못 끼운다');
+        assert(Math.abs(campRuneEff('tap')-v1*2)<1e-9,'같은 룬 두 칸이 두 배로 안 쌓인다');
+        assert(campRuneEquip('norm',2,k1)===false,'보유(2)보다 많이 끼워졌다');
+        R.norm=[]; R.own={}; R.own[k1]=1; R.own[k2]=1;
+        campRuneEquip('norm',0,k1); campRuneEquip('norm',1,k2); }
       // 💎 값은 **등급 표 한 곳**에서 온다 — 룬마다 흩뿌리면 손볼 때 어긋난다
-      for(const gd of RUNE_GRADES) assert(runeGem(runeKey('gain',gd))===RUNE_GEM[gd],
-        gd+' 값이 등급 표와 다르다: '+runeGem(runeKey('gain',gd))+' / '+RUNE_GEM[gd]);
+      for(const gd of RUNE_GRADES) assert(runeGem(runeKey('tap',gd))===RUNE_GEM[gd],
+        gd+' 값이 등급 표와 다르다: '+runeGem(runeKey('tap',gd))+' / '+RUNE_GEM[gd]);
       // ② 다른 효과 키는 안 섞인다
       assert(campRuneEff('atk')===0,'끼우지도 않은 효과에 값이 있다: '+campRuneEff('atk'));
       // ③ 뺀 것은 안 세어진다 — 보유는 그대로인데 효과만 빠져야 한다
       campRuneUnequip('norm',1);
-      assert(Math.abs(campRuneEff('gain')-v1)<1e-9,'뺀 룬이 아직 효과에 남아 있다');
+      assert(Math.abs(campRuneEff('tap')-v1)<1e-9,'뺀 룬이 아직 효과에 남아 있다');
       assert(campRuneOwn(k2)===1,'뺐더니 보유까지 사라졌다');
       // ⚠ 「환생해도 남는가」는 **환생 스텝**이 잰다 — 실제 환생을 도는 곳이 거기 하나뿐이라
       //   여기서 또 돌리면 판이 두 번 되감겨 뒤 검사들이 흔들린다.
@@ -2137,27 +2165,22 @@ async function groupLobby(){
     const clear=()=>{ C.rune={}; campRuneState(); if(typeof campRuneTouch==='function') campRuneTouch(); };
     try{
       C.best={10:50}; clear();
-      // ① 💰 재화의 룬 — **탭과 채취 둘 다**에 걸리고, 그 자리는 **합산 항**이다
+      // ① 👆 손끝의 룬 — **탭에만** 걸리고, 그 자리는 **합산 항**이다.
+      //   ⚠ 「재화의 룬」(탭+채취)은 2026-09-03 에 지웠다 — 손끝을 품고 있어서 겹쳤다.
+      //     그래서 지금 **채취에 걸리는 일반 룬은 없다**(그게 맞는지는 밸런스가 정한다).
       if(typeof campTapGain==='function' && typeof campGatherMul==='function'){
         const t0=campTapGain(), g0=campGatherMul();
         chk(t0>0&&g0>0,'기준 수입이 0 이다');
-        put('gain','high'); const v=runeVal(runeKey('gain','high'));
-        const t1=campTapGain(), g1=campGatherMul();
-        chk(t1>t0,'재화의 룬이 탭에 안 걸린다: '+t0+' → '+t1);
-        chk(g1>g0,'재화의 룬이 채취에 안 걸린다: '+g0+' → '+g1);
+        put('tap','high');
+        const t1=campTapGain();
+        chk(t1>t0,'손끝의 룬이 탭에 안 걸린다: '+t0+' → '+t1);
+        chk(Math.abs(campGatherMul()-g0)<1e-9,'손끝의 룬이 채취까지 건드렸다 — 탭 전용이다');
         // 두 번째를 끼우면 **합**이라 증가분이 같아야 한다(곱이면 커진다)
         const d1=t1-t0;
-        put('gain','high'); const t2=campTapGain();
+        put('tap','high'); const t2=campTapGain();
         const d2=t2-t1;
         chk(Math.abs(d2-d1)<=Math.max(2,d1*0.06),
-          '재화의 룬이 합이 아니다 — 첫 장 +'+Math.round(d1)+' · 둘째 장 +'+Math.round(d2)+'(곱이면 더 크다)');
-        void v; clear(); }
-      // ② 👆 손끝의 룬 — **탭에만**. 채취는 그대로여야 한다
-      if(typeof campTapGain==='function' && typeof campGatherMul==='function'){
-        const t0=campTapGain(), g0=campGatherMul();
-        put('tap','high');
-        chk(campTapGain()>t0,'손끝의 룬이 탭에 안 걸린다');
-        chk(Math.abs(campGatherMul()-g0)<1e-9,'손끝의 룬이 채취까지 건드렸다 — 탭 전용이다');
+          '손끝의 룬이 합이 아니다 — 첫 장 +'+Math.round(d1)+' · 둘째 장 +'+Math.round(d2)+'(곱이면 더 크다)');
         clear(); }
       // ③ ⛽ 정제의 룬 — 가스 산출.
       //   ⚠ 정제소가 **서 있어야** 값이 나온다(campHasRefinery). 여기서 재는 것은 그 판정이
@@ -2232,17 +2255,15 @@ async function groupLobby(){
         chk(typeof techTick==='function' && /_techWkSpd\(/.test(String(techTick)),
           'techTick 이 _techWkSpd 를 안 쓴다 — 신속의 룬이 일꾼에 안 닿는다');
         clear(); }
-      // ⑥-2 🏃 가속·질주의 룬 — **부르는 자리가 하나뿐**이라 값과 자리를 함께 잠근다.
+      // ⑥-2 🏃 가속의 룬 — **부르는 자리가 하나뿐**이라 값과 자리를 함께 잠근다.
       //   ⭐ 값만 재면 「함수는 맞는데 아무도 안 부른다」를 못 잡는다 — 그래서 호출부까지 본다.
-      if(typeof campDtMul==='function' && typeof campRoundMul==='function'){
-        put('speed','uniq'); put('round','uniq');
-        const wS=1+runeVal(runeKey('speed','uniq')), wR=1+runeVal(runeKey('round','uniq'));
+      //   ⚠ 「질주의 룬」은 2026-09-03 에 지웠다(가속과 뜻이 겹쳤다) — 되살리려면 ATTIC.md.
+      if(typeof campDtMul==='function'){
+        put('speed','uniq');
+        const wS=1+runeVal(runeKey('speed','uniq'));
         chk(Math.abs(campDtMul()-wS)<1e-9,'가속의 룬 값이 안 붙는다: ×'+campDtMul().toFixed(3));
-        chk(Math.abs(campRoundMul()-wR)<1e-9,'질주의 룬 값이 안 붙는다: ×'+campRoundMul().toFixed(3));
         chk(/campDtMul\(\)/.test(String(campFrame)),
           'campFrame 이 campDtMul 을 안 쓴다 — 가속의 룬이 어디에도 안 닿는다');
-        chk(/campRoundMul\(\)/.test(String(campCombatStep)),
-          'campCombatStep 이 campRoundMul 을 안 쓴다 — 질주의 룬이 어디에도 안 닿는다');
         clear(); }
       // ⑥-3 ⚡ 열기의 룬 — 피버 **발동 확률**에 곱한다(지속·배수가 아니다).
       //   ⚠ 환생 트리에서 피버를 안 열면 campFevOn() 이 false 라 룬도 아무 일을 안 한다 —
@@ -2274,7 +2295,7 @@ async function groupLobby(){
         chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
         clear(); }
       assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
-      return '재화(합)·탭 전용·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·유즈맵(젬 제외)·회복 ok';
+      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·유즈맵(젬 제외)·회복 ok';
     } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
       if(typeof campRuneTouch==='function') campRuneTouch();
       if(typeof campWipeField==='function') campWipeField();
@@ -2298,10 +2319,98 @@ async function groupLobby(){
       campRuneEnter('slot'); await sleep(60);
       const el=$('campRune'); assert(visible(el),'룬 화면이 안 열림');
       assert(_runeSec==='slot','장착 탭이 아니다: '+_runeSec);
-      // ③ 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
-      const lk=el.querySelectorAll('.rnSlot.lk');
+      // ③ 🌌 판은 SVG 한 장이다(2026-09-03 성좌 판) — 줄 두 개(.rnSlot)로 되돌리지 말 것
+      assert(el.querySelector('.rnMap svg'),'성좌 판이 없다 — 목록형으로 되돌아갔다');
+      // 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
+      const lk=el.querySelectorAll('.rnHx.lk'), lkT=el.querySelectorAll('.rnLkT');
       assert(lk.length>0,'기록 0 인데 잠긴 칸이 하나도 없다');
-      assert(/R\d+/.test(lk[0].textContent),'잠긴 칸에 해금 라운드가 안 적혀 있다: '+lk[0].textContent);
+      assert(lk.length===RUNE_SLOT_R.norm.length-1+RUNE_SLOT_R.uniq.length,
+        '기록 0 인데 잠긴 칸 수가 맞지 않다: '+lk.length);
+      assert(lkT.length===lk.length&&/^R\d+$/.test(lkT[0].textContent),
+        '잠긴 칸에 해금 라운드가 안 적혀 있다: '+(lkT[0]||{}).textContent);
+      // 성좌 셋 — 한 무리를 다 열면 그 한가운데 유니크가 열린다
+      assert(RUNE_SLOT_R.norm.length===RUNE_CONS*RUNE_SLOT_R.uniq.length,
+        '일반 칸이 성좌 수로 안 나뉜다: '+RUNE_SLOT_R.norm.length+' / '+RUNE_CONS);
+      for(let c=0;c<RUNE_SLOT_R.uniq.length;c++){
+        const last=RUNE_SLOT_R.norm[(c+1)*RUNE_CONS-1];
+        assert(RUNE_SLOT_R.uniq[c]>last,
+          '성좌 '+(c+1)+' 의 유니크가 그 무리를 다 열기 전에 열린다: R'+RUNE_SLOT_R.uniq[c]+' ≤ R'+last); }
+      // ④ 🔍 판을 밀고 확대한다 · 🎒 가방은 늘 보인다 (2026-09-03)
+      { C.best={10:50}; campRuneEnter('slot'); await sleep(80);
+        const svg=$('rnSvg'), g=$('rnG');
+        assert(svg&&g,'판에 밀고 확대할 <g> 가 없다');
+        assert(svg._svvBound,'판에 손가락이 안 이어졌다 — 공용 엔진(svvBind)을 안 썼다');
+        assert(_runePickKind==='','칸이 골라진 채로 열렸다');
+        assert(el.querySelector('.rnBag'),'상시 가방이 없다 — 임시 시트로 되돌아갔다');
+        // 🗺 상단은 판 **위에 떠 있다** — 판이 화면 맨 위까지 차오른다(캠프 메인과 같은 규칙)
+        { const mp=el.querySelector('.rnMap'), tp=el.querySelector('.rnTop');
+          assert(mp&&tp,'판·상단이 없다');
+          assert(Math.abs(mp.getBoundingClientRect().top-el.getBoundingClientRect().top)<2,
+            '판이 상단 띠 아래에서 시작한다 — 상단이 판과 안 합쳐졌다');
+          assert(getComputedStyle(tp).position==='absolute','상단이 자리를 차지한다(떠 있지 않다)');
+          assert(!el.querySelector('.rnMapHd'),'판 위 머리줄이 남아 있다 — 상단으로 합쳤다');
+          assert(/최대 도달/.test(($('rnRound')||{}).textContent||''),'상단에 진행 수치가 없다');
+          // 🏷 제목 — 유즈맵·상점·환생과 같은 규격(이 화면만 빠져 있었다)
+          const cs=getComputedStyle(el.querySelector('.rnTitle'));
+          assert(cs.fontSize==='16px'&&cs.fontWeight==='700'&&parseFloat(cs.letterSpacing)>1.5,
+            '룬 제목이 공용 규격과 다르다: '+cs.fontSize+' / '+cs.fontWeight+' / '+cs.letterSpacing); }
+        assert(!el.querySelector('.rnPick'),'옛 임시 시트(.rnPick)가 되살아났다');
+        const V=_rnView;
+        // ⭐ 이동 방식은 **캠프 메인과 같다** — 손가락은 목표만 바꾸고 지금 뷰가 따라간다.
+        //   ⛔ 관성(손을 떼면 미끄러짐)을 다시 넣지 말 것 — 다른 화면과 조작감이 갈라진다.
+        assert(SVV_FOLLOW===9,'따라가는 속도가 메인맵(nemoViewTick k=dt*9)과 다르다: '+SVV_FOLLOW);
+        assert(typeof svvFling==='undefined'&&typeof svvZoomSmooth==='undefined',
+          '관성·별도 이징이 되살아났다 — 이동 방식이 캠프 메인과 갈라진다');
+        // 목표만 움직인다 → 지금 뷰는 그대로
+        campRuneFit(true);
+        const x0=V.x, tx0=V.tx;
+        svvGoto(V, ()=>$('rnG'), { x:tx0+120 }, false, ()=>true);
+        assert(Math.abs(V.tx-(tx0+120))<1e-6,'목표가 안 바뀐다');
+        assert(Math.abs(V.x-x0)<1e-6,'손가락이 지금 뷰를 직접 밀었다 — 보간을 건너뛴다');
+        // 한 프레임씩 돌리면 목표에 다가가고, **뒤로 갈수록 조금씩** 간다(감속)
+        const step=[]; for(let i=0;i<80&&svvTick(V,1/60);i++) step.push(V.x);
+        assert(Math.abs(V.x-V.tx)<1e-6,'목표에 안 닿는다: '+V.x.toFixed(1)+' / '+V.tx.toFixed(1));
+        const d1=step[1]-step[0], d2=step[step.length-1]-step[step.length-2];
+        assert(d2<d1*0.5,'등속으로 간다 — 감속이 없다: 처음 '+d1.toFixed(2)+' → 끝 '+d2.toFixed(2));
+        // 🔍 확대는 **한 점을 붙잡는다** — 붙잡은 화면점이 가리키던 월드점이 그대로여야 한다
+        campRuneFit(true);
+        const rr=svg.getBoundingClientRect();
+        const cx=rr.left+rr.width*0.42, cy=rr.top+rr.height*0.38;   // 한가운데를 피해서 잡는다
+        const wAt=()=>{ const q=svvToView(svg,cx,cy); return {x:(q.x-V.x)/V.z, y:(q.y-V.y)/V.z}; };
+        const z0=V.z, w0=wAt();
+        svvZoomAt(V, svg, ()=>$('rnG'), z0*1.6, cx, cy, RUNE_ZLIM, true);
+        assert(Math.abs(V.z-z0)>1e-6,'확대가 안 걸린다');
+        const w1=wAt();
+        assert(Math.hypot(w1.x-w0.x,w1.y-w0.y)<0.6,
+          '확대할 때 붙잡은 점이 흘러간다: '+Math.hypot(w1.x-w0.x,w1.y-w0.y).toFixed(2));
+        // ⛔ transform 에 CSS transition 을 걸지 말 것 — 보간과 이중이 되어 늦게 따라온다
+        assert(getComputedStyle($('rnG')).transitionDuration==='0s',
+          '판 <g> 에 transition 이 걸렸다 — 보간과 겹쳐 손가락을 늦게 따라온다');
+        // 📐 전체 보기 — 별들이 다 들어오고, 축소 하한이 그 배율을 따라 풀린다
+        campRuneFit(true);
+        assert(Math.abs(V.z-V.fitZ)<1e-6,'전체 보기 배율이 안 적힌다');
+        assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
+          '축소 하한이 전체 보기 배율을 안 따른다');
+        // 🎒 가방 탭 = **빈 칸 중 첫 칸**에 자동 장착
+        const R=campRuneState(); R.own[runeKey('tap','high')]=2;
+        R.norm=[]; campRuneTouch(); campRuneRender(); await sleep(30);
+        const k=runeKey('tap','high');
+        campRuneBagTap(k);
+        assert(campRuneState().norm[0]===k,'가방을 눌렀는데 빈 칸에 안 끼워졌다: '+campRuneState().norm[0]);
+        campRuneBagTap(k);
+        assert(campRuneState().norm[1]===k,'두 번째도 빈 칸을 찾아 끼워야 한다');
+        // 👆 칸을 고르면 **그 칸에** 끼운다(자동이 아니라)
+        R.own[runeKey('hp','low')]=1;
+        campRunePick('norm',4); await sleep(30);
+        assert(_runePickKind==='norm'&&_runePick===4,'칸이 안 골라진다');
+        campRuneBagTap(runeKey('hp','low'));
+        assert(campRuneState().norm[4]===runeKey('hp','low'),
+          '고른 칸에 안 끼워졌다: '+campRuneState().norm[4]);
+        // ⛔ 갈래가 다르면 안 들어간다
+        R.own[runeKey('speed','uniq')]=1; campRunePick('norm',5); await sleep(20);
+        campRuneBagTap(runeKey('speed','uniq'));
+        assert(!campRuneState().norm[5],'유니크 룬이 일반 칸에 들어갔다');
+        campRunePick('',-1); await sleep(20); }
       // ④ 룬 상점 탭 — 등급 버튼과 젬 값이 보인다
       campRuneEnter('shop'); await sleep(60);
       const buys=el.querySelectorAll('.rnBuy');
@@ -2310,7 +2419,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 ok';
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대(캠프 메인과 같은 추종) · 상시 가방(자동/지정 장착) ok';
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });
@@ -2765,9 +2874,13 @@ async function groupLobby(){
             '빈 곳을 두 번 눌러도 전체 보기로 안 간다');
           assert(src.indexOf('CAMP_TREE_ZSTEP * 1.4')<0,
             '두 번 누르기가 확대로 되돌아갔다 — 전체 보기여야 한다'); }
-      { const q=$('campTree').querySelector('.ctQ'); assert(q,'제목 옆 도움말(?) 이 없다');
-        const ti=$('campTree').querySelector('.ctTitle').getBoundingClientRect(), r=q.getBoundingClientRect();
-        assert(r.left>=ti.right-1 && r.left-ti.right<12,'도움말이 제목에서 떨어져 있다: '+Math.round(r.left-ti.right)+'px');
+      { const q=$('campTree').querySelector('.ctQ'); assert(q,'도움말(?) 이 없다');
+        // 🏷 화면 이름은 **재화 바 왼쪽**(#curTitle)이 맡는다(2026-09-03) — 화면 안 제목은 감췄다.
+        //   ⛔ 화면 안에 제목을 다시 띄우지 말 것 — 같은 이름이 두 층에 뜬다.
+        assert(getComputedStyle($('campTree').querySelector('.ctTitle')).display==='none',
+          '화면 안에 제목이 또 떠 있다');
+        const row=$('campTree').querySelector('.ctTopRow').getBoundingClientRect(), r=q.getBoundingClientRect();
+        assert(Math.abs(r.left-row.left)<14,'도움말이 상단 줄 왼쪽에 안 붙어 있다: '+Math.round(r.left-row.left)+'px');
         campTreeHelp(true);
         const h=$('campTree').querySelector('.ctHelp');
         assert(!h.classList.contains('hide'),'도움말이 안 열린다');
