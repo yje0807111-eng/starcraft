@@ -992,7 +992,12 @@ function techBuildListModel(){ const race=G.tech.race, t=TECH_TREE[race];
   return { mode:'build', title:t.name+' · 건설', icon:pIco('👷'), sub:'건물 탭 → 맵을 탭해 배치', items, info:_techResInfo() }; }
 // 🔬 이 건물의 연구 목록. 오토배틀은 건물 연구(업그레이드) 자체를 쓰지 않는다 —
 //   강화는 업그레이드 탭(_stkSupplyModel)의 전역 항목으로만 하고, 건물은 병력 공급원 역할만 한다.
-function _techResList(b){ return (techWallet() || !b) ? [] : (b.research||[]); }
+// ⚔ 캠프 전용 연구(camp:true · 공격속도·방어력)는 **캠프에서만** 건물 카드에 선다.
+//   ⛔ 관리자 건설 탭에 새 연구가 튀어나오면 안 된다 — 그 탭은 캠프 규칙을 안 따른다.
+//   ⚠ 오토배틀은 원래 연구를 안 쓴다(techWallet() → 빈 목록).
+function _techResList(b){ if(techWallet() || !b) return [];
+  const onCamp = (typeof campIsOn === 'function') && campIsOn();
+  return (b.research || []).filter(r => onCamp || !r.camp); }
 // 🏭 이 건물이 '생산' 프로필을 쓰는가. 관리자 = produces가 하나라도 있으면 생산 건물.
 //   오토배틀만 예외 — 전투 유닛은 건물이 웨이브마다 자동 배출(TECH_BLDG_UNIT)하므로 수동 생산은 일꾼뿐이다.
 function _techHasProd(b){ const ps=(b&&b.produces)||[];

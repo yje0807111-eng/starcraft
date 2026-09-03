@@ -1611,6 +1611,29 @@
     background:var(--bpFace) padding-box,var(--trayEdge) border-box,var(--metal-ring-n) border-box;
     box-shadow:0 0 7px -5px rgba(255,59,59,.35)}
   .cmdG .cgLift svg,.cmdG .cgRally svg,.cmdG .cgSelAll svg{width:17px;height:17px;display:block}
+  /* ⏫ 한 번에 올릴 레벨 — **한 칸을 눌러 돌린다**(×1 → ×5 → MAX · 2026-09-03).
+     ⛔ 껍데기를 새로 만들지 않는다 — 사냥터 수량 버튼(.hmUpQty/.hmUpQ · 30-home.css)이 단일 소스다.
+     여기서는 트레이 칸(.cgLift 등)과 **키만 맞춘다**: 높이 30px. */
+  /* ⏫ 배수(×1→×5→MAX) · 🔙 되돌아가기 — **글리프 버튼**(2026-09-03 사용자 확정 · 목업 ④안).
+     ⭐ 판·테두리를 걷고 **아주 옅은 면**(흰 5.5%)만 남긴다 — 카드 칸이 이미 붉은 테두리라
+       트레이까지 선을 두면 상자가 두 겹으로 겹쳐 보인다.
+     ⛔ 여기에 색을 넣지 말 것: 붉은색은 칸(고른 것)의 신호다.
+     ⚠ 높이 26px — 트레이 칸(30px)보다 낮다. 카드 위에 얇게 얹히라고 낮춘 것이다. */
+  .cmdG .cgGly{flex:none;height:22px;min-width:32px;padding:0 8px;cursor:pointer;
+    display:grid;place-items:center;line-height:1;   /* ⚠ 글자·그림을 칸 한가운데로 — line-height:normal 이면 숫자가 위로 뜬다 */
+    color:#f0f4f9;background:rgba(255,255,255,.19);border:0;border-radius:var(--r-bar);
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:12px;font-weight:700;letter-spacing:.02em}
+  .cmdG .cgGlySq{min-width:22px;padding:0}
+  .cmdG .cgGly .uiIco,.cmdG .cgGly img{width:13px;height:13px;display:block;
+    filter:brightness(1.5) saturate(0)}    /* 되돌아가기 그림 — 면 위에서 글자와 같은 밝기로 */
+  .cmdG .cgGly:active{background:rgba(255,255,255,.28);transform:translateY(1px)}
+  /* ⚠ 위아래 여백을 **눈에 보이는 대로** 맞춘다(2026-09-03 사용자 지적).
+       머리줄 기준으로는 위아래 3px 로 같았지만, 사람이 보는 기준은 **시트 위선**이다 —
+       그 위에 시트 padding-top(9px)이 더 얹혀 위 12 · 아래 3 으로 아래에 붙어 보였다.
+       7px 올려 **위아래가 같아진다**(실측 위 6 · 아래 7). ⛔ 시트·머리줄 padding 은 공유라 못 건드린다.
+       ⚠ 그래서 트레이가 머리줄 위로 조금 나간다 — 그게 눈에는 맞다. */
+  .cmdG .cgTopOut:has(.cgGly){gap:6px;align-items:center;margin-top:-7px}
   /* 켜짐(랠리 지정 중 · 부양 중) = 붉은 발광. 스킬 칸의 '지금 도는 중'과 같은 신호다 */
   .cmdG .cgLift.on,.cmdG .cgRally.on{background:var(--bpFace) padding-box,var(--trayEdgeOn) border-box,var(--metal-ring-n) border-box;
     box-shadow:0 0 9px -3px rgba(255,59,59,.65)}

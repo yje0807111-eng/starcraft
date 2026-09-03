@@ -96,13 +96,15 @@ const SKILL_RESEARCH={ stim:'stim', siege:'siege', spider_mine:'mine', lockdown:
   restoration:'restore', optical_flare:'flare', ensnare:'ensnare', broodling:'broodling', plague:'plague', consume:'consume',
   psi_storm:'storm', hallucination:'hallucination', maelstrom:'maelstrom', mind_control:'mindcontrol', disruption_web:'disruption', stasis:'stasis', recall:'recall' };
 // (C) 무기/방어 티어 — uid → {atk,def,sh?}(uid당 각 1개 → 중복가산 없음). 지상/공중=FXLAB_AIR · 종족=RACE_OF
+// ⚔ as = 공격속도 · dr = 방어력 — **캠프 전용 계열 연구**(20-camp-research.js 가 TECH_TREE 에 주입).
+//   ⚠ 캠프 밖에서는 그 연구가 존재하지 않으므로 레벨이 0 이라 아무 일도 안 한다.
 const UNIT_UPG={
-  marine:{atk:'inf_atk',def:'inf_def'}, machinegun:{atk:'inf_atk',def:'inf_def'}, ghost:{atk:'inf_atk',def:'inf_def'}, medic:{def:'inf_def'},
-  racer:{atk:'veh_atk',def:'veh_def'}, tank:{atk:'veh_atk',def:'veh_def'}, goliath:{atk:'veh_atk',def:'veh_def'},
-  skyguard:{atk:'air_atk',def:'air_def'}, hellfire:{atk:'air_atk',def:'air_def'}, dreadnought:{atk:'air_atk',def:'air_def'}, pelican:{def:'air_def'}, aegis:{def:'air_def'},
-  snapper:{atk:'melee_atk',def:'gnd_def'}, broodling:{atk:'melee_atk',def:'gnd_def'}, ultralisk:{atk:'melee_atk',def:'gnd_def'},
-  hydra:{atk:'range_atk',def:'gnd_def'}, thornqueen:{atk:'range_atk',def:'gnd_def'}, matron:{def:'gnd_def'}, defiler:{def:'gnd_def'},
-  wyvern:{atk:'fly_atk',def:'fly_def'}, stinger:{atk:'fly_atk',def:'fly_def'}, behemoth:{atk:'fly_atk',def:'fly_def'}, venom:{atk:'fly_atk',def:'fly_def'}, overlord:{def:'fly_def'}, medusa:{def:'fly_def'},
+  marine:{atk:'inf_atk',as:'inf_as',def:'inf_def',dr:'inf_dr'}, machinegun:{atk:'inf_atk',as:'inf_as',def:'inf_def',dr:'inf_dr'}, ghost:{atk:'inf_atk',as:'inf_as',def:'inf_def',dr:'inf_dr'}, medic:{def:'inf_def',dr:'inf_dr'},
+  racer:{atk:'veh_atk',as:'veh_as',def:'veh_def',dr:'veh_dr'}, tank:{atk:'veh_atk',as:'veh_as',def:'veh_def',dr:'veh_dr'}, goliath:{atk:'veh_atk',as:'veh_as',def:'veh_def',dr:'veh_dr'},
+  skyguard:{atk:'air_atk',as:'air_as',def:'air_def',dr:'air_dr'}, hellfire:{atk:'air_atk',as:'air_as',def:'air_def',dr:'air_dr'}, dreadnought:{atk:'air_atk',as:'air_as',def:'air_def',dr:'air_dr'}, pelican:{def:'air_def',dr:'air_dr'}, aegis:{def:'air_def',dr:'air_dr'},
+  snapper:{atk:'melee_atk',as:'melee_as',def:'gnd_def',dr:'gnd_dr'}, broodling:{atk:'melee_atk',as:'melee_as',def:'gnd_def',dr:'gnd_dr'}, ultralisk:{atk:'melee_atk',as:'melee_as',def:'gnd_def',dr:'gnd_dr'},
+  hydra:{atk:'range_atk',as:'range_as',def:'gnd_def',dr:'gnd_dr'}, thornqueen:{atk:'range_atk',as:'range_as',def:'gnd_def',dr:'gnd_dr'}, matron:{def:'gnd_def',dr:'gnd_dr'}, defiler:{def:'gnd_def',dr:'gnd_dr'},
+  wyvern:{atk:'fly_atk',as:'fly_as',def:'fly_def',dr:'fly_dr'}, stinger:{atk:'fly_atk',as:'fly_as',def:'fly_def',dr:'fly_dr'}, behemoth:{atk:'fly_atk',as:'fly_as',def:'fly_def',dr:'fly_dr'}, venom:{atk:'fly_atk',as:'fly_as',def:'fly_def',dr:'fly_dr'}, overlord:{def:'fly_def',dr:'fly_dr'}, medusa:{def:'fly_def',dr:'fly_dr'},
   blade:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, dragoon:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, archon:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, dark_templar:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'}, larva:{atk:'gnd_wpn',def:'gnd_arm',sh:'shield'},
   high_templar:{def:'gnd_arm',sh:'shield'}, dark_archon:{def:'gnd_arm',sh:'shield'}, worker_light:{def:'gnd_arm',sh:'shield'},
   falcon:{atk:'air_wpn',def:'air_arm',sh:'shield'}, skydancer:{atk:'air_wpn',def:'air_arm',sh:'shield'}, archangel:{atk:'air_wpn',def:'air_arm',sh:'shield'}, kronos:{atk:'air_wpn',def:'air_arm',sh:'shield'}, seraph:{def:'air_arm',sh:'shield'}, observer:{def:'air_arm',sh:'shield'} };

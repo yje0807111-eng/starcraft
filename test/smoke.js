@@ -5444,13 +5444,115 @@ async function groupLobby(){
         assert(slots().length===3,'계열이 셋이 아니다: '+slots().length);
         // ⛔ **표에 없는 계열 연구가 있으면 안 된다** — 조용히 사라지는 것이 제일 나쁘다.
         //    종족마다 계열 구성이 달라(테란 6 · 저그 5 · 프로토스 5) 자동으로 못 묶는다.
+        //    ⚔ 네 축이다(2026-09-03): 공격력 · 공격속도 · 체력 · 방어력.
         { const inTree=new Set();
-          for(const g of campArmTree()){ if(g.atk) inTree.add(g.atk); if(g.def) inTree.add(g.def); }
+          for(const g of campArmTree()){ for(const k of [g.atk, g.as, g.def, g.dr]) if(k) inTree.add(k); }
           const all=[];
           for(const b of (TECH_TREE[G.tech.race].buildings||[]))
             for(const r of (b.research||[])) if(r.tier) all.push(r.k);
           const miss=all.filter(k=>!inTree.has(k));
           assert(!miss.length,'무장 표에 없는 계열 연구가 있다 — 화면에서 사라진다: '+miss.join(',')); }
+        // ⏫ ×1 / ×5 / MAX — 한 번에 여러 레벨(2026-09-03). 클릭만 줄이고 **시간은 안 줄인다**.
+        if(typeof campArmMulCycle==='function' && typeof campArmBuy==='function'){
+          const T=G.tech, keepR=T.research, keepE=T.energy, keepC=T.credit, keepM=_armMul, keepS=_armSel;
+          const eid=987654; let be=T.ents.find(e=>e.eid===eid);
+          if(!be){ be={eid, type:'bldg', bk:'engbay', x:.5, y:.5, hp:500, maxHp:500, bt:0}; T.ents.push(be); }
+          try{
+            T.research={}; T.energy=500; T.credit=999999; T.built.engbay=1;
+            const lv=()=>T.research['union_inf_atk']|0;
+            const one=(mul)=>{ _armMul=mul; _armSel='inf_atk'; be._rj=null;
+              const g0=T.energy; campArmBuy('inf_atk');
+              const rj=be._rj; if(rj){ techApplyResearch(be,rj); be._rj=null; }
+              return { n:rj?rj.n:0, t:rj?rj.t:0, gas:g0-T.energy }; };
+            // 🔁 **한 칸을 눌러 돌린다** — 사냥터 수량 토글(.hmUpQty/.hmUpQ)과 같은 컴포넌트다.
+            //   ⛔ 버튼 셋으로 되돌리지 말 것(트레이는 판 밖이라 칸이 늘수록 전장을 가린다).
+            { const keep=_armMul; _armMul=1;
+              const seen=[]; for(let i=0;i<4;i++){ seen.push(_armMul); campArmMulCycle(); }
+              assert(seen.join(',')==='1,5,max,1','배수가 한 칸에서 안 돈다: '+seen.join(','));
+              const html=campArmMulHTML();
+              assert((html.match(/<button/g)||[]).length===1,'배수 칸이 하나가 아니다 — 버튼 셋으로 되돌아갔다');
+              // 🎛 글리프 버튼 — 판·테두리 없이 **아주 옅은 면**만(2026-09-03 · 목업 ④안).
+              //   ⛔ 여기에 색(붉은색)을 넣지 말 것 — 그건 칸(고른 것)의 신호다.
+              assert(/cgGly/.test(html),'배수 칸이 글리프 버튼(.cgGly)이 아니다');
+              assert(!/hmUpQty|cgMul/.test(html),'옛 껍데기가 되살아났다');
+              // 📐 자리 — 트레이는 카드 **오른쪽 끝**에 맞고 머리줄과 **세로 중앙**이 같다.
+              { campArmPick(0); const tr=document.querySelector('.cgTopOut');
+                const cd=document.querySelector('.cmdG'), hd=document.querySelector('.cmdG .cgHead');
+                if(tr&&cd&&hd&&cd.getBoundingClientRect().height>0){
+                  const t=tr.getBoundingClientRect(), c=cd.getBoundingClientRect(), h=hd.getBoundingClientRect();
+                  assert(Math.abs(c.right-t.right)<2,'트레이가 카드 오른쪽 끝과 안 맞는다: '+Math.round(c.right-t.right));
+                  void h;
+                  // ⚠ 위아래 여백은 **사람이 보는 기준**(시트 위선 ↔ 칸)으로 잰다.
+                  //   ⛔ 머리줄 기준으로 재지 말 것 — 그 위에 시트 padding 이 더 얹혀 있어
+                  //     머리줄로는 「같다」인데 화면에서는 아래로 붙어 보인다(2026-09-03 실측).
+                  const sh=$('btSheet'), gd=document.querySelector('.cmdG .cgGrid');
+                  if(sh&&gd){ const sr=sh.getBoundingClientRect(), gr=gd.getBoundingClientRect();
+                    const up=t.top-sr.top, dn=gr.top-t.bottom;
+                    assert(up>0&&dn>0&&Math.abs(up-dn)<=3,
+                      '트레이 위아래 여백이 다르다: 위 '+Math.round(up)+' 아래 '+Math.round(dn)); } } }
+              _armMul=keep; }
+            const a1=one(1);   assert(a1.n===1&&lv()===1,'×1 이 1레벨이 아니다: '+a1.n);
+            const a5=one(5);   assert(a5.n===5&&lv()===6,'×5 가 5레벨을 한 번에 안 올린다: '+a5.n);
+            // 💰 값은 **레벨마다 다르다** — 다섯 칸을 각각 더한 값이어야 한다(같은 값 ×5 가 아니다)
+            assert(a5.gas>a1.gas*4,'×5 의 값이 레벨별 합이 아니다: '+a5.gas);
+            // ⏱ 시간도 n 배다 — ⛔ 「돈만 내고 즉시」로 만들지 말 것(시간 축이 사라진다)
+            assert(Math.abs(a5.t-a1.t*5)<0.01,'×5 의 연구 시간이 5배가 아니다: '+a5.t+' / '+a1.t);
+            // MAX — 가스로 살 수 있는 만큼만, 그 이상은 안 산다
+            const can=campArmAfford('inf_atk'), aM=one('max');
+            assert(aM.n===can&&aM.n>0,'MAX 가 살 수 있는 만큼을 안 산다: '+aM.n+' / '+can);
+            assert(T.energy>=0,'MAX 가 가스를 넘겨 썼다: '+T.energy);
+            assert(campArmAfford('inf_atk')===0,'MAX 뒤에도 더 살 수 있다 — 다 안 샀다');
+          } finally { T.research=keepR; T.energy=keepE; T.credit=keepC;
+            _armMul=keepM; _armSel=keepS; be._rj=null;
+            const i=T.ents.indexOf(be); if(i>=0) T.ents.splice(i,1); } }
+        // ⏫ 같은 배수 칸이 **자원 칸에도** 있다(2026-09-03 사용자 확정).
+        //   ⛔ 자원용 배수를 따로 두지 말 것 — 두 칸을 오갈 때 값이 달라 보이면 그게 버그로 읽힌다.
+        if(typeof campResMulN==='function' && typeof campUpgBuyN==='function'){
+          campResEnter('res');
+          const C=campState(), keepU=JSON.stringify(C.upg||{}), keepC=G.tech.credit, keepM=_armMul, keepP=_resPick;
+          try{
+            const m=campResModelRes();
+            assert(m.topRight && /cgGly/.test(m.topRight),'자원 칸에 배수 칸(.cgGly)이 없다');
+            // 상태를 **무장 칸과 나눠 쓴다** — 한쪽에서 바꾸면 다른 쪽도 그 값이어야 한다
+            { const k=_armMul; _armMul=5;
+              assert(campResMulN('tap')===5,'자원 칸이 배수를 따로 들고 있다');
+              _armMul=k; }
+            C.upg={}; G.tech.credit=1e7; _resPick='tap';
+            const lv=()=>campUpgLv('tap');
+            // 💰 값은 레벨마다 다르다 — 다섯 칸 각각의 합이어야 한다(같은 값 ×5 가 아니다)
+            _armMul=1; const c1=campResCostN('tap',1);
+            _armMul=5; const c5=campResCostN('tap',5);
+            assert(c5>c1*4,'×5 의 값이 레벨별 합이 아니다: '+c5+' / '+c1);
+            // ⛔ 미리보기가 레벨을 **실제로 올려 두면 안 된다**(공짜 레벨이 된다)
+            assert(lv()===0,'값을 물어봤을 뿐인데 레벨이 올랐다: '+lv());
+            const b5=G.tech.credit; campUpgBuyN('tap',5);
+            assert(lv()===5,'×5 가 5칸을 한 번에 안 올린다: '+lv());
+            assert(Math.abs((b5-G.tech.credit)-c5)<1,'×5 가 낸 값이 미리 보여 준 값과 다르다');
+            // MAX — 지금 미네랄로 살 수 있는 만큼만, 넘겨 쓰지 않는다
+            _armMul='max';
+            const can=campUpgAfford('tap'), l0=lv(), got=campUpgBuyN('tap',campResMulN('tap'));
+            assert(got===can&&got>0,'MAX 가 살 수 있는 만큼을 안 산다: '+got+' / '+can);
+            assert(lv()-l0===got&&G.tech.credit>=0,'MAX 가 미네랄을 넘겨 썼다: '+G.tech.credit);
+            assert(campUpgAfford('tap')===0,'MAX 뒤에도 더 살 수 있다 — 다 안 샀다');
+          } finally { C.upg=JSON.parse(keepU); G.tech.credit=keepC; _armMul=keepM; _resPick=keepP;
+            campResEnter('arm'); } }
+        // ⚔ 네 축이 **실제로 유닛에 걸리는가** — 화면만 늘고 아무 일도 안 하면 안 된다.
+        //   ⛔ 캠프 전용 연구(as·dr)는 TECH_TREE 주입 → UNIT_UPG → campScaleAllies 세 곳이
+        //     다 이어져야 한다. 하나만 끊겨도 조용히 0 이 된다.
+        if(typeof campDeploy==='function' && typeof CAMPB!=='undefined' && CAMPB){
+          const keepR=G.tech.research;
+          try{
+            const one=()=>{ CAMPB.me.units.length=0; campDeploy('marine',0.4,0.5);
+              const u=CAMPB.me.units[0]; return {d:+u.dmg.toFixed(3), h:+u.maxHp.toFixed(2), c:+u.cdMax.toFixed(3)}; };
+            G.tech.research={}; const b0=one();
+            G.tech.research={union_inf_atk:10}; assert(one().d>b0.d*1.3,'공격력 연구가 안 걸린다');
+            G.tech.research={union_inf_as:10};  assert(one().c<b0.c*0.8,'공격속도 연구가 안 걸린다');
+            G.tech.research={union_inf_def:10}; assert(one().h>b0.h*1.3,'체력 연구가 안 걸린다');
+            G.tech.research={union_inf_dr:10};  assert(one().h>b0.h*1.1,'방어력 연구가 안 걸린다');
+            // 🛡 방어력은 상한이 있다(−60%) — 없으면 레벨이 오를수록 무적이 된다
+            G.tech.research={union_inf_dr:999};
+            assert(Math.abs(one().h-b0.h/(1-CAMP_RES_DR_MAX))<0.05,'방어력 상한이 안 걸린다');
+          } finally { G.tech.research=keepR; } }
         // 계열을 고르면 2단으로 · 되돌아가기가 있다
         campArmPick(0);
         assert(body.querySelector('.cgBack'),'계열 안에서 되돌아가기가 없다 — 나갈 길이 막힌다');
