@@ -860,6 +860,16 @@
          값이 0 이면 「갑자기 어두워진다」로 돌아가므로 **짧게 겹치되 먼저**가 정답이다. */
     transition-duration:calc(var(--t-screen) * .4)}
   #phone.artLift .navBar{z-index:121}
+  /* 💠 캠프의 세 구역(환생·업그레이드·룬) 위에서도 **재화와 설정이 보인다**(2026-09-03 사용자 확정).
+     ⭐ 새 바를 만들지 않는다 — 공용 재화 바(#curBar)를 그대로 올린다(단일 소스).
+     ⚠ .artLift 는 그 셋이 열렸을 때만 붙는다(campRebArtOn) — 딱 필요한 화면에만 걸린다.
+     ⛔ 던전 칩(.curTitle)은 함께 올리지 말 것 — 그건 **캠프 맵의 것**이라 구역 안에서는 뜻이 없다. */
+  #phone.artLift .curBar{z-index:121}
+  /* ⚙ 구역에서는 **톱니**다(유즈맵 선택과 같은 얼굴) — 캠프 맵의 ☰(더보기)와 얼굴을 가른다.
+     ⚠ #phone.campMode 규칙과 특이도를 다투므로 클래스 둘(.campMode.artLift)로 이긴다. */
+  #phone.campMode.artLift .curBar .hudSet .icoBars{display:block}
+  #phone.campMode.artLift .curBar .hudSet .icoMenu{display:none}
+  #phone.campMode.artLift .curBar .hudSet.on .icoBars{display:none}
   /* 🎬 화면 전환 — 로딩(#opening)만 흐려지며 들고 난다.
      ⚠ .appScreen.hide 가 display:none 이라 그냥 두면 전환이 뚝 끊긴다. 로딩을
         var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.

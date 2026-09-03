@@ -82,6 +82,9 @@ const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','dgScre
 const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상점' };
 const CUR_SCREENS=['homeScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
+// 🧍 인구 칸을 캠프 **밖에서도** 보여 줄 화면(2026-09-03 사용자 확정).
+//   ⚠ 값은 캠프 상태에서 온다 — 캠프를 한 번도 안 열었으면 0/0 이다.
+const POP_SCREENS=['mapSelect','shopScreen'];
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
   campDropClose(); e.classList.remove('asChip','open'); e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
@@ -120,6 +123,11 @@ function curChipHTML(o){
     +'<i class="cdCv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>'; }
 // 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
+  // 🏕 캠프 **구역**(환생·업그레이드·룬)이 열려 있으면 던전 칩 대신 그 이름을 쓴다(2026-09-03).
+  //   ⛔ 칩을 그대로 두지 말 것 — 「던전 5 · 라운드 30/50」은 캠프 맵의 것이라 구역 안에서는 뜻이 없다.
+  { const z = (typeof campZoneTitle === 'function') ? campZoneTitle() : '';
+    if(z){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip', 'open'); }
+      if(e.textContent !== z) e.textContent = z; return; } }
   const o=campChipInfo();
   if(!o){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip'); e.textContent=''; } return; }
   e.classList.add('asChip'); e.innerHTML=curChipHTML(o);
@@ -319,7 +327,9 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   const _camp = (typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech) ? G.tech : null;
   setN('curMin', _camp ? (_camp.credit||0) : profMineral());
   setN('curGas', _camp ? (_camp.energy||0) : profGas());
-  if(_camp) set('curPop', (_camp.sup||0) + '/' + (_camp.supCap||0));   // 🏕 인구 — 캠프에서만 보인다
+  // 🏕 인구 — 캠프 안에서는 살아 있는 값, 밖(유즈맵·상점)에서는 **저장된 캠프 상태**를 읽는다.
+  { const _c = _camp || ((typeof campState==='function') ? campState() : null);
+    if(_c) set('curPop', (_c.sup||0) + '/' + (_c.supCap||0)); }
   setN('curGem', profGem());
   curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
   if(typeof guidePaint==='function') guidePaint(); }   // 🧭 가이드 띠도 같은 박자로
@@ -413,6 +423,8 @@ function showAppScreen(id){ setInGame(false);
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
+  { const ph=document.getElementById('phone');                                     // 🧍 인구 칸을 보여 줄 화면
+    if(ph) ph.classList.toggle('popBar', POP_SCREENS.indexOf(id)>=0); }
   // 🧭 가이드 띠는 #phone 직속이라 **화면을 바꿔도 남는다.** 여기서 다시 그려 걷어 낸다
   //    (위 campExit() 로 캠프가 이미 꺼졌으므로 guidePaint 가 스스로 지운다).
   //    ⛔ 없으면 상점·정비 화면에서 띠가 첫 패널 머리줄을 덮는다(실측 2026-08-31).

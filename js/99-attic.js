@@ -458,3 +458,33 @@ function campMineHit(clientX, clientY){
   const m = _techMineralAt(w.x, w.y);
   return !!(m && m.amount > 0);
 }
+
+// ── [js/22-camp-rune.js] _runeRowHTML — 옛 목록형 룬 칸(줄 두 개)
+// 일반·유니크를 가로 줄 두 개로 늘어놓던 렌더러다. 2026-09-03 사용자 확정으로 룬 화면이
+// **성좌 판**(SVG 한 장 · 유니크가 중심, 일반 8칸이 고리)으로 바뀌며 호출자가 사라졌다.
+// ⛔ 되살리면 같은 화면을 두 번 그리게 된다 — 스모크 「성좌 판이 없다」가 잡는다.
+function _runeRowHTML(kind, label){
+  const tb = RUNE_SLOT_R[kind] || [], open = campRuneSlots(kind), eq = campRuneEq(kind);
+  const next = campRuneNextAt(kind);
+  let h = '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">' + label + '</span>'
+    + '<span class="rnSecN">' + open + ' / ' + tb.length + '</span></div><div class="rnSlots">';
+  for(let i = 0; i < tb.length; i++){
+    if(i >= open){   // 🔒 잠긴 칸 — **왜 잠겼는지 적는다**(이유가 없으면 버그처럼 보인다)
+      h += '<button class="rnSlot lk" type="button" disabled><i class="rnLk">🔒</i>'
+        + '<span class="rnLkR">R' + tb[i] + '</span></button>'; continue; }
+    const key = eq[i];
+    const sel = (_runePickKind === kind && _runePick === i) ? ' sel' : '';
+    if(!key){ h += '<button class="rnSlot em' + sel + '" type="button" onclick="campRunePick(\'' + kind + '\',' + i + ')">+</button>'; continue; }
+    const p = runeParse(key), gc = (RUNE_GD[p.gd] || {}).col || '#8b95a5';
+    h += '<button class="rnSlot on' + sel + '" type="button" style="--rg:' + gc + '"'
+      + ' onclick="campRunePick(\'' + kind + '\',' + i + ')">'
+      + '<span data-ico="' + p.def.ico + '"></span>'
+      + '<span class="rnSlN">' + p.def.nm.replace('의 룬', '') + '</span>'
+      + '<span class="rnSlV">' + runeValTx(key) + '</span></button>'; }
+  h += '</div>';
+  if(next) h += '<div class="rnNext">다음 칸은 <b>R' + next + '</b> 에 열립니다</div>';
+  return h + '</div>'; }
+
+// ── [js/19-camp.js] campRoundMul
+// 💠 **질주의 룬 — 웨이브 대기 배수.** 다음 무리가 빨리 오면 라운드가 짧아진다.
+function campRoundMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('round') : 1; }
