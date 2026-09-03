@@ -5406,19 +5406,17 @@ async function groupLobby(){
       CAMPB.ai.units=[{dead:false},{dead:false},{dead:false}];
       campBarReset(); campBarRender();
       assert(el.querySelector('.cbFoe').textContent==='적 3','적 수가 안 맞음: '+el.querySelector('.cbFoe').textContent);
-      // ③ 🌳 **트리 칩은 없다**(2026-09-01 사용자 확정) — 트리 입구는 하단 네비 「환생 › 트리」 하나다.
-      //   ⛔ 띠에 되돌리지 말 것: 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
-      assert(!el.querySelector('.cbTree'),'띠에 트리 칩이 되살아났다 — 입구가 둘이 된다');
-      // 🔁 환생 칩은 남는다 — 띠 전체는 pointer-events:none 이라 이 칩만 되살아 있어야 한다
-      { assert(getComputedStyle(el).pointerEvents==='none','띠가 맵 조작을 가로챈다');
-        C.rbPts=2e6; campBarReset(); campBarRender();
-        const rb=el.querySelector('.cbReb'); assert(rb,'환생 칩이 없다');
-        assert(getComputedStyle(rb).pointerEvents==='auto','환생 칩이 안 눌린다'); }
+      // ③ 🚪 **띠에 화면 입구가 없다**(트리 2026-09-01 · 환생 2026-09-03 사용자 확정).
+      //   둘 다 하단 네비에 제 칸이 있다 — 띠에 또 두면 입구가 둘이 된다. ⛔ 되돌리지 말 것.
+      //   띠에 남는 것은 **읽는 것**뿐이다(적 수 · 피버).
+      { for(const cls of ['.cbTree','.cbReb'])
+          assert(!el.querySelector(cls),'띠에 '+cls+' 가 되살아났다 — 입구가 둘이 된다');
+        assert(getComputedStyle(el).pointerEvents==='none','띠가 맵 조작을 가로챈다');
+        C.rbPts=2e6; C.earn=9e9; campBarReset(); campBarRender();
+        assert(!el.querySelector('button'),'띠에 누를 것이 생겼다 — 띠는 읽는 자리다'); }
       // ④ 보여줄 게 없으면 띠가 숨는다(빈 판이 맵을 가리지 않게)
-      //   ⚠ 환생 칩은 rbPts 가 아니라 **누적 획득**(campWealth)으로 켜진다 — 그것도 비워야 한다.
       C.dg=0; C.cleared=0; C.rbPts=0; C.earn=0; C.earnGas=0;
       campBattleClose(); campBarReset(); campBarRender();
-      assert(!campCanRebirth(),'누적을 비웠는데 환생 조건이 켜져 있다 — 조건이 딴 데서 온다');
       assert(el.classList.contains('empty'),'보여줄 게 없는데 띠가 남아 있다: '+el.className+' / '+el.innerHTML.slice(0,160));
       // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다
       // ⑤ 매 프레임 불리므로 바뀐 것만 쓴다 — 적 수 칸으로 잰다(트리 칩은 없앴다)
@@ -10786,7 +10784,7 @@ async function groupLobby(){
   // 🏕 캠프 좌상단 던전 칩(2026-08-25) — 재화 바 왼쪽 빈 슬롯에 얹는 얇은 판.
   //   ⚠ 캠프 화면 자체는 3D 라 여기서 못 띄운다. 그래서 **캠프를 켜지 않고** 무는 검사로 세운다 —
   //     ① 마크업 만드는 함수 ② 화면이 바뀔 때 걷히는가 ③ CSS 가 실제로 걸리는가.
-  await step('캠프 좌상단: 던전 칩(왼쪽 광원 띠 + 두 줄)', async()=>{
+  await step('캠프 좌상단: 던전 칩(한 줄 · 가운뎃점 · 판 없음)', async()=>{
     skipIf(typeof curChipHTML!=='function','칩 함수 없음');
     const t=$('curTitle'); assert(t,'재화 바 왼쪽 슬롯(#curTitle)이 없음');
     // ⚠ 아래는 전부 try/finally 안이다 — 중간에 실패해도 캠프 스텁이 남으면 **뒤 검사가 줄줄이 깨진다**
@@ -10795,38 +10793,54 @@ async function groupLobby(){
     // ⚠ 재화 바가 숨겨져 있으면 rect 가 전부 0 이라 자리 검사가 통째로 헛돈다 — 먼저 켜 둔다
     const _barWas=$('curBar').classList.contains('hide'); if(_barWas) curShow(true);
     try{
-    // ① 마크업 — 이름·라벨·숫자·진행 막대가 다 들어간다
+    // ① 마크업 — 이름 · 가운뎃점 · 숫자 · 진행 밑선
     t.classList.add('asChip');
     t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10});
     const nm=t.querySelector('.cdNm'), n=t.querySelector('.cdN'), bar=t.querySelector('.cdBar i');
     assert(nm && nm.textContent==='잊혀진 회랑','던전 이름이 칩에 없음');
-    assert(t.querySelector('.cdLab') && t.querySelector('.cdLab').textContent==='던전','라벨이 없음');
     assert(n && n.textContent==='3','현재 값이 없음');
     assert(t.querySelector('.cdDim').textContent==='/10','최댓값 표기가 없음');
-    assert(bar,'진행 막대가 없음');
-    assert(Math.abs(parseFloat(bar.style.width)-30)<0.6,'진행 막대가 3/10=30% 가 아님: '+bar.style.width);
-    assert(t.querySelector('.cdRail'),'왼쪽 광원 띠(7안의 핵심)가 없음');
-    // ①-2 진행 막대는 **판 안쪽**에 앉는다 — 아래 테두리에 붙거나 좌우 모서리에 물리면 새어 보인다
+    assert(t.querySelector('.cdSep'),'가운뎃점이 없음 — 이름과 숫자가 붙어 읽힌다');
+    assert(bar,'진행 밑선이 없음');
+    assert(Math.abs(parseFloat(bar.style.width)-30)<0.6,'진행이 3/10=30% 가 아님: '+bar.style.width);
+    // ①-2 ⛔ **옛 두 줄 부품이 되살아나지 않았다**(2026-09-03 · 한 줄로 바꿨다).
+    //   판·왼쪽 광원 띠·라벨은 좌상단만 하단 구역과 색·재질이 갈리게 하던 것들이다.
+    for(const cls of ['.cdRail','.cdBody','.cdSub','.cdLab'])
+      assert(!t.querySelector(cls),'옛 두 줄 부품 '+cls+' 가 되살아났다');
+    // ①-3 라벨은 화면에서 뺐지만 **읽어 주는 말에는 남는다**(정보까지 잃으면 안 된다)
+    { const on0=window.campIsOn, st0=window.campState;
+      window.campIsOn=()=>true; window.campState=()=>({dg:3, cleared:26});
+      curPaintChip();
+      const al=t.getAttribute('aria-label')||'';
+      window.campIsOn=on0; window.campState=st0;
+      assert(/라운드/.test(al),'읽어 주는 말에 라벨이 없다: '+al);
+      t.classList.add('asChip'); t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10}); }
+    // ①-4 진행 밑선은 **⌄ 밑을 지나가지 않는다** — 겹치면 화살표가 붉게 물든다
     { const r=t.getBoundingClientRect(), br=t.querySelector('.cdBar').getBoundingClientRect();
-      const gapB=r.bottom-br.bottom, gapL=br.left-r.left, gapR=r.right-br.right;
-      assert(gapB>=2,'막대가 칩 아래 테두리에 붙었다(간격 '+gapB.toFixed(1)+'px)');
-      assert(gapL>=3 && gapR>=3,'막대 좌우가 안 잘렸다 — 판 모서리에 물린다(좌 '+gapL.toFixed(1)+' / 우 '+gapR.toFixed(1)+')'); }
-    // ①-3 라운드 줄은 **밑선 정렬**이다. 글자 크기가 셋 다 달라(9.5/12/11px) 가운데로 맞추면 어긋나 보인다.
-    //   ⚠ rect 로는 못 잰다 — 밑선이 맞아도 글자 크기가 다르면 **하강부만큼 아래가 벌어진다**
-    //     (실측 1.0px). 그래서 규칙 자체를 본다(말줄임과 같은 이유).
-    { const ai=getComputedStyle(t.querySelector('.cdSub')).alignItems;
-      assert(ai==='baseline','라운드 줄이 밑선 정렬이 아니다 — 숫자와 총 라운드가 어긋나 보인다: '+ai); }
-    // ② CSS — 클래스만 붙이면 칩 물성이 실제로 걸리는가(규칙이 다른 파일에 있어 조용히 빠질 수 있다)
+      assert(r.right-br.right>=8,'진행 밑선이 ⌄ 자리까지 온다(여백 '+(r.right-br.right).toFixed(1)+'px)'); }
+    // ①-5 한 줄이라 **밑선 정렬**이다 — 이름 11.5 · 숫자 13 · 총 라운드 11px 로 크기가 달라
+    //   가운데로 맞추면 숫자만 떠 보인다.
+    { const ai=getComputedStyle(t).alignItems;
+      assert(ai==='baseline','칩이 밑선 정렬이 아니다: '+ai); }
+    // ② CSS — 클래스만 붙이면 물성이 실제로 걸리는가(규칙이 다른 파일에 있어 조용히 빠질 수 있다)
+    // ⚠ 위에서 칩을 **다시 그렸다** — n/bar 가 가리키던 노드는 떨어져 나가 스타일이 빈 값이 된다.
+    //   (실제로 그래서 한 번 헛돌았다: 「칩 숫자가 흰 글자가 아니다: 」 — 색이 아예 빈 문자열이었다.)
+    const n2=t.querySelector('.cdN'), bar2=t.querySelector('.cdBar i');
     { const cs=getComputedStyle(t);
-      assert(parseFloat(cs.borderRadius)===3,'칩 모서리가 3px 이 아님(DESIGN 각진 규칙): '+cs.borderRadius);
-      assert(parseFloat(cs.borderTopWidth)>0,'칩 테두리가 없음 — .curTitle.asChip 규칙이 안 걸렸다');
-      const a=cs.backgroundColor.match(/[\d.]+/g)||[];
-      assert(a.length===4 && parseFloat(a[3])>0.3 && parseFloat(a[3])<0.95,
-        '칩 배경이 반투명하지 않음(맵 위에 얹히는 판이다): '+cs.backgroundColor);
-      // 숫자는 청록(--hud) 발광 — 초록만 재면 파랑도 통과하므로 파랑·초록이 빨강보다 크고 빛이 있는지로 잰다
-      const c=(getComputedStyle(n).color.match(/[\d.]+/g)||[]).map(Number);
-      assert(c[1]>120 && c[2]>150 && c[1]>c[0]+60 && c[2]>c[0]+60,'칩 숫자가 청록이 아님: '+getComputedStyle(n).color);
-      assert(/px/.test(getComputedStyle(n).textShadow||''),'칩 숫자에 발광이 없음'); }
+      // ⛔ **판이 없다**(2026-09-03 사용자 확정) — 좌상단은 맵 위에 얹히는 **글자**다. 되돌리지 말 것.
+      const a=(cs.backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+      assert(a.length<4 || a[3]<=0.05,'칩에 면이 생겼다 — 좌상단은 판이 아니라 글자다: '+cs.backgroundColor);
+      assert(parseFloat(cs.borderTopWidth)===0,'칩에 테두리가 생겼다 — 판을 되돌리면 안 된다');
+      assert(/drop-shadow/.test(cs.filter||''),'칩이 그림자로 안 떠 있다 — 밝은 배경에서 글자가 묻힌다');
+      // ⛔ **청록을 되돌리지 말 것.** 글자는 흰색이고 진행선만 하단 비용색(붉은색)이다 —
+      //   좌상단만 색이 갈려 하단 구역과 안 어울리던 것이 이 디자인의 이유다.
+      const c=(getComputedStyle(n2).color.match(/[\d.]+/g)||[]).map(Number);
+      assert(!(c[1]>120 && c[2]>150 && c[1]>c[0]+60 && c[2]>c[0]+60),
+        '칩 숫자가 청록으로 돌아갔다: '+getComputedStyle(n2).color);
+      assert(c[0]>190 && c[1]>190 && c[2]>190,'칩 숫자가 흰 글자가 아니다: '+getComputedStyle(n2).color);
+      const bc=(getComputedStyle(bar2).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+      assert(bc[0]>200 && bc[0]>bc[1]+80 && bc[0]>bc[2]+80,
+        '진행선이 붉은색이 아니다(하단 구역의 비용색이어야 한다): '+getComputedStyle(bar2).backgroundColor); }
     // ②-2 칩은 재화 바 안에 들어가야 한다 — 두 줄을 그냥 쌓으면 바(34px)를 넘어 밖으로 삐져나온다(실측 44.7px)
     { const bar=$('curBar'); const was=bar.classList.contains('hide');
       if(was) curShow(true);
@@ -10890,7 +10904,9 @@ async function groupLobby(){
       window.campIsOn=()=>true;
       cs.dg=0; cs.cleared=0;
       { const a=campChipInfo();
-        assert(a && /캠프/.test(a.name),'0단계인데 캠프로 안 보임: '+JSON.stringify(a)); }
+        assert(a && /캠프/.test(a.name),'0단계인데 캠프로 안 보임: '+JSON.stringify(a));
+        // 🏕 캠프도 다른 구역과 **같은 자리**(0/50)를 쓴다(2026-09-03) — 숫자를 빼 봤더니 밋밋했다.
+        assert(a.cur===0 && a.max===CAMP_ROUND_MAX,'캠프 칩이 0/'+CAMP_ROUND_MAX+' 이 아님: '+JSON.stringify(a)); }
       cs.dg=3; cs.cleared=26;
       { const b=campChipInfo();
         assert(b && b.lab==='라운드' && b.cur===27,'던전인데 라운드를 안 씀: '+JSON.stringify(b));
@@ -11186,7 +11202,9 @@ async function groupLobby(){
       assert(skin===1,'던전을 옮겼는데 바닥 그림을 안 갈았다(campSkin 호출 '+skin+'회)');
       assert(!d(),'이동했는데 판이 안 닫힘');
       assert((t.querySelector('.cdNm')||{}).textContent==='폐쇄된 시설','칩이 새 던전으로 안 바뀜');
-      assert((t.querySelector('.cdLab')||{}).textContent==='라운드','라운드가 생겼는데 칩이 아직 던전을 보여준다');
+      // 라벨은 화면에서 뺐다(한 줄이라 자리가 없다) — **읽어 주는 말**로 확인한다
+      assert(/라운드/.test(t.getAttribute('aria-label')||''),
+        '라운드가 생겼는데 읽어 주는 말이 아직 던전이다: '+t.getAttribute('aria-label'));
       assert((t.querySelector('.cdN')||{}).textContent==='40','칩 라운드 값이 안 맞음');
       // ⑨ 바깥을 누르면 닫힌다
       t.click(); await sleep(40); assert(d(),'다시 안 열림');
@@ -11236,7 +11254,9 @@ async function groupLobby(){
       assert(PROF().camp.cleared===0,'캠프로 갔는데 라운드가 남아 있다: cleared '+PROF().camp.cleared);
       assert(skin>skin0,'캠프로 옮겼는데 바닥 그림을 안 갈았다');
       assert((t.querySelector('.cdNm')||{}).textContent===CAMP_HOME_NAME,'칩이 캠프로 안 바뀜');
-      assert((t.querySelector('.cdLab')||{}).textContent==='단계','캠프인데 칩이 라운드를 보여준다');
+      // 🏕 캠프도 던전과 같은 자리(0/50)를 쓴다(2026-09-03) — 숫자를 뺐다가 밋밋해서 되돌렸다.
+      assert((t.querySelector('.cdN')||{}).textContent==='0','캠프 칩에 현재 값(0)이 없다');
+      assert((t.querySelector('.cdDim')||{}).textContent==='/'+CAMP_ROUND_MAX,'캠프 칩 상한이 라운드 상한과 다르다');
       // 다시 열면 **캠프가 지금 자리로 잡힌다**(0 을 1 로 올려 버리면 여기가 어긋난다)
       t.click(); await sleep(40);
       assert((d().querySelector('.cdRow.here')||{}).dataset.dg==='0',

@@ -1,0 +1,184 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>던전 드롭다운 재설계 — 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 실측(2026-09-03 · 폰 390px) — 좌상단 칩(캠프 · 잊혀진 회랑 · 30/50)을 누르면 칩 아래로 자라는 판.
+     지금 판만 **청록**(border rgba(0,229,255,.42) · 현재칸/라운드 하이라이트 --hud)이다 —
+     칩·트레이·하단 커맨드 카드는 전부 붉은색(#ff7676)과 검정 면으로 갈아탔는데 이 판만 안 남았다.
+     ⛔ 이 컴포넌트(#campDrop)는 **캠프 전용 단일 UI**다 — 다른 화면과 안 겹친다. 자유롭게 바꿔도 된다.
+     자리 250px · 왼쪽 DUNGEON 목록(스크롤) · 오른쪽 ROUND 굴림 피커 · 아래 [이동] 버튼.
+     내용 구조는 그대로 두고 **판 색·테두리·강조색·행 표시**만 바꾼다. */
+:root{
+  --font-ko:'IBM Plex Sans KR',sans-serif; --font-num:'Rajdhani',sans-serif;
+  --neon:#ff3b3b; --neon-glow:rgba(255,59,59,.45); --cost:#ff7676;
+  --ink:#e6eefc; --dim:#6f7a88; --edge:rgba(255,255,255,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#101317;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}
+.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 10px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:56px}
+.sub b{color:#c3ccd8;font-weight:700}
+
+/* ── 무대 = 캠프 맵 위(재화 바 + 칩 + 판) ─────────────────────── */
+.phone{width:390px;height:340px;position:relative;overflow:hidden;
+  background:radial-gradient(120% 60% at 30% 0%,#8f8672,#7c7460)}
+.bar{position:absolute;left:0;top:0;right:0;height:34px;display:flex;align-items:center;
+  gap:8px;padding:0 10px;z-index:2;background:linear-gradient(180deg,rgba(0,0,0,.35),transparent)}
+.chip{display:flex;align-items:baseline;gap:0;font-size:11.5px;font-weight:800;color:#e6eefc}
+.chip i{font-style:normal;color:rgba(214,226,240,.35);margin:0 4px}
+.chip b{font-family:var(--font-num);font-size:13px}
+.chip .dim{font-family:var(--font-num);font-size:11px;color:rgba(214,226,240,.5)}
+.res{margin-left:auto;font-family:var(--font-num);font-weight:700;color:#cfd8e6;font-size:11px}
+
+/* 공통 골격 */
+.drop{position:absolute;left:30px;top:44px;width:250px;padding:8px 0 9px;font-size:11px;color:#d6e2f0}
+.sec{padding:0 9px}
+.sec+.sec{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.09)}
+.sl{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#77808c;margin-bottom:5px}
+.two{display:flex}
+.L{flex:1;min-width:0;padding-right:8px}
+.R{width:84px;flex:none;padding-left:9px;border-left:1px solid rgba(255,255,255,.09)}
+.list{max-height:104px;overflow-y:auto}
+.row{position:relative;display:flex;align-items:baseline;gap:7px;width:100%;
+  padding:5.5px 3px 5.5px 8px;font-size:11.5px;font-weight:700;color:#b9c4d2}
+.row .ix{font-family:var(--font-num);font-size:11px;color:#6f7a88;min-width:11px;text-align:right}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .mul{font-family:var(--font-num);font-size:10.5px;color:#6f7a88}
+.row.home{border-bottom:1px solid rgba(255,255,255,.09);padding-bottom:6px;margin-bottom:3px}
+.pickwrap{position:relative;height:104px}
+.pick{position:relative;height:104px}
+.rn{position:absolute;left:0;right:0;height:26px;text-align:center;
+  font-family:var(--font-num);font-size:13px;font-weight:700;color:#5f6874;line-height:26px}
+.rn.on{font-size:18px}
+.go{position:relative;display:block;width:100%;min-height:32px;background:none;
+  border:1px solid rgba(255,255,255,.2);border-radius:0;cursor:pointer;
+  font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.4px;color:#fff}
+.mm{margin:8px 0 0;color:#6f7887;font-size:10.5px;font-family:var(--font-num);letter-spacing:.04em}
+
+/* ① 지금 것 — 청록 테두리 + 청록 강조(기준선) */
+.v1{background:#0a0e14;border:1px solid rgba(0,229,255,.42);border-radius:0 3px 3px 3px;
+  box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.v1 .row.here{color:#fff}
+.v1 .row.here .ix{color:#00e5ff;text-shadow:0 0 6px rgba(0,229,255,.45)}
+.v1 .row.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;
+  background:#00e5ff;box-shadow:0 0 6px rgba(0,229,255,.45)}
+.v1 .mid{position:absolute;left:0;right:0;top:39px;height:26px;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
+.v1 .rn.on{color:#00e5ff;text-shadow:0 0 8px rgba(0,229,255,.45)}
+.v1 .go::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.62) 50%,transparent 92%),linear-gradient(90deg,transparent,rgba(255,59,59,.92),transparent)}
+
+/* ② 붉은 테두리만 — 색만 바꾼다(가장 작은 변화) */
+.v2{background:#0a0a0b;border:1px solid rgba(255,59,59,.38);border-radius:0 3px 3px 3px;
+  box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.v2 .row.here{color:#fff}
+.v2 .row.here .ix{color:var(--cost)}
+.v2 .row.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--cost);box-shadow:0 0 6px var(--neon-glow)}
+.v2 .mid{position:absolute;left:0;right:0;top:39px;height:26px;border-top:1px solid rgba(255,59,59,.22);border-bottom:1px solid rgba(255,59,59,.22)}
+.v2 .rn.on{color:var(--cost);text-shadow:0 0 8px var(--neon-glow)}
+.v2 .go{border-color:rgba(255,255,255,.16)}
+.v2 .go::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;background:var(--cost);box-shadow:0 0 6px var(--neon-glow)}
+
+/* ③ 판 없음 — 테두리 자체를 없애고 그림자로만 띄운다(칸 어휘 .cgSlot 재질) */
+.v3{background:linear-gradient(180deg,#141517,#0a0a0b);border:0;border-radius:3px;
+  box-shadow:0 10px 26px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.06)}
+.v3 .row.here{color:#fff;background:rgba(255,255,255,.04)}
+.v3 .row.here .ix{color:var(--cost)}
+.v3 .row.here::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--cost)}
+.v3 .mid{position:absolute;left:0;right:0;top:39px;height:26px;background:rgba(255,255,255,.04);border-radius:2px}
+.v3 .rn.on{color:#fff}
+.v3 .go{border:0;background:rgba(255,255,255,.05);border-radius:2px}
+
+/* ④ 모서리 컷 — 트레이·칸과 같은 문법을 판 자체에 */
+.v4{--cut:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  clip-path:var(--cut);background:linear-gradient(180deg,#121316,#08090a);
+  border:1px solid rgba(255,59,59,.28);box-shadow:0 10px 24px rgba(0,0,0,.6)}
+.v4 .row.here{color:#fff}
+.v4 .row.here .ix{color:var(--cost)}
+.v4 .row.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--cost);box-shadow:0 0 6px var(--neon-glow)}
+.v4 .mid{position:absolute;left:0;right:0;top:39px;height:26px;border-top:1px solid rgba(255,59,59,.2);border-bottom:1px solid rgba(255,59,59,.2)}
+.v4 .rn.on{color:var(--cost);text-shadow:0 0 8px var(--neon-glow)}
+.v4 .go{clip-path:var(--cut);border-color:rgba(255,255,255,.14)}
+.v4 .go::after{display:none}
+
+/* ⑤ 상단 실선 강조 — 청록 테두리를 걷고 위 1px 붉은 선만 */
+.v5{background:#0a0a0b;border:1px solid var(--edge);border-radius:0 3px 3px 3px;position:relative;
+  box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.v5::before{content:'';position:absolute;left:0;right:0;top:-1px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--cost) 30%,var(--cost) 70%,transparent);box-shadow:0 0 8px -1px var(--neon-glow)}
+.v5 .row.here{color:#fff}
+.v5 .row.here .ix{color:var(--cost)}
+.v5 .row.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--cost)}
+.v5 .mid{position:absolute;left:0;right:0;top:39px;height:26px;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
+.v5 .rn.on{color:var(--cost);text-shadow:0 0 8px var(--neon-glow)}
+.v5 .go::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;background:var(--cost)}
+
+/* ⑥ 칸 배경 강조 — 현재 던전 줄에 옅은 붉은 면(밑선 없이 면으로 표시) */
+.v6{background:#0a0a0b;border:1px solid var(--edge);border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.v6 .row.here{color:#fff;background:rgba(255,59,59,.10);border-radius:2px;margin:0 -3px;padding-left:11px;width:calc(100% + 6px)}
+.v6 .row.here .ix{color:var(--cost)}
+.v6 .mid{position:absolute;left:0;right:0;top:39px;height:26px;background:rgba(255,59,59,.10);border-radius:2px}
+.v6 .rn.on{color:var(--cost);text-shadow:0 0 8px var(--neon-glow)}
+.v6 .go{border-color:rgba(255,59,59,.3);background:rgba(255,59,59,.06)}
+.v6 .go::after{display:none}
+
+/* ⑦ 이중 톤 — 헤더(DUNGEON/ROUND)만 밝게, 본문은 완전 검정(하단 시트의 이중 톤과 짝) */
+.v7{background:#000;border:1px solid var(--edge);border-radius:3px;box-shadow:0 8px 22px rgba(0,0,0,.55)}
+.v7 .sl{background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);padding:3px 0;margin:-3px 0 5px}
+.v7 .row.here{color:#fff}
+.v7 .row.here .ix{color:var(--cost)}
+.v7 .row.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--cost)}
+.v7 .mid{position:absolute;left:0;right:0;top:39px;height:26px;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
+.v7 .rn.on{color:var(--cost);text-shadow:0 0 8px var(--neon-glow)}
+.v7 .go{border-color:rgba(255,255,255,.16)}
+.v7 .go::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;background:var(--cost)}
+
+/* ⑧ 유리 판 — 배경이 옅게 비치는 블러(하단 시트 ⑥안과 짝) */
+.v8{background:linear-gradient(180deg,rgba(20,22,26,.55),rgba(8,9,11,.88));backdrop-filter:blur(6px) saturate(.6);
+  border:1px solid rgba(255,255,255,.10);border-radius:0 3px 3px 3px;box-shadow:0 8px 22px rgba(0,0,0,.5)}
+.v8 .row.here{color:#fff}
+.v8 .row.here .ix{color:var(--cost)}
+.v8 .row.here::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;background:var(--cost);box-shadow:0 0 6px var(--neon-glow)}
+.v8 .mid{position:absolute;left:0;right:0;top:39px;height:26px;border-top:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16)}
+.v8 .rn.on{color:var(--cost);text-shadow:0 0 8px var(--neon-glow)}
+.v8 .go{border-color:rgba(255,255,255,.18)}
+.v8 .go::after{content:'';position:absolute;left:11%;right:11%;bottom:-1px;height:1px;background:var(--cost)}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const DG=[['0','캠프','안전','home'],['1','감염된 둥지','×1.0',''],['2','버려진 전초기지','×3.0',''],
+  ['3','잊혀진 회랑','×10.0','here'],['4','산란장','×30.0','']];
+const RN=[[31,''],[30,'on'],[29,'']];
+
+const DROP=(cls)=>'<div class="drop '+cls+'">'
+  +'<div class="sec"><div class="two">'
+    +'<div class="L"><div class="sl">DUNGEON</div><div class="list">'
+      + DG.map(([i,n,m,c])=>'<button class="row'+(c?' '+c:'')+'"><i class="ix">'+i+'</i><span class="nm">'+n+'</span><span class="mul">'+m+'</span></button>').join('')
+    +'</div></div>'
+    +'<div class="R"><div class="sl">ROUND</div><div class="pickwrap"><i class="mid"></i>'
+      +'<div class="pick">'
+        + RN.map(([v,c],i)=>'<div class="rn'+(c?' on':'')+'" style="top:'+(i*26)+'px">'+v+'</div>').join('')
+      +'</div></div></div>'
+  +'</div></div>'
+  +'<div class="sec" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.09)"><button class="go">이동</button></div>'
+  +'</div>';
+
+const CHIP='<div class="bar"><div class="chip">잊혀진 회랑<i>·</i><b>30</b><span class="dim">/50</span></div>'
+  +'<div class="res">1.6M&nbsp;&nbsp;755&nbsp;&nbsp;0&nbsp;&nbsp;0/10</div></div>';
+
+const ANS=[
+ ['지금 것 (기준선)','청록 테두리 + 청록 강조. 칩·트레이·하단 카드는 전부 붉은색으로 갈아탔는데 <b>이 판만 청록으로 남았다</b> — 안 어울리는 이유.'],
+ ['붉은 테두리만','가장 작은 변화 — 테두리·현재 칸·라운드 강조를 <b>전부 붉은색(#ff7676)</b>으로만 바꾼다. 구조는 그대로라 위화감이 없다.'],
+ ['판 없음','테두리를 없애고 <b>그림자로만</b> 띄운다(칸 재질 .cgSlot 과 같은 검정 그라데이션). 현재 칸은 밑선 대신 옅은 면으로 표시.'],
+ ['모서리 컷','트레이·칸과 같은 <b>모서리 컷 8px</b>을 판 전체에. 캠프 것이라는 게 형태로 먼저 읽힌다.'],
+ ['상단 실선 강조','청록 테두리를 걷고 <b>위 1px 붉은 선</b> 하나만 남긴다. 칩의 진행선과 같은 어휘 — 위아래로 짝이 맞는다.'],
+ ['칸 배경 강조','밑선 대신 현재 던전·라운드 줄에 <b>옅은 붉은 면</b>을 깐다. 세로 밑선보다 넓게 읽혀 스크롤 중에도 눈에 잘 띈다.'],
+ ['이중 톤','헤더(DUNGEON/ROUND)만 밝게, 본문은 <b>순수 검정</b> — 하단 시트 이중 톤 안과 짝을 이룬다.'],
+ ['유리 판','배경이 옅게 비치는 블러. 하단 시트 유리 안과 <b>같은 재질</b>로 통일하고 싶을 때.'],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d],i)=>
+ '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'
+ +'<div class="phone">'+CHIP+DROP('v'+(i+1))+'</div></div>').join('');
+</script></body></html>

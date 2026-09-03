@@ -3482,22 +3482,19 @@ function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
   const C = campState(); const pts = Math.floor(campRtPts());
   const dg = campDgN(), foe = campAlive('ai');
-  const canReb = (typeof campCanRebirth === 'function') && campCanRebirth();   // ⓒ 지금은 조건만 본다(종족별 건물은 나중에)
   campFevPaint();                                  // ⚡ 남은 초는 캐시 밖에서 갱신한다
-  const key = dg + '|' + foe + '|' + pts + '|' + (canReb ? 1 : 0);
+  const key = dg + '|' + foe + '|' + pts;
   if(key === _campBarS) return;
   _campBarS = key;
   // ⛔ 던전·라운드·진행은 여기 두지 말 것 — 재화 바 왼쪽 칩(#curTitle · js/12-appshell.js)이
   //    이미 그걸 보여주고 거기에 이동 드롭다운까지 붙어 있다. 두 곳에 두면 반드시 어긋난다.
   const fo = el.querySelector('.cbFoe');
   if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
-  // 🌳 트리 입구는 **하단 네비 「환생 › 트리」 하나**다(2026-09-01 사용자 확정).
-  //   ⛔ 띠에 트리 칩을 되돌리지 말 것 — 환생 화면에서 가는 길이 생겨 두 입구가 되었다.
-  // 🔁 환생 칩 — 조건(누적 재화 100만)을 채우면 나타난다. 화면을 안 봐도 열리는 것이 아니라
-  //    일꾼을 사고 탭을 눌러야 채워지는 값이다(HUNT_R1 §4-1).
-  { const rb = el.querySelector('.cbReb'); if(rb) rb.classList.toggle('hide', !canReb); }
+  // 🚪 **띠에 화면 입구를 두지 않는다**(2026-09-03 사용자 확정).
+  //   🌳 트리도(2026-09-01) 🔁 환생도 하단 네비에 제 칸이 있다 — 띠에 또 두면 입구가 둘이 된다.
+  //   ⛔ 되돌리지 말 것. 띠에 남는 것은 **읽는 것**뿐이다(적 수 · 피버).
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !canReb && !campFevActive());
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !campFevActive());
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; campFevPaint(); }
