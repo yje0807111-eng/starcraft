@@ -2626,6 +2626,46 @@ async function groupLobby(){
     } finally { C.rate=kR; G.tech.energy=kE; G.tech.credit=kC; C.rbTree=kT; }
   });
 
+  // 🚪 **마디 능력** (2026-09-02 사용자 확정) — 관문이 문만 여는 게 아니라 작게 세진다.
+  //   ⭐ 새 효과 종류를 만들지 않는 것이 요점이다 — campRtMul/campRtCut 한 곳에만 더한다.
+  //   ⛔ 마디 전용 f 를 만들어 곱셈 축을 늘리지 말 것(BALANCE §0 의 ×1,900만).
+  await step('환생 트리: 마디가 그 안 계열들과 같은 축에 얹힌다', async()=>{
+    skipIf(typeof campRtNodeAdd!=='function','마디 능력 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      // ① 아무것도 없으면 덤도 없다
+      C.rbTree={};
+      assert(campRtMul('gather')===1,'마디도 계열도 없는데 배수가 1 이 아니다: '+campRtMul('gather'));
+      // ② 갈래 마디만 사도 **계열을 안 샀는데** 조금 세진다 — 그게 「문을 열면 미리 맛본다」는 뜻
+      C.rbTree={root:1,'br:econ':1};
+      const brOnly=campRtMul('gather');
+      assert(Math.abs(brOnly-(1+CAMP_RT_NODE_BR))<1e-9,'갈래 마디 몫이 안 붙는다: '+brOnly);
+      // ③ 묶음 마디까지 사면 **더해진다**(곱이 아니다)
+      C.rbTree={root:1,'br:econ':1,'gp:econ가':1};
+      const both=campRtMul('gather');
+      assert(Math.abs(both-(1+CAMP_RT_NODE_BR+CAMP_RT_NODE_GP))<1e-9,'마디 둘이 합으로 안 붙는다: '+both);
+      // ④ 계열을 산 값에도 그대로 더해진다
+      C.rbTree={root:1,'br:econ':1,'gp:econ가':1,gather:1};
+      const lad=campRtLad('gather')[1];
+      assert(Math.abs(campRtMul('gather')-(lad+CAMP_RT_NODE_BR+CAMP_RT_NODE_GP))<1e-9,
+        '계열 값에 마디 몫이 안 얹힌다: '+campRtMul('gather'));
+      // ⑤ 다른 갈래에는 안 샌다
+      assert(campRtMul('atk')===1,'재화 마디가 아군 갈래까지 세게 한다: '+campRtMul('atk'));
+      // ⑥ 다른 묶음에도 안 샌다 — 묶음 마디는 제 묶음까지만
+      C.rbTree={root:1,'br:econ':1,'gp:econ가':1};
+      const other=campRtMul('idle');   // econ 다 묶음
+      assert(Math.abs(other-(1+CAMP_RT_NODE_BR))<1e-9,'묶음 마디가 남의 묶음까지 간다: '+other);
+      // ⑦ 적 약화는 **상한을 안 넘는다** — 넘기면 갈래 하한이 뚫린다
+      C.rbTree={root:1,'br:enemy':1,'gp:enemy가':1,foeHp:campRtMax('foeHp')};
+      assert(campRtCut('foeHp')<=CAMP_RT_CUT_MAX+1e-9,'마디 몫이 계열 상한을 넘겼다: '+campRtCut('foeHp'));
+      // ⑧ 사슬 갈래(시작 도움)에는 마디가 없다
+      assert(campRtNodeAdd('tap')===0,'사슬 갈래에 마디 몫이 붙는다');
+      return '갈래 +'+Math.round(CAMP_RT_NODE_BR*100)+'% · 묶음 +'+Math.round(CAMP_RT_NODE_GP*100)
+        +'% · 합으로 얹힘 · 갈래/묶음 밖으로 안 샘 · 적 약화 상한 지킴';
+    } finally { C.rbTree=keepT; }
+  });
+
   // 🔌 **산 계열이 실제로 수치를 움직이나** (2026-09-02).
   //   ⚠ 이 검사가 없어서 계열 7개가 「표에 있고 살 수 있고 화면에 뜨는데 아무 일이 안 나는」 채로
   //     오래 남아 있었다. 화면만 보면 멀쩡해 보이고, 다른 스모크는 전부 통과한다.
@@ -2714,13 +2754,14 @@ async function groupLobby(){
       const px=r.left+r.width*0.72, py=r.top+r.height*0.34;
       const before=campTreeToView(px,py);
       const wx=(before.x-_campTreeView.x)/_campTreeView.z, wy=(before.y-_campTreeView.y)/_campTreeView.z;
-      campTreeZoomAt(_campTreeView.z*1.6, px, py);
+      // ⚠ 팬·줌은 이제 **부드럽게 따라간다**(2026-09-02) — 즉시 값을 읽으려면 보간을 끝내야 한다.
+      campTreeZoomAt(_campTreeView.z*1.6, px, py); campTreeViewSettle();
       const sx=wx*_campTreeView.z+_campTreeView.x, sy=wy*_campTreeView.z+_campTreeView.y;
       assert(Math.abs(sx-before.x)<0.6&&Math.abs(sy-before.y)<0.6,
         '확대가 붙잡은 점을 놓쳤다 ('+(sx-before.x).toFixed(2)+', '+(sy-before.y).toFixed(2)+')');
       // 상하한이 있고, 「전체」는 늘 그 사이로 돌아온다
-      campTreeZoomAt(1e6,null); const hi=_campTreeView.z;
-      campTreeZoomAt(1e-6,null); const lo=_campTreeView.z;
+      campTreeZoomAt(1e6,null); campTreeViewSettle(); const hi=_campTreeView.z;
+      campTreeZoomAt(1e-6,null); campTreeViewSettle(); const lo=_campTreeView.z;
       assert(hi===CAMP_TREE_ZMAX,'확대 상한이 안 걸린다: '+hi);
       // ⭐ **축소 하한은 해금 정도를 따라간다**(2026-09-02) — 상수가 아니라 「전체 보기」 배율에 묶여 있다.
       //   초반엔 별이 몇 개뿐이라 마음껏 축소하면 화면이 텅 비기 때문이다.
@@ -2797,8 +2838,13 @@ async function groupLobby(){
         const g0=campTapGain();
         _campFevEnd=Date.now()+5000;
         assert(campFevActive(),'심었는데 안 켜진다');
-        assert(Math.abs(campTapGain()/g0-campFevMul())<0.02,
-          '피버 배수가 탭에 안 걸린다: '+(campTapGain()/g0).toFixed(2)+' vs '+campFevMul());
+        // ⚠ **비율로 재지 말 것** — campTapGain 은 Math.round 로 정수화한다.
+        //   탭당이 1~2 인 초반에는 반올림 오차 1 이 비율 5배로 보인다(마디 능력이 붙어 내부값이
+        //   1.00 → 1.15 가 되자 이 줄이 「5.00 vs 4」로 넘어졌다 · 2026-09-02).
+        //   반올림 오차는 최대 1 이므로 **절대 오차 1**(큰 값에서는 2%)로 잰다.
+        { const want=g0*campFevMul(), got=campTapGain();
+          assert(Math.abs(got-want) <= Math.max(1, want*0.02),
+            '피버 배수가 탭에 안 걸린다: '+got+' vs '+want+' (배수 '+campFevMul()+')'); }
         // ⑥ ⛔ 중첩되지 않는다 — 켜져 있는 동안 굴려도 시간이 안 늘어난다
         { const e0=_campFevEnd; for(let i=0;i<2000;i++) campFevRoll();
           assert(_campFevEnd===e0,'켜져 있는데 다시 터져 시간이 늘었다'); }

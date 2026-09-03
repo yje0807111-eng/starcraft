@@ -604,12 +604,34 @@ function campRtReset(){ const C = campState(); if(!C) return 0;
 //   배수형 = 사다리 값(누적) · 감소형 = 계열마다 −40% 까지 수확 체감
 const CAMP_RT_CUT_MAX = 0.40;          // 계열 하나가 깎을 수 있는 최대
 const CAMP_RT_CUT_FLOOR = 0.20;        // ⭐ 갈래 전체 실효 하한 — 적이 1/5 밑으로는 안 내려간다
-function campRtMul(k){ const n = campRtHas(k); if(n <= 0) return 1;
-  const lad = campRtLad(k); return lad[Math.min(campRtMax(k), n)]; }
+// 🚪 **마디 능력** (2026-09-02 사용자 확정) — 갈래·묶음 관문은 문만 여는 것이 아니라
+//   **그 안 계열들과 같은 축에 아주 작게 얹힌다.**
+//   ⭐ 새 효과 종류를 만들지 않는 것이 요점이다. `campRtMul`·`campRtCut` 이 이미 단일 입구라
+//     여기 한 곳에 더하면 모든 사용처에 자동으로 닿는다.
+//   ⛔ 마디 전용 `f` 를 만들어 곱셈 축을 늘리지 말 것 — BALANCE §0 의 ×1,900만이 그렇게 났다.
+//   ⚠ **같은 값이 계열마다 다르게 나온다**(실측 BALANCE §3-2-8: 같은 ×25 사다리가 ×1.08~×49.3).
+//     수입 축은 복리가 붙고 전투 축은 안 붙는다. 마디 값을 「몇 %p」로만 읽지 말 것.
+//   ⚠ 사슬 갈래(시작 도움)에는 마디가 없다 — 가운데에서 바로 별로 간다.
+const CAMP_RT_NODE_BR = 0.10;   // 갈래 마디 — 그 갈래 계열 전부에 +10%p
+const CAMP_RT_NODE_GP = 0.05;   // 묶음 마디 — 그 묶음 계열들에 +5%p
+function campRtNodeAdd(k){
+  const L = campRtLine(k); if(!L) return 0;
+  if(campRtIsChain(L.br)) return 0;
+  let a = 0;
+  if(campRtHas(CAMP_RT_BR_KEY(L.br)) > 0) a += CAMP_RT_NODE_BR;
+  if(campRtHas(CAMP_RT_GP_KEY(L.br, L.grp)) > 0) a += CAMP_RT_NODE_GP;
+  return a; }
+// ⭐ 계열을 **아직 안 샀어도** 마디 몫은 산다 — 그게 「문을 열면 그 안이 뭔지 미리 맛본다」는 뜻이다.
+function campRtMul(k){ const n = campRtHas(k), add = campRtNodeAdd(k);
+  if(n <= 0) return 1 + add;
+  const lad = campRtLad(k); return lad[Math.min(campRtMax(k), n)] + add; }
 // ⛔ 공식으로 만들지 말 것 — 지수 감쇠는 5차에서 상한에 **정확히** 닿지 않는다(실측 −37.99%).
 //    HUNT_R1 §4-5-4 의 표를 그대로 둔다: 5차가 딱 −40% 여야 「다 찍었다」가 성립한다.
 const CAMP_RT_CUT = [0, 0.12, 0.25, 0.33, 0.38, CAMP_RT_CUT_MAX];
-function campRtCut(k){ const n = campRtHas(k); return n <= 0 ? 0 : CAMP_RT_CUT[Math.min(5, n)]; }
+// ⚠ 마디 몫을 더해도 **계열 상한(−40%)은 그대로**다 — 여기를 넘기면 적 약화가 갈래 하한을 뚫는다.
+function campRtCut(k){ const n = campRtHas(k);
+  const base = n <= 0 ? 0 : CAMP_RT_CUT[Math.min(5, n)];
+  return Math.min(CAMP_RT_CUT_MAX, base + campRtNodeAdd(k)); }
 // 적 약화 갈래의 실효 배수 — 곱한 뒤 하한으로 막는다. ⛔ 하한을 빼면 지수 축이 둘이 된다.
 function campRtFoeMul(){ let m = 1;
   for(const L of CAMP_RT_LINES){ if(L.br !== 'enemy') continue; m *= (1 - campRtCut(L.k)); }
@@ -1031,8 +1053,10 @@ function campTreeOpen(){
   campTreeRender(); campTreeBind();
   // ⚠ 배치를 재려면 화면에 **떠 있어야** 한다(display:none 이면 getBBox 가 0을 준다) — .on 뒤에 부른다
   campTreeFit(true);
+  campTreeViewSync();   // 🖐 부드러운 따라가기의 목표를 지금 뷰에 맞춘다(옛 목표가 남아 있으면 열자마자 흘러간다)
 }
-function campTreeClose(){ const el = document.getElementById('campTree'); if(el) el.classList.remove('on', 'crIn'); }
+function campTreeClose(){ const el = document.getElementById('campTree'); if(el) el.classList.remove('on', 'crIn');
+  campTreeTweenStop(); campTreeViewSync(); }
 function campTreeIsOn(){ const el = document.getElementById('campTree'); return !!(el && el.classList.contains('on')); }
 
 // 고른 별의 모든 정보 — 이름 · 진행도 · 설명 · 지금값▶다음값 · 다음 단계 예고 ·
@@ -1105,7 +1129,16 @@ function campTreeInfo(){
     const cost = sel.t === 'br' ? CAMP_RT_BR_COST : CAMP_RT_GP_COST;
     const own = campRtHas(key) > 0, can = campRtCanBuy(key), left = pts - cost;
     const nm = sel.t === 'br' ? B.nm : (B.nm + ' · ' + sel.b + ' 묶음');
-    const tx = sel.t === 'br' ? '묶음 <b>4</b> 해금' : '계열 <b>2</b> 해금';
+    // ⚠ 개수를 **세서** 쓴다 — 「계열 2」로 박아 두었더니 재화 갈래(묶음마다 3~4계열)에서 거짓말이 됐다.
+    const nGp = sel.t === 'br'
+      ? CAMP_RT_GRP_KEYS.filter(function(g){ return campRtGpLive(bk, g); }).length : 0;
+    const nLn = sel.t === 'gp'
+      ? CAMP_RT_LINES.filter(function(L){ return L.br === bk && L.grp === sel.b; }).length : 0;
+    // 🚪 마디도 **능력을 갖는다**(2026-09-02) — 그 안 계열들과 같은 축에 얹힌다.
+    const nAdd = sel.t === 'br' ? CAMP_RT_NODE_BR : CAMP_RT_NODE_GP;
+    const tx = (sel.t === 'br' ? ('묶음 <b>' + nGp + '</b> 해금') : ('계열 <b>' + nLn + '</b> 해금'))
+      + ' · ' + (sel.t === 'br' ? '이 갈래' : '이 묶음') + ' 전부 <b>+'
+      + Math.round(nAdd * 100) + '%</b>';
     host.innerHTML =
       '<div class="ctHead"><span class="ctDot" style="background:' + B.col + '"></span>' +
       '<div class="ctHt"><div class="ctNm">' + nm + '</div></div></div>' +
@@ -1172,6 +1205,43 @@ function campTreeApplyView(){
   g.setAttribute('transform', 'translate(' + v.x.toFixed(1) + ' ' + v.y.toFixed(1) +
     ') scale(' + v.z.toFixed(3) + ')');
 }
+// ══ 🖐 손으로 밀고 키울 때의 부드러움 (2026-09-02 사용자 요청) ═══════════
+//   ⭐ **캠프 맵과 같은 수법**이다(`techViewTick`): 손가락은 **목표 뷰**만 바꾸고,
+//     실제 뷰는 매 프레임 목표 쪽으로 지수 보간으로 따라간다(k = min(1, dt×9)).
+//   ⛔ 배율은 **등비**로 당긴다 — 확대는 곱셈 축이라 선형으로 끌면 앞이 훅 커지고 뒤가 느려 보인다
+//     (아래 트윈이 같은 이유로 등비를 쓴다).
+//   ⚠ 트윈(별 고르기 연출)이 도는 동안은 **양보한다** — 둘이 같은 값을 밀면 서로 싸워 떨린다.
+//   ⚠ 즉시 값이 필요한 곳(스모크·계산)은 `campTreeViewSettle()` 로 보간을 끝내고 읽을 것.
+const CAMP_TREE_SMOOTH_K = 9;          // 목표를 따라가는 빠르기(초당) — 캠프 맵과 같은 값
+const CAMP_TREE_SMOOTH_EPS = 0.05;     // 이보다 가까우면 붙인다(viewBox 단위)
+let _ctViewT = null, _ctSmoothT0 = 0, _ctSmoothRAF = 0;
+function campTreeViewT(){ if(!_ctViewT){ const v = _campTreeView; _ctViewT = { x:v.x, y:v.y, z:v.z }; }
+  return _ctViewT; }
+// 목표를 지금 뷰에 맞춘다 — 연출이 끝났거나 뷰를 통째로 갈아 끼웠을 때
+function campTreeViewSync(){ const v = _campTreeView; _ctViewT = { x:v.x, y:v.y, z:v.z }; }
+// 보간을 **즉시 끝낸다** — 목표로 점프한다
+function campTreeViewSettle(){ if(!_ctViewT) return; const v = _campTreeView, t = _ctViewT;
+  v.x = t.x; v.y = t.y; v.z = t.z; campTreeApplyView(); }
+function campTreeSmoothKick(){ if(_ctSmoothRAF) return;
+  _ctSmoothT0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  _ctSmoothRAF = requestAnimationFrame(campTreeSmoothStep); }
+function campTreeSmoothStep(){
+  _ctSmoothRAF = 0;
+  const el = document.getElementById('campTree');
+  if(!el || !el.classList.contains('on')){ _ctViewT = null; return; }   // 닫혔으면 그만둔다
+  if(_ctTween){ campTreeSmoothKick(); return; }                        // 연출이 돌면 양보
+  const v = _campTreeView, t = campTreeViewT();
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const dt = Math.min(0.1, Math.max(0, (now - _ctSmoothT0) / 1000)); _ctSmoothT0 = now;
+  const k = Math.min(1, dt * CAMP_TREE_SMOOTH_K);
+  v.x += (t.x - v.x) * k; v.y += (t.y - v.y) * k;
+  if(v.z > 0) v.z *= Math.pow(t.z / v.z, k);
+  const near = Math.abs(t.x - v.x) < CAMP_TREE_SMOOTH_EPS
+            && Math.abs(t.y - v.y) < CAMP_TREE_SMOOTH_EPS
+            && Math.abs(t.z / v.z - 1) < 0.002;
+  if(near){ campTreeViewSettle(); return; }
+  campTreeApplyView(); campTreeSmoothKick(); }
+
 // ══ 🎬 뷰 이동 애니메이션 ═══════════════════════════════════════════════
 //   ⭐ 「천천히 출발 → 아주 빠르게 → 마지막에 살며시」(2026-09-01 사용자 지정).
 //     그 느낌은 5제곱 ease-in-out 이다 — 3제곱은 중간이 밋밋하고, 그 이상은 순간이동처럼 보인다.
@@ -1187,16 +1257,22 @@ function campTreeViewP(){ const v = _campTreeView;
   return { x: -v.x / v.z, y: -v.y / v.z }; }
 function campTreeTweenStop(){ _ctTween = null; }
 //   to = { P:{x,y} 월드점 · A:{x,y} 그 점이 앉을 화면 자리 · z 배율 }
+// ⭐ **뷰를 옮기는 모든 길이 한 방식으로 모인다**(2026-09-02 사용자 재확정).
+//   별을 누를 때·해제할 때·전체 보기 — 전부 **목표만 옮기고** campTreeSmoothStep 에 맡긴다.
+//   휠·드래그와 완전히 같은 느낌이 되어, 같은 화면에서 조작마다 감이 달라지지 않는다.
+//   ⛔ 5제곱 이징 연출(campTreeEase·campTreeTweenStep)로 되돌리지 말 것 — 그 곡선은
+//     처음과 끝 30%가 거의 안 움직이고 중간 40%에 몰려 **「굼뜨다 → 확 간다 → 질질 멈춘다」**
+//     로 읽힌다(실측: 560ms 인데 눈에 띄는 변화는 400ms 구간에만). 사용자가 「딱딱 끊긴다」고
+//     한 것이 그 느낌이다. ⚠ 함수는 남겨 둔다 — 되살릴 땐 여기 한 줄만 바꾸면 된다(유보 규칙).
 function campTreeTweenTo(to, now){
   const v = _campTreeView;
+  const z = to.z, x = to.A.x - to.P.x * to.z, y = to.A.y - to.P.y * to.z;
   if(now){ _ctTween = null;
-    v.z = to.z; v.x = to.A.x - to.P.x * to.z; v.y = to.A.y - to.P.y * to.z;
-    campTreeApplyView(); return; }
-  _ctTween = { t0: (typeof performance !== 'undefined' ? performance.now() : Date.now()),
-    ms: CAMP_TREE_TWEEN_MS, z0: v.z, z1: to.z,
-    P0: campTreeViewP(), P1: { x:to.P.x, y:to.P.y },
-    A0: { x:0, y:0 }, A1: { x:to.A.x, y:to.A.y } };
-  campTreeTweenStep(); }
+    v.z = z; v.x = x; v.y = y;
+    campTreeApplyView(); campTreeViewSync(); return; }
+  _ctTween = null;                       // 연출을 쓰지 않는다 — 보간이 맡는다
+  const t = campTreeViewT();
+  t.x = x; t.y = y; t.z = z; campTreeSmoothKick(); }
 function campTreeTweenStep(){
   const w = _ctTween; if(!w) return;
   const el = document.getElementById('campTree');
@@ -1208,6 +1284,9 @@ function campTreeTweenStep(){
   const ax = w.A0.x + (w.A1.x - w.A0.x) * e, ay = w.A0.y + (w.A1.y - w.A0.y) * e;
   _campTreeView.z = z; _campTreeView.x = ax - px * z; _campTreeView.y = ay - py * z;
   campTreeApplyView();
+  // ⚠ 연출이 뷰를 직접 밀었으니 **목표도 같이 옮긴다** — 안 그러면 연출이 끝나는 순간
+  //   보간이 옛 목표로 되돌리며 화면이 튄다.
+  campTreeViewSync();
   if(t >= 1){ _ctTween = null; return; }
   requestAnimationFrame(campTreeTweenStep); }
 
@@ -1314,14 +1393,17 @@ function campTreeToView(cx, cy){
   return { x: vb[0] + (cx - r.left - ox) / s, y: vb[1] + (cy - r.top - oy) / s };
 }
 // ⭐ 한 점을 붙잡고 배율을 바꾼다 — 확대·축소의 유일한 입구
+//   ⚠ **목표 뷰만 바꾼다**(2026-09-02) — 실제 뷰는 campTreeSmoothStep 이 부드럽게 따라온다.
+//     붙잡는 계산은 목표 기준이라야 한다. 지금 뷰(따라가는 중인 값) 기준으로 잡으면
+//     휠을 연달아 굴릴 때 붙잡은 점이 조금씩 흘러간다.
 function campTreeZoomAt(z2, cx, cy){
   campTreeTweenStop();                 // 손으로 확대하면 진행 중인 연출은 멈춘다
-  const v = _campTreeView, z1 = v.z;
+  const t = campTreeViewT(), z1 = t.z;
   z2 = campTreeClampZ(z2); if(z2 === z1) return;
   const p = (cx == null) ? { x:0, y:0 } : campTreeToView(cx, cy);
-  v.x = p.x - (p.x - v.x) * (z2 / z1);
-  v.y = p.y - (p.y - v.y) * (z2 / z1);
-  v.z = z2; campTreeApplyView();
+  t.x = p.x - (p.x - t.x) * (z2 / z1);
+  t.y = p.y - (p.y - t.y) * (z2 / z1);
+  t.z = z2; campTreeSmoothKick();
 }
 function campTreeBind(){
   const el = document.getElementById('campTree'); if(!el || _ctBound) return;
@@ -1333,7 +1415,9 @@ function campTreeBind(){
     // 👆 누른 별을 **여기서** 잡아 둔다. capture 뒤에는 target 이 <svg> 가 되어 알 수 없다.
     _ctDown = (e.target.closest && e.target.closest('[data-k]')) || campTreeNearest(e.clientX, e.clientY);
     _ctDownXY = { x:e.clientX, y:e.clientY };
-    if(_ctPtrs.size === 1) _ctDrag = { x:e.clientX, y:e.clientY, vx:_campTreeView.x, vy:_campTreeView.y };
+    // ⚠ 시작 뷰는 **목표** 기준이다 — 따라가는 중인 값에서 시작하면 손을 뗐다 다시 밀 때 튄다
+    if(_ctPtrs.size === 1){ const t0 = campTreeViewT();
+      _ctDrag = { x:e.clientX, y:e.clientY, vx:t0.x, vy:t0.y }; }
     else if(_ctPtrs.size === 2){ _ctDrag = null; _ctPinch = campTreePinch(); }
   });
   svg.addEventListener('pointermove', e => {
@@ -1350,8 +1434,9 @@ function campTreeBind(){
       _ctMoved = Math.max(_ctMoved, Math.abs(dx) + Math.abs(dy));
       // ⚠ 끄는 거리도 viewBox 단위로 바꿔야 손가락과 그림이 **같은 속도**로 움직인다
       const a = campTreeToView(_ctDrag.x, _ctDrag.y), b = campTreeToView(e.clientX, e.clientY);
-      _campTreeView.x = _ctDrag.vx + (b.x - a.x); _campTreeView.y = _ctDrag.vy + (b.y - a.y);
-      campTreeApplyView(); }
+      const t = campTreeViewT();
+      t.x = _ctDrag.vx + (b.x - a.x); t.y = _ctDrag.vy + (b.y - a.y);
+      campTreeSmoothKick(); }
   });
   svg.addEventListener('pointerup', e => {
     const el = _ctDown, xy = _ctDownXY;
