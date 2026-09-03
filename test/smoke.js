@@ -2849,7 +2849,24 @@ async function groupLobby(){
         // ⛔ 계열 아이콘과 겹치지 않아야 한다 — 같은 폴더를 쓰되 이름이 br_/gp_ 로 갈린다
         const lineIco=CAMP_RT_LINES.map(L=>L.ic);
         const dup=want.map(campRtNodeIco).filter(p=>lineIco.indexOf(p)>=0);
-        assert(dup.length===0,'마디가 계열 그림을 쓴다: '+dup.join(',')); }
+        assert(dup.length===0,'마디가 계열 그림을 쓴다: '+dup.join(','));
+        // 🌟 가운데(새로운 시작)도 제 그림을 갖는다 — 「점화 코어」(2026-09-03)
+        const rk=await fetch('assets/icons/tree/root.webp').then(r=>r.ok).catch(()=>false);
+        assert(rk,'가운데 그림(tree/root.webp)이 없다');
+        assert(lineIco.indexOf('tree/root.webp')<0,'계열이 가운데 그림을 쓴다'); }
+      // ⑦-c 📊 해금 진행도 — **분자가 분모를 넘지 않는다**(2026-09-03).
+      //   ⚠ 「178 / 173」이 실제로 화면에 떴다. 분모는 사슬 갈래의 마디와 죽은 묶음을 빼는데
+      //     분자는 안 빼고 있었다. 자루에는 그런 키가 들어갈 수 있다(옛 저장본·테스트가 심은 값).
+      { const K2=JSON.parse(JSON.stringify(C.rbTree||{}));
+        // 있을 수 있는 쓰레기를 일부러 심는다 — 사슬 갈래 마디 · 죽은 묶음 · 상한 초과 차수
+        C.rbTree={ root:1, _m2:1, 'br:start':1, 'gp:start가':1 };
+        for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue;
+          C.rbTree[CAMP_RT_BR_KEY(bk)]=1;
+          for(const g of CAMP_RT_GRP_KEYS) C.rbTree[CAMP_RT_GP_KEY(bk,g)]=1; }
+        for(const L of CAMP_RT_LINES) C.rbTree[L.k]=campRtMax(L.k)+3;
+        const have=campTreeOwned(), all=campTreeTotal();
+        assert(have<=all,'해금 진행도의 분자가 분모를 넘는다: '+have+' / '+all);
+        C.rbTree=K2; }
       // ⑧ 사슬 갈래(시작 도움)에는 마디가 없다
       assert(campRtNodeAdd('tap')===0,'사슬 갈래에 마디 몫이 붙는다');
       // ⑨ 🚪 **기준이 1 이 아닌 축은 곱으로 받는다**(2026-09-02) — 확률·시간·간격·할인·인구.
@@ -2881,6 +2898,159 @@ async function groupLobby(){
       return '갈래 +'+Math.round(CAMP_RT_NODE_BR*100)+'% · 묶음 +'+Math.round(CAMP_RT_NODE_GP*100)
         +'% · 합으로 얹힘 · 갈래/묶음 밖으로 안 샘 · 적 약화 상한 지킴';
     } finally { C.rbTree=keepT; }
+  });
+
+  // ✨ **해금 연출이 실제로 걸리나** (2026-09-03) — 선이 자라고, 별이 떠오른다.
+  //   ⚠ 두 번 속았다: 「마디를 살 때만 걸리고 계열을 살 때는 안 걸렸다」. 마디 키('gp:army가')는 선의 키와
+  //     같지만 계열의 버튼 키('atk')는 선이 찾는 'atk:1' 과 달랐다. 눈으로는 「선이 빠르다」로만 보였다.
+  //   ⭐ 그래서 **마디와 계열 둘 다** 산 직후 DOM 을 본다. 하나만 재면 다시 속는다.
+  await step('환생 트리: 해금하면 선이 자라고 별이 떠오른다 — 마디·계열 둘 다', async()=>{
+    skipIf(typeof campTreeBuySel!=='function'||typeof campTreeNewKind!=='function','해금 연출 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepSel=_campTreeSel;
+    const buy=function(tree, sel){
+      C.rbTree=tree; _ctNew={}; campRebEnter('tree'); campTreeRender();
+      _campTreeSel=sel; campTreeRender();
+      const btn=document.querySelector('#campTree .ctBuy');
+      if(!btn||btn.disabled) return null;
+      campTreeBuySel();
+      const g=document.getElementById('ctG');
+      return { grow:g.querySelectorAll('.ctGrow').length, dash:g.querySelectorAll('.ctGrowDash').length,
+               pop:g.querySelectorAll('.ctPop').length, lit:g.querySelectorAll('.ctLit').length,
+               keys:Object.keys(_ctNew) }; };
+    try{
+      C.rbPts=1e12;
+      // ① 마디(묶음)를 산다 — 자기 실선이 자라고(lit), 안 계열들이 점선으로 자라며 떠오른다(spawn)
+      const a=buy({root:1,_m2:1,'br:army':1},{t:'gp',a:'army',b:'가'});
+      assert(a,'묶음을 못 산다');
+      assert(a.grow>0,'묶음을 샀는데 실선이 안 자란다');
+      assert(a.dash>0,'묶음을 샀는데 안 계열로 가는 점선이 안 자란다');
+      assert(a.pop>0,'묶음을 샀는데 새 별이 안 떠오른다');
+      // ② 계열 1차를 산다 — **여기가 어긋났던 자리**. 실선이 자라야 한다.
+      const b=buy({root:1,_m2:1,'br:army':1,'gp:army가':1},{t:'n',a:'atk',b:1});
+      assert(b,'계열을 못 산다');
+      assert(b.keys.indexOf('atk:1')>=0,'산 계열의 키가 선과 다른 꼴이다: '+b.keys.join(','));
+      assert(b.grow>0,'계열을 샀는데 실선이 안 자란다 — 키 형식이 어긋났다');
+      assert(b.lit>0,'계열을 샀는데 색이 안 차오른다');
+      assert(b.dash>0,'계열을 샀는데 다음 차수로 가는 점선이 안 자란다');
+      // ②-b ⏱ **차례** — 실선 도착 → 색 차오름 → 점선 출발 → 새 별 (2026-09-03 사용자 확정).
+      //   ⛔ 전부 0초에 시작하면 순서가 뒤죽박죽이다. 시작·끝 시각으로 앞뒤를 잰다.
+      { const T=function(sel){ const e=document.querySelector('#ctG '+sel); if(!e) return null;
+          const cs=getComputedStyle(e), d0=parseFloat(cs.animationDelay), du=parseFloat(cs.animationDuration);
+          return { s:d0, e:d0+du }; };
+        const L1=T('.ctGrow'), LT=T('.ctLit'), L2=T('.ctGrowDash'), PP=T('.ctPop');
+        assert(L1&&LT&&L2&&PP,'해금 연출 조각이 빠졌다: '+[!!L1,!!LT,!!L2,!!PP].join(','));
+        assert(LT.s>=L1.e-0.01,'색이 실선 도착 전에 든다: 색 '+LT.s+' vs 선 끝 '+L1.e);
+        assert(L2.s>LT.s,'점선이 색 차오름보다 먼저 출발한다: 점선 '+L2.s+' vs 색 '+LT.s);
+        assert(PP.s>=L2.e-0.01,'새 별이 점선 도착 전에 뜬다: 별 '+PP.s+' vs 점선 끝 '+L2.e); }
+      // ③ 시간 — **모든 선이 같은 시간**(2026-09-03 재확정 · 등속을 접었다). 길이와 무관해야 한다.
+      const durs=[].map.call(document.querySelectorAll('#ctG .ctGrow, #ctG .ctGrowDash'),
+        function(e){ return parseFloat(getComputedStyle(e).animationDuration); });
+      assert(durs.length>0,'자라는 선이 없다');
+      assert(durs.every(function(d){ return Math.abs(d-CAMP_TREE_GROW_S)<0.011; }),
+        '선 시간이 상수와 다르다: '+durs.join(',')+' vs '+CAMP_TREE_GROW_S);
+      // ④ 점선은 대기 중에 **안 보여야** 한다(backwards) — 없으면 튀어나왔다 사라진다
+      const dd=document.querySelector('#ctG .ctGrowDash');
+      assert(/backwards/.test(getComputedStyle(dd).animationFillMode),
+        '점선 애니에 backwards 가 없다 — 대기 중에 원래 점선이 먼저 보인다');
+      return '묶음: 실선 '+a.grow+' 점선 '+a.dash+' 떠오름 '+a.pop+' · 계열: 실선 '+b.grow+' 점선 '+b.dash+' · 선 '+CAMP_TREE_GROW_S+'s 고정';
+    } finally { C.rbTree=keepT; C.rbPts=keepP; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
+  });
+
+  // 🚧 팬 경계 (2026-09-03 사용자 요청) — 양옆·위아래로 끝없이 밀리지 않는다.
+  //   ⭐ 목표 뷰에 걸린다. 아주 멀리 밀어도 별 무리의 가장자리가 화면 안 KEEP 까지는 남아야 한다.
+  await step('환생 트리: 아무리 밀어도 별 무리가 화면 밖으로 다 나가지 않는다', async()=>{
+    skipIf(typeof campTreeClampT!=='function','팬 경계 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2}; campRebEnter('tree'); campTreeRender();
+      const B=campTreeBounds(); assert(B&&B.n>0,'별 범위를 못 구했다');
+      const svg=document.getElementById('ctSvg'), vb=svg.getAttribute('viewBox').split(/\s+/).map(Number);
+      const hw=vb[2]/2, hh=vb[3]/2;
+      const K=campTreePanKeep(hw,hh,campTreeSheetH());
+      // 여백은 화면 비율이다 — 별 무리가 화면의 80% 안쪽까지만 나간다(빈 하늘 금지)
+      assert(K.x>=hw*0.5&&K.yTop>=hh*0.5,'여백이 너무 작다 — 밀면 빈 하늘이 된다: '+JSON.stringify(K));
+      const tv=campTreeViewT();
+      // 네 방향으로 엄청 멀리 민다 → 경계가 잡아야 한다
+      const far=[[1e5,0],[-1e5,0],[0,1e5],[0,-1e5]], bad=[];
+      for(const [dx,dy] of far){ tv.x=dx; tv.y=dy; campTreeClampT();
+        const sx0=B.x0*tv.z+tv.x, sx1=B.x1*tv.z+tv.x, sy0=B.y0*tv.z+tv.y, sy1=B.y1*tv.z+tv.y;
+        const inX = sx1 >= -hw+K.x-0.5 && sx0 <= hw-K.x+0.5;
+        const inY = sy1 >= -hh+K.yTop-0.5 && sy0 <= hh-K.yBot+0.5;
+        if(!(inX&&inY)) bad.push('('+dx+','+dy+')→x '+tv.x.toFixed(0)+' y '+tv.y.toFixed(0)); }
+      assert(bad.length===0,'경계를 뚫었다: '+bad.join(' · '));
+      // 가운데 근처에서는 손대지 않는다 — 경계는 먼 곳만 막는다
+      tv.x=0; tv.y=0; campTreeClampT();
+      assert(Math.abs(tv.x)<1&&Math.abs(tv.y)<1,'가운데인데 경계가 밀었다: '+tv.x+','+tv.y);
+      return '네 방향 1e5 → 전부 붙잡힘 · 여백 x '+K.x.toFixed(0)+' / 아래 '+K.yBot.toFixed(0)+' · 가운데는 그대로';
+    } finally { C.rbTree=keepT; campTreeViewSync(); }
+  });
+
+  // 📍 해제하면 **지금 배율은 그대로 두고**, 방금 해제한 별을 화면 가운데로 옮긴다 (2026-09-03 재확정).
+  //   ⛔ 「고르기 전의 자리로 되돌아간다」가 아니다 — 그건 방금 보던 별과 무관한 옛 자리로 튄다.
+  //   ⛔ 전체 보기로 물러나지도 않는다 — 축소가 너무 세다.
+  await step('환생 트리: 해제하면 고르기 전 배율로 줄어들며 그 별이 가운데로 온다', async()=>{
+    skipIf(typeof campTreeDesel!=='function'||typeof campTreeTap!=='function','트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2}; campRebEnter('tree'); campTreeRender();
+      campTreeFit(true); campTreeViewSync();
+      const fitZ=campTreeViewT().z;
+      // 「지금 보고 있는 배율」에서 출발한다 — 전체 보기보다 이미 확대돼 있는 상태
+      campTreeZoomAt(fitZ*1.1,null); campTreeViewSettle();
+      const zBefore=campTreeViewT().z;
+      // 별을 고른다 → 화면이 그 별로 가며 **더 확대**된다(campTreeFocus 가 CAMP_TREE_ZSEL 이상으로 키운다)
+      campTreeTap('gather',1); campTreeViewSettle();
+      const zDuring=campTreeViewT().z;
+      assert(zDuring>zBefore+0.01,'고르면 더 확대돼야 예시(1.95→2.29)와 같은 상황이 된다: '+zBefore+' → '+zDuring);
+      const p=campTreeSelPos(_campTreeSel);
+      assert(p,'고른 별의 좌표를 못 구했다');
+      // 해제 → 배율은 **고르기 전(zBefore)** 으로 되돌아가고, 그 별이 정확히 가운데(0,0)로
+      campTreeDesel(); campTreeViewSettle();
+      const after=campTreeViewT();
+      assert(Math.abs(after.z-zBefore)<0.001,
+        '해제해도 고르기 전 배율로 안 돌아온다: '+after.z+' vs 고르기 전 '+zBefore+' (고른 동안 '+zDuring+' · 전체 보기 '+fitZ+')');
+      const sx=p.x*after.z+after.x, sy=p.y*after.z+after.y;
+      assert(Math.abs(sx)<0.6&&Math.abs(sy)<0.6,
+        '해제한 별이 가운데로 안 온다: 화면좌표 '+sx.toFixed(1)+','+sy.toFixed(1));
+      return '배율 '+zBefore.toFixed(2)+'(전체 '+fitZ.toFixed(2)+') → 고름 '+zDuring.toFixed(2)+' → 해제 → '+after.z.toFixed(2)+' 복귀 · 그 별이 가운데';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
+  // ⏱ **재렌더에도 해금 애니가 되감기지 않고 이어진다** (2026-09-03 사용자 지적).
+  //   ⛔ 애니 도중에 다른 별을 고르거나 화면을 확대·해제하면 campTreeRender() 가 SVG 를
+  //     통째로 다시 그린다. 그때 delay 를 0 부터 다시 매기면 진행 중이던 애니가 처음부터
+  //     반복 재생된다 — 그게 이 검사가 잡는 회귀다.
+  await step('환생 트리: 도중에 다른 걸 눌러도 해금 애니가 되감기지 않는다', async()=>{
+    skipIf(typeof campTreeNewElapsed!=='function'||typeof campRtBuy!=='function','해금 연출 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepSel=_campTreeSel;
+    try{
+      C.rbPts=1e12; C.rbTree={root:1,_m2:1,'br:army':1,'gp:army가':1};
+      _ctNew={}; campRebEnter('tree'); campTreeRender();
+      _campTreeSel={t:'n',a:'atk',b:1}; campTreeRender();
+      const btn=document.querySelector('#campTree .ctBuy');
+      skipIf(!btn||btn.disabled,'못 산다');
+      campTreeBuySel();
+      const read=function(){ var g=function(e){ return e?parseFloat(getComputedStyle(e).animationDelay):null; };
+        return { grow:g(document.querySelector('#campTree .ctGrow')),
+                 pop:g(document.querySelector('#campTree .ctPop')) }; };
+      const before=read();
+      assert(before.grow!=null&&before.pop!=null,'애니 요소가 없다');
+      // 「다른 작업」 — 애니 도중 다른 별을 고르는 재렌더를 흉내낸다
+      await sleep(120);
+      const t0=Date.now();
+      _campTreeSel={t:'n',a:'hp',b:1}; campTreeRender();
+      _campTreeSel={t:'n',a:'atk',b:1}; campTreeRender();
+      const elapsed=(Date.now()-t0+120)/1000;
+      const after=read();
+      // ⛔ 되감겼다면 after.grow 가 다시 0 근처로 돌아온다 — 그러면 실패해야 한다
+      assert(after.grow < before.grow - elapsed + 0.05,
+        '재렌더 뒤 애니가 되감겼다: 전 '+before.grow+' → 후 '+after.grow+' (지난 시간 '+elapsed.toFixed(2)+')');
+      return '재렌더 전 delay '+before.grow.toFixed(2)+' → 후 '+after.grow.toFixed(2)+' (경과 '+elapsed.toFixed(2)+'s만큼 줄어듦 · 이어서 진행)';
+    } finally { C.rbTree=keepT; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
   });
 
   // 🔌 **산 계열이 실제로 수치를 움직이나** (2026-09-02).

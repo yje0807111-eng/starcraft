@@ -2061,14 +2061,34 @@
     rgba(5,7,11,.55) 62%,rgba(5,7,11,.86) 100%)}
 #campTree{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;
   background:none}   /* 배경은 #campRebBg 한 장이 맡는다 */
-#campTree.on{display:block}   /* 🎬 페이드는 .crIn 이 갖는다(위 #campReb 옆 규칙) — 탭 이동은 즉시 */
+#campTree.on{display:block}
+/* 🌑 배경 딤 — **사진을 눌러 별자리를 앞으로 낸다**(2026-09-03 사용자 확정 · 목업 look-8 ⑦안).
+   ⭐ 지금 화면의 진짜 문제는 노드가 아니라 **별과 배경이 같은 밝기에서 다투는 것**이었다.
+     철탑·건물 윤곽이 별자리 선과 같은 굵기·밝기라 눈이 어디를 볼지 못 정했다.
+   ⛔ 배경 그림 자체를 흐리지 말 것(blur) — 공들여 뽑은 그림이 안 보이게 된다.
+   ⚠ ::before 라 마크업을 안 건드린다. pointer-events:none 이라 밀기·탭을 안 막는다. */
+#campTree.on::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 42%,rgba(4,7,11,.30) 0%,
+    rgba(4,7,11,.80) 58%,rgba(4,7,11,.94) 100%)}   /* 🎬 페이드는 .crIn 이 갖는다(위 #campReb 옆 규칙) — 탭 이동은 즉시 */
 #campTree #ctSvg{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab}
+/* 🌌 머리줄은 **두 줄이 아니라 한 줄**이다 (2026-09-03 사용자 확정 · 목업 camp-tree-style-8 ③안).
+   ⭐ 규격은 룬 구역(.rnTop)과 **똑같다** — 그라데이션 판 · padding 44/14/14 · 한 줄.
+     ⚠ 룬의 세련됨은 「판을 없앤 것」이 아니라 **한 줄로 줄인 것**이다. 판을 지웠더니
+       글자가 별자리에 묻히고 재화 바와 붙어 오히려 어수선했다(2026-09-03 실측).
+   ⭐ 화면 이름은 공용 재화 바(#curTitle)가 갖는다 — 여기 남는 것은 포인트와 해금 수뿐.
+   ⛔ 진행 막대(.ctBar)를 되살리지 말 것 — 「108 / 173」이 같은 것을 더 정확히 말한다.
+   ⛔ 두 줄로 되돌리지 말 것(판 위에 또 한 줄을 띄우지 않는다 — 룬과 같은 규칙). */
 #campTree .ctTop{position:absolute;left:0;right:0;top:0;z-index:2;
-  display:flex;flex-direction:column;gap:0;padding:44px 14px 10px;   /* 위 44px = 재화 바 자리(--topPad + --curH) */
+  display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;
+  gap:9px;padding:44px 14px 14px;pointer-events:none;
   background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,.62) 62%,rgba(6,9,13,0))}
-#campTree .ctTopRow{display:flex;align-items:baseline;gap:8px}
+#campTree .ctTop > *{pointer-events:auto}
+#campTree .ctTopRow{display:flex;align-items:center;gap:7px;order:2}
 /* 📊 해금 진행도 — 「얼마나 왔나」. 별이 181칸이라 숫자만으로는 감이 안 온다 */
-#campTree .ctProg{display:flex;align-items:center;gap:8px;margin-top:8px}
+/* 왼쪽 = 해금 진행 · 오른쪽 = 도움말 + 포인트. ⛔ 넷을 한쪽에 몰지 말 것 —
+   오른쪽에 다 붙였더니 재화 바 밑에 글자 네 조각이 뭉쳐 읽히지 않았다(2026-09-03 실측). */
+#campTree .ctProg{display:flex;align-items:center;gap:6px;margin-top:0;order:1}
+#campTree .ctBar{display:none}
 #campTree .ctBar{flex:1;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.09);overflow:hidden}
 #campTree .ctBar i{display:block;height:100%;background:var(--gold,#ffd24a)}
 #campTree .ctProgN{font-family:var(--font-num);font-variant-numeric:tabular-nums;
@@ -2107,6 +2127,44 @@
    ⛔ 상태별로 색을 CSS 에 박지 말 것. 색은 **갈래**가 가지므로 JS 가 stroke 로 직접 준다
      (여기서 또 정하면 갈래 색과 두 벌이 되어 언젠가 갈라진다). */
 #campTree .ctGem{fill:rgba(6,9,14,.94);pointer-events:none}
+/* ✨ 해금 연출 (2026-09-03 사용자 확정) — 띡 하고 나타나지 않는다.
+   ⭐ 선이 먼저 자라 붙고(0.34초), 그 끝에서 별이 **채도를 찾아가며** 떠오른다(0.42초 · 0.26초 늦게).
+     순서가 뒤집히면 「선을 타고 생겼다」가 아니라 「따로 나타났다」로 읽힌다.
+   ⛔ 전체에 걸지 말 것 — 트리는 살 때마다 통째로 다시 그린다. 방금 열린 키에만 붙인다(_ctNew).
+   ⚠ 움직임을 줄이는 설정에서는 둘 다 끈다. */
+@keyframes ctPop{
+  0%{ opacity:0; transform:scale(.5); filter:saturate(0) brightness(1.6) }
+  55%{ opacity:1; filter:saturate(.35) brightness(1.2) }
+  100%{ opacity:1; transform:scale(1); filter:saturate(1) brightness(1) } }
+@keyframes ctGrow{ from{ stroke-dashoffset:var(--ctLen) } to{ stroke-dashoffset:0 } }
+@keyframes ctFadeIn{ from{ opacity:0 } to{ opacity:inherit } }
+/* 전에는 안 보이던 것 — 선이 자란 뒤 **떠오른다** */
+/* ⚠ 지연은 **흔한 선이 도착하는 시각**에 맞춘다(길이 중앙 28.6 → 0.35초).
+   ⛔ 가장 긴 선(0.6초)에 맞추면 짧은 선에서 한참 뜸을 들인다 — 선의 절반이 30 이하다. */
+/* ⚠ 지연은 CSS 에 두지 않는다 — 차례표(_ctSeq)가 별마다 인라인으로 준다. */
+#campTree .ctPop{ animation:ctPop .22s cubic-bezier(.2,.9,.3,1) both }
+/* 원래 그 자리에 있던 것을 샀다 — ⛔ **사라지지 않는다.** 색만 차오른다. */
+@keyframes ctLit{
+  0%{ filter:saturate(.15) brightness(1.05) }
+  55%{ filter:saturate(.6) brightness(1.35) }
+  100%{ filter:saturate(1) brightness(1) } }
+#campTree .ctLit{ animation:ctLit .30s ease-out both }
+/* ⛔ 시간을 여기서 정하지 말 것 — **선마다 다르다**(campTreeLink 가 animation-duration 을 인라인으로 준다).
+   여기 .34s 는 인라인이 없을 때의 안전값일 뿐이다. */
+#campTree .ctGrow{ stroke-dasharray:var(--ctLen);
+  animation:ctGrow .2s linear both }
+/* 안 산 선(점선)이 자라는 법 — `0 len` → `len 0`.
+   ⭐ fill-mode 는 **backwards** 다(2026-09-03). 차례를 기다리는 동안(delay) 첫 프레임 = 안 보임을
+     유지해야 한다. 없으면 대기 중에 원래 점선이 **먼저 튀어나왔다가** 애니가 시작되며 사라진다.
+     forwards/both 는 안 된다 — 끝나면 원래 점선(2 3)으로 돌아가야 「아직 안 샀음」이 남는다. */
+@keyframes ctGrowDash{ from{ stroke-dasharray:0 var(--ctLen) } to{ stroke-dasharray:var(--ctLen) 0 } }
+#campTree .ctGrowDash{ animation:ctGrowDash .2s linear backwards }
+#campTree .ctFade{ animation:ctFadeIn .5s .3s ease both }
+@media (prefers-reduced-motion:reduce){
+  #campTree .ctPop,#campTree .ctLit,#campTree .ctGrow,#campTree .ctGrowDash,#campTree .ctFade{ animation:none } }
+/* 산 별 — **면은 .ctGem 의 검은색 그대로**다(2026-09-03 사용자 확정). 번짐만 인라인 style 이
+   갈래 색으로 얹는다. ⛔ .ctGem.on{fill:...} 으로 면을 채우지 말 것 — 아이콘이 색에 묻힌다. */
+#campTree .ctSel{filter:drop-shadow(0 0 4px var(--acc-sel,#5cd6ff))}
 /* 👆 누르는 면 — 보이지 않지만 **보이는 별보다 크다**. 별 하나에 이것 하나뿐이라
    어디를 눌렀는지 헷갈릴 일이 없다(실측: 15px 짜리 별은 6px 만 빗나가도 헛쳤다). */
 #campTree .ctHit{fill:transparent;cursor:pointer}
@@ -2123,8 +2181,11 @@
 #campTree .ctBrNm{text-anchor:middle;dominant-baseline:middle;pointer-events:none;
   font-size:10px;letter-spacing:3px;font-weight:800}
 /* 가운데 — 글씨 없는 붉은 마름모(2026-09-01 사용자 확정) */
-#campTree .ctCore{fill:#ff5a3c;stroke:#ffd0be;stroke-width:1.1;pointer-events:none}
-#campTree .ctCore.on{fill:#ff5a3c}
+/* ⭐ 가운데 육각 — **다른 별과 같은 어두운 판**이다(2026-09-03). 그 위에 점화 코어 그림이 얹힌다.
+   ⛔ fill 을 주황으로 꽉 채우지 말 것 — 그림이 판에 묻힌다. 색은 테두리와 빛으로만 낸다. */
+#campTree .ctCore{fill:rgba(6,9,14,.94);stroke:#ff7a4a;stroke-width:1.5;pointer-events:none}
+#campTree .ctCore.on{stroke:#ff9a6a;stroke-width:1.9;
+  filter:drop-shadow(0 0 5px rgba(255,120,74,.55))}
 #campTree .ctCoreOut{fill:none;stroke:rgba(255,120,90,.42);stroke-width:1;pointer-events:none}
 
 /* ══ 하단 구역 — 고른 별의 모든 정보가 여기 모인다 ══════════════════════ */
