@@ -88,11 +88,55 @@ const CAMP_RES_ITEMS = [
     lv: () => (typeof campRefLv === 'function') ? campRefLv() : 0,
     // ⛽ 정제소를 아직 안 지었으면 올려도 나오는 것이 없다 — 그 사실을 슬롯에 적는다.
     lock: () => !(typeof campHasRefinery === 'function' && campHasRefinery()),
-    lockWhy: '정제소를 먼저 지으세요' }
+    lockWhy: '정제소를 먼저 지으세요' },
+  // 👷 **일꾼 생산** (2026-09-03 사용자 확정). 나머지 셋과 성격이 다르다 —
+  //   「올리는 것」이 아니라 「사는 것」이다. 그래서 cost/buy 를 제 손으로 갖는다.
+  //   ⭐ 왜 여기 두나: 자원을 늘리는 방법 넷(터치·채취·정제소·일꾼)이 **한 자리에** 모인다.
+  //     예전엔 일꾼만 본부를 골라 생산 카드에서 뽑아야 해서 혼자 동선이 달랐다.
+  //   ⚠ 값은 campHireCost 하나가 단일 소스다(본부 생산 카드도 그것을 쓴다 — campSyncHire).
+  //   ⛔ 여기서 유닛을 직접 만들지 말 것 — techDoProduce 를 부른다. 인구·대기열·상한 계산이
+  //     전부 거기 있고, 캠프는 그것을 감싸서 40기 상한만 얹었다(campPatchProduce).
+  { k: 'worker', nm: '일꾼 생산', ico: () => 'units/un_' + campWorkerKey(),
+    why: '광맥에 붙어 저절로 캐는 일꾼',
+    // ⚠ 여기 넷은 전부 **뽑는 중인 것까지** 센다(campWorkerNPlanned) — 안 그러면 대기열에
+    //   몰아 넣어 첫 마리 값으로 다섯을 사는 구멍이 난다(2026-09-03 사용자 발견).
+    now: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
+    next: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() + 1 : null,
+    unit: '기',
+    lv: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
+    lvTx: () => ((typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0)
+            + '/' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40),
+    cost: () => (typeof campHireCost === 'function' && typeof campWorkerNPlanned === 'function')
+            ? campHireCost(campWorkerNPlanned()) : 0,
+    buy: () => { const bk = campWorkerBldg();
+      if(bk && typeof techDoProduce === 'function' && typeof TECH_WORKER !== 'undefined')
+        techDoProduce(TECH_WORKER[G.tech.race], bk); },
+    lock: () => (typeof campWorkerNPlanned === 'function' && typeof CAMP_WORKER_MAX !== 'undefined')
+            && campWorkerNPlanned() >= CAMP_WORKER_MAX,
+    lockWhy: '일꾼은 ' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40) + '기까지' }
 ];
+// 👷 일꾼 유닛 키와, 그 일꾼을 뽑는 건물 키 — 종족마다 다르다.
+//   ⚠ TECH_TREE 를 뒤져 찾는다(campSyncHire 와 **같은 방식**) — 이름을 박아 두면 종족이 늘 때 깨진다.
+function campWorkerKey(){
+  return (typeof TECH_WORKER !== 'undefined' && typeof G !== 'undefined' && G.tech)
+    ? (TECH_WORKER[G.tech.race] || 'worker_human') : 'worker_human'; }
+function campWorkerBldg(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return null;
+  const t = TECH_TREE[G.tech.race]; if(!t || !t.buildings) return null;
+  const wk = campWorkerKey();
+  for(const b of t.buildings) if((b.produces || []).some(x => x.id === wk)) return b.k;
+  return null; }
 
 function campResItem(k) { return CAMP_RES_ITEMS.find(x => x.k === k) || null; }
 function campResItemLv(it) { return it.lv ? it.lv() : ((typeof campUpgLv === 'function') ? campUpgLv(it.k) : 0); }
+// 💰 값 — 항목이 제 값을 갖고 있으면 그것이 이긴다(일꾼은 campHireCost 를 쓴다).
+function campResItemCost(it) {
+  if (it && it.cost) return it.cost();
+  return (typeof campUpgCost === 'function') ? campUpgCost(it ? it.k : '') : 0; }
+// 🔤 슬롯 오른쪽 위 표기 — 기본은 「Lv.n」이고, 일꾼처럼 세는 것은 「n/40」이다.
+function campResItemTr(it) {
+  if (it && it.lvTx) return it.lvTx();
+  return 'Lv.' + campResItemLv(it); }
 
 // 숫자 표기 — 큰 수는 캠프·HUD 와 같은 축약기(fmtCur)를 쓴다. ⛔ 새 표기기를 만들지 말 것.
 function _campResNum(v, dec) {
@@ -106,17 +150,18 @@ function campResModelRes() {
   const have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0;   // ⛔ | 0 금지 — 21억을 넘으면 음수가 된다
   const items = CAMP_RES_ITEMS.map(it => {
     const lv = campResItemLv(it);
-    const cost = (typeof campUpgCost === 'function') ? campUpgCost(it.k) : 0;
+    const cost = campResItemCost(it);
     const locked = it.lock ? it.lock() : false;
     const poor = have < cost;
     return {
       k: it.k,
-      pro: (typeof _icoPathImg === 'function') ? _icoPathImg(it.ico, '🔧') : '',
+      pro: (typeof _icoPathImg === 'function')
+        ? _icoPathImg((typeof it.ico === 'function') ? it.ico() : it.ico, '🔧') : '',
       sn: it.nm,
       // ⭐ 누르기 **전에** 얼마나 오르는지 슬롯에서 바로 보인다(정보판은 고른 것만 보여 준다)
       sub: (function(){ const c = it.now(), x = it.next();
         return (x != null && !locked) ? (_campResNum(c, it.dec) + ' ▸ ' + _campResNum(x, it.dec)) : ''; })(),
-      tr: 'Lv.' + lv,
+      tr: campResItemTr(it),
       cr: cost,
       state: (locked || poor) ? 'dim' : '',
       sel: (_resPick === it.k),
@@ -125,14 +170,14 @@ function campResModelRes() {
   });
   const it = campResItem(_resPick) || CAMP_RES_ITEMS[0];
   const lv = campResItemLv(it);
-  const cost = (typeof campUpgCost === 'function') ? campUpgCost(it.k) : 0;
+  const cost = campResItemCost(it);
   const locked = it.lock ? it.lock() : false;
   const cur = it.now(), nxt = it.next();
   return {
     mode: 'upg', compact: true, title: '자원',
     kicker: true,
     info: {
-      eb: 'Lv.' + lv,
+      eb: campResItemTr(it),
       name: it.nm,
       // ⛔ **toast 에 기대지 말 것** — toast() 는 채팅으로 간다(addChat). 캠프에는 채팅바가 없어서
       //   (CLAUDE.md: 「유즈맵 안 전 구역 · 캠프만 제외」) 그 알림은 **아무 데도 안 보인다**.
@@ -172,7 +217,7 @@ function campResTap(k) {
     campResSheet(); return;
   }
   const have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0;   // ⛔ | 0 금지 — 21억을 넘으면 음수가 된다
-  const cost = (typeof campUpgCost === 'function') ? campUpgCost(k) : 0;
+  const cost = campResItemCost(it);
   if (have < cost) {
     // 얼마가 모자란지까지 말한다 — 「안 된다」가 아니라 「얼마가 더 필요하다」로 읽히게
     if (typeof toast === 'function')
@@ -180,7 +225,9 @@ function campResTap(k) {
     if (typeof playSfx === 'function') playSfx('ui_tab');
     campResSheet(); return;
   }
-  if (typeof campUpgBuy === 'function') campUpgBuy(k);
+  // 👷 일꾼은 「올리기」가 아니라 「생산」이다 — 항목이 제 손(buy)을 갖고 있으면 그것을 부른다.
+  if (it.buy) it.buy();
+  else if (typeof campUpgBuy === 'function') campUpgBuy(k);
   campResSheet();
 }
 

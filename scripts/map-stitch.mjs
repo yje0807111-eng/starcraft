@@ -40,6 +40,11 @@ const OUT   = path.resolve(ROOT, opt('out', 'docs/mock/quarters'));
 // ⚠ **1.0 아래로는 내려가지 않는다** — 조각을 줄이면 캔버스를 못 덮어 오른쪽·아래에
 //   검은 띠가 남고, 그걸 잘라내면 9:16 이 깨진다(실측 0.552). 키우면 넘치는 만큼 잘릴 뿐이다.
 const SCALES = has('noscale') ? [1] : [1.0, 1.01, 1.02, 1.03, 1.04];
+// 🎨 **조각마다 밝기가 조금씩 다르게 돌아온다** — 붙이면 한 칸만 떠 보인다.
+//   실측(던전 1): 조각3 이 원본보다 1.037배 밝고 조각4 는 1.009배 — 셋째 칸만 밝게 떴다.
+//   ⭐ --match=<원본 조각 폴더> 를 주면 각 조각을 **제 원본의 채널별 평균**에 맞춘다.
+//     ⚠ 조각끼리 맞추는 게 아니라 **원본에 맞춘다** — 그래야 넷이 함께 제자리로 온다.
+const MATCH = opt('match', '');
 
 const meta0 = await sharp(SRC).metadata();
 const W0 = meta0.width, H0 = meta0.height;
@@ -58,7 +63,19 @@ const up = {};
 for(const n of [1, 2, 3, 4]){
   const p = path.join(UP, `${NAME}_${n}_up.png`);
   if(!fs.existsSync(p)){ console.error('없는 파일: ' + p); process.exit(2); }
-  up[n] = { path: p, meta: await sharp(p).metadata() };
+  up[n] = { path: p, meta: await sharp(p).metadata(), gain: [1, 1, 1] };
+}
+if(MATCH){
+  for(const n of [1, 2, 3, 4]){
+    // ⚠ 이름 규약이 둘이다 — map-quarter 는 <name>_N.png, map-visible 은 <name>_vis_N.png
+    let ref = path.resolve(ROOT, MATCH, `${NAME}_${n}.png`);
+    if(!fs.existsSync(ref)) ref = path.resolve(ROOT, MATCH, `${NAME}_vis_${n}.png`);
+    if(!fs.existsSync(ref)){ console.log('  ⚠ 견줄 원본이 없다: ' + path.relative(ROOT, ref)); continue; }
+    const a = (await sharp(ref).stats()).channels.slice(0, 3).map(c => c.mean);
+    const b = (await sharp(up[n].path).stats()).channels.slice(0, 3).map(c => c.mean);
+    up[n].gain = a.map((v, i) => (b[i] > 0.5 ? v / b[i] : 1));
+    console.log(`  조각${n} 색 보정 ×${up[n].gain.map(g => g.toFixed(3)).join(' ')}`);
+  }
 }
 // 배율 — 조각 1 기준(넷 다 같은 크기로 왔다고 보고, 아니면 각자 제 배율)
 const K = up[1].meta.width / PLACE[1].w;
@@ -163,9 +180,19 @@ function placeOf(n){
 }
 const PL = { 1: placeOf(1), 2: placeOf(2), 3: placeOf(3), 4: placeOf(4) };
 
+// 🎨 채널별 배율을 raw 에 직접 곱한다 — sharp 의 linear() 는 채널 공통이라 색조가 안 맞는다.
+function applyGain(rgb, g){
+  if(g[0] === 1 && g[1] === 1 && g[2] === 1) return rgb;
+  for(let i = 0; i < rgb.length; i += 3){
+    rgb[i]   = Math.max(0, Math.min(255, Math.round(rgb[i]   * g[0])));
+    rgb[i+1] = Math.max(0, Math.min(255, Math.round(rgb[i+1] * g[1])));
+    rgb[i+2] = Math.max(0, Math.min(255, Math.round(rgb[i+2] * g[2]))); }
+  return rgb; }
 async function layer(n, left, top){
   const p = PL[n];
-  const rgb = await sharp(up[n].path).resize(p.w, p.h, { fit: 'fill' }).removeAlpha().raw().toBuffer();
+  const rgb = applyGain(
+    await sharp(up[n].path).resize(p.w, p.h, { fit: 'fill' }).removeAlpha().raw().toBuffer(),
+    up[n].gain);
   const al = fadeAlpha(p.w, p.h, left, top);
   const rgba = Buffer.alloc(p.w * p.h * 4);
   for(let i = 0; i < p.w * p.h; i++){
@@ -173,7 +200,10 @@ async function layer(n, left, top){
   const png = await sharp(rgba, { raw: { width: p.w, height: p.h, channels: 4 } }).png().toBuffer();
   return { input: png, left: Math.max(0, p.x), top: Math.max(0, p.y) };
 }
-const base = await sharp(up[1].path).resize(PL[1].w, PL[1].h, { fit: 'fill' }).png().toBuffer();
+const baseRaw = applyGain(
+  await sharp(up[1].path).resize(PL[1].w, PL[1].h, { fit: 'fill' }).removeAlpha().raw().toBuffer(),
+  up[1].gain);
+const base = await sharp(baseRaw, { raw: { width: PL[1].w, height: PL[1].h, channels: 3 } }).png().toBuffer();
 const comp = [{ input: base, left: Math.max(0, PL[1].x), top: Math.max(0, PL[1].y) },
   await layer(2, true, false), await layer(3, false, true), await layer(4, true, true)];
 
