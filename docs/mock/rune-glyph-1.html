@@ -1,0 +1,68 @@
+<!doctype html><meta charset="utf-8"><title>룬 문양 목업</title>
+<style>
+  body{margin:0;background:#07090d;color:#cdd6e2;font:12px/1.5 system-ui,'Malgun Gothic',sans-serif;padding:18px}
+  h1{font-size:14px;color:#8b95a5;letter-spacing:.1em;margin:0 0 14px;font-weight:600}
+  h2{font-size:11px;color:#6f7986;letter-spacing:.14em;margin:20px 0 8px;font-weight:600}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .cell{background:#000;border:1px solid #1b2129;border-radius:3px;padding:10px 6px 8px;text-align:center}
+  .nm{margin-top:6px;font-size:11px;color:#e6ecf4}
+  .de{font-size:10px;color:#7e8896}
+  .hexrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+</style>
+<h1>룬 문양 11종 — 2안 · 겹치던 셋(연타·가속·신속)을 갈랐다</h1>
+
+<h2>일반 7종</h2>
+<div class="grid" id="g1"></div>
+<h2>유니크 4종</h2>
+<div class="grid" id="g2"></div>
+<h2>판에 얹으면 (하급·중급·상급·유니크 띠)</h2>
+<div class="hexrow" id="g3"></div>
+
+<script>
+// 문양 = 각진 막대와 대각선만. 곡선 없음.
+const G = {
+  // 🔹 범주를 강제로 벌린다 — 같은 범주가 둘이면 24px 에서 합쳐진다
+  tap:   `<path d="M32 10 v22 M23 25 l9 11 9-11"/><path d="M20 45 h24 M25 52 h14"/>`,
+  gas:   `<path d="M21 24 h9 v28 h-9z M34 24 h9 v28 h-9z"/><path d="M25 18 v-7 M38 18 v-7"/>`,
+  pop:   `<path d="M32 10 l9 11 h-18z"/><path d="M17 27 l7 9 h-14z M47 27 l7 9 h-14z"/><path d="M12 48 h40"/>`,
+  atk:   `<path d="M32 8 l8 13 -8 9 -8-9z"/><path d="M32 30 v22"/><path d="M19 35 h26"/>`,
+  aspd:  `<path d="M14 20 v24 M24 14 v36 M34 20 v24 M44 14 v36 M54 24 v16"/>`,
+  hp:    `<path d="M32 8 l18 9 v13 l-18 26 -18-26V17z"/>`,
+  heal:  `<path d="M26 12 h12 v14 h14 v12 h-14 v14 h-12 v-14 h-14 v-12 h14z"/>`,
+  speed: `<path d="M14 10 h36 l-18 22 18 22 h-36 l18-22z"/>`,
+  wspd:  `<path d="M22 32 h24 M34 20 l12 12 -12 12"/><path d="M8 24 h10 M6 32 h10 M8 40 h10"/>`,
+  fever: `<path d="M32 54 v-18"/><path d="M32 34 l-14-14 M32 34 l14-14"/><path d="M18 20 l-6-8 M46 20 l6-8"/>`,
+  mapg:  `<path d="M32 8 l15 15 -15 15 -15-15z"/><path d="M32 40 l11 11 -11 11 -11-11z"/>`
+};
+const C = {
+  tap:'#5dff8f', gas:'#4de0c0', pop:'#ffd24a', atk:'#ff5a5a', aspd:'#ff8a3d',
+  hp:'#e0e6f0', heal:'#7dffcf', speed:'#ff6bd6', wspd:'#9d7bff', mapg:'#b8ff5a', fever:'#ffb03d'
+};
+const N = {
+  tap:['손끝의 룬','탭 획득량'], gas:['정제의 룬','가스 획득'], pop:['증원의 룬','인구 상한'],
+  atk:['힘의 룬','유닛 공격력'], aspd:['연타의 룬','유닛 공격속도'], hp:['수호의 룬','유닛 체력'],
+  heal:['치유의 룬','회복량'], speed:['가속의 룬','캠프 진행 속도'], wspd:['신속의 룬','일꾼 이동속도'],
+  mapg:['전리품의 룬','유즈맵 보상'], fever:['열기의 룬','피버 발동 확률']
+};
+const glyph = (k, s) => `<svg viewBox="0 0 64 64" width="${s}" height="${s}">
+  <g fill="none" stroke="${C[k]}" stroke-width="4.5" stroke-linecap="square" stroke-linejoin="miter"
+     style="filter:drop-shadow(0 0 5px ${C[k]})">${G[k]}</g></svg>`;
+const cell = k => `<div class="cell">${glyph(k,64)}<div class="nm">${N[k][0]}</div><div class="de">${N[k][1]}</div></div>`;
+document.getElementById('g1').innerHTML = ['tap','gas','pop','atk','aspd','hp','heal'].map(cell).join('');
+document.getElementById('g2').innerHTML = ['speed','wspd','mapg','fever'].map(cell).join('');
+
+// 판 위에 얹은 모습 — 꼭짓점이 위인 육각형
+const hexPts = r => { const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((50+r*Math.cos(a)).toFixed(1)+','+(50+r*Math.sin(a)).toFixed(1)); } return q.join(' '); };
+const BAND = [['#aab6c6','하급'],['#5cd6ff','중급'],['#ffcf6b','상급'],['#c98bff','유니크']];
+document.getElementById('g3').innerHTML = BAND.map(([col,tx],i) => {
+  const k = ['tap','atk','fever','speed'][i];
+  return `<div class="cell"><svg viewBox="0 0 100 100" width="84" height="84">
+    <polygon points="${hexPts(46)}" fill="#161b22" stroke="#39414d" stroke-width="3"/>
+    <polygon points="${hexPts(38)}" fill="#1e242c" stroke="${col}" stroke-width="2"
+      style="filter:drop-shadow(0 0 4px ${col})"/>
+    <g transform="translate(50 50) scale(0.82) translate(-32 -32)"
+       fill="none" stroke="${C[k]}" stroke-width="4.5" stroke-linecap="square" stroke-linejoin="miter"
+       style="filter:drop-shadow(0 0 5px ${C[k]})">${G[k]}</g>
+  </svg><div class="nm">${tx}</div><div class="de">${N[k][0]}</div></div>`; }).join('');
+</script>

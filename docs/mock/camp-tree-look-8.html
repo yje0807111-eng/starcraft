@@ -1,0 +1,190 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 트리 — 전체 분위기 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:22px;justify-content:center;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:74px}
+.pane{position:relative;width:390px;height:520px;overflow:hidden;background:#07090c}
+.bg{position:absolute;inset:0;background:url(../../assets/backgrounds/reb/reb.webp) center/cover no-repeat}
+.scrim{position:absolute;inset:0}
+svg{position:absolute;inset:0;width:100%;height:100%}
+.hd{position:absolute;left:12px;top:8px;z-index:3;font-size:11px;color:#8d97a6}
+.hd b{font-family:var(--font-num);color:var(--gold);font-size:13px}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+/* ── 실제 트리를 축약한 부챗살 ─────────────────────────────────────── */
+const BR = [
+  { k:'econ',  nm:'재화',  col:'#ffd24a', a:-0.30, rk:0.86 },
+  { k:'army',  nm:'아군',  col:'#4aa8ff', a: 0.30, rk:1.14 },
+  { k:'start', nm:'시작',  col:'#5dff8f', a: 0.72, rk:0.90 },
+  { k:'enemy', nm:'적',    col:'#ff3b3b', a:-0.87, rk:1.20 },
+];
+const CX = 195, CY = 250, ROOTC = '#ff7a4a';
+const SPREAD = 1.24, R_BR = 42, R_GP = 84, R0 = 126, RS = 32;
+function hash(s){ let h = 0; for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return h; }
+function jit(k, amp){ return ((hash(k) % 1000) / 1000 - 0.5) * amp; }
+function build(){
+  const N = { br:[], gp:[], node:[], link:[] };
+  BR.forEach(function(B){
+    const A = B.a * Math.PI;
+    const bp = { x:CX + Math.cos(A) * R_BR * B.rk, y:CY + Math.sin(A) * R_BR * B.rk };
+    N.br.push({ b:B, p:bp });
+    N.link.push({ a:{x:CX,y:CY}, b:bp, col:B.col, on:true, w:1.6 });
+    for(let g = 0; g < 4; g++){
+      const ga = A + (g - 1.5) / 3.5 * SPREAD;
+      const gp = { x:CX + Math.cos(ga) * R_GP * B.rk, y:CY + Math.sin(ga) * R_GP * B.rk };
+      const gOn = g < 3;
+      N.gp.push({ b:B, p:gp, on:gOn });
+      N.link.push({ a:bp, b:gp, col:B.col, on:gOn, w:1.3 });
+      for(let l = 0; l < 2; l++){
+        const la = ga + (l - 0.5) / 6 * SPREAD;
+        let prev = gp;
+        for(let n = 1; n <= 4; n++){
+          const r = (R0 + RS * (n - 1)) * B.rk;
+          const p = { x:CX + Math.cos(la) * r + jit(B.k + g + l + n, 8),
+                      y:CY + Math.sin(la) * r + jit(B.k + l + n + 'y', 8) };
+          const own = gOn && n <= (2 - l + (g === 0 ? 1 : 0));
+          N.node.push({ b:B, p:p, own:own, live:gOn });
+          N.link.push({ a:prev, b:p, col:B.col, on:own, w:1.1 });
+          prev = p;
+        }
+      }
+    }
+  });
+  return N;
+}
+const N = build();
+function hexPts(x, y, r){ const q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((x + r * Math.cos(a)).toFixed(1) + ',' + (y + r * Math.sin(a)).toFixed(1)); }
+  return q.join(' '); }
+
+/* ── 조각 ───────────────────────────────────────────────────────────── */
+function defs(o){
+  let d = '<defs>';
+  BR.concat([{ col:ROOTC }]).forEach(function(B){
+    d += '<linearGradient id="e' + o.id + B.col.slice(1) + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#fff" stop-opacity=".92"/>' +
+      '<stop offset=".42" stop-color="' + B.col + '"/>' +
+      '<stop offset="1" stop-color="' + B.col + '" stop-opacity=".34"/></linearGradient>';
+    // 선용 — 중심 쪽이 밝고 바깥으로 갈수록 옅어진다
+    d += '<linearGradient id="l' + o.id + B.col.slice(1) + '" x1="0" y1="0" x2="1" y2="0">' +
+      '<stop offset="0" stop-color="' + B.col + '" stop-opacity=".95"/>' +
+      '<stop offset="1" stop-color="' + B.col + '" stop-opacity=".35"/></linearGradient>';
+  });
+  if(o.radial) d += '<radialGradient id="rad' + o.id + '"><stop offset="0" stop-color="' + ROOTC +
+    '" stop-opacity=".20"/><stop offset=".55" stop-color="' + ROOTC +
+    '" stop-opacity=".05"/><stop offset="1" stop-color="' + ROOTC + '" stop-opacity="0"/></radialGradient>';
+  return d + '</defs>';
+}
+function nebula(){          // 갈래마다 아주 옅은 색 안개
+  return BR.map(function(B){
+    const A = B.a * Math.PI, r = 150 * B.rk;
+    return '<ellipse cx="' + (CX + Math.cos(A) * r).toFixed(0) + '" cy="' + (CY + Math.sin(A) * r).toFixed(0) +
+      '" rx="118" ry="96" fill="' + B.col + '" opacity=".045" style="filter:blur(26px)"/>';
+  }).join('');
+}
+function dust(){            // 별먼지 — 아주 작은 점들(고정 해시라 매번 같은 자리)
+  let s = '';
+  for(let i = 0; i < 90; i++){
+    const x = (hash('dx' + i) % 3900) / 10, y = (hash('dy' + i) % 5200) / 10;
+    const r = ((hash('dr' + i) % 100) / 100) * 0.9 + 0.35;
+    const op = ((hash('do' + i) % 100) / 100) * 0.28 + 0.06;
+    s += '<circle cx="' + Math.abs(x).toFixed(0) + '" cy="' + Math.abs(y).toFixed(0) + '" r="' + r.toFixed(2) +
+      '" fill="#cfe2ff" opacity="' + op.toFixed(2) + '"/>';
+  }
+  return s;
+}
+function lines(o){
+  return N.link.map(function(L){
+    const dim = L.on ? 1 : 0.16;
+    if(o.energy && L.on){
+      // 두 겹 — 아래에 굵고 흐린 빛, 위에 얇고 밝은 심
+      return '<line x1="' + L.a.x.toFixed(1) + '" y1="' + L.a.y.toFixed(1) + '" x2="' + L.b.x.toFixed(1) +
+        '" y2="' + L.b.y.toFixed(1) + '" stroke="' + L.col + '" stroke-width="' + (L.w * 2.6).toFixed(1) +
+        '" opacity=".13" stroke-linecap="round"/>' +
+        '<line x1="' + L.a.x.toFixed(1) + '" y1="' + L.a.y.toFixed(1) + '" x2="' + L.b.x.toFixed(1) +
+        '" y2="' + L.b.y.toFixed(1) + '" stroke="' + L.col + '" stroke-width="' + (L.w * 0.8).toFixed(1) +
+        '" opacity=".85" stroke-linecap="round"/>';
+    }
+    return '<line x1="' + L.a.x.toFixed(1) + '" y1="' + L.a.y.toFixed(1) + '" x2="' + L.b.x.toFixed(1) +
+      '" y2="' + L.b.y.toFixed(1) + '" stroke="' + L.col + '" stroke-width="' +
+      (o.thin ? (L.w * 0.7).toFixed(1) : L.w) + '" opacity="' + (dim * (o.thin ? .55 : .5)).toFixed(2) + '"' +
+      (L.on ? '' : ' stroke-dasharray="2 3"') + '/>';
+  }).join('');
+}
+function star(o){
+  let s = '';
+  N.node.forEach(function(nd){
+    const r = nd.own ? 8 : 8.6;
+    const op = nd.own ? 1 : (nd.live ? 0.5 : 0.16);
+    const stroke = nd.own ? 'url(#e' + o.id + nd.b.col.slice(1) + ')' : 'rgba(200,220,240,.30)';
+    s += '<polygon points="' + hexPts(nd.p.x, nd.p.y, r) + '" fill="rgba(6,9,14,.94)" stroke="' + stroke +
+      '" stroke-width="' + (nd.own ? 1.3 : 1.1) + '" opacity="' + op +
+      (nd.own ? '" style="filter:drop-shadow(0 0 ' + (o.glow || 3) + 'px ' + nd.b.col + ')' : '') + '"/>';
+    if(nd.own){
+      s += '<polygon points="' + hexPts(nd.p.x, nd.p.y, r + 4) + '" fill="none" stroke="' + nd.b.col +
+        '" stroke-width="1" opacity=".45"/>';
+      s += '<polygon points="' + hexPts(nd.p.x, nd.p.y, r - 1) + '" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>';
+    }
+  });
+  N.gp.forEach(function(q){
+    s += '<polygon points="' + hexPts(q.p.x, q.p.y, 7) + '" fill="rgba(7,10,15,.95)" stroke="' + q.b.col +
+      '" stroke-width="1.2" opacity="' + (q.on ? 1 : .3) + '"/>'; });
+  N.br.forEach(function(q){
+    s += '<polygon points="' + hexPts(q.p.x, q.p.y, 9.5) + '" fill="rgba(7,10,15,.97)" stroke="url(#e' +
+      o.id + q.b.col.slice(1) + ')" stroke-width="1.4"/>'; });
+  return s;
+}
+function core(o){
+  const rr = 15;
+  let s = '';
+  if(o.radial) s += '<circle cx="' + CX + '" cy="' + CY + '" r="215" fill="url(#rad' + o.id + ')"/>';
+  s += '<polygon points="' + hexPts(CX, CY, rr * 1.55) + '" fill="none" stroke="rgba(255,120,90,.42)" stroke-width="1"/>';
+  s += '<polygon points="' + hexPts(CX, CY, rr) + '" fill="rgba(6,9,14,.94)" stroke="url(#e' + o.id +
+    ROOTC.slice(1) + ')" stroke-width="1.6" style="filter:drop-shadow(0 0 5px ' + ROOTC + ')"/>';
+  s += '<polygon points="' + hexPts(CX, CY, rr - 1.1) + '" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>';
+  return s;
+}
+function scene(o){
+  o = o || {}; o.id = o.id || 'x';
+  const scrim = o.scrim
+    ? '<div class="scrim" style="background:radial-gradient(120% 90% at 50% 42%,rgba(4,7,11,.30) 0%,rgba(4,7,11,.80) 58%,rgba(4,7,11,.94) 100%)"></div>'
+    : (o.noScrim ? '' : '<div class="scrim" style="background:rgba(4,7,11,.18)"></div>');
+  return '<div class="bg"' + (o.blur ? ' style="filter:blur(2px) saturate(.7)"' : '') + '></div>' + scrim +
+    '<svg viewBox="0 0 390 520">' + defs(o) +
+    (o.nebula ? nebula() : '') + (o.dust ? dust() : '') +
+    lines(o) + star(o) + core(o) + '</svg>' +
+    '<div class="hd">해금 <b>62</b> / 173</div>';
+}
+
+const CASES = [
+  { t:'지금 (기준)', d:'배경 사진 위에 별자리가 그대로 얹힌다. 사진의 대비가 살아 있어 <b>별과 배경이 서로 다툰다</b>.',
+    o:{ id:'a' } },
+  { t:'배경을 눌러 준다', d:'⭐ 가장자리로 갈수록 어두워지는 <b>딤</b>을 씌운다. 사진은 분위기로만 남고 별자리가 앞으로 나온다. 한 겹 추가로 가장 크게 달라진다.',
+    o:{ id:'b', scrim:1 } },
+  { t:'배경을 흐린다', d:'사진에 <b>흐림 + 채도 낮춤</b>. 초점이 별자리에만 맺힌다. ⚠ 배경 그림을 공들여 뽑았는데 알아보기 어려워진다.',
+    o:{ id:'c', scrim:1, blur:1 } },
+  { t:'성운', d:'갈래가 뻗는 쪽마다 <b>아주 옅은 색 안개</b>. 어느 방향이 무슨 갈래인지 색으로 먼저 읽히고, 빈 공간이 덜 허전하다.',
+    o:{ id:'d', scrim:1, nebula:1 } },
+  { t:'별먼지', d:'배경에 <b>작은 점 90개</b>. 「성좌」라는 말과 맞아떨어지고, 밀 때 깊이감이 생긴다. ⚠ 고정 자리라 매번 같다.',
+    o:{ id:'e', scrim:1, dust:1 } },
+  { t:'선을 에너지로', d:'⭐ 산 경로를 <b>두 겹</b>으로 — 아래에 굵고 흐린 빛, 위에 얇고 밝은 심. 선 하나가 <b>흐르는 것</b>처럼 보인다.',
+    o:{ id:'f', scrim:1, energy:1 } },
+  { t:'가운데에서 퍼지는 빛', d:'중심에 <b>아주 넓고 옅은 방사</b>. 「여기서 시작한다」가 배경으로 말해진다.',
+    o:{ id:'g', scrim:1, radial:1 } },
+  { t:'⭐ 추천 — 전부', d:'딤 + 성운 + 별먼지 + 에너지 선 + 중심 방사. <b>배경은 물러나고 별자리가 주인공</b>이 된다. 요소는 늘었지만 전부 아주 옅어서 시끄럽지 않다.',
+    o:{ id:'h', scrim:1, nebula:1, dust:1, energy:1, radial:1, glow:3.4 } },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p><div class="pane">' + scene(c.o) + '</div></div>';
+}).join('');
+</script></body></html>

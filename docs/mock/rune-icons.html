@@ -1,0 +1,43 @@
+<!doctype html><meta charset="utf-8"><title>룬 아이콘 40</title>
+<style>
+  body{margin:0;background:#0a0d12;color:#cdd6e2;font:12px/1.5 system-ui,'Malgun Gothic',sans-serif;padding:16px}
+  h1{font-size:14px;color:#8b95a5;letter-spacing:.1em;margin:0 0 4px;font-weight:600}
+  .sub{font-size:11px;color:#6f7986;margin-bottom:14px}
+  h2{font-size:11px;letter-spacing:.14em;margin:16px 0 8px;font-weight:600}
+  .row{display:grid;grid-template-columns:96px repeat(3,1fr);gap:7px;align-items:center;margin-bottom:7px}
+  .nm{font-size:11.5px;color:#e6ecf4}.nm i{display:block;font-style:normal;font-size:9.5px;color:#7e8896}
+  .c{background:#000;border:1px solid #1b2129;border-radius:3px;padding:7px;text-align:center}
+  .c img{width:66px;height:66px;display:block;margin:0 auto}
+  .c b{display:block;font-size:9.5px;font-weight:500;margin-top:2px}
+  .u{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .sm{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .sm img{width:38px;height:38px}
+</style>
+<h1>룬 아이콘 40장 — 갈래 4 × 종류 4</h1>
+<div class="sub">위 성좌=경제 · 왼쪽=전투 · 오른쪽=성장 · 가운데 셋=유니크</div>
+<div id="w"></div>
+<h2 style="color:#ffe08a">유니크 — 금</h2><div class="u" id="u"></div>
+<h2 style="color:#6f7986">실제 칸 크기(38px)</h2><div class="sm" id="s"></div>
+<script>
+const N={tap:['손끝의 룬','탭 획득량'],gas:['정제의 룬','가스 획득'],mine:['채굴의 룬','일꾼 채취량'],
+ reb:['윤회의 룬','환생 포인트'],atk:['힘의 룬','유닛 공격력'],aspd:['연타의 룬','유닛 공격속도'],
+ hp:['수호의 룬','유닛 체력'],heal:['치유의 룬','회복량'],exp:['성장의 룬','경험치 · 준비 중'],
+ kill:['전과의 룬','적 처치 보상 · 준비 중'],mapg:['전리품의 룬','유즈맵 보상'],fevg:['열정의 룬','피버 획득량'],
+ speed:['가속의 룬','캠프 진행 속도'],wspd:['신속의 룬','일꾼 이동속도'],fever:['열기의 룬','피버 발동 확률'],
+ cost:['절약의 룬','구매 비용 −(최대 1.5%)']};
+const GRP=[['경제','#7effc9',['tap','gas','mine','reb']],['전투','#ffa3b8',['atk','aspd','hp','heal']],
+           ['성장','#e6eef8',['exp','kill','mapg','fevg']]];
+const G=[['low','하급','#9aa4b0'],['mid','중급','#5cd6ff'],['high','상급','#ffcf6b']];
+const P='../../assets/icons/rune/';
+document.getElementById('w').innerHTML=GRP.map(([gn,gc,ids])=>
+ '<h2 style="color:'+gc+'">'+gn+'</h2>'+ids.map(id=>
+  '<div class="row"><div class="nm">'+N[id][0]+'<i>'+N[id][1]+'</i></div>'
+  +G.map(([g,tx,c])=>'<div class="c"><img src="'+P+id+'_'+g+'.webp"><b style="color:'+c+'">'+tx+'</b></div>').join('')
+  +'</div>').join('')).join('');
+document.getElementById('u').innerHTML=['speed','wspd','fever','cost'].map(id=>
+ '<div class="c"><img src="'+P+id+'_uniq.webp"><b style="color:#ffe08a">'+N[id][0]+'</b>'
+ +'<b style="color:#7e8896">'+N[id][1]+'</b></div>').join('');
+document.getElementById('s').innerHTML=[].concat(...GRP.map(g=>g[2].map(id=>id+'_mid')))
+ .concat(['speed_uniq','wspd_uniq','fever_uniq','cost_uniq'])
+ .map(k=>'<img src="'+P+k+'.webp">').join('');
+</script>

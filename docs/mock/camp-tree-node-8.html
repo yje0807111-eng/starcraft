@@ -1,0 +1,193 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 트리 별 — 생김새 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --econ:#ffd24a;--army:#4aa8ff;--enemy:#ff3b3b;--root:#ff7a4a;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:22px;justify-content:center;align-items:flex-start}
+.cell{width:400px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:60px}
+.pane{position:relative;width:400px;height:320px;
+  background:radial-gradient(120% 120% at 50% 30%,#1a2029 0%,#0d1015 62%,#07090c 100%)}
+svg{position:absolute;inset:0;width:100%;height:100%}
+.lab{text-anchor:middle;font-size:8.5px;fill:#6d7683}
+.tag{text-anchor:middle;dominant-baseline:hanging;font-family:var(--font-num);
+  font-variant-numeric:tabular-nums;font-size:8.5px;fill:#7b8593}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+/* 여섯 상태를 나란히 — 왼→오: 못 산다 · 살 수 있다 · 샀다 · 귀함(샀다) · 극상(샀다) · 가운데 */
+const SLOT = [
+  { x: 66, st:'buy',  gr:'흔함', col:'#ffd24a', ic:'gas'     },
+  { x:178, st:'own',  gr:'보통', col:'#ffd24a', ic:'mine'    },
+  { x:290, st:'own',  gr:'귀함', col:'#4aa8ff', ic:'endure'  },
+];
+const ROOT = { x:178, y:238, col:'#ff7a4a', ic:'root' };
+const CY = 116, R = 42, RR = 50;
+const ICO = '../../assets/icons/tree/';
+
+function hexPts(x, y, r){ const q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((x + r * Math.cos(a)).toFixed(1) + ',' + (y + r * Math.sin(a)).toFixed(1)); }
+  return q.join(' '); }
+function hexPath(x, y, r){ return 'M' + hexPts(x, y, r).split(' ').join('L') + 'Z'; }
+function img(x, y, w, key, op){
+  return '<image href="' + ICO + key + '.webp" x="' + (x - w / 2).toFixed(1) + '" y="' +
+    (y - w / 2).toFixed(1) + '" width="' + w + '" height="' + w + '" opacity="' + op +
+    '" preserveAspectRatio="xMidYMid meet"/>'; }
+
+/* ── 조각들 ─────────────────────────────────────────────────────────── */
+function bodyOf(s, r, o){
+  const own = s.st === 'own', buy = s.st === 'buy';
+  const ring = (own || buy) ? s.col : 'rgba(200,220,240,.30)';
+  const sw = own ? (o.thick || 1.7) : 1.1;
+  return '<polygon points="' + hexPts(s.x, s.y || CY, r) + '" fill="' + (o.fillOn && own
+      ? s.col + '22' : 'rgba(6,9,14,.94)') + '" stroke="' + ring +
+    '" stroke-width="' + sw + '"' + (o.glow && own ? ' filter="url(#g' + o.gid + ')"' : '') + '/>';
+}
+function iconOf(s, r){
+  const own = s.st === 'own';
+  return img(s.x, s.y || CY, r * 1.46, s.ic, own ? 1 : (s.st === 'buy' ? .9 : .5));
+}
+function priceOf(s, r){
+  if(s.st === 'own') return '';
+  return '<text class="tag" x="' + s.x + '" y="' + ((s.y || CY) + r + 5) + '"' +
+    (s.st === 'buy' ? ' fill="' + s.col + '"' : '') + '>' + (s.st === 'buy' ? 24 : 96) + '</text>';
+}
+/* 지금 방식 — 후광 원 + 십자 스파크 */
+function legacyDeco(s, r){
+  if(s.st !== 'own') return '';
+  return '<circle cx="' + s.x + '" cy="' + (s.y || CY) + '" r="' + (r * 1.45) +
+    '" fill="' + s.col + '" opacity=".11"/>' +
+    '<path d="M' + (s.x - r * 1.75) + ' ' + (s.y || CY) + ' L' + (s.x + r * 1.75) + ' ' + (s.y || CY) +
+    ' M' + s.x + ' ' + ((s.y || CY) - r * 1.75) + ' L' + s.x + ' ' + ((s.y || CY) + r * 1.75) +
+    '" stroke="' + s.col + '" stroke-width="1.6" opacity=".34"/>';
+}
+function inner(s, r, o){
+  if(s.gr === '귀함' || s.gr === '극상')
+    return '<polygon points="' + hexPts(s.x, s.y || CY, r - 5) + '" fill="none" stroke="#ffcf5a" stroke-width="1" opacity=".8"/>';
+  if(s.gr === '보통')
+    return '<polygon points="' + hexPts(s.x, s.y || CY, r - 5) + '" fill="none" stroke="rgba(220,232,246,.34)" stroke-width=".8"/>';
+  return '';
+}
+/* 새 장식들 */
+function ringOut(s, r, gap){        // 바깥 육각 링 — 룬 판의 어휘
+  if(s.st !== 'own') return '';
+  return '<polygon points="' + hexPts(s.x, s.y || CY, r + (gap || 8)) + '" fill="none" stroke="' +
+    s.col + '" stroke-width="1" opacity=".45"/>';
+}
+function bracket(s, r){             // 꼭짓점 브라켓 — 여섯 모서리에 짧은 조각
+  if(s.st !== 'own') return '';
+  const y = s.y || CY; let d = '';
+  for(let i = 0; i < 6; i++){
+    const a0 = Math.PI / 180 * (60 * i - 90), a1 = Math.PI / 180 * (60 * (i + 1) - 90);
+    const R2 = r + 7;
+    const px = s.x + R2 * Math.cos(a0), py = y + R2 * Math.sin(a0);
+    const qx = s.x + R2 * Math.cos(a1), qy = y + R2 * Math.sin(a1);
+    d += 'M' + px.toFixed(1) + ' ' + py.toFixed(1) +
+         'L' + (px + (qx - px) * 0.26).toFixed(1) + ' ' + (py + (qy - py) * 0.26).toFixed(1) +
+         'M' + qx.toFixed(1) + ' ' + qy.toFixed(1) +
+         'L' + (qx + (px - qx) * 0.26).toFixed(1) + ' ' + (qy + (py - qy) * 0.26).toFixed(1);
+  }
+  return '<path d="' + d + '" stroke="' + s.col + '" stroke-width="2.2" fill="none" opacity=".9" stroke-linecap="round"/>';
+}
+function underGlow(s, r){           // 밑변 광원 — DESIGN.md 의 버튼 어휘
+  if(s.st !== 'own') return '';
+  const y = (s.y || CY) + r * 0.88;
+  return '<path d="M' + (s.x - r * 0.52) + ' ' + y.toFixed(1) + ' L' + (s.x + r * 0.52) + ' ' + y.toFixed(1) +
+    '" stroke="' + s.col + '" stroke-width="2.2" stroke-linecap="round" opacity=".9"/>';
+}
+function tier(s, r, n){             // 차수 눈금 — 테두리를 5조각으로
+  if(s.st !== 'own') return '';
+  const y = s.y || CY; let d = '';
+  for(let i = 0; i < 5; i++){
+    const a0 = Math.PI / 180 * (72 * i - 90 + 6), a1 = Math.PI / 180 * (72 * i - 90 + 66);
+    const R2 = r + 9;
+    d += 'M' + (s.x + R2 * Math.cos(a0)).toFixed(1) + ' ' + (y + R2 * Math.sin(a0)).toFixed(1) +
+         'A' + R2 + ' ' + R2 + ' 0 0 1 ' + (s.x + R2 * Math.cos(a1)).toFixed(1) + ' ' + (y + R2 * Math.sin(a1)).toFixed(1);
+  }
+  let d2 = '';
+  for(let i = 0; i < (n || 3); i++){
+    const a0 = Math.PI / 180 * (72 * i - 90 + 6), a1 = Math.PI / 180 * (72 * i - 90 + 66);
+    const R2 = r + 9;
+    d2 += 'M' + (s.x + R2 * Math.cos(a0)).toFixed(1) + ' ' + (y + R2 * Math.sin(a0)).toFixed(1) +
+          'A' + R2 + ' ' + R2 + ' 0 0 1 ' + (s.x + R2 * Math.cos(a1)).toFixed(1) + ' ' + (y + R2 * Math.sin(a1)).toFixed(1);
+  }
+  return '<path d="' + d + '" stroke="rgba(255,255,255,.14)" stroke-width="2" fill="none"/>' +
+         '<path d="' + d2 + '" stroke="' + s.col + '" stroke-width="2" fill="none" opacity=".95"/>';
+}
+function defsGlow(gid, blur){
+  return '<defs><filter id="g' + gid + '" x="-70%" y="-70%" width="240%" height="240%">' +
+    '<feDropShadow dx="0" dy="0" stdDeviation="' + blur + '" flood-opacity="0.85"/></filter></defs>';
+}
+function labels(){
+  return SLOT.map(function(s, i){
+    const t = ['살 수 있다', '샀다', '귀함(샀다)'][i];
+    return '<text class="lab" x="' + s.x + '" y="' + (CY + R + 30) + '">' + t + '</text>';
+  }).join('') + '<text class="lab" x="' + ROOT.x + '" y="' + (ROOT.y + RR + 22) + '">가운데</text>';
+}
+/* 한 안을 통째로 그린다 */
+function scene(o){
+  o = o || {}; o.gid = o.gid || 0;
+  let s = o.glow ? defsGlow(o.gid, o.blur || 3) : '';
+  SLOT.forEach(function(sl){
+    if(o.legacy) s += legacyDeco(sl, R);
+    if(o.ringOut) s += ringOut(sl, R, o.gap);
+    if(o.tier) s += tier(sl, R, 3);
+    s += bodyOf(sl, R, o) + inner(sl, R, o);
+    if(o.bracket) s += bracket(sl, R);
+    if(o.under) s += underGlow(sl, R);
+    s += iconOf(sl, R) + priceOf(sl, R);
+  });
+  const rt = { x:ROOT.x, y:ROOT.y, st:'own', gr:'', col:ROOT.col, ic:'root' };
+  if(o.legacy) s += legacyDeco(rt, RR);
+  if(o.ringOut) s += ringOut(rt, RR, o.gap);
+  s += bodyOf(rt, RR, o);
+  if(o.bracket) s += bracket(rt, RR);
+  if(o.under) s += underGlow(rt, RR);
+  s += iconOf(rt, RR);
+  return '<svg viewBox="0 0 400 320">' + s + labels() + '</svg>';
+}
+
+const CASES = [
+  { t:'지금 (기준)',
+    d:'산 별 뒤에 <b>색 원</b>이 뿌옇게 깔리고 <b>십자 선</b>이 사방으로 뻗는다. 별이 많아지면 원끼리 겹쳐 화면이 색 구름이 된다.',
+    o:{ legacy:1 } },
+
+  { t:'장식을 뺀다',
+    d:'후광 원과 십자를 <b>그냥 없앤다</b>. 산 것은 테두리 굵기와 아이콘 선명도로만 갈린다. ⚠ 가장 깨끗하지만 「샀다」가 약하게 읽힌다.',
+    o:{} },
+
+  { t:'바깥 육각 링',
+    d:'⭐ 산 별에 <b>간격을 둔 육각 링</b> 한 겹. 룬 판이 쓰는 어휘라 캠프가 한 벌로 읽힌다. 원이 아니라 육각이라 겹쳐도 지저분해지지 않는다.',
+    o:{ ringOut:1, gap:5 } },
+
+  { t:'꼭짓점 브라켓',
+    d:'육각 여섯 모서리에 <b>짧은 조각</b>만 붙인다. SF 조준선 느낌 — 선이 짧아 겹치지 않고, 「고정됐다」는 인상이 강하다.',
+    o:{ bracket:1 } },
+
+  { t:'번지는 빛(그림자)',
+    d:'원을 그리지 않고 <b>SVG 그림자</b>로 테두리에서 빛이 번지게 한다. 뿌연 원 대신 도형을 따라 빛나서 훨씬 깔끔하다.',
+    o:{ glow:1, blur:5.5, gid:1 } },
+
+  { t:'차오르는 면',
+    d:'산 별의 <b>안쪽을 갈래 색으로 옅게 채운다</b>. 장식을 하나도 안 늘리고 「샀다」를 가장 강하게 말한다.',
+    o:{ fillOn:1, thick:2 } },
+
+  { t:'차수 눈금',
+    d:'테두리 밖에 <b>5조각 눈금</b>을 두고 산 차수만큼 채운다. 별 하나만 봐도 「3/5 까지 왔다」가 읽힌다. ⚠ 24px 에서 눈금이 뭉갤 수 있다.',
+    o:{ tier:1 } },
+
+  { t:'⭐ 추천 — 링 + 번짐 + 면',
+    d:'바깥 육각 링 + 도형을 따라 번지는 빛 + 옅게 차오른 면. <b>원도 십자도 없다.</b> 셋 다 육각을 따라가서 별이 많아져도 형태가 뭉개지지 않는다.',
+    o:{ ringOut:1, gap:9, glow:1, blur:4.5, gid:2, fillOn:1, thick:2 } },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p><div class="pane">' + scene(c.o) + '</div></div>';
+}).join('');
+</script></body></html>
