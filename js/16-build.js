@@ -1081,7 +1081,31 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
         labels+='<div class="bGasFx" style="left:'+(_gp.x*100).toFixed(2)+'%;top:'+(_gp.y*100).toFixed(2)+'%"><i></i><i></i><i></i><i></i><i></i></div>'; }
       if(e.bt>0 && !e._bpause && !techWallet()){ const _lbl=e.waiting?'<span class="bldSpin"></span>':(_noPow?'⏸':(Math.ceil(e.bt)+'s'));   // 일꾼 오는 중 스피너 / 건설 중 시간 · 블랙아웃=정지 표시
         labels+='<div class="bldTime" style="left:'+(_sb.x*100).toFixed(2)+'%;top:'+(_sb.y*100).toFixed(2)+'%">'+_lbl+'</div>'; }
-      else if(!techWallet()){ const _q0=(e._pq&&e._pq.length)?e._pq[0]:(e._rj||null); if(_q0){ const _pp=Math.round((1-_q0.t/(_q0.tMax||1))*100); inner='<div class="bprog prod" style="bottom:0"><i style="width:'+_pp+'%"></i></div>'; } } }
+      // 🕐 **생산 중 = 건물 위에 유닛 얼굴 + 시계방향 링**(2026-09-03 사용자 확정).
+      //   ⛔ 옛 가로 막대(.bprog.prod)로 되돌리지 말 것 — 건물 **한가운데를 가로질러** 그려서
+      //     건물 그림에 묻혔고(실측 147×19px), 무엇을 뽑는지도 알 수 없었다.
+      //   ⭐ 얼굴은 unitPortraitHTML 이 단일 소스다(카드·헤더·대기열과 같은 그림).
+      //   ⚠ 연구(_rj)는 유닛이 아니라 얼굴이 없다 — 그때는 링만 돈다.
+      //   ⚠ 크기는 **고정**이다(줌을 따라 커지지 않는다) — 읽으라고 띄운 표시다.
+      else if(!techWallet()){ const _q0=(e._pq&&e._pq.length)?e._pq[0]:(e._rj||null);
+        if(_q0){ const _pd=(1-_q0.t/(_q0.tMax||1))*100;   // % — 위에서 아래로 걷힌다
+          // 🎨 **색이 있는 초상**을 쓴다 — 회색 프로필(un_*)은 작게 뜨면 뭔지 안 읽힌다.
+          const _face=(_q0.id && typeof unitFaceColorHTML==='function') ? unitFaceColorHTML(_q0.id)
+                     : ((_q0.id && typeof unitPortraitHTML==='function') ? unitPortraitHTML(_q0.id) : '');
+          const _qn=(e._pq&&e._pq.length>1) ? '<b>'+e._pq.length+'</b>' : '';
+          // ⚠ **크기는 건물 발자국에서 px 로 계산해 넣는다**(2026-09-03 사용자 확정).
+          //   ⛔ 건물 요소(.bent) 안에 두고 width:% 로 주지 말 것 — .bent 는 **크기 없는 앵커**라
+          //     (3D 가 그린다) % 가 0 이 되어 아이콘이 3~8px 로 찌부러진다(실측).
+          //   ⛔ labels 에 두고 px 고정으로도 두지 말 것 — 확대할수록 건물에 견줘 작아 보여
+          //     「비율이 왔다 갔다」 한다(사용자 지적).
+          //   ⭐ 그래서 발자국 폭(_bf.w × 칸폭 × 줌 × 맵 px)의 일정 비율로 **매 프레임 다시 잰다.**
+          const _br=(typeof _btRect==='function')?_btRect():null;
+          const _bpx=_br ? (_bf.w*_techCW()*techView().zoom*_br.width) : 40;
+          //   ⭐ 0.62 → **0.31**(2026-09-03 사용자 요청 「절반으로」) — 건물 폭의 약 1/3.
+          const _isz=Math.max(12, Math.round(_bpx*0.31));
+          const _ip2=_techW2S(e.x, e.y-(_bf.h/2)*_techCH());
+          labels+='<div class="bprodIco" style="left:'+(_ip2.x*100).toFixed(2)+'%;top:'+(_ip2.y*100).toFixed(2)+'%;'
+            +'width:'+_isz+'px;height:'+_isz+'px;--p:'+_pd.toFixed(1)+'%"><span>'+_face+'</span>'+_qn+'</div>'; } } }
     else if(e.type==='larva'){ const _lh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_larva')&&!(G.opt&&G.opt.model3d===false)); cls='larvaE'+(_lh3?' live3d':''); inner=_lh3?'':'<span class="lvWig">🐛</span>'; }   // 🐛 라바 · 3D 로드 시 빈 앵커 + live3d(2D 네모 아웃라인 제거 → 유닛과 동일한 3D 하단링)
     else if(e.type==='egg'){ const _eh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_egg')&&!(G.opt&&G.opt.model3d===false)); cls='eggE'+(_eh3?' live3d':''); inner=_eh3?'':'<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중) · 3D 로드 시 빈 앵커(swarm_egg 모델로 렌더)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);

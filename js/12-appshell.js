@@ -324,7 +324,11 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   const setN=(id,v)=>{ _curRoll(document.getElementById(id), v); };
   // 🏕 캠프에서는 **캠프 재화**를 보여 준다 — 관리자 재화 줄(.bres)을 숨겼으므로 이 줄이 유일한 표시다.
   //    ⛔ 줄을 두 개 두지 않는다(어느 쪽이 진짜인지 알 수 없어진다).
-  const _camp = (typeof campIsOn==='function' && campIsOn() && typeof G!=='undefined' && G.tech) ? G.tech : null;
+  // 🏕 **캠프 세션이 살아 있으면 어디서든 캠프 재화**다(2026-09-03 사용자 확정).
+  //   ⛔ campIsOn()(=캠프 화면)으로 가르지 말 것 — 유즈맵 선택·상점으로 나가는 순간
+  //     옛 지갑(profMineral)을 보여 줘서 숫자가 「1.0M → 0」으로 뚝 떨어졌다.
+  //   ⚠ 인구는 캠프 **화면**에서만 쓴다 — 다른 화면에는 인구 칸이 없다.
+  const _camp = (typeof campEcoOn==='function' && campEcoOn() && typeof G!=='undefined' && G.tech) ? G.tech : null;
   setN('curMin', _camp ? (_camp.credit||0) : profMineral());
   setN('curGas', _camp ? (_camp.energy||0) : profGas());
   // 🏕 인구 — 캠프 안에서는 살아 있는 값, 밖(유즈맵·상점)에서는 **저장된 캠프 상태**를 읽는다.

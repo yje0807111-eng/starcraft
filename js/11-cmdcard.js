@@ -880,6 +880,18 @@ function unitPortraitHTML(id){
 function _unIcoFb(im){ try{ im.classList.remove('unIco'); im.removeAttribute('onerror');
   im.src=im.getAttribute('data-p'); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 아이콘도 초상도 없다 → 원래 라인 SVG
+// 🎨 **색이 있는 초상을 먼저** 쓴다 (2026-09-03 사용자 확정 · 생산 표시용).
+//   ⚠ unitPortraitHTML 은 회색 프로필(icons/units/un_*)이 먼저다 — 카드·헤더·대기열은 그것이 맞다.
+//     하지만 맵 위에 작게 뜨는 자리에서는 **색이 있어야 한눈에 들어온다.**
+//   ⭐ 그림표는 PORTRAIT_IMG 하나를 그대로 쓴다(새 표를 만들지 않는다).
+//     없는 유닛이면 공용 초상 체인(unitPortraitHTML)으로 넘긴다.
+function unitFaceColorHTML(id){
+  if(!id) return '';
+  const p = (typeof PORTRAIT_IMG !== 'undefined') ? PORTRAIT_IMG[id] : null;
+  if(p) return '<img class="portImg unIco" src="' + p + '" alt="" draggable="false"'
+    + ' data-uid="' + id + '" onerror="_unSvgFb(this)">';
+  return (typeof unitPortraitHTML === 'function') ? unitPortraitHTML(id) : '';
+}
 function _unSvgFb(im){ try{ im.outerHTML=unitSVG(im.getAttribute('data-uid')); }catch(_e){ try{ im.remove(); }catch(_e2){} } }
 // 초상화 칩 내부 HTML(박스+개수+이름)
 // (구 chipHTML/unitHpHTML 제거 — 종류 칩·유닛별 HP는 커맨드 그리드 모델이 담당)
