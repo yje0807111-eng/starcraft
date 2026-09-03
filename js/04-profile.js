@@ -463,8 +463,13 @@ const UM_STK_FIRST='hard';   // 오토배틀은 난이도가 없다(noDiff) → 
 function umCapRate(diff){ const R=UM_DIFF_R[diff]||UM_DIFF_R.normal;
   let foes=0, sec=0; for(let w=1;w<=HB_WAVES;w++){ foes+=hbFoeCount(R,w); sec+=hbWaveTime(w)+HB_GAP_S; }
   return (foes*hbKillReward(1,R).min + hbClearBonus(1,R).min) / (sec/60); }
+// 💠 전리품의 룬 — **보상 재화만** 늘린다(사용자 확정 2026-09-02).
+//   ⛔ 젬에는 걸지 않는다. 젬으로 산 룬이 젬을 더 준다면 그것은 인쇄기다.
+//   ⚠ 이 룬은 일부러 **층을 넘는다**(GEM.md §1: 젬 부스트는 유즈맵에 안 걸린다).
+//     대신 승패에는 개입하지 않는다 — 끝난 뒤 받는 재화만 본다.
+function umRuneMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('mapGain') : 1; }
 function umFirstRw(diff){ const F=UM_FIRST[diff]; if(!F) return null;
-  const min=Math.round(Math.min(umRate(), umCapRate(diff))*60*F.h);
+  const min=Math.round(Math.min(umRate(), umCapRate(diff))*60*F.h*umRuneMul());
   return Object.assign({ pcoin:min, gas:Math.round(min*UM_GAS_RATIO), gem:F.gem }, F.tk||{}); }
 function umClearTbl(){ const M=PLAYER_META; if(!M.umClear) M.umClear={}; return M.umClear; }
 function umFirstGot(mapId,diff){ const t=umClearTbl()[mapId]; return !!(t&&t[diff]); }
@@ -489,7 +494,7 @@ function umDiffMul(){ const D=(typeof DIFFICULTY!=='undefined')&&DIFFICULTY[G.di
 // 판 종료 보상 — 순수 read G / write profile. _runSummary에서 1회 호출.
 function profRunReward(){ const p=PROF();
   const prog=Math.max(UM_PROG_MIN, Math.min(1, umProgress())), dMul=umDiffMul(), day=umDayMul();
-  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*day*(1+profPetBonus('coin')));   // 🐾 펫 코인% 반영 · 📅 하루 3판 뒤 체감
+  const min=Math.round(umRate()*UM_ANCHOR_MIN*prog*dMul*day*(1+profPetBonus('coin'))*umRuneMul());   // 🐾 펫 코인% · 📅 하루 3판 뒤 체감 · 💠 전리품의 룬
   const gas=Math.round(min*UM_GAS_RATIO);
   const k=G.kills||0, rd=G.round||0;
   const xp=Math.round((10 + k*0.5 + rd*8)*dMul);   // ⚠ 앵커 아님(위 주석 참조)

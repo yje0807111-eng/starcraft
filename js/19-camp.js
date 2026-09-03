@@ -164,7 +164,8 @@ function campHasRefinery(){
 }
 function campGasPerMin(){
   if(!campHasRefinery()) return 0;                // 정제소를 지어야 나온다
-  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gasMul');
+  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gasMul')
+    * ((typeof campRuneMul === 'function') ? campRuneMul('gas') : 1);   // 💠 정제의 룬
 }
 // ⚠ **campFrame 이 민다.** 프레임을 끄고 직접 미는 코드(벤치)는 이것도 같이 불러야 한다 —
 //   안 부르면 가스가 영영 0 이고, 가스가 드는 유닛을 한 기도 못 산다(실측으로 겪었다).
@@ -281,6 +282,12 @@ function campRebPtGain(){
   const base = Math.sqrt(campWealth() / CAMP_REB_COST);
   return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
     * campPackRebPt(); }   // 💳 환생 팩
+// 💠 **가속의 룬 — 프레임 시간 배수.** ⛔ 부르는 곳은 `campFrame` 한 곳뿐이다.
+//   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
+//   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
+function campDtMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('speed') : 1; }
+// 💠 **질주의 룬 — 웨이브 대기 배수.** 다음 무리가 빨리 오면 라운드가 짧아진다.
+function campRoundMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('round') : 1; }
 // 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
 function campRebMul(){ const C = campState(); return 1 + ((C && C.rebMul) || 0); }
 
@@ -300,11 +307,13 @@ function campRebirth(){
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
   C.rate = 0; C.rateGas = 0; C.leftAt = 0; C.tapped = 0; C.playS = 0;
   campFevReset();                                 // ⚡ 앞 회차의 피버가 이어지면 안 된다
-  // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree 는 지우지 않는다 — 그게 환생의 값이다
+  // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree · C.rune 은 지우지 않는다 — 그게 환생의 값이다
+  //    💠 룬은 **젬으로 산 것**이다. 회차가 되감긴다고 사라지면 결제가 사라지는 것이라 절대 안 된다.
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
   //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
-  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb, rbTree:C.rbTree };
+  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb, rbTree:C.rbTree,
+                 rune:C.rune };
   campBattleClose(); campBarReset();
   // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
   //    저장 상태만 되감고 저장하면 **방금 지운 것이 그대로 되살아난다**(스모크가 잡았다).
@@ -312,6 +321,7 @@ function campRebirth(){
   { const C2 = campState();          // 판을 다시 깔면서 저장을 읽었을 수 있다 — 남길 것을 다시 얹는다
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
       C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
+      if(keep.rune) C2.rune = keep.rune;   // 💠 젬으로 산 것 — 되감기면 안 된다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   campSave();
@@ -2894,17 +2904,23 @@ function campScaleAllies(list){
   //    ⛔ 사거리는 건드리지 않는다(늘리면 종족 상성이 바뀐다).
   for(const u of list) if(u) u.acq = campAcqBase(u);
   const tAtk = campRtMul('atk'), tHp = campRtMul('hp');   // 🌳 환생 트리 — 전 유닛 공통
+  // 💠 룬 — 트리와 **같은 자리**(전 유닛 공통 배수). 룬끼리는 이미 합으로 접혀 왔다.
+  //   ⚠ 공격속도는 `u.cdMax`(발사 간격)라 **나눈다** — 곱하면 느려진다.
+  const R = (typeof campRuneMul === 'function');
+  const rAtk = R ? campRuneMul('atk') : 1, rHp = R ? campRuneMul('hp') : 1;
+  const rAs  = R ? campRuneMul('aspd') : 1;
   let n = 0;
   for(const u of list){
     if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
     const uid = u.gm || u.id;
-    const atk = tAtk * campResMul(uid, 'atk');   // 🌳 트리 × 🔬 연구(계열별)
-    const hp  = tHp  * campResMul(uid, 'hp');
-    if(atk === 1 && hp === 1) continue;          // 얹을 것이 없으면 표시도 남기지 않는다
+    const atk = tAtk * rAtk * campResMul(uid, 'atk');   // 🌳 트리 × 💠 룬 × 🔬 연구(계열별)
+    const hp  = tHp  * rHp  * campResMul(uid, 'hp');
+    if(atk === 1 && hp === 1 && rAs === 1) continue;    // 얹을 것이 없으면 표시도 남기지 않는다
     u._campRtOn = 1;
     if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
       u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }
     if(atk !== 1) u.dmg = (u.dmg || 0) * atk;
+    if(rAs !== 1 && u.cdMax > 0) u.cdMax = u.cdMax / rAs;   // 💠 연타의 룬 — 발사 간격을 줄인다
     n++; }
   return n; }
 
@@ -2940,6 +2956,9 @@ function campCatchDown(before){
     if(endP > 0 && !u._endured && Math.random() < endP){
       u._endured = true; u.dead = false; u.hp = 1;
       CAMPB.me.units.push(u); continue; }
+    // 🧠 **정신 지배로 뺏은 적은 소환수다** — 죽으면 그대로 사라진다(부활 대기에 안 넣는다).
+    //   ⛔ 넣으면 라운드마다 되살아나 적이 영영 줄어든다.
+    if(u._mc) continue;
     CAMPB._down.push({ u:u, t:0 }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것 (⏱ 타이머 없음 — 라운드가 끝나야 일어난다)
   return n; }
 // 🩹 **라운드 리셋** — 누운 병력을 전원 일으키고, 서 있는 병력도 체력을 가득 채운다.
@@ -3108,7 +3127,8 @@ function campCombatStep(dt){
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
   if(campFoesPending()){                                  // ⏱ 다음 웨이브 투입
-    CAMPB._wqT -= dt;
+    // 💠 질주의 룬 — 다음 무리가 더 빨리 온다(= 라운드가 짧아진다)
+    CAMPB._wqT -= dt * campRoundMul();
     // ⭐ **화면의 적을 다 잡았으면 기다리지 않는다**(2026-08-30). 이 한 줄이 있어야
     //   간격을 늘려도 「대기가 곧 라운드 길이」가 되지 않는다 — 위 CAMP_WAVE_GAP_S 경고 참조.
     if(CAMPB._wqT <= 0 || !CAMPB.ai.units.length){ campSpawnWave(); CAMPB._wqT = CAMP_WAVE_GAP_S; } }
@@ -3268,9 +3288,20 @@ const CAMP_MINE_CAP = 5;
 //     ⛔ 칸 수를 줄이면 일꾼을 다 뽑아도 붙을 자리가 없어 남는다.
 //   ⚠ 칸 수를 바꾸면 가스와의 간격(CAMP_GAS_GAP)도 같이 봐야 한다 — 반폭이 그만큼 늘어난다.
 const CAMP_MINE_COLS = 8, CAMP_MINE_ROWS = 1;
-// 🏹 호의 깊이(칸) — 가운데가 이만큼 아래로 처진다. **0 이면 일직선**(지금 값 · 사용자 확정).
-//   ⚠ 식은 남겨 둔다 — 호로 되돌리고 싶으면 이 숫자 하나만 올리면 된다(옛 값 0.8).
-const CAMP_MINE_ARC = 0;
+// 🏹 호의 깊이(칸) — 가운데가 이만큼 **아래로 처진다**. 0 이면 일직선.
+//   ⭐ 0.8 (2026-09-02 사용자 확정 · 「더 완만하게 — 지금은 거의 V 자로 한 곳만 내려간다」).
+//     ⚠ 1.5 는 세로 흔들림(JIT_Y)과 겹쳐 가운데 한 덩이가 유독 처져 보였다 — 둘을 같이 줄였다.
+//   ⛔ 음수(위로 볼록)로 만들지 말 것 — 본부를 감싸는 산 모양이 되는데 사용자가 물렸다.
+const CAMP_MINE_ARC = 0.8;
+// 🪨 **삐뚤빼뚤함** — 완벽한 곡선은 사람이 놓은 것처럼 보인다. 자연물이니 조금씩 어긋나야 한다.
+//   ⚠ 단위는 **칸**이다(가로/세로 각각 ±이 값의 절반까지 흔들린다).
+//   ⭐ 흔들림은 **고정 시드**로 만든다 — 매 프레임 다시 뽑으면 광맥이 덜덜 떨고,
+//     새로 들어올 때마다 배치가 달라져 「내 기지」로 안 읽힌다.
+const CAMP_MINE_JIT_X = 0.55, CAMP_MINE_JIT_Y = 0.45;
+//   덩이 번호 하나로 -0.5~+0.5 를 만드는 고정 난수. ⛔ Math.random 을 쓰지 말 것.
+function campMineJit(i, salt){
+  const v = Math.sin((i + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+  return (v - Math.floor(v)) - 0.5; }
 // ⚠ 이 둘이 **기지가 하단 시트에 가리지 않게** 하는 유일한 장치다.
 //   맵은 화면 전체를 쓰고 시트가 그 위를 덮으므로(css/30-home.css 캠프 블록), 시트 상단보다
 //   위에 앉혀야 한다. 시트 상단 = 화면 세로의 0.77 지점(실측: 맵 701px 중 시트 161px + 네비).
@@ -3281,7 +3312,7 @@ const CAMP_MINE_ARC = 0;
 //   ⚠ 0.59 로 올린 것은 가스가 **광맥 줄로 내려왔기** 때문이기도 하다 — 본부가 낮으면
 //     그 발치와 광맥·가스 줄이 붙어 한 덩어리로 뭉쳐 보인다.
 const CAMP_ROW_BASE = 0.59;   // 본부 중심(격자 세로 비율 0~1)
-const CAMP_ROW_MINE = 0.67;   // 광맥 첫 줄
+const CAMP_ROW_MINE = 0.66;   // 광맥 첫 줄 — 옛 0.67 · 덩이가 커진 만큼 본부 쪽으로 당겼다
 // ⚠ 행 번호는 **여기 한 곳에서만** 만든다. 광맥과 가스가 각자 round(rows*f) 를 하면
 //   호출 시점에 _techRows() 가 달라져 서로 다른 행에 앉는다(실측: 가스가 광맥보다 5행 위였다).
 function campRow(f){ return Math.max(0, Math.round(_techRows() * f)); }
@@ -3299,13 +3330,19 @@ function campMineCol(){ return techCols() / 2 - (CAMP_MINE_COLS - 1) / 2; }
 // ⚠ 2~6번 그림은 **고갈 단계용**이라 여기서 안 쓴다 — 캠프 광맥은 마르지 않는다(inf).
 //   잔량이 주는 유즈맵이 생기면 그때 campMineSprite 가 잔량으로 단계를 고르게 바꾼다.
 // ⚠ 이 배열은 칸 수와 길이가 달라도 된다 — campMineSprite 가 **나머지 연산으로 돌려 쓴다**.
-const CAMP_MINE_SPRITE = ['1'];
+const CAMP_MINE_SPRITE = ['2','1','1','1','1','2','1','2'];   // ⭐ 왼쪽부터 이 순서(2026-09-02 사용자 지정)
+//   ⚠ 길이가 CAMP_MINE_COLS(8)와 같아야 **지정한 순서 그대로** 나온다 —
+//     짧으면 나머지 연산으로 돌려 쓰므로 순서가 어긋난다(campMineSprite).
 // 💎 결정 덩어리의 **크기와 간격**(2026-08-31 사용자 요청 — 「조금 키우고 간격을 아주 조금 벌리자」)
 //   ⚠ 둘은 함께 움직인다: 키우기만 하면 서로 겹치고, 벌리기만 하면 사이가 휑해진다.
 //   ⛔ 간격을 키울 때 x0(왼끝) 기준으로 곱하면 줄 전체가 오른쪽으로 밀린다 —
 //      **가운데를 축으로** 벌려야 제자리에 있다(campLayMinerals 참고).
-const CAMP_MINE_SCALE = 1.50;   // 스프라이트 크기(칸 대비) — 옛 1.34
-const CAMP_MINE_GAP   = 1.12;   // 이웃 간 간격 배수
+const CAMP_MINE_SCALE = 1.92;   // 스프라이트 크기(칸 대비) — 2.00 에서 아주 조금 더 줄였다(2026-09-02)
+const CAMP_MINE_GAP   = 1.65;   // 이웃 간 간격 배수 — 가로로 늘린 만큼(×1.1) 함께 벌렸다
+// 🔲 **가로 배율** — 결정을 옆으로 늘려 직사각형으로 만든다(2026-09-02 실험).
+//   ⚠ CSS 변수 --mnSx 로 내려간다(css/10-game.css .mnSpr). 그늘도 같은 값을 받는다.
+//   ⚠ 늘린 만큼 CAMP_MINE_GAP 도 함께 키울 것 — 안 그러면 이웃과 파고든다(1.50 × 1.1 = 1.65).
+const CAMP_MINE_SX = 1.10;
 // ⛔ **좌우 뒤집기를 쓰지 않는다**(2026-08-31 사용자 확정). 같은 그림을 그대로 반복한다 —
 //   뒤집으면 광원 방향이 칸마다 반대가 되어 오히려 눈에 걸린다. 반복이 거슬리면 뒤집지 말고
 //   그림을 한 장 더 뽑는다(stage2…). 가스도 같은 규칙이다.
@@ -3363,8 +3400,9 @@ function campLayMinerals(){
   for(let r = 0; r < CAMP_MINE_ROWS; r++) for(let c = 0; c < CAMP_MINE_COLS; c++)
     G.tech.minerals.push({ eid:G.tech.eseq++,
       // ⭐ 가운데를 축으로 벌린다 — x0 기준으로 곱하면 줄이 통째로 오른쪽으로 밀린다.
-      x: x0 + (_mid + (c - _mid) * CAMP_MINE_GAP) * cw,
-      y: y0 + (r + (1 - Math.pow(c / _last * 2 - 1, 2)) * CAMP_MINE_ARC) * ch,
+      x: x0 + (_mid + (c - _mid) * CAMP_MINE_GAP + campMineJit(c, 1) * CAMP_MINE_JIT_X) * cw,
+      y: y0 + (r + (1 - Math.pow(c / _last * 2 - 1, 2)) * CAMP_MINE_ARC
+               + campMineJit(c, 2) * CAMP_MINE_JIT_Y) * ch,
       // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
       //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
       //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.
@@ -3390,11 +3428,12 @@ function campLayGas(){
   const mid = campMineMidCol(), off = campMineHalfW() + CAMP_GAS_PAD;
   TECH_GAS.c0  = Math.max(0, Math.round(mid - off - TECH_GAS.w));                 // 왼쪽 — 오른 변이 광맥 끝에 닿는다
   CAMP_GAS2.c0 = Math.min(techCols() - TECH_GAS.w, Math.round(mid + off));        // 오른쪽 — 왼 변이 광맥 끝에 닿는다
-  // ⛽ 가스는 **광맥과 같은 줄**이다(2026-09-02 사용자 확정 · 본부 줄에서 내렸다).
-  //   맞추는 것은 중심이 아니라 **발치**다(CAMP_GAS_FOOT 설명) — 둘 다 바닥에 서 있는 물건이라
-  //   발이 같은 선에 있어야 한 줄로 읽힌다.
-  //   ⛔ 본부 행으로 되돌리지 말 것 — 「일직선으로 붙여」가 뜻을 잃는다.
-  TECH_GAS.r0 = Math.max(0, Math.round(campRow(CAMP_ROW_MINE) + CAMP_GAS_FOOT - TECH_GAS.h));
+  // ⛽ 가스는 **본부와 같은 높이**다(2026-09-02 사용자 확정 · 광맥 줄에서 다시 올렸다).
+  //   ⚠ 맞추는 것은 중심이 아니라 **발치**다(CAMP_GAS_FOOT 설명) — 둘 다 바닥에 서 있는
+  //     물건이라 발이 같은 선에 있어야 나란히 선 것으로 읽힌다.
+  //   ⛔ 광맥 줄로 되돌리지 말 것 — 오른쪽 가스를 끈 뒤로는(CAMP_GAS2_ON) 왼쪽 하나만 남아,
+  //     광맥 줄에 두면 줄 한쪽 끝에 혹처럼 붙어 보인다.
+  TECH_GAS.r0 = Math.max(0, Math.round(campRow(CAMP_ROW_BASE) + CAMP_GAS_FOOT - TECH_GAS.h));
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -3411,7 +3450,12 @@ function campRestoreGas(){
 //    오른쪽 자리로 잠시 바꿔 한 번 더 묻는다.** 두 자리 중 하나라도 통과하면 통과다.
 //    이러면 원본이 나중에 바뀌어도 규칙이 저절로 따라온다(복사한 로직은 낡는다).
 // ⛔ 원복을 반드시 한다 — TECH_GAS 는 공용 객체다.
-const CAMP_GAS2 = { c0:0, r0:0 };      // 오른쪽 자리(campLayGas 가 채운다)
+// ⛽ **가스는 왼쪽 하나뿐이다**(2026-09-02 사용자 확정).
+//   ⚠ 게임에 미치는 영향: 정제소를 지을 자리가 둘 → **하나**가 된다. 가스 수입이 절반이다.
+//   ⛔ 자리 계산(CAMP_GAS2.c0/r0)과 campGas2Built 은 **지우지 않는다** — 되살릴 때 필요하고,
+//     지금은 이 플래그 한 곳만 true 로 되돌리면 된다(유보는 삭제가 아니다).
+const CAMP_GAS2_ON = false;
+const CAMP_GAS2 = { c0:0, r0:0 };      // 오른쪽 자리(campLayGas 가 채운다 · 지금은 안 쓴다)
 let _campGasPatched = null;
 function _campWithGas2(fn, args){
   const sc = TECH_GAS.c0, sr = TECH_GAS.r0;
@@ -3490,12 +3534,14 @@ function campGas2Built(){
     if(e.type !== 'bldg') return false;
     const b = techGetBldg(G.tech.race, e.bk); if(!b || !b.gas) return false;
     const f = _techFoot(G.tech.race, e.bk), sn = _techSnap(e.x, e.y, f.w, f.h);
-    return sn.c0 === CAMP_GAS2.c0 && sn.r0 === CAMP_GAS2.r0; });
+    return CAMP_GAS2_ON && sn.c0 === CAMP_GAS2.c0 && sn.r0 === CAMP_GAS2.r0; });
 }
 // 오른쪽 가스 구역을 그린다 — techMapRender 가 .bmap 안을 통째로 갈아 끼우므로
 // **그 밖(#cstMain 직계)** 에 두고 매 프레임 자리만 갱신한다(안 그러면 매번 지워진다).
 function campDrawGas2(){
   const host = document.getElementById('cstMain'); if(!host || !_campOn) return;
+  // ⛔ 꺼져 있으면 **이미 그려진 것도 걷는다** — 숨기지 말고 지운다(CLAUDE.md 「잔상 금지」).
+  if(!CAMP_GAS2_ON){ const old = document.getElementById('campGas2'); if(old) old.remove(); return; }
   let el = document.getElementById('campGas2');
   if(!el){ el = document.createElement('div'); el.id = 'campGas2'; host.appendChild(el); }
   // 🧩 **왼쪽 것을 그대로 복제한다**(CLAUDE.md 「재구현·복사 금지」).
@@ -3612,7 +3658,11 @@ const CAMP_RT_SUP = [0, 50, 100, 200];
 function campSupAdd(){ const n = campRtHas('sup');
   return n > 0 ? CAMP_RT_SUP[Math.min(CAMP_RT_SUP.length - 1, n)] : 0; }
 function campApplySupCap(){ const add = campSupAdd();
-  if(add > 0 && typeof G !== 'undefined' && G.tech) G.tech.supCap = (G.tech.supCap || 0) + add; }
+  if(typeof G === 'undefined' || !G.tech) return;
+  if(add > 0) G.tech.supCap = (G.tech.supCap || 0) + add;
+  // 💠 증원의 룬 — **트리 몫을 더한 뒤**에 비율을 얹는다(순서를 바꾸면 트리가 안 늘어난다)
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('pop') : 1;
+  if(rm !== 1) G.tech.supCap = Math.floor((G.tech.supCap || 0) * rm); }
 
 // ── 화면 층 ─────────────────────────────────────────────────────────────
 // 건설 맵 #vBuild 는 .gview(인게임 층)이고 HOME 은 .appScreen 이다. 층이 다르다.
@@ -4262,7 +4312,16 @@ const CAMP_FEV_SEC = [4, 5, 6.5, 8, 10, 13];                    // 지속(초)
 let _campFevEnd = 0, _campFevCd = 0;
 function campFevOn(){ return (typeof campRtHas === 'function') && campRtHas('fever') > 0; }
 function campFevLv(k){ return Math.min(5, (typeof campRtHas === 'function') ? campRtHas(k) : 0); }
-function campFevPct(){ return CAMP_FEV_PCT[campFevLv('fevPct')]; }
+// 💠 **열기의 룬 — 발동 확률에 곱한다**(2026-09-02). ⛔ 거는 곳은 여기 하나뿐이다.
+//   ⭐ 지속·배수가 아니라 **확률**을 건드리는 이유: 지속·배수는 피버가 「사건」에서
+//     「상시 배수」로 바뀌는 축이라 상한(CAMP_FEV_CD)이 그걸 막고 있다(위 주석).
+//     확률만 올리면 피버가 **더 자주 오되 머무는 비율의 천장은 그대로**다.
+//   ⚠ 환생 트리에서 피버를 안 열었으면(`campFevOn()` false) 이 룬도 아무 일을 안 한다 —
+//     룬은 **있는 시스템을 도와주는 것**이지 새 시스템을 켜는 것이 아니다.
+//   ⛔ 확률이라 1 을 넘으면 안 된다. 지금 값(최대 5% × 1.05)으로는 닿지 않지만 막아 둔다.
+function campFevPct(){
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('fever') : 1;
+  return Math.min(1, CAMP_FEV_PCT[campFevLv('fevPct')] * rm); }
 function campFevMul(){ return CAMP_FEV_MUL[campFevLv('fevMul')]; }
 function campFevSec(){ return CAMP_FEV_SEC[campFevLv('fevSec')]; }
 function campFevActive(){ return campFevOn() && Date.now() < _campFevEnd; }
@@ -4297,7 +4356,10 @@ function campTapGain(){
   //     「재화 획득 +300%」라고 팔면서 실제로는 +89% 였다 — 표기와 실제가 달랐다.
   //   ⚠ 여기서도 **합이다**(곱이 아니다) — campGatherMul 과 같은 규칙(GEM.md §5-2).
   const packA = (typeof campPackGather === 'function') ? campPackGather() : 0;
-  return Math.max(1, Math.round(base * (1 + packA)
+  // 💠 룬도 **같은 합산 항**이다(GEM.md §5-2). ⛔ 곱 항으로 옮기지 말 것.
+  //   재화의 룬은 채취·탭 양쪽에, 손끝의 룬은 탭에만 걸린다.
+  const runeA = (typeof campRuneEff === 'function') ? (campRuneEff('gain') + campRuneEff('tap')) : 0;
+  return Math.max(1, Math.round(base * (1 + packA + runeA)
     * campMineMul() * campRebMul() * campRtMul('tap') * campRtMul('tapMul')
     * (campFevActive() ? campFevMul() : 1)));   // ⚡ 피버 — ⛔ 탭 경로마다 따로 곱하지 말 것
 }
@@ -4312,7 +4374,9 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   // ⛏ **정수 곡선**이다(campGatRaw) — 왕복 1회당 1원 → 2원 → 3원 …
   //   ⛔ campMileMul 을 곱하지 말 것 — 계단은 campGatRaw 안에 이미 있다(두 겹이 된다).
   //   💳 팩 보너스는 여기서도 **합**이다(GEM.md §5-2).
-  return (campGatRaw(lv) + campPackGather())
+  //   💠 룬도 여기서 **합**이다 — 재화의 룬만(손끝의 룬은 탭 전용).
+  const runeA = (typeof campRuneEff === 'function') ? campRuneEff('gain') : 0;
+  return (campGatRaw(lv) + campPackGather() + runeA)
     * campMineMul() * campRebMul() * campRtMul('gather'); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).
@@ -4798,8 +4862,15 @@ function campFrame(now){
   if(t < _campLastDraw) _campLastDraw = 0;
   if(t - _campLastDraw < campFrameMs()){ _campRAF = requestAnimationFrame(campFrame); return; }   // 너무 이르면 건너뛴다(끄는 중이면 안 건너뛴다)
   _campLastDraw = t;
-  const dt = Math.min(0.05, Math.max(0, (t - (_campLastT || t)) / 1000));   // ⚠ 건너뛴 시간도 dt 에 담긴다(_campLastT 는 그릴 때만 갱신)
+  let dt = Math.min(0.05, Math.max(0, (t - (_campLastT || t)) / 1000));   // ⚠ 건너뛴 시간도 dt 에 담긴다(_campLastT 는 그릴 때만 갱신)
   _campLastT = t;
+  // 💠 **가속의 룬 — 캠프 전체가 빨라진다**(사용자 확정 2026-09-02: 「게임속도는 캠프 전체」).
+  //   ⭐ 여기 한 줄이 단일 소스다. 일꾼·건설·전투·정제소가 전부 이 dt 를 타므로
+  //     아래 어느 곳에도 따로 걸지 않는다(두 겹이 되면 표기가 거짓말이 된다).
+  //   ⚠ **250ms 정산 타이머(자리 비움)는 여기 안 걸린다.** 켜 놓고 보는 동안만 빨라진다 —
+  //     그게 「진행 속도」의 뜻이고, 방치 수입까지 배가 되면 축이 하나 더 늘어난다.
+  //   ⛔ 이 배수를 수입 공식에도 또 곱하지 말 것. 빨라진 만큼 왕복이 늘어 이미 반영된다.
+  dt *= campDtMul();
   // ⚡ **한 프레임 안에서 맵 rect 를 한 번만 잰다.** 아래 campPatchRect 설명 참고.
   _campRectC = null;
   let _ok = false;
@@ -4871,6 +4942,7 @@ function campSkin(){
   if(raw <= 0){   // 캠프 — 전용 그림 한 장
     const u = new URL(CAMP_BG_DIR + CAMP_BG_HOME, document.baseURI).href;
     el.style.setProperty('--campBg', "url('" + u + "')");
+    el.style.setProperty('--mnSx', String(CAMP_MINE_SX));
     return; }
   const dg = Math.max(1, Math.min(10, raw));
   // ⚠ **문서 기준 절대 URL 로 만든다.** CSS 변수 안의 상대 경로는 변수를 *선언한 곳*이 아니라
@@ -4879,6 +4951,7 @@ function campSkin(){
   const dir = CAMP_BG_HAVE[dg] ? CAMP_BG_DIR : CAMP_BG_FALLBACK;
   const url = new URL(dir + 'dg' + dg + '.webp', document.baseURI).href;
   el.style.setProperty('--campBg', "url('" + url + "')");
+  el.style.setProperty('--mnSx', String(CAMP_MINE_SX));
 }
 
 // ── 🔍 화면 배율 ────────────────────────────────────────────────────────
@@ -4925,8 +4998,19 @@ function campSkin(){
 //     C 광맥·건물을 세로로 펼쳐 빈 땅을 콘텐츠로 채운다
 //   ⚠ 줌을 바꾸면 이 y 도 다시 봐야 한다. 확인: SHOT_ZOOM=1.9 SHOT_CY=0.56 node scripts/shot.mjs dgfight
 const CAMP_ZOOM = 1.9;
-const CAMP_VIEW_Y = 0.56;
-const CAMP_COLS = 48;
+// ⭐ **0.56 → 0.62** (2026-09-02 사용자 확정 · 「들어가면 본진이 여전히 아래에 있다」).
+//   ⚠ 옛 주석은 「시점을 올려도 한 칸도 안 움직인다」였다 — 그때는 CAMP_VIEW_PAD 가 2 라
+//     클램프 상한이 0.50 근처였고 무엇을 넣어도 거기서 잘렸기 때문이다.
+//     PAD 를 10 으로 넓히자(같은 날) 상한이 0.643 으로 올라가 **이제 실제로 움직인다.**
+//   📐 실측(줌 1.9 에서 본부가 화면 세로 몇 % 에 오나):
+//       0.56 → 62% · 0.60 → 54% · **0.62 → 50%(한가운데)** · 0.63 → 48% · 0.643(상한) → 46%
+//   ⚠ 값을 더 올려도 0.643 에서 잘린다. 더 올리려면 CAMP_VIEW_PAD 를 함께 키워야 한다.
+const CAMP_VIEW_Y = 0.62;
+// ⭐ **40 칸** (2026-09-02 사용자 확정 · 「모든 요소를 1.2배로」).
+//   셀 폭 = 격자폭 ÷ 칸수 이므로 48 → 40 이면 건물·유닛·광맥이 정확히 **1.2배**가 된다.
+//   ⚠ 광맥·가스 자리는 techCols() 기준으로 다시 계산된다(campMineCol · CAMP_GAS2.c0) —
+//     칸수를 바꾸면 배치도 따라 움직이므로 **화면으로 확인할 것**.
+const CAMP_COLS = 40;
 // 🚧 **맵 밖이 화면에 보이지 않게 하는 한도.**
 // 바닥(.bmapFloor)은 inset:0 이지만 **뷰 변환을 함께 받는다**(_techViewCSS). 그래서
 // 축소하면 바닥도 같이 줄어 사방에 빈 공간이 뚫린다 — 실측: zoom 0.5 에서 바닥이
@@ -4953,7 +5037,16 @@ const CAMP_MIN_ZOOM = 1.45;
 //   그 아래는 아무것도 없는 여백이라, 보이면 「빈 땅이 드러난 화면」이 된다.
 //   ⭐ 상수로 박지 않고 **실제 배치에서 잰다** — CAMP_ROW_MINE 이나 광맥 줄 수가 바뀌면 같이 따라간다.
 let _campViewBot = null;
-const CAMP_VIEW_PAD = 2;   // 덩어리 아래로 남기는 여유(격자 칸 수)
+// ⭐ **10 칸** (2026-09-02 사용자 확정 · 「축소했을 때 본부가 너무 아래에 있어 불편하다」).
+//   ⚠ 이 값이 곧 **화면이 얼마나 아래까지 내려가는가**다. 아래로 더 갈 수 있으면 그만큼
+//     본부·광맥이 화면 위로 올라온다 — 시점이 늘 아래 끝에 붙어 있기 때문이다.
+//   📐 실측(축소 1.45 · 아래 끝까지 민 화면에서 본부가 화면 세로 몇 % 에 오나):
+//       2칸 69% · 4칸 66% · 6칸 63% · 8칸 61% · **10칸 58%** · 12칸 55%
+//     ⇒ 10 칸이 「중앙 약간 아래」다. 12 는 본부가 한가운데보다 **위**로 올라간다.
+//   ⭐ 광맥 아랫변과 하단 시트 사이도 16px → **99px** 로 벌어진다(답답함이 사라진다).
+//   ⛔ 옛 값 2 로 되돌리지 말 것 — 「광맥 아래 여백이 보이면 안 된다」는 규칙이었는데,
+//     지금 바닥은 콘크리트 석판이라 빈 땅으로 읽히지 않는다(배경 교체 2026-09-02).
+const CAMP_VIEW_PAD = 10;  // 덩어리 아래로 남기는 여유(격자 칸 수)
 function campCalcViewBot(){
   _campViewBot = null;
   if(typeof G === 'undefined' || !G.tech) return null;
