@@ -1,0 +1,128 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>캠프 하단 시트 껍데기 — 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 실측(2026-09-03 · 폰 390px)
+     시트 높이 161px · 패딩 9px 8px 12px · 지금 그림자 0 -8px 24px rgba(0,0,0,.55)
+     지금 껍데기(.bp::before/#btSheet::before)는 모서리 컷 7px + var(--loadDim) + 무채 틴트 + backdrop saturate(.45)
+     ⛔ 이 컴포넌트는 **단일 소스**다(CLAUDE.md 레지스트리 — 건물 프로필·유닛 지정·관리자 건설이 전부 같은 #btSheet 를 쓴다).
+        여기서 바꾼 안을 실제로 넣을 땐 캠프에서만 켜지는 조건(#phone.campMode 등)으로 감싸거나,
+        전 화면에 걸 것인지 먼저 정해야 한다 — 지금은 **보임새만** 고르는 자리다.
+     내용(MY BASE 타이틀 · 8칸 stats · 오른쪽 채굴 슬롯)은 그대로 두고 **판(배경·테두리·구분선)만** 바꾼다. */
+:root{
+  --font-ko:'IBM Plex Sans KR',sans-serif; --font-num:'Rajdhani',sans-serif;
+  --neon:#ff3b3b; --neon-glow:rgba(255,59,59,.45);
+  --ink:#e6eefc; --dim:#9aa6b8; --edge:rgba(255,255,255,.07);
+  --face:linear-gradient(#0a0a0a,#000);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#101317;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}
+.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 10px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:56px}
+.sub b{color:#c3ccd8;font-weight:700}
+
+/* ── 무대 = 캠프 맵 위(실측 그림 톤) + 시트 + 네비 ─────────────────────── */
+.phone{width:390px;position:relative;overflow:hidden;background:#8f8672}
+.map{height:210px;position:relative;
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.08),rgba(0,0,0,.22)),
+    repeating-linear-gradient(0deg,#948b76 0 68px,#8a8168 68px 70px),
+    repeating-linear-gradient(90deg,#948b76 0 68px,#8a8168 68px 70px)}
+.map::after{content:'';position:absolute;inset:0;
+  background:radial-gradient(120% 60% at 30% 0%,rgba(0,0,0,.28),transparent 60%)}
+
+/* 시트 — 여기부터 8안이 갈린다. 공통 골격만 미리 깐다 */
+.sheet{position:relative;padding:9px 8px 0;overflow:hidden}
+.kick{font-family:var(--font-num);font-size:9px;font-weight:800;letter-spacing:2.16px;color:#e8edf5;
+  padding:6px 2px 7px;position:relative}
+.body{display:flex;gap:10px;padding-bottom:12px}
+.stats{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px 6px}
+.stat{display:flex;flex-direction:column;gap:1px}
+.stat span{font-size:9px;letter-spacing:.06em;color:var(--dim)}
+.stat b{font-family:var(--font-num);font-size:14px;color:var(--ink);font-weight:700}
+.slot{width:58px;flex:none;border:1px solid var(--edge);border-radius:3px;background:var(--face);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.slot i{width:24px;height:24px;border-radius:2px;background:linear-gradient(155deg,#3a4048,#181b20)}
+.slot b{font-size:9px;font-weight:800;color:var(--ink)}
+
+/* 네비 줄 — 지금 그대로(배경 없음), 무대 비교용 */
+.nav{height:42px;display:flex;align-items:center;justify-content:space-around;
+  font-size:10px;color:#8d97a6;font-weight:700;background:#0b0c0e}
+.nav span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.nav b{font-size:13px;font-weight:400}
+.mm{margin:8px 0 0;color:#6f7887;font-size:10.5px;font-family:var(--font-num);letter-spacing:.04em}
+
+/* ① 지금 것 — 모서리 컷 7px + 무채 틴트(기준선) */
+.v1{clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% 100%,0 100%,0 7px);
+  background:
+    linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent) top/100% 1px no-repeat,
+    linear-gradient(180deg,rgba(20,20,22,.55) 0%,rgba(10,10,11,.86) 55%,rgba(6,6,7,.94) 100%),
+    linear-gradient(180deg,rgba(26,28,32,.38),rgba(16,18,21,.26));
+  backdrop-filter:saturate(.45) brightness(.92);
+  box-shadow:0 -8px 24px rgba(0,0,0,.55)}
+
+/* ② 실선 판 — 딤 대신 확실한 검정 카드 + 위 1px 테두리 */
+.v2{background:linear-gradient(180deg,#141517 0%,#0a0a0b 100%);
+  border-top:1px solid rgba(255,255,255,.10);
+  box-shadow:0 -10px 28px rgba(0,0,0,.6)}
+
+/* ③ 모서리 컷을 더 키운다(12px) — 트레이·칸과 같은 각짐을 시트에도 */
+.v3{clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%,0 12px);
+  background:linear-gradient(180deg,rgba(18,19,21,.92),rgba(8,8,9,.97));
+  border-top:1px solid rgba(255,59,59,.22);
+  box-shadow:0 -8px 22px rgba(0,0,0,.55)}
+
+/* ④ 붉은 상단 실선 — 캠프 액센트(--neon)를 시트 경계에 얹는다 */
+.v4{background:linear-gradient(180deg,#141517,#0a0a0b);position:relative}
+.v4::before{content:'';position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon) 30%,var(--neon) 70%,transparent);
+  box-shadow:0 0 8px -1px var(--neon-glow)}
+
+/* ⑤ 이중 톤 — 머리줄만 한 단 밝게, 본문은 더 짙게(칸과 같은 검정) */
+.v5{background:#000}
+.v5 .kick{background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--edge)}
+
+/* ⑥ 유리 판 — 배경이 옅게 비치는 블러(로그인 화면 어휘를 더 강하게) */
+.v6{background:linear-gradient(180deg,rgba(20,22,26,.42),rgba(10,11,13,.74));
+  backdrop-filter:blur(6px) saturate(.6);
+  border-top:1px solid rgba(255,255,255,.08)}
+
+/* ⑦ 사선 스캔라인 — scPanel 어휘(메탈+스캔라인)를 시트 전체로 확장 */
+.v7{background:
+    repeating-linear-gradient(115deg,rgba(255,255,255,.015) 0 2px,transparent 2px 7px),
+    linear-gradient(155deg,rgba(40,46,58,.35),rgba(9,11,16,.92));
+  border-top:1px solid rgba(160,185,215,.16)}
+
+/* ⑧ 판 없음 — 그라데만으로 뜨게, 테두리·컷 없이 가장 가볍게 */
+.v8{background:linear-gradient(180deg,transparent,rgba(6,7,9,.88) 40%,rgba(4,4,5,.96) 100%)}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const STATS=[['터치 획득','1'],['자동 수급','측정 중'],['일꾼','0기'],['인구','0 / 10'],
+  ['던전 배수','×1.0'],['채취 배수','×1.0'],['터치 강화','Lv.0'],['채취 강화','Lv.0']];
+const SHEET=(cls)=>'<div class="sheet '+cls+'">'
+  +'<div class="kick">MY BASE</div>'
+  +'<div class="body"><div class="stats">'
+    +STATS.map(([n,v])=>'<div class="stat"><span>'+n+'</span><b>'+v+'</b></div>').join('')
+  +'</div><div class="slot"><i></i><b>채굴</b></div></div></div>';
+const NAV='<div class="nav"><span><b>↑</b>연구</span><span><b>↑</b>환생</span><span><b>⚡</b>룬</span>'
+  +'<span><b>▤</b>유즈맵</span><span><b>🎁</b>상점</span></div>';
+
+const ANS=[
+ ['지금 것 (기준선)','모서리 컷 7px + <b>var(--loadDim)</b> 곡선 + 무채 틴트 + backdrop saturate(.45). 배경이 옅게 비치고 아래로 갈수록 짙어진다. 다른 화면(건물 프로필·유닛 지정)과 공유하는 판이라 가장 무난하다.'],
+ ['실선 판','딤 곡선을 버리고 <b>확실한 검정 카드</b> + 위 1px 흰 테두리. 배경이 안 비쳐 칸(검은 면)과 재질이 거의 같아진다 — 시트가 하나의 판으로 뚜렷하게 읽힌다.'],
+ ['큰 모서리 컷','컷을 12px 로 키우고 <b>붉은 알파 테두리</b>를 얹는다. 트레이·칸의 각짐을 시트 자체까지 끌고 온다 — 가장 「캠프 것」처럼 보인다.'],
+ ['붉은 상단 실선','실선 판에 <b>얇은 붉은 선</b> 하나를 상단에 얹는다. 액센트가 있어 시트 경계가 뚜렷하고, 화면을 넘길 때도 같은 자리에서 신호를 준다.'],
+ ['이중 톤','머리줄(MY BASE)만 한 단 밝게 하고 <b>본문은 순수 검정</b> — 칸과 완전히 같은 색이 된다. 머리줄과 본문의 위계가 판 위에서도 갈린다.'],
+ ['유리 판','블러를 더 세게 걸어 <b>배경이 흐릿하게 비친다</b>. 로그인 화면의 유리 어휘를 시트로 가져온 것 — 맵과 가장 안 끊긴다.'],
+ ['사선 스캔라인','커맨드 카드(.scPanel)의 <b>메탈+스캔라인</b> 질감을 시트 전체로. 가장 「기계실」 같은 인상이지만 무늬가 은은해 글자를 안 가린다.'],
+ ['판 없음','테두리·컷 전부 없이 <b>그라데이션만</b>으로 뜬다. 가장 가볍고 전장이 가장 많이 비친다 — 대신 시트 경계가 가장 약하게 읽힌다.'],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d],i)=>
+ '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'
+ +'<div class="phone"><div class="map"></div>'+SHEET('v'+(i+1))+NAV+'</div></div>').join('');
+</script></body></html>
