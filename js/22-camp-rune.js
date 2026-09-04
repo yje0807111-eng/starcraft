@@ -397,6 +397,8 @@ function campRuneOpen(){ const el = document.getElementById('campRune'); if(!el)
 function campRuneClose(){ const el = document.getElementById('campRune');
   if(el) el.classList.remove('on', 'rnIn');
   _runePick = -1; _runePickKind = '';
+  _runeSwapKey = '';                  // 🔁 나갈 때 교체도 걷는다(다시 들어오면 칸이 흔들린 채다)
+  campRuneTipHide();
   if(typeof campRebArtOff === 'function') campRebArtOff(); }
 
 // 🧭 **룬 구역의 유일한 입구.** ⛔ campRuneOpen 을 밖에서 직접 부르지 말 것 —
@@ -404,7 +406,7 @@ function campRuneClose(){ const el = document.getElementById('campRune');
 function campRuneEnter(sec){
   const s = (sec === 'shop') ? 'shop' : 'slot';
   const wasIn = campRuneIsOn();
-  _runeSec = s; _runePick = -1; _runePickKind = '';
+  _runeSec = s; _runePick = -1; _runePickKind = ''; _runeSwapKey = '';
   campRuneOpen();
   { const el = document.getElementById('campRune'); if(el) el.classList.toggle('rnIn', !wasIn); }
   if(typeof navShow === 'function') navShow('rune');
@@ -517,7 +519,9 @@ function campRuneBindMap(){
     hit: e => (e.target.closest && e.target.closest('[data-rk]')) || null,
     onTap: el => campRuneSlotTap(el.dataset.rk, +el.dataset.ri),
     onHold: el => campRuneSlotHold(el.dataset.rk, +el.dataset.ri, el),
-    onEmpty: () => { campRuneTipHide(); if(_runePickKind) campRunePick('', -1); },
+    onEmpty: () => { campRuneTipHide();
+      if(_runeSwapKey){ campRuneSwapEnd(); return; }
+      if(_runePickKind) campRunePick('', -1); },
     onDouble: () => campRuneFit() });
   if(first) campRuneFit(true); }
 
@@ -553,6 +557,9 @@ function _runeVtx(x, y, r, i){ const a = Math.PI / 180 * (60 * i - 90);
 //   ⚠ 잠긴 칸의 `.rnHx.lk` 와 `.rnLkT` 는 스모크가 잰다 — 클래스 이름을 바꾸지 말 것.
 function _runeCell(kind, i, x, y, r, key, open, at, sel){
   const g = [], X = x.toFixed(1), Y = y.toFixed(1);
+  // 🔁 교체 모드 — 바꿀 수 있는 칸만 흔들고 나머지는 물린다(유니크는 일반 룬을 안 받는다)
+  const swCand = campRuneSwapCand(kind, i);
+  const swDim = _runeSwapKey && !swCand && !(open && !key);
   if(!open){
     g.push('<polygon class="rnHx lk" points="' + _runeHexPts(x, y, r * 0.93) + '"/>');
     g.push('<text class="rnLkT" x="' + X + '" y="' + (y + 2.5).toFixed(1) + '">R' + at + '</text>');
@@ -604,6 +611,13 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
   //   click 의 target 이 <svg> 로 바뀌어 안 온다. 엔진이 pointerdown 에서 이 표시를 읽는다.
   g.push('<circle class="rnHit" cx="' + X + '" cy="' + Y + '" r="' + (r + 3)
     + '" data-rk="' + kind + '" data-ri="' + i + '"/>');
+  // ⚠ 흔들림은 **칸 전체를 감싸서** 준다 — 조각마다 걸면 테두리와 문양이 따로 논다.
+  //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
+  if(swCand || swDim){
+    const st = 'transform-origin:' + X + 'px ' + Y + 'px'
+      + (swCand ? ';animation-delay:' + ((i * 53) % 260) + 'ms' : '');
+    return '<g class="' + (swCand ? 'rnWig' : 'rnDim') + '" style="' + st + '">'
+      + g.join('') + '</g>'; }
   return g.join(''); }
 
 // 🎨 판이 쓰는 그라데이션 — 등급마다 테두리(흰빛→등급색)와 뒷광 한 벌씩.
@@ -699,6 +713,106 @@ function _runeMapSvg(){
   return rows.join(''); }
 
 
+// ── 🔁 교체 — 칸이 꽉 찼을 때 「무엇과 바꿀까」를 판에서 고른다 ───────────
+//   ⭐ **왜 있나**(2026-09-04 사용자 확정) — 칸이 다 차면 가방을 눌러도 아무 일이 없었다.
+//     그때가 바로 「고르는 것」이 시작되는 자리인데 화면이 아무 말도 안 했다.
+//   흐름: 가방을 누른다 → 그 갈래 성좌가 **화면 한가운데**로 온다 → 바꿀 수 있는 칸이
+//     **흔들린다** → 그 중 하나를 누르면 있던 룬이 가방으로 날아가고 새 룬이 날아와 앉는다.
+//   ⚠ 유니크 룬은 칸 셋이 **세 성좌에 흩어져** 있다 — 한 곳을 잡을 수 없으므로 전체 보기로 둔다.
+//   ⛔ 확인창을 띄우지 말 것 — 넣고 빼기가 한 번씩인 화면이라 교체만 두 단계면 어긋난다.
+let _runeSwapKey = '';                  // 교체하려는 룬. '' 이면 교체 모드가 아니다
+const RUNE_FLY_MS = 320;                // 날아가는 시간 — 눈이 따라갈 만큼만
+function campRuneSwapOn(){ return !!_runeSwapKey; }
+// 이 칸이 지금 교체 후보인가 — 고른 룬과 **같은 종류**의 칸만 흔들린다
+function campRuneSwapCand(kind, i){
+  if(!_runeSwapKey) return false;
+  const p = runeParse(_runeSwapKey); if(!p.def) return false;
+  const want = (p.def.kind === 'uniq') ? 'uniq' : 'norm';
+  if(kind !== want) return false;
+  if(!campRuneEq(kind)[i]) return false;                    // 빈 칸은 교체가 아니라 그냥 장착
+  if(kind === 'uniq') return true;
+  return runeSlotGrp(i) === p.def.grp;                      // 일반은 제 갈래의 성좌만
+}
+function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
+  _runeSwapKey = ''; if(re !== false) campRuneRender(); }
+// 🎯 그 갈래 성좌를 **보이는 자리의 한가운데**로 — 위 띠와 아래 가방을 뺀 나머지의 중심이다.
+//   ⛔ 판 한가운데(RUNE_MAP_H/2)로 잡지 말 것 — 아래를 가방이 214px 덮어 성좌가 그 뒤로 내려간다.
+function campRuneSwapLook(now){
+  const p = runeParse(_runeSwapKey); if(!p.def || !_rnView) return;
+  if(p.def.kind === 'uniq'){ campRuneFit(now); return; }     // 칸 셋이 흩어져 있다
+  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;
+  const c = RUNE_CT[ci]; if(!c) return;
+  const mp = document.querySelector('#campRune .rnMap');
+  const H = mp ? mp.getBoundingClientRect().height : 0;
+  if(!H){ requestAnimationFrame(() => { if(_runeAlive() && _runeSwapKey) campRuneSwapLook(now); }); return; }
+  // 📐 **화면에서 잰 자리를 viewBox 좌표로 바꿔** 앵커로 쓴다.
+  //   ⛔ 화면 비율(높이/판높이)을 viewBox 값에 그대로 곱하지 말 것 —
+  //     판은 preserveAspectRatio 로 비율을 지키느라 화면을 꽉 채우지 않는다.
+  //     그렇게 하면 성좌가 한가운데에서 35px 어긋난다(실측 2026-09-04).
+  const svg = _runeSvg(); if(!svg) return;
+  const mr = mp.getBoundingClientRect();
+  const px = e => { const q = document.querySelector(e); return q ? q.getBoundingClientRect().height : 0; };
+  const t = px('#campRune .rnTop'), b = px('#campRune .rnBag');
+  const a = svvToView(svg, mr.left + mr.width / 2, mr.top + t + (mr.height - t - b) / 2);
+  svvLookAt(_rnView, _runeG, { x:c[0], y:c[1] }, a,
+    Math.max(_rnView.tz, RUNE_PICK_SC), now, _runeAlive); }
+function campRuneSwapBegin(key){
+  if(_runeSwapKey === key){ campRuneSwapEnd(); return; }      // 같은 것을 또 누르면 취소
+  _runeSwapKey = key;
+  _runePickKind = ''; _runePick = -1;                         // 칸 고르기와 겹치지 않게
+  campRuneTipHide();
+  campRuneRender();
+  campRuneSwapLook(false);
+  if(typeof toast === 'function') toast('바꿀 칸을 고르세요'); }
+
+// ✈ 날아가는 룬 — 상태는 **즉시** 바뀌고, 이 그림은 그 위에 얹히는 장식이다.
+//   ⛔ 애니가 끝날 때 상태를 바꾸지 말 것 — 중간에 화면을 나가면 반영이 통째로 사라진다.
+function _runeFly(key, from, to, ms){
+  const host = document.getElementById('campRune');
+  if(!host || !from || !to) return;
+  const src = runeIcoSrc(key); if(!src) return;
+  const hb = host.getBoundingClientRect();
+  const el = document.createElement('img');
+  el.className = 'rnFly'; el.src = src; el.draggable = false;
+  el.style.left = Math.round(from.x - hb.left - 17) + 'px';
+  el.style.top  = Math.round(from.y - hb.top - 17) + 'px';
+  host.appendChild(el);
+  const dx = Math.round(to.x - from.x), dy = Math.round(to.y - from.y);
+  requestAnimationFrame(() => {
+    el.style.transition = 'transform ' + ms + 'ms cubic-bezier(.34,.92,.32,1), opacity ' + ms + 'ms ease-in';
+    el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.72)';
+    el.style.opacity = '.10'; });
+  setTimeout(() => el.remove(), ms + 80); }
+// 📍 화면에서의 자리 — 칸 / 가방 줄의 버튼
+function _runeSlotAt(kind, i){
+  const el = document.querySelector('#rnG [data-rk="' + kind + '"][data-ri="' + i + '"]');
+  if(!el) return null; const r = el.getBoundingClientRect();
+  return { x:r.left + r.width / 2, y:r.top + r.height / 2 }; }
+function _runeBagAt(key){
+  const el = document.querySelector('#campRune .rnHb[data-key="' + key + '"]');
+  if(!el) return null; const r = el.getBoundingClientRect();
+  return { x:r.left + r.width / 2, y:r.top + r.height / 2 }; }
+// 🔁 실제 교체 — 있던 것은 가방으로, 고른 것은 칸으로.
+function campRuneSwapDo(kind, i){
+  const key = _runeSwapKey; if(!key) return false;
+  const old = campRuneEq(kind)[i] || null;
+  if(!campRuneCanEquip(kind, i, key)){
+    if(typeof toast === 'function') toast('이 칸에는 못 넣습니다'); return false; }
+  // 📐 자리를 **바꾸기 전에** 잰다 — 다시 그리면 가방 줄이 달라진다
+  const slotP = _runeSlotAt(kind, i);
+  const bagP  = _runeBagAt(key);
+  _runeSwapKey = '';
+  const R = campRuneState(); if(!R) return false;
+  R[kind][i] = key; campRuneTouch();
+  if(typeof saveMeta === 'function') saveMeta();
+  if(typeof playSfx === 'function') playSfx('ui_tab');
+  campRuneRender();
+  // ✈ 그린 뒤에 잰다 — 빠진 룬이 돌아갈 가방 줄은 이제야 생긴다
+  const backP = old ? _runeBagAt(old) : null;
+  if(old && slotP && backP) _runeFly(old, slotP, backP, RUNE_FLY_MS);
+  if(bagP && slotP) _runeFly(key, bagP, slotP, RUNE_FLY_MS);
+  return true; }
+
 // ── 🗒 효과 쪽지 — 칸을 길게 누르면 그 칸 옆에 뜬다 ─────────────────────
 //   ⭐ 확인창(.ecCard)이 아니다. 「무엇을 얼마나 올리나」만 말하는 **읽는 쪽지**라 버튼이 없다.
 //     아무 데나 누르면 사라진다(닫기 버튼을 두면 그것을 누르러 가야 한다).
@@ -734,6 +848,19 @@ function campRuneTipShow(key, el){
 //   ⛔ 낀 칸을 눌러 「고르기」 상태로 되돌리지 말 것 — 그러면 빼려고 두 번 눌러야 한다.
 function campRuneSlotTap(kind, i){
   campRuneTipHide();
+  // 🔁 교체 모드 — 흔들리는 칸을 누르면 바꾸고, 아닌 칸을 누르면 교체를 그만둔다
+  if(_runeSwapKey){
+    if(campRuneSwapCand(kind, i)){ campRuneSwapDo(kind, i); return; }
+    // 빈 칸이면 교체가 아니라 **그냥 장착**이다(칸이 비어 있으니 뺄 것이 없다)
+    const p0 = runeParse(_runeSwapKey);
+    const want0 = (p0.def && p0.def.kind === 'uniq') ? 'uniq' : 'norm';
+    if(kind === want0 && !campRuneEq(kind)[i] && campRuneCanEquip(kind, i, _runeSwapKey)){
+      const k0 = _runeSwapKey, bp = _runeBagAt(k0);
+      _runeSwapKey = '';
+      if(campRuneEquip(kind, i, k0)){ const sp = _runeSlotAt(kind, i);
+        if(bp && sp) _runeFly(k0, bp, sp, RUNE_FLY_MS); }
+      return; }
+    campRuneSwapEnd(); return; }
   const cur = campRuneEq(kind)[i] || null;
   if(cur){ campRuneUnequip(kind, i);
     if(typeof toast === 'function') toast(runeName(cur) + ' 을(를) 뺐습니다');
@@ -804,7 +931,7 @@ function _runeBagHex(key, gd, own, off, full){
     + ' stroke="rgba(150,170,200,.16)" stroke-width="1"/>';
   s += '</svg>';
   const cls = 'rnHb' + (on ? '' : ' none') + (off ? ' off' : '') + (full ? ' full' : '');
-  return '<button class="' + cls + '" type="button" style="--rg:' + c + '"'
+  return '<button class="' + cls + '" type="button" data-key="' + key + '" style="--rg:' + c + '"'
     + (on ? ' onclick="campRuneBagTap(\'' + key + '\')"' : ' disabled')
     + ' aria-label="' + runeName(key) + ' ' + own + '개">' + s
     + '<span class="rnHbL"><span class="rnHbN">' + (on ? '<em>×</em>' + own : '–') + '</span>'
@@ -880,7 +1007,9 @@ function campRuneBagTap(key){
     if(!campRuneEquip(kind, _runePick, key)) say('남은 룬이 없습니다');
     return; }
   if(campRuneAuto(key)) return;
-  say(campRuneFree(key) <= 0 ? '남은 룬이 없습니다' : '빈 칸이 없습니다 — 칸을 골라 바꿔 끼우세요'); }
+  // 🔁 **꽉 찼으면 교체 모드**로 들어간다 — 예전에는 여기서 아무 일도 안 일어났다.
+  if(campRuneFree(key) <= 0){ say('남은 룬이 없습니다'); return; }
+  campRuneSwapBegin(key); }
 
 // ── 룬 상점 ─────────────────────────────────────────────────────────────
 function _runeShopHTML(){

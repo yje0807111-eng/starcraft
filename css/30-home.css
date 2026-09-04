@@ -2529,6 +2529,16 @@
 /* 값 — 칸 **밖 아래**에 매달린다(이름을 가리지 않는다) */
 #campRune .rnVl{font-family:var(--font-num);font-variant-numeric:tabular-nums;
   font-size:8px;text-anchor:middle;dominant-baseline:hanging}
+/* 🔁 교체 모드 — 바꿀 수 있는 칸이 흔들린다(2026-09-04).
+   ⚠ transform-origin 을 사용자 좌표로 주므로 transform-box:view-box 가 함께 있어야 한다.
+   ⚠ 칸마다 animation-delay 를 조금씩 달리해 한 몸처럼 굳지 않게 한다(그리는 쪽에서 준다).
+   ⛔ blur·그림자를 더하지 말 것 — 칸이 스물일곱이라 프레임이 떨어진다(트리에서 38→23 실측). */
+@keyframes rnWig{ 0%,100%{transform:rotate(-2.4deg)} 50%{transform:rotate(2.4deg)} }
+#campRune .rnWig{transform-box:view-box;animation:rnWig .44s ease-in-out infinite}
+#campRune .rnDim{opacity:.30;transition:opacity var(--t-fast,.15s) ease}
+/* ✈ 날아가는 룬 — 상태는 이미 바뀌었고 이건 그 위에 얹히는 장식이다 */
+#campRune .rnFly{position:absolute;z-index:7;width:34px;height:34px;pointer-events:none;
+  object-fit:contain;will-change:transform,opacity}
 /* 🗒 효과 쪽지 — 칸을 길게 누르면 그 옆에 뜬다(2026-09-04).
    ⭐ 확인창이 아니라 **읽는 쪽지**다: 버튼이 없고 아무 데나 누르면 사라진다.
    ⚠ 판 위에 뜨므로 z 는 칸보다 위, 가방(z 2)보다도 위다. */

@@ -2426,6 +2426,7 @@ async function groupLobby(){
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
+    let swapNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2754,6 +2755,56 @@ async function groupLobby(){
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+        // 🔁 **꽉 찼을 때의 교체**(2026-09-04 사용자 확정)
+        //   칸이 다 차면 가방을 눌러도 아무 일이 없었다 — 그때가 「고르는 것」이 시작되는 자리다.
+        //   흐름: 가방 탭 → 그 갈래 성좌가 화면 한가운데로 → 바꿀 칸이 흔들림 → 탭 → 교체.
+        { const R4 = campRuneState();
+          // 경제 8칸을 채우고, 넣을 룬은 **남는 것이 있게** 둔다(없으면 「남은 룬이 없습니다」다)
+          const eco = ['tap','gas','mine','reb'];
+          for(let i = 0; i < RUNE_CONS; i++){
+            const k = runeKey(eco[i % 4], ['low','mid','high'][i % 3]);
+            R4.own[k] = (R4.own[k] | 0) + 1; R4.norm[i] = k; }
+          const want = runeKey('tap','high'); R4.own[want] = (R4.own[want] | 0) + 1;
+          R4.uniq[0] = runeKey('speed'); R4.own[runeKey('speed')] = 1;
+          campRuneTouch(); campRuneRender(); await sleep(30);
+          assert(campRuneFree(want) > 0, '준비가 틀렸다 — 넣을 룬이 남아 있지 않다');
+          campRuneBagTap(want);
+          assert(campRuneSwapOn(), '칸이 꽉 찼는데 교체 모드로 안 들어간다');
+          await sleep(40);
+          // 바꿀 수 있는 칸만 흔들린다 — 일반 룬이므로 유니크 칸은 물린다
+          const wig = document.querySelectorAll('#rnG .rnWig').length;
+          assert(wig === RUNE_CONS, '흔들리는 칸 수가 다르다: ' + wig + ' vs ' + RUNE_CONS);
+          const uHit = document.querySelector('#rnG [data-rk="uniq"][data-ri="0"]');
+          assert(uHit && uHit.closest('.rnDim'), '일반 룬을 고르는데 유니크 칸이 안 잠긴다');
+          // 🎯 성좌가 **보이는 자리의 한가운데**로 온다(위 띠·아래 가방을 뺀 나머지)
+          await sleep(650);
+          { let sx = 0, sy = 0;
+            for(let i = 0; i < RUNE_CONS; i++){
+              const e = document.querySelector('#rnG [data-rk="norm"][data-ri="' + i + '"]');
+              const r = e.getBoundingClientRect(); sx += r.left + r.width / 2; sy += r.top + r.height / 2; }
+            sx /= RUNE_CONS; sy /= RUNE_CONS;
+            const mr = document.querySelector('#campRune .rnMap').getBoundingClientRect();
+            const ph = e => { const q = document.querySelector(e); return q ? q.getBoundingClientRect().height : 0; };
+            const t = ph('#campRune .rnTop'), b = ph('#campRune .rnBag');
+            const d = Math.hypot(sx - (mr.left + mr.width / 2),
+                                 sy - (mr.top + t + (mr.height - t - b) / 2));
+            assert(d <= 8, '성좌가 한가운데에 안 온다: ' + Math.round(d) + 'px');
+            swapNote = '교체 중앙 ' + Math.round(d) + 'px'; }
+          // 🔁 흔들리는 칸을 누르면 바뀌고, 룬 둘이 날아간다(있던 것은 가방으로 · 새 것은 칸으로)
+          const old = campRuneEq('norm')[0];
+          campRuneSlotTap('norm', 0);
+          assert(campRuneEq('norm')[0] === want,
+            '교체가 안 됐다: ' + runeName(campRuneEq('norm')[0] || ''));
+          assert(!campRuneSwapOn(), '교체하고도 교체 모드가 안 꺼진다');
+          const fly = document.querySelectorAll('#campRune .rnFly').length;
+          assert(fly === 2, '날아가는 룬이 둘이 아니다: ' + fly + ' (뺀 것 + 넣은 것)');
+          assert(old !== want, '준비가 틀렸다 — 같은 룬으로 바꾸고 있다');
+          swapNote += ' · 날아감 ' + fly;
+          // 판의 빈 곳을 누르면 교체를 그만둔다
+          campRuneBagTap(want);
+          if(campRuneSwapOn()){ campRuneSwapEnd();
+            assert(!campRuneSwapOn(), '교체를 그만둘 수 없다'); }
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
         // 🎒 가방 탭 = **빈 칸 중 첫 칸**에 자동 장착
         const R=campRuneState(); R.own[runeKey('tap','high')]=2;
         R.norm=[]; campRuneTouch(); campRuneRender(); await sleep(30);
@@ -2812,7 +2863,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote;
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });
