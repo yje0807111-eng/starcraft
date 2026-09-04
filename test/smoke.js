@@ -3279,6 +3279,23 @@ async function groupLobby(){
       const tabs=[...document.querySelectorAll('#rnBody .pdSegBtn')].map(b=>b.textContent);
       assert(tabs.length===RUNE_GRPS.length+1,'갈래 탭 수가 다르다: '+tabs.join(','));
       assert(document.querySelector('#rnBody .pdSeg'),'공용 탭 띠(.pdSeg)를 안 쓴다');
+      // ⚠ **아직 닿는 데가 없는 룬은 그렇게 말한다** — 젬을 받으면서 말을 안 하면 거짓 판매다.
+      //   (2026-09-04 실측: exp·killGain 은 campRuneEff 를 부르는 곳이 0곳이다)
+      { const soon = RUNE_LIST.filter(d => d.soon);
+        assert(soon.length > 0, 'soon 표시가 하나도 없다 — 배선을 다 했으면 이 검사를 지운다');
+        for(const d of soon){
+          // ⚠ 그 룬의 **갈래 탭을 열고** 찾는다 — 상점은 한 번에 한 갈래만 그린다.
+          //   ⛔ 안 열고 찾으면 칸이 없어 검사를 통째로 건너뛴다(실측: 지워도 통과했다).
+          campRuneShopTab(d.kind === 'uniq' ? 'uniq' : d.grp); await sleep(30);
+          const cell = [...document.querySelectorAll('#rnBody .rnBuy')]
+            .find(b => (b.getAttribute('onclick') || '').indexOf("'" + d.id + "'") >= 0);
+          assert(cell, d.nm + ' 을 상점에서 못 찾았다(' + d.grp + ' 탭)');
+          assert(cell.querySelector('.rnSoon'),
+            d.nm + ' 이 아직 안 닿는데 상점이 그 말을 안 한다'); }
+        // ⛔ 추천에는 넣지 않는다 — 아무 일도 안 하는 것을 권할 수는 없다
+        const reco = runeRecoList().map(r => runeParse(r.key).def.id);
+        for(const d of soon) assert(reco.indexOf(d.id) < 0,
+          '아직 안 닿는 룬을 추천하고 있다: ' + d.nm); }
       // ⑦ 추천은 셋 이하이고, **왜 권하는지**를 적는다
       { const reco=runeRecoList();
         assert(reco.length<=3,'추천이 셋을 넘는다: '+reco.length);
