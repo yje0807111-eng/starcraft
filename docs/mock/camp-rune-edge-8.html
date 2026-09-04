@@ -1,0 +1,177 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 판 — 칸 테두리에 갈래 색을 어떻게 입힐까 (8안)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{ --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f; }
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:62px}
+.pane{position:relative;width:290px;height:369px;overflow:hidden;border:1px solid var(--metal-edge);
+  border-radius:var(--r-md);background:#080b10}
+.pane::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(120% 80% at 50% 12%,#121a24,#070a0e 70%)}
+.pane svg{position:relative;display:block;width:100%;height:100%}
+.rnZn{text-anchor:middle;font-family:var(--font-ti);font-size:12px;font-weight:700;
+  letter-spacing:.14em;opacity:.85}
+.rnEmIn{fill:none;stroke:#fff;stroke-width:.5;opacity:.07}
+</style></head><body>
+
+<h1>룬 판 — <b>칸 테두리</b>에 갈래 색을 어떻게 입힐까 · 8안</h1>
+<p>지금은 스물일곱 칸이 <b>같은 회청색 테두리</b>다. 갈래 색을 테두리에 넣어
+「이 칸은 경제의 자리」가 <b>칸 하나만 봐도</b> 읽히게 한다.
+경제 <b style="color:#7effc9">민트</b> · 전투 <b style="color:#ffa3b8">분홍</b> ·
+성장 <b style="color:#e6eef8">은백</b> · 가운데 유니크는 <b style="color:#c98bff">보라</b>.
+⚠ 지켜야 할 것: <b>빈 칸은 낀 칸보다 조용해야 한다</b>(끼우면 확 달라져야 하므로) —
+그래서 여덟 안 모두 <b>낀 칸의 테두리(흰빛→등급색 · 번짐)보다 약하게</b> 뒀다.
+각 판의 <b>경제 성좌 오른쪽 위 한 칸</b>은 상급 룬을 끼운 모습이다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var W=440, H=560, TRI=132, RING=64, R_N=21, R_U=33, CONS=8;
+var CT=[-90,150,30].map(function(d){ var a=Math.PI/180*d;
+  return [Math.round(W/2+Math.cos(a)*TRI), Math.round(H/2+Math.sin(a)*TRI)]; });
+var GRP=[{nm:'경제',c:'#7effc9'},{nm:'전투',c:'#ffa3b8'},{nm:'성장',c:'#e6eef8'}];
+var UQ='#c98bff';
+function hexPts(x,y,r){ var q=[]; for(var i=0;i<6;i++){ var a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function vtx(x,y,r,i){ var a=Math.PI/180*(60*i-90); return [x+r*Math.cos(a), y+r*Math.sin(a)]; }
+function nPos(ci,j){ var c=CT[ci], a=-Math.PI/2+j/CONS*Math.PI*2;
+  return [c[0]+Math.cos(a)*RING, c[1]+Math.sin(a)*RING]; }
+
+var DEFS='<defs>'
+ +'<linearGradient id="rnWell" x1="0" y1="0" x2="0" y2="1">'
+ +'<stop offset="0" stop-color="#04070b"/><stop offset=".55" stop-color="#0d141d"/>'
+ +'<stop offset="1" stop-color="#18222e"/></linearGradient>'
+ +'<linearGradient id="rnEhigh" x1="0" y1="0" x2="0" y2="1">'
+ +'<stop offset="0" stop-color="#fff" stop-opacity=".92"/>'
+ +'<stop offset=".42" stop-color="#ffcf6b"/>'
+ +'<stop offset="1" stop-color="#ffcf6b" stop-opacity=".34"/></linearGradient>'
+ +'<radialGradient id="rnBhigh"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".22"/>'
+ +'<stop offset=".62" stop-color="#ffcf6b" stop-opacity=".07"/>'
+ +'<stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient>';
+[0,1,2].forEach(function(i){ var c=GRP[i].c;
+  DEFS+='<radialGradient id="au'+i+'">'
+   +'<stop offset="0" stop-color="'+c+'" stop-opacity=".22"/>'
+   +'<stop offset=".55" stop-color="'+c+'" stop-opacity=".07"/>'
+   +'<stop offset="1" stop-color="'+c+'" stop-opacity="0"/></radialGradient>'; });
+/* 안마다 쓰는 그라데이션은 각 안이 직접 넣는다(id 충돌을 피해 접두사를 붙인다) */
+function gradEdge(pre, cols){ var d='';
+  cols.forEach(function(c,i){ d+='<linearGradient id="'+pre+i+'" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#dfe9f5" stop-opacity=".34"/>'
+    +'<stop offset=".45" stop-color="'+c+'" stop-opacity=".34"/>'
+    +'<stop offset="1" stop-color="'+c+'" stop-opacity=".12"/></linearGradient>'; });
+  return d; }
+
+/* 낀 칸(상급) — 비교 기준 */
+function lit(x,y,r){
+  return '<polygon points="'+hexPts(x,y,r+2.5)+'" fill="none" stroke="#ffcf6b" stroke-width=".9" opacity=".40"/>'
+   +'<polygon points="'+hexPts(x,y,r)+'" fill="#000" opacity=".55"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnWell)" stroke="url(#rnEhigh)" stroke-width="1.3" style="filter:drop-shadow(0 0 3px #ffcf6b)"/>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r*0.72).toFixed(1)+'" fill="url(#rnBhigh)"/>'
+   +'<polygon class="rnEmIn" points="'+hexPts(x,y,r-Math.max(1,r*0.073))+'"/>'
+   +'<image href="../../assets/icons/rune/glyph/tap.webp" x="'+(x-r*0.62).toFixed(1)+'" y="'+(y-r*0.62).toFixed(1)+'" width="'+(r*1.24).toFixed(1)+'" height="'+(r*1.24).toFixed(1)+'"/>'; }
+/* 빈 칸 바탕(파인 홈) — 테두리는 안마다 다르다 */
+function wellBase(x,y,r){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnWell)" fill-opacity=".86" stroke="none"/>'; }
+function inner(x,y,r){ return '<polygon class="rnEmIn" points="'+hexPts(x,y,r*0.93-1.6)+'"/>'; }
+
+var CASES=[
+{ t:'지금 (기준)', d:'스물일곱 칸이 모두 <b>같은 회청색</b>. 성좌 색은 오로라만 말한다.',
+  defs:function(){ return ''; },
+  em:function(x,y,r,c){ return wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="rgba(180,205,235,.24)" stroke-width="1"/>'
+    +inner(x,y,r); } },
+
+{ t:'테두리를 갈래 색으로', d:'가장 곧은 답 — <b>테두리 전체</b>를 그 갈래 색으로 옅게. 색만 갈리고 형태는 그대로다.',
+  defs:function(){ return ''; },
+  em:function(x,y,r,c){ return wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="'+c+'" stroke-width="1" opacity=".30"/>'
+    +inner(x,y,r); } },
+
+{ t:'위는 흰빛 · 아래는 갈래 색', d:'낀 칸과 <b>같은 어휘</b>(흰빛→색 그라데이션)를 아주 약하게 쓴다. 빛이 위에서 오는 결이 판 전체에 통한다.',
+  defs:function(){ return gradEdge('ge', [GRP[0].c, GRP[1].c, GRP[2].c, UQ]); },
+  em:function(x,y,r,c,gi){ return wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="url(#ge'+gi+')" stroke-width="1.1"/>'
+    +inner(x,y,r); } },
+
+{ t:'밑변만 갈래 색', d:'테두리는 중립으로 두고 <b>아래 두 변</b>만 색을 넣는다 — 판 아래에서 빛이 올라오는 결(다른 화면의 밑변 광원과 같은 어휘).',
+  defs:function(){ return ''; },
+  em:function(x,y,r,c){ var s=wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="rgba(180,205,235,.18)" stroke-width="1"/>';
+    var p=[]; for(var k=2;k<=4;k++) p.push(vtx(x,y,r*0.93,k));
+    s+='<path d="M'+p.map(function(q,i){ return (i?'L':'')+q[0].toFixed(1)+' '+q[1].toFixed(1); }).join('')
+      +'" fill="none" stroke="'+c+'" stroke-width="1.2" opacity=".42" stroke-linecap="round"/>';
+    return s+inner(x,y,r); } },
+
+{ t:'꼭짓점만 갈래 색', d:'변은 중립, <b>꼭짓점 여섯 부근</b>만 색이 맺힌다. 아주 조용하지만 가까이서 보면 갈래가 읽힌다.',
+  defs:function(){ return ''; },
+  em:function(x,y,r,c){ var s=wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="rgba(180,205,235,.20)" stroke-width="1"/>';
+    for(var k=0;k<6;k++){ var a=vtx(x,y,r*0.93,k), b=vtx(x,y,r*0.93,(k+1)%6);
+      var m1=[a[0]+(b[0]-a[0])*0.22, a[1]+(b[1]-a[1])*0.22];
+      var m2=[b[0]+(a[0]-b[0])*0.22, b[1]+(a[1]-b[1])*0.22];
+      s+='<path d="M'+a[0].toFixed(1)+' '+a[1].toFixed(1)+'L'+m1[0].toFixed(1)+' '+m1[1].toFixed(1)+'"'
+        +' stroke="'+c+'" stroke-width="1.3" opacity=".55" stroke-linecap="round" fill="none"/>'
+        +'<path d="M'+b[0].toFixed(1)+' '+b[1].toFixed(1)+'L'+m2[0].toFixed(1)+' '+m2[1].toFixed(1)+'"'
+        +' stroke="'+c+'" stroke-width="1.3" opacity=".55" stroke-linecap="round" fill="none"/>'; }
+    return s+inner(x,y,r); } },
+
+{ t:'테두리 + 홈 바닥에도 색', d:'테두리에 색을 넣고, <b>홈 바닥의 아래쪽</b>에도 그 색을 아주 옅게 섞는다. 칸이 갈래 색을 «담고» 있는 그릇처럼 보인다.',
+  defs:function(){ var d=''; [GRP[0].c,GRP[1].c,GRP[2].c,UQ].forEach(function(c,i){
+      d+='<linearGradient id="gw'+i+'" x1="0" y1="0" x2="0" y2="1">'
+       +'<stop offset="0" stop-color="#04070b"/><stop offset=".55" stop-color="#0d141d"/>'
+       +'<stop offset="1" stop-color="'+c+'" stop-opacity=".22"/></linearGradient>'; });
+    return d; },
+  em:function(x,y,r,c,gi){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#gw'+gi+')" fill-opacity=".86" stroke="none"/>'
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="'+c+'" stroke-width="1" opacity=".26"/>'
+    +inner(x,y,r); } },
+
+{ t:'이중 — 안쪽 중립 · 바깥 색', d:'중립 테두리 <b>바깥에</b> 갈래 색 겹을 하나 더 두른다. 칸 자체는 조용하고 <b>무리로 묶였을 때</b> 색이 보인다.',
+  defs:function(){ return ''; },
+  em:function(x,y,r,c){ return wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93+2.2)+'" fill="none" stroke="'+c+'" stroke-width=".8" opacity=".26"/>'
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="rgba(180,205,235,.22)" stroke-width="1"/>'
+    +inner(x,y,r); } },
+
+{ t:'안쪽 실선을 갈래 색으로', d:'바깥 테두리는 중립 그대로. <b>안쪽 얇은 선</b>만 갈래 색으로 바꾼다 — 가장 조용한 답이고, 홈의 깊이도 색을 띤다.',
+  defs:function(){ return ''; },
+  em:function(x,y,r,c){ return wellBase(x,y,r)
+    +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="none" stroke="rgba(180,205,235,.22)" stroke-width="1"/>'
+    +'<polygon points="'+hexPts(x,y,r*0.93-1.6)+'" fill="none" stroke="'+c+'" stroke-width=".8" opacity=".38"/>'; } }
+];
+
+function board(c){
+  var s = DEFS + c.defs() + '</defs>';
+  [0,1,2].forEach(function(i){
+    s+='<ellipse cx="'+CT[i][0]+'" cy="'+CT[i][1]+'" rx="250" ry="215" fill="url(#au'+i+')"/>'; });
+  [0,1,2].forEach(function(i){
+    s+='<text class="rnZn" x="'+CT[i][0]+'" y="'+(CT[i][1]-RING-R_N-5)+'" fill="'+GRP[i].c+'">'+GRP[i].nm+'</text>'; });
+  /* 중심에서 뻗는 실 */
+  for(var ci=0;ci<3;ci++) for(var j=0;j<CONS;j++){
+    var q=nPos(ci,j), dx=q[0]-CT[ci][0], dy=q[1]-CT[ci][1], L=Math.hypot(dx,dy);
+    var ux=dx/L, uy=dy/L, a0=R_U+5, a1=R_N+5;
+    s+='<line x1="'+(CT[ci][0]+ux*a0).toFixed(1)+'" y1="'+(CT[ci][1]+uy*a0).toFixed(1)+'"'
+      +' x2="'+(q[0]-ux*a1).toFixed(1)+'" y2="'+(q[1]-uy*a1).toFixed(1)+'"'
+      +' stroke="rgba(190,212,240,.07)" stroke-width=".8" stroke-dasharray="2 3"/>'; }
+  for(var ci=0;ci<3;ci++){
+    for(var j=0;j<CONS;j++){ var q=nPos(ci,j);
+      if(ci===0 && j===1) s+=lit(q[0],q[1],R_N);         /* 낀 칸 하나 */
+      else s+=c.em(q[0],q[1],R_N,GRP[ci].c,ci); }
+    s+=c.em(CT[ci][0],CT[ci][1],R_U,UQ,3); }             /* 가운데는 보라(유니크) */
+  return s; }
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><svg viewBox="0 0 '+W+' '+H+'">'+board(c)+'</svg></div></div>';
+}).join('');
+</script></body></html>
