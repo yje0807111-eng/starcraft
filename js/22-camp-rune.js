@@ -303,11 +303,18 @@ function campRuneFree(key){ return campRuneOwn(key) - campRuneEqCount(key); }
 // 💎 젬으로 산다. ⛔ 다른 재화를 받지 않는다(사용자 확정 2026-09-02).
 function campRuneBuy(id, gd){
   const key = runeKey(id, gd); const R = campRuneState(); if(!key || !R) return false;
-  const cost = runeGem(key); if(cost <= 0) return false;
+  const say = m => { if(typeof toast === 'function') toast(m); };
+  // 📦 **한 종류는 여덟 개까지** — 넘으면 아예 못 산다(버튼도 잠근다)
+  if(campRuneOwn(key) >= RUNE_OWN_MAX){
+    say('이 룬은 ' + RUNE_OWN_MAX + '개까지만 가질 수 있습니다'); return false; }
+  // 💎 값은 runeNowGem 하나가 정한다 — 할인 재고가 남아 있으면 할인가다
+  const sale = runeOnSale(key);
+  const cost = runeNowGem(key); if(cost <= 0) return false;
   const p = (typeof PROF === 'function') ? PROF() : null; if(!p) return false;
   const have = (typeof profGem === 'function') ? profGem() : 0;
-  if(have < cost){ if(typeof toast === 'function') toast('💎 젬이 부족합니다'); return false; }
+  if(have < cost){ say('💎 젬이 부족합니다'); return false; }
   p.gem = (p.gem || 0) - cost;
+  if(sale){ const w = runeSaleState(); if(w) w.sold[key] = 1; }   // 📦 그 주의 재고 하나를 쓴다
   R.own[key] = (R.own[key] | 0) + 1; campRuneTouch();
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof playSfx === 'function') playSfx('hero_merge');
@@ -1190,32 +1197,178 @@ function campRuneBagTap(key){
   campRuneSwapBegin(key); }
 
 // ── 룬 상점 ─────────────────────────────────────────────────────────────
-function _runeShopHTML(){
-  // 💠 재화는 **공용 아이콘**이다(resIco) — ⛔ 이모지를 직접 박지 말 것(CLAUDE.md 레지스트리).
+// ══ 🛒 룬 상점 — 추천 · 주간 할인 · 일반 (2026-09-04 사용자 확정) ═══════
+//   ⭐ 세 구역의 **역할이 다르다**:
+//     ① 추천 — 지금 상태에 맞는 셋. 값은 그대로고 **고르는 수고**만 줄인다.
+//     ② 주간 할인 — 30% 싸지만 **종류마다 한 개**뿐. 「매주 챙기는 것」이다.
+//     ③ 일반 — 언제든 살 수 있는 곳. 값은 제값(RUNE_GEM).
+//   ⛔ 값의 층을 셋으로 만들지 말 것 — 추천이 제 값을 가지면 「어디서 사야 싼가」를
+//     매번 계산해야 한다. 추천은 **바로가기**일 뿐이고, 할인 중이면 할인가로 보여 준다.
+//   ⛔ 할인에 재고를 두지 않으면 그 주의 6종은 아무도 일반에서 안 산다 — 일반 구역이 죽는다.
+
+// 📦 **한 종류는 여덟 개까지**(사용자 확정) — 일반 룬은 갈래마다 칸이 여덟이라
+//   한 종류로 성좌 하나를 채울 수 있는 선이다. ⛔ 넘겨서 팔지 말 것.
+const RUNE_OWN_MAX = 8;
+const RUNE_SALE_OFF = 0.30;              // 할인율
+const RUNE_SALE_N = 5;                   // 주마다 도는 일반 룬 수(등급은 섞인다)
+// 🕘 주는 **월요일 09:00** 에 바뀐다(사용자 확정). 로컬 시각 기준이다.
+const RUNE_WEEK_DOW = 1, RUNE_WEEK_HOUR = 9;
+function runeWeekStart(t){
+  const now = (t == null) ? Date.now() : t;
+  const d = new Date(now);
+  d.setHours(RUNE_WEEK_HOUR, 0, 0, 0);
+  const dow = (d.getDay() - RUNE_WEEK_DOW + 7) % 7;   // 이번 주 월요일까지 되돌린 날수
+  d.setDate(d.getDate() - dow);
+  if(now < d.getTime()) d.setDate(d.getDate() - 7);   // 아직 09:00 전이면 지난 주다
+  return d.getTime(); }
+function runeWeekNo(t){ return Math.floor(runeWeekStart(t) / 86400000 / 7); }
+function runeWeekLeft(t){
+  const now = (t == null) ? Date.now() : t;
+  const nx = new Date(runeWeekStart(now)); nx.setDate(nx.getDate() + 7);
+  return Math.max(0, nx.getTime() - now); }
+// ⏳ 「3일 4시간」처럼 — 분 아래는 안 적는다(초까지 세면 화면이 쉬지 않는다)
+function runeLeftTx(ms){
+  const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+  if(d > 0) return d + '일 ' + (h % 24) + '시간';
+  if(h > 0) return h + '시간 ' + (m % 60) + '분';
+  return Math.max(1, m) + '분'; }
+
+// 🎲 주 번호를 씨앗으로 한 **정해진 난수** — 같은 주에는 늘 같은 목록이 나온다
+function runeHash(s){ let h = 2166136261;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 1000000) / 1000000; }
+// 🛒 이번 주 할인 목록 — 일반 5(등급 섞임) + 유니크 1
+//   ⚠ 목록은 **주 번호만** 보고 정한다. 보유·진행에 따라 달라지면 「이번 주 목록」이 사람마다 달라진다.
+function runeSaleList(t){
+  const wk = runeWeekNo(t), seed = 'rs' + wk;
+  const norm = [];
+  for(const d of RUNE_LIST){ if(d.kind === 'uniq') continue;
+    for(const gd of RUNE_GRADES) norm.push(runeKey(d.id, gd)); }
+  norm.sort((a, b) => runeHash(seed + a) - runeHash(seed + b));
+  const uq = RUNE_LIST.filter(d => d.kind === 'uniq').map(d => d.id);
+  uq.sort((a, b) => runeHash(seed + 'u' + a) - runeHash(seed + 'u' + b));
+  return norm.slice(0, RUNE_SALE_N).concat(uq.slice(0, 1)); }
+function runeSaleGem(key){ return Math.max(1, Math.round(runeGem(key) * (1 - RUNE_SALE_OFF))); }
+// 📦 이번 주에 이미 산 것 — 주가 바뀌면 저절로 비워진다
+function runeSaleState(){
+  const R = campRuneState(); if(!R) return null;
+  const wk = runeWeekNo();
+  if(!R.wk || R.wk.no !== wk) R.wk = { no:wk, sold:{} };
+  if(!R.wk.sold || typeof R.wk.sold !== 'object') R.wk.sold = {};
+  return R.wk; }
+function runeSaleLeft(key){
+  const w = runeSaleState(); if(!w) return 0;
+  return (runeSaleList().indexOf(key) < 0) ? 0 : (w.sold[key] ? 0 : 1); }
+function runeOnSale(key){ return runeSaleList().indexOf(key) >= 0 && runeSaleLeft(key) > 0; }
+// 💎 지금 이 룬의 값 — 할인 재고가 남아 있으면 할인가다(단일 소스)
+function runeNowGem(key){ return runeOnSale(key) ? runeSaleGem(key) : runeGem(key); }
+
+// ⭐ 추천 셋 — **지금 사면 바로 쓸 수 있는 것**부터
+//   ① 빈 칸이 있는 갈래에서 ② 아직 안 가진 것 ③ 그것도 없으면 낀 것보다 한 등급 위
+//   ⛔ 무작위로 뽑지 말 것 — 「왜 이것을 권하나」를 한 줄로 댈 수 없으면 추천이 아니다.
+function runeRecoList(){
+  const R = campRuneState(); if(!R) return [];
+  const eqN = campRuneEq('norm'), eqU = campRuneEq('uniq');
+  const openN = campRuneSlots('norm'), openU = campRuneSlots('uniq');
+  // 갈래마다 빈 칸 수
+  const hole = {};
+  for(let i = 0; i < openN; i++) if(!eqN[i]){ const g = runeSlotGrp(i); hole[g] = (hole[g] | 0) + 1; }
+  let holeU = 0; for(let i = 0; i < openU; i++) if(!eqU[i]) holeU++;
+  const out = [], seen = {};
+  const push = (key, why) => { if(!key || seen[key]) return;
+    if(campRuneOwn(key) >= RUNE_OWN_MAX) return;
+    seen[key] = 1; out.push({ key, why }); };
+  // ① 빈 칸이 많은 갈래부터
+  const grps = RUNE_GRPS.slice().sort((a, b) => (hole[b] | 0) - (hole[a] | 0));
+  for(const g of grps){
+    if(!(hole[g] > 0)) continue;
+    for(const d of RUNE_LIST){ if(d.kind === 'uniq' || d.grp !== g) continue;
+      // 안 가진 것 중 **가장 높은 등급**을 권한다(살 수 있으면 좋은 것을)
+      for(const gd of RUNE_GRADES.slice().reverse()){ const k = runeKey(d.id, gd);
+        if(campRuneOwn(k) > 0) continue;
+        push(k, (RUNE_GRP[g] || {}).nm + ' 칸이 ' + hole[g] + '개 비었습니다'); break; }
+      if(out.length >= 3) break; }
+    if(out.length >= 3) break; }
+  if(holeU > 0) for(const d of RUNE_LIST){ if(d.kind !== 'uniq') continue;
+    const k = runeKey(d.id, 'uniq');
+    if(campRuneOwn(k) > 0) continue;
+    push(k, '유니크 칸이 ' + holeU + '개 비었습니다'); break; }
+  // ② 칸이 다 찼으면 — 낀 것 중 **등급을 올릴 수 있는 것**
+  if(out.length < 3) for(let i = 0; i < openN; i++){
+    const cur = eqN[i]; if(!cur) continue;
+    const p = runeParse(cur); if(!p.def || p.gd === 'high') continue;
+    const up = runeKey(p.def.id, p.gd === 'low' ? 'mid' : 'high');
+    push(up, runeName(cur) + ' 을 한 등급 올립니다');
+    if(out.length >= 3) break; }
+  return out.slice(0, 3); }
+
+// ── 🛒 상점 화면 — 추천 · 주간 할인 · 일반(갈래 탭) ─────────────────────
+let _runeShopTab = 'eco';                // 일반 구역에서 보고 있는 갈래
+function campRuneShopTab(g){ _runeShopTab = g; campRuneRender(); }
+// 💠 한 칸 — 그림 · 이름 · 등급 · 값. 살 수 없으면 왜 못 사는지 칸이 말한다.
+function _runeBuyCell(key, opt){
+  const O = opt || {}, p = runeParse(key); if(!p.def) return '';
+  const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
   const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
+  const own = campRuneOwn(key), full = own >= RUNE_OWN_MAX;
+  const sale = runeOnSale(key), cost = runeNowGem(key);
+  const have = (typeof profGem === 'function') ? profGem() : 0;
+  const soldOut = O.sale && !sale;                    // 할인 칸인데 재고를 이미 썼다
+  const off = full || soldOut || have < cost;
+  let tail;
+  if(full) tail = '<u class="max">' + RUNE_OWN_MAX + '개 보유</u>';
+  else if(soldOut) tail = '<u class="max">이번 주 완료</u>';
+  else tail = '<u>' + gemI + ' ' + cost
+    + (sale ? '<s>' + runeGem(key) + '</s>' : '') + '</u>';
+  return '<button class="rnBuy' + (sale ? ' sale' : '') + '" type="button"'
+    + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
+    + ' onclick="campRuneBuy(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + runeIcoHTML(key, 'rnBuyI')
+    + '<b>' + (O.nameFull ? runeName(key) : ((RUNE_GD[gd] || {}).tx || '')) + '</b>'
+    + '<span>' + runeValTx(key) + '</span>' + tail
+    + (own > 0 ? '<em class="rnHas">×' + own + '</em>' : '') + '</button>'; }
+
+function _runeShopHTML(){
   // ⛔ 「보유 젬」 줄은 뺐다(2026-09-04 사용자 확정) — 젬은 **상단 재화 바**에 이미 있다.
   //   같은 숫자를 두 층에 띄우면 어느 쪽이 진짜인지 묻게 된다.
   let h = '';
-  for(const kind of ['norm', 'uniq']){
-    h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">'
-      + (kind === 'uniq' ? '유니크' : '일반') + '</span></div>';
-    for(const d of RUNE_LIST){
-      if((d.kind === 'uniq' ? 'uniq' : 'norm') !== kind) continue;
-      const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
-      let btns = '';
-      for(const gd of gds){ const key = runeKey(d.id, gd), cost = runeGem(key);
-        const can = ((typeof profGem === 'function') ? profGem() : 0) >= cost;
-        btns += '<button class="rnBuy" type="button"' + (can ? '' : ' disabled')
-          + ' style="--rg:' + ((RUNE_GD[gd] || {}).col || '#8b95a5') + '"'
-          + ' onclick="campRuneBuy(\'' + d.id + '\',\'' + gd + '\')">'
-          + runeIcoHTML(key, 'rnBuyI')
-          + '<b>' + (RUNE_GD[gd] || {}).tx + '</b><span>' + runeValTx(key) + '</span>'
-          + '<u>' + gemI + ' ' + cost + '</u></button>'; }
-      const ownN = gds.reduce((a, gd) => a + campRuneOwn(runeKey(d.id, gd)), 0);
-      h += '<div class="rnItem"><div class="rnIH">'
-        + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnIi')
-        + '<span class="rnIN">' + d.nm + '</span><span class="rnID">' + d.de + '</span>'
-        + '<span class="rnIO">' + ownN + '</span></div>'
-        + '<div class="rnBuys">' + btns + '</div></div>'; }
-    h += '</div>'; }
+
+  // ⭐ ① 추천 — 지금 사면 바로 쓸 수 있는 셋. 값은 건드리지 않는다(바로가기일 뿐).
+  const reco = runeRecoList();
+  if(reco.length){
+    h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">추천</span>'
+      + '<span class="rnSecN">' + reco[0].why + '</span></div>'
+      + '<div class="rnGrid3">'
+      + reco.map(r => _runeBuyCell(r.key, { nameFull:true })).join('')
+      + '</div></div>'; }
+
+  // 🛒 ② 주간 할인 — 30% 싸지만 **종류마다 한 개**. 남은 시간을 함께 적는다.
+  h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">주간 할인</span>'
+    + '<span class="rnSecN">' + runeLeftTx(runeWeekLeft()) + ' 뒤 갱신</span></div>'
+    + '<div class="rnGrid3">'
+    + runeSaleList().map(k => _runeBuyCell(k, { sale:true, nameFull:true })).join('')
+    + '</div></div>';
+
+  // 🗂 ③ 일반 — 갈래 탭으로 나눈다(16종 × 3등급이면 한 목록에 다 못 담는다)
+  const tabs = RUNE_GRPS.concat('uniq');
+  const idx = Math.max(0, tabs.indexOf(_runeShopTab));
+  h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점</span></div>';
+  // 🗂 탭 띠는 **공용 함수**다(CLAUDE.md 「세그먼트 이동 바」) — 새로 만들지 않는다.
+  //   ⚠ items 는 {label} 이고 act 는 **함수**(k => 코드)다.
+  h += (typeof segNavHTML === 'function')
+    ? segNavHTML(tabs.map(g => ({ label:(RUNE_GRP[g] || {}).nm || g })), idx,
+        k => "campRuneShopTab('" + tabs[k] + "')")
+    : '';
+  h += '<div class="rnShopList">';
+  for(const d of RUNE_LIST){
+    const g = (d.kind === 'uniq') ? 'uniq' : d.grp;
+    if(g !== tabs[idx]) continue;
+    const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
+    h += '<div class="rnItem"><div class="rnIH">'
+      + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnIi')
+      + '<span class="rnIN">' + d.nm + '</span><span class="rnID">' + d.de + '</span></div>'
+      + '<div class="rnBuys">' + gds.map(gd => _runeBuyCell(runeKey(d.id, gd))).join('')
+      + '</div></div>'; }
+  h += '</div></div>';
   return h; }

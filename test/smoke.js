@@ -3048,8 +3048,11 @@ async function groupLobby(){
       //   ⛔ 💎 이모지로 되돌리지 말 것 — 상단 재화 바·상점과 그림이 달라진다.
       { const box=document.getElementById('rnBody');
         const gi=box.querySelectorAll('img.ri[src*="res_gem"]');
-        assert(gi.length>=buys.length,'젬 아이콘이 모자라다(resIco 를 안 쓴 자리가 있다): '
-          +gi.length+' / 버튼 '+buys.length);
+        // ⚠ **값이 적힌 칸만** 센다 — 「이번 주 완료」·「8개 보유」 칸은 값 대신 이유를 적으므로
+        //   젬 아이콘이 없다(2026-09-04 상점 개편). 그것까지 세면 상태에 따라 흔들린다.
+        const paid=[...buys].filter(b=>!b.querySelector('u.max'));
+        assert(gi.length>=paid.length,'젬 아이콘이 모자라다(resIco 를 안 쓴 자리가 있다): '
+          +gi.length+' / 값이 적힌 칸 '+paid.length);
         assert(!/💎/.test(box.textContent),'룬 상점에 💎 이모지가 남아 있다 — resIco 로 바꿀 것');
         // 📜 **스크롤은 젬 상점과 같은 규격**이다(2026-09-04 사용자 확정 · CLAUDE.md 「세로 스크롤바」).
         //   ⛔ 전용 스크롤바나 드래그 장치를 새로 만들지 말 것 — 화면마다 굵기가 달라진다.
@@ -3070,6 +3073,70 @@ async function groupLobby(){
       return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote+' · '+sumNote+' · '+nextNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
+  });
+
+  // ══ 🛒 룬 상점 — 추천 · 주간 할인 · 일반 (2026-09-04 사용자 확정) ══════
+  await step('룬 상점: 추천 셋 · 주간 할인(30% · 재고 1) · 갈래 탭 · 여덟 개 상한', async()=>{
+    skipIf(typeof campRuneEnter!=='function'||typeof runeSaleList!=='function','룬 상점 없음');
+    if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    const P=(typeof PROF==='function')?PROF():null; const keepG=P?(P.gem||0):0;
+    try{
+      C.best={10:50};
+      const R=campRuneState(); R.norm=[]; R.uniq=[]; R.own={}; delete R.wk; campRuneTouch();
+      if(P) P.gem=999999;
+      campRuneEnter('shop'); await sleep(120);
+      // ① 세 구역
+      const secs=[...document.querySelectorAll('#rnBody .rnSecT')].map(x=>x.textContent);
+      assert(secs.join(',')==='추천,주간 할인,상점','상점 구역이 셋이 아니다: '+secs.join(','));
+      assert(!document.querySelector('#campRune .rnHead'),
+        '「보유 젬」 줄이 되살아났다 — 젬은 상단 재화 바에 이미 있다');
+      // ② 주간 할인 = 일반 5 + 유니크 1 · 값은 30% 싸다
+      const sale=runeSaleList();
+      assert(sale.length===RUNE_SALE_N+1,'할인 종류가 여섯이 아니다: '+sale.length);
+      const uq=sale.filter(k=>runeParse(k).def.kind==='uniq');
+      assert(uq.length===1,'할인에 유니크가 하나가 아니다: '+uq.length);
+      for(const k of sale) assert(runeSaleGem(k)===Math.max(1,Math.round(runeGem(k)*(1-RUNE_SALE_OFF))),
+        '할인가가 표와 다르다: '+k);
+      // ③ **같은 주에는 같은 목록** — 사람마다·새로 고칠 때마다 달라지면 안 된다
+      assert(runeSaleList().join(',')===sale.join(','),'같은 주인데 목록이 달라진다');
+      const t0=Date.now();
+      assert(runeSaleList(t0).join(',')===runeSaleList(t0+3600e3).join(','),
+        '같은 주 안에서 시간이 지나자 목록이 바뀐다');
+      assert(runeSaleList(t0).join(',')!==runeSaleList(t0+8*86400e3).join(','),
+        '다음 주가 됐는데 목록이 그대로다');
+      // 🕘 주는 월요일 09:00 에 바뀐다
+      { const st=new Date(runeWeekStart(t0));
+        assert(st.getDay()===RUNE_WEEK_DOW && st.getHours()===RUNE_WEEK_HOUR,
+          '주의 시작이 월요일 09:00 이 아니다: '+st); }
+      // ④ **재고는 하나** — 사고 나면 제값으로 돌아온다
+      { const k=sale[0], p=runeParse(k);
+        const g0=P?P.gem:0; campRuneBuy(p.def.id, p.gd);
+        assert(g0-(P?P.gem:0)===runeSaleGem(k),'첫 구매가 할인가가 아니다');
+        assert(!runeOnSale(k),'샀는데 아직 할인 재고가 남아 있다');
+        const g1=P?P.gem:0; campRuneBuy(p.def.id, p.gd);
+        assert(g1-(P?P.gem:0)===runeGem(k),'두 번째가 제값이 아니다'); }
+      // ⑤ **한 종류는 여덟 개까지**
+      { const k=runeKey('tap','low'), p=runeParse(k);
+        R.own[k]=RUNE_OWN_MAX; campRuneTouch();
+        const g=P?P.gem:0;
+        assert(!campRuneBuy(p.def.id, p.gd),'여덟 개인데 더 샀다');
+        assert((P?P.gem:0)===g,'못 샀는데 젬이 나갔다'); }
+      // ⑥ 갈래 탭은 **공용 함수**(segNavHTML)를 쓴다
+      campRuneRender(); await sleep(40);
+      const tabs=[...document.querySelectorAll('#rnBody .pdSegBtn')].map(b=>b.textContent);
+      assert(tabs.length===RUNE_GRPS.length+1,'갈래 탭 수가 다르다: '+tabs.join(','));
+      assert(document.querySelector('#rnBody .pdSeg'),'공용 탭 띠(.pdSeg)를 안 쓴다');
+      // ⑦ 추천은 셋 이하이고, **왜 권하는지**를 적는다
+      { const reco=runeRecoList();
+        assert(reco.length<=3,'추천이 셋을 넘는다: '+reco.length);
+        if(reco.length) assert(reco[0].why && reco[0].why.length>0,'추천에 이유가 없다'); }
+      return '세 구역 · 할인 '+sale.length+'종(유니크 1) · '+Math.round(RUNE_SALE_OFF*100)
+        +'% · 재고 1 · 상한 '+RUNE_OWN_MAX+' · 탭 '+tabs.length;
+    } finally { if(typeof campRuneClose==='function') campRuneClose();
+      C.best=keepB; C.rune=keepR; if(P) P.gem=keepG; }
   });
 
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.

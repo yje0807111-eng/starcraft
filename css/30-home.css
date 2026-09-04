@@ -2694,6 +2694,29 @@
 #campRune .rnBuy u{text-decoration:none;color:#c98bff;font-size:11px;
   display:inline-flex;align-items:center;gap:3px}
 #campRune .rnBuy u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
+/* 🛒 상점 세 구역(2026-09-04 사용자 확정) — 추천 3칸 · 주간 할인 6칸 · 일반(갈래 탭).
+   ⚠ 값의 층은 **둘뿐**이다(제값 / 할인 30%). 추천은 값을 안 건드리는 바로가기다. */
+#campRune .rnGrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#campRune .rnShopList{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+/* 🏷 할인 칸 — 왼쪽 위에 −30%, 값 옆에 **제값을 그어** 붙인다 */
+#campRune .rnBuy{position:relative}
+#campRune .rnBuy.sale{border-color:color-mix(in srgb,var(--rg) 60%,transparent);
+  background:rgba(255,255,255,.06)}
+#campRune .rnOff{position:absolute;left:3px;top:3px;font-style:normal;
+  font-family:var(--font-num);font-size:9px;font-weight:700;color:#ff9c6b;
+  padding:0 3px;border-radius:var(--r-bar);background:rgba(255,120,60,.16)}
+#campRune .rnBuy u s{text-decoration:line-through;color:#69737f;font-size:9.5px;margin-left:3px}
+#campRune .rnBuy u.max{color:#69737f;font-size:9.5px}
+/* 📦 보유 개수 — 오른쪽 위. 여덟이면 더 못 산다(버튼이 잠긴다) */
+#campRune .rnHas{position:absolute;right:3px;top:3px;font-style:normal;
+  font-family:var(--font-num);font-size:9.5px;color:#8d97a6}
+/* 목록 줄 — 이름·설명 한 줄, 그 아래 등급 버튼들 */
+#campRune .rnItem{border:1px solid rgba(150,170,200,.14);border-radius:var(--r-md);
+  padding:7px 8px;background:rgba(255,255,255,.02)}
+#campRune .rnIH{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+#campRune .rnIi{width:26px;height:26px;flex:none;display:block;object-fit:contain}
+#campRune .rnIN{font-size:12px;color:#eef1f6;font-weight:600}
+#campRune .rnID{font-size:10.5px;color:#8d97a6}
 
 /* 🔷 룬 그림 — 판(등급 색)까지 들어 있는 한 장이다(assets/icons/rune/ · 2026-09-04).
    ⛔ 여기에 테두리·배경·둥근 모서리를 주지 말 것 — 그림이 이미 육각 판을 갖고 있다.
