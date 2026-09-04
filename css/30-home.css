@@ -2507,12 +2507,14 @@
 #campRune .rnDot{pointer-events:none}                               /* 유니크 꼭짓점 점 */
 #campRune .rnEmB{fill:url(#rnEm);pointer-events:none}               /* 빈 칸에 도는 숨 */
 #campRune .rnHx{stroke-width:1.2}
-/* 🔒 잠긴 칸 — 흐릿하되 **불투명**하다. opacity 로 흐리면 뒤의 구역 오로라가 그대로 비친다
-   (2026-09-04 사용자 지적: 「내부가 바깥 오로라 색을 너무 많이 가져온다」). */
-#campRune .rnHx.lk{fill:#070b11;stroke:rgba(140,160,185,.12);stroke-width:1}
+/* 🔒 잠긴 칸 — 흐릿하되 **얕게만** 비친다. opacity 로 통째로 흐리면(옛 .40)
+   뒤의 구역 오로라가 그대로 들어온다 — 면만 살짝 열어 둔다. */
+#campRune .rnHx.lk{fill:#070b11;fill-opacity:.68;stroke:rgba(140,160,185,.12);stroke-width:1}
 /* 🕳 빈 칸 = 파인 홈(2026-09-04 · 목업 camp-rune-slot-8 ②안).
-   ⚠ fill-opacity 를 주지 않는다 — 반투명이면 뒤의 구역 오로라가 비쳐 칸이 갈래 색으로 물든다. */
-#campRune .rnHx.em{fill:url(#rnWell);stroke:rgba(180,205,235,.24);stroke-width:1}
+   ⚠ **반투명은 남기되 얕게**(2026-09-04 사용자 확정: 「반투명을 원해, 근데 그게 과했다」).
+     .72 는 뒤의 구역 오로라가 그대로 들어와 칸이 갈래 색으로 물들었고, 1(불투명)은 판때기가 됐다.
+     ⛔ .8 아래로 내리지 말 것 — 물들기 시작한다(스모크가 하한을 잰다). */
+#campRune .rnHx.em{fill:url(#rnWell);fill-opacity:.86;stroke:rgba(180,205,235,.24);stroke-width:1}
 #campRune .rnEmIn{fill:none;stroke:#fff;stroke-width:.5;opacity:.07;pointer-events:none}
 /* 면은 **검게 둔다** — 등급색으로 채우면 그 위의 문양이 색에 묻힌다(트리에서 얻은 규칙). */
 #campRune .rnHx.on{fill:url(#rnFace)}

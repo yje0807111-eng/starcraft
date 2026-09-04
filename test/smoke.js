@@ -2600,19 +2600,21 @@ async function groupLobby(){
         assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
           '축소 하한이 전체 보기 배율을 안 따른다');
         // 🕳 **빈 칸은 파인 홈이다**(2026-09-04 사용자 확정 · 목업 camp-rune-slot-8 ②안)
-        //   ⛔ 반투명으로 되돌리지 말 것 — 뒤의 구역 오로라가 비쳐 칸이 갈래 색으로 물든다
-        //     (사용자 지적: 「내부가 바깥 오로라 색을 너무 많이 가져온다」).
+        //   ⚠ **반투명은 남기되 얕게**(2026-09-04 사용자 확정: 「반투명을 원해, 근데 그게 과했다」).
+        //     .72 에서는 뒤의 구역 오로라가 그대로 들어와 칸이 갈래 색으로 물들었다.
         { const em = $('rnG').querySelector('.rnHx.em');
           assert(em, '빈 칸이 없다');
           const cs = getComputedStyle(em);
-          assert(+cs.fillOpacity >= 1 && +cs.opacity >= 1,
-            '빈 칸이 반투명이다 — 오로라가 비친다: fill ' + cs.fillOpacity + ' / op ' + cs.opacity);
+          const semi = +cs.fillOpacity * +cs.opacity;
+          assert(semi >= 0.8 && semi < 1,
+            '빈 칸의 반투명이 범위 밖이다(0.8 이상 1 미만): ' + semi.toFixed(2));
           assert(cs.fill.indexOf('rnWell') >= 0, '빈 칸이 파인 홈이 아니다: ' + cs.fill);
           assert(!$('rnG').querySelector('.rnPl'), '「+」가 되살아났다 — 홈이 이미 비었음을 말한다');
           assert(!$('rnG').querySelector('.rnEmB'), '숨 원(.rnEmB)이 되살아났다 — 오로라를 한 겹 더 더한다');
           const lk = $('rnG').querySelector('.rnHx.lk');
-          if(lk){ const ls = getComputedStyle(lk);
-            assert(+ls.opacity >= 1, '잠긴 칸이 반투명이다 — 오로라가 비친다: ' + ls.opacity); } }
+          if(lk){ const ls = getComputedStyle(lk), lsemi = +ls.fillOpacity * +ls.opacity;
+            assert(lsemi >= 0.6 && lsemi < 1,
+              '잠긴 칸의 반투명이 범위 밖이다(0.6 이상 1 미만): ' + lsemi.toFixed(2)); } }
         // 🌌 **성좌 구역** — 갈래 색 오로라 + 이름(2026-09-04 사용자 확정 · 목업 camp-rune-zone-8 ②안)
         //   ⛔ 화면에 고정하지 말 것 — #rnG 안에 있어야 판과 같이 밀리고 확대된다.
         { const gg = $('rnG');
