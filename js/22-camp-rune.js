@@ -553,6 +553,8 @@ function _runeHexPts(x, y, r){ const q = [];
 const RUNE_RING1 = 2.5, RUNE_RING2 = 4.6;      // 바깥 링 — 칸 반지름에 더하는 여유
 const RUNE_RING_OP1 = 0.40, RUNE_RING_OP2 = 0.20;
 const RUNE_DOT_R = 3.2, RUNE_DOT_SZ = 0.9, RUNE_DOT_OP = 0.45;   // 유니크 꼭짓점 점 여섯
+// 🔁 교체 후보의 점선이 칸 밖으로 나가는 거리 — 이웃 칸 가장자리(28.0)를 넘으면 안 된다
+const RUNE_ANTS_GAP = 3.2;
 // 🔷 문양이 칸에서 차지하는 폭 ÷ 칸 반지름 (2026-09-04 사용자 지적: 「타일 내부를 너무 꽉 채운다」).
 //   ⚠ 육각 안에 들어가는 정사각의 한계는 **1.268** 이다(반변 a ≤ 0.634r). 옛 값 1.24 는
 //     그 한계에 거의 닿아 문양이 벽에 붙어 보였다. 1.00 이면 좌우로 0.13r 씩 남는다.
@@ -623,13 +625,19 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
   if(sel) g.push('<polygon class="rnHxSel" points="' + _runeHexPts(x, y, r + 6) + '"/>');
   // 👆 누르는 면 — 맨 위에 투명하게. ⚠ onclick 을 달지 않는다: 손가락을 붙잡는 순간
   //   click 의 target 이 <svg> 로 바뀌어 안 온다. 엔진이 pointerdown 에서 이 표시를 읽는다.
+  // 🔁 교체 후보의 **흐르는 점선** — 「고를 수 있음」의 오래된 관용구다.
+  //   ⚠ 반지름은 칸 밖 3.2 까지만(24.2). 이웃 칸 가장자리가 **28.0** 이라 그 안에 있어야 한다
+  //     (이웃 중심 사이 49.0 · 실측 2026-09-04). ⛔ 더 벌리면 옆 칸을 밟는다.
+  if(swCand){ const kc = key ? ((RUNE_GD[runeParse(key).gd] || {}).col || '#b4cdeb') : '#b4cdeb';
+    g.push('<polygon class="rnAnts" points="' + _runeHexPts(x, y, r + RUNE_ANTS_GAP) + '"'
+      + ' style="stroke:' + kc + '"/>'); }
   g.push('<circle class="rnHit" cx="' + X + '" cy="' + Y + '" r="' + (r + 3)
     + '" data-rk="' + kind + '" data-ri="' + i + '"/>');
   // ⚠ 흔들림은 **칸 전체를 감싸서** 준다 — 조각마다 걸면 테두리와 문양이 따로 논다.
   //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
   // ⚠ 흔들림·부풀림은 **칸 전체를 감싸서** 준다 — 조각마다 걸면 테두리와 문양이 따로 논다.
   //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
-  const cls = 'rnCell' + (swCand ? ' rnWig' : '') + (swDim ? ' rnDim' : '')
+  const cls = 'rnCell' + (swCand ? ' rnCand' : '') + (swDim ? ' rnDim' : '')
     + ((_runeVeil === kind + '-' + i) ? ' veil' : '');
   const st = 'transform-origin:' + X + 'px ' + Y + 'px'
     + (swCand ? ';animation-delay:' + ((i * 53) % 260) + 'ms' : '');

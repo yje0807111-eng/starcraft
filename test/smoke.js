@@ -2427,7 +2427,7 @@ async function groupLobby(){
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
     let swapNote='';
-    let glyphNote='', animNote='';
+    let glyphNote='', animNote='', waitNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2890,9 +2890,20 @@ async function groupLobby(){
           campRuneBagTap(want);
           assert(campRuneSwapOn(), '칸이 꽉 찼는데 교체 모드로 안 들어간다');
           await sleep(40);
-          // 바꿀 수 있는 칸만 흔들린다 — 일반 룬이므로 유니크 칸은 물린다
-          const wig = document.querySelectorAll('#rnG .rnWig').length;
-          assert(wig === RUNE_CONS, '흔들리는 칸 수가 다르다: ' + wig + ' vs ' + RUNE_CONS);
+          // 🔁 바꿀 수 있는 칸만 **숨쉬고 점선이 돈다** — 일반 룬이므로 유니크 칸은 물린다.
+          //   ⛔ 좌우로 떠는 흔들림으로 되돌리지 말 것(2026-09-04 사용자 확정 · 목업 camp-rune-wait2-4 ①안).
+          const wig = document.querySelectorAll('#rnG .rnCand').length;
+          assert(wig === RUNE_CONS, '대기 중인 칸 수가 다르다: ' + wig + ' vs ' + RUNE_CONS);
+          { const cand = document.querySelector('#rnG .rnCand');
+            assert(getComputedStyle(cand).animationName === 'rnBreathe',
+              '후보 칸의 대기 모션이 숨쉬기가 아니다: ' + getComputedStyle(cand).animationName);
+            const ants = document.querySelectorAll('#rnG .rnAnts');
+            assert(ants.length === RUNE_CONS, '흐르는 점선이 후보 수와 다르다: ' + ants.length);
+            // 📏 점선은 **이웃 칸 가장자리 안**에 있어야 한다(이웃 중심 사이 49.0 · 가장자리 28.0)
+            const gap = RUNE_R_N + RUNE_ANTS_GAP;
+            const near = 2 * RUNE_RING * Math.sin(Math.PI / RUNE_CONS) - RUNE_R_N;
+            assert(gap < near, '점선이 옆 칸을 밟는다: ' + gap.toFixed(1) + ' vs ' + near.toFixed(1));
+            waitNote = '대기 숨+점선 ' + gap.toFixed(1) + '/' + near.toFixed(1); }
           const uHit = document.querySelector('#rnG [data-rk="uniq"][data-ri="0"]');
           assert(uHit && uHit.closest('.rnDim'), '일반 룬을 고르는데 유니크 칸이 안 잠긴다');
           // 🎯 성좌가 **보이는 자리의 한가운데**로 온다(위 띠·아래 가방을 뺀 나머지)
@@ -2982,7 +2993,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote;
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });
