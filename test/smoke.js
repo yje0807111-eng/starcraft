@@ -1406,6 +1406,7 @@ async function groupLobby(){
         .filter(e=>getComputedStyle(e).display!=='none')
         .sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left)
         .map(e=>{ const im=e.querySelector('img'); return im? im.src.split('/').pop().replace('res_','').replace('.webp','') : '?'; });
+      // 💎 젬은 미네랄·가스 다음, 🧍 인구는 **맨 오른쪽**(2026-09-04 사용자 확정).
       assert(order.join(',')==='mineral,gas,gem,pop','재화 순서가 다름: '+order.join(',')); }
     // ⛔ 캠프는 공용 자원을 셋이나 빌린다(#cvMarine · TECH_GAS 좌표 · 판정 함수 3개).
     //    **나갈 때 전부 돌려놓는지**를 여기서 잰다 — 안 돌려주면 관리자 건설 탭이 어긋난다.
@@ -5272,8 +5273,12 @@ async function groupLobby(){
     try{
       // ① 표 불변식 — 정수 · 문턱이 안 내려간다 · 50R 배수가 안 줄어든다
       for(let d=0; d<=CAMP_DG_MAX; d++){ const t=CAMP_MINE[d];
-        assert(Number.isInteger(t.base) && Number.isInteger(t.x), 'CAMP_MINE['+d+'] 가 정수가 아님');
-        assert(Number.isInteger(t.base*t.x), 'CAMP_MINE['+d+'] 50클리어 배율이 정수가 아님');
+        // ⚠ **던전 1 만 예외**다(2026-09-04 사용자 확정) — 진입 ×1.5 · x=4/3 이라 정수가 아니다.
+        //   진입값이 ×1 이면 선택 화면에서 「내려가도 이득이 없다」로 읽혀서 올렸다(HUNT_R1 §6-1-0-1).
+        if(d===1){ assert(Math.abs(t.base-1.5)<1e-9,'던전 1 진입이 ×1.5 가 아님: '+t.base);
+          assert(Math.abs(t.base*t.x-2)<1e-9,'던전 1 50클리어가 ×2.0 이 아님: '+(t.base*t.x)); }
+        else { assert(Number.isInteger(t.base) && Number.isInteger(t.x), 'CAMP_MINE['+d+'] 가 정수가 아님');
+          assert(Number.isInteger(t.base*t.x), 'CAMP_MINE['+d+'] 50클리어 배율이 정수가 아님'); }
         if(d>1){ const prev=CAMP_MINE[d-1], step=t.base/(prev.base*prev.x);
           assert(step>1, '단계 '+d+' 문턱에서 배율이 안 오른다: '+(prev.base*prev.x)+' → '+t.base);
           assert(step<=2, '단계 '+d+' 문턱이 2배를 넘는다: '+step.toFixed(2));
@@ -5284,11 +5289,12 @@ async function groupLobby(){
       assert(campMineMul()===1, '캠프 배율이 1이 아님: '+campMineMul());
       // ③ 라운드는 **클리어할 때마다** 붙는다 — 50라운드면 50번(49번이 아니다)
       campEnterDungeon(1);
-      assert(campRoundN()===1 && campMineMul()===1, '던전 1 진입값이 틀림');
+      // 던전 1 = **1.5 에서 시작 · 라운드마다 +0.01 · 50라운드에 2.0**(2026-09-04 사용자 확정)
+      assert(Math.abs(campMineMul()-1.5)<1e-9, '던전 1 진입값이 ×1.5 가 아님: '+campMineMul());
       campClearRound();
-      assert(Math.abs(campMineMul()-1.02)<1e-9, '1라운드 클리어 뒤 배율: '+campMineMul()+' (기대 1.02)');
+      assert(Math.abs(campMineMul()-1.51)<1e-9, '1라운드 클리어 뒤 배율: '+campMineMul()+' (기대 1.51)');
       for(let i=0;i<48;i++) campClearRound();          // 누계 49회
-      assert(Math.abs(campMineMul()-1.98)<1e-9, '49회 클리어 배율: '+campMineMul()+' (기대 1.98)');
+      assert(Math.abs(campMineMul()-1.99)<1e-9, '49회 클리어 배율: '+campMineMul()+' (기대 1.99)');
       // ④ 50회째를 깨면 **다음 던전으로 자동** — 그 순간 배율은 다음 던전 진입값
       campClearRound();
       assert(campDgN()===2 && campRoundN()===1, '50 클리어인데 자동 이동 안 함: '+campDgN()+'-'+campRoundN());
@@ -6540,15 +6546,24 @@ async function groupLobby(){
     _hb.char.x=sv.x; _hb.char.y=sv.y; hbResize();
     assert(inside-outside>=6,'회복 구역이 배경에 덮여 안 보인다(초록 차 '+(inside-outside)+') — hbDrawHeal이 hbFloor보다 먼저 그려졌는지 확인');
     return '초록 차 '+(inside-outside); });
-  // 재화 바 — + 버튼은 숫자에 붙어 있어야 한다(멀면 어느 재화의 +인지 헷갈린다)
-  await step('재화 바: + 버튼이 숫자에 붙어 있다', async()=>{
+  // 재화 바 — 🗄 [+] 는 **화면에서 뺐다**(2026-09-04 · 좌상단 칩에 자리를 내주려고).
+  //   ⛔ 되살아나면 잡는다 — 되살릴 땐 이 계약을 함께 뒤집을 것(옛 규칙: 숫자와 0~3px 붙어 있어야 한다).
+  await step('재화 바: [+] 를 뺐고 · 아이콘이 한 단 작다', async()=>{
     const res=document.querySelector('#curBar .res'); skipIf(!res,'재화 바 없음');
     curShow(true);
-    const num=res.querySelector('b'), plus=res.querySelector('.curPlus');
-    skipIf(!num||!plus||!num.getClientRects().length,'표시 안 됨');
-    const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
-    assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
-    return gap.toFixed(1)+'px'; });
+    // [+] 는 **젬에만** 있다(2026-09-04) — 젬은 사는 재화라 그 자리가 필요하고, 미네랄·가스는 뺐다.
+    { const plus=[...document.querySelectorAll('#curBar .curPlus')];
+      assert(plus.length===1,'[+] 가 하나가 아니다(젬에만 있어야 한다): '+plus.length);
+      assert(plus[0].parentElement.querySelector('b').id==='curGem','[+] 가 젬이 아닌 재화에 붙어 있다'); }
+    // 💎 젬은 미네랄·가스 다음, 🧍 인구는 맨 오른쪽(2026-09-04 사용자 확정)
+    { const ids=[...document.querySelectorAll('#curBar .res b')].map(b=>b.id);
+      assert(ids.join(',')==='curMin,curGas,curGem,curPop','재화 차례가 다르다: '+ids.join(',')); }
+    const ri=res.querySelector('img.ri'); skipIf(!ri||!ri.getClientRects().length,'표시 안 됨');
+    const w=ri.getBoundingClientRect().width;
+    assert(Math.abs(w-12)<=0.6,'재화 아이콘이 12px 이 아니다: '+w.toFixed(1));
+    // ⚠ 12px 아래로는 미네랄·가스 그림이 서로 구분이 안 된다 — 더 줄이지 말 것
+    assert(w>=11.5,'재화 아이콘이 너무 작다(미네랄·가스가 구분이 안 된다): '+w.toFixed(1));
+    return '아이콘 '+w.toFixed(0)+'px · [+] 없음'; });
   // 웨이브 시간 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
   await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbWaveFail!=='function','실패 처리 없음');
@@ -11057,6 +11072,19 @@ async function groupLobby(){
     //   판·왼쪽 광원 띠·라벨은 좌상단만 하단 구역과 색·재질이 갈리게 하던 것들이다.
     for(const cls of ['.cdRail','.cdBody','.cdSub','.cdLab'])
       assert(!t.querySelector(cls),'옛 두 줄 부품 '+cls+' 가 되살아났다');
+    // ①-2-1 🔁 **다른 화면에 갔다 와도 칩이 다시 그려진다**(2026-09-04 사용자 신고).
+    //   curSetTitle 이 칩 내용을 글자로 덮는데 캐시 키(_cdKey)가 남아 있으면 curPaintChip 이
+    //   「값이 안 바뀌었다」고 보고 다시 안 그려 **좌상단이 빈 채로 남았다**(유즈맵·상점 왕복).
+    { const on0=window.campIsOn, st0=window.campState;
+      window.campIsOn=()=>true; window.campState=()=>({dg:3, cleared:26});
+      curPaintChip();
+      curSetTitle('상점');                                   // 다른 화면 — 칩이 글자로 바뀐다
+      assert(t.textContent==='상점' && !t.querySelector('.cdNm'),'제목이 글자로 안 바뀜: '+t.innerHTML);
+      curPaintChip();                                        // 캠프 복귀
+      const ok=t.querySelector('.cdNm') && t.textContent.indexOf('/')>0;
+      window.campIsOn=on0; window.campState=st0;
+      assert(ok,'다른 화면에 갔다 왔더니 칩이 빈 채로 남았다: "'+t.textContent+'"');
+      t.classList.add('asChip'); t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10}); }
     // ①-3 라벨은 화면에서 뺐지만 **읽어 주는 말에는 남는다**(정보까지 잃으면 안 된다)
     { const on0=window.campIsOn, st0=window.campState;
       window.campIsOn=()=>true; window.campState=()=>({dg:3, cleared:26});
@@ -11082,6 +11110,14 @@ async function groupLobby(){
       assert(a.length<4 || a[3]<=0.05,'칩에 면이 생겼다 — 좌상단은 판이 아니라 글자다: '+cs.backgroundColor);
       assert(parseFloat(cs.borderTopWidth)===0,'칩에 테두리가 생겼다 — 판을 되돌리면 안 된다');
       assert(/drop-shadow/.test(cs.filter||''),'칩이 그림자로 안 떠 있다 — 밝은 배경에서 글자가 묻힌다');
+      // ⬆ 글자 크기 — 기본은 12.5/14 다(재화 줄에서 [+] 를 빼고 자리를 만들어 키웠다).
+      //   ⚠ **캠프에서는 한 단 작다**(11/12) — 프로필 이름(11.5)보다 칩이 커서 눈이 아래로 먼저 갔다
+      //     (2026-09-04 사용자 확정 · 목업 camp-topleft-8 ⑦안). 그 검사는 아래 프로필 스텝이 맡는다.
+      { const ph=$('phone'), had=ph.classList.contains('campMode'); ph.classList.remove('campMode');
+        const nm=parseFloat(getComputedStyle(t.querySelector('.cdNm')).fontSize);
+        const n2=parseFloat(getComputedStyle(t.querySelector('.cdN')).fontSize);
+        ph.classList.toggle('campMode', had);
+        assert(Math.abs(nm-12.5)<0.1 && Math.abs(n2-14)<0.1,'칩 글자 크기가 12.5/14 가 아니다: '+nm+'/'+n2); }
       // ⛔ **청록을 되돌리지 말 것.** 글자는 흰색이고 진행선만 하단 비용색(붉은색)이다 —
       //   좌상단만 색이 갈려 하단 구역과 안 어울리던 것이 이 디자인의 이유다.
       const c=(getComputedStyle(n2).color.match(/[\d.]+/g)||[]).map(Number);
@@ -11137,7 +11173,10 @@ async function groupLobby(){
       if(was) curShow(false);
       assert(o1<=0,'재화 6자리에서 ☰ 가 화면 밖으로 '+o1.toFixed(1)+'px 나갔다(칩 '+w1.toFixed(0)+'px)');
       assert(o2<=0,'재화 지수 표기에서 ☰ 가 화면 밖으로 '+o2.toFixed(1)+'px 나갔다(칩 '+w2.toFixed(0)+'px)');
-      assert(w2<w1,'재화가 커졌는데 칩이 안 줄었다 — 줄어들지 않으면 언젠가 ☰ 를 민다');
+      // ⚠ 「재화가 커지면 칩이 줄어든다」는 계약은 뺐다(2026-09-04) — [+] 를 없애고 아이콘을 줄여
+      //   자리가 남으면서, 지수 표기에서도 칩이 안 줄어도 되게 됐다. **지켜야 할 성질은 위 두 줄**이다:
+      //   재화가 아무리 길어져도 ☰ 가 화면 안(o1·o2 ≤ 0)이고, 좁아지면 이름이 말줄임된다(아래 nmOv).
+      assert(w2<=w1,'재화가 커졌는데 칩이 오히려 넓어졌다: '+w1.toFixed(0)+' → '+w2.toFixed(0));
       assert(nmOv.o==='hidden' && nmOv.t==='ellipsis',
         '칩이 줄어들 때 던전 이름이 안 잘린다 — 글자가 칩을 뚫고 나간다(overflow-x '+nmOv.o+' / '+nmOv.t+')');
       // 칩을 다시 세워 아래 검사가 이어지게 한다
@@ -11202,7 +11241,8 @@ async function groupLobby(){
         assert(get('던전 배수')===want,'던전 배수가 표와 안 맞음: '+get('던전 배수')+' (기대 '+want+')'); }
       // ② 던전을 옮기면 값이 따라간다(두 곳에서 각자 계산하면 여기서 갈린다)
       prof.camp.dg=1; const m2=_campIdleModel();
-      assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.0','던전을 바꿨는데 배수가 그대로');
+      // 던전 1 진입 = ×1.5(2026-09-04 사용자 확정 · 옛 ×1.0)
+      assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.5','던전을 바꿨는데 배수가 그대로: '+m2.info.stats.find(x=>x[0]==='던전 배수')[1]);
       prof.camp.dg=3;
       // ③ 실제로 그려진다 — 공용 렌더러(renderCmdGrid)를 쓴다(새 카드를 만들지 않는다)
       renderCampIdleSheet(box);
@@ -11384,6 +11424,116 @@ async function groupLobby(){
 
   // 🏕 던전·라운드 드롭다운(2026-08-25) — 칩을 누르면 칩 아래로 자란다.
   //   ⚠ 캠프 화면은 3D 라 여기서 못 띄운다 → 캠프 상태만 흉내 내고 **판 자체**를 검사한다.
+  // 🌒 좌상단 그늘 — 캠프는 바닥이 밝은 돌이라 판 없는 글자가 묻힌다. 판을 만들지 않고
+  //   **화면 맨 위에서 내려오는 그늘** 한 겹으로 읽히게 한다(2026-09-04 · 목업 camp-chip-scrim-4 4안).
+  // ⚙ 오른쪽 위 버튼 — 캠프 맵은 ☰(더보기), 캠프 **구역**(환생·트리·룬)과 그 밖 화면은 톱니(설정).
+  //   ! 는 ☰ 에만 붙고, 구역에서 톱니를 누르면 **설정이 구역 위로** 떠야 한다(2026-09-04 사용자 신고 둘).
+  await step('오른쪽 위: 톱니에는 ! 가 없고 · 구역에서 설정이 열린다', async()=>{
+    const bar=$('curBar'), btn=$('curSettingsBtn'), dot=$('hbGrowDot'), ph=$('phone');
+    skipIf(!bar||!btn||!dot,'재화 바 없음');
+    const wasHide=bar.classList.contains('hide'), camp0=ph.classList.contains('campMode'), art0=ph.classList.contains('artLift');
+    try{
+      curShow(true); dot.classList.add('show');
+      // ① 캠프 맵 = ☰ + ! 가 보인다
+      ph.classList.add('campMode'); ph.classList.remove('artLift');
+      assert(getComputedStyle(dot).display!=='none','캠프 맵인데 ! 가 안 보인다 — 더보기 신호가 사라졌다');
+      // ② 캠프 구역 = 톱니 + ! 없음
+      ph.classList.add('artLift');
+      assert(getComputedStyle(dot).display==='none','톱니에 ! 가 붙어 있다 — 설정에는 알릴 것이 없다');
+      // ③ 유즈맵·상점(캠프 밖) = 톱니 + ! 없음
+      ph.classList.remove('campMode','artLift');
+      assert(getComputedStyle(dot).display==='none','캠프 밖 톱니에 ! 가 붙어 있다');
+      // ④ 구역에서 오른쪽 위를 누르면 **설정**이 열리고, 구역(z 120) 위에 뜬다
+      if(typeof hudTopMenu==='function' && $('settingsPop')){
+        ph.classList.add('campMode','artLift');
+        hudTopMenu('app'); await sleep(40);
+        const sp=$('settingsPop');
+        assert(!sp.classList.contains('hide'),'구역에서 톱니를 눌렀는데 설정이 안 열린다(더보기로 샜다)');
+        assert(parseInt(getComputedStyle(sp).zIndex,10)>120,'설정이 구역(z 120) 뒤에 열린다: z '+getComputedStyle(sp).zIndex);
+        if(typeof closeSettings==='function') closeSettings(); await sleep(40); }
+      return '☰=!  · 톱니=! 없음 · 구역에서 설정 열림';
+    } finally { dot.classList.remove('show');
+      ph.classList.toggle('campMode', camp0); ph.classList.toggle('artLift', art0);
+      if(wasHide) curShow(false); }
+  });
+
+  // 🧑 좌상단 프로필 상자 — 초상(정사각) · 이름 · 레벨 · 경험치. 칩은 그 아래 줄이다.
+  await step('캠프 좌상단: 프로필 상자(정사각 초상 · 이름 · 레벨)', async()=>{
+    const e=$('curLv'); skipIf(!e,'프로필 상자 없음');
+    const ph=$('phone'), bar=$('curBar');
+    const camp0=ph.classList.contains('campMode'), wasHide=bar.classList.contains('hide');
+    try{
+      curShow(true); ph.classList.add('campMode');
+      if(typeof curPaintLv==='function'){ e._lvKey=''; curPaintLv(); }
+      assert(getComputedStyle(e).display!=='none','캠프인데 프로필 상자가 안 보인다');
+      const nm=e.querySelector('.clvNm'), lv=e.querySelector('.clvN'), bar2=e.querySelector('.clvBar i');
+      assert(nm && nm.textContent.trim(),'이름이 비어 있다');
+      assert(lv && /^Lv\.\d+$/.test(lv.textContent),'레벨 표기가 「Lv.n」 이 아니다: '+(lv&&lv.textContent));
+      assert(bar2,'경험치 바가 없다');
+      // 🖼 초상은 **공용 avatarHTML**(⛔ 새 초상을 만들지 말 것) 이고, 이 자리에서만 **정사각**이다.
+      const av=e.querySelector('.fAva');
+      assert(av,'초상이 공용 .fAva 가 아니다 — 새로 만들었는지 확인할 것');
+      const br=parseFloat(getComputedStyle(av).borderRadius)||0, ar=av.getBoundingClientRect();
+      const w=ar.width;
+      assert(br<=6,'초상이 동그라미다 — 이 자리는 정사각이다(radius '+br.toFixed(1)+')');
+      assert(w>0 && Math.abs(w-ar.height)<0.6,'초상이 정사각형이 아니다: '+w.toFixed(1)+'×'+ar.height.toFixed(1));
+      // 📐 높이는 **글자 블록(이름+레벨)과 맞아야** 한다 — 아래로 삐져나오면 안 된다(2026-09-04 사용자 지적)
+      { const tr=e.querySelector('.clvTx').getBoundingClientRect();
+        assert(ar.bottom<=tr.bottom+0.6,'초상이 글자 블록 아래로 삐져나온다: '+(ar.bottom-tr.bottom).toFixed(2)+'px');
+        assert(ar.top>=tr.top-0.6,'초상이 글자 블록 위로 삐져나온다: '+(tr.top-ar.top).toFixed(2)+'px');
+        // 📏 위아래가 **양쪽 다** 닿아야 한다 — 아래만 맞고 위가 비면 얹혀 있는 것처럼 보인다(2026-09-04)
+        assert(Math.abs((ar.top-tr.top))<=0.6 && Math.abs((ar.bottom-tr.bottom))<=0.6,
+          '초상 높이가 글자 블록과 안 맞는다: 위 '+(ar.top-tr.top).toFixed(2)+' 아래 '+(ar.bottom-tr.bottom).toFixed(2));
+        assert(ar.right<=tr.left+0.6,'초상이 이름을 덮는다: '+(ar.right-tr.left).toFixed(1)+'px'); }
+      // 🎨 닉 색(초록·보라)은 걷는다 — 좌상단은 한 사람뿐이라 그 색이 뜻이 없고 상단 줄에서 튄다
+      { const raw=getComputedStyle(av).borderTopColor, n=raw.split(/[^0-9.]+/).filter(Boolean).map(Number);
+        const sat=Math.max(n[0],n[1],n[2])-Math.min(n[0],n[1],n[2]);
+        assert(sat<=24,'초상이 아직 닉 색이다(무채로 걷어야 한다): '+raw);
+        assert(!av.getAttribute('style'),'초상에 인라인 색이 남아 있다 — CSS 가 못 이긴다');
+        // 🫥 면은 **반투명**이다 — 짙으면 상단 줄에서 이 칸만 판처럼 튄다(2026-09-04 사용자 지적)
+        { const bi=getComputedStyle(av).backgroundImage;
+          const al=bi.split("rgba(").slice(1).map(function(s){ var p=s.split(")")[0].split(","); return Number(p[3]); });
+          assert(al.length && Math.max.apply(null,al)<=0.6,
+            '초상 면이 너무 짙다(배경이 비쳐야 한다): '+bi.slice(0,60)); } }
+      // ⛔ 공용 초상(다른 화면)은 원형 그대로여야 한다 — 여기서만 덮는 것이 규칙이다
+      { const probe=document.createElement('span'); probe.className='fAva'; document.body.appendChild(probe);
+        const pr=parseFloat(getComputedStyle(probe).borderRadius)||0; probe.remove();
+        assert(pr>6,'공용 초상까지 각져 버렸다 — 친구·대기실이 함께 바뀐다: radius '+pr); }
+      // ⑦+⑧ 좌상단 두 줄의 위계(2026-09-04 사용자 확정 · 목업 camp-topleft-8):
+      //   ⑦ 칩 글자는 **프로필 이름보다 작다** — 커지면 눈이 아래로 먼저 간다.
+      //   ⑧ 프로필과 칩 사이에 **헤어라인**(칩의 ::before) — 두 줄이 다른 정보임을 선으로 말한다.
+      { const chip=$('curTitle');
+        if(chip && chip.classList.contains('asChip') && chip.querySelector('.cdNm')){
+          const cn=parseFloat(getComputedStyle(chip.querySelector('.cdNm')).fontSize);
+          const pn=parseFloat(getComputedStyle(nm).fontSize);
+          assert(cn<pn,'칩 글자가 프로필 이름보다 크다 — 눈이 아래로 먼저 간다: 칩 '+cn+' vs 이름 '+pn);
+          const bf=getComputedStyle(chip,'::before');
+          assert(bf.content!=='none','프로필과 칩 사이 구분선이 없다');
+          assert(parseFloat(bf.height)<=1.5,'구분선이 헤어라인(1px)보다 두껍다: '+bf.height); } }
+      return '정사각 '+w.toFixed(0)+'px · '+nm.textContent+' · '+lv.textContent;
+    } finally { ph.classList.toggle('campMode', camp0); if(wasHide) curShow(false); }
+  });
+
+  await step('캠프 좌상단: 위에서 내려오는 그늘(판이 아니라 그늘)', async()=>{
+    const bar=$('curBar'); skipIf(!bar,'재화 바 없음');
+    const ph=$('phone'); const had=ph.classList.contains('campMode');
+    const wasHide=bar.classList.contains('hide'), wasBare=bar.classList.contains('bare');
+    try{
+      curShow(true); bar.classList.add('bare'); ph.classList.add('campMode');
+      const af=getComputedStyle(bar,'::after');
+      assert(af.display!=='none','캠프인데 그늘이 없다 — 밝은 돌바닥에서 좌상단 글자가 묻힌다');
+      assert(parseFloat(af.height)>=40,'그늘이 너무 얕다(칩·재화를 못 덮는다): '+af.height);
+      // ⛔ 판을 만들지 말 것 — 그늘은 ::after 한 겹이고 바 자체는 면이 없다
+      const cs=getComputedStyle(bar), bg=(cs.backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+      assert(bg.length<4 || bg[3]<=0.05,'재화 바에 면이 생겼다 — 좌상단은 판이 아니라 글자다: '+cs.backgroundColor);
+      // 캠프가 아니면 그늘은 다시 꺼진다(다른 화면은 배경이 이미 어둡다)
+      ph.classList.remove('campMode');
+      assert(getComputedStyle(bar,'::after').display==='none','캠프가 아닌데 그늘이 켜져 있다');
+      return '그늘 '+af.height+' · 캠프에서만';
+    } finally { ph.classList.toggle('campMode', had); bar.classList.toggle('bare', wasBare);
+      if(wasHide) curShow(false); }
+  });
+
   await step('캠프 좌상단: 던전 선택 전체 화면(칩이 머리줄 · ◀▶ + 슬라이더)', async()=>{
     skipIf(typeof campDropOpen!=='function','드롭다운 함수 없음');
     const t=$('curTitle'); assert(t,'#curTitle 이 없음');
@@ -11456,7 +11606,28 @@ async function groupLobby(){
       { const row=d().querySelector('.cdRow.here'); const cs=getComputedStyle(row);
         const bc=(cs.borderTopColor.match(/[\d.]+/g)||[]).map(Number);
         assert(bc[0]>200 && bc[0]>bc[1]+80,'현재 던전 카드 테두리가 붉은색이 아니다: '+cs.borderTopColor);
-        assert(row.querySelector('.cdSub') && row.querySelector('.cdSub').textContent,'던전 카드에 부제(배수) 줄이 없다'); }
+        // 부제 = **장소 설명**이다(2026-09-04). ⛔ 배수를 두 곳에 적지 말 것 — 어느 쪽이 맞는지 헷갈린다.
+        const sub=row.querySelector('.cdSub');
+        assert(sub && sub.textContent,'던전 카드에 부제(장소 설명)가 없다');
+        assert(!/배수|×/.test(sub.textContent),'부제에 배수가 또 적혀 있다: '+sub.textContent);
+        // 배수는 **범위**로 적는다 — 던전 1 은 ×1 로 들어가 ×2 로 나온다(진입값만 적으면 이득이 없어 보인다)
+        const _rows=[...d().querySelectorAll('.cdRow')];
+        assert(_rows[0].querySelector('.cdMul').textContent==='×1.0','캠프 배수가 ×1.0 이 아니다: '+_rows[0].querySelector('.cdMul').textContent);
+        assert(/^×1.5 ~ ×2.0$/.test(_rows[1].querySelector('.cdMul').textContent),
+          '던전 1 배수가 「×1.5 ~ ×2.0」 이 아니다(2026-09-04 사용자 확정): '+_rows[1].querySelector('.cdMul').textContent);
+        assert(/^×3.0 ~ ×6.0$/.test(_rows[2].querySelector('.cdMul').textContent),
+          '던전 2 배수가 「×3.0 ~ ×6.0」 이 아니다: '+_rows[2].querySelector('.cdMul').textContent);
+        // 10 이상은 소수를 안 붙인다(2026-09-04 사용자 확정) — 「×10.0」이 아니라 「×10」
+        assert(/^×10 ~ ×20$/.test(_rows[3].querySelector('.cdMul').textContent),
+          '던전 3 배수가 「×10 ~ ×20」 이 아니다(10 이상은 소수를 뗀다): '+_rows[3].querySelector('.cdMul').textContent);
+        // 축약값도 이 화면에서는 소수를 뗀다 — 「×120.0K」가 아니라 「×120K」(⛔ fmtCur 자체는 안 고친다)
+        assert(!/.dK|.0M/.test(_rows[9].querySelector('.cdMul').textContent),
+          '던전 9 축약 배수에 소수가 남았다: '+_rows[9].querySelector('.cdMul').textContent);
+        // 🚫 던전 목록에 스크롤 막대를 보이지 않는다 — 카드 오른쪽 배수 글자와 겹친다
+        { const list=d().querySelector('.cdList');
+          assert(!list.classList.contains('uiScroll'),'던전 목록에 공용 스크롤바(.uiScroll)가 붙었다 — 막대가 도로 그려진다');
+          assert(getComputedStyle(list).scrollbarWidth==='none','던전 목록 스크롤 막대가 보인다');
+          assert(list.scrollHeight>list.clientHeight,'던전 목록이 굴러가지 않는다 — 막대만 감춰야지 스크롤까지 막으면 안 된다'); } }
       // ⑥ 🎚 슬라이더 — 채움/손잡이 = (r-1)/(max-1) · 붉은 채움 · **누르고 끌면** 라운드가 따라온다
       { const sl=d().querySelector('.cdSld'), f=d().querySelector('.cdFill'), k=d().querySelector('.cdKnob');
         assert(sl && f && k,'라운드 슬라이더 조각이 없음');

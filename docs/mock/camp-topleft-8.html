@@ -1,0 +1,143 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>좌상단 다듬기 — 프로필 + 던전 칩 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ **지금 화면 실측**(2026-09-04 · 폰 390px · 좌표는 #phone 기준)
+     프로필  x10  y14  106×26   (초상 26 + 이름 11.5 + Lv 11 + 경험치 바 52×2)
+     던전 칩 x10  y46  69.6×14  (「캠프 · 0/50」 + ⌄ + 붉은 진행 밑선)
+     재화    x210.8 y15 169.2×24 · 적 배지 줄 y52 (오른쪽 끝)
+     그늘    화면 맨 위에서 56px 내려온다
+   ⛔ 자리는 **좌상단으로 확정**이다(2026-09-04 사용자 확정) — 중앙 이동은 접었다:
+      ① 칩이 던전 선택 전체 화면의 머리줄·닫는 손잡이다 ② 맵 상단 중앙은 적이 내려오는 줄(SPAWN_Y .18)
+      ③ 좌상단은 환생·룬 구역 이름도 쓰는 「지금 어디」의 자리다.
+   그래서 여덟 안은 **자리를 옮기지 않고** 두 줄(프로필·칩)의 짜임만 다르게 한다. */
+:root{--ko:'IBM Plex Sans KR',sans-serif;--num:'Rajdhani',sans-serif;--red:#ff7676;--ink:#e6eefc;
+  --dim:rgba(214,226,240,.5);--mute:rgba(214,226,240,.35);--edge:rgba(255,255,255,.16)}
+*{box-sizing:border-box}
+body{margin:0;background:#101317;color:#dfe5ee;font-family:var(--ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--num)}
+.sub{margin:0 0 9px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:58px}.sub b{color:#c3ccd8;font-weight:700}
+/* 무대 — 지금 캠프(밝은 돌바닥) */
+.phone{width:390px;height:150px;position:relative;overflow:hidden;
+  background:radial-gradient(120% 90% at 30% 0%,#9a9179,#867d68)}
+.phone::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 46px,transparent 46px 48px),
+             repeating-linear-gradient(90deg,rgba(0,0,0,.05) 0 62px,transparent 62px 64px)}
+.scrim{position:absolute;left:0;right:0;top:0;height:56px;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.28) 55%,transparent)}
+.bar{position:absolute;left:10px;right:10px;top:10px;height:34px;z-index:2;display:flex;align-items:center}
+.res{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--num);font-weight:800;font-size:11.5px;
+  color:#f2f6fb;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.res span{display:flex;align-items:center;gap:4px}
+.res u{width:12px;height:12px;border-radius:2px;text-decoration:none;display:block}
+.res .m u{background:linear-gradient(180deg,#7fd8ff,#2b7fae)}.res .g u{background:linear-gradient(180deg,#7ff0b0,#25865a)}
+.res .p u{background:linear-gradient(180deg,#c9b6ff,#6a4fd0)}.res .c u{background:linear-gradient(180deg,#cfd8e6,#7d8794)}
+.set{width:22px;height:22px;border-radius:3px;border:1px solid var(--edge);display:grid;place-items:center;color:#aab6c6}
+.set svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.foe{position:absolute;right:8px;top:52px;z-index:2;font-family:var(--num);font-weight:800;font-size:11px;color:#ff6b6b;
+  padding:2px 7px;border:1px solid rgba(255,59,59,.4);border-radius:3px;background:rgba(20,8,8,.5)}
+.mm{margin:7px 0 0;color:#6f7887;font-size:10.5px;font-family:var(--num);letter-spacing:.04em}
+/* ── 공통 부품 ─────────────────────────────────────────────────────── */
+.pf{position:absolute;left:10px;z-index:3;display:flex;align-items:center;gap:7px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.av{flex:none;width:26px;height:26px;border-radius:3px;border:1px solid var(--edge);
+  background:linear-gradient(180deg,rgba(22,24,28,.34),rgba(9,10,12,.46));
+  display:grid;place-items:center;font-size:12px;font-weight:800;color:#dfe7f2;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))}
+.tx{display:flex;flex-direction:column;gap:3px;min-width:0}
+.nm{font-size:11.5px;font-weight:800;color:var(--ink);line-height:1;white-space:nowrap}
+.row{display:flex;align-items:center;gap:5px}
+.lv{font-family:var(--num);font-size:11px;font-weight:800;color:rgba(214,226,240,.72);line-height:1}
+.xp{width:52px;height:2px;background:rgba(255,255,255,.14);overflow:hidden}
+.xp i{display:block;height:100%;width:42%;background:rgba(214,226,240,.75)}
+.chip{position:absolute;left:10px;z-index:3;display:inline-flex;align-items:baseline;
+  padding:0 13px 0 0;line-height:1;letter-spacing:-.2px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.chip .c1{font-size:12.5px;font-weight:800;color:var(--ink)}
+.chip .sep{font-style:normal;font-size:11.5px;color:var(--mute);margin:0 4px}
+.chip .n{font-family:var(--num);font-size:14px;font-weight:800;color:var(--ink)}
+.chip .d{font-style:normal;font-family:var(--num);font-size:11.5px;color:var(--dim)}
+.chip .cv{position:absolute;right:0;bottom:0;width:11px;height:11px;color:var(--dim)}
+.chip .cv svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.chip .ul{position:absolute;left:0;right:12px;bottom:-4px;height:2px;background:rgba(255,255,255,.14)}
+.chip .ul i{display:block;height:100%;width:60%;background:var(--red)}
+
+/* ① 지금 것(기준선) — 프로필 y14 · 칩 y46 */
+.v1 .pf{top:14px}
+.v1 .chip{top:46px}
+
+/* ② 붙인다 — 칩을 프로필 바로 밑(y40)으로. 두 줄이 한 덩어리로 읽힌다 */
+.v2 .pf{top:14px}
+.v2 .chip{top:40px}
+
+/* ③ 한 줄 — 칩을 프로필 오른쪽에 세운다(세로 두 줄을 없앤다) */
+.v3 .pf{top:15px}
+.v3 .chip{top:19px;left:126px}
+
+/* ④ 들여쓰기 — 칩을 초상 폭(33px)만큼 들여 이름·레벨과 왼끝을 맞춘다 */
+.v4 .pf{top:14px}
+.v4 .chip{top:46px;left:43px}
+
+/* ⑤ 칩에 그늘 — 칩만 옅은 그늘을 깔아 프로필과 층을 가른다 */
+.v5 .pf{top:14px}
+.v5 .chip{top:44px;padding:4px 13px 4px 8px;margin-left:-8px;
+  background:linear-gradient(90deg,rgba(0,0,0,.42),rgba(0,0,0,.16) 76%,transparent)}
+.v5 .chip .ul{left:8px;right:14px;bottom:2px}
+
+/* ⑥ 초상 크게 — 초상을 두 줄 높이(40px)로 키우고 오른쪽에 이름/레벨/칩 셋을 쌓는다 */
+.v6 .pf{top:14px;align-items:flex-start}
+.v6 .av{width:40px;height:40px;font-size:16px}
+.v6 .tx{gap:4px}
+.v6 .chip{position:static;padding-right:13px}
+.v6 .chip .ul{left:0;right:12px;bottom:-3px}
+
+/* ⑦ 칩을 작게 — 프로필이 주인공, 칩은 한 단 작고 옅게(위계를 준다) */
+.v7 .pf{top:14px}
+.v7 .chip{top:45px}
+.v7 .chip .c1{font-size:11px;color:rgba(230,238,252,.82)}
+.v7 .chip .n{font-size:12px;color:rgba(230,238,252,.82)}
+.v7 .chip .d{font-size:10px}
+.v7 .chip .ul{right:11px;bottom:-3px}
+
+/* ⑧ 구분선 — 프로필과 칩 사이에 얇은 헤어라인 하나 */
+.v8 .pf{top:12px}
+.v8 .chip{top:48px}
+.v8 .hr{position:absolute;left:10px;width:106px;top:42px;height:1px;z-index:3;
+  background:linear-gradient(90deg,rgba(255,255,255,.20),transparent)}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const CV='<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+const PF='<div class="pf"><span class="av">레</span><span class="tx"><span class="nm">레인저</span>'
+  +'<span class="row"><i class="lv">Lv.12</i><span class="xp"><i></i></span></span></span></div>';
+const CHIP='<div class="chip"><span class="c1">잊혀진 회랑</span><i class="sep">·</i><b class="n">30</b><i class="d">/50</i>'
+  +'<i class="cv">'+CV+'</i><span class="ul"><i></i></span></div>';
+const PF6='<div class="pf"><span class="av">레</span><span class="tx"><span class="nm">레인저</span>'
+  +'<span class="row"><i class="lv">Lv.12</i><span class="xp"><i></i></span></span>'+CHIP+'</span></div>';
+const RES='<div class="res"><span class="m"><u></u>1.6M</span><span class="g"><u></u>755</span>'
+  +'<span class="p"><u></u>0</span><span class="c"><u></u>0/10</span>'
+  +'<i class="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg></i></div>';
+const ANS=[
+ ['지금 것 (기준선)','프로필 y14 · 칩 y46. 두 줄 사이가 <b>6px</b> 떠 있어 각자 따로 노는 느낌이고, 칩 왼끝이 초상과 같은 줄에 서 있다.'],
+ ['붙인다','칩을 <b>프로필 바로 밑(y40)</b>으로 올린다. 6px 틈이 사라져 두 줄이 한 덩어리로 읽힌다 — 가장 작은 변화.'],
+ ['한 줄로','칩을 <b>프로필 오른쪽</b>에 세워 세로 두 줄을 아예 없앤다. 맵을 가장 적게 가리지만 좌상단이 가로로 길어진다(약 230px).'],
+ ['들여쓰기','칩을 <b>초상 폭만큼 들여</b> 이름·레벨과 왼끝을 맞춘다. 초상이 두 줄을 함께 안는 모양이 되어 덩어리가 분명하다.'],
+ ['칩에 그늘','칩에만 <b>옅은 그늘</b>을 깔아 프로필과 층을 가른다. 밝은 바닥에서 칩이 더 또렷해지고, 「누르는 것」이라는 신호도 된다.'],
+ ['초상 크게','초상을 <b>두 줄 높이(40px)</b>로 키우고 오른쪽에 이름·레벨·칩 셋을 쌓는다. 프로필이 확실한 주인공이 되고 칩이 그 아래 자연스럽게 붙는다.'],
+ ['칩을 작게','프로필이 주인공, 칩은 <b>한 단 작고 옅게</b>. 지금은 칩 글자가 이름보다 커서 눈이 아래로 먼저 간다 — 위계를 뒤집는다.'],
+ ['구분선','프로필과 칩 사이에 <b>얇은 헤어라인</b> 하나. 두 줄이 다른 정보라는 것을 선으로 말한다 — 하단 구역의 머리줄 어휘와 같다.'],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d],i)=>{
+  const v='v'+(i+1);
+  const body=(i===5) ? PF6 : (PF+CHIP+(i===7?'<i class="hr"></i>':''));
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'
+    +'<div class="phone '+v+'"><div class="scrim"></div><div class="bar">'+RES+'</div>'
+    +body+'<span class="foe">적 16</span></div><p class="mm"></p></div>'; }).join('');
+const measure=()=>{document.querySelectorAll('.cell').forEach(c=>{
+  const ph=c.querySelector('.phone').getBoundingClientRect();
+  const pf=c.querySelector('.pf').getBoundingClientRect(), ch=c.querySelector('.chip').getBoundingClientRect();
+  c.querySelector('.mm').textContent='프로필 '+(pf.left-ph.left).toFixed(0)+','+(pf.top-ph.top).toFixed(0)
+    +' · 칩 '+(ch.left-ph.left).toFixed(0)+','+(ch.top-ph.top).toFixed(0)
+    +' · 두 줄 틈 '+(ch.top-pf.bottom).toFixed(1)+'px · 좌상단 폭 '+Math.max(pf.right,ch.right).toFixed(0)+'px';});};
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(measure); else setTimeout(measure,300);
+</script></body></html>
