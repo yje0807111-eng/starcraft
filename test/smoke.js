@@ -532,15 +532,21 @@ async function groupLobby(){
       const $peek=()=>document.querySelector('#campReb .crPeek');
       const $hm=()=>document.querySelector('#campReb .crHm');
       assert($st()&&$list(),'이번 회차 구역이 없다');
-      const open=()=>getComputedStyle($list()).display!=='none';
+      // ⚠ 접힘은 이제 **display 가 아니라 grid-template-rows** 다(2026-09-04 부드러운 접기).
+      //   display 로 재면 늘 'block' 이라 검사가 조용히 통과한다 — **감싸는 칸의 높이**로 본다.
+      const $fold=k=>document.querySelector('#campReb .crFold.'+k);
+      const open=()=>$fold('list').getBoundingClientRect().height>4;
       // 머리줄이 곧 손잡이다
       { const h=$st().querySelector('.crH'); assert(h&&h.tagName==='BUTTON','머리줄이 눌리는 손잡이가 아니다'); }
       const was=open();
       if(was) campRebStToggle();                      // 접힌 상태로 맞춘다
+      await sleep(360);
       assert(!open(),'접었는데 목록이 그대로 보인다');
       // 접히면 배수·포인트가 **아래로 내려온다**
+      // ⚠ 이제 움직임에 시간이 걸린다 — **끝난 뒤에** 잰다(전이 중에 재면 중간값이 나온다)
+      await sleep(360);
       const y0=document.querySelector('#campReb .crTopCard').getBoundingClientRect().top;
-      campRebStToggle();
+      campRebStToggle(); await sleep(360);
       assert(open(),'폈는데 목록이 안 보인다');
       const y1=document.querySelector('#campReb .crTopCard').getBoundingClientRect().top;
       assert(y0>y1+30,'접었을 때 배수 구역이 안 내려온다: 접힘 '+Math.round(y0)+' vs 펴짐 '+Math.round(y1));
@@ -548,8 +554,8 @@ async function groupLobby(){
       campRebRender();
       assert(open(),'다시 그렸더니 접힘 상태가 초기화됐다');
       // 📄 접혀 있어도 **요약 두 줄**은 보인다(총 미네랄 · 플레이 시간) — ⛔ 통째로 감추지 말 것
-      { campRebStToggle();                             // 다시 접는다
-        assert($peek() && getComputedStyle($peek()).display!=='none','접었더니 요약까지 사라졌다');
+      { campRebStToggle(); await sleep(360);            // 다시 접는다
+        assert($peek() && $fold('peek').getBoundingClientRect().height>4,'접었더니 요약까지 사라졌다');
         // ⭐ 요약도 **줄 꼴**이다(아이콘·이름·값) — ⛔ 아이콘만 늘어놓은 한 줄로 되돌리지 말 것
         { const rows=$peek().querySelectorAll('.crLi');
           assert(rows.length===2,'요약이 두 줄이 아니다: '+rows.length);
@@ -560,8 +566,15 @@ async function groupLobby(){
         assert(($peek().innerText||'').indexOf(want)>=0,
           '요약의 미네랄이 합계가 아니다: '+$peek().innerText.trim()+' (기대 '+want+')');
         // 펴면 요약은 물러나고 목록이 나온다
-        campRebStToggle();
-        assert(getComputedStyle($peek()).display==='none','폈는데 요약이 남아 있다'); }
+        campRebStToggle(); await sleep(360);
+        assert($fold('peek').getBoundingClientRect().height<=4,'폈는데 요약이 남아 있다'); }
+      // 🎬 **부드럽게 열리고 닫힌다** — 감싸는 칸에 전이가 걸려 있어야 한다.
+      //   ⛔ display:none 으로 되돌리지 말 것(애니가 안 걸린다) · ⛔ max-height 어림값도 쓰지 말 것.
+      { const cs=getComputedStyle($fold('list'));
+        assert(/grid-template-rows/.test(cs.transitionProperty),
+          '접기에 애니가 없다(전이 속성: '+cs.transitionProperty+')');
+        assert(parseFloat(cs.transitionDuration)>0.05,'접기 애니 시간이 0 이다: '+cs.transitionDuration);
+        assert(getComputedStyle($list()).display!=='none','목록을 display:none 으로 감췄다 — 애니가 안 걸린다'); }
       // ✍ 손잡이 글자는 **다음에 할 일**이다 — 접혀 있으면 「더보기」, 펴져 있으면 「접기」
       { assert($hm(),'더보기 글자가 없다');
         assert($hm().textContent==='접기','펴진 상태의 손잡이가 「접기」가 아니다: '+$hm().textContent);
@@ -573,7 +586,8 @@ async function groupLobby(){
     { const w=document.querySelector('#campReb .crWarn');
       assert(w,'되돌릴 수 없다는 안내가 없다');
       const t=(w.textContent||'').trim();
-      assert(t==='환생 시 진행이 초기화됩니다','경고 문구가 다르다: '+t);
+      // ✍ **무엇이 남는지까지** 말한다 — 초기화만 적으면 겁만 준다(실제로 배수·트리는 남는다)
+      assert(t==='진행은 초기화 · 배수와 트리는 그대로','경고 문구가 다르다: '+t);
       // 자리 — **환생 버튼 위**다(팩 아래에 두면 팩에 대한 경고로 읽힌다)
       const go=document.querySelector('#campReb .crGo');
       assert(w.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+1,
@@ -586,12 +600,70 @@ async function groupLobby(){
       const names=li.map(e=>e.querySelector('.crNm').textContent);
       for(const k of ['터치','터치로 번 미네랄','자동으로 번 미네랄','가스','플레이 시간'])
         assert(names.indexOf(k)>=0,'회차 지표에 빠짐: '+k); }
-    // ⑤ 💳 ×2 는 **환생 팩**이다 — 젬 1회권이 아니다(2026-08-31 · GEM.md §4 · BALANCE §4-C)
+    // ✍ 문구 — **모바일 어휘**(2026-09-04 사용자 확정). ⛔ 아래 넷을 되돌리지 말 것.
+    //   ⛔ 큰 숫자 라벨에 「증가량」을 쓰지 말 것 — 값은 환생 **후의 배수**지 늘어나는 폭이 아니다.
+    { const q=s2=>document.querySelector('#campReb '+s2);
+      const tx=(e)=>((e&&e.textContent)||'').replace(/\s+/g,'').trim();
+      assert(tx(q('.crHero .crK'))==='환생후재화배수','큰 숫자 라벨이 다르다: '+tx(q('.crHero .crK')));
+      assert(tx(q('.crPt .crK'))==='환생트리포인트','포인트 라벨이 다르다: '+tx(q('.crPt .crK')));
+      assert(tx(q('.crNow')).indexOf('지금')===0,'칩이 「지금 ×N」 이 아니다: '+tx(q('.crNow')));
+      assert(tx(q('.crNow')).indexOf('배수')<0,'칩에 「배수」가 겹친다 — 위 라벨이 이미 배수다');
+      const w=tx(q('.crWarn'));
+      assert(w.indexOf('초기화')>=0 && w.indexOf('그대로')>=0,
+        '경고가 「무엇이 남는지」를 안 말한다: '+w); }
+    // ⑤ 📺 아래 한 칸은 **두 얼굴**이다 (2026-09-04 사용자 확정)
+    //   ㉠ 팩이 없으면 — 「광고 시청 시 포인트 ×1.5」 **버튼**(아직 껍데기)
+    //   ㉡ 팩을 샀으면 — 「배수·포인트 ×2 · 환생 팩」 **상태 표시**로 잠긴다(팩이 광고를 덮는다)
+    //   ✍ **무엇에 걸리는 배수인지**가 문구에 있어야 한다 — 광고는 포인트만, 팩은 둘 다.
+    //     둘이 같은 꼴이라 범위를 안 적으면 같은 것으로 읽힌다(⛔ 각주로 빼지 말 것).
+    //   ⛔ 이 화면에서 상점으로 보내는 옛 길(campRebToShop)을 되살리지 말 것.
     { const pk=document.querySelector('#campReb .crPk');
-      assert(pk,'환생 팩 줄이 없다');
+      assert(pk,'아래 칸이 없다');
       assert(!campRebPackOn(),'스모크 시작 상태에서 팩을 이미 갖고 있다');
-      assert(pk.textContent.indexOf('2')>=0,'팩 줄에 배수가 안 보임');
-      assert(/campRebToShop/.test(pk.getAttribute('onclick')||''),'팩 줄이 상점으로 안 보낸다');
+      assert(pk.tagName==='BUTTON','팩이 없는데 광고 칸이 버튼이 아니다');
+      { const t=(pk.innerText||'').replace(/\s+/g,' ').trim();
+        assert(t.indexOf('광고')>=0 && t.indexOf('1.5')>=0,'광고 칸 문구가 다르다: '+t);
+        assert(t.indexOf('포인트')>=0,'광고 문구가 **무엇에 걸리는지**를 안 말한다: '+t); }
+      assert(!/campRebToShop/.test(pk.getAttribute('onclick')||''),
+        '옛 상점 길이 되살아났다 — 팩은 상점에서만 판다');
+      // 🔒 **환생 버튼과 같이 잠긴다**(2026-09-04) — 지금 환생을 못 하는데 배수만 올려 둘 수 없다.
+      //   ⛔ 광고만 열어 두지 말 것: 눌러서 얻은 ×1.5 가 갈 곳이 없다.
+      { const go=document.querySelector('#campReb .crGo');
+        assert(pk.disabled===(go?go.disabled:false),
+          '광고 칸의 잠김이 환생 버튼과 다르다 — 광고 '+pk.disabled+' · 환생 '+(go&&go.disabled)); }
+      // 🌙 **잠김도 꺼진 네온**이다(2026-09-04 사용자 확정 · 목업 camp-reb-off-8 ②안).
+      //   어휘를 **끄지 말고 낮춘다** — 후광·고리 그라디언트·윗변 반사를 그대로 두고 세기만 뺀다.
+      //   ⛔ 평면 회색(background 단색 · rim 단색 · ::before display:none)으로 되돌리지 말 것:
+      //     두 칸이 나란히 죽어 화면이 통째로 밋밋해진다(사용자 지적).
+      { const C=campState(); const e0=C.earn;
+        C.earn=0; campRebRender(); await sleep(40);
+        const g=document.querySelector('#campReb .crGo'), ad=document.querySelector('#campReb .crPk.ad');
+        assert(g && g.disabled,'재화를 0 으로 했는데 환생이 안 잠긴다');
+        const lum=e=>{ const m=getComputedStyle(e).color.match(/[0-9.]+/g).map(Number);
+          return .299*m[0]+.587*m[1]+.114*m[2]; };
+        const off={};
+        for(const row of [['환생',g],['광고',ad]]){ const nm=row[0], el=row[1];
+          assert(el,nm+' 칸이 없다');
+          assert(/gradient/.test(getComputedStyle(el).backgroundImage),
+            nm+' 잠김이 평면이다 — 후광이 사라졌다');
+          const rim=el.querySelector('.crRim');
+          assert(rim && /gradient/.test(getComputedStyle(rim).backgroundImage),
+            nm+' 잠김 고리가 단색이다 — 그라디언트를 되돌려 놓지 말 것');
+          assert(getComputedStyle(el,'::before').display!=='none',
+            nm+' 잠김에서 윗변 반사를 껐다');
+          off[nm]=lum(el); }
+        // ⚠ 그래도 **켜짐보다 어두워야** 한다 — 못 누르는데 주 동작으로 읽히면 안 된다
+        C.earn=CAMP_REB_COST*3; campRebRender(); await sleep(40);
+        const g2=document.querySelector('#campReb .crGo'), a2=document.querySelector('#campReb .crPk.ad');
+        assert(!g2.disabled,'조건을 채웠는데 환생이 아직 잠겨 있다');
+        assert(lum(g2)-off['환생']>40,'환생 잠김이 켜짐만큼 밝다: '
+          +Math.round(off['환생'])+' → '+Math.round(lum(g2)));
+        assert(lum(a2)-off['광고']>10,'광고 잠김이 켜짐만큼 밝다: '
+          +Math.round(off['광고'])+' → '+Math.round(lum(a2)));
+        C.earn=e0; campRebRender(); await sleep(40); }
+      // 🚧 광고는 껍데기다 — ⛔ 눌러도 배수가 **실제로 올라가면 안 된다**(표시와 어긋난다)
+      { const m0=campRebMulGain(); campRebAd();
+        assert(campRebMulGain()===m0,'광고 껍데기가 배수를 실제로 올렸다: '+m0+' → '+campRebMulGain()); }
       // ⭐ 팩은 **버튼 구역**이다(2026-08-31 사용자 확정) — 다만 위계는 「환생」보다 한 단 아래.
       //   ⛔ 주 동작이 둘로 보이면 안 된다: 높이가 「환생」보다 낮아야 한다.
       assert(document.querySelectorAll('#campReb .crGo').length===1,'주 버튼이 하나가 아님');
@@ -609,7 +681,12 @@ async function groupLobby(){
       assert(Math.abs(p1/p0-2)<1e-6,'팩을 사도 포인트가 2배가 안 됨: ×'+(p1/p0).toFixed(3));
       campRebRender(); await sleep(40);
       { const on=document.querySelector('#campReb .crPk.on');
-        assert(on,'팩을 샀는데 「적용 중」으로 안 바뀐다'); }
+        assert(on,'팩을 샀는데 「적용 중」으로 안 바뀐다');
+        // 💳 팩은 **둘 다**에 걸린다 — 광고(포인트만)와 갈라 읽혀야 한다
+        const t2=(on.textContent||'').replace(/[ ]+/g,' ').trim();
+        assert(t2.indexOf('배수')>=0 && t2.indexOf('포인트')>=0,
+          '팩 줄이 **무엇에 걸리는지**를 안 말한다: '+t2);
+        assert(on.tagName!=='BUTTON','팩을 샀는데 아직 누를 수 있는 버튼이다'); }
       delete packs.reb; campRebRender(); await sleep(40); }
     // ④ 되돌릴 수 없으므로 확인을 거친다 — 나가기·로그아웃과 같은 껍데기
     campRebAsk(); await sleep(80);

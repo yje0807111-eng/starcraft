@@ -1466,9 +1466,13 @@ function campRebPlayTx(sec){ sec = Math.max(0, Math.floor(sec || 0));
 //     누른 자리가 DOM 에서 사라진다(좌상단 칩이 앓던 그 병).
 const REB_ST_KEY = 'nm_rebstat';
 let _rebStOpen = (typeof _lsGet === 'function') ? !!_lsGet(REB_ST_KEY, false) : false;
-function campRebStApply(){
+function campRebStApply(noAnim){
   const el = document.getElementById('campReb'); if(!el) return;
   const body = el.querySelector('.crBody'), st = el.querySelector('.crSt');
+  // 🎬 애니를 끄고 켜는 스위치 — 껐다가 **한 프레임 뒤** 다시 켠다(그 사이에 값이 자리를 잡는다)
+  if(noAnim && st){ st.classList.add('noAnim'); if(body) body.classList.add('noAnim');
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){
+      st.classList.remove('noAnim'); if(body) body.classList.remove('noAnim'); }); }); }
   if(body) body.classList.toggle('fold', !_rebStOpen);
   if(st){ st.classList.toggle('fold', !_rebStOpen);
     const h = st.querySelector('.crH');
@@ -1519,10 +1523,15 @@ function campRebRender(){
   box.innerHTML =
     // ── ① 위 — 배수(판 없이) + 포인트 칸 ──
     '<div class="crGap"></div><div class="crTopCard">'
-    + '<div class="crHero"><div class="crK">획 득 배 수</div>'
+    // ✍ ⛔ 「증가량」으로 적지 말 것 — 이 값은 환생 **뒤의 배수**(현재 + 이번에 붙는 몫)이지
+    //   늘어나는 폭이 아니다. 증가량이라면 0.20 이라고 적어야 맞다(2026-09-04).
+    + '<div class="crHero"><div class="crK">환생 후 재화 배수</div>'
     + '<div class="crBig">' + next.toFixed(2) + '</div>'
-    + '<div class="crNow">현재 ×' + campRebMul().toFixed(2) + '</div></div>'
-    + '<div class="crPt"><div class="crK">획 득 포 인 트</div>'
+    // ✍ ⛔ 「현재 배수」로 적지 말 것 — 위 라벨이 이미 배수라고 했다. 「지금 ↔ 환생 후」로 짝을 짓는다.
+    + '<div class="crNow">지금 ×' + campRebMul().toFixed(2) + '</div></div>'
+    // ✍ ⛔ 「획득량」을 붙이지 말 것 — 값이 「+2」라 + 가 이미 획득을 말한다.
+    //   대신 **어디에 쓰는 포인트인지**를 이름에 넣는다(환생 트리).
+    + '<div class="crPt"><div class="crK">환생 트리 포인트</div>'
     + '<div class="crPv">+' + campNum(gPts) + '</div>'
     + '<div class="crFx">재화 <b>' + fW.toFixed(2) + '</b> × 던전 <b>' + fD.toFixed(2)
     + '</b> × 라운드 <b>' + fR.toFixed(2) + '</b></div></div></div>'
@@ -1541,17 +1550,22 @@ function campRebRender(){
     //   ⛔ 아이콘만 늘어놓은 한 줄로 되돌리지 말 것 — 무엇의 숫자인지 이름이 없으면 못 읽는다.
     //   ⭐ 미네랄은 터치·자동을 **합쳐서** 보여 준다(요약이니 둘로 나누지 않는다).
     //   ⛔ 줄을 더 늘리지 말 것 — 늘리면 접은 뜻이 없어진다.
+    // 🎬 접히는 것은 **감싸는 칸(.crFold)** 이 맡는다 — 그 칸의 grid-template-rows 를
+    //   0fr ↔ 1fr 로 옮기면 **높이를 몰라도** 부드럽게 열리고 닫힌다.
+    //   ⛔ display:none 으로 되돌리지 말 것 — display 는 애니가 안 걸린다(그래서 툭 튀었다).
+    //   ⛔ max-height 로 하지 말 것 — 어림값을 박아야 하고, 내용이 그보다 길면 잘린다.
+    + '<div class="crFold peek">'
     + '<div class="crPeek">'
     + li(gi.min,  '미네랄', campNum((C.earnTap || 0) + (C.earnAuto || 0)), '')
     + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
-    + '</div>'
-    + '<div class="crList">'
+    + '</div></div>'
+    + '<div class="crFold list"><div class="crList">'
     + li(gi.tap,  '터치', campNum(C.tapped || 0), '회')
     + li(gi.min,  '터치로 번 미네랄', campNum(C.earnTap || 0), '')
     + li(gi.auto, '자동으로 번 미네랄', campNum(C.earnAuto || 0), '')
     + li(gi.gas,  '가스', campNum(C.earnGas || 0), '')
     + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
-    + '</div></div>';
+    + '</div></div></div>';
   // ── ③ 아래 — 조건 + 버튼 둘. **바닥 고정**이라 지표가 길어져도 안 밀린다 ──
   const foot = document.getElementById('crFoot');
   if(foot) foot.innerHTML =
@@ -1562,30 +1576,52 @@ function campRebRender(){
     // 🔲 .crRim = 1px 그라디언트 고리(마스크). ⛔ 빼지 말 것 — 빼면 테두리가 통째로 사라진다.
     // ⚠ 경고는 **환생 버튼 바로 위**다(2026-09-04 고침) — 팩 버튼 아래에 두면
     //   「팩을 사면 초기화된다」로 읽힌다. 되돌릴 수 없는 것은 그 버튼 옆에서 말한다.
-    // ✍ **짧게**(2026-09-04 사용자 지적) — 「환생하면 지금까지의 진행이 초기화됩니다」는
-    //   같은 말을 두 번 한다(환생하면 / 지금까지의). 조사와 수식을 걷고 명사로 끊는다.
-    + '<div class="crWarn">환생 시 진행이 초기화됩니다</div>'
+    // ✍ **무엇이 남는지까지** 말한다(2026-09-04) — 초기화만 적으면 겁만 주는데,
+    //   실제로 배수·포인트·트리·최고 기록은 그대로다(campRebirth 는 C 만 되감는다).
+    //   ⛔ 「환생하면 지금까지의 진행이 초기화됩니다」로 되돌리지 말 것 — 같은 말을 두 번 한다.
+    + '<div class="crWarn">진행은 초기화 · 배수와 트리는 그대로</div>'
     + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>'
     + '<span class="crRim"></span>'
     + '<span class="crGoI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"'
     + ' stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg></span>'
     + '환 생</button>'
-    // ── 💳 환생 팩 — 사면 **그 뒤로 계속** 2배. 위 두 숫자에 이미 반영돼 있다 ──
-    //    ⭐ **버튼 구역**이다(2026-08-31 사용자 확정 · 옛 「조용한 한 줄」에서 승격).
-    //      위계는 「환생」보다 한 단 아래 — 같은 얼굴이되 낮고 작다. 색은 보라(현질)를 지킨다.
-    //    ⚠ 산 뒤(`.on`)는 **버튼이 아니라 상태 표시**다 — 누를 것이 없으니 button 을 쓰지 않는다.
+    // ── 📺 이 한 칸이 **두 얼굴**이다 (2026-09-04 사용자 확정) ──
+    //    ㉠ 환생 팩이 **없으면** — 「광고 시청 시 환생 ×1.5」 버튼(무료 보상이라 **금색**).
+    //    ㉡ 환생 팩을 **샀으면** — 「환생 ×2 · 환생 팩」 **상태 표시**로 잠긴다(현질이라 **보라**).
+    //      ⭐ 팩이 광고를 **덮는다** — 둘을 곱하지 않는다(GEM.md §5-2: 지수 축이 둘이 되면 폭주한다).
+    //    ⚠ 팩을 사는 곳은 **상점(추천 칸)** 이다 — 이 화면에서 파는 길은 없앴다.
+    //      ⛔ 「보러 가기」로 상점에 보내던 옛 길을 되살리지 말 것.
+    //    🚧 **광고는 아직 껍데기다** — 광고 시스템이 없다(CAMP_PACKS 의 'ads' 도 soon:true).
+    //      ⛔ 눌렀을 때 배수를 **실제로 주지 말 것**: 지금 화면의 1.20 에는 광고 몫이 안 들어 있다.
+    //        주려면 campRebMulGain/campRebPtGain 부터 고쳐야 하고, 그건 광고가 생긴 뒤의 일이다.
+    // ✍ **무엇에 걸리는 배수인지**를 그 자리에서 말한다(2026-09-04 사용자 확정).
+    //   광고는 **포인트에만** 붙고, 팩은 **배수와 포인트 둘 다**다 — 둘이 같은 꼴이라
+    //   범위를 안 적으면 같은 것으로 읽힌다. ⛔ 각주로 빼지 말 것: 약속은 약속하는 자리에서 한다.
+    //   ⚠ 조건을 못 채웠으면 광고도 **함께 잠긴다** — 지금 환생을 못 하는데 배수만 올려 둘 수 없다.
     + (campRebPackOn()
-        ? '<div class="crPk on">환생 팩 ×' + campRebPackX().toFixed(0) + ' 적용 중</div>'
-        : '<button class="crPk" type="button" onclick="campRebToShop()">'
+        ? '<div class="crPk on">배수·포인트 ×' + campRebPackX().toFixed(0) + ' · '
+          + ((campPackDef('reb') || {}).nm || '환생 팩') + '</div>'
+        : '<button class="crPk ad" type="button" onclick="campRebAd()"' + (can ? '' : ' disabled') + '>'
           + '<span class="crRim"></span>'
-          + '<span class="crPkT">환생 팩 — 배수·포인트가 <b>계속 2배</b></span>'
-          + '<u>보러 가기</u></button>');
-  campRebStApply();      // 📂 접힘/펴짐을 다시 입힌다(다시 그릴 때마다 초기화되면 안 된다)
+          + '<span class="crPkI"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+          + '<path d="M8 5.5v13l11-6.5z"/></svg></span>'
+          + '<span class="crPkT">광고 시청 시 <b>포인트 ×1.5</b></span></button>');
+  // 📂 접힘/펴짐을 다시 입힌다(다시 그릴 때마다 초기화되면 안 된다).
+  //   ⚠ **다시 그린 직후에는 애니를 끈다**(noAnim) — 안 그러면 화면을 열 때마다 접힘 애니가
+  //     한 번 재생돼 「왜 혼자 움직이지」가 된다. 손으로 누른 때만 움직여야 한다.
+  campRebStApply(true);
 }
-// 환생 팩을 보러 상점으로 — 팩은 **추천 칸**에 있다(젬 칸이 아니다)
-function campRebToShop(){ campRebClose();
-  if(typeof openShop === 'function') openShop();
-  if(typeof setShopSec === 'function') setShopSec('reco'); }
+// 📺 **광고 보고 이번 환생 ×1.5** — 아직 껍데기다(2026-09-04).
+//   ⭐ 왜 껍데기인가: 이 프로젝트에 광고 시스템이 없다(CAMP_PACKS 의 'ads' 도 soon:true).
+//     ⛔ 여기서 배수를 **주지 말 것** — 화면의 「환생 후 재화 배수」에 광고 몫이 안 들어 있어서
+//       주는 순간 표시와 실제가 어긋난다. 광고가 생기면 campRebMulGain 부터 고치고 여기를 잇는다.
+//   ⚠ 환생 팩을 샀으면 이 버튼은 아예 안 나온다 — 그 자리가 「환생 ×2」 상태 표시로 잠긴다.
+function campRebAd(){
+  // ⚠ 조건을 못 채웠으면 버튼이 이미 disabled 라 여기 안 온다 — 그래도 한 번 더 막는다
+  //   (밖에서 부를 수 있고, 「지금 환생을 못 하는데 배수만 올려 두는」 상태를 만들면 안 된다).
+  if(typeof campCanRebirth === 'function' && !campCanRebirth()) return;
+  if(typeof toast === 'function') toast('📺 광고는 아직 준비 중입니다'); }
+// ⛔ 옛 길(campRebToShop)은 다락으로 갔다 — 이 화면에서 상점으로 보내지 않는다(2026-09-04).
 
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
 function campTreeOpen(){

@@ -1,0 +1,259 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 · 잠김 버튼 8안</title>
+<style>
+/* 🔒 환생 화면의 **잠김(disabled)** 얼굴 8안 — 2026-09-04
+   문제: 지금은 켜짐의 어휘(방사형 후광 · 1px 그라디언트 고리 · 윗변 반사)를 전부 죽여서 밋밋하다.
+   목표: 「켜짐에서 많이 잔잔해진 것」 — 어휘는 남기고 세기와 색만 뺀다. */
+*{box-sizing:border-box}
+body{margin:0;padding:22px 16px 40px;font-family:'Pretendard','Malgun Gothic',sans-serif;
+  background:radial-gradient(120% 90% at 50% 0%,#1a1a3a 0%,#0d0d20 42%,#07070f 100%);
+  color:#e6e9f2}
+h1{margin:0 0 4px;font-size:15px;letter-spacing:.04em;color:#cfd6e6}
+.sub{margin:0 0 20px;font-size:11.5px;color:#78829a;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;max-width:900px}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+.cell{padding:14px 14px 16px;border-radius:10px;
+  background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.05)}
+.cell.base{background:rgba(120,195,255,.045);border-color:rgba(120,195,255,.16)}
+.no{display:flex;align-items:baseline;gap:8px;margin:0 0 3px}
+.no b{font-size:13px;color:#fff}
+.no span{font-size:11px;color:#8a93a8}
+.dsc{margin:0 0 12px;font-size:11px;color:#6f7a8e;line-height:1.55}
+
+/* ── 공통 뼈대(실제 css/30-home.css 의 어휘를 그대로 옮김) ── */
+.go,.pk{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;
+  width:100%;border:0;border-radius:6px;font-family:inherit;cursor:default}
+.go{min-height:58px;font-size:17px;font-weight:800;letter-spacing:.16em}
+.pk{min-height:48px;margin-top:10px;padding:0 14px;justify-content:flex-start;
+  font-size:12.5px;font-weight:700}
+.rim{position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude}
+.top{position:absolute;left:9%;right:9%;top:1.5px;height:1px;border-radius:1px;pointer-events:none}
+.gi{display:flex;width:20px;height:20px}
+.gi svg{width:100%;height:100%}
+.pi{flex:0 0 auto;display:flex;width:15px;height:15px}
+.pi svg{width:100%;height:100%}
+.pt{flex:1;min-width:0;text-align:left;line-height:1.35}
+
+/* ══ 기준 · 켜짐(지금 화면) ══ */
+.on .go{color:#fff;background:radial-gradient(120% 180% at 50% -20%,rgba(120,195,255,.30),
+  rgba(24,48,96,.08) 62%,rgba(10,18,36,.04))}
+.on .go .rim{background:linear-gradient(180deg,rgba(160,220,255,.88),rgba(60,110,190,.26))}
+.on .go .top{background:linear-gradient(90deg,transparent,rgba(210,240,255,.55),transparent)}
+.on .go .gi{color:#bfe6ff}
+.on .pk{color:#cfc8b0;background:radial-gradient(120% 180% at 50% -20%,rgba(255,210,74,.20),
+  rgba(110,86,24,.06) 62%,rgba(40,31,10,.03))}
+.on .pk .rim{background:linear-gradient(180deg,rgba(255,226,150,.80),rgba(150,116,40,.22))}
+.on .pk .top{background:linear-gradient(90deg,transparent,rgba(255,236,190,.42),transparent)}
+.on .pk .pi{color:#ffd24a}
+.on .pk b{color:#ffd24a}
+
+/* ══ 지금 · 잠김(밋밋하다는 그것) ══ */
+.now .go,.now .pk{color:#69737f;background:rgba(255,255,255,.03)}
+.now .rim{background:rgba(255,255,255,.10)}
+.now .top{display:none}
+.now .gi,.now .pi{color:#5f6772}
+.now .pk b{color:#7b8593}
+
+/* ══ ① 색만 뺀 후광 — 형태는 켜짐 그대로, 색상만 중성 회색 ══ */
+.v1 .go,.v1 .pk{color:#7c8695;background:radial-gradient(120% 180% at 50% -20%,
+  rgba(200,212,230,.115),rgba(40,46,60,.05) 62%,rgba(12,14,20,.03))}
+.v1 .rim{background:linear-gradient(180deg,rgba(190,204,224,.34),rgba(70,80,98,.12))}
+.v1 .top{background:linear-gradient(90deg,transparent,rgba(210,222,240,.20),transparent)}
+.v1 .gi,.v1 .pi{color:#6d7684}
+.v1 .pk b{color:#93a0b2}
+
+/* ══ ② 꺼진 네온 — 제 색을 아주 희미하게 남긴다(시안 · 금색) ══ */
+.v2 .go{color:#7a8794;background:radial-gradient(120% 180% at 50% -20%,
+  rgba(120,195,255,.085),rgba(24,48,96,.03) 62%,rgba(10,18,36,.02))}
+.v2 .go .rim{background:linear-gradient(180deg,rgba(150,200,240,.30),rgba(50,80,130,.10))}
+.v2 .go .top{background:linear-gradient(90deg,transparent,rgba(190,225,255,.16),transparent)}
+.v2 .go .gi{color:#6f8496}
+.v2 .pk{color:#87826f;background:radial-gradient(120% 180% at 50% -20%,
+  rgba(255,210,74,.065),rgba(110,86,24,.025) 62%,rgba(40,31,10,.02))}
+.v2 .pk .rim{background:linear-gradient(180deg,rgba(220,200,150,.28),rgba(110,92,50,.10))}
+.v2 .pk .top{background:linear-gradient(90deg,transparent,rgba(240,225,180,.15),transparent)}
+.v2 .pk .pi{color:#8b8158}
+.v2 .pk b{color:#a2946a}
+
+/* ══ ③ 고리만 — 면은 비우고 테두리 그라디언트로 버틴다 ══ */
+.v3 .go,.v3 .pk{color:#78828f;background:transparent}
+.v3 .rim{background:linear-gradient(180deg,rgba(196,210,230,.40),rgba(60,70,88,.06))}
+.v3 .top{background:linear-gradient(90deg,transparent,rgba(210,222,240,.22),transparent)}
+.v3 .gi,.v3 .pi{color:#6b7382}
+.v3 .pk b{color:#8e9aab}
+
+/* ══ ④ 후광만 — 고리는 단색으로 죽이고 위쪽 번짐만 남긴다 ══ */
+.v4 .go,.v4 .pk{color:#7b8593;background:radial-gradient(120% 170% at 50% -25%,
+  rgba(206,220,240,.14),rgba(30,36,48,.04) 58%,transparent)}
+.v4 .rim{background:rgba(255,255,255,.085)}
+.v4 .top{background:linear-gradient(90deg,transparent,rgba(215,228,245,.24),transparent)}
+.v4 .gi,.v4 .pi{color:#6c7584}
+.v4 .pk b{color:#909cad}
+
+/* ══ ⑤ 점선 고리 — 잠김을 **형태**로 말한다(색을 안 쓴다) ══ */
+.v5 .go,.v5 .pk{color:#79838f;background:rgba(255,255,255,.022);
+  outline:1px dashed rgba(190,204,224,.26);outline-offset:-1px}
+.v5 .rim{display:none}
+.v5 .top{background:linear-gradient(90deg,transparent,rgba(210,222,240,.14),transparent)}
+.v5 .gi,.v5 .pi{color:#6b7482}
+.v5 .pk b{color:#8e99a9}
+
+/* ══ ⑥ 눌린 판 — 볼록을 뒤집어 **오목**하게(안쪽 그림자) ══ */
+.v6 .go,.v6 .pk{color:#79828f;background:rgba(8,10,16,.28);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.45),inset 0 -1px 0 rgba(255,255,255,.05)}
+.v6 .rim{background:rgba(255,255,255,.07)}
+.v6 .top{display:none}
+.v6 .gi,.v6 .pi{color:#6a7381}
+.v6 .pk b{color:#8d98a8}
+
+/* ══ ⑦ 세로 페이드 — 위가 밝고 아래로 사라지는 면(후광 대신 선형) ══ */
+.v7 .go,.v7 .pk{color:#7c8694;
+  background:linear-gradient(180deg,rgba(220,230,245,.085),rgba(255,255,255,.012) 55%,transparent)}
+.v7 .rim{background:linear-gradient(180deg,rgba(198,212,232,.36),rgba(60,70,88,.08))}
+.v7 .top{background:linear-gradient(90deg,transparent,rgba(214,226,244,.26),transparent)}
+.v7 .gi,.v7 .pi{color:#6d7684}
+.v7 .pk b{color:#919dae}
+
+/* ══ ⑧ 절충 — 회색 후광 + 고리 윗머리에만 제 색이 남는다 ══ */
+.v8 .go{color:#7c8694;background:radial-gradient(120% 180% at 50% -20%,
+  rgba(200,212,230,.10),rgba(40,46,60,.04) 62%,rgba(12,14,20,.02))}
+.v8 .go .rim{background:linear-gradient(180deg,rgba(150,205,245,.42),
+  rgba(150,165,190,.16) 34%,rgba(60,70,88,.07))}
+.v8 .go .top{background:linear-gradient(90deg,transparent,rgba(196,226,250,.24),transparent)}
+.v8 .go .gi{color:#71808f}
+.v8 .pk{color:#7c8694;background:radial-gradient(120% 180% at 50% -20%,
+  rgba(200,212,230,.085),rgba(40,46,60,.035) 62%,rgba(12,14,20,.02))}
+.v8 .pk .rim{background:linear-gradient(180deg,rgba(235,208,140,.40),
+  rgba(150,165,190,.15) 34%,rgba(60,70,88,.07))}
+.v8 .pk .top{background:linear-gradient(90deg,transparent,rgba(240,224,180,.20),transparent)}
+.v8 .pk .pi{color:#867e63}
+.v8 .pk b{color:#9c9478}
+</style></head><body>
+<h1>환생 · 아래 광고 칸 — 잠김 얼굴 8안</h1>
+<p class="sub">맨 위 둘이 기준이다 — <b>켜짐</b>(조건 충족)과 <b>지금의 잠김</b>(밋밋하다고 한 그것).<br>
+여덟 안은 전부 「켜짐의 어휘를 남기되 세기와 색을 뺀」 방향이다.</p>
+<div class="grid">
+
+  <div class="cell base on">
+    <div class="no"><b>기준 · 켜짐</b><span>지금 화면(조건 충족)</span></div>
+    <p class="dsc">방사형 후광 + 1px 그라디언트 고리 + 윗변 반사 1px. 시안=동작, 금색=무료 보상.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell now">
+    <div class="no"><b>지금 · 잠김</b><span>고칠 대상</span></div>
+    <p class="dsc">후광·고리 그라디언트·윗변 반사를 전부 죽였다 → 평면 회색 상자 둘.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v1">
+    <div class="no"><b>①</b><span>색만 뺀 후광</span></div>
+    <p class="dsc">형태는 켜짐 그대로 — 후광·고리·반사 전부 살리고 <b>색상만 중성 회색</b>으로.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v2">
+    <div class="no"><b>②</b><span>꺼진 네온</span></div>
+    <p class="dsc">제 색(시안·금색)을 <b>아주 희미하게</b> 남긴다 — 불이 꺼졌을 뿐 같은 물건.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v3">
+    <div class="no"><b>③</b><span>고리만</span></div>
+    <p class="dsc">면을 비우고 <b>테두리 그라디언트</b>로만 버틴다. 가장 가볍다.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v4">
+    <div class="no"><b>④</b><span>후광만</span></div>
+    <p class="dsc">고리는 단색으로 죽이고 <b>위쪽 번짐</b>만 남긴다 — 빛의 흔적.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v5">
+    <div class="no"><b>⑤</b><span>점선 고리</span></div>
+    <p class="dsc">잠김을 <b>형태</b>로 말한다 — 색 대신 끊어진 선. 신호는 가장 분명하다.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v6">
+    <div class="no"><b>⑥</b><span>눌린 판</span></div>
+    <p class="dsc">볼록을 뒤집어 <b>오목</b>하게 — 안쪽 그림자. 「지금은 못 누른다」가 촉각으로 온다.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v7">
+    <div class="no"><b>⑦</b><span>세로 페이드</span></div>
+    <p class="dsc">후광 대신 <b>위에서 아래로 사라지는 면</b>. 방사형보다 조용하고 넓다.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+  <div class="cell v8">
+    <div class="no"><b>⑧</b><span>절충 · ①+②</span></div>
+    <p class="dsc">회색 후광 위에 고리 <b>윗머리에만</b> 제 색이 남는다 — 정체는 알되 조용하다.</p>
+    <button class="go"><span class="rim"></span><span class="top"></span>
+      <span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg></span>
+      환 생</button>
+    <button class="pk"><span class="rim"></span><span class="top"></span>
+      <span class="pi"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+      <span class="pt">광고 시청 시 <b>포인트 ×1.5</b></span></button>
+  </div>
+
+</div></body></html>

@@ -498,3 +498,11 @@ function campTreePayHTML(cost, pts){
   return '<div class="ctPay"><span class="ctPip"></span>' +
     '<span class="ctCv">' + campNum(cost) + '</span>' +
     '<span class="ctHave">point 필요</span></div>'; }
+
+
+// ── [js/19-camp.js] campRebToShop — 환생 화면에서 상점으로 (2026-09-04 유보)
+// 💳 환생 팩 버튼의 「보러 가기」가 부르던 길. 그 자리를 **광고 버튼**이 가져가면서 끊겼다.
+//   팩은 이제 상점(추천 칸)에서만 산다. ⛔ 환생 화면에 파는 길을 다시 내지 말 것.
+function campRebToShop(){ campRebClose();
+  if(typeof openShop === 'function') openShop();
+  if(typeof setShopSec === 'function') setShopSec('reco'); }
