@@ -417,6 +417,12 @@ function campRuneEnter(sec){
 function campRuneRender(){
   campRuneTipHide();      // 🗒 다시 그리면 쪽지는 걷는다(가리키던 칸이 사라질 수 있다)
   const box = document.getElementById('rnBody'); if(!box) return;
+  // 📜 **가방이 내려가 있던 자리를 지킨다**(2026-09-04 사용자 확정).
+  //   ⛔ 다시 그릴 때마다 맨 위로 올리지 말 것 — 아래쪽 룬을 하나 넣을 때마다 목록이
+  //     처음으로 튀어 다음 것을 다시 찾아 내려가야 한다.
+  //   ⚠ 갈래를 거르면 목록이 짧아진다 — 남은 높이에 맞춰 물린다(브라우저가 알아서 한다).
+  const _bagKeep = (() => { const q = document.querySelector('#campRune .rnBagG');
+    return q ? q.scrollTop : 0; })();
   if(!campRuneState()){ box.innerHTML = ''; return; }
   const _shop = (_runeSec === 'shop');
   box.classList.toggle('shop', _shop);       // 상점만 흐르는 목록이다(판은 전체를 채운다)
@@ -426,6 +432,7 @@ function campRuneRender(){
   box.classList.toggle('uiScroll', _shop);
   box.innerHTML = (_runeSec === 'shop') ? _runeShopHTML() : _runeSlotHTML();
   if(typeof paintIcons === 'function') paintIcons(box);
+  if(_bagKeep){ const q = document.querySelector('#campRune .rnBagG'); if(q) q.scrollTop = _bagKeep; }
   _runeTopSync();
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(장착 / 룬 상점)
   if(_runeSec !== 'shop') campRuneBindMap(); }
@@ -855,10 +862,8 @@ function campRuneSlotTap(kind, i){
     const p0 = runeParse(_runeSwapKey);
     const want0 = (p0.def && p0.def.kind === 'uniq') ? 'uniq' : 'norm';
     if(kind === want0 && !campRuneEq(kind)[i] && campRuneCanEquip(kind, i, _runeSwapKey)){
-      const k0 = _runeSwapKey, bp = _runeBagAt(k0);
-      _runeSwapKey = '';
-      if(campRuneEquip(kind, i, k0)){ const sp = _runeSlotAt(kind, i);
-        if(bp && sp) _runeFly(k0, bp, sp, RUNE_FLY_MS); }
+      const k0 = _runeSwapKey; _runeSwapKey = '';
+      campRuneEquipFly(kind, i, k0);
       return; }
     campRuneSwapEnd(); return; }
   const cur = campRuneEq(kind)[i] || null;
@@ -991,8 +996,20 @@ function campRuneAuto(key){
   if(campRuneFree(key) <= 0) return false;
   const R = campRuneState(); if(!R) return false;
   const n = campRuneSlots(kind);
-  for(let i = 0; i < n; i++) if(!R[kind][i]) return campRuneEquip(kind, i, key);
+  for(let i = 0; i < n; i++) if(!R[kind][i]){
+    // ✈ 빈 칸에 들어갈 때도 **날아서** 들어간다(2026-09-04 사용자 확정) —
+    //   교체만 날아가면 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
+    if(!campRuneEquipFly(kind, i, key)) return false;
+    return true; }
   return false; }
+// ✈ 장착 + 날아가는 그림 — 가방 줄에서 칸으로.
+//   ⚠ 출발 자리는 **끼우기 전에** 잰다(다시 그리면 그 버튼이 «–» 로 바뀌거나 자리가 달라진다).
+function campRuneEquipFly(kind, i, key){
+  const from = _runeBagAt(key);
+  if(!campRuneEquip(kind, i, key)) return false;
+  const to = _runeSlotAt(kind, i);
+  if(from && to) _runeFly(key, from, to, RUNE_FLY_MS);
+  return true; }
 // 🎒 가방을 눌렀을 때 — 칸을 골라 뒀으면 **그 칸에**, 아니면 **빈 칸에**.
 function campRuneBagTap(key){
   const pp = runeParse(key); if(!pp.def) return;
@@ -1004,7 +1021,7 @@ function campRuneBagTap(key){
     // 고른 칸에 이미 같은 룬이면 아무 일도 아니다
     const cur = campRuneEq(kind)[_runePick] || null;
     if(cur === key) return;
-    if(!campRuneEquip(kind, _runePick, key)) say('남은 룬이 없습니다');
+    if(!campRuneEquipFly(kind, _runePick, key)) say('남은 룬이 없습니다');
     return; }
   if(campRuneAuto(key)) return;
   // 🔁 **꽉 찼으면 교체 모드**로 들어간다 — 예전에는 여기서 아무 일도 안 일어났다.

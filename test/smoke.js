@@ -2755,6 +2755,30 @@ async function groupLobby(){
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+        // ✈ **빈 칸에 넣을 때도 날아서 들어간다**(2026-09-04 사용자 확정)
+        //   ⛔ 교체만 날아가게 두지 말 것 — 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
+        { const R5 = campRuneState(); R5.norm = []; R5.uniq = []; campRuneTouch();
+          campRuneRender(); await sleep(30);
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
+          const k5 = runeKey('tap','high'); R5.own[k5] = (R5.own[k5] | 0) + 1;
+          campRuneBagTap(k5);
+          assert(campRuneEq('norm')[0] === k5, '빈 칸에 안 들어갔다');
+          assert(document.querySelectorAll('#campRune .rnFly').length === 1,
+            '빈 칸에 넣었는데 날아가는 그림이 없다');
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
+        // 📜 **가방이 내려가 있던 자리를 지킨다** — 하나 넣을 때마다 맨 위로 튀면 다시 찾아 내려가야 한다
+        { const bg = document.querySelector('#campRune .rnBagG');
+          assert(bg, '가방 목록이 없다');
+          bg.scrollTop = 120;
+          const was = bg.scrollTop;
+          if(was > 0){
+            const k6 = runeKey('gas','mid'); const R6 = campRuneState();
+            R6.own[k6] = (R6.own[k6] | 0) + 1;
+            campRuneBagTap(k6);
+            const bg2 = document.querySelector('#campRune .rnBagG');
+            assert(bg2 && bg2.scrollTop === was,
+              '룬을 넣었더니 가방이 맨 위로 튀었다: ' + was + ' → ' + (bg2 ? bg2.scrollTop : '?'));
+            document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); } }
         // 🔁 **꽉 찼을 때의 교체**(2026-09-04 사용자 확정)
         //   칸이 다 차면 가방을 눌러도 아무 일이 없었다 — 그때가 「고르는 것」이 시작되는 자리다.
         //   흐름: 가방 탭 → 그 갈래 성좌가 화면 한가운데로 → 바꿀 칸이 흔들림 → 탭 → 교체.
