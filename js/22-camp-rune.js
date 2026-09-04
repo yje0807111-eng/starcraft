@@ -552,6 +552,11 @@ function _runeHexPts(x, y, r){ const q = [];
 const RUNE_RING1 = 2.5, RUNE_RING2 = 4.6;      // 바깥 링 — 칸 반지름에 더하는 여유
 const RUNE_RING_OP1 = 0.40, RUNE_RING_OP2 = 0.20;
 const RUNE_DOT_R = 3.2, RUNE_DOT_SZ = 0.9, RUNE_DOT_OP = 0.45;   // 유니크 꼭짓점 점 여섯
+// 🔷 문양이 칸에서 차지하는 폭 ÷ 칸 반지름 (2026-09-04 사용자 지적: 「타일 내부를 너무 꽉 채운다」).
+//   ⚠ 육각 안에 들어가는 정사각의 한계는 **1.268** 이다(반변 a ≤ 0.634r). 옛 값 1.24 는
+//     그 한계에 거의 닿아 문양이 벽에 붙어 보였다. 1.00 이면 좌우로 0.13r 씩 남는다.
+//   ⛔ 1.2 이상으로 되돌리지 말 것.
+const RUNE_GLYPH_K = 1.00;
 // 육각 꼭짓점 하나 — i 번째(꼭짓점이 위)
 function _runeVtx(x, y, r, i){ const a = Math.PI / 180 * (60 * i - 90);
   return [x + r * Math.cos(a), y + r * Math.sin(a)]; }
@@ -607,12 +612,13 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
         + '" r="' + RUNE_DOT_SZ + '" style="fill:' + c + ';opacity:' + RUNE_DOT_OP + '"/>'); }
     // 🔷 문양 — 유니크는 **앉은 성좌 색**을 따른다
     { const gp = (kind === 'uniq') ? (RUNE_GRPS[i] || '') : '';
-      const src = runeGlyphSrc(key, gp), w = r * 1.24;
+      const src = runeGlyphSrc(key, gp), w = r * RUNE_GLYPH_K;
       if(src) g.push('<image class="rnImg" href="' + src + '"'
         + ' x="' + (x - w / 2).toFixed(1) + '" y="' + (y - w / 2).toFixed(1) + '"'
         + ' width="' + w.toFixed(1) + '" height="' + w.toFixed(1) + '"/>'); }
-    g.push('<text class="rnVl" x="' + X + '" y="' + (y + r + 3.5).toFixed(1) + '" style="fill:' + c + '">'
-      + runeValTx(key) + '</text>'); }
+    // ⛔ 칸 밖 아래의 % 는 뺐다(2026-09-04 사용자 확정) — 스물일곱 칸에 숫자가 붙으면
+    //   판이 시끄럽고, 값은 길게 눌러 뜨는 쪽지와 가방 줄이 이미 말한다. 
+  }
   if(sel) g.push('<polygon class="rnHxSel" points="' + _runeHexPts(x, y, r + 6) + '"/>');
   // 👆 누르는 면 — 맨 위에 투명하게. ⚠ onclick 을 달지 않는다: 손가락을 붙잡는 순간
   //   click 의 target 이 <svg> 로 바뀌어 안 온다. 엔진이 pointerdown 에서 이 표시를 읽는다.
@@ -996,7 +1002,9 @@ function campRuneAuto(key){
   if(campRuneFree(key) <= 0) return false;
   const R = campRuneState(); if(!R) return false;
   const n = campRuneSlots(kind);
-  for(let i = 0; i < n; i++) if(!R[kind][i]){
+  // ⚠ **그 룬이 들어갈 수 있는** 빈 칸을 찾는다 — 그냥 첫 빈 칸을 잡으면
+  //   갈래가 다른 성좌에서 걸려 장착이 실패한다(성장 룬이 경제 칸에서 막혔다).
+  for(let i = 0; i < n; i++) if(!R[kind][i] && campRuneCanEquip(kind, i, key)){
     // ✈ 빈 칸에 들어갈 때도 **날아서** 들어간다(2026-09-04 사용자 확정) —
     //   교체만 날아가면 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
     if(!campRuneEquipFly(kind, i, key)) return false;

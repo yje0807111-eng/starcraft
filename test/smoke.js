@@ -2427,6 +2427,7 @@ async function groupLobby(){
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
     let swapNote='';
+    let glyphNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2755,6 +2756,31 @@ async function groupLobby(){
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+        // 🐞 **가방 탭은 그 룬이 들어갈 수 있는 빈 칸을 찾는다**(2026-09-04 사용자 신고: 「성장 룬이 안 들어가」)
+        //   ⛔ 그냥 첫 빈 칸을 잡지 말 것 — 갈래가 다른 성좌에서 걸려 장착이 실패하고,
+        //     그대로 교체 모드로 빠져 아무 일도 못 한다.
+        { const R7 = campRuneState(); R7.norm = []; R7.uniq = []; campRuneTouch();
+          campRuneRender(); await sleep(20);
+          const pick = { eco:'tap', war:'atk', grow:'exp' };
+          for(const g of RUNE_GRPS){
+            const k = runeKey(pick[g], 'low'); R7.own[k] = (R7.own[k] | 0) + 1;
+            campRuneBagTap(k);
+            if(campRuneSwapOn()) campRuneSwapEnd();
+            const at = campRuneEq('norm').indexOf(k);
+            assert(at >= 0, g + ' 룬이 아예 안 들어간다(' + pick[g] + ')');
+            assert(runeSlotGrp(at) === g,
+              g + ' 룬이 ' + runeSlotGrp(at) + ' 성좌로 갔다: ' + at + '번'); }
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
+        // 🔇 칸 밖 아래의 % 는 뺐다 — 스물일곱 칸에 숫자가 붙으면 판이 시끄럽다
+        assert(!$('rnG').querySelector('.rnVl'),
+          '칸 아래 % 가 되살아났다 — 값은 쪽지와 가방 줄이 말한다');
+        // 📐 문양은 칸 안에 **여유 있게** 들어간다 — 육각의 한계(반지름×1.268)에 닿지 않는다
+        { const img = $('rnG').querySelector('.rnImg');
+          assert(img, '낀 칸의 문양이 없다');
+          const w = +img.getAttribute('width');
+          assert(w > 0 && w <= RUNE_R_N * 1.10,
+            '문양이 칸을 꽉 채운다: ' + w + ' (한계 ' + (RUNE_R_N * 1.268).toFixed(1) + ')');
+          glyphNote = '문양 ' + w.toFixed(0) + '/' + (RUNE_R_N * 1.268).toFixed(0); }
         // ✈ **빈 칸에 넣을 때도 날아서 들어간다**(2026-09-04 사용자 확정)
         //   ⛔ 교체만 날아가게 두지 말 것 — 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
         { const R5 = campRuneState(); R5.norm = []; R5.uniq = []; campRuneTouch();
@@ -2887,7 +2913,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote;
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });
