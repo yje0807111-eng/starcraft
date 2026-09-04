@@ -438,6 +438,37 @@ function campRuneRender(){
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(장착 / 룬 상점)
   if(_runeSec !== 'shop') campRuneBindMap(); }
 
+// ── 📊 지금 걸려 있는 효과 — 오른쪽 위에 합쳐서 나열한다 ─────────────────
+//   ⭐ 칸마다 몇 %인지는 알아도 「그래서 지금 무엇이 얼마나 올랐나」는 안 보였다
+//     (2026-09-04 사용자 요청). 같은 효과를 여러 칸에 끼웠으면 **합쳐서** 한 줄이다.
+//   ⚠ 값은 **campRuneEff 한 곳**에서 가져온다 — 여기서 다시 더하지 말 것.
+//     그래야 상한(구매 비용 감소의 뚜껑)도 저절로 따라온다.
+//   ⚠ 판을 누르지 않는다: `.rnTop` 안에 넣으면 그 높이가 hideT 로 잡혀 성좌가 아래로 밀린다.
+//     그래서 **떠 있는 별도 층**이고 pointer-events 는 없다(팬·줌을 안 가로챈다).
+const RUNE_SUM_MAX = 12;                 // 여기까지 보이고 나머지는 「외 n가지」로 접는다
+function campRuneEffList(){
+  const out = [];
+  for(const d of RUNE_LIST){
+    const v = (typeof campRuneEff === 'function') ? campRuneEff(d.eff) : 0;
+    if(!(v > 0)) continue;
+    out.push({ eff:d.eff, nm:d.de, v:v,
+      grp:(d.kind === 'uniq') ? 'uniq' : d.grp,
+      down:(d.eff === 'costCut') }); }        // 💰 유일한 감소형 — 부호를 뒤집어 적는다
+  return out; }
+function _runeSumTx(v){ const p = v * 100;
+  const t = (Math.abs(p - Math.round(p)) < 0.05) ? String(Math.round(p)) : p.toFixed(1);
+  return t + '%'; }
+function _runeSumHTML(){
+  const q = campRuneEffList();
+  if(!q.length) return '';                    // ⛔ 빈 판을 띄우지 않는다
+  const shown = q.slice(0, RUNE_SUM_MAX), rest = q.length - shown.length;
+  let h = '<div class="rnSum" aria-label="적용 중인 효과">';
+  for(const e of shown){
+    const c = (RUNE_GRP[e.grp] || {}).col || '#c3ccd8';
+    h += '<div class="rnSumR"><span>' + e.nm + '</span>'
+      + '<b style="color:' + c + '">' + (e.down ? '−' : '+') + _runeSumTx(e.v) + '</b></div>'; }
+  if(rest > 0) h += '<div class="rnSumR more"><span>외 ' + rest + '가지</span></div>';
+  return h + '</div>'; }
 // ── 장착 화면 — 🌌 성좌 판 ──────────────────────────────────────────────
 //   ⭐ 줄 두 개(옛 모습)가 아니라 **한 장의 판**이다. 칸의 자리가 곧 해금 순서이고,
 //     성좌 한가운데가 유니크다 — 「이 무리를 다 열면 저 가운데가 열린다」가 그림으로 읽힌다.
@@ -448,7 +479,7 @@ function campRuneRender(){
 function _runeSlotHTML(){
   return '<div class="rnMap"><svg id="rnSvg" viewBox="0 0 ' + RUNE_MAP_W + ' ' + RUNE_MAP_H + '"'
     + ' preserveAspectRatio="xMidYMid meet"><g id="rnG">' + _runeMapSvg() + '</g></svg></div>'
-    + _runeBagHTML(); }
+    + _runeSumHTML() + _runeBagHTML(); }
 // 🗺 **상단 진행 수치는 없앴다**(2026-09-04 사용자 확정: 「없어도 될 것 같아」).
 //   칸마다 「R45」로 열리는 라운드가 적혀 있어서 같은 말을 두 곳에서 하고 있었다.
 //   ⛔ 되살리지 말 것. ⚠ 요소(#rnRound)는 남겨 둔다 — 마크업을 건드리지 않으려는 것뿐이다.

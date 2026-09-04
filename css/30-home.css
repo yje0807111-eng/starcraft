@@ -2558,6 +2558,19 @@
 @keyframes rnRipple{ 0%{transform:scale(1);opacity:.85} 100%{transform:scale(2.1);opacity:0} }
 #campRune .rnRipple{fill:none;stroke-width:1.4;pointer-events:none;transform-box:view-box;
   animation:rnRipple .58s cubic-bezier(.2,.7,.3,1) forwards}
+/* 📊 지금 걸려 있는 효과 — 판 오른쪽 위에 떠 있다(2026-09-04).
+   ⚠ .rnTop 안에 넣지 말 것 — 그 높이가 hideT 로 잡혀 성좌가 아래로 밀린다.
+   ⚠ pointer-events 없음: 판을 밀거나 확대할 때 손가락을 가로채면 안 된다. */
+#campRune .rnSum{position:absolute;right:10px;top:50px;z-index:4;pointer-events:none;
+  display:flex;flex-direction:column;gap:1px;min-width:104px;max-width:150px;
+  padding:6px 8px;border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(8,12,17,.72),rgba(6,9,13,.60))}
+#campRune .rnSumR{display:flex;align-items:baseline;gap:8px;line-height:1.35}
+#campRune .rnSumR span{font-size:9.5px;color:#8d97a6;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+#campRune .rnSumR b{margin-left:auto;font-family:var(--font-num);
+  font-variant-numeric:tabular-nums;font-size:11px;font-weight:700}
+#campRune .rnSumR.more span{color:#69737f;font-size:9px}
 /* 🗒 효과 쪽지 — 칸을 길게 누르면 그 옆에 뜬다(2026-09-04).
    ⭐ 확인창이 아니라 **읽는 쪽지**다: 버튼이 없고 아무 데나 누르면 사라진다.
    ⚠ 판 위에 뜨므로 z 는 칸보다 위, 가방(z 2)보다도 위다. */

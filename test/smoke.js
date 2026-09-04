@@ -2427,7 +2427,7 @@ async function groupLobby(){
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
     let swapNote='';
-    let glyphNote='', animNote='', waitNote='';
+    let glyphNote='', animNote='', waitNote='', sumNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2756,6 +2756,30 @@ async function groupLobby(){
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+        // 📊 **지금 걸려 있는 효과**를 오른쪽 위에 합쳐서 나열한다(2026-09-04 사용자 요청)
+        { const R9 = campRuneState(); R9.norm = []; R9.uniq = []; campRuneTouch();
+          campRuneRender(); await sleep(20);
+          assert(!document.querySelector('#campRune .rnSum'),
+            '아무것도 안 끼웠는데 요약이 떴다 — 빈 판을 띄우지 않는다');
+          // 같은 효과를 여러 칸에 끼우면 **합쳐진다**(한 줄)
+          for(const gd of RUNE_GRADES){ const k = runeKey('tap', gd);
+            R9.own[k] = (R9.own[k] | 0) + 1; }
+          R9.norm[0] = runeKey('tap','low'); R9.norm[1] = runeKey('tap','mid');
+          R9.norm[2] = runeKey('tap','high');
+          campRuneTouch(); campRuneRender(); await sleep(20);
+          const rows = [...document.querySelectorAll('#campRune .rnSum .rnSumR:not(.more)')];
+          assert(rows.length === 1, '같은 효과가 안 합쳐졌다: ' + rows.length + '줄');
+          // ⚠ 값은 campRuneEff 한 곳에서 온다 — 여기서 다시 더하면 어긋난다
+          const want = campRuneEff('tap');
+          const got = parseFloat(rows[0].querySelector('b').textContent.replace(/[^0-9.]/g, '')) / 100;
+          assert(Math.abs(got - want) < 1e-6,
+            '요약 값이 campRuneEff 와 다르다: ' + got + ' vs ' + want);
+          // 🚧 판을 누르지 않는다 — .rnTop 안에 넣으면 그 높이가 hideT 로 잡혀 성좌가 밀린다
+          const sum = document.querySelector('#campRune .rnSum');
+          assert(!sum.closest('.rnTop'), '요약이 상단 띠 안에 들어갔다 — 성좌가 아래로 밀린다');
+          assert(getComputedStyle(sum).pointerEvents === 'none',
+            '요약이 손가락을 가로챈다 — 판을 밀 수 없게 된다');
+          sumNote = '효과 요약 ' + rows.length + '줄'; }
         // ✈ **연출** — 넣고 · 빼고 · 바꾸는 셋이 같은 어휘를 쓴다(2026-09-04 사용자 확정:
         //   「단순하고 끊기는 느낌」). 끊겨 보이던 이유는 **도착하는 순간이 없어서**였다.
         { const R8 = campRuneState(); R8.norm = []; R8.uniq = []; campRuneTouch();
@@ -2993,7 +3017,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote;
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote+' · '+sumNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });
