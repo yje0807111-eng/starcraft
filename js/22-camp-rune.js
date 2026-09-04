@@ -716,7 +716,9 @@ function _runeBagRow(d, kindSel){
     bt += _runeBagHex(k, gd, campRuneOwn(k), off, campRuneFree(k) <= 0); }
   return '<div class="rnRw' + (off ? ' off' : '') + '">' + runeIcoHTML(ico, 'rnRwI')
     + '<span class="rnRwT">' + d.de + (d.soon ? '<u>준비 중</u>' : '')
-    + '<s>' + gds.map(gd => _runePctTx(runeKey(d.id, gd))).join(' · ') + '</s></span>'
+    // 🎨 등급 값은 **그 등급의 색**으로 적는다 — 버튼 테두리와 같은 색이라 줄과 버튼이 이어 읽힌다
+    + '<s>' + gds.map(gd => '<b style="color:' + ((RUNE_GD[gd] || {}).col || '#69737f') + '">'
+        + _runePctTx(runeKey(d.id, gd)) + '</b>').join('<i>·</i>') + '</s></span>'
     + '<span class="rnRwB">' + bt + '</span></div>'; }
 function _runeBagHTML(){
   const kindSel = _runePickKind || '';

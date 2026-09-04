@@ -2544,13 +2544,16 @@
 #campRune .rnGrpH u{flex:1;height:1px;text-decoration:none;opacity:.30;
   background:linear-gradient(90deg,var(--gc),transparent)}
 /* 📄 줄 하나 = 룬 한 종류 */
-#campRune .rnRw{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:var(--r-md)}
-#campRune .rnRw + .rnRw{margin-top:2px}
+#campRune .rnRw{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:var(--r-md)}
+/* 줄 사이 구분선 — 설정 목록·방 만들기 폼과 같은 어휘다(면을 더하지 않고 선 한 줄만) */
+#campRune .rnRw + .rnRw{border-top:1px solid rgba(255,255,255,.07)}
 #campRune .rnRw.off{opacity:.30}                     /* 고른 칸에 못 끼우는 줄 */
-#campRune .rnRwI{width:36px;height:36px;flex:none;display:block;object-fit:contain}
+#campRune .rnRwI{width:30px;height:30px;flex:none;display:block;object-fit:contain}
 #campRune .rnRwT{font-size:11.5px;color:#eef1f6;line-height:1.25}
 #campRune .rnRwT s{display:block;text-decoration:none;font-family:var(--font-num);
   font-size:9.5px;color:#69737f;margin-top:1px}
+#campRune .rnRwT s b{font-weight:600}                 /* 값은 그 등급의 색(인라인) */
+#campRune .rnRwT s i{font-style:normal;color:#69737f;margin:0 3px;opacity:.7}
 #campRune .rnRwT u{text-decoration:none;margin-left:5px;font-size:9px;color:#8d97a6}
 #campRune .rnRwB{margin-left:auto;display:flex;gap:3px;flex:none}
 /* 🔷 등급 버튼 — 성좌 칸의 「켜」를 34px 로 줄여 넣었다.

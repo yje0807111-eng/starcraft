@@ -2614,6 +2614,15 @@ async function groupLobby(){
           const t0=rws[0].querySelector('.rnRwT').firstChild.textContent;
           assert(t0===RUNE_LIST[0].de,'줄 이름이 효과 이름이 아니다: '+t0);
           assert(t0.indexOf('룬')<0,'줄 이름에 룬 이름이 들어갔다: '+t0);
+          // 🎨 등급 값은 **그 등급의 색**이고, 줄 사이에는 **구분선**이 있다(2026-09-04 사용자 확정)
+          { const hex=c=>{ const m=/^#(\w\w)(\w\w)(\w\w)$/.exec(c);
+              return m?('rgb('+parseInt(m[1],16)+', '+parseInt(m[2],16)+', '+parseInt(m[3],16)+')'):c; };
+            const vs=rws[0].querySelectorAll('.rnRwT s b');
+            assert(vs.length===3,'등급 값이 셋이 아니다: '+vs.length);
+            RUNE_GRADES.forEach((gd,i)=>{ const want=hex(RUNE_GD[gd].col);
+              assert(getComputedStyle(vs[i]).color===want,
+                gd+' 값이 등급 색이 아니다: '+getComputedStyle(vs[i]).color+' vs '+want); });
+            assert(getComputedStyle(rws[1]).borderTopWidth==='1px','줄 사이 구분선이 없다'); }
           // 🔷 육각 버튼 — 등급마다 하나. 그라데이션은 **한 벌만** 두고 나눠 쓴다
           assert(bag.querySelectorAll('.rnBagDefs').length===1,
             '버튼마다 <defs> 를 만들고 있다(한 벌이어야 한다)');
