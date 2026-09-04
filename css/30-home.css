@@ -2529,6 +2529,21 @@
 /* 값 — 칸 **밖 아래**에 매달린다(이름을 가리지 않는다) */
 #campRune .rnVl{font-family:var(--font-num);font-variant-numeric:tabular-nums;
   font-size:8px;text-anchor:middle;dominant-baseline:hanging}
+/* 🗒 효과 쪽지 — 칸을 길게 누르면 그 옆에 뜬다(2026-09-04).
+   ⭐ 확인창이 아니라 **읽는 쪽지**다: 버튼이 없고 아무 데나 누르면 사라진다.
+   ⚠ 판 위에 뜨므로 z 는 칸보다 위, 가방(z 2)보다도 위다. */
+#campRune .rnTip{position:absolute;z-index:6;display:flex;align-items:center;gap:8px;
+  max-width:200px;padding:7px 9px;pointer-events:none;
+  border:1px solid color-mix(in srgb,var(--rg) 42%,transparent);border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(16,22,30,.97),rgba(8,11,16,.97));
+  box-shadow:0 6px 18px rgba(0,0,0,.55)}
+#campRune .rnTipI{width:30px;height:30px;flex:none;display:block;object-fit:contain}
+#campRune .rnTipB{display:flex;flex-direction:column;gap:1px;min-width:0}
+#campRune .rnTipB b{font-size:11.5px;color:#eef1f6;font-weight:600;white-space:nowrap}
+#campRune .rnTipB s{text-decoration:none;font-size:10px;color:#8d97a6}
+#campRune .rnTipB u{text-decoration:none;font-family:var(--font-num);font-size:12px;
+  font-weight:700;color:var(--rg)}
+#campRune .rnTipS{font-style:normal;font-size:9.5px;color:#69737f}
 /* 🌌 성좌 구역 — 갈래 색 오로라 + 이름(2026-09-04 · 목업 camp-rune-zone-8 ②안).
    ⚠ 둘 다 #rnG 안이라 판과 **같이** 밀리고 확대된다. ⛔ 화면에 고정하지 말 것. */
 #campRune .rnAu{pointer-events:none}

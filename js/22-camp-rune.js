@@ -413,6 +413,7 @@ function campRuneEnter(sec){
   return s; }
 
 function campRuneRender(){
+  campRuneTipHide();      // 🗒 다시 그리면 쪽지는 걷는다(가리키던 칸이 사라질 수 있다)
   const box = document.getElementById('rnBody'); if(!box) return;
   if(!campRuneState()){ box.innerHTML = ''; return; }
   const _shop = (_runeSec === 'shop');
@@ -514,8 +515,9 @@ function campRuneBindMap(){
   svvBind(svg, { v:_rnView, g:_runeG, lim:RUNE_ZLIM, alive:_runeAlive,
     box: _runeBox, boxOpt: _runeBoxOpt,
     hit: e => (e.target.closest && e.target.closest('[data-rk]')) || null,
-    onTap: el => campRunePick(el.dataset.rk, +el.dataset.ri),
-    onEmpty: () => { if(_runePickKind) campRunePick('', -1); },
+    onTap: el => campRuneSlotTap(el.dataset.rk, +el.dataset.ri),
+    onHold: el => campRuneSlotHold(el.dataset.rk, +el.dataset.ri, el),
+    onEmpty: () => { campRuneTipHide(); if(_runePickKind) campRunePick('', -1); },
     onDouble: () => campRuneFit() });
   if(first) campRuneFit(true); }
 
@@ -697,6 +699,54 @@ function _runeMapSvg(){
   return rows.join(''); }
 
 
+// ── 🗒 효과 쪽지 — 칸을 길게 누르면 그 칸 옆에 뜬다 ─────────────────────
+//   ⭐ 확인창(.ecCard)이 아니다. 「무엇을 얼마나 올리나」만 말하는 **읽는 쪽지**라 버튼이 없다.
+//     아무 데나 누르면 사라진다(닫기 버튼을 두면 그것을 누르러 가야 한다).
+//   ⚠ 자리는 **누른 칸의 화면 좌표**에서 낸다 — 판이 밀리고 확대되므로 SVG 좌표로는 못 잡는다.
+//     위로 띄우되 화면 위를 넘으면 아래로 내린다.
+const RUNE_TIP_W = 168;
+function campRuneTipHide(){ const t = document.getElementById('rnTip'); if(t) t.remove(); }
+function campRuneTipShow(key, el){
+  campRuneTipHide();
+  const host = document.getElementById('campRune'); if(!host || !el) return;
+  const p = runeParse(key); if(!p.def) return;
+  const c = (RUNE_GD[p.gd] || {}).col || '#8b95a5';
+  const box = el.getBoundingClientRect(), hb = host.getBoundingClientRect();
+  const tip = document.createElement('div');
+  tip.id = 'rnTip'; tip.className = 'rnTip'; tip.style.setProperty('--rg', c);
+  tip.innerHTML = runeIcoHTML(key, 'rnTipI')
+    + '<span class="rnTipB"><b>' + runeName(key) + '</b>'
+    + '<s>' + p.def.de + '</s>'
+    + '<u>' + runeValTx(key) + '</u></span>'
+    + (p.def.soon ? '<i class="rnTipS">아직 배선되지 않은 효과입니다</i>' : '');
+  host.appendChild(tip);
+  // 📐 가운데를 칸에 맞추고, 위가 모자라면 아래로 — 좌우는 화면 안으로 물린다
+  const w = tip.offsetWidth || RUNE_TIP_W, h = tip.offsetHeight || 60;
+  let x = box.left - hb.left + box.width / 2 - w / 2;
+  let y = box.top - hb.top - h - 8;
+  if(y < 6) y = box.bottom - hb.top + 8;
+  x = Math.max(6, Math.min(hb.width - w - 6, x));
+  tip.style.left = Math.round(x) + 'px'; tip.style.top = Math.round(y) + 'px'; }
+
+// 👆 **칸을 누르면** — 낀 칸은 **바로 빠지고**, 빈 칸은 골라진다(2026-09-04 사용자 확정).
+//   ⭐ 넣고 빼는 데 확인 단계를 두지 않는다: 가방을 누르면 들어가고, 칸을 누르면 나온다.
+//     빼는 것은 잃는 것이 아니라 **가방으로 돌아가는 것**이라 되돌리기가 쉽다.
+//   ⛔ 낀 칸을 눌러 「고르기」 상태로 되돌리지 말 것 — 그러면 빼려고 두 번 눌러야 한다.
+function campRuneSlotTap(kind, i){
+  campRuneTipHide();
+  const cur = campRuneEq(kind)[i] || null;
+  if(cur){ campRuneUnequip(kind, i);
+    if(typeof toast === 'function') toast(runeName(cur) + ' 을(를) 뺐습니다');
+    return; }
+  campRunePick(kind, i); }
+
+// 👆 **길게 누르면 효과 쪽지** — 낀 룬이 무엇을 얼마나 올리는지 그 자리에서 본다.
+//   ⚠ 빈 칸에는 쪽지가 없다(보여 줄 것이 없다). 잠긴 칸은 애초에 누르는 면이 없다.
+function campRuneSlotHold(kind, i, el){
+  const cur = campRuneEq(kind)[i] || null;
+  if(!cur) return;
+  campRuneTipShow(cur, el); }
+
 // 칸을 누르면 그 아래에 「끼울 수 있는 룬」이 펼쳐진다.
 // ⭐ 새 팝업을 만들지 않는다 — 칸과 후보를 한 화면에서 봐야 바꿔 끼우는 판단이 된다.
 function campRunePick(kind, i){
@@ -763,7 +813,7 @@ function _runeBagHex(key, gd, own, off, full){
 function _runeBagRow(d, kindSel){
   const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
   const kind = (d.kind === 'uniq') ? 'uniq' : 'norm';
-  const off = !!kindSel && kindSel !== kind;              // 고른 칸에 못 끼우는 줄은 물린다
+  const off = false;      // 🔎 거르고 나면 남은 줄은 전부 끼울 수 있다(물릴 것이 없다)
   // 그림은 **가진 것 중 가장 높은 등급**을 보여 준다 — 하나도 없으면 가장 낮은 등급
   let ico = runeKey(d.id, gds[0]);
   for(const gd of gds){ const k = runeKey(d.id, gd); if(campRuneOwn(k) > 0) ico = k; }
@@ -778,12 +828,18 @@ function _runeBagRow(d, kindSel){
     + '<span class="rnRwB">' + bt + '</span></div>'; }
 function _runeBagHTML(){
   const kindSel = _runePickKind || '';
+  // 🔎 **칸을 고르면 그 갈래만 남긴다**(2026-09-04 사용자 확정: 「전투 칸이면 전투 룬만」).
+  //   ⛔ 물리기만(.off) 하지 말 것 — 못 끼우는 줄이 화면을 차지하면 고르는 일이 안 줄어든다.
+  //   ⚠ 갈래는 **칸이 정한다**(runeSlotGrp) — 유니크 칸이면 유니크만.
+  const grpSel = kindSel ? (kindSel === 'uniq' ? 'uniq' : runeSlotGrp(_runePick)) : '';
   // 머리줄 — 고른 칸이 있으면 그 칸을 말하고, 차 있으면 빼는 길을 준다
   let hd;
   if(kindSel){
     const eq = campRuneEq(kindSel), cur = eq[_runePick] || null;
     const nm = (kindSel === 'uniq' ? '유니크' : '일반') + ' ' + (_runePick + 1) + '번 칸';
+    const gn = (RUNE_GRP[grpSel] || {}).nm || '';
     hd = '<span class="rnBagT">' + nm + (cur ? ' · ' + runeName(cur) : ' · 비어 있음') + '</span>'
+      + (gn ? '<span class="rnBagN">' + gn + ' 룬만</span>' : '')
       + (cur ? '<button class="rnOff" type="button" onclick="campRuneUnequip(\'' + kindSel + '\','
           + _runePick + ')">빼기</button>' : ''); }
   // ⛔ 「누르면 빈 칸에 끼웁니다」 안내는 뺐다(2026-09-04 사용자 확정) —
@@ -791,6 +847,7 @@ function _runeBagHTML(){
   else hd = '<span class="rnBagT">보유한 룬</span>';
   let g = '';
   for(const grp of RUNE_GRPS.concat('uniq')){
+    if(grpSel && grp !== grpSel) continue;              // 🔎 고른 칸의 갈래만
     const q = RUNE_LIST.filter(d => (d.kind === 'uniq' ? 'uniq' : d.grp) === grp);
     if(!q.length) continue;
     const gi = RUNE_GRP[grp] || { nm:grp, col:'#8b95a5' };

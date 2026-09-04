@@ -2685,6 +2685,75 @@ async function groupLobby(){
               if(over>worst){ worst=over; who=q[0]; } }); });
           assert(worst<0, who+' 가 육각 밖으로 '+worst.toFixed(1)+'px 나갔다 — 글자를 줄이거나 덜 내릴 것');
           bagNote='가방 '+rws.length+'줄 · 버튼 '+hbs.length+'개 · 글자 여유 '+(-worst).toFixed(1)+'px'; }
+        // 👆 **넣고 빼기는 한 번씩**(2026-09-04 사용자 확정)
+        //   가방을 누르면 들어가고, 낀 칸을 누르면 나온다. 확인 단계를 두지 않는다 —
+        //   빼는 것은 잃는 것이 아니라 가방으로 돌아가는 것이라 되돌리기가 쉽다.
+        { const R2 = campRuneState(), kk = runeKey('tap','high');
+          R2.own[kk] = 2; R2.norm[0] = kk; campRuneTouch(); campRuneRender();
+          campRuneSlotTap('norm', 0);
+          assert(!campRuneEq('norm')[0], '낀 칸을 눌렀는데 안 빠진다 — 「고르기」로 되돌아갔다');
+          // 빈 칸은 골라진다(빼기가 아니라)
+          campRuneSlotTap('norm', 0);
+          assert(_runePickKind === 'norm' && _runePick === 0, '빈 칸을 눌렀는데 안 골라진다'); }
+        // 🗒 **길게 누르면 효과 쪽지** — 엔진의 onHold 를 타고 온다
+        { const R2 = campRuneState(); R2.norm[0] = runeKey('tap','high'); campRuneTouch();
+          campRuneRender(); await sleep(20);
+          const el = document.querySelector('#rnG [data-rk="norm"][data-ri="0"]');
+          assert(el, '칸의 누르는 면이 없다');
+          campRuneSlotHold('norm', 0, el);
+          const tip = $('rnTip');
+          assert(tip, '길게 눌렀는데 쪽지가 안 뜬다');
+          assert(tip.querySelector('b') && tip.querySelector('s') && tip.querySelector('u'),
+            '쪽지에 이름·효과·값이 다 있지 않다');
+          assert(tip.querySelector('u').textContent === runeValTx(runeKey('tap','high')),
+            '쪽지의 값이 룬의 값과 다르다: ' + tip.querySelector('u').textContent);
+          // 📐 화면 안에 들어온다 — 판을 밀어도 쪽지가 밖으로 새면 안 된다
+          const tr = tip.getBoundingClientRect(), hr = $('campRune').getBoundingClientRect();
+          assert(tr.left >= hr.left - 1 && tr.right <= hr.right + 1
+              && tr.top >= hr.top - 1 && tr.bottom <= hr.bottom + 1,
+            '쪽지가 화면 밖으로 나갔다');
+          // 빈 칸에는 쪽지가 없다(보여 줄 것이 없다)
+          campRuneSlotTap('norm', 0);                        // 뺀다
+          campRuneSlotHold('norm', 0, el);
+          assert(!$('rnTip'), '빈 칸인데 쪽지가 떴다');
+          // 👆 **손가락으로** 길게 눌러 본다 — 엔진의 배선까지 함께 잰다.
+          //   ⚠ 함수 안에 'onHold' 라는 글자가 있는지로는 배선이 끊긴 것을 못 잡는다(실측).
+          R2.norm[0] = runeKey('tap','high'); campRuneTouch(); campRuneRender(); await sleep(20);
+          { const svg = $('rnSvg');
+            const hit = document.querySelector('#rnG [data-rk="norm"][data-ri="0"]');
+            const rr = hit.getBoundingClientRect();
+            const opt = { pointerId:1, bubbles:true,
+              clientX: rr.left + rr.width / 2, clientY: rr.top + rr.height / 2 };
+            const keep = svg.setPointerCapture; svg.setPointerCapture = () => {};
+            try{
+              // ⚠ **칸에** 보낸다 — svg 에 보내면 target 이 svg 가 되어 ctx.hit 이 못 찾는다
+              //   (실제 손가락은 그 자리의 요소가 target 이다).
+              hit.dispatchEvent(new PointerEvent('pointerdown', opt));
+              await sleep(60);
+              assert(!$('rnTip'), '누르자마자 쪽지가 떴다 — 길게 누르기가 아니다');
+              await sleep(520);
+              assert($('rnTip'), '손가락으로 길게 눌렀는데 쪽지가 안 뜬다 — 엔진 배선이 끊겼다');
+              hit.dispatchEvent(new PointerEvent('pointerup', opt));
+              // 길게 눌러 일이 벌어졌으면 뗄 때의 탭은 삼킨다(빼기가 같이 일어나면 안 된다)
+              assert(campRuneEq('norm')[0], '길게 누른 뒤 손을 떼자 룬이 빠졌다 — 탭을 안 삼켰다');
+            } finally { svg.setPointerCapture = keep; }
+            campRuneTipHide(); } }
+        // 🔎 **칸을 고르면 가방이 그 갈래만** 보여 준다
+        { // ⚠ 칸을 **비우고** 잰다 — 낀 칸을 누르면 「빼기」라 고르기가 안 된다
+          const R3 = campRuneState(); R3.norm = []; R3.uniq = []; campRuneTouch(); campRuneRender();
+          RUNE_GRPS.forEach((k, ci) => {
+            campRunePick('', -1); campRuneSlotTap('norm', ci * RUNE_CONS);
+            const hs = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
+            assert(hs.length === 1 && hs[0] === RUNE_GRP[k].nm,
+              ci + '번 성좌를 골랐는데 가방에 ' + hs.join(',') + ' 이 보인다');
+            });
+          campRunePick('', -1); campRuneSlotTap('uniq', 0);
+          const hu = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
+          assert(hu.length === 1 && hu[0] === RUNE_GRP.uniq.nm,
+            '유니크 칸을 골랐는데 가방에 ' + hu.join(',') + ' 이 보인다');
+          campRunePick('', -1);
+          const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
+          assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
         // 🎒 가방 탭 = **빈 칸 중 첫 칸**에 자동 장착
         const R=campRuneState(); R.own[runeKey('tap','high')]=2;
         R.norm=[]; campRuneTouch(); campRuneRender(); await sleep(30);

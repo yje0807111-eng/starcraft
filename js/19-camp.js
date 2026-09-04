@@ -361,6 +361,9 @@ const SVV_SNAP_P = 0.6, SVV_SNAP_Z = 0.002;   // 이만큼 가까우면 목표�
 const SVV_TAP_SLOP = 14;        // 이만큼까지는 「누른 것」 — 손가락은 가만히 못 있는다
 const SVV_ZSTEP = 1.22;         // 휠 한 칸
 const SVV_DTAP_MS = 320;        // 두 번 톡톡으로 치는 간격
+// 👆 **길게 누르기** — 손가락을 이만큼 붙잡고 있으면 onHold 가 온다.
+//   ⚠ 발동한 뒤의 pointerup 은 **탭으로 치지 않는다**(누르자마자 두 가지가 일어나면 안 된다).
+const SVV_HOLD_MS = 420;
 function svvNew(){ return { x:0, y:0, z:1, tx:0, ty:0, tz:1, fitZ:0, run:0 }; }
 // 화면(클라이언트) 좌표 → viewBox 좌표. ⚠ preserveAspectRatio="xMidYMid meet" 전제 —
 //   짧은 쪽에 맞춰 여백이 생기므로 그 여백을 빼야 손가락과 그림이 같은 자리를 가리킨다.
@@ -473,13 +476,18 @@ function svvBind(svg, ctx){
   const two = () => { const a = [...P.values()]; if(a.length < 2) return null;
     return { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y),
              cx:(a[0].x + a[1].x) / 2, cy:(a[0].y + a[1].y) / 2 }; };
+  // 👆 길게 누르기 — 누른 채로 SVV_HOLD_MS 를 넘기면 발동하고, 그 뒤 탭은 삼킨다
+  let holdT = 0, held = false;
+  const holdOff = () => { if(holdT){ clearTimeout(holdT); holdT = 0; } };
   svg.addEventListener('pointerdown', e => {
     svg.setPointerCapture(e.pointerId); P.set(e.pointerId, { x:e.clientX, y:e.clientY });
-    moved = 0;
+    moved = 0; held = false; holdOff();
     // 👆 누른 것을 **여기서** 잡아 둔다 — capture 뒤에는 target 이 <svg> 가 되어 알 수 없다.
     down = ctx.hit ? ctx.hit(e) : null;
-    if(P.size === 1) drag = { x:e.clientX, y:e.clientY, vx:ctx.v.tx, vy:ctx.v.ty };
-    else if(P.size === 2){ drag = null; pinch = two(); } });
+    if(P.size === 1){ drag = { x:e.clientX, y:e.clientY, vx:ctx.v.tx, vy:ctx.v.ty };
+      if(ctx.onHold && down) holdT = setTimeout(() => { holdT = 0; held = true;
+        ctx.onHold(down); }, SVV_HOLD_MS); }
+    else if(P.size === 2){ drag = null; pinch = two(); holdOff(); } });
   svg.addEventListener('pointermove', e => {
     if(!P.has(e.pointerId)) return;
     P.set(e.pointerId, { x:e.clientX, y:e.clientY });
@@ -491,6 +499,7 @@ function svvBind(svg, ctx){
       return; }
     if(drag){ const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+      if(moved > SVV_TAP_SLOP) holdOff();          // 밀기 시작하면 길게 누르기는 취소
       // ⚠ 끄는 거리도 viewBox 단위로 바꿔야 손가락과 그림이 **같은 속도**로 움직인다
       const a = svvToView(svg, drag.x, drag.y), b = svvToView(svg, e.clientX, e.clientY);
       svvGoto(ctx.v, ctx.g, { x: drag.vx + (b.x - a.x), y: drag.vy + (b.y - a.y) }, false, ctx.alive);
@@ -500,12 +509,15 @@ function svvBind(svg, ctx){
           svvKick(ctx.v, ctx.g, ctx.alive); } } } });
   svg.addEventListener('pointerup', () => {
     const el = down; down = null; P.clear(); pinch = null; drag = null;
+    holdOff();
+    if(held){ held = false; return; }                      // 길게 눌러 이미 일이 벌어졌다
     if(moved > SVV_TAP_SLOP) return;                       // 밀었으면 탭이 아니다
     if(el){ tapT = 0; if(ctx.onTap) ctx.onTap(el); return; }
     const t = Date.now();
     if(t - tapT < SVV_DTAP_MS){ tapT = 0; if(ctx.onDouble) ctx.onDouble(); return; }
     tapT = t; if(ctx.onEmpty) ctx.onEmpty(); });
-  svg.addEventListener('pointercancel', () => { P.clear(); pinch = null; drag = null; down = null; });
+  svg.addEventListener('pointercancel', () => { P.clear(); pinch = null; drag = null; down = null;
+    holdOff(); held = false; });
   // 🖱 휠 — 커서 자리를 붙잡고 확대. ⚠ passive:false 여야 페이지가 같이 스크롤되지 않는다
   svg.addEventListener('wheel', e => { e.preventDefault();
     svvZoomAt(ctx.v, svg, ctx.g, ctx.v.tz * (e.deltaY < 0 ? SVV_ZSTEP : 1 / SVV_ZSTEP),
