@@ -1,0 +1,231 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 버튼 — 그라디언트 테두리 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--pk:#c9a6ff;--cy:#5cd6ff;--r-bar:3px;--r-md:6px;--r-lg:9px}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 6px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1320px}
+.note b{color:#dfe5ee}
+.zoomWrap{margin:14px 22px 6px;padding:18px 20px 20px;border-radius:var(--r-lg);
+  background:radial-gradient(120% 140% at 50% 0%,#131a26,#070a0f 70%)}
+.zoomWrap h2{margin:0 0 4px;font-size:13px;color:#cfd7e2}
+.zoomWrap p{margin:0 0 14px;font-size:11px;color:#8d97a6}
+.zoom{display:grid;grid-template-columns:repeat(4,1fr);gap:16px 18px}
+.zc{}
+.zc .zt{margin:0 0 7px;font-size:11.5px;font-weight:700;color:#a7b2c0}
+.zc .zt i{font-style:normal;color:var(--gold);margin-right:6px;font-family:var(--font-num)}
+/* 2배로 키워 본다 — 차이가 1px 단위라 실제 크기로는 안 보인다 */
+/* ⚠ transform 은 자리를 안 차지한다 — 키운 높이(58×1.6 ≈ 93)만큼 상자를 따로 잡아 준다.
+   안 그러면 다음 줄이 위로 올라와 겹친다(실제로 겹쳤다). */
+.zbox{height:100px}
+.zbig{transform:scale(1.6);transform-origin:left top;width:62.5%}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:10px 22px 40px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:76px}
+.sub b{color:#cfd7e2}
+
+/* ══ 폰 ══════════════════════════════════════════════════════════ */
+.ph{position:relative;width:390px;height:844px;overflow:hidden;background:#05070b;
+  display:flex;flex-direction:column}
+.ph::before{content:'';position:absolute;inset:0;z-index:0;
+  background:url('../../assets/backgrounds/reb/reb.webp') center/cover no-repeat;opacity:.9}
+.ph::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,6,10,.72),rgba(4,6,10,.34) 34%,rgba(4,6,10,.86))}
+.bar{position:relative;z-index:2;flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:44px 12px 6px;height:90px}
+.bar .t{font-size:15px;font-weight:700;color:#eef1f6;letter-spacing:.1em}
+.bar .r{margin-left:auto;font-family:var(--font-num);font-size:11px;color:#9fb0c4}
+.body{position:relative;z-index:2;flex:1;min-height:0;overflow:hidden;
+  padding:8px 18px 6px;display:flex;flex-direction:column}
+.foot{position:relative;z-index:2;flex:0 0 auto;padding:10px 18px 12px;
+  background:linear-gradient(180deg,rgba(5,8,12,0),rgba(5,8,12,.72) 34%,rgba(5,8,12,.88))}
+.nav{position:relative;z-index:2;flex:0 0 auto;height:56px;display:flex;align-items:center;
+  justify-content:space-around;border-top:1px solid rgba(255,255,255,.08);background:#05070b;
+  font-size:11px;color:#69737f}
+.nav b{color:#cfd7e2;font-weight:700}
+/* 위·가운데 — ⓐ 확정분 */
+.gap{height:24px}
+.k{font-family:var(--font-num);font-size:11px;color:#a7b2c0;letter-spacing:.32em;text-shadow:0 1px 6px #000}
+.hero{position:relative;text-align:center}
+.hero::before{content:'';position:absolute;left:50%;top:52%;width:230px;height:230px;
+  margin:-115px 0 0 -115px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,rgba(150,120,255,.22),rgba(90,70,180,.10) 46%,rgba(5,8,12,0) 70%)}
+.big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:62px;line-height:1;color:#fff;text-shadow:0 3px 22px #000}
+.now{display:inline-block;margin-top:7px;padding:3px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
+  font-family:var(--font-num);font-size:12px;color:#9aa5b3}
+.pt{position:relative;text-align:center;margin-top:16px;padding:12px 14px 13px;
+  border-radius:var(--r-md);border:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.006));
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.pt::before{content:'';position:absolute;left:14%;right:14%;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent)}
+.pt .k{letter-spacing:.24em}
+.pv{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:32px;font-weight:800;
+  color:var(--gold);line-height:1.1;margin-top:3px}
+.fx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:5px}
+.fx b{color:#a9b4c2;font-weight:700}
+.sec{margin-top:14px}
+.h{font-size:12px;font-weight:700;color:#9aa5b3;margin:0 2px 8px}
+.list{padding:2px 12px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.08);
+  background:rgba(9,13,19,.42);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.li{display:flex;align-items:center;gap:10px;padding:9px 0}
+.li+.li{border-top:1px solid rgba(255,255,255,.07)}
+.li .ic{flex:0 0 18px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+  color:#7f8b99;opacity:.9}
+.li .ic svg{width:100%;height:100%} .li .ic img{width:16px;height:16px;object-fit:contain}
+.li .nm{flex:1;min-width:0;font-size:12.5px;color:#a7b2c0}
+.li .v{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;
+  font-weight:800;color:#e9eff7}
+.li .v u{text-decoration:none;font-size:11px;font-weight:700;color:#7b8593;margin-left:3px}
+.cond{margin-bottom:12px}
+.ct{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:12px;
+  color:#8d97a6;margin-bottom:5px}
+.cb{height:4px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.cb i{display:block;height:100%;background:var(--cy)}
+.pk{position:relative;display:flex;align-items:center;gap:9px;width:100%;min-height:48px;
+  margin-top:10px;padding:0 14px;border-radius:var(--r-md);font-size:12.5px;font-weight:700;
+  color:#c3bcd2;border:1px solid rgba(201,166,255,.34);background:rgba(201,166,255,.08)}
+.pk::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,166,255,.75),transparent)}
+.pk .t{flex:1;min-width:0;text-align:left;line-height:1.35}
+.pk b{color:var(--pk);font-weight:800} .pk u{text-decoration:none;color:var(--pk)}
+.warn{margin-top:9px;text-align:center;font-size:11px;color:#6f7b89}
+
+/* ══════════════════════════════════════════════════════════════════
+   🔵 버튼 — 여덟 안. 공통 뼈대는 하나다.
+   ⭐ **진짜 1px 그라디언트 테두리**는 background 두 겹으로 만든다:
+      padding-box 에 면, border-box 에 그라디언트, border 는 transparent.
+      (border-color 로는 그라디언트를 못 준다 — 이게 유일한 방법이다.)
+   ══════════════════════════════════════════════════════════════════ */
+.go{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  min-height:58px;border:0;border-radius:var(--r-md);font-size:17px;font-weight:800;letter-spacing:.16em;
+  color:#fff}
+.go svg{width:20px;height:20px;color:#bfe6ff}
+/* 🔲 **1px 그라디언트 테두리** — 고리만 남기는 마스크.
+   ⛔ background 두 겹(padding-box / border-box) 방식을 쓰지 말 것: 내부가 **반투명**이면
+     밝은 테두리 그라디언트가 면 전체로 비쳐 버튼이 통째로 밝아진다(2026-09-04 실측 — 실제로 그랬다).
+   ⭐ 마스크는 테두리 두께만큼만 남기므로 내부가 아무리 투명해도 안전하다. */
+.go .rim{position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude}
+/* 윗변 하이라이트 — 테두리 바로 안쪽의 1px 반사 */
+.go.hl::before{content:'';position:absolute;left:9%;right:9%;top:1.5px;height:1px;border-radius:1px;
+  pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(210,240,255,.55),transparent)}
+
+/* ⓪ 지금 — 평평한 시안(비교용) */
+.v0 .go{border:1px solid rgba(92,214,255,.55);background:rgba(92,214,255,.10)}
+.v0 .go .rim{display:none}
+/* ① 그라디언트 테두리 + 위가 밝은 내부 */
+.v1 .go{background:linear-gradient(180deg,rgba(96,166,255,.20),rgba(30,60,120,.10) 62%,rgba(16,30,60,.06))}
+.v1 .rim{background:linear-gradient(180deg,rgba(150,215,255,.85),rgba(60,110,190,.28))}
+/* ② ① + 윗변 하이라이트 */
+.v2 .go{background:linear-gradient(180deg,rgba(96,166,255,.20),rgba(30,60,120,.10) 62%,rgba(16,30,60,.06))}
+.v2 .rim{background:linear-gradient(180deg,rgba(150,215,255,.85),rgba(60,110,190,.28))}
+/* ③ ② + 안쪽 위 광(inset) */
+.v3 .go{background:linear-gradient(180deg,rgba(96,166,255,.22),rgba(30,60,120,.10) 62%,rgba(16,30,60,.06));
+  box-shadow:inset 0 10px 22px -12px rgba(180,225,255,.55)}
+.v3 .rim{background:linear-gradient(180deg,rgba(150,215,255,.85),rgba(60,110,190,.28))}
+/* ④ 대각으로 흐른다 */
+.v4 .go{background:linear-gradient(152deg,rgba(110,180,255,.24),rgba(30,60,120,.10) 58%,rgba(14,26,52,.05))}
+.v4 .rim{background:linear-gradient(152deg,rgba(170,225,255,.9),rgba(50,95,170,.22))}
+/* ⑤ 테두리가 위만 밝다 — 아래로 갈수록 사라진다 */
+.v5 .go{background:linear-gradient(180deg,rgba(96,166,255,.20),rgba(24,48,96,.08) 70%,rgba(10,18,36,.03))}
+.v5 .rim{background:linear-gradient(180deg,rgba(190,235,255,.95),rgba(70,130,210,.34) 42%,rgba(40,70,120,.08))}
+/* ⑥ 가운데 위에서 번지는 후광 */
+.v6 .go{background:radial-gradient(120% 180% at 50% -20%,rgba(120,195,255,.30),rgba(24,48,96,.08) 62%,rgba(10,18,36,.04))}
+.v6 .rim{background:linear-gradient(180deg,rgba(160,220,255,.88),rgba(60,110,190,.26))}
+/* ⑦ ⭐ 종합 */
+.v7 .go{background:linear-gradient(180deg,rgba(104,176,255,.24),rgba(28,56,112,.10) 60%,rgba(14,26,52,.05));
+  box-shadow:inset 0 12px 26px -14px rgba(190,230,255,.6),0 6px 20px -14px rgba(60,130,220,.9)}
+.v7 .rim{background:linear-gradient(180deg,rgba(195,238,255,.95),rgba(72,132,212,.36) 40%,rgba(38,68,118,.10))}
+</style></head><body>
+<h1>환생 버튼 — <span style="color:#8d97a6">그라디언트 테두리 · 은은한 내부 8안</span></h1>
+<p class="note">참고 이미지의 결을 좇는다 — <b>테두리가 1px 그라디언트</b>(위는 밝고 아래로 사라진다) · <b>내부도 그라디언트</b>(위가 약간 밝다) · 면은 채우지 않고 <b>비치는 정도</b>.
+<br>⭐ 진짜 1px 그라디언트 테두리는 <code>border-color</code> 로는 못 만든다 — <b>background 를 두 겹</b>으로 깔아야 한다(padding-box 에 면 · border-box 에 그라디언트 · border 는 투명).
+<br>⚠ 차이가 <b>1px 단위</b>라 실제 크기로는 안 보인다 — 아래에 <b>1.6배로 키운 줄</b>을 먼저 뒀다. 폰은 그 다음이다.</p>
+
+<div class="zoomWrap"><h2>1.6배로 키워 본 여덟</h2>
+  <p>같은 배경 위에 나란히 뒀다. 테두리의 위·아래 밝기 차와 내부 그라디언트의 방향을 여기서 견준다.</p>
+  <div class="zoom" id="zoom"></div></div>
+
+<div class="wrap" id="wrap"></div>
+<script>
+const IC = '../../assets/icons/';
+const D = { mul:'1.20', now:'×1.00', pts:'+2', fx:'재화 <b>1.41</b> × 던전 <b>1.00</b> × 라운드 <b>1.00</b>',
+  cond:'724,960 / 1.0M', pct:72 };
+const G = {
+  tap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 11V9.5a1.5 1.5 0 0 1 3 0V12"/>' +
+      '<path d="M15 12v-1a1.5 1.5 0 0 1 3 0v5a5 5 0 0 1-5 5h-1.5a5 5 0 0 1-4.3-2.5L6 16"/></svg>',
+  auto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+       '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21' +
+       'M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg>',
+  time:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+       '<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.2 2"/></svg>',
+  min:'<img src="' + IC + 'res_mineral.webp" alt="">',
+  gas:'<img src="' + IC + 'res_gas.webp" alt="">' };
+const ST = [
+  [G.tap,  '터치',             '1,240', '회'],
+  [G.min,  '터치로 번 미네랄',  '832.0K', ''],
+  [G.auto, '자동으로 번 미네랄','4.2M',  ''],
+  [G.gas,  '가스',             '3,120', ''],
+  [G.time, '플레이 시간',       '32',    '분'] ];
+const row = a => '<div class="li"><span class="ic">' + a[0] + '</span>' +
+  '<span class="nm">' + a[1] + '</span>' +
+  '<span class="v">' + a[2] + (a[3] ? '<u>' + a[3] + '</u>' : '') + '</span></div>';
+const ICOgo = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+  'stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg>';
+const CASES = [
+{ k:'v0', hl:0, t:'지금 (기준) — 평평한 시안',
+  d:'테두리도 면도 <b>한 값</b>이다. 위아래가 똑같아 판이 납작하다.' },
+{ k:'v1', hl:0, t:'① 그라디언트 테두리 + 위가 밝은 내부',
+  d:'테두리를 <b>위 .85 → 아래 .28</b> 로 흘리고, 내부도 위가 밝게. 이것만으로 「빛이 위에서 온다」가 생긴다.' },
+{ k:'v2', hl:1, t:'② ① + 윗변 하이라이트 한 줄',
+  d:'테두리 바로 안쪽에 <b>1px 밝은 선</b>을 하나 더 긋는다. 유리판의 윗면 반사 — 이 게임의 별·아이콘 틀이 쓰는 그 수법이다.' },
+{ k:'v3', hl:1, t:'③ ② + 안쪽 위 광(inset)',
+  d:'위에서 안쪽으로 <b>번지는 광</b>을 넣는다(inset 그림자). 선 하나보다 부드럽고, 면이 「비어 있지 않다」는 느낌을 준다.' },
+{ k:'v4', hl:1, t:'④ 대각으로 흐른다',
+  d:'세로가 아니라 <b>왼쪽 위 → 오른쪽 아래</b>로 흘린다. 빛이 한 방향에서 비스듬히 드는 결. 넓은 버튼에서 특히 산다.' },
+{ k:'v5', hl:1, t:'⑤ 테두리가 위만 밝다 — 아래는 사라진다',
+  d:'테두리 자체를 <b>위 .95 → 42% 지점 .34 → 아래 .08</b> 로. 버튼의 아랫부분이 어둠에 잠겨 <b>떠 있는</b> 것처럼 보인다.' },
+{ k:'v6', hl:1, t:'⑥ 가운데 위에서 번지는 후광',
+  d:'내부를 세로가 아니라 <b>방사형</b>으로 — 위 가운데가 가장 밝고 사방으로 사라진다. 글자 뒤가 밝아 <b>「환 생」이 가장 또렷</b>하다.' },
+{ k:'v7', hl:1, t:'⑦ ⭐ 종합 — 위만 밝은 테두리 + 위가 밝은 내부 + 윗변 선 + 안쪽 광',
+  d:'⑤ 의 테두리 + ③ 의 안쪽 광 + 윗변 선을 함께. 바깥으로 아주 옅은 그림자까지 더해 <b>판이 배경에서 살짝 떠오른다</b>. 채우지 않았는데도 주 동작으로 읽힌다.' },
+];
+function btn(c){ return '<button class="go' + (c.hl ? ' hl' : '') + '">' +
+  '<span class="rim"></span>' + ICOgo + '환 생</button>'; }
+function ph(c){
+  return '<div class="ph ' + c.k + '"><div class="bar"><span class="t">환생</span>' +
+    '<span class="r">◈ 0 · ⬢ 0 · ◆ 0</span></div>' +
+    '<div class="body"><div class="gap"></div>' +
+      '<div class="hero"><div class="k">획 득 배 수</div><div class="big">' + D.mul + '</div>' +
+      '<div class="now">현재 ' + D.now + '</div></div>' +
+      '<div class="pt"><div class="k">획 득 포 인 트</div><div class="pv">' + D.pts + '</div>' +
+      '<div class="fx">' + D.fx + '</div></div>' +
+      '<div class="sec"><div class="h">이번 회차</div><div class="list">' + ST.map(row).join('') +
+      '</div></div></div>' +
+    '<div class="foot">' +
+      '<div class="cond"><div class="ct"><span>환생 조건</span><span>' + D.cond + '</span></div>' +
+      '<div class="cb"><i style="width:' + D.pct + '%"></i></div></div>' + btn(c) +
+      '<button class="pk"><span class="t">환생 팩 — 배수·포인트가 <b>계속 2배</b></span><u>보러 가기</u></button>' +
+      '<div class="warn">환생하면 지금까지의 진행이 초기화됩니다</div></div>' +
+    '<div class="nav"><span>던전</span><b>환생</b><span>환생 트리</span></div></div>'; }
+
+document.getElementById('zoom').innerHTML = CASES.map(function(c, i){
+  return '<div class="zc ' + c.k + '"><p class="zt"><i>' + i + '</i>' +
+    c.t.replace(/^[⓪①②③④⑤⑥⑦\d\s.]*/, '').replace(/^— /, '') + '</p>' +
+    '<div class="zbox"><div class="zbig">' + btn(c) + '</div></div></div>'; }).join('');
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' + ph(c) + '</div>'; }).join('');
+</script></body></html>

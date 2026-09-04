@@ -482,7 +482,7 @@ const NAV_TREE=[
     cur:()=>(campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null)),
     reset:()=>campRebEnter('info'), subs:[
       { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
-      { k:'tree', label:'업그레이드', ico:'flag', act:()=>campRebEnter('tree') } ] },
+      { k:'tree', label:'환생 트리', ico:'flag', act:()=>campRebEnter('tree') } ] },
   // 💠 룬 — 환생과 유즈맵 사이(2026-09-02 사용자 확정: 연구·환생·**룬**·유즈맵·상점).
   //   ⭐ 자리가 여기인 이유: 왼쪽 셋이 「내가 세지는 곳」이고 오른쪽 둘이 「밖으로 나가는 곳」이다.
   //   하위 둘 — **장착**(칸에 끼우기)과 **룬 상점**(젬으로 사기).
