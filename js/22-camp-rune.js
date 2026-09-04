@@ -616,8 +616,8 @@ function _runeZoneSvg(){
   for(let ci = 0; ci < RUNE_CT.length; ci++){
     const c = RUNE_CT[ci], key = RUNE_GRPS[ci], gi = RUNE_GRP[key];
     if(!gi) continue;
-    g.push('<circle class="rnAu" cx="' + c[0] + '" cy="' + c[1] + '" r="'
-      + Math.round((RUNE_RING + RUNE_R_N) * 1.55) + '" fill="url(#rnAu' + ci + ')"/>');
+    // ⭕ 원이 아니라 **타원**이다 — 정원은 경계가 도드라진다(트리의 성운도 타원이다).
+    g.push('<ellipse class="rnAu" cx="' + c[0] + '" cy="' + c[1] + '" rx="250" ry="215" fill="url(#rnAu' + ci + ')"/>');
     g.push('<text class="rnZn" x="' + c[0] + '" y="' + (c[1] - RUNE_ZONE_DY).toFixed(0)
       + '" style="fill:' + gi.col + '">' + gi.nm + '</text>'); }
   return g.join(''); }
@@ -633,14 +633,18 @@ function _runeDefs(){
       + '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>'
       + '<stop offset=".62" stop-color="' + c + '" stop-opacity=".07"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
-  // 🌌 성좌 구역의 오로라 — 갈래 색으로 넓고 흐리게(칸의 뒷광과 다른 층이다)
-  //   ⚠ 세기는 **재서 정했다**(2026-09-04). 배경이 어두운 사진이라 .20 에서는 배경보다
-   //     2~10 밝을 뿐이어서 전투·성장이 아예 안 보였다. .50 에서 R13/G19 만큼 갈린다.
-  //     ⛔ 다시 낮추지 말 것 — 「은은하게」의 하한이 여기다.
+  // 🌌 성좌 구역의 오로라 — **환생 트리의 성운과 같은 문법**이다(2026-09-04 사용자 확정:
+  //   「환생 트리 구역의 배경처럼 뒤에 나오는 은은한 빛」).
+  //   ⭐ 요령은 **아주 넓게 · 아주 옅게**다(트리: 타원 rx186 · 세기 .05, 중심 빛 r300).
+  //     처음에는 성좌 크기의 1.5배(r132)에 .50 으로 진하게 넣었는데, 그러면 경계가 보여
+  //     「빛」이 아니라 **동그란 얼룩**으로 읽힌다(사용자 지적). 반경을 두 배로 늘리고
+  //     세기를 절반 아래로 내리면 경계가 화면 밖으로 밀려 스며드는 빛이 된다.
+  //   ⛔ 반경을 줄이면서 세기를 올리지 말 것 — 그 조합이 얼룩이다.
+  //   ⛔ blur 필터를 쓰지 말 것 — 트리에서 팬·줌이 38 → 23 프레임으로 떨어졌다(19-camp.js).
   for(let i = 0; i < RUNE_GRPS.length; i++){ const c = (RUNE_GRP[RUNE_GRPS[i]] || {}).col || '#8b95a5';
     d += '<radialGradient id="rnAu' + i + '">'
-      + '<stop offset="0" stop-color="' + c + '" stop-opacity=".50"/>'
-      + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".16"/>'
+      + '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>'
+      + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".07"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
   // 🕳 빈 칸의 **파인 홈** — 위가 어둡고 아래가 밝다. 빛이 위에서 오니 안쪽으로 파인 자리로 읽힌다
   //   (2026-09-04 사용자 확정 · 목업 camp-rune-slot-8 ②안).
