@@ -1,0 +1,123 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 판 — 교체 대기 모션 두 조합 (실제 좌표 · 움직입니다)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{ --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f; }
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:380px}
+.cap{margin:0 0 4px;font-weight:700;font-size:14px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11.5px;line-height:1.65;min-height:66px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.pane{position:relative;width:380px;height:330px;overflow:hidden;border:1px solid var(--metal-edge);
+  border-radius:var(--r-md);background:#080b10}
+.pane::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(110% 90% at 50% 42%,#16202b,#080b10 74%)}
+.pane svg{position:relative;display:block;width:100%;height:100%}
+.tag{position:absolute;right:8px;bottom:6px;font-size:9.5px;color:var(--txt-off);font-family:var(--font-num)}
+.cellG{transform-box:view-box}
+.dim{opacity:.30}
+
+/* ② 숨쉬기 */
+@keyframes breathe{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.075)} }
+/* ⑤ 흐르는 점선 */
+@keyframes ants{ to{stroke-dashoffset:-22} }
+/* ⑥ 퍼지는 고리 */
+@keyframes ring{ 0%{transform:scale(1);opacity:.65} 72%{opacity:0} 100%{transform:scale(var(--rk,1.7));opacity:0} }
+/* ⑦ 떠오름 + 숨 */
+@keyframes lift{ 0%{transform:translateY(0) scale(1)} 100%{transform:translateY(-3px) scale(1.05)} }
+@keyframes liftB{ 0%,100%{transform:translateY(-3px) scale(1.05)} 50%{transform:translateY(-3px) scale(1.075)} }
+
+.A .cand{animation:breathe 1.15s ease-in-out infinite}
+.A .cand .ants{animation:ants 1.1s linear infinite}
+.B .cand{animation:lift .22s ease-out forwards, liftB 1.6s ease-in-out .22s infinite}
+.B .cand .ring{transform-box:view-box;animation:ring 1.5s cubic-bezier(.2,.7,.3,1) infinite}
+</style></head><body>
+
+<h1>교체 대기 — <b>②+⑤</b> 와 <b>⑦+⑥</b> · <span style="color:#8fe6b0;font-size:12px">이 파일을 열면 실제로 움직입니다</span></h1>
+<p><b>실제 판의 좌표 그대로</b>다(고리 반지름 64 · 칸 반지름 21 · 여덟 칸).
+⚠ 앞 목업은 칸 간격이 실제보다 넓어서 안 드러난 것이 있다 —
+<b>이웃 칸 중심 사이가 49.0</b> 이고 칸 가장자리까지 <b>28.0</b> 뿐이라,
+퍼지는 고리를 1.7배로 두면 <s>35.7 까지 번져 옆 칸을 밟는다</s>.
+그래서 ⑥은 두 벌을 나란히 놓았다 — 원래 세기(1.7)와 <b>안 밟는 세기</b>(1.30).</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+/* 실제 값(js/22-camp-rune.js) */
+var RING = 64, R = 21, RU = 33, CONS = 8;
+var CX = 190, CY = 158;
+function hexPts(x,y,r){ var q=[]; for(var i=0;i<6;i++){ var a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function pos(j){ var a=-Math.PI/2+j/CONS*Math.PI*2; return [CX+Math.cos(a)*RING, CY+Math.sin(a)*RING]; }
+var GLY = ['tap','gas','mine','reb','tap','gas','mine','reb'];
+var GD  = ['high','mid','low','high','mid','low','high','mid'];
+var COL = { low:'#9aa4b0', mid:'#5cd6ff', high:'#ffcf6b' };
+
+var DEFS = '<defs><linearGradient id="face" x1="0" y1="0" x2="0" y2="1">'
+ + '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>';
+['low','mid','high'].forEach(function(g){ var c = COL[g];
+  DEFS += '<linearGradient id="e'+g+'" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#fff" stop-opacity=".92"/>'
+    + '<stop offset=".42" stop-color="'+c+'"/>'
+    + '<stop offset="1" stop-color="'+c+'" stop-opacity=".34"/></linearGradient>'
+    + '<radialGradient id="b'+g+'"><stop offset="0" stop-color="'+c+'" stop-opacity=".22"/>'
+    + '<stop offset=".62" stop-color="'+c+'" stop-opacity=".07"/>'
+    + '<stop offset="1" stop-color="'+c+'" stop-opacity="0"/></radialGradient>'; });
+DEFS += '</defs>';
+
+function cell(x, y, gd, gly, r, extra){
+  var c = COL[gd];
+  return '<polygon points="'+hexPts(x,y,r)+'" fill="#000" opacity=".55"/>'
+   + '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" stroke="url(#e'+gd+')" stroke-width="1.3"/>'
+   + '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r*0.72).toFixed(1)+'" fill="url(#b'+gd+')"/>'
+   + '<polygon points="'+hexPts(x,y,r-1.5)+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>'
+   + '<image href="../../assets/icons/rune/glyph/'+gly+'.webp" x="'+(x-r*0.5).toFixed(1)
+   + '" y="'+(y-r*0.5).toFixed(1)+'" width="'+r+'" height="'+r+'"/>'
+   + (extra || ''); }
+
+function board(kind, rk){
+  var s = DEFS;
+  s += '<g class="cellG dim">' + cell(CX, CY, 'high', 'speed', RU) + '</g>';
+  for(var j = 0; j < CONS; j++){
+    var p = pos(j), gd = GD[j], ex = '';
+    if(kind === 'A')
+      ex = '<polygon class="ants" points="'+hexPts(p[0],p[1],R+3.2)+'" fill="none"'
+         + ' stroke="'+COL[gd]+'" stroke-width="1.1" stroke-opacity=".75" stroke-dasharray="5 3"/>';
+    if(kind === 'B')
+      ex = '<polygon class="ring" points="'+hexPts(p[0],p[1],R)+'" fill="none"'
+         + ' stroke="'+COL[gd]+'" stroke-width="1.3"'
+         + ' style="--rk:'+rk+';transform-origin:'+p[0].toFixed(1)+'px '+p[1].toFixed(1)+'px"/>';
+    s += '<g class="cellG cand" style="transform-origin:'+p[0].toFixed(1)+'px '+p[1].toFixed(1)
+      + 'px;animation-delay:'+(j*72)+'ms,'+(j*72+220)+'ms">'
+      + cell(p[0], p[1], gd, GLY[j], R, ex) + '</g>'; }
+  /* 📏 옆 칸까지의 여유를 그림으로 — 점선 원이 「여기부터 남의 칸」 */
+  s += '<circle cx="'+pos(0)[0].toFixed(1)+'" cy="'+pos(0)[1].toFixed(1)+'" r="28"'
+     + ' fill="none" stroke="#ffb0b0" stroke-width=".7" stroke-dasharray="3 3" opacity=".55"/>';
+  return s; }
+
+var CASES = [
+{ k:'A', rk:1, t:'②+⑤ — 숨쉬기 + 흐르는 점선',
+  d:'칸은 <b>조용히 숨쉬고</b>(1 ↔ 1.075), 둘레의 점선이 <b>돈다</b>. 움직임이 칸 안과 밖으로 나뉘어 서로 안 부딪힌다. <em>가장 조용하고 가장 싸다</em> — 판이 스물일곱 칸이어도 안 시끄럽다.' },
+{ k:'B', rk:1.7, t:'⑦+⑥ — 떠오름 + 퍼지는 고리 (1.7배)',
+  d:'후보가 <b>한 번 떠오르고</b> 그 자리에서 숨쉬며, 고리가 <b>주기적으로 퍼진다</b>. 「집어 든 상태」가 분명하다. <s>⚠ 고리가 35.7 까지 번져 붉은 점선(28.0)을 넘는다 — 옆 칸을 밟는다.</s>' },
+{ k:'B', rk:1.30, t:'⑦+⑥ — 고리를 줄여 안 밟게 (1.30배)',
+  d:'같은 조합인데 고리를 <b>1.30배</b>로 줄였다(27.3 → 붉은 점선 안). 안 밟지만 <b>퍼지는 맛이 줄어</b> ②의 숨쉬기와 구분이 흐릿해진다.' },
+{ k:'A', rk:1, t:'②+⑤ (같은 것 · 오래 보기용)',
+  d:'왼쪽과 같은 안이다. 두 조합을 <b>번갈아 보며</b> 어느 쪽이 오래 봐도 편한지 견주려고 한 벌 더 뒀다.' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p>'
+   + '<p class="sub">'+c.d+'</p>'
+   + '<div class="pane '+c.k+'"><svg viewBox="0 0 380 330">'+board(c.k, c.rk)+'</svg>'
+   + '<span class="tag">붉은 점선 = 옆 칸 경계(28.0)</span></div></div>'; }).join('');
+</script></body></html>
