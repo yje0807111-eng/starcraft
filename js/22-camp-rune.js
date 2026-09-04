@@ -398,6 +398,7 @@ function campRuneClose(){ const el = document.getElementById('campRune');
   if(el) el.classList.remove('on', 'rnIn');
   _runePick = -1; _runePickKind = '';
   _runeSwapKey = '';                  // 🔁 나갈 때 교체도 걷는다(다시 들어오면 칸이 흔들린 채다)
+  _runeVeil = '';                     // 🫥 감춰 둔 칸도 푼다(안 그러면 문양이 사라진 채로 남는다)
   campRuneTipHide();
   if(typeof campRebArtOff === 'function') campRebArtOff(); }
 
@@ -628,7 +629,8 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
   //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
   // ⚠ 흔들림·부풀림은 **칸 전체를 감싸서** 준다 — 조각마다 걸면 테두리와 문양이 따로 논다.
   //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
-  const cls = 'rnCell' + (swCand ? ' rnWig' : '') + (swDim ? ' rnDim' : '');
+  const cls = 'rnCell' + (swCand ? ' rnWig' : '') + (swDim ? ' rnDim' : '')
+    + ((_runeVeil === kind + '-' + i) ? ' veil' : '');
   const st = 'transform-origin:' + X + 'px ' + Y + 'px'
     + (swCand ? ';animation-delay:' + ((i * 53) % 260) + 'ms' : '');
   return '<g class="' + cls + '" data-ck="' + kind + '-' + i + '" style="' + st + '">'
@@ -795,12 +797,20 @@ const RUNE_ARC_MAX = 74;              // 호의 최대 높이(px)
 // 📍 칸의 <g> — 문양을 감추거나 부풀리려면 칸 전체를 잡아야 한다
 function _runeCellEl(kind, i){
   return document.querySelector('#rnG .rnCell[data-ck="' + kind + '-' + i + '"]'); }
-// 🫥 받을 칸의 문양을 감춘다 — 날아온 그림이 도착해야 나타난다
+// 🫥 받을 칸의 문양을 감춘다 — 날아온 그림이 도착해야 나타난다.
+//   ⚠ **그릴 때부터** 감춰야 한다(상태로 둔다). 다 그린 뒤에 클래스를 붙이면 문양이
+//     opacity 1 로 한 번 계산된 뒤 0 으로 **페이드아웃**되어, 누르는 순간 칸에 룬이
+//     「생겼다 사라진다」(2026-09-04 실측: 탭 직후 1 → 6프레임에 걸쳐 0.18).
+//   ⛔ 렌더 뒤에 classList 로만 붙이지 말 것.
+let _runeVeil = '';                     // 'norm-3' 처럼 — 도착을 기다리는 칸 하나
+function _runeVeilKey(kind, i){ return kind + '-' + i; }
 function _runeCellVeil(kind, i, on){
-  const el = _runeCellEl(kind, i); if(!el) return;
-  el.classList.toggle('veil', !!on); }
+  _runeVeil = on ? _runeVeilKey(kind, i) : '';
+  const el = _runeCellEl(kind, i);      // 이미 그려져 있으면 지금 것도 맞춘다
+  if(el) el.classList.toggle('veil', !!on); }
 // 💥 도착 — 칸이 한 번 부풀고, 갈래 색 고리가 퍼진다
 function campRuneLand(kind, i, key){
+  if(_runeVeil === _runeVeilKey(kind, i)) _runeVeil = '';
   const el = _runeCellEl(kind, i); if(!el) return;
   el.classList.remove('veil');
   el.classList.remove('rnPop'); void el.getBBox;          // 애니를 다시 태우려면 한 번 끊는다
@@ -882,10 +892,10 @@ function campRuneSwapDo(kind, i){
   R[kind][i] = key; campRuneTouch();
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof playSfx === 'function') playSfx('ui_tab');
+  _runeVeil = _runeVeilKey(kind, i);                   // 🫥 다시 그리기 **전에** 감춘다
   campRuneRender();
   // ✈ 그린 뒤에 잰다 — 빠진 룬이 돌아갈 가방 줄은 이제야 생긴다
   const backP = old ? _runeBagAt(old) : null;
-  _runeCellVeil(kind, i, true);                       // 🫥 새 룬이 도착할 때까지 감춘다
   // ⭐ **나가는 것이 먼저다.** 둘이 같이 날면 어느 것이 들어오는지 안 읽힌다.
   if(old && slotP && backP){
     const oc = (RUNE_GD[runeParse(old).gd] || {}).col || '';
@@ -1093,10 +1103,12 @@ function campRuneAuto(key){
 function campRuneEquipFly(kind, i, key, opt){
   const O = opt || {};
   const from = _runeBagAt(key);
-  if(!campRuneEquip(kind, i, key)) return false;
+  // 🫥 **끼우기 전에** 감춰 둔다 — campRuneEquip 이 곧 다시 그리는데, 그때 이미 감춰져 있어야
+  //   문양이 「생겼다 사라지는」 것으로 안 보인다.
+  _runeVeil = _runeVeilKey(kind, i);
+  if(!campRuneEquip(kind, i, key)){ _runeVeil = ''; return false; }
   const to = _runeSlotAt(kind, i);
-  if(!from || !to) return true;                       // 자리를 못 찾으면 조용히 넣기만 한다
-  _runeCellVeil(kind, i, true);                       // 🫥 도착할 때까지 문양을 감춘다
+  if(!from || !to){ _runeVeil = ''; campRuneRender(); return true; }   // 자리를 못 찾으면 그냥 보인다
   const c = (RUNE_GD[runeParse(key).gd] || {}).col || '';
   _runeFly(key, from, to, RUNE_FLY_MS,
     { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) });

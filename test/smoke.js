@@ -2766,6 +2766,16 @@ async function groupLobby(){
           campRuneBagTap(k8);
           assert(document.querySelectorAll('#rnG .rnCell.veil').length === 1,
             '받을 칸을 안 가린다 — 문양이 이미 있으니 도착이 안 보인다');
+          // 🫥 **한 프레임도 보이면 안 된다** — 다 그린 뒤에 가리면 문양이 1 에서 0 으로
+          //   페이드아웃되어 「생겼다 사라진다」(2026-09-04 사용자 신고 · 실측 6프레임).
+          //   ⛔ 렌더 뒤에 classList 로만 붙이지 말 것 — 그릴 때부터 감춰야 한다.
+          { const cell = _runeCellEl('norm', 0);
+            const gi = cell && cell.querySelector('.rnImg');
+            assert(gi, '받을 칸에 문양이 없다');
+            for(let fr = 0; fr < 4; fr++){
+              const op = +getComputedStyle(gi).opacity;
+              assert(op < 0.02, '넣는 순간 칸에 룬이 잠깐 보인다(' + fr + '프레임째 opacity ' + op.toFixed(2) + ')');
+              await new Promise(r => requestAnimationFrame(r)); } }
           const fly = document.querySelector('#campRune .rnFly');
           assert(fly, '날아가는 그림이 없다');
           // 📐 궤적은 **호**다 — 같은 **가로 진행률**에서 직선보다 위에 있다.
