@@ -124,6 +124,29 @@ async function hexMask(size){
 
 // 문양을 판 위에 screen 으로 얹는다(위 설명)
 // tint 를 주면 문양을 그 색으로 물들인다(유니크의 갈래 색 벌 — 위 GRP_COL 설명).
+// 📐 **문양은 판의 「안쪽 면」 안에 들어가야 한다** (2026-09-04 사용자 지적: 「룬 형태가 타일 바깥으로 삐져나온다」).
+//   ⚠ 판 그림의 육각은 **테두리 띠가 두껍다** — 문양이 놓일 자리는 그 안쪽이다.
+//     판 4장을 실측해(가로 중앙선·세로 중앙선을 훑어 밝은 띠가 끝나는 곳) 가장 조이는 값을 쓴다:
+//       가로 반폭  low 46 · mid 51 · high 53 · uniq 50   → 46 (반지름으로 환산 53.1)
+//       세로 반높이 low 58 · mid 56 · high 45 · uniq 54   → 45 (상급 판의 위 테두리가 가장 두껍다)
+//   ⛔ 정사각 패딩 뒤 SCALE 하나로만 키우지 말 것 — 종횡비가 제각각이라 정사각에 가까운
+//     문양(윤회의 나선·치유)이 육각 좌우 경사면을 넘는다(실측: SCALE 0.64 에서 1px 초과).
+const FACE_R  = 53.1 / 64;      // 안쪽 면의 육각 반지름 ÷ 판 반지름
+const FACE_HY = 45   / 64;      // 안쪽 면의 반높이 ÷ 판 반지름
+const FACE_PAD = 0.95;          // 발광 번짐 여유 — 잉크 상자 밖으로 빛이 조금 더 퍼진다
+// 육각(뾰족한 쪽이 위)의 반폭 — 중심에서 dy 만큼 떨어진 높이에서
+const hexHalf = (dy, R) => (dy <= R / 2) ? (0.866 * R) : (0.866 * R * Math.max(0, (R - dy) / (R / 2)));
+// 잉크 상자(rw×rh, 정사각 변 대비 비율)가 안쪽 면에 들어가는 **정사각 변의 상한**
+//   dyPx 만큼 옮겨 놓으므로 위·아래 모서리를 따로 잰다.
+function faceFit(rw, rh, dyPx){
+  const R = SIZE / 2 * FACE_R * FACE_PAD, HY = SIZE / 2 * FACE_HY * FACE_PAD;
+  const ok = side => { const hx = side * rw / 2, h = side * rh / 2;
+    const top = Math.abs(-h + dyPx), bot = Math.abs(h + dyPx);
+    if(Math.max(top, bot) > HY) return false;
+    return hx <= hexHalf(top, R) && hx <= hexHalf(bot, R); };
+  let lo = 0, hi = SIZE * 2;
+  for(let i = 0; i < 40; i++){ const m = (lo + hi) / 2; if(ok(m)) lo = m; else hi = m; }
+  return lo; }
 async function compose(tile, sym, outFile, id, tint){
   const tw = TWEAK[id] || {};
   const scale = (tw.scale != null) ? tw.scale : SCALE;
@@ -143,7 +166,11 @@ async function compose(tile, sym, outFile, id, tint){
     left: Math.round(bx.left - (side - bx.width)/2),
     top:  Math.round(bx.top  - (side - bx.height)/2),
     width: side, height: side };
-  const sw = Math.round(SIZE * scale);
+  // 📐 안쪽 면 상한 — 원하는 크기(scale)와 들어가는 크기 중 **작은 쪽**을 쓴다
+  const want = SIZE * scale;
+  const cap  = faceFit(bx.width / side, bx.height / side, Math.round(SIZE * dy));
+  const sw = Math.round(Math.min(want, cap));
+  if(cap < want) fitLog.push([id, (cap / SIZE).toFixed(3), scale.toFixed(2)]);
   let ov = sharp(sym)
     .extract({ left: Math.max(0, sq.left), top: Math.max(0, sq.top),
                width: sq.width, height: sq.height })
@@ -216,6 +243,7 @@ async function glyph(sym, outFile, tint){
     .webp({ quality: 92, alphaQuality: 100 }).toFile(outFile);
   return fs.statSync(outFile).size; }
 
+const fitLog = [];
 const made = [];
 const gmade = [];
 for(const id of NORM){
@@ -251,6 +279,10 @@ const tot = made.reduce((a, b) => a + b[1], 0);
 console.log('  🔷 ' + made.length + '장 · 합계 ' + (tot/1024).toFixed(0) + 'KB · 평균 '
   + (tot/made.length/1024).toFixed(1) + 'KB   문양 비율 ' + SCALE + ' · 올림 ' + DY + ' · ' + SIZE + 'px');
 console.log('  📁 ' + path.relative(ROOT, OUT));
+if(fitLog.length){ const seen = {};
+  const q = fitLog.filter(r => seen[r[0]] ? false : (seen[r[0]] = 1));
+  console.log('  📐 판 안쪽 면에 맞춰 줄인 문양 ' + q.length + '개 — '
+    + q.map(r => r[0] + ' ' + r[2] + '→' + r[1]).join(' · ')); }
 if(gmade.length){ const gt = gmade.reduce((a, b) => a + b[1], 0);
   console.log('  🔷 문양(성좌 판용) ' + gmade.length + '장 · 합계 ' + (gt/1024).toFixed(0) + 'KB');
   console.log('  📁 ' + path.relative(ROOT, GLYPH_OUT)); }

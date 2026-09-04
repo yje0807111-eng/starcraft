@@ -1,0 +1,135 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 판 — 성좌 구역을 어떻게 나타낼까 (8안)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{ --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f; }
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:62px}
+.pane{position:relative;width:290px;height:369px;overflow:hidden;border:1px solid var(--metal-edge);
+  border-radius:var(--r-md);background:#080b10}
+.pane::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(120% 80% at 50% 12%,#121a24,#070a0e 70%)}
+.pane svg{position:relative;display:block;width:100%;height:100%}
+.lbl{font-family:var(--font-ti);font-size:10px;letter-spacing:.14em;font-weight:700}
+.lbS{font-family:var(--font-num);font-size:8.5px}
+</style></head><body>
+
+<h1>룬 판 — <b>성좌 구역(경제 · 전투 · 성장)</b>을 어떻게 나타낼까 · 8안</h1>
+<p>지금 판은 세 무리가 삼각으로 놓여 있을 뿐 <b>어느 무리가 무엇인지 말해 주지 않는다</b>.
+말씀하신 <b>오로라</b>(①)를 넣고, 같은 자리를 다르게 푸는 방법 일곱을 나란히 놓았다.
+색은 이미 정해진 갈래 색이다 — 경제 <b style="color:#7effc9">민트</b> ·
+전투 <b style="color:#ffa3b8">분홍</b> · 성장 <b style="color:#e6eef8">흰빛</b>.
+⚠ 판은 <b>밀고 확대</b>하므로 배경 장치는 판과 <b>같이 움직여야</b> 한다(화면에 붙이면 확대할 때 어긋난다).
+낀 칸 몇 개는 색 테두리로 흉내만 냈다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+/* 실제 값(js/22-camp-rune.js) 그대로 */
+var W=440, H=560, TRI=132, RING=64, R_N=21, R_U=33, CONS=8;
+var CT=[-90,150,30].map(function(d){ var a=Math.PI/180*d;
+  return [Math.round(W/2+Math.cos(a)*TRI), Math.round(H/2+Math.sin(a)*TRI)]; });
+var GRP=[{k:'eco',nm:'경제',c:'#7effc9',de:'버는 것'},
+         {k:'war',nm:'전투',c:'#ffa3b8',de:'싸우는 것'},
+         {k:'grow',nm:'성장',c:'#e6eef8',de:'자라는 것'}];
+function hexPts(x,y,r){ var q=[]; for(var i=0;i<6;i++){ var a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function nPos(ci,j){ var c=CT[ci], a=-Math.PI/2+j/CONS*Math.PI*2;
+  return [c[0]+Math.cos(a)*RING, c[1]+Math.sin(a)*RING]; }
+function cells(){ var s='';
+  for(var ci=0; ci<3; ci++){ var c=GRP[ci].c;
+    for(var j=0;j<CONS;j++){ var p=nPos(ci,j), lit=((ci+j)%3===0);
+      s+='<polygon points="'+hexPts(p[0],p[1],R_N)+'" fill="'+(lit?'rgba(20,28,38,.92)':'rgba(255,255,255,.02)')
+        +'" stroke="'+(lit?c:'rgba(150,170,200,.20)')+'" stroke-width="'+(lit?1.3:1)+'"/>'; }
+    s+='<polygon points="'+hexPts(CT[ci][0],CT[ci][1],R_U)+'" fill="rgba(255,255,255,.02)"'
+      +' stroke="rgba(150,170,200,.20)" stroke-width="1"/>'; }
+  return s; }
+var RAD = RING + R_N + 4;          /* 성좌 하나가 차지하는 반지름(칸 바깥까지) */
+
+var CASES=[
+{ t:'오로라 번짐', d:'말씀하신 안. 성좌 뒤에 <b>큰 색 번짐</b>을 아주 옅게 깐다. 판을 밀면 같이 움직인다.',
+  bg:function(){ var d='<defs>'; GRP.forEach(function(g,i){ d+='<radialGradient id="au'+i+'">'
+      +'<stop offset="0" stop-color="'+g.c+'" stop-opacity=".22"/>'
+      +'<stop offset=".55" stop-color="'+g.c+'" stop-opacity=".07"/>'
+      +'<stop offset="1" stop-color="'+g.c+'" stop-opacity="0"/></radialGradient>'; });
+    d+='</defs>'; GRP.forEach(function(g,i){
+      d+='<circle cx="'+CT[i][0]+'" cy="'+CT[i][1]+'" r="'+(RAD*1.5).toFixed(0)+'" fill="url(#au'+i+')"/>'; });
+    return d; } },
+
+{ t:'오로라 + 이름', d:'①에 <b>이름표 한 줄</b>을 더한다. 색만으로는 「무엇의 무리인지」까지는 말 못 한다.',
+  bg:function(){ var d='<defs>'; GRP.forEach(function(g,i){ d+='<radialGradient id="ax'+i+'">'
+      +'<stop offset="0" stop-color="'+g.c+'" stop-opacity=".20"/>'
+      +'<stop offset=".55" stop-color="'+g.c+'" stop-opacity=".06"/>'
+      +'<stop offset="1" stop-color="'+g.c+'" stop-opacity="0"/></radialGradient>'; });
+    d+='</defs>'; GRP.forEach(function(g,i){ var x=CT[i][0], y=CT[i][1];
+      d+='<circle cx="'+x+'" cy="'+y+'" r="'+(RAD*1.5).toFixed(0)+'" fill="url(#ax'+i+')"/>'
+        +'<text class="lbl" x="'+x+'" y="'+(y-RAD-13)+'" text-anchor="middle" fill="'+g.c
+        +'" opacity=".85">'+g.nm+'</text>'; });
+    return d; } },
+
+{ t:'성운 고리', d:'번짐 대신 <b>원 테두리</b> 하나. 경계가 분명해 「여기까지가 한 무리」가 읽힌다.',
+  bg:function(){ var d=''; GRP.forEach(function(g,i){ var x=CT[i][0], y=CT[i][1];
+      d+='<circle cx="'+x+'" cy="'+y+'" r="'+(RAD+8)+'" fill="'+g.c+'" opacity=".035"/>'
+        +'<circle cx="'+x+'" cy="'+y+'" r="'+(RAD+8)+'" fill="none" stroke="'+g.c
+        +'" stroke-width="1" opacity=".24"/>'; });
+    return d; } },
+
+{ t:'육각 영역', d:'무리를 감싸는 <b>큰 육각</b>. 칸도 육각이라 같은 어휘로 커진다 — 판 전체가 한 문법이 된다.',
+  bg:function(){ var d=''; GRP.forEach(function(g,i){ var x=CT[i][0], y=CT[i][1];
+      d+='<polygon points="'+hexPts(x,y,RAD+10)+'" fill="'+g.c+'" opacity=".04"/>'
+        +'<polygon points="'+hexPts(x,y,RAD+10)+'" fill="none" stroke="'+g.c
+        +'" stroke-width="1" opacity=".26"/>'; });
+    return d; } },
+
+{ t:'바닥 원반', d:'무리 <b>아래에</b> 납작한 빛을 깐다. 성좌가 바닥에 <b>놓인 것</b>처럼 보여 깊이가 생긴다.',
+  bg:function(){ var d='<defs>'; GRP.forEach(function(g,i){ d+='<radialGradient id="dk'+i+'">'
+      +'<stop offset="0" stop-color="'+g.c+'" stop-opacity=".26"/>'
+      +'<stop offset="1" stop-color="'+g.c+'" stop-opacity="0"/></radialGradient>'; });
+    d+='</defs>'; GRP.forEach(function(g,i){ var x=CT[i][0], y=CT[i][1];
+      d+='<ellipse cx="'+x+'" cy="'+(y+RAD*0.62).toFixed(0)+'" rx="'+(RAD*1.15).toFixed(0)
+        +'" ry="'+(RAD*0.42).toFixed(0)+'" fill="url(#dk'+i+')"/>'; });
+    return d; } },
+
+{ t:'별자리 선', d:'고리의 칸끼리 <b>선으로 잇는다</b>. 별자리처럼 하나의 무리로 묶이고, 색이 갈래를 말한다.',
+  bg:function(){ var d=''; GRP.forEach(function(g,ci){ var p='';
+      for(var j=0;j<=CONS;j++){ var q=nPos(ci,j%CONS);
+        p+=(j?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1); }
+      d+='<path d="'+p+'Z" fill="'+g.c+'" opacity=".03"/>'
+        +'<path d="'+p+'Z" fill="none" stroke="'+g.c+'" stroke-width=".9" opacity=".24"/>'; });
+    return d; } },
+
+{ t:'테두리 호 + 이름', d:'무리 <b>위쪽에만</b> 짧은 호를 그리고 그 위에 이름. 배경을 거의 안 건드린다.',
+  bg:function(){ var d=''; GRP.forEach(function(g,i){ var x=CT[i][0], y=CT[i][1], R=RAD+9;
+      var a0=Math.PI*1.18, a1=Math.PI*1.82;
+      var p='M'+(x+Math.cos(a0)*R).toFixed(1)+' '+(y+Math.sin(a0)*R).toFixed(1)
+        +'A'+R+' '+R+' 0 0 1 '+(x+Math.cos(a1)*R).toFixed(1)+' '+(y+Math.sin(a1)*R).toFixed(1);
+      d+='<path d="'+p+'" fill="none" stroke="'+g.c+'" stroke-width="1.4" opacity=".38"/>'
+        +'<text class="lbl" x="'+x+'" y="'+(y-R-7)+'" text-anchor="middle" fill="'+g.c
+        +'" opacity=".9">'+g.nm+'</text>'; });
+    return d; } },
+
+{ t:'구역 명패', d:'무리 <b>옆에 작은 명패</b>(색 막대 + 이름 + 한 줄). 배경은 그대로 두고 <b>글로</b> 말한다.',
+  bg:function(){ var d=''; GRP.forEach(function(g,i){ var x=CT[i][0], y=CT[i][1];
+      var px=x-RAD-4, py=y-RAD+2;
+      d+='<rect x="'+px+'" y="'+py+'" width="3" height="26" fill="'+g.c+'" opacity=".8"/>'
+        +'<text class="lbl" x="'+(px+9)+'" y="'+(py+11)+'" fill="'+g.c+'" opacity=".95">'+g.nm+'</text>'
+        +'<text class="lbS" x="'+(px+9)+'" y="'+(py+23)+'" fill="#c3ccd8" opacity=".55">'+g.de+'</text>'; });
+    return d; } }
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><svg viewBox="0 0 '+W+' '+H+'">'+c.bg()+cells()+'</svg></div></div>';
+}).join('');
+</script></body></html>
