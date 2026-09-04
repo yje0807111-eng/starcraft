@@ -2599,6 +2599,20 @@ async function groupLobby(){
         assert(Math.abs(V.z-V.fitZ)<1e-6,'전체 보기 배율이 안 적힌다');
         assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
           '축소 하한이 전체 보기 배율을 안 따른다');
+        // 🌌 **성좌 구역** — 갈래 색 오로라 + 이름(2026-09-04 사용자 확정 · 목업 camp-rune-zone-8 ②안)
+        //   ⛔ 화면에 고정하지 말 것 — #rnG 안에 있어야 판과 같이 밀리고 확대된다.
+        { const gg = $('rnG');
+          assert(gg.querySelectorAll('.rnAu').length === RUNE_GRPS.length,
+            '오로라가 성좌 수만큼 없다: ' + gg.querySelectorAll('.rnAu').length);
+          const zn = gg.querySelectorAll('.rnZn');
+          assert(zn.length === RUNE_GRPS.length, '구역 이름이 셋이 아니다: ' + zn.length);
+          const nms = [...zn].map(t => t.textContent).join(',');
+          assert(nms === RUNE_GRPS.map(k => RUNE_GRP[k].nm).join(','),
+            '구역 이름·순서가 갈래 표와 다르다: ' + nms);
+          // 📐 이름이 **전체 보기 범위 안**에 있다 — 밖이면 다 줄였을 때 잘린다
+          const bx = _runeBox();
+          for(const t of zn){ const y = +t.getAttribute('y');
+            assert(y - 12 >= bx.y0, '구역 이름이 전체 보기 범위 위로 나갔다: y=' + y + ' vs ' + bx.y0.toFixed(0)); } }
         // 🎒 **가방은 줄 목록이다** — 줄 하나 = 룬 한 종류, 등급 셋이 한 줄에 (2026-09-04 사용자 확정)
         //   ⛔ 4열 카드 그리드(.rnB)로 되돌리지 말 것 — 같은 룬의 세 등급이 흩어져
         //     「이 효과를 얼마나 갖고 있나」가 안 읽혔다.

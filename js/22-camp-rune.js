@@ -601,6 +601,24 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
 
 // 🎨 판이 쓰는 그라데이션 — 등급마다 테두리(흰빛→등급색)와 뒷광 한 벌씩.
 //   ⚠ **매 렌더 새로 낸다** — SVG 를 통째로 갈아 끼우므로 defs 도 같이 들어가야 한다.
+// 🌌 **성좌 구역** — 무리마다 갈래 색 오로라 + 이름 (2026-09-04 사용자 확정 · 목업 camp-rune-zone-8 ②안)
+//   ⭐ 지금 판은 세 무리가 삼각으로 놓여 있을 뿐 **어느 무리가 무엇인지** 말해 주지 않았다.
+//     색만으로는 「민트 = 경제」를 배워야 알므로 **이름을 함께** 둔다.
+//   ⚠ 이 레이어는 `#rnG` 안에 있다 — 판을 밀고 확대하면 **같이 움직인다**.
+//     ⛔ 화면에 고정하지 말 것: 확대할 때 성좌와 어긋난다.
+//   ⚠ 이름의 y 는 **칸 바깥에 바싹** 붙인다(RUNE_RING + RUNE_R_N + 5). 더 띄우면
+//     `_runeBox()`(전체 보기·팬 경계의 단일 소스)가 재는 범위 밖으로 나가 잘린다.
+const RUNE_ZONE_DY = RUNE_RING + RUNE_R_N + 5;
+function _runeZoneSvg(){
+  const g = [];
+  for(let ci = 0; ci < RUNE_CT.length; ci++){
+    const c = RUNE_CT[ci], key = RUNE_GRPS[ci], gi = RUNE_GRP[key];
+    if(!gi) continue;
+    g.push('<circle class="rnAu" cx="' + c[0] + '" cy="' + c[1] + '" r="'
+      + Math.round((RUNE_RING + RUNE_R_N) * 1.55) + '" fill="url(#rnAu' + ci + ')"/>');
+    g.push('<text class="rnZn" x="' + c[0] + '" y="' + (c[1] - RUNE_ZONE_DY).toFixed(0)
+      + '" style="fill:' + gi.col + '">' + gi.nm + '</text>'); }
+  return g.join(''); }
 function _runeDefs(){
   let d = '<defs><linearGradient id="rnFace" x1="0" y1="0" x2="0" y2="1">'
     + '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>';
@@ -613,12 +631,21 @@ function _runeDefs(){
       + '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>'
       + '<stop offset=".62" stop-color="' + c + '" stop-opacity=".07"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
+  // 🌌 성좌 구역의 오로라 — 갈래 색으로 넓고 흐리게(칸의 뒷광과 다른 층이다)
+  //   ⚠ 세기는 **재서 정했다**(2026-09-04). 배경이 어두운 사진이라 .20 에서는 배경보다
+   //     2~10 밝을 뿐이어서 전투·성장이 아예 안 보였다. .50 에서 R13/G19 만큼 갈린다.
+  //     ⛔ 다시 낮추지 말 것 — 「은은하게」의 하한이 여기다.
+  for(let i = 0; i < RUNE_GRPS.length; i++){ const c = (RUNE_GRP[RUNE_GRPS[i]] || {}).col || '#8b95a5';
+    d += '<radialGradient id="rnAu' + i + '">'
+      + '<stop offset="0" stop-color="' + c + '" stop-opacity=".50"/>'
+      + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".16"/>'
+      + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
   d += '<radialGradient id="rnEm"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".12"/>'
     + '<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>';
   return d + '</defs>'; }
 
 function _runeMapSvg(){
-  const rows = [_runeDefs()], tbN = RUNE_SLOT_R.norm, tbU = RUNE_SLOT_R.uniq;
+  const rows = [_runeDefs(), _runeZoneSvg()], tbN = RUNE_SLOT_R.norm, tbU = RUNE_SLOT_R.uniq;
   const openN = campRuneSlots('norm'), openU = campRuneSlots('uniq');
   const eqN = campRuneEq('norm'), eqU = campRuneEq('uniq');
   // 성좌마다 — 중심에서 고리로 뻗는 실(열린 칸만 밝다)
