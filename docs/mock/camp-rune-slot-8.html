@@ -1,0 +1,170 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 판 — 빈 칸·잠긴 칸을 덜 밋밋하게 (8안)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{ --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif; --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f; }
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:62px}
+.pane{position:relative;width:290px;height:250px;overflow:hidden;border:1px solid var(--metal-edge);
+  border-radius:var(--r-md);background:#080b10}
+.pane::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(120% 90% at 50% 20%,#141d27,#080b10 72%)}
+.pane svg{position:relative;display:block;width:100%;height:100%}
+/* 지금 화면의 값 그대로 */
+.rnHx{stroke-width:1.2}
+.rnHx.lk{fill:url(#rnFace);opacity:.40;stroke:rgba(140,160,185,.14);stroke-width:1}
+.rnHx.em{fill:url(#rnFace);fill-opacity:.72;stroke:rgba(180,205,235,.26);stroke-width:1}
+.rnHx.on{fill:url(#rnFace)}
+.rnHxFloor{fill:#000;opacity:.55}
+.rnHxIn2{fill:none;stroke:#fff;stroke-width:.6;opacity:.16}
+.rnEmB{fill:url(#rnEm)}
+.rnLkT{fill:#49525d;font-family:var(--font-num);font-size:7.5px;text-anchor:middle}
+.rnPl{fill:rgba(175,200,232,.30);font-family:var(--font-num);font-size:12px;text-anchor:middle}
+.rnZn{text-anchor:middle;font-family:var(--font-ti);font-size:11px;font-weight:700;letter-spacing:.14em;opacity:.85}
+.tag{position:absolute;left:8px;bottom:6px;font-size:9.5px;color:var(--txt-off);font-family:var(--font-num)}
+</style></head><body>
+
+<h1>룬 판 — <b>빈 칸·잠긴 칸</b>을 덜 밋밋하게 · 8안</h1>
+<p>지금 빈 칸은 <b>육각 하나 + 「+」</b>가 전부라 판이 텅 비어 보인다.
+아무것도 안 끼운 상태에서도 <b>「여기가 자리다」</b>가 읽히게 만드는 여덟 가지.
+⚠ 지켜야 할 것 둘: <b>낀 칸보다 조용해야</b> 하고(끼우면 확 달라져야 한다),
+<b>칸 바깥 25.6 을 넘으면 옆 칸을 밟는다</b>(이웃 중심 사이 49).
+각 판은 왼쪽 위 <b>잠긴 칸</b> 셋 · 나머지 <b>빈 칸</b> · 오른쪽 아래 <b>낀 칸</b> 하나를 함께 보여 준다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var VB_W=300, VB_H=258, R=21, RU=33;
+var CX=150, CY=125, RING=64;
+function hexPts(x,y,r){ var q=[]; for(var i=0;i<6;i++){ var a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function vtx(x,y,r,i){ var a=Math.PI/180*(60*i-90); return [x+r*Math.cos(a), y+r*Math.sin(a)]; }
+function nPos(j){ var a=-Math.PI/2+j/8*Math.PI*2; return [CX+Math.cos(a)*RING, CY+Math.sin(a)*RING]; }
+
+var DEFS='<defs>'
+ +'<linearGradient id="rnFace" x1="0" y1="0" x2="0" y2="1">'
+ +'<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>'
+ +'<radialGradient id="rnEm"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".12"/>'
+ +'<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>'
+ +'<radialGradient id="rnAu"><stop offset="0" stop-color="#7effc9" stop-opacity=".50"/>'
+ +'<stop offset=".55" stop-color="#7effc9" stop-opacity=".16"/>'
+ +'<stop offset="1" stop-color="#7effc9" stop-opacity="0"/></radialGradient>'
+ +'<linearGradient id="rnEhigh" x1="0" y1="0" x2="0" y2="1">'
+ +'<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
+ +'<stop offset=".42" stop-color="#ffcf6b"/>'
+ +'<stop offset="1" stop-color="#ffcf6b" stop-opacity=".34"/></linearGradient>'
+ +'<radialGradient id="rnBhigh"><stop offset="0" stop-color="#ffcf6b" stop-opacity=".22"/>'
+ +'<stop offset=".62" stop-color="#ffcf6b" stop-opacity=".07"/>'
+ +'<stop offset="1" stop-color="#ffcf6b" stop-opacity="0"/></radialGradient>'
+ +'<pattern id="pGrid" width="7" height="7" patternUnits="userSpaceOnUse">'
+ +'<path d="M0 0H7M0 0V7" stroke="rgba(175,200,232,.13)" stroke-width=".5" fill="none"/></pattern>'
+ +'<pattern id="pHatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">'
+ +'<path d="M0 0V5" stroke="rgba(175,200,232,.11)" stroke-width=".6"/></pattern>'
+ +'<linearGradient id="gWell" x1="0" y1="0" x2="0" y2="1">'
+ +'<stop offset="0" stop-color="#000" stop-opacity=".55"/>'
+ +'<stop offset=".55" stop-color="#000" stop-opacity=".08"/>'
+ +'<stop offset="1" stop-color="#9fc0ea" stop-opacity=".07"/></linearGradient>'
+ +'</defs>';
+
+/* 낀 칸(상급) — 비교 기준. 어느 안에서도 이것보다 조용해야 한다 */
+function lit(x,y,r){
+  return '<polygon class="rnHxR" points="'+hexPts(x,y,r+2.5)+'" style="fill:none;stroke:#ffcf6b;stroke-width:.9;opacity:.40"/>'
+   +'<polygon class="rnHxFloor" points="'+hexPts(x,y,r)+'"/>'
+   +'<polygon class="rnHx on" points="'+hexPts(x,y,r*0.93)+'" style="stroke:url(#rnEhigh);stroke-width:1.3;filter:drop-shadow(0 0 3px #ffcf6b)"/>'
+   +'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r*0.72).toFixed(1)+'" style="fill:url(#rnBhigh)"/>'
+   +'<polygon class="rnHxIn2" points="'+hexPts(x,y,r-Math.max(1,r*0.073))+'"/>'
+   +'<image href="../../assets/icons/rune/glyph/tap.webp" x="'+(x-r*0.62).toFixed(1)+'" y="'+(y-r*0.62).toFixed(1)+'" width="'+(r*1.24).toFixed(1)+'" height="'+(r*1.24).toFixed(1)+'"/>'; }
+/* 지금의 잠긴 칸 */
+function lockNow(x,y,r,at){
+  return '<polygon class="rnHx lk" points="'+hexPts(x,y,r*0.93)+'"/>'
+   +'<text class="rnLkT" x="'+x.toFixed(1)+'" y="'+(y+2.5).toFixed(1)+'">R'+at+'</text>'; }
+/* 지금의 빈 칸 */
+function emptyNow(x,y,r){
+  return '<circle class="rnEmB" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(r*0.8).toFixed(1)+'"/>'
+   +'<polygon class="rnHx em" points="'+hexPts(x,y,r*0.93)+'"/>'
+   +'<text class="rnPl" x="'+x.toFixed(1)+'" y="'+(y+4.5).toFixed(1)+'">+</text>'; }
+
+/* 안마다 「빈 칸」만 다시 그린다(잠긴 칸·낀 칸은 공통) */
+var CASES=[
+{ t:'지금 (기준)', d:'육각 하나 + <b>「+」</b>. 비교를 위해 그대로 둔 판.', em:emptyNow },
+
+{ t:'파인 홈', d:'면을 <b>위가 어둡고 아래가 밝은</b> 그라데이션으로 바꾼다. 빛이 위에서 오니 <b>안쪽으로 파인 자리</b>로 읽힌다 — 「끼우는 곳」 그 자체.',
+  em:function(x,y,r){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#gWell)"'
+    +' stroke="rgba(180,205,235,.24)" stroke-width="1"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.93-1.6)+'" fill="none" stroke="#fff" stroke-width=".5" opacity=".07"/>'; } },
+
+{ t:'모서리 브래킷', d:'육각 <b>꼭짓점 여섯에 짧은 갈고리</b>만 남긴다. 테두리를 다 그리지 않아 「아직 안 채워진 자리」로 보인다.',
+  em:function(x,y,r){ var s='<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnFace)" fill-opacity=".55" stroke="none"/>';
+    for(var k=0;k<6;k++){ var a=vtx(x,y,r*0.93,k), b=vtx(x,y,r*0.93,(k+1)%6);
+      var d1x=a[0]+(b[0]-a[0])*0.26, d1y=a[1]+(b[1]-a[1])*0.26;
+      var d2x=b[0]+(a[0]-b[0])*0.26, d2y=b[1]+(a[1]-b[1])*0.26;
+      s+='<path d="M'+a[0].toFixed(1)+' '+a[1].toFixed(1)+'L'+d1x.toFixed(1)+' '+d1y.toFixed(1)+'"'
+        +' stroke="rgba(180,205,235,.42)" stroke-width="1.1" fill="none" stroke-linecap="round"/>'
+        +'<path d="M'+b[0].toFixed(1)+' '+b[1].toFixed(1)+'L'+d2x.toFixed(1)+' '+d2y.toFixed(1)+'"'
+        +' stroke="rgba(180,205,235,.42)" stroke-width="1.1" fill="none" stroke-linecap="round"/>'; }
+    return s; } },
+
+{ t:'속 육각(자리 표시)', d:'안에 <b>작은 육각</b>을 하나 더 둔다 — 룬이 앉을 <b>실제 크기</b>를 미리 보여 주는 자리. 끼우면 그 자리에 문양이 온다.',
+  em:function(x,y,r){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnFace)" fill-opacity=".70"'
+    +' stroke="rgba(180,205,235,.24)" stroke-width="1"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.52)+'" fill="none" stroke="rgba(175,200,232,.30)"'
+    +' stroke-width=".9" stroke-dasharray="2.6 2.2"/>'; } },
+
+{ t:'격자 무늬', d:'면을 <b>옅은 격자</b>로 채운다. 빈 칸이 «없음»이 아니라 <b>«바탕»</b>으로 읽혀 판에 결이 생긴다.',
+  em:function(x,y,r){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnFace)" fill-opacity=".72"'
+    +' stroke="rgba(180,205,235,.24)" stroke-width="1"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#pGrid)" opacity=".9"/>'; } },
+
+{ t:'빗금', d:'격자 대신 <b>사선 빗금</b>. 「비어 있음」을 뜻하는 흔한 기호라 뜻이 바로 읽힌다.',
+  em:function(x,y,r){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnFace)" fill-opacity=".72"'
+    +' stroke="rgba(180,205,235,.24)" stroke-width="1"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#pHatch)"/>'; } },
+
+{ t:'꼭짓점 점 여섯', d:'유니크의 <b>꼭짓점 점</b>을 아주 흐리게 빌려 온다. 판 전체가 같은 어휘로 묶이고, 낀 칸에서 그 점이 <b>밝아진다</b>.',
+  em:function(x,y,r){ var s='<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#rnFace)" fill-opacity=".72"'
+    +' stroke="rgba(180,205,235,.22)" stroke-width="1"/>';
+    for(var k=0;k<6;k++){ var q=vtx(x,y,r*0.93,k);
+      s+='<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="1" fill="rgba(180,205,235,.34)"/>'; }
+    return s; } },
+
+{ t:'파인 홈 + 속 육각', d:'②와 ④를 겹친다 — <b>파인 자리</b> 안에 <b>룬이 앉을 크기</b>가 보인다. 가장 「끼우는 곳」답지만 요소가 둘이라 조금 시끄럽다.',
+  em:function(x,y,r){ return '<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#gWell)"'
+    +' stroke="rgba(180,205,235,.24)" stroke-width="1"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.93-1.6)+'" fill="none" stroke="#fff" stroke-width=".5" opacity=".07"/>'
+   +'<polygon points="'+hexPts(x,y,r*0.52)+'" fill="none" stroke="rgba(175,200,232,.26)"'
+    +' stroke-width=".9" stroke-dasharray="2.6 2.2"/>'; } }
+];
+
+function board(em){
+  var s = DEFS + '<circle cx="'+CX+'" cy="'+CY+'" r="'+Math.round((RING+R)*1.55)+'" fill="url(#rnAu)"/>'
+    + '<text class="rnZn" x="'+CX+'" y="'+(CY-RING-R-5)+'" fill="#7effc9">경제</text>';
+  /* 중심에서 뻗는 실 */
+  for(var j=0;j<8;j++){ var q=nPos(j), dx=q[0]-CX, dy=q[1]-CY, L=Math.hypot(dx,dy);
+    var ux=dx/L, uy=dy/L, a0=RU+5, a1=R+5;
+    s+='<line x1="'+(CX+ux*a0).toFixed(1)+'" y1="'+(CY+uy*a0).toFixed(1)+'"'
+      +' x2="'+(q[0]-ux*a1).toFixed(1)+'" y2="'+(q[1]-uy*a1).toFixed(1)+'"'
+      +' stroke="rgba(190,212,240,.07)" stroke-width=".8" stroke-dasharray="2 3"/>'; }
+  for(var j=0;j<8;j++){ var q=nPos(j);
+    if(j>=6) s+=lockNow(q[0],q[1],R,(j-5)*15+30);       /* 잠긴 칸 둘 */
+    else if(j===3) s+=lit(q[0],q[1],R);                  /* 낀 칸 하나 */
+    else s+=em(q[0],q[1],R); }
+  s+=em(CX,CY,RU);                                       /* 가운데 유니크도 빈 칸 */
+  return s; }
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><svg viewBox="0 0 '+VB_W+' '+VB_H+'">'+board(c.em)+'</svg>'
+   + '<span class="tag">잠김 2 · 낀 칸 1 · 나머지 빈 칸</span></div></div>';
+}).join('');
+</script></body></html>

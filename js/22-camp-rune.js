@@ -757,7 +757,9 @@ function _runeBagHTML(){
     hd = '<span class="rnBagT">' + nm + (cur ? ' · ' + runeName(cur) : ' · 비어 있음') + '</span>'
       + (cur ? '<button class="rnOff" type="button" onclick="campRuneUnequip(\'' + kindSel + '\','
           + _runePick + ')">빼기</button>' : ''); }
-  else hd = '<span class="rnBagT">보유한 룬</span><span class="rnBagN">누르면 빈 칸에 끼웁니다</span>';
+  // ⛔ 「누르면 빈 칸에 끼웁니다」 안내는 뺐다(2026-09-04 사용자 확정) —
+  //   한 번 배우면 계속 자리만 차지한다. 칸을 고른 상태의 안내는 위에 남는다.
+  else hd = '<span class="rnBagT">보유한 룬</span>';
   let g = '';
   for(const grp of RUNE_GRPS.concat('uniq')){
     const q = RUNE_LIST.filter(d => (d.kind === 'uniq' ? 'uniq' : d.grp) === grp);

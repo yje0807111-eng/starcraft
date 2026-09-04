@@ -2534,13 +2534,13 @@
 /* 🎒 상시 가방 — 위=판 / 아래=가방. 프로필 장비창(아바타/가방)과 같은 나눔이다.
    ⛔ 칸을 눌러야 뜨는 임시 시트로 되돌리지 말 것(2026-09-03 사용자 확정). */
 #campRune .rnBag{position:absolute;left:0;right:0;bottom:0;z-index:2;
-  display:flex;flex-direction:column;gap:7px;padding:9px 12px 12px;
+  display:flex;flex-direction:column;gap:4px;padding:5px 12px 10px;
   border-top:1px solid var(--metal-edge);
   background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
-#campRune .rnBagH{display:flex;align-items:center;gap:8px;min-height:22px}
+#campRune .rnBagH{display:flex;align-items:center;gap:8px;min-height:16px}
 #campRune .rnBagT{font-size:12px;color:#c3ccd8;letter-spacing:.04em}
 #campRune .rnBagN{margin-left:auto;font-size:10.5px;color:#69737f}
-#campRune .rnBagG{display:block;max-height:172px;overflow-y:auto;padding-bottom:2px}
+#campRune .rnBagG{display:block;max-height:214px;overflow-y:auto;padding-bottom:2px}
 /* 🏷 갈래 머리줄 — 성좌와 같은 색이라 판과 이어 읽힌다 */
 #campRune .rnGrpH{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
 #campRune .rnGrpH:first-child{margin-top:0}
