@@ -2536,9 +2536,21 @@
 @keyframes rnWig{ 0%,100%{transform:rotate(-2.4deg)} 50%{transform:rotate(2.4deg)} }
 #campRune .rnWig{transform-box:view-box;animation:rnWig .44s ease-in-out infinite}
 #campRune .rnDim{opacity:.30;transition:opacity var(--t-fast,.15s) ease}
-/* ✈ 날아가는 룬 — 상태는 이미 바뀌었고 이건 그 위에 얹히는 장식이다 */
+/* ✈ 날아가는 룬 — 상태는 이미 바뀌었고 이건 그 위에 얹히는 장식이다.
+   ⚠ 궤적·시간은 JS(Web Animations)가 준다 — 호를 그려야 해서 CSS 로는 못 낸다. */
 #campRune .rnFly{position:absolute;z-index:7;width:34px;height:34px;pointer-events:none;
-  object-fit:contain;will-change:transform,opacity}
+  object-fit:contain;will-change:transform}
+/* 🫥 도착을 기다리는 칸 — 문양만 감춘다(테두리는 그대로라 「자리」는 보인다) */
+#campRune .rnCell.veil .rnImg{opacity:0}
+#campRune .rnCell .rnImg{transition:opacity .16s ease}
+/* 💥 도착 — 한 번 부풀었다 제자리로. 칸과 가방 버튼이 같은 어휘를 쓴다 */
+@keyframes rnPop{ 0%{transform:scale(.86)} 42%{transform:scale(1.14)} 100%{transform:scale(1)} }
+#campRune .rnCell.rnPop{transform-box:view-box;animation:rnPop .42s cubic-bezier(.2,.9,.3,1)}
+#campRune .rnHb.rnPop{animation:rnPop .42s cubic-bezier(.2,.9,.3,1)}
+/* 🔵 퍼지는 고리 — 「적용됐다」의 신호. 등급 색으로 한 번만 번진다 */
+@keyframes rnRipple{ 0%{transform:scale(1);opacity:.85} 100%{transform:scale(2.1);opacity:0} }
+#campRune .rnRipple{fill:none;stroke-width:1.4;pointer-events:none;transform-box:view-box;
+  animation:rnRipple .58s cubic-bezier(.2,.7,.3,1) forwards}
 /* 🗒 효과 쪽지 — 칸을 길게 누르면 그 옆에 뜬다(2026-09-04).
    ⭐ 확인창이 아니라 **읽는 쪽지**다: 버튼이 없고 아무 데나 누르면 사라진다.
    ⚠ 판 위에 뜨므로 z 는 칸보다 위, 가방(z 2)보다도 위다. */

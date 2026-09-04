@@ -2427,7 +2427,7 @@ async function groupLobby(){
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
     let swapNote='';
-    let glyphNote='';
+    let glyphNote='', animNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2756,6 +2756,65 @@ async function groupLobby(){
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+        // ✈ **연출** — 넣고 · 빼고 · 바꾸는 셋이 같은 어휘를 쓴다(2026-09-04 사용자 확정:
+        //   「단순하고 끊기는 느낌」). 끊겨 보이던 이유는 **도착하는 순간이 없어서**였다.
+        { const R8 = campRuneState(); R8.norm = []; R8.uniq = []; campRuneTouch();
+          campRuneRender(); await sleep(30);
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
+          const k8 = runeKey('tap','high'); R8.own[k8] = (R8.own[k8] | 0) + 2;
+          // ① 날아가는 동안 **받을 칸은 가려져** 있다 — 그림이 도착해야 문양이 나타난다
+          campRuneBagTap(k8);
+          assert(document.querySelectorAll('#rnG .rnCell.veil').length === 1,
+            '받을 칸을 안 가린다 — 문양이 이미 있으니 도착이 안 보인다');
+          const fly = document.querySelector('#campRune .rnFly');
+          assert(fly, '날아가는 그림이 없다');
+          // 📐 궤적은 **호**다 — 같은 **가로 진행률**에서 직선보다 위에 있다.
+          //   ⚠ 시간으로 재면 안 된다: easing 때문에 직선이어도 초반에는 덜 내려가
+          //     「호처럼」 보인다(실측 — 호를 꺼도 통과했다). 가로 진행률로 재면 easing 이 상쇄된다.
+          { const from = _runeBagAt(k8), to = _runeSlotAt('norm', 0);
+            assert(from && to && Math.abs(to.x - from.x) > 40,
+              '두 자리가 가로로 거의 같아 궤적을 못 잰다');
+            await sleep(RUNE_FLY_MS * 0.45);
+            const m = fly.getBoundingClientRect();
+            const mx = m.left + m.width / 2, my = m.top + m.height / 2;
+            const t = (mx - from.x) / (to.x - from.x);
+            assert(t > 0.05 && t < 0.95, '중간 지점을 못 잡았다: t=' + t.toFixed(2));
+            const lin = from.y + (to.y - from.y) * t;           // 같은 진행률의 직선 높이
+            assert(my < lin - 8,
+              '궤적이 직선이다 — 호를 그려야 기계 같지 않다: ' + Math.round(my) + ' vs ' + Math.round(lin)); }
+          // ② 도착하면 가림이 풀리고 **고리가 퍼진다**
+          //   ⏳ 고정 대기가 아니라 **기다렸다 확인**한다 — 기기가 느리면 연출이 늦게 온다.
+          const waitFor = async (sel, ms) => { for(let t = 0; t * 40 < ms; t++){
+            if(document.querySelector(sel)) return true; await sleep(40); } return false; };
+          assert(await waitFor('#rnG .rnRipple', 1200),
+            '도착 고리가 없다 — 「적용됐다」가 안 보인다');
+          assert(!document.querySelector('#rnG .rnCell.veil'), '도착했는데 칸이 계속 가려져 있다');
+          await sleep(660);
+          assert(!document.querySelector('#rnG .rnRipple'), '고리가 안 걷힌다 — 계속 쌓인다');
+          // ③ 빼면 **가방 줄 버튼이 부푼다** — 어디로 갔는지 눈이 따라간다
+          campRuneSlotTap('norm', 0);
+          assert(document.querySelectorAll('#campRune .rnFly').length >= 1, '뺄 때 날아가는 그림이 없다');
+          assert(await waitFor('#campRune .rnHb.rnPop', 1400), '가방 버튼이 안 부푼다');
+          await sleep(480);
+          // ④ 교체는 **나가는 것이 먼저** — 둘이 같이 날면 어느 것이 들어오는지 안 읽힌다
+          const eco = ['tap','gas','mine','reb'];
+          for(let i = 0; i < RUNE_CONS; i++){
+            const k = runeKey(eco[i % 4], ['low','mid','high'][i % 3]);
+            R8.own[k] = (R8.own[k] | 0) + 1; R8.norm[i] = k; }
+          campRuneTouch(); campRuneRender(); await sleep(30);
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
+          campRuneBagTap(k8);
+          if(campRuneSwapOn()){
+            campRuneSlotTap('norm', 0);
+            const vis = () => [...document.querySelectorAll('#campRune .rnFly')]
+              .filter(e => getComputedStyle(e).opacity !== '0').length;
+            assert(vis() === 1, '교체에서 둘이 같이 난다: ' + vis());
+            let two = false;
+            for(let t = 0; t < 12 && !two; t++){ await sleep(40); if(vis() === 2) two = true; }
+            assert(two, '한 박자 뒤에 들어오는 것이 안 뜬다: ' + vis());
+            animNote = '연출 호·고리·시차 ok'; }
+          await sleep(RUNE_FLY_MS + 200);
+          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
         // 🐞 **가방 탭은 그 룬이 들어갈 수 있는 빈 칸을 찾는다**(2026-09-04 사용자 신고: 「성장 룬이 안 들어가」)
         //   ⛔ 그냥 첫 빈 칸을 잡지 말 것 — 갈래가 다른 성좌에서 걸려 장착이 실패하고,
         //     그대로 교체 모드로 빠져 아무 일도 못 한다.
@@ -2913,7 +2972,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote;
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });

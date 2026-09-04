@@ -626,12 +626,13 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
     + '" data-rk="' + kind + '" data-ri="' + i + '"/>');
   // ⚠ 흔들림은 **칸 전체를 감싸서** 준다 — 조각마다 걸면 테두리와 문양이 따로 논다.
   //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
-  if(swCand || swDim){
-    const st = 'transform-origin:' + X + 'px ' + Y + 'px'
-      + (swCand ? ';animation-delay:' + ((i * 53) % 260) + 'ms' : '');
-    return '<g class="' + (swCand ? 'rnWig' : 'rnDim') + '" style="' + st + '">'
-      + g.join('') + '</g>'; }
-  return g.join(''); }
+  // ⚠ 흔들림·부풀림은 **칸 전체를 감싸서** 준다 — 조각마다 걸면 테두리와 문양이 따로 논다.
+  //   transform-origin 은 사용자 좌표라 transform-box:view-box 가 함께 있어야 한다(CSS).
+  const cls = 'rnCell' + (swCand ? ' rnWig' : '') + (swDim ? ' rnDim' : '');
+  const st = 'transform-origin:' + X + 'px ' + Y + 'px'
+    + (swCand ? ';animation-delay:' + ((i * 53) % 260) + 'ms' : '');
+  return '<g class="' + cls + '" data-ck="' + kind + '-' + i + '" style="' + st + '">'
+    + g.join('') + '</g>'; }
 
 // 🎨 판이 쓰는 그라데이션 — 등급마다 테두리(흰빛→등급색)와 뒷광 한 벌씩.
 //   ⚠ **매 렌더 새로 낸다** — SVG 를 통째로 갈아 끼우므로 defs 도 같이 들어가야 한다.
@@ -734,7 +735,6 @@ function _runeMapSvg(){
 //   ⚠ 유니크 룬은 칸 셋이 **세 성좌에 흩어져** 있다 — 한 곳을 잡을 수 없으므로 전체 보기로 둔다.
 //   ⛔ 확인창을 띄우지 말 것 — 넣고 빼기가 한 번씩인 화면이라 교체만 두 단계면 어긋난다.
 let _runeSwapKey = '';                  // 교체하려는 룬. '' 이면 교체 모드가 아니다
-const RUNE_FLY_MS = 320;                // 날아가는 시간 — 눈이 따라갈 만큼만
 function campRuneSwapOn(){ return !!_runeSwapKey; }
 // 이 칸이 지금 교체 후보인가 — 고른 룬과 **같은 종류**의 칸만 흔들린다
 function campRuneSwapCand(kind, i){
@@ -778,24 +778,87 @@ function campRuneSwapBegin(key){
   campRuneSwapLook(false);
   if(typeof toast === 'function') toast('바꿀 칸을 고르세요'); }
 
-// ✈ 날아가는 룬 — 상태는 **즉시** 바뀌고, 이 그림은 그 위에 얹히는 장식이다.
-//   ⛔ 애니가 끝날 때 상태를 바꾸지 말 것 — 중간에 화면을 나가면 반영이 통째로 사라진다.
-function _runeFly(key, from, to, ms){
+// ── ✈ 룬이 오가는 연출 ────────────────────────────────────────────────────
+//   ⭐ **끊겨 보이던 이유는 「도착하는 순간」이 없어서였다**(2026-09-04 사용자 지적).
+//     칸에는 룬이 이미 그려져 있고 날아온 그림은 그냥 사라졌다 — 둘이 만나는 지점이 없다.
+//   그래서 넷을 함께 한다:
+//     ① 날아가는 동안 **받을 칸의 문양을 감춘다** — 그림이 도착해야 나타난다.
+//     ② 궤적은 **호**다(직선은 기계 같다). 거리에 비례해 위로 띄운다.
+//     ③ 도착하면 칸이 **한 번 부풀고**(pop) 갈래 색 **고리가 퍼진다** — 「적용됐다」의 신호.
+//     ④ 가방으로 돌아가면 그 **줄 버튼이 부푼다** — 어디로 들어갔는지 눈이 따라간다.
+//   ⛔ 상태를 애니 끝에 바꾸지 말 것 — 중간에 화면을 나가면 반영이 통째로 사라진다.
+//     ⚠ 그래서 「감추고 → 도착하면 보이기」로 푼다. 상태는 여전히 즉시 바뀐다.
+const RUNE_FLY_MS = 400;              // 날아가는 시간
+const RUNE_FLY_GAP = 110;             // 교체에서 «나가는 것» 과 «들어오는 것» 의 시차
+const RUNE_ARC_MAX = 74;              // 호의 최대 높이(px)
+
+// 📍 칸의 <g> — 문양을 감추거나 부풀리려면 칸 전체를 잡아야 한다
+function _runeCellEl(kind, i){
+  return document.querySelector('#rnG .rnCell[data-ck="' + kind + '-' + i + '"]'); }
+// 🫥 받을 칸의 문양을 감춘다 — 날아온 그림이 도착해야 나타난다
+function _runeCellVeil(kind, i, on){
+  const el = _runeCellEl(kind, i); if(!el) return;
+  el.classList.toggle('veil', !!on); }
+// 💥 도착 — 칸이 한 번 부풀고, 갈래 색 고리가 퍼진다
+function campRuneLand(kind, i, key){
+  const el = _runeCellEl(kind, i); if(!el) return;
+  el.classList.remove('veil');
+  el.classList.remove('rnPop'); void el.getBBox;          // 애니를 다시 태우려면 한 번 끊는다
+  requestAnimationFrame(() => el.classList.add('rnPop'));
+  setTimeout(() => el.classList.remove('rnPop'), 460);
+  // 🔵 퍼지는 고리 — 등급 색으로. ⛔ blur 를 쓰지 말 것(칸이 스물일곱이다).
+  const g = _runeG(); if(!g) return;
+  const p = runeParse(key), c = (RUNE_GD[p.gd] || {}).col || '#8b95a5';
+  const pos = (kind === 'uniq') ? campRuneUPos(i) : campRuneNPos(i);
+  const r0 = (kind === 'uniq') ? RUNE_R_U : RUNE_R_N;
+  const ring = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+  ring.setAttribute('class', 'rnRipple');
+  ring.setAttribute('points', _runeHexPts(pos[0], pos[1], r0));
+  ring.setAttribute('style', 'stroke:' + c + ';transform-origin:' + pos[0] + 'px ' + pos[1] + 'px');
+  g.appendChild(ring);
+  setTimeout(() => ring.remove(), 620); }
+// 🎒 가방 줄의 버튼이 한 번 부푼다 — 빠진 룬이 어디로 갔는지 눈이 따라간다
+function campRuneBagPop(key){
+  const el = document.querySelector('#campRune .rnHb[data-key="' + key + '"]');
+  if(!el) return;
+  el.classList.remove('rnPop'); void el.offsetWidth;
+  el.classList.add('rnPop');
+  setTimeout(() => el.classList.remove('rnPop'), 460); }
+
+// ✈ 날아가는 룬 — 호를 그리며 간다. 도착하면 onLand 를 부른다.
+//   ⚠ 그림은 **끝까지 또렷하다**. 흐려지며 사라지면 「도착」이 아니라 「없어짐」으로 보인다.
+function _runeFly(key, from, to, ms, opt){
   const host = document.getElementById('campRune');
-  if(!host || !from || !to) return;
-  const src = runeIcoSrc(key); if(!src) return;
+  const O = opt || {};
+  const done = () => { if(O.onLand) O.onLand(); };
+  if(!host || !from || !to){ done(); return; }
+  const src = runeIcoSrc(key); if(!src){ done(); return; }
   const hb = host.getBoundingClientRect();
   const el = document.createElement('img');
   el.className = 'rnFly'; el.src = src; el.draggable = false;
   el.style.left = Math.round(from.x - hb.left - 17) + 'px';
   el.style.top  = Math.round(from.y - hb.top - 17) + 'px';
+  if(O.tint) el.style.filter = 'drop-shadow(0 0 7px ' + O.tint + ')';
   host.appendChild(el);
-  const dx = Math.round(to.x - from.x), dy = Math.round(to.y - from.y);
-  requestAnimationFrame(() => {
-    el.style.transition = 'transform ' + ms + 'ms cubic-bezier(.34,.92,.32,1), opacity ' + ms + 'ms ease-in';
-    el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(.72)';
-    el.style.opacity = '.10'; });
-  setTimeout(() => el.remove(), ms + 80); }
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const arc = Math.min(RUNE_ARC_MAX, Math.hypot(dx, dy) * 0.34);
+  const run = () => {
+    const kf = [
+      { transform:'translate(0px,0px) scale(1)', opacity:1, offset:0 },
+      { transform:'translate(' + (dx * 0.28).toFixed(1) + 'px,' + (dy * 0.28 - arc * 0.82).toFixed(1)
+        + 'px) scale(1.16)', opacity:1, offset:0.34 },
+      { transform:'translate(' + (dx * 0.72).toFixed(1) + 'px,' + (dy * 0.72 - arc * 0.5).toFixed(1)
+        + 'px) scale(1.06)', opacity:1, offset:0.72 },
+      { transform:'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px) scale(.94)',
+        opacity:1, offset:1 }];
+    const a = el.animate ? el.animate(kf, { duration: ms, easing:'cubic-bezier(.32,.02,.2,1)',
+      fill:'forwards' }) : null;
+    const fin = () => { el.remove(); done(); };
+    if(a) a.onfinish = fin; else setTimeout(fin, ms); };
+  // ⏳ 늦게 띄우는 것(교체의 «들어오는 것»)은 그만큼 기다렸다 뜬다 — 두 그림이 겹쳐 날지 않게
+  if(O.delay){ el.style.opacity = '0';
+    setTimeout(() => { el.style.opacity = '1'; run(); }, O.delay); }
+  else requestAnimationFrame(run); }
 // 📍 화면에서의 자리 — 칸 / 가방 줄의 버튼
 function _runeSlotAt(kind, i){
   const el = document.querySelector('#rnG [data-rk="' + kind + '"][data-ri="' + i + '"]');
@@ -822,8 +885,17 @@ function campRuneSwapDo(kind, i){
   campRuneRender();
   // ✈ 그린 뒤에 잰다 — 빠진 룬이 돌아갈 가방 줄은 이제야 생긴다
   const backP = old ? _runeBagAt(old) : null;
-  if(old && slotP && backP) _runeFly(old, slotP, backP, RUNE_FLY_MS);
-  if(bagP && slotP) _runeFly(key, bagP, slotP, RUNE_FLY_MS);
+  _runeCellVeil(kind, i, true);                       // 🫥 새 룬이 도착할 때까지 감춘다
+  // ⭐ **나가는 것이 먼저다.** 둘이 같이 날면 어느 것이 들어오는지 안 읽힌다.
+  if(old && slotP && backP){
+    const oc = (RUNE_GD[runeParse(old).gd] || {}).col || '';
+    _runeFly(old, slotP, backP, RUNE_FLY_MS,
+      { tint:oc, onLand: () => campRuneBagPop(old) }); }
+  if(bagP && slotP){
+    const nc = (RUNE_GD[runeParse(key).gd] || {}).col || '';
+    _runeFly(key, bagP, slotP, RUNE_FLY_MS,
+      { tint:nc, delay: old ? RUNE_FLY_GAP : 0, onLand: () => campRuneLand(kind, i, key) }); }
+  else campRuneLand(kind, i, key);
   return true; }
 
 // ── 🗒 효과 쪽지 — 칸을 길게 누르면 그 칸 옆에 뜬다 ─────────────────────
@@ -873,8 +945,14 @@ function campRuneSlotTap(kind, i){
       return; }
     campRuneSwapEnd(); return; }
   const cur = campRuneEq(kind)[i] || null;
-  if(cur){ campRuneUnequip(kind, i);
-    if(typeof toast === 'function') toast(runeName(cur) + ' 을(를) 뺐습니다');
+  if(cur){
+    // ✈ 자리를 **빼기 전에** 잰다 — 빼고 나면 그 칸에 문양이 없다
+    const from = _runeSlotAt(kind, i);
+    campRuneUnequip(kind, i);
+    const to = _runeBagAt(cur);
+    const c = (RUNE_GD[runeParse(cur).gd] || {}).col || '';
+    if(from && to) _runeFly(cur, from, to, RUNE_FLY_MS,
+      { tint:c, onLand: () => campRuneBagPop(cur) });
     return; }
   campRunePick(kind, i); }
 
@@ -1012,11 +1090,16 @@ function campRuneAuto(key){
   return false; }
 // ✈ 장착 + 날아가는 그림 — 가방 줄에서 칸으로.
 //   ⚠ 출발 자리는 **끼우기 전에** 잰다(다시 그리면 그 버튼이 «–» 로 바뀌거나 자리가 달라진다).
-function campRuneEquipFly(kind, i, key){
+function campRuneEquipFly(kind, i, key, opt){
+  const O = opt || {};
   const from = _runeBagAt(key);
   if(!campRuneEquip(kind, i, key)) return false;
   const to = _runeSlotAt(kind, i);
-  if(from && to) _runeFly(key, from, to, RUNE_FLY_MS);
+  if(!from || !to) return true;                       // 자리를 못 찾으면 조용히 넣기만 한다
+  _runeCellVeil(kind, i, true);                       // 🫥 도착할 때까지 문양을 감춘다
+  const c = (RUNE_GD[runeParse(key).gd] || {}).col || '';
+  _runeFly(key, from, to, RUNE_FLY_MS,
+    { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) });
   return true; }
 // 🎒 가방을 눌렀을 때 — 칸을 골라 뒀으면 **그 칸에**, 아니면 **빈 칸에**.
 function campRuneBagTap(key){
