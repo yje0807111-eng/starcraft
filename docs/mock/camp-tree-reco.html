@@ -1,0 +1,201 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 트리 — 추천 표식 · 지정 빛 (확정안)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 6px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1240px}
+.note b{color:#dfe5ee}
+.sec{margin:20px 22px 6px;font-size:13.5px;font-weight:700}
+.sec i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.desc{margin:0 22px 9px;color:#8d97a6;font-size:11px;line-height:1.7;max-width:1240px}
+.desc b{color:#cfd7e2}
+.pane{position:relative;margin:0 22px;width:calc(100% - 44px);max-width:1240px;
+  background:radial-gradient(120% 130% at 50% 34%,#171d26 0%,#0c0f14 62%,#07090c 100%)}
+svg{display:block;width:100%;height:auto}
+.lab{text-anchor:middle;font-size:9px;fill:#6d7683}
+.tag{text-anchor:middle;dominant-baseline:hanging;font-family:var(--font-num);
+  font-variant-numeric:tabular-nums;font-size:9px;fill:#7b8593}
+/* ── 게임과 **같은 값**(css/30-home.css) ─────────────────────────────── */
+@keyframes ctRecoBreath{0%,100%{opacity:.34;transform:scale(1)}
+  50%{opacity:.80;transform:scale(.86)}}
+@keyframes ctRecoGlowB{0%,100%{opacity:.18}50%{opacity:.72}}
+.ctReco{animation:ctRecoBreath 3.6s ease-in-out infinite}
+.ctRecoG{animation:ctRecoGlowB 3.6s ease-in-out infinite}
+/* ── 하단 시트 조각 — 이름 + 「추천」 배지 ───────────────────────────── */
+.sheet{margin:0 22px;width:calc(100% - 44px);max-width:430px;padding:16px 16px 14px;
+  border-top:1px solid rgba(255,255,255,.07);background:#06090e}
+.ctHead{display:flex;align-items:center;gap:14px}
+.ctRing{position:relative;flex:0 0 56px;width:56px;height:56px}
+.ctRing svg{position:absolute;inset:0;width:56px;height:56px;transform:rotate(-90deg)}
+.ctRingBg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:3}
+.ctRingOn{fill:none;stroke:rgba(255,210,74,.7);stroke-width:3;stroke-linecap:round}
+.ctRing img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:26px;height:26px;object-fit:contain;opacity:.9}
+.ctNm{font-size:17px;font-weight:700;color:#fff;line-height:1.2}
+.ctStage{margin-top:3px;font-size:10px;letter-spacing:.14em;color:#69737f}
+.ctRecoTag{display:inline-block;vertical-align:2px;margin-left:8px;padding:2px 6px;border-radius:3px;
+  border:1px solid rgba(255,210,74,.42);background:rgba(255,210,74,.10);
+  font-family:var(--font-ko);font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  color:var(--gold);line-height:1.25}
+.ctDesc{margin-top:13px;font-size:13px;line-height:1.7;color:#a7b2c0}
+.ctDesc b{color:#f0f4f9;font-weight:700}
+.ctPay{display:flex;align-items:baseline;gap:8px;margin-top:15px;padding-top:13px;
+  border-top:1px solid rgba(255,255,255,.07)}
+.ctPip{width:9px;height:9px;transform:rotate(45deg);background:var(--gold);align-self:center;flex:0 0 auto}
+.ctCv{font-family:var(--font-num);font-size:24px;font-weight:800;color:var(--gold);line-height:1.1}
+.ctHave{font-size:10px;letter-spacing:.18em;color:#69737f}
+</style></head><body>
+<h1>환생 트리 — 🏅 추천 표식 · ✨ 지정 빛 (지금 들어간 값 그대로)</h1>
+<p class="note">아래 그림은 <b>게임에 들어간 값을 그대로</b> 옮긴 것이다 — 육각 좌표식, 그라디언트, 애니 주기(3.6초)·진폭(1.0↔0.86)까지 같다.
+움직임은 정지 이미지로는 판단이 안 돼서 <b>① 필름스트립</b>(한 주기를 다섯 컷으로 쪼갠 것)과 <b>② 실제로 움직이는 것</b>을 나란히 뒀다.</p>
+
+<p class="sec"><i>1</i>추천 표식 한 주기 — 「지금 자리」에서 <b>안으로 모였다가</b> 돌아온다</p>
+<p class="desc"><b>가장 모여도 기본 테두리에서 여유를 두고 멈춘다</b> — 아래 <span style="color:#7fd4ff">파란 점선</span>이 그 테두리 자리다.
+밖으로는 별 간격(52)이 좁아 더 못 키운다.
+조각과 뒤 빛은 <b>같은 주기·같은 위상</b>이라 한 덩어리로 숨 쉰다. 한 번 도는 데 <b>3.6초</b> — 늘 떠 있는 표시라 빠르면 곧 시끄러워진다.</p>
+<div class="pane" id="film"></div>
+
+<p class="sec"><i>2</i>실제로 움직이는 것 — 별 다섯 상태</p>
+<p class="desc">왼→오: <b>못 산다</b> · <b>살 수 있다</b> · <b>🏅 추천</b>(움직인다) · <b>✨ 지정됨</b> · <b>샀다</b>.
+안 산 별 둘(못 산다·살 수 있다)은 <b>테두리가 같다</b> — 갈래 색 세로 그라디언트를 알파만 낮춘 것.
+지정하면 테두리가 <b>산 별의 것</b>으로 바뀐다(「사면 이렇게 된다」). 지정한 별에는 추천 표식을 안 그린다 — 표시가 둘이면 뜻이 흐려진다.</p>
+<div class="pane" id="live"></div>
+
+<p class="sec"><i>3</i>그 별을 누르면 — 하단 시트 이름 오른쪽에 <b>「추천」</b></p>
+<p class="desc">지도 위 표식과 <b>같은 것을 가리킨다</b>. 표식은 지도에서, 배지는 시트에서 같은 말을 한다.
+이름 <b>오른쪽</b>이라야 이름 시작 위치가 별마다 안 달라진다. 금색은 포인트·비용의 색이라 「값어치」로 읽힌다.</p>
+<div class="sheet">
+  <div class="ctHead">
+    <span class="ctRing">
+      <svg viewBox="0 0 56 56"><circle class="ctRingBg" cx="28" cy="28" r="25"/>
+        <circle class="ctRingOn" cx="28" cy="28" r="25" stroke-dasharray="157.1" stroke-dashoffset="125.7"/></svg>
+      <img src="../../assets/icons/tree/gas.webp" alt=""></span>
+    <div><div class="ctNm">가스 채취<span class="ctRecoTag">추천</span></div>
+      <div class="ctStage">I  1 / 5 단계</div></div>
+  </div>
+  <div class="ctDesc">가스를 얻는 양이 <b>1.5배</b> 증가합니다.</div>
+  <div class="ctPay"><span class="ctPip"></span><span class="ctCv">2</span>
+    <span class="ctHave">point 필요</span></div>
+</div>
+
+<script>
+const ICO = '../../assets/icons/tree/';
+const CY = 92, R = 30, COL = '#ffd24a';
+const GAP = 8;            // CAMP_TREE_RECO_GAP — 가장 벌어졌을 때 테두리에서 떨어지는 거리
+const SC_MIN = .86;         // ctRecoBreath 50% — 가장 모였을 때의 배율
+function hexPts(x, y, r){ const q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((x + r * Math.cos(a)).toFixed(1) + ',' + (y + r * Math.sin(a)).toFixed(1)); }
+  return q.join(' '); }
+function defs(){
+  const cols = ['#ffd24a','#4aa8ff'];
+  return '<defs>' + cols.map(function(c){
+    return '<linearGradient id="ctg' + c.slice(1) + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>' +
+      '<stop offset=".42" stop-color="' + c + '"/>' +
+      '<stop offset="1" stop-color="' + c + '" stop-opacity=".34"/></linearGradient>' +
+    '<linearGradient id="ctg' + c.slice(1) + 'd" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#ffffff" stop-opacity=".34"/>' +
+      '<stop offset=".45" stop-color="' + c + '" stop-opacity=".38"/>' +
+      '<stop offset="1" stop-color="' + c + '" stop-opacity=".07"/></linearGradient>' +
+    '<radialGradient id="ctb' + c.slice(1) + '">' +
+      '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>' +
+      '<stop offset=".62" stop-color="' + c + '" stop-opacity=".07"/>' +
+      '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }).join('') +
+    '<linearGradient id="ctFace" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>' +
+    '<filter id="ctDim"><feColorMatrix type="saturate" values="0.15"/>' +
+      '<feComponentTransfer><feFuncR type="linear" slope="0.42"/><feFuncG type="linear" slope="0.42"/>' +
+      '<feFuncB type="linear" slope="0.46"/></feComponentTransfer></filter></defs>'; }
+function img(x, y, w, key, op, dim){
+  return '<image href="' + ICO + key + '.webp" x="' + (x - w / 2).toFixed(1) + '" y="' +
+    (y - w / 2).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + w.toFixed(1) +
+    '" opacity="' + op + '"' + (dim ? ' filter="url(#ctDim)"' : '') +
+    ' preserveAspectRatio="xMidYMid meet"/>'; }
+/* 별 하나 — js/19-camp.js 의 campTreeGem 과 같은 겹 순서 */
+function star(x, st, ic, cost, col){
+  col = col || COL;
+  const own = st === 'own', r = R, rb = r - r * .07;
+  let s = '';
+  if(own) s += '<polygon points="' + hexPts(x, CY, r + 4) + '" fill="none" stroke="' + col +
+    '" stroke-width="1" opacity=".45"/>';
+  s += '<polygon points="' + hexPts(x, CY, r) + '" fill="#000" opacity=".55"/>';
+  s += '<polygon points="' + hexPts(x, CY, rb) + '" fill="url(#ctFace)" stroke="url(#ctg' +
+    col.slice(1) + (own ? '' : 'd') + ')" stroke-width="' + (own ? 1.3 : 1.1) + '"' +
+    (own ? ' style="filter:drop-shadow(0 0 3px ' + col + ')"' : '') + '/>';
+  if(own){ s += '<circle cx="' + x + '" cy="' + CY + '" r="' + (r * .72).toFixed(1) +
+      '" fill="url(#ctb' + col.slice(1) + ')"/>';
+    s += '<polygon points="' + hexPts(x, CY, r - Math.max(1, r * .073)) +
+      '" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>'; }
+  s += img(x, CY, r * 1.46, ic, own ? 1 : (st === 'buy' ? .92 : .6), !own);
+  if(cost) s += '<text class="tag" x="' + x + '" y="' + (CY + r + 3) + '"' +
+    (st === 'buy' ? ' fill="' + col + '"' : '') + '>' + cost + '</text>';
+  return s; }
+/* ✨ 지정 빛 — 산 별의 테두리를 그대로 두른다 */
+function selGlow(x, col){ col = col || COL;
+  const r = R, rb = r - r * .07;
+  return '<polygon points="' + hexPts(x, CY, rb) + '" fill="none" stroke="url(#ctg' + col.slice(1) +
+      ')" stroke-width="1.3" style="filter:drop-shadow(0 0 3px ' + col + ')"/>' +
+    '<circle cx="' + x + '" cy="' + CY + '" r="' + (r * .72).toFixed(1) + '" fill="url(#ctb' +
+      col.slice(1) + ')"/>' +
+    '<polygon points="' + hexPts(x, CY, r - Math.max(1, r * .073)) +
+      '" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>'; }
+/* 🏅 추천 표식 — campTreeRecoMark 와 같은 식. t=null 이면 CSS 애니, 숫자면 그 위상으로 고정 */
+function recoMark(x, t){
+  const r = R, R2 = r + GAP; let d = '';
+  for(let i = 0; i < 6; i++){
+    const a0 = Math.PI / 180 * (60 * i - 90), a1 = Math.PI / 180 * (60 * (i + 1) - 90);
+    const px = x + R2 * Math.cos(a0), py = CY + R2 * Math.sin(a0);
+    const qx = x + R2 * Math.cos(a1), qy = CY + R2 * Math.sin(a1);
+    d += 'M' + px.toFixed(1) + ' ' + py.toFixed(1) + 'L' + (px + (qx - px) * .26).toFixed(1) + ' ' +
+           (py + (qy - py) * .26).toFixed(1) +
+         'M' + qx.toFixed(1) + ' ' + qy.toFixed(1) + 'L' + (qx + (px - qx) * .26).toFixed(1) + ' ' +
+           (qy + (py - qy) * .26).toFixed(1); }
+  // t: 0 = 가장 벌어진 자리(1.0) … 1 = 가장 모인 자리(SC_MIN)
+  const sc = (t == null) ? null : (1 - (1 - SC_MIN) * t);
+  const opG = (t == null) ? null : (.34 + .46 * t);
+  const opB = (t == null) ? null : (.18 + .54 * t);
+  const glow = '<circle cx="' + x + '" cy="' + CY + '" r="' + (r * 1.5).toFixed(1) + '" fill="url(#ctb' +
+    COL.slice(1) + ')"' + (t == null ? ' class="ctRecoG"' : ' opacity="' + opB.toFixed(2) + '"') + '/>';
+  // ⚠ 고정 컷은 **transform 속성만** 쓴다 — 여기에 transform-origin 을 같이 주면 크롬이 두 번
+  //   중심을 잡아 조각이 옆으로 밀려난다(실제로 그렇게 렌더됐다).
+  const g = (t == null)
+    ? '<g class="ctReco" style="transform-origin:' + x + 'px ' + CY + 'px">' +
+      '<path d="' + d + '" fill="none" stroke="' + COL + '" stroke-width=".9" stroke-linecap="round"/></g>'
+    : '<g opacity="' + opG.toFixed(2) + '" transform="translate(' + x + ' ' + CY + ') scale(' +
+      sc.toFixed(3) + ') translate(' + (-x) + ' ' + (-CY) + ')">' +
+      '<path d="' + d + '" fill="none" stroke="' + COL + '" stroke-width=".9" stroke-linecap="round"/></g>';
+  return glow + g; }
+function labels(xs, tx){ return xs.map(function(x, i){
+  return '<text class="lab" x="' + x + '" y="' + (CY + R + 34) + '">' + tx[i] + '</text>'; }).join(''); }
+
+/* ① 필름스트립 — 한 주기를 다섯 컷 */
+{ const xs = [70, 210, 350, 490, 630];
+  const ts = [0, .5, 1, .5, 0];
+  const tx = ['0.0초 (지금 자리)', '0.9초', '1.8초 (가장 모임 · 테두리 바깥)', '2.7초', '3.6초 (제자리)'];
+  let s = defs();
+  xs.forEach(function(x, i){ s += star(x, 'buy', 'gas', 2) + recoMark(x, ts[i]);
+    // 🔍 기본 테두리 자리 — 표식이 여기 **안으로 안 들어간다**는 것을 눈으로 보라고 그린다
+    s += '<polygon points="' + hexPts(x, CY, R - R * .07) + '" fill="none" stroke="#7fd4ff" ' +
+      'stroke-width=".7" stroke-dasharray="3 3" opacity=".45"/>'; });
+  s += labels(xs, tx);
+  document.getElementById('film').innerHTML =
+    '<svg viewBox="0 0 700 175">' + s + '</svg>'; }
+
+/* ② 실물 — 다섯 상태 */
+{ const xs = [70, 210, 350, 490, 630];
+  const tx = ['못 산다', '살 수 있다', '🏅 추천', '✨ 지정됨', '샀다'];
+  let s = defs();
+  s += star(xs[0], 'next', 'atk', 96, '#4aa8ff');
+  s += star(xs[1], 'buy',  'mine', 24);
+  s += star(xs[2], 'buy',  'gas',  2) + recoMark(xs[2], null);
+  s += star(xs[3], 'buy',  'gather', 24) + selGlow(xs[3]);
+  s += star(xs[4], 'own',  'tap');
+  s += labels(xs, tx);
+  document.getElementById('live').innerHTML =
+    '<svg viewBox="0 0 700 175">' + s + '</svg>'; }
+</script></body></html>

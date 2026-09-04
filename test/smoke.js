@@ -407,8 +407,8 @@ async function groupLobby(){
     // ① 네비에서 들어가면 하위 둘이 뜬다
     navGo('reb');
     { const c=cells();
-      assert(c.indexOf('환생')>=0 && c.indexOf('업그레이드')>=0,
-        '하위가 환생·업그레이드가 아니다: '+c.join('|')); }
+      assert(c.indexOf('환생')>=0 && c.indexOf('환생 트리')>=0,
+        '하위가 환생·환생 트리가 아니다: '+c.join('|')); }
     assert(campRebIsOn(),'정보 탭인데 환생 화면이 안 열렸다');
     // ② 업그레이드 = 환생 트리 · 서로 배타
     navSub('tree');
@@ -416,7 +416,7 @@ async function groupLobby(){
     // ③ 캠프 배지에서 바로 들어와도 하위가 뜬다(_navDrill 을 안 맞추면 통째로 안 나온다)
     campRebEnter('info');
     { const c=cells();
-      assert(c.indexOf('업그레이드')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
+      assert(c.indexOf('환생 트리')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
     assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
     // ④ ✕ 를 없앴다 — **나가는 길은 하단 네비 하나**다(2026-08-31 사용자 확정)
     assert(!document.querySelector('#campReb .crX'),'환생 화면에 ✕ 가 남아 있다');
@@ -3067,6 +3067,116 @@ async function groupLobby(){
     } finally { C.rbTree=keepT; campTreeViewSync(); }
   });
 
+  // 🏅 **다음에 열 것**을 하나만 짚는다 (2026-09-04 사용자 요청).
+  //   ⛔ 배선이 없는 계열(wkCap·dgRw)을 짚지 말 것 — 추천은 「열면 좋다」는 말이라 거짓말이 된다.
+  //   ⛔ 지정한 별과 겹치지 말 것 — 표시가 둘이면 어느 쪽이 무슨 뜻인지 못 읽는다.
+  await step('환생 트리: 다음에 열 것을 하나만 짚는다', async()=>{
+    skipIf(typeof campTreeRecoPick!=='function','추천이 없다');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,'gp:econ나':1,gather:2,mine:1};
+      _campTreeSel=null; campRebEnter('tree'); campTreeRender();
+      const key=campTreeRecoPick();
+      assert(key,'살 수 있는 것이 있는데 아무것도 안 짚는다');
+      // ① 짚은 것은 실제로 **살 수 있는** 자리여야 한다
+      { const p=key.split(':');
+        if(key.indexOf('br:')!==0 && key.indexOf('gp:')!==0 && key!=='root')
+          assert(campTreeState(p[0],+p[1])==='buy','살 수 없는 것을 짚었다: '+key); }
+      // ② 배선 없는 계열은 절대 안 짚는다
+      assert(CAMP_RT_RECO_SKIP.indexOf(key.split(':')[0])<0,'배선 없는 계열을 짚었다: '+key);
+      // ③ 표식은 **하나뿐**
+      { const m=document.querySelectorAll('#ctG .ctReco');
+        assert(m.length===1,'추천 표식이 '+m.length+'개다(하나여야 한다)'); }
+      // ③-b 📏 **가장 모여도 별 테두리 바깥**이어야 한다 (2026-09-04 사용자 지적).
+      //   ⛔ 안으로 파고들면 아이콘을 덮는다. 벌어진 거리(JS)와 최소 배율(CSS)을 **함께** 잰다.
+      { let minSc=1;
+        for(const ss of document.styleSheets){ let rs; try{ rs=ss.cssRules; }catch(e){ continue; }
+          for(const r of rs||[]){ if(r.type!==7||r.name!=='ctRecoBreath') continue;
+            for(const kf of r.cssRules){ const m=/scale\(([0-9.]+)\)/.exec(kf.style.transform||'');
+              if(m) minSc=Math.min(minSc,parseFloat(m[1])); } } }
+        assert(minSc<1,'추천 애니가 안 움직인다(최소 배율을 못 찾았다)');
+        // 표식이 붙는 별의 반지름은 11(묶음 마디)·13(갈래 마디)·15(계열) 셋뿐 — 가장 좁은 것으로 잰다
+        // ⚠ 「안 들어간다」로는 부족하다 — 붙어 있으면 답답하다(2026-09-04 사용자 두 번째 지적).
+        //   테두리에서 **4 이상** 떨어져 있어야 한다.
+        const rMin=11, out=(rMin+CAMP_TREE_RECO_GAP)*minSc;
+        assert(out>rMin+4,'가장 모였을 때 표식이 테두리에 붙는다: r'+rMin+' 인데 '+out.toFixed(1)+
+          ' (벌어짐 '+CAMP_TREE_RECO_GAP+' × 최소 배율 '+minSc+')');
+        assert(minSc<0.95,'애니 폭이 너무 작아 안 보인다: 최소 배율 '+minSc); }
+      // ④ 점수가 가장 높은 것을 골랐나 — 규칙(상승폭 ÷ 비용)을 여기서 다시 계산해 맞춰 본다
+      { let bk='', bs=0;
+        for(const L of CAMP_RT_LINES){ if(CAMP_RT_RECO_SKIP.indexOf(L.k)>=0) continue;
+          const nn=campRtHas(L.k)+1; if(campTreeState(L.k,nn)!=='buy') continue;
+          const c=campRtCost(L.k,nn); if(!isFinite(c)||c<=0) continue;
+          const sc=campRtRecoGain(L.k,nn)/c; if(sc>bs){ bs=sc; bk=L.k+':'+nn; } }
+        assert(key===bk,'가장 점수 높은 것을 안 골랐다: 골랐다 '+key+' vs 계산 '+bk); }
+      // ⑤ 그 별을 고르면 추천 표식은 물러난다(지정 빛과 안 겹친다)
+      { const p=key.split(':'); campTreeTap(p[0],+p[1]);
+        const m=document.querySelectorAll('#ctG .ctReco');
+        assert(m.length===0,'지정한 별에 추천 표식이 그대로 남았다'); }
+      return '짚은 것 '+key+' (규칙: 상승폭 ÷ 비용 · 배선 없는 '+CAMP_RT_RECO_SKIP.join('·')+' 제외)';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
+  // ✨ **고른 별은 은은하게 빛난다** — 산 별의 테두리를 그대로 두른다(「사면 이렇게 된다」).
+  await step('환생 트리: 안 산 별도 갈래 색 그라디언트 · 고르면 빛난다', async()=>{
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:1};
+      _campTreeSel=null; campRebEnter('tree'); campTreeRender();
+      // ① 안 산 별의 테두리 = **갈래 색 흐린 그라디언트**. ⛔ 회색 평평한 선으로 되돌리지 말 것.
+      { const g=[...document.querySelectorAll('#ctG .ctGem')].filter(e=>!e.classList.contains('on'));
+        assert(g.length>0,'안 산 별이 없다(검사 불가)');
+        for(const e of g){ const st=e.getAttribute('stroke')||'';
+          assert(st.indexOf('url(#ctg')===0,'안 산 별이 그라디언트를 안 쓴다: '+st); }
+        // 살 수 있다/못 산다로 테두리를 가르지 않는다 — 둘 다 같은 그라디언트
+        const ids=new Set(g.map(e=>e.getAttribute('stroke')));
+        assert([...ids].every(v=>v.slice(-2)==='d)'),'안 산 별끼리 테두리가 갈린다: '+[...ids].join(' ')); }
+      // ② 고르면 빛이 하나 붙는다(drop-shadow 를 두른 폴리곤)
+      { const before=document.querySelectorAll('#ctG polygon[style*="drop-shadow"]').length;
+        campTreeTap('gather',2);
+        const after=document.querySelectorAll('#ctG polygon[style*="drop-shadow"]').length;
+        assert(after>before,'고른 별에 빛이 안 붙는다: '+before+' → '+after); }
+      return '안 산 별 = 갈래 색 흐린 그라디언트 · 고르면 산 별 테두리로 빛난다';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
+  // 🔍 **별이 적을수록 당겨 본다** (2026-09-04 사용자 지적).
+  //   ⛔ 「무리의 폭을 못 재면 가장 축소」로 되돌리지 말 것 — 가운데만 열린 첫 화면에서
+  //     별 하나를 놓고 화면의 90%를 빈 하늘로 채우던 것이 그 갈래였다.
+  await step('환생 트리: 가운데만 열려도 그 별로 당겨 본다', async()=>{
+    skipIf(typeof campTreeFit!=='function'||typeof campTreeViewT!=='function','트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      const zoomOf=function(tree){ C.rbTree=tree; campRebEnter('tree'); campTreeRender();
+        campTreeFit(true); campTreeViewSync(); return campTreeViewT().z; };
+      // ⭐ **아무것도 안 산 진짜 첫 화면**부터 본다 — 가운데는 .ctGem 이 아니라서 별이 0개로
+      //   세어지던 것이 원인이었다(2026-09-04). 그때 「잴 수 없다」 갈래로 빠져 가장 축소로 열렸다.
+      const z0=zoomOf({});
+      assert(z0>1.2,'아무것도 안 샀는데 화면이 안 당겨진다: ×'+z0.toFixed(2));
+      { const B0=campTreeBounds();
+        assert(B0&&B0.n>0,'가운데를 별로 안 센다 — 경계가 비었다(그래서 가장 축소로 열린다)'); }
+      // 그래도 가운데는 눌려야 한다(.ctGem 클래스를 붙여 해결하면 여기서 걸린다)
+      { const hit=document.querySelector('#ctG .ctHit[data-k="root"]');
+        assert(hit,'가운데 히트 영역이 없다');
+        assert(getComputedStyle(hit).pointerEvents!=='none','가운데가 안 눌린다'); }
+      const z1=zoomOf({root:1});                                   // 가운데 하나
+      const zMany=zoomOf({root:1,_m2:1,'br:econ':1,'br:army':1,'gp:econ가':1,gather:5,mine:5});
+      assert(z1>1.2,'가운데만 열렸는데 화면이 안 당겨진다: ×'+z1.toFixed(2));
+      assert(z1>=zMany,'별이 적은데 더 멀리서 본다: 하나 ×'+z1.toFixed(2)+' vs 여럿 ×'+zMany.toFixed(2));
+      // 그 별이 화면 가운데에 온다
+      const p=(function(){ const e=document.querySelector('#ctG .ctGem[data-k="root"]');
+        return e?{x:+e.getAttribute('data-cx'),y:+e.getAttribute('data-cy')}:null; })();
+      C.rbTree={root:1}; campTreeRender(); campTreeFit(true); campTreeViewSync();
+      const v=campTreeViewT();
+      if(p){ const sx=p.x*v.z+v.x, sy=p.y*v.z+v.y;
+        assert(Math.abs(sx)<1&&Math.abs(sy)<1,'가운데 별이 화면 한복판에 안 온다: '+sx.toFixed(1)+','+sy.toFixed(1)); }
+      return '별 하나 ×'+campTreeViewT().z.toFixed(2)+' · 여럿 ×'+zMany.toFixed(2)+' (적을수록 당겨 본다)';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
   // 📍 해제하면 **지금 배율은 그대로 두고**, 방금 해제한 별을 화면 가운데로 옮긴다 (2026-09-03 재확정).
   //   ⛔ 「고르기 전의 자리로 되돌아간다」가 아니다 — 그건 방금 보던 별과 무관한 옛 자리로 튄다.
   //   ⛔ 전체 보기로 물러나지도 않는다 — 축소가 너무 세다.
@@ -3400,8 +3510,9 @@ async function groupLobby(){
         for(const L of CAMP_RT_LINES) want+=campRtMax(L.k);
         assert(all===want,'진행도 분모가 실제 칸 수와 다르다: '+all+' ≠ '+want);
         assert(campTreeOwned()>0&&campTreeOwned()<=all,'진행도 분자가 범위 밖: '+campTreeOwned());
-        const tx=$('campTree').querySelector('.ctProgN').textContent;
-        assert(tx.indexOf('/ '+all)>=0,'진행도 표시가 계산과 다르다: '+tx); }
+        // ⛔ 화면에는 안 띄운다(2026-09-04 사용자 확정) — 「0 / 173」이 재화 바 밑에서 포인트와 헷갈렸다.
+        const pn=$('campTree').querySelector('.ctProgN');
+        assert(!pn||getComputedStyle(pn).display==='none','해금 진행도(0 / 173)가 화면에 되살아났다'); }
       // ❓ 공통 규칙은 **도움말 한 곳**에 있다 — 별마다 반복하면 32계열×5차 = 160번 같은 말이 된다
       assert(!$('campTree').querySelector('.ctZoom'),
         '확대·축소 버튼이 되살아났다 — 손가락으로만 한다');
@@ -3410,22 +3521,112 @@ async function groupLobby(){
             '빈 곳을 두 번 눌러도 전체 보기로 안 간다');
           assert(src.indexOf('CAMP_TREE_ZSTEP * 1.4')<0,
             '두 번 누르기가 확대로 되돌아갔다 — 전체 보기여야 한다'); }
-      { const q=$('campTree').querySelector('.ctQ'); assert(q,'도움말(?) 이 없다');
-        // 🏷 화면 이름은 **재화 바 왼쪽**(#curTitle)이 맡는다(2026-09-03) — 화면 안 제목은 감췄다.
+      { // 🏷 화면 이름은 **재화 바 왼쪽**(#curTitle)이 맡는다(2026-09-03) — 화면 안 제목은 감췄다.
         //   ⛔ 화면 안에 제목을 다시 띄우지 말 것 — 같은 이름이 두 층에 뜬다.
         assert(getComputedStyle($('campTree').querySelector('.ctTitle')).display==='none',
           '화면 안에 제목이 또 떠 있다');
-        const row=$('campTree').querySelector('.ctTopRow').getBoundingClientRect(), r=q.getBoundingClientRect();
-        assert(Math.abs(r.left-row.left)<14,'도움말이 상단 줄 왼쪽에 안 붙어 있다: '+Math.round(r.left-row.left)+'px');
+        // ❓ 물음표의 자리는 **그 이름 바로 오른쪽**이다(2026-09-04 사용자 확정).
+        //   ⛔ 화면 안 상단 줄(.ctTop)로 되돌리지 말 것 — 이름과 물음표가 두 층으로 갈린다.
+        assert(!$('campTree').querySelector('.ctQ'),'물음표가 화면 안에 되살아났다');
+        const q=$('curTitle').querySelector('.ctQ'); assert(q,'이름 옆에 도움말(?) 이 없다');
+        // 🖐 **눌러지나** — 실제로 손가락이 닿는지 본다(2026-09-04 회귀).
+        //   ⚠ 재화 바는 HOME 에서 .curBar.bare{pointer-events:none} 이고 되살릴 자식을 하나씩 적어 둔다.
+        //     .ctQ 를 그 목록에 안 넣어서 물음표가 **보이기만 하고 안 눌렸다**. 있는지만 보면 못 잡는다.
+        { const r=q.getBoundingClientRect();
+          const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+          assert(hit===q||q.contains(hit),
+            '물음표가 안 눌린다(pointer-events 나 가림): 그 자리의 요소는 '+(hit&&(hit.className||hit.tagName))); }
+        const tt=$('curTitle').getBoundingClientRect(), r=q.getBoundingClientRect();
+        assert(r.left>=tt.left&&r.right<=tt.right+1,'물음표가 이름 칸 밖에 있다');
+        assert(r.left-tt.left>10,'물음표가 이름 왼쪽에 붙었다 — 오른쪽이어야 한다');
         campTreeHelp(true);
         const h=$('campTree').querySelector('.ctHelp');
         assert(!h.classList.contains('hide'),'도움말이 안 열린다');
         const tx=h.innerText||'';
-        assert(/환생 포인트/.test(tx)&&/사라지지 않/.test(tx),'도움말에 핵심 규칙이 없다');
-        // 숫자는 상수에서 꺼내야 한다 — 손으로 적으면 값을 바꿀 때 문구만 옛말이 된다
-        assert(tx.indexOf('−'+Math.round(CAMP_RT_CUT_MAX*100)+'%')>=0,'적 약화 상한이 상수와 다르다');
+        assert(/포인트/.test(tx)&&/초기화되지 않/.test(tx),'도움말에 핵심 규칙이 없다');
+        // ✍ **시스템만 짧게**(2026-09-04 사용자 확정) — 세부 수치는 그 별을 고르면 시트가 말한다.
+        //   ⛔ 계열별 상한 같은 숫자를 도움말에 되돌리지 말 것 — 두 곳이 어긋나면 둘 다 안 믿는다.
+        assert(!/%/.test(tx),'도움말에 세부 수치가 되살아났다: '+tx.split(String.fromCharCode(10)).join(' / '));
+        { const li=h.querySelectorAll('.ctHelpLi li');
+          assert(li.length<=3,'도움말 줄이 늘었다('+li.length+') — 세 줄을 넘기지 않는다');
+          // 📏 **한 줄에 한 문장**(2026-09-04 사용자 확정) — 넘치면 문장을 짧게 끊는다(판을 넓히지 않는다).
+          const h1=li[0].getBoundingClientRect().height;
+          for(const e of li){ const r=e.getBoundingClientRect();
+            assert(r.height<=h1+1,'줄이 두 줄로 넘어갔다: '+e.textContent);
+            assert(e.scrollWidth<=e.clientWidth+1,'줄이 상자보다 넓다: '+e.textContent); }
+          // 강조(굵은 글씨)는 쓰지 않는다 — 줄이 셋뿐이라 강조할 것이 없다
+          assert(!h.querySelector('.ctHelpLi b,.ctHelpLi strong'),'도움말에 강조 글씨가 되살아났다');
+          // 닫기는 **공용 .actBtn** 한 벌만 쓴다(레지스트리) — 제 스타일을 다시 만들지 말 것
+          assert(h.querySelector('.ctHelpX.actBtn'),'닫기가 공용 액션 버튼이 아니다'); }
         campTreeHelp(false);
         assert(h.classList.contains('hide'),'도움말이 안 닫힌다'); }
+      // 🔤 단위는 **point** 한 낱말이다(2026-09-04 사용자 확정) — 상단 잔액도, 별의 비용 줄도.
+      //   ⛔ 「포인트」로 되돌리지 말 것 · ⛔ 비용 줄에 「보유 N」을 다시 붙이지 말 것(잔액은 상단이 이미 말한다).
+      // 🌟 「새로운 시작」 시트의 아이콘 = **지도의 그 별과 같은 그림**(2026-09-04 사용자 확정).
+      //   ⛔ ✦ 글리프로 되돌리지 말 것 — 별과 시트가 다른 얼굴이면 같은 것으로 안 읽힌다.
+      { campTreeTap('root');
+        const im=$('campTree').querySelector('.ctRow .ctIco img');
+        assert(im,'가운데 시트 아이콘이 그림이 아니다(글리프로 되돌아갔다)');
+        assert(/tree.root[.]webp$/.test(im.getAttribute('src')||''),
+          '가운데 시트가 지도의 별과 다른 그림을 쓴다: '+im.getAttribute('src'));
+        assert(im.naturalWidth>0,'가운데 시트 아이콘이 안 불러와진다');
+        campTreeDesel(); }
+      // 🧾 **시트는 「머리 한 줄 + 설명 + 버튼」** (2026-09-04 사용자 확정 · 목업 camp-tree-sheet-8 ④안).
+      //   ⛔ 원형 게이지·「2 / 5 단계」·금색 마름모·밑변 광원 버튼을 되살리지 말 것.
+      { campTreeTap('gather',1);
+        const sh=$('campTree').querySelector('.ctSheet');
+        assert(sh.querySelector('.ctRow'),'머리 한 줄(.ctRow)이 없다');
+        assert(!sh.querySelector('.ctRing'),'원형 게이지가 되살아났다');
+        assert(!sh.querySelector('.ctStage'),'「2 / 5 단계」 줄이 되살아났다');
+        assert(!sh.querySelector('.ctPay'),'옛 비용 줄이 되살아났다');
+        assert(!sh.querySelector('.ctRt'),'값이 머리 줄 오른쪽으로 되돌아갔다');
+        assert(!sh.querySelector('.ctPip'),'금색 마름모가 되살아났다');
+        // 차수 = **로마자 하나**
+        { const r=sh.querySelector('.ctRow .ctRom');
+          if(r){ const t=(r.textContent||'').trim();
+            assert(!/[0-9]/.test(t) && t.indexOf('단계')<0 && t.indexOf('/')<0,'차수가 로마자 하나가 아니다: '+t); } }
+        // 아이콘 틀은 **육각**(svg polygon) — ⛔ 원(circle)으로 되돌리지 말 것
+        { const ic=sh.querySelector('.ctRow .ctIco svg');
+          assert(ic && ic.querySelector('polygon'),'시트 아이콘 틀이 육각이 아니다'); }
+        // 🫧 시트는 **살짝 비친다** — 뒤의 별·성운이 아주 흐릿하게 보인다(2026-09-04 사용자 요청).
+        //   ⛔ 불투명으로 되돌리지 말 것 · ⛔ 흐림(backdrop-filter)을 빼지 말 것 —
+        //     흐림 없이 알파만 낮추면 뒤 별이 또렷하게 비쳐 글자와 겹친다.
+        { const cs=getComputedStyle(sh);
+          const bf=cs.backdropFilter||cs.webkitBackdropFilter||'';
+          assert(/blur/.test(bf),'시트에 흐림이 없다: '+bf);
+          // 배경 그라디언트의 알파가 1 이면 아무것도 안 비친다
+          const bg=String(cs.backgroundImage);
+          const al=[]; bg.replace(/rgba\(([^)]*)\)/g,function(_,v){ al.push(parseFloat(v.split(String.fromCharCode(44))[3])); });
+          assert(al.length>0,'시트 배경이 그라디언트가 아니다');
+          assert(Math.max.apply(null,al)<0.97,'시트가 불투명하다: 최대 알파 '+Math.max.apply(null,al)); }
+        // 버튼은 **공용 .actBtn** 한 벌 — 밑변 광원(::after)은 안 그린다
+        { const b=sh.querySelector('.ctBuy');
+          assert(b && b.classList.contains('actBtn'),'버튼이 공용 액션 버튼이 아니다');
+          const af=getComputedStyle(b,'::after');
+          assert(af.content==='none'||af.display==='none','버튼에 밑변 광원이 되살아났다'); }
+        campTreeDesel(); }
+      { const w=$('campTree').querySelector('.ctPtsWrap'); assert(w,'상단 포인트 줄이 없다');
+        const t=(w.innerText||'').trim();
+        assert(/point/.test(t)&&!/포인트/.test(t),'상단 단위가 point 가 아니다: '+t); }
+      // 🚫 「가운데를 눌러 시작」 힌트도 걷었다 — 아무것도 안 고른 상태의 시트는 비어 있어야 한다
+      { campTreeFit(true);
+        const sh=$('campTree').querySelector('.ctSheet');
+        assert(!/눌러/.test(sh.innerText||''),'힌트 줄이 되살아났다: '+(sh.innerText||'').trim()); }
+      // 💠 값의 자리는 **버튼 안 오른쪽 끝**이다(2026-09-04 사용자 확정 · 목업 buycost-4 ②안).
+      //   ⛔ 머리 줄 오른쪽으로 되돌리지 말 것 — 시선이 내려가는 길에서 비켜 있어 안 보였다.
+      //   ⛔ 「보유 N」을 되돌리지 말 것 — 잔액은 상단 줄(.ctPts)이 이미 늘 띄운다.
+      // ⚠ **아직 안 산 차수**를 골라야 한다 — 이미 산 별은 낼 값이 없어 값 칸이 없다(정상).
+      { campTreeTap('gather',3);
+        const sh=$('campTree').querySelector('.ctSheet');
+        assert(!sh.querySelector('.ctRt'),'값이 머리 줄로 되돌아갔다');
+        const br=sh.querySelector('.ctBuy .ctBr'); assert(br,'버튼 안에 값이 없다');
+        const t=(br.innerText||'').trim();
+        assert(t.indexOf('point')>=0,'값 옆 단위가 point 가 아니다: '+t);
+        assert(t.indexOf('보유')<0,'값 옆에 보유 잔액이 되살아났다: '+t);
+        // 📐 양끝 — 값은 버튼 **오른쪽 끝**에 붙는다(왼쪽 글자 길이가 달라져도 안 흔들리게)
+        { const b=sh.querySelector('.ctBuy').getBoundingClientRect(), r=br.getBoundingClientRect();
+          assert(b.right-r.right<24,'값이 버튼 오른쪽 끝에 안 붙었다: '+Math.round(b.right-r.right)+'px'); }
+        campTreeDesel(); }
       campTreeTap('gather',3);
       assert(!$('campTree').querySelector('.ctPerm'),
         '별 시트에 공통 꼬리표가 되살아났다 — 규칙은 도움말(?)에 둔다');
@@ -11002,9 +11203,11 @@ async function groupLobby(){
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
-      assert(reb && reb.subs.length===2,'환생 하위 칸(정보·업그레이드)이 없음');
-      // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「업그레이드」(환생 트리)
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,업그레이드','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb && reb.subs.length===2,'환생 하위 칸(환생·환생 트리)이 없음');
+      // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
+      //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
+      //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.

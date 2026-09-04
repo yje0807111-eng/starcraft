@@ -131,9 +131,15 @@ function curChipHTML(o){
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
   // 🏕 캠프 **구역**(환생·업그레이드·룬)이 열려 있으면 던전 칩 대신 그 이름을 쓴다(2026-09-03).
   //   ⛔ 칩을 그대로 두지 말 것 — 「던전 5 · 라운드 30/50」은 캠프 맵의 것이라 구역 안에서는 뜻이 없다.
+  //   ❓ 도움말(?)이 필요한 구역은 **이름 바로 오른쪽**에 단추를 하나 달고 나온다(2026-09-04 사용자 확정) —
+  //     ⛔ 화면 안 상단 줄(.ctTop)로 되돌리지 말 것: 이름과 물음표가 두 층으로 갈려 읽혔다.
   { const z = (typeof campZoneTitle === 'function') ? campZoneTitle() : '';
     if(z){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip', 'open'); }
-      if(e.textContent !== z) e.textContent = z; return; } }
+      const q = (typeof campZoneHelp === 'function') ? campZoneHelp() : '';
+      const html = z + (q ? '<button class="ctQ" type="button" aria-label="도움말" ' +
+        'onclick="event.stopPropagation();' + q + '">?</button>' : '');
+      if(e.innerHTML !== html) e.innerHTML = html;
+      return; } }
   const o=campChipInfo();
   if(!o){ if(e.classList.contains('asChip')){ campDropClose(); e.classList.remove('asChip'); e.textContent=''; } return; }
   e.classList.add('asChip'); e.innerHTML=curChipHTML(o);

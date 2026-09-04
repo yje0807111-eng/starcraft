@@ -1,0 +1,276 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 트리 — 별 상세 시트 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--metal-edge:#3c3e46;--r-bar:3px;--r-sm:4px;--r-md:6px;--r-lg:9px}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1300px}
+.note b{color:#dfe5ee}
+.wrap{display:flex;flex-wrap:wrap;gap:24px;padding:14px 22px 40px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:86px}
+.sub b{color:#cfd7e2}
+.ph{position:relative;width:390px;height:320px;overflow:hidden;
+  background:radial-gradient(120% 100% at 50% 22%,#1b232e 0%,#0c1015 60%,#07090c 100%)}
+.map{position:absolute;left:0;right:0;top:0;height:190px}
+.map svg{display:block;width:100%;height:100%}
+.sheet{position:absolute;left:0;right:0;bottom:0;padding:14px 14px 16px;
+  border-top:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c)}
+
+/* ══ 공통 조각 ══════════════════════════════════════════════════════ */
+.head{display:flex;align-items:center;gap:14px}
+.ht{min-width:0;flex:1}
+.nm{font-size:17px;font-weight:700;color:#fff;line-height:1.25}
+/* 🔢 차수 = **로마자 하나**. 진행 게이지·「2 / 5 단계」는 쓰지 않는다 (2026-09-04 사용자 확정) —
+   한 별을 계속 올리는 것이 아니라 **다음 별로 넘어가는** 구조라 분수가 뜻을 갖지 않는다. */
+.rom{font-family:var(--font-num);font-weight:600;letter-spacing:.06em}
+.desc{margin-top:13px;font-size:13px;line-height:1.7;color:#a7b2c0}
+.desc b{color:#f0f4f9;font-weight:700}
+.was{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#7b8593}
+.to{margin:0 6px;color:#5b6674}
+.cv{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:24px;font-weight:800;color:var(--gold);line-height:1.1}
+.unit{font-size:10px;letter-spacing:.18em;color:#69737f}
+/* 공용 액션 버튼(DESIGN.md §2 · .actBtn) — 옅은 면 + 1px, **밑변 광원 없음** */
+.act{width:100%;margin-top:14px;height:44px;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:var(--font-ko);font-size:14px;font-weight:800;letter-spacing:.02em;color:#fff;
+  border:1px solid rgba(255,255,255,.32);border-radius:var(--r-bar);background:rgba(255,255,255,.14)}
+.act .an{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;color:var(--gold)}
+.act .au{font-size:10.5px;letter-spacing:.12em;color:#9aa4b1}
+.pay{display:flex;align-items:baseline;gap:8px;margin-top:15px;padding-top:13px;
+  border-top:1px solid rgba(255,255,255,.07)}
+
+/* ── ⓪ 지금 (기준) ─────────────────────────────────────────────────── */
+.o0 .ring{position:relative;flex:0 0 56px;width:56px;height:56px}
+.o0 .ring svg{position:absolute;inset:0;width:56px;height:56px;transform:rotate(-90deg)}
+.o0 .rbg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:3}
+.o0 .ron{fill:none;stroke:rgba(255,210,74,.7);stroke-width:3;stroke-linecap:round}
+.o0 .ring img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:26px;height:26px;object-fit:contain;opacity:.9}
+.o0 .stage{margin-top:3px;font-size:10px;letter-spacing:.14em;color:#69737f}
+.o0 .stage .rom{letter-spacing:.18em;color:#8b96a4;margin-right:7px}
+.o0 .pip{width:9px;height:9px;transform:rotate(45deg);background:var(--gold);align-self:center;flex:0 0 auto}
+.o0 .buy{position:relative;width:100%;margin-top:13px;min-height:46px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:var(--r-md);font:700 14px/1 inherit;letter-spacing:.1em;color:#fff;
+  border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+.o0 .buy::after{content:'';position:absolute;left:12%;right:12%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+
+/* ── 육각 틀 (①④⑤⑥⑦ 공용) ──────────────────────────────────────── */
+.hx{position:relative;flex:0 0 var(--hs);width:var(--hs);height:var(--hs)}
+.hx svg{position:absolute;inset:0;width:100%;height:100%}
+.hx img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:calc(var(--hs) * .47);height:calc(var(--hs) * .47);object-fit:contain}
+
+/* ── ① 육각 + 이름 뒤 로마자 ──────────────────────────────────────── */
+.o1 .hx{--hs:56px}
+.o1 .nmw{display:flex;align-items:baseline;gap:9px}
+.o1 .rom{font-size:14px;color:#8b96a4}
+.o1 .hpip{width:11px;height:12px;flex:0 0 auto;align-self:center;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);background:var(--gold)}
+
+/* ── ② 모서리 컷 사각 + 로마자 뱃지 ───────────────────────────────── */
+.o2 .sq{position:relative;flex:0 0 56px;width:56px;height:56px;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.04);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.o2 .sq img{width:30px;height:30px;object-fit:contain}
+.o2 .bg{position:absolute;right:2px;top:2px;padding:0 4px;height:15px;display:flex;align-items:center;
+  font-family:var(--font-num);font-size:11px;font-weight:700;color:#0a0c10;background:var(--gold)}
+
+/* ── ③ 틀 없음 + 왼쪽 갈래 띠 ─────────────────────────────────────── */
+.o3 .sheet{padding-left:20px}
+.o3 .bar{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);opacity:.75}
+.o3 .head{gap:12px}
+.o3 .plain{flex:0 0 48px;width:48px;height:48px;display:flex;align-items:center;justify-content:center}
+.o3 .plain img{width:44px;height:44px;object-fit:contain}
+.o3 .rom{font-size:13px;color:#8b96a4;margin-left:9px;vertical-align:1px}
+.o3 .pay{justify-content:flex-end;gap:7px}
+
+/* ── ④ 한 줄 정리 ─────────────────────────────────────────────────── */
+.o4 .row{display:flex;align-items:center;gap:12px}
+.o4 .hx{--hs:44px}
+.o4 .nm{font-size:16px}
+.o4 .rom{font-size:13px;color:#8b96a4;margin-left:8px}
+.o4 .right{margin-left:auto;text-align:right;flex:0 0 auto}
+.o4 .cv{font-size:21px}
+.o4 .desc{margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.07)}
+
+/* ── ⑤ 비용을 버튼 안으로 ─────────────────────────────────────────── */
+.o5 .hx{--hs:56px}
+.o5 .nmw{display:flex;align-items:baseline;gap:9px}
+.o5 .rom{font-size:14px;color:#8b96a4}
+.o5 .act{margin-top:16px;height:48px}
+
+/* ── ⑥ 카드 안의 카드 ─────────────────────────────────────────────── */
+.o6 .blk{position:relative;display:flex;align-items:center;gap:13px;padding:11px 12px;
+  border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:linear-gradient(160deg,rgba(19,24,35,.9),rgba(6,9,14,.93))}
+.o6 .blk::before{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(255,210,74,.20);border-radius:var(--r-bar)}
+.o6 .hx{--hs:48px}
+.o6 .nmw{display:flex;align-items:baseline;gap:9px}
+.o6 .rom{font-size:13px;color:#8b96a4}
+.o6 .pay{margin-top:13px;padding-top:0;border-top:none}
+
+/* ── ⑦ 추천 ──────────────────────────────────────────────────────── */
+.o7 .hx{--hs:56px}
+.o7 .nmw{display:flex;align-items:baseline;gap:10px}
+.o7 .rom{font-size:15px;font-weight:700;color:var(--gold);opacity:.9}
+.o7 .pay .lead{font-size:11px;letter-spacing:.1em;color:#69737f;margin-right:auto}
+</style></head><body>
+<h1>환생 트리 — 별을 고르면 나오는 하단 시트 8안</h1>
+<p class="note">여덟 안 모두 같은 내용이다 — <b>광산 등급 Ⅱ · 1.5배 → 2.5배 · 6,144 point · 강화</b>.
+<b>진행 게이지와 「2 / 5 단계」는 전부 뺐다</b>(2026-09-04 사용자 확정) — 한 별을 계속 올리는 것이 아니라 다음 별로 넘어가는 구조라 분수가 뜻을 갖지 않는다. 차수는 <b>로마자 하나</b>로만 말한다.
+<br>⚠ 지금 버튼(<b>⓪</b>)은 <b>밑변 광원</b>을 쓰는데, 2026-08-26 에 화면 전체에서 걷어낸 어휘다(DESIGN.md §2). 버튼만 혼자 옛날 것으로 보이는 원인이라 <b>①~⑦ 은 전부 공용 <code>.actBtn</code></b>.</p>
+<div class="wrap" id="wrap"></div>
+<script>
+const ICO = '../../assets/icons/tree/';
+const NAME = '광산 등급', KEY = 'mine', COST = '6,144', ROM = 'Ⅱ', COL = '#ffd24a';
+const DESC = '광산에서 얻는 미네랄이 <span class="was">1.5배</span><span class="to">→</span><b>2.5배</b> 증가합니다.';
+
+function hexPts(cx, cy, r){ const q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); }
+  return q.join(' '); }
+/* 아이콘 틀 — **지도의 별과 같은 육각**. 진행 눈금은 없다(차수는 로마자가 말한다). */
+function hexFrame(size, ring){
+  const c = size / 2, r = c - 1.5, id = 'f' + size + (ring ? 'r' : '');
+  return '<svg viewBox="0 0 ' + size + ' ' + size + '">' +
+    '<defs><linearGradient id="g' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>' +
+      '<stop offset=".42" stop-color="' + COL + '"/>' +
+      '<stop offset="1" stop-color="' + COL + '" stop-opacity=".34"/></linearGradient>' +
+    '<linearGradient id="f' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>' +
+    '<radialGradient id="b' + id + '"><stop offset="0" stop-color="' + COL + '" stop-opacity=".22"/>' +
+      '<stop offset="1" stop-color="' + COL + '" stop-opacity="0"/></radialGradient></defs>' +
+    (ring ? '<polygon points="' + hexPts(c, c, r) + '" fill="none" stroke="' + COL +
+      '" stroke-width="1" opacity=".38"/>' : '') +
+    '<polygon points="' + hexPts(c, c, r - (ring ? 5 : 0)) + '" fill="url(#f' + id + ')" stroke="url(#g' +
+      id + ')" stroke-width="1.3" style="filter:drop-shadow(0 0 3px ' + COL + ')"/>' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + (r * .52).toFixed(1) + '" fill="url(#b' + id + ')"/>' +
+    '<polygon points="' + hexPts(c, c, r - (ring ? 6.2 : 1.2)) + '" fill="none" stroke="#fff" ' +
+      'stroke-width=".6" opacity=".16"/></svg>'; }
+function ico(){ return '<img src="' + ICO + KEY + '.webp" alt="">'; }
+/* 위쪽 지도 조각 — 고른 별 하나가 빛나는 모습(어느 안에서도 같다) */
+function mapBit(){
+  const s = [];
+  s.push('<defs><linearGradient id="mg" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/><stop offset=".42" stop-color="' + COL + '"/>' +
+    '<stop offset="1" stop-color="' + COL + '" stop-opacity=".34"/></linearGradient>' +
+    '<linearGradient id="mgd" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#ffffff" stop-opacity=".34"/>' +
+    '<stop offset=".45" stop-color="' + COL + '" stop-opacity=".38"/>' +
+    '<stop offset="1" stop-color="' + COL + '" stop-opacity=".07"/></linearGradient>' +
+    '<linearGradient id="mf" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>' +
+    '<radialGradient id="mb"><stop offset="0" stop-color="' + COL + '" stop-opacity=".22"/>' +
+    '<stop offset="1" stop-color="' + COL + '" stop-opacity="0"/></radialGradient></defs>');
+  s.push('<path d="M195 72 L120 122 M195 72 L268 118" stroke="rgba(255,210,74,.28)" stroke-width="1" ' +
+    'stroke-dasharray="3 3"/>');
+  [[195, 72, 1, 'mine'], [120, 122, 0, 'gather'], [268, 118, 0, 'gas']].forEach(function(p){
+    const sel = p[2], r = 17;
+    s.push('<polygon points="' + hexPts(p[0], p[1], r) + '" fill="#000" opacity=".55"/>');
+    s.push('<polygon points="' + hexPts(p[0], p[1], r - 1.2) + '" fill="url(#mf)" stroke="url(#' +
+      (sel ? 'mg' : 'mgd') + ')" stroke-width="' + (sel ? 1.3 : 1.1) + '"' +
+      (sel ? ' style="filter:drop-shadow(0 0 3px ' + COL + ')"' : '') + '/>');
+    if(sel) s.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="12" fill="url(#mb)"/>');
+    s.push('<image href="' + ICO + p[3] + '.webp" x="' + (p[0] - 12) + '" y="' + (p[1] - 12) +
+      '" width="24" height="24" opacity="' + (sel ? 1 : .62) + '"/>'); });
+  return '<svg viewBox="0 0 390 190">' + s.join('') + '</svg>'; }
+
+/* ══ 여덟 안 ═══════════════════════════════════════════════════════ */
+const CASES = [
+{ k:'o0', t:'지금 (기준)',
+  d:'원형 게이지 + 「Ⅱ 2 / 5 단계」 + 금색 마름모 + 밑변 광원 버튼. ⚠ 게이지와 분수는 <b>한 별을 계속 올린다</b>는 뜻인데 실제로는 다음 별로 넘어간다 — 없는 진행을 그리고 있었다.',
+  h:function(){ const g = 2 * Math.PI * 25, off = g * (1 - 2 / 5);
+    return '<div class="head"><span class="ring"><svg viewBox="0 0 56 56">' +
+      '<circle class="rbg" cx="28" cy="28" r="25"/>' +
+      '<circle class="ron" cx="28" cy="28" r="25" stroke-dasharray="' + g.toFixed(1) +
+      '" stroke-dashoffset="' + off.toFixed(1) + '"/></svg>' + ico() + '</span>' +
+      '<div class="ht"><div class="nm">' + NAME + '</div>' +
+      '<div class="stage"><span class="rom">II</span>2 / 5 단계</div></div></div>' +
+      '<div class="desc">' + DESC + '</div>' +
+      '<div class="pay"><span class="pip"></span><span class="cv">' + COST + '</span>' +
+      '<span class="unit">point 필요</span></div>' +
+      '<div class="buy">강 화</div>'; } },
+
+{ k:'o1', t:'육각 + 이름 뒤 로마자',
+  d:'아이콘 틀을 <b>육각</b>으로 — 지도의 별과 같은 도형이라 시트가 지도의 연장으로 읽힌다. 차수는 이름 뒤 <b>Ⅱ</b> 하나(회색). 마름모는 <b>작은 육각 핍</b>, 버튼은 공용 <code>.actBtn</code>.',
+  h:function(){ return '<div class="head"><span class="hx">' + hexFrame(56) + ico() + '</span>' +
+    '<div class="ht"><div class="nmw"><span class="nm">' + NAME + '</span>' +
+    '<span class="rom">' + ROM + '</span></div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="pay"><span class="hpip"></span><span class="cv">' + COST + '</span>' +
+    '<span class="unit">point 필요</span></div>' +
+    '<div class="act">강 화</div>'; } },
+
+{ k:'o2', t:'모서리 컷 사각 + 로마자 뱃지',
+  d:'아이콘 틀은 <b>모서리 컷 사각</b>(각진 SF · DESIGN.md §0), 차수는 그 <b>오른쪽 위 금색 뱃지</b>에 넣는다 — 이름 줄이 완전히 비어 이름이 가장 크게 읽힌다. 비용 앞 도형은 아예 뺐다.',
+  h:function(){ return '<div class="head"><span class="sq">' + ico() +
+    '<span class="bg">' + ROM + '</span></span>' +
+    '<div class="ht"><div class="nm">' + NAME + '</div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="pay"><span class="cv">' + COST + '</span><span class="unit">point 필요</span></div>' +
+    '<div class="act">강 화</div>'; } },
+
+{ k:'o3', t:'틀을 아예 없앤다 — 왼쪽 갈래 띠',
+  d:'아이콘을 <b>테 없이 그대로</b> 놓고, 시트 왼쪽 끝에 갈래 색 세로 띠 하나만 둔다. 어느 갈래인지는 그 띠가 말한다. 비용은 <b>오른쪽 정렬</b>이라 시선이 이름 → 설명 → 값 → 버튼으로 곧게 내려간다.',
+  h:function(){ return '<span class="bar"></span>' +
+    '<div class="head"><span class="plain">' + ico() + '</span>' +
+    '<div class="ht"><div class="nm">' + NAME + '<span class="rom">' + ROM + '</span></div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="pay"><span class="cv">' + COST + '</span><span class="unit">point</span></div>' +
+    '<div class="act">강 화</div>'; } },
+
+{ k:'o4', t:'한 줄 정리 — 시트를 낮춘다',
+  d:'이름·차수·<b>비용까지 한 줄</b>에 넣고 설명은 그 아래로. 시트가 낮아져 <b>지도가 더 보인다</b> — 별을 옮겨 다니며 비교하기 좋다. ⚠ 값이 작아져(21px) 주인공 자리를 버튼에 내준다.',
+  h:function(){ return '<div class="row"><span class="hx">' + hexFrame(44) + ico() + '</span>' +
+    '<div class="ht"><span class="nm">' + NAME + '</span><span class="rom">' + ROM + '</span></div>' +
+    '<div class="right"><div class="cv">' + COST + '</div><div class="unit">point</div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="act">강 화</div>'; } },
+
+{ k:'o5', t:'비용을 버튼 안으로 — 줄 하나를 없앤다',
+  d:'「6,144 point 필요」와 「강화」는 <b>같은 말을 두 줄에 나눠</b> 하고 있다. 버튼이 <b>강화 · 6,144 point</b> 를 함께 말하면 줄이 하나 줄고, 누르기 직전에 값이 눈앞에 있다. ⚠ 못 사는 상태에서 값이 어디 있는지 약해진다.',
+  h:function(){ return '<div class="head"><span class="hx">' + hexFrame(56) + ico() + '</span>' +
+    '<div class="ht"><div class="nmw"><span class="nm">' + NAME + '</span>' +
+    '<span class="rom">' + ROM + '</span></div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="act">강 화<span class="an">' + COST + '</span><span class="au">point</span></div>'; } },
+
+{ k:'o6', t:'카드 안의 카드 — 이중 테두리',
+  d:'아이콘·이름·차수를 <b>판 한 겹</b>에 담는다. 바깥은 금속색, 안쪽은 금색 얇은 선 — <b>도움말 판과 같은 어휘</b>(DESIGN.md §2)라 캠프의 판들이 한 벌로 읽힌다. ⚠ 시트 안에 판이 생겨 층이 하나 늘어난다.',
+  h:function(){ return '<div class="blk"><span class="hx">' + hexFrame(48) + ico() + '</span>' +
+    '<div class="ht"><div class="nmw"><span class="nm">' + NAME + '</span>' +
+    '<span class="rom">' + ROM + '</span></div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="pay"><span class="cv">' + COST + '</span><span class="unit">point 필요</span></div>' +
+    '<div class="act">강 화</div>'; } },
+
+{ k:'o7', t:'⭐ 추천 — 육각 링 + 금색 로마자 + 값만 남긴 비용 줄',
+  d:'아이콘 틀은 <b>육각 + 바깥 링</b> — 지도에서 <b>산 별</b>이 두르는 그 링이라, 고른 별을 크게 확대한 것처럼 보인다. 차수는 이름 뒤 <b>금색 Ⅱ</b>(값·비용과 같은 색이라 「등급」으로 읽힌다). 비용 줄은 왼쪽에 「필요」 한 낱말, 오른쪽에 <b>값과 단위</b>만 — 마름모를 없애도 값이 주인공인 채로 남는다.',
+  h:function(){ return '<div class="head"><span class="hx">' + hexFrame(56, 1) + ico() + '</span>' +
+    '<div class="ht"><div class="nmw"><span class="nm">' + NAME + '</span>' +
+    '<span class="rom">' + ROM + '</span></div></div></div>' +
+    '<div class="desc">' + DESC + '</div>' +
+    '<div class="pay"><span class="lead">필요</span><span class="cv">' + COST + '</span>' +
+    '<span class="unit">point</span></div>' +
+    '<div class="act">강 화</div>'; } },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' +
+    '<div class="ph ' + c.k + '"><div class="map">' + mapBit() + '</div>' +
+    '<div class="sheet">' + c.h() + '</div></div></div>';
+}).join('');
+</script></body></html>

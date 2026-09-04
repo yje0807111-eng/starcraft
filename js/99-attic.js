@@ -488,3 +488,13 @@ function _runeRowHTML(kind, label){
 // ── [js/19-camp.js] campRoundMul
 // 💠 **질주의 룬 — 웨이브 대기 배수.** 다음 무리가 빨리 오면 라운드가 짧아진다.
 function campRoundMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('round') : 1; }
+
+
+// ── [js/19-camp.js] campTreePayHTML — 별 시트의 **비용 한 줄** (2026-09-04 유보)
+// 💠 값이 주인공(24px)이고 금색 마름모가 앞에 섰다. 시트를 「머리 한 줄」로 바꾸면서
+//   값이 **이름 줄 오른쪽**으로 올라가 이 줄이 통째로 사라졌다(목업 camp-tree-sheet-8 ④안).
+//   ⛔ 마름모(.ctPip)는 이 게임의 다른 어디에도 없는 도형이라 되살리지 않는다.
+function campTreePayHTML(cost, pts){
+  return '<div class="ctPay"><span class="ctPip"></span>' +
+    '<span class="ctCv">' + campNum(cost) + '</span>' +
+    '<span class="ctHave">point 필요</span></div>'; }

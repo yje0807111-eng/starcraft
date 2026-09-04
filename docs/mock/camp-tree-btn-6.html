@@ -1,0 +1,208 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 트리 — 해금 버튼 6안 + ②+⑤ 섞기 3안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--r-bar:3px;--r-md:6px}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1300px}
+.note b{color:#dfe5ee}
+.wrap{display:flex;flex-wrap:wrap;gap:24px;padding:14px 22px 40px;align-items:flex-start}
+.cell{width:410px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:74px}
+.sub b{color:#cfd7e2}
+.st{margin:9px 0 5px;font-size:10.5px;letter-spacing:.1em;color:#5f6a77}
+.sheet{width:390px;padding:14px 14px 16px;border-top:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c)}
+.ctRow{display:flex;align-items:center;gap:12px}
+.ctIco{position:relative;flex:0 0 44px;width:44px;height:44px}
+.ctIco svg{position:absolute;inset:0;width:44px;height:44px;display:block}
+.ctIco img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:21px;height:21px;object-fit:contain}
+.ctHt{flex:1;min-width:0;display:flex;flex-direction:row;align-items:baseline;gap:8px}
+.ctNm{font-size:16px;font-weight:700;color:#fff;line-height:1.25}
+.ctRom{font-family:var(--font-num);font-size:13px;font-weight:600;letter-spacing:.06em;color:#8b96a4}
+.ctDesc{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:13px;line-height:1.7;color:#a7b2c0}
+.ctDesc b{color:#f0f4f9;font-weight:700}
+.was{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#7b8593}
+.to{margin:0 6px;color:#5b6674}
+
+/* ══ 버튼 — 어느 안이든 뼈대는 같다(양끝 · 46px · 값은 오른쪽 끝) ══════ */
+.b{position:relative;width:100%;margin-top:14px;height:46px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 16px;cursor:pointer;overflow:hidden;
+  font-family:var(--font-ko);font-size:14px;font-weight:800;letter-spacing:.02em}
+.b .r{display:flex;align-items:baseline;gap:6px}
+.b .n{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;font-size:17px}
+.b .u{font-size:10.5px;letter-spacing:.12em}
+
+/* ⓪ 지금 — 공용 .actBtn 그대로(무채 · 옅은 면 + 1px) */
+.b0{color:#fff;border:1px solid rgba(255,255,255,.32);border-radius:var(--r-bar);
+  background:rgba(255,255,255,.14)}
+.b0 .n{color:var(--gold)} .b0 .u{color:#8b96a4}
+.b0.off{color:#5f6772;border-color:rgba(255,255,255,.07);background:rgba(255,255,255,.03)}
+.b0.off .n{color:#8a7a48} .b0.off .u{color:#5f6772}
+
+/* ① 갈래 색을 입힌다 — 무채를 벗고 이 별의 색으로 */
+.b1{color:#fff;border:1px solid rgba(255,210,74,.42);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,rgba(255,210,74,.16),rgba(255,210,74,.07))}
+.b1 .n{color:var(--gold)} .b1 .u{color:#a2957a}
+.b1.off{color:#5f6772;border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.b1.off .n{color:#8a7a48} .b1.off .u{color:#5f6772}
+
+/* ② 모서리 컷 — 각진 SF(DESIGN.md §0). 왼쪽 위·오른쪽 아래를 자른다 */
+.b2{color:#fff;border:1px solid rgba(255,210,74,.45);border-radius:0;
+  background:rgba(255,210,74,.10);
+  clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+.b2 .n{color:var(--gold)} .b2 .u{color:#a2957a}
+.b2.off{color:#5f6772;border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+.b2.off .n{color:#8a7a48} .b2.off .u{color:#5f6772}
+
+/* ③ 칸이 갈린다 — 값이 제 칸을 갖는다 */
+.b3{padding:0;color:#fff;border:1px solid rgba(255,210,74,.42);border-radius:var(--r-bar);
+  background:rgba(255,210,74,.10)}
+.b3 .l{flex:1;display:flex;align-items:center;justify-content:center;height:100%}
+.b3 .r{flex:0 0 42%;display:flex;align-items:center;justify-content:center;gap:6px;height:100%;
+  background:rgba(255,210,74,.10);border-left:1px solid rgba(255,210,74,.30)}
+.b3 .n{color:var(--gold)} .b3 .u{color:#a2957a}
+.b3.off{color:#5f6772;border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+.b3.off .r{background:rgba(255,255,255,.03);border-left-color:rgba(255,255,255,.10)}
+.b3.off .n{color:#8a7a48} .b3.off .u{color:#5f6772}
+
+/* ④ 면을 채운다 — 가장 강한 주 동작. 글자는 어두운 색 */
+.b4{color:#12100a;border:1px solid rgba(255,210,74,.9);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#ffdc70,#e8b52e)}
+.b4 .n{color:#12100a} .b4 .u{color:rgba(18,16,10,.62)}
+.b4.off{color:#5f6772;border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.04)}
+.b4.off .n{color:#8a7a48} .b4.off .u{color:#5f6772}
+
+/* ⑤ 안쪽 프레임 — 판(카드)의 이중 테두리를 버튼에 */
+.b5{color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,rgba(255,210,74,.13),rgba(255,210,74,.05))}
+.b5::before{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(255,210,74,.34);border-radius:1px}
+.b5 .n{color:var(--gold)} .b5 .u{color:#a2957a}
+.b5.off{background:rgba(255,255,255,.03);color:#5f6772;border-color:rgba(255,255,255,.08)}
+.b5.off::before{border-color:rgba(255,255,255,.08)}
+.b5.off .n{color:#8a7a48} .b5.off .u{color:#5f6772}
+
+/* ══ ②+⑤ 섞기 — 모서리 컷 + 안쪽 금색 선 ═══════════════════════════
+   ⚠ 바깥 clip-path 는 ::before 까지 자른다. 그래서 ⑦ 은 안쪽 선의 **모서리가 함께 잘리고**,
+     ⑧ 은 ::before 에 같은 컷을 한 번 더 줘서 안쪽 선이 **제 모서리 컷**을 갖는다. */
+.b7{color:#fff;border:1px solid rgba(255,210,74,.45);border-radius:0;
+  background:rgba(255,210,74,.10);
+  clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+.b7::before{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(255,210,74,.34)}
+.b7 .n{color:var(--gold)} .b7 .u{color:#a2957a}
+.b7.off{color:#5f6772;border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+.b7.off::before{border-color:rgba(255,255,255,.10)}
+.b7.off .n{color:#8a7a48} .b7.off .u{color:#5f6772}
+
+.b8{color:#fff;border:1px solid rgba(255,210,74,.45);border-radius:0;
+  background:rgba(255,210,74,.10);
+  clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+.b8::before{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(255,210,74,.34);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.b8 .n{color:var(--gold)} .b8 .u{color:#a2957a}
+.b8.off{color:#5f6772;border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+.b8.off::before{border-color:rgba(255,255,255,.10)}
+.b8.off .n{color:#8a7a48} .b8.off .u{color:#5f6772}
+
+.b9{color:#fff;border:1px solid rgba(255,210,74,.62);border-radius:0;
+  background:linear-gradient(180deg,rgba(255,210,74,.22),rgba(255,210,74,.09));
+  clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+.b9::before{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(255,210,74,.42);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+.b9 .n{color:#ffe08a} .b9 .u{color:#b6a681}
+.b9.off{color:#5f6772;border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+.b9.off::before{border-color:rgba(255,255,255,.10)}
+.b9.off .n{color:#8a7a48} .b9.off .u{color:#5f6772}
+
+/* ⑥ 왼쪽 색 띠 — 무채 면에 갈래 색은 띠 하나로만 */
+.b6{color:#fff;border:1px solid rgba(255,255,255,.20);border-radius:var(--r-bar);
+  background:rgba(255,255,255,.06);padding-left:22px}
+.b6::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--gold)}
+.b6 .n{color:var(--gold)} .b6 .u{color:#8b96a4}
+.b6.off{color:#5f6772;border-color:rgba(255,255,255,.07);background:rgba(255,255,255,.03)}
+.b6.off::before{background:rgba(255,255,255,.12)}
+.b6.off .n{color:#8a7a48} .b6.off .u{color:#5f6772}
+</style></head><body>
+<h1>환생 트리 — 해금 버튼 6안 <span style="color:#8d97a6">+ ②+⑤ 섞기 3안(⑦⑧⑨)</span></h1>
+<p class="note">뼈대는 어느 안이든 같다 — <b>양끝 배치 · 높이 46 · 값은 오른쪽 끝</b>. 바뀌는 것은 <b>면·테두리·모양</b>뿐이다.
+문구는 이제 차수와 상관없이 <b>늘 「해 금」</b>이다. 안마다 <b>살 수 있을 때 / 포인트가 모자랄 때</b>를 같이 뒀다.
+<br>⚠ <b>⓪ 은 공용 <code>.actBtn</code></b> 그대로다. 이 버튼이 무채라 화면(금색 별·금색 값)과 안 붙는 것이 「구려 보이는」 첫 번째 이유다.
+①~⑥ 은 그 자리에서 갈래 색을 얼마나 쓰느냐로 갈린다.</p>
+<div class="wrap" id="wrap"></div>
+<script>
+const ICO = '../../assets/icons/tree/';
+const NAME = '광산 등급', KEY = 'mine', COST = '6,144', ROM = 'Ⅱ', COL = '#ffd24a';
+const DESC = '미네랄을 얻는 모든 곳에서 <span class="was">1.5배</span><span class="to">→</span><b>2.5배</b> 늘어납니다.';
+function hexPts(cx, cy, r){ const q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); }
+  return q.join(' '); }
+function icoBox(){
+  const z = 44, c = z / 2, r = c - 1.5;
+  return '<span class="ctIco"><svg viewBox="0 0 ' + z + ' ' + z + '">' +
+    '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>' +
+      '<stop offset=".42" stop-color="' + COL + '"/>' +
+      '<stop offset="1" stop-color="' + COL + '" stop-opacity=".34"/></linearGradient>' +
+    '<linearGradient id="sf" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>' +
+    '<radialGradient id="sb"><stop offset="0" stop-color="' + COL + '" stop-opacity=".22"/>' +
+      '<stop offset="1" stop-color="' + COL + '" stop-opacity="0"/></radialGradient></defs>' +
+    '<polygon points="' + hexPts(c, c, r) + '" fill="url(#sf)" stroke="url(#sg)" stroke-width="1.3" ' +
+      'style="filter:drop-shadow(0 0 3px ' + COL + ')"/>' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + (r * .52).toFixed(1) + '" fill="url(#sb)"/>' +
+    '<polygon points="' + hexPts(c, c, r - 1.2) + '" fill="none" stroke="#fff" stroke-width=".6" ' +
+      'opacity=".16"/></svg><img src="' + ICO + KEY + '.webp" alt=""></span>'; }
+function btn(k, off){
+  const lab = off ? '포인트 부족' : '해 금';
+  const val = '<span class="n">' + COST + '</span><span class="u">point</span>';
+  if(k === 'b3') return '<div class="b ' + k + (off ? ' off' : '') + '">' +
+    '<span class="l">' + lab + '</span><span class="r">' + val + '</span></div>';
+  return '<div class="b ' + k + (off ? ' off' : '') + '">' +
+    '<span>' + lab + '</span><span class="r">' + val + '</span></div>'; }
+function sheet(k, off){
+  return '<div class="sheet"><div class="ctRow">' + icoBox() +
+    '<div class="ctHt"><span class="ctNm">' + NAME + '</span><span class="ctRom">' + ROM + '</span></div></div>' +
+    '<div class="ctDesc">' + DESC + '</div>' + btn(k, off) + '</div>'; }
+
+const CASES = [
+{ k:'b0', t:'지금 (기준) — 공용 액션 버튼',
+  d:'무채 흰 면 5%/14% + 1px. 어느 화면에서나 같은 얼굴이라 <b>안전하지만</b>, 이 화면은 별도 값도 금색이라 버튼만 회색으로 떠 있다. 「구려 보이는」 첫 번째 이유다.' },
+{ k:'b1', t:'① 갈래 색을 입힌다',
+  d:'같은 뼈대에 <b>면과 테두리만 갈래 색</b>으로. 위가 밝은 세로 그라디언트라 별의 테두리와 문법이 같아진다. 가장 작은 변화로 화면과 붙는다.' },
+{ k:'b2', t:'② 모서리 컷 — 각진 SF',
+  d:'왼쪽 위·오른쪽 아래 모서리를 <b>잘라낸다</b>(DESIGN.md §0 각진 SF). 캠프 건설 카드가 쓰는 꼴이라 게임 안에서 낯설지 않다. 둥근 3px 만으로는 안 나는 「기계」 느낌이 난다.' },
+{ k:'b3', t:'③ 칸이 갈린다 — 「해 금 │ 값」',
+  d:'세로선으로 <b>두 칸</b>. 값이 제 칸을 가져 가장 또렷하고, 「무엇을 하나 / 얼마인가」가 눈에 딱 갈린다. ⚠ 버튼이 둘로 보일 위험 — 실제로는 통째로 눌린다.' },
+{ k:'b4', t:'④ 면을 채운다 — 가장 강한 주 동작',
+  d:'금색을 <b>제대로 채우고</b> 글자를 어둡게. 화면에서 가장 강한 한 곳이 되어 「여기를 눌러라」가 분명하다. ⚠ DESIGN.md 는 볼록한 판을 걷어냈다 — 이 화면 하나만 예외를 두는 셈이라 다른 화면과 위계가 어긋날 수 있다.' },
+{ k:'b5', t:'⑤ 안쪽 프레임 — 판의 이중 테두리',
+  d:'바깥은 은은하게, <b>안쪽에 금색 얇은 선</b> 한 겹(도움말 판·별 칸이 쓰는 그 문법). 캠프의 판들과 한 벌로 읽힌다. 면은 옅게만 물들인다.' },
+{ k:'b6', t:'⑥ 왼쪽 색 띠 — 무채 면에 색은 띠로만',
+  d:'면은 무채 그대로 두고 <b>왼쪽 끝 4px 띠</b>에만 갈래 색을 준다. 공용 버튼의 규칙을 거의 안 깨면서 이 별이 어느 갈래인지 말한다. 가장 조용한 안.' },
+{ k:'b7', t:'⑦ ②+⑤ — 모서리 컷 + 안쪽 선(모서리가 함께 잘린다)',
+  d:'컷 안에 <b>금색 얇은 선</b> 한 겹. 바깥 컷이 안쪽 선까지 잘라서 <b>모서리에서 선이 끊긴다</b> — 기계 패널의 조립선처럼 읽힌다. 가장 손이 덜 간 섞기.' },
+{ k:'b8', t:'⑧ ②+⑤ — 안쪽 선도 제 모서리 컷을 갖는다',
+  d:'안쪽 선에도 <b>같은 컷</b>을 한 번 더 준다. 두 테두리가 <b>나란히 꺾여</b> 모서리가 두 겹으로 접힌다. ⑦ 보다 마감이 정갈하고, 캠프의 판(도움말·별 칸)과 문법이 가장 잘 맞는다.' },
+{ k:'b9', t:'⑨ ⑧ + 면을 한 단 진하게',
+  d:'⑧ 에 면과 테두리를 <b>한 단 밝게</b>(면 .22 · 테두리 .62). ④ 처럼 채우지는 않으면서 「여기를 눌러라」가 더 분명해진다. ⚠ 화면에서 가장 밝은 곳이 버튼이 되어 별에서 시선을 가져올 수 있다.' },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' +
+    '<p class="st">살 수 있을 때</p>' + sheet(c.k, 0) +
+    '<p class="st">포인트가 모자랄 때</p>' + sheet(c.k, 1) + '</div>';
+}).join('');
+</script></body></html>
