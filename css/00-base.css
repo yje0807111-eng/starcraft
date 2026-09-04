@@ -86,6 +86,13 @@
   .uiScroll::-webkit-scrollbar{width:5px}
   .uiScroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .uiScroll::-webkit-scrollbar-track{background:transparent}
+  /* 📜 **막대를 감추는 변형** — 스크롤은 그대로 되고 막대만 안 보인다(2026-09-04).
+     ⭐ Chrome 은 scrollbar-width 가 thin / none 둘뿐이라 「더 얇게」가 없다.
+       그래서 「거의 안 보이게」의 답은 **감추는 것**이다.
+     ⚠ 감추면 「더 있다」는 신호도 사라진다 — 쓰는 쪽에서 **아래 페이드**로 대신 알릴 것.
+     ⛔ 화면마다 scrollbar-width:none 을 새로 쓰지 말 것. 이 클래스를 함께 붙인다. */
+  .uiScroll.bare{scrollbar-width:none}
+  .uiScroll.bare::-webkit-scrollbar{width:0;height:0}
   /* 🖼 폰 **바깥** 여백 = 짙은 아이보리(2026-08-24). 검정이면 폰 밑변과 배경이 이어져 버려
      하단 네비(면을 걷어낸 뒤로는 더더욱)가 어디서 끝나는지 안 보였다. 밝은 쪽으로 한 단 올려 폰의
      윤곽 자체가 경계가 되게 한다. ⛔ 화면 안(#phone) 색이 아니다 — 안쪽 톤은 건드리지 않는다. */

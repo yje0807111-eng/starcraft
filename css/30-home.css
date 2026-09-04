@@ -2604,7 +2604,12 @@
 #campRune .rnBagH{display:flex;align-items:center;gap:8px;min-height:16px}
 #campRune .rnBagT{font-size:12px;color:#c3ccd8;letter-spacing:.04em}
 #campRune .rnBagN{margin-left:auto;font-size:10.5px;color:#69737f}
-#campRune .rnBagG{display:block;max-height:214px;overflow-y:auto;padding-bottom:2px}
+/* 🎒 가방 목록 — 막대는 감추고(.bare) **아래 페이드**로 「더 있다」를 알린다(2026-09-04 사용자 요청).
+   ⚠ 페이드는 12px 뿐이다. 더 길면 마지막 줄의 값이 흐려져 읽기 나빠진다.
+   ⛔ 화면 전용 스크롤바를 새로 정의하지 말 것 — 공용 .uiScroll.bare 를 쓴다. */
+#campRune .rnBagG{display:block;max-height:214px;overflow-y:auto;padding-bottom:2px;
+  -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 12px),transparent);
+  mask-image:linear-gradient(180deg,#000 calc(100% - 12px),transparent)}
 /* 🏷 갈래 머리줄 — 성좌와 같은 색이라 판과 이어 읽힌다 */
 #campRune .rnGrpH{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
 #campRune .rnGrpH:first-child{margin-top:0}

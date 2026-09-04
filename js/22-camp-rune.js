@@ -1120,7 +1120,7 @@ function _runeBagHTML(){
       + q.map(d => _runeBagRow(d, kindSel)).join(''); }
   if(!g) g = '<div class="rnEmp">가진 룬이 없습니다 — 룬 상점에서 삽니다</div>';
   return '<div class="rnBag">' + _runeBagDefs() + '<div class="rnBagH">' + hd + '</div>'
-    + '<div class="rnBagG uiScroll">' + g + '</div></div>'; }
+    + '<div class="rnBagG uiScroll bare">' + g + '</div></div>'; }
 
 // 빈 칸 중 첫 칸에 끼운다 — 「고르지 않고 그냥 눌렀을 때」의 길
 function campRuneAuto(key){

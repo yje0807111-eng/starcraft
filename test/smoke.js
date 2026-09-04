@@ -2659,7 +2659,26 @@ async function groupLobby(){
           const t0=rws[0].querySelector('.rnRwT').firstChild.textContent;
           assert(t0===RUNE_LIST[0].de,'줄 이름이 효과 이름이 아니다: '+t0);
           assert(t0.indexOf('룬')<0,'줄 이름에 룬 이름이 들어갔다: '+t0);
-          // 🎨 등급 값은 **그 등급의 색**이고, 줄 사이에는 **구분선**이 있다(2026-09-04 사용자 확정)
+          // 📜 **가방의 스크롤 막대는 감춘다**(2026-09-04 사용자 요청: 「거의 안 보이게」)
+        //   ⭐ Chrome 은 thin / none 둘뿐이라 「더 얇게」가 없다 — 답은 감추는 것이다.
+        //   ⛔ 화면 전용 규칙을 새로 쓰지 말 것: 공용 `.uiScroll.bare` 를 함께 붙인다.
+        { const bg = document.querySelector('#campRune .rnBagG');
+          assert(bg && bg.classList.contains('uiScroll'),
+            '가방이 공용 스크롤 규칙을 안 쓴다');
+          assert(bg.classList.contains('bare'), '가방의 막대가 안 감춰졌다');
+          const cs = getComputedStyle(bg);
+          assert(cs.scrollbarWidth === 'none', '막대가 여전히 보인다: ' + cs.scrollbarWidth);
+          assert(bg.offsetWidth - bg.clientWidth === 0,
+            '막대가 자리를 먹는다: ' + (bg.offsetWidth - bg.clientWidth) + 'px');
+          // ⚠ 감춰도 **스크롤은 되어야** 한다
+          const keep = bg.scrollTop; bg.scrollTop = 70;
+          assert(bg.scrollTop === 70, '막대를 감췄더니 스크롤이 안 된다: ' + bg.scrollTop);
+          bg.scrollTop = keep;
+          // ⚠ 대신 「아래에 더 있다」를 페이드로 알린다(막대가 없어졌으니 신호가 하나는 있어야 한다)
+          assert((cs.maskImage && cs.maskImage !== 'none')
+              || (cs.webkitMaskImage && cs.webkitMaskImage !== 'none'),
+            '막대도 없고 아래 페이드도 없다 — 더 있다는 것을 알 길이 없다'); }
+        // 🎨 등급 값은 **그 등급의 색**이고, 줄 사이에는 **구분선**이 있다(2026-09-04 사용자 확정)
           { const hex=c=>{ const m=/^#(\w\w)(\w\w)(\w\w)$/.exec(c);
               return m?('rgb('+parseInt(m[1],16)+', '+parseInt(m[2],16)+', '+parseInt(m[3],16)+')'):c; };
             const vs=rws[0].querySelectorAll('.rnRwT s b');
