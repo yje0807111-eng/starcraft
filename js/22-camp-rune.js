@@ -1193,8 +1193,9 @@ function campRuneBagTap(key){
 function _runeShopHTML(){
   // 💠 재화는 **공용 아이콘**이다(resIco) — ⛔ 이모지를 직접 박지 말 것(CLAUDE.md 레지스트리).
   const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
-  let h = '<div class="rnHead"><span>보유 젬</span><b>' + gemI + ' '
-    + ((typeof profGem === 'function') ? profGem() : 0) + '</b></div>';
+  // ⛔ 「보유 젬」 줄은 뺐다(2026-09-04 사용자 확정) — 젬은 **상단 재화 바**에 이미 있다.
+  //   같은 숫자를 두 층에 띄우면 어느 쪽이 진짜인지 묻게 된다.
+  let h = '';
   for(const kind of ['norm', 'uniq']){
     h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">'
       + (kind === 'uniq' ? '유니크' : '일반') + '</span></div>';
