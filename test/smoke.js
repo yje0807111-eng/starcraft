@@ -2427,7 +2427,7 @@ async function groupLobby(){
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
     let swapNote='';
-    let glyphNote='', animNote='', waitNote='', sumNote='';
+    let glyphNote='', animNote='', waitNote='', sumNote='', nextNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2756,6 +2756,37 @@ async function groupLobby(){
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+        // 🎯 **넣으면 다음 빈 칸으로 옮겨 간다**(2026-09-04 사용자 요청)
+        //   가방을 연달아 누르면 그 갈래의 빈 칸이 차례로 채워진다.
+        //   ⛔ 고른 자리를 그대로 두지 말 것 — 다음 탭이 방금 넣은 것을 덮어쓴다.
+        { const RA = campRuneState(); RA.norm = []; RA.uniq = []; campRuneTouch();
+          const gr = ['exp','kill','mapg','fevg'];
+          const base = RUNE_GRPS.indexOf('grow') * RUNE_CONS;
+          for(let i = 0; i < RUNE_CONS; i++){ const k = runeKey(gr[i % 4], 'low');
+            RA.own[k] = (RA.own[k] | 0) + 1; RA.norm[base + i] = k; }
+          const holes = [base + 1, base + 3, base + 6];
+          for(const h of holes) RA.norm[h] = null;
+          for(const id of gr){ const k = runeKey(id, 'mid'); RA.own[k] = (RA.own[k] | 0) + 2; }
+          campRuneTouch(); campRuneRender(); await sleep(30);
+          campRuneSlotTap('norm', holes[0]);
+          assert(_runePick === holes[0], '빈 칸이 안 골라진다: ' + _runePick);
+          const went = [];
+          for(let t = 0; t < holes.length; t++){
+            const at = _runePick;
+            campRuneBagTap(runeKey(gr[t % 4], 'mid'));
+            went.push(at);
+            assert(campRuneEq('norm')[at], at + '번 칸이 안 채워졌다'); }
+          assert(went.join(',') === holes.join(','),
+            '빈 칸을 차례로 안 채운다: ' + went.join(',') + ' vs ' + holes.join(','));
+          assert(!_runePickKind,
+            '그 갈래가 다 찼는데 선택이 남아 있다 — 가방이 계속 한 갈래만 보여 준다');
+          // 🚧 갈래를 넘어가지는 않는다 — 성좌가 바뀌면 화면이 멀리 뛰고 가방도 통째로 갈린다
+          assert(campRunePickNext('norm', base) === -1,
+            '성장이 다 찼는데 다른 갈래의 빈 칸으로 넘어간다');
+          // ⏳ 날아가는 것이 **끝나기를 기다린다** — 도중에 요소를 지우면 도착 콜백이 안 와
+          //   감춤(_runeVeil)이 남고, 다음 검사에서 「계속 가려져 있다」로 터진다(실측).
+          await sleep(RUNE_FLY_MS + 160);
+          nextNote = '연속 장착 ' + went.length + '칸'; }
         // 📊 **지금 걸려 있는 효과**를 오른쪽 위에 합쳐서 나열한다(2026-09-04 사용자 요청)
         { const R9 = campRuneState(); R9.norm = []; R9.uniq = []; campRuneTouch();
           campRuneRender(); await sleep(20);
@@ -3017,7 +3048,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote+' · '+sumNote;
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote+' · '+sumNote+' · '+nextNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });

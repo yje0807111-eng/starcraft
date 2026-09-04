@@ -1153,6 +1153,17 @@ function campRuneEquipFly(kind, i, key, opt){
     { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) });
   return true; }
 // 🎒 가방을 눌렀을 때 — 칸을 골라 뒀으면 **그 칸에**, 아니면 **빈 칸에**.
+// 🎯 같은 갈래의 **다음 빈 칸** — 없으면 -1.
+//   ⚠ 한 바퀴 돌며 찾는다(뒤가 다 찼으면 앞의 빈 칸으로). 갈래를 넘어가지는 않는다 —
+//     성좌가 바뀌면 화면이 멀리 뛰고, 가방도 통째로 갈린다.
+function campRunePickNext(kind, from){
+  const n = campRuneSlots(kind), eq = campRuneEq(kind);
+  const grp = (kind === 'uniq') ? 'uniq' : runeSlotGrp(from);
+  for(let s = 1; s <= n; s++){ const i = (from + s) % n;
+    if(eq[i]) continue;
+    if(kind === 'norm' && runeSlotGrp(i) !== grp) continue;
+    return i; }
+  return -1; }
 function campRuneBagTap(key){
   const pp = runeParse(key); if(!pp.def) return;
   const kind = (pp.def.kind === 'uniq') ? 'uniq' : 'norm';
@@ -1163,7 +1174,15 @@ function campRuneBagTap(key){
     // 고른 칸에 이미 같은 룬이면 아무 일도 아니다
     const cur = campRuneEq(kind)[_runePick] || null;
     if(cur === key) return;
-    if(!campRuneEquipFly(kind, _runePick, key)) say('남은 룬이 없습니다');
+    const at = _runePick;
+    if(!campRuneEquipFly(kind, at, key)){ say('남은 룬이 없습니다'); return; }
+    // 🎯 **다음 빈 칸으로 옮겨 간다**(2026-09-04 사용자 요청) — 가방을 연달아 누르면
+    //   그 갈래의 빈 칸이 차례로 채워진다. 칸을 하나 넣을 때마다 다시 고르지 않아도 된다.
+    //   ⛔ 고른 자리를 그대로 두지 말 것 — 다음 탭이 방금 넣은 것을 **덮어쓴다**.
+    const nx = campRunePickNext(kind, at);
+    if(nx >= 0) _runePick = nx;
+    else { _runePickKind = ''; _runePick = -1; }   // 그 갈래가 다 찼다 — 가방을 전체로 되돌린다
+    campRuneRender();
     return; }
   if(campRuneAuto(key)) return;
   // 🔁 **꽉 찼으면 교체 모드**로 들어간다 — 예전에는 여기서 아무 일도 안 일어났다.
