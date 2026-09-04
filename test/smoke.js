@@ -407,8 +407,8 @@ async function groupLobby(){
     // ① 네비에서 들어가면 하위 둘이 뜬다
     navGo('reb');
     { const c=cells();
-      assert(c.indexOf('환생')>=0 && c.indexOf('업그레이드')>=0,
-        '하위가 환생·업그레이드가 아니다: '+c.join('|')); }
+      assert(c.indexOf('환생')>=0 && c.indexOf('환생 트리')>=0,
+        '하위가 환생·환생 트리가 아니다: '+c.join('|')); }
     assert(campRebIsOn(),'정보 탭인데 환생 화면이 안 열렸다');
     // ② 업그레이드 = 환생 트리 · 서로 배타
     navSub('tree');
@@ -416,7 +416,7 @@ async function groupLobby(){
     // ③ 캠프 배지에서 바로 들어와도 하위가 뜬다(_navDrill 을 안 맞추면 통째로 안 나온다)
     campRebEnter('info');
     { const c=cells();
-      assert(c.indexOf('업그레이드')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
+      assert(c.indexOf('환생 트리')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
     assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
     // ④ ✕ 를 없앴다 — **나가는 길은 하단 네비 하나**다(2026-08-31 사용자 확정)
     assert(!document.querySelector('#campReb .crX'),'환생 화면에 ✕ 가 남아 있다');
@@ -521,18 +521,149 @@ async function groupLobby(){
       assert(fx,'포인트 계산 근거 줄이 없다');
       for(const k of ['재화','던전','라운드']) assert(fx.textContent.indexOf(k)>=0,'계산 근거에 '+k+' 가 없음');
       assert(fx.querySelectorAll('b').length===3,'계산 근거의 값이 셋이 아님'); }
+    // 📂 **이번 회차는 접었다 편다** — 기본은 **접힘**(2026-09-04 사용자 확정).
+    //   ⛔ 기본을 펴짐으로 되돌리지 말 것 — 이 화면에서 먼저 봐야 하는 것은 배수·포인트다.
+    //   ⛔ 다시 그릴 때 접힘 상태가 풀리면 안 된다(campRebStApply 가 매 렌더 끝에 다시 입힌다).
+    { skipIf(typeof campRebStToggle!=='function','접기 없음');
+      // ⚠ **매번 다시 찾는다** — campRebRender() 가 innerHTML 을 통째로 갈아서 붙잡아 둔 참조가
+      //   떨어져 나간다(떨어진 노드는 computed style 이 비어 있어 검사가 조용히 통과해 버린다).
+      const $st=()=>document.querySelector('#campReb .crSt');
+      const $list=()=>document.querySelector('#campReb .crList');
+      const $peek=()=>document.querySelector('#campReb .crPeek');
+      const $hm=()=>document.querySelector('#campReb .crHm');
+      assert($st()&&$list(),'이번 회차 구역이 없다');
+      // ⚠ 접힘은 이제 **display 가 아니라 grid-template-rows** 다(2026-09-04 부드러운 접기).
+      //   display 로 재면 늘 'block' 이라 검사가 조용히 통과한다 — **감싸는 칸의 높이**로 본다.
+      const $fold=k=>document.querySelector('#campReb .crFold.'+k);
+      const open=()=>$fold('list').getBoundingClientRect().height>4;
+      // 머리줄이 곧 손잡이다
+      { const h=$st().querySelector('.crH'); assert(h&&h.tagName==='BUTTON','머리줄이 눌리는 손잡이가 아니다'); }
+      const was=open();
+      if(was) campRebStToggle();                      // 접힌 상태로 맞춘다
+      await sleep(360);
+      assert(!open(),'접었는데 목록이 그대로 보인다');
+      // 접히면 배수·포인트가 **아래로 내려온다**
+      // ⚠ 이제 움직임에 시간이 걸린다 — **끝난 뒤에** 잰다(전이 중에 재면 중간값이 나온다)
+      await sleep(360);
+      const y0=document.querySelector('#campReb .crTopCard').getBoundingClientRect().top;
+      campRebStToggle(); await sleep(360);
+      assert(open(),'폈는데 목록이 안 보인다');
+      const y1=document.querySelector('#campReb .crTopCard').getBoundingClientRect().top;
+      assert(y0>y1+30,'접었을 때 배수 구역이 안 내려온다: 접힘 '+Math.round(y0)+' vs 펴짐 '+Math.round(y1));
+      // 다시 그려도 상태가 남는다
+      campRebRender();
+      assert(open(),'다시 그렸더니 접힘 상태가 초기화됐다');
+      // 📄 접혀 있어도 **요약 두 줄**은 보인다(총 미네랄 · 플레이 시간) — ⛔ 통째로 감추지 말 것
+      { campRebStToggle(); await sleep(360);            // 다시 접는다
+        assert($peek() && $fold('peek').getBoundingClientRect().height>4,'접었더니 요약까지 사라졌다');
+        // ⭐ 요약도 **줄 꼴**이다(아이콘·이름·값) — ⛔ 아이콘만 늘어놓은 한 줄로 되돌리지 말 것
+        { const rows=$peek().querySelectorAll('.crLi');
+          assert(rows.length===2,'요약이 두 줄이 아니다: '+rows.length);
+          for(const r of rows) assert(r.querySelector('.crIc')&&r.querySelector('.crNm')&&r.querySelector('b'),
+            '요약 줄에 아이콘·이름·값이 다 없다: '+r.innerText.trim()); }
+        // 미네랄은 터치·자동을 **합친** 값이다
+        const C2=campState(), want=campNum((C2.earnTap||0)+(C2.earnAuto||0));
+        assert(($peek().innerText||'').indexOf(want)>=0,
+          '요약의 미네랄이 합계가 아니다: '+$peek().innerText.trim()+' (기대 '+want+')');
+        // 펴면 요약은 물러나고 목록이 나온다
+        campRebStToggle(); await sleep(360);
+        assert($fold('peek').getBoundingClientRect().height<=4,'폈는데 요약이 남아 있다'); }
+      // 🎬 **부드럽게 열리고 닫힌다** — 감싸는 칸에 전이가 걸려 있어야 한다.
+      //   ⛔ display:none 으로 되돌리지 말 것(애니가 안 걸린다) · ⛔ max-height 어림값도 쓰지 말 것.
+      { const cs=getComputedStyle($fold('list'));
+        assert(/grid-template-rows/.test(cs.transitionProperty),
+          '접기에 애니가 없다(전이 속성: '+cs.transitionProperty+')');
+        assert(parseFloat(cs.transitionDuration)>0.05,'접기 애니 시간이 0 이다: '+cs.transitionDuration);
+        assert(getComputedStyle($list()).display!=='none','목록을 display:none 으로 감췄다 — 애니가 안 걸린다'); }
+      // ✍ 손잡이 글자는 **다음에 할 일**이다 — 접혀 있으면 「더보기」, 펴져 있으면 「접기」
+      { assert($hm(),'더보기 글자가 없다');
+        assert($hm().textContent==='접기','펴진 상태의 손잡이가 「접기」가 아니다: '+$hm().textContent);
+        campRebStToggle();
+        assert($hm().textContent==='더보기','접힌 상태의 손잡이가 「더보기」가 아니다: '+$hm().textContent);
+        campRebStToggle(); }
+      if(!was) campRebStToggle(); }
+    // ✍ 경고 한 줄 — **짧게**. ⛔ 「환생하면 지금까지의 진행이 초기화됩니다」로 되돌리지 말 것.
+    { const w=document.querySelector('#campReb .crWarn');
+      assert(w,'되돌릴 수 없다는 안내가 없다');
+      const t=(w.textContent||'').trim();
+      // ✍ **무엇이 남는지까지** 말한다 — 초기화만 적으면 겁만 준다(실제로 배수·트리는 남는다)
+      assert(t==='진행은 초기화 · 배수와 트리는 그대로','경고 문구가 다르다: '+t);
+      // 자리 — **환생 버튼 위**다(팩 아래에 두면 팩에 대한 경고로 읽힌다)
+      const go=document.querySelector('#campReb .crGo');
+      assert(w.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+1,
+        '경고가 환생 버튼 위에 있지 않다'); }
     // ④ 이번 회차 지표 다섯 — 「내가 얼마나 했나」
-    { const li=[...document.querySelectorAll('#campReb .crLi')];
+    // ⚠ **목록 안의** 줄만 센다 — 접힘 요약(.crPeek)도 같은 .crLi 를 쓴다(2026-09-04)
+    { const li=[...document.querySelectorAll('#campReb .crList .crLi')];
       assert(li.length===5,'회차 지표가 다섯 줄이 아님: '+li.length);
-      const names=li.map(e=>e.querySelector('span').textContent);
+      // ⚠ 줄 첫 span 은 **아이콘 칸**(.crIc)이다 — 이름은 .crNm 이다(2026-09-04 아이콘이 붙었다)
+      const names=li.map(e=>e.querySelector('.crNm').textContent);
       for(const k of ['터치','터치로 번 미네랄','자동으로 번 미네랄','가스','플레이 시간'])
         assert(names.indexOf(k)>=0,'회차 지표에 빠짐: '+k); }
-    // ⑤ 💳 ×2 는 **환생 팩**이다 — 젬 1회권이 아니다(2026-08-31 · GEM.md §4 · BALANCE §4-C)
+    // ✍ 문구 — **모바일 어휘**(2026-09-04 사용자 확정). ⛔ 아래 넷을 되돌리지 말 것.
+    //   ⛔ 큰 숫자 라벨에 「증가량」을 쓰지 말 것 — 값은 환생 **후의 배수**지 늘어나는 폭이 아니다.
+    { const q=s2=>document.querySelector('#campReb '+s2);
+      const tx=(e)=>((e&&e.textContent)||'').replace(/\s+/g,'').trim();
+      assert(tx(q('.crHero .crK'))==='환생후재화배수','큰 숫자 라벨이 다르다: '+tx(q('.crHero .crK')));
+      assert(tx(q('.crPt .crK'))==='환생트리포인트','포인트 라벨이 다르다: '+tx(q('.crPt .crK')));
+      assert(tx(q('.crNow')).indexOf('지금')===0,'칩이 「지금 ×N」 이 아니다: '+tx(q('.crNow')));
+      assert(tx(q('.crNow')).indexOf('배수')<0,'칩에 「배수」가 겹친다 — 위 라벨이 이미 배수다');
+      const w=tx(q('.crWarn'));
+      assert(w.indexOf('초기화')>=0 && w.indexOf('그대로')>=0,
+        '경고가 「무엇이 남는지」를 안 말한다: '+w); }
+    // ⑤ 📺 아래 한 칸은 **두 얼굴**이다 (2026-09-04 사용자 확정)
+    //   ㉠ 팩이 없으면 — 「광고 시청 시 포인트 ×1.5」 **버튼**(아직 껍데기)
+    //   ㉡ 팩을 샀으면 — 「배수·포인트 ×2 · 환생 팩」 **상태 표시**로 잠긴다(팩이 광고를 덮는다)
+    //   ✍ **무엇에 걸리는 배수인지**가 문구에 있어야 한다 — 광고는 포인트만, 팩은 둘 다.
+    //     둘이 같은 꼴이라 범위를 안 적으면 같은 것으로 읽힌다(⛔ 각주로 빼지 말 것).
+    //   ⛔ 이 화면에서 상점으로 보내는 옛 길(campRebToShop)을 되살리지 말 것.
     { const pk=document.querySelector('#campReb .crPk');
-      assert(pk,'환생 팩 줄이 없다');
+      assert(pk,'아래 칸이 없다');
       assert(!campRebPackOn(),'스모크 시작 상태에서 팩을 이미 갖고 있다');
-      assert(pk.textContent.indexOf('2')>=0,'팩 줄에 배수가 안 보임');
-      assert(/campRebToShop/.test(pk.getAttribute('onclick')||''),'팩 줄이 상점으로 안 보낸다');
+      assert(pk.tagName==='BUTTON','팩이 없는데 광고 칸이 버튼이 아니다');
+      { const t=(pk.innerText||'').replace(/\s+/g,' ').trim();
+        assert(t.indexOf('광고')>=0 && t.indexOf('1.5')>=0,'광고 칸 문구가 다르다: '+t);
+        assert(t.indexOf('포인트')>=0,'광고 문구가 **무엇에 걸리는지**를 안 말한다: '+t); }
+      assert(!/campRebToShop/.test(pk.getAttribute('onclick')||''),
+        '옛 상점 길이 되살아났다 — 팩은 상점에서만 판다');
+      // 🔒 **환생 버튼과 같이 잠긴다**(2026-09-04) — 지금 환생을 못 하는데 배수만 올려 둘 수 없다.
+      //   ⛔ 광고만 열어 두지 말 것: 눌러서 얻은 ×1.5 가 갈 곳이 없다.
+      { const go=document.querySelector('#campReb .crGo');
+        assert(pk.disabled===(go?go.disabled:false),
+          '광고 칸의 잠김이 환생 버튼과 다르다 — 광고 '+pk.disabled+' · 환생 '+(go&&go.disabled)); }
+      // 🌙 **잠김도 꺼진 네온**이다(2026-09-04 사용자 확정 · 목업 camp-reb-off-8 ②안).
+      //   어휘를 **끄지 말고 낮춘다** — 후광·고리 그라디언트·윗변 반사를 그대로 두고 세기만 뺀다.
+      //   ⛔ 평면 회색(background 단색 · rim 단색 · ::before display:none)으로 되돌리지 말 것:
+      //     두 칸이 나란히 죽어 화면이 통째로 밋밋해진다(사용자 지적).
+      { const C=campState(); const e0=C.earn;
+        C.earn=0; campRebRender(); await sleep(40);
+        const g=document.querySelector('#campReb .crGo'), ad=document.querySelector('#campReb .crPk.ad');
+        assert(g && g.disabled,'재화를 0 으로 했는데 환생이 안 잠긴다');
+        const lum=e=>{ const m=getComputedStyle(e).color.match(/[0-9.]+/g).map(Number);
+          return .299*m[0]+.587*m[1]+.114*m[2]; };
+        const off={};
+        for(const row of [['환생',g],['광고',ad]]){ const nm=row[0], el=row[1];
+          assert(el,nm+' 칸이 없다');
+          assert(/gradient/.test(getComputedStyle(el).backgroundImage),
+            nm+' 잠김이 평면이다 — 후광이 사라졌다');
+          const rim=el.querySelector('.crRim');
+          assert(rim && /gradient/.test(getComputedStyle(rim).backgroundImage),
+            nm+' 잠김 고리가 단색이다 — 그라디언트를 되돌려 놓지 말 것');
+          assert(getComputedStyle(el,'::before').display!=='none',
+            nm+' 잠김에서 윗변 반사를 껐다');
+          off[nm]=lum(el); }
+        // ⚠ 그래도 **켜짐보다 어두워야** 한다 — 못 누르는데 주 동작으로 읽히면 안 된다
+        C.earn=CAMP_REB_COST*3; campRebRender(); await sleep(40);
+        const g2=document.querySelector('#campReb .crGo'), a2=document.querySelector('#campReb .crPk.ad');
+        assert(!g2.disabled,'조건을 채웠는데 환생이 아직 잠겨 있다');
+        assert(lum(g2)-off['환생']>40,'환생 잠김이 켜짐만큼 밝다: '
+          +Math.round(off['환생'])+' → '+Math.round(lum(g2)));
+        assert(lum(a2)-off['광고']>10,'광고 잠김이 켜짐만큼 밝다: '
+          +Math.round(off['광고'])+' → '+Math.round(lum(a2)));
+        C.earn=e0; campRebRender(); await sleep(40); }
+      // 🚧 광고는 껍데기다 — ⛔ 눌러도 배수가 **실제로 올라가면 안 된다**(표시와 어긋난다)
+      { const m0=campRebMulGain(); campRebAd();
+        assert(campRebMulGain()===m0,'광고 껍데기가 배수를 실제로 올렸다: '+m0+' → '+campRebMulGain()); }
       // ⭐ 팩은 **버튼 구역**이다(2026-08-31 사용자 확정) — 다만 위계는 「환생」보다 한 단 아래.
       //   ⛔ 주 동작이 둘로 보이면 안 된다: 높이가 「환생」보다 낮아야 한다.
       assert(document.querySelectorAll('#campReb .crGo').length===1,'주 버튼이 하나가 아님');
@@ -550,7 +681,12 @@ async function groupLobby(){
       assert(Math.abs(p1/p0-2)<1e-6,'팩을 사도 포인트가 2배가 안 됨: ×'+(p1/p0).toFixed(3));
       campRebRender(); await sleep(40);
       { const on=document.querySelector('#campReb .crPk.on');
-        assert(on,'팩을 샀는데 「적용 중」으로 안 바뀐다'); }
+        assert(on,'팩을 샀는데 「적용 중」으로 안 바뀐다');
+        // 💳 팩은 **둘 다**에 걸린다 — 광고(포인트만)와 갈라 읽혀야 한다
+        const t2=(on.textContent||'').replace(/[ ]+/g,' ').trim();
+        assert(t2.indexOf('배수')>=0 && t2.indexOf('포인트')>=0,
+          '팩 줄이 **무엇에 걸리는지**를 안 말한다: '+t2);
+        assert(on.tagName!=='BUTTON','팩을 샀는데 아직 누를 수 있는 버튼이다'); }
       delete packs.reb; campRebRender(); await sleep(40); }
     // ④ 되돌릴 수 없으므로 확인을 거친다 — 나가기·로그아웃과 같은 껍데기
     campRebAsk(); await sleep(80);
@@ -1260,7 +1396,8 @@ async function groupLobby(){
         const gb=gimg.map(e=>e.getBoundingClientRect()), mb=mimg.map(e=>e.getBoundingClientRect());
         // ⛽ **가스는 본부와 같은 높이**다(2026-09-02 · 광맥 줄에서 올렸다).
         //   ⛔ 「가스와 광맥의 발치가 같은 선」으로 되돌리지 말 것 — 규약이 바뀌었다.
-        assert(TECH_GAS.r0===Math.max(0,Math.round(campRow(CAMP_ROW_BASE)+CAMP_GAS_FOOT-TECH_GAS.h)),
+        //   ⬇ 부지는 거기서 **CAMP_GAS_ROW_OFF 칸 아래**다(2026-09-04) — 그림은 CSS(--gzDY)가 되돌려 제자리다.
+        assert(TECH_GAS.r0===Math.max(0,Math.round(campRow(CAMP_ROW_BASE)+CAMP_GAS_FOOT-TECH_GAS.h)+CAMP_GAS_ROW_OFF),
           '가스 행이 본부 줄 기준이 아니다: r0='+TECH_GAS.r0);
         assert(gb[0].bottom < mb[0].bottom,
           '가스가 광맥보다 아래에 있다 — 본부 줄이면 광맥보다 위여야 한다');
@@ -1295,7 +1432,13 @@ async function groupLobby(){
         const save=G.tech.arm; G.tech.arm='refinery';
         const at=(c,r)=>techArmValid(TECH_GRID.x0+(c+TECH_GAS.w/2)*cw, techY0()+(r+TECH_GAS.h/2)*ch);
         assert(at(TECH_GAS.c0,TECH_GAS.r0),'왼쪽 가스에 정제소를 못 짓는다');
-        assert(at(CAMP_GAS2.c0,CAMP_GAS2.r0),'오른쪽 가스에 정제소를 못 짓는다');
+        // ⛽ **오른쪽은 지금 꺼져 있다**(CAMP_GAS2_ON=false · 2026-09-02 「가스는 왼쪽 하나뿐」).
+        //   ⛔ 꺼진 자리를 인정하지 말 것 — 판정을 감싼 채로 두면 화면에 아무것도 없는 칸이
+        //     건설 금지로 남는다(2026-09-04 사용자 신고로 드러났다).
+        if(CAMP_GAS2_ON) assert(at(CAMP_GAS2.c0,CAMP_GAS2.r0),'오른쪽 가스에 정제소를 못 짓는다');
+        else { G.tech.arm='supply';
+          assert(at(CAMP_GAS2.c0,CAMP_GAS2.r0),'꺼진 오른쪽 가스 자리가 아직 건설 금지다');
+          G.tech.arm='refinery'; }
         assert(!at(Math.round(techCols()/2), campRow(0.45)),'가스 광산이 아닌 곳에도 정제소가 지어진다');
         G.tech.arm=save; }
       // ⛽ 오른쪽 가스도 **왼쪽과 같은 실물**이어야 한다 — 구역 표시만 있으면 빈 땅으로 보인다.
@@ -1406,6 +1549,7 @@ async function groupLobby(){
         .filter(e=>getComputedStyle(e).display!=='none')
         .sort((a,b)=>a.getBoundingClientRect().left-b.getBoundingClientRect().left)
         .map(e=>{ const im=e.querySelector('img'); return im? im.src.split('/').pop().replace('res_','').replace('.webp','') : '?'; });
+      // 💎 젬은 미네랄·가스 다음, 🧍 인구는 **맨 오른쪽**(2026-09-04 사용자 확정).
       assert(order.join(',')==='mineral,gas,gem,pop','재화 순서가 다름: '+order.join(',')); }
     // ⛔ 캠프는 공용 자원을 셋이나 빌린다(#cvMarine · TECH_GAS 좌표 · 판정 함수 3개).
     //    **나갈 때 전부 돌려놓는지**를 여기서 잰다 — 안 돌려주면 관리자 건설 탭이 어긋난다.
@@ -1414,8 +1558,14 @@ async function groupLobby(){
       campExit();
       assert(TECH_GAS.c0!==gasBefore.c0 || TECH_GAS.r0!==gasBefore.r0 || true,'');   // 좌표는 원복돼 값이 달라진다
       assert(techArmValid===window.techArmValid,'함수 참조가 깨졌다');
-      assert(techArmValid!==fnBefore.a || _techGasOverlap!==fnBefore.b || _techInGasZone!==fnBefore.c,
-        '캠프를 나갔는데 가스 판정 함수가 아직 감싸진 채다 — 관리자 탭이 두 자리를 인정하게 된다');
+      // ⛽ 오른쪽 가스가 **켜져 있을 때만** 감싼다(2026-09-04) — 꺼져 있으면 애초에 안 감싸는 것이 맞다.
+      //   ⛔ 꺼진 채로 감싸면 화면에 아무것도 없는 칸이 건설 금지로 남는다(사용자 신고로 드러났다).
+      if(CAMP_GAS2_ON)
+        assert(techArmValid!==fnBefore.a || _techGasOverlap!==fnBefore.b || _techInGasZone!==fnBefore.c,
+          '캠프를 나갔는데 가스 판정 함수가 아직 감싸진 채다 — 관리자 탭이 두 자리를 인정하게 된다');
+      else
+        assert(techArmValid===fnBefore.a && _techGasOverlap===fnBefore.b && _techInGasZone===fnBefore.c,
+          '오른쪽 가스가 꺼졌는데 판정 함수를 감쌌다 — 맵에 없는 자리가 건설 금지로 남는다');
       openHome(); await sleep(420); }   // 다시 들어와 이어서 검사
     // 캐릭터 프로필은 캠프에 없다 — 캠프는 기지를 키우는 게임이라 캐릭터가 없다
     assert(!document.querySelector('.hbHudTop'),'옛 사냥터 캐릭터 HUD 가 되살아났다(다락으로 갔다 · ATTIC.md)');
@@ -3636,6 +3786,116 @@ async function groupLobby(){
     } finally { C.rbTree=keepT; campTreeViewSync(); }
   });
 
+  // 🏅 **다음에 열 것**을 하나만 짚는다 (2026-09-04 사용자 요청).
+  //   ⛔ 배선이 없는 계열(wkCap·dgRw)을 짚지 말 것 — 추천은 「열면 좋다」는 말이라 거짓말이 된다.
+  //   ⛔ 지정한 별과 겹치지 말 것 — 표시가 둘이면 어느 쪽이 무슨 뜻인지 못 읽는다.
+  await step('환생 트리: 다음에 열 것을 하나만 짚는다', async()=>{
+    skipIf(typeof campTreeRecoPick!=='function','추천이 없다');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,'gp:econ나':1,gather:2,mine:1};
+      _campTreeSel=null; campRebEnter('tree'); campTreeRender();
+      const key=campTreeRecoPick();
+      assert(key,'살 수 있는 것이 있는데 아무것도 안 짚는다');
+      // ① 짚은 것은 실제로 **살 수 있는** 자리여야 한다
+      { const p=key.split(':');
+        if(key.indexOf('br:')!==0 && key.indexOf('gp:')!==0 && key!=='root')
+          assert(campTreeState(p[0],+p[1])==='buy','살 수 없는 것을 짚었다: '+key); }
+      // ② 배선 없는 계열은 절대 안 짚는다
+      assert(CAMP_RT_RECO_SKIP.indexOf(key.split(':')[0])<0,'배선 없는 계열을 짚었다: '+key);
+      // ③ 표식은 **하나뿐**
+      { const m=document.querySelectorAll('#ctG .ctReco');
+        assert(m.length===1,'추천 표식이 '+m.length+'개다(하나여야 한다)'); }
+      // ③-b 📏 **가장 모여도 별 테두리 바깥**이어야 한다 (2026-09-04 사용자 지적).
+      //   ⛔ 안으로 파고들면 아이콘을 덮는다. 벌어진 거리(JS)와 최소 배율(CSS)을 **함께** 잰다.
+      { let minSc=1;
+        for(const ss of document.styleSheets){ let rs; try{ rs=ss.cssRules; }catch(e){ continue; }
+          for(const r of rs||[]){ if(r.type!==7||r.name!=='ctRecoBreath') continue;
+            for(const kf of r.cssRules){ const m=/scale\(([0-9.]+)\)/.exec(kf.style.transform||'');
+              if(m) minSc=Math.min(minSc,parseFloat(m[1])); } } }
+        assert(minSc<1,'추천 애니가 안 움직인다(최소 배율을 못 찾았다)');
+        // 표식이 붙는 별의 반지름은 11(묶음 마디)·13(갈래 마디)·15(계열) 셋뿐 — 가장 좁은 것으로 잰다
+        // ⚠ 「안 들어간다」로는 부족하다 — 붙어 있으면 답답하다(2026-09-04 사용자 두 번째 지적).
+        //   테두리에서 **4 이상** 떨어져 있어야 한다.
+        const rMin=11, out=(rMin+CAMP_TREE_RECO_GAP)*minSc;
+        assert(out>rMin+4,'가장 모였을 때 표식이 테두리에 붙는다: r'+rMin+' 인데 '+out.toFixed(1)+
+          ' (벌어짐 '+CAMP_TREE_RECO_GAP+' × 최소 배율 '+minSc+')');
+        assert(minSc<0.95,'애니 폭이 너무 작아 안 보인다: 최소 배율 '+minSc); }
+      // ④ 점수가 가장 높은 것을 골랐나 — 규칙(상승폭 ÷ 비용)을 여기서 다시 계산해 맞춰 본다
+      { let bk='', bs=0;
+        for(const L of CAMP_RT_LINES){ if(CAMP_RT_RECO_SKIP.indexOf(L.k)>=0) continue;
+          const nn=campRtHas(L.k)+1; if(campTreeState(L.k,nn)!=='buy') continue;
+          const c=campRtCost(L.k,nn); if(!isFinite(c)||c<=0) continue;
+          const sc=campRtRecoGain(L.k,nn)/c; if(sc>bs){ bs=sc; bk=L.k+':'+nn; } }
+        assert(key===bk,'가장 점수 높은 것을 안 골랐다: 골랐다 '+key+' vs 계산 '+bk); }
+      // ⑤ 그 별을 고르면 추천 표식은 물러난다(지정 빛과 안 겹친다)
+      { const p=key.split(':'); campTreeTap(p[0],+p[1]);
+        const m=document.querySelectorAll('#ctG .ctReco');
+        assert(m.length===0,'지정한 별에 추천 표식이 그대로 남았다'); }
+      return '짚은 것 '+key+' (규칙: 상승폭 ÷ 비용 · 배선 없는 '+CAMP_RT_RECO_SKIP.join('·')+' 제외)';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
+  // ✨ **고른 별은 은은하게 빛난다** — 산 별의 테두리를 그대로 두른다(「사면 이렇게 된다」).
+  await step('환생 트리: 안 산 별도 갈래 색 그라디언트 · 고르면 빛난다', async()=>{
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:1};
+      _campTreeSel=null; campRebEnter('tree'); campTreeRender();
+      // ① 안 산 별의 테두리 = **갈래 색 흐린 그라디언트**. ⛔ 회색 평평한 선으로 되돌리지 말 것.
+      { const g=[...document.querySelectorAll('#ctG .ctGem')].filter(e=>!e.classList.contains('on'));
+        assert(g.length>0,'안 산 별이 없다(검사 불가)');
+        for(const e of g){ const st=e.getAttribute('stroke')||'';
+          assert(st.indexOf('url(#ctg')===0,'안 산 별이 그라디언트를 안 쓴다: '+st); }
+        // 살 수 있다/못 산다로 테두리를 가르지 않는다 — 둘 다 같은 그라디언트
+        const ids=new Set(g.map(e=>e.getAttribute('stroke')));
+        assert([...ids].every(v=>v.slice(-2)==='d)'),'안 산 별끼리 테두리가 갈린다: '+[...ids].join(' ')); }
+      // ② 고르면 빛이 하나 붙는다(drop-shadow 를 두른 폴리곤)
+      { const before=document.querySelectorAll('#ctG polygon[style*="drop-shadow"]').length;
+        campTreeTap('gather',2);
+        const after=document.querySelectorAll('#ctG polygon[style*="drop-shadow"]').length;
+        assert(after>before,'고른 별에 빛이 안 붙는다: '+before+' → '+after); }
+      return '안 산 별 = 갈래 색 흐린 그라디언트 · 고르면 산 별 테두리로 빛난다';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
+  // 🔍 **별이 적을수록 당겨 본다** (2026-09-04 사용자 지적).
+  //   ⛔ 「무리의 폭을 못 재면 가장 축소」로 되돌리지 말 것 — 가운데만 열린 첫 화면에서
+  //     별 하나를 놓고 화면의 90%를 빈 하늘로 채우던 것이 그 갈래였다.
+  await step('환생 트리: 가운데만 열려도 그 별로 당겨 본다', async()=>{
+    skipIf(typeof campTreeFit!=='function'||typeof campTreeViewT!=='function','트리 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+    try{
+      const zoomOf=function(tree){ C.rbTree=tree; campRebEnter('tree'); campTreeRender();
+        campTreeFit(true); campTreeViewSync(); return campTreeViewT().z; };
+      // ⭐ **아무것도 안 산 진짜 첫 화면**부터 본다 — 가운데는 .ctGem 이 아니라서 별이 0개로
+      //   세어지던 것이 원인이었다(2026-09-04). 그때 「잴 수 없다」 갈래로 빠져 가장 축소로 열렸다.
+      const z0=zoomOf({});
+      assert(z0>1.2,'아무것도 안 샀는데 화면이 안 당겨진다: ×'+z0.toFixed(2));
+      { const B0=campTreeBounds();
+        assert(B0&&B0.n>0,'가운데를 별로 안 센다 — 경계가 비었다(그래서 가장 축소로 열린다)'); }
+      // 그래도 가운데는 눌려야 한다(.ctGem 클래스를 붙여 해결하면 여기서 걸린다)
+      { const hit=document.querySelector('#ctG .ctHit[data-k="root"]');
+        assert(hit,'가운데 히트 영역이 없다');
+        assert(getComputedStyle(hit).pointerEvents!=='none','가운데가 안 눌린다'); }
+      const z1=zoomOf({root:1});                                   // 가운데 하나
+      const zMany=zoomOf({root:1,_m2:1,'br:econ':1,'br:army':1,'gp:econ가':1,gather:5,mine:5});
+      assert(z1>1.2,'가운데만 열렸는데 화면이 안 당겨진다: ×'+z1.toFixed(2));
+      assert(z1>=zMany,'별이 적은데 더 멀리서 본다: 하나 ×'+z1.toFixed(2)+' vs 여럿 ×'+zMany.toFixed(2));
+      // 그 별이 화면 가운데에 온다
+      const p=(function(){ const e=document.querySelector('#ctG .ctGem[data-k="root"]');
+        return e?{x:+e.getAttribute('data-cx'),y:+e.getAttribute('data-cy')}:null; })();
+      C.rbTree={root:1}; campTreeRender(); campTreeFit(true); campTreeViewSync();
+      const v=campTreeViewT();
+      if(p){ const sx=p.x*v.z+v.x, sy=p.y*v.z+v.y;
+        assert(Math.abs(sx)<1&&Math.abs(sy)<1,'가운데 별이 화면 한복판에 안 온다: '+sx.toFixed(1)+','+sy.toFixed(1)); }
+      return '별 하나 ×'+campTreeViewT().z.toFixed(2)+' · 여럿 ×'+zMany.toFixed(2)+' (적을수록 당겨 본다)';
+    } finally { C.rbTree=keepT; _campTreeSel=null; campTreeFit(true); campTreeViewSync(); }
+  });
+
   // 📍 해제하면 **지금 배율은 그대로 두고**, 방금 해제한 별을 화면 가운데로 옮긴다 (2026-09-03 재확정).
   //   ⛔ 「고르기 전의 자리로 되돌아간다」가 아니다 — 그건 방금 보던 별과 무관한 옛 자리로 튄다.
   //   ⛔ 전체 보기로 물러나지도 않는다 — 축소가 너무 세다.
@@ -3969,8 +4229,9 @@ async function groupLobby(){
         for(const L of CAMP_RT_LINES) want+=campRtMax(L.k);
         assert(all===want,'진행도 분모가 실제 칸 수와 다르다: '+all+' ≠ '+want);
         assert(campTreeOwned()>0&&campTreeOwned()<=all,'진행도 분자가 범위 밖: '+campTreeOwned());
-        const tx=$('campTree').querySelector('.ctProgN').textContent;
-        assert(tx.indexOf('/ '+all)>=0,'진행도 표시가 계산과 다르다: '+tx); }
+        // ⛔ 화면에는 안 띄운다(2026-09-04 사용자 확정) — 「0 / 173」이 재화 바 밑에서 포인트와 헷갈렸다.
+        const pn=$('campTree').querySelector('.ctProgN');
+        assert(!pn||getComputedStyle(pn).display==='none','해금 진행도(0 / 173)가 화면에 되살아났다'); }
       // ❓ 공통 규칙은 **도움말 한 곳**에 있다 — 별마다 반복하면 32계열×5차 = 160번 같은 말이 된다
       assert(!$('campTree').querySelector('.ctZoom'),
         '확대·축소 버튼이 되살아났다 — 손가락으로만 한다');
@@ -3979,22 +4240,112 @@ async function groupLobby(){
             '빈 곳을 두 번 눌러도 전체 보기로 안 간다');
           assert(src.indexOf('CAMP_TREE_ZSTEP * 1.4')<0,
             '두 번 누르기가 확대로 되돌아갔다 — 전체 보기여야 한다'); }
-      { const q=$('campTree').querySelector('.ctQ'); assert(q,'도움말(?) 이 없다');
-        // 🏷 화면 이름은 **재화 바 왼쪽**(#curTitle)이 맡는다(2026-09-03) — 화면 안 제목은 감췄다.
+      { // 🏷 화면 이름은 **재화 바 왼쪽**(#curTitle)이 맡는다(2026-09-03) — 화면 안 제목은 감췄다.
         //   ⛔ 화면 안에 제목을 다시 띄우지 말 것 — 같은 이름이 두 층에 뜬다.
         assert(getComputedStyle($('campTree').querySelector('.ctTitle')).display==='none',
           '화면 안에 제목이 또 떠 있다');
-        const row=$('campTree').querySelector('.ctTopRow').getBoundingClientRect(), r=q.getBoundingClientRect();
-        assert(Math.abs(r.left-row.left)<14,'도움말이 상단 줄 왼쪽에 안 붙어 있다: '+Math.round(r.left-row.left)+'px');
+        // ❓ 물음표의 자리는 **그 이름 바로 오른쪽**이다(2026-09-04 사용자 확정).
+        //   ⛔ 화면 안 상단 줄(.ctTop)로 되돌리지 말 것 — 이름과 물음표가 두 층으로 갈린다.
+        assert(!$('campTree').querySelector('.ctQ'),'물음표가 화면 안에 되살아났다');
+        const q=$('curTitle').querySelector('.ctQ'); assert(q,'이름 옆에 도움말(?) 이 없다');
+        // 🖐 **눌러지나** — 실제로 손가락이 닿는지 본다(2026-09-04 회귀).
+        //   ⚠ 재화 바는 HOME 에서 .curBar.bare{pointer-events:none} 이고 되살릴 자식을 하나씩 적어 둔다.
+        //     .ctQ 를 그 목록에 안 넣어서 물음표가 **보이기만 하고 안 눌렸다**. 있는지만 보면 못 잡는다.
+        { const r=q.getBoundingClientRect();
+          const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+          assert(hit===q||q.contains(hit),
+            '물음표가 안 눌린다(pointer-events 나 가림): 그 자리의 요소는 '+(hit&&(hit.className||hit.tagName))); }
+        const tt=$('curTitle').getBoundingClientRect(), r=q.getBoundingClientRect();
+        assert(r.left>=tt.left&&r.right<=tt.right+1,'물음표가 이름 칸 밖에 있다');
+        assert(r.left-tt.left>10,'물음표가 이름 왼쪽에 붙었다 — 오른쪽이어야 한다');
         campTreeHelp(true);
         const h=$('campTree').querySelector('.ctHelp');
         assert(!h.classList.contains('hide'),'도움말이 안 열린다');
         const tx=h.innerText||'';
-        assert(/환생 포인트/.test(tx)&&/사라지지 않/.test(tx),'도움말에 핵심 규칙이 없다');
-        // 숫자는 상수에서 꺼내야 한다 — 손으로 적으면 값을 바꿀 때 문구만 옛말이 된다
-        assert(tx.indexOf('−'+Math.round(CAMP_RT_CUT_MAX*100)+'%')>=0,'적 약화 상한이 상수와 다르다');
+        assert(/포인트/.test(tx)&&/초기화되지 않/.test(tx),'도움말에 핵심 규칙이 없다');
+        // ✍ **시스템만 짧게**(2026-09-04 사용자 확정) — 세부 수치는 그 별을 고르면 시트가 말한다.
+        //   ⛔ 계열별 상한 같은 숫자를 도움말에 되돌리지 말 것 — 두 곳이 어긋나면 둘 다 안 믿는다.
+        assert(!/%/.test(tx),'도움말에 세부 수치가 되살아났다: '+tx.split(String.fromCharCode(10)).join(' / '));
+        { const li=h.querySelectorAll('.ctHelpLi li');
+          assert(li.length<=3,'도움말 줄이 늘었다('+li.length+') — 세 줄을 넘기지 않는다');
+          // 📏 **한 줄에 한 문장**(2026-09-04 사용자 확정) — 넘치면 문장을 짧게 끊는다(판을 넓히지 않는다).
+          const h1=li[0].getBoundingClientRect().height;
+          for(const e of li){ const r=e.getBoundingClientRect();
+            assert(r.height<=h1+1,'줄이 두 줄로 넘어갔다: '+e.textContent);
+            assert(e.scrollWidth<=e.clientWidth+1,'줄이 상자보다 넓다: '+e.textContent); }
+          // 강조(굵은 글씨)는 쓰지 않는다 — 줄이 셋뿐이라 강조할 것이 없다
+          assert(!h.querySelector('.ctHelpLi b,.ctHelpLi strong'),'도움말에 강조 글씨가 되살아났다');
+          // 닫기는 **공용 .actBtn** 한 벌만 쓴다(레지스트리) — 제 스타일을 다시 만들지 말 것
+          assert(h.querySelector('.ctHelpX.actBtn'),'닫기가 공용 액션 버튼이 아니다'); }
         campTreeHelp(false);
         assert(h.classList.contains('hide'),'도움말이 안 닫힌다'); }
+      // 🔤 단위는 **point** 한 낱말이다(2026-09-04 사용자 확정) — 상단 잔액도, 별의 비용 줄도.
+      //   ⛔ 「포인트」로 되돌리지 말 것 · ⛔ 비용 줄에 「보유 N」을 다시 붙이지 말 것(잔액은 상단이 이미 말한다).
+      // 🌟 「새로운 시작」 시트의 아이콘 = **지도의 그 별과 같은 그림**(2026-09-04 사용자 확정).
+      //   ⛔ ✦ 글리프로 되돌리지 말 것 — 별과 시트가 다른 얼굴이면 같은 것으로 안 읽힌다.
+      { campTreeTap('root');
+        const im=$('campTree').querySelector('.ctRow .ctIco img');
+        assert(im,'가운데 시트 아이콘이 그림이 아니다(글리프로 되돌아갔다)');
+        assert(/tree.root[.]webp$/.test(im.getAttribute('src')||''),
+          '가운데 시트가 지도의 별과 다른 그림을 쓴다: '+im.getAttribute('src'));
+        assert(im.naturalWidth>0,'가운데 시트 아이콘이 안 불러와진다');
+        campTreeDesel(); }
+      // 🧾 **시트는 「머리 한 줄 + 설명 + 버튼」** (2026-09-04 사용자 확정 · 목업 camp-tree-sheet-8 ④안).
+      //   ⛔ 원형 게이지·「2 / 5 단계」·금색 마름모·밑변 광원 버튼을 되살리지 말 것.
+      { campTreeTap('gather',1);
+        const sh=$('campTree').querySelector('.ctSheet');
+        assert(sh.querySelector('.ctRow'),'머리 한 줄(.ctRow)이 없다');
+        assert(!sh.querySelector('.ctRing'),'원형 게이지가 되살아났다');
+        assert(!sh.querySelector('.ctStage'),'「2 / 5 단계」 줄이 되살아났다');
+        assert(!sh.querySelector('.ctPay'),'옛 비용 줄이 되살아났다');
+        assert(!sh.querySelector('.ctRt'),'값이 머리 줄 오른쪽으로 되돌아갔다');
+        assert(!sh.querySelector('.ctPip'),'금색 마름모가 되살아났다');
+        // 차수 = **로마자 하나**
+        { const r=sh.querySelector('.ctRow .ctRom');
+          if(r){ const t=(r.textContent||'').trim();
+            assert(!/[0-9]/.test(t) && t.indexOf('단계')<0 && t.indexOf('/')<0,'차수가 로마자 하나가 아니다: '+t); } }
+        // 아이콘 틀은 **육각**(svg polygon) — ⛔ 원(circle)으로 되돌리지 말 것
+        { const ic=sh.querySelector('.ctRow .ctIco svg');
+          assert(ic && ic.querySelector('polygon'),'시트 아이콘 틀이 육각이 아니다'); }
+        // 🫧 시트는 **살짝 비친다** — 뒤의 별·성운이 아주 흐릿하게 보인다(2026-09-04 사용자 요청).
+        //   ⛔ 불투명으로 되돌리지 말 것 · ⛔ 흐림(backdrop-filter)을 빼지 말 것 —
+        //     흐림 없이 알파만 낮추면 뒤 별이 또렷하게 비쳐 글자와 겹친다.
+        { const cs=getComputedStyle(sh);
+          const bf=cs.backdropFilter||cs.webkitBackdropFilter||'';
+          assert(/blur/.test(bf),'시트에 흐림이 없다: '+bf);
+          // 배경 그라디언트의 알파가 1 이면 아무것도 안 비친다
+          const bg=String(cs.backgroundImage);
+          const al=[]; bg.replace(/rgba\(([^)]*)\)/g,function(_,v){ al.push(parseFloat(v.split(String.fromCharCode(44))[3])); });
+          assert(al.length>0,'시트 배경이 그라디언트가 아니다');
+          assert(Math.max.apply(null,al)<0.97,'시트가 불투명하다: 최대 알파 '+Math.max.apply(null,al)); }
+        // 버튼은 **공용 .actBtn** 한 벌 — 밑변 광원(::after)은 안 그린다
+        { const b=sh.querySelector('.ctBuy');
+          assert(b && b.classList.contains('actBtn'),'버튼이 공용 액션 버튼이 아니다');
+          const af=getComputedStyle(b,'::after');
+          assert(af.content==='none'||af.display==='none','버튼에 밑변 광원이 되살아났다'); }
+        campTreeDesel(); }
+      { const w=$('campTree').querySelector('.ctPtsWrap'); assert(w,'상단 포인트 줄이 없다');
+        const t=(w.innerText||'').trim();
+        assert(/point/.test(t)&&!/포인트/.test(t),'상단 단위가 point 가 아니다: '+t); }
+      // 🚫 「가운데를 눌러 시작」 힌트도 걷었다 — 아무것도 안 고른 상태의 시트는 비어 있어야 한다
+      { campTreeFit(true);
+        const sh=$('campTree').querySelector('.ctSheet');
+        assert(!/눌러/.test(sh.innerText||''),'힌트 줄이 되살아났다: '+(sh.innerText||'').trim()); }
+      // 💠 값의 자리는 **버튼 안 오른쪽 끝**이다(2026-09-04 사용자 확정 · 목업 buycost-4 ②안).
+      //   ⛔ 머리 줄 오른쪽으로 되돌리지 말 것 — 시선이 내려가는 길에서 비켜 있어 안 보였다.
+      //   ⛔ 「보유 N」을 되돌리지 말 것 — 잔액은 상단 줄(.ctPts)이 이미 늘 띄운다.
+      // ⚠ **아직 안 산 차수**를 골라야 한다 — 이미 산 별은 낼 값이 없어 값 칸이 없다(정상).
+      { campTreeTap('gather',3);
+        const sh=$('campTree').querySelector('.ctSheet');
+        assert(!sh.querySelector('.ctRt'),'값이 머리 줄로 되돌아갔다');
+        const br=sh.querySelector('.ctBuy .ctBr'); assert(br,'버튼 안에 값이 없다');
+        const t=(br.innerText||'').trim();
+        assert(t.indexOf('point')>=0,'값 옆 단위가 point 가 아니다: '+t);
+        assert(t.indexOf('보유')<0,'값 옆에 보유 잔액이 되살아났다: '+t);
+        // 📐 양끝 — 값은 버튼 **오른쪽 끝**에 붙는다(왼쪽 글자 길이가 달라져도 안 흔들리게)
+        { const b=sh.querySelector('.ctBuy').getBoundingClientRect(), r=br.getBoundingClientRect();
+          assert(b.right-r.right<24,'값이 버튼 오른쪽 끝에 안 붙었다: '+Math.round(b.right-r.right)+'px'); }
+        campTreeDesel(); }
       campTreeTap('gather',3);
       assert(!$('campTree').querySelector('.ctPerm'),
         '별 시트에 공통 꼬리표가 되살아났다 — 규칙은 도움말(?)에 둔다');
@@ -5054,7 +5405,7 @@ async function groupLobby(){
     G.tech.ents.push({ eid:bEid, type:'bldg', bk:'bunker', x:hq.x, y:Math.max(0.05,hq.y-0.18), w:2, h:2, bt:0 });
     CAMPB=null; campCombatStep(0.05);
     campWipeField();
-    const bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
+    let bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
     assert(bunk,'벙커가 전장에 안 올라왔다 — campBuildStructs 가 못 봤다');
     const crew=[]; for(let i=0;i<6;i++) crew.push(campDeploy('machinegun', 0.34+(i%3)*0.03, 0.50));
     CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
@@ -5067,6 +5418,9 @@ async function groupLobby(){
       assert(inB.length>0,'10초 만에 탑승이 풀렸다');
       const far=inB.filter(u=>Math.hypot(u.x-bunk.x,u.y-bunk.y)>80);
       assert(!far.length,'탄 유닛이 벙커에서 떨어져 나갔다: '+far.length+'기'); }
+    // ⚠ 10초 사이에 라운드가 넘어갔으면 campRoundRevive 가 전장 건물을 **새로 만든다** —
+    //   옛 참조를 그대로 쓰면 「벙커가 대신 안 받았다」로 헛되이 넘어진다(2026-09-04 초반 램프로 드러났다).
+    bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker')||bunk;
     // ③ 피해는 벙커가 받는다 — 탄 유닛을 때려도 체력이 안 줄고 벙커가 준다
     { const u=CAMPB.me.units.find(x=>!x.dead&&campInBunker(x));
       assert(u,'탄 유닛이 없다');
@@ -5841,8 +6195,12 @@ async function groupLobby(){
     try{
       // ① 표 불변식 — 정수 · 문턱이 안 내려간다 · 50R 배수가 안 줄어든다
       for(let d=0; d<=CAMP_DG_MAX; d++){ const t=CAMP_MINE[d];
-        assert(Number.isInteger(t.base) && Number.isInteger(t.x), 'CAMP_MINE['+d+'] 가 정수가 아님');
-        assert(Number.isInteger(t.base*t.x), 'CAMP_MINE['+d+'] 50클리어 배율이 정수가 아님');
+        // ⚠ **던전 1 만 예외**다(2026-09-04 사용자 확정) — 진입 ×1.5 · x=4/3 이라 정수가 아니다.
+        //   진입값이 ×1 이면 선택 화면에서 「내려가도 이득이 없다」로 읽혀서 올렸다(HUNT_R1 §6-1-0-1).
+        if(d===1){ assert(Math.abs(t.base-1.5)<1e-9,'던전 1 진입이 ×1.5 가 아님: '+t.base);
+          assert(Math.abs(t.base*t.x-2)<1e-9,'던전 1 50클리어가 ×2.0 이 아님: '+(t.base*t.x)); }
+        else { assert(Number.isInteger(t.base) && Number.isInteger(t.x), 'CAMP_MINE['+d+'] 가 정수가 아님');
+          assert(Number.isInteger(t.base*t.x), 'CAMP_MINE['+d+'] 50클리어 배율이 정수가 아님'); }
         if(d>1){ const prev=CAMP_MINE[d-1], step=t.base/(prev.base*prev.x);
           assert(step>1, '단계 '+d+' 문턱에서 배율이 안 오른다: '+(prev.base*prev.x)+' → '+t.base);
           assert(step<=2, '단계 '+d+' 문턱이 2배를 넘는다: '+step.toFixed(2));
@@ -5853,11 +6211,12 @@ async function groupLobby(){
       assert(campMineMul()===1, '캠프 배율이 1이 아님: '+campMineMul());
       // ③ 라운드는 **클리어할 때마다** 붙는다 — 50라운드면 50번(49번이 아니다)
       campEnterDungeon(1);
-      assert(campRoundN()===1 && campMineMul()===1, '던전 1 진입값이 틀림');
+      // 던전 1 = **1.5 에서 시작 · 라운드마다 +0.01 · 50라운드에 2.0**(2026-09-04 사용자 확정)
+      assert(Math.abs(campMineMul()-1.5)<1e-9, '던전 1 진입값이 ×1.5 가 아님: '+campMineMul());
       campClearRound();
-      assert(Math.abs(campMineMul()-1.02)<1e-9, '1라운드 클리어 뒤 배율: '+campMineMul()+' (기대 1.02)');
+      assert(Math.abs(campMineMul()-1.51)<1e-9, '1라운드 클리어 뒤 배율: '+campMineMul()+' (기대 1.51)');
       for(let i=0;i<48;i++) campClearRound();          // 누계 49회
-      assert(Math.abs(campMineMul()-1.98)<1e-9, '49회 클리어 배율: '+campMineMul()+' (기대 1.98)');
+      assert(Math.abs(campMineMul()-1.99)<1e-9, '49회 클리어 배율: '+campMineMul()+' (기대 1.99)');
       // ④ 50회째를 깨면 **다음 던전으로 자동** — 그 순간 배율은 다음 던전 진입값
       campClearRound();
       assert(campDgN()===2 && campRoundN()===1, '50 클리어인데 자동 이동 안 함: '+campDgN()+'-'+campRoundN());
@@ -6173,7 +6532,10 @@ async function groupLobby(){
       assert((campFoeDiff(1,49)/campFoeDiff(1,0)) > (m1/m0)*10,
         '50라운드에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
       // ④ 마리 수 — 라운드가 오르면 잘게 쪼갠다. 상한 100
-      assert(campFoeCount(1)===3,'1라운드 마리 수: '+campFoeCount(1));
+      //   ⚠ 던전 1 의 초반만 **램프**가 마리 수도 함께 줄인다(campFoeEasy · 2026-09-04) — R1 은 1마리다.
+      //     그 램프를 안 타는 자리(던전 2)에서 원래 값 3 을 확인한다.
+      C.dg=2; assert(campFoeCount(1)===3,'램프 밖 1라운드 마리 수: '+campFoeCount(1));
+      C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 램프로 1마리가 아님: '+campFoeCount(1));
       assert(campFoeCount(50)===CAMP_FOE_NMAX,'50라운드가 상한이 아님: '+campFoeCount(50));
       assert(campFoeCount(999)<=CAMP_FOE_NMAX,'마리 수가 상한을 넘음');
       // ⑤ campScaleFoes 는 무리의 **총 체력**을 목표에 맞추되 유닛별 차이를 남긴다
@@ -7109,15 +7471,24 @@ async function groupLobby(){
     _hb.char.x=sv.x; _hb.char.y=sv.y; hbResize();
     assert(inside-outside>=6,'회복 구역이 배경에 덮여 안 보인다(초록 차 '+(inside-outside)+') — hbDrawHeal이 hbFloor보다 먼저 그려졌는지 확인');
     return '초록 차 '+(inside-outside); });
-  // 재화 바 — + 버튼은 숫자에 붙어 있어야 한다(멀면 어느 재화의 +인지 헷갈린다)
-  await step('재화 바: + 버튼이 숫자에 붙어 있다', async()=>{
+  // 재화 바 — 🗄 [+] 는 **화면에서 뺐다**(2026-09-04 · 좌상단 칩에 자리를 내주려고).
+  //   ⛔ 되살아나면 잡는다 — 되살릴 땐 이 계약을 함께 뒤집을 것(옛 규칙: 숫자와 0~3px 붙어 있어야 한다).
+  await step('재화 바: [+] 를 뺐고 · 아이콘이 한 단 작다', async()=>{
     const res=document.querySelector('#curBar .res'); skipIf(!res,'재화 바 없음');
     curShow(true);
-    const num=res.querySelector('b'), plus=res.querySelector('.curPlus');
-    skipIf(!num||!plus||!num.getClientRects().length,'표시 안 됨');
-    const gap=plus.getBoundingClientRect().left-num.getBoundingClientRect().right;
-    assert(gap>=0 && gap<=3,'숫자와 + 사이가 '+gap.toFixed(1)+'px — 0~3px여야 한다');
-    return gap.toFixed(1)+'px'; });
+    // [+] 는 **젬에만** 있다(2026-09-04) — 젬은 사는 재화라 그 자리가 필요하고, 미네랄·가스는 뺐다.
+    { const plus=[...document.querySelectorAll('#curBar .curPlus')];
+      assert(plus.length===1,'[+] 가 하나가 아니다(젬에만 있어야 한다): '+plus.length);
+      assert(plus[0].parentElement.querySelector('b').id==='curGem','[+] 가 젬이 아닌 재화에 붙어 있다'); }
+    // 💎 젬은 미네랄·가스 다음, 🧍 인구는 맨 오른쪽(2026-09-04 사용자 확정)
+    { const ids=[...document.querySelectorAll('#curBar .res b')].map(b=>b.id);
+      assert(ids.join(',')==='curMin,curGas,curGem,curPop','재화 차례가 다르다: '+ids.join(',')); }
+    const ri=res.querySelector('img.ri'); skipIf(!ri||!ri.getClientRects().length,'표시 안 됨');
+    const w=ri.getBoundingClientRect().width;
+    assert(Math.abs(w-12)<=0.6,'재화 아이콘이 12px 이 아니다: '+w.toFixed(1));
+    // ⚠ 12px 아래로는 미네랄·가스 그림이 서로 구분이 안 된다 — 더 줄이지 말 것
+    assert(w>=11.5,'재화 아이콘이 너무 작다(미네랄·가스가 구분이 안 된다): '+w.toFixed(1));
+    return '아이콘 '+w.toFixed(0)+'px · [+] 없음'; });
   // 웨이브 시간 안에 못 비우면 실패 → 3초 뒤 1웨이브부터. 라운드는 안 내려간다(죽음과 다르다).
   await step('웨이브 실패: 시간 초과 → 3초 뒤 1웨이브 · 가운데 · 최대 체력', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)'); 
     skipIf(typeof hbWaveFail!=='function','실패 처리 없음');
@@ -11571,9 +11942,11 @@ async function groupLobby(){
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
-      assert(reb && reb.subs.length===2,'환생 하위 칸(정보·업그레이드)이 없음');
-      // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「업그레이드」(환생 트리)
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,업그레이드','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb && reb.subs.length===2,'환생 하위 칸(환생·환생 트리)이 없음');
+      // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
+      //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
+      //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.
@@ -11626,6 +11999,19 @@ async function groupLobby(){
     //   판·왼쪽 광원 띠·라벨은 좌상단만 하단 구역과 색·재질이 갈리게 하던 것들이다.
     for(const cls of ['.cdRail','.cdBody','.cdSub','.cdLab'])
       assert(!t.querySelector(cls),'옛 두 줄 부품 '+cls+' 가 되살아났다');
+    // ①-2-1 🔁 **다른 화면에 갔다 와도 칩이 다시 그려진다**(2026-09-04 사용자 신고).
+    //   curSetTitle 이 칩 내용을 글자로 덮는데 캐시 키(_cdKey)가 남아 있으면 curPaintChip 이
+    //   「값이 안 바뀌었다」고 보고 다시 안 그려 **좌상단이 빈 채로 남았다**(유즈맵·상점 왕복).
+    { const on0=window.campIsOn, st0=window.campState;
+      window.campIsOn=()=>true; window.campState=()=>({dg:3, cleared:26});
+      curPaintChip();
+      curSetTitle('상점');                                   // 다른 화면 — 칩이 글자로 바뀐다
+      assert(t.textContent==='상점' && !t.querySelector('.cdNm'),'제목이 글자로 안 바뀜: '+t.innerHTML);
+      curPaintChip();                                        // 캠프 복귀
+      const ok=t.querySelector('.cdNm') && t.textContent.indexOf('/')>0;
+      window.campIsOn=on0; window.campState=st0;
+      assert(ok,'다른 화면에 갔다 왔더니 칩이 빈 채로 남았다: "'+t.textContent+'"');
+      t.classList.add('asChip'); t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10}); }
     // ①-3 라벨은 화면에서 뺐지만 **읽어 주는 말에는 남는다**(정보까지 잃으면 안 된다)
     { const on0=window.campIsOn, st0=window.campState;
       window.campIsOn=()=>true; window.campState=()=>({dg:3, cleared:26});
@@ -11651,6 +12037,14 @@ async function groupLobby(){
       assert(a.length<4 || a[3]<=0.05,'칩에 면이 생겼다 — 좌상단은 판이 아니라 글자다: '+cs.backgroundColor);
       assert(parseFloat(cs.borderTopWidth)===0,'칩에 테두리가 생겼다 — 판을 되돌리면 안 된다');
       assert(/drop-shadow/.test(cs.filter||''),'칩이 그림자로 안 떠 있다 — 밝은 배경에서 글자가 묻힌다');
+      // ⬆ 글자 크기 — 기본은 12.5/14 다(재화 줄에서 [+] 를 빼고 자리를 만들어 키웠다).
+      //   ⚠ **캠프에서는 한 단 작다**(11/12) — 프로필 이름(11.5)보다 칩이 커서 눈이 아래로 먼저 갔다
+      //     (2026-09-04 사용자 확정 · 목업 camp-topleft-8 ⑦안). 그 검사는 아래 프로필 스텝이 맡는다.
+      { const ph=$('phone'), had=ph.classList.contains('campMode'); ph.classList.remove('campMode');
+        const nm=parseFloat(getComputedStyle(t.querySelector('.cdNm')).fontSize);
+        const n2=parseFloat(getComputedStyle(t.querySelector('.cdN')).fontSize);
+        ph.classList.toggle('campMode', had);
+        assert(Math.abs(nm-12.5)<0.1 && Math.abs(n2-14)<0.1,'칩 글자 크기가 12.5/14 가 아니다: '+nm+'/'+n2); }
       // ⛔ **청록을 되돌리지 말 것.** 글자는 흰색이고 진행선만 하단 비용색(붉은색)이다 —
       //   좌상단만 색이 갈려 하단 구역과 안 어울리던 것이 이 디자인의 이유다.
       const c=(getComputedStyle(n2).color.match(/[\d.]+/g)||[]).map(Number);
@@ -11706,7 +12100,10 @@ async function groupLobby(){
       if(was) curShow(false);
       assert(o1<=0,'재화 6자리에서 ☰ 가 화면 밖으로 '+o1.toFixed(1)+'px 나갔다(칩 '+w1.toFixed(0)+'px)');
       assert(o2<=0,'재화 지수 표기에서 ☰ 가 화면 밖으로 '+o2.toFixed(1)+'px 나갔다(칩 '+w2.toFixed(0)+'px)');
-      assert(w2<w1,'재화가 커졌는데 칩이 안 줄었다 — 줄어들지 않으면 언젠가 ☰ 를 민다');
+      // ⚠ 「재화가 커지면 칩이 줄어든다」는 계약은 뺐다(2026-09-04) — [+] 를 없애고 아이콘을 줄여
+      //   자리가 남으면서, 지수 표기에서도 칩이 안 줄어도 되게 됐다. **지켜야 할 성질은 위 두 줄**이다:
+      //   재화가 아무리 길어져도 ☰ 가 화면 안(o1·o2 ≤ 0)이고, 좁아지면 이름이 말줄임된다(아래 nmOv).
+      assert(w2<=w1,'재화가 커졌는데 칩이 오히려 넓어졌다: '+w1.toFixed(0)+' → '+w2.toFixed(0));
       assert(nmOv.o==='hidden' && nmOv.t==='ellipsis',
         '칩이 줄어들 때 던전 이름이 안 잘린다 — 글자가 칩을 뚫고 나간다(overflow-x '+nmOv.o+' / '+nmOv.t+')');
       // 칩을 다시 세워 아래 검사가 이어지게 한다
@@ -11771,7 +12168,8 @@ async function groupLobby(){
         assert(get('던전 배수')===want,'던전 배수가 표와 안 맞음: '+get('던전 배수')+' (기대 '+want+')'); }
       // ② 던전을 옮기면 값이 따라간다(두 곳에서 각자 계산하면 여기서 갈린다)
       prof.camp.dg=1; const m2=_campIdleModel();
-      assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.0','던전을 바꿨는데 배수가 그대로');
+      // 던전 1 진입 = ×1.5(2026-09-04 사용자 확정 · 옛 ×1.0)
+      assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.5','던전을 바꿨는데 배수가 그대로: '+m2.info.stats.find(x=>x[0]==='던전 배수')[1]);
       prof.camp.dg=3;
       // ③ 실제로 그려진다 — 공용 렌더러(renderCmdGrid)를 쓴다(새 카드를 만들지 않는다)
       renderCampIdleSheet(box);
@@ -11953,6 +12351,363 @@ async function groupLobby(){
 
   // 🏕 던전·라운드 드롭다운(2026-08-25) — 칩을 누르면 칩 아래로 자란다.
   //   ⚠ 캠프 화면은 3D 라 여기서 못 띄운다 → 캠프 상태만 흉내 내고 **판 자체**를 검사한다.
+  // 🌒 좌상단 그늘 — 캠프는 바닥이 밝은 돌이라 판 없는 글자가 묻힌다. 판을 만들지 않고
+  //   **화면 맨 위에서 내려오는 그늘** 한 겹으로 읽히게 한다(2026-09-04 · 목업 camp-chip-scrim-4 4안).
+  // ⚙ 오른쪽 위 버튼 — 캠프 맵은 ☰(더보기), 캠프 **구역**(환생·트리·룬)과 그 밖 화면은 톱니(설정).
+  //   ! 는 ☰ 에만 붙고, 구역에서 톱니를 누르면 **설정이 구역 위로** 떠야 한다(2026-09-04 사용자 신고 둘).
+  await step('오른쪽 위: 톱니에는 ! 가 없고 · 구역에서 설정이 열린다', async()=>{
+    const bar=$('curBar'), btn=$('curSettingsBtn'), dot=$('hbGrowDot'), ph=$('phone');
+    skipIf(!bar||!btn||!dot,'재화 바 없음');
+    const wasHide=bar.classList.contains('hide'), camp0=ph.classList.contains('campMode'), art0=ph.classList.contains('artLift');
+    try{
+      curShow(true); dot.classList.add('show');
+      // ① 캠프 맵 = ☰ + ! 가 보인다
+      ph.classList.add('campMode'); ph.classList.remove('artLift');
+      assert(getComputedStyle(dot).display!=='none','캠프 맵인데 ! 가 안 보인다 — 더보기 신호가 사라졌다');
+      // ② 캠프 구역 = 톱니 + ! 없음
+      ph.classList.add('artLift');
+      assert(getComputedStyle(dot).display==='none','톱니에 ! 가 붙어 있다 — 설정에는 알릴 것이 없다');
+      // ③ 유즈맵·상점(캠프 밖) = 톱니 + ! 없음
+      ph.classList.remove('campMode','artLift');
+      assert(getComputedStyle(dot).display==='none','캠프 밖 톱니에 ! 가 붙어 있다');
+      // ④ 구역에서 오른쪽 위를 누르면 **설정**이 열리고, 구역(z 120) 위에 뜬다
+      if(typeof hudTopMenu==='function' && $('settingsPop')){
+        ph.classList.add('campMode','artLift');
+        hudTopMenu('app'); await sleep(40);
+        const sp=$('settingsPop');
+        assert(!sp.classList.contains('hide'),'구역에서 톱니를 눌렀는데 설정이 안 열린다(더보기로 샜다)');
+        assert(parseInt(getComputedStyle(sp).zIndex,10)>120,'설정이 구역(z 120) 뒤에 열린다: z '+getComputedStyle(sp).zIndex);
+        if(typeof closeSettings==='function') closeSettings(); await sleep(40); }
+      return '☰=!  · 톱니=! 없음 · 구역에서 설정 열림';
+    } finally { dot.classList.remove('show');
+      ph.classList.toggle('campMode', camp0); ph.classList.toggle('artLift', art0);
+      if(wasHide) curShow(false); }
+  });
+
+  // 🧑 좌상단 프로필 상자 — 초상(정사각) · 이름 · 레벨 · 경험치. 칩은 그 아래 줄이다.
+  // 🎓 강제 튜토리얼 — 대상만 열고 나머지는 막는다. 진행도는 **게임 상태에서 직접 읽는다**.
+  //   ⚠ 검사 내내 꺼 두므로(runSmoke 첫 줄) 여기서만 잠깐 켠다.
+  await step('강제 튜토리얼: 대상만 열리고 · 진행도가 상태를 따라간다', async()=>{
+    skipIf(typeof tutoPaint!=='function','튜토리얼 없음');
+    const ph=$('phone'), S=(typeof guideState==='function')?guideState():null;
+    skipIf(!S,'가이드 상태 없음');
+    const on0=window.campIsOn, off0=TUTO_OFF, t0=S.t, base0=S.base, skip0=S.skip;
+    try{
+      window.campIsOn=()=>true; TUTO_OFF=false; S.t=0; S.base=null; delete S.skip;
+      var _cm0=ph.classList.contains('campMode'); ph.classList.add('campMode');
+      tutoPaint();
+      // 표 자체는 화면이 없어도 잰다 — 단계마다 **제 진행도**를 갖는 것이 이 설계의 핵심이다
+      assert(TUTO_STEPS[0].goal===1,'첫 단계가 1번이 아니다: '+TUTO_STEPS[0].goal);
+      assert(TUTO_STEPS[1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[1].goal);
+      assert(TUTO_STEPS.length>=6,'단계표가 너무 짧다: '+TUTO_STEPS.length);
+      const ov=$('tutoOv');
+      // 대상(채굴 칸)이 화면에 있어야 스포트라이트가 뜬다 — 없으면 이 검사는 건너뛴다
+      const tgt=document.querySelector('[data-minemode]');
+      skipIf(!ov||!tgt||!tgt.getClientRects().length,'캠프 하단이 안 떠 있음');
+      // ① 링이 대상을 감싼다
+      const R=ov.querySelector('.tuRing').getBoundingClientRect(), Tg=tgt.getBoundingClientRect();
+      assert(R.left<=Tg.left+1 && R.right>=Tg.right-1 && R.top<=Tg.top+1 && R.bottom>=Tg.bottom-1,
+        '스포트라이트가 대상을 안 감싼다');
+      // ② 대상 밖은 막고 · 대상은 통과한다(네 판이 입력을 먹는다)
+      const pr=ph.getBoundingClientRect();
+      const out=document.elementFromPoint(pr.left+pr.width*0.5, pr.top+pr.height*0.35);
+      const inn=document.elementFromPoint(Tg.left+Tg.width/2, Tg.top+Tg.height/2);
+      assert(out && out.closest && out.closest('.tutoOv'),'대상 밖이 안 막힌다 — 완전 강제가 깨졌다');
+      assert(inn && inn.closest && inn.closest('[data-minemode]'),'대상이 안 눌린다 — 스포트라이트가 대상까지 덮었다');
+      // ③ 두 진행도 — 왼쪽은 몇 단계째, 오른쪽은 이번 단계의 진행
+      assert(/^1 \/ \d+$/.test(ov.querySelector('.tuStep').textContent),'왼쪽이 단계 표시가 아니다: '+ov.querySelector('.tuStep').textContent);
+      assert(ov.querySelector('.tuN').textContent==='0 / 1','첫 단계 진행이 0 / 1 이 아니다: '+ov.querySelector('.tuN').textContent);
+      // ④ 말풍선이 **대상 근처**에 있다(화면 끝에 두면 눈이 두 번 움직인다)
+      { const tip=ov.querySelector('.tuTip').getBoundingClientRect();
+        const d=Math.min(Math.abs(tip.top-Tg.bottom), Math.abs(Tg.top-tip.bottom));
+        assert(d<=40,'말풍선이 대상에서 멀다: '+d.toFixed(0)+'px'); }
+      // ⑤ 다음 단계는 goal 이 10 이다(광맥 두드리기) — 단계마다 제 진행도를 갖는다
+      assert(TUTO_STEPS[1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[1].goal);
+      // ⑥ 🚪 **직접 켜 보는 자리**가 있다(2026-09-04 사용자 요청) — 가이드 시트 맨 위 줄.
+      //   ⛔ 그만두기를 빼지 말 것: 튜토리얼은 화면을 덮으므로 켠 사람이 나올 길이 필요하다.
+      assert(typeof tutoRestart==='function' && typeof tutoStop==='function','튜토리얼을 켜고 끄는 입구가 없다');
+      { S.t=TUTO_STEPS.length; S.skip=1; if(typeof openGuide==='function') openGuide();
+        const row=document.querySelector('.gqTuto');
+        assert(row,'가이드 시트에 튜토리얼 줄이 없다');
+        assert(row.querySelector('.gqTutoGo'),'「해 보기」 버튼이 없다');
+        tutoRestart();
+        assert(tutoIdx()===0 && !S.skip,'다시 하기가 처음으로 안 돌린다: t='+S.t+' skip='+S.skip);
+        tutoStop();
+        assert(S.skip===1 && !$('tutoOv'),'그만두기가 안 먹는다');
+        if(typeof closeGuide==='function') closeGuide(); }
+      return '단계 '+TUTO_STEPS.length+' · 대상만 열림 · 0/1 → 0/10';
+    } finally { window.campIsOn=on0; TUTO_OFF=off0; S.t=t0; S.base=base0;
+      if(skip0!=null) S.skip=skip0; else delete S.skip;
+      ph.classList.toggle('campMode', _cm0); tutoPaint(); }
+  });
+
+  // ⛽ 가스 자리 — 안 보이는 금지 구역이 없어야 하고, 짓는 자리와 그림이 짝을 이뤄야 한다.
+  await step('캠프 가스: 안 보이는 금지 구역 없음 · 짓는 자리는 그림보다 한 칸 아래', async()=>{
+    skipIf(typeof CAMP_GAS2_ON==='undefined'||typeof TECH_GAS==='undefined','가스 구역 없음');
+    // ① 🚧 오른쪽 가스를 끈 동안에는 **그 자리를 막지 않는다** — 화면에 아무것도 없는데 건설이
+    //   막히던 버그(2026-09-04 사용자 신고). 판정을 감싸는 패치 자체가 안 걸려야 한다.
+    if(!CAMP_GAS2_ON) assert(!_campGasPatched,
+      '오른쪽 가스가 꺼졌는데 판정 패치가 걸려 있다 — 맵에 없는 자리가 건설 금지로 남는다');
+    // ② ⬇ 짓는 자리(TECH_GAS.r0)와 그림 보정(--gzDY)은 **짝이다** — 하나만 바꾸면 그림이 통째로 움직인다.
+    //   부지 높이가 2칸이라 한 칸 = 50%p. 기본 −27% 는 「반 칸 내림(23%) − 한 칸(50%p)」이다.
+    assert(CAMP_GAS_ROW_OFF===1,'가스 부지 오프셋이 1칸이 아니다: '+CAMP_GAS_ROW_OFF);
+    { let ok=false;
+      for(const ss of document.styleSheets){ try{
+        for(const r of ss.cssRules){ if(!r.selectorText||!/gzSpr/.test(r.selectorText)) continue;
+          const t=(r.style&&r.style.transform)||'';
+          if(/--gzDYs*,s*-27%/.test(t)) ok=true; } }catch(_e){} }
+      assert(ok,'그림 보정 기본값이 −27% 가 아니다 — 부지를 한 칸 내렸으면 그림도 그만큼 되올려야 제자리다'); }
+    return (CAMP_GAS2_ON?'오른쪽 켜짐':'오른쪽 꺼짐 · 금지 구역 없음')+' · 부지 −'+CAMP_GAS_ROW_OFF+'칸';
+  });
+
+  // ❤ 전장 HP 바 — 맞으면 화면에서 체력이 닳는 것이 보여야 한다(2026-09-04 사용자 요청).
+  await step('캠프 전장: 맞으면 화면에서 체력이 닳는다 (HP 바)', async()=>{
+    skipIf(typeof campBattleBars!=='function'||typeof campDeploy!=='function','전장 HP 바 없음');
+    const C=campState(); const back={dg:C.dg, cleared:C.cleared};
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      const u=campDeploy('marine', 0.5, CAMP_LINE_GY);
+      assert(u,'유닛을 못 세웠다');
+      const parse=(s)=>{ const d=document.createElement('div'); d.innerHTML=s;
+        return [...d.querySelectorAll('.bentBar')].map(b=>{ const i=b.querySelector('.uH i');
+          return { w:i?i.style.width:'', col:i?i.style.background:'' }; }); };
+      // ① **가득 찬 것은 안 그린다** — 수십 기가 늘 바를 달고 있으면 화면이 바 투성이가 된다
+      u.hp=u.maxHp;
+      { const bars=parse(campBattleBars());
+        assert(!bars.some(b=>/^100/.test(b.w)),'가득 찬 것에도 바가 그려진다'); }
+      // ② 맞으면 그 비율로 뜬다
+      u.hp=u.maxHp*0.4;
+      { const bars=parse(campBattleBars());
+        const hit=bars.find(b=>Math.abs(parseFloat(b.w)-40)<1);
+        assert(hit,'40% 로 깎았는데 그 바가 없다: '+bars.map(b=>b.w).join(',')); }
+      // ③ 건물도 같은 규칙 — 적이 건물을 때리면 보여야 한다
+      { const b0=(CAMPB._bld||[]).find(x=>x&&!x.dead);
+        skipIf(!b0,'전장에 건물이 없다');
+        const mx=b0.maxHp||b0.max; b0.hp=mx*0.5;
+        const bars=parse(campBattleBars());
+        assert(bars.some(b=>Math.abs(parseFloat(b.w)-50)<1),'건물 바가 안 그려진다');
+        b0.hp=mx; }
+      // ④ 적은 붉은색 — 오토배틀(10-engine.js)과 같은 규약이라 아군과 눈으로 갈린다
+      { const f=(CAMPB.ai&&CAMPB.ai.units||[]).find(x=>x&&!x.dead);
+        if(f && f.maxHp>0){ f.hp=f.maxHp*0.5;
+          const bars=parse(campBattleBars());
+          assert(bars.some(b=>/255,\s*90,\s*90|ff5a5a/i.test(b.col)),
+            '적 바가 붉지 않다: '+bars.map(b=>b.col).join(' | ')); } }
+      return '가득참 숨김 · 깎이면 그 비율 · 건물 포함 · 적은 붉은색';
+    } finally { C.dg=back.dg; C.cleared=back.cleared; campBattleClose(); }
+  });
+
+  // 🍼 초반 램프 — R1 을 깨지는 크기로 낮추되 **후반과 환생 보상은 건드리지 않는다**.
+  await step('캠프 초반 램프: R1 은 쉽고 · 마지막 라운드에서 합류하고 · 환생 포인트는 그대로', async()=>{
+    skipIf(typeof campFoeEasy!=='function','초반 램프 없음');
+    // ① 던전 1 의 R1 이 가장 쉽고, R10 에서 원래 곡선에 합류한다
+    assert(campFoeEasy(1,1)<0.3,'R1 이 안 쉽다: '+campFoeEasy(1,1));
+    assert(campFoeEasy(1,CAMP_EASY_END)===1,'R'+CAMP_EASY_END+' 에서 합류하지 않는다: '+campFoeEasy(1,CAMP_EASY_END));
+    // ⭐ 끝점은 던전의 **마지막 라운드**여야 한다 — 그래야 던전 1 R50 에서 ×1 로 만나고
+    //   던전 2 로 넘어가는 벽이 지금과 같다(문턱 ×3 그대로). 끝점이 그보다 앞이면 던전 1 후반이
+    //   제 난이도로 돌아와 「전체적으로 낮춘다」가 깨지고, 뒤면 R50 이 쉬운 채로 던전 2 를 만난다.
+    assert(CAMP_EASY_END===CAMP_ROUND_MAX,'램프 끝점이 던전 마지막 라운드가 아니다: '+CAMP_EASY_END);
+    assert(campFoeEasy(1,CAMP_ROUND_MAX)===1,'던전 1 마지막 라운드가 ×1 이 아니다 — 던전 2 벽이 커진다');
+    assert(campFoeEasy(1,CAMP_ROUND_MAX+10)===1,'라운드 상한 밖에서 램프가 되살아난다');
+    { let prev=0; for(let r=1;r<=CAMP_EASY_END;r++){ const v=campFoeEasy(1,r);
+        assert(v>=prev,'램프가 도로 내려간다: R'+r+' = '+v); prev=v; } }
+    // ② **던전 1 에만** 건다 — 모든 던전에 걸면 옮길 때마다 쉬운 구간이 생겨 곡선이 톱니가 된다
+    assert(campFoeEasy(2,1)===1,'던전 2 에도 램프가 걸렸다 — 곡선이 톱니가 된다');
+    assert(campFoeEasy(0,1)===1,'캠프(0)에 램프가 걸렸다');
+    // ③ ⛔ 난이도 자체(campFoeDiff)에 곱하면 **환생 포인트**가 같이 깎인다(campRebMul 이 그 값을 읽는다)
+    { const f0=window.campFoeEasy; try{ window.campFoeEasy=()=>0.5;
+        assert(campFoeDiff(1,0)===1,'램프가 campFoeDiff 로 샜다 — 초반 환생 포인트가 깎인다');
+      } finally { window.campFoeEasy=f0; } }
+    return 'R1 ×'+campFoeEasy(1,1)+' → R'+CAMP_EASY_END+' ×1 · 던전 1 전용 · 보상 영향 없음';
+  });
+
+  // 🏗 건물 짓기 단계 — 「채굴 끄기 → 일꾼 지정 → 카드 → 배치」가 한 동작에 한 단계여야 한다.
+  //   ⚠ 화면 없이 잰다(캠프 하단은 스모크에서 높이 0 이라 카드를 못 띄운다) — 대신 **표와 셀렉터**를
+  //     실제 건설 카드 마크업(techBuildListModel)과 맞춰 본다. 실주행은 scripts/tuto-run.mjs 가 한다.
+  await step('튜토리얼: 건물 짓기가 손동작 단위로 갈라져 있다', async()=>{
+    skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_BLD==='undefined','튜토리얼 없음');
+    const ids=TUTO_STEPS.map(s=>s.id);
+    for(const need of ['coinB','mineOff','pickWk','armB1','placeB1','deselWk','selB1','unit',
+                       'dgOpen','dgPick','dgGo'])
+      assert(ids.indexOf(need)>=0,'단계가 없다: '+need);
+    // 순서 — 돈을 다 모은 **뒤에** 채굴을 끈다(끄고 나면 두드려 벌 수가 없다)
+    const at=(k)=>ids.indexOf(k);
+    assert(at('coinB')<at('mineOff'),'채굴을 끄고 나서 돈을 모으라고 한다 — 두드릴 수가 없다');
+    assert(at('mineOff')<at('pickWk') && at('pickWk')<at('armB1') && at('armB1')<at('placeB1'),
+      '건물 단계 순서가 어긋났다: '+ids.join(' → '));
+    // 🧹 짓고 → 지정 풀고 → 건물 지정하고 → 뽑는다. 한 단계에 두 동작을 넣으면 거기서 멈춘다.
+    assert(at('placeB1')<at('deselWk') && at('deselWk')<at('selB1') && at('selB1')<at('unit'),
+      '유닛 단계 순서가 어긋났다: '+ids.join(' → '));
+    // 🗺 던전 이동도 셋 — 목록을 열고 · 고르고 · 「이동」 을 누른다(고르기에서 끝내면 화면이 열린 채 남는다)
+    assert(at('unit')<at('dgOpen') && at('dgOpen')<at('dgPick') && at('dgPick')<at('dgGo'),
+      '던전 단계 순서가 어긋났다: '+ids.join(' → '));
+    assert(TUTO_DG===1,'캠프(0) 다음은 던전 1 이다 — 지금 표는 '+TUTO_DG);
+    assert(TUTO_STEPS[at('dgGo')].id==='dgGo' && at('dgGo')===ids.length-1,
+      '「이동」 이 마지막 단계가 아니다 — 튜토리얼이 그 뒤로 이어진다');
+    // 종족 — 표의 키와 건물이 실제 TECH_TREE 에 있다(⛔ 'barracks' 를 박아 두면 다른 종족이 막힌다)
+    for(const rk in TUTO_BLD){ const t=TECH_TREE[rk];
+      assert(t,'TUTO_BLD 의 종족 키가 TECH_TREE 에 없다: '+rk);
+      const keys=(t.buildings||[]).map(b=>b.k);
+      for(const bk of TUTO_BLD[rk].b.concat([TUTO_BLD[rk].u])){
+        if(bk==null) continue;
+        assert(keys.indexOf(bk)>=0, rk+' 에 그런 건물이 없다: '+bk); } }
+    // 💸 유니온의 둘째 칸은 비어 있어야 한다 — 캠프 보급소는 3만이라 첫 안내에서 모을 수 있는 돈이 아니다
+    assert(TUTO_BLD.union.b[1]==null,'튜토리얼이 보급소를 시킨다 — 캠프 보급소는 '+campSupplyCost(0).toLocaleString()+' 이다');
+    // 🎯 카드 셀렉터가 **실제 마크업**과 맞나 — 건설 카드는 data 속성이 없어 onclick 으로 찾는다
+    { const r0=G.tech.race; try{
+        G.tech.race='union';
+        const sel=_tutoBSel(0), m=techBuildListModel();
+        const it=(m.items||[]).find(x=>x&&/techArm\('barracks'/.test(String(x.act||'')));
+        assert(it,'건설 목록에 병영 카드가 없다');
+        const box=document.createElement('div'); box.innerHTML=_cgSlotHTML(it, true);
+        assert(box.firstChild.matches(sel),'카드 셀렉터가 마크업과 안 맞는다: '+sel);
+      } finally { G.tech.race=r0; } }
+    // 🎁 첫 유닛 공짜는 **튜토리얼 안에서만** — 밖으로 새면 캠프 경제가 무너진다
+    assert(typeof tutoFreeUnit==='function','첫 유닛 공짜 규칙이 없다');
+    // ⏱ 기다림 없애기도 **튜토리얼 안에서만** — 캠프 경제는 건설·생산 시간 위에 서 있다
+    assert(typeof tutoNoWait==='function','즉시 생산 스위치가 없다');
+    { const off0=TUTO_OFF; try{ TUTO_OFF=true;
+        assert(tutoFreeUnit('marine')===false,'튜토리얼이 꺼져 있는데 유닛이 공짜다');
+        assert(tutoNoWait()===false,'튜토리얼이 꺼져 있는데 즉시 생산이다');
+      } finally { TUTO_OFF=off0; } }
+    // ⏱ **건물을 지정하는 단계(selB1)부터** 공짜다 — 카드가 열리는 그 순간 0 이라야 한다.
+    //   (2026-09-04 사용자 지적: 5,000 으로 잠겨 있다가 뒤늦게 0 이 됐다 — 값 갱신이 한 박자 늦었다)
+    { const on0=window.campIsOn, off0=TUTO_OFF, S=guideState();
+      const t0=S?S.t:0, skip0=S?S.skip:null, r0=G.tech.race, u0=G.tech.units;
+      try{ window.campIsOn=()=>true; TUTO_OFF=false; G.tech.race='union'; G.tech.units={};
+        if(S){ delete S.skip;
+          S.t=ids.indexOf('selB1'); assert(tutoFreeUnit('marine')===true,'병영을 지정하는 단계에서 아직 안 공짜다');
+          S.t=ids.indexOf('unit');  assert(tutoFreeUnit('marine')===true,'뽑는 단계에서 안 공짜다');
+          S.t=ids.indexOf('deselWk'); assert(tutoFreeUnit('marine')===false,'그 앞 단계까지 공짜가 번졌다');
+          S.t=ids.indexOf('unit'); G.tech.units={marine:1};
+          assert(tutoFreeUnit('marine')===false,'이미 한 기 가졌는데 또 공짜다'); }
+      } finally { window.campIsOn=on0; TUTO_OFF=off0; G.tech.race=r0; G.tech.units=u0;
+        if(S){ S.t=t0; if(skip0!=null) S.skip=skip0; else delete S.skip; } } }
+    // 🚧 맵을 여는 단계에서 **「채굴 멈춤」이 안 눌린다** — 누르면 캐는 것이 멎어 그 단계가 영영 안 끝난다
+    //   (2026-09-04 사용자 신고). 그 버튼이 **그 단계의 대상일 때만**(.tuLive) 산다.
+    { const d=document.createElement('div'); d.id='campMineStopProbe'; d.className='tuLive';
+      const ph2=$('phone'), had=ph2.classList.contains('tutoOn');
+      // 실제 선택자를 그대로 쓰려면 id 가 같아야 한다 — 진짜 버튼이 없을 때만 대역을 세운다
+      const real=$('campMineStop'); const el=real||d;
+      if(!real){ d.id='campMineStop'; ph2.appendChild(d); }
+      try{ ph2.classList.add('tutoOn');
+        el.classList.remove('tuLive');
+        assert(getComputedStyle(el).pointerEvents==='none',
+          '튜토리얼 중인데 「채굴 멈춤」이 눌린다 — 맵 단계에서 누르면 막힌다');
+        el.classList.add('tuLive');
+        assert(getComputedStyle(el).pointerEvents!=='none',
+          'mineOff 단계에서도 「채굴 멈춤」이 안 눌린다');
+      } finally { el.classList.remove('tuLive');
+        if(!real) d.remove(); ph2.classList.toggle('tutoOn', had); } }
+    // ⛏ 두 번째 방어선 — 그래도 꺼졌으면 **켜는 칸을 먼저 가리킨다**(맵을 두드려도 안 캐지므로)
+    { assert(typeof _tutoTapAt==='function','맵 두드리기 단계의 공용 대상이 없다');
+      const f0=window.campMineModeOn;
+      try{ window.campMineModeOn=()=>false;
+        assert(_tutoTapTip('두드리세요')!=='두드리세요','채굴이 꺼졌는데 안내가 안 바뀐다');
+        window.campMineModeOn=()=>true;
+        assert(_tutoTapAt()==='map','채굴이 켜졌는데 맵을 안 연다');
+        assert(_tutoTapTip('두드리세요')==='두드리세요','채굴이 켜졌는데 안내가 바뀐다');
+      } finally { window.campMineModeOn=f0; } }
+    // 🎬 처음 뜰 때 **스며든다** — 이름만 보지 말고 프레임을 잰다(DESIGN.md §5.5).
+    //   ⛔ fill-mode 가 붙으면 백그라운드 탭에서 애니가 멈춰 화면이 통째로 안 보인다(환생 구역 선례).
+    { const d=document.createElement('div'); d.className='tutoOv'; $('phone').appendChild(d);
+      const cs=getComputedStyle(d);
+      assert(/tutoFadeIn/.test(cs.animationName),'튜토리얼이 페이드인 없이 툭 덮인다: '+cs.animationName);
+      assert(cs.animationFillMode==='none','페이드에 fill-mode 가 붙었다 — 백그라운드 탭에서 안 보이게 된다');
+      const o0=Number(getComputedStyle(d).opacity); await sleep(140);
+      const o1=Number(getComputedStyle(d).opacity); d.remove();
+      assert(o0<0.6,'첫 프레임이 이미 진하다 — 페이드가 안 돈다: '+o0.toFixed(2));
+      assert(o1>o0,'투명도가 안 오른다: '+o0.toFixed(2)+' → '+o1.toFixed(2)); }
+    // 🎬 첫 등장은 **로고가 걷힐 때**다 — 맵이 커지는 연출(campInClip) 을 기다리지 않는다
+    { const hs=$('homeScreen'), had=hs&&hs.classList.contains('campInClip');
+      const on0=window.campIsOn, off0=TUTO_OFF, S=guideState(), t0=S?S.t:0, skip0=S?S.skip:null;
+      try{ if(hs) hs.classList.add('campInClip');
+        window.campIsOn=()=>true; TUTO_OFF=false; if(S){ S.t=0; delete S.skip; }
+        assert(tutoOn()===true,'맵이 커지는 동안 튜토리얼이 안 뜬다 — 2.7초 늦는다');
+      } finally { window.campIsOn=on0; TUTO_OFF=off0;
+        if(S){ S.t=t0; if(skip0!=null) S.skip=skip0; else delete S.skip; }
+        if(hs && !had) hs.classList.remove('campInClip'); } }
+    return ids.length+'단계 · '+Object.keys(TUTO_BLD).length+'종족 · 셀렉터 일치 · 첫 유닛 공짜';
+  });
+
+  await step('캠프 좌상단: 프로필 상자(정사각 초상 · 이름 · 레벨)', async()=>{
+    const e=$('curLv'); skipIf(!e,'프로필 상자 없음');
+    const ph=$('phone'), bar=$('curBar');
+    const camp0=ph.classList.contains('campMode'), wasHide=bar.classList.contains('hide');
+    try{
+      curShow(true); ph.classList.add('campMode');
+      if(typeof curPaintLv==='function'){ e._lvKey=''; curPaintLv(); }
+      assert(getComputedStyle(e).display!=='none','캠프인데 프로필 상자가 안 보인다');
+      const nm=e.querySelector('.clvNm'), lv=e.querySelector('.clvN'), bar2=e.querySelector('.clvBar i');
+      assert(nm && nm.textContent.trim(),'이름이 비어 있다');
+      assert(lv && /^Lv\.\d+$/.test(lv.textContent),'레벨 표기가 「Lv.n」 이 아니다: '+(lv&&lv.textContent));
+      assert(bar2,'경험치 바가 없다');
+      // 🖼 초상은 **공용 avatarHTML**(⛔ 새 초상을 만들지 말 것) 이고, 이 자리에서만 **정사각**이다.
+      const av=e.querySelector('.fAva');
+      assert(av,'초상이 공용 .fAva 가 아니다 — 새로 만들었는지 확인할 것');
+      const br=parseFloat(getComputedStyle(av).borderRadius)||0, ar=av.getBoundingClientRect();
+      const w=ar.width;
+      assert(br<=6,'초상이 동그라미다 — 이 자리는 정사각이다(radius '+br.toFixed(1)+')');
+      assert(w>0 && Math.abs(w-ar.height)<0.6,'초상이 정사각형이 아니다: '+w.toFixed(1)+'×'+ar.height.toFixed(1));
+      // 📐 높이는 **글자 블록(이름+레벨)과 맞아야** 한다 — 아래로 삐져나오면 안 된다(2026-09-04 사용자 지적)
+      { const tr=e.querySelector('.clvTx').getBoundingClientRect();
+        assert(ar.bottom<=tr.bottom+0.6,'초상이 글자 블록 아래로 삐져나온다: '+(ar.bottom-tr.bottom).toFixed(2)+'px');
+        assert(ar.top>=tr.top-0.6,'초상이 글자 블록 위로 삐져나온다: '+(tr.top-ar.top).toFixed(2)+'px');
+        // 📏 위아래가 **양쪽 다** 닿아야 한다 — 아래만 맞고 위가 비면 얹혀 있는 것처럼 보인다(2026-09-04)
+        assert(Math.abs((ar.top-tr.top))<=0.6 && Math.abs((ar.bottom-tr.bottom))<=0.6,
+          '초상 높이가 글자 블록과 안 맞는다: 위 '+(ar.top-tr.top).toFixed(2)+' 아래 '+(ar.bottom-tr.bottom).toFixed(2));
+        assert(ar.right<=tr.left+0.6,'초상이 이름을 덮는다: '+(ar.right-tr.left).toFixed(1)+'px'); }
+      // 🎨 닉 색(초록·보라)은 걷는다 — 좌상단은 한 사람뿐이라 그 색이 뜻이 없고 상단 줄에서 튄다
+      { const raw=getComputedStyle(av).borderTopColor, n=raw.split(/[^0-9.]+/).filter(Boolean).map(Number);
+        const sat=Math.max(n[0],n[1],n[2])-Math.min(n[0],n[1],n[2]);
+        assert(sat<=24,'초상이 아직 닉 색이다(무채로 걷어야 한다): '+raw);
+        assert(!av.getAttribute('style'),'초상에 인라인 색이 남아 있다 — CSS 가 못 이긴다');
+        // 🫥 면은 **반투명**이다 — 짙으면 상단 줄에서 이 칸만 판처럼 튄다(2026-09-04 사용자 지적)
+        { const bi=getComputedStyle(av).backgroundImage;
+          const al=bi.split("rgba(").slice(1).map(function(s){ var p=s.split(")")[0].split(","); return Number(p[3]); });
+          assert(al.length && Math.max.apply(null,al)<=0.6,
+            '초상 면이 너무 짙다(배경이 비쳐야 한다): '+bi.slice(0,60)); } }
+      // ⛔ 공용 초상(다른 화면)은 원형 그대로여야 한다 — 여기서만 덮는 것이 규칙이다
+      { const probe=document.createElement('span'); probe.className='fAva'; document.body.appendChild(probe);
+        const pr=parseFloat(getComputedStyle(probe).borderRadius)||0; probe.remove();
+        assert(pr>6,'공용 초상까지 각져 버렸다 — 친구·대기실이 함께 바뀐다: radius '+pr); }
+      // ⑦+⑧ 좌상단 두 줄의 위계(2026-09-04 사용자 확정 · 목업 camp-topleft-8):
+      //   ⑦ 칩 글자는 **프로필 이름보다 작다** — 커지면 눈이 아래로 먼저 간다.
+      //   ⑧ 프로필과 칩 사이에 **헤어라인**(칩의 ::before) — 두 줄이 다른 정보임을 선으로 말한다.
+      { const chip=$('curTitle');
+        if(chip && chip.classList.contains('asChip') && chip.querySelector('.cdNm')){
+          const cn=parseFloat(getComputedStyle(chip.querySelector('.cdNm')).fontSize);
+          const pn=parseFloat(getComputedStyle(nm).fontSize);
+          assert(cn<pn,'칩 글자가 프로필 이름보다 크다 — 눈이 아래로 먼저 간다: 칩 '+cn+' vs 이름 '+pn);
+          const bf=getComputedStyle(chip,'::before');
+          assert(bf.content!=='none','프로필과 칩 사이 구분선이 없다');
+          assert(parseFloat(bf.height)<=1.5,'구분선이 헤어라인(1px)보다 두껍다: '+bf.height); } }
+      return '정사각 '+w.toFixed(0)+'px · '+nm.textContent+' · '+lv.textContent;
+    } finally { ph.classList.toggle('campMode', camp0); if(wasHide) curShow(false); }
+  });
+
+  await step('캠프 좌상단: 위에서 내려오는 그늘(판이 아니라 그늘)', async()=>{
+    const bar=$('curBar'); skipIf(!bar,'재화 바 없음');
+    const ph=$('phone'); const had=ph.classList.contains('campMode');
+    const wasHide=bar.classList.contains('hide'), wasBare=bar.classList.contains('bare');
+    try{
+      curShow(true); bar.classList.add('bare'); ph.classList.add('campMode');
+      const af=getComputedStyle(bar,'::after');
+      assert(af.display!=='none','캠프인데 그늘이 없다 — 밝은 돌바닥에서 좌상단 글자가 묻힌다');
+      assert(parseFloat(af.height)>=40,'그늘이 너무 얕다(칩·재화를 못 덮는다): '+af.height);
+      // ⛔ 판을 만들지 말 것 — 그늘은 ::after 한 겹이고 바 자체는 면이 없다
+      const cs=getComputedStyle(bar), bg=(cs.backgroundColor.match(/[\d.]+/g)||[]).map(Number);
+      assert(bg.length<4 || bg[3]<=0.05,'재화 바에 면이 생겼다 — 좌상단은 판이 아니라 글자다: '+cs.backgroundColor);
+      // 캠프가 아니면 그늘은 다시 꺼진다(다른 화면은 배경이 이미 어둡다)
+      ph.classList.remove('campMode');
+      assert(getComputedStyle(bar,'::after').display==='none','캠프가 아닌데 그늘이 켜져 있다');
+      return '그늘 '+af.height+' · 캠프에서만';
+    } finally { ph.classList.toggle('campMode', had); bar.classList.toggle('bare', wasBare);
+      if(wasHide) curShow(false); }
+  });
+
   await step('캠프 좌상단: 던전 선택 전체 화면(칩이 머리줄 · ◀▶ + 슬라이더)', async()=>{
     skipIf(typeof campDropOpen!=='function','드롭다운 함수 없음');
     const t=$('curTitle'); assert(t,'#curTitle 이 없음');
@@ -12025,7 +12780,28 @@ async function groupLobby(){
       { const row=d().querySelector('.cdRow.here'); const cs=getComputedStyle(row);
         const bc=(cs.borderTopColor.match(/[\d.]+/g)||[]).map(Number);
         assert(bc[0]>200 && bc[0]>bc[1]+80,'현재 던전 카드 테두리가 붉은색이 아니다: '+cs.borderTopColor);
-        assert(row.querySelector('.cdSub') && row.querySelector('.cdSub').textContent,'던전 카드에 부제(배수) 줄이 없다'); }
+        // 부제 = **장소 설명**이다(2026-09-04). ⛔ 배수를 두 곳에 적지 말 것 — 어느 쪽이 맞는지 헷갈린다.
+        const sub=row.querySelector('.cdSub');
+        assert(sub && sub.textContent,'던전 카드에 부제(장소 설명)가 없다');
+        assert(!/배수|×/.test(sub.textContent),'부제에 배수가 또 적혀 있다: '+sub.textContent);
+        // 배수는 **범위**로 적는다 — 던전 1 은 ×1 로 들어가 ×2 로 나온다(진입값만 적으면 이득이 없어 보인다)
+        const _rows=[...d().querySelectorAll('.cdRow')];
+        assert(_rows[0].querySelector('.cdMul').textContent==='×1.0','캠프 배수가 ×1.0 이 아니다: '+_rows[0].querySelector('.cdMul').textContent);
+        assert(/^×1.5 ~ ×2.0$/.test(_rows[1].querySelector('.cdMul').textContent),
+          '던전 1 배수가 「×1.5 ~ ×2.0」 이 아니다(2026-09-04 사용자 확정): '+_rows[1].querySelector('.cdMul').textContent);
+        assert(/^×3.0 ~ ×6.0$/.test(_rows[2].querySelector('.cdMul').textContent),
+          '던전 2 배수가 「×3.0 ~ ×6.0」 이 아니다: '+_rows[2].querySelector('.cdMul').textContent);
+        // 10 이상은 소수를 안 붙인다(2026-09-04 사용자 확정) — 「×10.0」이 아니라 「×10」
+        assert(/^×10 ~ ×20$/.test(_rows[3].querySelector('.cdMul').textContent),
+          '던전 3 배수가 「×10 ~ ×20」 이 아니다(10 이상은 소수를 뗀다): '+_rows[3].querySelector('.cdMul').textContent);
+        // 축약값도 이 화면에서는 소수를 뗀다 — 「×120.0K」가 아니라 「×120K」(⛔ fmtCur 자체는 안 고친다)
+        assert(!/.dK|.0M/.test(_rows[9].querySelector('.cdMul').textContent),
+          '던전 9 축약 배수에 소수가 남았다: '+_rows[9].querySelector('.cdMul').textContent);
+        // 🚫 던전 목록에 스크롤 막대를 보이지 않는다 — 카드 오른쪽 배수 글자와 겹친다
+        { const list=d().querySelector('.cdList');
+          assert(!list.classList.contains('uiScroll'),'던전 목록에 공용 스크롤바(.uiScroll)가 붙었다 — 막대가 도로 그려진다');
+          assert(getComputedStyle(list).scrollbarWidth==='none','던전 목록 스크롤 막대가 보인다');
+          assert(list.scrollHeight>list.clientHeight,'던전 목록이 굴러가지 않는다 — 막대만 감춰야지 스크롤까지 막으면 안 된다'); } }
       // ⑥ 🎚 슬라이더 — 채움/손잡이 = (r-1)/(max-1) · 붉은 채움 · **누르고 끌면** 라운드가 따라온다
       { const sl=d().querySelector('.cdSld'), f=d().querySelector('.cdFill'), k=d().querySelector('.cdKnob');
         assert(sl && f && k,'라운드 슬라이더 조각이 없음');
@@ -15276,6 +16052,10 @@ async function groupSandbox(){
 const GROUPS={ lobby:groupLobby, game:groupGame, sandbox:groupSandbox };
 
 window.runSmoke=async function(group){
+  // 🎓 **튜토리얼은 검사 내내 꺼 둔다.** 켜져 있으면 스포트라이트가 화면을 덮고 입력을 막아
+  //   맵·네비·시트 검사가 통째로 「덮였다」로 넘어진다(실측 2026-09-04). 튜토리얼 자체는
+  //   전용 스텝이 잠깐 켜서 잰다 — CAMP_DEV_NOFAIL 과 같은 어법이다.
+  try{ if(typeof TUTO_OFF!=='undefined') TUTO_OFF=true; if(typeof tutoPaint==='function') tutoPaint(); }catch(_e){}
   const t0=performance.now();
   const names=group?[group]:Object.keys(GROUPS);
   for(const g of names){ if(GROUPS[g]) await GROUPS[g](); }

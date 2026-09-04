@@ -1,0 +1,160 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 화면 ① — 획득 포인트 칸 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--pk:#c9a6ff;--r-bar:3px;--r-md:6px;--r-lg:9px}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1320px}
+.note b{color:#dfe5ee}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:14px 22px 40px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:86px}
+.sub b{color:#cfd7e2}
+
+/* ══ 폰 — 실제 치수 그대로(390×844 · 머리 90 · 네비 56) ══════════════ */
+.ph{position:relative;width:390px;height:844px;overflow:hidden;background:#05070b;
+  display:flex;flex-direction:column}
+.ph::before{content:'';position:absolute;inset:0;z-index:0;
+  background:url('../../assets/backgrounds/reb/reb.webp') center/cover no-repeat;opacity:.9}
+.ph::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,6,10,.72),rgba(4,6,10,.34) 34%,rgba(4,6,10,.86))}
+.bar{position:relative;z-index:2;flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:44px 12px 6px;height:90px}
+.bar .t{font-size:15px;font-weight:700;color:#eef1f6;letter-spacing:.1em}
+.bar .r{margin-left:auto;font-family:var(--font-num);font-size:11px;color:#9fb0c4}
+.body{position:relative;z-index:2;flex:1;min-height:0;overflow:hidden;
+  padding:8px 18px 6px;display:flex;flex-direction:column}
+.foot{position:relative;z-index:2;flex:0 0 auto;padding:10px 18px 12px;
+  background:linear-gradient(180deg,rgba(5,8,12,0),rgba(5,8,12,.72) 34%,rgba(5,8,12,.88))}
+.nav{position:relative;z-index:2;flex:0 0 auto;height:56px;display:flex;align-items:center;
+  justify-content:space-around;border-top:1px solid rgba(255,255,255,.08);background:#05070b;
+  font-size:11px;color:#69737f}
+.nav b{color:#cfd7e2;font-weight:700}
+
+/* ══ 공통 ══════════════════════════════════════════════════════════ */
+.k{font-family:var(--font-num);font-size:11px;color:#a7b2c0;letter-spacing:.32em;text-shadow:0 1px 6px #000}
+.hero{position:relative;text-align:center}
+/* 큰 숫자 뒤 후광 — ① 안 그대로 */
+.hero::before{content:'';position:absolute;left:50%;top:52%;width:230px;height:230px;
+  margin:-115px 0 0 -115px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,rgba(150,120,255,.22),rgba(90,70,180,.10) 46%,rgba(5,8,12,0) 70%)}
+.big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:62px;line-height:1;color:#fff;text-shadow:0 3px 22px #000}
+.now{display:inline-block;margin-top:7px;padding:3px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
+  font-family:var(--font-num);font-size:12px;color:#9aa5b3}
+/* 🔵 얇은 링 — 참고 이미지의 원. ④ 에서만 쓴다 */
+.ring{position:absolute;left:50%;top:52%;width:200px;height:200px;margin:-100px 0 0 -100px;
+  z-index:-1;border-radius:50%;border:1px solid rgba(150,180,255,.16);
+  box-shadow:0 0 26px rgba(120,150,255,.10) inset}
+/* 획득 포인트 칸 — **가운데 정렬**. 면·테두리는 안마다 다르다 */
+.pt{text-align:center;margin-top:16px;padding:12px 14px 13px;border-radius:var(--r-md)}
+.pt .k{letter-spacing:.24em}
+.pv{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:32px;font-weight:800;
+  color:var(--gold);line-height:1.1;margin-top:3px}
+.fx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:5px}
+.fx b{color:#a9b4c2;font-weight:700}
+.h{font-size:11.5px;font-weight:700;color:#8d97a6;margin:0 2px 7px}
+.list{padding:2px 12px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.08);
+  background:rgba(9,13,19,.46);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.li{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0}
+.li+.li{border-top:1px solid rgba(255,255,255,.07)}
+.li span{font-size:12.5px;color:#9aa5b3}
+.li b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;font-weight:800;color:#e9eff7}
+.cond{margin-bottom:12px}
+.ct{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:12px;
+  color:#8d97a6;margin-bottom:5px}
+.cb{height:4px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.cb i{display:block;height:100%;background:rgba(255,255,255,.5)}
+.go{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  min-height:58px;border-radius:var(--r-md);font-size:17px;font-weight:800;letter-spacing:.16em;
+  color:#fff;border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+.go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+.go svg{width:20px;height:20px;color:var(--gold)}
+.pk{position:relative;display:flex;align-items:center;gap:9px;width:100%;min-height:48px;
+  margin-top:10px;padding:0 14px;border-radius:var(--r-md);font-size:12.5px;font-weight:700;
+  color:#c3bcd2;border:1px solid rgba(201,166,255,.34);background:rgba(201,166,255,.08)}
+.pk::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,166,255,.75),transparent)}
+.pk .t{flex:1;min-width:0;text-align:left;line-height:1.35}
+.pk b{color:var(--pk);font-weight:800} .pk u{text-decoration:none;color:var(--pk)}
+.warn{margin-top:9px;text-align:center;font-size:11px;color:#6f7b89}
+
+/* ── 네 안의 차이: 위 여백 + 포인트 칸의 면 ─────────────────────────── */
+.a .gap{height:24px} .b .gap{height:32px} .c .gap{height:24px} .d .gap{height:32px}
+/* ⓐ 옅은 면 + 1px 테두리 */
+.a .pt{border:1px solid rgba(255,255,255,.10);background:rgba(10,14,21,.50);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+/* ⓑ 테두리 없이 **면만** — 가장 배경에 녹는다 */
+.b .pt{border:0;background:radial-gradient(120% 140% at 50% 0%,rgba(255,255,255,.09),rgba(255,255,255,.02) 70%);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+/* ⓒ 위가 밝은 면 + 얇은 윗선 하나(물성만) */
+.c .pt{border:0;position:relative;
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.012));
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.c .pt::before{content:'';position:absolute;left:14%;right:14%;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent)}
+/* ⓓ 금빛이 아주 옅게 물든 면 + 얇은 금 테두리 */
+.d .pt{border:1px solid rgba(255,210,74,.18);
+  background:linear-gradient(180deg,rgba(255,210,74,.075),rgba(255,210,74,.02));
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+</style></head><body>
+<h1>환생 화면 ①안 — <span style="color:#8d97a6">획득 포인트 칸 4안 · 배수 구역을 조금 내림</span></h1>
+<p class="note">①안(배수를 판 없이 크게)을 바탕으로 <b>두 가지만</b> 바꿔 넷을 만들었다 —
+<b>① 획득 포인트를 가운데 정렬한 칸에 담고</b>, <b>② 배수 구역을 위에서 조금 내렸다</b>(머리줄 바로 밑에 붙어 있었다).
+칸의 면은 넷 다 <b>배경이 비치는 정도</b>로만 깔았다 — 판이 아니라 「기운」이 되도록.
+<br>⚠ 폰은 실제 치수 그대로(390×844)라 여기서 안 넘치면 실제로도 안 넘친다. 안마다 넘침을 재서 아래에 적었다.</p>
+<div class="wrap" id="wrap"></div>
+<script>
+const D = { mul:'1.20', now:'×1.00', pts:'+2', fx:'재화 <b>1.41</b> × 던전 <b>1.00</b> × 라운드 <b>1.00</b>',
+  cond:'724,960 / 1.0M', pct:72,
+  st:[['터치','1,240회'],['터치로 번 미네랄','832.0K'],['자동으로 번 미네랄','4.2M'],
+      ['가스','3,120'],['플레이 시간','32분']] };
+const ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+  'stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg>';
+const list = () => '<div class="list">' + D.st.map(a =>
+  '<div class="li"><span>' + a[0] + '</span><b>' + a[1] + '</b></div>').join('') + '</div>';
+function ph(k, ring){
+  return '<div class="ph ' + k + '"><div class="bar"><span class="t">환생</span>' +
+    '<span class="r">◈ 0 · ⬢ 0 · ◆ 0</span></div>' +
+    '<div class="body">' +
+      '<div class="gap"></div>' +
+      '<div class="hero">' + (ring ? '<span class="ring"></span>' : '') +
+        '<div class="k">획 득 배 수</div><div class="big">' + D.mul + '</div>' +
+        '<div class="now">현재 ' + D.now + '</div></div>' +
+      '<div class="pt"><div class="k">획 득 포 인 트</div><div class="pv">' + D.pts + '</div>' +
+        '<div class="fx">' + D.fx + '</div></div>' +
+      '<div style="margin-top:14px"><div class="h">이번 회차</div>' + list() + '</div>' +
+    '</div>' +
+    '<div class="foot">' +
+      '<div class="cond"><div class="ct"><span>환생 조건</span><span>' + D.cond + '</span></div>' +
+      '<div class="cb"><i style="width:' + D.pct + '%"></i></div></div>' +
+      '<button class="go">' + ICO + '환 생</button>' +
+      '<button class="pk"><span class="t">환생 팩 — 배수·포인트가 <b>계속 2배</b></span><u>보러 가기</u></button>' +
+      '<div class="warn">환생하면 지금까지의 진행이 초기화됩니다</div>' +
+    '</div>' +
+    '<div class="nav"><span>던전</span><b>환생</b><span>환생 트리</span></div></div>'; }
+
+const CASES = [
+{ k:'a', t:'ⓐ 옅은 면 + 1px 테두리 · 여백 24',
+  d:'칸을 <b>테두리로 한 번 그어</b> 준다. 「여기가 한 덩이」가 가장 분명하다. ⚠ 아래 지표 목록도 같은 얼굴(테두리+면)이라 <b>판이 둘 연달아</b> 보인다.' },
+{ k:'b', t:'ⓑ 테두리 없이 면만 · 여백 32',
+  d:'테두리를 아예 빼고 <b>위에서 아래로 옅어지는 면</b>만 깐다. 가장 배경에 녹아 「기운」처럼 읽힌다. 배수의 후광과도 자연스럽게 이어진다. ⚠ 칸의 경계가 흐려 값이 조금 덜 묶인다.', ring:0 },
+{ k:'c', t:'ⓒ 위가 밝은 면 + 윗선 한 줄 · 여백 24',
+  d:'면은 ⓑ 처럼 옅게 두되 <b>윗변에 짧은 밝은 선</b> 하나를 그어 시작점을 알린다. 이 게임이 판 대신 쓰는 그 어휘(밑변 광원)를 뒤집은 것. 테두리 없이도 덩이가 선다.' },
+{ k:'d', t:'ⓓ 금빛이 옅게 물든 면 + 얇은 링 · 여백 32',
+  d:'포인트는 금색 값이니 <b>칸도 아주 옅게 금빛</b>으로 물들인다 — 색이 「이 칸은 포인트」라고 말한다. 배수 뒤에는 참고 이미지처럼 <b>얇은 링</b>을 하나 둘렀다.', ring:1 },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + String.fromCharCode(97 + i) + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' + ph(c.k, c.ring) + '</div>';
+}).join('');
+</script></body></html>

@@ -1,0 +1,154 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 트리 — 비용을 버튼 안으로 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--r-bar:3px;--r-md:6px}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1300px}
+.note b{color:#dfe5ee}
+.wrap{display:flex;flex-wrap:wrap;gap:24px;padding:14px 22px 40px;align-items:flex-start}
+.cell{width:410px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:76px}
+.sub b{color:#cfd7e2}
+.st{margin:9px 0 5px;font-size:10.5px;letter-spacing:.1em;color:#5f6a77}
+
+/* ── 시트(지금 들어간 것) ─────────────────────────────────────────── */
+.sheet{width:390px;padding:14px 14px 16px;
+  border-top:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg,rgba(9,12,18,.86),rgba(6,8,12,.985) 26%,#06080c)}
+.ctRow{display:flex;align-items:center;gap:12px}
+.ctIco{position:relative;flex:0 0 44px;width:44px;height:44px}
+.ctIco svg{position:absolute;inset:0;width:44px;height:44px;display:block}
+.ctIco img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:21px;height:21px;object-fit:contain}
+.ctHt{flex:1;min-width:0;display:flex;flex-direction:row;align-items:baseline;gap:8px}
+.ctNm{font-size:16px;font-weight:700;color:#fff;line-height:1.25}
+.ctRom{font-family:var(--font-num);font-size:13px;font-weight:600;letter-spacing:.06em;color:#8b96a4}
+/* 지금 자리 — 오른쪽 위 (⓪ 에서만 쓴다) */
+.ctRt{margin-left:auto;flex:0 0 auto;text-align:right}
+.ctRt .ctCv{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:21px;font-weight:800;color:var(--gold);line-height:1.1;display:block}
+.ctRt .ctHave{display:block;margin-top:1px;font-size:10px;letter-spacing:.18em;color:#69737f}
+.ctDesc{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07);
+  font-size:13px;line-height:1.7;color:#a7b2c0}
+.ctDesc b{color:#f0f4f9;font-weight:700}
+.was{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#7b8593}
+.to{margin:0 6px;color:#5b6674}
+
+/* ── 공용 액션 버튼(.actBtn) — 옅은 면 + 1px. 위계는 면·테두리 밝기 ── */
+.btn{position:relative;width:100%;margin-top:14px;height:46px;display:flex;align-items:center;
+  justify-content:center;gap:9px;cursor:pointer;
+  font-family:var(--font-ko);font-size:14px;font-weight:800;letter-spacing:.02em;color:#c3cbd4;
+  border:1px solid rgba(255,255,255,.1);border-radius:var(--r-bar);background:rgba(255,255,255,.05)}
+.btn.pri{color:#fff;border-color:rgba(255,255,255,.32);background:rgba(255,255,255,.14)}
+.btn.off{color:#5f6772;border-color:rgba(255,255,255,.07);background:rgba(255,255,255,.03);cursor:default}
+.n{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;color:var(--gold)}
+.u{font-size:10.5px;letter-spacing:.12em;color:#8b96a4}
+.btn.off .n{color:#8a7a48}
+.btn.off .u{color:#5f6772}
+
+/* ① 한 줄 — 이름 뒤에 값이 따라온다 */
+.b1 .n{font-size:16px}
+
+/* ② 양끝 — 왼쪽에 할 일, 오른쪽 끝에 값 */
+.b2{justify-content:space-between;padding:0 16px}
+.b2 .r{display:flex;align-items:baseline;gap:6px}
+.b2 .n{font-size:17px}
+
+/* ③ 두 줄 — 값이 이름 밑에 작게 */
+.b3{flex-direction:column;gap:1px;height:56px}
+.b3 .r{display:flex;align-items:baseline;gap:5px}
+.b3 .n{font-size:13px}
+.b3 .u{font-size:9.5px}
+
+/* ④ 칸이 갈린다 — 세로선 하나로 「할 일 | 값」 */
+.b4{padding:0;gap:0}
+.b4 .l{flex:1;display:flex;align-items:center;justify-content:center;height:100%}
+.b4 .r{flex:0 0 44%;display:flex;align-items:baseline;justify-content:center;gap:6px;height:100%;
+  align-items:center;border-left:1px solid rgba(255,255,255,.12)}
+.b4 .n{font-size:17px}
+</style></head><body>
+<h1>환생 트리 — 필요 포인트를 <b>버튼 안</b>으로 4안</h1>
+<p class="note">머리 줄 오른쪽 값(<b>⓪</b>)을 지우고 해금·강화 버튼 안으로 옮긴다. 안마다 <b>살 수 있을 때</b>와 <b>포인트가 모자랄 때</b>를 함께 뒀다 —
+값을 버튼에 넣으면 <b>못 사는 상태에서 값이 어디 있는지</b>가 갈리는 자리라 그것까지 봐야 정한다.
+버튼 얼굴은 어느 안이든 공용 <code>.actBtn</code>(옅은 면 + 1px)이고, 위계는 면·테두리의 밝기가 맡는다.</p>
+<div class="wrap" id="wrap"></div>
+<script>
+const ICO = '../../assets/icons/tree/';
+const NAME = '광산 등급', KEY = 'mine', COST = '6,144', ROM = 'Ⅱ', COL = '#ffd24a';
+const DESC = '미네랄을 얻는 모든 곳에서 <span class="was">1.5배</span><span class="to">→</span><b>2.5배</b> 늘어납니다.';
+
+function hexPts(cx, cy, r){ const q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1)); }
+  return q.join(' '); }
+/* 지금 들어간 시트 아이콘 그대로(campTreeSheetIco) */
+function icoBox(){
+  const z = 44, c = z / 2, r = c - 1.5;
+  return '<span class="ctIco"><svg viewBox="0 0 ' + z + ' ' + z + '">' +
+    '<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>' +
+      '<stop offset=".42" stop-color="' + COL + '"/>' +
+      '<stop offset="1" stop-color="' + COL + '" stop-opacity=".34"/></linearGradient>' +
+    '<linearGradient id="sf" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>' +
+    '<radialGradient id="sb"><stop offset="0" stop-color="' + COL + '" stop-opacity=".22"/>' +
+      '<stop offset="1" stop-color="' + COL + '" stop-opacity="0"/></radialGradient></defs>' +
+    '<polygon points="' + hexPts(c, c, r) + '" fill="url(#sf)" stroke="url(#sg)" stroke-width="1.3" ' +
+      'style="filter:drop-shadow(0 0 3px ' + COL + ')"/>' +
+    '<circle cx="' + c + '" cy="' + c + '" r="' + (r * .52).toFixed(1) + '" fill="url(#sb)"/>' +
+    '<polygon points="' + hexPts(c, c, r - 1.2) + '" fill="none" stroke="#fff" stroke-width=".6" ' +
+      'opacity=".16"/></svg><img src="' + ICO + KEY + '.webp" alt=""></span>'; }
+/* 시트 한 장 — 머리 줄(값 자리는 안이 정한다) + 설명 + 버튼 */
+function sheet(rightCost, btn){
+  return '<div class="sheet"><div class="ctRow">' + icoBox() +
+    '<div class="ctHt"><span class="ctNm">' + NAME + '</span><span class="ctRom">' + ROM + '</span></div>' +
+    (rightCost ? '<div class="ctRt"><div class="ctCv">' + COST + '</div>' +
+      '<div class="ctHave">point</div></div>' : '') + '</div>' +
+    '<div class="ctDesc">' + DESC + '</div>' + btn + '</div>'; }
+
+const CASES = [
+{ t:'지금 (기준) — 값은 오른쪽 위',
+  d:'값이 <b>머리 줄 오른쪽 끝</b>에 있다. ⚠ 시선이 이름에서 설명으로 곧게 내려가는데 값만 옆으로 비켜 있어 <b>눈에 안 들어온다</b> — 누르기 직전에 얼마인지 다시 찾아 올라가야 한다.',
+  on: sheet(1, '<div class="btn pri">강 화</div>'),
+  off: sheet(1, '<div class="btn off">포인트가 모자랍니다</div>') },
+
+{ t:'① 한 줄 — 「강 화 6,144 point」',
+  d:'할 일과 값이 <b>한 줄에 붙어</b> 나온다. 가장 짧고, 누르는 순간 얼마를 내는지가 손가락 바로 밑에 있다. ⚠ 못 사는 상태에서는 문구가 길어져(「포인트가 모자랍니다 6,144 point」) 두 말이 다툰다 — 그래서 <b>값만</b> 남긴다.',
+  on: sheet(0, '<div class="btn pri b1">강 화<span class="n">' + COST + '</span><span class="u">point</span></div>'),
+  off: sheet(0, '<div class="btn off b1">포인트가 모자랍니다<span class="n">' + COST + '</span><span class="u">point</span></div>') },
+
+{ t:'② 양끝 — 왼쪽에 할 일, 오른쪽 끝에 값',
+  d:'버튼을 <b>양끝으로</b> 벌린다. 값이 오른쪽 끝에 서서 <b>글자 길이가 달라져도 자리가 안 흔들린다</b> — 「강 화」든 「포인트가 모자랍니다」든 값은 늘 같은 곳이다. 상점 결제 버튼의 익숙한 꼴이기도 하다.',
+  on: sheet(0, '<div class="btn pri b2"><span>강 화</span><span class="r"><span class="n">' + COST +
+    '</span><span class="u">point</span></span></div>'),
+  off: sheet(0, '<div class="btn off b2"><span>포인트 부족</span><span class="r"><span class="n">' + COST +
+    '</span><span class="u">point</span></span></div>') },
+
+{ t:'③ 두 줄 — 할 일 밑에 값',
+  d:'버튼을 <b>두 줄</b>로 키워(56px) 위에 할 일, 아래에 값을 둔다. 값이 작아도 바로 밑이라 읽힌다. 긴 문구와도 안 다툰다. ⚠ 버튼이 10px 두꺼워져 <b>시트가 그만큼 지도를 더 가린다</b>.',
+  on: sheet(0, '<div class="btn pri b3"><span>강 화</span><span class="r"><span class="n">' + COST +
+    '</span><span class="u">point</span></span></div>'),
+  off: sheet(0, '<div class="btn off b3"><span>포인트가 모자랍니다</span><span class="r"><span class="n">' + COST +
+    '</span><span class="u">point</span></span></div>') },
+
+{ t:'④ 칸이 갈린다 — 「할 일 │ 값」',
+  d:'세로선 하나로 버튼을 <b>두 칸</b>으로 나눈다. 값이 제 칸을 가져서 가장 또렷하고, 「무엇을 하는가 / 얼마인가」가 눈에 딱 갈린다. ⚠ 버튼 안에 선이 생겨 <b>둘로 보일 위험</b>이 있다 — 실제로는 통째로 눌린다.',
+  on: sheet(0, '<div class="btn pri b4"><span class="l">강 화</span><span class="r"><span class="n">' + COST +
+    '</span><span class="u">point</span></span></div>'),
+  off: sheet(0, '<div class="btn off b4"><span class="l">포인트 부족</span><span class="r"><span class="n">' + COST +
+    '</span><span class="u">point</span></span></div>') },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' +
+    '<p class="st">살 수 있을 때</p>' + c.on +
+    '<p class="st">포인트가 모자랄 때</p>' + c.off + '</div>';
+}).join('');
+</script></body></html>

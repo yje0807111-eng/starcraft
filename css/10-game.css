@@ -456,6 +456,9 @@
 
 /* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
   /* 설정 팝업 */
+  /* ⚠ 캠프 구역(환생·트리·룬)은 z-index 120 이라 72 로는 **판 뒤에 열려 안 보인다**(2026-09-04 사용자 신고).
+     구역이 켜져 있을 때만(.artLift) 그 위로 올린다 — 다른 화면에서는 72 그대로. */
+  #phone.artLift #settingsPop{z-index:130}
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
     /* ⛔ 청록 방사를 뺐다 — 판을 없앤 뒤로는 이 화면에서 유일한 색 덩어리였다(로그인·로딩과 같은 언어).
        판이 없으니 읽힘은 딤이 책임진다. 게임 안은 전장 위라 밖(.72)보다 진하게 간다. */
@@ -1211,7 +1214,10 @@
      실측: 보정 전 가스 발치 558.5 vs 광맥 발치 564.5. */
   .bGasZone.spr .gzSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
     display:block;pointer-events:none;
-    transform:translateY(var(--gzDY,23%)) scale(var(--gzK,0.95));transform-origin:center bottom;
+    /* ⚠ 23% → **-27%** (2026-09-04): 부지(TECH_GAS.r0)를 한 칸 내렸으므로(CAMP_GAS_ROW_OFF)
+       그림은 그만큼 되올려야 **화면에서 제자리**다. 부지 높이가 2칸이라 한 칸 = 50%p 다.
+       ⛔ 둘 중 하나만 고치지 말 것 — 그림이 통째로 반 칸 움직인다. */
+    transform:translateY(var(--gzDY,-27%)) scale(var(--gzK,0.95));transform-origin:center bottom;
     filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
   /* ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 뒤집으면 광원 방향이 반대가 되어
      오히려 눈에 걸린다. 반복이 거슬리면 그림을 한 장 더 뽑는다(stage2…). */

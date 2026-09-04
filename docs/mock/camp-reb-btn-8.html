@@ -1,0 +1,218 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 화면 ⓐ — 하단 버튼 색 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--pk:#c9a6ff;--cy:#5cd6ff;--r-bar:3px;--r-md:6px;--r-lg:9px}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1320px}
+.note b{color:#dfe5ee}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:14px 22px 40px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:82px}
+.sub b{color:#cfd7e2}
+
+/* ══ 폰 — 실제 치수(390×844 · 머리 90 · 네비 56) ═══════════════════ */
+.ph{position:relative;width:390px;height:844px;overflow:hidden;background:#05070b;
+  display:flex;flex-direction:column}
+.ph::before{content:'';position:absolute;inset:0;z-index:0;
+  background:url('../../assets/backgrounds/reb/reb.webp') center/cover no-repeat;opacity:.9}
+.ph::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,6,10,.72),rgba(4,6,10,.34) 34%,rgba(4,6,10,.86))}
+.bar{position:relative;z-index:2;flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:44px 12px 6px;height:90px}
+.bar .t{font-size:15px;font-weight:700;color:#eef1f6;letter-spacing:.1em}
+.bar .r{margin-left:auto;font-family:var(--font-num);font-size:11px;color:#9fb0c4}
+.body{position:relative;z-index:2;flex:1;min-height:0;overflow:hidden;
+  padding:8px 18px 6px;display:flex;flex-direction:column}
+.foot{position:relative;z-index:2;flex:0 0 auto;padding:10px 18px 12px;
+  background:linear-gradient(180deg,rgba(5,8,12,0),rgba(5,8,12,.72) 34%,rgba(5,8,12,.88))}
+.nav{position:relative;z-index:2;flex:0 0 auto;height:56px;display:flex;align-items:center;
+  justify-content:space-around;border-top:1px solid rgba(255,255,255,.08);background:#05070b;
+  font-size:11px;color:#69737f}
+.nav b{color:#cfd7e2;font-weight:700}
+
+/* ══ 위·가운데 — ⓐ안 확정분. 여덟 안이 똑같이 쓴다 ═══════════════ */
+.gap{height:24px}
+.k{font-family:var(--font-num);font-size:11px;color:#a7b2c0;letter-spacing:.32em;text-shadow:0 1px 6px #000}
+.hero{position:relative;text-align:center}
+.hero::before{content:'';position:absolute;left:50%;top:52%;width:230px;height:230px;
+  margin:-115px 0 0 -115px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,rgba(150,120,255,.22),rgba(90,70,180,.10) 46%,rgba(5,8,12,0) 70%)}
+.big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:62px;line-height:1;color:#fff;text-shadow:0 3px 22px #000}
+.now{display:inline-block;margin-top:7px;padding:3px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
+  font-family:var(--font-num);font-size:12px;color:#9aa5b3}
+.pt{position:relative;text-align:center;margin-top:16px;padding:12px 14px 13px;
+  border-radius:var(--r-md);border:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.006));
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.pt::before{content:'';position:absolute;left:14%;right:14%;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent)}
+.pt .k{letter-spacing:.24em}
+.pv{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:32px;font-weight:800;
+  color:var(--gold);line-height:1.1;margin-top:3px}
+.fx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:5px}
+.fx b{color:#a9b4c2;font-weight:700}
+.sec{margin-top:14px}
+.h{font-size:12px;font-weight:700;color:#9aa5b3;margin:0 2px 8px}
+.list{padding:2px 12px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.08);
+  background:rgba(9,13,19,.42);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.li{display:flex;align-items:center;gap:10px;padding:9px 0}
+.li+.li{border-top:1px solid rgba(255,255,255,.07)}
+.li .ic{flex:0 0 18px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;
+  color:#7f8b99;opacity:.9}
+.li .ic svg{width:100%;height:100%} .li .ic img{width:16px;height:16px;object-fit:contain}
+.li .nm{flex:1;min-width:0;font-size:12.5px;color:#a7b2c0}
+.li .v{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;
+  font-weight:800;color:#e9eff7}
+.li .v u{text-decoration:none;font-size:11px;font-weight:700;color:#7b8593;margin-left:3px}
+
+/* ══ 아래 — **여기만 다르다** ═════════════════════════════════════ */
+.cond{margin-bottom:12px}
+.ct{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:12px;
+  color:#8d97a6;margin-bottom:5px}
+.cb{height:4px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.cb i{display:block;height:100%;background:rgba(255,255,255,.5)}
+/* 버튼 뼈대 — 색만 안마다 바뀐다 */
+.go{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  min-height:58px;border-radius:var(--r-md);font-size:17px;font-weight:800;letter-spacing:.16em;
+  color:#fff;overflow:hidden}
+.go svg{width:20px;height:20px}
+.pk{position:relative;display:flex;align-items:center;gap:9px;width:100%;min-height:48px;
+  margin-top:10px;padding:0 14px;border-radius:var(--r-md);font-size:12.5px;font-weight:700;
+  color:#c3bcd2;border:1px solid rgba(201,166,255,.34);background:rgba(201,166,255,.08)}
+.pk::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,166,255,.75),transparent)}
+.pk .t{flex:1;min-width:0;text-align:left;line-height:1.35}
+.pk b{color:var(--pk);font-weight:800} .pk u{text-decoration:none;color:var(--pk)}
+.warn{margin-top:9px;text-align:center;font-size:11px;color:#6f7b89}
+
+/* ⓪ 지금 — 금색 테두리 + 밑변 광원 */
+.v0 .go{border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+.v0 .go svg{color:var(--gold)}
+.v0 .go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+/* ① 시안 — 조건 바가 이미 쓰는 그 색 */
+.v1 .go{border:1px solid rgba(92,214,255,.55);background:rgba(92,214,255,.10)}
+.v1 .go svg{color:var(--cy)}
+.v1 .go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(92,214,255,.95),transparent);
+  box-shadow:0 0 4px rgba(92,214,255,.55)}
+.v1 .cb i{background:var(--cy)}
+/* ② 남보라 — 배경의 보랏빛과 잇는다 */
+.v2 .go{border:1px solid rgba(140,150,255,.55);background:rgba(120,130,255,.12)}
+.v2 .go svg{color:#a3adff}
+.v2 .go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(150,160,255,.95),transparent);
+  box-shadow:0 0 4px rgba(140,150,255,.55)}
+/* ③ 채운 파랑 — 참고 시안의 그 꼴(면을 제대로 채운다) */
+.v3 .go{border:1px solid rgba(120,190,255,.55);
+  background:linear-gradient(180deg,#2f6fd0,#1d4a92);box-shadow:0 6px 18px -8px rgba(60,130,240,.8)}
+.v3 .go svg{color:#d6e8ff}
+/* ④ 파랑 테두리 + 안쪽 프레임 */
+.v4 .go{border:1px solid rgba(92,214,255,.40);background:rgba(92,214,255,.08)}
+.v4 .go::before{content:'';position:absolute;inset:3px;pointer-events:none;
+  border:1px solid rgba(92,214,255,.30);border-radius:2px}
+.v4 .go svg{color:var(--cy)}
+/* ⑤ 왼쪽 파란 띠 — 해금 버튼과 같은 어휘 */
+.v5 .go{border:1px solid rgba(255,255,255,.20);padding-left:8px;
+  background:linear-gradient(90deg,rgba(92,214,255,.16) 0%,rgba(92,214,255,.05) 42%,rgba(255,255,255,.05) 100%)}
+.v5 .go::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--cy)}
+.v5 .go svg{color:var(--cy)}
+/* ⑥ 파랑 + 팩도 파랑 계열로(보라를 버린다) */
+.v6 .go{border:1px solid rgba(92,214,255,.55);background:rgba(92,214,255,.10)}
+.v6 .go svg{color:var(--cy)}
+.v6 .go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(92,214,255,.95),transparent)}
+.v6 .pk{border-color:rgba(120,160,220,.30);background:rgba(120,160,220,.07);color:#a9bed6}
+.v6 .pk b,.v6 .pk u{color:#8fc4f0}
+.v6 .pk::after{background:linear-gradient(90deg,transparent,rgba(140,190,240,.6),transparent)}
+/* ⑦ 채운 파랑 + 팩은 보라 테두리만(위계를 크게 벌린다) */
+.v7 .go{border:0;background:linear-gradient(180deg,#3f8ae0,#1f5bb0);
+  box-shadow:0 8px 22px -10px rgba(70,150,250,.9)}
+.v7 .go svg{color:#e2efff}
+.v7 .pk{background:none;border-color:rgba(201,166,255,.28)}
+.v7 .pk::after{display:none}
+</style></head><body>
+<h1>환생 화면 ⓐ안 — <span style="color:#8d97a6">하단 버튼 색 8안</span></h1>
+<p class="note">여덟 안 모두 <b>위·가운데는 ⓐ 확정분 그대로</b>다 — 바뀌는 것은 <b>하단 버튼</b>뿐이다.
+<br>⭐ 이 화면은 배경이 <b>짙은 남색·보라</b>인데 버튼만 금색이라 혼자 튄다는 지적. 다만 색에는 뜻이 붙어 있다:
+<b>금색 = 게임 안 보상</b>(포인트 값이 그 색이다) · <b>보라 = 현질</b>(환생 팩) · <b>시안 <code>#5cd6ff</code> = 「조건이 찼다」</b>(환생 조건 바가 이미 쓴다).
+<br>⚠ 버튼을 시안으로 옮기면 <b>금색은 포인트 값에만</b> 남는다 — 값과 동작이 색으로 갈려 오히려 깔끔해진다.
+대신 <b>팩(보라)과 버튼(파랑)이 이웃</b>하게 되니 그 궁합까지 같이 봐야 한다(⑥·⑦ 이 그 답을 달리 낸다).</p>
+<div class="wrap" id="wrap"></div>
+<script>
+const IC = '../../assets/icons/';
+const D = { mul:'1.20', now:'×1.00', pts:'+2', fx:'재화 <b>1.41</b> × 던전 <b>1.00</b> × 라운드 <b>1.00</b>',
+  cond:'724,960 / 1.0M', pct:72 };
+const G = {
+  tap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11"/><path d="M12 11V9.5a1.5 1.5 0 0 1 3 0V12"/>' +
+      '<path d="M15 12v-1a1.5 1.5 0 0 1 3 0v5a5 5 0 0 1-5 5h-1.5a5 5 0 0 1-4.3-2.5L6 16"/></svg>',
+  auto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+       '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21' +
+       'M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg>',
+  time:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+       '<circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3.2 2"/></svg>',
+  min:'<img src="' + IC + 'res_mineral.webp" alt="">',
+  gas:'<img src="' + IC + 'res_gas.webp" alt="">' };
+const ST = [
+  [G.tap,  '터치',             '1,240', '회'],
+  [G.min,  '터치로 번 미네랄',  '832.0K', ''],
+  [G.auto, '자동으로 번 미네랄','4.2M',  ''],
+  [G.gas,  '가스',             '3,120', ''],
+  [G.time, '플레이 시간',       '32',    '분'] ];
+const row = a => '<div class="li"><span class="ic">' + a[0] + '</span>' +
+  '<span class="nm">' + a[1] + '</span>' +
+  '<span class="v">' + a[2] + (a[3] ? '<u>' + a[3] + '</u>' : '') + '</span></div>';
+const ICOgo = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+  'stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg>';
+function ph(k){
+  return '<div class="ph ' + k + '"><div class="bar"><span class="t">환생</span>' +
+    '<span class="r">◈ 0 · ⬢ 0 · ◆ 0</span></div>' +
+    '<div class="body"><div class="gap"></div>' +
+      '<div class="hero"><div class="k">획 득 배 수</div><div class="big">' + D.mul + '</div>' +
+      '<div class="now">현재 ' + D.now + '</div></div>' +
+      '<div class="pt"><div class="k">획 득 포 인 트</div><div class="pv">' + D.pts + '</div>' +
+      '<div class="fx">' + D.fx + '</div></div>' +
+      '<div class="sec"><div class="h">이번 회차</div><div class="list">' + ST.map(row).join('') +
+      '</div></div></div>' +
+    '<div class="foot">' +
+      '<div class="cond"><div class="ct"><span>환생 조건</span><span>' + D.cond + '</span></div>' +
+      '<div class="cb"><i style="width:' + D.pct + '%"></i></div></div>' +
+      '<button class="go">' + ICOgo + '환 생</button>' +
+      '<button class="pk"><span class="t">환생 팩 — 배수·포인트가 <b>계속 2배</b></span><u>보러 가기</u></button>' +
+      '<div class="warn">환생하면 지금까지의 진행이 초기화됩니다</div></div>' +
+    '<div class="nav"><span>던전</span><b>환생</b><span>환생 트리</span></div></div>'; }
+
+const CASES = [
+{ k:'v0', t:'지금 (기준) — 금색',
+  d:'금색 테두리 + 밑변 광원. ⚠ 배경이 짙은 남색·보라라 <b>버튼만 따로 논다</b>. 게다가 바로 위 포인트 값도 금색이라 <b>같은 색이 두 뜻</b>(값 / 동작)을 맡고 있다.' },
+{ k:'v1', t:'① 시안 — 조건 바가 쓰는 그 색',
+  d:'환생 조건 바가 다 차면 이미 <b>이 색</b>으로 변한다. 버튼을 같은 색으로 두면 「조건이 찼다 → 이걸 눌러라」가 <b>한 색으로 이어진다</b>. 바 색도 함께 시안으로 맞췄다.' },
+{ k:'v2', t:'② 남보라 — 배경의 보랏빛과 잇는다',
+  d:'배수 뒤 후광이 보랏빛이다. 버튼을 <b>같은 계열</b>로 두면 화면이 한 덩이로 읽힌다. ⚠ 아래 팩(보라)과 <b>너무 가까워</b> 둘이 한 줄로 보일 수 있다.' },
+{ k:'v3', t:'③ 채운 파랑 — 참고 시안의 그 꼴',
+  d:'테두리만이 아니라 <b>면을 제대로 채운다</b>. 화면에서 가장 강한 한 곳이 되어 「여기를 눌러라」가 분명하다. ⚠ DESIGN.md 가 걷어낸 「볼록한 판」에 가깝다 — 이 화면만 예외가 된다.' },
+{ k:'v4', t:'④ 시안 + 안쪽 프레임',
+  d:'시안 테두리에 <b>안쪽 얇은 선</b> 한 겹(트리의 판·해금 버튼이 쓰는 그 이중 테두리). 밑변 광원 없이도 덩이가 서고, 캠프의 다른 판들과 문법이 맞는다.' },
+{ k:'v5', t:'⑤ 왼쪽 파란 띠 — 해금 버튼과 같은 어휘',
+  d:'환생 트리의 <b>해금 버튼</b>이 왼쪽 금색 띠 + 번지는 면이다. 그 문법을 그대로 가져오되 색만 시안으로. 두 화면의 주 동작이 <b>같은 꼴</b>이 되어 배우기 쉽다.' },
+{ k:'v6', t:'⑥ 시안 + 팩도 파랑 계열로',
+  d:'버튼을 시안으로 옮기면 아래 팩(보라)과 이웃한다. 여기서는 <b>팩도 푸른 계열</b>로 눕혀 아래가 한 색이 되게 했다. ⚠ 보라를 버리면 <b>현질 표시</b>가 사라진다(GEM.md 는 보라를 현질 색으로 못박았다).' },
+{ k:'v7', t:'⑦ 채운 파랑 + 팩은 테두리만',
+  d:'버튼은 <b>가득 채운 파랑</b>, 팩은 <b>면을 아예 비워</b> 테두리만 남긴다. 위계 차이가 가장 크고, 보라도 지킨다. ⚠ 「강함 ↔ 조용함」 대비가 커서 팩이 눈에 잘 안 들어올 수 있다.' },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' + ph(c.k) + '</div>';
+}).join('');
+</script></body></html>
