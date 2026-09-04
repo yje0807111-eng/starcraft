@@ -381,6 +381,33 @@ function svvClampZ(v, z, lim){
   const L = lim || {};
   const lo = Math.max(L.min || 0.3, (v.fitZ || 0) * (L.out || 0.72));
   return Math.max(lo, Math.min(L.max || 2.6, z)); }
+// 🚧 **팬 경계** — 끝없이 밀려 빈 화면으로 못 가게 한다 (2026-09-04 사용자 요청).
+//   ⭐ 규칙: 그림 무리의 가장자리가 화면 안쪽 **KEEP 비율**까지는 들어와도 되지만 그 너머로는 못 나간다.
+//   ⚠ 무리가 화면보다 작을 때는 하한이 상한보다 커진다 — min/max 로 이어 붙여 가운데 근처에 묶는다
+//     (캠프 맵 _techClampView · 환생 트리 campTreeClampT 와 같은 수법이다).
+//   ⚠ **목표 뷰에만** 건다. 지금 뷰는 보간이 따라오므로 경계에서 부드럽게 멈춘다.
+// 📏 **얼마나 밖으로 내보낼 수 있나** — 화면 반쪽 대비 비율이다(0 이면 무리가 화면을 꽉 채운 채로만 움직인다).
+//   ⭐ 「가장자리에서 몇 % 여백」이 아니라 **무리의 가장자리와 화면 가장자리**를 직접 잇는다.
+//     그래야 전체 보기에서는 거의 못 움직이고, 확대할수록 움직일 거리가 저절로 늘어난다.
+//   ⛔ 여백식(가운데에서 잰 거리)으로 되돌리지 말 것 — 아무리 조여도 한 화면 폭만큼 밀렸다
+//     (2026-09-04 실측: 가장 빡빡하게 줘도 좌우 403 · 판 폭이 440 인데).
+const SVV_SLACK = 0.15;
+function svvClampPan(v, svg, box, opt){
+  if(!v || !svg || !box) return;
+  const O = opt || {};
+  const vb = (svg.getAttribute('viewBox') || '0 0 100 100').split(/\s+/).map(Number);
+  const z = v.tz || 1;
+  const sl = (O.slack != null) ? O.slack : SVV_SLACK;
+  const sx = vb[2] / 2 * sl, sy = vb[3] / 2 * sl;   // 이만큼까지는 밖으로 나가도 된다
+  // 화면좌표 = 월드 × z + t.
+  //   가로: 무리의 오른끝이 화면 오른끝(−여유)보다 왼쪽으로 못 가고, 왼끝이 화면 왼끝(+여유)보다 오른쪽으로 못 온다.
+  //   세로: 위·아래를 상단 띠·가방이 덮으므로 **보이는 띠**를 기준으로 잰다.
+  //   ⚠ 무리가 화면보다 작으면 하한 > 상한이 된다 — min/max 로 이어 붙여 가운데 근처에 묶는다.
+  const cl = (lo, hi, t) => { const a2 = Math.min(lo, hi), b2 = Math.max(lo, hi);
+    return Math.max(a2, Math.min(b2, t)); };
+  const yA = vb[1] + (O.hideT || 0), yB = vb[1] + vb[3] - (O.hideB || 0);
+  v.tx = cl(vb[0] + vb[2] - sx - box.x1 * z, vb[0] + sx - box.x0 * z, v.tx);
+  v.ty = cl(yB - sy - box.y1 * z,            yA + sy - box.y0 * z,    v.ty); }
 // ── 한 프레임 보간 — 지금 뷰가 목표로 다가간다 ─────────────────────────
 function svvTick(v, dt){
   if(v.x === v.tx && v.y === v.ty && v.z === v.tz) return false;
@@ -466,7 +493,11 @@ function svvBind(svg, ctx){
       moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
       // ⚠ 끄는 거리도 viewBox 단위로 바꿔야 손가락과 그림이 **같은 속도**로 움직인다
       const a = svvToView(svg, drag.x, drag.y), b = svvToView(svg, e.clientX, e.clientY);
-      svvGoto(ctx.v, ctx.g, { x: drag.vx + (b.x - a.x), y: drag.vy + (b.y - a.y) }, false, ctx.alive); } });
+      svvGoto(ctx.v, ctx.g, { x: drag.vx + (b.x - a.x), y: drag.vy + (b.y - a.y) }, false, ctx.alive);
+      // 🚧 경계 — ctx.box() 를 주면 그 범위 밖으로 못 민다(위 svvClampPan)
+      if(ctx.box){ const bx = ctx.box();
+        if(bx){ svvClampPan(ctx.v, svg, bx, ctx.boxOpt && ctx.boxOpt());
+          svvKick(ctx.v, ctx.g, ctx.alive); } } } });
   svg.addEventListener('pointerup', () => {
     const el = down; down = null; P.clear(); pinch = null; drag = null;
     if(moved > SVV_TAP_SLOP) return;                       // 밀었으면 탭이 아니다
@@ -478,7 +509,10 @@ function svvBind(svg, ctx){
   // 🖱 휠 — 커서 자리를 붙잡고 확대. ⚠ passive:false 여야 페이지가 같이 스크롤되지 않는다
   svg.addEventListener('wheel', e => { e.preventDefault();
     svvZoomAt(ctx.v, svg, ctx.g, ctx.v.tz * (e.deltaY < 0 ? SVV_ZSTEP : 1 / SVV_ZSTEP),
-      e.clientX, e.clientY, ctx.lim, false, ctx.alive); }, { passive:false }); }
+      e.clientX, e.clientY, ctx.lim, false, ctx.alive);
+    if(ctx.box){ const bx = ctx.box();
+      if(bx){ svvClampPan(ctx.v, svg, bx, ctx.boxOpt && ctx.boxOpt());
+        svvKick(ctx.v, ctx.g, ctx.alive); } } }, { passive:false }); }
 
 // ══ 🌳 환생 포인트 트리 (2026-08-25 · 6단계) ═══════════════════════════
 //   설계 단일 소스: HUNT_R1.md §4-4(구조·비용) · §4-5(32계열 내용).

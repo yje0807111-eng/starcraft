@@ -1,0 +1,146 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 칸 — 트리 어휘로 다시 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px}
+h1 + p{margin:0 22px 6px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1180px}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:16px 22px 30px;justify-content:flex-start;align-items:flex-start}
+.cell{width:286px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:80px}
+.pane{position:relative;width:286px;height:300px;overflow:hidden;background:#07090c;border-radius:4px}
+.bg{position:absolute;inset:0;background:url(../../assets/backgrounds/reb/reb.webp) center/cover no-repeat}
+.scrim{position:absolute;inset:0;background:rgba(5,8,12,.60)}
+svg{position:absolute;inset:0;width:100%;height:100%}
+.tag{position:absolute;left:8px;top:6px;z-index:3;font-size:10px;color:#69737f}
+</style></head><body>
+
+<h1>룬 칸 — 환생 트리 별의 켜를 그대로 옮긴 8안</h1>
+<p>왼쪽 위부터 <b>끼운 칸 · 빈 칸 · 잠긴 칸</b> 셋을 나란히 놓았다. 배경 딤은 여덟 안 모두 같다(트리와 같은 세기 .60) —
+그래야 켜의 차이만 보인다. ①이 지금 화면이다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+/* ══ 트리 별(campTreeGem)의 켜 — 아래에서 위로 ═════════════════════════
+   ① 바깥 육각 링 (r+4)          ⑤ 아이콘 뒤 광 (radialGradient · blur 금지)
+   ② 검은 바닥 (r · #000 .55)     ⑥ 안쪽 흰 실선 (r-7% · #fff .16)
+   ③ 면 그라데이션 (#1b2634→#06090e)  ⑦ 등급 테두리 (r-2.6)
+   ④ 테두리 그라데이션 (흰→갈래색) + drop-shadow(형태를 따라 번진다)   ⑧ 아이콘
+   지금 룬 칸은 ⑧ 하나뿐이다 — 판까지 그림(webp)에 구워져 있어 나머지 켜가 없다. */
+const P = '../../assets/icons/rune/';   // 판+문양이 합쳐진 그림
+const S = 'rune/';                      // 문양만 (docs/mock/rune/)
+const R = 30;                           // 칸 반지름(목업은 크게 본다)
+const COL = '#7effc9';                  // 경제 갈래
+const GOLD = '#ffcf6b';
+
+function hexPts(x,y,r){ const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+
+function defs(){
+  return '<defs>'
+    // 면 — 위가 밝은 남색(트리 ctFace 그대로)
+    + '<linearGradient id="face" x1="0" y1="0" x2="0" y2="1">'
+    +   '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>'
+    // 테두리 — 위 흰빛 → 갈래색 → 아래 옅게(트리 ctg 그대로)
+    + '<linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">'
+    +   '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
+    +   '<stop offset=".42" stop-color="'+COL+'"/>'
+    +   '<stop offset="1" stop-color="'+COL+'" stop-opacity=".34"/></linearGradient>'
+    + '<linearGradient id="edgeG" x1="0" y1="0" x2="0" y2="1">'
+    +   '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
+    +   '<stop offset=".42" stop-color="'+GOLD+'"/>'
+    +   '<stop offset="1" stop-color="'+GOLD+'" stop-opacity=".34"/></linearGradient>'
+    // 아이콘 뒤 광
+    + '<radialGradient id="back"><stop offset="0" stop-color="'+COL+'" stop-opacity=".22"/>'
+    +   '<stop offset=".62" stop-color="'+COL+'" stop-opacity=".07"/>'
+    +   '<stop offset="1" stop-color="'+COL+'" stop-opacity="0"/></radialGradient>'
+    // 빈 칸에 아주 옅게 도는 숨
+    + '<radialGradient id="emg"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".12"/>'
+    +   '<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>'
+    + '</defs>'; }
+
+/* ── 칸 하나 ─────────────────────────────────────────────────────────
+   o 로 켜를 켠다: outer(바깥링) floor(검은바닥) face(면) edge(테두리) glow(번짐)
+                  back(뒷광) inner(흰실선) grade(등급테) vec(벡터판=문양만 이미지) */
+function cell(x,y,st,img,o){
+  const s=[]; const r=R;
+  if(st==='lk'){                                   // 잠김
+    if(o.face) s.push('<polygon points="'+hexPts(x,y,r)+'" fill="url(#face)" opacity=".55"/>');
+    s.push('<polygon points="'+hexPts(x,y,r)+'" fill="rgba(120,140,165,.018)" stroke="rgba(140,160,185,'+(o.face?'.16':'.10')+')" stroke-width="1"/>');
+    if(o.inner) s.push('<polygon points="'+hexPts(x,y,r-2)+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".05"/>');
+    s.push('<text x="'+x+'" y="'+(y+3)+'" text-anchor="middle" font-family="Rajdhani" font-size="10" fill="#49525d">R45</text>');
+    return s.join(''); }
+  if(st==='em'){                                   // 빈 칸
+    if(o.back) s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.8)+'" fill="url(#emg)"/>');
+    if(o.face) s.push('<polygon points="'+hexPts(x,y,r)+'" fill="url(#face)" opacity=".8"/>');
+    s.push('<polygon points="'+hexPts(x,y,r)+'" fill="rgba(150,175,205,.03)" stroke="rgba(180,205,235,'+(o.face?'.30':'.18')+')" stroke-width="1"/>');
+    if(o.inner) s.push('<polygon points="'+hexPts(x,y,r-2)+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".10"/>');
+    s.push('<text x="'+x+'" y="'+(y+6)+'" text-anchor="middle" font-family="Rajdhani" font-size="17" fill="rgba(175,200,232,.34)">+</text>');
+    return s.join(''); }
+  // 끼운 칸
+  if(o.outer) s.push('<polygon points="'+hexPts(x,y,r+4)+'" fill="none" stroke="'+COL+'" stroke-width="1" opacity=".45"/>');
+  if(o.floor) s.push('<polygon points="'+hexPts(x,y,r)+'" fill="#000" opacity=".55"/>');
+  if(o.vec){
+    // 벡터 판 — 트리처럼 도형으로 그리고 **문양만** 이미지
+    s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" stroke="url(#edge)" stroke-width="1.3"'
+      +(o.glow?' style="filter:drop-shadow(0 0 3px '+COL+')"':'')+'/>');
+    if(o.back) s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.72).toFixed(1)+'" fill="url(#back)"/>');
+    if(o.inner) s.push('<polygon points="'+hexPts(x,y,r-Math.max(1,r*0.073))+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>');
+    if(o.grade) s.push('<polygon points="'+hexPts(x,y,r-3.4)+'" fill="none" stroke="rgba(220,232,246,.34)" stroke-width=".8"/>');
+    const w=r*1.20;
+    s.push('<image href="'+S+'sym_'+img+'.png" x="'+(x-w/2).toFixed(1)+'" y="'+(y-w/2).toFixed(1)
+      +'" width="'+w.toFixed(1)+'" height="'+w.toFixed(1)+'" style="mix-blend-mode:screen"/>');
+    return s.join(''); }
+  // 판 그림(webp) 을 그대로 쓰는 안
+  if(o.back) s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*1.15).toFixed(1)+'" fill="url(#back)"/>');
+  s.push('<image href="'+P+img+'_mid.webp" x="'+(x-r)+'" y="'+(y-r)+'" width="'+(r*2)+'" height="'+(r*2)+'"'
+    +(o.glow?' style="filter:drop-shadow(0 0 3px '+COL+')"':'')+'/>');
+  if(o.inner) s.push('<polygon points="'+hexPts(x,y,r-Math.max(1,r*0.073))+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>');
+  if(o.grade) s.push('<polygon points="'+hexPts(x,y,r-3.4)+'" fill="none" stroke="rgba(220,232,246,.34)" stroke-width=".8"/>');
+  return s.join(''); }
+
+/* ── 판 하나 — 끼운 칸 셋(세 등급) + 빈 칸 + 잠긴 칸 ─────────────── */
+function board(o){
+  let s='<svg viewBox="0 0 286 300">'+defs()+'<g>';
+  // 윗줄 — 끼운 칸 셋
+  s+=cell(72,74,'on','tap',o);
+  s+=cell(143,74,'on','gas',o);
+  s+=cell(214,74,'on','mine',o);
+  // 아랫줄 — 빈 칸 · 잠긴 칸 · 끼운 칸(맞물림 확인)
+  s+=cell(72,176,'em',null,o);
+  s+=cell(143,176,'lk',null,o);
+  s+=cell(214,176,'on','reb',o);
+  // 이름·값 — 실제 화면과 같이 칸 밖 아래
+  [[72,'손끝'],[143,'정제'],[214,'채굴']].forEach(function(q){
+    s+='<text x="'+q[0]+'" y="'+(74+R+13)+'" text-anchor="middle" font-family="Rajdhani" font-size="11" font-weight="700" fill="'+COL+'">+2.5%</text>'; });
+  return s+'</g></svg>'; }
+
+const CASES=[
+ { t:'지금 화면 (기준)', d:'판까지 구워진 <b>그림 한 장</b>뿐이다. 배경과 상호작용이 없어 스티커처럼 얹혀 보인다. 트리 별이 가진 켜 여덟 중 <b>여덟 번째(아이콘)만</b> 있는 셈.',
+   o:{} },
+ { t:'검은 바닥 + 번짐', d:'그림 밑에 <b>검은 육각</b>을 깔아 배경 사진을 눌러 앉히고, 그림에 <b>형태를 따라가는 번짐</b>(drop-shadow)을 준다. 트리 별의 ②④ 켜.',
+   o:{ floor:1, glow:1 } },
+ { t:'바깥 육각 링', d:'칸 밖 <b>r+4</b> 자리에 얇은 링을 하나 더 두른다. 트리에서 「산 별」을 즉시 읽게 하는 장치 — 룬에서는 <b>끼운 칸</b>이 그 역할.',
+   o:{ floor:1, outer:1 } },
+ { t:'뒷광 + 흰 실선', d:'그림 뒤에 <b>갈래색 광</b>(radialGradient), 안쪽에 <b>흰 실선</b> 한 겹. 유리·금속 안쪽 반사처럼 두께를 안 늘리고 깊이만 준다.',
+   o:{ floor:1, back:1, inner:1 } },
+ { t:'벡터 판 — 문양만 그림', d:'⭐ <b>구조가 바뀌는 안.</b> 판(육각)을 그림에서 빼고 트리처럼 <b>도형으로</b> 그린다(면 그라데이션 + 테두리 그라데이션). 문양만 이미지로 얹는다.',
+   o:{ vec:1, floor:1, glow:1 } },
+ { t:'벡터 판 + 모든 켜', d:'⑤에 <b>뒷광 · 흰 실선 · 등급 테두리</b>까지. 트리 별과 켜 수가 같아진다. 등급이 안쪽 테두리로도 읽힌다.',
+   o:{ vec:1, floor:1, glow:1, back:1, inner:1, grade:1, outer:1 } },
+ { t:'종합 — 그림 유지', d:'지금 그림(webp)을 그대로 두고 <b>주변 켜만</b> 더한다: 바깥 링 + 검은 바닥 + 뒷광 + 번짐 + 흰 실선. 아이콘 52장을 다시 안 만들어도 된다.',
+   o:{ outer:1, floor:1, back:1, glow:1, inner:1 } },
+ { t:'종합 — 빈·잠긴 칸까지', d:'⑦에 더해 <b>빈 칸과 잠긴 칸도</b> 트리처럼 면 그라데이션을 받는다. 지금은 빈 칸이 선 하나뿐이라 「구멍」으로 보인다.',
+   o:{ outer:1, floor:1, back:1, glow:1, inner:1, face:1 } },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><div class="bg"></div><div class="scrim"></div>'
+   + board(c.o) + '<span class="tag">끼움 · 끼움 · 끼움 / 빈칸 · 잠김 · 끼움</span></div></div>'; }).join('');
+</script></body></html>

@@ -1,0 +1,175 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 가방 — 오른쪽 등급 버튼 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1220px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:62px}
+.pane{position:relative;width:390px;height:300px;overflow:hidden;background:#0a0d12;
+  border-top:1px solid var(--metal-edge)}
+.bag{position:absolute;inset:0;display:flex;flex-direction:column;padding:9px 12px 12px;
+  background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
+.bagH{display:flex;align-items:center;min-height:20px;margin-bottom:8px;flex:0 0 auto}
+.bagT{font-size:12px;color:var(--txt-dim)}
+.bagN{margin-left:auto;font-size:10px;color:var(--txt-off)}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.16) transparent}
+.body::-webkit-scrollbar{width:5px}
+.body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
+.sec{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
+.sec:first-child{margin-top:0}
+.sec .dot{width:6px;height:6px;border-radius:var(--r-bar);background:var(--c)}
+.sec .t{font-size:10.5px;color:var(--c);letter-spacing:.1em}
+.sec .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--c),transparent);opacity:.30}
+
+/* ⑦ 줄 — 제목 + % 한 줄, 오른쪽은 버튼 셋 */
+.rw{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:var(--r-md)}
+.rw + .rw{margin-top:3px}
+.rw img{width:36px;height:36px;flex:none}
+.tt{font-size:11.5px;color:var(--txt);line-height:1.25}
+.tt s{display:block;text-decoration:none;font-family:var(--font-num);font-size:9.5px;
+  color:var(--txt-off);margin-top:1px}
+.btns{margin-left:auto;display:flex;gap:4px}
+
+/* ── 버튼 공통 ── */
+.b{position:relative;min-width:40px;height:34px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;font:inherit;
+  border:none;background:none;padding:0}
+.b .n{font-family:var(--font-num);font-size:13px;font-weight:700;color:var(--txt);line-height:1}
+.b .p{font-family:var(--font-num);font-size:9px;color:var(--gc);line-height:1;margin-top:1px}
+.b.off{cursor:default}
+.b.off .n{color:var(--txt-off);opacity:.45}
+.b.off .p{opacity:.35}
+
+/* ① 옅은 면 + 1px (공용 .actBtn 어휘) */
+.s1 .b{border:1px solid color-mix(in srgb,var(--gc) 34%,transparent);border-radius:var(--r-md);
+  background:color-mix(in srgb,var(--gc) 8%,rgba(255,255,255,.03))}
+.s1 .b.off{border-color:rgba(150,170,200,.14);background:rgba(255,255,255,.02)}
+/* ② 테두리만 */
+.s2 .b{border:1px solid color-mix(in srgb,var(--gc) 46%,transparent);border-radius:var(--r-md)}
+.s2 .b.off{border-color:rgba(150,170,200,.13);border-style:dashed}
+/* ③ 밑변 광원 — 프로젝트 어휘(면은 검고 아래만 빛난다) */
+.s3 .b{border-radius:var(--r-md);background:rgba(255,255,255,.035);
+  box-shadow:inset 0 -2px 0 -1px var(--gc)}
+.s3 .b.off{background:rgba(255,255,255,.015);box-shadow:inset 0 -2px 0 -1px rgba(150,170,200,.18)}
+/* ④ 모서리 컷 — 각진 SF */
+.s4 .b{border:1px solid color-mix(in srgb,var(--gc) 40%,transparent);
+  background:color-mix(in srgb,var(--gc) 9%,rgba(255,255,255,.02));
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.s4 .b.off{border-color:rgba(150,170,200,.14);background:rgba(255,255,255,.02)}
+/* ⑤ 육각 — 룬 판과 같은 어휘 */
+.s5 .b{width:38px;min-width:38px;height:38px;
+  background:color-mix(in srgb,var(--gc) 10%,rgba(255,255,255,.03));
+  clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)}
+.s5 .b::after{content:'';position:absolute;inset:0;
+  background:color-mix(in srgb,var(--gc) 30%,transparent);
+  clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);
+  -webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);
+  -webkit-mask-composite:xor;mask-composite:exclude;padding:1px}
+.s5 .b.off{background:rgba(255,255,255,.02)}
+.s5 .b.off::after{background:rgba(150,170,200,.16)}
+/* ⑥ 큰 숫자 + 아래 얇은 등급색 선 */
+.s6 .b{border-radius:0;border-bottom:2px solid var(--gc);min-width:38px;height:30px}
+.s6 .b .n{font-size:15px}
+.s6 .b.off{border-bottom-color:rgba(150,170,200,.18)}
+/* ⑦ 알약 — % 가 안, 개수가 배지 */
+.s7 .b{min-width:44px;height:26px;border-radius:11px;flex-direction:row;gap:0;
+  border:1px solid color-mix(in srgb,var(--gc) 40%,transparent);
+  background:color-mix(in srgb,var(--gc) 10%,transparent)}
+.s7 .b .p{font-size:10.5px;margin:0;color:var(--gc)}
+.s7 .b .n{position:absolute;top:-5px;right:-4px;min-width:15px;height:15px;border-radius:8px;
+  font-size:9.5px;display:flex;align-items:center;justify-content:center;
+  background:#0d1218;border:1px solid color-mix(in srgb,var(--gc) 55%,transparent);color:var(--txt)}
+.s7 .b.off{border-color:rgba(150,170,200,.14);background:none}
+.s7 .b.off .n{display:none}
+/* ⑧ 종합 — 옅은 면 + 밑변 광원 + 모서리 컷 */
+.s8 .b{border:1px solid color-mix(in srgb,var(--gc) 30%,transparent);
+  background:color-mix(in srgb,var(--gc) 8%,rgba(255,255,255,.025));
+  box-shadow:inset 0 -2px 0 -1px color-mix(in srgb,var(--gc) 70%,transparent);
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px)}
+.s8 .b.off{border-color:rgba(150,170,200,.13);background:rgba(255,255,255,.018);
+  box-shadow:none}
+</style></head><body>
+
+<h1>룬 가방 — 오른쪽 등급 버튼 8안</h1>
+<p>⑦ 줄 구성은 그대로다(<b>제목 = 효과 이름</b> · 그 아래 <b>1% · 2.5% · 5%</b>).
+바뀌는 건 오른쪽 <b>등급 버튼 셋</b>의 생김새뿐. 각 버튼은 <b>보유 개수</b>를 보여 주고 누르면 그 등급을 끼운다.
+<b>0개인 등급</b>은 못 누르는 모습이어야 하고, 그래도 %는 남아야 한다(무엇을 더 살지 보이도록).</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const P='../../assets/icons/rune/';
+const G={ eco:{nm:'경제',c:'#7effc9'}, war:{nm:'전투',c:'#ffa3b8'},
+          grow:{nm:'성장',c:'#e6eef8'}, uniq:{nm:'유니크',c:'#c98bff'} };
+const GD={ low:{c:'#9aa4b0',p:'1%'}, mid:{c:'#5cd6ff',p:'2.5%'},
+           high:{c:'#ffcf6b',p:'5%'}, uniq:{c:'#c98bff',p:'5%'} };
+const OWN=[
+ ['eco','tap','탭 획득',    {low:1, mid:2, high:3}],
+ ['eco','gas','가스 획득',  {low:1, mid:2}],
+ ['eco','mine','일꾼 채취', {high:1}],
+ ['eco','reb','환생 포인트',{low:2, mid:1}],
+ ['war','atk','유닛 공격력',{mid:1, high:2}],
+ ['war','hp','유닛 체력',   {low:3}],
+ ['uniq','speed','캠프 진행 속도',{uniq:1}],
+ ['uniq','fever','피버 확률',{uniq:1}]];
+const GS=g=>g==='uniq'?['uniq']:['low','mid','high'];
+function ico(r){ const gs=GS(r[0]); const has=gs.slice().reverse().find(g=>r[3][g])||gs[0];
+  return P+r[1]+'_'+has+'.webp'; }
+function head(k){ const g=G[k];
+  return '<div class="sec" style="--c:'+g.c+'"><span class="dot"></span>'
+    +'<span class="t">'+g.nm+'</span><span class="ln"></span></div>'; }
+function row(r){
+  const gs=GS(r[0]);
+  const pct=gs.map(g=>GD[g].p).join(' · ');
+  const btns=gs.map(function(g){ const n=r[3][g];
+    return '<button class="b'+(n?'':' off')+'" style="--gc:'+GD[g].c+'">'
+      +'<span class="n">'+(n?n:'–')+'</span><span class="p">'+GD[g].p+'</span></button>'; }).join('');
+  return '<div class="rw"><img src="'+ico(r)+'" alt="">'
+    + '<span class="tt">'+r[2]+'<s>'+pct+'</s></span>'
+    + '<span class="btns">'+btns+'</span></div>'; }
+function board(){ return Object.keys(G).map(function(k){
+  const q=OWN.filter(r=>r[0]===k); if(!q.length) return '';
+  return head(k)+q.map(row).join(''); }).join(''); }
+
+const CASES=[
+ { t:'옅은 면 + 1px', s:'s1',
+   d:'공용 액션 버튼(<b>.actBtn</b>)의 어휘 그대로 — 옅은 면에 1px 테두리. 화면 전체와 가장 잘 붙는다.' },
+ { t:'테두리만', s:'s2',
+   d:'면을 걷고 <b>선만</b>. 0개는 점선이라 「비어 있다」가 형태로 읽힌다.' },
+ { t:'밑변 광원', s:'s3',
+   d:'면은 중립이고 <b>아래만 등급색으로 빛난다</b>. 이 프로젝트가 탭 띠·카드에서 쓰는 어휘.' },
+ { t:'모서리 컷', s:'s4',
+   d:'각진 SF — 좌상·우하 모서리를 <b>45° 로 자른다</b>(라운드 대신). 큰 패널이 쓰는 문법을 버튼에.' },
+ { t:'육각 버튼', s:'s5',
+   d:'⭐ 룬 판과 <b>같은 육각</b>. 「이 칸에 끼운다」가 형태로 이어진다. 대신 가로를 더 먹는다.' },
+ { t:'큰 숫자 + 밑줄', s:'s6',
+   d:'판을 아예 없애고 <b>큰 숫자 + 등급색 밑줄</b>. 가장 가볍지만 «누를 수 있음»이 제일 약하다.' },
+ { t:'알약 + 개수 배지', s:'s7',
+   d:'버튼 본문은 <b>%</b>, 보유 개수는 <b>우상단 배지</b>. 0개는 배지가 사라진다.' },
+ { t:'종합 — 면 + 밑변 + 컷', s:'s8',
+   d:'①의 면에 ③의 밑변 광원과 ④의 모서리 컷을 얹었다. 눌리는 느낌이 가장 분명하다.' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><div class="bag '+c.s+'">'
+   +   '<div class="bagH"><span class="bagT">보유한 룬</span>'
+   +     '<span class="bagN">누르면 빈 칸에 끼웁니다</span></div>'
+   +   '<div class="body">'+board()+'</div>'
+   + '</div></div></div>'; }).join('');
+</script></body></html>

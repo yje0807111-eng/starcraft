@@ -1,0 +1,193 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 가방 — 리스트 / 그리드 · 갈래 구분 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;      /* DESIGN.md 라운드 3단계 — 그 사이 값 금지 */
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1220px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:76px}
+.pane{position:relative;width:390px;height:340px;overflow:hidden;background:#0a0d12;
+  border-top:1px solid var(--metal-edge)}
+/* 가방 껍데기 — 실제 화면과 같은 규격 */
+.bag{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding:9px 12px 12px;background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
+.bagH{display:flex;align-items:center;min-height:20px;margin-bottom:8px;flex:0 0 auto}
+.bagT{font-size:12px;color:var(--txt-dim)}
+.bagN{margin-left:auto;font-size:10px;color:var(--txt-off)}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.16) transparent}
+.body::-webkit-scrollbar{width:5px}
+.body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
+
+/* ── 공용 탭 띠(segNavHTML 규격) ── */
+.seg{position:relative;display:grid;gap:0;margin-bottom:8px;flex:0 0 auto;
+  background:#05070a;border-radius:var(--r-md);overflow:hidden}
+.seg .b{padding:6px 0;text-align:center;font-size:11px;color:var(--txt-off);
+  border-bottom:1px solid transparent}
+.seg .b.on{color:var(--txt);border-bottom-color:var(--sc,#7effc9)}
+
+/* ── 그리드 ── */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.g3{grid-template-columns:repeat(3,1fr)}
+.it{display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 2px;
+  border-radius:var(--r-lg);position:relative}
+.it img{width:42px;height:42px;display:block}
+.it.big img{width:54px;height:54px}
+.it .n{font-size:10px;color:var(--txt-dim)}
+.it .v{font-family:var(--font-num);font-size:10px;font-weight:700;color:var(--c)}
+.it .q{position:absolute;right:2px;top:1px;font-family:var(--font-num);font-size:9.5px;color:var(--txt)}
+.it .q i{font-style:normal;color:var(--txt-off)}
+
+/* ── 리스트 ── */
+.row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:var(--r-md)}
+.row + .row{margin-top:2px}
+.row img{width:34px;height:34px;flex:none}
+.row .nm{font-size:11px;color:var(--txt)}
+.row .de{font-size:9.5px;color:var(--txt-off)}
+.row .v{margin-left:auto;font-family:var(--font-num);font-size:12px;font-weight:700;color:var(--c)}
+.row .q{width:38px;text-align:right;font-family:var(--font-num);font-size:10px;color:var(--txt)}
+.row .q i{font-style:normal;color:var(--txt-off)}
+.row.bar{border-left:3px solid var(--c);border-radius:0 var(--r-md) var(--r-md) 0}
+
+/* ── 갈래 머리줄 ── */
+.sec{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
+.sec:first-child{margin-top:0}
+.sec .dot{width:6px;height:6px;border-radius:var(--r-bar);background:var(--c)}
+.sec .t{font-size:10.5px;color:var(--c);letter-spacing:.1em}
+.sec .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--c),transparent);opacity:.30}
+.sec .n{font-family:var(--font-num);font-size:10px;color:var(--txt-off)}
+
+/* ── 가로 줄 ── */
+.hrow{display:flex;gap:4px;overflow-x:auto;padding-bottom:3px;scrollbar-width:none}
+.hrow::-webkit-scrollbar{display:none}
+.hrow .it{flex:0 0 auto;width:72px}
+
+/* ── 등급 칩(압축형) ── */
+.cmp{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:var(--r-md)}
+.cmp + .cmp{margin-top:2px}
+.cmp img{width:34px;height:34px;flex:none}
+.cmp .nm{font-size:11px;color:var(--txt);min-width:52px}
+.cmp .chips{margin-left:auto;display:flex;gap:3px}
+.chip{min-width:38px;padding:2px 4px;border-radius:var(--r-bar);text-align:center;
+  border:1px solid color-mix(in srgb,var(--gc) 42%,transparent);
+  background:color-mix(in srgb,var(--gc) 10%,transparent)}
+.chip b{display:block;font-family:var(--font-num);font-size:10px;font-weight:700;color:var(--gc)}
+.chip s{display:block;text-decoration:none;font-size:8.5px;color:var(--txt-off)}
+.chip.off{opacity:.30}
+</style></head><body>
+
+<h1>룬 가방 — 리스트냐 그리드냐 · 갈래를 어떻게 가르나</h1>
+<p>보유할 수 있는 것은 <b>일반 12종 × 3등급 + 유니크 4 = 40칸</b>이라 다 모으면 꽤 길다.
+갈래는 <b>경제 · 전투 · 성장 · 유니크</b> 넷. 라운드는 3/6/9, 간격은 4/8/12, 숫자는 Rajdhani — 규격 표대로 썼다.
+①이 지금 화면(그리드 4열 · 갈래 구분 없음)이다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const P='../../assets/icons/rune/';
+const G={ eco:{nm:'경제',c:'#7effc9'}, war:{nm:'전투',c:'#ffa3b8'},
+          grow:{nm:'성장',c:'#e6eef8'}, uniq:{nm:'유니크',c:'#c98bff'} };
+const GD={ low:{nm:'하급',c:'#9aa4b0',v:'+1%'}, mid:{nm:'중급',c:'#5cd6ff',v:'+2.5%'},
+           high:{nm:'상급',c:'#ffcf6b',v:'+5%'}, uniq:{nm:'유니크',c:'#c98bff',v:'+5%'} };
+/* 보유 목록 — 갈래 · id · 짧은 이름 · 무엇을 올리나 · 등급별 보유(남은/전체) */
+const OWN=[
+ ['eco','tap','손끝','탭 획득',   {high:[2,3], mid:[1,2], low:[0,1]}],
+ ['eco','gas','정제','가스 획득', {mid:[2,2], low:[1,1]}],
+ ['eco','mine','채굴','일꾼 채취',{high:[1,1]}],
+ ['eco','reb','윤회','환생 포인트',{mid:[1,1], low:[2,2]}],
+ ['war','atk','힘','유닛 공격력', {high:[1,2], mid:[0,1]}],
+ ['war','aspd','연타','공격속도', {mid:[1,1]}],
+ ['war','hp','수호','유닛 체력',  {low:[3,3]}],
+ ['war','heal','치유','회복량',   {high:[1,1], low:[1,1]}],
+ ['grow','exp','성장','경험치',   {mid:[2,2]}],
+ ['grow','kill','전과','처치 보상',{high:[1,1], mid:[1,1]}],
+ ['grow','mapg','전리품','유즈맵 보상',{low:[2,2]}],
+ ['grow','fevg','열정','피버 획득',{mid:[1,1]}],
+ ['uniq','speed','가속','진행 속도',{uniq:[1,1]}],
+ ['uniq','wspd','신속','일꾼 이동',{uniq:[0,1]}],
+ ['uniq','fever','열기','피버 확률',{uniq:[1,1]}],
+ ['uniq','cost','절약','구매 비용',{uniq:[1,1]}]];
+const ORD=['high','mid','low','uniq'];
+/* (갈래, id, 이름, 설명, 등급, 남은, 전체) 로 펴기 */
+function flat(gk){ const out=[];
+  for(const r of OWN){ if(gk && r[0]!==gk) continue;
+    for(const g of ORD){ const q=r[4][g]; if(!q) continue;
+      out.push({ gk:r[0], id:r[1], nm:r[2], de:r[3], gd:g, free:q[0], own:q[1] }); } }
+  return out; }
+function src(o){ return P+o.id+'_'+o.gd+'.webp'; }
+
+/* ── 조각 ────────────────────────────────────────────────────────── */
+function itemCell(o,cls){ const c=GD[o.gd].c;
+  return '<div class="it '+(cls||'')+'" style="--c:'+c+'">'
+    + '<span class="q">'+o.free+'<i>/'+o.own+'</i></span>'
+    + '<img src="'+src(o)+'" alt="">'
+    + '<span class="n">'+o.nm+'</span><span class="v">'+GD[o.gd].v+'</span></div>'; }
+function itemRow(o,bar){ const c=GD[o.gd].c;
+  return '<div class="row'+(bar?' bar':'')+'" style="--c:'+(bar?G[o.gk].c:c)+'">'
+    + '<img src="'+src(o)+'" alt="">'
+    + '<div><div class="nm">'+o.nm+' <span style="color:'+c+';font-size:9.5px">'+GD[o.gd].nm+'</span></div>'
+    +   '<div class="de">'+o.de+'</div></div>'
+    + '<span class="v" style="--c:'+c+'">'+GD[o.gd].v+'</span>'
+    + '<span class="q">'+o.free+'<i>/'+o.own+'</i></span></div>'; }
+function secHead(gk,n){ const g=G[gk];
+  return '<div class="sec" style="--c:'+g.c+'"><span class="dot"></span>'
+    + '<span class="t">'+g.nm+'</span><span class="ln"></span><span class="n">'+n+'</span></div>'; }
+function segBar(act){ const ks=Object.keys(G);
+  return '<div class="seg" style="grid-template-columns:repeat('+ks.length+',1fr)">'
+    + ks.map(function(k,i){ return '<div class="b'+(i===act?' on':'')+'" style="--sc:'+G[k].c+'">'+G[k].nm+'</div>'; }).join('')
+    + '</div>'; }
+
+/* ── 여덟 안 ─────────────────────────────────────────────────────── */
+const CASES=[
+ { t:'① 그리드 4열 (지금)', d:'갈래 구분이 없다. 40칸이 한 덩어리로 흐른다 — <b>무엇을 얼마나 갖고 있나</b>는 보이지만 어느 갈래가 빈지는 안 보인다.',
+   f:()=>'<div class="grid">'+flat().map(o=>itemCell(o)).join('')+'</div>' },
+ { t:'② 그리드 + 갈래 머리줄', d:'같은 그리드에 <b>갈래 머리줄</b>만 끼운다. 색 점 + 이름 + 개수. 지금 구조를 거의 안 바꾸면서 구분이 생긴다.',
+   f:()=>Object.keys(G).map(function(k){ const q=flat(k);
+     return secHead(k,q.length)+'<div class="grid">'+q.map(o=>itemCell(o)).join('')+'</div>'; }).join('') },
+ { t:'③ 갈래 탭 + 그리드', d:'공용 탭 띠(<b>segNavHTML</b>)로 한 번에 <b>한 갈래만</b> 본다. 목록이 짧아 스크롤이 거의 없다. 대신 다른 갈래는 안 보인다.',
+   f:()=>segBar(0)+'<div class="grid">'+flat('eco').map(o=>itemCell(o)).join('')+'</div>' },
+ { t:'④ 리스트 — 한 줄에 하나', d:'아이콘 + 이름·설명 + 효과 + 보유. <b>무엇을 올리는 룬인지</b>가 글로 보인다. 대신 한 화면에 6~7줄뿐이라 많이 스크롤한다.',
+   f:()=>flat().map(o=>itemRow(o)).join('') },
+ { t:'⑤ 리스트 + 갈래 머리줄', d:'④에 갈래 머리줄. 설명이 있어 처음 보는 사람에게 가장 친절하지만 <b>가장 길다</b>(40줄).',
+   f:()=>Object.keys(G).map(function(k){ const q=flat(k);
+     return secHead(k,q.length)+q.map(o=>itemRow(o)).join(''); }).join('') },
+ { t:'⑥ 갈래마다 가로 줄', d:'갈래를 <b>세로로 쌓고 각 줄은 옆으로 넘긴다</b>(모바일 스토어식). 네 갈래가 한 화면에 다 보이고 세로 스크롤이 짧다.',
+   f:()=>Object.keys(G).map(function(k){ const q=flat(k);
+     return secHead(k,q.length)+'<div class="hrow">'+q.map(o=>itemCell(o)).join('')+'</div>'; }).join('') },
+ { t:'⑦ 등급을 칩으로 압축', d:'⭐ <b>줄 수가 40 → 16</b>. 룬 하나가 한 줄이고 등급 셋은 오른쪽 칩으로. 없는 등급은 흐리게 — <b>무엇을 더 사야 하나</b>가 한눈에 보인다.',
+   f:()=>Object.keys(G).map(function(k){ const q=OWN.filter(r=>r[0]===k);
+     return secHead(k,q.length)+q.map(function(r){
+       const gs=(k==='uniq')?['uniq']:['low','mid','high'];
+       const first=gs.slice().reverse().find(g=>r[4][g])||gs[0];
+       return '<div class="cmp"><img src="'+P+r[1]+'_'+first+'.webp" alt="">'
+         + '<div><div class="nm">'+r[2]+'</div><div class="de">'+r[3]+'</div></div>'
+         + '<div class="chips">'+gs.map(function(g){ const q2=r[4][g];
+             return '<span class="chip'+(q2?'':' off')+'" style="--gc:'+GD[g].c+'">'
+               + '<b>'+(q2?(q2[0]+'/'+q2[1]):'–')+'</b><s>'+GD[g].nm+'</s></span>'; }).join('')
+         + '</div></div>'; }).join(''); }).join('') },
+ { t:'⑧ 갈래 색 띠 + 리스트', d:'머리줄 대신 줄마다 <b>왼쪽에 갈래 색 띠</b>. 섹션을 안 나눠도 갈래가 읽히고, 정렬을 바꿔도(등급순 등) 색이 따라온다.',
+   f:()=>flat().map(o=>itemRow(o,true)).join('') },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t.replace(/^[①-⑧]\s*/,'')+'</p>'
+   + '<p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><div class="bag">'
+   +   '<div class="bagH"><span class="bagT">보유한 룬</span>'
+   +     '<span class="bagN">누르면 빈 칸에 끼웁니다</span></div>'
+   +   '<div class="body">'+c.f()+'</div>'
+   + '</div></div></div>'; }).join('');
+</script></body></html>

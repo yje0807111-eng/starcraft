@@ -1,0 +1,163 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 칸 — 벡터 판 8안(등급 색 · 유니크)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px}
+h1 + p{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1200px}
+h1 + p b{color:#cfd8e4}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:14px 22px 30px;align-items:flex-start}
+.cell{width:300px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:74px}
+.pane{position:relative;width:300px;height:250px;overflow:hidden;background:#07090c;border-radius:4px}
+.bg{position:absolute;inset:0;background:url(../../assets/backgrounds/reb/reb.webp) center/cover no-repeat}
+.scrim{position:absolute;inset:0;background:rgba(5,8,12,.62)}
+svg{position:absolute;inset:0;width:100%;height:100%}
+</style></head><body>
+
+<h1>룬 칸 — 벡터 판 8안 · 등급 색과 유니크의 격</h1>
+<p>판을 그림에서 빼고 <b>도형으로</b> 그린다(트리 별과 같은 방식). 문양만 이미지로 얹는다.
+윗줄은 <b>하급 · 중급 · 상급 · 유니크</b>, 아랫줄은 <b>빈 칸 · 잠긴 칸 · 고른 칸</b>.
+여덟 안 모두 배경 딤은 같다 — 켜의 차이만 보이게.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+/* 등급 색 — RUNE_GD 실값 */
+const GD = [
+  { k:'low',  nm:'하급',   col:'#9aa4b0', v:'+1%'   },
+  { k:'mid',  nm:'중급',   col:'#5cd6ff', v:'+2.5%' },
+  { k:'high', nm:'상급',   col:'#ffcf6b', v:'+5%'   },
+  { k:'uniq', nm:'유니크', col:'#c98bff', v:'+5%'   }];
+const S = 'rune/';                 // 문양 원본(문양만 · 검정 배경)
+const SYM = ['tap','gas','mine','speed'];
+const R = 27;
+const XS = [46,130,214,278];       // 넷째(유니크)는 살짝 밖 — 아래에서 자리 다시 잡는다
+function hexPts(x,y,r){ const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function vtx(x,y,r,i){ const a=Math.PI/180*(60*i-90); return [x+r*Math.cos(a), y+r*Math.sin(a)]; }
+
+function defs(){
+  let s='<defs>';
+  // 면 — 위가 밝은 남색(트리 ctFace). 등급이 올라가도 면은 어둡게 둔다(문양이 묻히지 않게).
+  s+='<linearGradient id="face" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>';
+  // 유니크 면 — 아주 옅은 보라기만 섞는다(⑤안에서 쓴다)
+  s+='<linearGradient id="faceU" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#241d34"/><stop offset="1" stop-color="#08060e"/></linearGradient>';
+  GD.forEach(function(g){
+    const c=g.col;
+    // 테두리 — 위 흰빛 → 등급색 → 아래 옅게
+    s+='<linearGradient id="e'+g.k+'" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
+      +'<stop offset=".42" stop-color="'+c+'"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity=".34"/></linearGradient>';
+    // 뒷광
+    s+='<radialGradient id="b'+g.k+'"><stop offset="0" stop-color="'+c+'" stop-opacity=".22"/>'
+      +'<stop offset=".62" stop-color="'+c+'" stop-opacity=".07"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity="0"/></radialGradient>';
+    // 면에 도는 아주 옅은 등급색(⑤)
+    s+='<linearGradient id="t'+g.k+'" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="'+c+'" stop-opacity=".14"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity="0"/></linearGradient>'; });
+  s+='<radialGradient id="emg"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".12"/>'
+    +'<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>';
+  return s+'</defs>'; }
+
+/* ── 칸 한 개 ────────────────────────────────────────────────────────
+   o: 켜 조합 · g: 등급 · uq: 유니크인가 */
+function cell(x,y,gi,sym,o,st){
+  const g=GD[gi], c=g.col, uq=g.k==='uniq', s=[];
+  const r=R, U=uq&&o.uqOn;
+  if(st==='em'){
+    s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.8)+'" fill="url(#emg)"/>');
+    s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" opacity=".72" stroke="rgba(180,205,235,.26)" stroke-width="1"/>');
+    s.push('<polygon points="'+hexPts(x,y,r-2)+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".08"/>');
+    s.push('<text x="'+x+'" y="'+(y+6)+'" text-anchor="middle" font-family="Rajdhani" font-size="16" fill="rgba(175,200,232,.32)">+</text>');
+    return s.join(''); }
+  if(st==='lk'){
+    s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" opacity=".40" stroke="rgba(140,160,185,.14)" stroke-width="1"/>');
+    s.push('<text x="'+x+'" y="'+(y+3)+'" text-anchor="middle" font-family="Rajdhani" font-size="10" fill="#49525d">R45</text>');
+    return s.join(''); }
+
+  // ── 끼운 칸 ──
+  // 바깥 링 — 등급이 올라갈수록 하나씩 는다(o.ringByGd) 또는 유니크만(o.ringUq)
+  const rings = o.ringByGd ? (gi===0?0:gi===1?0:gi===2?1:2) : (o.ringUq&&uq ? (o.uqRich?2:1) : (o.ringAll?1:0));
+  for(let i=0;i<rings;i++)
+    s.push('<polygon points="'+hexPts(x,y,r+3.5+i*3.2)+'" fill="none" stroke="'+c+'" stroke-width="'+(i?'.7':'1')+'" opacity="'+(i?'.20':'.40')+'"/>');
+  // 검은 바닥 — 배경 사진을 눌러 앉힌다
+  s.push('<polygon points="'+hexPts(x,y,r)+'" fill="#000" opacity=".55"/>');
+  // 면 + 테두리 (번짐은 형태를 따라간다)
+  const faceId = (o.faceUq&&uq) ? 'faceU' : 'face';
+  s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#'+faceId+')" stroke="url(#e'+g.k+')" '
+    +'stroke-width="'+(o.thickByGd?(1+gi*0.22).toFixed(2):(uq?1.5:1.3))+'" '
+    +'style="filter:drop-shadow(0 0 '+(uq&&o.uqRich?4:3)+'px '+c+')"/>');
+  // 면에 도는 등급색 (아주 옅게)
+  if(o.tint) s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#t'+g.k+')" pointer-events="none"/>');
+  // 뒷광
+  if(o.back) s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.72).toFixed(1)+'" fill="url(#b'+g.k+')"/>');
+  // 안쪽 흰 실선
+  if(o.inner) s.push('<polygon points="'+hexPts(x,y,r-Math.max(1,r*0.073))+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>');
+  // 안쪽 등급 겹 — 등급 수만큼
+  if(o.innerByGd){ const n=gi; for(let i=0;i<n;i++)
+    s.push('<polygon points="'+hexPts(x,y,r-3.4-i*2.6)+'" fill="none" stroke="'+c+'" stroke-width=".7" opacity="'+(0.30-i*0.06).toFixed(2)+'"/>'); }
+  // 꼭짓점 컷 — 각진 SF 어휘. 유니크는 여섯, 상급은 셋
+  if(o.tick){ const n = uq?6:(gi===2?3:0);
+    for(let i=0;i<n;i++){ const p=vtx(x,y,r+1.6,i*(uq?1:2)), q=vtx(x,y,r-2.2,i*(uq?1:2));
+      s.push('<line x1="'+p[0].toFixed(1)+'" y1="'+p[1].toFixed(1)+'" x2="'+q[0].toFixed(1)+'" y2="'+q[1].toFixed(1)
+        +'" stroke="'+c+'" stroke-width=".9" opacity=".55"/>'); } }
+  // 유니크 — 점선 후광(아주 옅게)
+  if(U && o.uqDash) s.push('<polygon points="'+hexPts(x,y,r+7)+'" fill="none" stroke="'+c+'" stroke-width=".8" stroke-dasharray="2 4" opacity=".30"/>');
+  // 유니크 — 꼭짓점 점 여섯
+  if(U && o.uqDot) for(let i=0;i<6;i++){ const p=vtx(x,y,r+3.5,i);
+    s.push('<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="1.1" fill="'+c+'" opacity=".62"/>'); }
+  // 문양
+  const w=r*1.24;
+  s.push('<image href="'+S+'sym_'+sym+'.png" x="'+(x-w/2).toFixed(1)+'" y="'+(y-w/2).toFixed(1)
+    +'" width="'+w.toFixed(1)+'" height="'+w.toFixed(1)+'" style="mix-blend-mode:screen"/>');
+  // 고른 칸(아랫줄 셋째)
+  if(st==='sel') s.push('<polygon points="'+hexPts(x,y,r+5)+'" fill="none" stroke="#7defff" stroke-width="1.1" opacity=".9"/>');
+  return s.join(''); }
+
+function board(o){
+  let s='<svg viewBox="0 0 300 250">'+defs()+'<g>';
+  const X=[44,120,196,268], Y1=64, Y2=170;
+  GD.forEach(function(g,i){
+    s+=cell(X[i],Y1,i,SYM[i],o,'on');
+    s+='<text x="'+X[i]+'" y="'+(Y1+R+14)+'" text-anchor="middle" font-family="Rajdhani" font-size="10.5" font-weight="700" fill="'+g.col+'">'+g.v+'</text>';
+    s+='<text x="'+X[i]+'" y="'+(Y1+R+25)+'" text-anchor="middle" font-family="IBM Plex Sans KR" font-size="8.5" fill="#69737f">'+g.nm+'</text>'; });
+  s+=cell(X[0],Y2,1,null,o,'em');
+  s+=cell(X[1],Y2,1,null,o,'lk');
+  s+=cell(X[2],Y2,1,'gas',o,'sel');
+  s+=cell(X[3],Y2,3,'fever',o,'on');
+  ['빈 칸','잠김','고름','유니크'].forEach(function(t,i){
+    s+='<text x="'+X[i]+'" y="'+(Y2+R+14)+'" text-anchor="middle" font-family="IBM Plex Sans KR" font-size="8.5" fill="#69737f">'+t+'</text>'; });
+  return s+'</g></svg>'; }
+
+const CASES=[
+ { t:'기본 — 트리 규격 그대로', d:'면 그라데이션 + 등급색 테두리 + 형태를 따르는 번짐. 딱 그것뿐. <b>등급은 테두리 색으로만</b> 읽는다.',
+   o:{} },
+ { t:'뒷광 + 흰 실선', d:'①에 <b>문양 뒤 광</b>과 <b>안쪽 흰 실선</b>. 두께를 안 늘리고 깊이만 준다 — 트리 별이 쓰는 두 켜.',
+   o:{ back:1, inner:1 } },
+ { t:'등급 = 안쪽 겹 수', d:'하급 0겹 · 중급 1겹 · 상급 2겹 · 유니크 3겹. <b>색을 못 알아봐도 겹 수로</b> 등급이 읽힌다(색맹 대비이기도 하다).',
+   o:{ back:1, inner:1, innerByGd:1 } },
+ { t:'등급 = 바깥 링 수', d:'겹을 안쪽이 아니라 <b>바깥</b>에 둔다. 상급 1개 · 유니크 2개. 칸이 커 보이지 않게 링은 얇고 옅다.',
+   o:{ back:1, inner:1, ringByGd:1 } },
+ { t:'면에 등급색 한 방울', d:'면을 검게 두되 <b>위쪽에만</b> 등급색을 아주 옅게 흘린다(.14 → 0). 유니크는 면 자체가 옅은 보라.',
+   o:{ back:1, inner:1, tint:1, faceUq:1 } },
+ { t:'꼭짓점 컷', d:'각진 SF 어휘 — 꼭짓점을 가로지르는 짧은 절단선. <b>상급 셋 · 유니크 여섯.</b> 빛을 안 늘리고 «만듦새»만 올린다.',
+   o:{ back:1, inner:1, tick:1 } },
+ { t:'유니크만 특별하게', d:'일반 셋은 ②처럼 조용히 두고, <b>유니크에만</b> 바깥 링 둘 + 꼭짓점 점 여섯 + 점선 후광. 등급 차가 아니라 <b>격의 차</b>로 읽힌다.',
+   o:{ back:1, inner:1, ringUq:1, uqOn:1, uqRich:1, uqDot:1, uqDash:1 } },
+ { t:'종합 — 절제', d:'③(안쪽 겹) + ⑤(면 한 방울) + ⑦(유니크만 점)을 <b>세기를 낮춰</b> 합쳤다. 등급은 색·겹 둘로 읽히고 유니크만 조용히 화려하다.',
+   o:{ back:1, inner:1, innerByGd:1, tint:1, faceUq:1, uqOn:1, uqDot:1 } },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><div class="bg"></div><div class="scrim"></div>'+board(c.o)+'</div></div>'; }).join('');
+</script></body></html>

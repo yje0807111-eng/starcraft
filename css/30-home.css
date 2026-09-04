@@ -2495,11 +2495,22 @@
 #campRune .rnMapHd b{font-family:var(--font-num);font-size:13px;color:var(--gold);font-weight:700}
 /* ⭐ 이중 테두리 — 낀 칸은 바깥에 얇은 겹을 하나 더 두른다(2026-09-03 · 목업 tri-6 ②안).
    ⛔ 십자 반짝임·후광 원을 되살리지 말 것 — 환생 트리의 어휘라 룬 판에서는 시끄러웠다. */
+/* 🔷 **칸은 도형이다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).
+   환생 트리 별과 같은 켜: 검은 바닥 → 면(위가 밝은 남색) + 등급색 테두리 → 뒷광 → 안쪽 흰 실선 → 문양.
+   ⛔ 판까지 합친 그림(assets/icons/rune/<id>_<등급>.webp)으로 되돌리지 말 것 — 배경과 상호작용이
+     없어 스티커처럼 얹혔다. 그 그림은 **가방·상점**(HTML)이 계속 쓴다.
+   ⚠ 색·굵기·번짐은 js 가 인라인으로 얹는다(등급마다 달라서) — 여기서는 공통 성질만 정한다. */
+#campRune .rnHxFloor{fill:#000;opacity:.55;pointer-events:none}
+#campRune .rnHxR{fill:none;pointer-events:none}                    /* 바깥 링 — 등급을 형태로 */
+#campRune .rnBk{pointer-events:none}                                /* 문양 뒤 광 */
+#campRune .rnHxIn2{fill:none;stroke:#fff;stroke-width:.6;opacity:.16;pointer-events:none}
+#campRune .rnDot{pointer-events:none}                               /* 유니크 꼭짓점 점 */
+#campRune .rnEmB{fill:url(#rnEm);pointer-events:none}               /* 빈 칸에 도는 숨 */
 #campRune .rnHx{stroke-width:1.2}
-#campRune .rnHx.lk{fill:rgba(120,140,165,.018);stroke:rgba(140,160,185,.10);stroke-width:1}
-#campRune .rnHx.em{fill:rgba(150,175,205,.03);stroke:rgba(160,185,215,.18);stroke-width:1}
-#campRune .rnHx.on{fill:rgba(8,11,16,.9);
-  stroke:color-mix(in srgb,var(--rg) 72%,transparent);stroke-width:1.2}
+#campRune .rnHx.lk{fill:url(#rnFace);opacity:.40;stroke:rgba(140,160,185,.14);stroke-width:1}
+#campRune .rnHx.em{fill:url(#rnFace);fill-opacity:.72;stroke:rgba(180,205,235,.26);stroke-width:1}
+/* 면은 **검게 둔다** — 등급색으로 채우면 그 위의 문양이 색에 묻힌다(트리에서 얻은 규칙). */
+#campRune .rnHx.on{fill:url(#rnFace)}
 #campRune .rnHxOut{fill:none;stroke:color-mix(in srgb,var(--rg) 22%,transparent);stroke-width:1}
 #campRune .rnHxIn{fill:none;stroke:color-mix(in srgb,var(--rg) 28%,transparent);stroke-width:1}
 /* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
@@ -2524,21 +2535,44 @@
 #campRune .rnBagH{display:flex;align-items:center;gap:8px;min-height:22px}
 #campRune .rnBagT{font-size:12px;color:#c3ccd8;letter-spacing:.04em}
 #campRune .rnBagN{margin-left:auto;font-size:10.5px;color:#69737f}
-#campRune .rnBagG{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
-  max-height:172px;overflow-y:auto;padding-bottom:2px}
-#campRune .rnB{position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;min-height:56px;padding:5px 4px;cursor:pointer;
-  border:1px solid color-mix(in srgb,var(--rg) 45%,transparent);border-radius:var(--r-lg);
-  background:color-mix(in srgb,var(--rg) 8%,rgba(12,15,20,.7));color:#eef1f6;font:inherit}
-#campRune .rnB .ic{width:18px;height:18px}
-#campRune .rnBn{font-size:10px;color:#c3ccd8}
-#campRune .rnBv{font-family:var(--font-num);font-size:10px;font-weight:700;color:var(--rg)}
-#campRune .rnBc{position:absolute;right:4px;top:3px;font-family:var(--font-num);
-  font-size:10px;color:#eef1f6}
-#campRune .rnBc i{font-style:normal;color:#69737f}
-#campRune .rnB.full{opacity:.5}                    /* 남은 것이 없다 — 다 끼웠다 */
-#campRune .rnB.off{opacity:.28;pointer-events:none} /* 고른 칸에는 못 들어간다 */
-#campRune .rnEmp{grid-column:1/-1;padding:16px 8px;text-align:center;font-size:11px;color:#69737f}
+#campRune .rnBagG{display:block;max-height:172px;overflow-y:auto;padding-bottom:2px}
+/* 🏷 갈래 머리줄 — 성좌와 같은 색이라 판과 이어 읽힌다 */
+#campRune .rnGrpH{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
+#campRune .rnGrpH:first-child{margin-top:0}
+#campRune .rnGrpH i{width:6px;height:6px;border-radius:var(--r-bar);background:var(--gc)}
+#campRune .rnGrpH span{font-size:10.5px;color:var(--gc);letter-spacing:.1em}
+#campRune .rnGrpH u{flex:1;height:1px;text-decoration:none;opacity:.30;
+  background:linear-gradient(90deg,var(--gc),transparent)}
+/* 📄 줄 하나 = 룬 한 종류 */
+#campRune .rnRw{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:var(--r-md)}
+#campRune .rnRw + .rnRw{margin-top:2px}
+#campRune .rnRw.off{opacity:.30}                     /* 고른 칸에 못 끼우는 줄 */
+#campRune .rnRwI{width:36px;height:36px;flex:none;display:block;object-fit:contain}
+#campRune .rnRwT{font-size:11.5px;color:#eef1f6;line-height:1.25}
+#campRune .rnRwT s{display:block;text-decoration:none;font-family:var(--font-num);
+  font-size:9.5px;color:#69737f;margin-top:1px}
+#campRune .rnRwT u{text-decoration:none;margin-left:5px;font-size:9px;color:#8d97a6}
+#campRune .rnRwB{margin-left:auto;display:flex;gap:3px;flex:none}
+/* 🔷 등급 버튼 — 성좌 칸의 「켜」를 34px 로 줄여 넣었다.
+   ⚠ ×N·% 두 줄을 **한 덩어리로 세로 가운데** 두고 1.2px 만 내린다.
+     ⛔ %를 bottom 에 붙이지 말 것 — 육각 아래는 뾰족해서 글자가 밖으로 나간다.
+   값은 목업 camp-rune-hexbtn7-4 ③안에서 잰 것(2026-09-04 사용자 확정). */
+#campRune .rnHb{position:relative;display:block;padding:0;border:none;background:none;
+  cursor:pointer;font:inherit}
+#campRune .rnHb svg{display:block}
+#campRune .rnHbL{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:none;transform:translateY(1.2px)}
+#campRune .rnHbN{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;
+  color:#eef1f6;line-height:1;font-size:13px}
+#campRune .rnHbN em{font-style:normal;font-weight:500;opacity:.72;margin-right:.5px;font-size:9.4px}
+#campRune .rnHbP{font-family:var(--font-num);color:var(--rg);line-height:1;
+  font-size:5.5px;opacity:.72;margin-top:1px}
+#campRune .rnHb.none{cursor:default}                 /* 아직 못 가진 등급 */
+#campRune .rnHb.none .rnHbN{color:#69737f;opacity:.45}
+#campRune .rnHb.none .rnHbP{opacity:.32}
+#campRune .rnHb.full{opacity:.5}                     /* 남은 것이 없다 — 다 끼웠다 */
+#campRune .rnHb.off{opacity:.28;pointer-events:none} /* 고른 칸에는 못 들어간다 */
+#campRune .rnEmp{padding:16px 8px;text-align:center;font-size:11px;color:#69737f}
 #campRune .rnSlots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 #campRune .rnSlot{position:relative;min-height:62px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:2px;padding:6px 4px;cursor:pointer;

@@ -1,0 +1,163 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 가방 — ×N 더 키우기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1220px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:40px}
+.pane{position:relative;width:390px;height:280px;overflow:hidden;background:#0a0d12;
+  border-top:1px solid var(--metal-edge)}
+.bag{position:absolute;inset:0;display:flex;flex-direction:column;padding:9px 12px 12px;
+  background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
+.bagH{display:flex;align-items:center;min-height:20px;margin-bottom:8px;flex:0 0 auto}
+.bagT{font-size:12px;color:var(--txt-dim)}
+.bagN{margin-left:auto;font-size:10px;color:var(--txt-off)}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.16) transparent}
+.body::-webkit-scrollbar{width:5px}
+.body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
+.sec{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
+.sec:first-child{margin-top:0}
+.sec .dot{width:6px;height:6px;border-radius:var(--r-bar);background:var(--c)}
+.sec .t{font-size:10.5px;color:var(--c);letter-spacing:.1em}
+.sec .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--c),transparent);opacity:.30}
+.rw{display:flex;align-items:center;gap:8px;padding:3px 6px;border-radius:var(--r-md)}
+.rw + .rw{margin-top:2px}
+.rw > img{width:36px;height:36px;flex:none}
+.tt{font-size:11.5px;color:var(--txt);line-height:1.25}
+.tt s{display:block;text-decoration:none;font-family:var(--font-num);font-size:9.5px;
+  color:var(--txt-off);margin-top:1px}
+.btns{margin-left:auto;display:flex;gap:3px;flex:none}
+
+/* ── 육각 버튼 34px ── */
+.hb{position:relative;display:block;padding:0;border:none;background:none;cursor:pointer;font:inherit}
+.hb svg{display:block}
+/* 두 줄을 한 덩어리로 세로 가운데 — 안마다 --dy 만큼만 옮긴다(양수 = 아래로) */
+.hb .lb{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:none;
+  transform:translateY(var(--dy,0px))}
+.hb .n{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:700;
+  color:var(--txt);line-height:1;font-size:var(--nz,10.5px)}
+.hb .n em{font-style:normal;font-weight:500;opacity:.72;margin-right:.5px;
+  font-size:calc(var(--nz,10.5px) * .72)}
+.hb .p{font-family:var(--font-num);color:var(--gc);line-height:1;
+  font-size:var(--pz,6.5px);opacity:.72;margin-top:var(--gap,1.5px)}
+.hb.off{cursor:default}
+.hb.off .n{color:var(--txt-off);opacity:.45}
+.hb.off .p{opacity:.32}
+</style></head><body>
+
+<h1>룬 가방 — ②안에서 <b>×N 을 더 키웠다</b></h1>
+<p>②안(×N 11 · % 5.5 · 1.5px 내림)에서 <b>×N 만</b> 키웠다. 34px 버튼·% 5.5 는 그대로. ⚠ ×N 이 커지면 덩어리가 두꺼워져 % 가 육각의 <b>뾰족한 아래</b>로 밀린다 — 그래서 큰 안은 <b>내림을 조금 되돌렸다</b>. ×N·% 둘 다 안에 들어오는지 <b>재서</b> 옆에 적었다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const P='../../assets/icons/rune/';
+const G={ eco:{nm:'경제',c:'#7effc9'}, war:{nm:'전투',c:'#ffa3b8'},
+          grow:{nm:'성장',c:'#e6eef8'}, uniq:{nm:'유니크',c:'#c98bff'} };
+const GD={ low:{c:'#9aa4b0',p:'1%'}, mid:{c:'#5cd6ff',p:'2.5%'},
+           high:{c:'#ffcf6b',p:'5%'}, uniq:{c:'#c98bff',p:'5%'} };
+const OWN=[
+ ['eco','tap','탭 획득',    {low:1, mid:2, high:3}],
+ ['eco','gas','가스 획득',  {low:1, mid:2}],
+ ['eco','mine','일꾼 채취', {high:1}],
+ ['eco','reb','환생 포인트',{low:2, mid:1}],
+ ['war','atk','유닛 공격력',{mid:1, high:2}],
+ ['uniq','speed','캠프 진행 속도',{uniq:1}],
+ ['uniq','cost','구매 비용 −',{uniq:1}]];
+const GS=g=>g==='uniq'?['uniq']:['low','mid','high'];
+function ico(r){ const gs=GS(r[0]); const has=gs.slice().reverse().find(g=>r[3][g])||gs[0];
+  return P+r[1]+'_'+has+'.webp'; }
+function head(k){ const g=G[k];
+  return '<div class="sec" style="--c:'+g.c+'"><span class="dot"></span>'
+    +'<span class="t">'+g.nm+'</span><span class="ln"></span></div>'; }
+function hexPts(cx,cy,r){ const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+let uid=0; const W=34;
+function hex(g,n,st){
+  const c=GD[g].c, on=!!n, R=W/2-1, id='h'+(uid++);
+  let s='<svg width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'">';
+  if(on){
+    s+='<defs><linearGradient id="'+id+'f" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>'
+      +'<linearGradient id="'+id+'e" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
+      +'<stop offset=".42" stop-color="'+c+'"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity=".34"/></linearGradient>'
+      +'<radialGradient id="'+id+'b">'
+      +'<stop offset="0" stop-color="'+c+'" stop-opacity=".26"/>'
+      +'<stop offset=".62" stop-color="'+c+'" stop-opacity=".08"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity="0"/></radialGradient></defs>'
+      +'<polygon points="'+hexPts(W/2,W/2,R)+'" fill="url(#'+id+'f)" stroke="url(#'+id+'e)" stroke-width="1.2"/>'
+      +'<circle cx="'+(W/2)+'" cy="'+(W/2)+'" r="'+(R*0.7).toFixed(1)+'" fill="url(#'+id+'b)"/>'
+      +'<polygon points="'+hexPts(W/2,W/2,R-1.4)+'" fill="none" stroke="#fff" stroke-width=".55" opacity=".16"/>';
+  } else {
+    s+='<polygon points="'+hexPts(W/2,W/2,R)+'" fill="rgba(255,255,255,.018)" '
+      +'stroke="rgba(150,170,200,.16)" stroke-width="1"/>';
+  }
+  s+='</svg>';
+  return '<button class="hb'+(on?'':' off')+'" style="--gc:'+c+';'+st+'">'+s
+    + '<span class="lb"><span class="n">'+(on?'<em>×</em>'+n:'–')+'</span>'
+    + '<span class="p">'+GD[g].p+'</span></span></button>'; }
+function row(r,st){ const gs=GS(r[0]);
+  return '<div class="rw"><img src="'+ico(r)+'" alt="">'
+    + '<span class="tt">'+r[2]+'<s>'+gs.map(g=>GD[g].p).join(' · ')+'</s></span>'
+    + '<span class="btns">'+gs.map(g=>hex(g,r[3][g],st)).join('')+'</span></div>'; }
+function board(st){ return Object.keys(G).map(function(k){
+  const q=OWN.filter(r=>r[0]===k); if(!q.length) return '';
+  return head(k)+q.map(r=>row(r,st)).join(''); }).join(''); }
+
+const CASES=[
+ { t:'×N 12 · 1.5px 내림', st:'--nz:12px;--pz:5.5px;--dy:1.5px;--gap:1px',
+   d:'②에서 한 단 키웠다.' },
+ { t:'×N 12.5 · 1.5px 내림', st:'--nz:12.5px;--pz:5.5px;--dy:1.5px;--gap:1px',
+   d:'⭐ 두 단. 개수가 확실히 주인공이 된다.' },
+ { t:'×N 13 · 1.2px 내림', st:'--nz:13px;--pz:5.5px;--dy:1.2px;--gap:1px',
+   d:'세 단. 덩어리가 두꺼워져 내림을 0.3px 되돌렸다.' },
+ { t:'×N 14 · 1px 내림', st:'--nz:14px;--pz:5.5px;--dy:1px;--gap:.5px',
+   d:'가장 크게 — 34px 버튼에서 낼 수 있는 거의 한계.' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  uid=0;
+  return '<div class="cell" data-i="'+i+'"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p>'
+   + '<p class="sub">'+c.d+' <b class="fit"></b></p>'
+   + '<div class="pane"><div class="bag">'
+   +   '<div class="bagH"><span class="bagT">보유한 룬</span>'
+   +     '<span class="bagN">누르면 빈 칸에 끼웁니다</span></div>'
+   +   '<div class="body">'+board(c.st)+'</div>'
+   + '</div></div></div>'; }).join('');
+
+/* 📏 ×N·% 가 육각 안에 들어오는지 잰다 — 위아래로 갈수록 좁아지는 폭과 견준다 */
+document.querySelectorAll('.cell').forEach(function(cell){
+  let worst=0, who='';
+  cell.querySelectorAll('.hb').forEach(function(b){
+    const B=b.getBoundingClientRect();
+    const cy=B.top+B.height/2, r=B.height/2-1;
+    [['n',b.querySelector('.n')],['%',b.querySelector('.p')]].forEach(function(q){
+      if(!q[1]) return; const R=q[1].getBoundingClientRect();
+      // 글자 상자의 위·아래 두 모서리 중 육각이 더 좁은 쪽에서 잰다
+      const dy=Math.max(Math.abs(R.bottom-cy), Math.abs(R.top-cy));
+      const half=(dy<=r*0.5)?(0.866*r):(0.866*r*Math.max(0,(r-dy)/(r*0.5)));
+      const over=R.width/2-half;
+      if(over>worst){ worst=over; who=q[0]; } }); });
+  const el=cell.querySelector('.fit');
+  el.textContent = worst<=0 ? '· 버튼 안에 들어온다'
+    : ('· ⚠ '+who+' 가 '+worst.toFixed(1)+'px 삐져나온다');
+  el.style.color = worst<=0 ? '#8fe6b0' : '#ffb0b0'; });
+</script></body></html>

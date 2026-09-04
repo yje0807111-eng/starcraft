@@ -1,0 +1,192 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 가방 ⑦ 업그레이드 — 효과 이름 · 보유 개수 · % 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1220px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:12px 22px 30px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:62px}
+.pane{position:relative;width:390px;height:330px;overflow:hidden;background:#0a0d12;
+  border-top:1px solid var(--metal-edge)}
+.bag{position:absolute;inset:0;display:flex;flex-direction:column;padding:9px 12px 12px;
+  background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
+.bagH{display:flex;align-items:center;min-height:20px;margin-bottom:8px;flex:0 0 auto}
+.bagT{font-size:12px;color:var(--txt-dim)}
+.bagN{margin-left:auto;font-size:10px;color:var(--txt-off)}
+.body{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.16) transparent}
+.body::-webkit-scrollbar{width:5px}
+.body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
+
+/* 갈래 머리줄 */
+.sec{display:flex;align-items:center;gap:6px;margin:8px 0 5px}
+.sec:first-child{margin-top:0}
+.sec .dot{width:6px;height:6px;border-radius:var(--r-bar);background:var(--c)}
+.sec .t{font-size:10.5px;color:var(--c);letter-spacing:.1em}
+.sec .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--c),transparent);opacity:.30}
+
+/* 줄 */
+.rw{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:var(--r-md)}
+.rw + .rw{margin-top:2px}
+.rw img{width:36px;height:36px;flex:none}
+.tt{font-size:11.5px;color:var(--txt);line-height:1.25}
+.tt s{display:block;text-decoration:none;font-size:9.5px;color:var(--txt-off);margin-top:1px}
+.right{margin-left:auto;display:flex;gap:3px;align-items:center}
+
+/* 칩 — 기본 */
+.ch{min-width:34px;padding:2px 4px;border-radius:var(--r-bar);text-align:center;
+  border:1px solid color-mix(in srgb,var(--gc) 42%,transparent);
+  background:color-mix(in srgb,var(--gc) 10%,transparent)}
+.ch b{display:block;font-family:var(--font-num);font-size:11px;font-weight:700;color:var(--txt)}
+.ch s{display:block;text-decoration:none;font-family:var(--font-num);font-size:9px;color:var(--gc)}
+.ch.off{opacity:.26}
+.ch.rev b{font-size:9px;color:var(--gc);font-weight:500}
+.ch.rev s{font-size:11px;font-weight:700;color:var(--txt)}
+.ch.dash{border-style:dashed;background:none}
+.ch.plain{border:none;background:none;min-width:30px}
+
+/* 트랙 — 1% — 2.5% — 5% 를 이어서 */
+.tr{margin-left:auto;display:flex;align-items:center}
+.tr .seg{display:flex;flex-direction:column;align-items:center;min-width:34px}
+.tr .seg b{font-family:var(--font-num);font-size:10.5px;font-weight:700;color:var(--gc)}
+.tr .seg s{text-decoration:none;font-family:var(--font-num);font-size:10px;color:var(--txt)}
+.tr .seg.off b,.tr .seg.off s{color:var(--txt-off);opacity:.5}
+.tr .lk{width:8px;height:1px;background:var(--txt-off);opacity:.35;margin-top:-8px}
+
+/* 막대 — 등급 셋을 칸 셋으로 */
+.br{margin-left:auto;display:flex;gap:2px;align-items:flex-end}
+.br .b{width:30px;border-radius:var(--r-bar);text-align:center;
+  border:1px solid color-mix(in srgb,var(--gc) 40%,transparent);
+  background:color-mix(in srgb,var(--gc) 14%,transparent);padding:2px 0}
+.br .b.off{border-color:rgba(140,160,185,.16);background:none}
+.br .b u{display:block;text-decoration:none;font-family:var(--font-num);font-size:11px;font-weight:700;color:var(--txt)}
+.br .b.off u{color:var(--txt-off);opacity:.6}
+.br .b s{display:block;text-decoration:none;font-family:var(--font-num);font-size:8.5px;color:var(--gc)}
+.br .b.off s{color:var(--txt-off);opacity:.6}
+
+/* % 를 제목 아래 한 줄로 */
+.pct{display:block;margin-top:2px;font-family:var(--font-num);font-size:9.5px;color:var(--txt-off)}
+.pct em{font-style:normal;color:var(--gc)}
+.cnt{margin-left:auto;display:flex;gap:4px}
+.cnt span{min-width:22px;text-align:center;font-family:var(--font-num);font-size:11px;
+  font-weight:700;color:var(--txt)}
+.cnt span.off{color:var(--txt-off);opacity:.45}
+</style></head><body>
+
+<h1>룬 가방 ⑦ 업그레이드 — 제목은 효과 이름 · 수치는 보유 개수 · 등급은 %로</h1>
+<p>바뀐 것 셋: <b>제목이 「탭 획득」처럼 무엇을 올리는지</b>로 · <b>수치는 보유 개수만</b>(남은/전체 아님) ·
+<b>등급 이름 대신 %</b>(1% · 2.5% · 5%). 여덟 안은 그 셋을 <b>어떻게 배치하느냐</b>로 갈린다.
+⚠ 실제 값은 1 / 2.5 / 5% 다 — 말씀하신 «1-3-5» 의 가운데는 2.5% 다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const P='../../assets/icons/rune/';
+const G={ eco:{nm:'경제',c:'#7effc9'}, war:{nm:'전투',c:'#ffa3b8'},
+          grow:{nm:'성장',c:'#e6eef8'}, uniq:{nm:'유니크',c:'#c98bff'} };
+const GD={ low:{c:'#9aa4b0',p:'1%'}, mid:{c:'#5cd6ff',p:'2.5%'},
+           high:{c:'#ffcf6b',p:'5%'}, uniq:{c:'#c98bff',p:'5%'} };
+/* 갈래 · id · 효과 이름(제목) · 룬 이름(부제) · 등급별 보유 개수 */
+const OWN=[
+ ['eco','tap','탭 획득','손끝의 룬',      {low:1, mid:2, high:3}],
+ ['eco','gas','가스 획득','정제의 룬',    {low:1, mid:2}],
+ ['eco','mine','일꾼 채취','채굴의 룬',   {high:1}],
+ ['eco','reb','환생 포인트','윤회의 룬',  {low:2, mid:1}],
+ ['war','atk','유닛 공격력','힘의 룬',    {mid:1, high:2}],
+ ['war','aspd','유닛 공격속도','연타의 룬',{mid:1}],
+ ['war','hp','유닛 체력','수호의 룬',     {low:3}],
+ ['war','heal','회복량','치유의 룬',      {low:1, high:1}],
+ ['grow','exp','경험치','성장의 룬',      {mid:2}],
+ ['grow','kill','적 처치 보상','전과의 룬',{mid:1, high:1}],
+ ['grow','mapg','유즈맵 보상','전리품의 룬',{low:2}],
+ ['grow','fevg','피버 획득','열정의 룬',  {mid:1}],
+ ['uniq','speed','캠프 진행 속도','가속의 룬',{uniq:1}],
+ ['uniq','wspd','일꾼 이동속도','신속의 룬',{uniq:1}],
+ ['uniq','fever','피버 확률','열기의 룬', {uniq:1}],
+ ['uniq','cost','구매 비용 −','절약의 룬',{uniq:1}]];
+const GS=g=>g==='uniq'?['uniq']:['low','mid','high'];
+function ico(r){ const gs=GS(r[0]); const has=gs.slice().reverse().find(g=>r[4][g])||gs[0];
+  return P+r[1]+'_'+has+'.webp'; }
+function head(k){ const g=G[k];
+  return '<div class="sec" style="--c:'+g.c+'"><span class="dot"></span>'
+    +'<span class="t">'+g.nm+'</span><span class="ln"></span></div>'; }
+
+/* 줄 하나 — mode 로 오른쪽 모양을 고른다 */
+function row(r,mode){
+  const gs=GS(r[0]);
+  let right='';
+  if(mode==='chip' || mode==='rev' || mode==='dash' || mode==='plain'){
+    right='<div class="right">'+gs.map(function(g){ const n=r[4][g];
+      const cls='ch'+(mode==='rev'?' rev':'')+(mode==='dash'&&!n?' dash':'')
+        +(mode==='plain'?' plain':'')+(n?'':' off');
+      return '<span class="'+cls+'" style="--gc:'+GD[g].c+'">'
+        +'<b>'+(n?n:'–')+'</b><s>'+GD[g].p+'</s></span>'; }).join('')+'</div>';
+  } else if(mode==='track'){
+    right='<div class="tr">'+gs.map(function(g,i){ const n=r[4][g];
+      return (i?'<span class="lk"></span>':'')
+        +'<span class="seg'+(n?'':' off')+'" style="--gc:'+GD[g].c+'">'
+        +'<s>'+(n?n:'–')+'</s><b>'+GD[g].p+'</b></span>'; }).join('')+'</div>';
+  } else if(mode==='bar'){
+    right='<div class="br">'+gs.map(function(g){ const n=r[4][g];
+      return '<span class="b'+(n?'':' off')+'" style="--gc:'+GD[g].c+'">'
+        +'<u>'+(n?n:'0')+'</u><s>'+GD[g].p+'</s></span>'; }).join('')+'</div>';
+  } else if(mode==='under'){
+    right='<div class="cnt">'+gs.map(function(g){ const n=r[4][g];
+      return '<span class="'+(n?'':'off')+'">'+(n?n:'–')+'</span>'; }).join('')+'</div>';
+  }
+  const sub = (mode==='under')
+    ? '<span class="pct">'+gs.map(g=>'<em style="--gc:'+GD[g].c+'">'+GD[g].p+'</em>').join(' · ')+'</span>'
+    : (mode==='name' ? '<s>'+r[3]+'</s>' : '');
+  const rr = (mode==='name')
+    ? '<div class="right">'+gs.map(function(g){ const n=r[4][g];
+        return '<span class="ch'+(n?'':' off')+'" style="--gc:'+GD[g].c+'">'
+          +'<b>'+(n?n:'–')+'</b><s>'+GD[g].p+'</s></span>'; }).join('')+'</div>'
+    : right;
+  return '<div class="rw"><img src="'+ico(r)+'" alt="">'
+    + '<span class="tt">'+r[2]+sub+'</span>' + rr + '</div>'; }
+
+function board(mode,only){
+  return Object.keys(G).map(function(k){
+    if(only && k!==only) return '';
+    return head(k)+OWN.filter(r=>r[0]===k).map(r=>row(r,mode)).join(''); }).join(''); }
+
+const CASES=[
+ { t:'개수 위 · % 아래', m:'chip',
+   d:'칩 하나에 <b>보유 개수(큰 흰 숫자)</b>와 <b>%(작은 등급색)</b>. 없는 등급은 «–» 로 흐리게.' },
+ { t:'% 위 · 개수 아래', m:'rev',
+   d:'위아래를 뒤집었다. <b>%가 먼저</b> 읽혀 「어느 세기를 갖고 있나」가 앞선다.' },
+ { t:'없는 등급은 점선', m:'dash',
+   d:'①과 같되 <b>안 가진 등급만 점선 테두리</b>. 「살 수 있는 자리」로 읽힌다 — 상점으로 가는 힌트.' },
+ { t:'테두리 없이', m:'plain',
+   d:'칩의 판·테두리를 걷고 <b>숫자와 %만</b>. 가장 조용하다 — 룬 그림이 주인공이 된다.' },
+ { t:'트랙 — 1% ─ 2.5% ─ 5%', m:'track',
+   d:'⭐ 세 등급을 <b>선으로 이어</b> 한 축으로 보여 준다. 위가 보유 개수, 아래가 %.' },
+ { t:'막대 셋', m:'bar',
+   d:'등급을 <b>칸 셋</b>으로. 가진 칸은 면이 차고 없는 칸은 비어 있다 — 진행도처럼 읽힌다.' },
+ { t:'% 는 제목 아래 · 개수만 오른쪽', m:'under',
+   d:'%를 <b>제목 밑 한 줄</b>로 빼고 오른쪽엔 개수만 셋. 오른쪽이 가장 가볍다.' },
+ { t:'룬 이름을 부제로', m:'name',
+   d:'①에 <b>「손끝의 룬」을 작은 부제</b>로 남긴다. 효과로 찾고 이름으로 확인한다 — 이름을 아주 버리진 않는 안.' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d+'</p>'
+   + '<div class="pane"><div class="bag">'
+   +   '<div class="bagH"><span class="bagT">보유한 룬</span>'
+   +     '<span class="bagN">누르면 빈 칸에 끼웁니다</span></div>'
+   +   '<div class="body">'+board(c.m)+'</div>'
+   + '</div></div></div>'; }).join('');
+</script></body></html>

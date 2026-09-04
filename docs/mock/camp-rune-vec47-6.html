@@ -1,0 +1,140 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 칸 — ④+⑦ 조합, 실제 크기에서 조율</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px}
+h1 + p{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1200px}
+h1 + p b{color:#cfd8e4}
+.warn{color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:14px 22px 30px;align-items:flex-start}
+.cell{width:300px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:62px}
+.pane{position:relative;width:300px;height:330px;overflow:hidden;background:#07090c;border-radius:4px}
+.bg{position:absolute;inset:0;background:url(../../assets/backgrounds/reb/reb.webp) center/cover no-repeat}
+.scrim{position:absolute;inset:0;background:rgba(5,8,12,.62)}
+svg{position:absolute;inset:0;width:100%;height:100%}
+.lb{position:absolute;left:8px;font-size:9.5px;color:#69737f;z-index:3}
+.lb.a{top:6px}.lb.b{top:186px}
+</style></head><body>
+
+<h1>④ 바깥 링 + ⑦ 유니크 특별 — 실제 크기에서 조율</h1>
+<p>위 절반은 <b>실제 성좌 그대로</b>(칸 반지름 21 · 고리 72 · 8칸). 아래 절반은 같은 칸을 <b>크게</b> 본 것.
+⚠ 이웃 칸 중심 사이는 <b>55.1</b> 이라 링이 27.5 를 넘으면 <span class="warn">옆 칸을 침범한다</span> — 그 선을 넘는 안은 아래에 적었다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+const GD = { low:'#9aa4b0', mid:'#5cd6ff', high:'#ffcf6b', uniq:'#c98bff' };
+const S = 'rune/';
+const R_N = 21, R_U = 33, RING = 72, CONS = 8;
+const CT = [150,96];                     // 성좌 하나만 크게
+const SLOT = [                            // 8칸 — 등급을 섞어 둔다
+  ['tap','high'], ['gas','mid'], ['mine','low'], ['reb','mid'],
+  ['exp','high'], null, null, 'lk'];
+function hexPts(x,y,r){ const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function vtx(x,y,r,i){ const a=Math.PI/180*(60*i-90); return [x+r*Math.cos(a), y+r*Math.sin(a)]; }
+function nPos(j){ const a=-Math.PI/2+j/CONS*Math.PI*2;
+  return [CT[0]+Math.cos(a)*RING, CT[1]+Math.sin(a)*RING]; }
+
+function defs(){
+  let s='<defs><linearGradient id="face" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>';
+  for(const k in GD){ const c=GD[k];
+    s+='<linearGradient id="e'+k+'" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
+      +'<stop offset=".42" stop-color="'+c+'"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity=".34"/></linearGradient>'
+      +'<radialGradient id="b'+k+'"><stop offset="0" stop-color="'+c+'" stop-opacity=".22"/>'
+      +'<stop offset=".62" stop-color="'+c+'" stop-opacity=".07"/>'
+      +'<stop offset="1" stop-color="'+c+'" stop-opacity="0"/></radialGradient>'; }
+  s+='<radialGradient id="emg"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".12"/>'
+    +'<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>';
+  return s+'</defs>'; }
+
+/* o: g1(상급 링 반지름 여유) g2(유니크 둘째 링 여유) dash(점선 후광 여유·0=없음)
+      dot(꼭짓점 점) op1/op2(링 진하기) */
+function cell(x,y,r,gd,sym,o,st){
+  const c=GD[gd], uq=(gd==='uniq'), s=[];
+  if(st==='em'){
+    s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.8)+'" fill="url(#emg)"/>');
+    s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" opacity=".72" stroke="rgba(180,205,235,.26)" stroke-width="1"/>');
+    s.push('<text x="'+x+'" y="'+(y+5)+'" text-anchor="middle" font-family="Rajdhani" font-size="13" fill="rgba(175,200,232,.32)">+</text>');
+    return s.join(''); }
+  if(st==='lk'){
+    s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" opacity=".40" stroke="rgba(140,160,185,.14)" stroke-width="1"/>');
+    s.push('<text x="'+x+'" y="'+(y+2.5)+'" text-anchor="middle" font-family="Rajdhani" font-size="7.5" fill="#49525d">R45</text>');
+    return s.join(''); }
+  // ⭕ 바깥 링 — ④: 상급 1개 · 유니크 2개 (하급·중급은 없다)
+  const nRing = uq ? 2 : (gd==='high' ? 1 : 0);
+  for(let i=0;i<nRing;i++){
+    const rr = r + (i===0 ? o.g1 : o.g2);
+    s.push('<polygon points="'+hexPts(x,y,rr)+'" fill="none" stroke="'+c+'" stroke-width="'+(i?'.7':'.9')
+      +'" opacity="'+(i?o.op2:o.op1)+'"/>'); }
+  // ⑦ 유니크 — 점선 후광
+  if(uq && o.dash) s.push('<polygon points="'+hexPts(x,y,r+o.dash)+'" fill="none" stroke="'+c
+    +'" stroke-width=".7" stroke-dasharray="2 4" opacity="'+o.dashOp+'"/>');
+  // 검은 바닥 + 면 + 테두리
+  s.push('<polygon points="'+hexPts(x,y,r)+'" fill="#000" opacity=".55"/>');
+  s.push('<polygon points="'+hexPts(x,y,r*0.93)+'" fill="url(#face)" stroke="url(#e'+gd+')" '
+    +'stroke-width="'+(uq?1.5:1.3)+'" style="filter:drop-shadow(0 0 '+(uq?4:3)+'px '+c+')"/>');
+  s.push('<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.72).toFixed(1)+'" fill="url(#b'+gd+')"/>');
+  s.push('<polygon points="'+hexPts(x,y,r-Math.max(1,r*0.073))+'" fill="none" stroke="#fff" stroke-width=".6" opacity=".16"/>');
+  // ⑦ 유니크 — 꼭짓점 점 여섯
+  if(uq && o.dot) for(let i=0;i<6;i++){ const p=vtx(x,y,r+o.dotR,i);
+    s.push('<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="'+o.dotSz+'" fill="'+c+'" opacity="'+o.dotOp+'"/>'); }
+  const w=r*1.24;
+  s.push('<image href="'+S+'sym_'+sym+'.png" x="'+(x-w/2).toFixed(1)+'" y="'+(y-w/2).toFixed(1)
+    +'" width="'+w.toFixed(1)+'" height="'+w.toFixed(1)+'" style="mix-blend-mode:screen"/>');
+  return s.join(''); }
+
+function board(o){
+  let s='<svg viewBox="0 0 300 330">'+defs()+'<g>';
+  // ── 위: 실제 크기 성좌 ──
+  for(let j=0;j<CONS;j++){ const p=nPos(j), v=SLOT[j];
+    if(v==='lk')      s+=cell(p[0],p[1],R_N,'mid',null,o,'lk');
+    else if(v===null) s+=cell(p[0],p[1],R_N,'mid',null,o,'em');
+    else              s+=cell(p[0],p[1],R_N,v[1],v[0],o,'on'); }
+  s+=cell(CT[0],CT[1],R_U,'uniq','speed',o,'on');
+  // ── 아래: 같은 칸을 크게 (하급·상급·유니크) ──
+  const Y=262, X=[62,150,238], R2=30;
+  s+=cell(X[0],Y,R2,'low','mine',o,'on');
+  s+=cell(X[1],Y,R2,'high','tap',o,'on');
+  s+=cell(X[2],Y,R2,'uniq','fever',o,'on');
+  ['하급','상급','유니크'].forEach(function(t,i){
+    s+='<text x="'+X[i]+'" y="'+(Y+R2+13)+'" text-anchor="middle" font-family="IBM Plex Sans KR" font-size="9" fill="#69737f">'+t+'</text>'; });
+  return s+'</g></svg>'; }
+
+/* 이웃 칸 중심 사이 = 2·72·sin(22.5°) = 55.1 → 한 칸이 27.5 를 넘으면 침범 */
+const LIMIT = 2*RING*Math.sin(Math.PI/CONS)/2;
+function reach(o){ const uq = R_N + Math.max(o.g1,o.g2, o.dash||0, o.dot?(o.dotR+o.dotSz):0);
+  return uq; }
+
+const CASES=[
+ { t:'그대로 (⑧안 세기)', d:'앞 목업에서 쓴 값 그대로. 링 여유 3.5 / 6.7 · 점선 7 · 점 3.5.',
+   o:{ g1:3.5, g2:6.7, dash:7, dashOp:.30, dot:1, dotR:3.5, dotSz:1.1, dotOp:.62, op1:.40, op2:.20 } },
+ { t:'링만 좁힘', d:'링을 <b>2.5 / 4.6</b> 으로 당긴다. 칸이 커 보이는 것을 줄이고 이웃 침범도 막는다.',
+   o:{ g1:2.5, g2:4.6, dash:7, dashOp:.30, dot:1, dotR:3.5, dotSz:1.1, dotOp:.62, op1:.40, op2:.20 } },
+ { t:'점선 후광 뺌', d:'②에서 <b>점선을 없앤다</b>. 「너무 눈에 띄지 않게」에 가장 걸리던 켜.',
+   o:{ g1:2.5, g2:4.6, dash:0, dot:1, dotR:3.5, dotSz:1.1, dotOp:.62, op1:.40, op2:.20 } },
+ { t:'점도 줄임', d:'③에서 점을 <b>더 작고 옅게</b>(1.1→0.9 · .62→.45). 유니크가 조용해진다.',
+   o:{ g1:2.5, g2:4.6, dash:0, dot:1, dotR:3.2, dotSz:.9, dotOp:.45, op1:.40, op2:.20 } },
+ { t:'링을 더 옅게', d:'④에서 링 진하기를 <b>.40/.20 → .28/.14</b>. 등급 신호는 남기되 존재감만 낮춘다.',
+   o:{ g1:2.5, g2:4.6, dash:0, dot:1, dotR:3.2, dotSz:.9, dotOp:.45, op1:.28, op2:.14 } },
+ { t:'가장 조용한 안', d:'⑤에서 유니크 둘째 링까지 뺀다(링 1개). <b>유니크는 점 여섯으로만</b> 갈린다.',
+   o:{ g1:2.5, g2:2.5, dash:0, dot:1, dotR:3.2, dotSz:.9, dotOp:.45, op1:.28, op2:0 } },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  const rc = reach(c.o), bad = rc > LIMIT;
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p><p class="sub">'+c.d
+   + '<br><b style="color:'+(bad?'#ffb0b0':'#8fe6b0')+'">칸 바깥 '+rc.toFixed(1)+' / 한계 '+LIMIT.toFixed(1)
+   + (bad?' — 옆 칸 침범':' — 안전')+'</b></p>'
+   + '<div class="pane"><div class="bg"></div><div class="scrim"></div>'+board(c.o)
+   + '<span class="lb a">실제 크기 (칸 21)</span><span class="lb b">크게 본 것</span></div></div>'; }).join('');
+</script></body></html>

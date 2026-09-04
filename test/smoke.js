@@ -2425,6 +2425,7 @@ async function groupLobby(){
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
+    let bagNote='';
     try{
       // ① 네비 순서 — 연구 · 환생 · 룬 · 유즈맵 · 상점
       const cells=NAV_TREE.filter(x=>!x.noCell).map(x=>x.k);
@@ -2437,6 +2438,46 @@ async function groupLobby(){
       assert(_runeSec==='slot','장착 탭이 아니다: '+_runeSec);
       // ③ 🌌 판은 SVG 한 장이다(2026-09-03 성좌 판) — 줄 두 개(.rnSlot)로 되돌리지 말 것
       assert(el.querySelector('.rnMap svg'),'성좌 판이 없다 — 목록형으로 되돌아갔다');
+      // 🔷 **칸은 도형이다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).
+      //   판까지 합친 그림 한 장으로 되돌리면 배경과 상호작용이 없어 스티커처럼 얹힌다.
+      //   ⭐ 여기서 잠그는 것은 넷이다: 도형으로 그린다 · 등급 그라데이션이 있다 ·
+      //     등급을 **형태로도** 읽는다(상급 1링 · 유니크 2링) · 이웃 칸을 안 밟는다.
+      { const C2=campState(); const keepB2=JSON.parse(JSON.stringify(C2.best||{}));
+        const keepR2=JSON.parse(JSON.stringify(C2.rune||{}));
+        try{
+          C2.best={10:50};
+          const put=(id,gd)=>{ const k=runeKey(id,gd); const R2=campRuneState();
+            R2.own[k]=(R2.own[k]|0)+1; const kind=(runeParse(k).def.kind==='uniq')?'uniq':'norm';
+            const n=campRuneSlots(kind);
+            for(let i=0;i<n;i++) if(!campRuneEq(kind)[i] && campRuneCanEquip(kind,i,k)) return campRuneEquip(kind,i,k);
+            return false; };
+          put('tap','low'); put('gas','high'); put('speed','uniq');
+          campRuneRender(); await sleep(40);
+          const svg=el.querySelector('.rnMap svg');
+          // ① 판이 도형이다 — 등급 그라데이션이 defs 에 있어야 한다
+          assert(svg.querySelector('#rnFace'),'칸 면 그라데이션이 없다 — 판이 다시 그림 한 장이 됐다');
+          for(const gd of ['low','mid','high','uniq'])
+            assert(svg.querySelector('#rnE'+gd) && svg.querySelector('#rnB'+gd),
+              '등급 '+gd+' 의 테두리·뒷광 그라데이션이 없다');
+          // ② 문양은 **문양만** 담은 그림이다(판이 안 구워져 있다)
+          { const im=svg.querySelector('image.rnImg');
+            assert(im,'칸에 문양이 없다');
+            assert((im.getAttribute('href')||'').indexOf('/glyph/')>=0,
+              '문양이 판까지 합친 그림이다: '+im.getAttribute('href')); }
+          // ③ 등급을 **형태로도** 읽는다 — 상급 1링 · 유니크 2링 · 하급 0링
+          assert(svg.querySelectorAll('.rnHxR').length===3,
+            '바깥 링 수가 다르다(상급 1 + 유니크 2 = 3): '+svg.querySelectorAll('.rnHxR').length);
+          assert(svg.querySelectorAll('.rnDot').length===6,
+            '유니크 꼭짓점 점이 여섯이 아니다: '+svg.querySelectorAll('.rnDot').length);
+          // ④ ⛔ **이웃 칸을 밟지 않는다** — 고리 8칸이라 중심 사이가 좁다.
+          //   점선 후광(r+7)을 되살리면 여기서 걸린다(목업에서 28.0 vs 한계 27.6 이었다).
+          //   ⚠ 고리 위 칸이 가질 수 있는 가장 바깥은 **상급 링 하나**(RUNE_RING1)다 —
+          //     링 둘·점 여섯은 유니크의 것이고 유니크는 가운데에만 앉는다.
+          //     ⛔ 그 둘까지 더해 재지 말 것: 있지도 않은 장식으로 고리를 못 좁히게 된다(2026-09-04).
+          { const gap=RUNE_RING*Math.sin(Math.PI/RUNE_CONS);
+            const reach=RUNE_R_N+RUNE_RING1;
+            assert(reach<=gap,'칸 장식이 옆 칸을 밟는다: '+reach.toFixed(1)+' > '+gap.toFixed(1)); }
+        } finally { C2.best=keepB2; C2.rune=keepR2; campRuneRender(); } }
       // 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
       const lk=el.querySelectorAll('.rnHx.lk'), lkT=el.querySelectorAll('.rnLkT');
       assert(lk.length>0,'기록 0 인데 잠긴 칸이 하나도 없다');
@@ -2465,13 +2506,64 @@ async function groupLobby(){
             '판이 상단 띠 아래에서 시작한다 — 상단이 판과 안 합쳐졌다');
           assert(getComputedStyle(tp).position==='absolute','상단이 자리를 차지한다(떠 있지 않다)');
           assert(!el.querySelector('.rnMapHd'),'판 위 머리줄이 남아 있다 — 상단으로 합쳤다');
-          assert(/최대 도달/.test(($('rnRound')||{}).textContent||''),'상단에 진행 수치가 없다');
+          // 🗺 **상단 진행 수치는 없앴다**(2026-09-04 사용자 확정) — 칸마다 「R45」가 이미 말한다.
+          //   ⛔ 되살리지 말 것. 요소는 남아 있되 비어 있어야 한다.
+          assert(!(($('rnRound')||{}).textContent||'').trim(),
+            '상단 진행 수치가 되살아났다: '+($('rnRound')||{}).textContent);
           // 🏷 제목 — 유즈맵·상점·환생과 같은 규격(이 화면만 빠져 있었다)
           const cs=getComputedStyle(el.querySelector('.rnTitle'));
           assert(cs.fontSize==='16px'&&cs.fontWeight==='700'&&parseFloat(cs.letterSpacing)>1.5,
             '룬 제목이 공용 규격과 다르다: '+cs.fontSize+' / '+cs.fontWeight+' / '+cs.letterSpacing); }
+        // 🔺 **성좌 셋은 작은 정삼각**이다(2026-09-04 사용자 확정: 「더 작은 삼각형 · 간격을 좁혀」).
+        //   ⚠ 순서는 위 · 왼쪽 · 오른쪽 = 경제 · 전투 · 성장. 각도를 바꾸면 좌우가 뒤집힌다(실제로 겪었다).
+        { assert(RUNE_CT.length===3,'성좌가 셋이 아니다');
+          const d=[]; for(let i=0;i<3;i++) for(let j=i+1;j<3;j++)
+            d.push(Math.hypot(RUNE_CT[i][0]-RUNE_CT[j][0], RUNE_CT[i][1]-RUNE_CT[j][1]));
+          assert(Math.max(...d)-Math.min(...d)<2,'정삼각이 아니다: '+d.map(v=>v.toFixed(0)).join('/'));
+          // ⛔ 성좌끼리 겹치면 어느 무리인지 안 읽힌다 — 칸 바깥까지 친 반지름으로 잰다
+          const rad=RUNE_RING+RUNE_R_N+Math.max(RUNE_RING1,RUNE_RING2,RUNE_DOT_R+RUNE_DOT_SZ);
+          assert(Math.min(...d)>=rad*2,'성좌가 겹친다: 간격 '+Math.min(...d).toFixed(0)+' < '+(rad*2).toFixed(0));
+          assert(RUNE_CT[0][1]<RUNE_CT[1][1] && Math.abs(RUNE_CT[1][1]-RUNE_CT[2][1])<2,
+            '위·왼쪽·오른쪽 배치가 아니다');
+          assert(RUNE_CT[1][0]<RUNE_CT[2][0],
+            '전투(왼쪽)와 성장(오른쪽)이 뒤집혔다: '+RUNE_CT[1]+' / '+RUNE_CT[2]); }
+        // 🎯 **성좌 안에서도 칸이 안 겹친다** — 고리를 좁힐수록 이웃끼리·가운데와 붙는다.
+        //   ⚠ 고리 칸의 바깥은 상급 링까지 친 값이고, 가운데는 유니크(링 2 · 점)를 친다.
+        { const rN = RUNE_R_N + RUNE_RING1;
+          const rU = RUNE_R_U + Math.max(RUNE_RING2, RUNE_DOT_R + RUNE_DOT_SZ);
+          const chord = 2 * RUNE_RING * Math.sin(Math.PI / RUNE_CONS);
+          assert(chord > rN * 2,
+            '고리 위 이웃 칸이 겹친다: 현 '+chord.toFixed(1)+' ≤ '+(rN*2).toFixed(1));
+          assert(RUNE_RING > rU + rN,
+            '가운데 유니크와 고리 칸이 겹친다: '+RUNE_RING+' ≤ '+(rU+rN).toFixed(1)); }
+        // 🔍 **최대 축소는 전체 보기까지**(2026-09-04 사용자 확정) — 더 줄면 빈 하늘만 남는다
+        assert(RUNE_ZLIM.out>=1,'최대 축소가 전체 보기보다 더 풀려 있다: out='+RUNE_ZLIM.out);
         assert(!el.querySelector('.rnPick'),'옛 임시 시트(.rnPick)가 되살아났다');
         const V=_rnView;
+        // 🚧 **팬 경계**(2026-09-04 사용자 요청) — 끝없이 밀려 빈 화면으로 못 간다.
+        //   ⚠ 값만 재면 「함수는 맞는데 아무도 안 부른다」를 못 잡는다 — 엔진 배선까지 본다.
+        { assert(typeof svvClampPan==='function','팬 경계 함수가 없다');
+          assert(typeof _runeBox==='function' && _runeBox(),'칸 범위를 못 낸다');
+          assert(/ctx.box/.test(String(svvBind)),
+            '엔진이 경계를 안 쓴다 — svvBind 에 배선이 빠졌다');
+          const kx=V.tx, ky=V.ty, kz=V.tz;
+          // ⭐ **얼마나 움직일 수 있나를 직접 잰다** — 「경계가 있다」만 재면 한 화면씩 밀려도 통과한다
+          //   (2026-09-04 실측: 옛 여백식은 아무리 조여도 좌우 403 이었다 · 판 폭이 440 인데).
+          const travel=(z)=>{ const o=_runeBoxOpt(), bx=_runeBox();
+            const lo={tx:-1e6,ty:-1e6,tz:z}, hi={tx:1e6,ty:1e6,tz:z};
+            svvClampPan(lo,$('rnSvg'),bx,o); svvClampPan(hi,$('rnSvg'),bx,o);
+            return { x:hi.tx-lo.tx, y:hi.ty-lo.ty }; };
+          { const t=travel(V.fitZ||1);
+            assert(t.x<RUNE_MAP_W*0.25 && t.y<RUNE_MAP_H*0.25,
+              '전체 보기인데 너무 많이 밀린다: 좌우 '+t.x.toFixed(0)+' 상하 '+t.y.toFixed(0)); }
+          { const t=travel(RUNE_PICK_SC);
+            assert(t.x<RUNE_MAP_W*0.7 && t.y<RUNE_MAP_H*0.7,
+              '최대 확대에서 너무 많이 밀린다: 좌우 '+t.x.toFixed(0)+' 상하 '+t.y.toFixed(0)); }
+          V.tx=1e5; V.ty=1e5;
+          svvClampPan(V, $('rnSvg'), _runeBox(), _runeBoxOpt());
+          assert(Math.abs(V.tx)<1e4 && Math.abs(V.ty)<1e4,
+            '멀리 밀었는데 경계가 안 잡는다: '+V.tx.toFixed(0)+','+V.ty.toFixed(0));
+          V.tx=kx; V.ty=ky; V.tz=kz; }
         // ⭐ 이동 방식은 **캠프 메인과 같다** — 손가락은 목표만 바꾸고 지금 뷰가 따라간다.
         //   ⛔ 관성(손을 떼면 미끄러짐)을 다시 넣지 말 것 — 다른 화면과 조작감이 갈라진다.
         assert(SVV_FOLLOW===9,'따라가는 속도가 메인맵(nemoViewTick k=dt*9)과 다르다: '+SVV_FOLLOW);
@@ -2507,6 +2599,40 @@ async function groupLobby(){
         assert(Math.abs(V.z-V.fitZ)<1e-6,'전체 보기 배율이 안 적힌다');
         assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
           '축소 하한이 전체 보기 배율을 안 따른다');
+        // 🎒 **가방은 줄 목록이다** — 줄 하나 = 룬 한 종류, 등급 셋이 한 줄에 (2026-09-04 사용자 확정)
+        //   ⛔ 4열 카드 그리드(.rnB)로 되돌리지 말 것 — 같은 룬의 세 등급이 흩어져
+        //     「이 효과를 얼마나 갖고 있나」가 안 읽혔다.
+        { const bag=document.querySelector('#campRune .rnBag');
+          assert(!bag.querySelector('.rnB'),'옛 4열 카드(.rnB)가 되살아났다');
+          const rws=bag.querySelectorAll('.rnRw');
+          assert(rws.length===RUNE_LIST.length,
+            '줄 수가 룬 종류 수와 다르다: '+rws.length+' vs '+RUNE_LIST.length);
+          // 갈래 머리줄 넷(경제·전투·성장·유니크) — 성좌와 같은 색이라 판과 이어 읽힌다
+          assert(bag.querySelectorAll('.rnGrpH').length===4,
+            '갈래 머리줄이 넷이 아니다: '+bag.querySelectorAll('.rnGrpH').length);
+          // 이름은 **효과 이름**이다 — ⛔ 「윤회·손끝」 같은 룬 이름으로 되돌리지 말 것
+          const t0=rws[0].querySelector('.rnRwT').firstChild.textContent;
+          assert(t0===RUNE_LIST[0].de,'줄 이름이 효과 이름이 아니다: '+t0);
+          assert(t0.indexOf('룬')<0,'줄 이름에 룬 이름이 들어갔다: '+t0);
+          // 🔷 육각 버튼 — 등급마다 하나. 그라데이션은 **한 벌만** 두고 나눠 쓴다
+          assert(bag.querySelectorAll('.rnBagDefs').length===1,
+            '버튼마다 <defs> 를 만들고 있다(한 벌이어야 한다)');
+          const hbs=bag.querySelectorAll('.rnHb');
+          assert(hbs.length===RUNE_LIST.length*3-RUNE_LIST.filter(d=>d.kind==='uniq').length*2,
+            '버튼 수가 등급 수와 안 맞는다: '+hbs.length);
+          // 📐 ×N·% 가 육각 **안**에 있다 — 아래가 뾰족해서 밖으로 새기 쉬운 자리다
+          let worst=-99, who='';
+          hbs.forEach(b=>{ const B=b.getBoundingClientRect();
+            if(!B.width) return;
+            const cy=B.top+B.height/2, r=B.height/2-1;
+            [['xN',b.querySelector('.rnHbN')],['%',b.querySelector('.rnHbP')]].forEach(q=>{
+              if(!q[1]) return; const R2=q[1].getBoundingClientRect();
+              const dy=Math.max(Math.abs(R2.bottom-cy),Math.abs(R2.top-cy));
+              const half=(dy<=r*0.5)?(0.866*r):(0.866*r*Math.max(0,(r-dy)/(r*0.5)));
+              const over=R2.width/2-half;
+              if(over>worst){ worst=over; who=q[0]; } }); });
+          assert(worst<0, who+' 가 육각 밖으로 '+worst.toFixed(1)+'px 나갔다 — 글자를 줄이거나 덜 내릴 것');
+          bagNote='가방 '+rws.length+'줄 · 버튼 '+hbs.length+'개 · 글자 여유 '+(-worst).toFixed(1)+'px'; }
         // 🎒 가방 탭 = **빈 칸 중 첫 칸**에 자동 장착
         const R=campRuneState(); R.own[runeKey('tap','high')]=2;
         R.norm=[]; campRuneTouch(); campRuneRender(); await sleep(30);
@@ -2565,7 +2691,7 @@ async function groupLobby(){
       // ⑤ 구역을 떠나면 닫힌다(나가는 길이 하단 네비뿐이다 — 환생 구역과 같은 규칙)
       navShow('map'); await sleep(40);
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
-      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대(캠프 메인과 같은 추종) · 상시 가방(자동/지정 장착) ok';
+      return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; }
   });

@@ -1,0 +1,215 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 성좌 판 — 전체 분위기 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;--gold:#ffd24a}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:22px;justify-content:center;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:88px}
+.pane{position:relative;width:390px;height:560px;overflow:hidden;background:#07090c}
+.bg{position:absolute;inset:0;background:url(../../assets/backgrounds/reb/reb.webp) center/cover no-repeat}
+.scrim{position:absolute;inset:0}
+svg{position:absolute;inset:0;width:100%;height:100%}
+/* 상단 띠 — 실제 화면과 같은 규격(제목은 재화 바가 맡으므로 진행 수치만) */
+.hd{position:absolute;left:0;right:0;top:0;z-index:4;padding:14px 14px 12px;
+  display:flex;align-items:baseline;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,9,13,.94),rgba(6,9,13,.62) 62%,rgba(6,9,13,0))}
+.hd .rd{margin-left:auto;font-size:11px;color:#8d97a6;letter-spacing:.04em}
+.hd .rd b{font-family:var(--font-num);color:var(--gold);font-size:13px;font-weight:700}
+/* 가방 — 실제 화면과 같이 아래를 덮는다 */
+.bag{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:9px 12px 12px;
+  border-top:1px solid rgba(120,140,170,.22);
+  background:linear-gradient(180deg,rgba(6,9,13,.72),rgba(6,9,13,.94) 34%)}
+.bagH{display:flex;align-items:center;min-height:20px;margin-bottom:6px}
+.bagT{font-size:12px;color:#c3ccd8}
+.bagN{margin-left:auto;font-size:10.5px;color:#69737f}
+.bagG{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.bagI{display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 4px;
+  border:1px solid color-mix(in srgb,var(--rg) 45%,transparent);border-radius:9px;
+  background:color-mix(in srgb,var(--rg) 8%,rgba(12,15,20,.7))}
+.bagI img{width:34px;height:34px;display:block}
+.bagI .n{font-size:10px;color:#c3ccd8}
+.bagI .v{font-family:var(--font-num);font-size:10px;font-weight:700;color:var(--rg)}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+/* ══ 실제 값 그대로 (js/22-camp-rune.js) ══════════════════════════════ */
+const MAP_W = 440, MAP_H = 560;
+const CT = [[220,130],[92,400],[348,400]];   // 성좌 셋 — 🔺 삼각
+const RING = 72, R_N = 21, R_U = 33, CONS = 8;
+const GRP = [
+  { k:'eco',  nm:'경제', col:'#7effc9' },
+  { k:'war',  nm:'전투', col:'#ffa3b8' },
+  { k:'grow', nm:'성장', col:'#e6eef8' }];
+const UNIQ_COL = '#ffe08a';
+/* 성좌마다 8칸 — 어떤 룬이 끼워졌나(null = 빈 칸, false = 잠김) */
+const P = '../../assets/icons/rune/';
+const FILL = [
+  ['tap_low','gas_mid','mine_high','reb_mid',null,null,false,false],
+  ['atk_high','aspd_mid','hp_low','heal_high',null,false,false,false],
+  ['exp_mid','kill_high','mapg_low','fevg_mid',null,null,false,false]];
+const UFILL = ['speed_uniq_eco','fever_uniq_war','cost_uniq_grow'];
+const OPEN_R = [0,15,30,45,60,75,90,105];    // 잠긴 칸에 뜨는 라운드
+
+function nPos(ci,j){ const c=CT[ci], a=-Math.PI/2 + j/CONS*Math.PI*2;
+  return [c[0]+Math.cos(a)*RING, c[1]+Math.sin(a)*RING]; }
+function hexPts(x,y,r){ const q=[]; for(let i=0;i<6;i++){ const a=Math.PI/180*(60*i-90);
+  q.push((x+r*Math.cos(a)).toFixed(1)+','+(y+r*Math.sin(a)).toFixed(1)); } return q.join(' '); }
+function hash(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return Math.abs(h%1000)/1000; }
+
+/* ── 조각들 ────────────────────────────────────────────────────────── */
+// 🌌 성운 — 성좌마다 제 갈래 색 구름(트리와 같은 어휘 · blur 금지, radialGradient)
+function nebula(op){ return GRP.map(function(g,i){
+  return '<ellipse cx="'+CT[i][0]+'" cy="'+CT[i][1]+'" rx="150" ry="128" fill="url(#neb'+g.k+')" opacity="'+op+'"/>'; }).join(''); }
+// ✨ 별먼지 — 난수가 아니라 키 해시(다시 그려도 자리가 같다)
+function dust(n){ let s=''; for(let i=0;i<n;i++){
+  const x=(hash('dx'+i)*MAP_W).toFixed(0), y=(hash('dy'+i)*MAP_H).toFixed(0);
+  const r=(hash('dr'+i)*0.9+0.35).toFixed(2), o=(hash('do'+i)*0.28+0.06).toFixed(2);
+  s+='<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#cfe2ff" opacity="'+o+'"/>'; } return s; }
+// 🕸 중심 → 칸 실 (a=바깥에서 멈추는 여유)
+function spokes(mode){ let s='';
+  GRP.forEach(function(g,ci){ for(let j=0;j<CONS;j++){
+    const q=nPos(ci,j), c=CT[ci];
+    const dx=q[0]-c[0], dy=q[1]-c[1], L=Math.hypot(dx,dy)||1, ux=dx/L, uy=dy/L;
+    const a0=R_U+5, a1=R_N+4, on=j<FILL[ci].filter(function(v){return v!==false;}).length;
+    const x1=(c[0]+ux*a0).toFixed(1), y1=(c[1]+uy*a0).toFixed(1);
+    const x2=(q[0]-ux*a1).toFixed(1), y2=(q[1]-uy*a1).toFixed(1);
+    if(mode==='glow' && on)   // 두 겹 — 굵고 흐린 빛 + 얇고 밝은 심
+      s+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+g.col+'" stroke-opacity=".14" stroke-width="3.4"/>';
+    s+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(on?g.col:'#8fa6c4')+'" stroke-opacity="'+(on?.42:.08)+'" stroke-width="'+(on?1:.8)+'"'+(on?'':' stroke-dasharray="2 3"')+'/>';
+  }}); return s; }
+// 🔗 이웃 칸끼리 잇는 고리 선(성좌가 「무리」로 읽히게)
+function ringLine(op){ return GRP.map(function(g,ci){
+  const pts=[]; for(let j=0;j<CONS;j++){ const q=nPos(ci,j); pts.push(q[0].toFixed(1)+','+q[1].toFixed(1)); }
+  return '<polygon points="'+pts.join(' ')+'" fill="none" stroke="'+g.col+'" stroke-opacity="'+op+'" stroke-width=".9"/>'; }).join(''); }
+// ◎ 성좌 후광 고리
+function halo(){ return GRP.map(function(g,i){
+  return '<circle cx="'+CT[i][0]+'" cy="'+CT[i][1]+'" r="'+(RING+R_N+6)+'" fill="none" stroke="'+g.col+'" stroke-opacity=".10" stroke-width="1"/>'
+       + '<circle cx="'+CT[i][0]+'" cy="'+CT[i][1]+'" r="'+(RING-R_N-4)+'" fill="none" stroke="'+g.col+'" stroke-opacity=".06" stroke-width="1"/>'; }).join(''); }
+// 🏷 갈래 이름 — 성좌 위에
+function labels(){ return GRP.map(function(g,i){
+  return '<text x="'+CT[i][0]+'" y="'+(CT[i][1]-RING-R_N-16)+'" text-anchor="middle" '
+    +'font-family="IBM Plex Sans KR" font-size="10.5" letter-spacing="2" fill="'+g.col+'" opacity=".62">'+g.nm+'</text>'; }).join(''); }
+// ⬡ 바닥 육각 격자 — 아주 옅게
+function grid(){ let s=''; const R=26, hw=Math.sqrt(3)/2*R;
+  for(let r=-1;r<MAP_H/ (R*1.5)+1;r++) for(let c=-1;c<MAP_W/(hw*2)+2;c++){
+    const x=c*hw*2+(r%2?hw:0), y=r*R*1.5;
+    s+='<polygon points="'+hexPts(x,y,R)+'" fill="none" stroke="#8fa6c4" stroke-opacity=".030" stroke-width=".7"/>'; }
+  return s; }
+
+/* ── 칸 하나 ───────────────────────────────────────────────────────── */
+//  st: 'on'(끼움) · 'em'(빈칸) · 'lk'(잠김)
+function cell(x,y,r,st,col,img,at,opt){
+  const O = opt||{}; let s='';
+  if(st==='lk'){
+    s+='<polygon points="'+hexPts(x,y,r)+'" fill="rgba(120,140,165,.018)" stroke="rgba(140,160,185,.10)" stroke-width="1"/>';
+    if(O.lkDot) s+='<circle cx="'+x+'" cy="'+y+'" r="1.6" fill="#49525d"/>';
+    else s+='<text x="'+x+'" y="'+(y+2.5)+'" text-anchor="middle" font-family="Rajdhani" font-size="7.5" fill="#49525d">R'+at+'</text>';
+    return s; }
+  if(st==='em'){
+    if(O.emGlow) s+='<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.9)+'" fill="url(#emg)"/>';
+    s+='<polygon points="'+hexPts(x,y,r)+'" fill="rgba(150,175,205,.03)" stroke="rgba(160,185,215,.18)" stroke-width="1"'+(O.emDash?' stroke-dasharray="3 2.5"':'')+'/>';
+    s+='<text x="'+x+'" y="'+(y+4.5)+'" text-anchor="middle" font-family="Rajdhani" font-size="12" fill="rgba(175,200,232,.30)">+</text>';
+    return s; }
+  // 끼운 칸 — 그림이 곧 판이다
+  if(O.back) s+='<circle cx="'+x+'" cy="'+y+'" r="'+(r*1.5)+'" fill="url(#bk'+col.slice(1)+')"/>';
+  if(O.outer) s+='<polygon points="'+hexPts(x,y,r+3)+'" fill="none" stroke="'+col+'" stroke-opacity=".22" stroke-width="1"/>';
+  s+='<image href="'+P+img+'.webp" x="'+(x-r)+'" y="'+(y-r)+'" width="'+(r*2)+'" height="'+(r*2)+'"/>';
+  if(O.val) s+='<text x="'+x+'" y="'+(y+r+4)+'" text-anchor="middle" font-family="Rajdhani" font-size="8" font-weight="700" fill="'+col+'">+5%</text>';
+  return s; }
+
+/* ── 판 하나 ───────────────────────────────────────────────────────── */
+/* 📐 실제 화면과 같은 「전체 보기」 — svvFit 의 계산을 그대로 옮겼다.
+   위는 상단 띠, 아래는 가방이 덮으므로 그 사이 남는 자리 한가운데에 맞춘다.
+   ⛔ 이걸 빼면 아래 두 성좌가 가방 뒤에 숨는다(실측 2026-09-04). */
+const HIDE_T = 46/560, HIDE_B = 128/560, PAD = 30;
+function fitT(){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  GRP.forEach(function(g,ci){ for(let j=0;j<CONS;j++){ const q=nPos(ci,j);
+    x0=Math.min(x0,q[0]); x1=Math.max(x1,q[0]); y0=Math.min(y0,q[1]); y1=Math.max(y1,q[1]); } });
+  const yA=MAP_H*HIDE_T, yB=MAP_H*(1-HIDE_B);
+  const w=x1-x0+PAD*2, h=y1-y0+PAD*2;
+  const z=Math.min(1.35, Math.min(MAP_W/w, (yB-yA)/h));
+  const tx=MAP_W/2-(x0+x1)/2*z, ty=(yA+yB)/2-(y0+y1)/2*z;
+  return 'translate('+tx.toFixed(1)+' '+ty.toFixed(1)+') scale('+z.toFixed(3)+')'; }
+
+function board(o){
+  let s='<svg viewBox="0 0 '+MAP_W+' '+MAP_H+'">';
+  // defs
+  s+='<defs>';
+  GRP.forEach(function(g){
+    s+='<radialGradient id="neb'+g.k+'"><stop offset="0" stop-color="'+g.col+'" stop-opacity=".055"/>'
+      +'<stop offset=".55" stop-color="'+g.col+'" stop-opacity=".022"/>'
+      +'<stop offset="1" stop-color="'+g.col+'" stop-opacity="0"/></radialGradient>';
+    s+='<radialGradient id="bk'+g.col.slice(1)+'"><stop offset="0" stop-color="'+g.col+'" stop-opacity=".22"/>'
+      +'<stop offset=".62" stop-color="'+g.col+'" stop-opacity=".07"/>'
+      +'<stop offset="1" stop-color="'+g.col+'" stop-opacity="0"/></radialGradient>'; });
+  s+='<radialGradient id="bk'+UNIQ_COL.slice(1)+'"><stop offset="0" stop-color="'+UNIQ_COL+'" stop-opacity=".26"/>'
+    +'<stop offset=".62" stop-color="'+UNIQ_COL+'" stop-opacity=".08"/>'
+    +'<stop offset="1" stop-color="'+UNIQ_COL+'" stop-opacity="0"/></radialGradient>';
+  s+='<radialGradient id="emg"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".10"/>'
+    +'<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>';
+  s+='</defs>';
+  s+='<g transform="'+fitT()+'">';
+  // 뒷켜
+  if(o.grid)   s+=grid();
+  if(o.neb)    s+=nebula(o.neb);
+  if(o.dust)   s+=dust(o.dust);
+  if(o.halo)   s+=halo();
+  if(o.ring)   s+=ringLine(o.ring);
+  if(o.spokes) s+=spokes(o.spokes);
+  if(o.label)  s+=labels();
+  // 칸
+  GRP.forEach(function(g,ci){
+    for(let j=0;j<CONS;j++){
+      const q=nPos(ci,j), v=FILL[ci][j];
+      const st = (v===false)?'lk':(v===null?'em':'on');
+      s+=cell(q[0],q[1],R_N,st,g.col,v,OPEN_R[j],o);
+    }
+    s+=cell(CT[ci][0],CT[ci][1],R_U,'on',UNIQ_COL,UFILL[ci],0,o);
+  });
+  return s+'</g></svg>';
+}
+
+/* ── 여덟 안 ───────────────────────────────────────────────────────── */
+const CASES = [
+  { t:'성운', d:'트리와 같은 어휘. 성좌마다 제 갈래 색 구름을 깔아 <b>세 무리가 색으로 갈린다</b>. blur 대신 radialGradient — 트리에서 blur 를 썼다가 프레임이 38→23 으로 떨어진 전례가 있다.',
+    o:{ neb:1, spokes:'plain', scrim:'.42' } },
+  { t:'별먼지 + 두 겹 실', d:'배경에 먼지 110 알, 중심에서 뻗는 실을 <b>두 겹</b>으로(굵고 흐린 빛 + 얇고 밝은 심). 트리 선과 같은 방식.',
+    o:{ dust:110, spokes:'glow', scrim:'.46' } },
+  { t:'후광 고리', d:'성좌마다 <b>바깥·안쪽 두 고리</b>를 얇게 둘러 무리의 경계를 만든다. 칸은 그대로 두고 자리만 정돈한다.',
+    o:{ halo:1, spokes:'plain', scrim:'.44' } },
+  { t:'무리 선', d:'이웃 칸끼리 <b>여덟 각형으로 잇는다</b>. 중심 실 대신 둘레를 이어 「한 무리」가 도형으로 읽힌다.',
+    o:{ ring:.16, spokes:'plain', scrim:'.44' } },
+  { t:'갈래 이름표', d:'성좌 위에 <b>경제 · 전투 · 성장</b>을 적는다. 지금은 색으로만 갈리는데, 글자가 있으면 처음 보는 사람도 안다.',
+    o:{ neb:.8, label:1, spokes:'plain', scrim:'.44' } },
+  { t:'바닥 육각 격자', d:'판 전체에 아주 옅은 <b>벌집 격자</b>. 칸이 그 위에 놓인 것으로 읽혀 빈 자리가 «비어 보이지» 않는다.',
+    o:{ grid:1, spokes:'plain', scrim:'.50' } },
+  { t:'종합 — 밝게', d:'성운 + 먼지 + 두 겹 실 + 이름표 + <b>칸 뒤 광</b>. 트리의 다섯 어휘를 다 가져온 안.',
+    o:{ neb:1, dust:110, spokes:'glow', label:1, back:1, outer:1, emGlow:1, scrim:'.40' } },
+  { t:'종합 — 차분하게', d:'같은 재료를 <b>절반 세기</b>로. 배경은 더 어둡게 눌러 두고 빛은 칸에만 남긴다. 잠긴 칸은 라운드 숫자 대신 <b>점</b>, 빈 칸은 점선.',
+    o:{ neb:.55, dust:70, spokes:'plain', back:1, lkDot:1, emDash:1, scrim:'.66' } },
+];
+
+const BAGROW = [
+  ['tap_high','손끝','+5%','#7effc9'], ['gas_mid','정제','+2.5%','#7effc9'],
+  ['atk_high','힘','+5%','#ffa3b8'],   ['exp_mid','성장','+2.5%','#e6eef8']];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p>'
+    + '<p class="sub">'+c.d+'</p>'
+    + '<div class="pane"><div class="bg"></div>'
+    + '<div class="scrim" style="background:rgba(5,8,12,'+(c.o.scrim||'.44')+')"></div>'
+    + board(c.o)
+    + '<div class="hd"><span class="rd">최대 도달 <b>500</b> / 500</span></div>'
+    + '<div class="bag"><div class="bagH"><span class="bagT">보유한 룬</span>'
+    +   '<span class="bagN">누르면 빈 칸에 끼웁니다</span></div><div class="bagG">'
+    +   BAGROW.map(function(b){ return '<div class="bagI" style="--rg:'+b[3]+'">'
+    +     '<img src="'+P+b[0]+'.webp" alt=""><span class="n">'+b[1]+'</span>'
+    +     '<span class="v">'+b[2]+'</span></div>'; }).join('')
+    + '</div></div></div></div>'; }).join('');
+</script></body></html>

@@ -180,7 +180,44 @@ async function compose(tile, sym, outFile, id, tint){
   return fs.statSync(outFile).size;
 }
 
+// 🔷 **문양만** 따로 낸다 — 성좌 판이 판(육각)을 도형으로 그리기 때문이다(2026-09-04 사용자 확정 ④안).
+//   ⭐ 판을 벡터로 그리면 등급 색이 테두리·뒷광·번짐에 실려 **상태에 반응**한다. 그림은 못 한다.
+//   ⚠ 배경이 검정인 원본을 그대로 얹으면 육각 안에 검은 사각이 남는다 —
+//     **밝기를 알파로** 옮긴다(글로우가 자연스럽게 사라진다). ⛔ 문턱으로 자르지 말 것: 가장자리가 톱니가 된다.
+//   ⚠ 가방·상점은 그대로 합친 그림(webp)을 쓴다 — 거기는 HTML 이라 SVG 도형을 못 쓴다.
+const GLYPH_OUT = path.resolve(ROOT, 'assets/icons/rune/glyph');
+const GLYPH_SIZE = 128;
+async function glyph(sym, outFile, tint){
+  const bx = await inkBox(sym);
+  const side = Math.max(bx.width, bx.height);
+  const sq = { left: Math.round(bx.left - (side - bx.width) / 2),
+               top:  Math.round(bx.top  - (side - bx.height) / 2),
+               width: side, height: side };
+  const { data, info } = await sharp(sym)
+    .extract({ left: Math.max(0, sq.left), top: Math.max(0, sq.top), width: sq.width, height: sq.height })
+    .resize(GLYPH_SIZE, GLYPH_SIZE, { fit: 'contain', background: { r:0, g:0, b:0, alpha:255 } })
+    .removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const n = info.width * info.height, out = Buffer.alloc(n * 4);
+  for(let i = 0; i < n; i++){
+    let r = data[i*3], g = data[i*3+1], b = data[i*3+2];
+    const L = Math.max(r, g, b);                       // 밝기 = 알파
+    if(tint){ const k = L / 255;                       // 🎨 갈래 색으로 갈아입힌다(유니크)
+      const w = Math.max(0, (k - 0.82) / 0.18) * 0.55; // 심지에 남기는 흰빛
+      r = Math.min(255, Math.round(tint[0] * k + 255 * w));
+      g = Math.min(255, Math.round(tint[1] * k + 255 * w));
+      b = Math.min(255, Math.round(tint[2] * k + 255 * w)); }
+    // ⚠ 알파를 곱한 색이 아니라 **원래 색**을 넣는다(webp 는 straight alpha 다).
+    const k2 = L ? 255 / L : 0;
+    out[i*4]   = Math.min(255, Math.round(r * k2));
+    out[i*4+1] = Math.min(255, Math.round(g * k2));
+    out[i*4+2] = Math.min(255, Math.round(b * k2));
+    out[i*4+3] = L; }
+  await sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .webp({ quality: 92, alphaQuality: 100 }).toFile(outFile);
+  return fs.statSync(outFile).size; }
+
 const made = [];
+const gmade = [];
 for(const id of NORM){
   if(ONLY && id !== ONLY) continue;
   if(!fs.existsSync(symPath(id))) continue;
@@ -188,7 +225,10 @@ for(const id of NORM){
     if(!fs.existsSync(tilePath(g))) continue;
     const f = path.join(OUT, id + '_' + g + '.webp');
     const sz = await compose(tilePath(g), symPath(id), f, id);
-    made.push([id + '_' + g, sz]); } }
+    made.push([id + '_' + g, sz]); }
+  // 🔷 성좌 판이 쓰는 문양 — 등급과 무관하게 한 장이다(판은 도형이 그린다)
+  fs.mkdirSync(GLYPH_OUT, { recursive: true });
+  gmade.push([id, await glyph(symPath(id), path.join(GLYPH_OUT, id + '.webp'))]); }
 for(const id of UNIQ){
   if(ONLY && id !== ONLY) continue;
   if(!fs.existsSync(symPath(id)) || !fs.existsSync(tilePath('uniq'))) continue;
@@ -199,13 +239,21 @@ for(const id of UNIQ){
   for(const g in GRP_COL){
     const f2 = path.join(OUT, id + '_uniq_' + g + '.webp');
     const sz2 = await compose(tilePath('uniq'), symPath(id), f2, id, GRP_COL[g]);
-    made.push([id + '_uniq_' + g, sz2]); } }
+    made.push([id + '_uniq_' + g, sz2]); }
+  // 🔷 문양 — 유니크는 **앉은 성좌 색**을 따르므로 갈래마다 한 장씩(2026-09-04)
+  fs.mkdirSync(GLYPH_OUT, { recursive: true });
+  gmade.push([id, await glyph(symPath(id), path.join(GLYPH_OUT, id + '.webp'))]);
+  for(const g in GRP_COL)
+    gmade.push([id + '_' + g, await glyph(symPath(id), path.join(GLYPH_OUT, id + '_' + g + '.webp'), GRP_COL[g])]); }
 
 if(!made.length){ console.log('  만든 것이 없다 — docs/mock/rune/ 에 파일을 넣어 주세요'); process.exit(0); }
 const tot = made.reduce((a, b) => a + b[1], 0);
 console.log('  🔷 ' + made.length + '장 · 합계 ' + (tot/1024).toFixed(0) + 'KB · 평균 '
   + (tot/made.length/1024).toFixed(1) + 'KB   문양 비율 ' + SCALE + ' · 올림 ' + DY + ' · ' + SIZE + 'px');
 console.log('  📁 ' + path.relative(ROOT, OUT));
+if(gmade.length){ const gt = gmade.reduce((a, b) => a + b[1], 0);
+  console.log('  🔷 문양(성좌 판용) ' + gmade.length + '장 · 합계 ' + (gt/1024).toFixed(0) + 'KB');
+  console.log('  📁 ' + path.relative(ROOT, GLYPH_OUT)); }
 
 // 🖼 대조판 — 이름표를 붙여 늘어놓는다. ⚠ 트리 33장에서 이 판이 없었으면 어긋난 것을 못 찾았다(ART.md §15-3).
 if(has('sheet') && made.length){
