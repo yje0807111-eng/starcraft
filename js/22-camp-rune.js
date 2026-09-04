@@ -559,7 +559,10 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
     // 🕳 **파인 홈** — 「+」 하나뿐이던 빈 칸을 «끼우는 자리»로 바꾼다(목업 camp-rune-slot-8 ②안).
     //   ⛔ 반투명으로 되돌리지 말 것 — 뒤의 구역 오로라가 비쳐 칸이 갈래 색으로 물든다.
     //   ⛔ 「+」·숨 원(.rnEmB)을 되살리지 말 것: 홈이 이미 「비었다」를 말하고, 원은 오로라를 한 겹 더 더한다.
-    g.push('<polygon class="rnHx em" points="' + _runeHexPts(x, y, r * 0.93) + '"/>');
+    // 🎨 갈래 색 테두리 — 일반 칸은 그 성좌의 갈래, 유니크 칸은 보라
+    const gk = (kind === 'uniq') ? 'uniq' : runeSlotGrp(i);
+    g.push('<polygon class="rnHx em" points="' + _runeHexPts(x, y, r * 0.93)
+      + '" style="stroke:url(#rnEg' + gk + ')"/>');
     g.push('<polygon class="rnEmIn" points="' + _runeHexPts(x, y, r * 0.93 - 1.6) + '"/>'); }
   else {
     const pp = runeParse(key), c = (RUNE_GD[pp.gd] || {}).col || '#8b95a5', uq = pp.gd === 'uniq';
@@ -646,6 +649,18 @@ function _runeDefs(){
       + '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>'
       + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".07"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
+  // 🎨 **빈 칸 테두리는 갈래 색**이다(2026-09-04 사용자 확정 · 목업 camp-rune-edge-8 ③안).
+  //   ⭐ 낀 칸의 테두리(#rnE<등급>)와 **같은 어휘**다 — 위가 흰빛, 아래로 갈수록 색.
+  //     빛이 위에서 오는 결이 판 전체에 통하고, 칸 하나만 봐도 어느 갈래의 자리인지 읽힌다.
+  //   ⚠ 세기는 낀 칸보다 **약하다**(흰빛 .92 → .34). 빈 칸이 더 시끄러우면 끼웠을 때
+  //     달라지는 것이 없다. ⛔ 올리지 말 것.
+  for(const k of RUNE_GRPS.concat('uniq')){
+    const c = (k === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
+                             : ((RUNE_GRP[k] || {}).col || '#b4cdeb');
+    d += '<linearGradient id="rnEg' + k + '" x1="0" y1="0" x2="0" y2="1">'
+      + '<stop offset="0" stop-color="#dfe9f5" stop-opacity=".34"/>'
+      + '<stop offset=".45" stop-color="' + c + '" stop-opacity=".34"/>'
+      + '<stop offset="1" stop-color="' + c + '" stop-opacity=".12"/></linearGradient>'; }
   // 🕳 빈 칸의 **파인 홈** — 위가 어둡고 아래가 밝다. 빛이 위에서 오니 안쪽으로 파인 자리로 읽힌다
   //   (2026-09-04 사용자 확정 · 목업 camp-rune-slot-8 ②안).
   //   ⚠ **불투명하게 둔다.** 반투명이면 뒤의 구역 오로라가 그대로 비쳐 칸이 갈래 색으로 물든다

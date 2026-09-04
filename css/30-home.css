@@ -2514,7 +2514,7 @@
    ⚠ **반투명은 남기되 얕게**(2026-09-04 사용자 확정: 「반투명을 원해, 근데 그게 과했다」).
      .72 는 뒤의 구역 오로라가 그대로 들어와 칸이 갈래 색으로 물들었고, 1(불투명)은 판때기가 됐다.
      ⛔ .8 아래로 내리지 말 것 — 물들기 시작한다(스모크가 하한을 잰다). */
-#campRune .rnHx.em{fill:url(#rnWell);fill-opacity:.86;stroke:rgba(180,205,235,.24);stroke-width:1}
+#campRune .rnHx.em{fill:url(#rnWell);fill-opacity:.86;stroke:rgba(180,205,235,.24);stroke-width:1.1}
 #campRune .rnEmIn{fill:none;stroke:#fff;stroke-width:.5;opacity:.07;pointer-events:none}
 /* 면은 **검게 둔다** — 등급색으로 채우면 그 위의 문양이 색에 묻힌다(트리에서 얻은 규칙). */
 #campRune .rnHx.on{fill:url(#rnFace)}

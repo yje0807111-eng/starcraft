@@ -2599,6 +2599,19 @@ async function groupLobby(){
         assert(Math.abs(V.z-V.fitZ)<1e-6,'전체 보기 배율이 안 적힌다');
         assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
           '축소 하한이 전체 보기 배율을 안 따른다');
+        // 🎨 **빈 칸 테두리는 갈래 색**이다(2026-09-04 사용자 확정 · 목업 camp-rune-edge-8 ③안)
+        //   일반 칸은 그 성좌의 갈래, 가운데 유니크 칸은 보라. 낀 칸과 같은 어휘(위 흰빛 → 아래 색)다.
+        { const defs = _runeDefs();
+          for(const k of RUNE_GRPS.concat('uniq'))
+            assert(defs.indexOf('id="rnEg' + k + '"') >= 0, '갈래 테두리 그라데이션이 없다: ' + k);
+          const cellOf = (kind, i) => _runeCell(kind, i, 0, 0, 21, null, true, 1, false);
+          RUNE_GRPS.forEach((k, ci) => { const t = cellOf('norm', ci * RUNE_CONS);
+            assert(t.indexOf('#rnEg' + k) >= 0, ci + '번 성좌의 빈 칸이 ' + k + ' 색을 안 쓴다'); });
+          assert(cellOf('uniq', 0).indexOf('#rnEguniq') >= 0, '유니크 칸이 보라 테두리를 안 쓴다');
+          // ⚠ 빈 칸은 낀 칸보다 **조용해야** 한다 — 흰빛 세기가 낀 칸(.92)보다 낮다
+          const m = /id="rnEgeco"[\s\S]*?stop-opacity="([.0-9]+)"/.exec(defs);
+          assert(m && +m[1] < 0.92,
+            '빈 칸 테두리가 낀 칸만큼 세다 — 끼워도 달라지는 것이 없다: ' + (m && m[1])); }
         // 🕳 **빈 칸은 파인 홈이다**(2026-09-04 사용자 확정 · 목업 camp-rune-slot-8 ②안)
         //   ⚠ **반투명은 남기되 얕게**(2026-09-04 사용자 확정: 「반투명을 원해, 근데 그게 과했다」).
         //     .72 에서는 뒤의 구역 오로라가 그대로 들어와 칸이 갈래 색으로 물들었다.
