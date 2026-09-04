@@ -986,6 +986,51 @@
     stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
   .curTitle.asChip.open .cdCv{transform:rotate(180deg);color:#ff7676}
 
+  /* 🎓 가이드 시트 맨 위 — **튜토리얼을 직접 켜 보는 줄**(2026-09-04). 버튼은 공용 .actBtn 이다. */
+  .gqTuto{display:flex;align-items:center;gap:8px;padding:9px 10px;margin-bottom:8px;
+    border:1px solid rgba(255,255,255,.10);border-radius:var(--r-bar,3px);background:rgba(255,255,255,.04)}
+  .gqTutoTx{flex:1;min-width:0;font-size:11.5px;font-weight:700;color:#c3ccd8;line-height:1.35}
+  .gqTutoTx b{font-family:var(--font-num);color:#ff7676;margin-left:2px}
+  .gqTuto .actBtn{flex:none;height:30px;padding:0 12px;font-size:11.5px}
+  /* ══ 🎓 강제 튜토리얼 — 스포트라이트 + 입력 차단 (2026-09-04 사용자 확정) ══════════════
+     ⭐ 딤에 구멍을 뚫지 않는다. **네 판(위·아래·왼·오른)** 으로 대상을 둘러싼다 —
+        구멍(mask)은 그 자리의 터치를 딤이 먹어 대상이 안 눌린다.
+     ⛔ 대상 밖은 전부 막는다(하단 네비·설정 포함) — 「완전 강제」가 확정이다.
+     ⚠ z-index 는 던전 선택(61)·재화 바(62)·캠프 구역(120)보다 위여야 한다 → 140. */
+  /* 🎬 **캠프가 다가올 때 함께 스며든다**(2026-09-04 사용자 요청) — 딤이 툭 덮이면 그 연출이 끊긴다.
+     ⛔ animation-fill-mode 를 주지 말 것: 탭이 백그라운드면 애니가 멈춰 화면이 통째로 안 보인다
+        (환생 구역에서 실제로 그랬다 · 같은 어법이 `crFadeIn` 이다). 기본 opacity 는 1 이라 안전하다.
+     ⚠ 노드는 tutoPaint 가 **한 번만** 만든다 — 단계가 바뀔 때는 안 돈다(처음 한 번뿐). */
+  .tutoOv{position:absolute;inset:0;z-index:140;pointer-events:none;
+    animation:tutoFadeIn var(--t-screen) ease}
+  @keyframes tutoFadeIn{from{opacity:0}to{opacity:1}}
+  /* 🚧 튜토리얼 중에는 **맵 위에 떠 있는 「채굴 멈춤」이 안 눌린다** (2026-09-04 사용자 신고).
+     맵을 여는 단계에서 그 버튼까지 함께 열려, 누르면 캐는 것이 멎어 그 단계가 영영 안 끝났다.
+     ⭐ 그 버튼이 **그 단계의 대상일 때**(.tuLive · tutoPaint 가 붙인다)만 산다.
+     ⛔ display:none 으로 숨기지 말 것 — 자리가 사라지면 mineOff 단계에서 가리킬 것이 없다. */
+  #phone.tutoOn #campMineStop{pointer-events:none;opacity:.4}
+  #phone.tutoOn #campMineStop.tuLive{pointer-events:auto;opacity:1}
+  .tutoOv>i{position:absolute;background:rgba(2,3,6,.72);pointer-events:auto}   /* 네 판이 입력을 먹는다 */
+  /* 대상 테두리 — 여기는 **안 막는다**(pointer-events:none) */
+  .tutoOv .tuRing{background:none;pointer-events:none;border:2px solid #ff7676;border-radius:var(--r-bar,3px);
+    box-shadow:0 0 0 3px rgba(255,118,118,.18);animation:tutoPulse 1.4s ease-in-out infinite}
+  @keyframes tutoPulse{0%,100%{box-shadow:0 0 0 3px rgba(255,118,118,.18)}50%{box-shadow:0 0 0 7px rgba(255,118,118,.06)}}
+  /* 말풍선 — 판 없이 글자(상단 줄과 같은 어법). 단계 번호만 작은 칩. */
+  /* 말풍선 — **대상 옆**에 붙는다(2026-09-04 사용자 지적). 화면 끝에 두면 눈이 두 번 움직인다.
+     판을 옅게 깔아 맵 위에서도 읽히게 하고, 꼬리로 대상 쪽을 가리킨다. */
+  .tutoOv .tuTip{position:absolute;z-index:1;pointer-events:none;display:flex;flex-direction:column;gap:5px;
+    padding:9px 11px;border-radius:var(--r-bar,3px);
+    background:linear-gradient(180deg,rgba(16,17,20,.94),rgba(8,9,11,.96));
+    border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.5);
+    text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  .tutoOv .tuTip::after{content:'';position:absolute;left:50%;margin-left:-6px;border:6px solid transparent;
+    top:-12px;border-bottom-color:rgba(255,255,255,.12)}
+  .tutoOv .tuTip.up::after{top:auto;bottom:-12px;border-bottom-color:transparent;border-top-color:rgba(255,255,255,.12)}
+  .tutoOv .tuHd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  /* 왼쪽 = **몇 단계째**(가시성을 올렸다 · 붉은 글자) · 오른쪽 = **이번 단계의 진행** */
+  .tutoOv .tuStep{font-family:var(--font-num);font-size:11.5px;font-weight:800;color:#ff7676;letter-spacing:.02em}
+  .tutoOv .tuN{font-family:var(--font-num);font-size:11.5px;font-weight:800;color:rgba(214,226,240,.72)}
+  .tutoOv .tuTx{font-size:12.5px;font-weight:800;color:#fff;line-height:1.35}
   /* 🧭 가이드 「지금 할 일」 띠 — 재화 바 바로 아래(2026-08-25).
      ⚠ #phone 직속이다 — 캠프 화면 안에 넣으면 캠프 파일을 건드리게 된다.
      ⚠ z 는 재화 바(62)보다 **낮게** 둔다 — 던전 드롭다운이 이 위를 덮어야 한다. */

@@ -1214,7 +1214,10 @@
      실측: 보정 전 가스 발치 558.5 vs 광맥 발치 564.5. */
   .bGasZone.spr .gzSpr{width:100%;height:100%;object-fit:contain;object-position:center bottom;
     display:block;pointer-events:none;
-    transform:translateY(var(--gzDY,23%)) scale(var(--gzK,0.95));transform-origin:center bottom;
+    /* ⚠ 23% → **-27%** (2026-09-04): 부지(TECH_GAS.r0)를 한 칸 내렸으므로(CAMP_GAS_ROW_OFF)
+       그림은 그만큼 되올려야 **화면에서 제자리**다. 부지 높이가 2칸이라 한 칸 = 50%p 다.
+       ⛔ 둘 중 하나만 고치지 말 것 — 그림이 통째로 반 칸 움직인다. */
+    transform:translateY(var(--gzDY,-27%)) scale(var(--gzK,0.95));transform-origin:center bottom;
     filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
   /* ⛔ 좌우를 뒤집지 않는다(2026-08-31 사용자 확정) — 뒤집으면 광원 방향이 반대가 되어
      오히려 눈에 걸린다. 반복이 거슬리면 그림을 한 장 더 뽑는다(stage2…). */

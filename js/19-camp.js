@@ -2089,9 +2089,33 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
 //     손잡이를 따로 두어야 한다 — ⛔ 이 상수 하나로 초반과 후반을 같이 맞추려 들지 말 것
 //     (그래서 값이 네 번 바뀌었다).
 const CAMP_FOE_HP0 = 30, CAMP_FOE_ATK0 = 0.33;
+// 🍼 ── **초반 램프** (2026-09-04 사용자 확정) ───────────────────────────────
+//   ⚠ 문제는 「적이 세다」가 아니라 **아군이 1 기라 못 쏜다**는 것이었다(camp-trace 실측:
+//     사거리 안 17.8% · 못 닿는 정도 ×1.66 · 설계 DPS 의 27% 만 나옴). 적 3 마리가 흩어져 있는데
+//     레인저 하나가 쫓아다니느라 82% 의 시간을 논다 — R1 하나에 90초가 넘었다.
+//   ⭐ 그래서 **체력과 마리 수를 함께** 내린다. 마리가 줄면 표적이 하나라 실효 화력도 같이 오른다.
+//   ⛔ CAMP_FOE_HP0 을 또 내려서 고치지 말 것 — 그 상수는 후반까지 함께 내려간다
+//     (2026-09-03 800→30 때 R50 이 26.7배 쉬워졌다. 위 주석에 그 기록이 있다).
+//   ⭐ 램프는 **R1 에서 가장 세고 마지막 라운드에서 1.0** 이라 원래 곡선에 그대로 합류한다.
+//   ⚠ **던전 1 에만** 건다. 모든 던전에 걸면 던전을 옮길 때마다 쉬운 구간이 생겨 곡선이 톱니가 된다.
+//   ⛔ campFoeDiff 자체에 곱하지 말 것 — 그 값은 **환생 포인트**(campRebMul)도 읽는다.
+//     초반 보상이 같이 깎인다. 그래서 적을 만들 때(campScaleFoes·campFoeCount)만 곱한다.
+//   ⭐ **끝점은 R50(던전의 마지막)이다**(2026-09-04 사용자 확정 — 「1던전은 전체적으로 낮춰 달라」).
+//     처음엔 R10 이었다. 던전 1 을 통째로 연습장으로 삼되, **끝에서 정확히 ×1 로 합류**하므로
+//     던전 2 로 넘어가는 벽은 지금과 같다(문턱 ×3 그대로).
+//     ⛔ 상수 배수(던전 1 전체를 ×0.15)로 바꾸지 말 것 — 그러면 던전 1 R50 과 던전 2 R1 사이가
+//       20배로 벌어져 **거기서 막힌다**. 램프의 요점은 「낮게 시작해 제자리로 돌아오는 것」이다.
+const CAMP_EASY_MUL = 0.15, CAMP_EASY_END = CAMP_ROUND_MAX, CAMP_EASY_DG = 1;
+function campFoeEasy(dg, round){
+  if((dg | 0) !== CAMP_EASY_DG) return 1;
+  const r = Math.max(1, round | 0);
+  if(r >= CAMP_EASY_END) return 1;
+  const t = (r - 1) / (CAMP_EASY_END - 1);          // R1 → 0 · R10 → 1
+  return CAMP_EASY_MUL + (1 - CAMP_EASY_MUL) * t; }
 const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
-  const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1));
+  const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1))
+            * campFoeEasy((typeof campDgN === 'function') ? campDgN() : 0, round);
   // 🌳 트리 「적 마리 수」 — 총 유입량은 그대로고 **나누는 수만** 준다(개체가 두꺼워진다)
   const cut = (typeof campRtCut === 'function') ? (1 - campRtCut('foeN')) : 1;
   return Math.max(1, Math.min(CAMP_FOE_NMAX, Math.round(n * cut))); }
@@ -2721,6 +2745,40 @@ function campBattleList(){
         z: -1000 + (Math.floor((g.gy - techY0()) / _techCH()) + 0.5) * zstep }); } }
   return out; }
 
+// ❤ **전장 HP 바** (2026-09-04 사용자 요청 — 「맞으면 화면에서 hp 가 닳는 게 보여야 한다」)
+//   ⚠ 왜 안 보였나: 전장 유닛·건물은 **3D 모델만** 얹혀 있었고(campBattleList 는 좌표·모델만 낸다)
+//     바를 아무도 안 그렸다. 기지 쪽 바(`.bentBar` · 16-build.js)는 **지정한 것만** 그린다 —
+//     그래서 전투 중에는 아군도 적도 건물도 체력이 화면에 전혀 안 나왔다.
+//   ⭐ **가득 찬 것은 안 그린다.** 수십 기가 늘 바를 달고 있으면 화면이 바 투성이가 된다 —
+//     맞은 것만 뜨고, 죽거나 회복되면 사라진다.
+//   ⭐ 마크업은 공용 `_barsHTML`(02-gacha.js) 하나뿐이다 — ⛔ 새 HP 바를 만들지 말 것.
+//     좌표도 기지 바와 **같은 변환**(_techW2S)을 쓴다(다른 자를 쓰면 3D 유닛과 어긋난다).
+//   ⚠ 적은 붉은색으로 굳힌다 — 오토배틀(10-engine.js)의 `_foe?'#ff5a5a'` 규약과 같다.
+function campBattleBars(){
+  if(!CAMPB || campDgN() <= 0) return '';
+  if(typeof _barsHTML !== 'function' || typeof _techW2S !== 'function') return '';
+  const W = CAMPB.world || 1, zm = (G.tech && G.tech.view ? G.tech.view.zoom : 1) || 1;
+  const uw = Math.max(0.05, 0.9 * _techCW() * zm);
+  const out = [];
+  const put = function(wx, wy, hp, mx, sh, msh, foe, wide, dy){
+    if(!(mx > 0)) return;
+    const r = Math.max(0, Math.min(1, (hp || 0) / mx));
+    const sr = (msh > 0) ? Math.max(0, Math.min(1, (sh || 0) / msh)) : null;
+    if(r >= 0.999 && (sr == null || sr >= 0.999)) return;            // 가득 찬 것은 안 그린다
+    const g = campW2G(wx, wy, W), s = _techW2S(g.gx, g.gy);
+    if(s.x < -0.1 || s.x > 1.1 || s.y < -0.1 || s.y > 1.1) return;    // 화면 밖(3D 컬링과 같은 뜻)
+    out.push('<div class="bentBar" style="left:' + (s.x * 100).toFixed(2) + '%;top:calc('
+      + (s.y * 100).toFixed(2) + '% + ' + dy + 'px);width:' + (wide * 100).toFixed(2) + '%">'
+      + _barsHTML({ hpR:r, hpCol:(foe ? '#ff5a5a' : hpBarColor(r)), shR:sr, enR:null }) + '</div>'); };
+  for(const side of ['me', 'ai']){ const foe = (side === 'ai');
+    for(const u of (CAMPB[side] && CAMPB[side].units) || []){
+      if(u.dead) continue;
+      put(u.x, u.y, u.hp, u.maxHp, u.sh, u.maxSh, foe, uw, 17); } }
+  for(const b of (CAMPB._bld || [])){
+    if(!b || b.dead) continue;
+    put(b.x, b.y, b.hp, (b.maxHp || b.max), 0, 0, false, uw * 2, 4); }
+  return out.join(''); }
+
 // 기지 렌더를 감싼다 — 그 안에서 renderBuildTab 이 부르는 M3D.sync 에 전투 유닛을 얹는다.
 //   ⚠ finally 로 반드시 되돌린다. 안 되돌리면 관리자 탭·오토배틀이 캠프 유닛을 달고 다닌다.
 function campWithBattleDraw(fn){
@@ -3318,7 +3376,8 @@ function campScaleFoes(list, share){
   if(!list || !list.length) return 0;
   const sh = (share > 0) ? share : 1;
   campDesignStats(list);                          // ⚔ 설계 능력치 먼저 — 그 뒤에 난이도 정규화가 총량을 맞춘다
-  const diff = campFoeDiff(campDgN(), campCleared());
+  // 🍼 초반 램프 — R1 은 「몇 대 때리면 끝나는」 크기로, R10 에서 원래 곡선에 합류한다(위 설명).
+  const diff = campFoeDiff(campDgN(), campCleared()) * campFoeEasy(campDgN(), campRoundN());
   let hp0 = 0, dmg0 = 0;
   for(const u of list){ hp0 += (u.maxHp || 0) + (u.maxSh || 0); dmg0 += (u.dmg || 0); }
   // 🌳 트리 「적 약화」 갈래 — 계열마다 −40% · 갈래 전체 실효 하한 ×0.2(HUNT_R1 §4-5-4)
@@ -3983,6 +4042,9 @@ const CAMP_GAS_PAD = 0;
 //   가스는 `align-items:flex-end` 라 **부지 밑변이 곧 발치**다 — 그 둘을 맞춘다.
 //   ⛔ 부지 중심을 광맥 y 에 맞추던 옛 식으로 되돌리지 말 것 — 가스가 한 뼘 낮게 보인다.
 const CAMP_GAS_FOOT = 0.45;
+// ⬇ 부지(짓는 자리)만 이만큼 아래 행으로 — **그림은 안 따라간다**(CSS `--gzDY` 가 같은 만큼 되돌린다).
+//   부지 높이가 2칸이므로 **한 칸 = --gzDY 의 50%p** 다. 둘을 함께 고쳐야 그림이 제자리에 남는다.
+const CAMP_GAS_ROW_OFF = 1;
 // 광맥 줄의 **시각 반폭**(칸) — 끝 덩이의 중심까지 + 스프라이트 반폭.
 //   ⚠ 덩이는 칸에 점으로 앉고 스프라이트가 그보다 크다(CAMP_MINE_SCALE). 중심 간 거리만
 //     재면 그림이 가스를 파고든다.
@@ -4034,7 +4096,11 @@ function campLayGas(){
   //     물건이라 발이 같은 선에 있어야 나란히 선 것으로 읽힌다.
   //   ⛔ 광맥 줄로 되돌리지 말 것 — 오른쪽 가스를 끈 뒤로는(CAMP_GAS2_ON) 왼쪽 하나만 남아,
   //     광맥 줄에 두면 줄 한쪽 끝에 혹처럼 붙어 보인다.
-  TECH_GAS.r0 = Math.max(0, Math.round(campRow(CAMP_ROW_BASE) + CAMP_GAS_FOOT - TECH_GAS.h));
+  //   ⬇ **부지만 한 칸 아래**(2026-09-04 사용자 확정) — 그림은 제자리다(CSS `--gzDY` 가 그만큼 되돌린다).
+  //     ⚠ 그림이 광맥 발치에 맞춰 반 칸 내려가 있어(--gzDY) 짓는 자리 표시가 그림 **위쪽**에 걸쳐 있었다.
+  //       부지를 한 칸 내리면 이제 그림 **아래쪽**(건물이 실제로 설 바닥)에 걸친다.
+  //     ⛔ 이 상수와 CSS 의 --gzDY 는 **짝이다** — 하나만 바꾸면 그림이 통째로 움직인다.
+  TECH_GAS.r0 = Math.max(0, Math.round(campRow(CAMP_ROW_BASE) + CAMP_GAS_FOOT - TECH_GAS.h) + CAMP_GAS_ROW_OFF);
   CAMP_GAS2.r0 = TECH_GAS.r0;                                 // 같은 행
   campPatchGas(); campPatchSync(); campPatchZoom();
 }
@@ -4064,6 +4130,11 @@ function _campWithGas2(fn, args){
   try { return fn.apply(null, args); } finally { TECH_GAS.c0 = sc; TECH_GAS.r0 = sr; }
 }
 function campPatchGas(){
+  // ⛔ **오른쪽 가스를 끈 동안에는 감싸지 않는다**(2026-09-04 사용자 신고 · 실측으로 확인).
+  //   `_techGasOverlap` 까지 함께 감싸고 있어서, 화면에 아무것도 없는 오른쪽 자리가
+  //   「가스 광산 예약」으로 남아 **일반 건물이 그 칸에 못 지어졌다**(맵에는 안 보이는 금지 구역).
+  //   ⚠ 되살릴 때는 이 줄이 저절로 풀린다 — CAMP_GAS2_ON 한 곳만 true 로 되돌리면 된다.
+  if(!CAMP_GAS2_ON) return;
   if(_campGasPatched || typeof window === 'undefined') return;
   const P = {};
   for(const name of ['techArmValid', '_techGasOverlap', '_techInGasZone']){
@@ -4080,10 +4151,13 @@ function campPatchGas(){
   _campGasPatched = P;
 }
 function campUnpatchGas(){
+  // ⚠ **sync 원복이 먼저다.** campLayGas 는 campPatchSync 를 **따로** 부르므로, 가스 판정을
+  //   안 감쌌더라도(CAMP_GAS2_ON=false) M3D.syncBuild 는 감싸져 있다. 아래 가드 뒤에 두었더니
+  //   캠프를 나가도 그 감싸기가 남아 검사 여섯 개가 줄줄이 깨졌다(2026-09-04).
+  campUnpatchSync();
   if(!_campGasPatched) return;
   for(const k in _campGasPatched) window[k] = _campGasPatched[k];
   _campGasPatched = null;
-  campUnpatchSync();
 }
 
 // 오른쪽 가스의 **3D 모델**도 왼쪽과 같게 세운다.
@@ -4694,7 +4768,10 @@ function campRaceToCamp(){
     if(ph) ph.classList.remove('campPick');   // 캠프가 켜지면 campMode 가 이어받는다
   };
   if(!black){ done(); campEnterAnim(); return; }
-  black.then(function(){ done(); campEnterAnim(); titleOutroEnd(); });   // 다 덮인 뒤 걷으며 다가온다
+  // 🎓 튜토리얼은 **로고가 걷히는 그 자리에서** 뜬다(2026-09-04 사용자 확정 — 맵이 다 커질 때까지
+  //   기다리면 2.7초라 「너무 느리다」였다). ⛔ campEnterAnim 이 끝난 뒤로 미루지 말 것.
+  black.then(function(){ done(); campEnterAnim(); titleOutroEnd();
+    if(typeof tutoKick === 'function') tutoKick(); });   // 다 덮인 뒤 걷으며 다가온다
 }
 
 // CSS 가 시간을 정한다 — JS 는 읽기만 한다(두 곳에 숫자를 두면 반드시 어긋난다).
@@ -4714,7 +4791,10 @@ function campEnterAnim(){
   const hs = document.getElementById('homeScreen');
   if(hs){ hs.classList.add('campInClip');
     clearTimeout(hs._campClipT);
-    hs._campClipT = setTimeout(function(){ hs.classList.remove('campInClip'); },
+    // 🎓 튜토리얼은 **이미 떠 있다**(로고가 걷힐 때 campRaceToCamp 가 부른다) — 여기서는 맵이 다
+    //   커진 자리에 맞춰 한 번 다시 잰다. ⛔ 이것을 튜토리얼의 **첫 등장**으로 되돌리지 말 것(2.7초 늦다).
+    hs._campClipT = setTimeout(function(){ hs.classList.remove('campInClip');
+        if(typeof tutoKick==='function') tutoKick(); },
       _campMs('--campInDur', 2.3) + 400); }
   const ms = _campMs('--campInDur', 2.3);
   for(const e of els){ if(!e) continue;
@@ -5680,9 +5760,19 @@ function campFrame(now){
       campGasTick(dt);                                            // ⛽ 정제소 자동 생산
     }
     _campSim = false;
+    // ❤ 전장 HP 바 — renderBuildTab 이 라벨 층(#cstLabels)을 **통째로 덮으므로** 그 뒤에 얹는다.
+    //   ⛔ renderBuildTab 안으로 옮기지 말 것 — 그 파일은 관리자 건설 탭과 공유다(캠프 전장이 새 나간다).
+    { const _lb = document.getElementById('cstLabels');
+      if(_lb){ const _hb = campBattleBars(); if(_hb) _lb.insertAdjacentHTML('beforeend', _hb); } }
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
     campSyncHire(); campSyncSupply(); campSyncUnitCost();          // 👷🏠⚔ 일꾼·보급소·전투 유닛 다음 가격(보유 수에 따라)
+    // ⏱ **튜토리얼 동안만 기다림을 없앤다**(2026-09-04 사용자 요청 · 판단은 tutoNoWait 이 한다).
+    //   ⭐ 바뀔 때만 쓴다 — 매 프레임 false 로 덮으면 다른 데서 켠 것을 조용히 끄게 된다.
+    //   ⛔ 튜토리얼이 끝나면 반드시 되돌아와야 한다(그 되돌림이 아래 else 다).
+    { const _nw = (typeof tutoNoWait === 'function') && tutoNoWait();
+      if(_nw !== !!G.tech._tutoNW){ G.tech._tutoNW = _nw; G.tech.nocool = _nw;
+        if(_nw) for(const e of G.tech.ents) if(e.type === 'bldg' && e.bt > 0 && typeof techFinishBuild === 'function') techFinishBuild(e); } }
     campSyncSheet();                                              // 🗂 시트를 늘 띄워 둔다
     _ok = true;
   } catch(err){
@@ -6415,9 +6505,12 @@ function campSyncUnitCost(){
       _campUnitHome.push({ q: q, m: q.m, g: q.g }); } }
   for(const h of _campUnitHome){
     const base = campUnitBase(h.q.id, h.m);                    // 💰 설계표 값(없으면 일률 배수)
-    h.q.m = campUnitCost(base, h.q.id);
+    // 🎓 **튜토리얼의 첫 한 기만 공짜**(2026-09-04 사용자 확정 · 판단은 tutoFreeUnit 이 다 한다).
+    //   ⛔ 여기에 조건을 더 쓰지 말 것 — 두 곳에서 정하면 어긋난다.
+    const free = (typeof tutoFreeUnit === 'function') && tutoFreeUnit(h.q.id);
+    h.q.m = free ? 0 : campUnitCost(base, h.q.id);
     const gas = CAMP_UNIT_GAS[h.q.id];                         // ⛽ 설계표(§2-3-2) · 없으면 가스 안 듦
-    h.q.g = gas ? campUnitCost(gas, h.q.id) : 0;
+    h.q.g = free ? 0 : (gas ? campUnitCost(gas, h.q.id) : 0);
   }
 }
 function campRestoreUnitCost(){
