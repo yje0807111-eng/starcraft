@@ -463,6 +463,11 @@
   .hbGrowDot{display:none;position:absolute;top:-3px;right:-2px;font-style:normal;color:#ff9a9a;
     font-family:var(--font-num);font-size:12px;font-weight:800;line-height:1;text-shadow:0 0 6px rgba(255,80,80,.8)}
   .hbGrowDot.show{display:block}
+  /* ⛔ **톱니(설정)에는 ! 를 붙이지 않는다**(2026-09-04 사용자 지적) — ! 는 「더보기 안에 지금 할 수 있는 것이
+     있다」는 신호라 ☰ 일 때만 뜻이 있다. 오른쪽 위가 ☰ 인 곳은 **캠프 맵(#phone.campMode)뿐**이고,
+     캠프 구역(.artLift)·유즈맵·상점은 톱니다(css/20-lobby.css 의 icoBars 규칙과 짝을 맞춘다). */
+  #phone:not(.campMode) .curBar .hudSet .hbGrowDot,
+  #phone.campMode.artLift .curBar .hudSet .hbGrowDot{display:none}
   /* 더보기 칸 안의 배지는 글자 없는 점 — 이 격자는 '아이콘만'이 규칙이라 !를 쓸 수 없다(스모크가 검사) */
   .hbMoreIt .hbGrowDot{top:1px;right:1px;width:5px;height:5px;border-radius:50%;background:#ff9a9a;
     box-shadow:0 0 5px rgba(255,80,80,.9)}
@@ -872,7 +877,15 @@
      그래야 우주 배경이 상단까지 끊기지 않고 이어져 보인다. showAppScreen()이 화면별로 .bare를 붙인다. */
   .curBar.bare{background:none;border-bottom:0}
   .curBar.bare::after{display:none}
-  .curBar .curRes{display:flex;align-items:center;gap:8px;margin-left:auto}   /* 설정 상자가 줄에 합류해 폭이 늘었다 — 간격을 좁혀 HOME 프로필과 겹치지 않게 */
+  /* 🌒 **위에서 내려오는 그늘**(2026-09-04 사용자 확정 · 목업 docs/mock/camp-chip-scrim-4.html 4안).
+     캠프는 바닥이 밝은 돌이라 판 없는 좌상단 글자가 배경에 묻혔다. 판을 만들지 않고
+     **화면 맨 위에서 56px 흘러내리는 그늘** 한 겹을 깐다 — 칩과 재화가 그 위에 함께 얹힌다.
+     ⚠ .bare 는 그늘을 끄는 규칙이라 캠프에서만 도로 켠다(다른 화면은 배경이 이미 어둡다).
+     ⚠ top 은 **화면 꼭대기 기준**이다 — 바가 --topPad 만큼 내려와 있어 그만큼 위로 끌어올린다.
+     ⛔ 판(면·테두리)을 만들지 말 것 — 좌상단은 글자다(칩과 같은 규칙). */
+  #phone.campMode .curBar.bare::after{display:block;top:calc(-1 * var(--topPad));height:56px;
+    background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.28) 55%,transparent)}
+  .curBar .curRes{display:flex;align-items:center;gap:7px;margin-left:auto}   /* 설정 상자가 줄에 합류해 폭이 늘었다 — 간격을 좁혀 HOME 프로필과 겹치지 않게 */
   .curBar .hudSet{margin-left:1px;margin-right:-8px}   /* 오른쪽 끝에 거의 붙인다(.curBar padding 10px 상쇄) */
   .curTitle,
   #campTree .ctTitle,
@@ -897,13 +910,68 @@
     background:none;border:0;                                   /* 판 없음 */
     filter:drop-shadow(0 1px 3px rgba(0,0,0,.92));
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
-  .curTitle.asChip .cdNm{font-size:11.5px;font-weight:800;color:#e6eefc;
+  /* 🧑 레벨·경험치 — 재화 바 **맨 왼쪽**(2026-09-04 사용자 확정). 캠프에서만 보인다.
+     칩과 같은 어법이다: 판 없이 글자 + 그림자, 진행은 얇은 밑선 하나.
+     ⛔ 판(면·테두리)을 만들지 말 것 — 상단 줄은 전부 「글자」다. */
+  .curLv{display:none}
+  /* ⚠ align-items 는 **stretch** 다(2026-09-04 사용자 지적) — center 로 두면 초상(26px 고정)이
+     글자 블록(25.5px)보다 커서 아래로 삐져나온다. 늘려 놓고 초상이 그 높이를 따라가게 한다. */
+  #phone.campMode .curLv{display:flex;align-items:center;gap:7px;flex:none;min-width:0;
+    text-shadow:0 1px 3px rgba(0,0,0,.9)}
+  /* 🖼 초상 = 공용 .fAva 를 이 자리 크기로만 줄인다(⛔ 새 초상을 만들지 말 것) */
+  /* ⚠ 크기는 **px 로 못 박는다**(2026-09-04). 두 번 헛짚었다:
+       ① 26px 고정 + 가운데 정렬 → 글자 블록(25.5px)보다 커서 아래로 삐져나왔다(사용자 지적).
+       ② height:100% + aspect-ratio → 칸이 글자 폭(13px)으로 접혀 **세로로 길쭉해졌다**(실측).
+     글자 블록 높이(25.5px)와 사실상 같은 **25px 정사각**이 가장 안전하다 — 위아래 0.25px 씩 안으로 든다. */
+  .curLv .clvAv{flex:none;display:flex;width:26px;height:26px;line-height:0;
+    filter:drop-shadow(0 1px 3px rgba(0,0,0,.7))}
+  /* ⬛ 이 자리 초상만 **정사각**이다(2026-09-04 사용자 확정) — 상단 줄의 다른 것들(칩·재화·칸)이 전부
+     각져 있어 동그라미 하나만 튀었다. ⛔ 공용 .fAva(원형)를 고치지 말 것 — 친구·대기실·게임 시작이
+     같은 것을 쓴다. 여기서만 덮는다(안쪽 사진 .fAvaImg 도 함께 각지게 해야 모서리가 안 남는다). */
+  /* 높이는 **글자 블록을 따라간다**(height:100% + aspect-ratio 1) — 이름·레벨 두 줄과 위아래가 딱 맞는다.
+     색은 상단 줄 어휘(검은 면 · 흰 테두리 · 흰 글자)다 — ⛔ 닉 색(초록·보라)을 되돌리지 말 것.
+     ⚠ 닉 색은 JS 가 인라인을 걷어 줘야 여기 값이 이긴다(curPaintLv 참고). */
+  /* ⚠ 면은 **옅게**(2026-09-04 사용자 지적) — 검정이 짙으면 상단 줄에서 이 칸만 판처럼 튄다.
+     아래 배경이 비쳐 자연스럽게 묻히도록 .86/.92 → .34/.46 으로 낮췄다. */
+  .curLv .clvAv .fAva{width:100%;height:100%;font-size:12px;border-width:1px;
+    border-radius:var(--r-bar,3px);
+    background:linear-gradient(180deg,rgba(22,24,28,.34),rgba(9,10,12,.46));
+    border-color:rgba(255,255,255,.16);color:#dfe7f2}
+  .curLv .clvAv .fAva>.fAvaImg{border-radius:var(--r-bar,3px)}
+  .curLv .clvTx{display:flex;flex-direction:column;gap:3px;min-width:0}
+  /* 이름 — 길면 말줄임(닉은 10자까지라 대개 안 잘린다) */
+  .curLv .clvNm{font-size:11.5px;font-weight:800;color:#e6eefc;line-height:1;max-width:96px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .curLv .clvRow{display:flex;align-items:center;gap:5px}
+  .curLv .clvN{font-style:normal;font-family:var(--font-num);font-size:11px;font-weight:800;color:rgba(214,226,240,.72);line-height:1;flex:none}
+  /* 경험치 = 얇은 밑선(칩의 진행선과 같은 어휘) — ⚠ 색은 **흰 계열**이다. 붉은색은 던전 진행의 것이라
+     둘 다 붉으면 어느 쪽이 무엇인지 안 갈린다. */
+  .curLv .clvBar{width:52px;flex:none;height:2px;background:rgba(255,255,255,.14);overflow:hidden}
+  .curLv .clvBar i{display:block;height:100%;width:0;background:rgba(214,226,240,.75)}
+  /* 🏕 던전 칩은 **레벨 아래 줄**로 내려간다(캠프에서만). 바 안에서 자리를 다투지 않게 흐름에서 뺀다.
+     ⚠ 다른 화면의 #curTitle(글자 제목)은 그대로 바 안에 있어야 한다 — .asChip 일 때만 내린다. */
+  /* ⑦+⑧ 2026-09-04 사용자 확정(목업 docs/mock/camp-topleft-8.html) — 좌상단 두 줄의 위계를 잡는다.
+     ⑦ 칩을 **한 단 작고 옅게**: 12.5/14px 이던 칩이 이름(11.5px)보다 커서 눈이 아래로 먼저 갔다.
+     ⑧ 프로필과 칩 사이에 **헤어라인** 하나: 두 줄이 다른 정보라는 것을 선으로 말한다(하단 머리줄 어휘).
+     ⛔ 선을 위한 요소를 새로 만들지 말 것 — 칩의 ::before 로 그린다(칩이 걷히면 선도 함께 사라진다). */
+  #phone.campMode .curBar .curTitle.asChip{position:absolute;left:10px;top:calc(100% + 4px)}
+  #phone.campMode .curBar .curTitle.asChip::before{content:'';position:absolute;left:0;right:0;top:-4px;height:1px;
+    background:linear-gradient(90deg,rgba(255,255,255,.20),transparent);pointer-events:none}
+  /* ⑦ 한 단 작고 옅게 — 프로필(이름 11.5px)이 주인공이고 칩은 그 아래 딸린 줄이다 */
+  #phone.campMode .curBar .curTitle.asChip .cdNm{font-size:11px;color:rgba(230,238,252,.82)}
+  #phone.campMode .curBar .curTitle.asChip .cdN{font-size:12px;color:rgba(230,238,252,.82)}
+  #phone.campMode .curBar .curTitle.asChip .cdDim{font-size:10px}
+  #phone.campMode .curBar .curTitle.asChip .cdSep{font-size:10px}
+  #phone.campMode .curBar .curTitle.asChip .cdBar{right:11px;bottom:-3px}
+  /* ⬆ 2026-09-04 — 한 단 키웠다(이름 11.5→12.5 · 숫자 13→14). 재화 줄에서 [+] 를 빼고 아이콘을 줄여
+     자리가 110 → 216.8px 로 늘어난 덕이다(실측). ⚠ 더 키우려면 재화 줄에서 또 자리를 내야 한다. */
+  .curTitle.asChip .cdNm{font-size:12.5px;font-weight:800;color:#e6eefc;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
   /* 가운뎃점만 좌우로 띄운다 — 숫자와 총 라운드(「30/50」)는 **붙어야** 한 덩어리로 읽힌다 */
-  .curTitle.asChip .cdSep{font-style:normal;font-size:11px;color:rgba(214,226,240,.35);flex:none;
+  .curTitle.asChip .cdSep{font-style:normal;font-size:11.5px;color:rgba(214,226,240,.35);flex:none;
     margin:0 4px}
-  .curTitle.asChip .cdN{font-family:var(--font-num);font-size:13px;font-weight:800;color:#e6eefc;flex:none}
-  .curTitle.asChip .cdDim{font-style:normal;font-family:var(--font-num);font-size:11px;
+  .curTitle.asChip .cdN{font-family:var(--font-num);font-size:14px;font-weight:800;color:#e6eefc;flex:none}
+  .curTitle.asChip .cdDim{font-style:normal;font-family:var(--font-num);font-size:11.5px;
     color:rgba(214,226,240,.5);flex:none}
   /* 진행 = 밑선 하나. **박스 밖**(음수 bottom)에 그린다 — 안쪽에 두면 그 자리만큼 글자가 위로 밀려
      재화 줄과 세로선이 어긋난다(위 박스 주석). ⚠ 막대를 라운드 오른쪽에 두면 칩이 134px 이 되어
@@ -991,7 +1059,8 @@
      ⛔ 청록·발광 없음. ⛔ 칩 아래 드롭다운(width 256 · 칩 rect 기준 left/top)으로 되돌리지 말 것. */
   .cdDrop{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:61;   /* 재화 바(62) 바로 아래 — 칩이 위에 남아 닫는 손잡이가 된다 */
     display:flex;flex-direction:column;
-    padding:calc(var(--topPad) + var(--curH) + 6px) 14px 0;
+    /* ⚠ 위 여백 = 재화 바 + **칩 한 줄**(칩이 레벨 아래로 내려갔다 · 2026-09-04). 안 비우면 목록 첫 칸이 칩에 가린다. */
+    padding:calc(var(--topPad) + var(--curH) + 21px) 14px 0;
     background:linear-gradient(180deg,#121316 0%,#0b0c0e 60%,#080809 100%);
     font-size:11px;color:var(--txt,#d6e2f0);border:0;box-shadow:none;
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
@@ -1002,7 +1071,12 @@
     font-family:var(--font-num);font-size:9px;font-weight:800;letter-spacing:.24em;color:rgba(232,237,245,.62);
     padding-bottom:6px;margin-bottom:2px;border-bottom:1px solid rgba(255,255,255,.12)}
   .cdSl em{font-style:normal;font-size:9px;letter-spacing:.06em;font-weight:700;color:rgba(214,226,240,.4)}
-  .cdList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:8px}
+  /* ⛔ **스크롤 막대를 보이지 말 것**(2026-09-04 사용자 지시) — 카드 오른쪽 배수 글자와 겹쳐 지저분했다.
+     굴리는 것은 그대로 되고 막대만 감춘다. ⚠ 그래서 .uiScroll(공용 스크롤바)을 **안 붙인다** —
+     붙이면 공용 규칙이 막대를 도로 그린다. */
+  .cdList{flex:1 1 auto;min-height:0;overflow-y:auto;padding-bottom:8px;
+    scrollbar-width:none;-ms-overflow-style:none}
+  .cdList::-webkit-scrollbar{width:0;height:0;display:none}
   /* 던전 줄 — 판 없이 글자만. 「지금 여기」는 왼쪽 청록 띠 하나로 말한다 */
   /* ⚠ **밑선 정렬**이다. 번호(Rajdhani)와 이름(NotoKR)은 글자 상자 높이가 12 vs 16px 이라,
      상자를 가운데 맞춰도 글자는 서로 다른 높이에 앉는다(칩의 라운드 줄과 같은 문제).
@@ -1018,7 +1092,9 @@
   .cdRow .cdTx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
   .cdRow .cdRnm{font-size:12.5px;font-weight:800;color:#e6eefc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cdRow .cdSub{font-size:10px;color:rgba(214,226,240,.55)}
-  .cdRow .cdMul{font-family:var(--font-num);font-size:11px;color:rgba(214,226,240,.55)}
+  /* ⬆ 배수는 카드에서 **읽으라고 있는 값**이다 — 11px 은 작아서 안 읽혔다(2026-09-04 사용자 지적).
+     ⚠ 뒷자리 던전은 「×700,000 ~ ×3.5M」처럼 길다 — 더 키우면 이름을 밀어 말줄임이 생긴다. */
+  .cdRow .cdMul{font-family:var(--font-num);font-size:11.75px;font-weight:700;color:rgba(214,226,240,.68)}
   .cdRow.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}
   .cdRow.here .cdIx{color:#ff7676}                              /* 칩 진행선과 같은 붉은색 · 발광 없음 */
   .cdRow.done .cdIx{color:#6f7a88}                              /* 지나온 던전 — 번호를 옅게 */
@@ -1065,10 +1141,15 @@
   .cdTicks span{width:2ch;text-align:center}
   /* [이동] = 공용 .actBtn.pri 그대로(옅은 흰 면 .14 + 1px .32). 여기서 덮는 건 **크기뿐**. ⛔ 제 버튼을 만들지 말 것. */
   .cdFoot .cdGo{width:100%;height:44px;font-size:13px;margin-top:12px}
-  .curBar .res{display:flex;align-items:center;gap:4px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:12.5px;color:#f2f6fb;white-space:nowrap;
+  /* ⚠ 2026-09-04 — 재화 줄을 한 단 줄였다(아이콘 14→12 · 글자 12.5→11.5 · 칸 사이 8→7).
+     좌상단 칩과 **폭을 나눠 쓰는 자리**라, 칩 글자를 키우려면 여기서 자리를 내주는 수밖에 없다.
+     ⛔ 더 줄이지 말 것 — 12px 아래로는 미네랄·가스 그림이 서로 구분이 안 된다. */
+  .curBar .res{display:flex;align-items:center;gap:4px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;font-size:11.5px;color:#f2f6fb;white-space:nowrap;
     text-shadow:0 1px 3px rgba(0,0,0,.95),0 0 10px rgba(0,0,0,.6)}
-  .curBar .ri{width:14px;height:14px;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}
-  /* [+] — 평소엔 거의 안 보이고 누를 수 있음만 알린다(인게임 HUD에는 없다 — 획득 전용 재화) */
+  .curBar .ri{width:12px;height:12px;flex:none;filter:drop-shadow(0 1px 3px rgba(0,0,0,.95))}
+  /* [+] — 🗄 **화면에서 뺐다**(2026-09-04 사용자 확정 · 좌상단 칩에 자리를 내주려고).
+     마크업(sc-ums-web.html)에서 지웠고 이 규칙만 남는다 — 되살리려면 <i class="curPlus"> 를 다시 넣으면 된다.
+     ⛔ 규칙을 지우지 말 것(유보는 삭제가 아니다 · GAME_DIRECTION §5). */
   .curBar .curPlus{width:14px;height:14px;flex:none;margin-left:-2px;   /* .res의 gap 4px를 상쇄해 숫자에 붙인다(6px→2px) */display:grid;place-items:center;
     background:rgba(4,6,10,.14);border:1px solid rgba(255,255,255,.1);cursor:pointer;
     filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));transition:border-color .15s}

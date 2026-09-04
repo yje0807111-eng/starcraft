@@ -1,0 +1,93 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>좌상단 칩 — 그늘 한 겹 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 자리가 넓어졌다(2026-09-04) — 재화 줄에서 [+] 셋을 빼고 아이콘 14→12 · 글자 12.5→11.5 로 줄였다.
+     실측: 재화 구역 213 → **153.2px** · 칩이 쓸 수 있는 폭 **216.8px**(전에는 110px 예산).
+     그래서 이제 **이름이 안 잘린 채로** 글자를 키울 수 있다 — 네 안 전부 이름 12.5px · 숫자 14px.
+     네 안은 「그늘 한 겹」의 변주다: 그늘을 **어디까지 · 얼마나 · 어떤 모양으로** 깔 것인가.
+     ⛔ 판(테두리)·청록·발광 없음. 붉은색은 진행 밑선에만. */
+:root{--ko:'IBM Plex Sans KR',sans-serif;--num:'Rajdhani',sans-serif;--red:#ff7676;--ink:#e6eefc;--dim:rgba(214,226,240,.5);--mute:rgba(214,226,240,.35)}
+*{box-sizing:border-box}
+body{margin:0;background:#101317;color:#dfe5ee;font-family:var(--ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:406px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}.cap i{font-style:normal;color:#ffd24a;margin-right:7px;font-family:var(--num)}
+.sub{margin:0 0 9px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:56px}.sub b{color:#c3ccd8;font-weight:700}
+.pair{display:flex;flex-direction:column;gap:6px}
+.phone{width:390px;height:76px;position:relative;overflow:hidden}
+.light{background:radial-gradient(120% 90% at 30% 0%,#9a9179,#867d68)}
+.light::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 34px,transparent 34px 36px),repeating-linear-gradient(90deg,rgba(0,0,0,.05) 0 60px,transparent 60px 62px)}
+.dark{background:radial-gradient(120% 90% at 30% 0%,#2a3038,#14171b)}
+.bar{position:absolute;left:0;top:0;right:0;height:34px;display:flex;align-items:center;gap:8px;padding:0 10px;z-index:2}
+/* 재화 줄 — **줄인 뒤 실제 값**(아이콘 12 · 글자 11.5 · 칸 사이 7 · [+] 없음) */
+.res{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--num);font-weight:800;font-size:11.5px;color:#f2f6fb;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.res span{display:flex;align-items:center;gap:4px}
+.res u{width:12px;height:12px;border-radius:2px;text-decoration:none;display:block}
+.res .m u{background:linear-gradient(180deg,#7fd8ff,#2b7fae)}.res .g u{background:linear-gradient(180deg,#7ff0b0,#25865a)}
+.res .p u{background:linear-gradient(180deg,#c9b6ff,#6a4fd0)}.res .c u{background:linear-gradient(180deg,#cfd8e6,#7d8794)}
+.set{width:22px;height:22px;border-radius:3px;border:1px solid rgba(255,255,255,.16);display:grid;place-items:center;color:#aab6c6;margin-left:1px}
+.set svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+.mm{margin:7px 0 0;color:#6f7887;font-size:10.5px;font-family:var(--num);letter-spacing:.04em}
+/* 칩 — 크기는 네 안이 같다 */
+.chip{position:relative;display:inline-flex;align-items:baseline;gap:0;min-width:0;max-width:216px;
+  letter-spacing:-.2px;line-height:1;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.chip .nm{font-size:12.5px;font-weight:800;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chip .sep{font-style:normal;font-size:11.5px;color:var(--mute);margin:0 4px}
+.chip .n{font-family:var(--num);font-size:14px;font-weight:800;color:var(--ink);flex:none}
+.chip .d{font-style:normal;font-family:var(--num);font-size:11.5px;color:var(--dim);flex:none}
+.chip .cv{position:absolute;width:11px;height:11px;color:var(--dim)}
+.chip .cv svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.chip .ul i{display:block;height:100%;width:60%;background:var(--red)}
+
+/* ① 왼쪽에서 사라지는 그늘 (기본형) — 글자 뒤만 짙고 오른쪽으로 녹는다 */
+.v1{padding:4px 14px 4px 8px;margin-left:-8px;
+  background:linear-gradient(90deg,rgba(0,0,0,.45),rgba(0,0,0,.18) 76%,transparent)}
+.v1 .cv{right:1px;bottom:5px}
+.v1 .ul{position:absolute;left:8px;right:14px;bottom:2px;height:2px;background:rgba(255,255,255,.14)}
+
+/* ② 재화 줄까지 이어지는 띠 — 바 전체에 얇은 그늘(칩만 따로 노는 느낌을 없앤다) */
+.v2{padding:4px 14px 4px 0}
+.v2 .cv{right:1px;bottom:5px}
+.v2 .ul{position:absolute;left:0;right:14px;bottom:2px;height:2px;background:rgba(255,255,255,.14)}
+.barShade{position:absolute;left:0;right:0;top:0;height:34px;z-index:1;
+  background:linear-gradient(180deg,rgba(0,0,0,.42),rgba(0,0,0,.10))}
+
+/* ③ 둥근 그늘 — 알약 모양으로 감싼다(모서리가 부드러워 판처럼 안 읽힌다) */
+.v3{padding:5px 14px 5px 10px;margin-left:-6px;border-radius:14px;
+  background:radial-gradient(120% 140% at 20% 50%,rgba(0,0,0,.52),rgba(0,0,0,.12) 78%,transparent)}
+.v3 .cv{right:2px;bottom:6px}
+.v3 .ul{position:absolute;left:10px;right:15px;bottom:3px;height:2px;background:rgba(255,255,255,.14)}
+
+/* ④ 위에서 내려오는 그늘 — 재화 바 자체가 화면 위에서 흘러내리는 그늘의 일부가 된다 */
+.v4{padding:4px 14px 4px 8px;margin-left:-8px}
+.v4 .cv{right:1px;bottom:5px}
+.v4 .ul{position:absolute;left:8px;right:14px;bottom:2px;height:2px;background:rgba(255,255,255,.14)}
+.topShade{position:absolute;left:0;right:0;top:0;height:56px;z-index:1;
+  background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.28) 55%,transparent)}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const CV='<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+const CHIP=(v)=>'<div class="chip '+v+'"><span class="nm">잊혀진 회랑</span><i class="sep">·</i><b class="n">30</b><i class="d">/50</i>'
+  +'<i class="cv">'+CV+'</i><span class="ul"><i></i></span></div>';
+const RES='<div class="res"><span class="m"><u></u>1.6M</span><span class="g"><u></u>755</span><span class="p"><u></u>0</span><span class="c"><u></u>0/10</span>'
+  +'<i class="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg></i></div>';
+const EXTRA={2:'<div class="barShade"></div>',4:'<div class="topShade"></div>'};
+const STAGE=(v,i)=>'<div class="pair">'
+  +['light','dark'].map(bg=>'<div class="phone '+bg+'">'+(EXTRA[i]||'')+'<div class="bar">'+CHIP(v)+RES+'</div></div>').join('')
+  +'</div>';
+const ANS=[
+ ['왼쪽에서 사라지는 그늘 (기본형)','글자 뒤만 짙고 <b>오른쪽으로 녹아 없어진다</b>. 경계가 없어 판으로 안 읽히고, 밝은 돌바닥에서도 글자가 뜬다. 재화 줄과는 상관없이 칩만 감싼다.'],
+ ['재화 줄까지 이어지는 띠','칩만이 아니라 <b>재화 바 전체에 얇은 그늘</b>을 깐다. 좌우가 한 줄로 묶여 「상단 바」로 읽히고, 칩만 따로 노는 느낌이 사라진다.'],
+ ['둥근 그늘','같은 그늘이되 <b>알약 모양</b>으로 감싼다. 모서리가 부드러워 판처럼 안 보이면서 「여기가 버튼」이라는 게 ①보다 분명하다.'],
+ ['위에서 내려오는 그늘','화면 <b>맨 위에서 56px 흘러내리는 그늘</b>. 칩·재화 모두 그 안에 얹혀 가장 자연스럽고, 배경이 밝든 어둡든 위쪽 글자가 항상 읽힌다.'],
+];
+document.getElementById('wrap').innerHTML=ANS.map(([t,d],i)=>
+ '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+t+'</p><p class="sub">'+d+'</p>'+STAGE('v'+(i+1),i+1)+'<p class="mm"></p></div>').join('');
+const measure=()=>{document.querySelectorAll('.cell').forEach(c=>{const ch=c.querySelector('.chip'),r=ch.getBoundingClientRect();
+  const nm=c.querySelector('.nm'); const cut=nm.scrollWidth>nm.clientWidth+1;
+  c.querySelector('.mm').textContent='폭 '+r.width.toFixed(1)+'px · 높이 '+r.height.toFixed(1)+'px'
+    +(cut?'   ⚠ 이름이 잘린다':'   이름 안 잘림 · 남는 자리 '+(216-r.width).toFixed(0)+'px');});};
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(measure); else setTimeout(measure,300);
+</script></body></html>

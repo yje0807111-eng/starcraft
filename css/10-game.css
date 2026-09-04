@@ -456,6 +456,9 @@
 
 /* 우측 고정폭 설정 칸 — 주 탭보다 작고 조용하게 */
   /* 설정 팝업 */
+  /* ⚠ 캠프 구역(환생·트리·룬)은 z-index 120 이라 72 로는 **판 뒤에 열려 안 보인다**(2026-09-04 사용자 신고).
+     구역이 켜져 있을 때만(.artLift) 그 위로 올린다 — 다른 화면에서는 72 그대로. */
+  #phone.artLift #settingsPop{z-index:130}
   #settingsPop{position:absolute;inset:0;z-index:72;   /* 허브(60)·마을(60)·캐릭터(61)보다 위 */display:flex;align-items:center;justify-content:center;
     /* ⛔ 청록 방사를 뺐다 — 판을 없앤 뒤로는 이 화면에서 유일한 색 덩어리였다(로그인·로딩과 같은 언어).
        판이 없으니 읽힘은 딤이 책임진다. 게임 안은 전장 위라 밖(.72)보다 진하게 간다. */

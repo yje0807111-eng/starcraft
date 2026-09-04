@@ -266,6 +266,11 @@ function hbMoreBtns(){ return ['curSettingsBtn','settingsBtn']
   .map(function(id){ return document.getElementById(id); }).filter(Boolean); }
 function hudTopMenu(fb){ const hs=document.getElementById('homeScreen');
   if(hbMoreOn()) return hbCloseMore();
+  // 🏕 캠프 **구역**(환생·트리·룬)이 열려 있으면 오른쪽 위는 **톱니(설정)** 다 — 더보기가 아니다.
+  //   ⚠ 구역은 HOME 위에 덮는 판이라 homeScreen 이 그대로 '보이는' 상태다. 그래서 아래 줄이
+  //     먼저 걸려 **더보기가 구역 뒤에서 열리고 있었다**(눌러도 아무 일도 안 나는 것처럼 보였다).
+  { const ph=document.getElementById('phone');
+    if(ph && ph.classList.contains('artLift') && typeof openAppSettings==='function') return openAppSettings(); }
   if(hs && !hs.classList.contains('hide') && typeof hbOpenMore==='function') return hbOpenMore();
   if(fb==='app' && typeof openAppSettings==='function') return openAppSettings();
   openSettings(); }

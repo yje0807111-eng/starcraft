@@ -617,13 +617,20 @@
     <div class="rnBody" id="rnBody"></div>
   </div>
   <div id="curBar" class="curBar hide">
+    <!-- 🧑 플레이어 레벨·경험치 — **가장 좌상단**(2026-09-04 사용자 확정). 캠프에서만 보인다.
+         ⚠ 경험치는 **아직 캠프에서 안 오른다**(profGainXp 를 부르는 곳이 옛 사냥터·토벌뿐이다).
+            지금은 「자리와 표시」만 만든 것이고, 지급 규칙은 나중에 정한다(사용자 확정: 표시만 먼저). -->
+    <span class="curLv" id="curLv" aria-live="off"><span class="clvAv" id="clvAv"></span><span class="clvTx"><b class="clvNm">-</b><span class="clvRow"><i class="clvN">Lv.1</i><span class="clvBar"><i></i></span></span></span></span>
     <span class="curTitle" id="curTitle"></span><!-- 화면 제목 슬롯(curSetTitle) — 비어 있으면 재화만 오른쪽 정렬 -->
     <span class="curRes">
-      <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
-      <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
-      <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
+      <span class="res"><img class="ri" src="assets/icons/res_mineral.webp" alt=""><b id="curMin">0</b></span>
+      <span class="res"><img class="ri" src="assets/icons/res_gas.webp" alt=""><b id="curGas">0</b></span>
       <!-- 🏕 인구 — 캠프 전용. 관리자 재화 줄(.bres)을 걷었으므로 인구를 볼 곳이 여기뿐이다.
            ⛔ 이모지를 쓰지 말 것 — 재화 아이콘은 assets/icons/res_*.webp 가 단일 소스(CLAUDE.md). -->
+      <!-- 💎 젬 = 현질 재화. **미네랄·가스 다음, 인구 앞**에 선다(2026-09-04 사용자 확정).
+           ⛔ [+] 는 젬에만 남긴다 — 미네랄·가스의 [+] 는 뺐다(좌상단 칩에 자리를 내주려고). -->
+      <span class="res"><img class="ri" src="assets/icons/res_gem.webp" alt=""><b id="curGem">0</b><i class="curPlus" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></i></span>
+      <!-- 🧍 인구 — **맨 오른쪽**(재화가 아니라 「지금 상태」라 줄 끝에 둔다 · 2026-09-04 사용자 확정) -->
       <span class="res curPop"><img class="ri" src="assets/icons/res_pop.webp" alt=""><b id="curPop">0/0</b></span>
       <div class="hudSet" id="curSettingsBtn" data-sfx="ui_open" onclick="hudTopMenu('app')" title="더보기"><i class="hbGrowDot" id="hbGrowDot">!</i><span class="icoBars" data-ico="gear"></span><span class="icoMenu" data-ico="bars"></span><svg class="icoX" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"><path d="M6.2 6.2 17.8 17.8M17.8 6.2 6.2 17.8"/></svg></div>
     </span>
