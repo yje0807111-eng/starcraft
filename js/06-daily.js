@@ -114,7 +114,13 @@ function dqGive(rw){ const p=(typeof PROF==='function')?PROF():null; if(!p||!rw)
   return dqRwPlain(rw); }
 function dqRwAdd(a,b){ for(const k in b) a[k]=(a[k]||0)+b[k]; return a; }
 // ── 계측 — 게임 곳곳에서 이 한 곳으로만 들어온다 ──
-function dqNote(kind, n){ try{
+function dqNote(kind, n){
+  // 🎓 **가이드도 같은 계측을 쓴다**(2026-09-04). 전에는 guideNote 를 부르는 곳이 던전 이동 한 곳뿐이라
+  //   탭·업그레이드·건설·유닛 단계가 **영영 안 넘어갔다**(실측). 지급 지점마다 줄을 더하지 말고
+  //   **공용 입구 하나**에 얹는다 — 새 계측이 생겨도 여기로 들어오면 가이드가 저절로 따라온다.
+  //   ⛔ guideNote 를 개별 지점에 흩뿌리지 말 것(두 벌이 되면 한쪽만 세다 어긋난다).
+  try{ if(typeof guideNote==='function') guideNote(kind, n); }catch(_g){}
+  try{
   const D=dqState(); if(!D) return; const done=[]; let ch=0;
   for(const e of D.q){ const Q=DQ_BY[e.id];
     if(!Q || Q.kind!==kind || e.got || e.n>=Q.goal) continue;
@@ -358,12 +364,324 @@ function guideNote(kind, n){ try{
   if(typeof saveMeta==='function') saveMeta();
   if(typeof playSfx==='function') playSfx('ui_confirm');
   if(typeof toast==='function') toast('🧭 '+g.name+' 완료'+(tx?' — '+tx:''));
-  guidePaint();
+  guidePaint(); tutoKick();
 }catch(_e){} }
 // ── 화면 ① 「지금 할 일」 띠 — 재화 바 바로 아래 ─────────────────
 // ⚠ 더보기 **안에만** 두면 초보자가 못 찾는다(메뉴를 열 줄 알면 이미 초보가 아니다).
 //   그래서 지금 할 일 **한 줄만** 화면에 두고, 전체 목록은 시트에서 본다.
 // ⚠ #phone 직속이다 — 캠프 화면(#homeScreen) 안에 넣으면 캠프 파일을 건드리게 된다.
+// ══ 🎓 강제 튜토리얼 (2026-09-04 사용자 확정) ════════════════════════════
+//   모바일 초반 튜토리얼 방식: **대상만 남기고 화면을 덮어** 순서대로 따라가게 한다.
+//   ⭐ 딤에 「구멍」을 뚫는 게 아니라 **네 판(위·아래·왼·오른)** 으로 둘러싼다 —
+//     구멍을 뚫는 방식(mask)은 그 자리의 터치가 딤에 먹혀 대상이 안 눌린다.
+//   ⛔ 대상 밖 터치는 전부 막는다(하단 네비·설정 포함) — 「완전 강제」가 사용자 확정이다.
+//   ⚠ 3D 오브젝트(본부 등)는 DOM 이 아니라 앵커를 못 잡는다 — 그런 단계는 **맵 전체**를 열어 주고
+//     말풍선으로 안내한다(TUTO_AT 의 'map').
+// 📋 **튜토리얼은 제 단계표를 갖는다**(2026-09-04 사용자 확정). 가이드(GUIDE_STEPS)와 나눈 이유:
+//   가이드의 「광맥 10번」 한 줄이 실제로는 **채굴을 켜고 → 10번 두드리는** 두 동작이라,
+//   한 줄로 두면 「여기를 눌러 채굴을 켭니다 0/10」처럼 **셈이 거짓말**을 한다(사용자 지적).
+//   ⭐ 진행도는 **게임 상태에서 직접 읽는다**(n()) — 따로 세지 않으므로 어긋날 수가 없다.
+//   ⛔ 여기에 이벤트 리스너를 달아 세지 말 것(두 벌이 된다).
+const TUTO_DG = 1;   // 🗺 튜토리얼이 데려가는 곳 — 캠프(0)의 바로 다음
+const TUTO_STEPS = [
+  // ⚠ 채굴이 켜졌는지는 **campMineModeOn()** 이 안다(#phone.mineMode). 옛 시트의 #campMineTap 을
+  //   보고 있었더니 켜도 다음으로 안 넘어갔다(2026-09-04 사용자 신고 · 그 시트는 이제 안 쓴다).
+  { id:'mineOn', goal:1,  tip:'여기를 눌러 채굴을 켭니다',
+    at:()=>_tutoVis('[data-minemode]'),
+    n:()=>(typeof campMineModeOn==='function' && campMineModeOn()) ? 1 : 0 },
+  // ⛏ 채굴 모드에서는 **맵 어디를 눌러도 캔다**(19-camp.js) — 그래서 대상이 맵 전체다.
+  { id:'tap',    goal:10, tip:()=>_tutoTapTip('맵을 두드려 미네랄을 캡니다'),
+    at:_tutoTapAt, n:()=>_tutoDelta('tapped') },
+  { id:'resOpen',goal:1,  tip:'하단의 「연구」를 엽니다',
+    at:()=>_tutoVis('.navIt[data-nav="research"]'), n:()=>_tutoVis('[data-res="tap"]') ? 1 : 0 },
+  // 💰 **살 돈부터 모은다**(2026-09-04 사용자 지적) — 돈이 없는데 「사세요」라고만 하면 막힌다.
+  //   ⭐ 목표는 **그 물건의 값**이고 진행은 **지금 미네랄**이다 — 이미 있으면 즉시 넘어간다.
+  //   ⛔ 「10번 두드리기」처럼 횟수로 두지 말 것: 값이 바뀌면(강화·환생) 모자라 또 막힌다.
+  { id:'coinTap',goal:()=>_tutoCost('tap'),  tip:()=>_tutoTapTip('맵을 두드려 살 돈을 모읍니다'),
+    at:_tutoTapAt, n:()=>_tutoCoin() },
+  { id:'upgTap', goal:1,  tip:'터치 강화를 삽니다 — 한 번 더 누르면 삽니다',
+    at:()=>_tutoVis('[data-res="tap"]'), n:()=>_tutoLv('tap') },
+  { id:'coinWk', goal:()=>_tutoHire(),       tip:()=>_tutoTapTip('일꾼 값을 모읍니다 — 맵을 두드리세요'),
+    at:_tutoTapAt, n:()=>_tutoCoin() },
+  { id:'worker', goal:1,  tip:'일꾼을 뽑습니다 — 가만 있어도 벌어 줍니다',
+    at:()=>_tutoVis('[data-res="worker"]'),
+    n:()=>(typeof campWorkerNPlanned==='function' ? (campWorkerNPlanned()>0?1:0) : 0) },
+  { id:'coinGat',goal:()=>_tutoCost('gather'),tip:()=>_tutoTapTip('채취 강화 값을 모읍니다'),
+    at:_tutoTapAt, n:()=>_tutoCoin() },
+  { id:'upgGat', goal:1,  tip:'채취 강화를 삽니다 — 두 번째 수입',
+    at:()=>_tutoVis('[data-res="gather"]'), n:()=>_tutoLv('gather') },
+  // 🏗 **건물 짓기는 손이 네 번 간다**(2026-09-04 사용자 지적) — 채굴을 끄고 · 일꾼을 지정하고 ·
+  //   하단 카드를 누른 다음에야 맵에 놓는다. 「맵의 본부를 눌러 병영을 짓습니다」 한 줄로는
+  //   그 넷을 알 길이 없어 거기서 막혔다. 그래서 **한 동작에 한 단계**로 편다.
+  //   ⚠ 돈은 **채굴이 켜져 있을 때 한꺼번에** 모은다 — 끄고 나면 두드려 벌 수가 없다(순서가 곧 이유다).
+  { id:'coinB',  goal:()=>_tutoBCost(0)+_tutoBCost(1), tip:()=>_tutoTapTip('건물 값을 모읍니다 — 맵을 두드리세요'),
+    at:_tutoTapAt, n:()=>_tutoCoin() },
+  { id:'mineOff',goal:1,  tip:'오른쪽 위 「채굴 멈춤」을 누릅니다',
+    at:()=>_tutoVis('#campMineStop'),
+    n:()=>(typeof campMineModeOn==='function' && !campMineModeOn()) ? 1 : 0 },
+  { id:'pickWk', goal:1,  tip:'일꾼을 드래그해 지정합니다 — 건설 카드가 하단에 뜹니다',
+    at:()=>'map', n:()=>_tutoWkSel() },
+  { id:'armB1',  goal:1,  tip:()=>'하단의 「'+_tutoBName(0)+'」 카드를 누릅니다',
+    at:()=>_tutoVis(_tutoBSel(0)) || 'map', n:()=>_tutoArmed(0) },
+  { id:'placeB1',goal:1,  tip:()=>'맵에서 지을 자리를 누르고 ▶ 로 확정합니다',
+    at:()=>'map', n:()=>_tutoBuiltI(0) },
+  { id:'armB2',  goal:1,  tip:()=>'일꾼을 지정하고 「'+_tutoBName(1)+'」 카드를 누릅니다',
+    at:()=>_tutoVis(_tutoBSel(1)) || 'map', n:()=>_tutoArmed(1) },
+  { id:'placeB2',goal:1,  tip:()=>'「'+_tutoBName(1)+'」 자리를 누르고 ▶ 로 확정합니다',
+    at:()=>'map', n:()=>_tutoBuiltI(1) },
+  // 🧹 지은 뒤에는 **일꾼 지정을 푼다**(2026-09-04 사용자 지적). 안 풀면 하단이 건설 목록인 채라
+  //   병영을 눌러도 생산 카드가 안 나온다 — 해제 버튼은 공용 ⊘ 하나뿐이다(#btDesel).
+  { id:'deselWk',goal:1,  tip:'⊘ 를 눌러 일꾼 지정을 풉니다',
+    at:()=>_tutoVis('#btDesel'),
+    n:()=>((typeof G!=='undefined' && G.tech && (G.tech.selU||[]).length) ? 0 : 1) },
+  // ⚔ 유닛 뽑기도 **두 동작**이다 — 건물을 눌러 지정해야 생산 카드가 열린다.
+  //   (2026-09-04 사용자 신고: 병영을 눌렀는데 다음 단계로 안 갔다 — 한 단계에 두 동작을 넣어서였다)
+  { id:'selB1',  goal:1,  tip:()=>'맵의 「'+_tutoBName(2)+'」 을 눌러 지정합니다',
+    at:()=>'map', n:()=>_tutoSelB() },
+  { id:'unit',   goal:1,  tip:()=>'「'+_tutoUnitName()+'」 를 뽑습니다 — 첫 한 기는 공짜입니다',
+    at:()=>_tutoVis(_tutoUnitSel()) || 'map', n:()=>_tutoUnit() },
+  // 🗺 던전 이동도 **세 동작**이다(2026-09-04 사용자 요청) — 칩을 눌러 목록을 열고 · 던전을 고르고 ·
+  //   아래 「이동」 을 누른다. 고르기만 하고 끝내면 화면이 열린 채로 남아 무엇을 더 해야 할지 모른다.
+  //   ⚠ 캠프가 0 단계라 **첫 이동지는 던전 1** 이다(전에 던전 2 라고 적어 두었던 것은 잘못이었다).
+  { id:'dgOpen', goal:1,  tip:'좌상단을 눌러 던전 목록을 엽니다',
+    at:()=>_tutoVis('#curTitle'), n:()=>_tutoVis('#campDrop') ? 1 : 0 },
+  { id:'dgPick', goal:1,  tip:'「던전 '+TUTO_DG+'」 을 고릅니다',
+    at:()=>_tutoVis('.cdRow[data-dg="'+TUTO_DG+'"]') || _tutoVis('#curTitle'),
+    n:()=>((typeof _cdPick!=='undefined' && _cdPick && (_cdPick.dg|0)===TUTO_DG) ? 1 : 0) },
+  { id:'dgGo',   goal:1,  tip:'아래 「이동」 을 눌러 내려갑니다',
+    at:()=>_tutoVis('.cdGo') || _tutoVis('#curTitle'),
+    n:()=>{ const C=(typeof campState==='function')?campState():null;
+      return (C && (C.dg|0)>=TUTO_DG) ? 1 : 0; } },
+];
+
+// ⛏ **맵을 두드려 버는 단계의 공용 대상**(2026-09-04 사용자 신고에서 나왔다).
+//   채굴이 꺼져 있으면 맵을 아무리 두드려도 안 캐진다 — 그 상태로 두면 그 단계가 영영 안 끝난다.
+//   ⭐ 그래서 꺼져 있으면 **켜는 칸을 먼저 연다.** 이것은 **두 번째 방어선**이다 —
+//     첫 번째는 CSS(`#phone.tutoOn #campMineStop`)가 애초에 못 끄게 막는 것이다.
+function _tutoTapAt(){ return (typeof campMineModeOn==='function' && campMineModeOn())
+  ? 'map' : (_tutoVis('[data-minemode]') || 'map'); }
+function _tutoTapTip(base){ return (typeof campMineModeOn==='function' && campMineModeOn())
+  ? base : '채굴이 꺼졌습니다 — 여기를 다시 켭니다'; }
+// 화면에 **실제로 보이는** 것만 돌려준다 — 숨은 시트 안의 요소를 가리키면 스포트라이트가 안 뜬다
+//   (예: #campMineTap 은 채굴 시트 안이라 닫혀 있어도 DOM 에는 있다 · 실측 2026-09-04).
+function _tutoVis(sel){ if(!sel) return null; const e=document.querySelector(sel); return (e && e.getClientRects().length) ? e : null; }
+// 진행도 밑값 — 「10번 두드리기」처럼 **이번 단계에서 얼마나 했나**를 세는 것은 시작값을 빼야 한다.
+function _tutoDelta(key){ const S=guideState(), C=(typeof campState==='function')?campState():null;
+  if(!S || !C) return 0;
+  if(S.base==null) S.base=(C[key]|0);
+  return Math.max(0, (C[key]|0) - S.base); }
+function _tutoLv(k){ return (typeof campUpgLv==='function' && campUpgLv(k)>0) ? 1 : 0; }
+// 💰 값과 지갑 — 「모으기」 단계가 쓴다. 값은 **살 때마다 오르므로** 그때그때 물어본다.
+function _tutoCost(k){ return (typeof campUpgCost==='function') ? Math.max(1, campUpgCost(k)|0) : 1; }
+function _tutoHire(){ return (typeof campHireCost==='function' && typeof campWorkerNPlanned==='function')
+  ? Math.max(1, campHireCost(campWorkerNPlanned())|0) : 1; }
+function _tutoCoin(){ const T=(typeof G!=='undefined')?G.tech:null; return T ? Math.floor(T.credit||0) : 0; }
+function _tutoBuilt(k){ const T=(typeof G!=='undefined')?G.tech:null;
+  return (T && T.built && T.built[k]) ? 1 : 0; }
+// 🏗 **종족마다 초반 건물이 다르다.** b=[먼저, 그다음] · u=유닛을 뽑는 건물.
+//   ⚠ 여기 키는 **TECH_TREE 키**(union·swarm·aetherial)다 — 화면에서 고르는 terran/zerg/protoss 가
+//     아니다(campTechRace 가 옮긴다). ⛔ 'barracks' 처럼 유니온 이름을 박아 두지 말 것.
+//   ⚠ 에테리얼은 **동력탑이 먼저**다(동력장 없이는 차원문을 못 짓는다) — 그래서 순서가 종족마다 다르다.
+//   ⚠ 스웜은 보급이 건물이 아니라 유닛(수송충)이라 둘째 칸이 없다 — null 이면 그 단계는 저절로 넘어간다.
+const TUTO_BLD = {
+  // ⛔ 유니온의 둘째 칸은 **비워 둔다** — 캠프의 보급소는 3만이다(campSupplyCost · 30000×1.2^n).
+  //   튜토리얼 초반에 손으로 모을 수 있는 돈이 아니다(실측: 목표가 30,150 으로 잡혔다).
+  //   인구는 환생 트리로도 올라간다 — 보급소는 한참 뒤의 일이라 첫 안내에서 뺀다.
+  union:     { b:['barracks',null],     u:'barracks' },
+  aetherial: { b:['pylon','gateway'],   u:'gateway'  },
+  swarm:     { b:['pool',null],         u:'hatchery' },
+};
+function _tutoBk(i){ const T=(typeof G!=='undefined')?G.tech:null;
+  const d=(T && TUTO_BLD[T.race]) || null; if(!d) return null;
+  return (i===2) ? (d.u||null) : (d.b[i]||null); }
+function _tutoBDef(i){ const T=(typeof G!=='undefined')?G.tech:null, k=_tutoBk(i);
+  return (k && typeof techGetBldg==='function') ? (techGetBldg(T.race,k)||null) : null; }
+function _tutoBName(i){ const b=_tutoBDef(i); return b ? b.name : '건물'; }
+function _tutoBCost(i){ const b=_tutoBDef(i); return b ? Math.max(0,b.m|0) : 0; }
+// 건설 카드는 data 속성이 없다 — 슬롯이 들고 있는 **onclick 문자열**로 찾는다(techBuildListModel).
+function _tutoBSel(i){ const k=_tutoBk(i); return k ? (`.cgSlot[onclick*="techArm('${k}'"]`) : null; }
+function _tutoArmed(i){ const k=_tutoBk(i); if(!k) return 1;   // 없는 건물 = 이미 끝난 것으로 친다
+  const T=(typeof G!=='undefined')?G.tech:null; return (T && T.arm===k) ? 1 : 0; }
+function _tutoBuiltI(i){ const k=_tutoBk(i); return k ? _tutoBuilt(k) : 1; }
+// 👷 일꾼을 지정했나 — 건설 카드가 하단에 뜨는 조건이다(지정이 없으면 캠프 요약판이 그대로다).
+function _tutoWkSel(){ const T=(typeof G!=='undefined')?G.tech:null;
+  if(!T || !T.ents || !(T.selU||[]).length) return 0;
+  return T.selU.some(id=>{ const e=T.ents.find(x=>x.eid===id); return !!(e && e.type==='worker'); }) ? 1 : 0; }
+// ⚔ 첫 전투 유닛 — 일꾼이 아니고 **인구를 먹는 것**이다(스웜의 수송충은 pop 0 이라 이 조건으로 빠진다).
+function _tutoUnitId(){ const b=_tutoBDef(2); if(!b) return null;
+  const T=(typeof G!=='undefined')?G.tech:null;
+  const wk=(typeof TECH_WORKER!=='undefined' && T) ? TECH_WORKER[T.race] : null;
+  const p=(b.produces||[]).find(x=>x && x.id!==wk && (x.pop|0)>0); return p ? p.id : null; }
+function _tutoUnitName(){ const id=_tutoUnitId(); if(!id) return '전투 유닛';
+  const T=(typeof G!=='undefined')?G.tech:null;
+  if(typeof _techRealName==='function' && T){ try{ return _techRealName(T.race, id); }catch(_e){} }
+  const b=_tutoBDef(2), p=b && (b.produces||[]).find(x=>x&&x.id===id); return (p&&p.name) || id; }
+function _tutoUnitSel(){ const id=_tutoUnitId(); return id ? (`.cgSlot[onclick*="techDoProduce('${id}'"]`) : null; }
+// 🏛 유닛을 뽑으려면 **그 건물이 지정돼 있어야** 한다 — 지정이 곧 생산 카드를 여는 동작이다.
+function _tutoSelB(){ const T=(typeof G!=='undefined')?G.tech:null, k=_tutoBk(2);
+  if(!T || !k) return 1;
+  if(T.sel==null) return 0;
+  const e=(T.ents||[]).find(x=>x.eid===T.sel);
+  return (e && e.type==='bldg' && e.bk===k) ? 1 : 0; }
+// ⚠ 캠프는 완성된 유닛을 **전장으로 바로 보낸다**(campPatchFinish) — ents 만 보면 영영 0 이다.
+//   그래서 셋 다 본다: 이미 나왔나(units 카운터) · 판에 있나 · 뽑는 중인가(대기열 `_pq` · 스웜은 알).
+function _tutoUnit(){ const T=(typeof G!=='undefined')?G.tech:null; if(!T) return 0;
+  const id=_tutoUnitId(); if(!id) return 1;
+  if(T.units && (T.units[id]|0)>0) return 1;
+  const es=T.ents||[];
+  if(es.some(e=>e.type==='unit' && e.uid===id)) return 1;
+  if(es.some(e=>e.type==='egg' && e.id===id)) return 1;
+  if(es.some(e=>e.type==='bldg' && (e._pq||[]).some(q=>q && q.id===id))) return 1;
+  return 0; }
+// 🎁 **첫 전투 유닛은 공짜**(2026-09-04 사용자 확정) — 캠프 레인저는 5,000 이라 튜토리얼 도중에
+//   손으로 모을 수 있는 돈이 아니다(campUnitCost · CAMP_UNIT_PRICE).
+//   ⛔ 조건을 넓히지 말 것: 튜토리얼이 켜져 있고 · 지금 단계가 「뽑기」고 · 그 유닛을 아직 한 기도
+//     안 가졌을 때만이다. 하나라도 빠지면 공짜가 캠프 경제로 샌다.
+//   ⚠ 값을 실제로 0 으로 만드는 곳은 `campSyncUnitCost`(19-camp.js) 한 줄이다 — 카드도 그 값을 읽는다.
+// ⏱ **튜토리얼 동안은 기다림이 없다**(2026-09-04 사용자 요청) — 건물 짓는 시간·유닛 나오는 시간에
+//   할 일이 없어 「멈춰 있는 느낌」이었다. 즉시 완료는 관리자 치트 `nocool` 과 **같은 스위치**다
+//   (`_techBuildTime`·`_techProdTime`·`_techResearchTime` 셋이 그 하나를 본다 — 16-build.js).
+//   ⛔ 시간 계산을 여기서 새로 하지 말 것. ⚠ 켜고 끄는 곳은 campFrame 한 곳이다(19-camp.js).
+function tutoNoWait(){ return (typeof tutoOn==='function') && tutoOn(); }
+function tutoFreeUnit(id){
+  if(typeof tutoOn!=='function' || !tutoOn()) return false;
+  // ⏱ **한 단계 일찍부터** 공짜다(2026-09-04 사용자 지적: 「5,000 으로 잠겨 있다가 뒤늦게 0 이 된다」).
+  //   병영을 지정하는 단계(selB1)에서 이미 0 이라야, 카드가 열리는 그 순간부터 0 으로 보인다.
+  //   ⛔ 더 넓히지 말 것 — 「그 유닛을 아직 한 기도 안 가졌을 때만」이 새는 것을 막는 마지막 조건이다.
+  const st=tutoStep(); if(!st || (st.id!=='unit' && st.id!=='selB1')) return false;
+  if(!id || id!==_tutoUnitId()) return false;
+  const T=(typeof G!=='undefined')?G.tech:null;
+  return !!(T && !(T.units && (T.units[id]|0) > 0)); }
+function tutoIdx(){ const S=guideState(); return S ? (S.t|0) : 0; }
+function tutoStep(){ return TUTO_STEPS[tutoIdx()] || null; }
+// 🔧 **검사용 스위치**(CAMP_DEV_NOFAIL 과 같은 어법). 튜토리얼은 화면을 통째로 덮고 입력을 막으므로
+//   자동 검사(스모크)가 게임을 조작할 수 없다 — 그래서 검사에서는 꺼 두고, **튜토리얼 전용 스텝만** 켠다.
+//   ⛔ 게임 코드에서 이 값을 켜지 말 것. 검사와 개발자 콘솔 전용이다.
+let TUTO_OFF=false;
+function tutoOn(){ const S=guideState();
+  if(TUTO_OFF) return false;
+  // 🎬 **화면이 넘어가는 중에는 안 뜬다**(2026-09-04 사용자 신고) — 종족을 고르고 캠프로 들어가는
+  //   전환(그라데이션·로고)이 끝나기 전에 스포트라이트가 떠서, 아직 없는 것을 가리키고 있었다.
+  //   ⚠ 종족 선택(#phone.campPick)이 떠 있는 동안도 아니다 — 그때는 캠프가 아직 아니다.
+  { const ph=document.getElementById('phone');
+    if(ph && ph.classList.contains('campPick')) return false;
+    // 🎬 **로고가 걷히면 바로 뜬다**(2026-09-04 사용자 확정). 전에는 캠프가 다가오는 연출
+    //   (campInClip · 2.7초)까지 기다렸는데 「너무 느리다」였다. 기다리는 것은 **검은 판**까지고,
+    //   맵이 커지는 동안에는 이미 떠 있어도 된다 — 대상은 하단·상단이라 그 애니와 겹치지 않고,
+    //   자리가 조금 움직여도 tutoPump 가 120ms 마다 다시 잰다.
+    //   ⛔ campInClip 가드를 되살리지 말 것. ⚠ 종족 판(campPick) 가드는 위에 그대로 둔다 —
+    //     그건 「아직 캠프가 아닌」 상태라 가리킬 것이 정말로 없다.
+  }
+  return !!(S && !S.skip && tutoIdx() < TUTO_STEPS.length
+            && typeof campIsOn==='function' && campIsOn()
+            && typeof guideOn==='function' && guideOn()); }
+// 지금 단계의 대상 — {el|map, tip, n, goal}. 못 찾으면 null(그 프레임은 넘어간다).
+// ⚠ goal 은 **숫자이거나 함수**다 — 「모으기」는 그 물건의 값이 목표라 그때 물어봐야 한다.
+function _tutoGoal(st){ const g=(typeof st.goal==='function') ? st.goal() : st.goal; return Math.max(1, g|0); }
+function tutoTarget(){
+  const st=tutoStep(); if(!st) return null;
+  const a=st.at();
+  const goal=_tutoGoal(st), n=Math.min(goal, st.n()|0);
+  const tip=(typeof st.tip==='function') ? st.tip() : st.tip;   // 종족마다 건물 이름이 다르다
+  if(a==='map') return { map:true, tip:tip, n:n, goal:goal };
+  if(!a) return null;
+  return { el:a, tip:tip, n:n, goal:goal };
+}
+// 다 했으면 다음 단계로 — 진행도를 그릴 때마다 확인한다(따로 이벤트를 안 단다).
+function tutoAdvance(){
+  const S=guideState(), st=tutoStep(); if(!S || !st) return false;
+  if((st.n()|0) < _tutoGoal(st)) return false;
+  S.t=tutoIdx()+1; S.base=null;
+  // 💰 **단계가 바뀌면 값도 그 자리에서 다시 잰다.** 유닛 값은 campFrame 이 프레임마다 갱신하는데
+  //   「첫 한 기 공짜」는 **단계**에 달려 있다 — 안 그러면 카드가 한 박자 옛 값으로 잠겨 보인다.
+  //   ⛔ 여기서 값을 계산하지 말 것. campSyncUnitCost 가 단일 소스다(19-camp.js).
+  try{ if(typeof campSyncUnitCost==='function') campSyncUnitCost(); }catch(_e){}
+  try{ if(typeof techUIRender==='function') techUIRender(); }catch(_e){}
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  if(typeof saveMeta==='function') saveMeta();
+  return true;
+}
+let _tutoT=0;
+function tutoPaint(){
+  const ph=document.getElementById('phone'); if(!ph) return;
+  // ⭐ 그릴 때마다 「다 했나」를 본다 — 이벤트를 따로 달지 않으므로 무엇으로 달성했든 넘어간다.
+  //   ⏱ 넘어갔으면 **이 프레임에서 바로** 새 대상을 그린다(아래로 그대로 이어진다) — 한 박자 쉬면 굼떠 보인다.
+  if(tutoOn()){ let guard=0; while(tutoAdvance() && ++guard<TUTO_STEPS.length){} }
+  let ov=document.getElementById('tutoOv');
+  if(!tutoOn()){ if(ov) ov.remove(); ph.classList.remove('tutoOn'); return; }
+  const t=tutoTarget(); if(!t){ if(ov) ov.remove(); ph.classList.remove('tutoOn'); return; }
+  if(!ov){ ov=document.createElement('div'); ov.id='tutoOv'; ov.className='tutoOv';
+    ov.innerHTML='<i class="tuT"></i><i class="tuB"></i><i class="tuL"></i><i class="tuR"></i>'
+      +'<i class="tuRing"></i><div class="tuTip"><span class="tuHd"><b class="tuStep"></b><b class="tuN"></b></span>'
+      +'<span class="tuTx"></span></div>';
+    ph.appendChild(ov); }
+  ph.classList.add('tutoOn');
+  // 🚧 **맵을 열면 그 위에 떠 있는 버튼까지 함께 열린다**(2026-09-04 사용자 신고).
+  //   「채굴 멈춤」(#campMineStop)은 #phone 직속이라 맵 영역과 겹친다 — 맵 단계에서 그걸 누르면
+  //   캐는 것이 멎어 「맵을 두드립니다」가 **영영 안 끝났다**(돈 모으기 단계도 같다).
+  //   ⭐ 그래서 **그 버튼이 지금 단계의 대상일 때만** 살려 둔다(막는 일은 CSS 가 한다).
+  //   ⛔ 버튼을 숨기지 말 것 — 자리가 사라지면 mineOff 단계에서 가리킬 것이 없다.
+  { const _ms=document.getElementById('campMineStop');
+    if(_ms) _ms.classList.toggle('tuLive', t.el===_ms); }
+  const pr=ph.getBoundingClientRect();
+  // 맵 단계는 **맵 전체**를 연다(3D 오브젝트는 앵커를 못 잡는다)
+  const host=document.getElementById('homeScreen');
+  const r = t.map ? (function(){ const h=(host||ph).getBoundingClientRect();
+      const top=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topPad'))||10;
+      const cur=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--curH'))||34;
+      const nav=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navH'))||42;
+      return { left:h.left, right:h.right, top:pr.top+top+cur+26, bottom:pr.bottom-nav-170 }; })()
+    : t.el.getBoundingClientRect();
+  const PAD=6;
+  const x1=Math.max(0, r.left-pr.left-PAD), y1=Math.max(0, r.top-pr.top-PAD);
+  const x2=Math.min(pr.width, r.right-pr.left+PAD), y2=Math.min(pr.height, r.bottom-pr.top+PAD);
+  const px=(v)=>v.toFixed(1)+'px';
+  const q=(s)=>ov.querySelector(s);
+  q('.tuT').style.cssText='left:0;top:0;right:0;height:'+px(y1);
+  q('.tuB').style.cssText='left:0;top:'+px(y2)+';right:0;bottom:0';
+  q('.tuL').style.cssText='left:0;top:'+px(y1)+';width:'+px(x1)+';height:'+px(y2-y1);
+  q('.tuR').style.cssText='left:'+px(x2)+';top:'+px(y1)+';right:0;height:'+px(y2-y1);
+  q('.tuRing').style.cssText='left:'+px(x1)+';top:'+px(y1)+';width:'+px(x2-x1)+';height:'+px(y2-y1);
+  // 말풍선은 **대상 옆**에 붙인다(2026-09-04 사용자 지적) — 화면 아래 끝에 두면 어디를 누르라는 건지
+  //   눈이 두 번 움직인다. 아래에 자리가 있으면 아래, 없으면 위. 좌우는 대상 중심을 따라간다.
+  q('.tuStep').textContent=(tutoIdx()+1)+' / '+TUTO_STEPS.length;
+  q('.tuTx').textContent=t.tip;
+  q('.tuN').textContent=t.n+' / '+t.goal;                    // 오른쪽 = **이번 단계의 진행**
+  const tip=q('.tuTip'), TIPW=250, below=(y2+86<pr.height);
+  const cx=(x1+x2)/2, L=Math.max(10, Math.min(pr.width-TIPW-10, cx-TIPW/2));
+  tip.style.cssText='width:'+px(TIPW)+';left:'+px(L)+';'
+    +(below? 'top:'+px(y2+10) : 'top:'+px(Math.max(10, y1-84)));
+  tip.classList.toggle('up', !below);
+}
+// 매 프레임 다시 재지 않는다 — 대상이 움직이는 것은 화면이 바뀔 때뿐이라 그때만 부른다.
+//   ⚠ 다만 시트가 새로 그려지면 대상 노드가 바뀌므로 짧은 간격으로 한 번 더 확인한다.
+function tutoKick(){
+  // ⛔ **부팅이 끝나기 전에는 돌지 않는다**(2026-09-04). 로딩 중에 이 일을 하면 load 이벤트가
+  //   늦어지거나 안 떨어진다 — 실측: 2인 검사에서 첫 페이지가 readyState 'interactive' 에서 멈췄다.
+  if(typeof document!=='undefined' && document.readyState!=='complete'){
+    if(!_tutoWait){ _tutoWait=1; window.addEventListener('load', ()=>{ _tutoWait=0; tutoKick(); }, {once:true}); }
+    return; }
+  // ⏱ **다음 프레임에 그린다**(2026-09-04 사용자 지적: 넘어가는 게 굼떴다). 60ms 지연을 두면
+  //   화면은 이미 바뀌었는데 스포트라이트가 한 박자 늦게 따라와 어긋나 보인다.
+  if(_tutoRaf) return;
+  _tutoRaf=requestAnimationFrame(()=>{ _tutoRaf=0; tutoPaint(); });
+  tutoPump(); }
+let _tutoRaf=0;
+let _tutoWait=0;
+let _tutoTimer=0;
+// 🔁 **튜토리얼이 도는 동안은 스스로 다시 그린다**(2026-09-04). 전에는 dqNote 가 불릴 때만 그렸는데,
+//   일꾼 지정·건설 카드 누르기·건물 배치는 **계측을 안 거친다** — 그 단계들이 영영 안 넘어갔다.
+//   ⛔ 그 자리마다 tutoKick() 을 흩뿌리지 말 것(빠뜨린 곳이 곧 멈추는 곳이 된다).
+//   ⏱ 120ms = 손이 느꼈을 때 이미 넘어가 있는 간격이고, tutoPaint 는 껐을 때 즉시 빠져나온다.
+//   타이머는 **튜토리얼을 마쳤거나 껐을 때만** 선다 — 캠프 밖으로 나간 동안은 돌되 아무것도 안 그린다.
+function tutoPump(){ if(_tutoTimer || typeof setInterval!=='function') return;
+  _tutoTimer=setInterval(function(){
+    const S=(typeof guideState==='function')?guideState():null;
+    const done = TUTO_OFF || !S || S.skip || tutoIdx()>=TUTO_STEPS.length
+                 || !(typeof guideOn==='function' && guideOn());
+    if(done){ clearInterval(_tutoTimer); _tutoTimer=0; tutoPaint(); return; }
+    tutoPaint();
+  }, 120); }
 function guidePaint(){
   const ph=document.getElementById('phone'); if(!ph) return;
   let el=document.getElementById('guideBar');
@@ -390,9 +708,35 @@ function openGuide(){ const el=document.getElementById('hbGuideSheet'); if(!el) 
   if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeGuide(){ const el=document.getElementById('hbGuideSheet'); if(el) el.classList.add('hide');
   if(typeof playSfx==='function') playSfx('ui_close'); }
+// 🎓 **튜토리얼을 직접 켜 보는 자리**(2026-09-04 사용자 요청) — 가이드 시트 맨 위 줄.
+//   ⭐ 튜토리얼은 원래 새 계정에서 저절로 뜬다. 이미 지나간 사람이 **다시 볼 길**이 없어서 여기 둔다.
+//   ⚠ 켜면 화면이 덮이고 대상 밖 터치가 막힌다(완전 강제) — 그래서 **그만두기**를 함께 둔다.
+//     ⛔ 그만두기를 없애지 말 것: 없으면 켠 사람이 끝낼 때까지 빠져나올 길이 없다.
+function tutoRestart(){
+  const S=guideState(); if(!S) return;
+  S.t=0; S.base=null; delete S.skip;
+  if(typeof TUTO_OFF!=='undefined') TUTO_OFF=false;
+  if(typeof closeGuide==='function') closeGuide();
+  // 캠프 밖이면 데려간다 — 튜토리얼은 캠프 화면 위에서만 뜻이 있다
+  if(typeof campIsOn==='function' && !campIsOn() && typeof openHome==='function') openHome();
+  if(typeof saveMeta==='function') saveMeta();
+  setTimeout(tutoPaint, 260); }
+function tutoStop(){
+  const S=guideState(); if(!S) return;
+  S.skip=1;
+  if(typeof saveMeta==='function') saveMeta();
+  tutoPaint();
+  if(typeof toast==='function') toast('🎓 튜토리얼을 껐습니다 — 가이드에서 다시 켤 수 있습니다'); }
 function renderGuide(){ const box=document.getElementById('hbGuideBody'); if(!box) return;
   const S=guideState(); if(!S) return;
-  box.innerHTML=GUIDE_STEPS.map(function(g,i){
+  const running=(typeof tutoOn==='function') && tutoOn();
+  box.innerHTML='<div class="gqTuto">'
+    +'<span class="gqTutoTx">따라 하며 배우는 튜토리얼'
+      +(running?(' <b>'+(tutoIdx()+1)+' / '+TUTO_STEPS.length+' 진행 중</b>'):'')+'</span>'
+    +'<button class="actBtn gqTutoGo" type="button" onclick="tutoRestart()">'+(running?'처음부터':'해 보기')+'</button>'
+    +(running?'<button class="actBtn sub gqTutoNo" type="button" onclick="tutoStop();renderGuide()">그만두기</button>':'')
+    +'</div>'
+    +GUIDE_STEPS.map(function(g,i){
     const done=(i<S.i), now=(i===S.i);
     const n=now?(S.n||0):(done?g.goal:0);
     const bar=(now && g.goal>1) ? '<i class="gqBar"><i style="width:'+((n/g.goal)*100).toFixed(1)+'%"></i></i>' : '';
