@@ -1,0 +1,225 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>환생 화면 v3 — 배치 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--font-ko:'IBM Plex Sans KR',sans-serif;--font-num:'Rajdhani',sans-serif;
+  --gold:#ffd24a;--pk:#c9a6ff;--r-bar:3px;--r-md:6px;--r-lg:9px;--metal-edge:#3c3e46}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:#dfe5ee;font-family:var(--font-ko);font-size:12px}
+h1{margin:20px 22px 2px;font-size:15px}
+.note{margin:0 22px 8px;color:#8d97a6;font-size:11.5px;line-height:1.7;max-width:1320px}
+.note b{color:#dfe5ee}
+.wrap{display:flex;flex-wrap:wrap;gap:22px;padding:14px 22px 40px;align-items:flex-start}
+.cell{width:390px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:#8d97a6;font-size:11px;line-height:1.65;min-height:74px}
+.sub b{color:#cfd7e2}
+
+/* ══ 폰 한 대 — 실제 화면과 같은 치수(390×844 · 재화 바 44 · 네비 56) ══ */
+.ph{position:relative;width:390px;height:844px;overflow:hidden;background:#05070b;
+  display:flex;flex-direction:column}
+.ph::before{content:'';position:absolute;inset:0;z-index:0;
+  background:url('../../assets/backgrounds/reb/reb.webp') center/cover no-repeat;opacity:.9}
+.ph::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,6,10,.72),rgba(4,6,10,.34) 34%,rgba(4,6,10,.86))}
+.bar{position:relative;z-index:2;flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:44px 12px 6px;height:90px;font-family:var(--font-ti,var(--font-ko))}
+.bar .t{font-size:15px;font-weight:700;color:#eef1f6;letter-spacing:.1em}
+.bar .r{margin-left:auto;display:flex;gap:9px;align-items:center;font-family:var(--font-num);
+  font-size:11px;color:#9fb0c4}
+.body{position:relative;z-index:2;flex:1;min-height:0;overflow:hidden;
+  padding:8px 18px 6px;display:flex;flex-direction:column}
+.foot{position:relative;z-index:2;flex:0 0 auto;padding:10px 18px 12px;
+  background:linear-gradient(180deg,rgba(5,8,12,0),rgba(5,8,12,.72) 34%,rgba(5,8,12,.88))}
+.nav{position:relative;z-index:2;flex:0 0 auto;height:56px;display:flex;align-items:center;
+  justify-content:space-around;border-top:1px solid rgba(255,255,255,.08);background:#05070b;
+  font-size:11px;color:#69737f}
+.nav b{color:#cfd7e2;font-weight:700}
+
+/* ══ 공통 조각 ══════════════════════════════════════════════════════ */
+.k{font-family:var(--font-num);font-size:11px;color:#a7b2c0;letter-spacing:.32em;text-shadow:0 1px 6px #000}
+.big{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-weight:800;
+  font-size:62px;line-height:1;color:#fff;text-shadow:0 3px 22px #000}
+.now{display:inline-block;margin-top:7px;padding:3px 10px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);
+  font-family:var(--font-num);font-size:12px;color:#9aa5b3}
+.pv{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:30px;font-weight:800;
+  color:var(--gold);line-height:1.1;margin-top:2px}
+.fx{font-family:var(--font-num);font-size:11px;color:#7b8593;margin-top:4px}
+.fx b{color:#a9b4c2;font-weight:700}
+.card{border-radius:var(--r-md);border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(180deg,rgba(10,14,21,.52),rgba(6,9,14,.66));
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.hero{position:relative;text-align:center}
+.hero::before{content:'';position:absolute;left:50%;top:52%;width:210px;height:210px;
+  margin:-105px 0 0 -105px;z-index:-1;pointer-events:none;border-radius:50%;
+  background:radial-gradient(circle,rgba(150,120,255,.22),rgba(90,70,180,.10) 46%,rgba(5,8,12,0) 70%)}
+.h{font-size:11.5px;font-weight:700;color:#8d97a6;margin:0 2px 7px}
+.list{padding:2px 12px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.08);
+  background:rgba(9,13,19,.46);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.li{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0}
+.li+.li{border-top:1px solid rgba(255,255,255,.07)}
+.li span{font-size:12.5px;color:#9aa5b3}
+.li b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:15px;font-weight:800;color:#e9eff7}
+.cond{margin-bottom:12px}
+.ct{display:flex;justify-content:space-between;font-family:var(--font-num);font-size:12px;
+  color:#8d97a6;margin-bottom:5px}
+.cb{height:4px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.cb i{display:block;height:100%;background:rgba(255,255,255,.5)}
+.go{position:relative;display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
+  min-height:58px;border-radius:var(--r-md);font-size:17px;font-weight:800;letter-spacing:.16em;
+  color:#fff;border:1px solid rgba(255,210,74,.55);background:rgba(255,210,74,.10)}
+.go::after{content:'';position:absolute;left:10%;right:10%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,210,74,.95),transparent);
+  box-shadow:0 0 4px rgba(255,210,74,.55)}
+.go svg{width:20px;height:20px;color:var(--gold)}
+.pk{position:relative;display:flex;align-items:center;gap:9px;width:100%;min-height:48px;
+  margin-top:10px;padding:0 14px;border-radius:var(--r-md);font-size:12.5px;font-weight:700;
+  color:#c3bcd2;border:1px solid rgba(201,166,255,.34);background:rgba(201,166,255,.08)}
+.pk::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,166,255,.75),transparent)}
+.pk .t{flex:1;min-width:0;text-align:left;line-height:1.35}
+.pk b{color:var(--pk);font-weight:800} .pk u{text-decoration:none;color:var(--pk)}
+.warn{margin-top:9px;text-align:center;font-size:11px;color:#6f7b89}
+
+/* ── 안별 조각 ─────────────────────────────────────────────────────── */
+/* ② 두 칸 */
+.two{display:flex;gap:10px}
+.two > div{flex:1;text-align:center;padding:12px 8px}
+.two .big{font-size:40px}
+.two .pv{font-size:32px}
+/* ③ 원형 게이지 히어로 */
+.ring{position:relative;width:190px;height:190px;margin:0 auto}
+.ring svg{position:absolute;inset:0;width:190px;height:190px;transform:rotate(-90deg)}
+.ring .in{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .rb{fill:none;stroke:rgba(255,255,255,.09);stroke-width:5}
+.ring .ro{fill:none;stroke:var(--gold);stroke-width:5;stroke-linecap:round;opacity:.85}
+.ringT{margin-top:6px;text-align:center;font-family:var(--font-num);font-size:11.5px;color:#8d97a6}
+/* ⑤ 지표 격자 */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{padding:9px 11px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.08);
+  background:rgba(9,13,19,.46)}
+.tile span{display:block;font-size:11px;color:#8d97a6}
+.tile b{display:block;margin-top:2px;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:17px;font-weight:800;color:#e9eff7}
+.tile.w{grid-column:1 / -1}
+/* ⑥ 게이지 버튼 */
+.goG{position:relative;overflow:hidden}
+.goG i{position:absolute;left:0;top:0;bottom:0;z-index:-1;background:rgba(255,210,74,.16)}
+.pkThin{min-height:38px;font-size:12px}
+/* ⑦ 추천 — 포인트를 금색 띠로 */
+.ptBar{display:flex;align-items:center;gap:10px;margin-top:12px;padding:9px 12px;
+  border-radius:var(--r-md);border:1px solid rgba(255,210,74,.24);background:rgba(255,210,74,.06)}
+.ptBar .k{letter-spacing:.14em;font-size:10.5px}
+.ptBar .pv{font-size:24px;margin:0}
+.ptBar .fx{margin:0 0 0 auto;text-align:right}
+</style></head><body>
+<h1>환생 화면 v3 — 배치 8안 <span style="color:#8d97a6">(2026-09-04 · 위/가운데/아래 재배치)</span></h1>
+<p class="note">여덟 안 모두 담는 정보는 같다 — <b>획득 배수 1.20(현재 ×1.00) · 획득 포인트 +2 · 이번 회차 지표 다섯 · 환생 조건 · 환생 · 환생 팩</b>. 담는 그릇만 다르다.
+요청한 세 가지가 기준이다: <b>①배수·포인트를 완전히 위로 ②정보는 가운데 ③하단 버튼 둘을 크게·보기 쉽게</b>.
+<br>⚠ 폰은 <b>실제 치수 그대로</b>다(390×844 · 머리 90 · 네비 56) — 여기서 넘치면 실제로도 넘친다. 안마다 넘침을 재서 아래에 적었다.</p>
+<div class="wrap" id="wrap"></div>
+<script>
+const D = { mul:'1.20', now:'×1.00', pts:'+2', fx:'재화 <b>1.41</b> × 던전 <b>1.00</b> × 라운드 <b>1.00</b>',
+  cond:'724,960 / 1.0M', pct:72,
+  st:[['터치','1,240회'],['터치로 번 미네랄','832.0K'],['자동으로 번 미네랄','4.2M'],
+      ['가스','3,120'],['플레이 시간','32분']] };
+const ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+  'stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg>';
+const li = a => '<div class="li"><span>' + a[0] + '</span><b>' + a[1] + '</b></div>';
+const list = () => '<div class="list">' + D.st.map(li).join('') + '</div>';
+const tiles = () => '<div class="grid">' + D.st.slice(0,4).map(a =>
+    '<div class="tile"><span>' + a[0] + '</span><b>' + a[1] + '</b></div>').join('') +
+  '<div class="tile w"><span>' + D.st[4][0] + '</span><b>' + D.st[4][1] + '</b></div></div>';
+const cond = () => '<div class="cond"><div class="ct"><span>환생 조건</span><span>' + D.cond +
+  '</span></div><div class="cb"><i style="width:' + D.pct + '%"></i></div></div>';
+const go = () => '<button class="go">' + ICO + '환 생</button>';
+const pk = (thin) => '<button class="pk' + (thin ? ' pkThin' : '') + '">' +
+  '<span class="t">환생 팩 — 배수·포인트가 <b>계속 2배</b></span><u>보러 가기</u></button>';
+const warn = () => '<div class="warn">환생하면 지금까지의 진행이 초기화됩니다</div>';
+const hero = () => '<div class="hero"><div class="k">획 득 배 수</div>' +
+  '<div class="big">' + D.mul + '</div><div class="now">현재 ' + D.now + '</div></div>';
+const ptBlock = () => '<div style="text-align:center;margin-top:14px;padding-top:13px;' +
+  'border-top:1px solid rgba(255,255,255,.09)"><div class="k">획 득 포 인 트</div>' +
+  '<div class="pv">' + D.pts + '</div><div class="fx">' + D.fx + '</div></div>';
+function ph(body, foot){
+  return '<div class="ph"><div class="bar"><span class="t">환생</span>' +
+    '<span class="r">◈ 0 · ⬢ 0 · ◆ 0</span></div>' +
+    '<div class="body">' + body + '</div><div class="foot">' + foot + '</div>' +
+    '<div class="nav"><span>던전</span><b>환생</b><span>환생 트리</span></div></div>'; }
+
+const CASES = [
+{ t:'지금 넣어 둔 것 (기준)',
+  d:'배수와 포인트를 <b>한 판</b>에 붙여 맨 위로 · 가운데 지표 목록 · 바닥 고정 버튼 둘.',
+  b:'<div class="card" style="padding:13px 14px 12px">' + hero() + ptBlock() + '</div>' +
+    '<div style="margin-top:12px"><div class="h">이번 회차</div>' + list() + '</div>',
+  f: cond() + go() + pk() + warn() },
+
+{ t:'① 배수만 히어로 · 포인트는 금색 띠',
+  d:'배수를 <b>판 없이</b> 크게 띄우고(하늘이 그대로 배경) 포인트는 그 아래 <b>얇은 금색 띠</b> 한 줄로. 위가 가벼워져 지표가 커진다. ⚠ 포인트의 존재감이 한 단 내려간다.',
+  b:'<div style="padding:6px 0 2px">' + hero() + '</div>' +
+    '<div class="ptBar"><div><div class="k">획 득 포 인 트</div><div class="pv">' + D.pts +
+    '</div></div><div class="fx">' + D.fx + '</div></div>' +
+    '<div style="margin-top:14px"><div class="h">이번 회차</div>' + list() + '</div>',
+  f: cond() + go() + pk() + warn() },
+
+{ t:'② 두 칸 나란히 — 배수 / 포인트',
+  d:'배수와 포인트를 <b>좌우 두 칸</b>으로. 위 높이가 확 줄어(248 → 약 110) 지표와 버튼이 커진다. ⚠ 배수의 크기가 절반이 되어 「먼 목표」의 무게가 약해진다(HUNT_R1 §4-2-0).',
+  b:'<div class="card two"><div><div class="k">획 득 배 수</div><div class="big">' + D.mul +
+    '</div><div class="now">현재 ' + D.now + '</div></div>' +
+    '<div style="border-left:1px solid rgba(255,255,255,.09)"><div class="k">획 득 포 인 트</div>' +
+    '<div class="pv">' + D.pts + '</div><div class="fx" style="margin-top:8px">재화 <b>1.41</b></div></div></div>' +
+    '<div style="margin-top:14px"><div class="h">이번 회차</div>' + list() + '</div>',
+  f: cond() + go() + pk() + warn() },
+
+{ t:'③ 원형 게이지 히어로 — 조건을 원이 말한다',
+  d:'배수를 <b>원 안</b>에 넣고 그 <b>테두리가 환생 조건</b>을 채운다(참고 시안의 원). 「얼마나 남았나」를 숫자 대신 형태가 말해 아래 조건 줄이 필요 없어진다.',
+  b:'<div style="padding:4px 0 2px"><div class="ring">' +
+    '<svg viewBox="0 0 190 190"><circle class="rb" cx="95" cy="95" r="88"/>' +
+    '<circle class="ro" cx="95" cy="95" r="88" stroke-dasharray="' + (2*Math.PI*88).toFixed(0) +
+    '" stroke-dashoffset="' + (2*Math.PI*88*(1-D.pct/100)).toFixed(0) + '"/></svg>' +
+    '<div class="in"><div class="k">획 득 배 수</div><div class="big" style="font-size:52px">' + D.mul +
+    '</div><div class="now">현재 ' + D.now + '</div></div></div>' +
+    '<div class="ringT">환생 조건 ' + D.cond + '</div></div>' +
+    '<div class="ptBar"><div><div class="k">획 득 포 인 트</div><div class="pv">' + D.pts +
+    '</div></div><div class="fx">' + D.fx + '</div></div>' +
+    '<div style="margin-top:12px"><div class="h">이번 회차</div>' + list() + '</div>',
+  f: go() + pk() + warn() },
+
+{ t:'④ 조건을 위로 — 「언제 되나」를 먼저',
+  d:'가장 궁금한 것은 <b>언제 환생할 수 있나</b>다. 조건 바를 히어로 <b>바로 밑</b>으로 올려 배수·포인트와 함께 읽게 한다. 아래는 지표와 버튼만 남아 하단이 넓어진다.',
+  b:'<div class="card" style="padding:13px 14px 12px">' + hero() + ptBlock() +
+    '<div style="margin-top:13px;padding-top:12px;border-top:1px solid rgba(255,255,255,.09)">' +
+    cond().replace('margin-bottom:12px','') + '</div></div>' +
+    '<div style="margin-top:12px"><div class="h">이번 회차</div>' + list() + '</div>',
+  f: go() + pk() + warn() },
+
+{ t:'⑤ 지표를 타일 격자로',
+  d:'세로 목록 다섯 줄(217px)을 <b>2×3 타일</b>(약 150px)로 줄인다. 남은 높이는 버튼이 가져간다. ⚠ 「터치로 번 / 자동으로 번」처럼 긴 이름이 타일에서 두 줄이 될 수 있다.',
+  b:'<div class="card" style="padding:13px 14px 12px">' + hero() + ptBlock() + '</div>' +
+    '<div style="margin-top:12px"><div class="h">이번 회차</div>' + tiles() + '</div>',
+  f: cond() + go() + pk() + warn() },
+
+{ t:'⑥ 버튼이 조건을 삼킨다',
+  d:'조건 줄을 없애고 <b>환생 버튼 안이 채워진다</b> — 72% 차 있으면 버튼의 72%가 금색이다. 「누를 수 있게 되기까지」가 누를 자리에 그대로 보인다. 팩은 한 단 낮춰(38px) 위계를 벌린다.',
+  b:'<div class="card" style="padding:13px 14px 12px">' + hero() + ptBlock() + '</div>' +
+    '<div style="margin-top:12px"><div class="h">이번 회차</div>' + list() + '</div>',
+  f: '<button class="go goG"><i style="width:' + D.pct + '%"></i>' + ICO + '환 생 ' +
+     '<span style="font-family:var(--font-num);font-size:13px;letter-spacing:0;color:#a9b4c2">' +
+     D.pct + '%</span></button>' + pk(1) + warn() },
+
+{ t:'⑦ ⭐ 추천 — 히어로 판 + 금색 포인트 띠 + 타일',
+  d:'배수는 <b>판 안에서 크게</b>(먼 목표의 무게를 지킨다) · 포인트는 <b>금색 띠</b>로 갈라 「이번에 얻는 것」임을 색으로 말한다 · 지표는 <b>타일</b>이라 짧다 · 남은 높이를 버튼 둘이 가져간다.',
+  b:'<div class="card" style="padding:13px 14px 12px">' + hero() + '</div>' +
+    '<div class="ptBar"><div><div class="k">획 득 포 인 트</div><div class="pv">' + D.pts +
+    '</div></div><div class="fx">' + D.fx + '</div></div>' +
+    '<div style="margin-top:12px"><div class="h">이번 회차</div>' + tiles() + '</div>',
+  f: cond() + go() + pk() + warn() },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + i + '</i>' + c.t + '</p>' +
+    '<p class="sub">' + c.d + '</p>' + ph(c.b, c.f) + '</div>';
+}).join('');
+</script></body></html>

@@ -521,10 +521,69 @@ async function groupLobby(){
       assert(fx,'포인트 계산 근거 줄이 없다');
       for(const k of ['재화','던전','라운드']) assert(fx.textContent.indexOf(k)>=0,'계산 근거에 '+k+' 가 없음');
       assert(fx.querySelectorAll('b').length===3,'계산 근거의 값이 셋이 아님'); }
+    // 📂 **이번 회차는 접었다 편다** — 기본은 **접힘**(2026-09-04 사용자 확정).
+    //   ⛔ 기본을 펴짐으로 되돌리지 말 것 — 이 화면에서 먼저 봐야 하는 것은 배수·포인트다.
+    //   ⛔ 다시 그릴 때 접힘 상태가 풀리면 안 된다(campRebStApply 가 매 렌더 끝에 다시 입힌다).
+    { skipIf(typeof campRebStToggle!=='function','접기 없음');
+      // ⚠ **매번 다시 찾는다** — campRebRender() 가 innerHTML 을 통째로 갈아서 붙잡아 둔 참조가
+      //   떨어져 나간다(떨어진 노드는 computed style 이 비어 있어 검사가 조용히 통과해 버린다).
+      const $st=()=>document.querySelector('#campReb .crSt');
+      const $list=()=>document.querySelector('#campReb .crList');
+      const $peek=()=>document.querySelector('#campReb .crPeek');
+      const $hm=()=>document.querySelector('#campReb .crHm');
+      assert($st()&&$list(),'이번 회차 구역이 없다');
+      const open=()=>getComputedStyle($list()).display!=='none';
+      // 머리줄이 곧 손잡이다
+      { const h=$st().querySelector('.crH'); assert(h&&h.tagName==='BUTTON','머리줄이 눌리는 손잡이가 아니다'); }
+      const was=open();
+      if(was) campRebStToggle();                      // 접힌 상태로 맞춘다
+      assert(!open(),'접었는데 목록이 그대로 보인다');
+      // 접히면 배수·포인트가 **아래로 내려온다**
+      const y0=document.querySelector('#campReb .crTopCard').getBoundingClientRect().top;
+      campRebStToggle();
+      assert(open(),'폈는데 목록이 안 보인다');
+      const y1=document.querySelector('#campReb .crTopCard').getBoundingClientRect().top;
+      assert(y0>y1+30,'접었을 때 배수 구역이 안 내려온다: 접힘 '+Math.round(y0)+' vs 펴짐 '+Math.round(y1));
+      // 다시 그려도 상태가 남는다
+      campRebRender();
+      assert(open(),'다시 그렸더니 접힘 상태가 초기화됐다');
+      // 📄 접혀 있어도 **요약 두 줄**은 보인다(총 미네랄 · 플레이 시간) — ⛔ 통째로 감추지 말 것
+      { campRebStToggle();                             // 다시 접는다
+        assert($peek() && getComputedStyle($peek()).display!=='none','접었더니 요약까지 사라졌다');
+        // ⭐ 요약도 **줄 꼴**이다(아이콘·이름·값) — ⛔ 아이콘만 늘어놓은 한 줄로 되돌리지 말 것
+        { const rows=$peek().querySelectorAll('.crLi');
+          assert(rows.length===2,'요약이 두 줄이 아니다: '+rows.length);
+          for(const r of rows) assert(r.querySelector('.crIc')&&r.querySelector('.crNm')&&r.querySelector('b'),
+            '요약 줄에 아이콘·이름·값이 다 없다: '+r.innerText.trim()); }
+        // 미네랄은 터치·자동을 **합친** 값이다
+        const C2=campState(), want=campNum((C2.earnTap||0)+(C2.earnAuto||0));
+        assert(($peek().innerText||'').indexOf(want)>=0,
+          '요약의 미네랄이 합계가 아니다: '+$peek().innerText.trim()+' (기대 '+want+')');
+        // 펴면 요약은 물러나고 목록이 나온다
+        campRebStToggle();
+        assert(getComputedStyle($peek()).display==='none','폈는데 요약이 남아 있다'); }
+      // ✍ 손잡이 글자는 **다음에 할 일**이다 — 접혀 있으면 「더보기」, 펴져 있으면 「접기」
+      { assert($hm(),'더보기 글자가 없다');
+        assert($hm().textContent==='접기','펴진 상태의 손잡이가 「접기」가 아니다: '+$hm().textContent);
+        campRebStToggle();
+        assert($hm().textContent==='더보기','접힌 상태의 손잡이가 「더보기」가 아니다: '+$hm().textContent);
+        campRebStToggle(); }
+      if(!was) campRebStToggle(); }
+    // ✍ 경고 한 줄 — **짧게**. ⛔ 「환생하면 지금까지의 진행이 초기화됩니다」로 되돌리지 말 것.
+    { const w=document.querySelector('#campReb .crWarn');
+      assert(w,'되돌릴 수 없다는 안내가 없다');
+      const t=(w.textContent||'').trim();
+      assert(t==='환생 시 진행이 초기화됩니다','경고 문구가 다르다: '+t);
+      // 자리 — **환생 버튼 위**다(팩 아래에 두면 팩에 대한 경고로 읽힌다)
+      const go=document.querySelector('#campReb .crGo');
+      assert(w.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+1,
+        '경고가 환생 버튼 위에 있지 않다'); }
     // ④ 이번 회차 지표 다섯 — 「내가 얼마나 했나」
-    { const li=[...document.querySelectorAll('#campReb .crLi')];
+    // ⚠ **목록 안의** 줄만 센다 — 접힘 요약(.crPeek)도 같은 .crLi 를 쓴다(2026-09-04)
+    { const li=[...document.querySelectorAll('#campReb .crList .crLi')];
       assert(li.length===5,'회차 지표가 다섯 줄이 아님: '+li.length);
-      const names=li.map(e=>e.querySelector('span').textContent);
+      // ⚠ 줄 첫 span 은 **아이콘 칸**(.crIc)이다 — 이름은 .crNm 이다(2026-09-04 아이콘이 붙었다)
+      const names=li.map(e=>e.querySelector('.crNm').textContent);
       for(const k of ['터치','터치로 번 미네랄','자동으로 번 미네랄','가스','플레이 시간'])
         assert(names.indexOf(k)>=0,'회차 지표에 빠짐: '+k); }
     // ⑤ 💳 ×2 는 **환생 팩**이다 — 젬 1회권이 아니다(2026-08-31 · GEM.md §4 · BALANCE §4-C)

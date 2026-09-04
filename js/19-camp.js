@@ -1457,6 +1457,31 @@ function campRebPlayTx(sec){ sec = Math.max(0, Math.floor(sec || 0));
   if(m > 0) return m + '분';
   return sec + '초'; }
 
+// 📂 **이번 회차 구역 접기/펴기** (2026-09-04 사용자 요청).
+//   ⭐ **기본은 접힘**이다 — 이 화면에서 먼저 봐야 하는 것은 「환생하면 뭘 받나」(배수·포인트)이고,
+//     지난 회차에 뭘 했는지는 궁금할 때만 편다.
+//   ⭐ 접히면 배수·포인트가 **화면 가운데로 내려온다**(.crBody.fold 가 위아래 여백을 반씩 나눈다).
+//   ⚠ 상태는 유즈맵 도크와 **같은 방식**으로 기억한다(_lsGet/_lsSet) — 한 번 펴 두면 다음에도 펴져 있다.
+//   ⛔ 다시 그리지(campRebRender) 말고 **클래스만 뒤집을 것** — 다시 그리면 값이 깜빡이고
+//     누른 자리가 DOM 에서 사라진다(좌상단 칩이 앓던 그 병).
+const REB_ST_KEY = 'nm_rebstat';
+let _rebStOpen = (typeof _lsGet === 'function') ? !!_lsGet(REB_ST_KEY, false) : false;
+function campRebStApply(){
+  const el = document.getElementById('campReb'); if(!el) return;
+  const body = el.querySelector('.crBody'), st = el.querySelector('.crSt');
+  if(body) body.classList.toggle('fold', !_rebStOpen);
+  if(st){ st.classList.toggle('fold', !_rebStOpen);
+    const h = st.querySelector('.crH');
+    if(h) h.setAttribute('aria-expanded', _rebStOpen ? 'true' : 'false');
+    // ✍ 손잡이 글자는 **다음에 일어날 일**을 말한다 — 접혀 있으면 「더보기」, 펴져 있으면 「접기」.
+    //   ⛔ 지금 상태를 적지 말 것(「펼침」/「접힘」) — 버튼은 상태가 아니라 동작을 말한다.
+    const m = st.querySelector('.crHm');
+    if(m) m.textContent = _rebStOpen ? '접기' : '더보기'; } }
+function campRebStToggle(){
+  _rebStOpen = !_rebStOpen;
+  if(typeof _lsSet === 'function') _lsSet(REB_ST_KEY, _rebStOpen);
+  campRebStApply();
+  if(typeof playSfx === 'function') playSfx(_rebStOpen ? 'ui_open' : 'ui_close'); }
 function campRebRender(){
   const box = document.getElementById('crBody'); if(!box) return;
   const C = campState(); if(!C){ box.innerHTML = ''; return; }
@@ -1469,31 +1494,82 @@ function campRebRender(){
   const fW = Math.sqrt(Math.max(0, wealth) / need);
   const fD = Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1));
   const fR = Math.pow(CAMP_RP_RD, campCleared());
-  const li = (k, v) => '<div class="crLi"><span>' + k + '</span><b>' + v + '</b></div>';
+  // 🔣 줄 아이콘 — 재화는 있는 자산, 나머지는 선 글리프(한 가족). ⛔ 이모지 금지.
+  const gi = {
+    tap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+      'stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11"/>' +
+      '<path d="M12 11V9.5a1.5 1.5 0 0 1 3 0V12"/>' +
+      '<path d="M15 12v-1a1.5 1.5 0 0 1 3 0v5a5 5 0 0 1-5 5h-1.5a5 5 0 0 1-4.3-2.5L6 16"/></svg>',
+    auto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+      'stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/>' +
+      '<path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7' +
+      'M18.4 5.6l-1.7 1.7M7.3 16.7l-1.7 1.7"/></svg>',
+    time:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+      'stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/>' +
+      '<path d="M12 7.4V12l3.2 2"/></svg>',
+    min:'<img src="assets/icons/res_mineral.webp" alt="">',
+    gas:'<img src="assets/icons/res_gas.webp" alt="">' };
+  // 값과 **단위를 떼어** 넘긴다 — 단위는 작고 흐리게 붙는다
+  const li = (ic, k, v, u) => '<div class="crLi"><span class="crIc">' + ic + '</span>' +
+    '<span class="crNm">' + k + '</span><b>' + v + (u ? '<u>' + u + '</u>' : '') + '</b></div>';
+  // 🧱 **위 → 가운데 → 아래** 세 덩이로 나눈다(2026-09-04 사용자 확정).
+  //   ① 위 — 배수와 포인트를 **한 판**에 붙여 화면 맨 위로 올린다(둘은 같은 것을 말하는 짝이다).
+  //   ② 가운데 — 이번 회차 지표.  ③ 아래 — 조건 + 버튼 둘(바닥 고정 · #crFoot).
+  //   ⛔ 히어로를 margin-top:auto 로 아래에서 밀어 올리지 말 것 — 위가 통째로 비어 보였다(실측 화면 23%).
   box.innerHTML =
-    // ── 히어로 = 획득 배수 ──
-    '<div class="crHero"><div class="crK">획 득 배 수</div>'
+    // ── ① 위 — 배수(판 없이) + 포인트 칸 ──
+    '<div class="crGap"></div><div class="crTopCard">'
+    + '<div class="crHero"><div class="crK">획 득 배 수</div>'
     + '<div class="crBig">' + next.toFixed(2) + '</div>'
     + '<div class="crNow">현재 ×' + campRebMul().toFixed(2) + '</div></div>'
-    // ── 포인트 + 계산 근거 ──
     + '<div class="crPt"><div class="crK">획 득 포 인 트</div>'
     + '<div class="crPv">+' + campNum(gPts) + '</div>'
     + '<div class="crFx">재화 <b>' + fW.toFixed(2) + '</b> × 던전 <b>' + fD.toFixed(2)
-    + '</b> × 라운드 <b>' + fR.toFixed(2) + '</b></div></div>'
-    // ── 이번 회차 지표(②안 · 세로 목록) ──
-    + '<div class="crSt"><div class="crH">이 번 회 차</div>'
-    + li('터치', campNum(C.tapped || 0) + '회')
-    + li('터치로 번 미네랄', campNum(C.earnTap || 0))
-    + li('자동으로 번 미네랄', campNum(C.earnAuto || 0))
-    + li('가스', campNum(C.earnGas || 0))
-    + li('플레이 시간', campRebPlayTx(C.playS))
+    + '</b> × 라운드 <b>' + fR.toFixed(2) + '</b></div></div></div>'
+    // ⬇ 접혔을 때 위·아래 빈 자리를 **1 : 0.55** 로 나눈다 — 위가 더 넓어 카드가 가운데보다 내려온다
+    //   (2026-09-04 사용자 지적: 접으면 위가 너무 비었다). 펴져 있으면 이 칸은 0 이다.
+    + '<div class="crGap2"></div>'
+    // ── ② 가운데 — 이번 회차 지표 ──
+    + '<div class="crSt"><button class="crH" type="button" onclick="campRebStToggle()"'
+    + ' aria-expanded="false"><span>이번 회차</span>'
+    + '<u class="crHm">더보기</u>'
+    + '<i class="crHv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></i></button>'
+    // 📄 **접혔을 때의 요약** — 다섯 줄 중 「얼마나 벌었나 · 얼마나 했나」 둘만 남긴다.
+    //   ⭐ 줄 꼴은 **펼친 목록과 같다**(아이콘 · 이름 · 값 · 단위) — 접었다고 다른 문법을 쓰면
+    //     펼 때마다 눈이 다시 적응해야 한다(2026-09-04 사용자 확정).
+    //   ⛔ 아이콘만 늘어놓은 한 줄로 되돌리지 말 것 — 무엇의 숫자인지 이름이 없으면 못 읽는다.
+    //   ⭐ 미네랄은 터치·자동을 **합쳐서** 보여 준다(요약이니 둘로 나누지 않는다).
+    //   ⛔ 줄을 더 늘리지 말 것 — 늘리면 접은 뜻이 없어진다.
+    + '<div class="crPeek">'
+    + li(gi.min,  '미네랄', campNum((C.earnTap || 0) + (C.earnAuto || 0)), '')
+    + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
     + '</div>'
-    // ── 조건 ──
-    + '<div class="crCond"><div class="crBar' + (can ? ' ok' : '') + '">'
-    + '<i style="width:' + pct.toFixed(1) + '%"></i></div>'
-    + '<div class="crT"><span>환생 조건</span><span>' + campNum(wealth) + ' / ' + campNum(need) + '</span></div></div>'
-    // ── 버튼 ──
-    + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>환 생</button>'
+    + '<div class="crList">'
+    + li(gi.tap,  '터치', campNum(C.tapped || 0), '회')
+    + li(gi.min,  '터치로 번 미네랄', campNum(C.earnTap || 0), '')
+    + li(gi.auto, '자동으로 번 미네랄', campNum(C.earnAuto || 0), '')
+    + li(gi.gas,  '가스', campNum(C.earnGas || 0), '')
+    + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
+    + '</div></div>';
+  // ── ③ 아래 — 조건 + 버튼 둘. **바닥 고정**이라 지표가 길어져도 안 밀린다 ──
+  const foot = document.getElementById('crFoot');
+  if(foot) foot.innerHTML =
+    '<div class="crCond"><div class="crT"><span>환생 조건</span><span>'
+    + campNum(wealth) + ' / ' + campNum(need) + '</span></div>'
+    + '<div class="crBar' + (can ? ' ok' : '') + '">'
+    + '<i style="width:' + pct.toFixed(1) + '%"></i></div></div>'
+    // 🔲 .crRim = 1px 그라디언트 고리(마스크). ⛔ 빼지 말 것 — 빼면 테두리가 통째로 사라진다.
+    // ⚠ 경고는 **환생 버튼 바로 위**다(2026-09-04 고침) — 팩 버튼 아래에 두면
+    //   「팩을 사면 초기화된다」로 읽힌다. 되돌릴 수 없는 것은 그 버튼 옆에서 말한다.
+    // ✍ **짧게**(2026-09-04 사용자 지적) — 「환생하면 지금까지의 진행이 초기화됩니다」는
+    //   같은 말을 두 번 한다(환생하면 / 지금까지의). 조사와 수식을 걷고 명사로 끊는다.
+    + '<div class="crWarn">환생 시 진행이 초기화됩니다</div>'
+    + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>'
+    + '<span class="crRim"></span>'
+    + '<span class="crGoI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"'
+    + ' stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4.6h-4.6"/></svg></span>'
+    + '환 생</button>'
     // ── 💳 환생 팩 — 사면 **그 뒤로 계속** 2배. 위 두 숫자에 이미 반영돼 있다 ──
     //    ⭐ **버튼 구역**이다(2026-08-31 사용자 확정 · 옛 「조용한 한 줄」에서 승격).
     //      위계는 「환생」보다 한 단 아래 — 같은 얼굴이되 낮고 작다. 색은 보라(현질)를 지킨다.
@@ -1501,7 +1577,10 @@ function campRebRender(){
     + (campRebPackOn()
         ? '<div class="crPk on">환생 팩 ×' + campRebPackX().toFixed(0) + ' 적용 중</div>'
         : '<button class="crPk" type="button" onclick="campRebToShop()">'
-          + '환생 팩 — 배수·포인트가 <b>계속 2배</b><u>보러 가기</u></button>');
+          + '<span class="crRim"></span>'
+          + '<span class="crPkT">환생 팩 — 배수·포인트가 <b>계속 2배</b></span>'
+          + '<u>보러 가기</u></button>');
+  campRebStApply();      // 📂 접힘/펴짐을 다시 입힌다(다시 그릴 때마다 초기화되면 안 된다)
 }
 // 환생 팩을 보러 상점으로 — 팩은 **추천 칸**에 있다(젬 칸이 아니다)
 function campRebToShop(){ campRebClose();

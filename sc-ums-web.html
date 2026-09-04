@@ -594,7 +594,10 @@
   <div id="campReb">
     <div class="crBg"></div>
     <div class="crTop"><span class="crTitle">환생</span></div>
+    <!-- ⭐ 몸통은 **스크롤**, 버튼 구역은 **바닥 고정**이다(2026-09-04 사용자 요청).
+         지표가 길어져도 「환생」·「팩」이 화면 밖으로 밀리지 않는다. -->
     <div class="crBody" id="crBody"></div>
+    <div class="crFoot" id="crFoot"></div>
     <!-- 확인 = 나가기·로그아웃과 **같은 컴포넌트**(.ecCard). ⛔ 새로 만들지 말 것 -->
     <div id="campRebOk" class="hide" onclick="if(event.target===this)campRebCancel()">
       <div class="ecCard">
