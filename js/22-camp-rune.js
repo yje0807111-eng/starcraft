@@ -556,9 +556,11 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
     g.push('<text class="rnLkT" x="' + X + '" y="' + (y + 2.5).toFixed(1) + '">R' + at + '</text>');
     return g.join(''); }
   if(!key){
-    g.push('<circle class="rnEmB" cx="' + X + '" cy="' + Y + '" r="' + (r * 0.8).toFixed(1) + '"/>');
+    // 🕳 **파인 홈** — 「+」 하나뿐이던 빈 칸을 «끼우는 자리»로 바꾼다(목업 camp-rune-slot-8 ②안).
+    //   ⛔ 반투명으로 되돌리지 말 것 — 뒤의 구역 오로라가 비쳐 칸이 갈래 색으로 물든다.
+    //   ⛔ 「+」·숨 원(.rnEmB)을 되살리지 말 것: 홈이 이미 「비었다」를 말하고, 원은 오로라를 한 겹 더 더한다.
     g.push('<polygon class="rnHx em" points="' + _runeHexPts(x, y, r * 0.93) + '"/>');
-    g.push('<text class="rnPl" x="' + X + '" y="' + (y + 4.5).toFixed(1) + '">+</text>'); }
+    g.push('<polygon class="rnEmIn" points="' + _runeHexPts(x, y, r * 0.93 - 1.6) + '"/>'); }
   else {
     const pp = runeParse(key), c = (RUNE_GD[pp.gd] || {}).col || '#8b95a5', uq = pp.gd === 'uniq';
     const gd = pp.gd || 'low';
@@ -640,6 +642,14 @@ function _runeDefs(){
       + '<stop offset="0" stop-color="' + c + '" stop-opacity=".50"/>'
       + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".16"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
+  // 🕳 빈 칸의 **파인 홈** — 위가 어둡고 아래가 밝다. 빛이 위에서 오니 안쪽으로 파인 자리로 읽힌다
+  //   (2026-09-04 사용자 확정 · 목업 camp-rune-slot-8 ②안).
+  //   ⚠ **불투명하게 둔다.** 반투명이면 뒤의 구역 오로라가 그대로 비쳐 칸이 갈래 색으로 물든다
+  //     (사용자 지적: 「내부가 바깥 오로라 색을 너무 많이 가져온다」).
+  d += '<linearGradient id="rnWell" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#04070b"/>'
+    + '<stop offset=".55" stop-color="#0d141d"/>'
+    + '<stop offset="1" stop-color="#18222e"/></linearGradient>';
   d += '<radialGradient id="rnEm"><stop offset="0" stop-color="#9fc0ea" stop-opacity=".12"/>'
     + '<stop offset="1" stop-color="#9fc0ea" stop-opacity="0"/></radialGradient>';
   return d + '</defs>'; }
