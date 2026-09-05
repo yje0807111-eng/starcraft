@@ -1336,6 +1336,25 @@ function _runeBuyCell(key, opt){
     + '<span>' + runeValTx(key) + '</span>' + tail
     + (own > 0 ? '<em class="rnHas">×' + own + '</em>' : '') + '</button>'; }
 
+// 🧾 상점 줄의 **작은 등급 버튼** — 가방의 육각 버튼과 같은 자리를 맡되 값(젬)을 적는다.
+//   ⚠ 가방은 「몇 개 가졌나」, 상점은 「얼마인가」다 — 같은 자리에 다른 숫자가 온다.
+function _runeBuySmall(key){
+  const p = runeParse(key); if(!p.def) return '';
+  const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
+  const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
+  const own = campRuneOwn(key), full = own >= RUNE_OWN_MAX;
+  const sale = runeOnSale(key), cost = runeNowGem(key);
+  const have = (typeof profGem === 'function') ? profGem() : 0;
+  const off = full || have < cost;
+  return '<button class="rnBuyS' + (sale ? ' sale' : '') + '" type="button"'
+    + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
+    + " onclick=\"campRuneBuy('" + p.def.id + "','" + gd + "')\">"
+    // 🏷 할인 중이면 그렇게 말한다 — 값만 싸면 「왜 싼가」를 모른다(일반 목록에도 뜬다)
+    + (sale ? '<i class="rnOffS">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b>'
+    + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
+            : '<u' + (sale ? ' class="sale"' : '') + '>' + gemI + ' ' + cost + '</u>')
+    + (own > 0 && !full ? '<em>×' + own + '</em>' : '') + '</button>'; }
 function _runeShopHTML(){
   // ⛔ 「보유 젬」 줄은 뺐다(2026-09-04 사용자 확정) — 젬은 **상단 재화 바**에 이미 있다.
   //   같은 숫자를 두 층에 띄우면 어느 쪽이 진짜인지 묻게 된다.
@@ -1374,10 +1393,12 @@ function _runeShopHTML(){
     const g = (d.kind === 'uniq') ? 'uniq' : d.grp;
     if(g !== tabs[idx]) continue;
     const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
-    h += '<div class="rnItem"><div class="rnIH">'
-      + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnIi')
-      + '<span class="rnIN">' + d.nm + '</span><span class="rnID">' + d.de + '</span></div>'
-      + '<div class="rnBuys">' + gds.map(gd => _runeBuyCell(runeKey(d.id, gd))).join('')
-      + '</div></div>'; }
+    // 🧾 **가로줄** — 가방과 같은 짜임이라 두 화면이 한 어휘로 읽힌다
+    h += '<div class="rnShopRw">'
+      + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnRwI')
+      + '<span class="rnRwT">' + d.de + (d.soon ? '<u>준비 중</u>' : '')
+      + '<s>' + gds.map(gd => _runePctTx(runeKey(d.id, gd))).join(' · ') + '</s></span>'
+      + '<span class="rnRwB">' + gds.map(gd => _runeBuySmall(runeKey(d.id, gd))).join('')
+      + '</span></div>'; }
   h += '</div></div>';
   return h; }

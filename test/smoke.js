@@ -3192,8 +3192,10 @@ async function groupLobby(){
         campRunePick('',-1); await sleep(20); }
       // ④ 룬 상점 탭 — 등급 버튼과 젬 값이 보인다
       campRuneEnter('shop'); await sleep(60);
-      const buys=el.querySelectorAll('.rnBuy');
-      assert(buys.length>=RUNE_LIST.length,'룬 상점에 살 것이 없다: '+buys.length);
+      // ⚠ 상점은 **두 모양**이다: 추천·할인은 카드(.rnBuy), 일반은 가로줄 버튼(.rnBuyS).
+      //   한쪽만 세면 목록을 가로형으로 바꿀 때 애먼 곳이 터진다(2026-09-05에 겪었다).
+      const buys=el.querySelectorAll('.rnBuy,.rnBuyS');
+      assert(buys.length>=RUNE_GRADES.length,'룬 상점에 살 것이 없다: '+buys.length);
       // 💠 **젬은 공용 아이콘이다**(2026-09-04 사용자 확정 · CLAUDE.md 「재화 아이콘」).
       //   ⛔ 💎 이모지로 되돌리지 말 것 — 상단 재화 바·상점과 그림이 달라진다.
       { const box=document.getElementById('rnBody');
@@ -3317,6 +3319,7 @@ async function groupLobby(){
         assert((P?P.gem:0)===g,'못 샀는데 젬이 나갔다'); }
       // ⑥ 갈래 탭은 **공용 함수**(segNavHTML)를 쓴다
       campRuneRender(); await sleep(40);
+      let shopNote='';
       const tabs=[...document.querySelectorAll('#rnBody .pdSegBtn')].map(b=>b.textContent);
       assert(tabs.length===RUNE_GRPS.length+1,'갈래 탭 수가 다르다: '+tabs.join(','));
       assert(document.querySelector('#rnBody .pdSeg'),'공용 탭 띠(.pdSeg)를 안 쓴다');
@@ -3328,10 +3331,12 @@ async function groupLobby(){
           // ⚠ 그 룬의 **갈래 탭을 열고** 찾는다 — 상점은 한 번에 한 갈래만 그린다.
           //   ⛔ 안 열고 찾으면 칸이 없어 검사를 통째로 건너뛴다(실측: 지워도 통과했다).
           campRuneShopTab(d.kind === 'uniq' ? 'uniq' : d.grp); await sleep(30);
-          const cell = [...document.querySelectorAll('#rnBody .rnBuy')]
+          const cell = [...document.querySelectorAll('#rnBody .rnBuy,#rnBody .rnBuyS')]
             .find(b => (b.getAttribute('onclick') || '').indexOf("'" + d.id + "'") >= 0);
           assert(cell, d.nm + ' 을 상점에서 못 찾았다(' + d.grp + ' 탭)');
-          assert(cell.querySelector('.rnSoon'),
+          // 카드는 칸 안(.rnSoon), 줄은 이름 옆(.rnRwT u)에 적는다
+          const row = cell.closest('.rnShopRw');
+          assert(cell.querySelector('.rnSoon') || (row && row.querySelector('.rnRwT u')),
             d.nm + ' 이 아직 안 닿는데 상점이 그 말을 안 한다'); }
         // ⛔ 추천에는 넣지 않는다 — 아무 일도 안 하는 것을 권할 수는 없다
         const reco = runeRecoList().map(r => runeParse(r.key).def.id);
@@ -3354,11 +3359,29 @@ async function groupLobby(){
           '고른 표시가 1px 밑줄이 아니다: '+(ind?getComputedStyle(ind).height:'없음'));
         assert(getComputedStyle(seg).backgroundColor==='rgba(0, 0, 0, 0)',
           '탭 띠에 판이 남아 있다'); }
+      // 🧾 **일반 상점은 가로줄**이다(2026-09-05 사용자 확정) — 가방과 같은 짜임:
+      //   [그림] [이름 / 등급 값] … [등급 버튼 셋]. ⛔ 세로 카드로 되돌리지 말 것.
+      { const rows=document.querySelectorAll('#rnBody .rnShopRw');
+        assert(rows.length>0,'상점 목록이 가로줄이 아니다');
+        const r0=rows[0].getBoundingClientRect();
+        assert(r0.height<=64,'줄이 너무 높다 — 카드로 되돌아갔다: '+Math.round(r0.height)+'px');
+        // 줄 하나에 등급 버튼이 셋(유니크 갈래는 하나)
+        const btns=rows[0].querySelectorAll('.rnBuyS');
+        assert(btns.length===RUNE_GRADES.length || btns.length===1,
+          '줄의 등급 버튼 수가 다르다: '+btns.length);
+        // 버튼은 **값**을 적는다(가방은 개수를 적는다 — 같은 자리 다른 숫자)
+        assert(rows[0].querySelector('.rnBuyS u'),'상점 줄 버튼에 값이 없다');
+        // 🏷 할인 중이면 일반 목록에서도 그렇게 말한다 — 값만 싸면 왜 싼지 모른다
+        { const sale=runeSaleList().find(k=>runeParse(k).def.kind!=='uniq');
+          if(sale){ campRuneShopTab(runeParse(sale).def.grp); await sleep(60);
+            assert(document.querySelector('#rnBody .rnBuyS .rnOffS'),
+              '할인 중인데 일반 목록이 그 말을 안 한다'); } }
+        shopNote='가로줄 '+rows.length+'개 · 높이 '+Math.round(r0.height)+'px'; }
       // ⑦ 추천은 셋 이하이고, **왜 권하는지**를 적는다
       { const reco=runeRecoList();
         assert(reco.length<=3,'추천이 셋을 넘는다: '+reco.length);
         if(reco.length) assert(reco[0].why && reco[0].why.length>0,'추천에 이유가 없다'); }
-      return '세 구역 · 할인 '+sale.length+'종(유니크 1) · '+Math.round(RUNE_SALE_OFF*100)
+      return shopNote+' · 세 구역 · 할인 '+sale.length+'종(유니크 1) · '+Math.round(RUNE_SALE_OFF*100)
         +'% · 재고 1 · 상한 '+RUNE_OWN_MAX+' · 탭 '+tabs.length;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; if(P) P.gem=keepG; }
