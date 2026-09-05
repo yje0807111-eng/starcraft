@@ -1,0 +1,148 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>일반 상점 — 구역 이름과 탭 바를 어디에 둘까 (8안)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 12px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:76px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.h{margin:0 0 4px;font-size:10px;color:var(--txt-off);font-family:var(--font-num)}
+.pane{width:290px;padding:10px;border-radius:var(--r-md);border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%);overflow:hidden}
+
+/* 위 구역(할인) — 어느 안이든 같다 */
+.sec{border:0;border-bottom:1px solid rgba(150,170,200,.22);padding:0 0 9px;margin-bottom:9px}
+.secH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.secT{font-size:12.5px;color:#eef1f6;font-weight:600;letter-spacing:.06em}
+.secN{font-size:11px;color:#aab4c2}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.card{height:44px;border:1px solid rgba(150,170,200,.32);border-radius:var(--r-sm);
+  background:rgba(255,255,255,.04)}
+
+/* 아래 구역(일반 상점) */
+.shop{border:0}
+.rw{display:flex;align-items:center;gap:8px;padding:6px 2px}
+.rw + .rw{border-top:1px solid rgba(255,255,255,.07)}
+.ico{width:30px;height:30px;flex:none;border-radius:4px;
+  background:linear-gradient(180deg,#1b2634,#06090e);border:1px solid rgba(150,170,200,.3)}
+.tt{flex:1 1 auto;min-width:0;font-size:11.5px;color:#eef1f6;line-height:1.25}
+.tt s{display:block;text-decoration:none;font-family:var(--font-num);font-size:9.5px;
+  color:#69737f;margin-top:1px}
+.bt{margin-left:auto;display:flex;gap:4px;flex:none}
+.bs{min-width:56px;padding:5px 6px;border-radius:var(--r-sm);text-align:center;
+  border:1px solid rgba(150,170,200,.5);background:rgba(255,255,255,.04)}
+.bs b{display:block;font-size:10px;color:#c3ccd8}
+.bs u{display:block;text-decoration:none;font-family:var(--font-num);font-size:11px;color:#e2b6ff}
+
+/* 탭 — 판 없는 띠(지금 규격) */
+.seg{position:relative;display:grid;grid-template-columns:repeat(4,1fr)}
+.seg .ind{position:absolute;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85) 50%,transparent)}
+.seg button{position:relative;z-index:1;padding:9px 4px;border:0;background:none;
+  font-family:var(--font-ko);font-size:11.5px;color:#8d97a6;cursor:pointer}
+.seg button.on{color:#eef1f6;font-weight:700}
+.segLine{border-bottom:1px solid rgba(150,170,200,.18)}
+
+/* ── 안별 배치 ── */
+/* ② 제목과 탭을 한 줄에 */
+.v2 .head{display:flex;align-items:center;gap:10px}
+.v2 .head .secT{flex:none}
+.v2 .seg{flex:1 1 auto;grid-template-columns:repeat(4,1fr)}
+.v2 .seg button{padding:7px 2px;font-size:11px}
+/* ③ 제목을 없애고 탭만 */
+.v3 .secT{display:none}
+/* ④ 제목을 탭 왼쪽에 작은 라벨로 */
+.v4 .head{display:flex;align-items:baseline;gap:8px}
+.v4 .secT{flex:none;font-size:10.5px;color:#8d97a6;letter-spacing:.14em;font-weight:400}
+.v4 .seg{flex:1 1 auto}
+.v4 .seg button{padding:7px 2px}
+/* ⑤ 탭이 위(구역 제목 위) */
+/* ⑥ 탭을 오른쪽 정렬 칩으로 */
+.v6 .head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.v6 .seg{display:flex;gap:4px}
+.v6 .seg .ind{display:none}
+.v6 .seg button{padding:4px 9px;border-radius:99px;font-size:10.5px;
+  border:1px solid rgba(150,170,200,.22)}
+.v6 .seg button.on{background:rgba(255,255,255,.12);border-color:rgba(186,200,220,.5)}
+/* ⑦ 탭이 화면 위에 붙어 따라온다(고정) */
+.v7 .stick{position:sticky;top:0;z-index:2;background:#0b1119;
+  box-shadow:0 4px 10px rgba(0,0,0,.5)}
+/* ⑧ 제목 줄에 개수까지 */
+.v8 .head{display:flex;align-items:center;justify-content:space-between}
+.v8 .secN{font-size:10.5px;color:#8d97a6}
+</style></head><body>
+
+<h1>일반 상점 — <b>구역 이름</b>과 <b>탭 바</b>를 어디에 둘까 · 8안</h1>
+<p>지금은 「상점」 제목과 탭이 <b>세로로 쌓여</b> 목록이 시작되기까지 <b>62px</b>을 쓴다.
+여덟 안 모두 <b>목록은 그대로</b>고 위쪽 두 줄의 자리만 다르다.
+각 안 위에 <b>목록이 시작되는 높이</b>를 적었다 — 작을수록 룬이 더 보인다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+function rows(n){ var h = '';
+  var nm = ['탭 획득량','가스 획득','일꾼 채취량','환생 포인트 획득'];
+  for(var i = 0; i < n; i++)
+    h += '<div class="rw"><span class="ico"></span>'
+      + '<span class="tt">' + nm[i % 4] + '<s>1% · 2.5% · 5%</s></span>'
+      + '<span class="bt">'
+      +   '<span class="bs"><b>하급</b><u>💎 40</u></span>'
+      +   '<span class="bs"><b>중급</b><u>💎 130</u></span>'
+      +   '<span class="bs"><b>상급</b><u>💎 400</u></span></span></div>';
+  return h; }
+function seg(){ return '<div class="seg segLine"><i class="ind" style="left:0;width:25%"></i>'
+  + ['경제','전투','성장','유니크'].map(function(t,k){
+      return '<button class="' + (k===0?'on':'') + '">' + t + '</button>'; }).join('') + '</div>'; }
+function sale(){ return '<div class="sec"><div class="secH"><span class="secT">주간 할인</span>'
+  + '<span class="secN">1일 18시간 뒤 갱신</span></div>'
+  + '<div class="g3"><span class="card"></span><span class="card"></span><span class="card"></span></div></div>'; }
+
+var CASES = [
+{ v:'', t:'지금 — 제목 / 탭 / 목록', d:'세 층이 세로로 쌓인다. 「상점」이라는 말이 <b>한 줄을 통째로</b> 쓴다.',
+  head:'<div class="head"><span class="secT">상점</span></div>' + seg() },
+{ v:'v2', t:'제목과 탭을 한 줄에', d:'「상점」을 왼쪽에 두고 탭을 그 옆에 붙인다. <em>한 줄을 아낀다.</em> ⚠ 탭 칸이 좁아져 「유니크」가 빠듯하다.',
+  head:'<div class="head"><span class="secT">상점</span>' + seg() + '</div>' },
+{ v:'v3', t:'제목을 없앤다', d:'탭이 곧 제목이다 — 「경제」가 켜져 있으면 경제 룬을 파는 곳이라는 뜻. <em>가장 짧다.</em> ⚠ 위 두 구역과 달리 이름표가 없어 층이 덜 갈린다.',
+  head:seg() },
+{ v:'v4', t:'제목을 작은 라벨로', d:'「상점」을 <b>작게·흐리게</b> 탭 왼쪽에. 이름은 남기되 무게를 뺀다.',
+  head:'<div class="head"><span class="secT">상점</span>' + seg() + '</div>' },
+{ v:'v5', t:'탭을 제목 위로', d:'탭이 먼저, 제목이 그 아래. <b>고르는 일</b>이 위로 온다. ⚠ 위 구역의 구분선과 탭 밑줄이 <s>가까이 겹쳐</s> 선이 둘로 보인다.',
+  head:seg() + '<div class="head" style="margin-top:6px"><span class="secT">상점</span></div>' },
+{ v:'v6', t:'탭을 칩으로 (오른쪽)', d:'제목은 왼쪽, 탭은 <b>알약 칩</b>으로 오른쪽에. 한 줄에 들어가고 「고른 것」이 채워진 칩이라 분명하다. ⚠ 네 칸이 빠듯해 글자가 작아진다.',
+  head:'<div class="head"><span class="secT">상점</span>' + seg() + '</div>' },
+{ v:'v7', t:'탭이 위에 붙어 따라온다', d:'제목·탭은 지금 자리 그대로인데, <b>스크롤해도 탭이 화면 위에 남는다</b>. 목록이 길 때 갈래를 바꾸러 위로 안 올라가도 된다.',
+  head:'<div class="head"><span class="secT">상점</span></div><div class="stick">' + seg() + '</div>' },
+{ v:'v8', t:'제목 줄에 개수까지', d:'「상점」 오른쪽에 <b>이 갈래에 몇 종</b>인지 적는다. 위 두 구역(갱신 시각·추천 이유)과 <b>같은 자리</b>라 세 구역이 한 결이 된다.',
+  head:'<div class="head"><span class="secT">상점</span><span class="secN">경제 4종</span></div>' + seg() },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  return '<div class="cell"><p class="cap"><i>' + (i+1) + '</i>' + c.t + '</p>'
+   + '<p class="sub">' + c.d + '</p>'
+   + '<p class="h" id="h' + i + '">목록 시작 높이 —</p>'
+   + '<div class="pane ' + c.v + '" style="height:250px;overflow:auto">'
+   +   sale()
+   +   '<div class="shop" id="s' + i + '">' + c.head + rows(4) + '</div>'
+   + '</div></div>'; }).join('');
+/* 📐 목록이 시작되는 높이를 잰다 — 작을수록 룬이 더 보인다 */
+CASES.forEach(function(c, i){
+  var box = document.getElementById('s' + i);
+  var first = box.querySelector('.rw');
+  var h = Math.round(first.getBoundingClientRect().top - box.getBoundingClientRect().top);
+  document.getElementById('h' + i).textContent = '📐 목록 시작까지 ' + h + 'px';
+});
+</script></body></html>

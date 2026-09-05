@@ -3,10 +3,6 @@
  * sc-ums-web.html 에서 분리(2026-08-20). 로드 순서 = 파일명 번호 순.
  * ⛔ 순서를 바꾸거나 파일을 합치지 말 것 — 전역 스코프를 공유하는 통짜 코드다.
  * ========================================================================== */
-// 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
-function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
-  el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
-function hbCloseMates(){ _mateFeedT=null; const el=document.getElementById('hbMateModal'); if(el) el.classList.add('hide'); }
 // 확률 표기 — 갓은 1단계에서 0.0001% 라, 소수점 1자리로 찍으면 전부 '0.0%'로 뭉개진다.
 function fmtOdds(v){ const x=v*100;
   const d = x>=10?0 : x>=1?1 : x>=0.1?2 : x>=0.01?3 : 4;
@@ -138,7 +134,6 @@ function hbGrowHas(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) ret
 function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
   if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
   el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
-function hbCloseGrow(){ const el=document.getElementById('hbGrowModal'); if(el) el.classList.add('hide'); }
 function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(!box) return;
   const c=CHAR(); if(!c) return;
   let h='<div class="hbRoundNote" style="padding:0 0 8px">Lv.'+c.level
@@ -226,51 +221,6 @@ function hbDoRebirth(){ const c=CHAR(); if(!c || !profCanRebirth(c)) return;
     if(typeof hbEnsureModels==='function') hbEnsureModels(_hb.dg);
     hbSyncChar(true); _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
   hbAfterGrow('환생! 경험치 ×'+profXpMul(c).toFixed(2)); }
-// ── C. 스탯 출처 내역 — "어디를 올려야 이득인가"를 화면에서 알 수 있게 ──
-// profStat()의 계산식을 그대로 분해한다(식이 바뀌면 여기도 같이 고칠 것 — 값을 두 번 계산하지 않도록 합계는 profStat로 검산).
-// 장비가 주는 스탯의 분해(부위별 합) — 지금은 장비만 남았으므로 이름 그대로 '장비 몫'이다.
-// 스탯 출처 표는 이걸 쓰지 않는다(csAxis 가 축 단위로 답한다). 장비 화면 검증용으로 남긴다.
-function profStatParts(k){ const c=CHAR(); if(!c) return null;
-  let gear=0;
-  for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
-    const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
-    for(const o of it.opts) if(o.k===k) gear+=o.v; }
-  return { gear:gear, total:profStat(k) }; }
-function hbOpenInfo(){ const el=document.getElementById('hbInfoModal'); if(!el) return;
-  if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
-  el.classList.remove('hide'); renderInfoModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
-function hbCloseInfo(){ const el=document.getElementById('hbInfoModal'); if(el) el.classList.add('hide'); }
-function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(!box) return;
-  const c=CHAR(); if(!c) return;
-  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · Lv.'+c.level
-    +' · 파워 <b>'+profPower()+'</b>'+(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
-  // ① 기본 스탯 — 출처는 넷뿐이다. 가산(업그레이드·장비)은 숫자로, 배수(레벨·환생 포인트)는 %로 적는다.
-  //    열 순서 = 계산 순서((기본+업그레이드+장비) × 레벨 × 환생) — 읽는 대로 계산되게 둔다.
-  h+='<div class="hbGrowLbl">기본 스탯 <span class="hbTblSub">업그레이드 · 장비 · 레벨 · 환생</span></div>'
-    +'<table class="hbTbl"><thead><tr><th>스탯</th><th>기본</th><th>업그레이드</th><th>장비</th><th>레벨</th><th>환생</th><th>합</th></tr></thead><tbody>';
-  const pc=v=>((v-1)>1e-9)? ('+'+Math.round((v-1)*100)+'%') : '-';
-  // ⚠ 열마다 반올림하면 '0 + 10 → 9.6' 처럼 합이 안 맞아 보인다(체력회복 1.2/레벨). 소수는 소수로 적는다.
-  // ⚠ 큰 수는 fmtCur 로 넘긴다 — 이 표는 열이 좁아 원시 숫자가 들어오면 통째로 밀린다
-  const n1=v=>(Math.abs(v)>=1e5)? fmtCur(v)
-            : ((Math.abs(v-Math.round(v))<0.05)? String(Math.round(v)) : v.toFixed(1));
-  for(const k of CS_ORDER){ const a=csAxis(k);
-    h+='<tr><td class="l">'+a.name+'</td><td>'+n1(a.base)+'</td>'
-      +'<td>'+(a.upg? ('+'+n1(a.upg)) : '-')+'</td>'
-      +'<td>'+(a.gear? ('+'+n1(a.gear)) : '-')+'</td>'
-      +'<td>'+pc(a.lp)+'</td><td>'+pc(a.rp)+'</td>'
-      +'<td class="s">'+csFmt(k, a.sub)+(a.capped?' <i>상한</i>':'')+'</td></tr>'; }
-  h+='</tbody></table>';
-  // ② 전투 수치 = 기본 스탯 × 추가 보정(장비 어빌리티 % · 펫/동료 패시브). 원천이 생기면 csBonus 가 답한다.
-  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">기본 스탯 + 추가 보정</span></div>'
-    +'<table class="hbTbl"><tbody>';
-  for(let i=0;i<CS_ORDER.length;i+=2){ h+='<tr>';
-    for(const k of CS_ORDER.slice(i,i+2))
-      h+='<td class="l">'+CS_AXES[k].name+'</td><td class="s">'+csFmt(k, csVal(k))+'</td>';
-    if(CS_ORDER.slice(i,i+2).length<2) h+='<td></td><td></td>';
-    h+='</tr>'; }
-  h+='</tbody></table>';
-  if(!csHasBonus()) h+='<div class="hbRoundNote" style="padding:6px 0 0">추가 보정 원천이 아직 없습니다 — 장비 어빌리티·펫/동료 패시브가 생기면 여기에 얹힙니다.</div>';
-  box.innerHTML=h; }
 // ── D. 레벨 해금 확장 — 해금이 실제로 무언가를 열도록 배선 ──
 // 🔓 장착/출전 칸 — 펫·동료 모두 **0칸에서 시작해 미네랄로 하나씩 연다**(2026-08-14 확정).
 //   최대 3칸이고 레벨 해금이 아니다 — 그래서 PROF_UNLOCKS 의 pet_slot3·4, ally_plus 는 전부 삭제됐다.
@@ -528,7 +478,6 @@ function openResearch(){
   if(!on && typeof openHome==='function') openHome();   // 캠프 밖에서 눌렀다 — 먼저 데려간다
   navShow('research');
   campResEnter('res'); }
-function openQuest(){    _navOpenShell('questScreen','quest'); }
 const navSec=(k)=>NAV_TREE.find(x=>x.k===k)||null;
 let _navSec='', _navDrill='';   // 지금 구역 / 내려가 있는 구역('' = 최상위)
 // attr = 'nav'(구역) / 'sub'(구역 안 항목). 같은 키가 두 층에 있을 수 있어(정비 구역 = 장비 하위 = gear) 나눈다.
@@ -565,6 +514,9 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
     if(typeof campTreeClose==='function') campTreeClose(); }
   // 💠 룬 구역도 같은 규칙 — 나가는 길이 하단 네비뿐이라 여기서 닫는다(2026-09-02).
   if(tab!=='rune'){ if(typeof campRuneClose==='function') campRuneClose(); }
+  // 📐 **구역 상단 띠**는 환생·룬·유즈맵·상점의 것이다 — 캠프로 돌아오면 끈다(2026-09-05).
+  //   ⛔ 캠프에 걸지 말 것: 거기 좌상단은 던전 칩이고 배경이 밝은 돌이라 규칙이 다르다.
+  if(tab==='camp' && typeof curSplitSync==='function') curSplitSync(false);
   if(_navSec!==tab){ _navSec=tab; _navDrill=''; }   // 다른 구역으로 갔다 = 최상위로
   navPaint(); }
 // 최상위 칸 — 화면으로 이동하고, 하위가 있으면 그 구역 네비로 내려간다

@@ -119,114 +119,12 @@ function renderHomeStats(){ const dot=document.getElementById('hbGrowDot'); if(!
 // ── 라운드 선택 · 반복/등반 ──
 // 최고 도달 라운드(hunt.best[dg])까지만 고를 수 있다. 라운드를 바꾸면 진행 중인 판은 버리고 새로 시작한다.
 function hbBest(dg){ const H=hbHunt(); return Math.max(1, Math.min(HB_ROUND_MAX, H.best[dg||H.dg]||1)); }
-// 던전 N 해금 = 던전 N-1에서 HB_DG_UNLOCK 라운드 도달. 던전 1은 항상 열려 있다.
-function hbDgOpen(dg){ return HB_DG_ALL_OPEN || dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
 function hbEliteChance(dg,round){ return Math.min(HB_ELITE_MAX, hbProg(dg,round)*0.012); }
 // ── 던전·라운드 고르기 ────────────────────────────────────────────────────
 // ⚠ 고르는 즉시 이동하지 않는다 — _hbPick 에 '초안'을 담고 [이동]을 눌러야 적용된다.
 //   던전은 ◀▶ 로 한 장씩, 라운드는 세로 피커(아래가 1라운드)에서 가운데 띠에 멈춘 것이 선택된다.
 let _hbPick=null, _hbRdT=null;
 const HB_RD_H=40, HB_RD_GAP=6;                       // 피커 한 칸 높이 · 간격 → 이동 간격은 둘의 합
-function hbRdPitch(){ return HB_RD_H+HB_RD_GAP; }
-// 피커 맨 윗 칸 = 최고 도달, 단 '다음 마일스톤'이 더 위면 거기까지 잠긴 칸으로 보여 준다(도전정신).
-function hbRdTop(dg,round){ const b=hbBest(dg); return Math.min(HB_ROUND_MAX, Math.max(b, hbNextRw(dg,round||b)||0)); }
-function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!el) return;
-  const H=hbHunt();
-  _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
-  el.classList.remove('hide'); renderRoundSheet();
-  if(typeof paintIcons==='function') paintIcons(el);
-  if(typeof playSfx==='function') playSfx('ui_open');
-  // 여백은 칸 높이·컨테이너 높이로 결정된다 → 보인 뒤에 재야 한다(숨은 동안은 높이가 0)
-  requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); }); }
-function hbCloseRounds(){ const el=document.getElementById('hbRoundSheet'); if(el) el.classList.add('hide');
-  _hbPick=null; clearTimeout(_hbRdT); _hbRdT=null;
-  if(typeof playSfx==='function') playSfx('ui_close'); }
-// 위아래 여백 = (보이는 높이 - 칸 높이)/2. 이게 있어야 첫·마지막 칸도 가운데에 설 수 있다.
-function hbRdPad(){ const sc=document.getElementById('hbRdScroll'); if(!sc) return;
-  const pad=Math.max(0,(sc.clientHeight-HB_RD_H)/2);
-  sc.style.paddingTop=pad+'px'; sc.style.paddingBottom=pad+'px'; }
-// 라운드 → 스크롤 위치. 목록은 큰 수가 위라 인덱스 = (최대 - 라운드).
-function hbRdCenter(round, smooth){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
-  const top=hbRdTop(_hbPick.dg,_hbPick.round), i=Math.max(0,Math.min(top-1, top-round));
-  sc.scrollTo({ top:i*hbRdPitch(), behavior:smooth?'smooth':'auto' }); }
-// 스크롤이 멎으면 가운데 칸이 곧 선택이다(짧게 기다렸다가 한 번만 확정한다)
-function hbRdScrolled(){ clearTimeout(_hbRdT); _hbRdT=setTimeout(hbRdSettle, 110); }
-function hbRdSettle(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
-  const top=hbRdTop(_hbPick.dg,_hbPick.round), best=hbBest(_hbPick.dg);
-  const i=Math.max(0,Math.min(top-1, Math.round(sc.scrollTop/hbRdPitch())));
-  let r=top-i;
-  if(r>best){ r=best; hbRdCenter(r,true); }        // 잠긴 목표 칸에 멈췄으면 고를 수 있는 데까지 되돌린다
-  if(r===_hbPick.round) return;
-  _hbPick.round=r; hbRdMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-// 강조만 갈아 끼운다 — 목록을 다시 그리면 스크롤이 튄다
-function hbRdMark(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
-  for(const b of sc.querySelectorAll('.hbRd')) b.classList.toggle('on', +b.dataset.r===_hbPick.round);
-  hbPickNote(); }
-// 칸을 눌러 고르면 그 칸이 가운데로 미끄러져 온다
-function hbRdTap(r){ if(!_hbPick) return; _hbPick.round=r; hbRdMark(); hbRdCenter(r,true);
-  if(typeof playSfx==='function') playSfx('ui_tab'); }
-// 던전 넘기기 — 열려 있는 것만 건너뛴다. 라운드는 그 던전의 최고 도달로 맞춘다.
-function hbPickDg(d){ if(!_hbPick) return;
-  for(let n=_hbPick.dg+d; n>=1 && n<=HB_DG_MAX; n+=d){ if(!hbDgOpen(n)) continue;
-    _hbPick.dg=n; _hbPick.round=hbBest(n); renderRoundSheet();
-    requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); });
-    if(typeof playSfx==='function') playSfx('ui_tab'); return; } }
-// [이동] — 여기서만 실제로 옮긴다
-function hbPickGo(){ if(!_hbPick) return; const H=hbHunt(), d=_hbPick.dg, r=_hbPick.round;
-  if(d!==H.dg){ H.dg=d; hbEnsureModels(d);
-    if(_hb){ _hb.dg=d; _hb._pat=null; } }                 // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
-  H.round=r; saveMeta();
-  if(_hb){ _hb.round=r; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
-    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
-  if(typeof playSfx==='function') playSfx('ui_confirm');
-  hbHud(); hbCloseRounds(); }
-function renderRoundSheet(){ const H=hbHunt(), sc=document.getElementById('hbRdScroll'); if(!sc) return;
-  if(!_hbPick) _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
-  const dg=_hbPick.dg, best=hbBest(dg);
-  _hbPick.round=Math.max(1,Math.min(best,_hbPick.round));
-  // 던전 카드 — 배경 그림은 전장이 쓰는 것과 같은 파일(새 에셋을 만들지 않는다)
-  { const card=document.getElementById('hbPickCard'), D=hbDun(dg);
-    if(card){ card.className='hbDgc';
-      card.innerHTML='<div class="hbDgcArt" style="background-image:url(\''+HB_BG_DIR+'dg'+dg+'.webp\')"></div>'
-        +'<div class="hbDgcTx"><b>던전 '+dg+' · '+D.name+'</b><em>최고 도달 '+best+' 라운드</em></div>'; } }
-  { const pv=document.getElementById('hbPickPrev'), nx=document.getElementById('hbPickNext');
-    const has=(d)=>{ for(let n=dg+d;n>=1&&n<=HB_DG_MAX;n+=d) if(hbDgOpen(n)) return true; return false; };
-    if(pv) pv.disabled=!has(-1); if(nx) nx.disabled=!has(1); }
-  // 라운드 — 큰 수가 위, 1이 맨 아래. 최고 도달까지 고를 수 있고, 그 위의 '다음 마일스톤'은 잠긴 목표로만 보인다.
-  let h='';
-  for(let i=hbRdTop(dg,_hbPick.round);i>=1;i--){ const rw=hbRoundRw(dg,i), got=rw&&hbRwGot(dg,i), far=i>best;
-    h+='<button class="hbRd'+(i===_hbPick.round?' on':'')+(far?' far':'')+'" data-r="'+i+'"'
-      +(far?' disabled':(' onclick="hbRdTap('+i+')"'))+'>'+i
-      +(i===best&&best>1?'<u>최고</u>':'')+(rw?('<u>'+(got?'✓':'🎁')+'</u>'):'')+'</button>'; }
-  sc.innerHTML=h;
-  hbPickNote();
-  const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
-  if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
-// 안내 줄은 없앴다(2026-08-14) — 칸 안의 🎁/✓·최고 표시로 충분하고, 세 줄짜리 설명이 피커를 눌렀다.
-function hbPickNote(){}
-// 던전 이동 — 그 던전에서 도달했던 라운드부터 다시 시작한다
-function hbGoDungeon(d){ const H=hbHunt();
-  d=Math.max(1,Math.min(HB_DG_MAX,d|0)); if(!hbDgOpen(d)) return;
-  H.dg=d; H.round=Math.max(1,H.best[d]||1); saveMeta();
-  hbEnsureModels(d);                                 // ⚔ 그 던전 적 3종 3D 모델만 지연 로드
-  if(_hb){ _hb.dg=d; _hb.round=H.round; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
-    _hb._pat=null;                                   // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
-    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
-  if(typeof playSfx==='function') playSfx('ui_open');
-  renderRoundSheet(); hbHud(); }
-function hbSetClimb(v){ const H=hbHunt(); H.climb=!!v; H.climbChosen=1; saveMeta(); renderRoundSheet(); hbHud();
-  if(typeof playSfx==='function') playSfx('ui_tab'); }
-// 라운드 이동의 실제 동작 — 시트를 여닫지 않는다(화살표 ±1과 목록 선택이 함께 쓴다)
-function hbSetRound(n){ const H=hbHunt(), best=hbBest(H.dg);
-  n=Math.max(1,Math.min(Math.min(best,HB_ROUND_MAX),n|0)); if(n===H.round && _hb && _hb.round===n) return false;
-  H.round=n; saveMeta();
-  if(_hb){ _hb.round=n; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
-    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
-  if(typeof playSfx==='function') playSfx('ui_open');
-  hbHud(); return true; }
-// ◀▶ ±1 — 가장 잦은 동작이라 시트를 거치지 않는다. 1 ~ 최고 도달 사이로 가둔다.
-function hbRoundStep(d){ const H=hbHunt(), cur=(_hb?_hb.round:(H.round||1));
-  if(hbSetRound(cur+(d|0)) && !document.getElementById('hbRoundSheet').classList.contains('hide')) renderRoundSheet(); }
 // ── Phase 4 UI — 스킬 바(전장 하단) + 부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
 // 🧱 건설 카드 한 장 — 하단 패널이 건설 구역이 될 때 쓴다. 카드 규격은 업그레이드와 같은 hmUpCardHTML.
 //    누르면 그 자리에서 배치 모드로 들어간다(hbBuy → hbArmStart).

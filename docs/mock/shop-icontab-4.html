@@ -1,0 +1,155 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>상점 아이콘 탭 — 이 화면의 어휘로 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --eco:#7effc9; --war:#ffa3b8; --grow:#e6eef8; --uniq:#c98bff;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(186,194,208,.55) 30%,
+    rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(150,158,172,.14) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 12px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:300px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:84px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.h{margin:0 0 4px;font-size:10px;color:var(--txt-off);font-family:var(--font-num)}
+.pane{position:relative;width:300px;height:280px;overflow:hidden;border-radius:var(--r-md);
+  border:1px solid var(--metal-edge);background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%)}
+.body{position:absolute;inset:0;overflow:hidden;padding:10px}
+
+/* 위 구역(할인) — 자리를 잡아 두는 용도 */
+.sec{border:0;border-bottom:1px solid rgba(150,170,200,.22);padding:0 0 8px;margin-bottom:8px}
+.secH{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.secT{font-size:12.5px;color:#eef1f6;font-weight:600;letter-spacing:.06em}
+.secN{font-size:10.5px;color:#aab4c2}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.card{height:30px;border:1px solid rgba(150,170,200,.32);border-radius:var(--r-sm);
+  background:rgba(255,255,255,.04)}
+
+/* 목록 */
+.rw{display:flex;align-items:center;gap:8px;padding:5px 2px}
+.rw + .rw{border-top:1px solid rgba(255,255,255,.07)}
+.ico{width:26px;height:26px;flex:none;border-radius:4px;
+  background:linear-gradient(180deg,#1b2634,#06090e);border:1px solid rgba(150,170,200,.3)}
+.tt{flex:1 1 auto;min-width:0;font-size:11px;color:#eef1f6;line-height:1.25}
+.tt s{display:block;text-decoration:none;font-family:var(--font-num);font-size:9px;
+  color:#69737f;margin-top:1px}
+.bt{margin-left:auto;display:flex;gap:4px;flex:none}
+.bs{min-width:50px;padding:4px 5px;border-radius:var(--r-sm);text-align:center;
+  border:1px solid rgba(150,170,200,.5);background:rgba(255,255,255,.04)}
+.bs b{display:block;font-size:9px;color:#c3ccd8}
+.bs u{display:block;text-decoration:none;font-family:var(--font-num);font-size:10px;color:#e2b6ff}
+
+/* 탭 공통 */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:9px}
+.tb{position:relative;text-align:center;cursor:pointer}
+.tb .gl{display:block;margin:0 auto}
+.tb span{display:block;font-size:10px;color:#8d97a6;font-family:var(--font-ti)}
+.tb.on span{color:#fff;font-weight:700}
+
+/* ══ ① 육각 아이콘 + 밑변 광원 ══ */
+.v1 .tb{padding:6px 2px 7px;border-radius:var(--r-bar);
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015))}
+.v1 .tb.on{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03))}
+.v1 .tb.on::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:var(--edge-light)}
+/* ══ ② 모서리 컷 판 + 등급색 테두리 ══ */
+.v2 .tb{padding:6px 2px 7px;background:rgba(255,255,255,.03);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)}
+.v2 .tb.on{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 55%,transparent)}
+/* ══ ③ 판 없이 아이콘만 · 아래 이름 ══ */
+.v3 .tabs{gap:2px}
+.v3 .tb{padding:4px 2px 8px}
+.v3 .tb .gl{opacity:.42}
+.v3 .tb.on .gl{opacity:1}
+.v3 .tb.on::after{content:'';position:absolute;left:22%;right:22%;bottom:2px;height:2px;
+  border-radius:2px;background:var(--c);opacity:.9}
+/* ══ ④ 커맨드 카드 어휘(검은 판 + 안쪽 흰 실선 + 밑변 광원) ══ */
+.v4 .tb{padding:6px 2px 7px;border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#141c26,#080c12);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+.v4 .tb.on{background:linear-gradient(180deg,#1b2634,#0a0f16);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.v4 .tb.on::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:var(--edge-light)}
+.v4 .tb.on::before{content:'';position:absolute;left:50%;bottom:-5px;width:7px;height:7px;
+  transform:translateX(-50%) rotate(45deg);background:#0a0f16;
+  border-right:1px solid rgba(255,255,255,.16);border-bottom:1px solid rgba(255,255,255,.16)}
+</style></head><body>
+
+<h1>상점 아이콘 탭 — <b>이 화면의 어휘</b>로 4안</h1>
+<p>①안(아이콘 탭)을 <b>DESIGN.md 안에서</b> 다시 그렸다: 각진 SF · 라운드 0/3/6/9 ·
+<b>밑변 광원</b> · 갈래 색은 이미 정해진 넷 · 아이콘은 <b>육각</b>(룬 칸·커맨드 카드와 같은 도형).
+⛔ 새 색·새 글꼴은 안 들였다. 각 안에 <b>목록이 시작되는 높이</b>를 재서 적었다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var G = [
+  { nm:'경제', c:'eco',  d:'M12 3 L20 12 L12 21 L4 12 Z' },                    /* 마름모 = 재화 */
+  { nm:'전투', c:'war',  d:'M12 3 L20 7 V13 C20 17 12 21 12 21 C12 21 4 17 4 13 V7 Z' }, /* 방패 */
+  { nm:'성장', c:'grow', d:'M12 3 L19 11 H15 V21 H9 V11 H5 Z' },               /* 위 화살 */
+  { nm:'유니크', c:'uniq', d:'M12 2 L14.6 9.2 L22 12 L14.6 14.8 L12 22 L9.4 14.8 L2 12 L9.4 9.2 Z' } /* 별 */
+];
+/* 육각 테두리 + 안쪽 글리프 — 룬 칸과 같은 도형이다 */
+function glyph(g, size, on){
+  var r = size / 2 - 1, pts = [];
+  for(var i = 0; i < 6; i++){ var a = Math.PI/180*(60*i-90);
+    pts.push((size/2 + r*Math.cos(a)).toFixed(1) + ',' + (size/2 + r*Math.sin(a)).toFixed(1)); }
+  return '<svg class="gl" width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">'
+   + '<polygon points="' + pts.join(' ') + '" fill="' + (on ? 'rgba(255,255,255,.05)' : 'none')
+   +   '" stroke="var(--' + g.c + ')" stroke-width="1" opacity="' + (on ? '.85' : '.38') + '"/>'
+   + '<g transform="translate(' + (size/2 - size*0.30) + ',' + (size/2 - size*0.30)
+   +   ') scale(' + (size*0.60/24).toFixed(3) + ')">'
+   + '<path d="' + g.d + '" fill="var(--' + g.c + ')" opacity="' + (on ? '1' : '.45') + '"/></g></svg>'; }
+function tabs(size){ return '<div class="tabs">'
+  + G.map(function(g, k){ return '<div class="tb' + (k===0?' on':'') + '" style="--c:var(--' + g.c + ')">'
+      + glyph(g, size, k===0) + '<span>' + g.nm + '</span></div>'; }).join('') + '</div>'; }
+function rows(n){ var h='', nm=['탭 획득량','가스 획득','일꾼 채취량','환생 포인트 획득'];
+  for(var i=0;i<n;i++) h += '<div class="rw"><span class="ico"></span>'
+    + '<span class="tt">'+nm[i%4]+'<s>1% · 2.5% · 5%</s></span>'
+    + '<span class="bt"><span class="bs"><b>하급</b><u>💎 40</u></span>'
+    + '<span class="bs"><b>중급</b><u>💎 130</u></span>'
+    + '<span class="bs"><b>상급</b><u>💎 400</u></span></span></div>';
+  return h; }
+function sale(){ return '<div class="sec"><div class="secH"><span class="secT">주간 할인</span>'
+  + '<span class="secN">1일 18시간 뒤 갱신</span></div>'
+  + '<div class="g3"><span class="card"></span><span class="card"></span><span class="card"></span></div></div>'; }
+
+var CASES = [
+{ v:'v1', t:'옅은 판 + 밑변 광원', sz:22,
+  d:'탭이 <b>아주 옅은 판</b>이고, 고른 것만 한 단 밝아지며 <b>아래 밑변 광원 한 줄</b>이 켜진다. 화면의 다른 띠(탭 띠·커맨드 카드)가 쓰는 바로 그 어휘라 <em>가장 조용히 섞인다.</em>' },
+{ v:'v2', t:'모서리 컷 판 + 갈래 테두리', sz:22,
+  d:'판의 <b>두 모서리를 자른다</b>(각진 SF). 고른 것은 안쪽에 <b>갈래 색 1px</b>이 돌아 색이 분명하다. 룬 칸의 등급 테두리와 같은 결.' },
+{ v:'v3', t:'판 없이 아이콘만 · 아래 색 밑줄', sz:26,
+  d:'판을 걷고 <b>육각 아이콘을 크게</b>. 안 고른 것은 흐리고, 고른 것은 색이 살아나며 <b>아래 갈래 색 밑줄</b>이 그어진다. 아이콘이 주인공이라 <em>가장 가볍다.</em>' },
+{ v:'v4', t:'커맨드 카드 어휘', sz:22,
+  d:'하단 커맨드 카드처럼 <b>검은 판 + 안쪽 흰 실선</b>, 고른 것은 밝아지고 <b>밑변 광원 + 아래 삼각</b>이 목록과 이어진다. 게임 안 카드와 같은 물성이라 <b>「누르는 것」</b>이 가장 분명하다.' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p>'
+   + '<p class="sub">'+c.d+'</p>'
+   + '<p class="h" id="h'+i+'">—</p>'
+   + '<div class="pane"><div class="body '+c.v+'">'
+   +   sale() + tabs(c.sz) + rows(4)
+   + '</div></div></div>'; }).join('');
+CASES.forEach(function(c,i){
+  var pane = document.querySelectorAll('.pane')[i];
+  var t = pane.querySelector('.tabs'), first = pane.querySelector('.rw');
+  document.getElementById('h'+i).textContent = '📐 탭 높이 ' + Math.round(t.getBoundingClientRect().height)
+    + 'px · 목록 시작까지 ' + Math.round(first.getBoundingClientRect().top - pane.getBoundingClientRect().top) + 'px';
+});
+</script></body></html>

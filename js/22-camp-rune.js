@@ -211,17 +211,11 @@ function campRuneBestRound(){
   for(const k in C.best){ const dg = k | 0; if(dg < 1) continue;
     const r = (dg - 1) * per + (C.best[k] | 0); if(r > m) m = r; }
   return m; }
-function campRuneMaxRound(){ const per = (typeof CAMP_ROUND_MAX !== 'undefined') ? CAMP_ROUND_MAX : 50;
-  const dgs = (typeof CAMP_DG_MAX !== 'undefined') ? (CAMP_DG_MAX | 0) : 10;
-  return per * Math.max(1, dgs); }
 // 열린 칸 수 — 표에서 「도달 라운드 이하」인 것을 센다
 function campRuneSlots(kind){ const tb = RUNE_SLOT_R[kind] || [];
   if(CAMP_RUNE_FREE) return tb.length;          // 🔧 전부 열어 둔다(위 스위치)
   const b = campRuneBestRound();
   let n = 0; for(const r of tb) if(b >= r) n++; return n; }
-// 다음 칸이 열리는 라운드(전부 열렸으면 0)
-function campRuneNextAt(kind){ const tb = RUNE_SLOT_R[kind] || []; const b = campRuneBestRound();
-  for(const r of tb) if(b < r) return r; return 0; }
 
 // ── 상태 ────────────────────────────────────────────────────────────────
 // `C.rune` 에 산다 = **환생해도 남는다**(campRebirth 의 keep 목록에 넣었다).
@@ -279,7 +273,6 @@ function runeIcoHTML(key, cls, grp){ const src = runeIcoSrc(key, grp);
   return '<img class="' + (cls || 'rnIco') + '" src="' + src + '" alt="" draggable="false">'; }
 function runeName(key){ const p = runeParse(key); if(!p.def) return '';
   return (p.def.kind === 'uniq') ? p.def.nm : (RUNE_GD[p.gd] ? RUNE_GD[p.gd].tx + ' ' + p.def.nm : p.def.nm); }
-function runeGradeOf(key){ return runeParse(key).gd; }
 // 표기 — 값은 전부 「+n%」다(합산 항이므로)
 // ⚠ **소수점을 반올림해 버리지 말 것.** 2.5% 를 「3%」로 적으면 표기와 실제가 어긋난다.
 //   딱 떨어지는 값(20%)에는 소수점을 안 붙인다 — 거짓 정밀도로 보인다.
@@ -404,6 +397,7 @@ function campRuneOpen(){ const el = document.getElementById('campRune'); if(!el)
   campRuneRender();
   if(typeof playSfx === 'function') playSfx('ui_open'); }
 function campRuneClose(){ const el = document.getElementById('campRune');
+  setTimeout(() => { if(typeof curSplitSync === 'function') curSplitSync(); }, 0);   // 📐 상단 띠 맞춤
   if(el) el.classList.remove('on', 'rnIn');
   _runePick = -1; _runePickKind = '';
   _runeSwapKey = '';                  // 🔁 나갈 때 교체도 걷는다(다시 들어오면 칸이 흔들린 채다)
@@ -444,6 +438,7 @@ function campRuneRender(){
   if(typeof paintIcons === 'function') paintIcons(box);
   if(_bagKeep){ const q = document.querySelector('#campRune .rnBagG'); if(q) q.scrollTop = _bagKeep; }
   _runeTopSync();
+  if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(장착 / 룬 상점)
   if(_runeSec !== 'shop') campRuneBindMap(); }
 
@@ -785,7 +780,6 @@ function _runeMapSvg(){
 //   ⚠ 유니크 룬은 칸 셋이 **세 성좌에 흩어져** 있다 — 한 곳을 잡을 수 없으므로 전체 보기로 둔다.
 //   ⛔ 확인창을 띄우지 말 것 — 넣고 빼기가 한 번씩인 화면이라 교체만 두 단계면 어긋난다.
 let _runeSwapKey = '';                  // 교체하려는 룬. '' 이면 교체 모드가 아니다
-function campRuneSwapOn(){ return !!_runeSwapKey; }
 // 이 칸이 지금 교체 후보인가 — 고른 룬과 **같은 종류**의 칸만 흔들린다
 function campRuneSwapCand(kind, i){
   if(!_runeSwapKey) return false;
@@ -852,10 +846,6 @@ function _runeCellEl(kind, i){
 //   ⛔ 렌더 뒤에 classList 로만 붙이지 말 것.
 let _runeVeil = '';                     // 'norm-3' 처럼 — 도착을 기다리는 칸 하나
 function _runeVeilKey(kind, i){ return kind + '-' + i; }
-function _runeCellVeil(kind, i, on){
-  _runeVeil = on ? _runeVeilKey(kind, i) : '';
-  const el = _runeCellEl(kind, i);      // 이미 그려져 있으면 지금 것도 맞춘다
-  if(el) el.classList.toggle('veil', !!on); }
 // 💥 도착 — 칸이 한 번 부풀고, 갈래 색 고리가 퍼진다
 function campRuneLand(kind, i, key){
   if(_runeVeil === _runeVeilKey(kind, i)) _runeVeil = '';
@@ -1307,6 +1297,28 @@ function runeRecoList(){
   return out.slice(0, 3); }
 
 // ── 🛒 상점 화면 — 추천 · 주간 할인 · 일반(갈래 탭) ─────────────────────
+// 🔷 갈래 아이콘의 속 글리프 — 경제=마름모(재화) · 전투=방패 · 성장=위 화살 · 유니크=별.
+//   ⛔ 새 에셋을 만들지 않는다: 도형 넷이면 충분하고, 색은 이미 정해진 갈래 색을 쓴다.
+const RUNE_TAB_GLYPH = {
+  eco:  'M12 3 L20 12 L12 21 L4 12 Z',
+  war:  'M12 3 L20 7 V13 C20 17 12 21 12 21 C12 21 4 17 4 13 V7 Z',
+  grow: 'M12 3 L19 11 H15 V21 H9 V11 H5 Z',
+  uniq: 'M12 2 L14.6 9.2 L22 12 L14.6 14.8 L12 22 L9.4 14.8 L2 12 L9.4 9.2 Z' };
+const RUNE_TAB_ICO = 22;
+// 탭 하나의 그림 — 육각 테두리(갈래 색) + 속 글리프. 고른 것만 진하다.
+function _runeTabIco(grp, on){
+  const c = (grp === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
+                             : ((RUNE_GRP[grp] || {}).col || '#b4cdeb');
+  const S = RUNE_TAB_ICO, R = S / 2 - 1, q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((S / 2 + R * Math.cos(a)).toFixed(1) + ',' + (S / 2 + R * Math.sin(a)).toFixed(1)); }
+  const k = (S * 0.60 / 24).toFixed(3), off = (S / 2 - S * 0.30).toFixed(1);
+  return '<svg class="rnTabI" width="' + S + '" height="' + S + '" viewBox="0 0 ' + S + ' ' + S + '">'
+    + '<polygon points="' + q.join(' ') + '" fill="' + (on ? 'rgba(255,255,255,.05)' : 'none')
+    +   '" stroke="' + c + '" stroke-width="1" opacity="' + (on ? '.85' : '.38') + '"/>'
+    + '<g transform="translate(' + off + ',' + off + ') scale(' + k + ')">'
+    + '<path d="' + (RUNE_TAB_GLYPH[grp] || RUNE_TAB_GLYPH.eco) + '" fill="' + c
+    +   '" opacity="' + (on ? '1' : '.45') + '"/></g></svg>'; }
 let _runeShopTab = 'eco';                // 일반 구역에서 보고 있는 갈래
 function campRuneShopTab(g){ _runeShopTab = g; campRuneRender(); }
 // 💠 한 칸 — 그림 · 이름 · 등급 · 값. 살 수 없으면 왜 못 사는지 칸이 말한다.
@@ -1334,6 +1346,25 @@ function _runeBuyCell(key, opt){
     + '<span>' + runeValTx(key) + '</span>' + tail
     + (own > 0 ? '<em class="rnHas">×' + own + '</em>' : '') + '</button>'; }
 
+// 🧾 상점 줄의 **작은 등급 버튼** — 가방의 육각 버튼과 같은 자리를 맡되 값(젬)을 적는다.
+//   ⚠ 가방은 「몇 개 가졌나」, 상점은 「얼마인가」다 — 같은 자리에 다른 숫자가 온다.
+function _runeBuySmall(key){
+  const p = runeParse(key); if(!p.def) return '';
+  const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
+  const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
+  const own = campRuneOwn(key), full = own >= RUNE_OWN_MAX;
+  const sale = runeOnSale(key), cost = runeNowGem(key);
+  const have = (typeof profGem === 'function') ? profGem() : 0;
+  const off = full || have < cost;
+  return '<button class="rnBuyS' + (sale ? ' sale' : '') + '" type="button"'
+    + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
+    + " onclick=\"campRuneBuy('" + p.def.id + "','" + gd + "')\">"
+    // 🏷 할인 중이면 그렇게 말한다 — 값만 싸면 「왜 싼가」를 모른다(일반 목록에도 뜬다)
+    + (sale ? '<i class="rnOffS">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b>'
+    + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
+            : '<u' + (sale ? ' class="sale"' : '') + '>' + gemI + ' ' + cost + '</u>')
+    + (own > 0 && !full ? '<em>×' + own + '</em>' : '') + '</button>'; }
 function _runeShopHTML(){
   // ⛔ 「보유 젬」 줄은 뺐다(2026-09-04 사용자 확정) — 젬은 **상단 재화 바**에 이미 있다.
   //   같은 숫자를 두 층에 띄우면 어느 쪽이 진짜인지 묻게 된다.
@@ -1349,10 +1380,16 @@ function _runeShopHTML(){
       + '</div></div>'; }
 
   // 🛒 ② 주간 할인 — 30% 싸지만 **종류마다 한 개**. 남은 시간을 함께 적는다.
+  // 📶 **등급 순으로 늘어놓는다**(2026-09-05 사용자 확정) — 하 · 중 · 상 · 유니크.
+  //   왼쪽 위에서 오른쪽 아래로 갈수록 좋은 것이라 값도 함께 커진다(읽는 결이 한 방향).
+  //   ⚠ 목록 자체(주간 시드)는 안 건드린다 — **보여 주는 순서만** 정한다.
+  const rank = { low:0, mid:1, high:2, uniq:3 };
+  const sale = runeSaleList().slice()
+    .sort((a, b) => (rank[runeParse(a).gd] | 0) - (rank[runeParse(b).gd] | 0));
   h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">주간 할인</span>'
     + '<span class="rnSecN">' + runeLeftTx(runeWeekLeft()) + ' 뒤 갱신</span></div>'
     + '<div class="rnGrid3">'
-    + runeSaleList().map(k => _runeBuyCell(k, { sale:true, nameFull:true })).join('')
+    + sale.map(k => _runeBuyCell(k, { sale:true, nameFull:true })).join('')
     + '</div></div>';
 
   // 🗂 ③ 일반 — 갈래 탭으로 나눈다(16종 × 3등급이면 한 목록에 다 못 담는다)
@@ -1361,19 +1398,26 @@ function _runeShopHTML(){
   h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점</span></div>';
   // 🗂 탭 띠는 **공용 함수**다(CLAUDE.md 「세그먼트 이동 바」) — 새로 만들지 않는다.
   //   ⚠ items 는 {label} 이고 act 는 **함수**(k => 코드)다.
+  //   🔷 **아이콘 탭**(2026-09-05 사용자 확정 · 목업 shop-icontab-4 ①안) —
+  //     육각 아이콘 + 이름, 고른 칸만 한 단 밝고 **아래 밑변 광원 한 줄**이 켜진다.
+  //     ⭐ 공용 함수(segNavHTML)를 그대로 쓴다 — label 에 그림을 담고 CSS 변형(.stack)이 세로로 세운다.
+  //     ⛔ 상점 전용 탭 함수를 새로 만들지 말 것.
   h += (typeof segNavHTML === 'function')
-    ? segNavHTML(tabs.map(g => ({ label:(RUNE_GRP[g] || {}).nm || g })), idx,
-        k => "campRuneShopTab('" + tabs[k] + "')")
+    ? segNavHTML(tabs.map((g, k) => ({
+        label: _runeTabIco(g, k === idx) + '<span>' + ((RUNE_GRP[g] || {}).nm || g) + '</span>' })), idx,
+        k => "campRuneShopTab('" + tabs[k] + "')").replace('class="pdSeg"', 'class="pdSeg stack"')
     : '';
   h += '<div class="rnShopList">';
   for(const d of RUNE_LIST){
     const g = (d.kind === 'uniq') ? 'uniq' : d.grp;
     if(g !== tabs[idx]) continue;
     const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
-    h += '<div class="rnItem"><div class="rnIH">'
-      + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnIi')
-      + '<span class="rnIN">' + d.nm + '</span><span class="rnID">' + d.de + '</span></div>'
-      + '<div class="rnBuys">' + gds.map(gd => _runeBuyCell(runeKey(d.id, gd))).join('')
-      + '</div></div>'; }
+    // 🧾 **가로줄** — 가방과 같은 짜임이라 두 화면이 한 어휘로 읽힌다
+    h += '<div class="rnShopRw">'
+      + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnRwI')
+      + '<span class="rnRwT">' + d.de + (d.soon ? '<u>준비 중</u>' : '')
+      + '<s>' + gds.map(gd => _runePctTx(runeKey(d.id, gd))).join(' · ') + '</s></span>'
+      + '<span class="rnRwB">' + gds.map(gd => _runeBuySmall(runeKey(d.id, gd))).join('')
+      + '</span></div>'; }
   h += '</div></div>';
   return h; }

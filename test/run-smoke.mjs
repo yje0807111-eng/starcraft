@@ -35,6 +35,16 @@ if(!CHROME){ console.error('크롬을 찾을 수 없습니다. CHROME_PATH 환�
     console.log((e.stdout||'').trim().split('\n').map(l=>'  '+l).join('\n'));
     console.error('\n❌ 고아 입구 검사 실패 — 위 목록을 먼저 보세요.');
     process.exit(1); }
+  // 🗄 죽은 코드 래칫(2026-09-05 · ATTIC.md §5) — 아무도 안 부르는 함수 · 어디에도 없는 CSS 클래스가
+  //    test/dead-known.json 밖에서 새로 생기면 여기서 멈춘다. 다락 이사가 한 번짜리로 끝나고
+  //    옛 CSS 가 살아 있는 척하며 새 화면에 재사용되던 것(사용자 지적)을 막는 유일한 장치다.
+  try{ const out=execFileSync(process.execPath, [path.join(ROOT,'scripts','dead-audit.mjs')],
+        { cwd:ROOT, encoding:'utf8' });
+    console.log(out.trim().split('\n').map(l=>'  '+l).join('\n'));
+  }catch(e){
+    console.log((e.stdout||'').trim().split('\n').map(l=>'  '+l).join('\n'));
+    console.error('\n❌ 죽은 코드 래칫 — 다락으로 옮기거나(scripts/attic-move.mjs · attic-css.mjs) 이유를 적어 test/dead-known.json 에.');
+    process.exit(1); }
 }
 
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json',

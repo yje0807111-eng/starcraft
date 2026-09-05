@@ -85,6 +85,8 @@ const CUR_SCREENS=['homeScreen','mapSelect','modeSheet','dgScreen','shopScreen',
 // 🧍 인구 칸을 캠프 **밖에서도** 보여 줄 화면(2026-09-03 사용자 확정).
 //   ⚠ 값은 캠프 상태에서 온다 — 캠프를 한 번도 안 열었으면 0/0 이다.
 const POP_SCREENS=['mapSelect','shopScreen'];
+// 📐 구역 상단 띠를 쓰는 화면(환생·룬은 campRebEnter/campRuneEnter 가 직접 켠다)
+const SPLIT_CUR_SCREENS=['mapSelect','shopScreen'];
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
   // ⚠ **캐시(_cdKey)도 함께 비운다**(2026-09-04). 칩 내용을 글자로 덮어써 놓고 키를 남기면,
@@ -416,6 +418,29 @@ function campDropGo(){ if(!_cdPick) return;
 
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
+// 📐 **구역 상단 띠**(2026-09-05 사용자 확정 · 목업 top-fill-8 ③안) — 위 그늘 + 아래 오로라 + 밑변 광원.
+//   ⭐ 환생 · 룬 · 유즈맵 · 상점이 **같은 얼굴**을 쓴다. 켜고 끄는 곳은 여기 하나다.
+//   ⛔ 캠프에는 걸지 않는다 — 거기 좌상단은 던전 칩이고 배경이 밝은 돌이라 규칙이 다르다
+//     (캠프는 .curBar.bare 의 「내려오는 그늘」을 그대로 쓴다).
+//   ⛔ 화면마다 background 를 새로 쓰지 말 것 — 이 클래스 하나만 붙인다.
+function curSplit(on){ const b = document.getElementById('curBar');
+  if(!b) return;
+  b.classList.toggle('split', !!on);
+  // ⚠ **바도 함께 켠다** — 환생·룬은 CUR_SCREENS 에 없어서 showAppScreen 이 안 켜 준다.
+  //   띠만 붙이고 바가 꺼져 있으면 상단이 통째로 비어 보인다(실측 2026-09-05).
+  if(on) curShow(true); }
+// 📐 지금 상태를 보고 **스스로 맞춘다** — 구역(환생·룬·트리)이 열려 있으면 켜고,
+//   아니면 화면 규칙(_splitScreen)에 맡긴다. 열기·닫기·화면 전환 뒤에 이걸 부른다.
+let _splitScreen = false;
+//   ⚠ 인자를 주면 **화면 쪽 판단도 갱신**한다 — 캠프로 돌아가는 길(navShow)은
+//     showAppScreen 을 안 타므로 그때 false 를 넘겨 줘야 띠가 걷힌다.
+function curSplitSync(screenOn){
+  if(screenOn !== undefined) _splitScreen = !!screenOn;
+  // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
+  //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
+  const zone = ['campRune','campReb','campTree'].some(id => {
+    const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
+  curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
 //   그대로 두면 우측 정렬된 숫자가 왼쪽으로 자라 좌상단 프로필을 덮는다(실제로 겹쳤다).
 //   10만부터 축약한다 — 5자리까지는 콤마 표기를 그대로 둬야 초반 수치를 정확히 읽을 수 있고,
@@ -577,6 +602,7 @@ function showAppScreen(id){ setInGame(false);
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
+  _splitScreen = SPLIT_CUR_SCREENS.indexOf(id)>=0; curSplitSync();                // 📐 구역 상단 띠
   { const ph=document.getElementById('phone');                                     // 🧍 인구 칸을 보여 줄 화면
     if(ph) ph.classList.toggle('popBar', POP_SCREENS.indexOf(id)>=0); }
   // 🧭 가이드 띠는 #phone 직속이라 **화면을 바꿔도 남는다.** 여기서 다시 그려 걷어 낸다
@@ -1946,8 +1972,10 @@ const MAP_SORTS=[['pop','인기순'],['new','신규'],['rec','추천'],['fav','�
 // 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다(사냥터와 같은 이유).
 function renderMapSortTabs(){ const tb=document.getElementById('msSortTabs'); if(!tb) return;
   const i=Math.max(0, MAP_SORTS.findIndex(function(c){ return c[0]===_mapSort; }));
+  // 📑 판 없는 띠 = 공용 변형 .plain (css/40-social.css) — ⛔ 화면 전용 규칙을 다시 쓰지 말 것
   tb.innerHTML=segNavHTML(MAP_SORTS.map(function(c){ return { label:c[1] }; }), i,
-    function(k){ return 'setMapSort(&#39;'+MAP_SORTS[k][0]+'&#39;)'; }); }
+    function(k){ return 'setMapSort(&#39;'+MAP_SORTS[k][0]+'&#39;)'; })
+    .replace('class="pdSeg"', 'class="pdSeg plain"'); }
 function setMapSort(s){ _mapSort=s;
   renderMapSortTabs();   // 정렬은 화면 위 띠가 맡는다
   const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];                          // 옛 드롭다운 흔적(있으면 갱신)
@@ -2163,8 +2191,6 @@ function _sdList(){ const L=DIFFICULTY_ORDER.map(function(d){ return {k:d, name:
 function _sdHasInf(){ return !!(_selMap && _selMap.id==='nemo' && USEMAPS.nemo_inf); }
 function _sdOk(k){ return (k==='inf') ? ((typeof infiniteUnlocked!=='function')||infiniteUnlocked())
                                       : ((typeof diffUnlocked!=='function')||diffUnlocked(k)); }
-function sdStartInf(){ if(!_sdOk('inf')){ if(typeof lobbyToast==='function') lobbyToast('🔒 노말을 클리어하면 열립니다'); return; }
-  startSoloInfinite(); }
 function _sdPrevKo(k){ if(k==='inf') return 'NORMAL';
   const r=DIFF_RANK.indexOf(k); return (r>0 && DIFFICULTY[DIFF_RANK[r-1]]) ? DIFFICULTY[DIFF_RANK[r-1]].name : ''; }
 function sdPick(i){ const L=_sdList(); if(!L[i]) return; _sdPick=L[i].k; renderSoloDiff();
@@ -2397,7 +2423,6 @@ function stepCpDiff(d){ const L=_cpList(), i=L.findIndex(function(x){ return x.k
   const k=L[n].k;
   if(k==='inf'){ _createInf=true; } else { _createInf=false; _createDiff=k; }
   renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=false; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
 // (setCpInf/#cpInfBtn 은 2026-08-27 삭제 — 무한이 난이도 사다리 마지막 칸으로 들어가 토글이 필요 없다)
 function mapHasDiff(){ return !(typeof _selMap!=='undefined' && _selMap && _selMap.noDiff); }   // 대인전 유즈맵 = 난이도 개념 없음
 // ══════════ 🎛 오토 배틀 대전 설정 — 방장이 정하고 방 전원에게 적용된다 ══════════

@@ -1,0 +1,550 @@
+/* ============================================================================
+ * 99-attic.css — 🗄 다락 (CSS)
+ *
+ * 화면 어디에도 안 쓰는 클래스의 규칙을 여기로 옮겨 둔다(2026-09-05 · ATTIC.md §5).
+ * ⛔ sc-ums-web.html 이 이 파일을 **링크하지 않는다** — CSS 는 로드되면 곧 살아 있는 것이라,
+ *    링크하는 순간 다락이 아니다(스모크 「다락 CSS 는 링크 밖」이 잰다).
+ * ⛔ 지우지 않는다(GAME_DIRECTION.md §5 「유보는 삭제가 아니다」). 되살릴 때의 자산이다.
+ * ⚠ 되살릴 때는 규칙을 원래 파일로 **옮겨 가고**(복사가 아니라), 그 클래스를 쓰는 마크업/JS 도 함께
+ *    돌아와야 한다 — 한쪽만 돌아오면 dead-audit 이 「다락과 살아 있는 쪽에 같은 이름」으로 잡는다.
+ * 구획마다 [원래 파일] 과 날짜가 붙어 있다 — 어디로 돌려놓을지 바로 안다.
+ * ========================================================================== */
+
+/* ══════════ [10-game.css] 2026-09-05 — 어디에도 안 쓰는 클래스 9개의 규칙 ══════════ */
+.cgPort .pIco .mIco{width:24px;height:24px}
+.btn.amb .bl{color:var(--neon-lt)}
+.btPicker{display:flex;flex-wrap:wrap;gap:4px;max-height:154px;overflow-y:auto;padding-right:2px}
+.btpRaceHead{flex:0 0 100%;font-size:var(--fs-xs);font-weight:700;color:#9fb4cc;margin:3px 0 1px;opacity:.9}
+.btpCard{display:flex;flex-direction:column;align-items:center;gap:2px;width:52px;padding:4px 2px;cursor:pointer;font-family:inherit;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.012));border:1px solid var(--metal-edge);transition:all .12s}
+.btpCard:hover{border-color:rgba(120,180,255,.5)}
+.btpCard:active{transform:translateY(1px)}
+.btpCard .btpPic{position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:4px}
+.btpCard .btpPic img{width:100%;height:100%;object-fit:cover;border-radius:4px}
+.btpCard .btpPic svg{width:24px;height:24px}
+.btpCard .btpNm{font-size:8.5px;font-weight:700;color:#cfd8e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.bent .bprog{position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:46px;height:6px;border-radius:3px;background:rgba(0,0,0,.62);overflow:hidden;border:1px solid rgba(120,150,190,.3)}
+.bent .bprog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f7d4a,#5adf8a);box-shadow:0 0 6px rgba(90,223,138,.5);transition:width .12s linear}
+.bent .bprog.prod i{background:linear-gradient(90deg,#2f6fbf,#5cc8ff);box-shadow:0 0 6px rgba(92,200,255,.5)}
+.pickHint{font-size:var(--fs-md);color:var(--txt-hud);text-align:center;margin-bottom:12px}
+.pickHint b{color:#fff}
+
+/* ══════════ [20-lobby.css] 2026-09-05 — 어디에도 안 쓰는 클래스 18개의 규칙 ══════════ */
+.sdHr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
+.sdInf{position:relative;flex:none;width:100%;height:42px;margin-bottom:8px;padding:0 13px;cursor:pointer;overflow:hidden;
+    display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;
+    border:1px solid transparent;border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,var(--metal-ring-n) border-box}
+.sdInf::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#b06bff;
+    box-shadow:0 0 4px #b06bff,0 0 10px #b06bff}
+.sdInf b{font-size:var(--fs-lg);font-weight:800;color:#d9c4ff}
+.sdInf em{flex:1;font-style:normal;font-size:var(--fs-sm);color:#8a929c;text-align:right}
+.sdInf.hide{display:none}
+.sdInf.lk{cursor:default}
+.sdInf.lk::before{background:#4a525e;box-shadow:none}
+.sdInf.lk b{color:#7f8a98}
+.lbDiff{font-weight:800}
+.rmSq{flex:0 0 auto;width:46px;height:48px;display:flex;align-items:center;justify-content:center;padding:0;
+    border-radius:11px;cursor:pointer;transition:transform .1s,background .16s,color .16s,border-color .16s;
+    color:#9fb0c2;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+.rmSq svg{width:19px;height:19px;display:block}
+.rmSq:active{transform:translateY(1px) scale(.98)}
+/* 화면전환(개인 플레이→난이도): 배경 딤은 끊김 없이 유지(페이드 생략), 새 카드가 오른쪽에서 슬라이드 인 */
+#soloDiffPanel.noDim:not(.hide){animation:none}
+.fxPush{animation:fxPushIn .3s cubic-bezier(.22,.9,.28,1)}
+/* 엠블럼 = 새로 그린 육각 라인(옛 방패는 폐지). 아트 위에 얹히므로 가볍게 */
+.opLogo{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#dbe4ef}
+.opLogo svg{width:44px;height:44px;filter:drop-shadow(0 2px 8px #000)}
+/* 제목 = 제목 폰트 한 가족. 옛 2톤(흰+네온)은 폐지 — 색은 막대 하나만 갖는다 */
+.opTitle{font-family:var(--font-ti);font-weight:400;font-size:31px;letter-spacing:.02em;
+    text-shadow:0 3px 20px #000,0 1px 3px #000}
+.opTitle .opT1,.opTitle .opT2{color:#fff;text-shadow:inherit}
+.opSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#96a1af;letter-spacing:.42em;text-shadow:0 1px 4px #000}
+.opPanel.moInfo{margin:0}
+.gsT1{--tmC:var(--tmC1)}
+.gsT2{--tmC:var(--tmC2)}
+.authDia{display:block;width:9px;height:9px;margin:0 auto 9px;transform:rotate(45deg);
+    background:linear-gradient(135deg,#ff9b9b,var(--ac))}
+.authWay._old::before{content:'';position:absolute;inset:0;z-index:-1;padding:1px;background:var(--btnLine,var(--metal-edge));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;mask-composite:exclude;
+    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
+      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
+.awG{flex:none;width:16px;font-style:normal;font-weight:900;font-size:15px;text-align:center;color:#e8eaed}
+
+/* ══════════ [30-home.css] 2026-09-05 — 어디에도 안 쓰는 클래스 138개의 규칙 ══════════ */
+/* ── 장비창 — 위: 아바타 + 부위별 슬롯 / 아래: 가방(늘 열림) ── */
+.twCard.gearFull{width:372px;max-width:94vw;height:90%;max-height:90%}
+/* 장비창만 화면을 넓게 쓴다 */
+.twCard.gearFull .twBody{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.mgSlot.feeding{border-color:var(--acc-sel,#5cd6ff)}
+.igInfoTop{display:flex;align-items:center;gap:9px}
+.igInfoBtns{display:flex;gap:6px;margin-top:8px}
+.igInfoBtns .twBtn{flex:1}
+.igFeed{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.igMat{display:flex;align-items:center;gap:4px;padding:4px 7px;cursor:pointer;font-size:10px;font-weight:700;
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar);background:rgba(255,255,255,.045)}
+.igMat i{font-style:normal;opacity:.75}
+.twInput{flex:0 0 auto;width:118px;padding:7px 9px;border-radius:8px;font-family:inherit;font-size:13px;color:#eaf1fb;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+.twInput:focus{outline:none;border-color:rgba(92,214,255,.6)}
+/* 인기맵 썸네일 = 유즈맵 선택과 같은 .mapThumb, 행 크기에 맞춰 축소만 */
+.hsEmptySub{display:inline-block;margin-top:4px;font-size:10px;color:#5f6a77;line-height:1.6}
+/* 친구 분류 탭(전체/유즈맵/RPG/친한친구) */
+.hsTabs{flex:none;display:flex;gap:4px;padding:0 0 8px}
+/* 친구 목록 = 3.5행 노출(더 있다는 걸 반쯤 보여줘 스크롤을 유도). --frRow만 고치면 따라온다 */
+.hsList{--frRow:43px;--frGap:4px;flex:none;height:calc(var(--frRow)*4.2 + var(--frGap)*4);
+    overflow-y:auto;display:flex;flex-direction:column;gap:var(--frGap);padding:0}
+/* 회색 판 + 미세 글로우 질감: 상단 하이라이트 · 내부 은은한 광 · 바깥 소프트 섀도 */
+.frRow{flex:none;display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:var(--r-lg);cursor:pointer;
+    background:var(--hbRow,rgba(28,40,66,.85));border:1px solid rgba(120,160,225,.16);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 22px -12px rgba(150,200,255,.8),0 2px 9px -6px rgba(0,0,0,.75);
+    transition:border-color .13s,background .13s,box-shadow .16s,transform .1s}
+.frRow:hover{border-color:rgba(105,160,255,.45);background:rgba(38,54,88,.92);transform:translateY(-1px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 26px -10px rgba(150,200,255,.95),0 5px 16px -7px rgba(127,208,255,.4)}
+.frRow:active{transform:translateY(0)}
+.frRow.off{opacity:.5}
+.frAv{position:relative;width:26px;height:26px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid rgba(255,255,255,.13);
+    box-shadow:0 0 9px -3px rgba(140,190,255,.55),inset 0 1px 0 rgba(255,255,255,.12)}
+.frDot{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;border:1.5px solid #0c0f16}
+.frDot.active{background:#5dff8f;box-shadow:0 0 5px rgba(93,255,143,.7)}
+.frDot.away{background:#ff5c5c;box-shadow:0 0 5px rgba(255,92,92,.7)}
+/* 자리비움 = 빨강 */
+.frDot.offline{background:#5b6675}
+.frMain{flex:1;min-width:0;display:flex;flex-direction:column;gap:0}
+.frName{font-size:11.5px;font-weight:800;color:#eaf1fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frFav{color:var(--gold);font-size:9.5px;margin-left:4px;vertical-align:1px}
+.frAct{font-size:9.5px;color:#93a0af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;min-width:0}
+.frBadge{flex:none;font-weight:800;padding:0 4px;border-radius:var(--r-bar);font-size:8px;letter-spacing:.2px}
+.frBadge.usemap{color:#bcd8ff;background:rgba(79,157,255,.14);border:1px solid rgba(79,157,255,.32)}
+.frBadge.rpg{color:#ffe0a3;background:rgba(255,200,90,.13);border:1px solid rgba(255,200,90,.3)}
+.frActTx{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.frPt{color:#78828f;font-weight:700}
+/* 플레이타임(부드럽게) */
+.frAway{color:#ff8a8a;font-weight:800}
+/* (자리비움 - N분) 빨강 */
+.frChat{flex:none;color:#7c8a99;display:flex;align-items:center;transition:color .13s}
+.frChat svg{width:15px;height:15px}
+.frRow:hover .frChat{color:#cfe0ec}
+/* ── 친구 DM 채팅 오버레이 ── */
+.dmChat{position:absolute;inset:0;z-index:120;display:flex;flex-direction:column;background:linear-gradient(180deg,#0e1219,#070a10)}
+.dmChat.hide{display:none}
+.dmHead{flex:none;display:flex;align-items:center;gap:11px;padding:15px 14px 12px;border-bottom:1px solid var(--metal-edge);background:rgba(255,255,255,.02)}
+.dmBack{width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9fb0c2;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge);border-radius:9px}
+.dmBack svg{width:17px;height:17px}
+.dmAv{position:relative;width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;font-size:19px;border-radius:50%;
+    background:radial-gradient(circle at 50% 35%,rgba(120,140,175,.22),rgba(10,12,18,.9));border:1px solid var(--metal-edge)}
+.dmStat{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2.5px solid #0c0f16;background:#5b6675}
+.dmStat.active{background:#5dff8f}
+.dmStat.away{background:#ff5c5c}
+.dmWho{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dmWho b{font-size:15px;font-weight:800;color:#eaf1fb}
+.dmSt{font-size:10.5px;color:#93a0af}
+.dmBody{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:16px 14px}
+.dmBody::-webkit-scrollbar{width:4px}
+.dmBody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
+.dmMsg{max-width:76%;padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.42;word-break:break-word}
+.dmMsg.them{align-self:flex-start;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge);border-top-left-radius:4px;color:#dce4ee}
+.dmMsg.me{align-self:flex-end;background:linear-gradient(180deg,#2f74b6,#1f5891);color:#fff;border-top-right-radius:4px}
+.dmSys{align-self:center;font-size:10.5px;color:#7d8b98;font-style:italic;padding:2px 0}
+.dmInputBar{flex:none;display:flex;gap:8px;padding:11px 12px;border-top:1px solid var(--metal-edge);background:rgba(255,255,255,.02)}
+.dmInputBar input{flex:1;min-width:0;padding:11px 13px;border-radius:11px;background:rgba(0,0,0,.4);border:1px solid var(--metal-edge);color:#eaf1fb;font-family:inherit;font-size:13px;outline:none}
+.dmInputBar input:focus{border-color:var(--neon-soft)}
+.dmInputBar input::placeholder{color:#6f757d}
+.dmSend{width:44px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;background:linear-gradient(180deg,#2f74b6,#1f5891);border:none;border-radius:11px}
+.dmSend svg{width:18px;height:18px}
+.twBar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;background:linear-gradient(180deg,rgba(13,18,28,.96),rgba(8,11,17,.9));border-bottom:1px solid var(--glass-edge)}
+.twBack{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-lg);cursor:pointer;color:#cdd6e2;background:rgba(255,255,255,.06);border:1px solid var(--metal-edge)}
+.twBack .mIco{width:18px;height:18px;color:inherit}
+/* 이름·레벨·전투력 묶음 = 내 캐릭터(스탯) 패널 입구. 광장은 장식이 되었으므로 이 버튼이 유일한 통로다 */
+.twWho{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:8px;padding:4px 8px;font-family:inherit;text-align:left;cursor:pointer;
+    color:inherit;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.twWho:active{background:rgba(255,255,255,.1)}
+.twCoin{margin-left:auto;font-family:var(--font-num);font-size:13px;color:var(--txt-mute)}
+.twCoin b{font-size:16px;font-weight:800;color:#ffd24a}
+.hbHudTop{position:absolute;left:8px;top:calc(3px + var(--topPad));z-index:2;   /* 재화 바와 같은 --topPad 를 본다 — 따로 놀면 안 된다 */display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+.hbIcoRow{display:flex;align-items:center;gap:6px}
+.hbCol{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0}
+/* 경험치 바와 같은 폭 — 이름이 길어도 기둥이 안 넓어진다(재화 바 침범 방지) */
+.hbSt i{font-style:normal;display:flex;align-items:baseline;gap:2px}
+.hbSt em{font-style:normal;font-size:8.5px;line-height:1}
+.hbXp{width:76px;height:3px;border-radius:var(--r-bar);background:rgba(255,255,255,.10);overflow:hidden}
+.hbXp i{display:block;height:100%;width:0;background:#5dff8f}
+/* 레벨(위) · 공격력(아래) 각각 한 줄 — 가로로 붙이면 어느 쪽 숫자인지 한눈에 안 들어온다 */
+.hbSt{display:flex;flex-direction:column;align-items:flex-start;gap:1px;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;color:#c6ccd4;line-height:1.15}
+/* 던전·라운드 — 볼륨 1(전장 위): 판을 깔지 않는다. 글자는 그림자로 띄우고 ◀▶ 버튼만 면을 갖는다 */
+.hbMid{position:absolute;left:50%;top:calc(3px + var(--hbHudH) + 8px);transform:translateX(-50%);z-index:2;text-align:center;
+    display:flex;flex-direction:column;align-items:center;pointer-events:auto;white-space:nowrap}
+.hbMidRow{display:flex;align-items:center;gap:2px}
+.arwBtn.framed .arwFrame{display:block}
+.arwBtn.framed .arwIco{width:13px;height:13px;stroke-width:2.8;filter:none}
+.arwBtn.framed:disabled .arwFrame{stroke:rgba(255,255,255,.11)}
+.hbMidTx{display:flex;flex-direction:column;align-items:center;gap:0;padding:0 12px;cursor:pointer;
+    background:none;border:none;font-family:inherit;color:inherit}
+.hbMidTx:active{opacity:.75}
+.hbMid b{font-family:var(--font-ti);font-size:13px;color:#ececec;letter-spacing:.3px;
+    text-shadow:0 1px 3px rgba(0,0,0,.9),0 0 12px rgba(0,0,0,.6)}
+.hbMidRd{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;
+    color:var(--txt-mute);letter-spacing:.4px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.hbMidRd em{font-style:normal;font-size:17px;color:#fff;margin-left:3px}
+/* 밑줄 = '여기 누르면 목록이 열린다' 신호. 색을 채우지 않고 얇은 광원 한 줄(DESIGN §0) */
+.hbMidLine{display:block;width:72px;height:1px;margin-top:3px;
+    background:linear-gradient(90deg,transparent,rgba(124,224,255,.85),transparent);
+    box-shadow:0 0 6px -1px rgba(92,214,255,.7)}
+.hbMidSub{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10px;font-weight:700;
+    color:#9a9a9a;letter-spacing:.4px;margin-top:3px;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.hbMid i{font-style:normal}
+.hmUpgChev{flex:none;width:9px;height:9px;border-right:2px solid #9a9a9a;border-bottom:2px solid #9a9a9a;
+    transform:rotate(45deg) translate(-2px,-2px);transition:transform .16s}
+.hmUpg.down .hmUpgChev{transform:rotate(-135deg) translate(-2px,-2px)}
+/* (구 진화·환생 줄은 제거 — 신호는 상단 성장 버튼 배지 #hbGrowDot) */
+.hmStat{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;height:28px;cursor:pointer;
+    font-family:inherit;font-size:var(--fs-sm);font-weight:800;color:#ececec;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.hmStat b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#9a9a9a}
+.hmStat i{font-style:normal;color:#5dff8f}
+.hmStat:disabled{cursor:default;opacity:.5}
+.hmStat.grow{flex:0 0 auto;padding:0 10px;color:var(--hmAccLt);border-color:rgba(var(--hmAccRGB),.45);background:rgba(var(--hmAccRGB),.10)}
+.hmStat.grow i{color:var(--hmAccLt)}
+/* 캐릭터 정보 표 — 숫자는 Rajdhani(§2 글자 규칙) */
+.hbTbl{width:100%;border-collapse:collapse;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-sm)}
+.hbTbl th{padding:3px 2px;font-size:8.5px;font-weight:800;color:#7a7a7a;text-align:center}
+.hbTbl td{padding:4px 2px;text-align:center;color:#9a9a9a}
+.hbTbl td.l{text-align:left;font-family:inherit;font-weight:800;color:#ececec}
+.hbTbl td.s{font-weight:800;color:#ffd24a}
+.hbTbl tbody tr+tr td{border-top:1px solid rgba(255,255,255,.05)}
+.hbChips{display:flex;flex-wrap:wrap;gap:4px}
+.hbChip{padding:3px 7px;font-size:var(--fs-sm);color:#9a9a9a;background:rgba(255,255,255,.045);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.hbChip b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#ececec}
+.lpNums{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:2px 0 4px}
+.lpNum{display:flex;flex-direction:column;gap:1px;padding:6px 8px;
+    background:rgba(255,255,255,.045);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.lpNum span{font-size:var(--fs-sm);color:var(--txt-mute)}
+.lpNum b{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:13px;color:#ececec}
+#phone.campMode .hbMid,
+  #phone.campPick .hbMid{display:none}
+/* 캐릭터 프로필(초상·레벨·XP)은 캠프에 없다 — 캠프는 기지를 키우는 게임이고 캐릭터가 없다. */
+#phone.campMode .hbHudTop,
+  #phone.campPick .hbHudTop{display:none}
+/* 제목이 재화 바로 갔다 — 그만큼 위 여백을 줄여 카드를 키운다 */
+#gearScreen .shopTitle{flex:none}
+#gearScreen .shopTitle .ic{width:15px;height:15px;vertical-align:-2px;margin-right:5px}
+.upgEmpty{flex:1 1 auto;display:grid;place-items:center;font-size:12px;color:#6f6f6f}
+/* 제목이 재화 바로 갔다 — 그만큼 위 여백을 줄여 카드를 키운다 */
+.shopTitle{text-align:center;font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec;padding:6px 0 12px}
+.dgSheetGo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:12px}
+.dgSheetGo .dgGo{flex-direction:column;gap:1px;height:44px;padding:0 8px;line-height:1.15}
+.dgSheetGo .dgGo b{font-size:var(--fs-xl)}
+.dgSheetGo .dgGo i{font-style:normal;font-family:var(--font-ko);font-size:var(--fs-xs);font-weight:400;opacity:.6;letter-spacing:0}
+/* 제목 + 그라데 헤어라인 — .ecTitle 문법 그대로. --acc 는 그 토벌 색(renderDgSheet 가 심는다) */
+.dgSheetTtl{position:relative;font-family:var(--font-ti);font-size:17px;letter-spacing:.5px;color:#eaf1fb;
+    text-shadow:0 1px 3px rgba(0,0,0,.65);margin-bottom:11px;padding-bottom:9px}
+.dgSheetTtl::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;opacity:.5;
+    background:linear-gradient(90deg,var(--acc,var(--acc-sel)),transparent 72%)}
+.dgSheetX{position:absolute;top:7px;right:7px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+    z-index:2;color:#9a9a9a;background:none;border:none;cursor:pointer}
+.dgSheetX svg{width:13px;height:13px}
+/* 마을 상단 설정 — 좌측 로그아웃과 짝 */
+.twGear{flex:0 0 auto;font-family:inherit;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:#8b98a8;background:none;border:none;transition:color .16s}
+.twGear svg,.twGear .ic{width:17px;height:17px}
+.twGear:hover{color:#fff}
+/* ── 하단 시트(친구) — 마을 위로 올라온다 ── */
+.twSheet{position:absolute;left:0;right:0;bottom:var(--navH);z-index:63;display:flex;flex-direction:column;
+    max-height:64%;padding:0 0 8px;background:rgba(11,16,29,.96);border-top:1px solid var(--hbEdge,rgba(90,120,190,.26));
+    box-shadow:0 -14px 34px -20px #000}
+.twSheet.hide{display:none}
+#msSocialDock .msTabs2{display:none}
+/* ⚠ 반투명·그라데로 두면 밑을 지나가는 행이 글자 사이로 비쳐 겹쳐 보인다 — 불투명이어야 한다 */
+.twSheetHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
+    font-size:var(--fs-xl);font-weight:800;color:#eaf1fb}
+.twSheetX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:#8b98a8;background:none;border:none}
+.twSheetX svg{width:15px;height:15px}
+.twSheet .hsList{margin:8px 12px 0}
+/* 던전 = 좌우 화살표로 한 장씩. ⛔ 이 팝업엔 푸른기를 쓰지 않는다(스모크가 검사) — 강조는 흰색·금색 */
+.hbPickDg{flex:none;display:flex;align-items:center;gap:8px;padding:0 12px 10px}
+.hbDgc{flex:1 1 auto;min-width:0;position:relative;height:64px;overflow:hidden;
+    background:#101216;border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.hbDgcArt{position:absolute;inset:0;background-position:center;background-size:cover}
+.hbDgcArt::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(4,5,9,.2),rgba(16,18,22,.94))}
+.hbDgcTx{position:absolute;left:0;right:0;bottom:0;padding:5px 8px 6px;text-align:center}
+.hbDgcTx b{display:block;font-family:var(--font-ti);font-size:var(--fs-lg);color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.hbDgcTx em{font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-size:var(--fs-sm);font-weight:700;color:#9a9a9a;letter-spacing:.3px}
+.hbDgc.lock .hbDgcArt{filter:grayscale(1) brightness(.5)}
+.hbDgc.lock .hbDgcTx b{color:#7a7a7a}
+/* 라운드 세로 피커 — 아래가 1라운드, 위로 갈수록 큰 수. 가운데 띠에 멈춘 것이 선택 */
+.hbRdPick{position:relative;flex:none;height:264px;overflow:hidden;margin-bottom:2px}
+/* 높이를 못 박는다 — flex:1 로 두면 부모가 내용 높이라 안쪽 스크롤이 카드 밖으로 샌다 */
+.hbRdBand{position:absolute;left:12px;right:12px;top:50%;height:40px;transform:translateY(-50%);
+    pointer-events:none;z-index:2;border-top:1px solid rgba(255,255,255,.34);border-bottom:1px solid rgba(255,255,255,.34);
+    box-shadow:0 0 10px -4px rgba(255,255,255,.5)}
+.hbRd.far{color:#4a4d55;background:rgba(255,255,255,.015);cursor:default}
+.hbPickBtns{flex:none;display:flex;gap:8px;justify-content:center;padding:10px 12px 2px}
+/* 확정 = 금색(역할 액센트 §2) */
+.hbModeRow{flex:none;display:flex;gap:8px;padding:0 12px 8px}
+.hbModeBtn{flex:1 1 0;display:flex;align-items:center;justify-content:center;height:34px;cursor:pointer;
+    font-family:inherit;color:#7a7a7a;background:rgba(255,255,255,.045);
+    border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.hbModeBtn b{font-family:var(--font-ti);font-size:var(--fs-lg);color:#9a9a9a}
+.hbModeBtn.on{color:#c8c8c8;background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.34)}
+.hbModeBtn.on b{color:#fff}
+.hbRd.rwGot{color:#7a7a7a;border-color:var(--metal-edge)}
+.hbRd.far{opacity:.45;cursor:default}
+/* 아직 못 간 라운드 = 목표만 보여 주고 못 고른다 */
+.hbRdRw{position:absolute;right:3px;top:2px;font-style:normal;font-size:9px;line-height:1}
+/* 보상 표기용 재화 아이콘(resIco) */
+.dqRw{color:#ffd24a}
+/* 보상 = 금색(역할 액센트 §2) */
+.dqRw+.dqRw::before{content:' · ';color:#5a5a5a}
+.twMap{position:relative;flex:1;min-height:0;overflow:hidden;touch-action:none;
+    background-color:#0c0c0e;
+    background-image:
+      linear-gradient(rgba(255,255,255,.034) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.034) 1px,transparent 1px),
+      radial-gradient(ellipse at 50% 42%,rgba(90,90,96,.16),transparent 72%);
+    background-size:40px 40px,40px 40px,auto}
+/* 월드 레이어 — 화면보다 큰 마을 전체. 카메라 = 이 요소의 transform 한 줄만 매 프레임 갱신(구역이 늘어도 비용 불변) */
+.twWorld{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+/* 화면 밖 구역 방향 표시 — 중립(시안은 '지금 선택된 것' 전용, DESIGN §2) */
+.twEdge{position:absolute;transform:translate(-50%,-50%);z-index:2;display:flex;align-items:center;justify-content:center;
+    width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;opacity:.72;
+    background:rgba(14,14,16,.88);border:1px solid rgba(255,255,255,.14);box-shadow:0 4px 12px -4px #000}
+.twEdge:hover{opacity:1}
+.twEdge.hide{display:none}
+.twEdge:active{transform:translate(-50%,-50%) scale(.92)}
+.twTapFx{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:1px solid rgba(255,255,255,.7);pointer-events:none;z-index:1;animation:twTap .5s ease-out forwards}
+/* 🏘 마을 건설 — 배경 그림 위 슬롯 + 하단 구매 바 */
+.vgSlot{position:absolute;transform:translate(-50%,-50%);width:76px;display:flex;flex-direction:column;
+    align-items:center;gap:2px;cursor:pointer;z-index:4}
+.vgSlot.empty{opacity:.42}
+.vgSlot .vgPad{width:56px;height:34px;border-radius:50%;position:relative;
+    background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.08),transparent 68%);
+    border:1px solid rgba(255,255,255,.14)}
+.vgSlot img.vgIco{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);width:60px;height:60px;
+    object-fit:contain;filter:drop-shadow(0 5px 7px rgba(0,0,0,.6));pointer-events:none}
+.vgSlot .vgNm{font-size:var(--fs-xs);font-weight:800;color:#dfeaff;text-shadow:0 1px 2px #000;white-space:nowrap}
+.vgBadge{position:absolute;left:50%;top:-14px;transform:translateX(-50%);display:flex;align-items:center;gap:3px;
+    padding:1px 6px;border-radius:9px;background:rgba(8,12,18,.9);border:1px solid var(--gold);
+    font-size:var(--fs-xs);font-weight:800;color:var(--gold);white-space:nowrap;z-index:5}
+.vgBadge img{width:11px;height:11px;object-fit:contain}
+.vgBadge.full{border-color:#ff3b3b;color:#ff3b3b}
+body.vgMode #townScreen{padding-top:0;padding-bottom:var(--navH)}
+body.vgMode .twMap{position:absolute;left:0;right:0;top:0;bottom:var(--navH);flex:none}
+/* 프로필 위치는 사냥터와 같다 — 재화 바는 우측 정렬이라 같은 줄을 나눠 쓴다(내리면 어긋나 보인다) */
+body.vgMode .hbHudTop{position:absolute;left:8px;top:3px;z-index:63}
+.vgBack{display:none}
+body.vgMode .vgBack{display:flex;position:absolute;right:9px;top:calc(var(--curH) + 6px);z-index:64;
+    width:32px;height:32px;align-items:center;justify-content:center;cursor:pointer;
+    color:#cfe0f5;background:rgba(10,14,20,.82);border:1px solid var(--metal-edge);border-radius:var(--r-lg)}
+body.vgMode .vgBack svg{width:17px;height:17px}
+body.vgMode .vgBack:active{transform:translateY(1px)}
+body.vgMode .twBar{display:none}
+/* 마을은 사냥터와 같은 상단(공용 재화 바)만 쓴다 — 두 겹으로 보이던 것 */
+body.vgMode #townScreen{padding-bottom:var(--navH)}
+/* 하단 네비 자리 확보 */
+.vgShop{position:absolute;left:0;right:0;bottom:var(--navH);z-index:8;padding:0 8px 8px;max-height:52%;overflow-y:auto}
+.twGround{position:absolute;inset:-25.0% -21.0%;pointer-events:none;
+    background:linear-gradient(rgba(6,8,12,.42),rgba(6,8,12,.52)),url('../assets/backgrounds/town/town_ground.webp') 50% 50%/cover no-repeat,url('../assets/tiles/terran_tile_light.webp') 0 0/128px repeat}
+/* 마을 바닥 그림(없으면 아래 타일이 그대로 보인다) */
+.twGround::after{content:'';position:absolute;inset:0;pointer-events:none;   /* 가장자리 비네트 — 월드 끝이 자연스럽게 어두워짐 */
+    background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(0,0,0,.55) 100%)}
+.twZone{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:2}
+/* 광장 = 상호작용 없는 지형지물. 눌리지 않고, 발판을 크게 깔아 '가운데 마당'으로 읽히게 한다 */
+.twZone.deco{pointer-events:none;z-index:1}
+.twZone.deco::before{width:150px;height:150px;top:22px;
+    background:radial-gradient(circle,rgba(255,255,255,.055),rgba(255,255,255,.02) 58%,transparent 72%);border-color:rgba(255,255,255,.06)}
+/* 구역 발판 — 시안 글로우 대신 중립 원판(어디를 밟을 수 있는지만 알려준다) */
+.twZone::before{content:'';position:absolute;left:50%;top:18px;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;z-index:-1;pointer-events:none;
+    background:radial-gradient(circle,rgba(255,255,255,.07),transparent 66%);border:1px solid rgba(255,255,255,.07)}
+.twZone:hover::before{background:radial-gradient(circle,rgba(255,255,255,.12),transparent 66%);border-color:rgba(255,255,255,.16)}
+.twEdge,.twPet{font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif}
+.twPet{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;border-radius:var(--r-lg);background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
+.twZone:active{transform:translate(-50%,-50%) scale(.94)}
+.twAvFlip{display:block;transition:transform .12s ease}
+.twAvFlip.l{transform:scaleX(-1)}
+.twAvShadow{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%);width:20px;height:6px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(1px)}
+.twCard{width:320px;max-width:88vw;max-height:82%;display:flex;flex-direction:column}
+.twBody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:4px}
+.twDel{flex:0 0 auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:var(--r-md);cursor:pointer;font-size:var(--fs-lg);line-height:1;
+    color:#8d97a4;background:rgba(255,255,255,.04);border:1px solid var(--metal-edge)}
+.twDel:active{transform:translateY(1px)}
+/* 크기·글꼴은 공용 화면 제목 규칙이 정한다(.curTitle 옆) */
+#campReb .crX{width:32px;height:32px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(0,0,0,.35);color:#c3ccd8;font-family:inherit;font-size:15px;cursor:pointer;padding:0}
+#campReb .crX:active{background:rgba(255,255,255,.08)}
+#campTree .ctProg{display:none}
+#campTree .ctFade{ animation:ctFadeIn .5s .3s ease both }
+@media (prefers-reduced-motion:reduce){
+  #campTree .ctFade{ animation:none }
+}
+#campTree .ctSel{filter:drop-shadow(0 0 4px var(--acc-sel,#5cd6ff))}
+#campTree .ctSp{stroke-width:.7;fill:none;pointer-events:none}
+/* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
+#campTree .ctSel{fill:none;stroke:var(--acc-sel,#5cd6ff);stroke-width:1.1;opacity:.85;pointer-events:none}
+#campTree .ctBrNm{text-anchor:middle;dominant-baseline:middle;pointer-events:none;
+  font-size:10px;letter-spacing:3px;font-weight:800}
+#campTree .ctHint{padding:2px 0 4px;text-align:center;font-size:var(--fs-md);color:#69737f}
+#campTree .ctHd{display:flex;align-items:center;gap:10px}
+#campTree .ctHead{display:flex;align-items:center;gap:14px}
+/* 마디는 아이콘이 없다 — 갈래 색 점 하나로 어디인지만 말한다 */
+#campTree .ctDot{flex:0 0 auto;width:10px;height:10px;border-radius:50%}
+#campTree .ctN{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:var(--fs-lg);color:#8d9aa9;margin-left:6px}
+#campTree .ctMeta{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);
+  letter-spacing:.1em;color:#8d9aa9}
+#campTree .ctMeta i{font-style:normal;color:#5b6674}
+/* 계열 진행도 — 이 별이 다섯 칸 중 어디인가 */
+#campTree .ctDots{display:flex;gap:4px;margin-top:9px}
+#campTree .ctDots i{flex:1;height:3px;border-radius:var(--r-bar)}
+/* 지금 ▶ 다음 — 큰 숫자가 주인공. 크기가 다른 글자는 **밑선**을 맞추고, 예고만 가운데로 */
+#campTree .ctStep{display:flex;align-items:baseline;gap:9px;margin-top:11px;
+  padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
+#campTree .ctNow{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:16px;color:#7b8593}
+#campTree .ctArw{color:#5b6674;font-size:12px;align-self:center;line-height:1}
+#campTree .ctNext{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:26px;font-weight:700;color:#fff;line-height:1}
+#campTree .ctAfter{margin-left:auto;align-self:center;font-size:var(--fs-sm);line-height:1.5;
+  color:#69737f;text-align:right}
+#campTree .ctAfter b{font-family:var(--font-num);color:#8d9aa9;font-weight:700}
+/* 머리줄 — 왼쪽 이름 / 오른쪽 값. 상점 탭에서는 보유 젬을 같은 자리에 쓴다 */
+#campRune .rnHead{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);font-size:12px;color:#98a2b3}
+#campRune .rnHead b{color:#eef1f6;font-size:14px;display:inline-flex;align-items:center;gap:4px}
+#campRune .rnHead b .ri{width:14px;height:14px;flex:none;display:block;object-fit:contain}
+/* ⚠ 옛 .rnMapHd(판 위에 뜨던 머리줄)는 상단 제목 옆(.rnRound)으로 합쳤다(2026-09-03) */
+#campRune .rnMapHd b{font-family:var(--font-num);font-size:13px;color:var(--gold);font-weight:700}
+/* 유니크 꼭짓점 점 */
+#campRune .rnEmB{fill:url(#rnEm);pointer-events:none}
+#campRune .rnHxOut{fill:none;stroke:color-mix(in srgb,var(--rg) 22%,transparent);stroke-width:1}
+#campRune .rnHxIn{fill:none;stroke:color-mix(in srgb,var(--rg) 28%,transparent);stroke-width:1}
+#campRune .rnPl{fill:rgba(175,200,232,.30);font-family:var(--font-num);font-size:12px;text-anchor:middle}
+#campRune .rnNm{fill:#c3ccd8;font-size:8px;text-anchor:middle}
+#campRune .rnNm.uq{font-size:9.5px;font-weight:700}
+/* 값 — 칸 **밖 아래**에 매달린다(이름을 가리지 않는다) */
+#campRune .rnVl{font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:8px;text-anchor:middle;dominant-baseline:hanging}
+#campRune .rnSlots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+#campRune .rnSlot{position:relative;min-height:62px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;padding:6px 4px;cursor:pointer;
+  border:1px solid var(--metal-edge);border-radius:var(--r-sm);
+  background:rgba(0,0,0,.3);color:#c3ccd8;font-family:inherit;font-size:11px}
+#campRune .rnSlot.em{color:#5b6472;font-size:20px}
+#campRune .rnSlot.lk{cursor:default;opacity:.55}
+#campRune .rnSlot.lk .rnLk{font-style:normal;font-size:14px}
+#campRune .rnSlot.lk .rnLkR{font-size:10px;color:#8b95a5}
+#campRune .rnSlot.on{border-color:color-mix(in srgb,var(--rg) 55%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.35))}
+#campRune .rnSlot.on .ic{width:18px;height:18px}
+#campRune .rnSlN{color:#eef1f6}
+#campRune .rnSlV{color:var(--rg);font-size:10px}
+#campRune .rnSlot.sel{outline:1px solid var(--acc-sel);outline-offset:-2px}
+#campRune .rnNext{margin-top:6px;font-size:11px;color:#8b95a5;text-align:center}
+#campRune .rnNext b{color:#c3ccd8}
+/* 고르기 판 — 칸 바로 아래에 펼쳐진다(새 팝업을 만들지 않는다) */
+#campRune .rnPick{border:1px solid var(--acc-sel);border-radius:var(--r-md);
+  background:rgba(10,14,20,.85);padding:8px;display:flex;flex-direction:column;gap:5px}
+#campRune .rnIO{font-size:11px;color:#c3ccd8}
+#campRune .rnBi{width:34px;height:34px;display:block;margin:0 auto 2px;object-fit:contain}
+
+/* ══════════ [40-social.css] 2026-09-05 — 어디에도 안 쓰는 클래스 14개의 규칙 ══════════ */
+/* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
+#twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
+/* 친구 오버레이(스텁 — 다음 단계에서 친구목록/메시지/파티 채움) */
+.foSoon{display:flex;align-items:center;justify-content:center;height:120px;color:#7d8b98;font-size:var(--fs-lg)}
+.foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}
+.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
+.foSecOn b{color:var(--ok)}
+.foSecOff{color:#6a727d;margin-top:13px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}
+.foSecOff b{color:#828b96}
+.ptAddLbl{font-size:var(--fs-xs);font-weight:600;color:#aeb7c1}
+.ptSlot.empty:hover .ptAddLbl{color:var(--neon-lt)}
+.cpDiffBtns{margin-bottom:4px}
+/* (구 인원 −/+ 스테퍼 .cpStepper/.cpStepBtn/.cpStepVal 은 폐지 — 1~8 칸 게이지(.cpPGrid)로 바뀌었다) */
+.cpRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px}
+.cpRow .cpLabel{margin:0}
+.cpPre{display:flex;gap:7px;margin-bottom:10px}
+.cpPreC{position:relative;flex:1;min-width:0;padding:10px 6px;cursor:pointer;overflow:hidden;text-align:center;
+    border:1px solid rgba(255,255,255,.08);border-radius:var(--r-bar);
+    background:linear-gradient(180deg,#131418,#0a0b0d);transition:border-color .12s,background .12s}
+.cpPreC b{display:block;font-family:var(--font-ti);font-size:12.5px;font-weight:400;color:#c6cdd6}
+.cpPreC i{display:block;font-style:normal;font-size:9.5px;color:#7d8792;margin-top:3px}
+.cpPreC.on{border-color:rgba(90,169,255,.45);background:linear-gradient(0deg,rgba(90,169,255,.14),rgba(11,12,14,.92) 62%)}
+.cpPreC.on b{color:#fff}
+.cpPreC.on::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--tmC1);box-shadow:0 0 8px var(--tmC1)}
+.cpPreC.cu.on{border-color:rgba(255,177,77,.45);background:linear-gradient(0deg,rgba(255,177,77,.14),rgba(11,12,14,.92) 62%)}
+.cpPreC.cu.on::after{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+/* ♾️ 무한 모드 토글(난이도 대안) — 보라 강조, 켜지면 위 난이도 pill 흐려짐 */
+.cpInfBtn{--dc:#b06bff;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:6px;padding:8px;border-radius:9px;font-family:inherit;font-weight:800;cursor:pointer;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);color:#a7b2bf;transition:background .13s,border-color .13s,color .13s}
+.cpInfBtn .ddN{font-size:11.5px}
+.cpInfBtn.on{color:#fff;border-color:var(--dc);background:linear-gradient(180deg,rgba(176,107,255,.16),rgba(176,107,255,.04));box-shadow:0 0 13px -5px var(--dc),inset 0 0 13px -7px var(--dc)}
+.cpInfBtn.on .ddN{color:#d3b3ff;text-shadow:0 0 8px var(--dc)}
+.cpDiffBtns .moDiffBtn.dim{opacity:.38}
+.cpDiffInfo .cpdInf{color:#c6a3ee;font-weight:700}
+.cpForm .cpRow{padding:9px 0;margin:0}
+.cpForm .cpRow .cpLabel{margin:0}
+#createPanel .cpDiffBtns{margin-bottom:9px}
+/* 난이도 = 이름 pill 한 줄(선택 시 난이도 색 강조) + 아래 정보줄 */
+.cpDiffBtns{display:flex;gap:6px;margin-bottom:7px}
+.cpDiffBtns .moDiffBtn{flex:1;min-width:0;padding:9px 2px;border-radius:9px;font-weight:800;text-align:center;
+    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);color:#a7b2bf;box-shadow:none;transition:background .13s,border-color .13s,color .13s}
+.cpDiffBtns .moDiffBtn .ddN{font-size:9.5px;letter-spacing:-.2px;display:block;line-height:1.1;white-space:nowrap}
+.cpDiffBtns .moDiffBtn.on{color:#fff;border-color:var(--dc);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));box-shadow:0 0 12px -5px var(--dc),inset 0 0 13px -7px var(--dc)}
+.cpDiffBtns .moDiffBtn.on .ddN{color:var(--dc);text-shadow:0 0 8px var(--dc)}
+.cpDiffInfo .cpdE{color:#b58585}
+.cpDiffInfo .cpdE b{color:#ff9e9e;font-weight:800;font-family:var(--font-num)}
+.cpDiffInfo .cpdC{color:#b59d63}
+.cpDiffInfo .cpdC b{color:#ffd485;font-weight:800;font-family:var(--font-num)}
+
+/* ══════════ [40-social.css] 2026-09-05 — 어디에도 안 쓰는 클래스 5개의 규칙 ══════════ */
+.msTabs2{flex:0 0 auto;display:block;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
+.msTabs2 .pdSeg{max-width:none;margin:0}
+.msTabs2 .pdSegBtn{position:relative}
+.moInfo{text-align:left;margin:2px 0 2px;padding:12px 14px 13px;border-radius:13px;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));border:1px solid var(--metal-edge)}
+#createPanel .sdInf{margin:9px 0 0}
+.sdInf.on{background:linear-gradient(180deg,rgba(176,107,255,.16),rgba(176,107,255,.04)) padding-box,
+    linear-gradient(180deg,#b06bff,#5b2f8f) border-box}
+.sdInf.on b{color:#efe2ff;text-shadow:0 0 8px #b06bff}
+/* 무한 모드 = 판을 걷고 왼쪽 보라 막대만 남긴다(막대가 곧 이 줄의 정체다) */
+#createPanel .sdInf{background:none;box-shadow:none;border:0;padding-left:11px}
+.opTitle,.shopTitle{
+    font-family:var(--font-ti);font-weight:700}
+
+/* ══════════ [30-home.css] 2026-09-05 — 어디에도 안 쓰는 클래스 2개의 규칙 ══════════ */
+.hbRdScroll{height:100%;overflow-y:auto;overflow-x:hidden;padding:0 12px;
+    display:flex;flex-direction:column;gap:6px;scroll-snap-type:y mandatory;overscroll-behavior:contain}
+.hbRd{flex:none;height:40px;scroll-snap-align:center;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:var(--fs-lg);font-weight:800;
+    color:#7a7a7a;background:rgba(255,255,255,.035);border:1px solid var(--metal-edge);border-radius:var(--r-bar)}
+.hbRd.on{color:#fff;background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.45)}
+/* 아직 못 가는 '다음 목표' — 보이되 못 고른다 */
+.hbRd u{text-decoration:none;font-family:var(--font-ko);font-size:var(--fs-xs);color:#8a8a8a}
+.hbRd.on u{color:#cfcfcf}
+.hbRd.best{color:#ffd24a;border-color:rgba(255,210,74,.45)}
+.hbRd{position:relative}
+.hbRd.rw{color:#ffd24a;border-color:rgba(255,210,74,.45);background:rgba(255,210,74,.07)}
+
+/* ══════════ [30-home.css] 2026-09-05 — 어디에도 안 쓰는 클래스 6개의 규칙 ══════════ */
+/* 룬 상점 — 룬 한 줄 + 등급 버튼들 */
+#campRune .rnItem{border-top:1px solid rgba(255,255,255,.06);padding:8px 0 6px}
+#campRune .rnItem:first-child{border-top:0}
+#campRune .rnIH{display:grid;grid-template-columns:20px auto 1fr auto;align-items:center;gap:6px}
+#campRune .rnIH .ic{width:16px;height:16px}
+#campRune .rnIN{font-size:13px;color:#eef1f6}
+#campRune .rnID{font-size:11px;color:#8b95a5}
+#campRune .rnBuys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+#campRune .rnBuys:has(> :only-child){grid-template-columns:1fr}
+/* 목록 줄 — 이름·설명 한 줄, 그 아래 등급 버튼들 */
+#campRune .rnItem{border:1px solid rgba(150,170,200,.14);border-radius:var(--r-md);
+  padding:7px 8px;background:rgba(255,255,255,.02)}
+#campRune .rnIH{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+#campRune .rnIi{width:26px;height:26px;flex:none;display:block;object-fit:contain}
+#campRune .rnIN{font-size:12px;color:#eef1f6;font-weight:600}
+#campRune .rnID{font-size:10.5px;color:#aab4c2}
+#campRune .rnIi{width:26px;height:26px;flex:none;object-fit:contain}
