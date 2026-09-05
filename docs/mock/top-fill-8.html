@@ -1,0 +1,135 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>상단 바 내부를 채우는 8안 — 밑변 광원 + 안쪽 빛</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --topPad:10px;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(160,168,182,.26) 13%,
+    rgba(186,194,208,.55) 30%,rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,
+    rgba(160,168,182,.26) 87%,rgba(150,158,172,.14) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 12px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:74px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.zlab{margin:6px 0 3px;font-size:10px;color:var(--txt-off);font-family:var(--font-num)}
+
+.ph{position:relative;width:290px;height:250px;overflow:hidden;border-radius:10px;
+  background:#080b10;border:1px solid var(--metal-edge)}
+.body{position:absolute;left:0;right:0;top:52px;bottom:0;padding:10px;
+  background:radial-gradient(120% 70% at 50% 0%,#121a24,#080b10 70%)}
+.sec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);padding:7px;margin-bottom:8px}
+.secH{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.secT{font-size:11.5px;color:var(--txt-dim);letter-spacing:.08em}
+.secN{font-size:10px;color:var(--txt-mute)}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.card{height:44px;border:1px solid rgba(150,170,200,.20);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#141c26,#0a0e14)}
+.card.on{border-color:rgba(255,207,107,.45)}
+
+/* ── 바 — 여덟 안이 **공통으로** 쓰는 뼈대 ── */
+.bar{position:relative;height:52px;display:flex;align-items:center;gap:10px;
+  padding:var(--topPad) 10px 0;overflow:hidden;
+  background:linear-gradient(180deg,rgba(8,12,18,.96),rgba(8,12,18,.90))}
+.ph .bar{position:absolute;left:0;right:0;top:0;z-index:3}
+/* 밑변 광원 — 여덟 안 모두 그대로 둔다(이것이 기준선이다) */
+.bar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;z-index:2;
+  background:var(--edge-light)}
+.bar .tt{position:relative;z-index:2;font-family:var(--font-ti);font-size:15px;color:#eef1f6;
+  letter-spacing:.10em;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.res{position:relative;z-index:2;margin-left:auto;display:flex;align-items:center;gap:6px}
+.res b{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-num);
+  font-size:12px;font-weight:600;color:#eef1f6}
+.dot{width:11px;height:11px;border-radius:2px;display:block}
+.dot.m{background:linear-gradient(180deg,#7fd4ff,#2b8fd6)}
+.dot.g{background:linear-gradient(180deg,#8ef2a8,#2fa15a)}
+.dot.j{background:linear-gradient(180deg,#e79cff,#a63fd0)}
+.set{width:20px;height:20px;border-radius:var(--r-bar);border:1px solid var(--metal-edge);
+  background:rgba(255,255,255,.05)}
+/* 안쪽 빛이 들어가는 층 — 글자보다 아래(z 1) */
+.fill{position:absolute;inset:0;z-index:1;pointer-events:none}
+
+/* ══ ① 아래에서 올라오는 오로라(중립) ══ */
+.f1{background:linear-gradient(0deg,rgba(190,215,255,.13) 0%,rgba(190,215,255,.05) 34%,transparent 68%)}
+/* ══ ② 오로라가 **왼쪽으로 치우친다** — 이름 쪽이 밝다 ══ */
+.f2{background:radial-gradient(120% 150% at 16% 118%,rgba(190,215,255,.20),rgba(190,215,255,.05) 46%,transparent 72%)}
+/* ══ ③ 위 그늘 + 아래 오로라(두 층) ══ */
+.f3{background:linear-gradient(180deg,rgba(0,0,0,.42),transparent 46%),
+  linear-gradient(0deg,rgba(190,215,255,.13),transparent 62%)}
+/* ══ ④ 양쪽 모서리에서 피는 빛 ══ */
+.f4{background:radial-gradient(90% 130% at 2% 120%,rgba(190,215,255,.18),transparent 60%),
+  radial-gradient(90% 130% at 98% 120%,rgba(190,215,255,.14),transparent 60%)}
+/* ══ ⑤ 금속 결 — 아주 옅은 세로 줄 ══ */
+.f5{background:linear-gradient(0deg,rgba(190,215,255,.10),transparent 60%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.030) 0 1px,transparent 1px 4px)}
+/* ══ ⑥ 육각 그물(판의 어휘) ══ */
+.f6{background:linear-gradient(0deg,rgba(190,215,255,.10),transparent 62%),
+  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='19'%3E%3Cpath d='M5.5 0 L16.5 0 L22 9.5 L16.5 19 L5.5 19 L0 9.5 Z' fill='none' stroke='rgba(190,215,255,0.05)' stroke-width='1'/%3E%3C/svg%3E") repeat}
+/* ══ ⑦ 밑변 광원이 **번진다** — 선과 한 몸 ══ */
+.f7{background:linear-gradient(0deg,rgba(232,236,244,.22) 0,rgba(232,236,244,.07) 5px,transparent 16px)}
+/* ══ ⑧ 아래 오로라 + 위 헤어라인 ══ */
+.f8{background:linear-gradient(0deg,rgba(190,215,255,.13),transparent 62%)}
+.f8::before{content:'';position:absolute;left:10px;right:10px;top:var(--topPad);height:1px;
+  background:linear-gradient(90deg,transparent,rgba(190,215,255,.30),transparent)}
+
+/* 🔍 확대 컷 — 미세한 빛은 실제 크기에서 안 보인다 */
+.zoom{width:290px;overflow:hidden;border-radius:var(--r-md);border:1px solid var(--metal-edge)}
+.zoom .bar{width:145px;zoom:2}
+</style></head><body>
+
+<h1>상단 바 <b>안쪽</b>을 채우는 8안 — 밑변 광원은 그대로 두고</h1>
+<p>①안(밑변 광원 한 줄)을 기준으로 <b>바 안을</b> 채운다. 여덟 안 모두 밑변 광원과 글자 자리는 <b>똑같다</b> —
+안쪽 빛만 다르다. ⚠ 이 바는 네 화면이 함께 쓰고 <b>배경이 제각각</b>이라(환생 키 아트 · 룬 성좌 ·
+유즈맵 목록 · 상점) 바 자체는 <b>불투명</b>해야 한다 — 그래서 빛은 «비치는» 것이 아니라 «바 안에 칠하는» 것이다.
+🔍 미세한 빛은 실제 크기에서 잘 안 보여 각 안 아래에 <b>2배 확대 컷</b>을 함께 뒀다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+function barHTML(n){
+  return '<div class="bar"><span class="fill f' + n + '"></span>'
+   + '<span class="tt">룬 상점</span>'
+   + '<span class="res"><b><i class="dot m"></i>0</b><b><i class="dot g"></i>0</b>'
+   +   '<b><i class="dot j"></i>0</b><span class="set"></span></span></div>'; }
+function phone(n){
+  return '<div class="ph">' + barHTML(n)
+   + '<div class="body">'
+   +   '<div class="sec"><div class="secH"><span class="secT">주간 할인</span>'
+   +     '<span class="secN">1일 20시간 뒤 갱신</span></div>'
+   +     '<div class="g3"><span class="card on"></span><span class="card"></span><span class="card on"></span></div></div>'
+   +   '<div class="sec"><div class="secH"><span class="secT">상점</span></div>'
+   +     '<div class="g3"><span class="card"></span><span class="card on"></span><span class="card"></span></div></div>'
+   + '</div></div>'; }
+
+var CASES = [
+{ t:'아래에서 올라오는 오로라', d:'말씀하신 안. 바 <b>밑변에서 위로</b> 옅은 빛이 번진다(중립 흰빛). 광원 한 줄이 «선»이 아니라 <b>«빛의 가장자리»</b>로 읽힌다. <em>가장 조용하고 어느 배경에서도 안전하다.</em>' },
+{ t:'왼쪽으로 치우친 오로라', d:'같은 빛인데 <b>왼쪽 아래에서</b> 핀다 — 화면 이름이 있는 쪽이 밝아져 <b>제목이 먼저</b> 읽힌다. 재화 줄 쪽은 조용히 남는다.' },
+{ t:'위 그늘 + 아래 오로라', d:'위에서 <b>그늘</b>이 내려오고 아래에서 <b>빛</b>이 올라온다. 두 층이 만나 바에 <b>깊이</b>가 생긴다 — 캠프의 「내려오는 그늘」과 같은 어휘를 반대로 쓴 것.' },
+{ t:'양쪽 모서리에서 피는 빛', d:'<b>왼쪽·오른쪽 아래 구석</b> 두 곳에서 빛이 핀다. 가운데가 비어 <b>양 끝에 무게</b>가 실린다 — 이름과 재화가 각자 자리를 갖는다.' },
+{ t:'금속 결', d:'오로라 위에 <b>아주 옅은 세로 줄</b>(4px 간격)을 깐다. 브러시 금속판 느낌이라 각진 SF 와 붙는다. ⚠ 화면 밀도가 높으면 <s>모아레</s>가 생길 수 있다.' },
+{ t:'육각 그물', d:'오로라 위에 <b>육각 무늬</b>를 아주 옅게. 룬 판·커맨드 카드와 같은 도형이라 판 전체가 한 문법이 된다. 배경이 있는 화면(환생)에서는 거의 안 보인다.' },
+{ t:'광원이 번진다', d:'선을 <b>위로 16px 번지게</b> 한다 — 「선 + 빛」이 아니라 <b>하나</b>다. 가장 단순하면서 바 아래쪽이 확실히 밝아진다.' },
+{ t:'아래 오로라 + 위 헤어라인', d:'①에 <b>위쪽 헤어라인</b>을 한 줄 더한다. 바가 <b>두 선 사이의 띠</b>로 읽혀 「구역」이라는 인상이 가장 강하다.' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c, i){
+  var n = i + 1;
+  return '<div class="cell"><p class="cap"><i>' + n + '</i>' + c.t + '</p>'
+   + '<p class="sub">' + c.d + '</p>'
+   + phone(n)
+   + '<p class="zlab">🔍 2배 확대</p>'
+   + '<div class="zoom">' + barHTML(n) + '</div></div>'; }).join('');
+</script></body></html>
