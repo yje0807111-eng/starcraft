@@ -12433,6 +12433,16 @@ async function groupLobby(){
           const el=[...w.querySelectorAll('.cgStat')];
           assert(Math.max(...el.slice(0,3).map(box))<Math.min(...el.slice(3).map(box)),
             '앞 셋이 왼쪽 열에 안 모였다 — 열 흐름이 깨졌다: '+L.join(',')+' | '+R.join(',')); }
+        // ⛔ **두 열이 판을 끝까지 채우는가.** 안 쓰는 열이 하나라도 더 있으면 내용이 통째로
+        //   왼쪽으로 쏠린다 — 실제로 그랬다(2026-09-05): 캠프 전용 override 가 옛 `repeat(3,1fr)`
+        //   을 걸고 있어 셋째 열이 비었고, 판 276px 중 오른쪽 96px 가 빈 칸이었다.
+        //   ⛔ `.cgStats.cgWide` 에 `grid-template-columns` 를 지정하지 말 것(열 흐름이 만든다).
+        { const wr=w.getBoundingClientRect();
+          const last=[...w.querySelectorAll('.cgStat')].pop().getBoundingClientRect();
+          assert(wr.right-last.right<4,
+            '오른쪽 열이 판 끝까지 안 간다 — 안 쓰는 열이 있다(내용이 왼쪽으로 쏠린다): 남은 '
+            +(wr.right-last.right).toFixed(1)+'px');
+          assert(colsOf().length===2,'열이 둘이 아니다: '+colsOf().join(' ')); }
         // 「라벨 ‥‥ 값」이 **한 줄**이다 — 위아래로 쌓이면 세로를 두 배로 먹는다
         { const c=w.querySelector('.cgStat'), lb=c.querySelector('span'), vb=c.querySelector('b');
           assert(Math.abs(lb.getBoundingClientRect().top-vb.getBoundingClientRect().top)<8,

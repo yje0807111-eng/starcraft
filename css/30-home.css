@@ -1100,10 +1100,13 @@
   /* ⛏ 채굴 토글 — 「MY BASE」 요약판의 **그리드 한 칸**(사용자 확정 2026-08-27).
      생김새는 공용 슬롯(.cgSlot)이 그대로 갖는다 — 여기서는 「한 칸만 보이게」와 「켜짐」만 정한다. */
   #phone.campMode #btSheetBody .cgSlot.empty{display:none}          /* 빈 칸 셋을 감춘다 = 한 칸만 */
-  /* ⚠ 슬롯이 옆에 서면서 왼쪽 통계 판이 좁아진다 — 4열 그대로 두면 글자가 줄바꿈돼 깨진다.
-     통계 판은 전폭(wide)일 때처럼 넓게 두고, 격자만 3열로 줄인다. */
+  /* ⚠ 슬롯이 옆에 서면서 왼쪽 통계 판이 좁아진다 — 판은 전폭(wide)일 때처럼 넓게 둔다. */
   #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgInfo{flex:1 1 auto;max-width:none;min-width:0}
-  #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgStats.cgWide{grid-template-columns:repeat(3,1fr)}
+  /* ⛔ 여기서 `grid-template-columns` 를 **지정하지 말 것**(2026-09-05).
+     요약판은 이제 줄 목록이고 **열 흐름**이라(css/10-game.css `.cgStats.cgWide`) 열은
+     `grid-auto-columns` 가 필요한 만큼만 만든다 — 두 열이다.
+     옛 `repeat(3,1fr)` 이 남아 있었더니 **쓰지 않는 셋째 열**이 생겨 내용이 통째로 왼쪽으로
+     쏠렸다(실측: 판 276px 중 오른쪽 96px 가 빈 칸이었다). */
   /* 한 칸만 남으므로 격자도 **1열**로 — 4열 그대로 두면 칸이 1/4 폭으로 쪼그라든다. */
   #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgCol{flex:none}
   #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgGrid{grid-template-columns:62px;grid-template-rows:1fr}
