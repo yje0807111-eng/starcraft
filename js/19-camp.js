@@ -2747,7 +2747,12 @@ let _campBox = null;               // 캠프의 드래그 박스(원본 _btBox �
 //   ⛔ 옛 0.022 는 기지의 2.5분의 1 이라 던전에서만 찍기가 어려웠다 — 「눌렀는데 반응이 없다」의
 //     절반이 이것이었다(2026-09-05 사용자 지적 · 조작감 통일 A안).
 const CAMP_PICK_R = 0.055;
-const CAMP_BOX_MIN = 0.015;        // 이만큼 끌어야 박스로 본다(원본과 같은 값)
+// 📦 박스로 보기 시작하는 문턱 — **기지 원본과 같은 규칙**이어야 한다(techPtrMove · 17-build-cards.js):
+//   두 축 **합이 6px**. ⛔ 옛 값 0.015 는 「비율 · 축별」이라 원본과 다른 자[尺]였다 —
+//   맵이 390×767 이면 가로 5.9px / **세로 11.5px** 이고, 합이 아니라 축별이라 대각선은 더 둔했다.
+//   실측(2026-09-05): 기지는 대각 3+3=6 에서 서는데 던전은 12+12 를 끌어야 섰다.
+//   그래서 「같은 유닛인데 던전에서만 드래그가 뻑뻑하다」가 됐다(사용자 신고).
+const CAMP_BOX_MIN_PX = 6;         // 기지 원본과 같은 값·같은 식(두 축 합 · 픽셀)
 function campSelList(){ if(!CAMPB) return [];
   const out = []; for(const u of CAMPB.me.units){ if(!u.dead && _campSel.indexOf(u.uid) >= 0) out.push(u); } return out; }
 // ⚠ 지정이 바뀌면 **시트와 해제 버튼을 바로 다시 그린다**(2026-09-05 사용자 신고: 「골랐는데 프로필도 해제 버튼도 안 뜬다」).
@@ -6251,8 +6256,8 @@ function campPatchZoom(){
       if(_campLongT && ev && _campLongFrom && ev.pointerId === _campLongFrom.id
          && Math.hypot(ev.clientX - _campLongFrom.x, ev.clientY - _campLongFrom.y) > 8) campPanDisarm();
       if(_campBox && ev && !_campBox.on){ const r = (typeof _btRect === 'function') ? _btRect() : null;
-        if(r && (Math.abs(ev.clientX - _campBox.cx0) / (r.width || 1) > CAMP_BOX_MIN
-              || Math.abs(ev.clientY - _campBox.cy0) / (r.height || 1) > CAMP_BOX_MIN)) _campBox.on = true; }
+        if(r && (Math.abs(ev.clientX - _campBox.cx0) + Math.abs(ev.clientY - _campBox.cy0)) > CAMP_BOX_MIN_PX)
+          _campBox.on = true; }
       return oMove.apply(this, arguments);
     };
 

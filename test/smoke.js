@@ -5801,6 +5801,57 @@ async function groupLobby(){
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
     return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
 
+  // 🖐 **던전 조작감 = 기지 조작감** (2026-09-05 사용자 신고: 「같은 레인저인데 던전에서만 다르다」)
+  //    ⚠ 위 스텝들은 API 를 직접 부른다 — **진짜 포인터 이벤트 경로**는 아무도 안 잰다.
+  //      「드래그가 뻑뻑하다 · ⊘ 를 눌러도 안 풀린다」는 전부 그 경로의 이야기다.
+  //    ⛔ 옛 문턱은 `|Δx|/폭 > 0.015 || |Δy|/높이 > 0.015`(비율 · 축별)였다. 원본은
+  //      `|Δx|+|Δy| > 6px`(픽셀 · 두 축 합)이라, 390×767 맵에서 세로가 11.5px 로 **두 배** 둔했다.
+  await step('캠프: 던전 드래그 문턱·⊘ 배선이 기지와 같다', async()=>{
+    // ⛔ 가드는 **옛 버전에도 있는 것**으로 — CAMP_BOX_MIN_PX 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof campDeploy!=='function'||typeof campSelSet!=='function'||typeof _btRect!=='function','캠프 전투 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패');
+      campSelClear(); campSyncSheet();
+      const r=_btRect(); skipIf(!r||!r.width,'맵 사각을 못 잼');
+      const W=CAMPB.world, g=campW2G(u.x,u.y,W), sp=_techW2S(g.gx,g.gy);
+      const px=Math.round(r.left+sp.x*r.width), py=Math.round(r.top+sp.y*r.height);
+      assert((py-r.top)/r.height>0.13,'전제: 유닛이 상단바 밖에 있어야 한다');
+      const fire=(el,type,x,y)=>{ el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,
+        clientX:x,clientY:y,pointerId:1,pointerType:'touch',isPrimary:true,button:0,buttons:type==='pointerup'?0:1})); };
+      const map=document.querySelector('.bmap'); assert(map,'맵 요소가 없다');
+      // ① 문턱 — 대각 2+2(=4px)에서는 아직 박스가 아니고, 4+4(=8px)면 박스다(원본 6px 규칙)
+      fire(map,'pointerdown',px,py);
+      assert(typeof _campBox!=='undefined' && _campBox,'누르는 순간 캠프 박스가 안 섰다');
+      fire(document,'pointermove',px+2,py+2);
+      assert(!_campBox.on,'2+2px 에서 벌써 박스가 됐다 — 문턱이 기지보다 예민하다');
+      fire(document,'pointermove',px+4,py+4);
+      assert(_campBox.on,'4+4px 를 끌었는데 박스가 안 됐다 — 기지(합 6px)보다 둔하다');
+      fire(document,'pointerup',px+4,py+4);
+      // ② 세로도 같은 자[尺]여야 한다 — 옛 「비율·축별」이면 세로만 두 배 둔했다
+      campSelClear();
+      fire(map,'pointerdown',px,py);
+      fire(document,'pointermove',px,py+7);
+      const vOn=!!(_campBox&&_campBox.on);
+      fire(document,'pointerup',px,py+7);
+      assert(vOn,'세로로 7px 를 끌었는데 박스가 안 됐다 — 세로 문턱이 가로와 다르다(옛 비율식)');
+      // ③ ⊘ 버튼이 **실제로 배선돼 있다** — 눌러서(click) 전장 지정이 풀린다
+      campSelClear(); campSelSet([u]); campSyncSheet();
+      const dz=$('btDesel'); assert(dz,'해제 버튼이 없다');
+      assert(dz.classList.contains('on'),'전장 유닛을 골랐는데 ⊘ 가 안 떴다');
+      dz.click();                      // 마크업의 onclick=techDeselU(event) 를 그대로 탄다
+      campSyncSheet();
+      assert(campSelList().length===0,'⊘ 를 눌렀는데 전장 지정이 안 풀렸다');
+      assert(!dz.classList.contains('on'),'⊘ 를 눌렀는데 버튼이 그대로 켜져 있다');
+      return '문턱 4+4px ○ / 2+2px ✕ / 세로 7px ○ · ⊘ 클릭 배선 ok';
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(typeof campSelClear==='function') campSelClear();
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+  });
+
   // 🖐 **내 명령은 명령이다** — SC 「이동」(2026-09-05 사용자 확정 · A안 · ARCHITECTURE §「⚔ 캠프 전투」).
   //    ⛔ 옛 방식은 자리(_post)만 옮기고 AI 복귀에 맡겨서: 0.8초 굳음 · 적이 보이면 무시 · 45 앞에서 멈춤.
   //    이 스텝은 그 셋이 되살아나지 않는지 **프레임 단위로** 잰다.
