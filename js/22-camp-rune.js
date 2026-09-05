@@ -211,17 +211,11 @@ function campRuneBestRound(){
   for(const k in C.best){ const dg = k | 0; if(dg < 1) continue;
     const r = (dg - 1) * per + (C.best[k] | 0); if(r > m) m = r; }
   return m; }
-function campRuneMaxRound(){ const per = (typeof CAMP_ROUND_MAX !== 'undefined') ? CAMP_ROUND_MAX : 50;
-  const dgs = (typeof CAMP_DG_MAX !== 'undefined') ? (CAMP_DG_MAX | 0) : 10;
-  return per * Math.max(1, dgs); }
 // 열린 칸 수 — 표에서 「도달 라운드 이하」인 것을 센다
 function campRuneSlots(kind){ const tb = RUNE_SLOT_R[kind] || [];
   if(CAMP_RUNE_FREE) return tb.length;          // 🔧 전부 열어 둔다(위 스위치)
   const b = campRuneBestRound();
   let n = 0; for(const r of tb) if(b >= r) n++; return n; }
-// 다음 칸이 열리는 라운드(전부 열렸으면 0)
-function campRuneNextAt(kind){ const tb = RUNE_SLOT_R[kind] || []; const b = campRuneBestRound();
-  for(const r of tb) if(b < r) return r; return 0; }
 
 // ── 상태 ────────────────────────────────────────────────────────────────
 // `C.rune` 에 산다 = **환생해도 남는다**(campRebirth 의 keep 목록에 넣었다).
@@ -279,7 +273,6 @@ function runeIcoHTML(key, cls, grp){ const src = runeIcoSrc(key, grp);
   return '<img class="' + (cls || 'rnIco') + '" src="' + src + '" alt="" draggable="false">'; }
 function runeName(key){ const p = runeParse(key); if(!p.def) return '';
   return (p.def.kind === 'uniq') ? p.def.nm : (RUNE_GD[p.gd] ? RUNE_GD[p.gd].tx + ' ' + p.def.nm : p.def.nm); }
-function runeGradeOf(key){ return runeParse(key).gd; }
 // 표기 — 값은 전부 「+n%」다(합산 항이므로)
 // ⚠ **소수점을 반올림해 버리지 말 것.** 2.5% 를 「3%」로 적으면 표기와 실제가 어긋난다.
 //   딱 떨어지는 값(20%)에는 소수점을 안 붙인다 — 거짓 정밀도로 보인다.
@@ -785,7 +778,6 @@ function _runeMapSvg(){
 //   ⚠ 유니크 룬은 칸 셋이 **세 성좌에 흩어져** 있다 — 한 곳을 잡을 수 없으므로 전체 보기로 둔다.
 //   ⛔ 확인창을 띄우지 말 것 — 넣고 빼기가 한 번씩인 화면이라 교체만 두 단계면 어긋난다.
 let _runeSwapKey = '';                  // 교체하려는 룬. '' 이면 교체 모드가 아니다
-function campRuneSwapOn(){ return !!_runeSwapKey; }
 // 이 칸이 지금 교체 후보인가 — 고른 룬과 **같은 종류**의 칸만 흔들린다
 function campRuneSwapCand(kind, i){
   if(!_runeSwapKey) return false;
@@ -852,10 +844,6 @@ function _runeCellEl(kind, i){
 //   ⛔ 렌더 뒤에 classList 로만 붙이지 말 것.
 let _runeVeil = '';                     // 'norm-3' 처럼 — 도착을 기다리는 칸 하나
 function _runeVeilKey(kind, i){ return kind + '-' + i; }
-function _runeCellVeil(kind, i, on){
-  _runeVeil = on ? _runeVeilKey(kind, i) : '';
-  const el = _runeCellEl(kind, i);      // 이미 그려져 있으면 지금 것도 맞춘다
-  if(el) el.classList.toggle('veil', !!on); }
 // 💥 도착 — 칸이 한 번 부풀고, 갈래 색 고리가 퍼진다
 function campRuneLand(kind, i, key){
   if(_runeVeil === _runeVeilKey(kind, i)) _runeVeil = '';

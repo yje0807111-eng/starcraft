@@ -58,6 +58,14 @@ function campArriveR(u){
 //   ⚠ 일반 도착 판정(campArriveR)을 쓰면 안 된다 — 의무병은 사거리가 0 이라 6px 이 나와
 //     제자리에서 미세 조정을 반복한다.
 const CAMP_HEAL_FOLLOW = 90;
+// 🖐 내 이동 명령의 **제자리걸음 상한**(초) — 이만큼 더 가까워지지 못하면 도착으로 본다.
+//   동료가 밀어(strikeSeparate) 도착 반경 안에 못 드는 경우를 위한 것. 값은 실측 궤적으로 확인할 것.
+const CAMP_ORDER_STALL = 0.8;
+// 🖐 내 이동 명령의 **도착 반경**(px). ⚠ 실측(2026-09-05): 공용 이동 물리(stepUnitMove)가 관성으로 감속하고
+//   진행도 창(_pgHold · 12px)이 걸려 유닛은 목표에서 **약 20** 에 선다(조용할 때 20 · 싸우던 중 19.6).
+//   그래서 campArriveR(마린 ≈ 11)만 쓰면 늘 제자리걸음 상한(0.8초)을 기다려 도착한다 → 여기서 바로 끝낸다.
+//   ⛔ CAMP_POST_R(45) 을 쓰지 말 것 — 그건 AI 복귀용이고 찍은 자리 45 앞에서 멈추던 것이 불만의 하나였다.
+const CAMP_ORDER_ARRIVE = 24;
 
 /* ── 목표 자리 ───────────────────────────────────────────────────────────
  * ⭐ **이 함수가 이 파일의 요점이다.** 「어디에 설 것인가」를 한 번에 정하고,
@@ -289,6 +297,14 @@ function campStepUnits(dt){
       // 💣 **매설 임무 중** — 표적을 안 잡고 그 자리로 간다(사용자 확정 2026-08-28).
       //   ⛔ 벙커 탑승과 같은 자리다. 이 위로 올리면 죽은 유닛도 걸어간다.
       if(u._mine){ if(typeof campMineTrip === 'function') campMineTrip(u, dt); continue; }
+      // 🖐 **내 명령이 살아 있다 — 표적을 잡지 않는다**(SC 「이동」 · 2026-09-05 사용자 확정 · A안).
+      //   ⛔ 여기서 _campPickTarget 을 타면 인지 범위의 적을 다음 프레임에 **다시 물어** 명령이 무시된다
+      //     (실측: 뒤로 빼는 명령에 거리가 1012 → 1074 로 벌어지고 적이 죽을 때까지 안 왔다).
+      //   ⚠ 의무병보다 **먼저** 본다 — 의무병도 명령을 받으면 치유를 멈추고 따라온다(기지와 같다).
+      //   ⚠ 매설(_mine)은 그 위에 있다 — 그건 이미 「명령」이고 campMoveSel 이 지우지 않는다.
+      if(side === 'me' && u._order){
+        if(u.tgtUid){ load.set(u.tgtUid, Math.max(0, (load.get(u.tgtUid) || 0) - 1)); u.tgtUid = null; }
+        u._btgt = null; act.push({ u, tgt:null, order:true }); continue; }
       if(typeof HEALER !== 'undefined' && HEALER[u.gm || u.id]){ act.push({ u, tgt:null, heal:true }); continue; }
       const prev = u.tgtUid;
       const tgt = _campPickTarget(u, foe.units, load, dt);
@@ -314,6 +330,20 @@ function campStepUnits(dt){
      * ⭐ **이 블록이 유닛의 위치를 정하는 유일한 곳이다.** 뒤에서 무르거나 자르지 않는다.  */
     for(const a of act){
       const u = a.u, tgt = a.tgt;
+      // 🖐 **내 명령 — 명령 지점으로만 간다**(SC 「이동」 · 2026-09-05 · A안). 벙커·치유·복귀보다 위다.
+      //   · 도착 판정은 기지처럼 **작게**(campArriveR · 마린 ≈ 11) — ⛔ CAMP_POST_R(45) 을 쓰지 말 것,
+      //     그건 AI 복귀용이라 찍은 자리 45 앞에서 멈춘다(실측 35 앞).
+      //   · 붙어 선 동료가 밀어(strikeSeparate) 끝내 반경 안에 못 드는 경우가 있다 → 더 가까워지지
+      //     않은 채 CAMP_ORDER_STALL 이 지나면 도착으로 본다(제자리걸음을 막는다).
+      //   · 도착한 자리가 새 _post 다. _idleT 를 채워 두어 **복귀 대기(0.8초)를 안 탄다** — 그 자리에서
+      //     바로 AI 가 표적을 잡는다.
+      if(a.order){ const o = u._order, dx = o.x - u.x, dy = o.y - u.y, d = Math.hypot(dx, dy);
+        if(d < (u._ordBest || Infinity) - 1){ u._ordBest = d; u._ordT = 0; } else u._ordT = (u._ordT || 0) + dt;
+        if(d <= Math.max(campArriveR(u), CAMP_ORDER_ARRIVE) || u._ordT >= CAMP_ORDER_STALL){
+          u._order = null; u._post = { x:o.x, y:o.y }; u._idleT = CAMP_RETURN_DELAY;
+          u._goalX = null; u._goalTgt = null; u.moving = false; continue; }
+        u._idleT = CAMP_RETURN_DELAY;
+        strikeMoveToward(u, o.x, o.y, dt); continue; }
       // 💉 의무병 — ① 치유 ② 싸우는 본대 따라가기 ③ 자기 자리. 순서가 곧 우선순위다.
       if(a.heal){
         if(_campHealNeed(u, me)){ strikeHealStep(u, me, dt); u._idleT = 0; continue; }   // ① 다친 아군이 있다

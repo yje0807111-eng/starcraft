@@ -92,9 +92,6 @@ function dgMySpec(){ const st=hbCharStats();
            spd:52*(csVal('aspd')/100), range:52, cd:Math.max(0.34, st.cd*DG_SPEC_MUL.cd) }; }
 
 let DG=null, _dgRaf=0, _dgLast=0;
-function dgEnter(floor){ if(floor>dgFloorCap()){ showTownToast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
-  dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
-  if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor); }
 // ⏩ 자동 전투 배속 — 한 판이 12~20초다(2026-08-20 실측: 1단계 12.4s · 5단계 19.9s).
 //    10배면 1.2~2.0초에 끝난다 = 사용자 요구 "거의 1초정도".
 //    ⛔ dgStep(dt*배속) 로 올리지 말 것 — 충돌·사거리 판정이 샌다. hbPump 와 같은 규칙(같은 dt 를 여러 번).
@@ -238,7 +235,6 @@ function dgSkill(){ if(!DG || DG.over || DG.skill.cd>0) return;
   DG.skill.cd=S.cd; DG.skill.left=S.dur;
   if(typeof playSfx==='function') playSfx('ui_open'); dgRender(); }
 function dgToHub(){ dgStopLoop(); DG=null; openHome(); openDungeonHub(); }   // 전투 종료 → HOME 복귀 후 토벌 팝업
-function dgFlee(){ dgToHub(); }
 // ── 🗝 던전 열쇠(매일 09:00 보충 · 던전별 2개 · 완료 시에만 소모) · 🎟 뽑기권 · 던전 허브 ──
 const DG_KEY_DAILY=2;   // 던전마다 하루 열쇠 수(09:00 리셋)
 // ── 토벌 종류(단일 소스) — 종류를 늘릴 땐 여기 한 줄 + TIX_KINDS 한 칸 ──────────────

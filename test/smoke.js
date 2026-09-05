@@ -317,6 +317,10 @@ async function groupLobby(){
                      'hbInfoModal','hbGrowModal','hbMateModal','hbBunkerModal','hbRoundSheet','hbMid','hbBar'])  // 🏹 옛 사냥터
       assert(!document.getElementById(id), '다락으로 보낸 마크업이 다시 있음: #'+id);
     assert(!document.querySelector('.hbHudTop'),'옛 사냥터 좌상단 프로필(.hbHudTop)이 되살아났다');
+    // 🔒 CSS 다락은 **링크 밖**이어야 한다(2026-09-05 · ATTIC.md §5) — CSS 는 로드되면 곧 살아 있는 것이라,
+    //    링크하는 순간 옛 클래스 1,300개가 다시 「살아 있는 척」한다(그게 옛 디자인이 재사용되던 경로다).
+    for(const l of document.querySelectorAll('link[rel="stylesheet"],style'))
+      assert(!/99-attic/.test((l.getAttribute('href')||'')+(l.textContent||'')),'CSS 다락(css/99-attic.css)이 링크돼 있다');
     // 환생 본문은 살아 있어야 한다 — 캐릭터 화면이 보관함(#chrStash)에서 빌려 쓴다
     { const gb=document.querySelectorAll('#hbGrowBody');
       assert(gb.length===1,'환생 본문이 하나가 아님: '+gb.length+'개');
@@ -4026,6 +4030,15 @@ async function groupLobby(){
 
   // 🔧 개발 스위치가 켜진 채 남아 있나 — 켜져 있으면 회수 시간·손익분기 같은 밸런스 수치가 전부 무의미하다.
   //   ⭐ **막지 않고 알린다.** 지금은 사용자가 트리를 눈으로 보려고 일부러 켜 둔 상태다(2026-09-02).
+  // 🔧 회차 시작 미네랄(CAMP_DEV_START_MIN · 2026-09-05 사용자 요청 「바로 유닛 뽑아 다음 던전에」).
+  //   ⭐ **막지 않고 알린다** — 다만 켜져 있으면 그 돈이 실제로 지갑에 왔는지, 회차마다 **한 번만**인지 잰다.
+  await step('🔧 개발 스위치: 회차 시작 미네랄이 켜져 있는지', async()=>{
+    skipIf(typeof CAMP_DEV_START_MIN==='undefined'||typeof campDevSeed!=='function','스위치 없음');
+    if(!(CAMP_DEV_START_MIN>0)) return '꺼져 있다(정상 · 시작 미네랄 0)';
+    const C=campState(); skipIf(!C||typeof G==='undefined'||!G.tech,'캠프가 안 떠 있음');
+    assert(C._devMin===1,'스위치가 켜져 있는데 이 회차에 시작 미네랄을 안 받았다');
+    const c0=G.tech.credit|0; assert(campDevSeed()===0 && (G.tech.credit|0)===c0,'같은 회차에 두 번 준다');
+    return '⚠ 켜져 있다 — 회차마다 +'+CAMP_DEV_START_MIN.toLocaleString()+' · 밸런스를 재기 전에 js/19-camp.js 의 CAMP_DEV_START_MIN 을 0 으로'; });
   await step('🔧 개발 스위치: 환생 포인트 무제한이 켜져 있는지', async()=>{
     skipIf(typeof CAMP_RT_PTS_FREE==='undefined','스위치 없음');
     assert(typeof campRtPts==='function','포인트를 읽는 단일 소스 함수가 없다');
@@ -5649,6 +5662,88 @@ async function groupLobby(){
     campBattleClose();
     return '복귀 · 회피 · 목줄 · 부활 자리 ok';
   });
+
+  // 🗂 **전장 유닛을 고르면 시트에 그 유닛 카드가 서고 · 해제 버튼이 켜진다**(2026-09-05 사용자 신고).
+  //    원인이었던 것 둘: ① campSyncSheet 가 기지 변수만 보고 매 프레임 요약으로 덮었다
+  //                    ② #btDesel 표시 조건이 기지 지정만 셌다. 이 스텝은 둘 다 프레임을 굴려 잰다.
+  await step('캠프: 전장 유닛을 고르면 프로필 시트 · 해제 버튼이 뜨고 요약이 덮지 않는다', async()=>{
+    skipIf(typeof campSelSet!=='function'||typeof campSyncSheet!=='function','3단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+    const body=$('btSheetBody'), dz=$('btDesel'); assert(body&&dz,'시트 본문/해제 버튼이 없다');
+    const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패');
+    // ⚠ 이름은 데이터에서(마린의 표시 이름은 「레인저」다) — 글자를 박으면 이름을 바꿀 때 거짓 실패가 난다
+    const uName=((typeof U!=='undefined' && U.marine && U.marine.name) || '레인저');
+    const isUnitCard=()=>!!(body._cgModel && !body._cgModel.kicker && (body.innerText||'').indexOf(uName)>=0);
+    const isIdle=()=>!!(body._cgModel && body._cgModel.kicker);
+    // 기준: 아무것도 안 골랐으면 요약
+    campSelClear(); campSyncSheet(); campSyncSheet();
+    assert(isIdle(),'전제: 안 골랐을 때 요약이 아니다');
+    assert(!dz.classList.contains('on'),'전제: 안 골랐는데 해제 버튼이 켜져 있다');
+    // ① 고르면 **그 순간** 유닛 카드 + 해제 버튼
+    campSelSet([u]);
+    assert(isUnitCard(),'골랐는데 시트에 유닛 카드가 안 섰다: '+(body.innerText||'').slice(0,40));
+    assert(dz.classList.contains('on'),'골랐는데 해제 버튼이 안 켜졌다');
+    // ② 프레임이 흘러도(campSyncSheet 매 프레임) 요약이 덮지 않는다
+    for(let i=0;i<5;i++) campSyncSheet();
+    assert(isUnitCard(),'프레임이 흐르자 요약이 유닛 카드를 덮었다');
+    assert(dz.classList.contains('on'),'프레임이 흐르자 해제 버튼이 꺼졌다');
+    // ③ 해제 버튼(techDeselU)이 전장 지정도 푼다 → 요약으로 돌아오고 버튼이 꺼진다
+    techDeselU(); campSyncSheet(); campSyncSheet();
+    assert(campSelList().length===0,'해제 버튼이 전장 지정을 안 풀었다');
+    assert(isIdle(),'해제했는데 요약으로 안 돌아왔다');
+    assert(!dz.classList.contains('on'),'해제했는데 버튼이 켜져 있다');
+    // ④ 죽은 유닛만 남은 지정은 「고른 것」이 아니다 — 요약으로 돌아온다
+    campSelSet([u]); u.dead=true; campSyncSheet(); campSyncSheet();
+    assert(isIdle(),'죽은 유닛 지정이 요약을 막는다');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); campSelClear();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
+    return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
+
+  // 🖐 **내 명령은 명령이다** — SC 「이동」(2026-09-05 사용자 확정 · A안 · ARCHITECTURE §「⚔ 캠프 전투」).
+  //    ⛔ 옛 방식은 자리(_post)만 옮기고 AI 복귀에 맡겨서: 0.8초 굳음 · 적이 보이면 무시 · 45 앞에서 멈춤.
+  //    이 스텝은 그 셋이 되살아나지 않는지 **프레임 단위로** 잰다.
+  await step('캠프: 이동 명령은 바로 출발하고 · 적을 무시하고 · 찍은 자리에 선다', async()=>{
+    skipIf(typeof campMoveSel!=='function'||typeof campStepUnits!=='function','3단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+    const dt=1/30;
+    const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패'); u.hp=u.maxHp=1e9;
+    // 적 하나를 인지 범위 안(바로 위)에 세운다 — 둘 다 죽지 않게
+    const foe=campWithStk(()=>{ const n0=STK.ai.units.length; strikeSpawnUnit('ai','marine');
+      return STK.ai.units.length>n0?STK.ai.units[STK.ai.units.length-1]:null; });
+    assert(foe,'적 배치 실패'); foe.x=u.x; foe.y=u.y-200; foe.hp=foe.maxHp=1e9;
+    for(let i=0;i<10 && !u.tgtUid;i++) campWithStk(()=>campStepUnits(dt));
+    assert(u.tgtUid,'전제: 적을 물어야 한다');
+    // ① 옆으로 멀리 빼는 명령 — **첫 프레임에** 움직이고 표적을 놓는다
+    //    ⚠ 레인 안 **빈 곳**으로 보낸다 — 앞 스텝들이 레인 아래에 건물을 지어 두어, 거기로 보내면
+    //      전장 물리(길찾기 없음)가 건물에 막혀 제자리걸음 상한이 「도착」으로 끝낸다(실측 106 앞).
+    //      그건 이 스텝이 재려는 것이 아니다.
+    campSelSet([u]); campMoveSel(0.28, CAMP_LINE_GY);
+    const goal={x:u._post.x,y:u._post.y}, x0=u.x, y0=u.y, d0=Math.hypot(goal.x-x0,goal.y-y0);
+    assert(d0>300,'전제: 멀리 보내야 잰다('+Math.round(d0)+')');
+    campWithStk(()=>campStepUnits(dt));
+    assert(Math.hypot(u.x-x0,u.y-y0)>0.5,'명령 뒤 첫 프레임에 안 움직였다 — 0.8초 굳음이 되살아났다');
+    assert(!u.tgtUid,'이동 중에 표적을 다시 물었다 — 명령이 무시된다');
+    // ② 적이 따라와도 끝까지 간다
+    let arrived=false; for(let i=0;i<12*30;i++){ campWithStk(()=>campStepUnits(dt)); if(!u._order){ arrived=true; break; } }
+    assert(arrived,'12초 안에 도착을 못 했다');
+    const dEnd=Math.hypot(goal.x-u.x,goal.y-u.y);
+    // ⚠ 공용 이동 물리가 관성으로 감속해 목표 **약 20** 에 선다(실측) — 도착 반경 CAMP_ORDER_ARRIVE(24)까지 허용.
+    //   ⛔ 45(CAMP_POST_R) 근처면 옛 「자리 45 앞 정지」가 되살아난 것이다.
+    assert(dEnd<=CAMP_ORDER_ARRIVE+2,'찍은 자리에서 '+Math.round(dEnd)+' 떨어져 멈췄다 — 기지처럼 자리까지 가야 한다(45 앞 정지가 되살아났다)');
+    assert(Math.hypot(u._post.x-goal.x,u._post.y-goal.y)<1,'도착 자리가 새 자리(_post)가 안 됐다');
+    // ③ 도착 뒤에는 **바로** AI 가 다시 맡는다 — 옆에 적이 있으면 첫 프레임에 다시 문다(0.8초 대기 없음)
+    foe.x=u.x; foe.y=u.y-200; foe.tgtUid=null;
+    campWithStk(()=>campStepUnits(dt));
+    assert(u.tgtUid,'도착했는데 AI 가 표적을 바로 안 잡는다(복귀 대기를 탔다)');
+    // ④ 찍기 반경은 기지 유닛(_techEntAt 의 0.055)과 같다
+    assert(Math.abs(CAMP_PICK_R-0.055)<1e-9,'전장 탭 반경이 기지와 다르다: '+CAMP_PICK_R);
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
+    return '첫 프레임 출발 · 표적 무시 · '+Math.round(d0)+' → '+Math.round(dEnd)+' · 도착 즉시 재교전'; });
 
   // 🖐 **내가 지정해서 원하는 자리로 옮긴다** (2026-08-28 사용자 확정)
   //    ⛔ 원본(건설 탭)의 탭 로직은 기지 엔티티만 안다 — 캠프가 up 에서 먼저 보고,
@@ -10464,7 +10559,11 @@ async function groupLobby(){
     try{
       C.ents=null;                        // 새 판으로 들어간다 — campRestore 는 C.ents 가 있으면 그것으로 덮는다
       campEnter();
-      assert((G.tech.credit|0)===0,'새 판인데 미네랄이 '+G.tech.credit+' 이다 — 탭으로 벌기 전에 이미 부자다');
+      // 🔧 개발 스위치(CAMP_DEV_START_MIN)가 켜져 있으면 **회차마다 한 번** 시작 미네랄이 얹힌다 —
+      //    이 회차에서 이미 받았으면(C._devMin) 0, 아니면 딱 그 값. 그 밖의 값은 규칙 위반이다.
+      { const seed=(typeof CAMP_DEV_START_MIN!=='undefined' && CAMP_DEV_START_MIN>0 && C._devMin!==1)?CAMP_DEV_START_MIN:0;
+        const ok=(G.tech.credit|0)===0 || ((G.tech.credit|0)===seed && seed>0);
+        assert(ok,'새 판인데 미네랄이 '+G.tech.credit+' 이다 — 탭으로 벌기 전에 이미 부자다'); }
       assert((G.tech.energy|0)===0,'새 판인데 가스가 '+G.tech.energy+' 이다');
       return '미네랄 0 · 가스 0';
     } finally { C.ents=keep; C.credit=kc; C.race=race0; campEnter(); } });

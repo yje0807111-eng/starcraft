@@ -376,7 +376,6 @@
   .sdRwRow .ric{width:20px;height:20px;flex:none;display:block;object-fit:contain}
   .sdRwRow .nm{font-size:var(--fs-md);color:#a8b3c0}
   .sdRwRow .v{margin-left:auto;font-family:var(--font-num);font-size:19px;font-weight:700;color:#eef2f6}
-  .sdHr{height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent)}
   .sdStats{display:flex;justify-content:center;gap:22px}
   .sdStat{text-align:center}
   .sdStat i{display:block;font-style:normal;font-size:var(--fs-xs);color:#828b96}
@@ -396,18 +395,6 @@
      ⛔ 취소 버튼도 없앴다 — 나가기는 머리줄 ✕(.sdX)가 맡는다(B5안).
      ⚠ 그런데 `.sdInf` 클래스 자체는 **방 만들기(#cpInfBtn)가 아직 쓴다** — 규칙을 지우면 그 화면이
         무너진다(실제로 한 번 무너뜨렸다). 아래는 그쪽 전용으로 남긴 것이다. */
-  .sdInf{position:relative;flex:none;width:100%;height:42px;margin-bottom:8px;padding:0 13px;cursor:pointer;overflow:hidden;
-    display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;
-    border:1px solid transparent;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#0a0a0a,#000) padding-box,var(--metal-ring-n) border-box}
-  .sdInf::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#b06bff;
-    box-shadow:0 0 4px #b06bff,0 0 10px #b06bff}
-  .sdInf b{font-size:var(--fs-lg);font-weight:800;color:#d9c4ff}
-  .sdInf em{flex:1;font-style:normal;font-size:var(--fs-sm);color:#8a929c;text-align:right}
-  .sdInf.hide{display:none}
-  .sdInf.lk{cursor:default}
-  .sdInf.lk::before{background:#4a525e;box-shadow:none}
-  .sdInf.lk b{color:#7f8a98}
   #soloDiffPanel .sdGo{flex:none;width:100%;height:50px;margin-top:0}
   /* ⚠ 난이도 화면 **바로 다음**에 뜬다 — 껍데기가 다르면 그 자리에서 덜컹인다.
      그래서 전체 화면 부품(.sdArt/.sdScr/.sdMap/.sdX/.sdBlk/.sdGo)을 **그대로 빌린다**.
@@ -520,7 +507,6 @@
   .riMain{min-width:0;flex:1}
   .riName{font-size:var(--fs-xl);font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .riDiff{font-size:8.5px;font-weight:800;letter-spacing:.3px;color:var(--dc,#888);border:1px solid var(--dc,#888);border-radius:var(--r-bar);padding:0 4px;margin-right:5px;vertical-align:1px}
-  .lbDiff{font-weight:800}
   .riSub{font-size:var(--fs-xs);color:var(--txt-mute);margin-top:2px}
   .riSub .riOver{color:#ff8a6b;font-weight:700}
   .riSub .riOpt{color:var(--warn);font-weight:700}   /* 기본 밸런스가 아닌 방 — 들어가기 전에 알아야 한다 */
@@ -621,11 +607,6 @@
   .rmBtns .actBtn.sq{flex:0 0 38px;height:38px;padding:0}
   .rmBtns .actBtn.sq::after{left:16%;right:16%}
   .rmBtns .actBtn svg{width:17px;height:17px;display:block;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
-  .rmSq{flex:0 0 auto;width:46px;height:48px;display:flex;align-items:center;justify-content:center;padding:0;
-    border-radius:11px;cursor:pointer;transition:transform .1s,background .16s,color .16s,border-color .16s;
-    color:#9fb0c2;background:rgba(255,255,255,.05);border:1px solid var(--metal-edge)}
-  .rmSq svg{width:19px;height:19px;display:block}
-  .rmSq:active{transform:translateY(1px) scale(.98)}
   /* 토스트 */
   #toast{position:absolute;bottom:46px;left:50%;transform:translateX(-50%);z-index:95;
     background:rgba(10,20,35,.92);border:1px solid var(--neon-soft);border-radius:var(--r-lg);padding:7px 14px;
@@ -670,9 +651,6 @@
      로딩 경로 전체를 컷으로 통일했다 — 여기만 흐리게 들어오면 그 뒤가 튀어 보인다. */
   #raceSelPanel:not(.hide){animation:ovDimIn .32s ease-out}
   @keyframes ovDimIn{from{opacity:0}to{opacity:1}}
-  /* 화면전환(개인 플레이→난이도): 배경 딤은 끊김 없이 유지(페이드 생략), 새 카드가 오른쪽에서 슬라이드 인 */
-  #soloDiffPanel.noDim:not(.hide){animation:none}
-  .fxPush{animation:fxPushIn .3s cubic-bezier(.22,.9,.28,1)}
   @keyframes fxPushIn{0%{opacity:0;transform:translateX(42px)}50%{opacity:1}100%{opacity:1;transform:translateX(0)}}
   /* 오프닝 로딩 */
   #opening{z-index:90;align-items:center;justify-content:center;text-align:center}
@@ -700,14 +678,6 @@
      이제 그림과 함께 #titleBg::after 가 맡는다 — 여기서 또 깔면 딤이 두 겹이 된다. */
   #opening.counting .opArt{display:none}   /* 진입 카운트다운은 자기 아트(.gsArt)를 쓴다 */
   /* ⚠ .opMid(로딩 전용 로고 블록)는 폐지했다 — 로고는 #titleMark 한 벌이다. */
-  /* 엠블럼 = 새로 그린 육각 라인(옛 방패는 폐지). 아트 위에 얹히므로 가볍게 */
-  .opLogo{width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:#dbe4ef}
-  .opLogo svg{width:44px;height:44px;filter:drop-shadow(0 2px 8px #000)}
-  /* 제목 = 제목 폰트 한 가족. 옛 2톤(흰+네온)은 폐지 — 색은 막대 하나만 갖는다 */
-  .opTitle{font-family:var(--font-ti);font-weight:400;font-size:31px;letter-spacing:.02em;
-    text-shadow:0 3px 20px #000,0 1px 3px #000}
-  .opTitle .opT1,.opTitle .opT2{color:#fff;text-shadow:inherit}
-  .opSub{font-family:var(--font-num);font-size:var(--fs-sm);color:#96a1af;letter-spacing:.42em;text-shadow:0 1px 4px #000}
   /* 하단 도크 = 유즈맵 진입(.gsBot)과 같은 자리·같은 규격 */
   #opening .opDock{padding:0 20px 34px}
   #opening .opCnt{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
@@ -724,7 +694,6 @@
   /* 게임 시작 로딩 = 카드 덱(H안) — 부팅 오프닝(.opWrap)은 통째로 감추고 #gsRoot 만 띄운다.
      ⚠ .opWrap 은 부팅 오프닝과 공용이다 — 여기서 덮지 말 것. */
   #opening.counting .opWrap{display:none}
-  .opPanel.moInfo{margin:0}
   #opening .moFeat .mfTx{color:#b3c0cf}
   #opening .moFeat .mfTx b{color:#f0f4fa}
   /* ══════════ 게임 진입 로딩 #gsRoot — 맵 키 아트 + 플레이어 카드 덱 + 하단 준비 도크 ══════════
@@ -763,7 +732,7 @@
   .gsTlb{display:flex;align-items:center;gap:6px;margin-bottom:6px;
     font-size:var(--fs-xs);font-weight:800;letter-spacing:.5px;color:var(--tmC)}
   .gsTlb s{flex:1;height:1px;text-decoration:none;opacity:.5;background:linear-gradient(90deg,var(--tmC),transparent)}
-  .gsT1{--tmC:var(--tmC1)} .gsT2{--tmC:var(--tmC2)}
+
   .gsCd{position:relative;height:100px;overflow:hidden;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:6px;border-radius:var(--r-bar);
     background:linear-gradient(180deg,#121317,#08090b);border:1px solid rgba(255,255,255,.07);
@@ -996,8 +965,6 @@
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.85) 50%,transparent)}
   .authTabs .pdSegInd::after{display:none}   /* 판이 없으니 밑변 광원도 뺀다(선이 곧 표시다) */
   .authTabs .pdSegBtn{padding:9px 4px}
-  .authDia{display:block;width:9px;height:9px;margin:0 auto 9px;transform:rotate(45deg);
-    background:linear-gradient(135deg,#ff9b9b,var(--ac))}
   /* ⚠ font-weight:900 을 되돌리지 말 것 — 제목 글꼴(--font-ti)은 400 단일 굵기라 브라우저가 가짜 볼드를 그린다 */
   /* 🖼 로고 블록 = **부팅 로딩(.opLogo/.opTitle/.opSub)과 같은 것**(2026-08-20).
      두 화면이 같은 그림 위에서 같은 자리에 같은 덩어리를 보여 준다 — 한 장면으로 이어진다.
@@ -1033,15 +1000,9 @@
   /* ⛔ 주 방식 표시(.pri 왼쪽 광선)도 폐지했다(2026-08-20). 셋 다 실제로 되는 방식이라
      하나만 권하면 나머지가 '덜 되는 것'으로 읽힌다. 밑변 광원은 여전히 주 버튼(.authBtn)의 서명이다. */
   .authWay.hide{display:none}
-  .authWay._old::before{content:'';position:absolute;inset:0;z-index:-1;padding:1px;background:var(--btnLine,var(--metal-edge));
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
-    -webkit-mask-composite:xor;mask-composite:exclude;
-    clip-path:polygon(var(--ch) 0,calc(100% - var(--ch)) 0,100% var(--ch),100% calc(100% - var(--ch)),
-      calc(100% - var(--ch)) 100%,var(--ch) 100%,0 calc(100% - var(--ch)),0 var(--ch))}
   /* 판이 없으니 '누를 것'이라는 신호는 반응이 낸다 — 밝아지고 살짝 눌린다(앱 공용 문법) */
   .authWay:hover{color:#fff}
   .authWay:active{transform:translateY(1px);color:#fff}
-  .awG{flex:none;width:16px;font-style:normal;font-weight:900;font-size:15px;text-align:center;color:#e8eaed}
   /* 폼 → 허브로 돌아가는 줄 */
   .authBack{align-self:flex-start;display:flex;align-items:center;gap:6px;margin-bottom:10px;padding:2px 0;
     background:none;border:none;cursor:pointer;font-family:inherit;font-size:var(--fs-xs);font-weight:700;

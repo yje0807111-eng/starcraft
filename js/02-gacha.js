@@ -21,7 +21,6 @@ const GACHA_TIER_ORDER = ['common','rare','epic','unique','legend','transcend','
 // 등급 → 단계 번호 1..7(단일 소스). 프레임 사다리(data-tr)·정렬·비교가 전부 이걸 쓴다.
 // ⚠ 등급 순서를 배열 리터럴로 다시 적지 말 것 — 여기 하나만 고치면 전부 따라온다.
 function tierRank(id){ const i=GACHA_TIER_ORDER.indexOf(id); return i<0? 1 : i+1; }
-function tierName(id){ return (GACHA_TIERS[id]||{}).name || '일반'; }
 // 🎰 단계형 뽑기 곡선(공용) — 동료·펫이 '같은 형태'를 쓴다. 새 뽑기를 만들 때도 이 함수를 쓸 것.
 //   문턱 need(k) = needA·(needB^(k-1) − 1)   → 초반은 촘촘하고 위로 갈수록 간격이 벌어진다
 //   확률 p(t,k) ∝ w0[t]·wg[t]^(k-1)          → wg<1 이면 비중이 줄고, >1 이면 는다

@@ -2138,8 +2138,6 @@ function _sdList(){ const L=DIFFICULTY_ORDER.map(function(d){ return {k:d, name:
 function _sdHasInf(){ return !!(_selMap && _selMap.id==='nemo' && USEMAPS.nemo_inf); }
 function _sdOk(k){ return (k==='inf') ? ((typeof infiniteUnlocked!=='function')||infiniteUnlocked())
                                       : ((typeof diffUnlocked!=='function')||diffUnlocked(k)); }
-function sdStartInf(){ if(!_sdOk('inf')){ if(typeof lobbyToast==='function') lobbyToast('🔒 노말을 클리어하면 열립니다'); return; }
-  startSoloInfinite(); }
 function _sdPrevKo(k){ if(k==='inf') return 'NORMAL';
   const r=DIFF_RANK.indexOf(k); return (r>0 && DIFFICULTY[DIFF_RANK[r-1]]) ? DIFFICULTY[DIFF_RANK[r-1]].name : ''; }
 function sdPick(i){ const L=_sdList(); if(!L[i]) return; _sdPick=L[i].k; renderSoloDiff();
@@ -2372,7 +2370,6 @@ function stepCpDiff(d){ const L=_cpList(), i=L.findIndex(function(x){ return x.k
   const k=L[n].k;
   if(k==='inf'){ _createInf=true; } else { _createInf=false; _createDiff=k; }
   renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=false; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
 // (setCpInf/#cpInfBtn 은 2026-08-27 삭제 — 무한이 난이도 사다리 마지막 칸으로 들어가 토글이 필요 없다)
 function mapHasDiff(){ return !(typeof _selMap!=='undefined' && _selMap && _selMap.noDiff); }   // 대인전 유즈맵 = 난이도 개념 없음
 // ══════════ 🎛 오토 배틀 대전 설정 — 방장이 정하고 방 전원에게 적용된다 ══════════
