@@ -5955,6 +5955,54 @@ async function groupLobby(){
     return '위 '+(worst*100).toFixed(1)+'% (화면 '+(top*100).toFixed(1)+'% 위) · 가로 '+(spread*100).toFixed(0)+'%p 퍼짐';
   });
 
+  // 👹 **적의 눈은 아군보다 훨씬 넓다** (2026-09-05 사용자 확정)
+  //    ⛔ 예전엔 적도 campAcqBase(제 사거리 + 100)를 썼다. 근접 적은 눈이 **147** 이라
+  //      진형 폭(500~840)을 못 덮고, 측면 차선으로 내려오는 적이 아군을 **그냥 지나쳐** 갔다.
+  //      📊 실측(scripts/camp-trace.mjs · 60초 · D1R30): 적이 표적을 가진 비율 20.9% ·
+  //         아군 600 안을 **표적 없이** 지나간 비율 34.5%.  고친 뒤 69% / **0%**.
+  //    ⚠ 아군 쪽(CAMP_ACQ_PAD·campAlertTick)은 건드리지 않는다 — 그건 「우르르 돌격」을 막는
+  //      장치다. 이 검사는 **적만** 넓어졌는지를 잰다.
+  await step('캠프: 적은 아군보다 훨씬 넓게 본다 (측면으로 지나치지 않는다)', async()=>{
+    // ⛔ 가드는 **옛 버전에도 있는 것**으로 잡는다 — CAMP_FOE_ACQ 로 잡으면 옛 코드에서
+    //    조용히 건너뛰어 레드 테스트가 안 터진다(2026-09-02 에 그렇게 두 번 헛통과했다).
+    skipIf(typeof campScaleFoes!=='function'||typeof campAcqBase!=='function'
+      ||typeof campStepUnits!=='function','캠프 전투 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      // ① 값 — 소환 경로 그대로(campScaleFoes 가 눈을 심는다)
+      const fresh=campWithStk(()=>{ const b4=CAMPB.ai.units.length;
+        for(let i=0;i<3;i++) strikeSpawnUnit('ai','marine');
+        const f=CAMPB.ai.units.slice(b4); campScaleFoes(f,1); return f; });
+      skipIf(!fresh||fresh.length<3,'적을 못 세움');
+      const base=campAcqBase(fresh[0]);          // 아군 규칙이었다면 이 값이었을 것
+      const acq=Math.round(fresh[0].acq||0);
+      assert(acq>=900,'적 인식이 좁다: '+fresh.map(e=>Math.round(e.acq||0)).join(','));
+      assert(acq>base*2,'적 인식이 아군 규칙(사거리+PAD='+Math.round(base)+')과 다르지 않다: '+acq);
+      // ② 행동 — **측면**으로 지나가는 적이 아군을 알아채는가
+      //    ⚠ 아군을 한 기만 두고 적 하나를 대각선 1000 밖에 둔다. 옛 눈(실효 402)으로는
+      //      절대 안 잡히고, 넓은 눈(실효 1680)이면 잡힌다.
+      campWipeField();
+      const ally=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return CAMPB.me.units[0]; });
+      const foe=campWithStk(()=>{ const b4=CAMPB.ai.units.length;
+        strikeSpawnUnit('ai','marine');
+        const f=CAMPB.ai.units.slice(b4); campScaleFoes(f,1); return f[0]; });
+      skipIf(!ally||!foe,'유닛을 못 세움');
+      ally.x=2000; ally.y=3000; ally._post={x:2000,y:3000}; ally.wait=0; ally.rallied=true;
+      ally.hp=ally.maxHp=1e6; ally.dmg=0;                 // 죽지도 죽이지도 않게 — 표적 잡기만 본다
+      foe.x=2800; foe.y=2400; foe.wait=0; foe.rallied=true; foe.dmg=0; foe.tgtUid=null;
+      const gap=Math.round(Math.hypot(foe.x-ally.x, foe.y-ally.y));
+      const eff=Math.round((foe.acq||0)*(typeof STK_ACQ_FAR!=='undefined'?STK_ACQ_FAR:1.4));
+      assert(gap>base*1.4,'검사가 헛돈다 — 옛 눈으로도 닿는 거리다: '+gap+' vs '+Math.round(base*1.4));
+      campWithStk(()=>{ for(let i=0;i<30;i++) campStepUnits(0.05); });
+      assert(foe.tgtUid===ally.uid,'측면 '+gap+' 밖의 아군을 못 알아챘다 (적 인식 '
+        +Math.round(foe.acq||0)+' · 실효 '+eff+')');
+      return '적 인식 '+acq+'(실효 '+eff+') vs 아군 규칙 '+Math.round(base)+' · 측면 '+gap+' 알아챔';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+  });
+
   // 🚶 **숨 고르기 동안 걸어서 자기 자리로 돌아온다** (2026-08-30 사용자 확정)
   //    ⛔ 예전엔 _gapT>0 이면 곧바로 return 해서 **6초 동안 한 발짝도 안 움직였다.**
   //      「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 늘려도 소용없었다.
