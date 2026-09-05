@@ -524,10 +524,6 @@ function _tutoUnitId(){ const b=_tutoBDef(2); if(!b) return null;
   const T=(typeof G!=='undefined')?G.tech:null;
   const wk=(typeof TECH_WORKER!=='undefined' && T) ? TECH_WORKER[T.race] : null;
   const p=(b.produces||[]).find(x=>x && x.id!==wk && (x.pop|0)>0); return p ? p.id : null; }
-function _tutoUnitName(){ const id=_tutoUnitId(); if(!id) return '전투 유닛';
-  const T=(typeof G!=='undefined')?G.tech:null;
-  if(typeof _techRealName==='function' && T){ try{ return _techRealName(T.race, id); }catch(_e){} }
-  const b=_tutoBDef(2), p=b && (b.produces||[]).find(x=>x&&x.id===id); return (p&&p.name) || id; }
 function _tutoUnitSel(){ const id=_tutoUnitId(); return id ? (`.cgSlot[onclick*="techDoProduce('${id}'"]`) : null; }
 // 🏛 유닛을 뽑으려면 **그 건물이 지정돼 있어야** 한다 — 지정이 곧 생산 카드를 여는 동작이다.
 // 🏛 **지은 건물을 그 자리에서 감싼다**(2026-09-04 사용자 요청) — 어디에 지었든 따라간다.
