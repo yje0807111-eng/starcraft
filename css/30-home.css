@@ -2858,11 +2858,17 @@
    ⛔ 크기를 안 주면 폭 100% 로 부풀어 판을 통째로 덮는다(2026-09-04 실측). 숫자 높이에 맞춘다. */
 #campRune .rnHead b .ri{width:14px;height:14px;flex:none;display:block;object-fit:contain}
 
-#campRune .rnSec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
-  background:rgba(255,255,255,.03);padding:8px}
+/* 🗂 구역은 **판이 아니라 제목 + 아래 구분선**이다(2026-09-05 사용자 확정 · 목업 rune-shop-8 A④안).
+   ⭐ 판을 걷으면 칸 테두리와 판 테두리가 겹치지 않아 화면이 깨끗해진다.
+   ⛔ 판(면·테두리)을 되돌리지 말 것 — 테두리가 두 겹이 되어 흐릿해 보이던 것이 이유다. */
+#campRune .rnSec{border:0;border-bottom:1px solid rgba(150,170,200,.22);
+  border-radius:0;background:none;padding:0 0 10px}
+#campRune .rnSec + .rnSec{margin-top:10px}
+#campRune .rnSec:last-child{border-bottom:0;padding-bottom:0}
 #campRune .rnSecH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-#campRune .rnSecT{font-size:12px;color:#c3ccd8;letter-spacing:.08em}
-#campRune .rnSecN{font-size:11px;color:#8b95a5}
+/* 🔆 흐리던 글자를 올린다(2026-09-05 실측: 부제 148 · 효과 이름 149 였다) */
+#campRune .rnSecT{font-size:12.5px;color:#eef1f6;font-weight:600;letter-spacing:.06em}
+#campRune .rnSecN{font-size:11px;color:#aab4c2}
 
 /* 칸 — 3열 격자. 잠긴 칸은 **왜 잠겼는지**(해금 라운드) 적는다 */
 /* 🌌 성좌 판 (2026-09-03 · 목업 ②안) — 유니크가 중심, 일반 8칸이 고리로 둘러싼다.
@@ -3065,7 +3071,7 @@
 #campRune .rnBuys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
 #campRune .rnBuys:has(> :only-child){grid-template-columns:1fr}
 #campRune .rnBuy{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 4px;
-  cursor:pointer;border:1px solid color-mix(in srgb,var(--rg) 38%,transparent);
+  cursor:pointer;border:1px solid color-mix(in srgb,var(--rg) 60%,transparent);
   border-radius:var(--r-sm);background:rgba(255,255,255,.04);
   color:#c3ccd8;font-family:inherit;font-size:11px}
 #campRune .rnBuy:disabled{opacity:.42;cursor:default}
@@ -3098,7 +3104,7 @@
 #campRune .rnIH{display:flex;align-items:center;gap:7px;margin-bottom:6px}
 #campRune .rnIi{width:26px;height:26px;flex:none;display:block;object-fit:contain}
 #campRune .rnIN{font-size:12px;color:#eef1f6;font-weight:600}
-#campRune .rnID{font-size:10.5px;color:#8d97a6}
+#campRune .rnID{font-size:10.5px;color:#aab4c2}
 
 /* 🔷 룬 그림 — 판(등급 색)까지 들어 있는 한 장이다(assets/icons/rune/ · 2026-09-04).
    ⛔ 여기에 테두리·배경·둥근 모서리를 주지 말 것 — 그림이 이미 육각 판을 갖고 있다.

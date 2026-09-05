@@ -1363,9 +1363,11 @@ function _runeShopHTML(){
   h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점</span></div>';
   // 🗂 탭 띠는 **공용 함수**다(CLAUDE.md 「세그먼트 이동 바」) — 새로 만들지 않는다.
   //   ⚠ items 는 {label} 이고 act 는 **함수**(k => 코드)다.
+  //   📑 **판 없는 띠**(.plain) — 유즈맵 정렬 띠와 **같은 규칙**을 쓴다(css/40-social.css).
+  //     ⛔ 상점 전용 탭 모양을 새로 만들지 말 것.
   h += (typeof segNavHTML === 'function')
     ? segNavHTML(tabs.map(g => ({ label:(RUNE_GRP[g] || {}).nm || g })), idx,
-        k => "campRuneShopTab('" + tabs[k] + "')")
+        k => "campRuneShopTab('" + tabs[k] + "')").replace('class="pdSeg"', 'class="pdSeg plain"')
     : '';
   h += '<div class="rnShopList">';
   for(const d of RUNE_LIST){

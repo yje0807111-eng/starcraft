@@ -3337,6 +3337,23 @@ async function groupLobby(){
         const reco = runeRecoList().map(r => runeParse(r.key).def.id);
         for(const d of soon) assert(reco.indexOf(d.id) < 0,
           '아직 안 닿는 룬을 추천하고 있다: ' + d.nm); }
+      // 🗂 **구역은 판이 아니라 제목 + 구분선**이다(2026-09-05 사용자 확정 · 목업 rune-shop-8 A④안)
+      //   ⛔ 판을 되돌리지 말 것 — 칸 테두리와 겹쳐 둘 다 흐릿해 보이던 것이 이유다.
+      { const sec=document.querySelector('#rnBody .rnSec');
+        assert(sec,'구역이 없다');
+        const cs=getComputedStyle(sec);
+        assert(cs.borderTopWidth==='0px','구역에 판 테두리가 돌아왔다: '+cs.borderTopWidth);
+        assert(cs.borderBottomWidth==='1px','구역 아래 구분선이 없다: '+cs.borderBottomWidth);
+        assert(cs.backgroundColor==='rgba(0, 0, 0, 0)','구역에 면이 돌아왔다: '+cs.backgroundColor); }
+      // 📑 **탭은 판 없는 띠**다 — 유즈맵 정렬 띠와 **같은 규칙**을 쓴다(css/40-social.css).
+      //   ⛔ 상점 전용 탭 모양을 새로 만들지 말 것.
+      { const seg=document.querySelector('#rnBody .pdSeg');
+        assert(seg && seg.classList.contains('plain'),'상점 탭이 판 없는 띠가 아니다');
+        const ind=seg.querySelector('.pdSegInd');
+        assert(ind && getComputedStyle(ind).height==='1px',
+          '고른 표시가 1px 밑줄이 아니다: '+(ind?getComputedStyle(ind).height:'없음'));
+        assert(getComputedStyle(seg).backgroundColor==='rgba(0, 0, 0, 0)',
+          '탭 띠에 판이 남아 있다'); }
       // ⑦ 추천은 셋 이하이고, **왜 권하는지**를 적는다
       { const reco=runeRecoList();
         assert(reco.length<=3,'추천이 셋을 넘는다: '+reco.length);
