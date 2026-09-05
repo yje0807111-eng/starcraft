@@ -89,8 +89,10 @@ const RUNE_LIST = [
   //   아무 일도 안 한다 — 열기의 룬이 피버를 안 열었을 때와 같다. 상점에서 그렇게 알린다.
   { id:'exp',   nm:'성장의 룬',   kind:'norm', grp:'grow', eff:'exp',     ico:'hero',
     de:'경험치 획득량', soon:true },
+  // ⚠ **아직 닿는 데가 없다**(2026-09-04 실측: campRuneEff('killGain') 을 부르는 곳이 0곳).
+  //   적 처치 보상이라는 자리를 먼저 잡아 둔 것이다 — 배선하면 soon 을 지운다.
   { id:'kill',  nm:'전과의 룬',   kind:'norm', grp:'grow', eff:'killGain',ico:'upg',
-    de:'적 처치 보상' },
+    de:'적 처치 보상', soon:true },
   // ⚠ 2026-09-04 에 **유니크 → 일반**으로 내려왔다(성장 갈래를 채우려고).
   //   ⛔ 젬에는 안 건다 — 젬은 현질 재화다(GEM.md).
   { id:'mapg',  nm:'전리품의 룬', kind:'norm', grp:'grow', eff:'mapGain', ico:'map',
@@ -1277,6 +1279,8 @@ function runeRecoList(){
   const out = [], seen = {};
   const push = (key, why) => { if(!key || seen[key]) return;
     if(campRuneOwn(key) >= RUNE_OWN_MAX) return;
+    // ⛔ 아직 닿는 데가 없는 룬은 **권하지 않는다** — 젬을 쓰라고 등 떠밀 수는 없다
+    { const pd = runeParse(key).def; if(pd && pd.soon) return; }
     seen[key] = 1; out.push({ key, why }); };
   // ① 빈 칸이 많은 갈래부터
   const grps = RUNE_GRPS.slice().sort((a, b) => (hole[b] | 0) - (hole[a] | 0));
@@ -1325,6 +1329,7 @@ function _runeBuyCell(key, opt){
     + ' onclick="campRuneBuy(\'' + p.def.id + '\',\'' + gd + '\')">'
     + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
     + runeIcoHTML(key, 'rnBuyI')
+    + (p.def.soon ? '<i class="rnSoon">준비 중</i>' : '')
     + '<b>' + (O.nameFull ? runeName(key) : ((RUNE_GD[gd] || {}).tx || '')) + '</b>'
     + '<span>' + runeValTx(key) + '</span>' + tail
     + (own > 0 ? '<em class="rnHas">×' + own + '</em>' : '') + '</button>'; }

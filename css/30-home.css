@@ -3065,6 +3065,9 @@
 #campRune .rnBuy u s{text-decoration:line-through;color:#69737f;font-size:9.5px;margin-left:3px}
 #campRune .rnBuy u.max{color:#69737f;font-size:9.5px}
 /* 📦 보유 개수 — 오른쪽 위. 여덟이면 더 못 산다(버튼이 잠긴다) */
+/* ⚠ 아직 닿는 데가 없는 효과 — 사기 전에 알린다(젬을 받으면서 말을 안 하면 거짓 판매다) */
+#campRune .rnSoon{position:absolute;left:3px;bottom:3px;font-style:normal;font-size:8.5px;
+  color:#8d97a6;padding:0 3px;border-radius:var(--r-bar);background:rgba(255,255,255,.07)}
 #campRune .rnHas{position:absolute;right:3px;top:3px;font-style:normal;
   font-family:var(--font-num);font-size:9.5px;color:#8d97a6}
 /* 목록 줄 — 이름·설명 한 줄, 그 아래 등급 버튼들 */
