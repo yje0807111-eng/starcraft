@@ -1370,10 +1370,16 @@ function _runeShopHTML(){
       + '</div></div>'; }
 
   // 🛒 ② 주간 할인 — 30% 싸지만 **종류마다 한 개**. 남은 시간을 함께 적는다.
+  // 📶 **등급 순으로 늘어놓는다**(2026-09-05 사용자 확정) — 하 · 중 · 상 · 유니크.
+  //   왼쪽 위에서 오른쪽 아래로 갈수록 좋은 것이라 값도 함께 커진다(읽는 결이 한 방향).
+  //   ⚠ 목록 자체(주간 시드)는 안 건드린다 — **보여 주는 순서만** 정한다.
+  const rank = { low:0, mid:1, high:2, uniq:3 };
+  const sale = runeSaleList().slice()
+    .sort((a, b) => (rank[runeParse(a).gd] | 0) - (rank[runeParse(b).gd] | 0));
   h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">주간 할인</span>'
     + '<span class="rnSecN">' + runeLeftTx(runeWeekLeft()) + ' 뒤 갱신</span></div>'
     + '<div class="rnGrid3">'
-    + runeSaleList().map(k => _runeBuyCell(k, { sale:true, nameFull:true })).join('')
+    + sale.map(k => _runeBuyCell(k, { sale:true, nameFull:true })).join('')
     + '</div></div>';
 
   // 🗂 ③ 일반 — 갈래 탭으로 나눈다(16종 × 3등급이면 한 목록에 다 못 담는다)
