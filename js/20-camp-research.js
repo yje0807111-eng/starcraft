@@ -66,7 +66,7 @@ const CAMP_RES_ITEMS = [
     now: () => (typeof campTapGain === 'function') ? campTapGain() : 0,
     next: (n) => _campPeekNext('tap', () => campTapGain(), n),
     unit: '/탭' },
-  { k: 'gather', nm: '채취 강화', ico: 'upgrades/up_speed',
+  { k: 'gather', nm: '일꾼 강화', ico: 'upgrades/up_speed',
     why: '일꾼이 한 번 다녀올 때 캐는 양',
     now: () => (typeof campGatherMul === 'function') ? campGatherMul() : 1,
     next: (n) => _campPeekNext('gather', () => campGatherMul(), n),

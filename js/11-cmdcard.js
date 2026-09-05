@@ -771,7 +771,7 @@ function _campIdleModel(){
   st.push(['채취 배수', (typeof campGatherMul==='function')?('×'+campGatherMul().toFixed(1)):'-']);
   if(typeof campUpgLv==='function'){
     st.push(['터치 강화', 'Lv.'+campUpgLv('tap')]);
-    st.push(['채취 강화', 'Lv.'+campUpgLv('gather')]); }
+    st.push(['일꾼 강화', 'Lv.'+campUpgLv('gather')]); }
   // ⛔ 제목에 **던전 이름을 쓰지 않는다** — 던전은 좌상단 칩이 이미 말한다(같은 것을 두 번 말하게 된다).
   //    대신 이 구역이 무엇인지를 자간 넓은 작은 라벨로 말한다(kicker · 로딩창 LOADING 과 같은 어법).
   return { mode:'upg', compact:true, build:true, wide:true,   // 빈 슬롯 4칸이 의미 없다 → 안쪽 전체를 쓴다

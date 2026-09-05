@@ -159,6 +159,24 @@ function curChipHTML(o){
     +'<i class="cdCv"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i>'
     // 진행 = **밑선 하나**. 막대를 따로 두지 않는다(줄을 더 쓰지 않게 absolute 로 앉힌다).
     +'<span class="cdBar"><i style="width:'+pct.toFixed(1)+'%"></i></span>'; }
+// 📈 **라운드에 따라 오르는 재화 획득 배수** — 칩 오른쪽의 작은 칸(2026-09-04 사용자 요청).
+//   ⛔ 값을 여기서 만들지 말 것 — campMineMul() 이 단일 소스다(던전 배수 + 라운드마다 오르는 몫).
+//   ⚠ **던전에서만** 보인다 — 캠프(0단계)는 배수가 고정이라 알려 줄 것이 없다.
+//   ⚠ 튜토리얼 마지막 단계가 이 칸을 가리킨다(TUTO_STEPS 의 outro) — id 를 바꾸면 그쪽도 고칠 것.
+function curPaintMul(){ const e=document.getElementById('curMul'); if(!e) return;
+  const on = (typeof campIsOn==='function') && campIsOn()
+          && (typeof campDgN==='function') && (campDgN()|0) > 0;
+  if(!on){ if(e.textContent) e.textContent=''; e.classList.remove('on'); return; }
+  const v = (typeof campMineMul==='function') ? campMineMul() : 1;
+  const tx = '획득 ×' + ((v>=100 && typeof fmtCur==='function') ? fmtCur(v)
+                        : (Math.round(v*10)/10).toFixed(1));
+  if(e.textContent!==tx) e.textContent=tx;
+  e.classList.add('on');
+  // 자리 — 칩 **바로 오른쪽**(같은 줄). 칩 폭은 던전 이름 길이에 따라 변하므로 그때그때 잰다.
+  { const ch=document.getElementById('curTitle');
+    if(ch && ch.classList.contains('asChip') && e.parentElement){
+      const cr=ch.getBoundingClientRect(), br=e.parentElement.getBoundingClientRect();
+      if(cr.width>0) e.style.left=Math.round(cr.right-br.left+8)+'px'; } } }
 // 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
   // 🏕 캠프 **구역**(환생·업그레이드·룬)이 열려 있으면 던전 칩 대신 그 이름을 쓴다(2026-09-03).
@@ -466,6 +484,7 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   setN('curGem', profGem());
   curPaintLv();       // 🧑 레벨·경험치(맨 윗줄)
   curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
+  curPaintMul();      // 📈 라운드에 따라 오르는 획득 배수(칩 옆)
   if(typeof guidePaint==='function') guidePaint();   // 🧭 가이드 띠도 같은 박자로
   if(typeof tutoKick==='function') tutoKick(); }     // 🎓 튜토리얼 스포트라이트도 같은 박자로
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
@@ -2068,6 +2087,12 @@ function josaRo(w){ w=String(w||''); if(!w) return '로';
   if(c<0||c>11171) return '로';                 // 한글이 아니면(영문·숫자) 기본형
   const jong=c%28;                              // 종성 인덱스(0=없음, 8=ㄹ)
   return (jong===0||jong===8) ? '로' : '으로'; }
+// 「…을/…를」 — 받침이 있으면 '을', 없으면 '를'. josaRo 와 **같은 자리**에 둔다(조사는 한 곳에서 만든다).
+//   ⚠ 튜토리얼이 던전 이름을 문장에 넣는다(「감염된 둥지를 선택합니다」) — 이름이 바뀌어도 맞아야 한다.
+function josaEul(w){ w=String(w||''); if(!w) return '를';
+  const c=w.charCodeAt(w.length-1)-0xAC00;
+  if(c<0||c>11171) return '를';
+  return (c%28) ? '을' : '를'; }
 
 // 행 문법은 **캠프 종족 선택(.crRow)에서 빌린다** — 아이콘 · 이름 · 부제 · ✓/›.
 // ⛔ 여기 전용 종족 행을 새로 만들지 말 것. 다른 것은 '고른 행을 종족색이 물들인다'(S3안)뿐이다.

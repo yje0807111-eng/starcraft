@@ -5466,11 +5466,11 @@ function campMineStopBtn(){
   if(b) return;
   b = document.createElement('button');
   b.id = 'campMineStop'; b.type = 'button';
-  b.setAttribute('aria-label', '채굴 멈추기');
+  b.setAttribute('aria-label', '채굴 모드 해제');
   b.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
     + '<rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/>'
     + '<rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/></svg>'
-    + '<i>채굴 멈춤</i>';
+    + '<i>채굴 모드 해제</i>';
   b.onclick = function(ev){ if(ev) ev.stopPropagation(); campMineModeSet(false); };
   ph.appendChild(b);
 }
@@ -5773,7 +5773,7 @@ function campMineOpen(){ openCampMine(); }   // 별칭 — 호출부가 어느 �
 
 const CAMP_MINE_UPGS = [
   { k:'tap',    nm:'터치 강화', why:'한 번 누를 때 캐는 양' },
-  { k:'gather', nm:'채취 강화', why:'일꾼이 한 번 다녀올 때 캐는 양' }
+  { k:'gather', nm:'일꾼 강화', why:'일꾼이 한 번 다녀올 때 캐는 양' }
 ];
 function campMineRender(){
   const sheet = document.getElementById('campMineSheet');
@@ -6067,6 +6067,9 @@ function campFrame(now){
       campCombatStep(dt);                                         // ⚔ 던전 전투(0단계에서는 스스로 빠진다)
       campGasTick(dt);                                            // ⛽ 정제소 자동 생산
     }
+    // 🎓 튜토리얼이 가리킬 **건물 자리** — 여기서 재야 한다(_campSim 구간 = 캠프 좌표계).
+    //   ⛔ 튜토리얼 쪽에서 직접 계산하지 말 것: 그때는 관리자 탭 좌표계라 링이 좌상단으로 튄다.
+    try{ if(typeof tutoBldBoxSave === 'function') tutoBldBoxSave(); }catch(_e){}
     _campSim = false;
     // ❤ 전장 HP 바 — renderBuildTab 이 라벨 층(#cstLabels)을 **통째로 덮으므로** 그 뒤에 얹는다.
     //   ⛔ renderBuildTab 안으로 옮기지 말 것 — 그 파일은 관리자 건설 탭과 공유다(캠프 전장이 새 나간다).

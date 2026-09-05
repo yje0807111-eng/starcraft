@@ -961,6 +961,14 @@
   #phone.campMode .curBar .curTitle.asChip{position:absolute;left:10px;top:calc(100% + 4px)}
   #phone.campMode .curBar .curTitle.asChip::before{content:'';position:absolute;left:0;right:0;top:-4px;height:1px;
     background:linear-gradient(90deg,rgba(255,255,255,.20),transparent);pointer-events:none}
+  /* 📈 라운드에 따라 오르는 **재화 획득 배수** — 칩과 **같은 줄, 칩 바로 오른쪽**(2026-09-04 사용자 요청).
+     ⛔ 판을 만들지 말 것 — 칩과 같은 어휘(글자만)로 둔다. 색은 칩 이름보다 옅다(딸린 정보다).
+     ⚠ 가로 자리(left)는 **JS 가 칩 폭을 재서** 준다(curPaintMul) — 던전 이름 길이에 따라 칩이 늘고 준다.
+     ⚠ 튜토리얼 마지막 단계가 이 칸을 감싼다 — 안 보이면 그 단계가 화면 전체를 덮는다. */
+  #curMul{display:none}
+  #phone.campMode .curBar #curMul.on{display:inline-block;position:absolute;top:calc(100% + 4px);
+    font-family:var(--font-num);font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap;
+    color:rgba(214,226,240,.62);text-shadow:0 1px 3px rgba(0,0,0,.9);pointer-events:none}
   /* ⑦ 한 단 작고 옅게 — 프로필(이름 11.5px)이 주인공이고 칩은 그 아래 딸린 줄이다 */
   #phone.campMode .curBar .curTitle.asChip .cdNm{font-size:11px;color:rgba(230,238,252,.82)}
   #phone.campMode .curBar .curTitle.asChip .cdN{font-size:12px;color:rgba(230,238,252,.82)}
@@ -1009,6 +1017,18 @@
   .tutoOv{position:absolute;inset:0;z-index:140;pointer-events:none;
     animation:tutoFadeIn var(--t-screen) ease}
   @keyframes tutoFadeIn{from{opacity:0}to{opacity:1}}
+  /* 🎞 **단계가 바뀔 때 부드럽게 옮겨 간다** (2026-09-04 사용자 요청).
+     자리·크기는 tutoPaint 가 인라인 style 로 주므로 transition 이 그대로 먹는다.
+     ⚠ 처음 뜰 때는 안 건다 — .tuAnim 을 한 박자 뒤에 붙인다(안 그러면 판이 0 에서 자라 보인다).
+     ⚠ 값이 안 바뀐 프레임에는 아무 일도 없다 — tutoPaint 가 120ms 마다 돌아도 헛돌지 않는다.
+     ⛔ 시간을 길게 잡지 말 것: 전환 중에는 스포트라이트가 중간 자리라 대상이 잠깐 덮인다. */
+  .tutoOv.tuAnim>i,.tutoOv.tuAnim .tuRing,.tutoOv.tuAnim .tuTip{
+    transition:left .22s ease,top .22s ease,right .22s ease,bottom .22s ease,
+               width .22s ease,height .22s ease}
+  /* 말풍선은 **글이 바뀌는 것**이라 자리 이동만으로는 안 읽힌다 — 한 번 떠오르게 한다.
+     ⛔ fill-mode 금지(기본 상태가 보임 · 환생 구역 선례와 같은 규칙). */
+  .tutoOv .tuTip.tuIn{animation:tuTipIn .24s ease}
+  @keyframes tuTipIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   /* 🚧 튜토리얼 중에는 **맵 위에 떠 있는 「채굴 멈춤」이 안 눌린다** (2026-09-04 사용자 신고).
      맵을 여는 단계에서 그 버튼까지 함께 열려, 누르면 캐는 것이 멎어 그 단계가 영영 안 끝났다.
      ⭐ 그 버튼이 **그 단계의 대상일 때**(.tuLive · tutoPaint 가 붙인다)만 산다.
@@ -1017,25 +1037,66 @@
   #phone.tutoOn #campMineStop.tuLive{pointer-events:auto;opacity:1}
   .tutoOv>i{position:absolute;background:rgba(2,3,6,.72);pointer-events:auto}   /* 네 판이 입력을 먹는다 */
   /* 대상 테두리 — 여기는 **안 막는다**(pointer-events:none) */
-  .tutoOv .tuRing{background:none;pointer-events:none;border:2px solid #ff7676;border-radius:var(--r-bar,3px);
+  /* ⚠ 1.5px — 2px 에서 한 단 얇게(2026-09-04 사용자 요청). 카드 테두리가 1px 이라 링만 굵으면
+     둘이 다른 화면의 것처럼 보였다. ⛔ 1px 아래로 내리지 말 것: 밝은 돌바닥에서 선이 사라진다. */
+  .tutoOv .tuRing{background:none;pointer-events:none;border:1.5px solid #ff7676;border-radius:var(--r-bar,3px);
     box-shadow:0 0 0 3px rgba(255,118,118,.18);animation:tutoPulse 1.4s ease-in-out infinite}
+  /* 🎞 먼 자리로 갈아탈 때 — 링이 살짝 부풀며 나타난다(미끄러지지 않으므로 등장이 필요하다).
+     ⛔ fill-mode 를 주지 말 것(기본 상태가 보임). */
+  .tutoOv .tuRing.tuPop{animation:tutoPulse 1.4s ease-in-out infinite, tuRingPop .22s ease}
+  @keyframes tuRingPop{from{transform:scale(1.14);opacity:.35}to{transform:none;opacity:1}}
   @keyframes tutoPulse{0%,100%{box-shadow:0 0 0 3px rgba(255,118,118,.18)}50%{box-shadow:0 0 0 7px rgba(255,118,118,.06)}}
   /* 말풍선 — 판 없이 글자(상단 줄과 같은 어법). 단계 번호만 작은 칩. */
   /* 말풍선 — **대상 옆**에 붙는다(2026-09-04 사용자 지적). 화면 끝에 두면 눈이 두 번 움직인다.
      판을 옅게 깔아 맵 위에서도 읽히게 하고, 꼬리로 대상 쪽을 가리킨다. */
+  /* 🎨 껍데기는 **룬 칸의 테두리 문법**이다(2026-09-04 사용자 확정 · 목업 camp-tuto-box-8 ④안).
+     위가 흰빛이고 아래로 갈수록 액센트로 물드는 **세로 그라데 선** — 선 하나로 「빛이 위에서 온다」를
+     말해서, 판이 얇아도 입체로 읽힌다(룬 rnEg 와 같은 어휘 · js/22-camp-rune.js).
+     ⚠ 그라데 테두리는 **면과 선을 두 겹으로 칠하는 방식**이다(padding-box / border-box) —
+       ⛔ border-color 를 따로 주지 말 것: 그러면 그라데가 통째로 덮인다.
+     ⛔ 옛 흰 1px 로 되돌리지 말 것. */
   .tutoOv .tuTip{position:absolute;z-index:1;pointer-events:none;display:flex;flex-direction:column;gap:5px;
-    padding:9px 11px;border-radius:var(--r-bar,3px);
-    background:linear-gradient(180deg,rgba(16,17,20,.94),rgba(8,9,11,.96));
-    border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.5);
+    padding:9px 11px;border-radius:var(--r-md,6px);border:1px solid transparent;
+    background:linear-gradient(180deg,rgba(12,15,21,.96),rgba(6,8,12,.97)) padding-box,
+               linear-gradient(180deg,rgba(223,233,245,.42),rgba(255,210,74,.30) 45%,rgba(255,210,74,.10)) border-box;
+    box-shadow:0 8px 20px -12px #000;
     text-shadow:0 1px 3px rgba(0,0,0,.9)}
-  .tutoOv .tuTip::after{content:'';position:absolute;left:50%;margin-left:-6px;border:6px solid transparent;
-    top:-12px;border-bottom-color:rgba(255,255,255,.12)}
-  .tutoOv .tuTip.up::after{top:auto;bottom:-12px;border-bottom-color:transparent;border-top-color:rgba(255,255,255,.12)}
+  /* 🎯 꼬리의 가로 자리는 **JS 가 대상 중심으로** 준다(--tuTail · tutoPaint). 가운데 고정이면
+     말풍선이 화면 안으로 밀렸을 때 엉뚱한 데를 가리킨다(2026-09-04 사용자 지적). */
+  .tutoOv .tuTip::after{content:'';position:absolute;left:var(--tuTail,50%);margin-left:-6px;
+    border:6px solid transparent;top:-12px;border-bottom-color:rgba(223,233,245,.42)}
+  /* 아래로 향한 꼬리는 카드의 **아랫변 색**(액센트가 옅어진 쪽)을 쓴다 — 같은 그라데의 그 자리다 */
+  .tutoOv .tuTip.up::after{top:auto;bottom:-12px;border-bottom-color:transparent;border-top-color:rgba(255,210,74,.22)}
   .tutoOv .tuHd{display:flex;align-items:center;justify-content:space-between;gap:8px}
   /* 왼쪽 = **몇 단계째**(가시성을 올렸다 · 붉은 글자) · 오른쪽 = **이번 단계의 진행** */
   .tutoOv .tuStep{font-family:var(--font-num);font-size:11.5px;font-weight:800;color:#ff7676;letter-spacing:.02em}
-  .tutoOv .tuN{font-family:var(--font-num);font-size:11.5px;font-weight:800;color:rgba(214,226,240,.72)}
-  .tutoOv .tuTx{font-size:12.5px;font-weight:800;color:#fff;line-height:1.35}
+  .tutoOv .tuN{font-family:var(--font-num);font-size:11.5px;font-weight:800;color:rgba(214,226,240,.72);
+    transition:color .12s ease}
+  /* ✅ **다 했다** — 0.3초 머무는 동안(TUTO_HOLD_MS) 이 초록이 보이고 나서 넘어간다.
+     색은 보상 버튼과 같은 --ok 다. ⛔ 붉은색을 쓰지 말 것: 왼쪽 단계 번호와 링이 그 색이다. */
+  .tutoOv .tuN.ok{color:#5dff8f}
+  /* ⚠ 줄바꿈 규칙 둘(2026-09-04 사용자 요청 — 「깔끔하게 줄바꿈」):
+     · pre-line — 문구에 넣은 \n 을 **의미 단위 줄바꿈**으로 쓴다(두 줄짜리는 거기서만 접힌다).
+     · keep-all — 한국어 **어절 중간에서 안 끊는다**(「탭하 / 세요」가 그랬다).
+     ⛔ break-all·break-word 로 되돌리지 말 것. */
+  .tutoOv .tuTx{font-size:12.5px;font-weight:800;color:#fff;line-height:1.35;
+    white-space:pre-line;word-break:keep-all}
+  /* 🎁 마지막 확인 버튼 — 공용 .actBtn.pri 가 면·테두리·글자를 갖는다. 여기서는 **자리와 크기만** 준다.
+     ⛔ 면·테두리를 따로 쓰지 말 것(레지스트리 「액션 버튼」). ⚠ 말풍선은 pointer-events:none 이라
+     버튼만 되살린다 — 그러지 않으면 안 눌린다. */
+  /* 🟢 **초록**(2026-09-04 사용자 확정 · 목업 camp-tuto-btn-6 ④안) — DESIGN 의 --ok 다.
+     「끝났다」는 뜻과 맞고, 금색은 카드 테두리가 이미 쓰고 있어 버튼까지 금색이면 과했다(사용자 지적).
+     ⚠ 공용 .actBtn.pri 를 **색만** 덮는다 — 크기·모양·누름 표시는 공용 그대로다.
+     ⛔ 붉은색을 쓰지 말 것: 스포트라이트 링이 그 색이다. ⛔ 시안도 아니다(「선택된 것」 전용). */
+  .tutoOv .tuTip .tuGo{height:36px;margin-top:3px;pointer-events:auto;font-size:12.5px;
+    color:#e9fff1;border-color:rgba(93,255,143,.38);background:rgba(93,255,143,.13)}
+  .tutoOv .tuTip .tuGo:active{background:rgba(93,255,143,.22)}
+  /* ⚠ **hidden 속성만으로는 안 숨는다** — 공용 `.actBtn{display:flex}` 가 브라우저 기본 `[hidden]` 을
+     이겨서, 마지막이 아닌 단계에도 **빈 상자**가 떴다(2026-09-04 사용자 신고). 여기서 못 박는다. */
+  .tutoOv .tuTip .tuGo[hidden]{display:none}
+  .tutoOv .tuTip .tuGo .tuGoRw{display:inline-flex;align-items:center;gap:3px;
+    font-family:var(--font-num);font-size:12.5px;font-weight:800;color:#bfffd6}
+  .tutoOv .tuTip .tuGo .tuGoIco{width:14px;height:14px;flex:none}
   /* 🧭 가이드 「지금 할 일」 띠 — 재화 바 바로 아래(2026-08-25).
      ⚠ #phone 직속이다 — 캠프 화면 안에 넣으면 캠프 파일을 건드리게 된다.
      ⚠ z 는 재화 바(62)보다 **낮게** 둔다 — 던전 드롭다운이 이 위를 덮어야 한다. */

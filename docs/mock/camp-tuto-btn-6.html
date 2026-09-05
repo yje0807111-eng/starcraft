@@ -1,0 +1,90 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>튜토리얼 보상 버튼 — 색 6안 (테두리는 ④ 고정)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ⚠ 껍데기는 **camp-tuto-box-8 의 ④안 고정**(룬 rnEg 문법 — 위 흰빛 → 아래 액센트 세로 그라데 테두리).
+     바꾸는 것은 **보상 버튼의 색 하나뿐**이다(2026-09-04 사용자: 「너무 눈에 띈다」).
+   ⚠ DESIGN.md 액센트는 **역할별**이다:
+     · 금색 = 재화·보상   · 시안 = 지금 선택된 것(화면당 1곳)   · 초록 = 긍정   · 붉은 = 위험·「지금 여기」
+     튜토리얼 링이 이미 붉은색을 쓰고 있으므로 버튼에 붉은색은 후보에서 뺀다.
+   ⚠ 공용 .actBtn.pri 가 기준선이다 — 면·테두리를 새로 쓰는 안은 그 사실을 밝혀 둔다. */
+:root{
+  --ko:'IBM Plex Sans KR',sans-serif; --num:'Rajdhani',sans-serif;
+  --gold:#ffd24a; --red:#ff7676; --cyan:#5cd6ff; --ok:#5dff8f; --gem:#a98bff;
+  --metal:rgba(150,170,200,.20);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0d1014;color:#dfe5ee;font-family:var(--ko);font-size:12px}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:24px;justify-content:center;align-items:flex-start}
+.cell{width:340px}
+.cap{margin:0 0 5px;font-weight:700;font-size:13px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--num)}
+.sub{margin:0 0 9px;color:#8d97a6;font-size:11px;line-height:1.6;min-height:48px}
+.sub b{color:#c3ccd8;font-weight:700}
+.phone{width:330px;height:150px;position:relative;overflow:hidden;
+  background:radial-gradient(120% 90% at 30% 0%,#9a9179,#6f6857)}
+.phone::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 34px,transparent 34px 36px)}
+.dim{position:absolute;inset:0;background:rgba(2,3,6,.72)}
+/* ④안 껍데기 — 세로 그라데 테두리(위 흰빛 → 아래 금색) */
+.tip{position:absolute;left:11px;top:22px;width:308px;display:flex;flex-direction:column;gap:5px;
+  padding:9px 11px;text-shadow:0 1px 3px rgba(0,0,0,.9);
+  border-radius:6px;border:1px solid transparent;
+  background:linear-gradient(180deg,rgba(12,15,21,.96),rgba(6,8,12,.97)) padding-box,
+             linear-gradient(180deg,rgba(223,233,245,.42),rgba(255,210,74,.30) 45%,rgba(255,210,74,.10)) border-box;
+  box-shadow:0 8px 20px -12px #000}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.no{font-family:var(--num);font-size:11.5px;font-weight:800;color:var(--red);letter-spacing:.02em}
+.pg{font-family:var(--num);font-size:11.5px;font-weight:800;color:rgba(214,226,240,.72)}
+.tx{font-size:12.5px;font-weight:800;color:#fff;line-height:1.35;word-break:keep-all}
+/* 버튼 기준선 = 공용 .actBtn.pri */
+.go{display:flex;align-items:center;justify-content:center;gap:6px;height:36px;margin-top:3px;
+  font-family:var(--ko);font-size:12.5px;font-weight:800;color:#fff;cursor:pointer;
+  border:1px solid rgba(255,255,255,.32);border-radius:3px;background:rgba(255,255,255,.14)}
+.go .rw{display:inline-flex;align-items:center;gap:3px;font-family:var(--num)}
+.go .gem{width:13px;height:13px;border-radius:2px;flex:none;
+  background:linear-gradient(180deg,#c9b6ff,#6a4fd0)}
+.mm{margin:7px 0 0;color:#6f7887;font-size:10.5px;font-family:var(--num);letter-spacing:.04em}
+
+/* ① 공용 그대로 — 면은 중립, 보상 숫자만 금색 */
+.b1 .go .rw{color:var(--gold)}
+/* ② 무채 + 금색은 아이콘·숫자에만 (테두리도 중립) */
+.b2 .go{border-color:rgba(255,255,255,.22);background:rgba(255,255,255,.08)}
+.b2 .go .rw{color:var(--gold)}
+/* ③ 젬 색(보라) — 보상이 젬이니 그 색으로 */
+.b3 .go{border-color:rgba(169,139,255,.45);background:rgba(169,139,255,.16);color:#efe9ff}
+.b3 .go .rw{color:#d9caff}
+/* ④ 초록(긍정·완료) */
+.b4 .go{border-color:rgba(93,255,143,.38);background:rgba(93,255,143,.13);color:#e9fff1}
+.b4 .go .rw{color:#bfffd6}
+/* ⑤ 시안(선택 액센트) — 화면당 1곳 규칙에 걸리는지 확인이 필요 */
+.b5 .go{border-color:rgba(92,214,255,.42);background:rgba(92,214,255,.14);color:#eaf9ff}
+.b5 .go .rw{color:#bfeaff}
+/* ⑥ 면 없이 금색 밑선만 — 가장 조용하다 */
+.b6 .go{border:none;background:none;border-bottom:2px solid rgba(255,210,74,.55);border-radius:0;
+  color:#fff;height:34px}
+.b6 .go .rw{color:var(--gold)}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const CARD = (v) => '<div class="phone ' + v + '"><i class="dim"></i><div class="tip">'
+  + '<div class="hd"><b class="no">20 / 20</b><b class="pg">0 / 1</b></div>'
+  + '<span class="tx">라운드가 오를수록 재화 획득 배수가 늘어납니다</span>'
+  + '<button class="go"><span>확인</span><b class="rw"><i class="gem"></i>×20</b></button></div></div>';
+const ANS = [
+ ['공용 버튼 그대로 <em>(중립 면)</em>','면·테두리는 <b>공용 .actBtn.pri 그대로</b>. 금색은 <b>보상 숫자에만</b> 남긴다 — 규칙을 하나도 안 건드리는 안이다.'],
+ ['한 단 더 조용하게','같은 중립이되 면·테두리를 <b>한 단 낮춘다</b>(면 8% · 테두리 22%). 카드 안에서 버튼이 튀지 않는다.'],
+ ['젬 색 <em>(보라)</em>','보상이 젬이니 <b>젬 색</b>으로 묶는다. 금색보다 차분하면서 「무엇을 주는지」가 색으로 읽힌다.'],
+ ['초록 <em>(긍정·완료)</em>','DESIGN 의 <b>--ok</b>. 「끝났다」는 뜻과 맞는 색이라 완료 버튼으로 자연스럽다.'],
+ ['시안 <em>(선택 액센트)</em>','<b>--acc-sel</b>. 다만 시안은 「지금 선택된 것」 전용이고 <b>화면당 1곳</b> 규칙이 있다 — 튜토리얼 중에는 다른 시안이 없어 가능하지만 규칙을 넓히는 셈이다.'],
+ ['면 없이 금색 밑선','면을 걷고 <b>밑선만</b> 남긴다. 가장 조용하다 — 대신 「누를 수 있다」가 가장 약하게 읽힌다.'],
+];
+document.getElementById('wrap').innerHTML = ANS.map(([t,d],i) =>
+ '<div class="cell"><p class="cap"><i>' + (i+1) + '</i>' + t + '</p><p class="sub">' + d + '</p>'
+ + CARD('b' + (i+1)) + '<p class="mm"></p></div>').join('');
+const measure = () => { document.querySelectorAll('.cell').forEach(c => {
+  const go = c.querySelector('.go'), cs = getComputedStyle(go);
+  c.querySelector('.mm').textContent = '면 ' + cs.backgroundColor + ' · 높이 '
+    + go.getBoundingClientRect().height.toFixed(0) + 'px'; }); };
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure); else setTimeout(measure, 300);
+</script></body></html>
