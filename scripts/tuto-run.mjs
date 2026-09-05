@@ -74,7 +74,8 @@ await page.evaluate(() => { const ph = document.getElementById('phone');
 await new Promise(r => setTimeout(r, 400));
 await page.evaluate(() => {
   const S = (typeof guideState === 'function') ? guideState() : null;
-  if (S) { S.t = 0; S.base = null; delete S.skip; }
+  // ⚠ 평소에는 안 뜬다(TUTO_AUTO=false) — 「해 보기」로 켠 판(S.trun)으로 세운다.
+  if (S) { S.t = 0; S.base = null; delete S.skip; S.trun = 1; }
   if (typeof TUTO_OFF !== 'undefined') TUTO_OFF = false;
   if (typeof tutoKick === 'function') tutoKick();
 });

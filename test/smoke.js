@@ -12393,7 +12393,7 @@ async function groupLobby(){
     skipIf(!S,'가이드 상태 없음');
     const on0=window.campIsOn, off0=TUTO_OFF, t0=S.t, base0=S.base, skip0=S.skip;
     try{
-      window.campIsOn=()=>true; TUTO_OFF=false; S.t=0; S.base=null; delete S.skip;
+      window.campIsOn=()=>true; TUTO_OFF=false; S.t=0; S.base=null; delete S.skip; S.trun=1;
       var _cm0=ph.classList.contains('campMode'); ph.classList.add('campMode');
       tutoPaint();
       // 표 자체는 화면이 없어도 잰다 — 단계마다 **제 진행도**를 갖는 것이 이 설계의 핵심이다
@@ -12437,7 +12437,7 @@ async function groupLobby(){
         if(typeof closeGuide==='function') closeGuide(); }
       return '단계 '+TUTO_STEPS.length+' · 대상만 열림 · 0/1 → 0/10';
     } finally { window.campIsOn=on0; TUTO_OFF=off0; S.t=t0; S.base=base0;
-      if(skip0!=null) S.skip=skip0; else delete S.skip;
+      delete S.trun; if(skip0!=null) S.skip=skip0; else delete S.skip;
       ph.classList.toggle('campMode', _cm0); tutoPaint(); }
   });
 
@@ -12566,6 +12566,18 @@ async function groupLobby(){
       } finally { G.tech.race=r0; } }
     // 🎁 첫 유닛 공짜는 **튜토리얼 안에서만** — 밖으로 새면 캠프 경제가 무너진다
     assert(typeof tutoFreeUnit==='function','첫 유닛 공짜 규칙이 없다');
+    // 🎓 **평소에는 안 뜬다**(2026-09-04 사용자 요청 — 「새로 들어갈 때마다 나온다」).
+    //   시작하는 문은 「해 보기」(tutoRestart → S.trun) 하나뿐이다.
+    { const on0=window.campIsOn, off0=TUTO_OFF, S=guideState();
+      const t0=S?S.t:0, run0=S?S.trun:null, skip0=S?S.skip:null;
+      try{ window.campIsOn=()=>true; TUTO_OFF=false;
+        if(S){ S.t=0; delete S.skip; delete S.trun;
+          assert(tutoOn()===false,'직접 켜지 않았는데 튜토리얼이 뜬다 — 들어갈 때마다 나온다');
+          S.trun=1;
+          assert(tutoOn()===true,'「해 보기」로 켰는데 안 뜬다'); }
+      } finally { window.campIsOn=on0; TUTO_OFF=off0;
+        if(S){ S.t=t0; if(run0!=null) S.trun=run0; else delete S.trun;
+               if(skip0!=null) S.skip=skip0; else delete S.skip; } } }
     // ⏱ 기다림 없애기도 **튜토리얼 안에서만** — 캠프 경제는 건설·생산 시간 위에 서 있다
     assert(typeof tutoNoWait==='function','즉시 생산 스위치가 없다');
     { const off0=TUTO_OFF; try{ TUTO_OFF=true;
@@ -12577,14 +12589,14 @@ async function groupLobby(){
     { const on0=window.campIsOn, off0=TUTO_OFF, S=guideState();
       const t0=S?S.t:0, skip0=S?S.skip:null, r0=G.tech.race, u0=G.tech.units;
       try{ window.campIsOn=()=>true; TUTO_OFF=false; G.tech.race='union'; G.tech.units={};
-        if(S){ delete S.skip;
+        if(S){ delete S.skip; S.trun=1;
           S.t=ids.indexOf('selB1'); assert(tutoFreeUnit('marine')===true,'병영을 지정하는 단계에서 아직 안 공짜다');
           S.t=ids.indexOf('unit');  assert(tutoFreeUnit('marine')===true,'뽑는 단계에서 안 공짜다');
           S.t=ids.indexOf('deselWk'); assert(tutoFreeUnit('marine')===false,'그 앞 단계까지 공짜가 번졌다');
           S.t=ids.indexOf('unit'); G.tech.units={marine:1};
           assert(tutoFreeUnit('marine')===false,'이미 한 기 가졌는데 또 공짜다'); }
       } finally { window.campIsOn=on0; TUTO_OFF=off0; G.tech.race=r0; G.tech.units=u0;
-        if(S){ S.t=t0; if(skip0!=null) S.skip=skip0; else delete S.skip; } } }
+        if(S){ S.t=t0; delete S.trun; if(skip0!=null) S.skip=skip0; else delete S.skip; } } }
     // 🚧 맵을 여는 단계에서 **「채굴 멈춤」이 안 눌린다** — 누르면 캐는 것이 멎어 그 단계가 영영 안 끝난다
     //   (2026-09-04 사용자 신고). 그 버튼이 **그 단계의 대상일 때만**(.tuLive) 산다.
     { const d=document.createElement('div'); d.id='campMineStopProbe'; d.className='tuLive';
@@ -12624,10 +12636,10 @@ async function groupLobby(){
     { const hs=$('homeScreen'), had=hs&&hs.classList.contains('campInClip');
       const on0=window.campIsOn, off0=TUTO_OFF, S=guideState(), t0=S?S.t:0, skip0=S?S.skip:null;
       try{ if(hs) hs.classList.add('campInClip');
-        window.campIsOn=()=>true; TUTO_OFF=false; if(S){ S.t=0; delete S.skip; }
+        window.campIsOn=()=>true; TUTO_OFF=false; if(S){ S.t=0; delete S.skip; S.trun=1; }
         assert(tutoOn()===true,'맵이 커지는 동안 튜토리얼이 안 뜬다 — 2.7초 늦는다');
       } finally { window.campIsOn=on0; TUTO_OFF=off0;
-        if(S){ S.t=t0; if(skip0!=null) S.skip=skip0; else delete S.skip; }
+        if(S){ S.t=t0; delete S.trun; if(skip0!=null) S.skip=skip0; else delete S.skip; }
         if(hs && !had) hs.classList.remove('campInClip'); } }
     return ids.length+'단계 · '+Object.keys(TUTO_BLD).length+'종족 · 셀렉터 일치 · 첫 유닛 공짜';
   });

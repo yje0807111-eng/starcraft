@@ -558,8 +558,19 @@ function tutoStep(){ return TUTO_STEPS[tutoIdx()] || null; }
 //   자동 검사(스모크)가 게임을 조작할 수 없다 — 그래서 검사에서는 꺼 두고, **튜토리얼 전용 스텝만** 켠다.
 //   ⛔ 게임 코드에서 이 값을 켜지 말 것. 검사와 개발자 콘솔 전용이다.
 let TUTO_OFF=false;
+// 🎓 **평소에는 안 뜬다**(2026-09-04 사용자 요청 — 「새로 들어갈 때마다 나온다」).
+//   ⚠ 버그가 아니었다: 끝내지도 「그만두기」를 누르지도 않으면 다음 진입에 그 단계부터 다시 뜨는 것이
+//     원래 설계였다. 요청은 그 자동 시작을 끄는 것이다.
+//   ⭐ 시작하는 문은 이제 **가이드 시트의 「해 보기」 하나뿐**이다(tutoRestart 가 S.trun 을 켠다).
+//   ⚠ 신규 계정 첫 진입에 자동으로 켜고 싶어지면 이 상수만 true 로 되돌린다 — 그때도
+//     **한 번 뜨면 다시 안 뜬다**(S.tseen). ⛔ tseen 검사를 지우지 말 것: 그게 없으면
+//     끝낼 때까지 매번 뜨는 옛 동작으로 돌아간다.
+const TUTO_AUTO = false;
 function tutoOn(){ const S=guideState();
   if(TUTO_OFF) return false;
+  if(S && !S.trun){                       // 「해 보기」로 켠 판이 아니면
+    if(!TUTO_AUTO) return false;          //   평소에는 안 뜬다(지금 설정)
+    if(S.tseen) return false; }           //   자동이어도 한 번만
   // 🎬 **화면이 넘어가는 중에는 안 뜬다**(2026-09-04 사용자 신고) — 종족을 고르고 캠프로 들어가는
   //   전환(그라데이션·로고)이 끝나기 전에 스포트라이트가 떠서, 아직 없는 것을 가리키고 있었다.
   //   ⚠ 종족 선택(#phone.campPick)이 떠 있는 동안도 아니다 — 그때는 캠프가 아직 아니다.
@@ -616,6 +627,10 @@ function tutoPaint(){
       +'<span class="tuTx"></span></div>';
     ph.appendChild(ov); }
   ph.classList.add('tutoOn');
+  // 🎓 **한 번 떴다**는 표시 — 자동 시작(TUTO_AUTO)일 때 두 번째부터 안 뜨게 하는 자리다.
+  //   ⚠ 지금은 자동이 꺼져 있어 쓰이지 않지만, 되돌렸을 때 곧바로 살아나야 한다.
+  { const _S=guideState(); if(_S && !_S.tseen){ _S.tseen=1;
+      try{ if(typeof saveMeta==='function') saveMeta(); }catch(_e){} } }
   // 🚧 **맵을 열면 그 위에 떠 있는 버튼까지 함께 열린다**(2026-09-04 사용자 신고).
   //   「채굴 멈춤」(#campMineStop)은 #phone 직속이라 맵 영역과 겹친다 — 맵 단계에서 그걸 누르면
   //   캐는 것이 멎어 「맵을 두드립니다」가 **영영 안 끝났다**(돈 모으기 단계도 같다).
@@ -714,7 +729,8 @@ function closeGuide(){ const el=document.getElementById('hbGuideSheet'); if(el) 
 //     ⛔ 그만두기를 없애지 말 것: 없으면 켠 사람이 끝낼 때까지 빠져나올 길이 없다.
 function tutoRestart(){
   const S=guideState(); if(!S) return;
-  S.t=0; S.base=null; delete S.skip;
+  // ⭐ 이 판을 **직접 켠 것**으로 표시한다 — 평소에는 안 뜨므로(TUTO_AUTO) 이 표시가 없으면 안 뜬다.
+  S.t=0; S.base=null; delete S.skip; S.trun=1;
   if(typeof TUTO_OFF!=='undefined') TUTO_OFF=false;
   if(typeof closeGuide==='function') closeGuide();
   // 캠프 밖이면 데려간다 — 튜토리얼은 캠프 화면 위에서만 뜻이 있다
@@ -723,7 +739,7 @@ function tutoRestart(){
   setTimeout(tutoPaint, 260); }
 function tutoStop(){
   const S=guideState(); if(!S) return;
-  S.skip=1;
+  S.skip=1; delete S.trun;              // 직접 켠 표시도 걷는다(다시 켜려면 「해 보기」)
   if(typeof saveMeta==='function') saveMeta();
   tutoPaint();
   if(typeof toast==='function') toast('🎓 튜토리얼을 껐습니다 — 가이드에서 다시 켤 수 있습니다'); }
