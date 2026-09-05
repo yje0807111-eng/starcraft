@@ -7031,6 +7031,36 @@ async function groupLobby(){
         const lh=parseFloat(getComputedStyle(d).lineHeight)||13;
         assert(d.getBoundingClientRect().height<=lh*4+2,
           '설명이 네 줄을 넘는다 — 판을 밀어낸다: '+d.textContent); }
+      // ✂ **모든 종족의 연구 설명이 흉하게 안 넘어간다** — `_ddBrk`(js/11-cmdcard.js)가 그리는
+      //   자리에서 잡는다. ⛔ 91개 문구를 손으로 고치지 말 것(하나 늘 때마다 또 손봐야 한다).
+      //   실측(2026-09-05): 손보기 전 91개 중 **15개**가 깨졌다 —
+      //     「…+1/ / 티어」(슬래시 뒤) · 「…포격 / 모드」(한 낱말만 남음) · 「…시간 / ↑」(한글↔기호).
+      { assert(typeof _ddBrk==='function','설명 줄바꿈 손질기(_ddBrk)가 없다');
+        const probe=document.createElement('div'); probe.className='cgDd';
+        probe.style.cssText='position:fixed;left:-9999px;top:0;width:95px;font-size:9.5px;'
+          +'line-height:1.4;word-break:keep-all;overflow-wrap:break-word';
+        document.body.appendChild(probe);
+        const badly=[];
+        try{
+          const seen=new Set();
+          for(const race in TECH_TREE) for(const bd of (TECH_TREE[race].buildings||[]))
+            for(const r of (bd.research||[])){
+              if(!r.desc || seen.has(r.desc)) continue; seen.add(r.desc);
+              probe.textContent=_ddBrk(r.desc);
+              const node=probe.firstChild, R=document.createRange(), tops=[];
+              const t=probe.textContent;
+              for(let i=0;i<t.length;i++){ R.setStart(node,i); R.setEnd(node,i+1);
+                const rc=R.getClientRects()[0]; tops.push(rc?Math.round(rc.top):null); }
+              const ls=[]; let cur='', last=null;
+              for(let i=0;i<t.length;i++){ if(tops[i]!=null && tops[i]!==last){ if(cur) ls.push(cur); cur=''; last=tops[i]; } cur+=t[i]; }
+              if(cur) ls.push(cur);
+              const L=ls.map(x=>x.trim()).filter(Boolean);
+              // 마지막 줄에 **짧은 조각 하나만** 남으면 흉하다
+              if(L.length>1 && L[L.length-1].replace(/\s/g,'').length<=3) badly.push(r.k+': '+L.join(' / '));
+              if(L.length>4) badly.push(r.k+': '+L.length+'줄');
+            }
+        } finally { document.body.removeChild(probe); }
+        assert(!badly.length,'연구 설명이 흉하게 넘어간다('+badly.length+'개): '+badly.slice(0,3).join(' | ')); }
 
       // ② 정보판이 **현재 ▸ 다음**을 보여 준다
       { const v=body.querySelector('.cgVal');

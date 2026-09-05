@@ -1834,6 +1834,31 @@ function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class=
   const meta=(it.tr!=null&&it.tr!=='')?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.tr+'</div>'):((!build&&it.meta)?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'');   // tr=건설 카드에서도 보이는 우상단 배지(업그레이드 다음 단계 등) · 그 외 건설 카드=메타 제거
   const bot=(it.bottom!=null)?it.bottom:('<div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div>');   // 🧱 bottom = 커스텀 하단 줄(벙커 HP 등)
   return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+((it.sub!=null&&it.sub!=='')?('<div class="cgSub">'+it.sub+'</div>'):'')+bot+'</div>'; }
+// ✂ **좁은 설명 칸에서 줄이 흉하게 넘어가는 것을 막는다**(2026-09-05).
+//   설명 칸(.cgDd)은 캠프 연구 구역에서 **95px 뿐이다**(실측) — 한글 9~10자에서 줄이 바뀐다.
+//   그대로 두면 실측으로 91개 중 15개가 이렇게 깨졌다:
+//     · 「전투기·폭격기·전함 +1/ / 티어」  — 슬래시 **뒤**가 끊긴다
+//     · 「공성전차 장거리 포격 / 모드」    — 마지막 한 낱말만 다음 줄에 남는다
+//   ⭐ 그래서 **문구를 고치지 않고 그리는 자리에서** 두 가지만 손본다. 새 설명이 들어와도 저절로 걸린다.
+//     ⛔ 91개를 손으로 고치지 말 것 — 하나 늘 때마다 또 손봐야 한다.
+//   ⚠ `\u2060`(낱말 이음)·`\u00A0`(줄바꿈 없는 공백)은 **눈에 안 보인다** — 이스케이프로만 적는다.
+//   ⚠ 이미 손으로 잡아 둔 곳(js/20-camp-research.js 의 `\u00A0`)과 **겹치지 않는다**:
+//     그쪽은 이미 보통 공백이 아니라서 아래 ②의 낱말 나누기에 안 걸린다.
+function _ddBrk(s){
+  if(s == null) return s;
+  s = String(s);
+  if(s.indexOf('<') >= 0) return s;                  // ⛔ HTML 조각(툴팁 등)은 건드리지 않는다
+  // ① 「+1/티어」·「−3%/레벨」 — 슬래시 뒤에서 끊기지 않게 붙인다
+  s = s.replace(/\/(?=\S)/g, '/\u2060');
+  // ③ 「시간↑」 — 한글 **바로 뒤에 붙은 기호**도 끊긴다. `keep-all` 은 한글 낱말만 지키고
+  //   한글↔기호 경계는 여전히 줄 바꿀 자리로 본다(실측: 「…유지 시간 / ↑」).
+  s = s.replace(/([^\s\u2060])([↑↓→←])/g, '$1\u2060$2');
+  // ② 마지막 낱말이 짧으면 앞 낱말과 묶는다 — 줄 끝에 한 낱말만 남지 않게
+  const t = s.split(' ');
+  if(t.length >= 2 && t[t.length - 1].length <= 4)
+    return t.slice(0, -2).concat(t.slice(-2).join('\u00A0')).join(' ');
+  return s;
+}
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
   let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' cgScr':'')+(d.statsWide?' cgWide':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
@@ -1844,7 +1869,7 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
     const r=Math.max(0,Math.min(1,u.hp/(u.maxHp||1)));
     return '<div class="cgUChip" data-uid="'+(u.uid!=null?u.uid:u.eid)+'" '+(u.act||('onclick="techSubSelectOne(event,'+u.eid+')"'))+' title="이 유닛만 지정"><i class="cgUFill" style="width:'+(r*100)+'%;background:'+hpBarColor(r)+'"></i><em class="cgUHp">'+Math.round(u.hp)+'/'+Math.round(u.maxHp||0)+'</em></div>';
   }).join('')+'</div>'; }   // 👥 유닛별 HP 칩 그리드 — 얇은 HP 선(비율↓=빨강) + 칩 중앙 HP 수치(40/40), 탭=개별 지정 · 12↑도 그리드 스크롤(프로필 높이 고정)
-  return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
+  return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+_ddBrk(d.desc)+'</div>':'')+val
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+valSm+'</div>'):'')+q+ul
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;
