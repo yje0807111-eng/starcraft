@@ -4371,6 +4371,18 @@ async function groupLobby(){
           const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
           if(d<cross){ cross=d; cw=pts[i].br+' ↔ '+pts[j].br; } }
         assert(cross>=34,'다른 갈래가 겹친다(중심 사이 '+cross.toFixed(0)+'): '+cw); }
+      // 📏 **줄기가 등간격이어야 한다**(2026-09-04 사용자 지적 「두 번째 다음으로 너무 멀어진다」)
+      //   가운데 → 갈래마디 → 묶음마디 → 첫 계열. 한 칸만 두 배로 벌어지면 나무가 끊겨 보인다.
+      //   ⛔ R0 만 키워서 겹침을 고치지 말 것 — 그러면 이 칸만 138 이 된다(실측).
+      { const d=p=>Math.hypot(p.x,p.y);
+        for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)||campTreeBrSoon(bk)) continue;
+          const L0=CAMP_RT_LINES.find(L=>L.br===bk); if(!L0) continue;
+          const r=[d(campTreeBrPos(bk)), d(campTreeGpPos(bk,L0.grp)), d(campTreePos(L0.k,1))];
+          const gap=[r[0], r[1]-r[0], r[2]-r[1]];
+          const lo=Math.min(...gap), hi=Math.max(...gap);
+          assert(lo>0,bk+' 줄기 간격이 뒤집혔다: '+gap.map(Math.round).join(' · '));
+          assert(hi/lo<1.7,bk+' 줄기 한 칸만 크게 벌어졌다: '+gap.map(Math.round).join(' · ')
+            +' (가장 큰 칸이 가장 작은 칸의 '+(hi/lo).toFixed(2)+'배)'); } }
       // 🔗 선이 별 **안으로 파고들지 않는다** (2026-09-02 사용자 지적)
       //   ⛔ 중심에서 중심으로 긋지 말 것. 양 끝을 반지름 + 틈만큼 물린다.
       { const g=$('ctG'); const gems=[...g.querySelectorAll('.ctGem')].map(e=>({
