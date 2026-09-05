@@ -136,9 +136,6 @@ function dqNote(kind, n){
     dqDot(); }
   dqRefresh();
 }catch(_e){} }
-// ── 퀘스트 수령 ──
-function dqDoneN(){ const D=dqState(); if(!D) return 0;
-  return D.q.filter(function(e){ const Q=DQ_BY[e.id]; return Q && e.n>=Q.goal; }).length; }
 function dqClaim(i){ const D=dqState(); if(!D) return; const e=D.q[i], Q=e&&DQ_BY[e.id];
   if(!Q || e.got || e.n<Q.goal) return;
   e.got=1; const tx=dqGive(Q.rw);

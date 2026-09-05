@@ -448,9 +448,13 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   if(_sig==null || _sig!==body._stkSig){ body._stkSig=_sig;
     if(specHTML!=null) body.innerHTML=specHTML; else if(model) renderCmdGrid(body, model); }
   const _liftSel=(G.tech.sel!=null)&&!!G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'&&x._lifted);   // 부양 건물 선택 = 바닥탭이 이동이라 금지버튼으로 해제
-  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes); }
+  // 🏕 캠프 던전의 **전장 유닛 지정**(_campSel · js/19-camp.js)도 셈에 넣는다 — 그 지정은 기지 변수(selU)에 없어서
+  //    해제 버튼이 영영 안 켜졌다(2026-09-05 사용자 신고). 관리자 건설·오토배틀에서는 _campSel 이 비어 있어 영향이 없다.
+  const _campSelN=(typeof campSelList==='function')?campSelList().length:0;
+  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes || _campSelN>0); }
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
+  if(typeof campSelClear==='function') campSelClear();   // 🏕 캠프 던전의 전장 유닛 지정도 같은 버튼으로 푼다(2026-09-05)
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
   const sh=G.tech.sheet; if(sh&&sh.sec==='ent'){ sh.open=false; sh.sec=null; } techUIRender(); }   // 해제 후 다시 드래그=박스 지정(메인 규약)
 function techSubSelectType(ev,uid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👥 혼합 지정 → 종류 칩 짧게 탭 = 그 종류 프로필만 표시(selU는 전부 유지 · 소프트) · uid 빈값=전체로 복귀

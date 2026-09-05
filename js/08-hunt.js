@@ -459,7 +459,6 @@ function csVal(k){ const a=csAxis(k); return a?a.total:0; }
 // 추가 보정 훅 — 장비 어빌리티(공격력 %)·펫/동료 패시브가 생기면 여기서만 곱한다.
 // ⚠ 지금은 원천이 없어 항상 1이다. 새 보정을 만들면 이 함수 안에 넣을 것(전투식에 직접 곱하지 말 것).
 function csBonus(k){ return 1; }
-function csHasBonus(){ for(const k of CS_ORDER) if(Math.abs(csBonus(k)-1)>1e-9) return true; return false; }
 // ══════════════════════════════════════════════════════════════════════════════════════
 function hbCharStats(){ const n=hbUpgNum;
   return { atk:csVal('atk'), hpMax:csVal('hp'),
@@ -499,10 +498,7 @@ function hbSyncChar(heal){ if(!_hb||!_hb.char) return null;
 //    ⛔ 옛 고정 배수(체력 8 · 공격 5 · 보상 24)로 되돌리지 말 것: 50라운드를 민 뒤
 //       다음 던전 1라운드가 8배로 떨어져 난이도가 통째로 무너진다.
 function hbProg(dg,round){ return (Math.max(1,dg||1)-1)*HB_ROUND_MAX + Math.max(1,round||1); }
-// ⚠ 아래 넷은 '던전 시작까지의 누적 배수'다 — hbCurve(base,dg,1) 과 같다(옛 이름 호환).
-function HB_DG_HP (dg){ return hbCurve(HB_ROUND_HP , dg, 1); }   // 적 체력
 function HB_DG_REW(dg){ return hbCurve(HB_ROUND_REW, dg, 1); }   // 재화 보상
-function HB_DG_MUL(dg){ return HB_DG_HP(dg); }             // 옛 이름 호환
 // ── 📈 라운드 곡선 = 지수(2026-08-18). 레벨 1회에 포인트 1 = +50% 라 성장이 폭발적이고,
 //    옛 선형 곡선(체력 14+5R)으로는 몇 라운드 만에 저항이 사라졌다. 그래서 적도 같이 지수로 올린다.
 //    ⚠ 넷을 함께 본다 — 체력만 올리면 벽이고, 보상만 올리면 인플레다.
@@ -583,11 +579,6 @@ function hbRwClaim(dg,round){ const r=hbRoundRw(dg,round); if(!r || hbRwGot(dg,r
   if(r.atk) p.tickets.ally=(p.tickets.ally||0)+r.atk;
   if(r.ptk) p.tickets.pet=(p.tickets.pet||0)+r.ptk;
   return true; }
-// 다음으로 노릴 마일스톤(아직 안 받은 것 중 가장 가까운 것) — 팝업 안내 문구용
-function hbNextRw(dg,from){ const best=hbBest(dg);
-  for(let r=HB_RW_EVERY; r<=Math.max(best,from||1)+HB_RW_EVERY*4; r+=HB_RW_EVERY)
-    if(!hbRwGot(dg,r)) return r;
-  return 0; }
 // ── ⚔ Phase 4: 전장 확장 — 스킬 · 부스트 · 동료/펫 · 건설(터렛·벙커) ──
 // 수치는 전부 아래 표에 모여 있다(밸런스는 나중에 표만 고친다).
 // 아군(동료·펫·터렛·벙커)은 hbStep 안에서 적과 같은 월드 좌표로 돈다.
@@ -1074,35 +1065,6 @@ function hbKick(){ const S=_hb; if(!S||!S.on||S.bg) return;
 function hbPumpAll(){ const v=_hbView;
   try{ for(const k in HBS){ const S=HBS[k]; if(!S||!S.on||S.manual) continue; hbUse(k); hbPump(); } }
   finally{ hbUse(v); } }
-function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
-  hbUse('hunt');                                      // ⚠ 사냥터 화면이므로 포인터를 사냥터 세션으로 — 토벌을 보다 왔을 수 있다
-  if(_hb && _hb.on){                                  // 이미 돌고 있던 판 — 라운드·웨이브·적을 그대로 이어받는다
-    _hb.bg=false; _hb.cv=cv; _hb.ctx=cv.getContext('2d'); _hb._pat=null;
-    _hb.vTop=0; _hb.vBot=0;                           // 카메라는 새 레이아웃으로 '즉시' 맞춘다(보간하면 돌아온 순간 어긋나 보인다)
-    hbSyncChar();                                     // 자리를 비운 사이 산 업그레이드·레벨·포인트를 반영
-    if(!_hbTick) _hbTick=setInterval(hbPumpAll,50);
-    _hb.lastSim=performance.now();
-    if(!_hbRaf) _hbRaf=requestAnimationFrame(hbFrame);
-    hbResize(); hbHud(); renderHbBar(); return; }
-  const H=hbHunt(), st=hbCharStats();
-  hbSetSess('hunt', { on:true, mode:'hunt', speed:1, lastSim:performance.now(),
-    cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
-    dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], chests:[], fx:null, floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
-    allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
-    buf:{min:0,gas:0,xp:0,kills:0},
-    char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit, critDmg:st.critDmg,
-           range:st.range, regen:st.regen, cdT:0, hitT:9,
-           shd:st.shdMax, shdMax:st.shdMax, shdReg:st.shdReg,
-           lifest:st.lifest, knock:st.knock, chestDmg:st.chestDmg, multiC:st.multiC, multiN:st.multiN,
-           bncC:st.bncC, bncN:st.bncN, scritC:st.scritC, scritM:st.scritM,
-           mspd:st.mspd, rrng:st.rrng } });
-  hbUse('hunt');
-  hbEnsureModels(_hb.dg);                            // ⚔ 현재 던전 적 모델 준비(없으면 이모지로 시작)
-  hbResize(); hbLayoutAllies(); hbSpawnWave(); hbHud(); renderHbBar();
-  _hb.lastSim=performance.now();
-  _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
-  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50); }  // 진행 보장(세션 전부)
 // ══ ⚔ 토벌 세션 — 같은 엔진, 다른 규칙 (2026-08-20) ══════════════════════════════════
 // 사냥터와 **같은 hbStep** 을 쓴다. 이동·카이팅·스킬·3D 를 두 번 만들지 않기 위해서다(단일 소스).
 // 다른 것은 규칙뿐이고, 규칙 차이는 딱 다섯 군데다:
@@ -2467,7 +2429,6 @@ let _townOpen=false, _twZone=null;
 let _twW=0,_twH=0, _twVW=0,_twVH=0, _twVL=0,_twVT=0;   // 월드 크기 / 화면(뷰포트) 크기·위치
 let _twChar={x:0,y:0,tx:0,ty:0,dx:0,dy:0,mode:null,face:1};   // mode: null=정지 | 'to'=목적지 이동 | 'dir'=방향 이동
 let _twPtr=null, _twGoZone=null, _twRaf=0, _twLast=0;   // _twGoZone = 지금 향하고 있는 '지정한' 구역(도착하면 그것만 열린다)
-function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
 // 마을을 떠날 때의 공통 정리 — 루프·패널·시트를 한 번에 닫는다(그대로 두면 배경에서 계속 돈다)
 function twLeave(){ _townOpen=false; twStopLoop(); closeTownPanel(); twCloseSocial(); twCloseChat(); profStampSeen(); }
 // 🗺 마을 → 유즈맵 선택
@@ -2490,13 +2451,6 @@ function renderTownBar(){ const p=PROF(), c=CHAR();
 function showTownToast(msg){ const t=document.getElementById(gearOpen()?'gearToast':shopOpen()?'shopToast':'twToast'); if(!t) return; t.textContent=msg; t.classList.remove('hide');
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add('hide'), 2600); }
 const TOWN_ZONE_SCREEN={ shop:()=>openShop() };   // 구역 → 전용 화면 매핑(팝업 대신 화면 전환)
-function openTownPanel(zone){ const _z=TOWN_PANELS[zone];
-  if(_z && _z.screen && TOWN_ZONE_SCREEN[_z.screen]){ _twChar.mode=null; _twPtr=null; return TOWN_ZONE_SCREEN[_z.screen](); }   // 전용 화면 구역
-  _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
-  const card=document.querySelector('#townPanel .twCard');
-  if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
-  const t=document.getElementById('tpTitle'), z=TOWN_PANELS[zone]; if(t) t.textContent=(z&&z.title)||'시설';
-  refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
 // ── 🎁 상점(전용 화면) ─────────────────────────────────────────────────────
 // 팝업이 아니라 독립 화면이다. 내용 렌더러는 renderProfGacha() 하나뿐(단일 소스) — 마크업을 복제하지 말 것.
 function shopOpen(){ const e=document.getElementById('shopScreen'); return !!(e && !e.classList.contains('hide')); }
@@ -2536,10 +2490,6 @@ function renderChr(){ const host=document.getElementById('chrBody'); if(!host) r
     if(el){ host.innerHTML=''; host.appendChild(el); S.render(); } }
   else { host.innerHTML=S.html(); }
   if(typeof paintIcons==='function') paintIcons(host); }
-function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k;
-  if(typeof _lpPicking!=='undefined') _lpPicking=false;   // 화면을 옮기면 '고르는 중'은 남기지 않는다
-  renderChr();
-  if(typeof navPaint==='function') navPaint(); }
 // ── 🧍 스탯 구역 ────────────────────────────────────────────────────────────────
 //   위 = 지금 내가 어떤 상태인지 '아주 간단히'(자세한 출처 분해는 사냥터 좌상단 프로필 팝업).
 //   아래 = 레벨 포인트를 찍는 곳. 여기가 이 화면의 유일한 조작이다.
@@ -2594,21 +2544,6 @@ function _chrSkillHTML(){ let h='<div class="hbGrowLbl">사냥터 스킬</div>';
       +'<span class="hbRowTx"><b>'+SK.name+' <i>재사용 '+SK.cd+'초</i></b><em>'+SK.tip+'</em></span></div>'; }
   h+='<div class="hbRoundNote" style="padding:8px 0 0">스킬 강화는 아직 없습니다 — 사냥터 하단 바에서 직접 쓰거나 자동(A)으로 켤 수 있습니다.</div>';
   return h; }
-function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
-  profEnsureChar();
-  if(typeof twLeave==='function') twLeave();
-  showAppScreen('upgScreen'); navShow('upg'); renderChr();
-  if(typeof paintIcons==='function') paintIcons(document.getElementById('upgScreen')); }
-function openGear(){ if(typeof loadMeta==='function') loadMeta();
-  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
-  if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
-  _gearPick=null; _gearSel=null;
-  showAppScreen('gearScreen'); navShow('gear'); renderGear();
-  if(typeof paintIcons==='function') paintIcons(document.getElementById('gearScreen')); }
-function setGearTab(v){ if(_gearTab===v) return; _gearTab=v; _gearPick=null; _gearSel=null;
-  if(typeof playSfx==='function') playSfx('ui_tab');
-  if(typeof navPaint==='function') navPaint();   // 탭 띠는 하단 네비로 갔다 — 표시는 거기서 한다
-  renderGear(); }
 function renderGear(){ const body=document.getElementById('gearBody'); if(!body) return;
   const old=body.querySelector('.bagBody'), keep=old?old.scrollTop:0;   // 다시 그려도 가방을 보던 위치를 유지
   body.innerHTML = (_gearTab==='pet') ? _shopPetPanel('펫을 장착하면 <b>코인·공격·체력 %</b>가 오릅니다')
@@ -3175,7 +3110,6 @@ let _gearPage=PROF_GEAR_PAGES[0].id;   // 페이퍼돌 페이지(방어구 ↔ �
 function profGearPageAt(i){ const n=PROF_GEAR_PAGES.length;
   _gearPage=PROF_GEAR_PAGES[((i%n)+n)%n].id; _gearSel=null; _gearPick=null;
   if(typeof playSfx==='function') playSfx('ui_open'); refreshTownPanel(); }
-function profGearPageStep(d){ profGearPageAt(PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage)+d); }
 // 가방 분류 — 페이퍼돌 섹션과 같은 축(전체 + PROF_GEAR_PAGES)이라 표기가 하나로 유지된다
 function _gearPageName(){ const pg=PROF_GEAR_PAGES.find(x=>x.id===_gearPage); return pg?pg.name:'장비'; }
 // 아이템 1개가 주는 스탯 합(주 스탯 + 옵션) — 비교 표시와 합계에 함께 쓴다

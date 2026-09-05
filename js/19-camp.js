@@ -65,13 +65,6 @@ function campRoundN(){ return (campDgN() > 0) ? campCleared() + 1 : 0; }
 // ⛔ 옛 이름 campDgMul 은 남겨 둔다 — 밖에서 부르는 곳이 생겼을 때 조용히 갈라지지 않게.
 function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))].base; }
 
-// 캠프(0) → 던전으로 내려간다. 인자가 없으면 **최고 기록 다음 칸**이 아니라 던전 1부터.
-function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
-  const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
-  C.dg = n; C.cleared = 0; campSave();
-  if(typeof campBarReset === 'function') campBarReset();
-  campSkin();                                        // 🎨 바닥을 그 던전 그림으로 (아래 ⛔)
-  return n; }
 // ⛔ **던전이 바뀌면 campSkin() 을 반드시 부를 것**(2026-08-30). 오래도록 캠프 화면에 처음
 //   들어올 때 한 번만 불려서, 50라운드를 채워 자동으로 넘어가면 바닥이 옛 그림 그대로였다.
 //   부르는 곳은 셋이다: 화면 진입 · 던전 이동 · 50라운드 자동 이동.
@@ -100,7 +93,6 @@ function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared() };
   C.dg = 0; C.cleared = 0; campSave(); return was; }
 
-function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
 
 // ══ 🔁 환생 (2026-08-25 · 5단계) ═══════════════════════════════════════
 //   설계 단일 소스: HUNT_R1.md §4. 요지 셋 —
@@ -140,12 +132,6 @@ const CAMP_REF_COST0 = 10000, CAMP_REF_R = 1.12;
 const CAMP_REF_KEY = 'gasup';
 const CAMP_REF_RES = { k:CAMP_REF_KEY, name:'가스 생산', desc:'정제소 자동 생산 +' + CAMP_REF_STEP + '/분', tier:[] };
 let _campRefHome = null;
-function campPatchRefinery(){
-  if(_campRefHome || typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
-  const t = TECH_TREE[G.tech.race]; if(!t) return;
-  const b = (t.buildings || []).find(function(x){ return x.gas; }); if(!b) return;
-  _campRefHome = { b: b, had: b.research || null };
-  b.research = (b.research || []).concat([CAMP_REF_RES]); }
 // ⏱ **캠프의 스킬 비용은 쿨타임 하나다** (2026-08-28 사용자 확정).
 //   ⭐ 캠프는 방치형 자동 전투다 — 누가 마나를 보고 있지 않다. 그래서 **마나·체력 소모를
 //     전부 무시하고 쿨타임 하나로** 판단한다. 「쿨이 돌면 쓴다」가 규칙의 전부다.
@@ -283,6 +269,17 @@ function campFlushPend(){
   if(m > 0 && typeof toast === 'function') toast('💠 상점에서 산 재화가 들어왔습니다');
   if(typeof saveMeta === 'function') saveMeta();
   return m; }
+// 🔧 개발 스위치 — 회차 시작 미네랄(CAMP_DEV_START_MIN). campFlushPend 와 같은 자리에서, 판이 선 뒤 한 번.
+//   ⛔ C.credit 에 직접 넣지 말 것(같은 이유 — 새 판은 credit 을 0 으로 덮는다). G.tech.credit 이 살아 있는 지갑이다.
+function campDevSeed(){
+  if(!(CAMP_DEV_START_MIN > 0)) return 0;
+  const C = campState(); if(!C || C._devMin) return 0;
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  C._devMin = 1;
+  G.tech.credit = (G.tech.credit || 0) + CAMP_DEV_START_MIN;
+  if(typeof toast === 'function') toast('🔧 개발 스위치: 시작 미네랄 +' + CAMP_DEV_START_MIN.toLocaleString());
+  if(typeof saveMeta === 'function') saveMeta();
+  return CAMP_DEV_START_MIN; }
 
 // ① 획득 배수 — 기존 배수에 **더한다**(곱이 아니다). 로그라 난이도가 1만 배 올라도 +3.2 만 붙는다.
 function campRebMulGain(){
@@ -312,6 +309,7 @@ function campRebirth(){
   C.dg = 0; C.cleared = 0;
   C.earn = 0; C.earnGas = 0; C.earnTap = 0; C.earnAuto = 0;
   C.credit = 0; C.energy = 0;
+  C._devMin = 0;                                  // 🔧 개발 스위치 시작 미네랄 — 새 회차에 다시 한 번
   C.built = {}; C.addon = {}; C.units = {}; C.research = {};
   C.sup = 0; C.supCap = 0; C.eseq = 1; C.ents = []; C.minerals = [];
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
@@ -749,6 +747,13 @@ function campRtKeyCost(k){
 //   ⛔ 적립(campRebirth)·환급(campRtReset)은 그대로 `C.rbPts` 에 쓴다 — 스위치를 끄면 그동안 번 것이 그대로 남는다.
 const CAMP_RT_PTS_FREE = true;
 const CAMP_RT_PTS_FREE_N = 1e18;
+// 🔧 **개발 스위치 — 회차 시작 미네랄**(2026-09-05 사용자 요청: 「바로 유닛 뽑아서 다음 던전 들어갈 수 있게」).
+//   0 이면 꺼짐. 켜져 있으면 캠프가 서고 난 뒤(campDevSeed) **회차마다 한 번** 이만큼 넣는다 —
+//   새 판이든 저장을 복원한 판이든 같다(플래그 C._devMin · 환생이 되감는다).
+//   ⚠ 설계상의 시작 미네랄은 **0** 이다(HUNT_R1 §1 · 「첫 미네랄은 탭으로 번다」). 이건 조작감·전투를
+//     바로 시험하려는 임시 값이라, 켜져 있는 동안 회수 시간·손익분기 같은 밸런스 수치는 전부 무의미하다
+//     (camp-bench 도 이 돈을 받는다). 스모크 「개발 스위치」가 켜짐을 알린다 — **재기 전에 0 으로**.
+const CAMP_DEV_START_MIN = 10000;
 function campRtPts(){ if(CAMP_RT_PTS_FREE) return CAMP_RT_PTS_FREE_N;
   const C = campState(); return (C && C.rbPts) || 0; }
 // ⭐ 사슬 규칙 — 환생 → 갈래 → 묶음 → 계열, 그 다음은 그 계열의 앞 차수.
@@ -774,17 +779,6 @@ function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 
   if(!CAMP_RT_PTS_FREE) C.rbPts = (C.rbPts || 0) - cost;   // 🔧 무제한이면 깎지 않는다
   b[k] = (b[k] | 0) + 1;
   campSave(); return cost; }
-// 초기화 — 산 것을 전부 물리고 포인트를 100% 돌려받는다. 비용은 젬(GEM.md §4).
-//   ⚠ 마디 값도 함께 돌려준다 — 안 그러면 되돌릴수록 포인트가 샌다.
-function campRtReset(){ const C = campState(); if(!C) return 0;
-  const b = campRtBag(); let back = 0;
-  if(b.root) back += CAMP_RT_ROOT_COST;
-  for(const bk in CAMP_TREE_BR){
-    if(b[CAMP_RT_BR_KEY(bk)]) back += CAMP_RT_BR_COST;
-    for(const g of CAMP_RT_GRP_KEYS) if(b[CAMP_RT_GP_KEY(bk, g)]) back += CAMP_RT_GP_COST; }
-  for(const L of CAMP_RT_LINES){ const n = b[L.k] | 0;
-    for(let i = 1; i <= n; i++) back += campRtCost(L.k, i); }
-  C.rbTree = { _m2:1 }; C.rbPts = (C.rbPts || 0) + back; campSave(); return back; }
 
 // ── 효과 ────────────────────────────────────────────────────────────────
 //   배수형 = 사다리 값(누적) · 감소형 = 계열마다 −40% 까지 수확 체감
@@ -957,15 +951,6 @@ function campTreeIsSel(t, a, b){ const s = _campTreeSel;
 const CAMP_TREE_ICO = 'assets/icons/';
 // 👆 누르는 반경 — 계열 간격(CAMP_TREE_RS 52)의 절반보다 작게 잡아 옆 별을 훔치지 않게 한다
 function campTreeHitR(r){ return Math.min(Math.max(r + 10, 22), CAMP_TREE_RS * 0.46); }
-// ⛔ **x·y 를 반드시 숫자로 되돌린다.** 부르는 쪽(campTreeGem)이 toFixed 한 **문자열**을 넘긴다 —
-//   그대로 두면 `x - r` 은 숫자인데 `x + r` 은 **문자열 이어붙이기**가 되어
-//   "67.3" + 22.75 → "67.322.75" 같은 값이 나오고, SVG 경로 파서가 그걸 두 수로 쪼개 읽어
-//   도형이 통째로 망가진다(실측 2026-09-02: 반짝임 하나가 12×216px 짜리 **긴 세로선**으로 그려졌다).
-function campTreeSpark(x, y, r, col, op){
-  x = +x; y = +y;
-  return '<path d="M' + (x - r) + ' ' + y + ' L' + (x + r) + ' ' + y +
-    ' M' + x + ' ' + (y - r) + ' L' + x + ' ' + (y + r) + '" class="ctSp" stroke="' + col +
-    '" opacity="' + (op || .5).toFixed(2) + '"/>'; }
 // ⭐ 별 하나 — 등급이 테두리로, 내용이 아이콘으로 읽힌다.
 //   흔함 가는 한 겹 · 보통 밝은 한 겹 · 귀함 금 두 겹 · 극상 금 두 겹 + 바깥 광륜
 // ⬡ 육각 꼭짓점 — **룬 판과 같은 규칙**이다(60·i − 90도 = 위 꼭짓점 · 2026-09-03 사용자 확정).
@@ -1372,8 +1357,6 @@ function campTreeSvg(){
 //     화면에도 「어림」이라고 적는다. 실측이 바뀌면 이 두 상수만 고치면 된다.
 const CAMP_REB_T10 = 96;      // 배수 없이 던전 10 까지(시간) · HUNT_R1 §4-2-0 표
 const CAMP_REB_TEXP = 1 / 3.4;   // 시간 = T10 × M^(-1/3.4)
-function campRebHours(mul){ return CAMP_REB_T10 * Math.pow(Math.max(1, mul), -CAMP_REB_TEXP); }
-function campRebHourTx(h){ return (h >= 10) ? (Math.round(h) + '시간') : (h.toFixed(1) + '시간'); }
 
 function campRebOpen(){
   const el = document.getElementById('campReb'); if(!el) return;
@@ -1713,10 +1696,6 @@ function campTreeClose(){
   campTreeTweenStop(); campTreeViewSync(); campTreeFlowStop(); _ctZBefore = null; }
 function campTreeIsOn(){ const el = document.getElementById('campTree'); return !!(el && el.classList.contains('on')); }
 
-// 고른 별의 모든 정보 — 이름 · 진행도 · 설명 · 지금값▶다음값 · 다음 단계 예고 ·
-//   비용 · 사고 나면 남는 포인트 · 사기. ⭐ 한 곳에 모은다(2026-09-01 사용자 확정).
-//   ⚠ 값·설명은 지어내지 않는다 — 효과 사다리(CAMP_RT_LADDER · CAMP_RT_CUT)에서 그대로 꺼낸다.
-function campTreeIsCut(k){ const L = campRtLine(k); return !!L && L.br === 'enemy'; }
 function campTreeVal(k, n){
   const L = campRtLine(k), vk = (L && L.vk) || 'mul';
   const i = Math.max(0, Math.min(campRtMax(k), n));
@@ -1941,9 +1920,6 @@ function campTreeSmoothStep(){
 const CAMP_TREE_TWEEN_MS = 560;
 let _ctTween = null;
 function campTreeEase(t){ return t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2; }
-// 지금 화면 한가운데에 있는 월드점 — 애니의 출발점이다
-function campTreeViewP(){ const v = _campTreeView;
-  return { x: -v.x / v.z, y: -v.y / v.z }; }
 function campTreeTweenStop(){ _ctTween = null; }
 //   to = { P:{x,y} 월드점 · A:{x,y} 그 점이 앉을 화면 자리 · z 배율 }
 // ⭐ **뷰를 옮기는 모든 길이 한 방식으로 모인다**(2026-09-02 사용자 재확정).
@@ -2561,25 +2537,6 @@ const CAMP_DEF_BLD = { bunker:1, turret:1 };
 //   ⚠ **방어 건물(포탑류)이 생기면 예외가 필요하다** — 40배로 맞으면 무용지물이 된다.
 //     지금 캠프 건물은 전부 「맞기만 하는」 것이라 예외가 없다.
 const CAMP_FOE_BLD_MUL = 40;
-// 프레임 전 건물 체력을 떠 둔다 → strikeStepUnits 뒤에 깎인 만큼을 배율로 증폭한다.
-//   ⭐ 이 방식인 이유: 적이 구조물에 넣는 피해는 18-strike.js 안에서 `front.hp -= …` 로
-//     직접 빠져 가로챌 훅이 없다. ⛔ 18-strike.js 는 고치지 않는다(오토배틀 공유).
-//   ⚠ 내 건물을 때리는 것은 적뿐이다(아군은 같은 편을 안 친다) — 그래서 감소분 = 적 피해다.
-function campBldSnap(){
-  if(!CAMPB || !CAMPB._bld) return null;
-  const m = new Map();
-  for(const b of CAMPB._bld) if(b && !b.dead) m.set(b, b.hp);
-  return m; }
-function campBldAmp(snap){
-  if(!snap || CAMP_FOE_BLD_MUL === 1) return 0;
-  let hit = 0;
-  for(const [b, hp0] of snap){
-    const d = hp0 - b.hp;                       // 이번 프레임에 깎인 양
-    if(!(d > 0)) continue;
-    hit += d;
-    b.hp = hp0 - d * CAMP_FOE_BLD_MUL;
-    if(b.hp <= 0){ b.hp = 0; b.dead = true; } }
-  return hit; }
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
@@ -2786,13 +2743,22 @@ function campW2G(sx, sy, W){
 //   (17-build-cards.js 가 쓰는 것과 같은 규약이다).
 let _campSel = [];                 // 고른 전장 유닛 uid
 let _campBox = null;               // 캠프의 드래그 박스(원본 _btBox 와 별개 — 전장 유닛용)
-const CAMP_PICK_R = 0.022;         // 탭 히트 반경(격자 정규 좌표)
+// 탭 히트 반경(격자 정규 좌표). ⭐ **기지 유닛과 같은 값**이다(`_techEntAt` 의 rad 0.055 · 16-build.js).
+//   ⛔ 옛 0.022 는 기지의 2.5분의 1 이라 던전에서만 찍기가 어려웠다 — 「눌렀는데 반응이 없다」의
+//     절반이 이것이었다(2026-09-05 사용자 지적 · 조작감 통일 A안).
+const CAMP_PICK_R = 0.055;
 const CAMP_BOX_MIN = 0.015;        // 이만큼 끌어야 박스로 본다(원본과 같은 값)
 function campSelList(){ if(!CAMPB) return [];
   const out = []; for(const u of CAMPB.me.units){ if(!u.dead && _campSel.indexOf(u.uid) >= 0) out.push(u); } return out; }
-function campSelClear(){ if(!_campSel.length) return false; _campSel = []; return true; }
+// ⚠ 지정이 바뀌면 **시트와 해제 버튼을 바로 다시 그린다**(2026-09-05 사용자 신고: 「골랐는데 프로필도 해제 버튼도 안 뜬다」).
+//   techPanelRender 는 기지 쪽 이벤트에만 불려서, 전장 지정만 바뀌면 아무도 안 그렸다. 캠프가 켜져 있을 때만 부른다.
+function _campSelChanged(){
+  if(typeof _campOn === 'undefined' || !_campOn) return;
+  if(typeof techPanelRender === 'function') techPanelRender(); }
+function campSelClear(){ if(!_campSel.length) return false; _campSel = []; _campSelChanged(); return true; }
 function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.uid; });
   if(_campSel.length && typeof G !== 'undefined' && G.tech){ G.tech.selU = []; G.tech.sel = null; G.tech.selRes = null; }
+  _campSelChanged();
   return _campSel.length; }
 // ══ 🗂 **지정한 전장 유닛의 프로필 시트** (2026-08-28) ═══════════════════
 //   ⭐ 던전 안에서는 유닛이 **전장(CAMPB.me.units)** 에 있고 기지 엔티티가 없다.
@@ -2814,6 +2780,9 @@ function campFieldSheet(){
   model.compact = true; model.build = true;
   sheet.classList.add('open', 'simple');
   renderCmdGrid(body, model);
+  body._cfSig = _campSel.join(',');                     // campSyncSheet 가 「이미 이 지정을 그렸다」를 아는 표식
+  // ⊘ 해제 버튼 — 원본 techPanelRender 가 켜 주는데, 이 함수가 그보다 먼저 return 하므로 여기서 켠다
+  const dz = document.getElementById('btDesel'); if(dz) dz.classList.add('on');
   return true; }
 // 🧬 **전장 유닛 변태** — `techDoMorph` 는 기지 엔티티만 안다. 전장에서는 캠프가 직접 한다.
 //   ⭐ 규칙은 원본과 같다 — 에테리얼은 **같은 유닛 2기 융합**, 스웜은 1기 변태.
@@ -2913,6 +2882,15 @@ function campMoveSel(gx, gy){
     u._bunk = null; u._bhp = null;                // 🧱 다른 자리를 주면 벙커에서 내린다
     u._post = { x:px, y:py };
     u.tgtUid = null; u._btgt = null; u._btT = 0;   // 표적을 놓고 자리로 간다(복귀가 손댈 수 있게)
+    // 🖐 **내 명령은 명령이다** — SC 「이동」(2026-09-05 사용자 확정 · A안).
+    //   ⛔ 예전엔 자리(_post)만 옮기고 AI 의 「복귀」에 맡겼다. 그래서 실측(scripts/camp-trace 계열):
+    //     · 명령 뒤 **0.8초 굳음**(복귀 대기 CAMP_RETURN_DELAY 를 내 명령까지 탔다)
+    //     · 적이 인지 범위에 있으면 다음 프레임에 **다시 물어** 적 쪽으로 갔다(거리 1012 → 1074)
+    //     · 자리 **45 앞**에서 멈췄다(CAMP_POST_R 은 AI 복귀용 판정이다)
+    //   ⭐ 이제 `_order` 가 살아 있는 동안 campStepUnits 는 그 유닛의 표적을 잡지 않고 명령 지점으로만
+    //     민다(21-camp-battle.js 패스 ①·②). 도착하면 그 자리가 _post 가 되고 AI 가 다시 맡는다.
+    u._order = { x:px, y:py }; u._ordBest = Infinity; u._ordT = 0;
+    u._idleT = CAMP_RETURN_DELAY;                 // 복귀 대기를 안 탄다(도착 뒤에도 바로 AI 로)
   }
   if(typeof playSfx === 'function') playSfx('ui_confirm');
   return list.length; }
@@ -3157,15 +3135,6 @@ function campFoePool(ids){
     return true;
   });
 }
-// 이 id 가 몇 티어인가 — 없으면 0. (구성이 실제로 지켜지는지 재는 데 쓴다)
-function campFoeTierOf(id){
-  if(!id || !CAMPB) return 0;
-  const T = CAMP_FOE_TIER[CAMPB.ai.race] || CAMP_FOE_TIER.terran;
-  if(T.t1.indexOf(id) >= 0) return 1;
-  if(T.t2.indexOf(id) >= 0) return 2;
-  if(T.t3.indexOf(id) >= 0) return 3;
-  return 0;
-}
 function campFoeId(){
   if(typeof STK_RACES === 'undefined' || !CAMPB) return null;
   const race = CAMPB.ai.race;
@@ -3377,9 +3346,6 @@ function campAlertApply(){
  *   ⚠ **되살리지 말 것.** 되살리면 미는 주체가 다시 둘이 된다 —
  *     스모크 「캠프: 미는 주체가 하나다」가 campCombatStep 소스를 훑어 막는다.
  *   ⚠ 지우지 않고 남겨 둔 것은 유보 규칙 때문이다(CLAUDE.md 🗄 다락). 옛 값·주석에 실측 근거가 있다. */
-function campPostSnap(){
-  if(!CAMPB || !CAMPB.me) return;
-  for(const u of CAMPB.me.units){ if(u.dead) continue; u._sx = u.x; u._sy = u.y; } }
 // 🏠 **자리 복귀 — 「한 번만 명령한다」** (2026-08-31 사용자 확정).
 //   ⛔ 예전에는 **매 프레임** 복귀를 다시 밀었다. 그러면 오토배틀 이동과 매 순간 싸운다:
 //     ① strikeStepUnits 가 적 쪽으로 한 걸음 옮긴다
@@ -3398,33 +3364,6 @@ function campPostSnap(){
 //     다만 집결지는 strikeRallyPoint(side) 가 정하고 **side 만 받아 유닛별 값을 못 준다.**
 //     그래서 자리까지의 이동은 캠프가 밀되 **한 번만** 민다.
 const CAMP_RETURN_DELAY = 0.8;     // 전투가 이만큼 없으면 자리로 돌아간다
-function campPostStep(dt){
-  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
-  const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
-  campWithStk(function(){
-    for(const u of CAMPB.me.units){ if(u.dead) continue;
-      if(campInBunker(u)) continue;               // 🧱 벙커에 탄 유닛은 campBunkerStep 이 붙든다
-      if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
-      // ⚔ 싸우는 중이면 복귀보다 전투가 먼저다.
-      // ⛔ **표적 번호가 있다는 것만으로 판단하지 말 것.** 적이 죽어도 u.tgtUid 는 그대로 남는다 —
-      //   그러면 「싸우는 중」으로 오해해 **영영 자리로 안 돌아온다**(브라우저 실측 2026-08-28).
-      if(u.tgtUid && strikeFindUnit(CAMPB.ai.units, u.tgtUid)){
-        u._idleT = 0; u._homeT = 0; continue; }    // 전투 중 — 시계를 되감고 손을 뗀다
-      // ⏳ 전투가 없어진 지 얼마나 됐나 — 바로 돌아가지 않는다(적이 곧 다시 붙을 수 있다)
-      u._idleT = (u._idleT || 0) + dt;
-      if(u._idleT < CAMP_RETURN_DELAY) continue;
-      const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
-      if(dx * dx + dy * dy <= R2){ u.moving = false; u._homeT = 0; continue; }   // 이미 자리
-      // ⛔ **몰아서 밀지 않는다** (2026-08-31). 처음엔 0.5초치를 한 프레임에 밀었다가
-      //   유닛이 **308px 씩 순간이동**했다(실측 37회). 복귀 목표는 _post 로 고정이라
-      //   간격을 둘 이유도 없다 — 매 프레임 dt 만큼 정상 속도로 걸어온다.
-      // ⭐ **복귀는 빠르게**(2026-08-30 사용자 확정) — 싸우러 나갔다 오는 길이라 굼뜨면
-      //   다음 무리가 올 때까지 자리를 못 잡는다. 속도 상수를 건드리지 않고 dt 를 키운다.
-      //   ⚠ 배수는 1.8 이라 한 프레임 이동이 0.09초치 — 순간이동으로 보이지 않는다.
-      strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K); n++; }
-    if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
-  });
-  return n; }
 
 // 🧱 **벙커 — 화력병을 살리는 자리** (2026-08-30 사용자 확정).
 //   ⚠ 왜 필요한가: 화력병 사거리는 70 인데 적(스웜 T1)은 34~47 이다. **적 사거리 안까지
@@ -3581,105 +3520,7 @@ const CAMP_ENG_TICK = 0.4;
 //   ⚠ 이 값은 **방어 건물의 뜻과 맞바꾼 것이다** — 전선이 넓게 움직일수록 벙커·포탑이
 //     서 있는 자리의 의미가 옅어진다. 줄이려면 화력 손실을 다른 축에서 메워야 한다.
 const CAMP_ENG_OUT = 1200;
-function campEngageStep(dt){
-  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
-  if(typeof strikeFindUnit !== 'function') return 0;
-  // ① 표적별로 붙은 아군을 모은다
-  const byTgt = new Map();
-  for(const u of CAMPB.me.units){
-    if(u.dead || !u.tgtUid) continue;
-    if(campInBunker(u)) continue;              // 🧱 벙커에 탄 유닛은 나가지 않는다(무너졌으면 나간다)
-    if(!byTgt.has(u.tgtUid)) byTgt.set(u.tgtUid, []);
-    byTgt.get(u.tgtUid).push(u); }
-  if(!byTgt.size) return 0;
-  let n = 0;
-  campWithStk(function(){
-    for(const pair of byTgt){
-      const list = pair[1];
-      const t = strikeFindUnit(CAMPB.ai.units, pair[0]);
-      if(!t || t.dead) continue;                       // 죽은 표적은 campPostStep 이 복귀로 처리한다
-      list.sort(function(a, b){ return (a.uid < b.uid) ? -1 : (a.uid > b.uid) ? 1 : 0; });
-      const cnt = list.length;
-      for(let i = 0; i < cnt; i++){
-        const u = list[i], rng = u.rng || 0;
-        if(rng <= 0) continue;                          // 안 때리는 유닛(의무병 등)은 건드리지 않는다
-        // ⛔ **사거리 끝을 「지키려」 하지 않는다 — 뒤로는 안 물러난다** (2026-08-31 사용자 지적).
-        //   ⚠ 증상: 「유닛들이 멈췄다 갔다 한다. 적이 몰려오면 도망 다니는 것처럼 보인다.」
-        //   ⭐ 원인: 목표를 늘 `표적에서 rng×0.85` 로 잡으니, **적이 다가오면 그 거리를 지키려고
-        //     뒤로 밀려났다.** 적 사거리는 아군보다 짧아(campFoeRngCap) 계속 붙으러 오는데
-        //     아군은 계속 물러나니 **매 프레임 방향이 뒤집힌다.**
-        //     실측(마린 10기 · 30초): 방향 뒤집힘 **유닛당 33.9회** · 표적 바뀜은 2.1회뿐 —
-        //     표적이 흔들려서가 아니라 **거리 유지 때문**이라는 뜻이다.
-        //   ⭐ 그래서 **다가가는 데만** 쓴다: 이미 그보다 가까우면 지금 거리를 그대로 둔다.
-        //     각도(부채꼴·링)는 그대로 계산되므로 옆으로 벌리는 것은 계속 된다.
-        //   ⚠ 이 식은 예전에 한 번 33% 로 실패했었다(시도 ②). 그때는 **레인저가 3칸**이라
-        //     사거리 자체가 짧았고 층 배치도 없었다 — 조건이 다르다.
-        // ⛔ `Math.min(지금거리, …)` 로 「뒤로 안 간다」를 만들지 말 것 — **세 번 실패했다.**
-        //   도착 판정을 90 으로 넓힌 뒤에도 43% 였다(그 전엔 0% · 33%).
-        //   앞줄이 멈추면 뒷줄이 갈 곳이 없다는 구조는 무엇과 조합해도 그대로다.
-        const want = rng * (u.melee ? CAMP_ENG_MELEE : CAMP_ENG_RANGED);
-        // 기준 각도 — **자기 자리 쪽**이다. 아군은 아래(자기 진영)에서 올려다보므로
-        // 원거리는 그 방향을 중심으로 벌려야 적 뒤로 돌아가지 않는다.
-        const home = u._post || u;
-        const base = Math.atan2(home.y - t.y, home.x - t.x);
-        let ang;
-        if(u.melee){
-          ang = base + (i - (cnt - 1) / 2) * (Math.PI * 2 / Math.max(1, cnt));   // ㉠ 둘러싸기
-        } else {
-          // ㉡ 부채꼴 — 간격이 각도로 얼마인지 거리에서 역산한다(멀수록 좁은 각도로 충분하다)
-          const step = Math.min(CAMP_ENG_ARC / Math.max(1, cnt), 2 * Math.asin(Math.min(0.9, CAMP_ENG_GAP / (2 * Math.max(1, want)))));
-          ang = base + (i - (cnt - 1) / 2) * step; }
-        let gx = t.x + Math.cos(ang) * want, gy = t.y + Math.sin(ang) * want;
-        // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정).
-        //   ⛔ 그냥 두면 적을 **따라 들어간다** — 표적이 멀수록 멀리 쫓아가서 자리가 무너지고,
-        //     전선이 계속 움직여 **벙커·포탑 같은 고정 방어가 아무 뜻이 없어진다**
-        //     (실측 2026-08-30: 벙커에 태운 판이 안 태운 판보다 늘 느렸다 · 실효 0.45 vs 1.4).
-        //   ⭐ 원하는 그림은 「제자리에서 조금만 나가 도와주고 자리를 지킨다」다.
-        //     그래서 목표 자리를 **_post 로부터 CAMP_ENG_OUT 안**으로 자른다.
-        //   ⚠ 사거리가 안 닿으면 그냥 안 닿는 채로 둔다 — 그것이 「자리를 지킨다」의 뜻이다.
-        //     적이 결국 자리 쪽으로 오므로 기다리면 만난다(적은 내 건물을 치러 내려온다).
-        //   ⭐ 상한은 **층마다 다르다**(campEngageOut) — 뒤로 밀린 긴 사거리 유닛은 덜 나가고,
-        //     앞줄의 짧은 사거리 유닛은 더 나간다. 그래야 긴 유닛이 앞을 막아도 짧은 유닛이 닿는다.
-        { const home = u._post, lim = campEngageOut(u);
-          if(home){ const ox = gx - home.x, oy = gy - home.y, od = Math.hypot(ox, oy);
-            if(od > lim){ gx = home.x + ox / od * lim;
-                          gy = home.y + oy / od * lim; } } }
-        const dx = gx - u.x, dy = gy - u.y;
-        if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
-        // ⏱ **간격은 「목표 계산」에 건다 — 이동은 매 프레임 정상 속도로** (2026-08-31).
-        //   ⛔ 처음엔 이동 자체를 가끔만 하고 **0.4초치를 한 프레임에 몰아서** 밀었다.
-        //     그래서 유닛이 **훅훅 튀었다** — 실측: 자리 잡기에서 순간이동 236회(최대 203px).
-        //     사용자가 화면에서 「튕기면서 순간이동한다」고 본 것이 이것이다.
-        //   ⭐ 떨림의 원인은 **목표가 매 프레임 바뀌는 것**이지 이동이 잦은 게 아니다.
-        //     그러니 목표만 CAMP_ENG_TICK 마다 갱신하고, **이동은 매 프레임 dt 만큼** 한다.
-        //     → 이동량이 정상이라 안 튀고, 목표가 안정적이라 덜 떨린다.
-        u._engT = (u._engT || 0) - dt;
-        if(u._engT <= 0 || u._engGx == null){ u._engT = CAMP_ENG_TICK; u._engGx = gx; u._engGy = gy; }
-        const tx = u._engGx, ty = u._engGy;
-        const ddx = tx - u.x, ddy = ty - u.y;
-        if(ddx * ddx + ddy * ddy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
-        if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고
-        strikeMoveToward(u, tx, ty, dt); n++; } }        // ⭐ dt — 몰아서 밀지 않는다
-    if(n && typeof strikeSeparate === 'function') strikeSeparate();
-  });
-  return n; }
 
-// 🪢 **목줄** — **자기 자리**에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
-//   ⛔ 「인식 거리를 넓힌다」만 하고 이걸 빼면 적 본진까지 쫓아간다. 그러면 아군이 흩어져
-//     각개격파되고, 적이 건물을 때리는데 아군은 저 위에 있는 그림이 된다.
-//   ⚠ 속도를 깎지 않고 **위치만** 자른다 — 이동 로직(stepUnitMove)은 공용이라 건드리지 않는다.
-function campLeash(){
-  if(!CAMPB || !CAMPB.me) return 0;
-  const L2 = CAMP_LEASH * CAMP_LEASH; let n = 0;
-  const fb = campRallyPoint();                     // 자리가 아직 없는 유닛만 옛 기준을 쓴다
-  for(const u of CAMPB.me.units){ if(u.dead) continue;
-    const r = u._post || fb; if(!r) continue;
-    const dx = u.x - r.x, dy = u.y - r.y, d2 = dx * dx + dy * dy;
-    if(d2 <= L2) continue;
-    const d = Math.sqrt(d2) || 1;
-    u.x = r.x + dx / d * CAMP_LEASH; u.y = r.y + dy / d * CAMP_LEASH; n++; }
-  return n;
-}
 
 // 갓 스폰된 적을 이번 라운드 난이도에 맞춘다.
 //   ⭐ 개체 값을 통째로 덮어쓰지 않고 **무리 전체의 기본값 합** 대비 배율로 민다 —
@@ -3956,8 +3797,6 @@ function campRoundRevive(){
     u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
     u._endured = false; }                            // 🛡 버팀은 라운드당 1회 — 새 라운드에 다시 찬다
   return up; }
-// 누워 있는(부활 대기) 유닛 수 — 승패 판정이 쓴다
-function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
 
 // 살아 있는 유닛 수
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;
@@ -4228,7 +4067,6 @@ function campState(){
     p.camp.rbTree.endure = p.camp.rbTree.rebuild; delete p.camp.rbTree.rebuild; }
   return p.camp;
 }
-function campHasRace(){ const C = campState(); return !!(C && C.race); }
 // STK_RACES 는 기존 3종족에 옛 별칭(terran/zerg/protoss)을 쓰고 TECH_TREE 는 union/swarm/… 을 쓴다.
 // 변환은 오토배틀이 이미 갖고 있다 — 표를 다시 적지 않는다.
 function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRace(r) : r; }
@@ -4837,6 +4675,7 @@ function campEnter(){
   campLayGas();                                        // ⛽ 가스는 광맥 자리를 보고 정한다 — 반드시 뒤
   campCalcViewBot();                                   // ✂ 화면 아래 끝을 배치에서 잰다(반드시 광맥·가스 뒤)
   campFlushPend();                                     // 💠 상점에서 산 재화 — 판이 선 뒤에 넣는다
+  campDevSeed();                                       // 🔧 개발 스위치 — 회차 시작 미네랄(켜져 있을 때만 · 회차마다 한 번)
   campZoom();                                          // 🔍 전체가 한눈에 들어오게
   campSkin();                                          // 🎨 바닥을 사냥터 던전 배경으로
   campStartFrame();                                    // ▶ 캠프 자기 루프(유즈맵 루프는 HOME 에서 멈춘다)
@@ -5143,26 +4982,6 @@ function campEnterAnim(){
 // ⭐ lv 인자를 받는 이유: 나중에 연구가 **무한 티어**로 열린다(환생 이후).
 //   레벨을 boolean 이나 0~3 고정으로 다루면 그때 구조를 못 넓힌다.
 const CAMP_COST_K = 1;                              // 사냥터 전용 배율(표가 오면 교체)
-function campCost(kind, key, lv){
-  const L = Math.max(0, lv | 0);
-  let m = 0, g = 0;
-  // ⚠ 비용은 techBldgSpec/techUnitSpec 이 아니라 **TECH_TREE 쪽**에 있다.
-  //   techBldgSpec = TECH_SPEC[race].bldg[k] (상세 스펙 · 비용 없음)
-  //   건물 비용 = TECH_TREE[race].buildings[].m/g · 유닛 비용 = 그 건물의 produces[].m/g
-  if(typeof G !== 'undefined' && G.tech && typeof TECH_TREE !== 'undefined'){
-    const race = G.tech.race, t = TECH_TREE[race];
-    if(kind === 'bldg'){
-      const b = (typeof techGetBldg === 'function') ? techGetBldg(race, key) : null;
-      if(b){ m = b.m || 0; g = b.g || 0; }
-    } else if(kind === 'unit'){
-      const bs = (t && t.buildings) || [];
-      for(const b of bs){ const q = (b.produces || []).find(function(x){ return x.id === key; });
-        if(q){ m = q.m || 0; g = q.g || 0; break; } }
-    }
-  }
-  const _d = campUpgDisc();   // 🌳 「업그레이드 비용」 — 건물·유닛 값도 캠프가 매긴다
-  return { m: Math.round(m * CAMP_COST_K * _d), g: Math.round(g * CAMP_COST_K * _d), lv: L };
-}
 
 // ── 터치 채집 ───────────────────────────────────────────────────────────
 // 광맥을 누르면 그 자리에서 미네랄이 나온다. 일꾼 왕복(방치)과 **다른 축**이다.
@@ -5253,11 +5072,6 @@ const CAMP_COST_R1 = { tap:1.15, gather:1.20, hold:1.35 };   // 무릎 후(Lv10~
 const CAMP_COST_KNEE = 10;
 // 마일스톤 — 20, 50, 100, 200, 400 … (50 부터 2배씩) · 넘을 때마다 효과 ×2
 const CAMP_MILE_FIRST = 20, CAMP_MILE_SECOND = 50;
-function campMileMul(lv){
-  let mul = 1, m = CAMP_MILE_FIRST;
-  while(lv >= m && mul < 1e12){ mul *= 2; m = (m === CAMP_MILE_FIRST) ? CAMP_MILE_SECOND : m * 2; }
-  return mul;
-}
 // 다음 마일스톤까지 몇 레벨 남았나 — 화면에 「계단이 보이게」 쓰는 값
 function campMileNext(lv){
   let m = CAMP_MILE_FIRST;
@@ -5569,30 +5383,6 @@ function campTapHuman(x, y){
                      _campLerp(jit, CAMP_TAP_JIT_BAD, CAMP_TAP_JIT_OK));
   return CAMP_TAP_FLOOR + (1 - CAMP_TAP_FLOOR) * h;
 }
-// 눌린 곳이 광맥인가 — 맞으면 캐고 true
-// ⚠ human=true 는 **실제 사람 이벤트로 들어온 탭**에만 준다(아래 리스너). 그때만 감쇠를 잰다 —
-//   벤치·스모크가 직접 부르는 탭까지 감쇠하면 측정값이 오염된다.
-function campTapAt(clientX, clientY, human){
-  if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
-  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
-  const r = _btRect(); if(!r || !r.width || !r.height) return false;
-  const sx = (clientX - r.left) / r.width, sy = (clientY - r.top) / r.height;
-  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return false;
-  if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
-  const w = _techS2W(sx, sy);
-  const m = _techMineralAt(w.x, w.y); if(!m || m.amount <= 0) return false;
-  campFevRoll();                                    // ⚡ 광맥 탭도 같은 판정
-  let gain = Math.min(campTapGain(), m.amount);     // 매장량보다 많이 캘 수는 없다
-  if(human){ gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY))); }   // 🤖 리듬·좌표 감쇠
-  m.amount -= gain;
-  G.tech.credit = (G.tech.credit || 0) + gain;
-  _campTapAcc += gain;                              // 이 몫에는 채취 배수를 걸지 않는다(위 참고)
-  _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
-  const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;   // 실측용 — 손 축이 얼마나 쓰였나
-  if(typeof updateCurBar === "function") updateCurBar();
-  else if(typeof techUIRender === 'function') techUIRender();
-  return true;
-}
 // ⚠ 캡처 단계(세 번째 인자 true)라야 `.bmap` 의 인라인 onpointerdown 보다 **먼저** 받는다.
 //   뒤에 달면 손가락이 늘 이동·선택 명령에 먼저 먹힌다.
 if(typeof document !== 'undefined'){
@@ -5756,11 +5546,6 @@ function campMineFloat(n, ev){
   setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 900);
 }
 
-function openCampMine(){
-  const el = document.getElementById('campMineSheet'); if(!el) return;
-  el.classList.remove('hide'); campMineRender();
-  if(typeof playSfx === 'function') playSfx('ui_open');
-}
 function closeCampMine(){
   const el = document.getElementById('campMineSheet'); if(el) el.classList.add('hide');
   if(typeof playSfx === 'function') playSfx('ui_close');
@@ -5774,7 +5559,6 @@ if(typeof document !== 'undefined'){
   });
 }
 
-function campMineOpen(){ openCampMine(); }   // 별칭 — 호출부가 어느 이름을 쓰든 통하게
 
 const CAMP_MINE_UPGS = [
   { k:'tap',    nm:'터치 강화', why:'한 번 누를 때 캐는 양' },
@@ -5980,6 +5764,11 @@ function campApplyGatherMul(){
 //    (원 주석: "HOME에서 이걸 안 막으면 60 → 47fps"). 유즈맵 전장까지 같이 되살아난다.
 //    캠프가 필요한 건 renderBuildTab 하나뿐이므로 **자기 루프**를 따로 돈다.
 let _campRAF = 0, _campLastT = 0;
+// 🔬 **측정 도구의 훅** — 앱은 안 부르고 scripts/camp-trace.mjs · camp-bench.mjs 가 시계를 끄고 직접 민다.
+//   ⚠ dead-audit 은 앱 안의 호출만 세므로 이 둘을 「죽었다」고 본다 → test/dead-known.json 에 사유가 있다.
+//   ⛔ 다락으로 보내지 말 것(2026-09-05 에 한 번 갔다가 되돌렸다) — 도구가 부르는 이름은 제자리에 있어야 찾는다.
+function campStopFrame(){ if(_campRAF){ cancelAnimationFrame(_campRAF); _campRAF = 0; } }
+function campStopTimer(){ if(_campTimer){ clearInterval(_campTimer); _campTimer = 0; } }
 // ⏱ 프레임 간격 하한(ms). 캠프 한 프레임은 **3D 1.02M 픽셀 렌더 + 맵 DOM 통째 재생성**이다
 //   (실측: #cvMarine 730×1402 @dpr2 · techMapRender 가 #cstMain·#cstLabels 의 innerHTML 을
 //    매 프레임 갈아 끼운다). RTS 라 60fps 가 필요 없으므로 절반만 그린다.
@@ -6118,7 +5907,6 @@ function campWithBuildTab(fn){
   try { return fn(); } finally { G.tab = t; }
 }
 function campStartFrame(){ if(_campRAF) return; _campLastT = 0; _campLastDraw = 0; _campRAF = requestAnimationFrame(campFrame); }
-function campStopFrame(){ if(_campRAF){ cancelAnimationFrame(_campRAF); _campRAF = 0; } }
 
 function campStartTimer(){
   if(_campTimer) return;
@@ -6143,7 +5931,6 @@ function campStartTimer(){
       campAutoSave(); }
   }, CAMP_TICK_MS);
 }
-function campStopTimer(){ if(_campTimer){ clearInterval(_campTimer); _campTimer = 0; } }
 
 // ── 🎨 겉모습을 사냥터 것으로 ────────────────────────────────────────────
 // 시스템은 건설 구역, 디자인은 사냥터 — 바닥 그림도 사냥터가 쓰던 던전 배경을 그대로 쓴다.
@@ -6583,27 +6370,25 @@ function campSyncSheet(){
     // ⚠ 이때 techPanelRender 는 model 이 null 이라 시트 본문을 건드리지 않는다 — 요약이 덮이지 않는다.
     //    (건물을 고르면 그쪽이 body 를 다시 그리고, 해제하면 요약이 스스로 되살아난다)
     // ⛔ 배치·스킬 조준 중에는 건드리지 않는다 — 조준 대상이 바뀌어 버린다.
+    // 🖐 **전장 유닛 지정도 「고른 것」이다**(2026-09-05 사용자 신고). 던전에서 유닛을 고르면 campSelSet 이
+    //    기지 지정(selU)을 비우므로, 기지 변수만 보면 늘 idle 로 읽혀 **매 프레임 요약이 유닛 카드를 덮었다**.
+    //    ⛔ _campSel 길이로 재지 말 것 — 죽은 유닛 번호가 남을 수 있다. campSelList 가 산 것만 준다.
+    const fieldN = (typeof campSelList === 'function') ? campSelList().length : 0;
+    if(fieldN){
+      // 지정이 바뀌었을 때만 그린다(표식 _cfSig) — 매 프레임 renderCmdGrid 를 부르면 카드가 깜빡인다
+      const body = document.getElementById('btSheetBody');
+      if(body && body._cfSig !== _campSel.join(',') && typeof campFieldSheet === 'function') campFieldSheet();
+      return; }
     const idle = T.sel == null && !(T.selU && T.selU.length) && !T.selRes && !T.arm && !T.skillArm;
     if(idle){
       const st = T.sheet || (T.sheet = {open:false, sec:null}); st.open = false; st.sec = null;
       // ⚠ 높이 클래스(.simple)를 직접 붙인다 — techPanelRender 는 '보여 줄 모델이 있을 때만' 붙이는데
       //   요약은 그쪽 모델이 아니다. 안 붙이면 시트가 내용대로 커져 **기지를 가린다**(실측으로 걸렸다).
       sh.classList.add('simple');
+      { const body = document.getElementById('btSheetBody'); if(body) body._cfSig = null; }   // 요약이 덮었으니 유닛 표식을 지운다
       if(typeof renderCampIdleSheet === 'function') renderCampIdleSheet();
     }
   }
-}
-// ⛔ 예전에는 여기서 시트 높이를 --campSheetH 로 흘려 맵 높이를 줄였다. 지금은 맵이 화면 전체를
-//   쓰므로 그 값을 아무도 안 본다 — 매 프레임 offsetHeight 를 읽는 것은 **강제 동기 레이아웃**만
-//   일으키는 순손해라 걷어냈다.
-// 본부 한 채 — 시트의 기본 대상. 종족마다 키가 달라 TECH_TREE 의 첫 건물(=본부)로 찾는다
-function campHQ(){
-  const T = G.tech; if(!T || !T.ents) return null;
-  const tree = (typeof TECH_TREE !== 'undefined') && TECH_TREE[T.race];
-  const key = tree && tree.buildings && tree.buildings[0] && tree.buildings[0].key;
-  let hq = key && T.ents.find(e => e.type === 'bldg' && e.key === key && !(e.bt > 0));
-  if(!hq) hq = T.ents.find(e => e.type === 'bldg' && !(e.bt > 0));   // 본부가 없으면 완성된 아무 건물
-  return hq || null;
 }
 function campClearSheet(){
   const sh = document.getElementById('btSheet'); if(sh) sh.classList.remove('open');

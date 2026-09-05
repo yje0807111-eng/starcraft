@@ -1,0 +1,11 @@
+{
+ "_": "🗄 dead-audit 이 알고 있는 죽은 코드 — 여기 없는 새 이름이 나오면 npm test 가 실패한다. 이유 없이 넣지 말 것(ATTIC.md §5).",
+ "fn": {
+  "strikeWpnHave": "js/18-strike.js 는 ⛔ 수정 금지 파일(CLAUDE.md · 캠프 전투는 21-camp-battle 이 소유) — 다락으로 못 옮긴다",
+  "strikeStress": "같은 이유 · 옛 스트레스 모드 진입점(주석 1339 가 설명한다)",
+  "strikeLaneArrows": "같은 이유 · 진격 화살표(요청으로 끈 것 · 1810 줄에 호출이 주석으로 남아 있다)",
+  "campStopFrame": "🔬 측정 도구의 훅 — scripts/camp-trace.mjs · camp-bench.mjs 가 시계를 끄고 직접 민다. 앱은 안 부른다. 다락에 두면 도구가 제자리에서 못 찾으니 19-camp.js 에 둔다",
+  "campStopTimer": "같은 이유(campStopFrame 과 짝)"
+ },
+ "css": {}
+}

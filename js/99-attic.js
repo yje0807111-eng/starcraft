@@ -506,3 +506,672 @@ function campTreePayHTML(cost, pts){
 function campRebToShop(){ campRebClose();
   if(typeof openShop === 'function') openShop();
   if(typeof setShopSec === 'function') setShopSec('reco'); }
+
+// ── [js/02-gacha.js] tierName
+function tierName(id){ return (GACHA_TIERS[id]||{}).name || '일반'; }
+
+// ── [js/04-profile.js] profRecordRp
+// ⚠ 기록 기반 환생 포인트는 폐지했다(2026-08-19). 그건 '마지막 환생 뒤에는 레벨이 멈춘다'는
+//    유한 사다리 전제에서 필요했던 보조 축인데, 환생이 무한이 된 지금은 그 상태가 없다.
+//    깊이 민 보상은 환생 자체(레벨 비례 배수·포인트)가 이미 준다 — 두 벌로 두면 같은 진행을 두 번 센다.
+//    ⛔ 되살리지 말 것. 필요하면 profRebGrantAt 의 계수(PROF_REB_RP_K)를 키우는 쪽이 맞다.
+function profRecordRp(){ return 0; }
+
+// ── [js/04-profile.js] ticketN
+function ticketN(kind){ const p=PROF(); return (p.tickets&&p.tickets[kind])||0; }
+
+// ── [js/05-home.js] hbOpenRounds
+function hbOpenRounds(){ const el=document.getElementById('hbRoundSheet'); if(!el) return;
+  const H=hbHunt();
+  _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
+  el.classList.remove('hide'); renderRoundSheet();
+  if(typeof paintIcons==='function') paintIcons(el);
+  if(typeof playSfx==='function') playSfx('ui_open');
+  // 여백은 칸 높이·컨테이너 높이로 결정된다 → 보인 뒤에 재야 한다(숨은 동안은 높이가 0)
+  requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); }); }
+
+// ── [js/05-home.js] hbRdScrolled
+// 스크롤이 멎으면 가운데 칸이 곧 선택이다(짧게 기다렸다가 한 번만 확정한다)
+function hbRdScrolled(){ clearTimeout(_hbRdT); _hbRdT=setTimeout(hbRdSettle, 110); }
+
+// ── [js/05-home.js] hbPickDg
+// 던전 넘기기 — 열려 있는 것만 건너뛴다. 라운드는 그 던전의 최고 도달로 맞춘다.
+function hbPickDg(d){ if(!_hbPick) return;
+  for(let n=_hbPick.dg+d; n>=1 && n<=HB_DG_MAX; n+=d){ if(!hbDgOpen(n)) continue;
+    _hbPick.dg=n; _hbPick.round=hbBest(n); renderRoundSheet();
+    requestAnimationFrame(()=>{ if(!_hbPick) return; hbRdPad(); hbRdCenter(_hbPick.round,false); });
+    if(typeof playSfx==='function') playSfx('ui_tab'); return; } }
+
+// ── [js/05-home.js] hbPickGo
+// [이동] — 여기서만 실제로 옮긴다
+function hbPickGo(){ if(!_hbPick) return; const H=hbHunt(), d=_hbPick.dg, r=_hbPick.round;
+  if(d!==H.dg){ H.dg=d; hbEnsureModels(d);
+    if(_hb){ _hb.dg=d; _hb._pat=null; } }                 // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
+  H.round=r; saveMeta();
+  if(_hb){ _hb.round=r; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_confirm');
+  hbHud(); hbCloseRounds(); }
+
+// ── [js/05-home.js] hbGoDungeon
+// 던전 이동 — 그 던전에서 도달했던 라운드부터 다시 시작한다
+function hbGoDungeon(d){ const H=hbHunt();
+  d=Math.max(1,Math.min(HB_DG_MAX,d|0)); if(!hbDgOpen(d)) return;
+  H.dg=d; H.round=Math.max(1,H.best[d]||1); saveMeta();
+  hbEnsureModels(d);                                 // ⚔ 그 던전 적 3종 3D 모델만 지연 로드
+  if(_hb){ _hb.dg=d; _hb.round=H.round; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb._pat=null;                                   // 바닥 타일 패턴 캐시 무효화(던전이 바뀌었다)
+    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_open');
+  renderRoundSheet(); hbHud(); }
+
+// ── [js/05-home.js] hbSetClimb
+function hbSetClimb(v){ const H=hbHunt(); H.climb=!!v; H.climbChosen=1; saveMeta(); renderRoundSheet(); hbHud();
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// ── [js/05-home.js] hbRoundStep
+// ◀▶ ±1 — 가장 잦은 동작이라 시트를 거치지 않는다. 1 ~ 최고 도달 사이로 가둔다.
+function hbRoundStep(d){ const H=hbHunt(), cur=(_hb?_hb.round:(H.round||1));
+  if(hbSetRound(cur+(d|0)) && !document.getElementById('hbRoundSheet').classList.contains('hide')) renderRoundSheet(); }
+
+// ── [js/06-daily.js] dqDoneN
+// ── 퀘스트 수령 ──
+function dqDoneN(){ const D=dqState(); if(!D) return 0;
+  return D.q.filter(function(e){ const Q=DQ_BY[e.id]; return Q && e.n>=Q.goal; }).length; }
+
+// ── [js/07-home-upgrade.js] hbOpenMates
+// 🤝 동료 — 영입(첫 구매)·강화(같은 버튼)·출전 토글. 옛 전직 트리가 여기로 옮겨 왔다.
+function hbOpenMates(){ const el=document.getElementById('hbMateModal'); if(!el) return;
+  el.classList.remove('hide'); renderMateModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+
+// ── [js/07-home-upgrade.js] hbCloseMates
+function hbCloseMates(){ _mateFeedT=null; const el=document.getElementById('hbMateModal'); if(el) el.classList.add('hide'); }
+
+// ── [js/07-home-upgrade.js] hbCloseGrow
+function hbCloseGrow(){ const el=document.getElementById('hbGrowModal'); if(el) el.classList.add('hide'); }
+
+// ── [js/07-home-upgrade.js] profStatParts
+// ── C. 스탯 출처 내역 — "어디를 올려야 이득인가"를 화면에서 알 수 있게 ──
+// profStat()의 계산식을 그대로 분해한다(식이 바뀌면 여기도 같이 고칠 것 — 값을 두 번 계산하지 않도록 합계는 profStat로 검산).
+// 장비가 주는 스탯의 분해(부위별 합) — 지금은 장비만 남았으므로 이름 그대로 '장비 몫'이다.
+// 스탯 출처 표는 이걸 쓰지 않는다(csAxis 가 축 단위로 답한다). 장비 화면 검증용으로 남긴다.
+function profStatParts(k){ const c=CHAR(); if(!c) return null;
+  let gear=0;
+  for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
+    const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
+    for(const o of it.opts) if(o.k===k) gear+=o.v; }
+  return { gear:gear, total:profStat(k) }; }
+
+// ── [js/07-home-upgrade.js] hbOpenInfo
+function hbOpenInfo(){ const el=document.getElementById('hbInfoModal'); if(!el) return;
+  if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
+  el.classList.remove('hide'); renderInfoModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+
+// ── [js/07-home-upgrade.js] hbCloseInfo
+function hbCloseInfo(){ const el=document.getElementById('hbInfoModal'); if(el) el.classList.add('hide'); }
+
+// ── [js/07-home-upgrade.js] openQuest
+function openQuest(){    _navOpenShell('questScreen','quest'); }
+
+// ── [js/08-hunt.js] HB_DG_MUL
+function HB_DG_MUL(dg){ return HB_DG_HP(dg); }             // 옛 이름 호환
+
+// ── [js/08-hunt.js] hbStart
+function hbStart(){ const cv=document.getElementById('hbCv'); if(!cv) return;
+  hbUse('hunt');                                      // ⚠ 사냥터 화면이므로 포인터를 사냥터 세션으로 — 토벌을 보다 왔을 수 있다
+  if(_hb && _hb.on){                                  // 이미 돌고 있던 판 — 라운드·웨이브·적을 그대로 이어받는다
+    _hb.bg=false; _hb.cv=cv; _hb.ctx=cv.getContext('2d'); _hb._pat=null;
+    _hb.vTop=0; _hb.vBot=0;                           // 카메라는 새 레이아웃으로 '즉시' 맞춘다(보간하면 돌아온 순간 어긋나 보인다)
+    hbSyncChar();                                     // 자리를 비운 사이 산 업그레이드·레벨·포인트를 반영
+    if(!_hbTick) _hbTick=setInterval(hbPumpAll,50);
+    _hb.lastSim=performance.now();
+    if(!_hbRaf) _hbRaf=requestAnimationFrame(hbFrame);
+    hbResize(); hbHud(); renderHbBar(); return; }
+  const H=hbHunt(), st=hbCharStats();
+  hbSetSess('hunt', { on:true, mode:'hunt', speed:1, lastSim:performance.now(),
+    cv, ctx:cv.getContext('2d'), w:0,h:0,d:1, vTop:0, vBot:0, cx:0, cy:0, k:1, t:0,
+    dg:H.dg||1, round:H.round||1, wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
+    pend:[], pendT:0, foes:[], chests:[], fx:null, floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
+    allies:[], turrets:[], bunkers:[], pets:[], skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false,
+    buf:{min:0,gas:0,xp:0,kills:0},
+    char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit, critDmg:st.critDmg,
+           range:st.range, regen:st.regen, cdT:0, hitT:9,
+           shd:st.shdMax, shdMax:st.shdMax, shdReg:st.shdReg,
+           lifest:st.lifest, knock:st.knock, chestDmg:st.chestDmg, multiC:st.multiC, multiN:st.multiN,
+           bncC:st.bncC, bncN:st.bncN, scritC:st.scritC, scritM:st.scritM,
+           mspd:st.mspd, rrng:st.rrng } });
+  hbUse('hunt');
+  hbEnsureModels(_hb.dg);                            // ⚔ 현재 던전 적 모델 준비(없으면 이모지로 시작)
+  hbResize(); hbLayoutAllies(); hbSpawnWave(); hbHud(); renderHbBar();
+  _hb.lastSim=performance.now();
+  _hbRaf=requestAnimationFrame(hbFrame);            // 그리기
+  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50); }  // 진행 보장(세션 전부)
+
+// ── [js/08-hunt.js] mapToHub
+function mapToHub(){ if(typeof stopRoomsTick==='function') stopRoomsTick(); if(typeof playSfx==='function') playSfx('ui_close'); openHome(); }   // 유즈맵 선택 → 메인(HOME)으로 복귀
+
+// ── [js/08-hunt.js] openTownPanel
+function openTownPanel(zone){ const _z=TOWN_PANELS[zone];
+  if(_z && _z.screen && TOWN_ZONE_SCREEN[_z.screen]){ _twChar.mode=null; _twPtr=null; return TOWN_ZONE_SCREEN[_z.screen](); }   // 전용 화면 구역
+  _twZone=zone; _twChar.mode=null; _twPtr=null;   // 시설에 들어가면 걸음을 멈춘다
+  const card=document.querySelector('#townPanel .twCard');
+  if(card) card.classList.toggle('gearFull', zone==='gear');   // 장비창만 카드 높이를 고정해 위/아래 구역을 나눈다
+  const t=document.getElementById('tpTitle'), z=TOWN_PANELS[zone]; if(t) t.textContent=(z&&z.title)||'시설';
+  refreshTownPanel(); popShow('townPanel'); bagScrollHint(); }   // 숨은 동안은 높이가 0이라 표시 후 한 번 더 재본다
+
+// ── [js/08-hunt.js] setChrSec
+function setChrSec(k){ if(!CHR_SECS[k]) return; _chrSec=k;
+  if(typeof _lpPicking!=='undefined') _lpPicking=false;   // 화면을 옮기면 '고르는 중'은 남기지 않는다
+  renderChr();
+  if(typeof navPaint==='function') navPaint(); }
+
+// ── [js/08-hunt.js] openUpgScreen
+function openUpgScreen(){ if(typeof loadMeta==='function') loadMeta();
+  profEnsureChar();
+  if(typeof twLeave==='function') twLeave();
+  showAppScreen('upgScreen'); navShow('upg'); renderChr();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('upgScreen')); }
+
+// ── [js/08-hunt.js] openGear
+function openGear(){ if(typeof loadMeta==='function') loadMeta();
+  profEnsureChar();   // 캐릭터가 없으면 조용히 기본 유닛을 지급한다(선택 화면 없음)
+  if(typeof twLeave==='function') twLeave();                                     // 마을에서 들어왔으면 루프·팝업 정리
+  _gearPick=null; _gearSel=null;
+  showAppScreen('gearScreen'); navShow('gear'); renderGear();
+  if(typeof paintIcons==='function') paintIcons(document.getElementById('gearScreen')); }
+
+// ── [js/08-hunt.js] setGearTab
+function setGearTab(v){ if(_gearTab===v) return; _gearTab=v; _gearPick=null; _gearSel=null;
+  if(typeof playSfx==='function') playSfx('ui_tab');
+  if(typeof navPaint==='function') navPaint();   // 탭 띠는 하단 네비로 갔다 — 표시는 거기서 한다
+  renderGear(); }
+
+// ── [js/08-hunt.js] profGearPageStep
+function profGearPageStep(d){ profGearPageAt(PROF_GEAR_PAGES.findIndex(p=>p.id===_gearPage)+d); }
+
+// ── [js/09-dungeon.js] dgEnter
+function dgEnter(floor){ if(floor>dgFloorCap()){ showTownToast('Lv.'+dgFloorReqLv(floor)+'부터 도전할 수 있습니다'); return; }
+  dgStopLoop(); closeTownPanel(); twStopLoop(); _townOpen=false;
+  if(typeof playSfx==='function') playSfx('ui_open'); dgStart(floor); }
+
+// ── [js/09-dungeon.js] dgFlee
+function dgFlee(){ dgToHub(); }
+
+// ── [js/12-appshell.js] sdStartInf
+function sdStartInf(){ if(!_sdOk('inf')){ if(typeof lobbyToast==='function') lobbyToast('🔒 노말을 클리어하면 열립니다'); return; }
+  startSoloInfinite(); }
+
+// ── [js/12-appshell.js] setCpDiff
+function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=false; renderCpDiff(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// ── [js/19-camp.js] campEnterDungeon
+// 캠프(0) → 던전으로 내려간다. 인자가 없으면 **최고 기록 다음 칸**이 아니라 던전 1부터.
+function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
+  const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
+  C.dg = n; C.cleared = 0; campSave();
+  if(typeof campBarReset === 'function') campBarReset();
+  campSkin();                                        // 🎨 바닥을 그 던전 그림으로 (아래 ⛔)
+  return n; }
+
+// ── [js/19-camp.js] campBest
+function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
+
+// ── [js/19-camp.js] campPatchRefinery
+function campPatchRefinery(){
+  if(_campRefHome || typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t) return;
+  const b = (t.buildings || []).find(function(x){ return x.gas; }); if(!b) return;
+  _campRefHome = { b: b, had: b.research || null };
+  b.research = (b.research || []).concat([CAMP_REF_RES]); }
+
+// ── [js/19-camp.js] campRtReset
+// 초기화 — 산 것을 전부 물리고 포인트를 100% 돌려받는다. 비용은 젬(GEM.md §4).
+//   ⚠ 마디 값도 함께 돌려준다 — 안 그러면 되돌릴수록 포인트가 샌다.
+function campRtReset(){ const C = campState(); if(!C) return 0;
+  const b = campRtBag(); let back = 0;
+  if(b.root) back += CAMP_RT_ROOT_COST;
+  for(const bk in CAMP_TREE_BR){
+    if(b[CAMP_RT_BR_KEY(bk)]) back += CAMP_RT_BR_COST;
+    for(const g of CAMP_RT_GRP_KEYS) if(b[CAMP_RT_GP_KEY(bk, g)]) back += CAMP_RT_GP_COST; }
+  for(const L of CAMP_RT_LINES){ const n = b[L.k] | 0;
+    for(let i = 1; i <= n; i++) back += campRtCost(L.k, i); }
+  C.rbTree = { _m2:1 }; C.rbPts = (C.rbPts || 0) + back; campSave(); return back; }
+
+// ── [js/19-camp.js] campTreeSpark
+// ⛔ **x·y 를 반드시 숫자로 되돌린다.** 부르는 쪽(campTreeGem)이 toFixed 한 **문자열**을 넘긴다 —
+//   그대로 두면 `x - r` 은 숫자인데 `x + r` 은 **문자열 이어붙이기**가 되어
+//   "67.3" + 22.75 → "67.322.75" 같은 값이 나오고, SVG 경로 파서가 그걸 두 수로 쪼개 읽어
+//   도형이 통째로 망가진다(실측 2026-09-02: 반짝임 하나가 12×216px 짜리 **긴 세로선**으로 그려졌다).
+function campTreeSpark(x, y, r, col, op){
+  x = +x; y = +y;
+  return '<path d="M' + (x - r) + ' ' + y + ' L' + (x + r) + ' ' + y +
+    ' M' + x + ' ' + (y - r) + ' L' + x + ' ' + (y + r) + '" class="ctSp" stroke="' + col +
+    '" opacity="' + (op || .5).toFixed(2) + '"/>'; }
+
+// ── [js/19-camp.js] campRebHours
+function campRebHours(mul){ return CAMP_REB_T10 * Math.pow(Math.max(1, mul), -CAMP_REB_TEXP); }
+
+// ── [js/19-camp.js] campRebHourTx
+function campRebHourTx(h){ return (h >= 10) ? (Math.round(h) + '시간') : (h.toFixed(1) + '시간'); }
+
+// ── [js/19-camp.js] campTreeIsCut
+// 고른 별의 모든 정보 — 이름 · 진행도 · 설명 · 지금값▶다음값 · 다음 단계 예고 ·
+//   비용 · 사고 나면 남는 포인트 · 사기. ⭐ 한 곳에 모은다(2026-09-01 사용자 확정).
+//   ⚠ 값·설명은 지어내지 않는다 — 효과 사다리(CAMP_RT_LADDER · CAMP_RT_CUT)에서 그대로 꺼낸다.
+function campTreeIsCut(k){ const L = campRtLine(k); return !!L && L.br === 'enemy'; }
+
+// ── [js/19-camp.js] campTreeViewP
+// 지금 화면 한가운데에 있는 월드점 — 애니의 출발점이다
+function campTreeViewP(){ const v = _campTreeView;
+  return { x: -v.x / v.z, y: -v.y / v.z }; }
+
+// ── [js/19-camp.js] campBldSnap
+// 프레임 전 건물 체력을 떠 둔다 → strikeStepUnits 뒤에 깎인 만큼을 배율로 증폭한다.
+//   ⭐ 이 방식인 이유: 적이 구조물에 넣는 피해는 18-strike.js 안에서 `front.hp -= …` 로
+//     직접 빠져 가로챌 훅이 없다. ⛔ 18-strike.js 는 고치지 않는다(오토배틀 공유).
+//   ⚠ 내 건물을 때리는 것은 적뿐이다(아군은 같은 편을 안 친다) — 그래서 감소분 = 적 피해다.
+function campBldSnap(){
+  if(!CAMPB || !CAMPB._bld) return null;
+  const m = new Map();
+  for(const b of CAMPB._bld) if(b && !b.dead) m.set(b, b.hp);
+  return m; }
+
+// ── [js/19-camp.js] campBldAmp
+function campBldAmp(snap){
+  if(!snap || CAMP_FOE_BLD_MUL === 1) return 0;
+  let hit = 0;
+  for(const [b, hp0] of snap){
+    const d = hp0 - b.hp;                       // 이번 프레임에 깎인 양
+    if(!(d > 0)) continue;
+    hit += d;
+    b.hp = hp0 - d * CAMP_FOE_BLD_MUL;
+    if(b.hp <= 0){ b.hp = 0; b.dead = true; } }
+  return hit; }
+
+// ── [js/19-camp.js] campFoeTierOf
+// 이 id 가 몇 티어인가 — 없으면 0. (구성이 실제로 지켜지는지 재는 데 쓴다)
+function campFoeTierOf(id){
+  if(!id || !CAMPB) return 0;
+  const T = CAMP_FOE_TIER[CAMPB.ai.race] || CAMP_FOE_TIER.terran;
+  if(T.t1.indexOf(id) >= 0) return 1;
+  if(T.t2.indexOf(id) >= 0) return 2;
+  if(T.t3.indexOf(id) >= 0) return 3;
+  return 0;
+}
+
+// ── [js/19-camp.js] campPostSnap
+function campPostSnap(){
+  if(!CAMPB || !CAMPB.me) return;
+  for(const u of CAMPB.me.units){ if(u.dead) continue; u._sx = u.x; u._sy = u.y; } }
+
+// ── [js/19-camp.js] campPostStep
+function campPostStep(dt){
+  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
+  const R2 = CAMP_POST_R * CAMP_POST_R; let n = 0;
+  campWithStk(function(){
+    for(const u of CAMPB.me.units){ if(u.dead) continue;
+      if(campInBunker(u)) continue;               // 🧱 벙커에 탄 유닛은 campBunkerStep 이 붙든다
+      if(!u._post) u._post = { x:u.x, y:u.y };     // 자리가 없으면 지금 자리를 자리로 삼는다
+      // ⚔ 싸우는 중이면 복귀보다 전투가 먼저다.
+      // ⛔ **표적 번호가 있다는 것만으로 판단하지 말 것.** 적이 죽어도 u.tgtUid 는 그대로 남는다 —
+      //   그러면 「싸우는 중」으로 오해해 **영영 자리로 안 돌아온다**(브라우저 실측 2026-08-28).
+      if(u.tgtUid && strikeFindUnit(CAMPB.ai.units, u.tgtUid)){
+        u._idleT = 0; u._homeT = 0; continue; }    // 전투 중 — 시계를 되감고 손을 뗀다
+      // ⏳ 전투가 없어진 지 얼마나 됐나 — 바로 돌아가지 않는다(적이 곧 다시 붙을 수 있다)
+      u._idleT = (u._idleT || 0) + dt;
+      if(u._idleT < CAMP_RETURN_DELAY) continue;
+      const p = u._post, dx = p.x - u.x, dy = p.y - u.y;
+      if(dx * dx + dy * dy <= R2){ u.moving = false; u._homeT = 0; continue; }   // 이미 자리
+      // ⛔ **몰아서 밀지 않는다** (2026-08-31). 처음엔 0.5초치를 한 프레임에 밀었다가
+      //   유닛이 **308px 씩 순간이동**했다(실측 37회). 복귀 목표는 _post 로 고정이라
+      //   간격을 둘 이유도 없다 — 매 프레임 dt 만큼 정상 속도로 걸어온다.
+      // ⭐ **복귀는 빠르게**(2026-08-30 사용자 확정) — 싸우러 나갔다 오는 길이라 굼뜨면
+      //   다음 무리가 올 때까지 자리를 못 잡는다. 속도 상수를 건드리지 않고 dt 를 키운다.
+      //   ⚠ 배수는 1.8 이라 한 프레임 이동이 0.09초치 — 순간이동으로 보이지 않는다.
+      strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K); n++; }
+    if(n && typeof strikeSeparate === 'function') strikeSeparate();  // 겹친 것을 밀어낸다(공용 함수)
+  });
+  return n; }
+
+// ── [js/19-camp.js] campEngageStep
+function campEngageStep(dt){
+  if(!CAMPB || !CAMPB.me || typeof strikeMoveToward !== 'function') return 0;
+  if(typeof strikeFindUnit !== 'function') return 0;
+  // ① 표적별로 붙은 아군을 모은다
+  const byTgt = new Map();
+  for(const u of CAMPB.me.units){
+    if(u.dead || !u.tgtUid) continue;
+    if(campInBunker(u)) continue;              // 🧱 벙커에 탄 유닛은 나가지 않는다(무너졌으면 나간다)
+    if(!byTgt.has(u.tgtUid)) byTgt.set(u.tgtUid, []);
+    byTgt.get(u.tgtUid).push(u); }
+  if(!byTgt.size) return 0;
+  let n = 0;
+  campWithStk(function(){
+    for(const pair of byTgt){
+      const list = pair[1];
+      const t = strikeFindUnit(CAMPB.ai.units, pair[0]);
+      if(!t || t.dead) continue;                       // 죽은 표적은 campPostStep 이 복귀로 처리한다
+      list.sort(function(a, b){ return (a.uid < b.uid) ? -1 : (a.uid > b.uid) ? 1 : 0; });
+      const cnt = list.length;
+      for(let i = 0; i < cnt; i++){
+        const u = list[i], rng = u.rng || 0;
+        if(rng <= 0) continue;                          // 안 때리는 유닛(의무병 등)은 건드리지 않는다
+        // ⛔ **사거리 끝을 「지키려」 하지 않는다 — 뒤로는 안 물러난다** (2026-08-31 사용자 지적).
+        //   ⚠ 증상: 「유닛들이 멈췄다 갔다 한다. 적이 몰려오면 도망 다니는 것처럼 보인다.」
+        //   ⭐ 원인: 목표를 늘 `표적에서 rng×0.85` 로 잡으니, **적이 다가오면 그 거리를 지키려고
+        //     뒤로 밀려났다.** 적 사거리는 아군보다 짧아(campFoeRngCap) 계속 붙으러 오는데
+        //     아군은 계속 물러나니 **매 프레임 방향이 뒤집힌다.**
+        //     실측(마린 10기 · 30초): 방향 뒤집힘 **유닛당 33.9회** · 표적 바뀜은 2.1회뿐 —
+        //     표적이 흔들려서가 아니라 **거리 유지 때문**이라는 뜻이다.
+        //   ⭐ 그래서 **다가가는 데만** 쓴다: 이미 그보다 가까우면 지금 거리를 그대로 둔다.
+        //     각도(부채꼴·링)는 그대로 계산되므로 옆으로 벌리는 것은 계속 된다.
+        //   ⚠ 이 식은 예전에 한 번 33% 로 실패했었다(시도 ②). 그때는 **레인저가 3칸**이라
+        //     사거리 자체가 짧았고 층 배치도 없었다 — 조건이 다르다.
+        // ⛔ `Math.min(지금거리, …)` 로 「뒤로 안 간다」를 만들지 말 것 — **세 번 실패했다.**
+        //   도착 판정을 90 으로 넓힌 뒤에도 43% 였다(그 전엔 0% · 33%).
+        //   앞줄이 멈추면 뒷줄이 갈 곳이 없다는 구조는 무엇과 조합해도 그대로다.
+        const want = rng * (u.melee ? CAMP_ENG_MELEE : CAMP_ENG_RANGED);
+        // 기준 각도 — **자기 자리 쪽**이다. 아군은 아래(자기 진영)에서 올려다보므로
+        // 원거리는 그 방향을 중심으로 벌려야 적 뒤로 돌아가지 않는다.
+        const home = u._post || u;
+        const base = Math.atan2(home.y - t.y, home.x - t.x);
+        let ang;
+        if(u.melee){
+          ang = base + (i - (cnt - 1) / 2) * (Math.PI * 2 / Math.max(1, cnt));   // ㉠ 둘러싸기
+        } else {
+          // ㉡ 부채꼴 — 간격이 각도로 얼마인지 거리에서 역산한다(멀수록 좁은 각도로 충분하다)
+          const step = Math.min(CAMP_ENG_ARC / Math.max(1, cnt), 2 * Math.asin(Math.min(0.9, CAMP_ENG_GAP / (2 * Math.max(1, want)))));
+          ang = base + (i - (cnt - 1) / 2) * step; }
+        let gx = t.x + Math.cos(ang) * want, gy = t.y + Math.sin(ang) * want;
+        // 🚧 **자리에서 멀리 나가지 않는다** (2026-08-30 사용자 확정).
+        //   ⛔ 그냥 두면 적을 **따라 들어간다** — 표적이 멀수록 멀리 쫓아가서 자리가 무너지고,
+        //     전선이 계속 움직여 **벙커·포탑 같은 고정 방어가 아무 뜻이 없어진다**
+        //     (실측 2026-08-30: 벙커에 태운 판이 안 태운 판보다 늘 느렸다 · 실효 0.45 vs 1.4).
+        //   ⭐ 원하는 그림은 「제자리에서 조금만 나가 도와주고 자리를 지킨다」다.
+        //     그래서 목표 자리를 **_post 로부터 CAMP_ENG_OUT 안**으로 자른다.
+        //   ⚠ 사거리가 안 닿으면 그냥 안 닿는 채로 둔다 — 그것이 「자리를 지킨다」의 뜻이다.
+        //     적이 결국 자리 쪽으로 오므로 기다리면 만난다(적은 내 건물을 치러 내려온다).
+        //   ⭐ 상한은 **층마다 다르다**(campEngageOut) — 뒤로 밀린 긴 사거리 유닛은 덜 나가고,
+        //     앞줄의 짧은 사거리 유닛은 더 나간다. 그래야 긴 유닛이 앞을 막아도 짧은 유닛이 닿는다.
+        { const home = u._post, lim = campEngageOut(u);
+          if(home){ const ox = gx - home.x, oy = gy - home.y, od = Math.hypot(ox, oy);
+            if(od > lim){ gx = home.x + ox / od * lim;
+                          gy = home.y + oy / od * lim; } } }
+        const dx = gx - u.x, dy = gy - u.y;
+        if(dx * dx + dy * dy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
+        // ⏱ **간격은 「목표 계산」에 건다 — 이동은 매 프레임 정상 속도로** (2026-08-31).
+        //   ⛔ 처음엔 이동 자체를 가끔만 하고 **0.4초치를 한 프레임에 몰아서** 밀었다.
+        //     그래서 유닛이 **훅훅 튀었다** — 실측: 자리 잡기에서 순간이동 236회(최대 203px).
+        //     사용자가 화면에서 「튕기면서 순간이동한다」고 본 것이 이것이다.
+        //   ⭐ 떨림의 원인은 **목표가 매 프레임 바뀌는 것**이지 이동이 잦은 게 아니다.
+        //     그러니 목표만 CAMP_ENG_TICK 마다 갱신하고, **이동은 매 프레임 dt 만큼** 한다.
+        //     → 이동량이 정상이라 안 튀고, 목표가 안정적이라 덜 떨린다.
+        u._engT = (u._engT || 0) - dt;
+        if(u._engT <= 0 || u._engGx == null){ u._engT = CAMP_ENG_TICK; u._engGx = gx; u._engGy = gy; }
+        const tx = u._engGx, ty = u._engGy;
+        const ddx = tx - u.x, ddy = ty - u.y;
+        if(ddx * ddx + ddy * ddy <= CAMP_ENG_OK * CAMP_ENG_OK){ u.moving = false; continue; }
+        if(u._sx != null){ u.x = u._sx; u.y = u._sy; }   // strike 가 옮긴 것을 무르고
+        strikeMoveToward(u, tx, ty, dt); n++; } }        // ⭐ dt — 몰아서 밀지 않는다
+    if(n && typeof strikeSeparate === 'function') strikeSeparate();
+  });
+  return n; }
+
+// ── [js/19-camp.js] campLeash
+// 🪢 **목줄** — **자기 자리**에서 CAMP_LEASH 보다 멀어지면 그 선까지 끌어당긴다.
+//   ⛔ 「인식 거리를 넓힌다」만 하고 이걸 빼면 적 본진까지 쫓아간다. 그러면 아군이 흩어져
+//     각개격파되고, 적이 건물을 때리는데 아군은 저 위에 있는 그림이 된다.
+//   ⚠ 속도를 깎지 않고 **위치만** 자른다 — 이동 로직(stepUnitMove)은 공용이라 건드리지 않는다.
+function campLeash(){
+  if(!CAMPB || !CAMPB.me) return 0;
+  const L2 = CAMP_LEASH * CAMP_LEASH; let n = 0;
+  const fb = campRallyPoint();                     // 자리가 아직 없는 유닛만 옛 기준을 쓴다
+  for(const u of CAMPB.me.units){ if(u.dead) continue;
+    const r = u._post || fb; if(!r) continue;
+    const dx = u.x - r.x, dy = u.y - r.y, d2 = dx * dx + dy * dy;
+    if(d2 <= L2) continue;
+    const d = Math.sqrt(d2) || 1;
+    u.x = r.x + dx / d * CAMP_LEASH; u.y = r.y + dy / d * CAMP_LEASH; n++; }
+  return n;
+}
+
+// ── [js/19-camp.js] campDown
+// 누워 있는(부활 대기) 유닛 수 — 승패 판정이 쓴다
+function campDown(){ return (CAMPB && CAMPB._down) ? CAMPB._down.length : 0; }
+
+// ── [js/19-camp.js] campHasRace
+function campHasRace(){ const C = campState(); return !!(C && C.race); }
+
+// ── [js/19-camp.js] campCost
+function campCost(kind, key, lv){
+  const L = Math.max(0, lv | 0);
+  let m = 0, g = 0;
+  // ⚠ 비용은 techBldgSpec/techUnitSpec 이 아니라 **TECH_TREE 쪽**에 있다.
+  //   techBldgSpec = TECH_SPEC[race].bldg[k] (상세 스펙 · 비용 없음)
+  //   건물 비용 = TECH_TREE[race].buildings[].m/g · 유닛 비용 = 그 건물의 produces[].m/g
+  if(typeof G !== 'undefined' && G.tech && typeof TECH_TREE !== 'undefined'){
+    const race = G.tech.race, t = TECH_TREE[race];
+    if(kind === 'bldg'){
+      const b = (typeof techGetBldg === 'function') ? techGetBldg(race, key) : null;
+      if(b){ m = b.m || 0; g = b.g || 0; }
+    } else if(kind === 'unit'){
+      const bs = (t && t.buildings) || [];
+      for(const b of bs){ const q = (b.produces || []).find(function(x){ return x.id === key; });
+        if(q){ m = q.m || 0; g = q.g || 0; break; } }
+    }
+  }
+  const _d = campUpgDisc();   // 🌳 「업그레이드 비용」 — 건물·유닛 값도 캠프가 매긴다
+  return { m: Math.round(m * CAMP_COST_K * _d), g: Math.round(g * CAMP_COST_K * _d), lv: L };
+}
+
+// ── [js/19-camp.js] campMileMul
+function campMileMul(lv){
+  let mul = 1, m = CAMP_MILE_FIRST;
+  while(lv >= m && mul < 1e12){ mul *= 2; m = (m === CAMP_MILE_FIRST) ? CAMP_MILE_SECOND : m * 2; }
+  return mul;
+}
+
+// ── [js/19-camp.js] campTapAt
+// 눌린 곳이 광맥인가 — 맞으면 캐고 true
+// ⚠ human=true 는 **실제 사람 이벤트로 들어온 탭**에만 준다(아래 리스너). 그때만 감쇠를 잰다 —
+//   벤치·스모크가 직접 부르는 탭까지 감쇠하면 측정값이 오염된다.
+function campTapAt(clientX, clientY, human){
+  if(!_campOn || typeof G === 'undefined' || !G.tech) return false;
+  if(typeof _btRect !== 'function' || typeof _techS2W !== 'function' || typeof _techMineralAt !== 'function') return false;
+  const r = _btRect(); if(!r || !r.width || !r.height) return false;
+  const sx = (clientX - r.left) / r.width, sy = (clientY - r.top) / r.height;
+  if(sx < 0 || sx > 1 || sy < 0 || sy > 1) return false;
+  if(sy < 0.13) return false;                       // 상단바 — techPtrDown 과 같은 규약
+  const w = _techS2W(sx, sy);
+  const m = _techMineralAt(w.x, w.y); if(!m || m.amount <= 0) return false;
+  campFevRoll();                                    // ⚡ 광맥 탭도 같은 판정
+  let gain = Math.min(campTapGain(), m.amount);     // 매장량보다 많이 캘 수는 없다
+  if(human){ gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY))); }   // 🤖 리듬·좌표 감쇠
+  m.amount -= gain;
+  G.tech.credit = (G.tech.credit || 0) + gain;
+  _campTapAcc += gain;                              // 이 몫에는 채취 배수를 걸지 않는다(위 참고)
+  _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
+  const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;   // 실측용 — 손 축이 얼마나 쓰였나
+  if(typeof updateCurBar === "function") updateCurBar();
+  else if(typeof techUIRender === 'function') techUIRender();
+  return true;
+}
+
+// ── [js/19-camp.js] campMineOpen
+function campMineOpen(){ openCampMine(); }   // 별칭 — 호출부가 어느 이름을 쓰든 통하게
+
+// ── [js/19-camp.js] campHQ
+// ⛔ 예전에는 여기서 시트 높이를 --campSheetH 로 흘려 맵 높이를 줄였다. 지금은 맵이 화면 전체를
+//   쓰므로 그 값을 아무도 안 본다 — 매 프레임 offsetHeight 를 읽는 것은 **강제 동기 레이아웃**만
+//   일으키는 순손해라 걷어냈다.
+// 본부 한 채 — 시트의 기본 대상. 종족마다 키가 달라 TECH_TREE 의 첫 건물(=본부)로 찾는다
+function campHQ(){
+  const T = G.tech; if(!T || !T.ents) return null;
+  const tree = (typeof TECH_TREE !== 'undefined') && TECH_TREE[T.race];
+  const key = tree && tree.buildings && tree.buildings[0] && tree.buildings[0].key;
+  let hq = key && T.ents.find(e => e.type === 'bldg' && e.key === key && !(e.bt > 0));
+  if(!hq) hq = T.ents.find(e => e.type === 'bldg' && !(e.bt > 0));   // 본부가 없으면 완성된 아무 건물
+  return hq || null;
+}
+
+// ── [js/22-camp-rune.js] campRuneMaxRound
+function campRuneMaxRound(){ const per = (typeof CAMP_ROUND_MAX !== 'undefined') ? CAMP_ROUND_MAX : 50;
+  const dgs = (typeof CAMP_DG_MAX !== 'undefined') ? (CAMP_DG_MAX | 0) : 10;
+  return per * Math.max(1, dgs); }
+
+// ── [js/22-camp-rune.js] campRuneNextAt
+// 다음 칸이 열리는 라운드(전부 열렸으면 0)
+function campRuneNextAt(kind){ const tb = RUNE_SLOT_R[kind] || []; const b = campRuneBestRound();
+  for(const r of tb) if(b < r) return r; return 0; }
+
+// ── [js/22-camp-rune.js] runeGradeOf
+function runeGradeOf(key){ return runeParse(key).gd; }
+
+// ── [js/22-camp-rune.js] campRuneSwapOn
+function campRuneSwapOn(){ return !!_runeSwapKey; }
+
+// ── [js/22-camp-rune.js] _runeCellVeil
+function _runeCellVeil(kind, i, on){
+  _runeVeil = on ? _runeVeilKey(kind, i) : '';
+  const el = _runeCellEl(kind, i);      // 이미 그려져 있으면 지금 것도 맞춘다
+  if(el) el.classList.toggle('veil', !!on); }
+
+// ── [js/05-home.js] hbCloseRounds
+function hbCloseRounds(){ const el=document.getElementById('hbRoundSheet'); if(el) el.classList.add('hide');
+  _hbPick=null; clearTimeout(_hbRdT); _hbRdT=null;
+  if(typeof playSfx==='function') playSfx('ui_close'); }
+
+// ── [js/05-home.js] hbRdPad
+// 위아래 여백 = (보이는 높이 - 칸 높이)/2. 이게 있어야 첫·마지막 칸도 가운데에 설 수 있다.
+function hbRdPad(){ const sc=document.getElementById('hbRdScroll'); if(!sc) return;
+  const pad=Math.max(0,(sc.clientHeight-HB_RD_H)/2);
+  sc.style.paddingTop=pad+'px'; sc.style.paddingBottom=pad+'px'; }
+
+// ── [js/05-home.js] hbRdSettle
+function hbRdSettle(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  const top=hbRdTop(_hbPick.dg,_hbPick.round), best=hbBest(_hbPick.dg);
+  const i=Math.max(0,Math.min(top-1, Math.round(sc.scrollTop/hbRdPitch())));
+  let r=top-i;
+  if(r>best){ r=best; hbRdCenter(r,true); }        // 잠긴 목표 칸에 멈췄으면 고를 수 있는 데까지 되돌린다
+  if(r===_hbPick.round) return;
+  _hbPick.round=r; hbRdMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// ── [js/05-home.js] renderRoundSheet
+function renderRoundSheet(){ const H=hbHunt(), sc=document.getElementById('hbRdScroll'); if(!sc) return;
+  if(!_hbPick) _hbPick={ dg:(_hb?_hb.dg:H.dg)||1, round:(_hb?_hb.round:H.round)||1 };
+  const dg=_hbPick.dg, best=hbBest(dg);
+  _hbPick.round=Math.max(1,Math.min(best,_hbPick.round));
+  // 던전 카드 — 배경 그림은 전장이 쓰는 것과 같은 파일(새 에셋을 만들지 않는다)
+  { const card=document.getElementById('hbPickCard'), D=hbDun(dg);
+    if(card){ card.className='hbDgc';
+      card.innerHTML='<div class="hbDgcArt" style="background-image:url(\''+HB_BG_DIR+'dg'+dg+'.webp\')"></div>'
+        +'<div class="hbDgcTx"><b>던전 '+dg+' · '+D.name+'</b><em>최고 도달 '+best+' 라운드</em></div>'; } }
+  { const pv=document.getElementById('hbPickPrev'), nx=document.getElementById('hbPickNext');
+    const has=(d)=>{ for(let n=dg+d;n>=1&&n<=HB_DG_MAX;n+=d) if(hbDgOpen(n)) return true; return false; };
+    if(pv) pv.disabled=!has(-1); if(nx) nx.disabled=!has(1); }
+  // 라운드 — 큰 수가 위, 1이 맨 아래. 최고 도달까지 고를 수 있고, 그 위의 '다음 마일스톤'은 잠긴 목표로만 보인다.
+  let h='';
+  for(let i=hbRdTop(dg,_hbPick.round);i>=1;i--){ const rw=hbRoundRw(dg,i), got=rw&&hbRwGot(dg,i), far=i>best;
+    h+='<button class="hbRd'+(i===_hbPick.round?' on':'')+(far?' far':'')+'" data-r="'+i+'"'
+      +(far?' disabled':(' onclick="hbRdTap('+i+')"'))+'>'+i
+      +(i===best&&best>1?'<u>최고</u>':'')+(rw?('<u>'+(got?'✓':'🎁')+'</u>'):'')+'</button>'; }
+  sc.innerHTML=h;
+  hbPickNote();
+  const r=document.getElementById('hbModeRep'), c=document.getElementById('hbModeClm');
+  if(r) r.classList.toggle('on', !H.climb); if(c) c.classList.toggle('on', !!H.climb); }
+
+// ── [js/05-home.js] hbSetRound
+// 라운드 이동의 실제 동작 — 시트를 여닫지 않는다(화살표 ±1과 목록 선택이 함께 쓴다)
+function hbSetRound(n){ const H=hbHunt(), best=hbBest(H.dg);
+  n=Math.max(1,Math.min(Math.min(best,HB_ROUND_MAX),n|0)); if(n===H.round && _hb && _hb.round===n) return false;
+  H.round=n; saveMeta();
+  if(_hb){ _hb.round=n; _hb.wave=1; _hb.phase='fight'; _hb.buf={min:0,gas:0,xp:0,kills:0};
+    _hb.foes.length=0; _hb.pend.length=0; _hb.char.hp=_hb.char.hpMax; hbSpawnWave(); }
+  if(typeof playSfx==='function') playSfx('ui_open');
+  hbHud(); return true; }
+
+// ── [js/07-home-upgrade.js] renderInfoModal
+function renderInfoModal(){ const box=document.getElementById('hbInfoBody'); if(!box) return;
+  const c=CHAR(); if(!c) return;
+  let h='<div class="hbRoundNote" style="padding:0 0 8px">'+escHtml(c.name)+' · Lv.'+c.level
+    +' · 파워 <b>'+profPower()+'</b>'+(c.reb?(' · 환생 '+c.reb+'회'):'')+'</div>';
+  // ① 기본 스탯 — 출처는 넷뿐이다. 가산(업그레이드·장비)은 숫자로, 배수(레벨·환생 포인트)는 %로 적는다.
+  //    열 순서 = 계산 순서((기본+업그레이드+장비) × 레벨 × 환생) — 읽는 대로 계산되게 둔다.
+  h+='<div class="hbGrowLbl">기본 스탯 <span class="hbTblSub">업그레이드 · 장비 · 레벨 · 환생</span></div>'
+    +'<table class="hbTbl"><thead><tr><th>스탯</th><th>기본</th><th>업그레이드</th><th>장비</th><th>레벨</th><th>환생</th><th>합</th></tr></thead><tbody>';
+  const pc=v=>((v-1)>1e-9)? ('+'+Math.round((v-1)*100)+'%') : '-';
+  // ⚠ 열마다 반올림하면 '0 + 10 → 9.6' 처럼 합이 안 맞아 보인다(체력회복 1.2/레벨). 소수는 소수로 적는다.
+  // ⚠ 큰 수는 fmtCur 로 넘긴다 — 이 표는 열이 좁아 원시 숫자가 들어오면 통째로 밀린다
+  const n1=v=>(Math.abs(v)>=1e5)? fmtCur(v)
+            : ((Math.abs(v-Math.round(v))<0.05)? String(Math.round(v)) : v.toFixed(1));
+  for(const k of CS_ORDER){ const a=csAxis(k);
+    h+='<tr><td class="l">'+a.name+'</td><td>'+n1(a.base)+'</td>'
+      +'<td>'+(a.upg? ('+'+n1(a.upg)) : '-')+'</td>'
+      +'<td>'+(a.gear? ('+'+n1(a.gear)) : '-')+'</td>'
+      +'<td>'+pc(a.lp)+'</td><td>'+pc(a.rp)+'</td>'
+      +'<td class="s">'+csFmt(k, a.sub)+(a.capped?' <i>상한</i>':'')+'</td></tr>'; }
+  h+='</tbody></table>';
+  // ② 전투 수치 = 기본 스탯 × 추가 보정(장비 어빌리티 % · 펫/동료 패시브). 원천이 생기면 csBonus 가 답한다.
+  h+='<div class="hbGrowLbl">전투 수치 <span class="hbTblSub">기본 스탯 + 추가 보정</span></div>'
+    +'<table class="hbTbl"><tbody>';
+  for(let i=0;i<CS_ORDER.length;i+=2){ h+='<tr>';
+    for(const k of CS_ORDER.slice(i,i+2))
+      h+='<td class="l">'+CS_AXES[k].name+'</td><td class="s">'+csFmt(k, csVal(k))+'</td>';
+    if(CS_ORDER.slice(i,i+2).length<2) h+='<td></td><td></td>';
+    h+='</tr>'; }
+  h+='</tbody></table>';
+  if(!csHasBonus()) h+='<div class="hbRoundNote" style="padding:6px 0 0">추가 보정 원천이 아직 없습니다 — 장비 어빌리티·펫/동료 패시브가 생기면 여기에 얹힙니다.</div>';
+  box.innerHTML=h; }
+
+// ── [js/08-hunt.js] HB_DG_HP
+// ⚠ 아래 넷은 '던전 시작까지의 누적 배수'다 — hbCurve(base,dg,1) 과 같다(옛 이름 호환).
+function HB_DG_HP (dg){ return hbCurve(HB_ROUND_HP , dg, 1); }   // 적 체력
+
+// ── [js/19-camp.js] openCampMine
+function openCampMine(){
+  const el = document.getElementById('campMineSheet'); if(!el) return;
+  el.classList.remove('hide'); campMineRender();
+  if(typeof playSfx === 'function') playSfx('ui_open');
+}
+
+// ── [js/05-home.js] hbDgOpen
+// 던전 N 해금 = 던전 N-1에서 HB_DG_UNLOCK 라운드 도달. 던전 1은 항상 열려 있다.
+function hbDgOpen(dg){ return HB_DG_ALL_OPEN || dg<=1 || (hbHunt().best[dg-1]||0)>=HB_DG_UNLOCK; }
+
+// ── [js/05-home.js] hbRdTap
+// 칸을 눌러 고르면 그 칸이 가운데로 미끄러져 온다
+function hbRdTap(r){ if(!_hbPick) return; _hbPick.round=r; hbRdMark(); hbRdCenter(r,true);
+  if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// ── [js/08-hunt.js] csHasBonus
+function csHasBonus(){ for(const k of CS_ORDER) if(Math.abs(csBonus(k)-1)>1e-9) return true; return false; }
+
+// ── [js/05-home.js] hbRdCenter
+// 라운드 → 스크롤 위치. 목록은 큰 수가 위라 인덱스 = (최대 - 라운드).
+function hbRdCenter(round, smooth){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  const top=hbRdTop(_hbPick.dg,_hbPick.round), i=Math.max(0,Math.min(top-1, top-round));
+  sc.scrollTo({ top:i*hbRdPitch(), behavior:smooth?'smooth':'auto' }); }
+
+// ── [js/05-home.js] hbRdMark
+// 강조만 갈아 끼운다 — 목록을 다시 그리면 스크롤이 튄다
+function hbRdMark(){ const sc=document.getElementById('hbRdScroll'); if(!sc||!_hbPick) return;
+  for(const b of sc.querySelectorAll('.hbRd')) b.classList.toggle('on', +b.dataset.r===_hbPick.round);
+  hbPickNote(); }
+
+// ── [js/05-home.js] hbRdPitch
+function hbRdPitch(){ return HB_RD_H+HB_RD_GAP; }
+
+// ── [js/05-home.js] hbRdTop
+// 피커 맨 윗 칸 = 최고 도달, 단 '다음 마일스톤'이 더 위면 거기까지 잠긴 칸으로 보여 준다(도전정신).
+function hbRdTop(dg,round){ const b=hbBest(dg); return Math.min(HB_ROUND_MAX, Math.max(b, hbNextRw(dg,round||b)||0)); }
+
+// ── [js/05-home.js] hbPickNote
+// 안내 줄은 없앴다(2026-08-14) — 칸 안의 🎁/✓·최고 표시로 충분하고, 세 줄짜리 설명이 피커를 눌렀다.
+function hbPickNote(){}
+
+// ── [js/08-hunt.js] hbNextRw
+// 다음으로 노릴 마일스톤(아직 안 받은 것 중 가장 가까운 것) — 팝업 안내 문구용
+function hbNextRw(dg,from){ const best=hbBest(dg);
+  for(let r=HB_RW_EVERY; r<=Math.max(best,from||1)+HB_RW_EVERY*4; r+=HB_RW_EVERY)
+    if(!hbRwGot(dg,r)) return r;
+  return 0; }

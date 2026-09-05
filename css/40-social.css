@@ -97,8 +97,6 @@
         아직 카드가 있어서 이 정도로 덮으면 배경이 죽는다. 여기서만 덮는다. */
   #mapSelect::after{background:linear-gradient(180deg, rgba(2,3,8,.94) 0%, rgba(2,3,8,.74) 13%,
     rgba(2,3,8,.6) 34%, rgba(2,3,8,.64) 62%, rgba(2,3,8,.86) 86%, rgba(2,3,8,.96) 100%)}
-  /* 마을 채팅 시트 — 소셜 블록을 그대로 담는다(유즈맵에서 옮겨옴) */
-  #twChat .msSocial.inTown{flex:1;min-height:0;margin-top:0;border:0;border-radius:0;background:none}
   /* 정렬 드롭다운(커스텀 HUD 메뉴) */
   .msSortDD{flex:0 0 auto;position:relative}
   /* 정렬 드롭다운 = 중립 글래스 + 구분선(방찾기 난이도 필터·슬롯 메뉴와 통일. 빨간 네온 제거) */
@@ -145,9 +143,7 @@
   /* 탭(채팅/파티/친구 · 친구 필터) = 공용 세그먼트 바(.pdSeg · segNavHTML) 를 담는 그릇일 뿐이다.
      ⛔ 여기서 탭의 생김새를 만들지 말 것 — 유즈맵 정렬 띠·장비창 섹션 바와 한 컴포넌트다(2026-08-27 통일).
         덮는 것은 폭(공용은 max-width:286px 라 그대로 두면 오른쪽이 빈다)뿐이다. */
-  .msTabs2{flex:0 0 auto;display:block;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.015)}
-  .msTabs2 .pdSeg{max-width:none;margin:0}
-  .msTabs2 .pdSegBtn{position:relative}   /* 친구 배지가 버튼 기준으로 붙는다 */
+/* 친구 배지가 버튼 기준으로 붙는다 */
   .msPanelBody{flex:1;min-height:60px;padding:8px 9px;overflow-y:auto;overflow-x:hidden;background:transparent;border:none}
   .msPanelBody::-webkit-scrollbar{width:4px}.msPanelBody::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   /* 채팅: 보기영역 + 입력줄(박스 내부에서 작동) */
@@ -217,16 +213,6 @@
     border:none;border-left:1px solid rgba(255,255,255,.09);background:transparent;color:#cfd8e3;transition:background .12s}
   .msChatSend:active{background:rgba(255,255,255,.07)}
   .msChatSend:active{transform:translateY(1px)}
-  /* 친구 오버레이(스텁 — 다음 단계에서 친구목록/메시지/파티 채움) */
-  
-  
-  
-  
-  
-  
-  
-  
-  .foSoon{display:flex;align-items:center;justify-content:center;height:120px;color:#7d8b98;font-size:var(--fs-lg)}
   /* 검색 줄 = 방 찾기(.rmNum)와 같은 규격이다 — 라운드 3px 하나, 입력은 어두운 홈, 버튼은 공용 .actBtn.
      ⚠ 옛 값은 6px 라운드 + 붉은 면(rgba(255,59,59,.14))이었다. 둥글고, 면을 칠해서
        "위계는 색이 아니라 빛의 양" 규칙에서도 벗어나 있었다. 되돌리지 말 것. */
@@ -238,9 +224,8 @@
      height:auto + stretch 라 입력칸이 정하는 높이에 맞춰 늘어난다(둘의 높이를 따로 적지 않는다). */
   .foSearchBtn{flex:0 0 auto;height:auto;align-self:stretch;padding:0 15px;font-size:var(--fs-lg)}
   .foSecLbl{font-size:var(--fs-sm);font-weight:800;letter-spacing:.5px;color:#8a9aa8;margin:9px 1px 5px}.foSecLbl b{color:var(--neon)}
-  .foSecAdd{display:flex;align-items:center;gap:4px;color:#aeb7c1;margin-top:2px}.foSecAdd .ic{width:12px;height:12px;color:var(--neon)}
-  .foSecOn b{color:var(--ok)}
-  .foSecOff{color:#6a727d;margin-top:13px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}.foSecOff b{color:#828b96}
+
+
   /* 친구 머리줄은 파티 머리줄(.ptHead/.ptTitle/.ptHeadBtns)을 그대로 쓴다 — 같은 구역의 같은 것이다 */
   .foList{display:flex;flex-direction:column;gap:3px}
   /* 면 = 다른 곳과 같은 짙은 검정(.hmUp/.mapItem). 옛 rgba(26,28,34)는 B가 R보다 8 높아 푸른기가 돌았다.
@@ -295,9 +280,7 @@
   .ptSlot.empty:active{transform:scale(.98)}
   .ptAddAv{flex:0 0 auto;width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;
     font-size:13px;font-weight:300;line-height:1;color:#c4cdd6;background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.4)}
-  .ptAddLbl{font-size:var(--fs-xs);font-weight:600;color:#aeb7c1}
   .ptSlot.empty:hover .ptAddAv{color:var(--neon-lt);border-color:var(--neon-soft);background:var(--neon-faint)}
-  .ptSlot.empty:hover .ptAddLbl{color:var(--neon-lt)}
   
   
   .ptSlot .ptName{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}   /* 파티 슬롯 전용 — 공학소 행(.ptNameRow)의 이름까지 늘어나지 않게 범위 한정 */
@@ -475,8 +458,6 @@
   .moThumb .mmIco .ic{width:68px;height:68px;color:var(--mapAccent,#cbd8e6);filter:drop-shadow(0 0 9px var(--mapAccent,#6d86b8))}
   .moMap{font-size:22px;font-weight:800;color:#eaf1fb;letter-spacing:.3px;margin:2px 24px 14px;
     text-shadow:0 0 11px var(--mapAccent,#8aa0c8),0 2px 5px rgba(0,0,0,.6)}
-  .moInfo{text-align:left;margin:2px 0 2px;padding:12px 14px 13px;border-radius:13px;
-    background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.018));border:1px solid var(--metal-edge)}
 
   /* ── 아트 = 카드 전체. 층은 넷이고 순서를 z-index 로 못 박는다 ──
      0 뒤 흐린 판 → 1 또렷한 맵 → 2 비네트 → 3 맵색 오라
@@ -559,10 +540,6 @@
      
   
   .rmEmpty{text-align:center;color:#7d8b98;font-size:var(--fs-lg);font-weight:700;padding:26px 0}
-  .cpDiffBtns{margin-bottom:4px}
-  /* (구 인원 −/+ 스테퍼 .cpStepper/.cpStepBtn/.cpStepVal 은 폐지 — 1~8 칸 게이지(.cpPGrid)로 바뀌었다) */
-  .cpRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px}
-  .cpRow .cpLabel{margin:0}
   /* ══ 방 만들기 = **전체 화면**이다(2026-08-19). 방 찾기와 같은 규약 — 딤도 카드 테두리도 없다.
      ⛔ 팝업 카드 안에 다시 넣지 말 것. 상·하단까지 화면이 쓴다. */
   #createPanel .cpCard{width:100%;max-width:none;height:100%;max-height:none;padding:50px 18px 28px;
@@ -590,17 +567,6 @@
      (같은 화면 같은 자리에서 고르는 것인데 부품이 둘이면 두 화면처럼 읽힌다) */
   .cpPreSub{margin-top:6px;font-size:var(--fs-sm);color:#8a929c;text-align:center}
   #cpPreStep{margin-bottom:10px}
-  .cpPre{display:flex;gap:7px;margin-bottom:10px}
-  .cpPreC{position:relative;flex:1;min-width:0;padding:10px 6px;cursor:pointer;overflow:hidden;text-align:center;
-    border:1px solid rgba(255,255,255,.08);border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#131418,#0a0b0d);transition:border-color .12s,background .12s}
-  .cpPreC b{display:block;font-family:var(--font-ti);font-size:12.5px;font-weight:400;color:#c6cdd6}
-  .cpPreC i{display:block;font-style:normal;font-size:9.5px;color:#7d8792;margin-top:3px}
-  .cpPreC.on{border-color:rgba(90,169,255,.45);background:linear-gradient(0deg,rgba(90,169,255,.14),rgba(11,12,14,.92) 62%)}
-  .cpPreC.on b{color:#fff}
-  .cpPreC.on::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--tmC1);box-shadow:0 0 8px var(--tmC1)}
-  .cpPreC.cu.on{border-color:rgba(255,177,77,.45);background:linear-gradient(0deg,rgba(255,177,77,.14),rgba(11,12,14,.92) 62%)}
-  .cpPreC.cu.on::after{background:var(--warn);box-shadow:0 0 8px var(--warn)}
   .cpVs{--cc:var(--tmC1);position:relative;padding:13px 12px;border-radius:var(--r-bar);overflow:hidden;
     background:linear-gradient(180deg,#0d0d0d,#050505);border:1px solid color-mix(in srgb,var(--cc) 22%,transparent);
     box-shadow:inset 0 0 30px -18px var(--cc)}
@@ -633,10 +599,6 @@
   .cpDiffStep .sdStepTx{font-size:21px}
   .cpDiffStep .sdDots{margin-top:5px}
   #createPanel .cpVs.dim{opacity:.4}
-  #createPanel .sdInf{margin:9px 0 0}
-  .sdInf.on{background:linear-gradient(180deg,rgba(176,107,255,.16),rgba(176,107,255,.04)) padding-box,
-    linear-gradient(180deg,#b06bff,#5b2f8f) border-box}
-  .sdInf.on b{color:#efe2ff;text-shadow:0 0 8px #b06bff}
   #createPanel .cpBtns{margin-top:auto;flex:0 0 auto;padding-top:13px}   /* 버튼은 항상 하단 고정(화면 밖으로 안 나감) */
   #createPanel .cpBtns .actBtn{height:46px}
   /* 입력 높이 축소(방이름·비밀번호) */
@@ -646,23 +608,12 @@
   .cpForm{flex:1 1 auto;overflow-y:auto;min-height:0;padding:0;border-radius:0;background:none;border:0;
     scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
   .cpForm::-webkit-scrollbar{width:5px} .cpForm::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
-  /* ♾️ 무한 모드 토글(난이도 대안) — 보라 강조, 켜지면 위 난이도 pill 흐려짐 */
-  .cpInfBtn{--dc:#b06bff;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:6px;padding:8px;border-radius:9px;font-family:inherit;font-weight:800;cursor:pointer;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);color:#a7b2bf;transition:background .13s,border-color .13s,color .13s}
-  .cpInfBtn .ddN{font-size:11.5px}
-  .cpInfBtn.on{color:#fff;border-color:var(--dc);background:linear-gradient(180deg,rgba(176,107,255,.16),rgba(176,107,255,.04));box-shadow:0 0 13px -5px var(--dc),inset 0 0 13px -7px var(--dc)}
-  .cpInfBtn.on .ddN{color:#d3b3ff;text-shadow:0 0 8px var(--dc)}
-  .cpDiffBtns .moDiffBtn.dim{opacity:.38}
-  .cpDiffInfo .cpdInf{color:#c6a3ee;font-weight:700}
   .cpForm .cpSection{padding:0 0 16px;border-bottom:0}
   .cpForm .cpSection:empty{display:none}
   .cpForm .cpSection:last-child{padding-bottom:0}
   .cpForm .cpLabel{margin:0 0 6px 0}
-  .cpForm .cpRow{padding:9px 0;margin:0}
-  .cpForm .cpRow .cpLabel{margin:0}
   /* 섹션 내부 컨트롤 자체 여백 제거(섹션 패딩이 간격 담당) */
   #createPanel #cpName{margin:0}
-  #createPanel .cpDiffBtns{margin-bottom:9px}
   #createPanel .cpDiffInfo{margin:0}
   #createPanel #cpVis{margin:0}
   #createPanel .cpPwWrap{margin:11px 0 0}
@@ -675,8 +626,6 @@
   #createPanel #cpName{background:none;border:0;border-bottom:1px solid rgba(255,255,255,.18);
     border-radius:0;padding:9px 2px;margin:0 0 4px}
   #createPanel #cpName:focus{border-color:transparent;border-bottom-color:rgba(255,59,59,.85)}
-  /* 무한 모드 = 판을 걷고 왼쪽 보라 막대만 남긴다(막대가 곧 이 줄의 정체다) */
-  #createPanel .sdInf{background:none;box-shadow:none;border:0;padding-left:11px}
   /* 난이도 상세 = 위아래 선 사이의 숫자.
      ⚠ 테두리만 걷으면 안 된다 — 안쪽 초록 글로우(box-shadow inset)가 남아 그대로 상자로 읽힌다(실제로 그랬다). */
   #createPanel .cpVs{background:none;border:0;border-radius:0;box-shadow:none;padding:11px 2px;
@@ -691,16 +640,9 @@
   #createPanel .cpPc:disabled{opacity:1;background:linear-gradient(180deg,#0b0b0d,#08080a);color:#4b525c}
   /* ⛔ 여기서 면색을 덮지 말 것 — 그러면 A5(.setSeg)를 쓰는 의미가 없어진다.
      방 만들기의 공개/비공개는 설정 창의 그래픽 품질과 **같은 모습**이어야 한다(2026-08-27). */
-  /* 난이도 = 이름 pill 한 줄(선택 시 난이도 색 강조) + 아래 정보줄 */
-  .cpDiffBtns{display:flex;gap:6px;margin-bottom:7px}
-  .cpDiffBtns .moDiffBtn{flex:1;min-width:0;padding:9px 2px;border-radius:9px;font-weight:800;text-align:center;
-    background:rgba(255,255,255,.05);border:1px solid var(--metal-edge);color:#a7b2bf;box-shadow:none;transition:background .13s,border-color .13s,color .13s}
-  .cpDiffBtns .moDiffBtn .ddN{font-size:9.5px;letter-spacing:-.2px;display:block;line-height:1.1;white-space:nowrap}
-  .cpDiffBtns .moDiffBtn.on{color:#fff;border-color:var(--dc);background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));box-shadow:0 0 12px -5px var(--dc),inset 0 0 13px -7px var(--dc)}
-  .cpDiffBtns .moDiffBtn.on .ddN{color:var(--dc);text-shadow:0 0 8px var(--dc)}
   .cpDiffInfo{display:flex;justify-content:center;gap:14px;margin:0 0 20px;font-size:9px;font-weight:700}
-  .cpDiffInfo .cpdE{color:#b58585} .cpDiffInfo .cpdE b{color:#ff9e9e;font-weight:800;font-family:var(--font-num)}
-  .cpDiffInfo .cpdC{color:#b59d63} .cpDiffInfo .cpdC b{color:#ffd485;font-weight:800;font-family:var(--font-num)}
+
+
   /* (구 .soloDiffBtns 난이도 목록은 폐지 — 세그먼트 바 + 상세(#soloDiffPanel .sdNav/.sdDet)로 바뀌었다) */
   /* 개인/멀티 = 사냥터 구매 버튼(.hmUpBtn)의 금속 링 구조.
      링(테두리) 그라데 + 안쪽 면을 두 겹 background 로 낸다 — 의사요소를 쓰면
@@ -738,6 +680,5 @@
         font-weight에 져서 일부 제목만 가짜 볼드로 남는다(전에 font-size로 똑같이 당했다).
      ⚠ IBM Plex Sans KR은 700이 최대다 — 800/900을 남기면 브라우저가 가짜 볼드를 그려 획이 뭉갠다.
         그래서 700으로 되돌린다. 제목은 '같은 가족 + 굵기 700 + 큰 크기'로 선다. */
-  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.opTitle,.lbTitle,.ptTitle,.shopTitle,.shopHead,
-  .curTitle,.mapName,#msSortLbl,.hbmHead,#campTree .ctTitle,#campRune .rnTitle,#campReb .crTitle{
+  #ovTitle,.ovTtl,.ecTitle,.setTitle,.hmUpgHead,.twName,.cpTitle,.lbTitle,.ptTitle,.shopHead,.curTitle,.mapName,#msSortLbl,.hbmHead,#campTree .ctTitle,#campRune .rnTitle,#campReb .crTitle{
     font-family:var(--font-ti);font-weight:700}

@@ -21,7 +21,7 @@
   - ⛔ `js/08-hunt.js`(2953줄)는 **던전 1~10 데이터·마을 때문에 남아 있을 뿐**이다. HOME 게임플레이를 여기서 고치지 말 것 — 화면에 안 나온다.
   - ⚠ 문서·코드의 **「사냥터」는 대부분 옛 이름**이다(102곳). 다만 화면의 **「사냥터 업그레이드」(`.hmUpg`)와 `UM_*` 경제 상수는 살아 있는 이름**이라 일괄 치환 금지.
 - **Read `GAME_DIRECTION.md` before any 사냥터(=지금의 캠프) gameplay/성장 decision** — 이 게임을 *어떤 게임으로* 만들 것인가의 단일 소스(재미·성장 축·확장·유보). 전투 성장은 추상 카드가 아니라 **`TECH_TREE` 연구**다. ⚠ `HUNT2.md`(구현 부록)는 그보다 먼저 쓰여 **일부 결정이 무효**다 — 무효 목록은 `GAME_DIRECTION.md` §6.
-- 🗄 **안 쓰는 코드는 `js/99-attic.js`(다락)에 있다 — 목록은 `ATTIC.md`.** 옛 화면·옛 디자인을 되살리기 전에 거기부터 볼 것. ⛔ 지우지는 않는다(유보는 삭제가 아니다). 되살아나면 스모크 「다락」이 잡는다.
+- 🗄 **안 쓰는 코드는 `js/99-attic.js`(다락)에 있다 — 목록은 `ATTIC.md`.** 🔒 **CSS 도 다락이 있다**(`css/99-attic.css` · ⛔ 링크하지 않는다) 그리고 **`npm test` 가 죽은 코드 총량을 잠근다**(`scripts/dead-audit.mjs` · 2026-09-05): 아무도 안 부르는 함수·어디에도 없는 CSS 클래스가 새로 생기면 실패한다 → `scripts/attic-move.mjs`/`attic-css.mjs` 로 옮기거나 이유를 적어 `test/dead-known.json` 에. ⚠ 새 화면을 만들 때 **grep 에 걸린 클래스가 다락 것이면 쓰지 말 것** — 그게 「옛 디자인이 되살아나는」 경로였다. 옛 화면·옛 디자인을 되살리기 전에 거기부터 볼 것. ⛔ 지우지는 않는다(유보는 삭제가 아니다). 되살아나면 스모크 「다락」이 잡는다.
 - **Read `ARCHITECTURE.md` first** — section map (jump by banner search strings), global state, frame pipeline, M3D API, and a pitfall list. Update it when structure changes.
 - **Read `DESIGN.md` before any visual change** — 확정된 스타일 규칙(각진 SF · 볼륨 3단 · 라운드 0/3/6/9 · 역할별 액센트). 값은 고민하지 말고 표에서 꺼낼 것. **일괄 치환 금지** — 화면을 만지는 김에 그 화면만 체크리스트를 통과시킨다(touch-it-fix-it).
   - 🎬 **화면 전환(페이드·디졸브·줌)을 만진다면 `DESIGN.md` §5.5 체크리스트를 먼저 읽을 것.**

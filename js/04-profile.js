@@ -264,11 +264,6 @@ function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
   }catch(e){}
   try{ saveMeta(); }catch(e){}
   return N; }
-// ⚠ 기록 기반 환생 포인트는 폐지했다(2026-08-19). 그건 '마지막 환생 뒤에는 레벨이 멈춘다'는
-//    유한 사다리 전제에서 필요했던 보조 축인데, 환생이 무한이 된 지금은 그 상태가 없다.
-//    깊이 민 보상은 환생 자체(레벨 비례 배수·포인트)가 이미 준다 — 두 벌로 두면 같은 진행을 두 번 센다.
-//    ⛔ 되살리지 말 것. 필요하면 profRebGrantAt 의 계수(PROF_REB_RP_K)를 키우는 쪽이 맞다.
-function profRecordRp(){ return 0; }
 // 스탯/파워(전부 read-only)
 // 장비가 주는 스탯 합(pow/vit/foc/agi) — 이제 이 네 키는 '장비 전용 꼬리표'다.
 // ⚠ 직업 기본치·진화★·레벨 자동증가·펫 %는 전부 뺐다(2026-08-18). 스탯 출처는 넷뿐이다:
@@ -335,7 +330,6 @@ const PROF_PET_START_TICKETS=5;      // 처음 열 때 쥐여 주는 펫 뽑기�
 //   ※ 퀘스트 보상은 아직 퀘스트 시스템 자체가 없다 — 생기면 여기 dgAddTicket 을 부르면 된다.
 const TICKET_GEM={ally:5, pet:4, gear:3};
 const TICKET_NAME={ally:'동료', pet:'펫', gear:'장비'};
-function ticketN(kind){ const p=PROF(); return (p.tickets&&p.tickets[kind])||0; }
 function buyTicketGem(kind){ const p=PROF(), c=TICKET_GEM[kind]; if(!c) return false;
   if(profGem()<c) return false;
   p.gem=(p.gem||0)-c; if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
