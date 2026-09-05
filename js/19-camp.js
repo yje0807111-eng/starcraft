@@ -1413,7 +1413,9 @@ function _campRebArtOff0(){
 //     **화면은 즉시 뜨는데 그림만 뒤늦게 떠올라** 한 번 번쩍인다(2026-08-31 사용자 신고).
 //     트리는 제 배경이 거의 불투명해서 꺼진 것이 안 보였을 뿐이다.
 //   ⭐ 배경은 **구역의 것**이다 — 들어올 때 켜고 나갈 때만 돌려준다.
-function campRebClose(keepArt){ const el = document.getElementById('campReb'); if(el) el.classList.remove('on', 'crIn');
+function campRebClose(keepArt){
+  setTimeout(() => { if(typeof curSplitSync === 'function') curSplitSync(); }, 0);   // 📐 상단 띠 맞춤
+  const el = document.getElementById('campReb'); if(el) el.classList.remove('on', 'crIn');
   if(keepArt) return;
   campRebArtOff();   // 구역을 나갈 때만 끈다(잔상 금지)
 }
@@ -1454,8 +1456,7 @@ function campRebEnter(sec){
   else { campTreeClose(); campRebOpen(); }
   { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
     if(el) el.classList.toggle('crIn', !wasIn); }
-  // 📐 구역 상단 띠 — **닫는 함수를 부른 뒤에** 켠다(그 안에서 꺼 버린다)
-  if(typeof curSplit === 'function') curSplit(true);
+  if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(환생 / 환생 트리)
   // 🧭 네비를 「환생 구역의 하위」 상태로 맞춘다.
   //   ⚠ navShow 만으로는 부족하다 — 그것은 **구역**을 켤 뿐이고, 하위 칸(정보·업그레이드)은
@@ -1706,7 +1707,9 @@ function campTreeFlowTick(){
 function campTreeFlowStart(){ campTreeFlowStop();
   _ctFlowT = setInterval(campTreeFlowTick, CAMP_TREE_FLOW_MS); }
 function campTreeFlowStop(){ if(_ctFlowT){ clearInterval(_ctFlowT); _ctFlowT = null; } }
-function campTreeClose(){ const el = document.getElementById('campTree'); if(el) el.classList.remove('on', 'crIn');
+function campTreeClose(){
+  setTimeout(() => { if(typeof curSplitSync === 'function') curSplitSync(); }, 0);   // 📐 상단 띠 맞춤
+  const el = document.getElementById('campTree'); if(el) el.classList.remove('on', 'crIn');
   campTreeTweenStop(); campTreeViewSync(); campTreeFlowStop(); _ctZBefore = null; }
 function campTreeIsOn(){ const el = document.getElementById('campTree'); return !!(el && el.classList.contains('on')); }
 

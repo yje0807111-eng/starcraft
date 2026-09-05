@@ -404,6 +404,7 @@ function campRuneOpen(){ const el = document.getElementById('campRune'); if(!el)
   campRuneRender();
   if(typeof playSfx === 'function') playSfx('ui_open'); }
 function campRuneClose(){ const el = document.getElementById('campRune');
+  setTimeout(() => { if(typeof curSplitSync === 'function') curSplitSync(); }, 0);   // 📐 상단 띠 맞춤
   if(el) el.classList.remove('on', 'rnIn');
   _runePick = -1; _runePickKind = '';
   _runeSwapKey = '';                  // 🔁 나갈 때 교체도 걷는다(다시 들어오면 칸이 흔들린 채다)
@@ -444,8 +445,7 @@ function campRuneRender(){
   if(typeof paintIcons === 'function') paintIcons(box);
   if(_bagKeep){ const q = document.querySelector('#campRune .rnBagG'); if(q) q.scrollTop = _bagKeep; }
   _runeTopSync();
-  // 📐 구역 상단 띠 — **닫는 함수를 부른 뒤에** 켠다(그 안에서 꺼 버린다)
-  if(typeof curSplit === 'function') curSplit(true);
+  if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(장착 / 룬 상점)
   if(_runeSec !== 'shop') campRuneBindMap(); }
 

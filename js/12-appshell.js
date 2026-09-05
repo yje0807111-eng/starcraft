@@ -411,6 +411,18 @@ function curSplit(on){ const b = document.getElementById('curBar');
   // ⚠ **바도 함께 켠다** — 환생·룬은 CUR_SCREENS 에 없어서 showAppScreen 이 안 켜 준다.
   //   띠만 붙이고 바가 꺼져 있으면 상단이 통째로 비어 보인다(실측 2026-09-05).
   if(on) curShow(true); }
+// 📐 지금 상태를 보고 **스스로 맞춘다** — 구역(환생·룬·트리)이 열려 있으면 켜고,
+//   아니면 화면 규칙(_splitScreen)에 맡긴다. 열기·닫기·화면 전환 뒤에 이걸 부른다.
+let _splitScreen = false;
+//   ⚠ 인자를 주면 **화면 쪽 판단도 갱신**한다 — 캠프로 돌아가는 길(navShow)은
+//     showAppScreen 을 안 타므로 그때 false 를 넘겨 줘야 띠가 걷힌다.
+function curSplitSync(screenOn){
+  if(screenOn !== undefined) _splitScreen = !!screenOn;
+  // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
+  //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
+  const zone = ['campRune','campReb','campTree'].some(id => {
+    const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
+  curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
 //   그대로 두면 우측 정렬된 숫자가 왼쪽으로 자라 좌상단 프로필을 덮는다(실제로 겹쳤다).
 //   10만부터 축약한다 — 5자리까지는 콤마 표기를 그대로 둬야 초반 수치를 정확히 읽을 수 있고,
@@ -571,7 +583,7 @@ function showAppScreen(id){ setInGame(false);
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
-  curSplit(SPLIT_CUR_SCREENS.indexOf(id)>=0);                                     // 📐 구역 상단 띠(환생·룬·유즈맵·상점)
+  _splitScreen = SPLIT_CUR_SCREENS.indexOf(id)>=0; curSplitSync();                // 📐 구역 상단 띠
   { const ph=document.getElementById('phone');                                     // 🧍 인구 칸을 보여 줄 화면
     if(ph) ph.classList.toggle('popBar', POP_SCREENS.indexOf(id)>=0); }
   // 🧭 가이드 띠는 #phone 직속이라 **화면을 바꿔도 남는다.** 여기서 다시 그려 걷어 낸다
