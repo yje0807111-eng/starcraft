@@ -1,0 +1,212 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>MY BASE 줄 목록 — 좌우를 가르는 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --bpFace:rgba(10,13,18,.92); --txt:#e6eefc; --dim:#8a94a6; --mute:#657085;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.10) 0%,rgba(186,194,208,.50) 32%,
+    rgb(226,231,240) 50%,rgba(186,194,208,.50) 68%,rgba(150,158,172,.10) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1+p{margin:0 22px 14px;color:var(--mute);font-size:11.5px;line-height:1.7;max-width:1180px}
+h1+p b{color:var(--dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:6px 22px 30px;align-items:flex-start}
+.cell{width:352px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 9px;color:var(--mute);font-size:11px;line-height:1.65;min-height:88px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+
+.stage{position:relative;width:352px;padding:12px 10px 10px;border-radius:10px;overflow:hidden;
+  background:linear-gradient(180deg,#4a4d52 0%,#3c3f45 38%,#0a0d12 38%,#080b10 100%)}
+.sheet{display:flex;gap:8px;align-items:stretch}
+.kick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#e8edf5;
+  text-shadow:0 1px 2px rgba(0,0,0,.9);margin:0 0 5px 2px}
+.panel{flex:1;min-width:0;min-height:118px;background:var(--bpFace);border:1px solid var(--metal-edge);
+  border-radius:var(--r-bar);padding:8px 10px;display:flex;flex-direction:column;justify-content:center}
+.mine{flex:none;width:64px;background:var(--bpFace);border:1px solid var(--metal-edge);
+  border-radius:var(--r-bar);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.mine .ico{width:40px;height:40px;border:1px solid rgba(255,59,59,.5);border-radius:2px;
+  background:linear-gradient(180deg,#2a2e35,#14171c);display:flex;align-items:center;
+  justify-content:center;font-size:20px;color:#c9d2df}
+.mine b{font-size:10.5px;font-weight:700;color:#dbe3ef}
+
+/* ── 줄 목록 뼈대 — 여덟 안 공통 ── */
+.rows{display:grid;grid-template-rows:repeat(3,auto);grid-auto-flow:column;
+  grid-auto-columns:minmax(0,1fr);column-gap:12px;row-gap:0;align-content:space-between;
+  height:100%;position:relative}
+.r{display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;
+  gap:8px;min-width:0;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+.r:nth-child(3n){border-bottom:none}
+.r .l{font-size:10px;letter-spacing:.02em;color:#93a0b2;flex:0 1 auto;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r .v{font-family:var(--font-num);font-weight:700;font-size:13px;color:var(--txt);
+  flex:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+.r .v i{font-style:normal;font-weight:700;font-size:9.5px;color:#8794a8}
+
+/* ② 세로 구분선 */
+.v2{position:relative}
+.v2::before{content:'';position:absolute;left:50%;top:2px;bottom:2px;width:1px;
+  background:linear-gradient(180deg,rgba(160,172,192,.05),rgba(160,172,192,.34),rgba(160,172,192,.05))}
+/* ③ 리더 점선 */
+.v3 .r{gap:6px}
+.v3 .r .l{flex:0 0 auto}
+.v3 .r .dots{flex:1 1 auto;min-width:8px;height:1px;align-self:center;margin:0 2px;
+  background-image:radial-gradient(circle,rgba(150,163,184,.55) 0.8px,transparent 0.9px);
+  background-size:4px 1px;background-repeat:repeat-x}
+/* ④ 붙여 쓰기 — 라벨+값을 왼쪽 한 덩어리로, 열 사이를 크게 */
+/* ⚠ 값은 **오른쪽 정렬 그대로** 둔다 — 라벨 옆에 붙이면 숫자가 세로로 안 맞아 훑을 수가 없다.
+   여기서 바꾸는 것은 **열 사이 여백 하나뿐**이다(12 → 28px). */
+.v4{column-gap:28px}
+/* ⑤ 열 얼룩 */
+.v5{column-gap:0}
+.v5 .r{padding-left:8px;padding-right:8px}
+.v5 .r:nth-child(n+4){background:rgba(255,255,255,.035)}
+.v5 .r:nth-child(4){border-top-left-radius:var(--r-bar);border-top-right-radius:var(--r-bar)}
+.v5 .r:nth-child(6){border-bottom-left-radius:var(--r-bar);border-bottom-right-radius:var(--r-bar)}
+/* ⑥ 줄무늬 */
+.v6{column-gap:0}
+.v6 .r{padding-left:8px;padding-right:8px;border-bottom:none}
+.v6 .r:nth-child(2),.v6 .r:nth-child(5){background:rgba(255,255,255,.04)}
+/* ⑦ 줄 앞 액센트 막대 */
+.v7 .r{padding-left:8px;position:relative}
+.v7 .r::before{content:'';position:absolute;left:0;top:5px;bottom:5px;width:2px;border-radius:1px;
+  background:rgba(150,163,184,.30)}
+.v7 .r:nth-child(-n+3)::before{background:rgba(255,210,74,.55)}
+/* ⑧ 열 머리표 */
+.v8{grid-template-rows:auto repeat(3,auto);align-content:start;row-gap:0}
+.v8 .h{font-size:8.5px;letter-spacing:.2em;color:#7b8698;padding:0 0 3px;
+  border-bottom:1px solid rgba(160,172,192,.28);margin-bottom:2px}
+.v8 .r:nth-child(3n){border-bottom:1px solid rgba(255,255,255,.055)}
+.v8 .r:nth-child(4n){border-bottom:none}
+</style></head><body>
+
+<h1>「MY BASE」 줄 목록 — 좌우 두 정보를 가르는 8안</h1>
+<p>문제: 한 줄에 정보가 둘이라 <b>왼쪽 값과 오른쪽 라벨이 붙어 보인다</b>(「×12.4 일꾼」이 한 덩어리로 읽힌다).
+값 여섯과 배치는 여덟 안이 <b>모두 같고</b>, 다른 것은 <b>둘을 가르는 방법</b>뿐이다 — 선 · 점선 · 여백 · 면 · 막대 · 이름.
+면은 검정이고 색을 갖는 것은 선과 빛뿐 · 라운드 0/3/6/9 · 간격 4/8/12 를 여덟 안 모두 지킨다.</p>
+
+<div class="wrap">
+
+<!-- ① -->
+<div class="cell"><p class="cap"><i>①</i>지금 — 열 간격 12px 뿐</p>
+<p class="sub">기준선. 가로 구분선이 열마다 끊겨 있어 <em>아주 약하게는</em> 갈리지만,
+<s>왼쪽 값과 오른쪽 라벨 사이가 12px 밖에 안 돼 한 덩어리로 읽힌다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows">
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ② -->
+<div class="cell"><p class="cap"><i>②</i>세로 구분선 — 가운데 1px</p>
+<p class="sub">가장 곧은 답. 가로선과 <em>같은 굵기·같은 밝기</em>라 어휘가 하나로 유지된다.
+위아래로 흐리게 사라져 판을 자르는 느낌은 안 난다. <s>선이 하나 더 늘어난다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v2">
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ③ -->
+<div class="cell"><p class="cap"><i>③</i>리더 점선 — 라벨 ‥‥ 값</p>
+<p class="sub">가르는 대신 <em>묶는다.</em> 점선이 라벨과 제 값을 이어 주므로 옆 칸의 라벨과 헷갈릴 일이 없다.
+표·영수증의 오래된 어법이라 설명이 필요 없다. <s>점이 많아져 판이 시끄러워질 수 있다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v3">
+<div class="r"><span class="l">총 배수</span><span class="dots"></span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="dots"></span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="dots"></span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="dots"></span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="dots"></span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="dots"></span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ④ -->
+<div class="cell"><p class="cap"><i>④</i>여백만 — 열 사이를 28px로</p>
+<p class="sub">선도 면도 더하지 않는다. <em>가장 싼 방법</em>이고 이 프로젝트가 여러 번 고른 방향이다.
+<s>다만 값이 길어지면(1.2K → 12.4M) 여백이 도로 좁아진다 — 가장 긴 값에서 다시 봐야 한다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v4">
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑤ -->
+<div class="cell"><p class="cap"><i>⑤</i>열 얼룩 — 오른쪽 열에 옅은 면</p>
+<p class="sub">두 열이 <em>서로 다른 바닥</em>에 앉는다. 선을 안 쓰고도 가장 확실하게 갈린다.
+<s>면을 더하는 것이라 「면은 검정」 규칙과 부딪힌다 — 아주 옅게(.035) 써야 겨우 어울린다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v5">
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑥ -->
+<div class="cell"><p class="cap"><i>⑥</i>줄무늬 — 가운데 줄에 옅은 면</p>
+<p class="sub">가로선을 걷고 <em>줄 자체를 띠로</em> 만든다. 눈이 가로로 흐르므로 「같은 줄의 둘」이 한 쌍으로 읽힌다.
+<s>그런데 지금 문제는 「같은 줄의 둘을 갈라 달라」는 것이라, 방향이 반대일 수 있다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v6">
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑦ -->
+<div class="cell"><p class="cap"><i>⑦</i>줄 앞 막대 — 소속을 색으로</p>
+<p class="sub">줄 맨 앞에 2px 막대. <em>왼쪽 열은 금색(버는 것) · 오른쪽 열은 중립(쌓은 것)</em>이라
+가르는 동시에 두 열의 성격까지 말한다. 색을 갖는 것은 선뿐이라는 규칙에도 맞는다.</p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v7">
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑧ -->
+<div class="cell"><p class="cap"><i>⑧</i>열 머리표 — 두 무리에 이름을 준다</p>
+<p class="sub">가르는 것을 넘어 <em>왜 갈렸는지</em>를 말한다. 머리줄 밑선이 열을 시작시키므로 세로선이 필요 없다.
+<s>줄이 하나 늘어 나머지 셋이 얇아지고, 판 높이를 더 먹는다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows v8">
+<div class="h">수입</div>
+<div class="r"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="r"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="r"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="h">보유</div>
+<div class="r"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="r"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="r"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+</div></body></html>
