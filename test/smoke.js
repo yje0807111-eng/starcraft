@@ -3350,15 +3350,34 @@ async function groupLobby(){
         assert(cs.borderTopWidth==='0px','구역에 판 테두리가 돌아왔다: '+cs.borderTopWidth);
         assert(cs.borderBottomWidth==='1px','구역 아래 구분선이 없다: '+cs.borderBottomWidth);
         assert(cs.backgroundColor==='rgba(0, 0, 0, 0)','구역에 면이 돌아왔다: '+cs.backgroundColor); }
-      // 📑 **탭은 판 없는 띠**다 — 유즈맵 정렬 띠와 **같은 규칙**을 쓴다(css/40-social.css).
-      //   ⛔ 상점 전용 탭 모양을 새로 만들지 말 것.
-      { const seg=document.querySelector('#rnBody .pdSeg');
-        assert(seg && seg.classList.contains('plain'),'상점 탭이 판 없는 띠가 아니다');
+      // 🔷 **탭은 아이콘 탭**이다(2026-09-05 사용자 확정 · 목업 shop-icontab-4 ①안) —
+      //   육각 아이콘 **위**, 이름 **아래**, 고른 칸만 옅은 판 + **밑변 광원 한 줄**.
+      //   ⭐ 잠그는 것은 **공용 함수를 그대로 쓴다**는 사실이다: 껍데기는 `.pdSeg`(segNavHTML)이고
+      //     세로로 세우는 것은 **공용 변형 `.stack`**(css/40-social.css) 하나다.
+      //   ⛔ 상점 전용 탭 함수·마크업을 새로 만들지 말 것.
+      { // ⚠ 칸의 면은 **그라데이션**(background-image)이다 — backgroundColor 로 재면 둘 다 0 이 나온다
+        const topA=el=>{ const m=(getComputedStyle(el).backgroundImage||'').match(/rgba\(([^)]*)\)/);
+          if(!m) return 0; const n=m[1].split(','); return n.length>3?parseFloat(n[3]):1; };
+        const seg=document.querySelector('#rnBody .pdSeg');
+        assert(seg && seg.classList.contains('stack'),'상점 탭이 공용 아이콘 탭(.pdSeg.stack)이 아니다');
+        const btns=[...seg.querySelectorAll('.pdSegBtn')];
+        assert(btns.length===tabs.length,'아이콘 탭 칸 수가 다르다: '+btns.length);
+        for(const b of btns){
+          assert(b.querySelector('svg.rnTabI'),'탭 칸에 육각 아이콘이 없다: '+b.textContent);
+          assert(b.querySelector('span'),'탭 칸에 이름이 없다');
+          assert(getComputedStyle(b).flexDirection==='column',
+            '아이콘과 이름이 세로로 안 쌓인다: '+getComputedStyle(b).flexDirection); }
+        // 고른 칸만 밝다 — 위계는 **면의 밝기**다
+        const on=btns.find(b=>b.classList.contains('on'))||btns[0];
+        const aOn=topA(on), aOff=topA(btns.find(b=>b!==on));
+        assert(aOn>0 && aOff>0,'탭 칸에 옅은 판이 없다: '+aOn+' / '+aOff);
+        assert(aOn>aOff,'고른 탭이 더 밝지 않다: '+aOn.toFixed(3)+' vs '+aOff.toFixed(3));
+        // 표시자는 **1px 밑변 광원**(판이 아니다)
         const ind=seg.querySelector('.pdSegInd');
         assert(ind && getComputedStyle(ind).height==='1px',
-          '고른 표시가 1px 밑줄이 아니다: '+(ind?getComputedStyle(ind).height:'없음'));
+          '고른 표시가 1px 밑변 광원이 아니다: '+(ind?getComputedStyle(ind).height:'없음'));
         assert(getComputedStyle(seg).backgroundColor==='rgba(0, 0, 0, 0)',
-          '탭 띠에 판이 남아 있다'); }
+          '탭 띠 자체에 판이 남아 있다'); }
       // 🧾 **일반 상점은 가로줄**이다(2026-09-05 사용자 확정) — 가방과 같은 짜임:
       //   [그림] [이름 / 등급 값] … [등급 버튼 셋]. ⛔ 세로 카드로 되돌리지 말 것.
       { const rows=document.querySelectorAll('#rnBody .rnShopRw');

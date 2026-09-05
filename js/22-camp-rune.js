@@ -1309,6 +1309,28 @@ function runeRecoList(){
   return out.slice(0, 3); }
 
 // ── 🛒 상점 화면 — 추천 · 주간 할인 · 일반(갈래 탭) ─────────────────────
+// 🔷 갈래 아이콘의 속 글리프 — 경제=마름모(재화) · 전투=방패 · 성장=위 화살 · 유니크=별.
+//   ⛔ 새 에셋을 만들지 않는다: 도형 넷이면 충분하고, 색은 이미 정해진 갈래 색을 쓴다.
+const RUNE_TAB_GLYPH = {
+  eco:  'M12 3 L20 12 L12 21 L4 12 Z',
+  war:  'M12 3 L20 7 V13 C20 17 12 21 12 21 C12 21 4 17 4 13 V7 Z',
+  grow: 'M12 3 L19 11 H15 V21 H9 V11 H5 Z',
+  uniq: 'M12 2 L14.6 9.2 L22 12 L14.6 14.8 L12 22 L9.4 14.8 L2 12 L9.4 9.2 Z' };
+const RUNE_TAB_ICO = 22;
+// 탭 하나의 그림 — 육각 테두리(갈래 색) + 속 글리프. 고른 것만 진하다.
+function _runeTabIco(grp, on){
+  const c = (grp === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
+                             : ((RUNE_GRP[grp] || {}).col || '#b4cdeb');
+  const S = RUNE_TAB_ICO, R = S / 2 - 1, q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
+    q.push((S / 2 + R * Math.cos(a)).toFixed(1) + ',' + (S / 2 + R * Math.sin(a)).toFixed(1)); }
+  const k = (S * 0.60 / 24).toFixed(3), off = (S / 2 - S * 0.30).toFixed(1);
+  return '<svg class="rnTabI" width="' + S + '" height="' + S + '" viewBox="0 0 ' + S + ' ' + S + '">'
+    + '<polygon points="' + q.join(' ') + '" fill="' + (on ? 'rgba(255,255,255,.05)' : 'none')
+    +   '" stroke="' + c + '" stroke-width="1" opacity="' + (on ? '.85' : '.38') + '"/>'
+    + '<g transform="translate(' + off + ',' + off + ') scale(' + k + ')">'
+    + '<path d="' + (RUNE_TAB_GLYPH[grp] || RUNE_TAB_GLYPH.eco) + '" fill="' + c
+    +   '" opacity="' + (on ? '1' : '.45') + '"/></g></svg>'; }
 let _runeShopTab = 'eco';                // 일반 구역에서 보고 있는 갈래
 function campRuneShopTab(g){ _runeShopTab = g; campRuneRender(); }
 // 💠 한 칸 — 그림 · 이름 · 등급 · 값. 살 수 없으면 왜 못 사는지 칸이 말한다.
@@ -1388,11 +1410,14 @@ function _runeShopHTML(){
   h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점</span></div>';
   // 🗂 탭 띠는 **공용 함수**다(CLAUDE.md 「세그먼트 이동 바」) — 새로 만들지 않는다.
   //   ⚠ items 는 {label} 이고 act 는 **함수**(k => 코드)다.
-  //   📑 **판 없는 띠**(.plain) — 유즈맵 정렬 띠와 **같은 규칙**을 쓴다(css/40-social.css).
-  //     ⛔ 상점 전용 탭 모양을 새로 만들지 말 것.
+  //   🔷 **아이콘 탭**(2026-09-05 사용자 확정 · 목업 shop-icontab-4 ①안) —
+  //     육각 아이콘 + 이름, 고른 칸만 한 단 밝고 **아래 밑변 광원 한 줄**이 켜진다.
+  //     ⭐ 공용 함수(segNavHTML)를 그대로 쓴다 — label 에 그림을 담고 CSS 변형(.stack)이 세로로 세운다.
+  //     ⛔ 상점 전용 탭 함수를 새로 만들지 말 것.
   h += (typeof segNavHTML === 'function')
-    ? segNavHTML(tabs.map(g => ({ label:(RUNE_GRP[g] || {}).nm || g })), idx,
-        k => "campRuneShopTab('" + tabs[k] + "')").replace('class="pdSeg"', 'class="pdSeg plain"')
+    ? segNavHTML(tabs.map((g, k) => ({
+        label: _runeTabIco(g, k === idx) + '<span>' + ((RUNE_GRP[g] || {}).nm || g) + '</span>' })), idx,
+        k => "campRuneShopTab('" + tabs[k] + "')").replace('class="pdSeg"', 'class="pdSeg stack"')
     : '';
   h += '<div class="rnShopList">';
   for(const d of RUNE_LIST){
