@@ -1,0 +1,173 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>상점 탭 — 모바일 게임에서 흔한 4가지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --eco:#7effc9; --war:#ffa3b8; --grow:#e6eef8; --uniq:#c98bff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 12px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:300px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.who{margin:0 0 4px;font-size:10.5px;color:#8fb6ff}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:92px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.h{margin:0 0 4px;font-size:10px;color:var(--txt-off);font-family:var(--font-num)}
+.pane{position:relative;width:300px;height:290px;overflow:hidden;border-radius:var(--r-md);
+  border:1px solid var(--metal-edge);background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%)}
+.body{position:absolute;inset:0;overflow:auto;padding:10px}
+
+/* 목록 줄 */
+.rw{display:flex;align-items:center;gap:8px;padding:6px 2px}
+.rw + .rw{border-top:1px solid rgba(255,255,255,.07)}
+.ico{width:28px;height:28px;flex:none;border-radius:4px;
+  background:linear-gradient(180deg,#1b2634,#06090e);border:1px solid rgba(150,170,200,.3)}
+.tt{flex:1 1 auto;min-width:0;font-size:11.5px;color:#eef1f6;line-height:1.25}
+.tt s{display:block;text-decoration:none;font-family:var(--font-num);font-size:9.5px;
+  color:#69737f;margin-top:1px}
+.bt{margin-left:auto;display:flex;gap:4px;flex:none}
+.bs{min-width:52px;padding:4px 5px;border-radius:var(--r-sm);text-align:center;
+  border:1px solid rgba(150,170,200,.5);background:rgba(255,255,255,.04)}
+.bs b{display:block;font-size:9.5px;color:#c3ccd8}
+.bs u{display:block;text-decoration:none;font-family:var(--font-num);font-size:10.5px;color:#e2b6ff}
+
+/* ══ ① 아이콘 탭 + 아래 삼각 ══ */
+.m1 .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px}
+.m1 .tb{position:relative;padding:6px 2px 7px;border-radius:var(--r-md);text-align:center;
+  border:1px solid rgba(150,170,200,.18);background:rgba(255,255,255,.03)}
+.m1 .tb i{display:block;width:18px;height:18px;margin:0 auto 3px;border-radius:4px;
+  background:var(--c);opacity:.55}
+.m1 .tb span{font-size:10px;color:#8d97a6}
+.m1 .tb.on{border-color:color-mix(in srgb,var(--c) 60%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03))}
+.m1 .tb.on i{opacity:1}
+.m1 .tb.on span{color:#fff;font-weight:700}
+.m1 .tb.on::after{content:'';position:absolute;left:50%;bottom:-5px;width:8px;height:8px;
+  transform:translateX(-50%) rotate(45deg);
+  background:#101821;border-right:1px solid color-mix(in srgb,var(--c) 60%,transparent);
+  border-bottom:1px solid color-mix(in srgb,var(--c) 60%,transparent)}
+
+/* ══ ② 좌측 세로 레일 ══ */
+.m2 .body{padding:0;display:flex}
+.m2 .rail{flex:0 0 54px;display:flex;flex-direction:column;gap:2px;padding:8px 4px;
+  background:rgba(4,7,11,.72);border-right:1px solid rgba(150,170,200,.16)}
+.m2 .rb{position:relative;padding:8px 0 7px;border-radius:var(--r-md);text-align:center}
+.m2 .rb i{display:block;width:20px;height:20px;margin:0 auto 3px;border-radius:5px;
+  background:var(--c);opacity:.5}
+.m2 .rb span{font-size:9.5px;color:#8d97a6;letter-spacing:-.02em}
+.m2 .rb.on{background:linear-gradient(90deg,color-mix(in srgb,var(--c) 20%,transparent),transparent)}
+.m2 .rb.on i{opacity:1} .m2 .rb.on span{color:#fff;font-weight:700}
+.m2 .rb.on::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:3px;
+  border-radius:0 2px 2px 0;background:var(--c)}
+.m2 .list{flex:1 1 auto;min-width:0;padding:8px 10px;overflow:auto}
+
+/* ══ ③ 가로 스크롤 알약 + 구역 배너 ══ */
+.m3 .banner{display:flex;align-items:center;gap:7px;padding:7px 9px;margin-bottom:7px;
+  border-radius:var(--r-md);background:linear-gradient(90deg,rgba(120,150,200,.20),transparent 70%);
+  border-left:3px solid var(--gold)}
+.m3 .banner b{font-size:12.5px;color:#fff;font-weight:700}
+.m3 .banner s{margin-left:auto;text-decoration:none;font-size:10.5px;color:#aab4c2}
+.m3 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.m3 .cp{flex:none;display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:99px;
+  border:1px solid rgba(150,170,200,.24);background:rgba(255,255,255,.03);
+  font-size:11px;color:#9aa4b2;white-space:nowrap}
+.m3 .cp i{width:8px;height:8px;border-radius:99px;background:var(--c);opacity:.7}
+.m3 .cp.on{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.06));
+  border-color:rgba(200,215,235,.5);color:#fff;font-weight:700}
+.m3 .cp.on i{opacity:1}
+
+/* ══ ④ 하단 고정 탭(엄지 영역) ══ */
+.m4 .body{padding:10px 10px 52px}
+.m4 .dock{position:absolute;left:0;right:0;bottom:0;display:grid;
+  grid-template-columns:repeat(4,1fr);
+  background:linear-gradient(180deg,rgba(10,14,20,.92),rgba(6,9,13,.98));
+  border-top:1px solid rgba(150,170,200,.28)}
+.m4 .db{position:relative;padding:8px 2px 9px;text-align:center}
+.m4 .db i{display:block;width:18px;height:18px;margin:0 auto 3px;border-radius:5px;
+  background:var(--c);opacity:.5}
+.m4 .db span{font-size:10px;color:#8d97a6}
+.m4 .db.on i{opacity:1} .m4 .db.on span{color:#fff;font-weight:700}
+.m4 .db.on::before{content:'';position:absolute;left:14%;right:14%;top:0;height:2px;
+  border-radius:0 0 2px 2px;background:var(--c)}
+</style></head><body>
+
+<h1>상점 탭 — <b>모바일 게임에서 흔한</b> 4가지</h1>
+<p>지금 화면의 제약은 잊고 <b>패턴 자체</b>로 골랐다. 각 안에 그 방식을 쓰는 게임 갈래와
+<b>목록이 시작되는 높이</b>를 함께 적었다. ⚠ 넷 다 지금 프로젝트에 넣으려면 손볼 것이 있다 —
+그건 각 안의 마지막 줄에 적었다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var G = [['경제','eco'],['전투','war'],['성장','grow'],['유니크','uniq']];
+function rows(n){ var h='', nm=['탭 획득량','가스 획득','일꾼 채취량','환생 포인트 획득'];
+  for(var i=0;i<n;i++) h += '<div class="rw"><span class="ico"></span>'
+    + '<span class="tt">'+nm[i%4]+'<s>1% · 2.5% · 5%</s></span>'
+    + '<span class="bt"><span class="bs"><b>하급</b><u>💎 40</u></span>'
+    + '<span class="bs"><b>중급</b><u>💎 130</u></span>'
+    + '<span class="bs"><b>상급</b><u>💎 400</u></span></span></div>';
+  return h; }
+
+var CASES = [
+{ v:'m1', t:'아이콘 탭 + 아래 삼각',
+  who:'가챠·수집형 상점에서 가장 흔하다(원신 · 브롤스타즈 계열)',
+  d:'탭마다 <b>아이콘 + 글자</b>를 두고, 고른 것은 밝은 판이 되며 <b>아래로 삼각</b>이 나와 목록과 이어진다. 갈래가 색과 그림으로 구분돼 글자를 안 읽어도 찾는다. ⚠ 넣으려면 <s>갈래 아이콘 4개</s>가 필요하다.',
+  html:'<div class="body"><div class="tabs">'
+    + G.map(function(g,k){ return '<div class="tb'+(k===0?' on':'')+'" style="--c:var(--'+g[1]+')">'
+        + '<i></i><span>'+g[0]+'</span></div>'; }).join('')
+    + '</div><div class="list">'+rows(4)+'</div></div>' },
+
+{ v:'m2', t:'좌측 세로 레일',
+  who:'상점이 큰 RPG에서 흔하다(명일방주 · 에픽세븐 계열)',
+  d:'갈래를 <b>왼쪽 세로</b>로 쌓는다. 세로 자리를 <b>하나도 안 쓴다</b> — 목록이 화면 맨 위에서 시작한다. 갈래가 늘어도 아래로 이어 붙이면 된다. ⚠ 목록 폭이 <s>54px 줄어</s> 등급 버튼 셋이 빠듯해진다.',
+  html:'<div class="body"><div class="rail">'
+    + G.map(function(g,k){ return '<div class="rb'+(k===0?' on':'')+'" style="--c:var(--'+g[1]+')">'
+        + '<i></i><span>'+g[0]+'</span></div>'; }).join('')
+    + '</div><div class="list">'+rows(4)+'</div></div>' },
+
+{ v:'m3', t:'가로 스크롤 알약 + 구역 배너',
+  who:'방치형·캐주얼 상점에서 흔하다(쿠키런 · 아처로 계열)',
+  d:'위에 <b>구역 배너</b>(색 띠 + 이름), 아래에 <b>가로로 흐르는 알약 칩</b>. 갈래가 여섯이 되든 열이 되든 <em>가로로 밀면 된다</em> — 확장에 가장 강하다. ⚠ 「밀 수 있다」를 알려면 <s>오른쪽 끝을 살짝 잘라</s> 보여야 한다.',
+  html:'<div class="body">'
+    + '<div class="banner"><b>상점</b><s>경제 4종</s></div>'
+    + '<div class="chips">'
+    + G.concat([['한정','gold'],['교환','eco']]).map(function(g,k){
+        return '<span class="cp'+(k===0?' on':'')+'" style="--c:var(--'+(g[1]==='gold'?'uniq':g[1])+')">'
+          + '<i></i>'+g[0]+'</span>'; }).join('')
+    + '</div>' + rows(4) + '</div>' },
+
+{ v:'m4', t:'하단 고정 탭(엄지 영역)',
+  who:'한 손으로 오래 보는 상점에서 쓴다(대부분의 방치형 메인 탭)',
+  d:'갈래를 <b>화면 아래</b>에 둔다. 엄지가 닿는 자리라 <b>바꾸기가 가장 쉽고</b>, 위쪽은 목록이 통째로 쓴다. ⚠ 이 게임은 하단에 <s>이미 네비(연구·환생·룬·유즈맵·상점)가 있어</s> 탭이 두 줄로 겹친다 — 넣으려면 그 둘을 합쳐야 한다.',
+  html:'<div class="body">' + rows(5) + '</div>'
+    + '<div class="dock">'
+    + G.map(function(g,k){ return '<div class="db'+(k===0?' on':'')+'" style="--c:var(--'+g[1]+')">'
+        + '<i></i><span>'+g[0]+'</span></div>'; }).join('')
+    + '</div>' },
+];
+
+document.getElementById('wrap').innerHTML = CASES.map(function(c,i){
+  return '<div class="cell"><p class="cap"><i>'+(i+1)+'</i>'+c.t+'</p>'
+   + '<p class="who">▸ '+c.who+'</p>'
+   + '<p class="sub">'+c.d+'</p>'
+   + '<p class="h" id="h'+i+'">—</p>'
+   + '<div class="pane '+c.v+'">'+c.html+'</div></div>'; }).join('');
+/* 📐 목록이 시작되는 높이 */
+CASES.forEach(function(c,i){
+  var pane = document.querySelectorAll('.pane')[i];
+  var first = pane.querySelector('.rw');
+  var h = Math.round(first.getBoundingClientRect().top - pane.getBoundingClientRect().top);
+  document.getElementById('h'+i).textContent = '📐 목록 시작까지 ' + h + 'px'
+    + ' · 목록 폭 ' + Math.round(first.getBoundingClientRect().width) + 'px';
+});
+</script></body></html>
