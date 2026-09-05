@@ -7012,9 +7012,25 @@ async function groupLobby(){
       const nms=slots().map(x=>(x.querySelector('.cgName')||{}).textContent);
       assert(nms.length===CAMP_RES_ITEMS.length,
         '자원 칸 수가 표와 다르다: '+nms.join(',')+' vs '+CAMP_RES_ITEMS.length);
-      for(const need of ['터치 강화','일꾼 강화','정제소','일꾼 생산'])
+      // ⚠ 이름은 **「정제 강화」**다(2026-09-05) — 이 칸은 건물이 아니라 올리는 것이다.
+      //   건물 이름(정제소)은 아직 안 지었을 때 lockWhy 가 따로 말한다.
+      for(const need of ['터치 강화','일꾼 강화','정제 강화','일꾼 생산'])
         assert(nms.indexOf(need)>=0, need+' 가 자원 칸에 없다: '+nms.join(','));
       assert(nms.indexOf('채굴 속도')<0,'채굴 속도가 자원 칸에 되살아났다 — 트리로 옮겼다');
+      // ✂ **설명이 판을 넘지 않는다.** 설명 칸은 95px 뿐이라 문구가 길면 잘리거나 판을 밀어낸다.
+      //   ⚠ 줄 넘어가는 자리는 `\u00A0`(줄바꿈 없는 공백)로 잡아 두었다(js/20-camp-research.js) —
+      //     보통 공백으로 되돌리면 「…획득량 / 증가」처럼 한 낱말만 남는다.
+      { for(const it of CAMP_RES_ITEMS){
+          assert(it.why && it.why.trim(), it.k+' 설명이 비었다');
+          campResTap(it.k); campResTap(it.k===_resPick?'__none__':it.k);   // 고르기만(사지 않는다)
+        }
+        _resPick='tap'; campResSheet();
+        const d=body.querySelector('.cgDd');
+        assert(d,'설명 줄이 없다');
+        assert(d.scrollHeight<=d.clientHeight+1,'설명이 잘린다: '+d.textContent);
+        const lh=parseFloat(getComputedStyle(d).lineHeight)||13;
+        assert(d.getBoundingClientRect().height<=lh*4+2,
+          '설명이 네 줄을 넘는다 — 판을 밀어낸다: '+d.textContent); }
 
       // ② 정보판이 **현재 ▸ 다음**을 보여 준다
       { const v=body.querySelector('.cgVal');
