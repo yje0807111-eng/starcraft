@@ -12443,6 +12443,23 @@ async function groupLobby(){
             '오른쪽 열이 판 끝까지 안 간다 — 안 쓰는 열이 있다(내용이 왼쪽으로 쏠린다): 남은 '
             +(wr.right-last.right).toFixed(1)+'px');
           assert(colsOf().length===2,'열이 둘이 아니다: '+colsOf().join(' ')); }
+        // ▍**줄 앞 막대가 좌우를 가른다**(2026-09-05 · 목업 camp-base-split-8 ⑦안).
+        //   왼쪽 열은 금색(버는 것) · 오른쪽 열은 중립(쌓은 것) — 가르는 동시에 성격을 말한다.
+        //   ⚠ 앞 셋이 왼쪽 열이라는 것은 **열 흐름**이 보장한다(위에서 이미 쟀다). 행 흐름으로
+        //     바뀌면 색이 뒤섞이므로 둘을 함께 봐야 한다.
+        { const el=[...w.querySelectorAll('.cgStat')];
+          const bar=e=>getComputedStyle(e,'::before');
+          const wid=e=>parseFloat(bar(e).width)||0;
+          assert(el.every(e=>wid(e)>0),'줄 앞 막대가 없다 — 좌우가 다시 붙어 보인다');
+          const L=bar(el[0]).backgroundColor, R=bar(el[3]).backgroundColor;
+          assert(L!==R,'좌우 막대가 같은 색이다 — 가르는 구실을 못 한다: '+L);
+          for(const i of [1,2]) assert(bar(el[i]).backgroundColor===L,'왼쪽 열 막대 색이 줄마다 다르다');
+          for(const i of [4,5]) assert(bar(el[i]).backgroundColor===R,'오른쪽 열 막대 색이 줄마다 다르다');
+          // 왼쪽(버는 것)이 **금색**이어야 한다 — 재화의 색이다(DESIGN.md 액센트 표).
+          { const m=L.match(/\d+/g)||[];
+            assert(+m[0]>200 && +m[1]>150 && +m[2]<120,'왼쪽 열 막대가 금색이 아니다: '+L); }
+          assert(el.every(e=>parseFloat(bar(e).width)<=2.5),
+            '막대가 굵다 — 값보다 먼저 눈에 든다: '+bar(el[0]).width); }
         // 「라벨 ‥‥ 값」이 **한 줄**이다 — 위아래로 쌓이면 세로를 두 배로 먹는다
         { const c=w.querySelector('.cgStat'), lb=c.querySelector('span'), vb=c.querySelector('b');
           assert(Math.abs(lb.getBoundingClientRect().top-vb.getBoundingClientRect().top)<8,
