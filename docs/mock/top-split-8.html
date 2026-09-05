@@ -1,0 +1,165 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>상단 구역을 아래와 나누는 8안 — 환생 · 룬 · 유즈맵 · 상점</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Jua&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif; --font-jua:'Jua',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --curH:34px; --topPad:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)}
+h2{font-size:13px;margin:18px 22px 2px;color:var(--gold);font-family:var(--font-ti)}
+h2 + p{margin:0 22px 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;max-width:1240px}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:76px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+
+/* ── 폰 한 대 ── */
+.ph{position:relative;width:290px;height:400px;overflow:hidden;border-radius:10px;
+  background:#080b10;border:1px solid var(--metal-edge)}
+/* 본문(아래) — 어느 안이든 같다. 나뉘는지를 보려는 것이므로 내용은 흉내만 */
+.body{position:absolute;left:0;right:0;top:52px;bottom:0;padding:10px;
+  background:radial-gradient(120% 70% at 50% 0%,#121a24,#080b10 70%)}
+.sec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);padding:7px;margin-bottom:8px}
+.secH{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.secT{font-size:11.5px;color:var(--txt-dim);letter-spacing:.08em}
+.secN{font-size:10px;color:var(--txt-mute)}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.card{height:52px;border:1px solid rgba(150,170,200,.20);border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#141c26,#0a0e14)}
+.card.on{border-color:rgba(255,207,107,.45)}
+
+/* ── 상단 바 공통(지금 화면의 규격) ── */
+.bar{position:absolute;left:0;right:0;top:0;height:52px;z-index:3;
+  display:flex;align-items:center;gap:10px;padding:var(--topPad) 10px 0}
+.bar .tt{font-family:var(--font-ti);font-size:15px;color:#eef1f6;letter-spacing:.10em;
+  white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.res{margin-left:auto;display:flex;align-items:center;gap:6px}
+.res b{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-num);
+  font-size:12px;font-weight:600;color:#eef1f6}
+.dot{width:11px;height:11px;border-radius:2px;display:block}
+.dot.m{background:linear-gradient(180deg,#7fd4ff,#2b8fd6)}
+.dot.g{background:linear-gradient(180deg,#8ef2a8,#2fa15a)}
+.dot.j{background:linear-gradient(180deg,#e79cff,#a63fd0)}
+.set{width:20px;height:20px;border-radius:var(--r-bar);border:1px solid var(--metal-edge);
+  background:rgba(255,255,255,.05)}
+/* 왼쪽 아이콘 배지(모바일 게임형에서 쓴다) */
+.ico{width:24px;height:24px;flex:none;display:grid;place-items:center;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(180deg,#2a3a52,#131b26)}
+.ico::before{content:'';width:9px;height:9px;background:var(--gold);
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+
+/* ══ ① 밑변 광원 한 줄 ══ */
+.m1 .bar{background:linear-gradient(180deg,rgba(8,12,18,.96),rgba(8,12,18,.88))}
+.m1 .bar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:var(--edge-light,linear-gradient(90deg,rgba(150,158,172,.14),rgba(232,236,244,.85) 50%,rgba(150,158,172,.14)))}
+/* ══ ② 면 + 아래 그림자 ══ */
+.m2 .bar{background:linear-gradient(180deg,#131a24,#0c121a);
+  box-shadow:0 6px 14px rgba(0,0,0,.55)}
+/* ══ ③ 모서리 컷 + 1px ══ */
+.m3 .bar{background:linear-gradient(180deg,#121822,#0b1017);
+  clip-path:polygon(0 0,100% 0,100% 100%,14px 100%,0 calc(100% - 14px));
+  border-bottom:1px solid rgba(150,170,200,.28)}
+.m3 .bar::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(186,194,208,.55),transparent)}
+/* ══ ④ 바가 판 · 본문이 한 단 어둡다 ══ */
+.m4 .bar{background:linear-gradient(180deg,#18212d,#111823);
+  border-bottom:1px solid rgba(150,170,200,.30)}
+.m4 .body{background:#070a0e}
+.m4 .body::before{content:'';position:absolute;left:0;right:0;top:0;height:10px;
+  background:linear-gradient(180deg,rgba(0,0,0,.5),transparent)}
+/* ══ ⑤ 짙은 헤더 + 아이콘 배지 ══ */
+.m5 .bar{background:linear-gradient(180deg,#1b2c46,#0f1a2b);
+  border-bottom:2px solid rgba(90,150,220,.35)}
+.m5 .bar .tt{font-family:var(--font-jua);letter-spacing:.02em;font-size:16px}
+/* ══ ⑥ 아래가 둥근 헤더 ══ */
+.m6 .bar{height:56px;background:linear-gradient(180deg,#1a2740,#101a2a);
+  border-radius:0 0 16px 16px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.m6 .bar .tt{font-family:var(--font-jua);letter-spacing:.02em;font-size:16px}
+.m6 .body{top:60px}
+/* ══ ⑦ 그라데이션 + 광택 ══ */
+.m7 .bar{background:linear-gradient(180deg,#24354f 0%,#16223a 45%,#0d1524 100%);
+  border-bottom:1px solid rgba(120,180,255,.28)}
+.m7 .bar::before{content:'';position:absolute;left:0;right:0;top:0;height:50%;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),transparent)}
+.m7 .bar .tt{font-family:var(--font-jua);letter-spacing:.02em;font-size:16px}
+/* ══ ⑧ 리본 제목 ══ */
+.m8 .bar{background:linear-gradient(180deg,#111925,#0a0f17);
+  border-bottom:1px solid rgba(150,170,200,.22)}
+.m8 .rib{position:absolute;left:0;bottom:-10px;display:flex;align-items:center;gap:7px;
+  padding:4px 14px 4px 10px;background:linear-gradient(180deg,#2b3d5c,#16233a);
+  clip-path:polygon(0 0,100% 0,calc(100% - 12px) 100%,0 100%);
+  box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.m8 .rib .tt{font-family:var(--font-jua);font-size:15px;letter-spacing:.02em}
+.m8 .bar > .tt{display:none}
+.m8 .body{top:62px}
+</style></head><body>
+
+<h1>상단 구역을 아래와 <b>완전히 나누는</b> 8안 — 환생 · 룬 · 유즈맵 · 상점 (캠프 제외)</h1>
+<p>지금은 재화 바가 <b>배경 위에 그냥 얹혀</b> 있어서 위아래가 한 덩어리로 보인다.
+여덟 안 모두 <b>같은 자리·같은 내용</b>(왼쪽 화면 이름 · 오른쪽 재화 + 설정)을 쓰고 <b>가르는 방법만</b> 다르다 —
+공용 바(<b>#curBar</b>) 하나를 고치는 일이라 네 화면에 한꺼번에 걸린다.
+⚠ <b>캠프는 제외</b>다: 거기 좌상단은 던전 칩이고 배경이 밝은 돌이라 규칙이 다르다.</p>
+
+<h2>A. 지금 화면들과 어울리는 넷 — 각진 SF · 라운드 0/3/6/9 · 밑변 광원</h2>
+<p>DESIGN.md 의 어휘 안에서 푼다. 새 색·새 글꼴을 들이지 않는다.</p>
+<div class="wrap" id="wrapA"></div>
+
+<h2>B. 모바일 게임형 넷 — 헤더가 「화면의 이름표」다</h2>
+<p>헤더에 <b>색과 두께</b>를 준다. ⚠ 셋은 제목 글꼴을 <b>Jua</b>로 바꿨다 —
+DESIGN.md 는 버튼에서 Jua 를 뺀 적이 있으니(<s>--font-ti 로 되돌린 이력</s>) 여기 쓰려면 그 결정을 다시 봐야 한다.</p>
+<div class="wrap" id="wrapB"></div>
+
+<script>
+function phone(n){
+  var ribbon = (n === 8);
+  return '<div class="ph m' + n + '">'
+   + '<div class="bar">'
+   +   ((n >= 5) ? '<span class="ico"></span>' : '')
+   +   '<span class="tt">룬 상점</span>'
+   +   (ribbon ? '<span class="rib"><span class="ico"></span><span class="tt">룬 상점</span></span>' : '')
+   +   '<span class="res">'
+   +     '<b><i class="dot m"></i>0</b><b><i class="dot g"></i>0</b><b><i class="dot j"></i>0</b>'
+   +     '<span class="set"></span></span>'
+   + '</div>'
+   + '<div class="body">'
+   +   '<div class="sec"><div class="secH"><span class="secT">주간 할인</span>'
+   +     '<span class="secN">1일 20시간 뒤 갱신</span></div>'
+   +     '<div class="g3"><span class="card on"></span><span class="card"></span><span class="card on"></span>'
+   +     '<span class="card"></span><span class="card on"></span><span class="card"></span></div></div>'
+   +   '<div class="sec"><div class="secH"><span class="secT">상점</span></div>'
+   +     '<div class="g3"><span class="card"></span><span class="card"></span><span class="card on"></span></div></div>'
+   + '</div></div>'; }
+
+var A = [
+{ t:'밑변 광원 한 줄', d:'바 아래에 <b>1px 광원</b>을 깐다 — 탭 띠·커맨드 카드가 쓰는 그 어휘다. 가장 조용하고, 어느 배경에서도 선이 살아 있다. <em>새로 들이는 것이 없다.</em>' },
+{ t:'면 + 아래 그림자', d:'바에 어두운 면을 깔고 <b>아래로 그림자</b>를 떨군다. 위가 <b>떠 있는 층</b>으로 읽혀 나뉜 느낌이 가장 분명하다. 선을 안 그어도 갈린다.' },
+{ t:'모서리 컷 + 1px', d:'바 <b>왼쪽 아래 모서리를 잘라</b> 각진 SF 어휘를 쓴다. 판이 「기계 부품」처럼 보인다. ⚠ 잘린 쪽이 비므로 배경이 밝으면 티가 난다.' },
+{ t:'바가 판 · 본문이 한 단 어둡게', d:'바를 <b>한 단 밝은 판</b>으로 두고 본문을 어둡게 내린다. 선도 그림자도 없이 <b>밝기 차</b>만으로 가른다 — 가장 담백하다.' },
+];
+var B = [
+{ t:'짙은 헤더 + 아이콘 배지', d:'보내 주신 그림에 가장 가깝다. <b>남색 헤더</b> + 왼쪽 <b>육각 아이콘</b> + 아래 2px 파란 선. 화면마다 아이콘만 갈아 끼우면 된다.' },
+{ t:'아래가 둥근 헤더', d:'헤더 <b>아래 두 모서리를 둥글게</b> 내려앉힌다. 부드럽고 「앱」다운 인상. ⚠ 라운드 16px 은 DESIGN.md 의 0/3/6/9 밖이다 — 쓰려면 예외를 정해야 한다.' },
+{ t:'그라데이션 + 광택', d:'위가 밝고 아래가 어두운 헤더에 <b>얇은 광택</b>을 얹는다. 금속판 느낌이라 SF 와도 붙고, 화려한 쪽으로 한 걸음.' },
+{ t:'리본 제목', d:'헤더는 조용히 두고 <b>제목만 리본처럼</b> 아래로 튀어나온다. 이름이 크게 읽히고, 재화 줄과 제목이 서로 안 다툰다. ⚠ 리본이 본문 위를 6px 덮는다.' },
+];
+function render(el, list, base){
+  document.getElementById(el).innerHTML = list.map(function(c, i){
+    return '<div class="cell"><p class="cap"><i>' + (base + i) + '</i>' + c.t + '</p>'
+     + '<p class="sub">' + c.d + '</p>' + phone(base + i) + '</div>'; }).join(''); }
+render('wrapA', A, 1);
+render('wrapB', B, 5);
+</script></body></html>
