@@ -2551,6 +2551,36 @@ async function groupLobby(){
             'campFevRoll 이 campFevPct 를 안 쓴다 — 열기의 룬이 어디에도 안 닿는다');
         } finally { C.rbTree=keepT; }
         clear(); }
+      // ⑥-4 ✨ 치명 터치 — 예리(확률)·일격(배수) 둘이 **다른 자리**에 걸린다.
+      //   ⛔ 피버와 곱하지 않는다 — 피버 중에는 치명이 쉰다.
+      if(typeof campCritPct==='function' && typeof campCritRoll==='function'){
+        const p0=campCritPct(), m0=campCritMul();
+        chk(p0>0 && m0>1,'치명 터치 기본값이 없다: '+p0+' · ×'+m0);
+        put('crit','high'); const wP=1+runeVal(runeKey('crit','high'));
+        chk(Math.abs(campCritPct()/p0-wP)<0.01,'예리의 룬이 치명 확률에 안 걸린다: ×'+(campCritPct()/p0).toFixed(3));
+        chk(Math.abs(campCritMul()-m0)<1e-9,'예리의 룬이 치명 배수까지 건드렸다');
+        clear();
+        put('critm','high'); const wM=1+runeVal(runeKey('critm','high'));
+        chk(Math.abs(campCritMul()/m0-wM)<0.01,'일격의 룬이 치명 배수에 안 걸린다: ×'+(campCritMul()/m0).toFixed(3));
+        chk(Math.abs(campCritPct()-p0)<1e-9,'일격의 룬이 치명 확률까지 건드렸다');
+        clear();
+        // ⛔ **피버 중에는 안 굴린다.** 곱하면 ×36 이 나온다 — 그 한 번을 노리는 놀이가 된다.
+        { const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+          const realR=Math.random;
+          try{
+            C.rbTree=Object.assign({}, C.rbTree, { fever:1 });
+            Math.random=()=>0;                          // 무조건 치명이 뜨는 주사위
+            chk(campCritRoll()>1,'확률 1 인데 치명이 안 떴다 — 검사 준비 실패');
+            if(typeof campFevRoll==='function'){ campFevRoll();
+              chk(campFevActive(),'피버가 안 켜졌다 — 겹침을 못 잰다');
+              chk(campCritRoll()===1,'피버 중인데 치명이 또 터졌다 — 배수가 곱해진다'); }
+          } finally { Math.random=realR; C.rbTree=keepT;
+            if(typeof campFevReset==='function') campFevReset(); } }
+        // 자리도 잠근다 — 탭 경로 둘이 **같은 함수**를 써야 한다(수식이 두 벌이 되면 어긋난다)
+        chk(typeof campTapRoll==='function','campTapRoll 이 없다 — 탭 경로가 갈렸다');
+        chk(/campTapRoll\(\)/.test(String(campMineOnce)),'campMineOnce 가 campTapRoll 을 안 쓴다');
+        chk(/campTapRoll\(\)/.test(String(campMineTap)),'campMineTap 이 campTapRoll 을 안 쓴다');
+        clear(); }
       // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
       if(typeof umFirstRw==='function'){
         const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
@@ -2561,7 +2591,7 @@ async function groupLobby(){
         chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
         clear(); }
       assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
-      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·유즈맵(젬 제외)·회복 ok';
+      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·치명 터치·유즈맵(젬 제외)·회복 ok';
     } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
       if(typeof campRuneTouch==='function') campRuneTouch();
       if(typeof campWipeField==='function') campWipeField();

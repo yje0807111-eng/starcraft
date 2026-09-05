@@ -2514,6 +2514,16 @@
   @keyframes cmPopUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}
     18%{opacity:1;transform:translate(-50%,-70%) scale(1)}
     100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+  /* ✨ 치명 터치 — **숫자만** 달라진다(2026-09-05).
+     ⛔ 토스트·섬광을 더하지 말 것: 열 번에 한 번씩 오는 일이라 화면이 시끄러워진다.
+     ⭐ 색은 금색(재화의 색)을 그대로 쓰되 **더 크고 밝게** — 다른 뜻이 아니라 「같은 것이 크게」다. */
+  .cmPop.crit{font-size:24px;color:#ffd479;
+    text-shadow:0 0 10px rgba(255,196,92,.55),0 1px 4px #000;
+    animation:cmPopCrit .9s ease-out forwards}
+  @keyframes cmPopCrit{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+    14%{opacity:1;transform:translate(-50%,-72%) scale(1.28)}
+    26%{transform:translate(-50%,-78%) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-175%) scale(1)}}
   /* 업그레이드 줄 — 행 사이 1px 만(로그인·설정과 같은 어법) */
   .cmUpg{max-height:38vh;overflow-y:auto;padding:0 14px 12px}
   .cmRow{display:flex;align-items:center;gap:10px;padding:11px 0;

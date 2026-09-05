@@ -5189,6 +5189,39 @@ function campFevRoll(){
 // 환생하면 꺼진다 — 회차가 바뀌었는데 앞 회차의 피버가 이어지면 안 된다
 function campFevReset(){ _campFevEnd = 0; _campFevCd = 0; campFevPaint(); }
 
+// ══ ✨ 치명 터치 (2026-09-05 사용자 확정) ═══════════════════════════════
+// 확률로 **그 한 탭**이 몇 배가 된다.
+//   ⭐ **피버와 무엇이 다른가**: 피버는 몇 초 동안 이어지는 **상태**이고 치명은 **한 번의 사건**이다.
+//     그래서 피버 배수는 `campTapGain` 안에 있고(상태라 표시에도 실려야 한다),
+//     치명은 **탭 자리에서** 곱한다(사건이라 「지금 1탭 N」 표시가 매번 흔들리면 안 된다).
+//   ⛔ **둘을 곱하지 않는다.** 피버 ×18 에 치명 ×2 를 곱하면 ×36 이다 — 탭 하나가 그만큼
+//     튀면 「가끔 크게」가 아니라 **그 한 번을 노리는 놀이**가 된다.
+//     ⭐ 규칙은 **큰 것 하나**다. 지금 값으로는 피버(최소 ×3)가 늘 치명(×2대)보다 크므로
+//       피버 중에는 **아예 안 굴린다** — 굴려 봐야 결과가 안 바뀌고 번쩍임만 남는다.
+//     ⚠ 값이 뒤집혀 치명이 더 커질 수 있게 되면 여기를 `Math.max` 로 바꿔야 한다.
+//   ⚠ 피버와 달리 **환생 트리 없이 처음부터 켜져 있다.** 룬은 있는 것을 키운다.
+//   ⚠ 기대값은 `1 + 확률 × (배수 − 1)` 이다 — 기본값(10% · ×2)이면 탭 수입 **×1.10**.
+const CAMP_CRIT_PCT = 0.10;   // 탭 한 번이 치명이 될 확률
+const CAMP_CRIT_MUL = 2;      // 치명이면 몇 배
+function campCritPct(){
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('critPct') : 1;
+  return Math.min(1, CAMP_CRIT_PCT * rm); }        // ⛔ 확률이라 1 을 넘으면 안 된다
+function campCritMul(){
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('critMul') : 1;
+  return CAMP_CRIT_MUL * rm; }
+// 이번 탭의 배수 — 1(보통) 또는 campCritMul()
+function campCritRoll(){
+  if(typeof campFevActive === 'function' && campFevActive()) return 1;   // ⛔ 피버 중에는 쉰다
+  return (Math.random() < campCritPct()) ? campCritMul() : 1; }
+
+// ⛏ **탭 한 번의 획득 — 탭 경로 둘이 함께 쓴다.**
+//   ⛔ 어느 한쪽에서 수식을 다시 쓰지 말 것(두 벌이 되면 반드시 어긋난다 — 이 파일의 오랜 규칙).
+//   ⚠ 판정 순서가 중요하다: 피버를 **먼저** 굴려야 이번 탭이 그 배수를 탄다.
+function campTapRoll(){
+  campFevRoll();                                   // ⚡ 이번 탭이 피버를 터뜨리나 — 획득을 재기 전에
+  const c = campCritRoll();                        // ✨ 치명 — 피버 중이면 1 이 온다
+  return { gain: ((typeof campTapGain === 'function') ? campTapGain() : 1) * c, crit: c > 1 }; }
+
 function campTapGain(){
   const C = campState(); if(!C) return CAMP_TAP_BASE;
   // ⭐ 던전 배수는 **탭과 일꾼 양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
@@ -5297,8 +5330,8 @@ function campMineStopBtn(){
 //   ⛔ 획득량 수식을 여기서 만들지 말 것 — campTapGain 하나가 단일 소스다.
 function campMineOnce(clientX, clientY, human, mul){
   if(typeof G === 'undefined' || !G.tech) return 0;
-  campFevRoll();                                    // ⚡ 이번 탭이 피버를 터뜨리나 — **획득을 재기 전에**
-  let gain = ((typeof campTapGain === 'function') ? campTapGain() : 1) * (mul || 1);
+  const roll = campTapRoll();                       // ⚡✨ 피버·치명 판정 — **획득을 재기 전에**
+  let gain = roll.gain * (mul || 1);
   // 🤖 2차 방어선은 그대로 둔다 — 상한만으로는 매크로가 사람의 2배를 번다(설계 대화 2026-08-27).
   if(human && typeof campTapHuman === 'function')
     gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY)));
@@ -5306,15 +5339,16 @@ function campMineOnce(clientX, clientY, human, mul){
   _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
   if(typeof updateCurBar === 'function') updateCurBar();
-  campMineFloatMap(gain, clientX, clientY);
+  campMineFloatMap(gain, clientX, clientY, roll.crit);
   if(typeof dqNote === 'function') try{ dqNote('tap', 1); }catch(e){}
   return gain;
 }
 // 캔 만큼 숫자가 **누른 자리에서** 튀어오른다 — 눌렀다는 것이 눈으로 돌아오는 유일한 신호다.
-function campMineFloatMap(n, clientX, clientY){
+function campMineFloatMap(n, clientX, clientY, crit){
   const host = document.getElementById('cstMain'); if(!host) return;
   const r = host.getBoundingClientRect();
-  const el = document.createElement('i'); el.className = 'cmPop mapPop';
+  // ✨ 치명이면 **그 숫자만** 달라진다 — ⛔ 토스트를 띄우지 말 것(열 번에 한 번씩 뜬다).
+  const el = document.createElement('i'); el.className = 'cmPop mapPop' + (crit ? ' crit' : '');
   el.textContent = '+' + ((typeof campNum === 'function') ? campNum(n) : n);
   el.style.left = Math.max(6, Math.min(r.width - 6, (clientX || r.width/2) - r.left)) + 'px';
   el.style.top  = Math.max(6, Math.min(r.height - 6, (clientY || r.height/2) - r.top)) + 'px';
@@ -5523,22 +5557,23 @@ function campUpgBuy(k){
 function campMineTap(ev){
   if(!_campOn || typeof G === 'undefined' || !G.tech) return;
   if(ev && ev.isTrusted === false && !window._campTapForce) return;   // 🤖 1차 방어선(메인 탭과 같은 규칙)
-  campFevRoll();                                    // ⚡ 과녁 탭도 같은 판정
-  let gain = campTapGain();
+  const roll = campTapRoll();                       // ⚡✨ 과녁 탭도 같은 판정(공용 함수 하나)
+  let gain = roll.gain;
   if(ev && ev.isTrusted !== false) gain = Math.max(1, Math.floor(gain * campTapHuman(ev.clientX, ev.clientY)));
   G.tech.credit = (G.tech.credit || 0) + gain;
   _campTapAcc += gain;
   _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
   if(typeof updateCurBar === 'function') updateCurBar();
-  campMineFloat(gain, ev);
+  campMineFloat(gain, ev, roll.crit);
   campMineRender();
 }
 
 // 캔 만큼 숫자가 튀어오른다 — 눌렀다는 것이 손끝에서 눈으로 돌아오는 유일한 신호다
-function campMineFloat(n, ev){
+function campMineFloat(n, ev, crit){
   const host = document.getElementById('campMineTap'); if(!host) return;
-  const el = document.createElement('i'); el.className = 'cmPop'; el.textContent = '+' + campNum(n);
+  const el = document.createElement('i'); el.className = 'cmPop' + (crit ? ' crit' : '');
+  el.textContent = '+' + campNum(n);
   if(ev && ev.clientX != null){ const r = host.getBoundingClientRect();
     el.style.left = Math.max(6, Math.min(r.width - 6, ev.clientX - r.left)) + 'px';
     el.style.top  = Math.max(6, Math.min(r.height - 6, ev.clientY - r.top)) + 'px'; }
