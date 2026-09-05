@@ -12419,7 +12419,24 @@ async function groupLobby(){
       { const w=box.querySelector('.cgStats.cgWide');
         assert(w,'요약이 전폭 격자가 아니다');
         const colsOf=()=>(getComputedStyle(w).gridTemplateColumns||'').split(/\s+/).filter(Boolean);
-        assert(colsOf().length===3,'요약 격자가 3열이 아님(여섯 칸을 두 줄로 편다): '+colsOf().length+'열');
+        const rowsOf=()=>(getComputedStyle(w).gridTemplateRows||'').split(/\s+/).filter(Boolean);
+        // 📋 줄 목록 — **두 열 × 세 줄**(2026-09-05 사용자 확정 · 목업 camp-base-8 ⑤안)
+        assert(colsOf().length===2,'요약이 두 열이 아님: '+colsOf().length+'열');
+        assert(rowsOf().length===3,'요약이 세 줄이 아님: '+rowsOf().length+'줄');
+        // ⭐ **열이 흐름**이어야 왼쪽 열=버는 것 / 오른쪽 열=쌓은 것으로 갈린다.
+        //   ⛔ 행 흐름(기본값)으로 돌아가면 좌우가 뒤섞여 두 성격이 안 갈린다.
+        assert(getComputedStyle(w).gridAutoFlow.indexOf('column')>=0,
+          '격자가 열 흐름이 아니다 — 좌우가 뒤섞인다: '+getComputedStyle(w).gridAutoFlow);
+        { const st=[...w.querySelectorAll('.cgStat')].map(e=>e.querySelector('span').textContent);
+          const L=st.slice(0,3), R=st.slice(3);
+          const box=e=>e.getBoundingClientRect().left;
+          const el=[...w.querySelectorAll('.cgStat')];
+          assert(Math.max(...el.slice(0,3).map(box))<Math.min(...el.slice(3).map(box)),
+            '앞 셋이 왼쪽 열에 안 모였다 — 열 흐름이 깨졌다: '+L.join(',')+' | '+R.join(',')); }
+        // 「라벨 ‥‥ 값」이 **한 줄**이다 — 위아래로 쌓이면 세로를 두 배로 먹는다
+        { const c=w.querySelector('.cgStat'), lb=c.querySelector('span'), vb=c.querySelector('b');
+          assert(Math.abs(lb.getBoundingClientRect().top-vb.getBoundingClientRect().top)<8,
+            '라벨과 값이 한 줄이 아니다(위아래로 쌓였다)'); }
         // ⛔ **값이 길어져도 칸 폭이 변하면 안 된다.** `1fr` 은 `minmax(auto,1fr)` 이라
         //   내용보다 좁아지지 않는다 — 한 칸의 값이 길어지면 나머지가 전부 밀려 줄이 좌우로
         //   움직인다(2026-09-05 사용자 지적). `minmax(0,1fr)` 이 그것을 묶는다.
@@ -12464,7 +12481,7 @@ async function groupLobby(){
         for(const k in keep) if(keep[k]) window[k]=keep[k];
         assert(!err,'캠프 함수가 없을 때 모델이 터진다: '+err);
         assert(m3 && m3.info && m3.info.stats.length,'캠프가 없을 때 모델이 비었다'); }
-      return m.info.stats.length+'값 · 작은 라벨 머리 · 전폭 3열 2줄 · 값 칸에 한글 없음 · 칸 폭 고정';
+      return m.info.stats.length+'값 · 작은 라벨 머리 · 줄 목록 2열×3줄(열 흐름) · 값 칸에 한글 없음 · 열 폭 고정';
     } finally {
       box.remove();
       window.campIsOn=on0; window.campState=st0;
