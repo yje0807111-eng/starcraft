@@ -62,8 +62,6 @@ function campCleared(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) retur
 function campRoundN(){ return (campDgN() > 0) ? campCleared() + 1 : 0; }
 
 // ── 진입 · 클리어 · 탈락 ────────────────────────────────────────────────
-// ⛔ 옛 이름 campDgMul 은 남겨 둔다 — 밖에서 부르는 곳이 생겼을 때 조용히 갈라지지 않게.
-function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))].base; }
 
 // ⛔ **던전이 바뀌면 campSkin() 을 반드시 부를 것**(2026-08-30). 오래도록 캠프 화면에 처음
 //   들어올 때 한 번만 불려서, 50라운드를 채워 자동으로 넘어가면 바닥이 옛 그림 그대로였다.
@@ -297,6 +295,27 @@ function campRebPtGain(){
 function campDtMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('speed') : 1; }
 // 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
 function campRebMul(){ const C = campState(); return 1 + ((C && C.rebMul) || 0); }
+
+// 📊 **총 배수 — 탭과 채취 양쪽에 똑같이 걸리는 곱 항만** (2026-09-05 사용자 확정).
+//   하단 「MY BASE」 판의 대표 숫자다.
+//
+//   ⚠ **「내가 쌓아 온 것 전부」가 아니다.** 한쪽에만 걸리는 것은 여기 없다 —
+//     · 탭 전용   campRtMul('tap') · campRtMul('tapMul') · 손끝의 룬(campRuneEff('tap'))
+//     · 채취 전용 campRtMul('gather') · 채굴의 룬(campRuneMul('mine'))
+//     · 결제 팩   둘 다에 걸리지만 **합산 항**이라 배수로 뽑아낼 수가 없다(GEM.md §5-2)
+//   ⭐ 그래도 화면이 거짓말을 하지 않는 이유: 그것들은 옆의 **「터치당·채취당」 숫자에
+//     이미 전부 반영**돼 있다. 총 배수는 「둘 다에 걸리는 것」, 옆의 둘은 「최종 결과」다.
+//   ⭐ 던전 배수(campMineMul)에는 환생 트리의 'mine' 계열이 이미 들어 있다 — 트리가 통째로
+//     빠지는 것은 아니다.
+//   ⛔ **피버를 곱하지 말 것** — 켜질 때마다 대표 숫자가 튀어 「쌓아 온 값」으로 안 읽힌다.
+//   ⛔ 여기에 항을 더하려면 먼저 campTapGain·campGatherMul **양쪽에** 같은 꼴로 들어 있는지 볼 것.
+function campCommonMul(){ return campMineMul() * campRebMul(); }
+// ⛏ 일꾼이 **왕복 한 번에 버는 미네랄.** 엔진이 TECH_GATHER_AMT(8)를 주고 캠프가 그 위에
+//   (배수−1)만큼을 얹는다(campTick) — 그래서 실제 획득은 이 곱이다.
+//   ⛔ 8 을 여기 박지 말 것: 16-build.js 의 const 가 단일 소스다.
+function campGatherGain(){
+  const amt = (typeof TECH_GATHER_AMT !== 'undefined') ? TECH_GATHER_AMT : 8;
+  return Math.max(1, Math.round(amt * campGatherMul())); }
 
 // 환생 실행. 남는 것: 종족 · 최고 기록 · 배수 · 포인트 · 트리.  그 밖은 전부 되감는다.
 function campRebirth(){

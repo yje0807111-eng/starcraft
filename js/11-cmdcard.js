@@ -756,22 +756,29 @@ function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:fa
 //   대신 여기서 **기지 전체 요약**을 보여 준다 — 유즈맵 하단이 늘 내 캐릭터를 보여 주는 것과 같은 자리다.
 //   ⚠ 캠프 상태는 **읽기만** 한다(19-camp.js 는 다른 작업자 영역).
 function _campIdleModel(){
-  const C=(typeof campState==='function')?campState():null;
   const T=(typeof G!=='undefined')?G.tech:null;
   const f=(typeof fmtCur==='function')?fmtCur:(n=>String(Math.floor(n||0)));
-  const dg=C?Math.max(1,Math.min(10,C.dg||1)):1;
   const wk=(T&&T.ents)?T.ents.filter(e=>e.type==='worker').length:0;
-  const rate=(C&&C.rate>0)?C.rate:0;
+  // 📊 **여섯 칸(3열 2줄).** 값이 흔들리지 않는 것이 이 판의 첫째 조건이다 —
+  //   ⛔ **값 칸에 한글을 넣지 말 것.** 값은 숫자 폰트(--font-num = Rajdhani)로 그려지는데
+  //     한글은 그 폰트에 없어 IBM Plex Sans KR 로 떨어진다. 같은 14px 인데 크기가 달라 보여
+  //     「글자가 커졌다 작아졌다」로 읽힌다(2026-09-05 사용자 지적의 원인 ①).
+  //     단위·꼬리표는 `<i class="u">` 로 빼서 작은 회색 보조 글자로 만든다.
+  //   ⛔ 상단 재화 바·좌상단 칩이 말하는 것을 여기서 또 말하지 말 것 —
+  //     그래서 인구(재화 바에 있다)·던전 배수(칩이 던전을 말하고, 총 배수에 포함된다)를 뺐다.
+  //   ⛔ 자동 수급(초당)도 뺐다 — 「채취당 × 일꾼 수」로 읽히는 것이 더 낫다는 판단이다.
+  const u=t=>'<i class="u">'+t+'</i>';
+  // 배수는 자릿수가 커져도 폭이 안 늘어야 한다 — 100 부터는 fmtCur 의 축약(1.2K)에 맡긴다.
+  const mul=v=>(v<100 ? v.toFixed(1) : f(v));
   const st=[];
-  st.push(['터치 획득', (typeof campTapGain==='function')?f(campTapGain()):'-']);
-  st.push(['자동 수급', rate? (f(rate)+'/초') : '측정 중']);
-  st.push(['일꾼',      wk+'기']);
-  st.push(['인구',      T? ((T.sup||0)+' / '+(T.supCap||0)) : '-']);
-  st.push(['던전 배수', (typeof campDgMul==='function')?('×'+campDgMul(dg).toFixed(1)):'-']);
-  st.push(['채취 배수', (typeof campGatherMul==='function')?('×'+campGatherMul().toFixed(1)):'-']);
+  st.push(['총 배수',   (typeof campCommonMul==='function')?(u('×')+mul(campCommonMul())):'-']);
+  st.push(['터치당',    (typeof campTapGain==='function')?f(campTapGain()):'-']);
+  st.push(['채취당',    (typeof campGatherGain==='function')?f(campGatherGain()):'-']);
+  // 🧍 상한을 **같이** 보여 준다 — 더 뽑을 수 있는지가 여기서만 읽힌다(광맥 8덩이 × 5명 = 40).
+  st.push(['일꾼',      wk+u('/'+((typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:'-'))]);
   if(typeof campUpgLv==='function'){
-    st.push(['터치 강화', 'Lv.'+campUpgLv('tap')]);
-    st.push(['일꾼 강화', 'Lv.'+campUpgLv('gather')]); }
+    st.push(['터치 강화', u('Lv.')+campUpgLv('tap')]);
+    st.push(['일꾼 강화', u('Lv.')+campUpgLv('gather')]); }
   // ⛔ 제목에 **던전 이름을 쓰지 않는다** — 던전은 좌상단 칩이 이미 말한다(같은 것을 두 번 말하게 된다).
   //    대신 이 구역이 무엇인지를 자간 넓은 작은 라벨로 말한다(kicker · 로딩창 LOADING 과 같은 어법).
   return { mode:'upg', compact:true, build:true, wide:true,   // 빈 슬롯 4칸이 의미 없다 → 안쪽 전체를 쓴다
@@ -779,12 +786,17 @@ function _campIdleModel(){
     info:{ hideName:true, statsWide:true, stats:st },
     items:[] }; }
 // 값이 바뀔 때만 다시 그린다 — 캠프 틱은 매 프레임 돌아서 그냥 그리면 입력이 끊긴다
+// ⚠ 서명은 **화면에 나오는 값**만 센다. 안 나오는 것(인구·초당 수급)을 세면 헛되이 다시 그리고,
+//   나오는 것을 빠뜨리면 값이 바뀌어도 판이 안 갈린다 — 여섯 칸과 여기가 같이 움직여야 한다.
 function _campIdleSig(){
-  const C=(typeof campState==='function')?campState():null;
   const T=(typeof G!=='undefined')?G.tech:null;
-  return 'ci|'+(C?(C.dg||1):0)+'|'+(C?(C.upg&&C.upg.tap||0):0)+'|'+(C?(C.upg&&C.upg.gather||0):0)
-    +'|'+((C&&C.rate>0)?C.rate.toFixed(1):0)
-    +'|'+(T?((T.ents||[]).filter(e=>e.type==='worker').length):0)+'|'+(T?(T.sup||0):0)+'|'+(T?(T.supCap||0):0); }
+  const n=(fn,a)=>{ try{ return (typeof fn==='function')?Math.round(fn(a)*100):0; }catch(_e){ return 0; } };
+  return 'ci|'+n(typeof campCommonMul!=='undefined'?campCommonMul:null)
+    +'|'+n(typeof campTapGain!=='undefined'?campTapGain:null)
+    +'|'+n(typeof campGatherGain!=='undefined'?campGatherGain:null)
+    +'|'+(T?((T.ents||[]).filter(e=>e.type==='worker').length):0)
+    +'|'+n(typeof campUpgLv!=='undefined'?campUpgLv:null,'tap')
+    +'|'+n(typeof campUpgLv!=='undefined'?campUpgLv:null,'gather'); }
 // 캠프가 부르는 입구. host 를 안 주면 캠프 시트 본문(#btSheetBody)에 그린다.
 function renderCampIdleSheet(host){
   const el=host||document.getElementById('btSheetBody'); if(!el) return;

@@ -54,6 +54,7 @@
 | `14-input-fx.js` | `_btPickerHTML` `btAdd` | 옛 건설 고르개 |
 | `18-strike.js` | `strikeWpnTotal` | 옛 무기 합계 |
 | `19-camp.js` | `campMineHit` | ⛏ 광맥 탭으로 채굴 모드에 들던 시절의 **판정기**(2026-09-02) — 아래 §3-F |
+| `19-camp.js` | `campDgMul` | 「MY BASE」의 '던전 배수' 칸이 유일한 호출자였다(2026-09-05 에 칸을 뺐다) · ⚠ 화면용은 `campDgMulTx`(12-appshell.js)로 **다른 함수**다 |
 | `22-camp-rune.js` | `_runeRowHTML` | 💠 옛 목록형 룬 칸(줄 두 개) — 성좌 판으로 바뀌며 도달 불가(2026-09-03) |
 | `19-camp.js` | `campRoundMul` | 💠 「질주의 룬」이 웨이브 대기를 줄이던 자리 — 룬을 지우며 부를 것이 없어졌다(2026-09-03) |
 | `08-hunt.js` | **마을 47개**(월드·카메라·건설·친구 허브·DM·마을 3D) | 🏘 §3-B 참고 — 통째로 갔다 |

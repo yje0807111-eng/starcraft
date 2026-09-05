@@ -12374,18 +12374,33 @@ async function groupLobby(){
       assert(m.title.indexOf('잊혀진')<0 && m.title.indexOf('던전')<0,
         '제목에 던전 이름이 들어갔다 — 좌상단 칩과 같은 말을 두 번 한다: '+m.title);
       // 캠프 값을 **실제로 읽는가** — 하드코딩이면 아래에서 걸린다
-      assert(get('일꾼')==='3기','일꾼 수를 안 읽음: '+get('일꾼'));
-      assert(get('인구')==='9 / 18','인구를 안 읽음: '+get('인구'));
-      assert(get('터치 강화')==='Lv.4','터치 강화 레벨을 안 읽음: '+get('터치 강화'));
-      assert(get('일꾼 강화')==='Lv.2','일꾼 강화 레벨을 안 읽음: '+get('일꾼 강화'));
-      assert(/\/초$/.test(get('자동 수급')||''),'자동 수급이 초당 표기가 아님: '+get('자동 수급'));
-      // ⭐ 2026-08-25: 배수는 ×1.5^(던전-1) 공식이 아니라 CAMP_MINE 표다(HUNT_R1.md §6-1-0-1)
-      { const want='×'+campMineMul().toFixed(1);
-        assert(get('던전 배수')===want,'던전 배수가 표와 안 맞음: '+get('던전 배수')+' (기대 '+want+')'); }
-      // ② 던전을 옮기면 값이 따라간다(두 곳에서 각자 계산하면 여기서 갈린다)
-      prof.camp.dg=1; const m2=_campIdleModel();
-      // 던전 1 진입 = ×1.5(2026-09-04 사용자 확정 · 옛 ×1.0)
-      assert(m2.info.stats.find(x=>x[0]==='던전 배수')[1]==='×1.5','던전을 바꿨는데 배수가 그대로: '+m2.info.stats.find(x=>x[0]==='던전 배수')[1]);
+      // 📊 **여섯 칸**(2026-09-05 사용자 확정). 뺀 셋과 그 이유 —
+      //   인구(상단 재화 바에 있다) · 던전 배수(좌상단 칩 + 총 배수에 포함) · 자동 수급(초당).
+      //   ⛔ 되살리려면 위 둘과 겹치지 않는지 먼저 볼 것.
+      const txt=v=>String(v==null?'':v).replace(/<[^>]*>/g,'');   // 값에 단위 <i class="u"> 가 섞인다
+      assert((m.info.stats||[]).length===6,'요약이 여섯 칸이 아니다: '+(m.info.stats||[]).length);
+      for(const k of ['인구','던전 배수','자동 수급','터치 획득','채취 배수'])
+        assert(get(k)===undefined,'뺐던 칸이 되살아났다: '+k);
+      assert(txt(get('일꾼'))==='3/40','일꾼 수·상한을 안 읽음: '+txt(get('일꾼')));
+      assert(txt(get('터치 강화'))==='Lv.4','터치 강화 레벨을 안 읽음: '+txt(get('터치 강화')));
+      assert(txt(get('일꾼 강화'))==='Lv.2','일꾼 강화 레벨을 안 읽음: '+txt(get('일꾼 강화')));
+      // ⭐ 총 배수 = **탭·채취 양쪽에 똑같이 걸리는 곱 항만**(campCommonMul).
+      //   ⛔ 한쪽에만 걸리는 것(탭 트리·손끝의 룬 · 채취 트리·채굴의 룬)을 여기 더하지 말 것 —
+      //     그것들은 「터치당·채취당」 숫자에 이미 반영돼 있다.
+      { const v=campCommonMul(), want='×'+(v<100?v.toFixed(1):fmtCur(v));
+        assert(txt(get('총 배수'))===want,'총 배수가 campCommonMul 과 다름: '+txt(get('총 배수'))+' (기대 '+want+')'); }
+      assert(txt(get('터치당'))===fmtCur(campTapGain()),'터치당이 campTapGain 과 다름: '+txt(get('터치당')));
+      assert(txt(get('채취당'))===fmtCur(campGatherGain()),'채취당이 campGatherGain 과 다름: '+txt(get('채취당')));
+      // ⛔ **값 칸에 한글이 있으면 안 된다.** 값은 숫자 폰트(Rajdhani)로 그려지는데 한글은 그
+      //   폰트에 없어 다른 폰트로 떨어진다 — 같은 크기인데 커졌다 작아졌다 해 보인다
+      //   (2026-09-05 사용자 지적). 단위는 <i class="u"> 로 빼서 작은 보조 글자로 만든다.
+      for(const r of (m.info.stats||[]))
+        assert(!/[가-힣]/.test(txt(r[1])),'값 칸에 한글이 들어갔다 — 글자 크기가 흔들린다: '+r[0]+'='+txt(r[1]));
+      // ② 던전을 옮기면 총 배수가 따라간다(두 곳에서 각자 계산하면 여기서 갈린다)
+      { const v1=campCommonMul(); prof.camp.dg=1; const m2=_campIdleModel(), v2=campCommonMul();
+        assert(Math.abs(v1-v2)>1e-9,'전제가 바뀜: 던전 1과 3의 배수가 같다');
+        assert(txt(m2.info.stats.find(x=>x[0]==='총 배수')[1])==='×'+(v2<100?v2.toFixed(1):fmtCur(v2)),
+          '던전을 바꿨는데 총 배수가 그대로: '+txt(m2.info.stats.find(x=>x[0]==='총 배수')[1])); }
       prof.camp.dg=3;
       // ③ 실제로 그려진다 — 공용 렌더러(renderCmdGrid)를 쓴다(새 카드를 만들지 않는다)
       renderCampIdleSheet(box);
@@ -12403,8 +12418,17 @@ async function groupLobby(){
         assert(parseFloat(cs.letterSpacing)>=1.5,'머리줄 라벨의 자간이 안 넓다: '+cs.letterSpacing); }
       { const w=box.querySelector('.cgStats.cgWide');
         assert(w,'요약이 전폭 격자가 아니다');
-        const cols=(getComputedStyle(w).gridTemplateColumns||'').split(/\s+/).filter(Boolean).length;
-        assert(cols===4,'요약 격자가 4열이 아님(8줄을 두 줄로 편다): '+cols+'열'); }
+        const colsOf=()=>(getComputedStyle(w).gridTemplateColumns||'').split(/\s+/).filter(Boolean);
+        assert(colsOf().length===3,'요약 격자가 3열이 아님(여섯 칸을 두 줄로 편다): '+colsOf().length+'열');
+        // ⛔ **값이 길어져도 칸 폭이 변하면 안 된다.** `1fr` 은 `minmax(auto,1fr)` 이라
+        //   내용보다 좁아지지 않는다 — 한 칸의 값이 길어지면 나머지가 전부 밀려 줄이 좌우로
+        //   움직인다(2026-09-05 사용자 지적). `minmax(0,1fr)` 이 그것을 묶는다.
+        const before=colsOf().join(',');
+        const b0=w.querySelector('.cgStat b'); const keep=b0.innerHTML;
+        b0.innerHTML='1,234,567,890';
+        assert(colsOf().join(',')===before,
+          '값이 길어지자 칸 폭이 변했다 — 값이 바뀔 때마다 줄이 좌우로 움직인다: '+before+' → '+colsOf().join(','));
+        b0.innerHTML=keep; }
       // ④ 값이 바뀌면 다시 그린다 — 시그니처가 안 움직이면 영영 옛 값이 남는다
       const sig1=box._gSig; prof.camp.upg.tap=9; renderCampIdleSheet(box);
       assert(box._gSig!==sig1,'값이 바뀌었는데 다시 안 그림(시그니처가 안 움직인다)');
@@ -12434,13 +12458,13 @@ async function groupLobby(){
       // ⑤ 캠프 함수가 **아예 없을 때**도 안 터진다(다른 화면·다른 빌드에서 불려도 조용히)
       //   ⚠ delete 로는 못 지운다 — function 선언으로 만든 전역은 지워지지 않는다(그래서 한 번 헛돌았다).
       //     undefined 로 덮어야 '함수가 없는' 상황이 실제로 만들어진다.
-      { const keep={}; for(const k of ['campState','campTapGain','campGatherMul','campDgMul','campUpgLv']){ keep[k]=window[k]; window[k]=undefined; }
+      { const keep={}; for(const k of ['campState','campTapGain','campGatherGain','campCommonMul','campUpgLv']){ keep[k]=window[k]; window[k]=undefined; }
         let m3=null, err='';
         try{ m3=_campIdleModel(); }catch(e){ err=e.message; }
         for(const k in keep) if(keep[k]) window[k]=keep[k];
         assert(!err,'캠프 함수가 없을 때 모델이 터진다: '+err);
         assert(m3 && m3.info && m3.info.stats.length,'캠프가 없을 때 모델이 비었다'); }
-      return m.info.stats.length+'값 · 작은 라벨 머리 · 전폭 4열 2줄 · campSyncSheet 연결 확인';
+      return m.info.stats.length+'값 · 작은 라벨 머리 · 전폭 3열 2줄 · 값 칸에 한글 없음 · 칸 폭 고정';
     } finally {
       box.remove();
       window.campIsOn=on0; window.campState=st0;
