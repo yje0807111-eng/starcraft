@@ -1,0 +1,172 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 상점 — 흐린 것 걷어내기 4안 + 탭 띠 4안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(186,194,208,.55) 30%,
+    rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(150,158,172,.14) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+h2{font-size:13.5px;margin:20px 22px 2px;color:var(--gold);font-family:var(--font-ti)}
+h2 + p{margin:0 22px 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;max-width:1240px}
+h2 + p b{color:var(--txt-dim)} h2 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:290px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:70px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.pane{width:290px;padding:10px;border-radius:var(--r-md);border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%)}
+
+/* ── 지금 규격 ── */
+.sec{border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:rgba(255,255,255,.03);padding:8px;margin-bottom:9px}
+.secH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.secT{font-size:12px;color:#c3ccd8;letter-spacing:.08em}
+.secN{font-size:11px;color:#8b95a5}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.buy{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:6px 4px;border:1px solid color-mix(in srgb,var(--rg) 38%,transparent);
+  border-radius:var(--r-sm);background:rgba(255,255,255,.04);color:#c3ccd8;font-size:11px}
+.buy .ic{width:26px;height:26px;border-radius:3px;
+  background:linear-gradient(180deg,#1b2634,#06090e);border:1px solid var(--rg);opacity:.9}
+.buy b{color:var(--rg);font-weight:600;font-size:11px}
+.buy span{font-size:10.5px}
+.buy u{text-decoration:none;color:#c98bff;font-size:11px;font-family:var(--font-num)}
+.buy u s{text-decoration:line-through;color:#69737f;font-size:9.5px;margin-left:3px}
+.off{position:absolute;left:3px;top:3px;font-style:normal;font-family:var(--font-num);
+  font-size:9px;font-weight:700;color:#ff9c6b;padding:0 3px;border-radius:var(--r-bar);
+  background:rgba(255,120,60,.16)}
+
+/* ══ A. 흐린 것 걷어내기 ══ */
+/* ① 지금 */
+/* ② 구역 판을 또렷하게 */
+.a2 .sec{border-color:rgba(150,170,200,.42);background:rgba(255,255,255,.055)}
+.a2 .secT{color:#eef1f6;font-weight:600}
+.a2 .secN{color:#aab4c2}
+/* ③ 칸을 또렷하게 — 테두리·글자 */
+.a3 .buy{border-color:color-mix(in srgb,var(--rg) 70%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03))}
+.a3 .buy span{color:#dfe6ef}
+.a3 .buy u{color:#e2b6ff}
+.a3 .secN{color:#aab4c2}
+/* ④ 판을 없애고 제목 + 구분선 */
+.a4 .sec{border:0;background:none;padding:0 0 9px;margin-bottom:9px;
+  border-bottom:1px solid rgba(150,170,200,.22)}
+.a4 .secT{color:#eef1f6;font-weight:600;font-size:12.5px}
+.a4 .secN{color:#aab4c2}
+.a4 .buy{border-color:color-mix(in srgb,var(--rg) 60%,transparent);
+  background:rgba(255,255,255,.05)}
+.a4 .buy span{color:#dfe6ef}
+/* ⑤=②+③ 둘 다 */
+.a5 .sec{border-color:rgba(150,170,200,.42);background:rgba(255,255,255,.055)}
+.a5 .secT{color:#eef1f6;font-weight:600} .a5 .secN{color:#aab4c2}
+.a5 .buy{border-color:color-mix(in srgb,var(--rg) 70%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03))}
+.a5 .buy span{color:#dfe6ef} .a5 .buy u{color:#e2b6ff}
+
+/* ══ B. 탭 띠 ══ */
+.seg{position:relative;display:grid;gap:2px;padding:3px;margin:2px 0 8px;
+  border-radius:var(--r-md);background:rgba(6,9,13,.72);
+  border:1px solid rgba(150,170,200,.20)}
+.seg .ind{position:absolute;pointer-events:none}
+.seg button{position:relative;z-index:1;padding:6px 0;border:0;background:none;cursor:pointer;
+  font-family:var(--font-ko);font-size:11.5px;color:#8d97a6}
+.seg button.on{color:#eef1f6;font-weight:700}
+/* ① 지금 — 검은 판 + 밑변 광원 */
+.b1 .seg .ind{position:absolute;top:3px;bottom:3px;border-radius:var(--r-bar);
+  background:rgba(0,0,0,.55)}
+.b1 .seg .ind::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:var(--edge-light)}
+/* ② 밑줄만 — 판을 없앤다 */
+.b2 .seg{background:none;border:0;border-bottom:1px solid rgba(150,170,200,.22);
+  border-radius:0;padding:0 0 1px}
+.b2 .seg .ind{position:absolute;bottom:-1px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,#e8ecf4,transparent)}
+.b2 .seg button{padding:7px 0}
+/* ③ 채워진 칸 — 고른 것이 밝은 판 */
+.b3 .seg{background:rgba(6,9,13,.55)}
+.b3 .seg .ind{position:absolute;top:3px;bottom:3px;border-radius:var(--r-bar);
+  background:linear-gradient(180deg,#2b3a4e,#18222e);
+  border:1px solid rgba(186,200,220,.34)}
+.b3 .seg button.on{color:#fff}
+/* ④ 각진 탭 — 아래가 열린 폴더 */
+.b4 .seg{background:none;border:0;border-bottom:1px solid rgba(150,170,200,.28);
+  border-radius:0;padding:0}
+.b4 .seg .ind{position:absolute;top:0;bottom:-1px;
+  background:linear-gradient(180deg,rgba(120,150,190,.22),rgba(10,14,20,.9));
+  border:1px solid rgba(150,170,200,.34);border-bottom-color:#0b1017;
+  clip-path:polygon(6px 0,100% 0,100% 100%,0 100%,0 6px)}
+.b4 .seg button{padding:8px 0}
+</style></head><body>
+
+<h1>룬 상점 — <b>흐린 것</b> 걷어내기 4안 · <b>탭 띠</b> 4안</h1>
+<p>지금 화면에서 <b>밝기 150 미만</b>으로 잰 것들: 구역 부제(148) · 효과 이름(149) ·
+제값 취소선(113) · 탭의 안 고른 글자(138). 여기에 <b>구역 판과 칸의 테두리</b>가 아주 옅어
+층이 흐릿하게 갈린다.
+⚠ <b>탭 띠는 공용이다</b>(segNavHTML · 22곳에서 쓴다 — 장비창 · 유즈맵 정렬 · 친구 · 뽑기 …).
+바꾸면 <s>그 화면들이 전부 같이 바뀐다</s> — 상점만 다르게 하려면 단일 소스가 깨진다.</p>
+
+<h2>A. 흐린 것 걷어내기 (①이 지금)</h2>
+<p>글자 밝기와 <b>테두리 세기</b>를 함께 올린다. 값·아이콘 자리는 그대로다.</p>
+<div class="wrap" id="wrapA"></div>
+
+<h2>B. 탭 띠 4안 (①이 지금 · 공용이라 다른 화면도 함께 바뀐다)</h2>
+<p>같은 자리·같은 글자에 <b>고른 것을 어떻게 보여 주는지</b>만 다르다.</p>
+<div class="wrap" id="wrapB"></div>
+
+<script>
+var GD = { low:{c:'#9aa4b0',t:'하급',v:'+1%',g:40}, mid:{c:'#5cd6ff',t:'중급',v:'+2.5%',g:130},
+           high:{c:'#ffcf6b',t:'상급',v:'+5%',g:400}, uq:{c:'#c98bff',t:'유니크',v:'+5%',g:1200} };
+function buy(k, sale){ const d = GD[k];
+  return '<span class="buy" style="--rg:' + d.c + '">'
+   + (sale ? '<i class="off">-30%</i>' : '')
+   + '<span class="ic"></span><b>' + d.t + '</b><span>' + d.v + '</span>'
+   + '<u>💎 ' + (sale ? Math.round(d.g*0.7) : d.g)
+   + (sale ? '<s>' + d.g + '</s>' : '') + '</u></span>'; }
+function seg(cls){
+  var tabs = ['경제','전투','성장','유니크'], i = 0;
+  var h = '<div class="seg ' + cls + '" style="grid-template-columns:repeat(4,1fr)">'
+   + '<i class="ind" style="left:calc(3px + ' + i + '*(100% - 6px)/4);width:calc((100% - 6px)/4)"></i>';
+  tabs.forEach(function(t, k){ h += '<button class="' + (k===i?'on':'') + '">' + t + '</button>'; });
+  return h + '</div>'; }
+function shop(segCls){
+  return '<div class="sec"><div class="secH"><span class="secT">주간 할인</span>'
+   +   '<span class="secN">1일 18시간 뒤 갱신</span></div>'
+   +   '<div class="g3">' + buy('high',1) + buy('mid',1) + buy('uq',1) + '</div></div>'
+   + '<div class="sec"><div class="secH"><span class="secT">상점</span></div>'
+   +   seg(segCls)
+   +   '<div class="g3">' + buy('low') + buy('mid') + buy('high') + '</div></div>'; }
+
+var A = [
+{ c:'', t:'지금', d:'비교용. 구역 판 테두리 <b>.22</b> · 칸 테두리 <b>등급색 38%</b> · 부제 밝기 148.' },
+{ c:'a2', t:'구역 판을 또렷하게', d:'판 테두리를 <b>.22 → .42</b>, 면을 한 단 밝게, 제목을 흰색으로. <b>층</b>이 먼저 읽힌다 — 어디가 한 구역인지 분명해진다.' },
+{ c:'a3', t:'칸을 또렷하게', d:'칸 테두리를 <b>38% → 70%</b>, 면에 그라데이션, 값 글자를 밝게. <b>살 것</b>이 먼저 읽힌다. 하급(회색)도 살아난다.' },
+{ c:'a4', t:'판을 없애고 구분선', d:'구역 판을 걷고 <b>제목 + 아래 선</b>만 남긴다. 테두리가 겹치지 않아 <em>가장 깨끗</em>하지만, 구역의 «상자» 느낌은 사라진다.' },
+{ c:'a5', t:'②+③ 둘 다', d:'판도 칸도 또렷하게. 가장 분명하지만 테두리가 <b>두 겹</b>으로 겹쳐 조금 무겁다.' },
+];
+var B = [
+{ c:'b1', t:'지금 — 검은 판 + 밑변 광원', d:'고른 칸이 <b>어두워지고</b> 아래에 광원 한 줄. 조용하지만 「고른 것이 눌린 것」인지 <s>덜 읽힌다</s>.' },
+{ c:'b2', t:'밑줄만', d:'판을 걷고 <b>고른 것 아래 2px</b>만. 가장 가볍고 글자가 잘 읽힌다. 상단 띠·구역 판과 선이 겹치지 않는다.' },
+{ c:'b3', t:'채워진 칸', d:'고른 것이 <b>밝은 판</b>이 된다. 「지금 여기」가 가장 분명하다 — 모바일에서 흔한 방식.' },
+{ c:'b4', t:'각진 탭', d:'고른 것이 <b>아래가 열린 폴더 탭</b>이 되어 내용과 이어진다. 각진 SF 어휘와 맞고, 목록이 그 탭에 «달려 있다»가 읽힌다.' },
+];
+function render(id, list, base, segOf){
+  document.getElementById(id).innerHTML = list.map(function(x, i){
+    return '<div class="cell"><p class="cap"><i>' + (base+i) + '</i>' + x.t + '</p>'
+     + '<p class="sub">' + x.d + '</p>'
+     + '<div class="pane ' + (segOf ? '' : x.c) + '">' + shop(segOf ? x.c : 'b1') + '</div></div>'; }).join(''); }
+render('wrapA', A, 1, false);
+render('wrapB', B, 1, true);
+</script></body></html>
