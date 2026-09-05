@@ -51,15 +51,11 @@
      ⭐ 2026-09-05 에 **공용 변형**(.pdSeg.plain)으로 올렸다 — 룬 상점도 같은 얼굴을 쓴다.
        ⛔ 규칙을 복사하지 말 것: 같은 얼굴이 두 곳에 생기면 반드시 어긋난다.
        쓰는 쪽은 감싸는 요소에 클래스를 주는 대신 **띠 자체에 .plain** 을 붙인다. */
-  .pdSeg.plain,
-  #mapSelect .msSortTabs .pdSeg{padding:0;border:none;background:none;border-radius:0}
-  .pdSeg.plain .pdSegInd,
-  #mapSelect .msSortTabs .pdSegInd{top:auto;bottom:0;height:1px;border:none;border-radius:0;
+  .pdSeg.plain{padding:0;border:none;background:none;border-radius:0}
+  .pdSeg.plain .pdSegInd{top:auto;bottom:0;height:1px;border:none;border-radius:0;
     background:linear-gradient(90deg,transparent,rgba(255,255,255,.85) 50%,transparent)}
-  .pdSeg.plain .pdSegInd::after,
-  #mapSelect .msSortTabs .pdSegInd::after{display:none}   /* 판이 없으니 밑변 광원도 뺀다(선이 곧 표시다) */
-  .pdSeg.plain .pdSegBtn,
-  #mapSelect .msSortTabs .pdSegBtn{padding:9px 4px}
+  .pdSeg.plain .pdSegInd::after{display:none}   /* 판이 없으니 밑변 광원도 뺀다(선이 곧 표시다) */
+  .pdSeg.plain .pdSegBtn{padding:9px 4px}
   /* 🔷 **아이콘 탭**(.stack) — 그림을 위, 이름을 아래로 세운다(2026-09-05 · 목업 shop-icontab-4 ①안).
      ⭐ 칸은 아주 옅은 판이고 **고른 것만** 한 단 밝아지며 아래 **밑변 광원 한 줄**이 켜진다 —
        화면의 다른 띠(탭 띠·커맨드 카드)가 쓰는 바로 그 어휘다.

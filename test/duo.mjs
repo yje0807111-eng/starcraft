@@ -69,7 +69,10 @@ export async function runDuo(browser, baseUrl){
     await A.exposeFunction('__duoOut', m => B.evaluate(x => window.__duoDeliver(x), m).catch(()=>{}));
     await B.exposeFunction('__duoOut', m => A.evaluate(x => window.__duoDeliver(x), m).catch(()=>{}));
 
-    for(const p of [A,B]){ await p.goto(baseUrl, { waitUntil:'load' }); await p.waitForFunction('typeof G!=="undefined"', { timeout:20000 }); }
+    // ⚠ **load 를 기다리지 않는다** — 로비 BGM(assets/audio/bgm/lobby_3.mp3)의 요청이 열린 채로
+    //   남아 있어 load 이벤트가 안 온다(2026-09-05 실측: 두 쪽이 같이 뜰 때 90초 넘게 걸리거나 아예 안 온다).
+    //   부팅의 신호는 아래 G 다 — 그것만 기다리면 충분하고, 미디어 스트림에 매달리지 않는다.
+    for(const p of [A,B]){ await p.goto(baseUrl, { waitUntil:'domcontentloaded' }); await p.waitForFunction('typeof G!=="undefined"', { timeout:20000 }); }
     await A.evaluate('(' + SHIM + ')("uid_a","P_a")');
     await B.evaluate('(' + SHIM + ')("uid_b","P_b")');
     const ra = await A.evaluate('(' + START + ')(1)'), rb = await B.evaluate('(' + START + ')(2)');

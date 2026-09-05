@@ -1953,8 +1953,10 @@ const MAP_SORTS=[['pop','인기순'],['new','신규'],['rec','추천'],['fav','�
 // 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다(사냥터와 같은 이유).
 function renderMapSortTabs(){ const tb=document.getElementById('msSortTabs'); if(!tb) return;
   const i=Math.max(0, MAP_SORTS.findIndex(function(c){ return c[0]===_mapSort; }));
+  // 📑 판 없는 띠 = 공용 변형 .plain (css/40-social.css) — ⛔ 화면 전용 규칙을 다시 쓰지 말 것
   tb.innerHTML=segNavHTML(MAP_SORTS.map(function(c){ return { label:c[1] }; }), i,
-    function(k){ return 'setMapSort(&#39;'+MAP_SORTS[k][0]+'&#39;)'; }); }
+    function(k){ return 'setMapSort(&#39;'+MAP_SORTS[k][0]+'&#39;)'; })
+    .replace('class="pdSeg"', 'class="pdSeg plain"'); }
 function setMapSort(s){ _mapSort=s;
   renderMapSortTabs();   // 정렬은 화면 위 띠가 맡는다
   const di=document.getElementById('msSortDDi'); if(di && ICO[s]) di.innerHTML=ICO[s];                          // 옛 드롭다운 흔적(있으면 갱신)

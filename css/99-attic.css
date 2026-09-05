@@ -529,3 +529,22 @@ body.vgMode #townScreen{padding-bottom:var(--navH)}
 .hbRd.best{color:#ffd24a;border-color:rgba(255,210,74,.45)}
 .hbRd{position:relative}
 .hbRd.rw{color:#ffd24a;border-color:rgba(255,210,74,.45);background:rgba(255,210,74,.07)}
+
+/* ══════════ [30-home.css] 2026-09-05 — 어디에도 안 쓰는 클래스 6개의 규칙 ══════════ */
+/* 룬 상점 — 룬 한 줄 + 등급 버튼들 */
+#campRune .rnItem{border-top:1px solid rgba(255,255,255,.06);padding:8px 0 6px}
+#campRune .rnItem:first-child{border-top:0}
+#campRune .rnIH{display:grid;grid-template-columns:20px auto 1fr auto;align-items:center;gap:6px}
+#campRune .rnIH .ic{width:16px;height:16px}
+#campRune .rnIN{font-size:13px;color:#eef1f6}
+#campRune .rnID{font-size:11px;color:#8b95a5}
+#campRune .rnBuys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+#campRune .rnBuys:has(> :only-child){grid-template-columns:1fr}
+/* 목록 줄 — 이름·설명 한 줄, 그 아래 등급 버튼들 */
+#campRune .rnItem{border:1px solid rgba(150,170,200,.14);border-radius:var(--r-md);
+  padding:7px 8px;background:rgba(255,255,255,.02)}
+#campRune .rnIH{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+#campRune .rnIi{width:26px;height:26px;flex:none;display:block;object-fit:contain}
+#campRune .rnIN{font-size:12px;color:#eef1f6;font-weight:600}
+#campRune .rnID{font-size:10.5px;color:#aab4c2}
+#campRune .rnIi{width:26px;height:26px;flex:none;object-fit:contain}
