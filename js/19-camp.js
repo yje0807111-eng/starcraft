@@ -2540,9 +2540,6 @@ const CAMP_FOE_BLD_MUL = 40;
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
-  const x0 = TECH_GRID.x0, x1 = TECH_GRID.x1, y0 = techY0(), y1 = techY1();
-  const sx = function(wx){ return W * (0.15 + (wx - x0) / Math.max(1e-6, x1 - x0) * 0.70); };
-  const sy = function(wy){ return W * (0.62 + (wy - y0) / Math.max(1e-6, y1 - y0) * 0.30); };
   const mainK = (TECH_TREE[G.tech.race] && TECH_TREE[G.tech.race].buildings[0] || {}).k;
   const out = [];
   for(const e of (G.tech.ents || [])){
@@ -2551,20 +2548,23 @@ function campBuildStructs(){
     const hp = Math.round((isMain ? (CAMPB.me.base.maxHp || CAMPB.me.base.hp) : CAMP_BLD_HP) * (isMain ? 1 : bm));
     // 🏛 본부는 **객체를 새로 만들지 않는다**(전장 판정이 me.base 를 본다) — 그래서 체력을 손으로 채운다.
     //   ⛔ 이게 없으면 「건물을 다시 올린다 = 체력이 가득 찬다」가 일반 건물에만 걸린다.
-    if(isMain){ const b = CAMPB.me.base;
-      b.x = sx(e.x); b.y = sy(e.y); b.eid = e.eid;
+    if(isMain){ const b = CAMPB.me.base; const q = campG2W(e.x, e.y, W);
+      b.x = q.x; b.y = q.y; b.eid = e.eid;
       b.hp = b.maxHp = b.max = hp; b.dead = false;
       out.push(b); continue; }
-    // 🛡 **방어 건물은 전선에 선다** (2026-08-30 사용자 확정).
-    //   ⛔ 일반 매핑(sy)은 격자 전체를 전장 **62~92%** 로 눌러 담는다. 그런데 전투는
-    //     **50~60%** 에서 벌어진다 — 벙커를 어디에 지어도 전선 뒤였다(실측 828 떨어짐 ·
-    //     화력병 사거리 70 → 벙커 체력이 120/120 그대로였다).
-    //   ⭐ 그래서 방어 건물만 **유닛과 같은 좌표계**(campG2W)를 쓴다. 격자 위쪽에 지으면
-    //     전장 앞(14%), 아래쪽이면 뒤(86%) — 플레이어가 방어선을 직접 고를 수 있다.
+    // 🛡 **건물은 내가 지은 자리에 선다** — 격자 위쪽에 지으면 전장 앞(14%), 아래쪽이면 뒤(86%).
+    //   ⭐ 방어 건물(벙커·포탑)이 2026-08-30 에 먼저 이 좌표계로 옮겨 왔고, 2026-09-05 에
+    //     **나머지 건물도 같은 것을 쓰게** 통일했다(위 설명). 이제 갈래가 하나다.
     //   ⚠ campG2W 는 campW2G 의 역이라 **화면과 어긋나지 않는다** — 전장 유닛을 그릴 때
     //     쓰는 역변환이 그대로 원래 격자 자리를 돌려준다.
-    //   ⚠ 일반 건물은 그대로 둔다(전투에 거의 안 나오고, 매핑을 바꾸면 기지 그림이 흔들린다).
-    const p = CAMP_DEF_BLD[e.bk] ? campG2W(e.x, e.y, W) : { x:sx(e.x), y:sy(e.y) };
+    //   ⭐ **이제 일반 건물도 같은 좌표계를 쓴다** (2026-09-05 사용자 신고: 「던전에서 유닛이
+    //     건물 구역은 통과하고 빈 공간에서 건물이 있는 것처럼 돌아간다」).
+    //     ⛔ 옛 sx/sy 매핑은 격자를 전장 0.15~0.85 × 0.62~0.92 로 눌러 담아, 그려진 자리와
+    //       **화면의 12~30%** 어긋났다(실측 2026-09-05 · 격자 (0.10,0.20) → 되돌리면 (0.220,0.478)).
+    //       건물이 그림과 다른 데 서 있으니 적이 그걸 치러 엉뚱한 데로 갔다.
+    //     ⚠ 옛 주석은 「매핑을 바꾸면 기지 그림이 흔들린다」고 했는데 **틀렸다** — 건물 그림은
+    //       기지 맵이 G.tech.ents 로 그린다. CAMPB._bld 는 전투 판정에만 쓰인다.
+    const p = campG2W(e.x, e.y, W);
     out.push({ x:p.x, y:p.y, hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
   }
   for(const b of out) b._bsT = null;   // 🏢 건물 시전 주기는 **라운드마다** 다시 센다(본부는 객체를 재사용하므로 손으로 지운다)
@@ -2700,6 +2700,21 @@ function campRallyPoint(){
   r.hp = r.max = r.maxHp = 1e18; r.dead = false;      // 아군 오사로 부서지지 않게 되돌린다
   return r;
 }
+// 🧱 ── **건물을 단단한 장애물로 만들지 않는다 — 해 보고 되돌렸다** (2026-09-05) ─────
+// ⛔ 던전에서 유닛을 미는 장애물은 `strikeTempleRects()`(18-strike.js)가 돌려주는 것뿐이고,
+//   캠프에서 그것은 **본부 하나**다(2차·중앙·적 본부는 campBattleOpen 이 죽여 둔다).
+//   그래서 나머지 건물은 **그냥 통과한다**(사용자 신고 2026-09-05).
+// 🧪 그래서 `strikeTempleRects` 를 캠프에서만 감싸 **내 건물 전부**를 그려진 발판 크기의 원으로
+//   돌려주게 해 봤다. 궤적은 오히려 좋아졌는데(뒤집힘 16.7 → 13.8 · 사거리 안 22.2 → 23.6%),
+//   ⛔ **아군이 갇혔다** — 스모크 「유닛이 자기 자리로 돌아온다」의 의무병이 싸우는 아군에게
+//     다가가기는커녕 **멀어졌다**(1152 → 1387). 원인은 반지름이 아니라 구조다:
+//     **던전에는 경로탐색이 없다.** 기지는 `_techFindPath` 가 건물을 **우회하는 길**을 만들지만,
+//     전장은 국소 회피 + 마지막에 원 밖으로 밀어내기뿐이라 건물 뒤로는 길이 안 난다.
+//   ⭐ 그래서 되돌렸다. 되살리려면 **먼저 전장에 경로탐색(또는 흐름장)을 붙여야 한다** —
+//     18-strike 의 흐름장(`strikeFlow*`)은 목표 신전 하나를 전제로 짜여 있어 그대로는 못 쓴다.
+//   ⚠ 대신 **좌표계는 통일했다**(campBuildStructs) — 건물이 그려진 자리에 서므로, 본부의
+//     회피 원도 이제 그림 위에 얹힌다(옛날엔 화면의 4.2% 위에 떠 있었다).
+
 // ⛔ strikeFrontStruct 를 감싼다 — 적이 내 건물을 때릴 수 있게 하는 유일한 입구다.
 //   ⚠ side 는 **때리는 쪽**이다(원본: foe = S[side==='me'?'ai':'me']). 적이 칠 때만 바꿔 준다.
 let _campFrontPatched = null;

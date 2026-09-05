@@ -5485,38 +5485,45 @@ async function groupLobby(){
   //    ⛔ 일반 매핑은 격자 전체를 전장 62~92% 로 눌러 담는데 전투는 50~60% 에서 벌어진다.
   //      그래서 벙커를 어디에 지어도 전선 뒤였다 — 실측 벙커 체력이 **120/120 그대로**였다.
   //    ⭐ 방어 건물만 유닛과 같은 좌표계(campG2W)를 쓴다 → 격자 위쪽 = 전장 앞.
-  await step('캠프: 방어 건물만 전선에 선다 (일반 건물은 뒤 그대로)', async()=>{
-    skipIf(typeof CAMP_DEF_BLD==='undefined'||typeof campBuildStructs!=='function','방어 건물 매핑 없음');
+  await step('캠프: 건물은 내가 지은 자리에 선다 (그림과 안 어긋난다)', async()=>{
+    skipIf(typeof campBuildStructs!=='function'||typeof campG2W!=='function','건물 매핑 없음');
     campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
     skipIf(!CAMPB,'전장이 안 열림');
     const W=CAMPB.world;
     // 같은 격자 자리(위쪽)에 벙커와 일반 건물을 하나씩
-    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='_probe')));
+    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
     G.tech.built['bunker']=1;
-    const gy=0.25;
+    const gy=0.25, gyLow=0.55;
     G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'bunker', x:0.5, y:gy, w:2,h:2, bt:0 });
     G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'barracks', x:0.4, y:gy, w:2,h:2, bt:0 });
     campBuildStructs();
     const bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
     const barr=(CAMPB._bld||[]).find(b=>b&&b.bk==='barracks');
     assert(bunk&&barr,'건물이 전장에 안 올라왔다');
-    // ① 같은 격자인데 벙커가 훨씬 앞(y 가 작다)
-    assert(bunk.y < barr.y - W*0.15,
-      '방어 건물이 앞으로 안 나갔다: 벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'%');
-    // ② 벙커는 전선(전장 50~60%)보다 앞이다 — 적을 먼저 만난다
-    assert(bunk.y <= W*0.60,
-      '벙커가 전선보다 뒤다: '+Math.round(bunk.y/W*100)+'% (전선은 50~60%)');
-    // ③ 일반 건물은 예전 구간(62~92%)에 그대로 — 앞에 나가면 기지가 곧바로 부서진다
-    assert(barr.y >= W*0.60,
-      '일반 건물까지 앞으로 나갔다: '+Math.round(barr.y/W*100)+'%');
-    // ④ 좌표계가 유닛과 같아야 화면과 안 어긋난다 — 역변환이 원래 격자를 돌려준다
-    { const g=campW2G(bunk.x, bunk.y, W);
-      assert(Math.abs(g.gy-gy)<0.01 && Math.abs(g.gx-0.5)<0.01,
-        '방어 건물 좌표가 유닛 좌표계와 안 맞는다 — 화면에서 어긋나 보인다: '+g.gx.toFixed(3)+','+g.gy.toFixed(3)); }
-    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
-    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
-    campBattleClose();
-    return '벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'% · 유닛 좌표계와 일치';
+    try{
+      // ① **좌표계가 하나다** — 같은 격자 세로면 전장 세로도 같다 (2026-09-05 통일)
+      //    ⛔ 옛 규칙은 방어 건물만 campG2W, 나머지는 sx/sy 였다. 그래서 일반 건물이
+      //      그려진 자리에서 **화면의 12~30%** 떨어진 데 서 있었다(사용자 신고).
+      assert(Math.abs(bunk.y-barr.y) < W*0.01,
+        '같은 격자인데 전장 세로가 다르다 — 좌표계가 둘이다: 벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'%');
+      // ② 역변환이 **원래 격자**를 돌려준다 = 그림과 안 어긋난다 (둘 다)
+      for(const [nm,b,gx] of [['벙커',bunk,0.5],['병영',barr,0.4]]){
+        const g=campW2G(b.x, b.y, W);
+        assert(Math.abs(g.gy-gy)<0.01 && Math.abs(g.gx-gx)<0.01,
+          nm+' 자리가 그려진 격자와 어긋난다: ('+g.gx.toFixed(3)+','+g.gy.toFixed(3)+') vs ('+gx+','+gy+')'); }
+      // ③ 격자 위에 지으면 앞, 아래에 지으면 뒤 — 내가 방어선을 고른다
+      G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&e.bk==='barracks'));
+      G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'barracks', x:0.4, y:gyLow, w:2,h:2, bt:0 });
+      campBuildStructs();
+      const low=(CAMPB._bld||[]).find(b=>b&&b.bk==='barracks');
+      assert(low && low.y > bunk.y + W*0.15,
+        '아래에 지었는데 앞과 같은 자리다: '+Math.round((low?low.y:0)/W*100)+'% vs '+Math.round(bunk.y/W*100)+'%');
+      return '같은 격자 → 같은 세로('+Math.round(bunk.y/W*100)+'%) · 역변환 일치 · 아래에 지으면 '+Math.round(low.y/W*100)+'%';
+    } finally {
+      G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
+      if(typeof campBuildStructs==='function') campBuildStructs();
+      { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
   });
 
   // 🧱 **벙커 — 화력병을 살리는 자리** (2026-08-30 사용자 확정)
