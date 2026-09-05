@@ -1454,6 +1454,8 @@ function campRebEnter(sec){
   else { campTreeClose(); campRebOpen(); }
   { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
     if(el) el.classList.toggle('crIn', !wasIn); }
+  // 📐 구역 상단 띠 — **닫는 함수를 부른 뒤에** 켠다(그 안에서 꺼 버린다)
+  if(typeof curSplit === 'function') curSplit(true);
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(환생 / 환생 트리)
   // 🧭 네비를 「환생 구역의 하위」 상태로 맞춘다.
   //   ⚠ navShow 만으로는 부족하다 — 그것은 **구역**을 켤 뿐이고, 하위 칸(정보·업그레이드)은

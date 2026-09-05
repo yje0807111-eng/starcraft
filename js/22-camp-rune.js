@@ -444,6 +444,8 @@ function campRuneRender(){
   if(typeof paintIcons === 'function') paintIcons(box);
   if(_bagKeep){ const q = document.querySelector('#campRune .rnBagG'); if(q) q.scrollTop = _bagKeep; }
   _runeTopSync();
+  // 📐 구역 상단 띠 — **닫는 함수를 부른 뒤에** 켠다(그 안에서 꺼 버린다)
+  if(typeof curSplit === 'function') curSplit(true);
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(장착 / 룬 상점)
   if(_runeSec !== 'shop') campRuneBindMap(); }
 

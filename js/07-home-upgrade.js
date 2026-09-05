@@ -565,6 +565,9 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
     if(typeof campTreeClose==='function') campTreeClose(); }
   // 💠 룬 구역도 같은 규칙 — 나가는 길이 하단 네비뿐이라 여기서 닫는다(2026-09-02).
   if(tab!=='rune'){ if(typeof campRuneClose==='function') campRuneClose(); }
+  // 📐 **구역 상단 띠**는 환생·룬·유즈맵·상점의 것이다 — 캠프로 돌아오면 끈다(2026-09-05).
+  //   ⛔ 캠프에 걸지 말 것: 거기 좌상단은 던전 칩이고 배경이 밝은 돌이라 규칙이 다르다.
+  if(tab==='camp' && typeof curSplit==='function') curSplit(false);
   if(_navSec!==tab){ _navSec=tab; _navDrill=''; }   // 다른 구역으로 갔다 = 최상위로
   navPaint(); }
 // 최상위 칸 — 화면으로 이동하고, 하위가 있으면 그 구역 네비로 내려간다

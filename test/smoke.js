@@ -3225,6 +3225,47 @@ async function groupLobby(){
       C.best=keepB; C.rune=keepR; }
   });
 
+  // 📐 **구역 상단 띠** — 환생 · 룬 · 유즈맵 · 상점이 같은 얼굴을 쓴다(2026-09-05 사용자 확정)
+  await step('구역 상단 띠: 네 화면이 같은 얼굴 · 캠프는 빠진다', async()=>{
+    skipIf(typeof curSplit!=='function'||typeof campRuneEnter!=='function','구역 띠 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    try{
+      C.best={10:50};
+      const bar=()=>document.getElementById('curBar');
+      const on=()=>bar().classList.contains('split');
+      const vis=()=>{ const cs=getComputedStyle(bar()); return cs.display!=='none'; };
+      const line=()=>getComputedStyle(bar(),'::after').height;
+      const seen=[];
+      // ① 네 화면 — 띠가 켜지고 바도 보인다
+      campRuneEnter('slot'); await sleep(120);
+      assert(on(),'룬에 구역 띠가 없다'); assert(vis(),'룬에서 재화 바가 숨겨져 있다');
+      seen.push('룬 '+line());
+      campRebEnter('info'); await sleep(120);
+      assert(on(),'환생에 구역 띠가 없다'); assert(vis(),'환생에서 재화 바가 숨겨져 있다');
+      seen.push('환생 '+line());
+      if(typeof campRebClose==='function') campRebClose();
+      showAppScreen('mapSelect'); await sleep(120);
+      assert(on(),'유즈맵에 구역 띠가 없다'); seen.push('유즈맵 '+line());
+      showAppScreen('shopScreen'); await sleep(120);
+      assert(on(),'상점에 구역 띠가 없다'); seen.push('상점 '+line());
+      // 📏 넷 다 **밑변 광원 한 줄**(1px)이다 — 캠프의 그늘(56/64px)과 다른 것
+      for(const s of seen) assert(s.indexOf('1px')>=0,
+        '밑변 광원이 한 줄이 아니다: '+s+' (캠프 그늘 규칙이 이기고 있다)');
+      // ② 캠프에는 안 걸린다 — 거기 좌상단은 던전 칩이고 배경이 밝은 돌이다
+      if(typeof navShow==='function'){ navShow('camp'); await sleep(150);
+        assert(!on(),'캠프에 구역 띠가 걸렸다 — 던전 칩 자리라 규칙이 다르다');
+        assert(line().indexOf('1px')<0,'캠프의 그늘이 한 줄로 바뀌었다: '+line()); }
+      return '네 화면 ok('+seen.join(' · ')+') · 캠프 제외';
+    } finally { C.best=keepB;
+      if(typeof campRuneClose==='function') campRuneClose();
+      // ⚠ **화면을 원래대로 돌려놓는다** — 이 스텝은 유즈맵·상점·캠프를 오간다.
+      //   그냥 두면 뒤따르는 스텝들이 엉뚱한 화면에서 시작해 줄줄이 깨진다(실측 2026-09-05).
+      if(typeof openHome==='function') openHome();
+      if(typeof navShow==='function') navShow('camp');
+      await sleep(150); }
+  });
+
   // ══ 🛒 룬 상점 — 추천 · 주간 할인 · 일반 (2026-09-04 사용자 확정) ══════
   await step('룬 상점: 추천 셋 · 주간 할인(30% · 재고 1) · 갈래 탭 · 여덟 개 상한', async()=>{
     skipIf(typeof campRuneEnter!=='function'||typeof runeSaleList!=='function','룬 상점 없음');

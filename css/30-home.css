@@ -885,6 +885,28 @@
      ⛔ 판(면·테두리)을 만들지 말 것 — 좌상단은 글자다(칩과 같은 규칙). */
   #phone.campMode .curBar.bare::after{display:block;top:calc(-1 * var(--topPad));height:56px;
     background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.28) 55%,transparent)}
+  /* 📐 **구역 상단 띠**(2026-09-05 사용자 확정 · 목업 docs/mock/top-fill-8.html ③안).
+     환생 · 룬 · 유즈맵 · 상점이 **같은 얼굴**을 쓴다 — 위에서 그늘이 내려오고 아래에서 빛이 올라오며,
+     맨 아래는 밑변 광원 한 줄이다. 그래서 상단이 아래 본문과 **완전히 갈린다**.
+     ⛔ 캠프에는 안 붙는다(켜는 곳은 curSplit 하나 · 12-appshell.js).
+     ⚠ 이 바는 네 화면이 함께 쓰고 배경이 제각각이라 **불투명**해야 한다 —
+       빛은 「비치는」 것이 아니라 「바 안에 칠하는」 것이다.
+     ⚠ .bare 뒤에 와야 그 규칙을 덮는다(유즈맵·상점은 .bare 도 함께 붙는다). */
+  .curBar.split{background:linear-gradient(180deg,rgba(8,12,18,.96),rgba(8,12,18,.90));
+    padding-top:var(--topPad)}
+  .curBar.split::before{content:'';position:absolute;left:0;right:0;top:calc(-1 * var(--topPad));
+    bottom:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,rgba(8,12,18,.96),rgba(8,12,18,.90)),
+      linear-gradient(180deg,rgba(0,0,0,.42),transparent 46%),
+      linear-gradient(0deg,rgba(190,215,255,.13),transparent 62%)}
+  /* 밑변 광원 한 줄 — 바 아래에 붙어 상단 구역의 끝을 긋는다 */
+  /* ⚠ 캠프의 「내려오는 그늘」(#phone.campMode .curBar.bare::after · 56px)이 **더 구체적**이라
+     그냥 .split::after 로는 진다(실측 2026-09-05: 룬에서만 광원선이 안 보였다).
+     그래서 그 조합까지 함께 적는다. ⛔ !important 로 덮지 말 것. */
+  #phone .curBar.split::after,
+  #phone.campMode .curBar.bare.split::after{display:block;content:'';position:absolute;
+    left:0;right:0;top:auto;bottom:0;height:1px;z-index:0;
+    background:var(--edge-light);opacity:.85}
   .curBar .curRes{display:flex;align-items:center;gap:7px;margin-left:auto}   /* 설정 상자가 줄에 합류해 폭이 늘었다 — 간격을 좁혀 HOME 프로필과 겹치지 않게 */
   .curBar .hudSet{margin-left:1px;margin-right:-8px}   /* 오른쪽 끝에 거의 붙인다(.curBar padding 10px 상쇄) */
   .curTitle,

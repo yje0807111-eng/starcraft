@@ -85,6 +85,8 @@ const CUR_SCREENS=['homeScreen','mapSelect','modeSheet','dgScreen','shopScreen',
 // 🧍 인구 칸을 캠프 **밖에서도** 보여 줄 화면(2026-09-03 사용자 확정).
 //   ⚠ 값은 캠프 상태에서 온다 — 캠프를 한 번도 안 열었으면 0/0 이다.
 const POP_SCREENS=['mapSelect','shopScreen'];
+// 📐 구역 상단 띠를 쓰는 화면(환생·룬은 campRebEnter/campRuneEnter 가 직접 켠다)
+const SPLIT_CUR_SCREENS=['mapSelect','shopScreen'];
 const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
   // ⚠ **캐시(_cdKey)도 함께 비운다**(2026-09-04). 칩 내용을 글자로 덮어써 놓고 키를 남기면,
@@ -398,6 +400,17 @@ function campDropGo(){ if(!_cdPick) return;
 
 function curShow(on){ const b=document.getElementById('curBar'), p=document.getElementById('phone');
   if(b) b.classList.toggle('hide', !on); if(p) p.classList.toggle('curOn', !!on); }
+// 📐 **구역 상단 띠**(2026-09-05 사용자 확정 · 목업 top-fill-8 ③안) — 위 그늘 + 아래 오로라 + 밑변 광원.
+//   ⭐ 환생 · 룬 · 유즈맵 · 상점이 **같은 얼굴**을 쓴다. 켜고 끄는 곳은 여기 하나다.
+//   ⛔ 캠프에는 걸지 않는다 — 거기 좌상단은 던전 칩이고 배경이 밝은 돌이라 규칙이 다르다
+//     (캠프는 .curBar.bare 의 「내려오는 그늘」을 그대로 쓴다).
+//   ⛔ 화면마다 background 를 새로 쓰지 말 것 — 이 클래스 하나만 붙인다.
+function curSplit(on){ const b = document.getElementById('curBar');
+  if(!b) return;
+  b.classList.toggle('split', !!on);
+  // ⚠ **바도 함께 켠다** — 환생·룬은 CUR_SCREENS 에 없어서 showAppScreen 이 안 켜 준다.
+  //   띠만 붙이고 바가 꺼져 있으면 상단이 통째로 비어 보인다(실측 2026-09-05).
+  if(on) curShow(true); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
 //   그대로 두면 우측 정렬된 숫자가 왼쪽으로 자라 좌상단 프로필을 덮는다(실제로 겹쳤다).
 //   10만부터 축약한다 — 5자리까지는 콤마 표기를 그대로 둬야 초반 수치를 정확히 읽을 수 있고,
@@ -558,6 +571,7 @@ function showAppScreen(id){ setInGame(false);
   const _cur=CUR_SCREENS.indexOf(id)>=0; curShow(_cur); curSetTitle(SCREEN_TITLE[id]||''); if(_cur) updateCurBar();   // 💠 공용 재화 바
   { const cb=document.getElementById('curBar');                                    // HOME만 배경 위 숫자(.bare) — 다른 화면은 판 그대로
     if(cb) cb.classList.toggle('bare', BARE_CUR_SCREENS.indexOf(id)>=0); }
+  curSplit(SPLIT_CUR_SCREENS.indexOf(id)>=0);                                     // 📐 구역 상단 띠(환생·룬·유즈맵·상점)
   { const ph=document.getElementById('phone');                                     // 🧍 인구 칸을 보여 줄 화면
     if(ph) ph.classList.toggle('popBar', POP_SCREENS.indexOf(id)>=0); }
   // 🧭 가이드 띠는 #phone 직속이라 **화면을 바꿔도 남는다.** 여기서 다시 그려 걷어 낸다
