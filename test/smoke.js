@@ -3608,45 +3608,67 @@ async function groupLobby(){
         for(let n=1,mx=campRtMax(L.k);n<=mx;n++) if(campTreeState(L.k,n)) shown++; }
       assert(shown===0,'갈래를 안 샀는데 계열이 '+shown+'칸 보인다 — 첫 화면이 32개로 붐빈다');
       assert(campTreeBrState('econ')==='buy','갈래를 살 수 있어야 한다');
-      // ⛓ 사슬 갈래 — 관문이 없고, 별 하나가 **여러** 다음 별을 연다
-      { assert(campTreeBrState('start')===null,'사슬 갈래에 갈래 관문이 남아 있다');
-        assert(campTreeGpState('start','가')===null,'사슬 갈래에 묶음 관문이 남아 있다');
-        assert(campTreeState('startMin',1)==='buy','가운데를 샀는데 사슬 첫 별이 안 열렸다');
-        assert(campTreeState('tap',1)===null&&campTreeState('startWk',1)===null,
-          '부모를 안 샀는데 곁가지가 보인다');
-        assert(campTreeState('startMin',2)===null,'첫 별을 안 샀는데 다음 별이 보인다');
-        campRtBuy('startMin');
-        assert(campTreeState('startMin',2)==='buy'&&campTreeState('tap',1)==='buy'
-          &&campTreeState('startWk',1)==='buy','별 하나가 세 갈래를 열지 못한다');
-        assert(campTreeState('skipRd',1)===null,'먼 부모(3차)를 안 샀는데 열렸다');
-        campRtBuy('startMin'); campRtBuy('startMin');          // II · III
-        assert(campTreeState('skipRd',1)==='buy','3차를 샀는데 그 뒤가 안 열렸다');
-        // 좌표 — 사슬은 부모에서 뻗어 나간다(같은 자리에 겹치지 않는다)
-        const a=campTreePos('startMin',1), b=campTreePos('tap',1), c=campTreePos('startWk',1);
-        assert(Math.hypot(a.x-b.x,a.y-b.y)>40&&Math.hypot(b.x-c.x,b.y-c.y)>40,
-          '사슬 별들이 한자리에 겹친다');
+      // ⛓ 사슬 갈래 — 2026-09-04 부터 **쓰는 갈래가 없다**(옛 「시작 도움」이 재화로 합쳐졌다).
+      //   ⛔ 장치는 지우지 않았다(유보) — 표에 키를 하나 넣으면 그 갈래가 다시 사슬이 된다.
+      { assert(typeof CAMP_RT_CHAIN==='object','사슬 장치가 사라졌다 — 유보는 삭제가 아니다');
+        assert(Object.keys(CAMP_RT_CHAIN).length===0,
+          '사슬 갈래가 되살아났다: '+Object.keys(CAMP_RT_CHAIN).join(','));
+        assert(CAMP_RT_LINES.every(L=>!campRtIsChain(L.br)),'사슬 갈래에 속한 계열이 있다');
+        // 🔒 미개봉 갈래 — 보이되 **못 산다**
+        const soon=Object.keys(CAMP_TREE_BR).filter(campTreeBrSoon);
+        assert(soon.length===1,'미개봉 갈래가 하나가 아니다: '+soon.length);
+        assert(!campRtCanBuy('br:'+soon[0]),'미개봉 갈래를 살 수 있다');
+        assert(campTreeBrState(soon[0])==='next','미개봉 갈래가 안 보이거나 살 수 있게 보인다');
+        assert(campRtNodeIco('br:'+soon[0])==='','미개봉 갈래에 남의 그림이 붙었다');
+        assert(CAMP_RT_LINES.every(L=>L.br!==soon[0]),'미개봉 갈래에 계열이 들어 있다');
+        // ⛔ 옛 사슬 전제(가운데만 사면 첫 별이 열린다)는 지웠다 — 이제 모든 갈래가 관문을 거친다.
+        // 📐 대신 **관문 순서**를 잰다: 갈래 → 묶음 → 계열 (모든 갈래가 같은 구조다)
+        { const Lg=campRtLine('gather');
+          C.rbTree={root:1,_m2:1}; C.rbPts=1e9;
+          assert(campTreeState('gather',1)===null,'갈래를 안 샀는데 계열이 보인다');
+          C.rbTree['br:'+Lg.br]=1;
+          assert(campTreeState('gather',1)===null,'묶음을 안 샀는데 계열이 보인다');
+          C.rbTree['gp:'+Lg.br+Lg.grp]=1;
+          assert(campTreeState('gather',1)==='buy','묶음을 샀는데 계열이 안 열린다');
+          assert(campTreeState('gather',3)===null,'앞 차수를 안 샀는데 뒤가 보인다'); }
+        // 좌표 — 같은 묶음의 형제가 한자리에 겹치지 않는다
+        //   ⚠ 계열 이름을 손으로 박지 말 것 — 표에서 같은 묶음의 둘을 꺼낸다
+        { const Lg=campRtLine('gather');
+          const sib=CAMP_RT_LINES.filter(L=>L.br===Lg.br&&L.grp===Lg.grp);
+          assert(sib.length>=2,'같은 묶음에 형제가 없다(검사 불가)');
+          const a=campTreePos(sib[0].k,1), b=campTreePos(sib[1].k,1);
+          assert(Math.hypot(a.x-b.x,a.y-b.y)>30,'같은 묶음의 별이 한자리에 겹친다'); }
         C.rbTree={root:1,_m2:1}; C.rbPts=1e9; }
       assert(campTreeGpState('econ','가')===null,'갈래를 안 샀는데 묶음이 보인다');
       // ② 갈래를 사면 묶음이, 묶음을 사면 계열이 열린다
       assert(campRtCanBuy('br:econ'),'갈래를 못 산다');
       campRtBuy('br:econ');
-      assert(campTreeGpState('econ','가')==='buy','갈래를 샀는데 묶음이 안 열렸다');
-      assert(campTreeState('gather',1)===null,'묶음을 안 샀는데 계열이 보인다');
-      campRtBuy('gp:econ가');
+      { const gg=campRtLine('gather').grp;      // ⚠ 묶음은 표에서 — 손으로 박으면 재편 때 깨진다
+        assert(campTreeGpState('econ',gg)==='buy','갈래를 샀는데 묶음이 안 열렸다');
+        assert(campTreeState('gather',1)===null,'묶음을 안 샀는데 계열이 보인다');
+        campRtBuy('gp:econ'+gg); }
       assert(campTreeState('gather',1)==='buy','묶음을 샀는데 계열 1차가 안 열렸다');
       assert(campTreeState('gather',2)===null,'1차를 안 샀는데 2차가 보인다 — 다음 한 칸만 보여야 한다');
       // ③ ⛔ **짝 조건(관문)은 없앴다**(2026-09-01) — 계열은 제 앞 차수만 보면 된다.
       //   되살리면 「왜 못 사는지」를 한 겹 더 읽어야 해서 걷어냈다.
-      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:3,gas:1};
+      { const Lg=campRtLine('gather');
+        C.rbTree={root:1,_m2:1,gather:3};
+        C.rbTree['br:'+Lg.br]=1; C.rbTree['gp:'+Lg.br+Lg.grp]=1;
+        // 짝(같은 묶음의 다른 계열)은 1차만 — 그래도 4차가 열려야 한다
+        const sib=CAMP_RT_LINES.find(L=>L.br===Lg.br&&L.grp===Lg.grp&&L.k!=='gather'&&!L.pa);
+        if(sib) C.rbTree[sib.k]=1; }
       assert(campTreeState('gather',4)==='buy','짝이 1차라고 4차가 막혔다 — 관문이 되살아났다');
       assert(campRtCanBuy('gather'),'앞 차수를 샀는데 못 산다');
       assert(typeof CAMP_RT_GATE_N==='undefined'&&typeof campRtGateOk==='undefined',
         '관문 상수·함수가 남아 있다');
       // ④ 🕰 옛 저장본 — 마디가 없던 자루도 살려낸다(안 그러면 산 계열이 화면에서 사라진다)
       C.rbTree={root:1,gather:2};
-      assert(campRtBrOn('econ')&&campRtGpOn('econ','가'),'옛 저장본의 마디가 안 채워졌다');
+      { const Lg=campRtLine('gather');
+        assert(campRtBrOn(Lg.br)&&campRtGpOn(Lg.br,Lg.grp),'옛 저장본의 마디가 안 채워졌다'); }
       // ⑤ 되돌리면 **마디 값도** 함께 돌아온다(안 그러면 되돌릴수록 포인트가 샌다)
-      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1}; C.rbPts=0;
+      { const Lg=campRtLine('gather');
+        C.rbTree={root:1,_m2:1}; C.rbTree['br:'+Lg.br]=1; C.rbTree['gp:'+Lg.br+Lg.grp]=1; }
+      C.rbPts=0;
       const back=campRtReset();
       assert(back===CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST,
         '되돌린 값이 마디를 빠뜨렸다: '+back);
@@ -3748,7 +3770,7 @@ async function groupLobby(){
       const brOnly=campRtMul('gather');
       assert(Math.abs(brOnly-(1+CAMP_RT_NODE_BR))<1e-9,'갈래 마디 몫이 안 붙는다: '+brOnly);
       // ③ 묶음 마디까지 사면 **더해진다**(곱이 아니다)
-      C.rbTree={root:1,'br:econ':1,'gp:econ가':1};
+      C.rbTree={root:1,'br:econ':1}; C.rbTree['gp:econ'+campRtLine('gather').grp]=1;
       const both=campRtMul('gather');
       assert(Math.abs(both-(1+CAMP_RT_NODE_BR+CAMP_RT_NODE_GP))<1e-9,'마디 둘이 합으로 안 붙는다: '+both);
       // ④ 계열을 산 값에도 그대로 더해진다
@@ -3759,16 +3781,26 @@ async function groupLobby(){
       // ⑤ 다른 갈래에는 안 샌다
       assert(campRtMul('atk')===1,'재화 마디가 아군 갈래까지 세게 한다: '+campRtMul('atk'));
       // ⑥ 다른 묶음에도 안 샌다 — 묶음 마디는 제 묶음까지만
-      C.rbTree={root:1,'br:econ':1,'gp:econ가':1};
-      const other=campRtMul('idle');   // econ 다 묶음
-      assert(Math.abs(other-(1+CAMP_RT_NODE_BR))<1e-9,'묶음 마디가 남의 묶음까지 간다: '+other);
+      // ⚠ **다른 묶음의 계열을 표에서 찾아 쓴다** — 손으로 박으면 재편 때 조용히 같은 묶음이 된다
+      //   (2026-09-04 실제로 그랬다: idle 이 econ 다 → 가 로 옮겨 가드가 거짓 실패했다).
+      { const g0=campRtLine('gather').grp;
+        C.rbTree={root:1,'br:econ':1}; C.rbTree['gp:econ'+g0]=1;
+        const oth=CAMP_RT_LINES.find(L=>L.br==='econ'&&L.grp!==g0&&!L.pa);
+        assert(oth,'재화 갈래에 다른 묶음 계열이 없다(검사 불가)');
+        const other=campRtMul(oth.k);
+        assert(Math.abs(other-(1+CAMP_RT_NODE_BR))<1e-9,
+          '묶음 마디가 남의 묶음('+oth.k+')까지 간다: '+other); }
       // ⑦ 적 약화는 **상한을 안 넘는다** — 넘기면 갈래 하한이 뚫린다
-      C.rbTree={root:1,'br:enemy':1,'gp:enemy가':1,foeHp:campRtMax('foeHp')};
+      { const Lf=campRtLine('foeHp');
+        C.rbTree={root:1,foeHp:campRtMax('foeHp')};
+        C.rbTree['br:'+Lf.br]=1; C.rbTree['gp:'+Lf.br+Lf.grp]=1; }
       assert(campRtCut('foeHp')<=CAMP_RT_CUT_MAX+1e-9,'마디 몫이 계열 상한을 넘겼다: '+campRtCut('foeHp'));
       // ⑦-b 🚪 **마디도 제 그림을 갖는다**(2026-09-02) — 빈 검은 원이던 자리다.
       //   ⚠ 한 장만 빠져도 그 마디 하나가 다시 빈 원이 된다 — 15개 중 하나를 눈으로는 못 찾는다.
       { const want=[];
         for(const bk in CAMP_TREE_BR){ if(campRtIsChain(bk)) continue;
+          // 🔒 미개봉 갈래는 **그림이 없는 것이 정상**이다(2026-09-04) — 뜻이 「아직 모른다」다
+          if(campTreeBrSoon(bk)) continue;
           want.push(CAMP_RT_BR_KEY(bk));
           for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(bk,g)) want.push(CAMP_RT_GP_KEY(bk,g)); }
         const bad=want.filter(k=>!campRtNodeIco(k));
@@ -3895,7 +3927,9 @@ async function groupLobby(){
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
     try{
-      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2}; campRebEnter('tree'); campTreeRender();
+      C.rbTree={root:1,_m2:1,'br:econ':1,gather:2};
+      C.rbTree['gp:econ'+campRtLine('gather').grp]=1;
+      campRebEnter('tree'); campTreeRender();
       const B=campTreeBounds(); assert(B&&B.n>0,'별 범위를 못 구했다');
       const svg=document.getElementById('ctSvg'), vb=svg.getAttribute('viewBox').split(/\s+/).map(Number);
       const hw=vb[2]/2, hh=vb[3]/2;
@@ -3974,7 +4008,9 @@ async function groupLobby(){
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
     try{
-      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:1};
+      // ⚠ 묶음을 손으로 박지 말 것 — 계열은 재편될 수 있다(2026-09-04 에 gather 가 가 → 나)
+      C.rbTree={root:1,_m2:1,'br:econ':1,gather:1};
+      C.rbTree['gp:econ'+campRtLine('gather').grp]=1;
       _campTreeSel=null; campRebEnter('tree'); campTreeRender();
       // ① 안 산 별의 테두리 = **갈래 색 흐린 그라디언트**. ⛔ 회색 평평한 선으로 되돌리지 말 것.
       { const g=[...document.querySelectorAll('#ctG .ctGem')].filter(e=>!e.classList.contains('on'));
@@ -4036,7 +4072,9 @@ async function groupLobby(){
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
     try{
-      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2}; campRebEnter('tree'); campTreeRender();
+      C.rbTree={root:1,_m2:1,'br:econ':1,gather:2};
+      C.rbTree['gp:econ'+campRtLine('gather').grp]=1;
+      campRebEnter('tree'); campTreeRender();
       campTreeFit(true); campTreeViewSync();
       const fitZ=campTreeViewT().z;
       // 「지금 보고 있는 배율」에서 출발한다 — 전체 보기보다 이미 확대돼 있는 상태
