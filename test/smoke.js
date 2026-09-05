@@ -3666,9 +3666,20 @@ async function groupLobby(){
           assert((C.rbPts|0)===0,'가운데를 샀는데 포인트가 안 깎였다: '+C.rbPts); }
       // 새로운 시작은 **절대값**이다 — 배수면 §4-5-5 곱셈 상한 표에 축이 하나 더 늘어 폭주한다
       assert(typeof campRootGrant==='function','새로운 시작이 배선되지 않았다');
-      assert(CAMP_ROOT_MIN>0&&CAMP_ROOT_WK>0,'새로운 시작이 비어 있다');
+      // 🌟 새로운 시작 — **미네랄 50 + 터치 강화 1**(2026-09-04 사용자 확정).
+      //   ⛔ 일꾼을 되돌리지 말 것: 1 포인트에 자동 수급까지 열리는 것이 과했다.
+      //     자동 축은 「시작 일꾼」 계열이 따로 판다.
+      assert(CAMP_ROOT_MIN>0,'새로운 시작이 비어 있다');
+      assert(CAMP_ROOT_WK===0,'새로운 시작이 일꾼을 다시 준다 — 자동 수급이 공짜로 열린다');
+      assert(CAMP_ROOT_TAP>0,'새로운 시작이 터치 강화를 안 준다');
+      { const C2=campState(); C2.upg={};
+        const before=campTapGain();
+        campRootGrant();
+        assert(campUpgLv('tap')>=CAMP_ROOT_TAP,'새로운 시작이 터치 강화 레벨을 안 얹는다');
+        assert(campTapGain()>before,'터치 강화를 줬는데 획득량이 그대로');
+        C2.upg={}; }
       return '갈래→묶음→계열 · 짝 조건 없음 · 옛 저장본 잇기 · 환급 '+back+
-        ' · 새로운 시작 '+CAMP_ROOT_MIN+'/'+CAMP_ROOT_WK+'기'+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
+        ' · 새로운 시작 미네랄 '+CAMP_ROOT_MIN+'·터치 '+CAMP_ROOT_TAP+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
     } finally { C.rbTree=keepT; C.rbPts=keepP; } });
 
   // ⛽→💠 가스를 미네랄로 (2026-09-02 사용자 요청)
@@ -7324,7 +7335,9 @@ async function groupLobby(){
     // ⚠ openHome() 이 loadMeta() 로 프로필을 다시 읽으므로 위에서 잡은 C 는 낡은 참조다.
     //    상태를 만질 땐 **그때그때 campState() 로 다시 가져온다**(코드 쪽은 늘 그렇게 한다).
     // ④ 업그레이드는 **정수 레벨** — 나중에 무한 티어가 얹힐 수 있어야 한다
-    { const S=campState(); S.upg=S.upg||{};
+    // ⚠ **0레벨에서 시작한다** — 「새로운 시작」이 터치 강화 1을 얹으므로(2026-09-04)
+    //   그냥 재면 1→1 이 되어 「안 오른다」로 잘못 잡힌다.
+    { const S=campState(); S.upg=S.upg||{}; S.upg.tap=0;
       const g0=campTapGain(); S.upg.tap=1; const g1=campTapGain();
       assert(g1>g0,'업그레이드 1레벨인데 획득량이 그대로: '+g0+'→'+g1); S.upg.tap=0; }
     // ⑤ 던전 배수는 탭에도 걸린다(탭·일꾼 한쪽만 오르면 비율이 무너진다)

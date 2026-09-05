@@ -702,8 +702,13 @@ const CAMP_RT_ROOT_COST = 1;
 //     일꾼 1기(140) + 미네랄 100 = **240 미네랄**, 탭만으로 벌면 4분 남짓이다.
 //   ⚠ HUNT_R1 §4-2-0 ① 은 「첫 환생 보상을 **후하게**」라고 적었는데 이 값은 그보다 가볍다 —
 //     사용자가 2026-09-01 에 직접 정한 값이다(옛 200/3기/병영에서 내렸다). 실측 뒤 다시 볼 자리.
-const CAMP_ROOT_MIN = 100;          // 시작 미네랄
-const CAMP_ROOT_WK = 1;             // 시작 일꾼 — 한 기부터 자동 수급이 돈다
+// ⭐ **1 포인트치고 너무 컸다**(2026-09-04 사용자 판단) — 옛 값은 미네랄 100 + 일꾼 1기 = 240 미네랄
+//   어치였다(일꾼 첫 마리가 140). 첫 환생이 정확히 1 포인트를 주는데 그 대가로 자동 수급까지
+//   열리는 것은 과했다. ⇒ **미네랄 50 + 터치 강화 1레벨**로 내렸다.
+//   ⭐ 일꾼(자동 수급)을 뺀 것이 요점이다 — 자동 축은 이제 「시작 일꾼」 계열이 따로 판다.
+const CAMP_ROOT_MIN = 50;           // 시작 미네랄
+const CAMP_ROOT_WK = 0;             // 시작 일꾼 — ⛔ 0 이다(옛 1기는 자동 수급을 공짜로 열었다)
+const CAMP_ROOT_TAP = 1;            // 시작 터치 강화 레벨
 //   🗄 시작 건물은 **화면에서만 뺐다**(유보 규칙) — null 이면 안 준다. 배선은 아래에 그대로 있다.
 const CAMP_ROOT_BLD = null;
 const CAMP_RT_BR_COST = 8;      // 갈래 마디 값 (티어 2 기준값)
@@ -1791,8 +1796,10 @@ function campTreeInfo(){
     host.innerHTML =
       campTreeSheetRow('tree/root.webp', CAMP_TREE_ROOT_COL, '새로운 시작', '',
         campTreeRecoTag('root')) +
-      '<div class="ctDesc">회차 시작 시 미네랄 <b>' + campNum(CAMP_ROOT_MIN) + '</b> · 일꾼 <b>' +
-      CAMP_ROOT_WK + '</b>' + (bldNm ? ' · ' + bldNm + ' <b>1</b>' : '') + '</div>' +
+      '<div class="ctDesc">회차 시작 시 미네랄 <b>' + campNum(CAMP_ROOT_MIN) + '</b>' +
+      (CAMP_ROOT_TAP > 0 ? ' · 터치 강화 <b>' + CAMP_ROOT_TAP + '</b>' : '') +
+      (CAMP_ROOT_WK > 0 ? ' · 일꾼 <b>' + CAMP_ROOT_WK + '</b>' : '') +
+      (bldNm ? ' · ' + bldNm + ' <b>1</b>' : '') + '</div>' +
       campTreeBuyBtn('root', !own && can, own ? '보유' : (can ? '해 금' : '포인트 부족'),
         own ? null : CAMP_RT_ROOT_COST);
     return; }
@@ -4413,9 +4420,15 @@ function campLayBase(){
 //   ⛔ 여기서 배수를 곱하지 말 것 — 새로운 시작은 절대값이라 후반에 저절로 희석되는 것이 설계다.
 function campRootGrant(){
   if(typeof G === 'undefined' || !G.tech || !campRtRootOn()) return null;
-  const got = { min:0, wk:0, bld:null };
+  const got = { min:0, wk:0, tap:0, bld:null };
   G.tech.credit = (G.tech.credit || 0) + CAMP_ROOT_MIN;
   got.min = CAMP_ROOT_MIN;
+  // ⛏ 터치 강화 — **레벨을 얹는다**(값을 직접 만지지 않는다). campTapGain 이 이미 이 레벨을
+  //   단일 소스로 읽으므로, 여기 한 줄이면 표시·비용·마일스톤이 전부 따라온다.
+  //   ⚠ C.upg 는 회차마다 비워지므로(campRebirth), 여기서 얹는 것이 곧 「회차 시작 시」다.
+  if(CAMP_ROOT_TAP > 0){ const C = campState();
+    if(C){ C.upg = C.upg || {}; if((C.upg.tap | 0) < CAMP_ROOT_TAP) C.upg.tap = CAMP_ROOT_TAP;
+      got.tap = CAMP_ROOT_TAP; } }
   // 👷 일꾼 — 광맥 위에 나란히. 좌표는 campLayBase 의 첫 일꾼 자리를 기준으로 옆으로 벌린다.
   const cw = (typeof _techCW === 'function') ? _techCW() : 0.02;
   const ch = (typeof _techCH === 'function') ? _techCH() : 0.02;
