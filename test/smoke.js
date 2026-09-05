@@ -2576,6 +2576,30 @@ async function groupLobby(){
               chk(campCritRoll()===1,'피버 중인데 치명이 또 터졌다 — 배수가 곱해진다'); }
           } finally { Math.random=realR; C.rbTree=keepT;
             if(typeof campFevReset==='function') campFevReset(); } }
+        // ⛏ 일꾼 채굴 치명 — 확률은 **따로**(노다지), 배수는 **같은 것**(일격)
+        if(typeof campGCritPct==='function' && typeof campGatherCritRoll==='function'){
+          const g0=campGCritPct();
+          chk(g0>0,'일꾼 채굴 치명 기본 확률이 없다');
+          put('gcrit','high'); const wG=1+runeVal(runeKey('gcrit','high'));
+          chk(Math.abs(campGCritPct()/g0-wG)<0.01,'노다지의 룬이 채굴 치명 확률에 안 걸린다: ×'+(campGCritPct()/g0).toFixed(3));
+          chk(Math.abs(campCritPct()-p0)<1e-9,'노다지의 룬이 터치 치명 확률까지 건드렸다');
+          clear();
+          // ⭐ **배수는 하나다** — 일격의 룬이 채굴 치명에도 걸려야 한다
+          put('critm','high');
+          const realR=Math.random; try{ Math.random=()=>0;
+            const on=(typeof campIsOn==='function')&&campIsOn();
+            if(on) chk(Math.abs(campGatherCritRoll()-campCritMul())<1e-9,
+              '일격의 룬이 채굴 치명 배수에 안 걸린다: '+campGatherCritRoll()+' / '+campCritMul());
+            else chk(campGatherCritRoll()===1,'캠프 밖인데 채굴 치명이 걸린다 — 관리자 탭까지 번진다');
+          } finally { Math.random=realR; }
+          // 자리 — 일꾼이 반납하는 곳은 techTick 안의 _techGatherTick 하나다.
+          //   ⚠ **부르는 것만 보면 안 된다**(2026-09-05 레드 테스트로 드러난 구멍): 굴려 놓고
+          //     지급에 안 곱해도 이름은 그대로 남아 통과했다. 곱하는 것까지 함께 본다.
+          chk(typeof _techGatherTick==='function' && /campGatherCritRoll\(\)/.test(String(_techGatherTick)),
+            '_techGatherTick 이 campGatherCritRoll 을 안 쓴다 — 채굴 치명이 어디에도 안 닿는다');
+          chk(typeof _techGatherTick==='function' && /credit\s*\+=\s*_got\s*\*/.test(String(_techGatherTick)),
+            '_techGatherTick 이 채굴 치명을 지급에 안 곱한다 — 굴리기만 하고 버린다');
+          clear(); }
         // 자리도 잠근다 — 탭 경로 둘이 **같은 함수**를 써야 한다(수식이 두 벌이 되면 어긋난다)
         chk(typeof campTapRoll==='function','campTapRoll 이 없다 — 탭 경로가 갈렸다');
         chk(/campTapRoll\(\)/.test(String(campMineOnce)),'campMineOnce 가 campTapRoll 을 안 쓴다');
@@ -2591,7 +2615,7 @@ async function groupLobby(){
         chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
         clear(); }
       assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
-      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·치명 터치·유즈맵(젬 제외)·회복 ok';
+      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·치명(터치·채굴)·유즈맵(젬 제외)·회복 ok';
     } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
       if(typeof campRuneTouch==='function') campRuneTouch();
       if(typeof campWipeField==='function') campWipeField();
@@ -7007,7 +7031,12 @@ async function groupLobby(){
       //     ⭐ 그래도 **최대치가 연타에 못 미쳐야** 한다: 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이다.
       //       실측(2026-08-27 · 30분): 연타 6탭 127만 / 홀드 최대(실효 3.3탭) 56만 = 44%.
       // ⚠ 배수 **장치**는 2 로 재야 한다 — 지금 설정값이 1 이라 그대로 재면 늘 통과하는 헛검사가 된다.
-      { const g1=campMineOnce(10,10,false), gM=campMineOnce(10,10,false,2);
+      // ⚠ **주사위를 고정하고 잰다**(2026-09-05). 탭에는 이제 ✨치명 터치(확률 배수)가 붙어 있어
+      //   그냥 두 번 부르면 한쪽만 치명이 떠서 비가 2 가 아니게 된다(실제로 1 → 4 가 나왔다).
+      { const realR=Math.random; let g1, gM;
+        try{ Math.random=()=>1;                     // 치명·피버 둘 다 안 뜨는 주사위
+          g1=campMineOnce(10,10,false); gM=campMineOnce(10,10,false,2);
+        } finally { Math.random=realR; }
         assert(gM===g1*2,'홀드 배수 장치가 안 걸린다: '+g1+' → '+gM);
         // 최대까지 올려도 연타(초당 ~6회)를 넘지 않는다
         const holdPerSec=(1000/CAMP_HOLD_MIN)*CAMP_HOLD_MUL;

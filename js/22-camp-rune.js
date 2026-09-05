@@ -81,8 +81,13 @@ const RUNE_LIST = [
   //     (24칸 중 8칸을 이 룬으로 채우면 +40% → 14%).
   { id:'crit',  nm:'예리의 룬',   kind:'norm', grp:'eco',  eff:'critPct', ico:'upg',
     de:'치명 터치 확률' },
+  // ⚠ 배수는 **터치와 채굴 둘 다**에 걸린다(2026-09-05 사용자 확정) — 그래서 이름이 「치명 배수」다.
+  //   ⛔ 채굴용 배수 룬을 따로 만들지 말 것: 「치명 배수」가 두 벌이 되어 표기가 갈린다.
   { id:'critm', nm:'일격의 룬',   kind:'norm', grp:'eco',  eff:'critMul', ico:'coin',
-    de:'치명 터치 배수' },
+    de:'치명 배수(터치·채굴)' },
+  // ⛏ 일꾼 왕복의 치명 **확률**. 터치와 빈도가 전혀 달라 한 값으로 못 묶는다.
+  { id:'gcrit', nm:'노다지의 룬', kind:'norm', grp:'eco',  eff:'gcritPct', ico:'coin',
+    de:'일꾼 채굴 치명 확률' },
 
   // ⚔ 전투 — 던전에서 싸우는 것
   { id:'atk',   nm:'힘의 룬',     kind:'norm', grp:'war',  eff:'atk',     ico:'upg',

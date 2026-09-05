@@ -5214,6 +5214,21 @@ function campCritRoll(){
   if(typeof campFevActive === 'function' && campFevActive()) return 1;   // ⛔ 피버 중에는 쉰다
   return (Math.random() < campCritPct()) ? campCritMul() : 1; }
 
+// ⛏ **일꾼 채굴 치명** (2026-09-05 사용자 확정) — 일꾼이 한 번 캐 온 것이 배가 된다.
+//   ⭐ **배수는 터치 치명과 같은 것을 쓴다**(일격의 룬 하나가 둘 다 키운다 · 사용자 확정).
+//     ⛔ 채굴용 배수를 따로 두지 말 것 — 그러면 「치명 배수」가 두 벌이 되어 표기가 갈린다.
+//   ⚠ **확률만 따로다**(노다지의 룬). 터치와 채굴은 빈도가 전혀 달라서 한 값으로 못 묶는다.
+//   ⚠ 캠프 밖에서는 늘 1 이다 — 건설 판(16-build.js)은 관리자 탭·오토배틀과 **공유**다.
+//   ⚠ **광맥은 원래 몫만 줄어든다.** 치명은 덤이지 더 캔 것이 아니다 —
+//     잔량까지 배로 깎으면 치명이 뜰수록 광맥이 빨리 마른다(그건 벌이 아니라 벌금이다).
+const CAMP_GCRIT_PCT = 0.10;   // 왕복 한 번이 치명이 될 확률
+function campGCritPct(){
+  const rm = (typeof campRuneMul === 'function') ? campRuneMul('gcritPct') : 1;
+  return Math.min(1, CAMP_GCRIT_PCT * rm); }
+function campGatherCritRoll(){
+  if(!(typeof campIsOn === 'function' && campIsOn())) return 1;
+  return (Math.random() < campGCritPct()) ? campCritMul() : 1; }
+
 // ⛏ **탭 한 번의 획득 — 탭 경로 둘이 함께 쓴다.**
 //   ⛔ 어느 한쪽에서 수식을 다시 쓰지 말 것(두 벌이 되면 반드시 어긋난다 — 이 파일의 오랜 규칙).
 //   ⚠ 판정 순서가 중요하다: 피버를 **먼저** 굴려야 이번 탭이 그 배수를 탄다.
