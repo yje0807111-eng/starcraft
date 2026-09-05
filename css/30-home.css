@@ -2802,16 +2802,18 @@
 #campRune .rnShopRw{display:flex;align-items:center;gap:8px;padding:6px 2px}
 #campRune .rnShopRw + .rnShopRw{border-top:1px solid rgba(255,255,255,.07)}
 #campRune .rnShopRw .rnRwT{flex:1 1 auto;min-width:0}
-#campRune .rnShopRw .rnRwB{margin-left:auto;display:flex;gap:4px;flex:none}
-/* 작은 등급 버튼 — 가방의 육각 자리에 값(젬)이 온다 */
+#campRune .rnShopRw .rnRwB{margin-left:auto;display:flex;gap:3px;flex:none}
+/* 작은 등급 버튼 — 가방의 육각 자리에 값(젬)이 온다.
+   ⚠ **등급이 넷이 됐다**(2026-09-05 · 유니크가 등급이 되면서). 폭을 60 → 46 으로 줄였다 —
+     넷을 60px 로 두면 줄이 넘쳐 이름이 두 줄로 접히고 줄 높이가 66px 이 된다(스모크가 잰다). */
 #campRune .rnBuyS{position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;min-width:60px;padding:5px 6px;cursor:pointer;
+  justify-content:center;gap:1px;min-width:46px;padding:5px 3px;cursor:pointer;
   border:1px solid color-mix(in srgb,var(--rg) 60%,transparent);border-radius:var(--r-sm);
   background:rgba(255,255,255,.04);font-family:inherit}
 #campRune .rnBuyS:disabled{opacity:.42;cursor:default}
 #campRune .rnBuyS b{font-size:10px;color:var(--rg);font-weight:600}
-#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:3px;
-  font-family:var(--font-num);font-size:11.5px;font-weight:700;color:#e2b6ff}
+#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:2px;
+  font-family:var(--font-num);font-size:10.5px;font-weight:700;color:#e2b6ff}
 #campRune .rnBuyS u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
 #campRune .rnBuyS u.max{color:#69737f;font-size:10px}
 #campRune .rnBuyS.sale{border-color:color-mix(in srgb,var(--rg) 85%,transparent);
