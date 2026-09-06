@@ -2345,9 +2345,12 @@ async function groupLobby(){
       // ⭐ **일반은 칸(24)이 종류(9)보다 많다**(2026-09-03 사용자 확정 · 성좌 판).
       //   그래서 선택은 「무엇을 끼우나」가 아니라 **「어느 축에 몇 칸을 주나」**다.
       //   ⛔ 같은 룬의 중복 장착을 막지 말 것 — 막으면 9종이 그냥 다 끼워져 고를 것이 사라진다.
-      //   ⛔ 유니크는 반대다 — 종류(4)가 칸(3)보다 많아야 하나를 버리는 선택이 남는다.
-      { const nU=RUNE_LIST.filter(x=>x.kind==='uniq').length;
-        assert(nU>RUNE_SLOT_R.uniq.length,'유니크 종류('+nU+')가 칸('+RUNE_SLOT_R.uniq.length+')보다 많지 않다');
+      //   🎚 **유니크는 등급이다**(2026-09-05 사용자 확정) — 별개 룬 종류가 아니다.
+      //     ⛔ `kind:'uniq'` 로 되돌리지 말 것. 유니크 칸(3)에는 **아무 룬의 유니크 등급**이
+      //       들어가되, 갈래는 성좌가 정한다(경제 성좌 중심 = 경제 룬의 유니크 등급).
+      { assert(RUNE_GRADES.join(',')==='low,mid,high,uniq','등급이 넷이 아니다: '+RUNE_GRADES.join(','));
+        assert(!RUNE_LIST.some(x=>x.kind),'룬에 kind 가 남아 있다 — 유니크는 등급이지 종류가 아니다');
+        assert(RUNE_LIST.length>RUNE_SLOT_R.uniq.length,'룬 종류가 유니크 칸보다 적다');
         // 같은 룬을 두 칸에 — 보유한 만큼 끼워지고 효과도 그만큼 쌓인다
         R.norm=[]; R.own={}; R.own[k1]=2;
         assert(campRuneEquip('norm',0,k1)&&campRuneEquip('norm',1,k1),'같은 룬을 두 칸에 못 끼운다');
@@ -2396,7 +2399,7 @@ async function groupLobby(){
     // ⚠ **칸마다 들어갈 갈래가 정해져 있다**(2026-09-04) — 아무 빈 칸이나 잡으면 안 끼워진다.
     const put=(id,gd)=>{ const k=runeKey(id,gd); const R=campRuneState();
       R.own[k]=(R.own[k]|0)+1;
-      const kind=(runeParse(k).def.kind==='uniq')?'uniq':'norm';
+      const kind=runeBucket(k);
       const n=campRuneSlots(kind);
       for(let i=0;i<n;i++) if(!R[kind][i] && campRuneCanEquip(kind,i,k)) return campRuneEquip(kind,i,k)&&k;
       return false; };
@@ -2551,6 +2554,104 @@ async function groupLobby(){
             'campFevRoll 이 campFevPct 를 안 쓴다 — 열기의 룬이 어디에도 안 닿는다');
         } finally { C.rbTree=keepT; }
         clear(); }
+      // ⑥-4 ✨ 치명 터치 — 예리(확률)·일격(배수) 둘이 **다른 자리**에 걸린다.
+      //   ⛔ 피버와 곱하지 않는다 — 피버 중에는 치명이 쉰다.
+      if(typeof campCritPct==='function' && typeof campCritRoll==='function'){
+        const p0=campCritPct(), m0=campCritMul();
+        chk(p0>0 && m0>1,'치명 터치 기본값이 없다: '+p0+' · ×'+m0);
+        put('crit','high'); const wP=1+runeVal(runeKey('crit','high'));
+        chk(Math.abs(campCritPct()/p0-wP)<0.01,'예리의 룬이 치명 확률에 안 걸린다: ×'+(campCritPct()/p0).toFixed(3));
+        chk(Math.abs(campCritMul()-m0)<1e-9,'예리의 룬이 치명 배수까지 건드렸다');
+        clear();
+        put('critm','high'); const wM=1+runeVal(runeKey('critm','high'));
+        chk(Math.abs(campCritMul()/m0-wM)<0.01,'일격의 룬이 치명 배수에 안 걸린다: ×'+(campCritMul()/m0).toFixed(3));
+        chk(Math.abs(campCritPct()-p0)<1e-9,'일격의 룬이 치명 확률까지 건드렸다');
+        clear();
+        // ⛔ **피버 중에는 안 굴린다.** 곱하면 ×36 이 나온다 — 그 한 번을 노리는 놀이가 된다.
+        { const keepT=JSON.parse(JSON.stringify(C.rbTree||{}));
+          const realR=Math.random;
+          try{
+            C.rbTree=Object.assign({}, C.rbTree, { fever:1 });
+            Math.random=()=>0;                          // 무조건 치명이 뜨는 주사위
+            chk(campCritRoll()>1,'확률 1 인데 치명이 안 떴다 — 검사 준비 실패');
+            if(typeof campFevRoll==='function'){ campFevRoll();
+              chk(campFevActive(),'피버가 안 켜졌다 — 겹침을 못 잰다');
+              chk(campCritRoll()===1,'피버 중인데 치명이 또 터졌다 — 배수가 곱해진다'); }
+          } finally { Math.random=realR; C.rbTree=keepT;
+            if(typeof campFevReset==='function') campFevReset(); } }
+        // ⛏ 일꾼 채굴 치명 — 확률은 **따로**(노다지), 배수는 **같은 것**(일격)
+        if(typeof campGCritPct==='function' && typeof campGatherCritRoll==='function'){
+          const g0=campGCritPct();
+          chk(g0>0,'일꾼 채굴 치명 기본 확률이 없다');
+          put('gcrit','high'); const wG=1+runeVal(runeKey('gcrit','high'));
+          chk(Math.abs(campGCritPct()/g0-wG)<0.01,'노다지의 룬이 채굴 치명 확률에 안 걸린다: ×'+(campGCritPct()/g0).toFixed(3));
+          chk(Math.abs(campCritPct()-p0)<1e-9,'노다지의 룬이 터치 치명 확률까지 건드렸다');
+          clear();
+          // ⭐ **배수는 하나다** — 일격의 룬이 채굴 치명에도 걸려야 한다
+          put('critm','high');
+          const realR=Math.random; try{ Math.random=()=>0;
+            const on=(typeof campIsOn==='function')&&campIsOn();
+            if(on) chk(Math.abs(campGatherCritRoll()-campCritMul())<1e-9,
+              '일격의 룬이 채굴 치명 배수에 안 걸린다: '+campGatherCritRoll()+' / '+campCritMul());
+            else chk(campGatherCritRoll()===1,'캠프 밖인데 채굴 치명이 걸린다 — 관리자 탭까지 번진다');
+          } finally { Math.random=realR; }
+          // 자리 — 일꾼이 반납하는 곳은 techTick 안의 _techGatherTick 하나다.
+          //   ⚠ **부르는 것만 보면 안 된다**(2026-09-05 레드 테스트로 드러난 구멍): 굴려 놓고
+          //     지급에 안 곱해도 이름은 그대로 남아 통과했다. 곱하는 것까지 함께 본다.
+          chk(typeof _techGatherTick==='function' && /campGatherCritRoll\(\)/.test(String(_techGatherTick)),
+            '_techGatherTick 이 campGatherCritRoll 을 안 쓴다 — 채굴 치명이 어디에도 안 닿는다');
+          chk(typeof _techGatherTick==='function' && /credit\s*\+=\s*_got\s*\*/.test(String(_techGatherTick)),
+            '_techGatherTick 이 채굴 치명을 지급에 안 곱한다 — 굴리기만 하고 버린다');
+          clear(); }
+        // 자리도 잠근다 — 탭 경로 둘이 **같은 함수**를 써야 한다(수식이 두 벌이 되면 어긋난다)
+        chk(typeof campTapRoll==='function','campTapRoll 이 없다 — 탭 경로가 갈렸다');
+        chk(/campTapRoll\(\)/.test(String(campMineOnce)),'campMineOnce 가 campTapRoll 을 안 쓴다');
+        chk(/campTapRoll\(\)/.test(String(campMineTap)),'campMineTap 이 campTapRoll 을 안 쓴다');
+        clear(); }
+      // ⑥-5 🎯 조준의 룬 — 사거리. ⚠ 옛 주석의 「사거리는 건드리지 않는다」는 인식 거리 맥락이다.
+      // ⑥-6 📉 감소형 셋 — 스킬 쿨 · 미네랄 비용 · 가스 비용. **뚜껑 50%** 를 함께 잰다.
+      if(typeof campUpgDisc==='function' && typeof campGasDisc==='function'){
+        // 💰 미네랄 — 절약의 룬만. ⛔ 가스 룬이 여기 새면 안 된다
+        const d0=campUpgDisc();
+        put('costm','high'); const wC=runeVal(runeKey('costm','high'));
+        chk(Math.abs(campUpgDisc()-(d0-wC))<1e-9,'절약의 룬이 미네랄 값에 안 걸린다: '+campUpgDisc().toFixed(4));
+        chk(Math.abs(campGasDisc()-d0)<1e-9,'절약의 룬이 가스 값까지 깎았다 — 재화를 가려야 한다');
+        clear();
+        // ⛽ 가스 — 검약의 룬만
+        const g0=campGasDisc();
+        put('costg','high'); const wG2=runeVal(runeKey('costg','high'));
+        chk(Math.abs(campGasDisc()-(g0-wG2))<1e-9,'검약의 룬이 가스 값에 안 걸린다: '+campGasDisc().toFixed(4));
+        chk(Math.abs(campUpgDisc()-g0)<1e-9,'검약의 룬이 미네랄 값까지 깎았다');
+        clear();
+        // 🧢 **뚜껑 50%** — 감소형은 합산이라 뚜껑이 없으면 100% 를 넘어 부호가 뒤집힌다
+        //   (공짜를 지나 **돈을 받는다**).
+        //   ⚠ 지금 값으로는 **뚜껑에 못 닿는다**(성장 성좌 8칸 × 1.5% + 유니크 1칸 × 5% = 17%).
+        //     그래서 값을 억지로 채워 재면 **늘 통과하는 헛검사**가 된다 — 실제로 그랬다.
+        //     ⭐ 그래서 **등급 값을 잠시 크게 만들어** 뚜껑 자체를 잰다. 뚜껑은 값과 무관하게
+        //       있어야 하는 것이라, 값이 커졌을 때 무슨 일이 나는가가 곧 뚜껑의 존재 이유다.
+        { const keepV=RUNE_VAL.high;
+          try{ RUNE_VAL.high=0.9;                     // 한 칸만으로 90% — 뚜껑이 없으면 그대로 나온다
+            const R2=campRuneState(); const kh=runeKey('costm','high');
+            R2.own[kh]=9; const gi=RUNE_GRPS.indexOf('grow');
+            R2.norm[gi*RUNE_CONS]=kh;
+            if(typeof campRuneTouch==='function') campRuneTouch();
+            chk(campRuneEff('costMin')<=RUNE_CUT_CAP+1e-9,
+              '감소형 뚜껑이 안 걸린다: '+campRuneEff('costMin')+' > '+RUNE_CUT_CAP);
+            // ⛔ 증가형에는 뚜껑을 씌우지 말 것 — 감소형만의 규칙이다
+            const ka=runeKey('atk','high'); R2.own[ka]=9;
+            const wi=RUNE_GRPS.indexOf('war'); R2.norm[wi*RUNE_CONS]=ka;
+            if(typeof campRuneTouch==='function') campRuneTouch();
+            chk(campRuneEff('atk')>RUNE_CUT_CAP,
+              '증가형에까지 뚜껑이 걸렸다: '+campRuneEff('atk'));
+          } finally { RUNE_VAL.high=keepV;
+            if(typeof campRuneTouch==='function') campRuneTouch(); }
+          clear(); } }
+      // 🎯 사거리 · 📉 스킬 쿨 — 전장이 필요 없는 것부터
+      if(typeof campRtMul==='function' && typeof campCombatStep==='function'){
+        chk(/campRuneEff\('skCd'\)/.test(String(campCombatStep)),
+          'campCombatStep 이 각성의 룬(skCd)을 안 읽는다 — 스킬 쿨 감소가 어디에도 안 닿는다');
+        chk(typeof campScaleAllies==='function' && /campRuneMul\('rng'\)/.test(String(campScaleAllies)),
+          'campScaleAllies 가 조준의 룬(rng)을 안 읽는다'); }
       // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
       if(typeof umFirstRw==='function'){
         const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
@@ -2561,7 +2662,7 @@ async function groupLobby(){
         chk(r1.gem===r0.gem,'전리품의 룬이 **젬까지** 늘렸다 — 젬으로 산 룬이 젬을 찍으면 인쇄기다');
         clear(); }
       assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
-      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·유즈맵(젬 제외)·회복 ok';
+      return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·치명(터치·채굴)·사거리·감소형(뚜껑)·유즈맵(젬 제외)·회복 ok';
     } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
       if(typeof campRuneTouch==='function') campRuneTouch();
       if(typeof campWipeField==='function') campWipeField();
@@ -2603,11 +2704,11 @@ async function groupLobby(){
         try{
           C2.best={10:50};
           const put=(id,gd)=>{ const k=runeKey(id,gd); const R2=campRuneState();
-            R2.own[k]=(R2.own[k]|0)+1; const kind=(runeParse(k).def.kind==='uniq')?'uniq':'norm';
+            R2.own[k]=(R2.own[k]|0)+1; const kind=runeBucket(k);   // 🎚 칸 무리는 등급이 정한다
             const n=campRuneSlots(kind);
             for(let i=0;i<n;i++) if(!campRuneEq(kind)[i] && campRuneCanEquip(kind,i,k)) return campRuneEquip(kind,i,k);
             return false; };
-          put('tap','low'); put('gas','high'); put('speed','uniq');
+          put('tap','low'); put('gas','high'); put('speed','uniq');   // 🎚 유니크는 등급이라 아무 룬이나 된다
           campRuneRender(); await sleep(40);
           const svg=el.querySelector('.rnMap svg');
           // ① 판이 도형이다 — 등급 그라데이션이 defs 에 있어야 한다
@@ -2756,14 +2857,18 @@ async function groupLobby(){
         assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
           '축소 하한이 전체 보기 배율을 안 따른다');
         // 🎨 **빈 칸 테두리는 갈래 색**이다(2026-09-04 사용자 확정 · 목업 camp-rune-edge-8 ③안)
-        //   일반 칸은 그 성좌의 갈래, 가운데 유니크 칸은 보라. 낀 칸과 같은 어휘(위 흰빛 → 아래 색)다.
+        //   ⚠ 유니크 칸도 **제 성좌의 갈래 색**이다(2026-09-05) — 유니크가 등급이 되면서
+        //     「유니크 갈래」가 사라졌기 때문이다. 등급의 보라는 낀 룬 쪽이 갖는다.
         { const defs = _runeDefs();
-          for(const k of RUNE_GRPS.concat('uniq'))
+          for(const k of RUNE_GRPS)
             assert(defs.indexOf('id="rnEg' + k + '"') >= 0, '갈래 테두리 그라데이션이 없다: ' + k);
           const cellOf = (kind, i) => _runeCell(kind, i, 0, 0, 21, null, true, 1, false);
           RUNE_GRPS.forEach((k, ci) => { const t = cellOf('norm', ci * RUNE_CONS);
             assert(t.indexOf('#rnEg' + k) >= 0, ci + '번 성좌의 빈 칸이 ' + k + ' 색을 안 쓴다'); });
-          assert(cellOf('uniq', 0).indexOf('#rnEguniq') >= 0, '유니크 칸이 보라 테두리를 안 쓴다');
+          // 🎚 유니크 칸도 **제 성좌의 갈래 색**이다(2026-09-05) — 유니크가 등급이 되면서
+          //   「유니크 갈래」가 사라졌다. 등급의 보라는 낀 룬 쪽(RUNE_GD.uniq)이 갖는다.
+          RUNE_GRPS.forEach((k, ci) => assert(cellOf('uniq', ci).indexOf('#rnEg' + k) >= 0,
+            ci + '번 성좌의 유니크 칸이 ' + k + ' 색을 안 쓴다'));
           // ⚠ 빈 칸은 낀 칸보다 **조용해야** 한다 — 흰빛 세기가 낀 칸(.92)보다 낮다
           const m = /id="rnEgeco"[\s\S]*?stop-opacity="([.0-9]+)"/.exec(defs);
           assert(m && +m[1] < 0.92,
@@ -2806,9 +2911,11 @@ async function groupLobby(){
           const rws=bag.querySelectorAll('.rnRw');
           assert(rws.length===RUNE_LIST.length,
             '줄 수가 룬 종류 수와 다르다: '+rws.length+' vs '+RUNE_LIST.length);
-          // 갈래 머리줄 넷(경제·전투·성장·유니크) — 성좌와 같은 색이라 판과 이어 읽힌다
-          assert(bag.querySelectorAll('.rnGrpH').length===4,
-            '갈래 머리줄이 넷이 아니다: '+bag.querySelectorAll('.rnGrpH').length);
+          // 갈래 머리줄 **셋**(경제·전투·성장) — 성좌와 같은 색이라 판과 이어 읽힌다.
+          //   🎚 2026-09-05 에 넷 → 셋이 됐다: 유니크가 갈래가 아니라 **등급**이 되면서
+          //     제 머리줄을 잃고, 대신 모든 줄의 **네 번째 버튼**으로 들어갔다.
+          assert(bag.querySelectorAll('.rnGrpH').length===RUNE_GRPS.length,
+            '갈래 머리줄이 '+RUNE_GRPS.length+'이 아니다: '+bag.querySelectorAll('.rnGrpH').length);
           // 이름은 **효과 이름**이다 — ⛔ 「윤회·손끝」 같은 룬 이름으로 되돌리지 말 것
           const t0=rws[0].querySelector('.rnRwT').firstChild.textContent;
           assert(t0===RUNE_LIST[0].de,'줄 이름이 효과 이름이 아니다: '+t0);
@@ -2836,7 +2943,7 @@ async function groupLobby(){
           { const hex=c=>{ const m=/^#(\w\w)(\w\w)(\w\w)$/.exec(c);
               return m?('rgb('+parseInt(m[1],16)+', '+parseInt(m[2],16)+', '+parseInt(m[3],16)+')'):c; };
             const vs=rws[0].querySelectorAll('.rnRwT s b');
-            assert(vs.length===3,'등급 값이 셋이 아니다: '+vs.length);
+            assert(vs.length===RUNE_GRADES.length,'등급 값이 '+RUNE_GRADES.length+'이 아니다: '+vs.length);
             RUNE_GRADES.forEach((gd,i)=>{ const want=hex(RUNE_GD[gd].col);
               assert(getComputedStyle(vs[i]).color===want,
                 gd+' 값이 등급 색이 아니다: '+getComputedStyle(vs[i]).color+' vs '+want); });
@@ -2845,7 +2952,7 @@ async function groupLobby(){
           assert(bag.querySelectorAll('.rnBagDefs').length===1,
             '버튼마다 <defs> 를 만들고 있다(한 벌이어야 한다)');
           const hbs=bag.querySelectorAll('.rnHb');
-          assert(hbs.length===RUNE_LIST.length*3-RUNE_LIST.filter(d=>d.kind==='uniq').length*2,
+          assert(hbs.length===RUNE_LIST.length*RUNE_GRADES.length,
             '버튼 수가 등급 수와 안 맞는다: '+hbs.length);
           // 📐 ×N·% 가 육각 **안**에 있다 — 아래가 뾰족해서 밖으로 새기 쉬운 자리다
           let worst=-99, who='';
@@ -2922,18 +3029,24 @@ async function groupLobby(){
             assert(hs.length === 1 && hs[0] === RUNE_GRP[k].nm,
               ci + '번 성좌를 골랐는데 가방에 ' + hs.join(',') + ' 이 보인다');
             });
-          campRunePick('', -1); campRuneSlotTap('uniq', 0);
-          const hu = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
-          assert(hu.length === 1 && hu[0] === RUNE_GRP.uniq.nm,
-            '유니크 칸을 골랐는데 가방에 ' + hu.join(',') + ' 이 보인다');
+          // 🎚 **유니크 칸도 제 성좌의 갈래만** 보여 준다(2026-09-05) — 유니크가 등급이 되면서
+          //   「유니크 갈래」가 사라졌다. 경제 성좌의 중심이면 가방에는 경제 룬만 남는다.
+          RUNE_GRPS.forEach((k, ci) => {
+            campRunePick('', -1); campRuneSlotTap('uniq', ci);
+            const hu = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
+            assert(hu.length === 1 && hu[0] === RUNE_GRP[k].nm,
+              ci + '번 유니크 칸을 골랐는데 가방에 ' + hu.join(',') + ' 이 보인다'); });
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
-          assert(all.length === 4, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
+          assert(all.length === RUNE_GRPS.length, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }
         // 🎯 **넣으면 다음 빈 칸으로 옮겨 간다**(2026-09-04 사용자 요청)
         //   가방을 연달아 누르면 그 갈래의 빈 칸이 차례로 채워진다.
         //   ⛔ 고른 자리를 그대로 두지 말 것 — 다음 탭이 방금 넣은 것을 덮어쓴다.
         { const RA = campRuneState(); RA.norm = []; RA.uniq = []; campRuneTouch();
-          const gr = ['exp','kill','mapg','fevg'];
+          // ⚠ **목록을 손으로 적지 말 것** — 룬은 늘고 줄어든다(2026-09-05: 'exp' 가 지워지며
+          //   여기가 통째로 죽었다). 갈래에서 그때그때 꺼내 쓴다.
+          const gr = RUNE_LIST.filter(d => d.grp === 'grow').map(d => d.id).slice(0, 4);
+          assert(gr.length === 4, '성장 갈래 룬이 넷보다 적다: ' + gr.join(','));
           const base = RUNE_GRPS.indexOf('grow') * RUNE_CONS;
           for(let i = 0; i < RUNE_CONS; i++){ const k = runeKey(gr[i % 4], 'low');
             RA.own[k] = (RA.own[k] | 0) + 1; RA.norm[base + i] = k; }
@@ -3058,7 +3171,9 @@ async function groupLobby(){
         //     그대로 교체 모드로 빠져 아무 일도 못 한다.
         { const R7 = campRuneState(); R7.norm = []; R7.uniq = []; campRuneTouch();
           campRuneRender(); await sleep(20);
-          const pick = { eco:'tap', war:'atk', grow:'exp' };
+          // ⚠ 목록을 손으로 적지 말 것 — 갈래마다 **첫 룬**을 그때그때 꺼낸다(2026-09-05).
+          const pick = {}; for(const g of RUNE_GRPS){ const d = RUNE_LIST.find(x => x.grp === g);
+            assert(d, g + ' 갈래에 룬이 없다'); pick[g] = d.id; }
           for(const g of RUNE_GRPS){
             const k = runeKey(pick[g], 'low'); R7.own[k] = (R7.own[k] | 0) + 1;
             campRuneBagTap(k);
@@ -3107,12 +3222,15 @@ async function groupLobby(){
         //   흐름: 가방 탭 → 그 갈래 성좌가 화면 한가운데로 → 바꿀 칸이 흔들림 → 탭 → 교체.
         { const R4 = campRuneState();
           // 경제 8칸을 채우고, 넣을 룬은 **남는 것이 있게** 둔다(없으면 「남은 룬이 없습니다」다)
-          const eco = ['tap','gas','mine','reb'];
+          // ⚠ 목록을 손으로 적지 말 것 — 갈래에서 꺼낸다(2026-09-05: 'reb' 가 지워지며 죽었다).
+          const eco = RUNE_LIST.filter(d => d.grp === 'eco').map(d => d.id);
+          assert(eco.length >= 2, '경제 갈래 룬이 너무 적다');
           for(let i = 0; i < RUNE_CONS; i++){
-            const k = runeKey(eco[i % 4], ['low','mid','high'][i % 3]);
+            const k = runeKey(eco[i % eco.length], ['low','mid','high'][i % 3]);
             R4.own[k] = (R4.own[k] | 0) + 1; R4.norm[i] = k; }
-          const want = runeKey('tap','high'); R4.own[want] = (R4.own[want] | 0) + 1;
-          R4.uniq[0] = runeKey('speed'); R4.own[runeKey('speed')] = 1;
+          const want = runeKey(eco[0],'high'); R4.own[want] = (R4.own[want] | 0) + 1;
+          // 🎚 유니크 칸에는 **그 성좌 갈래 룬의 유니크 등급**이 들어간다(2026-09-05)
+          { const ku = runeKey(eco[0], 'uniq'); R4.uniq[0] = ku; R4.own[ku] = 1; }
           campRuneTouch(); campRuneRender(); await sleep(30);
           assert(campRuneFree(want) > 0, '준비가 틀렸다 — 넣을 룬이 남아 있지 않다');
           campRuneBagTap(want);
@@ -3293,7 +3411,7 @@ async function groupLobby(){
       // ② 주간 할인 = 일반 5 + 유니크 1 · 값은 30% 싸다
       const sale=runeSaleList();
       assert(sale.length===RUNE_SALE_N+1,'할인 종류가 여섯이 아니다: '+sale.length);
-      const uq=sale.filter(k=>runeParse(k).def.kind==='uniq');
+      const uq=sale.filter(k=>runeParse(k).gd==='uniq');
       assert(uq.length===1,'할인에 유니크가 하나가 아니다: '+uq.length);
       for(const k of sale) assert(runeSaleGem(k)===Math.max(1,Math.round(runeGem(k)*(1-RUNE_SALE_OFF))),
         '할인가가 표와 다르다: '+k);
@@ -3325,7 +3443,7 @@ async function groupLobby(){
       campRuneRender(); await sleep(40);
       let shopNote='';
       const tabs=[...document.querySelectorAll('#rnBody .pdSegBtn')].map(b=>b.textContent);
-      assert(tabs.length===RUNE_GRPS.length+1,'갈래 탭 수가 다르다: '+tabs.join(','));
+      assert(tabs.length===RUNE_GRPS.length,'갈래 탭 수가 다르다: '+tabs.join(','));   // 🎚 유니크 탭은 없다(등급이라서)
       assert(document.querySelector('#rnBody .pdSeg'),'공용 탭 띠(.pdSeg)를 안 쓴다');
       // ⚠ **아직 닿는 데가 없는 룬은 그렇게 말한다** — 젬을 받으면서 말을 안 하면 거짓 판매다.
       //   (2026-09-04 실측: exp·killGain 은 campRuneEff 를 부르는 곳이 0곳이다)
@@ -3334,7 +3452,7 @@ async function groupLobby(){
         for(const d of soon){
           // ⚠ 그 룬의 **갈래 탭을 열고** 찾는다 — 상점은 한 번에 한 갈래만 그린다.
           //   ⛔ 안 열고 찾으면 칸이 없어 검사를 통째로 건너뛴다(실측: 지워도 통과했다).
-          campRuneShopTab(d.kind === 'uniq' ? 'uniq' : d.grp); await sleep(30);
+          campRuneShopTab(d.grp); await sleep(30);
           const cell = [...document.querySelectorAll('#rnBody .rnBuy,#rnBody .rnBuyS')]
             .find(b => (b.getAttribute('onclick') || '').indexOf("'" + d.id + "'") >= 0);
           assert(cell, d.nm + ' 을 상점에서 못 찾았다(' + d.grp + ' 탭)');
@@ -3395,7 +3513,7 @@ async function groupLobby(){
         // 버튼은 **값**을 적는다(가방은 개수를 적는다 — 같은 자리 다른 숫자)
         assert(rows[0].querySelector('.rnBuyS u'),'상점 줄 버튼에 값이 없다');
         // 🏷 할인 중이면 일반 목록에서도 그렇게 말한다 — 값만 싸면 왜 싼지 모른다
-        { const sale=runeSaleList().find(k=>runeParse(k).def.kind!=='uniq');
+        { const sale=runeSaleList().find(k=>runeParse(k).gd!=='uniq');
           if(sale){ campRuneShopTab(runeParse(sale).def.grp); await sleep(60);
             assert(document.querySelector('#rnBody .rnBuyS .rnOffS'),
               '할인 중인데 일반 목록이 그 말을 안 한다'); } }
@@ -6953,7 +7071,12 @@ async function groupLobby(){
         w.x=cc.x; w.y=cc.y; w.tx=null; w.ty=null; w._wp=null; w._bStuck=0; w._bPrevD=null;
         w._carry=true; w._cKind='mineral'; w._cEid=node.eid; w._gKind='mineral'; w._gEid=node.eid;
         w.build=null; w._gSt='back'; w._dropEid=cc.eid; w._gBaseSpot={x:w.x,y:w.y}; };
-      const run=()=>{ const c0=G.tech.credit; _techGatherTick(0.05); return G.tech.credit-c0; };
+      // ⚠ **주사위를 고정하고 잰다**(2026-09-05). 반납에는 ⛏치명 채굴(확률 배수)이 붙어서
+      //   그냥 재면 지급이 배로 나온다. 여기가 잠그는 것은 **잔량이 마르면 안 준다**이지
+      //   지급의 크기가 아니다 — 치명은 잔량을 더 깎지 않는다(그건 아래 ③이 따로 잰다).
+      const run=()=>{ const c0=G.tech.credit, rr=Math.random;
+        try{ Math.random=()=>1; _techGatherTick(0.05); } finally { Math.random=rr; }
+        return G.tech.credit-c0; };
       // ① 잔량이 넉넉하면 준다
       arm(100); const g1=run();
       assert(g1>0,'넉넉한데 한 푼도 안 준다 — 반납 지점을 못 탔다');
@@ -7031,7 +7154,10 @@ async function groupLobby(){
       // ② 켜면 **광맥이 아닌 자리에서도** 캔다 — 이것이 A안의 전부다
       campMineModeSet(true);
       G.tech.credit=0;
-      const g=campMineOnce(100, 300, false);
+      // ⚠ **주사위를 고정하고 잰다** — ✨치명 터치가 붙어 그냥 재면 배로 나온다(2026-09-05).
+      //   여기가 잠그는 것은 「수식이 한 벌인가」라 치명은 껐다 두고 본다.
+      let g; { const rr=Math.random; try{ Math.random=()=>1; g=campMineOnce(100, 300, false); }
+        finally { Math.random=rr; } }
       assert(g>0 && G.tech.credit===g,'채굴 모드인데 안 캐진다: '+g);
       assert(g===campTapGain(),'획득량이 campTapGain 과 다르다 — 수식이 두 벌이다: '+g+' vs '+campTapGain());
       // ③ 연타 **상한** — 사람 손은 거의 안 닿지만 매크로의 폭주는 잘린다
@@ -7083,7 +7209,12 @@ async function groupLobby(){
       //     ⭐ 그래도 **최대치가 연타에 못 미쳐야** 한다: 「편한 만큼 덜 버는 선택지」가 이 축의 뜻이다.
       //       실측(2026-08-27 · 30분): 연타 6탭 127만 / 홀드 최대(실효 3.3탭) 56만 = 44%.
       // ⚠ 배수 **장치**는 2 로 재야 한다 — 지금 설정값이 1 이라 그대로 재면 늘 통과하는 헛검사가 된다.
-      { const g1=campMineOnce(10,10,false), gM=campMineOnce(10,10,false,2);
+      // ⚠ **주사위를 고정하고 잰다**(2026-09-05). 탭에는 이제 ✨치명 터치(확률 배수)가 붙어 있어
+      //   그냥 두 번 부르면 한쪽만 치명이 떠서 비가 2 가 아니게 된다(실제로 1 → 4 가 나왔다).
+      { const realR=Math.random; let g1, gM;
+        try{ Math.random=()=>1;                     // 치명·피버 둘 다 안 뜨는 주사위
+          g1=campMineOnce(10,10,false); gM=campMineOnce(10,10,false,2);
+        } finally { Math.random=realR; }
         assert(gM===g1*2,'홀드 배수 장치가 안 걸린다: '+g1+' → '+gM);
         // 최대까지 올려도 연타(초당 ~6회)를 넘지 않는다
         const holdPerSec=(1000/CAMP_HOLD_MIN)*CAMP_HOLD_MUL;
@@ -10783,8 +10914,10 @@ async function groupLobby(){
       // ② 탭하면 campTapGain 만큼 는다
       window._campTapForce=1;
       G.tech.credit=0;
+      // ⚠ **주사위를 고정하고 잰다** — ✨치명 터치가 붙어 그냥 재면 배로 나온다(2026-09-05).
       const g=campTapGain();
-      campMineTap({isTrusted:false});
+      { const rr=Math.random; try{ Math.random=()=>1; campMineTap({isTrusted:false}); }
+        finally { Math.random=rr; } }
       assert(G.tech.credit===g,'과녁 탭이 campTapGain('+g+') 과 다르게 준다: '+G.tech.credit);
       // ③ 돈이 모자라면 못 산다
       G.tech.credit=0;
