@@ -5485,38 +5485,45 @@ async function groupLobby(){
   //    ⛔ 일반 매핑은 격자 전체를 전장 62~92% 로 눌러 담는데 전투는 50~60% 에서 벌어진다.
   //      그래서 벙커를 어디에 지어도 전선 뒤였다 — 실측 벙커 체력이 **120/120 그대로**였다.
   //    ⭐ 방어 건물만 유닛과 같은 좌표계(campG2W)를 쓴다 → 격자 위쪽 = 전장 앞.
-  await step('캠프: 방어 건물만 전선에 선다 (일반 건물은 뒤 그대로)', async()=>{
-    skipIf(typeof CAMP_DEF_BLD==='undefined'||typeof campBuildStructs!=='function','방어 건물 매핑 없음');
+  await step('캠프: 건물은 내가 지은 자리에 선다 (그림과 안 어긋난다)', async()=>{
+    skipIf(typeof campBuildStructs!=='function'||typeof campG2W!=='function','건물 매핑 없음');
     campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
     skipIf(!CAMPB,'전장이 안 열림');
     const W=CAMPB.world;
     // 같은 격자 자리(위쪽)에 벙커와 일반 건물을 하나씩
-    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='_probe')));
+    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
     G.tech.built['bunker']=1;
-    const gy=0.25;
+    const gy=0.25, gyLow=0.55;
     G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'bunker', x:0.5, y:gy, w:2,h:2, bt:0 });
     G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'barracks', x:0.4, y:gy, w:2,h:2, bt:0 });
     campBuildStructs();
     const bunk=(CAMPB._bld||[]).find(b=>b&&b.bk==='bunker');
     const barr=(CAMPB._bld||[]).find(b=>b&&b.bk==='barracks');
     assert(bunk&&barr,'건물이 전장에 안 올라왔다');
-    // ① 같은 격자인데 벙커가 훨씬 앞(y 가 작다)
-    assert(bunk.y < barr.y - W*0.15,
-      '방어 건물이 앞으로 안 나갔다: 벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'%');
-    // ② 벙커는 전선(전장 50~60%)보다 앞이다 — 적을 먼저 만난다
-    assert(bunk.y <= W*0.60,
-      '벙커가 전선보다 뒤다: '+Math.round(bunk.y/W*100)+'% (전선은 50~60%)');
-    // ③ 일반 건물은 예전 구간(62~92%)에 그대로 — 앞에 나가면 기지가 곧바로 부서진다
-    assert(barr.y >= W*0.60,
-      '일반 건물까지 앞으로 나갔다: '+Math.round(barr.y/W*100)+'%');
-    // ④ 좌표계가 유닛과 같아야 화면과 안 어긋난다 — 역변환이 원래 격자를 돌려준다
-    { const g=campW2G(bunk.x, bunk.y, W);
-      assert(Math.abs(g.gy-gy)<0.01 && Math.abs(g.gx-0.5)<0.01,
-        '방어 건물 좌표가 유닛 좌표계와 안 맞는다 — 화면에서 어긋나 보인다: '+g.gx.toFixed(3)+','+g.gy.toFixed(3)); }
-    G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
-    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
-    campBattleClose();
-    return '벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'% · 유닛 좌표계와 일치';
+    try{
+      // ① **좌표계가 하나다** — 같은 격자 세로면 전장 세로도 같다 (2026-09-05 통일)
+      //    ⛔ 옛 규칙은 방어 건물만 campG2W, 나머지는 sx/sy 였다. 그래서 일반 건물이
+      //      그려진 자리에서 **화면의 12~30%** 떨어진 데 서 있었다(사용자 신고).
+      assert(Math.abs(bunk.y-barr.y) < W*0.01,
+        '같은 격자인데 전장 세로가 다르다 — 좌표계가 둘이다: 벙커 '+Math.round(bunk.y/W*100)+'% · 병영 '+Math.round(barr.y/W*100)+'%');
+      // ② 역변환이 **원래 격자**를 돌려준다 = 그림과 안 어긋난다 (둘 다)
+      for(const [nm,b,gx] of [['벙커',bunk,0.5],['병영',barr,0.4]]){
+        const g=campW2G(b.x, b.y, W);
+        assert(Math.abs(g.gy-gy)<0.01 && Math.abs(g.gx-gx)<0.01,
+          nm+' 자리가 그려진 격자와 어긋난다: ('+g.gx.toFixed(3)+','+g.gy.toFixed(3)+') vs ('+gx+','+gy+')'); }
+      // ③ 격자 위에 지으면 앞, 아래에 지으면 뒤 — 내가 방어선을 고른다
+      G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&e.bk==='barracks'));
+      G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'barracks', x:0.4, y:gyLow, w:2,h:2, bt:0 });
+      campBuildStructs();
+      const low=(CAMPB._bld||[]).find(b=>b&&b.bk==='barracks');
+      assert(low && low.y > bunk.y + W*0.15,
+        '아래에 지었는데 앞과 같은 자리다: '+Math.round((low?low.y:0)/W*100)+'% vs '+Math.round(bunk.y/W*100)+'%');
+      return '같은 격자 → 같은 세로('+Math.round(bunk.y/W*100)+'%) · 역변환 일치 · 아래에 지으면 '+Math.round(low.y/W*100)+'%';
+    } finally {
+      G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&(e.bk==='bunker'||e.bk==='barracks')));
+      if(typeof campBuildStructs==='function') campBuildStructs();
+      { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
   });
 
   // 🧱 **벙커 — 화력병을 살리는 자리** (2026-08-30 사용자 확정)
@@ -5801,6 +5808,57 @@ async function groupLobby(){
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
     return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
 
+  // 🖐 **던전 조작감 = 기지 조작감** (2026-09-05 사용자 신고: 「같은 레인저인데 던전에서만 다르다」)
+  //    ⚠ 위 스텝들은 API 를 직접 부른다 — **진짜 포인터 이벤트 경로**는 아무도 안 잰다.
+  //      「드래그가 뻑뻑하다 · ⊘ 를 눌러도 안 풀린다」는 전부 그 경로의 이야기다.
+  //    ⛔ 옛 문턱은 `|Δx|/폭 > 0.015 || |Δy|/높이 > 0.015`(비율 · 축별)였다. 원본은
+  //      `|Δx|+|Δy| > 6px`(픽셀 · 두 축 합)이라, 390×767 맵에서 세로가 11.5px 로 **두 배** 둔했다.
+  await step('캠프: 던전 드래그 문턱·⊘ 배선이 기지와 같다', async()=>{
+    // ⛔ 가드는 **옛 버전에도 있는 것**으로 — CAMP_BOX_MIN_PX 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof campDeploy!=='function'||typeof campSelSet!=='function'||typeof _btRect!=='function','캠프 전투 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패');
+      campSelClear(); campSyncSheet();
+      const r=_btRect(); skipIf(!r||!r.width,'맵 사각을 못 잼');
+      const W=CAMPB.world, g=campW2G(u.x,u.y,W), sp=_techW2S(g.gx,g.gy);
+      const px=Math.round(r.left+sp.x*r.width), py=Math.round(r.top+sp.y*r.height);
+      assert((py-r.top)/r.height>0.13,'전제: 유닛이 상단바 밖에 있어야 한다');
+      const fire=(el,type,x,y)=>{ el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,
+        clientX:x,clientY:y,pointerId:1,pointerType:'touch',isPrimary:true,button:0,buttons:type==='pointerup'?0:1})); };
+      const map=document.querySelector('.bmap'); assert(map,'맵 요소가 없다');
+      // ① 문턱 — 대각 2+2(=4px)에서는 아직 박스가 아니고, 4+4(=8px)면 박스다(원본 6px 규칙)
+      fire(map,'pointerdown',px,py);
+      assert(typeof _campBox!=='undefined' && _campBox,'누르는 순간 캠프 박스가 안 섰다');
+      fire(document,'pointermove',px+2,py+2);
+      assert(!_campBox.on,'2+2px 에서 벌써 박스가 됐다 — 문턱이 기지보다 예민하다');
+      fire(document,'pointermove',px+4,py+4);
+      assert(_campBox.on,'4+4px 를 끌었는데 박스가 안 됐다 — 기지(합 6px)보다 둔하다');
+      fire(document,'pointerup',px+4,py+4);
+      // ② 세로도 같은 자[尺]여야 한다 — 옛 「비율·축별」이면 세로만 두 배 둔했다
+      campSelClear();
+      fire(map,'pointerdown',px,py);
+      fire(document,'pointermove',px,py+7);
+      const vOn=!!(_campBox&&_campBox.on);
+      fire(document,'pointerup',px,py+7);
+      assert(vOn,'세로로 7px 를 끌었는데 박스가 안 됐다 — 세로 문턱이 가로와 다르다(옛 비율식)');
+      // ③ ⊘ 버튼이 **실제로 배선돼 있다** — 눌러서(click) 전장 지정이 풀린다
+      campSelClear(); campSelSet([u]); campSyncSheet();
+      const dz=$('btDesel'); assert(dz,'해제 버튼이 없다');
+      assert(dz.classList.contains('on'),'전장 유닛을 골랐는데 ⊘ 가 안 떴다');
+      dz.click();                      // 마크업의 onclick=techDeselU(event) 를 그대로 탄다
+      campSyncSheet();
+      assert(campSelList().length===0,'⊘ 를 눌렀는데 전장 지정이 안 풀렸다');
+      assert(!dz.classList.contains('on'),'⊘ 를 눌렀는데 버튼이 그대로 켜져 있다');
+      return '문턱 4+4px ○ / 2+2px ✕ / 세로 7px ○ · ⊘ 클릭 배선 ok';
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(typeof campSelClear==='function') campSelClear();
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+  });
+
   // 🖐 **내 명령은 명령이다** — SC 「이동」(2026-09-05 사용자 확정 · A안 · ARCHITECTURE §「⚔ 캠프 전투」).
   //    ⛔ 옛 방식은 자리(_post)만 옮기고 AI 복귀에 맡겨서: 0.8초 굳음 · 적이 보이면 무시 · 45 앞에서 멈춤.
   //    이 스텝은 그 셋이 되살아나지 않는지 **프레임 단위로** 잰다.
@@ -5953,6 +6011,54 @@ async function groupLobby(){
     { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
     campBattleClose();
     return '위 '+(worst*100).toFixed(1)+'% (화면 '+(top*100).toFixed(1)+'% 위) · 가로 '+(spread*100).toFixed(0)+'%p 퍼짐';
+  });
+
+  // 👹 **적의 눈은 아군보다 훨씬 넓다** (2026-09-05 사용자 확정)
+  //    ⛔ 예전엔 적도 campAcqBase(제 사거리 + 100)를 썼다. 근접 적은 눈이 **147** 이라
+  //      진형 폭(500~840)을 못 덮고, 측면 차선으로 내려오는 적이 아군을 **그냥 지나쳐** 갔다.
+  //      📊 실측(scripts/camp-trace.mjs · 60초 · D1R30): 적이 표적을 가진 비율 20.9% ·
+  //         아군 600 안을 **표적 없이** 지나간 비율 34.5%.  고친 뒤 69% / **0%**.
+  //    ⚠ 아군 쪽(CAMP_ACQ_PAD·campAlertTick)은 건드리지 않는다 — 그건 「우르르 돌격」을 막는
+  //      장치다. 이 검사는 **적만** 넓어졌는지를 잰다.
+  await step('캠프: 적은 아군보다 훨씬 넓게 본다 (측면으로 지나치지 않는다)', async()=>{
+    // ⛔ 가드는 **옛 버전에도 있는 것**으로 잡는다 — CAMP_FOE_ACQ 로 잡으면 옛 코드에서
+    //    조용히 건너뛰어 레드 테스트가 안 터진다(2026-09-02 에 그렇게 두 번 헛통과했다).
+    skipIf(typeof campScaleFoes!=='function'||typeof campAcqBase!=='function'
+      ||typeof campStepUnits!=='function','캠프 전투 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWipeField();
+      // ① 값 — 소환 경로 그대로(campScaleFoes 가 눈을 심는다)
+      const fresh=campWithStk(()=>{ const b4=CAMPB.ai.units.length;
+        for(let i=0;i<3;i++) strikeSpawnUnit('ai','marine');
+        const f=CAMPB.ai.units.slice(b4); campScaleFoes(f,1); return f; });
+      skipIf(!fresh||fresh.length<3,'적을 못 세움');
+      const base=campAcqBase(fresh[0]);          // 아군 규칙이었다면 이 값이었을 것
+      const acq=Math.round(fresh[0].acq||0);
+      assert(acq>=900,'적 인식이 좁다: '+fresh.map(e=>Math.round(e.acq||0)).join(','));
+      assert(acq>base*2,'적 인식이 아군 규칙(사거리+PAD='+Math.round(base)+')과 다르지 않다: '+acq);
+      // ② 행동 — **측면**으로 지나가는 적이 아군을 알아채는가
+      //    ⚠ 아군을 한 기만 두고 적 하나를 대각선 1000 밖에 둔다. 옛 눈(실효 402)으로는
+      //      절대 안 잡히고, 넓은 눈(실효 1680)이면 잡힌다.
+      campWipeField();
+      const ally=campWithStk(()=>{ strikeSpawnUnit('me','marine'); return CAMPB.me.units[0]; });
+      const foe=campWithStk(()=>{ const b4=CAMPB.ai.units.length;
+        strikeSpawnUnit('ai','marine');
+        const f=CAMPB.ai.units.slice(b4); campScaleFoes(f,1); return f[0]; });
+      skipIf(!ally||!foe,'유닛을 못 세움');
+      ally.x=2000; ally.y=3000; ally._post={x:2000,y:3000}; ally.wait=0; ally.rallied=true;
+      ally.hp=ally.maxHp=1e6; ally.dmg=0;                 // 죽지도 죽이지도 않게 — 표적 잡기만 본다
+      foe.x=2800; foe.y=2400; foe.wait=0; foe.rallied=true; foe.dmg=0; foe.tgtUid=null;
+      const gap=Math.round(Math.hypot(foe.x-ally.x, foe.y-ally.y));
+      const eff=Math.round((foe.acq||0)*(typeof STK_ACQ_FAR!=='undefined'?STK_ACQ_FAR:1.4));
+      assert(gap>base*1.4,'검사가 헛돈다 — 옛 눈으로도 닿는 거리다: '+gap+' vs '+Math.round(base*1.4));
+      campWithStk(()=>{ for(let i=0;i<30;i++) campStepUnits(0.05); });
+      assert(foe.tgtUid===ally.uid,'측면 '+gap+' 밖의 아군을 못 알아챘다 (적 인식 '
+        +Math.round(foe.acq||0)+' · 실효 '+eff+')');
+      return '적 인식 '+acq+'(실효 '+eff+') vs 아군 규칙 '+Math.round(base)+' · 측면 '+gap+' 알아챔';
+    } finally { if(typeof campWipeField==='function') campWipeField();
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
   });
 
   // 🚶 **숨 고르기 동안 걸어서 자기 자리로 돌아온다** (2026-08-30 사용자 확정)
