@@ -48,6 +48,9 @@ const ACQCAP = +(process.env.ACQ || 0);
 //   ⚠ campAlertTick 을 통째로 끄면 acq 자체가 안 갱신된다. **그 함수가 끝난 직후**
 //     _alertAcq/_alertT 만 0 으로 지워야 「전파만 없는」 상태가 된다.
 const NOALERT = process.env.NOALERT === '1';
+// 🔢 **라운드** — 기본(R1)은 적이 1마리라 「적이 아군을 지나치나」를 못 잰다.
+//   ⚠ 적 마리 수는 라운드로만 는다(campFoeCount). 측면 통과를 보려면 여러 마리가 필요하다.
+const ROUND = +(process.env.ROUND || 0);
 const OUT = process.env.OUT || path.join(ROOT, 'docs', 'mock');
 fs.mkdirSync(OUT, { recursive: true });
 
@@ -89,7 +92,7 @@ await pg.evaluate(() => { campStopFrame(); campStopTimer(); });   // 시계를 �
  *   (30분 벤치에서 던전 진입이 20.6분이었다), 그러면 「움직임을 본다」는 목적에 비해 너무 비싸다.
  *   ⭐ 대신 자리는 실제 생산과 같은 경로를 지난다 — campDeploy 가 campLayerPost 까지 부른다.  */
 async function record(seed){
-  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, acqcap, noalert, seed) => {
+  return await pg.evaluate((dg, squad, secs, shots, engage, res, outlim, acqcap, noalert, seed, round) => {
     const FPS = 30, dt = 1 / FPS, N = Math.round(secs * FPS);
     // 🔬 연구 — 계열 업그레이드 전 항목을 res 레벨로. campResLv 가 읽는 그 자리에 직접 넣는다.
     if(res > 0 && typeof UNIT_UPG !== 'undefined' && G.tech){
@@ -99,7 +102,10 @@ async function record(seed){
         for(const k of [m.atk, m.def]) if(k) G.tech.research[race + '_' + k] = res; } }
     if(outlim > 0) window.campEngageOut = function(){ return outlim; };
     // ── 부대 세우기
-    campEnterDungeon(dg); CAMPB = null; campCombatStep(dt);
+    campEnterDungeon(dg);
+    // 🔢 라운드를 갈아 끼운다 — 적 마리 수가 여기서만 는다(campFoeCount)
+    if(round > 0){ const _C = campState(); if(_C) _C.cleared = Math.max(0, round - 1); }
+    CAMPB = null; campCombatStep(dt);
     if(!CAMPB) return { err: '전장이 안 열림' };
     // 🧹 전장 비우기 — smoke.js 의 campWipeField 와 같은 일(그건 테스트 파일 안에만 있다).
     //   ⚠ campBattleClose 는 병력을 기지로 되돌리므로 여기선 못 쓴다(이 판의 임시 유닛이 새어 나간다).
@@ -169,7 +175,16 @@ async function record(seed){
       for(const u of CAMPB.me.units) me.push({ u: u.uid, id: u.id, x: Math.round(u.x), y: Math.round(u.y),
         r: Math.round(u.rng || 0), tgt: u.tgtUid || '', dead: !!u.dead,
         px: u._post ? Math.round(u._post.x) : null, py: u._post ? Math.round(u._post.y) : null });
-      for(const u of CAMPB.ai.units) if(!u.dead) ai.push({ x: Math.round(u.x), y: Math.round(u.y) });
+      // 👹 적도 함께 기록한다 — 「양 측면으로 오는 적이 아군을 그냥 지나치나」를 재려면
+      //   적이 **표적을 잡았는가**와 **그때 가장 가까운 아군이 얼마나 멀었는가**가 필요하다.
+      //   ⚠ 아군 기록과 달리 죽은 것은 아예 안 담는다(적은 수가 많아 프레임 기록이 커진다).
+      for(const u of CAMPB.ai.units){ if(u.dead) continue;
+        let nd = Infinity;
+        for(const a of CAMPB.me.units){ if(a.dead) continue;
+          const dx = a.x - u.x, dy = a.y - u.y, d2 = dx * dx + dy * dy;
+          if(d2 < nd) nd = d2; }
+        ai.push({ x: Math.round(u.x), y: Math.round(u.y), tgt: u.tgtUid || '',
+          acq: Math.round(u.acq || 0), nd: (nd < Infinity) ? Math.round(Math.sqrt(nd)) : -1 }); }
       // 💥 체력 총합 — 「실제로 피해가 오갔는가」. ⚠ 죽은 유닛의 남은 체력은 0 으로 친다.
       //   ⭐ 이것이 있어야 「안 죽는다」가 **못 맞히는 것**인지 **원래 단단한 것**인지 갈린다.
       const hp = (arr) => arr.reduce((a, u) => a + (u.dead ? 0 : (u.hp || 0) + (u.sh || 0)), 0);
@@ -289,7 +304,26 @@ async function record(seed){
     const settleMed = settleT.length ? settleT[Math.floor(settleT.length/2)] : -1;
     const settleP90 = settleT.length ? settleT[Math.floor(settleT.length*0.9)] : -1;
     const nU = Math.max(1, uids.size);
+    // 👹 **적 쪽 자[尺]** (2026-09-05) — 「측면으로 오는 적이 아군을 그냥 지나치나」.
+    //   ⭐ 아군 지표만으로는 이게 안 보인다. 아군은 제자리를 지키는 게 정상이라
+    //     「표적 없음」이 곧 문제가 아니지만, 적은 **아군을 향해 오는 것이 일**이다.
+    //   ① 표적을 가진 비율 — 낮으면 적이 건물만 보고 내려간다.
+    //   ② 표적 없이 아군 곁을 지나간 정도 — FOE_PASS_R 안에 있으면서 표적이 없는 프레임.
+    //      ⭐ **이것이 사용자가 말한 증상 그 자체다**(「그냥 지나쳐 간다」).
+    //   ③ 표적 없는 적의 최근접 아군 거리 중앙값 — 눈이 얼마나 모자란지의 크기.
+    const FOE_PASS_R = 600;
+    let fT = 0, fN = 0, fPass = 0, fPassN = 0; const fNear = [];
+    for(const fr of frames){ for(const e of fr.ai){
+      if(e.nd < 0) continue;                       // 아군이 전멸한 프레임
+      fN++; if(e.tgt) fT++;
+      if(e.nd <= FOE_PASS_R){ fPassN++; if(!e.tgt) fPass++; }
+      if(!e.tgt) fNear.push(e.nd); } }
+    fNear.sort((a, b) => a - b);
     const stat = { frames: frames.length, units: uids.size,
+      foeHasTgt: +(100 * fT / Math.max(1, fN)).toFixed(1),
+      foePassPct: +(100 * fPass / Math.max(1, fPassN)).toFixed(1),
+      foeNoTgtNear: fNear.length ? fNear[Math.floor(fNear.length / 2)] : 0,
+      foeAcq: frames.length && frames[0].ai.length ? Math.round(frames[0].ai[0].acq || 0) : 0,
       flips: +(flips / nU).toFixed(1), tele, teleMax: Math.round(teleMax), tgtSw: +(tgtSw / nU).toFixed(1),
       flipTot: flips, flipInPct: +(flipIn / Math.max(1, flips) * 100).toFixed(0),
       settleMed: +settleMed.toFixed(1), settleP90: +settleP90.toFixed(1),
@@ -434,7 +468,7 @@ async function record(seed){
       g.fillText(fr.t.toFixed(1) + 's · 아군 ' + fr.me.filter(m => !m.dead).length + ' · 적 ' + fr.ai.length,
         ox + 2, oy + cellH + 14); }
     return { stat, ok: true };
-  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, ACQCAP, NOALERT, seed);
+  }, DG, SQUAD, SECS, SHOTS, ENGAGE, RES, OUTLIM, ACQCAP, NOALERT, seed, ROUND);
 }
 
 const med = a => { const s = a.slice().sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -453,6 +487,7 @@ for(let i = 0; i < RUNS; i++){
 
 const K = ['inRange', 'inRangeFight', 'idlePct', 'hasTgt', 'gapMul', 'flips', 'tgtSw', 'tele', 'teleMax', 'moveAvg', 'leash', 'engPush', 'aliveEnd', 'foeEnd',
   'dmgOut', 'dmgIn', 'shotOut', 'awayAvg', 'awayMax', 'acqAt', 'dpsMe', 'dpsAi', 'hpMe0', 'hpAi0', 'effMe', 'effAi',
+  'foeHasTgt', 'foePassPct', 'foeNoTgtNear', 'foeAcq',
   'flipTot', 'flipInPct', 'flipNoTPct', 'flipSwPct',
   'settleMed', 'settleP90', 'segDone', 'segFail', 'segCleared', 'failClosePct', 'flipSolvedPct'];
 const M = {}; for(const k of K) M[k] = med(runs.map(r => r[k]));
@@ -483,6 +518,11 @@ console.log('  ⚡ 순간이동(>60px)    ' + M.tele + '회 (최대 ' + M.teleMa
 console.log('  🪢 목줄 발동          ' + M.leash + '회');
 console.log('  🚚 자리잡기 밀기      ' + M.engPush + '회');
 console.log('  📏 프레임당 이동      ' + M.moveAvg + 'px/유닛');
+console.log('');
+console.log('  👹 적이 표적을 가진 비율  ' + M.foeHasTgt + '%      ← 낮으면 적이 아군을 못 보고 건물만 보고 내려간다');
+console.log('  👹 아군 600 안을 **표적 없이** 지나간 비율  ' + M.foePassPct + '%   ← 「그냥 지나쳐 간다」의 자[尺]');
+console.log('  👹 표적 없는 적↔최근접 아군  ' + M.foeNoTgtNear + '      ← 눈이 얼마나 모자란지 (적 인식 ' + M.foeAcq + ')');
+console.log('');
 console.log('  💀 끝: 아군 ' + M.aliveEnd + '기 살아있음 · 적 ' + M.foeEnd + '마리 남음');
 console.log('');
 console.log('  🔫 아군이 쏜 횟수      ' + M.shotOut + '회      ← 위치 문제인지 표적 문제인지 가른다');

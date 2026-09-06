@@ -2606,9 +2606,6 @@ const CAMP_FOE_BLD_MUL = 40;
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
-  const x0 = TECH_GRID.x0, x1 = TECH_GRID.x1, y0 = techY0(), y1 = techY1();
-  const sx = function(wx){ return W * (0.15 + (wx - x0) / Math.max(1e-6, x1 - x0) * 0.70); };
-  const sy = function(wy){ return W * (0.62 + (wy - y0) / Math.max(1e-6, y1 - y0) * 0.30); };
   const mainK = (TECH_TREE[G.tech.race] && TECH_TREE[G.tech.race].buildings[0] || {}).k;
   const out = [];
   for(const e of (G.tech.ents || [])){
@@ -2617,20 +2614,23 @@ function campBuildStructs(){
     const hp = Math.round((isMain ? (CAMPB.me.base.maxHp || CAMPB.me.base.hp) : CAMP_BLD_HP) * (isMain ? 1 : bm));
     // 🏛 본부는 **객체를 새로 만들지 않는다**(전장 판정이 me.base 를 본다) — 그래서 체력을 손으로 채운다.
     //   ⛔ 이게 없으면 「건물을 다시 올린다 = 체력이 가득 찬다」가 일반 건물에만 걸린다.
-    if(isMain){ const b = CAMPB.me.base;
-      b.x = sx(e.x); b.y = sy(e.y); b.eid = e.eid;
+    if(isMain){ const b = CAMPB.me.base; const q = campG2W(e.x, e.y, W);
+      b.x = q.x; b.y = q.y; b.eid = e.eid;
       b.hp = b.maxHp = b.max = hp; b.dead = false;
       out.push(b); continue; }
-    // 🛡 **방어 건물은 전선에 선다** (2026-08-30 사용자 확정).
-    //   ⛔ 일반 매핑(sy)은 격자 전체를 전장 **62~92%** 로 눌러 담는다. 그런데 전투는
-    //     **50~60%** 에서 벌어진다 — 벙커를 어디에 지어도 전선 뒤였다(실측 828 떨어짐 ·
-    //     화력병 사거리 70 → 벙커 체력이 120/120 그대로였다).
-    //   ⭐ 그래서 방어 건물만 **유닛과 같은 좌표계**(campG2W)를 쓴다. 격자 위쪽에 지으면
-    //     전장 앞(14%), 아래쪽이면 뒤(86%) — 플레이어가 방어선을 직접 고를 수 있다.
+    // 🛡 **건물은 내가 지은 자리에 선다** — 격자 위쪽에 지으면 전장 앞(14%), 아래쪽이면 뒤(86%).
+    //   ⭐ 방어 건물(벙커·포탑)이 2026-08-30 에 먼저 이 좌표계로 옮겨 왔고, 2026-09-05 에
+    //     **나머지 건물도 같은 것을 쓰게** 통일했다(위 설명). 이제 갈래가 하나다.
     //   ⚠ campG2W 는 campW2G 의 역이라 **화면과 어긋나지 않는다** — 전장 유닛을 그릴 때
     //     쓰는 역변환이 그대로 원래 격자 자리를 돌려준다.
-    //   ⚠ 일반 건물은 그대로 둔다(전투에 거의 안 나오고, 매핑을 바꾸면 기지 그림이 흔들린다).
-    const p = CAMP_DEF_BLD[e.bk] ? campG2W(e.x, e.y, W) : { x:sx(e.x), y:sy(e.y) };
+    //   ⭐ **이제 일반 건물도 같은 좌표계를 쓴다** (2026-09-05 사용자 신고: 「던전에서 유닛이
+    //     건물 구역은 통과하고 빈 공간에서 건물이 있는 것처럼 돌아간다」).
+    //     ⛔ 옛 sx/sy 매핑은 격자를 전장 0.15~0.85 × 0.62~0.92 로 눌러 담아, 그려진 자리와
+    //       **화면의 12~30%** 어긋났다(실측 2026-09-05 · 격자 (0.10,0.20) → 되돌리면 (0.220,0.478)).
+    //       건물이 그림과 다른 데 서 있으니 적이 그걸 치러 엉뚱한 데로 갔다.
+    //     ⚠ 옛 주석은 「매핑을 바꾸면 기지 그림이 흔들린다」고 했는데 **틀렸다** — 건물 그림은
+    //       기지 맵이 G.tech.ents 로 그린다. CAMPB._bld 는 전투 판정에만 쓰인다.
+    const p = campG2W(e.x, e.y, W);
     out.push({ x:p.x, y:p.y, hp:hp, max:hp, maxHp:hp, dead:false, eid:e.eid, bk:e.bk });
   }
   for(const b of out) b._bsT = null;   // 🏢 건물 시전 주기는 **라운드마다** 다시 센다(본부는 객체를 재사용하므로 손으로 지운다)
@@ -2766,6 +2766,21 @@ function campRallyPoint(){
   r.hp = r.max = r.maxHp = 1e18; r.dead = false;      // 아군 오사로 부서지지 않게 되돌린다
   return r;
 }
+// 🧱 ── **건물을 단단한 장애물로 만들지 않는다 — 해 보고 되돌렸다** (2026-09-05) ─────
+// ⛔ 던전에서 유닛을 미는 장애물은 `strikeTempleRects()`(18-strike.js)가 돌려주는 것뿐이고,
+//   캠프에서 그것은 **본부 하나**다(2차·중앙·적 본부는 campBattleOpen 이 죽여 둔다).
+//   그래서 나머지 건물은 **그냥 통과한다**(사용자 신고 2026-09-05).
+// 🧪 그래서 `strikeTempleRects` 를 캠프에서만 감싸 **내 건물 전부**를 그려진 발판 크기의 원으로
+//   돌려주게 해 봤다. 궤적은 오히려 좋아졌는데(뒤집힘 16.7 → 13.8 · 사거리 안 22.2 → 23.6%),
+//   ⛔ **아군이 갇혔다** — 스모크 「유닛이 자기 자리로 돌아온다」의 의무병이 싸우는 아군에게
+//     다가가기는커녕 **멀어졌다**(1152 → 1387). 원인은 반지름이 아니라 구조다:
+//     **던전에는 경로탐색이 없다.** 기지는 `_techFindPath` 가 건물을 **우회하는 길**을 만들지만,
+//     전장은 국소 회피 + 마지막에 원 밖으로 밀어내기뿐이라 건물 뒤로는 길이 안 난다.
+//   ⭐ 그래서 되돌렸다. 되살리려면 **먼저 전장에 경로탐색(또는 흐름장)을 붙여야 한다** —
+//     18-strike 의 흐름장(`strikeFlow*`)은 목표 신전 하나를 전제로 짜여 있어 그대로는 못 쓴다.
+//   ⚠ 대신 **좌표계는 통일했다**(campBuildStructs) — 건물이 그려진 자리에 서므로, 본부의
+//     회피 원도 이제 그림 위에 얹힌다(옛날엔 화면의 4.2% 위에 떠 있었다).
+
 // ⛔ strikeFrontStruct 를 감싼다 — 적이 내 건물을 때릴 수 있게 하는 유일한 입구다.
 //   ⚠ side 는 **때리는 쪽**이다(원본: foe = S[side==='me'?'ai':'me']). 적이 칠 때만 바꿔 준다.
 let _campFrontPatched = null;
@@ -2813,7 +2828,12 @@ let _campBox = null;               // 캠프의 드래그 박스(원본 _btBox �
 //   ⛔ 옛 0.022 는 기지의 2.5분의 1 이라 던전에서만 찍기가 어려웠다 — 「눌렀는데 반응이 없다」의
 //     절반이 이것이었다(2026-09-05 사용자 지적 · 조작감 통일 A안).
 const CAMP_PICK_R = 0.055;
-const CAMP_BOX_MIN = 0.015;        // 이만큼 끌어야 박스로 본다(원본과 같은 값)
+// 📦 박스로 보기 시작하는 문턱 — **기지 원본과 같은 규칙**이어야 한다(techPtrMove · 17-build-cards.js):
+//   두 축 **합이 6px**. ⛔ 옛 값 0.015 는 「비율 · 축별」이라 원본과 다른 자[尺]였다 —
+//   맵이 390×767 이면 가로 5.9px / **세로 11.5px** 이고, 합이 아니라 축별이라 대각선은 더 둔했다.
+//   실측(2026-09-05): 기지는 대각 3+3=6 에서 서는데 던전은 12+12 를 끌어야 섰다.
+//   그래서 「같은 유닛인데 던전에서만 드래그가 뻑뻑하다」가 됐다(사용자 신고).
+const CAMP_BOX_MIN_PX = 6;         // 기지 원본과 같은 값·같은 식(두 축 합 · 픽셀)
 function campSelList(){ if(!CAMPB) return [];
   const out = []; for(const u of CAMPB.me.units){ if(!u.dead && _campSel.indexOf(u.uid) >= 0) out.push(u); } return out; }
 // ⚠ 지정이 바뀌면 **시트와 해제 버튼을 바로 다시 그린다**(2026-09-05 사용자 신고: 「골랐는데 프로필도 해제 버튼도 안 뜬다」).
@@ -3609,8 +3629,28 @@ function campScaleFoes(list, share){
     u.maxHp = u.maxHp * hpMul; u.hp = u.maxHp;
     u.maxSh = (u.maxSh || 0) * hpMul; u.sh = u.maxSh;
     u.dmg = (u.dmg || 0) * dmgMul;
-    if(u.rng > rCap){ u.rng = rCap; if(u.acq < rCap) u.acq = rCap; } }   // acq 를 같이 열어야 다가와서 쏜다
+    if(u.rng > rCap){ u.rng = rCap; if(u.acq < rCap) u.acq = rCap; }
+    // 👹 **적의 눈은 아군보다 훨씬 넓다** (2026-09-05 사용자 확정) — 아래 CAMP_FOE_ACQ 설명 참고
+    if(u.acq < CAMP_FOE_ACQ) u.acq = CAMP_FOE_ACQ; }
   return diff; }
+// 👹 ── 적의 인식 거리 — **아군과 규칙이 다르다** (2026-09-05 사용자 확정) ─────
+// ⭐ 아군은 「제자리를 지키다 마중 나간다」라 눈이 좁아야 한다(사거리 + 100). 적은 반대로
+//   **아군을 찾아오는 것이 일**이라, 좁은 눈은 그냥 버그로 보인다.
+// ⛔ 왜 필요했나 — 적도 campAcqBase(제 사거리 + 100)를 썼다. 근접 적은 사거리 47 이라
+//   **눈이 147**(실효 147×STK_ACQ_FAR=206)이었다. 진형 폭은 500~840px 이라 측면 차선으로
+//   내려오는 적은 아군을 **못 보고 그대로 지나쳐** 건물로 갔다.
+//   📊 실측(30초 · D1R12 · scripts/camp-trace.mjs):
+//      적이 표적을 가진 비율 **6%** · 아군 600 안을 표적 없이 지나간 비율 **55.2%** ·
+//      표적 없는 적↔최근접 아군 중앙값 1736.
+// ⭐ 그래서 적에게는 **고정된 넓은 눈**을 준다 — 멀리서 내려오면서도 아군을 보고 그리로 온다.
+//   ⚠ 실효는 여기에 STK_ACQ_FAR(1.4)이 곱해진다 — 1200 이면 실효 1680.
+// ⛔ 아군의 CAMP_ACQ_PAD·전파(campAlertTick)를 건드리지 말 것 — 그건 「우르르 돌격」을 막는
+//   장치다(2026-08-31 실측: 인식이 이동 제한보다 크면 생성 즉시 전군이 뛰쳐나갔다).
+//   ⚠ campAlertTick / campAlertApply 는 **아군만** 돈다. 그래서 적 값은 여기서 한 번 심으면
+//     프레임 중에 덮이지 않는다(campScaleFoes 는 소환된 무리마다 한 번씩 돈다).
+// ⛔ 유닛 표(U·STK_UNITS)의 range 를 고치지 말 것 — 멀티 대전과 오각형 상성이 같이 바뀐다.
+//   여기서 만지는 것은 **소환된 적 개체의 acq 하나**뿐이다.
+const CAMP_FOE_ACQ = 1200;
 // ── 🎯 적 사거리 상한 — **아군이 먼저 쏘게 한다** (2026-08-27) ─────────
 // ⛔ 안 걸면 라운드가 안 끝난다. 적 탱크 332 · 고스트 273 이 아군 최대 215 보다 멀리서 쏘는데
 //   아군은 제자리 방어라 다가가지 않고, 맞은 만큼 의무병이 채운다 → **양쪽 다 안 죽는다.**
@@ -6303,8 +6343,8 @@ function campPatchZoom(){
       if(_campLongT && ev && _campLongFrom && ev.pointerId === _campLongFrom.id
          && Math.hypot(ev.clientX - _campLongFrom.x, ev.clientY - _campLongFrom.y) > 8) campPanDisarm();
       if(_campBox && ev && !_campBox.on){ const r = (typeof _btRect === 'function') ? _btRect() : null;
-        if(r && (Math.abs(ev.clientX - _campBox.cx0) / (r.width || 1) > CAMP_BOX_MIN
-              || Math.abs(ev.clientY - _campBox.cy0) / (r.height || 1) > CAMP_BOX_MIN)) _campBox.on = true; }
+        if(r && (Math.abs(ev.clientX - _campBox.cx0) + Math.abs(ev.clientY - _campBox.cy0)) > CAMP_BOX_MIN_PX)
+          _campBox.on = true; }
       return oMove.apply(this, arguments);
     };
 
