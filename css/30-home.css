@@ -1100,10 +1100,13 @@
   /* ⛏ 채굴 토글 — 「MY BASE」 요약판의 **그리드 한 칸**(사용자 확정 2026-08-27).
      생김새는 공용 슬롯(.cgSlot)이 그대로 갖는다 — 여기서는 「한 칸만 보이게」와 「켜짐」만 정한다. */
   #phone.campMode #btSheetBody .cgSlot.empty{display:none}          /* 빈 칸 셋을 감춘다 = 한 칸만 */
-  /* ⚠ 슬롯이 옆에 서면서 왼쪽 통계 판이 좁아진다 — 4열 그대로 두면 글자가 줄바꿈돼 깨진다.
-     통계 판은 전폭(wide)일 때처럼 넓게 두고, 격자만 3열로 줄인다. */
+  /* ⚠ 슬롯이 옆에 서면서 왼쪽 통계 판이 좁아진다 — 판은 전폭(wide)일 때처럼 넓게 둔다. */
   #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgInfo{flex:1 1 auto;max-width:none;min-width:0}
-  #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgStats.cgWide{grid-template-columns:repeat(3,1fr)}
+  /* ⛔ 여기서 `grid-template-columns` 를 **지정하지 말 것**(2026-09-05).
+     요약판은 이제 줄 목록이고 **열 흐름**이라(css/10-game.css `.cgStats.cgWide`) 열은
+     `grid-auto-columns` 가 필요한 만큼만 만든다 — 두 열이다.
+     옛 `repeat(3,1fr)` 이 남아 있었더니 **쓰지 않는 셋째 열**이 생겨 내용이 통째로 왼쪽으로
+     쏠렸다(실측: 판 276px 중 오른쪽 96px 가 빈 칸이었다). */
   /* 한 칸만 남으므로 격자도 **1열**로 — 4열 그대로 두면 칸이 1/4 폭으로 쪼그라든다. */
   #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgCol{flex:none}
   #phone.campMode #btSheetBody .cmdG:has(.cmbSlot) .cgGrid{grid-template-columns:62px;grid-template-rows:1fr}
@@ -2514,6 +2517,16 @@
   @keyframes cmPopUp{0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}
     18%{opacity:1;transform:translate(-50%,-70%) scale(1)}
     100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
+  /* ✨ 치명 터치 — **숫자만** 달라진다(2026-09-05).
+     ⛔ 토스트·섬광을 더하지 말 것: 열 번에 한 번씩 오는 일이라 화면이 시끄러워진다.
+     ⭐ 색은 금색(재화의 색)을 그대로 쓰되 **더 크고 밝게** — 다른 뜻이 아니라 「같은 것이 크게」다. */
+  .cmPop.crit{font-size:24px;color:#ffd479;
+    text-shadow:0 0 10px rgba(255,196,92,.55),0 1px 4px #000;
+    animation:cmPopCrit .9s ease-out forwards}
+  @keyframes cmPopCrit{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+    14%{opacity:1;transform:translate(-50%,-72%) scale(1.28)}
+    26%{transform:translate(-50%,-78%) scale(1)}
+    100%{opacity:0;transform:translate(-50%,-175%) scale(1)}}
   /* 업그레이드 줄 — 행 사이 1px 만(로그인·설정과 같은 어법) */
   .cmUpg{max-height:38vh;overflow-y:auto;padding:0 14px 12px}
   .cmRow{display:flex;align-items:center;gap:10px;padding:11px 0;
@@ -2792,16 +2805,18 @@
 #campRune .rnShopRw{display:flex;align-items:center;gap:8px;padding:6px 2px}
 #campRune .rnShopRw + .rnShopRw{border-top:1px solid rgba(255,255,255,.07)}
 #campRune .rnShopRw .rnRwT{flex:1 1 auto;min-width:0}
-#campRune .rnShopRw .rnRwB{margin-left:auto;display:flex;gap:4px;flex:none}
-/* 작은 등급 버튼 — 가방의 육각 자리에 값(젬)이 온다 */
+#campRune .rnShopRw .rnRwB{margin-left:auto;display:flex;gap:3px;flex:none}
+/* 작은 등급 버튼 — 가방의 육각 자리에 값(젬)이 온다.
+   ⚠ **등급이 넷이 됐다**(2026-09-05 · 유니크가 등급이 되면서). 폭을 60 → 46 으로 줄였다 —
+     넷을 60px 로 두면 줄이 넘쳐 이름이 두 줄로 접히고 줄 높이가 66px 이 된다(스모크가 잰다). */
 #campRune .rnBuyS{position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;min-width:60px;padding:5px 6px;cursor:pointer;
+  justify-content:center;gap:1px;min-width:46px;padding:5px 3px;cursor:pointer;
   border:1px solid color-mix(in srgb,var(--rg) 60%,transparent);border-radius:var(--r-sm);
   background:rgba(255,255,255,.04);font-family:inherit}
 #campRune .rnBuyS:disabled{opacity:.42;cursor:default}
 #campRune .rnBuyS b{font-size:10px;color:var(--rg);font-weight:600}
-#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:3px;
-  font-family:var(--font-num);font-size:11.5px;font-weight:700;color:#e2b6ff}
+#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:2px;
+  font-family:var(--font-num);font-size:10.5px;font-weight:700;color:#e2b6ff}
 #campRune .rnBuyS u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
 #campRune .rnBuyS u.max{color:#69737f;font-size:10px}
 #campRune .rnBuyS.sale{border-color:color-mix(in srgb,var(--rg) 85%,transparent);

@@ -637,7 +637,11 @@ function _techGatherTick(dt){ let dep=false, any=false;
         if(_ck==='mineral'){ const _sm=(G.tech.minerals||[]).find(m=>m.eid===_ce)||((w._gKind==='mineral')?res:null);
           const _inf=!!(_sm&&_sm.inf);
           const _got=(_sm&&!_inf) ? Math.min(TECH_GATHER_AMT, Math.max(0,_sm.amount||0)) : TECH_GATHER_AMT;
-          if(!G.tech.inf) G.tech.credit+=_got;
+          // ⛏💠 **캠프의 일꾼 채굴 치명** — 캠프 밖에서는 늘 1 이다(이 파일은 관리자 탭·오토배틀과 공유).
+          //   ⚠ **잔량은 _got 만큼만 줄인다.** 치명은 덤이지 더 캔 것이 아니다 —
+          //     잔량까지 배로 깎으면 치명이 뜰수록 광맥이 빨리 마른다.
+          const _gcr=(typeof campGatherCritRoll==='function') ? campGatherCritRoll() : 1;
+          if(!G.tech.inf) G.tech.credit+=_got*_gcr;
           if(_sm&&!_inf) _sm.amount=Math.max(0,(_sm.amount||0)-_got); }
         else { const _sg=G.tech.ents.find(x=>x.eid===_ce&&x.type==='bldg')||((w._gKind==='gas')?res:null);
           const _got=_sg ? Math.min(TECH_GATHER_AMT, Math.max(0,_techGasRemain())) : TECH_GATHER_AMT;

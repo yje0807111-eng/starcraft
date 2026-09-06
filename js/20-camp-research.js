@@ -56,23 +56,33 @@ const CAMP_RES_ATTIC = [
     lockWhy: '최대 — 더 줄이면 연타보다 빨라집니다' },
 ];
 
+// ✂ **줄이 넘어가는 자리를 손으로 잡는다**(2026-09-05 사용자 요청 「각 줄이 깔끔하게 넘어가도록」).
+//   설명 칸은 **95px 밖에 안 된다**(실측) — 한글 9~10자에서 줄이 바뀐다. 띄어쓰기마다 끊기게 두면
+//   「…획득량 / 증가」처럼 한 낱말만 남거나, 두 문장이 한 줄에 섞인다.
+//   ⭐ 그래서 **붙어 있어야 하는 낱말 사이에 `\u00A0`(줄바꿈 없는 공백)** 을 넣는다.
+//     보이는 것은 보통 띄어쓰기와 같고, 거기서만 안 끊긴다.
+//   ⚠ 눈에 안 보이는 문자라 **반드시 `\u00A0` 이스케이프로 적을 것** — 진짜 NBSP 를 붙여 넣으면
+//     나중에 보통 공백으로 되돌아가도 아무도 모른다.
+//   ⛔ `<br>` 로 끊지 말 것 — 폭이 달라지면(기기·글꼴) 그 자리가 틀린 자리가 된다.
 // ── 📋 자원 칸 항목 표 ───────────────────────────────────────────────────
 // ⭐ **한 줄이 곧 슬롯 하나**다. 값·다음값·설명을 전부 여기서 정하고, 그리는 쪽은 이 표만 읽는다.
 //   ⚠ 정제소가 여기 있는 것이 이번 이동의 핵심이다 — 예전엔 정제소 **건물**의 연구 카드였다.
 //     건물을 고르지 않으면 올릴 수 없어서, 자원 성장 셋 중 하나만 자리가 달랐다.
 const CAMP_RES_ITEMS = [
   { k: 'tap', nm: '터치 강화', ico: 'upgrades/up_mineral_up',
-    why: '한 번 누를 때 캐는 양',
+    why: '탭\u00A0당 미네랄\u00A0증가',
     now: () => (typeof campTapGain === 'function') ? campTapGain() : 0,
     next: (n) => _campPeekNext('tap', () => campTapGain(), n),
     unit: '/탭' },
   { k: 'gather', nm: '일꾼 강화', ico: 'upgrades/up_speed',
-    why: '일꾼이 한 번 다녀올 때 캐는 양',
+    why: '채굴\u00A0당 미네랄 획득량\u00A0증가',
     now: () => (typeof campGatherMul === 'function') ? campGatherMul() : 1,
     next: (n) => _campPeekNext('gather', () => campGatherMul(), n),
     unit: '배', dec: 2 },
-  { k: 'refinery', nm: '정제소', ico: 'buildings/bld_refinery',
-    why: '정제소가 스스로 캐는 가스',
+  // ⚠ 이름은 **「정제 강화」**다(2026-09-05 사용자 확정) — 이 칸은 건물이 아니라 **올리는 것**이다.
+  //   건물 이름(정제소)은 아직 안 지었을 때 `lockWhy` 가 따로 말한다.
+  { k: 'refinery', nm: '정제 강화', ico: 'buildings/bld_refinery',
+    why: '채굴\u00A0당 가스 획득량\u00A0증가',
     now: () => (typeof campGasPerMin === 'function') ? campGasPerMin() : 0,
     // ⚠ 정제소 레벨은 C.upg 와 연구 칸(G.tech.research) 중 **큰 쪽**이다(campRefLv).
     //   그래서 C.upg 만 올려 보는 _campPeekNext 로는 안 움직일 수 있다 — 값에서 직접 한 칸 올린다.
@@ -89,7 +99,7 @@ const CAMP_RES_ITEMS = [
     lv: () => (typeof campRefLv === 'function') ? campRefLv() : 0,
     // ⛽ 정제소를 아직 안 지었으면 올려도 나오는 것이 없다 — 그 사실을 슬롯에 적는다.
     lock: () => !(typeof campHasRefinery === 'function' && campHasRefinery()),
-    lockWhy: '정제소를 먼저 지으세요' },
+    lockWhy: '정제소를 먼저\u00A0건설하세요' },
   // 👷 **일꾼 생산** (2026-09-03 사용자 확정). 나머지 셋과 성격이 다르다 —
   //   「올리는 것」이 아니라 「사는 것」이다. 그래서 cost/buy 를 제 손으로 갖는다.
   //   ⭐ 왜 여기 두나: 자원을 늘리는 방법 넷(터치·채취·정제소·일꾼)이 **한 자리에** 모인다.
@@ -98,7 +108,7 @@ const CAMP_RES_ITEMS = [
   //   ⛔ 여기서 유닛을 직접 만들지 말 것 — techDoProduce 를 부른다. 인구·대기열·상한 계산이
   //     전부 거기 있고, 캠프는 그것을 감싸서 40기 상한만 얹었다(campPatchProduce).
   { k: 'worker', nm: '일꾼 생산', ico: () => 'units/un_' + campWorkerKey(),
-    why: '광맥에 붙어 저절로 캐는 일꾼',
+    why: '자동 자원\u00A0채굴\u00A0유닛',
     // ⚠ 여기 넷은 전부 **뽑는 중인 것까지** 센다(campWorkerNPlanned) — 안 그러면 대기열에
     //   몰아 넣어 첫 마리 값으로 다섯을 사는 구멍이 난다(2026-09-03 사용자 발견).
     now: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
@@ -584,7 +594,10 @@ function campArmModelTop() {
   });
   return { mode:'upg', compact:true, title:'무장', kicker:true,
     info:{ eb:'계열', name:'', hideName:true,
-           desc:'강화할 계열을 고르세요 — 공격력·공격속도·체력·방어력을 따로 올립니다' },
+           desc:'강화할 계열을 선택하세요. 계열\u00A0별\u00A0강화가 나누어져\u00A0있습니다.' },
+  // ⚠ 「계열 별 강화가」를 통째로 묶어야 넷째 줄이 산다 — 「계열 별」만 묶으면 그것이
+  //   둘째 줄 끝에 올라타고 「강화가」 하나만 셋째 줄에 남는다(실측으로 두 번 만에 잡았다).
+  //   지금: 「강화할 계열을 / 선택하세요. / 계열 별 강화가 / 나누어져 있습니다.」
     items: items };
 }
 // ── 고른 계열의 [공격][방어] ─────────────────────────────────────────────

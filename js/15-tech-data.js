@@ -48,10 +48,10 @@ TECH_TREE.union={ name:'유니온', res:{m:'크레딧', g:'에너지'}, building
       {k:'charon', u:'goliath', name:'대공 강화', desc:'기갑병 대공 사거리↑', m:150, g:150} ] },
   { k:'armory', name:'무기고', ico:'⚔️', m:100, g:50, req:['factory'],
     research:[
-      {k:'veh_atk', name:'차량 공격력', desc:'레이서·공성전차·기갑병 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'veh_def', name:'차량 방어력', desc:'차량 방어 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'air_atk', name:'함선 공격력', desc:'전투기·폭격기·전함 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'air_def', name:'함선 방어력', desc:'함선 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'veh_atk', name:'차량 공격력', desc:'레이서·공성전차·기갑병 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'veh_def', name:'차량 방어력', desc:'차량 방어 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_atk', name:'함선 공격력', desc:'전투기·폭격기·전함 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_def', name:'함선 방어력', desc:'함선 방어 +1/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'starport', name:'비행장', ico:'🚀', m:150, g:100, req:['factory'], lift:true,
     produces:[
       {id:'skyguard', name:'전투기', m:150, g:100, pop:2},                                  // 레이스
@@ -103,9 +103,9 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {k:'adrenal', u:'snapper', name:'광폭화', desc:'척후병 공격속도↑', m:200, g:200, req:['hive']} ] },
   { k:'evochamber', name:'진화장', ico:'🧬', m:50, g:0, req:['hatchery'],
     research:[
-      {k:'melee_atk', name:'근접 공격력', desc:'척후병·스웜링·돌격괴수 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'range_atk', name:'원거리 공격력', desc:'스파이크·가시여왕 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'melee_atk', name:'근접 공격력', desc:'척후병·스웜링·돌격괴수 +1/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'range_atk', name:'원거리 공격력', desc:'스파이크·가시여왕 +1/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'gnd_def', name:'지상 방어력', desc:'모든 지상 +1/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'hydraden', name:'스파이크 굴', ico:'🐍', m:100, g:50, req:['pool'], unlocks:['hydra','thornqueen'],   // 리퍼·럴커 해금
     research:[
       {k:'muscle', u:'hydra', name:'이속 강화', desc:'스파이크 이동속도↑', m:150, g:150},
@@ -122,8 +122,8 @@ TECH_TREE.swarm={ name:'스웜', res:{m:'크레딧', g:'에너지'}, buildings:[
       {k:'ventral', u:'overlord', name:'수송 능력 개발', desc:'수송충 수송(드랍) 가능', m:200, g:200} ] },
   { k:'spire', name:'첨탑', ico:'🦇', m:200, g:150, req:['lair'], unlocks:['wyvern','stinger'], evolveTo:'gspire',   // 와이번·스팅어 해금 · 거대 첨탑로 진화
     research:[
-      {k:'fly_atk', name:'비행 공격력', desc:'비행충·자폭충·포격충 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'fly_def', name:'비행 방어력', desc:'비행 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'fly_atk', name:'비행 공격력', desc:'비행충·자폭충·포격충 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'fly_def', name:'비행 방어력', desc:'비행 방어 +1/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'queensnest', name:'여왕 둥지', ico:'👑', m:150, g:150, req:['lair'], unlocks:['medusa'],   // 메두사(퀸) 해금
     research:[
       {k:'ensnare', u:'medusa', name:'점착 가스', desc:'적 이동·공속 감소', m:100, g:100},
@@ -161,15 +161,15 @@ TECH_TREE.aetherial={ name:'에테리얼', res:{m:'크레딧', g:'에너지'}, b
   { k:'assimilator', name:'융합소', ico:'🛢', m:100, g:0, gas:true, req:[] },
   { k:'forge', name:'강화소', ico:'⚒️', m:150, g:0, req:['nexus'],
     research:[
-      {k:'gnd_wpn', name:'지상 무기', desc:'광전사·센티넬·보이드 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'gnd_arm', name:'지상 방어', desc:'지상 방어 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'shield', name:'실드 강화', desc:'모든 유닛 실드 +/티어', tier:[[200,200],[300,300],[400,400]]} ] },
+      {k:'gnd_wpn', name:'지상 무기', desc:'광전사·센티넬·보이드 +1/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'gnd_arm', name:'지상 방어', desc:'지상 방어 +1/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'shield', name:'실드 강화', desc:'모든 유닛 실드 +1/티어', tier:[[200,200],[300,300],[400,400]]} ] },
   { k:'cannon', name:'에너지 타워', ico:'☄️', m:150, g:0, req:['forge'], detector:true },
   { k:'cyber', name:'사이버 코어', ico:'⚙️', m:200, g:0, req:['gateway'],
     research:[
       {k:'singularity', u:'dragoon', name:'사거리 강화', desc:'센티넬 사거리↑', m:150, g:150},
-      {k:'air_wpn', name:'공중 무기', desc:'팔콘·요격기·모함·전함 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'air_arm', name:'공중 방어', desc:'공중 방어 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'air_wpn', name:'공중 무기', desc:'팔콘·요격기·모함·전함 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'air_arm', name:'공중 방어', desc:'공중 방어 +1/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'battery', name:'쉴드 충전', ico:'🔋', m:100, g:0, req:['gateway'] },
   // ── 스타게이트·공중군 ──
   { k:'stargate', name:'공중 차원문', ico:'🛸', m:150, g:150, req:['cyber'],
@@ -262,9 +262,9 @@ TECH_TREE.feral={ name:'페럴', res:{m:'크레딧', g:'에너지'}, buildings:[
   // ── 업그레이드·보조·방어 ──
   { k:'bloodaltar', name:'혈흔 제단', ico:'🩸', m:125, g:0, req:['denrock'],
     research:[
-      {k:'fer_melee_atk', name:'근접 공격력', desc:'추격수·포식수·우두머리 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'fer_range_atk', name:'원거리 공격력', desc:'가시 사수·대공 투석수 등 +/티어', tier:[[100,100],[150,150],[200,200]]},
-      {k:'fer_gnd_def', name:'지상 방어력', desc:'모든 지상 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'fer_melee_atk', name:'근접 공격력', desc:'추격수·포식수·우두머리 등 +1/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'fer_range_atk', name:'원거리 공격력', desc:'가시 사수·대공 투석수 등 +1/티어', tier:[[100,100],[150,150],[200,200]]},
+      {k:'fer_gnd_def', name:'지상 방어력', desc:'모든 지상 +1/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'frenzycore', name:'광폭 코어', ico:'💢', m:150, g:100, req:['clawpit'],
     research:[
       {k:'frenzy_cap', name:'광폭화 상한', desc:'스택 상한 20→30', m:150, g:150},
@@ -319,8 +319,8 @@ TECH_TREE.colossus={ name:'콜로서스', res:{m:'크레딧', g:'에너지'}, bu
       {k:'minrange_cut', name:'근접 조준', desc:'최소 사거리 −30%', m:150, g:150} ] },
   { k:'armorworks', name:'장갑 공작소', ico:'🛡', m:125, g:0, req:['corefoundry'],
     research:[
-      {k:'col_atk', name:'공격력', desc:'모든 유닛 +/티어', tier:[[100,100],[175,175],[250,250]]},
-      {k:'col_def', name:'방어력', desc:'모든 유닛 +/티어', tier:[[150,150],[225,225],[300,300]]} ] },
+      {k:'col_atk', name:'공격력', desc:'모든 유닛 +1/티어', tier:[[100,100],[175,175],[250,250]]},
+      {k:'col_def', name:'방어력', desc:'모든 유닛 +1/티어', tier:[[150,150],[225,225],[300,300]]} ] },
   { k:'servobay', name:'기동 정비소', ico:'🔧', m:100, g:50, req:['assembly'],
     research:[
       {k:'servo_spd', name:'구동계 강화', desc:'이동속도 +15%', m:150, g:150},

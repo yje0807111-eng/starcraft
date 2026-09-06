@@ -1,0 +1,233 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>캠프 하단 「MY BASE」 판 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --neon:#ff3b3b; --acc-sel:#5cd6ff; --info:#4aa8ff;
+  --metal-edge:rgba(150,170,200,.22);
+  --bpFace:rgba(10,13,18,.92);
+  --txt:#e6eefc; --dim:#8a94a6; --mute:#657085;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.10) 0%,rgba(160,168,182,.22) 14%,
+    rgba(186,194,208,.50) 32%,rgb(226,231,240) 50%,rgba(186,194,208,.50) 68%,
+    rgba(160,168,182,.22) 86%,rgba(150,158,172,.10) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1+p{margin:0 22px 14px;color:var(--mute);font-size:11.5px;line-height:1.7;max-width:1180px}
+h1+p b{color:var(--dim)}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:6px 22px 30px;align-items:flex-start}
+.cell{width:352px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 9px;color:var(--mute);font-size:11px;line-height:1.65;min-height:86px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+
+/* ── 무대: 캠프 바닥 위에 뜬 하단 시트 ── */
+.stage{position:relative;width:352px;padding:12px 10px 10px;border-radius:10px;overflow:hidden;
+  background:linear-gradient(180deg,#4a4d52 0%,#3c3f45 38%,#0a0d12 38%,#080b10 100%)}
+.sheet{display:flex;gap:8px;align-items:stretch}
+.kick{font-family:var(--font-num);font-size:9px;letter-spacing:.24em;color:#e8edf5;
+  text-shadow:0 1px 2px rgba(0,0,0,.9);margin:0 0 5px 2px}
+.panel{flex:1;min-width:0;min-height:118px;background:var(--bpFace);border:1px solid var(--metal-edge);
+  border-radius:var(--r-bar);padding:9px 10px;display:flex;flex-direction:column;justify-content:center}
+/* ⛏ 채굴 칸 — 여덟 안 공통(공용 슬롯이라 안마다 바꾸지 않는다) */
+.mine{flex:none;width:64px;background:var(--bpFace);border:1px solid var(--metal-edge);
+  border-radius:var(--r-bar);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.mine .ico{width:40px;height:40px;border:1px solid rgba(255,59,59,.5);border-radius:2px;
+  background:linear-gradient(180deg,#2a2e35,#14171c);display:flex;align-items:center;
+  justify-content:center;font-size:20px;color:#c9d2df}
+.mine b{font-size:10.5px;font-weight:700;color:#dbe3ef}
+
+/* 값 공통 — 숫자만 크게, 단위는 작은 회색 */
+.v{font-family:var(--font-num);font-weight:700;color:var(--txt);line-height:1.05;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.v i{font-style:normal;font-weight:700;font-size:9.5px;color:#8794a8}
+.l{font-size:9px;letter-spacing:.06em;color:#8794a8;white-space:nowrap}
+
+/* ① 지금 */
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.g3 .v{font-size:15px}
+.st{display:flex;flex-direction:column;gap:1px;min-width:0}
+
+/* ② 히어로 */
+.hero{display:flex;gap:10px;align-items:center}
+.heroL{flex:none;width:92px;padding-right:12px;border-right:1px solid rgba(255,255,255,.07)}
+.heroL .l{font-size:9px;margin-bottom:2px}
+.heroL .v{font-size:27px;color:#fff;text-shadow:0 0 14px rgba(255,210,74,.28)}
+.heroL .v i{font-size:13px;color:var(--gold)}
+.heroR{flex:1;min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px}
+.heroR .v{font-size:12.5px} .heroR .l{font-size:8.5px}
+
+/* ③ 두 구역 */
+.two .sect{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.two .sect+.sect{margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.07)}
+.two .v{font-size:14px}
+
+/* ④ 아이콘 칸 */
+.g3i{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.g3i .st{flex-direction:row;align-items:center;gap:6px}
+.g3i .bg{flex:none;width:24px;height:24px;border-radius:2px;display:flex;align-items:center;
+  justify-content:center;background:rgba(255,255,255,.045);border:1px solid rgba(150,170,200,.16);overflow:hidden}
+.g3i .bg img{width:88%;height:88%;object-fit:contain;display:block}
+.g3i .tx{min-width:0;display:flex;flex-direction:column;gap:1px} .g3i .v{font-size:13.5px} .g3i .l{font-size:8.5px}
+
+/* ⑤ 줄 목록 */
+.rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  padding:5px 0;border-bottom:1px solid rgba(255,255,255,.055)}
+.row:nth-last-child(-n+2){border-bottom:none}
+.rows .l{font-size:10px;color:#93a0b2} .rows .v{font-size:13px}
+
+/* ⑥ 칸 나눔 */
+.g3b{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.g3b .st{padding:5px 7px;border-radius:var(--r-bar);background:rgba(255,255,255,.035);
+  border:1px solid rgba(150,170,200,.14)}
+.g3b .v{font-size:14px} .g3b .l{font-size:8.5px}
+
+/* ⑦ 밑변 광원 */
+.g3u{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 10px}
+.g3u .st{position:relative;padding-bottom:5px}
+.g3u .st::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(90deg,rgba(160,170,190,.42),rgba(160,170,190,.06))}
+.g3u .st.on::after{background:linear-gradient(90deg,rgba(255,210,74,.75),rgba(255,210,74,.06))}
+.g3u .v{font-size:14.5px}
+
+/* ⑧ 띠 + 4칸 */
+.band{display:flex;align-items:baseline;gap:7px;padding:0 0 7px;position:relative;margin-bottom:8px}
+.band::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--edge-light)}
+.band .l{font-size:9px;letter-spacing:.2em}
+.band .v{font-size:21px;margin-left:auto;color:#fff}
+.band .v i{font-size:12px;color:var(--gold)}
+.g22{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.g22 .v{font-size:13px} .g22 .l{font-size:8.5px}
+</style></head><body>
+
+<h1>캠프 하단 「MY BASE」 판 — 8안</h1>
+<p>값 여섯은 <b>모두 같다</b>(총 배수 ×12.4 · 터치당 1.2K · 채취당 96 · 일꾼 24/40 · 강화 Lv.18 / Lv.11) — 다른 것은 <b>배치와 위계</b>뿐이다.
+⛏ 채굴 칸은 공용 슬롯이라 여덟 안이 <b>같은 것</b>을 쓴다. 값 칸에는 한글을 넣지 않는다(단위는 작은 회색 보조 글자).
+라운드 0/3/6/9 · 간격 4/8/12 · 숫자는 Rajdhani · 면은 검정이고 색을 갖는 것은 선과 빛뿐이라는 규칙을 여덟 안 모두 지킨다.</p>
+
+<div class="wrap">
+
+<!-- ① -->
+<div class="cell"><p class="cap"><i>①</i>지금 — 라벨 위 · 값 아래 · 3×2</p>
+<p class="sub">기준선. 여섯 칸이 <b>모두 같은 무게</b>라 훑기는 편한데 <em>무엇부터 볼지</em>가 없다.
+판이 넓어 아래가 비어 보인다.</p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="g3">
+<div class="st"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="st"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="st"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="st"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="st"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="st"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ② -->
+<div class="cell"><p class="cap"><i>②</i>히어로 — 총 배수 하나를 크게</p>
+<p class="sub">모바일 방치형에서 가장 흔한 꼴. <em>대표 숫자가 서고</em> 나머지는 곁들이가 된다.
+비어 보이던 높이도 이 숫자가 채운다. <s>다만 나머지 다섯이 작아져 훑기는 ①보다 불리하다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="hero">
+<div class="heroL"><div class="l">총 배수</div><div class="v"><i>×</i>12.4</div></div>
+<div class="heroR">
+<div class="st"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="st"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="st"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="st"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="st"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ③ -->
+<div class="cell"><p class="cap"><i>③</i>두 구역 — 「버는 것」과 「쌓은 것」</p>
+<p class="sub">가로 선 하나로 <em>성격이 다른 둘</em>을 가른다. 위=지금 버는 속도, 아래=내가 쌓아 둔 것.
+선은 면을 더하지 않는 가장 싼 구분이다(설정 목록과 같은 어휘).</p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel two">
+<div class="sect">
+<div class="st"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="st"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="st"><span class="l">채취당</span><span class="v">96</span></div>
+</div>
+<div class="sect">
+<div class="st"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="st"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="st"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ④ -->
+<div class="cell"><p class="cap"><i>④</i>아이콘 칸 — 그림으로 먼저 찾는다</p>
+<p class="sub">라벨을 읽기 전에 <em>그림으로 자리를 기억</em>하게 한다. 게임에서 가장 흔한 방식이고
+여기 그림은 <b>실제 에셋</b>이다(자리만 잡은 것이 아니다). <s>가로를 먹어 값 자리가 좁아진다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="g3i">
+<div class="st"><span class="bg"><img src="../../assets/icons/upgrades/up_mineral_up.webp" alt=""></span><span class="tx"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></span></div>
+<div class="st"><span class="bg"><img src="../../assets/icons/res_mineral.webp" alt=""></span><span class="tx"><span class="l">터치당</span><span class="v">1.2K</span></span></div>
+<div class="st"><span class="bg"><img src="../../assets/icons/upgrades/up_mine.webp" alt=""></span><span class="tx"><span class="l">채취당</span><span class="v">96</span></span></div>
+<div class="st"><span class="bg"><img src="../../assets/icons/res_pop.webp" alt=""></span><span class="tx"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></span></div>
+<div class="st"><span class="bg"><img src="../../assets/icons/upgrades/up_melee_atk.webp" alt=""></span><span class="tx"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></span></div>
+<div class="st"><span class="bg"><img src="../../assets/icons/upgrades/up_speed.webp" alt=""></span><span class="tx"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑤ -->
+<div class="cell"><p class="cap"><i>⑤</i>줄 목록 — 라벨 ‥‥ 값</p>
+<p class="sub">두 열 × 세 줄. <em>이름과 값이 한 줄에</em> 있어 세로가 덜 든다.
+설정·룬 가방과 같은 어휘라 화면 사이가 이어진다. <s>숫자가 오른쪽 끝에 붙어 열별로 어긋나 보일 수 있다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="rows">
+<div class="row"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="row"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="row"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="row"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="row"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="row"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑥ -->
+<div class="cell"><p class="cap"><i>⑥</i>칸 나눔 — 지표마다 제 칸</p>
+<p class="sub">커맨드 카드 슬롯과 <em>같은 물성</em>(옅은 면 + 1px). 여섯이 또렷하게 갈린다.
+<s>다만 판 안에 판이라 테두리가 두 겹이 되고, 판때기처럼 무거워질 위험이 있다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="g3b">
+<div class="st"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="st"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="st"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="st"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="st"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="st"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑦ -->
+<div class="cell"><p class="cap"><i>⑦</i>밑변 광원 — 면 대신 빛으로 가른다</p>
+<p class="sub">칸마다 아래에 <em>1px 광원 한 줄</em>. 상단 구역 띠·탭과 같은 어휘라 화면이 한 세계로 읽힌다.
+면을 하나도 더하지 않으면서 여섯이 갈린다. 총 배수 줄만 금색이라 대표가 선다.</p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="g3u">
+<div class="st on"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="st"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="st"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="st"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="st"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="st"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+<!-- ⑧ -->
+<div class="cell"><p class="cap"><i>⑧</i>머리 띠 + 4칸</p>
+<p class="sub">총 배수를 <em>판의 머리줄</em>로 빼고 밑변 광원으로 본문과 가른다(구역 상단 띠와 같은 어법).
+남은 다섯은 3열 두 줄로 편다. <s>대표를 뺀 만큼 아래가 ①보다 더 비어 보일 수 있다.</s></p>
+<div class="stage"><p class="kick">MY BASE</p><div class="sheet"><div class="panel">
+<div class="band"><span class="l">총 배수</span><span class="v"><i>×</i>12.4</span></div>
+<div class="g22">
+<div class="st"><span class="l">터치당</span><span class="v">1.2K</span></div>
+<div class="st"><span class="l">채취당</span><span class="v">96</span></div>
+<div class="st"><span class="l">일꾼</span><span class="v">24<i>/40</i></span></div>
+<div class="st"><span class="l">터치 강화</span><span class="v"><i>Lv.</i>18</span></div>
+<div class="st"><span class="l">일꾼 강화</span><span class="v"><i>Lv.</i>11</span></div>
+</div></div><div class="mine"><span class="ico">⛏</span><b>채굴</b></div></div></div></div>
+
+</div></body></html>
