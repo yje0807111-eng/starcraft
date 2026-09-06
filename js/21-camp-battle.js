@@ -36,6 +36,64 @@
 //   ⛔ 오토배틀의 신전 형상 함수(strikeTempleGap/Half/R)를 쓰지 않는다 — 저건 큰 사각형
 //     신전용이고, 캠프 건물은 격자 한 칸짜리라 그 계산이 과하게 파고든다.
 const CAMP_BLD_R = 46;
+// 🏃 **던전 이동 속도 — 기지와 가운데에서 만난다** (2026-09-05 사용자 확정)
+//   ⛔ 무엇이 문제였나 — 같은 레인저인데 기지와 던전의 속도가 달랐다.
+//     실측(2026-09-05 · **순항** 구간, 화면 세로 비율/초): 기지 병력 **0.1738** · 던전 **0.0435** — **4배**.
+//     ⚠ 처음엔 「1.5배」로 읽었는데 **틀린 측정**이었다 — 5초를 재는 동안 기지 유닛이 도착해
+//       멈춰서 평균이 낮게 나왔다. 거리를 늘려 초마다 재야 순항 속도가 보인다.
+//     두 곳이 아예 다른 식을 쓴다 — 기지는 `TECH_SPD_MUL`(16-build.js), 던전은 오토배틀의
+//     `MOVE_MUL`(14-input-fx.js)로 나눈다.
+//   ⭐ 사용자 판단은 「가운데」다 — 기지는 너무 빠르고 던전은 너무 느리다.
+//     목표 0.1087 = 두 값의 중간. 기지 **병력**은 0.6 → **0.375**(TECH_SPD_MUL_U), 던전은 여기서 **×2.5**.
+//     ⛔ 기지 **일꾼**은 0.6 그대로다 — 채취 왕복이 곧 수입이라 건드리면 경제가 조용히 깎인다.
+//   ⛔ `MOVE_MUL` 을 고치지 말 것 — 유즈맵 오토배틀과 공유한다.
+//   ⚠ 거는 자리는 **이동 호출의 dt** 다(CAMP_RETURN_K 와 같은 관용구). 유닛의 `spd` 는
+//     실제 이동에 안 쓰이고, `strikeMoveToward` 안의 `_skSpdMul` 은 밖에서 못 만진다.
+const CAMP_SPD_MUL = 2.5;
+
+/* 🧱 ── 건물을 뚫고 가지 않는다 — **기지의 길찾기를 그대로 빌린다** (2026-09-05) ─────
+ * ⛔ 무엇이 문제였나 — 전장에서 유닛을 미는 장애물은 `strikeTempleRects()`(18-strike.js) 뿐이고
+ *   캠프에서 그것은 **본부 하나**다. 나머지 건물은 그냥 통과했다(사용자 신고).
+ * ⛔ 먼저 「건물 전부를 원형 장애물로」 만들어 봤다가 **되돌렸다** — 국소 회피 + 밀어내기만으로는
+ *   건물 뒤로 길이 안 나서 **아군이 갇혔다**(의무병이 아군에게서 1152 → 1387 로 멀어졌다).
+ * ⭐ 그래서 **기지가 이미 쓰는 길찾기**(`_techFindPath` · 16-build.js)를 빌린다. 그것은
+ *   **격자 좌표(0~1)** 에서 도는데, 전장 좌표는 `campW2G` 로 바로 그 격자가 된다 —
+ *   그림·건물·유닛이 전부 같은 격자에 있으니 변환만 하면 된다. ⛔ 길찾기를 새로 짜지 말 것.
+ * ⚠ **매 프레임 돌리지 않는다** — A* 가 건물 꼭짓점 전부를 훑는다. 막혔을 때만, 유닛마다
+ *   `CAMP_PATH_T` 마다 다시 낸다. 안 막혔으면 곧장 간다(대부분의 프레임이 이쪽이다).
+ * ⚠ 목표가 크게 움직이면(적을 쫓는 중) 길을 버린다 — 낡은 길을 붙들면 엉뚱한 데로 간다.
+ */
+const CAMP_PATH_T   = 0.5;    // 길을 다시 내는 주기(초)
+const CAMP_PATH_ARR = 0.018;  // 경유점 도착 판정(격자)
+const CAMP_PATH_MOVE= 0.06;   // 목표가 이만큼(격자) 움직이면 길을 버린다
+function _campPathClear(u, gA, gB){
+  if(typeof _techSegClear !== 'function') return true;
+  return _techSegClear({ x:gA.gx, y:gA.gy, type:'unit', uid:(u.gm || u.id) }, gA.gx, gA.gy, gB.gx, gB.gy); }
+function campMove(u, tx, ty, dt){
+  if(typeof strikeMoveToward !== 'function') return;
+  const step = dt * CAMP_SPD_MUL;
+  const W = (CAMPB && CAMPB.world) || 4800;
+  if(typeof campW2G !== 'function' || typeof campG2W !== 'function' || typeof _techFindPath !== 'function'){
+    strikeMoveToward(u, tx, ty, step); return; }
+  const gA = campW2G(u.x, u.y, W), gB = campW2G(tx, ty, W);
+  // 들고 있던 길 — 목표가 그대로면 이어서 따라간다
+  const wp = u._cpWp;
+  if(wp && wp.length && u._cpGx != null
+     && Math.hypot(gB.gx - u._cpGx, gB.gy - u._cpGy) <= CAMP_PATH_MOVE){
+    while(wp.length && Math.hypot(wp[0].x - gA.gx, wp[0].y - gA.gy) <= CAMP_PATH_ARR) wp.shift();
+    if(wp.length){ const p = campG2W(wp[0].x, wp[0].y, W);
+      strikeMoveToward(u, p.x, p.y, step); return; }
+  }
+  u._cpWp = null;
+  u._cpT = (u._cpT || 0) - dt;
+  if(_campPathClear(u, gA, gB)){ strikeMoveToward(u, tx, ty, step); return; }   // 곧장 갈 수 있다
+  if(u._cpT > 0){ strikeMoveToward(u, tx, ty, step); return; }                  // 아직 다시 낼 때가 아니다
+  u._cpT = CAMP_PATH_T * (0.8 + Math.random() * 0.4);   // 유닛마다 위상을 흩어 한 프레임에 몰리지 않게
+  let path = null;
+  try{ path = _techFindPath({ x:gA.gx, y:gA.gy, type:'unit', uid:(u.gm || u.id) }, gB.gx, gB.gy); }catch(e){ path = null; }
+  if(path && path.length > 1){ u._cpWp = path; u._cpGx = gB.gx; u._cpGy = gB.gy;
+    const p = campG2W(path[0].x, path[0].y, W); strikeMoveToward(u, p.x, p.y, step); return; }
+  strikeMoveToward(u, tx, ty, step); }
 // ⏱ 목표를 붙들어 두는 시간 — 0 이면 매 프레임 다시 계산한다.
 //   ⚠ 옛 CAMP_ENG_TICK(0.4)은 **되돌리기와 싸우던 시절**의 값이다. 미는 주체가 하나면
 //     목표가 매 프레임 바뀌어도 서로 무르지 않으므로 붙들 이유가 줄어든다.
@@ -343,7 +401,7 @@ function campStepUnits(dt){
           u._order = null; u._post = { x:o.x, y:o.y }; u._idleT = CAMP_RETURN_DELAY;
           u._goalX = null; u._goalTgt = null; u.moving = false; continue; }
         u._idleT = CAMP_RETURN_DELAY;
-        strikeMoveToward(u, o.x, o.y, dt); continue; }
+        campMove(u, o.x, o.y, dt); continue; }
       // 💉 의무병 — ① 치유 ② 싸우는 본대 따라가기 ③ 자기 자리. 순서가 곧 우선순위다.
       if(a.heal){
         if(_campHealNeed(u, me)){ strikeHealStep(u, me, dt); u._idleT = 0; continue; }   // ① 다친 아군이 있다
@@ -356,7 +414,7 @@ function campStepUnits(dt){
             if(od > lim){ gx = u._post.x + ox / od * lim; gy = u._post.y + oy / od * lim; } }
           const dx = gx - u.x, dy = gy - u.y;
           if(dx * dx + dy * dy <= CAMP_HEAL_FOLLOW * CAMP_HEAL_FOLLOW){ u.moving = false; continue; }
-          strikeMoveToward(u, gx, gy, dt); continue; }
+          campMove(u, gx, gy, dt); continue; }
         // ③ 아무도 안 싸운다 → 아래 일반 복귀와 **같은 규칙**으로 자기 자리로 (지연 포함)
       }
       // 🧱 벙커에 탄 유닛은 움직이지 않는다 — 자리 고정·피해 전가는 campBunkerStep 이 맡는다.
@@ -374,7 +432,7 @@ function campStepUnits(dt){
         // 🗿 최소 사거리 — 이보다 가까우면 **쏠 수 없다.** 물러나 거리를 되찾는다.
         //   ⚠ 이것이 '페럴 > 콜로서스'의 핵심이다(RACES.md §1).
         if(u.minRng > 0 && d < u.minRng + (u.size || 14) * 0.95){
-          strikeMoveToward(u, u.x - (tgt.x - u.x), u.y - (tgt.y - u.y), dt);
+          campMove(u, u.x - (tgt.x - u.x), u.y - (tgt.y - u.y), dt);
           u.depT = u.dep; continue; }
         if(d <= strikeReach(u, tgt)){
           u.moving = false; u.face = Math.atan2(tgt.x - u.x, tgt.y - u.y);
@@ -422,14 +480,14 @@ function campStepUnits(dt){
         if(dx * dx + dy * dy <= CAMP_POST_R * CAMP_POST_R){ u.moving = false; continue; }
         // ⭐ **복귀는 빠르게**(2026-08-30 사용자 확정) — 싸우러 나갔다 오는 길이라 굼뜨면
         //   다음 무리가 올 때까지 자리를 못 잡는다. 배수 1.8 = 한 프레임 0.09초치라 안 튄다.
-        strikeMoveToward(u, p.x, p.y, dt * CAMP_RETURN_K);
+        campMove(u, p.x, p.y, dt * CAMP_RETURN_K);
         continue; }
 
       // ── 이동 — **한 프레임에 딱 한 번**
       const gx = goal.x - u.x, gy = goal.y - u.y;
       const ar = campArriveR(u);
       if(gx * gx + gy * gy <= ar * ar){ u.moving = false; continue; }
-      strikeMoveToward(u, goal.x, goal.y, dt); }
+      campMove(u, goal.x, goal.y, dt); }
 
     // ── 죽은 유닛 정리 (오토배틀과 같은 규약)
     const dead = me.units.filter(u => u.dead);

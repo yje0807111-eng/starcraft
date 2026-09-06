@@ -5808,6 +5808,61 @@ async function groupLobby(){
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
     return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
 
+  // 🧱 **던전에서도 건물을 뚫고 가지 않는다** (2026-09-05 사용자 신고)
+  //    ⛔ 전장의 장애물은 `strikeTempleRects()`(=본부 하나)뿐이라 나머지 건물은 통과했다.
+  //    ⛔ 건물 전부를 원형 장애물로 만드는 안은 **되돌렸다** — 국소 회피뿐이라 아군이 갇혔다.
+  //    ⭐ 지금은 **기지의 길찾기(_techFindPath)를 격자 좌표에서 그대로 빌린다**(campMove).
+  await step('캠프: 던전에서 건물을 뚫지 않고 돌아간다 (기지 길찾기 재사용)', async()=>{
+    // ⛔ 가드는 옛 버전에도 있는 것으로 — campMove 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof campDeploy!=='function'||typeof campStepUnits!=='function'
+      ||typeof _techFindPath!=='function'||typeof campW2G!=='function','캠프/길찾기 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const W=CAMPB.world;
+      // 유닛과 목표 **사이**에 건물을 놓는다
+      G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&e.bk==='barracks'));
+      const bg={x:0.5,y:0.40};
+      G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:'barracks', x:bg.x, y:bg.y, w:3,h:3, bt:0 });
+      campBuildStructs();
+      const probe={ x:bg.x, y:bg.y, type:'unit', uid:'marine' };
+      const rect=(_techNavRects(probe)||[]).find(R=>bg.x>R.x0&&bg.x<R.x1&&bg.y>R.y0&&bg.y<R.y1);
+      skipIf(!rect,'건물이 길찾기 장애물로 안 잡힌다(격자 밖)');
+      const u=campDeploy('marine', 0.5, 0.55); assert(u,'배치 실패');
+      u.hp=u.maxHp=1e9;
+      const goal={x:0.5,y:0.24};
+      // ① 전제 — 곧장 가면 건물을 지난다
+      assert(!_techSegClear(probe, 0.5, 0.55, goal.x, goal.y),'전제: 직선이 건물을 안 지난다 — 검사가 헛돈다');
+      campSelSet([u]); campMoveSel(goal.x, goal.y);
+      // ⚠ 판정을 둘로 나눈다 — **모퉁이를 살짝 스치는 것**과 **한가운데를 뚫는 것**은 다르다.
+      //   관성이 있는 이동이라 코너에서 몇 프레임 겹치는 것은 기지에서도 일어난다.
+      //   ⛔ 「뚫고 간다」의 자[尺]는 **안쪽 절반**이다 — 돌아가면 거기엔 한 프레임도 안 들어간다.
+      const cx=(rect.x0+rect.x1)/2, cy=(rect.y0+rect.y1)/2;
+      const ihx=(rect.x1-rect.x0)/4, ihy=(rect.y1-rect.y0)/4;
+      let inside=0, core=0, best=1e9;
+      for(let i=0;i<10*30;i++){ campWithStk(()=>campStepUnits(1/30));
+        const g=campW2G(u.x,u.y,W);
+        if(g.gx>rect.x0&&g.gx<rect.x1&&g.gy>rect.y0&&g.gy<rect.y1) inside++;
+        if(Math.abs(g.gx-cx)<ihx&&Math.abs(g.gy-cy)<ihy) core++;
+        best=Math.min(best, Math.hypot(g.gx-goal.x, g.gy-goal.y));
+        if(!u._order) break; }
+      const g1=campW2G(u.x,u.y,W);
+      // ② 건물 **한가운데**를 지나가지 않았다 = 돌아갔다
+      assert(core===0,'건물 한가운데를 '+core+'프레임 지나갔다 — 뚫고 갔다');
+      // ③ 모퉁이를 스치는 것도 짧아야 한다(0.7초 미만)
+      assert(inside<21,'건물에 '+inside+'프레임 겹쳤다 — 모퉁이를 스치는 정도가 아니다');
+      // ④ 그래도 목표 쪽으로 갔다(막혀서 제자리걸음이 아니다)
+      assert(best < 0.10,'건물을 피하다 목표에 못 갔다: 가장 가까웠던 거리 '+best.toFixed(3));
+      return '한가운데 0프레임 · 겹침 '+inside+'프레임 · 목표까지 '+best.toFixed(3)+' (끝 '+g1.gy.toFixed(3)+')';
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      G.tech.ents=(G.tech.ents||[]).filter(e=>!(e&&e.bk==='barracks'));
+      if(typeof campBuildStructs==='function' && CAMPB) campBuildStructs();
+      if(typeof campSelClear==='function') campSelClear();
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+  });
+
   // 🖐 **던전 조작감 = 기지 조작감** (2026-09-05 사용자 신고: 「같은 레인저인데 던전에서만 다르다」)
   //    ⚠ 위 스텝들은 API 를 직접 부른다 — **진짜 포인터 이벤트 경로**는 아무도 안 잰다.
   //      「드래그가 뻑뻑하다 · ⊘ 를 눌러도 안 풀린다」는 전부 그 경로의 이야기다.

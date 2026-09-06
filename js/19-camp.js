@@ -2590,7 +2590,7 @@ function campMineTrip(u, dt){
   const m = u._mine; if(!m) return;
   const dx = m.x - u.x, dy = m.y - u.y;
   if(dx*dx + dy*dy > CAMP_MINE_ARR*CAMP_MINE_ARR){
-    if(typeof strikeMoveToward === 'function') strikeMoveToward(u, m.x, m.y, dt);
+    if(typeof campMove === 'function') campMove(u, m.x, m.y, dt);   // 🏃 매설도 같은 속도로
     return; }
   const sk = m.sk || {};
   (CAMPB._mines || (CAMPB._mines = [])).push({

@@ -775,7 +775,15 @@ if(typeof document!=='undefined'){ document.addEventListener('pointermove', func
   document.addEventListener('pointerup', function(e){ if(_inBuildPtr()&&typeof techPtrUp==='function') techPtrUp(e); });
   document.addEventListener('pointercancel', function(e){ if(_inBuildPtr()&&typeof techPtrUp==='function') techPtrUp(e); }); }
 // ── 그리드 배치: 배치 영역(0.06~0.94 × 0.18~0.94)을 20×20 정사각(픽셀) 셀로 나눔. 건물은 size[w,h]만큼 셀 점유 ──
-const TECH_SPD_MUL=0.6;   // 건설지 유닛 이동 속도 배율(1=기존). 화면 종횡비 보정과 함께 적용
+// 🏃 건설지(=캠프 기지) 이동 속도 배율.
+//   ⭐ **병력만 던전과 가운데에서 만난다**(2026-09-05 사용자 확정: 「기지는 너무 빠르고 던전은 너무 느리다」).
+//     실측(순항 · 화면 세로 비율/초): 기지 병력 **0.1738** · 던전 **0.0435** — **4배** 차이였다.
+//     중간 0.1087 로 맞춘다 → 기지 병력 0.6 → **0.375**, 던전은 `CAMP_SPD_MUL` **2.5**.
+//   ⛔ **일꾼은 0.6 그대로 둔다** — 채취는 왕복 횟수가 곧 수입이라, 느리게 하면 경제가 조용히 깎인다
+//     (BALANCE §3 의 실측 기준선이 전부 이 값으로 잰 것이다). 사용자가 말한 것은 병력 조작감이다.
+//   ⚠ 병력 쪽 두 값은 **한 쌍**이다 — 한쪽만 고치면 다시 갈라진다(js/21-camp-battle.js CAMP_SPD_MUL).
+const TECH_SPD_MUL=0.6;        // 일꾼 — 옛 값 그대로(경제 기준선)
+const TECH_SPD_MUL_U=0.375;    // 병력 — 던전과 가운데에서 만난다
 const TECH_GRID={ cols:20, x0:0.06, y0:0.18, x1:0.94, y1:0.94 };
 function techCols(){ return techWallet()? STK_TECH_COLS : TECH_GRID.cols; }   // 건설 그리드 칸 수 — 오토배틀은 보드처럼 더 넓게(맵별)
 function techExtOpen(){ const w=techWallet(); return !!(w && (w.mines||0)>=STK_MINE_CAP); }   // 광산 최대 보유 → 건설지 확장 개방
