@@ -63,7 +63,15 @@ try {
     : { width: 430, height: 880, deviceScaleFactor: +(process.env.SHOT_DPR||1),
         hasTouch: MOBILE, isMobile: MOBILE });
   await page.goto('http://127.0.0.1:' + PORT + '/' + (isPage ? WHAT : 'sc-ums-web.html'), { waitUntil: 'domcontentloaded' });
-  if (isPage) { await new Promise(r => setTimeout(r, 1200)); await page.screenshot({ path: OUT, fullPage: true });
+  // 🖼 **프레임이 한 장 그려진 뒤에** 찍는다(2026-09-05).
+  //   ⛔ setTimeout 만으로는 모자란다 — 렌더러가 아직 화면을 못 만든 상태에서 찍으면
+  //     `Cannot take screenshot with 0 width` 로 **죽는다.** 목업을 찍다 걸렸고, 되짚어 보니
+  //     이 경주는 늘 있었다(어떤 파일은 이기고 어떤 파일은 졌다 — 그래서 파일 탓으로 보였다).
+  //   ⚠ 웹폰트로는 못 기다린다. 이 환경은 Google Fonts 가 막혀 있어(ERR_CONNECTION_RESET)
+  //     `document.fonts.ready` 가 도움이 안 된다. **rAF 두 번**이 「한 장 그렸다」의 신호다.
+  if (isPage) { await new Promise(r => setTimeout(r, 1200));
+    try { await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))); } catch (_e) {}
+    await page.screenshot({ path: OUT, fullPage: true });
     console.log(WHAT + ' → ' + path.basename(OUT)); await browser.close(); server.close(); process.exit(0); }
   if (WHAT === 'boot') {
     await new Promise(r => setTimeout(r, AT != null ? AT : 700));   // 막대가 도는 중

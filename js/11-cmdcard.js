@@ -756,22 +756,29 @@ function _autoSheetModel(){ const o=autoUtilOwned(); if(!G.auto) G.auto={unit:fa
 //   대신 여기서 **기지 전체 요약**을 보여 준다 — 유즈맵 하단이 늘 내 캐릭터를 보여 주는 것과 같은 자리다.
 //   ⚠ 캠프 상태는 **읽기만** 한다(19-camp.js 는 다른 작업자 영역).
 function _campIdleModel(){
-  const C=(typeof campState==='function')?campState():null;
   const T=(typeof G!=='undefined')?G.tech:null;
   const f=(typeof fmtCur==='function')?fmtCur:(n=>String(Math.floor(n||0)));
-  const dg=C?Math.max(1,Math.min(10,C.dg||1)):1;
   const wk=(T&&T.ents)?T.ents.filter(e=>e.type==='worker').length:0;
-  const rate=(C&&C.rate>0)?C.rate:0;
+  // 📊 **여섯 칸(3열 2줄).** 값이 흔들리지 않는 것이 이 판의 첫째 조건이다 —
+  //   ⛔ **값 칸에 한글을 넣지 말 것.** 값은 숫자 폰트(--font-num = Rajdhani)로 그려지는데
+  //     한글은 그 폰트에 없어 IBM Plex Sans KR 로 떨어진다. 같은 14px 인데 크기가 달라 보여
+  //     「글자가 커졌다 작아졌다」로 읽힌다(2026-09-05 사용자 지적의 원인 ①).
+  //     단위·꼬리표는 `<i class="u">` 로 빼서 작은 회색 보조 글자로 만든다.
+  //   ⛔ 상단 재화 바·좌상단 칩이 말하는 것을 여기서 또 말하지 말 것 —
+  //     그래서 인구(재화 바에 있다)·던전 배수(칩이 던전을 말하고, 총 배수에 포함된다)를 뺐다.
+  //   ⛔ 자동 수급(초당)도 뺐다 — 「채취당 × 일꾼 수」로 읽히는 것이 더 낫다는 판단이다.
+  const u=t=>'<i class="u">'+t+'</i>';
+  // 배수는 자릿수가 커져도 폭이 안 늘어야 한다 — 100 부터는 fmtCur 의 축약(1.2K)에 맡긴다.
+  const mul=v=>(v<100 ? v.toFixed(1) : f(v));
   const st=[];
-  st.push(['터치 획득', (typeof campTapGain==='function')?f(campTapGain()):'-']);
-  st.push(['자동 수급', rate? (f(rate)+'/초') : '측정 중']);
-  st.push(['일꾼',      wk+'기']);
-  st.push(['인구',      T? ((T.sup||0)+' / '+(T.supCap||0)) : '-']);
-  st.push(['던전 배수', (typeof campDgMul==='function')?('×'+campDgMul(dg).toFixed(1)):'-']);
-  st.push(['채취 배수', (typeof campGatherMul==='function')?('×'+campGatherMul().toFixed(1)):'-']);
+  st.push(['총 배수',   (typeof campCommonMul==='function')?(u('×')+mul(campCommonMul())):'-']);
+  st.push(['터치당',    (typeof campTapGain==='function')?f(campTapGain()):'-']);
+  st.push(['채취당',    (typeof campGatherGain==='function')?f(campGatherGain()):'-']);
+  // 🧍 상한을 **같이** 보여 준다 — 더 뽑을 수 있는지가 여기서만 읽힌다(광맥 8덩이 × 5명 = 40).
+  st.push(['일꾼',      wk+u('/'+((typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:'-'))]);
   if(typeof campUpgLv==='function'){
-    st.push(['터치 강화', 'Lv.'+campUpgLv('tap')]);
-    st.push(['일꾼 강화', 'Lv.'+campUpgLv('gather')]); }
+    st.push(['터치 강화', u('Lv.')+campUpgLv('tap')]);
+    st.push(['일꾼 강화', u('Lv.')+campUpgLv('gather')]); }
   // ⛔ 제목에 **던전 이름을 쓰지 않는다** — 던전은 좌상단 칩이 이미 말한다(같은 것을 두 번 말하게 된다).
   //    대신 이 구역이 무엇인지를 자간 넓은 작은 라벨로 말한다(kicker · 로딩창 LOADING 과 같은 어법).
   return { mode:'upg', compact:true, build:true, wide:true,   // 빈 슬롯 4칸이 의미 없다 → 안쪽 전체를 쓴다
@@ -779,12 +786,17 @@ function _campIdleModel(){
     info:{ hideName:true, statsWide:true, stats:st },
     items:[] }; }
 // 값이 바뀔 때만 다시 그린다 — 캠프 틱은 매 프레임 돌아서 그냥 그리면 입력이 끊긴다
+// ⚠ 서명은 **화면에 나오는 값**만 센다. 안 나오는 것(인구·초당 수급)을 세면 헛되이 다시 그리고,
+//   나오는 것을 빠뜨리면 값이 바뀌어도 판이 안 갈린다 — 여섯 칸과 여기가 같이 움직여야 한다.
 function _campIdleSig(){
-  const C=(typeof campState==='function')?campState():null;
   const T=(typeof G!=='undefined')?G.tech:null;
-  return 'ci|'+(C?(C.dg||1):0)+'|'+(C?(C.upg&&C.upg.tap||0):0)+'|'+(C?(C.upg&&C.upg.gather||0):0)
-    +'|'+((C&&C.rate>0)?C.rate.toFixed(1):0)
-    +'|'+(T?((T.ents||[]).filter(e=>e.type==='worker').length):0)+'|'+(T?(T.sup||0):0)+'|'+(T?(T.supCap||0):0); }
+  const n=(fn,a)=>{ try{ return (typeof fn==='function')?Math.round(fn(a)*100):0; }catch(_e){ return 0; } };
+  return 'ci|'+n(typeof campCommonMul!=='undefined'?campCommonMul:null)
+    +'|'+n(typeof campTapGain!=='undefined'?campTapGain:null)
+    +'|'+n(typeof campGatherGain!=='undefined'?campGatherGain:null)
+    +'|'+(T?((T.ents||[]).filter(e=>e.type==='worker').length):0)
+    +'|'+n(typeof campUpgLv!=='undefined'?campUpgLv:null,'tap')
+    +'|'+n(typeof campUpgLv!=='undefined'?campUpgLv:null,'gather'); }
 // 캠프가 부르는 입구. host 를 안 주면 캠프 시트 본문(#btSheetBody)에 그린다.
 function renderCampIdleSheet(host){
   const el=host||document.getElementById('btSheetBody'); if(!el) return;
@@ -1822,6 +1834,31 @@ function _cgSlotHTML(it, build){ if(!it||it.state==='empty') return '<div class=
   const meta=(it.tr!=null&&it.tr!=='')?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.tr+'</div>'):((!build&&it.meta)?('<div class="cgMeta '+(it.metaCls||'')+'">'+it.meta+'</div>'):'');   // tr=건설 카드에서도 보이는 우상단 배지(업그레이드 다음 단계 등) · 그 외 건설 카드=메타 제거
   const bot=(it.bottom!=null)?it.bottom:('<div class="cgCost">'+_cgCost(it.cr,it.en,build)+'</div>');   // 🧱 bottom = 커스텀 하단 줄(벙커 HP 등)
   return '<div class="'+cls+'"'+(it.act?(' '+it.act):'')+'>'+meta+'<div class="cgPro">'+(it.pro||'')+'</div><div class="cgName">'+(it.sn||'')+'</div>'+((it.sub!=null&&it.sub!=='')?('<div class="cgSub">'+it.sub+'</div>'):'')+bot+'</div>'; }
+// ✂ **좁은 설명 칸에서 줄이 흉하게 넘어가는 것을 막는다**(2026-09-05).
+//   설명 칸(.cgDd)은 캠프 연구 구역에서 **95px 뿐이다**(실측) — 한글 9~10자에서 줄이 바뀐다.
+//   그대로 두면 실측으로 91개 중 15개가 이렇게 깨졌다:
+//     · 「전투기·폭격기·전함 +1/ / 티어」  — 슬래시 **뒤**가 끊긴다
+//     · 「공성전차 장거리 포격 / 모드」    — 마지막 한 낱말만 다음 줄에 남는다
+//   ⭐ 그래서 **문구를 고치지 않고 그리는 자리에서** 두 가지만 손본다. 새 설명이 들어와도 저절로 걸린다.
+//     ⛔ 91개를 손으로 고치지 말 것 — 하나 늘 때마다 또 손봐야 한다.
+//   ⚠ `\u2060`(낱말 이음)·`\u00A0`(줄바꿈 없는 공백)은 **눈에 안 보인다** — 이스케이프로만 적는다.
+//   ⚠ 이미 손으로 잡아 둔 곳(js/20-camp-research.js 의 `\u00A0`)과 **겹치지 않는다**:
+//     그쪽은 이미 보통 공백이 아니라서 아래 ②의 낱말 나누기에 안 걸린다.
+function _ddBrk(s){
+  if(s == null) return s;
+  s = String(s);
+  if(s.indexOf('<') >= 0) return s;                  // ⛔ HTML 조각(툴팁 등)은 건드리지 않는다
+  // ① 「+1/티어」·「−3%/레벨」 — 슬래시 뒤에서 끊기지 않게 붙인다
+  s = s.replace(/\/(?=\S)/g, '/\u2060');
+  // ③ 「시간↑」 — 한글 **바로 뒤에 붙은 기호**도 끊긴다. `keep-all` 은 한글 낱말만 지키고
+  //   한글↔기호 경계는 여전히 줄 바꿀 자리로 본다(실측: 「…유지 시간 / ↑」).
+  s = s.replace(/([^\s\u2060])([↑↓→←])/g, '$1\u2060$2');
+  // ② 마지막 낱말이 짧으면 앞 낱말과 묶는다 — 줄 끝에 한 낱말만 남지 않게
+  const t = s.split(' ');
+  if(t.length >= 2 && t[t.length - 1].length <= 4)
+    return t.slice(0, -2).concat(t.slice(-2).join('\u00A0')).join(' ');
+  return s;
+}
 function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class="cgDd">항목을 선택하세요</div>';
   let val=''; if(d.stats) val='<div class="cgStats'+(d.statsScroll?' cgScr':'')+(d.statsWide?' cgWide':'')+'">'+d.stats.map(s=>'<div class="cgStat"><span>'+s[0]+'</span><b>'+s[1]+'</b></div>').join('')+'</div>';
   else if(d.val&&!d.val.sm) val='<div class="cgVal"><span class="cur">'+d.val.cur+'</span><span class="arw">▸</span><span class="nxt">'+d.val.nxt+'</span><span class="u">'+(d.val.unit||'')+'</span></div>';
@@ -1832,7 +1869,7 @@ function _cgInfoHTML(d){ if(!d) return '<div class="cgEb">정보</div><div class
     const r=Math.max(0,Math.min(1,u.hp/(u.maxHp||1)));
     return '<div class="cgUChip" data-uid="'+(u.uid!=null?u.uid:u.eid)+'" '+(u.act||('onclick="techSubSelectOne(event,'+u.eid+')"'))+' title="이 유닛만 지정"><i class="cgUFill" style="width:'+(r*100)+'%;background:'+hpBarColor(r)+'"></i><em class="cgUHp">'+Math.round(u.hp)+'/'+Math.round(u.maxHp||0)+'</em></div>';
   }).join('')+'</div>'; }   // 👥 유닛별 HP 칩 그리드 — 얇은 HP 선(비율↓=빨강) + 칩 중앙 HP 수치(40/40), 탭=개별 지정 · 12↑도 그리드 스크롤(프로필 높이 고정)
-  return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+d.desc+'</div>':'')+val
+  return (d.eb?'<div class="cgEb">'+d.eb+'</div>':'')+(d.hideName?'':'<div class="cgDn">'+(d.name||'')+'</div>')+(d.desc?'<div class="cgDd">'+_ddBrk(d.desc)+'</div>':'')+val
     +(d.progLabel?('<div class="cgProg"><div class="pl"><span>'+d.progLabel+(d.progTime?' <em class="pt">'+d.progTime+'</em>':'')+'</span><b>'+(d.progVal||'')+'</b></div><div class="cgBar"><i style="width:'+Math.max(4,d.prog||0)+'%"></i></div>'+(d.qbar?('<div class="cgQBar"'+(d.qbar.cancel!=null?' onclick="techCancelQueue(event,'+d.qbar.cancel+')" title="탭 = 마지막 예약 취소(100% 환불)" style="cursor:pointer"':'')+' aria-label="대기열 '+(d.qbar.n||0)+'/5"><i style="width:'+Math.max(0,d.qbar.fill||0)+'%'+(d.qbar.color?(';background:'+d.qbar.color):'')+'"></i></div>'):'')+valSm+'</div>'):'')+q+ul
     +'<div class="cgDcost">'+_cgCost(d.cr,d.en)+(d.time?'<span class="time">'+d.time+'</span>':'')+'</div>'; }
 function renderCmdGrid(host, m){ const el=(typeof host==='string')?document.getElementById(host):host; if(!el||!m) return;

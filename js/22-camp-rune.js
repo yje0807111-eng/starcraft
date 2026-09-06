@@ -19,8 +19,12 @@
 // 순서: 19-camp.js 의 `campState`·`campSave`·`CAMP_ROUND_MAX` 를 읽으므로 **뒤에 와야 한다.**
 
 // ── 등급 ────────────────────────────────────────────────────────────────
-// 일반 룬은 하급·중급·상급 셋. 유니크는 등급이 없다(그 자체가 한 등급).
-const RUNE_GRADES = ['low', 'mid', 'high'];
+// 🎚 **유니크는 등급이다**(2026-09-05 사용자 확정) — 룬 **종류**가 아니다.
+//   ⛔ `kind:'uniq'` 로 되돌리지 말 것. 그때는 유니크가 「다른 룬에 없는 능력」 넷이었는데,
+//     지금은 **모든 룬의 네 번째 등급**이다 — 같은 효과를 훨씬 세게 준다.
+//   ⭐ **어느 칸에 들어가느냐를 정하는 것도 등급이다**: 유니크 등급 → 유니크 칸(성좌 중심 3).
+//     갈래는 그대로다 — 경제 성좌의 중심에는 **경제 룬의 유니크 등급**만 들어간다.
+const RUNE_GRADES = ['low', 'mid', 'high', 'uniq'];
 const RUNE_GD = {
   low:  { tx:'하급', col:'#8b95a5' },
   mid:  { tx:'중급', col:'#5cd6ff' },
@@ -30,14 +34,10 @@ const RUNE_GD = {
 // ── 룬 표 ───────────────────────────────────────────────────────────────
 // ⚠ **여기 값은 전부 임시다.** 등급별 수치·젬 값은 사용자가 정한다(스킬 때와 같은 방식).
 //   확정되면 이 표가 단일 소스가 되고, 문서는 `GEM.md` §8 이 받는다.
-// kind:'norm' — 일반 칸에 끼운다. v/gem 은 **등급별 표**.
-// kind:'uniq' — 유니크 칸(3개)에만 끼운다. **다른 룬에 없는 능력**이라 등급이 하나다.
 // eff — 효과 키. `campRuneEff(eff)` 가 이 키로 합을 낸다.
 // ── 룬 표 (2026-09-02 값 확정) ──────────────────────────────────────────
 // ⭐ **종류가 칸보다 많아야 「고르는 것」이 된다.** 일반 10종 / 5칸 · 유니크 4종 / 3칸.
 //   ⛔ 종류 = 칸 이면 전부 끼워지므로 고를 것이 없어진다 — 그러면 이 시스템은 그냥 「연구 2」다.
-// kind:'norm' — 일반 칸에 끼운다. 하급·중급·상급 세 등급.
-// kind:'uniq' — 유니크 칸(3개)에만. **다른 룬에 없는 능력**이라 등급이 하나다.
 // eff — 효과 키. `campRuneEff(eff)` 가 이 키로 합을 낸다. 값은 전부 **더할 비율**이다.
 //   ⛔ 감소형(쿨타임·비용 −%)을 넣지 말 것 — 합산이라 100% 를 넘으면 부호가 뒤집힌다.
 //     넣으려면 상한을 함께 설계해야 한다(지금은 전부 증가형이라 그 문제가 없다).
@@ -51,80 +51,98 @@ const RUNE_GRP = {
   eco:  { nm:'경제', col:'#7effc9' },
   war:  { nm:'전투', col:'#ffa3b8' },
   grow: { nm:'성장', col:'#e6eef8' },
+  // ⚠ 'uniq' 는 **갈래가 아니라 등급**이다(2026-09-05). 여기 남겨 둔 것은 옛 저장·이름표가
+  //   찾을 때를 위한 것뿐이고, 칸·탭·성좌는 RUNE_GRPS(셋)만 본다.
   uniq: { nm:'유니크', col:'#ffe08a' } };
+// 🎚 룬 하나가 들어갈 **칸 무리** — 등급이 정한다. ⛔ 룬 종류로 가르지 말 것.
+function runeBucket(key){ return (runeParse(key).gd === 'uniq') ? 'uniq' : 'norm'; }
+// 🗺 칸의 갈래 — 일반은 성좌 고리, **유니크 칸은 그 성좌의 중심**이라 같은 갈래다(사용자 확정).
+function runeCellGrp(kind, i){
+  return (kind === 'uniq') ? (RUNE_GRPS[i] || RUNE_GRPS[0]) : runeSlotGrp(i); }
 // 일반 i번 칸이 속한 갈래 — 성좌 하나가 통째로 한 갈래다
 function runeSlotGrp(i){ return RUNE_GRPS[Math.floor(i / RUNE_CONS)] || RUNE_GRPS[0]; }
 
 const RUNE_LIST = [
-  // ── 일반 12종 = 갈래 4종 × 3 ── 값은 RUNE_VAL 이 정한다(하급 1% · 중급 2.5% · 상급 5%)
-  // ⚠ 「재화의 룬」(gain · 탭+채취)은 2026-09-03 에 지웠다 — 손끝의 룬을 **품고 있어서**
-  //   젬 값이 같으면 손끝을 살 이유가 없었다. ⛔ 되살리려면 손끝과 겹치지 않게 갈라야 한다.
-  // ⚠ 「증원의 룬」(pop · 인구 상한)은 2026-09-04 에 뺐다 — 환생 구역에서 200 을 그냥 찍을 수
-  //   있어서 룬으로 1~5% 를 더하는 것이 의미가 없었다(사용자 지적).
-  // ⚠ 건설·생산·연구 **속도** 룬도 접었다 — 캠프에서 그 시간이 병목이 아니다.
+  // ── 갈래마다 7종을 목표로 한다(칸은 8이라 하나는 두 번 끼우게 된다 — 그게 마지막 선택이다).
+  //   ⚠ **유니크는 여기 없다.** 등급이지 종류가 아니다(위 RUNE_GRADES 설명).
+  // ⚠ 지운 룬들 — ⛔ 되살리려면 왜 지웠는지부터 볼 것:
+  //   「재화의 룬」(gain · 2026-09-03) 손끝의 룬을 품고 있어 값이 같으면 손끝을 살 이유가 없었다.
+  //   「증원의 룬」(pop · 2026-09-04) 환생 구역에서 200 을 그냥 찍을 수 있어 1~5% 가 무의미했다.
+  //   「윤회의 룬」(rebPts · 2026-09-05) **환생할 때만 끼는 시스템이 별로**라는 판단(사용자).
+  //   「성장의 룬」(exp · 2026-09-05) 적 처치 보상과 **겹친다**(사용자).
+  //   건설·생산·연구 **속도** 룬 — 캠프에서 그 시간이 병목이 아니다.
 
-  // 💠 경제 — 캠프에서 버는 것
-  { id:'tap',   nm:'손끝의 룬',   kind:'norm', grp:'eco',  eff:'tap',     ico:'coin',
+  // 💠 경제 7 — 캠프에서 버는 것
+  { id:'tap',   nm:'손끝의 룬',   grp:'eco',  eff:'tap',      ico:'coin',
     de:'탭 획득량' },
-  { id:'gas',   nm:'정제의 룬',   kind:'norm', grp:'eco',  eff:'gas',     ico:'box',
+  { id:'gas',   nm:'정제의 룬',   grp:'eco',  eff:'gas',      ico:'box',
     de:'가스 획득' },
   // ⚠ 손끝(손으로 누를 때)과 **다른 자리**다 — 이쪽은 일꾼이 왕복해서 캐는 양이다.
-  { id:'mine',  nm:'채굴의 룬',   kind:'norm', grp:'eco',  eff:'mine',    ico:'upg',
+  { id:'mine',  nm:'채굴의 룬',   grp:'eco',  eff:'mine',     ico:'upg',
     de:'일꾼 채취량' },
-  { id:'reb',   nm:'윤회의 룬',   kind:'norm', grp:'eco',  eff:'rebPts',  ico:'new',
-    de:'환생 포인트 획득' },
-
-  // ⚔ 전투 — 던전에서 싸우는 것
-  { id:'atk',   nm:'힘의 룬',     kind:'norm', grp:'war',  eff:'atk',     ico:'upg',
-    de:'유닛 공격력' },
-  { id:'aspd',  nm:'연타의 룬',   kind:'norm', grp:'war',  eff:'aspd',    ico:'upg',
-    de:'유닛 공격속도' },
-  { id:'hp',    nm:'수호의 룬',   kind:'norm', grp:'war',  eff:'hp',      ico:'armor',
-    de:'유닛 체력' },
-  { id:'heal',  nm:'치유의 룬',   kind:'norm', grp:'war',  eff:'heal',    ico:'hero',
-    de:'회복량' },
-
-  // 🌱 성장 — 레벨과 바깥 보상
-  // ⚠ **레벨 시스템은 아직 없다**(2026-09-04). 이 둘은 자리를 먼저 잡아 둔 것이라 지금은
-  //   아무 일도 안 한다 — 열기의 룬이 피버를 안 열었을 때와 같다. 상점에서 그렇게 알린다.
-  { id:'exp',   nm:'성장의 룬',   kind:'norm', grp:'grow', eff:'exp',     ico:'hero',
-    de:'경험치 획득량', soon:true },
-  // ⚠ **아직 닿는 데가 없다**(2026-09-04 실측: campRuneEff('killGain') 을 부르는 곳이 0곳).
-  //   적 처치 보상이라는 자리를 먼저 잡아 둔 것이다 — 배선하면 soon 을 지운다.
-  { id:'kill',  nm:'전과의 룬',   kind:'norm', grp:'grow', eff:'killGain',ico:'upg',
-    de:'적 처치 보상', soon:true },
-  // ⚠ 2026-09-04 에 **유니크 → 일반**으로 내려왔다(성장 갈래를 채우려고).
-  //   ⛔ 젬에는 안 건다 — 젬은 현질 재화다(GEM.md).
-  { id:'mapg',  nm:'전리품의 룬', kind:'norm', grp:'grow', eff:'mapGain', ico:'map',
-    de:'유즈맵 보상 재화' },
-  // ⚡ 피버 **획득량**(배수)이다. 열기의 룬(확률)과 다른 자리.
-  //   ⚠ 예전 주석은 「배수에 붙이면 상시 배수가 된다」고 막았다. 2026-09-04 사용자 확정으로
-  //     연다 — 피버 자체를 **짧게·약하게·확률 낮게·쿨 길게** 유지한다는 전제다.
-  //     ⛔ 그 전제가 깨지면(피버가 길어지거나 흔해지면) 이 룬부터 다시 재야 한다.
-  { id:'fevg',  nm:'열정의 룬',   kind:'norm', grp:'grow', eff:'fevGain', ico:'boost',
-    de:'피버 획득량' },
-
-  // ── 유니크 4종 — **다른 데서 못 사는 것**이라 칸이 셋뿐이다 ──
-  // ⚠ **가속의 룬은 유별나게 세다.** 실측(2026-09-02 · BALANCE §3-2-7): +10% 가 45분 누적
-  //   수입을 **+60%** 로 만들었다(누적 증폭 4.9제곱 — 결제 팩 1.63제곱보다 3배 가파르다).
-  //   다른 룬은 축 하나를 키우지만 이것은 **시간 자체**라 모든 축에 곱해진다.
-  { id:'speed', nm:'가속의 룬',   kind:'uniq', grp:'uniq', eff:'speed',   ico:'boost',
-    de:'캠프 전체 진행 속도' },
-  // ⭐ 이동속도 룬은 **일꾼 하나뿐**이다(2026-09-02). 「유닛 이동속도」는 뺀 축이다.
-  { id:'wspd',  nm:'신속의 룬',   kind:'uniq', grp:'uniq', eff:'wspd',    ico:'boost',
+  // ⭐ 이동속도 룬은 **일꾼 하나뿐**이다. 「유닛 이동속도」는 뺀 축이다 — 되살리지 말 것.
+  { id:'wspd',  nm:'신속의 룬',   grp:'eco',  eff:'wspd',     ico:'boost',
     de:'일꾼 이동속도' },
-  // ⚡ **확률**을 올린다(지속·배수가 아니다). 배수는 열정의 룬이 맡는다.
-  //   ⚠ 환생 트리에서 피버를 안 열었으면 이 룬도 아무 일을 안 한다.
-  { id:'fever', nm:'열기의 룬',   kind:'uniq', grp:'uniq', eff:'fever',   ico:'new',
+  // ✨ 치명 — 확률 둘(터치·채굴)과 배수 하나. ⛔ 채굴용 배수를 따로 만들지 말 것.
+  { id:'crit',  nm:'예리의 룬',   grp:'eco',  eff:'critPct',  ico:'upg',
+    de:'치명 터치 확률' },
+  { id:'critm', nm:'일격의 룬',   grp:'eco',  eff:'critMul',  ico:'coin',
+    de:'치명 배수(터치·채굴)' },
+  { id:'gcrit', nm:'노다지의 룬', grp:'eco',  eff:'gcritPct', ico:'coin',
+    de:'일꾼 채굴 치명 확률' },
+
+  // ⚔ 전투 6 — 던전에서 싸우는 것
+  //   ⚠ **여섯이다**(2026-09-05). 「공격 회피율」은 사용자가 뺐다.
+  { id:'atk',   nm:'힘의 룬',     grp:'war',  eff:'atk',      ico:'upg',
+    de:'유닛 공격력' },
+  { id:'aspd',  nm:'연타의 룬',   grp:'war',  eff:'aspd',     ico:'upg',
+    de:'유닛 공격속도' },
+  { id:'hp',    nm:'수호의 룬',   grp:'war',  eff:'hp',       ico:'armor',
+    de:'유닛 체력' },
+  { id:'heal',  nm:'치유의 룬',   grp:'war',  eff:'heal',     ico:'hero',
+    de:'회복량' },
+  // 🎯 ⚠ campScaleAllies 의 옛 주석은 「사거리는 건드리지 않는다(종족 상성이 바뀐다)」였다.
+  //   그 경고는 **인식 거리를 넓히던 맥락**의 것이고, 여기는 1.5~5% 라 상성이 뒤집힐 폭이 아니다.
+  //   ⛔ 그래도 두 자릿수로 올리지 말 것 — 그때는 옛 경고가 그대로 살아난다.
+  { id:'rng',   nm:'조준의 룬',   grp:'war',  eff:'rng',      ico:'flag',
+    de:'유닛 사거리' },
+  // 📉 **감소형**이다 — 뚜껑은 RUNE_CUT_CAP(50%).
+  { id:'skcd',  nm:'각성의 룬',   grp:'war',  eff:'skCd',     ico:'boost',
+    de:'스킬 쿨타임 감소' },
+
+  // 🌱 성장 7 — 캠프 바깥까지 닿는 것
+  // ⚠ **아직 닿는 데가 없다**(2026-09-04 실측: 부르는 곳 0곳). 적 처치 보상이라는 자리를
+  //   먼저 잡아 둔 것이다 — 배선하면 soon 을 지운다.
+  { id:'kill',  nm:'전과의 룬',   grp:'grow', eff:'killGain', ico:'upg',
+    de:'적 처치 보상', soon:true },
+  // ⛔ 젬에는 안 건다 — 젬은 현질 재화다(GEM.md).
+  { id:'mapg',  nm:'전리품의 룬', grp:'grow', eff:'mapGain',  ico:'map',
+    de:'유즈맵 보상 재화' },
+  // ⚡ 피버 **획득량**(배수). 열기(확률)와 다른 자리다.
+  { id:'fevg',  nm:'열정의 룬',   grp:'grow', eff:'fevGain',  ico:'boost',
+    de:'피버 획득량' },
+  // ⚠ **가속은 유별나게 세다.** 실측(BALANCE §3-2-7): +10% 가 45분 누적 수입을 +60% 로
+  //   만들었다(누적 증폭 4.9제곱 — 결제 팩 1.63제곱보다 3배 가파르다). 다른 룬은 축 하나를
+  //   키우지만 이것은 **시간 자체**라 모든 축에 곱해진다. ⛔ 값을 올릴 때 이 사실을 먼저 볼 것.
+  { id:'speed', nm:'가속의 룬',   grp:'grow', eff:'speed',    ico:'boost',
+    de:'캠프 전체 진행 속도' },
+  // ⚡ **확률**을 올린다(지속·배수가 아니다). ⚠ 환생 트리에서 피버를 안 열었으면 아무 일도 안 한다.
+  { id:'fever', nm:'열기의 룬',   grp:'grow', eff:'fever',    ico:'new',
     de:'피버 발동 확률' },
-  // 💰 **유일한 감소형이다.** 코드 규칙은 감소형을 막는다(합산이 100% 를 넘으면 부호가 뒤집힌다).
-  //   ⭐ 그래서 **상한을 함께 둔다** — 유니크 칸이 셋이고 룬당 0.5% 라 최대 1.5% 다.
-  //     ⛔ 값을 올리거나 다른 구역에서 같은 축을 건드리지 말 것(2026-09-04 사용자 확정:
-  //       「오로지 룬 3개로만」). 올리려면 RUNE_COST_CAP 을 함께 손봐야 한다.
-  { id:'cost',  nm:'절약의 룬',   kind:'uniq', grp:'uniq', eff:'costCut', ico:'gift',
-    v:0.005, de:'구매 비용 감소' } ];
-// 💰 구매 비용 감소의 **뚜껑** — 위 절약의 룬 설명 참고. 합이 이 값을 넘지 않는다.
-const RUNE_COST_CAP = 0.015;
+  // 📉 **감소형 둘** — 미네랄과 가스를 갈랐다(2026-09-05 사용자 확정). 뚜껑은 RUNE_CUT_CAP.
+  //   ⚠ 캠프에서 미네랄로 사는 것과 가스로 사는 것이 다른 화면이라, 한 룬으로 묶으면
+  //     「무엇이 싸지는가」가 안 읽힌다.
+  { id:'costm', nm:'절약의 룬',   grp:'grow', eff:'costMin',  ico:'gift',
+    de:'미네랄 구매 비용 감소' },
+  { id:'costg', nm:'검약의 룬',   grp:'grow', eff:'costGas',  ico:'gift',
+    de:'가스 구매 비용 감소' } ];
+// 💰📉 **감소형의 뚜껑 — 50%**(2026-09-05 사용자 확정).
+//   ⛔ 감소형은 합산이라 100% 를 넘으면 부호가 뒤집힌다(공짜를 지나 돈을 받는다).
+//     지금 값으로는 24칸을 다 몰아도 36% 라 안 닿지만, **뚜껑은 값과 무관하게 있어야 한다** —
+//     값을 손보는 사람이 이 사실을 매번 다시 발견하게 두면 안 된다.
+//   해당하는 룬 셋: 미네랄 비용 · 가스 비용 · 스킬 쿨타임.
+const RUNE_CUT_CAP = 0.50;
+const RUNE_CUT_EFF = { costMin:1, costGas:1, skCd:1 };
 
 // ── 📏 **효과 값 — 등급이 정한다** (2026-09-02 사용자 확정: 「전부 1~5% 로」) ──
 // ⭐ **룬은 게임을 심하게 바꾸면 안 된다.** 앞 값(상급 15~35%)은 다 갖추면 수입 ×1.47 ·
@@ -132,10 +150,9 @@ const RUNE_COST_CAP = 0.015;
 // ⭐ **룬마다 값을 다르게 두지 않는다.** 1~5% 안에서 룬끼리 1%p 를 다투게 만들어 봐야
 //   실측 흔들림(판마다 ±40%)에 묻힌다 — 고르는 이유는 **세기가 아니라 무슨 축이냐**여야 한다.
 // ⛔ 이 값을 두 자릿수로 되돌리지 말 것. 그러면 룬이 「연구 2」가 된다.
-const RUNE_VAL = { low:0.01, mid:0.025, high:0.05 };
-// 유니크 값 — **넷 다 같다**(2026-09-03 사용자 확정). 한동안 가속만 2.5% 였으나 접었다.
-//   ⚠ 룬 하나가 제 값을 가지려면 표에 v 를 적으면 된다(지금은 아무도 안 쓴다).
-const RUNE_VAL_UNIQ = 0.05;
+// ⚠ 값이 낮아진 것은 **칸이 5 → 24 로 늘었기 때문**이다(2026-09-05 사용자 확정).
+//   상급만 24칸을 채워도 축 하나에 +36% 라, 옛 값(1/2.5/5%)이면 +120% 였다.
+const RUNE_VAL = { low:0.005, mid:0.01, high:0.015, uniq:0.05 };
 
 // ── 💎 값 — **등급이 정한다. 룬마다 따로 두지 않는다** ────────────────────
 // ⭐ **등급이 오를수록 %당 값이 비싸다**(10 → 13 → 20 젬/%). 손해처럼 보이지만 맞다 —
@@ -145,8 +162,7 @@ const RUNE_VAL_UNIQ = 0.05;
 // ⚠ **효과 값이 4배 낮아졌는데 젬 값은 그대로다**(2026-09-02). 상급 400젬(≈₩7,000)에
 //   +5% 라 %당 값이 8,000원꼴이다 — 앞 표(+20% · 2,000원꼴)보다 네 배 비싸다.
 //   ⛔ 함부로 내리지 말 것 — **가격은 사용자 결정**이다. 다만 값을 정할 때 이 사실을 볼 것.
-const RUNE_GEM = { low:40, mid:130, high:400 };
-const RUNE_GEM_UNIQ = 1200;
+const RUNE_GEM = { low:40, mid:130, high:400, uniq:1200 };
 
 // ── 슬롯 해금 — **최대 도달 라운드**가 연다 ───────────────────────────────
 // ⭐ 「최대」다. 환생으로 되감겨도 **한 번이라도 닿았으면 남는다**(사용자 확정 2026-09-02).
@@ -232,20 +248,18 @@ function campRuneState(){
 // ── 룬 키 — 일반은 `id:등급`, 유니크는 `id` ───────────────────────────────
 function runeDef(id){ for(const d of RUNE_LIST) if(d.id === id) return d; return null; }
 function runeKey(id, gd){ const d = runeDef(id); if(!d) return '';
-  return (d.kind === 'uniq') ? d.id : (d.id + ':' + gd); }
+  return d.id + ':' + gd; }
 function runeParse(key){ const s = String(key || '').split(':');
   const d = runeDef(s[0]); if(!d) return { def:null, gd:'' };
-  return { def:d, gd:(d.kind === 'uniq') ? 'uniq' : (s[1] || '') }; }
+  return { def:d, gd:(s[1] || '') }; }
 // 📏 효과 값도 **등급 표**가 정한다(RUNE_VAL). 룬이 제 값을 갖고 싶으면 def.v 로 덮는다.
 //   ⛔ 룬마다 값을 흩뿌리지 말 것 — 젬 값(runeGem)과 같은 원칙이다.
 function runeVal(key){ const p = runeParse(key); if(!p.def) return 0;
-  if(p.def.kind === 'uniq') return (p.def.v != null) ? p.def.v : RUNE_VAL_UNIQ;
   if(p.def.v && p.def.v[p.gd] != null) return p.def.v[p.gd];
   return RUNE_VAL[p.gd] || 0; }
 // 💎 값은 **등급 표**가 정한다(RUNE_GEM). 룬이 제 값을 갖고 싶으면 def.gem 으로 덮는다.
 //   ⛔ 룬마다 값을 흩뿌리지 말 것 — 값을 손볼 때 한 곳만 고치면 되게 둔다.
 function runeGem(key){ const p = runeParse(key); if(!p.def) return 0;
-  if(p.def.kind === 'uniq') return p.def.gem || RUNE_GEM_UNIQ;
   if(p.def.gem && p.def.gem[p.gd]) return p.def.gem[p.gd];
   return RUNE_GEM[p.gd] || 0; }
 // 🔷 **룬 그림은 판까지 포함된 한 장이다**(assets/icons/rune/<id>_<등급>.webp · 2026-09-04).
@@ -272,7 +286,7 @@ function runeIcoHTML(key, cls, grp){ const src = runeIcoSrc(key, grp);
   if(!src) return '';
   return '<img class="' + (cls || 'rnIco') + '" src="' + src + '" alt="" draggable="false">'; }
 function runeName(key){ const p = runeParse(key); if(!p.def) return '';
-  return (p.def.kind === 'uniq') ? p.def.nm : (RUNE_GD[p.gd] ? RUNE_GD[p.gd].tx + ' ' + p.def.nm : p.def.nm); }
+  return RUNE_GD[p.gd] ? (RUNE_GD[p.gd].tx + ' ' + p.def.nm) : p.def.nm; }
 // 표기 — 값은 전부 「+n%」다(합산 항이므로)
 // ⚠ **소수점을 반올림해 버리지 말 것.** 2.5% 를 「3%」로 적으면 표기와 실제가 어긋난다.
 //   딱 떨어지는 값(20%)에는 소수점을 안 붙인다 — 거짓 정밀도로 보인다.
@@ -324,7 +338,7 @@ function campRuneBuy(id, gd){
 function campRuneCanEquip(kind, i, key){
   const R = campRuneState(); if(!R) return false;
   const p = runeParse(key); if(!p.def) return false;
-  if((p.def.kind === 'uniq' ? 'uniq' : 'norm') !== kind) return false;
+  if(runeBucket(key) !== kind) return false;              // 🎚 칸 무리는 **등급**이 정한다
   if(i < 0 || i >= campRuneSlots(kind)) return false;
   // 🗺 **성좌마다 들어갈 갈래가 정해져 있다**(2026-09-04 사용자 확정 · RUNE_GRPS 설명).
   //   ⛔ 이 줄을 빼지 말 것 — 한 성좌 안에서 색이 섞이면 무엇을 모은 판인지 안 읽힌다.
@@ -369,7 +383,7 @@ function _runeEffAll(){
 function campRuneEff(eff){
   const v = _runeEffAll()[eff] || 0;
   // 💰 **감소형은 뚜껑이 있다** — 절약의 룬 설명 참고. 다른 축에는 상한이 없다(전부 증가형이라).
-  if(eff === 'costCut') return Math.min(v, RUNE_COST_CAP);
+  if(RUNE_CUT_EFF[eff]) return Math.min(v, RUNE_CUT_CAP);   // 📉 감소형 셋의 뚜껑
   return v; }
 // 부르는 쪽이 쓰기 좋은 모양 — **합산 항을 배수 하나로 접어 준다**(1 + 합).
 //   ⛔ 배수끼리 다시 곱하지 말 것. 룬끼리는 이미 합으로 접혔다.
@@ -456,7 +470,7 @@ function campRuneEffList(){
     const v = (typeof campRuneEff === 'function') ? campRuneEff(d.eff) : 0;
     if(!(v > 0)) continue;
     out.push({ eff:d.eff, nm:d.de, v:v,
-      grp:(d.kind === 'uniq') ? 'uniq' : d.grp,
+      grp:d.grp,
       down:(d.eff === 'costCut') }); }        // 💰 유일한 감소형 — 부호를 뒤집어 적는다
   return out; }
 function _runeSumTx(v){ const p = v * 100;
@@ -619,7 +633,7 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
     //   ⛔ 반투명으로 되돌리지 말 것 — 뒤의 구역 오로라가 비쳐 칸이 갈래 색으로 물든다.
     //   ⛔ 「+」·숨 원(.rnEmB)을 되살리지 말 것: 홈이 이미 「비었다」를 말하고, 원은 오로라를 한 겹 더 더한다.
     // 🎨 갈래 색 테두리 — 일반 칸은 그 성좌의 갈래, 유니크 칸은 보라
-    const gk = (kind === 'uniq') ? 'uniq' : runeSlotGrp(i);
+    const gk = runeCellGrp(kind, i);
     g.push('<polygon class="rnHx em" points="' + _runeHexPts(x, y, r * 0.93)
       + '" style="stroke:url(#rnEg' + gk + ')"/>');
     g.push('<polygon class="rnEmIn" points="' + _runeHexPts(x, y, r * 0.93 - 1.6) + '"/>'); }
@@ -729,7 +743,7 @@ function _runeDefs(){
   //     빛이 위에서 오는 결이 판 전체에 통하고, 칸 하나만 봐도 어느 갈래의 자리인지 읽힌다.
   //   ⚠ 세기는 낀 칸보다 **약하다**(흰빛 .92 → .34). 빈 칸이 더 시끄러우면 끼웠을 때
   //     달라지는 것이 없다. ⛔ 올리지 말 것.
-  for(const k of RUNE_GRPS.concat('uniq')){
+  for(const k of RUNE_GRPS){
     const c = (k === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
                              : ((RUNE_GRP[k] || {}).col || '#b4cdeb');
     d += '<linearGradient id="rnEg' + k + '" x1="0" y1="0" x2="0" y2="1">'
@@ -784,11 +798,10 @@ let _runeSwapKey = '';                  // 교체하려는 룬. '' 이면 교체
 function campRuneSwapCand(kind, i){
   if(!_runeSwapKey) return false;
   const p = runeParse(_runeSwapKey); if(!p.def) return false;
-  const want = (p.def.kind === 'uniq') ? 'uniq' : 'norm';
+  const want = runeBucket(_runeSwapKey);
   if(kind !== want) return false;
   if(!campRuneEq(kind)[i]) return false;                    // 빈 칸은 교체가 아니라 그냥 장착
-  if(kind === 'uniq') return true;
-  return runeSlotGrp(i) === p.def.grp;                      // 일반은 제 갈래의 성좌만
+  return runeCellGrp(kind, i) === p.def.grp;               // 🗺 유니크 칸도 제 성좌의 갈래다
 }
 function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
   _runeSwapKey = ''; if(re !== false) campRuneRender(); }
@@ -796,8 +809,7 @@ function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
 //   ⛔ 판 한가운데(RUNE_MAP_H/2)로 잡지 말 것 — 아래를 가방이 214px 덮어 성좌가 그 뒤로 내려간다.
 function campRuneSwapLook(now){
   const p = runeParse(_runeSwapKey); if(!p.def || !_rnView) return;
-  if(p.def.kind === 'uniq'){ campRuneFit(now); return; }     // 칸 셋이 흩어져 있다
-  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;
+  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;   // 🗺 유니크도 제 성좌로 간다
   const c = RUNE_CT[ci]; if(!c) return;
   const mp = document.querySelector('#campRune .rnMap');
   const H = mp ? mp.getBoundingClientRect().height : 0;
@@ -986,7 +998,7 @@ function campRuneSlotTap(kind, i){
     if(campRuneSwapCand(kind, i)){ campRuneSwapDo(kind, i); return; }
     // 빈 칸이면 교체가 아니라 **그냥 장착**이다(칸이 비어 있으니 뺄 것이 없다)
     const p0 = runeParse(_runeSwapKey);
-    const want0 = (p0.def && p0.def.kind === 'uniq') ? 'uniq' : 'norm';
+    const want0 = p0.def ? runeBucket(_runeSwapKey) : 'norm';
     if(kind === want0 && !campRuneEq(kind)[i] && campRuneCanEquip(kind, i, _runeSwapKey)){
       const k0 = _runeSwapKey; _runeSwapKey = '';
       campRuneEquipFly(kind, i, k0);
@@ -1075,8 +1087,7 @@ function _runeBagHex(key, gd, own, off, full){
     + '<span class="rnHbP">' + _runePctTx(key) + '</span></span></button>'; }
 // 줄 하나 — 룬 한 종류(등급 셋을 한 줄에)
 function _runeBagRow(d, kindSel){
-  const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
-  const kind = (d.kind === 'uniq') ? 'uniq' : 'norm';
+  const gds = RUNE_GRADES;                                 // 🎚 등급 넷을 한 줄에(유니크 포함)
   const off = false;      // 🔎 거르고 나면 남은 줄은 전부 끼울 수 있다(물릴 것이 없다)
   // 그림은 **가진 것 중 가장 높은 등급**을 보여 준다 — 하나도 없으면 가장 낮은 등급
   let ico = runeKey(d.id, gds[0]);
@@ -1095,7 +1106,7 @@ function _runeBagHTML(){
   // 🔎 **칸을 고르면 그 갈래만 남긴다**(2026-09-04 사용자 확정: 「전투 칸이면 전투 룬만」).
   //   ⛔ 물리기만(.off) 하지 말 것 — 못 끼우는 줄이 화면을 차지하면 고르는 일이 안 줄어든다.
   //   ⚠ 갈래는 **칸이 정한다**(runeSlotGrp) — 유니크 칸이면 유니크만.
-  const grpSel = kindSel ? (kindSel === 'uniq' ? 'uniq' : runeSlotGrp(_runePick)) : '';
+  const grpSel = kindSel ? runeCellGrp(kindSel, _runePick) : '';
   // 머리줄 — 고른 칸이 있으면 그 칸을 말하고, 차 있으면 빼는 길을 준다
   let hd;
   if(kindSel){
@@ -1110,9 +1121,9 @@ function _runeBagHTML(){
   //   한 번 배우면 계속 자리만 차지한다. 칸을 고른 상태의 안내는 위에 남는다.
   else hd = '<span class="rnBagT">보유한 룬</span>';
   let g = '';
-  for(const grp of RUNE_GRPS.concat('uniq')){
+  for(const grp of RUNE_GRPS){
     if(grpSel && grp !== grpSel) continue;              // 🔎 고른 칸의 갈래만
-    const q = RUNE_LIST.filter(d => (d.kind === 'uniq' ? 'uniq' : d.grp) === grp);
+    const q = RUNE_LIST.filter(d => d.grp === grp);
     if(!q.length) continue;
     const gi = RUNE_GRP[grp] || { nm:grp, col:'#8b95a5' };
     g += '<div class="rnGrpH" style="--gc:' + gi.col + '"><i></i><span>' + gi.nm + '</span><u></u></div>'
@@ -1124,7 +1135,7 @@ function _runeBagHTML(){
 // 빈 칸 중 첫 칸에 끼운다 — 「고르지 않고 그냥 눌렀을 때」의 길
 function campRuneAuto(key){
   const pp = runeParse(key); if(!pp.def) return false;
-  const kind = (pp.def.kind === 'uniq') ? 'uniq' : 'norm';
+  const kind = runeBucket(key);
   if(campRuneFree(key) <= 0) return false;
   const R = campRuneState(); if(!R) return false;
   const n = campRuneSlots(kind);
@@ -1157,7 +1168,7 @@ function campRuneEquipFly(kind, i, key, opt){
 //     성좌가 바뀌면 화면이 멀리 뛰고, 가방도 통째로 갈린다.
 function campRunePickNext(kind, from){
   const n = campRuneSlots(kind), eq = campRuneEq(kind);
-  const grp = (kind === 'uniq') ? 'uniq' : runeSlotGrp(from);
+  const grp = runeCellGrp(kind, from);
   for(let s = 1; s <= n; s++){ const i = (from + s) % n;
     if(eq[i]) continue;
     if(kind === 'norm' && runeSlotGrp(i) !== grp) continue;
@@ -1165,7 +1176,7 @@ function campRunePickNext(kind, from){
   return -1; }
 function campRuneBagTap(key){
   const pp = runeParse(key); if(!pp.def) return;
-  const kind = (pp.def.kind === 'uniq') ? 'uniq' : 'norm';
+  const kind = runeBucket(key);
   const say = m => { if(typeof toast === 'function') toast(m); };
   if(_runePickKind && _runePickKind !== kind){
     say(kind === 'uniq' ? '유니크 칸에만 들어갑니다' : '일반 칸에만 들어갑니다'); return; }
@@ -1234,10 +1245,10 @@ function runeHash(s){ let h = 2166136261;
 function runeSaleList(t){
   const wk = runeWeekNo(t), seed = 'rs' + wk;
   const norm = [];
-  for(const d of RUNE_LIST){ if(d.kind === 'uniq') continue;
-    for(const gd of RUNE_GRADES) norm.push(runeKey(d.id, gd)); }
+  for(const d of RUNE_LIST) for(const gd of RUNE_GRADES){
+    if(gd !== 'uniq') norm.push(runeKey(d.id, gd)); }
   norm.sort((a, b) => runeHash(seed + a) - runeHash(seed + b));
-  const uq = RUNE_LIST.filter(d => d.kind === 'uniq').map(d => d.id);
+  const uq = RUNE_LIST.map(d => runeKey(d.id, 'uniq'));
   uq.sort((a, b) => runeHash(seed + 'u' + a) - runeHash(seed + 'u' + b));
   return norm.slice(0, RUNE_SALE_N).concat(uq.slice(0, 1)); }
 function runeSaleGem(key){ return Math.max(1, Math.round(runeGem(key) * (1 - RUNE_SALE_OFF))); }
@@ -1276,14 +1287,14 @@ function runeRecoList(){
   const grps = RUNE_GRPS.slice().sort((a, b) => (hole[b] | 0) - (hole[a] | 0));
   for(const g of grps){
     if(!(hole[g] > 0)) continue;
-    for(const d of RUNE_LIST){ if(d.kind === 'uniq' || d.grp !== g) continue;
+    for(const d of RUNE_LIST){ if(d.grp !== g) continue;
       // 안 가진 것 중 **가장 높은 등급**을 권한다(살 수 있으면 좋은 것을)
       for(const gd of RUNE_GRADES.slice().reverse()){ const k = runeKey(d.id, gd);
         if(campRuneOwn(k) > 0) continue;
         push(k, (RUNE_GRP[g] || {}).nm + ' 칸이 ' + hole[g] + '개 비었습니다'); break; }
       if(out.length >= 3) break; }
     if(out.length >= 3) break; }
-  if(holeU > 0) for(const d of RUNE_LIST){ if(d.kind !== 'uniq') continue;
+  if(holeU > 0) for(const d of RUNE_LIST){
     const k = runeKey(d.id, 'uniq');
     if(campRuneOwn(k) > 0) continue;
     push(k, '유니크 칸이 ' + holeU + '개 비었습니다'); break; }
@@ -1393,7 +1404,7 @@ function _runeShopHTML(){
     + '</div></div>';
 
   // 🗂 ③ 일반 — 갈래 탭으로 나눈다(16종 × 3등급이면 한 목록에 다 못 담는다)
-  const tabs = RUNE_GRPS.concat('uniq');
+  const tabs = RUNE_GRPS;
   const idx = Math.max(0, tabs.indexOf(_runeShopTab));
   h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점</span></div>';
   // 🗂 탭 띠는 **공용 함수**다(CLAUDE.md 「세그먼트 이동 바」) — 새로 만들지 않는다.
@@ -1409,12 +1420,12 @@ function _runeShopHTML(){
     : '';
   h += '<div class="rnShopList">';
   for(const d of RUNE_LIST){
-    const g = (d.kind === 'uniq') ? 'uniq' : d.grp;
+    const g = d.grp;
     if(g !== tabs[idx]) continue;
-    const gds = (d.kind === 'uniq') ? ['uniq'] : RUNE_GRADES;
+    const gds = RUNE_GRADES;
     // 🧾 **가로줄** — 가방과 같은 짜임이라 두 화면이 한 어휘로 읽힌다
     h += '<div class="rnShopRw">'
-      + runeIcoHTML(runeKey(d.id, (d.kind === 'uniq') ? 'uniq' : 'mid'), 'rnRwI')
+      + runeIcoHTML(runeKey(d.id, 'mid'), 'rnRwI')
       + '<span class="rnRwT">' + d.de + (d.soon ? '<u>준비 중</u>' : '')
       + '<s>' + gds.map(gd => _runePctTx(runeKey(d.id, gd))).join(' · ') + '</s></span>'
       + '<span class="rnRwB">' + gds.map(gd => _runeBuySmall(runeKey(d.id, gd))).join('')

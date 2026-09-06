@@ -1175,3 +1175,11 @@ function hbNextRw(dg,from){ const best=hbBest(dg);
   for(let r=HB_RW_EVERY; r<=Math.max(best,from||1)+HB_RW_EVERY*4; r+=HB_RW_EVERY)
     if(!hbRwGot(dg,r)) return r;
   return 0; }
+
+// ── [js/19-camp.js] campDgMul — 던전 배수(옛 이름)
+// 「MY BASE」 요약판의 '던전 배수' 칸이 유일한 호출자였는데, 2026-09-05 에 그 칸을 뺐다
+// (좌상단 칩이 던전을 말하고, 값은 '총 배수'(campCommonMul)에 이미 들어 있다).
+// ⚠ 화면에 던전별 배수를 쓰는 곳은 **campDgMulTx**(js/12-appshell.js) 다 — 이것과 다른 함수다.
+//   던전 선택 화면이 그쪽을 쓴다. ⛔ 되살릴 때 둘을 헷갈리지 말 것.
+function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))].base; }
+
