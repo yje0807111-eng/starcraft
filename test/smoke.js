@@ -5932,7 +5932,11 @@ async function groupLobby(){
           const b0=Math.hypot(med.x-buddy.x, med.y-buddy.y);
           for(let i=0;i<40;i++) _step(0.05);
           const b1=Math.hypot(med.x-buddy.x, med.y-buddy.y);
-          assert(b1<b0-20,'싸우는 아군이 있는데 의무병이 안 따라간다: '+Math.round(b0)+' → '+Math.round(b1)); } } }
+          const _dbg=' [진단 heal='+(!!_campHealNeed(med,CAMPB.me))+' busy='+(!!_campBusyAlly(med,CAMPB.me))
+            +' hold='+(!!med._pgHold)+' moved='+Math.round(Math.hypot(med.x-med._post.x,med.y-med._post.y))
+            +' buddyHp='+Math.round(buddy.hp)+'/'+Math.round(buddy.maxHp)
+            +' foeAlive='+(!!strikeFindUnit(CAMPB.ai.units,buddy.tgtUid))+']';
+          assert(b1<b0-20,'싸우는 아군이 있는데 의무병이 안 따라간다: '+Math.round(b0)+' → '+Math.round(b1)+_dbg); } } }
     // ⑤ 부활하면 자기 자리에서 일어난다
     { campWithStk(()=>{ STK.me.units.length=0; });
       const u=mk('marine', W*0.5, W*0.60);
