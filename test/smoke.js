@@ -6006,10 +6006,12 @@ async function groupLobby(){
       const W=CAMPB.world;
       const a=campDeploy('marine', 0.5, CAMP_LANE_TOP+0.06), b=campDeploy('marine', 0.5, CAMP_LANE_BOT-0.02);
       assert(a&&b,'배치 실패'); a.hp=a.maxHp=1e9; b.hp=b.maxHp=1e9;
+      // ⚠ campLayerPost 가 같은 사거리를 같은 줄에 세우므로 자리를 직접 박는다(앞 유닛은 위, 본대는 아래)
+      a.x=W*0.5; a.y=W*0.30; a._post={x:a.x,y:a.y}; b.x=W*0.5; b.y=W*0.55; b._post={x:b.x,y:b.y};   // 1200 뒤 — 부르는 반경(1800) 안 · 곁 전파(400)·제 눈(≈400) 밖
       const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); return STK.ai.units[STK.ai.units.length-1]; });
       assert(foe,'적 배치 실패'); foe.hp=foe.maxHp=1e9; foe.x=a.x; foe.y=a.y-100;   // a 의 사거리 안
       const gap=Math.hypot(a.x-b.x,a.y-b.y);
-      assert(gap>CAMP_ALERT_R*2 && gap>campAcqBase(b)*1.4,'전제: 본대가 곁 전파·제 눈 밖에 있어야 한다: '+Math.round(gap));
+      assert(gap>CAMP_ALERT_R*2 && gap>campAcqBase(b)*1.4 && gap<1800,'전제: 본대가 곁 전파·제 눈 밖, 부르는 반경 안이어야 한다: '+Math.round(gap));
       // a 가 교전 중이 되게(표적 잡기) — 한 프레임 굴린다
       campWithStk(()=>campStepUnits(1/30));
       assert(a.tgtUid===foe.uid,'전제: 앞 유닛이 표적을 못 잡았다');
