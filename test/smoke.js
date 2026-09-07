@@ -5993,6 +5993,37 @@ async function groupLobby(){
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
     return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
 
+  // ⚔ **싸우는 아군이 부르면 본대가 온다** (2026-09-05 · DBG1 실측으로 잡은 정체)
+  //    앞 유닛 하나가 적 무리에 물리면 본대는 1,100px 뒤에서 놀았다(눈 = 사거리+100 · 전파 400 은 곁만).
+  //    교전 중(표적이 사거리 안)인 아군은 CAMP_ALERT_FIGHT_R 까지 부른다. 받는 쪽은 자리 제한 안에서만 간다.
+  await step('캠프: 교전 중인 아군이 멀리 있는 본대를 부른다', async()=>{
+    // ⛔ 가드는 옛 버전에도 있는 것으로 — CAMP_ALERT_FIGHT_R 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof campAlertTick!=='function'||typeof campDeploy!=='function'||typeof campAcqBase!=='function','전파 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const W=CAMPB.world;
+      const a=campDeploy('marine', 0.5, CAMP_LANE_TOP+0.06), b=campDeploy('marine', 0.5, CAMP_LANE_BOT-0.02);
+      assert(a&&b,'배치 실패'); a.hp=a.maxHp=1e9; b.hp=b.maxHp=1e9;
+      const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); return STK.ai.units[STK.ai.units.length-1]; });
+      assert(foe,'적 배치 실패'); foe.hp=foe.maxHp=1e9; foe.x=a.x; foe.y=a.y-100;   // a 의 사거리 안
+      const gap=Math.hypot(a.x-b.x,a.y-b.y);
+      assert(gap>CAMP_ALERT_R*2 && gap>campAcqBase(b)*1.4,'전제: 본대가 곁 전파·제 눈 밖에 있어야 한다: '+Math.round(gap));
+      // a 가 교전 중이 되게(표적 잡기) — 한 프레임 굴린다
+      campWithStk(()=>campStepUnits(1/30));
+      assert(a.tgtUid===foe.uid,'전제: 앞 유닛이 표적을 못 잡았다');
+      b._alertAcq=0; b._alertT=0;
+      for(let i=0;i<8;i++) campAlertTick(0.1);              // 전파 주기(0.25s)를 넘긴다
+      const need=Math.hypot(foe.x-b.x,foe.y-b.y);
+      assert((b._alertAcq||0)>=need-1,'본대의 눈이 그 적까지 안 넓어졌다: '+Math.round(b._alertAcq||0)+' < '+Math.round(need));
+      assert((b.acq||0)>=need-1,'전파받은 눈이 acq 에 안 얹혔다: '+Math.round(b.acq||0));
+      return '앞 유닛 교전 → '+Math.round(gap)+' 뒤 본대 눈 '+Math.round(b.acq)+' (적까지 '+Math.round(need)+')';
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+  });
+
   // 🩸 **캠프에서는 최소 피해 바닥(0.5)이 없다** (2026-09-05 · 손 플레이 실측에서 잡았다)
   //    strikeHit 은 한 대를 max(0.5, 공격−방어) 로 센다. 캠프는 1/10 스케일이라 R1 적의 한 대가 0.09 인데
   //    바닥 0.5 로 5.6배 올라가 혼자서는 R5 에서 죽었고, CAMP_FOE_ATK0 를 내려도 체감이 없었다(축이 죽어 있었다).
