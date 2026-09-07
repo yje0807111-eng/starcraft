@@ -624,6 +624,23 @@ await pg.evaluate(()=>{
             __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
           } } }
       // 🔬 DBG1 — 손 플레이 정체 진단: 5초마다 아군 1기·최근접 적·건물을 찍는다
+      // 🕸 **교착 진단**(2026-09-07) — 한 라운드가 4분을 넘기면 **한 번** 적·아군 전부를 찍는다.
+      //   실측: 적 1 · 아군 7~15 살아 있고 건물 체력 100% 인 채 30분(D1R34 · D2R3 · D2R26). 누가 왜 안 싸우는지 보려는 것.
+      if((i%100)===0 && campDgN()>0 && __CB.roundT>240 && typeof CAMPB!=='undefined' && CAMPB && !(__CB._stallDump||(__CB._stallDump={}))[campDgN()+':'+campRoundN()]){
+        __CB._stallDump[campDgN()+':'+campRoundN()]=1;
+        const W=CAMPB.world, es=CAMPB.ai.units.filter(x=>!x.dead), ms=CAMPB.me.units.filter(x=>!x.dead);
+        const fmt=(x)=>{ const tg=x.tgtUid?(strikeFindUnit(CAMPB.ai.units,x.tgtUid)||strikeFindUnit(CAMPB.me.units,x.tgtUid)):null;
+          return (x.gm||x.id)+'#'+String(x.uid).slice(-3)+'@'+Math.round(x.x)+','+Math.round(x.y)+' hp='+(x.hp||0).toFixed(1)+'/'+(x.maxHp||0).toFixed(0)
+            +' acq='+Math.round(x.acq||0)+' rng='+Math.round(x.rng||0)+' atk='+(x._atk?((x._atk.gnd?'g':'')+(x._atk.air?'a':'')):'?')
+            +' tgt='+(tg?((tg.gm||tg.id)+'#'+String(tg.uid).slice(-3)+' d='+Math.round(Math.hypot(tg.x-x.x,tg.y-x.y))):(x.tgtUid?'?':'-'))
+            +' btgt='+(x._btgt?'B':'-')+' mv='+(x.moving?1:0)+' wp='+(x._cpWp?x._cpWp.length:0)+' goal='+(x._goalX!=null?Math.round(x._goalX)+','+Math.round(x._goalY):'-')
+            +' hold='+(x._pgHold?1:0)+' wait='+((x.wait||0).toFixed(1))+' ord='+(x._order?1:0)+' post='+(x._post?Math.round(x._post.x)+','+Math.round(x._post.y):'-')
+            +' bunk='+(x._bunk!=null?1:0)+' mine='+(x._mine?1:0)+' col='+(x._collapseT!=null?1:0)+' air='+((typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(x.gm||x.id))?1:0); };
+        const bl=(CAMPB._bld||[]).filter(x=>!x.dead).map(x=>(x.bk||'본부')+'@'+Math.round(x.x)+','+Math.round(x.y)+' hp='+Math.round(x.hp||0)).join(' ');
+        (__CB.dbg||(__CB.dbg=[])).push('🕸 '+__CB.t.toFixed(0)+'s D'+campDgN()+'R'+campRoundN()+' 라운드 '+Math.round(__CB.roundT)+'초째 · W='+Math.round(W)+' · 대기웨이브='+(CAMPB._wq?CAMPB._wq.length:0)
+          +'\n   적('+es.length+'): '+es.map(fmt).join(' | ')
+          +'\n   아군('+ms.length+'): '+ms.slice(0,8).map(fmt).join(' | ')+(ms.length>8?' …':'')
+          +'\n   건물: '+bl); }
       if(__CB.dbg1 && (i%100)===0 && typeof CAMPB!=='undefined' && CAMPB){
         const u=CAMPB.me.units.filter(x=>!x.dead)[0], es=CAMPB.ai.units.filter(x=>!x.dead);
         let e=null, bd=1e18; if(u) for(const z of es){ const d=Math.hypot(z.x-u.x,z.y-u.y); if(d<bd){ bd=d; e=z; } }
@@ -959,7 +976,7 @@ if(fin.inc){
 }
 // ⚠ **무효 표시는 `최종` 줄 자체에 붙인다.** 위에만 적으면 `grep '^최종'` 으로 표를 모으는 사람이
 //   그대로 표본에 넣는다 — 실제로 그렇게 오염된 판을 두 번 세었다.
-if(DBG1 && fin.dbg && fin.dbg.length){ console.log('\n🔬 손 플레이 정체 진단 (5초마다)'); for(const l of fin.dbg) console.log('  '+l); }
+if(fin.dbg && fin.dbg.length){ console.log('\n🔬 진단 (손 플레이 5초마다 · 교착 라운드 1회)'); for(const l of fin.dbg) console.log('  '+l); }
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`
   + (froze ? '  🧊 얼어붙음 — 표본으로 쓰지 말 것' : ''));
 if(froze){
