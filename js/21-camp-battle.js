@@ -64,7 +64,11 @@ const CAMP_SPD_MUL = 2.5;
  * ⚠ 목표가 크게 움직이면(적을 쫓는 중) 길을 버린다 — 낡은 길을 붙들면 엉뚱한 데로 간다.
  */
 const CAMP_PATH_T   = 0.5;    // 길을 다시 내는 주기(초)
-const CAMP_PATH_ARR = 0.018;  // 경유점 도착 판정(격자)
+// ⚠ **기지 원본과 같은 값(0.05)** 이어야 한다(16-build.js 의 경유점 선행 전환 `_dw<0.05`).
+//   ⛔ 0.018 로 두었다가 벽이 생겼다(2026-09-05 실측 D1R34 · 20분 정체): 이동 물리가 목표 앞에서
+//     감속·정착해 **경유점 0.02~0.03 앞에서 「도착」으로 멈추는데**, 판정은 「아직」이라 다음 점으로
+//     안 넘겼다 — 적도 아군도 길을 든 채 제자리에 섰다(moving=false · hold=false · wp=3).
+const CAMP_PATH_ARR = 0.05;   // 경유점 도착 판정(격자)
 const CAMP_PATH_MOVE= 0.06;   // 목표가 이만큼(격자) 움직이면 길을 버린다
 function _campPathClear(u, gA, gB){
   if(typeof _techSegClear !== 'function') return true;
@@ -82,7 +86,11 @@ function campMove(u, tx, ty, dt){
      && Math.hypot(gB.gx - u._cpGx, gB.gy - u._cpGy) <= CAMP_PATH_MOVE){
     while(wp.length && Math.hypot(wp[0].x - gA.gx, wp[0].y - gA.gy) <= CAMP_PATH_ARR) wp.shift();
     if(wp.length){ const p = campG2W(wp[0].x, wp[0].y, W);
-      strikeMoveToward(u, p.x, p.y, step); return; }
+      strikeMoveToward(u, p.x, p.y, step);
+      // ⭐ 물리가 「도착」으로 멈췄으면(moving=false) 판정 거리와 상관없이 다음 점으로 넘긴다 —
+      //   둘이 서로 기다리는 교착의 안전망. 마지막 점이면 길을 버려 곧장 목표로 간다.
+      if(!u.moving) wp.shift();
+      return; }
   }
   u._cpWp = null;
   u._cpT = (u._cpT || 0) - dt;
