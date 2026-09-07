@@ -116,25 +116,31 @@ if(RUNES){ const got=await pg.evaluate(spec=>{
   const C=campState();
   C.best={10:50};                                  // 💠 칸을 전부 연다(천장을 잰다)
   C.rune={}; const R=campRuneState();
-  const PRE={
-    // ⚠ 유니크는 넷인데 칸이 셋이다. 열기(fever)는 피버타임이 아직 없어 **아무 일도 안 한다** —
-    //   그래서 'all' 은 캠프에 실제로 닿는 셋(가속·질주·전리품)을 든다.
-    all:   ["gain:high","tap:high","wspd:high","atk:high","hp:high","speed:uniq","round:uniq","mapg:uniq"],
-    eco:   ["gain:high","tap:high","gas:high","wspd:high","pop:high"],
-    war:   ["atk:high","hp:high","aspd:high","heal:high","gain:high"],
-    speed: ["speed:uniq"],
-    round: ["round:uniq"] };
+  // ⛔ **목록을 손으로 적지 말 것**(2026-09-05). 룬은 늘고 줄고 갈래를 옮겨 다닌다 —
+  //   옛 프리셋은 지워진 룬('gain'·'round')을 들고 있어 절반이 조용히 안 끼워졌다.
+  //   ⭐ 대신 **칸을 기준으로** 채운다: 성좌 하나 = 그 갈래 룬을 돌려 가며 8칸 + 중심 유니크 1칸.
+  const fillGrp = (g) => {
+    const ds = RUNE_LIST.filter(d => d.grp === g).map(d => d.id);
+    if(!ds.length) return [];
+    const out = [];
+    for(let i = 0; i < RUNE_CONS; i++) out.push(ds[i % ds.length] + ":high");
+    out.push(ds[0] + ":uniq");                    // 🎚 유니크는 등급이다 — 그 성좌 중심에 하나
+    return out; };
+  const PRE = { all: RUNE_GRPS.reduce((a, g) => a.concat(fillGrp(g)), []) };
+  for(const g of RUNE_GRPS) PRE[g] = fillGrp(g);
   const list=PRE[spec] || spec.split(",").map(x=>x.trim()).filter(Boolean);
   const on=[];
   for(const it of list){ const a=it.split(":"), id=a[0], gd=a[1]||"high";
     const k=runeKey(id,gd); const d=runeParse(k).def; if(!d) continue;
     R.own[k]=(R.own[k]|0)+1;
-    const kind=(d.kind==="uniq")?"uniq":"norm", n=campRuneSlots(kind);
+    // 🎚 칸 무리는 **등급**이 정한다(2026-09-05) — ⛔ d.kind 로 가르지 말 것(그 필드는 없어졌다)
+    const kind=(typeof runeBucket==="function")?runeBucket(k):"norm", n=campRuneSlots(kind);
     for(let i=0;i<n;i++){ if(!R[kind][i] && campRuneEquip(kind,i,k)){ on.push(k); break; } } }
   if(typeof campRuneTouch==="function") campRuneTouch();
   saveMeta();
-  const eff={}; for(const e of ["gain","tap","gas","wspd","pop","atk","hp","aspd","heal","speed","round","mapGain"]){
-    const v=campRuneEff(e); if(v) eff[e]=+(v*100).toFixed(0)+"%"; }
+  // 📊 무엇이 실제로 얹혔나 — **룬 표에서 꺼낸다**(손으로 적으면 또 어긋난다)
+  const eff={}; for(const d of RUNE_LIST){
+    const v=campRuneEff(d.eff); if(v) eff[d.eff]=+(v*100).toFixed(1)+"%"; }
   return { on, eff, norm:campRuneSlots("norm"), uniq:campRuneSlots("uniq") }; }, RUNES);
   if(got.err) console.log("💠 룬: "+got.err);
   else console.log("💠 룬 "+got.on.length+"개 장착(칸 "+got.norm+"+"+got.uniq+") — "
