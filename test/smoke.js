@@ -356,16 +356,20 @@ async function groupLobby(){
       assert((c.earnAuto||0)===0,'탭만 했는데 자동 몫이 생김: '+(c.earnAuto||0)); }
     // ② 자동 — 탭 없이 크레딧만 늘면 자동 몫으로 간다
     const tap0=campState().earnTap||0;
+    // ⚠ 캠프가 엔진 수입에 채취 배수(m)를 먹인다 — Lv0 은 ×1/8 이라 500 이 63 이 된다(2026-09-05 · 1원 시작).
+    //   재는 것은 「탭 없이 늘어난 것은 자동 몫」이라는 **갈라 세는 규칙**이므로, 배수를 먹인 뒤의 값과 견준다.
+    const mG=campGatherMul(), want500=Math.round(500*mG);
     G.tech.credit=(G.tech.credit||0)+500; tick();
     { const c=campState();
-      assert(Math.round(c.earnAuto||0)===500,'자동 몫이 안 맞음: '+Math.round(c.earnAuto||0));
+      assert(Math.abs((c.earnAuto||0)-500*mG)<=1,'자동 몫이 안 맞음: '+Math.round(c.earnAuto||0)+' (기대 '+want500+' = 500×'+mG.toFixed(3)+')');
       assert(Math.round(c.earnTap||0)===Math.round(tap0),'자동 수입이 터치 몫으로 샜다'); }
     // ③ 섞여 들어와도 갈린다 — 같은 틱에 탭과 자동이 함께
     { const t1=campState().earnTap||0, a1=campState().earnAuto||0;
       G.tech.credit=(G.tech.credit||0)+300; campMineOnce(200,400,false,1); tick();
       const c=campState();
       assert((c.earnTap||0)>t1,'섞였을 때 터치 몫이 안 늘었다');
-      assert(Math.round((c.earnAuto||0)-a1)===300,'섞였을 때 자동 몫이 안 맞음: '+Math.round((c.earnAuto||0)-a1)); }
+      // ⚠ ±1 — 배수(1/8)를 먹이며 반올림이 두 번 든다(탭 몫을 뗀 뒤 · 배수 뒤). 재는 것은 「갈라 세는 규칙」이다.
+      assert(Math.abs(((c.earnAuto||0)-a1)-300*mG)<=1,'섞였을 때 자동 몫이 안 맞음: '+Math.round((c.earnAuto||0)-a1)+' (기대 '+Math.round(300*mG)+')'); }
     // ④ 둘의 합이 번 돈과 같아야 한다 — 어느 한쪽으로 새면 여기서 걸린다
     { const c=campState();
       assert(Math.abs(((c.earnTap||0)+(c.earnAuto||0)) - (c.earn||0)) <= 1,
@@ -7845,23 +7849,20 @@ async function groupLobby(){
       // ⛏ **채취도 「실제 수」다**(2026-09-02) — 왕복 1회당 1원 → 2원 → 3원, 탭과 같은 곡선.
       //    ⛔ 옛 방식은 레벨당 +2.5% 배율이었다. 배율이면 「1원이 2원이 된다」가 화면에서 안 읽힌다.
       if(typeof campGatRaw==='function'){
+        // ⛏ **1원에서 +1씩** (2026-09-05 사용자 확정) — 마일스톤 두 배 계단은 탭에만 있다
         assert(campGatRaw(0)===1,'채취 0레벨이 1 이 아니다: '+campGatRaw(0));
         assert(campGatRaw(1)===2,'채취 1레벨이 2 가 아니다: '+campGatRaw(1));
-        assert(campGatRaw(10)===12,'채취 Lv10 이 12 가 아니다(탭과 같은 마일스톤): '+campGatRaw(10));
-        // 💰 비용은 **세 레벨마다 ×10** (2026-09-02 사용자 확정)
-        //    50 · 150 · 300 · 500 · 1500 · 3000 · 5000 · 1.5만 · 3만 · 5만
-        //    ⭐ 노림수는 채취를 「끝없이 사는 축」에서 빼는 것 — 옛 제곱 곡선(25n(n+1))에서는
-        //      30분 판에서 채취 Lv61 까지 올라가 수입의 94.7% 를 먹었다(실측).
-        //    ⛔ 제곱 곡선으로 되돌리지 말 것.
+        assert(campGatRaw(10)===11,'채취 Lv10 이 11 이 아니다(더하기 계단 · 마일스톤 없음): '+campGatRaw(10));
+        // ⭐ 실제 왕복 1회 획득도 1원에서 시작한다 — 엔진 기본 8 을 캠프가 나눈다
+        { const g0=(()=>{ S.upg.gather=0; return campGatherGain(); })();
+          const g1=(()=>{ S.upg.gather=1; const v=campGatherGain(); S.upg.gather=0; return v; })();
+          assert(g0===1,'채취 Lv0 왕복 1회가 1원이 아니다(엔진 8 이 새어 나온다): '+g0);
+          assert(g1===2,'채취 Lv1 왕복 1회가 2원이 아니다: '+g1); }
+        // 💰 비용 50 × 1.12^Lv — 싸게 · 많이(2026-09-05). ⛔ 「세 레벨마다 ×10」으로 되돌리지 말 것
         const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
-        const want=[50,150,300,500,1500,3000,5000,15000,30000,50000];
-        const got=want.map((_,i)=>g(i));
-        assert(want.every((v,i)=>got[i]===v),
-          '채취 비용이 세 레벨마다 ×10 이 아니다: '+got.join(','));
-        // ⭐ 성능은 탭과 같은 곡선을 그대로 쓴다(campGatRaw = campTapRaw) — 값만 갈랐다
-        const t=(lv)=>{ S.upg.tap=lv; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
-        assert(g(0)/t(0)===5,'채취 첫 레벨이 탭의 5배가 아니다: '+g(0)+' vs '+t(0));
-        assert(g(9)/t(9)>50,'채취 Lv10 이 탭보다 충분히 비싸지 않다: '+g(9)+' vs '+t(9));
+        assert(g(0)===50,'채취 첫 레벨이 50 이 아니다: '+g(0));
+        for(const lv of [3,10,30]) assert(Math.abs(g(lv)/g(lv-1)-1.12)<0.02,'채취 비용 계단이 1.12 가 아니다(Lv'+lv+'): '+(g(lv)/g(lv-1)).toFixed(3));
+        assert(g(9)<200,'채취 Lv10 이 200 을 넘는다 — 「싸게 많이」가 아니다: '+g(9));
       }
       assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
       assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
@@ -7929,7 +7930,8 @@ async function groupLobby(){
     //      일꾼을 뽑는 행위 자체가 무의미했다. 캠프 광맥에 cap 을 얹어 열었다(실측 40기 137/초).
     { const S=campState(); S.upg.gather=0; const m0=campGatherMul();
       S.upg.gather=40; const m40=campGatherMul(); S.upg.gather=0;
-      assert(Math.abs(m0-1)<0.01,'효율 Lv0 은 배수 1 이어야 한다(기준선): '+m0.toFixed(3));
+      // ⭐ Lv0 기준선은 **왕복 1원** = 엔진 8 의 1/8 (2026-09-05 · 채취 1원 시작). ⛔ 1 로 되돌리지 말 것 — 그러면 Lv0 이 8원이다.
+      assert(Math.abs(m0-1/TECH_GATHER_AMT)<0.01,'효율 Lv0 배수가 1/'+TECH_GATHER_AMT+'(왕복 1원)이 아니다: '+m0.toFixed(3));
       assert(m40>m0,'효율 레벨이 채취 배수를 못 올린다');
       const mins=(G.tech&&G.tech.minerals)||[];
       assert(mins.length&&mins.every(m=>(m.cap|0)===CAMP_MINE_CAP),

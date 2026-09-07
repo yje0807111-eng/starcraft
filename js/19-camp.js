@@ -5273,22 +5273,17 @@ function campTapNeedTaps(n){
 //   ⛔ 옛 방식은 「레벨당 +2.5% × campMileMul」 이었다 — 배율이라 「1원이 2원이 된다」가
 //     화면에서 안 읽혔다. 정수로 세면 무엇이 늘었는지 바로 보인다.
 //   ⚠ 비용은 **탭보다 훨씬 비싸다**(아래 campGatCost) — 일꾼은 수가 늘고 저절로 캐기 때문이다.
-function campGatRaw(lv){ return campTapRaw(lv); }
-// 💰 채취 강화 비용 — **세 레벨마다 ×10** (2026-09-02 사용자 확정)
-//   50 · 150 · 300 · 500 · 1500 · 3000 · 5000 · 1.5만 · 3만 · 5만 · 15만 …
-//   ⭐ Lv1 만 예외(50)이고, **Lv2 부터는 [150·300·500] 세 칸이 한 묶음**으로 묶음마다 ×10.
-//     레벨당 평균 ×2.15 — 옛 제곱 곡선(25n(n+1))보다 훨씬 가파르다.
-//   ⭐ 노림수는 **채취를 「끝없이 사는 축」에서 빼는 것**이다. 옛 곡선에서는 30분 판의
-//     수입 94.7% 가 채취 배수였고 레벨이 61 까지 올라갔다(실측 2026-09-02).
-//     성장은 터치 마일스톤(CAMP_TAP_MILES)과 던전 배수(CAMP_MINE)가 맡는다.
-//   ⛔ 「25n(n+1)」(제곱)으로 되돌리지 말 것 — 되돌리면 다시 채취 한 축이 판을 먹는다.
-//   ⚠ 성능 곡선(campGatRaw)은 **안 건드렸다** — 탭과 공유하므로 여기서 만지면 탭도 움직인다.
-const CAMP_GAT_COST0 = 50;              // 채취 0→1레벨 비용
-const CAMP_GAT_CYC = [150, 300, 500];   // Lv2 부터 세 칸 한 묶음 — 묶음이 넘어갈 때마다 ×10
-function campGatCost(n){
-  if(n <= 1) return CAMP_GAT_COST0;
-  const i = n - 2;
-  return CAMP_GAT_CYC[i % 3] * Math.pow(10, Math.floor(i / 3)); }
+// ⛏ **1원에서 시작해 레벨마다 +CAMP_GAT_ADD 원** (2026-09-05 사용자 확정 — 「기본 8 에서 두 배로 뛰는 것 말고,
+//   1 에서 조금씩 + 로」). 마일스톤 두 배 계단은 탭에만 남긴다.
+//   ⛔ 옛 `campGatRaw = campTapRaw` 는 엔진 기본 8 에 곱해져 Lv0 8 → Lv1 16 이었다(사용자가 본 「두 배」).
+//   ⚠ 값은 **원 단위**다 — campGatherMul 이 엔진의 TECH_GATHER_AMT(8)로 나눠 배수로 바꾼다.
+const CAMP_GAT_BASE = 1, CAMP_GAT_ADD = 1;
+function campGatRaw(lv){ return CAMP_GAT_BASE + CAMP_GAT_ADD * Math.max(0, lv | 0); }
+// 💰 채취 강화 비용 — **50 × 1.12^Lv** (2026-09-05 사용자 확정 — 「업그레이드 간 비용을 줄이자」).
+//   Lv10 155 · Lv30 1,500 · Lv60 2.6만. 한 레벨이 +1원뿐이라 **싸게 · 많이** 사는 축이다.
+//   ⛔ 옛 「세 레벨마다 ×10」(Lv10 5만)은 레벨당 +8원(엔진 8 × 1) 시절의 값이다 — 되돌리면 아무도 못 산다.
+const CAMP_GAT_COST0 = 50, CAMP_GAT_COST_R = 1.12;
+function campGatCost(n){ return Math.ceil(CAMP_GAT_COST0 * Math.pow(CAMP_GAT_COST_R, Math.max(0, (n | 0) - 1))); }
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
 const CAMP_HOLD_COST0 = 500;    // 홀드 0→1레벨 비용
@@ -5507,7 +5502,9 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   //   ⭐ 되살린 것이 아니라 **다른 룬**이다: 옛 「재화의 룬」은 탭까지 품어서 지웠고,
    //     이것은 일꾼 왕복에만 닿는다(손끝의 룬과 겹치지 않는다).
   //   ⚠ 곱 항으로 들어간다 — 합산 항(campGatRaw)은 **정수 곡선**이라 1~5% 를 더할 수 없다.
-  return (campGatRaw(lv) + campPackGather())
+  // ⚠ 엔진이 왕복마다 TECH_GATHER_AMT(8)를 주므로 **원 ÷ 8** 이 배수다 — Lv0 은 ×0.125(= 1원).
+  const amt = (typeof TECH_GATHER_AMT !== 'undefined') ? TECH_GATHER_AMT : 8;
+  return (campGatRaw(lv) + campPackGather()) / amt
     * campMineMul() * campRebMul() * campRtMul('gather')
     * ((typeof campRuneMul === 'function') ? campRuneMul('mine') : 1); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
@@ -6016,9 +6013,13 @@ function campApplyGatherMul(){
     _campTapAcc -= tapPart; delta -= tapPart;
     CAMP_INC.tap += tapPart;
     const m = campGatherMul();
-    if(delta > 0){ CAMP_INC.gather += delta;
-      if(m > 1){ const add = Math.round(delta * (m - 1));
-        CAMP_INC.mul += add; G.tech.credit = cur + add; } }
+    if(delta > 0){
+      // ⭐ 배수가 1 보다 **작아도** 적용한다(2026-09-05) — 채취가 1원에서 시작하므로 Lv0 은 ×0.125 라
+      //   엔진이 준 8 을 1 로 깎아야 한다. ⛔ 「m > 1 일 때만」으로 되돌리면 Lv0 이 도로 8원이 된다.
+      const add = Math.round(delta * (m - 1));
+      if(add >= 0){ CAMP_INC.gather += delta; CAMP_INC.mul += add; }
+      else { CAMP_INC.gather += Math.max(0, delta + add); }
+      if(add !== 0) G.tech.credit = cur + add; }
   } else if(delta < 0){ _campTapAcc = 0; }          // 건물을 샀다 = 지출. 누적을 흘려보낸다
   // 🔁 환생 기준이 되는 **번 돈**을 여기서 센다 — 배수를 다 먹인 뒤의 실제 증가분이다.
   //    ⛔ 지출은 빼지 않는다. '얼마나 벌었나'가 기준이지 '지금 얼마 있나'가 아니다.
