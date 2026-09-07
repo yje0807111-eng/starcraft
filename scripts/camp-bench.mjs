@@ -75,6 +75,13 @@ const RUNES=(process.env.RUNES||"").trim();
 //     그 **차이**를 본다. 판 사이 흔들림이 양쪽에 똑같이 들어가므로 상쇄된다.
 //   ⛔ SEED 를 안 주면 예전과 똑같이 돈다(기본 동작을 바꾸지 않는다).
 const SEED=+(process.env.SEED||0);
+// 🏕 **던전에 안 내려간다** — `NODG=1` (2026-09-05).
+//   ⭐ 왜: 전투에 `Math.random` 이 43곳이고, 구매 정책이 문턱 시스템이라 그 난수가
+//     초반 한 번의 갈림을 낳으면 45분 내내 따라온다(BALANCE §3-2-9).
+//     캠프(0단계)에 묶어 두면 전투 난수가 **통째로** 빠져 경제 축만 남는다.
+//   ⚠ 그래서 **경제 룬만** 잴 수 있다. 전투 룬(힘·연타·수호·치유·조준·각성)은 여기서 무의미하다.
+//   ⚠ 던전 배수(campMineMul)도 안 오르므로 절대 수입은 작다 — **팔끼리의 비**만 본다.
+const NODG=!!process.env.NODG;
 // 🌳 환생 트리 실측(2026-09-02) — TREE=mine:5,prod:5 처럼 **계열:차수** 목록.
 //   ⚠ 트리는 자루(C.rbTree)가 전부다. 포인트를 쓰지 않고 **직접 심는다** — 여기서 재려는 것은
 //     「그 계열이 수치를 얼마나 움직이나」이지 「그걸 살 수 있나」가 아니다.
@@ -103,7 +110,7 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0,nodg0)=>{
   // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
   if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
   // 🎲 씨앗을 심는다 — mulberry32(작고 고르다). ⛔ 전역 Math.random 을 갈아 끼우는 것이
@@ -119,8 +126,8 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   const C=campState(); C.race='terran';
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0, nodg:nodg0 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED, NODG);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -143,7 +150,16 @@ if(RUNES){ const got=await pg.evaluate(spec=>{
     return out; };
   const PRE = { all: RUNE_GRPS.reduce((a, g) => a.concat(fillGrp(g)), []) };
   for(const g of RUNE_GRPS) PRE[g] = fillGrp(g);
-  const list=PRE[spec] || spec.split(",").map(x=>x.trim()).filter(Boolean);
+  // 🔬 **룬 하나만** — `RUNES=one:tap` — 그 룬의 성좌 8칸 + 중심 유니크를 **전부 그 룬으로** 채운다.
+  //   ⭐ 축을 하나씩 갈라 재는 유일한 길이다. 갈래를 통째로 켜면 어느 룬이 센지 안 갈린다.
+  let list;
+  if(spec.indexOf("one:") === 0){
+    const d1 = RUNE_LIST.find(x => x.id === spec.slice(4));
+    if(!d1) return { err:"그런 룬이 없다: " + spec.slice(4) };
+    list = [];
+    for(let i = 0; i < RUNE_CONS; i++) list.push(d1.id + ":high");
+    list.push(d1.id + ":uniq");
+  } else list = PRE[spec] || spec.split(",").map(x=>x.trim()).filter(Boolean);
   const on=[];
   for(const it of list){ const a=it.split(":"), id=a[0], gd=a[1]||"high";
     const k=runeKey(id,gd); const d=runeParse(k).def; if(!d) continue;
@@ -204,6 +220,7 @@ await pg.evaluate(()=>{
   { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1)) __CB.want[b.k]=1;
   }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
+  if(__CB.nodg) __CB.enter = 1e9;   // 🏕 NODG — 영영 안 내려간다(전투 난수를 통째로 뺀다)
   // ⚠ **설계 라운드 길이보다 넉넉해야 한다.** 던전 2 후반은 실측 330초이고 R50 은 10분대로
   //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
   __CB.stallS=900;
