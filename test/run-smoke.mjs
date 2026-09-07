@@ -63,6 +63,15 @@ const server=http.createServer((req,res)=>{
 
 const groupsArg=process.argv[2];
 const GROUPS=(groupsArg && groupsArg!=='duo')?[groupsArg]:(groupsArg==='duo'?[]:['lobby','game','sandbox']);
+// 🔁 **흔들리는 검사 잡기** (2026-09-05)
+//   SMOKE_REPEAT=n  — 같은 그룹을 n번 돌리고, 스텝별로 몇 번 실패했나 집계한다.
+//                     흔들림은 한 판으로 못 본다 — 「몇 판 중 몇 번」이 있어야 잡은 것인지 안다.
+//   SMOKE_ONLY=문구  — 이름에 그 문구가 든 스텝만 돌린다(나머지는 건너뜀).
+//                     ⚠ 스텝은 앞 스텝의 상태에 기대는 것이 많다(캠프 진입 뒤에 캠프 검사 등).
+//                       골라 돌릴 때는 앞 스텝도 문구에 걸리게 넓게 잡을 것 — 안 그러면
+//                       「고쳤는데 여전히 실패」가 실은 「준비가 안 됐다」일 수 있다.
+const REPEAT=Math.max(1, +(process.env.SMOKE_REPEAT||1));
+const ONLY=(process.env.SMOKE_ONLY||'').trim();
 const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
 
 // ── 프리플라이트: css/ 안의 상대 경로가 살아 있는가 ─────────────────────
@@ -90,21 +99,34 @@ const browser=await puppeteer.launch({ executablePath:CHROME, headless:process.e
   args:['--mute-audio','--disable-gpu-sandbox','--no-sandbox'] });
 
 let anyFail=false; const allReports=[];
+const tally={};   // 🔁 REPEAT 집계 — 스텝 이름 → { fail, runs, msgs }
 try{
-  for(const g of GROUPS){
-    const page=await browser.newPage();
+  for(const g of GROUPS) for(let rep=0; rep<REPEAT; rep++){
+    // 🧼 **페이지마다 새 브라우저 컨텍스트** — 새 탭만 열면 localStorage 가 그대로 남아 다음 판이
+    //    앞 판의 저장본(캠프 진행·설정)을 물려받는다. REPEAT 2판째부터 캠프 스텝 여덟이 한꺼번에
+    //    넘어진 것이 그것이었다(2026-09-07 실측 · 1판째 0 / 2판째 6 / 3판째 8). 격리는 컨텍스트가 한다.
+    const ctx=await browser.createBrowserContext();
+    const page=await ctx.newPage();
     page.setDefaultTimeout(60000);
     await page.setViewport({width:390,height:844,deviceScaleFactor:1});
     const pageErrors=[];
     page.on('pageerror', e=>pageErrors.push(String(e.message||e).slice(0,200)));
     await page.goto(`http://127.0.0.1:${PORT}/sc-ums-web.html`, {waitUntil:'load'});
+    if(ONLY) await page.evaluate(o=>{ window.__SMOKE_ONLY=o; }, ONLY);
     await page.evaluate(SMOKE_SRC);
     await page.waitForFunction('typeof G!=="undefined"', {timeout:15000});
     await new Promise(r=>setTimeout(r,800));   // 초기 모델/폰트 로드 여유
     const report=await page.evaluate(gg=>window.runSmoke(gg), g);
     report.pageErrors=pageErrors.slice(0,10);
+    if(REPEAT>1){
+      for(const st of report.steps){ if(st.skip) continue;
+        const t=tally[st.name]||(tally[st.name]={fail:0,runs:0,msgs:new Set()});
+        t.runs++; if(!st.ok){ t.fail++; t.msgs.add(st.detail.slice(0,120)); } }
+      console.log(`  · ${g} ${rep+1}/${REPEAT}: fail ${report.fail} (${report.ms}ms)`
+        + (report.fail?'  ✘ '+report.steps.filter(s=>!s.ok&&!s.skip).map(s=>s.name.slice(0,40)).join(' | '):''));
+      if(rep<REPEAT-1){ await ctx.close(); continue; } }
     allReports.push(report);
-    await page.close();
+    await ctx.close();
   }
   // ── 두 클라이언트 통합(멀티) — 그룹 지정이 없을 때만. 상대 시점까지 본다.
   //    스모크는 가짜 채널로 '보내는 것'만 잡는다. 보내는 모양과 받는 모양이 어긋나는
@@ -129,5 +151,11 @@ for(const r of allReports){
   if(r.pageErrors&&r.pageErrors.length){ console.log('  ⚠ 페이지 예외:'); r.pageErrors.forEach(e=>console.log('    · '+e)); }
   if(r.fail>0 || r.errors.length || (r.pageErrors&&r.pageErrors.length)) anyFail=true;
 }
+if(REPEAT>1){
+  const rows=Object.entries(tally).filter(([,t])=>t.fail>0).sort((a,b)=>b[1].fail-a[1].fail);
+  console.log(`\n■ 🔁 ${REPEAT}번 반복 — 흔들린 스텝 (${rows.length}개)`);
+  if(!rows.length) console.log('  (없음 — 전부 매번 통과)');
+  for(const [name,t] of rows){ console.log(`  ${t.fail}/${t.runs}  ${name}`);
+    for(const m of t.msgs) console.log(`         — ${m}`); } }
 console.log('\n'+(anyFail?'❌ 스모크 실패':'✅ 스모크 전체 통과'));
 process.exit(anyFail?1:0);

@@ -1467,8 +1467,16 @@ Supabase Realtime presence 기반(방 목록·로비·파티·귓말). 방 목�
 ```bash
 npm test                      # 전 그룹: lobby / game / sandbox (헤드리스 크롬, ~10초)
 node test/run-smoke.mjs game  # 한 그룹만
+SMOKE_REPEAT=6 node test/run-smoke.mjs lobby            # 🔁 같은 그룹을 6번 — 스텝별 「몇 판 중 몇 번」 집계
+SMOKE_ONLY='공용 액션 버튼' SMOKE_REPEAT=8 node test/run-smoke.mjs lobby   # 이름에 그 문구가 든 스텝만(나머지 건너뜀)
 node test/bench-strike.mjs 400 80 4   # 대규모 전투 렌더 벤치(유닛수 프레임수 반복수)
 ```
+- 🔁 **흔들리는 스텝은 한 판으로 못 잡는다**(2026-09-07). `SMOKE_REPEAT` 로 집계하고 `SMOKE_ONLY` 로 좁혀 고친 뒤 다시 센다.
+  ⚠ `SMOKE_ONLY` 는 앞 스텝을 건너뛰므로 상태에 기대는 스텝(캠프 진입 뒤 캠프 검사)은 문구를 넓게 잡을 것.
+  🧼 페이지마다 **새 브라우저 컨텍스트**다 — 새 탭만 열면 localStorage 가 남아 다음 판이 앞 판의 캠프 저장본을 물려받는다
+  (REPEAT 2판째부터 캠프 스텝 여덟이 한꺼번에 넘어졌다). 그룹 사이도 같은 규칙이라 lobby 의 저장본이 game 으로 새지 않는다.
+  그날 잡은 넷의 원인은 전부 **검사 쪽**이었다: 앞 검사가 남긴 선택(`selRes`) · 40스텝 안에 죽는 체력 5짜리 아군 ·
+  벽시계로 잰 애니메이션 중간 지점 · `.actBtn` 전환(.12s)이 끝나기 전에 읽은 면 — 증상값을 만지지 말고 흐름을 읽을 것.
 - 벤치(`test/bench-strike.mjs`)는 직스 맵에 유닛을 강제 소환해 프레임을 `strikeStep`/`M3D.sync`(JS루프·월드행렬·renderer.render)로 쪼개 잰다. **실제 GPU가 필요해 창을 띄운다(headful) — 창을 가리면 컴포지팅이 멈춰 값이 무의미**해진다. 조건은 한 페이지 안에서 교대(A/B/B/A) 측정 — 전투가 진행될수록 유닛이 뭉쳐 부하가 오르므로 순서를 고정하면 뒤 조건이 손해를 본다. 런 간 편차 ±5% 수준이라 그보다 작은 개선은 이 벤치로 판정 불가.
 - 환경변수: `BENCH_URL=주소`(이미 떠 있는 개발 서버로 측정) · `LOWPOLY=1`(삼각형이 병목인지) · `BONEVIS=1`(본 순회 제외 효과) · `PXDBG=1`(화면상 유닛 px) · `SHOT=경로`(시뮬 정지 후 3배 해상도 스크린샷) · `FORCEID=유닛id`(전 유닛을 한 종류로 — 1:1 비교) · `BONECHK=유닛id`(부착물 모델이 본 제외에서 빠지는지 검증).
 - **종족 상성(오각형)은 `node test/race-matchup.mjs [판수]` 로 잰다.** 헤드리스 크롬에 진짜 게임을 올려 `strikeStep` 을 그대로 돌리고 승패만 읽는다 — 양 진영을 AI 로 두고, 배출은 `strikeSpawnForPlayer` 의 AI 분기와 같은 식으로, **테크 깊이(배출 건물 수) 2~7 을 전부** 돌아 단계별 승률까지 낸다. 판마다 me/ai 를 바꿔 진영 편향을 상쇄한다.

@@ -61,6 +61,9 @@ const visible=el=>!!(el && el.offsetParent!=null);
 // ── 스텝 러너 ──
 const steps=[];
 async function step(name, fn){
+  // 🔁 SMOKE_ONLY — 이름에 그 문구가 없는 스텝은 건너뛴다(run-smoke.mjs 가 심는다)
+  if(window.__SMOKE_ONLY && name.indexOf(window.__SMOKE_ONLY)<0){
+    steps.push({name, ok:true, skip:true, detail:'SKIP: ONLY 필터', ms:0}); return; }
   const t0=performance.now();
   try{ const detail=await fn(); steps.push({name, ok:true, detail:detail==null?'':String(detail), ms:Math.round(performance.now()-t0)}); }
   catch(e){ steps.push({name, ok:false, detail:(e&&e.message||String(e)).slice(0,300), ms:Math.round(performance.now()-t0)}); }
@@ -1774,7 +1777,10 @@ async function groupLobby(){
             assert(!campMineModeOn(),'광맥을 탭했더니 채굴 모드가 켜졌다 — 버튼으로만 켜져야 한다');
           } }
         // ⛏ 그 대신 **버튼은 켠다** — 문이 하나도 없으면 채굴을 아예 못 한다.
-        { campMineModeSet(false); renderCampIdleSheet(); spin(2);
+        //   ⚠ 바로 앞 검사가 **광맥을 골라 뒀다**(`G.tech.selRes`) — 그 채로 그리면 `campSyncSheet` 가
+        //     「고른 것이 있다」고 보고 광맥 프로필을 MY BASE 위에 덮어 버튼이 사라진다(흔들림의 원인 ·
+        //     앞 검사의 `onMap` 가드가 탭을 건너뛰는 판에서만 통과했다 · 2026-09-07). 지우고 그린다.
+        { campMineModeSet(false); clearSel(); renderCampIdleSheet(); spin(2);
           const btn=document.querySelector('[data-minemode]');
           assert(btn,'채굴 버튼이 없다 — 채굴 모드로 들어갈 문이 사라졌다');
           //   ⚠ `fire` 는 pointerup 을 **document 에** 던진다 — 이 위임 처리기는 `ev.target.closest`
@@ -3140,8 +3146,15 @@ async function groupLobby(){
           { const from = _runeBagAt(k8), to = _runeSlotAt('norm', 0);
             assert(from && to && Math.abs(to.x - from.x) > 40,
               '두 자리가 가로로 거의 같아 궤적을 못 잰다');
-            await sleep(RUNE_FLY_MS * 0.45);
+            // ⏸ 벽시계로 기다리면 안 된다 — 기기가 느리면 45% 를 재려던 것이 도착한 뒤(t=0.96)다
+            //   (흔들림의 원인 · 2026-09-07). 애니메이션 자체를 45% 에 **세워 놓고** 잰 뒤 다시 돌린다.
+            let anim = null;
+            for(let fr = 0; fr < 30 && !anim; fr++){ anim = fly.getAnimations()[0] || null;
+              if(!anim) await new Promise(r => requestAnimationFrame(r)); }
+            assert(anim, '날아가는 애니메이션이 안 붙었다');
+            anim.pause(); anim.currentTime = anim.effect.getComputedTiming().duration * 0.45;
             const m = fly.getBoundingClientRect();
+            anim.play();
             const mx = m.left + m.width / 2, my = m.top + m.height / 2;
             const t = (mx - from.x) / (to.x - from.x);
             assert(t > 0.05 && t < 0.95, '중간 지점을 못 잡았다: t=' + t.toFixed(2));
@@ -3163,9 +3176,9 @@ async function groupLobby(){
           assert(await waitFor('#campRune .rnHb.rnPop', 1400), '가방 버튼이 안 부푼다');
           await sleep(480);
           // ④ 교체는 **나가는 것이 먼저** — 둘이 같이 날면 어느 것이 들어오는지 안 읽힌다
-          const eco = ['tap','gas','mine','reb'];
+          const eco = RUNE_LIST.filter(d => d.grp === 'eco').map(d => d.id);   // ⛔ 손으로 적지 말 것 — 지운 룬(reb)이 남아 빈 키를 만들었다
           for(let i = 0; i < RUNE_CONS; i++){
-            const k = runeKey(eco[i % 4], ['low','mid','high'][i % 3]);
+            const k = runeKey(eco[i % eco.length], ['low','mid','high'][i % 3]);
             R8.own[k] = (R8.own[k] | 0) + 1; R8.norm[i] = k; }
           campRuneTouch(); campRuneRender(); await sleep(30);
           document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
@@ -5948,6 +5961,10 @@ async function groupLobby(){
         const buddy=mk('marine', W*0.5, W*0.36), foe2=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
           const z=STK.ai.units[STK.ai.units.length-1]; if(z){ z.x=W*0.5; z.y=W*0.34; } return z; });
         if(buddy&&foe2){ campScaleAllies([buddy]); buddy.tgtUid=foe2.uid;
+          // ⚠ 마린 설계 체력이 5 다 — 맞상대는 맨 수치라 사격 시작 시점(cd 무작위)에 따라 2초 안에
+          //   아군이 죽고, `_campBusyAlly` 는 죽은 아군을 안 세어 의무병이 집으로 간다(흔들림의 원인 ·
+          //   buddyHp=-20/5 실측 · 2026-09-07). 피해를 0 으로 둬도 바닥 0.5 가 남으므로 체력을 키운다.
+          buddy.hp=buddy.maxHp=1e6;
           med.x=med._post.x; med.y=med._post.y;                     // 집에 있는 상태에서 시작
           const b0=Math.hypot(med.x-buddy.x, med.y-buddy.y);
           for(let i=0;i<40;i++) _step(0.05);
@@ -11585,11 +11602,16 @@ async function groupLobby(){
     // ⚠ 하위 버튼을 재느라 방 만들기를 열어 뒀다 — 잠김 검사는 **난이도 화면으로 돌아가서** 한다
     //    (다른 화면이 덮은 채로 재면 떨어져 나간 노드에 걸려 어떤 비교도 통과한다)
     closeCreate(); await sleep(40); openMapSelect(); await sleep(40); _selMap=USEMAPS.nemo; openSoloDiff(); await sleep(120);
-    sdPick(ui); await sleep(70);
+    // ⚠ `#sdGo` 는 고정 마크업이라 renderSoloDiff 가 **다시 만들지 않고 disabled 만 바꾼다** — 그래서
+    //    `.actBtn{transition:… .12s}` 가 걸린다. 고정 시간(70ms) 뒤에 재면 느린 판에서 전환이 아직
+    //    시작도 안 해 옛 면(.14)이 읽힌다(흔들림의 원인 · 2026-09-07). **전환이 끝나기를 기다린다.**
+    const settled=async el=>{ await sleep(0); await Promise.all(el.getAnimations().map(a=>a.finished.catch(()=>{}))); };
+    sdPick(ui); await settled($('sdGo'));
     const onLum=lum(rgb(getComputedStyle($('sdGo')).color));
-    if(li>=0){ sdPick(li); await sleep(70);
+    if(li>=0){ sdPick(li); await settled($('sdGo'));
       const off=$('sdGo'); assert(off.disabled,'잠긴 난이도인데 버튼이 열려 있음');
-      assert(alpha(getComputedStyle(off).backgroundColor)<aFace,'비활성 면이 주 동작보다 어둡지 않음');
+      const offFace=alpha(getComputedStyle(off).backgroundColor);
+      assert(offFace<aFace,'비활성 면이 주 동작보다 어둡지 않음: '+offFace+' vs '+aFace);
       assert(lum(rgb(getComputedStyle(off).color))<onLum,'비활성 글자가 활성보다 어둡지 않음'); }
     // ④ 방 만들기도 **같은 컴포넌트**를 쓴다 — 확정/취소 짝이 화면마다 달라지면 안 된다
     closeSoloDiff(); await sleep(40); openRooms(); await sleep(60); createRoom(); await sleep(120);
