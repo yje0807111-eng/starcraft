@@ -7867,19 +7867,22 @@ async function groupLobby(){
           const g1=(()=>{ S.upg.gather=1; const v=campGatherGain(); S.upg.gather=0; return v; })();
           assert(g0===1,'채취 Lv0 왕복 1회가 1원이 아니다(엔진 8 이 새어 나온다): '+g0);
           assert(g1===2,'채취 Lv1 왕복 1회가 2원이 아니다: '+g1); }
-        // 💰 비용 50 × 1.12^Lv — 싸게 · 많이(2026-09-05). ⛔ 「세 레벨마다 ×10」으로 되돌리지 말 것
+        // 💰 비용 50 × 1.22^Lv — 싸게 · 많이(2026-09-05 → 실측 1.22 · 2026-09-07). ⛔ 「세 레벨마다 ×10」으로 되돌리지 말 것
         const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
         assert(g(0)===50,'채취 첫 레벨이 50 이 아니다: '+g(0));
         for(const lv of [3,10,30]) assert(Math.abs(g(lv)/g(lv-1)-CAMP_GAT_COST_R)<0.02,'채취 비용 계단이 '+CAMP_GAT_COST_R+' 가 아니다(Lv'+lv+'): '+(g(lv)/g(lv-1)).toFixed(3));
-        assert(g(9)<300,'채취 Lv10 이 300 을 넘는다 — 「싸게 많이」가 아니다: '+g(9));
+        assert(g(9)<=300,'채취 Lv10 이 300 을 넘는다 — 「싸게 많이」가 아니다: '+g(9));
+        assert(CAMP_GAT_COST_R>=1.2,'채취 비용 계단이 1.2 아래로 내려갔다 — 5분에 Lv31 이 된다: '+CAMP_GAT_COST_R);
       }
       assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
       assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
       assert(tap(25)-tap(24)===3,'Lv25 에서 증가폭이 3 으로 안 커진다(마일스톤마다 +1 · 2026-09-05): '+(tap(25)-tap(24)));
       assert(tap(50)-tap(49)===4,'Lv50 에서 증가폭이 4 로 안 커진다: '+(tap(50)-tap(49)));
-      // ⚠ 마일스톤 레벨은 **사는 것도 비싸다** — 필요 탭이 +20 붙는다(Lv10 은 55 → 75)
+      // ⚠ 마일스톤 레벨은 **사는 것도 비싸다** — 필요 탭이 +20 붙는다(Lv10 은 K·10+K → +20 · K=10 이면 110 → 130)
+      //   ⏫ K 는 CAMP_TAP_COSTK 한 곳(2026-09-07 · 5 → 10: 탭이 수입 2/3 를 먹어 첫 환생이 27분이었다).
       { const t10=(function(){ S.upg.tap=9; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; })();
-        assert(t10===75,'Lv10 필요 탭이 75 가 아니다: '+t10); }
+        assert(t10===CAMP_TAP_COSTK*11+20,'Lv10 필요 탭이 K·11+20 이 아니다: '+t10+' (K='+CAMP_TAP_COSTK+')');
+        assert(CAMP_TAP_COSTK>=10,'탭 비용 계수가 10 아래로 내려갔다 — 탭이 도로 공짜 축이 된다: '+CAMP_TAP_COSTK); }
       assert(campMileMul(19)===1 && campMileMul(20)===2 && campMileMul(50)===4 && campMileMul(100)===8,
         '마일스톤 계단이 20/50/100 에서 안 오른다: '+[campMileMul(19),campMileMul(20),campMileMul(50),campMileMul(100)].join(','));
       // ⛔ 마일스톤 배수는 Lv 에 **선형**이어야 한다(간격이 2배씩 넓어지므로). 지수가 되면 축이 셋이 된다.
@@ -7887,13 +7890,14 @@ async function groupLobby(){
       assert(Math.abs(k1-k2)<0.01 && Math.abs(k2-k3)<0.01,
         '마일스톤이 지수로 자란다 — 지수 축이 셋이 되어 폭주한다: '+[k1,k2,k3].map(v=>v.toFixed(3)).join(','));
       // ⛏ 탭 비용은 **횟수로 설계한 2차식**이다(2026-09-02 · 5n(n+1)) — 계단비로 재면 안 된다.
-      //   ⭐ 잠그는 것은 「Lv n 을 사는 데 몇 번 눌러야 하는가」다: 10 → 15 → 20 → 25 …(5씩)
+      //   ⭐ 잠그는 것은 「Lv n 을 사는 데 몇 번 눌러야 하는가」다: K·n+K = 20 → 30 → 40 → 50 …(K=10 씩 · 2026-09-07)
       //   ⛔ 옛 검사는 계단비 1.09 를 봤다. 지수 시절 값이라 지금은 뜻이 없다.
       const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
       const taps=(n)=>{ S.upg.tap=n; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; };
-      assert(c(0)===10,'첫 탭 강화가 10 이 아니다: '+c(0));
+      const K=CAMP_TAP_COSTK;
+      assert(c(0)===2*K,'첫 탭 강화가 2K('+(2*K)+') 가 아니다: '+c(0));
       for(let lv=0; lv<5; lv++)
-        assert(taps(lv)===10+5*lv, 'Lv'+(lv+1)+' 에 필요한 탭이 '+(10+5*lv)+'번이 아니다: '+taps(lv));
+        assert(taps(lv)===K*(lv+2), 'Lv'+(lv+1)+' 에 필요한 탭이 '+(K*(lv+2))+'번이 아니다: '+taps(lv));
       // 무릎(Lv10) 뒤로는 지수로 넘어간다 — 2차식만 두면 후반에 탭이 공짜가 된다
       assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
     // 🤖 매크로 방지 (HUNT_R1 §1-1-3) — 탭에 상한이 없으므로 이것이 유일한 제동이다
