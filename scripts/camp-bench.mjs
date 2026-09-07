@@ -67,6 +67,14 @@ const PACKS=(process.env.PACK||"").split(",").map(x=>x.trim()).filter(Boolean);
 //     ⚠ 그러므로 이 실측이 답하는 것은 「지금 열린 칸으로 얼마나 세지나」가 아니라
 //       **「다 갖춘 사람이 얼마나 세지나」**(천장)다. 둘을 헷갈리지 말 것.
 const RUNES=(process.env.RUNES||"").trim();
+// 🎲 **주사위를 고정한다** — `SEED=n` (2026-09-05).
+//   ⭐ 왜 필요한가: 전투에 `Math.random` 이 43곳이고, 2026-09-05 부터는 **탭 자체도** 무작위다
+//     (✨치명 터치). 그래서 같은 설정으로 돌려도 판마다 결과가 두 배씩 갈린다 —
+//     그 흔들림이 룬이 주는 1.5~8% 를 통째로 덮는다.
+//   ⭐ 쓰는 법은 **짝지어 비교**다: 같은 SEED 로 `RUNES=` 와 `RUNES=eco` 를 각각 돌려
+//     그 **차이**를 본다. 판 사이 흔들림이 양쪽에 똑같이 들어가므로 상쇄된다.
+//   ⛔ SEED 를 안 주면 예전과 똑같이 돈다(기본 동작을 바꾸지 않는다).
+const SEED=+(process.env.SEED||0);
 // 🌳 환생 트리 실측(2026-09-02) — TREE=mine:5,prod:5 처럼 **계열:차수** 목록.
 //   ⚠ 트리는 자루(C.rbTree)가 전부다. 포인트를 쓰지 않고 **직접 심는다** — 여기서 재려는 것은
 //     「그 계열이 수치를 얼마나 움직이나」이지 「그걸 살 수 있나」가 아니다.
@@ -95,9 +103,16 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0)=>{
   // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
   if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
+  // 🎲 씨앗을 심는다 — mulberry32(작고 고르다). ⛔ 전역 Math.random 을 갈아 끼우는 것이
+  //   요점이다: 게임 코드 43곳을 하나하나 고칠 수 없고, 고쳐서도 안 된다(벤치용 갈래가 생긴다).
+  if(seed0 > 0){ let a = seed0 >>> 0;
+    Math.random = function(){ a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   document.getElementById('opening')?.classList.add('hide');
   document.getElementById('auth')?.classList.add('hide');
   const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','벤치');
@@ -105,7 +120,7 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
   window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK);
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
