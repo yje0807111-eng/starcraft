@@ -593,7 +593,12 @@ await pg.evaluate(()=>{
         let e=null, bd=1e18; if(u) for(const z of es){ const d=Math.hypot(z.x-u.x,z.y-u.y); if(d<bd){ bd=d; e=z; } }
         const bl=(CAMPB._bld||[]).filter(x=>!x.dead).map(x=>(x.bk||'본부')+'@'+Math.round(x.x)+','+Math.round(x.y)).join(' ');
         (__CB.dbg||(__CB.dbg=[])).push('🔬'+__CB.t.toFixed(0)+'s R'+campRoundN()+' 아군='+(u?(u.id+'@'+Math.round(u.x)+','+Math.round(u.y)+' post='+(u._post?Math.round(u._post.x)+','+Math.round(u._post.y):'-')+' hp='+u.hp.toFixed(1)+' tgt='+(u.tgtUid||'-')+' order='+(!!u._order)+' wp='+(u._cpWp?u._cpWp.length:0)+' hold='+(!!u._pgHold)+' bunk='+(u._bunk!=null)):'없음')
-          +' | 적'+es.length+' 최근접='+(e?(e.id+'@'+Math.round(e.x)+','+Math.round(e.y)+' hp='+e.hp.toFixed(1)+' tgt='+(e.tgtUid||'-')+' 거리='+Math.round(bd)+' hold='+(!!e._pgHold)+' wp='+(e._cpWp?e._cpWp.length:0)+' moving='+e.moving):'-')+' | 아군전부 '+CAMPB.me.units.filter(x=>!x.dead).map(x=>x.id.slice(0,3)+'@'+Math.round(x.x)+','+Math.round(x.y)+(x._pgHold?'H':'')+(x._cpWp?'P'+x._cpWp.length:'')+(x.tgtUid?'T':'')+(x._goalX!=null?'g'+Math.round(x._goalX)+','+Math.round(x._goalY):'')+(x.moving?'m':'')).join(' ')
+          +' | 적'+es.length+' 최근접='+(e?(e.id+'@'+Math.round(e.x)+','+Math.round(e.y)+' hp='+e.hp.toFixed(1)+' tgt='+(e.tgtUid||'-')+' 거리='+Math.round(bd)+' hold='+(!!e._pgHold)+' wp='+(e._cpWp?e._cpWp.length:0)+' moving='+e.moving):'-')+' | 아군전부 '+CAMPB.me.units.filter(x=>!x.dead).map(x=>{ const tg=x.tgtUid?strikeFindUnit(CAMPB.ai.units,x.tgtUid):null;
+            let nd=1e9, ne=null; for(const z of es){ const d=Math.hypot(z.x-x.x,z.y-x.y); if(d<nd){ nd=d; ne=z; } }
+            return x.id.slice(0,3)+'@'+Math.round(x.x)+','+Math.round(x.y)+(x._pgHold?'H':'')+(x._cpWp?'P'+x._cpWp.length:'')
+              +(tg?('T'+Math.round(Math.hypot(tg.x-x.x,tg.y-x.y))+'/'+Math.round(strikeReach(x,tg))):(x.tgtUid?'T?':''))
+              +(ne?('N'+Math.round(nd)+'/'+Math.round(strikeReach(x,ne))+(x._atk?(x._atk.gnd?'g':'')+(x._atk.air?'a':''):'')):'')
+              +' cd'+(x.cd>0?x.cd.toFixed(1):'0')+(x._goalX!=null?'g'+Math.round(x._goalX)+','+Math.round(x._goalY):'')+(x.moving?'m':''); }).join(' ')
           +' | 적전부 '+es.map(x=>x.id.slice(0,3)+'@'+Math.round(x.x)+','+Math.round(x.y)+(x._pgHold?'H':'')+(x._cpWp?'P'+x._cpWp.length:'')+(x.tgtUid?'T':'')+(x._goalX!=null?'g'+Math.round(x._goalX)+','+Math.round(x._goalY):'')+(x.moving?'m':'')).join(' ')
           +' | 건물'+(CAMPB._bld||[]).filter(x=>!x.dead).length); }
       if((i%20)===0){ __CB.tap(); const w=campWealth();
