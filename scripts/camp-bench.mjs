@@ -52,6 +52,7 @@ const HOARD=+(process.env.HOARD||0);
 //   경제 업그레이드(탭·채취·일꾼)는 그대로 산다 — 「내 수입」은 자연스럽게 자라야 하기 때문이다.
 //   ⭐ 이 표가 곧 「초반 적 수치를 정하는 자[尺]」다. 라운드별 걸린 초 · 죽었나를 본다.
 const HAND=(process.env.HAND==null)?-1:+(process.env.HAND);
+const DBG1=!!process.env.DBG1;   // 🔬 손 플레이 정체 진단 로그
 const HOLD_GATE=+(process.env.HOLD_GATE||1e6);
 // 🧱 벙커 탑승(2026-08-30) — 환경변수 BUNK=0 이면 **짓기는 하되 태우지 않는다.**
 //   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
@@ -100,7 +101,7 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,hand0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,hand0,dbg10)=>{
   // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
   if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
   document.getElementById('opening')?.classList.add('hide');
@@ -109,8 +110,8 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   const C=campState(); C.race='terran';
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0 , hand:hand0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, HAND);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0 , hand:hand0, dbg1:dbg10 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, HAND, DBG1);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -580,6 +581,13 @@ await pg.evaluate(()=>{
           } else if(!__CB.rebGot.t2){                             // 2단계 — 환생 후 재도달
             __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
           } } }
+      // 🔬 DBG1 — 손 플레이 정체 진단: 5초마다 아군 1기·최근접 적·건물을 찍는다
+      if(__CB.dbg1 && (i%100)===0 && typeof CAMPB!=='undefined' && CAMPB){
+        const u=CAMPB.me.units.filter(x=>!x.dead)[0], es=CAMPB.ai.units.filter(x=>!x.dead);
+        let e=null, bd=1e18; if(u) for(const z of es){ const d=Math.hypot(z.x-u.x,z.y-u.y); if(d<bd){ bd=d; e=z; } }
+        const bl=(CAMPB._bld||[]).filter(x=>!x.dead).map(x=>(x.bk||'본부')+'@'+Math.round(x.x)+','+Math.round(x.y)).join(' ');
+        (__CB.dbg||(__CB.dbg=[])).push('🔬'+__CB.t.toFixed(0)+'s R'+campRoundN()+' 아군='+(u?(u.id+'@'+Math.round(u.x)+','+Math.round(u.y)+' post='+(u._post?Math.round(u._post.x)+','+Math.round(u._post.y):'-')+' hp='+u.hp.toFixed(1)+' tgt='+(u.tgtUid||'-')+' order='+(!!u._order)+' wp='+(u._cpWp?u._cpWp.length:0)+' hold='+(!!u._pgHold)+' bunk='+(u._bunk!=null)):'없음')
+          +' | 적'+es.length+' 최근접='+(e?(e.id+'@'+Math.round(e.x)+','+Math.round(e.y)+' hp='+e.hp.toFixed(1)+' tgt='+(e.tgtUid||'-')+' 거리='+Math.round(bd)):'-')+' | 건물 '+bl); }
       if((i%20)===0){ __CB.tap(); const w=campWealth();
         if(!__CB.gateT && w>=1e6) __CB.gateT=__CB.t;
         // 💰 지갑(들고 있는 돈) — 누적과 달리 쓰면 줄어든다
@@ -749,7 +757,7 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
-    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
+    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, dbg:__CB.dbg||[], gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
   // 🧱 벙커 — 몇 채이고 몇 기가 탔고 실제로 얼마나 맞았나
   bunk:(function(){ const on=!!__CB.bunk;
@@ -896,6 +904,7 @@ if(fin.inc){
 }
 // ⚠ **무효 표시는 `최종` 줄 자체에 붙인다.** 위에만 적으면 `grep '^최종'` 으로 표를 모으는 사람이
 //   그대로 표본에 넣는다 — 실제로 그렇게 오염된 판을 두 번 세었다.
+if(DBG1 && fin.dbg && fin.dbg.length){ console.log('\n🔬 손 플레이 정체 진단 (5초마다)'); for(const l of fin.dbg) console.log('  '+l); }
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`
   + (froze ? '  🧊 얼어붙음 — 표본으로 쓰지 말 것' : ''));
 if(froze){

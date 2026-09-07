@@ -1301,7 +1301,8 @@ async function groupLobby(){
           assert(campRefLv()===before+3,'연구 칸에 쌓인 정제소 레벨을 안 읽는다: '+campRefLv());
           delete G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]; }
         S.upg.refinery=0; G.tech.ents.splice(G.tech.ents.indexOf(fake),1); G.tech.energy=e0; } }
-    // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × 1.15^보유). 조합을 강제하는 유일한 장치다.
+    // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × CAMP_UNIT_R^보유 · 2026-09-05 부터 ×2.5).
+    //    조합을 강제하는 유일한 장치다. ⛔ 배수를 여기 숫자로 박지 말 것 — 상수 하나가 단일 소스다.
     if(typeof campSyncUnitCost==='function'){
       const T=TECH_TREE[G.tech.race], wk=TECH_WORKER[G.tech.race];
       let q=null; for(const b of T.buildings){ const f=(b.produces||[]).find(x=>x.id!==wk); if(f){ q=f; break; } }
@@ -1312,7 +1313,8 @@ async function groupLobby(){
       campSyncUnitCost();
       assert(q.m===base,'0기 보유인데 설계 기본가가 아니다: '+q.m+' (기대 '+base+')');
       G.tech.units[q.id]=3; campSyncUnitCost();
-      const want=Math.ceil(base*Math.pow(1.15,3));
+      assert(CAMP_UNIT_R>=2.5-1e-9,'반복 구매 배수가 2.5 미만이다(도배가 안 막힌다): '+CAMP_UNIT_R);
+      const want=Math.ceil(base*Math.pow(CAMP_UNIT_R,3));
       assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
       // ⛽ **유닛에는 가스가 안 든다**(2026-08-27 축 분리 — 미네랄=양 / 가스=질).
       //   ⛔ 되살리면 가스를 유닛과 연구가 나눠 써 **연구가 굶는다**(가스는 늘 모자란 자원).
