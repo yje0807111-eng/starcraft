@@ -2427,13 +2427,36 @@ function campFoeRace(dg){
 //   적 난이도   = Π(던전 문턱) × (라운드 밑)^(깬 라운드 수)
 //   ⛔ 미네랄(CAMP_MINE)과 **같은 식으로 묶지 말 것.** 보상은 라운드마다 조금, 난이도는 크게 —
 //      둘을 묶으면 50라운드를 돌아도 적이 1.33배인데 아군 화력은 20배가 된다(HUNT_R1 §6-1).
-const CAMP_RB0 = 1.07, CAMP_RB_STEP = 0.003, CAMP_DG_STEP = 3;
-function campRBase(dg){ return CAMP_RB0 + Math.max(0, (dg | 0) - 1) * CAMP_RB_STEP; }
-function campDgThreshold(dg){ return Math.pow(campRBase(dg - 1), CAMP_ROUND_MAX - 1) * CAMP_DG_STEP; }
-// dg=0(캠프)은 적이 없으므로 1을 준다
+// 📈 ── **라운드가 갈수록 가팔라지는 곡선** (2026-09-05 사용자 확정 — 「초반은 완만, 뒤로 갈수록 점점 세게」)
+//   ⛔ 옛 곡선은 거꾸로였다: 라운드 밑 1.07 은 일정한데 초반 램프(0.15→1)가 얹혀 **초반이 라운드당
+//     +15~20%, 후반이 +7%** 였다. 손 플레이(1기·Lv0)로 재니 R5 에서 막혔고 뒤는 늘어졌다.
+//   ⭐ 지금은 **라운드 배율 자체가 오른다** — R1 에서 CAMP_RR_LO(+3%) 로 시작해 R50 에서 CAMP_RR_HI(+15%)
+//     까지 선형으로 커진다. 던전이 깊을수록 양끝이 CAMP_RB_STEP 씩 더 무겁다.
+//     한 던전을 통째로 곱하면 ×63(옛 1.07^49×램프 = ×184) — R50 이 옛날의 3분의 1 이다.
+//     ⚠ 뒤로 갈수록 5라운드마다 2배(1.15^5) 라 「업그레이드만으로 막히는 순간」이 온다 — 그때 머릿수·다음
+//       테크로 뚫는 것이 설계 의도다(연구는 더하기 계단이라 뒤로 갈수록 효율이 떨어진다 · campResMul).
+//   ⛔ 미네랄(CAMP_MINE)과 **같은 식으로 묶지 말 것.** 보상은 라운드마다 조금, 난이도는 크게(HUNT_R1 §6-1).
+//   ⛔ campFoeDiff 에 다른 배수를 곱하지 말 것 — 환생 포인트(campRebMul)도 이 값을 읽는다.
+const CAMP_RR_LO = 1.03, CAMP_RR_HI = 1.15, CAMP_RB_STEP = 0.003, CAMP_DG_STEP = 3;
+// 던전 dg 의 k 번째 라운드를 깰 때 곱해지는 배율(k = 1..CAMP_ROUND_MAX−1)
+function campRoundRate(dg, k){
+  const t = Math.max(0, Math.min(1, ((k | 0) - 1) / Math.max(1, CAMP_ROUND_MAX - 2)));
+  const add = Math.max(0, (dg | 0) - 1) * CAMP_RB_STEP;
+  return CAMP_RR_LO + add + (CAMP_RR_HI - CAMP_RR_LO) * t; }
+// 🧷 옛 이름 — 「라운드 밑」 하나로 쓰던 자리(scripts/reb-x2-sim.mjs 등)를 위해 **한 던전의 기하평균 배율**을 돌려준다.
+//   ⛔ 새 코드에서 쓰지 말 것 — 라운드마다 배율이 다르다(campRoundRate).
+function campRBase(dg){ let x = 1; const n = CAMP_ROUND_MAX - 1;
+  for(let k = 1; k <= n; k++) x *= campRoundRate(dg, k);
+  return Math.pow(x, 1 / n); }
+// 한 던전을 통째로 깬 배율 × 던전 문턱(어느 던전에서나 ×3)
+function campDgThreshold(dg){
+  let x = 1; for(let k = 1; k <= CAMP_ROUND_MAX - 1; k++) x *= campRoundRate(dg - 1, k);
+  return x * CAMP_DG_STEP; }
+// 「지금 던전 dg 에서 cleared 라운드를 깬 상태」의 적 난이도. dg=0(캠프)은 적이 없으므로 1.
 function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
-  let x = 1; for(let k = 2; k <= dg; k++) x *= campDgThreshold(k);
-  return x * Math.pow(campRBase(dg), Math.max(0, cleared | 0)); }
+  let x = 1; for(let d = 2; d <= dg; d++) x *= campDgThreshold(d);
+  const n = Math.max(0, cleared | 0); for(let k = 1; k <= n; k++) x *= campRoundRate(dg, k);
+  return x; }
 
 // ── 웨이브 — 총량은 난이도가 정하고, 몇 마리로 쪼갤지는 라운드가 정한다 (HUNT_R1 §6-2-1) ──
 //   기본값: 체력 40 · 공격 0.33. 여기에 난이도가 곱해진 것이 **그 라운드의 총 유입량**이다.
@@ -2462,7 +2485,10 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
 //     (총 체력 826 → 31). 후반을 되살리려면 **라운드 곡선(campRBase)** 이나 구간별 난이도로
 //     손잡이를 따로 두어야 한다 — ⛔ 이 상수 하나로 초반과 후반을 같이 맞추려 들지 말 것
 //     (그래서 값이 네 번 바뀌었다).
-const CAMP_FOE_HP0 = 30, CAMP_FOE_ATK0 = 0.33;
+// ⭐ **R1 값이 곧 기준값이다** (2026-09-05) — 옛 30/0.33 은 램프(×0.15)를 거쳐 R1 에서 4.5/0.05 가 됐다.
+//   램프를 곡선 안으로 옮기면서(위 campRoundRate) 그 R1 값을 그대로 기준값으로 둔다. 눈금은 아군과 같다
+//   (레인저 체력 5 · 공격 1): R1 적 하나가 4.5 체력이라 다섯 대면 죽는다.
+const CAMP_FOE_HP0 = 4.5, CAMP_FOE_ATK0 = 0.05;
 // 🍼 ── **초반 램프** (2026-09-04 사용자 확정) ───────────────────────────────
 //   ⚠ 문제는 「적이 세다」가 아니라 **아군이 1 기라 못 쏜다**는 것이었다(camp-trace 실측:
 //     사거리 안 17.8% · 못 닿는 정도 ×1.66 · 설계 DPS 의 27% 만 나옴). 적 3 마리가 흩어져 있는데
@@ -2479,14 +2505,17 @@ const CAMP_FOE_HP0 = 30, CAMP_FOE_ATK0 = 0.33;
 //     던전 2 로 넘어가는 벽은 지금과 같다(문턱 ×3 그대로).
 //     ⛔ 상수 배수(던전 1 전체를 ×0.15)로 바꾸지 말 것 — 그러면 던전 1 R50 과 던전 2 R1 사이가
 //       20배로 벌어져 **거기서 막힌다**. 램프의 요점은 「낮게 시작해 제자리로 돌아오는 것」이다.
-const CAMP_EASY_MUL = 0.15, CAMP_EASY_END = CAMP_ROUND_MAX, CAMP_EASY_DG = 1;
+// ⚠ 램프는 **꺼 두었다**(2026-09-05 · CAMP_EASY_MUL = 1) — 「초반은 완만하게」는 이제 곡선(campRoundRate)이
+//   맡는다. 함수와 배선은 남긴다(유보 규칙). 되살리려면 0.15 로 돌리되, 곡선과 겹치면 초반이 두 번 낮아진다.
+const CAMP_EASY_MUL = 1, CAMP_EASY_END = CAMP_ROUND_MAX, CAMP_EASY_DG = 1;
 function campFoeEasy(dg, round){
   if((dg | 0) !== CAMP_EASY_DG) return 1;
   const r = Math.max(1, round | 0);
   if(r >= CAMP_EASY_END) return 1;
   const t = (r - 1) / (CAMP_EASY_END - 1);          // R1 → 0 · R10 → 1
   return CAMP_EASY_MUL + (1 - CAMP_EASY_MUL) * t; }
-const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
+// 🐜 마리 수 — R1 은 **1마리**(옛 3×램프 0.15 와 같다), 라운드마다 ×1.08 → R50 에 43마리.
+const CAMP_FOE_N0 = 1, CAMP_FOE_NR = 1.08, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
   const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1))
             * campFoeEasy((typeof campDgN === 'function') ? campDgN() : 0, round);
@@ -3851,7 +3880,12 @@ function campDesignStats(list){ let n = 0; for(const u of (list || [])) if(campD
 //   가스 수급을 키워 레벨 수를 늘리는 대신 한 레벨의 무게를 줄였다 — 총 강함은 비슷한데
 //   「오르는 느낌」이 훨씬 자주 온다.
 //   ⚠ 던전 하나(적 ×2)를 따라잡는 데 필요한 레벨이 **11 → 24** 로 늘었다(§3-4 표도 그렇게 고쳤다).
-const CAMP_RES_STEP = 1.03;       // 계열 업그레이드 한 레벨당(HUNT_R1 §3-4)
+// ⭐ **더하기 계단** (2026-09-05 사용자 확정 — 「업그레이드는 동일하게 오르고, 값은 비싸져 효율이 떨어진다」)
+//   한 레벨 = 기본값의 +CAMP_RES_ADD. Lv1 +20% · Lv5 ×2 · Lv10 ×3 — **레벨마다 같은 양**이 붙는다.
+//   ⛔ 옛 곱하기 1.03 은 어느 레벨에서나 +3% 라 「막히는 순간」이 안 왔다. 더하기면 Lv10 의 한 레벨은
+//     상대적으로 +7% 뿐이고 가스 값은 계속 오르므로(CAMP_RES_GAS_R) 뒤로 갈수록 효율이 떨어진다 —
+//     그때 머릿수·다음 테크로 뚫는 것이 설계 의도다(위 campRoundRate 설명과 한 짝).
+const CAMP_RES_ADD = 0.20;        // 계열 업그레이드 한 레벨당 더해지는 몫(기본값 대비)
 function campResLv(uid, kind){    // kind: 'atk' | 'hp'
   if(typeof G === 'undefined' || !G.tech || typeof UNIT_UPG === 'undefined') return 0;
   const m = UNIT_UPG[uid]; if(!m) return 0;
@@ -3860,7 +3894,7 @@ function campResLv(uid, kind){    // kind: 'atk' | 'hp'
   if(!k) return 0;
   return (G.tech.research && (G.tech.research[G.tech.race + '_' + k] | 0)) || 0; }
 function campResMul(uid, kind){ const lv = campResLv(uid, kind);
-  return lv ? Math.pow(CAMP_RES_STEP, lv) : 1; }
+  return lv ? 1 + CAMP_RES_ADD * lv : 1; }
 // 🛡 방어력 — **받는 피해 −1.5%/레벨**(최대 −60%).
 //   ⛔ 엔진의 armor 는 **감산**이라 캠프의 작은 공격력(1~31)에서는 저공격 유닛이 통째로
 //     무력화된다 — HUNT_R1 §3-1 이 방어를 뺀 이유가 그것이다.

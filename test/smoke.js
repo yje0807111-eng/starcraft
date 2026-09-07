@@ -4780,7 +4780,7 @@ async function groupLobby(){
       spawn();
       campScaleAllies(CAMPB.me.units);
       const m1=pick('marine'), r1=pick('racer');
-      const want=Math.pow(CAMP_RES_STEP,3);
+      const want=1+CAMP_RES_ADD*3;   // ⭐ 더하기 계단(2026-09-05)
       assert(Math.abs(m1.dmg/mA0-want)<1e-6,'보병 공격 3레벨이 ×'+want.toFixed(3)+'가 아님: ×'+(m1.dmg/mA0).toFixed(3));
       assert(Math.abs(m1.maxHp-mH0)<1e-6,'공격 연구인데 체력이 움직였다');
       assert(Math.abs(r1.dmg-rA0)<1e-6,'보병 연구가 차량(레이서)에 샜다: ×'+(r1.dmg/rA0).toFixed(3));
@@ -4790,7 +4790,7 @@ async function groupLobby(){
       spawn();
       campScaleAllies(CAMPB.me.units);
       const m2=pick('marine'), r2=pick('racer');
-      const want2=Math.pow(CAMP_RES_STEP,2);
+      const want2=1+CAMP_RES_ADD*2;
       assert(Math.abs(r2.maxHp/rH0-want2)<1e-6,'차량 체력 2레벨이 ×'+want2.toFixed(3)+'가 아님: ×'+(r2.maxHp/rH0).toFixed(3));
       assert(Math.abs(m2.maxHp-mH0)<1e-6,'차량 연구가 보병(마린)에 샜다');
       // ④ 트리와 곱해진다(둘 중 하나만 걸리면 안 된다)
@@ -6257,9 +6257,11 @@ async function groupLobby(){
     }
     assert(!bad.length,'무리 하나가 1마리뿐이다 — 적 수가 0↔1 로 깜빡인다: '+bad.join(' '));
     // 후반은 여전히 여러 무리로 나뉜다(밀려오는 느낌이 사라지면 안 된다)
-    const late=split(campFoeCount(25));
+    //   ⚠ 「후반」은 던전의 마지막 라운드(R50)로 잰다 — 2026-09-05 마리 수 곡선을 1×1.08^r 로 낮춘 뒤
+    //     R25 는 6마리라 두 무리뿐이다. 그건 설계다(초반은 완만).
+    const late=split(campFoeCount(CAMP_ROUND_MAX));
     assert(late.length>=4,'후반이 안 쪼개진다: '+late.join(','));
-    return 'R1~12 무리당 2마리 이상 · R25 는 '+late.length+'무리';
+    return 'R1~12 무리당 2마리 이상 · R'+CAMP_ROUND_MAX+' 는 '+late.length+'무리';
   });
 
   // 🚪 **적은 화면 위 밖에서 태어난다** (2026-08-30 사용자 확정)
@@ -7111,22 +7113,27 @@ async function groupLobby(){
       for(let d=2; d<=CAMP_DG_MAX; d++){
         const step=campFoeDiff(d,0)/campFoeDiff(d-1,CAMP_ROUND_MAX-1);
         assert(Math.abs(step-3)<0.01,'던전 '+d+' 문턱이 ×3 이 아님: '+step.toFixed(3)); }
-      // ② 깊은 던전일수록 라운드 한 칸이 더 무겁다
-      assert(Math.abs(campRBase(1)-1.07)<1e-9 && Math.abs(campRBase(10)-1.097)<1e-9,
-        '라운드 밑이 설계값(1.070→1.097)과 다름: '+campRBase(1)+'→'+campRBase(10));
-      assert(campFoeDiff(1,49)/campFoeDiff(1,0) < campFoeDiff(10,49)/campFoeDiff(10,0),
-        '던전 10 의 50라운드가 던전 1 보다 안 무겁다');
+      // ② ⭐ **라운드가 갈수록 가팔라진다**(2026-09-05 사용자 확정) — R1 +3% → R50 +15%
+      //    ⛔ 옛 「라운드 밑 1.07 일정 + 초반 램프」는 거꾸로였다(초반 +15~20% · 후반 +7%).
+      assert(Math.abs(campRoundRate(1,1)-CAMP_RR_LO)<1e-9,'R1 배율이 CAMP_RR_LO 가 아님: '+campRoundRate(1,1));
+      assert(Math.abs(campRoundRate(1,CAMP_ROUND_MAX-1)-CAMP_RR_HI)<1e-9,'마지막 라운드 배율이 CAMP_RR_HI 가 아님');
+      assert(campRoundRate(1,1)<1.05 && campRoundRate(1,CAMP_ROUND_MAX-1)>1.12,'초반 완만·후반 가파름이 아니다');
+      { let prev=0; for(let k=1;k<CAMP_ROUND_MAX;k++){ const v=campRoundRate(1,k); assert(v>=prev,'배율이 도로 내려간다: R'+k); prev=v; } }
+      // 깊은 던전일수록 같은 라운드가 더 무겁다
+      assert(campRoundRate(10,1)>campRoundRate(1,1) && campFoeDiff(1,49)/campFoeDiff(1,0) < campFoeDiff(10,49)/campFoeDiff(10,0),
+        '던전 10 이 던전 1 보다 안 무겁다');
+      // 문턱 = 앞 던전을 통째로 깬 배율 × 3 — 두 식이 같은 배율을 읽어야 한다
+      { let x=1; for(let k=1;k<CAMP_ROUND_MAX;k++) x*=campRoundRate(1,k);
+        assert(Math.abs(campDgThreshold(2)/(x*CAMP_DG_STEP)-1)<1e-9,'던전 2 문턱이 던전 1 곡선과 안 맞는다'); }
       // ③ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
       C.dg=1; C.cleared=0; const m0=campMineMul();
       C.cleared=49;        const m1=campMineMul();
       assert((campFoeDiff(1,49)/campFoeDiff(1,0)) > (m1/m0)*10,
         '50라운드에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
-      // ④ 마리 수 — 라운드가 오르면 잘게 쪼갠다. 상한 100
-      //   ⚠ 던전 1 의 초반만 **램프**가 마리 수도 함께 줄인다(campFoeEasy · 2026-09-04) — R1 은 1마리다.
-      //     그 램프를 안 타는 자리(던전 2)에서 원래 값 3 을 확인한다.
-      C.dg=2; assert(campFoeCount(1)===3,'램프 밖 1라운드 마리 수: '+campFoeCount(1));
-      C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 램프로 1마리가 아님: '+campFoeCount(1));
-      assert(campFoeCount(50)===CAMP_FOE_NMAX,'50라운드가 상한이 아님: '+campFoeCount(50));
+      // ④ 마리 수 — R1 은 1마리(어느 던전이나 · 램프 없이 기준값이 1), 라운드가 오르면 잘게 쪼갠다. 상한 100
+      C.dg=2; assert(campFoeCount(1)===1,'던전 2 R1 마리 수: '+campFoeCount(1));
+      C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 1마리가 아님: '+campFoeCount(1));
+      assert(campFoeCount(50)>=30 && campFoeCount(50)<=CAMP_FOE_NMAX,'50라운드 마리 수가 30~상한 밖: '+campFoeCount(50));
       assert(campFoeCount(999)<=CAMP_FOE_NMAX,'마리 수가 상한을 넘음');
       // ⑤ campScaleFoes 는 무리의 **총 체력**을 목표에 맞추되 유닛별 차이를 남긴다
       C.dg=2; C.cleared=10;
@@ -7150,7 +7157,7 @@ async function groupLobby(){
         assert(Math.abs(split/whole-1)<1e-6,'쪼개서 낸 총 체력이 한 번에 낸 것과 다르다: '+split+' vs '+whole); }
       // ⑥ 0단계(캠프)에는 난이도가 없다
       assert(campFoeDiff(0,0)===1,'캠프에 난이도가 붙었다: '+campFoeDiff(0,0));
-      return '문턱 ×'+CAMP_DG_STEP+' · 라운드밑 '+campRBase(1).toFixed(3)+'→'+campRBase(10).toFixed(3)
+      return '문턱 ×'+CAMP_DG_STEP+' · 라운드 배율 '+campRoundRate(1,1).toFixed(3)+'→'+campRoundRate(1,CAMP_ROUND_MAX-1).toFixed(3)
         +' · 천장 '+campFoeDiff(CAMP_DG_MAX,CAMP_ROUND_MAX-1).toExponential(2);
     } finally { C.dg=back.dg; C.cleared=back.cleared; } });
 
@@ -13224,28 +13231,20 @@ async function groupLobby(){
     } finally { C.dg=back.dg; C.cleared=back.cleared; campBattleClose(); }
   });
 
-  // 🍼 초반 램프 — R1 을 깨지는 크기로 낮추되 **후반과 환생 보상은 건드리지 않는다**.
-  await step('캠프 초반 램프: R1 은 쉽고 · 마지막 라운드에서 합류하고 · 환생 포인트는 그대로', async()=>{
-    skipIf(typeof campFoeEasy!=='function','초반 램프 없음');
-    // ① 던전 1 의 R1 이 가장 쉽고, R10 에서 원래 곡선에 합류한다
-    assert(campFoeEasy(1,1)<0.3,'R1 이 안 쉽다: '+campFoeEasy(1,1));
-    assert(campFoeEasy(1,CAMP_EASY_END)===1,'R'+CAMP_EASY_END+' 에서 합류하지 않는다: '+campFoeEasy(1,CAMP_EASY_END));
-    // ⭐ 끝점은 던전의 **마지막 라운드**여야 한다 — 그래야 던전 1 R50 에서 ×1 로 만나고
-    //   던전 2 로 넘어가는 벽이 지금과 같다(문턱 ×3 그대로). 끝점이 그보다 앞이면 던전 1 후반이
-    //   제 난이도로 돌아와 「전체적으로 낮춘다」가 깨지고, 뒤면 R50 이 쉬운 채로 던전 2 를 만난다.
-    assert(CAMP_EASY_END===CAMP_ROUND_MAX,'램프 끝점이 던전 마지막 라운드가 아니다: '+CAMP_EASY_END);
-    assert(campFoeEasy(1,CAMP_ROUND_MAX)===1,'던전 1 마지막 라운드가 ×1 이 아니다 — 던전 2 벽이 커진다');
-    assert(campFoeEasy(1,CAMP_ROUND_MAX+10)===1,'라운드 상한 밖에서 램프가 되살아난다');
-    { let prev=0; for(let r=1;r<=CAMP_EASY_END;r++){ const v=campFoeEasy(1,r);
-        assert(v>=prev,'램프가 도로 내려간다: R'+r+' = '+v); prev=v; } }
-    // ② **던전 1 에만** 건다 — 모든 던전에 걸면 옮길 때마다 쉬운 구간이 생겨 곡선이 톱니가 된다
-    assert(campFoeEasy(2,1)===1,'던전 2 에도 램프가 걸렸다 — 곡선이 톱니가 된다');
-    assert(campFoeEasy(0,1)===1,'캠프(0)에 램프가 걸렸다');
-    // ③ ⛔ 난이도 자체(campFoeDiff)에 곱하면 **환생 포인트**가 같이 깎인다(campRebMul 이 그 값을 읽는다)
+  // 🍼 초반 램프는 **꺼져 있다**(2026-09-05) — 「초반은 완만하게」는 곡선(campRoundRate)이 맡는다.
+  //   ⛔ 램프(0.15)를 되살리면 곡선과 겹쳐 초반이 두 번 낮아진다. 함수는 남아 있되 ×1 이어야 한다.
+  await step('캠프 초반 램프: 꺼져 있다(×1) · 완만함은 곡선이 맡는다 · 환생 포인트는 그대로', async()=>{
+    skipIf(typeof campFoeEasy!=='function'||typeof campRoundRate!=='function','램프/곡선 없음');
+    for(const r of [1,10,CAMP_ROUND_MAX,CAMP_ROUND_MAX+10]) assert(campFoeEasy(1,r)===1,'램프가 살아 있다: R'+r+' = '+campFoeEasy(1,r));
+    assert(campFoeEasy(2,1)===1 && campFoeEasy(0,1)===1,'다른 던전/캠프에 램프가 걸렸다');
+    // R1 이 쉬운 것은 **기준값**(R1 = 4.5/0.05 · 1마리)과 **완만한 첫 배율**(+3%) 때문이다
+    assert(CAMP_FOE_HP0<10 && campFoeCount(1)===1,'R1 기준값이 「몇 대면 죽는」 크기가 아니다: '+CAMP_FOE_HP0+' · '+campFoeCount(1)+'마리');
+    assert(campRoundRate(1,1)<=1.05,'R1 배율이 완만하지 않다: '+campRoundRate(1,1));
+    // ⛔ 난이도 자체(campFoeDiff)에 곱하면 환생 포인트가 같이 깎인다 — 램프가 새지 않는다
     { const f0=window.campFoeEasy; try{ window.campFoeEasy=()=>0.5;
         assert(campFoeDiff(1,0)===1,'램프가 campFoeDiff 로 샜다 — 초반 환생 포인트가 깎인다');
       } finally { window.campFoeEasy=f0; } }
-    return 'R1 ×'+campFoeEasy(1,1)+' → R'+CAMP_EASY_END+' ×1 · 던전 1 전용 · 보상 영향 없음';
+    return '램프 ×1 · R1 '+CAMP_FOE_HP0+'체력 1마리 · 첫 배율 '+campRoundRate(1,1).toFixed(2);
   });
 
   // 🏗 건물 짓기 단계 — 「채굴 끄기 → 일꾼 지정 → 카드 → 배치」가 한 동작에 한 단계여야 한다.
