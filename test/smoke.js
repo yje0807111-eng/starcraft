@@ -5993,6 +5993,38 @@ async function groupLobby(){
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
     return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
 
+  // 🩸 **캠프에서는 최소 피해 바닥(0.5)이 없다** (2026-09-05 · 손 플레이 실측에서 잡았다)
+  //    strikeHit 은 한 대를 max(0.5, 공격−방어) 로 센다. 캠프는 1/10 스케일이라 R1 적의 한 대가 0.09 인데
+  //    바닥 0.5 로 5.6배 올라가 혼자서는 R5 에서 죽었고, CAMP_FOE_ATK0 를 내려도 체감이 없었다(축이 죽어 있었다).
+  //    캠프 전투 동안만 campPatchHit 이 감싼다. 유즈맵(오토배틀)은 그대로다.
+  await step('캠프: 최소 피해 바닥(0.5)이 캠프에서만 걷힌다', async()=>{
+    // ⛔ 가드는 옛 버전에도 있는 것으로 — campPatchHit 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof strikeHit!=='function'||typeof campEnterDungeon!=='function'||typeof campDeploy!=='function','배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패');
+      u.hp=u.maxHp=5; u.armor=0; u.sh=0; u.maxSh=0;
+      const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); return STK.ai.units[STK.ai.units.length-1]; });
+      assert(foe,'적 배치 실패');
+      // ① 캠프 전투 중 — 0.1 짜리 한 대는 0.1 만 깎는다(바닥 없음)
+      campWithStk(()=>strikeHit(u, 0.1, foe));
+      assert(Math.abs((5-u.hp)-0.1)<0.02,'캠프인데 0.1 짜리 한 대가 '+(5-u.hp).toFixed(2)+' 깎였다 — 바닥 0.5 가 살아 있다');
+      // ② 0.5 이상은 원본 규칙 그대로(방어 감산)
+      u.hp=5; u.armor=1; campWithStk(()=>strikeHit(u, 2, foe));
+      assert(Math.abs((5-u.hp)-1)<0.02,'방어 감산이 어긋났다: '+(5-u.hp).toFixed(2));
+      u.armor=0;
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+    // ③ 캠프를 나가면 원본으로 돌아간다 — 0.1 짜리도 0.5 로 센다(유즈맵 규칙)
+    { const t={hp:5,maxHp:5,armor:0,sh:0,side:'me'}, a={id:'marine',side:'ai'};
+      strikeHit(t, 0.1, a);
+      assert(Math.abs((5-t.hp)-0.5)<0.02,'캠프를 나갔는데 바닥이 안 돌아왔다: '+(5-t.hp).toFixed(2)); }
+    return '캠프 0.1 → 0.1 · 방어 감산 ok · 나가면 0.1 → 0.5';
+  });
+
   // 🧱 **던전에서도 건물을 뚫고 가지 않는다** (2026-09-05 사용자 신고)
   //    ⛔ 전장의 장애물은 `strikeTempleRects()`(=본부 하나)뿐이라 나머지 건물은 통과했다.
   //    ⛔ 건물 전부를 원형 장애물로 만드는 안은 **되돌렸다** — 국소 회피뿐이라 아군이 갇혔다.

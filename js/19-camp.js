@@ -2800,6 +2800,35 @@ function campRallyPoint(){
 //   ⚠ 대신 **좌표계는 통일했다**(campBuildStructs) — 건물이 그려진 자리에 서므로, 본부의
 //     회피 원도 이제 그림 위에 얹힌다(옛날엔 화면의 4.2% 위에 떠 있었다).
 
+// 🩸 ── **최소 피해 바닥(0.5)을 캠프에서만 걷는다** (2026-09-05 · 손 플레이 실측에서 잡았다) ─────
+// ⛔ 무엇이 문제였나 — `strikeHit`(18-strike.js) 는 한 대를 **`Math.max(0.5, 공격−방어)`** 로 센다.
+//   오토배틀 스케일(공격 6~30)에서는 뜻이 없는 안전장치인데, 캠프는 1/10 스케일이라(HUNT_R1 §3-1)
+//   R1 적의 설계 공격이 **한 대 0.09** 다 → 바닥 0.5 로 올라가 **5.6배**. 실측: 레인저 체력 5 가
+//   5초에 3 깎였다(초당 0.6 · 스내퍼 cd 0.8 → 0.5/0.8). 그래서 혼자서는 R5~R6 에서 죽었고,
+//   `CAMP_FOE_ATK0` 를 아무리 내려도(800 → 30 때도) 체감이 안 바뀌었다 — **축이 죽어 있었다.**
+// ⭐ 그래서 캠프 전투 동안만 `strikeHit` 를 감싸, **바닥 아래(0.5 미만)의 한 대는 설계값 그대로** 넣는다.
+//   0.5 이상은 원본에 그대로 넘긴다(방어·상성·실드 규칙은 원본이 맡는다).
+//   ⛔ 18-strike.js 를 고치지 않는다(유즈맵과 공유). 켜고 끄는 자리는 campPatchFront 와 같다.
+//   ⚠ 실드도 같은 바닥이 있다 — 에테리얼 적(실드 → 체력 합산)은 sh=0 이라 체력 분기만 탄다.
+let _campHitPatched = null;
+function campPatchHit(){
+  if(_campHitPatched || typeof window === 'undefined') return;
+  const o = window.strikeHit; if(typeof o !== 'function') return;
+  _campHitPatched = o;
+  window.strikeHit = function(tgt, rawAtk, atk){
+    if(_campOn && CAMPB && tgt && (rawAtk || 0) < 0.5 && !(tgt.sh > 0)){
+      if(typeof strikeWebBlocks === 'function' && strikeWebBlocks(tgt, atk)) return;   // 🕸 장판 규칙은 그대로
+      const mul = (typeof _sbTypeMul === 'function') ? _sbTypeMul(atk, tgt) : 1;
+      tgt.hp -= Math.max(0, (rawAtk || 0) - (tgt.armor || 0)) * mul;                  // 바닥 없이 설계값 그대로
+      return; }
+    return o.apply(this, arguments);
+  };
+}
+function campUnpatchHit(){
+  if(!_campHitPatched) return;
+  window.strikeHit = _campHitPatched; _campHitPatched = null;
+}
+
 // ⛔ strikeFrontStruct 를 감싼다 — 적이 내 건물을 때릴 수 있게 하는 유일한 입구다.
 //   ⚠ side 는 **때리는 쪽**이다(원본: foe = S[side==='me'?'ai':'me']). 적이 칠 때만 바꿔 준다.
 let _campFrontPatched = null;
@@ -4746,13 +4775,14 @@ function campHideView(){
   }
   campUnmountView();                                   // #vBuild 를 원래 자리로
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
-  campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
+  campRestoreHire(); campRestoreSupply(); campRestoreRefinery(); campRestoreUnitCost();   // 👷🏠⛽⚔ 가격 원복(TECH_TREE 는 공유다)
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
   campUnpatchFieldSheet();                                        // 🗂 전장 프로필 감싸기 원복
   campUnpatchMorph();                                             // 🧬 변태 감싸기 원복
   campUnpatchProduce(); campUnpatchArm(); campUnpatchProdTime();   // 상한 문지기·생산 시간 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
+  campUnpatchHit();                                        // 🩸 피해 바닥 원복(같은 이유)
   // 🔬 연구 구역 원복 — ⛔ **이것만 빠져 있었다**(2026-08-31). 나머지 9개는 전부 여기서 되돌리는데
   //   이 하나가 없어 techPanelRender·renderCampIdleSheet 래퍼가 영영 남았다.
   //   ⚠ 지금은 래퍼가 campIsOn() 으로 스스로 빠져서 무해하지만, 그 가드를 지우는 순간
@@ -4804,6 +4834,7 @@ function campEnter(){
   campPatchFieldSheet();                               // 🗂 지정한 전장 유닛 프로필(⚠ 연구 구역 **뒤에** 걸어야 바깥이 된다)
   campPatchMorph();                                    // 🧬 전장 유닛 변태(기지 유닛은 원본 그대로)
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
+  campPatchHit();                                      // 🩸 최소 피해 바닥(0.5)을 걷는다 — 1/10 스케일이 살아난다
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
   //   그 뒤로 _techCW()·_techCH()·_techRows() 값이 전부 달라진다.
@@ -6071,7 +6102,7 @@ function campFrame(now){
       if(_lb){ const _hb = campBattleBars(); if(_hb) _lb.insertAdjacentHTML('beforeend', _hb); } }
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
-    campSyncHire(); campSyncSupply(); campSyncUnitCost();          // 👷🏠⚔ 일꾼·보급소·전투 유닛 다음 가격(보유 수에 따라)
+    campSyncHire(); campSyncSupply(); campSyncRefinery(); campSyncUnitCost();   // 👷🏠⛽⚔ 일꾼·보급소·정제소·전투 유닛 가격
     // ⏱ **튜토리얼 동안만 기다림을 없앤다**(2026-09-04 사용자 요청 · 판단은 tutoNoWait 이 한다).
     //   ⭐ 바뀔 때만 쓴다 — 매 프레임 false 로 덮으면 다른 데서 켠 것을 조용히 끄게 된다.
     //   ⛔ 튜토리얼이 끝나면 반드시 되돌아와야 한다(그 되돌림이 아래 else 다).
@@ -6723,6 +6754,25 @@ function campSyncSupply(){
   const b = t.buildings.find(function(x){ return x.k === 'supply'; }); if(!b) return;
   if(!_campSupHome) _campSupHome = { b: b, m: b.m, g: b.g };
   b.m = campSupplyCost(campSupplyN()); b.g = 0;
+}
+// ── ⛽ 정제소 건설 비용 — **캠프에서만 1만** (2026-09-05 사용자 확정) ─────────────
+// TECH_TREE 값(100)은 유즈맵 건설 모드와 공유라 그대로 두고, 보급소와 같은 방식으로
+// 캠프에 있는 동안만 `b.m` 을 갈아 끼우고 나갈 때 되돌린다.
+// ⭐ 왜 1만인가 — 100 은 첫 1분 수입(초당 3)에도 사라지는 값이라 「가스 축을 여는 결정」이 없었다.
+//   보급소가 3만부터 시작하므로 그 아래 한 단으로 둔다. 업그레이드(CAMP_REF_COST0 1만 × 1.12^Lv)와 같은 눈금.
+const CAMP_REFINERY_M = 10000;
+let _campRefPriceHome = null;
+function campSyncRefinery(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t || !t.buildings) return;
+  const b = t.buildings.find(function(x){ return x.gas; }); if(!b) return;   // 종족마다 가스 건물 하나
+  if(!_campRefPriceHome) _campRefPriceHome = { b: b, m: b.m, g: b.g };
+  b.m = CAMP_REFINERY_M; b.g = 0;
+}
+function campRestoreRefinery(){
+  if(!_campRefPriceHome) return;
+  _campRefPriceHome.b.m = _campRefPriceHome.m; _campRefPriceHome.b.g = _campRefPriceHome.g;
+  _campRefPriceHome = null;
 }
 function campRestoreSupply(){
   if(!_campSupHome) return;
