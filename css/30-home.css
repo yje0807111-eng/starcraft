@@ -2685,6 +2685,12 @@
 @keyframes rnPop{ 0%{transform:scale(.86)} 42%{transform:scale(1.14)} 100%{transform:scale(1)} }
 #campRune .rnCell.rnPop{transform-box:view-box;animation:rnPop .42s cubic-bezier(.2,.9,.3,1)}
 #campRune .rnHb.rnPop{animation:rnPop .42s cubic-bezier(.2,.9,.3,1)}
+/* ⛔ **대기(.rnCand)가 도착 팝(.rnPop)을 이긴다** (2026-09-05).
+   교체 대기 중인 칸은 「골라 달라」고 숨쉬어야 한다 — 방금 도착한 칸이라고 해서
+   그 신호가 꺼지면 그 칸만 후보가 아닌 것처럼 보인다.
+   ⚠ 순서가 규칙이다: `.rnCell.rnPop` 보다 **뒤**에 있고 같은 무게(클래스 둘)라 이긴다.
+     ⛔ 위로 옮기지 말 것 — 그 순간 도착 팝이 다시 이겨 숨쉬기가 멎는다(스모크가 잡는다). */
+#campRune .rnCell.rnCand{animation:rnBreathe 1.15s ease-in-out infinite}
 /* 🔵 퍼지는 고리 — 「적용됐다」의 신호. 등급 색으로 한 번만 번진다 */
 @keyframes rnRipple{ 0%{transform:scale(1);opacity:.85} 100%{transform:scale(2.1);opacity:0} }
 #campRune .rnRipple{fill:none;stroke-width:1.4;pointer-events:none;transform-box:view-box;

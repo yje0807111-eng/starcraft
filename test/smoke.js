@@ -2358,9 +2358,24 @@ async function groupLobby(){
         assert(campRuneEquip('norm',2,k1)===false,'보유(2)보다 많이 끼워졌다');
         R.norm=[]; R.own={}; R.own[k1]=1; R.own[k2]=1;
         campRuneEquip('norm',0,k1); campRuneEquip('norm',1,k2); }
-      // 💎 값은 **등급 표 한 곳**에서 온다 — 룬마다 흩뿌리면 손볼 때 어긋난다
+      // 💎 **젬 값**은 등급 표 한 곳에서 온다 — 룬마다 흩뿌리면 손볼 때 어긋난다.
+      //   ⚠ **효과 값은 다르다** — 룬마다 덮는 것이 정상이다(전달률이 달라서 · 아래).
       for(const gd of RUNE_GRADES) assert(runeGem(runeKey('tap',gd))===RUNE_GEM[gd],
-        gd+' 값이 등급 표와 다르다: '+runeGem(runeKey('tap',gd))+' / '+RUNE_GEM[gd]);
+        gd+' 젬 값이 등급 표와 다르다: '+runeGem(runeKey('tap',gd))+' / '+RUNE_GEM[gd]);
+      // 📐 **값을 맞춘 기준은 「표시값」이 아니라 「실제로 닿는 폭」이다**(2026-09-05 · GEM.md §8-8).
+      //   같은 +17% 라도 룬마다 실제 영향이 75배까지 갈린다 — 그래서 전달률로 값을 나눴다.
+      //   ⛔ 아래 방향을 뒤집지 말 것. 뒤집으면 한쪽은 게임을 흔들고 한쪽은 아무 일도 안 한다.
+      { const base=runeFullSum('tap');                       // 직접 수입항 = 기준
+        assert(base>0.15 && base<0.20,'기준 룬(탭)의 상한이 17% 대가 아니다: '+(base*100).toFixed(1)+'%');
+        // ① ⏩ **시간 축은 훨씬 작아야 한다** — 모든 축에 곱해져 누적 4.9제곱으로 커진다
+        assert(runeFullSum('speed') < base/3,
+          '가속의 룬이 기본표에 가깝다 — 시간 축이라 실제로는 +116% 가 된다: '+(runeFullSum('speed')*100).toFixed(1)+'%');
+        // ② 🎲 **확률·배수 축은 훨씬 커야 한다** — 비율을 곱하는 자리라 숫자가 작으면 아무 일도 안 한다
+        for(const id of ['crit','critm','gcrit','fever','fevg'])
+          assert(runeFullSum(id) > base*3,
+            id+' 의 값이 너무 작다 — 확률·배수에 비율을 곱하는 자리다: '+(runeFullSum(id)*100).toFixed(0)+'%');
+        // ③ 확률 룬이 배수 룬보다 커야 한다(같은 %p 를 움직이는 데 더 많이 든다)
+        assert(runeFullSum('crit') > runeFullSum('critm'),'예리가 일격보다 작다 — 전달률이 뒤집혔다'); }
       // ② 다른 효과 키는 안 섞인다
       assert(campRuneEff('atk')===0,'끼우지도 않은 효과에 값이 있다: '+campRuneEff('atk'));
       // ③ 뺀 것은 안 세어진다 — 보유는 그대로인데 효과만 빠져야 한다
@@ -3235,7 +3250,12 @@ async function groupLobby(){
           assert(campRuneFree(want) > 0, '준비가 틀렸다 — 넣을 룬이 남아 있지 않다');
           campRuneBagTap(want);
           assert(campRuneSwapOn(), '칸이 꽉 찼는데 교체 모드로 안 들어간다');
-          await sleep(40);
+          // ⚠ 이 검사가 판마다 갈리던 원인 **둘**을 2026-09-05 에 고쳤다:
+          //   ① `.rnPop` 을 붙이는 것은 rAF 안인데 지우는 것은 밖의 460ms 타이머라,
+          //      rAF 가 밀린 프레임에서는 **지운 뒤에 붙어** 클래스가 영영 남았다.
+          //   ② 그래도 도착 팝이 대기 숨쉬기를 덮었다 — CSS 에서 `.rnCand` 가 이기게 했다.
+          //   ⇒ 이제 기다림에 기대지 않는다(짧게 둔다).
+          await sleep(60);
           // 🔁 바꿀 수 있는 칸만 **숨쉬고 점선이 돈다** — 일반 룬이므로 유니크 칸은 물린다.
           //   ⛔ 좌우로 떠는 흔들림으로 되돌리지 말 것(2026-09-04 사용자 확정 · 목업 camp-rune-wait2-4 ①안).
           const wig = document.querySelectorAll('#rnG .rnCand').length;
