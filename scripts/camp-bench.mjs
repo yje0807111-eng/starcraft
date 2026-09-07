@@ -47,6 +47,11 @@ const WALL_WARN=600, WALL_STOP=1800;
 //   HOARD=n : 채취 레벨이 n 에 닿으면 **경제 업그레이드 구매를 멈추고 모은다**(0 = 안 함).
 //     병력 생산·건설·연구는 그대로 둔다 — 안 그러면 던전이 안 내려가 수입이 같이 멎는다.
 const HOARD=+(process.env.HOARD||0);
+// 🖐 **손 플레이 기준** (2026-09-05 사용자 요청 — 「업그레이드 50 · 병력 여러 기로 재서 적이 세게 잡혔다」)
+//   HAND=n : 병력 **1기**로 던전에 들어가고, 연구는 키마다 **n 레벨까지만**(0 또는 1), 병력 추가 생산 없음.
+//   경제 업그레이드(탭·채취·일꾼)는 그대로 산다 — 「내 수입」은 자연스럽게 자라야 하기 때문이다.
+//   ⭐ 이 표가 곧 「초반 적 수치를 정하는 자[尺]」다. 라운드별 걸린 초 · 죽었나를 본다.
+const HAND=(process.env.HAND==null)?-1:+(process.env.HAND);
 const HOLD_GATE=+(process.env.HOLD_GATE||1e6);
 // 🧱 벙커 탑승(2026-08-30) — 환경변수 BUNK=0 이면 **짓기는 하되 태우지 않는다.**
 //   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
@@ -183,6 +188,7 @@ await pg.evaluate(()=>{
   { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1)) __CB.want[b.k]=1;
   }
   __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
+  if(__CB.hand>=0) __CB.enter=1;   // 🖐 손 플레이 기준 — 첫 유닛 하나로 바로 내려간다
   // ⚠ **설계 라운드 길이보다 넉넉해야 한다.** 던전 2 후반은 실측 330초이고 R50 은 10분대로
   //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
   __CB.stallS=900;
@@ -337,6 +343,7 @@ await pg.evaluate(()=>{
         // ⛽ 비교 실험 — 정제소 레벨 상한(0 = 없음)
         if(__CB.refCap>0 && typeof CAMP_REF_KEY!=='undefined' && r.k===CAMP_REF_KEY
            && typeof campRefLv==='function' && campRefLv()>=__CB.refCap) continue;
+        if(__CB.hand>=0 && r.k!==CAMP_REF_KEY && lv>=__CB.hand) continue;   // 🖐 손 플레이 — 연구는 n 레벨까지만(정제소는 경제라 제외)
         if(!r.tier && lv) continue;                        // 단발은 한 번뿐
         if(typeof _techReqMet==='function' && !_techReqMet(r.req)) continue;
         const c=(typeof campResearchCost==='function' && campResearchCost(r,lv))||[r.m||0,r.g||0];
@@ -471,6 +478,10 @@ await pg.evaluate(()=>{
   //   ⚠ 지갑은 하나(G.tech.credit)라 **누적 지출**로 가른다.
   { const oP=__CB.produce, oB=__CB.buy;
     __CB.produce=function(){ if((__CB.spentU||0) >= campWealth()*0.5) return;
+      // 🖐 손 플레이 기준 — 병력은 **한 기**뿐. 죽으면 다시 한 기.
+      if(__CB.hand>=0){ const alive=(typeof campAlive==='function')?campAlive('me'):0;
+        const base=(G.tech.ents||[]).filter(e=>e.type==='unit').length;
+        if(alive+base>=1) return; }
       const c0=G.tech.credit||0; oP(); __CB.spentU=(__CB.spentU||0)+Math.max(0,c0-(G.tech.credit||0)); };
     __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
       // 💰 모으기 모드 — 채취가 목표 레벨에 닿으면 경제 구매를 멈춘다(HOARD)
@@ -829,6 +840,7 @@ console.log(fin.holdT ? `□ F 지갑 ${F(HOLD_GATE)} 도달: 시작 후 **${(fi
                       : `□ F 지갑 ${F(HOLD_GATE)}: ${(fin.t/60).toFixed(1)}분 안에 못 모음`
                         + ` (지금 지갑 ${F(fin.hold)} · 최고 ${F(fin.holdMax)})`
                         + (HOARD ? '' : '  ⚠ 모으기 모드 꺼짐 — HOARD=n 으로 채취 Lv n 부터 모은다'));
+if(HAND>=0) console.log('\n🖐 손 플레이 기준 — 병력 1기 · 연구 최대 Lv'+HAND+' · 병력 추가 생산 없음');
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
 console.log('초    | 던전R  | 번돈      | 지갑      | 초당    | 효율 | 탭  | 일꾼 | 인구     | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
