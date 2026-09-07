@@ -5247,6 +5247,10 @@ const CAMP_TAP_COSTK = 5;       // 탭 비용 = 필요탭수 × 그때 탭당 ·
 //   ⚠ 마일스톤 레벨은 **사는 것도 비싸다**: 필요 탭이 +20 붙는다(Lv10 은 55 → **75탭**).
 //     성능이 뛰는 자리는 관문이기도 해야 한다.
 const CAMP_TAP_MILES = [10, 25, 50, 100, 500, 1000];
+// ⭐ 마일스톤에서 증가폭이 **+1 씩** 커진다(1 → 2 → 3 → 4 …). ⛔ 옛 「×2 씩」(1 → 2 → 4 → 8 → 16)은
+//   채취를 1원으로 낮춘 뒤 탭이 수입의 61% 를 먹는 폭주 축이 됐다(45분 실측 · Lv59 탭당 220 → 이제 155).
+//   계단은 그대로 있다 — 「다음 계단까지 몇 레벨」이라는 목표는 남는다(2026-09-05 사용자 확정 방향).
+const CAMP_TAP_MILE_ADD = 1;
 // Lv 에서의 **기본** 탭당(배수 제외) — 구간마다 증가폭이 다르므로 구간별로 한 번에 더한다.
 //   ⛔ 레벨 하나씩 도는 루프를 쓰지 말 것 — Lv 가 수천이 되면 프레임마다 그만큼 돈다.
 function campTapRaw(lv){
@@ -5254,7 +5258,7 @@ function campTapRaw(lv){
   const ms = CAMP_TAP_MILES.concat([Infinity]);
   while(from <= lv){
     const m = ms[mi];
-    if(from >= m){ step *= 2; mi++; continue; }
+    if(from >= m){ step += CAMP_TAP_MILE_ADD; mi++; continue; }   // ⭐ 마일스톤마다 증가폭 +1 (옛 ×2 · 2026-09-05)
     const to = Math.min(lv, m - 1);
     v += step * (to - from + 1);
     from = to + 1;
@@ -5280,9 +5284,9 @@ function campTapNeedTaps(n){
 const CAMP_GAT_BASE = 1, CAMP_GAT_ADD = 1;
 function campGatRaw(lv){ return CAMP_GAT_BASE + CAMP_GAT_ADD * Math.max(0, lv | 0); }
 // 💰 채취 강화 비용 — **50 × 1.12^Lv** (2026-09-05 사용자 확정 — 「업그레이드 간 비용을 줄이자」).
-//   Lv10 155 · Lv30 1,500 · Lv60 2.6만. 한 레벨이 +1원뿐이라 **싸게 · 많이** 사는 축이다.
+//   Lv10 222 · Lv30 6,100 · Lv60 88만. 한 레벨이 +1원뿐이라 **싸게 · 많이** 사는 축이되, 1.12 는 5분에 Lv31 로 너무 쌌다.
 //   ⛔ 옛 「세 레벨마다 ×10」(Lv10 5만)은 레벨당 +8원(엔진 8 × 1) 시절의 값이다 — 되돌리면 아무도 못 산다.
-const CAMP_GAT_COST0 = 50, CAMP_GAT_COST_R = 1.12;
+const CAMP_GAT_COST0 = 50, CAMP_GAT_COST_R = 1.18;   // 1.12 는 5분에 Lv31 이었다(너무 쌈) → 1.18
 function campGatCost(n){ return Math.ceil(CAMP_GAT_COST0 * Math.pow(CAMP_GAT_COST_R, Math.max(0, (n | 0) - 1))); }
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
@@ -5579,6 +5583,10 @@ function campMineOnce(clientX, clientY, human, mul){
   if(human && typeof campTapHuman === 'function')
     gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY)));
   G.tech.credit = (G.tech.credit || 0) + gain;
+  // ⭐ 맵 탭도 **터치 몫**으로 센다(2026-09-07). ⛔ 빼면 캠프 틱이 이 돈을 「일꾼이 캔 것」으로 보고
+  //   채취 배수를 먹인다 — 채취가 1원(×1/8)에서 시작한 뒤로는 탭 8원이 1원이 됐다(스모크 ③ 이 잡았다).
+  //   과녁 탭(campMineTap)·벤치는 원래 이렇게 센다 — 맵 탭만 빠져 있던 것이 「BALANCE 문제」의 정체다.
+  _campTapAcc += gain;
   _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
   if(typeof updateCurBar === 'function') updateCurBar();
@@ -5992,9 +6000,9 @@ const CAMP_SLOW_EVERY = 8;      // 250ms × 8 = 2초
 let _campTimer = 0, _campSlow = 0, _campLastCr = 0, _campTapAcc = 0;
 // 📊 **표시 전용** 탭 누적 — 경제용 `_campTapAcc` 와 **따로 둔다.**
 //   ⚠ 왜 따로인가: `_campTapAcc` 는 「채취 배수를 안 먹일 몫」이라 경제 계산에 쓰인다.
-//     거기에 맵 탭(campMineOnce)을 끼워 넣으면 **획득량이 바뀐다**(그 몫이 배수를 못 받게 된다).
 //     환생 화면의 「터치로 번 미네랄」은 표시일 뿐이라 경제를 건드리면 안 된다.
-//   ⚠ 그래서 맵 탭이 `_campTapAcc` 에 안 들어가는 문제는 **여기서 고치지 않는다**(BALANCE 문제).
+//   ⚠ 맵 탭(campMineOnce)도 2026-09-07 부터 `_campTapAcc` 에 들어간다 — 배수가 1 아래로 내려간 뒤
+//     (채취 Lv0 = ×1/8) 빠져 있던 맵 탭이 8원 → 1원으로 깎였기 때문이다. 탭은 어느 길이든 배수를 안 먹는다.
 let _campTapEarn = 0;
 // 📊 **수입 내역** — 번 돈이 어디서 왔는지 나눠 센다(2026-08-30 · sc-3 요청).
 //   ⭐ 왜 필요한가: 실측 100만 도달이 **27분**인데 설계 추정은 10시간이다(22배). 설계표(§1-1)를

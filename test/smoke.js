@@ -348,8 +348,13 @@ async function groupLobby(){
     C.earn=0; C.earnTap=0; C.earnAuto=0; C.playS=0; C.tapped=0;
     // ① 탭 — 터치 몫으로 쌓인다
     window._campTapForce=1;
-    for(let i=0;i<10;i++) campMineOnce(200,400,false,1);
+    // ⭐ 맵 탭은 **채취 배수를 안 먹는다**(2026-09-07) — Lv0 배수가 1/8 이라, 빠져 있으면 탭 8원이 1원이 된다.
+    //   ⛔ campMineOnce 가 _campTapAcc 에 안 넣던 옛 상태로 되돌리면 여기서 걸린다.
+    const crT=G.tech.credit||0; let tapSum=0;
+    for(let i=0;i<10;i++) tapSum+=campMineOnce(200,400,false,1);
     tick();
+    assert(Math.round((G.tech.credit||0)-crT)===Math.round(tapSum),
+      '맵 탭이 채취 배수를 먹었다 — 탭 '+tapSum+' · 실제 증가 '+Math.round((G.tech.credit||0)-crT));
     { const c=campState();
       assert((c.tapped|0)===10,'터치 횟수가 안 쌓임: '+(c.tapped|0));
       assert((c.earnTap||0)>0,'터치로 번 미네랄이 안 쌓임');
@@ -7651,7 +7656,11 @@ async function groupLobby(){
             assert(Math.abs((b5-G.tech.credit)-c5)<1,'×5 가 낸 값이 미리 보여 준 값과 다르다');
             // MAX — 지금 미네랄로 살 수 있는 만큼만, 넘겨 쓰지 않는다
             _armMul='max';
+            // ⚠ MAX 는 한 번에 CAMP_UPG_MAX_STEP(99) 까지만 산다 — 지갑이 그보다 크면 「남았다」가 정상이다.
+            //   탭 곡선이 완만해진 뒤(마일스톤 +1 · 2026-09-05) 1e7 로는 99칸이 다 사져서 여기서 걸렸다.
+            G.tech.credit=1e5;
             const can=campUpgAfford('tap'), l0=lv(), got=campUpgBuyN('tap',campResMulN('tap'));
+            assert(can<CAMP_UPG_MAX_STEP,'MAX 상한에 걸려 「다 샀다」를 못 잰다: '+can);
             assert(got===can&&got>0,'MAX 가 살 수 있는 만큼을 안 산다: '+got+' / '+can);
             assert(lv()-l0===got&&G.tech.credit>=0,'MAX 가 미네랄을 넘겨 썼다: '+G.tech.credit);
             assert(campUpgAfford('tap')===0,'MAX 뒤에도 더 살 수 있다 — 다 안 샀다');
@@ -7861,13 +7870,13 @@ async function groupLobby(){
         // 💰 비용 50 × 1.12^Lv — 싸게 · 많이(2026-09-05). ⛔ 「세 레벨마다 ×10」으로 되돌리지 말 것
         const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
         assert(g(0)===50,'채취 첫 레벨이 50 이 아니다: '+g(0));
-        for(const lv of [3,10,30]) assert(Math.abs(g(lv)/g(lv-1)-1.12)<0.02,'채취 비용 계단이 1.12 가 아니다(Lv'+lv+'): '+(g(lv)/g(lv-1)).toFixed(3));
-        assert(g(9)<200,'채취 Lv10 이 200 을 넘는다 — 「싸게 많이」가 아니다: '+g(9));
+        for(const lv of [3,10,30]) assert(Math.abs(g(lv)/g(lv-1)-CAMP_GAT_COST_R)<0.02,'채취 비용 계단이 '+CAMP_GAT_COST_R+' 가 아니다(Lv'+lv+'): '+(g(lv)/g(lv-1)).toFixed(3));
+        assert(g(9)<300,'채취 Lv10 이 300 을 넘는다 — 「싸게 많이」가 아니다: '+g(9));
       }
       assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
       assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
-      assert(tap(25)-tap(24)===4,'Lv25 에서 증가폭이 4 로 안 커진다: '+(tap(25)-tap(24)));
-      assert(tap(50)-tap(49)===8,'Lv50 에서 증가폭이 8 로 안 커진다: '+(tap(50)-tap(49)));
+      assert(tap(25)-tap(24)===3,'Lv25 에서 증가폭이 3 으로 안 커진다(마일스톤마다 +1 · 2026-09-05): '+(tap(25)-tap(24)));
+      assert(tap(50)-tap(49)===4,'Lv50 에서 증가폭이 4 로 안 커진다: '+(tap(50)-tap(49)));
       // ⚠ 마일스톤 레벨은 **사는 것도 비싸다** — 필요 탭이 +20 붙는다(Lv10 은 55 → 75)
       { const t10=(function(){ S.upg.tap=9; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; })();
         assert(t10===75,'Lv10 필요 탭이 75 가 아니다: '+t10); }
