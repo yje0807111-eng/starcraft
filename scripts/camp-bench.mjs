@@ -482,7 +482,10 @@ await pg.evaluate(()=>{
       // 🖐 손 플레이 기준 — 병력은 **한 기**뿐. 죽으면 다시 한 기.
       if(__CB.hand>=0){ const alive=(typeof campAlive==='function')?campAlive('me'):0;
         const base=(G.tech.ents||[]).filter(e=>e.type==='unit').length;
-        if(alive+base>=1) return; }
+        // ⚠ 누운 유닛(_down · 30초 뒤 부활)도 센다 — 안 세면 첫 죽음에서 둘째 기를 사서 「1기」가 아니게 된다
+        //   (2026-09-05 실측: R6 에서 죽자 기관총병을 사서 그 뒤가 2기 판이었다).
+        const down=(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._down)?CAMPB._down.length:0;
+        if(alive+base+down>=1) return; }
       const c0=G.tech.credit||0; oP(); __CB.spentU=(__CB.spentU||0)+Math.max(0,c0-(G.tech.credit||0)); };
     __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
       // 💰 모으기 모드 — 채취가 목표 레벨에 닿으면 경제 구매를 멈춘다(HOARD)
