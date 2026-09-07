@@ -2824,6 +2824,11 @@ async function groupLobby(){
           assert(typeof _runeBox==='function' && _runeBox(),'칸 범위를 못 낸다');
           assert(/ctx.box/.test(String(svvBind)),
             '엔진이 경계를 안 쓴다 — svvBind 에 배선이 빠졌다');
+          // ⚠ fitZ 는 **처음 열 때 한 번**(campRuneBind 의 first) 그때의 가방·상단 높이로 잡힌다.
+          //    그 뒤 가방이 차거나 비면 덮이는 높이가 달라져, 옛 fitZ 로 재는 이동 거리가 경계와
+          //    어긋난다(실측 상하 167 · 상한 140 · 2026-09-07). 「전체 보기」의 계약은 **같은 레이아웃에서**
+          //    맞춘 배율과 경계가 맞는 것이므로, 지금 레이아웃으로 다시 맞춘 뒤 잰다.
+          campRuneFit(true);
           const kx=V.tx, ky=V.ty, kz=V.tz;
           // ⭐ **얼마나 움직일 수 있나를 직접 잰다** — 「경계가 있다」만 재면 한 화면씩 밀려도 통과한다
           //   (2026-09-04 실측: 옛 여백식은 아무리 조여도 좌우 403 이었다 · 판 폭이 440 인데).
@@ -2832,8 +2837,10 @@ async function groupLobby(){
             svvClampPan(lo,$('rnSvg'),bx,o); svvClampPan(hi,$('rnSvg'),bx,o);
             return { x:hi.tx-lo.tx, y:hi.ty-lo.ty }; };
           { const t=travel(V.fitZ||1);
+            const o=_runeBoxOpt();
             assert(t.x<RUNE_MAP_W*0.25 && t.y<RUNE_MAP_H*0.25,
-              '전체 보기인데 너무 많이 밀린다: 좌우 '+t.x.toFixed(0)+' 상하 '+t.y.toFixed(0)); }
+              '전체 보기인데 너무 많이 밀린다: 좌우 '+t.x.toFixed(0)+' 상하 '+t.y.toFixed(0)
+              +' (fitZ '+(V.fitZ||0).toFixed(2)+' · 위 '+o.hideT.toFixed(0)+' 아래 '+o.hideB.toFixed(0)+')'); }
           { const t=travel(RUNE_PICK_SC);
             assert(t.x<RUNE_MAP_W*0.7 && t.y<RUNE_MAP_H*0.7,
               '최대 확대에서 너무 많이 밀린다: 좌우 '+t.x.toFixed(0)+' 상하 '+t.y.toFixed(0)); }
@@ -3126,6 +3133,13 @@ async function groupLobby(){
           const k8 = runeKey('tap','high'); R8.own[k8] = (R8.own[k8] | 0) + 2;
           // ① 날아가는 동안 **받을 칸은 가려져** 있다 — 그림이 도착해야 문양이 나타난다
           campRuneBagTap(k8);
+          // ✈ 그림은 **지금** 붙고 애니는 다음 프레임에 붙는다. 느린 판에서는 아래 4프레임을 기다리는 동안
+          //   400ms 비행이 끝나 그림이 지워진다(4배 스로틀링 실측 3/3 · 2026-09-07) — 붙자마자 잡아 두고
+          //   애니가 붙는 즉시 **멈춰 세운다**. 중간 지점은 뒤에서 시간을 직접 놓고 잰다.
+          const fly = document.querySelector('#campRune .rnFly');
+          assert(fly, '날아가는 그림이 없다');
+          let anim = null;
+          const holdFly = () => { if(!anim){ const a = fly.getAnimations()[0]; if(a){ anim = a; anim.pause(); } } };
           assert(document.querySelectorAll('#rnG .rnCell.veil').length === 1,
             '받을 칸을 안 가린다 — 문양이 이미 있으니 도착이 안 보인다');
           // 🫥 **한 프레임도 보이면 안 된다** — 다 그린 뒤에 가리면 문양이 1 에서 0 으로
@@ -3137,9 +3151,7 @@ async function groupLobby(){
             for(let fr = 0; fr < 4; fr++){
               const op = +getComputedStyle(gi).opacity;
               assert(op < 0.02, '넣는 순간 칸에 룬이 잠깐 보인다(' + fr + '프레임째 opacity ' + op.toFixed(2) + ')');
-              await new Promise(r => requestAnimationFrame(r)); } }
-          const fly = document.querySelector('#campRune .rnFly');
-          assert(fly, '날아가는 그림이 없다');
+              await new Promise(r => requestAnimationFrame(r)); holdFly(); } }
           // 📐 궤적은 **호**다 — 같은 **가로 진행률**에서 직선보다 위에 있다.
           //   ⚠ 시간으로 재면 안 된다: easing 때문에 직선이어도 초반에는 덜 내려가
           //     「호처럼」 보인다(실측 — 호를 꺼도 통과했다). 가로 진행률로 재면 easing 이 상쇄된다.
@@ -3148,11 +3160,10 @@ async function groupLobby(){
               '두 자리가 가로로 거의 같아 궤적을 못 잰다');
             // ⏸ 벽시계로 기다리면 안 된다 — 기기가 느리면 45% 를 재려던 것이 도착한 뒤(t=0.96)다
             //   (흔들림의 원인 · 2026-09-07). 애니메이션 자체를 45% 에 **세워 놓고** 잰 뒤 다시 돌린다.
-            let anim = null;
-            for(let fr = 0; fr < 30 && !anim; fr++){ anim = fly.getAnimations()[0] || null;
+            for(let fr = 0; fr < 30 && !anim; fr++){ holdFly();
               if(!anim) await new Promise(r => requestAnimationFrame(r)); }
             assert(anim, '날아가는 애니메이션이 안 붙었다');
-            anim.pause(); anim.currentTime = anim.effect.getComputedTiming().duration * 0.45;
+            anim.currentTime = anim.effect.getComputedTiming().duration * 0.45;
             const m = fly.getBoundingClientRect();
             anim.play();
             const mx = m.left + m.width / 2, my = m.top + m.height / 2;
@@ -3185,12 +3196,19 @@ async function groupLobby(){
           campRuneBagTap(k8);
           if(campRuneSwapOn()){
             campRuneSlotTap('norm', 0);
-            const vis = () => [...document.querySelectorAll('#campRune .rnFly')]
-              .filter(e => getComputedStyle(e).opacity !== '0').length;
+            const flies = () => [...document.querySelectorAll('#campRune .rnFly')];
+            const vis = () => flies().filter(e => getComputedStyle(e).opacity !== '0').length;
+            assert(flies().length === 2, '교체인데 그림이 둘이 아니다: ' + flies().length);
             assert(vis() === 1, '교체에서 둘이 같이 난다: ' + vis());
-            let two = false;
-            for(let t = 0; t < 12 && !two; t++){ await sleep(40); if(vis() === 2) two = true; }
-            assert(two, '한 박자 뒤에 들어오는 것이 안 뜬다: ' + vis());
+            // ⏸ 나가는 것은 **세워 둔다** — 느린 판에서는 첫 표본 전에 400ms 비행이 끝나 둘 다 지워진다
+            //   (4배 스로틀링 실측 「0」 · 2026-09-07). 들어오는 것은 시차(RUNE_FLY_GAP) 뒤 타이머가 켠다.
+            { const out = flies().find(e => getComputedStyle(e).opacity !== '0');
+              for(let fr = 0; fr < 30 && !out.getAnimations()[0]; fr++) await new Promise(r => requestAnimationFrame(r));
+              const oa = out.getAnimations()[0]; if(oa) oa.pause();
+              let two = false;
+              for(let t = 0; t < 40 && !two; t++){ if(vis() === 2) two = true; else await sleep(40); }
+              assert(two, '한 박자 뒤에 들어오는 것이 안 뜬다: ' + vis());
+              flies().forEach(e => e.getAnimations().forEach(a => { try{ a.play(); }catch(_e){} })); }
             animNote = '연출 호·고리·시차 ok'; }
           await sleep(RUNE_FLY_MS + 200);
           document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
@@ -3588,15 +3606,19 @@ async function groupLobby(){
       '닫기가 열기와 같은 애니 이름이다 ('+_closeAni+') — 되감기가 안 돌고 끝값으로 점프한다');
     // ② 닫자마자는 남아 있고(연출 중), 곧 사라진다 — 그리고 **중간 모습이 실제로 있어야 한다**
     assert(!!document.querySelector('.cdDrop'),'던전 판이 애니 없이 즉시 지워졌다');
+    // ⏸ 25ms 폴링으로 중간을 낚으면 느린 판에서는 프레임이 성겨 한 번도 안 걸린다(4배 스로틀링 실측 · 2026-09-07).
+    //   닫기 애니를 **절반에 세워 놓고** 읽은 뒤 다시 돌린다 — 프레임이 몇 개든 같은 답이 나온다.
     let _mid=false;
-    for(let i=0;i<6;i++){ await sleep(25);
-      const x=document.querySelector('.cdDrop'); if(!x) break;
+    { const x=document.querySelector('.cdDrop'); const a=x&&x.getAnimations()[0];
+      assert(a,'닫기 애니메이션이 안 붙었다');
+      a.pause(); a.currentTime=a.effect.getComputedTiming().duration*0.5;
       // ⚠ 정규식을 쓰지 않는다 — 이 파일을 heredoc 으로 고칠 때 역슬래시가 벗겨져 깨진다.
       const seg=(getComputedStyle(x).clipPath||'').split(' ').pop().replace(')','');  // "41.2%"
       const left = seg.slice(-1)==='%' ? 100-parseFloat(seg) : -1;
-      if(left>3 && left<97) _mid=true; }
+      if(left>3 && left<97) _mid=true;
+      a.play(); }
     assert(_mid,'닫는 중 중간 모습이 한 번도 안 잡혔다 — 접히지 않고 툭 사라진다');
-    await sleep(420);
+    { let t=0; while(document.querySelector('.cdDrop') && t<1500){ await sleep(40); t+=40; } }   // 느린 판은 뒷정리 타이머가 밀린다
     assert(!document.querySelector('.cdDrop'),'던전 판이 애니 뒤에도 안 지워졌다');
     // 더보기도 같은 애니여야 한다 — 둘이 다르면 단일 소스가 깨진 것
     hbOpenMore(); await sleep(30);
@@ -4270,12 +4292,19 @@ async function groupLobby(){
       const before=read();
       assert(before.grow!=null&&before.pop!=null,'애니 요소가 없다');
       // 「다른 작업」 — 애니 도중 다른 별을 고르는 재렌더를 흉내낸다
-      await sleep(120);
+      // ⏱ 지난 시간은 **잠들기 전부터** 잰다 — sleep(120) 이 느린 판에서는 1초 넘게 걸리는데 그걸 120 으로
+      //   치면 「애니가 끝나 요소가 안 그려진 것」을 「되감김」으로 잘못 읽는다(4배 스로틀링 실측 · 2026-09-07).
       const t0=Date.now();
+      await sleep(120);
       _campTreeSel={t:'n',a:'hp',b:1}; campTreeRender();
       _campTreeSel={t:'n',a:'atk',b:1}; campTreeRender();
-      const elapsed=(Date.now()-t0+120)/1000;
+      const elapsed=(Date.now()-t0)/1000;
       const after=read();
+      if(after.grow==null){
+        // 애니가 다 지나 요소가 안 그려진 것이면 되감긴 게 아니다 — 단, 정말 지났어야 한다
+        assert(elapsed > before.grow + CAMP_TREE_GROW_S,
+          '애니 도중 재렌더에서 선이 사라졌다 (지난 시간 '+elapsed.toFixed(2)+')');
+        return '재렌더 전 delay '+before.grow.toFixed(2)+' · '+elapsed.toFixed(2)+'s 가 지나 애니가 끝난 뒤(요소 없음 · 되감기지 않음)'; }
       // ⛔ 되감겼다면 after.grow 가 다시 0 근처로 돌아온다 — 그러면 실패해야 한다
       assert(after.grow < before.grow - elapsed + 0.05,
         '재렌더 뒤 애니가 되감겼다: 전 '+before.grow+' → 후 '+after.grow+' (지난 시간 '+elapsed.toFixed(2)+')');
@@ -10517,14 +10546,15 @@ async function groupLobby(){
     skipIf(typeof gameStartCountdown!=='function','진입 화면 없음');
     openMapSelect(); _selMap=USEMAPS.nemo; await sleep(40);
     gameStartCountdown(()=>{});
-    await sleep(60);
+    // ⚠ 잠김은 **부르는 즉시** 걸린다(_gsEnterLoading 은 동기). 60ms 잔 뒤에 보면 느린 판에서는 그 잠이
+    //   GS_LOAD_MS(800) 를 넘겨 이미 100% 가 된 뒤라 「열려 있다」로 읽힌다(4배 스로틀링 실측 · 2026-09-07).
     const sb=$('opStart'), fill=$('gsBarFill');
     const pct=()=>parseFloat(fill.style.width)||0;
     assert(sb.disabled, '로딩 중인데 시작 버튼이 이미 열려 있음');
     assert(pct()<100, '로딩이 시작하자마자 100%');
-    // 다 찰 때까지 기다린다(GS_LOAD_MS 기준 + 여유)
+    // 다 찰 때까지 기다린다(GS_LOAD_MS 기준 + 여유 — 느린 판은 30ms 간격 타이머가 밀린다)
     const t0=performance.now();
-    while(sb.disabled && performance.now()-t0 < GS_LOAD_MS+1200) await sleep(30);
+    while(sb.disabled && performance.now()-t0 < GS_LOAD_MS+3000) await sleep(30);
     assert(!sb.disabled, '막대가 다 찼는데 시작 버튼이 안 열림');
     assert(pct()>=100, '버튼이 열렸는데 막대가 100% 가 아님: '+pct()+'%');
     const took=Math.round(performance.now()-t0);
@@ -10558,20 +10588,35 @@ async function groupLobby(){
     const op=$('opening'), bar=op.querySelector('.opBar'), wrap=bar.parentElement;
     op.classList.remove('hide','counting'); await sleep(50);
     const W=wrap.getBoundingClientRect().width; assert(W>1,'막대 칸 폭이 0 — 화면이 안 보인다');
-    let peak=0, fullAt=null, hidAt=null; const t0=performance.now();
-    const iv=setInterval(()=>{ const w=bar.getBoundingClientRect().width/W*100, t=performance.now()-t0;
-      if(w>peak) peak=w;
-      if(fullAt===null && w>=99) fullAt=t;
-      // ⚠ 전환 시점 = 로딩이 **걷히기 시작하는** 순간(.fxOut). .hide 는 페이드가 끝난 뒤라
-      //    그것만 보면 전환이 늦게 잡힌다. 둘 중 먼저 오는 것을 쓴다.
-      if(hidAt===null && (op.classList.contains('fxOut')||op.classList.contains('hide'))) hidAt=t; }, 16);
+    let peak=0, fullAt=null, hidAt=null, shown=0; const t0=performance.now();
+    // 👁 **폴링(16ms setInterval)으로 재면 안 된다** — 게임 프레임(3D 렌더)이 주 스레드를 물고 있으면
+    //    타이머가 100ms 넘게 밀려 「100% 가 된 순간」을 늦게 보고, 그만큼 간격이 짧게 나온다
+    //    (실측 78ms · 2026-09-07 · 규칙은 200ms). 바뀌는 **순간에 깨우는** MutationObserver 로 잰다 —
+    //    막대 폭은 인라인 style(전환 없음 · opBarDone 이 즉시 100% 로 놓는다), 전환은 class 다.
+    const rdBar=()=>{ const w=parseFloat(bar.style.width)||0; if(w>peak) peak=w;
+      if(fullAt===null && w>=99) fullAt=performance.now()-t0; };
+    const moB=new MutationObserver(rdBar); moB.observe(bar,{attributes:true,attributeFilter:['style']});
+    // ⚠ 전환 시점 = 로딩이 **걷히기 시작하는** 순간(.fxOut). .hide 는 페이드가 끝난 뒤라
+    //    그것만 보면 전환이 늦게 잡힌다. 둘 중 먼저 오는 것을 쓴다. 그 순간 **그려진** 폭도 같이 본다.
+    const moO=new MutationObserver(()=>{ if(hidAt===null && (op.classList.contains('fxOut')||op.classList.contains('hide'))){
+      hidAt=performance.now()-t0; shown=bar.getBoundingClientRect().width/W*100; } });
+    moO.observe(op,{attributes:true,attributeFilter:['class']});
+    // 📏 그동안 **가장 긴 프레임**도 잰다 — 느린 판에서 주 스레드가 1초 넘게 멎으면(4배 스로틀링 실측 1683ms ·
+    //    2026-09-07) 그 시간은 「머문 시간」이 아니라 「멈춘 시간」이다. 상한에서 그만큼만 봐준다.
+    let maxFrame=0, _lf=performance.now(), _fr=true; const _frames=[];
+    const _frLoop=()=>{ if(!_fr) return; const n=performance.now(); const g=n-_lf; if(g>maxFrame) maxFrame=g;
+      _frames.push({ a:_lf-t0, b:n-t0, g }); _lf=n; requestAnimationFrame(_frLoop); };
+    requestAnimationFrame(_frLoop);
     await new Promise(r=>showLoading(r, 400));
-    await sleep(_fadeMs()+80); clearInterval(iv);
+    await sleep(_fadeMs()+80); moB.disconnect(); moO.disconnect(); _fr=false;
     assert(peak>=99, '막대가 100% 를 못 채우고 넘어감(최대 '+peak.toFixed(0)+'%)');
+    assert(shown>=99, '넘어가는 순간 그려진 막대가 100% 가 아니다('+shown.toFixed(0)+'%)');
     assert(fullAt!==null && hidAt!==null, '100% 도달·전환 시점을 못 잼');
     const gap=hidAt-fullAt;
     assert(gap>=LOAD_HOLD*0.5, '100% 를 보여 주지 않고 바로 넘어감(간격 '+Math.round(gap)+'ms)');
-    assert(gap<=LOAD_HOLD*3+250, '100% 뒤 너무 오래 머묾(간격 '+Math.round(gap)+'ms)');
+    // 머문 창(100% → 걷힘) 안에서 60ms 를 넘긴 프레임의 초과분 = 「멈춘 시간」. 머문 시간에서 그만큼은 뺀다.
+    const stall=_frames.filter(f=>f.b>fullAt && f.a<hidAt).reduce((a,f)=>a+Math.max(0,f.g-60),0);
+    assert(gap-stall<=LOAD_HOLD*3+250, '100% 뒤 너무 오래 머묾(간격 '+Math.round(gap)+'ms · 멈춤 '+Math.round(stall)+'ms · 가장 긴 프레임 '+Math.round(maxFrame)+'ms)');
     op.classList.add('hide'); if(typeof opBarReset==='function') opBarReset();
     return '최대 '+peak.toFixed(0)+'% · 100%→전환 '+Math.round(gap)+'ms';
   });
@@ -10715,9 +10760,14 @@ async function groupLobby(){
       assert((sc.match(/rgba?\(/g)||[]).length>=4,'스크림 단계가 적어 끝이 급하다: '+sc.slice(0,60)); }
     // ⭐ 진짜 디졸브 = 나가는 판과 들어오는 판이 **동시에 보인다**.
     //    순서대로 흐렸다 나타내면 중간이 비어 '사라졌다 나타나는' 것으로 보인다(그렇게 만들었다가 되돌림).
-    authOpenForm('id'); await sleep(60);
+    authOpenForm('id');
     const hub=$('authHub'), form=$('authForm');
     const hs=getComputedStyle(hub), fs2=getComputedStyle(form);
+    // ⏸ 60ms 뒤 한 번 읽으면 느린 판에서는 아직 첫 프레임 전이라 「허브 1 · 폼 0」이 나온다(4배 스로틀링 실측 ·
+    //   2026-09-07). 나가는 판(authGhostOut)·들어오는 판(authGhostIn)의 애니를 **절반에 세워 놓고** 읽는다.
+    const _ga=[hub,form].map(e=>e.getAnimations()[0]);
+    assert(_ga[0]&&_ga[1],'전환 애니가 안 붙었다 (허브 '+!!_ga[0]+' · 폼 '+!!_ga[1]+')');
+    for(const a of _ga){ a.pause(); a.currentTime=a.effect.getComputedTiming().duration*0.5; }
     assert(hs.display!=='none' && fs2.display!=='none',
       '전환 중에 한쪽만 있다 — 겹치지 않으면 디졸브가 아니다 (허브 '+hs.display+' · 폼 '+fs2.display+')');
     assert(+hs.opacity>0.03 && +hs.opacity<0.97 && +fs2.opacity>0.03 && +fs2.opacity<0.97,
@@ -10726,7 +10776,8 @@ async function groupLobby(){
     { const hr=hub.getBoundingClientRect(), fr=form.getBoundingClientRect();
       assert(Math.abs(hr.top-fr.top)<=2,'전환 중 두 판의 윗변이 어긋난다 — 제자리 디졸브가 아니다 (허브 '
         +Math.round(hr.top)+' · 폼 '+Math.round(fr.top)+')'); }
-    await sleep(_cssMs('--t-swap',.22)+240);
+    for(const a of _ga) a.play();
+    { let t=0; while(getComputedStyle(hub).display!=='none' && t<_cssMs('--t-swap',.22)+1500){ await sleep(40); t+=40; } }
     assert(getComputedStyle(hub).display==='none','전환이 끝났는데 옛 판이 남아 있다');
     assert(!form.classList.contains('hide'),'폼이 안 열렸다 — 본문이 실행되지 않았다');
     assert(+getComputedStyle(document.querySelector('.authIn')).opacity>0.9,'내용이 안 돌아왔다');
@@ -10998,6 +11049,14 @@ async function groupLobby(){
       // ⚠ 판이 **다 차오른 뒤에** 고른다. 뜨자마자 누르면 campOvIn 이 아직 도는 중이라
       //    아래의 「검은 판보다 먼저 걷혔나」 검사가 그 초기값(op 0.09)을 걷히는 것으로 오해한다.
       await sleep(_cssMs('--t-screen',.7)+90);
+      // 👁 **순간을 기록한다** — 느린 판에서는 아래 「세 프레임」이 4초를 넘겨 검은 판이 왔다 간 뒤라
+      //   「안 올라온다」로 읽힌다(4배 스로틀링 실측 · 2026-09-07). 검은 판이 오른 순간과 종족 판이
+      //   걷힌 순간을 관찰자로 적어 두고, 이미 지났으면 **순서**로 판정한다.
+      let blackAt=null, ovHideAt=null; const tB=performance.now(), phEl=document.getElementById('phone');
+      const moP=new MutationObserver(()=>{ if(blackAt===null && phEl.classList.contains('artBlack')) blackAt=performance.now()-tB; });
+      moP.observe(phEl,{attributes:true,attributeFilter:['class']});
+      const moV=new MutationObserver(()=>{ if(ovHideAt===null && ov.classList.contains('hide')) ovHideAt=performance.now()-tB; });
+      moV.observe(ov,{attributes:true,attributeFilter:['class']});
       campPickRace();
       // ⭐ 종족은 **즉시** 정해진다. 캠프를 세우는 일만 **두 프레임** 뒤다(검은 판을 먼저 그리려고).
       //    ⛔ 그보다 더 미루면 캠프 상태를 바로 쓰는 코드가 어긋난다 — 0.7초까지 미뤘다가
@@ -11007,15 +11066,20 @@ async function groupLobby(){
       assert(typeof G!=='undefined' && G.tech && G.tech.ents,
         '세 프레임이 지났는데 캠프가 안 섰다 — campEnter 가 너무 늦다');
       // 🎬 화면은 **검은 판이 먼저 덮는다** — 캠프가 잠깐 보였다 덮이면 그게 「깜빡임」이다
-      assert(document.getElementById('phone').classList.contains('artBlack'),
+      assert(phEl.classList.contains('artBlack') || blackAt!==null,
         '검은 판이 안 올라온다 — 캠프가 그대로 드러나 깜빡인다');
       // ⭐ 종족 판은 **검은 판이 다 덮을 때까지 그대로 버틴다**(2026-08-27 재설계).
       //    예전엔 여기서 자체 페이드로 걷었는데, 검은 판(0.7초)보다 먼저 사라져
       //    **캠프가 통째로 한 번 노출됐다**(프레임 실측: 종족 선택 73.9 → 캠프 139 → 검은 화면 35.6).
       //    걷는 일은 검은 판이 다 덮은 뒤 campRaceToCamp 의 done() 이 한다.
-      assert(!ov.classList.contains('hide') && +getComputedStyle(ov).opacity > .9,
+      if(ovHideAt!==null){   // 이미 걷혔다(느린 판) → 검은 판이 다 덮은 뒤였는지 순서로 본다
+        assert(blackAt!==null && ovHideAt >= blackAt + _fadeMs()*0.8,
+          '종족 판이 검은 판보다 먼저 걷혔다 — 그 틈으로 캠프가 드러난다 (검은 판 '
+          +Math.round(blackAt||-1)+'ms · 판 걷힘 '+Math.round(ovHideAt)+'ms)'); }
+      else assert(!ov.classList.contains('hide') && +getComputedStyle(ov).opacity > .9,
         '종족 판이 검은 판보다 먼저 걷혔다 — 그 틈으로 캠프가 드러난다 (op '
         +getComputedStyle(ov).opacity+' / hide '+ov.classList.contains('hide')+')');
+      moP.disconnect(); moV.disconnect();
       await sleep(1350);   // 다 덮인 뒤(--t-screen + 유지) 걷히며 줌이 시작되기를 기다린다
       const vb=document.getElementById('vBuild'), mc=document.getElementById('cvMarine');
       assert(vb&&mc,'맵·3D 요소를 못 찾았다');
@@ -11773,7 +11837,7 @@ async function groupLobby(){
     G.activePlayers=[1,2,3,4,5,6,7,8]; G.myPlayer=1; G.playerNames={2:'호랑이',3:'까치',4:'별똥',5:'무쇠',6:'파랑',7:'노을',8:'단비'};
     gameStartCountdown(); await sleep(120);
     // ⏳ 로딩 단계(막대 0→100%)가 끝나야 준비 표기가 나온다 — 그 전에는 LOADING% 다(2026-08-19)
-    { const t0=performance.now(); while(_gsLoading && performance.now()-t0<GS_LOAD_MS+1200) await sleep(30); }
+    { const t0=performance.now(); while(_gsLoading && performance.now()-t0<GS_LOAD_MS+3000) await sleep(30); }
     freeze();
     _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
     assert(!root.classList.contains('solo') && !root.classList.contains('teamed'),'협동인데 solo/teamed 가 붙음');
@@ -11798,7 +11862,7 @@ async function groupLobby(){
     op.classList.add('hide'); _selMap=USEMAPS.cpu; _lobbyMax=8;
     gameStartCountdown(); await sleep(120);
     // ⏳ 로딩 단계(막대 0→100%)가 끝나야 준비 표기가 나온다 — 그 전에는 LOADING% 다(2026-08-19)
-    { const t0=performance.now(); while(_gsLoading && performance.now()-t0<GS_LOAD_MS+1200) await sleep(30); }
+    { const t0=performance.now(); while(_gsLoading && performance.now()-t0<GS_LOAD_MS+3000) await sleep(30); }
     freeze();
     _gsReady=new Set([1,2,4,5,7]); _renderGsPlayers(); await sleep(60);
     assert(root.classList.contains('teamed'),'팀 맵인데 .teamed 가 없음');
@@ -11811,7 +11875,9 @@ async function groupLobby(){
     assert($('gsLine').querySelector('.gsBd.vs'),'팀전인데 대진 배지(4 vs 4)가 없음');
     // ③ 개인 — 덱이 없고 하단이 로딩 진행률로 바뀐다('준비'는 혼자서 뜻이 없다)
     op.classList.add('hide'); _selMap=USEMAPS.nemo; G.activePlayers=[1];
-    gameStartCountdown(); await sleep(160); freeze();
+    // ⚠ 160ms 잔 뒤 얼리면 느린 판에서는 그 잠이 GS_LOAD_MS 를 넘겨 첫 틱에 곧장 100%·준비 표기가 된다
+    //   (4배 스로틀링 실측 · 2026-09-07). 부르자마자 얼려 **로딩 상태 그대로** 한 번 그려서 잰다.
+    gameStartCountdown(); freeze(); _gsPaintCount();
     assert(root.classList.contains('solo'),'혼자인데 .solo 가 없음');
     assert(!$('gsDeck').querySelector('.gsCd'),'혼자인데 카드 덱이 남아 있음');
     assert($('gsCntLb').textContent==='LOADING','개인 플레이 하단이 준비 표기 그대로임');
@@ -13522,7 +13588,11 @@ async function groupLobby(){
       const cs=getComputedStyle(d);
       assert(/tutoFadeIn/.test(cs.animationName),'튜토리얼이 페이드인 없이 툭 덮인다: '+cs.animationName);
       assert(cs.animationFillMode==='none','페이드에 fill-mode 가 붙었다 — 백그라운드 탭에서 안 보이게 된다');
-      const o0=Number(getComputedStyle(d).opacity); await sleep(140);
+      // ⏸ 벽시계(140ms)로 두 번 읽으면 느린 판에서는 그 사이 프레임이 하나도 없어 0→0 이 나온다
+      //   (4배 스로틀링 실측 2/3 · 2026-09-07). 애니메이션을 직접 0% 와 50% 에 세워 놓고 읽는다.
+      const fa=d.getAnimations()[0]; assert(fa,'페이드 애니가 안 붙었다');
+      fa.pause(); fa.currentTime=0; const o0=Number(getComputedStyle(d).opacity);
+      fa.currentTime=fa.effect.getComputedTiming().duration*0.5;
       const o1=Number(getComputedStyle(d).opacity); d.remove();
       assert(o0<0.6,'첫 프레임이 이미 진하다 — 페이드가 안 돈다: '+o0.toFixed(2));
       assert(o1>o0,'투명도가 안 오른다: '+o0.toFixed(2)+' → '+o1.toFixed(2)); }

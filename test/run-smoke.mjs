@@ -70,7 +70,11 @@ const GROUPS=(groupsArg && groupsArg!=='duo')?[groupsArg]:(groupsArg==='duo'?[]:
 //                     ⚠ 스텝은 앞 스텝의 상태에 기대는 것이 많다(캠프 진입 뒤에 캠프 검사 등).
 //                       골라 돌릴 때는 앞 스텝도 문구에 걸리게 넓게 잡을 것 — 안 그러면
 //                       「고쳤는데 여전히 실패」가 실은 「준비가 안 됐다」일 수 있다.
+//   SMOKE_CPU=n     — 페이지의 주 스레드를 n배 느리게(크롬 CPU 스로틀링). 「느린 기기」를 흉내 내
+//                     시간에 기대는 검사를 흔들어 본다. ⚠ 바깥에서 CPU 를 바쁘게 하는 것으로는 안 된다 —
+//                     루프 12개를 띄워도 실행 시간이 1초도 안 늘었다(2026-09-07 실측 · 크롬은 제 코어를 얻는다).
 const REPEAT=Math.max(1, +(process.env.SMOKE_REPEAT||1));
+const CPU=Math.max(1, +(process.env.SMOKE_CPU||1));
 const ONLY=(process.env.SMOKE_ONLY||'').trim();
 const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
 
@@ -96,6 +100,9 @@ const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const PORT=server.address().port;
 const browser=await puppeteer.launch({ executablePath:CHROME, headless:process.env.HEADFUL?false:'new',
+  // ⏱ 스로틀링이면 lobby 한 판(평소 100~160초)이 4배로 늘어 puppeteer 기본 protocolTimeout(180초)을 넘긴다
+  //    (실측 2026-09-07 · Runtime.callFunctionOn timed out). 그때만 넉넉히 푼다 — 평소엔 기본값이 멈춤을 잡아 준다.
+  protocolTimeout: CPU>1 ? 1800000 : undefined,
   args:['--mute-audio','--disable-gpu-sandbox','--no-sandbox'] });
 
 let anyFail=false; const allReports=[];
@@ -109,6 +116,7 @@ try{
     const page=await ctx.newPage();
     page.setDefaultTimeout(60000);
     await page.setViewport({width:390,height:844,deviceScaleFactor:1});
+    if(CPU>1) await page.emulateCPUThrottling(CPU);
     const pageErrors=[];
     page.on('pageerror', e=>pageErrors.push(String(e.message||e).slice(0,200)));
     await page.goto(`http://127.0.0.1:${PORT}/sc-ums-web.html`, {waitUntil:'load'});
