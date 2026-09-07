@@ -74,6 +74,8 @@ const CAMP_PATH_MOVE= 0.06;   // 목표가 이만큼(격자) 움직이면 길을
 const CAMP_STUCK_T = 6;       // 이만큼(초) 제자리면 막힌 것으로 본다
 const CAMP_STUCK_D = 4;       // 「제자리」 = 이 거리(px) 안
 const CAMP_STUCK_NUDGE = 28;  // 한 번에 옮기는 양(px) — 눈에 안 띄는 크기
+const CAMP_LEASH_EXT_T = 8;   // 목줄에 잘린 채 사거리 밖으로 이만큼(초) 있으면
+const CAMP_LEASH_EXT = 300;   // 그 표적에 한해 목줄을 이만큼(px) 더 준다(누적)
 const CAMP_BLD_STUCK_T = 5;   // 적이 앞 건물과의 거리를 이만큼(초) 못 줄이면
 const CAMP_BLD_ALT_T = 12;    // 가장 가까운 건물을 이만큼(초) 친다
 function _campPathClear(u, gA, gB){
@@ -176,9 +178,21 @@ function campGoalFor(u, tgt, slot, cnt){
   //   ⚠ 사거리가 안 닿으면 그냥 안 닿는 채로 둔다 — 그것이 「자리를 지킨다」의 뜻이다.
   //     적이 결국 자리 쪽으로 오므로 기다리면 만난다(적은 내 건물을 치러 내려온다).
   if(u._post){
-    const lim = (typeof campEngageOut === 'function') ? campEngageOut(u) : CAMP_ENG_OUT;
+    let lim = (typeof campEngageOut === 'function') ? campEngageOut(u) : CAMP_ENG_OUT;
+    // 🕸 **목줄에 잘려 영영 못 닿으면 목줄을 조금씩 늘린다**(2026-09-07 · 교착 실측 D2R29 15분: 공중 적 셋이 앞에 나간
+    //   의무병·벙커를 치고 의무병 둘이 서로 치유해 버티는데, 대공이 되는 마린은 목줄 끝(1200)에 서서 사거리 밖).
+    //   잘린 목표가 사거리 밖인 채 CAMP_LEASH_EXT_T 가 지날 때마다 그 표적에 한해 CAMP_LEASH_EXT 씩 더 나간다.
+    //   표적이 바뀌면 원래 목줄로 돌아온다. ⛔ 목줄을 아예 풀지 말 것 — 「자리를 지킨다」가 캠프의 뜻이다.
+    const tk = tgt.uid;
+    if(u._lsK !== tk){ u._lsK = tk; u._lsEx = 0; u._lsT = 0; }
+    lim += (u._lsEx || 0);
     const ox = gx - u._post.x, oy = gy - u._post.y, od = Math.hypot(ox, oy);
-    if(od > lim){ gx = u._post.x + ox / od * lim; gy = u._post.y + oy / od * lim; }
+    if(od > lim){ gx = u._post.x + ox / od * lim; gy = u._post.y + oy / od * lim;
+      const rr = (typeof strikeReach === 'function') ? strikeReach(u, tgt) : rng;
+      if(Math.hypot(gx - tgt.x, gy - tgt.y) > rr){          // 잘린 자리에서는 못 때린다
+        if((u._lsT = (u._lsT || 0) + CAMP_GOAL_HOLD) >= CAMP_LEASH_EXT_T){ u._lsT = 0; u._lsEx = (u._lsEx || 0) + CAMP_LEASH_EXT; } }
+      else u._lsT = 0; }
+    else u._lsT = 0;
   }
   return { x:gx, y:gy };
 }

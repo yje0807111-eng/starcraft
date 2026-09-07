@@ -6744,6 +6744,19 @@ async function groupLobby(){
         finally{ CAMPB._bld=keepB; }
         assert(base.hp < h0,'본부 앞(반폭+여유)에 선 사거리 63 적이 본부를 못 친다 — 아군이 전멸하면 판이 영영 멈춘다: 거리 '+Math.round(z.y-base.y)+' · 반폭 '+half);
         base.hp=h0; } }
+    // ①-c 🕸 **목줄에 잘려 영영 못 닿으면 목줄이 조금씩 늘어난다**(2026-09-07 교착 실측 D2R29 15분).
+    //   표적이 목줄(1200)+사거리 밖에 서 있으면 CAMP_LEASH_EXT_T 마다 CAMP_LEASH_EXT 씩 더 나간다. 표적이 바뀌면 원래대로.
+    if(typeof campGoalFor==='function' && typeof CAMP_LEASH_EXT==='number'){
+      const post={x:2400,y:3200}, u={x:2400,y:3200,_post:post,rng:187,size:14,uid:'lsU',melee:false};
+      const tg={x:2400,y:3200-1200-187-400,uid:'lsT',size:14};
+      const far=()=>Math.hypot(campGoalFor(u,tg,0,1).x-post.x, campGoalFor(u,tg,0,1).y-post.y);
+      const d0=far();
+      assert(Math.abs(d0-CAMP_ENG_OUT)<2,'목줄이 처음부터 안 잘린다: '+Math.round(d0));
+      let dN=d0; for(let i=0;i<Math.ceil(CAMP_LEASH_EXT_T/CAMP_GOAL_HOLD)+4;i++) dN=Math.hypot(campGoalFor(u,tg,0,1).x-post.x, campGoalFor(u,tg,0,1).y-post.y);
+      assert(dN>=CAMP_ENG_OUT+CAMP_LEASH_EXT-2,'목줄 밖 표적을 '+CAMP_LEASH_EXT_T+'초 못 닿았는데 목줄이 안 늘었다: '+Math.round(dN));
+      const tg2={x:2400,y:3200-1200-187-400,uid:'lsT2',size:14};
+      const d2=Math.hypot(campGoalFor(u,tg2,0,1).x-post.x, campGoalFor(u,tg2,0,1).y-post.y);
+      assert(Math.abs(d2-CAMP_ENG_OUT)<2,'표적이 바뀌었는데 늘어난 목줄이 남는다: '+Math.round(d2)); }
     // ②-b 🕸 막힌 유닛 안전망이 있다(CAMP_STUCK_T 초 제자리면 살짝 옮긴다) — 상수 셋이 있어야 한다
     assert(typeof CAMP_STUCK_T==='number' && CAMP_STUCK_T>=3 && CAMP_STUCK_T<=15 && CAMP_STUCK_NUDGE>0 && CAMP_STUCK_NUDGE<=60,
       '교착 안전망 상수가 없거나 범위 밖이다');
