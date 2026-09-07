@@ -6729,6 +6729,24 @@ async function groupLobby(){
     const got = hp0 - b.hp;
     assert(got > CAMP_FOE_BLD_MUL*0.5,
       '건물 피해가 안 커졌다: 공격 1 → '+got.toFixed(2)+' (기대 '+CAMP_FOE_BLD_MUL+' 안팎)');
+    // ①-b 🕸 **본부 앞에 밀려 선 적도 쏜다**(2026-09-07 교착 고침) — 본부는 밀어내는 원(반폭 210)이 46 보다 훨씬 커서,
+    //   옛 식(거리−46)으로는 사거리 63 짜리가 본부 앞 220 에서 **영영 못 쐈다**(아군 전멸 뒤 10~30분 정지).
+    { const base=CAMPB.me.base;
+      if(base && !base.dead && typeof strikeTempleHalf==='function'){
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+        const h0=base.hp, half=strikeTempleHalf(base);
+        const z=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); const z=STK.ai.units[STK.ai.units.length-1];
+          if(z){ z.x=base.x; z.y=base.y+half+(z.size||14)*0.7+6; z.wait=0; z.rallied=true; z.cd=0; z.depT=0; z.dmg=1; z.cdMax=1; z.rng=63; } return z; });
+        skipIf(!z,'적을 못 만들었다');
+        // ⚠ 다른 건물이 앞에 있으면 그리로 간다 — 본부만 남긴다
+        const keepB=CAMPB._bld; CAMPB._bld=[base];
+        try{ for(let i=0;i<40;i++) campWithStk(()=>{ campStepUnits(0.05); }); }
+        finally{ CAMPB._bld=keepB; }
+        assert(base.hp < h0,'본부 앞(반폭+여유)에 선 사거리 63 적이 본부를 못 친다 — 아군이 전멸하면 판이 영영 멈춘다: 거리 '+Math.round(z.y-base.y)+' · 반폭 '+half);
+        base.hp=h0; } }
+    // ②-b 🕸 막힌 유닛 안전망이 있다(CAMP_STUCK_T 초 제자리면 살짝 옮긴다) — 상수 셋이 있어야 한다
+    assert(typeof CAMP_STUCK_T==='number' && CAMP_STUCK_T>=3 && CAMP_STUCK_T<=15 && CAMP_STUCK_NUDGE>0 && CAMP_STUCK_NUDGE<=60,
+      '교착 안전망 상수가 없거나 범위 밖이다');
     // ② 본부 체력이 설계 스케일이다(엔진 기본 7500 이 새어 들어오면 15시간이 걸린다)
     assert(CAMPB.me.base.maxHp <= CAMP_BASE_HP*4+1e-6,
       '본부 체력이 설계 스케일을 벗어났다: '+CAMPB.me.base.maxHp+' (기준 '+CAMP_BASE_HP+' · 트리 배수 허용)');
