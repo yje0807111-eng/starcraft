@@ -3465,15 +3465,26 @@ function campAlertTick(dt){
     for(const e of foes){ if(e.dead) continue;
       const dx = e.x - u.x, dy = e.y - u.y, d2 = dx * dx + dy * dy;
       if(d2 <= A2 && d2 < bd){ bd = d2; bx = e.x; by = e.y; } }
-    if(bd < Infinity) spot.push({ u:u, x:bx, y:by }); }
+    if(bd < Infinity) spot.push({ u:u, x:bx, y:by, fight:false }); }
+  // ⚔ **싸우고 있는 아군은 멀리서도 부른다** (2026-09-05 · 실측으로 잡은 교착)
+  //   ⛔ 무엇이 문제였나 — 앞으로 나간 유닛 하나(+의무병)가 적 무리에 물리면, 적은 그 유닛만 물고 안 내려오고
+  //     그 유닛은 의무병 덕에 안 죽고, 본대 3~4기는 1,100px 뒤에서 눈(사거리+100)에 아무것도 안 들어와
+  //     **놀았다**. 혼자 17마리를 깎으니 라운드가 몇 분, 치유가 피해를 이기면 영영이었다(D1R33 · 20분).
+  //   ⭐ 「표적이 사거리 안에 있는」 아군(= 실제로 교전 중)을 CAMP_ALERT_FIGHT_R 까지 넓게 전파원으로 삼는다.
+  //     받는 쪽은 여전히 제 자리 제한(campEngageOut) 안에서만 간다 — 「우르르」가 아니라 「가서 돕는다」다.
+  //   ⚠ 「적을 봤다」(위 ①)와 다르다 — 그건 곁 400 만 번진다(나오자마자 전군이 뛰는 것을 막는 장치).
+  for(const u of mine){ if(u.dead || !u.tgtUid) continue;
+    const t = (typeof strikeFindUnit === 'function') ? strikeFindUnit(foes, u.tgtUid) : null; if(!t || t.dead) continue;
+    const dx = t.x - u.x, dy = t.y - u.y, rc = (typeof strikeReach === 'function') ? strikeReach(u, t) : (u.rng || 0);
+    if(dx * dx + dy * dy <= rc * rc * 1.44) spot.push({ u:u, x:t.x, y:t.y, fight:true }); }
   // ② 시드 곁(150)의 아군에게 **그 눈을 그대로** 넘긴다.
   //    ⭐ 넘겨받은 아군은 다음 틱의 시드가 되어 또 곁으로 넘긴다 — 줄줄이 번진다.
   //    ⛔ 반경을 다시 넓히지 말 것(옛 900) — 한 명이 보면 판 전체가 몰렸다.
-  if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R;
+  if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R, F2 = CAMP_ALERT_FIGHT_R * CAMP_ALERT_FIGHT_R;
     for(const u of mine){ if(u.dead) continue;
       for(const sp of spot){ if(sp.u === u) continue;
         const dx = sp.u.x - u.x, dy = sp.u.y - u.y;
-        if(dx * dx + dy * dy > R2) continue;
+        if(dx * dx + dy * dy > (sp.fight ? F2 : R2)) continue;
         // 내 자리에서 **그 적까지** 닿는 눈을 뜬다(여유 PAD 만큼 더)
         const need = Math.hypot(sp.x - u.x, sp.y - u.y) + CAMP_ACQ_PAD;
         u._alertT = CAMP_ALERT_S;
@@ -4078,6 +4089,7 @@ const CAMP_HIT_ACQ_S = 3;          // 맞아서 넓어진 인식이 유지되는
 //   ⛔ 그렇다고 진형 폭(840)까지 주면 안 된다 — **어디에 두든 전군이 달려가 배치의 뜻이 사라진다**
 //     (2026-09-01 사용자 확정). 400 은 「곁의 두세 명 건너까지」에 해당한다.
 const CAMP_ALERT_R = 400;          // 옆 아군에게 전파되는 거리 — **연쇄한다**(아래 campAlertTick)
+const CAMP_ALERT_FIGHT_R = 1800;   // ⚔ **교전 중인** 아군이 부르는 거리 — 본대가 와서 돕는다(2026-09-05 · campAlertTick)
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 // 🪢 **자기 자리에서 이보다 멀리는 못 나간다** — 이제 이것이 **자리 제한의 유일한 장치**다.
