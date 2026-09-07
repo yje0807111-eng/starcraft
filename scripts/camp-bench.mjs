@@ -597,7 +597,10 @@ await pg.evaluate(()=>{
           const got=campRebirth();
           const bought=[]; if(got){
             // 싼 것부터 — 가운데(1) → 재화 갈래(8) → 채광 묶음(32) → 광산 등급·채취·일꾼 상한 순
-            const wish=['root','br:econ','gp:econ나','mine','gather','wkCap','gp:econ다','tapMul','gp:econ가','startMin','startWk'];
+            // 재화 채광 묶음 먼저(다음 환생이 빨라진다) → 전투 갈래(천장이 오른다) → 나머지. 싼 것부터 한 칸씩.
+            //   ⚠ 묶음 「가」만 1티어(1·2·6)다 — 「나」부터 2티어(4·8·24)라 첫 환생(≈9.5)에는 전투 「가」(공격력·생산 속도)가 든다.
+            const wish=['root','br:army','gp:army가','atk','prod','bldg','br:econ','gp:econ가','startMin','idle',
+              'gp:army나','hp','sup','gp:econ나','gather','gas','wkCap','mine','gp:army다','foeHp','gp:econ다','tapMul','startWk'];
             let guard=0; while(guard++<200){ let any=false;
               for(const k of wish){ if(campRtCanBuy(k)){ const c=campRtBuy(k); bought.push(k+'('+c+')'); any=true; break; } }
               if(!any) break; } }

@@ -97,8 +97,11 @@ function campFail(){ const C = campState(); if(!C) return 0;
 //   ① 조건은 **매번 같다**: 그 회차 재화점수 100만. 회차가 늘어도 안 오른다.
 //      고정이라 후반에는 금방 채워진다 → 「특정 시점부터 자유롭게」가 저절로 이루어진다.
 //   ② 배수는 **로그**(폭주 방지) · 포인트는 **제곱근 × 깊이**(트리 비용이 지수라 같이 자라야 한다)
-//   ③ 기준선 100만과 포인트 공식의 기준선은 **같은 숫자**다 — 그래서 조건을 채운 그 순간
-//      기준량이 정확히 1 이고, 「지금 환생할까 더 벌고 환생할까」가 이 한 숫자에서 나온다.
+//   ③ ~~기준선 100만과 포인트 공식의 기준선은 같은 숫자~~ → **2026-09-07 갈랐다**(사용자 결정 「둘 다」).
+//      관문을 100만으로 당긴 뒤 조건을 막 채운 첫 환생이 1.35 포인트라 **가운데(1) 말고는 아무것도 못 샀다**
+//      (갈래 8 · 묶음 32 · 첫 계열까지 41). 설계표(HUNT_R1 §4-4 「첫 환생 12.8 · 1티어 2~3개」)는 옛 경제
+//      (100만이 D2R20 쯤)를 전제한 것이라, 포인트 기준선을 따로 두어(CAMP_RP_BASE) 그 표의 자리로 되돌린다.
+//      첫 환생(100만 · D2R0) = √50 × 1.35 ≈ **9.5 포인트** → 가운데 1 + 갈래 2 + 묶음 4 + 계열 한둘.
 //
 //   ⚠ 통신소 스캔은 아직 입구로 안 붙였다(§4 의 화면 쪽). 지금 조건은 재화점수 하나다 —
 //      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
@@ -159,7 +162,11 @@ function campGasPerMin(){
   if(!campHasRefinery()) return 0;                // 정제소를 지어야 나온다
   // ⚠ campRtMul 은 **계열 키**를 받는다 — 효과 종류(f:'gasMul')가 아니다(2026-09-02 고침).
   //   'gasMul' 은 자루에 절대 안 들어가는 이름이라 가스 생산량 계열이 몇 차든 배수 1 이었다.
-  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gas')
+  // 🔁 **환생 배수는 가스에도 걸린다**(2026-09-07 사용자 결정 「둘 다」). 그 전에는 미네랄에만 걸려
+  //   2회차가 던전 2 까지는 10분 빨랐지만 **천장(D2R20)이 1회차와 같았다** — 전투력은 연구(가스)가 정하는데
+  //   가스가 안 자랐다(BALANCE §3-2-14). 배수는 **합**(로그로 큰다)이라 가스도 지수가 되지 않는다.
+  //   ⚠ 「가스는 안 자란다」(HUNT_R1 §2-3-0)는 **회차 안**에서의 말로 남는다 — 회차 안에는 여전히 정제소 레벨뿐이다.
+  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRebMul() * campRtMul('gas')
     * ((typeof campRuneMul === 'function') ? campRuneMul('gas') : 1);   // 💠 정제의 룬
 }
 // ⚠ **campFrame 이 민다.** 프레임을 끄고 직접 미는 코드(벤치)는 이것도 같이 불러야 한다 —
@@ -174,6 +181,10 @@ function campGasTick(dt){
 }
 const CAMP_REB_K = 0.8, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
 const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
+// 📐 포인트 기준선 — √(번 재화 ÷ CAMP_RP_BASE). ⛔ CAMP_REB_COST(관문)와 **같지 않다**(2026-09-07 · 위 ③).
+//   2만 = 관문 100만에서 √50 ≈ 7.07 배 — 트리 1티어(1·2·6)와 마디(2·4)를 첫 환생에 서넛 살 수 있는 자리.
+//   ⚠ 값을 바꾸면 트리 전체(160칸 · 최고 티어 ≈ 5.5조)의 도달 시각이 함께 움직인다 — 스모크가 첫 환생 범위를 잰다.
+const CAMP_RP_BASE = 20000;
 
 // 그 회차에 번 것 — 미네랄과 가스를 하나로 본다
 function campWealth(){ const C = campState(); if(!C) return 0;
@@ -285,7 +296,7 @@ function campRebMulGain(){
     * campPackRebMul(); }   // 💳 환생 팩 — 쌓이는 양만 키운다(합산 누적이라 지수가 안 된다)
 // ② 획득 포인트 — 기준량(번 재화) × 깊이 배수. 재화를 2배 벌어야 1.41배다.
 function campRebPtGain(){
-  const base = Math.sqrt(campWealth() / CAMP_REB_COST);
+  const base = Math.sqrt(campWealth() / CAMP_RP_BASE);   // ⚠ 관문(CAMP_REB_COST)이 아니라 포인트 기준선
   return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
     * campPackRebPt()                                     // 💳 환생 팩
     ; }   // ⚠ 「윤회의 룬」(rebPts)은 2026-09-05 에 지웠다 — 환생할 때만 끼는 축이라 재미가 없다
@@ -747,7 +758,8 @@ function campRtCost(k, n){ const L = campRtLine(k);
 // 🌟 **새로운 시작** — 가운데(root)는 트리를 여는 열쇠이자 **첫 환생의 보상**이다(2026-09-01 사용자 확정).
 //   ⛔ 값을 CAMP_RT_BASE 로 두면 안 된다 — 그것은 **비용 공식의 티어1 기준값**이라
 //     건드리면 160칸 전부의 값이 함께 움직인다. root 만의 상수를 따로 둔다.
-//   ⭐ 왜 1인가: 포인트 공식은 `√(번 재화 ÷ 100만)` 이라 **조건을 막 채운 첫 환생은 정확히 1** 이다.
+//   ⭐ 왜 1인가: 포인트 공식이 `√(번 재화 ÷ 100만)` 이던 때 **조건을 막 채운 첫 환생이 정확히 1** 이었다.
+//     (2026-09-07 부터 기준선이 2만이라 첫 환생은 ≈9.5 — 그래도 root 는 1 로 둔다: 「트리를 여는 열쇠」는 싸야 한다.)
 //     2 였을 때는 첫 환생으로 트리를 **열 수조차 없었다** — 눌렀는데 아무 일도 안 일어났다.
 //     HUNT_R1 §4-2-0 이 「첫 경험이 『눌렀더니 느려졌다』면 두 번 다시 안 누른다」고 못박은 자리다.
 const CAMP_RT_ROOT_COST = 1;
@@ -768,8 +780,11 @@ const CAMP_ROOT_WK = 0;             // 시작 일꾼 — ⛔ 0 이다(옛 1기�
 const CAMP_ROOT_TAP = 1;            // 시작 터치 강화 레벨
 //   🗄 시작 건물은 **화면에서만 뺐다**(유보 규칙) — null 이면 안 준다. 배선은 아래에 그대로 있다.
 const CAMP_ROOT_BLD = null;
-const CAMP_RT_BR_COST = 8;      // 갈래 마디 값 (티어 2 기준값)
-const CAMP_RT_GP_COST = 32;     // 묶음 마디 값 (티어 3 기준값)
+// 🚪 마디 값 — 8/32(티어 2·3 기준값)에서 **2/4** 로(2026-09-07 사용자 결정 「둘 다」).
+//   8+32 면 첫 계열(1티어 1·2·6)에 닿기까지 41 이라 마디가 계열보다 20배 비쌌다 — 문이 방보다 비싼 셈.
+//   2/4 는 1티어 계열 값(1·2·6)과 같은 자릿수라 「갈래를 열고 하나를 고른다」가 첫 환생 안에 든다.
+const CAMP_RT_BR_COST = 2;      // 갈래 마디 값
+const CAMP_RT_GP_COST = 4;      // 묶음 마디 값
 const CAMP_RT_BR_KEY = b => 'br:' + b;
 const CAMP_RT_GP_KEY = (b, g) => 'gp:' + b + g;
 //   ⛔ **짝 조건(관문)을 되살리지 말 것**(2026-09-01 제거). 「4차부터 같은 묶음의 짝도 3차 이상」이라는
@@ -1610,7 +1625,7 @@ function campRebRender(){
   const next = campRebMul() + gMul;                 // 배수는 **합**이다(곱이 아니다)
   // 📐 포인트가 어디서 왔는지 — 식을 그대로 쓰지 않고 **곱하는 세 값**으로 쪼갠다.
   //    식을 쓰면 결과(2.96)와 표시(+2 · 바닥내림)가 어긋나 오히려 헷갈린다.
-  const fW = Math.sqrt(Math.max(0, wealth) / need);
+  const fW = Math.sqrt(Math.max(0, wealth) / CAMP_RP_BASE);   // 📐 포인트 기준선(관문과 다르다 · 2026-09-07)
   const fD = Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1));
   const fR = Math.pow(CAMP_RP_RD, campCleared());
   // 🔣 줄 아이콘 — 재화는 있는 자산, 나머지는 선 글리프(한 가족). ⛔ 이모지 금지.

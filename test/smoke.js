@@ -1281,11 +1281,15 @@ async function groupLobby(){
       //     지금 값의 근거는 BALANCE.md §3-2-2 (회차당 계열 144레벨 + 단발 3~5개 ≈ 가스 476).
       const fake={ type:'bldg', bt:0, bk:(TECH_TREE[G.tech.race].buildings.find(b=>b.gas)||{}).k, eid:'gasT' };
       if(fake.bk){ G.tech.ents.push(fake);
-        assert(Math.abs(campGasPerMin()-CAMP_REF_BASE*campMineMul()*campRtMul('gasMul'))<1e-9,
+        assert(Math.abs(campGasPerMin()-CAMP_REF_BASE*campMineMul()*campRebMul()*campRtMul('gasMul'))<1e-9,
           'Lv0 분당 생산이 기본값과 다르다: '+campGasPerMin());
+        // 🔁 환생 배수는 **가스에도** 걸린다(2026-09-07 사용자 결정) — 안 걸리면 2회차 천장이 1회차와 같다(BALANCE §3-2-14)
+        { const C0=campState(), keepR=C0.rebMul||0; C0.rebMul=keepR+2;
+          const g3=campGasPerMin(); C0.rebMul=keepR;
+          assert(Math.abs(g3/campGasPerMin()-(3+keepR)/(1+keepR))<1e-9,'환생 배수가 가스에 안 걸린다: ×'+(g3/campGasPerMin()).toFixed(3)); }
         assert(CAMP_REF_BASE>=1,'가스 기본 생산이 1/분 미만이다 — 회차 안에 연구를 못 연다: '+CAMP_REF_BASE);
         S.upg.refinery=10;
-        assert(Math.abs(campGasPerMin()-(CAMP_REF_BASE+CAMP_REF_STEP*10)*campMineMul()*campRtMul('gasMul'))<1e-9,
+        assert(Math.abs(campGasPerMin()-(CAMP_REF_BASE+CAMP_REF_STEP*10)*campMineMul()*campRebMul()*campRtMul('gasMul'))<1e-9,
           'Lv10 분당 생산이 레벨 계단과 다르다: '+campGasPerMin());
         const g0=G.tech.energy||0; campGasTick(60);
         assert(Math.abs((G.tech.energy||0)-g0-campGasPerMin())<1e-6,'1분 틱이 분당 생산과 다르다');
@@ -3802,8 +3806,19 @@ async function groupLobby(){
       assert(back===CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST,
         '되돌린 값이 마디를 빠뜨렸다: '+back);
       // ⑥ 🌟 새로운 시작 — **첫 환생이 딱 살 수 있어야** 한다.
-      //   포인트 공식은 √(번 재화÷100만) 이라 조건을 막 채운 첫 환생은 정확히 1 이다.
-      //   ⛔ root 가 그보다 비싸면 첫 환생으로는 트리를 **열 수조차 없다**(HUNT_R1 §4-2-0).
+      //   포인트 공식이 √(번 재화÷100만) 이던 때 조건을 막 채운 첫 환생이 정확히 1 이었다(지금은 기준선 2만 · ≈9.5).
+      //   ⛔ root 가 1 보다 비싸면 「트리를 여는 열쇠」가 비싸진다(HUNT_R1 §4-2-0).
+      // 📐 **첫 환생이 서넛을 산다**(2026-09-07 사용자 결정) — 관문(100만 · D2R0)에서 포인트 9~15 이고,
+      //   가운데 + 갈래 + 묶음 + 1티어 흔함 한 계열(1+2+4+1 = 8)이 그 안에 든다. ⛔ 마디를 8/32 로 되돌리면 여기서 걸린다.
+      { const keepE=C.earn, keepG=C.earnGas, keepD=C.dg, keepC=C.cleared;
+        C.earn=CAMP_REB_COST; C.earnGas=0; C.dg=2; C.cleared=0;
+        const p=campRebPtGain();
+        assert(p>=9 && p<=15,'관문을 막 채운 첫 환생 포인트가 9~15 밖이다: '+p.toFixed(2));
+        // ⚠ 묶음 「가」의 계열이 1티어(1·2·6)다 — 「나」부터는 2티어(4·8·24)라 첫 환생에는 「가」 하나가 든다.
+        { const need=CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST+campRtCost('atk',1)+campRtCost('prod',1);
+          assert(need <= p,'첫 환생으로 「가운데+갈래+묶음+1티어 흔함 둘」을 못 산다: 값 '+need+' · 포인트 '+p.toFixed(2)); }
+        assert(CAMP_RT_BR_COST<=CAMP_RT_GP_COST && CAMP_RT_GP_COST<=campRtCost('mine',1),'마디가 1티어 귀함 계열보다 비싸다 — 문이 방보다 비싸다');
+        C.earn=keepE; C.earnGas=keepG; C.dg=keepD; C.cleared=keepC; }
       assert(CAMP_RT_ROOT_COST<=1,'가운데 값이 첫 환생 포인트(1)보다 비싸다: '+CAMP_RT_ROOT_COST);
       assert(CAMP_RT_ROOT_COST!==CAMP_RT_BASE||CAMP_RT_BASE<=1,
         '가운데 값이 비용 공식의 기준값과 묶여 있다 — 한쪽을 고치면 160칸이 함께 움직인다');
