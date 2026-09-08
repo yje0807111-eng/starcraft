@@ -789,7 +789,7 @@ function tutoPaint(){
   if(!ov){ ov=document.createElement('div'); ov.id='tutoOv'; ov.className='tutoOv';
     ov.innerHTML='<i class="tuT"></i><i class="tuB"></i><i class="tuL"></i><i class="tuR"></i>'
       +'<i class="tuRing"></i><div class="tuTip"><span class="tuHd"><b class="tuStep"></b><b class="tuN"></b></span>'
-      +'<span class="tuTx"></span>'
+      +'<span class="tuTx"></span><span class="tuSub" hidden></span>'
       // 🎁 **마지막 단계의 확인 버튼**(2026-09-04 사용자 제안) — 보상을 버튼에 얹으면
       //   「여기서 끝난다」가 한눈에 읽힌다. ⛔ 새 버튼을 만들지 말 것: 공용 .actBtn.pri 다.
       +'<button type="button" class="actBtn pri tuGo" hidden></button></div>';
@@ -866,17 +866,29 @@ function tutoPaint(){
   { const _st=tutoStep(), _id=_st?_st.id:'';
     if(ov._tuStep!==_id){ ov._tuStep=_id;
       const _tp=q('.tuTip'); _tp.classList.remove('tuIn'); void _tp.offsetWidth; _tp.classList.add('tuIn'); } }
-  q('.tuStep').textContent=_tutoNo()+' / '+_tutoTotal();
+  // 🏁 마지막 칸은 왼쪽 위가 **번호가 아니라 「튜토리얼 종료」**다 — 시킬 일이 없고 끝을 알린다.
+  { const _st=tutoStep(), _last=!!(_st && _st.id==='outro'), _sp=q('.tuStep');
+    _sp.textContent=_last ? TUTO_END_TITLE : (_tutoNo()+' / '+_tutoTotal());
+    _sp.classList.toggle('end', _last); }
   q('.tuTx').textContent=t.tip;
+  // ⚠ **초기화를 말없이 하지 않는다** — 지어 둔 것이 사라진다는 예고를 확인 버튼 위에 둔다.
+  { const _st=tutoStep(), _last=!!(_st && _st.id==='outro'), _sb=q('.tuSub');
+    _sb.textContent=_last ? TUTO_END_SUB : ''; _sb.hidden=!_last; }
   q('.tuN').textContent=t.n+' / '+t.goal;                    // 오른쪽 = **이번 단계의 진행**
   q('.tuN').classList.toggle('ok', t.n>=t.goal);             // ✅ 다 했으면 초록(0.3초 머무는 동안 보인다)
   // 🎁 마지막 단계에만 확인 버튼 — 보상을 **버튼 안에** 얹는다(재화 아이콘은 공용 resIco 하나뿐이다).
   { const _go=q('.tuGo'), _st=tutoStep(), _last=!!(_st && _st.id==='outro');
     _go.hidden=!_last;
     if(_last && !_go._tuFill){ _go._tuFill=1;
-      const _g=(TUTO_REWARD && TUTO_REWARD.gem)|0;
-      const _ico=(typeof resIco==='function') ? resIco('gem','tuGoIco') : '';
-      _go.innerHTML='<span>확인</span>'+(_g>0 ? ('<b class="tuGoRw">'+_ico+'×'+_g+'</b>') : '');
+      // 🎁 **받는 것을 다 적는다** — 젬(보상)과 밑천 미네랄(새 출발). 둘 다 실제로 들어가므로
+      //   하나만 적으면 나머지가 없는 것처럼 보인다. ⛔ 이모지 금지 — 재화 그림은 resIco 하나다.
+      const _rw=[];
+      { const _g=(TUTO_REWARD && TUTO_REWARD.gem)|0;
+        if(_g>0) _rw.push(['gem', _g]); }
+      if(TUTO_RESET_MIN>0) _rw.push(['mineral', TUTO_RESET_MIN]);
+      _go.innerHTML='<span>확인</span>' + _rw.map(function(r){
+        const _ico=(typeof resIco==='function') ? resIco(r[0],'tuGoIco') : '';
+        return '<b class="tuGoRw">'+_ico+'×'+r[1].toLocaleString()+'</b>'; }).join('');
       if(typeof paintIcons==='function') try{ paintIcons(_go); }catch(_e){} } }
   // 📏 **폭은 글에 맞춘다**(2026-09-04 사용자 요청 — 「두 줄로 나오는 것들이 한 줄로」).
   //   전에는 250px 고정이라 짧은 문구도 두 줄이 됐고, 「탭하 / 세요」처럼 어절 중간에서 끊겼다.
@@ -967,6 +979,11 @@ function closeGuide(){ const el=document.getElementById('hbGuideSheet'); if(el) 
 const TUTO_REWARD = { gem:20 };
 // 🎁 마치고 새로 시작할 때 쥐어 주는 밑천. 연습판을 걷어내므로 빈손이 되면 안 된다.
 const TUTO_RESET_MIN = 500;
+// 🏁 **마지막 칸의 말**(2026-09-08 사용자 확정) — 왼쪽 위는 단계 번호 대신 「튜토리얼 종료」,
+//   문구 아래에는 판이 걷힌다는 예고를 둔다. ⛔ 초기화를 말없이 하지 말 것 —
+//   지어 둔 병영과 유닛이 사라지므로, 누르기 **전에** 알아야 한다.
+const TUTO_END_TITLE = '튜토리얼 종료';
+const TUTO_END_SUB   = '게임이 초기화 됩니다';
 function tutoFinish(){
   const S=guideState(); if(!S) return;
   delete S.trun; delete S.tack;

@@ -13556,8 +13556,23 @@ async function groupLobby(){
         assert(go.classList.contains('actBtn') && go.classList.contains('pri'),
           '확인 버튼이 공용 .actBtn.pri 가 아니다: '+go.className);
         assert(go.querySelector('img,svg'),'버튼에 보상 아이콘이 없다 — 재화 아이콘은 resIco 하나뿐이다');
+        // 🎁 **받는 것을 다 적는다** — 젬(보상) + 밑천 미네랄(새 출발). 둘 다 실제로 들어가므로
+        //   하나만 적으면 나머지가 없는 것처럼 보인다(2026-09-08 사용자 요청).
         assert(go.textContent.indexOf('×'+(TUTO_REWARD.gem|0))>=0,
-          '버튼에 보상 수가 없다: '+go.textContent);
+          '버튼에 젬 보상이 없다: '+go.textContent);
+        assert(go.textContent.indexOf('×'+TUTO_RESET_MIN.toLocaleString())>=0,
+          '버튼에 밑천 미네랄이 없다: '+go.textContent);
+        assert(go.querySelectorAll('img,svg').length>=2,
+          '보상이 둘인데 그림이 하나다 — 젬·미네랄 각각 resIco: '+go.innerHTML.slice(0,120));
+        // 🏁 왼쪽 위는 **번호가 아니라 「튜토리얼 종료」** · 그 아래에 초기화 예고
+        { const sp=ov.querySelector('.tuStep'), sb=ov.querySelector('.tuSub');
+          assert(sp && sp.textContent===TUTO_END_TITLE,
+            '마지막 칸의 왼쪽 위가 끝을 말하지 않는다: '+(sp?sp.textContent:'없음'));
+          assert(sp.classList.contains('end') && !/Rajdhani/.test(getComputedStyle(sp).fontFamily),
+            '한글을 숫자 서체에 맡겼다: '+getComputedStyle(sp).fontFamily);
+          assert(sb && !sb.hidden && sb.textContent===TUTO_END_SUB,
+            '초기화 예고가 없다 — 지어 둔 것이 사라지는데 말없이 하면 안 된다: '+(sb?sb.textContent:'없음'));
+          assert(getComputedStyle(sb).display!=='none','초기화 예고가 안 보인다'); }
         assert(getComputedStyle(go).pointerEvents!=='none',
           '확인 버튼이 안 눌린다 — 말풍선이 pointer-events:none 이라 버튼만 되살려야 한다');
         // 🟢 보상 버튼은 **초록**(--ok · 2026-09-04 사용자 확정 · 목업 camp-tuto-btn-6 ④안).
@@ -13575,6 +13590,13 @@ async function groupLobby(){
         const go2=$('tutoOv') ? $('tutoOv').querySelector('.tuGo') : null;
         assert(!go2 || getComputedStyle(go2).display==='none',
           '마지막이 아닌 단계에도 확인 버튼이 보인다 — hidden 이 display 에 덮였다');
+        // 🏁 끝 문구·예고도 마지막 칸에만 — 그 앞 칸은 번호로 돌아온다
+        { const sp2=$('tutoOv')?$('tutoOv').querySelector('.tuStep'):null;
+          const sb2=$('tutoOv')?$('tutoOv').querySelector('.tuSub'):null;
+          assert(!sp2 || sp2.textContent.indexOf('/')>0,
+            '마지막이 아닌데 왼쪽 위가 끝을 말한다: '+(sp2?sp2.textContent:''));
+          assert(!sb2 || sb2.hidden || getComputedStyle(sb2).display==='none',
+            '마지막이 아닌 단계에도 초기화 예고가 뜬다'); }
       } finally { window.campIsOn=on0; TUTO_OFF=off0;
         if(S){ S.t=t0;
           if(run0!=null) S.trun=run0; else delete S.trun;

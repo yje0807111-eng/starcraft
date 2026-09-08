@@ -218,6 +218,11 @@ for (let guard = 0; guard < 26; guard++) {
       if (!el) return '⚠ 던전 칸이 없다'; el.click(); return '던전 ' + TUTO_DG + ' 고름'; });
     await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'outro') {
+    // 🖼 마지막 칸은 **눈으로 본다** — 왼쪽 위 「튜토리얼 종료」·초기화 예고·보상 둘이
+    //   한 카드에 들어가는지는 글자 수로 못 잰다.
+    if (process.env.SHOT) { await new Promise(r => setTimeout(r, 500));
+      await page.screenshot({ path: 'docs/mock/camp-tuto-outro.png' });
+      console.log('        shot docs/mock/camp-tuto-outro.png'); }
     const r = await page.evaluate(() => { const ov = document.getElementById('tutoOv');
       const g0 = (typeof profGem === 'function') ? profGem() : -1;
       const go = ov ? ov.querySelector('.tuGo') : null;
