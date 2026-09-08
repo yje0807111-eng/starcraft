@@ -2136,26 +2136,34 @@ slingshot, letter Y typeface, arrow, filled solid shape, three arms`
 
 ---
 
-**⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png` · **획 하나만**
+**⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png` · **베인 자국 셋**
 
-⚠ 두 번 실패했다. ① 호 + 눈금 둘 → **십자**가 됐다(전과 X·일격 별과 한 무리).
-② 조건을 더 조여도 → 이번엔 눈금이 호에 이어 붙어 **룬 문자**(ᛒ·R)가 됐다.
-⇒ 원인은 **눈금**이다. 옆에 짧은 획을 두면 모델이 그것을 본체에 잇는다.
-⭐ **눈금을 없애고 호 하나만** 남긴다. 공통 NEGATIVE 의 `letters` 로는 안 막혔으므로
-`rune letter, runic alphabet, futhark` 를 따로 적는다.
+⚠ **호(弧)를 네 번 시도하고 접었다.** 초승달은 이 세트에서 안 나온다 —
+공통 블록의 `FORM: Straight segments and hard angles` 가 곡선을 계속 밀어낸다.
+  ① 호 + 눈금 둘 → **십자**(전과 X·일격 별과 한 무리)
+  ② 조건을 조임 → 눈금이 호에 붙어 **룬 문자**(ᛒ)
+  ③ 눈금을 뺌 → 「>」 꼴로 **꺾였다**
+  ④ `cut from the rim of a perfect circle` → 곡선은 나왔으나 **3/4 바퀴**라 각성(열린 고리)과 겹쳤다
+⇒ ⭐ **모티프를 직선으로 바꿨다**(2026-09-08 사용자 확정). 공통 블록이 각진 형태를
+  요구하므로, 곡선을 우겨넣는 것보다 **직선으로 뜻을 만드는 편**이 한 번에 나온다.
+  ⛔ 다시 초승달로 되돌리지 말 것 — 위 넷을 다시 겪는다.
 
 ```
-A single crescent arc and nothing else in the frame — one clean curved stroke, the
-same width along its whole length with no taper at either tip. It is a long shallow
-curve opening toward the lower left, its two ends stopping well apart from each other
-so the shape stays open like a drawn bow rather than closing into a circle. Nothing
-is filled, and no second stroke, tick or mark appears anywhere beside it.
-Vivid green #13f487 with a near-white core along the stroke.
+Three straight parallel slashes leaning to the right, evenly spaced side by side like
+cut marks. The middle slash is the longest, the one on its upper right is shorter,
+and the one on its lower left is shorter still, so their ends form a stepped rhythm
+rather than a straight edge. All three are simple straight lines of the same width
+with flat square ends and no curve anywhere, and none of them touch. A single small
+square dot sits just off the upper end of the middle slash, floating clear of it in
+the direction the slashes lean.
+Nothing else appears in the frame and nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
 ```
-추가 NEGATIVE: `rune letter, runic alphabet, futhark, letterform, two strokes, tick
-marks, dashes beside the arc, cross, X shape, asterisk, star, plus sign, closed
-circle, ring, crescent moon with a face, sword, blade with handle, hilt, spiral,
-filled solid shape`
+추가 NEGATIVE: `curve, arc, crescent, circle, ring, X shape, cross, strokes crossing
+each other, strokes joined at one end, chevron, V shape, arrow, arrowhead, sword,
+blade with handle, hilt, claw with fingers, hand, four or more slashes, slashes of
+equal length, dot touching the slash, tapered strokes, filled solid shape,
+rune letter, futhark`
 
 **⑬ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
 
