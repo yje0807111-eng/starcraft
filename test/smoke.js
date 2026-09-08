@@ -1143,48 +1143,63 @@ async function groupLobby(){
       assert(cur()==='deal','상점 재진입인데 첫 하위가 아님: '+cur()); }
     openHome(); await sleep(60);
     return 'HOME 카드 1개 + 네비 5칸(home·정비·마을·유즈맵·상점) ok'; });
-  // 폰트 3종 — 제목 Jua(내장) · 본문 Noto Sans KR Bold(내장) · 숫자 Rajdhani(웹폰트).
-  // ⚠ 실제 렌더가 아니라 CSS만 잰다(헤드리스에선 웹폰트를 못 받을 수 있어 렌더 비교는 못 믿는다).
-  await step('폰트: 제목/본문/숫자가 토큰으로 갈린다', async()=>{
+  // 🔤 폰트 — **SUIT 한 가족**(2026-09-08 사용자 확정 · 목업 docs/mock/font-set-3.html A안):
+  //   제목 = 'SUITTi'(Heavy 한 벌을 모든 굵기에) · 본문 = 'SUITKR'(500 / 700~800 / 900) · 숫자 = Rajdhani.
+  //   ⭐ 셋 다 **로컬 woff2**(assets/fonts/)라 헤드리스에서도 실제로 뜬다 — 그래서 토큰만이 아니라
+  //     **글자 폭으로 Heavy 가 정말 걸렸는지**까지 잰다(옛 Jua·Noto 때는 렌더를 못 믿어 CSS 만 봤다).
+  //   ⛔ Jua 로 되돌리지 말 것 — 둥근 디스플레이체라 각진 SF 와 어긋난다(DESIGN.md §폰트).
+  await step('폰트: 제목/본문/숫자가 토큰으로 갈린다 · SUIT 가 실제로 뜬다', async()=>{
     const root=getComputedStyle(document.documentElement);
     const ti=root.getPropertyValue('--font-ti'), ko=root.getPropertyValue('--font-ko'), num=root.getPropertyValue('--font-num');
-    // 제목=디스플레이(Jua) · 본문=고가독(Noto Bold) — 두 가족을 역할로 가른다
-    assert(/JuaKR/.test(ti),'제목 토큰이 JuaKR이 아님: '+ti);
-    assert(/NotoKR/.test(ko),'본문 토큰이 NotoKR이 아님: '+ko);
+    assert(/SUITTi/.test(ti),'제목 토큰이 SUITTi 가 아님: '+ti);
+    assert(/SUITKR/.test(ko),'본문 토큰이 SUITKR 이 아님: '+ko);
     assert(ti!==ko,'제목·본문이 같은 토큰 — 역할이 안 갈림');
     assert(/Rajdhani/.test(num),'숫자 토큰에 Rajdhani가 없음: '+num);
+    assert(/SUITKR/.test(num),'숫자 토큰의 한글 폴백이 SUIT 가 아님(한글 섞인 수치가 다른 서체로 뜬다): '+num);
     assert(ti!==num && ko!==num,'숫자 폰트가 한글과 안 갈림');
-    // 한글 2종은 내장(woff2)이라 네트워크 없이도 뜬다 — @font-face 실재 확인
-    const faces=[...document.fonts].map(f=>f.family);
-    for(const f of ['JuaKR','NotoKR'])
-      assert(faces.indexOf(f)>=0, f+' @font-face가 없음: '+[...new Set(faces)].join(','));
+    // @font-face 넷 — 본문 셋(굵기 범위) + 제목 하나(전 범위)
+    const faces=[...document.fonts].map(f=>f.family.replace(/"/g,'')+' '+f.weight);
+    for(const f of ['SUITKR 100 600','SUITKR 700 800','SUITKR 900','SUITTi 100 900'])
+      assert(faces.indexOf(f)>=0, f+' @font-face 가 없음: '+[...new Set(faces)].filter(x=>/SUIT/.test(x)).join(','));
+    // 🖨 **실제로 뜬다** — 로컬 파일이라 네트워크 없이 로드돼야 한다
+    for(const spec of ['500 16px SUITKR','700 16px SUITKR','900 16px SUITKR','400 16px SUITTi']){
+      await document.fonts.load(spec, '환생 트리 Rebirth 12');
+      assert(document.fonts.check(spec),'서체가 안 떴다(파일이 없거나 경로가 틀렸다): '+spec); }
+    // 🖋 제목(Heavy)이 본문(Medium)보다 **잉크가 많다** — 이름만 갈린 게 아니라 무게가 진짜 다르다.
+    //   ⚠ 글자 **폭**으로 재면 안 된다 — 한글은 굵기가 달라도 전각 폭이 같다(실측: 둘 다 153.6px).
+    //     그래서 캔버스에 찍고 **어두운 픽셀 수**를 센다.
+    { const ink=(font)=>{ const cv=document.createElement('canvas'); cv.width=360; cv.height=60;
+        const c=cv.getContext('2d'); c.fillStyle='#fff'; c.fillRect(0,0,360,60);
+        c.fillStyle='#000'; c.font=font; c.textBaseline='middle'; c.fillText('환생 트리 주간 할인 Rebirth',4,30);
+        const d=c.getImageData(0,0,360,60).data; let n=0; for(let i=0;i<d.length;i+=4) if(d[i]<128) n++; return n; };
+      const iTi=ink('400 22px SUITTi'), iKo=ink('500 22px SUITKR');
+      assert(iTi>iKo*1.25,'제목 서체가 본문보다 무겁지 않다(Heavy 가 안 걸렸다): 잉크 제목 '+iTi+' / 본문 '+iKo); }
     // 숫자는 여전히 구글 웹폰트(Rajdhani)
     const imp=[...document.styleSheets].flatMap(s=>{try{return [...s.cssRules]}catch(e){return []}})
       .filter(r=>r.type===CSSRule.IMPORT_RULE).map(r=>r.href).join(' ');
     assert(imp.indexOf('Rajdhani')>=0,'Rajdhani를 웹폰트로 안 불러옴: '+imp);
+    assert(imp.indexOf('IBM+Plex')<0,'IBM Plex 를 아직 받는다 — 폴백 자리는 이제 SUIT 다: '+imp);
     // 개별 규칙에 폰트 이름을 박아두면 토큰이 무의미해진다
     let hard=0, sample='';
     for(const sh of document.styleSheets){ let rules; try{rules=sh.cssRules}catch(e){continue}
       for(const r of rules||[]){ if(!r.selectorText) continue;   // @font-face는 폰트를 '정의'하는 곳이라 이름이 있는 게 정상
         const ff=r.style&&r.style.fontFamily;
-        if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic|JuaKR|NotoKR/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
+        if(ff && /Rajdhani|Do Hyeon|IBM Plex|Apple SD Gothic|JuaKR|NotoKR|SUIT/.test(ff)){ hard++; if(!sample) sample=r.selectorText+' → '+ff; } } }
     assert(hard===0,'개별 규칙에 폰트 이름이 박혀 있음('+hard+'곳): '+sample);
-    // 위계 = 가족 + 크기. Jua는 400 단일 굵기라 굵기로는 가를 수 없다.
-    // ⚠ 하단(네비·탭·카드 이름)과 사냥터 패널 제목은 Noto 로 통일했다 — Jua 는 큰 제목에만 남는다.
-    //   그래서 Jua 표본은 .hmUpgHead 가 아니라 화면 제목(.curTitle = 재화 바 왼쪽)에서 잰다.
+    // 위계 = 굵기 + 크기. 큰 제목(재화 바 왼쪽)은 제목 토큰, 하단(네비·탭·카드 이름)은 본문 토큰.
     openShop(); await sleep(60);
     const head=document.querySelector('#curBar .curTitle'), hs=getComputedStyle(head);
-    assert(/JuaKR/.test(hs.fontFamily),'큰 제목에 제목 폰트(JuaKR)가 안 걸림: '+hs.fontFamily);
+    assert(/SUITTi/.test(hs.fontFamily),'큰 제목에 제목 폰트(SUITTi)가 안 걸림: '+hs.fontFamily);
     openHome(); await sleep(60);
     const body=document.querySelector('.hmUpName'), bs=getComputedStyle(body);
-    assert(!/JuaKR/.test(bs.fontFamily),'본문까지 제목 폰트라 위계가 없음: '+bs.fontFamily);
-    // 하단은 한 서체로 — 네비 라벨·패널 제목·카드 이름이 전부 Noto 여야 한다(서체가 섞이면 글자가 삐뚤빼뚤해 보인다)
+    assert(!/SUITTi/.test(bs.fontFamily),'본문까지 제목 폰트라 위계가 없음: '+bs.fontFamily);
     for(const sel of ['#navBar .navIt','.hmUpgHead','.pdSegBtn']){
       const el=document.querySelector(sel); if(!el) continue;
-      assert(/NotoKR/.test(getComputedStyle(el).fontFamily), sel+' 이 Noto 가 아님: '+getComputedStyle(el).fontFamily); }
+      const ff=getComputedStyle(el).fontFamily;
+      assert(/SUITKR/.test(ff) && !/SUITTi/.test(ff), sel+' 이 본문 서체가 아님: '+ff); }
     const hsz=parseFloat(hs.fontSize), bsz=parseFloat(bs.fontSize);
     assert(hsz-bsz>=3,'제목이 본문보다 충분히 크지 않음: 제목 '+hsz+' / 본문 '+bsz);
-    return '큰제목 Jua '+hsz+'px · 하단 전부 Noto '+bsz+'px · 숫자 Rajdhani'; });
+    return '큰제목 SUIT Heavy '+hsz+'px · 하단 SUIT Medium '+bsz+'px · 숫자 Rajdhani · 넷 다 실제 로드'; });
   // 💠 공용 재화 바 — 미네랄=pcoin · 가스 · 젬. 모든 RPG/허브 + 유즈맵 선택 상단 상시(인게임 제외).
   await step('공용 재화 바: RPG/유즈맵 상단 상시 · 미네랄/가스/젬', async()=>{ skipIf(typeof curShow!=='function','재화 바 없음');
     // curShow()는 showAppScreen 안에서 동기 실행 → 화면 연 직후 동기 검사(전환 FX/타이머 레이스 회피)

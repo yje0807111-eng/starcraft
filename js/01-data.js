@@ -8,7 +8,7 @@
 // ============================================================================
 // 캔버스(2D ctx.font)용 숫자 폰트 — CSS의 --font-num과 같은 값이지만 캔버스는 var()를 못 읽어 여기 따로 둔다.
 // 폰트를 바꿀 땐 :root의 --font-num과 이 상수를 같이 고칠 것.
-const FONT_NUM='Rajdhani,"IBM Plex Sans KR","Apple SD Gothic Neo",sans-serif';
+const FONT_NUM='Rajdhani,"SUITKR","Apple SD Gothic Neo",sans-serif';   // ⚠ css --font-num 과 같은 순서 — 캔버스는 CSS 변수를 못 읽는다
 // ── 시스템 메시지 아이콘 ── 이모지 대신 라인 아이콘(24/1.7/currentColor) 한 벌.
 // 색은 빨강(--neon) 통일, 상태색만 예외: 성공=초록 · 자원=금색
 const _MI=(p,c)=>({d:'<svg class="mIco'+(c?' '+c:'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>'});
