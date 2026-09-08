@@ -2797,17 +2797,30 @@
        룬은 뒤로 물러난다. 등급은 그림·이름·값이 이미 세 번 말한다.
      ⭐ 값은 **제 판 위에 앉힌다**(아래 .rnBuy u) — 숫자가 카드 바닥에 흩어져 있지 않게.
      ⭐ 세로로 늘려 안쪽에 여유를 준다(그림 30→38px · 최소 높이 116px). */
-#campRune .rnBuy{display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 6px 8px;
-  cursor:pointer;border:1px solid color-mix(in srgb,var(--rg) 24%,transparent);
-  border-radius:var(--r-sm);background:rgba(255,255,255,.04);
+/* 🔩 **모서리 컷 + 금속 테**(2026-09-08 사용자 확정 · 목업 docs/mock/sale-card-8.html ④안) —
+     DESIGN.md 의 「각진 SF」를 카드에 그대로 옮긴 것. 왼쪽 위·오른쪽 아래를 45°로 잘라내고(--cut),
+     테두리는 border 가 아니라 **::before 의 그라데이션 띠**(등급색 → 금속)다 — border 로는 잘린
+     모서리를 따라갈 수 없다. ⚠ clip-path 라 바깥 그림자는 못 쓴다(잘린다).
+     ⛔ border 를 되살리지 말 것 — 컷과 어긋나 모서리에 네모가 남는다. 스모크가 border 0 을 잰다. */
+#campRune .rnBuy{--cut:7px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px 8px;
+  cursor:pointer;border:0;border-radius:0;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03));
   color:#c3ccd8;font-family:inherit;font-size:11px;min-height:116px}
+/* 금속 테 — 1px 띠만 남기고 안쪽을 도려낸다(바깥 육각 − 안쪽 육각). 등급색이 위, 금속이 아래. */
+#campRune .rnBuy::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 55%,transparent),rgba(150,170,200,.14));
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut),
+    1px calc(var(--cut) + .5px),1px calc(100% - 1px),calc(100% - var(--cut) - .5px) calc(100% - 1px),
+    calc(100% - 1px) calc(100% - var(--cut) - .5px),calc(100% - 1px) 1px,calc(var(--cut) + .5px) 1px)}
 #campRune .rnBuy:disabled{opacity:.42;cursor:default}
 #campRune .rnBuy b{color:var(--rg);font-weight:600}
 /* 💎 값을 감싸는 **톤다운 판** — 카드 폭을 꽉 채우고 맨 아래에 붙는다(margin-top:auto).
    ⚠ 면은 **어둡게**(카드보다 낮은 층) — 밝게 하면 판이 값보다 먼저 읽힌다. */
 #campRune .rnBuy u{text-decoration:none;color:#c98bff;font-size:11px;
   display:flex;align-items:center;justify-content:center;gap:3px;
-  margin-top:auto;width:100%;padding:4px 4px;border-radius:var(--r-sm);
+  margin-top:auto;width:100%;padding:4px 4px;border-radius:0;
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
   background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.06)}
 #campRune .rnBuy u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
 /* 🛒 상점 세 구역(2026-09-04 사용자 확정) — 추천 3칸 · 주간 할인 6칸 · 일반(갈래 탭).
@@ -2848,15 +2861,14 @@
   font-family:var(--font-num);font-size:9px;color:#8d97a6}
 /* 🏷 할인 칸 — 왼쪽 위에 −30%, 값 옆에 **제값을 그어** 붙인다 */
 #campRune .rnBuy{position:relative}
-/* ⚠ 할인 칸도 **같은 옅기**다 — 여기만 60%로 두면 여섯 칸이 전부 진해진다(그게 원래 모습이었다) */
-#campRune .rnBuy.sale{border-color:color-mix(in srgb,var(--rg) 24%,transparent);
-  background:rgba(255,255,255,.06)}
+/* 할인 칸 — 면만 한 단 밝다. ⚠ 테두리는 ::before 의 띠라 여기서 border 를 만지지 않는다 */
+#campRune .rnBuy.sale{background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04))}
 /* 🏷 −30% 배지 — **붉은 면에 흰 글자**(2026-09-08 사용자 확정 · 옛 주황 반투명은 값 옆의
    그은 제값과 섞여 안 읽혔다). 모서리는 카드(3px)보다 한 단 둥글다. */
-#campRune .rnOff{position:absolute;left:4px;top:4px;font-style:normal;
+#campRune .rnOff{position:absolute;left:5px;top:5px;font-style:normal;
   font-family:var(--font-num);font-size:9px;font-weight:700;color:#fff;
-  padding:1px 5px;border-radius:5px;background:#e03a44;
-  box-shadow:0 1px 3px rgba(0,0,0,.45)}
+  padding:1px 5px;border-radius:0;background:#e03a44;
+  clip-path:polygon(3px 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,0 100%,0 3px)}
 #campRune .rnBuy u s{text-decoration:line-through;color:#69737f;font-size:9.5px;margin-left:3px}
 #campRune .rnBuy u.max{color:#69737f;font-size:9.5px}
 /* 📦 보유 개수 — 오른쪽 위. 여덟이면 더 못 산다(버튼이 잠긴다) */

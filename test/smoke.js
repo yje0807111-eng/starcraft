@@ -3625,10 +3625,12 @@ async function groupLobby(){
         const cs=getComputedStyle(card);
         assert(card.getBoundingClientRect().height>=110,
           '카드가 낮아졌다 — 안쪽 여유가 사라진다: '+Math.round(card.getBoundingClientRect().height)+'px');
-        // 테두리 — 등급색을 옅게 섞은 값이라 **불투명도**로 잰다
-        { const m=(cs.borderTopColor||'').match(/[\d.]+/g)||[];
-          const a=m.length>3?+m[3]:1;
-          assert(a<0.40,'카드 테두리가 다시 진해졌다: 불투명도 '+a); }
+        // 🔩 **모서리 컷 + 금속 테**(2026-09-08 · 목업 sale-card-8 ④안) — border 가 아니라
+        //   clip-path 로 잘라내고 ::before 의 띠로 두른다. ⛔ border 를 되살리지 말 것(컷과 어긋난다).
+        assert(cs.borderTopWidth==='0px','카드에 border 가 돌아왔다 — 컷과 어긋나 모서리에 네모가 남는다: '+cs.borderTopWidth);
+        assert(/polygon/.test(cs.clipPath),'카드 모서리가 잘려 있지 않다: '+cs.clipPath);
+        { const bf=getComputedStyle(card,'::before');
+          assert(/polygon/.test(bf.clipPath) && bf.backgroundImage!=='none','금속 테(::before 띠)가 없다'); }
         // 💎 값은 **제 판** 위에 앉는다(면이 있고 카드 폭을 거의 채운다)
         { const u=card.querySelector('u'); assert(u,'값이 없다');
           const us=getComputedStyle(u);
@@ -3641,8 +3643,7 @@ async function groupLobby(){
           const rgb=(os.backgroundColor.match(/\d+/g)||[]).map(Number);
           assert(rgb.length>=3 && rgb[0]>150 && rgb[0]>rgb[1]*1.8 && rgb[0]>rgb[2]*1.8,
             '배지가 붉지 않다: '+os.backgroundColor);
-          assert(parseFloat(os.borderTopLeftRadius)>=4,
-            '배지 모서리가 카드보다 둥글지 않다: '+os.borderTopLeftRadius); }
+          assert(/polygon/.test(os.clipPath),'배지가 각지지 않다(카드와 같은 컷이어야 한다): '+os.clipPath); }
         // 🔷 그림 — 줄(가방)보다 크다
         { const im=card.querySelector('.rnBuyI'); assert(im,'그림이 없다');
           assert(im.getBoundingClientRect().width>=36,
