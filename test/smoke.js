@@ -3617,6 +3617,36 @@ async function groupLobby(){
             assert(document.querySelector('#rnBody .rnBuyS .rnOffS'),
               '할인 중인데 일반 목록이 그 말을 안 한다'); } }
         shopNote='가로줄 '+rows.length+'개 · 높이 '+Math.round(r0.height)+'px'; }
+      // 🛒 **할인 카드의 얼굴**(2026-09-08 사용자 확정) — 값은 제 판 위에 · 테두리는 옅게 ·
+      //   배지는 붉은 면 · 그림은 크게 · 카드는 세로로 길게.
+      //   ⛔ 되돌리지 말 것: 진한 테두리 여섯이 나란히 서면 격자가 먼저 보이고 룬이 뒤로 물러난다.
+      { const card=document.querySelector('#rnBody .rnBuy.sale');
+        assert(card,'할인 카드가 없다');
+        const cs=getComputedStyle(card);
+        assert(card.getBoundingClientRect().height>=110,
+          '카드가 낮아졌다 — 안쪽 여유가 사라진다: '+Math.round(card.getBoundingClientRect().height)+'px');
+        // 테두리 — 등급색을 옅게 섞은 값이라 **불투명도**로 잰다
+        { const m=(cs.borderTopColor||'').match(/[\d.]+/g)||[];
+          const a=m.length>3?+m[3]:1;
+          assert(a<0.40,'카드 테두리가 다시 진해졌다: 불투명도 '+a); }
+        // 💎 값은 **제 판** 위에 앉는다(면이 있고 카드 폭을 거의 채운다)
+        { const u=card.querySelector('u'); assert(u,'값이 없다');
+          const us=getComputedStyle(u);
+          assert(us.backgroundColor!=='rgba(0, 0, 0, 0)','값을 감싸는 판이 없다');
+          const w=u.getBoundingClientRect().width, cw=card.getBoundingClientRect().width;
+          assert(w>cw*0.7,'값 판이 카드 폭을 안 채운다: '+Math.round(w)+'/'+Math.round(cw)); }
+        // 🏷 배지 — 붉은 **면**에 흰 글자, 카드보다 한 단 둥글다
+        { const off=card.querySelector('.rnOff'); assert(off,'할인 배지가 없다');
+          const os=getComputedStyle(off);
+          const rgb=(os.backgroundColor.match(/\d+/g)||[]).map(Number);
+          assert(rgb.length>=3 && rgb[0]>150 && rgb[0]>rgb[1]*1.8 && rgb[0]>rgb[2]*1.8,
+            '배지가 붉지 않다: '+os.backgroundColor);
+          assert(parseFloat(os.borderTopLeftRadius)>=4,
+            '배지 모서리가 카드보다 둥글지 않다: '+os.borderTopLeftRadius); }
+        // 🔷 그림 — 줄(가방)보다 크다
+        { const im=card.querySelector('.rnBuyI'); assert(im,'그림이 없다');
+          assert(im.getBoundingClientRect().width>=36,
+            '카드 그림이 작아졌다: '+Math.round(im.getBoundingClientRect().width)+'px'); } }
       // ⑦ 추천은 셋 이하이고, **왜 권하는지**를 적는다
       { const reco=runeRecoList();
         assert(reco.length<=3,'추천이 셋을 넘는다: '+reco.length);
