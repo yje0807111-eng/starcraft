@@ -2136,19 +2136,26 @@ slingshot, letter Y typeface, arrow, filled solid shape, three arms`
 
 ---
 
-**⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png`
+**⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png` · **획 하나만**
+
+⚠ 두 번 실패했다. ① 호 + 눈금 둘 → **십자**가 됐다(전과 X·일격 별과 한 무리).
+② 조건을 더 조여도 → 이번엔 눈금이 호에 이어 붙어 **룬 문자**(ᛒ·R)가 됐다.
+⇒ 원인은 **눈금**이다. 옆에 짧은 획을 두면 모델이 그것을 본체에 잇는다.
+⭐ **눈금을 없애고 호 하나만** 남긴다. 공통 NEGATIVE 의 `letters` 로는 안 막혔으므로
+`rune letter, runic alphabet, futhark` 를 따로 적는다.
 
 ```
-A single crescent arc drawn as one clean curved stroke that opens toward the lower
-left, the same width along its whole length with no taper at either tip. Outside the
-arc's upper-right flank, two short straight ticks sit parallel to each other and
-angled to follow the curve, both floating clear of the arc and not touching it; the
-tick nearer the arc is slightly longer than the far one. Nothing is filled.
-Vivid green #13f487 with a near-white core along each stroke.
+A single crescent arc and nothing else in the frame — one clean curved stroke, the
+same width along its whole length with no taper at either tip. It is a long shallow
+curve opening toward the lower left, its two ends stopping well apart from each other
+so the shape stays open like a drawn bow rather than closing into a circle. Nothing
+is filled, and no second stroke, tick or mark appears anywhere beside it.
+Vivid green #13f487 with a near-white core along the stroke.
 ```
-추가 NEGATIVE: `cross, X shape, asterisk, star, radiating lines, two strokes crossing,
-plus sign, sword, blade with handle, hilt, crescent moon with a face, spiral,
-three or more ticks, ticks touching the arc, filled solid shape`
+추가 NEGATIVE: `rune letter, runic alphabet, futhark, letterform, two strokes, tick
+marks, dashes beside the arc, cross, X shape, asterisk, star, plus sign, closed
+circle, ring, crescent moon with a face, sword, blade with handle, hilt, spiral,
+filled solid shape`
 
 **⑬ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
 
