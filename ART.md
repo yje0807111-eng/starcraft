@@ -1925,7 +1925,23 @@ grain, bokeh, wide bloom, low contrast
 | 성장(캠프 밖) | `#4b84d8` 파랑 | 전과 `#4b84d8` · 전리품 `#5084c8` · 열정 `#1f7bcc` |
 | ~~속도·비용·피버~~ | ~~`#fbc304` 금~~ | ⛔ **없어진 무리다** — §16-8 참고 |
 
-⚠ 재는 법: 밝고(>150) 채도 있는 픽셀 중 **채도 상위 5%** 의 평균이다. 그냥 평균을 내면
+**📏 획 굵기 — 마크 긴 변의 1/13**(2026-09-08 실측).
+⛔ **픽셀 수로 적지 말 것.** 모델마다 마크를 프레임에 채우는 정도가 다르다 —
+같은 1024px 안에서도 잉크 상자가 510~891px 로 갈린다. **비율**이라야 재현된다.
+
+| | 획 ÷ 마크 긴 변 |
+|---|---|
+| 중앙값 | **1/13** |
+| 굵은 쪽 | 치유 1/6 · 전과 1/7 · 각성 1/9 · 열기 1/9 |
+| 얇은 쪽 | 일격 1/20 · 경험 1/20 · 힘 1/19 · 절약 1/18 |
+
+⇒ SUBJECT 에 **굵기 조항을 반드시 넣는다**: 「선 너비는 마크 긴 변의 약 1/13」.
+⛔ 「thin」 한 단어로만 적지 말 것 — 안 듣는다.
+⚠ **1/20 으로 적지 말 것**(2026-09-08 에 그렇게 썼다가 사용자가 잡았다) — 그건 24장 중
+가장 얇은 축이라, 넷을 다시 뽑으면 그 넷만 얇아진다.
+재는 법: 밝기 110 넘는 픽셀의 가로 연속 길이 중앙값 ÷ 잉크 상자의 긴 변.
+
+⚠ 색 재는 법: 밝고(>150) 채도 있는 픽셀 중 **채도 상위 5%** 의 평균이다. 그냥 평균을 내면
 바깥 번짐이 섞여 어둡게 나온다(첫 측정에서 `#26945f` 가 나왔다 — 같은 초록의 흐린 판이다).
 
 ### 16-7. 🆕 아직 안 뽑은 문양 8종 (2026-09-08)
@@ -2105,6 +2121,97 @@ Steel blue #4b84d8 with a near-white core along each stroke.
 ```
 추가 NEGATIVE: `flame, fire, tree, branch with leaves, tuning fork with round tips,
 slingshot, letter Y typeface, arrow, filled solid shape, three arms`
+
+---
+
+### 16-9. 🔁 다시 뽑는 넷 (2026-09-08 · 첫 판을 보고 조인 것)
+
+첫 판에서 셋이 어긋났고 하나는 원래부터 굵었다. ⭐ **모양의 뜻은 그대로 두고 조건만 조인다.**
+
+| 룬 | 무엇이 문제였나 |
+|---|---|
+| 예리 | 초승달 호가 안 나오고 **십자+눈금**이 됐다 — 전과(X)·일격(별)과 한 무리로 보인다 |
+| 절약 · 검약 | **금색**으로 나왔다. 성장 갈래라 파랑이어야 한다(색 표를 고치기 전 프롬프트였다) |
+| 치유 | 선이 **102px** 로 다른 것(중앙값 51px)의 두 배다 |
+
+---
+
+**⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png`
+
+```
+One single crescent arc, and nothing crosses it. The arc is one continuous smooth
+curve with no straight segments and no corners: its two tips point toward the upper
+left and the lower right, and its body bulges toward the upper right, like a thin
+sliver cut from the edge of a circle. Outside that bulge sit two short straight
+ticks, parallel to each other and angled to follow the curve, both floating clear of
+the arc and of each other; the tick nearer the arc is slightly longer. The ticks
+never touch the arc and never cross each other.
+The line weight is even and moderate: the stroke is about one thirteenth of the
+mark's longest dimension — a fine engraved line, neither hairline nor bold. The arc
+is at least eight times longer than the line is thick. Nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `cross, X shape, asterisk, star, radiating lines, two strokes crossing,
+plus sign, sword, blade, hilt, crescent moon with a face, spiral, three or more ticks,
+ticks touching the arc, filled solid shape, thick heavy stroke`
+
+**⑬ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
+
+```
+An upright angular crystal fills the upper half: a pointed top, two straight sides
+flaring outward, a flat base, hollow inside, with one straight vertical facet line
+down its middle that reaches neither the point nor the base. Below the crystal,
+floating clear and touching nothing, one downward chevron sits centred — exactly two
+straight strokes meeting at a point below, with no shaft, no tail and no crossbar.
+The chevron is narrower than the crystal's base.
+The line weight is even and moderate: the stroke is about one thirteenth of the
+mark's longest dimension — a fine engraved line, neither hairline nor bold. Every
+straight segment is at least six times longer than the line is thick. Nothing is
+filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `arrow with a shaft, arrowhead on a stem, tapering arrow, coin,
+currency symbol, percent sign, two chevrons, diamond suit, chevron touching the
+crystal, filled solid shape, thick heavy stroke`
+
+**⑭ 검약의 룬** (가스 구매 비용 감소) — `sym_costg.png`
+
+```
+Two short straight vertical bars of equal length and equal width stand side by side
+in the upper half, separated by a gap about as wide as one bar. Below them, floating
+clear and touching neither bar, one downward chevron sits centred and spans the width
+of both — exactly two straight strokes meeting at a point below, with no shaft, no
+tail and no crossbar.
+The line weight is even and moderate: the stroke is about one thirteenth of the
+mark's longest dimension — a fine engraved line, neither hairline nor bold. Every
+straight segment is at least six times longer than the line is thick. Nothing is
+filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `arrow with a shaft, arrowhead on a stem, tapering arrow, thick arrow,
+bottle, flask, gas cloud, smoke, three bars, two chevrons, equals sign, letter U,
+filled solid shape, thick heavy stroke`
+
+**⑮ 치유의 룬** (회복량) — `sym_heal.png` · **모양 그대로, 선만 얇게**
+
+```
+A cross with four arms of equal length radiating up, down, left and right from a
+small square centre. All four arms are the same thickness as each other and end in
+flat square cuts. The shape is perfectly symmetric in every direction — no arm is
+longer than another.
+The line weight is moderate, matching an engraved line: the stroke is about one
+twelfth of the mark's longest dimension, so each arm is roughly six times longer than
+it is wide and the mark reads as four lines meeting rather than one solid plus sign.
+That is about half the weight a bold graphic cross would use. Nothing is filled.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `bold thick cross, heavy stroke, wide arms, filled solid shape,
+christian cross with a long lower arm, medical cross badge, rounded arm ends,
+square outline around the cross, plus sign inside a box`
+
+⚠ 치유의 색을 `#ffa3b8` 에서 `#d6496e` 로 바꿨다 — 옛 프롬프트의 값은 §16-3 표의 것인데,
+실제 파일들은 그보다 진하다(힘 `#d6496e` · 치유 `#e5497a`). 옅은 값으로 다시 뽑으면
+치유만 혼자 뜬다.
 
 ---
 
