@@ -117,6 +117,10 @@ const log = async (what) => { const s = await snap();
 await log('시작');
 await page.evaluate(() => { if (typeof campMineModeSet === 'function') campMineModeSet(true); });
 await new Promise(r => setTimeout(r, 760)); await log('채굴 켬');
+// 🖼 전장 틀의 **기준 모습** — 시트가 기지 요약(작을 때)인 화면. 병영을 고른 pickU(시트가 큼)와
+//   같은 규칙으로 잡히는지는 두 장을 나란히 봐야 안다.
+if (process.env.SHOT) { await page.screenshot({ path: 'docs/mock/camp-tuto-map.png' });
+  console.log('        shot docs/mock/camp-tuto-map.png'); }
 await page.evaluate(() => { for (let i = 0; i < 12; i++) if (typeof campMineOnce === 'function') campMineOnce(195, 400, false); });
 await new Promise(r => setTimeout(r, 760)); await log('12번 캠');
 await page.evaluate(() => { const b = document.querySelector('.navIt[data-nav="research"]'); if (b) b.click(); });
@@ -182,6 +186,10 @@ for (let guard = 0; guard < 26; guard++) {
       return '한 손가락 밀기 y=' + v.y.toFixed(3); });
     await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'pickU') {
+    // 🖼 틀이 **유닛을 품는지** 눈으로 본다 — 틀 밖에 서 있으면 드래그가 막혀 못 지정한다.
+    if (process.env.SHOT) { await new Promise(r => setTimeout(r, 500));
+      await page.screenshot({ path: 'docs/mock/camp-tuto-picku.png' });
+      console.log('        shot docs/mock/camp-tuto-picku.png'); }
     const r = await page.evaluate(() => { const id = _tutoUnitId();
       const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
       if (!u) return '유닛이 없다';

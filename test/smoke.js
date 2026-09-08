@@ -13716,14 +13716,42 @@ async function groupLobby(){
     assert(TUTO_MOVE_GY < CAMP_ROW_BASE - 0.1,
       '데려갈 자리가 본부에 너무 가깝다: '+TUTO_MOVE_GY+' (본부 '+CAMP_ROW_BASE+')');
     assert(TUTO_MOVE_GY > 0.15,'데려갈 자리가 맵 꼭대기로 붙었다: '+TUTO_MOVE_GY);
-    // 👆 유닛을 잡는 단계는 **화면을 통째로** 연다 — 유닛이 어디 서 있든 손이 닿아야 한다
-    assert(TUTO_STEPS[at('pickU')].at()==='free','유닛 지정 단계가 화면을 다 열지 않는다');
-    { const d=document.createElement('div'); d.className='tutoOv';
-      const ri3=document.createElement('i'); ri3.className='tuRing tuHide'; d.appendChild(ri3);
-      $('phone').appendChild(d);
-      const bc=getComputedStyle(ri3).borderTopColor; d.remove();
-      assert(bc.indexOf('0)')>0 || bc==='transparent',
-        '화면을 다 여는 단계인데 링이 화면을 두른다: '+bc); }
+    // 👆 유닛을 잡는 단계의 대상은 **전장 전체**다 — 유닛이 어디 서 있든 손이 닿아야 하므로
+    //   한 자리를 가리킬 수 없다(2026-09-08 사용자 확정 · 그 전에는 'free' 라 틀이 아예 없었다).
+    assert(TUTO_STEPS[at('pickU')].at()==='map','유닛 지정 단계가 전장 틀을 안 쓴다');
+    // 🗺 **전장 틀의 아랫변은 시트를 직접 재서** 잡는다 — 상수로 두면 병영을 고른 화면처럼
+    //   시트가 커졌을 때 틀 아랫변이 시트 뒤로 숨어 「어디까지가 전장인지」가 안 보인다.
+    { const S=guideState(), on0=window.campIsOn, off0=TUTO_OFF, sh=$('btSheet');
+      const t0=S?S.t:0, run0=S?S.trun:null, skip0=S?S.skip:null;
+      const st0=sh?sh.style.cssText:null;
+      // ⚠ 시트를 **#phone 안으로 옮겨 놓고** 잰다 — 캠프 화면이 아닐 때 #btSheet 은 인게임 층에
+      //   있어 화면(폰) 밖에 앉는다. 그러면 무엇을 해도 틀이 안 변해 계약이 헛돈다.
+      const par0=sh?sh.parentNode:null, nx0=sh?sh.nextSibling:null;
+      try{ if(S && sh){ window.campIsOn=()=>true; TUTO_OFF=false;
+          $('phone').appendChild(sh);
+          S.t=ids.indexOf('pickU'); S.trun=1; delete S.skip;
+          const read=()=>{ tutoPaint(); const ov=$('tutoOv');
+            const rg=ov?ov.querySelector('.tuRing'):null;
+            return rg?rg.getBoundingClientRect():null; };
+          // 시트를 크게 → 틀이 그만큼 짧아져야 한다(상수였다면 안 변한다)
+          // ⚠ fixed 로 못 박는다 — 캠프 화면이 아닐 때 #btSheet 은 인게임 층에 있어
+          //   화면 밖에 있을 수 있고, 그러면 아무것도 재지 못한다.
+          const put=(h)=>{ sh.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'
+            +h+'px;display:block;visibility:visible;transform:none;z-index:1'; return read(); };
+          const big=put(300), small=put(120);
+          assert(big && small,'전장 틀을 못 쟀다');
+          assert(small.bottom - big.bottom > 100,
+            '시트가 커져도 틀이 그대로다 — 아랫변이 상수로 박혔나: '
+            +Math.round(big.bottom)+' vs '+Math.round(small.bottom));
+          const sr=sh.getBoundingClientRect();
+          assert(small.bottom <= sr.top + 8,
+            '틀 아랫변이 시트를 밟는다: '+Math.round(small.bottom)+' > '+Math.round(sr.top));
+        } } finally { window.campIsOn=on0; TUTO_OFF=off0;
+        if(sh){ sh.style.cssText=st0||'';
+          if(par0){ if(nx0) par0.insertBefore(sh, nx0); else par0.appendChild(sh); } }
+        if(S){ S.t=t0; if(run0!=null) S.trun=run0; else delete S.trun;
+          if(skip0!=null) S.skip=skip0; else delete S.skip; }
+        tutoPaint(); } }
     // 🧹 짓고 → 지정 풀고 → 건물 지정하고 → 뽑는다. 한 단계에 두 동작을 넣으면 거기서 멈춘다.
     assert(at('placeB1')<at('deselWk') && at('deselWk')<at('selB1') && at('selB1')<at('unit'),
       '유닛 단계 순서가 어긋났다: '+ids.join(' → '));

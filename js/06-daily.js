@@ -445,10 +445,11 @@ const TUTO_STEPS = [
   //   ⭐ 링이 그 자리를 감싸므로 「어디로」가 눈에 보인다(자리 계산은 캠프가 해 준다 · tutoBldBoxSave).
   //   ⚠ **멈춰야** 넘어간다(u.tx==null) — 지나가는 중에 통과시키면 배치를 배우지 못한다.
   // 👆 **먼저 지정한다** — 화면 아무 데나 드래그해서 유닛을 잡는다(2026-09-08 사용자 요청).
-  //   ⭐ 이 단계만 화면을 **통째로** 연다('free') — 유닛이 어디 서 있든 손이 닿아야 한다.
-  //     그래서 링도 안 그린다(화면을 두르면 답답하고, 가리킬 한 자리가 없다).
+  //   ⭐ 대상은 **전장 전체**('map')다 — 유닛이 어디 서 있든 손이 닿아야 하므로 한 자리를
+  //     가리킬 수 없다. 상단 재화 바와 하단 시트를 뺀 그 틀이 곧 「여기를 드래그하라」다
+  //     (2026-09-08 사용자 확정 — 그 전에는 'free' 라 틀이 아예 없어 어디를 만질지 안 보였다).
   { id:'pickU',  goal:1,  tip:'화면을 드래그해 유닛을 지정합니다',
-    at:()=>'free', n:()=>_tutoPickedU() },
+    at:()=>'map', n:()=>_tutoPickedU() },
   { id:'moveU',  goal:1,  tip:'지정한 유닛을 위쪽 입구로 옮깁니다',
     at:()=>_tutoMoveRect() || 'map', n:()=>_tutoMovedTo() },
   { id:'deselU', goal:1,  tip:'⊘ 를 눌러 유닛 지정을 풉니다',
@@ -828,11 +829,21 @@ function tutoPaint(){
     : t.free ? { left:pr.left, right:pr.right, top:pr.top, bottom:pr.bottom }
     : t.full ? { left:pr.left+pr.width/2, right:pr.left+pr.width/2,
                        top:pr.top+pr.height*0.40, bottom:pr.top+pr.height*0.40 }
+    // 🗺 **전장 = 상단 띠와 하단 시트 사이**(2026-09-08 사용자 확정).
+    //   ⚠ 아랫변은 **시트를 직접 재서** 잡는다 — 예전엔 170px 상수였는데, 시트는 고른 것에 따라
+    //     커진다(기지 요약 ↔ 생산 카드 줄). 상수로 두면 병영을 고른 화면에서 틀 아랫변이
+    //     시트 뒤로 숨어 「어디까지가 전장인지」가 안 보였다(실측 camp-tuto-picku.png).
+    //   ⚠ 시트가 화면 밖으로 내려가 있을 때(배치 중)는 네비 위까지가 전장이다.
     : t.map ? (function(){ const h=(host||ph).getBoundingClientRect();
       const top=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topPad'))||10;
       const cur=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--curH'))||34;
       const nav=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navH'))||42;
-      return { left:h.left, right:h.right, top:pr.top+top+cur+26, bottom:pr.bottom-nav-170 }; })()
+      const y0=pr.top+top+cur+26;
+      let y2=pr.bottom-nav;                              // 시트가 없거나 내려가 있으면 네비 위까지
+      const _sh=document.getElementById('btSheet');
+      if(_sh){ const s=_sh.getBoundingClientRect();
+        if(s.height>0 && s.top>y0 && s.top<y2) y2=s.top; }
+      return { left:h.left, right:h.right, top:y0, bottom:Math.max(y0+40, y2) }; })()
     : t.el.getBoundingClientRect();
   const PAD=6;
   const x1=Math.max(0, r.left-pr.left-PAD), y1=Math.max(0, r.top-pr.top-PAD);
