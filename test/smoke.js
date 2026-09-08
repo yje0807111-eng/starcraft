@@ -1196,14 +1196,21 @@ async function groupLobby(){
     //   ⛔ 「HOME 이면 pcoin」으로 되돌리지 말 것 — 지금 HOME 은 캠프다. 유즈맵 선택·상점으로
     //     나가도 같은 값이 이어져야 한다(예전엔 「1.0M → 0」으로 뚝 떨어졌다).
     //   ⚠ 젬은 언제나 프로필 지갑이다(현질 재화라 캠프와 무관하다).
+    // ⚠ **「0 이 아니다」로 재지 말 것**(2026-09-08). 캠프는 정말로 **빈손에서 시작한다** —
+    //   환생 직후·튜토리얼 종료 직후의 미네랄은 0 이 맞다. 예전엔 앞 스텝이 남긴 잔액에 기대
+    //   0 이면 실패시켰는데, 환생 뒤 관리자 탭 시작값(1,500)이 새던 버그가 그 잔액이었다.
+    //   ⭐ 대신 **값을 직접 심고 그 값이 바에 뜨는지** 본다 — 이게 원래 재려던 것이다
+    //     (캠프 세션이면 pcoin 이 아니라 캠프 지갑을 읽는가).
     { const eco = (typeof campEcoOn==='function' && campEcoOn() && typeof G!=='undefined' && G.tech);
-      const wantMin = eco ? Math.round(G.tech.credit||0) : 12345;
-      const wantGas = eco ? Math.round(G.tech.energy||0) : 67;
+      const cr0 = eco ? (G.tech.credit||0) : 0, en0 = eco ? (G.tech.energy||0) : 0;
+      if(eco){ G.tech.credit=4321; G.tech.energy=76; updateCurBar(); }
+      const wantMin = eco ? 4321 : 12345;
+      const wantGas = eco ? 76 : 67;
       const gotMin = +$('curMin').textContent.replace(/,/g,'').replace(/[KMB]$/,'');
-      assert(eco || String(gotMin)===String(wantMin),
-        '미네랄이 pcoin과 다름: '+$('curMin').textContent);
-      if(eco) assert($('curMin').textContent!=='0' && $('curMin').textContent!=='',
-        '캠프 세션인데 재화 바가 비었다: '+$('curMin').textContent);
+      assert(String(gotMin)===String(wantMin),
+        (eco?'캠프 지갑이 아니라 딴 데를 읽는다: ':'미네랄이 pcoin과 다름: ')+$('curMin').textContent);
+      if(eco){ assert($('curGas').textContent==='76','캠프 가스 표시 불일치: '+$('curGas').textContent);
+        G.tech.credit=cr0; G.tech.energy=en0; updateCurBar(); }
       assert($('curGem').textContent==='8','젬 표시 불일치: '+$('curGem').textContent);
       if(!eco) assert($('curGas').textContent==='67','가스 표시 불일치: '+$('curGas').textContent); }
     // 💠 **어느 화면으로 가도 같은 값**이어야 한다 — 캠프 세션이 살아 있으면 그 값이 이어진다
@@ -13477,11 +13484,24 @@ async function groupLobby(){
     assert((D.rune?JSON.stringify(D.rune):null)===before.rune,'룬이 지워졌다');
     // 🎁 밑천 — 빈손으로 되돌리면 앞의 스무 단계가 헛수고로 보인다
     //   ⚠ 캠프가 안 켜져 있으면 지갑이 아니라 **보류함(C.pend)** 으로 간다(campAddRes) — 둘 다 본다
+    //   ⛔ **딱 밑천만이다.** techUIInit 의 관리자 탭 시작값(미네랄 1,500 · 가스 1,000)이 따라오면
+    //     안 된다 — 2026-09-08 실측으로 그렇게 새고 있었다(되감고 나니 2,000 이었다).
     assert(TUTO_RESET_MIN>0,'밑천이 0 이다');
     const got=Math.max((D.credit|0)+((D.pend&&D.pend.m)|0),
       (typeof G!=='undefined'&&G.tech)?(G.tech.credit|0):0);
     assert(got>=TUTO_RESET_MIN,'밑천이 안 들어왔다: '+got+' < '+TUTO_RESET_MIN);
-    return '되감음 · 환생 값 유지 · 밑천 '+TUTO_RESET_MIN.toLocaleString();
+    const root=(typeof campRtRootOn==='function'&&campRtRootOn()&&typeof CAMP_ROOT_MIN!=='undefined')
+      ? (CAMP_ROOT_MIN|0) : 0;                       // 🌟 환생 트리 root 는 정당한 몫이다
+    assert(got<=TUTO_RESET_MIN+root,
+      '관리자 탭 시작값이 따라왔다: 미네랄 '+got+' (밑천 '+TUTO_RESET_MIN+' + root '+root+')');
+    const gas=(typeof G!=='undefined'&&G.tech)?(G.tech.energy|0):(D.energy|0);
+    assert(gas===0,'되감았는데 가스가 있다 — 정제소를 지어야 나온다: '+gas);
+    const wk=(typeof G!=='undefined'&&G.tech)
+      ? (G.tech.ents||[]).filter(e=>e&&e.type==='worker').length : 0;
+    const rootWk=(typeof campRtRootOn==='function'&&campRtRootOn()&&typeof CAMP_ROOT_WK!=='undefined')
+      ? (CAMP_ROOT_WK|0) : 0;
+    assert(wk<=rootWk,'되감았는데 일꾼이 서 있다 — 첫 일꾼은 탭으로 번 돈으로 산다: '+wk);
+    return '되감음 · 환생 값 유지 · 밑천 '+got.toLocaleString()+' · 가스 0 · 일꾼 '+wk;
   });
 
   await step('튜토리얼: 건물 짓기가 손동작 단위로 갈라져 있다', async()=>{

@@ -394,13 +394,31 @@ function campRebirth(){
   campSave();
   return got; }
 
+// 🌱 **새 판의 시작 조건 — 한 곳에서만 정한다**(2026-09-08).
+//   ⚠ techUIInit 은 **관리자 건설 탭의 시작값**을 넣는다(16-build.js `TECH_START` — 미네랄 1,500 ·
+//     가스 1,000 · 일꾼 1기). 캠프의 시작은 **빈손**이다(HUNT_R1 §1·§2-3-1): 첫 미네랄은 탭으로 벌고,
+//     첫 일꾼은 그 돈으로 사고, 가스는 정제소를 지어야 나온다.
+//   ⛔ 이 세 줄을 부르는 곳마다 따로 쓰지 말 것 — 캠프 진입(campEnter)에만 있고 되감기(campWipeBoard)에
+//     없어서, **환생·튜토리얼 종료 뒤 미네랄 1,500 과 가스 1,000 이 공짜로 붙었다**(2026-09-08 실측).
+//   🌟 환생 트리 가운데(root)를 샀으면 그만큼은 쥐고 시작한다 — 그것도 「새 판」의 일부다.
+function campFreshStart(){
+  if(typeof G === 'undefined' || !G.tech) return false;
+  G.tech.ents = (G.tech.ents || []).filter(function(e){ return e.type !== 'worker'; });  // 👷 시작 일꾼 0기
+  G.tech.energy = 0;                                  // ⛽ 시작 가스 0
+  G.tech.credit = 0;                                  // 💎 시작 미네랄 0
+  if(typeof campRootGrant === 'function') campRootGrant();
+  return true; }
+
 // 살아 있는 건설 판을 새 판으로 되돌린다. 화면이 떠 있으면 다시 깔고, 아니면 비우기만 한다.
 function campWipeBoard(){
   const C = campState(); if(!C || typeof G === 'undefined' || !G.tech) return false;
   if(typeof techUIInit === 'function' && C.race){
     techUIInit(campTechRace(C.race));               // 본부·일꾼만 있는 새 판
     G.tech.inf = false; G.tech.nocool = false;      // 관리자 치트는 꺼진 채로
-    if(_campOn){ campLayBase(); campLayMinerals(); campLayGas(); campAutoGather(); }
+    // ⚠ 순서 — 판을 깔고 → **시작 조건**을 적용하고(일꾼 걷기·자원 0·root) → 일꾼을 광맥에 붙인다.
+    if(_campOn){ campLayBase(); campLayMinerals(); campLayGas(); }
+    campFreshStart();                               // 🌱 관리자 탭 시작값(1500·1000·일꾼1)을 걷는다
+    if(_campOn) campAutoGather();
     if(typeof techUIRender === 'function') techUIRender();
     return true; }
   const T = G.tech;                                  // 종족이 없으면(테스트 등) 비우기만
@@ -4901,20 +4919,9 @@ function campEnter(){
   const had = campRestore();                           // ② 저장분이 있으면 덮어씀
   if(!had){ campLayBase(); campLayMinerals(); }         // 새 판이면 기지·광맥을 하단으로 다시 깐다
   G.tech.inf = false; G.tech.nocool = false;           // ③ ⚠ 관리자 치트(무한 자원·쿨 없음)를 끈다
-  // 👷 **시작 일꾼 0기**(HUNT_R1 §1) — 첫 일꾼은 탭으로 번 돈으로 산다.
-  //    techUIInit 이 1기를 깔아 두므로(16-build.js:14) 새 판일 때만 걷는다.
-  if(!had) G.tech.ents = (G.tech.ents || []).filter(function(e){ return e.type !== 'worker'; });
-  // ⛽ **시작 가스 0**(HUNT_R1 §2-3-1 — 정제소를 지어야 나온다).
-  //    techUIInit 은 관리자 탭 기본값 1000 을 넣는다(16-build.js `TECH_START`). 그대로 두면
-  //    연구를 26레벨이나 공짜로 사서 「가스는 늘 모자란다」가 첫 5분에 무너진다(실측 2026-08-27).
-  //    ⚠ 미네랄(1500)은 건드리지 않는다 — 그쪽은 환생 트리 「시작 미네랄」의 기준선이다(§4-5).
-  if(!had) G.tech.energy = 0;
-  // 💎 **시작 미네랄 0**(2026-08-27) — 첫 미네랄은 탭으로 번다. 일꾼 0기와 같은 규칙이다.
-  //    techUIInit 은 관리자 탭 기본값 1500 을 넣는다(16-build.js `TECH_START`).
-  //    ⚠ 환생 트리 「시작 미네랄」(startMin)은 **아직 미배선**이다 — 노드 정의만 있다.
-  if(!had) G.tech.credit = 0;
-  // 🌟 새로운 시작 — 가운데(root)를 샀으면 빈손이 아니게 시작한다. **새 판일 때만** 얹는다.
-  if(!had) campRootGrant();
+  // 🌱 **빈손으로 시작한다** — 일꾼 0기 · 가스 0 · 미네랄 0 · 환생 트리 root 만큼만.
+  //    저장분이 있으면(had) 건드리지 않는다. 규칙은 campFreshStart 한 곳에 있다.
+  if(!had) campFreshStart();
   campPatchProduce(); campPatchArm(); campPatchProdTime();   // 일꾼 40기 · 보급소 24채 문지기 · 일꾼 3초
   campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
   // ⛽ **정제소 카드는 연구 구역 「자원」 칸이 갖는다**(2026-08-27 · js/20-camp-research.js).
