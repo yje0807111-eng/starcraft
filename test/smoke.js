@@ -2695,6 +2695,27 @@ async function groupLobby(){
           'campCombatStep 이 각성의 룬(skCd)을 안 읽는다 — 스킬 쿨 감소가 어디에도 안 닿는다');
         chk(typeof campScaleAllies==='function' && /campRuneMul\('rng'\)/.test(String(campScaleAllies)),
           'campScaleAllies 가 조준의 룬(rng)을 안 읽는다'); }
+      // 🛡 **방벽의 룬** — 최대 체력의 그 비율만큼 **실드로** 얹힌다(2026-09-08).
+      //   ⭐ 여기서 잠그는 것은 넷이다:
+      //     ① 실제로 닿는다(값을 읽는 게 아니라 유닛에 얹어 본다)
+      //     ② **더한다** — 실드가 원래 있는 유닛(프로토스)에 덮어쓰면 그 종족만 손해다
+      //     ③ 얹은 실드는 **채워져 있다**
+      //     ④ **체력이 아니다** — 체력 배수로 바꾸면 수호의 룬과 글자만 다른 룬이 된다
+      if(typeof campScaleAllies==='function'){
+        put('shld','high'); const r=campRuneEff('shield');
+        chk(r>0,'방벽의 룬 값이 0 이다');
+        // ⚠ campDesignStats 가 아는 유닛은 능력치를 설계값으로 덮는다 — 모르는 이름으로 잰다
+        const mk=sh=>({ gm:'__runeProbe', maxHp:1000, hp:1000, maxSh:sh, sh:sh,
+          dmg:10, cdMax:1, rng:5, spd:1 });
+        const a=mk(0);   campScaleAllies([a]);
+        const b=mk(400); campScaleAllies([b]);
+        chk(Math.abs(a.maxSh-a.maxHp*r)<a.maxHp*r*0.02,
+          '방벽의 룬이 실드에 안 닿는다: 실드 '+Math.round(a.maxSh)+' · 기대 '+Math.round(a.maxHp*r));
+        chk(a.sh===a.maxSh,'얹은 실드가 채워지지 않았다');
+        chk(b.maxSh>400+a.maxSh*0.9,'원래 실드를 **덮어썼다**(더해야 한다): '+Math.round(b.maxSh));
+        chk(Math.abs(a.maxHp-1000)<1,
+          '방벽의 룬이 체력을 늘렸다 — 그러면 수호의 룬과 같은 자리다: '+Math.round(a.maxHp));
+        clear(); }
       // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
       if(typeof umFirstRw==='function'){
         const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
@@ -3599,6 +3620,27 @@ async function groupLobby(){
         +'% · 재고 1 · 상한 '+RUNE_OWN_MAX+' · 탭 '+tabs.length;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
       C.best=keepB; C.rune=keepR; if(P) P.gem=keepG; }
+  });
+
+  // ══ 🖼 룬 그림 — **룬마다 등급마다 한 장씩 있다** (2026-09-08) ═════════
+  //   ⭐ 이 검사가 없어서 스무 종 중 열아홉이 그림 없이 남아 있었다 — 상점을 열면
+  //     이미지 13장 중 7장이 빈 네모였다(실측). 유니크가 「종류」에서 「등급」으로 바뀐 뒤
+  //     rune-compose 의 손으로 적은 목록이 안 따라온 것이 원인이다.
+  //   ⛔ 「파일이 있나」로 재지 말 것 — 브라우저가 실제로 **받을 수 있나**를 잰다.
+  await step('룬 그림: 룬마다 등급 넷 + 성좌 문양이 다 뜬다', async()=>{
+    skipIf(typeof RUNE_LIST==='undefined'||typeof runeIcoSrc!=='function','룬 시스템 없음');
+    const gds=RUNE_GRADES;                   // ⚠ 유니크는 **이미 등급표 안에 있다**(넷)
+    const want=[], bad=[];
+    for(const d of RUNE_LIST) for(const gd of gds) want.push(runeIcoSrc(runeKey(d.id, gd)));
+    // 🌌 성좌 판은 **문양만** 쓴다 — 그것도 함께 잰다(칸이 빈 채로 보이던 길이 여기다)
+    for(const d of RUNE_LIST) want.push(runeGlyphSrc(runeKey(d.id, 'mid')));
+    for(const src of want){
+      if(!src){ bad.push('(빈 경로)'); continue; }
+      try{ const r=await fetch(src, { cache:'no-store' }); if(!r.ok) bad.push(src); }
+      catch(e){ bad.push(src+' ('+e.message+')'); } }
+    assert(!bad.length, bad.length+'장이 없다 — node scripts/rune-compose.mjs 를 돌릴 것: '
+      +bad.slice(0,6).join(' ／ '));
+    return '타일 '+(RUNE_LIST.length*gds.length)+'장 · 문양 '+RUNE_LIST.length+'장 · 빠진 것 0';
   });
 
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
