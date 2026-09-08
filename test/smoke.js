@@ -2268,6 +2268,8 @@ async function groupLobby(){
     //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
     //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
     if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
+    if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneSlots!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
@@ -2303,6 +2305,8 @@ async function groupLobby(){
     //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
     //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
     if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
+    if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneBuy!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
@@ -2348,6 +2352,8 @@ async function groupLobby(){
     //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
     //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
     if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
+    if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneEff!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
@@ -2420,6 +2426,8 @@ async function groupLobby(){
     //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
     //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
     if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
+    if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneEff!=='function'||typeof campRuneMul!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepR=JSON.parse(JSON.stringify(C.rune||{})), keepB=JSON.parse(JSON.stringify(C.best||{}));
@@ -2733,6 +2741,8 @@ async function groupLobby(){
     //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
     //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
     if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
+    if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneEnter!=='function'||typeof NAV_TREE==='undefined','룬 구역 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
@@ -3481,6 +3491,8 @@ async function groupLobby(){
   await step('룬 상점: 추천 셋 · 주간 할인(30% · 재고 1) · 갈래 탭 · 여덟 개 상한', async()=>{
     skipIf(typeof campRuneEnter!=='function'||typeof runeSaleList!=='function','룬 상점 없음');
     if(typeof CAMP_RUNE_FREE !== 'undefined') CAMP_RUNE_FREE = false;
+    // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
+    if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=JSON.parse(JSON.stringify(C.best||{}));
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
