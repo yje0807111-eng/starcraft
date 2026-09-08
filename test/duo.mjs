@@ -72,7 +72,14 @@ export async function runDuo(browser, baseUrl){
     // ⚠ **load 를 기다리지 않는다** — 로비 BGM(assets/audio/bgm/lobby_3.mp3)의 요청이 열린 채로
     //   남아 있어 load 이벤트가 안 온다(2026-09-05 실측: 두 쪽이 같이 뜰 때 90초 넘게 걸리거나 아예 안 온다).
     //   부팅의 신호는 아래 G 다 — 그것만 기다리면 충분하고, 미디어 스트림에 매달리지 않는다.
-    for(const p of [A,B]){ await p.goto(baseUrl, { waitUntil:'domcontentloaded' }); await p.waitForFunction('typeof G!=="undefined"', { timeout:20000 }); }
+    for(const p of [A,B]){ await p.goto(baseUrl, { waitUntil:'domcontentloaded' }); await p.waitForFunction('typeof G!=="undefined"', { timeout:20000 });
+      // ⚠ **initAuth 가 끝날 때까지 기다린 뒤에** 가짜 채널을 심는다(2026-09-08 실측).
+      //   initAuth 는 esm.sh 에서 supabase 를 받아 _sb 에 넣는 **네트워크 대기**다 — 먼저 심으면
+      //   그 import 가 뒤늦게 돌아와 _sb 를 진짜 클라이언트로 덮는다. 그러면 removeChannel 이
+      //   가짜 채널에 unsubscribe 를 불러 터진다("e.unsubscribe is not a function").
+      //   ⛔ load 를 기다리는 것으로 되돌리지 말 것 — 로비 BGM 요청이 열린 채라 load 가 안 온다.
+      //   못 받아 오는 회선이면 _sb 는 null 로 남고 덮을 사람도 없다 → 20초 뒤 그냥 심는다.
+      await p.waitForFunction('typeof _sb!=="undefined" && _sb!==null', { timeout:20000 }).catch(()=>{}); }
     await A.evaluate('(' + SHIM + ')("uid_a","P_a")');
     await B.evaluate('(' + SHIM + ')("uid_b","P_b")');
     const ra = await A.evaluate('(' + START + ')(1)'), rb = await B.evaluate('(' + START + ')(2)');
