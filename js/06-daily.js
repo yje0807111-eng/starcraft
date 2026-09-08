@@ -380,7 +380,25 @@ function guideNote(kind, n){ try{
 //   ⭐ 진행도는 **게임 상태에서 직접 읽는다**(n()) — 따로 세지 않으므로 어긋날 수가 없다.
 //   ⛔ 여기에 이벤트 리스너를 달아 세지 말 것(두 벌이 된다).
 const TUTO_DG = 1;   // 🗺 튜토리얼이 데려가는 곳 — 캠프(0)의 바로 다음
+// 📚 **셋으로 나눈다**(2026-09-08 사용자 확정) — 스물여섯 단계를 한 줄로 이으면 어디쯤 왔는지
+//   알 수 없고 쉬어 갈 자리도 없다. 챕터가 바뀔 때 카드를 한 번 띄우고, 그 뒤로는 말풍선
+//   왼쪽 위가 「챕터 2 · 3/13」처럼 **챕터 안에서만** 센다.
+//   ⭐ **경계는 표가 아니라 단계다** — TUTO_STEPS 안의 챕터 카드(ch 를 가진 칸)가 곧 경계이고,
+//     번호도 그 사이에서 센다. ⛔ 「몇 번부터 몇 번까지」를 따로 적어 두지 말 것: 단계가
+//     하나 늘 때마다 두 곳을 고쳐야 하고, 한 곳을 잊으면 번호가 조용히 어긋난다.
+//   ⛔ 보상은 나누지 않는다(사용자 확정) — 챕터는 나누는 눈금일 뿐이고 보상은 끝에 한 번이다.
+const TUTO_CH = [
+  { n:1, title:'자원',        sub:'두드려 벌고, 일꾼에게 맡깁니다' },
+  { n:2, title:'기지와 부대',  sub:'짓고, 뽑고, 움직입니다' },
+  { n:3, title:'출격',        sub:'던전으로 나갑니다' },
+];
+// 🃏 챕터 카드 한 칸을 만든다 — 시키는 일이 없고 **읽고 [계속]** 을 누른다(outro 와 같은 어법).
+function _tutoChStep(k){ const c=TUTO_CH[k];
+  return { id:'ch'+c.n, ch:c.n, goal:1,
+    tip:()=>c.title, sub:()=>c.sub, go:()=>'계속',
+    at:()=>'all', n:()=>{ const S=guideState(); return (S && S.tack) ? 1 : 0; } }; }
 const TUTO_STEPS = [
+  _tutoChStep(0),
   // ⚠ 채굴이 켜졌는지는 **campMineModeOn()** 이 안다(#phone.mineMode). 옛 시트의 #campMineTap 을
   //   보고 있었더니 켜도 다음으로 안 넘어갔다(2026-09-04 사용자 신고 · 그 시트는 이제 안 쓴다).
   { id:'mineOn', goal:1,  tip:'여기를 터치하여 채굴 모드를 켭니다',
@@ -411,6 +429,7 @@ const TUTO_STEPS = [
   //   ⚠ 돈은 **채굴이 켜져 있을 때 한꺼번에** 모은다 — 끄고 나면 두드려 벌 수가 없다(순서가 곧 이유다).
   { id:'coinB',  goal:()=>_tutoBCost(0)+_tutoBCost(1), tip:()=>_tutoBuildCostTip(),
     at:_tutoTapAt, n:()=>_tutoCoin() },
+  _tutoChStep(1),
   { id:'mineOff',goal:1,  tip:'채굴 모드 해제 버튼을 눌러 일반모드로 전환합니다',
     at:()=>_tutoVis('#campMineStop'),
     n:()=>(typeof campMineModeOn==='function' && !campMineModeOn()) ? 1 : 0 },
@@ -438,6 +457,38 @@ const TUTO_STEPS = [
   // 🗺 던전 이동도 **세 동작**이다(2026-09-04 사용자 요청) — 칩을 눌러 목록을 열고 · 던전을 고르고 ·
   //   아래 「이동」 을 누른다. 고르기만 하고 끝내면 화면이 열린 채로 남아 무엇을 더 해야 할지 모른다.
   //   ⚠ 캠프가 0 단계라 **첫 이동지는 던전 1** 이다(전에 던전 2 라고 적어 두었던 것은 잘못이었다).
+  // 🚶 뽑은 유닛을 **옮겨 본다**(2026-09-08 사용자 요청). 캠프에는 전장이 없어 유닛이 기지에 서므로
+  //   (campPatchFinish · 던전 밖에는 CAMPB 가 없다), 여기서 지정→이동을 한 번 익히고 던전으로 간다.
+  //   ⚠ 지정하는 법은 앞의 일꾼 단계(pickWk)에서 이미 배웠다 — 그래서 한 단계로 둔다.
+  // 🚪 **정해진 자리로** 데려간다(2026-09-08 사용자 확정) — 맵 위쪽 입구, 적이 내려오는 길목이다.
+  //   ⭐ 링이 그 자리를 감싸므로 「어디로」가 눈에 보인다(자리 계산은 캠프가 해 준다 · tutoBldBoxSave).
+  //   ⚠ **멈춰야** 넘어간다(u.tx==null) — 지나가는 중에 통과시키면 배치를 배우지 못한다.
+  // 👆 **먼저 지정한다** — 화면 아무 데나 드래그해서 유닛을 잡는다(2026-09-08 사용자 요청).
+  //   ⭐ 대상은 **전장 전체**('map')다 — 유닛이 어디 서 있든 손이 닿아야 하므로 한 자리를
+  //     가리킬 수 없다. 상단 재화 바와 하단 시트를 뺀 그 틀이 곧 「여기를 드래그하라」다
+  //     (2026-09-08 사용자 확정 — 그 전에는 'free' 라 틀이 아예 없어 어디를 만질지 안 보였다).
+  { id:'pickU',  goal:1,  tip:'화면을 드래그해 유닛을 지정합니다',
+    at:()=>'map', n:()=>_tutoPickedU() },
+  { id:'moveU',  goal:1,  tip:'지정한 유닛을 위쪽 입구로 옮깁니다',
+    at:()=>_tutoMoveRect() || 'map', n:()=>_tutoMovedTo() },
+  { id:'deselU', goal:1,  tip:'⊘ 를 눌러 유닛 지정을 풉니다',
+    at:()=>_tutoVis('#btDesel'),
+    n:()=>((typeof G!=='undefined' && G.tech && (G.tech.selU||[]).length) ? 0 : 1) },
+  // 🔍 화면 조작 — **두 손가락**이다. 모바일에서 이걸 모르면 맵을 못 보고, 어디에 지을지도 못 고른다.
+  //   ⭐ 확대와 이동을 **한 단계에서 둘 다**(0/2) — 손가락 하나로 되는 일이 아니라는 것을 같이 배운다.
+  //   ⚠ 기준(S.vw0/S.vp0)은 **단계에 들어올 때** 잡는다 — 확대하면 시점도 함께 움직이므로 따로 센다.
+  { id:'zoomPan',goal:2,  tip:'두 손가락으로 화면을 확대하고 움직여 봅니다',
+    at:()=>'map', n:()=>(_tutoView('zoom') + _tutoView('pan')) },
+  // 🖐 한 손가락으로도 화면을 민다 — **길게 누르면** 이동 모드로 바뀐다(탭하면 돌아온다).
+  { id:'panMode',goal:1,  tip:'빈 바닥을 길게 눌러 화면 이동 모드로 바꿉니다\n그 뒤엔 한 손가락으로 밀 수 있습니다',
+    at:()=>'map', n:()=>_tutoPanMode() },
+  // 🖐 모드만 켜고 끝내면 **무엇이 달라졌는지 모른다** — 한 손가락으로 실제로 밀어 본다.
+  //   ⚠ 기준(S.vp0)은 단계에 들어올 때 새로 잡힌다(tutoAdvance) — 앞의 zoomPan 이 민 것은 안 센다.
+  //   ⚠ 이동 모드가 풀리면(탭) 다시 켜라고 말한다 — 안 그러면 밀어도 안 밀려 영영 안 끝난다.
+  { id:'panDrag',goal:1,  tip:()=>(_tutoPanMode() ? '한 손가락으로 화면을 밀어 봅니다'
+                                                  : '이동 모드가 풀렸습니다 — 다시 길게 누릅니다'),
+    at:()=>'map', n:()=>(_tutoPanMode() ? _tutoView('pan') : 0) },
+  _tutoChStep(2),
   { id:'dgOpen', goal:1,  tip:'좌상단을 눌러 던전 목록을 엽니다',
     at:()=>_tutoVis('#curTitle'), n:()=>_tutoVis('#campDrop') ? 1 : 0 },
   { id:'dgPick', goal:1,  tip:()=>_tutoDgTip(),
@@ -451,6 +502,7 @@ const TUTO_STEPS = [
   //   아무 데나 터치하면 끝나고 보상이 나간다(tutoPaint 가 오버레이에 리스너를 단다).
   //   ⚠ 이 단계만 게임 상태가 아니라 **터치했나**를 본다. 그래서 상태를 S.tack 에 남긴다.
   { id:'outro',  goal:1,  tip:'라운드가 오를수록 재화 획득 배수가 늘어납니다',
+    sub:()=>TUTO_END_SUB,                                    // ⚠ 초기화를 말없이 하지 않는다
     at:()=>_tutoVis('#curMul') || 'all',
     n:()=>{ const S=guideState(); return (S && S.tack) ? 1 : 0; } },
 ];
@@ -524,6 +576,41 @@ function _tutoUnitId(){ const b=_tutoBDef(2); if(!b) return null;
   const T=(typeof G!=='undefined')?G.tech:null;
   const wk=(typeof TECH_WORKER!=='undefined' && T) ? TECH_WORKER[T.race] : null;
   const p=(b.produces||[]).find(x=>x && x.id!==wk && (x.pop|0)>0); return p ? p.id : null; }
+// 🚶 뽑은 유닛을 **실제로 옮겼나**. 이동 목표(tx)는 도착하면 사라지므로 그것만 보면 놓친다 —
+//   그래서 **시작 자리를 기억해 두고** 달라졌는지 함께 본다(S.mv0 · 단계가 바뀌면 지운다).
+// 👆 전투 유닛을 **지정했나**(일꾼이 아니라). 지정이 곧 「옮길 대상을 골랐다」는 뜻이다.
+function _tutoPickedU(){
+  const T=(typeof G!=='undefined')?G.tech:null;
+  const id=_tutoUnitId(); if(!id) return 1;
+  if(!T || !(T.selU||[]).length) return 0;
+  return T.selU.some(x=>{ const e=(T.ents||[]).find(y=>y && y.eid===x);
+    return !!(e && e.type==='unit' && e.uid===id); }) ? 1 : 0; }
+function _tutoMovedTo(){
+  const T=(typeof G!=='undefined')?G.tech:null;
+  if(!T) return 0;
+  const id=_tutoUnitId(); if(!id) return 1;                       // 뽑을 유닛이 없는 종족이면 건너뛴다
+  const u=(T.ents||[]).find(e=>e && e.type==='unit' && e.uid===id);
+  if(!u) return 0;                                                // 아직 안 나왔다
+  if(u.tx!=null) return 0;                                        // 가는 중 — **멈춰야** 넘어간다
+  const p=_tutoBox && _tutoBox.kind==='move' ? _tutoBox : null;
+  if(!p) return 0;
+  return (Math.hypot(u.x-p.wx, u.y-p.wy) <= p.wr) ? 1 : 0; }
+// 🖐 화면 이동 모드가 켜졌나 — DOM 으로 본다(#cstMain.campPan · campPanMode 가 붙인다).
+//   ⛔ 롱프레스 이벤트를 여기서 세지 말 것: 캠프가 이미 그 판정을 갖고 있다(두 벌이 된다).
+function _tutoPanMode(){
+  const m=document.getElementById('cstMain');
+  if(m && m.classList.contains('campPan')) return 1;
+  return (typeof _campPanMode!=='undefined' && _campPanMode) ? 1 : 0; }
+// 🔍 화면을 **확대했나 / 움직였나** — 시점(techView)이 그 단계에 들어올 때와 달라졌는지 본다.
+//   ⛔ 두 손가락 이벤트를 직접 세지 말 것: 캠프·관리자 탭이 같은 조작을 공유해 두 벌이 된다.
+function _tutoView(kind){
+  const S=guideState(); if(!S || typeof techView!=='function') return 0;
+  const v=techView(); if(!v) return 0;
+  const key=(kind==='zoom') ? 'vw0' : 'vp0';
+  const now=(kind==='zoom') ? String(Math.round((v.zoom||1)*100))
+                            : (Math.round((v.x||0)*1000)+','+Math.round((v.y||0)*1000));
+  if(S[key]==null){ S[key]=now; return 0; }
+  return (now!==S[key]) ? 1 : 0; }
 function _tutoUnitSel(){ const id=_tutoUnitId(); return id ? (`.cgSlot[onclick*="techDoProduce('${id}'"]`) : null; }
 // 🏛 유닛을 뽑으려면 **그 건물이 지정돼 있어야** 한다 — 지정이 곧 생산 카드를 여는 동작이다.
 // 🏛 **지은 건물을 그 자리에서 감싼다**(2026-09-04 사용자 요청) — 어디에 지었든 따라간다.
@@ -542,15 +629,36 @@ function _tutoUnitSel(){ const id=_tutoUnitId(); return id ? (`.cgSlot[onclick*=
 //   ⛔ 눈으로 확인하지 않고 바꾸지 말 것 — 3D 는 DOM 이 없어 계산만으로는 못 맞춘다
 //     (scripts/tuto-run.mjs 를 SHOT=1 로 돌리면 그 단계를 찍어 준다).
 const TUTO_BLD_UP = 0.18, TUTO_BLD_PAD = 9;
-let _tutoBldBox = null;
+// 🚪 유닛을 데려갈 자리 — **맵 위쪽 입구**(적이 내려오는 길목 · 2026-09-08 사용자가 화면에서 짚었다).
+//   격자 세로 비율이다(0=위 · 1=아래). 본부 0.59 · 광맥 0.66 보다 한참 위다.
+//   ⚠ 반경은 셀 단위 — 손으로 옮기는 것이라 넉넉해야 한다(정확히 한 칸은 못 맞춘다).
+//   ⚠ 0.30 → **0.34**(2026-09-08 사용자 요청 「조금만 더 내려」).
+const TUTO_MOVE_GX = 0.5, TUTO_MOVE_GY = 0.34, TUTO_MOVE_CELLS = 3;
+let _tutoBox = null;
 function tutoBldBoxSave(){
-  _tutoBldBox = null;
+  _tutoBox = null;
   if(typeof G==='undefined' || !G.tech) return;
   if(typeof _techW2S!=='function' || typeof _techFoot!=='function' || typeof _btRect!=='function') return;
   const st=(typeof tutoStep==='function') ? tutoStep() : null;
-  if(!st || st.id!=='selB1') return;                       // 그 단계에서만 잰다(헛일을 안 한다)
+  if(!st) return;
+  const hb0=_btRect(); if(!hb0 || !(hb0.width>0 && hb0.height>0)) return;
+  // 🚪 **데려갈 자리**(맵 위쪽 입구) — 링이 감쌀 사각형과, 도착 판정에 쓸 월드 좌표를 함께 둔다.
+  //   ⚠ 여기가 아니면 좌표가 안 맞는다(캠프 좌표계는 campFrame 안에서만 산다).
+  if(st.id==='moveU'){
+    if(typeof campRowY!=='function' || typeof TECH_GRID==='undefined') return;
+    const zm=(typeof techView==='function' && techView()) ? (techView().zoom||1) : 1;
+    const wx=TECH_GRID.x0 + (TECH_GRID.x1-TECH_GRID.x0)*TUTO_MOVE_GX;
+    const wy=campRowY(TUTO_MOVE_GY);
+    const wr=_techCW()*TUTO_MOVE_CELLS;                    // 도착으로 쳐 줄 반경(월드)
+    const sp=_techW2S(wx, wy);
+    const pw=wr*2*zm*hb0.width, ph=wr*2*zm*hb0.height*(_techCH()/_techCW());
+    _tutoBox = { kind:'move', wx:wx, wy:wy, wr:wr,
+      left:hb0.left+sp.x*hb0.width - pw/2, right:hb0.left+sp.x*hb0.width + pw/2,
+      top:hb0.top+sp.y*hb0.height - ph/2, bottom:hb0.top+sp.y*hb0.height + ph/2 };
+    return; }
+  if(st.id!=='selB1') return;                              // 나머지 단계는 잴 것이 없다
   const bk=_tutoBk(2); if(!bk) return;
-  const hb=_btRect(); if(!hb || !(hb.width>0 && hb.height>0)) return;
+  const hb=hb0;
   const e=(G.tech.ents||[]).find(x=>x && x.type==='bldg' && x.bk===bk && (x.bt|0)<=0);
   if(!e) return;
   const f=_techFoot(G.tech.race, bk) || { w:2, h:2 };
@@ -564,8 +672,10 @@ function tutoBldBoxSave(){
   // 📏 발판보다 **넉넉하게** 감싼다 — 3D 그림은 발판 밖으로 자란다(지붕·포탑).
   const pw=Math.max(30, f.w*_techCW()*zm*hb.width)  + TUTO_BLD_PAD*2;
   const ph=Math.max(30, f.h*_techCH()*zm*hb.height) + TUTO_BLD_PAD*2;
-  _tutoBldBox = { bk:bk, left:cx-pw/2, right:cx+pw/2, top:cy-ph/2, bottom:cy+ph/2 }; }
-function _tutoBldRect(bk){ return (_tutoBldBox && _tutoBldBox.bk===bk) ? _tutoBldBox : null; }
+  _tutoBox = { kind:'bld', bk:bk, left:cx-pw/2, right:cx+pw/2, top:cy-ph/2, bottom:cy+ph/2 }; }
+function _tutoBldRect(bk){ return (_tutoBox && _tutoBox.kind==='bld' && _tutoBox.bk===bk) ? _tutoBox : null; }
+// 🚪 유닛을 데려갈 자리 — 링이 이 사각형을 감싼다.
+function _tutoMoveRect(){ return (_tutoBox && _tutoBox.kind==='move') ? _tutoBox : null; }
 function _tutoSelB(){ const T=(typeof G!=='undefined')?G.tech:null, k=_tutoBk(2);
   if(!T || !k) return 1;
   if(T.sel==null) return 0;
@@ -606,10 +716,25 @@ function tutoFreeUnit(id){
 function _tutoLive(st){ if(!st) return false;
   if(st.id==='armB2' || st.id==='placeB2') return _tutoBk(1)!=null;
   return true; }
-function _tutoNo(){ let n=0, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
-  for(let i=0;i<=k;i++) if(_tutoLive(TUTO_STEPS[i])) n++;
+// 🔢 번호는 **범위 안에서** 센다 — 인자를 안 주면 전체(옛 동작), 챕터 경계를 주면 챕터 안 번호다.
+//   ⚠ 챕터 카드는 세지 않는다 — 시키는 일이 아니라 표지라서, 세면 「1/13」이 카드에서 시작한다.
+function _tutoNo(from){ let n=0, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
+  for(let i=(from|0);i<=k;i++){ const s=TUTO_STEPS[i]; if(_tutoLive(s) && !s.ch) n++; }
   return Math.max(1, n); }
-function _tutoTotal(){ let n=0; for(const st of TUTO_STEPS) if(_tutoLive(st)) n++; return n; }
+function _tutoTotal(from, to){ let n=0;
+  const a=(from|0), b=(to==null?TUTO_STEPS.length:to);
+  for(let i=a;i<b;i++){ const s=TUTO_STEPS[i]; if(_tutoLive(s) && !s.ch) n++; }
+  return n; }
+// 📚 지금 챕터 — 지나온 마지막 챕터 카드가 정한다(경계가 곧 그 카드다).
+function _tutoChNow(){ let c=null, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
+  for(let i=0;i<=k;i++) if(TUTO_STEPS[i].ch) c=TUTO_STEPS[i].ch;
+  return c; }
+// 📐 지금 챕터의 [시작, 끝) — 앞 카드의 다음 칸부터 다음 카드 앞까지.
+function _tutoChSpan(){ let a=0, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
+  for(let i=0;i<=k;i++) if(TUTO_STEPS[i].ch) a=i+1;
+  let b=TUTO_STEPS.length;
+  for(let i=a;i<TUTO_STEPS.length;i++) if(TUTO_STEPS[i].ch){ b=i; break; }
+  return [a, b]; }
 function tutoIdx(){ const S=guideState(); return S ? (S.t|0) : 0; }
 function tutoStep(){ return TUTO_STEPS[tutoIdx()] || null; }
 // 🔧 **검사용 스위치**(CAMP_DEV_NOFAIL 과 같은 어법). 튜토리얼은 화면을 통째로 덮고 입력을 막으므로
@@ -652,12 +777,16 @@ function tutoTarget(){
   const a=st.at();
   const goal=_tutoGoal(st), n=Math.min(goal, st.n()|0);
   const tip=(typeof st.tip==='function') ? st.tip() : st.tip;   // 종족마다 건물 이름이 다르다
-  if(a==='all') return { full:true, tip:tip, n:n, goal:goal };   // 📖 읽고 넘기는 단계(대상이 없다)
-  if(a==='map') return { map:true, tip:tip, n:n, goal:goal };
+  // 🗒 **부제는 단계가 갖는다** — 챕터 카드는 「짓고, 뽑고, 움직입니다」, 마지막 칸은 초기화 예고.
+  //   ⛔ 화면 쪽에서 단계 id 를 보고 문구를 고르지 말 것(표가 단일 소스다).
+  const sub=(typeof st.sub==='function') ? st.sub() : (st.sub||'');
+  if(a==='free') return { free:true, tip:tip, sub:sub, n:n, goal:goal };  // 👆 화면을 통째로 연다
+  if(a==='all') return { full:true, ch:st.ch||0, tip:tip, sub:sub, n:n, goal:goal }; // 📖 읽고 넘긴다
+  if(a==='map') return { map:true, tip:tip, sub:sub, n:n, goal:goal };
   // 🏛 맵 위의 **한 자리**(건물처럼 DOM 이 아닌 것) — {left,top,right,bottom}
-  if(a && a.left!=null) return { rect:a, tip:tip, n:n, goal:goal };
+  if(a && a.left!=null) return { rect:a, tip:tip, sub:sub, n:n, goal:goal };
   if(!a) return null;
-  return { el:a, tip:tip, n:n, goal:goal };
+  return { el:a, tip:tip, sub:sub, n:n, goal:goal };
 }
 // 다 했으면 다음 단계로 — 진행도를 그릴 때마다 확인한다(따로 이벤트를 안 단다).
 // ✅ **완료를 보고 넘어간다**(2026-09-04 사용자 요청) — 목표를 채우면 곧바로 다음으로 가지 않고
@@ -678,7 +807,8 @@ function tutoAdvance(){
     if(now - S.hold < TUTO_HOLD_MS) return false;               // 아직 보여 주는 중
     delete S.hold; }
   const _last=(tutoIdx()+1 >= TUTO_STEPS.length);
-  S.t=tutoIdx()+1; S.base=null;
+  // 📖 **「읽었다」는 한 칸짜리다** — 안 지우면 다음 챕터 카드가 뜨자마자 통과한다(카드가 셋이다).
+  S.t=tutoIdx()+1; S.base=null; delete S.tack; delete S.mv0; delete S.vw0; delete S.vp0;
   if(_last) tutoFinish();
   // 💰 **단계가 바뀌면 값도 그 자리에서 다시 잰다.** 유닛 값은 campFrame 이 프레임마다 갱신하는데
   //   「첫 한 기 공짜」는 **단계**에 달려 있다 — 안 그러면 카드가 한 박자 옛 값으로 잠겨 보인다.
@@ -700,7 +830,7 @@ function tutoPaint(){
   if(!ov){ ov=document.createElement('div'); ov.id='tutoOv'; ov.className='tutoOv';
     ov.innerHTML='<i class="tuT"></i><i class="tuB"></i><i class="tuL"></i><i class="tuR"></i>'
       +'<i class="tuRing"></i><div class="tuTip"><span class="tuHd"><b class="tuStep"></b><b class="tuN"></b></span>'
-      +'<span class="tuTx"></span>'
+      +'<span class="tuTx"></span><span class="tuSub" hidden></span>'
       // 🎁 **마지막 단계의 확인 버튼**(2026-09-04 사용자 제안) — 보상을 버튼에 얹으면
       //   「여기서 끝난다」가 한눈에 읽힌다. ⛔ 새 버튼을 만들지 말 것: 공용 .actBtn.pri 다.
       +'<button type="button" class="actBtn pri tuGo" hidden></button></div>';
@@ -714,7 +844,7 @@ function tutoPaint(){
     //   ⚠ 게임 행동이 아니라 「읽었다」는 신호라, 계측(dqNote)이 아니라 여기서 받는 것이 맞다.
     ov.querySelector('.tuGo').addEventListener('click', function(ev){
       if(ev && ev.stopPropagation) ev.stopPropagation();
-      const st=tutoStep(); if(!st || st.id!=='outro') return;
+      const st=tutoStep(); if(!st || (st.id!=='outro' && !st.ch)) return;
       const S=guideState(); if(S) S.tack=1;
       tutoPaint(); }); }
   ph.classList.add('tutoOn');
@@ -735,35 +865,58 @@ function tutoPaint(){
   // 📖 읽고 넘기는 단계는 **여는 곳이 없다** — 점 하나로 두면 판 넷이 화면을 다 덮어,
   //   어디를 눌러도 아래 리스너가 받는다(그게 「화면을 터치하세요」의 구현이다).
   const r = t.rect ? t.rect
+    // 👆 화면 전체 — 판 넷이 두께 0 이 되어 **아무것도 안 막는다**(그 단계만 강제를 푼다).
+    : t.free ? { left:pr.left, right:pr.right, top:pr.top, bottom:pr.bottom }
     : t.full ? { left:pr.left+pr.width/2, right:pr.left+pr.width/2,
                        top:pr.top+pr.height*0.40, bottom:pr.top+pr.height*0.40 }
+    // 🗺 **전장 = 상단 띠와 하단 시트 사이**(2026-09-08 사용자 확정).
+    //   ⚠ 아랫변은 **시트를 직접 재서** 잡는다 — 예전엔 170px 상수였는데, 시트는 고른 것에 따라
+    //     커진다(기지 요약 ↔ 생산 카드 줄). 상수로 두면 병영을 고른 화면에서 틀 아랫변이
+    //     시트 뒤로 숨어 「어디까지가 전장인지」가 안 보였다(실측 camp-tuto-picku.png).
+    //   ⚠ 시트가 화면 밖으로 내려가 있을 때(배치 중)는 네비 위까지가 전장이다.
     : t.map ? (function(){ const h=(host||ph).getBoundingClientRect();
       const top=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topPad'))||10;
       const cur=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--curH'))||34;
       const nav=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--navH'))||42;
-      return { left:h.left, right:h.right, top:pr.top+top+cur+26, bottom:pr.bottom-nav-170 }; })()
+      const y0=pr.top+top+cur+26;
+      let y2=pr.bottom-nav;                              // 시트가 없거나 내려가 있으면 네비 위까지
+      const _sh=document.getElementById('btSheet');
+      if(_sh){ const s=_sh.getBoundingClientRect();
+        if(s.height>0 && s.top>y0 && s.top<y2) y2=s.top; }
+      return { left:h.left, right:h.right, top:y0, bottom:Math.max(y0+40, y2) }; })()
     : t.el.getBoundingClientRect();
-  const PAD=6;
+  // 📚 챕터 카드는 **구멍이 없다** — 여느 단계의 여유(PAD)를 그대로 두면 대상이 없는데도
+  //   14px 짜리 밝은 점이 카드 위에 남는다(2026-09-08 실측). 시킬 일이 없으니 열 곳도 없다.
+  const PAD=t.ch ? 0 : 6;
   const x1=Math.max(0, r.left-pr.left-PAD), y1=Math.max(0, r.top-pr.top-PAD);
   const x2=Math.min(pr.width, r.right-pr.left+PAD), y2=Math.min(pr.height, r.bottom-pr.top+PAD);
   const px=(v)=>v.toFixed(1)+'px';
   const q=(s)=>ov.querySelector(s);
+  // 🎞 **멀리 뛸 때는 미끄러지지 않는다**(2026-09-04 사용자 지적 — 「왼쪽으로 갔다가 온다」).
+  //   미끄러지면 그 사이 엉뚱한 데를 훑는다(실측 궤적: 하단 버튼 → 좌상단 칸까지 화면을 가로질렀다).
+  //   ⭐ 먼 이동은 그 자리에서 갈아타고, 링이 **살짝 부풀며 나타난다**(tuPop) — 「거기서 새로 떴다」로 읽힌다.
+  //   ⚠ **자리를 주기 전에** 정해야 한다(2026-09-08). 링 style 을 준 뒤에 transition 을 꺼 봐야
+  //     이미 시작한 보간은 안 멈춘다 — 실측에서 링이 364px 에서 53px 로 계속 미끄러졌다.
+  //   ⚠ 가까운 이동은 그대로 미끄러진다(단계가 이어진다는 느낌은 그쪽이 낫다).
+  //   📚 **챕터 카드로 들어갈 때도 즉시** — 대상이 없어 구멍이 화면만 하게 벌어져 있다가
+  //     점으로 오므라든다. 그건 「미끄러진다」가 아니라 **밝은 사각형이 닫히는** 것이라
+  //     한 박자 동안 아무것도 아닌 판이 떠 있는 것으로 보인다(2026-09-08 실측 camp-tuto-ch2.png).
+  { const mx=(x1+x2)/2, my=(y1+y2)/2, prev=ov._tuAt;
+    ov._tuAt={ x:mx, y:my };
+    if((prev && Math.hypot(mx-prev.x, my-prev.y) > pr.height*0.30) || !!t.ch){
+      ov.classList.remove('tuAnim');
+      const rg=q('.tuRing'); rg.classList.remove('tuPop'); void rg.offsetWidth; rg.classList.add('tuPop');
+      if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ ov.classList.add('tuAnim'); });
+      else ov.classList.add('tuAnim'); } }
   q('.tuT').style.cssText='left:0;top:0;right:0;height:'+px(y1);
   q('.tuB').style.cssText='left:0;top:'+px(y2)+';right:0;bottom:0';
   q('.tuL').style.cssText='left:0;top:'+px(y1)+';width:'+px(x1)+';height:'+px(y2-y1);
   q('.tuR').style.cssText='left:'+px(x2)+';top:'+px(y1)+';right:0;height:'+px(y2-y1);
   q('.tuRing').style.cssText='left:'+px(x1)+';top:'+px(y1)+';width:'+px(x2-x1)+';height:'+px(y2-y1);
-  // 🎞 **멀리 뛸 때는 미끄러지지 않는다**(2026-09-04 사용자 지적 — 「왼쪽으로 갔다가 온다」).
-  //   하단 버튼(13,710)에서 좌상단 칸(110,70)까지 미끄러지면 그 사이 **엉뚱한 데를 훑는다**(실측 궤적).
-  //   ⭐ 먼 이동은 그 자리에서 갈아타고, 링이 **살짝 부풀며 나타난다**(tuPop) — 「거기서 새로 떴다」로 읽힌다.
-  //   ⚠ 가까운 이동은 그대로 미끄러진다(단계가 이어진다는 느낌은 그쪽이 낫다).
-  { const mx=(x1+x2)/2, my=(y1+y2)/2, prev=ov._tuAt;
-    ov._tuAt={ x:mx, y:my };
-    if(prev && Math.hypot(mx-prev.x, my-prev.y) > pr.height*0.30){
-      ov.classList.remove('tuAnim');
-      const rg=q('.tuRing'); rg.classList.remove('tuPop'); void rg.offsetWidth; rg.classList.add('tuPop');
-      if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ ov.classList.add('tuAnim'); });
-      else ov.classList.add('tuAnim'); } }
+  // 👆 화면 전체를 여는 단계 · 📚 챕터 카드에는 테두리를 안 그린다.
+  //   ⚠ 챕터 카드에 링이 남으면 화면 한가운데에 **아무것도 아닌 붉은 사각형**이 뜬다 —
+  //     시키는 일이 없는 칸이라 가리킬 곳도 없다(2026-09-08 실측 camp-tuto-ch2.png).
+  q('.tuRing').classList.toggle('tuHide', !!t.free || !!t.ch);
   // 말풍선은 **대상 옆**에 붙인다(2026-09-04 사용자 지적) — 화면 아래 끝에 두면 어디를 누르라는 건지
   //   눈이 두 번 움직인다. 아래에 자리가 있으면 아래, 없으면 위. 좌우는 대상 중심을 따라간다.
   // 🎞 **단계가 바뀔 때만** 말풍선을 다시 태운다(2026-09-04 사용자 요청 — 「조금 더 자연스럽게」).
@@ -772,17 +925,42 @@ function tutoPaint(){
   { const _st=tutoStep(), _id=_st?_st.id:'';
     if(ov._tuStep!==_id){ ov._tuStep=_id;
       const _tp=q('.tuTip'); _tp.classList.remove('tuIn'); void _tp.offsetWidth; _tp.classList.add('tuIn'); } }
-  q('.tuStep').textContent=_tutoNo()+' / '+_tutoTotal();
+  // 🏷 왼쪽 위 — 챕터 카드는 「챕터 2」, 마지막 칸은 「튜토리얼 종료」, 그 밖은 「챕터 2 · 3/13」.
+  //   ⭐ 번호를 **챕터 안에서** 센다(2026-09-08 사용자 확정) — 스물여섯을 통으로 세면 어디쯤
+  //     왔는지 감이 안 온다. ⛔ 전체 통산으로 되돌리지 말 것.
+  { const _st=tutoStep(), _last=!!(_st && _st.id==='outro'), _sp=q('.tuStep');
+    const _ch=_tutoChNow(), _sp2=_tutoChSpan();
+    _sp.textContent = _st && _st.ch ? ('챕터 ' + _st.ch)
+      : _last ? TUTO_END_TITLE
+      : ((_ch ? ('챕터 ' + _ch + ' · ') : '') + _tutoNo(_sp2[0]) + ' / ' + _tutoTotal(_sp2[0], _sp2[1]));
+    _sp.classList.toggle('end', _last || !!(_st && _st.ch)); }
   q('.tuTx').textContent=t.tip;
+  // 🗒 부제 — 챕터 카드의 한 줄 소개 · 마지막 칸의 초기화 예고. 없으면 자리도 없다.
+  { const _sb=q('.tuSub'); _sb.textContent=t.sub||''; _sb.hidden=!t.sub; }
+  // 🃏 챕터 카드는 **판이 다르다** — 제목이 크고 진행 숫자가 없다(시키는 일이 없다).
+  { const _st=tutoStep(), _isCh=!!(_st && _st.ch);
+    q('.tuTip').classList.toggle('ch', _isCh);
+    q('.tuN').hidden=_isCh; }
   q('.tuN').textContent=t.n+' / '+t.goal;                    // 오른쪽 = **이번 단계의 진행**
   q('.tuN').classList.toggle('ok', t.n>=t.goal);             // ✅ 다 했으면 초록(0.3초 머무는 동안 보인다)
   // 🎁 마지막 단계에만 확인 버튼 — 보상을 **버튼 안에** 얹는다(재화 아이콘은 공용 resIco 하나뿐이다).
   { const _go=q('.tuGo'), _st=tutoStep(), _last=!!(_st && _st.id==='outro');
-    _go.hidden=!_last;
-    if(_last && !_go._tuFill){ _go._tuFill=1;
-      const _g=(TUTO_REWARD && TUTO_REWARD.gem)|0;
-      const _ico=(typeof resIco==='function') ? resIco('gem','tuGoIco') : '';
-      _go.innerHTML='<span>확인</span>'+(_g>0 ? ('<b class="tuGoRw">'+_ico+'×'+_g+'</b>') : '');
+    const _isCh=!!(_st && _st.ch);
+    _go.hidden=!(_last || _isCh);
+    // 🃏 챕터 카드의 버튼은 **「계속」** — 보상이 없으므로 글자만이다.
+    //   ⚠ 캐시 열쇠는 **단계 id** 다 — 「채운 적 있다」로 두면 챕터 2 카드에 챕터 1 의 글자가 남는다.
+    if(_isCh && _go._tuFill!==_st.id){ _go._tuFill=_st.id;
+      _go.innerHTML='<span>'+((typeof _st.go==='function')?_st.go():'계속')+'</span>'; }
+    if(_last && _go._tuFill!=='outro'){ _go._tuFill='outro';
+      // 🎁 **받는 것을 다 적는다** — 젬(보상)과 밑천 미네랄(새 출발). 둘 다 실제로 들어가므로
+      //   하나만 적으면 나머지가 없는 것처럼 보인다. ⛔ 이모지 금지 — 재화 그림은 resIco 하나다.
+      const _rw=[];
+      { const _g=(TUTO_REWARD && TUTO_REWARD.gem)|0;
+        if(_g>0) _rw.push(['gem', _g]); }
+      if(TUTO_RESET_MIN>0) _rw.push(['mineral', TUTO_RESET_MIN]);
+      _go.innerHTML='<span>확인</span>' + _rw.map(function(r){
+        const _ico=(typeof resIco==='function') ? resIco(r[0],'tuGoIco') : '';
+        return '<b class="tuGoRw">'+_ico+'×'+r[1].toLocaleString()+'</b>'; }).join('');
       if(typeof paintIcons==='function') try{ paintIcons(_go); }catch(_e){} } }
   // 📏 **폭은 글에 맞춘다**(2026-09-04 사용자 요청 — 「두 줄로 나오는 것들이 한 줄로」).
   //   전에는 250px 고정이라 짧은 문구도 두 줄이 됐고, 「탭하 / 세요」처럼 어절 중간에서 끊겼다.
@@ -871,6 +1049,13 @@ function closeGuide(){ const el=document.getElementById('hbGuideSheet'); if(el) 
 //   ⛔ 젬을 여기서 직접 더하지 말 것 — 공용 지급기 dqGive 하나가 단일 소스다(저장·재화 바 갱신까지 한다).
 //   ⚠ S.tdone 으로 **한 번만** 준다. 「해 보기」로 다시 돌려도 두 번 주지 않는다.
 const TUTO_REWARD = { gem:20 };
+// 🎁 마치고 새로 시작할 때 쥐어 주는 밑천. 연습판을 걷어내므로 빈손이 되면 안 된다.
+const TUTO_RESET_MIN = 500;
+// 🏁 **마지막 칸의 말**(2026-09-08 사용자 확정) — 왼쪽 위는 단계 번호 대신 「튜토리얼 종료」,
+//   문구 아래에는 판이 걷힌다는 예고를 둔다. ⛔ 초기화를 말없이 하지 말 것 —
+//   지어 둔 병영과 유닛이 사라지므로, 누르기 **전에** 알아야 한다.
+const TUTO_END_TITLE = '튜토리얼 종료';
+const TUTO_END_SUB   = '게임이 초기화 됩니다';
 function tutoFinish(){
   const S=guideState(); if(!S) return;
   delete S.trun; delete S.tack;
@@ -879,8 +1064,18 @@ function tutoFinish(){
   let tx='';
   try{ if(typeof dqGive==='function') tx=dqGive(TUTO_REWARD); }catch(_e){}
   if(typeof saveMeta==='function') saveMeta();
+  // 🔄 **연습판을 걷고 맨 처음부터**(2026-09-08 사용자 확정) — 튜토리얼은 던전 1 까지 데려가고
+  //   건물·유닛을 남긴다. 그대로 두면 「처음 하는 판」이 아니라 남이 쓰던 판에서 시작하는 셈이다.
+  //   ⛔ 환생이 아니다 — 배수·포인트를 안 준다(campTutoReset 이 그 경계를 지킨다).
+  //   🎁 밑천 미네랄을 함께 준다 — 빈손으로 되돌리면 앞의 스무 단계가 헛수고로 보인다.
+  let reset=false;
+  try{ if(typeof campTutoReset==='function') reset=campTutoReset(TUTO_RESET_MIN); }catch(_e){}
+  if(reset){ try{ if(typeof techUIRender==='function') techUIRender(); }catch(_e){}
+    try{ if(typeof updateCurBar==='function') updateCurBar(); }catch(_e){} }
   if(typeof playSfx==='function') try{ playSfx('ui_confirm'); }catch(_e){}
-  if(typeof toast==='function') toast('🎓 튜토리얼 완료 — ' + (tx || '💎 젬 20')); }
+  if(typeof toast==='function')
+    toast('🎓 튜토리얼 완료 — ' + (tx || '💎 젬 20')
+          + (reset ? (' · ' + TUTO_RESET_MIN.toLocaleString() + ' 미네랄로 새 출발') : '')); }
 function tutoRestart(){
   const S=guideState(); if(!S) return;
   // ⭐ 이 판을 **직접 켠 것**으로 표시한다 — 평소에는 안 뜨므로(TUTO_AUTO) 이 표시가 없으면 안 뜬다.

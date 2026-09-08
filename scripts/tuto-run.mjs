@@ -114,9 +114,39 @@ const log = async (what) => { const s = await snap();
     + String(s.tip||'').split(String.fromCharCode(10)).join(' | ') + (what ? ('   <- ' + what) : '')); };
 
 
+// 📚 챕터 카드는 **읽고 [계속]** 을 누르면 넘어간다 — 시키는 일이 없다.
+//   ⚠ **버튼이 생길 때까지 기다린다** — 첫 카드는 오버레이가 그려지기 전에 부르게 되고,
+//     그때 그냥 지나치면 뒤의 조작이 전부 카드 위에서 헛돈다(실측: 채굴·연구가 카드 상태에서 돌았다).
+const chGo = async (wait = 16) => {
+  for (let i = 0; i < wait; i++) {
+    const r = await page.evaluate(() => {
+      const st = (typeof tutoStep === 'function') ? tutoStep() : null;
+      if (!st || !st.ch) return 'done';
+      const g = document.querySelector('#tutoOv .tuGo');
+      if (!g || getComputedStyle(g).display === 'none') return null;
+      window.__chShot = st.ch; return 'shot'; });
+    if (r === 'shot') {
+      // 🖼 챕터 카드는 **눈으로 본다** — 제목·부제·[계속] 이 한 판에 들어가는지는 글자 수로 못 잰다.
+      const k = await page.evaluate(() => window.__chShot);
+      if (process.env.SHOT) { await new Promise(x => setTimeout(x, 500));
+        await page.screenshot({ path: 'docs/mock/camp-tuto-ch' + k + '.png' });
+        console.log('        shot docs/mock/camp-tuto-ch' + k + '.png'); }
+      const r2 = await page.evaluate(() => { const st = tutoStep();
+        document.querySelector('#tutoOv .tuGo').click(); return '챕터 ' + st.ch + ' 시작'; });
+      await new Promise(x => setTimeout(x, 760)); await log(r2); return true; }
+    if (r === 'done') return false;
+    if (r) { await new Promise(x => setTimeout(x, 760)); await log(r); return true; }
+    await new Promise(x => setTimeout(x, 300)); }
+  return false; };
+
 await log('시작');
+await chGo();                                        // 챕터 1 카드
 await page.evaluate(() => { if (typeof campMineModeSet === 'function') campMineModeSet(true); });
 await new Promise(r => setTimeout(r, 760)); await log('채굴 켬');
+// 🖼 전장 틀의 **기준 모습** — 시트가 기지 요약(작을 때)인 화면. 병영을 고른 pickU(시트가 큼)와
+//   같은 규칙으로 잡히는지는 두 장을 나란히 봐야 안다.
+if (process.env.SHOT) { await page.screenshot({ path: 'docs/mock/camp-tuto-map.png' });
+  console.log('        shot docs/mock/camp-tuto-map.png'); }
 await page.evaluate(() => { for (let i = 0; i < 12; i++) if (typeof campMineOnce === 'function') campMineOnce(195, 400, false); });
 await new Promise(r => setTimeout(r, 760)); await log('12번 캠');
 await page.evaluate(() => { const b = document.querySelector('.navIt[data-nav="research"]'); if (b) b.click(); });
@@ -126,9 +156,10 @@ const feed = async (n) => { await page.evaluate((k) => {
   if (typeof G !== 'undefined' && G.tech) G.tech.credit = (G.tech.credit || 0) + k;
   if (typeof updateCurBar === 'function') updateCurBar(); }, n); };
 
-for (let guard = 0; guard < 24; guard++) {
+for (let guard = 0; guard < 26; guard++) {
   const s = await snap();
   if (s.id === null) break;
+  if (String(s.id).indexOf('ch')===0) { await chGo(); continue; }
   if (/^coin/.test(s.id)) { await feed(Math.max(0, s.goal - s.credit) + 5);
     await new Promise(r => setTimeout(r, 760)); await log('돈 채움'); continue; }
   if (s.id === 'upgTap' || s.id === 'upgGat') { const k = (s.id === 'upgTap') ? 'tap' : 'gather';
@@ -142,6 +173,7 @@ for (let guard = 0; guard < 24; guard++) {
   break;
 }
 
+await chGo();                                        // 챕터 2 카드
 { const ok = await page.evaluate(() => { const b = document.getElementById('campMineStop'); if (!b) return false; b.click(); return true; });
   await new Promise(r => setTimeout(r, 760)); await log(ok ? '채굴 멈춤 버튼 누름' : '⚠ 멈춤 버튼이 없다'); }
 
@@ -157,9 +189,63 @@ await page.evaluate(() => { if (typeof G === 'undefined' || !G.tech) return;
     if (typeof techUIRender === 'function') techUIRender(); } });
 await new Promise(r => setTimeout(r, 760)); await log('일꾼 지정');
 
-for (let guard = 0; guard < 20; guard++) {
+for (let guard = 0; guard < 26; guard++) {
   const s = await snap(); const id = String(s.id || '');
-  if (!/^(armB|placeB|deselWk|selB1|unit|dg|outro)/.test(id)) break;
+  if (!/^(ch|armB|placeB|deselWk|selB1|unit|pickU|moveU|deselU|zoomPan|panMode|panDrag|dg|outro)/.test(id)) break;
+  if (id.indexOf('ch')===0) { await chGo(); continue; }
+  if (id === 'deselU') {
+    await page.evaluate(() => { const b = document.getElementById('btDesel'); if (b) b.click();
+      else if (typeof techDeselU === 'function') techDeselU(); });
+    await new Promise(r => setTimeout(r, 760)); await log('유닛 지정 해제'); continue; }
+  if (id === 'zoomPan') {
+    const r = await page.evaluate(() => { const v = techView(); v.zoom = (v.zoom || 1) * 1.4; v.x = (v.x || 0.5) + 0.06;
+      const t = (typeof techViewT === 'function') ? techViewT() : null;
+      if (t) { t.zoom = v.zoom; t.x = v.x; }
+      return '확대 ' + v.zoom.toFixed(2) + ' · 이동 ' + v.x.toFixed(3); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'panMode') {
+    await page.evaluate(() => { if (typeof campPanMode === 'function') campPanMode(true); });
+    await new Promise(r => setTimeout(r, 760)); await log('이동 모드 켬'); continue; }
+  if (id === 'panDrag') {
+    // 🖐 이동 모드를 켠 채 **한 손가락으로 민다** — 모드가 꺼져 있으면 단계가 안 넘어간다.
+    const r = await page.evaluate(() => {
+      if (typeof campPanMode === 'function') campPanMode(true);
+      const v = techView(); v.y = (v.y || 0.5) + 0.05;
+      const t = (typeof techViewT === 'function') ? techViewT() : null; if (t) t.y = v.y;
+      return '한 손가락 밀기 y=' + v.y.toFixed(3); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'pickU') {
+    // 🖼 틀이 **유닛을 품는지** 눈으로 본다 — 틀 밖에 서 있으면 드래그가 막혀 못 지정한다.
+    if (process.env.SHOT) { await new Promise(r => setTimeout(r, 500));
+      await page.screenshot({ path: 'docs/mock/camp-tuto-picku.png' });
+      console.log('        shot docs/mock/camp-tuto-picku.png'); }
+    const r = await page.evaluate(() => { const id = _tutoUnitId();
+      const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
+      if (!u) return '유닛이 없다';
+      G.tech.sel = null; G.tech.selU = [u.eid];
+      const sh = G.tech.sheet || (G.tech.sheet = {}); sh.open = true; sh.sec = 'ent';
+      if (typeof techUIRender === 'function') techUIRender();
+      return '유닛 지정'; });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'moveU') {
+    const r = await page.evaluate(() => { const id = _tutoUnitId();
+      const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
+      if (!u) return '유닛이 없다';
+      const p = _tutoMoveRect();
+      if (!p) return '목표 자리를 아직 못 잰다';
+      u.x = p.wx; u.y = p.wy; u.tx = null; u.ty = null;   // 그 자리에 **멈춰** 세운다
+      return '입구로 옮겼다 (' + u.x.toFixed(3) + ',' + u.y.toFixed(3) + ')'; });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'zoomV') {
+    const r = await page.evaluate(() => { const v = techView(); v.zoom = (v.zoom || 1) * 1.4;
+      if (typeof techViewT === 'function' && techViewT()) techViewT().zoom = v.zoom;
+      return '확대 ' + v.zoom.toFixed(2); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'panV') {
+    const r = await page.evaluate(() => { const v = techView(); v.x = (v.x || 0.5) + 0.06;
+      if (typeof techViewT === 'function' && techViewT()) techViewT().x = v.x;
+      return '이동 x=' + v.x.toFixed(3); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'dgOpen') {
     await page.evaluate(() => { const e = document.getElementById('curTitle'); if (e) e.click();
       else if (typeof campDropToggle === 'function') campDropToggle(); });
@@ -169,6 +255,11 @@ for (let guard = 0; guard < 20; guard++) {
       if (!el) return '⚠ 던전 칸이 없다'; el.click(); return '던전 ' + TUTO_DG + ' 고름'; });
     await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'outro') {
+    // 🖼 마지막 칸은 **눈으로 본다** — 왼쪽 위 「튜토리얼 종료」·초기화 예고·보상 둘이
+    //   한 카드에 들어가는지는 글자 수로 못 잰다.
+    if (process.env.SHOT) { await new Promise(r => setTimeout(r, 500));
+      await page.screenshot({ path: 'docs/mock/camp-tuto-outro.png' });
+      console.log('        shot docs/mock/camp-tuto-outro.png'); }
     const r = await page.evaluate(() => { const ov = document.getElementById('tutoOv');
       const g0 = (typeof profGem === 'function') ? profGem() : -1;
       const go = ov ? ov.querySelector('.tuGo') : null;
@@ -183,7 +274,15 @@ for (let guard = 0; guard < 20; guard++) {
         + String.fromCharCode(10) + '        HTML: ' + icoH; });
     await new Promise(r => setTimeout(r, 760));
     const gem = await page.evaluate(() => (window.__g0|0) + '→' + ((typeof profGem==='function')?profGem():-1));
-    await log(r + ' · 텀 뒤 젬 ' + gem); continue; }
+    // 🔄 마치면 **판을 걷고 맨 처음부터** — 던전 0 · 건물 없음 · 밑천 미네랄
+    const rs = await page.evaluate(() => { const C = campState() || {};
+      const built = Object.keys(C.built || {}).join(',') || '없음';
+      const cr = (typeof G!=='undefined'&&G.tech) ? (G.tech.credit|0) : (C.credit|0);
+      const ents = (typeof G!=='undefined'&&G.tech)
+        ? (G.tech.ents||[]).map(e=>e.type+':'+(e.bid||e.uid||'')).join(' ') : '-';
+      return '던전 ' + (C.dg|0) + ' · 건물 [' + built + '] · 판 [' + ents + '] · 미네랄 ' + cr
+           + ' · 환생배수 ' + (C.rebMul||0) + '/포인트 ' + (C.rbPts||0); });
+    await log(r + ' · 텀 뒤 젬 ' + gem + String.fromCharCode(10) + '        되감김: ' + rs); continue; }
   if (id === 'dgGo') {
     const r = await page.evaluate(() => { const el = document.querySelector('.cdGo');
       if (!el) return '⚠ 이동 버튼이 없다'; el.click(); return '이동 누름'; });
@@ -192,7 +291,10 @@ for (let guard = 0; guard < 20; guard++) {
         const rg=ov?ov.querySelector('.tuRing'):null; const out=[];
         for(let i=0;i<40;i++){ await new Promise(r=>requestAnimationFrame(r));
           const q=rg?rg.getBoundingClientRect():null;
-          out.push(q?(Math.round(q.left)+','+Math.round(q.top)):'-'); }
+          const cm=document.getElementById('curMul');
+          const cs=cm?getComputedStyle(cm):null;
+          out.push(q?(Math.round(q.left)+','+Math.round(q.top)+'/'+Math.round(q.width)+'x'+Math.round(q.height)
+            +' mul:'+(cs?cs.display:'-')+':'+(cm?(cm.style.left||'없음'):'-')):'-'); }
         return out; });
       const uniq=[]; for(const p of tr) if(uniq[uniq.length-1]!==p) uniq.push(p);
       console.log('        링 궤적: ' + uniq.join('  ')); }

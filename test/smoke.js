@@ -1196,14 +1196,21 @@ async function groupLobby(){
     //   ⛔ 「HOME 이면 pcoin」으로 되돌리지 말 것 — 지금 HOME 은 캠프다. 유즈맵 선택·상점으로
     //     나가도 같은 값이 이어져야 한다(예전엔 「1.0M → 0」으로 뚝 떨어졌다).
     //   ⚠ 젬은 언제나 프로필 지갑이다(현질 재화라 캠프와 무관하다).
+    // ⚠ **「0 이 아니다」로 재지 말 것**(2026-09-08). 캠프는 정말로 **빈손에서 시작한다** —
+    //   환생 직후·튜토리얼 종료 직후의 미네랄은 0 이 맞다. 예전엔 앞 스텝이 남긴 잔액에 기대
+    //   0 이면 실패시켰는데, 환생 뒤 관리자 탭 시작값(1,500)이 새던 버그가 그 잔액이었다.
+    //   ⭐ 대신 **값을 직접 심고 그 값이 바에 뜨는지** 본다 — 이게 원래 재려던 것이다
+    //     (캠프 세션이면 pcoin 이 아니라 캠프 지갑을 읽는가).
     { const eco = (typeof campEcoOn==='function' && campEcoOn() && typeof G!=='undefined' && G.tech);
-      const wantMin = eco ? Math.round(G.tech.credit||0) : 12345;
-      const wantGas = eco ? Math.round(G.tech.energy||0) : 67;
+      const cr0 = eco ? (G.tech.credit||0) : 0, en0 = eco ? (G.tech.energy||0) : 0;
+      if(eco){ G.tech.credit=4321; G.tech.energy=76; updateCurBar(); }
+      const wantMin = eco ? 4321 : 12345;
+      const wantGas = eco ? 76 : 67;
       const gotMin = +$('curMin').textContent.replace(/,/g,'').replace(/[KMB]$/,'');
-      assert(eco || String(gotMin)===String(wantMin),
-        '미네랄이 pcoin과 다름: '+$('curMin').textContent);
-      if(eco) assert($('curMin').textContent!=='0' && $('curMin').textContent!=='',
-        '캠프 세션인데 재화 바가 비었다: '+$('curMin').textContent);
+      assert(String(gotMin)===String(wantMin),
+        (eco?'캠프 지갑이 아니라 딴 데를 읽는다: ':'미네랄이 pcoin과 다름: ')+$('curMin').textContent);
+      if(eco){ assert($('curGas').textContent==='76','캠프 가스 표시 불일치: '+$('curGas').textContent);
+        G.tech.credit=cr0; G.tech.energy=en0; updateCurBar(); }
       assert($('curGem').textContent==='8','젬 표시 불일치: '+$('curGem').textContent);
       if(!eco) assert($('curGas').textContent==='67','가스 표시 불일치: '+$('curGas').textContent); }
     // 💠 **어느 화면으로 가도 같은 값**이어야 한다 — 캠프 세션이 살아 있으면 그 값이 이어진다
@@ -13416,12 +13423,18 @@ async function groupLobby(){
     skipIf(!S,'가이드 상태 없음');
     const on0=window.campIsOn, off0=TUTO_OFF, t0=S.t, base0=S.base, skip0=S.skip;
     try{
-      window.campIsOn=()=>true; TUTO_OFF=false; S.t=0; S.base=null; delete S.skip; S.trun=1;
+      window.campIsOn=()=>true; TUTO_OFF=false;
+      // ⚠ 챕터 카드(0번)가 아니라 **첫 지시 단계**에서 잰다 — 카드는 대상이 없다.
+      S.t=TUTO_STEPS.findIndex(s=>s.id==='mineOn'); S.base=null; delete S.skip; S.trun=1;
       var _cm0=ph.classList.contains('campMode'); ph.classList.add('campMode');
       tutoPaint();
       // 표 자체는 화면이 없어도 잰다 — 단계마다 **제 진행도**를 갖는 것이 이 설계의 핵심이다
-      assert(TUTO_STEPS[0].goal===1,'첫 단계가 1번이 아니다: '+TUTO_STEPS[0].goal);
-      assert(TUTO_STEPS[1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[1].goal);
+      // 📚 맨 앞은 **챕터 1 카드**다(읽고 넘긴다) — 시키는 일은 그다음 칸부터다.
+      //   ⚠ 이 검사는 「단계마다 제 진행도를 갖는다」를 재는 것이라, 카드를 건너뛰고 잰다.
+      const _i0=TUTO_STEPS.findIndex(s=>s.id==='mineOn'), _i1=TUTO_STEPS.findIndex(s=>s.id==='tap');
+      assert(TUTO_STEPS[0].ch===1,'맨 앞이 챕터 1 카드가 아니다: '+TUTO_STEPS[0].id);
+      assert(TUTO_STEPS[_i0].goal===1,'첫 단계가 1번이 아니다: '+TUTO_STEPS[_i0].goal);
+      assert(TUTO_STEPS[_i1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[_i1].goal);
       assert(TUTO_STEPS.length>=6,'단계표가 너무 짧다: '+TUTO_STEPS.length);
       const ov=$('tutoOv');
       // 대상(채굴 칸)이 화면에 있어야 스포트라이트가 뜬다 — 없으면 이 검사는 건너뛴다
@@ -13438,14 +13451,16 @@ async function groupLobby(){
       assert(out && out.closest && out.closest('.tutoOv'),'대상 밖이 안 막힌다 — 완전 강제가 깨졌다');
       assert(inn && inn.closest && inn.closest('[data-minemode]'),'대상이 안 눌린다 — 스포트라이트가 대상까지 덮었다');
       // ③ 두 진행도 — 왼쪽은 몇 단계째, 오른쪽은 이번 단계의 진행
-      assert(/^1 \/ \d+$/.test(ov.querySelector('.tuStep').textContent),'왼쪽이 단계 표시가 아니다: '+ov.querySelector('.tuStep').textContent);
+      { const _hd=ov.querySelector('.tuStep').textContent;
+        assert(_hd.indexOf('챕터 1 · 1 / ')===0,
+          '왼쪽이 「챕터 N · a / b」가 아니다: '+_hd); }
       assert(ov.querySelector('.tuN').textContent==='0 / 1','첫 단계 진행이 0 / 1 이 아니다: '+ov.querySelector('.tuN').textContent);
       // ④ 말풍선이 **대상 근처**에 있다(화면 끝에 두면 눈이 두 번 움직인다)
       { const tip=ov.querySelector('.tuTip').getBoundingClientRect();
         const d=Math.min(Math.abs(tip.top-Tg.bottom), Math.abs(Tg.top-tip.bottom));
         assert(d<=40,'말풍선이 대상에서 멀다: '+d.toFixed(0)+'px'); }
       // ⑤ 다음 단계는 goal 이 10 이다(광맥 두드리기) — 단계마다 제 진행도를 갖는다
-      assert(TUTO_STEPS[1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[1].goal);
+      assert(TUTO_STEPS[_i1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[_i1].goal);
       // ⑥ 🚪 **직접 켜 보는 자리**가 있다(2026-09-04 사용자 요청) — 가이드 시트 맨 위 줄.
       //   ⛔ 그만두기를 빼지 말 것: 튜토리얼은 화면을 덮으므로 켠 사람이 나올 길이 필요하다.
       assert(typeof tutoRestart==='function' && typeof tutoStop==='function','튜토리얼을 켜고 끄는 입구가 없다');
@@ -13541,21 +13556,138 @@ async function groupLobby(){
   // 🏗 건물 짓기 단계 — 「채굴 끄기 → 일꾼 지정 → 카드 → 배치」가 한 동작에 한 단계여야 한다.
   //   ⚠ 화면 없이 잰다(캠프 하단은 스모크에서 높이 0 이라 카드를 못 띄운다) — 대신 **표와 셀렉터**를
   //     실제 건설 카드 마크업(techBuildListModel)과 맞춰 본다. 실주행은 scripts/tuto-run.mjs 가 한다.
+  // 🔄 튜토리얼을 마치면 **연습판을 걷고 맨 처음부터** — 다만 **환생은 아니다**.
+  //   ⛔ 여기서 배수·포인트가 오르면 튜토리얼이 환생 최적 루틴이 된다(가이드에서 다시 켤 수 있다).
+  await step('튜토리얼 종료: 판을 되감되 환생 값은 안 준다', async()=>{
+    skipIf(typeof campTutoReset!=='function'||typeof campState!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태가 없다');
+    const before={ rebMul:C.rebMul||0, rbPts:C.rbPts||0, reb:C.reb|0, race:C.race,
+                   best:C.best, rune:C.rune?JSON.stringify(C.rune):null };
+    C.dg=3; C.cleared=7; C.earnTap=1234; C.upg={ tap:5 };
+    assert(campTutoReset(TUTO_RESET_MIN),'되감기가 실패했다');
+    const D=campState();
+    assert((D.dg|0)===0&&(D.cleared|0)===0,'던전·진행이 안 되감겼다: '+D.dg+'/'+D.cleared);
+    assert((D.earnTap|0)===0,'회차 지표가 남았다: '+D.earnTap);
+    assert(!D.upg||!Object.keys(D.upg).length,'회차 업그레이드가 남았다: '+JSON.stringify(D.upg));
+    // ⛔ 환생 값은 **그대로** — 튜토리얼로 벌 수 있으면 안 된다
+    assert((D.rebMul||0)===before.rebMul&&(D.rbPts||0)===before.rbPts&&(D.reb|0)===before.reb,
+      '튜토리얼이 환생 값을 줬다: '+(D.rebMul||0)+'/'+(D.rbPts||0)+'/'+(D.reb|0));
+    assert(D.race===before.race&&D.best===before.best,'남겨야 할 것이 지워졌다');
+    // 💠 룬은 젬으로 산 것이라 어떤 되감기에서도 안 지운다
+    assert((D.rune?JSON.stringify(D.rune):null)===before.rune,'룬이 지워졌다');
+    // 🎁 밑천 — 빈손으로 되돌리면 앞의 스무 단계가 헛수고로 보인다
+    //   ⚠ 캠프가 안 켜져 있으면 지갑이 아니라 **보류함(C.pend)** 으로 간다(campAddRes) — 둘 다 본다
+    //   ⛔ **딱 밑천만이다.** techUIInit 의 관리자 탭 시작값(미네랄 1,500 · 가스 1,000)이 따라오면
+    //     안 된다 — 2026-09-08 실측으로 그렇게 새고 있었다(되감고 나니 2,000 이었다).
+    assert(TUTO_RESET_MIN>0,'밑천이 0 이다');
+    const got=Math.max((D.credit|0)+((D.pend&&D.pend.m)|0),
+      (typeof G!=='undefined'&&G.tech)?(G.tech.credit|0):0);
+    assert(got>=TUTO_RESET_MIN,'밑천이 안 들어왔다: '+got+' < '+TUTO_RESET_MIN);
+    const root=(typeof campRtRootOn==='function'&&campRtRootOn()&&typeof CAMP_ROOT_MIN!=='undefined')
+      ? (CAMP_ROOT_MIN|0) : 0;                       // 🌟 환생 트리 root 는 정당한 몫이다
+    assert(got<=TUTO_RESET_MIN+root,
+      '관리자 탭 시작값이 따라왔다: 미네랄 '+got+' (밑천 '+TUTO_RESET_MIN+' + root '+root+')');
+    const gas=(typeof G!=='undefined'&&G.tech)?(G.tech.energy|0):(D.energy|0);
+    assert(gas===0,'되감았는데 가스가 있다 — 정제소를 지어야 나온다: '+gas);
+    const wk=(typeof G!=='undefined'&&G.tech)
+      ? (G.tech.ents||[]).filter(e=>e&&e.type==='worker').length : 0;
+    const rootWk=(typeof campRtRootOn==='function'&&campRtRootOn()&&typeof CAMP_ROOT_WK!=='undefined')
+      ? (CAMP_ROOT_WK|0) : 0;
+    assert(wk<=rootWk,'되감았는데 일꾼이 서 있다 — 첫 일꾼은 탭으로 번 돈으로 산다: '+wk);
+    return '되감음 · 환생 값 유지 · 밑천 '+got.toLocaleString()+' · 가스 0 · 일꾼 '+wk;
+  });
+
+  // 📚 튜토리얼은 **셋으로 나뉜다**(2026-09-08 사용자 확정) — 자원 · 기지와 부대 · 출격.
+  //   경계는 표가 아니라 **챕터 카드 단계**이고, 번호도 그 사이에서 센다.
+  await step('튜토리얼: 챕터 셋으로 갈린다 · 카드는 읽고 넘긴다', async()=>{
+    skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_CH==='undefined','튜토리얼 없음');
+    const ids=TUTO_STEPS.map(s=>s.id), at=(k)=>ids.indexOf(k);
+    assert(TUTO_CH.length===3,'챕터가 셋이 아니다: '+TUTO_CH.length);
+    for(const c of TUTO_CH) assert(c.title && c.sub,'챕터에 제목·부제가 없다: '+JSON.stringify(c));
+    // 🗂 경계 — 자원은 채굴부터, 기지는 채굴 해제부터, 출격은 던전 목록부터
+    assert(at('ch1')+1===at('mineOn'),'챕터 1 이 채굴 앞에서 안 열린다: '+ids.slice(0,3).join(' → '));
+    assert(at('ch2')+1===at('mineOff'),'챕터 2 가 「채굴 해제」 앞이 아니다');
+    assert(at('ch3')+1===at('dgOpen'),'챕터 3 이 「던전 목록」 앞이 아니다');
+    // 🔢 카드는 **번호에서 빠진다** — 세면 「1/13」이 카드에서 시작해 셈이 거짓말이 된다
+    { const S=guideState(); skipIf(!S,'상태 없음'); const t0=S.t;
+      try{ S.t=at('ch2'); const sp=_tutoChSpan();
+        assert(sp[0]===at('mineOff'),'챕터 범위가 카드부터 시작한다: '+sp[0]+' vs '+at('mineOff'));
+        assert(sp[1]===at('ch3'),'챕터 범위가 다음 카드에서 안 끝난다: '+sp[1]);
+        const tot=_tutoTotal(sp[0],sp[1]);
+        assert(tot>0 && tot<TUTO_STEPS.length,'챕터 안 총수가 이상하다: '+tot);
+        S.t=at('mineOff');
+        assert(_tutoNo(sp[0])===1,'챕터 첫 단계가 1 이 아니다: '+_tutoNo(sp[0]));
+        assert(_tutoChNow()===2,'챕터 번호가 틀렸다: '+_tutoChNow());
+      } finally { S.t=t0; } }
+    // 🃏 카드의 모습 — 링·꼬리·진행 숫자가 없고, 버튼은 「계속」(보상은 끝에 한 번뿐이다)
+    { const S=guideState(), on0=window.campIsOn, off0=TUTO_OFF;
+      const t0=S?S.t:0, run0=S?S.trun:null, skip0=S?S.skip:null, ack0=S?S.tack:null;
+      try{ window.campIsOn=()=>true; TUTO_OFF=false;
+        if(S){ S.t=at('ch2'); S.trun=1; delete S.skip; delete S.tack; }
+        tutoPaint();
+        const ov=$('tutoOv'); assert(ov,'챕터 카드가 안 뜬다');
+        const tip=ov.querySelector('.tuTip'), go=ov.querySelector('.tuGo');
+        assert(tip.classList.contains('ch'),'챕터 카드가 지시 카드와 같은 얼굴이다');
+        assert(ov.querySelector('.tuStep').textContent==='챕터 2',
+          '카드 머리줄이 챕터를 안 말한다: '+ov.querySelector('.tuStep').textContent);
+        assert(ov.querySelector('.tuTx').textContent===TUTO_CH[1].title,'카드 제목이 다르다');
+        const sb=ov.querySelector('.tuSub');
+        assert(sb && !sb.hidden && sb.textContent===TUTO_CH[1].sub,'카드 부제가 없다');
+        assert(ov.querySelector('.tuN').hidden,'카드에 진행 숫자가 뜬다 — 시킬 일이 없는 칸이다');
+        assert(getComputedStyle(tip,'::after').display==='none','카드에 꼬리가 남았다 — 가리킬 곳이 없다');
+        const rgc=getComputedStyle(ov.querySelector('.tuRing')).borderTopColor;
+        assert(rgc.indexOf('0)')>0||rgc==='transparent','카드에 스포트라이트 링이 남았다: '+rgc);
+        assert(go && !go.hidden && getComputedStyle(go).display!=='none','카드에 「계속」 버튼이 없다');
+        assert(go.textContent.trim()==='계속','카드 버튼 글자가 다르다: '+go.textContent);
+        assert(!go.querySelector('img,svg'),'카드 버튼에 보상이 붙었다 — 보상은 끝에 한 번이다');
+        // 📖 「읽었다」는 **한 칸짜리** — 안 지우면 다음 카드가 뜨자마자 통과한다
+        go.click();
+        assert(S.tack===1,'카드를 눌러도 읽었다는 표시가 안 남는다');
+        S.t=at('ch3'); S.base=null; delete S.tack;      // tutoAdvance 가 하는 것과 같다
+        tutoPaint();
+        assert((TUTO_STEPS[at('ch3')].n()|0)===0,
+          '다음 카드가 뜨자마자 통과한다 — 「읽었다」를 안 지웠다');
+      } finally { window.campIsOn=on0; TUTO_OFF=off0;
+        if(S){ S.t=t0;
+          if(run0!=null) S.trun=run0; else delete S.trun;
+          if(skip0!=null) S.skip=skip0; else delete S.skip;
+          if(ack0!=null) S.tack=ack0; else delete S.tack; }
+        tutoPaint(); } }
+    return '챕터 '+TUTO_CH.map(c=>c.title).join(' · ');
+  });
+
   await step('튜토리얼: 건물 짓기가 손동작 단위로 갈라져 있다', async()=>{
     skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_BLD==='undefined','튜토리얼 없음');
     const ids=TUTO_STEPS.map(s=>s.id);
     for(const need of ['coinB','mineOff','pickWk','armB1','placeB1','deselWk','selB1','unit',
+                       'pickU','moveU','deselU','zoomPan','panMode','panDrag',
                        'dgOpen','dgPick','dgGo','outro'])
       assert(ids.indexOf(need)>=0,'단계가 없다: '+need);
+    // 🔍 화면 조작 판정 — **단계마다 기준을 새로 잡는다**(확대하면 시점도 함께 움직인다)
+    { const S=guideState(), v0=(typeof techView==='function')?techView():null;
+      skipIf(!S||!v0,'시점이 없다');
+      const keep={ vw0:S.vw0, zoom:v0.zoom, x:v0.x };
+      try{ delete S.vw0;
+        assert(_tutoView('zoom')===0,'기준을 잡기도 전에 확대했다고 한다');
+        v0.zoom=(v0.zoom||1)*1.3;
+        assert(_tutoView('zoom')===1,'확대했는데 못 알아본다');
+        delete S.vw0;
+        assert(_tutoView('pan')===0,'이동도 기준부터 잡아야 한다');
+        v0.x=(v0.x||0.5)+0.05;
+        assert(_tutoView('pan')===1,'움직였는데 못 알아본다');
+      } finally { v0.zoom=keep.zoom; v0.x=keep.x;
+        if(keep.vw0!=null) S.vw0=keep.vw0; else delete S.vw0; } }
     // 🔢 **번호가 중간에 안 뛴다**(2026-09-04 사용자 지적) — 종족에 없는 단계는 세지 않는다.
     //   유니온은 둘째 건물이 없어(TUTO_BLD.union.b[1]=null) armB2·placeB2 가 화면에 안 나타난다.
     { const r0=G.tech.race; try{ G.tech.race='union';
         assert(_tutoLive({id:'armB2'})===false && _tutoLive({id:'placeB2'})===false,
           '유니온인데 둘째 건물 단계를 센다 — 번호가 뛴다');
-        assert(_tutoTotal()===ids.length-2,'보이는 단계 수가 안 맞는다: '+_tutoTotal()+' (전체 '+ids.length+')');
+        // ⚠ 챕터 카드 셋도 세지 않는다(시키는 일이 아니라 표지다)
+        assert(_tutoTotal()===ids.length-2-TUTO_CH.length,
+          '보이는 단계 수가 안 맞는다: '+_tutoTotal()+' (전체 '+ids.length+' · 카드 '+TUTO_CH.length+')');
         G.tech.race='aetherial';
         assert(_tutoLive({id:'armB2'})===true,'에테리얼은 둘째 건물(동력탑→차원문)을 쓴다');
-        assert(_tutoTotal()===ids.length,'에테리얼인데 단계가 빠진다: '+_tutoTotal());
+        assert(_tutoTotal()===ids.length-TUTO_CH.length,'에테리얼인데 단계가 빠진다: '+_tutoTotal());
       } finally { G.tech.race=r0; } }
     // 📖 **마지막은 읽고 넘긴다** — 좌상단 **배수 칸**(#curMul)을 감싼다(2026-09-04 사용자 확정).
     //   ⚠ 그 칸이 없거나 안 보이면 화면 전체('all')로 물러난다 — 그래도 아무 데나 터치하면 넘어간다.
@@ -13578,8 +13710,23 @@ async function groupLobby(){
         assert(go.classList.contains('actBtn') && go.classList.contains('pri'),
           '확인 버튼이 공용 .actBtn.pri 가 아니다: '+go.className);
         assert(go.querySelector('img,svg'),'버튼에 보상 아이콘이 없다 — 재화 아이콘은 resIco 하나뿐이다');
+        // 🎁 **받는 것을 다 적는다** — 젬(보상) + 밑천 미네랄(새 출발). 둘 다 실제로 들어가므로
+        //   하나만 적으면 나머지가 없는 것처럼 보인다(2026-09-08 사용자 요청).
         assert(go.textContent.indexOf('×'+(TUTO_REWARD.gem|0))>=0,
-          '버튼에 보상 수가 없다: '+go.textContent);
+          '버튼에 젬 보상이 없다: '+go.textContent);
+        assert(go.textContent.indexOf('×'+TUTO_RESET_MIN.toLocaleString())>=0,
+          '버튼에 밑천 미네랄이 없다: '+go.textContent);
+        assert(go.querySelectorAll('img,svg').length>=2,
+          '보상이 둘인데 그림이 하나다 — 젬·미네랄 각각 resIco: '+go.innerHTML.slice(0,120));
+        // 🏁 왼쪽 위는 **번호가 아니라 「튜토리얼 종료」** · 그 아래에 초기화 예고
+        { const sp=ov.querySelector('.tuStep'), sb=ov.querySelector('.tuSub');
+          assert(sp && sp.textContent===TUTO_END_TITLE,
+            '마지막 칸의 왼쪽 위가 끝을 말하지 않는다: '+(sp?sp.textContent:'없음'));
+          assert(sp.classList.contains('end') && !/Rajdhani/.test(getComputedStyle(sp).fontFamily),
+            '한글을 숫자 서체에 맡겼다: '+getComputedStyle(sp).fontFamily);
+          assert(sb && !sb.hidden && sb.textContent===TUTO_END_SUB,
+            '초기화 예고가 없다 — 지어 둔 것이 사라지는데 말없이 하면 안 된다: '+(sb?sb.textContent:'없음'));
+          assert(getComputedStyle(sb).display!=='none','초기화 예고가 안 보인다'); }
         assert(getComputedStyle(go).pointerEvents!=='none',
           '확인 버튼이 안 눌린다 — 말풍선이 pointer-events:none 이라 버튼만 되살려야 한다');
         // 🟢 보상 버튼은 **초록**(--ok · 2026-09-04 사용자 확정 · 목업 camp-tuto-btn-6 ④안).
@@ -13597,6 +13744,13 @@ async function groupLobby(){
         const go2=$('tutoOv') ? $('tutoOv').querySelector('.tuGo') : null;
         assert(!go2 || getComputedStyle(go2).display==='none',
           '마지막이 아닌 단계에도 확인 버튼이 보인다 — hidden 이 display 에 덮였다');
+        // 🏁 끝 문구·예고도 마지막 칸에만 — 그 앞 칸은 번호로 돌아온다
+        { const sp2=$('tutoOv')?$('tutoOv').querySelector('.tuStep'):null;
+          const sb2=$('tutoOv')?$('tutoOv').querySelector('.tuSub'):null;
+          assert(!sp2 || sp2.textContent.indexOf('/')>0,
+            '마지막이 아닌데 왼쪽 위가 끝을 말한다: '+(sp2?sp2.textContent:''));
+          assert(!sb2 || sb2.hidden || getComputedStyle(sb2).display==='none',
+            '마지막이 아닌 단계에도 초기화 예고가 뜬다'); }
       } finally { window.campIsOn=on0; TUTO_OFF=off0;
         if(S){ S.t=t0;
           if(run0!=null) S.trun=run0; else delete S.trun;
@@ -13692,6 +13846,66 @@ async function groupLobby(){
     assert(at('coinB')<at('mineOff'),'채굴을 끄고 나서 돈을 모으라고 한다 — 두드릴 수가 없다');
     assert(at('mineOff')<at('pickWk') && at('pickWk')<at('armB1') && at('armB1')<at('placeB1'),
       '건물 단계 순서가 어긋났다: '+ids.join(' → '));
+    // 🚶🔍 유닛을 뽑은 **뒤에** 옮기고 · 지정을 풀고 · 화면 조작을 익히고 · 던전으로 간다(2026-09-08 사용자 확정)
+    assert(at('unit')<at('pickU') && at('pickU')<at('moveU')
+           && at('moveU')<at('deselU') && at('deselU')<at('zoomPan')
+           && at('zoomPan')<at('panMode') && at('panMode')<at('panDrag')
+           && at('panDrag')<at('dgOpen'),
+      '유닛·화면 조작 단계 순서가 어긋났다: '+ids.join(' → '));
+    // 🔍 확대와 이동은 **둘 다** 해야 넘어간다(0/2) — 한 단계로 묶되 하나만 해서는 안 된다
+    assert(_tutoGoal(TUTO_STEPS[at('zoomPan')])===2,
+      '화면 조작이 하나만 해도 넘어간다: '+_tutoGoal(TUTO_STEPS[at('zoomPan')]));
+    // 🖐 모드를 켠 다음 **실제로 민다** — 모드만 켜고 끝내면 무엇이 달라졌는지 모른다.
+    //   ⚠ 모드가 꺼져 있으면 밀어도 0 이어야 한다(밀리지도 않는데 통과시키면 안 넘어간 채로 남는다).
+    { const S=guideState(), m=$('cstMain');
+      if(S && m){ const was=m.classList.contains('campPan'), keep=S.vp0;
+        try{ m.classList.remove('campPan'); delete S.vp0;
+          const d=TUTO_STEPS[at('panDrag')];
+          const tp=(typeof d.tip==='function')?d.tip():d.tip;
+          assert((d.n()|0)===0,'이동 모드가 꺼졌는데 민 것으로 친다');
+          assert(String(tp).indexOf('다시')>=0,
+            '이동 모드가 풀렸는데 다시 켜라고 말하지 않는다: '+tp);
+        } finally { if(was) m.classList.add('campPan'); if(keep!=null) S.vp0=keep; else delete S.vp0; } } }
+    // 🚪 데려갈 자리는 **맵 위쪽**이다(본부 0.59 · 광맥 0.66 보다 위) — 화면을 보고 맞춘 값이라 범위만 지킨다
+    assert(TUTO_MOVE_GY < CAMP_ROW_BASE - 0.1,
+      '데려갈 자리가 본부에 너무 가깝다: '+TUTO_MOVE_GY+' (본부 '+CAMP_ROW_BASE+')');
+    assert(TUTO_MOVE_GY > 0.15,'데려갈 자리가 맵 꼭대기로 붙었다: '+TUTO_MOVE_GY);
+    // 👆 유닛을 잡는 단계의 대상은 **전장 전체**다 — 유닛이 어디 서 있든 손이 닿아야 하므로
+    //   한 자리를 가리킬 수 없다(2026-09-08 사용자 확정 · 그 전에는 'free' 라 틀이 아예 없었다).
+    assert(TUTO_STEPS[at('pickU')].at()==='map','유닛 지정 단계가 전장 틀을 안 쓴다');
+    // 🗺 **전장 틀의 아랫변은 시트를 직접 재서** 잡는다 — 상수로 두면 병영을 고른 화면처럼
+    //   시트가 커졌을 때 틀 아랫변이 시트 뒤로 숨어 「어디까지가 전장인지」가 안 보인다.
+    { const S=guideState(), on0=window.campIsOn, off0=TUTO_OFF, sh=$('btSheet');
+      const t0=S?S.t:0, run0=S?S.trun:null, skip0=S?S.skip:null;
+      const st0=sh?sh.style.cssText:null;
+      // ⚠ 시트를 **#phone 안으로 옮겨 놓고** 잰다 — 캠프 화면이 아닐 때 #btSheet 은 인게임 층에
+      //   있어 화면(폰) 밖에 앉는다. 그러면 무엇을 해도 틀이 안 변해 계약이 헛돈다.
+      const par0=sh?sh.parentNode:null, nx0=sh?sh.nextSibling:null;
+      try{ if(S && sh){ window.campIsOn=()=>true; TUTO_OFF=false;
+          $('phone').appendChild(sh);
+          S.t=ids.indexOf('pickU'); S.trun=1; delete S.skip;
+          const read=()=>{ tutoPaint(); const ov=$('tutoOv');
+            const rg=ov?ov.querySelector('.tuRing'):null;
+            return rg?rg.getBoundingClientRect():null; };
+          // 시트를 크게 → 틀이 그만큼 짧아져야 한다(상수였다면 안 변한다)
+          // ⚠ fixed 로 못 박는다 — 캠프 화면이 아닐 때 #btSheet 은 인게임 층에 있어
+          //   화면 밖에 있을 수 있고, 그러면 아무것도 재지 못한다.
+          const put=(h)=>{ sh.style.cssText='position:absolute;left:0;right:0;bottom:0;height:'
+            +h+'px;display:block;visibility:visible;transform:none;z-index:1'; return read(); };
+          const big=put(300), small=put(120);
+          assert(big && small,'전장 틀을 못 쟀다');
+          assert(small.bottom - big.bottom > 100,
+            '시트가 커져도 틀이 그대로다 — 아랫변이 상수로 박혔나: '
+            +Math.round(big.bottom)+' vs '+Math.round(small.bottom));
+          const sr=sh.getBoundingClientRect();
+          assert(small.bottom <= sr.top + 8,
+            '틀 아랫변이 시트를 밟는다: '+Math.round(small.bottom)+' > '+Math.round(sr.top));
+        } } finally { window.campIsOn=on0; TUTO_OFF=off0;
+        if(sh){ sh.style.cssText=st0||'';
+          if(par0){ if(nx0) par0.insertBefore(sh, nx0); else par0.appendChild(sh); } }
+        if(S){ S.t=t0; if(run0!=null) S.trun=run0; else delete S.trun;
+          if(skip0!=null) S.skip=skip0; else delete S.skip; }
+        tutoPaint(); } }
     // 🧹 짓고 → 지정 풀고 → 건물 지정하고 → 뽑는다. 한 단계에 두 동작을 넣으면 거기서 멈춘다.
     assert(at('placeB1')<at('deselWk') && at('deselWk')<at('selB1') && at('selB1')<at('unit'),
       '유닛 단계 순서가 어긋났다: '+ids.join(' → '));

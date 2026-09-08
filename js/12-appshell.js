@@ -173,12 +173,18 @@ function curPaintMul(){ const e=document.getElementById('curMul'); if(!e) return
   const tx = '획득 ×' + ((v>=100 && typeof fmtCur==='function') ? fmtCur(v)
                         : (Math.round(v*10)/10).toFixed(1));
   if(e.textContent!==tx) e.textContent=tx;
-  e.classList.add('on');
   // 자리 — 칩 **바로 오른쪽**(같은 줄). 칩 폭은 던전 이름 길이에 따라 변하므로 그때그때 잰다.
-  { const ch=document.getElementById('curTitle');
+  //   ⚠ **자리를 잡고 나서 보여 준다**(2026-09-08). 던전을 옮기면 칩이 잠깐 비는데, 먼저 보이게 하면
+  //     left 가 아직 없어 **화면 왼쪽 끝에 나타났다가** 제자리로 미끄러진다 — 튜토리얼 링이 그걸
+  //     따라가 「왼쪽에 갔다가 온다」로 보였다(실측 궤적 x 2 → 110).
+  //   ⛔ 순서를 되돌리지 말 것(보이기 → 자리).
+  { let put=false;
+    const ch=document.getElementById('curTitle');
     if(ch && ch.classList.contains('asChip') && e.parentElement){
       const cr=ch.getBoundingClientRect(), br=e.parentElement.getBoundingClientRect();
-      if(cr.width>0) e.style.left=Math.round(cr.right-br.left+8)+'px'; } } }
+      if(cr.width>20){ e.style.left=Math.round(cr.right-br.left+8)+'px'; put=true; } }
+    if(!put && e.style.left) put=true;                 // 전에 잡아 둔 자리가 있으면 그대로 쓴다
+    e.classList.toggle('on', put); } }
 // 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
   // 🏕 캠프 **구역**(환생·업그레이드·룬)이 열려 있으면 던전 칩 대신 그 이름을 쓴다(2026-09-03).
