@@ -3615,6 +3615,27 @@ async function groupLobby(){
       C.best=keepB; C.rune=keepR; if(P) P.gem=keepG; }
   });
 
+  // ══ 🖼 룬 그림 — **룬마다 등급마다 한 장씩 있다** (2026-09-08) ═════════
+  //   ⭐ 이 검사가 없어서 스무 종 중 열아홉이 그림 없이 남아 있었다 — 상점을 열면
+  //     이미지 13장 중 7장이 빈 네모였다(실측). 유니크가 「종류」에서 「등급」으로 바뀐 뒤
+  //     rune-compose 의 손으로 적은 목록이 안 따라온 것이 원인이다.
+  //   ⛔ 「파일이 있나」로 재지 말 것 — 브라우저가 실제로 **받을 수 있나**를 잰다.
+  await step('룬 그림: 룬마다 등급 넷 + 성좌 문양이 다 뜬다', async()=>{
+    skipIf(typeof RUNE_LIST==='undefined'||typeof runeIcoSrc!=='function','룬 시스템 없음');
+    const gds=RUNE_GRADES;                   // ⚠ 유니크는 **이미 등급표 안에 있다**(넷)
+    const want=[], bad=[];
+    for(const d of RUNE_LIST) for(const gd of gds) want.push(runeIcoSrc(runeKey(d.id, gd)));
+    // 🌌 성좌 판은 **문양만** 쓴다 — 그것도 함께 잰다(칸이 빈 채로 보이던 길이 여기다)
+    for(const d of RUNE_LIST) want.push(runeGlyphSrc(runeKey(d.id, 'mid')));
+    for(const src of want){
+      if(!src){ bad.push('(빈 경로)'); continue; }
+      try{ const r=await fetch(src, { cache:'no-store' }); if(!r.ok) bad.push(src); }
+      catch(e){ bad.push(src+' ('+e.message+')'); } }
+    assert(!bad.length, bad.length+'장이 없다 — node scripts/rune-compose.mjs 를 돌릴 것: '
+      +bad.slice(0,6).join(' ／ '));
+    return '타일 '+(RUNE_LIST.length*gds.length)+'장 · 문양 '+RUNE_LIST.length+'장 · 빠진 것 0';
+  });
+
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
   //   여기서 잠그는 것은 생김새가 아니라 **구조 셋**이다:
   //     ① 둘이 같은 애니를 쓴다(따로 만들면 반드시 어긋난다 — UI 단일 소스)

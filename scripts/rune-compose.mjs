@@ -54,17 +54,25 @@ const TWEAK = {
   fever: { dy: +0.014 },   // Y 자도 같은 이유
   speed: { scale: 0.55 }   // 모래시계는 꽉 찬 사각이라 같은 값에서도 커 보인다(기본의 0.86 배)
 };
-// ⚠ 갈래 순서 = RUNE_GRPS(경제·전투·성장). 표는 js/22-camp-rune.js 가 단일 소스다.
-const NORM = ['tap', 'gas', 'mine', 'reb',      // 💠 경제
-              'atk', 'aspd', 'hp', 'heal',      // ⚔ 전투
-              'exp', 'kill', 'mapg', 'fevg'];   // 🌱 성장
-const UNIQ = ['speed', 'wspd', 'fever', 'cost'];
+// ⚠ **룬 목록을 여기 적지 않는다** — js/22-camp-rune.js 의 RUNE_LIST 를 읽는다(2026-09-08).
+//   손으로 적어 둔 옛 목록(NORM 12 · UNIQ 4)은 **유니크가 「종류」이던 시절**의 것이라,
+//   등급으로 바뀐 뒤로 새 룬이 늘 때마다 조용히 빠졌다 — 그래서 스무 종 중 열아홉이
+//   그림 없이 남아 있었다(실측: 상점 이미지 13장 중 7장이 안 떴다).
+const RUNE_SRC = fs.readFileSync(path.join(ROOT, 'js/22-camp-rune.js'), 'utf8');
+const RUNE_BODY = RUNE_SRC.slice(RUNE_SRC.indexOf('const RUNE_LIST'), RUNE_SRC.indexOf('const RUNE_CUT_CAP'));
+const RUNES = [...RUNE_BODY.matchAll(/\{\s*id:'([a-z]+)',\s*nm:'([^']+)',\s*grp:'([a-z]+)'/g)]
+  .map(m => ({ id: m[1], nm: m[2], grp: m[3] }));
+if(RUNES.length < 10) throw new Error('RUNE_LIST 를 못 읽었다 — 목록 모양이 바뀌었나?');
+const NORM = RUNES.map(r => r.id);
+const UNIQ = NORM;                    // 🎚 유니크는 **등급**이라 모든 룬이 한 벌씩 갖는다
 // 🎨 **유니크는 성좌 색을 따라간다**(2026-09-04 사용자 확정).
 //   ⚠ 유니크 칸은 성좌 **한가운데**라, 문양이 금색 하나면 그 칸만 색이 튄다.
 //   ⭐ 그래서 같은 문양을 갈래 색으로 물들여 3벌 더 만든다 — 다시 뽑지 않는다.
 //     `<id>_uniq.webp`(기본 금 · 가방·상점용) + `<id>_uniq_<갈래>.webp`(성좌용)
 //   ⛔ 색을 코드에서 CSS 필터로 입히지 말 것 — 발광 코어까지 물들어 탁해진다.
-const GRP_COL = { eco:[0x7e,0xff,0xc9], war:[0xff,0xa3,0xb8], grow:[0xe6,0xee,0xf8] };
+// ⚠ 값은 **있는 문양의 획을 재서** 얻은 것이다(2026-09-08 · ART.md §16-6).
+//   ⛔ ART.md §16-3 의 옛 표(#7effc9/#ffa3b8/#e6eef8)로 되돌리지 말 것 — 그림과 달랐다.
+const GRP_COL = { eco:[0x13,0xf4,0x87], war:[0xd6,0x49,0x6e], grow:[0x4b,0x84,0xd8] };
 const GRADES = ['low', 'mid', 'high'];
 
 const tilePath = g => path.join(SRC, 'tile_' + g + '.png');

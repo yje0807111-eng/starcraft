@@ -1914,14 +1914,19 @@ grain, bokeh, wide bloom, low contrast
 {SYMBOL}. Colour {COLOUR}.
 ```
 
-**{COLOUR} — 갈래가 정한다**(§16-3 의 「색은 세 군뿐」을 실제 16장에 맞춰 적은 것):
+**색 — 갈래가 정한다.** ⚠ 아래 값은 문서에서 옮긴 것이 아니라 **있는 문양 16장의 획을
+직접 재서** 얻은 것이다(2026-09-08). §16-3 의 표(`#7effc9`/`#ffa3b8`/`#e6eef8`)와 실제
+그림이 서로 달랐고, **파일이 맞다** — 새로 뽑는 것은 이 값에 맞춘다.
 
-| 갈래 | 색 | 지금 쓰는 문양 |
+| 갈래 | 색 | 잰 룬 |
 |---|---|---|
-| 경제(버는 것) | `#7effc9` 민트 | 손끝 · 채굴 · 정제 |
-| 전투 | `#ffa3b8` 분홍 | 힘 · 연타 · 수호 · 치유 |
-| 성장(캠프 밖) | `#8ab6ff` 하늘 | 전과 · 전리품 |
-| 속도·비용·피버 | `#ffd24a` 금 | 가속 · 신속 · 열기 · 비용 |
+| 경제(버는 것) | `#13f487` 초록 | 손끝 `#13f487` · 채굴 · 정제 |
+| 전투 | `#d6496e` 장미 | 힘 `#d6496e` · 치유 `#e5497a` · 연타 · 수호 |
+| 성장(캠프 밖) | `#4b84d8` 파랑 | 전과 `#4b84d8` · 전리품 `#5084c8` · 열정 `#1f7bcc` |
+| ~~속도·비용·피버~~ | ~~`#fbc304` 금~~ | ⛔ **없어진 무리다** — §16-8 참고 |
+
+⚠ 재는 법: 밝고(>150) 채도 있는 픽셀 중 **채도 상위 5%** 의 평균이다. 그냥 평균을 내면
+바깥 번짐이 섞여 어둡게 나온다(첫 측정에서 `#26945f` 가 나왔다 — 같은 초록의 흐린 판이다).
 
 ### 16-7. 🆕 아직 안 뽑은 문양 8종 (2026-09-08)
 
@@ -1934,16 +1939,174 @@ Y 갈래(열기) · 마름모+선(열정) · 두 기둥(정제) · 십자(치유
 X(전과) · 모래알(전리품) · 가로선+세로획(채굴) · 사각 나선(환생·미사용) · 모래시계(가속) ·
 아래 화살(손끝) · ≡→(신속)이다.
 
-| 파일 | 룬 | {SYMBOL} | {COLOUR} |
+⚠ **SUBJECT 는 「무엇처럼 생겼나」가 아니라 「어떻게 그리나」로 적는다**(2026-09-08 사용자 지적).
+한 줄짜리 명사구는 모델이 제 마음대로 살을 붙인다 — **획 몇 개인지 · 어디서 만나고 어디서
+안 닿는지 · 무엇이 비어 있는지**까지 적어야 같은 그림이 다시 나온다. 색도 그 안에 적는다
+(`{COLOUR}` 자리를 따로 두지 않는다 — 「가운데가 거의 흰 획」이 이 계열의 광택이다).
+
+---
+
+**① 예리의 룬** (치명 터치 확률) — `sym_crit.png`
+
+```
+A single crescent arc drawn as one clean curved stroke that opens toward the lower
+left, the same width along its whole length with no taper at either tip. Outside the
+arc's upper-right flank, two short straight ticks sit parallel to each other and
+angled to follow the curve, both floating clear of the arc and not touching it; the
+tick nearer the arc is slightly longer than the far one. Nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `sword, blade with handle, hilt, crescent moon with a face, star,
+spiral, filled solid shape, three or more ticks, ticks touching the arc`
+
+**② 일격의 룬** (치명 배수) — `sym_critm.png`
+
+```
+A small hollow circle sits at the exact centre. Six short straight rays radiate
+outward from it in even sixty-degree steps, every ray floating clear of the circle
+and not touching it. Three alternating rays are long; the three between them are half
+that length. All strokes are one equal width and the circle stays empty inside.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `snowflake, asterisk glyph, sun with a face, wheel, gear, spokes
+touching the circle, filled centre dot, four rays, eight rays`
+
+**③ 노다지의 룬** (일꾼 채굴 치명 확률) — `sym_gcrit.png`
+
+```
+Three upright angular crystals stand side by side on one shared straight baseline: a
+tall one in the centre and a shorter one on each side. Each is an open outline with
+straight facet edges and a pointed top, hollow inside. One short straight spark
+stroke floats just above the centre crystal's tip, angled away from it and not
+touching. Equal stroke thickness throughout.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `diamond gemstone, ring, jewel sparkle, pickaxe, rock pile, cave,
+filled solid shape, more than three crystals, crystals of equal height`
+
+**④ 조준의 룬** (유닛 사거리) — `sym_rng.png`
+
+```
+Four L-shaped corner brackets sit at the corners of an imaginary square, each opening
+inward toward the centre. The two arms of every bracket are equal in length and meet
+at a hard right angle. The brackets never touch one another — a wide gap runs along
+the middle of each side of the square. A single small dot sits alone at the exact
+centre, clear of all four brackets.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `circle scope, crosshair lines running through the centre, closed
+square, complete frame, target rings, telescope, arrow, filled solid shape`
+
+**⑤ 각성의 룬** (스킬 쿨타임 감소) — `sym_skcd.png`
+
+```
+A ring drawn as an open outline with a wedge-shaped notch cut out of its top, so the
+circle stops cleanly on both sides of the gap and the two cut ends face each other.
+Inside the ring, floating clear of it and not touching, one short downward chevron
+sits centred — two straight strokes meeting at a point below. Equal stroke thickness
+throughout, nothing filled.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `clock hands, numerals, tick marks around the ring, hourglass, arrow,
+spiral, letter C, two rings, filled solid shape`
+
+**⑥ 방벽의 룬** (유닛 방어막) — `sym_shld.png`
+
+```
+Two arcs and one straight bar. A wide shallow dome arc spans the top. Directly under
+it a shorter arc of the same curvature sits nested inside, floating clear and not
+touching. Beneath both, one straight horizontal bar runs across, its ends stopping
+just short of where the outer dome lands so the bar connects to neither arc.
+Everything is hollow and drawn at one stroke width.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `heraldic shield, triangle, hexagon, honeycomb, umbrella, rainbow,
+bridge, three arcs, closed dome touching the base, filled solid shape`
+
+**⑦ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
+
+```
+An upright angular crystal occupies the upper half: a pointed top, two straight sides
+flaring outward, a flat base, hollow inside, with one straight facet line running
+down its middle. Below it, floating clear and not touching, a single downward chevron
+of the same stroke width sits centred — two straight strokes meeting at a point
+below. Nothing is filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `coin, currency symbol, percent sign, arrowhead with a shaft, two
+chevrons, diamond suit, filled solid shape, chevron touching the crystal`
+
+**⑧ 검약의 룬** (가스 구매 비용 감소) — `sym_costg.png`
+
+```
+Two short straight vertical bars of equal length and equal width stand side by side
+in the upper half, separated by a gap about as wide as one bar. Below them, floating
+clear and touching neither, one downward chevron sits centred and spans both — two
+straight strokes meeting at a point below. Nothing is filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `bottle, flask, gas cloud, smoke, three bars, arrowhead with a shaft,
+two chevrons, equals sign, letter U, filled solid shape`
+
+---
+
+### 16-8. 🔁 갈래가 바뀌어 **색만** 다시 뽑는 문양 3종 (2026-09-08)
+
+옛 문양은 갈래가 셋이 아니라 **넷**이었다 — 경제·전투·성장 + 「속도·비용·피버」 금색 무리.
+그 무리가 없어지면서 셋이 다른 갈래로 옮겨 갔는데 **그림은 금색인 채 남았다**. 성좌 판에서
+같은 무리 안에 색이 혼자 다른 칸이 생긴다.
+
+⭐ **모양은 그대로 두고 색만 바꾼다.** 아래 SUBJECT 는 지금 파일을 보고 그대로 받아 적은 것이다
+(2026-09-08 · 300px 로 확대해 확인). ⛔ 이 참에 모양을 「더 낫게」 고치지 말 것 —
+쓰던 그림이 바뀌면 사용자는 새 룬이 생긴 줄 안다.
+
+| 룬 | 지금 색 | 갈래 | 바꿀 색 |
 |---|---|---|---|
-| `sym_crit.png` | 예리(치명 터치 확률) | `A keen crescent slash arc with two short parallel ticks trailing its outer edge` | `#7effc9` |
-| `sym_critm.png` | 일격(치명 배수) | `A starburst of six short straight rays radiating from one small open centre point, rays of two alternating lengths` | `#7effc9` |
-| `sym_gcrit.png` | 노다지(채굴 치명 확률) | `A three-peaked angular crystal cluster outline with one short spark stroke off its tallest peak` | `#7effc9` |
-| `sym_rng.png` | 조준(사거리) | `Four L-shaped corner brackets arranged as a square reticle around a single small dot at the centre, corners not touching` | `#ffa3b8` |
-| `sym_skcd.png` | 각성(스킬 쿨 −) | `An open ring with a wedge-shaped gap at its top, and one short downward chevron inside the ring` | `#ffa3b8` |
-| `sym_shld.png` | 방벽(방어막) | `A wide shallow dome arc standing on a short straight base line, with one shorter arc nested inside it` | `#ffa3b8` |
-| `sym_costm.png` | 절약(미네랄 비용 −) | `A small upright angular crystal outline with a downward chevron directly beneath it` | `#ffd24a` |
-| `sym_costg.png` | 검약(가스 비용 −) | `Two short parallel vertical bars with a downward chevron directly beneath them` | `#ffd24a` |
+| 신속의 룬(일꾼 이동속도) | `#f9cb08` 금 | 경제 | `#13f487` |
+| 가속의 룬(캠프 진행 속도) | `#fbc304` 금 | 성장 | `#4b84d8` |
+| 열기의 룬(피버 발동 확률) | `#dca61c` 금 | 성장 | `#4b84d8` |
+
+---
+
+**⑨ 신속의 룬** (일꾼 이동속도) — `sym_wspd.png`
+
+```
+Two short horizontal bars sit stacked at the left, one above the other with a clear
+gap between them; the upper bar is shorter than the lower one. To their right, clear
+of both and touching neither, one long horizontal arrow runs to the right: a straight
+shaft ending in an open arrowhead made of two short diagonals that meet at the tip
+and do not close into a triangle. All strokes are one equal width, nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `double chevron, filled triangular arrowhead, three or more bars,
+bars touching the shaft, motion blur, speed lines curving, filled solid shape`
+
+**⑩ 가속의 룬** (캠프 전체 진행 속도) — `sym_speed.png`
+
+```
+An angular hourglass drawn as an open outline: one horizontal bar across the top, one
+horizontal bar across the bottom of equal length, and two long straight diagonals that
+run from the ends of the top bar inward, cross at a single point in the middle, and
+continue outward to the ends of the bottom bar. The shape is hollow, perfectly
+symmetric left to right and top to bottom.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `sand, falling grains, realistic hourglass, wooden frame, filled solid
+shape, arrow, arrowhead, bowtie ribbon`
+
+**⑪ 열기의 룬** (피버 발동 확률) — `sym_fever.png`
+
+```
+A tall straight vertical stem rises from the bottom and splits at its top into two
+straight arms that spread outward and upward at equal angles, forming a Y. Each arm
+ends in a short horizontal segment that turns outward, so both tips finish in a small
+right-angled hook. Everything is one equal stroke width, hollow, and symmetric.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `flame, fire, tree, branch with leaves, tuning fork with round tips,
+slingshot, letter Y typeface, arrow, filled solid shape, three arms`
+
+---
 
 ⚠ **절약·검약은 아래 꺾쇠를 함께 쓴다** — 그게 「내려간다」의 어휘이고, 위에 얹은 것
 (결정 ↔ 두 기둥)이 무엇이 싸지는지를 가른다. ⛔ 둘 중 하나만 꺾쇠를 빼지 말 것.
