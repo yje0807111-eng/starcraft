@@ -3951,6 +3951,9 @@ function campScaleAllies(list){
   // 🎯 사거리 — ⚠ 위 acq 주석의 「사거리는 건드리지 않는다」는 **인식 거리를 넓히던 맥락**의 것이다.
   //   여기는 0.5~5% 라 종족 상성이 뒤집힐 폭이 아니다. ⛔ 두 자릿수로 올리면 그 경고가 되살아난다.
   const rRg  = R ? campRuneMul('rng') : 1;
+  // 🛡 방벽의 룬 — **최대 체력의 이 비율만큼 실드를 얹는다**(배수가 아니라 더하는 양이다).
+  //   ⛔ 체력 배수로 바꾸지 말 것 — 그러면 수호의 룬과 같은 자리가 되어 룬 하나가 뜻을 잃는다.
+  const rSh  = R ? campRuneEff('shield') : 0;
   let n = 0;
   for(const u of list){
     if(!u || u._campRtOn) continue;   // 이미 얹은 유닛
@@ -3958,13 +3961,16 @@ function campScaleAllies(list){
     const atk = tAtk * rAtk * campResMul(uid, 'atk');   // 🌳 트리 × 💠 룬 × 🔬 연구(계열별)
     const hp  = tHp  * rHp  * campResMul(uid, 'hp') * campResDrMul(uid);   // 🛡 방어력은 체력으로 환산
     const asp = rAs * campResMul(uid, 'as');            // ⚡ 공격속도 — 💠 룬 × 🔬 연구
-    if(atk === 1 && hp === 1 && asp === 1 && rRg === 1) continue;   // 얹을 것이 없으면 표시도 남기지 않는다
+    if(atk === 1 && hp === 1 && asp === 1 && rRg === 1 && rSh === 0) continue;   // 얹을 것이 없으면 표시도 남기지 않는다
     u._campRtOn = 1;
     if(hp !== 1){ u.maxHp = (u.maxHp || 0) * hp; u.hp = u.maxHp;
       u.maxSh = (u.maxSh || 0) * hp; u.sh = u.maxSh; }
     if(atk !== 1) u.dmg = (u.dmg || 0) * atk;
     if(asp !== 1 && u.cdMax > 0) u.cdMax = u.cdMax / asp;  // 발사 **간격**이라 나눈다(곱하면 느려진다)
     if(rRg !== 1 && u.rng > 0) u.rng = u.rng * rRg;         // 💠 조준의 룬 — 사거리
+    // 🛡 방벽의 룬 — 체력 배수를 얹은 **뒤**의 최대 체력을 기준으로 더한다.
+    //   ⚠ 실드가 원래 있는 유닛(프로토스)에는 더해진다 — 덮어쓰면 그 종족만 손해다.
+    if(rSh > 0 && u.maxHp > 0){ u.maxSh = (u.maxSh || 0) + u.maxHp * rSh; u.sh = u.maxSh; }
     n++; }
   return n; }
 

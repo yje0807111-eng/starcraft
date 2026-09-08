@@ -1876,3 +1876,82 @@ node scripts/icon-cutout.mjs <입력.png> assets/icons/tree/<계열키>.webp
 (얇게 나오면 24px 에서 사라진다). 각 `NEGATIVE` 끝에 **그 룬에서만 막을 것**을 적는다 —
 치유에 `christian cross`, 가속에 `sand, realistic hourglass`, 신속에 `double chevron` 같은 식이다.
 ⚠ 문양 프롬프트에는 `hexagon, tile, plate, frame` 을 반드시 넣는다. 안 넣으면 판을 같이 그린다.
+
+### 16-6. 🔷 문양 공통 블록 — **원문 보관** (2026-09-08)
+
+⚠ **이 절은 복원본이다.** 문양 16장을 뽑은 원문이 어디에도 안 남아 있었고(§16-5 는
+「§15-2 를 굵고 밝게」라고만 적혀 있다), 그 설명만으로는 실제 그림이 안 나온다 —
+있는 16장은 **입체 아이콘이 아니라 얇은 선 각인**이다(2026-09-08 에 전부 펼쳐 보고 확인).
+그래서 **보고 맞춘 블록**을 여기 적어 둔다.
+
+⛔ **다음에 뽑을 때 이 블록을 고치지 말 것.** 대신 **첫 한 장을 뽑아 기존 문양 옆에 나란히
+놓고 눈으로 대조한 뒤** 나머지를 돌린다 — 스타일이 갈리면 한 화면에서 바로 티가 난다(§15-2 교훈).
+
+```
+--- RENDER SPEC ---
+A single abstract rune sigil for a mobile game, drawn as a MINIMAL LINE MARK.
+One mark only, centered, flat straight-on view. Even margin on all four sides.
+FORM: two to four strokes at most. Straight segments and hard angles; a curve only
+where the meaning needs one. Reads at 24 pixels. Not an illustration, not an object
+with volume — an engraved sign.
+STROKE: uniform thin bright neon line, constant width, sharp square ends, no taper,
+no outline around the line. Hollow shapes only — nothing is filled in.
+TREATMENT: the line self-illuminates on black with a tight soft glow hugging it.
+Bright and saturated so it survives at small size. No shading, no gradient across
+the mark, no volume, no perspective, no three-dimensional facets.
+BACKGROUND: flat solid pure black #000000 filling the entire frame, completely empty.
+No gradient, no vignette, no stars, no ground plane, no cast shadow, no pedestal.
+OUTPUT: 1024x1024 PNG, crisp vector-like edges.
+--- NEGATIVE ---
+hexagon, tile, plate, frame, border, badge, shield plate, background shape,
+white background, light background, grey background, gradient background, transparent
+checkerboard, vignette, photorealistic, 3d render, volume, shading, bevel, chamfer,
+metal, chrome, glossy, drop shadow, ground shadow, pedestal, text, letters, numbers,
+watermark, logo, multiple marks, scene, character, cute, filled solid shapes,
+thick outline, tapered strokes, calligraphy, brush stroke, sketch, hand drawn,
+grain, bokeh, wide bloom, low contrast
+--- SUBJECT ---
+{SYMBOL}. Colour {COLOUR}.
+```
+
+**{COLOUR} — 갈래가 정한다**(§16-3 의 「색은 세 군뿐」을 실제 16장에 맞춰 적은 것):
+
+| 갈래 | 색 | 지금 쓰는 문양 |
+|---|---|---|
+| 경제(버는 것) | `#7effc9` 민트 | 손끝 · 채굴 · 정제 |
+| 전투 | `#ffa3b8` 분홍 | 힘 · 연타 · 수호 · 치유 |
+| 성장(캠프 밖) | `#8ab6ff` 하늘 | 전과 · 전리품 |
+| 속도·비용·피버 | `#ffd24a` 금 | 가속 · 신속 · 열기 · 비용 |
+
+### 16-7. 🆕 아직 안 뽑은 문양 8종 (2026-09-08)
+
+⚠ **지금 화면에서 그림이 깨져 있는 룬들이다.** 상점에서 이미지 13장 중 7장이 안 뜬다(실측).
+문양이 나오면 타일은 `node scripts/rune-compose.mjs` 가 조합한다 — **손으로 만들지 말 것.**
+
+⛔ **한 모티프는 한 룬에만**(§15-3). 아래 여덟은 있는 16장과 **겹치지 않게** 골랐다 —
+있는 것은 리듬 막대(연타) · 아래 검(힘) · 빗살(비용·미사용) · 막대 그래프(경험·미사용) ·
+Y 갈래(열기) · 마름모+선(열정) · 두 기둥(정제) · 십자(치유) · 아래 삼각(수호) ·
+X(전과) · 모래알(전리품) · 가로선+세로획(채굴) · 사각 나선(환생·미사용) · 모래시계(가속) ·
+아래 화살(손끝) · ≡→(신속)이다.
+
+| 파일 | 룬 | {SYMBOL} | {COLOUR} |
+|---|---|---|---|
+| `sym_crit.png` | 예리(치명 터치 확률) | `A keen crescent slash arc with two short parallel ticks trailing its outer edge` | `#7effc9` |
+| `sym_critm.png` | 일격(치명 배수) | `A starburst of six short straight rays radiating from one small open centre point, rays of two alternating lengths` | `#7effc9` |
+| `sym_gcrit.png` | 노다지(채굴 치명 확률) | `A three-peaked angular crystal cluster outline with one short spark stroke off its tallest peak` | `#7effc9` |
+| `sym_rng.png` | 조준(사거리) | `Four L-shaped corner brackets arranged as a square reticle around a single small dot at the centre, corners not touching` | `#ffa3b8` |
+| `sym_skcd.png` | 각성(스킬 쿨 −) | `An open ring with a wedge-shaped gap at its top, and one short downward chevron inside the ring` | `#ffa3b8` |
+| `sym_shld.png` | 방벽(방어막) | `A wide shallow dome arc standing on a short straight base line, with one shorter arc nested inside it` | `#ffa3b8` |
+| `sym_costm.png` | 절약(미네랄 비용 −) | `A small upright angular crystal outline with a downward chevron directly beneath it` | `#ffd24a` |
+| `sym_costg.png` | 검약(가스 비용 −) | `Two short parallel vertical bars with a downward chevron directly beneath them` | `#ffd24a` |
+
+⚠ **절약·검약은 아래 꺾쇠를 함께 쓴다** — 그게 「내려간다」의 어휘이고, 위에 얹은 것
+(결정 ↔ 두 기둥)이 무엇이 싸지는지를 가른다. ⛔ 둘 중 하나만 꺾쇠를 빼지 말 것.
+
+⚠ **방벽에 육각형을 쓰지 말 것.** 육각은 **판**의 모양이라 문양이 판과 섞인다(NEGATIVE 에 있다).
+
+각 `NEGATIVE` 끝에 그 룬에서만 막을 것을 더한다:
+예리 `sword, blade with handle` · 일격 `snowflake, asterisk glyph` ·
+노다지 `diamond gemstone, ring` · 조준 `circle scope, cross hair lines through centre` ·
+각성 `clock hands, numerals, hourglass` · 방벽 `heraldic shield, triangle, hexagon` ·
+절약 `coin, currency symbol` · 검약 `bottle, flask, gas cloud`

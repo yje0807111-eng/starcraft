@@ -2688,6 +2688,27 @@ async function groupLobby(){
           'campCombatStep 이 각성의 룬(skCd)을 안 읽는다 — 스킬 쿨 감소가 어디에도 안 닿는다');
         chk(typeof campScaleAllies==='function' && /campRuneMul\('rng'\)/.test(String(campScaleAllies)),
           'campScaleAllies 가 조준의 룬(rng)을 안 읽는다'); }
+      // 🛡 **방벽의 룬** — 최대 체력의 그 비율만큼 **실드로** 얹힌다(2026-09-08).
+      //   ⭐ 여기서 잠그는 것은 넷이다:
+      //     ① 실제로 닿는다(값을 읽는 게 아니라 유닛에 얹어 본다)
+      //     ② **더한다** — 실드가 원래 있는 유닛(프로토스)에 덮어쓰면 그 종족만 손해다
+      //     ③ 얹은 실드는 **채워져 있다**
+      //     ④ **체력이 아니다** — 체력 배수로 바꾸면 수호의 룬과 글자만 다른 룬이 된다
+      if(typeof campScaleAllies==='function'){
+        put('shld','high'); const r=campRuneEff('shield');
+        chk(r>0,'방벽의 룬 값이 0 이다');
+        // ⚠ campDesignStats 가 아는 유닛은 능력치를 설계값으로 덮는다 — 모르는 이름으로 잰다
+        const mk=sh=>({ gm:'__runeProbe', maxHp:1000, hp:1000, maxSh:sh, sh:sh,
+          dmg:10, cdMax:1, rng:5, spd:1 });
+        const a=mk(0);   campScaleAllies([a]);
+        const b=mk(400); campScaleAllies([b]);
+        chk(Math.abs(a.maxSh-a.maxHp*r)<a.maxHp*r*0.02,
+          '방벽의 룬이 실드에 안 닿는다: 실드 '+Math.round(a.maxSh)+' · 기대 '+Math.round(a.maxHp*r));
+        chk(a.sh===a.maxSh,'얹은 실드가 채워지지 않았다');
+        chk(b.maxSh>400+a.maxSh*0.9,'원래 실드를 **덮어썼다**(더해야 한다): '+Math.round(b.maxSh));
+        chk(Math.abs(a.maxHp-1000)<1,
+          '방벽의 룬이 체력을 늘렸다 — 그러면 수호의 룬과 같은 자리다: '+Math.round(a.maxHp));
+        clear(); }
       // ⑦ 🗺 전리품의 룬 — **재화만**. ⛔ 젬은 그대로여야 한다
       if(typeof umFirstRw==='function'){
         const r0=umFirstRw('normal'); skipIf(!r0,'유즈맵 최초 보상 표가 없다');
