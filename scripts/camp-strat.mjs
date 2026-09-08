@@ -32,7 +32,7 @@ const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..'
 const MINS = +(process.argv[2] || 45);
 const DG0  = +(process.argv[3] || 1);
 const SEED = +(process.argv[4] || 0);
-const ALL  = ['bal', 'eco', 'army', 'tap', 'work', 'gath', 'nors'];
+const ALL  = ['e20', 'e35', 'e50', 'e65', 'e80', 'tap', 'gath', 'work', 'nors'];
 const LIST = (process.env.STRATS || '').trim()
   ? process.env.STRATS.split(',').map(x => x.trim()).filter(Boolean) : ALL;
 
@@ -70,15 +70,18 @@ for (const s of LIST) { const r = await run(s); if (r) rows.push(r); }
 
 const ok = rows.filter(r => !r.froze);
 if (!ok.length) { console.log('\n⛔ 쓸 수 있는 판이 없다.'); process.exit(1); }
+// ⛔ **갈림도는 kind:'play' 로만 잰다.** 절단(탭만·채취만…)을 섞으면 「그 기둥을 뽑으면 망한다」가
+//   「지배 전략이 있다」로 둔갑한다 — 2026-09-08 첫 실측에서 실제로 그렇게 틀렸다(×117 로 찍혔다).
+const play = ok.filter(r => (r.kind || 'play') === 'play');
+const abl  = ok.filter(r => r.kind === 'abl');
 
 // 📊 표 — 사람이 읽는 순서: 어디까지 갔나 · 얼마나 벌었나 · 벽 · 첫 30분
 const F = n => (n == null ? '-' : n.toLocaleString());
-console.log('\n■ 📊 전략별 결과');
-console.log('전략   | 이름       | 끝난 곳  | 번 돈        | 30분 위치 | 30분 부 | 벽              | 10분+ 라운드');
+console.log('\n■ 📊 전략별 결과   (🔪 = 절단 실험 · 갈림도에 안 넣는다)');
+console.log('전략   | 이름          | 끝난 곳  | 번 돈        | 30분 위치 | 30분 부 | 벽              | 10분+ 라운드');
 for (const r of rows) {
-  const nm = { bal:'균형(지금)', eco:'경제 몰빵', army:'병력 몰빵', tap:'탭 특화',
-               work:'일꾼·인구', gath:'채취 특화', nors:'연구 안 함' }[r.strat] || r.strat;
-  console.log(r.strat.padEnd(6) + '| ' + nm.padEnd(10) + ' | '
+  const nm = (r.kind === 'abl' ? '🔪 ' : '') + (r.nm || r.strat);
+  console.log(r.strat.padEnd(6) + '| ' + nm.padEnd(13) + ' | '
     + ('D' + r.dg + 'R' + r.round).padEnd(8) + ' | ' + F(r.earn).padStart(12) + ' | '
     + (r.m30 ? ('D' + r.m30.dg + 'R' + r.m30.r) : '-').padEnd(9) + ' | '
     + (r.m30 ? F(r.m30.w) : '-').padStart(7) + ' | '
@@ -88,24 +91,29 @@ for (const r of rows) {
 }
 
 // ① 갈림도 — 결과가 얼마나 벌어지나
-const spread = (key, get) => {
-  const v = ok.map(get).filter(x => x != null && isFinite(x));
+const spread = (rowsIn, get) => {
+  const v = rowsIn.map(get).filter(x => x != null && isFinite(x));
   if (v.length < 2) return null;
   const lo = Math.min(...v), hi = Math.max(...v);
   return { lo, hi, x: lo > 0 ? hi / lo : Infinity,
-    loS: ok.find(r => get(r) === lo).strat, hiS: ok.find(r => get(r) === hi).strat };
+    loS: rowsIn.find(r => get(r) === lo).strat, hiS: rowsIn.find(r => get(r) === hi).strat };
 };
 // 진행도 = 던전과 라운드를 한 숫자로(던전 하나 = 라운드 50 어치).
 //   ⚠ +1 은 **던전에 한 번도 못 들어간 판(D0R0)** 때문이다 — 0 이면 갈림도가 ÷0 이 된다.
 //   그 판은 「아무 데도 못 갔다」라는 결과이지 표본 오류가 아니므로 빼지 않고 바닥값으로 둔다.
 const prog = r => r.dg * 50 + r.round + 1;
-console.log('\n■ 🎯 갈림도 — 「고를 게 있나」');
+console.log(`\n■ 🎯 갈림도 — 「고를 게 있나」  (사람이 고를 법한 ${play.length}개로만 잰다)`);
 for (const [lab, get] of [['진행(던전R)', prog], ['번 돈', r => r.earn], ['30분 부', r => r.m30 && r.m30.w]]) {
-  const s = spread(lab, get);
+  const s = spread(play, get);
   if (!s) { console.log('  ' + lab + ': 표본 부족'); continue; }
   console.log(`  ${lab.padEnd(11)} ×${s.x.toFixed(2)}   최저 ${s.loS}(${F(Math.round(s.lo))}) → 최고 ${s.hiS}(${F(Math.round(s.hi))})`);
 }
-{ const s = spread('', prog);
+if (abl.length) { console.log('\n■ 🔪 절단 — 이 기둥을 뽑으면 어떻게 되나 (「무엇이 게임을 떠받치나」)');
+  const base = play.find(r => r.strat === 'e50') || play[0];
+  for (const r of abl) console.log(`  ${(r.nm||r.strat).padEnd(10)} D${r.dg}R${r.round} · 번 돈 ${F(r.earn)}`
+    + (base ? `   (기준 ${base.strat} 대비 진행 ×${(prog(r)/prog(base)).toFixed(2)} · 돈 ×${(r.earn/Math.max(1,base.earn)).toFixed(2)})` : '')
+    + (r.wall ? `  🧱 D${r.wall.dg}R${r.wall.r} ${Math.round(r.wall.sec/60)}분` : '')); }
+{ const s = spread(play, prog);
   const dead = ok.filter(r => r.dg === 0);
   console.log('\n■ 📖 읽기  (기준 = 진행도. 던전 하나 = 라운드 50 어치)');
   if (!s) console.log('  표본이 둘 미만이라 못 잰다.');

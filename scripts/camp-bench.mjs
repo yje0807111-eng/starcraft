@@ -25,15 +25,25 @@ const POL=(process.argv[4]||'A').toUpperCase();
 //   ⭐ **읽는 법**: 프리셋들의 결과가 안 벌어지면 「무엇을 골라도 같다」 = 판단이 없다는 뜻이고,
 //     너무 벌어지면 지배 전략 하나만 남는다(GAME_DIRECTION §2-5 「지배 빌드 하나」).
 //     둘 사이가 목표다 — 어느 쪽이 옳은지가 **상황에 따라** 갈리는 것.
+//   ⭐ 두 갈래로 나눠 둔다 — **섞어서 판정하면 안 된다**(2026-09-08 실측에서 실제로 틀렸다).
+//     kind:'play' 사람이 실제로 고를 법한 것 → **갈림도는 이것들로만** 잰다.
+//     kind:'abl'  기둥을 통째로 뽑는 절단 실험 → 「무엇이 이 게임을 떠받치나」를 본다.
+//     ⛔ 절단을 갈림도에 넣으면 「탭만 사면 망한다」가 「지배 전략이 있다」로 둔갑한다.
 const STRATS={
-  bal:  { nm:'균형(지금)',  eco:0.5, only:null,                 rsch:1 },
-  eco:  { nm:'경제 몰빵',   eco:0.8, only:null,                 rsch:1 },
-  army: { nm:'병력 몰빵',   eco:0.2, only:null,                 rsch:1 },
-  tap:  { nm:'탭 특화',     eco:0.5, only:['tap'],              rsch:1 },
-  work: { nm:'일꾼·인구',   eco:0.5, only:['worker','supply'],  rsch:1 },
-  gath: { nm:'채취 특화',   eco:0.5, only:['gather'],           rsch:1 },
-  nors: { nm:'연구 안 함',  eco:0.5, only:null,                 rsch:0 },
+  // 🎚 경제:병력 지출 비율 한 축 — 사람이 실제로 고르는 것은 대개 이 눈금이다
+  e20:  { nm:'경제20:병력80', eco:0.20, only:null,                rsch:1, kind:'play' },
+  e35:  { nm:'경제35:병력65', eco:0.35, only:null,                rsch:1, kind:'play' },
+  e50:  { nm:'경제50:병력50', eco:0.50, only:null,                rsch:1, kind:'play' },
+  e65:  { nm:'경제65:병력35', eco:0.65, only:null,                rsch:1, kind:'play' },
+  e80:  { nm:'경제80:병력20', eco:0.80, only:null,                rsch:1, kind:'play' },
+  // 🔪 절단 — 기둥 하나를 뽑는다(전략이 아니라 「그게 없으면 어떻게 되나」)
+  tap:  { nm:'탭만',        eco:0.5, only:['tap'],              rsch:1, kind:'abl' },
+  gath: { nm:'채취만',      eco:0.5, only:['gather'],           rsch:1, kind:'abl' },
+  work: { nm:'일꾼·인구만',  eco:0.5, only:['worker','supply'],  rsch:1, kind:'abl' },
+  nors: { nm:'연구 안 함',   eco:0.5, only:null,                 rsch:0, kind:'abl' },
 };
+// 옛 이름은 그대로 통하게 둔다(BALANCE·커밋 기록이 이 이름으로 적혀 있다)
+STRATS.bal=STRATS.e50; STRATS.eco=STRATS.e80; STRATS.army=STRATS.e20;
 const STRAT=(process.env.STRAT||'bal').trim();
 if(!STRATS[STRAT]){ console.error('STRAT 이름이 없다: '+STRAT+'  (있는 것: '+Object.keys(STRATS).join(' ')+')'); process.exit(2); }
 // 🔮 **스킬을 끄고 재는 모드** — `SKILLS_OFF=1` (2026-08-28).
@@ -1052,7 +1062,7 @@ if(froze){
   const m30=at(1800);
   const WW=await pg.evaluate(()=>({ wall:__CB.wall||null, warn:__CB.wallWarnLog||[] }));
   console.log('«BENCH» '+JSON.stringify({
-    strat:STRAT, pol:POL, mins:MINS, seed:SEED,
+    strat:STRAT, nm:STRATS[STRAT].nm, kind:STRATS[STRAT].kind||'play', pol:POL, mins:MINS, seed:SEED,
     t:+(fin.t/60).toFixed(1), dg:fin.dg, round:fin.round, earn:Math.round(fin.earn),
     reb:fin.reb, froze:!!froze,
     m30: m30 ? { t:m30.t, w:m30.w, dg:m30.dg, r:m30.r } : null,
