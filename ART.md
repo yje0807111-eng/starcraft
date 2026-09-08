@@ -2178,19 +2178,26 @@ Steel blue #4b84d8 with a near-white core along each stroke.
 bottle, flask, gas cloud, smoke, three bars, two chevrons, equals sign, letter U,
 filled solid shape`
 
-**⑮ 치유의 룬** (회복량) — `sym_heal.png` · **모양 그대로, 선만 얇게**
+**⑮ 치유의 룬** (회복량) — `sym_heal.png` · **속을 비운 십자**
+
+⭐ **얇게 만들지 않고 「테두리만」으로 바꾼다**(2026-09-08 사용자 확정).
+선을 가늘게 하라고 적으면 실이 되도록 얇아졌다 — 굵은 십자를 그대로 두고 **속을 비우면**
+획 굵기는 다른 문양과 같아지면서 십자의 크기와 무게는 남는다.
+⚠ 이 집의 문법과도 맞는다: 있는 문양은 전부 **속이 빈 윤곽**이다(가스의 마름모·수호의 삼각).
 
 ```
-A cross with four arms of equal length radiating up, down, left and right from a
-small square centre. All four arms are the same width as each other and end in flat
-square cuts, and the shape is perfectly symmetric in every direction. The arms are
-slender — each about six times longer than it is wide — so the mark reads as four
-fine lines meeting rather than one solid plus sign. Nothing is filled.
-Rose pink #d6496e with a near-white core along each stroke.
+A cross drawn as an outline only, hollow inside. Its silhouette has four arms of
+equal length radiating up, down, left and right from a square centre; every corner is
+a hard right angle and each arm ends in a flat square cut, so the contour is a
+twelve-sided figure. One continuous line of even width traces that whole contour and
+the interior stays empty. The shape is perfectly symmetric in every direction — no
+arm is longer than another.
+Rose pink #d6496e with a near-white core along the contour.
 ```
-추가 NEGATIVE: `bold thick cross, heavy stroke, wide arms, filled solid shape,
-christian cross with a long lower arm, medical cross badge, rounded arm ends,
-square outline around the cross, plus sign inside a box`
+추가 NEGATIVE: `filled solid cross, solid plus sign, thick single stroke cross,
+double outline, second cross inside, rounded corners, chamfered corners, christian
+cross with a long lower arm, medical cross badge, square outline around the cross,
+shading inside the outline`
 
 ⭐ **막는 말은 SUBJECT 가 아니라 NEGATIVE 에 둔다**(2026-09-08 사용자 확정).
 조건을 SUBJECT 안에 잔뜩 쌓았더니 문장이 뻣뻣해지고 오히려 모양이 흐트러졌다 —
