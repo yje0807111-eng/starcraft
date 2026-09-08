@@ -930,6 +930,9 @@
     box-shadow:0 0 0 3px rgba(255,118,118,.18);animation:tutoPulse 1.4s ease-in-out infinite}
   /* 🎞 먼 자리로 갈아탈 때 — 링이 살짝 부풀며 나타난다(미끄러지지 않으므로 등장이 필요하다).
      ⛔ fill-mode 를 주지 말 것(기본 상태가 보임). */
+  /* 👆 화면을 통째로 여는 단계(pickU)에는 테두리를 안 그린다 — 화면을 두르면 답답하고,
+     가리킬 **한 자리**가 없다. 판은 두께 0 이라 어차피 아무것도 안 막는다. */
+  .tutoOv .tuRing.tuHide{border-color:transparent;box-shadow:none;animation:none}
   .tutoOv .tuRing.tuPop{animation:tutoPulse 1.4s ease-in-out infinite, tuRingPop .22s ease}
   @keyframes tuRingPop{from{transform:scale(1.14);opacity:.35}to{transform:none;opacity:1}}
   @keyframes tutoPulse{0%,100%{box-shadow:0 0 0 3px rgba(255,118,118,.18)}50%{box-shadow:0 0 0 7px rgba(255,118,118,.06)}}

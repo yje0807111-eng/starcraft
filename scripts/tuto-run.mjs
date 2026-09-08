@@ -157,9 +157,58 @@ await page.evaluate(() => { if (typeof G === 'undefined' || !G.tech) return;
     if (typeof techUIRender === 'function') techUIRender(); } });
 await new Promise(r => setTimeout(r, 760)); await log('일꾼 지정');
 
-for (let guard = 0; guard < 20; guard++) {
+for (let guard = 0; guard < 26; guard++) {
   const s = await snap(); const id = String(s.id || '');
-  if (!/^(armB|placeB|deselWk|selB1|unit|dg|outro)/.test(id)) break;
+  if (!/^(armB|placeB|deselWk|selB1|unit|pickU|moveU|deselU|zoomPan|panMode|panDrag|dg|outro)/.test(id)) break;
+  if (id === 'deselU') {
+    await page.evaluate(() => { const b = document.getElementById('btDesel'); if (b) b.click();
+      else if (typeof techDeselU === 'function') techDeselU(); });
+    await new Promise(r => setTimeout(r, 760)); await log('유닛 지정 해제'); continue; }
+  if (id === 'zoomPan') {
+    const r = await page.evaluate(() => { const v = techView(); v.zoom = (v.zoom || 1) * 1.4; v.x = (v.x || 0.5) + 0.06;
+      const t = (typeof techViewT === 'function') ? techViewT() : null;
+      if (t) { t.zoom = v.zoom; t.x = v.x; }
+      return '확대 ' + v.zoom.toFixed(2) + ' · 이동 ' + v.x.toFixed(3); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'panMode') {
+    await page.evaluate(() => { if (typeof campPanMode === 'function') campPanMode(true); });
+    await new Promise(r => setTimeout(r, 760)); await log('이동 모드 켬'); continue; }
+  if (id === 'panDrag') {
+    // 🖐 이동 모드를 켠 채 **한 손가락으로 민다** — 모드가 꺼져 있으면 단계가 안 넘어간다.
+    const r = await page.evaluate(() => {
+      if (typeof campPanMode === 'function') campPanMode(true);
+      const v = techView(); v.y = (v.y || 0.5) + 0.05;
+      const t = (typeof techViewT === 'function') ? techViewT() : null; if (t) t.y = v.y;
+      return '한 손가락 밀기 y=' + v.y.toFixed(3); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'pickU') {
+    const r = await page.evaluate(() => { const id = _tutoUnitId();
+      const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
+      if (!u) return '유닛이 없다';
+      G.tech.sel = null; G.tech.selU = [u.eid];
+      const sh = G.tech.sheet || (G.tech.sheet = {}); sh.open = true; sh.sec = 'ent';
+      if (typeof techUIRender === 'function') techUIRender();
+      return '유닛 지정'; });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'moveU') {
+    const r = await page.evaluate(() => { const id = _tutoUnitId();
+      const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
+      if (!u) return '유닛이 없다';
+      const p = _tutoMoveRect();
+      if (!p) return '목표 자리를 아직 못 잰다';
+      u.x = p.wx; u.y = p.wy; u.tx = null; u.ty = null;   // 그 자리에 **멈춰** 세운다
+      return '입구로 옮겼다 (' + u.x.toFixed(3) + ',' + u.y.toFixed(3) + ')'; });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'zoomV') {
+    const r = await page.evaluate(() => { const v = techView(); v.zoom = (v.zoom || 1) * 1.4;
+      if (typeof techViewT === 'function' && techViewT()) techViewT().zoom = v.zoom;
+      return '확대 ' + v.zoom.toFixed(2); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
+  if (id === 'panV') {
+    const r = await page.evaluate(() => { const v = techView(); v.x = (v.x || 0.5) + 0.06;
+      if (typeof techViewT === 'function' && techViewT()) techViewT().x = v.x;
+      return '이동 x=' + v.x.toFixed(3); });
+    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'dgOpen') {
     await page.evaluate(() => { const e = document.getElementById('curTitle'); if (e) e.click();
       else if (typeof campDropToggle === 'function') campDropToggle(); });
@@ -183,7 +232,15 @@ for (let guard = 0; guard < 20; guard++) {
         + String.fromCharCode(10) + '        HTML: ' + icoH; });
     await new Promise(r => setTimeout(r, 760));
     const gem = await page.evaluate(() => (window.__g0|0) + '→' + ((typeof profGem==='function')?profGem():-1));
-    await log(r + ' · 텀 뒤 젬 ' + gem); continue; }
+    // 🔄 마치면 **판을 걷고 맨 처음부터** — 던전 0 · 건물 없음 · 밑천 미네랄
+    const rs = await page.evaluate(() => { const C = campState() || {};
+      const built = Object.keys(C.built || {}).join(',') || '없음';
+      const cr = (typeof G!=='undefined'&&G.tech) ? (G.tech.credit|0) : (C.credit|0);
+      const ents = (typeof G!=='undefined'&&G.tech)
+        ? (G.tech.ents||[]).map(e=>e.type+':'+(e.bid||e.uid||'')).join(' ') : '-';
+      return '던전 ' + (C.dg|0) + ' · 건물 [' + built + '] · 판 [' + ents + '] · 미네랄 ' + cr
+           + ' · 환생배수 ' + (C.rebMul||0) + '/포인트 ' + (C.rbPts||0); });
+    await log(r + ' · 텀 뒤 젬 ' + gem + String.fromCharCode(10) + '        되감김: ' + rs); continue; }
   if (id === 'dgGo') {
     const r = await page.evaluate(() => { const el = document.querySelector('.cdGo');
       if (!el) return '⚠ 이동 버튼이 없다'; el.click(); return '이동 누름'; });
@@ -192,7 +249,10 @@ for (let guard = 0; guard < 20; guard++) {
         const rg=ov?ov.querySelector('.tuRing'):null; const out=[];
         for(let i=0;i<40;i++){ await new Promise(r=>requestAnimationFrame(r));
           const q=rg?rg.getBoundingClientRect():null;
-          out.push(q?(Math.round(q.left)+','+Math.round(q.top)):'-'); }
+          const cm=document.getElementById('curMul');
+          const cs=cm?getComputedStyle(cm):null;
+          out.push(q?(Math.round(q.left)+','+Math.round(q.top)+'/'+Math.round(q.width)+'x'+Math.round(q.height)
+            +' mul:'+(cs?cs.display:'-')+':'+(cm?(cm.style.left||'없음'):'-')):'-'); }
         return out; });
       const uniq=[]; for(const p of tr) if(uniq[uniq.length-1]!==p) uniq.push(p);
       console.log('        링 궤적: ' + uniq.join('  ')); }

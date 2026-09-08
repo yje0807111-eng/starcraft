@@ -328,14 +328,11 @@ function campGatherGain(){
   const amt = (typeof TECH_GATHER_AMT !== 'undefined') ? TECH_GATHER_AMT : 8;
   return Math.max(1, Math.round(amt * campGatherMul())); }
 
-// 환생 실행. 남는 것: 종족 · 최고 기록 · 배수 · 포인트 · 트리.  그 밖은 전부 되감는다.
-function campRebirth(){
-  const C = campState(); if(!C || !campCanRebirth()) return null;
-  const got = { mul: campRebMulGain(), pts: campRebPtGain(), dg: campDgN(), cleared: campCleared() };
-  C.rebMul = (C.rebMul || 0) + got.mul;          // ⚠ 합이다 — 곱으로 두면 지수 축이 둘이 된다
-  C.rbPts  = (C.rbPts  || 0) + got.pts;
-  C.reb    = (C.reb | 0) + 1;
-  // ── 되감기 ──
+// 🔄 **회차 되감기 — 목록은 한 곳에서만 만든다.** 환생(campRebirth)과 튜토리얼 종료(campTutoReset)가
+//   같은 것을 지운다. ⛔ 목록을 두 벌 만들지 말 것 — 한쪽에 항목이 늘면 다른 쪽이 조용히 남긴다.
+//   ⚠ **남길 것은 부르는 쪽이 손에 쥔다**(종족·최고 기록·환생 값·룬) — 여기서는 판단하지 않는다.
+function campRunReset(C){
+  if(!C) return false;
   C.dg = 0; C.cleared = 0;
   C.earn = 0; C.earnGas = 0; C.earnTap = 0; C.earnAuto = 0;
   C.credit = 0; C.energy = 0;
@@ -345,6 +342,38 @@ function campRebirth(){
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
   C.rate = 0; C.rateGas = 0; C.leftAt = 0; C.tapped = 0; C.playS = 0;
   campFevReset();                                 // ⚡ 앞 회차의 피버가 이어지면 안 된다
+  return true; }
+
+// 🎓 **튜토리얼을 마치면 연습판을 걷고 맨 처음부터**(2026-09-08 사용자 확정).
+//   튜토리얼은 던전 1 까지 데려가고 건물·유닛을 남긴다 — 그대로 두면 「처음 하는 판」이 아니다.
+//   ⛔ **환생이 아니다** — 배수(rebMul)·포인트(rbPts)·환생 횟수(reb)를 **주지 않는다**.
+//     남는 것은 보상뿐이다(젬 · 밑천 미네랄). 튜토리얼로 환생 값을 벌 수 있으면 그게 최적 루틴이 된다.
+//   ⚠ 남길 것은 환생과 같다 — 💠 룬은 젬으로 산 것이라 어떤 되감기에서도 안 지운다.
+function campTutoReset(minerals){
+  const C = campState(); if(!C) return false;
+  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
+                 rbTree:C.rbTree, rune:C.rune };
+  campRunReset(C);
+  campBattleClose(); campBarReset();
+  campWipeBoard();                                // 살아 있는 판도 새 판으로(안 하면 저장이 되살린다)
+  { const C2 = campState();                       // 판을 다시 깔며 저장을 읽었을 수 있다 — 다시 얹는다
+    if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
+      C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
+      if(keep.rune) C2.rune = keep.rune;          // 💠 젬으로 산 것 — 되감기면 안 된다
+      C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
+      C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
+  if(minerals > 0) campAddRes(minerals, 0);       // 🎁 새 출발 밑천 — ⛔ 지갑 입구는 campAddRes 하나다
+  campSave();
+  return true; }
+
+// 환생 실행. 남는 것: 종족 · 최고 기록 · 배수 · 포인트 · 트리.  그 밖은 전부 되감는다.
+function campRebirth(){
+  const C = campState(); if(!C || !campCanRebirth()) return null;
+  const got = { mul: campRebMulGain(), pts: campRebPtGain(), dg: campDgN(), cleared: campCleared() };
+  C.rebMul = (C.rebMul || 0) + got.mul;          // ⚠ 합이다 — 곱으로 두면 지수 축이 둘이 된다
+  C.rbPts  = (C.rbPts  || 0) + got.pts;
+  C.reb    = (C.reb | 0) + 1;
+  campRunReset(C);                                // ── 되감기(환생·튜토리얼 종료가 함께 쓴다)
   // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree · C.rune 은 지우지 않는다 — 그게 환생의 값이다
   //    💠 룬은 **젬으로 산 것**이다. 회차가 되감긴다고 사라지면 결제가 사라지는 것이라 절대 안 된다.
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —

@@ -13456,12 +13456,55 @@ async function groupLobby(){
   // 🏗 건물 짓기 단계 — 「채굴 끄기 → 일꾼 지정 → 카드 → 배치」가 한 동작에 한 단계여야 한다.
   //   ⚠ 화면 없이 잰다(캠프 하단은 스모크에서 높이 0 이라 카드를 못 띄운다) — 대신 **표와 셀렉터**를
   //     실제 건설 카드 마크업(techBuildListModel)과 맞춰 본다. 실주행은 scripts/tuto-run.mjs 가 한다.
+  // 🔄 튜토리얼을 마치면 **연습판을 걷고 맨 처음부터** — 다만 **환생은 아니다**.
+  //   ⛔ 여기서 배수·포인트가 오르면 튜토리얼이 환생 최적 루틴이 된다(가이드에서 다시 켤 수 있다).
+  await step('튜토리얼 종료: 판을 되감되 환생 값은 안 준다', async()=>{
+    skipIf(typeof campTutoReset!=='function'||typeof campState!=='function','캠프 없음');
+    const C=campState(); skipIf(!C,'캠프 상태가 없다');
+    const before={ rebMul:C.rebMul||0, rbPts:C.rbPts||0, reb:C.reb|0, race:C.race,
+                   best:C.best, rune:C.rune?JSON.stringify(C.rune):null };
+    C.dg=3; C.cleared=7; C.earnTap=1234; C.upg={ tap:5 };
+    assert(campTutoReset(TUTO_RESET_MIN),'되감기가 실패했다');
+    const D=campState();
+    assert((D.dg|0)===0&&(D.cleared|0)===0,'던전·진행이 안 되감겼다: '+D.dg+'/'+D.cleared);
+    assert((D.earnTap|0)===0,'회차 지표가 남았다: '+D.earnTap);
+    assert(!D.upg||!Object.keys(D.upg).length,'회차 업그레이드가 남았다: '+JSON.stringify(D.upg));
+    // ⛔ 환생 값은 **그대로** — 튜토리얼로 벌 수 있으면 안 된다
+    assert((D.rebMul||0)===before.rebMul&&(D.rbPts||0)===before.rbPts&&(D.reb|0)===before.reb,
+      '튜토리얼이 환생 값을 줬다: '+(D.rebMul||0)+'/'+(D.rbPts||0)+'/'+(D.reb|0));
+    assert(D.race===before.race&&D.best===before.best,'남겨야 할 것이 지워졌다');
+    // 💠 룬은 젬으로 산 것이라 어떤 되감기에서도 안 지운다
+    assert((D.rune?JSON.stringify(D.rune):null)===before.rune,'룬이 지워졌다');
+    // 🎁 밑천 — 빈손으로 되돌리면 앞의 스무 단계가 헛수고로 보인다
+    //   ⚠ 캠프가 안 켜져 있으면 지갑이 아니라 **보류함(C.pend)** 으로 간다(campAddRes) — 둘 다 본다
+    assert(TUTO_RESET_MIN>0,'밑천이 0 이다');
+    const got=Math.max((D.credit|0)+((D.pend&&D.pend.m)|0),
+      (typeof G!=='undefined'&&G.tech)?(G.tech.credit|0):0);
+    assert(got>=TUTO_RESET_MIN,'밑천이 안 들어왔다: '+got+' < '+TUTO_RESET_MIN);
+    return '되감음 · 환생 값 유지 · 밑천 '+TUTO_RESET_MIN.toLocaleString();
+  });
+
   await step('튜토리얼: 건물 짓기가 손동작 단위로 갈라져 있다', async()=>{
     skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_BLD==='undefined','튜토리얼 없음');
     const ids=TUTO_STEPS.map(s=>s.id);
     for(const need of ['coinB','mineOff','pickWk','armB1','placeB1','deselWk','selB1','unit',
+                       'pickU','moveU','deselU','zoomPan','panMode','panDrag',
                        'dgOpen','dgPick','dgGo','outro'])
       assert(ids.indexOf(need)>=0,'단계가 없다: '+need);
+    // 🔍 화면 조작 판정 — **단계마다 기준을 새로 잡는다**(확대하면 시점도 함께 움직인다)
+    { const S=guideState(), v0=(typeof techView==='function')?techView():null;
+      skipIf(!S||!v0,'시점이 없다');
+      const keep={ vw0:S.vw0, zoom:v0.zoom, x:v0.x };
+      try{ delete S.vw0;
+        assert(_tutoView('zoom')===0,'기준을 잡기도 전에 확대했다고 한다');
+        v0.zoom=(v0.zoom||1)*1.3;
+        assert(_tutoView('zoom')===1,'확대했는데 못 알아본다');
+        delete S.vw0;
+        assert(_tutoView('pan')===0,'이동도 기준부터 잡아야 한다');
+        v0.x=(v0.x||0.5)+0.05;
+        assert(_tutoView('pan')===1,'움직였는데 못 알아본다');
+      } finally { v0.zoom=keep.zoom; v0.x=keep.x;
+        if(keep.vw0!=null) S.vw0=keep.vw0; else delete S.vw0; } }
     // 🔢 **번호가 중간에 안 뛴다**(2026-09-04 사용자 지적) — 종족에 없는 단계는 세지 않는다.
     //   유니온은 둘째 건물이 없어(TUTO_BLD.union.b[1]=null) armB2·placeB2 가 화면에 안 나타난다.
     { const r0=G.tech.race; try{ G.tech.race='union';
@@ -13607,6 +13650,38 @@ async function groupLobby(){
     assert(at('coinB')<at('mineOff'),'채굴을 끄고 나서 돈을 모으라고 한다 — 두드릴 수가 없다');
     assert(at('mineOff')<at('pickWk') && at('pickWk')<at('armB1') && at('armB1')<at('placeB1'),
       '건물 단계 순서가 어긋났다: '+ids.join(' → '));
+    // 🚶🔍 유닛을 뽑은 **뒤에** 옮기고 · 지정을 풀고 · 화면 조작을 익히고 · 던전으로 간다(2026-09-08 사용자 확정)
+    assert(at('unit')<at('pickU') && at('pickU')<at('moveU')
+           && at('moveU')<at('deselU') && at('deselU')<at('zoomPan')
+           && at('zoomPan')<at('panMode') && at('panMode')<at('panDrag')
+           && at('panDrag')<at('dgOpen'),
+      '유닛·화면 조작 단계 순서가 어긋났다: '+ids.join(' → '));
+    // 🔍 확대와 이동은 **둘 다** 해야 넘어간다(0/2) — 한 단계로 묶되 하나만 해서는 안 된다
+    assert(_tutoGoal(TUTO_STEPS[at('zoomPan')])===2,
+      '화면 조작이 하나만 해도 넘어간다: '+_tutoGoal(TUTO_STEPS[at('zoomPan')]));
+    // 🖐 모드를 켠 다음 **실제로 민다** — 모드만 켜고 끝내면 무엇이 달라졌는지 모른다.
+    //   ⚠ 모드가 꺼져 있으면 밀어도 0 이어야 한다(밀리지도 않는데 통과시키면 안 넘어간 채로 남는다).
+    { const S=guideState(), m=$('cstMain');
+      if(S && m){ const was=m.classList.contains('campPan'), keep=S.vp0;
+        try{ m.classList.remove('campPan'); delete S.vp0;
+          const d=TUTO_STEPS[at('panDrag')];
+          const tp=(typeof d.tip==='function')?d.tip():d.tip;
+          assert((d.n()|0)===0,'이동 모드가 꺼졌는데 민 것으로 친다');
+          assert(String(tp).indexOf('다시')>=0,
+            '이동 모드가 풀렸는데 다시 켜라고 말하지 않는다: '+tp);
+        } finally { if(was) m.classList.add('campPan'); if(keep!=null) S.vp0=keep; else delete S.vp0; } } }
+    // 🚪 데려갈 자리는 **맵 위쪽**이다(본부 0.59 · 광맥 0.66 보다 위) — 화면을 보고 맞춘 값이라 범위만 지킨다
+    assert(TUTO_MOVE_GY < CAMP_ROW_BASE - 0.1,
+      '데려갈 자리가 본부에 너무 가깝다: '+TUTO_MOVE_GY+' (본부 '+CAMP_ROW_BASE+')');
+    assert(TUTO_MOVE_GY > 0.15,'데려갈 자리가 맵 꼭대기로 붙었다: '+TUTO_MOVE_GY);
+    // 👆 유닛을 잡는 단계는 **화면을 통째로** 연다 — 유닛이 어디 서 있든 손이 닿아야 한다
+    assert(TUTO_STEPS[at('pickU')].at()==='free','유닛 지정 단계가 화면을 다 열지 않는다');
+    { const d=document.createElement('div'); d.className='tutoOv';
+      const ri3=document.createElement('i'); ri3.className='tuRing tuHide'; d.appendChild(ri3);
+      $('phone').appendChild(d);
+      const bc=getComputedStyle(ri3).borderTopColor; d.remove();
+      assert(bc.indexOf('0)')>0 || bc==='transparent',
+        '화면을 다 여는 단계인데 링이 화면을 두른다: '+bc); }
     // 🧹 짓고 → 지정 풀고 → 건물 지정하고 → 뽑는다. 한 단계에 두 동작을 넣으면 거기서 멈춘다.
     assert(at('placeB1')<at('deselWk') && at('deselWk')<at('selB1') && at('selB1')<at('unit'),
       '유닛 단계 순서가 어긋났다: '+ids.join(' → '));
