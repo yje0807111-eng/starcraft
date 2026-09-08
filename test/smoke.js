@@ -13338,12 +13338,18 @@ async function groupLobby(){
     skipIf(!S,'가이드 상태 없음');
     const on0=window.campIsOn, off0=TUTO_OFF, t0=S.t, base0=S.base, skip0=S.skip;
     try{
-      window.campIsOn=()=>true; TUTO_OFF=false; S.t=0; S.base=null; delete S.skip; S.trun=1;
+      window.campIsOn=()=>true; TUTO_OFF=false;
+      // ⚠ 챕터 카드(0번)가 아니라 **첫 지시 단계**에서 잰다 — 카드는 대상이 없다.
+      S.t=TUTO_STEPS.findIndex(s=>s.id==='mineOn'); S.base=null; delete S.skip; S.trun=1;
       var _cm0=ph.classList.contains('campMode'); ph.classList.add('campMode');
       tutoPaint();
       // 표 자체는 화면이 없어도 잰다 — 단계마다 **제 진행도**를 갖는 것이 이 설계의 핵심이다
-      assert(TUTO_STEPS[0].goal===1,'첫 단계가 1번이 아니다: '+TUTO_STEPS[0].goal);
-      assert(TUTO_STEPS[1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[1].goal);
+      // 📚 맨 앞은 **챕터 1 카드**다(읽고 넘긴다) — 시키는 일은 그다음 칸부터다.
+      //   ⚠ 이 검사는 「단계마다 제 진행도를 갖는다」를 재는 것이라, 카드를 건너뛰고 잰다.
+      const _i0=TUTO_STEPS.findIndex(s=>s.id==='mineOn'), _i1=TUTO_STEPS.findIndex(s=>s.id==='tap');
+      assert(TUTO_STEPS[0].ch===1,'맨 앞이 챕터 1 카드가 아니다: '+TUTO_STEPS[0].id);
+      assert(TUTO_STEPS[_i0].goal===1,'첫 단계가 1번이 아니다: '+TUTO_STEPS[_i0].goal);
+      assert(TUTO_STEPS[_i1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[_i1].goal);
       assert(TUTO_STEPS.length>=6,'단계표가 너무 짧다: '+TUTO_STEPS.length);
       const ov=$('tutoOv');
       // 대상(채굴 칸)이 화면에 있어야 스포트라이트가 뜬다 — 없으면 이 검사는 건너뛴다
@@ -13360,14 +13366,16 @@ async function groupLobby(){
       assert(out && out.closest && out.closest('.tutoOv'),'대상 밖이 안 막힌다 — 완전 강제가 깨졌다');
       assert(inn && inn.closest && inn.closest('[data-minemode]'),'대상이 안 눌린다 — 스포트라이트가 대상까지 덮었다');
       // ③ 두 진행도 — 왼쪽은 몇 단계째, 오른쪽은 이번 단계의 진행
-      assert(/^1 \/ \d+$/.test(ov.querySelector('.tuStep').textContent),'왼쪽이 단계 표시가 아니다: '+ov.querySelector('.tuStep').textContent);
+      { const _hd=ov.querySelector('.tuStep').textContent;
+        assert(_hd.indexOf('챕터 1 · 1 / ')===0,
+          '왼쪽이 「챕터 N · a / b」가 아니다: '+_hd); }
       assert(ov.querySelector('.tuN').textContent==='0 / 1','첫 단계 진행이 0 / 1 이 아니다: '+ov.querySelector('.tuN').textContent);
       // ④ 말풍선이 **대상 근처**에 있다(화면 끝에 두면 눈이 두 번 움직인다)
       { const tip=ov.querySelector('.tuTip').getBoundingClientRect();
         const d=Math.min(Math.abs(tip.top-Tg.bottom), Math.abs(Tg.top-tip.bottom));
         assert(d<=40,'말풍선이 대상에서 멀다: '+d.toFixed(0)+'px'); }
       // ⑤ 다음 단계는 goal 이 10 이다(광맥 두드리기) — 단계마다 제 진행도를 갖는다
-      assert(TUTO_STEPS[1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[1].goal);
+      assert(TUTO_STEPS[_i1].goal===10,'두 번째 단계가 10번이 아니다: '+TUTO_STEPS[_i1].goal);
       // ⑥ 🚪 **직접 켜 보는 자리**가 있다(2026-09-04 사용자 요청) — 가이드 시트 맨 위 줄.
       //   ⛔ 그만두기를 빼지 말 것: 튜토리얼은 화면을 덮으므로 켠 사람이 나올 길이 필요하다.
       assert(typeof tutoRestart==='function' && typeof tutoStop==='function','튜토리얼을 켜고 끄는 입구가 없다');
@@ -13504,6 +13512,65 @@ async function groupLobby(){
     return '되감음 · 환생 값 유지 · 밑천 '+got.toLocaleString()+' · 가스 0 · 일꾼 '+wk;
   });
 
+  // 📚 튜토리얼은 **셋으로 나뉜다**(2026-09-08 사용자 확정) — 자원 · 기지와 부대 · 출격.
+  //   경계는 표가 아니라 **챕터 카드 단계**이고, 번호도 그 사이에서 센다.
+  await step('튜토리얼: 챕터 셋으로 갈린다 · 카드는 읽고 넘긴다', async()=>{
+    skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_CH==='undefined','튜토리얼 없음');
+    const ids=TUTO_STEPS.map(s=>s.id), at=(k)=>ids.indexOf(k);
+    assert(TUTO_CH.length===3,'챕터가 셋이 아니다: '+TUTO_CH.length);
+    for(const c of TUTO_CH) assert(c.title && c.sub,'챕터에 제목·부제가 없다: '+JSON.stringify(c));
+    // 🗂 경계 — 자원은 채굴부터, 기지는 채굴 해제부터, 출격은 던전 목록부터
+    assert(at('ch1')+1===at('mineOn'),'챕터 1 이 채굴 앞에서 안 열린다: '+ids.slice(0,3).join(' → '));
+    assert(at('ch2')+1===at('mineOff'),'챕터 2 가 「채굴 해제」 앞이 아니다');
+    assert(at('ch3')+1===at('dgOpen'),'챕터 3 이 「던전 목록」 앞이 아니다');
+    // 🔢 카드는 **번호에서 빠진다** — 세면 「1/13」이 카드에서 시작해 셈이 거짓말이 된다
+    { const S=guideState(); skipIf(!S,'상태 없음'); const t0=S.t;
+      try{ S.t=at('ch2'); const sp=_tutoChSpan();
+        assert(sp[0]===at('mineOff'),'챕터 범위가 카드부터 시작한다: '+sp[0]+' vs '+at('mineOff'));
+        assert(sp[1]===at('ch3'),'챕터 범위가 다음 카드에서 안 끝난다: '+sp[1]);
+        const tot=_tutoTotal(sp[0],sp[1]);
+        assert(tot>0 && tot<TUTO_STEPS.length,'챕터 안 총수가 이상하다: '+tot);
+        S.t=at('mineOff');
+        assert(_tutoNo(sp[0])===1,'챕터 첫 단계가 1 이 아니다: '+_tutoNo(sp[0]));
+        assert(_tutoChNow()===2,'챕터 번호가 틀렸다: '+_tutoChNow());
+      } finally { S.t=t0; } }
+    // 🃏 카드의 모습 — 링·꼬리·진행 숫자가 없고, 버튼은 「계속」(보상은 끝에 한 번뿐이다)
+    { const S=guideState(), on0=window.campIsOn, off0=TUTO_OFF;
+      const t0=S?S.t:0, run0=S?S.trun:null, skip0=S?S.skip:null, ack0=S?S.tack:null;
+      try{ window.campIsOn=()=>true; TUTO_OFF=false;
+        if(S){ S.t=at('ch2'); S.trun=1; delete S.skip; delete S.tack; }
+        tutoPaint();
+        const ov=$('tutoOv'); assert(ov,'챕터 카드가 안 뜬다');
+        const tip=ov.querySelector('.tuTip'), go=ov.querySelector('.tuGo');
+        assert(tip.classList.contains('ch'),'챕터 카드가 지시 카드와 같은 얼굴이다');
+        assert(ov.querySelector('.tuStep').textContent==='챕터 2',
+          '카드 머리줄이 챕터를 안 말한다: '+ov.querySelector('.tuStep').textContent);
+        assert(ov.querySelector('.tuTx').textContent===TUTO_CH[1].title,'카드 제목이 다르다');
+        const sb=ov.querySelector('.tuSub');
+        assert(sb && !sb.hidden && sb.textContent===TUTO_CH[1].sub,'카드 부제가 없다');
+        assert(ov.querySelector('.tuN').hidden,'카드에 진행 숫자가 뜬다 — 시킬 일이 없는 칸이다');
+        assert(getComputedStyle(tip,'::after').display==='none','카드에 꼬리가 남았다 — 가리킬 곳이 없다');
+        const rgc=getComputedStyle(ov.querySelector('.tuRing')).borderTopColor;
+        assert(rgc.indexOf('0)')>0||rgc==='transparent','카드에 스포트라이트 링이 남았다: '+rgc);
+        assert(go && !go.hidden && getComputedStyle(go).display!=='none','카드에 「계속」 버튼이 없다');
+        assert(go.textContent.trim()==='계속','카드 버튼 글자가 다르다: '+go.textContent);
+        assert(!go.querySelector('img,svg'),'카드 버튼에 보상이 붙었다 — 보상은 끝에 한 번이다');
+        // 📖 「읽었다」는 **한 칸짜리** — 안 지우면 다음 카드가 뜨자마자 통과한다
+        go.click();
+        assert(S.tack===1,'카드를 눌러도 읽었다는 표시가 안 남는다');
+        S.t=at('ch3'); S.base=null; delete S.tack;      // tutoAdvance 가 하는 것과 같다
+        tutoPaint();
+        assert((TUTO_STEPS[at('ch3')].n()|0)===0,
+          '다음 카드가 뜨자마자 통과한다 — 「읽었다」를 안 지웠다');
+      } finally { window.campIsOn=on0; TUTO_OFF=off0;
+        if(S){ S.t=t0;
+          if(run0!=null) S.trun=run0; else delete S.trun;
+          if(skip0!=null) S.skip=skip0; else delete S.skip;
+          if(ack0!=null) S.tack=ack0; else delete S.tack; }
+        tutoPaint(); } }
+    return '챕터 '+TUTO_CH.map(c=>c.title).join(' · ');
+  });
+
   await step('튜토리얼: 건물 짓기가 손동작 단위로 갈라져 있다', async()=>{
     skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_BLD==='undefined','튜토리얼 없음');
     const ids=TUTO_STEPS.map(s=>s.id);
@@ -13530,10 +13597,12 @@ async function groupLobby(){
     { const r0=G.tech.race; try{ G.tech.race='union';
         assert(_tutoLive({id:'armB2'})===false && _tutoLive({id:'placeB2'})===false,
           '유니온인데 둘째 건물 단계를 센다 — 번호가 뛴다');
-        assert(_tutoTotal()===ids.length-2,'보이는 단계 수가 안 맞는다: '+_tutoTotal()+' (전체 '+ids.length+')');
+        // ⚠ 챕터 카드 셋도 세지 않는다(시키는 일이 아니라 표지다)
+        assert(_tutoTotal()===ids.length-2-TUTO_CH.length,
+          '보이는 단계 수가 안 맞는다: '+_tutoTotal()+' (전체 '+ids.length+' · 카드 '+TUTO_CH.length+')');
         G.tech.race='aetherial';
         assert(_tutoLive({id:'armB2'})===true,'에테리얼은 둘째 건물(동력탑→차원문)을 쓴다');
-        assert(_tutoTotal()===ids.length,'에테리얼인데 단계가 빠진다: '+_tutoTotal());
+        assert(_tutoTotal()===ids.length-TUTO_CH.length,'에테리얼인데 단계가 빠진다: '+_tutoTotal());
       } finally { G.tech.race=r0; } }
     // 📖 **마지막은 읽고 넘긴다** — 좌상단 **배수 칸**(#curMul)을 감싼다(2026-09-04 사용자 확정).
     //   ⚠ 그 칸이 없거나 안 보이면 화면 전체('all')로 물러난다 — 그래도 아무 데나 터치하면 넘어간다.

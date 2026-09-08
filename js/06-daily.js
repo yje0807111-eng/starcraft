@@ -380,7 +380,25 @@ function guideNote(kind, n){ try{
 //   ⭐ 진행도는 **게임 상태에서 직접 읽는다**(n()) — 따로 세지 않으므로 어긋날 수가 없다.
 //   ⛔ 여기에 이벤트 리스너를 달아 세지 말 것(두 벌이 된다).
 const TUTO_DG = 1;   // 🗺 튜토리얼이 데려가는 곳 — 캠프(0)의 바로 다음
+// 📚 **셋으로 나눈다**(2026-09-08 사용자 확정) — 스물여섯 단계를 한 줄로 이으면 어디쯤 왔는지
+//   알 수 없고 쉬어 갈 자리도 없다. 챕터가 바뀔 때 카드를 한 번 띄우고, 그 뒤로는 말풍선
+//   왼쪽 위가 「챕터 2 · 3/13」처럼 **챕터 안에서만** 센다.
+//   ⭐ **경계는 표가 아니라 단계다** — TUTO_STEPS 안의 챕터 카드(ch 를 가진 칸)가 곧 경계이고,
+//     번호도 그 사이에서 센다. ⛔ 「몇 번부터 몇 번까지」를 따로 적어 두지 말 것: 단계가
+//     하나 늘 때마다 두 곳을 고쳐야 하고, 한 곳을 잊으면 번호가 조용히 어긋난다.
+//   ⛔ 보상은 나누지 않는다(사용자 확정) — 챕터는 나누는 눈금일 뿐이고 보상은 끝에 한 번이다.
+const TUTO_CH = [
+  { n:1, title:'자원',        sub:'두드려 벌고, 일꾼에게 맡깁니다' },
+  { n:2, title:'기지와 부대',  sub:'짓고, 뽑고, 움직입니다' },
+  { n:3, title:'출격',        sub:'던전으로 나갑니다' },
+];
+// 🃏 챕터 카드 한 칸을 만든다 — 시키는 일이 없고 **읽고 [계속]** 을 누른다(outro 와 같은 어법).
+function _tutoChStep(k){ const c=TUTO_CH[k];
+  return { id:'ch'+c.n, ch:c.n, goal:1,
+    tip:()=>c.title, sub:()=>c.sub, go:()=>'계속',
+    at:()=>'all', n:()=>{ const S=guideState(); return (S && S.tack) ? 1 : 0; } }; }
 const TUTO_STEPS = [
+  _tutoChStep(0),
   // ⚠ 채굴이 켜졌는지는 **campMineModeOn()** 이 안다(#phone.mineMode). 옛 시트의 #campMineTap 을
   //   보고 있었더니 켜도 다음으로 안 넘어갔다(2026-09-04 사용자 신고 · 그 시트는 이제 안 쓴다).
   { id:'mineOn', goal:1,  tip:'여기를 터치하여 채굴 모드를 켭니다',
@@ -411,6 +429,7 @@ const TUTO_STEPS = [
   //   ⚠ 돈은 **채굴이 켜져 있을 때 한꺼번에** 모은다 — 끄고 나면 두드려 벌 수가 없다(순서가 곧 이유다).
   { id:'coinB',  goal:()=>_tutoBCost(0)+_tutoBCost(1), tip:()=>_tutoBuildCostTip(),
     at:_tutoTapAt, n:()=>_tutoCoin() },
+  _tutoChStep(1),
   { id:'mineOff',goal:1,  tip:'채굴 모드 해제 버튼을 눌러 일반모드로 전환합니다',
     at:()=>_tutoVis('#campMineStop'),
     n:()=>(typeof campMineModeOn==='function' && !campMineModeOn()) ? 1 : 0 },
@@ -469,6 +488,7 @@ const TUTO_STEPS = [
   { id:'panDrag',goal:1,  tip:()=>(_tutoPanMode() ? '한 손가락으로 화면을 밀어 봅니다'
                                                   : '이동 모드가 풀렸습니다 — 다시 길게 누릅니다'),
     at:()=>'map', n:()=>(_tutoPanMode() ? _tutoView('pan') : 0) },
+  _tutoChStep(2),
   { id:'dgOpen', goal:1,  tip:'좌상단을 눌러 던전 목록을 엽니다',
     at:()=>_tutoVis('#curTitle'), n:()=>_tutoVis('#campDrop') ? 1 : 0 },
   { id:'dgPick', goal:1,  tip:()=>_tutoDgTip(),
@@ -482,6 +502,7 @@ const TUTO_STEPS = [
   //   아무 데나 터치하면 끝나고 보상이 나간다(tutoPaint 가 오버레이에 리스너를 단다).
   //   ⚠ 이 단계만 게임 상태가 아니라 **터치했나**를 본다. 그래서 상태를 S.tack 에 남긴다.
   { id:'outro',  goal:1,  tip:'라운드가 오를수록 재화 획득 배수가 늘어납니다',
+    sub:()=>TUTO_END_SUB,                                    // ⚠ 초기화를 말없이 하지 않는다
     at:()=>_tutoVis('#curMul') || 'all',
     n:()=>{ const S=guideState(); return (S && S.tack) ? 1 : 0; } },
 ];
@@ -695,10 +716,25 @@ function tutoFreeUnit(id){
 function _tutoLive(st){ if(!st) return false;
   if(st.id==='armB2' || st.id==='placeB2') return _tutoBk(1)!=null;
   return true; }
-function _tutoNo(){ let n=0, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
-  for(let i=0;i<=k;i++) if(_tutoLive(TUTO_STEPS[i])) n++;
+// 🔢 번호는 **범위 안에서** 센다 — 인자를 안 주면 전체(옛 동작), 챕터 경계를 주면 챕터 안 번호다.
+//   ⚠ 챕터 카드는 세지 않는다 — 시키는 일이 아니라 표지라서, 세면 「1/13」이 카드에서 시작한다.
+function _tutoNo(from){ let n=0, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
+  for(let i=(from|0);i<=k;i++){ const s=TUTO_STEPS[i]; if(_tutoLive(s) && !s.ch) n++; }
   return Math.max(1, n); }
-function _tutoTotal(){ let n=0; for(const st of TUTO_STEPS) if(_tutoLive(st)) n++; return n; }
+function _tutoTotal(from, to){ let n=0;
+  const a=(from|0), b=(to==null?TUTO_STEPS.length:to);
+  for(let i=a;i<b;i++){ const s=TUTO_STEPS[i]; if(_tutoLive(s) && !s.ch) n++; }
+  return n; }
+// 📚 지금 챕터 — 지나온 마지막 챕터 카드가 정한다(경계가 곧 그 카드다).
+function _tutoChNow(){ let c=null, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
+  for(let i=0;i<=k;i++) if(TUTO_STEPS[i].ch) c=TUTO_STEPS[i].ch;
+  return c; }
+// 📐 지금 챕터의 [시작, 끝) — 앞 카드의 다음 칸부터 다음 카드 앞까지.
+function _tutoChSpan(){ let a=0, k=Math.min(tutoIdx(), TUTO_STEPS.length-1);
+  for(let i=0;i<=k;i++) if(TUTO_STEPS[i].ch) a=i+1;
+  let b=TUTO_STEPS.length;
+  for(let i=a;i<TUTO_STEPS.length;i++) if(TUTO_STEPS[i].ch){ b=i; break; }
+  return [a, b]; }
 function tutoIdx(){ const S=guideState(); return S ? (S.t|0) : 0; }
 function tutoStep(){ return TUTO_STEPS[tutoIdx()] || null; }
 // 🔧 **검사용 스위치**(CAMP_DEV_NOFAIL 과 같은 어법). 튜토리얼은 화면을 통째로 덮고 입력을 막으므로
@@ -741,13 +777,16 @@ function tutoTarget(){
   const a=st.at();
   const goal=_tutoGoal(st), n=Math.min(goal, st.n()|0);
   const tip=(typeof st.tip==='function') ? st.tip() : st.tip;   // 종족마다 건물 이름이 다르다
-  if(a==='free') return { free:true, tip:tip, n:n, goal:goal };  // 👆 화면을 통째로 연다(막지 않는다)
-  if(a==='all') return { full:true, tip:tip, n:n, goal:goal };   // 📖 읽고 넘기는 단계(대상이 없다)
-  if(a==='map') return { map:true, tip:tip, n:n, goal:goal };
+  // 🗒 **부제는 단계가 갖는다** — 챕터 카드는 「짓고, 뽑고, 움직입니다」, 마지막 칸은 초기화 예고.
+  //   ⛔ 화면 쪽에서 단계 id 를 보고 문구를 고르지 말 것(표가 단일 소스다).
+  const sub=(typeof st.sub==='function') ? st.sub() : (st.sub||'');
+  if(a==='free') return { free:true, tip:tip, sub:sub, n:n, goal:goal };  // 👆 화면을 통째로 연다
+  if(a==='all') return { full:true, ch:st.ch||0, tip:tip, sub:sub, n:n, goal:goal }; // 📖 읽고 넘긴다
+  if(a==='map') return { map:true, tip:tip, sub:sub, n:n, goal:goal };
   // 🏛 맵 위의 **한 자리**(건물처럼 DOM 이 아닌 것) — {left,top,right,bottom}
-  if(a && a.left!=null) return { rect:a, tip:tip, n:n, goal:goal };
+  if(a && a.left!=null) return { rect:a, tip:tip, sub:sub, n:n, goal:goal };
   if(!a) return null;
-  return { el:a, tip:tip, n:n, goal:goal };
+  return { el:a, tip:tip, sub:sub, n:n, goal:goal };
 }
 // 다 했으면 다음 단계로 — 진행도를 그릴 때마다 확인한다(따로 이벤트를 안 단다).
 // ✅ **완료를 보고 넘어간다**(2026-09-04 사용자 요청) — 목표를 채우면 곧바로 다음으로 가지 않고
@@ -768,7 +807,8 @@ function tutoAdvance(){
     if(now - S.hold < TUTO_HOLD_MS) return false;               // 아직 보여 주는 중
     delete S.hold; }
   const _last=(tutoIdx()+1 >= TUTO_STEPS.length);
-  S.t=tutoIdx()+1; S.base=null; delete S.mv0; delete S.vw0; delete S.vp0;
+  // 📖 **「읽었다」는 한 칸짜리다** — 안 지우면 다음 챕터 카드가 뜨자마자 통과한다(카드가 셋이다).
+  S.t=tutoIdx()+1; S.base=null; delete S.tack; delete S.mv0; delete S.vw0; delete S.vp0;
   if(_last) tutoFinish();
   // 💰 **단계가 바뀌면 값도 그 자리에서 다시 잰다.** 유닛 값은 campFrame 이 프레임마다 갱신하는데
   //   「첫 한 기 공짜」는 **단계**에 달려 있다 — 안 그러면 카드가 한 박자 옛 값으로 잠겨 보인다.
@@ -804,7 +844,7 @@ function tutoPaint(){
     //   ⚠ 게임 행동이 아니라 「읽었다」는 신호라, 계측(dqNote)이 아니라 여기서 받는 것이 맞다.
     ov.querySelector('.tuGo').addEventListener('click', function(ev){
       if(ev && ev.stopPropagation) ev.stopPropagation();
-      const st=tutoStep(); if(!st || st.id!=='outro') return;
+      const st=tutoStep(); if(!st || (st.id!=='outro' && !st.ch)) return;
       const S=guideState(); if(S) S.tack=1;
       tutoPaint(); }); }
   ph.classList.add('tutoOn');
@@ -845,7 +885,9 @@ function tutoPaint(){
         if(s.height>0 && s.top>y0 && s.top<y2) y2=s.top; }
       return { left:h.left, right:h.right, top:y0, bottom:Math.max(y0+40, y2) }; })()
     : t.el.getBoundingClientRect();
-  const PAD=6;
+  // 📚 챕터 카드는 **구멍이 없다** — 여느 단계의 여유(PAD)를 그대로 두면 대상이 없는데도
+  //   14px 짜리 밝은 점이 카드 위에 남는다(2026-09-08 실측). 시킬 일이 없으니 열 곳도 없다.
+  const PAD=t.ch ? 0 : 6;
   const x1=Math.max(0, r.left-pr.left-PAD), y1=Math.max(0, r.top-pr.top-PAD);
   const x2=Math.min(pr.width, r.right-pr.left+PAD), y2=Math.min(pr.height, r.bottom-pr.top+PAD);
   const px=(v)=>v.toFixed(1)+'px';
@@ -856,9 +898,12 @@ function tutoPaint(){
   //   ⚠ **자리를 주기 전에** 정해야 한다(2026-09-08). 링 style 을 준 뒤에 transition 을 꺼 봐야
   //     이미 시작한 보간은 안 멈춘다 — 실측에서 링이 364px 에서 53px 로 계속 미끄러졌다.
   //   ⚠ 가까운 이동은 그대로 미끄러진다(단계가 이어진다는 느낌은 그쪽이 낫다).
+  //   📚 **챕터 카드로 들어갈 때도 즉시** — 대상이 없어 구멍이 화면만 하게 벌어져 있다가
+  //     점으로 오므라든다. 그건 「미끄러진다」가 아니라 **밝은 사각형이 닫히는** 것이라
+  //     한 박자 동안 아무것도 아닌 판이 떠 있는 것으로 보인다(2026-09-08 실측 camp-tuto-ch2.png).
   { const mx=(x1+x2)/2, my=(y1+y2)/2, prev=ov._tuAt;
     ov._tuAt={ x:mx, y:my };
-    if(prev && Math.hypot(mx-prev.x, my-prev.y) > pr.height*0.30){
+    if((prev && Math.hypot(mx-prev.x, my-prev.y) > pr.height*0.30) || !!t.ch){
       ov.classList.remove('tuAnim');
       const rg=q('.tuRing'); rg.classList.remove('tuPop'); void rg.offsetWidth; rg.classList.add('tuPop');
       if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ ov.classList.add('tuAnim'); });
@@ -868,7 +913,10 @@ function tutoPaint(){
   q('.tuL').style.cssText='left:0;top:'+px(y1)+';width:'+px(x1)+';height:'+px(y2-y1);
   q('.tuR').style.cssText='left:'+px(x2)+';top:'+px(y1)+';right:0;height:'+px(y2-y1);
   q('.tuRing').style.cssText='left:'+px(x1)+';top:'+px(y1)+';width:'+px(x2-x1)+';height:'+px(y2-y1);
-  q('.tuRing').classList.toggle('tuHide', !!t.free);   // 👆 화면 전체를 여는 단계에는 테두리를 안 그린다
+  // 👆 화면 전체를 여는 단계 · 📚 챕터 카드에는 테두리를 안 그린다.
+  //   ⚠ 챕터 카드에 링이 남으면 화면 한가운데에 **아무것도 아닌 붉은 사각형**이 뜬다 —
+  //     시키는 일이 없는 칸이라 가리킬 곳도 없다(2026-09-08 실측 camp-tuto-ch2.png).
+  q('.tuRing').classList.toggle('tuHide', !!t.free || !!t.ch);
   // 말풍선은 **대상 옆**에 붙인다(2026-09-04 사용자 지적) — 화면 아래 끝에 두면 어디를 누르라는 건지
   //   눈이 두 번 움직인다. 아래에 자리가 있으면 아래, 없으면 위. 좌우는 대상 중심을 따라간다.
   // 🎞 **단계가 바뀔 때만** 말풍선을 다시 태운다(2026-09-04 사용자 요청 — 「조금 더 자연스럽게」).
@@ -877,20 +925,33 @@ function tutoPaint(){
   { const _st=tutoStep(), _id=_st?_st.id:'';
     if(ov._tuStep!==_id){ ov._tuStep=_id;
       const _tp=q('.tuTip'); _tp.classList.remove('tuIn'); void _tp.offsetWidth; _tp.classList.add('tuIn'); } }
-  // 🏁 마지막 칸은 왼쪽 위가 **번호가 아니라 「튜토리얼 종료」**다 — 시킬 일이 없고 끝을 알린다.
+  // 🏷 왼쪽 위 — 챕터 카드는 「챕터 2」, 마지막 칸은 「튜토리얼 종료」, 그 밖은 「챕터 2 · 3/13」.
+  //   ⭐ 번호를 **챕터 안에서** 센다(2026-09-08 사용자 확정) — 스물여섯을 통으로 세면 어디쯤
+  //     왔는지 감이 안 온다. ⛔ 전체 통산으로 되돌리지 말 것.
   { const _st=tutoStep(), _last=!!(_st && _st.id==='outro'), _sp=q('.tuStep');
-    _sp.textContent=_last ? TUTO_END_TITLE : (_tutoNo()+' / '+_tutoTotal());
-    _sp.classList.toggle('end', _last); }
+    const _ch=_tutoChNow(), _sp2=_tutoChSpan();
+    _sp.textContent = _st && _st.ch ? ('챕터 ' + _st.ch)
+      : _last ? TUTO_END_TITLE
+      : ((_ch ? ('챕터 ' + _ch + ' · ') : '') + _tutoNo(_sp2[0]) + ' / ' + _tutoTotal(_sp2[0], _sp2[1]));
+    _sp.classList.toggle('end', _last || !!(_st && _st.ch)); }
   q('.tuTx').textContent=t.tip;
-  // ⚠ **초기화를 말없이 하지 않는다** — 지어 둔 것이 사라진다는 예고를 확인 버튼 위에 둔다.
-  { const _st=tutoStep(), _last=!!(_st && _st.id==='outro'), _sb=q('.tuSub');
-    _sb.textContent=_last ? TUTO_END_SUB : ''; _sb.hidden=!_last; }
+  // 🗒 부제 — 챕터 카드의 한 줄 소개 · 마지막 칸의 초기화 예고. 없으면 자리도 없다.
+  { const _sb=q('.tuSub'); _sb.textContent=t.sub||''; _sb.hidden=!t.sub; }
+  // 🃏 챕터 카드는 **판이 다르다** — 제목이 크고 진행 숫자가 없다(시키는 일이 없다).
+  { const _st=tutoStep(), _isCh=!!(_st && _st.ch);
+    q('.tuTip').classList.toggle('ch', _isCh);
+    q('.tuN').hidden=_isCh; }
   q('.tuN').textContent=t.n+' / '+t.goal;                    // 오른쪽 = **이번 단계의 진행**
   q('.tuN').classList.toggle('ok', t.n>=t.goal);             // ✅ 다 했으면 초록(0.3초 머무는 동안 보인다)
   // 🎁 마지막 단계에만 확인 버튼 — 보상을 **버튼 안에** 얹는다(재화 아이콘은 공용 resIco 하나뿐이다).
   { const _go=q('.tuGo'), _st=tutoStep(), _last=!!(_st && _st.id==='outro');
-    _go.hidden=!_last;
-    if(_last && !_go._tuFill){ _go._tuFill=1;
+    const _isCh=!!(_st && _st.ch);
+    _go.hidden=!(_last || _isCh);
+    // 🃏 챕터 카드의 버튼은 **「계속」** — 보상이 없으므로 글자만이다.
+    //   ⚠ 캐시 열쇠는 **단계 id** 다 — 「채운 적 있다」로 두면 챕터 2 카드에 챕터 1 의 글자가 남는다.
+    if(_isCh && _go._tuFill!==_st.id){ _go._tuFill=_st.id;
+      _go.innerHTML='<span>'+((typeof _st.go==='function')?_st.go():'계속')+'</span>'; }
+    if(_last && _go._tuFill!=='outro'){ _go._tuFill='outro';
       // 🎁 **받는 것을 다 적는다** — 젬(보상)과 밑천 미네랄(새 출발). 둘 다 실제로 들어가므로
       //   하나만 적으면 나머지가 없는 것처럼 보인다. ⛔ 이모지 금지 — 재화 그림은 resIco 하나다.
       const _rw=[];
