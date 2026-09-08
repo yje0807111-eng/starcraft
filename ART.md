@@ -2139,75 +2139,64 @@ slingshot, letter Y typeface, arrow, filled solid shape, three arms`
 **⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png`
 
 ```
-One single crescent arc, and nothing crosses it. The arc is one continuous smooth
-curve with no straight segments and no corners: its two tips point toward the upper
-left and the lower right, and its body bulges toward the upper right, like a thin
-sliver cut from the edge of a circle. Outside that bulge sit two short straight
-ticks, parallel to each other and angled to follow the curve, both floating clear of
-the arc and of each other; the tick nearer the arc is slightly longer. The ticks
-never touch the arc and never cross each other.
-The line weight is even and moderate: the stroke is about one thirteenth of the
-mark's longest dimension — a fine engraved line, neither hairline nor bold. The arc
-is at least eight times longer than the line is thick. Nothing is filled.
+A single crescent arc drawn as one clean curved stroke that opens toward the lower
+left, the same width along its whole length with no taper at either tip. Outside the
+arc's upper-right flank, two short straight ticks sit parallel to each other and
+angled to follow the curve, both floating clear of the arc and not touching it; the
+tick nearer the arc is slightly longer than the far one. Nothing is filled.
 Vivid green #13f487 with a near-white core along each stroke.
 ```
 추가 NEGATIVE: `cross, X shape, asterisk, star, radiating lines, two strokes crossing,
-plus sign, sword, blade, hilt, crescent moon with a face, spiral, three or more ticks,
-ticks touching the arc, filled solid shape, thick heavy stroke`
+plus sign, sword, blade with handle, hilt, crescent moon with a face, spiral,
+three or more ticks, ticks touching the arc, filled solid shape`
 
 **⑬ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
 
 ```
-An upright angular crystal fills the upper half: a pointed top, two straight sides
-flaring outward, a flat base, hollow inside, with one straight vertical facet line
-down its middle that reaches neither the point nor the base. Below the crystal,
-floating clear and touching nothing, one downward chevron sits centred — exactly two
-straight strokes meeting at a point below, with no shaft, no tail and no crossbar.
-The chevron is narrower than the crystal's base.
-The line weight is even and moderate: the stroke is about one thirteenth of the
-mark's longest dimension — a fine engraved line, neither hairline nor bold. Every
-straight segment is at least six times longer than the line is thick. Nothing is
-filled.
+An upright angular crystal drawn as an open outline stands in the upper half: a
+pointed top, two straight sides flaring outward, a flat base, and one straight facet
+line down its middle. Below it, floating clear and not touching, a single downward
+chevron sits centred — two straight strokes meeting at a point below, the same width
+as the rest. Nothing is filled.
 Steel blue #4b84d8 with a near-white core along each stroke.
 ```
 추가 NEGATIVE: `arrow with a shaft, arrowhead on a stem, tapering arrow, coin,
 currency symbol, percent sign, two chevrons, diamond suit, chevron touching the
-crystal, filled solid shape, thick heavy stroke`
+crystal, filled solid shape`
 
 **⑭ 검약의 룬** (가스 구매 비용 감소) — `sym_costg.png`
 
 ```
 Two short straight vertical bars of equal length and equal width stand side by side
 in the upper half, separated by a gap about as wide as one bar. Below them, floating
-clear and touching neither bar, one downward chevron sits centred and spans the width
-of both — exactly two straight strokes meeting at a point below, with no shaft, no
-tail and no crossbar.
-The line weight is even and moderate: the stroke is about one thirteenth of the
-mark's longest dimension — a fine engraved line, neither hairline nor bold. Every
-straight segment is at least six times longer than the line is thick. Nothing is
+clear and touching neither, a single downward chevron sits centred and spans both —
+two straight strokes meeting at a point below, the same width as the bars. Nothing is
 filled.
 Steel blue #4b84d8 with a near-white core along each stroke.
 ```
 추가 NEGATIVE: `arrow with a shaft, arrowhead on a stem, tapering arrow, thick arrow,
 bottle, flask, gas cloud, smoke, three bars, two chevrons, equals sign, letter U,
-filled solid shape, thick heavy stroke`
+filled solid shape`
 
 **⑮ 치유의 룬** (회복량) — `sym_heal.png` · **모양 그대로, 선만 얇게**
 
 ```
 A cross with four arms of equal length radiating up, down, left and right from a
-small square centre. All four arms are the same thickness as each other and end in
-flat square cuts. The shape is perfectly symmetric in every direction — no arm is
-longer than another.
-The line weight is moderate, matching an engraved line: the stroke is about one
-twelfth of the mark's longest dimension, so each arm is roughly six times longer than
-it is wide and the mark reads as four lines meeting rather than one solid plus sign.
-That is about half the weight a bold graphic cross would use. Nothing is filled.
+small square centre. All four arms are the same width as each other and end in flat
+square cuts, and the shape is perfectly symmetric in every direction. The arms are
+slender — each about six times longer than it is wide — so the mark reads as four
+fine lines meeting rather than one solid plus sign. Nothing is filled.
 Rose pink #d6496e with a near-white core along each stroke.
 ```
 추가 NEGATIVE: `bold thick cross, heavy stroke, wide arms, filled solid shape,
 christian cross with a long lower arm, medical cross badge, rounded arm ends,
 square outline around the cross, plus sign inside a box`
+
+⭐ **막는 말은 SUBJECT 가 아니라 NEGATIVE 에 둔다**(2026-09-08 사용자 확정).
+조건을 SUBJECT 안에 잔뜩 쌓았더니 문장이 뻣뻣해지고 오히려 모양이 흐트러졌다 —
+SUBJECT 는 **어떻게 그리나**만 흐르듯 적고, 하지 말 것은 NEGATIVE 가 맡는다.
+⚠ 굵기 조항도 **치유에만** 넣는다(그것만 굵어서 고치는 것이다). 나머지는 적지 않는다 —
+적으면 그 넷만 다른 것과 다른 굵기가 된다(§16-6).
 
 ⚠ 치유의 색을 `#ffa3b8` 에서 `#d6496e` 로 바꿨다 — 옛 프롬프트의 값은 §16-3 표의 것인데,
 실제 파일들은 그보다 진하다(힘 `#d6496e` · 치유 `#e5497a`). 옅은 값으로 다시 뽑으면
