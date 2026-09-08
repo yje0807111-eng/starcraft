@@ -1,0 +1,125 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>주간 할인 — 코너 리본 + 값 버튼 + 모서리 컷/금속 테 (조합 4안)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --gem:#c98bff; --red:#e03a44;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1400px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:320px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:96px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.pane{width:320px;padding:10px;border-radius:var(--r-md);border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%);overflow:hidden}
+
+/* ── 바탕 = 지금 규격 ── */
+.sec{border:0;border-bottom:1px solid rgba(150,170,200,.22);padding:0 0 9px}
+.secH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.secT{font-size:12.5px;color:#eef1f6;font-weight:600;letter-spacing:.06em}
+.secN{font-size:11px;color:#aab4c2;font-family:var(--font-num)}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.buy{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:9px 6px 8px;min-height:118px;color:#c3ccd8;font-size:11px}
+.buy img.ic{width:38px;height:38px;display:block;margin:1px auto 2px;object-fit:contain}
+.buy b{color:var(--rg);font-weight:600;font-size:11px}
+.buy .val{font-size:10.5px}
+.has{position:absolute;right:4px;top:4px;font-style:normal;font-family:var(--font-num);
+  font-size:9.5px;color:#8d97a6;z-index:3}
+
+/* 🔩 모서리 컷 + 금속 테 — 안 넷이 공유한다(④안) */
+.buy{border:0;border-radius:0;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03));--cut:7px}
+.buy::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 62%,transparent),rgba(150,170,200,.16));
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut),
+    1px calc(var(--cut) + .5px),1px calc(100% - 1px),calc(100% - var(--cut) - .5px) calc(100% - 1px),
+    calc(100% - 1px) calc(100% - var(--cut) - .5px),calc(100% - 1px) 1px,calc(var(--cut) + .5px) 1px)}
+
+/* 💜 값을 버튼으로(⑤안) — 각진 컷까지 함께 */
+.buy u{text-decoration:none;font-family:var(--font-num);font-weight:600;font-size:11.5px;color:#fff;
+  display:flex;align-items:center;justify-content:center;gap:3px;margin-top:auto;width:100%;
+  padding:5px 4px;background:linear-gradient(180deg,#8a3fd6,#5d23a3);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 2px 0 rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.25);
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+.buy u img{width:11px;height:11px;display:block;filter:brightness(1.3)}
+.buy u s{text-decoration:line-through;color:rgba(255,255,255,.55);font-size:9.5px;margin-left:3px;font-weight:400}
+
+/* 🎀 코너 리본(⑥안) — 안마다 자리가 다르다 */
+.rib{position:absolute;font-style:normal;font-family:var(--font-num);font-weight:700;
+  color:#fff;background:var(--red);z-index:3;box-shadow:0 1px 2px rgba(0,0,0,.5)}
+.secT::before{content:'한정';display:inline-block;margin-right:6px;padding:0 5px;font-size:9px;
+  font-family:var(--font-num);font-weight:700;color:#fff;background:var(--red);border-radius:3px;vertical-align:1px}
+
+/* ① 기본 조합 — 리본이 컷 위를 지난다 */
+.v1 .rib{left:-19px;top:8px;transform:rotate(-45deg);padding:1px 22px;font-size:8.5px;letter-spacing:.04em}
+
+/* ② 리본이 곧 모서리 — 컷을 키우고 그 자리를 붉게 채운다 */
+.v2 .buy{--cut:22px}
+.v2 .buy::before{background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 62%,transparent),rgba(150,170,200,.16))}
+.v2 .rib{left:0;top:0;width:44px;height:44px;padding:0;box-shadow:none;
+  clip-path:polygon(0 0,100% 0,0 100%);display:block}
+.v2 .rib i{position:absolute;left:1px;top:9px;transform:rotate(-45deg);font-style:normal;
+  font-size:8.5px;letter-spacing:.02em;display:block;width:34px;text-align:center}
+
+/* ③ 리본을 오른쪽 위로 — 그림을 안 가린다 */
+.v3 .rib{right:-19px;left:auto;top:8px;transform:rotate(45deg);padding:1px 22px;font-size:8.5px;letter-spacing:.04em}
+.v3 .has{right:auto;left:4px;top:4px}
+
+/* ④ ①에 등급 뒷광을 더한다 */
+.v4 .rib{left:-19px;top:8px;transform:rotate(-45deg);padding:1px 22px;font-size:8.5px;letter-spacing:.04em}
+.v4 .buy{background:
+  radial-gradient(62% 56% at 50% 32%,color-mix(in srgb,var(--rg) 26%,transparent),transparent 70%),
+  linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03))}
+.v4 .buy img.ic{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--rg) 55%,transparent))}
+</style></head><body>
+
+<h1>주간 할인 — <b>코너 리본</b> + <b>값 버튼</b> + <b>모서리 컷·금속 테</b> 조합 · 4안</h1>
+<p>셋을 다 얹으면 <b>리본과 잘린 모서리가 같은 45°</b>라 어디에 두느냐가 관건이다. 네 안은 그 자리만 다르다.
+값 버튼(보라)과 금속 테(등급색→금속)는 넷 모두 같다. 그림은 실제 룬 타일이다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var SALE = [
+  { id:'atk',  gd:'mid',  nm:'중급 힘의 룬',    v:'+1%',   p:91,  o:130,  rg:'#5cd6ff' },
+  { id:'crit', gd:'mid',  nm:'중급 예리의 룬',  v:'+10%',  p:91,  o:130,  rg:'#5cd6ff' },
+  { id:'mapg', gd:'high', nm:'상급 전리품의 룬',v:'+1.5%', p:280, o:400,  rg:'#ffcf6b' },
+  { id:'costg',gd:'high', nm:'상급 검약의 룬',  v:'+1.5%', p:280, o:400,  rg:'#ffcf6b' },
+  { id:'atk',  gd:'high', nm:'상급 힘의 룬',    v:'+1.5%', p:280, o:400,  rg:'#ffcf6b' },
+  { id:'heal', gd:'uniq', nm:'유니크 치유의 룬',v:'+5%',   p:840, o:1200, rg:'#c98bff' } ];
+var GEM = '<img src="../../assets/icons/res_gem.webp" alt="">';
+function buy(s, k){
+  var rib = (k === 'v2') ? '<i class="rib"><i>-30%</i></i>' : '<i class="rib">-30%</i>';
+  return '<div class="buy" style="--rg:' + s.rg + '">' + rib + '<em class="has">×3</em>'
+    + '<img class="ic" src="../../assets/icons/rune/' + s.id + '_' + s.gd + '.webp" alt="">'
+    + '<b>' + s.nm + '</b><span class="val">' + s.v + '</span>'
+    + '<u>' + GEM + s.p + '<s>' + s.o + '</s></u></div>'; }
+function section(k){
+  return '<div class="sec"><div class="secH"><span class="secT">주간 할인</span>'
+    + '<span class="secN">5일 17시간 뒤 갱신</span></div>'
+    + '<div class="g3">' + SALE.map(function(s){ return buy(s, k); }).join('') + '</div></div>'; }
+
+var CASES = [
+{ c:'v1', t:'기본 조합 — 리본이 컷을 지난다', d:'셋을 그대로 겹친 것. 리본이 <b>잘린 모서리 위를 가로질러</b> 지나가며 카드 밖으로 나가는 부분이 컷에 맞춰 잘린다. 리본과 컷이 같은 각도라 <em>선이 이어져 보인다</em>. ⚠ 리본이 그림 왼쪽 위를 조금 덮는다.' },
+{ c:'v2', t:'리본이 곧 모서리', d:'컷을 <b>7 → 22px</b>로 키우고 그 삼각형 자리를 통째로 붉게 채운다. 리본을 «얹은» 것이 아니라 <em>모서리 자체가 리본</em>이라 가장 정돈돼 보인다. ⚠ 글자가 작아 −30%가 빠듯하다.' },
+{ c:'v3', t:'리본을 오른쪽 위로', d:'컷은 왼쪽 위·오른쪽 아래 그대로 두고 리본만 <b>오른쪽 위</b>로. 그림을 전혀 안 가리고 ×3(보유)이 왼쪽으로 간다. ⚠ 리본이 컷 없는 모서리에 얹혀 <s>«이어지는 느낌»은 사라진다</s>.' },
+{ c:'v4', t:'①에 등급 뒷광까지', d:'①과 같되 카드 안에 <b>등급색 라디얼 빛</b>과 그림 그림자를 더한다. 가장 화려한 벌 — 등급이 색으로 먼저 읽힌다. ⚠ 여섯 칸이 다 빛나 조금 시끄럽다.' },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(x, i){
+  return '<div class="cell"><p class="cap"><i>' + (i+1) + '</i>' + x.t + '</p><p class="sub">' + x.d + '</p>'
+   + '<div class="pane ' + x.c + '">' + section(x.c) + '</div></div>'; }).join('');
+</script></body></html>
