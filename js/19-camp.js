@@ -97,8 +97,11 @@ function campFail(){ const C = campState(); if(!C) return 0;
 //   ① 조건은 **매번 같다**: 그 회차 재화점수 100만. 회차가 늘어도 안 오른다.
 //      고정이라 후반에는 금방 채워진다 → 「특정 시점부터 자유롭게」가 저절로 이루어진다.
 //   ② 배수는 **로그**(폭주 방지) · 포인트는 **제곱근 × 깊이**(트리 비용이 지수라 같이 자라야 한다)
-//   ③ 기준선 100만과 포인트 공식의 기준선은 **같은 숫자**다 — 그래서 조건을 채운 그 순간
-//      기준량이 정확히 1 이고, 「지금 환생할까 더 벌고 환생할까」가 이 한 숫자에서 나온다.
+//   ③ ~~기준선 100만과 포인트 공식의 기준선은 같은 숫자~~ → **2026-09-07 갈랐다**(사용자 결정 「둘 다」).
+//      관문을 100만으로 당긴 뒤 조건을 막 채운 첫 환생이 1.35 포인트라 **가운데(1) 말고는 아무것도 못 샀다**
+//      (갈래 8 · 묶음 32 · 첫 계열까지 41). 설계표(HUNT_R1 §4-4 「첫 환생 12.8 · 1티어 2~3개」)는 옛 경제
+//      (100만이 D2R20 쯤)를 전제한 것이라, 포인트 기준선을 따로 두어(CAMP_RP_BASE) 그 표의 자리로 되돌린다.
+//      첫 환생(100만 · D2R0) = √50 × 1.35 ≈ **9.5 포인트** → 가운데 1 + 갈래 2 + 묶음 4 + 계열 한둘.
 //
 //   ⚠ 통신소 스캔은 아직 입구로 안 붙였다(§4 의 화면 쪽). 지금 조건은 재화점수 하나다 —
 //      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
@@ -159,7 +162,11 @@ function campGasPerMin(){
   if(!campHasRefinery()) return 0;                // 정제소를 지어야 나온다
   // ⚠ campRtMul 은 **계열 키**를 받는다 — 효과 종류(f:'gasMul')가 아니다(2026-09-02 고침).
   //   'gasMul' 은 자루에 절대 안 들어가는 이름이라 가스 생산량 계열이 몇 차든 배수 1 이었다.
-  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRtMul('gas')
+  // 🔁 **환생 배수는 가스에도 걸린다**(2026-09-07 사용자 결정 「둘 다」). 그 전에는 미네랄에만 걸려
+  //   2회차가 던전 2 까지는 10분 빨랐지만 **천장(D2R20)이 1회차와 같았다** — 전투력은 연구(가스)가 정하는데
+  //   가스가 안 자랐다(BALANCE §3-2-14). 배수는 **합**(로그로 큰다)이라 가스도 지수가 되지 않는다.
+  //   ⚠ 「가스는 안 자란다」(HUNT_R1 §2-3-0)는 **회차 안**에서의 말로 남는다 — 회차 안에는 여전히 정제소 레벨뿐이다.
+  return (CAMP_REF_BASE + CAMP_REF_STEP * campRefLv()) * campMineMul() * campRebMul() * campRtMul('gas')
     * ((typeof campRuneMul === 'function') ? campRuneMul('gas') : 1);   // 💠 정제의 룬
 }
 // ⚠ **campFrame 이 민다.** 프레임을 끄고 직접 미는 코드(벤치)는 이것도 같이 불러야 한다 —
@@ -174,6 +181,10 @@ function campGasTick(dt){
 }
 const CAMP_REB_K = 0.8, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
 const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
+// 📐 포인트 기준선 — √(번 재화 ÷ CAMP_RP_BASE). ⛔ CAMP_REB_COST(관문)와 **같지 않다**(2026-09-07 · 위 ③).
+//   2만 = 관문 100만에서 √50 ≈ 7.07 배 — 트리 1티어(1·2·6)와 마디(2·4)를 첫 환생에 서넛 살 수 있는 자리.
+//   ⚠ 값을 바꾸면 트리 전체(160칸 · 최고 티어 ≈ 5.5조)의 도달 시각이 함께 움직인다 — 스모크가 첫 환생 범위를 잰다.
+const CAMP_RP_BASE = 20000;
 
 // 그 회차에 번 것 — 미네랄과 가스를 하나로 본다
 function campWealth(){ const C = campState(); if(!C) return 0;
@@ -285,7 +296,7 @@ function campRebMulGain(){
     * campPackRebMul(); }   // 💳 환생 팩 — 쌓이는 양만 키운다(합산 누적이라 지수가 안 된다)
 // ② 획득 포인트 — 기준량(번 재화) × 깊이 배수. 재화를 2배 벌어야 1.41배다.
 function campRebPtGain(){
-  const base = Math.sqrt(campWealth() / CAMP_REB_COST);
+  const base = Math.sqrt(campWealth() / CAMP_RP_BASE);   // ⚠ 관문(CAMP_REB_COST)이 아니라 포인트 기준선
   return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
     * campPackRebPt()                                     // 💳 환생 팩
     ; }   // ⚠ 「윤회의 룬」(rebPts)은 2026-09-05 에 지웠다 — 환생할 때만 끼는 축이라 재미가 없다
@@ -747,7 +758,8 @@ function campRtCost(k, n){ const L = campRtLine(k);
 // 🌟 **새로운 시작** — 가운데(root)는 트리를 여는 열쇠이자 **첫 환생의 보상**이다(2026-09-01 사용자 확정).
 //   ⛔ 값을 CAMP_RT_BASE 로 두면 안 된다 — 그것은 **비용 공식의 티어1 기준값**이라
 //     건드리면 160칸 전부의 값이 함께 움직인다. root 만의 상수를 따로 둔다.
-//   ⭐ 왜 1인가: 포인트 공식은 `√(번 재화 ÷ 100만)` 이라 **조건을 막 채운 첫 환생은 정확히 1** 이다.
+//   ⭐ 왜 1인가: 포인트 공식이 `√(번 재화 ÷ 100만)` 이던 때 **조건을 막 채운 첫 환생이 정확히 1** 이었다.
+//     (2026-09-07 부터 기준선이 2만이라 첫 환생은 ≈9.5 — 그래도 root 는 1 로 둔다: 「트리를 여는 열쇠」는 싸야 한다.)
 //     2 였을 때는 첫 환생으로 트리를 **열 수조차 없었다** — 눌렀는데 아무 일도 안 일어났다.
 //     HUNT_R1 §4-2-0 이 「첫 경험이 『눌렀더니 느려졌다』면 두 번 다시 안 누른다」고 못박은 자리다.
 const CAMP_RT_ROOT_COST = 1;
@@ -768,8 +780,11 @@ const CAMP_ROOT_WK = 0;             // 시작 일꾼 — ⛔ 0 이다(옛 1기�
 const CAMP_ROOT_TAP = 1;            // 시작 터치 강화 레벨
 //   🗄 시작 건물은 **화면에서만 뺐다**(유보 규칙) — null 이면 안 준다. 배선은 아래에 그대로 있다.
 const CAMP_ROOT_BLD = null;
-const CAMP_RT_BR_COST = 8;      // 갈래 마디 값 (티어 2 기준값)
-const CAMP_RT_GP_COST = 32;     // 묶음 마디 값 (티어 3 기준값)
+// 🚪 마디 값 — 8/32(티어 2·3 기준값)에서 **2/4** 로(2026-09-07 사용자 결정 「둘 다」).
+//   8+32 면 첫 계열(1티어 1·2·6)에 닿기까지 41 이라 마디가 계열보다 20배 비쌌다 — 문이 방보다 비싼 셈.
+//   2/4 는 1티어 계열 값(1·2·6)과 같은 자릿수라 「갈래를 열고 하나를 고른다」가 첫 환생 안에 든다.
+const CAMP_RT_BR_COST = 2;      // 갈래 마디 값
+const CAMP_RT_GP_COST = 4;      // 묶음 마디 값
 const CAMP_RT_BR_KEY = b => 'br:' + b;
 const CAMP_RT_GP_KEY = (b, g) => 'gp:' + b + g;
 //   ⛔ **짝 조건(관문)을 되살리지 말 것**(2026-09-01 제거). 「4차부터 같은 묶음의 짝도 3차 이상」이라는
@@ -1610,7 +1625,7 @@ function campRebRender(){
   const next = campRebMul() + gMul;                 // 배수는 **합**이다(곱이 아니다)
   // 📐 포인트가 어디서 왔는지 — 식을 그대로 쓰지 않고 **곱하는 세 값**으로 쪼갠다.
   //    식을 쓰면 결과(2.96)와 표시(+2 · 바닥내림)가 어긋나 오히려 헷갈린다.
-  const fW = Math.sqrt(Math.max(0, wealth) / need);
+  const fW = Math.sqrt(Math.max(0, wealth) / CAMP_RP_BASE);   // 📐 포인트 기준선(관문과 다르다 · 2026-09-07)
   const fD = Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1));
   const fR = Math.pow(CAMP_RP_RD, campCleared());
   // 🔣 줄 아이콘 — 재화는 있는 자산, 나머지는 선 글리프(한 가족). ⛔ 이모지 금지.
@@ -2427,13 +2442,41 @@ function campFoeRace(dg){
 //   적 난이도   = Π(던전 문턱) × (라운드 밑)^(깬 라운드 수)
 //   ⛔ 미네랄(CAMP_MINE)과 **같은 식으로 묶지 말 것.** 보상은 라운드마다 조금, 난이도는 크게 —
 //      둘을 묶으면 50라운드를 돌아도 적이 1.33배인데 아군 화력은 20배가 된다(HUNT_R1 §6-1).
-const CAMP_RB0 = 1.07, CAMP_RB_STEP = 0.003, CAMP_DG_STEP = 3;
-function campRBase(dg){ return CAMP_RB0 + Math.max(0, (dg | 0) - 1) * CAMP_RB_STEP; }
-function campDgThreshold(dg){ return Math.pow(campRBase(dg - 1), CAMP_ROUND_MAX - 1) * CAMP_DG_STEP; }
-// dg=0(캠프)은 적이 없으므로 1을 준다
+// 📈 ── **라운드가 갈수록 가팔라지는 곡선** (2026-09-05 사용자 확정 — 「초반은 완만, 뒤로 갈수록 점점 세게」)
+//   ⛔ 옛 곡선은 거꾸로였다: 라운드 밑 1.07 은 일정한데 초반 램프(0.15→1)가 얹혀 **초반이 라운드당
+//     +15~20%, 후반이 +7%** 였다. 손 플레이(1기·Lv0)로 재니 R5 에서 막혔고 뒤는 늘어졌다.
+//   ⭐ 지금은 **라운드 배율 자체가 오른다** — R1 에서 CAMP_RR_LO(+4.5%) 로 시작해 R50 에서 CAMP_RR_HI(+18%)
+//     까지 선형으로 커진다. 던전이 깊을수록 양끝이 CAMP_RB_STEP 씩 더 무겁다.
+//     한 던전을 통째로 곱하면 ×63(옛 1.07^49×램프 = ×184) — R50 이 옛날의 3분의 1 이다.
+//     ⚠ 뒤로 갈수록 5라운드마다 2배(1.15^5) 라 「업그레이드만으로 막히는 순간」이 온다 — 그때 머릿수·다음
+//       테크로 뚫는 것이 설계 의도다(연구는 더하기 계단이라 뒤로 갈수록 효율이 떨어진다 · campResMul).
+//   ⛔ 미네랄(CAMP_MINE)과 **같은 식으로 묶지 말 것.** 보상은 라운드마다 조금, 난이도는 크게(HUNT_R1 §6-1).
+//   ⛔ campFoeDiff 에 다른 배수를 곱하지 말 것 — 환생 포인트(campRebMul)도 이 값을 읽는다.
+//   📈 1.03→1.15 에서 **1.045→1.18** 로 (2026-09-07 사용자 결정 「2번」 — 첫 환생을 늦추려고 던전 2 진입을 늦춘다).
+//     실측(45분 벤치): 던전 2 진입 22 → 22~28분 · 첫 환생 33~37분(옛 32~40 · 평균 36). ⚠ 40분에는 못 닿는다 —
+//     던전 1 수입만으로도 38분쯤 100만이 차서, 적 곡선으로는 여기가 끝이다(BALANCE.md §3-2-13).
+//     기준 체력 4.5 → 6 은 **효과가 없었다**(진입 21.9분) — 곡선의 양끝이 손잡이다.
+//     손 플레이(1기·Lv1)는 12분에 R27 · 패배 0 — 「혼자 R10」은 여전히 넉넉하다.
+const CAMP_RR_LO = 1.045, CAMP_RR_HI = 1.18, CAMP_RB_STEP = 0.003, CAMP_DG_STEP = 3;
+// 던전 dg 의 k 번째 라운드를 깰 때 곱해지는 배율(k = 1..CAMP_ROUND_MAX−1)
+function campRoundRate(dg, k){
+  const t = Math.max(0, Math.min(1, ((k | 0) - 1) / Math.max(1, CAMP_ROUND_MAX - 2)));
+  const add = Math.max(0, (dg | 0) - 1) * CAMP_RB_STEP;
+  return CAMP_RR_LO + add + (CAMP_RR_HI - CAMP_RR_LO) * t; }
+// 🧷 옛 이름 — 「라운드 밑」 하나로 쓰던 자리(scripts/reb-x2-sim.mjs 등)를 위해 **한 던전의 기하평균 배율**을 돌려준다.
+//   ⛔ 새 코드에서 쓰지 말 것 — 라운드마다 배율이 다르다(campRoundRate).
+function campRBase(dg){ let x = 1; const n = CAMP_ROUND_MAX - 1;
+  for(let k = 1; k <= n; k++) x *= campRoundRate(dg, k);
+  return Math.pow(x, 1 / n); }
+// 한 던전을 통째로 깬 배율 × 던전 문턱(어느 던전에서나 ×3)
+function campDgThreshold(dg){
+  let x = 1; for(let k = 1; k <= CAMP_ROUND_MAX - 1; k++) x *= campRoundRate(dg - 1, k);
+  return x * CAMP_DG_STEP; }
+// 「지금 던전 dg 에서 cleared 라운드를 깬 상태」의 적 난이도. dg=0(캠프)은 적이 없으므로 1.
 function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
-  let x = 1; for(let k = 2; k <= dg; k++) x *= campDgThreshold(k);
-  return x * Math.pow(campRBase(dg), Math.max(0, cleared | 0)); }
+  let x = 1; for(let d = 2; d <= dg; d++) x *= campDgThreshold(d);
+  const n = Math.max(0, cleared | 0); for(let k = 1; k <= n; k++) x *= campRoundRate(dg, k);
+  return x; }
 
 // ── 웨이브 — 총량은 난이도가 정하고, 몇 마리로 쪼갤지는 라운드가 정한다 (HUNT_R1 §6-2-1) ──
 //   기본값: 체력 40 · 공격 0.33. 여기에 난이도가 곱해진 것이 **그 라운드의 총 유입량**이다.
@@ -2462,7 +2505,10 @@ function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
 //     (총 체력 826 → 31). 후반을 되살리려면 **라운드 곡선(campRBase)** 이나 구간별 난이도로
 //     손잡이를 따로 두어야 한다 — ⛔ 이 상수 하나로 초반과 후반을 같이 맞추려 들지 말 것
 //     (그래서 값이 네 번 바뀌었다).
-const CAMP_FOE_HP0 = 30, CAMP_FOE_ATK0 = 0.33;
+// ⭐ **R1 값이 곧 기준값이다** (2026-09-05) — 옛 30/0.33 은 램프(×0.15)를 거쳐 R1 에서 4.5/0.05 가 됐다.
+//   램프를 곡선 안으로 옮기면서(위 campRoundRate) 그 R1 값을 그대로 기준값으로 둔다. 눈금은 아군과 같다
+//   (레인저 체력 5 · 공격 1): R1 적 하나가 4.5 체력이라 다섯 대면 죽는다.
+const CAMP_FOE_HP0 = 4.5, CAMP_FOE_ATK0 = 0.05;
 // 🍼 ── **초반 램프** (2026-09-04 사용자 확정) ───────────────────────────────
 //   ⚠ 문제는 「적이 세다」가 아니라 **아군이 1 기라 못 쏜다**는 것이었다(camp-trace 실측:
 //     사거리 안 17.8% · 못 닿는 정도 ×1.66 · 설계 DPS 의 27% 만 나옴). 적 3 마리가 흩어져 있는데
@@ -2479,14 +2525,17 @@ const CAMP_FOE_HP0 = 30, CAMP_FOE_ATK0 = 0.33;
 //     던전 2 로 넘어가는 벽은 지금과 같다(문턱 ×3 그대로).
 //     ⛔ 상수 배수(던전 1 전체를 ×0.15)로 바꾸지 말 것 — 그러면 던전 1 R50 과 던전 2 R1 사이가
 //       20배로 벌어져 **거기서 막힌다**. 램프의 요점은 「낮게 시작해 제자리로 돌아오는 것」이다.
-const CAMP_EASY_MUL = 0.15, CAMP_EASY_END = CAMP_ROUND_MAX, CAMP_EASY_DG = 1;
+// ⚠ 램프는 **꺼 두었다**(2026-09-05 · CAMP_EASY_MUL = 1) — 「초반은 완만하게」는 이제 곡선(campRoundRate)이
+//   맡는다. 함수와 배선은 남긴다(유보 규칙). 되살리려면 0.15 로 돌리되, 곡선과 겹치면 초반이 두 번 낮아진다.
+const CAMP_EASY_MUL = 1, CAMP_EASY_END = CAMP_ROUND_MAX, CAMP_EASY_DG = 1;
 function campFoeEasy(dg, round){
   if((dg | 0) !== CAMP_EASY_DG) return 1;
   const r = Math.max(1, round | 0);
   if(r >= CAMP_EASY_END) return 1;
   const t = (r - 1) / (CAMP_EASY_END - 1);          // R1 → 0 · R10 → 1
   return CAMP_EASY_MUL + (1 - CAMP_EASY_MUL) * t; }
-const CAMP_FOE_N0 = 3, CAMP_FOE_NR = 1.10, CAMP_FOE_NMAX = 100;
+// 🐜 마리 수 — R1 은 **1마리**(옛 3×램프 0.15 와 같다), 라운드마다 ×1.08 → R50 에 43마리.
+const CAMP_FOE_N0 = 1, CAMP_FOE_NR = 1.08, CAMP_FOE_NMAX = 100;
 function campFoeCount(round){
   const n = CAMP_FOE_N0 * Math.pow(CAMP_FOE_NR, Math.max(0, (round | 0) - 1))
             * campFoeEasy((typeof campDgN === 'function') ? campDgN() : 0, round);
@@ -2799,6 +2848,35 @@ function campRallyPoint(){
 //     18-strike 의 흐름장(`strikeFlow*`)은 목표 신전 하나를 전제로 짜여 있어 그대로는 못 쓴다.
 //   ⚠ 대신 **좌표계는 통일했다**(campBuildStructs) — 건물이 그려진 자리에 서므로, 본부의
 //     회피 원도 이제 그림 위에 얹힌다(옛날엔 화면의 4.2% 위에 떠 있었다).
+
+// 🩸 ── **최소 피해 바닥(0.5)을 캠프에서만 걷는다** (2026-09-05 · 손 플레이 실측에서 잡았다) ─────
+// ⛔ 무엇이 문제였나 — `strikeHit`(18-strike.js) 는 한 대를 **`Math.max(0.5, 공격−방어)`** 로 센다.
+//   오토배틀 스케일(공격 6~30)에서는 뜻이 없는 안전장치인데, 캠프는 1/10 스케일이라(HUNT_R1 §3-1)
+//   R1 적의 설계 공격이 **한 대 0.09** 다 → 바닥 0.5 로 올라가 **5.6배**. 실측: 레인저 체력 5 가
+//   5초에 3 깎였다(초당 0.6 · 스내퍼 cd 0.8 → 0.5/0.8). 그래서 혼자서는 R5~R6 에서 죽었고,
+//   `CAMP_FOE_ATK0` 를 아무리 내려도(800 → 30 때도) 체감이 안 바뀌었다 — **축이 죽어 있었다.**
+// ⭐ 그래서 캠프 전투 동안만 `strikeHit` 를 감싸, **바닥 아래(0.5 미만)의 한 대는 설계값 그대로** 넣는다.
+//   0.5 이상은 원본에 그대로 넘긴다(방어·상성·실드 규칙은 원본이 맡는다).
+//   ⛔ 18-strike.js 를 고치지 않는다(유즈맵과 공유). 켜고 끄는 자리는 campPatchFront 와 같다.
+//   ⚠ 실드도 같은 바닥이 있다 — 에테리얼 적(실드 → 체력 합산)은 sh=0 이라 체력 분기만 탄다.
+let _campHitPatched = null;
+function campPatchHit(){
+  if(_campHitPatched || typeof window === 'undefined') return;
+  const o = window.strikeHit; if(typeof o !== 'function') return;
+  _campHitPatched = o;
+  window.strikeHit = function(tgt, rawAtk, atk){
+    if(_campOn && CAMPB && tgt && (rawAtk || 0) < 0.5 && !(tgt.sh > 0)){
+      if(typeof strikeWebBlocks === 'function' && strikeWebBlocks(tgt, atk)) return;   // 🕸 장판 규칙은 그대로
+      const mul = (typeof _sbTypeMul === 'function') ? _sbTypeMul(atk, tgt) : 1;
+      tgt.hp -= Math.max(0, (rawAtk || 0) - (tgt.armor || 0)) * mul;                  // 바닥 없이 설계값 그대로
+      return; }
+    return o.apply(this, arguments);
+  };
+}
+function campUnpatchHit(){
+  if(!_campHitPatched) return;
+  window.strikeHit = _campHitPatched; _campHitPatched = null;
+}
 
 // ⛔ strikeFrontStruct 를 감싼다 — 적이 내 건물을 때릴 수 있게 하는 유일한 입구다.
 //   ⚠ side 는 **때리는 쪽**이다(원본: foe = S[side==='me'?'ai':'me']). 적이 칠 때만 바꿔 준다.
@@ -3407,15 +3485,26 @@ function campAlertTick(dt){
     for(const e of foes){ if(e.dead) continue;
       const dx = e.x - u.x, dy = e.y - u.y, d2 = dx * dx + dy * dy;
       if(d2 <= A2 && d2 < bd){ bd = d2; bx = e.x; by = e.y; } }
-    if(bd < Infinity) spot.push({ u:u, x:bx, y:by }); }
+    if(bd < Infinity) spot.push({ u:u, x:bx, y:by, fight:false }); }
+  // ⚔ **싸우고 있는 아군은 멀리서도 부른다** (2026-09-05 · 실측으로 잡은 교착)
+  //   ⛔ 무엇이 문제였나 — 앞으로 나간 유닛 하나(+의무병)가 적 무리에 물리면, 적은 그 유닛만 물고 안 내려오고
+  //     그 유닛은 의무병 덕에 안 죽고, 본대 3~4기는 1,100px 뒤에서 눈(사거리+100)에 아무것도 안 들어와
+  //     **놀았다**. 혼자 17마리를 깎으니 라운드가 몇 분, 치유가 피해를 이기면 영영이었다(D1R33 · 20분).
+  //   ⭐ 「표적이 사거리 안에 있는」 아군(= 실제로 교전 중)을 CAMP_ALERT_FIGHT_R 까지 넓게 전파원으로 삼는다.
+  //     받는 쪽은 여전히 제 자리 제한(campEngageOut) 안에서만 간다 — 「우르르」가 아니라 「가서 돕는다」다.
+  //   ⚠ 「적을 봤다」(위 ①)와 다르다 — 그건 곁 400 만 번진다(나오자마자 전군이 뛰는 것을 막는 장치).
+  for(const u of mine){ if(u.dead || !u.tgtUid) continue;
+    const t = (typeof strikeFindUnit === 'function') ? strikeFindUnit(foes, u.tgtUid) : null; if(!t || t.dead) continue;
+    const dx = t.x - u.x, dy = t.y - u.y, rc = (typeof strikeReach === 'function') ? strikeReach(u, t) : (u.rng || 0);
+    if(dx * dx + dy * dy <= rc * rc * 1.44) spot.push({ u:u, x:t.x, y:t.y, fight:true }); }
   // ② 시드 곁(150)의 아군에게 **그 눈을 그대로** 넘긴다.
   //    ⭐ 넘겨받은 아군은 다음 틱의 시드가 되어 또 곁으로 넘긴다 — 줄줄이 번진다.
   //    ⛔ 반경을 다시 넓히지 말 것(옛 900) — 한 명이 보면 판 전체가 몰렸다.
-  if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R;
+  if(spot.length){ const R2 = CAMP_ALERT_R * CAMP_ALERT_R, F2 = CAMP_ALERT_FIGHT_R * CAMP_ALERT_FIGHT_R;
     for(const u of mine){ if(u.dead) continue;
       for(const sp of spot){ if(sp.u === u) continue;
         const dx = sp.u.x - u.x, dy = sp.u.y - u.y;
-        if(dx * dx + dy * dy > R2) continue;
+        if(dx * dx + dy * dy > (sp.fight ? F2 : R2)) continue;
         // 내 자리에서 **그 적까지** 닿는 눈을 뜬다(여유 PAD 만큼 더)
         const need = Math.hypot(sp.x - u.x, sp.y - u.y) + CAMP_ACQ_PAD;
         u._alertT = CAMP_ALERT_S;
@@ -3669,7 +3758,13 @@ function campScaleFoes(list, share){
 //     프레임 중에 덮이지 않는다(campScaleFoes 는 소환된 무리마다 한 번씩 돈다).
 // ⛔ 유닛 표(U·STK_UNITS)의 range 를 고치지 말 것 — 멀티 대전과 오각형 상성이 같이 바뀐다.
 //   여기서 만지는 것은 **소환된 적 개체의 acq 하나**뿐이다.
-const CAMP_FOE_ACQ = 1200;
+// ⭐ **1200 → 4000 (전장 전체)** (2026-09-05 · 손 플레이 기준 실측에서 잡았다).
+//   1200(실효 1680)으로도 **교착**이 났다: 병력이 1기뿐이면 적은 레인 위쪽에 지어진 건물부터
+//   갉고(적 → 건물 1856~2810 · 레인저 눈 402), 둘이 영영 못 만나 R1 이 304초 걸렸다.
+//   ⭐ 규칙을 「살아 있는 아군이 있으면 **어디 있든** 그리로 간다」로 세운다 — 사용자가 앞서 정한
+//     「멀리 있어도 다가오면서 즉시 아군을 인식한다」의 끝까지다. 건물은 병력이 없을 때만 친다.
+//   ⚠ 실효 = 4000×1.4 = 5600 > 전장 4800 이라 사실상 무제한이다.
+const CAMP_FOE_ACQ = 4000;
 // ── 🎯 적 사거리 상한 — **아군이 먼저 쏘게 한다** (2026-08-27) ─────────
 // ⛔ 안 걸면 라운드가 안 끝난다. 적 탱크 332 · 고스트 273 이 아군 최대 215 보다 멀리서 쏘는데
 //   아군은 제자리 방어라 다가가지 않고, 맞은 만큼 의무병이 채운다 → **양쪽 다 안 죽는다.**
@@ -3816,7 +3911,12 @@ function campDesignStats(list){ let n = 0; for(const u of (list || [])) if(campD
 //   가스 수급을 키워 레벨 수를 늘리는 대신 한 레벨의 무게를 줄였다 — 총 강함은 비슷한데
 //   「오르는 느낌」이 훨씬 자주 온다.
 //   ⚠ 던전 하나(적 ×2)를 따라잡는 데 필요한 레벨이 **11 → 24** 로 늘었다(§3-4 표도 그렇게 고쳤다).
-const CAMP_RES_STEP = 1.03;       // 계열 업그레이드 한 레벨당(HUNT_R1 §3-4)
+// ⭐ **더하기 계단** (2026-09-05 사용자 확정 — 「업그레이드는 동일하게 오르고, 값은 비싸져 효율이 떨어진다」)
+//   한 레벨 = 기본값의 +CAMP_RES_ADD. Lv1 +20% · Lv5 ×2 · Lv10 ×3 — **레벨마다 같은 양**이 붙는다.
+//   ⛔ 옛 곱하기 1.03 은 어느 레벨에서나 +3% 라 「막히는 순간」이 안 왔다. 더하기면 Lv10 의 한 레벨은
+//     상대적으로 +7% 뿐이고 가스 값은 계속 오르므로(CAMP_RES_GAS_R) 뒤로 갈수록 효율이 떨어진다 —
+//     그때 머릿수·다음 테크로 뚫는 것이 설계 의도다(위 campRoundRate 설명과 한 짝).
+const CAMP_RES_ADD = 0.20;        // 계열 업그레이드 한 레벨당 더해지는 몫(기본값 대비)
 function campResLv(uid, kind){    // kind: 'atk' | 'hp'
   if(typeof G === 'undefined' || !G.tech || typeof UNIT_UPG === 'undefined') return 0;
   const m = UNIT_UPG[uid]; if(!m) return 0;
@@ -3825,7 +3925,7 @@ function campResLv(uid, kind){    // kind: 'atk' | 'hp'
   if(!k) return 0;
   return (G.tech.research && (G.tech.research[G.tech.race + '_' + k] | 0)) || 0; }
 function campResMul(uid, kind){ const lv = campResLv(uid, kind);
-  return lv ? Math.pow(CAMP_RES_STEP, lv) : 1; }
+  return lv ? 1 + CAMP_RES_ADD * lv : 1; }
 // 🛡 방어력 — **받는 피해 −1.5%/레벨**(최대 −60%).
 //   ⛔ 엔진의 armor 는 **감산**이라 캠프의 작은 공격력(1~31)에서는 저공격 유닛이 통째로
 //     무력화된다 — HUNT_R1 §3-1 이 방어를 뺀 이유가 그것이다.
@@ -4009,6 +4109,7 @@ const CAMP_HIT_ACQ_S = 3;          // 맞아서 넓어진 인식이 유지되는
 //   ⛔ 그렇다고 진형 폭(840)까지 주면 안 된다 — **어디에 두든 전군이 달려가 배치의 뜻이 사라진다**
 //     (2026-09-01 사용자 확정). 400 은 「곁의 두세 명 건너까지」에 해당한다.
 const CAMP_ALERT_R = 400;          // 옆 아군에게 전파되는 거리 — **연쇄한다**(아래 campAlertTick)
+const CAMP_ALERT_FIGHT_R = 1800;   // ⚔ **교전 중인** 아군이 부르는 거리 — 본대가 와서 돕는다(2026-09-05 · campAlertTick)
 const CAMP_ALERT_S = 3;            // 전파 지속(초) — 풀리면 다시 자기 자리로
 const CAMP_ALERT_TICK = 0.25;      // 전파 판정 주기(초) — 매 프레임 돌면 비싸다
 // 🪢 **자기 자리에서 이보다 멀리는 못 나간다** — 이제 이것이 **자리 제한의 유일한 장치**다.
@@ -4740,13 +4841,14 @@ function campHideView(){
   }
   campUnmountView();                                   // #vBuild 를 원래 자리로
   campRestoreGas(); campUnpatchGas(); campUnpatchZoom();   // ⛽🔍 가스·줌 판정 원복(관리자 탭이 같은 것을 본다)
-  campRestoreHire(); campRestoreSupply(); campRestoreUnitCost();   // 👷🏠⚔ 가격 원복(TECH_TREE 는 공유다)
+  campRestoreHire(); campRestoreSupply(); campRestoreRefinery(); campRestoreUnitCost();   // 👷🏠⛽⚔ 가격 원복(TECH_TREE 는 공유다)
   campRestoreRefinery();                                          // ⛽ 정제소 연구 카드를 뺀다(캠프 전용)
   campUnpatchFieldSheet();                                        // 🗂 전장 프로필 감싸기 원복
   campUnpatchMorph();                                             // 🧬 변태 감싸기 원복
   campUnpatchProduce(); campUnpatchArm(); campUnpatchProdTime();   // 상한 문지기·생산 시간 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
+  campUnpatchHit();                                        // 🩸 피해 바닥 원복(같은 이유)
   // 🔬 연구 구역 원복 — ⛔ **이것만 빠져 있었다**(2026-08-31). 나머지 9개는 전부 여기서 되돌리는데
   //   이 하나가 없어 techPanelRender·renderCampIdleSheet 래퍼가 영영 남았다.
   //   ⚠ 지금은 래퍼가 campIsOn() 으로 스스로 빠져서 무해하지만, 그 가드를 지우는 순간
@@ -4798,6 +4900,7 @@ function campEnter(){
   campPatchFieldSheet();                               // 🗂 지정한 전장 유닛 프로필(⚠ 연구 구역 **뒤에** 걸어야 바깥이 된다)
   campPatchMorph();                                    // 🧬 전장 유닛 변태(기지 유닛은 원본 그대로)
   campPatchFront();                                    // 🏢 적이 내 건물을 때릴 수 있게(패배 = 건물 전멸)
+  campPatchHit();                                      // 🩸 최소 피해 바닥(0.5)을 걷는다 — 1/10 스케일이 살아난다
   campShowView();                                      // ④
   // ⭐ **격자 패치를 격자 계산보다 먼저 건다.** techCols() 감싸기(20→48칸)가 여기 들어 있고,
   //   그 뒤로 _techCW()·_techCH()·_techRows() 값이 전부 달라진다.
@@ -5154,7 +5257,11 @@ const CAMP_GAT_STEP = 0.025;    // ⛔ 옛 값(레벨당 +2.5%) — 지금은 ca
 //       Lv1 10(10탭) · Lv2 30(15탭) · Lv3 60(20탭) · Lv4 100(25탭) · Lv5 150(30탭)
 //   ⚠ 이것은 **2차식**이라 지수보다 완만하다. 후반까지 이대로 두면 탭이 공짜가 된다 —
 //     무릎(CAMP_COST_KNEE) 부터는 지수로 넘어간다. 후반 밸런스는 아직 안 쟀다(2026-09-02).
-const CAMP_TAP_COSTK = 5;       // 탭 비용 = 필요탭수 × 그때 탭당 · 필요탭수 = 5n+5
+// ⏫ K = 5 → 10 (2026-09-07 실측). 5 일 때 탭이 수입의 61~69% 를 먹고 첫 환생이 27~29분이었다.
+//   10 이면 Lv10 130탭 · Lv40 430탭(초당 3탭이면 2.4분) — 「눌러서 갚는다」는 설계는 그대로다.
+//   ⚠ 마일스톤을 뒤로 미루는 안(15·35·70·150)은 **더 빨라졌다**(31.6/33.1분) — 탭이 싸지자 벤치가 채취로 돈을 돌렸다.
+//     한 축만 깎으면 다른 축이 메운다. 값 표는 BALANCE.md §3-2-13.
+const CAMP_TAP_COSTK = 10;      // 탭 비용 = 필요탭수 × 그때 탭당 · 필요탭수 = K·n+K
 // ⛏ **탭 마일스톤** (2026-09-02 사용자 확정) — 여기를 지나면 **레벨당 증가폭이 2배**가 된다.
 //   1 → 2 → 4 → 8 → 16 → 32 → 64
 //   ⭐ Lv10 을 사면 탭당 **10 → 12**(+2) · Lv25 는 40 → 44(+4) · Lv50 은 140 → 148(+8) …
@@ -5164,6 +5271,10 @@ const CAMP_TAP_COSTK = 5;       // 탭 비용 = 필요탭수 × 그때 탭당 ·
 //   ⚠ 마일스톤 레벨은 **사는 것도 비싸다**: 필요 탭이 +20 붙는다(Lv10 은 55 → **75탭**).
 //     성능이 뛰는 자리는 관문이기도 해야 한다.
 const CAMP_TAP_MILES = [10, 25, 50, 100, 500, 1000];
+// ⭐ 마일스톤에서 증가폭이 **+1 씩** 커진다(1 → 2 → 3 → 4 …). ⛔ 옛 「×2 씩」(1 → 2 → 4 → 8 → 16)은
+//   채취를 1원으로 낮춘 뒤 탭이 수입의 61% 를 먹는 폭주 축이 됐다(45분 실측 · Lv59 탭당 220 → 이제 155).
+//   계단은 그대로 있다 — 「다음 계단까지 몇 레벨」이라는 목표는 남는다(2026-09-05 사용자 확정 방향).
+const CAMP_TAP_MILE_ADD = 1;
 // Lv 에서의 **기본** 탭당(배수 제외) — 구간마다 증가폭이 다르므로 구간별로 한 번에 더한다.
 //   ⛔ 레벨 하나씩 도는 루프를 쓰지 말 것 — Lv 가 수천이 되면 프레임마다 그만큼 돈다.
 function campTapRaw(lv){
@@ -5171,7 +5282,7 @@ function campTapRaw(lv){
   const ms = CAMP_TAP_MILES.concat([Infinity]);
   while(from <= lv){
     const m = ms[mi];
-    if(from >= m){ step *= 2; mi++; continue; }
+    if(from >= m){ step += CAMP_TAP_MILE_ADD; mi++; continue; }   // ⭐ 마일스톤마다 증가폭 +1 (옛 ×2 · 2026-09-05)
     const to = Math.min(lv, m - 1);
     v += step * (to - from + 1);
     from = to + 1;
@@ -5180,7 +5291,7 @@ function campTapRaw(lv){
 }
 // Lv n 을 사는 데 필요한 탭 수 — 5씩 늘고, 마일스톤에서 +20
 function campTapNeedTaps(n){
-  let t = 5 * n + 5;
+  let t = CAMP_TAP_COSTK * n + CAMP_TAP_COSTK;
   for(const m of CAMP_TAP_MILES) if(n >= m) t += 20;
   return t;
 }
@@ -5190,22 +5301,17 @@ function campTapNeedTaps(n){
 //   ⛔ 옛 방식은 「레벨당 +2.5% × campMileMul」 이었다 — 배율이라 「1원이 2원이 된다」가
 //     화면에서 안 읽혔다. 정수로 세면 무엇이 늘었는지 바로 보인다.
 //   ⚠ 비용은 **탭보다 훨씬 비싸다**(아래 campGatCost) — 일꾼은 수가 늘고 저절로 캐기 때문이다.
-function campGatRaw(lv){ return campTapRaw(lv); }
-// 💰 채취 강화 비용 — **세 레벨마다 ×10** (2026-09-02 사용자 확정)
-//   50 · 150 · 300 · 500 · 1500 · 3000 · 5000 · 1.5만 · 3만 · 5만 · 15만 …
-//   ⭐ Lv1 만 예외(50)이고, **Lv2 부터는 [150·300·500] 세 칸이 한 묶음**으로 묶음마다 ×10.
-//     레벨당 평균 ×2.15 — 옛 제곱 곡선(25n(n+1))보다 훨씬 가파르다.
-//   ⭐ 노림수는 **채취를 「끝없이 사는 축」에서 빼는 것**이다. 옛 곡선에서는 30분 판의
-//     수입 94.7% 가 채취 배수였고 레벨이 61 까지 올라갔다(실측 2026-09-02).
-//     성장은 터치 마일스톤(CAMP_TAP_MILES)과 던전 배수(CAMP_MINE)가 맡는다.
-//   ⛔ 「25n(n+1)」(제곱)으로 되돌리지 말 것 — 되돌리면 다시 채취 한 축이 판을 먹는다.
-//   ⚠ 성능 곡선(campGatRaw)은 **안 건드렸다** — 탭과 공유하므로 여기서 만지면 탭도 움직인다.
-const CAMP_GAT_COST0 = 50;              // 채취 0→1레벨 비용
-const CAMP_GAT_CYC = [150, 300, 500];   // Lv2 부터 세 칸 한 묶음 — 묶음이 넘어갈 때마다 ×10
-function campGatCost(n){
-  if(n <= 1) return CAMP_GAT_COST0;
-  const i = n - 2;
-  return CAMP_GAT_CYC[i % 3] * Math.pow(10, Math.floor(i / 3)); }
+// ⛏ **1원에서 시작해 레벨마다 +CAMP_GAT_ADD 원** (2026-09-05 사용자 확정 — 「기본 8 에서 두 배로 뛰는 것 말고,
+//   1 에서 조금씩 + 로」). 마일스톤 두 배 계단은 탭에만 남긴다.
+//   ⛔ 옛 `campGatRaw = campTapRaw` 는 엔진 기본 8 에 곱해져 Lv0 8 → Lv1 16 이었다(사용자가 본 「두 배」).
+//   ⚠ 값은 **원 단위**다 — campGatherMul 이 엔진의 TECH_GATHER_AMT(8)로 나눠 배수로 바꾼다.
+const CAMP_GAT_BASE = 1, CAMP_GAT_ADD = 1;
+function campGatRaw(lv){ return CAMP_GAT_BASE + CAMP_GAT_ADD * Math.max(0, lv | 0); }
+// 💰 채취 강화 비용 — **50 × 1.22^Lv** (2026-09-05 사용자 확정 「업그레이드 간 비용을 줄이자」 → 2026-09-07 실측으로 1.22).
+//   Lv10 300 · Lv30 16,000 · Lv60 6,400만. 한 레벨이 +1원뿐이라 **싸게 · 많이** 사는 축이되, 1.12 는 5분에 Lv31 로 너무 쌌다.
+//   ⛔ 옛 「세 레벨마다 ×10」(Lv10 5만)은 레벨당 +8원(엔진 8 × 1) 시절의 값이다 — 되돌리면 아무도 못 산다.
+const CAMP_GAT_COST0 = 50, CAMP_GAT_COST_R = 1.22;   // 1.12 는 5분에 Lv31(너무 쌈) → 1.18 → 1.22 (2026-09-07 실측 · 45분에 Lv31~34)
+function campGatCost(n){ return Math.ceil(CAMP_GAT_COST0 * Math.pow(CAMP_GAT_COST_R, Math.max(0, (n | 0) - 1))); }
 // ⛏ 홀드 간격 단축 — **10레벨이 끝이다**(800 → 300ms · CAMP_HOLD_MIN).
 //   ⭐ 끝이 있는 축이라 계단을 가파르게 둔다 — 끝까지 가는 것 자체가 목표가 되게.
 const CAMP_HOLD_COST0 = 500;    // 홀드 0→1레벨 비용
@@ -5260,7 +5366,11 @@ const CAMP_RES_GAS0 = 1;        // 계열 업그레이드 1레벨 가스
 //   같은 가스로 두 배 더 오른다 — 안 그러면 축이 그냥 약해진다(실측: DPS 215→108).
 //   ⚠ 비율이 중요하다: 효과 1.03 ÷ 비용 1.04 → 강함이 가스의 0.75제곱으로 자란다.
 //     옛 짝(1.065 / 1.08)은 0.81제곱이었으므로 **지금이 더 안전한 쪽**이다(BALANCE §0).
-const CAMP_RES_GAS_R = 1.04;    // 레벨당 비싸짐
+// ⭐ **레벨당 ×1.08** (2026-09-05 사용자 확정 방향 — 「값이 비싸져 효율이 떨어진다」).
+//   옛 1.04 는 거의 평평해서 30분 판에서 연구가 **Lv195**(더하기 계단이라 ×40)까지 갔다 — 「막히는 순간」이
+//   안 오고 연구만으로 D2 를 뚫었다. 1.08 이면 같은 가스로 Lv60~70 언저리에서 값이 무거워져,
+//   그때부터 머릿수·다음 테크가 답이 된다(campRoundRate 의 후반 가속과 한 짝).
+const CAMP_RES_GAS_R = 1.08;    // 레벨당 비싸짐
 const CAMP_RES_ONE = { 100:10, 150:15, 200:20 };   // 단발 연구(§3-4-1) — 원본 미네랄값이 곧 등급
 const CAMP_RES_ONE_DEF = 15;    // 표에 없는 등급은 '보통'으로 본다
 // r = TECH_TREE 의 연구 정의 · lv = 지금 레벨. 캠프가 아니면 null(호출부가 원본 값을 쓴다).
@@ -5420,7 +5530,9 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   //   ⭐ 되살린 것이 아니라 **다른 룬**이다: 옛 「재화의 룬」은 탭까지 품어서 지웠고,
    //     이것은 일꾼 왕복에만 닿는다(손끝의 룬과 겹치지 않는다).
   //   ⚠ 곱 항으로 들어간다 — 합산 항(campGatRaw)은 **정수 곡선**이라 1~5% 를 더할 수 없다.
-  return (campGatRaw(lv) + campPackGather())
+  // ⚠ 엔진이 왕복마다 TECH_GATHER_AMT(8)를 주므로 **원 ÷ 8** 이 배수다 — Lv0 은 ×0.125(= 1원).
+  const amt = (typeof TECH_GATHER_AMT !== 'undefined') ? TECH_GATHER_AMT : 8;
+  return (campGatRaw(lv) + campPackGather()) / amt
     * campMineMul() * campRebMul() * campRtMul('gather')
     * ((typeof campRuneMul === 'function') ? campRuneMul('mine') : 1); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
@@ -5495,6 +5607,10 @@ function campMineOnce(clientX, clientY, human, mul){
   if(human && typeof campTapHuman === 'function')
     gain = Math.max(1, Math.floor(gain * campTapHuman(clientX, clientY)));
   G.tech.credit = (G.tech.credit || 0) + gain;
+  // ⭐ 맵 탭도 **터치 몫**으로 센다(2026-09-07). ⛔ 빼면 캠프 틱이 이 돈을 「일꾼이 캔 것」으로 보고
+  //   채취 배수를 먹인다 — 채취가 1원(×1/8)에서 시작한 뒤로는 탭 8원이 1원이 됐다(스모크 ③ 이 잡았다).
+  //   과녁 탭(campMineTap)·벤치는 원래 이렇게 센다 — 맵 탭만 빠져 있던 것이 「BALANCE 문제」의 정체다.
+  _campTapAcc += gain;
   _campTapEarn += gain;                             // 📊 표시용(경제와 무관)
   const C = campState(); if(C) C.tapped = (C.tapped || 0) + 1;
   if(typeof updateCurBar === 'function') updateCurBar();
@@ -5908,9 +6024,9 @@ const CAMP_SLOW_EVERY = 8;      // 250ms × 8 = 2초
 let _campTimer = 0, _campSlow = 0, _campLastCr = 0, _campTapAcc = 0;
 // 📊 **표시 전용** 탭 누적 — 경제용 `_campTapAcc` 와 **따로 둔다.**
 //   ⚠ 왜 따로인가: `_campTapAcc` 는 「채취 배수를 안 먹일 몫」이라 경제 계산에 쓰인다.
-//     거기에 맵 탭(campMineOnce)을 끼워 넣으면 **획득량이 바뀐다**(그 몫이 배수를 못 받게 된다).
 //     환생 화면의 「터치로 번 미네랄」은 표시일 뿐이라 경제를 건드리면 안 된다.
-//   ⚠ 그래서 맵 탭이 `_campTapAcc` 에 안 들어가는 문제는 **여기서 고치지 않는다**(BALANCE 문제).
+//   ⚠ 맵 탭(campMineOnce)도 2026-09-07 부터 `_campTapAcc` 에 들어간다 — 배수가 1 아래로 내려간 뒤
+//     (채취 Lv0 = ×1/8) 빠져 있던 맵 탭이 8원 → 1원으로 깎였기 때문이다. 탭은 어느 길이든 배수를 안 먹는다.
 let _campTapEarn = 0;
 // 📊 **수입 내역** — 번 돈이 어디서 왔는지 나눠 센다(2026-08-30 · sc-3 요청).
 //   ⭐ 왜 필요한가: 실측 100만 도달이 **27분**인데 설계 추정은 10시간이다(22배). 설계표(§1-1)를
@@ -5929,9 +6045,13 @@ function campApplyGatherMul(){
     _campTapAcc -= tapPart; delta -= tapPart;
     CAMP_INC.tap += tapPart;
     const m = campGatherMul();
-    if(delta > 0){ CAMP_INC.gather += delta;
-      if(m > 1){ const add = Math.round(delta * (m - 1));
-        CAMP_INC.mul += add; G.tech.credit = cur + add; } }
+    if(delta > 0){
+      // ⭐ 배수가 1 보다 **작아도** 적용한다(2026-09-05) — 채취가 1원에서 시작하므로 Lv0 은 ×0.125 라
+      //   엔진이 준 8 을 1 로 깎아야 한다. ⛔ 「m > 1 일 때만」으로 되돌리면 Lv0 이 도로 8원이 된다.
+      const add = Math.round(delta * (m - 1));
+      if(add >= 0){ CAMP_INC.gather += delta; CAMP_INC.mul += add; }
+      else { CAMP_INC.gather += Math.max(0, delta + add); }
+      if(add !== 0) G.tech.credit = cur + add; }
   } else if(delta < 0){ _campTapAcc = 0; }          // 건물을 샀다 = 지출. 누적을 흘려보낸다
   // 🔁 환생 기준이 되는 **번 돈**을 여기서 센다 — 배수를 다 먹인 뒤의 실제 증가분이다.
   //    ⛔ 지출은 빼지 않는다. '얼마나 벌었나'가 기준이지 '지금 얼마 있나'가 아니다.
@@ -6065,7 +6185,7 @@ function campFrame(now){
       if(_lb){ const _hb = campBattleBars(); if(_hb) _lb.insertAdjacentHTML('beforeend', _hb); } }
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
-    campSyncHire(); campSyncSupply(); campSyncUnitCost();          // 👷🏠⚔ 일꾼·보급소·전투 유닛 다음 가격(보유 수에 따라)
+    campSyncHire(); campSyncSupply(); campSyncRefinery(); campSyncUnitCost();   // 👷🏠⛽⚔ 일꾼·보급소·정제소·전투 유닛 가격
     // ⏱ **튜토리얼 동안만 기다림을 없앤다**(2026-09-04 사용자 요청 · 판단은 tutoNoWait 이 한다).
     //   ⭐ 바뀔 때만 쓴다 — 매 프레임 false 로 덮으면 다른 데서 켠 것을 조용히 끄게 된다.
     //   ⛔ 튜토리얼이 끝나면 반드시 되돌아와야 한다(그 되돌림이 아래 else 다).
@@ -6718,6 +6838,25 @@ function campSyncSupply(){
   if(!_campSupHome) _campSupHome = { b: b, m: b.m, g: b.g };
   b.m = campSupplyCost(campSupplyN()); b.g = 0;
 }
+// ── ⛽ 정제소 건설 비용 — **캠프에서만 1만** (2026-09-05 사용자 확정) ─────────────
+// TECH_TREE 값(100)은 유즈맵 건설 모드와 공유라 그대로 두고, 보급소와 같은 방식으로
+// 캠프에 있는 동안만 `b.m` 을 갈아 끼우고 나갈 때 되돌린다.
+// ⭐ 왜 1만인가 — 100 은 첫 1분 수입(초당 3)에도 사라지는 값이라 「가스 축을 여는 결정」이 없었다.
+//   보급소가 3만부터 시작하므로 그 아래 한 단으로 둔다. 업그레이드(CAMP_REF_COST0 1만 × 1.12^Lv)와 같은 눈금.
+const CAMP_REFINERY_M = 10000;
+let _campRefPriceHome = null;
+function campSyncRefinery(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return;
+  const t = TECH_TREE[G.tech.race]; if(!t || !t.buildings) return;
+  const b = t.buildings.find(function(x){ return x.gas; }); if(!b) return;   // 종족마다 가스 건물 하나
+  if(!_campRefPriceHome) _campRefPriceHome = { b: b, m: b.m, g: b.g };
+  b.m = CAMP_REFINERY_M; b.g = 0;
+}
+function campRestoreRefinery(){
+  if(!_campRefPriceHome) return;
+  _campRefPriceHome.b.m = _campRefPriceHome.m; _campRefPriceHome.b.g = _campRefPriceHome.g;
+  _campRefPriceHome = null;
+}
 function campRestoreSupply(){
   if(!_campSupHome) return;
   _campSupHome.b.m = _campSupHome.m; _campSupHome.b.g = _campSupHome.g;
@@ -6743,11 +6882,18 @@ function campRestoreHire(){
 // `기본가 × 1.15^(이미 보유한 같은 유닛 수)`.
 // ⭐ **이게 없으면 「제일 센 유닛 도배」가 늘 정답이다.** 크기·데미지 타입 상성(§3-2)과
 //   적 티어 구성(§6-2-0)이 통째로 이 규칙에 기대고 있다 — 조합을 강제하는 유일한 장치다.
-// ⚠ 배수 1.10 은 약했다(도배↔골고루 7배). 1.15 로 16배가 된다 — 인구까지 세고 나온 값이다.
+// ⚠ 배수 1.10 은 약했다(도배↔골고루 7배). 1.15 로 16배가 됐지만 **여전히 약했다** —
+//   10기를 사도 합계 10만이라 30분 경제(100만 남짓)에서 도배가 안 막혔다.
+// ⭐ **×2.5** (2026-09-05 사용자 확정). 레인저 5000 → 1.25만 → 3.1만 → 7.8만 → 19.5만 → 48.8만 …
+//   30분 안에는 한 종류 **6기(합 ~80만)** 언저리가 한계다. 뜻은 둘이다:
+//   ① 도배가 막힌다 — 같은 값이면 다른 종류가 싸다(조합을 강제하는 장치).
+//   ② **초반 성장은 머릿수가 아니라 업그레이드다** — 한두 기로 연구를 올리며 라운드를 밀고,
+//      머릿수는 환생·수입이 커진 뒤의 축이다. 적 수치도 그 전제(1~2기 · Lv0~1)로 다시 잰다.
+//   ⛔ 인구 상한(보급소)과 **같이** 조인다 — ×3 은 5기 다음이 122만이라 인구가 할 일이 없어진다.
 // ⛔ 값은 TECH_TREE 의 produces[].m/g 에 있고 관리자 탭·오토배틀과 **공유**다 — 나갈 때 되돌린다.
 // ⚠ 보유 수 = 기지에 있는 것(G.tech.units) + **전장에 나가 있는 것**. 전장 것을 안 세면
 //   출격할 때마다 값이 처음으로 돌아가 규칙이 통째로 무력해진다.
-const CAMP_UNIT_R = 1.15;
+const CAMP_UNIT_R = 2.5;
 // ── 💰 캠프 기본가 — HUNT_R1 §3-1 표 (2026-08-27) ────────────────────────
 // ⛔ **코드 값이 설계표의 1/100 ~ 1/800 이었다.** 그래서 반복 구매(×1.15)가 안 물었다 —
 //   레인저 50 짜리는 초당 수입 8,781 에 견줘 공짜라, 36기를 사고 나서야 처음 비싸진다.

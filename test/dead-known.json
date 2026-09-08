@@ -6,7 +6,8 @@
   "strikeLaneArrows": "같은 이유 · 진격 화살표(요청으로 끈 것 · 1810 줄에 호출이 주석으로 남아 있다)",
   "campStopFrame": "🔬 측정 도구의 훅 — scripts/camp-trace.mjs · camp-bench.mjs 가 시계를 끄고 직접 민다. 앱은 안 부른다. 다락에 두면 도구가 제자리에서 못 찾으니 19-camp.js 에 둔다",
   "campStopTimer": "같은 이유(campStopFrame 과 짝)",
-  "runeFullSum": "📐 검사 전용 자 — 「그 룬을 다 채웠을 때의 합」을 코드가 스스로 말하게 한다. 스모크가 전달률 설계(GEM.md §8-8)를 이걸로 잠근다. 앱은 안 부르지만 22-camp-rune.js 에 있어야 값 표 바로 옆에서 읽힌다"
+  "runeFullSum": "📐 검사 전용 자 — 「그 룬을 다 채웠을 때의 합」을 코드가 스스로 말하게 한다. 스모크가 전달률 설계(GEM.md §8-8)를 이걸로 잠근다. 앱은 안 부르지만 22-camp-rune.js 에 있어야 값 표 바로 옆에서 읽힌다",
+  "campRBase": "🧷 옛 이름 호환 — 라운드 배율이 상수였을 때의 「라운드 밑」. scripts/reb-x2-sim.mjs 가 부른다(앱은 campRoundRate 를 쓴다 · 2026-09-05 곡선 교체). 도구가 제자리에서 찾도록 19-camp.js 에 둔다"
  },
  "css": {}
 }

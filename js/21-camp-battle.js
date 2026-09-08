@@ -64,8 +64,20 @@ const CAMP_SPD_MUL = 2.5;
  * ⚠ 목표가 크게 움직이면(적을 쫓는 중) 길을 버린다 — 낡은 길을 붙들면 엉뚱한 데로 간다.
  */
 const CAMP_PATH_T   = 0.5;    // 길을 다시 내는 주기(초)
-const CAMP_PATH_ARR = 0.018;  // 경유점 도착 판정(격자)
+// ⚠ **기지 원본과 같은 값(0.05)** 이어야 한다(16-build.js 의 경유점 선행 전환 `_dw<0.05`).
+//   ⛔ 0.018 로 두었다가 벽이 생겼다(2026-09-05 실측 D1R34 · 20분 정체): 이동 물리가 목표 앞에서
+//     감속·정착해 **경유점 0.02~0.03 앞에서 「도착」으로 멈추는데**, 판정은 「아직」이라 다음 점으로
+//     안 넘겼다 — 적도 아군도 길을 든 채 제자리에 섰다(moving=false · hold=false · wp=3).
+const CAMP_PATH_ARR = 0.05;   // 경유점 도착 판정(격자)
 const CAMP_PATH_MOVE= 0.06;   // 목표가 이만큼(격자) 움직이면 길을 버린다
+// 🕸 교착 안전망(2026-09-07 · 실측 3종: 본부 앞 사거리 밖 · 앞 건물 옆에서 정지 · 서로 기다리기)
+const CAMP_STUCK_T = 6;       // 이만큼(초) 제자리면 막힌 것으로 본다
+const CAMP_STUCK_D = 4;       // 「제자리」 = 이 거리(px) 안
+const CAMP_STUCK_NUDGE = 28;  // 한 번에 옮기는 양(px) — 눈에 안 띄는 크기
+const CAMP_LEASH_EXT_T = 8;   // 목줄에 잘린 채 사거리 밖으로 이만큼(초) 있으면
+const CAMP_LEASH_EXT = 300;   // 그 표적에 한해 목줄을 이만큼(px) 더 준다(누적)
+const CAMP_BLD_STUCK_T = 5;   // 적이 앞 건물과의 거리를 이만큼(초) 못 줄이면
+const CAMP_BLD_ALT_T = 12;    // 가장 가까운 건물을 이만큼(초) 친다
 function _campPathClear(u, gA, gB){
   if(typeof _techSegClear !== 'function') return true;
   return _techSegClear({ x:gA.gx, y:gA.gy, type:'unit', uid:(u.gm || u.id) }, gA.gx, gA.gy, gB.gx, gB.gy); }
@@ -82,7 +94,11 @@ function campMove(u, tx, ty, dt){
      && Math.hypot(gB.gx - u._cpGx, gB.gy - u._cpGy) <= CAMP_PATH_MOVE){
     while(wp.length && Math.hypot(wp[0].x - gA.gx, wp[0].y - gA.gy) <= CAMP_PATH_ARR) wp.shift();
     if(wp.length){ const p = campG2W(wp[0].x, wp[0].y, W);
-      strikeMoveToward(u, p.x, p.y, step); return; }
+      strikeMoveToward(u, p.x, p.y, step);
+      // ⭐ 물리가 「도착」으로 멈췄으면(moving=false) 판정 거리와 상관없이 다음 점으로 넘긴다 —
+      //   둘이 서로 기다리는 교착의 안전망. 마지막 점이면 길을 버려 곧장 목표로 간다.
+      if(!u.moving) wp.shift();
+      return; }
   }
   u._cpWp = null;
   u._cpT = (u._cpT || 0) - dt;
@@ -162,9 +178,21 @@ function campGoalFor(u, tgt, slot, cnt){
   //   ⚠ 사거리가 안 닿으면 그냥 안 닿는 채로 둔다 — 그것이 「자리를 지킨다」의 뜻이다.
   //     적이 결국 자리 쪽으로 오므로 기다리면 만난다(적은 내 건물을 치러 내려온다).
   if(u._post){
-    const lim = (typeof campEngageOut === 'function') ? campEngageOut(u) : CAMP_ENG_OUT;
+    let lim = (typeof campEngageOut === 'function') ? campEngageOut(u) : CAMP_ENG_OUT;
+    // 🕸 **목줄에 잘려 영영 못 닿으면 목줄을 조금씩 늘린다**(2026-09-07 · 교착 실측 D2R29 15분: 공중 적 셋이 앞에 나간
+    //   의무병·벙커를 치고 의무병 둘이 서로 치유해 버티는데, 대공이 되는 마린은 목줄 끝(1200)에 서서 사거리 밖).
+    //   잘린 목표가 사거리 밖인 채 CAMP_LEASH_EXT_T 가 지날 때마다 그 표적에 한해 CAMP_LEASH_EXT 씩 더 나간다.
+    //   표적이 바뀌면 원래 목줄로 돌아온다. ⛔ 목줄을 아예 풀지 말 것 — 「자리를 지킨다」가 캠프의 뜻이다.
+    const tk = tgt.uid;
+    if(u._lsK !== tk){ u._lsK = tk; u._lsEx = 0; u._lsT = 0; }
+    lim += (u._lsEx || 0);
     const ox = gx - u._post.x, oy = gy - u._post.y, od = Math.hypot(ox, oy);
-    if(od > lim){ gx = u._post.x + ox / od * lim; gy = u._post.y + oy / od * lim; }
+    if(od > lim){ gx = u._post.x + ox / od * lim; gy = u._post.y + oy / od * lim;
+      const rr = (typeof strikeReach === 'function') ? strikeReach(u, tgt) : rng;
+      if(Math.hypot(gx - tgt.x, gy - tgt.y) > rr){          // 잘린 자리에서는 못 때린다
+        if((u._lsT = (u._lsT || 0) + CAMP_GOAL_HOLD) >= CAMP_LEASH_EXT_T){ u._lsT = 0; u._lsEx = (u._lsEx || 0) + CAMP_LEASH_EXT; } }
+      else u._lsT = 0; }
+    else u._lsT = 0;
   }
   return { x:gx, y:gy };
 }
@@ -455,10 +483,26 @@ function campStepUnits(dt){
         // 👹 적은 표적이 없으면 **내 건물**을 치러 내려온다. 앞(y 가 작은) 건물부터.
         //   ⛔ 오토배틀의 신전 분기를 쓰지 않는다 — 캠프에는 신전 형상이 없다.
         u._goalX = null; u._goalTgt = null;
-        const b = nextBld();                              // 앞(y 가 작은) 건물 — 부서졌으면 그 자리에서 다음 것으로
+        let b = nextBld();                                // 앞(y 가 작은) 건물 — 부서졌으면 그 자리에서 다음 것으로
         if(!b){ u.moving = false; continue; }             // 부술 것이 없으면 선다
-        const bd2 = Math.hypot(b.x - u.x, b.y - u.y) - CAMP_BLD_R;
         if(!u._atk.gnd){ u.moving = false; continue; }     // 지상을 못 때리면 건물도 못 때린다
+        // 🕸 **앞 건물에 못 다가가면 가까운 건물로**(2026-09-07 · 교착 실측 D2R35: 적 넷이 앞 건물 옆에서 30분).
+        //   CAMP_BLD_STUCK_T 동안 앞 건물과의 거리가 안 줄면 그 유닛만 **가장 가까운** 건물을 CAMP_BLD_ALT_T 동안 친다.
+        //   ⛔ 처음부터 최근접으로 두지 말 것 — 무리가 갈라져 건물 여럿을 동시에 갉는다(위 주석).
+        if(u._bAlt && !u._bAlt.dead && (u._bAlt.hp || 0) > 0 && (u._bAltT = (u._bAltT || 0) - dt) > 0) b = u._bAlt;
+        else { u._bAlt = null;
+          const dNow = Math.hypot(b.x - u.x, b.y - u.y);
+          if(u._bdK !== b.uid + ':' + b.eid || dNow < (u._bdBest || Infinity) - 2){ u._bdK = b.uid + ':' + b.eid; u._bdBest = dNow; u._bdT = 0; }
+          else if((u._bdT = (u._bdT || 0) + dt) > CAMP_BLD_STUCK_T){
+            let nb = null, nd = Infinity;
+            for(const x of ((typeof campBldAlive === 'function') ? campBldAlive() : [])){ const d = Math.hypot(x.x - u.x, x.y - u.y); if(d < nd){ nd = d; nb = x; } }
+            if(nb && nb !== b){ u._bAlt = nb; u._bAltT = CAMP_BLD_ALT_T; b = nb; }
+            u._bdT = 0; u._bdBest = Infinity; } }
+        // 🏛 **본부는 밀어내는 원(반폭 210)이 CAMP_BLD_R(46)보다 훨씬 크다** — 표면까지의 거리로 재야 한다.
+        //   ⛔ 옛 식 `거리 − 46` 은 사거리 63 짜리 적이 본부 앞 220 에 밀려 서서 **영영 못 쐈다**(2026-09-07 교착 실측
+        //   D2R1: 아군 전멸 · 적 1 · 본부 체력 그대로 · 10~30분). 본부만 남으면 판이 멈추는 버그였다.
+        const bd2 = (b === S.me.base && typeof strikeTempleGap === 'function')
+          ? strikeTempleGap(b, u.x, u.y) : Math.hypot(b.x - u.x, b.y - u.y) - CAMP_BLD_R;
         if(bd2 <= (u.rng || 0) + (u.size || 14) * 0.95){
           u.moving = false; u.face = Math.atan2(b.x - u.x, b.y - u.y);
           _campFireBld(u, b, me, dt, col);
@@ -486,8 +530,20 @@ function campStepUnits(dt){
       // ── 이동 — **한 프레임에 딱 한 번**
       const gx = goal.x - u.x, gy = goal.y - u.y;
       const ar = campArriveR(u);
-      if(gx * gx + gy * gy <= ar * ar){ u.moving = false; continue; }
-      campMove(u, goal.x, goal.y, dt); }
+      if(gx * gx + gy * gy <= ar * ar){ u.moving = false; u._stkT = 0; continue; }
+      campMove(u, goal.x, goal.y, dt);
+      // 🕸 **막힌 유닛은 살짝 옮긴다** — 마지막 안전망(2026-09-07). 목표가 도착 반경 밖인데 CAMP_STUCK_T 동안
+      //   CAMP_STUCK_D 도 못 움직였으면 목표 쪽으로 CAMP_STUCK_NUDGE 만큼 그냥 놓고 길·대기 상태를 비운다.
+      //   진행도 창(_pgHold)은 「영구 동결 없음」이 목적이지만 벽·원·서로 기다리기 앞에서는 0.5초 대기 ↔ 0.22초 재시도를
+      //   영원히 반복했다(실측 30분). ⚠ 옮기는 양이 작아 눈에 안 띈다 — 밀어내는 원 안이면 다음 프레임에 도로 밀려나고, 그러면
+      //   다시 6초 뒤 다른 쪽으로 옮긴다. ⛔ 목표까지 순간이동시키지 말 것.
+      { const mv = Math.hypot(u.x - (u._stkX == null ? u.x : u._stkX), u.y - (u._stkY == null ? u.y : u._stkY));
+        if(mv >= CAMP_STUCK_D || u._stkX == null){ u._stkX = u.x; u._stkY = u.y; u._stkT = 0; }
+        else if((u._stkT = (u._stkT || 0) + dt) >= CAMP_STUCK_T){
+          const d = Math.hypot(gx, gy) || 1, a = Math.atan2(gy, gx) + (Math.random() - 0.5) * 1.2;
+          u.x += Math.cos(a) * Math.min(CAMP_STUCK_NUDGE, d); u.y += Math.sin(a) * Math.min(CAMP_STUCK_NUDGE, d);
+          u._cpWp = null; u._pgHold = false; u._pgT = 0; u._pgX = null;
+          u._stkX = u.x; u._stkY = u.y; u._stkT = 0; (CAMPB._stuckN = (CAMPB._stuckN || 0) + 1); } } }
 
     // ── 죽은 유닛 정리 (오토배틀과 같은 규약)
     const dead = me.units.filter(u => u.dead);

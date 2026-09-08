@@ -28,6 +28,11 @@ const REFCAP=+(process.argv[5]||0);
 //   목표 던전(REB_DG · 기본 3)에 처음 닿는 순간 환생하고, 다시 닿을 때까지 시간을 잰다.
 //   「환생 안 하고 T분」 vs 「환생하고 T'분」 한 쌍이 첫 환생 손익의 실측값이다.
 const REB=(process.argv[6]||'')==='reb';
+// 🔁 **관문 환생 모드**(2026-09-07 사용자 요청 「첫 환생 이후 진행 시뮬」) — argv[6]='gate' 이면:
+//   게임의 진짜 관문(campCanRebirth · 누적 100만)이 열리는 순간 환생하고, 받은 포인트로 트리를
+//   **실제 포인트로**(개발 스위치 CAMP_RT_PTS_FREE 무시) 싼 것부터 사고, 이어서 계속 논다.
+//   ⭐ 「환생 뒤 던전 n 첫 진입」을 1회차와 견주면 그것이 「전보다 얼마나 쉽게 높은 구역에 가나」다.
+const GATE=(process.argv[6]||'')==='gate';
 // 🔁 환생 모드가 노리는 던전 — 기본 3. ⭐ 얕게(2) 잡으면 같은 실험이 몇 배 빨리 끝난다.
 //   💳 환생 팩 값을 잴 때 이걸 2 로 두고 돌렸다(2026-08-31 · GEM.md §5-4-8).
 const REB_DG=+(process.env.REB_DG||3);
@@ -47,6 +52,12 @@ const WALL_WARN=600, WALL_STOP=1800;
 //   HOARD=n : 채취 레벨이 n 에 닿으면 **경제 업그레이드 구매를 멈추고 모은다**(0 = 안 함).
 //     병력 생산·건설·연구는 그대로 둔다 — 안 그러면 던전이 안 내려가 수입이 같이 멎는다.
 const HOARD=+(process.env.HOARD||0);
+// 🖐 **손 플레이 기준** (2026-09-05 사용자 요청 — 「업그레이드 50 · 병력 여러 기로 재서 적이 세게 잡혔다」)
+//   HAND=n : 병력 **1기**로 던전에 들어가고, 연구는 키마다 **n 레벨까지만**(0 또는 1), 병력 추가 생산 없음.
+//   경제 업그레이드(탭·채취·일꾼)는 그대로 산다 — 「내 수입」은 자연스럽게 자라야 하기 때문이다.
+//   ⭐ 이 표가 곧 「초반 적 수치를 정하는 자[尺]」다. 라운드별 걸린 초 · 죽었나를 본다.
+const HAND=(process.env.HAND==null)?-1:+(process.env.HAND);
+const DBG1=!!process.env.DBG1;   // 🔬 손 플레이 정체 진단 로그
 const HOLD_GATE=+(process.env.HOLD_GATE||1e6);
 // 🧱 벙커 탑승(2026-08-30) — 환경변수 BUNK=0 이면 **짓기는 하되 태우지 않는다.**
 //   ⭐ 켜고 끈 한 쌍이 「벙커가 라운드 시간에 무슨 짓을 하는가」의 실측값이다.
@@ -110,7 +121,7 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0,nodg0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0,nodg0,hand0,dbg10,gate0)=>{
   // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
   if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
   // 🎲 씨앗을 심는다 — mulberry32(작고 고르다). ⛔ 전역 Math.random 을 갈아 끼우는 것이
@@ -126,8 +137,8 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   const C=campState(); C.race='terran';
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0, nodg:nodg0 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED, NODG);
+  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, gateMode:gate0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0, nodg:nodg0, hand:hand0, dbg1:dbg10 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED, NODG, HAND, DBG1, GATE);
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -219,7 +230,11 @@ await pg.evaluate(()=>{
   //   ⚠ 값·선행은 __CB.build 가 본다(못 지으면 그냥 넘어간다).
   { const T=TECH_TREE[G.tech.race]; if(T) for(const b of T.buildings.slice(1)) __CB.want[b.k]=1;
   }
-  __CB.army=0; __CB.enter=8;   // 유닛 이만큼 모이면 던전으로 내려간다
+  // 🚪 던전 입장 조건 — **1기**(2026-09-05). 옛 8기는 유닛이 5000 일 때의 규칙이다.
+  //   반복 구매 ×2.5 뒤에는 8기(합 ~80만)를 모으는 데 22분이 걸려 30분 판의 3분의 2 가 대기였다(실측).
+  //   실제 플레이는 첫 유닛으로 바로 내려가고, 던전 안에서 계속 산다(생산은 전장에 바로 선다).
+  __CB.army=0; __CB.enter=1;
+  if(__CB.hand>=0) __CB.enter=1;   // 🖐 손 플레이 기준 — 첫 유닛 하나로 바로 내려간다
   if(__CB.nodg) __CB.enter = 1e9;   // 🏕 NODG — 영영 안 내려간다(전투 난수를 통째로 뺀다)
   // ⚠ **설계 라운드 길이보다 넉넉해야 한다.** 던전 2 후반은 실측 330초이고 R50 은 10분대로
   //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
@@ -305,8 +320,17 @@ await pg.evaluate(()=>{
   // ⭐ **구매 정책 셋을 나란히 돌린다**(HUNT_R1 §6-7-0). 후보는 넷 — 효율 / 탭 / 일꾼 / 보급소.
   //   Δ 는 전부 「초당 수입이 얼마나 느는가」로 통일한다. 값이 아니라 **Δ÷비용** 으로 고른다.
   //   ⛔ 「가장 싼 것」(BALANCE §4 규약)은 옛 사냥터용이라 여기서는 일꾼이 영영 안 팔린다.
+  const RES_M_RESERVE=4;   // 미네랄로 사는 것(정제 강화) = 값의 몇 배가 지갑에 있어야 사는가
   __CB.buy=function(){
     const S=campState(), T=G.tech;
+    // ⛽ **정제 강화(정제소 레벨)는 여기서 산다** (2026-09-07 고침).
+    //   2026-08-27 에 정제소 카드가 건물 연구에서 연구 구역 「자원」 칸(campUpgBuy('refinery'))으로 옮겨 갔는데
+    //   벤치의 __CB.research 는 옛 연구 카드(CAMP_REF_KEY)만 찾아서 **정제소가 영영 L0** 이었다 —
+    //   가스가 12/분에 묶여 연구·D2 진입이 전부 가스 병목이었다(2026-09-07 실측: 45·90분 판 전부 L0).
+    //   규칙은 옛 연구 정책 그대로: 미네랄이 값의 RES_M_RESERVE 배 있을 때만(경제 축을 안 먹게).
+    if(typeof campHasRefinery==='function' && campHasRefinery() && typeof campUpgBuy==='function'){
+      const rc=campUpgCost('refinery');
+      if(!(__CB.refCap>0 && campRefLv()>=__CB.refCap) && (T.credit||0) >= rc*RES_M_RESERVE + __CB.RESERVE) campUpgBuy('refinery'); }
     for(let g=0; g<20; g++){
       const cash=Math.floor((T.credit||0)) - __CB.RESERVE;
       if(cash<=0) return;
@@ -356,7 +380,6 @@ await pg.evaluate(()=>{
     } };
   // 자동 건설 — 트리 순서대로, 선행이 맞고 돈이 되면 짓는다
   // ⛽ 정제소 레벨 — 가스가 없으면 유닛 12종 중 8종을 못 산다. 경제 몫으로 산다.
-  const RES_M_RESERVE=4;   // 미네랄로 사는 연구 = 값의 몇 배가 지갑에 있어야 사는가
   // ⛽ 정제소 업그레이드는 **__CB.research 가 진짜 경로로 산다**(정제소 연구 카드 · 2026-08-27).
   //   ⛔ 예전엔 여기서 S.upg.refinery 를 직접 올렸다 — 화면에 없는 길이라 실제와 달랐다.
   // 🔬 연구 — **가스는 여기에만 쓴다**(2026-08-27). 건물마다 한 번에 하나씩이라
@@ -375,6 +398,7 @@ await pg.evaluate(()=>{
         // ⛽ 비교 실험 — 정제소 레벨 상한(0 = 없음)
         if(__CB.refCap>0 && typeof CAMP_REF_KEY!=='undefined' && r.k===CAMP_REF_KEY
            && typeof campRefLv==='function' && campRefLv()>=__CB.refCap) continue;
+        if(__CB.hand>=0 && r.k!==CAMP_REF_KEY && lv>=__CB.hand) continue;   // 🖐 손 플레이 — 연구는 n 레벨까지만(정제소는 경제라 제외)
         if(!r.tier && lv) continue;                        // 단발은 한 번뿐
         if(typeof _techReqMet==='function' && !_techReqMet(r.req)) continue;
         const c=(typeof campResearchCost==='function' && campResearchCost(r,lv))||[r.m||0,r.g||0];
@@ -509,6 +533,13 @@ await pg.evaluate(()=>{
   //   ⚠ 지갑은 하나(G.tech.credit)라 **누적 지출**로 가른다.
   { const oP=__CB.produce, oB=__CB.buy;
     __CB.produce=function(){ if((__CB.spentU||0) >= campWealth()*0.5) return;
+      // 🖐 손 플레이 기준 — 병력은 **한 기**뿐. 죽으면 다시 한 기.
+      if(__CB.hand>=0){ const alive=(typeof campAlive==='function')?campAlive('me'):0;
+        const base=(G.tech.ents||[]).filter(e=>e.type==='unit').length;
+        // ⚠ 누운 유닛(_down · 30초 뒤 부활)도 센다 — 안 세면 첫 죽음에서 둘째 기를 사서 「1기」가 아니게 된다
+        //   (2026-09-05 실측: R6 에서 죽자 기관총병을 사서 그 뒤가 2기 판이었다).
+        const down=(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._down)?CAMPB._down.length:0;
+        if(alive+base+down>=1) return; }
       const c0=G.tech.credit||0; oP(); __CB.spentU=(__CB.spentU||0)+Math.max(0,c0-(G.tech.credit||0)); };
     __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
       // 💰 모으기 모드 — 채취가 목표 레벨에 닿으면 경제 구매를 멈춘다(HOARD)
@@ -593,6 +624,29 @@ await pg.evaluate(()=>{
           ents:G.tech.ents.length, race:G.tech.race, credit:Math.round(G.tech.credit||0) }; }
         __CB.prevWk=wk; }
       { const d=campDgN(); if(d>0 && !__CB.dgFirst[d]) __CB.dgFirst[d]={ run:__CB.runs, t:+(__CB.t/60).toFixed(1) };
+        // 🔁 관문 환생 — 진짜 관문이 열리면 환생하고, 트리를 실제 포인트로 산 뒤 계속 논다
+        if(__CB.gateMode && !__CB.rebGot && typeof campCanRebirth==='function' && campCanRebirth()){
+          const C=campState();
+          // ⚠ 개발 스위치(CAMP_RT_PTS_FREE)를 무시하고 **실제 포인트**로 산다 — 함수 둘을 덮는다
+          window.campRtPts=function(){ const C=campState(); return (C&&C.rbPts)||0; };
+          if(!__CB._rtBuyO){ __CB._rtBuyO=window.campRtBuy;
+            window.campRtBuy=function(k){ const C=campState(), b4=(C&&C.rbPts)||0; const cost=__CB._rtBuyO.apply(this,arguments);
+              if(cost && C && ((C.rbPts||0)===b4)) C.rbPts=b4-cost; return cost; }; }
+          const got=campRebirth();
+          const bought=[]; if(got){
+            // 싼 것부터 — 가운데(1) → 재화 갈래(8) → 채광 묶음(32) → 광산 등급·채취·일꾼 상한 순
+            // 재화 채광 묶음 먼저(다음 환생이 빨라진다) → 전투 갈래(천장이 오른다) → 나머지. 싼 것부터 한 칸씩.
+            //   ⚠ 묶음 「가」만 1티어(1·2·6)다 — 「나」부터 2티어(4·8·24)라 첫 환생(≈9.5)에는 전투 「가」(공격력·생산 속도)가 든다.
+            const wish=['root','br:army','gp:army가','atk','prod','bldg','br:econ','gp:econ가','startMin','idle',
+              'gp:army나','hp','sup','gp:econ나','gather','gas','wkCap','mine','gp:army다','foeHp','gp:econ다','tapMul','startWk'];
+            let guard=0; while(guard++<200){ let any=false;
+              for(const k of wish){ if(campRtCanBuy(k)){ const c=campRtBuy(k); bought.push(k+'('+c+')'); any=true; break; } }
+              if(!any) break; } }
+          __CB.rebGot={ t1:+(__CB.t/60).toFixed(1), mul:got?+got.mul.toFixed(2):null, pts:got?+got.pts.toFixed(2):null,
+            dg:got?got.dg:0, r:got?got.cleared:0, bought, left:+(((C&&C.rbPts)||0).toFixed(2)), gate:true };
+          __CB.dgAfter={}; __CB.spentE=0; __CB.spentU=0; }
+        { const d2=campDgN();   // ⚠ 환생 직후 d 는 옛 값이다 — 다시 읽는다
+          if(__CB.rebGot && __CB.rebGot.gate && d2>0 && !__CB.dgAfter[d2]) __CB.dgAfter[d2]=+(__CB.t/60).toFixed(1); }
         // 🔁 환생 손익 — 목표 던전에 처음 닿는 순간 환생하고, 다시 닿을 때까지 잰다
         if(__CB.rebMode && d===__CB.rebDg){
           if(!__CB.rebGot){                                       // 1단계 — 지금 환생한다
@@ -607,6 +661,37 @@ await pg.evaluate(()=>{
           } else if(!__CB.rebGot.t2){                             // 2단계 — 환생 후 재도달
             __CB.rebGot.t2=+(__CB.t/60).toFixed(1);
           } } }
+      // 🔬 DBG1 — 손 플레이 정체 진단: 5초마다 아군 1기·최근접 적·건물을 찍는다
+      // 🕸 **교착 진단**(2026-09-07) — 한 라운드가 4분을 넘기면 **한 번** 적·아군 전부를 찍는다.
+      //   실측: 적 1 · 아군 7~15 살아 있고 건물 체력 100% 인 채 30분(D1R34 · D2R3 · D2R26). 누가 왜 안 싸우는지 보려는 것.
+      if((i%100)===0 && campDgN()>0 && __CB.roundT>240 && typeof CAMPB!=='undefined' && CAMPB && !(__CB._stallDump||(__CB._stallDump={}))[campDgN()+':'+campRoundN()]){
+        __CB._stallDump[campDgN()+':'+campRoundN()]=1;
+        const W=CAMPB.world, es=CAMPB.ai.units.filter(x=>!x.dead), ms=CAMPB.me.units.filter(x=>!x.dead);
+        const fmt=(x)=>{ const tg=x.tgtUid?(strikeFindUnit(CAMPB.ai.units,x.tgtUid)||strikeFindUnit(CAMPB.me.units,x.tgtUid)):null;
+          return (x.gm||x.id)+'#'+String(x.uid).slice(-3)+'@'+Math.round(x.x)+','+Math.round(x.y)+' hp='+(x.hp||0).toFixed(1)+'/'+(x.maxHp||0).toFixed(0)
+            +' acq='+Math.round(x.acq||0)+' rng='+Math.round(x.rng||0)+' atk='+(x._atk?((x._atk.gnd?'g':'')+(x._atk.air?'a':'')):'?')
+            +' tgt='+(tg?((tg.gm||tg.id)+'#'+String(tg.uid).slice(-3)+' d='+Math.round(Math.hypot(tg.x-x.x,tg.y-x.y))):(x.tgtUid?'?':'-'))
+            +' btgt='+(x._btgt?'B':'-')+' mv='+(x.moving?1:0)+' wp='+(x._cpWp?x._cpWp.length:0)+' goal='+(x._goalX!=null?Math.round(x._goalX)+','+Math.round(x._goalY):'-')
+            +' hold='+(x._pgHold?1:0)+' wait='+((x.wait||0).toFixed(1))+' ord='+(x._order?1:0)+' post='+(x._post?Math.round(x._post.x)+','+Math.round(x._post.y):'-')
+            +' bunk='+(x._bunk!=null?1:0)+' mine='+(x._mine?1:0)+' col='+(x._collapseT!=null?1:0)+' air='+((typeof FXLAB_AIR!=='undefined'&&FXLAB_AIR.has(x.gm||x.id))?1:0); };
+        const bl=(CAMPB._bld||[]).filter(x=>!x.dead).map(x=>(x.bk||'본부')+'@'+Math.round(x.x)+','+Math.round(x.y)+' hp='+Math.round(x.hp||0)).join(' ');
+        (__CB.dbg||(__CB.dbg=[])).push('🕸 '+__CB.t.toFixed(0)+'s D'+campDgN()+'R'+campRoundN()+' 라운드 '+Math.round(__CB.roundT)+'초째 · W='+Math.round(W)+' · 대기웨이브='+(CAMPB._wq?CAMPB._wq.length:0)
+          +'\n   적('+es.length+'): '+es.map(fmt).join(' | ')
+          +'\n   아군('+ms.length+'): '+ms.slice(0,8).map(fmt).join(' | ')+(ms.length>8?' …':'')
+          +'\n   건물: '+bl); }
+      if(__CB.dbg1 && (i%100)===0 && typeof CAMPB!=='undefined' && CAMPB){
+        const u=CAMPB.me.units.filter(x=>!x.dead)[0], es=CAMPB.ai.units.filter(x=>!x.dead);
+        let e=null, bd=1e18; if(u) for(const z of es){ const d=Math.hypot(z.x-u.x,z.y-u.y); if(d<bd){ bd=d; e=z; } }
+        const bl=(CAMPB._bld||[]).filter(x=>!x.dead).map(x=>(x.bk||'본부')+'@'+Math.round(x.x)+','+Math.round(x.y)).join(' ');
+        (__CB.dbg||(__CB.dbg=[])).push('🔬'+__CB.t.toFixed(0)+'s R'+campRoundN()+' 아군='+(u?(u.id+'@'+Math.round(u.x)+','+Math.round(u.y)+' post='+(u._post?Math.round(u._post.x)+','+Math.round(u._post.y):'-')+' hp='+u.hp.toFixed(1)+' tgt='+(u.tgtUid||'-')+' order='+(!!u._order)+' wp='+(u._cpWp?u._cpWp.length:0)+' hold='+(!!u._pgHold)+' bunk='+(u._bunk!=null)):'없음')
+          +' | 적'+es.length+' 최근접='+(e?(e.id+'@'+Math.round(e.x)+','+Math.round(e.y)+' hp='+e.hp.toFixed(1)+' tgt='+(e.tgtUid||'-')+' 거리='+Math.round(bd)+' hold='+(!!e._pgHold)+' wp='+(e._cpWp?e._cpWp.length:0)+' moving='+e.moving):'-')+' | 아군전부 '+CAMPB.me.units.filter(x=>!x.dead).map(x=>{ const tg=x.tgtUid?strikeFindUnit(CAMPB.ai.units,x.tgtUid):null;
+            let nd=1e9, ne=null; for(const z of es){ const d=Math.hypot(z.x-x.x,z.y-x.y); if(d<nd){ nd=d; ne=z; } }
+            return x.id.slice(0,3)+'@'+Math.round(x.x)+','+Math.round(x.y)+(x._pgHold?'H':'')+(x._cpWp?'P'+x._cpWp.length:'')
+              +(tg?('T'+Math.round(Math.hypot(tg.x-x.x,tg.y-x.y))+'/'+Math.round(strikeReach(x,tg))):(x.tgtUid?'T?':''))
+              +(ne?('N'+Math.round(nd)+'/'+Math.round(strikeReach(x,ne))+(x._atk?(x._atk.gnd?'g':'')+(x._atk.air?'a':''):'')):'')
+              +' cd'+(x.cd>0?x.cd.toFixed(1):'0')+(x._goalX!=null?'g'+Math.round(x._goalX)+','+Math.round(x._goalY):'')+(x.moving?'m':''); }).join(' ')
+          +' | 적전부 '+es.map(x=>x.id.slice(0,3)+'@'+Math.round(x.x)+','+Math.round(x.y)+(x._pgHold?'H':'')+(x._cpWp?'P'+x._cpWp.length:'')+(x.tgtUid?'T':'')+(x._goalX!=null?'g'+Math.round(x._goalX)+','+Math.round(x._goalY):'')+(x.moving?'m':'')).join(' ')
+          +' | 건물'+(CAMPB._bld||[]).filter(x=>!x.dead).length); }
       if((i%20)===0){ __CB.tap(); const w=campWealth();
         if(!__CB.gateT && w>=1e6) __CB.gateT=__CB.t;
         // 💰 지갑(들고 있는 돈) — 누적과 달리 쓰면 줄어든다
@@ -743,7 +828,7 @@ while(ran<MINS*60){
   const st=await pg.evaluate(c=>{ __CB.tick(c);
     return { t:__CB.t, dg:campDgN(), round:campRoundN(), earn:Math.round(campWealth()),
       foe:campAlive('ai'), me:campAlive('me'), rounds:__CB.log.length, stuck:__CB.stuck, army:__CB.army,
-      cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2),
+      cr:Math.round((G.tech&&G.tech.credit)||0), rebDone:!!(__CB.rebGot&&__CB.rebGot.t2&&!__CB.rebGot.gate),
       wall:__CB.wall||null }; }, CH);
   ran=st.t;
   // 🧊 얼어붙음 감시 — 값이 **바뀌기만** 하면 시계를 되감는다(환생 리셋도 「바뀜」이다)
@@ -776,7 +861,7 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
-    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
+    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, dbg:__CB.dbg||[], gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
   // 🧱 벙커 — 몇 채이고 몇 기가 탔고 실제로 얼마나 맞았나
   bunk:(function(){ const on=!!__CB.bunk;
@@ -803,7 +888,7 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     for(const k in R){ const kk=k.replace(T.race+'_',''), v=(R[k]===true?1:(R[k]|0));
       if(tierK.has(kk)) tierN+=v; else if(oneK[kk]) one.push(oneK[kk]); else if(kk!=='gasup') one.push(kk); }
     return { tier:tierN, one:one }; })() }));
-{ const R=await pg.evaluate(()=>({ runs:__CB.runs, log:__CB.runLog||[], first:__CB.dgFirst||{}, cap:__CB.refCap|0, ref:(typeof campRefLv==='function')?campRefLv():-1, reb:__CB.rebGot||null }));
+{ const R=await pg.evaluate(()=>({ runs:__CB.runs, log:__CB.runLog||[], first:__CB.dgFirst||{}, cap:__CB.refCap|0, ref:(typeof campRefLv==='function')?campRefLv():-1, reb:(__CB.rebGot&&!__CB.rebGot.gate)?__CB.rebGot:null, gate:(__CB.rebGot&&__CB.rebGot.gate)?__CB.rebGot:null, after:__CB.dgAfter||{}, rebMul:(typeof campRebMul==='function')?campRebMul():1 }));
   { const W=await pg.evaluate(()=>({ wall:__CB.wall||null, warn:__CB.wallWarnLog||[], slow:__CB.slow||[] }));
     console.log('');
     console.log('■ 🧱 벽 — 환생 없이 어디서 막히는가');
@@ -825,6 +910,12 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     console.log(R.reb.t2!=null
       ? ('  환생 후 다시 D'+REB_DG+' 까지: '+(R.reb.t2-R.reb.t1).toFixed(1)+'분 (누적 '+R.reb.t2+'분)')
       : '  ⚠ 시간 안에 재도달 못 함'); }
+  if(R.gate){ const g=R.gate; console.log('');
+    console.log('■ 🔁 관문 환생 (누적 100만이 열리는 순간 환생 → 이어서 플레이)');
+    console.log('  환생 시각 '+g.t1+'분 · D'+g.dg+'R'+g.r+' · 배수 +'+g.mul+' (지금 ×'+R.rebMul.toFixed(2)+') · 포인트 +'+g.pts+' · 산 것: '+(g.bought.join(' ')||'없음')+' · 남은 포인트 '+g.left);
+    for(const d in R.after) console.log('  환생 후 던전 '+d+' 첫 진입: 환생 +'+(R.after[d]-g.t1).toFixed(1)+'분 (누적 '+R.after[d]+'분)'
+      +(R.first[d]?(' — 1회차는 '+R.first[d].t+'분'):' — 1회차는 못 감')); }
+  else if(GATE) console.log('\n■ 🔁 관문 환생 — 시간 안에 관문(누적 100만)이 안 열렸다');
   console.log('');
   console.log('■ 🔁 회차 — 정제소 상한 '+(R.cap>0?('L'+R.cap):'없음')+' · 최종 정제소 L'+R.ref);
   for(const d in R.first) console.log('  던전 '+d+' 첫 진입: '+R.first[d].run+'회차 · '+R.first[d].t+'분');
@@ -867,6 +958,7 @@ console.log(fin.holdT ? `□ F 지갑 ${F(HOLD_GATE)} 도달: 시작 후 **${(fi
                       : `□ F 지갑 ${F(HOLD_GATE)}: ${(fin.t/60).toFixed(1)}분 안에 못 모음`
                         + ` (지금 지갑 ${F(fin.hold)} · 최고 ${F(fin.holdMax)})`
                         + (HOARD ? '' : '  ⚠ 모으기 모드 꺼짐 — HOARD=n 으로 채취 Lv n 부터 모은다'));
+if(HAND>=0) console.log('\n🖐 손 플레이 기준 — 병력 1기 · 연구 최대 Lv'+HAND+' · 병력 추가 생산 없음');
 console.log('\n■ 15초마다 — 번 돈과 수급 속도');
 console.log('초    | 던전R  | 번돈      | 지갑      | 초당    | 효율 | 탭  | 일꾼 | 인구     | 가스/정제소 | 연구Lv | 병력(선+누움) | 아군DPS | 건물(남음 체력) | 적난이도 | 병력 구성');
 { const W=fin.wealth, step=Math.max(1, Math.floor(W.length/18));
@@ -922,6 +1014,7 @@ if(fin.inc){
 }
 // ⚠ **무효 표시는 `최종` 줄 자체에 붙인다.** 위에만 적으면 `grep '^최종'` 으로 표를 모으는 사람이
 //   그대로 표본에 넣는다 — 실제로 그렇게 오염된 판을 두 번 세었다.
+if(fin.dbg && fin.dbg.length){ console.log('\n🔬 진단 (손 플레이 5초마다 · 교착 라운드 1회)'); for(const l of fin.dbg) console.log('  '+l); }
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`
   + (froze ? '  🧊 얼어붙음 — 표본으로 쓰지 말 것' : ''));
 if(froze){

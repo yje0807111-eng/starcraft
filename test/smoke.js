@@ -351,24 +351,33 @@ async function groupLobby(){
     C.earn=0; C.earnTap=0; C.earnAuto=0; C.playS=0; C.tapped=0;
     // ① 탭 — 터치 몫으로 쌓인다
     window._campTapForce=1;
-    for(let i=0;i<10;i++) campMineOnce(200,400,false,1);
+    // ⭐ 맵 탭은 **채취 배수를 안 먹는다**(2026-09-07) — Lv0 배수가 1/8 이라, 빠져 있으면 탭 8원이 1원이 된다.
+    //   ⛔ campMineOnce 가 _campTapAcc 에 안 넣던 옛 상태로 되돌리면 여기서 걸린다.
+    const crT=G.tech.credit||0; let tapSum=0;
+    for(let i=0;i<10;i++) tapSum+=campMineOnce(200,400,false,1);
     tick();
+    assert(Math.round((G.tech.credit||0)-crT)===Math.round(tapSum),
+      '맵 탭이 채취 배수를 먹었다 — 탭 '+tapSum+' · 실제 증가 '+Math.round((G.tech.credit||0)-crT));
     { const c=campState();
       assert((c.tapped|0)===10,'터치 횟수가 안 쌓임: '+(c.tapped|0));
       assert((c.earnTap||0)>0,'터치로 번 미네랄이 안 쌓임');
       assert((c.earnAuto||0)===0,'탭만 했는데 자동 몫이 생김: '+(c.earnAuto||0)); }
     // ② 자동 — 탭 없이 크레딧만 늘면 자동 몫으로 간다
     const tap0=campState().earnTap||0;
+    // ⚠ 캠프가 엔진 수입에 채취 배수(m)를 먹인다 — Lv0 은 ×1/8 이라 500 이 63 이 된다(2026-09-05 · 1원 시작).
+    //   재는 것은 「탭 없이 늘어난 것은 자동 몫」이라는 **갈라 세는 규칙**이므로, 배수를 먹인 뒤의 값과 견준다.
+    const mG=campGatherMul(), want500=Math.round(500*mG);
     G.tech.credit=(G.tech.credit||0)+500; tick();
     { const c=campState();
-      assert(Math.round(c.earnAuto||0)===500,'자동 몫이 안 맞음: '+Math.round(c.earnAuto||0));
+      assert(Math.abs((c.earnAuto||0)-500*mG)<=1,'자동 몫이 안 맞음: '+Math.round(c.earnAuto||0)+' (기대 '+want500+' = 500×'+mG.toFixed(3)+')');
       assert(Math.round(c.earnTap||0)===Math.round(tap0),'자동 수입이 터치 몫으로 샜다'); }
     // ③ 섞여 들어와도 갈린다 — 같은 틱에 탭과 자동이 함께
     { const t1=campState().earnTap||0, a1=campState().earnAuto||0;
       G.tech.credit=(G.tech.credit||0)+300; campMineOnce(200,400,false,1); tick();
       const c=campState();
       assert((c.earnTap||0)>t1,'섞였을 때 터치 몫이 안 늘었다');
-      assert(Math.round((c.earnAuto||0)-a1)===300,'섞였을 때 자동 몫이 안 맞음: '+Math.round((c.earnAuto||0)-a1)); }
+      // ⚠ ±1 — 배수(1/8)를 먹이며 반올림이 두 번 든다(탭 몫을 뗀 뒤 · 배수 뒤). 재는 것은 「갈라 세는 규칙」이다.
+      assert(Math.abs(((c.earnAuto||0)-a1)-300*mG)<=1,'섞였을 때 자동 몫이 안 맞음: '+Math.round((c.earnAuto||0)-a1)+' (기대 '+Math.round(300*mG)+')'); }
     // ④ 둘의 합이 번 돈과 같아야 한다 — 어느 한쪽으로 새면 여기서 걸린다
     { const c=campState();
       assert(Math.abs(((c.earnTap||0)+(c.earnAuto||0)) - (c.earn||0)) <= 1,
@@ -1275,11 +1284,15 @@ async function groupLobby(){
       //     지금 값의 근거는 BALANCE.md §3-2-2 (회차당 계열 144레벨 + 단발 3~5개 ≈ 가스 476).
       const fake={ type:'bldg', bt:0, bk:(TECH_TREE[G.tech.race].buildings.find(b=>b.gas)||{}).k, eid:'gasT' };
       if(fake.bk){ G.tech.ents.push(fake);
-        assert(Math.abs(campGasPerMin()-CAMP_REF_BASE*campMineMul()*campRtMul('gasMul'))<1e-9,
+        assert(Math.abs(campGasPerMin()-CAMP_REF_BASE*campMineMul()*campRebMul()*campRtMul('gasMul'))<1e-9,
           'Lv0 분당 생산이 기본값과 다르다: '+campGasPerMin());
+        // 🔁 환생 배수는 **가스에도** 걸린다(2026-09-07 사용자 결정) — 안 걸리면 2회차 천장이 1회차와 같다(BALANCE §3-2-14)
+        { const C0=campState(), keepR=C0.rebMul||0; C0.rebMul=keepR+2;
+          const g3=campGasPerMin(); C0.rebMul=keepR;
+          assert(Math.abs(g3/campGasPerMin()-(3+keepR)/(1+keepR))<1e-9,'환생 배수가 가스에 안 걸린다: ×'+(g3/campGasPerMin()).toFixed(3)); }
         assert(CAMP_REF_BASE>=1,'가스 기본 생산이 1/분 미만이다 — 회차 안에 연구를 못 연다: '+CAMP_REF_BASE);
         S.upg.refinery=10;
-        assert(Math.abs(campGasPerMin()-(CAMP_REF_BASE+CAMP_REF_STEP*10)*campMineMul()*campRtMul('gasMul'))<1e-9,
+        assert(Math.abs(campGasPerMin()-(CAMP_REF_BASE+CAMP_REF_STEP*10)*campMineMul()*campRebMul()*campRtMul('gasMul'))<1e-9,
           'Lv10 분당 생산이 레벨 계단과 다르다: '+campGasPerMin());
         const g0=G.tech.energy||0; campGasTick(60);
         assert(Math.abs((G.tech.energy||0)-g0-campGasPerMin())<1e-6,'1분 틱이 분당 생산과 다르다');
@@ -1304,7 +1317,8 @@ async function groupLobby(){
           assert(campRefLv()===before+3,'연구 칸에 쌓인 정제소 레벨을 안 읽는다: '+campRefLv());
           delete G.tech.research[G.tech.race+'_'+CAMP_REF_KEY]; }
         S.upg.refinery=0; G.tech.ents.splice(G.tech.ents.indexOf(fake),1); G.tech.energy=e0; } }
-    // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × 1.15^보유). 조합을 강제하는 유일한 장치다.
+    // ⚔ 반복 구매 — 같은 유닛을 살수록 비싸진다(기본가 × CAMP_UNIT_R^보유 · 2026-09-05 부터 ×2.5).
+    //    조합을 강제하는 유일한 장치다. ⛔ 배수를 여기 숫자로 박지 말 것 — 상수 하나가 단일 소스다.
     if(typeof campSyncUnitCost==='function'){
       const T=TECH_TREE[G.tech.race], wk=TECH_WORKER[G.tech.race];
       let q=null; for(const b of T.buildings){ const f=(b.produces||[]).find(x=>x.id!==wk); if(f){ q=f; break; } }
@@ -1315,7 +1329,8 @@ async function groupLobby(){
       campSyncUnitCost();
       assert(q.m===base,'0기 보유인데 설계 기본가가 아니다: '+q.m+' (기대 '+base+')');
       G.tech.units[q.id]=3; campSyncUnitCost();
-      const want=Math.ceil(base*Math.pow(1.15,3));
+      assert(CAMP_UNIT_R>=2.5-1e-9,'반복 구매 배수가 2.5 미만이다(도배가 안 막힌다): '+CAMP_UNIT_R);
+      const want=Math.ceil(base*Math.pow(CAMP_UNIT_R,3));
       assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
       // ⛽ **유닛에는 가스가 안 든다**(2026-08-27 축 분리 — 미네랄=양 / 가스=질).
       //   ⛔ 되살리면 가스를 유닛과 연구가 나눠 써 **연구가 굶는다**(가스는 늘 모자란 자원).
@@ -3846,8 +3861,19 @@ async function groupLobby(){
       assert(back===CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST,
         '되돌린 값이 마디를 빠뜨렸다: '+back);
       // ⑥ 🌟 새로운 시작 — **첫 환생이 딱 살 수 있어야** 한다.
-      //   포인트 공식은 √(번 재화÷100만) 이라 조건을 막 채운 첫 환생은 정확히 1 이다.
-      //   ⛔ root 가 그보다 비싸면 첫 환생으로는 트리를 **열 수조차 없다**(HUNT_R1 §4-2-0).
+      //   포인트 공식이 √(번 재화÷100만) 이던 때 조건을 막 채운 첫 환생이 정확히 1 이었다(지금은 기준선 2만 · ≈9.5).
+      //   ⛔ root 가 1 보다 비싸면 「트리를 여는 열쇠」가 비싸진다(HUNT_R1 §4-2-0).
+      // 📐 **첫 환생이 서넛을 산다**(2026-09-07 사용자 결정) — 관문(100만 · D2R0)에서 포인트 9~15 이고,
+      //   가운데 + 갈래 + 묶음 + 1티어 흔함 한 계열(1+2+4+1 = 8)이 그 안에 든다. ⛔ 마디를 8/32 로 되돌리면 여기서 걸린다.
+      { const keepE=C.earn, keepG=C.earnGas, keepD=C.dg, keepC=C.cleared;
+        C.earn=CAMP_REB_COST; C.earnGas=0; C.dg=2; C.cleared=0;
+        const p=campRebPtGain();
+        assert(p>=9 && p<=15,'관문을 막 채운 첫 환생 포인트가 9~15 밖이다: '+p.toFixed(2));
+        // ⚠ 묶음 「가」의 계열이 1티어(1·2·6)다 — 「나」부터는 2티어(4·8·24)라 첫 환생에는 「가」 하나가 든다.
+        { const need=CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST+campRtCost('atk',1)+campRtCost('prod',1);
+          assert(need <= p,'첫 환생으로 「가운데+갈래+묶음+1티어 흔함 둘」을 못 산다: 값 '+need+' · 포인트 '+p.toFixed(2)); }
+        assert(CAMP_RT_BR_COST<=CAMP_RT_GP_COST && CAMP_RT_GP_COST<=campRtCost('mine',1),'마디가 1티어 귀함 계열보다 비싸다 — 문이 방보다 비싸다');
+        C.earn=keepE; C.earnGas=keepG; C.dg=keepD; C.cleared=keepC; }
       assert(CAMP_RT_ROOT_COST<=1,'가운데 값이 첫 환생 포인트(1)보다 비싸다: '+CAMP_RT_ROOT_COST);
       assert(CAMP_RT_ROOT_COST!==CAMP_RT_BASE||CAMP_RT_BASE<=1,
         '가운데 값이 비용 공식의 기준값과 묶여 있다 — 한쪽을 고치면 160칸이 함께 움직인다');
@@ -4840,7 +4866,7 @@ async function groupLobby(){
       spawn();
       campScaleAllies(CAMPB.me.units);
       const m1=pick('marine'), r1=pick('racer');
-      const want=Math.pow(CAMP_RES_STEP,3);
+      const want=1+CAMP_RES_ADD*3;   // ⭐ 더하기 계단(2026-09-05)
       assert(Math.abs(m1.dmg/mA0-want)<1e-6,'보병 공격 3레벨이 ×'+want.toFixed(3)+'가 아님: ×'+(m1.dmg/mA0).toFixed(3));
       assert(Math.abs(m1.maxHp-mH0)<1e-6,'공격 연구인데 체력이 움직였다');
       assert(Math.abs(r1.dmg-rA0)<1e-6,'보병 연구가 차량(레이서)에 샜다: ×'+(r1.dmg/rA0).toFixed(3));
@@ -4850,7 +4876,7 @@ async function groupLobby(){
       spawn();
       campScaleAllies(CAMPB.me.units);
       const m2=pick('marine'), r2=pick('racer');
-      const want2=Math.pow(CAMP_RES_STEP,2);
+      const want2=1+CAMP_RES_ADD*2;
       assert(Math.abs(r2.maxHp/rH0-want2)<1e-6,'차량 체력 2레벨이 ×'+want2.toFixed(3)+'가 아님: ×'+(r2.maxHp/rH0).toFixed(3));
       assert(Math.abs(m2.maxHp-mH0)<1e-6,'차량 연구가 보병(마린)에 샜다');
       // ④ 트리와 곱해진다(둘 중 하나만 걸리면 안 된다)
@@ -6057,6 +6083,71 @@ async function groupLobby(){
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
     return '고름→유닛 카드+⊘ · 5프레임 유지 · 해제→요약 · 죽은 지정은 요약'; });
 
+  // ⚔ **싸우는 아군이 부르면 본대가 온다** (2026-09-05 · DBG1 실측으로 잡은 정체)
+  //    앞 유닛 하나가 적 무리에 물리면 본대는 1,100px 뒤에서 놀았다(눈 = 사거리+100 · 전파 400 은 곁만).
+  //    교전 중(표적이 사거리 안)인 아군은 CAMP_ALERT_FIGHT_R 까지 부른다. 받는 쪽은 자리 제한 안에서만 간다.
+  await step('캠프: 교전 중인 아군이 멀리 있는 본대를 부른다', async()=>{
+    // ⛔ 가드는 옛 버전에도 있는 것으로 — CAMP_ALERT_FIGHT_R 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof campAlertTick!=='function'||typeof campDeploy!=='function'||typeof campAcqBase!=='function','전파 배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const W=CAMPB.world;
+      const a=campDeploy('marine', 0.5, CAMP_LANE_TOP+0.06), b=campDeploy('marine', 0.5, CAMP_LANE_BOT-0.02);
+      assert(a&&b,'배치 실패'); a.hp=a.maxHp=1e9; b.hp=b.maxHp=1e9;
+      // ⚠ campLayerPost 가 같은 사거리를 같은 줄에 세우므로 자리를 직접 박는다(앞 유닛은 위, 본대는 아래)
+      a.x=W*0.5; a.y=W*0.30; a._post={x:a.x,y:a.y}; b.x=W*0.5; b.y=W*0.55; b._post={x:b.x,y:b.y};   // 1200 뒤 — 부르는 반경(1800) 안 · 곁 전파(400)·제 눈(≈400) 밖
+      const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); return STK.ai.units[STK.ai.units.length-1]; });
+      assert(foe,'적 배치 실패'); foe.hp=foe.maxHp=1e9; foe.x=a.x; foe.y=a.y-100;   // a 의 사거리 안
+      const gap=Math.hypot(a.x-b.x,a.y-b.y);
+      assert(gap>CAMP_ALERT_R*2 && gap>campAcqBase(b)*1.4 && gap<1800,'전제: 본대가 곁 전파·제 눈 밖, 부르는 반경 안이어야 한다: '+Math.round(gap));
+      // a 가 교전 중이 되게(표적 잡기) — 한 프레임 굴린다
+      campWithStk(()=>campStepUnits(1/30));
+      assert(a.tgtUid===foe.uid,'전제: 앞 유닛이 표적을 못 잡았다');
+      b._alertAcq=0; b._alertT=0;
+      for(let i=0;i<8;i++) campAlertTick(0.1);              // 전파 주기(0.25s)를 넘긴다
+      const need=Math.hypot(foe.x-b.x,foe.y-b.y);
+      assert((b._alertAcq||0)>=need-1,'본대의 눈이 그 적까지 안 넓어졌다: '+Math.round(b._alertAcq||0)+' < '+Math.round(need));
+      assert((b.acq||0)>=need-1,'전파받은 눈이 acq 에 안 얹혔다: '+Math.round(b.acq||0));
+      return '앞 유닛 교전 → '+Math.round(gap)+' 뒤 본대 눈 '+Math.round(b.acq)+' (적까지 '+Math.round(need)+')';
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+  });
+
+  // 🩸 **캠프에서는 최소 피해 바닥(0.5)이 없다** (2026-09-05 · 손 플레이 실측에서 잡았다)
+  //    strikeHit 은 한 대를 max(0.5, 공격−방어) 로 센다. 캠프는 1/10 스케일이라 R1 적의 한 대가 0.09 인데
+  //    바닥 0.5 로 5.6배 올라가 혼자서는 R5 에서 죽었고, CAMP_FOE_ATK0 를 내려도 체감이 없었다(축이 죽어 있었다).
+  //    캠프 전투 동안만 campPatchHit 이 감싼다. 유즈맵(오토배틀)은 그대로다.
+  await step('캠프: 최소 피해 바닥(0.5)이 캠프에서만 걷힌다', async()=>{
+    // ⛔ 가드는 옛 버전에도 있는 것으로 — campPatchHit 로 잡으면 옛 코드에서 조용히 건너뛴다
+    skipIf(typeof strikeHit!=='function'||typeof campEnterDungeon!=='function'||typeof campDeploy!=='function','배선 없음');
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패');
+      u.hp=u.maxHp=5; u.armor=0; u.sh=0; u.maxSh=0;
+      const foe=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); return STK.ai.units[STK.ai.units.length-1]; });
+      assert(foe,'적 배치 실패');
+      // ① 캠프 전투 중 — 0.1 짜리 한 대는 0.1 만 깎는다(바닥 없음)
+      campWithStk(()=>strikeHit(u, 0.1, foe));
+      assert(Math.abs((5-u.hp)-0.1)<0.02,'캠프인데 0.1 짜리 한 대가 '+(5-u.hp).toFixed(2)+' 깎였다 — 바닥 0.5 가 살아 있다');
+      // ② 0.5 이상은 원본 규칙 그대로(방어 감산)
+      u.hp=5; u.armor=1; campWithStk(()=>strikeHit(u, 2, foe));
+      assert(Math.abs((5-u.hp)-1)<0.02,'방어 감산이 어긋났다: '+(5-u.hp).toFixed(2));
+      u.armor=0;
+    } finally { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      { const C2=campState(); if(C2){ C2.dg=0; C2.cleared=0; } }
+      if(typeof campBattleClose==='function') campBattleClose(); }
+    // ③ 캠프를 나가면 원본으로 돌아간다 — 0.1 짜리도 0.5 로 센다(유즈맵 규칙)
+    { const t={hp:5,maxHp:5,armor:0,sh:0,side:'me'}, a={id:'marine',side:'ai'};
+      strikeHit(t, 0.1, a);
+      assert(Math.abs((5-t.hp)-0.5)<0.02,'캠프를 나갔는데 바닥이 안 돌아왔다: '+(5-t.hp).toFixed(2)); }
+    return '캠프 0.1 → 0.1 · 방어 감산 ok · 나가면 0.1 → 0.5';
+  });
+
   // 🧱 **던전에서도 건물을 뚫고 가지 않는다** (2026-09-05 사용자 신고)
   //    ⛔ 전장의 장애물은 `strikeTempleRects()`(=본부 하나)뿐이라 나머지 건물은 통과했다.
   //    ⛔ 건물 전부를 원형 장애물로 만드는 안은 **되돌렸다** — 국소 회피뿐이라 아군이 갇혔다.
@@ -6101,6 +6192,10 @@ async function groupLobby(){
       assert(core===0,'건물 한가운데를 '+core+'프레임 지나갔다 — 뚫고 갔다');
       // ③ 모퉁이를 스치는 것도 짧아야 한다(0.7초 미만)
       assert(inside<21,'건물에 '+inside+'프레임 겹쳤다 — 모퉁이를 스치는 정도가 아니다');
+      // ④-0 ⛔ 경유점 도착 판정은 **기지 원본(0.05)보다 빡빡하면 안 된다** — 이동 물리가 목표 앞에서
+      //      감속·정착해 0.02~0.03 앞에서 「도착」으로 멈추는데 판정이 「아직」이면 다음 점으로 안 넘긴다.
+      //      실측(2026-09-05): 0.018 로 두었다가 D1R34 에서 적·아군이 길을 든 채 20분을 서 있었다.
+      assert(typeof CAMP_PATH_ARR!=='undefined' && CAMP_PATH_ARR>=0.05-1e-9,'경유점 도착 판정이 기지(0.05)보다 빡빡하다: '+CAMP_PATH_ARR);
       // ④ 그래도 목표 쪽으로 갔다(막혀서 제자리걸음이 아니다)
       assert(best < 0.10,'건물을 피하다 목표에 못 갔다: 가장 가까웠던 거리 '+best.toFixed(3));
       return '한가운데 0프레임 · 겹침 '+inside+'프레임 · 목표까지 '+best.toFixed(3)+' (끝 '+g1.gy.toFixed(3)+')';
@@ -6289,9 +6384,11 @@ async function groupLobby(){
     }
     assert(!bad.length,'무리 하나가 1마리뿐이다 — 적 수가 0↔1 로 깜빡인다: '+bad.join(' '));
     // 후반은 여전히 여러 무리로 나뉜다(밀려오는 느낌이 사라지면 안 된다)
-    const late=split(campFoeCount(25));
+    //   ⚠ 「후반」은 던전의 마지막 라운드(R50)로 잰다 — 2026-09-05 마리 수 곡선을 1×1.08^r 로 낮춘 뒤
+    //     R25 는 6마리라 두 무리뿐이다. 그건 설계다(초반은 완만).
+    const late=split(campFoeCount(CAMP_ROUND_MAX));
     assert(late.length>=4,'후반이 안 쪼개진다: '+late.join(','));
-    return 'R1~12 무리당 2마리 이상 · R25 는 '+late.length+'무리';
+    return 'R1~12 무리당 2마리 이상 · R'+CAMP_ROUND_MAX+' 는 '+late.length+'무리';
   });
 
   // 🚪 **적은 화면 위 밖에서 태어난다** (2026-08-30 사용자 확정)
@@ -6698,6 +6795,37 @@ async function groupLobby(){
     const got = hp0 - b.hp;
     assert(got > CAMP_FOE_BLD_MUL*0.5,
       '건물 피해가 안 커졌다: 공격 1 → '+got.toFixed(2)+' (기대 '+CAMP_FOE_BLD_MUL+' 안팎)');
+    // ①-b 🕸 **본부 앞에 밀려 선 적도 쏜다**(2026-09-07 교착 고침) — 본부는 밀어내는 원(반폭 210)이 46 보다 훨씬 커서,
+    //   옛 식(거리−46)으로는 사거리 63 짜리가 본부 앞 220 에서 **영영 못 쐈다**(아군 전멸 뒤 10~30분 정지).
+    { const base=CAMPB.me.base;
+      if(base && !base.dead && typeof strikeTempleHalf==='function'){
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+        const h0=base.hp, half=strikeTempleHalf(base);
+        const z=campWithStk(()=>{ strikeSpawnUnit('ai','marine'); const z=STK.ai.units[STK.ai.units.length-1];
+          if(z){ z.x=base.x; z.y=base.y+half+(z.size||14)*0.7+6; z.wait=0; z.rallied=true; z.cd=0; z.depT=0; z.dmg=1; z.cdMax=1; z.rng=63; } return z; });
+        skipIf(!z,'적을 못 만들었다');
+        // ⚠ 다른 건물이 앞에 있으면 그리로 간다 — 본부만 남긴다
+        const keepB=CAMPB._bld; CAMPB._bld=[base];
+        try{ for(let i=0;i<40;i++) campWithStk(()=>{ campStepUnits(0.05); }); }
+        finally{ CAMPB._bld=keepB; }
+        assert(base.hp < h0,'본부 앞(반폭+여유)에 선 사거리 63 적이 본부를 못 친다 — 아군이 전멸하면 판이 영영 멈춘다: 거리 '+Math.round(z.y-base.y)+' · 반폭 '+half);
+        base.hp=h0; } }
+    // ①-c 🕸 **목줄에 잘려 영영 못 닿으면 목줄이 조금씩 늘어난다**(2026-09-07 교착 실측 D2R29 15분).
+    //   표적이 목줄(1200)+사거리 밖에 서 있으면 CAMP_LEASH_EXT_T 마다 CAMP_LEASH_EXT 씩 더 나간다. 표적이 바뀌면 원래대로.
+    if(typeof campGoalFor==='function' && typeof CAMP_LEASH_EXT==='number'){
+      const post={x:2400,y:3200}, u={x:2400,y:3200,_post:post,rng:187,size:14,uid:'lsU',melee:false};
+      const tg={x:2400,y:3200-1200-187-400,uid:'lsT',size:14};
+      const far=()=>Math.hypot(campGoalFor(u,tg,0,1).x-post.x, campGoalFor(u,tg,0,1).y-post.y);
+      const d0=far();
+      assert(Math.abs(d0-CAMP_ENG_OUT)<2,'목줄이 처음부터 안 잘린다: '+Math.round(d0));
+      let dN=d0; for(let i=0;i<Math.ceil(CAMP_LEASH_EXT_T/CAMP_GOAL_HOLD)+4;i++) dN=Math.hypot(campGoalFor(u,tg,0,1).x-post.x, campGoalFor(u,tg,0,1).y-post.y);
+      assert(dN>=CAMP_ENG_OUT+CAMP_LEASH_EXT-2,'목줄 밖 표적을 '+CAMP_LEASH_EXT_T+'초 못 닿았는데 목줄이 안 늘었다: '+Math.round(dN));
+      const tg2={x:2400,y:3200-1200-187-400,uid:'lsT2',size:14};
+      const d2=Math.hypot(campGoalFor(u,tg2,0,1).x-post.x, campGoalFor(u,tg2,0,1).y-post.y);
+      assert(Math.abs(d2-CAMP_ENG_OUT)<2,'표적이 바뀌었는데 늘어난 목줄이 남는다: '+Math.round(d2)); }
+    // ②-b 🕸 막힌 유닛 안전망이 있다(CAMP_STUCK_T 초 제자리면 살짝 옮긴다) — 상수 셋이 있어야 한다
+    assert(typeof CAMP_STUCK_T==='number' && CAMP_STUCK_T>=3 && CAMP_STUCK_T<=15 && CAMP_STUCK_NUDGE>0 && CAMP_STUCK_NUDGE<=60,
+      '교착 안전망 상수가 없거나 범위 밖이다');
     // ② 본부 체력이 설계 스케일이다(엔진 기본 7500 이 새어 들어오면 15시간이 걸린다)
     assert(CAMPB.me.base.maxHp <= CAMP_BASE_HP*4+1e-6,
       '본부 체력이 설계 스케일을 벗어났다: '+CAMPB.me.base.maxHp+' (기준 '+CAMP_BASE_HP+' · 트리 배수 허용)');
@@ -7143,22 +7271,27 @@ async function groupLobby(){
       for(let d=2; d<=CAMP_DG_MAX; d++){
         const step=campFoeDiff(d,0)/campFoeDiff(d-1,CAMP_ROUND_MAX-1);
         assert(Math.abs(step-3)<0.01,'던전 '+d+' 문턱이 ×3 이 아님: '+step.toFixed(3)); }
-      // ② 깊은 던전일수록 라운드 한 칸이 더 무겁다
-      assert(Math.abs(campRBase(1)-1.07)<1e-9 && Math.abs(campRBase(10)-1.097)<1e-9,
-        '라운드 밑이 설계값(1.070→1.097)과 다름: '+campRBase(1)+'→'+campRBase(10));
-      assert(campFoeDiff(1,49)/campFoeDiff(1,0) < campFoeDiff(10,49)/campFoeDiff(10,0),
-        '던전 10 의 50라운드가 던전 1 보다 안 무겁다');
+      // ② ⭐ **라운드가 갈수록 가팔라진다**(2026-09-05 사용자 확정) — R1 +3% → R50 +15%
+      //    ⛔ 옛 「라운드 밑 1.07 일정 + 초반 램프」는 거꾸로였다(초반 +15~20% · 후반 +7%).
+      assert(Math.abs(campRoundRate(1,1)-CAMP_RR_LO)<1e-9,'R1 배율이 CAMP_RR_LO 가 아님: '+campRoundRate(1,1));
+      assert(Math.abs(campRoundRate(1,CAMP_ROUND_MAX-1)-CAMP_RR_HI)<1e-9,'마지막 라운드 배율이 CAMP_RR_HI 가 아님');
+      assert(campRoundRate(1,1)<1.05 && campRoundRate(1,CAMP_ROUND_MAX-1)>1.12,'초반 완만·후반 가파름이 아니다');
+      { let prev=0; for(let k=1;k<CAMP_ROUND_MAX;k++){ const v=campRoundRate(1,k); assert(v>=prev,'배율이 도로 내려간다: R'+k); prev=v; } }
+      // 깊은 던전일수록 같은 라운드가 더 무겁다
+      assert(campRoundRate(10,1)>campRoundRate(1,1) && campFoeDiff(1,49)/campFoeDiff(1,0) < campFoeDiff(10,49)/campFoeDiff(10,0),
+        '던전 10 이 던전 1 보다 안 무겁다');
+      // 문턱 = 앞 던전을 통째로 깬 배율 × 3 — 두 식이 같은 배율을 읽어야 한다
+      { let x=1; for(let k=1;k<CAMP_ROUND_MAX;k++) x*=campRoundRate(1,k);
+        assert(Math.abs(campDgThreshold(2)/(x*CAMP_DG_STEP)-1)<1e-9,'던전 2 문턱이 던전 1 곡선과 안 맞는다'); }
       // ③ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
       C.dg=1; C.cleared=0; const m0=campMineMul();
       C.cleared=49;        const m1=campMineMul();
       assert((campFoeDiff(1,49)/campFoeDiff(1,0)) > (m1/m0)*10,
         '50라운드에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
-      // ④ 마리 수 — 라운드가 오르면 잘게 쪼갠다. 상한 100
-      //   ⚠ 던전 1 의 초반만 **램프**가 마리 수도 함께 줄인다(campFoeEasy · 2026-09-04) — R1 은 1마리다.
-      //     그 램프를 안 타는 자리(던전 2)에서 원래 값 3 을 확인한다.
-      C.dg=2; assert(campFoeCount(1)===3,'램프 밖 1라운드 마리 수: '+campFoeCount(1));
-      C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 램프로 1마리가 아님: '+campFoeCount(1));
-      assert(campFoeCount(50)===CAMP_FOE_NMAX,'50라운드가 상한이 아님: '+campFoeCount(50));
+      // ④ 마리 수 — R1 은 1마리(어느 던전이나 · 램프 없이 기준값이 1), 라운드가 오르면 잘게 쪼갠다. 상한 100
+      C.dg=2; assert(campFoeCount(1)===1,'던전 2 R1 마리 수: '+campFoeCount(1));
+      C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 1마리가 아님: '+campFoeCount(1));
+      assert(campFoeCount(50)>=30 && campFoeCount(50)<=CAMP_FOE_NMAX,'50라운드 마리 수가 30~상한 밖: '+campFoeCount(50));
       assert(campFoeCount(999)<=CAMP_FOE_NMAX,'마리 수가 상한을 넘음');
       // ⑤ campScaleFoes 는 무리의 **총 체력**을 목표에 맞추되 유닛별 차이를 남긴다
       C.dg=2; C.cleared=10;
@@ -7182,7 +7315,7 @@ async function groupLobby(){
         assert(Math.abs(split/whole-1)<1e-6,'쪼개서 낸 총 체력이 한 번에 낸 것과 다르다: '+split+' vs '+whole); }
       // ⑥ 0단계(캠프)에는 난이도가 없다
       assert(campFoeDiff(0,0)===1,'캠프에 난이도가 붙었다: '+campFoeDiff(0,0));
-      return '문턱 ×'+CAMP_DG_STEP+' · 라운드밑 '+campRBase(1).toFixed(3)+'→'+campRBase(10).toFixed(3)
+      return '문턱 ×'+CAMP_DG_STEP+' · 라운드 배율 '+campRoundRate(1,1).toFixed(3)+'→'+campRoundRate(1,CAMP_ROUND_MAX-1).toFixed(3)
         +' · 천장 '+campFoeDiff(CAMP_DG_MAX,CAMP_ROUND_MAX-1).toExponential(2);
     } finally { C.dg=back.dg; C.cleared=back.cleared; } });
 
@@ -7635,7 +7768,11 @@ async function groupLobby(){
             assert(Math.abs((b5-G.tech.credit)-c5)<1,'×5 가 낸 값이 미리 보여 준 값과 다르다');
             // MAX — 지금 미네랄로 살 수 있는 만큼만, 넘겨 쓰지 않는다
             _armMul='max';
+            // ⚠ MAX 는 한 번에 CAMP_UPG_MAX_STEP(99) 까지만 산다 — 지갑이 그보다 크면 「남았다」가 정상이다.
+            //   탭 곡선이 완만해진 뒤(마일스톤 +1 · 2026-09-05) 1e7 로는 99칸이 다 사져서 여기서 걸렸다.
+            G.tech.credit=1e5;
             const can=campUpgAfford('tap'), l0=lv(), got=campUpgBuyN('tap',campResMulN('tap'));
+            assert(can<CAMP_UPG_MAX_STEP,'MAX 상한에 걸려 「다 샀다」를 못 잰다: '+can);
             assert(got===can&&got>0,'MAX 가 살 수 있는 만큼을 안 산다: '+got+' / '+can);
             assert(lv()-l0===got&&G.tech.credit>=0,'MAX 가 미네랄을 넘겨 썼다: '+G.tech.credit);
             assert(campUpgAfford('tap')===0,'MAX 뒤에도 더 살 수 있다 — 다 안 샀다');
@@ -7833,31 +7970,31 @@ async function groupLobby(){
       // ⛏ **채취도 「실제 수」다**(2026-09-02) — 왕복 1회당 1원 → 2원 → 3원, 탭과 같은 곡선.
       //    ⛔ 옛 방식은 레벨당 +2.5% 배율이었다. 배율이면 「1원이 2원이 된다」가 화면에서 안 읽힌다.
       if(typeof campGatRaw==='function'){
+        // ⛏ **1원에서 +1씩** (2026-09-05 사용자 확정) — 마일스톤 두 배 계단은 탭에만 있다
         assert(campGatRaw(0)===1,'채취 0레벨이 1 이 아니다: '+campGatRaw(0));
         assert(campGatRaw(1)===2,'채취 1레벨이 2 가 아니다: '+campGatRaw(1));
-        assert(campGatRaw(10)===12,'채취 Lv10 이 12 가 아니다(탭과 같은 마일스톤): '+campGatRaw(10));
-        // 💰 비용은 **세 레벨마다 ×10** (2026-09-02 사용자 확정)
-        //    50 · 150 · 300 · 500 · 1500 · 3000 · 5000 · 1.5만 · 3만 · 5만
-        //    ⭐ 노림수는 채취를 「끝없이 사는 축」에서 빼는 것 — 옛 제곱 곡선(25n(n+1))에서는
-        //      30분 판에서 채취 Lv61 까지 올라가 수입의 94.7% 를 먹었다(실측).
-        //    ⛔ 제곱 곡선으로 되돌리지 말 것.
+        assert(campGatRaw(10)===11,'채취 Lv10 이 11 이 아니다(더하기 계단 · 마일스톤 없음): '+campGatRaw(10));
+        // ⭐ 실제 왕복 1회 획득도 1원에서 시작한다 — 엔진 기본 8 을 캠프가 나눈다
+        { const g0=(()=>{ S.upg.gather=0; return campGatherGain(); })();
+          const g1=(()=>{ S.upg.gather=1; const v=campGatherGain(); S.upg.gather=0; return v; })();
+          assert(g0===1,'채취 Lv0 왕복 1회가 1원이 아니다(엔진 8 이 새어 나온다): '+g0);
+          assert(g1===2,'채취 Lv1 왕복 1회가 2원이 아니다: '+g1); }
+        // 💰 비용 50 × 1.22^Lv — 싸게 · 많이(2026-09-05 → 실측 1.22 · 2026-09-07). ⛔ 「세 레벨마다 ×10」으로 되돌리지 말 것
         const g=(lv)=>{ S.upg.gather=lv; const v=campUpgCost('gather'); S.upg.gather=0; return v; };
-        const want=[50,150,300,500,1500,3000,5000,15000,30000,50000];
-        const got=want.map((_,i)=>g(i));
-        assert(want.every((v,i)=>got[i]===v),
-          '채취 비용이 세 레벨마다 ×10 이 아니다: '+got.join(','));
-        // ⭐ 성능은 탭과 같은 곡선을 그대로 쓴다(campGatRaw = campTapRaw) — 값만 갈랐다
-        const t=(lv)=>{ S.upg.tap=lv; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
-        assert(g(0)/t(0)===5,'채취 첫 레벨이 탭의 5배가 아니다: '+g(0)+' vs '+t(0));
-        assert(g(9)/t(9)>50,'채취 Lv10 이 탭보다 충분히 비싸지 않다: '+g(9)+' vs '+t(9));
+        assert(g(0)===50,'채취 첫 레벨이 50 이 아니다: '+g(0));
+        for(const lv of [3,10,30]) assert(Math.abs(g(lv)/g(lv-1)-CAMP_GAT_COST_R)<0.02,'채취 비용 계단이 '+CAMP_GAT_COST_R+' 가 아니다(Lv'+lv+'): '+(g(lv)/g(lv-1)).toFixed(3));
+        assert(g(9)<=300,'채취 Lv10 이 300 을 넘는다 — 「싸게 많이」가 아니다: '+g(9));
+        assert(CAMP_GAT_COST_R>=1.2,'채취 비용 계단이 1.2 아래로 내려갔다 — 5분에 Lv31 이 된다: '+CAMP_GAT_COST_R);
       }
       assert(tap(10)-tap(9)===2,'Lv10 에서 증가폭이 2 로 안 커진다: '+(tap(10)-tap(9)));
       assert(tap(10)===12,'Lv10 탭당이 12 가 아니다: '+tap(10));
-      assert(tap(25)-tap(24)===4,'Lv25 에서 증가폭이 4 로 안 커진다: '+(tap(25)-tap(24)));
-      assert(tap(50)-tap(49)===8,'Lv50 에서 증가폭이 8 로 안 커진다: '+(tap(50)-tap(49)));
-      // ⚠ 마일스톤 레벨은 **사는 것도 비싸다** — 필요 탭이 +20 붙는다(Lv10 은 55 → 75)
+      assert(tap(25)-tap(24)===3,'Lv25 에서 증가폭이 3 으로 안 커진다(마일스톤마다 +1 · 2026-09-05): '+(tap(25)-tap(24)));
+      assert(tap(50)-tap(49)===4,'Lv50 에서 증가폭이 4 로 안 커진다: '+(tap(50)-tap(49)));
+      // ⚠ 마일스톤 레벨은 **사는 것도 비싸다** — 필요 탭이 +20 붙는다(Lv10 은 K·10+K → +20 · K=10 이면 110 → 130)
+      //   ⏫ K 는 CAMP_TAP_COSTK 한 곳(2026-09-07 · 5 → 10: 탭이 수입 2/3 를 먹어 첫 환생이 27분이었다).
       { const t10=(function(){ S.upg.tap=9; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; })();
-        assert(t10===75,'Lv10 필요 탭이 75 가 아니다: '+t10); }
+        assert(t10===CAMP_TAP_COSTK*11+20,'Lv10 필요 탭이 K·11+20 이 아니다: '+t10+' (K='+CAMP_TAP_COSTK+')');
+        assert(CAMP_TAP_COSTK>=10,'탭 비용 계수가 10 아래로 내려갔다 — 탭이 도로 공짜 축이 된다: '+CAMP_TAP_COSTK); }
       assert(campMileMul(19)===1 && campMileMul(20)===2 && campMileMul(50)===4 && campMileMul(100)===8,
         '마일스톤 계단이 20/50/100 에서 안 오른다: '+[campMileMul(19),campMileMul(20),campMileMul(50),campMileMul(100)].join(','));
       // ⛔ 마일스톤 배수는 Lv 에 **선형**이어야 한다(간격이 2배씩 넓어지므로). 지수가 되면 축이 셋이 된다.
@@ -7865,13 +8002,14 @@ async function groupLobby(){
       assert(Math.abs(k1-k2)<0.01 && Math.abs(k2-k3)<0.01,
         '마일스톤이 지수로 자란다 — 지수 축이 셋이 되어 폭주한다: '+[k1,k2,k3].map(v=>v.toFixed(3)).join(','));
       // ⛏ 탭 비용은 **횟수로 설계한 2차식**이다(2026-09-02 · 5n(n+1)) — 계단비로 재면 안 된다.
-      //   ⭐ 잠그는 것은 「Lv n 을 사는 데 몇 번 눌러야 하는가」다: 10 → 15 → 20 → 25 …(5씩)
+      //   ⭐ 잠그는 것은 「Lv n 을 사는 데 몇 번 눌러야 하는가」다: K·n+K = 20 → 30 → 40 → 50 …(K=10 씩 · 2026-09-07)
       //   ⛔ 옛 검사는 계단비 1.09 를 봤다. 지수 시절 값이라 지금은 뜻이 없다.
       const c=(n)=>{ S.upg.tap=n; const v=campUpgCost('tap'); S.upg.tap=0; return v; };
       const taps=(n)=>{ S.upg.tap=n; const v=Math.ceil(campUpgCost('tap')/campTapGain()); S.upg.tap=0; return v; };
-      assert(c(0)===10,'첫 탭 강화가 10 이 아니다: '+c(0));
+      const K=CAMP_TAP_COSTK;
+      assert(c(0)===2*K,'첫 탭 강화가 2K('+(2*K)+') 가 아니다: '+c(0));
       for(let lv=0; lv<5; lv++)
-        assert(taps(lv)===10+5*lv, 'Lv'+(lv+1)+' 에 필요한 탭이 '+(10+5*lv)+'번이 아니다: '+taps(lv));
+        assert(taps(lv)===K*(lv+2), 'Lv'+(lv+1)+' 에 필요한 탭이 '+(K*(lv+2))+'번이 아니다: '+taps(lv));
       // 무릎(Lv10) 뒤로는 지수로 넘어간다 — 2차식만 두면 후반에 탭이 공짜가 된다
       assert(Math.abs(c(15)/c(14)-1.15)<0.02,'무릎 후 비용 계단이 1.15 가 아니다: '+(c(15)/c(14)).toFixed(3)); }
     // 🤖 매크로 방지 (HUNT_R1 §1-1-3) — 탭에 상한이 없으므로 이것이 유일한 제동이다
@@ -7917,7 +8055,8 @@ async function groupLobby(){
     //      일꾼을 뽑는 행위 자체가 무의미했다. 캠프 광맥에 cap 을 얹어 열었다(실측 40기 137/초).
     { const S=campState(); S.upg.gather=0; const m0=campGatherMul();
       S.upg.gather=40; const m40=campGatherMul(); S.upg.gather=0;
-      assert(Math.abs(m0-1)<0.01,'효율 Lv0 은 배수 1 이어야 한다(기준선): '+m0.toFixed(3));
+      // ⭐ Lv0 기준선은 **왕복 1원** = 엔진 8 의 1/8 (2026-09-05 · 채취 1원 시작). ⛔ 1 로 되돌리지 말 것 — 그러면 Lv0 이 8원이다.
+      assert(Math.abs(m0-1/TECH_GATHER_AMT)<0.01,'효율 Lv0 배수가 1/'+TECH_GATHER_AMT+'(왕복 1원)이 아니다: '+m0.toFixed(3));
       assert(m40>m0,'효율 레벨이 채취 배수를 못 올린다');
       const mins=(G.tech&&G.tech.minerals)||[];
       assert(mins.length&&mins.every(m=>(m.cap|0)===CAMP_MINE_CAP),
@@ -13298,28 +13437,20 @@ async function groupLobby(){
     } finally { C.dg=back.dg; C.cleared=back.cleared; campBattleClose(); }
   });
 
-  // 🍼 초반 램프 — R1 을 깨지는 크기로 낮추되 **후반과 환생 보상은 건드리지 않는다**.
-  await step('캠프 초반 램프: R1 은 쉽고 · 마지막 라운드에서 합류하고 · 환생 포인트는 그대로', async()=>{
-    skipIf(typeof campFoeEasy!=='function','초반 램프 없음');
-    // ① 던전 1 의 R1 이 가장 쉽고, R10 에서 원래 곡선에 합류한다
-    assert(campFoeEasy(1,1)<0.3,'R1 이 안 쉽다: '+campFoeEasy(1,1));
-    assert(campFoeEasy(1,CAMP_EASY_END)===1,'R'+CAMP_EASY_END+' 에서 합류하지 않는다: '+campFoeEasy(1,CAMP_EASY_END));
-    // ⭐ 끝점은 던전의 **마지막 라운드**여야 한다 — 그래야 던전 1 R50 에서 ×1 로 만나고
-    //   던전 2 로 넘어가는 벽이 지금과 같다(문턱 ×3 그대로). 끝점이 그보다 앞이면 던전 1 후반이
-    //   제 난이도로 돌아와 「전체적으로 낮춘다」가 깨지고, 뒤면 R50 이 쉬운 채로 던전 2 를 만난다.
-    assert(CAMP_EASY_END===CAMP_ROUND_MAX,'램프 끝점이 던전 마지막 라운드가 아니다: '+CAMP_EASY_END);
-    assert(campFoeEasy(1,CAMP_ROUND_MAX)===1,'던전 1 마지막 라운드가 ×1 이 아니다 — 던전 2 벽이 커진다');
-    assert(campFoeEasy(1,CAMP_ROUND_MAX+10)===1,'라운드 상한 밖에서 램프가 되살아난다');
-    { let prev=0; for(let r=1;r<=CAMP_EASY_END;r++){ const v=campFoeEasy(1,r);
-        assert(v>=prev,'램프가 도로 내려간다: R'+r+' = '+v); prev=v; } }
-    // ② **던전 1 에만** 건다 — 모든 던전에 걸면 옮길 때마다 쉬운 구간이 생겨 곡선이 톱니가 된다
-    assert(campFoeEasy(2,1)===1,'던전 2 에도 램프가 걸렸다 — 곡선이 톱니가 된다');
-    assert(campFoeEasy(0,1)===1,'캠프(0)에 램프가 걸렸다');
-    // ③ ⛔ 난이도 자체(campFoeDiff)에 곱하면 **환생 포인트**가 같이 깎인다(campRebMul 이 그 값을 읽는다)
+  // 🍼 초반 램프는 **꺼져 있다**(2026-09-05) — 「초반은 완만하게」는 곡선(campRoundRate)이 맡는다.
+  //   ⛔ 램프(0.15)를 되살리면 곡선과 겹쳐 초반이 두 번 낮아진다. 함수는 남아 있되 ×1 이어야 한다.
+  await step('캠프 초반 램프: 꺼져 있다(×1) · 완만함은 곡선이 맡는다 · 환생 포인트는 그대로', async()=>{
+    skipIf(typeof campFoeEasy!=='function'||typeof campRoundRate!=='function','램프/곡선 없음');
+    for(const r of [1,10,CAMP_ROUND_MAX,CAMP_ROUND_MAX+10]) assert(campFoeEasy(1,r)===1,'램프가 살아 있다: R'+r+' = '+campFoeEasy(1,r));
+    assert(campFoeEasy(2,1)===1 && campFoeEasy(0,1)===1,'다른 던전/캠프에 램프가 걸렸다');
+    // R1 이 쉬운 것은 **기준값**(R1 = 4.5/0.05 · 1마리)과 **완만한 첫 배율**(+3%) 때문이다
+    assert(CAMP_FOE_HP0<10 && campFoeCount(1)===1,'R1 기준값이 「몇 대면 죽는」 크기가 아니다: '+CAMP_FOE_HP0+' · '+campFoeCount(1)+'마리');
+    assert(campRoundRate(1,1)<=1.05,'R1 배율이 완만하지 않다: '+campRoundRate(1,1));
+    // ⛔ 난이도 자체(campFoeDiff)에 곱하면 환생 포인트가 같이 깎인다 — 램프가 새지 않는다
     { const f0=window.campFoeEasy; try{ window.campFoeEasy=()=>0.5;
         assert(campFoeDiff(1,0)===1,'램프가 campFoeDiff 로 샜다 — 초반 환생 포인트가 깎인다');
       } finally { window.campFoeEasy=f0; } }
-    return 'R1 ×'+campFoeEasy(1,1)+' → R'+CAMP_EASY_END+' ×1 · 던전 1 전용 · 보상 영향 없음';
+    return '램프 ×1 · R1 '+CAMP_FOE_HP0+'체력 1마리 · 첫 배율 '+campRoundRate(1,1).toFixed(2);
   });
 
   // 🏗 건물 짓기 단계 — 「채굴 끄기 → 일꾼 지정 → 카드 → 배치」가 한 동작에 한 단계여야 한다.
