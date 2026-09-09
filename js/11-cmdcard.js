@@ -805,7 +805,7 @@ function renderCampIdleSheet(host){
   //   화면에는 건물 카드가 남아 있다 — 서명만 보면 영영 안 그려진다.
   const mine=!!(el._cgModel && el._cgModel.kicker);
   if(mine && el._gSig===sig) return;
-  el._gSig=sig; el._cgSig=undefined; renderCmdGrid(el, _campIdleModel()); }
+  el._gSig=sig; el._cgSig=undefined; el._cfSig=null; renderCmdGrid(el, _campIdleModel()); }   // _cfSig: 유닛·적 건물 카드 표식 — 요약이 덮었으니 지운다(캠프 campSyncSheet 가 다시 그린다)
 
 function renderAutoSheet(){ const host=document.getElementById('unitCmd'); if(!host) return; host.classList.add('simple');
   const sig='auto|'+autoSig()+'|'+(host._cgPage||0);

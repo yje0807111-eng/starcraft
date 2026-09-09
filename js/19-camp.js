@@ -3438,6 +3438,33 @@ function campFoeOverlayHTML(){
     out.push('<div class="' + cls + '" data-eid="' + m.eid + '" style="left:' + (s.x * 100).toFixed(2) + '%;top:'
       + (s.y * 100).toFixed(2) + '%;width:' + (w * 100).toFixed(2) + '%;height:' + (h * 100).toFixed(2) + '%">' + inner + '</div>'); }
   return out.join(''); }
+// ⛏⛽ **적 광맥·가스**(연출 · 2026-09-09) — 내 광맥 스프라이트(16-build techMapRender 의 .bMineral.spr)와
+//   **같은 마크업**을 fbLayer 에 얹는다. 자리는 23-camp-dungeon 의 campFoeLayout 이 준다.
+//   ⛔ 게임 값에 안 들어간다 — G.tech.minerals 에 넣지 말 것(내 일꾼이 캐러 간다).
+function campFoeMinesHTML(){
+  if(!CAMPB || !CAMPB._fmine || campDgN() <= 0 || typeof _techW2S !== 'function') return '';
+  const zm = (G.tech && G.tech.view ? G.tech.view.zoom : 1) || 1, cw = _techCW(), ch = _techCH();
+  const k = (typeof CAMP_MINE_SCALE !== 'undefined') ? CAMP_MINE_SCALE : 1.34, dy = 0.30;
+  const out = [];
+  CAMPB._fmine.forEach(function(m, i){
+    const spr = (typeof campMineSprite === 'function') ? campMineSprite(m, i) : ''; if(!spr) return;
+    const tl = _techW2S(m.gx - k / 2 * cw, m.gy - (k / 2 + dy) * ch), br = _techW2S(m.gx + k / 2 * cw, m.gy + (k / 2 - dy) * ch);
+    if(br.x < -0.2 || tl.x > 1.2 || br.y < -0.2 || tl.y > 1.2) return;
+    const sh = _techW2S(m.gx, m.gy + (k / 2 - dy) * ch - 0.16 * ch), sw = Math.max(0.035, k * 0.80 * cw * zm);
+    out.push('<div class="bGndShadow mnShd" style="left:' + ((sh.x + sw * SHD_DX) * 100).toFixed(2) + '%;top:' + ((sh.y + sw * SHD_DY * 0.40) * 100).toFixed(2)
+      + '%;width:' + (sw * 100).toFixed(2) + '%;height:' + (sw * 0.40 * 100).toFixed(2) + '%"></div>');
+    out.push('<div class="bMineral spr foe" style="left:' + (tl.x * 100).toFixed(2) + '%;top:' + (tl.y * 100).toFixed(2) + '%;width:'
+      + ((br.x - tl.x) * 100).toFixed(2) + '%;height:' + ((br.y - tl.y) * 100).toFixed(2) + '%"><img class="mnSpr" src="' + spr
+      + '" alt=""><img class="mnSpr shade" src="' + spr + '" alt=""></div>'); });
+  // ⛽ 가스 — 왼쪽 가스 구역(.bGasZone)의 **복제**(campDrawGas2 와 같은 수법 · 마크업을 다시 쓰지 않는다)
+  if(CAMPB._fgas){ const left = document.querySelector('#cstMain .bmap .bGasZone');
+    if(left){ const gw = (typeof TECH_GAS !== 'undefined' ? TECH_GAS.w : 3) * cw, gh = (typeof TECH_GAS !== 'undefined' ? TECH_GAS.h : 2) * ch;
+      const tl = _techW2S(CAMPB._fgas.gx - gw / 2, CAMPB._fgas.gy - gh / 2), br = _techW2S(CAMPB._fgas.gx + gw / 2, CAMPB._fgas.gy + gh / 2);
+      if(!(br.x < -0.2 || tl.x > 1.2 || br.y < -0.2 || tl.y > 1.2))
+        out.push('<div class="' + left.className.split(' ').filter(function(c){ return c && c !== 'hot'; }).join(' ') + ' foe" style="position:absolute;left:'
+          + (tl.x * 100).toFixed(2) + '%;top:' + (tl.y * 100).toFixed(2) + '%;width:' + ((br.x - tl.x) * 100).toFixed(2) + '%;height:' + ((br.y - tl.y) * 100).toFixed(2) + '%">'
+          + left.innerHTML + '</div>'); } }
+  return out.join(''); }
 function campBattleBars(){
   if(!CAMPB || campDgN() <= 0) return '';
   if(typeof _barsHTML !== 'function' || typeof _techW2S !== 'function') return '';
@@ -6460,7 +6487,8 @@ function campFrame(now){
         // 🏰 적 기지 표식(밑변 광원·표적·안개·잔해·체력) — 같은 층에 같은 방식으로(2026-09-09)
         //   ⚠ **한 층(.fbLayer)으로 갈아 끼운다** — 덧붙이기만 하면 프레임마다 쌓인다(실측: 12채가 144개).
         const _old = _lb.querySelector('.fbLayer'); if(_old) _old.remove();
-        const _fm = (typeof campFoeOverlayHTML === 'function') ? campFoeOverlayHTML() : '';
+        const _fm = ((typeof campFoeMinesHTML === 'function') ? campFoeMinesHTML() : '')
+                  + ((typeof campFoeOverlayHTML === 'function') ? campFoeOverlayHTML() : '');
         if(_fm) _lb.insertAdjacentHTML('beforeend', '<div class="fbLayer">' + _fm + '</div>'); } }
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
@@ -6861,7 +6889,9 @@ function campPatchZoom(){
   window._techClampView = function(v){
     if(!_campOn) return oClamp.apply(this, arguments);
     v = v || (G.tech && G.tech.view); if(!v) return;
-    v.zoom = Math.max(CAMP_MIN_ZOOM, Math.min(techMaxZoom(), v.zoom));
+    // 🏰 던전에서는 하한이 1.0 까지 내려간다(campMinZoom · 23-camp-dungeon) — 위 한 화면의 적 기지가 한눈에 들게.
+    const _mz = (typeof campMinZoom === 'function') ? campMinZoom() : CAMP_MIN_ZOOM;
+    v.zoom = Math.max(_mz, Math.min(techMaxZoom(), v.zoom));
     // 팬 여지 = 바닥이 화면을 덮는 한도(위 설명). 원본과 같은 식이되 음수만 막는다.
     const m = Math.max(0, (1 - 1 / v.zoom) * 0.5);
     // ⛔ 시트 몫으로 시점을 내리지 않는다 — **맵 뷰포트(#cstMain)가 이미 시트 위에서 끝난다**
@@ -6978,7 +7008,10 @@ function campSyncSheet(){
     if(!fieldN && typeof campFoePicked === 'function' && campFoePicked()){
       const body = document.getElementById('btSheetBody');
       const sig = 'foe:' + campFoePicked().eid + ':' + Math.round(campFoePicked().hp);
-      if(body && body._cfSig !== sig && typeof campFoeSheet === 'function') campFoeSheet();
+      // ⚠ 서명이 같아도 **그려진 모델이 이 건물의 것인지** 본다(renderCampIdleSheet 와 같은 수법) — 요약판이
+      //   서명을 안 지우고 덮으면 서명만 믿는 쪽은 영영 안 그린다(실측 2026-09-09: 스모크 3회 중 1회 「터치 강화」가 남았다).
+      const drawn = body && body._cgModel && body._cgModel.foeEid === campFoePicked().eid;
+      if(body && (body._cfSig !== sig || !drawn) && typeof campFoeSheet === 'function') campFoeSheet();
       return; }
     if(fieldN){
       // 지정이 바뀌었을 때만 그린다(표식 _cfSig) — 매 프레임 renderCmdGrid 를 부르면 카드가 깜빡인다

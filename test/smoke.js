@@ -7442,8 +7442,9 @@ async function groupLobby(){
        if(typeof techViewTick==='function') techViewTick(1);
        const fb=CAMPB._fbld, live=fb.filter(b=>!b.dead), seen=fb.filter(b=>b.seen&&!b.dead).length;
        // ① 3D 엔트리 — 기지 건물과 같은 규약(id 'cb_'+모델키 · fitW · z) · 살아 있는 것 전부 · 안 본 것은 hidden
-       const e3=campFoeBld3D();
+       const e3all=campFoeBld3D(), e3=e3all.filter(e=>!/_wk/.test(e.uid)), wk=e3all.length-e3.length;
        assert(e3.length===live.length,'3D 엔트리가 산 건물 수와 다르다: '+e3.length+'/'+live.length);
+       assert(wk===CAMP_FOE_WORKERS,'적 일꾼 연출이 '+CAMP_FOE_WORKERS+'기가 아니다: '+wk);
        for(const e of e3){ assert(/^cb_/.test(e.id),'3D 엔트리 id 가 cb_ 규약이 아니다: '+e.id);
          assert(e.fitW>0 && typeof e.z==='number','3D 엔트리에 fitW·z 가 없다(기지 건물과 다른 크기로 선다)'); }
        assert(e3.filter(e=>e.hidden).length===live.length-seen,'안 본 건물이 hidden 으로 안 넘어간다');
@@ -7482,6 +7483,11 @@ async function groupLobby(){
          assert(CAMPB._foeSel===tg.dataset.eid,'적 건물을 눌렀는데 들여다보기가 안 잡힌다: '+CAMPB._foeSel);
          const card=document.querySelector('#btSheetBody .cgSlot .cgName');
          assert(card && card.textContent==='공격 대상','프로필에 「공격 대상」 카드가 없다: '+(card?card.textContent:'없음'));
+         // 🩹 요약판(MY BASE)이 서명을 안 지우고 덮어도 **다음 동기화가 되살린다** — 서명이 아니라 그려진 모델을 본다
+         { const body=document.getElementById('btSheetBody'); body._cgSig=undefined; renderCmdGrid(body, _campIdleModel()); body._cfSig='foe:'+tg.dataset.eid+':'+Math.round(campFoePicked().hp);   // 요약이 서명을 그대로 두고 덮은 상황
+           assert(document.querySelector('#btSheetBody .cgSlot .cgName').textContent!=='공격 대상','전제: 요약판이 안 덮였다');
+           campSyncSheet();
+           assert(document.querySelector('#btSheetBody .cgSlot .cgName').textContent==='공격 대상','요약판이 덮은 뒤 적 프로필이 안 되살아난다(서명만 믿는다)'); }
          assert(C.foeTgt==null,'누르기만 했는데 표적이 박혔다 — 표적은 카드가 정한다');
          document.querySelector('#btSheetBody .cgSlot').click(); await sleep(50);
          assert(C.foeTgt===tg.dataset.eid,'카드를 눌렀는데 표적이 안 잡힌다: '+C.foeTgt);
@@ -7507,6 +7513,55 @@ async function groupLobby(){
        return '3D '+e3.length+' · 표식 '+marks.length+'(진행 '+cnt('prog')+' · 안개 '+cnt('hid')+') · 화면 안 · 띠 · 탭→카드→표적 · 종족 고정';
      } finally { C.dg=back.dg; C.race=back.race; C.foeTgt=back.foeTgt; if(CAMPB) CAMPB._foeSel=null; campBattleClose(); campBarReset(); }
    });
+  // 🎲 **적 기지 배치는 생성기가 뽑는다**(2026-09-09 사용자 확정 · 23-camp-dungeon campFoeLayout).
+  //   규칙은 고정 — **맨 위 본진 → 테크 → 앞줄 생산**(내 기지의 거울) · 탑은 구간 앞 · 보급고류는 바깥 —
+  //   자리만 씨앗 난수다. 씨앗은 원정마다 새로(C.foeSeed) · 같은 씨앗이면 같은 배치.
+  //   ⛏ 적 광맥·가스·일꾼은 **연출**이다(사용자 확정 「연출만」) — 값에 안 들어간다.
+  await step('캠프 던전: 적 기지 배치 — 위 본진·아래 생산 · 원정마다 랜덤 · 광맥·가스·일꾼 연출', async()=>{
+    skipIf(typeof campFoeLayout!=='function','배치 생성기 없음');
+    const C=campState(); const back={dg:C.dg, seed:C.foeSeed};
+    try{
+      const s1=(campEnterDungeon(1), C.foeSeed); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB||!CAMPB._fbld,'전장이 안 열림');
+      const fb=CAMPB._fbld, main=fb.find(b=>b.kind==='main');
+      assert(main,'본진이 없다');
+      // ① 순서 — 위(작은 gy)가 뒤다: 본진 < 테크 < 생산. 탑은 제 구간 진행 건물보다 앞(큰 gy).
+      for(const b of fb){ if(b.kind==='prod') assert(b.gy>main.gy,'생산 건물이 본진보다 뒤에 있다');
+        if(b.kind==='tech'||b.kind==='res') assert(b.gy>main.gy,'테크가 본진보다 뒤에 있다'); }
+      for(const b of fb) if(b.kind==='prod') for(const t of fb) if(t.kind==='tech'||t.kind==='res')
+        assert(b.gy>t.gy,'생산 건물이 테크보다 뒤에 있다(앞줄이 아니다)');
+      for(const t of fb) if(t.kind==='tower'){ const zb=fb.filter(b=>b.role==='prog'&&b.zone===t.zone);
+        for(const b of zb) assert(t.gy>b.gy-0.01,'문지기 탑이 제 구간 건물보다 뒤에 있다(구간 '+t.zone+')'); }
+      // ② 전장 y 는 0 이상 · 격자 위 한 화면 안
+      for(const b of fb) assert(b.y>=0 && b.gy>=-0.43,'적 건물이 전장 밖으로 나갔다: '+b.bk+' y='+Math.round(b.y)+' gy='+b.gy.toFixed(3));
+      // ③ 겹치지 않는다 — 발판(0.07)보다 가깝게 붙은 쌍이 없다. ⚠ **씨앗 300개 × 던전 3** 으로 잰다 — 한 판만 재면
+      //    씨앗 운이다(실측 2026-09-09: 4000개 중 780개가 겹치던 값이 스모크 한 번은 통과했다). 순서 규칙도 같이.
+      const d=campDgDef(1);
+      for(let dn=1;dn<=3;dn++){ const dd=campDgDef(dn); if(!dd||!dd.bld) continue;
+        for(let sd=1;sd<=300;sd++){ const L=campFoeLayout(dd, sd*7919+1).bld, mi=dd.bld.findIndex(q=>q.kind==='main');
+          for(let i=0;i<L.length;i++){ const q=dd.bld[i];
+            assert(L[i].gy>=-0.43,'던전 '+dn+' 씨앗 '+sd+': '+q.k+' 이 전장 위로 나갔다 gy='+L[i].gy.toFixed(3));
+            if(i!==mi && q.role==='prog') assert(L[i].gy>L[mi].gy,'던전 '+dn+' 씨앗 '+sd+': '+q.k+' 이 본진보다 뒤다');
+            for(let j=i+1;j<L.length;j++) assert(Math.hypot(L[i].gx-L[j].gx,L[i].gy-L[j].gy)>=0.07,
+              '던전 '+dn+' 씨앗 '+sd+': 적 건물이 겹친다 '+q.k+' · '+dd.bld[j].k); } } }
+      // ④ 씨앗 — 같은 씨앗 같은 배치 · 다른 씨앗 다른 배치 · 원정마다 새 씨앗
+      assert(JSON.stringify(campFoeLayout(d,s1).bld)===JSON.stringify(campFoeLayout(d,s1).bld),'같은 씨앗인데 배치가 다르다');
+      assert(JSON.stringify(campFoeLayout(d,s1).bld)!==JSON.stringify(campFoeLayout(d,s1+7).bld),'씨앗이 달라도 배치가 같다 — 랜덤이 아니다');
+      campEnterDungeon(0); campBattleClose();
+      campEnterDungeon(1); assert(C.foeSeed!==s1,'다시 들어왔는데 씨앗이 그대로다 — 원정마다 새 배치여야 한다');
+      CAMPB=null; campCombatStep(0.05);
+      if(typeof techViewTick==='function') techViewTick(1);   // 👁 진입 뷰 보간을 끝낸다 — 일꾼 엔트리는 화면 안에서만 나온다
+      // ⑤ 연출 — 광맥 8 · 가스 1 · 일꾼 3(3D 엔트리) · 게임 값에는 없다
+      assert(CAMPB._fmine && CAMPB._fmine.length===CAMP_MINE_COLS,'적 광맥이 '+CAMP_MINE_COLS+'덩이가 아니다');
+      assert(CAMPB._fgas,'적 가스 자리가 없다');
+      const mainNow=CAMPB._fbld.find(b=>b.kind==='main');
+      for(const m of CAMPB._fmine) assert(m.gy<mainNow.gy,'적 광맥이 본진 위에 있지 않다');
+      assert(campFoeBld3D().filter(e=>/_wk/.test(e.uid)).length===CAMP_FOE_WORKERS,'적 일꾼 연출이 없다');
+      assert(!(G.tech.minerals||[]).some(m=>m.gy!=null && m.gy<0),'적 광맥이 G.tech.minerals 에 들어갔다 — 내 일꾼이 캐러 간다');
+      assert(campAlive('ai')===CAMPB.ai.units.filter(u=>!u.dead).length,'적 수에 연출 유닛이 섞였다');
+      return '본진 위 · 생산 앞 · 900판 겹침 없음 · 씨앗 '+String(s1).slice(-4)+'→'+String(C.foeSeed).slice(-4)+' · 광맥 '+CAMPB._fmine.length+' · 가스 · 일꾼 '+CAMP_FOE_WORKERS;
+    } finally { C.dg=back.dg; C.foeSeed=back.seed; campBattleClose(); campBarReset(); }
+  });
   await step('캠프 던전: 릴레이(한 곳에서 · 깰수록 세진다) · 구간 관문 · 보급고', async()=>{
     skipIf(typeof campFoeActive!=='function'||typeof campFoeZoneOpen!=='function','릴레이 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
@@ -7611,8 +7666,11 @@ async function groupLobby(){
           const z=STK.ai.units[STK.ai.units.length-1];
           if(z){ z.x=u.x+(u.rng||187)*1.35; z.y=u.y; z._sx=z.x; z._sy=z.y; } return z; });
         assert(e,'적을 못 만들었다');
-        for(let i=0;i<60;i++) campCombatStep(1/30);
-        assert(u.tgtUid,'적을 표적으로 안 잡았다 — 검사가 헛돈다(사거리·인지 값이 바뀌었나)');
+        // ⚠ **한 번이라도** 잡았으면 전제는 충족이다 — 릴레이가 뽑는 적이 오가며 표적이 순간 비는 틱이 있다
+        //   (실측 2026-09-09: 10틱 su3 → 30틱 null → 60틱 su8). 그 틈에 재면 헛돈다.
+        let _sawTgt=false;
+        for(let i=0;i<60;i++){ campCombatStep(1/30); if(u.tgtUid) _sawTgt=true; }
+        assert(_sawTgt,'적을 표적으로 안 잡았다 — 검사가 헛돈다(사거리·인지 값이 바뀌었나)');
         const d1=Math.hypot(b.x-u.x, b.y-u.y);
         assert(d1 < d0-5,'적을 쫓느라 건물로 안 나아간다 — 교착이 되살아났다: '
           +Math.round(d0)+' → '+Math.round(d1));

@@ -2896,8 +2896,9 @@
 #phone.campMode .fbMark .fbTip{position:absolute;top:-19px;left:50%;transform:translateX(-50%);
   font-family:var(--font-ko);font-size:9px;font-weight:700;color:#ff7676;white-space:nowrap;letter-spacing:.02em}
 /* 못 본 건물 — 속 빈 실루엣(이름도 없다) */
-#phone.campMode .fbMark.hid{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
-#phone.campMode .fbMark.hid::before{content:'';position:absolute;inset:22%;border-radius:2px;background:rgba(255,255,255,.06)}
+/* ⚠ 위 한 화면은 바닥 그림이 없어(배경색뿐) 옅은 실루엣이 묻혔다(실측) — 검은 바닥에서도 읽히는 값 */
+#phone.campMode .fbMark.hid{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.13)}
+#phone.campMode .fbMark.hid::before{content:'';position:absolute;inset:22%;border-radius:2px;background:rgba(255,255,255,.09)}
 /* 잔해 — ✕ */
 #phone.campMode .fbMark.dead{opacity:.5}
 #phone.campMode .fbMark.dead::before{content:'';position:absolute;inset:18%;

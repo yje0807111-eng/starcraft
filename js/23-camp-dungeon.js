@@ -18,9 +18,10 @@
 //     넣을 때 그 사람의 배치를 같은 모양으로 넘기면 그대로 돈다 — 그래서 입력을 표 하나로 받는다.
 //   ⚠ `k` 는 **`TECH_TREE[campTechRace(race)].buildings` 의 키**다. 종족 키가 두 벌이라는 것에 주의:
 //     건물 표는 union·swarm·aetherial · 전투 엔진(STK_RACES)은 terran·zerg·protoss.
-//   ⚠ 좌표는 **격자 비율**(gx·gy)이다. `campG2W` 가 전장 좌표로 바꾼다 — 내 건물과 같은 자를 쓴다.
-//     적 기지는 격자 **위 한 화면**(gy −0.26~−0.05 · CAMP_LANE_TOP=−0.26 부터 · 2026-09-09 사용자: 「화면 완전 위」).
-//     ⚠ 옛 값(0.18~0.335)에서 gy' = −0.26 + (gy − 0.18) × 2 로 옮겼다 — **전장 좌표는 그대로**다(19-camp CAMP_LANE_TOP 설명).
+//   🎲 **자리는 표에 없다** — `campFoeLayout(d, seed)` 가 원정마다 새로 뽑는다(2026-09-09 사용자: 「항상 정해져 있지 않고
+//     랜덤으로」). 규칙은 고정이고 세부 자리만 씨앗 난수다: **맨 위 본진 → 그 아래 테크 → 앞줄 생산**(내 기지를 뒤집은
+//     거울 · 사용자 확정) · 문지기 탑은 구간 앞 가운데 · 보급고류는 좌우 바깥. 좌표는 격자 비율이고 `campG2W` 가 전장으로 바꾼다.
+//     ⚠ 적 기지는 격자 **위 한 화면**(gy −0.43~0.05 · CAMP_LANE_TOP=−0.26 · 전장 y 는 0 이상이어야 한다 — 하한 gy −0.43).
 //   role: 'prog' 진행(6채 · 이걸 다 깨야 다음 던전) · 'side' 부수(6채 · 안 센다)
 //   step: 진행 건물의 **차례**(1~6). ⭐ 릴레이의 뼈대다 — 살아 있는 것 중 step 이 가장 작은
 //         한 채만 적을 뽑는다. 그걸 깨면 다음 채가 이어받아 **더 센 것을 더 자주** 보낸다.
@@ -42,36 +43,36 @@ const CAMP_DG = [
     desc:'앞 건물부터 하나씩 — 깰수록 다음 건물이 더 센 것을 보낸다',
     bld:[
       // 구간 1 — 문지기 미사일 포탑
-      { k:'turret',   gx:.50, gy:0.050, role:'side', kind:'tower', zone:1 },
-      { k:'barracks', gx:.30, gy:0.000, role:'prog', kind:'prod', zone:1, step:1, foe:['marine'] },
-      { k:'factory',  gx:.70, gy:0.000, role:'prog', kind:'prod', zone:1, step:2, foe:['machinegun','marine'] },
-      { k:'supply',   gx:.10, gy:0.030, role:'side', kind:'depot', zone:1 },
+      { k:'turret', role:'side', kind:'tower', zone:1 },
+      { k:'barracks', role:'prog', kind:'prod', zone:1, step:1, foe:['marine'] },
+      { k:'factory', role:'prog', kind:'prod', zone:1, step:2, foe:['machinegun','marine'] },
+      { k:'supply', role:'side', kind:'depot', zone:1 },
       // 구간 2 — 문지기 벙커
-      { k:'bunker',   gx:.50, gy:-0.080, role:'side', kind:'tower', zone:2 },
-      { k:'engbay',   gx:.28, gy:-0.140, role:'prog', kind:'tech', zone:2, step:3, foe:['ghost','marine'] },
-      { k:'refinery', gx:.72, gy:-0.140, role:'prog', kind:'res',  zone:2, step:4, foe:['machinegun','ghost'] },
-      { k:'supply',   gx:.90, gy:-0.110, role:'side', kind:'depot', zone:2 },
+      { k:'bunker', role:'side', kind:'tower', zone:2 },
+      { k:'engbay', role:'prog', kind:'tech', zone:2, step:3, foe:['ghost','marine'] },
+      { k:'refinery', role:'prog', kind:'res',  zone:2, step:4, foe:['machinegun','ghost'] },
+      { k:'supply', role:'side', kind:'depot', zone:2 },
       // 구간 3 — 문지기 포탑 + 본진
-      { k:'turret',   gx:.50, gy:-0.190, role:'side', kind:'tower', zone:3 },
-      { k:'academy',  gx:.26, gy:-0.250, role:'prog', kind:'tech', zone:3, step:5, foe:['racer','marine'] },
-      { k:'command',  gx:.60, gy:-0.256, role:'prog', kind:'main', zone:3, step:6, foe:['goliath','tank','marine'] },
-      { k:'supply',   gx:.88, gy:-0.240, role:'side', kind:'depot', zone:3 } ] },
+      { k:'turret', role:'side', kind:'tower', zone:3 },
+      { k:'academy', role:'prog', kind:'tech', zone:3, step:5, foe:['racer','marine'] },
+      { k:'command', role:'prog', kind:'main', zone:3, step:6, foe:['goliath','tank','marine'] },
+      { k:'supply', role:'side', kind:'depot', zone:3 } ] },
   // ── D2 스웜 기지 — 「연구가 필요하다」. 기믹: **공중이 섞인다**(대공이 없으면 못 깬다) ──
   { race:'swarm', name:'감염된 둥지', lesson:'research', air:true,
     desc:'적이 단단하다 — 연구 없이는 못 깬다. 하늘에서도 온다',
     bld:[
-      { k:'sunken',     gx:.50, gy:0.050, role:'side', kind:'tower', zone:1 },
-      { k:'pool',       gx:.30, gy:0.000, role:'prog', kind:'prod', zone:1, step:1, foe:['broodling'] },
-      { k:'hydraden',   gx:.70, gy:0.000, role:'prog', kind:'prod', zone:1, step:2, foe:['snapper','broodling'] },
-      { k:'creep',      gx:.10, gy:0.030, role:'side', kind:'depot', zone:1 },
-      { k:'spore',      gx:.50, gy:-0.080, role:'side', kind:'tower', zone:2 },
-      { k:'evochamber', gx:.28, gy:-0.140, role:'prog', kind:'tech', zone:2, step:3, foe:['hydra','snapper'] },
-      { k:'extractor',  gx:.72, gy:-0.140, role:'prog', kind:'res',  zone:2, step:4, foe:['hydra','broodling'] },
-      { k:'creep',      gx:.90, gy:-0.110, role:'side', kind:'depot', zone:2 },
-      { k:'sunken',     gx:.50, gy:-0.190, role:'side', kind:'tower', zone:3 },
-      { k:'lair',       gx:.26, gy:-0.250, role:'prog', kind:'tech', zone:3, step:5, foe:['thornqueen','hydra'] },
-      { k:'hatchery',   gx:.60, gy:-0.256, role:'prog', kind:'main', zone:3, step:6, foe:['ultralisk','thornqueen','hydra'] },
-      { k:'creep',      gx:.88, gy:-0.240, role:'side', kind:'depot', zone:3 } ] },
+      { k:'sunken', role:'side', kind:'tower', zone:1 },
+      { k:'pool', role:'prog', kind:'prod', zone:1, step:1, foe:['broodling'] },
+      { k:'hydraden', role:'prog', kind:'prod', zone:1, step:2, foe:['snapper','broodling'] },
+      { k:'creep', role:'side', kind:'depot', zone:1 },
+      { k:'spore', role:'side', kind:'tower', zone:2 },
+      { k:'evochamber', role:'prog', kind:'tech', zone:2, step:3, foe:['hydra','snapper'] },
+      { k:'extractor', role:'prog', kind:'res',  zone:2, step:4, foe:['hydra','broodling'] },
+      { k:'creep', role:'side', kind:'depot', zone:2 },
+      { k:'sunken', role:'side', kind:'tower', zone:3 },
+      { k:'lair', role:'prog', kind:'tech', zone:3, step:5, foe:['thornqueen','hydra'] },
+      { k:'hatchery', role:'prog', kind:'main', zone:3, step:6, foe:['ultralisk','thornqueen','hydra'] },
+      { k:'creep', role:'side', kind:'depot', zone:3 } ] },
   // ── D3 에테리얼 기지 — 「조합 + 최종」. 기믹: **동력탑이 그 구간의 탑을 먹인다** ──
   //   ⭐ 이 설계의 가장 좋은 한 칸이다 — 문지기 탑을 **직접 깨든, 그 구간의 파일런을 깨든** 문이 열린다.
   //     「어느 걸 먼저」가 진짜 판단이 된다. ⛔ D1·D2 에는 넣지 않는다(배우기 전에 나오면 그냥 어렵다).
@@ -79,18 +80,18 @@ const CAMP_DG = [
   { race:'aetherial', name:'잊혀진 회랑', lesson:'mix', powered:true,
     desc:'동력탑이 문지기를 먹인다 — 무엇을 먼저 깰지가 갈린다',
     bld:[
-      { k:'cannon',      gx:.50, gy:0.050, role:'side', kind:'tower', zone:1 },
-      { k:'gateway',     gx:.30, gy:0.000, role:'prog', kind:'prod', zone:1, step:1, foe:['blade'] },
-      { k:'stargate',    gx:.70, gy:0.000, role:'prog', kind:'prod', zone:1, step:2, foe:['dragoon','blade'] },
-      { k:'pylon',       gx:.10, gy:0.030, role:'side', kind:'depot', zone:1, power:true },
-      { k:'cannon',      gx:.50, gy:-0.080, role:'side', kind:'tower', zone:2 },
-      { k:'forge',       gx:.28, gy:-0.140, role:'prog', kind:'tech', zone:2, step:3, foe:['dark_templar','dragoon'] },
-      { k:'assimilator', gx:.72, gy:-0.140, role:'prog', kind:'res',  zone:2, step:4, foe:['dragoon','blade'] },
-      { k:'pylon',       gx:.90, gy:-0.110, role:'side', kind:'depot', zone:2, power:true },
-      { k:'cannon',      gx:.50, gy:-0.190, role:'side', kind:'tower', zone:3 },
-      { k:'cyber',       gx:.26, gy:-0.250, role:'prog', kind:'tech', zone:3, step:5, foe:['archon','dragoon'] },
-      { k:'nexus',       gx:.60, gy:-0.256, role:'prog', kind:'main', zone:3, step:6, foe:['kronos','archangel','archon'] },
-      { k:'pylon',       gx:.88, gy:-0.240, role:'side', kind:'depot', zone:3, power:true } ] },
+      { k:'cannon', role:'side', kind:'tower', zone:1 },
+      { k:'gateway', role:'prog', kind:'prod', zone:1, step:1, foe:['blade'] },
+      { k:'stargate', role:'prog', kind:'prod', zone:1, step:2, foe:['dragoon','blade'] },
+      { k:'pylon', role:'side', kind:'depot', zone:1, power:true },
+      { k:'cannon', role:'side', kind:'tower', zone:2 },
+      { k:'forge', role:'prog', kind:'tech', zone:2, step:3, foe:['dark_templar','dragoon'] },
+      { k:'assimilator', role:'prog', kind:'res',  zone:2, step:4, foe:['dragoon','blade'] },
+      { k:'pylon', role:'side', kind:'depot', zone:2, power:true },
+      { k:'cannon', role:'side', kind:'tower', zone:3 },
+      { k:'cyber', role:'prog', kind:'tech', zone:3, step:5, foe:['archon','dragoon'] },
+      { k:'nexus', role:'prog', kind:'main', zone:3, step:6, foe:['kronos','archangel','archon'] },
+      { k:'pylon', role:'side', kind:'depot', zone:3, power:true } ] },
 ];
 
 // ── 🔢 값 — ⚠ 전부 출발점이다(안 쟀다) ────────────────────────────────────
@@ -210,13 +211,16 @@ function campFoeBase(dg){
     const g = (q.step | 0) > 0 ? ((q.step | 0) - 1) : Math.max(0, ((q.zone | 0) - 1) * 2);
     return campFoeDiff(dg, g); };
   let i = 0;
+  const C0 = (typeof campState === 'function') ? campState() : null;
+  const lay = campFoeLayout(d, (C0 && C0.foeSeed) || 1);   // 🎲 이번 원정의 자리(씨앗은 campEnterDungeon 이 뽑는다)
   for(const q of d.bld){
     const eid = 'fb' + dg + '_' + (i++);                   // ⚠ 자리마다 고정된 id — 같은 던전이면 늘 같다
     const def = campFoeBldDef(d.race, q.k);
     const k = CAMP_FOE_BLD_K[q.kind] || 1;
     const hp = Math.max(1, Math.round(CAMP_FOE_BLD_HP0 * k * _bdiff(q)));
-    const p = (typeof campG2W === 'function') ? campG2W(q.gx, q.gy, W) : { x:W * q.gx, y:W * q.gy };
-    out.push({ x:p.x, y:p.y, eid:eid, bk:q.k, role:q.role, kind:q.kind,
+    const g = lay.bld[i - 1];
+    const p = (typeof campG2W === 'function') ? campG2W(g.gx, g.gy, W) : { x:W * g.gx, y:W * g.gy };
+    out.push({ x:p.x, y:p.y, gx:g.gx, gy:g.gy, eid:eid, bk:q.k, role:q.role, kind:q.kind,
       zone:q.zone | 0, step:q.step | 0, spawn:q.foe || null,
       nm:(def && def.name) || q.k, ico:(def && def.ico) || '',
       power:!!q.power, foe:true,                           // foe:true = 「적 것」 표식(내 건물과 가른다)
@@ -224,6 +228,7 @@ function campFoeBase(dg){
       seen:false, _twT:0 });
   }
   CAMPB._fbld = out;
+  CAMPB._fmine = lay.mine; CAMPB._fgas = lay.gas;           // ⛏ 적 광맥·가스 자리(연출 · 19-camp 가 그린다)
   // 👁 **앞줄은 처음부터 보인다.** ⛔ 전부 가리면 표적이 하나도 없어 병력이 집결점에 선 채
   //   영영 안 나아간다 — 안개가 진행을 막아 버린다(닭과 달걀). 내 쪽에서 가장 가까운
   //   세 채를 열어 주면 거기서부터 시야가 번져 나간다.
@@ -518,6 +523,8 @@ function campEnterDungeon(dg){
   const mx = (typeof CAMP_DG_MAX !== 'undefined') ? CAMP_DG_MAX : CAMP_DG_MAX_N;
   const n = Math.max(0, Math.min(mx, dg | 0));
   C.dg = n; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
+  // 🎲 원정마다 새 배치 — 같은 원정 안(저장·복원)에서는 같은 씨앗이라 자리가 안 바뀐다
+  if(n > 0) C.foeSeed = campFoeNewSeed();
   C.cleared = 0; C.rnd = 1;                       // 🧷 옛 값 — 저장 호환용으로만 남긴다
   if(n > 0) campDgTimerReset(n);                  // ⏱ 이번 판 시계를 0 으로(최고기록은 안 건드린다)
   if(typeof campSave === 'function') campSave();
@@ -564,6 +571,7 @@ function campFoeBld3D(){
       face:yaw + ((cfg && cfg.f) || 0), yoff:-3, dy:((cfg && cfg.dy) || 0), lift:0,
       fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12),
       sel:false, buildP:null, hidden:!q.seen, z:zOf(by) }); }
+  for(const w of campFoeWorkers3D(v, cwpx)) out.push(w);        // 🚶 적 일꾼(연출)
   return out; }
 // 👁 **던전에 들어가면 적 기지가 보이게 뷰를 맞춘다**(REDESIGN_PLAN §위험 2 「12채가 화면에 다 드나」).
 //   ⛔ 새 팬·줌 장치가 아니다 — 기지 맵의 목표 뷰(techViewT)를 한 번 옮기고 나머지는 원래 장치가 따라간다.
@@ -580,7 +588,14 @@ function campFoeLookAt(){
   if(!n) return false;
   const foeY = sy / n;
   const t = techViewT(), v = techView();
-  t.zoom = (typeof techMinZoom === 'function') ? techMinZoom() : 1;
+  // 🔍 줌 — 기지 세로(광맥 위끝 ~ 앞줄 탑 아래끝 + 여유)가 **상단바 아래·시트 위**에 다 들게. 하한은 campMinZoom(1.0).
+  { let lo = 1, hi = -1;
+    for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); if(g.gy < lo) lo = g.gy; if(g.gy > hi) hi = g.gy; }
+    for(const m of (CAMPB._fmine || [])){ if(m.gy < lo) lo = m.gy; }
+    const span = Math.max(0.2, hi - lo + 0.12);
+    const sf = (typeof techSheetFrac === 'function') ? techSheetFrac() : 0.21;
+    const avail = Math.max(0.3, 1 - 0.13 - sf);
+    t.zoom = Math.max(campMinZoom(), Math.min((typeof techMaxZoom === 'function') ? techMaxZoom() : 3, avail / span)); }
   t.x = 0.5;
   t.y = foeY - 9;                                   // 위로 한껏 — clamp 가 위 끝(campViewTop)에서 받는다
   _techClampView(t);
@@ -646,7 +661,7 @@ function campFoeSheetModel(b){
   if(b.spawn && b.spawn.length) stats.push(['뽑는 적', b.spawn.join(' · ')]);
   const ico = (typeof _techBldgPortrait === 'function') ? _techBldgPortrait(b.bk, b.ico) : '';
   const hpsh = (typeof _cgHpShStr === 'function') ? _cgHpShStr(Math.max(0, Math.round(b.hp)), 0) : '';
-  return { mode:'info', title:b.nm || b.bk, icon:ico, hpsh:hpsh,
+  return { mode:'info', foeEid:b.eid, title:b.nm || b.bk, icon:ico, hpsh:hpsh,
     sub:(d ? d.name : '적 기지') + (why ? (' · ' + why) : ''),
     items:[{ pro:(typeof pIco === 'function') ? pIco('⚔') : '⚔', sn:isTgt ? '표적 해제' : '공격 대상',
              tr:isTgt ? '표적' : '', metaCls:'lv', sel:isTgt, state:can ? 'ok' : 'dim',
@@ -680,5 +695,97 @@ function campViewTop(){
   const y0 = (typeof techY0 === 'function') ? techY0() : 0.18;
   if(dg <= 0) return y0;
   const d = campDgDef(dg); if(!d || !d.bld || !d.bld.length) return y0;
-  let top = 1; for(const q of d.bld) if(q.gy < top) top = q.gy;
+  const lay = campFoeLayout(d, ((typeof campState === 'function' && campState()) || {}).foeSeed || 1);
+  let top = 1; for(const q of lay.bld) if(q.gy < top) top = q.gy;
+  for(const m of lay.mine) if(m.gy < top) top = m.gy;
   return Math.min(y0, top - 0.18); }
+
+
+// ══ 🎲 적 기지 배치 생성기 — 규칙은 고정 · 자리는 씨앗 (2026-09-09 사용자 확정) ═════════
+//   ⭐ **내 기지를 뒤집은 거울**: 맨 위 본진(6) → 테크(5·4·3) → 앞줄 생산(2·1). 문지기 탑은 각 구간 **앞**
+//     가운데(그 탑을 깨야 구간이 열린다 · campFoeZoneOpen) · 보급고류는 좌우 바깥.
+//   ⭐ 광맥·가스도 뽑는다 — 본진 **위**에 광맥 호(내 기지의 거울 · 위로 볼록), 가스는 구간 2 옆.
+//     ⚠ 둘 다 **연출**이다(사용자 확정 「연출만」) — 게임 값에 안 들어간다. 적 정제소(res)를 깨면 나오는
+//     전리품은 그대로다.
+//   🎲 씨앗 = C.foeSeed(원정마다 새로) — ⛔ Math.random 을 쓰지 말 것: 저장·복원하면 자리가 바뀌고 스모크가 못 잰다.
+//   📐 세로 자리(격자 gy): 광맥 −0.41 · 본진 −0.34 · 구간3 테크 −0.30(본진 옆) · 탑③ −0.22 · 구간2 테크 −0.19 · 탑② −0.13 ·
+//     생산 −0.05 · 탑① +0.03. ⚠ 구간3 테크와 구간2 테크는 **다른 줄**이다 — 한 줄에 두면 좌우 교대가 같은 열을 다시 잡아
+//     겹친다(실측: engbay · academy). ⚠ 하한 −0.43 — 그 위는 전장 y 가 음수가 된다(18-strike 길찾기 셀). 상단 여유는 campViewTop 이 준다.
+//   📏 **같은 열에 서는 쌍은 줄 차이 − 흔들림 합 ≥ 0.07(발판)** 이어야 한다 — 씨앗 12,000개를 돌려 잡은 규칙(scratch seeds.mjs):
+//     탑③↔본진(가운데 열) 0.09−0.04=0.05 · 탑③↔탑② 0.09−0.04 · 테크③↔테크②(좌우 교대가 같은 쪽을 잡을 때) 0.10−0.04 — 셋이 겹쳤다.
+//     그래서 **탑은 세로 흔들림이 없고**(가로만) 세로 흔들림은 0.015 다. ⛔ 값을 옮기면 스모크의 겹침 검사가 씨앗에 따라 터진다.
+const CAMP_FOE_ROW = { mine:-0.41, main:-0.34, tech3:-0.30, tower3:-0.22, tech:-0.19, tower2:-0.13, prod:-0.05, tower1:0.03 };
+// 🔍 던전 안의 축소 하한 — 위 한 화면(적 기지)까지 한눈에 보이게 1.0 까지 내린다(캠프는 CAMP_MIN_ZOOM 그대로).
+//   ⚠ 1.0 아래로는 바닥이 화면 폭을 못 덮는다(19-camp CAMP_MIN_ZOOM 설명 · 물리 하한 1.0).
+const CAMP_DG_MIN_ZOOM = 1.0;
+function campMinZoom(){ const dg = (typeof campDgN === 'function') ? campDgN() : 0;
+  return dg > 0 ? CAMP_DG_MIN_ZOOM : ((typeof CAMP_MIN_ZOOM !== 'undefined') ? CAMP_MIN_ZOOM : 1.45); }
+const CAMP_FOE_JIT = { x:0.04, y:0.015, tower:0.06 };         // 씨앗 흔들림(격자 단위) — 발판(2칸 = 0.088)보다 작다 · 탑은 가로만
+function campFoeRng(seed){                                   // mulberry32 — 작고 결정적이다
+  let a = (seed >>> 0) || 1;
+  return function(){ a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function campFoeNewSeed(){ return ((Date.now() * 2654435761) ^ (Math.floor(performance.now() * 1000))) >>> 0 || 1; }
+// 표(d.bld)의 순서를 지키며 자리를 준다 — 같은 씨앗이면 같은 배치
+function campFoeLayout(d, seed){
+  const R = campFoeRng(seed), j = k => (R() - 0.5) * 2 * k;
+  const flip = R() < 0.5 ? -1 : 1;                           // 기지 전체 좌우 반전
+  const X = x => 0.5 + (x - 0.5) * flip;
+  const rowOf = q => q.kind === 'main' ? 'main' : q.kind === 'tower' ? ('tower' + q.zone)
+               : (q.role === 'prog' && (q.kind === 'prod')) ? 'prod' : (q.role === 'prog') ? (q.zone === 3 ? 'tech3' : 'tech') : ('side' + q.zone);
+  // 줄마다 좌·우 자리를 번갈아 준다(씨앗으로 어느 쪽이 먼저인지 정한다)
+  const side = {}, out = [];
+  for(const q of d.bld){
+    const r = rowOf(q); let gx, gy;
+    if(r === 'main'){ gx = 0.5 + j(0.03); gy = CAMP_FOE_ROW.main + j(CAMP_FOE_JIT.y); }
+    else if(r.indexOf('tower') === 0){ gx = 0.5 + j(CAMP_FOE_JIT.tower); gy = CAMP_FOE_ROW[r]; }   // 세로 흔들림 없음(위 📏)
+    else if(r === 'prod' || r === 'tech' || r === 'tech3'){
+      if(side[r] == null) side[r] = R() < 0.5 ? 0 : 1;
+      const left = (side[r]++ % 2) === 0;
+      gx = X(left ? 0.30 : 0.70) + j(CAMP_FOE_JIT.x);
+      gy = CAMP_FOE_ROW[r] + j(CAMP_FOE_JIT.y); }
+    else { // 보급고·크립·파일런 — 구간 바깥. 구간 1 은 왼쪽, 2·3 은 오른쪽(반전은 X 가 한다)
+      const z = q.zone | 0, left = (z === 1);
+      // ⚠ 구간 2·3 은 **같은 오른쪽 열**이라 세로 간격이 곧 겹침 여부다 — 줄 차이 0.10 에서 흔들림 ±0.02 씩을 빼면
+      //   0.06 이라 발판(0.07)보다 가까웠다(실측: supply · supply 겹침 · 씨앗 하나). 구간 3 만 제 줄에 두면 0.13 − 0.04 = 0.09.
+      const gyRow = z === 1 ? CAMP_FOE_ROW.prod + 0.03 : z === 2 ? CAMP_FOE_ROW.tech + 0.03 : CAMP_FOE_ROW.tech3;
+      gx = X(left ? 0.13 : 0.87) + j(0.02); gy = gyRow + j(CAMP_FOE_JIT.y); }   // ⚠ 0.90 은 발판 반이 화면 밖으로 나갔다(실측)
+    out.push({ gx:gx, gy:gy }); }
+  // ⛏ 광맥 — 본진 위 호(내 기지 campLayMinerals 의 거울 · 위로 볼록). 흔들림은 같은 고정 난수(campMineJit)
+  const mine = [];
+  { const cols = (typeof CAMP_MINE_COLS !== 'undefined') ? CAMP_MINE_COLS : 8;
+    const gap = (typeof CAMP_MINE_GAP !== 'undefined') ? CAMP_MINE_GAP : 1.65;
+    const arc = (typeof CAMP_MINE_ARC !== 'undefined') ? CAMP_MINE_ARC : 0.8;
+    const cw = (typeof _techCW === 'function') ? _techCW() : 0.022, ch = (typeof _techCH === 'function') ? _techCH() : 0.02;
+    const last = Math.max(1, cols - 1), mid = last / 2;
+    const x0 = 0.5 - mid * gap * cw, y0 = CAMP_FOE_ROW.mine + j(0.01);
+    for(let c = 0; c < cols; c++){
+      const jx = (typeof campMineJit === 'function') ? campMineJit(c, 11) : 0, jy = (typeof campMineJit === 'function') ? campMineJit(c, 12) : 0;
+      mine.push({ i:c, gx: x0 + (c * gap + jx * 0.55) * cw,
+                  gy: y0 - ((1 - Math.pow(c / last * 2 - 1, 2)) * arc + jy * 0.45) * ch }); } }
+  // ⛽ 가스 — 구간 2 높이의 **왼쪽** 바깥(오른쪽은 구간 2·3 보급고 열이라 겹쳐 보인다). 반전을 따라간다.
+  const gas = { gx: X(0.14), gy: CAMP_FOE_ROW.tech - 0.02 + j(0.01) };
+  return { bld:out, mine:mine, gas:gas, flip:flip }; }
+// 🚶 적 일꾼 연출 — 본진↔광맥을 오간다. **전투 밖**이다(맞지 않는다 · 세지 않는다 · 값에 안 들어간다).
+//   3D 엔트리(기지 유닛 규약)로만 존재한다 — campFoeBld3D 가 함께 돌려준다.
+const CAMP_FOE_WORKERS = 3, CAMP_FOE_WORK_S = 7.5;           // 마릿수 · 왕복 한 바퀴(초)
+function campFoeWorkers3D(v, cwpx){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld || !CAMPB._fmine || !CAMPB._fmine.length) return [];
+  const d = campDgDef((typeof campDgN === 'function') ? campDgN() : 0); if(!d) return [];
+  const main = CAMPB._fbld.find(function(b){ return b && b.kind === 'main' && !b.dead; }); if(!main) return [];
+  const mk = (typeof TECH_WORKER !== 'undefined' && TECH_WORKER[d.race]) || 'worker_human';
+  const t = (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000;
+  const yoff = (typeof TECH_UNIT_YOFF !== 'undefined') ? TECH_UNIT_YOFF : 6;
+  const cellK = _techCW() / ((TECH_GRID.x1 - TECH_GRID.x0) / TECH_GRID.cols);
+  const scl = ((typeof TECH_USCALE !== 'undefined') ? TECH_USCALE : 1) * ((typeof TECH_UVIS !== 'undefined') ? TECH_UVIS : 1) * cellK;
+  const out = [];
+  for(let i = 0; i < CAMP_FOE_WORKERS; i++){
+    const m = CAMPB._fmine[Math.floor(i * CAMPB._fmine.length / CAMP_FOE_WORKERS)];
+    const ph = ((t / CAMP_FOE_WORK_S) + i / CAMP_FOE_WORKERS) % 1;        // 0→1 왕복 위상
+    const u = ph < 0.5 ? ph * 2 : (1 - ph) * 2;                           // 0(본진) → 1(광맥) → 0
+    const gx = main.gx + (m.gx - main.gx) * u + (i - 1) * 0.012, gy = main.gy + (m.gy - main.gy) * u;
+    const x = (gx - v.x) * v.zoom + 0.5, y = (gy - v.y) * v.zoom + 0.5;
+    if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;
+    out.push({ uid:'cst_foe_wk' + i, id:mk, x:x, y:y, face:(ph < 0.5 ? -Math.PI / 2 : Math.PI / 2), moving:true,
+      yoff:yoff, yawFix:true, scl:scl, working:false, sel:false, z:-1185 }); }
+  return out; }
