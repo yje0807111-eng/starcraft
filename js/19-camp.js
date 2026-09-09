@@ -2788,6 +2788,9 @@ function campRescaleMine(){
     const want = Math.round(CAMP_BLD_HP * k * (bm > 0 ? 1 : 1));
     if(want > (q.max || 0)){ q.max = want; q.maxHp = want; q.hp = want; n++; } }
   return n; }
+// 🏰 건물 사격 여유(px) — 유닛끼리의 사거리에 이만큼 더해서 건물을 때린다.
+//   ⛔ 0 으로 되돌리지 말 것: 사거리 70 짜리(화력병)가 뭉친 전선 뒤에서 영영 못 쏜다(21-camp-battle 설명).
+const CAMP_BLD_PAD = 70;
 const CAMP_BLD_HP = 1200 / 10;     // 건물 한 채의 기본 체력(× campMyScale)
 // 🏛 본부 — 엔진 기본(mapCfg('baseHp') = 7500 · 오토배틀 신전용)을 **같은 1/10 스케일**로 내린 값.
 //   ⚠ 본부는 마지막 보루라 일반 건물의 6.25배다. campBattleOpen 에서 덮어쓴다.
@@ -2819,6 +2822,9 @@ const CAMP_DEF_BLD = { bunker:1, turret:1 };
 const CAMP_FOE_BLD_MUL = 1.5;
 // 💀 전멸 판정 유예(초) — 한 프레임의 0 으로 판을 닫지 않는다(배치·부활 사이의 빈 틈).
 const CAMP_WIPE_GRACE = 3;
+// 🕸 진격 정지 판정(초) — 표적 건물 체력이 이만큼 **한 톨도** 안 줄면 원정을 끝낸다.
+//   ⚠ 너무 짧게 두지 말 것: 긴 사거리 유닛이 걸어가는 동안에도 체력은 안 준다(이동 30~40초).
+const CAMP_STALL_T = 75;
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
@@ -4412,6 +4418,20 @@ function campCombatStep(dt){
   //       · 「전멸 = 패배」(2026-08-29) → 사용자가 2026-08-30 에 뒤집었다
   //    ⚠ 전멸해도 판이 멈추지 않는 이유가 여기 있다: 부활은 라운드 시작뿐이라 그동안 못
   //      일어나지만, 적이 본부를 부수면서 **게임은 계속 나아간다.** 그 둘이 짝이다.
+  // 🕸 **진격이 멈추면 원정을 끝낸다** (2026-09-09 · 시뮬로 잡은 교착 두 번째).
+  //   ⛔ 전멸 판정만으로는 못 잡는다. 실측(관문 6): 무장 병력이 **0 은 아닌데**(1~4기 남음)
+  //     아무도 표적 건물 사거리 안에 못 들어가서, 탑이 **40/921 로 97초 동안 그대로**였다.
+  //     누운 병력 14기는 관문을 깨야 일어나는데 관문을 못 깨니 영영 안 일어난다.
+  //   ⭐ 원인은 **짧은 사거리**다 — 화력병은 사거리 70(거의 근접)이라 적 27마리가 건물을
+  //     둘러싸면 붙을 자리가 없다. 그래서 「원리상 못 때린다」가 아니라 **「사실상 안 줄어든다」**를 잰다.
+  //   ⚠ 자는 **표적 건물의 체력**이다 — 그게 안 줄고 관문도 안 깨지면 진격이 멈춘 것이다.
+  //     ⛔ 「적을 못 때린다」로 재지 말 것: 적은 계속 잡고 있어도 기지는 안 부수는 상태가 이것이다.
+  { const fr = (typeof campFoeFront === 'function') ? campFoeFront() : null;
+    const hp = fr ? (fr.hp || 0) : -1, bk = campBroken();
+    if(!fr || hp < (CAMPB._stallHp == null ? Infinity : CAMPB._stallHp) - 1e-6 || bk !== CAMPB._stallB){
+      CAMPB._stallT = 0; CAMPB._stallHp = hp; CAMPB._stallB = bk; }
+    else CAMPB._stallT = (CAMPB._stallT || 0) + dt; }
+  const _stalled = CAMPB._started && (CAMPB._stallT || 0) >= CAMP_STALL_T;
   const _base = CAMPB.me.base;
   // 💀 **전멸 = 그 원정의 끝**(2026-09-09 · 시뮬로 잡은 구조 결함).
   //   ⛔ 「패배는 본부 파괴 하나뿐」은 **라운드가 있던 시절의 규칙**이다. 그때는 라운드가 바뀔 때마다
@@ -4428,9 +4448,12 @@ function campCombatStep(dt){
   else CAMPB._wipeT = (CAMPB._wipeT || 0) + dt;
   const _wiped = CAMPB._started && _armed === 0 && (CAMPB._wipeT || 0) >= CAMP_WIPE_GRACE;
   const _lost = !_base || _base.dead || (_base.hp || 0) <= 0;
-  if(_lost || _noHit || _wiped){
+  if(_lost || _noHit || _wiped || _stalled){
     const was = campFail(); campBattleClose(); campBarReset();
-    campSay(_wiped
+    campSay(_stalled
+      ? ('🕸 진격이 멈췄습니다 — 캠프에서 더 키워 다시 오세요(던전 ' + was.dg + ' · ' + was.cleared + '/'
+         + CAMP_DG_STEPS + ' 채)')
+      : _wiped
       ? ('💀 병력이 전멸했습니다 — 캠프로 돌아가 재정비하세요(던전 ' + was.dg + ' · ' + was.cleared + '/'
          + CAMP_DG_STEPS + ' 채)')
       : _lost

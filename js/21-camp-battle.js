@@ -494,6 +494,22 @@ function campStepUnits(dt){
         continue; }
 
       if(tgt) u._idleT = 0;                              // ⏳ 싸우는 중 — 복귀 시계를 되감는다
+      // 🏰 **건물에 닿은 유닛은 건물을 친다 — 적보다 먼저** (2026-09-09 · 시뮬로 잡은 공성 불가).
+      //   ⛔ 적을 먼저 쏘게 두면 **건물을 영영 못 친다.** 옛 라운드에는 웨이브 사이에 틈이 있어
+      //     그때 건물을 쳤지만, 릴레이는 적이 **끊이지 않는 흐름**이라 그 틈이 안 온다.
+      //     실측(관문 6 · 아군 15기): 본진이 60초에 **73**만 깎였다 — 이론 화력의 **2%**.
+      //   ⭐ 이 한 줄이 **분업**을 만든다: 앞줄(건물에 닿은 유닛)은 벽을 치고, 뒷줄은 적을 막는다.
+      //     역할을 따로 지정할 필요가 없다 — 자리가 역할을 정한다.
+      //   ⚠ 아군(me)에만 건다. 적은 내 건물을 치러 오는 쪽이라 이미 그 순서다.
+      //   ⚠ 벙커에 탄 유닛은 위에서 이미 `continue` 했다.
+      if(side === 'me'){
+        const mb = nextBld(side);
+        if(mb && u._atk.gnd){
+          const gap = Math.hypot(mb.x - u.x, mb.y - u.y) - CAMP_BLD_R;
+          if(gap <= (u.rng || 0) + (u.size || 14) * 0.95 + CAMP_BLD_PAD){
+            u.moving = false; u.face = Math.atan2(mb.x - u.x, mb.y - u.y);
+            _campFireBld(u, mb, me, dt, col);
+            continue; } } }
       if(tgt){
         const d = Math.hypot(tgt.x - u.x, tgt.y - u.y);
         // 🗿 최소 사거리 — 이보다 가까우면 **쏠 수 없다.** 물러나 거리를 되찾는다.
@@ -556,7 +572,15 @@ function campStepUnits(dt){
         //   D2R1: 아군 전멸 · 적 1 · 본부 체력 그대로 · 10~30분). 본부만 남으면 판이 멈추는 버그였다.
         const bd2 = (b === S.me.base && typeof strikeTempleGap === 'function')
           ? strikeTempleGap(b, u.x, u.y) : Math.hypot(b.x - u.x, b.y - u.y) - CAMP_BLD_R;
-        if(bd2 <= (u.rng || 0) + (u.size || 14) * 0.95){
+        // 🏰 **건물은 크다 — 사격 거리에 여유를 준다**(2026-09-09 · 시뮬로 잡은 공성 불가).
+        //   ⛔ 유닛끼리의 사거리를 그대로 쓰면 **짧은 사거리 유닛이 건물을 영영 못 때린다**:
+        //     실측(관문 6) — 아군 20기가 살아 있는데 표적 건물 사거리 안이 **0기**였고,
+        //     본진이 1555/1611 로 멈춘 채 판이 끝났다. 적 27 + 아군 20 = 47기가 건물 앞에
+        //     뭉치면 겹침 회피(strikeSeparate)가 서로를 밀어내 아무도 표면 128px 안에 못 들어간다.
+        //     ⚠ 화력병은 사거리가 **70**(거의 근접)이라 특히 심하다 — 그 유닛으로는 공성이 불가능했다.
+        //   ⭐ 건물은 유닛보다 훨씬 크므로 「벽을 칠 수 있는 거리」가 더 넓은 것이 자연스럽다.
+        //   ⚠ **사격 판정에만** 더한다 — 목표 자리(campBldGoal)는 그대로라 유닛은 여전히 붙으러 간다.
+        if(bd2 <= (u.rng || 0) + (u.size || 14) * 0.95 + CAMP_BLD_PAD){
           u.moving = false; u.face = Math.atan2(b.x - u.x, b.y - u.y);
           _campFireBld(u, b, me, dt, col);
           continue; }
