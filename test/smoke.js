@@ -6018,13 +6018,27 @@ async function groupLobby(){
       assert(tot/n < 20, '유닛이 덜덜 떤다 — 위치를 덮어쓰는 장치가 생겼다: 유닛당 '
         +(tot/n).toFixed(1)+'회/10초 (옛 구조 32회 · 지금 구조 2~3회)'); }
     for(let i=0;i<300;i++) campCombatStep(0.05);
-    // ⓒ 🚧 **자리에서 CAMP_ENG_OUT 밖으로 안 나간다** — 목줄 없이 목표를 잘라서 지킨다.
+    // ⓒ 🚧 **CAMP_ENG_OUT 밖으로 안 나간다 — 단, 자는 「자리」가 아니라 「자리 또는 지금 치는 건물」이다.**
     //    ⛔ 예전엔 목줄이 위치를 **직접 잘랐다**(순간이동). 그래서 경계에 붙으면 초당 4회씩
     //      끊어 당겨 그 자체가 떨림의 원인이었다(실측 3760회/30초).
     //    ⚠ 여유를 두는 이유: 겹침 회피(strikeSeparate)가 밀어내는 만큼은 넘을 수 있다.
-    { const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
-        .filter(u=>Math.hypot(u.x-u._post.x, u.y-u._post.y) > CAMP_ENG_OUT*1.25);
-      assert(!out.length,'자리에서 제한('+CAMP_ENG_OUT+')보다 멀리 나갔다: '+out.length+'기'); }
+    //    🏰 **자를 바꾼 이유**(2026-09-09 · 던전이 「적 기지 치기」가 되면서): 유닛은 이제
+    //      **적 기지로 진군한다.** 건물 공격 자리(campBldGoal)는 일부러 자리 제한을 안 탄다 —
+    //      타면 앞으로 못 나간다. 실측에서 자리(y 3212)와 활성 건물(y 1693)의 거리가 1519 라
+    //      「자리에서 1500 이내」는 **구조적으로 못 지킨다**(⛔ 값을 늘려 덮지 말 것 — 그러면
+    //      이 검사가 아무것도 안 잰다). 이 검사가 진짜로 잡아야 하는 것은 **「아무 데로나 달아나는 유닛」**
+    //      이므로, 닻을 **자리 ∪ 지금 치는 건물** 로 넓힌다. 둘 다에서 멀면 그건 진짜 이탈이다.
+    //    ⚠ 닻을 **활성 건물 하나**로 좁히면 안 된다(2026-09-09 실측 2기 실패): 구간이 넘어가는 동안
+    //      뒤처진 유닛은 지나온 건물과 다음 건물 사이에 있어서 어느 쪽 하나만으로는 늘 멀다.
+    //      **살아 있는 적 건물 아무거나** 곁에 있으면 그건 「칠 것 곁에 있다」이지 이탈이 아니다.
+    { const objs=(typeof campFoeBldAlive==='function') ? campFoeBldAlive() : [];
+      const lim=CAMP_ENG_OUT*1.25;
+      const near=(u,p)=>!!p && Math.hypot(u.x-p.x, u.y-p.y) <= lim;
+      const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
+        .filter(u=>!near(u,u._post) && !objs.some(b=>near(u,b)));
+      assert(!out.length,'자리에서도 치는 건물에서도 제한('+CAMP_ENG_OUT+')보다 멀다 — 달아난 유닛: '
+        +out.length+'기 ('+out.slice(0,3).map(u=>u.id+' d자리='
+          +Math.round(Math.hypot(u.x-u._post.x,u.y-u._post.y))).join(' · ')+')'); }
     // ⓓ ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
     { const ai=CAMPB.ai.units.filter(u=>!u.dead);
       if(ai.length){ const near=(u)=>{ let b=Infinity; for(const e of ai){ const d=Math.hypot(e.x-u.x,e.y-u.y); if(d<b) b=d; } return b; };
@@ -6035,7 +6049,7 @@ async function groupLobby(){
     campWipeField();
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
     campBattleClose();
-    return '미는 주체 1 · 자리 제한 '+CAMP_ENG_OUT+' · 떨림 문턱 통과 · 근접이 더 가까이';
+    return '미는 주체 1 · 이탈 제한 '+CAMP_ENG_OUT+'(자리 ∪ 치는 건물) · 떨림 문턱 통과 · 근접이 더 가까이';
   });
 
   // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
@@ -7400,6 +7414,86 @@ async function groupLobby(){
       assert(campFoeCount(50)>campFoeCount(1),'웨이브가 라운드에 안 따라온다');
       return '적 '+campFoeCount(1)+'→'+campFoeCount(50)+'마리 · STK 빌리고 반납 ok';
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
+      campBattleClose(); if(typeof campSave==='function') campSave(); } });
+
+  // 🔗 **릴레이 기지** (2026-09-09 사용자 확정 · GAME_DIRECTION §0-A)
+  //   ⭐ 재는 것 넷: ① 적이 **활성 건물 한 곳**에서만 나온다 ② 깰수록 **더 세진다**(줄지 않는다)
+  //     ③ **문지기 탑**이 그 구간의 진행 건물을 잠근다 ④ **보급고**를 깨면 일시 버프가 붙는다.
+  //   ⛔ 「살아 있는 건물 수로 나눈다」로 되돌리면 ②가 뒤집혀 여기서 실패한다.
+  await step('캠프 던전: 릴레이(한 곳에서 · 깰수록 세진다) · 구간 관문 · 보급고', async()=>{
+    skipIf(typeof campFoeActive!=='function'||typeof campFoeZoneOpen!=='function','릴레이 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const back={dg:C.dg, broken:C.broken, foeDead:C.foeDead, depotT:C.depotT, foeTgt:C.foeTgt};
+    try{
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      C.broken=0; C.foeDead={}; C.depotT=0; C.foeTgt=null;
+      campFoeBase(1);
+      // ① 표가 구간·차례를 다 갖고 있다 — 하나라도 비면 릴레이가 임의 순서가 된다
+      { const prog=CAMPB._fbld.filter(b=>b.role==='prog');
+        const steps=prog.map(b=>b.step|0).sort((a,b)=>a-b);
+        assert(steps.join(',')==='1,2,3,4,5,6','진행 건물의 차례가 1~6 이 아니다: '+steps.join(','));
+        assert(CAMPB._fbld.every(b=>(b.zone|0)>=1&&(b.zone|0)<=CAMP_DG_ZONES),'구간이 안 붙은 건물이 있다');
+        assert(CAMPB._fbld.filter(b=>b.kind==='tower').length===CAMP_DG_ZONES,'문지기 탑이 구간 수와 다르다');
+        assert(!CAMPB._fbld.some(b=>b.kind==='deco'),'치장(deco)이 되살아났다 — 표적이 안 되는 건물은 판단을 안 만든다');
+        assert(prog.every(b=>(b.spawn||[]).length),'유닛 목록(foe)이 없는 진행 건물이 있다 — 커리큘럼이 비었다'); }
+      // ② 적은 **활성 건물 한 곳**에서 나온다
+      const act=campFoeActive();
+      assert(act && (act.step|0)===1,'활성 생산자가 첫 차례가 아니다: '+(act?act.step:'없음'));
+      CAMPB._fspT=0; CAMPB._wq=[]; CAMPB._wqTot=0;
+      const n1=campFoeSpawnTick(0.1);
+      assert(n1>0 && CAMPB._wq.length===1,'릴레이가 무리를 안 보냈다');
+      { const q=CAMPB._wq[0];
+        assert(typeof q==='object','스폰 큐가 자리를 안 들고 온다 — 위쪽 한 줄에서 나온다');
+        assert(Math.abs(q.x-act.x)<1e-6 && Math.abs(q.y-act.y)<1e-6,'스폰 자리가 활성 건물이 아니다');
+        const before=CAMPB.ai.units.length; campSpawnWave();
+        const fresh=CAMPB.ai.units.slice(before);
+        assert(fresh.length>0,'적이 안 나왔다');
+        // 건물 둘레에서 나온다 — 옛 위쪽 한 줄이면 수백 픽셀 떨어진다
+        for(const u of fresh) assert(Math.hypot(u.x-act.x, u.y-act.y) <= CAMP_FOE_SPAWN_R+CAMP_FOE_SPAWN_OFF+2,
+          '적이 건물 자리에서 안 나왔다: '+Math.round(Math.hypot(u.x-act.x,u.y-act.y))+'px');
+        // 그 건물이 뽑기로 한 유닛이다(걸러서 남은 것 안에서)
+        const want=campFoePool(act.spawn||[]);
+        if(want.length) for(const u of fresh) assert(want.indexOf(u.id)>=0,'표에 없는 유닛이 나왔다: '+u.id);
+        for(const u of fresh) u.dead=true; }
+      // ③ **깰수록 세진다** — 주기는 짧아지고 마리는 는다. ⛔ 줄어들면 마지막이 시시해진다
+      { for(let i=1;i<CAMP_DG_STEPS;i++)
+          assert(CAMP_FOE_RELAY_S[i]<=CAMP_FOE_RELAY_S[i-1] && CAMP_FOE_RELAY_N[i]>=CAMP_FOE_RELAY_N[i-1],
+            '단계 '+(i+1)+'에서 압박이 약해진다 — 릴레이가 뒤집혔다');
+        assert(CAMP_FOE_RELAY_S[CAMP_DG_STEPS-1]<CAMP_FOE_RELAY_S[0] && CAMP_FOE_RELAY_N[CAMP_DG_STEPS-1]>CAMP_FOE_RELAY_N[0],
+          '마지막 단계가 첫 단계보다 안 세다'); }
+      // ④ **문지기 탑이 구간을 잠근다**
+      { assert(!campFoeZoneOpen(1),'문지기가 살아 있는데 구간 1 이 열려 있다');
+        const p1=CAMPB._fbld.find(b=>b.step===1); p1.seen=true;
+        assert(!campFoeCanTarget(p1),'구간이 잠겼는데 진행 건물을 때릴 수 있다');
+        const tw=campFoeTowerLive(1); assert(tw.length,'구간 1 의 문지기가 없다');
+        for(const t of tw) t.seen=true;
+        // 표적은 문지기로 간다 — ⛔ 보급고로 새면 안 된다(자동으로는 안 들른다)
+        const f=campFoeFront();
+        assert(f && f.kind==='tower','잠긴 구간에서 표적이 문지기가 아니다: '+(f?f.kind:'없음'));
+        for(const t of tw) campBreakBld(t);
+        assert(campFoeZoneOpen(1),'문지기를 깼는데 구간이 안 열렸다');
+        assert(campFoeCanTarget(p1),'구간이 열렸는데 진행 건물을 못 때린다');
+        assert(campBroken()===0,'문지기를 깼는데 진행 수가 올랐다 — 부수 건물은 안 센다'); }
+      // ⑤ **보급고** — 깨면 일시 버프. ⛔ 영구가 되면 진행 6채가 뒷전이 된다
+      { assert(campDepotMul()===1,'아무것도 안 깼는데 보급 버프가 걸려 있다');
+        const dp=CAMPB._fbld.find(b=>b.kind==='depot'&&b.zone===1);
+        assert(dp,'보급고가 없다'); dp.seen=true;
+        campBreakBld(dp);
+        assert(campDepotMul()===CAMP_DEPOT_MUL,'보급고를 깼는데 버프가 안 걸렸다: '+campDepotMul());
+        assert(campBroken()===0,'보급고를 깼는데 진행 수가 올랐다');
+        campDepotTick(CAMP_DEPOT_S+1);
+        assert(campDepotMul()===1,'보급 버프가 안 닳는다 — 영구가 됐다'); }
+      // ⑥ 릴레이가 이어받는다 — 첫 채를 깨면 두 번째가 활성이 된다
+      { const p1=CAMPB._fbld.find(b=>b.step===1); campBreakBld(p1);
+        const nx=campFoeActive();
+        assert(nx && (nx.step|0)===2,'첫 채를 깼는데 두 번째가 안 이어받았다: '+(nx?nx.step:'없음'));
+        assert(campBroken()===1,'진행 수가 안 올랐다: '+campBroken()); }
+      return '차례 1~6 · 구간 '+CAMP_DG_ZONES+' · 스폰 '+CAMP_FOE_RELAY_S[0]+'s×'+CAMP_FOE_RELAY_N[0]
+        +' → '+CAMP_FOE_RELAY_S[CAMP_DG_STEPS-1]+'s×'+CAMP_FOE_RELAY_N[CAMP_DG_STEPS-1]
+        +' · 보급 ×'+CAMP_DEPOT_MUL+' '+CAMP_DEPOT_S+'s';
+    } finally { C.dg=back.dg; C.broken=back.broken; C.foeDead=back.foeDead;
+      C.depotT=back.depotT; C.foeTgt=back.foeTgt;
       campBattleClose(); if(typeof campSave==='function') campSave(); } });
 
   // 📈 적 난이도 곡선 — HUNT_R1.md §6-1. ⛔ 미네랄(CAMP_MINE)과 같은 식으로 묶지 말 것.

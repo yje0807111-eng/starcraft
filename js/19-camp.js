@@ -100,7 +100,9 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared(), broken: campCleared() };
   C.dg = 0; C.cleared = 0; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
+  C.depotT = 0;                                       // ⚡ 보급고 버프도 사라진다(그 던전 처음부터)
   if(typeof CAMPB !== 'undefined' && CAMPB && CAMPB._down) CAMPB._down.length = 0;
+  if(typeof CAMPB !== 'undefined' && CAMPB){ CAMPB._fspT = 0; if(CAMPB._wq) CAMPB._wq.length = 0; }
   campSave(); return was; }
 
 
@@ -3389,11 +3391,16 @@ function campFoePool(ids){
     return true;
   });
 }
-function campFoeId(){
+//   ⭐ `prefer` 는 **그 건물이 뽑는 유닛 목록**(CAMP_DG 의 foe)이다 — 릴레이의 커리큘럼이
+//     여기로 들어온다. ⚠ 걸러서 아무것도 안 남으면 옛 티어 표로 되돌아간다(종족이 바뀌어도 안 멈춘다).
+function campFoeId(prefer){
   if(typeof STK_RACES === 'undefined' || !CAMPB) return null;
   const race = CAMPB.ai.race;
   const all = ((STK_RACES[race] || STK_RACES.terran).units) || [];
   if(!all.length) return null;
+  if(prefer && prefer.length){
+    const pp = campFoePool(prefer);
+    if(pp.length) return pp[(Math.random() * pp.length) | 0]; }
   const T = CAMP_FOE_TIER[race] || CAMP_FOE_TIER.terran;
   const mix = campFoeMix(campFoeStep());
   // 비율대로 티어를 고르고, 그 티어가 비었으면 아래 티어로 내려간다(초반에 T3 만 있는 종족 대비)
@@ -3496,12 +3503,22 @@ const CAMP_FOE_SPAWN_W = 0.62;   // 가로로 퍼뜨리는 폭(가운데 통로�
 // ⚠ **후반(R30+)에는 다시 재야 한다**(sc-2 지적 2026-08-30). 지금 확인은 R15(적 11마리)까지다.
 //   R40 이후엔 100마리가 한 줄로 내려와 **행렬**이 되므로, 앞줄이 닿고 뒷줄이 뒤따르는 사이
 //   「다 잡을 때까지」가 길어질 소지가 있다. 라운드 길이가 늘면 이 세 값부터 의심할 것.
-function campPlaceFoes(list){
+//   🏭 **`at` 이 있으면 그 건물 자리에서 나온다**(2026-09-09 릴레이). 없으면 옛 규칙(위쪽 한 줄).
+//     ⚠ 옛 규칙은 아직 지우지 않는다 — 던전 밖(캠프 침입 확인·스모크)에서 여전히 쓴다.
+function campPlaceFoes(list, at){
   if(!CAMPB || !list || !list.length) return 0;
   const W = CAMPB.world;
+  const R = (typeof CAMP_FOE_SPAWN_R !== 'undefined') ? CAMP_FOE_SPAWN_R : 26;
+  const OFF = (typeof CAMP_FOE_SPAWN_OFF !== 'undefined') ? CAMP_FOE_SPAWN_OFF : 18;
   for(const u of list){
-    u.x = W * (0.5 + (Math.random() - 0.5) * CAMP_FOE_SPAWN_W);
-    u.y = W * (CAMP_FOE_SPAWN_Y + (Math.random() - 0.5) * CAMP_FOE_SPAWN_J);
+    if(at && at.x != null){
+      // 건물 둘레에 원판으로 흩는다 — 한 점에 겹쳐 나오면 서로 밀다가 끼인다.
+      const a = Math.random() * Math.PI * 2, r = R * Math.sqrt(Math.random());
+      u.x = at.x + Math.cos(a) * r;
+      u.y = at.y + Math.sin(a) * r + OFF;          // 내 쪽으로 조금 — 건물 안에서 안 나오게
+    } else {
+      u.x = W * (0.5 + (Math.random() - 0.5) * CAMP_FOE_SPAWN_W);
+      u.y = W * (CAMP_FOE_SPAWN_Y + (Math.random() - 0.5) * CAMP_FOE_SPAWN_J); }
     u._sx = u.x; u._sy = u.y;                      // 보간 잔상 제거(안 하면 옛 자리에서 미끄러진다)
   }
   return list.length; }
@@ -3515,17 +3532,22 @@ function campSpawnFoes(){ if(!CAMPB || typeof strikeSpawnUnit !== 'function') re
   CAMPB._wqTot = n;                              // ⚠ 라운드 전체 마리 수 — 무리마다 몫을 나누는 데 쓴다
   return campSpawnWave(); }                       // 첫 웨이브는 곧바로
 // 대기 중인 웨이브 한 묶음을 내보낸다
+//   ⚠ 큐 한 칸은 **숫자이거나 `{n, x, y, ids}`** 다(2026-09-09) — 릴레이·반격은 자리를 들고 온다.
+//     ⛔ 객체만 받도록 좁히지 말 것: 옛 라운드 큐(campSpawnFoes)가 아직 숫자를 넣는다.
 function campSpawnWave(){
   if(!CAMPB || !CAMPB._wq || !CAMPB._wq.length) return 0;
-  const k = CAMPB._wq.shift();
+  const q = CAMPB._wq.shift();
+  const at = (q && typeof q === 'object') ? q : null;
+  const k = at ? (at.n | 0) : (q | 0);
   // ⛔ **무리마다 라운드 총량을 통째로 주면 안 된다.** 6무리로 쪼개면 라운드 총 체력이 6배가 된다 —
   //   실측(2026-08-28): 적 체력 1,300 을 넣었더니 R24 가 설계 16초 대신 **193초**였다.
   //   ⭐ 라운드 총량 = CAMP_FOE_HP0 × 난이도. 각 무리는 **마리 수 비율만큼**만 가져간다.
   const share = (CAMPB._wqTot > 0) ? (k / CAMPB._wqTot) : 1;
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
-    for(let i = 0; i < k; i++) strikeSpawnUnit('ai', campFoeId());   // ⛔ 공중 전용은 뽑지 않는다
+    const ids = at && at.ids;                      // 🏭 그 건물이 뽑는 유닛(없으면 티어 표)
+    for(let i = 0; i < k; i++) strikeSpawnUnit('ai', campFoeId(ids));  // ⛔ 공중 전용은 뽑지 않는다
     const fresh = CAMPB.ai.units.slice(b4);
-    campPlaceFoes(fresh);                          // 🚪 화면 위 밖에 한 줄로 세운다(아래)
+    campPlaceFoes(fresh, at);                      // 🏭 건물 자리 · 없으면 화면 위 한 줄(아래)
     campScaleFoes(fresh, share);
     return CAMPB.ai.units.length - b4; }) | 0; }
 // 아직 안 나온 적이 남았나 — ⚠ 승리 판정이 이걸 봐야 한다(안 보면 첫 웨이브만 잡고 라운드가 넘어간다)
@@ -4238,7 +4260,8 @@ function campCombatStep(dt){
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   // 🏰 적 기지(23-camp-dungeon) — 압박·방어탑·안개·타이머. ⚠ 이동보다 **먼저** 봐야 이번 프레임에 반영된다.
   if(typeof campFoeReveal === 'function') campFoeReveal(false, dt);      // 🌫 시야가 닿은 건물이 드러난다
-  if(typeof campFoeSpawnTick === 'function') campFoeSpawnTick(dt);       // 🌊 살아 있는 생산 건물이 적을 보낸다
+  if(typeof campFoeSpawnTick === 'function') campFoeSpawnTick(dt);       // 🌊 활성 건물(릴레이)이 적을 보낸다
+  if(typeof campDepotTick === 'function') campDepotTick(dt);             // ⚡ 보급고 버프가 닳는다
   if(typeof campFoeTowerStep === 'function') campFoeTowerStep(dt);       // 🗼 방어탑이 나를 쏜다
   if(typeof campDgTimerTick === 'function') campDgTimerTick(dt);         // ⏱ 최고기록 시계
   const _b4 = CAMPB.me.units.slice();   // 🩹 campStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
@@ -5594,6 +5617,7 @@ function campTapGain(){
   const runeA = (typeof campRuneEff === 'function') ? campRuneEff('tap') : 0;   // 💠 손끝의 룬(탭 전용)
   return Math.max(1, Math.round(base * (1 + packA + runeA)
     * campMineMul() * campRebMul() * campRtMul('tap') * campRtMul('tapMul')
+    * ((typeof campDepotMul === 'function') ? campDepotMul() : 1)   // ⚡ 보급고(일시)
     * (campFevActive() ? campFevMul() : 1)));   // ⚡ 피버 — ⛔ 탭 경로마다 따로 곱하지 말 것
 }
 // 일꾼 효율 — **왕복 1회당** 배수(HUNT_R1 §1). Lv0 = 1.0 이라 기준선이 바뀌지 않는다.
@@ -5618,6 +5642,7 @@ function campGatherMul(){ const C = campState(); if(!C) return 1;
   const amt = (typeof TECH_GATHER_AMT !== 'undefined') ? TECH_GATHER_AMT : 8;
   return (campGatRaw(lv) + campPackGather()) / amt
     * campMineMul() * campRebMul() * campRtMul('gather')
+    * ((typeof campDepotMul === 'function') ? campDepotMul() : 1)    // ⚡ 보급고(일시)
     * ((typeof campRuneMul === 'function') ? campRuneMul('mine') : 1); }
 // ══ ⛏ 채굴 모드 (2026-08-27 사용자 확정 · A+F) ═══════════════════════════
 // 켜면 **맵 전체가 과녁**이 된다(A). 누르고 있으면 간격마다 저절로 캔다(F).

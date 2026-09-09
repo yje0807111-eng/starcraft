@@ -92,7 +92,7 @@ const CAMP_DG = [
 | **tower** ×3 | `turret` ×2 · `bunker` | `sunken` ×2 · `spore` | `cannon` ×3 |
 | **deco** ×3 | `supply` ×3 | `creep` ×3 | `pylon` ×3 |
 | **기믹** | **없다**(튜토리얼 · 미러전) | **공중이 섞인다** — `spore`(대공탑)가 있고 적도 난다 → **대공 병력이 없으면 못 깬다** | **`pylon` 이 `cannon` 에 전력을 준다** — 부수 건물인데 깨면 탑 셋이 멎는다 → 「부수 건물을 먼저 칠 이유」 |
-| **가르침** | 병영을 깨면 적이 준다 · 공학소를 깨면 약해진다 | 적 체력이 높아 **연구 없이는 못 깬다** | 순서를 고르면 훨씬 쉬워진다 |
+| **가르침** | 릴레이 — 앞 건물부터 하나씩, 깰수록 세진다 | 적 체력이 높아 **연구 없이는 못 깬다** · 공중이 섞인다 | 파일런이 그 구간 탑을 먹인다 — 순서를 고르면 훨씬 쉬워진다 |
 
 ⭐ D3 의 `pylon` 이 이 설계의 **가장 좋은 한 칸**이다 — 「진행 6채만 세지만, 부수 건물을 먼저 깨는 게 이득일 수 있다」가
 성립해 「어느 걸 먼저」가 진짜 판단이 된다. ⛔ D1·D2 에는 넣지 않는다(배우기 전에 나오면 그냥 어렵기만 하다).
@@ -129,7 +129,11 @@ function campFoeBase(def)            // CAMP_DG[dg] → CAMPB._fbld = [{x,y,hp,m
 function campFoeBldAlive()           // _fbld 중 살아 있는 것 (campBldAlive 의 거울)
 function campFoeFront()              // 내 병력의 다음 표적 — C.foeTgt 가 살아 있으면 그것 · 아니면 「앞줄」(y 큰 것 = 내 쪽) 진행 건물 · last 는 나머지 다 죽어야
 function campFoeDiff(dg, broken)     // 시그니처 유지 · 내부 곡선을 6계단으로(아래 1-F)
-function campFoeSpawnTick(dt)        // 🆕 압박 — 살아 있는 prod 건물마다 주기(CAMP_FOE_SPAWN_S / 남은 prod 수)로 1무리. 웨이브 큐(_wq) 대신
+function campFoeSpawnTick(dt)        // 🆕 릴레이 압박 — **활성 건물 한 곳**이 제 자리에서 1무리(CAMP_FOE_RELAY_S/_N). ⛔ 「건물 수로 나눈다」 폐기(2026-09-09)
+function campFoeActive()             // 🆕 살아 있는 진행 건물 중 step 이 가장 앞선 한 채 — 릴레이의 심장
+function campFoeZoneOpen(z)          // 🆕 그 구간의 문지기 탑이 멎었나 — 잠겨 있으면 안쪽 진행 건물을 못 때린다
+function campFoeTowerLive(z)         // 🆕 그 구간에서 돌고 있는 탑(D3 은 **그 구간의** 파일런이 살아야 돈다)
+function campDepotMul() / campDepotTick(dt)  // 🆕 ⚡ 보급고 버프(30초 자원 ×2) — ⛔ campCommonMul 에 넣지 말 것
 function campFoeTowerStep(dt)        // 🆕 부수 건물 tower 가 사거리 안 내 유닛을 쏜다 (_campFireBld 의 거울 · 정지 사수)
 function campCounterWave(b)          // 🎁 반격 — 건물을 깨면 즉시 campSpawnWave(kind별 크기) · 「깬 직후가 가장 위험하다」
 function campLoot(b)                 // 🎁 전리품 — res→가스 · prod→미네랄 · tech→진행 중 연구 시간 −n% · main→둘 다. 입구는 campAddRes()
@@ -224,7 +228,7 @@ function campDgTimerTick(dt)         // 🎁 타이머 — dg>0 이고 전장이
    | 물음 | 답 |
    |---|---|
    | 방어탑을 물릴까 | **사라졌다** — ③안은 아무것도 안 물린다(④안 전용 문제였다) |
-   | 잔해를 몇 채까지 남기나 | **부술 수 있는 것만 잔해가 된다**: 진행 6채 + 방어탑 3채 = 최대 9. **치장(deco) 3채는 표적이 아니다**(충돌만 있고 체력이 없다) — 12채가 다 잔해가 되는 일이 없다 |
+   | 잔해를 몇 채까지 남기나 | **12채 전부**(2026-09-09 · 옛 「치장 3채는 표적이 아니다」를 폐기했다 — 지금은 보급고라 부술 수 있다). 잔해 상한이 필요하면 그때 잰다 |
    | 12채가 화면에 다 드나 | **단계 1 에서 실제로 그려 보고 정한다.** 목업 좌표는 격자 위 절반(y 0.18~0.45)에 들어간다. ⚠ 안 들어오면 **적 기지에 처음 들어갈 때 한 번 전체 보기로 맞춘다**(캠프 맵은 이미 밀고 확대된다 · `_techClampView`) — ⛔ 새 팬·줌 장치를 만들지 말 것 |
 3. ~~스웜·에테리얼 기지가 없다~~ → ✅ **표 셋을 위에 다 채웠다**(실재하는 건물 키 · 기믹 · 가르침).
    남은 건 **좌표와 값**이다: 좌표는 목업이 확정되면 그 배치를 그대로 옮기고, 값은 단계 0 의 자로 D1 → D2·D3ic 순서로 맞춘다.
