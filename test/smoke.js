@@ -7507,7 +7507,30 @@ async function groupLobby(){
           '나중에 나온 적이 처음 것보다 훨씬 약하다 — 옛 _wqTot 몫이 되살아났다: '
           +hp[0].toFixed(3)+' ~ '+hp[hp.length-1].toFixed(3));
         campWithStk(()=>{ STK.ai.units.length=0; }); CAMPB._wq=[]; }
-      // ⑦ 릴레이가 이어받는다 — 첫 채를 깨면 두 번째가 활성이 된다
+      // ⑦ ⚔🏰 **진군 중에는 적을 쫓지 않는다** — 2026-09-09 실측으로 잡은 교착.
+      //    ⛔ 쫓는 목표(campGoalFor)는 **자리에서 1200 안으로 잘리고** 건물 목표는 안 잘린다.
+      //      그래서 적이 하나만 보여도 아군이 자리 쪽으로 되돌아갔다가 적이 죽으면 다시 나아가기를
+      //      반복해, 적이 끊이지 않는 릴레이에서는 **영영 건물에 못 닿는다**.
+      //    📊 고치기 전(3분·12기): 진행 2/6 · 건물 실효 화력 10.8% · 60초 뒤 사거리 안 0/12.
+      //       고친 뒤: 진행 5/6 · 31.2%.
+      //    ⚠ 재는 법: **사거리 밖**(쫓아야 닿는) 적을 하나 두고, 그래도 건물에 가까워지는지 본다.
+      { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+        const t1=campFoeTowerLive(1); for(const t of t1){ t.seen=true; campBreakBld(t); }  // 구간 1 을 연다
+        const b=campFoeFront(); assert(b && b.role==='prog','구간을 열었는데 진행 건물이 표적이 아니다');
+        const u=campDeploy('marine', 0.5, 0.5); assert(u,'레인저 배치 실패');
+        const d0=Math.hypot(b.x-u.x, b.y-u.y);
+        // 사거리 밖 · 인지 안에 적 하나 — 「쫓아야 닿는」 자리다
+        const e=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
+          const z=STK.ai.units[STK.ai.units.length-1];
+          if(z){ z.x=u.x+(u.rng||187)*1.35; z.y=u.y; z._sx=z.x; z._sy=z.y; } return z; });
+        assert(e,'적을 못 만들었다');
+        for(let i=0;i<60;i++) campCombatStep(1/30);
+        assert(u.tgtUid,'적을 표적으로 안 잡았다 — 검사가 헛돈다(사거리·인지 값이 바뀌었나)');
+        const d1=Math.hypot(b.x-u.x, b.y-u.y);
+        assert(d1 < d0-5,'적을 쫓느라 건물로 안 나아간다 — 교착이 되살아났다: '
+          +Math.round(d0)+' → '+Math.round(d1));
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
+      // ⑧ 릴레이가 이어받는다 — 첫 채를 깨면 두 번째가 활성이 된다
       { const p1=CAMPB._fbld.find(b=>b.step===1); campBreakBld(p1);
         const nx=campFoeActive();
         assert(nx && (nx.step|0)===2,'첫 채를 깼는데 두 번째가 안 이어받았다: '+(nx?nx.step:'없음'));
