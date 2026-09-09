@@ -1143,21 +1143,8 @@
   .cdFoot{flex:none;margin:0 -14px;padding:10px 14px 14px;
     background:linear-gradient(180deg,rgba(8,8,9,0),rgba(8,8,9,.96) 30%)}
   .cdRnd .cdSl{border-bottom:0;margin-bottom:0;padding-bottom:2px}
-  .cdRl{display:flex;align-items:center;gap:2px;padding:4px 0 2px}
-  .cdRl .cdArw{width:32px;height:32px;flex:none}
-  .cdRl .cdArw:disabled{opacity:.25;pointer-events:none}
-  .cdRnN{flex:1;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;line-height:1;color:#fff}
-  .cdRnN em{font-style:normal;font-size:13px;color:rgba(214,226,240,.35);margin-left:3px}
   /* 🎚 슬라이더 = 붉은 채움 + 흰 손잡이(칩 밑선 어휘를 키운 것). 트랙은 3px 이지만 **누르는 높이는 28px** —
      손가락이 트랙 위아래 어디를 눌러도 잡힌다. 손잡이 위치는 (r-1)/(max-1) — 1·50 이 눈금 위에 정확히 선다. */
-  .cdSld{position:relative;height:28px;margin:0 9px;cursor:pointer;touch-action:none}
-  .cdSld::before{content:'';position:absolute;left:0;right:0;top:12.5px;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
-  .cdSld .cdFill{position:absolute;left:0;top:12.5px;height:3px;border-radius:2px;background:#ff7676}
-  .cdSld .cdKnob{position:absolute;top:5px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:#fff;
-    box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 3px rgba(255,118,118,.25);transition:box-shadow .12s}
-  .cdSld.drag .cdKnob{box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 6px rgba(255,118,118,.3)}
-  .cdTicks{display:flex;justify-content:space-between;margin:0 9px;font-family:var(--font-num);font-size:9px;color:rgba(214,226,240,.35)}
-  .cdTicks span{width:2ch;text-align:center}
   /* [이동] = 공용 .actBtn.pri 그대로(옅은 흰 면 .14 + 1px .32). 여기서 덮는 건 **크기뿐**. ⛔ 제 버튼을 만들지 말 것. */
   .cdFoot .cdGo{width:100%;height:44px;font-size:13px;margin-top:12px}
   /* ⚠ 2026-09-04 — 재화 줄을 한 단 줄였다(아이콘 14→12 · 글자 12.5→11.5 · 칸 사이 8→7).

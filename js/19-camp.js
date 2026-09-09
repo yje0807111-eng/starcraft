@@ -3355,8 +3355,15 @@ const CAMP_FOE_TIER = {
   protoss:  { t1:['blade','dark_templar'], t2:['dragoon','archon','falcon'], t3:['skydancer','kronos','archangel'] },
   feral:    { t1:['wolfrunner','thornspitter','clawfighter'], t2:['hornedcharger','howlslinger','stalkercat','venomfang'], t3:['alphawolf','wyvernrider','skytalon','stormroc'] },
   colossus: { t1:['gunner','guardwalker'], t2:['twincannon','flakbattery','railgun'], t3:['arclight','siegecolossus','skylance'] } };
-// 라운드 구간별 티어 비율 — [최대라운드, t1, t2, t3]
-const CAMP_FOE_MIX = [[10, 100, 0, 0], [25, 60, 40, 0], [40, 25, 50, 25], [Infinity, 0, 40, 60]];
+// 🏰 **통산 관문**(1~18) 구간별 티어 비율 — [최대관문, t1, t2, t3] (2026-09-09 · 라운드 1~50 에서 옮겼다)
+//   ⭐ 던전 하나가 한 단계를 가르친다(§0-A 커리큘럼): D1(1~6) 은 T1 만 · D2(7~12) 는 T2 가 섞이고 ·
+//     D3(13~18) 은 T3 가 주력이다. ⛔ 라운드 눈금(10·25·40)으로 되돌리지 말 것 — 영영 T1 만 나온다.
+const CAMP_FOE_MIX = [[6, 100, 0, 0], [9, 60, 40, 0], [12, 25, 50, 25], [Infinity, 0, 40, 60]];
+// 통산 관문 = (던전−1)×6 + 부순 진행 건물 수. ⛔ campRoundN(1~7)을 넣지 말 것 — 던전이 안 반영된다.
+function campFoeStep(){ const dg = campDgN();
+  if(dg <= 0) return 0;
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  return (dg - 1) * per + campCleared(); }
 function campFoeMix(r){
   for(const row of CAMP_FOE_MIX) if(r <= row[0]) return row;
   return CAMP_FOE_MIX[CAMP_FOE_MIX.length - 1];
@@ -3388,7 +3395,7 @@ function campFoeId(){
   const all = ((STK_RACES[race] || STK_RACES.terran).units) || [];
   if(!all.length) return null;
   const T = CAMP_FOE_TIER[race] || CAMP_FOE_TIER.terran;
-  const mix = campFoeMix(campRoundN());
+  const mix = campFoeMix(campFoeStep());
   // 비율대로 티어를 고르고, 그 티어가 비었으면 아래 티어로 내려간다(초반에 T3 만 있는 종족 대비)
   const tiers = [campFoePool(T.t1), campFoePool(T.t2), campFoePool(T.t3)];
   let roll = Math.random() * 100, pick = -1;

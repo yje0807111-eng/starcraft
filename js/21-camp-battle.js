@@ -162,13 +162,16 @@ function campBldAngle(u){
     for(let i = 0; i < q.length; i++) h = (h * 31 + q.charCodeAt(i)) | 0;
     u._bAng = ((h >>> 0) % 1000) / 1000; }
   return u._bAng; }
+//   ⚠ **각도만 나누면 모자란다** — 사거리가 같은 유닛끼리는 같은 원 위에 서서 여전히 부딪힌다.
+//     그래서 거리도 함께 흩는다(같은 몫으로 · 최대 +60%). 둘 다 uid 로 고정이라 목표가 안 돈다.
 function campBldGoal(u, b, home){
   const rng = u.rng || 0, sz = u.size || 14;
+  const q = campBldAngle(u);
   const want = Math.max(CAMP_BLD_R + sz * 0.9,
-    rng * (u.melee ? CAMP_ENG_MELEE : CAMP_ENG_RANGED));
+    rng * (u.melee ? CAMP_ENG_MELEE : CAMP_ENG_RANGED)) * (1 + q * 0.6);
   const h = home || u._post || u;
   const base = Math.atan2(h.y - b.y, h.x - b.x);
-  const ang = base + (campBldAngle(u) - 0.5) * CAMP_ENG_ARC;
+  const ang = base + (q - 0.5) * CAMP_ENG_ARC * 1.6;
   return { x:b.x + Math.cos(ang) * want, y:b.y + Math.sin(ang) * want }; }
 
 function campGoalFor(u, tgt, slot, cnt){

@@ -349,3 +349,21 @@ function campDgTimerReset(dg){
   if(!C.dgT) C.dgT = {};
   const t = C.dgT[dg | 0] || (C.dgT[dg | 0] = { cur:0, best:0 });
   t.cur = 0; return true; }
+
+// ── 🚪 던전에 들어간다 — **유일한 입구** ─────────────────────────────────
+//   ⭐ 다락에 있던 옛 `campEnterDungeon`(라운드를 0 으로)을 새 계약으로 되살린 것이다.
+//   🏰 **늘 그 던전 처음부터**다 — 부순 건물이 되살아나고 시계가 0 으로 돌아간다(§0-A).
+//     ⛔ 「라운드를 골라 들어간다」로 되돌리지 말 것: 관문은 건물이고 중간 진입이 없다.
+function campEnterDungeon(dg){
+  const C = (typeof campState === 'function') ? campState() : null; if(!C) return 0;
+  const mx = (typeof CAMP_DG_MAX !== 'undefined') ? CAMP_DG_MAX : CAMP_DG_MAX_N;
+  const n = Math.max(0, Math.min(mx, dg | 0));
+  C.dg = n; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
+  C.cleared = 0; C.rnd = 1;                       // 🧷 옛 값 — 저장 호환용으로만 남긴다
+  if(n > 0) campDgTimerReset(n);                  // ⏱ 이번 판 시계를 0 으로(최고기록은 안 건드린다)
+  if(typeof campSave === 'function') campSave();
+  if(typeof campBarReset === 'function') campBarReset();
+  if(typeof campSkin === 'function') campSkin();  // 🎨 바닥을 그 던전 그림으로
+  // 🏰 전장이 열려 있으면 적 기지도 그 던전 것으로 다시 세운다
+  if(typeof CAMPB !== 'undefined' && CAMPB) campFoeBase(n);
+  return n; }

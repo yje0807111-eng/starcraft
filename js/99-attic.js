@@ -706,12 +706,8 @@ function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=fals
 
 // ── [js/19-camp.js] campEnterDungeon
 // 캠프(0) → 던전으로 내려간다. 인자가 없으면 **최고 기록 다음 칸**이 아니라 던전 1부터.
-function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
-  const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
-  C.dg = n; C.cleared = 0; campSave();
-  if(typeof campBarReset === 'function') campBarReset();
-  campSkin();                                        // 🎨 바닥을 그 던전 그림으로 (아래 ⛔)
-  return n; }
+// (campEnterDungeon 은 2026-09-09 에 **되살렸다** — js/23-camp-dungeon.js. 던전이 「적 기지」가 되며
+//  「그 던전 처음부터」가 규칙이 되어 다시 유일한 입구가 됐다. ⛔ 여기에 사본을 두지 말 것.)
 
 // ── [js/19-camp.js] campBest
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
@@ -1015,7 +1011,8 @@ function campHQ(){
 }
 
 // ── [js/22-camp-rune.js] campRuneMaxRound
-function campRuneMaxRound(){ const per = (typeof CAMP_ROUND_MAX !== 'undefined') ? CAMP_ROUND_MAX : 50;
+// 🏰 눈금이 **통산 관문**으로 바뀌었다(2026-09-09 · 라운드 폐지) — 던전 셋 × 진행 건물 6채 = 18.
+function campRuneMaxRound(){ const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
   const dgs = (typeof CAMP_DG_MAX !== 'undefined') ? (CAMP_DG_MAX | 0) : 10;
   return per * Math.max(1, dgs); }
 
@@ -1183,3 +1180,50 @@ function hbNextRw(dg,from){ const best=hbBest(dg);
 //   던전 선택 화면이 그쪽을 쓴다. ⛔ 되살릴 때 둘을 헷갈리지 말 것.
 function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))].base; }
 
+
+// ── [js/12-appshell.js] campRndSlider
+// 🎚 슬라이더 — 누른 자리·끄는 자리를 라운드로 바꾼다. pointer capture 로 손가락이 트랙을 벗어나도 따라온다.
+//   ⚠ 여기서 값을 따로 들지 않는다 — campRndTap 이 유일한 입구(◀▶ 와 같은 길).
+function campRndSlider(el){ if(!el) return;
+  const at=(ev)=>{ const r=el.getBoundingClientRect(); if(r.width<=0) return;
+    const x=Math.max(0, Math.min(1, (ev.clientX-r.left)/r.width));
+    campRndTap(1+Math.round(x*(CAMP_RND_MAX-1))); };
+  el.addEventListener('pointerdown', (ev)=>{ ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+    el.classList.add('drag'); at(ev); });
+  el.addEventListener('pointermove', (ev)=>{ if(el.classList.contains('drag')) at(ev); });
+  for(const t of ['pointerup','pointercancel']) el.addEventListener(t, ()=>el.classList.remove('drag')); }
+
+// ── [js/12-appshell.js] campRndHold
+// ◀▶ 를 **누르고 있으면 반복**한다(0.35초 뒤부터 70ms 마다) — 50칸을 한 칸씩 눌러 가는 건 고문이다.
+//   ⚠ click 이 아니라 pointerdown 으로 첫 칸을 움직인다 — 캠프 화면은 터치 처리가 click 을 안 만들 수 있다
+//     (무장 트레이가 그래서 안 눌렸다 · CLAUDE.md 무장 칸 항목). 그래서 click 은 막는다(두 번 가지 않게).
+function campRndHold(btn, dir){
+  const stop=()=>{ clearTimeout(_cdRndT); clearInterval(_cdRndT); _cdRndT=null; };
+  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); if(btn.disabled) return;
+    campRndStep(dir); stop();
+    _cdRndT=setTimeout(()=>{ _cdRndT=setInterval(()=>{ if(btn.disabled){ stop(); return; } campRndStep(dir); }, 70); }, 350); });
+  for(const t of ['pointerup','pointercancel','pointerleave']) btn.addEventListener(t, stop);
+  btn.onclick=(e)=>e.preventDefault();
+}
+
+// ── [js/12-appshell.js] campRndTap
+function campRndTap(r){ if(!_cdPick) return;
+  const v=Math.max(1, Math.min(CAMP_RND_MAX, r|0)); if(v===_cdPick.rnd) return;
+  _cdPick.rnd=v; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// ── [js/12-appshell.js] campRndStep
+function campRndStep(dir){ if(_cdPick) campRndTap(_cdPick.rnd+dir); }
+
+// ── [js/12-appshell.js] campRndMark
+// 라운드 = **큰 숫자 + ◀▶**(2026-09-03). 굴림 피커는 무겁고 막대는 손가락으로 정확히 안 잡혀서 버렸다.
+//   눌러서 정확히 고르고, 아래 붉은 밑선(.cdProg)이 「50 중 어디쯤」을 읽어 준다 — 칩의 밑선과 같은 어휘.
+function campRndMark(){ const d=document.getElementById('campDrop'); if(!d||!_cdPick) return;
+  const n=d.querySelector('.cdRnN'), f=d.querySelector('.cdFill'), k=d.querySelector('.cdKnob'), sl=d.querySelector('.cdSld');
+  if(n) n.innerHTML=_cdPick.rnd+'<em>/'+CAMP_RND_MAX+'</em>';
+  // 슬라이더 위치 = (r-1)/(max-1) — 1 이 왼끝, 50 이 오른끝(손잡이가 눈금 1·50 위에 정확히 선다)
+  const pct=((_cdPick.rnd-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
+  if(f) f.style.width=pct; if(k) k.style.left=pct;
+  if(sl) sl.setAttribute('aria-valuenow', _cdPick.rnd);
+  // 끝에 닿은 쪽 화살표는 잠근다(1 아래·50 위는 없다)
+  for(const b of d.querySelectorAll('.cdArw')){ const dd=+b.dataset.d;
+    b.disabled=(dd<0 && _cdPick.rnd<=1)||(dd>0 && _cdPick.rnd>=CAMP_RND_MAX); } }

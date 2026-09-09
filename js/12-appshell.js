@@ -116,11 +116,13 @@ function campChipInfo(){
   const d=(typeof hbDun==='function')?hbDun(dg):null;
   // 🏕 캠프도 던전과 **같은 자리**를 쓴다(2026-09-03) — 숫자를 빼 봤더니 너무 밋밋했다.
   //   상한은 던전과 같은 라운드 상한(50)이다 — 단계 개수(10)를 쓰면 다른 구역과 자릿수가 갈려 보인다.
-  if(!inDg) return { name:CAMP_HOME_NAME, lab:'라운드',
-    cur:0, max:(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:CAMP_RND_MAX };
-  const rnd=(typeof campRoundN==='function')?campRoundN():1;
-  const rmax=(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:50;
-  return { name:(d&&d.name)||('던전 '+dg), lab:'라운드', cur:rnd, max:rmax }; }
+  // 🏰 **진행 지표가 「부순 건물 수」다**(2026-09-09 · 라운드 폐지 · GAME_DIRECTION §0-A).
+  //   ⛔ 「라운드 30/50」으로 되돌리지 말 것 — 던전은 적 기지이고 관문은 건물 여섯이다.
+  const smax=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+  if(!inDg) return { name:CAMP_HOME_NAME, lab:'건물', cur:0, max:smax };
+  const nm=(typeof campDgName==='function')?campDgName(dg):((d&&d.name)||('던전 '+dg));
+  const done=(typeof campBroken==='function')?campBroken():0;
+  return { name:nm, lab:'건물', cur:done, max:smax }; }
 // 🧑 레벨·경험치 — 재화 바 **맨 왼쪽**. 캠프에서만 보인다(CSS 가 가른다).
 //   ⚠ **아직 캠프에서는 경험치가 안 오른다** — profGainXp 를 부르는 곳이 옛 사냥터(08-hunt.js)와
 //     토벌(09-dungeon.js)뿐이고 둘 다 유보 상태다. 표시만 먼저 만든 것이다(2026-09-04 사용자 확정).
@@ -327,9 +329,13 @@ function campDropRender(){
   let L='';
   // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
   //   지나온 던전(here 보다 앞)은 번호를 옅게 — 「어디까지 왔나」가 목록에서 읽힌다.
-  for(let i=0;i<=CAMP_DG_MAX;i++){ const D=(i>0 && typeof hbDun==='function')?hbDun(i):null;
+  // 🏰 **이름은 `campDgName`(23-camp-dungeon) 한 곳에서 온다**(2026-09-09).
+  //   ⛔ `hbDun`(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 칩과 목록의 이름이 어긋났다
+  //     (실측: 칩은 「감염된 둥지」인데 목록 같은 줄은 「버려진 전초기지」였다).
+  for(let i=0;i<=CAMP_DG_MAX;i++){
     const open=campDgOpen(i), here=(i===_cdPick.dg), done=(i>0 && i<_cdPick.dg);
-    const nm=(i===0)?CAMP_HOME_NAME:((D&&D.name)||('던전 '+i));
+    const nm=(i===0)?CAMP_HOME_NAME
+      :((typeof campDgName==='function')?campDgName(i):('던전 '+i));
     // 부제 = **장소 설명**(배수가 아니다). 잠긴 곳만 이유를 적는다.
     const sub=open ? campDgDesc(i) : '아직 열리지 않았다';
     L+='<button class="cdRow'+(here?' here':'')+(done?' done':'')+(open?'':' lock')+(i===0?' home':'')+'" data-dg="'+i+'"'
@@ -340,25 +346,19 @@ function campDropRender(){
   const noRnd=(_cdPick.dg===0);
   d.innerHTML='<div class="cdSec cdTop">'
       +'<div class="cdSl">DUNGEON<em>0 – '+CAMP_DG_MAX+'</em></div><div class="cdList">'+L+'</div></div>'
+    // 🏰 **라운드 줄이 없어졌다**(2026-09-09 · GAME_DIRECTION §0-A). 관문은 건물 여섯이고
+    //   **늘 그 던전 처음부터** 들어가므로 고를 것이 없다.
+    //   ⛔ ROUND 큰 숫자·◀▶·슬라이더(.cdRnd/.cdRnN/.cdSld/.cdTicks)를 되살리지 말 것 —
+    //     되살리면 「중간부터 들어간다」가 되어 관문 규칙이 무너진다. CSS 는 다락으로 갔다.
     +'<div class="cdFoot">'
-      +'<div class="cdRnd'+(noRnd?' off':'')+'"><div class="cdSl">ROUND<em>1 – '+CAMP_RND_MAX+'</em></div>'
-        +'<div class="cdRl">'
-          +'<button class="arwBtn cdArw" data-arw="l" data-d="-1" type="button" aria-label="이전 라운드"></button>'
-          +'<b class="cdRnN"></b>'
-          +'<button class="arwBtn cdArw" data-arw="r" data-d="1" type="button" aria-label="다음 라운드"></button>'
-        +'</div>'
-        // 🎚 슬라이더 — 한 번에 멀리. ◀▶ 는 한 칸씩 정확히. 둘 다 campRndTap 하나로 모인다.
-        +'<div class="cdSld" role="slider" aria-label="라운드" aria-valuemin="1" aria-valuemax="'+CAMP_RND_MAX+'">'
-          +'<i class="cdFill"></i><i class="cdKnob"></i></div>'
-        +'<div class="cdTicks">'+[1,10,20,30,40,50].map(v=>'<span>'+v+'</span>').join('')+'</div>'
-      +'</div>'
-      +'<button class="actBtn pri cdGo" type="button">이동</button></div>';
+      +'<div class="cdNote">'+(noRnd?'집 — 여기서 키우고 재정비한다'
+        :('진행 건물 '+((typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6)+'채를 부수면 완주'))+'</div>'
+      +'<button class="actBtn pri cdGo" type="button">'+(noRnd?'돌아가기':'진입')+'</button></div>';
   for(const b of d.querySelectorAll('.cdRow')) b.onclick=()=>campDropPickDg(+b.dataset.dg);
-  for(const b of d.querySelectorAll('.cdArw')) campRndHold(b, +b.dataset.d);
-  campRndSlider(d.querySelector('.cdSld'));
   d.querySelector('.cdGo').onclick=campDropGo;
   if(typeof paintIcons==='function') paintIcons(d);   // .arwBtn[data-arw] 글리프를 채운다(공용 · CLAUDE.md 「방향 버튼」)
-  campRndMark(); }
+  // 🏰 campRndMark() 는 라운드 줄과 함께 다락으로 갔다(2026-09-09) — ⛔ 다시 부르지 말 것(없는 요소를 읽는다).
+}
 
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
@@ -368,43 +368,6 @@ function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
     const R=d.querySelector('.cdRnd'); if(R) R.classList.toggle('off', dg===0); }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
-// 라운드 = **큰 숫자 + ◀▶**(2026-09-03). 굴림 피커는 무겁고 막대는 손가락으로 정확히 안 잡혀서 버렸다.
-//   눌러서 정확히 고르고, 아래 붉은 밑선(.cdProg)이 「50 중 어디쯤」을 읽어 준다 — 칩의 밑선과 같은 어휘.
-function campRndMark(){ const d=document.getElementById('campDrop'); if(!d||!_cdPick) return;
-  const n=d.querySelector('.cdRnN'), f=d.querySelector('.cdFill'), k=d.querySelector('.cdKnob'), sl=d.querySelector('.cdSld');
-  if(n) n.innerHTML=_cdPick.rnd+'<em>/'+CAMP_RND_MAX+'</em>';
-  // 슬라이더 위치 = (r-1)/(max-1) — 1 이 왼끝, 50 이 오른끝(손잡이가 눈금 1·50 위에 정확히 선다)
-  const pct=((_cdPick.rnd-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
-  if(f) f.style.width=pct; if(k) k.style.left=pct;
-  if(sl) sl.setAttribute('aria-valuenow', _cdPick.rnd);
-  // 끝에 닿은 쪽 화살표는 잠근다(1 아래·50 위는 없다)
-  for(const b of d.querySelectorAll('.cdArw')){ const dd=+b.dataset.d;
-    b.disabled=(dd<0 && _cdPick.rnd<=1)||(dd>0 && _cdPick.rnd>=CAMP_RND_MAX); } }
-function campRndTap(r){ if(!_cdPick) return;
-  const v=Math.max(1, Math.min(CAMP_RND_MAX, r|0)); if(v===_cdPick.rnd) return;
-  _cdPick.rnd=v; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function campRndStep(dir){ if(_cdPick) campRndTap(_cdPick.rnd+dir); }
-// 🎚 슬라이더 — 누른 자리·끄는 자리를 라운드로 바꾼다. pointer capture 로 손가락이 트랙을 벗어나도 따라온다.
-//   ⚠ 여기서 값을 따로 들지 않는다 — campRndTap 이 유일한 입구(◀▶ 와 같은 길).
-function campRndSlider(el){ if(!el) return;
-  const at=(ev)=>{ const r=el.getBoundingClientRect(); if(r.width<=0) return;
-    const x=Math.max(0, Math.min(1, (ev.clientX-r.left)/r.width));
-    campRndTap(1+Math.round(x*(CAMP_RND_MAX-1))); };
-  el.addEventListener('pointerdown', (ev)=>{ ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){}
-    el.classList.add('drag'); at(ev); });
-  el.addEventListener('pointermove', (ev)=>{ if(el.classList.contains('drag')) at(ev); });
-  for(const t of ['pointerup','pointercancel']) el.addEventListener(t, ()=>el.classList.remove('drag')); }
-// ◀▶ 를 **누르고 있으면 반복**한다(0.35초 뒤부터 70ms 마다) — 50칸을 한 칸씩 눌러 가는 건 고문이다.
-//   ⚠ click 이 아니라 pointerdown 으로 첫 칸을 움직인다 — 캠프 화면은 터치 처리가 click 을 안 만들 수 있다
-//     (무장 트레이가 그래서 안 눌렸다 · CLAUDE.md 무장 칸 항목). 그래서 click 은 막는다(두 번 가지 않게).
-function campRndHold(btn, dir){
-  const stop=()=>{ clearTimeout(_cdRndT); clearInterval(_cdRndT); _cdRndT=null; };
-  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); if(btn.disabled) return;
-    campRndStep(dir); stop();
-    _cdRndT=setTimeout(()=>{ _cdRndT=setInterval(()=>{ if(btn.disabled){ stop(); return; } campRndStep(dir); }, 70); }, 350); });
-  for(const t of ['pointerup','pointercancel','pointerleave']) btn.addEventListener(t, stop);
-  btn.onclick=(e)=>e.preventDefault();
-}
 
 // [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
 function campDropGo(){ if(!_cdPick) return;
@@ -420,10 +383,10 @@ function campDropGo(){ if(!_cdPick) return;
   // 🏕 캠프(0)로 가면 라운드는 없다 — cleared·rnd 를 비운다(campRoundN 도 0 을 돌려준다)
   // 🏰 **그 던전을 처음부터** 시작한다(2026-09-09 · §0-A). 부순 건물은 되살아난다.
   //   ⛔ 옛 「라운드를 골라서 들어간다」로 되돌리지 말 것 — 관문은 건물이고 중간 진입이 없다.
+  //   ⭐ 규칙은 `campEnterDungeon`(23-camp-dungeon) 한 곳에 있다 — 여기서 상태를 직접 만지지 말 것.
   const toHome=(_cdPick.dg===0);
-  C.dg=_cdPick.dg; C.broken=0; C.foeDead={}; C.foeTgt=null;
-  C.cleared=0; C.rnd=1;                       // 🧷 옛 값 — 저장 호환용으로만 남긴다(아무도 안 읽는다)
-  if(!toHome && typeof campDgTimerReset==='function') campDgTimerReset(C.dg);   // ⏱ 이번 판 시계를 0 으로
+  if(typeof campEnterDungeon==='function') campEnterDungeon(_cdPick.dg);
+  else { C.dg=_cdPick.dg; C.broken=0; C.foeDead={}; C.cleared=0; C.rnd=1; }
   if(typeof campBattleClose==='function') campBattleClose();   // 던전이 바뀌면 전장을 새로 연다
   if(typeof campBarReset==='function') campBarReset();
   if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로

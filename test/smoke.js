@@ -2303,18 +2303,19 @@ async function groupLobby(){
       const n0=campRuneSlots('norm');
       assert(n0===1,'기록 0 인데 일반 칸이 '+n0+'개 열렸다 — 첫 칸 하나여야 한다');
       assert(campRuneSlots('uniq')===0,'기록 0 인데 유니크 칸이 열렸다');
-      // ② 던전이 넘어가도 **한 줄로 펴서** 센다 — D2 R10 = 60 이지 10 이 아니다
-      C.best={2:10};
-      assert(campRuneBestRound()===60,'D2 R10 이 통산 60 이 아니다: '+campRuneBestRound());
+      // ② 던전이 넘어가도 **한 줄로 펴서** 센다 — 🏰 D2 에서 3채 = (2−1)×6+3 = 9(2026-09-09 · 라운드 폐지)
+      C.best={2:3};
+      assert(campRuneBestRound()===9,'D2 에서 3채가 통산 9 가 아니다: '+campRuneBestRound());
       // ③ 라운드가 오르면 칸이 는다 · ⛔ 젬으로는 **안 열린다**
       C.best={}; p.gem=999999;
       assert(campRuneSlots('norm')===1,'젬이 많으면 칸이 열린다 — 돈이 칸을 열면 안 된다');
-      C.best={1:30};
+      C.best={1:4};                                   // 🏰 던전 1 에서 네 채를 부쉈다
       const n1=campRuneSlots('norm');
-      assert(n1>n0,'R30 인데 칸이 안 늘었다: '+n0+' → '+n1);
+      assert(n1>n0,'네 채를 부쉈는데 칸이 안 늘었다: '+n0+' → '+n1);
       // ④ 상한까지 다 열린다 · 그 위로는 더 안 열린다
-      C.best={10:50};
-      assert(campRuneBestRound()===campRuneMaxRound(),'D10 R50 이 상한이 아니다');
+      C.best={3:CAMP_DG_STEPS};                       // 🏰 마지막 던전을 완주 = 통산 18
+      assert(campRuneBestRound()===campRuneMaxRound(),'던전 3 완주가 상한이 아니다: '
+        +campRuneBestRound()+' vs '+campRuneMaxRound());
       assert(campRuneSlots('norm')===RUNE_SLOT_R.norm.length,'끝까지 갔는데 일반 칸이 다 안 열렸다');
       assert(campRuneSlots('uniq')===RUNE_SLOT_R.uniq.length,'끝까지 갔는데 유니크 칸이 다 안 열렸다');
       assert(campRuneNextAt('norm')===0,'다 열렸는데 다음 해금 라운드가 남아 있다');
@@ -6052,6 +6053,9 @@ async function groupLobby(){
     const mk=(id,x,y)=>campWithStk(()=>{ strikeSpawnUnit('me',id);
       const z=STK.me.units[STK.me.units.length-1];
       if(z){ z.x=x; z.y=y; z.wait=0; z.rallied=true; z._post={x:x,y:y}; z._sx=x; z._sy=y; } return z; });
+    // 🏰 **적 기지를 비우고 잰다**(2026-09-09). 기지가 있으면 아군은 진격하는 것이 맞다 —
+    //   이 검사가 재려는 것은 「칠 것이 없을 때 자기 자리로 돌아오나」다.
+    if(CAMPB) CAMPB._fbld = [];
     // ① 자리에서 밀려나면 돌아온다
     const a=mk('marine', W*0.5, W*0.70);
     assert(a,'레인저를 못 만들었다');
@@ -6468,12 +6472,14 @@ async function groupLobby(){
     assert(a && b, '--campBg 가 안 걸렸다');
     assert(a!==b, '던전을 옮겼는데 바닥 그림이 그대로다: '+a.slice(-28));
     assert(/dg3/.test(b), '던전 3 인데 dg3 그림이 아니다: '+b.slice(-28));
-    { const C=campState(); C.dg=3; C.cleared=CAMP_ROUND_MAX-1; campSkin(); const c0=bgOf();
-      campClearRound();                                  // 50 을 채운다 → dg4 로 자동 이동
-      assert(campDgN()===4,'자동 이동이 안 됐다: '+campDgN());
-      assert(bgOf()!==c0,'자동 이동인데 바닥이 그대로다'); }
-    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } campSkin(); }
-    return 'dg1 ≠ dg3 · 자동 이동에서도 갱신';
+    // 🏰 **자동 이동이 없다**(2026-09-09 · 던전 = 원정). 완주하면 캠프로 돌아오고, 다음 던전은 골라서 간다.
+    //   ⛔ 「50라운드를 채우면 다음 던전으로」를 되살리지 말 것 — 돌아와 재정비하는 것이 규칙이다.
+    { const C=campState(); campEnterDungeon(2); const c2=bgOf();
+      assert(/dg2/.test(c2),'던전 2 인데 dg2 그림이 아니다: '+c2.slice(-28));
+      assert(campDgN()===2,'campEnterDungeon(2) 인데 dg 가 2 가 아니다: '+campDgN());
+      assert(campBroken()===0,'던전에 들어갔는데 부순 수가 0 이 아니다: '+campBroken()); }
+    { campEnterDungeon(0); campSkin(); }
+    return 'dg1 ≠ dg3 · 던전을 옮기면 갱신 · 자동 이동 없음';
   });
 
   // ✨ **초반에 적 수가 깜빡이지 않는다** (2026-08-30)
@@ -6584,6 +6590,7 @@ async function groupLobby(){
     const d0 = Math.hypot(u.x-px, u.y-py);
     CAMPB._gapT = CAMP_ROUND_GAP_S;                   // 숨 고르기 중으로 만든다
     CAMPB.ai.units.length = 0;
+    CAMPB._fbld = [];                                 // 🏰 칠 기지가 없어야 「자리로 돌아온다」를 잰다
     for(let i=0;i<40;i++) campCombatStep(0.05);       // 2초 — 아직 숨 고르기 안이다
     assert(CAMPB._gapT>0,'테스트가 숨 고르기를 다 써 버렸다(간격을 줄일 것)');
     const d1 = Math.hypot(u.x-px, u.y-py);
@@ -7009,6 +7016,7 @@ async function groupLobby(){
       assert(campCanHitFoes()===false,'누운 대공을 세고 있다 — 라운드가 영영 안 끝난다');
       // ⭐ 규칙의 끝 — 못 때리는 적만 남았으니 다음 프레임에 **패배**해야 한다
       CAMPB._started=true; if(CAMPB._wq) CAMPB._wq.length=0;
+      CAMPB._fbld=[];        // 🏰 부술 기지가 남아 있으면 막다른 길이 아니다(건물을 부수면 이긴다)
       campCombatStep(0.05);
       assert(campDgN()===0,'누운 대공만 남았는데 패배가 안 났다: dg '+campDgN());
       // 패배가 되돌린 병력(기지 엔티티)을 걷는다 — 다음 검사 오염 방지
@@ -7066,32 +7074,36 @@ async function groupLobby(){
       C.dg=0; C.cleared=0;
       assert(campRoundN()===0, '0단계에 라운드가 있다: '+campRoundN());
       assert(campMineMul()===1, '캠프 배율이 1이 아님: '+campMineMul());
-      // ③ 라운드는 **클리어할 때마다** 붙는다 — 50라운드면 50번(49번이 아니다)
+      // ③ 🏰 배율은 **진행 건물을 부술 때마다** 붙는다 — 6채면 6번(2026-09-09 · 라운드 폐지)
       campEnterDungeon(1);
-      // 던전 1 = **1.5 에서 시작 · 라운드마다 +0.01 · 50라운드에 2.0**(2026-09-04 사용자 확정)
+      // 던전 1 = **1.5 에서 시작 · 한 채마다 +1/12 · 6채에 2.0**(계단이 50 에서 6 으로 바뀌었다)
       assert(Math.abs(campMineMul()-1.5)<1e-9, '던전 1 진입값이 ×1.5 가 아님: '+campMineMul());
-      campClearRound();
-      assert(Math.abs(campMineMul()-1.51)<1e-9, '1라운드 클리어 뒤 배율: '+campMineMul()+' (기대 1.51)');
-      for(let i=0;i<48;i++) campClearRound();          // 누계 49회
-      assert(Math.abs(campMineMul()-1.99)<1e-9, '49회 클리어 배율: '+campMineMul()+' (기대 1.99)');
-      // ④ 50회째를 깨면 **다음 던전으로 자동** — 그 순간 배율은 다음 던전 진입값
-      campClearRound();
-      assert(campDgN()===2 && campRoundN()===1, '50 클리어인데 자동 이동 안 함: '+campDgN()+'-'+campRoundN());
-      assert(campMineMul()===3, '던전 2 진입 배율: '+campMineMul()+' (기대 3)');
-      assert(campBest(1)===50, '던전 1 최고 기록이 50이 아님: '+campBest(1));
-      // ⑤ 지면 캠프(0)로 탈락 — 몇 라운드를 깼든. best 는 남는다
-      campClearRound(); campClearRound();
+      const step=campMineInc(1);
+      C.broken=1;
+      assert(Math.abs(campMineMul()-(1.5+step))<1e-9, '한 채 부순 뒤 배율: '+campMineMul()+' (기대 '+(1.5+step)+')');
+      C.broken=CAMP_DG_STEPS;
+      assert(Math.abs(campMineMul()-2.0)<1e-6, '여섯 채를 다 부쉈는데 ×2.0 이 아님: '+campMineMul());
+      C.broken=0;
+      // ④ 🏰 **진행 지표는 부순 건물 수**다 — 라운드는 없다.
+      assert(campRoundN()===campBroken()+1,'관문 번호가 부순 수+1 이 아니다');
+      assert(typeof campClearRound!=='function' || !/C\.cleared\s*=\s*campCleared\(\)\s*\+/.test(String(campCombatStep)),
+        'campCombatStep 이 아직 라운드를 올린다 — 두 체계가 공존한다');
+      // ⑤ 지면 캠프(0)로 · **그 던전 진행이 통째로 되감긴다**(부순 건물이 되살아난다) · best 는 남는다
+      campEnterDungeon(2); C.broken=3;
+      if(!C.best) C.best={}; C.best[2]=Math.max(C.best[2]|0, 3);
+      C.foeDead={ x:1 };
       const was=campFail();
-      assert(was.dg===2 && was.cleared===2, '탈락 기록이 틀림: '+JSON.stringify(was));
+      assert(was.dg===2 && was.broken===3, '탈락 기록이 틀림: '+JSON.stringify(was));
       assert(campDgN()===0 && campMineMul()===1, '탈락인데 캠프로 안 돌아감: '+campDgN());
-      assert(campBest(1)===50 && campBest(2)===2, '탈락으로 best 가 지워짐');
-      // ⑥ 마지막 던전은 끝에 머문다(넘어갈 곳이 없다)
-      campEnterDungeon(CAMP_DG_MAX);
-      for(let i=0;i<60;i++) campClearRound();
-      assert(campDgN()===CAMP_DG_MAX, '마지막 던전에서 넘어가 버림: '+campDgN());
-      assert(campCleared()===CAMP_ROUND_MAX, '마지막 던전 클리어 수가 상한을 넘음: '+campCleared());
-      return '0=캠프 · 1~'+CAMP_DG_MAX+'던전 × '+CAMP_ROUND_MAX+'라운드 · 배율 1→'+(CAMP_MINE[CAMP_DG_MAX].base*CAMP_MINE[CAMP_DG_MAX].x);
-    } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best;
+      assert(campBroken()===0, '탈락인데 부순 수가 안 지워졌다: '+campBroken());
+      assert(!Object.keys(C.foeDead||{}).length, '탈락인데 부순 건물이 안 되살아났다 — 「그 던전 처음부터」가 규칙이다');
+      assert((C.best[2]|0)===3, '탈락으로 best 가 지워졌다');
+      // ⑥ 던전은 셋이다 — 그 위는 무한층(아직 없다)
+      assert(CAMP_DG_MAX===3, '던전이 셋이 아니다: '+CAMP_DG_MAX);
+      assert(CAMP_DG.length===CAMP_DG_MAX+1, 'CAMP_DG 표가 던전 수와 안 맞는다: '+CAMP_DG.length);
+      campEnterDungeon(0);
+      return '0=캠프 · 1~'+CAMP_DG_MAX+'던전 × '+CAMP_DG_STEPS+'관문 · 배율 1→'+(CAMP_MINE[CAMP_DG_MAX].base*CAMP_MINE[CAMP_DG_MAX].x);
+    } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best; C.broken=0; C.foeDead={};
       if(typeof campSave==='function') campSave(); } });
 
   // ⚔ 던전 전투 — 오토배틀(18-strike.js)을 빌려 쓴다. ⛔ 전투를 캠프에 새로 짜지 말 것.
@@ -7120,13 +7132,27 @@ async function groupLobby(){
       //      하한이 있었는데, 그러면 라운드가 길어졌을 때 **대기 때문인지 전투 때문인지 못 가린다**
       //      (실제로 난이도가 11배 올라도 18초 고정이었고 전부 대기 시간이었다).
       //      길게 하고 싶으면 적 체력만 만진다.
-      const r0=campRoundN();
-      CAMPB._gapT=0;                       // ⚠ 라운드 사이 숨 고르기 중이면 그 프레임은 갭만 처리한다
-      if(CAMPB._wq) CAMPB._wq.length=0;    // ⚠ 아직 안 나온 무리가 있으면 그 프레임에 새로 나와 전멸이 아니게 된다
-      for(const u of CAMPB.ai.units) u.dead=true;
-      campCombatStep(0.05);
-      assert(campRoundN()===r0+1,'적 전멸인데 라운드가 안 오름: '+r0+' → '+campRoundN());
-      assert(!(CAMPB._wq && CAMPB._wq.length),'라운드가 넘어갔는데 안 나온 무리가 남아 있다');
+      // 🏰 **적을 다 잡아도 안 끝난다** — 기지를 무너뜨려야 이긴다(2026-09-09 · 라운드 폐지).
+      //   ⛔ 「적 유닛 0 = 클리어」로 되돌리지 말 것: 살아 있는 생산 건물이 계속 무리를 보내므로
+      //     0 이 되는 순간은 「이겼다」가 아니라 그냥 **무리 사이 틈**이다.
+      { CAMPB._gapT=0;
+        if(CAMPB._wq) CAMPB._wq.length=0;
+        for(const u of CAMPB.ai.units) u.dead=true;
+        const dg0=campDgN();
+        campCombatStep(0.05);
+        assert(campDgN()===dg0,'적만 전멸했는데 던전이 끝났다 — 기지를 무너뜨려야 이긴다'); }
+      // 🏰 **진행 건물 6채를 다 부수면 완주하고 캠프로 돌아온다**(원정이다 · 자동 진입 없음)
+      { assert(CAMPB._fbld && CAMPB._fbld.length===12,'적 기지가 12채가 아니다: '+((CAMPB._fbld||[]).length));
+        assert(CAMPB._fbld.filter(b=>b.role==='prog').length===CAMP_DG_STEPS,'진행 건물이 6채가 아니다');
+        const dgWas=campDgN();
+        for(const b of CAMPB._fbld) if(b.role==='prog' && !b.dead) campBreakBld(b);
+        assert(campFoeProgLeft()===0,'진행 건물을 다 부쉈는데 남아 있다: '+campFoeProgLeft());
+        campCombatStep(0.05);
+        assert(campDgN()===0,'기지를 무너뜨렸는데 캠프로 안 돌아왔다: '+campDgN());
+        const C9=campState();
+        assert(C9.dgDone && C9.dgDone[dgWas],'완주했는데 dgDone 이 안 찍혔다'); }
+      // 다시 들어가 뒷 검사를 잇는다(전장이 닫혔다)
+      campEnterDungeon(1); campBattleClose(); campCombatStep(0.05);
       // ⑤ ⛔ **출격이 없다** (2026-08-28) — 유닛은 생산될 때 이미 전장에 선다.
       //    라운드가 넘어가도 **병력이 저절로 불어나지 않고, 있던 것이 그대로 남는다.**
       //    ⚠ 옛 규칙(campSortie · campTrimArmy)은 「유닛이 두 번 태어나던 구조」의 증상을
@@ -7156,8 +7182,13 @@ async function groupLobby(){
             assert(!campCanHitFoes(),'공중 적 + 지상 아군인데 때릴 수 있다고 한다');
             if(CAMPB._wq) CAMPB._wq.length=0;
             const dg0=campDgN();
+            // 🏰 **적 기지가 남아 있으면 막다른 길이 아니다**(2026-09-09) — 건물을 부수면 이긴다.
+            //   그래서 이 규칙은 **부술 것이 하나도 없을 때만** 작동해야 한다.
             campCombatStep(0.05);
-            assert(campDgN()===0,'때릴 수 없는 적만 남았는데 안 졌다 — 라운드가 영원히 안 끝난다(던전 '+dg0+')');
+            assert(campDgN()===dg0,'적 기지가 남아 있는데 졌다 — 건물을 부수면 이길 수 있다');
+            for(const b of (CAMPB._fbld||[])) { b.dead=true; b.hp=0; }
+            campCombatStep(0.05);
+            assert(campDgN()===0,'때릴 수 없는 적만 남고 부술 건물도 없는데 안 졌다(던전 '+dg0+')');
             // 🧹 일부러 진 검사다 — 전장이 닫혔으므로 뒤 검사를 위해 다시 들어간다
             if(typeof campEnterDungeon==='function'){ campEnterDungeon(dg0||1); campCombatStep(0.05); }
           } } }
@@ -7225,17 +7256,20 @@ async function groupLobby(){
         campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
       // 🎖 **티어 구성** (§6-2-0) — 라운드 구간마다 어느 티어가 몇 % 인지 못 박는다.
       //    ⛔ 뽑기로 섞으면 라운드 시간이 20배까지 흔들린다(실측 2.6초 ↔ 59.7초).
+      // 🏰 **눈금이 통산 관문(1~18)이다**(2026-09-09) — 던전 하나가 한 단계를 가르친다.
+      //   D1(1~6) T1 만 · D2(7~9) T2 섞임 · D2 후반~D3(10~12) T3 등장.
       if(typeof campFoeTierOf==='function'){
-        const S=campState(), keep=S.cleared|0;
-        const sample=(r,n)=>{ S.cleared=Math.max(0,r-1); const c={t1:0,t2:0,t3:0,x:0};
+        const S=campState(), keepD=S.dg|0, keepB=S.broken|0;
+        const sample=(step,n)=>{ S.dg=Math.max(1,Math.ceil(step/CAMP_DG_STEPS));
+          S.broken=Math.max(0,step-(S.dg-1)*CAMP_DG_STEPS); const c={t1:0,t2:0,t3:0,x:0};
           for(let i=0;i<n;i++){ const id=campFoeId(); const t=campFoeTierOf(id); c[t?('t'+t):'x']++; }
-          S.cleared=keep; return c; };
-        { const c=sample(5,120);
-          assert(c.t1===120,'R5 는 T1 만 나와야 한다: '+JSON.stringify(c)); }
-        { const c=sample(20,300);   // T1 60 / T2 40
-          assert(c.t3===0,'R20 에 T3 가 나왔다: '+JSON.stringify(c));
-          assert(c.t1>c.t2,'R20 에서 T1 이 T2 보다 많아야 한다: '+JSON.stringify(c));
-          assert(c.t2>300*0.25,'R20 에 T2 가 너무 적다(40% 여야): '+JSON.stringify(c)); }
+          S.dg=keepD; S.broken=keepB; return c; };
+        { const c=sample(4,120);
+          assert(c.t1===120,'던전 1(관문 4)은 T1 만 나와야 한다: '+JSON.stringify(c)); }
+        { const c=sample(8,300);   // T1 60 / T2 40
+          assert(c.t3===0,'관문 8 에 T3 가 나왔다: '+JSON.stringify(c));
+          assert(c.t1>c.t2,'관문 8 에서 T1 이 T2 보다 많아야 한다: '+JSON.stringify(c));
+          assert(c.t2>300*0.25,'관문 8 에 T2 가 너무 적다(40% 여야): '+JSON.stringify(c)); }
         { const c=sample(45,300);   // T2 40 / T3 60
           assert(c.t1===0,'R45 에 T1 이 나왔다: '+JSON.stringify(c));
           assert(c.t3>c.t2,'R45 에서 T3 가 T2 보다 많아야 한다: '+JSON.stringify(c)); }
@@ -7401,8 +7435,8 @@ async function groupLobby(){
       assert(campFoeCount(50)>=30 && campFoeCount(50)<=CAMP_FOE_NMAX,'50라운드 마리 수가 30~상한 밖: '+campFoeCount(50));
       assert(campFoeCount(999)<=CAMP_FOE_NMAX,'마리 수가 상한을 넘음');
       // ⑤ campScaleFoes 는 무리의 **총 체력**을 목표에 맞추되 유닛별 차이를 남긴다
-      C.dg=2; C.cleared=10;
-      const want=campFoeDiff(2,10);
+      C.dg=2; C.broken=3;                              // 🏰 던전 2 에서 세 채를 부순 상태
+      const want=campFoeDiff(2,3);
       const mob=[{maxHp:40,maxSh:0,dmg:6},{maxHp:400,maxSh:0,dmg:30}];   // 마린급 · 탱크급
       const r0=mob[1].maxHp/mob[0].maxHp;
       campScaleFoes(mob);
@@ -8015,6 +8049,9 @@ async function groupLobby(){
   await step('캠프: 터치 채집 · 비용 조회 · 자리 비움 정산', async()=>{
     skipIf(typeof campTapAt!=='function','캠프 채집 없음');
     const C=campState(); C.race='terran'; C.ents=[]; C.minerals=[]; C.upg={}; C.rate=0; C.leftAt=0;
+    // 🏕 **캠프(0단계)에서 잰다** — 던전에 있으면 campMineMul 이 곱해져 「왕복 1원」이 안 된다.
+    //   ⚠ 앞 step 이 던전에 들어간 채로 끝날 수 있어 여기서 씻는다(검사끼리 상태를 물려주지 않는다).
+    C.dg=0; C.broken=0; C.foeDead={};
     openHome(); await sleep(420);
     assert(G.tech && (G.tech.minerals||[]).length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥이 안 깔림');
     // ① 광맥을 누르면 캔다 — 화면 좌표로 실제 탭 경로를 탄다
@@ -8047,10 +8084,11 @@ async function groupLobby(){
     //     round(1.5)=2 로 33% 과다가 된다(실제 게임에서도 그렇다 — 값이 작을 때만 생기는 반올림 특성).
     //     레벨이 조금만 올라도 사라지므로 여기서는 L10(1024)에서 잰다.
     //   ⚠ 2026-08-25: 단계 번호가 한 칸 내려갔다(0=캠프). 배수도 공식이 아니라 CAMP_MINE 표다.
-    { const S=campState(); S.upg.tap=10; const d0=S.dg, c0=S.cleared;
-      S.dg=0; S.cleared=0; const g0=campTapGain();
-      S.dg=2; S.cleared=0; const g2=campTapGain();
-      S.dg=d0; S.cleared=c0; S.upg.tap=0;
+    // 🏰 **부순 건물 수(broken)를 씻고 잰다**(2026-09-09) — 남아 있으면 그만큼 배율이 더 붙는다.
+    { const S=campState(); S.upg.tap=10; const d0=S.dg, c0=S.broken|0;
+      S.dg=0; S.broken=0; const g0=campTapGain();
+      S.dg=2; S.broken=0; const g2=campTapGain();
+      S.dg=d0; S.broken=c0; S.upg.tap=0;
       const want=CAMP_MINE[2].base/CAMP_MINE[0].base;
       assert(Math.abs(g2/g0-want)<0.02,'던전 배수가 탭에 안 걸림: '+(g2/g0).toFixed(3)+' (기대 '+want+')'); }
     // ⑤-b ⭐ **폭주 방지 불변식 — 레벨이 올라도 레벨업이 쉬워지지 않는다.**
@@ -12991,11 +13029,13 @@ async function groupLobby(){
       t.classList.add('asChip'); t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10}); }
     // ①-3 라벨은 화면에서 뺐지만 **읽어 주는 말에는 남는다**(정보까지 잃으면 안 된다)
     { const on0=window.campIsOn, st0=window.campState;
-      window.campIsOn=()=>true; window.campState=()=>({dg:3, cleared:26});
+      window.campIsOn=()=>true; window.campState=()=>({dg:3, broken:2});
       curPaintChip();
       const al=t.getAttribute('aria-label')||'';
       window.campIsOn=on0; window.campState=st0;
-      assert(/라운드/.test(al),'읽어 주는 말에 라벨이 없다: '+al);
+      // 🏰 라벨이 「라운드」에서 **「건물」**로 바뀌었다(2026-09-09 · 라운드 폐지)
+      assert(/건물/.test(al),'읽어 주는 말에 라벨이 없다: '+al);
+      assert(!/라운드/.test(al),'옛 라운드 표기가 남아 있다: '+al);
       t.classList.add('asChip'); t.innerHTML=curChipHTML({name:'잊혀진 회랑', lab:'던전', cur:3, max:10}); }
     // ①-4 진행 밑선은 **⌄ 밑을 지나가지 않는다** — 겹치면 화살표가 붉게 물든다
     { const r=t.getBoundingClientRect(), br=t.querySelector('.cdBar').getBoundingClientRect();
@@ -13095,19 +13135,18 @@ async function groupLobby(){
     //    상태는 19-camp.js 가 단일 소스이고 이 칩은 **읽기만** 한다.
     { const on=window.campIsOn, cs=campState(), bk={dg:cs.dg, cleared:cs.cleared};
       window.campIsOn=()=>true;
-      cs.dg=0; cs.cleared=0;
+      cs.dg=0; cs.broken=0;
       { const a=campChipInfo();
         assert(a && /캠프/.test(a.name),'0단계인데 캠프로 안 보임: '+JSON.stringify(a));
-        // 🏕 캠프도 다른 구역과 **같은 자리**(0/50)를 쓴다(2026-09-03) — 숫자를 빼 봤더니 밋밋했다.
-        assert(a.cur===0 && a.max===CAMP_ROUND_MAX,'캠프 칩이 0/'+CAMP_ROUND_MAX+' 이 아님: '+JSON.stringify(a)); }
-      cs.dg=3; cs.cleared=26;
+        // 🏕 캠프도 던전과 **같은 자리**를 쓴다 — 🏰 이제 눈금은 **건물 0/6**이다(2026-09-09).
+        assert(a.cur===0 && a.max===CAMP_DG_STEPS,'캠프 칩이 0/'+CAMP_DG_STEPS+' 이 아님: '+JSON.stringify(a)); }
+      cs.dg=3; cs.broken=2;
       { const b=campChipInfo();
-        assert(b && b.lab==='라운드' && b.cur===27,'던전인데 라운드를 안 씀: '+JSON.stringify(b));
-        assert(b.max===CAMP_ROUND_MAX,'칩 라운드 상한이 캠프와 다름: '+b.max+' vs '+CAMP_ROUND_MAX); }
-      // ⛔ 12-appshell 의 CAMP_RND_MAX 는 19-camp 의 CAMP_ROUND_MAX 를 베낀 값이다 — 갈리면 안 된다
-      assert(CAMP_RND_MAX===CAMP_ROUND_MAX,
-        '라운드 상한이 두 파일에서 갈렸다: 12-appshell '+CAMP_RND_MAX+' vs 19-camp '+CAMP_ROUND_MAX);
-      cs.dg=bk.dg; cs.cleared=bk.cleared; window.campIsOn=on; }
+        assert(b && b.lab==='건물' && b.cur===2,'던전인데 부순 건물 수를 안 씀: '+JSON.stringify(b));
+        assert(b.max===CAMP_DG_STEPS,'칩 상한이 관문 수와 다름: '+b.max+' vs '+CAMP_DG_STEPS);
+        // ⛔ 옛 라운드 눈금(50)이 남아 있으면 두 체계가 공존한다
+        assert(b.max!==50,'칩이 아직 라운드 상한(50)을 쓴다'); }
+      cs.dg=bk.dg; cs.broken=0; window.campIsOn=on; }
     return '이름·던전 3/10 · 막대 30%(판 안쪽) · 밑선 정렬 · 바 안에 들어감 · ☰ 안 밀림 · 걷힘 확인';
     } finally {
       window.campIsOn=_on0; window.campState=_st0;
@@ -14138,7 +14177,8 @@ async function groupLobby(){
     try{
       // 🚪 이 step 은 **드롭다운 UI** 를 보는 것이라 「병력이 있어야 던전에 간다」의 대상이 아니다
       gateOff=campGateOpen();
-      prof.camp=Object.assign({}, camp0||{}, {dg:3, cleared:26});   // 라운드 27 = 깬 수 26 (rnd 는 비추는 값)
+      // 🏰 던전 3 에서 두 채를 부순 상태(2026-09-09 · 라운드 폐지) · 앞 던전을 완주해야 열리므로 dgDone 도 준다
+      prof.camp=Object.assign({}, camp0||{}, {dg:3, broken:2, dgDone:{1:1,2:1}});
       window.campIsOn=()=>true; window.campState=()=>PROF().camp; window.campSkin=()=>{skin++;};
       curShow(true); updateCurBar();
       // ① 칩에 펼침 표시가 있고, 열면 뒤집힌다
@@ -14161,24 +14201,19 @@ async function groupLobby(){
       assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='잊혀진 회랑','현재 던전이 안 잡힘');
       // 라운드 = 큰 숫자 + ◀▶(2026-09-03) — 굴림 피커(.cdRn 50칸)는 없앴다
       assert(!d().querySelector('.cdRn') && !d().querySelector('#cdPickBox'),'옛 굴림 피커가 되살아났다');
-      { const n=d().querySelector('.cdRnN'); assert(n,'라운드 숫자(.cdRnN)가 없음');
-        assert(n.firstChild && n.firstChild.textContent==='27','현재 라운드가 안 잡힘: '+n.textContent);
-        assert(n.querySelector('em') && n.querySelector('em').textContent==='/'+CAMP_RND_MAX,'라운드 상한 표기가 없음'); }
-      assert(d().querySelectorAll('.cdArw').length===2,'◀▶ 가 둘이 아님');
-      // ◀▶ 는 **공용 방향 버튼**(.arwBtn + data-arw)이다 — 새 화살표를 만들지 않는다(CLAUDE.md 레지스트리)
-      for(const b of d().querySelectorAll('.cdArw'))
-        assert(b.classList.contains('arwBtn') && b.dataset.arw,'◀▶ 가 공용 .arwBtn 이 아니다: '+b.className);
-      // [이동] = 공용 .actBtn.pri — 제 버튼을 따로 만들지 않는다
+      // 🏰 **라운드 줄이 통째로 없어졌다**(2026-09-09 · 관문은 건물 여섯이고 늘 처음부터 들어간다).
+      //   ⛔ 큰 숫자·◀▶·슬라이더를 되살리지 말 것 — 되살리면 「중간부터 들어간다」가 되어 관문 규칙이 무너진다.
+      for(const k of ['.cdRnN','.cdSld','.cdArw','.cdTicks','.cdRl','.cdRnd'])
+        assert(!d().querySelector(k),'옛 라운드 조작이 되살아났다: '+k);
+      { const nt=d().querySelector('.cdNote'); assert(nt,'던전이 무엇을 요구하는지 알려 주는 줄이 없다');
+        assert(/6채|완주|집/.test(nt.textContent),'안내가 관문을 안 말한다: '+nt.textContent); }
+      // [진입] = 공용 .actBtn.pri — 제 버튼을 따로 만들지 않는다
       { const g=d().querySelector('.cdGo');
-        assert(g.classList.contains('actBtn') && g.classList.contains('pri'),'[이동]이 공용 .actBtn.pri 가 아니다: '+g.className); }
+        assert(g.classList.contains('actBtn') && g.classList.contains('pri'),'[진입]이 공용 .actBtn.pri 가 아니다: '+g.className); }
       // ⛔ 청록 금지 — 판 테두리·현재 칸·라운드 숫자 어디에도 청록(--hud)이 없어야 한다(하단 구역과 갈리던 원인)
       { const cyan=(c)=>{ const a=(c.match(/[\d.]+/g)||[]).map(Number); return a.length>=3 && a[1]>120 && a[2]>150 && a[1]>a[0]+60 && a[2]>a[0]+60; };
         assert(!cyan(getComputedStyle(d()).borderTopColor),'드롭다운 테두리가 청록이다: '+getComputedStyle(d()).borderTopColor);
-        assert(!cyan(getComputedStyle(d().querySelector('.cdRow.here .cdIx')).color),'현재 던전 번호가 청록이다');
-        assert(!cyan(getComputedStyle(d().querySelector('.cdRnN')).color),'라운드 숫자가 청록이다'); }
-      // 라벨(DUNGEON/ROUND)은 하단 시트 머리줄(.cgKick)과 같은 서명 — 자간이 같아야 한다
-      { const sl=getComputedStyle(d().querySelector('.cdSl'));
-        assert(Math.abs(parseFloat(sl.letterSpacing)-9*0.24)<0.2,'라벨 자간이 .cgKick(.24em) 과 다르다: '+sl.letterSpacing); }
+        assert(!cyan(getComputedStyle(d().querySelector('.cdRow.here .cdIx')).color),'현재 던전 번호가 청록이다'); }
       // ③ 자리 — **전체 화면**이다(2026-09-03 사용자 확정 · 목업 camp-dgpick-full-8 1안). 재화 바와 하단 네비 사이를
       //    통째로 덮고, 칩은 그 위에 남아 머리줄이자 닫는 손잡이가 된다. ⛔ 칩 아래 작은 판으로 되돌리지 말 것.
       { const ph=$('phone').getBoundingClientRect(), dr=d().getBoundingClientRect(), cr=t.getBoundingClientRect();
@@ -14215,59 +14250,39 @@ async function groupLobby(){
         // 10 이상은 소수를 안 붙인다(2026-09-04 사용자 확정) — 「×10.0」이 아니라 「×10」
         assert(/^×10 ~ ×20$/.test(_rows[3].querySelector('.cdMul').textContent),
           '던전 3 배수가 「×10 ~ ×20」 이 아니다(10 이상은 소수를 뗀다): '+_rows[3].querySelector('.cdMul').textContent);
-        // 축약값도 이 화면에서는 소수를 뗀다 — 「×120.0K」가 아니라 「×120K」(⛔ fmtCur 자체는 안 고친다)
-        assert(!/.dK|.0M/.test(_rows[9].querySelector('.cdMul').textContent),
-          '던전 9 축약 배수에 소수가 남았다: '+_rows[9].querySelector('.cdMul').textContent);
+        // 🏰 던전이 **셋**이라 줄은 넷(캠프 + 1~3)이다 — ⛔ 옛 10던전(축약 배수 ×120K)을 참조하지 말 것
+        assert(_rows.length===CAMP_DG_MAX+1,'던전 줄 수가 던전 수와 안 맞는다: '+_rows.length);
+        for(const r of _rows) assert(!/\.\dK|\.0M/.test(r.querySelector('.cdMul').textContent),
+          '축약 배수에 소수가 남았다: '+r.querySelector('.cdMul').textContent);
         // 🚫 던전 목록에 스크롤 막대를 보이지 않는다 — 카드 오른쪽 배수 글자와 겹친다
         { const list=d().querySelector('.cdList');
           assert(!list.classList.contains('uiScroll'),'던전 목록에 공용 스크롤바(.uiScroll)가 붙었다 — 막대가 도로 그려진다');
           assert(getComputedStyle(list).scrollbarWidth==='none','던전 목록 스크롤 막대가 보인다');
-          assert(list.scrollHeight>list.clientHeight,'던전 목록이 굴러가지 않는다 — 막대만 감춰야지 스크롤까지 막으면 안 된다'); } }
-      // ⑥ 🎚 슬라이더 — 채움/손잡이 = (r-1)/(max-1) · 붉은 채움 · **누르고 끌면** 라운드가 따라온다
-      { const sl=d().querySelector('.cdSld'), f=d().querySelector('.cdFill'), k=d().querySelector('.cdKnob');
-        assert(sl && f && k,'라운드 슬라이더 조각이 없음');
-        const want=((27-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
-        assert(f.style.width===want && k.style.left===want,'슬라이더 위치가 27 이 아님: 채움 '+f.style.width+' 손잡이 '+k.style.left);
-        const c=(getComputedStyle(f).backgroundColor.match(/[\d.]+/g)||[]).map(Number);
-        assert(c[0]>200 && c[0]>c[1]+80 && c[0]>c[2]+80,'슬라이더 채움이 붉은색이 아니다: '+getComputedStyle(f).backgroundColor);
-        assert(sl.getBoundingClientRect().height>=24,'슬라이더 누르는 높이가 손가락에 좁다: '+sl.getBoundingClientRect().height.toFixed(0)+'px');
-        // 트랙 80% 지점을 누르면 ≈ 40, 끌어서 20% 로 가면 ≈ 11
-        const r=sl.getBoundingClientRect(), pe=(t,x)=>sl.dispatchEvent(new PointerEvent(t,{pointerId:7,clientX:r.left+r.width*x,clientY:r.top+r.height/2,bubbles:true,cancelable:true,isPrimary:true}));
-        pe('pointerdown',.8); const a=+d().querySelector('.cdRnN').firstChild.textContent;
-        pe('pointermove',.2);  const b=+d().querySelector('.cdRnN').firstChild.textContent; pe('pointerup',.2);
-        assert(Math.abs(a-40)<=1,'슬라이더 80% 를 눌렀는데 라운드가 40 근처가 아님: '+a);
-        assert(Math.abs(b-11)<=1,'슬라이더를 20% 로 끌었는데 라운드가 11 근처가 아님: '+b);
-        campRndTap(27); }
-      // ⑥-1 ◀▶ — pointerdown 으로 한 칸(캠프 화면은 click 을 안 만들 수 있다) · 끝에서는 잠긴다
-      { const fw=d().querySelector('.cdArw[data-d="1"]');
-        fw.dispatchEvent(new PointerEvent('pointerdown',{pointerId:1,bubbles:true,cancelable:true,isPrimary:true}));
-        fw.dispatchEvent(new PointerEvent('pointerup',{pointerId:1,bubbles:true,cancelable:true,isPrimary:true}));
-        assert(d().querySelector('.cdRnN').firstChild.textContent==='28','▶ 를 눌렀는데 라운드가 한 칸 안 움직임');
-        campRndTap(CAMP_RND_MAX);
-        assert(fw.disabled,'상한(50)인데 ▶ 가 안 잠김');
-        assert(!d().querySelector('.cdArw[data-d="-1"]').disabled,'상한인데 ◀ 까지 잠겼다');
-        campRndTap(27); }
-      // ⑥-2 카드는 **세로 가운데** 정렬이다(2026-09-03) — 이름·부제 두 줄 블록을 큰 번호(22px)와 블록으로 맞춘다.
-      //     ⚠ 옛 한 줄 목록은 밑선 정렬이었다(번호 12px vs 이름 16px 상자). 두 줄이 되면서 규칙이 바뀐 것이지 빠진 게 아니다.
+          // 🏰 던전이 셋이라 **넘치지 않는다** — 그래서 「실제로 굴러간다」가 아니라 **「굴러갈 수 있다」**를 잰다.
+          //   ⛔ 막대만 감춰야지 스크롤까지 막으면 안 된다(무한층이 붙으면 줄이 다시 늘어난다).
+          assert(/auto|scroll/.test(getComputedStyle(list).overflowY),
+            '던전 목록이 굴러갈 수 없다 — 막대만 감춰야지 스크롤까지 막으면 안 된다: '+getComputedStyle(list).overflowY); } }
+      // 🏰 **라운드 슬라이더·◀▶ 는 없어졌다**(2026-09-09) — 관문이 건물이라 고를 것이 없다.
+      //   ⛔ 여기에 라운드 조작 검사를 되살리지 말 것: 「중간부터 들어간다」가 되어 관문 규칙이 무너진다.
+      //   ⑥ 카드는 **세로 가운데** 정렬이다(2026-09-03) — 이름·부제 두 줄 블록을 큰 번호(22px)와 맞춘다.
       { const ai=getComputedStyle(d().querySelector('.cdRow')).alignItems;
         assert(ai==='center','던전 카드가 세로 가운데 정렬이 아니다 — 번호와 두 줄 블록이 어긋나 보인다: '+ai); }
       // ⑦ 고르기만 해서는 **안 바뀐다** — 확정 버튼이 있는 이유다
-      d().querySelector('.cdRow[data-dg="5"]').click();
-      campRndTap(40);
-      assert(PROF().camp.dg===3 && PROF().camp.cleared===26,
-        '고르기만 했는데 실제 값이 바뀌었다(확정 버튼이 무의미해진다): '+PROF().camp.dg+'/'+PROF().camp.cleared);
-      assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='폐쇄된 시설','고른 것이 표시에 안 반영됨');
-      // ⑧ [이동] — 여기서만 옮긴다. 배경도 새 던전 것으로 갈고 칩도 갱신된다.
+      d().querySelector('.cdRow[data-dg="2"]').click();
+      assert(PROF().camp.dg===3 && (PROF().camp.broken|0)===2,
+        '고르기만 했는데 실제 값이 바뀌었다(확정 버튼이 무의미해진다): '+PROF().camp.dg+'/'+PROF().camp.broken);
+      assert((d().querySelector('.cdRow.here .cdRnm')||{}).textContent==='감염된 둥지','고른 것이 표시에 안 반영됨');
+      // ⑧ [진입] — 여기서만 옮긴다. 🏰 **늘 그 던전 처음부터**이므로 부순 수가 0 이 된다.
       d().querySelector('.cdGo').click(); await sleep(40);
-      assert(PROF().camp.dg===5 && PROF().camp.cleared===39,
-        '이동이 캠프 상태(cleared)에 반영 안 됨: '+PROF().camp.dg+'/'+PROF().camp.cleared);
-      assert(skin===1,'던전을 옮겼는데 바닥 그림을 안 갈았다(campSkin 호출 '+skin+'회)');
+      assert(PROF().camp.dg===2 && (PROF().camp.broken|0)===0,
+        '진입이 캠프 상태에 반영 안 됨(처음부터여야 한다): '+PROF().camp.dg+'/'+PROF().camp.broken);
+      assert(skin>=1,'던전을 옮겼는데 바닥 그림을 안 갈았다(campSkin 호출 '+skin+'회)');
       assert(!d(),'이동했는데 판이 안 닫힘');
-      assert((t.querySelector('.cdNm')||{}).textContent==='폐쇄된 시설','칩이 새 던전으로 안 바뀜');
+      assert((t.querySelector('.cdNm')||{}).textContent==='감염된 둥지','칩이 새 던전으로 안 바뀜');
       // 라벨은 화면에서 뺐다(한 줄이라 자리가 없다) — **읽어 주는 말**로 확인한다
-      assert(/라운드/.test(t.getAttribute('aria-label')||''),
-        '라운드가 생겼는데 읽어 주는 말이 아직 던전이다: '+t.getAttribute('aria-label'));
-      assert((t.querySelector('.cdN')||{}).textContent==='40','칩 라운드 값이 안 맞음');
+      assert(/건물/.test(t.getAttribute('aria-label')||''),
+        '읽어 주는 말이 아직 옛 라운드다: '+t.getAttribute('aria-label'));
+      assert((t.querySelector('.cdN')||{}).textContent==='0','칩 진행 값이 안 맞음(진입은 0 부터)');
       // ⑨ 바깥을 누르면 닫힌다
       t.click(); await sleep(40); assert(d(),'다시 안 열림');
       $('phone').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
@@ -14294,11 +14309,11 @@ async function groupLobby(){
       //     ⚠ 원래 계획은 「병력이 없으면 이동을 막는다」다 — 그것이 들어오면 이 검사와 플래그를 함께 지운다.
       { skipIf(typeof CAMP_DEV_NOFAIL==='undefined','개발 플래그 없음');
         const had=CAMP_DEV_NOFAIL, C=campState();
-        const save={ dg:C.dg, cleared:C.cleared };
-        C.dg=4; C.cleared=7;
+        const save={ dg:C.dg, cleared:C.cleared, broken:C.broken };
+        C.dg=2; C.broken=3;
         CAMP_DEV_NOFAIL=true;  campFail();
-        assert(C.dg===4 && C.cleared===7,
-          '개발 모드인데 졌다고 자리를 잃었다: dg '+C.dg+' cleared '+C.cleared);
+        assert(C.dg===2 && (C.broken|0)===3,
+          '개발 모드인데 졌다고 자리를 잃었다: dg '+C.dg+' broken '+C.broken);
         CAMP_DEV_NOFAIL=false; campFail();
         assert(C.dg===0 && C.cleared===0,
           '개발 모드를 껐는데도 캠프로 안 돌아간다 — 진짜 규칙이 죽었다: dg '+C.dg);
