@@ -2529,14 +2529,32 @@ function campRoundRate(dg, k){
 function campRBase(dg){ let x = 1; const n = CAMP_ROUND_MAX - 1;
   for(let k = 1; k <= n; k++) x *= campRoundRate(dg, k);
   return Math.pow(x, 1 / n); }
-// 한 던전을 통째로 깬 배율 × 던전 문턱(어느 던전에서나 ×3)
-function campDgThreshold(dg){
-  let x = 1; for(let k = 1; k <= CAMP_ROUND_MAX - 1; k++) x *= campRoundRate(dg - 1, k);
-  return x * CAMP_DG_STEP; }
-// 「지금 던전 dg 에서 cleared 라운드를 깬 상태」의 적 난이도. dg=0(캠프)은 적이 없으므로 1.
-function campFoeDiff(dg, cleared){ dg = dg | 0; if(dg <= 0) return 1;
-  let x = 1; for(let d = 2; d <= dg; d++) x *= campDgThreshold(d);
-  const n = Math.max(0, cleared | 0); for(let k = 1; k <= n; k++) x *= campRoundRate(dg, k);
+// 🏰 **관문 사다리** (2026-09-09 · 던전이 「적 기지 치기」가 되면서 자를 갈았다)
+//   ⛔ **라운드 눈금(CAMP_ROUND_MAX=50)으로 되돌리지 말 것.** 관문이 6개가 된 뒤로도 옛 자를
+//     쓰고 있어서 곡선이 이렇게 망가져 있었다(2026-09-09 실측):
+//       던전 안에서는 관문 6개를 다 깨도 **×1.36**(거의 평평 — 「깰 때마다 세진다」가 거짓말)
+//       던전을 넘을 때는 **×540**(절벽 — 아무리 커도 못 넘는다)
+//     평평·평평·평평·절벽 이던 것을 **고른 계단 여섯**으로 바꾼다.
+//   ⭐ **끝점은 지킨다** — 한 회차 전체 배율이 옛 D3R50(9.2e7)과 같은 자리에 온다.
+//     campFoeDiff 는 보상(campMineMul)과 환생 포인트(campRebMul)도 읽으므로, 끝점을 옮기면
+//     「첫 환생 하루」 설계가 통째로 어긋난다(HUNT_R1 §4).
+//   ⚠ 그래서 관문 하나가 **평균 ×2.8** 이다 — 크다. 옛 게임은 같은 총량을 라운드 150개로 나눴다.
+//     관문 하나가 그만큼 길어야 한다는 뜻이고, **전리품·연구가 관문마다 2~4배**를 따라와야 한다.
+//     ⚠ 아직 안 쟀다 — 여기가 이 개편에서 가장 벽이 되기 쉬운 자리다(BALANCE §3-2-16).
+//   ⭐ 뒤로 갈수록 가팔라진다 — 마지막 본진이 클라이맥스다(릴레이와 같은 방향).
+const CAMP_GATE_RATE = [1.9, 2.2, 2.5, 2.9, 3.4, 4.4];   // 관문 k(1~6)를 깰 때 곱해지는 배율
+function campGateRate(k){                                 // k = 1..CAMP_DG_STEPS
+  const i = Math.max(0, Math.min(CAMP_GATE_RATE.length - 1, (k | 0) - 1));
+  return CAMP_GATE_RATE[i]; }
+// 「지금 던전 dg 에서 관문 gates 개를 깬 상태」의 적 난이도. dg=0(캠프)은 적이 없으므로 1.
+//   ⚠ 두 번째 인자는 이제 **부순 진행 건물 수**(0~6)다 — 옛 이름(cleared)은 라운드였다.
+function campFoeDiff(dg, gates){ dg = dg | 0; if(dg <= 0) return 1;
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  let x = 1;
+  for(let d = 1; d < dg; d++)                             // 앞 던전들은 통째로 깬 것으로 친다
+    for(let k = 1; k <= per; k++) x *= campGateRate(k);
+  const n = Math.max(0, Math.min(per, gates | 0));
+  for(let k = 1; k <= n; k++) x *= campGateRate(k);
   return x; }
 
 // ── 웨이브 — 총량은 난이도가 정하고, 몇 마리로 쪼갤지는 라운드가 정한다 (HUNT_R1 §6-2-1) ──
@@ -3542,7 +3560,11 @@ function campSpawnWave(){
   // ⛔ **무리마다 라운드 총량을 통째로 주면 안 된다.** 6무리로 쪼개면 라운드 총 체력이 6배가 된다 —
   //   실측(2026-08-28): 적 체력 1,300 을 넣었더니 R24 가 설계 16초 대신 **193초**였다.
   //   ⭐ 라운드 총량 = CAMP_FOE_HP0 × 난이도. 각 무리는 **마리 수 비율만큼**만 가져간다.
-  const share = (CAMPB._wqTot > 0) ? (k / CAMPB._wqTot) : 1;
+  // 🔗 릴레이·반격(자리를 든 칸)은 **흐름**이라 한 마리가 늘 같은 몫을 갖는다.
+  //   ⛔ `k / _wqTot` 를 쓰지 말 것 — 릴레이에서 `_wqTot` 은 끝없이 커져 적이 점점 약해진다.
+  const REF = (typeof CAMP_FOE_RELAY_REF !== 'undefined') ? CAMP_FOE_RELAY_REF : 12;
+  const share = at ? (k / REF)
+    : ((CAMPB._wqTot > 0) ? (k / CAMPB._wqTot) : 1);
   return campWithStk(() => { const b4 = CAMPB.ai.units.length;
     const ids = at && at.ids;                      // 🏭 그 건물이 뽑는 유닛(없으면 티어 표)
     for(let i = 0; i < k; i++) strikeSpawnUnit('ai', campFoeId(ids));  // ⛔ 공중 전용은 뽑지 않는다

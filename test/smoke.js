@@ -7484,7 +7484,30 @@ async function groupLobby(){
         assert(campBroken()===0,'보급고를 깼는데 진행 수가 올랐다');
         campDepotTick(CAMP_DEPOT_S+1);
         assert(campDepotMul()===1,'보급 버프가 안 닳는다 — 영구가 됐다'); }
-      // ⑥ 릴레이가 이어받는다 — 첫 채를 깨면 두 번째가 활성이 된다
+      // ⑥ 🧯 **적이 무한히 쌓이지 않는다** — 「죽음의 나선」을 끊는 유일한 장치(2026-09-09 사용자 지적).
+      //    ⛔ 상한이 없으면 **못 이기는 판이 반드시 지는 판**이 된다: 죽이는 속도가 나오는 속도보다
+      //      느려지는 순간부터 영원히 쌓여 전멸이 확정된다. 병력이 약한 초반이 정확히 그 구간이다.
+      //    ⚠ 아무도 안 죽이는 판을 만들어 잰다 — 실측(2026-09-09): 상한 없이 5분이면 88마리,
+      //      상한을 켜면 8마리에서 평평해진다.
+      { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+        CAMPB._fspT=0; CAMPB._wq=[]; CAMPB._wqT=0;
+        const cap=CAMP_FOE_LIVE_MAX[campFoeStepIdx(campFoeActive())]|0;
+        assert(cap>0,'적 상한이 없다');
+        for(let f=0; f<30*180; f++){                   // 3분 — 스폰만 굴린다(전투 없음)
+          campFoeSpawnTick(1/30);
+          CAMPB._wqT-=1/30; if(CAMPB._wqT<=0){ campSpawnWave(); CAMPB._wqT=CAMP_WAVE_GAP_S; } }
+        const live=campFoeLive();
+        assert(live<=cap,'적이 상한을 넘었다: '+live+' > '+cap+' — 죽음의 나선을 막는 장치가 샌다');
+        assert(live>=Math.min(3,cap),'적이 아예 안 나왔다: '+live);
+        // ⛔ **적이 시간이 갈수록 약해지면 안 된다** (2026-09-09 실측으로 잡은 버그):
+        //   릴레이가 옛 `k / _wqTot` 몫을 쓰면 _wqTot 이 끝없이 커져 나중 적이 티끌이 된다.
+        //   ⚠ 첫 무리와 마지막 무리의 개체 체력이 같은 눈금이어야 한다.
+        const hp=CAMPB.ai.units.filter(u=>!u.dead).map(u=>u.maxHp).sort((a,b)=>a-b);
+        if(hp.length>=2) assert(hp[hp.length-1]/hp[0] < 4,
+          '나중에 나온 적이 처음 것보다 훨씬 약하다 — 옛 _wqTot 몫이 되살아났다: '
+          +hp[0].toFixed(3)+' ~ '+hp[hp.length-1].toFixed(3));
+        campWithStk(()=>{ STK.ai.units.length=0; }); CAMPB._wq=[]; }
+      // ⑦ 릴레이가 이어받는다 — 첫 채를 깨면 두 번째가 활성이 된다
       { const p1=CAMPB._fbld.find(b=>b.step===1); campBreakBld(p1);
         const nx=campFoeActive();
         assert(nx && (nx.step|0)===2,'첫 채를 깼는데 두 번째가 안 이어받았다: '+(nx?nx.step:'없음'));
@@ -7501,28 +7524,29 @@ async function groupLobby(){
     skipIf(typeof campFoeDiff!=='function','난이도 곡선 없음');
     const C=campState(); const back={dg:C.dg, cleared:C.cleared};
     try{
-      // ① 던전 문턱은 어느 던전에서나 ×3 — 하나라도 어긋나면 「내려갈수록 쉬워지는」 구간이 생긴다
-      assert(CAMP_DG_STEP===3,'던전 문턱 상수가 3 이 아님: '+CAMP_DG_STEP+' (HUNT_R1 §6-1)');
+      // ① 🏰 **사다리는 관문 6개다**(2026-09-09 · 옛 라운드 50 눈금을 버렸다).
+      //    ⛔ 던전 문턱(옛 ×3 · 실제로는 ×540 절벽)을 되살리지 말 것 — 실측으로 이렇게 망가져 있었다:
+      //      던전 **안**에서 관문 6개를 다 깨도 ×1.36(거의 평평)인데 던전을 **넘을 때만** ×540.
+      //    ⭐ 지금은 이음매가 없다: 「D(n) 을 다 깬 값」과 「D(n+1) 시작값」이 **같아야** 한다.
+      assert(CAMP_GATE_RATE.length===CAMP_DG_STEPS,'관문 배율 표가 관문 수와 다르다: '+CAMP_GATE_RATE.length);
       for(let d=2; d<=CAMP_DG_MAX; d++){
-        const step=campFoeDiff(d,0)/campFoeDiff(d-1,CAMP_ROUND_MAX-1);
-        assert(Math.abs(step-3)<0.01,'던전 '+d+' 문턱이 ×3 이 아님: '+step.toFixed(3)); }
-      // ② ⭐ **라운드가 갈수록 가팔라진다**(2026-09-05 사용자 확정) — R1 +3% → R50 +15%
-      //    ⛔ 옛 「라운드 밑 1.07 일정 + 초반 램프」는 거꾸로였다(초반 +15~20% · 후반 +7%).
-      assert(Math.abs(campRoundRate(1,1)-CAMP_RR_LO)<1e-9,'R1 배율이 CAMP_RR_LO 가 아님: '+campRoundRate(1,1));
-      assert(Math.abs(campRoundRate(1,CAMP_ROUND_MAX-1)-CAMP_RR_HI)<1e-9,'마지막 라운드 배율이 CAMP_RR_HI 가 아님');
-      assert(campRoundRate(1,1)<1.05 && campRoundRate(1,CAMP_ROUND_MAX-1)>1.12,'초반 완만·후반 가파름이 아니다');
-      { let prev=0; for(let k=1;k<CAMP_ROUND_MAX;k++){ const v=campRoundRate(1,k); assert(v>=prev,'배율이 도로 내려간다: R'+k); prev=v; } }
-      // 깊은 던전일수록 같은 라운드가 더 무겁다
-      assert(campRoundRate(10,1)>campRoundRate(1,1) && campFoeDiff(1,49)/campFoeDiff(1,0) < campFoeDiff(10,49)/campFoeDiff(10,0),
-        '던전 10 이 던전 1 보다 안 무겁다');
-      // 문턱 = 앞 던전을 통째로 깬 배율 × 3 — 두 식이 같은 배율을 읽어야 한다
-      { let x=1; for(let k=1;k<CAMP_ROUND_MAX;k++) x*=campRoundRate(1,k);
-        assert(Math.abs(campDgThreshold(2)/(x*CAMP_DG_STEP)-1)<1e-9,'던전 2 문턱이 던전 1 곡선과 안 맞는다'); }
-      // ③ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
-      C.dg=1; C.cleared=0; const m0=campMineMul();
-      C.cleared=49;        const m1=campMineMul();
-      assert((campFoeDiff(1,49)/campFoeDiff(1,0)) > (m1/m0)*10,
-        '50라운드에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
+        const seam=campFoeDiff(d,0)/campFoeDiff(d-1,CAMP_DG_STEPS);
+        assert(Math.abs(seam-1)<1e-9,'던전 '+d+' 이음매에 절벽이 있다: ×'+seam.toFixed(3)
+          +' — 앞 던전을 다 깨면 그대로 이어져야 한다'); }
+      // ② ⭐ **관문이 갈수록 가팔라진다** — 마지막 본진이 클라이맥스다(릴레이와 같은 방향)
+      { let prev=0; for(let k=1;k<=CAMP_DG_STEPS;k++){ const v=campGateRate(k);
+          assert(v>prev,'관문 배율이 도로 내려간다: 관문 '+k+' ×'+v); prev=v; } }
+      assert(campGateRate(1)>1.2,'첫 관문 배율이 너무 작다 — 「깰 때마다 세진다」가 안 보인다: ×'+campGateRate(1));
+      // ③ ⛔ **끝점을 옮기지 말 것** — campFoeDiff 는 보상(campMineMul)과 환생 포인트(campRebMul)도
+      //    읽는다. 한 회차 천장이 크게 달라지면 「첫 환생 하루」 설계가 통째로 어긋난다(HUNT_R1 §4).
+      //    옛 눈금(던전 3 · 라운드 50)의 천장이 9.2e7 이었다.
+      { const top=campFoeDiff(CAMP_DG_MAX,CAMP_DG_STEPS);
+        assert(top>3e7 && top<3e8,'한 회차 천장이 옛 자리(9.2e7)에서 크게 벗어났다: '+top.toExponential(2)); }
+      // ④ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
+      C.dg=1; C.cleared=0; C.broken=0; const m0=campMineMul();
+      C.cleared=CAMP_DG_STEPS; C.broken=CAMP_DG_STEPS; const m1=campMineMul();
+      assert((campFoeDiff(1,CAMP_DG_STEPS)/campFoeDiff(1,0)) > (m1/m0)*10,
+        '던전 하나에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
       // ④ 마리 수 — R1 은 1마리(어느 던전이나 · 램프 없이 기준값이 1), 라운드가 오르면 잘게 쪼갠다. 상한 100
       C.dg=2; assert(campFoeCount(1)===1,'던전 2 R1 마리 수: '+campFoeCount(1));
       C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 1마리가 아님: '+campFoeCount(1));
@@ -7550,8 +7574,9 @@ async function groupLobby(){
         assert(Math.abs(split/whole-1)<1e-6,'쪼개서 낸 총 체력이 한 번에 낸 것과 다르다: '+split+' vs '+whole); }
       // ⑥ 0단계(캠프)에는 난이도가 없다
       assert(campFoeDiff(0,0)===1,'캠프에 난이도가 붙었다: '+campFoeDiff(0,0));
-      return '문턱 ×'+CAMP_DG_STEP+' · 라운드 배율 '+campRoundRate(1,1).toFixed(3)+'→'+campRoundRate(1,CAMP_ROUND_MAX-1).toFixed(3)
-        +' · 천장 '+campFoeDiff(CAMP_DG_MAX,CAMP_ROUND_MAX-1).toExponential(2);
+      return '관문 배율 ×'+campGateRate(1)+'→×'+campGateRate(CAMP_DG_STEPS)
+        +' · 던전당 ×'+campFoeDiff(1,CAMP_DG_STEPS).toFixed(0)+' · 이음매 없음'
+        +' · 천장 '+campFoeDiff(CAMP_DG_MAX,CAMP_DG_STEPS).toExponential(2);
     } finally { C.dg=back.dg; C.cleared=back.cleared; } });
 
   // 🗺 맵 위 띠 — **칩과 안 겹치는 것만** 남긴다(적 수 · 트리 입구).

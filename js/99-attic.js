@@ -1227,3 +1227,10 @@ function campRndMark(){ const d=document.getElementById('campDrop'); if(!d||!_cd
   // 끝에 닿은 쪽 화살표는 잠근다(1 아래·50 위는 없다)
   for(const b of d.querySelectorAll('.cdArw')){ const dd=+b.dataset.d;
     b.disabled=(dd<0 && _cdPick.rnd<=1)||(dd>0 && _cdPick.rnd>=CAMP_RND_MAX); } }
+
+// ── [js/19-camp.js] campDgThreshold — 🏰 **옛 라운드 눈금의 던전 문턱**(2026-09-09 배선 끊김)
+//   던전 하나를 라운드 49개로 넘던 시절의 자다. 관문 6개(CAMP_GATE_RATE)로 갈아타면서
+//   `campFoeDiff` 가 이걸 안 부른다. ⛔ 되살리지 말 것 — 되살리면 던전 문턱이 ×540 절벽으로 돌아온다.
+function campDgThreshold(dg){
+  let x = 1; for(let k = 1; k <= CAMP_ROUND_MAX - 1; k++) x *= campRoundRate(dg - 1, k);
+  return x * CAMP_DG_STEP; }

@@ -109,6 +109,21 @@ const CAMP_FOE_TOWER_CD  = 1.0;          // 발사 간격(초)
 //   ⚠ 두 표는 단계(step 1~6)로 읽는다 — 배열 인덱스는 step−1.
 const CAMP_FOE_RELAY_S = [3.4, 3.0, 2.7, 2.4, 2.1, 1.8];   // 단계별 스폰 주기(초) — 짧아진다
 const CAMP_FOE_RELAY_N = [2, 2, 3, 3, 4, 5];               // 단계별 한 무리 마리 수 — 늘어난다
+// 🧯 **전장 적 상한 — 「죽음의 나선」을 끊는 유일한 장치** (2026-09-09 사용자 지적)
+//   ⛔ 상한이 없으면 **못 이기는 판은 반드시 지는 판**이 된다: 죽이는 속도가 나오는 속도보다
+//     느린 순간부터 적이 무한히 쌓이고, 그 뒤로는 무엇을 해도 전멸한다. 병력이 약한 초반이
+//     정확히 그 구간이라, 「들어간다 → 죽는다 → 다시 산다」가 끝없이 돈다.
+//   ⭐ 상한이 있으면 못 이기는 판은 **버티는 판**이 된다 — 적을 잡아 돈을 벌며 캠프 경제로
+//     자라다가, 준비되면 다시 민다. 그게 이 게임이 원한 마린키우기의 고리다.
+//   ⚠ 상한은 단계마다 오른다 — 「밀수록 어려워진다」는 그대로다(마리 수도 세기도 함께 오른다).
+//   ⛔ 상한을 없애서 난이도를 올리지 말 것. 난이도는 CAMP_GATE_RATE(세기)와 이 표(머릿수)로 올린다.
+//   ⚠ 전부 안 쟀다.
+const CAMP_FOE_LIVE_MAX = [8, 10, 13, 16, 20, 25];         // 단계별 전장에 동시에 살아 있을 수 있는 적
+// ⚠ **릴레이 무리 한 벌이 가져가는 몫**(campScaleFoes 의 share). ⛔ 옛 `k / _wqTot` 를 쓰지 말 것 —
+//   그건 「라운드 총량을 무리들이 나눠 갖는다」는 뜻이고, 라운드가 없는 릴레이에서는 `_wqTot` 가
+//   **끝없이 커져 적이 시간이 갈수록 약해진다**(2026-09-09 실측: 5분 뒤 아군이 한 기도 안 죽었다).
+//   ⭐ 릴레이는 흐름이지 덩어리가 아니다 — 한 마리가 늘 같은 몫(1/REF)을 갖는다.
+const CAMP_FOE_RELAY_REF = 12;           // ⚠ 안 쟀다 — 「한 벌의 총량」이 적 몇 마리치인가
 const CAMP_FOE_SPAWN_R   = 26;           // 건물 둘레로 흩는 반경 — 한 점에서 겹쳐 나오면 끼인다
 const CAMP_FOE_SPAWN_OFF = 18;           // 건물보다 내 쪽으로 이만큼 — 건물 안에서 안 나오게
 // ⚡ **보급고** — 진행에 안 세지만 깨면 일시 버프. ⭐ 「지금 들러서 힘 받고 갈까」가 생긴다.
@@ -314,8 +329,8 @@ function campCounterWave(b){
   // ⭐ **깨진 그 자리에서** 튀어나온다 — 위쪽 줄에서 나오면 「보복」으로 안 읽힌다.
   const act = campFoeActive();
   CAMPB._wq.push({ n:n, x:b.x, y:b.y, ids:(act && act.spawn) || null });
-  CAMPB._wqTot = (CAMPB._wqTot || 0) + n;
   CAMPB._wqT = 0;                                          // 곧바로 나온다
+  // ⛔ `_wqTot` 을 건드리지 않는다 — 그건 **옛 라운드 큐**의 자다(위 CAMP_FOE_RELAY_REF).
   return n; }
 
 // ── 🌊 릴레이 압박 — **활성 건물 한 곳**이 적을 보낸다 ────────────────────
@@ -328,11 +343,25 @@ function campFoeSpawnTick(dt){
   CAMPB._fspT = (CAMPB._fspT || 0) - dt;
   if(CAMPB._fspT > 0) return 0;
   const i = campFoeStepIdx(act);
+  // 🧯 상한에 닿았으면 안 보낸다 — ⛔ 이 줄을 빼면 못 이기는 판이 반드시 지는 판이 된다(위 설명).
+  //   ⚠ **대기 중인 무리도 센다**(_wq) — 안 세면 큐에 쌓아 두었다가 한꺼번에 쏟아진다.
+  { const live = campFoeLive(), pend = campFoePendN();
+    if(live + pend >= (CAMP_FOE_LIVE_MAX[i] | 0)){ CAMPB._fspT = CAMP_FOE_RELAY_S[i]; return 0; } }
   const n = CAMP_FOE_RELAY_N[i] | 0;
   CAMPB._fspT = CAMP_FOE_RELAY_S[i];
   if(!CAMPB._wq) CAMPB._wq = [];
   CAMPB._wq.push({ n:n, x:act.x, y:act.y, ids:act.spawn || null });
-  CAMPB._wqTot = (CAMPB._wqTot || 0) + n;
+  return n; }                                              // ⛔ `_wqTot` 은 안 건드린다(위 설명)
+
+// 지금 전장에 살아 있는 적 · 아직 안 나온 적(큐에 든 것)
+function campFoeLive(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB.ai) return 0;
+  let n = 0; for(const u of CAMPB.ai.units) if(u && !u.dead) n++;
+  return n; }
+function campFoePendN(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._wq) return 0;
+  let n = 0;
+  for(const q of CAMPB._wq) n += (q && typeof q === 'object') ? (q.n | 0) : (q | 0);
   return n; }
 
 // ── ⚡ 보급고 버프 ────────────────────────────────────────────────────────
