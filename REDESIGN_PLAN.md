@@ -165,6 +165,21 @@ function campDgTimerTick(dt)         // 🎁 타이머 — dg>0 이고 전장이
 | 룬 칸 해금 | `campRuneBestRound`(라운드 환산) | `campRuneBestStep()` = max((dg−1)×6 + best[dg]) · `RUNE_SLOT_R` 을 **0~18 눈금**으로 다시 적는다(GEM.md §8-3 갱신) |
 | 환생 화면 `.crFx` | 재화×던전×라운드 | 재화 → **도달**(아래 1-F) · 라운드 → 건물 |
 
+#### 1-E 진행 (2026-09-09 · 화면을 실제 게임에 얹었다)
+
+| 항목 | 상태 |
+|---|---|
+| 던전 칩 · 던전 선택 화면(라운드 줄 삭제 · [진입]) | ✅ (앞선 커밋) |
+| **적 기지 그리기** — 3D(syncBuild 규약) · ③안 표식(밑변 광원·표적·안개·잔해·체력·🔒) | ✅ `campFoeBld3D` · `campFoeMarks` · `campFoeOverlayHTML` |
+| 12채가 화면에 다 드나 | ✅ **든다** — 진입 때 `campFoeLookAt`(축소 한계 · y 는 적 기지↔본부 사이 0.45) · 실측 12/12 |
+| 맵 띠 「다음 표적」 | ✅ `.cbTgt` |
+| 적 건물 탭 → 프로필 → 「공격 대상」 카드 → `C.foeTgt` | ✅ 탭은 들여다보기(`_foeSel`) · 지정은 카드 |
+| 종족 선택 제거 | ✅ 유니온 고정 · 옛 화면은 다락(ATTIC §5-D) · 첫 진입 연출은 그대로 |
+| 환생 화면 `.crFx` 라벨 | ✅ 「× 건물」 |
+| 룬 칸 해금 눈금 | ⚠ `campRuneBestRound` 는 6단 환산으로 바뀌어 있음 · `RUNE_SLOT_R` 표(0~16)가 새 눈금(0~18)에 맞는지는 **안 봤다** |
+
+⚠ 값(뷰 비율 0.45 · 표식 크기)은 헤드리스 실측이다 — 실기에서 한 번 볼 것.
+
 ### 1-F. 곡선·공식 — 자리만 바꾸고 값은 나중에
 - `campFoeDiff(dg, broken)`: 던전 문턱 ×3 유지 · 던전 안 6계단은 `CAMP_STEP_R=[1, r1, …, r5]`(표 · 단계 0 자로 맞춘다). ⛔ 50라운드 곡선 상수(`CAMP_RR_LO/HI`·`campRoundRate`) → 다락.
 - `campMineMul()`: `cleared` → `broken`(6계단으로 나눠 오른다 · `campMineInc` 분모 = 6).

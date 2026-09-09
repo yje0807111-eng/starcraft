@@ -1729,7 +1729,7 @@ function campRebRender(){
     + '<div class="crPt"><div class="crK">환생 트리 포인트</div>'
     + '<div class="crPv">+' + campNum(gPts) + '</div>'
     + '<div class="crFx">재화 <b>' + fW.toFixed(2) + '</b> × 던전 <b>' + fD.toFixed(2)
-    + '</b> × 라운드 <b>' + fR.toFixed(2) + '</b></div></div></div>'
+    + '</b> × 건물 <b>' + fR.toFixed(2) + '</b></div></div></div>'   // 🏰 라운드 → 부순 건물(2026-09-09)
     // ⬇ 접혔을 때 위·아래 빈 자리를 **1 : 0.55** 로 나눈다 — 위가 더 넓어 카드가 가운데보다 내려온다
     //   (2026-09-04 사용자 지적: 접으면 위가 너무 비었다). 펴져 있으면 이 칸은 0 이다.
     + '<div class="crGap2"></div>'
@@ -3112,6 +3112,18 @@ function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.u
 function campFieldEnts(){
   return campSelList().map(function(u){
     return { eid:'cf_' + u.uid, type:'unit', uid:(u.gm || u.id), x:u.x, y:u.y, _fu:u }; }); }
+// 🏰 적 건물 프로필 시트 — 모델은 23-camp-dungeon(campFoeSheetModel) · 껍데기는 공용 renderCmdGrid.
+function campFoeSheet(){
+  const body = document.getElementById('btSheetBody'), sheet = document.getElementById('btSheet');
+  if(!body || !sheet || typeof renderCmdGrid !== 'function' || typeof campFoePicked !== 'function') return false;
+  const b = campFoePicked(); if(!b) return false;
+  const model = (typeof campFoeSheetModel === 'function') ? campFoeSheetModel(b) : null; if(!model) return false;
+  model.compact = true; model.build = true;
+  sheet.classList.add('open', 'simple');
+  renderCmdGrid(body, model);
+  body._cfSig = 'foe:' + b.eid + ':' + Math.round(b.hp);
+  const dz = document.getElementById('btDesel'); if(dz) dz.classList.add('on');
+  return true; }
 function campFieldSheet(){
   const body = document.getElementById('btSheetBody'), sheet = document.getElementById('btSheet');
   if(!body || !sheet || typeof techUnitPanelModel !== 'function' || typeof renderCmdGrid !== 'function') return false;
@@ -3254,6 +3266,14 @@ function campPtrUp(ev){
   if(typeof _btDown === 'undefined' || !_btDown || _btMoved) return false;
   const u = campBattleAt(ev.clientX, ev.clientY);
   if(u){ campSelSet([u]); if(typeof playSfx === 'function') playSfx('ui_tab'); return true; }
+  // 🏰 ②-b 적 건물을 눌렀다 = **다음 표적**으로 고른다(2026-09-09 · REDESIGN_PLAN 1-E).
+  //    ⚠ 유닛보다 뒤, 벙커·빈 바닥보다 앞 — 건물은 빈 바닥이 아니라서 ④로 새면 「이동」이 돼 버린다.
+  if(typeof campFoeTapAt === 'function'){
+    const g0 = campScr2G(ev.clientX, ev.clientY);
+    const fb = g0 ? campFoeTapAt(g0.x, g0.y) : null;
+    if(fb){ if(typeof playSfx === 'function') playSfx('ui_tab');
+      if(typeof campFoeSheet === 'function') campFoeSheet();
+      return true; } }
   // ③ 고른 병력이 있고 **벙커**를 눌렀다 = 탑승 (2026-08-30)
   //    ⚠ 바닥 판정보다 **먼저** 본다 — 벙커는 빈 바닥이 아니라서 아래 ④로 새 버린다.
   if(_campSel.length){
@@ -3387,6 +3407,27 @@ function campBattleList(){
 //   ⭐ 마크업은 공용 `_barsHTML`(02-gacha.js) 하나뿐이다 — ⛔ 새 HP 바를 만들지 말 것.
 //     좌표도 기지 바와 **같은 변환**(_techW2S)을 쓴다(다른 자를 쓰면 3D 유닛과 어긋난다).
 //   ⚠ 적은 붉은색으로 굳힌다 — 오토배틀(10-engine.js)의 `_foe?'#ff5a5a'` 규약과 같다.
+// 🏰 **적 기지 표식** — ③안 「밑변 광원」(REDESIGN_PLAN §위험 2 · 목업 docs/mock/camp-foebase-4.html).
+//   모델은 23-camp-dungeon 의 campFoeMarks 가 준다 — 여기는 그것을 #cstLabels 의 DOM 으로 옮길 뿐이다.
+//   ⭐ 자리·폭은 내 건물 체력바(techMapRender 의 .bldHp)와 **같은 자**(_techW2S · 발판 폭 × 줌)다.
+//   ⛔ 번호 배지·깃발·후광을 붙이지 말 것 · ⛔ 부수 건물을 물리지 말 것(방어탑이 흐려지면 위험이 안 보인다).
+function campFoeOverlayHTML(){
+  if(!CAMPB || campDgN() <= 0 || typeof campFoeMarks !== 'function' || typeof _techW2S !== 'function') return '';
+  const zm = (G.tech && G.tech.view ? G.tech.view.zoom : 1) || 1, out = [];
+  for(const m of campFoeMarks()){
+    const s = _techW2S(m.x, m.y);
+    if(s.x < -0.15 || s.x > 1.15 || s.y < -0.15 || s.y > 1.15) continue;
+    const w = Math.max(0.06, m.fw * _techCW() * zm), h = Math.max(0.05, m.fh * _techCH() * zm);
+    const cls = 'fbMark' + (m.prog ? ' prog' : ' side') + (m.tgt ? ' tgt' : '') + (m.hid ? ' hid' : '')
+      + (m.dead ? ' dead' : '') + (m.lock ? ' lock' : '') + (m.tower ? ' tower' : '');
+    let inner = '';
+    if(m.tgt && !m.dead) inner += '<i class="fbCr"></i><b class="fbTip">다음 표적</b>';
+    if(m.lock && !m.tgt) inner += '<b class="fbLock">🔒</b>';
+    if(m.hit && !m.dead) inner += '<i class="fbHp"><i style="width:' + (Math.max(0, Math.min(1, m.hp / m.max)) * 100).toFixed(1) + '%"></i></i>';
+    if(!m.hid && !m.dead) inner += '<b class="fbNm">' + escHtml(m.nm || '') + '</b>';
+    out.push('<div class="' + cls + '" data-eid="' + m.eid + '" style="left:' + (s.x * 100).toFixed(2) + '%;top:'
+      + (s.y * 100).toFixed(2) + '%;width:' + (w * 100).toFixed(2) + '%;height:' + (h * 100).toFixed(2) + '%">' + inner + '</div>'); }
+  return out.join(''); }
 function campBattleBars(){
   if(!CAMPB || campDgN() <= 0) return '';
   if(typeof _barsHTML !== 'function' || typeof _techW2S !== 'function') return '';
@@ -3420,7 +3461,10 @@ function campWithBattleDraw(fn){
   const orig = M.syncBuild;   // ⚠ 건설 맵은 sync 가 아니라 **syncBuild** 다(14-input-fx.js:950)
   M.syncBuild = function(list){
     try{ const add = campBattleList();
-      if(add.length && Array.isArray(list)) for(const e of add) list.push(e); }catch(_e){}
+      if(add.length && Array.isArray(list)) for(const e of add) list.push(e);
+      // 🏰 적 기지 건물 — 기지 건물과 같은 규약의 엔트리(23-camp-dungeon campFoeBld3D)
+      const fb = (typeof campFoeBld3D === 'function') ? campFoeBld3D() : [];
+      if(fb.length && Array.isArray(list)) for(const e of fb) list.push(e); }catch(_e){}
     return orig.apply(M, arguments); };
   try{ return fn(); } finally { M.syncBuild = orig; } }
 
@@ -4491,19 +4535,23 @@ function campBarRender(){
   const el = document.getElementById('campBar'); if(!el) return;
   const C = campState(); const pts = Math.floor(campRtPts());
   const dg = campDgN(), foe = campAlive('ai');
+  const tg = (dg > 0 && typeof campFoeTgtName === 'function') ? campFoeTgtName() : '';   // 🎯 다음 표적(23-camp-dungeon)
   campFevPaint();                                  // ⚡ 남은 초는 캐시 밖에서 갱신한다
-  const key = dg + '|' + foe + '|' + pts;
+  const key = dg + '|' + foe + '|' + pts + '|' + tg;
   if(key === _campBarS) return;
   _campBarS = key;
   // ⛔ 던전·라운드·진행은 여기 두지 말 것 — 재화 바 왼쪽 칩(#curTitle · js/12-appshell.js)이
   //    이미 그걸 보여주고 거기에 이동 드롭다운까지 붙어 있다. 두 곳에 두면 반드시 어긋난다.
   const fo = el.querySelector('.cbFoe');
   if(fo) fo.textContent = (dg > 0 && foe > 0) ? ('적 ' + foe) : '';
+  // 🎯 **다음 표적** — 띠 오른쪽(③안). 읽는 것뿐이다(누르는 곳은 맵의 건물이다).
+  const tgEl = el.querySelector('.cbTgt');
+  if(tgEl){ tgEl.innerHTML = tg ? ('다음 <b>' + escHtml(tg) + '</b>') : ''; tgEl.classList.toggle('hide', !tg); }
   // 🚪 **띠에 화면 입구를 두지 않는다**(2026-09-03 사용자 확정).
   //   🌳 트리도(2026-09-01) 🔁 환생도 하단 네비에 제 칸이 있다 — 띠에 또 두면 입구가 둘이 된다.
   //   ⛔ 되돌리지 말 것. 띠에 남는 것은 **읽는 것**뿐이다(적 수 · 피버).
   // 보여줄 게 하나도 없으면 띠 자체를 숨긴다(빈 판이 맵을 가리지 않게)
-  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !campFevActive());
+  el.classList.toggle('empty', !(dg > 0 && foe > 0) && !campFevActive() && !tg);
 }
 // 화면을 떠났다 돌아올 때 다시 그리게 한다(잔상 금지 — 캐시가 남으면 옛 값이 보인다)
 function campBarReset(){ _campBarS = ''; campFevPaint(); }
@@ -5116,7 +5164,9 @@ function campHideView(){
 //   복원을 그 앞에 두면 방금 복원한 것이 통째로 날아간다.
 function campEnter(){
   const C = campState(); if(!C) return;
-  if(!C.race){ campRaceSheet(); return; }              // 종족을 아직 안 골랐다
+  // 🧬 **종족 선택 화면은 뜨지 않는다**(2026-09-09 · REDESIGN_PLAN 1-E). 첫 바퀴는 유니온 고정이고
+  //   종족 변이는 2차 환생(단계 4)의 몫이다. ⛔ campRaceSheet 로 되돌리지 말 것.
+  if(!C.race){ C.race = 'terran'; if(typeof campSave === 'function') campSave(); }
   if(typeof techUIInit !== 'function') return;
   techUIInit(campTechRace(C.race));                    // ① 본부·일꾼·광맥이 깔린 새 판
   const had = campRestore();                           // ② 저장분이 있으면 덮어씀
@@ -5266,7 +5316,10 @@ if(typeof document !== 'undefined' && typeof window !== 'undefined'){
 }
 // HOME 진입점 — 05-home.js 의 openHome() 이 부른다(옛 hbStart() 자리).
 function campOpen(){ const C = campState(); if(!C) return;
-  if(!C.race) campRaceSheet(); else campEnter(); }
+  // 🧬 종족을 아직 안 정했으면 유니온으로 박고 **첫 진입 연출**(검은 판 → 캠프 → 튜토리얼)을 그대로 탄다.
+  //   ⛔ campRaceSheet 로 되돌리지 말 것 · ⛔ campEnter 를 바로 부르지 말 것 — tutoKick 이 그 연출 끝에 걸려 있다.
+  if(!C.race){ C.race = 'terran'; if(typeof campSave === 'function') campSave(); campRaceToCamp(); }
+  else campEnter(); }
 
 // 주기 저장 — 건물 완성·생산마다 부르는 대신 타이머 하나로 묶는다(저장은 비싸다).
 const CAMP_SAVE_MS = 30000;
@@ -5303,29 +5356,6 @@ let _campRacePick = null;
 //   없으면 배경은 기본 그라데, 아이콘은 STK_RACES[k].icon(이모지)로 대체된다.
 function campRaceArt(k){ return 'assets/backgrounds/races/' + stkTechRace(k) + '.webp'; }
 function campRaceIcon(k){ return 'assets/icons/races/' + stkTechRace(k) + '.webp'; }
-function campRaceSheet(){
-  if(typeof STK_RACES === 'undefined') return;
-  _campRacePick = _campRacePick || CAMP_RACE_ORDER[0];
-  let ov = document.getElementById('campRaceOv');
-  if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv';
-    // ⚠ 껍데기는 **한 번만** 짓는다 — 미리보기 두 겹(.crPrevL)이 살아 있어야 크로스페이드가 된다.
-    //   행/버튼만 campRaceRender() 가 다시 그린다.
-    ov.innerHTML = '<div class="crPrev"><div class="crPrevL"></div><div class="crPrevL"></div></div>'
-      + '<div class="crScr"><div class="crHd"><div class="crTtl">종족 선택</div></div>'
-      + '<div class="crRows"></div>'
-      + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
-    (document.getElementById('phone') || document.body).appendChild(ov); }
-  { const _ph=document.getElementById('phone'); if(_ph) _ph.classList.add('campPick'); }   // 옛 사냥터 UI 를 숨긴다(css 「campPick」)
-  // ⭐ display 해제와 `on` 을 **같은 프레임에** 한다. animation 은 클래스가 붙는 순간 처음부터 돌기 때문에
-  //    한 프레임 미룰 이유가 없다 — 미루면 그 사이 프레임에 판이 보여 검은 섬광이 된다(css 「기본값은 0」).
-  ov.classList.remove('hide');
-  ov.classList.remove('closing');
-  // 🎬 로딩에서 바로 넘어온 것이면 로딩과 **같은 길이로** 차오른다(css 「raceFx」)
-  { const _ph2=document.getElementById('phone');
-    ov.classList.toggle('raceFx', !!(_ph2 && _ph2.classList.contains('raceIn'))); }
-  ov.classList.add('on');
-  campRaceRender(); campRacePrev(_campRacePick, true);
-}
 // 전장 그림 교체 = **짧은 크로스페이드**(두 겹을 번갈아 쓴다). 첫 표시(now)는 페이드 없이 바로.
 function campRacePrev(k, now){
   const ov = document.getElementById('campRaceOv'); if(!ov) return;
@@ -5355,20 +5385,6 @@ function campRaceRender(){
 }
 function campRaceSel(k){ if(!STK_RACES[k] || k === _campRacePick) return;
   _campRacePick = k; campRaceRender(); campRacePrev(k); }
-// ⚠ 한 번 고르면 바꾸지 않는다 — 기지가 종족 건물로 채워지므로 도중 교체는 뜻이 없다.
-//   (바꾸는 기능이 필요해지면 '기지를 버리고 새로 시작'으로 따로 만든다)
-function campPickRace(){
-  const C = campState(); if(!C || C.race) return;
-  C.race = _campRacePick || CAMP_RACE_ORDER[0];
-  if(typeof saveMeta === 'function') saveMeta();
-  // 🎬 **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
-  //    여기가 「게임이 실제로 시작되는 지점」이다(enterAfterWarm 의 _needRace 주석과 짝).
-  //    ⛔ 여기서 종족 판을 걷지 않는다. 위에서 검은 판(z88)이 덮어 주므로 걷을 이유가 없고,
-  //       먼저 걷으면 **아직 반투명한 검은 판 아래로 캠프가 통째로 드러난다**
-  //       (2026-08-27 프레임 실측: 종족 선택 73.9 → **캠프 139** → 검은 화면 35.6 → 캠프 142.
-  //        캠프가 두 번 나온다). 걷는 일은 campRaceToCamp 이 다 덮은 뒤에 한다.
-  campRaceToCamp();
-}
 
 // 종족 선택 → 캠프.
 // ⭐ **순서가 핵심이다.** campEnter() 는 **즉시** 부른다 — 늦추면 이 함수를 부르고 바로 캠프를
@@ -6430,7 +6446,12 @@ function campFrame(now){
     // ❤ 전장 HP 바 — renderBuildTab 이 라벨 층(#cstLabels)을 **통째로 덮으므로** 그 뒤에 얹는다.
     //   ⛔ renderBuildTab 안으로 옮기지 말 것 — 그 파일은 관리자 건설 탭과 공유다(캠프 전장이 새 나간다).
     { const _lb = document.getElementById('cstLabels');
-      if(_lb){ const _hb = campBattleBars(); if(_hb) _lb.insertAdjacentHTML('beforeend', _hb); } }
+      if(_lb){ const _hb = campBattleBars(); if(_hb) _lb.insertAdjacentHTML('beforeend', _hb);
+        // 🏰 적 기지 표식(밑변 광원·표적·안개·잔해·체력) — 같은 층에 같은 방식으로(2026-09-09)
+        //   ⚠ **한 층(.fbLayer)으로 갈아 끼운다** — 덧붙이기만 하면 프레임마다 쌓인다(실측: 12채가 144개).
+        const _old = _lb.querySelector('.fbLayer'); if(_old) _old.remove();
+        const _fm = (typeof campFoeOverlayHTML === 'function') ? campFoeOverlayHTML() : '';
+        if(_fm) _lb.insertAdjacentHTML('beforeend', '<div class="fbLayer">' + _fm + '</div>'); } }
     campBarRender();                                              // 🗺 단계·라운드 배지(바뀐 것만 쓴다)
     campDrawGas2();                                               // ⛽ 오른쪽 가스 구역(캠프가 얹는다)
     campSyncHire(); campSyncSupply(); campSyncRefinery(); campSyncUnitCost();   // 👷🏠⛽⚔ 일꾼·보급소·정제소·전투 유닛 가격
@@ -6938,7 +6959,14 @@ function campSyncSheet(){
     // 🖐 **전장 유닛 지정도 「고른 것」이다**(2026-09-05 사용자 신고). 던전에서 유닛을 고르면 campSelSet 이
     //    기지 지정(selU)을 비우므로, 기지 변수만 보면 늘 idle 로 읽혀 **매 프레임 요약이 유닛 카드를 덮었다**.
     //    ⛔ _campSel 길이로 재지 말 것 — 죽은 유닛 번호가 남을 수 있다. campSelList 가 산 것만 준다.
+    // 🏰 **고른 적 건물**이 있으면 그 프로필(공격 대상 카드)이다 — 유닛 지정보다 앞, 요약보다 앞.
+    //   ⚠ 표적이 죽으면 campFoePicked 가 null 을 주어 저절로 요약으로 돌아간다.
     const fieldN = (typeof campSelList === 'function') ? campSelList().length : 0;
+    if(!fieldN && typeof campFoePicked === 'function' && campFoePicked()){
+      const body = document.getElementById('btSheetBody');
+      const sig = 'foe:' + campFoePicked().eid + ':' + Math.round(campFoePicked().hp);
+      if(body && body._cfSig !== sig && typeof campFoeSheet === 'function') campFoeSheet();
+      return; }
     if(fieldN){
       // 지정이 바뀌었을 때만 그린다(표식 _cfSig) — 매 프레임 renderCmdGrid 를 부르면 카드가 깜빡인다
       const body = document.getElementById('btSheetBody');

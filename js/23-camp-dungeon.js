@@ -229,6 +229,9 @@ function campFoeBase(dg){
   { const cand = out.slice().sort(function(a, b){ return b.y - a.y; });  // y 큰 것 = 내 쪽
     for(let j = 0; j < Math.min(3, cand.length); j++) cand[j].seen = true; }
   campFoeReveal(true);                                     // 그 밖에 이미 시야에 든 것도 바로 드러낸다
+  // 👁 기지가 서는 순간 뷰를 그쪽으로 — 전장은 campEnterDungeon 이 아니라 **첫 campCombatStep** 이 여니
+  //   (실측: 진입 때는 CAMPB 가 아직 없다) 여기서 걸어야 실제로 보인다.
+  campFoeLookAt();
   return out.length; }
 
 // 살아 있는 적 건물 — ⭐ **12채 전부 표적이다**(2026-09-09 · 옛 '치장'을 없앴다).
@@ -521,4 +524,145 @@ function campEnterDungeon(dg){
   if(typeof campSkin === 'function') campSkin();  // 🎨 바닥을 그 던전 그림으로
   // 🏰 전장이 열려 있으면 적 기지도 그 던전 것으로 다시 세운다
   if(typeof CAMPB !== 'undefined' && CAMPB) campFoeBase(n);
+  if(n > 0 && typeof CAMPB !== 'undefined' && CAMPB) campFoeLookAt();   // 👁 적 기지가 보이는 자리로
   return n; }
+
+
+// ══ 🖼 화면이 읽는 것 — **모델만 준다**(DOM 은 19-camp · 3D 는 90-m3d 가 그린다) ═════════════
+//   ⭐ 적 기지 화면은 ③안 「밑변 광원」이다(REDESIGN_PLAN §위험 2 · 목업 docs/mock/camp-foebase-4.html).
+//     진행 건물 6채만 바닥이 붉다 · 다음 표적은 붉은 모서리 · 못 본 건물은 속 빈 실루엣 ·
+//     잔해는 ✕ · 체력 선은 맞은 건물에만. ⛔ 번호 배지·깃발·후광을 붙이지 말 것 · ⛔ 부수 건물을 물리지 말 것.
+// 🏗 **3D 엔트리** — 기지 건물이 syncBuild 에 들어가는 것과 **같은 규약**(14-input-fx.js:910~ 의 건물 줄).
+//   캠프 프레임이 M3D.syncBuild 를 감쌀 때(19-camp campWithBattleDraw) 전투 유닛 뒤에 덧붙인다.
+//   ⚠ 안 본 것(seen=false)은 hidden 으로 넘긴다(안개 규약 — 자리는 잡되 그리지 않는다) · 죽은 것은 안 넘긴다(잔해는 2D ✕).
+//   ⚠ race 는 **던전 종족**(TECH_MODEL 키) — 내 종족이 아니다. ⛔ 두 번째 3D 동기화 함수를 만들지 말 것.
+function campFoeBld3D(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld || typeof G === 'undefined' || !G.tech) return [];
+  const d = campDgDef((typeof campDgN === 'function') ? campDgN() : 0); if(!d) return [];
+  if(typeof TECH_MODEL === 'undefined' || !TECH_MODEL[d.race] || typeof _techW2S !== 'function') return [];
+  const v = G.tech.view || { x:0.5, y:0.5, zoom:1 }, W = CAMPB.world || 1;
+  const map = document.getElementById('cstMain'), Wpx = (map && map.clientWidth) || 360;
+  const cw = _techCW(), ch = _techCH(), cwpx = cw * Wpx * v.zoom;
+  const rows = Math.max(1, (typeof _techRows === 'function') ? _techRows() : 28), zstep = Math.min(60, 2600 / (rows + 1));
+  const zOf = function(wy){ return -1000 + Math.floor((wy - techY0()) / ch) * zstep; };
+  const yaw = (d.race === 'swarm') ? 0 : ((typeof CST_YAW !== 'undefined') ? CST_YAW : 0);
+  const out = [];
+  for(const q of CAMPB._fbld){
+    if(!q || q.dead) continue;
+    const mk = TECH_MODEL[d.race][q.bk]; if(!mk) continue;
+    const cfg = (typeof CST_BLDG_CFG !== 'undefined') ? CST_BLDG_CFG[mk] : null;
+    const g = (typeof campW2G === 'function') ? campW2G(q.x, q.y, W) : { gx:q.x / W, gy:q.y / W };
+    const bf = (typeof _techFoot === 'function') ? _techFoot(d.race, q.bk) : { w:2, h:2 };
+    const by = g.gy + (bf.h / 2) * ch;
+    const x = (g.gx - v.x) * v.zoom + 0.5, y = (by - v.y) * v.zoom + 0.5;
+    if(x < -0.3 || x > 1.3 || y < -0.3 || y > 1.3) continue;
+    out.push({ uid:'cst_foe_' + q.eid, id:'cb_' + mk, x:x, y:y,
+      face:yaw + ((cfg && cfg.f) || 0), yoff:-3, dy:((cfg && cfg.dy) || 0), lift:0,
+      fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12),
+      sel:false, buildP:null, hidden:!q.seen, z:zOf(by) }); }
+  return out; }
+// 👁 **던전에 들어가면 적 기지가 보이게 뷰를 맞춘다**(REDESIGN_PLAN §위험 2 「12채가 화면에 다 드나」).
+//   ⛔ 새 팬·줌 장치가 아니다 — 기지 맵의 목표 뷰(techViewT)를 한 번 옮기고 나머지는 원래 장치가 따라간다.
+//   ⭐ 축소는 한계(techMinZoom)까지, 세로는 **적 기지 무게중심과 내 본부의 사이**. 12채가 다 들면 좋고,
+//     안 들면 위쪽(적)이 먼저 보이는 쪽을 택한다 — 「무엇을 부술지」가 「내 기지」보다 먼저다.
+//   ⚠ 캠프(0)로 돌아갈 때는 손대지 않는다 — 기지 맵의 제 뷰로 돌아간다.
+function campFoeLookAt(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld || !CAMPB._fbld.length) return false;
+  if(typeof techViewT !== 'function' || typeof techView !== 'function' || typeof _techClampView !== 'function') return false;
+  const W = CAMPB.world || 1;
+  let sy = 0, n = 0;
+  for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); sy += g.gy; n++; }
+  if(!n) return false;
+  const foeY = sy / n;
+  const me = (CAMPB.me && CAMPB.me.base) ? campW2G(CAMPB.me.base.x, CAMPB.me.base.y, W).gy : 0.64;
+  const t = techViewT(), v = techView();
+  t.zoom = (typeof techMinZoom === 'function') ? techMinZoom() : 1;
+  t.x = 0.5;
+  t.y = foeY + (me - foeY) * CAMP_FOE_LOOK_K;
+  _techClampView(t);
+  // 첫 프레임부터 그 자리 — 부드럽게 따라가면 첫 1초 동안 내 기지만 보인다
+  v.x = t.x; v.y = t.y; v.zoom = t.zoom;
+  return true; }
+const CAMP_FOE_LOOK_K = 0.45;   // 0 = 적 기지 한가운데 · 1 = 내 본부. 실측으로 정한다(아래 스모크가 12채 중 몇 채가 드는지 잰다)
+// 🎨 오버레이 모델 — 건물마다 「어디에·어떤 상태로」. 19-camp 의 campFoeOverlayHTML 이 이걸 DOM 으로 옮긴다.
+//   상태: prog/side · tgt(다음 표적) · hid(안개) · dead(잔해) · lock(구간이 잠겨 아직 못 때린다) · hit(맞았다)
+function campFoeMarks(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld) return [];
+  const d = campDgDef((typeof campDgN === 'function') ? campDgN() : 0); if(!d) return [];
+  const W = CAMPB.world || 1, tgt = campFoeFront(), out = [];
+  for(const b of CAMPB._fbld){
+    if(!b) continue;
+    const g = (typeof campW2G === 'function') ? campW2G(b.x, b.y, W) : { gx:b.x / W, gy:b.y / W };
+    const foot = (typeof _techFoot === 'function') ? _techFoot(d.race, b.bk) : { w:2, h:2 };
+    out.push({ eid:b.eid, nm:b.nm, x:g.gx, y:g.gy, fw:foot.w, fh:foot.h,
+      prog:b.role === 'prog', tower:b.kind === 'tower', depot:b.kind === 'depot',
+      tgt:!!(tgt && tgt.eid === b.eid), hid:!b.seen, dead:!!b.dead,
+      lock:(b.role === 'prog' && !b.dead && b.seen && !campFoeZoneOpen(b.zone)),
+      hp:b.hp, max:b.max, hit:(!b.dead && b.seen && b.hp < b.max) }); }
+  return out; }
+// 🗺 맵 띠 오른쪽에 적을 이름 — 「다음 공학소」. 없으면 빈 문자열(띠가 칸을 감춘다).
+function campFoeTgtName(){ const t = campFoeFront(); return t ? (t.nm || t.bk || '') : ''; }
+// 👆 적 건물을 눌렀다 — 격자 좌표(gx·gy)에서 가장 가까운 **살아 있고 본** 건물. 발판 반폭 안이어야 한다.
+//   ⭐ 누르는 것은 「들여다보기」다(CAMPB._foeSel · 세션 값 · 저장 안 함) — 시트에 프로필이 뜨고,
+//     **표적 지정은 그 카드**(campFoeTgtSet)가 한다. 잠긴 건물도 눌리며 왜 잠겼는지 읽을 수 있다.
+//   ⛔ 여기서 바로 foeTgt 를 박지 말 것 — 잠긴 건물을 누르면 아무 일도 안 일어나 「안 눌린다」로 느껴진다(실측).
+//   ⚠ 안개에 가린 것은 안 잡힌다(실루엣은 있지만 무엇인지 모르는 것이 안개의 뜻이다).
+function campFoeTapAt(gx, gy){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld) return null;
+  const d = campDgDef((typeof campDgN === 'function') ? campDgN() : 0); if(!d) return null;
+  const W = CAMPB.world || 1, cw = (typeof _techCW === 'function') ? _techCW() : 0.05,
+        ch = (typeof _techCH === 'function') ? _techCH() : 0.05;
+  let best = null, bd = 1e9;
+  for(const b of CAMPB._fbld){
+    if(!b || b.dead || !b.seen) continue;
+    const g = (typeof campW2G === 'function') ? campW2G(b.x, b.y, W) : { gx:b.x / W, gy:b.y / W };
+    const foot = (typeof _techFoot === 'function') ? _techFoot(d.race, b.bk) : { w:2, h:2 };
+    const hw = Math.max(1, foot.w) * cw * 0.6, hh = Math.max(1, foot.h) * ch * 0.6;
+    const dx = (gx - g.gx) / hw, dy = (gy - g.gy) / hh, dd = dx * dx + dy * dy;
+    if(dd <= 1 && dd < bd){ bd = dd; best = b; } }
+  if(!best) return null;
+  CAMPB._foeSel = best.eid;
+  return best; }
+
+// 🗂 적 건물 프로필 — **공용 커맨드 카드 모델**(renderCmdGrid · CLAUDE.md 「프로필/커맨드 그리드」).
+//   ⛔ 시트를 새로 만들지 말 것 — 내 건물(techBldgPlainModel)과 같은 껍데기에 「공격 대상」 카드 하나다.
+function campFoeSheetModel(b){
+  if(!b) return null;
+  const d = campDgDef((typeof campDgN === 'function') ? campDgN() : 0);
+  const C = (typeof campState === 'function') ? campState() : null;
+  const isTgt = !!(C && C.foeTgt === b.eid), can = campFoeCanTarget(b);
+  const role = b.role === 'prog' ? ('진행 ' + b.step + '/' + CAMP_DG_STEPS)
+             : (b.kind === 'tower' ? '문지기 탑' : (b.kind === 'depot' ? '보급고' : '부수'));
+  const why = !b.seen ? '아직 못 봤다' : (b.dead ? '이미 부쉈다' : (!campFoeZoneOpen(b.zone) ? ('구간 ' + b.zone + ' 문지기 탑이 살아 있다') : ''));
+  const loot = b.kind === 'res' ? '가스' : b.kind === 'prod' ? '미네랄' : b.kind === 'tech' ? '연구 시간 −'
+             : b.kind === 'main' ? '미네랄 + 가스' : b.kind === 'depot' ? '⚡ 잠시 자원 ×2' : '—';
+  // ⚠ 잠김 표기는 **진행 건물에만** — 탑·보급고는 언제든 때릴 수 있다(실측: 탑 자체에 「잠김」이 떠 헷갈렸다)
+  const stats = [['역할', role], ['구간', String(b.zone) + ((b.role === 'prog' && !campFoeZoneOpen(b.zone)) ? ' · 🔒 잠김' : '')],
+                 ['부수면', loot]];
+  if(b.spawn && b.spawn.length) stats.push(['뽑는 적', b.spawn.join(' · ')]);
+  const ico = (typeof _techBldgPortrait === 'function') ? _techBldgPortrait(b.bk, b.ico) : '';
+  const hpsh = (typeof _cgHpShStr === 'function') ? _cgHpShStr(Math.max(0, Math.round(b.hp)), 0) : '';
+  return { mode:'info', title:b.nm || b.bk, icon:ico, hpsh:hpsh,
+    sub:(d ? d.name : '적 기지') + (why ? (' · ' + why) : ''),
+    items:[{ pro:(typeof pIco === 'function') ? pIco('⚔') : '⚔', sn:isTgt ? '표적 해제' : '공격 대상',
+             tr:isTgt ? '표적' : '', metaCls:'lv', sel:isTgt, state:can ? 'ok' : 'dim',
+             act:'onclick="campFoeTgtSet(event,\'' + b.eid + '\')"' }],
+    info:{ stats:stats } }; }
+// 카드가 부른다 — 이미 표적이면 푼다(자동으로 돌아간다)
+function campFoeTgtSet(ev, eid){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  const C = (typeof campState === 'function') ? campState() : null; if(!C) return;
+  const b = (CAMPB && CAMPB._fbld || []).find(function(q){ return q && q.eid === eid; });
+  if(!b || !campFoeCanTarget(b)){ if(typeof playSfx === 'function') playSfx('ui_denied'); return; }
+  C.foeTgt = (C.foeTgt === eid) ? null : eid;
+  if(typeof campSave === 'function') campSave();
+  if(typeof playSfx === 'function') playSfx('ui_tab');
+  if(typeof campFoeSheet === 'function') campFoeSheet(); }
+// 지금 열어 둔 적 건물(시트가 보여 줄 것) — 눌러 둔 것(_foeSel). 죽었으면 없는 것으로.
+function campFoePicked(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld || !CAMPB._foeSel) return null;
+  const b = CAMPB._fbld.find(function(q){ return q && q.eid === CAMPB._foeSel; });
+  if(!b || b.dead){ CAMPB._foeSel = null; return null; }
+  return b; }
+// 들여다보기를 닫는다(⊘ 해제와 같은 뜻) — 19-camp 의 지정 해제가 부른다
+function campFoeUnpick(){ if(typeof CAMPB !== 'undefined' && CAMPB) CAMPB._foeSel = null; }

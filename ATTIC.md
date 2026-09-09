@@ -264,6 +264,19 @@ CSS 규칙 **342개**(30-home 255 · 40-social 47 · 20-lobby 26 · 10-game 14) 
 그게 얼마나 나빴는지는 실측으로 남아 있다(`BALANCE.md` §3-2-16): 던전 **안**에서는
 관문 6개를 다 깨도 ×1.36(거의 평평)인데 던전을 **넘을 때만** ×540 이었다.
 
+## 5-D. 🧬 캠프 종족 선택 화면 — 2026-09-09
+
+전면 개편(REDESIGN_PLAN 1-E)으로 **첫 바퀴는 유니온 고정**이 됐다 — `campEnter`/`campOpen` 이
+`C.race='terran'` 을 박고 들어간다. 종족을 고르는 일은 2차 환생(단계 4)으로 옮겨 갔다.
+
+| 갔다 | 어디로 | 왜 |
+|---|---|---|
+| `campRaceSheet` · `campPickRace` (19-camp) | `js/99-attic.js` | 부르는 곳이 0 |
+| `#campRaceOv .crPrev/.crScr/.crHd/.crTtl` 규칙 5개 | `css/99-attic.css` | 쓰는 마크업이 0 |
+
+⚠ `campRaceToCamp`(검은 판 → 캠프 → 튜토리얼)는 **살아 있다** — 종족 고정 뒤에도 그 연출을 탄다.
+⛔ **되살리지 말 것.** 종족 변이가 들어오면 옛 전체 화면이 아니라 `segNavHTML(CAMP_RACE_ORDER)` 띠다.
+
 ## 6. 관련 문서
 
 - `GAME_DIRECTION.md` §5 — 유보 목록과 「지우지 말 것」 규칙

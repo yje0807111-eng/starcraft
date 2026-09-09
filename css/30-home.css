@@ -1805,8 +1805,6 @@
   /* 미리보기 자리 — 종족별 전장 그림. 파일이 없으면 이 그라데가 그대로 보인다.
      두 겹(.crPrevL)을 번갈아 써서 종족을 바꿀 때 **짧은 크로스페이드**로 갈린다.
      나중에 녹화 영상이 들어오면 이 두 겹을 <video> 로 바꾼다 — 자리·딤은 그대로. */
-  #campRaceOv .crPrev{position:absolute;inset:0;
-    background:linear-gradient(180deg,#25344a 0%,#1a2636 26%,#101823 48%,#0a0e15 70%,#06080c 100%)}
   #campRaceOv .crPrevL{position:absolute;inset:0;opacity:0;
     background-position:center;background-size:cover;background-repeat:no-repeat;
     transition:opacity .32s ease}
@@ -1818,17 +1816,6 @@
      ② 아래 딤: 로딩 화면(.06→.10→.62→.96)보다 **65% 부근을 더 눌렀다.** 로딩은 로고 한 점만
         얹지만 여기는 종족 3행 + 확정 버튼이 앉는다 — 에테리얼 배경의 불길이 그 자리를 정통으로
         때려 이름이 묻혔다(실측). 행이 시작되는 65%에서 이미 .80 이어야 읽힌다. */
-  #campRaceOv .crPrev::after{content:'';position:absolute;inset:0;
-    background:
-      linear-gradient(180deg,rgba(6,8,12,.72) 0%,rgba(6,8,12,.34) 46%,rgba(6,8,12,0) 100%)
-        top/100% 148px no-repeat,
-      linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 30%,
-        rgba(6,8,12,.38) 52%,rgba(6,8,12,.80) 66%,rgba(6,8,12,.95) 100%)}
-  #campRaceOv .crScr{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;
-    padding:16px 14px 0}
-  /* 제목 — 설정 화면과 같은 크기·자리(왼쪽 정렬) */
-  #campRaceOv .crHd{display:flex;align-items:flex-start;justify-content:space-between}
-  #campRaceOv .crTtl{font-family:var(--font-ti);font-size:21px;color:#fff}
   /* 행 — 설정의 구조(좌 라벨 / 우 표시), 선만 좌우로 사라진다 */
   #campRaceOv .crRows{margin-top:auto;display:flex;flex-direction:column}
   #campRaceOv .crRow{position:relative;display:flex;align-items:center;gap:11px;width:100%;
@@ -2888,3 +2875,44 @@
    ⛔ 여기에 테두리·배경·둥근 모서리를 주지 말 것 — 그림이 이미 육각 판을 갖고 있다.
    ⚠ 크기는 **쓰는 자리가 정한다**(재화 아이콘과 같은 규칙). */
 #campRune .rnBuyI{width:38px;height:38px;display:block;margin:1px auto 2px;object-fit:contain}
+
+
+/* ══ 🏰 적 기지 표식 — ③안 「밑변 광원」(2026-09-09 · 목업 docs/mock/camp-foebase-4.html) ══
+   #cstLabels 에 campFoeOverlayHTML 이 얹는다. 자리·폭은 발판(내 건물 체력바와 같은 자).
+   ⭐ 어휘는 셋뿐 — 진행 건물의 **밑변 광원**, 다음 표적의 **붉은 모서리**, 못 본 것의 **속 빈 실루엣**.
+   ⛔ 번호·깃발·후광 금지 · ⛔ 부수 건물을 물리지 말 것(방어탑이 흐려지면 위험이 안 보인다). */
+#phone.campMode .fbMark{position:absolute;transform:translate(-50%,-50%);z-index:9;pointer-events:none;
+  border-radius:var(--r-sm);box-sizing:border-box}
+/* 진행 건물 — 바닥이 붉다(밑변 광원). 테두리는 한 단 밝다 */
+#phone.campMode .fbMark.prog{box-shadow:inset 0 -2px 0 rgba(255,118,118,.42);
+  border-bottom:1px solid rgba(255,118,118,.55)}
+#phone.campMode .fbMark.prog::after{content:'';position:absolute;left:8%;right:8%;bottom:-2px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,118,118,.9) 50%,transparent)}
+/* 다음 표적 — 붉은 모서리 넷 + 위에 「다음 표적」 */
+#phone.campMode .fbMark .fbCr{position:absolute;inset:-6px;border:1px solid #ff7676;border-radius:2px;
+  clip-path:polygon(0 0,28% 0,28% 1px,1px 1px,1px 28%,0 28%,0 72%,1px 72%,1px calc(100% - 1px),28% calc(100% - 1px),28% 100%,0 100%,
+    100% 100%,72% 100%,72% calc(100% - 1px),calc(100% - 1px) calc(100% - 1px),calc(100% - 1px) 72%,100% 72%,
+    100% 28%,calc(100% - 1px) 28%,calc(100% - 1px) 1px,72% 1px,72% 0,100% 0)}
+#phone.campMode .fbMark .fbTip{position:absolute;top:-19px;left:50%;transform:translateX(-50%);
+  font-family:var(--font-ko);font-size:9px;font-weight:700;color:#ff7676;white-space:nowrap;letter-spacing:.02em}
+/* 못 본 건물 — 속 빈 실루엣(이름도 없다) */
+#phone.campMode .fbMark.hid{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+#phone.campMode .fbMark.hid::before{content:'';position:absolute;inset:22%;border-radius:2px;background:rgba(255,255,255,.06)}
+/* 잔해 — ✕ */
+#phone.campMode .fbMark.dead{opacity:.5}
+#phone.campMode .fbMark.dead::before{content:'';position:absolute;inset:18%;
+  background:linear-gradient(45deg,transparent 46%,rgba(255,255,255,.4) 46% 54%,transparent 54%),
+             linear-gradient(-45deg,transparent 46%,rgba(255,255,255,.4) 46% 54%,transparent 54%)}
+/* 잠긴 구간의 진행 건물 — 🔒 */
+#phone.campMode .fbMark .fbLock{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;opacity:.75}
+/* 체력 선 — 맞은 건물에만 · 유닛 체력바(.bentBar)와 같은 두께 */
+#phone.campMode .fbMark .fbHp{position:absolute;left:4%;right:4%;bottom:3px;height:3px;border-radius:2px;
+  background:rgba(0,0,0,.55);overflow:hidden}
+#phone.campMode .fbMark .fbHp i{display:block;height:100%;background:#ff5a5a}
+/* 이름 — 아래에 작게(내 건물 이름표와 같은 자리) */
+#phone.campMode .fbMark .fbNm{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);
+  font-family:var(--font-ko);font-size:8.5px;font-weight:500;color:#8d97a6;white-space:nowrap}
+#phone.campMode .fbMark.tgt .fbNm{color:#ffb0b0}
+/* 🗺 맵 띠 — 다음 표적(오른쪽 끝) */
+#campBar .cbTgt{margin-left:auto;font-size:11px;color:#c3ccd8}
+#campBar .cbTgt b{color:#ff7676;font-weight:700}

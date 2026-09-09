@@ -488,8 +488,13 @@ async function groupLobby(){
           '좌상단에 구역 이름이 안 뜬다: '+$('curTitle').textContent);
         // 상단 제목이 재화 바에 안 가린다
         const t=$('campTree').querySelector('.ctTitle');
-        assert(t.getBoundingClientRect().top>=cb.getBoundingClientRect().bottom-1,
-          '업그레이드 제목이 재화 바에 가린다'); }
+        // ⚠ 캠프 모드에서는 화면 안 제목이 **감춰져 있다**(이름은 재화 바 왼쪽 #curTitle 이 맡는다 · CLAUDE.md 「캠프 구역 공통 상단」).
+        //   2026-09-09 부터 신규 계정도 종족 시트 없이 바로 캠프에 들어오므로 이 스텝이 캠프 모드에서 돈다 —
+        //   감춰진 제목의 top 은 0 이라 옛 검사가 헛돌았다. 보일 때만 잰다.
+        { const ts=getComputedStyle(t), tr=t.getBoundingClientRect();
+          if(ts.display!=='none' && tr.height>0)
+            assert(tr.top>=cb.getBoundingClientRect().bottom-1,
+              '업그레이드 제목이 재화 바에 가린다: top '+Math.round(tr.top)+' / 바 bottom '+Math.round(cb.getBoundingClientRect().bottom)); } }
       // 💠 룬 구역도 **같은 배경**을 쓴다(2026-09-03) — 오갈 때 안 꺼져야 한다
       if(typeof campRuneEnter==='function'){
         campRuneEnter('slot'); await sleep(20); assert(art(),'룬 구역으로 갔더니 배경이 꺼진다');
@@ -535,7 +540,7 @@ async function groupLobby(){
     // ③ 포인트에 **계산 근거**가 있어야 한다 — 「왜 2 인가」를 못 읽으면 숫자를 못 믿는다
     { const fx=document.querySelector('#campReb .crFx');
       assert(fx,'포인트 계산 근거 줄이 없다');
-      for(const k of ['재화','던전','라운드']) assert(fx.textContent.indexOf(k)>=0,'계산 근거에 '+k+' 가 없음');
+      for(const k of ['재화','던전','건물']) assert(fx.textContent.indexOf(k)>=0,'계산 근거에 '+k+' 가 없음');   // 🏰 라운드 → 건물(2026-09-09)
       assert(fx.querySelectorAll('b').length===3,'계산 근거의 값이 셋이 아님'); }
     // 📂 **이번 회차는 접었다 편다** — 기본은 **접힘**(2026-09-04 사용자 확정).
     //   ⛔ 기본을 펴짐으로 되돌리지 말 것 — 이 화면에서 먼저 봐야 하는 것은 배수·포인트다.
@@ -1244,33 +1249,14 @@ async function groupLobby(){
     skipIf(typeof campOpen!=='function','캠프 없음');
     const C=campState(); C.race=null; C.ents=[]; C.minerals=[]; C.built={};   // 신규 계정처럼
     openHome(); await sleep(260);
-    // ① 종족을 안 골랐으면 선택 화면이 뜬다 — 2026-08-24 개편: 팝업이 아니라 **전체 화면**이다
-    //   기준은 로딩·로그인·설정(DESIGN.md · 목업 docs/mock/race-select-v2-4a.html b안).
-    const ov=$('campRaceOv');
-    assert(ov && !ov.classList.contains('hide'),'종족 선택이 안 뜸');
-    assert(!ov.classList.contains('hbModal'),'종족 선택이 팝업(.hbModal)으로 돌아갔다 — 전체 화면이어야 한다');
-    { const r=ov.getBoundingClientRect(), ph=$('phone').getBoundingClientRect();
-      assert(r.height>ph.height*0.9,'전체 화면이 아니다: '+Math.round(r.height)+' vs '+Math.round(ph.height)); }
-    // ⚠ 캠프는 3종족만 쓴다(페럴·콜로서스는 캠프 경제 미대응) — STK_RACE_ORDER(5)와 다른 것이 정상
-    const rows=[...ov.querySelectorAll('.crRow')];
-    assert(rows.length===CAMP_RACE_ORDER.length,'종족 행이 CAMP_RACE_ORDER 와 다름: '+rows.length);
-    assert(rows.map(r=>r.querySelector('.crNm').textContent).join()===
-      CAMP_RACE_ORDER.map(k=>STK_RACES[k].name).join(),'종족 이름/순서가 표와 다르다');
-    // ⛔ 행 구분선은 좌우로 사라지는 헤어라인이다(DESIGN.md §1 볼륨 1). 전폭 실선으로 되돌리면
-    //   선이 그림을 가로질러 아트가 배경이 아니라 '표'로 보인다 — 로그인이 그 이유로 버린 처리다.
-    assert(getComputedStyle(rows[0]).borderBottomWidth==='0px','행이 전폭 실선 테두리를 쓴다');
-    assert(/linear-gradient/.test(getComputedStyle(rows[0],'::after').backgroundImage),
-      '행 구분선이 그라데 헤어라인이 아니다');
-    // 확정 버튼은 판 없이 글자 + 밑변 광원(주 버튼의 서명)
-    { const go=ov.querySelector('.crGo'); assert(go,'확정 버튼이 없다');
-      assert(getComputedStyle(go).borderTopWidth==='0px','확정 버튼에 테두리가 생겼다 — 판을 쓰지 않는 화면이다');
-      assert(/linear-gradient/.test(getComputedStyle(go,'::after').backgroundImage),'확정 버튼에 밑변 광원이 없다'); }
-    // 경고 문구는 뺐다(사용자 결정 2026-08-24) — 되살리려면 확정 단계에 붙일 것
-    assert(!/바꿀 수 없/.test(ov.textContent),'제거하기로 한 경고 문구가 살아 있다');
-    // ② 고르면 본부·일꾼·광맥이 깔린다
-    // ⚠ 종족 판은 **검은 판이 다 덮은 뒤에** 걷힌다(js/19-camp.js campRaceToCamp).
-    //    그 전에 재면 화면 가운데를 종족 판이 짚는다 — 전환이 끝나기를 기다린다.
-    campRaceSel('terran'); campPickRace(); await sleep(_cssMs('--t-screen',.7)+700);
+    // ① 🧬 **종족 선택 화면은 뜨지 않는다**(2026-09-09 · REDESIGN_PLAN 1-E). 첫 바퀴는 유니온 고정이고
+    //   종족 변이는 2차 환생(단계 4)의 몫이다. 옛 전체 화면(#campRaceOv · campRaceSheet)은 다락으로 갔다.
+    //   ⛔ 되살리지 말 것 — 되살아나면 아래가 잡는다.
+    assert(!document.querySelector('#campRaceOv.on'),'종족 선택 화면이 떴다 — 첫 바퀴는 유니온 고정이다');
+    // (되살아남은 dead-audit 이 잰다 — 다락 파일이 실려 있어 typeof 로는 못 가른다)
+    // ② 들어가면 유니온으로 박히고 본부·일꾼·광맥이 깔린다
+    // ⚠ 첫 진입 연출(검은 판 → 캠프)은 그대로다(js/19-camp.js campRaceToCamp) — 전환이 끝나기를 기다린다.
+    await sleep(_cssMs('--t-screen',.7)+700);
     assert(campState().race==='terran','종족이 저장 안 됨: '+campState().race);
     assert(G.tech && G.tech.race==='union','TECH 키로 변환이 안 됨: '+(G.tech&&G.tech.race));
     assert((G.tech.ents||[]).filter(e=>e.type==='bldg').length>=1,'본부가 없음');
@@ -7439,6 +7425,86 @@ async function groupLobby(){
   //   ⭐ 재는 것 넷: ① 적이 **활성 건물 한 곳**에서만 나온다 ② 깰수록 **더 세진다**(줄지 않는다)
   //     ③ **문지기 탑**이 그 구간의 진행 건물을 잠근다 ④ **보급고**를 깨면 일시 버프가 붙는다.
   //   ⛔ 「살아 있는 건물 수로 나눈다」로 되돌리면 ②가 뒤집혀 여기서 실패한다.
+   // 🏰 **적 기지 화면** — ③안 「밑변 광원」(2026-09-09 · REDESIGN_PLAN §위험 2 · 목업 docs/mock/camp-foebase-4.html).
+   //   ⭐ 엔진은 먼저 들어갔는데 **그리는 코드가 없어** 플레이어 눈에는 적 기지가 아예 없었다(실측 2026-09-09).
+   //     여기서 잠그는 것은 「보인다」의 여섯 얼굴이다: 3D 엔트리 · 표식(밑변 광원·표적·안개·잔해) ·
+   //     화면 안에 든다(뷰 맞춤) · 띠의 다음 표적 · 탭 → 프로필 → 카드로 표적 · 종족 선택이 안 뜬다.
+   //   ⛔ 번호 배지·깃발·후광을 붙이지 말 것 · ⛔ 부수 건물을 물리지 말 것 · ⛔ campRaceSheet 로 되돌리지 말 것.
+   await step('캠프 던전: 적 기지가 보인다 — 3D · 밑변 광원 · 표적 · 안개 · 띠 · 탭 · 종족 고정', async()=>{
+     skipIf(typeof campFoeBld3D!=='function'||typeof campFoeMarks!=='function','적 기지 화면 없음');
+     const C=campState(); const back={dg:C.dg, race:C.race, foeTgt:C.foeTgt};
+     try{
+       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+       skipIf(!CAMPB||!CAMPB._fbld,'전장이 안 열림');
+       campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
+       CAMPB.ai.units.forEach(u=>{ u.dmg=0; });
+       const fb=CAMPB._fbld, live=fb.filter(b=>!b.dead), seen=fb.filter(b=>b.seen&&!b.dead).length;
+       // ① 3D 엔트리 — 기지 건물과 같은 규약(id 'cb_'+모델키 · fitW · z) · 살아 있는 것 전부 · 안 본 것은 hidden
+       const e3=campFoeBld3D();
+       assert(e3.length===live.length,'3D 엔트리가 산 건물 수와 다르다: '+e3.length+'/'+live.length);
+       for(const e of e3){ assert(/^cb_/.test(e.id),'3D 엔트리 id 가 cb_ 규약이 아니다: '+e.id);
+         assert(e.fitW>0 && typeof e.z==='number','3D 엔트리에 fitW·z 가 없다(기지 건물과 다른 크기로 선다)'); }
+       assert(e3.filter(e=>e.hidden).length===live.length-seen,'안 본 건물이 hidden 으로 안 넘어간다');
+       // ② 표식 — 프레임이 그린다. 두 프레임 뒤에도 **12개**(덧붙이기만 하면 쌓인다 — 실측 144개)
+       for(let i=0;i<3;i++){ campCombatStep(0.05); if(typeof campFrame==='function'){ try{ campFrame(0.05); }catch(_e){} } }
+       await sleep(120);
+       const marks=[...document.querySelectorAll('#cstLabels .fbLayer .fbMark')];
+       const cnt=k=>marks.filter(m=>m.classList.contains(k)).length;
+       assert(marks.length===fb.length,'표식이 건물 수와 다르다(쌓이거나 빠졌다): '+marks.length+'/'+fb.length);
+       assert(cnt('prog')===CAMP_DG_STEPS,'진행 건물 표식이 '+CAMP_DG_STEPS+'개가 아니다: '+cnt('prog'));
+       assert(cnt('tgt')===1 && marks.find(m=>m.classList.contains('tgt')).dataset.eid===campFoeFront().eid,
+         '다음 표적 표식이 campFoeFront 와 다르다');
+       assert(cnt('hid')===fb.length-seen,'안개 실루엣 수가 안 본 건물 수와 다르다: '+cnt('hid'));
+       assert(marks.every(m=>!m.classList.contains('side')||getComputedStyle(m).opacity==='1'),
+         '부수 건물이 물려 있다 — 방어탑이 흐려지면 위험이 안 보인다');
+       // 밑변 광원은 **진행 건물에만**(부수 건물에 붙으면 「깰 것」이 열둘로 늘어난다)
+       { const pr=marks.find(m=>m.classList.contains('prog')), sd=marks.find(m=>m.classList.contains('side'));
+         assert(pr && getComputedStyle(pr).borderBottomWidth!=='0px','진행 건물에 밑변 광원이 없다');
+         assert(sd && getComputedStyle(sd).borderBottomWidth==='0px','부수 건물에도 밑변 광원이 붙었다'); }
+       // ③ 화면 안에 든다 — 뷰 맞춤(campFoeLookAt). 12채 전부 상단바 아래 · 시트 위
+       { const r=document.getElementById('cstMain').getBoundingClientRect();
+         const sh=document.getElementById('btSheet'), sb=sh?sh.getBoundingClientRect():null;
+         const inb=marks.filter(m=>{ const b=m.getBoundingClientRect(); return b.top>r.top+r.height*0.13 && (!sb||!sb.height||b.bottom<sb.top); }).length;
+         assert(inb===marks.length,'적 기지가 화면에 다 안 든다(뷰 맞춤이 안 됐다): '+inb+'/'+marks.length); }
+       // ④ 띠 — 다음 표적 이름
+       { const t=document.querySelector('#campBar .cbTgt');
+         assert(t && !t.classList.contains('hide') && t.textContent.indexOf(campFoeTgtName())>=0,
+           '맵 띠에 다음 표적이 없다: '+(t?t.textContent:'없음')); }
+       // ⑤ 탭 → 프로필(공용 커맨드 그리드) → 카드 → 표적. 잠긴 건물은 카드가 물린다(dim).
+       { const tg=marks.find(m=>m.classList.contains('tgt')), rb=tg.getBoundingClientRect();
+         const cx=rb.left+rb.width/2, cy=rb.top+rb.height/2, map=document.querySelector('.bmap'); assert(map,'맵 요소가 없다');
+         // 🖐 기지 맵과 같은 손가락 — pointerdown 은 .bmap(onpointerdown=techPtrDown) · pointerup 은 document(전장 탭 선례와 같다)
+         const fire=(el,type)=>el.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,clientX:cx,clientY:cy,pointerId:1,pointerType:'touch',isPrimary:true,button:0,buttons:type==='pointerup'?0:1}));
+         fire(map,'pointerdown'); await sleep(40); fire(document,'pointerup'); await sleep(200);
+         if(typeof campSyncSheet==='function') campSyncSheet();
+         assert(CAMPB._foeSel===tg.dataset.eid,'적 건물을 눌렀는데 들여다보기가 안 잡힌다: '+CAMPB._foeSel);
+         const card=document.querySelector('#btSheetBody .cgSlot .cgName');
+         assert(card && card.textContent==='공격 대상','프로필에 「공격 대상」 카드가 없다: '+(card?card.textContent:'없음'));
+         assert(C.foeTgt==null,'누르기만 했는데 표적이 박혔다 — 표적은 카드가 정한다');
+         document.querySelector('#btSheetBody .cgSlot').click(); await sleep(50);
+         assert(C.foeTgt===tg.dataset.eid,'카드를 눌렀는데 표적이 안 잡힌다: '+C.foeTgt);
+         assert(campFoeFront().eid===C.foeTgt,'고른 표적을 campFoeFront 가 안 따른다');
+         // 잠긴 진행 건물 — 눌리되 카드는 물린다
+         const lk=marks.find(m=>m.classList.contains('lock'));
+         if(lk){ const q=fb.find(x=>x.eid===lk.dataset.eid), gq=campW2G(q.x,q.y,CAMPB.world);   // 격자 중심을 바로 넣는다(화면 위치와 무관하게 「눌리는가」만)
+           const b=campFoeTapAt(gq.gx,gq.gy); assert(b && b.eid===lk.dataset.eid,'잠긴 건물이 안 눌린다(왜 잠겼는지 읽을 수 없다)');
+           const m=campFoeSheetModel(b); assert(m.items[0].state==='dim','잠긴 건물의 공격 카드가 안 물렸다'); }
+         // 안 본 건물은 안 잡힌다
+         const hd=marks.find(m=>m.classList.contains('hid'));
+         if(hd){ const q=fb.find(x=>x.eid===hd.dataset.eid), gq=campW2G(q.x,q.y,CAMPB.world);
+           const b=campFoeTapAt(gq.gx,gq.gy); assert(!b || b.eid!==hd.dataset.eid,'안개에 가린 건물이 눌린다'); }
+         campFoeUnpick(); }
+       // ⑥ 종족 선택 화면은 뜨지 않는다 — 없으면 유니온으로 박고 들어간다
+       { C.race=null; campOpen(); await sleep(60);
+         assert(C.race==='terran','종족이 안 박혔다: '+C.race);
+         assert(!document.querySelector('#campRaceOv.on'),'종족 선택 화면이 떴다 — 첫 바퀴는 유니온 고정이다'); }
+       // ⑦ 환생 화면 근거 — 「라운드」가 아니라 「건물」
+       if(typeof campRebRender==='function'){ campRebEnter('info'); await sleep(60);
+         const fx=document.querySelector('.crFx'); assert(fx && /건물/.test(fx.textContent) && !/라운드/.test(fx.textContent),
+           '환생 근거에 라운드가 남아 있다: '+(fx?fx.textContent:'없음')); campRebClose(); }
+       return '3D '+e3.length+' · 표식 '+marks.length+'(진행 '+cnt('prog')+' · 안개 '+cnt('hid')+') · 화면 안 · 띠 · 탭→카드→표적 · 종족 고정';
+     } finally { C.dg=back.dg; C.race=back.race; C.foeTgt=back.foeTgt; if(CAMPB) CAMPB._foeSel=null; campBattleClose(); campBarReset(); }
+   });
   await step('캠프 던전: 릴레이(한 곳에서 · 깰수록 세진다) · 구간 관문 · 보급고', async()=>{
     skipIf(typeof campFoeActive!=='function'||typeof campFoeZoneOpen!=='function','릴레이 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
