@@ -7561,6 +7561,42 @@ async function groupLobby(){
       C.depotT=back.depotT; C.foeTgt=back.foeTgt;
       campBattleClose(); if(typeof campSave==='function') campSave(); } });
 
+  // 🏁 **던전 1 은 실제로 깨진다** — 이 회차의 가장 중요한 회귀 검사(2026-09-09).
+  //   ⛔ 이 스텝이 없어서 「깨지지 않는 게임」이 한참 갔다. 세 가지가 각각 공성을 통째로 막았고
+  //     (전멸 교착 · 진군 교착 · 건물 사격 순서) 셋 다 **값이 아니라 구조** 문제였다 —
+  //     명목 화력이 건물 체력의 두 배인데도 안 깨졌다(BALANCE §5-7·§5-8).
+  //   ⚠ 이 검사는 「밸런스가 맞나」가 아니라 **「닿을 수 있나」**를 잰다. 값이 바뀌어 실패하면
+  //     문턱(병력 수·연구 배수)을 조정해도 되지만, **못 깨는 상태로 두지는 말 것.**
+  await step('캠프 던전: 던전 1 이 실제로 깨진다 (공성이 닿는다)', async()=>{
+    skipIf(typeof campEnterDungeon!=='function'||typeof campDeploy!=='function','캠프 전투 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const back={dg:C.dg, broken:C.broken, foeDead:C.foeDead, dgDone:C.dgDone, depotT:C.depotT};
+    try{
+      C.dgDone={};
+      campEnterDungeon(0); campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      // 알맞은 병력 — 화력병 20기 + 연구 ×5 (실측 90초에 클리어)
+      for(let i=0;i<20;i++) campDeploy('machinegun', 0.26+(i%6)*0.048, 0.44+Math.floor(i/6)*0.032);
+      CAMPB._started=false; CAMPB._gapT=0; campCombatStep(0.05);
+      const me=CAMPB.me.units;
+      assert(me.length>=20,'병력 배치 실패: '+me.length);
+      for(const u of me){ u.dmg*=5; u.maxHp*=5; u.hp=u.maxHp; }
+      let t=0, best=0, done=false;
+      for(let f=0; f<30*200 && !done; f++){
+        campCombatStep(1/30); t+=1/30;
+        if(!CAMPB){ done=true; break; }
+        best=Math.max(best, campBroken()); }
+      assert(done,'200초 안에 판이 안 끝났다 — 최고 '+best+'/'+CAMP_DG_STEPS
+        +' (공성이 안 닿으면 여기서 걸린다)');
+      assert(C.dgDone && C.dgDone[1],'던전 1 을 못 깼다 — 최고 '+best+'/'+CAMP_DG_STEPS
+        +' · '+Math.round(t)+'초. ⚠ 값이 아니라 구조를 볼 것: 건물 사격 순서(_campFireBld 가 적보다'
+        +' 먼저인가) · 진군(_march) · 건물 사격 여유(CAMP_BLD_PAD)');
+      return '화력병 20기 · 연구 ×5 → '+Math.round(t)+'초에 클리어';
+    } finally { C.dg=back.dg; C.broken=back.broken; C.foeDead=back.foeDead;
+      C.dgDone=back.dgDone; C.depotT=back.depotT;
+      campBattleClose(); if(typeof campSave==='function') campSave(); } });
+
   // 📈 적 난이도 곡선 — HUNT_R1.md §6-1. ⛔ 미네랄(CAMP_MINE)과 같은 식으로 묶지 말 것.
   await step('캠프 던전: 적 난이도 곡선 · 웨이브 분할', async()=>{
     skipIf(typeof campFoeDiff!=='function','난이도 곡선 없음');
