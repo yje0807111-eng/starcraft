@@ -46,8 +46,10 @@ const CAMP_MINE = [
 function campDgN(){ const C = campState(); return Math.max(0, Math.min(CAMP_DG_MAX, (C && C.dg) | 0)); }
 // ⭐ 배율은 라운드를 **클리어해야** 붙는다 → 50라운드면 50번 붙는다(49번이 아니다).
 //    그래서 증가량이 전부 딱 떨어진다: +0.02 · +0.06 · +0.2 · +1.2 · +6 · +28 · +180 · …
+//   ⚠ 나누는 수가 **관문 6개**다(2026-09-09 · 옛 라운드 50 에서). 한 채를 깰 때마다 붙는다.
 function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))];
-  return t.base * (t.x - 1) / CAMP_ROUND_MAX; }
+  const n = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : CAMP_ROUND_MAX;
+  return t.base * (t.x - 1) / n; }
 // 지금 미네랄 배율 — 탭과 일꾼 **양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
 // ⛏ 던전 기준값 × 클리어 보정 × **환생 트리 「광산 등급」**(2026-09-02 배선).
 //   ⭐ 이 함수가 탭·자동 채취·가스 셋의 공통 입구라, 여기 한 곳에 곱하면 셋 다에 닿는다
@@ -56,9 +58,12 @@ function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, 
 function campMineMul(){ const C = campState(); if(!C) return 1;
   const dg = campDgN(), t = CAMP_MINE[dg];
   return (t.base + campCleared() * campMineInc(dg)) * campRtMul('mine'); }
-function campCleared(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) return 0;
-  return Math.max(0, Math.min(CAMP_ROUND_MAX, C.cleared | 0)); }
-// 지금 도전 중인 라운드 = 클리어한 수 + 1 (0단계에는 라운드가 없다)
+// 🏰 **라운드가 없어졌다**(2026-09-09 · GAME_DIRECTION §0-A). 던전은 적 기지이고, 진행 지표는
+//   「부순 진행 건물 수」(0~6)다. ⛔ 이름을 그대로 둔 이유는 **소비처가 스무 곳**이기 때문이다 —
+//   여기 한 곳에서 갈아끼우면 난이도(campFoeDiff)·보상(campMineMul)·환생 포인트가 전부 새 자를 따라온다.
+//   단일 소스는 `js/23-camp-dungeon.js` 의 `campBroken()`.
+function campCleared(){ return (typeof campBroken === 'function') ? campBroken() : 0; }
+// 지금 도전 중인 관문 = 부순 수 + 1 (0단계에는 던전이 없다)
 function campRoundN(){ return (campDgN() > 0) ? campCleared() + 1 : 0; }
 
 // ── 진입 · 클리어 · 탈락 ────────────────────────────────────────────────
@@ -87,9 +92,16 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 //   ⚠ 그 플래그가 필요했던 이유는 **던전을 골라도 291ms 만에 되돌아오던 것**이었다 —
 //     병력 0 으로 들어가니 도착하자마자 졌다. 이제 애초에 못 들어간다.
 //   ⛔ 두 장치를 함께 두지 말 것 — 어느 쪽이 막는지 헷갈린다.
+// 💀 **패배 = 캠프로 돌아와 재정비하고, 다시 들어가면 그 던전 처음부터**(2026-09-09 · §0-A).
+//   ⛔ 옛 「직전 체크포인트」 안은 폐기했다 — 부순 건물은 **되살아난다**(C.foeDead 를 비운다).
+//   ⛔ 누운 병력(_down)도 버린다: 「재화는 지키되 **죽은 유닛은 다시 산다**」가 확정 규칙이다.
+//     공짜로 복구하면 무한 재시도가 되어 「지금 갈까, 키우고 갈까」라는 판단이 통째로 사라진다.
+//   ✅ 손실은 유한하다 — campUnitOwned 가 **현재 보유 수**를 세므로 유닛이 죽으면 값이 도로 내려간다.
 function campFail(){ const C = campState(); if(!C) return 0;
-  const was = { dg:C.dg | 0, cleared: campCleared() };
-  C.dg = 0; C.cleared = 0; campSave(); return was; }
+  const was = { dg:C.dg | 0, cleared: campCleared(), broken: campCleared() };
+  C.dg = 0; C.cleared = 0; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
+  if(typeof CAMPB !== 'undefined' && CAMPB && CAMPB._down) CAMPB._down.length = 0;
+  campSave(); return was; }
 
 
 // ══ 🔁 환생 (2026-08-25 · 5단계) ═══════════════════════════════════════
@@ -2624,6 +2636,7 @@ function campBattleOpen(){
     if(bm !== 1){ S.me.base.maxHp = (S.me.base.maxHp || S.me.base.hp) * bm; S.me.base.hp = S.me.base.maxHp; } }
   CAMPB = S;
   campBuildStructs();                                  // 🏢 기지의 건물들을 전장에 올린다
+  if(typeof campFoeBase === 'function') campFoeBase(campDgN());   // 🏰 적 기지를 세운다(23-camp-dungeon)
   campAdoptBaseUnits();                                // 🪖 캠프에서 뽑아 둔 병력을 그 자리로 데려온다
   return S;
 }
@@ -2935,7 +2948,11 @@ function campPatchFront(){
   window.strikeFrontStruct = function(side){
     if(_campOn && CAMPB){
       if(side === 'ai'){ const b = campFrontBld(); if(b) return b; }   // 적 → 내 건물(앞쪽부터)
-      if(side === 'me'){ const r = campRallyPoint(); if(r) return r; } // 아군 → 집결점(진격하지 않는다)
+      // 🏰 아군 → **적 건물로 진격한다**(2026-09-09). 표적이 없을 때만 집결점(= 캠프에서 방어).
+      //   ⛔ campFoeFront 는 죽은 것을 절대 안 준다 — 여기 dead 검사가 없어서(18-strike `_toTemple`)
+      //     죽은 구조물을 주면 아군이 그 자리까지 행군한다.
+      if(side === 'me'){ const f = (typeof campFoeFront === 'function') ? campFoeFront() : null; if(f) return f;
+        const r = campRallyPoint(); if(r) return r; }     // 아군 → 집결점(적 기지가 없으면 안 나간다)
     }
     return o.apply(this, arguments);
   };
@@ -4094,6 +4111,7 @@ function campAlive(side){ if(!CAMPB) return 0; let n = 0;
 function campDungeonSwap(){
   if(!CAMPB) return false;
   CAMPB.ai.race = campFoeRace(campDgN());
+  if(typeof campFoeBase === 'function') campFoeBase(campDgN());   // 🏰 적 기지도 그 던전 것으로
   CAMPB.ai.units.length = 0;                       // 적만 비운다
   if(CAMPB._wq) CAMPB._wq.length = 0;
   CAMPB._wqTot = 0; CAMPB._wqT = 0;
@@ -4211,6 +4229,11 @@ function campCombatStep(dt){
     return; }
   if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campRoundRevive(); campSpawnFoes(); return; }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
+  // 🏰 적 기지(23-camp-dungeon) — 압박·방어탑·안개·타이머. ⚠ 이동보다 **먼저** 봐야 이번 프레임에 반영된다.
+  if(typeof campFoeReveal === 'function') campFoeReveal(false, dt);      // 🌫 시야가 닿은 건물이 드러난다
+  if(typeof campFoeSpawnTick === 'function') campFoeSpawnTick(dt);       // 🌊 살아 있는 생산 건물이 적을 보낸다
+  if(typeof campFoeTowerStep === 'function') campFoeTowerStep(dt);       // 🗼 방어탑이 나를 쏜다
+  if(typeof campDgTimerTick === 'function') campDgTimerTick(dt);         // ⏱ 최고기록 시계
   const _b4 = CAMPB.me.units.slice();   // 🩹 campStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
   // ⚔ **캠프가 제 프레임을 통째로 소유한다**(`js/21-camp-battle.js` · 2026-08-31).
   //   ⛔ 예전엔 strikeStepUnits 를 돌린 **뒤에** 그 결과를 되돌리고 다시 밀었다 —
@@ -4251,7 +4274,12 @@ function campCombatStep(dt){
   //     병력이 0 이면 적이 건물·본부를 부수며 판이 나아가므로 멈추지 않는다.
   // ⛔ **`campAlive('me') > 0` 을 쓰지 말 것** — 그러면 의무병 하나가 「병력이 있다」로 세어져
   //   전투 유닛이 다 누운 판이 곧바로 탈락으로 간다(2026-08-31 재현). 두 판정은 **같은 자**를 써야 한다.
-  const _noHit = CAMPB._started && !campFoesPending()
+  // 🏰 **적 기지가 있으면 이 규칙은 안 쓴다**(2026-09-09). 옛 뜻은 「때릴 병력은 있는데 원리상
+  //   안 닿아 라운드가 영영 안 끝난다」였다. 이제는 못 닿는 적이 남아도 **건물을 부수면 이긴다** —
+  //   그래서 막다른 길이 아니다. 그동안 적이 본부를 부수면 그건 정상적인 패배다.
+  //   ⚠ 살아 있는 생산 건물이 계속 무리를 보내므로 `campFoesPending()` 도 거의 늘 참이다.
+  const _foeBldLeft = (typeof campFoeBldAlive === 'function') ? campFoeBldAlive().length : 0;
+  const _noHit = CAMPB._started && !campFoesPending() && !_foeBldLeft
     && campArmedUnits().length > 0 && !campCanHitFoes();
   // 🏢 **패배 = 본부 파괴 하나뿐**(2026-08-30 사용자 확정).
   //    ⭐ 전멸은 패배가 아니다. 병력이 다 누우면 적이 **길목의 건물을 차례로 부수며** 밀고
@@ -4274,15 +4302,22 @@ function campCombatStep(dt){
         ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
         : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다')), 'lose');
     return; }
-  // ② 적을 다 잡았다 → 라운드 클리어
-  if(CAMPB._started && campAlive('ai') === 0){
-    if(CAMPB._wq) CAMPB._wq.length = 0;    // 아직 안 나온 무리는 그냥 안 나온다(기다리는 화면을 만들지 않는다)
+  // ② 🏰 **진행 건물 6채를 다 부쉈다 → 던전 완주**(2026-09-09 · 옛 「적 유닛 0 = 라운드 클리어」를 대체).
+  //    ⛔ 적 유닛 수로 판정하지 말 것 — 적은 살아 있는 생산 건물이 계속 보내므로 0 이 되는 순간이
+  //      「이겼다」가 아니라 그냥 「무리 사이 틈」이다. 이겼다는 것은 **기지를 무너뜨렸다**는 뜻이다.
+  //    🏕 완주하면 **캠프로 돌아온다** — 던전은 원정이다(§0-A). ⛔ 다음 던전으로 자동 진입하지 말 것.
+  if(CAMPB._started && typeof campFoeProgLeft === 'function'
+     && CAMPB._fbld && CAMPB._fbld.length && campFoeProgLeft() === 0){
     const dgWas = campDgN();
-    campClearRound();
-    if(campDgN() !== dgWas){                                   // 던전이 바뀌면 **적만** 갈아 끼운다
-      campDungeonSwap(); campBarReset();
-      campSay('🏁 던전 ' + dgWas + ' 완주 — 던전 ' + campDgN() + ' 진입', 'game_start'); }
-    if(CAMPB){ CAMPB._started = true; CAMPB._gapT = CAMP_ROUND_GAP_S; } }
+    const C2 = campState();
+    if(C2){ if(!C2.dgDone) C2.dgDone = {}; C2.dgDone[dgWas] = 1; }
+    const fresh = (typeof campDgTimerDone === 'function') ? campDgTimerDone(dgWas) : false;
+    const mins = (C2 && C2.dgT && C2.dgT[dgWas]) ? Math.round((C2.dgT[dgWas].best || 0) / 60) : 0;
+    campFail();                                   // 캠프(0단계)로 · ⚠ 이 함수가 broken·foeDead 도 비운다
+    campBattleClose(); campBarReset();
+    campSay('🏁 ' + campDgName(dgWas) + ' 완주 — 캠프로 돌아왔습니다'
+      + (fresh ? (' · ⏱ 최고기록 ' + mins + '분') : ''), 'game_start');
+    return; }
 }
 
 // ══ 🗺 단계·라운드 배지 (2026-08-25 · 3단계) ═══════════════════════════

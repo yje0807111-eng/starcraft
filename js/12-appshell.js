@@ -93,7 +93,9 @@ function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) ret
   //   캠프로 돌아왔을 때 curPaintChip 이 「값이 안 바뀌었다」고 보고 다시 안 그려 **칩이 빈 채로 남는다**
   //   (유즈맵·상점에 갔다 오면 좌상단이 사라졌다 — 사용자 신고).
   campDropClose(); e.classList.remove('asChip','open'); e._cdKey=''; e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
-const CAMP_DG_MAX=10;      // 던전 1~10 (HB_DUNGEONS 길이와 같다)
+// 🏰 던전 **셋**(2026-09-09 · GAME_DIRECTION §0-A) — 적 종족과 짝이다(유니온 → 스웜 → 에테리얼).
+//   ⛔ 옛 10 으로 되돌리지 말 것. 표의 단일 소스는 `js/23-camp-dungeon.js` 의 `CAMP_DG` 다.
+const CAMP_DG_MAX=(typeof CAMP_DG_MAX_N!=='undefined')?CAMP_DG_MAX_N:3;
 // ⚠ 라운드 상한 — **설계 단일 소스는 19-camp.js 의 CAMP_ROUND_MAX** 다(HUNT_R1.md §6-1).
 //    그 파일이 **뒤에** 로드되므로 여기서 참조할 수 없어 값을 복사해 둔다.
 //    ⛔ 둘이 갈리면 칩·드롭다운이 실제 라운드와 어긋난다 — 스모크가 같은지 검사한다.
@@ -266,7 +268,13 @@ function campDgMulTx(dg){
   return '×' + f(t.base) + ' ~ ×' + f(t.base * t.x);   // 진입 ~ 50클리어
 }
 const CAMP_HOME_NAME='캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다 · ⛔ 왼쪽 아이콘 되돌리지 말 것(2026-09-03)
-function campDgOpen(dg){ return dg>=0 && dg<=CAMP_DG_MAX; }
+// 🔓 **앞 던전을 완주해야 열린다**(2026-09-09). 캠프(0)와 던전 1 은 늘 열려 있다.
+//   ⛔ 「최고 도달」로 열지 말 것 — 절반만 부수고 나온 던전은 아직 못 깬 것이다.
+function campDgOpen(dg){
+  if(dg<0 || dg>CAMP_DG_MAX) return false;
+  if(dg<=1) return true;
+  const C=(typeof campState==='function')?campState():null;
+  return !!(C && C.dgDone && C.dgDone[dg-1]); }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.
 //   ⛔ 두 벌로 들고 있지 말 것 — 드롭다운으로 옮긴 뒤 실제 라운드가 안 따라오던 원인이다.
@@ -410,8 +418,12 @@ function campDropGo(){ if(!_cdPick) return;
     return; }
   // ⭐ 캠프 상태에 쓴다 — cleared 가 단일 소스이고 rnd 는 그것을 비춘다(라운드 n = 깬 수 n-1)
   // 🏕 캠프(0)로 가면 라운드는 없다 — cleared·rnd 를 비운다(campRoundN 도 0 을 돌려준다)
+  // 🏰 **그 던전을 처음부터** 시작한다(2026-09-09 · §0-A). 부순 건물은 되살아난다.
+  //   ⛔ 옛 「라운드를 골라서 들어간다」로 되돌리지 말 것 — 관문은 건물이고 중간 진입이 없다.
   const toHome=(_cdPick.dg===0);
-  C.dg=_cdPick.dg; C.cleared=toHome?0:Math.max(0, _cdPick.rnd-1); C.rnd=toHome?1:_cdPick.rnd;
+  C.dg=_cdPick.dg; C.broken=0; C.foeDead={}; C.foeTgt=null;
+  C.cleared=0; C.rnd=1;                       // 🧷 옛 값 — 저장 호환용으로만 남긴다(아무도 안 읽는다)
+  if(!toHome && typeof campDgTimerReset==='function') campDgTimerReset(C.dg);   // ⏱ 이번 판 시계를 0 으로
   if(typeof campBattleClose==='function') campBattleClose();   // 던전이 바뀌면 전장을 새로 연다
   if(typeof campBarReset==='function') campBarReset();
   if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로
