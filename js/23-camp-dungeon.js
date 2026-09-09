@@ -19,7 +19,8 @@
 //   ⚠ `k` 는 **`TECH_TREE[campTechRace(race)].buildings` 의 키**다. 종족 키가 두 벌이라는 것에 주의:
 //     건물 표는 union·swarm·aetherial · 전투 엔진(STK_RACES)은 terran·zerg·protoss.
 //   ⚠ 좌표는 **격자 비율**(gx·gy)이다. `campG2W` 가 전장 좌표로 바꾼다 — 내 건물과 같은 자를 쓴다.
-//     적 기지는 격자 **위쪽**(gy 0.18~0.30 · CAMP_LANE_TOP=0.18 부터).
+//     적 기지는 격자 **위 한 화면**(gy −0.26~−0.05 · CAMP_LANE_TOP=−0.26 부터 · 2026-09-09 사용자: 「화면 완전 위」).
+//     ⚠ 옛 값(0.18~0.335)에서 gy' = −0.26 + (gy − 0.18) × 2 로 옮겼다 — **전장 좌표는 그대로**다(19-camp CAMP_LANE_TOP 설명).
 //   role: 'prog' 진행(6채 · 이걸 다 깨야 다음 던전) · 'side' 부수(6채 · 안 센다)
 //   step: 진행 건물의 **차례**(1~6). ⭐ 릴레이의 뼈대다 — 살아 있는 것 중 step 이 가장 작은
 //         한 채만 적을 뽑는다. 그걸 깨면 다음 채가 이어받아 **더 센 것을 더 자주** 보낸다.
@@ -41,36 +42,36 @@ const CAMP_DG = [
     desc:'앞 건물부터 하나씩 — 깰수록 다음 건물이 더 센 것을 보낸다',
     bld:[
       // 구간 1 — 문지기 미사일 포탑
-      { k:'turret',   gx:.50, gy:.335, role:'side', kind:'tower', zone:1 },
-      { k:'barracks', gx:.30, gy:.310, role:'prog', kind:'prod', zone:1, step:1, foe:['marine'] },
-      { k:'factory',  gx:.70, gy:.310, role:'prog', kind:'prod', zone:1, step:2, foe:['machinegun','marine'] },
-      { k:'supply',   gx:.10, gy:.325, role:'side', kind:'depot', zone:1 },
+      { k:'turret',   gx:.50, gy:0.050, role:'side', kind:'tower', zone:1 },
+      { k:'barracks', gx:.30, gy:0.000, role:'prog', kind:'prod', zone:1, step:1, foe:['marine'] },
+      { k:'factory',  gx:.70, gy:0.000, role:'prog', kind:'prod', zone:1, step:2, foe:['machinegun','marine'] },
+      { k:'supply',   gx:.10, gy:0.030, role:'side', kind:'depot', zone:1 },
       // 구간 2 — 문지기 벙커
-      { k:'bunker',   gx:.50, gy:.270, role:'side', kind:'tower', zone:2 },
-      { k:'engbay',   gx:.28, gy:.240, role:'prog', kind:'tech', zone:2, step:3, foe:['ghost','marine'] },
-      { k:'refinery', gx:.72, gy:.240, role:'prog', kind:'res',  zone:2, step:4, foe:['machinegun','ghost'] },
-      { k:'supply',   gx:.90, gy:.255, role:'side', kind:'depot', zone:2 },
+      { k:'bunker',   gx:.50, gy:-0.080, role:'side', kind:'tower', zone:2 },
+      { k:'engbay',   gx:.28, gy:-0.140, role:'prog', kind:'tech', zone:2, step:3, foe:['ghost','marine'] },
+      { k:'refinery', gx:.72, gy:-0.140, role:'prog', kind:'res',  zone:2, step:4, foe:['machinegun','ghost'] },
+      { k:'supply',   gx:.90, gy:-0.110, role:'side', kind:'depot', zone:2 },
       // 구간 3 — 문지기 포탑 + 본진
-      { k:'turret',   gx:.50, gy:.215, role:'side', kind:'tower', zone:3 },
-      { k:'academy',  gx:.26, gy:.185, role:'prog', kind:'tech', zone:3, step:5, foe:['racer','marine'] },
-      { k:'command',  gx:.60, gy:.182, role:'prog', kind:'main', zone:3, step:6, foe:['goliath','tank','marine'] },
-      { k:'supply',   gx:.88, gy:.190, role:'side', kind:'depot', zone:3 } ] },
+      { k:'turret',   gx:.50, gy:-0.190, role:'side', kind:'tower', zone:3 },
+      { k:'academy',  gx:.26, gy:-0.250, role:'prog', kind:'tech', zone:3, step:5, foe:['racer','marine'] },
+      { k:'command',  gx:.60, gy:-0.256, role:'prog', kind:'main', zone:3, step:6, foe:['goliath','tank','marine'] },
+      { k:'supply',   gx:.88, gy:-0.240, role:'side', kind:'depot', zone:3 } ] },
   // ── D2 스웜 기지 — 「연구가 필요하다」. 기믹: **공중이 섞인다**(대공이 없으면 못 깬다) ──
   { race:'swarm', name:'감염된 둥지', lesson:'research', air:true,
     desc:'적이 단단하다 — 연구 없이는 못 깬다. 하늘에서도 온다',
     bld:[
-      { k:'sunken',     gx:.50, gy:.335, role:'side', kind:'tower', zone:1 },
-      { k:'pool',       gx:.30, gy:.310, role:'prog', kind:'prod', zone:1, step:1, foe:['broodling'] },
-      { k:'hydraden',   gx:.70, gy:.310, role:'prog', kind:'prod', zone:1, step:2, foe:['snapper','broodling'] },
-      { k:'creep',      gx:.10, gy:.325, role:'side', kind:'depot', zone:1 },
-      { k:'spore',      gx:.50, gy:.270, role:'side', kind:'tower', zone:2 },
-      { k:'evochamber', gx:.28, gy:.240, role:'prog', kind:'tech', zone:2, step:3, foe:['hydra','snapper'] },
-      { k:'extractor',  gx:.72, gy:.240, role:'prog', kind:'res',  zone:2, step:4, foe:['hydra','broodling'] },
-      { k:'creep',      gx:.90, gy:.255, role:'side', kind:'depot', zone:2 },
-      { k:'sunken',     gx:.50, gy:.215, role:'side', kind:'tower', zone:3 },
-      { k:'lair',       gx:.26, gy:.185, role:'prog', kind:'tech', zone:3, step:5, foe:['thornqueen','hydra'] },
-      { k:'hatchery',   gx:.60, gy:.182, role:'prog', kind:'main', zone:3, step:6, foe:['ultralisk','thornqueen','hydra'] },
-      { k:'creep',      gx:.88, gy:.190, role:'side', kind:'depot', zone:3 } ] },
+      { k:'sunken',     gx:.50, gy:0.050, role:'side', kind:'tower', zone:1 },
+      { k:'pool',       gx:.30, gy:0.000, role:'prog', kind:'prod', zone:1, step:1, foe:['broodling'] },
+      { k:'hydraden',   gx:.70, gy:0.000, role:'prog', kind:'prod', zone:1, step:2, foe:['snapper','broodling'] },
+      { k:'creep',      gx:.10, gy:0.030, role:'side', kind:'depot', zone:1 },
+      { k:'spore',      gx:.50, gy:-0.080, role:'side', kind:'tower', zone:2 },
+      { k:'evochamber', gx:.28, gy:-0.140, role:'prog', kind:'tech', zone:2, step:3, foe:['hydra','snapper'] },
+      { k:'extractor',  gx:.72, gy:-0.140, role:'prog', kind:'res',  zone:2, step:4, foe:['hydra','broodling'] },
+      { k:'creep',      gx:.90, gy:-0.110, role:'side', kind:'depot', zone:2 },
+      { k:'sunken',     gx:.50, gy:-0.190, role:'side', kind:'tower', zone:3 },
+      { k:'lair',       gx:.26, gy:-0.250, role:'prog', kind:'tech', zone:3, step:5, foe:['thornqueen','hydra'] },
+      { k:'hatchery',   gx:.60, gy:-0.256, role:'prog', kind:'main', zone:3, step:6, foe:['ultralisk','thornqueen','hydra'] },
+      { k:'creep',      gx:.88, gy:-0.240, role:'side', kind:'depot', zone:3 } ] },
   // ── D3 에테리얼 기지 — 「조합 + 최종」. 기믹: **동력탑이 그 구간의 탑을 먹인다** ──
   //   ⭐ 이 설계의 가장 좋은 한 칸이다 — 문지기 탑을 **직접 깨든, 그 구간의 파일런을 깨든** 문이 열린다.
   //     「어느 걸 먼저」가 진짜 판단이 된다. ⛔ D1·D2 에는 넣지 않는다(배우기 전에 나오면 그냥 어렵다).
@@ -78,18 +79,18 @@ const CAMP_DG = [
   { race:'aetherial', name:'잊혀진 회랑', lesson:'mix', powered:true,
     desc:'동력탑이 문지기를 먹인다 — 무엇을 먼저 깰지가 갈린다',
     bld:[
-      { k:'cannon',      gx:.50, gy:.335, role:'side', kind:'tower', zone:1 },
-      { k:'gateway',     gx:.30, gy:.310, role:'prog', kind:'prod', zone:1, step:1, foe:['blade'] },
-      { k:'stargate',    gx:.70, gy:.310, role:'prog', kind:'prod', zone:1, step:2, foe:['dragoon','blade'] },
-      { k:'pylon',       gx:.10, gy:.325, role:'side', kind:'depot', zone:1, power:true },
-      { k:'cannon',      gx:.50, gy:.270, role:'side', kind:'tower', zone:2 },
-      { k:'forge',       gx:.28, gy:.240, role:'prog', kind:'tech', zone:2, step:3, foe:['dark_templar','dragoon'] },
-      { k:'assimilator', gx:.72, gy:.240, role:'prog', kind:'res',  zone:2, step:4, foe:['dragoon','blade'] },
-      { k:'pylon',       gx:.90, gy:.255, role:'side', kind:'depot', zone:2, power:true },
-      { k:'cannon',      gx:.50, gy:.215, role:'side', kind:'tower', zone:3 },
-      { k:'cyber',       gx:.26, gy:.185, role:'prog', kind:'tech', zone:3, step:5, foe:['archon','dragoon'] },
-      { k:'nexus',       gx:.60, gy:.182, role:'prog', kind:'main', zone:3, step:6, foe:['kronos','archangel','archon'] },
-      { k:'pylon',       gx:.88, gy:.190, role:'side', kind:'depot', zone:3, power:true } ] },
+      { k:'cannon',      gx:.50, gy:0.050, role:'side', kind:'tower', zone:1 },
+      { k:'gateway',     gx:.30, gy:0.000, role:'prog', kind:'prod', zone:1, step:1, foe:['blade'] },
+      { k:'stargate',    gx:.70, gy:0.000, role:'prog', kind:'prod', zone:1, step:2, foe:['dragoon','blade'] },
+      { k:'pylon',       gx:.10, gy:0.030, role:'side', kind:'depot', zone:1, power:true },
+      { k:'cannon',      gx:.50, gy:-0.080, role:'side', kind:'tower', zone:2 },
+      { k:'forge',       gx:.28, gy:-0.140, role:'prog', kind:'tech', zone:2, step:3, foe:['dark_templar','dragoon'] },
+      { k:'assimilator', gx:.72, gy:-0.140, role:'prog', kind:'res',  zone:2, step:4, foe:['dragoon','blade'] },
+      { k:'pylon',       gx:.90, gy:-0.110, role:'side', kind:'depot', zone:2, power:true },
+      { k:'cannon',      gx:.50, gy:-0.190, role:'side', kind:'tower', zone:3 },
+      { k:'cyber',       gx:.26, gy:-0.250, role:'prog', kind:'tech', zone:3, step:5, foe:['archon','dragoon'] },
+      { k:'nexus',       gx:.60, gy:-0.256, role:'prog', kind:'main', zone:3, step:6, foe:['kronos','archangel','archon'] },
+      { k:'pylon',       gx:.88, gy:-0.240, role:'side', kind:'depot', zone:3, power:true } ] },
 ];
 
 // ── 🔢 값 — ⚠ 전부 출발점이다(안 쟀다) ────────────────────────────────────
@@ -525,6 +526,7 @@ function campEnterDungeon(dg){
   // 🏰 전장이 열려 있으면 적 기지도 그 던전 것으로 다시 세운다
   if(typeof CAMPB !== 'undefined' && CAMPB) campFoeBase(n);
   if(n > 0 && typeof CAMPB !== 'undefined' && CAMPB) campFoeLookAt();   // 👁 적 기지가 보이는 자리로
+  if(n === 0 && typeof campZoom === 'function') campZoom();               // 🏕 집으로 — 시점도 기본 자리로(v·t 함께)
   return n; }
 
 
@@ -544,7 +546,9 @@ function campFoeBld3D(){
   const map = document.getElementById('cstMain'), Wpx = (map && map.clientWidth) || 360;
   const cw = _techCW(), ch = _techCH(), cwpx = cw * Wpx * v.zoom;
   const rows = Math.max(1, (typeof _techRows === 'function') ? _techRows() : 28), zstep = Math.min(60, 2600 / (rows + 1));
-  const zOf = function(wy){ return -1000 + Math.floor((wy - techY0()) / ch) * zstep; };
+  // ⚠ 적 기지는 격자 **위**(wy < techY0)라 행이 음수 → z 가 −1000 아래로 내려가 카메라 가시범위(−1200)를 벗어난다
+  //   (실측: 3D 가 통째로 안 보였다). 위쪽 것끼리 순서만 지키면 되므로 −1190 에서 받는다.
+  const zOf = function(wy){ return Math.max(-1190, -1000 + Math.floor((wy - techY0()) / ch) * zstep); };
   const yaw = (d.race === 'swarm') ? 0 : ((typeof CST_YAW !== 'undefined') ? CST_YAW : 0);
   const out = [];
   for(const q of CAMPB._fbld){
@@ -563,8 +567,9 @@ function campFoeBld3D(){
   return out; }
 // 👁 **던전에 들어가면 적 기지가 보이게 뷰를 맞춘다**(REDESIGN_PLAN §위험 2 「12채가 화면에 다 드나」).
 //   ⛔ 새 팬·줌 장치가 아니다 — 기지 맵의 목표 뷰(techViewT)를 한 번 옮기고 나머지는 원래 장치가 따라간다.
-//   ⭐ 축소는 한계(techMinZoom)까지, 세로는 **적 기지 무게중심과 내 본부의 사이**. 12채가 다 들면 좋고,
-//     안 들면 위쪽(적)이 먼저 보이는 쪽을 택한다 — 「무엇을 부술지」가 「내 기지」보다 먼저다.
+//   ⭐ 축소는 한계(techMinZoom)까지, 세로는 **위 끝**(clamp 가 정한다 = 적 기지 위끝 + 상단바 몫).
+//     내 본부는 안 보인다 — 원정 시작은 「무엇을 부술지」를 보는 것이다(2026-09-09 사용자: 「적 기지가 화면 완전 위」).
+//     ⚠ 적 기지는 격자 위 한 화면에 있다(19-camp CAMP_LANE_TOP) — 아래로 끌면 내 기지가 나온다.
 //   ⚠ 캠프(0)로 돌아갈 때는 손대지 않는다 — 기지 맵의 제 뷰로 돌아간다.
 function campFoeLookAt(){
   if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld || !CAMPB._fbld.length) return false;
@@ -574,16 +579,15 @@ function campFoeLookAt(){
   for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); sy += g.gy; n++; }
   if(!n) return false;
   const foeY = sy / n;
-  const me = (CAMPB.me && CAMPB.me.base) ? campW2G(CAMPB.me.base.x, CAMPB.me.base.y, W).gy : 0.64;
   const t = techViewT(), v = techView();
   t.zoom = (typeof techMinZoom === 'function') ? techMinZoom() : 1;
   t.x = 0.5;
-  t.y = foeY + (me - foeY) * CAMP_FOE_LOOK_K;
+  t.y = foeY - 9;                                   // 위로 한껏 — clamp 가 위 끝(campViewTop)에서 받는다
   _techClampView(t);
-  // 첫 프레임부터 그 자리 — 부드럽게 따라가면 첫 1초 동안 내 기지만 보인다
-  v.x = t.x; v.y = t.y; v.zoom = t.zoom;
+  // ⚠ **목표(t)만 옮긴다** — 실제 뷰(v)는 techViewTick 이 보간해 따라간다. v 를 직접 쓰면 바닥·광맥·그림자
+  //   (renderBuildTab 이 뷰가 바뀔 때 다시 그리는 층)가 옛 자리에 남는다(실측: 바닥 transform 이 옛 뷰였다).
+  //   내 기지에서 적 기지로 **올라가는 한 박자**가 원정 출발의 연출이기도 하다.
   return true; }
-const CAMP_FOE_LOOK_K = 0.45;   // 0 = 적 기지 한가운데 · 1 = 내 본부. 실측으로 정한다(아래 스모크가 12채 중 몇 채가 드는지 잰다)
 // 🎨 오버레이 모델 — 건물마다 「어디에·어떤 상태로」. 19-camp 의 campFoeOverlayHTML 이 이걸 DOM 으로 옮긴다.
 //   상태: prog/side · tgt(다음 표적) · hid(안개) · dead(잔해) · lock(구간이 잠겨 아직 못 때린다) · hit(맞았다)
 function campFoeMarks(){
@@ -666,3 +670,15 @@ function campFoePicked(){
   return b; }
 // 들여다보기를 닫는다(⊘ 해제와 같은 뜻) — 19-camp 의 지정 해제가 부른다
 function campFoeUnpick(){ if(typeof CAMPB !== 'undefined' && CAMPB) CAMPB._foeSel = null; }
+
+// 👁 **뷰의 위 한계** — 던전 안에서는 적 기지 위끝까지 올라간다(17-build-cards _techClampView 가 부른다).
+//   캠프(0)에서는 격자 위끝(techY0) 그대로 — 적 기지가 없는데 빈 하늘로 올라갈 이유가 없다.
+//   ⚠ 여유는 표의 가장 위 건물 + **0.18** — 상단바(재화 바 · 화면 위 13% ≈ 격자 0.09)와 발판 반 칸(0.06)이
+//     그 위를 덮기 때문이다(실측: 0.06 이면 위 끝에서 3채가 재화 바 뒤에 숨었다). 값이 아니라 표에서 읽는다.
+function campViewTop(){
+  const dg = (typeof campDgN === 'function') ? campDgN() : 0;
+  const y0 = (typeof techY0 === 'function') ? techY0() : 0.18;
+  if(dg <= 0) return y0;
+  const d = campDgDef(dg); if(!d || !d.bld || !d.bld.length) return y0;
+  let top = 1; for(const q of d.bld) if(q.gy < top) top = q.gy;
+  return Math.min(y0, top - 0.18); }

@@ -681,7 +681,7 @@ R1 적의 한 대 0.09 가 0.5 로 올라가 **5.6배**였다 — 혼자서는 R
 |---|---|---|
 | 3D 건물 | `campFoeBld3D()` → `campWithBattleDraw` 가 `M3D.syncBuild` 목록에 덧붙인다 | 기지 건물 줄(14-input-fx.js:910~)과 **같은 규약**(id `cb_`+모델키 · fitW · z) · 종족은 던전 것 · 안 본 것은 hidden · 죽은 것은 안 넘긴다 |
 | 표식(2D) | `campFoeMarks()` → `campFoeOverlayHTML()` → `#cstLabels .fbLayer` | 밑변 광원(진행) · 붉은 모서리(표적) · 실루엣(안개) · ✕(잔해) · 체력 선(맞은 것) · 🔒(잠긴 구간) · **한 층으로 갈아 끼운다**(덧붙이면 쌓인다) |
-| 뷰 | `campFoeLookAt()` — `campFoeBase` 끝 | 축소 한계에서 y 를 적 기지↔본부 사이로 · ⚠ `campEnterDungeon` 때는 `CAMPB` 가 없다 |
+| 뷰 | `campFoeLookAt()` — `campFoeBase` 끝 · 위 한계 `campViewTop()` | 적 기지는 **격자 위 한 화면**(`CAMP_LANE_TOP` −0.26 · 전장 좌표는 그대로) · 진입 뷰는 **위 끝**(목표 t 만 · 보간이 따라간다) · 아래로 끌면 내 기지 · 캠프 복귀 때 `campZoom()` · ⚠ 캠프는 `_techClampView` 를 덮어쓴다 — 그 yLo 가 진짜 경로 · 3D z 는 −1190 에서 받는다 |
 | 띠·탭·시트 | `campFoeTgtName` · `campFoeTapAt`(→ `_foeSel`) · `campFoeSheetModel`(→ 공용 `renderCmdGrid`) | 표적 지정은 카드(`campFoeTgtSet` → `C.foeTgt`) · ⊘ 가 들여다보기도 닫는다 |
 
 ⛔ `techMap3DSync`(90-m3d)를 확장하지 말 것 — **아무도 안 부르는** 관리자 맵 경로다(한 번 거기 얹었다가 되돌렸다).

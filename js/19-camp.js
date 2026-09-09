@@ -2746,7 +2746,10 @@ function campBattleClose(){
       G.tech.ents.push({ eid:G.tech.eseq++, type:'unit', uid:(u.gm || u.id), x:g.gx, y:g.gy });
     }
   }
-  CAMPB = null; }
+  CAMPB = null;
+  // 🏕 **집으로 돌아왔으면 시점도 집으로**(2026-09-09) — 원정 중 적 기지(격자 위 한 화면)를 보던 목표 뷰가
+  //   남아 있으면 캠프에서 보간이 계속 돌아 프레임 제한이 안 걸린다(스모크가 잡았다). 던전이 그대로면 안 건드린다.
+  if(campDgN() <= 0 && typeof campZoom === 'function') campZoom(); }
 
 // ══ 🏢 기지 건물을 전장에 올린다 (2026-08-27) ═══════════════════════════
 // **패배 = 내 건물이 전부 부서지는 것**이다. 예전에는 전장에 본부 하나뿐이라
@@ -3063,7 +3066,14 @@ function campUnpatchFront(){
 //     캠프 프레임 동안만 M3D.sync 를 감싸 **기지 리스트 뒤에 전투 유닛을 덧붙여** 통과시킨다 —
 //     campWithStk 가 전역 STK 를 바꿔 끼우는 것과 같은 관용구다.
 //   ⭐ 캔버스도 sync 호출도 **프레임당 하나** 그대로다. 두 번 부르면 뒤엣것이 앞엣것을 지운다.
-const CAMP_LANE_TOP = 0.18;   // 격자 위끝 = 적이 나타나는 줄(techY0 와 같은 값)
+// 🏰 **적 기지는 화면 한 장 위에 있다**(2026-09-09 사용자: 「지금은 너무 가깝다 — 화면 완전 위」).
+//   전장 좌표(0.14W = 적 출현 줄 · 0.86W = 내 본부)는 **그대로**고, 격자로 옮기는 **기울기만 두 배**다:
+//   옛 TOP 0.18(격자 위끝) → −0.26. 그래서 적 출현 줄이 격자 위 **한 화면**(0.44) 위에 그려지고,
+//   유닛은 화면에서 두 배 멀리서 두 배 빠르게 내려온다(실제 전투 값은 안 변한다 — 확대와 같은 뜻).
+//   ⚠ 아래(BOT · 내 쪽)를 기준으로 위로만 늘렸으므로 내 병력 자리·집결점은 화면에서 그대로다.
+//   ⛔ 전장 좌표를 음수로 늘리지 말 것 — 18-strike 의 길찾기 셀은 음수를 못 받는다.
+//   ⚠ 적 기지 표(23-camp-dungeon CAMP_DG 의 gy)는 이 격자 값이다 — TOP 을 바꾸면 표도 같이 옮겨야 한다.
+const CAMP_LANE_TOP = -0.26;  // 적 출현 줄(전장 0.14W)의 격자 y — 격자 위끝(0.18)보다 한 화면 위
 const CAMP_LANE_BOT = 0.62;   // 본부(y≈0.642) 바로 위 = 내 병력이 맞으러 가는 끝
 const CAMP_LANE_W   = 0.88;   // 레인 가로 폭 = 격자 폭(x0 0.06 ~ x1 0.94)
 
@@ -6872,7 +6882,10 @@ function campPatchZoom(){
       // 시트 윗변(화면 1-sf 지점)이 닿는 월드 좌표 = _campViewBot 이 되는 v.y
       yHi = Math.min(yHi, _campViewBot - (0.5 - sf) / v.zoom);
     }
-    const yLo = 0.5 - m;
+    // 🏰 위 한계 — 던전에서는 **적 기지 위끝**(격자 위 한 화면)까지 올라간다(campViewTop · 23-camp-dungeon).
+    //   화면 반높이(0.5/zoom)만큼 안쪽이 중심의 한계다. 캠프(0)에서는 옛 값 그대로.
+    const _top = (typeof campViewTop === 'function') ? campViewTop() : null;
+    const yLo = (_top != null && _top < 0.5 - m - 0.5 / v.zoom) ? (_top + 0.5 / v.zoom) : (0.5 - m);
     v.y = Math.max(yLo, Math.min(Math.max(yLo, yHi), v.y));
   };
 }

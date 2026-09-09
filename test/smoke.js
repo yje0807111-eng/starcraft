@@ -7438,6 +7438,8 @@ async function groupLobby(){
        skipIf(!CAMPB||!CAMPB._fbld,'전장이 안 열림');
        campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
        CAMPB.ai.units.forEach(u=>{ u.dmg=0; });
+       // 👁 진입 뷰는 **목표(t)만** 옮기고 실제 뷰는 보간이 따라간다(campFoeLookAt) — 프레임이 안 도는 여기서는 한 번에 끝낸다
+       if(typeof techViewTick==='function') techViewTick(1);
        const fb=CAMPB._fbld, live=fb.filter(b=>!b.dead), seen=fb.filter(b=>b.seen&&!b.dead).length;
        // ① 3D 엔트리 — 기지 건물과 같은 규약(id 'cb_'+모델키 · fitW · z) · 살아 있는 것 전부 · 안 본 것은 hidden
        const e3=campFoeBld3D();
