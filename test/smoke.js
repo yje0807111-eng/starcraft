@@ -1351,7 +1351,14 @@ async function groupLobby(){
       campSyncUnitCost();
       assert(q.m===base,'0기 보유인데 설계 기본가가 아니다: '+q.m+' (기대 '+base+')');
       G.tech.units[q.id]=3; campSyncUnitCost();
-      assert(CAMP_UNIT_R>=2.5-1e-9,'반복 구매 배수가 2.5 미만이다(도배가 안 막힌다): '+CAMP_UNIT_R);
+      // 💰 **반복 구매 배수는 「병력이 몇 기까지 느나」를 정한다**(2026-09-09 재설계).
+      //   ⛔ 2.5 로 되돌리지 말 것 — 5기째가 기본가의 **39배**라 병력 축이 통째로 죽어 있었고,
+      //     「밀수록 적이 세진다」를 머릿수로 감당할 길이 없었다(BALANCE §5).
+      //   ⛔ 1.0 근처로 내리지도 말 것 — 한 종류 도배가 최적이 되어 조합이 사라진다.
+      //   ⭐ 지금 1.30 = 20~25기에서 자연 상한.
+      assert(CAMP_UNIT_R>1.15 && CAMP_UNIT_R<1.7,
+        '반복 구매 배수가 설계 구간(1.15~1.7)을 벗어났다: '+CAMP_UNIT_R
+        +' — 병력이 몇 기까지 느는지가 여기서 정해진다');
       const want=Math.ceil(base*Math.pow(CAMP_UNIT_R,3));
       assert(q.m===want,'3기 보유 값이 틀렸다: '+q.m+' (기대 '+want+')');
       // ⛽ **유닛에는 가스가 안 든다**(2026-08-27 축 분리 — 미네랄=양 / 가스=질).
@@ -6898,7 +6905,11 @@ async function groupLobby(){
   //    ⛔ 이게 없으면 「전멸 = 패배가 아니다 · 적이 건물을 부수며 밀고 들어온다」가 작동하지 않는다.
   //      실측(고치기 전): 본부 7500 · 적 총 DPS 0.41 → 부수는 데 **909분**. 벤치의 D1R1 벽이 이것이었다.
   //    ⚠ 유닛 전투에는 걸리면 안 된다 — 체력 5 짜리 아군이 40배 공격에 즉사한다.
-  await step('캠프: 적이 건물을 칠 때만 40배 · 유닛 전투는 그대로', async()=>{
+  // ⚠ 배수의 크기가 바뀌었다(40 → 1.5 · 2026-09-09). 이 검사가 재는 것은 **크기가 아니라 자리**다:
+  //   「적이 **내 건물**을 칠 때만 곱해지고, 유닛끼리는 안 곱해진다」.
+  //   ⛔ 40 으로 되돌리지 말 것 — 그건 적이 한 라운드에 1~5마리이던 시절 값이라,
+  //     릴레이(상한 10~40)에서는 던전 3 의 적 셋이 **7초에** 본부를 부순다(BALANCE §5).
+  await step('캠프: 적이 건물을 칠 때만 배율 · 유닛 전투는 그대로', async()=>{
     skipIf(typeof campStepUnits!=='function','캠프 전투 없음');
     campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
     skipIf(!CAMPB,'전장이 안 열림');
@@ -6921,8 +6932,13 @@ async function groupLobby(){
     skipIf(!foe,'적을 못 만들었다');
     campWithStk(()=>{ campStepUnits(0.02); });
     const got = hp0 - b.hp;
-    assert(got > CAMP_FOE_BLD_MUL*0.5,
-      '건물 피해가 안 커졌다: 공격 1 → '+got.toFixed(2)+' (기대 '+CAMP_FOE_BLD_MUL+' 안팎)');
+    assert(Math.abs(got/CAMP_FOE_BLD_MUL - 1) < 0.5,
+      '건물 피해에 배율이 안 걸렸다: 공격 1 → '+got.toFixed(2)+' (기대 '+CAMP_FOE_BLD_MUL+' 안팎)');
+    // 📐 배수가 「전멸 뒤 60~120초」를 지키는지 — ⚠ 마리 수를 빼먹지 말 것(옛 40 이 그 실수였다)
+    { const cap = (typeof CAMP_FOE_LIVE_MAX!=='undefined') ? CAMP_FOE_LIVE_MAX[CAMP_DG_STEPS-2] : 30;
+      const sec = CAMP_BASE_HP / (cap * CAMP_FOE_ATK0 * CAMP_FOE_BLD_MUL);
+      assert(sec>40 && sec<200,'전멸 뒤 본부가 무너지는 시간이 설계 구간(60~120초)에서 크게 벗어났다: '
+        +Math.round(sec)+'초 (적 '+cap+'마리 × 공격 '+CAMP_FOE_ATK0+' × 배수 '+CAMP_FOE_BLD_MUL+')'); }
     // ①-b 🕸 **본부 앞에 밀려 선 적도 쏜다**(2026-09-07 교착 고침) — 본부는 밀어내는 원(반폭 210)이 46 보다 훨씬 커서,
     //   옛 식(거리−46)으로는 사거리 63 짜리가 본부 앞 220 에서 **영영 못 쐈다**(아군 전멸 뒤 10~30분 정지).
     { const base=CAMPB.me.base;
@@ -6966,7 +6982,10 @@ async function groupLobby(){
       if(me&&en){ me.armor=0; const h0=me.hp;
         campWithStk(()=>{ campStepUnits(0.02); });
         const took=h0-me.hp;
-        assert(took < CAMP_FOE_BLD_MUL*0.5,'유닛 피해에 건물 배율이 걸렸다: '+took.toFixed(2)+' (기대 1 안팎)'); } }
+        // ⚠ 문턱을 배수에 매지 말 것 — 배수가 1.5 로 내려오면(2026-09-09) 「배수의 절반」이
+        //   원래 피해(1)보다 작아져 **정상 동작이 실패**한다. 재는 것은 **원래 피해 그대로인가**다.
+        assert(Math.abs(took - (en.dmg||1)) < (en.dmg||1)*0.25,
+          '유닛 피해가 원래 값이 아니다: '+took.toFixed(2)+' (기대 '+(en.dmg||1)+' · 건물 배율이 새어 들어왔나)'); } }
     campWipeField();
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
     campBattleClose();
@@ -7560,16 +7579,31 @@ async function groupLobby(){
       { let prev=0; for(let k=1;k<=CAMP_DG_STEPS;k++){ const v=campGateRate(k);
           assert(v>prev,'관문 배율이 도로 내려간다: 관문 '+k+' ×'+v); prev=v; } }
       assert(campGateRate(1)>1.2,'첫 관문 배율이 너무 작다 — 「깰 때마다 세진다」가 안 보인다: ×'+campGateRate(1));
-      // ③ ⛔ **끝점을 옮기지 말 것** — campFoeDiff 는 보상(campMineMul)과 환생 포인트(campRebMul)도
-      //    읽는다. 한 회차 천장이 크게 달라지면 「첫 환생 하루」 설계가 통째로 어긋난다(HUNT_R1 §4).
-      //    옛 눈금(던전 3 · 라운드 50)의 천장이 9.2e7 이었다.
+      // ③ 🎯 **천장은 「아군이 낼 수 있는 강함」에 매여 있다**(2026-09-09 재설계).
+      //    난이도는 공격·체력 **양쪽**에 곱해져 전투력으로는 제곱이 된다. 아군 천장은
+      //    병력 수(×25) × 티어(×290) × 연구(×625) ≈ ×450만 이고, 적 천장을 그 아래에 둔다.
+      //    ⛔ 옛 9.2e7(전투력 ×8.6e15)로 되돌리지 말 것 — 한 회차에 던전 3 을 도는 것이
+      //      산술적으로 불가능해진다(「한 번의 환생에 최종까지」가 설계다).
       { const top=campFoeDiff(CAMP_DG_MAX,CAMP_DG_STEPS);
-        assert(top>3e7 && top<3e8,'한 회차 천장이 옛 자리(9.2e7)에서 크게 벗어났다: '+top.toExponential(2)); }
+        assert(top>200 && top<800,'한 회차 천장이 설계 구간(200~800)을 벗어났다: '+top.toFixed(0)); }
+      // ③-2 ⚠ 천장을 옮겼으면 **환생 배수**도 같이 옮겨야 한다 — campRebMul 은 이 천장의 log 다.
+      //    ⛔ CAMP_GATE_RATE 만 만지고 CAMP_REB_K 를 두면 환생이 조용히 시시해진다.
+      { const keep={dg:C.dg, broken:C.broken};
+        C.dg=CAMP_DG_MAX; C.broken=CAMP_DG_STEPS; C.cleared=CAMP_DG_STEPS;
+        const g=campRebMulGain();
+        C.dg=keep.dg; C.broken=keep.broken;
+        assert(g>4 && g<10,'천장에서의 환생 배수가 옛 자리(+6 근처)를 벗어났다: +'+g.toFixed(2)
+          +' — CAMP_GATE_RATE 를 만졌으면 CAMP_REB_K 도 함께 볼 것'); }
       // ④ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
       C.dg=1; C.cleared=0; C.broken=0; const m0=campMineMul();
       C.cleared=CAMP_DG_STEPS; C.broken=CAMP_DG_STEPS; const m1=campMineMul();
-      assert((campFoeDiff(1,CAMP_DG_STEPS)/campFoeDiff(1,0)) > (m1/m0)*10,
-        '던전 하나에 난이도가 보상의 10배도 안 오른다 — 곡선이 묶였나');
+      //    ⚠ 문턱을 ×10 에서 **×4** 로 내렸다(2026-09-09) — 사다리를 아군 천장에 맞춰 낮추면서
+      //      던전 하나의 난이도가 ×453 → ×7.2 가 됐다. 보상(×1.33)과의 **비**는 5.4 로 여전히 크다.
+      //      ⛔ 이 검사의 뜻은 「둘을 같은 식으로 묶지 마라」이지 특정 배수가 아니다(HUNT_R1 §6-1).
+      { const dRatio=campFoeDiff(1,CAMP_DG_STEPS)/campFoeDiff(1,0), mRatio=m1/m0;
+        assert(dRatio > mRatio*4,
+          '던전 하나에 난이도가 보상의 4배도 안 오른다 — 곡선이 묶였나: 난이도 ×'+dRatio.toFixed(1)
+          +' vs 보상 ×'+mRatio.toFixed(2)); }
       // ④ 마리 수 — R1 은 1마리(어느 던전이나 · 램프 없이 기준값이 1), 라운드가 오르면 잘게 쪼갠다. 상한 100
       C.dg=2; assert(campFoeCount(1)===1,'던전 2 R1 마리 수: '+campFoeCount(1));
       C.dg=1; assert(campFoeCount(1)===1,'던전 1 R1 이 1마리가 아님: '+campFoeCount(1));

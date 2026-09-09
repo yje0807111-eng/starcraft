@@ -95,10 +95,19 @@ const CAMP_DG = [
 // ── 🔢 값 — ⚠ 전부 출발점이다(안 쟀다) ────────────────────────────────────
 //   ⭐ 기준은 **내 건물**이다: CAMP_BLD_HP(120) · 본부 CAMP_BASE_HP(750).
 //     적 진행 건물이 그보다 얇으면 「깨는 맛」이 없고, 두꺼우면 한 채에 몇 분씩 걸린다.
-const CAMP_FOE_BLD_HP0 = 60;             // 진행 건물 한 채의 밑값 · 여기에 난이도(campFoeDiff)가 곱해진다
-const CAMP_FOE_BLD_K = { main:3.0, tech:1.0, prod:1.2, res:0.8, tower:1.5, depot:0.6 }; // 보급고는 얇다(들르는 값)
+// ⏫ **60 → 180** (2026-09-09) — 「몇 초 동안 때려야 깨지나」로 다시 잡았다.
+//   ⛔ 60 은 종잇장이었다: 던전 3 에 드레드노트 20기로 들어가면 진행 건물 여섯이 **한 프레임에**
+//     같이 무너져 던전이 10초에 끝났다(실측). 「하나씩 부순다」가 성립하려면 한 채가 시간을 먹어야 한다.
+//   ⭐ 기준: 그 관문에 **알맞은 병력**이면 한 채에 **20~30초**. 아군은 그동안 적 유닛과도 싸우므로
+//     실효 화력은 이론의 3분의 1쯤이다(실측 31%) — 그 몫까지 계산에 넣은 값이다.
+const CAMP_FOE_BLD_HP0 = 180;            // 진행 건물 한 채의 밑값 · 여기에 그 관문의 난이도가 곱해진다
+// ⏬ 본진 3.0 → **2.2** (2026-09-09) — 본진은 **마지막 관문**이라 사다리 배율(×1.62)을 이미 안고 있다.
+//   3.0 을 함께 쓰면 벽이 둘로 겹쳐 「5/6 에서 늘 전멸」이 된다(실측에서 네 판 중 세 판이 그랬다).
+const CAMP_FOE_BLD_K = { main:2.2, tech:1.0, prod:1.2, res:0.8, tower:1.2, depot:0.5 }; // 보급고는 얇다(들르는 값)
 // 🗼 방어탑 — 사거리 안 내 유닛을 쏜다. ⚠ 적 유닛과 **같은 자**를 쓴다(CAMP_FOE_ATK0 = 0.05).
-const CAMP_FOE_TOWER_DMG = 0.05 * 6;     // 탑 하나 = 적 여섯 몫의 화력
+// ⚠ **적 공격력에서 파생시킨다** — 상수로 박아 두면 `CAMP_FOE_ATK0` 를 만질 때마다 어긋난다
+//   (실제로 0.05 시절 값이 그대로 남아 탑이 적 한 마리보다 약해져 있었다 · 2026-09-09).
+const CAMP_FOE_TOWER_DMG = ((typeof CAMP_FOE_ATK0 !== 'undefined') ? CAMP_FOE_ATK0 : 0.17) * 6;   // 탑 하나 = 적 여섯 몫
 const CAMP_FOE_TOWER_RNG = 210;          // 전장 좌표 · 내 본부 밀어내는 원(210)과 같은 눈금
 const CAMP_FOE_TOWER_CD  = 1.0;          // 발사 간격(초)
 // 🌊 **릴레이 압박** — 적은 **활성 건물 한 곳에서만** 나온다(2026-09-09 사용자 확정).
@@ -118,12 +127,9 @@ const CAMP_FOE_RELAY_N = [2, 2, 3, 3, 4, 5];               // 단계별 한 무�
 //   ⚠ 상한은 단계마다 오른다 — 「밀수록 어려워진다」는 그대로다(마리 수도 세기도 함께 오른다).
 //   ⛔ 상한을 없애서 난이도를 올리지 말 것. 난이도는 CAMP_GATE_RATE(세기)와 이 표(머릿수)로 올린다.
 //   ⚠ 전부 안 쟀다.
-const CAMP_FOE_LIVE_MAX = [8, 10, 13, 16, 20, 25];         // 단계별 전장에 동시에 살아 있을 수 있는 적
-// ⚠ **릴레이 무리 한 벌이 가져가는 몫**(campScaleFoes 의 share). ⛔ 옛 `k / _wqTot` 를 쓰지 말 것 —
-//   그건 「라운드 총량을 무리들이 나눠 갖는다」는 뜻이고, 라운드가 없는 릴레이에서는 `_wqTot` 가
-//   **끝없이 커져 적이 시간이 갈수록 약해진다**(2026-09-09 실측: 5분 뒤 아군이 한 기도 안 죽었다).
-//   ⭐ 릴레이는 흐름이지 덩어리가 아니다 — 한 마리가 늘 같은 몫(1/REF)을 갖는다.
-const CAMP_FOE_RELAY_REF = 12;           // ⚠ 안 쟀다 — 「한 벌의 총량」이 적 몇 마리치인가
+//   ⚠ 아군 규모에 맞춘다 — 재구매 배수를 1.30 으로 내려(2026-09-09) 병력이 20~40기가 됐다.
+//     상한이 아군 수보다 훨씬 작으면 「몰려온다」가 안 되고, 크면 상한이 뜻을 잃는다.
+const CAMP_FOE_LIVE_MAX = [10, 14, 18, 24, 30, 40];        // 단계별 전장에 동시에 살아 있을 수 있는 적
 const CAMP_FOE_SPAWN_R   = 26;           // 건물 둘레로 흩는 반경 — 한 점에서 겹쳐 나오면 끼인다
 const CAMP_FOE_SPAWN_OFF = 18;           // 건물보다 내 쪽으로 이만큼 — 건물 안에서 안 나오게
 // ⚡ **보급고** — 진행에 안 세지만 깨면 일시 버프. ⭐ 「지금 들러서 힘 받고 갈까」가 생긴다.
@@ -137,10 +143,14 @@ const CAMP_COUNTER_N = { main:14, tech:6, prod:5, res:6, tower:4, depot:3 };
 //   지금까지 가스는 정제소(=경제 지출) 하나에서만 나와서, 경제에 쓰면 연구까지 따라와 저울이 안 섰다.
 //   res 건물이 가스를 내면 **가스가 전투 성과에서도** 나온다 → 경제=미네랄 / 전투=가스·연구로 축이 갈린다.
 //   ⚠ 그래서 **CAMP_LOOT_GAS 가 이 게임의 저울을 정하는 값**이다. 적으면 지금과 같고 많으면 경제가 죽는다.
-const CAMP_LOOT_GAS_S = 90;              // res 건물 = 지금 가스 수입의 몇 초치
-const CAMP_LOOT_MIN_S = 45;              // prod 건물 = 지금 미네랄 수입의 몇 초치
+//   ⏫ **관문 하나가 요구하는 성장을 전리품이 실제로 채워야 한다**(2026-09-09 설계).
+//     관문 배율이 ×1.2~1.55 이므로, 한 채를 깨면 그만큼의 성장을 **살 수 있어야** 다음 채로 간다.
+//     그 자리를 못 채우면 「깨고 → 벽 → 캠프에서 하염없이 기다림」이 되어 원정의 리듬이 죽는다.
+//   ⚠ 「몇 초치」라 수입이 자라면 전리품도 함께 자란다 — 뒤 관문일수록 자동으로 커진다.
+const CAMP_LOOT_GAS_S = 150;             // res 건물 = 지금 가스 수입의 몇 초치(연구 몇 레벨치)
+const CAMP_LOOT_MIN_S = 90;              // prod 건물 = 지금 미네랄 수입의 몇 초치(유닛 한두 기치)
 const CAMP_LOOT_TECH_CUT = 0.5;          // tech 건물 = 진행 중 연구의 남은 시간을 이만큼 깎는다
-const CAMP_LOOT_MAIN_S = 180;            // main = 둘 다 이만큼
+const CAMP_LOOT_MAIN_S = 300;            // main = 둘 다 이만큼(던전 하나를 끝낸 삯)
 // 🌫 안개 — 못 본 건물은 실루엣이다. ⚠ 엔진의 타일 안개(fogInit)는 **안 쓴다**(그건 유즈맵 격자용) —
 //   건물 12채의 플래그면 충분하고, 시스템 둘을 겹치면 어느 쪽이 정답인지 알 수 없게 된다.
 const CAMP_FOE_SEE_R = 1.25;             // 유닛 인지 거리의 이 배수 안이면 보인다
@@ -174,13 +184,21 @@ function campFoeBase(dg){
   const C = (typeof campState === 'function') ? campState() : null;
   const dead = (C && C.foeDead) || {};
   const W = CAMPB.world, out = [];
-  const diff = (typeof campFoeDiff === 'function') ? campFoeDiff(dg, campBroken()) : 1;
+  // 🪜 **건물마다 「제 관문의 난이도」로 짓는다**(2026-09-09).
+  //   ⛔ 기지 전체를 입장 시점의 난이도 하나로 짓지 말 것 — 그러면 체력이 판 내내 고정이라
+  //     적 유닛만 세지고 **뒤 건물이 상대적으로 더 물러진다**. 「밀수록 어려워진다」의 반대다
+  //     (실측 2026-09-09: 드레드노트 20기가 던전 3 을 13초에 통과했다).
+  //   ⭐ 진행 건물은 제 차례(step−1), 부수 건물은 제 구간이 열리는 관문((zone−1)×2)을 쓴다.
+  const _bdiff = function(q){
+    if(typeof campFoeDiff !== 'function') return 1;
+    const g = (q.step | 0) > 0 ? ((q.step | 0) - 1) : Math.max(0, ((q.zone | 0) - 1) * 2);
+    return campFoeDiff(dg, g); };
   let i = 0;
   for(const q of d.bld){
     const eid = 'fb' + dg + '_' + (i++);                   // ⚠ 자리마다 고정된 id — 같은 던전이면 늘 같다
     const def = campFoeBldDef(d.race, q.k);
     const k = CAMP_FOE_BLD_K[q.kind] || 1;
-    const hp = Math.max(1, Math.round(CAMP_FOE_BLD_HP0 * k * diff));
+    const hp = Math.max(1, Math.round(CAMP_FOE_BLD_HP0 * k * _bdiff(q)));
     const p = (typeof campG2W === 'function') ? campG2W(q.gx, q.gy, W) : { x:W * q.gx, y:W * q.gy };
     out.push({ x:p.x, y:p.y, eid:eid, bk:q.k, role:q.role, kind:q.kind,
       zone:q.zone | 0, step:q.step | 0, spawn:q.foe || null,
@@ -284,6 +302,7 @@ function campBreakBld(b){
     if(!C.best) C.best = {};
     C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.broken);    // 룬 칸·환생이 읽는 「최고 도달」
     // 🩹 **체크포인트 부활** — 옛 「라운드 시작」의 자리다. 누운 병력이 일어나고 체력이 찬다.
+    if(typeof campRescaleMine === 'function') campRescaleMine();   // 🏛 내 기지도 그 관문의 자로
     if(typeof campRoundRevive === 'function') campRoundRevive();
     if(typeof campSay === 'function'){
       const nx = campFoeActive();                          // 이어받을 다음 건물(없으면 이 던전 끝)
@@ -330,7 +349,7 @@ function campCounterWave(b){
   const act = campFoeActive();
   CAMPB._wq.push({ n:n, x:b.x, y:b.y, ids:(act && act.spawn) || null });
   CAMPB._wqT = 0;                                          // 곧바로 나온다
-  // ⛔ `_wqTot` 을 건드리지 않는다 — 그건 **옛 라운드 큐**의 자다(위 CAMP_FOE_RELAY_REF).
+  // ⛔ `_wqTot` 을 건드리지 않는다 — 그건 **옛 라운드 큐**의 자다(몫은 마리 수).
   return n; }
 
 // ── 🌊 릴레이 압박 — **활성 건물 한 곳**이 적을 보낸다 ────────────────────
