@@ -2255,30 +2255,32 @@ SUBJECT 는 **어떻게 그리나**만 흐르듯 적고, 하지 말 것은 NEGAT
 
 | 항목 | 값 | 왜 |
 |---|---|---|
-| 덮을 세로 | 격자 **−0.61 ~ 1.0** | 적 광맥 맨 위 −0.43(`CAMP_FOE_ROW.mine` −0.41 + 호) + 상단바 몫 0.18(`campViewTop`) |
-| CSS | `background-size:auto 161%` (⚠ 아직 118% — 그림이 오면 바꾼다) | 1.61 = 세로 범위 |
-| 비율 | **1:2** (세로 2 · 가로 1) | 161% 로 깔면 폭이 요소의 1.58배 → 좌우 29% 씩 넘친다(가장자리는 지형지물 띠라 잘려도 된다) |
-| 모델 | `gpt_image_2` · `1:2` · `2k`~`4k` · `high` | §11 과 같다(구조를 지키는 모델) |
+| 덮을 세로 | 격자 **−0.58 ~ 1.0** | 그림 위 6.5%(광맥 홈) ↔ 적 광맥 gy −0.48(`CAMP_FOE_ROW.mine`) · 아래 100% ↔ gy 1.0 → 높이 1.58 gy |
+| CSS | `.bmapFloor::before{top:-58%}` + `background-size:auto 100%`(css/30-home.css) | 바닥 요소 자체는 격자(0~1)라 **::before** 를 위로 58% 늘려 깐다 — ⛔ 바닥 요소에 바로 배경을 주면 격자 위가 검게 남는다(실측) |
+| 비율 | **9:16 으로 뽑고 양옆을 잘라 1:2** — `node scripts/map-crop.mjs <입력> <출력.webp>` | 생성기에 1:2 가 없다(2026-09-10 사용자). 세로는 그대로(세로 비율이 곧 게임판) · 1:2 로 깔면 폭이 요소의 1.55배 → 좌우 27% 씩 넘친다(가장자리는 지형지물 띠라 잘려도 된다) |
+| 모델 | `gpt_image_2` · `9:16` · `2k`~`4k` · `high` | §11 과 같다(구조를 지키는 모델) · ⚠ `_min` 미리보기(752×1344)가 아니라 **원본 크기**로 받을 것 |
 | 저장 | 폭 2400 리사이즈 + WebP q82 → `assets/backgrounds/camp/camp.webp` · `dungeons/dg1~3.webp` | §11 규격 · ⚠ 1:2 라 장당 2MB 급 |
 | 장수 | 캠프 0 + 던전 3 = **4장** | 던전은 셋뿐이다(REDESIGN §0-A) |
 
-**그림 안 위치(위 0% → 아래 100%)** — gy → (gy + 0.61) / 1.61. 적 줄은 `CAMP_FOE_ROW`(23-camp-dungeon)에서 환산:
+**그림 안 위치(위 0% → 아래 100%)** — gy → (gy + 0.58) / 1.58. 적 줄은 `CAMP_FOE_ROW`(23-camp-dungeon)에서 환산.
+⭐ 아래 비율은 **첫 그림(2026-09-10)이 실제로 낸 것**을 기준으로 삼았다 — 모델이 요청(13~42%)보다 짧은 고원(8~27%)을 냈고, 그림을 다시 뽑는 대신 **적 기지 줄을 조여서**(`CAMP_FOE_ROW` 간격 0.08 · 사용자: 「미네랄을 더 위로 · 건물은 판 안에 더 작은 비율로」) 고원 안에 넣었다. 그래서 공통 블록의 LAYOUT 도 이 비율이다.
 
 | 구역 | 세로 | 내용 |
 |---|---|---|
-| 상단 여백 | 0 ~ 11% | 재화 바·칩에 가린다. 벽·경계·어둠 |
-| **적 광맥 자국** | 11 ~ 13% | 위로 볼록한 얕은 호 하나(가로 30~70%) — 광맥 스프라이트가 그 위에 선다 |
-| **적 기지 고원** | **13 ~ 42%** | 평평한 한 덩어리 · **대좌 없음**(자리는 랜덤) · 본진 17% · 테크 19~26% · 생산 35% · 탑 24/30/40% |
-| 통로 | 42 ~ 70% | 적이 내려오는 길 · 장애물 없음 · 격자 위끝 0.18 = 49% |
-| **내 기지 석판** | **70 ~ 96%** | 본부 gy 0.64 → 78% · 광맥 줄 그 아래 · §11-2 ① |
+| 상단 여백 | 0 ~ 6% | 벽·경계 — 재화 바·칩 아래(`campViewTop` 여유 0.18 안) |
+| **적 광맥 홈** | 6 ~ 8% | 위로 볼록한 얕은 호 하나(가로 30~70%) — 광맥(gy −0.48) 이 그 위에 선다 |
+| **적 기지 고원** | **8 ~ 27%** | 평평한 한 덩어리 · **대좌 없음**(자리는 랜덤) · gy −0.45 ~ −0.15: 본진 −0.42(10%) · 테크 −0.38/−0.30 · 탑 −0.34/−0.26/−0.18 · 생산 −0.22 · 보급고는 탑 줄의 좌우 0.19/0.81 |
+| 통로 | 27 ~ 66% | 적이 내려오는 길 · 장애물 없음 · 격자 위끝 0.18 = 48% |
+| **내 기지 석판** | **66 ~ 100%** | 석판 위끝 gy 0.46 · 본부 gy 0.64 → 77% · 광맥 줄 그 아래 · §11-2 ① |
 | 지형지물 | 가로 0 ~ 22% · 78 ~ 100% | 화면 밖으로 넘치는 좌우 띠 + 위 모서리 |
 
-⚠ 모델은 좌표를 못 지킨다 — 뽑은 뒤 던전 1 에 들어가 표식(`campFoeMarks`)이 **고원 안에 앉는지** 눈으로 본다.
-고원이 좁으면 그림을 다시 뽑지 말고 `background-size` 를 조금 키운다(고원의 세로 범위가 13~42% 에서 벗어난 만큼).
+⚠ 모델은 좌표를 못 지킨다 — 뽑은 뒤 던전 1 에 들어가 표식(`campFoeMarks`)이 **고원 안에 앉는지** 눈으로 본다(가장 빠른 길: 그림을
+프로젝트 루트에 두고 `--campBg` 를 그 URL 로 바꿔 스크린샷 — 이 절의 수치가 그렇게 나왔다). 고원이 어긋나면 그림을 다시 뽑지 말고
+`::before` 의 `top` 을 손본다(고원 위끝이 gy −0.48 에 오도록).
 
 ### 17-2. 방법 — 0번(캠프)을 먼저, 던전은 그것을 첨부해 위쪽만 바꾼다 (§11-1 그대로)
 
-내 기지 석판(70~96%)은 **4장이 같아야** 한다(원정에서 돌아와도 같은 집). 캠프 0번을 마음에 들 때까지 뽑고,
+내 기지 석판(66~100%)은 **4장이 같아야** 한다(원정에서 돌아와도 같은 집). 캠프 0번을 마음에 들 때까지 뽑고,
 던전 1~3 은 그 그림을 **첨부**하고 「아래 1/3 은 그대로 · 위쪽만 그 던전」으로 뽑는다. ⛔ 후처리로 하단을 이식하지 말 것(§11-1).
 
 ### 17-3. 공통 블록 — 원문 그대로 (4장 모두)
@@ -2288,7 +2290,8 @@ SUBJECT 는 **어떻게 그리나**만 흐르듯 적고, 하지 말 것은 NEGAT
 ```
 --- RENDER SPEC ---
 A tall vertical top-down game board for a mobile real-time strategy game, seen from directly
-above (orthographic, no perspective tilt, no horizon). Portrait 1:2.
+above (orthographic, no perspective tilt, no horizon). Portrait 9:16 (the sides get cropped later,
+so keep everything important inside the middle 56% of the width).
 STYLE: dark industrial science-fiction ground. Charcoal concrete slabs and gunmetal deck plating
 with crisp chamfered edges, hairline panel seams and recessed grid lines. Cool blue-grey base tone.
 Clean hard-surface look — flat readable surfaces, no clutter, no small debris. The board must feel
@@ -2296,22 +2299,22 @@ like the same world as angular metal UI panels and blue-grey military buildings.
 LIGHT: even overhead light, mid-tone overall (neither dark nor bright — the game darkens it later).
 Soft, low-contrast shading in the seams only. No strong shadows, no spotlights, no glow pools.
 LAYOUT (top to bottom, of the full image height):
-  0–11%   a dark bounding wall or ridge — this strip is hidden under the top bar.
-  11–13%  one shallow ARC-SHAPED GROOVE bowing upward, spanning the middle 40% of the width —
+  0–6%    a dark bounding wall or ridge — this strip is hidden under the top bar.
+  6–8%    one shallow ARC-SHAPED GROOVE bowing upward, spanning the middle 40% of the width —
           a resting mark where mineral crystals will be placed. Nothing else on it.
-  13–42%  ENEMY BASE PLATEAU: one broad, flat, completely EMPTY platform of the enemy's material,
+  8–27%   ENEMY BASE PLATEAU: one broad, flat, completely EMPTY platform of the enemy's material,
           spanning 20–80% of the width, with a clean rim. NO pads, NO sockets, NO markings on it —
           buildings will be placed on it at random positions. Plain readable surface only.
-  42–70%  OPEN CORRIDOR: a wide empty passage down the centre, plain ground, nothing blocking it.
-  70–96%  PLAYER BASE SLAB: one broad stone-and-metal platform spanning the FULL width and running
-          off both sides, completely empty. Same material in every image of this set.
-  96–100% the slab continues off the bottom edge.
+  27–66%  OPEN CORRIDOR: a wide empty passage down the centre, plain ground, nothing blocking it.
+  66–100% PLAYER BASE SLAB: one broad stone-and-metal platform spanning the FULL width and running
+          off both sides and off the bottom edge, completely empty. Same material in every image
+          of this set.
 EDGES: terrain features (ridges, pipes, crystal, growth) ONLY in the outer 20% on the left and
 right, and in the top corners. Every feature is small — smaller than a single building.
 The centre column stays open from the enemy plateau down to the player slab.
 COLOUR: grey and blue-grey ground everywhere. ONE accent colour per image, used sparingly on the
 enemy plateau rim and the edges only, never on the player slab and never on the corridor.
-OUTPUT: 1:2 portrait, no text, no UI, no frame.
+OUTPUT: 9:16 portrait, no text, no UI, no frame.
 --- NEGATIVE ---
 buildings, pads, sockets, platforms drawn on the plateau, units, vehicles, characters, creatures,
 people, text, letters, numbers, icons, HUD, user interface, frame, border, isometric, perspective,
@@ -2328,9 +2331,9 @@ painterly, watercolor, glossy plastic, chrome, mirrored symmetry artifacts, tili
 **⓪ 캠프 (`camp/camp.webp` · 레퍼런스 없이 · 이 한 장이 4장의 석판을 정한다)**
 
 ```
-Home camp. The enemy plateau (13–42%) is here just quiet unused ground of the same grey concrete,
+Home camp. The enemy plateau (8–27%) is here just quiet unused ground of the same grey concrete,
 its rim barely visible, as if nothing has settled there yet; the arc groove above it is faint.
-The player slab (70–96%) is the hero of this image: large interlocking blue-grey deck plates with
+The player slab (66–100%) is the hero of this image: large interlocking blue-grey deck plates with
 chamfered edges, a few hairline seams, subtle wear at the joints. Edges left and right: low
 charcoal retaining walls with a single embedded pipe run. Accent colour: none — keep this image
 fully neutral grey and blue-grey so the three dungeons can differ from it.
@@ -2374,6 +2377,7 @@ the rim inlay, the channel and the crystal shards.
 
 1. ⓪ 를 먼저 — 석판이 화면 폭을 꽉 채우고 위 1/3 이 비었나. 마음에 안 들면 ⓪ 만 다시.
 2. ①~③ 은 ⓪ 첨부 · 하단이 정말 같은가(자르지 말 것).
-3. `background-size` 118% → **161%** 로 바꾸고, 던전 1 에 들어가 표식(`campFoeMarks`)이 고원 **안**에 앉고 광맥 스프라이트가
-   호 자국 위에 서는지 본다. 어긋나면 `background-size` 를 손본다(자리는 랜덤이라 표를 옮길 것이 없다).
-4. 저장은 §11 규격(폭 2400 · q82). `node scripts/art-lint.mjs`.
+3. `node scripts/map-crop.mjs <원본.png> assets/backgrounds/camp/camp.webp`(던전은 `dungeons/dgN.webp`) — 양옆 크롭 + WebP q82 · 세로 2688.
+   그리고 **`CAMP_BG_V2`(js/19-camp.js)에서 그 번호를 true 로** — 그래야 바닥이 −58% 까지 올라간다(옛 그림은 −18%).
+4. 던전 1 에 들어가 표식(`campFoeMarks`)이 고원 **안**에 앉고 광맥이 호 자국 위에 서는지 본다. 어긋나면 `::before` 의 `top` 을 손본다
+   (자리는 랜덤이라 표를 옮길 것이 없다). `node scripts/art-lint.mjs`.

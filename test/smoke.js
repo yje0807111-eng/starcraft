@@ -1956,7 +1956,7 @@ async function groupLobby(){
     //    문서 기준 절대 URL 이라야 'css/assets/…' 로 새지 않는다(파일 분할 때도 밟은 함정).
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
-      const bg=getComputedStyle(fl).backgroundImage;
+      const bg=getComputedStyle(fl,'::before').backgroundImage;   // 🖼 2026-09-10: 그림은 ::before 에 있다(격자 위까지 깔려야 해서)
       assert(bg.indexOf('backgrounds/camp/')>=0 || bg.indexOf('backgrounds/dungeons/')>=0,
         '바닥이 던전 배경이 아님: '+bg.slice(0,60));
       assert(bg.indexOf('css/assets')<0,'배경 경로가 css/ 기준으로 샜다: '+bg.slice(0,70)); }
@@ -7464,6 +7464,13 @@ async function groupLobby(){
        { const pr=marks.find(m=>m.classList.contains('prog')), sd=marks.find(m=>m.classList.contains('side'));
          assert(pr && getComputedStyle(pr).borderBottomWidth!=='0px','진행 건물에 밑변 광원이 없다');
          assert(sd && getComputedStyle(sd).borderBottomWidth==='0px','부수 건물에도 밑변 광원이 붙었다'); }
+       // 🖼 바닥 그림이 **격자 위 한 화면**까지 깔린다(2026-09-10) — 배경은 .bmapFloor::before 에 있고 위로 58% 늘어난다
+       { const fl=document.querySelector('#cstMain .bmapFloor'); assert(fl,'바닥 요소가 없다');
+         const ps=getComputedStyle(fl,'::before'); assert(ps.backgroundImage&&ps.backgroundImage!=='none','바닥 ::before 에 그림이 없다(격자 위가 검게 남는다)');
+         const ft=campFloorTop(campDgN()); assert(ft<=-0.18,'바닥 위 여유가 없다: '+ft);
+         assert(Math.abs(parseFloat(ps.top)/fl.clientHeight-ft)<0.02,'바닥 그림이 격자 위 '+(-ft*100)+'% 까지 안 올라간다: '+ps.top+'/'+fl.clientHeight);
+         assert(getComputedStyle(fl).backgroundImage.indexOf('url(')<0,'바닥 요소에 그림이 또 있다(두 겹) — 격자선 그라데이션만 있어야 한다');
+         assert(getComputedStyle(fl).overflow!=='hidden','바닥 요소가 ::before 를 자른다'); }
        // ③ 화면 안에 든다 — 뷰 맞춤(campFoeLookAt). 12채 전부 상단바 아래 · 시트 위
        { const r=document.getElementById('cstMain').getBoundingClientRect();
          const sh=document.getElementById('btSheet'), sb=sh?sh.getBoundingClientRect():null;
@@ -7534,6 +7541,10 @@ async function groupLobby(){
         for(const b of zb) assert(t.gy>b.gy-0.01,'문지기 탑이 제 구간 건물보다 뒤에 있다(구간 '+t.zone+')'); }
       // ② 전장 y 는 0 이상 · 격자 위 한 화면 안
       for(const b of fb) assert(b.y>=0 && b.gy>=-0.43,'적 건물이 전장 밖으로 나갔다: '+b.bk+' y='+Math.round(b.y)+' gy='+b.gy.toFixed(3));
+      // 📐 **전장 좌표가 표의 줄을 지킨다** — campG2W 가 레인 위(t<0)를 0 에서 자르면 −0.26 위의 줄이 전부 한 줄로 무너진다(실측 2026-09-10)
+      for(const b of fb){ const g=campW2G(b.x,b.y,CAMPB.world); assert(Math.abs(g.gy-b.gy)<0.005,'적 건물의 전장 자리가 표의 줄과 다르다(레인 위가 잘렸다): '+b.bk+' 표 '+b.gy.toFixed(3)+' 전장 '+g.gy.toFixed(3)); }
+      // 🗺 기지 전체가 그림의 고원 안(gy −0.48 ~ −0.15 · ART.md §17) — 광맥은 고원 위 홈, 건물은 그 아래
+      for(const b of fb) assert(b.gy<=-0.15,'적 건물이 고원 아래 통로에 선다: '+b.bk+' gy='+b.gy.toFixed(3));
       // ③ 겹치지 않는다 — 발판(0.07)보다 가깝게 붙은 쌍이 없다. ⚠ **씨앗 300개 × 던전 3** 으로 잰다 — 한 판만 재면
       //    씨앗 운이다(실측 2026-09-09: 4000개 중 780개가 겹치던 값이 스모크 한 번은 통과했다). 순서 규칙도 같이.
       const d=campDgDef(1);

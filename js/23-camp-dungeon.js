@@ -569,7 +569,7 @@ function campFoeBld3D(){
     if(x < -0.3 || x > 1.3 || y < -0.3 || y > 1.3) continue;
     out.push({ uid:'cst_foe_' + q.eid, id:'cb_' + mk, x:x, y:y,
       face:yaw + ((cfg && cfg.f) || 0), yoff:-3, dy:((cfg && cfg.dy) || 0), lift:0,
-      fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12),
+      fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12) * CAMP_FOE_SCL,
       sel:false, buildP:null, hidden:!q.seen, z:zOf(by) }); }
   for(const w of campFoeWorkers3D(v, cwpx)) out.push(w);        // 🚶 적 일꾼(연출)
   return out; }
@@ -595,7 +595,10 @@ function campFoeLookAt(){
     const span = Math.max(0.2, hi - lo + 0.12);
     const sf = (typeof techSheetFrac === 'function') ? techSheetFrac() : 0.21;
     const avail = Math.max(0.3, 1 - 0.13 - sf);
-    t.zoom = Math.max(campMinZoom(), Math.min((typeof techMaxZoom === 'function') ? techMaxZoom() : 3, avail / span)); }
+    // ↔ 가로도 다 들어야 한다(2026-09-10 실측: 세로만 맞추니 줌 1.49 에서 바깥 보급고 0.13/0.87 이 화면 밖) — 발판 반 칸 + 여유
+    let hx = 0; for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); hx = Math.max(hx, Math.abs(g.gx - 0.5)); }
+    const zx = 1 / (2 * hx + 0.10 + 0.06);
+    t.zoom = Math.max(campMinZoom(), Math.min((typeof techMaxZoom === 'function') ? techMaxZoom() : 3, avail / span, zx)); }
   t.x = 0.5;
   t.y = foeY - 9;                                   // 위로 한껏 — clamp 가 위 끝(campViewTop)에서 받는다
   _techClampView(t);
@@ -708,19 +711,25 @@ function campViewTop(){
 //     ⚠ 둘 다 **연출**이다(사용자 확정 「연출만」) — 게임 값에 안 들어간다. 적 정제소(res)를 깨면 나오는
 //     전리품은 그대로다.
 //   🎲 씨앗 = C.foeSeed(원정마다 새로) — ⛔ Math.random 을 쓰지 말 것: 저장·복원하면 자리가 바뀌고 스모크가 못 잰다.
-//   📐 세로 자리(격자 gy): 광맥 −0.41 · 본진 −0.34 · 구간3 테크 −0.30(본진 옆) · 탑③ −0.22 · 구간2 테크 −0.19 · 탑② −0.13 ·
-//     생산 −0.05 · 탑① +0.03. ⚠ 구간3 테크와 구간2 테크는 **다른 줄**이다 — 한 줄에 두면 좌우 교대가 같은 열을 다시 잡아
-//     겹친다(실측: engbay · academy). ⚠ 하한 −0.43 — 그 위는 전장 y 가 음수가 된다(18-strike 길찾기 셀). 상단 여유는 campViewTop 이 준다.
+//   📐 세로 자리(격자 gy): 광맥 −0.48 · 본진 −0.42 · 구간3 테크 −0.38(본진 옆) · 탑③ −0.34 · 구간2 테크 −0.30 · 탑② −0.26 ·
+//     생산 −0.22 · 탑① −0.18. ⚠ 구간3 테크와 구간2 테크는 **다른 줄**이다 — 한 줄에 두면 좌우 교대가 같은 열을 다시 잡아
+//     겹친다(실측: engbay · academy). ⚠ 건물 하한 −0.43 — 그 위는 전장 y 가 음수가 된다(18-strike 길찾기 셀). 상단 여유는 campViewTop 이 준다.
+//   🗺 **기지 전체가 그림의 고원 안에 선다**(2026-09-10 사용자: 「미네랄을 더 위로 · 건물은 판 안에 더 작은 비율로」) — 던전 바닥
+//     그림(ART.md §17)은 위 8~27% 가 적 고원이고, 바닥은 격자 위 0.58 까지 늘려 깐다(css/30-home.css .bmapFloor::before) →
+//     고원 = gy −0.48 ~ −0.16. 그래서 광맥 −0.48(고원 위 홈) · 탑① −0.18(고원 아래 턱) 이고, 줄 간격은 **0.08** 로 조였다.
+//     ⚠ 광맥은 연출이라 하한(−0.43) 위여도 된다(전장 좌표를 안 쓴다). 건물은 본진 −0.42 가 끝이다(세로 흔들림 없음).
 //   📏 **같은 열에 서는 쌍은 줄 차이 − 흔들림 합 ≥ 0.07(발판)** 이어야 한다 — 씨앗 12,000개를 돌려 잡은 규칙(scratch seeds.mjs):
-//     탑③↔본진(가운데 열) 0.09−0.04=0.05 · 탑③↔탑② 0.09−0.04 · 테크③↔테크②(좌우 교대가 같은 쪽을 잡을 때) 0.10−0.04 — 셋이 겹쳤다.
-//     그래서 **탑은 세로 흔들림이 없고**(가로만) 세로 흔들림은 0.015 다. ⛔ 값을 옮기면 스모크의 겹침 검사가 씨앗에 따라 터진다.
-const CAMP_FOE_ROW = { mine:-0.41, main:-0.34, tech3:-0.30, tower3:-0.22, tech:-0.19, tower2:-0.13, prod:-0.05, tower1:0.03 };
+//     가운데 열(본진·탑 셋)은 0.08 간격에 흔들림 0 · 옆 열(테크③·테크②·생산)은 0.08 − 0.005×2 = 0.07.
+//     ⛔ 값을 옮기면 스모크의 겹침 검사(900판)가 씨앗에 따라 터진다.
+const CAMP_FOE_ROW = { mine:-0.48, main:-0.42, tech3:-0.38, tower3:-0.34, tech:-0.30, tower2:-0.26, prod:-0.22, tower1:-0.18 };
 // 🔍 던전 안의 축소 하한 — 위 한 화면(적 기지)까지 한눈에 보이게 1.0 까지 내린다(캠프는 CAMP_MIN_ZOOM 그대로).
 //   ⚠ 1.0 아래로는 바닥이 화면 폭을 못 덮는다(19-camp CAMP_MIN_ZOOM 설명 · 물리 하한 1.0).
 const CAMP_DG_MIN_ZOOM = 1.0;
 function campMinZoom(){ const dg = (typeof campDgN === 'function') ? campDgN() : 0;
   return dg > 0 ? CAMP_DG_MIN_ZOOM : ((typeof CAMP_MIN_ZOOM !== 'undefined') ? CAMP_MIN_ZOOM : 1.45); }
-const CAMP_FOE_JIT = { x:0.04, y:0.015, tower:0.06 };         // 씨앗 흔들림(격자 단위) — 발판(2칸 = 0.088)보다 작다 · 탑은 가로만
+const CAMP_FOE_JIT = { x:0.04, y:0.005, tower:0.06 };         // 씨앗 흔들림(격자 단위) — 발판(2칸 = 0.088)보다 작다 · 본진·탑은 가로만
+// 🏗 적 건물 3D 크기 — 내 건물의 0.85 배(2026-09-10 사용자: 「건물이 판에 더 작은 비율로」). 표식(.fbMark)은 그대로다.
+const CAMP_FOE_SCL = 0.85;
 function campFoeRng(seed){                                   // mulberry32 — 작고 결정적이다
   let a = (seed >>> 0) || 1;
   return function(){ a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -737,7 +746,7 @@ function campFoeLayout(d, seed){
   const side = {}, out = [];
   for(const q of d.bld){
     const r = rowOf(q); let gx, gy;
-    if(r === 'main'){ gx = 0.5 + j(0.03); gy = CAMP_FOE_ROW.main + j(CAMP_FOE_JIT.y); }
+    if(r === 'main'){ gx = 0.5 + j(0.03); gy = CAMP_FOE_ROW.main; }   // 세로 흔들림 없음 — 하한 −0.43 바로 위다
     else if(r.indexOf('tower') === 0){ gx = 0.5 + j(CAMP_FOE_JIT.tower); gy = CAMP_FOE_ROW[r]; }   // 세로 흔들림 없음(위 📏)
     else if(r === 'prod' || r === 'tech' || r === 'tech3'){
       if(side[r] == null) side[r] = R() < 0.5 ? 0 : 1;
@@ -748,8 +757,11 @@ function campFoeLayout(d, seed){
       const z = q.zone | 0, left = (z === 1);
       // ⚠ 구간 2·3 은 **같은 오른쪽 열**이라 세로 간격이 곧 겹침 여부다 — 줄 차이 0.10 에서 흔들림 ±0.02 씩을 빼면
       //   0.06 이라 발판(0.07)보다 가까웠다(실측: supply · supply 겹침 · 씨앗 하나). 구간 3 만 제 줄에 두면 0.13 − 0.04 = 0.09.
-      const gyRow = z === 1 ? CAMP_FOE_ROW.prod + 0.03 : z === 2 ? CAMP_FOE_ROW.tech + 0.03 : CAMP_FOE_ROW.tech3;
-      gx = X(left ? 0.13 : 0.87) + j(0.02); gy = gyRow + j(CAMP_FOE_JIT.y); }   // ⚠ 0.90 은 발판 반이 화면 밖으로 나갔다(실측)
+      // 📐 **탑과 같은 줄 · 가로 0.19/0.81**(2026-09-10) — 옛 0.13/0.87 은 진입 줌(campFoeLookAt · 가로 맞춤)이 1.0 까지 내려가 기지가 작아졌다.
+      //   안쪽으로 들이면 옆 열(0.30/0.70 ± 0.04)과 가까워지므로 **탑의 줄**(테크 줄 사이)에 두고 가로 흔들림을 뺀다:
+      //   옆 열과 dx ≥ 0.07 · dy 0.04 → 0.081 ≥ 0.07(발판). ⛔ 가로 흔들림을 되살리지 말 것 — 0.02 만 흔들려도 0.057 로 겹친다.
+      const gyRow = z === 1 ? CAMP_FOE_ROW.tower1 : z === 2 ? CAMP_FOE_ROW.tower2 : CAMP_FOE_ROW.tower3;
+      gx = X(left ? 0.19 : 0.81); gy = gyRow; }   // 0.20 은 옆 열과 0.069 로 21/12000 겹쳤다(실측)
     out.push({ gx:gx, gy:gy }); }
   // ⛏ 광맥 — 본진 위 호(내 기지 campLayMinerals 의 거울 · 위로 볼록). 흔들림은 같은 고정 난수(campMineJit)
   const mine = [];
@@ -763,8 +775,8 @@ function campFoeLayout(d, seed){
       const jx = (typeof campMineJit === 'function') ? campMineJit(c, 11) : 0, jy = (typeof campMineJit === 'function') ? campMineJit(c, 12) : 0;
       mine.push({ i:c, gx: x0 + (c * gap + jx * 0.55) * cw,
                   gy: y0 - ((1 - Math.pow(c / last * 2 - 1, 2)) * arc + jy * 0.45) * ch }); } }
-  // ⛽ 가스 — 구간 2 높이의 **왼쪽** 바깥(오른쪽은 구간 2·3 보급고 열이라 겹쳐 보인다). 반전을 따라간다.
-  const gas = { gx: X(0.14), gy: CAMP_FOE_ROW.tech - 0.02 + j(0.01) };
+  // ⛽ 가스 — 본진 줄의 **왼쪽** 바깥(내 기지의 거울 · 오른쪽은 구간 2·3 보급고 열). 반전을 따라간다.
+  const gas = { gx: X(0.19), gy: CAMP_FOE_ROW.main + j(0.01) };
   return { bld:out, mine:mine, gas:gas, flip:flip }; }
 // 🚶 적 일꾼 연출 — 본진↔광맥을 오간다. **전투 밖**이다(맞지 않는다 · 세지 않는다 · 값에 안 들어간다).
 //   3D 엔트리(기지 유닛 규약)로만 존재한다 — campFoeBld3D 가 함께 돌려준다.

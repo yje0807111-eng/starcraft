@@ -3078,8 +3078,12 @@ const CAMP_LANE_BOT = 0.62;   // 본부(y≈0.642) 바로 위 = 내 병력이 �
 const CAMP_LANE_W   = 0.88;   // 레인 가로 폭 = 격자 폭(x0 0.06 ~ x1 0.94)
 
 // 전장 월드 → 격자 월드비율. 전장 세로축(적 W*0.14 ↔ 내 본부 W*0.86)을 레인에 선형 대응한다.
+// 📐 **레인 위로 넘치는 만큼**(t 의 하한) — 전장 y 0 이 t = −0.14/0.72 = −0.194 → 격자 gy −0.431 이다.
+//   ⛔ t 를 0 에서 자르지 말 것(2026-09-10 실측): 적 기지 줄(CAMP_FOE_ROW · gy −0.42 ~ −0.18)이 전부 **0.14W 한 줄**로
+//   무너져 본진·테크·탑이 겹쳐 섰다(레인 위끝 −0.26 위의 gy 가 모두 같은 전장 y 였다). 전장 y 는 0 까지 쓸 수 있다.
+const CAMP_LANE_TMIN = -0.14 / 0.72;
 function campW2G(sx, sy, W){
-  const t = Math.max(0, Math.min(1, ((sy / W) - 0.14) / 0.72));   // 0=적(위) · 1=나(아래)
+  const t = Math.max(CAMP_LANE_TMIN, Math.min(1, ((sy / W) - 0.14) / 0.72));   // 0=적 출현 줄(위) · 1=나(아래) · 음수 = 그 위 적 기지
   return { gx: 0.5 + ((sx / W) - 0.5) * CAMP_LANE_W,
            gy: CAMP_LANE_TOP + t * (CAMP_LANE_BOT - CAMP_LANE_TOP) }; }
 
@@ -3307,7 +3311,7 @@ function campPtrUp(ev){
 //   ⚠ 레인 밖(본부·건물이 있는 아래쪽)은 레인 끝으로 자른다. 전장은 0.18~0.62 뿐이라
 //     그보다 아래에서 뽑힌 유닛은 **레인 맨 아래(건물 바로 앞)** 에 선다.
 function campG2W(gx, gy, W){
-  const t = Math.max(0, Math.min(1, (gy - CAMP_LANE_TOP) / (CAMP_LANE_BOT - CAMP_LANE_TOP)));
+  const t = Math.max(CAMP_LANE_TMIN, Math.min(1, (gy - CAMP_LANE_TOP) / (CAMP_LANE_BOT - CAMP_LANE_TOP)));   // 하한은 전장 y 0(CAMP_LANE_TMIN)
   return { x: W * (0.5 + (gx - 0.5) / CAMP_LANE_W),
            y: W * (0.14 + t * 0.72) }; }
 
@@ -6570,10 +6574,16 @@ const CAMP_BG_HAVE = {};   // 캠프 전용 '던전' 그림이 있는 번호(지
 //    캠프는 적이 내려오는 통로가 없는 '터전'이라 그림의 요구가 다르다 — 위쪽이 통째로 숲이다.
 //    ⛔ dg 를 1 로 클램프해서 던전 1 과 공유하지 말 것. 던전 1(감염된 둥지)을 손보면 캠프가 같이 바뀐다.
 const CAMP_BG_HOME = 'camp.webp';   // 0단계 전용 그림(ART.md §11-B)
+// 🖼 **그림 세대** — §17(v2 · 9:16 → 1:2 크롭 · 위 8~27% 가 적 고원)로 뽑은 그림이면 true (2026-09-10).
+//   v2 는 바닥을 격자 위 0.58 까지 늘려 깔고(::before top −58%), 옛 §11 그림(9:16 · 118%)은 −18% 다 — 옛 그림을 −58% 로 깔면
+//   내 기지 석판이 1.34배 커져 본부가 타일 한 장 위에 선다(실측 2026-09-10 · 홈 캠프). 그림을 갈아 끼우면 여기를 true 로.
+const CAMP_BG_V2 = { 0:false, 1:false, 2:false, 3:false };
+function campFloorTop(dg){ return CAMP_BG_V2[dg | 0] ? -0.58 : -0.18; }
 function campSkin(){
   const C = campState(); if(!C) return;
   const el = document.getElementById('phone'); if(!el) return;
   const raw = (C.dg | 0);
+  el.style.setProperty('--floorTop', (campFloorTop(raw) * 100).toFixed(0) + '%');   // css/30-home.css .bmapFloor::before
   if(raw <= 0){   // 캠프 — 전용 그림 한 장
     const u = new URL(CAMP_BG_DIR + CAMP_BG_HOME, document.baseURI).href;
     el.style.setProperty('--campBg', "url('" + u + "')");
