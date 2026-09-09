@@ -2817,6 +2817,8 @@ const CAMP_DEF_BLD = { bunker:1, turret:1 };
 //   📐 지금 짝: 적 30마리 × 0.17 × 1.5 = 7.65/초 · 본부 750 → **98초**. 설계 구간(60~120초) 안이다.
 //     ⚠ 난이도는 양쪽(적 공격·내 본부)에 똑같이 곱해지므로 이 시간은 관문이 올라가도 그대로다.
 const CAMP_FOE_BLD_MUL = 1.5;
+// 💀 전멸 판정 유예(초) — 한 프레임의 0 으로 판을 닫지 않는다(배치·부활 사이의 빈 틈).
+const CAMP_WIPE_GRACE = 3;
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
@@ -4411,10 +4413,27 @@ function campCombatStep(dt){
   //    ⚠ 전멸해도 판이 멈추지 않는 이유가 여기 있다: 부활은 라운드 시작뿐이라 그동안 못
   //      일어나지만, 적이 본부를 부수면서 **게임은 계속 나아간다.** 그 둘이 짝이다.
   const _base = CAMPB.me.base;
+  // 💀 **전멸 = 그 원정의 끝**(2026-09-09 · 시뮬로 잡은 구조 결함).
+  //   ⛔ 「패배는 본부 파괴 하나뿐」은 **라운드가 있던 시절의 규칙**이다. 그때는 라운드가 바뀔 때마다
+  //     전원 부활이 있어서, 전멸해도 다음 라운드에 다시 일어났다.
+  //   ⚠ 라운드를 없애면서 부활이 **「관문을 깰 때」**로 옮겨졌는데, 병력이 0 이면 관문을 못 깬다 —
+  //     **순환**이다. 30분 자동 플레이에서 아군이 세 시점 모두 **0기**였고, 본부만 천천히
+  //     갉아먹히며 아무 일도 일어나지 않았다(BALANCE §5-5).
+  //   ⭐ 그래서 전멸하면 캠프로 돌려보낸다 — 사용자가 정한 「캠프로 돌아와 재정비하고 다시 들어간다」
+  //     그대로다(GAME_DIRECTION §0-A). 재화는 지키고 죽은 유닛은 다시 산다.
+  //   ⚠ **유예를 둔다** — 한 프레임의 0 으로 끝내면 「사고 배치하는 사이」에 판이 닫힌다.
+  //   ⚠ 무기가 없는 유닛(의무병)은 안 센다 — `campArmedUnits` 는 `_noHit` 과 **같은 자**를 쓴다.
+  const _armed = (typeof campArmedUnits === 'function') ? campArmedUnits().length : 1;
+  if(_armed > 0) CAMPB._wipeT = 0;
+  else CAMPB._wipeT = (CAMPB._wipeT || 0) + dt;
+  const _wiped = CAMPB._started && _armed === 0 && (CAMPB._wipeT || 0) >= CAMP_WIPE_GRACE;
   const _lost = !_base || _base.dead || (_base.hp || 0) <= 0;
-  if(_lost || _noHit){
+  if(_lost || _noHit || _wiped){
     const was = campFail(); campBattleClose(); campBarReset();
-    campSay(_lost
+    campSay(_wiped
+      ? ('💀 병력이 전멸했습니다 — 캠프로 돌아가 재정비하세요(던전 ' + was.dg + ' · ' + was.cleared + '/'
+         + CAMP_DG_STEPS + ' 채)')
+      : _lost
       ? ('🏢 본부가 무너졌습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
       : _noHit
       ? ('✈ 공중을 칠 수 없어 탈락 — 대공이 되는 병력을 섞으세요(던전 ' + was.dg + ' ' + was.cleared + '라운드)')
@@ -7115,20 +7134,29 @@ const CAMP_UNIT_R = 1.30;
 // ⛔ **가스는 건드리지 않는다.** 설계표(§3-1)는 「미네랄만」이라고 못 박았고 가스 규칙은 §2-3-2 인데
 //   아직 안 나왔다. 미네랄이 오른 비율만큼 가스도 올렸더니 **화력병 가스 5,000** 이 되어
 //   가스 유닛을 한 기도 못 샀다(실측 2026-08-27: 25분 내내 마린만 나왔다). 원값 그대로 둔다.
+// ⏬ **표 전체를 1/5 로 내렸다** (2026-09-09 · 30분 자동 플레이 실측).
+//   ⛔ 옛 값은 **재구매 배수 ×2.5** 와 한 짝이었다: 5기만 사면 끝이라 기본가가 높아도 됐다.
+//     배수를 1.30 으로 내려 「20기까지 늘리는」 설계로 바꿨으면 기본가도 함께 내려야 한다.
+//     ⚠ 안 내렸더니 시뮬 30분 내내 **병력이 1~2기**였다 — 벤치가 ROI 를 재서 연구만 샀다
+//       (연구 102레벨 vs 병력 1기). 원정이 1~3분짜리가 되고 대기 시간이 89% 였다.
+//   📐 계산: 20기 누적 = 기본가 × (1.30^20 − 1)/0.30 = 기본가 × **623**.
+//     마린 1,000 → 62만. 30분 수입이 29만이니 **한 시간쯤에 20기** — 첫 환생이 하루인 설계와 맞는다.
+//     (옛 5,000 이면 311만 = 다섯 시간치라 아무도 못 산다.)
+//   ⛔ 다시 올리려면 CAMP_UNIT_R 도 함께 볼 것 — 둘은 한 짝이다.
 const CAMP_UNIT_PRICE = {
   // 유니온 (§3-1)
-  marine:5000, machinegun:10000, racer:8000, goliath:20000, ghost:20000, medic:20000,
-  pelican:25000, aegis:20000, tank:35000, skyguard:35000, hellfire:50000, dreadnought:100000,
+  marine:1000, machinegun:2000, racer:1600, goliath:4000, ghost:4000, medic:4000,
+  pelican:5000, aegis:4000, tank:7000, skyguard:7000, hellfire:10000, dreadnought:20000,
   // 스웜 (§3-A) — ⭐ 싸고 얇다. 인구 1짜리가 둘이라 머릿수로 민다
-  snapper:4000, hydra:6000, stinger:8000, wyvern:16000, medusa:18000, ultralisk:55000, overlord:10000,
-  defiler:20000, venom:25000,                                   // 🧬 오염술사(생산) · 산성충(변태)
+  snapper:800, hydra:1200, stinger:1600, wyvern:3200, medusa:3600, ultralisk:11000, overlord:2000,
+  defiler:4000, venom:5000,                                     // 🧬 오염술사(생산) · 산성충(변태)
   // 에테리얼 (§3-B) — ⭐ 비싸고 두껍다(실드를 체력에 합쳐 본다)
-  blade:12000, dragoon:18000, dark_templar:25000, falcon:22000, skydancer:30000, reaver:45000,
-  kronos:50000, archangel:90000, high_templar:20000, seraph:25000, observer:12000,
-  dark_archon:25000 };                                          // 🧬 다크보이드(변태)
+  blade:2400, dragoon:3600, dark_templar:5000, falcon:4400, skydancer:6000, reaver:9000,
+  kronos:10000, archangel:18000, high_templar:4000, seraph:5000, observer:2400,
+  dark_archon:5000 };                                           // 🧬 다크보이드(변태)
 // ⚠ 표에 없는 종족(야수·기계 등)은 아직 설계표가 없다 — 일률 배수를 쓴다.
 //   유니온 12종의 「설계가 ÷ 코드가」 중앙값이 약 216배라 200 을 골랐다. 표가 나오면 위에 채운다.
-const CAMP_UNIT_PRICE_MUL = 200;
+const CAMP_UNIT_PRICE_MUL = 40;   // ⏬ 200 → 40 (위 표와 같은 비율)
 // ⛽ **유닛에는 가스가 안 든다** (2026-08-27 확정 — 축 분리).
 //   ⭐ **미네랄 = 양(유닛·일꾼·건물) / 가스 = 질(강화·해금).** 유닛은 '양' 쪽이다.
 //   ⛔ 되살리지 말 것 — 가스는 늘 모자란 자원이라, 유닛과 연구가 나눠 쓰면 **연구가 굶는다.**
