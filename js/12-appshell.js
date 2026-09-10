@@ -506,7 +506,8 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
   curPaintMul();      // 📈 라운드에 따라 오르는 획득 배수(칩 옆)
   if(typeof guidePaint==='function') guidePaint();   // 🧭 가이드 띠도 같은 박자로
-  if(typeof tutoKick==='function') tutoKick(); }     // 🎓 튜토리얼 스포트라이트도 같은 박자로
+  if(typeof tutoKick==='function') tutoKick();       // 🎓 튜토리얼 스포트라이트도 같은 박자로
+  if(typeof zoneTipKick==='function') zoneTipKick(); }  // 🗺 구역 안내도(그 화면에 처음 왔을 때 한 장)
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
 // ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
 //   var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
@@ -604,6 +605,7 @@ function showAppScreen(id){ setInGame(false);
   //    (위 campExit() 로 캠프가 이미 꺼졌으므로 guidePaint 가 스스로 지운다).
   //    ⛔ 없으면 상점·정비 화면에서 띠가 첫 패널 머리줄을 덮는다(실측 2026-08-31).
   if(typeof guidePaint==='function') guidePaint(); if(typeof tutoKick==='function') tutoKick();   // 🎓 튜토리얼 스포트라이트도 같은 박자로
+  if(typeof zoneTipKick==='function') zoneTipKick();
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
   // 🏕 캠프도 같은 이유로 여기서 걷는다 — 캠프는 공용 3D 캔버스(#cvMarine)를 HOME 안으로 **빌려 간다.**

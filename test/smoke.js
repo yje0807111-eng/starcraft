@@ -14000,6 +14000,63 @@ async function groupLobby(){
     return '되감음 · 환생 값 유지 · 밑천 '+got.toLocaleString()+' · 가스 0 · 일꾼 '+wk;
   });
 
+  // 🗺 구역 안내 — 강제 튜토리얼에서 뺀 것들이 여기서 「말해 주고 자유롭게」로 산다(2026-09-10).
+  await step('구역 안내: 처음 그 화면에 왔을 때 한 장 · 막지 않는다', async()=>{
+    skipIf(typeof ZONE_TIPS==='undefined'||typeof zoneTipPaint!=='function','구역 안내 없음');
+    // 뺀 여섯을 **아무도 안 가르치는 일**이 없어야 한다 — 문구로 다 덮였는지 본다
+    { const all=ZONE_TIPS.map(z=>String(z.title)+' '+String((typeof z.sub==='function')?z.sub():z.sub)).join(' ');
+      for(const w of ['지정','⊘','확대','길게','강화'])
+        assert(all.indexOf(w)>=0,'구역 안내가 「'+w+'」을 아무 데서도 안 말한다'); }
+    for(const z of ZONE_TIPS){ assert(z.id && z.title && z.sub && typeof z.at==='function',
+      '구역 안내 한 장이 덜 찼다: '+JSON.stringify(z.id)); }
+    // 🏰 적 기지 안내는 **개편이 만든 규칙 셋**을 말한다(진행 건물 · 표적 · 구간 잠김)
+    { const foe=ZONE_TIPS.find(z=>z.id==='foe'); assert(foe,'적 기지 안내가 없다');
+      const tx=String((typeof foe.sub==='function')?foe.sub():foe.sub);
+      for(const w of ['진행 건물','표적','잠깁니다'])
+        assert(tx.indexOf(w)>=0,'적 기지 안내가 「'+w+'」을 안 말한다: '+tx);
+      const n=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+      assert(tx.indexOf(String(n)+'채')>=0,'진행 건물 수를 손으로 박았나: '+tx); }
+    const S=guideState(); skipIf(!S,'상태 없음');
+    const zt0=S.zt, on0=window.campIsOn, off0=TUTO_OFF, t0=S.t, run0=S.trun, skip0=S.skip;
+    try{
+      window.campIsOn=()=>true; TUTO_OFF=true; delete S.trun; S.skip=1;   // 튜토리얼은 꺼 둔다
+      S.zt={};
+      // ⚠ 스모크에는 캠프 화면이 없다 — 「던전에 들어와 있다」를 만들어 'foe' 한 장을 띄운다.
+      //   ⛔ 화면이 없다고 건너뛰지 말 것: 이 계약이 재는 것은 **카드의 규칙**이지 화면이 아니다.
+      var _dg0=window.campDgN; window.campDgN=()=>TUTO_DG;
+      // ⛔ 튜토리얼이 도는 동안에는 안 뜬다(두 카드가 겹치면 어느 것을 눌러야 할지 모른다)
+      { TUTO_OFF=false; delete S.skip; S.trun=1; S.t=0;
+        assert(zoneTipNext()===null,'튜토리얼 중인데 구역 안내가 뜬다');
+        TUTO_OFF=true; S.skip=1; delete S.trun; S.t=t0; }
+      const z=zoneTipNext();
+      skipIf(!z,'지금 조건이 맞는 안내가 없다');
+      zoneTipPaint();
+      const el=$('zoneTip'); assert(el,'구역 안내가 안 그려졌다');
+      // ⭐ 껍데기는 **챕터 카드 그대로** — 새 컴포넌트를 만들지 않았다
+      const tip=el.querySelector('.tuTip');
+      assert(tip && tip.classList.contains('ch'),'구역 안내가 챕터 카드 껍데기를 안 쓴다');
+      assert(el.querySelector('.tuGo'),'확인 버튼이 없다');
+      // ⛔ **막지 않는다** — 자유 플레이 중에 뜨므로 게임 조작을 가로채면 안 된다
+      for(const i of el.querySelectorAll('i'))
+        assert(getComputedStyle(i).pointerEvents==='none',
+          '구역 안내가 화면을 막는다 — 자유 플레이 중이다: '+getComputedStyle(i).pointerEvents);
+      assert(getComputedStyle(tip).pointerEvents!=='none','카드가 안 눌린다');
+      // 👆 확인하면 닫히고 **다시 안 뜬다**
+      el.querySelector('.tuGo').click();
+      assert(!$('zoneTip'),'확인했는데 안 닫힌다');
+      assert(S.zt && S.zt[z.id],'봤다는 표시가 안 남는다 — 열 때마다 또 뜬다');
+      zoneTipPaint();
+      const el2=$('zoneTip');
+      assert(!el2 || el2.dataset.zt!==z.id,'닫은 안내가 다시 뜬다');
+      return '안내 '+ZONE_TIPS.length+'장 · 막지 않음 · 한 번만';
+    } finally { window.campIsOn=on0; TUTO_OFF=off0;
+      if(typeof _dg0!=='undefined') window.campDgN=_dg0;
+      if(zt0!=null) S.zt=zt0; else delete S.zt;
+      S.t=t0; if(run0!=null) S.trun=run0; else delete S.trun;
+      if(skip0!=null) S.skip=skip0; else delete S.skip;
+      const e=$('zoneTip'); if(e) e.remove(); }
+  });
+
   // 📚 튜토리얼은 **셋으로 나뉜다**(2026-09-08 사용자 확정) — 자원 · 기지와 부대 · 출격.
   //   경계는 표가 아니라 **챕터 카드 단계**이고, 번호도 그 사이에서 센다.
   await step('튜토리얼: 챕터 셋으로 갈린다 · 카드는 읽고 넘긴다', async()=>{
@@ -14069,8 +14126,12 @@ async function groupLobby(){
       for(const k of ids){ const s=TUTO_STEPS[ids.indexOf(k)];
         const t=String((typeof s.tip==='function')?s.tip():s.tip);
         assert(t.indexOf('라운드')<0,'「라운드」가 남은 안내가 있다('+k+'): '+t); }
-      assert(tp('outro').indexOf('부술수록')>0 || tp('outro').indexOf('부수면')>0,
-        '마지막 안내가 진행 축(부순 건물)을 안 말한다: '+tp('outro')); }
+      // 🎁 마지막은 **보상 카드**다(2026-09-10) — 던전 설명은 구역 안내('foe')가 맡는다.
+      //   ⛔ 여기서 또 설명하지 말 것: 튜토리얼은 곧 판을 걷으므로 배운 것이 바로 사라진다.
+      assert(TUTO_STEPS[at('outro')].at()==='all',
+        '마지막 칸이 무언가를 가리킨다 — 시킬 일이 없는 칸이다: '+TUTO_STEPS[at('outro')].at());
+      assert(String(TUTO_STEPS[at('outro')].sub())===TUTO_END_SUB,
+        '마지막 칸이 초기화를 말없이 한다'); }
     // ③ 진입 버튼 글자는 **화면이 정한다** — 캠프에서는 「돌아가기」, 던전을 고르면 「진입」
     { assert(typeof _cdGoLabel==='function','버튼 글자 함수가 없다');
       assert(_cdGoLabel(0)!==_cdGoLabel(TUTO_DG),
@@ -14084,23 +14145,15 @@ async function groupLobby(){
     skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_BLD==='undefined','튜토리얼 없음');
     const ids=TUTO_STEPS.map(s=>s.id);
     for(const need of ['coinB','mineOff','pickWk','armB1','placeB1','deselWk','selB1','unit',
-                       'pickU','moveU','deselU','zoomPan','panMode','panDrag',
                        'dgOpen','dgPick','dgGo','outro'])
       assert(ids.indexOf(need)>=0,'단계가 없다: '+need);
-    // 🔍 화면 조작 판정 — **단계마다 기준을 새로 잡는다**(확대하면 시점도 함께 움직인다)
-    { const S=guideState(), v0=(typeof techView==='function')?techView():null;
-      skipIf(!S||!v0,'시점이 없다');
-      const keep={ vw0:S.vw0, zoom:v0.zoom, x:v0.x };
-      try{ delete S.vw0;
-        assert(_tutoView('zoom')===0,'기준을 잡기도 전에 확대했다고 한다');
-        v0.zoom=(v0.zoom||1)*1.3;
-        assert(_tutoView('zoom')===1,'확대했는데 못 알아본다');
-        delete S.vw0;
-        assert(_tutoView('pan')===0,'이동도 기준부터 잡아야 한다');
-        v0.x=(v0.x||0.5)+0.05;
-        assert(_tutoView('pan')===1,'움직였는데 못 알아본다');
-      } finally { v0.zoom=keep.zoom; v0.x=keep.x;
-        if(keep.vw0!=null) S.vw0=keep.vw0; else delete S.vw0; } }
+    // 🗄 **강제로 시키지 않는 것**(2026-09-10 사용자 확정 — 「아주 기본만」). 이 여섯은 구역 안내로 갔다.
+    //   ⛔ 다시 강제 단계로 되돌리지 말 것: 강제가 길수록 개편 때마다 통째로 낡는다(실측).
+    for(const gone of ['upgTap','coinGat','upgGat','pickU','moveU','deselU','zoomPan','panMode','panDrag'])
+      assert(ids.indexOf(gone)<0,'강제로 되돌아온 단계가 있다: '+gone);
+    // 📏 **짧아야 한다** — 카드 셋을 빼고 스무 칸을 넘지 않는다(넘으면 다시 「손잡고 끌기」다)
+    assert(ids.filter(i=>i.indexOf('ch')!==0).length<=20,
+      '강제 단계가 다시 길어졌다: '+ids.length);
     // 🔢 **번호가 중간에 안 뛴다**(2026-09-04 사용자 지적) — 종족에 없는 단계는 세지 않는다.
     //   유니온은 둘째 건물이 없어(TUTO_BLD.union.b[1]=null) armB2·placeB2 가 화면에 안 나타난다.
     { const r0=G.tech.race; try{ G.tech.race='union';
@@ -14270,33 +14323,9 @@ async function groupLobby(){
     assert(at('coinB')<at('mineOff'),'채굴을 끄고 나서 돈을 모으라고 한다 — 두드릴 수가 없다');
     assert(at('mineOff')<at('pickWk') && at('pickWk')<at('armB1') && at('armB1')<at('placeB1'),
       '건물 단계 순서가 어긋났다: '+ids.join(' → '));
-    // 🚶🔍 유닛을 뽑은 **뒤에** 옮기고 · 지정을 풀고 · 화면 조작을 익히고 · 던전으로 간다(2026-09-08 사용자 확정)
-    assert(at('unit')<at('pickU') && at('pickU')<at('moveU')
-           && at('moveU')<at('deselU') && at('deselU')<at('zoomPan')
-           && at('zoomPan')<at('panMode') && at('panMode')<at('panDrag')
-           && at('panDrag')<at('dgOpen'),
-      '유닛·화면 조작 단계 순서가 어긋났다: '+ids.join(' → '));
-    // 🔍 확대와 이동은 **둘 다** 해야 넘어간다(0/2) — 한 단계로 묶되 하나만 해서는 안 된다
-    assert(_tutoGoal(TUTO_STEPS[at('zoomPan')])===2,
-      '화면 조작이 하나만 해도 넘어간다: '+_tutoGoal(TUTO_STEPS[at('zoomPan')]));
-    // 🖐 모드를 켠 다음 **실제로 민다** — 모드만 켜고 끝내면 무엇이 달라졌는지 모른다.
-    //   ⚠ 모드가 꺼져 있으면 밀어도 0 이어야 한다(밀리지도 않는데 통과시키면 안 넘어간 채로 남는다).
-    { const S=guideState(), m=$('cstMain');
-      if(S && m){ const was=m.classList.contains('campPan'), keep=S.vp0;
-        try{ m.classList.remove('campPan'); delete S.vp0;
-          const d=TUTO_STEPS[at('panDrag')];
-          const tp=(typeof d.tip==='function')?d.tip():d.tip;
-          assert((d.n()|0)===0,'이동 모드가 꺼졌는데 민 것으로 친다');
-          assert(String(tp).indexOf('다시')>=0,
-            '이동 모드가 풀렸는데 다시 켜라고 말하지 않는다: '+tp);
-        } finally { if(was) m.classList.add('campPan'); if(keep!=null) S.vp0=keep; else delete S.vp0; } } }
-    // 🚪 데려갈 자리는 **맵 위쪽**이다(본부 0.59 · 광맥 0.66 보다 위) — 화면을 보고 맞춘 값이라 범위만 지킨다
-    assert(TUTO_MOVE_GY < CAMP_ROW_BASE - 0.1,
-      '데려갈 자리가 본부에 너무 가깝다: '+TUTO_MOVE_GY+' (본부 '+CAMP_ROW_BASE+')');
-    assert(TUTO_MOVE_GY > 0.15,'데려갈 자리가 맵 꼭대기로 붙었다: '+TUTO_MOVE_GY);
-    // 👆 유닛을 잡는 단계의 대상은 **전장 전체**다 — 유닛이 어디 서 있든 손이 닿아야 하므로
-    //   한 자리를 가리킬 수 없다(2026-09-08 사용자 확정 · 그 전에는 'free' 라 틀이 아예 없었다).
-    assert(TUTO_STEPS[at('pickU')].at()==='map','유닛 지정 단계가 전장 틀을 안 쓴다');
+    assert(at('unit')<at('dgOpen'),'유닛을 뽑기 전에 던전으로 보낸다: '+ids.join(' → '));
+    // 👆 일꾼을 잡는 단계의 대상은 **전장 전체**다 — 어디 서 있든 손이 닿아야 하므로 한 자리를 못 가리킨다
+    assert(TUTO_STEPS[at('pickWk')].at()==='map','일꾼 지정 단계가 전장 틀을 안 쓴다');
     // 🗺 **전장 틀의 아랫변은 시트를 직접 재서** 잡는다 — 상수로 두면 병영을 고른 화면처럼
     //   시트가 커졌을 때 틀 아랫변이 시트 뒤로 숨어 「어디까지가 전장인지」가 안 보인다.
     { const S=guideState(), on0=window.campIsOn, off0=TUTO_OFF, sh=$('btSheet');
@@ -14307,7 +14336,7 @@ async function groupLobby(){
       const par0=sh?sh.parentNode:null, nx0=sh?sh.nextSibling:null;
       try{ if(S && sh){ window.campIsOn=()=>true; TUTO_OFF=false;
           $('phone').appendChild(sh);
-          S.t=ids.indexOf('pickU'); S.trun=1; delete S.skip;
+          S.t=ids.indexOf('pickWk'); S.trun=1; delete S.skip;
           const read=()=>{ tutoPaint(); const ov=$('tutoOv');
             const rg=ov?ov.querySelector('.tuRing'):null;
             return rg?rg.getBoundingClientRect():null; };
