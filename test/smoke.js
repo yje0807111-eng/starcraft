@@ -6021,15 +6021,15 @@ async function groupLobby(){
     //      「자리에서 1500 이내」는 **구조적으로 못 지킨다**(⛔ 값을 늘려 덮지 말 것 — 그러면
     //      이 검사가 아무것도 안 잰다). 이 검사가 진짜로 잡아야 하는 것은 **「아무 데로나 달아나는 유닛」**
     //      이므로, 닻을 **자리 ∪ 지금 치는 건물** 로 넓힌다. 둘 다에서 멀면 그건 진짜 이탈이다.
-    //    ⚠ 닻을 **활성 건물 하나**로 좁히면 안 된다(2026-09-09 실측 2기 실패): 구간이 넘어가는 동안
-    //      뒤처진 유닛은 지나온 건물과 다음 건물 사이에 있어서 어느 쪽 하나만으로는 늘 멀다.
-    //      **살아 있는 적 건물 아무거나** 곁에 있으면 그건 「칠 것 곁에 있다」이지 이탈이 아니다.
-    { const objs=(typeof campFoeBldAlive==='function') ? campFoeBldAlive() : [];
-      const lim=CAMP_ENG_OUT*1.25;
+    //    🪧 **자리 하나로 다시 조였다**(2026-09-10) — 아군이 적 기지로 저절로 안 걸어가게 되면서
+    //      「자리 ∪ 살아 있는 적 건물」이라는 넓은 닻이 필요 없어졌다. 자리에서만 재는 것이
+    //      **자동 돌격 회귀를 잡는 더 센 그물**이다(실측 이탈 최대 1242 < 1500).
+    //      ⛔ 다시 넓히지 말 것 — 넓히면 「맵 끝까지 걸어갔다」가 통과해 버린다.
+    { const lim=CAMP_ENG_OUT*1.25;
       const near=(u,p)=>!!p && Math.hypot(u.x-p.x, u.y-p.y) <= lim;
       const out=CAMPB.me.units.filter(u=>!u.dead&&u._post&&!campInBunker(u))
-        .filter(u=>!near(u,u._post) && !objs.some(b=>near(u,b)));
-      assert(!out.length,'자리에서도 치는 건물에서도 제한('+CAMP_ENG_OUT+')보다 멀다 — 달아난 유닛: '
+        .filter(u=>!near(u,u._post));
+      assert(!out.length,'자리에서 제한('+CAMP_ENG_OUT+')보다 멀리 나갔다 — 자동 돌격이 되살아났나: '
         +out.length+'기 ('+out.slice(0,3).map(u=>u.id+' d자리='
           +Math.round(Math.hypot(u.x-u._post.x,u.y-u._post.y))).join(' · ')+')'); }
     // ⓓ ㉠㉡ 갈라 쓰는가 — 근접이 원거리보다 적에게 가까이 선다
@@ -6042,7 +6042,7 @@ async function groupLobby(){
     campWipeField();
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }
     campBattleClose();
-    return '미는 주체 1 · 이탈 제한 '+CAMP_ENG_OUT+'(자리 ∪ 치는 건물) · 떨림 문턱 통과 · 근접이 더 가까이';
+    return '미는 주체 1 · 이탈 제한 '+CAMP_ENG_OUT+'(자리) · 떨림 문턱 통과 · 근접이 더 가까이';
   });
 
   // 🪧 **자기 자리를 지킨다** (2026-08-28 사용자 확정)
