@@ -3405,6 +3405,9 @@ function campBattleList(){
       const g = campW2G(u.x, u.y, W);
       const x = (g.gx - v.x) * v.zoom + 0.5, y = (g.gy - v.y) * v.zoom + 0.5;
       if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;   // ⚡ 화면 밖은 넘기지 않는다(오토배틀 STK_CULL 과 같은 뜻)
+      // 🌫 안개 속 **적**은 넘기지 않는다(안개 규약 — 3D 캔버스가 안개 층 위에 그려지므로 오버레이로는 못 가린다).
+      //   ⚠ 내 유닛은 늘 보인다(내 병력이 어디 있는지는 안개와 무관하다).
+      if(side === 'ai' && typeof campFogHidesAt === 'function' && campFogHidesAt(u.x, u.y)) continue;
       out.push({ uid:'cb_' + side + '_' + u.uid, id:u.id, x:x, y:y,
         sel:(side === 'me' && _campSel.indexOf(u.uid) >= 0),   // 🔵 지정 표시 = 3D 하단 링(기지 유닛과 같은 규약)
         face:(u.face || 0), moving:!!u.moving, yoff:yoff, yawFix:true, scl:scl,
@@ -3428,7 +3431,11 @@ function campBattleList(){
 function campFoeOverlayHTML(){
   if(!CAMPB || campDgN() <= 0 || typeof campFoeMarks !== 'function' || typeof _techW2S !== 'function') return '';
   const zm = (G.tech && G.tech.view ? G.tech.view.zoom : 1) || 1, out = [];
+  const _fog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogEnabled === 'function') && techFogEnabled();
   for(const m of campFoeMarks()){
+    // 🌫 **안개가 켜져 있으면 못 본 건물은 아예 안 그린다** — 실루엣(③안)은 안개가 없던 시절의 어휘다.
+    //   ⛔ 둘을 같이 두지 말 것: 어두운 안개 위에 실루엣이 떠서 「가려졌다」가 아니라 「덜 그렸다」로 보인다.
+    if(_fog && m.hid) continue;
     const s = _techW2S(m.x, m.y);
     if(s.x < -0.15 || s.x > 1.15 || s.y < -0.15 || s.y > 1.15) continue;
     const w = Math.max(0.06, m.fw * _techCW() * zm), h = Math.max(0.05, m.fh * _techCH() * zm);
@@ -3450,7 +3457,9 @@ function campFoeMinesHTML(){
   const zm = (G.tech && G.tech.view ? G.tech.view.zoom : 1) || 1, cw = _techCW(), ch = _techCH();
   const k = (typeof CAMP_MINE_SCALE !== 'undefined') ? CAMP_MINE_SCALE : 1.34, dy = 0.30;
   const out = [];
+  const _mfog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogHidden === 'function');
   CAMPB._fmine.forEach(function(m, i){
+    if(_mfog && techFogHidden(m.gx, m.gy)) return;   // 🌫 적 광맥·가스도 안개 안이면 안 보인다(적 진영 연출)
     const spr = (typeof campMineSprite === 'function') ? campMineSprite(m, i) : ''; if(!spr) return;
     const tl = _techW2S(m.gx - k / 2 * cw, m.gy - (k / 2 + dy) * ch), br = _techW2S(m.gx + k / 2 * cw, m.gy + (k / 2 - dy) * ch);
     if(br.x < -0.2 || tl.x > 1.2 || br.y < -0.2 || tl.y > 1.2) return;
@@ -3488,6 +3497,7 @@ function campBattleBars(){
   for(const side of ['me', 'ai']){ const foe = (side === 'ai');
     for(const u of (CAMPB[side] && CAMPB[side].units) || []){
       if(u.dead) continue;
+      if(foe && typeof campFogHidesAt === 'function' && campFogHidesAt(u.x, u.y)) continue;   // 🌫 안개 속 적은 체력도 안 보인다
       put(u.x, u.y, u.hp, u.maxHp, u.sh, u.maxSh, foe, uw, 17); } }
   for(const b of (CAMPB._bld || [])){
     if(!b || b.dead) continue;
@@ -5261,6 +5271,7 @@ function campEnter(){
   campStartTimer();
   if(typeof techUIRender === 'function') techUIRender();
   campMineBtnPaint();                                  // ⛏ 채굴 모드 버튼
+  if(typeof campFogSync === 'function') campFogSync();   // 🌫 집이면 끄고 원정이면 켠다(23-camp-dungeon)
   campAutoSave(true);
 }
 // 이번 체류에서 **실제로 번 것**을 재 둔다 — 자리 비움 정산이 이 속도를 쓴다.

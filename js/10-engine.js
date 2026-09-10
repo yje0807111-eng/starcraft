@@ -1212,7 +1212,12 @@ function fogLoadHeight(hm){ const f=G.fog; if(!f) return;   // hm: (tx,ty,cols,r
     else if(Array.isArray(hm)){ const row=hm[Math.floor(ty/f.rows*hm.length)]; h=Array.isArray(row)?(row[Math.floor(tx/f.cols*row.length)]||0):(row||0); }
     f.height[ty*f.cols+tx]=h|0; } } }
 function fogHeightAt(tx,ty,fog){ const f=fog||((typeof G!=='undefined')&&G.fog); if(!f) return 0; if(tx<0||ty<0||tx>=f.cols||ty>=f.rows) return 0; return f.height[ty*f.cols+tx]||0; }
-function _fogTile(nx,ny,fog){ const f=fog||G.fog; return { tx:Math.max(0,Math.min(f.cols-1,Math.floor(nx*f.cols))), ty:Math.max(0,Math.min(f.rows-1,Math.floor(ny*f.rows))) }; }
+// 🌫️ 안개 격자 ↔ 월드 — 세로는 **f.wy0~f.wy1**(기본 0~1)을 덮는다.
+//   ⭐ 캠프 던전은 적 기지가 **격자 위**(gy 음수)에 있어 0~1 로는 못 덮는다(19-camp CAMP_LANE_TOP).
+//   ⛔ 기본값을 바꾸지 말 것 — 관리자 건설·오토배틀은 0~1 그대로다(안 그러면 두 화면이 같이 어긋난다).
+function _fogSpan(f){ const y0=(f.wy0==null?0:f.wy0), y1=(f.wy1==null?1:f.wy1); return { y0:y0, h:Math.max(1e-6, y1-y0) }; }
+function _fogTile(nx,ny,fog){ const f=fog||G.fog, sp=_fogSpan(f);
+  return { tx:Math.max(0,Math.min(f.cols-1,Math.floor(nx*f.cols))), ty:Math.max(0,Math.min(f.rows-1,Math.floor(((ny-sp.y0)/sp.h)*f.rows))) }; }
 function fogVisAt(nx,ny){ if(!fogEnabled()) return 2; const f=G.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }   // 토글 off=항상 활성(전부 보임)
 function _fogReveal(nx,ny,sight,air,fog,asp){ const f=fog||G.fog, t=_fogTile(nx,ny,f), vh=air?255:fogHeightAt(t.tx,t.ty,f);
   const rx=Math.max(1,sight), ry=Math.max(1,sight*(asp||1)), rxi=Math.ceil(rx), ryi=Math.ceil(ry);   // 화면상 원형이 되도록 세로 반경을 화면비(W/H)로 보정(정사각 격자가 세로 화면에 늘어나는 것 상쇄)
@@ -1241,11 +1246,15 @@ function drawFog(ctx,W,H){ const f=G&&G.fog; if(!f||!f.on) return;   // 🌫️ 
   const _blur=Math.max(2,(W/f.cols)*0.9), _hf=('filter'in ctx); if(_hf) ctx.filter='blur('+_blur.toFixed(1)+'px)';   // 시야 테두리 더 둥글고 부드럽게
   ctx.drawImage(buf, 0, 0, W, H); if(_hf) ctx.filter='none'; ctx.imageSmoothingEnabled=sm; }
 // ── 🌫️ 건설 구역(관리 탭) 전장의 안개 — G.tech.fog(메인과 독립). 🌫️ 버튼으로 토글, 내 워커·건물이 시야 밝힘 ──
-function techFogInit(on){ if(!G.tech) return; const cols=FOG_COLS, rows=FOG_ROWS;
+// opt = { wy0, wy1, flat } — 덮을 세로 범위(기본 0~1)와 평지 여부(캠프 던전은 언덕이 없다).
+//   ⚠ 칸 수(rows)는 범위에 비례해 늘린다 — 안 늘리면 세로로 늘어난 칸이 되어 시야가 타원으로 보인다.
+function techFogInit(on, opt){ if(!G.tech) return; const o=opt||{};
+  const wy0=(o.wy0==null?0:o.wy0), wy1=(o.wy1==null?1:o.wy1), span=Math.max(1e-6, wy1-wy0);
+  const cols=FOG_COLS, rows=Math.max(8, Math.min(160, Math.round(FOG_ROWS*span)));
   const height=new Uint8Array(cols*rows), H=TECH_HILL;   // ⛰ 좌하단 언덕 = 고지대(height h)
-  for(let ty=0;ty<rows;ty++){ const wy=(ty+0.5)/rows; for(let tx=0;tx<cols;tx++){ const wx=(tx+0.5)/cols;
+  if(!o.flat) for(let ty=0;ty<rows;ty++){ const wy=wy0+((ty+0.5)/rows)*span; for(let tx=0;tx<cols;tx++){ const wx=(tx+0.5)/cols;
     if(wx>=H.x0&&wx<=H.x1&&wy>=H.y0&&wy<=H.y1) height[ty*cols+tx]=H.h; } }
-  G.tech.fog={ on:!!on, cols, rows, state:new Uint8Array(cols*rows), height, t:0 };
+  G.tech.fog={ on:!!on, cols, rows, state:new Uint8Array(cols*rows), height, t:0, wy0:wy0, wy1:wy1 };
   if(on) techFogCompute(); }
 function techFogEnabled(){ return !!(G.tech && G.tech.fog && G.tech.fog.on); }
 function techFogVisAt(nx,ny){ if(!techFogEnabled()) return 2; const f=G.tech.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }
@@ -1253,18 +1262,23 @@ function techFogHidden(nx,ny){ return techFogEnabled() && techFogVisAt(nx,ny)!==
 function techFogCompute(){ const f=G.tech&&G.tech.fog; if(!f||!f.on) return; const race=G.tech.race;
   const map=document.getElementById('cstMain'); const asp=(map&&map.clientWidth&&map.clientHeight)?map.clientWidth/map.clientHeight:0.62;   // 화면비 보정(세로 화면 → 원형 시야)
   const cpt=_techCW()*f.cols;   // 게임 타일 1칸 = 안개 셀 수(x). 시야값(타일)을 실제 크기로 — 점막·파일런과 동일한 "본체 + 반지름" 알고리즘
+  // ⚠ 세로 범위(wy0~wy1)를 넓히면 칸의 세로 크기가 달라진다 — 화면에서 **원**이 되도록 화면비를 함께 보정한다.
+  //   기본(0~1 · cols=rows)에서는 asp 그대로다.
+  const aspF=(function(){ const sp=_fogSpan(f); return asp*(f.rows/f.cols)/sp.h; })();
   for(let i=0;i<f.state.length;i++){ if(f.state[i]===2) f.state[i]=1; }   // 활성→탐색 강등
   for(const e of G.tech.ents){ if(!e) continue;
-    if(e.type==='worker'){ const rt=_techUnitSight(race,TECH_WORKER[race])+0.5; _fogReveal(e.x,e.y,rt*cpt,false,f,asp); }                     // 워커: 반지름=시야+본체½
-    else if(e.type==='bldg'){ const ft=_techFoot(race,e.bk)||{w:2,h:2}; const rt=_techBldgSight(race,e.bk)+Math.max(ft.w,ft.h)/2; _fogReveal(e.x,e.y,rt*cpt,!!e._lifted,f,asp); }   // 건물: 반지름=시야+본체½ · 부양=공중(지형 무시)
-    else if(e.type==='unit'){ const rt=_techUnitSight(race,e.uid)+0.5; _fogReveal(e.x,e.y,rt*cpt,!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,asp); } }
-  if(G.tech._scans) for(const s of G.tech._scans){ if(s.t>0) _fogReveal(s.x,s.y,s.r*f.cols,true,f,asp); } }   // 📡 스캐너 스윕: 지점 시야(지형 무시)
+    if(e.type==='worker'){ const rt=_techUnitSight(race,TECH_WORKER[race])+0.5; _fogReveal(e.x,e.y,rt*cpt,false,f,aspF); }                     // 워커: 반지름=시야+본체½
+    else if(e.type==='bldg'){ const ft=_techFoot(race,e.bk)||{w:2,h:2}; const rt=_techBldgSight(race,e.bk)+Math.max(ft.w,ft.h)/2; _fogReveal(e.x,e.y,rt*cpt,!!e._lifted,f,aspF); }   // 건물: 반지름=시야+본체½ · 부양=공중(지형 무시)
+    else if(e.type==='unit'){ const rt=_techUnitSight(race,e.uid)+0.5; _fogReveal(e.x,e.y,rt*cpt,!!(typeof _techAirOf==='function'&&_techAirOf(e)),f,aspF); } }
+  if(G.tech._scans) for(const s of G.tech._scans){ if(s.t>0) _fogReveal(s.x,s.y,s.r*f.cols,true,f,aspF); }   // 📡 스캐너 스윕: 지점 시야(지형 무시)
+  // 🏕 캠프 던전은 **전장 병력**도 시야를 낸다(그 코드는 캠프 파일에 둔다 — 23-camp-dungeon campFogExtra).
+  if(typeof campFogExtra==='function') campFogExtra(f, aspF, cpt); }
 function techFogDraw(){ const cv=document.getElementById('cstFog'); if(!cv) return;
   const map=document.getElementById('cstMain'); const W=(map&&map.clientWidth)||GW||360, H=(map&&map.clientHeight)||GH||420;
   if(cv.width!==W||cv.height!==H){ cv.width=W; cv.height=H; }
   const ctx=cv.getContext('2d'); ctx.clearRect(0,0,W,H);
   const f=G.tech&&G.tech.fog; if(!f||!f.on) return;
-  const buf=_fogBuffer(f), tl=_techW2S(0,0), br=_techW2S(1,1);   // 격자 전체(월드 0~1)를 뷰 변환 사각으로 → 양선형 확대(부드러움)
+  const _sp=_fogSpan(f), buf=_fogBuffer(f), tl=_techW2S(0,_sp.y0), br=_techW2S(1,_sp.y0+_sp.h);   // 덮는 범위(기본 월드 0~1)를 뷰 변환 사각으로 → 양선형 확대(부드러움)
   ctx.save(); ctx.beginPath(); ctx.rect(0,34,W,H-34); ctx.clip();   // 상단바(탭·자원) 위엔 안개 안 그림
   ctx.imageSmoothingEnabled=true; if(ctx.imageSmoothingQuality) ctx.imageSmoothingQuality='high';
   const _cellPx=(br.x-tl.x)*W/f.cols, _blur=Math.max(2,_cellPx*0.9), _hf=('filter'in ctx); if(_hf) ctx.filter='blur('+_blur.toFixed(1)+'px)';   // 시야 테두리 더 둥글고 부드럽게

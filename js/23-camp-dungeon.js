@@ -530,6 +530,7 @@ function campEnterDungeon(dg){
   if(typeof campSave === 'function') campSave();
   if(typeof campBarReset === 'function') campBarReset();
   if(typeof campSkin === 'function') campSkin();  // 🎨 바닥을 그 던전 그림으로
+  if(typeof campFogSync === 'function') campFogSync();   // 🌫 적 구역은 덮고 내 기지는 연다(0단계면 꺼진다)
   // 🏰 전장이 열려 있으면 적 기지도 그 던전 것으로 다시 세운다
   if(typeof CAMPB !== 'undefined' && CAMPB) campFoeBase(n);
   if(n > 0 && typeof CAMPB !== 'undefined' && CAMPB) campFoeLookAt();   // 👁 적 기지가 보이는 자리로
@@ -583,24 +584,38 @@ function campFoeLookAt(){
   if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB._fbld || !CAMPB._fbld.length) return false;
   if(typeof techViewT !== 'function' || typeof techView !== 'function' || typeof _techClampView !== 'function') return false;
   const W = CAMPB.world || 1;
+  // 🌫 **안개가 켜져 있으면 「보이는 것」에만 맞춘다**(2026-09-10) — 12채 전체에 맞추면 진입 화면이
+  //   통째로 검다(적 기지는 아직 안 봤다). 진입 때 보이는 것은 관문 규칙으로 드러난 앞줄 몇 채다.
+  //   ⛔ 안개를 끄고 전체를 보여 주지 말 것 — 그러면 탐험이 사라진다.
+  const _fog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogEnabled === 'function') && techFogEnabled();
+  const _list = _fog ? CAMPB._fbld.filter(function(q){ return q && q.seen; }) : CAMPB._fbld;
+  const list = (_list && _list.length) ? _list : CAMPB._fbld;
   let sy = 0, n = 0;
-  for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); sy += g.gy; n++; }
+  for(const q of list){ if(!q) continue; const g = campW2G(q.x, q.y, W); sy += g.gy; n++; }
   if(!n) return false;
   const foeY = sy / n;
   const t = techViewT(), v = techView();
   // 🔍 줌 — 기지 세로(광맥 위끝 ~ 앞줄 탑 아래끝 + 여유)가 **상단바 아래·시트 위**에 다 들게. 하한은 campMinZoom(1.0).
+  let lo0 = 0, hi0 = 0;
   { let lo = 1, hi = -1;
-    for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); if(g.gy < lo) lo = g.gy; if(g.gy > hi) hi = g.gy; }
-    for(const m of (CAMPB._fmine || [])){ if(m.gy < lo) lo = m.gy; }
+    for(const q of list){ if(!q) continue; const g = campW2G(q.x, q.y, W); if(g.gy < lo) lo = g.gy; if(g.gy > hi) hi = g.gy; }
+    if(!_fog) for(const m of (CAMPB._fmine || [])){ if(m.gy < lo) lo = m.gy; }   // 안개 중엔 광맥도 안 보인다
+    // 🌫 안개 중에는 **내 격자 위끝까지** 담는다 — 위쪽은 어차피 검다. 보이는 것은
+    //   「내 진영의 앞마당 ~ 드러난 적 앞줄」이고, 그 사이가 이번에 나아갈 길이다.
+    //   ⚠ 내 **본부**까지 담으면 세로가 0.96 이 되어 축소 하한(1.0)에 걸린다 — 그러면 위아래가 잘린다(실측).
+    if(_fog && typeof techY0 === 'function') hi = Math.max(hi, techY0() + 0.06);
     const span = Math.max(0.2, hi - lo + 0.12);
     const sf = (typeof techSheetFrac === 'function') ? techSheetFrac() : 0.21;
     const avail = Math.max(0.3, 1 - 0.13 - sf);
     // ↔ 가로도 다 들어야 한다(2026-09-10 실측: 세로만 맞추니 줌 1.49 에서 바깥 보급고 0.13/0.87 이 화면 밖) — 발판 반 칸 + 여유
-    let hx = 0; for(const q of CAMPB._fbld){ if(!q) continue; const g = campW2G(q.x, q.y, W); hx = Math.max(hx, Math.abs(g.gx - 0.5)); }
+    let hx = 0; for(const q of list){ if(!q) continue; const g = campW2G(q.x, q.y, W); hx = Math.max(hx, Math.abs(g.gx - 0.5)); }
     const zx = 1 / (2 * hx + 0.10 + 0.06);
-    t.zoom = Math.max(campMinZoom(), Math.min((typeof techMaxZoom === 'function') ? techMaxZoom() : 3, avail / span, zx)); }
+    t.zoom = Math.max(campMinZoom(), Math.min((typeof techMaxZoom === 'function') ? techMaxZoom() : 3, avail / span, zx));
+    lo0 = lo; hi0 = hi; }
   t.x = 0.5;
-  t.y = foeY - 9;                                   // 위로 한껏 — clamp 가 위 끝(campViewTop)에서 받는다
+  // 🌫 안개 중에는 위 끝으로 밀지 않는다 — 밀면 **검은 화면**으로 시작한다(실측 2026-09-10).
+  t.y = _fog ? ((lo0 + hi0) / 2) : (foeY - 9);      // 위로 한껏 — clamp 가 위 끝(campViewTop)에서 받는다
+
   _techClampView(t);
   // ⚠ **목표(t)만 옮긴다** — 실제 뷰(v)는 techViewTick 이 보간해 따라간다. v 를 직접 쓰면 바닥·광맥·그림자
   //   (renderBuildTab 이 뷰가 바뀔 때 다시 그리는 층)가 옛 자리에 남는다(실측: 바닥 transform 이 옛 뷰였다).
@@ -807,6 +822,70 @@ function campFoeWorkers3D(v, cwpx){
     const gx = main.gx + (m.gx - main.gx) * u + (i - 1) * 0.012, gy = main.gy + (m.gy - main.gy) * u;
     const x = (gx - v.x) * v.zoom + 0.5, y = (gy - v.y) * v.zoom + 0.5;
     if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;
+    if(typeof techFogHidden === 'function' && techFogHidden(gx, gy)) continue;   // 🌫 안개 안이면 안 보인다(적 진영 연출)
     out.push({ uid:'cst_foe_wk' + i, id:mk, x:x, y:y, face:(ph < 0.5 ? -Math.PI / 2 : Math.PI / 2), moving:true,
       yoff:yoff, yawFix:true, scl:scl, working:false, sel:false, z:-1185, rimCol:campFoeRim() }); }
   return out; }
+
+// ══ 🌫 던전의 안개 — 「내 쪽은 열려 있고, 적 쪽은 덮여 있다」 (2026-09-10 사용자 요청) ═══════
+//   ⭐ **관리자 건설 탭의 안개를 그대로 빌린다**(10-engine techFogInit/Compute/Draw · G.tech.fog).
+//     ⛔ 캠프용 안개를 새로 만들지 말 것 — 그리기·부드러운 전이·3D 숨김 규약이 이미 거기 있다.
+//     빌리면서 두 가지만 바꾼다: ① 덮는 세로 범위를 **격자 위 적 기지까지**(wy0) ② 시야를 내는 것에
+//     **전장 병력**을 더한다(기지 건물만 보던 것 — campFogExtra).
+//   🏠 **내 기지(격자 안)는 늘 열려 있다** — 집을 탐험할 이유가 없다(사용자: 「내 본진쪽은 깔끔하게」).
+//     그래서 격자 위끝(techY0) 아래는 매 계산마다 활성(2)으로 칠한다.
+//   👣 적 쪽은 **병력을 데리고 올라가야** 열린다 — 이미 있던 「적 건물 seen」(campFoeSee)과 같은 자다.
+//   ⚠ 안개는 **던전에서만** 켠다(캠프 0단계는 집이라 끈다 · campFogSync).
+const CAMP_FOG_SIGHT = 1.15;      // 전장 유닛 시야 = 인지 사거리(u.acq) × 이 배수 — 건물 seen 판정(CAMP_FOE_SEE_R)보다 살짝 넓다
+function campFogOn(){ return (typeof campDgN === 'function') && campDgN() > 0; }
+// 덮을 세로 위끝 — 뷰가 올라갈 수 있는 끝(campViewTop)보다 조금 더 위. 안 그러면 위 가장자리가 안개 밖으로 샌다.
+function campFogTop(){ const t = (typeof campViewTop === 'function') ? campViewTop() : 0; return Math.min(0, t - 0.06); }
+// 🌫 켜고 끄기 — 던전에 들어가면 켜고, 캠프로 돌아오면 끈다. 화면(#cstFog)도 같이 여닫는다.
+function campFogSync(){
+  if(typeof G === 'undefined' || !G.tech || typeof techFogInit !== 'function') return false;
+  const on = campFogOn(), ph = document.getElementById('phone');
+  if(ph) ph.classList.toggle('dgFog', on);
+  if(!on){ if(G.tech.fog) G.tech.fog.on = false; return false; }
+  const top = campFogTop(), f = G.tech.fog;
+  // 범위가 달라졌으면 새로 판다(던전마다 표의 맨 위가 다르다)
+  if(!f || Math.abs((f.wy0 == null ? 0 : f.wy0) - top) > 0.001) techFogInit(true, { wy0:top, wy1:1, flat:true });
+  else { f.on = true; if(typeof techFogCompute === 'function') techFogCompute(); }
+  return true; }
+// 👁 **캠프가 더하는 시야** — 10-engine techFogCompute 가 마지막에 부른다(엔진에 캠프 코드를 넣지 않으려고 뺀 훅).
+//   ⚠ asp·cpt 는 엔진이 이미 보정해서 준다(칸 크기·화면비) — 여기서 다시 만지지 말 것.
+function campFogExtra(f, asp, cpt){
+  if(!f || !f.on || !campFogOn()) return 0;
+  // 🏠 내 기지(격자 안)는 통째로 열어 둔다 — 아래에서 위로 훑는 것이 아니라 **줄 단위**로 칠한다(빠르다).
+  const sp0 = (f.wy0 == null ? 0 : f.wy0), spH = Math.max(1e-6, (f.wy1 == null ? 1 : f.wy1) - sp0);
+  const y0 = (typeof techY0 === 'function') ? techY0() : 0.18;
+  const ty0 = Math.max(0, Math.min(f.rows - 1, Math.floor(((y0 - sp0) / spH) * f.rows)));
+  for(let ty = ty0; ty < f.rows; ty++){ const row = ty * f.cols; for(let tx = 0; tx < f.cols; tx++) f.state[row + tx] = 2; }
+  // 👣 전장 병력 — 내 유닛만(적은 시야를 안 낸다). 전장 좌표 → 격자 → 안개 칸.
+  let n = 0;
+  if(typeof CAMPB !== 'undefined' && CAMPB && CAMPB.me && typeof campW2G === 'function'){
+    const W = CAMPB.world || 1, laneW = (typeof CAMP_LANE_W !== 'undefined') ? CAMP_LANE_W : 1;
+    for(const u of (CAMPB.me.units || [])){
+      if(!u || u.dead) continue;
+      const g = campW2G(u.x, u.y, W);
+      const rg = ((u.acq || 300) * CAMP_FOG_SIGHT) / W * laneW;     // 전장 사거리 → 격자 비율
+      _fogReveal(g.gx, g.gy, Math.max(1, rg * f.cols), false, f, asp); n++; } }
+  // 🏚 **본 적 있는 적 건물 둘레는 「탐색됨」**(검정 0 → 회색 1)으로 남긴다.
+  //   ⭐ 이걸 안 하면 관문 규칙(campFoeRevealGate — 막고 선 것은 늘 보인다)으로 드러난 건물이
+  //     **새까만 허공에 떠 있다**(실측 2026-09-10). 기억한 건물 밑에는 기억한 땅이 있어야 한다.
+  //   ⚠ 활성(2)으로 올리지 말 것 — 지금 보고 있는 것이 아니다(적 유닛이 그 위를 지나가도 안 보여야 한다).
+  if(typeof CAMPB !== 'undefined' && CAMPB && CAMPB._fbld){
+    const W2 = CAMPB.world || 1, laneW2 = (typeof CAMP_LANE_W !== 'undefined') ? CAMP_LANE_W : 1;
+    for(const b of CAMPB._fbld){ if(!b || !b.seen) continue;
+      const g = campW2G(b.x, b.y, W2), rg = (CAMP_FOE_SEE_NEAR * 0.62) / W2 * laneW2;
+      const t0 = _fogTile(g.gx, g.gy, f), rr = Math.max(1, rg * f.cols), rry = Math.max(1, rr * asp);
+      for(let dy = -Math.ceil(rry); dy <= Math.ceil(rry); dy++){ const ty = t0.ty + dy; if(ty < 0 || ty >= f.rows) continue;
+        for(let dx = -Math.ceil(rr); dx <= Math.ceil(rr); dx++){ const tx = t0.tx + dx; if(tx < 0 || tx >= f.cols) continue;
+          if((dx / rr) * (dx / rr) + (dy / rry) * (dy / rry) > 1) continue;
+          const i = ty * f.cols + tx; if(f.state[i] === 0) f.state[i] = 1; } } } }
+  return n; }
+// 🌫 **안개에 가려 안 보이나** — 전장 좌표(x,y)로 묻는다(3D·HP 바가 쓴다).
+//   ⚠ 격자 좌표를 받는 techFogHidden 과 다른 자다 — 전장 좌표를 그대로 넘기면 늘 가려진다.
+function campFogHidesAt(wx, wy){
+  if(!campFogOn() || typeof techFogHidden !== 'function' || typeof CAMPB === 'undefined' || !CAMPB) return false;
+  const g = campW2G(wx, wy, CAMPB.world || 1);
+  return techFogHidden(g.gx, g.gy); }
