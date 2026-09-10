@@ -2406,29 +2406,31 @@ the rim inlay, the channel and the crystal shards.
 ⚠ **바닥에 `brightness(.60) saturate(.80)` 필터가 걸려 있다**(css/30-home.css).
 그 값은 **그림 배경 기준**으로 정한 것이라 타일에는 안 맞을 수 있다 — 타일로 바꿀 때 다시 볼 것.
 
-### 18-2. 바닥 타일 프롬프트
+### 18-2. ⭐ 공통 블록 — **원문 그대로** 붙인다
 
-`{SURFACE}` 한 칸만 바꾼다.
+⛔ **한 글자도 고쳐 쓰지 말 것.** 아래가 `assets/tiles/` 의 타일들을 **실제로 뽑은 원문**이다
+(2026-09-10 사용자 제공). §15-2 와 같은 규칙이다 — 요약하거나 다듬어 쓰면 재질·톤이 미묘하게
+달라져 **한 화면에서 바로 티가 난다.**
+
+⚠ **기록**: 2026-09-10 에 이 절을 내가 지어낸 긴 프롬프트로 먼저 채웠다가 사용자가 원문을 주어
+바로잡았다. 그대로 뽑았으면 새 타일만 기존 것과 어긋났을 것이다.
 
 ```
-A seamless tiling ground texture for a top-down isometric strategy game, seen from
-directly above. The image must tile perfectly: the left edge continues into the right
-edge and the top edge continues into the bottom edge, with no seam and no visible
-border.
-
-SURFACE: {SURFACE}
-FORM: flat ground only — nothing stands up out of it, no props, no objects casting
-shadows.
-SHADING: clean stylized shading, gentle large-scale value variation so a field of
-repeated tiles does not read as an obvious grid. No strong single feature that would
-repeat and be spotted. No vignette, no lighting hotspot, no directional shadow.
-OUTPUT: 512x512 PNG, evenly lit, crisp but not noisy.
---- NEGATIVE ---
-seam, visible edge, border, frame, vignette, hotspot, strong shadow, single large
-feature, text, letters, numbers, watermark, logo, objects, props, characters, grid lines
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
 ```
 
-쓴 `{SURFACE}` 보기:
+### 18-2-1. 바닥 타일 — 공통 블록 앞에 표면 한 줄
+
+```
+{SURFACE},
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
+```
+
+`{SURFACE}` 보기 — 지금 `assets/tiles/` 에 있는 것들의 결:
 - `cracked dark concrete slabs with fine grit and thin expansion joints`
 - `hard packed reddish earth with scattered small gravel`
 - `riveted dark steel deck plating with shallow panel lines`
@@ -2442,67 +2444,37 @@ feature, text, letters, numbers, watermark, logo, objects, props, characters, gr
 ⇒ 그릴 것은 **12조각**이고, 아래 4×3 시트 한 장으로 **한 번에** 뽑는다.
 
 ⛔ **조각마다 따로 뽑지 말 것.** 재질·빛·색이 미묘하게 달라져 이어 붙였을 때 티가 난다 —
-§11-4-1 과 §15-2 가 같은 실패를 적고 있다(따로 뽑은 것은 「한 화면에서 바로 티가 난다」).
-한 생성 안에 있으면 재질이 무조건 같다.
+§11-4-1 과 §15-2 가 같은 실패를 적고 있다. 한 생성 안에 있으면 재질이 무조건 같다.
+
+⚠ **공통 블록에서 두 줄만 바꾼다** — 벽은 「이어 붙는 한 장」이 아니라 「조각 열둘」이라
+`seamless tileable texture` 를 그대로 쓸 수 없다. 나머지 세 줄은 **글자 그대로 둔다**
+(그래야 바닥 타일과 같은 톤·재질로 나온다).
 
 ```
-A tileset sheet for a top-down isometric strategy game, arranged as a strict 4 x 3 grid
-of 12 equal square cells on a flat pure black background, with thin black gutters
-between cells. Every cell contains one wall segment piece of the SAME material, drawn
-so its wall runs edge to edge and would connect seamlessly to the neighbouring cell.
-
-ROW 1: straight wall running left-right; straight wall running up-down; corner joining
-the right edge to the bottom edge; corner joining the left edge to the bottom edge.
-ROW 2: corner joining the right edge to the top edge; corner joining the left edge to
-the top edge; T junction opening left, right and down; T junction opening left, right
-and up.
-ROW 3: T junction opening up, down and right; T junction opening up, down and left;
-four-way cross junction; a single isolated square pillar touching no edge.
-
-MATERIAL: heavy angular armour plating, brushed dark metal with warm rust-brown
-weathering along the lower edges, thick chamfered top rim catching the light.
-FORM: hard-surface and angular. Corners are CHAMFERED — cut off at 45 degrees rather
-than rounded. Bold readable silhouette at 48 pixels. Few large shapes, no clutter.
-SHADING: clean stylized shading with three clear value steps plus crisp edge
-highlights. No muddy midtones, no ambient occlusion, no texture noise, no photoreal
-material.
-LIGHT: single key light from the upper left, identical in every cell. Bright rim light
-along the upper-right chamfers. No cast shadow on the ground.
-VIEW: seen from above at a shallow tilt, the same fixed angle in every cell — the top
-face of the wall is clearly visible and the front face is short.
-BACKGROUND: flat solid pure black #000000 filling every gutter and every empty area,
-completely empty.
-OUTPUT: 2048x1536 PNG, crisp vector-like edges, no outline stroke.
---- NEGATIVE ---
-white background, grey background, gradient background, transparent checkerboard,
-perspective distortion, varying camera angle between cells, varying light direction,
-photorealistic, soft shadows, drop shadow, ground shadow, floor, pedestal, text,
-letters, numbers, watermark, logo, frame, border, characters, vehicles, cute,
-rounded corners, soft rounded shapes, glossy plastic, grid lines, labels
+a 4 x 3 grid of 12 separate square wall tiles on a flat black background,
+each tile the same material, each wall drawn edge to edge so it connects to the next tile,
+row 1: straight left-right, straight up-down, corner right+down, corner left+down,
+row 2: corner right+up, corner left+up, T left-right-down, T left-right-up,
+row 3: T up-down-right, T up-down-left, four-way cross, single isolated pillar,
+same camera angle and same light direction in every tile,
+top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
 ```
 
-### 18-4. 지형지물(낱개) 프롬프트
+### 18-4. 지형지물(낱개)
 
-`{PROP}` 한 칸만 바꾼다 — `weathered rock outcrop` · `broken concrete barrier` ·
-`wrecked vehicle hull` · `stack of cargo crates` …
+⚠ 여기서는 `no characters no objects no units` 를 **뺀다** — 지형지물 자체가 object 다.
+나머지는 공통 블록 그대로.
 
 ```
-A single {PROP} for a top-down isometric strategy game, centered on a flat pure black
-background, seen from above at a shallow tilt. Smaller than a building — it must read
-as scenery, not as a structure. Bold readable silhouette at 32 pixels.
-FORM: hard-surface and angular. Corners are CHAMFERED — cut off at 45 degrees rather
-than rounded.
-SHADING: clean stylized shading with three clear value steps plus crisp edge
-highlights. No ambient occlusion, no texture noise, no photoreal material.
-LIGHT: single key light upper-left. Bright rim light along the upper-right chamfers.
-BACKGROUND: flat solid pure black #000000 filling the entire frame, completely empty.
-No cast shadow, no ground plane, no pedestal.
-OUTPUT: 512x512 PNG, crisp vector-like edges, no outline stroke.
---- NEGATIVE ---
-white background, grey background, gradient background, vignette, photorealistic, soft
-shadows, drop shadow, ground shadow, floor, pedestal, text, watermark, logo, frame,
-border, multiple objects, scene, character, cute, rounded corners, glossy plastic
+a single {PROP} on a flat black background, smaller than a building,
+top-down bird's eye view,
+dark tones, game background tile, 3D render
 ```
+
+`{PROP}` 보기: `weathered rock outcrop` · `broken concrete barrier` · `wrecked vehicle hull` ·
+`stack of cargo crates`
 
 ### 18-5. ⚠ 뽑은 뒤에 반드시 할 일
 
