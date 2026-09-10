@@ -1297,9 +1297,6 @@
   /* ⚠ HUD(.hbHudTop)는 손대지 않는다 — 이미 position:absolute · z-index:2 라 캠프 맵(z 0) 위다.
      relative/z-1 로 덮었다가 위치가 깨질 뻔했다. 화면 가운데 위쪽에서 맵이 잡히는 것은
      **거기 HUD 가 없어서**다(프로필은 left:8px 로 왼쪽에만 있다). 정상이다. */
-  /* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
-  .dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
-  .dgHubHead b{color:#ffd24a}
   /* 🎁 상점 전용 화면 — HOME .hmCard 구조를 그대로 따른다: 바깥 패널 + 머리줄 + 안쪽 칸
      ⚠ 굵기는 700까지만(IBM Plex Sans KR 최대). 800/900은 가짜 볼드가 된다 — DESIGN.md §2 */
   #shopScreen,#gearScreen{overflow:hidden}   /* 배경 ::before가 확대 애니메이션을 하므로 넘침 차단(.spaceBg가 하던 역할) */
@@ -1375,65 +1372,20 @@
   .shopGem button{width:100%}
   /* ⚔ 직접 토벌 — 사냥터 화면(HOME)을 그대로 빌린다. 두 번째 전투 화면을 만들지 않는다(단일 소스).
      빌린 화면에서 **사냥터 것만** 걷어낸다: 업그레이드 카드 · 라운드 ◀▶ · 건설 종료. */
-  body:not(.dgFight) #dgFightOut{display:none}
-  body.dgFight .hmScroll{display:none}                 /* 사냥터 업그레이드 카드 */
-  body.dgFight #hbRdPrev, body.dgFight #hbRdNext{display:none}   /* 토벌 중에 단계를 갈아탈 수는 없다 */
-  body.dgFight #hbMidTx{pointer-events:none}           /* 가운데도 목록을 열지 않는다 */
-  body.dgFight #hbBuildStop{display:none}              /* 토벌 중 건설 종료는 뜻이 없다 */
+/* 토벌 중 건설 종료는 뜻이 없다 */
   /* AUTO 칩은 사냥터의 '스킬 자동' 토글이다. 직접 토벌은 스킬이 늘 수동이라(그게 '직접'을 고르는 이유다)
      여기 두면 눌러도 아무 일이 없는 거짓말 컨트롤이 된다. */
-  body.dgFight .hbAutoChip{display:none}
   /* ⚔ 토벌 목록 행 — 방 찾기(.roomItem) 를 그대로 빌린다. ⛔ 새 목록 판을 만들지 말 것(CLAUDE.md 레지스트리).
      여기서 덮는 것은 **높이와 안쪽 배치뿐**이고, 면·테두리·밑변 광원은 공용 규칙 그대로다.
      밑변 광원(--dc) = 그 토벌이 주는 것의 색 — 배지를 안 읽어도 훑힌다.
      ⚠ 320px 폭에 [아이콘][이름+배지][소탕+값][입장+값] 을 넣으면 자리가 빠듯하다(실측: 이름+배지 104px).
        아이콘 30 · 행 여백 8 · 틈 7 이 그 실측에서 나온 값이다 — 늘리면 이름이 잘린다. */
-  .dgRow{height:76px;gap:7px;padding:8px 8px}
-  .dgRow .riName{display:flex;align-items:center;gap:5px;min-width:0;font-size:var(--fs-xl);font-weight:700;color:var(--txt)}
-  .dgRow .riName>u{text-decoration:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* 던전 아이콘 — assets/icons/dungeons/dg_<id>.webp 를 먼저 찾고 없으면 이모지로 떨어진다(beaconProHTML 과 같은 규칙) */
-  .dgIco{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
-    border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);overflow:hidden}
-  .dgIco img{width:100%;height:100%;object-fit:contain;display:block}
-  .roomItem.locked .dgIco{opacity:.45}
-  /* 단계 배지 — 12단계 · 미개척 · Lv.50 이 같은 자리에서 읽힌다(잠긴 것까지 한 문법) */
-  .dgStg{display:inline-flex;align-items:center;padding:1px 5px;border-radius:var(--r-bar);flex:none;
-    border:1px solid rgba(255,255,255,.14);font-family:var(--font-num);font-variant-numeric:tabular-nums;
-    font-weight:700;font-size:var(--fs-sm);color:#cfe0ec}
-  /* 🗝 열쇠 — assets/icons/ui/ui_key.webp 가 들어오면 자동 교체(uiIco 와 같은 규칙). ⛔ 이모지를 박지 말 것 */
-  .dgKey{display:inline-flex;align-items:center;gap:3px;flex:none;font-family:var(--font-num);
-    font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-lg);color:var(--gold)}
-  .dgKey svg,.dgKey img{width:12px;height:12px;flex:none;display:block}
-  .dgKey svg{fill:none;stroke:var(--gold);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-  .dgKey s{text-decoration:none;color:#61666e;font-size:var(--fs-sm)}
-  .roomItem.locked .dgKey{color:#5f6772}
-  .roomItem.locked .dgKey svg{stroke:#5f6772}
   /* 버튼 한 벌 = 공용 .actBtn + 그 아래 '이 버튼이 주는 것' 세로 목록.
      ⚠ 소탕(이미 깬 최고 단계)과 입장(다음 단계)은 주는 양이 다르다 — 값을 버튼마다 따로 적는 이유다. */
-  .dgBtnW{flex:none;display:flex;flex-direction:column;align-items:center}
-  .dgBtnW .actBtn{width:54px;height:24px;font-size:var(--fs-sm);padding:0 6px}
-  .dgVals{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:3px}
-  .dgVals span{display:flex;align-items:center;gap:3px;line-height:1.1;
-    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:8.5px;font-weight:700;color:#96a0ab}
-  .dgVals.off span{color:#4e535a}
-  .dgVals .ri{width:11px;height:11px}
-  .dgTix{display:flex;gap:14px;justify-content:center;padding:10px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
-  .dgTix b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:3px}
   /* 자동·직접 = 공용 .actBtn. ⛔ 면·테두리를 따로 쓰지 말 것 — 여기서 덮는 것은 크기와 2줄 배치뿐이다.
      위계는 색이 아니라 빛의 양: 직접이 .pri(붉은 밑변 광원), 자동은 기본(중립 흰선). */
-  .dgSheet{position:absolute;inset:0;z-index:64;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.10),transparent 72%),rgba(2,4,9,.62)}
-  .dgSheet.hide{display:none}
   /* ⚔ 시트 카드 = 앱 팝업 규격 그대로(.setCard/.ecCard). ⛔ 면을 색으로 채우지 말 것 —
      옛 아트 헤더(황토 그라데)가 DESIGN.md §0 위반이었다. 색은 제목 아래 헤어라인에만 남긴다. */
-  .dgSheetCard{position:relative;width:86%;max-width:290px;padding:16px 14px 15px;box-sizing:border-box;
-    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
-    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
-    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
-  .dgSheetCard>*{position:relative;z-index:1}
-  /* 방금 누른 그 행을 그대로 얹는다(dgRowHTML 'sheet') — 시트 안에서는 버튼 없이 이번에 받을 것만 */
-  #dgSheetRow .dgRow{height:60px;cursor:default}
-  #dgSheetRow .dgVals{margin-top:0;align-items:flex-end}
   .navIt,#tabs .tab{position:relative;z-index:1;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     cursor:pointer;font-family:var(--font-ko);font-size:11px;font-weight:700;letter-spacing:.1em;color:#b6bac2;
     text-shadow:0 1px 3px rgba(0,0,0,.95);
@@ -1591,8 +1543,6 @@
     box-shadow:0 16px 44px -12px #000}
   .hbmHead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 8px;
     font-size:15px;font-weight:700;letter-spacing:.6px;color:#ececec}   /* 700 초과 = 가짜 볼드(IBM Plex Sans KR 최대 700) — DESIGN.md §2 */
-  /* ⚔ 토벌 팝업 본문 — 카드 목록이 길어지므로 남은 높이 안에서만 스크롤 */
-  .dgHubBody{flex:1 1 auto;min-height:0;padding:0 12px;overflow-y:auto;overflow-x:hidden}
   .hbmX{width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;
     color:#9a9a9a;background:none;border:none}
   .hbmX svg{width:15px;height:15px}
