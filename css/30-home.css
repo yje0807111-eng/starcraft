@@ -1294,6 +1294,9 @@
   /* 맵 위에 얹힌 건설 장식·안내 */
   #phone.campMode #cstMain .bhint,     /* 「건물을 골라 배치」 같은 안내 문구 */
   #phone.campMode #cstMain .bHill{display:none}   /* 언덕 장식만 걷는다 — 가스 구역은 캠프도 쓴다 */
+  /* ⚠ 단 **회복 구역 밖 경고**는 캠프에서도 뜬다(2026-09-10) — 조작 안내와 달리 이건
+     「이 자리는 대가가 있다」는 판단 정보다. ⛔ 경고용 바를 새로 만들지 말 것(단일 소스). */
+  #phone.campMode #cstMain .bhint.warn{display:block}
   /* ⚠ HUD(.hbHudTop)는 손대지 않는다 — 이미 position:absolute · z-index:2 라 캠프 맵(z 0) 위다.
      relative/z-1 로 덮었다가 위치가 깨질 뻔했다. 화면 가운데 위쪽에서 맵이 잡히는 것은
      **거기 HUD 가 없어서**다(프로필은 left:8px 로 왼쪽에만 있다). 정상이다. */

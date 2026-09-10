@@ -126,8 +126,15 @@ const CAMP_FOE_TOWER_CD  = 1.0;          // 발사 간격(초)
 //   ⛔ 「시간이 지나면 적이 세진다」로 만들지 말 것 — 방치형에서 그건 「안 보면 손해」다(§2-5).
 //     이건 시간이 아니라 **내가 깬 것**에 반응하므로 방치해도 손해가 없다.
 //   ⚠ 두 표는 단계(step 1~6)로 읽는다 — 배열 인덱스는 step−1.
-const CAMP_FOE_RELAY_S = [3.4, 3.0, 2.7, 2.4, 2.1, 1.8];   // 단계별 스폰 주기(초) — 짧아진다
-const CAMP_FOE_RELAY_N = [2, 2, 3, 3, 4, 5];               // 단계별 한 무리 마리 수 — 늘어난다
+//   ⏳ **한 번에 많이 · 주기는 길게** (2026-09-10 사용자 확정) — 무리 사이에 **틈**이 있어야 한다.
+//     ⛔ 옛 값(2~5마리 / 1.8~3.4초)은 **틈이 없는 흐름**이었다. 적이 늘 사거리에 있으니 아군이
+//       건물을 영영 못 쳤고(본진 60초에 이론 화력의 2%), 그걸 「건물부터 친다」는 우회로 덮었다.
+//     ⭐ 지금은 리듬으로 푼다: **몰려온다 → 다 잡는다 → 그 틈에 벽을 친다.**
+//       무리를 정리하고 남는 시간이 곧 공성 시간이라, 「우리 화력이 무리를 제때 잡는가」가
+//       그 관문의 물음이 된다 — 못 잡으면 적이 쌓여 틈이 사라지고, 그때가 물러날 때다.
+//     ⚠ 초당 유입은 옛 값과 비슷하되 **뒤로 갈수록 완만**하다(0.50 → 1.64 · 옛 0.59 → 2.78).
+const CAMP_FOE_RELAY_S = [16, 15, 14, 13, 12, 11];         // 단계별 스폰 주기(초) — 조금씩 짧아진다
+const CAMP_FOE_RELAY_N = [8, 10, 12, 14, 16, 18];          // 단계별 한 무리 마리 수 — 한 번에 몰려온다
 // 🧯 **전장 적 상한 — 「죽음의 나선」을 끊는 유일한 장치** (2026-09-09 사용자 지적)
 //   ⛔ 상한이 없으면 **못 이기는 판은 반드시 지는 판**이 된다: 죽이는 속도가 나오는 속도보다
 //     느린 순간부터 적이 무한히 쌓이고, 그 뒤로는 무엇을 해도 전멸한다. 병력이 약한 초반이
@@ -146,7 +153,9 @@ const CAMP_FOE_RELAY_N = [2, 2, 3, 3, 4, 5];               // 단계별 한 무�
 //     ⭐ 지금은 ×1.6 — 총 전력이 ×11.5 로 사다리와 같은 자를 쓴다.
 //     ⭐ 그리고 **첫 칸을 10 → 16 으로 올렸다**: 초반에 적이 너무 적어 「몰려온다」가 없었고,
 //       적을 죽여 버는 돈(마린키우기의 고리)도 그만큼 얇았다.
-const CAMP_FOE_LIVE_MAX = [16, 18, 20, 22, 24, 26];        // 단계별 전장에 동시에 살아 있을 수 있는 적
+//   ⚠ **한 무리보다 넉넉해야 한다**(2026-09-10) — 상한이 무리 크기에 가까우면 남은 적이 몇만 있어도
+//     다음 무리가 통째로 건너뛰어져 리듬이 들쭉날쭉해진다. 무리의 두 배쯤 둔다.
+const CAMP_FOE_LIVE_MAX = [18, 22, 26, 30, 34, 38];        // 단계별 전장에 동시에 살아 있을 수 있는 적
 const CAMP_FOE_SPAWN_R   = 26;           // 건물 둘레로 흩는 반경 — 한 점에서 겹쳐 나오면 끼인다
 const CAMP_FOE_SPAWN_OFF = 18;           // 건물보다 내 쪽으로 이만큼 — 건물 안에서 안 나오게
 // ⚡ **보급고** — 진행에 안 세지만 깨면 일시 버프. ⭐ 「지금 들러서 힘 받고 갈까」가 생긴다.
@@ -333,9 +342,9 @@ function campBreakBld(b){
     if(typeof campNote === 'function') campNote('broken', 1);   // 🧭 가이드 — 진행 건물을 하나 부쉈다
     if(!C.best) C.best = {};
     C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.broken);    // 룬 칸·환생이 읽는 「최고 도달」
-    // 🩹 **체크포인트 부활** — 옛 「라운드 시작」의 자리다. 누운 병력이 일어나고 체력이 찬다.
+    // 🩹 **관문 보상 = 전체 회복** — 옛 「라운드 시작」의 자리다. ⛔ 부활은 없다(2026-09-10).
     if(typeof campRescaleMine === 'function') campRescaleMine();   // 🏛 내 기지도 그 관문의 자로
-    if(typeof campRoundRevive === 'function') campRoundRevive();
+    if(typeof campHealAll === 'function') campHealAll();
     if(typeof campSay === 'function'){
       const nx = campFoeActive();                          // 이어받을 다음 건물(없으면 이 던전 끝)
       campSay('🏚 ' + (b.nm || '건물') + ' 파괴 — ' + C.broken + '/' + CAMP_DG_STEPS
@@ -394,11 +403,14 @@ function campFoeSpawnTick(dt){
   CAMPB._fspT = (CAMPB._fspT || 0) - dt;
   if(CAMPB._fspT > 0) return 0;
   const i = campFoeStepIdx(act);
+  const n = CAMP_FOE_RELAY_N[i] | 0;
   // 🧯 상한에 닿았으면 안 보낸다 — ⛔ 이 줄을 빼면 못 이기는 판이 반드시 지는 판이 된다(위 설명).
   //   ⚠ **대기 중인 무리도 센다**(_wq) — 안 세면 큐에 쌓아 두었다가 한꺼번에 쏟아진다.
+  //   ⚠ **무리 전체가 들어갈 자리**를 본다(2026-09-10). 「한 마리라도 들어가나」로 재면
+  //     무리가 커진 지금(8~18마리) 상한을 **최대 무리−1 만큼 넘긴다**(실측 24 > 18).
+  //   ⭐ 통째로 미루는 것이 리듬에도 맞다 — 전장이 어느 정도 비어야 다음 무리가 온다.
   { const live = campFoeLive(), pend = campFoePendN();
-    if(live + pend >= (CAMP_FOE_LIVE_MAX[i] | 0)){ CAMPB._fspT = CAMP_FOE_RELAY_S[i]; return 0; } }
-  const n = CAMP_FOE_RELAY_N[i] | 0;
+    if(live + pend + n > (CAMP_FOE_LIVE_MAX[i] | 0)){ CAMPB._fspT = CAMP_FOE_RELAY_S[i]; return 0; } }
   CAMPB._fspT = CAMP_FOE_RELAY_S[i];
   if(!CAMPB._wq) CAMPB._wq = [];
   CAMPB._wq.push({ n:n, x:act.x, y:act.y, ids:act.spawn || null });
