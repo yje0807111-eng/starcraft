@@ -1956,13 +1956,25 @@ async function groupLobby(){
         // 🏗 **유닛을 지정한 채 내 건물을 탭하면 유닛이 풀리고 그 건물이 지정된다**
         //   (2026-09-10 사용자 확정 · 옛 규칙은 「그 자리로 이동」이라 ⊘ 로 먼저 풀어야 했다).
         //   ⛔ 「건물 탭 = 이동」으로 되돌리지 말 것.
+        //   ⚠ 일꾼은 캐는 동안 움직인다 — 건물 발판 위에 서 있으면 _techEntAt 이 건물 대신
+        //     그 일꾼을 돌려준다(실측: 3회 중 1회 실패). 재는 동안만 옆으로 치워 둔다.
         { campPanMode(false); clearSel();
-          G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
-          const q=at(bd.x,bd.y);
-          if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
-            assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
-            assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
-          clearSel(); }
+          const away=[];
+          try{
+            for(const e of (G.tech.ents||[])){
+              if(e.type!=='worker' && e.type!=='unit') continue;
+              if(Math.abs(e.x-bd.x)<0.12 && Math.abs(e.y-bd.y)<0.12){
+                away.push({e:e,x:e.x,y:e.y,tx:e.tx,ty:e.ty,wp:e._wp});
+                e.x=0.02; e.y=0.02; e.tx=null; e.ty=null; e._wp=null; } }
+            spin(1);
+            G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
+            const q=at(bd.x,bd.y);
+            if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+              assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
+              assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
+          } finally {
+            for(const a of away){ a.e.x=a.x; a.e.y=a.y; a.e.tx=a.tx; a.e.ty=a.ty; a.e._wp=a.wp; }
+            clearSel(); } }
 
         // ⑤ ⛔ **모드가 꺼져 있으면 빈 바닥 드래그는 여전히 박스 지정이다.**
         //   여기를 팬으로 쓰면 유닛 드래그 지정이 죽는다 — 그래서 모드로 가른 것이다.
