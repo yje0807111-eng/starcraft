@@ -2381,3 +2381,139 @@ the rim inlay, the channel and the crystal shards.
    그리고 **`CAMP_BG_V2`(js/19-camp.js)에서 그 번호를 true 로** — 그래야 바닥이 −58% 까지 올라간다(옛 그림은 −18%).
 4. 던전 1 에 들어가 표식(`campFoeMarks`)이 고원 **안**에 앉고 광맥이 호 자국 위에 서는지 본다. 어긋나면 `::before` 의 `top` 을 손본다
    (자리는 랜덤이라 표를 옮길 것이 없다). `node scripts/art-lint.mjs`.
+
+---
+
+## 18. 🧱 타일 계열 — 바닥·벽·지형지물 (2026-09-10 · 사용자 확정 「전면 타일」)
+
+⭐ **왜 타일로 가나** — 맵을 AI 그림 한 장으로 뽑던 방식(§11 · §17)이 세 가지로 계속 말썽이었다:
+확대하면 뭉개지고 · 건물과 그림체가 안 맞고 · **격자와 안 맞는다.**
+셋째가 가장 컸다: §11-4-1 이 「경계를 찾으려 하지 말 것 — 두 번 실패했다」고 적었고,
+지금도 그림 **세대마다 다른 보정값**을 쓴다(`CAMP_BG_V2`: 옛 −18% · v2 −58%).
+⇒ **타일은 격자에 맞춰 놓는 것이 정의**라 이 문제가 통째로 사라진다.
+
+### 18-1. 규격
+
+| 항목 | 값 |
+|---|---|
+| 타일 한 장 | **격자 6칸**(2026-09-10 사용자 확정) — 캠프 격자가 40칸이라 화면에서 약 50px |
+| ⚠ 왜 6칸인가 | 격자 한 칸이 8px 이라 2칸(17px)은 무늬가 뭉개져 그냥 색면이 된다. 오토배틀은 20칸이라 4칸이 66px — **같은 느낌을 내려면 캠프는 6~8칸**이다(실측) |
+| 깔개 방식 | 오토배틀 것 그대로(`STK_FLOOR_CELLS` · `js/16-build.js` `_floorSt`) — ⛔ 새 방식을 만들지 말 것 |
+| 바닥 타일 | 512×512 · 이어 붙는(seamless) · `assets/tiles/` |
+| 벽 조각 | 한 장 시트에서 잘라 쓴다(§18-3) |
+| 지형지물 | 낱개 · 검정 배경 · `assets/tiles/auto/deco_*.webp` 와 같은 자리 |
+
+⚠ **바닥에 `brightness(.60) saturate(.80)` 필터가 걸려 있다**(css/30-home.css).
+그 값은 **그림 배경 기준**으로 정한 것이라 타일에는 안 맞을 수 있다 — 타일로 바꿀 때 다시 볼 것.
+
+### 18-2. 바닥 타일 프롬프트
+
+`{SURFACE}` 한 칸만 바꾼다.
+
+```
+A seamless tiling ground texture for a top-down isometric strategy game, seen from
+directly above. The image must tile perfectly: the left edge continues into the right
+edge and the top edge continues into the bottom edge, with no seam and no visible
+border.
+
+SURFACE: {SURFACE}
+FORM: flat ground only — nothing stands up out of it, no props, no objects casting
+shadows.
+SHADING: clean stylized shading, gentle large-scale value variation so a field of
+repeated tiles does not read as an obvious grid. No strong single feature that would
+repeat and be spotted. No vignette, no lighting hotspot, no directional shadow.
+OUTPUT: 512x512 PNG, evenly lit, crisp but not noisy.
+--- NEGATIVE ---
+seam, visible edge, border, frame, vignette, hotspot, strong shadow, single large
+feature, text, letters, numbers, watermark, logo, objects, props, characters, grid lines
+```
+
+쓴 `{SURFACE}` 보기:
+- `cracked dark concrete slabs with fine grit and thin expansion joints`
+- `hard packed reddish earth with scattered small gravel`
+- `riveted dark steel deck plating with shallow panel lines`
+
+### 18-3. 🧱 벽 — **조각 세트다. 한 장이 아니다**
+
+벽 한 칸의 모양은 **이웃 네 방향 중 어디와 이어지나**로 정해진다(경우의 수 16).
+정면 탑다운이면 6종만 그리고 돌려 쓰면 되지만, **이 게임은 등각이라 90° 회전이 안 된다**
+(앞면이 옆면이 되고 빛 방향이 틀어진다). **좌우 뒤집기만** 쓸 수 있다.
+
+⇒ 그릴 것은 **12조각**이고, 아래 4×3 시트 한 장으로 **한 번에** 뽑는다.
+
+⛔ **조각마다 따로 뽑지 말 것.** 재질·빛·색이 미묘하게 달라져 이어 붙였을 때 티가 난다 —
+§11-4-1 과 §15-2 가 같은 실패를 적고 있다(따로 뽑은 것은 「한 화면에서 바로 티가 난다」).
+한 생성 안에 있으면 재질이 무조건 같다.
+
+```
+A tileset sheet for a top-down isometric strategy game, arranged as a strict 4 x 3 grid
+of 12 equal square cells on a flat pure black background, with thin black gutters
+between cells. Every cell contains one wall segment piece of the SAME material, drawn
+so its wall runs edge to edge and would connect seamlessly to the neighbouring cell.
+
+ROW 1: straight wall running left-right; straight wall running up-down; corner joining
+the right edge to the bottom edge; corner joining the left edge to the bottom edge.
+ROW 2: corner joining the right edge to the top edge; corner joining the left edge to
+the top edge; T junction opening left, right and down; T junction opening left, right
+and up.
+ROW 3: T junction opening up, down and right; T junction opening up, down and left;
+four-way cross junction; a single isolated square pillar touching no edge.
+
+MATERIAL: heavy angular armour plating, brushed dark metal with warm rust-brown
+weathering along the lower edges, thick chamfered top rim catching the light.
+FORM: hard-surface and angular. Corners are CHAMFERED — cut off at 45 degrees rather
+than rounded. Bold readable silhouette at 48 pixels. Few large shapes, no clutter.
+SHADING: clean stylized shading with three clear value steps plus crisp edge
+highlights. No muddy midtones, no ambient occlusion, no texture noise, no photoreal
+material.
+LIGHT: single key light from the upper left, identical in every cell. Bright rim light
+along the upper-right chamfers. No cast shadow on the ground.
+VIEW: seen from above at a shallow tilt, the same fixed angle in every cell — the top
+face of the wall is clearly visible and the front face is short.
+BACKGROUND: flat solid pure black #000000 filling every gutter and every empty area,
+completely empty.
+OUTPUT: 2048x1536 PNG, crisp vector-like edges, no outline stroke.
+--- NEGATIVE ---
+white background, grey background, gradient background, transparent checkerboard,
+perspective distortion, varying camera angle between cells, varying light direction,
+photorealistic, soft shadows, drop shadow, ground shadow, floor, pedestal, text,
+letters, numbers, watermark, logo, frame, border, characters, vehicles, cute,
+rounded corners, soft rounded shapes, glossy plastic, grid lines, labels
+```
+
+### 18-4. 지형지물(낱개) 프롬프트
+
+`{PROP}` 한 칸만 바꾼다 — `weathered rock outcrop` · `broken concrete barrier` ·
+`wrecked vehicle hull` · `stack of cargo crates` …
+
+```
+A single {PROP} for a top-down isometric strategy game, centered on a flat pure black
+background, seen from above at a shallow tilt. Smaller than a building — it must read
+as scenery, not as a structure. Bold readable silhouette at 32 pixels.
+FORM: hard-surface and angular. Corners are CHAMFERED — cut off at 45 degrees rather
+than rounded.
+SHADING: clean stylized shading with three clear value steps plus crisp edge
+highlights. No ambient occlusion, no texture noise, no photoreal material.
+LIGHT: single key light upper-left. Bright rim light along the upper-right chamfers.
+BACKGROUND: flat solid pure black #000000 filling the entire frame, completely empty.
+No cast shadow, no ground plane, no pedestal.
+OUTPUT: 512x512 PNG, crisp vector-like edges, no outline stroke.
+--- NEGATIVE ---
+white background, grey background, gradient background, vignette, photorealistic, soft
+shadows, drop shadow, ground shadow, floor, pedestal, text, watermark, logo, frame,
+border, multiple objects, scene, character, cute, rounded corners, glossy plastic
+```
+
+### 18-5. ⚠ 뽑은 뒤에 반드시 할 일
+
+| | |
+|---|---|
+| **이음매** | AI 는 「완벽히 이어지는」 타일을 잘 못 뽑는다. 가장자리를 겹쳐 섞는 후처리가 거의 늘 필요하다 |
+| **시트 칸 경계** | 4×3 을 못 박아도 모델이 조금씩 흘린다(§11-4-1 과 같은 문제) — **자를 때 눈으로 한 번 보고 맞춘다** |
+| **확인** | `node scripts/camp-tile-shot.mjs` 로 실제 화면에 깔아 본다(게임을 안 고치고 CSS 만 얹어 찍는다) |
+
+### 18-6. 아직 「무늬 반복」이지 타일맵이 아니다
+
+지금 §18-1 의 방식은 **무늬 하나를 반복**하는 것이다. 자리마다 다른 타일(길·절벽·경사)을
+놓으려면 **타일맵 데이터**(칸마다 타일 번호)가 따로 필요하다 — 그건 다음 단계다.
+⚠ 벽 조각 세트(§18-3)는 그 단계에서 쓴다. 지금은 뽑아 두기만 한다.

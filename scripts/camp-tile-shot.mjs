@@ -76,13 +76,15 @@ const shot=async(name)=>{ const f=path.join(OUT,'camp-tile-'+name+'.png');
 
 // ① 지금(그림 한 장) — 견줄 기준
 await shot('0-지금');
-// ② 타일 크기 비교 — 같은 그림으로 1·2·3·4칸
-for(const c of [1,2,4,6,8]){ await lay('auto/ground.webp', c, false); await shot('size-'+c+'칸'); }
-// ③ 그림 비교 — 2칸 고정
-for(const t of ['auto/ground.webp','auto/pave.webp','badlands.webp','desert.webp','terran_tile_light.webp','ashworld.webp']){
-  await lay(t, 6, false); await shot('tile-'+t.replace(/.*\//,'').replace('.webp','')); }
-// ④ 반복감 깨기 — 매크로 얼룩 얹기
-await lay('auto/ground.webp', 6, true); await shot('macro-on');
+// ② 타일 크기 비교 — 같은 그림으로
+for(const c of [2,4,6,8]){ await lay('auto/ground.webp', c, false); await shot('size-'+c+'칸'); }
+// ③ 그림 비교 — **6칸 고정**(2026-09-10 사용자 확정). 있는 타일 전부를 같은 조건으로 본다.
+const TILES=['terran_tile_light.webp','installation.webp','space_platform.webp','protoss_floor.webp',
+  'badlands.webp','ashworld.webp','desert.webp','auto/pave.webp','auto/ground.webp'];
+for(const t of TILES){ await lay(t, 6, false); await shot('tile-'+t.replace(/.*\//,'').replace('.webp','')); }
+// ④ 반복감 깨기 — 매크로 얼룩을 얹으면 넓게 볼 때 되풀이가 덜 읽힌다
+for(const t of ['terran_tile_light.webp','installation.webp','badlands.webp']){
+  await lay(t, 6, true); await shot('macro-'+t.replace(/.*\//,'').replace('.webp','')); }
 
 console.log(errs.length?('\n⛔ 예외:\n  '+errs.join('\n  ')):'\n✅ 예외 없음');
 await b.close(); server.close();
