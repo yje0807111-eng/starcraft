@@ -322,6 +322,63 @@ CHROME_PATH=/opt/pw-browsers/chromium node scripts/camp-trace.mjs [초] [던전]
 ⚠ **아군(me)에만 건다.** 적(ai)은 내 건물을 치러 내려오는 쪽이라 규칙이 다르다 —
 여기 걸면 적이 내 병력을 통째로 무시하고 지나쳐 방어의 뜻이 사라진다.
 
+#### 🔀 캠프 ↔ 오토 배틀이 자꾸 헷갈리는 **진짜 이유** (2026-09-10 정리)
+
+파일은 갈라져 있다(`18-strike.js` ↔ `21-camp-battle.js`). 그런데도 계속 섞이는 이유는 **한 줄**이다.
+
+```js
+function campWithStk(fn){          // js/19-camp.js
+  const prev = STK; STK = CAMPB;   // ← 전역을 캠프 것으로 바꿔치기
+  try { return fn(CAMPB); } finally { STK = prev; }
+}
+```
+
+⭐ **캠프가 오토 배틀인 척한다.** 오토 배틀 코드는 상태를 인자로 받지 않고 **전역 `STK` 를 읽는다**
+(18-strike 안에서 **333줄**). 그래서 캠프가 그 전역을 잠깐 바꿔치기하고 함수를 부른다 —
+빌려 간 함수 안에서 `STK` 는 그냥 `STK` 라 **자기가 누구를 위해 도는지 알 방법이 없다.**
+
+⛔ 그래서 **함수를 나누는 것으로는 못 가른다.** 밖에다 대고 물어야 한다.
+
+##### 🧭 물어보는 곳은 **`battleCtx()` 하나**다 (`js/10-engine.js`)
+
+`'camp' | 'autobattle' | 'sandbox' | 'usemap' | 'none'` 을 돌려준다.
+⭐ 가장 정확한 신호는 **`STK === CAMPB`** — 「지금 이 순간 캠프가 빌려 쓰는 중」이고, 화면·맵과 무관하다.
+
+⚠ 옛 판별기 다섯은 **서로 다른 질문**이라 무엇을 물어야 맞는지가 자명하지 않았다
+(`campIsOn` 24곳 · `techWallet` 38 · `G.strike` 44 · `G.sandbox` 46 · `MAP.id` 4 — 합 156곳).
+실제로 오토 배틀 강화를 걸 때 **셋을 겹쳐** 물어야 했다. ⛔ 새 코드는 `battleCtx()` 만 묻는다.
+⚠ 옛 다섯은 **그대로 둔다**(156곳을 일괄 치환하지 않는다 — touch-it-fix-it).
+
+##### 📋 캠프가 빌려 쓰는 20종 — **고칠 때 반드시 양쪽을 본다**
+
+⛔ 아래 **⚠ 표시된 일곱**은 밸런스에 직접 닿는다. 여기에 무엇을 더하면 **캠프와 오토 배틀 양쪽이
+같이 움직인다** — 한쪽만 원하면 `battleCtx()` 로 갈라야 한다.
+
+| | 함수 | 무엇을 하나 |
+|---|---|---|
+| ⚠ | `strikeAtkMul` `strikeSkillAtkMul` | 공격력 배율 |
+| ⚠ | `strikeHit` | 피해 계산(상성·방어·실드) |
+| ⚠ | `strikeKillGold` | 처치 보상 |
+| ⚠ | `strikeHealStep` `strikeSkillTick` | 치유 · 스킬 |
+| ⚠ | `strikeFrzCdMul` `strikeFrzKill` `strikeFrzStep` | 🐺 광폭화 |
+| | `strikeMoveToward` `strikeSeparate` `strikeNear` `strikeReach` | 이동 · 거리 |
+| | `strikeFindUnit` `strikeIsAir` `strikeGridBuild` | 조회 · 판정 |
+| | `strikeTempleGap` `strikeTempleRects` | 신전 기하 |
+| | `strikeFx` `strikeAlert` | 연출 · 알림 |
+
+⚠ **`strikeHpMul` 은 목록에 없지만 캠프에도 닿는다** — 캠프가 `strikeSpawnUnit` 을 부르고
+그 안에서 불린다. 「직접 부르는 것」만 세면 놓친다.
+
+⭐ **선례**: 🗺 오토 배틀 유즈맵 강화(2026-09-10). `strikeAtkMul`·`strikeHpMul` 에 영구 강화를
+걸어야 했는데 둘 다 캠프가 쓰는 함수라, `stkUpgOn()` 으로 **오토 배틀 + 내 진영일 때만** 걸었다.
+`strikeKillGold`(처치 보상)는 진영을 가릴 자리가 마땅치 않아 **아예 손대지 않았다**.
+
+##### 🛠 근본 해결은 **개편 뒤에** — 상태를 인자로 넘긴다
+
+`strikeAtkMul(side)` → `strikeAtkMul(state, side)` 로 바꾸면 함수가 스스로 안다.
+⚠ 다만 **333곳**을 손봐야 하고 그 파일은 지금 전면 개편이 한창이라 충돌이 확실하다.
+⛔ 개편이 끝나기 전에 시작하지 말 것(2026-09-10 사용자 확정 — 「개편 끝나고 ㉮ 진행」).
+
 #### ⚔ 캠프 전투 — **캠프가 제 프레임을 소유한다** (`js/21-camp-battle.js` · 2026-08-31)
 
 **옛 구조가 아팠던 이유 — 미는 주체가 셋이었다.** 오토배틀(`strikeStepUnits`)을 돌린 **뒤에**

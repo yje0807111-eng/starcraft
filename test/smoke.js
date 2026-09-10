@@ -339,14 +339,22 @@ async function groupLobby(){
           '값 순서가 깨졌다(영향이 큰 것이 더 비싸야 한다): '+order[i-1]+' '+tot(order[i-1])+' ≥ '+order[i]+' '+tot(order[i]));
         // ⛔ **캠프로 새지 않는가** — 캠프 전투가 이 파일의 부품(strikeAtkMul)을 그대로 빌려 쓴다.
         //   여기가 뚫리면 오토 배틀 강화가 캠프 밸런스를 통째로 흔든다.
-        { const on0=window.campIsOn, map0=(typeof MAP!=='undefined')?MAP:null;
+        //   ⭐ 판단은 **`battleCtx()` 하나**가 한다 — 「캠프가 빌려 쓰는 중」은 `STK===CAMPB` 로 안다.
+        { const on0=window.campIsOn, sb0=(typeof G!=='undefined'&&G)?G.sandbox:undefined,
+                st0=(typeof G!=='undefined'&&G)?G.strike:undefined;
           try{
             window.campIsOn=()=>true;
-            assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'캠프 전투 중인데 오토 배틀 강화가 걸린다');
+            assert(battleCtx()==='camp','캠프 화면인데 battleCtx 가 camp 가 아니다: '+battleCtx());
+            assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'캠프인데 오토 배틀 강화가 걸린다');
             window.campIsOn=()=>false;
-            if(typeof MAP!=='undefined'){ MAP=USEMAPS.nemo;
-              assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'다른 유즈맵인데 오토 배틀 강화가 걸린다'); }
-          } finally { window.campIsOn=on0; if(map0) MAP=map0; } }
+            if(typeof G!=='undefined'&&G){
+              G.sandbox=false; G.strike=false;
+              assert(battleCtx()!=='autobattle','오토 배틀이 아닌데 autobattle 로 읽힌다: '+battleCtx());
+              assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'오토 배틀이 아닌데 강화가 걸린다');
+              G.strike=true;
+              assert(battleCtx()==='autobattle','오토 배틀인데 autobattle 이 아니다: '+battleCtx()); }
+          } finally { window.campIsOn=on0;
+            if(typeof G!=='undefined'&&G){ G.sandbox=sb0; G.strike=st0; } } }
         PLAYER_META.buildLevels=JSON.parse(keep); }
       // ⑦ 뒤로 = 맵 목록
       mapUpgBack();

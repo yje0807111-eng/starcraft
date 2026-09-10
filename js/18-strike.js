@@ -158,12 +158,14 @@ function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
 //   ⛔ 이 파일의 부품을 **캠프 전투(21-camp-battle.js)가 그대로 빌려 쓴다** — `strikeAtkMul`·
 //     `strikeSpawnUnit` 이 그 예다. 그래서 함수를 나누는 것으로는 못 가른다:
 //     「지금이 오토 배틀인가 · 이 진영이 나인가」를 **여기서 직접** 확인한다.
-//   ⚠ 셋 다 참이어야 걸린다 — ① 캠프가 아니다 ② 지금 맵이 오토 배틀이다 ③ 내 진영이다.
+//   ⚠ 둘 다 참이어야 걸린다 — ① 지금이 **오토 배틀**이다 ② 이 진영이 **나**다.
 //     하나라도 빼면 캠프 밸런스나 상대 컴퓨터에까지 내 영구 강화가 샌다.
+//   ⭐ ①은 **`battleCtx()` 하나**가 답한다(js/10-engine.js) — 캠프가 빌려 쓰는 중이면
+//     `STK===CAMPB` 라 거기서 'camp' 가 나온다. ⛔ `campIsOn()`·`MAP.id` 를 겹쳐 묻던 옛 꼴로
+//     되돌리지 말 것: 물어야 할 것이 셋이라 새 코드마다 무엇을 물을지 헷갈렸다.
 function stkUpgOn(side){
-  if(typeof campIsOn === 'function' && campIsOn()) return false;         // ① 캠프 전투가 빌려 쓰는 중
-  if(typeof MAP === 'undefined' || !MAP || MAP.id !== 'cpu') return false; // ② 오토 배틀이 아니다
-  const S = STK; return !!(S && side && side === S.me);                   // ③ 내 진영만
+  if(typeof battleCtx !== 'function' || battleCtx() !== 'autobattle') return false;   // ① 오토 배틀만
+  const S = STK; return !!(S && side && side === S.me);                                // ② 내 진영만
 }
 function stkUpg(side){ return stkUpgOn(side) && typeof cpuBonus === 'function' ? cpuBonus() : null; }
 function strikeAtkMul(side){ const b = stkUpg(side);

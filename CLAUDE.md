@@ -15,6 +15,15 @@
 - Deliverable: a static file set — `sc-ums-web.html` (markup only, ~900 lines) + **`css/` 5 files** + **`js/` 19 files** — a mobile StarCraft-style usemap (vanilla JS, Three.js 3D, Supabase realtime). No build step and **no test framework**.
   - **Find the right file first: `ARCHITECTURE.md` §1 파일 지도.** Don't grep the HTML for logic — it holds only markup now.
   - `js/*.js` are **classic scripts** sharing one global scope, executed in tag order. ⛔ Never reorder the `<script>` tags, never convert them to `type="module"`, and remember declarations hoist **within a file only**.
+- 🔀 **캠프 ↔ 오토 배틀이 헷갈리는 진짜 이유 — 파일이 아니라 `campWithStk` 다**(2026-09-10 정리).
+  캠프가 **전역 `STK` 를 제 것(CAMPB)으로 바꿔치기**하고 오토 배틀 함수를 부른다(빌려 쓰는 20종).
+  그래서 빌려 간 함수 안에서는 **자기가 누구를 위해 도는지 알 수가 없다** — ⛔ 함수를 나눠서는 못 가른다.
+  ⭐ **새 코드는 `battleCtx()`(js/10-engine.js) 하나만 묻는다** — `'camp'|'autobattle'|'sandbox'|'usemap'|'none'`.
+  가장 정확한 신호는 `STK === CAMPB`(지금 빌려 쓰는 중)이라 화면·맵과 무관하다.
+  ⚠ 옛 판별기 다섯(`campIsOn`·`techWallet`·`G.strike`·`G.sandbox`·`MAP.id` · 합 156곳)은 **그대로 둔다**
+  — 서로 다른 질문이라 헷갈리던 것이고, 일괄 치환하지 않는다(touch-it-fix-it).
+  ⚠ 빌려 쓰는 20종과 **밸런스에 직접 닿는 일곱**은 `ARCHITECTURE.md` §「🔀 캠프 ↔ 오토 배틀」 표에 있다 —
+  그 함수를 고칠 때 **반드시 양쪽을 본다**. ⛔ 상태를 인자로 넘기는 근본 해결은 **개편 뒤에**(333곳).
 - ⚔ **캠프 전투는 `js/21-camp-battle.js` 가 소유한다**(2026-08-31). `campStepUnits(dt)` 한 함수가 표적 선정·자리·이동·사격을 다 한다. ⛔ `js/18-strike.js`(유즈맵 오토배틀)를 고치지 말 것 — 거기서는 **부품만** 가져온다(`strikeHit`·`strikeMoveToward`·`strikeSeparate`·`strikeSkillTick` …). ⛔ 옛 이동 장치 넷(`campPostSnap`·`campPostStep`·`campEngageStep`·`campLeash`)은 `19-camp.js` 에 남아 있지만 **배선이 끊겼다** — 되살리면 미는 주체가 둘이 되어 유닛이 덜덜 떤다(실측 96회/유닛 → 6.5회). 구조·실측은 `ARCHITECTURE.md` §「⚔ 캠프 전투」.
   - 🎬 **전투 움직임을 만졌으면 `node scripts/camp-trace.mjs` 로 눈으로 볼 것** — 궤적 그림 + 떨림·사거리 수치. 이 프로젝트는 움직임을 숫자로만 좇다가 네 번 헛짚고 전부 되돌렸다. 그다음 `scripts/camp-bench.mjs` 로 밸런스를 다시 잰다(이동이 바뀌면 화력이 바뀐다).
 - 🏕 **HOME 메인은 「캠프」다**(`js/19-camp.js` · 2026-08-23). 옛 **사냥터(웨이브 방어)를 대체했다** — 새로 만든 게 아니라 관리자 건설 시스템을 빌려 쓴다. 구조는 `ARCHITECTURE.md` §「🏕 캠프」.
