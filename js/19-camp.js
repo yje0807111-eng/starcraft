@@ -4394,18 +4394,33 @@ function campHealAll(){
 //     유닛이 실제로 죽기 시작한다 — 난이도의 문턱이 거기 하나로 모인다.
 //   ⭐ **내 땅에만 닿는다.** 그래서 드래그로 밀고 나가는 것이 진짜 판단이 된다 —
 //     자리를 지키면 회복, 적진으로 나가면 제 체력으로 싸운다.
-//   🌫 경계는 **안개와 같은 자**를 쓴다: 내 격자 위끝(`techY0`). 화면에서 「안개가 없는 땅」이
-//     곧 회복되는 땅이라 규칙이 눈에 보인다. ⛔ 별도의 경계값을 새로 두지 말 것 — 둘이 어긋나면
-//     플레이어는 어디까지가 안전한지 알 방법이 없다.
+//   🗺 경계는 **맵 그림의 「내 구역 입구」**다 — `CAMP_HEAL_GY`(격자 y 0.36).
+//     📏 눈금을 그려 실제로 쟀다(2026-09-10 · 캠프 배경): **난간·문설주 gy 0.33~0.36 ·
+//       노란 빗금 0.36~0.39 · 그 아래가 석판 본체.** 0.36 은 그 문간 한복판이라
+//       플레이어가 「여기까지가 내 땅」이라고 읽는 바로 그 선이다.
+//     ⚠ ART.md §17-1 표의 「석판 위끝 0.46」은 **던전 그림 기준의 옛 값**이다 — 캠프 배경으로
+//       재면 0.33 이다. ⛔ 표만 보고 값을 되돌리지 말 것(그러면 석판 한참 안쪽에서 끊긴다 · 실측).
+//     ⛔ **안개 경계(`techY0` 0.18)를 쓰지 말 것**(2026-09-10 사용자: 「안개 없는 땅이 내 땅보다
+//       넓은 느낌」). 0.18 은 격자 위끝이라 그림상 **통로 한복판**이다 — 석판보다 훨씬 위다.
+//     ⛔ 값을 코드 여기저기에 흩지 말 것 — 회복·건설 미리보기·경고문이 이 상수 하나를 본다.
 //   🏢 **내 건물도 함께 찬다.** ⛔ 부서진 건물은 안 되살린다 — 그러면 적이 본부까지 못 와서
 //     패배 규칙(본부 파괴)이 영영 성립하지 않는다.
 //   ⛔ 죽은 유닛은 안 살린다(위 campHealAll 주석과 같은 이유).
 const CAMP_HEAL_S = 5;             // 회복 주기(초) — 사용자 확정 2026-09-10
 //   ⚠ 전장은 **아래(y 큰 쪽)가 내 땅**이다 — 적은 위에서 내려온다.
+const CAMP_HEAL_GY = 0.36;         // 회복 구역 위 경계(격자 y) = 내 구역 입구(난간·빗금) · 실측 2026-09-10
 function campHomeY(W){
   const lim = W || (CAMPB && CAMPB.world) || 4800;
-  const gy = (typeof techY0 === 'function') ? techY0() : 0.18;
-  return (typeof campG2W === 'function') ? campG2W(0.5, gy, lim).y : lim * 0.5; }
+  return (typeof campG2W === 'function') ? campG2W(0.5, CAMP_HEAL_GY, lim).y : lim * 0.647; }
+// 🧱 **격자 자리가 회복 구역인가** — 건물·건설 미리보기가 쓰는 쪽(격자 좌표 그대로 잰다).
+//   ⚠ 큰 건물도 **중심 한 점**으로 판단한다 — 미리보기(노란 격자)와 실제 회복이 같은 자를 써야
+//     「초록으로 지었는데 회복이 안 된다」가 안 생긴다.
+function campHealGyOk(gy){ return (gy || 0) >= CAMP_HEAL_GY; }
+// 🟡 **여기 지으면 회복이 안 된다** — 건설 미리보기가 노란 격자·경고문을 띄우는 판단.
+//   ⭐ 건설 자체는 **막지 않는다**(2026-09-10 사용자 확정) — 벙커·포탑을 앞에 세울 수 있어야 한다.
+//     대가는 「맞아도 안 고쳐진다」 하나다.
+function campBuildNoHeal(gy){
+  return (typeof campIsOn === 'function') && campIsOn() && !campHealGyOk(gy); }
 //   ⭐ **「내 땅인가」의 단일 소스** — 화면(안개·표식)도 이걸 물어야 규칙이 하나로 보인다.
 function campInHome(u, W){ return !!u && (u.y >= campHomeY(W)); }
 function campHealZone(){
@@ -4414,7 +4429,11 @@ function campHealZone(){
   let n = 0;
   for(const u of CAMPB.me.units){ if(u.dead || !campInHome(u, W)) continue;
     u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0; n++; }
+  // 🏢 **건물도 같은 선을 탄다** — 회복 구역 밖(석판 위)에 세운 벙커·포탑은 맞은 채로 남는다.
+  //   ⛔ 부서진 건물은 안 되살린다 — 되살리면 적이 본부까지 못 와 패배 규칙이 죽는다.
+  const y0 = campHomeY(W);
   for(const b of (CAMPB._bld || [])){ if(!b || b.dead || (b.hp || 0) <= 0) continue;
+    if((b.y || 0) < y0) continue;                    // 앞에 내놓은 건물 = 회복 없음(그게 값이다)
     b.hp = b.maxHp || b.max || b.hp; }
   return n; }
 function campHealTick(dt){

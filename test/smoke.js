@@ -1675,6 +1675,27 @@ async function groupLobby(){
       assert(G.tech.ents.filter(e=>e.type==='bldg').length===n0+1,'확정을 눌러도 건물이 안 선다');
       campSyncSheet(); spin(3);
       assert(sh2.classList.contains('open'),'배치가 끝났는데 시트가 안 돌아온다');
+      // 🟡 **회복 구역 밖 = 노란 격자 + 경고문**(2026-09-10 사용자 확정).
+      //   ⛔ 막지는 않는다 — 벙커·포탑을 앞에 세우라고 남겨 둔 자리다.
+      if(typeof campBuildNoHeal==='function'){
+        techArm(bk); spin(2);
+        // ⚠ 본부(gy 0.59)·광맥(0.66)을 피해 **왼쪽 빈 열**에 놓는다 — 겹치면 그냥 「불가(빨강)」다
+        const put=(gy)=>{ G.tech.armXY={x:0.30,y:gy}; techUIRender(); spin(2); };
+        put(CAMP_HEAL_GY+0.03);                       // 석판 안 = 초록
+        let f=document.querySelector('.bfoot');
+        assert(f&&f.classList.contains('ok'),'회복 구역 안인데 초록이 아니다: '+(f?f.className:'없음'));
+        assert(!document.querySelector('.bhint.warn'),'회복 구역 안인데 경고문이 뜬다');
+        put(CAMP_HEAL_GY-0.06);                       // 석판 밖(통로) = 노랑 + 경고
+        f=document.querySelector('.bfoot');
+        assert(f&&f.classList.contains('warn'),
+          '회복 구역 밖인데 노란 격자가 아니다: '+(f?f.className:'없음'));
+        const wh=document.querySelector('.bhint.warn');
+        assert(wh,'회복 구역 밖인데 경고문이 없다');
+        assert(/회복/.test(wh.textContent),'경고문이 회복 얘기를 안 한다: '+wh.textContent);
+        assert(getComputedStyle(wh).display!=='none',
+          '경고문이 캠프에서 숨겨져 있다 — .bhint 를 통째로 감추는 규칙에 걸렸다');
+        assert(!f.classList.contains('bad'),'회복 구역 밖을 「건설 불가」로 막았다 — 벙커를 못 세운다');
+        techCancelArm(null); spin(2); }
       G.tech.credit=keep.m; G.tech.energy=keep.g; }
     // 🖱 휠 줌 · 팬 — 관리자 건설 조작을 그대로 쓴다(#vBuild 의 wheel → techWheel).
     //   ⚠ 목표 뷰(viewT)만 바꾸고 실제 뷰(view)는 techViewTick 이 보간한다 —
@@ -3807,7 +3828,9 @@ async function groupLobby(){
         assert(inU&&outU,'배치 실패');
         inU.y=y0+W*0.05; outU.y=y0-W*0.05;          // 하나는 내 땅, 하나는 적진
         inU.hp=1; outU.hp=1;
-        const b=(CAMPB._bld||[])[0]; if(b) b.hp=1;
+        // 🏢 건물 셋 — 회복 구역 안 / 밖(석판 위에 내놓은 벙커) / 부서진 것
+        const b=(CAMPB._bld||[])[0]; if(b){ b.hp=1; b.y=y0+W*0.05; }
+        const bOut=(CAMPB._bld||[])[2]; if(bOut){ bOut.hp=1; bOut.y=y0-W*0.05; }
         const dead=(CAMPB._bld||[])[1]; if(dead){ dead.hp=0; dead.dead=true; }
         // ⚠ dt 를 잘게 쪼개 세지 말 것 — 0.05 는 이진수로 딱 안 떨어져 100번 더해도 5.0 에 못 미친다
         CAMPB._healT=0;
@@ -3817,10 +3840,21 @@ async function groupLobby(){
         assert(inU.hp===inU.maxHp,'내 땅에 있는데 안 찼다: '+inU.hp+'/'+inU.maxHp);
         assert(outU.hp===1,'적진에 있는데 찼다 — 진격에 대가가 없어진다: '+outU.hp);
         if(b) assert(b.hp===(b.maxHp||b.max),'건물이 안 찼다: '+b.hp);
+        if(bOut) assert(bOut.hp===1,
+          '회복 구역 밖 건물이 찼다 — 앞에 내놓는 대가가 사라진다: '+bOut.hp);
         if(dead) assert(dead.dead&&(dead.hp||0)<=0,
           '부서진 건물이 되살아났다 — 적이 본부까지 못 와 패배 규칙이 죽는다');
-        // 🌫 경계는 **안개와 같은 자**(techY0)를 쓴다 — 별도 값을 두면 어디가 안전한지 알 수 없다
-        assert(Math.abs(y0-campG2W(0.5,techY0(),W).y)<1e-6,'회복 존 경계가 안개 경계와 다르다');
+        // 🗺 경계는 **맵의 「내 구역 입구」**(석판 위끝 CAMP_HEAL_GY)다.
+        //   ⛔ 안개 경계(techY0)로 되돌리지 말 것 — 그건 그림상 통로 한복판이라 너무 넓다
+        //     (2026-09-10 사용자: 「안개 없는 땅이 내 땅보다 넓은 느낌」).
+        assert(Math.abs(y0-campG2W(0.5,CAMP_HEAL_GY,W).y)<1e-6,'회복 경계가 CAMP_HEAL_GY 가 아니다');
+        assert(CAMP_HEAL_GY>techY0(),'회복 경계가 안개 경계보다 위다 — 다시 넓어졌다: '
+          +CAMP_HEAL_GY+' vs '+techY0());
+        assert(CAMP_LINE_GY>CAMP_HEAL_GY,'부대 기본 앞줄이 회복 구역 밖이다 — 자리를 지켜도 안 찬다: '
+          +CAMP_LINE_GY+' vs '+CAMP_HEAL_GY);
+        // 🟡 건설 미리보기 — 밖이면 노랑 + 경고문, 안이면 초록
+        assert(campBuildNoHeal(CAMP_HEAL_GY-0.05),'회복 구역 밖인데 경고가 안 뜬다');
+        assert(!campBuildNoHeal(CAMP_HEAL_GY+0.05),'회복 구역 안인데 경고가 뜬다');
         campWipeField(); }
 
       // ④ ⭐ **전멸은 패배가 아니다** — 적이 건물을 부수며 들어와 **본부가 무너져야** 진다.
@@ -6166,10 +6200,10 @@ async function groupLobby(){
     { campWithStk(()=>{ STK.me.units.length=0; });
       const u=mk('marine', W*0.5, W*0.60);
       if(u && typeof campHealZone==='function'){
-        u.hp=1; u.y=campHomeY(W)-W*0.05;                  // 자리는 내 땅인데 **몸은 적진**
+        u.hp=1; u.y=campHomeY(W)-W*0.05;                  // 자리는 내 땅인데 **몸은 밖**
         campHealZone();
-        assert(u.hp===1,'자리가 내 땅이면 적진에서도 회복된다 — 진격에 대가가 없다: '+u.hp);
-        u.y=u._post.y; campHealZone();
+        assert(u.hp===1,'자리가 내 땅이면 밖에서도 회복된다 — 진격에 대가가 없다: '+u.hp);
+        u.y=campHomeY(W)+W*0.05; campHealZone();          // ⚠ 경계는 석판 위끝이다(CAMP_HEAL_GY)
         assert(u.hp===u.maxHp,'내 땅으로 돌아왔는데 회복이 안 된다: '+u.hp+'/'+u.maxHp); } }
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
     { const C=campState(); if(C){ C.dg=0; C.cleared=0; } }

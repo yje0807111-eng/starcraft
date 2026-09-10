@@ -1209,24 +1209,32 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
   const pcPanel=G.tech.pcheck?_techPCPanel():'';   // 🎨 플레이어 색 확인 패널(1P~8P 전환 + 전 건물 배치)
   // (플레이어 색 확인 패널은 _techPCPanel에서 생성)
   // 배치 고스트 + ✓/✕ 확정 버튼 (드래그로 위치 조정)
-  let ghost='', armBtns='', foot='';
+  let ghost='', armBtns='', foot='', _armNoHeal=false;
   if(G.tech.arm && G.tech.armXY){ const _ab=techGetBldg(race,G.tech.arm)||{}, _gs=_techW2S(G.tech.armXY.x,G.tech.armXY.y), _ok=techArmValid(G.tech.armXY.x,G.tech.armXY.y);
+    // 🟡 **회복 구역 밖 = 노란 격자**(2026-09-10 사용자 확정 · 캠프에서만).
+    //   지을 수는 있다 — 벙커·포탑을 앞에 세우라고 남겨 둔 자리다. 대가는 「맞아도 안 고쳐진다」.
+    //   ⚠ 판단은 `campBuildNoHeal` 하나가 한다(js/19-camp.js) — 회복이 실제로 쓰는 자와 같아야
+    //     「초록으로 지었는데 회복이 안 된다」가 안 생긴다.
+    const _nh=_ok && (typeof campBuildNoHeal==='function') && campBuildNoHeal(G.tech.armXY.y);
+    const _vk=_ok?(_nh?'warn':'ok'):'bad';
     const _gmk=(TECH_MODEL[race]||{})[G.tech.arm], _is3d=!!(window.M3D&&M3D.ready&&M3D.ready()&&!(G.opt&&G.opt.model3d===false)&&M3D.hasModel&&M3D.hasModel('cb_'+_gmk));
     const _off=0, _zm=techView().zoom;   // 건물 base가 이제 footprint 하단에 렌더되므로 지면 요소는 실제 셀 위치 그대로
     // 점유 셀 footprint 하이라이트(격자선 포함) — 배치 중에만
     const _f=_techFoot(race,G.tech.arm), _sn=_techSnap(G.tech.armXY.x,G.tech.armXY.y,_f.w,_f.h), _cw=_techCW(), _ch=_techCH();
     const _tl=_techW2S(TECH_GRID.x0+_sn.c0*_cw, techY0()+_sn.r0*_ch), _br=_techW2S(TECH_GRID.x0+(_sn.c0+_sn.w)*_cw, techY0()+(_sn.r0+_sn.h)*_ch);
     const _r=_btRect(), _mW=(_r&&_r.width)||360, _mH=(_r&&_r.height)||420;
-    foot='<div class="bfoot '+(_ok?'ok':'bad')+'" style="left:'+(_tl.x*100).toFixed(2)+'%;top:calc('+(_tl.y*100).toFixed(2)+'% + '+_off+'px);width:'+((_br.x-_tl.x)*100).toFixed(2)+'%;height:'+((_br.y-_tl.y)*100).toFixed(2)+'%;background-size:'+(_cw*_mW*_zm).toFixed(1)+'px '+(_ch*_mH*_zm).toFixed(1)+'px"></div>';
+    foot='<div class="bfoot '+_vk+'" style="left:'+(_tl.x*100).toFixed(2)+'%;top:calc('+(_tl.y*100).toFixed(2)+'% + '+_off+'px);width:'+((_br.x-_tl.x)*100).toFixed(2)+'%;height:'+((_br.y-_tl.y)*100).toFixed(2)+'%;background-size:'+(_cw*_mW*_zm).toFixed(1)+'px '+(_ch*_mH*_zm).toFixed(1)+'px"></div>';
     for(const bc of _techFootBlockCells(_sn)){ const _btl=_techW2S(TECH_GRID.x0+bc.c*_cw,techY0()+bc.r*_ch), _bbr=_techW2S(TECH_GRID.x0+(bc.c+1)*_cw,techY0()+(bc.r+1)*_ch);   // 유닛 점유 셀 = 빨간색
       foot+='<div class="bfootBlk" style="left:'+(_btl.x*100).toFixed(2)+'%;top:calc('+(_btl.y*100).toFixed(2)+'% + '+_off+'px);width:'+((_bbr.x-_btl.x)*100).toFixed(2)+'%;height:'+((_bbr.y-_btl.y)*100).toFixed(2)+'%"></div>'; }
-    if(!_is3d) ghost='<div class="bent bghost '+(_ok?'ok':'bad')+'" style="left:'+(_gs.x*100).toFixed(2)+'%;top:calc('+(_gs.y*100).toFixed(2)+'% + '+_off+'px);transform:translate(-50%,-50%) scale('+_zm.toFixed(2)+')"><span class="be-ico">'+(_ab.ico||'🏢')+'</span></div>';   // 3D 미가용 폴백(이모지)
+    if(!_is3d) ghost='<div class="bent bghost '+_vk+'" style="left:'+(_gs.x*100).toFixed(2)+'%;top:calc('+(_gs.y*100).toFixed(2)+'% + '+_off+'px);transform:translate(-50%,-50%) scale('+_zm.toFixed(2)+')"><span class="be-ico">'+(_ab.ico||'🏢')+'</span></div>';   // 3D 미가용 폴백(이모지)
     const _fbx=(_tl.x+_br.x)/2, _fby=_br.y;   // 발판 하단 중앙 → 배너 앵커
+    _armNoHeal=_nh;
     armBtns='<div class="bArmBtns" style="left:'+(_fbx*100).toFixed(2)+'%;top:calc('+(_fby*100).toFixed(2)+'% + '+_off+'px)" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok'+(_ok?'':' dis')+'" onclick="techConfirmPlace(event)" title="확정"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techCancelArm(event)" title="취소">✕</button></div>'; }   // ▶ 확정 + ✕ 취소 — 발판 하단 중앙
   let resumeBtn='';   // ▶ 재개 — 일시정지된 건물 선택 시 발판 하단에 뜸
   if(G.tech.sel!=null){ const _sb=G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'); if(_sb&&_sb.bt>0&&_sb._bpause){ const _sbf=_techFoot(race,_sb.bk), _rs=_techW2S(_sb.x,_sb.y+(_sbf.h/2)*_techCH());   // 발판 하단 중앙
     resumeBtn='<div class="bArmBtns" style="left:'+(_rs.x*100).toFixed(2)+'%;top:'+(_rs.y*100).toFixed(2)+'%" onpointerdown="event.stopPropagation()" onpointerup="event.stopPropagation()"><button class="bArmBtn ok" onclick="techResumeBuild(event)" title="재개"><svg viewBox="0 0 24 24" width="15" height="15" style="display:block"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button><button class="bArmBtn cancel" onclick="techDemolishBuild(event)" title="철거">✕</button></div>'; } }   // 재개(▶) + 철거(✕) — 단순 아이콘
-  const hint=G.tech.skillArm?(((typeof SKILLS!=='undefined'&&SKILLS[G.tech.skillArm.key])||{}).arm||'🪄 대상을 탭하세요'):(G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다')));
+  // ⚠ 회복 구역 밖에 지으려는 순간에는 **그 경고가 안내 문구를 대신한다**(사용자: 「간단하게」).
+  const hint=_armNoHeal?'⚠ 이 구역은 회복되지 않습니다':G.tech.skillArm?(((typeof SKILLS!=='undefined'&&SKILLS[G.tech.skillArm.key])||{}).arm||'🪄 대상을 탭하세요'):(G.tech.arm?('📍 '+((techGetBldg(race,G.tech.arm)||{}).name)+(G.tech.armXY?' — 드래그로 위치 조정 후 ✓ 확정':' — 지을 곳을 탭하세요')):((G.tech.selU&&G.tech.selU.length)?('👥 '+G.tech.selU.length+'기 지정 — 탭/드래그로 이동 · 해제는 우상단 ✕'):(G.tech.sel==null?'일꾼 탭=건설 메뉴 · 드래그=유닛 지정 · 두 손가락=화면 이동':'건물을 탭하면 하단 시트에 생산·연구가 표시됩니다')));
   let _floorSt='';   // 오토배틀: 바닥 타일 1개 = 격자 STK_FLOOR_CELLS칸 — 칸 크기·격자 원점에 정확히 맞춤
   if(techWallet()){ const _mw=map.clientWidth||375, _mh=map.clientHeight||620, _fc=STK_FLOOR_CELLS;
     _floorSt=';background-size:'+(_techCW()*_mw*_fc).toFixed(2)+'px '+(_techCH()*_mh*_fc).toFixed(2)+'px'
@@ -1322,6 +1330,6 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
       if(e._skOn&&e._skOn.psi_cloak&&typeof SKILLS!=='undefined'&&SKILLS.psi_cloak) skZ+=_circ(e.x,e.y,SKILLS.psi_cloak.radius||0.12,'border:1px solid rgba(150,210,255,.55);background:radial-gradient(circle,rgba(150,210,255,.13),transparent 70%)');
       if(e._skOn&&e._skOn.siege) skZ+=_circ(e.x,e.y,0.024,'border:2px solid rgba(255,180,80,.7);background:radial-gradient(circle,rgba(255,180,80,.14),transparent 70%)');
       if(e._healF!=null){ const t=G.tech.ents.find(x=>x.eid===e._healF); if(t){ const p2=_techW2S(t.x,t.y); skZ+='<div class="tkHeal" style="left:'+(p2.x*100).toFixed(2)+'%;top:'+(p2.y*100).toFixed(2)+'%">'+((typeof SKILL_ICON!=='undefined'&&SKILL_ICON.heal)||'✚')+'</div>'; } } } }
-  map.innerHTML='<div class="bmap'+(techWallet()?' stk':'')+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+oobZ+'<div class="bmapTop">'+_side+(res?'<div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div>':'')+'</div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+((G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
+  map.innerHTML='<div class="bmap'+(techWallet()?' stk':'')+(G.tech.arm?' arming':'')+(G.tech.rallySet!=null?' rally':'')+'" onpointerdown="techPtrDown(event)" style="touch-action:none">'+_floor+hillZ+creepZ+psi+gasZone+mineZ+rallyZ+skZ+oobZ+'<div class="bmapTop">'+_side+(res?'<div class="bres" onpointerdown="event.stopPropagation()">'+res+'</div>':'')+'</div>'+pcPanel+ents+foot+ghost+'<div class="bhint'+(_armNoHeal?' warn':(G.tech.arm||(G.tech.selU&&G.tech.selU.length))?' on':'')+'">'+hint+'</div></div>';
   const _lblLayer=document.getElementById('cstLabels'); if(_lblLayer) _lblLayer.innerHTML=labels+armBtns+resumeBtn;   // 남은시간 라벨 + 배치 ✓/✕ + ▶재개 버튼을 전용 오버레이(z8)에 → 3D 유닛·건물 위(리파이너리 등 큰 건물에 안 가림)
   techFogDraw(); }   // 🌫️ 건설 안개 오버레이 재그림(맵 재렌더마다)
