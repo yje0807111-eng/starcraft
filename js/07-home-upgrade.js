@@ -80,7 +80,7 @@ const NAV_TREE=[
       { k:'friend', label:'친구', ico:'friend', act:()=>mapOpenSocial('friend') },
       { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') } ] },
   // 🏕 캠프 상점 = **두 칸**(2026-08-31 재편). 앞의 다섯 칸은 옛 사냥터 기준이라
-  //   파는 것이 캠프에 하나도 안 닿았다 — 자세한 것은 08-hunt.js 「캠프 상점」 절.
+  //   파는 것이 캠프에 하나도 안 닿았다 — 자세한 것은 08-ui-parts.js 「캠프 상점」 절.
   //   ⛔ 옛 구역(한정구매·뽑기·재화·패키지)의 코드는 남아 있다. 길만 닫았다.
   { k:'shop', label:'상점', ico:'gift', go:()=>openShop(), cur:()=>_shopSec, reset:()=>setShopSec('reco'), subs:[
       { k:'reco', label:'추천',    ico:'flag',  act:()=>setShopSec('reco') },
