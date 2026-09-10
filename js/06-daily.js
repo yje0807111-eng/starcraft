@@ -302,49 +302,56 @@ function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_h
 //    캠프가 `guideNote('build:barracks',1)` 한 줄씩 넣어 주면 차오른다.
 //    지금 이어져 있는 것은 던전 이동뿐이다(campDropGo → 12-appshell.js).
 // ════════════════════════════════════════════════════════════════════
-const GUIDE_RACE='union';        // 이 표가 전제하는 종족(TECH_TREE 키)
+// 🏰 **개편을 따라간다**(2026-09-10). 던전이 「라운드 50」에서 「적 기지 · 진행 건물 6채」로 바뀌면서
+//   옛 표의 절반이 없는 것을 가리켰다 — 「던전 2 로 옮긴다」·「통신소의 스캔을 눌러 환생」 따위.
+//   ⛔ 화면에 없는 것을 시키지 말 것: 가이드는 **다음에 무엇을 할지**를 말하는 자리다.
+// 🐞 그리고 **고장나 있었다** — 열다섯 중 계측이 이어진 것은 넷(tap·upg:*·dg:*)뿐이라
+//   다섯째 「병영 짓기」에서 영영 멈췄다(2026-09-10 실측). 계측을 캠프에서 흘려보내 고쳤다
+//   (campPatchNote · 건물 완공 · 유닛 생산 · 연구 완료 · 적 건물 파괴 · 던전 완주 · 환생).
+// 🧬 **종족을 가리지 않는다** — 첫 건물 이름만 종족 표(TUTO_BLD)에서 꺼낸다.
+//   ⛔ GUIDE_RACE 로 유니온만 띄우던 것으로 되돌리지 말 것: 다른 종족을 고르면 가이드가 통째로 없었다.
 const GUIDE_STEPS=[
   // ── 1부 · 돈 버는 법 (1분 세션) ───────────────────────────────
   {id:'tap',    kind:'tap',            goal:10, name:'광맥 두드리기',
    do:'광맥을 10번 두드린다',        why:'돈은 여기서 나온다',            rw:{gem:1}},
   {id:'upgTap', kind:'upg:tap',        goal:1,  name:'터치 강화',
-   do:'터치 업그레이드를 1번 산다',   why:'번 돈을 쓰는 법',               rw:{gem:1}},
+   do:'터치 강화를 1번 산다',        why:'번 돈을 쓰는 법',               rw:{gem:1}},
   {id:'worker', kind:'unit:worker',    goal:1,  name:'일꾼 뽑기',
    do:'일꾼을 1기 뽑는다',           why:'가만 있어도 벌린다',            rw:{gem:1}},
   {id:'upgGat', kind:'upg:gather',     goal:1,  name:'일꾼 강화',
-   do:'자동생산 업그레이드를 1번 산다', why:'두 번째 수입 축',             rw:{gem:1}},
-  // ── 2부 · 기지를 세운다 (10분 세션) ──────────────────────────
-  {id:'barrack',kind:'build:barracks', goal:1,  name:'병영 짓기',
-   do:'병영을 짓는다',               why:'테크가 열리는 문',              rw:{gem:2}},
-  {id:'supply', kind:'build:supply',   goal:1,  name:'보급고 짓기',
-   do:'보급고를 짓는다',             why:'인구가 있어야 병력이 는다',      rw:{gem:2}},
+   do:'일꾼 강화를 1번 산다',        why:'두 번째 수입 축',               rw:{gem:1}},
+  // ── 2부 · 기지를 세우고 첫 출격 (10분 세션) ──────────────────
+  {id:'barrack',kind:'build:first',    goal:1,  name:()=>_guideB()+' 짓기',
+   do:()=>_guideB()+'을 짓는다',      why:'전투 유닛이 나오는 곳',         rw:{gem:2}},
   {id:'unit',   kind:'unit:combat',    goal:1,  name:'유닛 뽑기',
-   do:'전투 유닛을 1기 뽑는다',       why:'기지를 지킬 병력',              rw:{gem:2}},
-  {id:'dg2',    kind:'dg:2',           goal:1,  name:'던전 내려가기',
-   do:'좌상단 칩을 눌러 던전 2 로 옮긴다', why:'더 깊을수록 더 번다',       rw:{gem:2}},
+   do:'전투 유닛을 1기 뽑는다',       why:'적 기지를 칠 병력',            rw:{gem:2}},
+  {id:'dg1',    kind:'dg:1',           goal:1,  name:'던전으로 나가기',
+   do:'좌상단 칩을 눌러 던전 1 로 들어간다', why:'캠프는 집이고 던전이 사냥터다', rw:{gem:2}},
+  {id:'break1', kind:'broken',         goal:1,  name:'적 건물 부수기',
+   do:'적 진행 건물을 1채 부순다',    why:'깰수록 재화 배수가 오른다',     rw:{gem:2}},
+  {id:'dgDone1',kind:'dgDone',         goal:1,  name:'던전 완주',
+   do:()=>('진행 건물 '+_guideSteps()+'채를 다 부순다'), why:'다음 던전이 열린다', rw:{gem:3}},
+  // ── 3부 · 더 깊이 (한 시간~) ─────────────────────────────────
   {id:'res1',   kind:'research',       goal:1,  name:'연구 끝내기',
    do:'연구를 1개 완료한다',         why:'유닛 전부가 영원히 세진다',      rw:{gem:2}},
-  // ── 3부 · 환생까지 (한 시간~) ────────────────────────────────
-  {id:'refine', kind:'build:refinery', goal:1,  name:'정제소 짓기',
-   do:'정제소를 짓는다',             why:'두 번째 자원(가스)',            rw:{gem:2}},
-  {id:'academy',kind:'build:academy',  goal:1,  name:'훈련소 짓기',
-   do:'훈련소를 짓는다',             why:'통신소의 조건',                 rw:{gem:2}},
-  {id:'comsat', kind:'build:comsat',   goal:1,  name:'통신소 짓기',
-   do:'본부에 통신소를 붙인다',       why:'환생이 일어나는 곳',            rw:{gem:3}},
-  {id:'dg3',    kind:'dg:3',           goal:1,  name:'던전 3 도달',
-   do:'던전 3 으로 옮긴다',          why:'여기서부터 스캔이 작동한다',     rw:{gem:3}},
+  {id:'dg2',    kind:'dg:2',           goal:1,  name:'던전 2',
+   do:'던전 2 로 들어간다',          why:'연구 없이는 못 깬다 · 하늘에서도 온다', rw:{gem:3}},
+  {id:'dg3',    kind:'dg:3',           goal:1,  name:'던전 3',
+   do:'던전 3 으로 들어간다',        why:'순서를 고르면 훨씬 쉬워진다',    rw:{gem:3}},
   {id:'reb',    kind:'rebirth',        goal:1,  name:'환생하기',
-   do:'통신소의 스캔을 누른다',       why:'전부 초기화하고 더 세게 다시',   rw:{gem:5}},
-  {id:'rebUse', kind:'rebUse',         goal:1,  name:'환생 보상 쓰기',
-   do:'환생으로 얻은 것을 쓴다',      why:'두 번째 판이 시작된다',         rw:{gem:5}},
+   do:'하단 「환생」 에서 환생한다',   why:'전부 되감고 더 세게 다시',      rw:{gem:5}},
 ];
+// 🧬 그 종족의 **첫 전투 건물 이름** — 표는 튜토리얼과 같은 것을 쓴다(TUTO_BLD 가 단일 소스).
+function _guideB(){ try{ if(typeof _tutoBName==='function') return _tutoBName(0); }catch(_e){} return '병영'; }
+function _guideSteps(){ return (typeof CAMP_DG_STEPS!=='undefined') ? CAMP_DG_STEPS : 6; }
+// 표의 글자는 **함수여도 된다**(종족·값이 바뀌면 문구가 따라온다) — 읽는 곳은 이 둘뿐이다.
+function guideTx(g, k){ const v=g?g[k]:null; return (typeof v==='function') ? v() : (v||''); }
 const GUIDE_BY={}; for(const _g of GUIDE_STEPS) GUIDE_BY[_g.id]=_g;
-// 가이드를 띄우는가 — 종족이 다르면 안 띄운다(위 ⚠ 참고). 다 끝냈어도 안 띄운다.
+// 가이드를 띄우는가 — 종족을 아직 안 골랐거나 다 끝냈으면 안 띄운다.
+//   ⛔ 종족으로 거르지 말 것(옛 GUIDE_RACE) — 표가 종족을 안 가린다(첫 건물 이름만 바뀐다).
 function guideOn(){ const S=guideState(); if(!S || S.i>=GUIDE_STEPS.length) return false;
   const C=(typeof campState==='function')?campState():null;
-  if(!C || !C.race) return false;                     // 종족을 아직 안 골랐다
-  const tr=(typeof campTechRace==='function')?campTechRace(C.race):C.race;
-  return tr===GUIDE_RACE; }
+  return !!(C && C.race); }
 function guideState(){ const p=(typeof PROF==='function')?PROF():null; if(!p) return null;
   if(!p.guide) p.guide={ i:0, n:0 };                  // i=지금 단계 · n=그 단계 진행 수
   return p.guide; }
@@ -360,7 +367,7 @@ function guideNote(kind, n){ try{
   S.i++; S.n=0;
   if(typeof saveMeta==='function') saveMeta();
   if(typeof playSfx==='function') playSfx('ui_confirm');
-  if(typeof toast==='function') toast('🧭 '+g.name+' 완료'+(tx?' — '+tx:''));
+  if(typeof toast==='function') toast('🧭 '+guideTx(g,'name')+' 완료'+(tx?' — '+tx:''));
   guidePaint(); tutoKick();
 }catch(_e){} }
 // ── 화면 ① 「지금 할 일」 띠 — 재화 바 바로 아래 ─────────────────
@@ -953,7 +960,7 @@ function guidePaint(){
     el.onclick=openGuide; ph.appendChild(el); }
   const pct=Math.max(0,Math.min(100,(S.n/g.goal)*100));
   el.innerHTML='<i class="gbIco" data-ico="flag"></i>'
-    +'<span class="gbTx">'+escHtml(g.do)+'</span>'
+    +'<span class="gbTx">'+escHtml(guideTx(g,'do'))+'</span>'
     +(g.goal>1 ? '<b class="gbN">'+S.n+'</b><i class="gbD">/'+g.goal+'</i>' : '')
     +'<i class="gbFill" style="width:'+pct.toFixed(1)+'%"></i>';
   if(typeof paintIcons==='function') paintIcons(el); }
@@ -1029,8 +1036,8 @@ function renderGuide(){ const box=document.getElementById('hbGuideBody'); if(!bo
     const bar=(now && g.goal>1) ? '<i class="gqBar"><i style="width:'+((n/g.goal)*100).toFixed(1)+'%"></i></i>' : '';
     return '<div class="gqRow'+(done?' done':'')+(now?' now':'')+'">'
       +'<i class="gqIx">'+(done?'✓':(i+1))+'</i>'
-      +'<span class="gqBody"><b class="gqNm">'+escHtml(g.do)+'</b>'
-        +'<em class="gqWhy">'+escHtml(g.why)+'</em>'+bar+'</span>'
+      +'<span class="gqBody"><b class="gqNm">'+escHtml(guideTx(g,'do'))+'</b>'
+        +'<em class="gqWhy">'+escHtml(guideTx(g,'why'))+'</em>'+bar+'</span>'
       +'<span class="gqRw">'+((typeof dqRwIco==='function')?dqRwIco(g.rw):'')+'</span></div>'; }).join('');
   { const h=document.getElementById('hbGuideHead');
     if(h) h.textContent=guideDone()? '다 끝냈다' : ('가이드 '+(S.i+1)+' / '+GUIDE_STEPS.length); }

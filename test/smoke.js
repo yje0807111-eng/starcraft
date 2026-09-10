@@ -13710,6 +13710,34 @@ async function groupLobby(){
     return ks.join(' · ');
   });
 
+  // 🐞 **가이드가 멈추는 자리** — 계측이 안 이어진 단계는 영영 안 넘어간다(2026-09-10 실측:
+  //   열다섯 중 넷만 이어져 다섯째 「병영 짓기」에서 멈춰 있었다).
+  //   ⭐ 그래서 **표의 kind 마다 그 계측을 넣는 곳이 있는지**를 코드에서 직접 찾아 본다.
+  //   ⛔ 표만 고치고 계측을 안 이으면 이 계약이 잡는다.
+  await step('가이드: 모든 단계가 실제로 넘어갈 수 있다', async()=>{
+    skipIf(typeof GUIDE_STEPS==='undefined','가이드 없음');
+    const S=guideState(); skipIf(!S,'상태 없음');
+    const i0=S.i, n0=S.n;
+    try{
+      for(let k=0;k<GUIDE_STEPS.length;k++){
+        S.i=k; S.n=0;
+        const g=GUIDE_STEPS[k];
+        guideNote(g.kind, g.goal);              // 그 종류를 목표만큼 넣으면
+        assert(S.i===k+1,'단계 「'+g.id+'」('+g.kind+')가 제 계측으로 안 넘어간다');
+      }
+    } finally { S.i=i0; S.n=n0; }
+    // 🏰 개편을 따라간다 — 없어진 것을 시키지 않는다
+    { const all=GUIDE_STEPS.map(g=>String(guideTx(g,'do'))+' '+String(guideTx(g,'why'))).join(' ');
+      for(const gone of ['라운드','통신소','스캔','보급고'])
+        assert(all.indexOf(gone)<0,'가이드가 없어진 것을 시킨다: '+gone+' — '+all); }
+    // 🧬 종족을 안 가린다 — 첫 건물은 표(TUTO_BLD)에서 이름을 꺼낸다
+    assert(typeof GUIDE_RACE==='undefined','GUIDE_RACE 가 살아 있다 — 종족을 다시 가린다');
+    { const b=GUIDE_STEPS.find(g=>g.kind==='build:first');
+      assert(b,'첫 건물 단계가 없다');
+      assert(typeof b.name==='function','첫 건물 이름이 박혀 있다 — 종족마다 다르다'); }
+    return GUIDE_STEPS.length+'단계 · 전부 제 계측으로 넘어간다';
+  });
+
   // 🧭 가이드 퀘스트(2026-08-25) — 「이 게임을 어떻게 하는가」를 순서로 가르친다.
   //   일일 퀘스트와 달리 **한 번만** 돌고 순서가 있다. 캠프 화면은 3D 라 못 띄우므로 상태만 흉내 낸다.
   await step('가이드 퀘스트: 순서 · 띠 · 목록', async()=>{
@@ -13736,7 +13764,7 @@ async function groupLobby(){
       // ③ 화면 띠 — 지금 할 일 한 줄. ⚠ 더보기 안에만 두면 초보자가 못 찾는다.
       const gb=$('guideBar'); assert(gb,'「지금 할 일」 띠가 없음');
       assert(gb.parentElement===$('phone'),'띠가 #phone 직속이 아니다 — 캠프 화면 안에 넣으면 캠프 파일을 건드리게 된다');
-      assert((gb.querySelector('.gbTx')||{}).textContent===guideCur().do,'띠 글이 지금 단계와 다름');
+      assert((gb.querySelector('.gbTx')||{}).textContent===guideTx(guideCur(),'do'),'띠 글이 지금 단계와 다름');
       { const cs=getComputedStyle(gb), a=cs.backgroundColor.match(/[\d.]+/g)||[];
         const alpha=(a.length===4)?parseFloat(a[3]):1;
         assert(alpha>=0.995,'띠가 비친다(전폭이라 7% 만 비쳐도 뒤 글자가 읽힌다): '+cs.backgroundColor);
@@ -13758,19 +13786,30 @@ async function groupLobby(){
         if(im){ const w=im.getBoundingClientRect().width;
           assert(w>0 && w<=16,'보상 아이콘이 너무 크다(줄을 덮는다): '+w.toFixed(0)+'px'); } }
       closeGuide();
-      // ⑤ 다른 종족이면 아예 안 띄운다 — 건물 키가 종족마다 다르다(union=barracks · swarm=pool …)
+      // ⑤ **종족을 안 가린다**(2026-09-10) — 첫 건물은 이름만 표에서 꺼내므로(TUTO_BLD) 어느 종족이든 깬다.
+      //   ⛔ 「유니온이 아니면 안 띄운다」로 되돌리지 말 것: 다른 종족을 고르면 가이드가 통째로 없었다.
       prof.camp.race='zerg'; updateCurBar();
-      assert(!guideOn(),'유니온이 아닌데 가이드가 켜졌다 — 건물 키가 달라 영영 못 깬다');
-      assert(!$('guideBar'),'가이드를 끄는 종족인데 띠가 남았다');
-      // ⑥ 던전 이동이 실제로 센다(지금 이어져 있는 유일한 계측)
-      prof.camp.race='terran'; prof.guide={i:7, n:0};    // 8번째 = 던전 2 로 옮기기
-      updateCurBar();
-      assert(guideCur().kind==='dg:2','8번째 단계가 던전 2 가 아님: '+guideCur().kind);
-      window.campSkin=()=>{};
-      gateOff=campGateOpen();          // 🚪 이 step 은 가이드 계측을 보는 것이라 병력 문의 대상이 아니다
-      campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
-      assert(guideState().i===8,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i);
-      return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 가드 · 던전 이동 계측';
+      assert(guideOn(),'종족을 바꿨더니 가이드가 사라졌다 — 표는 종족을 안 가린다');
+      { const b=GUIDE_STEPS.find(g=>g.kind==='build:first');
+        const nm=String(guideTx(b,'name'));
+        assert(nm && nm.indexOf('undefined')<0,'첫 건물 이름이 안 나온다: '+nm); }
+      assert($('guideBar'),'종족을 바꿨더니 「지금 할 일」 띠가 사라졌다');
+      // 🚪 **다 끝내면** 띠가 걷힌다 — 그때가 가이드를 끄는 유일한 자리다
+      { const S=guideState(), was=S.i; try{ S.i=GUIDE_STEPS.length; updateCurBar();
+          assert(!guideOn(),'다 끝냈는데 가이드가 켜져 있다');
+          assert(!$('guideBar'),'다 끝냈는데 띠가 남았다');
+        } finally { S.i=was; updateCurBar(); } }
+      // ⑥ 던전 이동이 실제로 센다 — **표에서 자리를 찾아** 잰다(⛔ 번호를 박지 말 것: 표가 바뀐다)
+      prof.camp.race='terran';
+      { const k=GUIDE_STEPS.findIndex(g=>g.kind==='dg:2');
+        assert(k>=0,'던전 2 단계가 표에 없다');
+        prof.guide={i:k, n:0}; updateCurBar();
+        assert(guideCur().kind==='dg:2','자리를 잘못 짚었다: '+guideCur().kind);
+        window.campSkin=()=>{};
+        gateOff=campGateOpen();        // 🚪 이 step 은 가이드 계측을 보는 것이라 병력 문의 대상이 아니다
+        campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
+        assert(guideState().i===k+1,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i); }
+      return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 무관 · 던전 이동 계측';
     } finally {
       gateOff();
       campDropClose(); closeGuide();

@@ -410,6 +410,7 @@ function campRebirth(){
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   campSave();
+  if(typeof dqNote === 'function') try{ dqNote('rebirth', 1); }catch(_e){}   // 🧭 가이드 — 환생
   return got; }
 
 // 🌱 **새 판의 시작 조건 — 한 곳에서만 정한다**(2026-09-08).
@@ -4558,6 +4559,7 @@ function campCombatStep(dt){
     const dgWas = campDgN();
     const C2 = campState();
     if(C2){ if(!C2.dgDone) C2.dgDone = {}; C2.dgDone[dgWas] = 1; }
+    campNote('dgDone', 1);                        // 🧭 가이드 — 던전을 끝까지 밀었다
     const fresh = (typeof campDgTimerDone === 'function') ? campDgTimerDone(dgWas) : false;
     const mins = (C2 && C2.dgT && C2.dgT[dgWas]) ? Math.round((C2.dgT[dgWas].best || 0) / 60) : 0;
     campFail();                                   // 캠프(0단계)로 · ⚠ 이 함수가 broken·foeDead 도 비운다
@@ -5186,6 +5188,7 @@ function campHideView(){
   campUnpatchMorph();                                             // 🧬 변태 감싸기 원복
   campUnpatchProduce(); campUnpatchArm(); campUnpatchProdTime();   // 상한 문지기·생산 시간 원복
   campUnpatchFinish();                                     // 🏭 생산 완료 원복(공유 함수다)
+  campUnpatchNote();                                       // 🧭 계측 패치도 원복(관리자 탭이 같은 함수를 쓴다)
   campUnpatchFront();                                      // 🏢 표적 선택 원복(오토배틀이 같은 함수를 쓴다)
   campUnpatchHit();                                        // 🩸 피해 바닥 원복(같은 이유)
   // 🔬 연구 구역 원복 — ⛔ **이것만 빠져 있었다**(2026-08-31). 나머지 9개는 전부 여기서 되돌리는데
@@ -5218,6 +5221,7 @@ function campEnter(){
   if(!had) campFreshStart();
   campPatchProduce(); campPatchArm(); campPatchProdTime();   // 일꾼 40기 · 보급소 24채 문지기 · 일꾼 3초
   campPatchFinish();                                   // 🏭 생산 완료 → 전장에 바로(유닛은 한 번만 태어난다)
+  campPatchNote();                                     // 🧭 건물·연구 완료를 계측 입구로
   // ⛽ **정제소 카드는 연구 구역 「자원」 칸이 갖는다**(2026-08-27 · js/20-camp-research.js).
   //   건물을 골라야만 올릴 수 있어서 자원 성장 셋 중 하나만 자리가 달랐다.
   //   ⚠ 뺐을 때 스모크 넷이 깨져 한 번 되돌렸는데, 재 보니 **연쇄가 아니라 테스트 간 오염**이었다:
@@ -7333,12 +7337,48 @@ function campUnpatchArm(){
 //   ⚠ 공유 파일(16-build.js)의 함수라 **나갈 때 반드시 되돌린다** — 안 되돌리면
 //     관리자 탭에서 뽑은 유닛이 화면에서 사라진다.
 let _campFinHome = null;
+// 🧭 **캠프에서 일어난 일을 계측 입구로 흘려보낸다**(2026-09-10).
+//   ⛔ 개별 지점에서 guideNote 를 부르지 말 것 — dqNote 하나가 공용 입구이고, 가이드는 그 위에 얹혀 있다.
+//   ⚠ 캠프에서만 센다 — 관리자 건설 탭·오토배틀에서 지은 건물이 가이드를 밀면 안 된다.
+//   ⚠ **프레임 밖으로 미룬다**(2026-09-10 실측). 건물 완공·연구 완료는 **프레임 루프 안**에서
+//     일어나는데(techStep), dqNote 는 가이드를 밀며 화면을 다시 그린다(guidePaint → tutoKick →
+//     techUIRender). 그걸 루프 한가운데서 돌리면 **캠프가 방금 깐 광맥이 덮인다** — 스모크의
+//     「광맥 수가 배치와 다름: 6」·「광맥이 안 깔림」이 그것이었다.
+//     ⛔ 여기서 곧바로 dqNote 를 부르지 말 것. 한 틱 늦어도 보이는 것은 같다.
+function campNote(kind, n){
+  if(!_campOn) return;
+  setTimeout(function(){ try{ if(typeof dqNote === 'function') dqNote(kind, n || 1); }catch(_e){} }, 0); }
+// 🏗🔬 건물 완공 · 연구 완료 — 엔진 함수 둘을 감싼다(⛔ 16-build.js 를 직접 고치지 말 것: 관리자 탭과 공유).
+//   ⭐ 건물은 **그 종족의 첫 전투 건물**만 'build:first' 로 흘린다 — 가이드 표가 종족을 안 가리는 이유다.
+let _campBldHome = null, _campResHome = null;
+function campPatchNote(){
+  if(typeof window === 'undefined') return;
+  if(!_campBldHome && typeof window.techFinishBuild === 'function'){
+    const o = window.techFinishBuild; _campBldHome = o;
+    window.techFinishBuild = function(e){ const r = o.apply(this, arguments);
+      if(e && e.bk){ campNote('build:' + e.bk, 1);
+        try{ if(typeof _tutoBk === 'function' && _tutoBk(0) === e.bk) campNote('build:first', 1); }catch(_x){} }
+      return r; }; }
+  if(!_campResHome && typeof window.techApplyResearch === 'function'){
+    const o2 = window.techApplyResearch; _campResHome = o2;
+    window.techApplyResearch = function(be, rj){ const r = o2.apply(this, arguments);
+      if(rj) campNote('research', 1);
+      return r; }; } }
+function campUnpatchNote(){
+  if(typeof window === 'undefined') return;
+  if(_campBldHome){ window.techFinishBuild = _campBldHome; _campBldHome = null; }
+  if(_campResHome){ window.techApplyResearch = _campResHome; _campResHome = null; } }
+
 function campPatchFinish(){
   if(_campFinHome || typeof window === 'undefined') return;
   const o = window.techFinishProduce; if(typeof o !== 'function') return;
   _campFinHome = o;
   window.techFinishProduce = function(q, be){
     const r = o.apply(this, arguments);
+    // 🧭 가이드·퀘스트 계측 — **공용 입구(dqNote) 하나**로 넣는다(⛔ guideNote 를 직접 부르지 말 것).
+    //   ⚠ 전장으로 내보내기 **전에** 센다 — 아래에서 return 으로 빠지는 길이 있다.
+    if(_campOn && q) campNote((q.id === (TECH_WORKER[G.tech.race] || 'worker_human'))
+      ? 'unit:worker' : 'unit:combat', 1);
     if(!_campOn || !CAMPB || !q || typeof STK_UNITS === 'undefined' || !STK_UNITS[q.id]) return r;
     const ents = (typeof G !== 'undefined' && G.tech) ? G.tech.ents : null; if(!ents) return r;
     for(let i = ents.length - 1; i >= 0; i--){ const e = ents[i];

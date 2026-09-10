@@ -323,6 +323,7 @@ function campBreakBld(b){
   campFoeRevealNear(b);                                    // 🌫 깬 자리 둘레가 드러난다
   if(b.role === 'prog' && C){
     C.broken = Math.min(CAMP_DG_STEPS, campBroken() + 1);
+    if(typeof campNote === 'function') campNote('broken', 1);   // 🧭 가이드 — 진행 건물을 하나 부쉈다
     if(!C.best) C.best = {};
     C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.broken);    // 룬 칸·환생이 읽는 「최고 도달」
     // 🩹 **체크포인트 부활** — 옛 「라운드 시작」의 자리다. 누운 병력이 일어나고 체력이 찬다.
