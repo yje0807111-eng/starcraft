@@ -445,10 +445,15 @@ const NAV_TREE=[
       { k:'shop', label:'룬 상점', ico:'gift', act:()=>campRuneEnter('shop') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
-  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
+  //   🗺 **강화**는 소셜 셋과 성격이 다르다 — 도크를 바꾸는 것이 아니라 **화면을 연다**.
+  //     ⚠ 그래서 `cur` 가 `_mapSocial` 만 보면 안 된다: 강화 화면이 열려 있으면 그쪽이 지금 자리다.
+  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(),
+    cur:()=>((typeof mapUpgIsOn==='function' && mapUpgIsOn()) ? 'upg' : _mapSocial),
+    reset:()=>mapOpenSocial('chat'), subs:[
       { k:'chat',   label:'채팅', ico:'chat',   act:()=>mapOpenSocial('chat') },
       { k:'friend', label:'친구', ico:'friend', act:()=>mapOpenSocial('friend') },
-      { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') } ] },
+      { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') },
+      { k:'upg',    label:'강화', ico:'upg',    act:()=>mapUpgEnter() } ] },
   // 🏕 캠프 상점 = **두 칸**(2026-08-31 재편). 앞의 다섯 칸은 옛 사냥터 기준이라
   //   파는 것이 캠프에 하나도 안 닿았다 — 자세한 것은 08-hunt.js 「캠프 상점」 절.
   //   ⛔ 옛 구역(한정구매·뽑기·재화·패키지)의 코드는 남아 있다. 길만 닫았다.

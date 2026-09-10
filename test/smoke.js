@@ -270,6 +270,60 @@ async function groupLobby(){
   // 허브 소셜: 상단(게임 선택)과 시각적으로 분리되고, '친구'가 한눈에 읽혀야 한다.
   // 탭 띠는 **하나뿐**이다 — 채팅/파티/친구 · 친구 필터 · 코인 공학소 · 유즈맵 정렬이 전부
   // segNavHTML(.pdSeg) 한 함수로 그려진다(2026-08-27 통일). 옛 사본(.msTab2/.ptTab/.cpSegBtn)은 없앴다.
+  // 🗺 유즈맵 강화 구역 — 2차 환생 포인트로 **맵마다** 영구 강화를 산다(2026-09-10 사용자 확정).
+  //   ⭐ 여기서 재는 것은 「같은 뒷단을 두 화면이 나눠 쓰는가」다 — 강화를 사고·저장하고·판에
+  //     먹이는 코드는 공학소와 **한 벌**이어야 한다(⛔ 두 벌이 되면 값이 갈린다).
+  await step('유즈맵 강화 구역: 공학소와 한 뒷단 · 맵별로 갈린다', ()=>{
+    skipIf(typeof mapUpgEnter!=='function','유즈맵 강화 구역 없음');
+    const keep=PLAYER_META.coins;
+    try{
+      // ① 표가 「어디서 사는가」를 꼬리표로 가른다 — 화면이 아니라 표가 단일 소스다
+      let inN=0, outN=0;
+      for(const k in META_BUILDS){ const b=META_BUILDS[k];
+        assert(b.map,'강화에 map 꼬리표가 없다: '+k);
+        if(b.out) outN++; else inN++; }
+      assert(inN>0 && outN>0,'공학소/바깥 한쪽이 비었다: 안 '+inN+' · 밖 '+outN);
+      // ② 공학소에는 바깥 것이 **안 보인다**(그 반대도)
+      openPointUpgrade();
+      { const names=[...$('ptList').querySelectorAll('.ptName')].map(x=>x.textContent);
+        for(const k in META_BUILDS){ const b=META_BUILDS[k];
+          if(b.out) assert(names.indexOf(b.name)<0,'바깥 강화가 공학소에 보인다: '+b.name); } }
+      closePointUpgrade();
+      // ③ 강화 구역 — 맵 목록이 뜨고, 항목이 있는 맵만 선다
+      //   ⚠ 포인트는 **연 뒤에** 넣는다 — `mapUpgEnter` 가 `loadMeta()` 로 저장본을 다시 읽어
+      //     미리 넣어 둔 값을 덮는다(실측: 「샀는데 레벨이 안 오른다」의 진짜 이유였다).
+      mapUpgEnter();
+      PLAYER_META.coins=99999;
+      const cards=[...document.querySelectorAll('.muMap')];
+      assert(cards.length,'강화할 유즈맵이 하나도 안 보인다');
+      assert(cards.length===mapUpgMaps().length,'맵 칸 수가 표와 다르다');
+      // ⛔ 이모지를 직접 박지 말 것 — 맵 그림은 목록과 **같은 것**(mapThumbHTML)을 쓴다
+      assert(cards[0].querySelector('.mapThumb'),'맵 그림이 공용 썸네일이 아니다');
+      // 🪙 가진 포인트가 보인다 — 상단 재화 바에 없는 재화라 이 화면이 말해야 한다
+      assert(($('muBal')||{}).textContent,'가진 포인트가 화면에 없다');
+      // ④ 맵을 고르면 **그 맵의 바깥 강화만** 나온다
+      mapUpgPick('nemo');
+      { const rows=[...$('muList').querySelectorAll('.ptName')].map(x=>x.textContent);
+        assert(rows.length,'고른 맵의 강화가 안 나온다');
+        const ok=Object.keys(META_BUILDS).filter(k=>META_BUILDS[k].out && META_BUILDS[k].map==='nemo')
+          .map(k=>META_BUILDS[k].name);
+        for(const nm of rows) assert(ok.indexOf(nm)>=0,'다른 맵/공학소 강화가 섞였다: '+nm); }
+      // ⑤ 줄은 **공학소와 같은 것**이다(ptRowsHTML 한 함수) — 뼈대가 같아야 한다
+      assert($('muList').querySelector('.ptRow')&&$('muList').querySelector('.ptBtn'),
+        '강화 줄이 공용 줄(.ptRow/.ptBtn)이 아니다');
+      // ⑥ 사면 레벨이 오르고 **지갑이 준다** — 뒷단이 공학소와 한 벌이라는 증거
+      { const id=Object.keys(META_BUILDS).find(k=>META_BUILDS[k].out && META_BUILDS[k].map==='nemo');
+        const lv0=buildLevel(id), c0=PLAYER_META.coins;
+        doPtUp(id);
+        assert(buildLevel(id)===lv0+1,'강화 구역에서 샀는데 레벨이 안 오른다');
+        assert(PLAYER_META.coins<c0,'샀는데 포인트가 안 빠진다');
+        PLAYER_META.buildLevels[id]=lv0; }
+      // ⑦ 뒤로 = 맵 목록
+      mapUpgBack();
+      assert(document.querySelectorAll('.muMap').length,'뒤로 갔는데 맵 목록이 안 나온다');
+      return '맵 '+cards.length+' · 바깥 '+outN+' · 공학소 '+inN;
+    } finally { PLAYER_META.coins=keep; }
+  });
   await step('탭 띠 단일 소스: 네 곳이 모두 공용 .pdSeg', ()=>{
     const seg=(host)=>host && host.querySelector('.pdSeg');
     // ⚠ 렌더러를 여기서 직접 부르면 안 된다 — 그러면 「화면을 열었을 때 띠가 채워지는가」를
@@ -283,7 +337,13 @@ async function groupLobby(){
     skipIf(typeof openPointUpgrade!=='function','코인 공학소 없음');
     openPointUpgrade();
     const pt=$('ptTabs'); assert(seg(pt),'코인 공학소를 열었는데 탭 띠가 안 그려짐');
-    assert(seg(pt).querySelectorAll('.pdSegBtn').length===5,'코인 공학소 5칸이 아님');
+    // ⚠ 칸 수를 박지 말 것 — 표(META_BUILDS)가 단일 소스이고 `ptTabsFor` 가 **실제로 있는 갈래만**
+    //   세운다(2026-09-10 에 스물셋을 유즈맵 강화 구역으로 빼면서 공학소는 생산 하나만 남았다).
+    //   여기서 재는 것은 「공용 탭 띠를 쓰는가」이지 「몇 칸인가」가 아니다.
+    { const want=(typeof ptTabsFor==='function') ? ptTabsFor(b=>!b.out).length : 0;
+      assert(want>0,'공학소에 남은 갈래가 없다 — 전부 바깥으로 나갔다');
+      assert(seg(pt).querySelectorAll('.pdSegBtn').length===want,
+        '코인 공학소 탭 수가 표와 다름: '+seg(pt).querySelectorAll('.pdSegBtn').length+' vs '+want); }
     // 형태가 같은가 — 같은 함수가 그렸으니 버튼의 뼈대가 같아야 한다(크기만 화면이 덮는다)
     // ⚠ 글자 크기·굵기는 뺀다 — 화면이 덮으라고 열어 둔 자리다. 뼈대(칸 나눔·정렬·테두리)만 본다.
     const key=b=>{ const c=getComputedStyle(b);
@@ -291,9 +351,12 @@ async function groupLobby(){
     assert(key(seg(srt).querySelector('.pdSegBtn'))===key(seg(pt).querySelector('.pdSegBtn')),
       '유즈맵 정렬과 코인 공학소의 뼈대가 다름');
     // 선택 표시가 옮겨가는가(띠를 다시 그리므로 매번 새로 찾아야 한다)
-    setPtGroup('combat');
-    assert($('ptTabs').querySelectorAll('.pdSegBtn')[3].classList.contains('on'),'코인 공학소 선택이 안 옮겨감');
-    setPtGroup('team');
+    // ⚠ 갈래 이름을 박지 말 것 — 2026-09-10 에 'combat'·'team' 이 유즈맵 강화 구역으로 나가면서
+    //   `setPtGroup('combat')` 이 없는 칸을 눌러 [3] 이 undefined 가 됐다(실측). 표에서 고른다.
+    { const ts=ptTabsFor(b=>!b.out);
+      if(ts.length>=2){ const g0=_ptGroup; setPtGroup(ts[1][0]);
+        assert($('ptTabs').querySelectorAll('.pdSegBtn')[1].classList.contains('on'),'코인 공학소 선택이 안 옮겨감');
+        setPtGroup(g0); } }
     return '2곳 = 한 컴포넌트'; });
   // 「둘 중 하나 고르기」도 하나뿐 — 방 만들기 공개/비공개가 설정 창의 그래픽 품질과 같은 컴포넌트여야 한다.
   await step('둘 중 하나 고르기 단일 소스: 방 공개 설정 = 설정 그래픽 품질', ()=>{

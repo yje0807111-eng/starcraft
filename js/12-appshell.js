@@ -75,19 +75,19 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // ⚠ townScreen 은 다락으로 갔다(ATTIC.md)   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
+const APP_SCREENS=['opening','auth','mapSelect','mapUpgScreen','modeSheet','homeScreen','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // ⚠ townScreen 은 다락으로 갔다(ATTIC.md)   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 // 화면 제목은 재화 바 왼쪽에 붙는다(유즈맵과 같은 방식) — 화면 안에 가운데 제목을 또 두지 않는다.
 // 여기 한 곳에서만 정한다. 화면마다 curSetTitle을 부르면 새 화면에서 빠뜨린다.
 const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상점' };
-const CUR_SCREENS=['homeScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
+const CUR_SCREENS=['homeScreen','mapSelect','mapUpgScreen','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 // 🧍 인구 칸을 캠프 **밖에서도** 보여 줄 화면(2026-09-03 사용자 확정).
 //   ⚠ 값은 캠프 상태에서 온다 — 캠프를 한 번도 안 열었으면 0/0 이다.
-const POP_SCREENS=['mapSelect','shopScreen'];
+const POP_SCREENS=['mapSelect','mapUpgScreen','shopScreen'];
 // 📐 구역 상단 띠를 쓰는 화면(환생·룬은 campRebEnter/campRuneEnter 가 직접 켠다)
-const SPLIT_CUR_SCREENS=['mapSelect','shopScreen'];
-const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+const SPLIT_CUR_SCREENS=['mapSelect','mapUpgScreen','shopScreen'];
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','mapUpgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
   // ⚠ **캐시(_cdKey)도 함께 비운다**(2026-09-04). 칩 내용을 글자로 덮어써 놓고 키를 남기면,
   //   캠프로 돌아왔을 때 curPaintChip 이 「값이 안 바뀌었다」고 보고 다시 안 그려 **칩이 빈 채로 남는다**
@@ -1957,6 +1957,84 @@ document.addEventListener('pointerdown', function(e){
   if(!t) return; if(t.disabled && !t.classList.contains('locked')) return;
   playSfx(_sfxForEl(t));
 }, true);
+// ══ 🗺 유즈맵 강화 구역 ══════════════════════════════════════════════════
+// 2차 환생으로 받은 포인트를 **유즈맵마다** 영구 강화에 넣는 곳(2026-09-10 사용자 확정).
+// 산 것은 그 유즈맵을 플레이할 때마다 **기본으로 깔린다** — 뒷단(`PLAYER_META.buildLevels` ·
+// `G.metaB`)이 이미 그렇게 돼 있어 여기서는 **사는 자리만** 새로 만든다.
+//
+// ⭐ **두 단**이다: 맵 목록 → 고른 맵의 강화 목록(무장 칸의 「계열 고르기 → 항목」과 같은 어법).
+// ⛔ 강화 줄을 새로 그리지 말 것 — 공학소와 **같은 줄**(`ptRowsHTML` · 09-dungeon.js)을 쓴다.
+// ⛔ 지갑을 새로 만들지 말 것 — `PLAYER_META.coins` 하나다(판 보상도 2차 환생도 여기로 들어온다).
+//   ⚠ 2차 환생은 **아직 없다**(다른 작업). 그래서 지금은 판 보상만 이 지갑을 채운다 —
+//     화면·표·적용은 그대로 시험된다. 2차 환생이 생기면 지급 한 줄만 이 지갑에 붙이면 된다.
+// ⚠ 지금 항목이 있는 맵은 **네모네모 하나**다. 오토 배틀 표는 다음 조각에서 짠다 —
+//   ⛔ 항목 없는 맵을 목록에 세우지 말 것(눌러도 빈 판이라 고장으로 보인다).
+let _mapUpgPick = null;   // null = 맵 목록 · 'nemo' 등 = 그 맵의 강화 목록
+let _mapUpgGrp  = null;   // 고른 맵 안에서 지금 보는 갈래(탭)
+function mapUpgIsOn(){ const el=document.getElementById('mapUpgScreen');
+  return !!(el && !el.classList.contains('hide')); }
+// 바깥 강화가 **하나라도 있는** 맵만 목록에 선다.
+function mapUpgMaps(){
+  return (typeof MAPS!=='undefined'?MAPS:[]).filter(function(m){
+    for(const k in META_BUILDS){ const b=META_BUILDS[k]; if(b.out && b.map===m.id) return true; }
+    return false; }); }
+// 🪙 지금 가진 포인트 — 상단 재화 바에는 없는 재화라 이 화면이 직접 말한다.
+//   ⚠ 안 보이면 「살 수 있나」를 값만 보고 못 가늠한다(공학소도 제 머리줄에 같은 것을 단다).
+function mapUpgBal(){ const el=document.getElementById('muBal'); if(!el) return;
+  el.innerHTML='<b>'+((typeof fmtCur==='function')?fmtCur(PLAYER_META.coins||0):(PLAYER_META.coins||0))+'</b>P'; }
+function mapUpgEnter(){ if(typeof loadMeta==='function') loadMeta();
+  _mapUpgPick=null; _mapUpgGrp=null;
+  showAppScreen('mapUpgScreen'); navShow('map');
+  renderMapUpg(); if(typeof navPaint==='function') navPaint(); }
+function mapUpgPick(id){ _mapUpgPick=id; _mapUpgGrp=null;
+  if(typeof playSfx==='function') playSfx('ui_tab'); renderMapUpg(); }
+function mapUpgBack(){ _mapUpgPick=null; _mapUpgGrp=null;
+  if(typeof playSfx==='function') playSfx('ui_close'); renderMapUpg(); }
+function setMapUpgGrp(g){ _mapUpgGrp=g; renderMapUpg(); }
+function renderMapUpg(){
+  const list=document.getElementById('muList'); if(!list) return;
+  const ttl=document.getElementById('muTtl'), back=document.getElementById('muBack');
+  const tabs=document.getElementById('muTabs');
+  const pick=_mapUpgPick;
+  mapUpgBal();
+  if(back) back.classList.toggle('hide', !pick);
+  // ── ① 맵 목록 ──
+  if(!pick){
+    if(typeof curSetTitle==='function') curSetTitle('유즈맵 강화');
+    if(ttl) ttl.textContent='강화할 유즈맵을 고르세요';
+    if(tabs) tabs.innerHTML='';
+    const maps=mapUpgMaps();
+    list.innerHTML = maps.length ? maps.map(function(m){
+      // 그 맵에 산 강화가 몇 개인지 — 「어디에 투자했나」가 목록에서 바로 읽힌다
+      let have=0, all=0;
+      for(const k in META_BUILDS){ const b=META_BUILDS[k]; if(!(b.out && b.map===m.id)) continue;
+        all++; if((typeof buildLevel==='function'?buildLevel(k):0)>0) have++; }
+      // ⭐ 그림·색은 **맵 목록과 같은 것**을 쓴다(mapThumbHTML · MAP_ACCENT) — ⛔ 이모지를 직접 박지 말 것.
+      const ac=(typeof MAP_ACCENT!=='undefined')?MAP_ACCENT[m.id]:null;
+      const esc=(typeof escHtml==='function')?escHtml:(x=>x);
+      return '<button class="muMap" onclick="mapUpgPick(\''+m.id+'\')"'
+        +(ac?' style="--mapAccent:'+ac+'"':'')+'>'
+        +((typeof mapThumbHTML==='function')?mapThumbHTML(m):'')
+        +'<span class="muMi"><b>'+esc(m.name)+'</b><i>'+esc(m.desc||'')+'</i></span>'
+        +'<span class="muN">'+have+'<u>/'+all+'</u></span></button>'; }).join('')
+      : '<div class="ptEmpty">아직 강화할 수 있는 유즈맵이 없습니다</div>';
+    return; }
+  // ── ② 고른 맵의 강화 목록 ──
+  const m=(typeof USEMAPS!=='undefined')?USEMAPS[pick]:null;
+  if(typeof curSetTitle==='function') curSetTitle((m&&m.name)||'유즈맵 강화');
+  if(ttl) ttl.textContent=(m&&m.name)||'';
+  const mine=function(b){ return !!b.out && b.map===pick; };
+  const ts=(typeof ptTabsFor==='function')?ptTabsFor(mine):[];
+  if(ts.length && !ts.some(function(t){ return t[0]===_mapUpgGrp; })) _mapUpgGrp=ts[0][0];
+  if(tabs) tabs.innerHTML=(ts.length>1 && typeof segNavHTML==='function')
+    ? segNavHTML(ts.map(function(t){ return { label:t[1] }; }),
+        Math.max(0, ts.findIndex(function(t){ return t[0]===_mapUpgGrp; })),
+        function(k){ return "setMapUpgGrp('"+ts[k][0]+"')"; }) : '';
+  list.innerHTML=(typeof ptRowsHTML==='function')
+    ? ptRowsHTML(function(b){ return mine(b) && (!_mapUpgGrp || b.group===_mapUpgGrp); })
+    : '';
+}
+
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태
