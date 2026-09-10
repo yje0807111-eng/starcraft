@@ -333,7 +333,22 @@ async function groupLobby(){
     assert(so.length===1,'소셜 DOM 이 하나가 아님: '+so.length+'개 (도크가 쓰는 단일 DOM 이어야 한다)');
     assert(so[0].closest('#msSocialDock'),'소셜 DOM 이 도크 밖에 있음');
     assert(document.getElementById('msChat') && document.getElementById('msChatInput'),'유즈맵 채팅 알맹이가 없어졌다');
-    return '다락 18개 없음 · 소셜/환생 본문은 살아 있음'; });
+    // 🏹 2026-09-10 — 사냥터·마을 본체가 통째로 다락으로 갔다(ATTIC.md 「🏘 마을」).
+    //   ⛔ 이 이름들이 살아 있는 파일에 다시 나타나면 옛 화면이 되살아난 것이다.
+    //   ⚠ 다락(js/99-attic.js)도 로드되므로 **존재 여부**가 아니라 **어느 파일에 있나**를 봐야 한다 —
+    //     그 판정은 `npm test` 앞단의 죽은 코드 래칫(scripts/dead-audit.mjs)이 한다.
+    //     여기서는 **화면 마크업**만 본다: 렌더러가 없으니 이 화면들은 그려질 수가 없다.
+    for(const id of ['hmScroll',        // 🏹 사냥터 업그레이드 카드
+                     'hbBoostModal',    // 부스트 팝업(사냥터 전용)
+                     'dgFightOut'])     // ⚔ 토벌 포기
+      assert(!document.getElementById(id),'다락으로 보낸 마크업이 다시 있음: #'+id);
+    // 🗄 08-hunt.js 는 없어졌다 — 남은 부품은 08-ui-parts.js 다(ATTIC.md 「🏹 사냥터 본체」)
+    for(const sc of document.querySelectorAll('script[src]'))
+      assert(!/08-hunt\.js/.test(sc.getAttribute('src')||''),'옛 08-hunt.js 가 되살아났다');
+    // ⭐ 살아남은 부품은 **실제로 살아 있어야** 한다(부품까지 함께 지우면 캠프가 죽는다)
+    for(const fn of ['resIco','segNavHTML','edgePush','hbDun','warmAll','askLogout','setShopSec'])
+      assert(typeof window[fn]==='function','08-ui-parts 부품이 없어졌다: '+fn);
+    return '다락 21개 없음 · 소셜/환생 본문과 08-ui-parts 부품 7개는 살아 있음'; });
   // 📊 회차 지표 — 환생 화면이 「이번 회차에 뭘 했나」를 보여 주려면 먼저 **기록**돼야 한다.
   //    ⚠ 셋 다 없던 것을 새로 붙였다(2026-08-31): 터치/자동 미네랄 구분 · 회차 플레이 시간.
   await step('회차 지표: 터치·자동 미네랄이 갈려 쌓이고 · 시간이 흐른다', async()=>{
@@ -1196,9 +1211,12 @@ async function groupLobby(){
     const head=document.querySelector('#curBar .curTitle'), hs=getComputedStyle(head);
     assert(/SUITTi/.test(hs.fontFamily),'큰 제목에 제목 폰트(SUITTi)가 안 걸림: '+hs.fontFamily);
     openHome(); await sleep(60);
-    const body=document.querySelector('.hmUpName'), bs=getComputedStyle(body);
+    // ⚠ 본문 표본은 **살아 있는 화면**에서 고른다 — 옛 사냥터 카드(.hmUpName)는 없어졌다(2026-09-10).
+    const body=document.querySelector('#navBar .navIt') || document.querySelector('.pdSegBtn');
+    assert(body,'본문 표본을 못 찾음(네비도 탭 띠도 없다)');
+    const bs=getComputedStyle(body);
     assert(!/SUITTi/.test(bs.fontFamily),'본문까지 제목 폰트라 위계가 없음: '+bs.fontFamily);
-    for(const sel of ['#navBar .navIt','.hmUpgHead','.pdSegBtn']){
+    for(const sel of ['#navBar .navIt','.pdSegBtn']){
       const el=document.querySelector(sel); if(!el) continue;
       const ff=getComputedStyle(el).fontFamily;
       assert(/SUITKR/.test(ff) && !/SUITTi/.test(ff), sel+' 이 본문 서체가 아님: '+ff); }
@@ -1529,8 +1547,9 @@ async function groupLobby(){
       const nb=$('navBar');
       assert(nb && !nb.classList.contains('hide'),'캠프인데 네비가 숨겨짐');
       assert(under(0.5,0.955).indexOf('navBar')>=0,'네비가 맵에 덮였다: '+under(0.5,0.955)); }
-    // 옛 사냥터 UI 는 캠프에서 빠진다(업그레이드 카드·웨이브 줄은 뜻이 없다)
-    assert(getComputedStyle($('hmScroll')).display==='none','옛 사냥터 업그레이드가 아직 보인다');
+    // 옛 사냥터 UI 는 **마크업째 없다**(2026-09-10 다락 · ATTIC.md 「🏘 마을」).
+    //   ⛔ 「숨어 있다」로 되돌리지 말 것 — 숨긴 것은 어디선가 다시 켜진다.
+    assert(!$('hmScroll'),'옛 사냥터 업그레이드 마크업이 되살아났다');
     // 🗂 하단 시트는 **늘 떠 있다**(유즈맵 하단 프로필 구역과 같은 자리). 셋을 함께 본다:
     //   ① 열려 있고 ② 내용이 있고 ③ 기지가 시트에 가리지 않는다.
     //   ⚠ ③ 은 순환하기 쉬운 자리다 — 맵 높이를 시트만큼 줄였더니 시트도 맵 기준이라 같이
@@ -9409,30 +9428,6 @@ async function groupLobby(){
     return '최소거리 '+HB_CHEST_MIN_D+' · 사거리 밖 무시 · 적 우선 ok'; });
   // 캐릭터 스탯 페이지 상단 — 전투력 칩 하나 + 하이라인 2열.
   // 띄우는 숫자는 전투력뿐이다. 나머지 축은 상자 없이 밑선으로만 나눈다(줄마다 상자면 위계가 없다).
-  await step('캐릭터 스탯: 전투력 칩 + 하이라인 2열', async()=>{
-    skipIf(typeof renderChrStat!=='function','스탯 화면 없음');
-    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
-    // ⚠ 하단 네비에서 빠진 화면이다(2026-08-25 개편 — 연구·임무로 교체). 화면·코드는 살아 있으므로
-    //   **직접 열어서** 계속 검사한다 — 유보한 코드가 썩지 않게. ⛔ navGo('upg'/'gear') 는 이제 없다.
-    openUpgScreen(); await sleep(120);
-    const host=$('upgScreen');
-    const hv=host.querySelector('.csHv');
-    assert(hv,'전투력 칩이 없음');
-    assert(hv.textContent.replace(/[^0-9]/g,'')===String(profPower()),
-      '칩 값이 profPower와 다름: '+hv.textContent+' vs '+profPower());
-    const rows=[...host.querySelectorAll('.csR')];
-    assert(rows.length===CS_ORDER.length,'줄 수가 축 수와 다름: '+rows.length+' vs '+CS_ORDER.length);
-    assert(!host.querySelector('.csBar'),'옛 가로 바가 남아 있음');
-    // 2열인가 — 줄들의 왼쪽 좌표가 정확히 두 가지여야 한다
-    const cols=new Set(rows.map(r=>Math.round(r.getBoundingClientRect().left)));
-    assert(cols.size===2,'2열이 아님(열 '+cols.size+'개)');
-    // 각 열의 마지막 줄만 밑선이 없다 — 끝에서 두 개가 그 자리다(홀수·짝수 무관)
-    assert(getComputedStyle(rows[0]).borderBottomWidth==='1px','첫 줄에 밑선이 없음');
-    for(const r of rows.slice(-2)) assert(getComputedStyle(r).borderBottomWidth==='0px',
-      '열 끝 줄에 밑선이 남아 매달린 선이 보인다');
-    // 같은 값이 두 번 나오면 안 된다(옛 lpNums 요약 블록은 이 목록이 대신한다)
-    assert(!host.querySelector('.lpNums .lpNum span'),'옛 전투 수치 요약이 남아 있음 — 같은 값이 두 벌이다');
-    return '전투력 '+hv.textContent+' · '+rows.length+'줄 2열'; });
   // 화면 제목 — 유즈맵과 같이 재화 바 왼쪽에 붙는다. 화면 안에 가운데 제목을 또 두면 두 벌이 된다.
   await step('제목: 재화 바 왼쪽 한 곳 (캐릭터·정비·상점)', async()=>{
     skipIf(typeof SCREEN_TITLE!=='object','제목 표 없음');
@@ -9805,55 +9800,9 @@ async function groupLobby(){
       if(!!hbHunt().skAuto!==was) hbToggleAuto(); }
     _hb.skT.nova=0; hbSkCdPaint();
     return '트레이 1판 · 칸=업그레이드 카드 규격 · 자동 칩 판 밖 · 바 '+w8.toFixed(0)+'→'+w2.toFixed(0)+'px'; });
-  // 🎴 업그레이드 카드 — 이중 테두리(D1) + 비용 버튼(B3). 둘 다 '방향'이 규칙이라 뒤집히면 안 된다.
-  await step('업그레이드 카드: 이중 테두리 · 버튼은 왼쪽 위에서 빛이 든다', async()=>{
-    openHome(); await sleep(90); renderHome();
-    const card=document.querySelector('#hmUpgGrid .hmUp:not(.lk)'); assert(card,'살 수 있는 카드가 없음');
-    // ① 이중 테두리 — 안쪽 프레임이 실재하고, 모서리 컷이 바깥과 평행하다(바깥 7 - inset 3 = 안쪽 4)
-    const af=getComputedStyle(card,'::after');
-    assert(af.content && af.content!=='none','카드 안쪽 프레임(::after)이 없음');
-    assert(Math.abs(parseFloat(af.borderTopWidth)-1)<0.01,'안쪽 프레임이 1px 이 아님: '+af.borderTopWidth);
-    assert(!/rgba\(0, 0, 0, 0\)|transparent/.test(af.borderTopColor),'안쪽 프레임 색이 투명함: '+af.borderTopColor);
-    { const inset=parseFloat(af.top);
-      const outer=parseFloat((getComputedStyle(card).clipPath.match(/(\d+(?:\.\d+)?)px/)||[])[1]);
-      const inner=parseFloat((af.clipPath.match(/(\d+(?:\.\d+)?)px/)||[])[1]);
-      assert(outer>0 && inner>0 && inset>0,'모서리 컷/여백을 못 읽음: '+outer+' / '+inner+' / '+inset);
-      assert(Math.abs((outer-inset)-inner)<0.01,
-        '안쪽 프레임 컷이 바깥과 평행하지 않음(대각선이 어긋난다): 바깥 '+outer+' - inset '+inset+' ≠ 안쪽 '+inner); }
-    // ② 비용 버튼 — 위·왼쪽이 밝고 오른쪽·아래가 진하다(빛은 왼쪽 위에서)
-    const btn=card.querySelector('.hmUpBtn'); assert(btn,'비용 버튼이 없음');
-    { const raw=getComputedStyle(btn).boxShadow, parts=[]; let d=0,cur='';
-      for(const ch of raw){ if(ch==='(') d++; else if(ch===')') d--;
-        if(ch===',' && d===0){ parts.push(cur.trim()); cur=''; } else cur+=ch; }
-      if(cur.trim()) parts.push(cur.trim());
-      const lum=t=>{ const m=t.match(/rgba?\(([^)]+)\)/); if(!m) return null;
-        const n=m[1].split(',').map(parseFloat); const a=n.length>3?n[3]:1;
-        return (0.3*n[0]+0.59*n[1]+0.11*n[2])*a; };
-      const find=re=>parts.filter(t=>t.indexOf('inset')>=0).find(t=>re.test(t));
-      const hi=find(/\s1px\s+1px\s/), lo=find(/\s-1px\s+-1px\s/);
-      assert(hi,'위·왼쪽 밝은 선(inset 1px 1px)이 없음: '+raw);
-      assert(lo,'오른쪽·아래 진한 선(inset -1px -1px)이 없음: '+raw);
-      assert(lum(hi)>lum(lo)+20,
-        '빛의 방향이 뒤집혔다 — 위·왼쪽이 오른쪽·아래보다 밝아야 한다: '+lum(hi).toFixed(1)+' vs '+lum(lo).toFixed(1)); }
-    // ③ 링도 같은 방향(대각선). 세로 그라데로 되돌아가면 버튼만 방향을 잃는다
-    assert(/315deg/.test(getComputedStyle(btn).backgroundImage),
-      '버튼 링이 대각선이 아님: '+getComputedStyle(btn).backgroundImage.slice(0,80));
-    return '이중 테두리 ok · 컷 7-3=4 · 빛 왼쪽 위'; });
+  // 🗄 「사냥터 업그레이드」 카드 계약 셋을 걷었다(2026-09-10) — 카드·격자·즉시열림.
+  //   화면·마크업·CSS·그리는 코드를 전부 없앴다(마을을 접으며 · GAME_DIRECTION §0-A). ⛔ 되살리지 말 것.
   // 📐 업그레이드 격자 — 칸 변이 반 픽셀에 놓이면 세로 테두리가 한쪽만 두 픽셀로 번진다.
-  //    (실측: 안쪽폭 376 - 간격 5 = 371 을 둘로 나눠 185.5px → 왼쪽 칸의 오른쪽 변만 흐렸다)
-  await step('업그레이드 격자: 칸 폭이 정수 — 테두리가 한쪽만 번지지 않는다', async()=>{
-    skipIf(typeof hmUpgSnapGrid!=='function','격자 스냅 없음');
-    openHome(); await sleep(90); renderHome();
-    const g=$('hmUpgGrid'), cs=[...g.querySelectorAll('.hmUp')].slice(0,4);
-    assert(cs.length>=2,'업그레이드 칸이 2개 미만: '+cs.length);
-    const frac=v=>Math.abs(v-Math.round(v));
-    for(const c of cs){ const r=c.getBoundingClientRect();
-      assert(frac(r.left)<0.01 && frac(r.right)<0.01,
-        '칸 변이 정수 자리가 아님(반 픽셀이면 한쪽 테두리만 번진다): left '+r.left.toFixed(3)+' · right '+r.right.toFixed(3));
-      assert(frac(r.width)<0.01,'칸 폭이 정수가 아님: '+r.width.toFixed(3)); }
-    const ws=new Set(cs.map(c=>Math.round(c.getBoundingClientRect().width)));
-    assert(ws.size===1,'칸마다 폭이 다름: '+[...ws].join(' / '));
-    return '칸 '+cs.length+'개 · 폭 '+[...ws][0]+'px 정수'; });
   // 🧱 기지 격자 — 타일이 단일 소스. 저장 왕복 · 겹침/범위 · 봉쇄 금지 · 옛 개수형 이관.
   await step('기지 격자: 배치·저장 왕복·겹침/범위·봉쇄 금지', async()=>{ skipIf(typeof campOpen==='function','🏕 캠프로 대체 — 옛 사냥터 정지(되살리면 이 줄을 지운다)');  skipIf(typeof hbPlaceStruct!=='function','기지 격자 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','스모크'); saveMeta(); }
@@ -11149,52 +11098,6 @@ async function groupLobby(){
     return sum1; });
 
   // 🔓 장착/출전 칸 — 0칸에서 시작해 미네랄로 하나씩 산다(레벨 해금이 아니다)
-  await step('장착 칸: 0에서 시작 · 미네랄로 구매 · 최대 3', async()=>{ skipIf(typeof mgBuySlot!=='function','칸 구매 없음');
-    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','칸'); saveMeta(); }
-    // ① 새 프로필은 펫·동료 모두 0칸이다
-    { const d=defaultProfile();
-      assert((d.petSlots||0)===0,'새 프로필 펫 칸이 0이 아님: '+d.petSlots);
-      assert((d.hunt.allySlots||0)===0,'새 프로필 동료 칸이 0이 아님: '+d.hunt.allySlots); }
-    // ⚠ openGear()는 loadMeta()로 저장본을 다시 읽어 PROF() 객체 자체를 갈아 끼운다.
-    //    먼저 저장하고, 그 뒤로는 지역 변수에 담아 두지 말고 매번 PROF()를 다시 읽어야 한다.
-    { const p0=PROF(); p0.petSlots=0; p0.hunt.allySlots=0; p0.pcoin=0; p0.unlocks={}; saveMeta(); }
-    openGear(); await sleep(60);
-    for(const k of ['pet','ally']){ setGearTab(k); await sleep(40);
-      const M=MG[k];
-      assert(M.max()===0,k+': 시작이 0칸이 아님: '+M.max());
-      // 0칸이면 잠긴 줄만 3개 · 자동 선택 줄은 안 나온다
-      assert(document.querySelectorAll('#gearBody .mgSlot.lock').length===MG_SLOT_MAX,
-        k+': 잠긴 칸 줄이 '+MG_SLOT_MAX+'개가 아님: '+document.querySelectorAll('#gearBody .mgSlot.lock').length);
-      // ⚠ resIco 는 크기 클래스를 안 주면 원본 크기로 나온다 — 줄이 통째로 무너진다(실제로 그랬다)
-      // ⚠ 이 줄에는 img 가 둘이다 — 왼쪽 칸의 자물쇠(.stIco)와 비용의 재화 아이콘(.gi).
-      //   `querySelector('img')` 로 잡으면 자물쇠가 걸려 엉뚱한 것을 잰다(실제로 그랬다). 둘 다 각각 본다.
-      { const row=document.querySelector('#gearBody .mgSlot.lock'), ic=row.querySelector('img.gi');
-        const lk=row.querySelector('.mgIco img');
-        // 자물쇠는 40px 카드 안에 여백을 두고 앉아야 한다 — 카드의 70% 를 넘으면 꽉 찬 것이다
-        if(lk){ const card=row.querySelector('.mgCard').getBoundingClientRect(), h=lk.getBoundingClientRect().height;
-          assert(h<=card.height*0.7,k+': 잠긴 칸 자물쇠가 카드를 꽉 채움: '+Math.round(h)+'/'+Math.round(card.height)+'px');
-          assert(h>=20,k+': 잠긴 칸 자물쇠가 너무 작음: '+Math.round(h)+'px'); }
-        assert(ic,k+': 잠긴 줄에 재화 아이콘이 없음');
-        assert(ic.getBoundingClientRect().height<=20,k+': 재화 아이콘이 너무 큼(크기 클래스 누락): '+Math.round(ic.getBoundingClientRect().height)+'px');
-        assert(row.getBoundingClientRect().height<=90,k+': 잠긴 줄 높이가 비정상: '+Math.round(row.getBoundingClientRect().height)+'px'); }
-      assert(!document.querySelector('#gearBody .mgAutoRow'),k+': 0칸인데 자동 선택 줄이 나옴');
-      // ② 미네랄이 모자라면 못 산다
-      PROF().pcoin=0; mgBuySlot(k); await sleep(20);
-      assert(M.max()===0,k+': 미네랄 0인데 칸이 열림');
-      // ③ 값을 치르면 하나씩 열리고, 값은 점점 비싸진다
-      for(let i=0;i<MG_SLOT_MAX;i++){
-        const cost=mgSlotCost(i);
-        assert(cost>0,k+': '+(i+1)+'번째 칸 값이 0');
-        if(i>0) assert(cost>mgSlotCost(i-1),k+': 칸 값이 점점 비싸지지 않음');
-        PROF().pcoin=cost; mgBuySlot(k); await sleep(20);
-        assert(M.max()===i+1,k+': '+(i+1)+'번째 칸이 안 열림: '+M.max());
-        assert(Math.floor(PROF().pcoin)===0,k+': 칸 값이 정확히 빠지지 않음: '+PROF().pcoin); }
-      // ④ 최대 3칸 — 더 사지지 않는다
-      PROF().pcoin=1e9; mgBuySlot(k); await sleep(20);
-      assert(M.max()===MG_SLOT_MAX,k+': 상한을 넘겨 열림: '+M.max());
-      assert(Math.floor(PROF().pcoin)===1e9,k+': 상한인데 미네랄이 빠짐');
-      assert(!document.querySelector('#gearBody .mgSlot.lock'),k+': 다 열었는데 잠긴 줄이 남음'); }
-    return '0칸 시작 · '+MG_SLOT_COST.join('/')+' 미네랄 · 최대 '+MG_SLOT_MAX; });
 
   // 🎟 뽑기권 = 미네랄로 못 산다. 엘리트·상자·라운드 보너스로 얻고 젬으로만 산다.
   await step('뽑기권: 미네랄 불가 · 젬 구매 · 상자/엘리트/라운드 지급', ()=>{ skipIf(typeof buyTicketGem!=='function','뽑기권 구매 없음');
@@ -13348,31 +13251,6 @@ async function groupLobby(){
     assert(Math.abs(_hb.char.atk-a0)<1e-6,'초기화 뒤 전투 수치가 안 돌아옴');
     navBack(); await sleep(40);
     return '찍기·초기화 → 전투 즉시 반영'; });
-  await step('사냥터 업그레이드: 미네랄이 차면 그 자리에서 버튼이 열린다', async()=>{
-    assert(typeof hmUpgAfford==='function','살 수 있는지 다시 칠하는 함수가 없음');
-    if(typeof hbEnd==='function') hbEnd();
-    const p=PROF(); p.chars.length=0; p.curId=''; profCreateChar('ranger','열림'); saveMeta();
-    openHome(); await sleep(120);
-    hbHunt().upgAuto=0; hmUpgTab('char'); p.pcoin=0; renderHome();
-    const btn=k=>document.querySelector('#hmUpgGrid .hmUpBtn[data-k="'+k+'"]');
-    assert(btn('atk'),'데미지 카드가 없음');
-    assert(btn('atk').classList.contains('off'),'미네랄이 0인데 버튼이 열려 있음');
-    // ⭐ 핵심: 화면을 떠났다 오지 않아도, 미네랄이 차면 열려야 한다
-    PROF().pcoin=1e9;
-    const n=hmUpgAfford();
-    assert(n>0,'미네랄이 찼는데 다시 칠해진 버튼이 없음');
-    assert(!btn('atk').classList.contains('off'),'미네랄이 충분한데 버튼이 잠긴 채임');
-    // 판정은 한 곳에서만 나온다 — 그릴 때와 다시 칠할 때가 갈리면 '회색인데 눌리는 버튼'이 생긴다
-    { const before=[...document.querySelectorAll('#hmUpgGrid .hmUpBtn[data-k]')]
-        .map(b=>b.dataset.k+':'+b.classList.contains('off')).join(',');
-      renderHome();
-      const after=[...document.querySelectorAll('#hmUpgGrid .hmUpBtn[data-k]')]
-        .map(b=>b.dataset.k+':'+b.classList.contains('off')).join(',');
-      assert(before===after,'다시 칠한 결과가 새로 그린 결과와 다름'); }
-    // 반대로 다 쓰면 그 자리에서 다시 잠긴다
-    PROF().pcoin=0; hmUpgAfford();
-    assert(btn('atk').classList.contains('off'),'미네랄이 없는데 버튼이 열린 채임');
-    return '즉시 열림/잠김 ok'; });
   await step('자동 업그레이드: 켜 두면 살 수 있는 것을 싼 것부터 산다', async()=>{
     assert(typeof hmAutoUpgTick==='function','자동 업그레이드가 없음');
     if(typeof hbEnd==='function') hbEnd();
@@ -13406,71 +13284,6 @@ async function groupLobby(){
     assert(hmAutoUpgTick()===0,'미네랄이 없는데 샀음');
     hbHunt().upgAuto=0;
     return '싼 것부터 · 한 틱 최대 '+HM_AUTO_MAX+'개'; });
-  await step('자동 배분: 골라 둔 한 축에만 계속 찍힌다', async()=>{
-    assert(typeof lpAutoSpend==='function','자동 배분이 없음');
-    const p=PROF(); p.chars.length=0; p.curId='';
-    profCreateChar('ranger','자동'); saveMeta();
-    let c=CHAR();
-    // ① 기본값이 실제 항목을 가리킨다 — 안 들러도 세지는 게 설계 의도다
-    assert(lpAutoKey(c)===LP_AUTO_DEFAULT && lpDef(LP_AUTO_DEFAULT),'기본 자동 대상이 실재하지 않음: '+c.lpAuto);
-    // ② 레벨이 오르면 '그 축에만' 들어간다 — 남는 포인트가 없어야 한다
-    c.lpAuto='critd'; c.unit.pts={};
-    c.xp=1e7; const ups=profApplyLevelUps(c);
-    assert(ups>0,'레벨이 안 오름');
-    assert(lpFree(c)===0,'자동인데 포인트가 남아 있음: '+lpFree(c));
-    assert(lpPts('critd',c)===lpTotal(c),'고른 축에 다 안 들어감: '+lpPts('critd',c)+'/'+lpTotal(c));
-    for(const S of LP_STATS) if(S.k!=='critd')
-      assert(lpPts(S.k,c)===0,'고르지 않은 축에도 찍힘: '+S.k+'='+lpPts(S.k,c));
-    // ③ 대상을 바꾸면 그 뒤로는 새 축에만 쌓인다(이미 찍힌 것은 그대로)
-    const before=lpPts('critd',c);
-    c.lpAuto='hp'; c.xp=1e7; profApplyLevelUps(c);
-    assert(lpPts('critd',c)===before,'대상을 바꿨는데 옛 축이 변함');
-    assert(lpPts('hp',c)>0 && lpFree(c)===0,'바꾼 축에 안 들어감');
-    // ④ 끄면 안 찍힌다
-    c.lpAuto=''; c.xp=1e7; profApplyLevelUps(c);
-    assert(lpFree(c)>0,'껐는데도 자동으로 찍힘');
-    assert(lpAutoSpend(c)===0,'꺼진 상태인데 자동이 실행됨');
-    // ⑤ 화면 흐름: [자동 선택] → 카드를 눌러 지정 → [지정 해제]
-    c.unit.pts={}; c.lpAuto=''; saveMeta();
-    navGo('upg'); await sleep(60); setChrSec('stat'); await sleep(40);
-    const au=()=>$('chrBody').querySelector('.lpHead .lpQ.au .hmUpQ');
-    const list=()=>$('chrBody').querySelector('.lpList');
-    const cells=()=>[...$('chrBody').querySelectorAll('.lpList .lpCell')];
-    // 지정 전 — 버튼은 '자동 선택', 고르는 중이 아니고, 어두워진 칸도 없다
-    assert(au().textContent.trim()==='자동 선택','지정 전 버튼 표기가 다름: '+au().textContent.trim());
-    assert(!list().classList.contains('picking'),'누르기 전인데 고르는 중임');
-    assert(!list().dataset.auto,'지정 전인데 대상 표시가 있음');
-    // 누르면 고르는 중 — 칸이 눌리는 자리가 되고 버튼은 '취소'
-    au().click(); await sleep(40);
-    assert(list().classList.contains('picking'),'자동 선택을 눌러도 고르는 중이 안 됨');
-    assert(au().textContent.trim()==='취소','고르는 중인데 버튼이 취소가 아님: '+au().textContent.trim());
-    assert(cells().every(e=>e.getAttribute('onclick')),'고르는 중인데 칸을 누를 수 없음');
-    assert(lpAutoKey()==='','고르기만 시작했는데 대상이 정해짐');
-    // 취소로 빠져나올 수 있다
-    au().click(); await sleep(40);
-    assert(!list().classList.contains('picking'),'취소했는데 고르는 중이 안 풀림');
-    assert(lpAutoKey()==='','취소했는데 대상이 정해짐');
-    // 다시 골라서 세 번째 카드를 지정
-    au().click(); await sleep(30);
-    const want=LP_STATS[2].k;
-    cells()[2].click(); await sleep(40);
-    assert(lpAutoKey()===want,'카드를 눌렀는데 그 축이 대상이 안 됨: '+lpAutoKey());
-    assert(!list().classList.contains('picking'),'지정했는데 고르는 중이 안 풀림');
-    assert(lpFree()===0,'지정했는데 밀린 포인트가 안 찍힘');
-    assert(list().dataset.auto===want,'목록에 자동 대상 표시가 없음');
-    // 지정한 칸만 진하고 나머지는 어두워진다
-    { const on=cells().filter(e=>e.classList.contains('on'));
-      assert(on.length===1 && on[0]===cells()[2],'진한 칸이 지정한 하나가 아님');
-      const a=parseFloat(getComputedStyle(cells()[2]).opacity), b=parseFloat(getComputedStyle(cells()[0]).opacity);
-      assert(a>b+0.2,'지정한 칸이 나머지보다 진하지 않음: '+a+' vs '+b); }
-    // 버튼이 '지정 해제'로 바뀌고, 누르면 풀린다
-    assert(au().textContent.trim()==='지정 해제','지정 뒤 버튼이 지정 해제가 아님: '+au().textContent.trim());
-    au().click(); await sleep(40);
-    assert(lpAutoKey()==='','지정 해제를 눌렀는데 안 풀림: '+lpAutoKey());
-    assert(!list().dataset.auto,'풀었는데 표시가 남음');
-    assert(au().textContent.trim()==='자동 선택','푼 뒤 버튼이 자동 선택으로 안 돌아감');
-    navBack(); await sleep(40);
-    return '자동 선택 → 카드 지정 → 지정 해제'; });
   await step('미네랄 획득: 환생 배수를 탄다(되돌려받는 것은 안 탄다)', ()=>{
     assert(typeof profGainCoin==='function','미네랄 획득 배수가 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; const c=profCreateChar('ranger','코인');
@@ -15526,247 +15339,6 @@ async function groupLobby(){
     openHome(); await sleep(40);
     return '전용 화면 · 두 경로 ok'; });
   // 🧰 정비 = 장비·펫·동료 전용 화면. 내용은 전부 기존 렌더러 재사용(단일 소스) — 복제본이 생기면 여기서 걸린다.
-  await step('정비: 전용 화면 · 장비/펫/동료 탭 · 렌더러 재사용', async()=>{ skipIf(typeof openGear!=='function','정비 화면 없음');
-    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','정비'); saveMeta(); }
-    // 등급 표기를 보려면 실제 보유가 있어야 한다 — 비어 있으면 검사가 헛돈다
-    // ⚠ 정원을 '채울 수 있을 만큼' 넣어야 교체 경로가 실제로 돌아간다
-    //    (예전엔 보유가 정원보다 적어 교체 검사가 통째로 건너뛰어져 red-test가 안 걸렸다)
-    { const p=PROF();
-      // 칸을 일부러 '일부만' 열고 '일부만' 채운다 — 채워짐·빈칸·잠김 세 종류가 다 나와야 높이를 비교할 수 있다
-      p.petSlots=MG_SLOT_MAX-1; hbHunt().allySlots=MG_SLOT_MAX-1;
-      p.pets={ wolf:{star:1,dup:2,fed:0}, slime:{star:0,dup:0,fed:0}, tiger:{star:0,dup:3,fed:0},
-               owl:{star:0,dup:0,fed:0}, golem:{star:0,dup:0,fed:0} };
-      p.equip=['wolf'];                                  // 열린 칸(2) 중 하나만 채운다
-      const H=hbHunt();
-      H.mates={ sniper:{lv:2,dup:1}, sentinel:{lv:1,dup:0}, spike:{lv:1,dup:2},
-                phantom:{lv:1,dup:0}, gunner:{lv:1,dup:0}, goliath:{lv:1,dup:0} };
-      H.party=['sniper'];                                // 열린 칸(2) 중 하나만 채운다
-      saveMeta(); }
-    // ⚠ 하단 네비에서 빠진 화면이다(2026-08-25 개편 — 연구·임무로 교체). 화면·코드는 살아 있으므로
-    //   **직접 열어서** 계속 검사한다 — 유보한 코드가 썩지 않게. ⛔ navGo('gear') 는 이제 없다.
-    openGear(); await sleep(60);
-    assert(visible($('gearScreen')),'정비 화면이 안 열림');
-    assert(!visible($('townPanel')),'정비인데 마을 팝업이 남아 있음');
-    // 탭 띠는 화면에서 걷어내고 하단 네비로 올렸다(2026-08-14) — 같은 UI 를 두 군데 두지 않는다
-    assert(!document.getElementById('gearTabs'),'정비 화면에 옛 탭 띠가 남아 있음');
-    // ⛔ 옛 네비 하위(장비·펫·동료) 검사는 걷어냈다 — 2026-08-25 개편으로 그 칸들이 없어졌다.
-    //   탭 전환(setGearTab)과 화면 내용은 아래에서 계속 검사한다.
-    // ⓪ 장비 슬롯 카드 — 각진 판 + 윗변 광선(네비바와 같은 --edge-light)
-    { setGearTab('gear'); await sleep(40);
-      // 착용 칸이 있어야 '등급 테두리가 통째로 차지하는가'를 볼 수 있다
-      { const c2=CHAR(); const it=profMakeItem('helmet',6,'epic');
-        if(it){ profAddItem(it); profEquipItem(it.iid); } renderGear(); await sleep(40); }
-      const slots=[].slice.call(document.querySelectorAll('#gearBody .pdSlot'));
-      assert(slots.length>0,'장비 슬롯이 없음');
-      const base=slots.find(e=>!e.classList.contains('on'));
-      const on=slots.find(e=>e.classList.contains('on'));
-      assert(base,'빈/잠긴 칸이 없어 기본 표현 검사 불가');
-      assert(on,'착용 칸이 없어 등급 테두리 검사 불가');
-      const cs=getComputedStyle(base);
-      // 각지게 — 라운드는 DESIGN.md 토큰의 아래쪽(≤3px)
-      assert(parseFloat(cs.borderTopLeftRadius)<=3,'슬롯이 아직 둥긂: '+cs.borderTopLeftRadius);
-      // 윗변 광선 = 네비바와 '같은' 그라데여야 한다(두 벌로 만들지 말 것)
-      const lightOf=el=>getComputedStyle(el,'::before').backgroundImage;
-      const nav=document.querySelector('.navBar');
-      assert(nav,'네비바가 없음');
-      const a=lightOf(base), b2=lightOf(nav);
-      assert(a && a!=='none','슬롯에 윗변 광선이 없음');
-      assert(a===b2,'기본 슬롯 광선이 네비바와 다른 그라데임(단일 소스 위반)');
-      assert(a.indexOf('gradient')>=0,'광선이 그라데가 아님: '+a.slice(0,40));
-      // 착용 칸 = 기본(은색) 표현이 '전부' 등급색으로 바뀐다. 단순 외곽선이 아니라 같은 성질을 갖는다.
-      { const oc=getComputedStyle(on), lit=lightOf(on);
-        assert(lit && lit!=='none','착용 칸에 윗변 광선이 없음');
-        assert(lit!==b2,'착용 칸이 아직 은색 광선을 씀(등급색이 차지해야 한다)');
-        assert(lit.indexOf('gradient')>=0,'착용 칸 광선이 그라데가 아님(단순 선 금지)');
-        const rgb=(oc.color.match(/\d+/g)||[]).slice(0,3).join(', ');
-        assert(rgb && lit.indexOf(rgb)>=0,'착용 칸 광선이 등급색이 아님: '+lit.slice(0,60)+' / color '+oc.color);
-        assert(oc.borderTopColor!==getComputedStyle(base).borderTopColor,'착용 칸 테두리가 기본과 같음'); }
-      // ⚠ overflow:hidden 을 쓰면 레벨 배지(.pdLv)가 잘린다 — 실제로 그렇게 잘렸었다
-      assert(cs.overflow!=='hidden','슬롯에 overflow:hidden 이 걸려 레벨 배지가 잘린다');
-      // 면이 배경보다 밝아야 '판'으로 읽힌다
-      { const g=cs.backgroundImage+cs.backgroundColor;
-        const nums=(g.match(/\d+/g)||[]).map(Number);
-        assert(nums.length>=3,'슬롯 면 색을 읽지 못함');
-        assert(nums[0]+nums[1]+nums[2]>=60,'슬롯 면이 너무 어두움: '+nums.slice(0,3).join(',')); }
-      // ＋ 는 부위 글리프와 겹치지 않는다(가운데에 겹쳐 두면 둘 다 안 읽힌다)
-      { const emp=slots.find(e=>e.classList.contains('empty'));
-        if(emp){ const plus=emp.querySelector('.pdPlus'), ico=emp.querySelector('.slIco');
-          assert(plus,'빈 슬롯에 ＋ 가 없음');
-          if(ico){ const a2=plus.getBoundingClientRect(), b3=ico.getBoundingClientRect();
-            const overlap=!(a2.right<=b3.left||a2.left>=b3.right||a2.bottom<=b3.top||a2.top>=b3.bottom);
-            assert(!overlap,'＋ 가 부위 글리프와 겹침'); } } } }
-    // ① 장비 = 마을 장비창과 같은 renderProfGear() — 아바타(페이퍼돌) + 가방이 그대로 나와야 한다
-    assert(document.querySelector('#gearBody .gearWrap'),'장비 탭에 장비창이 없음');
-    assert(document.querySelector('#gearBody .bagBody'),'장비 탭에 가방이 없음');
-    { const ref=renderProfGear().replace(/\s+/g,'');
-      assert(ref.indexOf('gearWrap')>=0 && document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,40)===ref.slice(0,40),
-        '정비 장비 탭이 renderProfGear()와 다름(복제 의심)'); }
-    // ② 펫 = 상점 '보유 펫'과 같은 _shopPetPanel()
-    setGearTab('pet'); await sleep(40);
-    // ⛔ 옛 네비 하위 활성 검사는 걷어냈다 — 2026-08-25 개편으로 정비 하위 칸이 없어졌다.
-    //   탭 전환 자체는 아래 본문 비교가 확인한다(_gearTab 이 실제로 펫으로 갔는지).
-    assert(_gearTab==='pet','펫 탭으로 안 바뀜: '+_gearTab);
-    { const ref=_shopPetPanel().replace(/\s+/g,'');
-      assert(document.getElementById('gearBody').innerHTML.replace(/\s+/g,'').slice(0,60)===ref.slice(0,60),
-        '정비 펫 탭이 _shopPetPanel()과 다름(복제 의심)'); }
-    // ③ 동료도 같은 뼈대
-    setGearTab('ally'); await sleep(40);
-    assert(document.querySelector('#gearBody .gearWrap'),'동료 탭이 비어 있음');
-    // ④ 세 탭이 '같은 뼈대'를 쓴다(2026-08-14) — 상단(쓰는 것) + 하단(가진 것 격자)
-    //    탭마다 다른 레이아웃 언어를 쓰면 같은 화면 안에서 다른 앱처럼 보인다.
-    for(const t of ['gear','pet','ally']){ setGearTab(t); await sleep(40);
-      assert(document.querySelector('#gearBody .gearWrap'),t+' 탭이 공용 뼈대(.gearWrap)를 안 씀');
-      assert(document.querySelector('#gearBody .gearSum'),t+' 탭에 상단 요약이 없음');
-      assert(document.querySelector('#gearBody .bagBody'),t+' 탭에 보유 격자가 없음'); }
-    // 하단 격자 높이는 세 탭이 같아야 한다 — 탭을 옮길 때 아래 구역이 들썩이면 안 된다
-    { const h={}; for(const t of ['gear','pet','ally']){ setGearTab(t); await sleep(40);
-        h[t]=Math.round(document.querySelector('#gearBody .bagScroll').getBoundingClientRect().height); }
-      assert(h.gear===h.pet && h.gear===h.ally,'탭마다 하단 격자 높이가 다름: '+JSON.stringify(h)); }
-    // 펫·동료 상단은 '세로로 길게' — 남는 세로 공간을 상단이 먹어야 아래가 비지 않는다
-    for(const t of ['pet','ally']){ setGearTab(t); await sleep(40);
-      const rows=document.querySelectorAll('#gearBody .mgSlot');
-      assert(rows.length>=2, t+' 탭 상단 슬롯이 2줄 미만');
-      const a=rows[0].getBoundingClientRect(), b2=rows[1].getBoundingClientRect();
-      assert(b2.top>=a.bottom-1, t+' 탭 상단이 아직 가로 배치임(세로로 쌓여야 한다)');
-      assert(a.width>200, t+' 탭 슬롯이 한 줄 폭을 안 씀: '+Math.round(a.width));
-      // 빈칸·잠긴 칸·채워진 칸의 높이가 같아야 한다 — 다르면 칸을 열 때 화면이 들썩인다
-      { const hs={};
-        for(const r of document.querySelectorAll('#gearBody .mgSlot')){
-          const kind=r.classList.contains('on')?'filled':r.classList.contains('lock')?'locked':'empty';
-          const h=Math.round(r.getBoundingClientRect().height);
-          if(hs[kind]!==undefined) assert(hs[kind]===h,t+': 같은 종류 줄끼리 높이가 다름('+kind+') '+hs[kind]+' vs '+h);
-          hs[kind]=h;
-          // 고정 높이를 줬으니 내용이 그 안에 들어와야 한다(넘치면 잘려 보인다)
-          assert(r.scrollHeight<=r.clientHeight+1,t+': 줄 내용이 넘침('+kind+') '+r.scrollHeight+'>'+r.clientHeight); }
-        const kinds=Object.keys(hs);
-        assert(kinds.length>=2,t+': 비교할 줄 종류가 부족함 — '+kinds.join(','));
-        for(const a of kinds) for(const b2 of kinds)
-          assert(hs[a]===hs[b2],t+': 줄 종류마다 높이가 다름 '+JSON.stringify(hs));
-        assert(hs[kinds[0]]<=72,t+': 줄이 너무 높음(압축 규칙): '+hs[kinds[0]]+'px'); }
-      // 줄 구성 = [카드][이름·능력치][해제·확장칸]
-      const card=rows[0].querySelector('.mgCard'), name=rows[0].querySelector('.mgName');
-      const stat=rows[0].querySelector('.mgStat'), add=rows[0].querySelectorAll('.mgAddBtn');
-      const btns=[].slice.call(rows[0].querySelectorAll('.mgBtn'));
-      assert(card&&name&&stat,t+' 탭 줄 구성이 [카드][이름·능력치]가 아님');
-      assert(name.getBoundingClientRect().left>=card.getBoundingClientRect().right-1,t+' 탭 이름이 카드 오른쪽이 아님');
-      assert(stat.textContent.trim().length>0,t+' 탭 능력치 줄이 비어 있음');
-      assert(MG_ADD_SLOTS>=1,'추가 능력치·스킬 확장 칸이 0개로 꺼져 있음');
-      assert(add.length===MG_ADD_SLOTS,t+' 탭 + 확장 칸 수가 표와 다름: '+add.length+' vs '+MG_ADD_SLOTS);
-      // ⓐ 레벨/★ 은 초상 위 배지가 아니라 '이름 오른쪽 텍스트'다
-      { const lv=rows[0].querySelector('.mgLv'), card=rows[0].querySelector('.mgCard');
-        assert(lv,t+' 탭에 레벨 표기(.mgLv)가 없음');
-        assert(!rows[0].querySelector('.mgTag'),t+' 탭에 옛 카드 배지(.mgTag)가 남음');
-        const lr=lv.getBoundingClientRect(), nr=name.getBoundingClientRect(), cr=card.getBoundingClientRect();
-        assert(lr.left>=nr.right-1,t+': 레벨이 이름 오른쪽이 아님');
-        assert(lr.left>=cr.right-1,t+': 레벨이 아직 초상 위에 있음'); }
-      // ⓑ 등급 이름과 특징은 줄에서 뺀다 — 등급은 테두리 색이 말한다
-      { const sx=stat.textContent;
-        for(const t2 of GACHA_TIER_ORDER)
-          assert(sx.indexOf(GACHA_TIERS[t2].name)<0,t+': 능력치 줄에 등급 이름이 남음: '+sx);
-        if(t==='ally'){ const id=MG.ally.on()[0];
-          if(id) assert(sx.indexOf(HB_MATES[id].tip)<0,t+': 능력치 줄에 특징이 남음: '+sx); } }
-      // ⓒ + 확장 칸은 해제 '왼쪽'에 · 이전보다 크다
-      { const un=btns.find(b=>b.textContent.trim()==='해제');
-        assert(un,t+': 해제 버튼이 없음');
-        assert(add[0].getBoundingClientRect().right<=un.getBoundingClientRect().left+1,
-          t+': + 칸이 해제 왼쪽이 아님');
-        assert(add[0].getBoundingClientRect().height>=26,
-          t+': + 칸이 너무 작음: '+Math.round(add[0].getBoundingClientRect().height)+'px'); }
-      // 줄에는 '해제'만 둔다 — 합성은 상태창으로 옮겼다(줄이 버튼으로 붐비지 않게)
-      const tx=btns.map(b=>b.textContent.trim());
-      assert(tx.indexOf('해제')>=0,t+' 탭에 해제 버튼이 없음: '+tx.join(','));
-      assert(tx.indexOf('합성')<0,t+' 탭 줄에 합성이 남아 있음(상태창으로 옮겼다)');
-      assert(btns[0].getBoundingClientRect().left>=name.getBoundingClientRect().right-1,t+' 탭 버튼이 이름 오른쪽이 아님');
-      // 경험치 막대가 있어야 '합성으로 오른다'가 보인다
-      assert(rows[0].querySelector('.mgExp'),t+' 탭에 경험치 막대가 없음'); }
-    // ⑤ 등급 표현은 세 탭 모두 '테두리 색' 하나로 통일한다 — 글자색·배지로 갈라 쓰지 않는다
-    { const tierCols=Object.keys(TIER_COLOR).map(k=>TIER_COLOR[k].toLowerCase());
-      const hex=rgb=>{ const m=(rgb.match(/\d+/g)||[]).slice(0,3).map(Number);
-        return m.length===3? ('#'+m.map(v=>v.toString(16).padStart(2,'0')).join('')) : ''; };
-      for(const t of ['pet','ally']){ setGearTab(t); await sleep(40);
-        const cells=document.querySelectorAll('#gearBody .igCell');
-        assert(cells.length>0, t+' 탭 보유 격자가 비어 있음(검사 불가)');
-        let tinted=0;
-        for(const el of cells){ const c=getComputedStyle(el);
-          if(tierCols.indexOf(hex(c.borderTopColor))>=0) tinted++; }
-        assert(tinted===cells.length, t+' 탭에서 등급이 테두리 색으로 안 나옴: '+tinted+'/'+cells.length); } }
-    // ⑥ 조작(2026-08-14 개편) — 자동선택 / 해제 / 상태창 / 교체 유도 / 등급 일괄 합성
-    for(const k of ['pet','ally']){ setGearTab(k); await sleep(40);
-      const M=MG[k];
-      // 칸은 산 만큼만 열린다 — 상한은 펫·동료 모두 MG_SLOT_MAX
-      assert(M.max()>=0 && M.max()<=MG_SLOT_MAX, k+': 칸 수가 0~'+MG_SLOT_MAX+' 범위를 벗어남: '+M.max());
-      // 이 단계는 '일부만 연' 상태를 전제로 한다(세 종류 줄을 다 보려면 잠긴 칸이 남아 있어야 한다)
-      assert(M.max()<MG_SLOT_MAX, k+': 시드가 칸을 다 열어 잠긴 줄 검사가 불가');
-      // ⚡ 자동 선택 — 가장 강한 순서대로 정원만큼 들어간다
-      for(const id of M.on().slice()) M.toggle(id);
-      assert(M.on().length===0,k+': 비우지 못함');
-      { const btn=[].slice.call(document.querySelectorAll('#gearBody .mgAutoRow .twBtn'))[0];
-        assert(btn && btn.textContent.indexOf('자동')>=0,k+': 자동 선택 버튼이 없음'); }
-      mgAuto(k); await sleep(30);
-      assert(M.on().length===Math.min(M.max(),M.owned().length),k+': 자동 선택이 정원을 안 채움: '+M.on().length);
-      { const rank=M.owned().slice().sort((a,b)=>M.power(b)-M.power(a)).slice(0,M.max());
-        for(const id of rank) assert(M.on().indexOf(id)>=0,k+': 자동 선택이 가장 강한 것을 안 올림: '+id); }
-      // 해제 → 빈 자리(＋)
-      const victim=M.on()[0];
-      mgUnequip(k, victim); await sleep(30);
-      assert(M.on().indexOf(victim)<0,k+': 해제해도 안 내려감');
-      assert(document.querySelector('#gearBody .mgSlot.empty'),k+': 해제한 자리가 빈 슬롯(＋)이 안 됨');
-      // 하단 카드 탭 = '상태창'이다(바로 교체 팝업이 뜨면 안 된다)
-      mgCellTap(k, victim); await sleep(30);
-      assert(document.querySelector('#gearBody .mgStatTbl'),k+': 하단 카드를 눌러도 상태창이 안 뜸');
-      assert($('gearBody').textContent.indexOf('와 교체')<0,k+': 옛 추가/교체 팝업이 남아 있음');
-      { const btns=[].slice.call(document.querySelectorAll('#gearBody .mgSheetBtns .twBtn')).map(b=>b.textContent.trim());
-        assert(btns.indexOf('합성')>=0 && btns.indexOf('교체')>=0,k+': 상태창에 합성·교체 버튼이 없음: '+btns.join(',')); }
-      // 교체 → 팝업이 내려가고 상단이 빨갛게 · 자리를 누르면 들어간다
-      mgSwapStart(); await sleep(30);
-      assert(!document.querySelector('#gearBody .mgStatTbl'),k+': 교체를 눌러도 상태창이 안 내려감');
-      { const red=document.querySelectorAll('#gearBody .mgSlot.swapT');
-        assert(red.length===M.max(),k+': 상단 칸이 교체 표시(빨강)로 안 바뀜: '+red.length+'/'+M.max());
-        const c=getComputedStyle(red[0]).borderTopColor, m=(c.match(/\d+/g)||[]).map(Number);
-        assert(m[0]>150 && m[0]>m[2]+40,k+': 교체 표시가 빨간색이 아님: '+c); }
-      { const old=M.on()[0];
-        mgSwapTo(old); await sleep(30);
-        assert(M.on().indexOf(victim)>=0 && M.on().indexOf(old)<0,k+': 교체가 반영되지 않음');
-        assert(M.on().length<=M.max(),k+': 교체로 정원을 넘김');
-        assert(!document.querySelector('#gearBody .mgSlot.swapT'),k+': 교체 뒤에도 빨간 표시가 남음'); }
-      // 합성 — 상태창 → 합성 → 등급 버튼으로 그 등급 중복을 통째로 담고 완료
-      { const tgt=M.on().find(id=>M.dup(id)>0) || M.on()[0];
-        const mat=M.owned().find(id=>M.dup(id)>0);
-        assert(mat,k+': 중복이 없어 합성 검사 불가');
-        mgCellTap(k, tgt); await sleep(20); mgMixOpen(); await sleep(30);
-        assert(document.querySelector('#gearBody .mgTierRow'),k+': 합성 팝업에 등급 버튼 줄이 없음');
-        const tier=M.tier(mat);
-        const tb=[].slice.call(document.querySelectorAll('#gearBody .mgTierBtn'))
-          .find(b=>b.textContent.indexOf(GACHA_TIERS[tier].name)>=0);
-        assert(tb,k+': '+tier+' 등급 버튼이 없음');
-        assert(mgMixExp()===0,k+': 열자마자 재료가 담겨 있음');
-        mgMixTier(tier); await sleep(20);
-        const want=M.owned().filter(id=>M.tier(id)===tier).reduce((a,id)=>a+M.dup(id)*M.pt(id),0);
-        assert(mgMixExp()===want,k+': 등급 버튼이 그 등급 중복을 전부 안 담음: '+mgMixExp()+' vs '+want);
-        mgMixTier(tier); await sleep(20);
-        assert(mgMixExp()===0,k+': 다시 눌러도 안 빠짐');
-        mgMixTier(tier); await sleep(20);
-        // 취소 → 아무것도 안 먹는다
-        const dup0=M.dup(mat), e0=M.exp(tgt).cur;
-        mgMixCancel(); await sleep(20);
-        assert(M.dup(mat)===dup0 && M.exp(tgt).cur===e0,k+': 취소했는데 재료가 소모됨');
-        // 완료 → 담은 만큼 들어간다
-        mgCellTap(k, tgt); await sleep(20); mgMixOpen(); await sleep(20); mgMixTier(tier); await sleep(20);
-        const lv0=M.lvTx(tgt);
-        mgMixApply(); await sleep(30);
-        assert(!document.querySelector('#gearBody .mgTierRow'),k+': 완료 뒤 합성 팝업이 안 닫힘');
-        assert(M.dup(mat)<dup0,k+': 완료했는데 재료가 안 줄어듦');
-        assert(M.exp(tgt).cur>e0 || M.lvTx(tgt)!==lv0,k+': 완료했는데 경험치·레벨이 그대로'); }
-    }
-    setGearTab('ally'); await sleep(40);
-    assert($('gearBody').textContent.indexOf('동료')>=0,'동료 탭에 동료 표기가 없음');
-    setGearTab('gear'); await sleep(40);
-    setGearTab('gear');
-    // 굵기 700 상한(DESIGN.md §2)
-    for(const sel of ['#curBar .curTitle','#navBar .navIt']){ const e=document.querySelector(sel);
-      if(e) assert(+getComputedStyle(e).fontWeight<=700, sel+' 굵기가 700 초과(가짜 볼드): '+getComputedStyle(e).fontWeight); }
-    openHome(); await sleep(40);
-    return '하위 3칸 · renderProfGear/_shopPetPanel 재사용 ok'; });
   await step('장비: 던전 드랍 → 장착하면 스탯에 반영', ()=>{ skipIf(typeof profMakeItem!=='function','장비 아이템 없음');
     const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0; p.unlocks={};
     p.pets={}; p.equip=[];                                // 펫 %보너스가 곱해지면 장비 기여분만 떼어 볼 수 없다
@@ -15793,158 +15365,6 @@ async function groupLobby(){
     assert(got===v && p.pcoin===v,'분해 환급 불일치: '+got+'/'+p.pcoin);
     assert(profItems().length===0,'가방에서 안 사라짐');
     return '분해 +'+v+'P'; });
-  await step('장비창: 장비/장신구 페이지 분리 · 가방 상시 노출', ()=>{ skipIf(typeof profPickSlot!=='function','페이퍼돌 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
-    profCreateChar('ranger','돌');
-    const it=profAddItem(profMakeItem('top',4,'epic')); profEquipItem(it.iid);
-    profAddItem(profMakeItem('shoes',4,'rare')); saveMeta();
-    _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
-    openHome(); openGear();                                   // ⚠ 마을 팝업 경로는 다락으로 갔다 — 정비 전용 화면으로 연다
-    const c=CHAR(); c.level=1; renderGear();
-    const body=$('gearBody');
-    const slots=body.querySelectorAll('.pdSlot');
-    // ① 한 페이지엔 자기 part만 — 장비 페이지에 장신구가 섞이면 안 된다
-    const armor=profPageSlots('armor'), acc=profPageSlots('acc');
-    assert(armor.length+acc.length===Object.keys(PROF_GEAR).length,'페이지에 안 들어간 슬롯이 있음');
-    assert(armor.length>=5 && acc.length>=3,'페이지 분배가 한쪽으로 쏠림: '+armor.length+'/'+acc.length);
-    for(const k of ['necklace','earring','ring','belt','cape']) assert(acc.indexOf(k)>=0,'장신구 쪽에 있어야 할 슬롯이 장비 쪽에 있음: '+k);
-    for(const k of ['weapon','helmet','top','bottom','shoes']) assert(armor.indexOf(k)>=0,'장비 쪽에 있어야 할 슬롯이 장신구 쪽에 있음: '+k);
-    assert(slots.length===armor.length,'장비 페이지 슬롯 수 불일치: '+slots.length);
-    const shown=[...slots].map(e=>e.getAttribute('title'));
-    for(const k of acc) assert(shown.indexOf(PROF_GEAR[k].name)<0,'장비 페이지에 '+PROF_GEAR[k].name+'이(가) 나옴');
-    // 섹션 이동은 화살표 버튼이 아니라 바(세그먼트) — 바는 아바타 아래, 장비 합계는 위
-    const seg=body.querySelector('.pdNav .pdSeg'); assert(seg,'섹션 이동 바가 없음');
-    assert(seg.querySelectorAll('.pdSegBtn').length===PROF_GEAR_PAGES.length,'바에 섹션이 다 안 들어감');
-    assert(seg.querySelector('.pdSegInd'),'바에 현재 섹션 표시가 없음');
-    assert(seg.querySelector('.pdSegBtn.on').textContent===PROF_GEAR_PAGES[0].name,'바에 켜진 섹션이 안 맞음');
-    const kids=[...body.querySelector('.gearWrap').children].map(e=>e.className.split(' ')[0]);
-    assert(kids.join('>')==='gearSum>pdWrap>pdNav>bagSec','장비창 세로 순서가 다름: '+kids.join('>'));
-    // 바를 눌러 섹션 이동
-    seg.querySelectorAll('.pdSegBtn')[1].click();
-    assert(_gearPage===PROF_GEAR_PAGES[1].id,'바를 눌러도 섹션이 안 바뀜');
-    profGearPageAt(0);
-    // ② 넘기면 장신구 페이지 — 슬롯이 통째로 갈린다
-    profGearPageStep(1);
-    assert(_gearPage===PROF_GEAR_PAGES[1].id,'페이지가 안 넘어감');
-    const slots2=$('gearBody').querySelectorAll('.pdSlot');
-    assert(slots2.length===acc.length,'장신구 페이지 슬롯 수 불일치: '+slots2.length);
-    const shown2=[...slots2].map(e=>e.getAttribute('title'));
-    for(const k of armor) assert(shown2.indexOf(PROF_GEAR[k].name)<0,'장신구 페이지에 '+PROF_GEAR[k].name+'이(가) 나옴');
-    profGearPageStep(-1);                                     // 장비 페이지로 되돌려 놓고 이어서 검사
-    assert(body.querySelector('.pdFig svg path'),'캐릭터 도형이 없음');
-    // 슬롯이 아바타 위에 부위별로 겹쳐 있어야 한다(상·하·좌·우 다 씀)
-    const ys=[...slots].map(e=>parseFloat(e.style.top)), xs=[...slots].map(e=>parseFloat(e.style.left));
-    const rows=[...new Set(ys)].sort((a,b)=>a-b), cols=[...new Set(xs)].sort((a,b)=>a-b);
-    assert(rows.length>=4 && rows[0]<20 && rows[rows.length-1]>70,'슬롯이 위아래 여러 줄로 안 퍼짐: '+rows.join(','));
-    assert(cols.length>=3 && cols[0]<40 && cols[cols.length-1]>60 && cols.indexOf(50)>=0,
-      '슬롯이 좌·중·우로 안 퍼짐(가운데 열이 몸통에 겹쳐야 함): '+cols.join(','));
-    assert(body.querySelectorAll('.pdSlot .slIco').length===slots.length,'슬롯 아이콘이 라인아트가 아님');
-    assert(body.querySelectorAll('.pdSlot.empty .pdPlus').length>0,'빈 칸에 ＋가 없음');
-    assert(body.querySelectorAll('.pdSlot.lock .pdLockIco').length===body.querySelectorAll('.pdSlot.lock').length,
-      '잠긴 칸에 자물쇠 아이콘이 없음(이모지로 남아 있는지 확인)');
-    assert(body.innerHTML.indexOf('🔒')<0,'슬롯에 자물쇠 이모지가 남아 있음');
-    for(const k in PROF_GEAR) assert(PROF_SLOT_ICON[k],'슬롯 아이콘 누락: '+k);
-    const eq=body.querySelector('.pdSlot.on'); assert(eq,'장착한 슬롯이 on으로 안 보임');
-    // 숫자 배너는 뺐다(2026-08-15) — 등급은 테두리가, 레벨은 가방 칸이 말한다
-    assert(!eq.querySelector('.pdLv'),'착용 칸에 숫자 배너가 아직 있음');
-    // Lv.1엔 기본 5칸만 열리고 나머지는 레벨로 잠겨 있어야 한다
-    const open=Object.keys(PROF_GEAR).filter(k=>!profSlotLocked(k));
-    assert(open.length===5,'Lv.1 해금 슬롯이 5칸이 아님: '+open.join(','));
-    for(const k of ['helmet','top','bottom','shoes','weapon']) assert(open.indexOf(k)>=0,'기본 슬롯이 잠김: '+k);
-    assert(body.querySelectorAll('.pdSlot.lock').length===armor.filter(k=>profSlotLocked(k)).length,'잠긴 칸 표시가 안 맞음');
-    CHAR().level=30; assert(Object.keys(PROF_GEAR).every(k=>!profSlotLocked(k)),'Lv.30인데 안 열린 칸이 있음');
-    CHAR().level=1;
-    // 가방은 아래 구역에 늘 열려 있어야 한다(시트로 감추지 않음)
-    assert(body.querySelector('.bagSec .bagBody .igGrid'),'가방 구역이 안 보임');
-    assert(body.querySelectorAll('.igGrid .igCell').length===2,'가방 격자 칸 수 불일치');
-    assert(!body.querySelector('.igInfo'),'아무것도 안 골랐는데 상세가 뜸');
-    profSelItem(it.iid);
-    const info=$('gearBody').querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
-    assert(info.textContent.indexOf('해제')>=0,'장착 중인데 해제 버튼이 아님');
-    assert(info.parentElement.classList.contains('bagSec'),'상세가 가방 구역 안에 겹치지 않음');
-    assert(getComputedStyle(info).position==='absolute','상세가 가방을 밀어내는 배치임(팝업이 아님)');
-    profCloseInfo(); assert(!$('gearBody').querySelector('.igInfo'),'상세 팝업이 안 닫힘');
-    profSlotTap('top');                                       // 슬롯 탭 → 가방을 그 칸으로 거른다
-    assert($('gearBody').querySelectorAll('.igGrid .igCell').length===1,'슬롯 필터가 안 걸림');
-    profSlotTap('top'); assert(_gearPick===null,'같은 칸을 다시 눌러도 전체로 안 돌아옴');
-    // ⛔ 마을 팝업 카드(#townPanel .twCard)의 높이 고정 검사는 걷어냈다 — 그 팝업이 다락으로 갔다(ATTIC.md).
-    //    정비는 전용 화면(#gearScreen)이라 카드 높이를 따로 잠글 필요가 없다.
-    return '장비 '+armor.length+'칸 / 장신구 '+acc.length+'칸(Lv.1 해금 '+open.length+')'; });
-  await step('장비창: 짐이 많아도 카드가 안 늘어나고 가방만 스크롤', ()=>{ skipIf(typeof bagScrollHint!=='function','가방 스크롤 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
-    profCreateChar('ranger','짐');
-    // ⚠ 가방은 '지금 페이지'의 부위만 보여 준다 — 아무 부위나 채우면 화면에 안 나와 넘치지 않는다
-    _gearPage=PROF_GEAR_PAGES[0].id;
-    const ks=profPageSlots(_gearPage), ts=PROF_ITEM_TIERS.map(t=>t.id);
-    for(let i=0;i<26;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
-    const ks2=profPageSlots(PROF_GEAR_PAGES[1].id);            // 다른 페이지 표본(가방이 페이지를 따라가는지 볼 것)
-    for(let i=0;i<5;i++) profAddItem(profMakeItem(ks2[i%ks2.length], 1+(i%5), ts[i%ts.length]));
-    saveMeta(); _gearPick=null; _gearSel=null;
-    openHome(); openGear(); CHAR().level=40; renderGear();
-    // ⚠ 「카드」는 이제 마을 팝업이 아니라 정비 화면의 판(.msPanel)이다 — 마을 팝업은 다락으로 갔다(ATTIC.md)
-    const body=$('gearBody'), card=$('gearScreen').querySelector('.msPanel');
-    const sc=body.querySelector('.bagScroll'), bag=body.querySelector('.bagBody'), sec=body.querySelector('.bagSec');
-    assert(sc&&bag,'가방 스크롤 영역이 없음');
-    // ① 넘치는 건 가방 안에서만 — 카드 본문 자체는 늘어나지도 스크롤되지도 않는다
-    assert(body.scrollHeight<=body.clientHeight+2,'짐이 많으면 카드 본문이 늘어남: '+body.scrollHeight+'>'+body.clientHeight);
-    assert(bag.scrollHeight>bag.clientHeight+4,'가방이 스크롤되지 않음(격자가 안 넘침)');
-    assert(getComputedStyle(bag).overflowY==='auto','가방 본문이 스크롤 영역이 아님');
-    // ② 가방 구역이 카드 밖으로 잘리지 않는다
-    const cr=card.getBoundingClientRect(), sr=sec.getBoundingClientRect();
-    assert(sr.bottom<=cr.bottom+1,'가방 구역이 카드 아래로 잘림: '+Math.round(sr.bottom)+'>'+Math.round(cr.bottom));
-    assert(sr.top>=cr.top,'가방 구역이 카드 위로 벗어남');
-    assert(cr.bottom<=innerHeight+1 && cr.top>=-1,'카드가 화면 밖으로 나감');
-    // ③ 가방은 위 구역보다 작아야 한다(짐이 늘어도 아바타를 잡아먹지 않음)
-    const pdr=body.querySelector('.pdWrap').getBoundingClientRect();
-    assert(pdr.height>sr.height,'가방이 착용 구역보다 큼: 가방 '+Math.round(sr.height)+' / 착용 '+Math.round(pdr.height));
-    // ④ 더 볼 게 남았다는 표시 · 6그리드 · 분류
-    assert(sc.classList.contains('more'),'스크롤이 남았는데 "더 있음" 표시가 없음');
-    // 재렌더 뒤엔 아래 노드들이 떨어져 나가 크기가 0이 되므로 여기서 숫자를 잡아 둔다
-    const bh=bag.clientHeight, bs=bag.scrollHeight;
-    const cells=[...body.querySelectorAll('.igCell')].slice(0,8).map(e=>e.getBoundingClientRect());
-    const perRow=cells.filter(r=>Math.abs(r.top-cells[0].top)<2).length;
-    assert(perRow===6,'가방이 6그리드가 아님: 한 줄 '+perRow+'칸');
-    assert(cells[0].width<=54,'가방 칸이 너무 큼: '+Math.round(cells[0].width)+'px');
-    const rows=Math.floor(bh/(cells[0].height+6));
-    assert(rows>=3,'가방이 한 화면에 3줄도 못 보여줌: '+rows+'줄('+Math.round(bh)+'px)');
-    // 가방은 위 페이지 네비(장비/장신구)를 따라간다 — 따로 거르는 분류 칩은 없다
-    assert(!body.querySelector('.bagCat'),'가방에 분류 칩이 남아 있음');
-    const nItem=pg=>profItems().filter(i=>(PROF_GEAR[i.slot]||{}).part===pg).length;
-    const nArm=nItem(PROF_GEAR_PAGES[0].id), nAcc=nItem(PROF_GEAR_PAGES[1].id);
-    assert(nArm>0 && nAcc>0 && nArm!==nAcc,'페이지 검사용 표본이 치우침: 장비 '+nArm+' / 장신구 '+nAcc);
-    assert(body.querySelector('.bagHead .bagTtl').textContent===PROF_GEAR_PAGES[0].name,'가방 머리가 지금 페이지 이름이 아님');
-    assert(body.querySelectorAll('.igCell').length===nArm,'가방이 장비 페이지 것만 보여 주지 않음');
-    profGearPageAt(1);
-    assert($('gearBody').querySelector('.bagHead .bagTtl').textContent===PROF_GEAR_PAGES[1].name,'페이지를 넘겨도 가방 머리가 안 바뀜');
-    assert($('gearBody').querySelectorAll('.igCell').length===nAcc,'페이지를 넘겨도 가방이 안 따라감');
-    profGearPageAt(0);
-    assert($('gearBody').querySelectorAll('.igCell').length===nArm,'페이지를 되돌려도 가방이 안 따라감');
-    // 칸 안 숫자(강화 수치)는 지웠다 · 테두리는 착용 칸과 같은 처리
-    const cell0=$('gearBody').querySelector('.igCell');
-    assert(!cell0.querySelector('.igLv'),'가방 칸에 숫자가 남아 있음');
-    const cs0=getComputedStyle(cell0), bf=getComputedStyle(cell0,'::before');
-    assert(parseFloat(cs0.borderTopLeftRadius)<=3,'가방 칸이 착용 칸보다 둥금: '+cs0.borderTopLeftRadius);
-    assert(bf.backgroundImage.indexOf('gradient')>=0,'가방 칸에 착용 칸과 같은 빛 테두리가 없음');
-    // ⑤ 스크롤한 채로 아이템을 골라 다시 그려도 보던 위치를 유지한다(위 분류 조작으로 노드가 갈렸으니 다시 잡는다)
-    const bagNow=$('gearBody').querySelector('.bagBody');
-    bagNow.scrollTop=90; bagScrollHint();
-    profSelItem(profItems()[12].iid);
-    const bag2=$('gearBody').querySelector('.bagBody');
-    assert(Math.abs(bag2.scrollTop-90)<=2,'다시 그리면 가방 스크롤이 맨 위로 튐: '+bag2.scrollTop);
-    // ⑥ 상세는 가방 위로 겹쳐 뜨는 팝업 — 레이아웃을 밀지 않는다
-    const info=$('gearBody').querySelector('.igInfo'); assert(info,'고른 아이템 상세가 없음');
-    const sec2=$('gearBody').querySelector('.bagSec'), pd2=$('gearBody').querySelector('.pdWrap');
-    assert(Math.abs(sec2.getBoundingClientRect().height-sr.height)<=1,'상세가 뜨자 가방 구역 높이가 바뀜(밀어냄)');
-    assert(Math.abs(pd2.getBoundingClientRect().height-pdr.height)<=1,'상세가 뜨자 착용 구역이 밀림');
-    const ir=info.getBoundingClientRect(), bsr=$('gearBody').querySelector('.bagScroll').getBoundingClientRect();
-    assert(ir.top<bsr.bottom-8,'상세가 가방 위로 겹치지 않고 아래에 붙음');
-    // ⚠ 알려진 것: 정비 전용 화면에서 상세가 판(.msPanel) 밑변을 **5px 넘는다**(마을 팝업 시절엔 카드 높이가
-    //    잠겨 있어 안 넘쳤다). 화면 밖으로 나가지는 않아 기능엔 지장이 없다 — 여기서는 「화면을 안 벗어난다」를 잰다.
-    //    판 밑변까지 딱 맞추려면 .igInfo 의 자리잡기를 손봐야 한다(아직 안 했다 · 2026-08-27).
-    assert(ir.bottom<=$('gearScreen').getBoundingClientRect().bottom+1,'상세 팝업이 화면을 넘침');
-    assert(info.querySelector('.igClose'),'상세 팝업에 닫기 버튼이 없음');
-    twLeave();
-    return '가방 '+Math.round(bh)+'px에 '+rows+'줄 · 내용 '+bs+'px'; });
   // DESIGN.md 규칙을 이 화면에만 강제한다. 다른 화면은 전환될 때 각자 스텝을 추가할 것.
   await step('장비 등급: 계정 공용 7단계 사다리를 그대로 쓴다', ()=>{
     skipIf(typeof PROF_ITEM_TIERS==='undefined','장비 등급 없음');
@@ -15969,65 +15389,6 @@ async function groupLobby(){
     try{ for(let i=0;i<40000;i++) seen[profMakeItem('weapon',40).tier]=1; } finally{ Math.random=or; }
     for(const id of ids) assert(seen[id],'깊은 층에서도 안 나오는 등급: '+id);
     return ids.length+'단계 · '+PROF_ITEM_TIERS[6].mul+'배까지'; });
-  await step('장비 등급 프레임: 착용 칸과 가방 칸이 한 사다리', ()=>{
-    skipIf(typeof tierFrame!=='function','등급 프레임 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
-    profCreateChar('ranger','프레임');
-    const ts=PROF_ITEM_TIERS.map(t=>t.id), ks=profPageSlots('armor');
-    ts.forEach((t,i)=>profAddItem(profMakeItem(ks[i%ks.length], 5, t)));
-    const c=CHAR(); c.level=40;
-    const hi=profItems().find(i=>i.tier==='god'); profEquipItem(hi.iid);
-    saveMeta(); _gearPick=null; _gearSel=null; _gearPage='armor';
-    openHome(); openGear(); renderGear();
-    const body=$('gearBody');
-    // ① 두 곳 다 같은 헬퍼가 그린다 — 단계 속성과 프레임 층이 빠지면 안 된다
-    const on=body.querySelector('.pdSlot.on');
-    assert(on && on.dataset.tr==='7','착용 칸에 단계 속성이 없음: '+(on&&on.dataset.tr));
-    assert(on.querySelector('.tfx'),'착용 칸에 프레임 층(.tfx)이 없음');
-    const cells=[...body.querySelectorAll('.igCell')];
-    assert(cells.length===ts.length,'가방 표본 수가 안 맞음: '+cells.length);
-    assert(cells.every(e=>e.querySelector('.tfx')),'가방 칸에 프레임 층이 없음');
-    // ② 빈 칸은 등급 구조를 하나도 갖지 않는다
-    const emp=body.querySelector('.pdSlot.empty');
-    assert(emp && !emp.dataset.tr,'빈 칸에 단계 속성이 붙음');
-    assert(emp && !emp.querySelector('.tfx'),'빈 칸에 프레임 층이 붙음');
-    // ③ 단계가 오를수록 구조가 '늘기만' 한다 — 어느 축도 뒤로 가면 안 된다
-    const rank=e=>+e.dataset.tr;
-    const byTier={}; for(const e of cells) byTier[rank(e)]=e;
-    let prev=null, grew=0;
-    for(let r=1;r<=7;r++){ const e=byTier[r]; assert(e,'단계 '+r+' 표본이 없음');
-      const cs=getComputedStyle(e), fx=getComputedStyle(e.querySelector('.tfx'));
-      const now={ b:parseFloat(getComputedStyle(e.querySelector('.tfx'),'::before').height)||0,
-                  ring:parseFloat(fx.getPropertyValue('--tfR'))||0,
-                  brk:parseFloat(fx.getPropertyValue('--tfKL'))||0,
-                  glow:parseFloat(cs.getPropertyValue('--tfG'))||0 };
-      if(prev){ for(const k in now) assert(now[k]>=prev[k], '단계 '+r+'에서 '+k+'가 뒤로 감: '+prev[k]+'→'+now[k]);
-        if(Object.keys(now).some(k=>now[k]>prev[k])) grew++; }
-      prev=now; }
-    assert(grew===6,'단계가 올라가도 구조가 그대로인 구간이 있음: '+grew+'/6');
-    // ④ 색은 인라인으로 들어오고 CSS는 currentColor 로만 받는다 — 등급 색값을 CSS에 복제하면 실패
-    const god=byTier[7];
-    assert(god.style.color.replace(/\s/g,'')==='rgb(255,43,214)','가방 칸이 등급색을 인라인으로 안 받음: '+god.style.color);
-    // ⚠ var() 가 든 선언은 크롬이 '적은 그대로' 보관한다 — #hex 가 rgb() 로 안 바뀐다. 두 표기 다 찾아야 한다.
-    const hex2rgb=h=>{ const n=parseInt(h.slice(1),16);
-      return 'rgb('+((n>>16)&255)+', '+((n>>8)&255)+', '+(n&255)+')'; };
-    let frameCss='';
-    for(const sh of document.styleSheets){ try{ for(const r of sh.cssRules){
-      if(/pdSlot|igCell|tfx|data-tr/.test(r.selectorText||'')) frameCss+=r.cssText+'\n'; } }catch(e){} }
-    assert(frameCss.length>400,'프레임 CSS를 못 읽음: '+frameCss.length);
-    const low=frameCss.toLowerCase();
-    const dup=Object.keys(TIER_COLOR).filter(t=>
-      low.indexOf(TIER_COLOR[t].toLowerCase())>=0 || low.indexOf(hex2rgb(TIER_COLOR[t]))>=0);
-    assert(!dup.length,'등급 색값이 CSS에 복제됨(currentColor 로 받아야 한다): '+dup.join(','));
-    // 글로우가 실제로 사다리를 타는가 — 두 칸 모두 --tfG 를 써야 한다(계산된 값 비교로는 색 차이에 묻힌다)
-    // 줄바꿈은 원문 그대로 보관되므로 줄 단위로 세면 안 된다 — 공백을 눌러 선언 단위로 자른다
-    const glowUses=frameCss.replace(/\s+/g,' ').split(';')
-      .filter(d=>/box-shadow/.test(d) && /var\(--tfG\)/.test(d)).length;
-    assert(glowUses>=2,'글로우가 단계를 안 탐 — box-shadow 가 --tfG 를 쓰는 곳 '+glowUses+'곳(착용·가방 둘 다여야 한다)');
-    // ⑤ 칸 안 숫자·등급 배지는 없다(테두리가 말한다)
-    assert(!god.querySelector('.igLv'),'칸에 숫자가 남아 있음');
-    twLeave();
-    return '7단계 · 구조 6번 증가 · 착용/가방 공용'; });
   await step('장비 아이콘: 그림이 없으면 라인아트로 돌아간다(404 없음)', ()=>{
     skipIf(typeof gearIco!=='function','장비 아이콘 파이프라인 없음');
     // 목록에 없는 부위/등급은 절대 <img> 를 만들지 않는다 — 가방 40칸이 전부 404를 쏘게 된다
@@ -16044,44 +15405,6 @@ async function groupLobby(){
     // 부위마다 라인아트가 실재해야 한다(빈 svg 는 빈 칸으로 보인다)
     for(const slot in PROF_GEAR) assert((PROF_SLOT_ICON[slot]||'').indexOf('<path')>=0,'라인아트 없음: '+slot);
     return GEAR_ART.size+'장 등록 · 나머지 '+Object.keys(PROF_GEAR).length+'부위 라인아트'; });
-  await step('장비창: DESIGN.md 규칙(라운드 토큰 · 시안 1곳 · 1px 테두리)', ()=>{
-    skipIf(typeof profPickSlot!=='function','장비창 없음');
-    const p=PROF(); p.chars.length=0; p.curId=''; p.items.length=0;
-    profCreateChar('ranger','룰');
-    const ks=Object.keys(PROF_GEAR), ts=PROF_ITEM_TIERS.map(t=>t.id);
-    for(let i=0;i<14;i++) profAddItem(profMakeItem(ks[i%ks.length], 1+(i%5), ts[i%ts.length]));
-    saveMeta(); _gearPick=null; _gearSel=null; _gearPage=PROF_GEAR_PAGES[0].id;
-    openHome(); openGear(); CHAR().level=40; renderGear();
-    const body=$('gearBody'), OK=['3px','6px','9px'];
-    const scan=()=>{ const bad=[], cyan=[];
-      for(const e of body.querySelectorAll('*')){ const c=getComputedStyle(e);
-        for(const v of c.borderRadius.split(/[\s\/]+/))
-          if(v && v!=='0px' && v!=='50%' && OK.indexOf(v)<0) bad.push((e.className||e.tagName)+'='+v);
-        if(parseFloat(c.borderTopWidth)>1.5) bad.push((e.className||e.tagName)+' 테두리 '+c.borderTopWidth);
-        // 면·링을 시안으로 채운 요소만 센다(2px 밑줄 라인은 ::after라 여기 안 잡힘)
-        const t=c.borderColor+' '+c.backgroundImage+' '+c.boxShadow+' '+c.backgroundColor;
-        if(/92,\s*214,\s*255|5cd6ff/i.test(t)) cyan.push(e.className||e.tagName);
-      } return {bad:bad, cyan:cyan}; };
-    let r=scan();
-    assert(!r.bad.length,'토큰 밖 라운드/두꺼운 테두리: '+r.bad.slice(0,4).join(', '));
-    // 아무것도 안 골랐으면 시안 채움은 없어야 한다(탭·분류는 중립 강조)
-    assert(!r.cyan.length,'선택 전인데 시안을 쓴 요소가 있음: '+r.cyan.slice(0,4).join(', '));
-    profGearPageAt(1);
-    r=scan(); assert(!r.cyan.length,'섹션/페이지 전환이 시안을 채움: '+r.cyan.slice(0,4).join(', '));
-    profGearPageAt(0);
-    // 아이템을 고르면 그 칸 하나만 시안(공용 .twBtn 제외 — 마을 전체 전환 때 처리)
-    profSelItem(profItems().filter(i=>(PROF_GEAR[i.slot]||{}).part===_gearPage)[2].iid);   // 가방은 지금 페이지 것만 보인다
-    r=scan();
-    const own=r.cyan.filter(c=>String(c).indexOf('twBtn')<0);
-    assert(own.length===1 && String(own[0]).indexOf('igCell')>=0,
-      '선택 시 시안이 정확히 고른 칸 하나가 아님: '+JSON.stringify(own));
-    // 숫자는 Rajdhani + tabular-nums
-    for(const sel of ['.gearSum b','.gsSub']){ const e=body.querySelector(sel);
-      if(!e) continue; const c=getComputedStyle(e);
-      assert(/Rajdhani/i.test(c.fontFamily), sel+' 숫자가 Rajdhani가 아님: '+c.fontFamily);
-      assert(c.fontVariantNumeric.indexOf('tabular-nums')>=0, sel+' tabular-nums 없음'); }
-    profCloseInfo(); twLeave();
-    return '라운드 3/6/9 · 시안 1곳 · 테두리 1px'; });
   await step('던전: 도전 가능 층이 레벨로 열린다', ()=>{ skipIf(typeof dgFloorCap!=='function','층 해금 없음');
     const p=PROF(); p.chars.length=0; p.curId='';
     const c=profCreateChar('ranger','층'); c.level=1;

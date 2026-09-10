@@ -1298,7 +1298,6 @@ const SPR_UNITS={
     states:{ idle:{frames:8,fps:8,loop:1}, walk:{frames:8,fps:12,loop:1}, attack:{frames:6,fps:14,loop:0} },
     url:{ idle:'assets/sprites/marine/idle.png', walk:'assets/sprites/marine/walk.png', attack:'assets/sprites/marine/attack.png' } },
 };
-function sprSheet(key){ return SPR_UNITS[key]||null; }
 const SPR_MARINE=SPR_UNITS.marine;   // 실험장이 쓰던 이름(그대로 유지 — 같은 객체다)
 let _spr=null, _sprRaf=0, _sprLast=0, _sprScale=1.15, _sprSpin=null;
 const SPR_SPEED=125;   // px/s
