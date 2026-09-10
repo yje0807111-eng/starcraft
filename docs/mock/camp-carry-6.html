@@ -1,0 +1,44 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>운반 덩어리 6안</title>
+<style>
+/* 🎒 일꾼이 든 덩어리 — 실제 3D 를 값만 바꿔 찍은 시안(2026-09-08 · scripts/camp-carry-shot.mjs)
+   ⚠ 목업(HTML)이 아니다. 여섯 장 전부 **같은 장면·같은 줌**에서 값만 갈아 찍은 실제 화면이다. */
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 40px;font-family:'Pretendard','Malgun Gothic',sans-serif;
+  background:#0a0c10;color:#e6e9f2}
+h1{margin:0 0 4px;font-size:15px;letter-spacing:.04em;color:#cfd6e6}
+.sub{margin:0 0 18px;font-size:11.5px;color:#78829a;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:900px}
+@media (max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{padding:11px;border-radius:10px;background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06)}
+.cell.base{background:rgba(255,120,120,.05);border-color:rgba(255,120,120,.22)}
+.no{display:flex;align-items:baseline;gap:7px;margin:0 0 3px}
+.no b{font-size:13px;color:#fff}
+.no span{font-size:10.5px;color:#8a93a8}
+.val{margin:0 0 9px;font:700 10px/1.5 'Rajdhani',sans-serif;color:#6f7a8e}
+img{display:block;width:100%;border-radius:7px;image-rendering:auto}
+</style></head><body>
+<h1>일꾼이 든 덩어리 — 6안</h1>
+<p class="sub">여섯 장 전부 <b>같은 장면·같은 줌</b>에서 값만 갈아 찍은 <b>실제 3D 화면</b>이다(목업 아님).<br>
+지금 것의 문제 둘: 덩어리가 <b>일꾼만큼 크고</b>, 몸에서 떨어져 <b>공중에 떠</b> 있다.</p>
+<div class="grid">
+  <div class="cell base"><div class="no"><b>지금</b><span>고칠 대상</span></div>
+    <p class="val">앞 0.014 · 옆 0 · 높이 −3 · 크기 1.00</p>
+    <img src="_carry/carry-a-now.png" alt=""></div>
+  <div class="cell"><div class="no"><b>①</b><span>작게만</span></div>
+    <p class="val">앞 0.014 · 옆 0 · 높이 −3 · 크기 0.45</p>
+    <img src="_carry/carry-b-small.png" alt=""></div>
+  <div class="cell"><div class="no"><b>②</b><span>작게 + 아래로</span></div>
+    <p class="val">앞 0.010 · 옆 0 · 높이 +6 · 크기 0.45</p>
+    <img src="_carry/carry-c-down.png" alt=""></div>
+  <div class="cell"><div class="no"><b>③</b><span>작게 + 손 앞</span></div>
+    <p class="val">앞 0.012 · 옆 0 · 높이 +2 · 크기 0.38</p>
+    <img src="_carry/carry-d-hand.png" alt=""></div>
+  <div class="cell"><div class="no"><b>④</b><span>작게 + 옆구리</span></div>
+    <p class="val">앞 0.004 · 옆 0.010 · 높이 +4 · 크기 0.38</p>
+    <img src="_carry/carry-e-side.png" alt=""></div>
+  <div class="cell"><div class="no"><b>⑤</b><span>작게 + 머리 위</span></div>
+    <p class="val">앞 0.002 · 옆 0 · 높이 −6 · 크기 0.42</p>
+    <img src="_carry/carry-f-head.png" alt=""></div>
+</div></body></html>

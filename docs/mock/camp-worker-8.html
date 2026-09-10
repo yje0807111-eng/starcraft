@@ -1,0 +1,49 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>일꾼이 서는 자리 8안</title>
+<style>
+/* 🧍 일꾼이 서는 자리 — 실제 3D 를 값만 바꿔 찍은 시안(2026-09-08 · scripts/camp-worker-shot.mjs)
+   ⚠ 목업(HTML)이 아니다. 같은 장면·같은 줌에서 값만 갈아 찍은 실제 화면이다. */
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 40px;font-family:'Pretendard','Malgun Gothic',sans-serif;
+  background:#0a0c10;color:#e6e9f2}
+h1{margin:0 0 4px;font-size:15px;letter-spacing:.04em;color:#cfd6e6}
+.sub{margin:0 0 14px;font-size:11.5px;color:#78829a;line-height:1.6}
+.gh{margin:18px 0 8px;font-size:12px;font-weight:800;color:#9fb6cc;letter-spacing:.05em}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:1000px}
+@media (max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{padding:10px;border-radius:10px;background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06)}
+.cell.base{background:rgba(255,120,120,.05);border-color:rgba(255,120,120,.22)}
+.no{display:flex;align-items:baseline;gap:6px;margin:0 0 2px}
+.no b{font-size:12.5px;color:#fff}
+.no span{font-size:10px;color:#8a93a8}
+.val{margin:0 0 8px;font:700 10px/1.4 'Rajdhani',sans-serif;color:#6f7a8e}
+img{display:block;width:100%;border-radius:7px}
+</style></head><body>
+<h1>일꾼이 서는 자리 — 채취 4안 · 건설 4안</h1>
+<p class="sub">여덟 장 전부 <b>같은 장면·같은 줌</b>에서 값만 갈아 찍은 <b>실제 3D 화면</b>이다(목업 아님).</p>
+
+<div class="gh">Ⓐ 채취 — 광맥에서 얼마나 물러설까 <span style="font-weight:400;color:#6f7a8e">(TECH_MINE_STAND)</span></div>
+<div class="grid">
+  <div class="cell base"><div class="no"><b>지금</b><span>고칠 대상</span></div>
+    <p class="val">물러섬 1.0</p><img src="_wk/wk-mine-a.png" alt=""></div>
+  <div class="cell"><div class="no"><b>①</b><span>바싹</span></div>
+    <p class="val">물러섬 0.35 — 덩어리에 파고든다</p><img src="_wk/wk-mine-b.png" alt=""></div>
+  <div class="cell"><div class="no"><b>②</b><span>조금 떨어져</span></div>
+    <p class="val">물러섬 1.7</p><img src="_wk/wk-mine-c.png" alt=""></div>
+  <div class="cell"><div class="no"><b>③</b><span>많이 떨어져</span></div>
+    <p class="val">물러섬 2.6</p><img src="_wk/wk-mine-d.png" alt=""></div>
+</div>
+
+<div class="gh">Ⓑ 건설 — 건물 발판의 어디에 설까 <span style="font-weight:400;color:#6f7a8e">(TECH_BUILD_SIDE)</span></div>
+<div class="grid">
+  <div class="cell base"><div class="no"><b>지금</b><span>고칠 대상</span></div>
+    <p class="val">발판 반지름 ×0.6 — 발판 안쪽</p><img src="_wk/wk-build-a.png" alt=""></div>
+  <div class="cell"><div class="no"><b>④</b><span>발판 가장자리</span></div>
+    <p class="val">×1.0</p><img src="_wk/wk-build-b.png" alt=""></div>
+  <div class="cell"><div class="no"><b>⑤</b><span>조금 바깥</span></div>
+    <p class="val">×1.35</p><img src="_wk/wk-build-c.png" alt=""></div>
+  <div class="cell"><div class="no"><b>⑥</b><span>안쪽 깊이</span></div>
+    <p class="val">×0.3 — 건물에 파묻힌다</p><img src="_wk/wk-build-d.png" alt=""></div>
+</div>
+</body></html>

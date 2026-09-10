@@ -387,7 +387,13 @@ function techResumeBuild(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); i
   if(!wk){ let bdst=1e9; for(const e of G.tech.ents){ if(e.type==='worker'&&e.build==null){ const d=(e.x-bd.x)*(e.x-bd.x)+(e.y-bd.y)*(e.y-bd.y); if(d<bdst){ bdst=d; wk=e; } } } }   // 없으면 가장 가까운 유휴 일꾼
   if(!wk){ if(typeof toast==='function') toast('⛔ 건설할 일꾼이 없음'); return; }
   wk.build=bd.eid; wk._working=false; wk._bpSide=null; wk._bpT=null;
-  _techRoute(wk, Math.max(techBX0(),Math.min(techBX1(),bd.x)), Math.max(techBY0(),Math.min(techBY1(),bd.y+0.05)));   // 건설지까지 우회 경로로 이동
+  // 🧱 **건물 아랫변으로 간다** — ⛔ `bd.y+0.05` 처럼 고정값으로 보내지 말 것(2026-09-08 사용자 신고).
+  //   실측: 칸 높이가 0.0112 라 0.05 는 **4.5칸 아래**다. 건물 반높이는 1~1.5칸뿐이라
+  //   일꾼이 건물에서 세 칸이나 떨어진 곳으로 먼저 걸어갔다가, 건설이 시작되면 그제서야
+  //   제자리(_techBldgSide)로 다시 붙었다 — 「한참 아래에서 시작한다」가 그것이다.
+  //   ⭐ 그래서 **일하는 자리와 같은 함수**로 보낸다. 건물 크기를 저절로 탄다.
+  { const _bs=_techBldgSide(bd, 2);   // 2 = 아래쪽 면
+    _techRoute(wk, Math.max(techBX0(),Math.min(techBX1(),_bs.x)), Math.max(techBY0(),Math.min(techBY1(),_bs.y))); }
   bd._bpause=false; bd.waiting=true;   // 일꾼 도착까지 대기(카운트다운 정지) → 도착 시 이어서 건설
   G.tech.selU=[]; G.tech.sel=bd.eid;   // 재개 = 일꾼 중복 지정 해제하고 해당 건물만 지정(건물 프로필 표시)
   if(typeof playSfx==='function') playSfx('ui_confirm'); techUIRender(); }
@@ -966,7 +972,9 @@ function techPlace(x,y){ if(G.tech&&G.tech.armNydusExit!=null){ _techPlaceNydusE
   const ne={eid:G.tech.eseq++, type:'bldg', bk:b.k, x:bx, y:by, bt:bt, btMax:bt, waiting:(bt>0&&!!wk)};
   G.tech.ents.push(ne);
   if(bt<=0){ techFinishBuild(ne); }   // 즉시(노쿨) 완성
-  else if(wk){ wk.build=ne.eid; _techRoute(wk, Math.max(techBX0(),Math.min(techBX1(),bx)), Math.max(techBY0(),Math.min(techBY1(),by+0.05))); }   // 일꾼 → 건설지까지 우회 경로로 이동
+  // 🧱 일꾼 → **건물 아랫변**으로(위 ①과 같은 규칙 · ⛔ 고정 0.05 로 되돌리지 말 것)
+  else if(wk){ wk.build=ne.eid; const _bs=_techBldgSide(ne, 2);
+    _techRoute(wk, Math.max(techBX0(),Math.min(techBX1(),_bs.x)), Math.max(techBY0(),Math.min(techBY1(),_bs.y))); }
   G.tech.arm=null; G.tech.armXY=null; const sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); sh.open=true; sh.sec='ent';
   if(wk){ const rest=_preAllIds.filter(id=>id!==wk.eid); G.tech.sel=null; G.tech.selType=null; G.tech.selU=rest.length?rest:[wk.eid]; }   // 🔨 건설 일꾼만 지정에서 빠지고 나머지 유닛(마린 등)은 지정 유지 — 혼자면 그 일꾼 유지
   else if(_preAllIds.length){ G.tech.sel=null; G.tech.selType=null; G.tech.selU=_preAllIds.slice(); }   // 노쿨(즉시건설): 지정했던 유닛 그대로 유지(건물로 안 바뀜)

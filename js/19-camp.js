@@ -2611,6 +2611,20 @@ function campAdoptBaseUnits(){
     if(e.type !== 'unit' || !STK_UNITS[e.uid]) continue;
     ents.splice(i, 1); take.push(e); }
   for(const e of take) campDeploy(e.uid, e.x, e.y);
+  // 🧹 **데려간 유닛은 기지 지정에서도 뺀다**(2026-09-08 사용자 신고로 실측·수정).
+  //   ⛔ 무엇이 문제였나 — 캠프에서 병력을 지정한 채 던전으로 내려가면 그 엔티티는 여기서
+  //     사라지는데 `G.tech.selU` 에는 번호가 그대로 남았다. 실측: 내려간 뒤 selU 3개 · **실재 0개**.
+  //     그 상태에서 기지 입력 처리는 「지정이 있다」고 믿고 모든 탭을 **유령 유닛의 이동 명령**으로
+  //     삼켰다(확인음만 나고 아무 일도 안 일어난다) — 조금이라도 끌면 탭 판정까지 통째로 빠진다.
+  //     ⊘ 버튼도 켜진 채 남았다(그 버튼은 selU 길이로만 켜진다).
+  //   ⚠ 건물 지정(`G.tech.sel`)은 건드리지 않는다 — 건물은 던전에도 그대로 서 있다.
+  if(take.length && G.tech.selU && G.tech.selU.length){
+    const gone = new Set(take.map(function(e){ return e.eid; }));
+    const left = G.tech.selU.filter(function(id){ return !gone.has(id); });
+    if(left.length !== G.tech.selU.length){
+      G.tech.selU = left;
+      // ⊘ 버튼과 시트는 techPanelRender 한 곳이 정한다 — 여기서 다시 그려 상태를 맞춘다.
+      if(typeof techPanelRender === 'function') techPanelRender(); } }
   return take.length; }
 // 🧳 전장을 닫을 때 **병력을 기지 엔티티로 되돌린다** (2026-08-29 · 페이블 점검에서 발견).
 //   ⛔ 유닛이 한 번만 태어나는 구조에서 전장 유닛은 CAMPB 에만 있는 **유일본**이다.
@@ -2631,7 +2645,13 @@ function campBattleClose(){
       G.tech.ents.push({ eid:G.tech.eseq++, type:'unit', uid:(u.gm || u.id), x:g.gx, y:g.gy });
     }
   }
-  CAMPB = null; }
+  CAMPB = null;
+  // 🧹 **지정을 들고 나가지 않는다**(2026-09-08 사용자 확정 — 던전을 옮기면 기본 상태로 들어간다).
+  //   ⭐ 여기가 유일한 자리다: 던전 이동·패배·환생·화면 이탈이 전부 이 함수를 지난다.
+  //   ⛔ 안 지우면 지정 번호(uid)가 **사라진 전장의 것**이라 아무 유닛도 못 찾는데 ⊘ 버튼만 켜져 있고,
+  //     새 전장에서 우연히 같은 번호가 나면 엉뚱한 유닛이 골라진다.
+  //   ⚠ campSelClear 가 시트·⊘ 버튼까지 되돌린다(_campSelChanged → techPanelRender).
+  campSelClear(); _campCmd = false; _campBox = null; }
 
 // ══ 🏢 기지 건물을 전장에 올린다 (2026-08-27) ═══════════════════════════
 // **패배 = 내 건물이 전부 부서지는 것**이다. 예전에는 전장에 본부 하나뿐이라
@@ -3055,7 +3075,7 @@ function campBattleInBox(g0, g1){
   return out; }
 // 🪧 고른 유닛들의 **자리를 옮긴다** — 한 점에 포개지지 않게 대형으로 편다.
 //   ⭐ 대형 슬롯은 기지 랠리가 쓰는 _ringSlotN 을 그대로 빌린다(새로 만들지 않는다).
-function campMoveSel(gx, gy){
+function campMoveSel(gx, gy, quiet){
   const list = campSelList(); if(!list.length || !CAMPB) return 0;
   const W = CAMPB.world || 4800, c = campG2W(gx, gy, W);
   for(let i = 0; i < list.length; i++){ const u = list[i];
@@ -3075,8 +3095,42 @@ function campMoveSel(gx, gy){
     u._order = { x:px, y:py }; u._ordBest = Infinity; u._ordT = 0;
     u._idleT = CAMP_RETURN_DELAY;                 // 복귀 대기를 안 탄다(도착 뒤에도 바로 AI 로)
   }
-  if(typeof playSfx === 'function') playSfx('ui_confirm');
+  // ⚠ 손가락을 끄는 동안 매 프레임 다시 부르므로(campCmdMove) 그때는 소리를 내지 않는다 — 기지도 그렇다
+  //   (기지는 down 에서 한 번만 ui_confirm 을 울리고 move 에서는 안 울린다 · 17-build-cards.js).
+  if(!quiet && typeof playSfx === 'function') playSfx('ui_confirm');
   return list.length; }
+
+/* 🖐 **누르는 순간 명령이 나간다 — 기지와 같은 규칙** (2026-09-08 사용자 신고로 실측·수정)
+ * ⛔ 무엇이 문제였나 — 던전에서는 이동 명령을 **뗄 때(up)** 만 냈고, 그 앞에 「끌었으면 박스 지정」
+ *   판정이 있었다. 그런데 박스 문턱이 두 축 합 **6px** 이라, 보통의 탭에서 생기는 손 흔들림만으로도
+ *   박스로 새어 **명령이 통째로 버려졌다.** 실측(scripts/_tmp_taptrace · 좌우 10연타):
+ *     또박또박 10/10 · **흔들림 4px 0/10** · 흔들림 8px 0/10 · 빠른 연타 9/10 · 겹치는 두 손가락 9/10
+ *   → 「몇 번의 입력이 안 먹는다」의 정체는 연타 속도가 아니라 **손 흔들림**이었다.
+ * ⭐ 기지는 애초에 이 구조가 아니다 — 지정이 있으면 **누르는 순간** `_btCmd` 를 세우고
+ *   `_techAssignMove` 로 명령을 내고, 끄는 동안 목표만 갱신한다. 박스는 **무지정일 때만** 만든다
+ *   (17-build-cards.js techPtrDown 끝). 그래서 기지에서는 흔들려도 멀쩡했다.
+ * ⭐ 그 규칙을 그대로 가져온다. 부수 효과도 기지와 같아진다 —
+ *   지정 중에는 박스 지정도, 롱프레스 화면 이동도 안 걸린다(둘 다 `_btCmd` 를 보고 빠진다).
+ *   화면을 옮기려면 **두 손가락**(2026-09-01 사용자 확정) 또는 ⊘ 로 지정을 풀면 된다.
+ * ⚠ 전장 유닛 위는 제외한다 — 그건 「다른 유닛을 고르기」이고 up 에서 처리한다(기지도 같다).
+ *   ⚠ campEmptyAt 은 **기지 엔티티만** 본다(전장 유닛은 CAMPB 에 있어 「빈 바닥」으로 나온다).
+ */
+let _campCmd = false;              // 지금 손가락이 이동 명령을 끌고 있나
+function campCmdAt(ev){
+  if(!_campOn || !CAMPB || campDgN() <= 0 || !ev) return null;
+  const sel = campSelList(); if(!sel.length) return null;      // 지정이 없으면 명령이 아니다(= 박스)
+  if(typeof campEmptyAt !== 'function' || !campEmptyAt(ev.clientX, ev.clientY)) return null;
+  // ⚠ campEmptyAt 은 **기지 엔티티만** 본다 — 전장 유닛은 CAMPB 에 있어 「빈 바닥」으로 나온다.
+  //   기지 규칙을 그대로 옮긴다: **한 기만 지정한 상태에서 다른 유닛**을 누른 것만 「고르기」로 넘기고
+  //   (up 의 ② 가 받는다), 그 밖(같은 유닛 · 여러 기 지정)은 기지처럼 그 자리로 **명령**이다.
+  const hit = campBattleAt(ev.clientX, ev.clientY);
+  if(hit && sel.length === 1 && hit.uid !== sel[0].uid) return null;
+  return campScr2G(ev.clientX, ev.clientY); }
+// 끄는 동안 목표만 갱신한다 — 소리는 안 낸다
+function campCmdMove(ev){
+  if(!_campCmd || !ev) return false;
+  const g = campScr2G(ev.clientX, ev.clientY); if(!g) return false;
+  campMoveSel(g.x, g.y, true); return true; }
 
 // 🖐 up 에서 캠프가 **먼저** 판정한다. true 를 돌리면 원본은 이 탭을 쓰지 않는다.
 //   ⚠ 순서가 중요하다 — 박스가 먼저다(끌었으면 탭이 아니다).
@@ -4047,6 +4101,9 @@ function campDungeonSwap(){
   campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
   campRoundRevive();                               // 🩹 던전이 바뀌어도 온전한 상태로 시작한다
   campRegroup();                                   // 🧭 표적을 풀어 자기 자리로 돌아가게 (아래)
+  // 🧹 **50라운드를 채워 자동으로 넘어갈 때도 지정을 푼다** — 손으로 옮길 때(campBattleClose)와 같은 규칙.
+  //   ⚠ 여기서는 전장이 안 닫히므로(적만 갈아 끼운다) campBattleClose 를 안 지난다.
+  campSelClear(); _campCmd = false; _campBox = null;
   // ⏸ **던전이 바뀔 때도 숨 고르기를 준다**(2026-08-30 사용자 확정) — 라운드 사이와 같은 6초.
   //   그 사이 병력이 걸어서 자리를 잡고, 다 모인 뒤에 새 던전의 적이 나온다.
   //   ⛔ 0 으로 두면 적이 곧바로 쏟아져 흩어진 채로 첫 라운드를 맞는다.
@@ -6511,6 +6568,23 @@ function campPatchZoom(){
         return;
       }
       const ret = oDown.apply(this, arguments);
+      /* 🖐 **지정 중에는 드래그가 없다 — 기지와 같은 규칙** (2026-09-08 사용자 신고로 실측·수정)
+       *   기지의 규약은 한 줄이다: 「지정 상태: 드래그/탭 = 이동 · **새 박스는 해제(✕) 후에만**」
+       *   (17-build-cards.js techPtrDown — 지정이 있으면 박스를 아예 안 만든다).
+       *   ⛔ 던전은 그러지 않아서, 지정한 채로 **내 유닛 위를 누르면** 박스와 롱프레스 팬이 걸렸다.
+       *     그러면 조금만 끌어도 `_btMoved` 가 서서 up 의 탭 판정이 통째로 빠진다 = 「씹힘」.
+       *     실측(scripts/camp-drag-audit.mjs):
+       *       기지 지정O·빈 바닥 「명령」 / 기지 지정O·유닛 위 「명령」
+       *       던전 지정O·빈 바닥 「명령」 / **던전 지정O·유닛 위 「박스+롱프레스팬」** ← 이 한 칸만 달랐다
+       *   ⭐ 그래서 지정이 있으면 **박스도 롱프레스 팬도 만들지 않는다.** 빈 바닥이면 그 자리에서
+       *     명령이 나가고, 유닛 위면 아무것도 안 한 채 up 의 「다른 유닛 고르기」로 넘긴다.
+       *   ⚠ 화면을 옮기려면 **두 손가락**이다(2026-09-01 사용자 확정) — 지정 중 팬은 기지에도 없다.
+       */
+      if(_campOn && CAMPB && campDgN() > 0 && !_btPan && !_btArm && campSelList().length){
+        _btBox = null; _campBox = null;                       // 박스 금지(기지와 같다)
+        const g = campCmdAt(ev);
+        if(g && campMoveSel(g.x, g.y)){ _campCmd = true; _btCmd = {}; }
+        return ret; }                                          // 롱프레스 팬도 안 건다
       // 🖐 캠프의 박스 시작점 — 원본 _btBox 는 기지 엔티티용이라 전장 유닛을 못 잡는다
       if(_campOn && CAMPB && campDgN() > 0 && !_btPan && !_btCmd && !_btArm)
         _campBox = { cx0:ev.clientX, cy0:ev.clientY, on:false };
@@ -6519,8 +6593,12 @@ function campPatchZoom(){
       //   자동 선택해 두는데(campSyncSheet), 그러면 빈 바닥 탭이 원본의 "건물 지정 해제"
       //   경로로 먼저 소비되어(17-build-cards.js:685) _btBox 가 **영영 서지 않는다**.
       //   실측: 그 판별자로는 롱프레스가 한 번도 안 걸렸다.
+      //   ⚠ **전장 유닛 위는 빈 바닥이 아니다** — campEmptyAt 은 기지 엔티티만 보므로 유닛 위에서도
+      //     true 가 나와, 던전에서 유닛을 꾹 누르면 고르기 대신 **화면 이동 모드**가 켜졌다.
+      //     기지는 유닛 위에서 팬이 안 걸린다(그쪽은 진짜 엔티티라 campEmptyAt 이 false 다) — 맞춘다.
       if(_campOn && !_campPanMode && !_btPan && !_btCmd && !_btArm && ev
-         && campEmptyAt(ev.clientX, ev.clientY)){
+         && campEmptyAt(ev.clientX, ev.clientY)
+         && !(CAMPB && campDgN() > 0 && campBattleAt(ev.clientX, ev.clientY))){
         campPanArm(ev);
       }
       return ret;
@@ -6544,6 +6622,8 @@ function campPatchZoom(){
       // 끌기 시작하면 롱프레스 취소 — 끌었다는 건 박스 지정을 하겠다는 뜻이다
       if(_campLongT && ev && _campLongFrom && ev.pointerId === _campLongFrom.id
          && Math.hypot(ev.clientX - _campLongFrom.x, ev.clientY - _campLongFrom.y) > 8) campPanDisarm();
+      // 🖐 명령을 끌고 있으면 **목표만 따라온다**(기지의 `_btCmd` 갈래와 같다)
+      if(_campCmd){ campCmdMove(ev); return oMove.apply(this, arguments); }
       if(_campBox && ev && !_campBox.on){ const r = (typeof _btRect === 'function') ? _btRect() : null;
         if(r && (Math.abs(ev.clientX - _campBox.cx0) + Math.abs(ev.clientY - _campBox.cy0)) > CAMP_BOX_MIN_PX)
           _campBox.on = true; }
@@ -6571,6 +6651,9 @@ function campPatchZoom(){
       }
       // 🖐 전장 병력 조작 — 원본보다 **먼저** 본다(원본은 기지 엔티티만 안다).
       //   처리했으면 _btDown·_btBox 를 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
+      // 🖐 명령을 끌던 손가락이 떨어졌다 — 이미 down 에서 냈으므로 up 은 아무것도 하지 않는다
+      //   ⛔ 여기서 campPtrUp 을 또 타면 같은 자리에 명령이 두 번 나가고 소리도 두 번 난다.
+      if(_campCmd){ _campCmd = false; _campBox = null; return oUp.apply(this, arguments); }
       if(_campOn && !_campPanMode && campPtrUp(ev)){
         if(typeof _btDown !== 'undefined') _btDown = null;
         if(typeof _btBox !== 'undefined') _btBox = null;
@@ -6653,6 +6736,7 @@ function campUnpatchZoom(){
   if(!_campZoomPatched) return;
   campUnpatchWheel();
   campPanDisarm(); campPanMode(false); _campPanDown = null; _campPanJustOn = false;   // 🖐 모드를 들고 나가지 않는다
+  _campCmd = false;                                                                   // 🖐 끌던 이동 명령도 들고 나가지 않는다
   campSelClear(); _campBox = null;                                                    // 🖐 전장 병력 지정도 들고 나가지 않는다
   for(const k in _campZoomPatched) window[k] = _campZoomPatched[k];
   _campZoomPatched = null;

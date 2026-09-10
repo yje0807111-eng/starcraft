@@ -1,0 +1,201 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>생산 표시 테두리 8안</title>
+<style>
+/* 🖼 생산 표시 **판의 테두리** 8안 — 2026-09-08
+   안쪽(얼굴 · 아래 진행선 · 위 캡슐)은 **여덟 안이 전부 같다** — 달라지는 것은 테두리뿐이다.
+   ⚠ 실제 크기 그대로 본다: 축소 18px · 확대 25px. 하이엔드 모바일 게임은 **작을 때** 판가름 난다.
+   기준선: DESIGN.md 각진 SF · 라운드 0/3/6/9 · 청록(--acc-sel)=동작 */
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 40px;font-family:'Pretendard','Malgun Gothic',sans-serif;
+  background:#0a0c10;color:#e6e9f2}
+h1{margin:0 0 4px;font-size:15px;letter-spacing:.04em;color:#cfd6e6}
+.sub{margin:0 0 16px;font-size:11.5px;color:#78829a;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;max-width:1020px}
+@media (max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{padding:12px 12px 14px;border-radius:10px;background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06)}
+.cell.base{background:rgba(255,120,120,.05);border-color:rgba(255,120,120,.2)}
+.no{display:flex;align-items:baseline;gap:7px;margin:0 0 2px}
+.no b{font-size:13px;color:#fff}
+.no span{font-size:10.5px;color:#8a93a8}
+.dsc{margin:0 0 11px;font-size:10.5px;color:#6f7a8e;line-height:1.5;min-height:46px}
+.pair{display:flex;align-items:flex-end;justify-content:center;gap:30px;height:126px;
+  border-radius:8px;background:linear-gradient(180deg,#2f333a,#24282e 60%,#1c1f24);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);padding-bottom:12px}
+.one{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px}
+.cap{font:700 8.5px/1 'Rajdhani',sans-serif;color:#5f6a78;letter-spacing:.05em}
+.bldg{width:48px;height:28px;border-radius:4px;
+  background:linear-gradient(160deg,#5c7fa8,#33506e 55%,#22384f);
+  box-shadow:0 6px 12px -6px #000,inset 0 1px 0 rgba(255,255,255,.16)}
+.holder{position:relative;display:flex;justify-content:center;margin-bottom:3px}
+
+/* ── 안쪽은 여덟 안이 전부 같다 ─────────────────────────── */
+.ico{position:relative;border-radius:3px;background:#0d1218}
+.s18 .ico{width:18px;height:18px}
+.s25 .ico{width:25px;height:25px}
+.ico>span{position:relative;display:block;width:100%;height:100%;overflow:hidden;
+  border-radius:inherit}
+.ico>span>img{width:100%;height:100%;object-fit:cover;object-position:center 26%;display:block;
+  filter:brightness(1.3) saturate(1.1)}
+.ico>span::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:rgba(255,255,255,.10);z-index:2}
+.ico>i.bar{position:absolute;left:0;bottom:0;height:3px;width:55%;z-index:3;
+  border-bottom-left-radius:3px;background:#5cd6ff;box-shadow:0 0 7px rgba(92,214,255,.85)}
+.ico>b{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);
+  padding:0 4px;height:11px;border-radius:6px;background:#0d1218;
+  box-shadow:0 0 0 1px rgba(150,200,240,.28);color:#dff2ff;white-space:nowrap;
+  font:800 8px/11px 'Rajdhani',sans-serif;z-index:4}
+
+/* ══ 기준 · 지금 — 한 겹 1px + 바깥 그림자 ══ */
+.v0 .ico{box-shadow:0 0 0 1px rgba(150,200,240,.28),0 4px 10px -4px rgba(0,0,0,.8)}
+
+/* ══ ① 이중 테두리 — 바깥 어둡게 · 안쪽 밝게 ══ */
+.v1 .ico{box-shadow:0 0 0 1px rgba(196,226,255,.34),0 0 0 2px rgba(4,7,11,.92),
+  0 5px 12px -5px rgba(0,0,0,.9)}
+
+/* ══ ② 그라디언트 링 — 위가 밝고 아래로 사라진다 ══ */
+.v2 .ico{box-shadow:0 5px 12px -5px rgba(0,0,0,.9)}
+.v2 .ico::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;
+  background:linear-gradient(180deg,rgba(214,238,255,.85),rgba(70,110,160,.22));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;z-index:5;pointer-events:none}
+
+/* ══ ③ 모서리 컷(각진 SF) ══ */
+/* ⚠ clip-path 는 **자식까지 자른다** — .ico 에 걸면 위 캡슐(<b>)이 통째로 잘려 안 보인다.
+   그래서 자르는 것은 **안쪽 면(span)과 테두리 링(::before)** 뿐이다. */
+.v3 .ico{--ch:5px;border-radius:0;background:transparent;
+  filter:drop-shadow(0 4px 7px rgba(0,0,0,.75))}
+.s18.v3 .ico{--ch:4px}
+.v3 .ico>span{border-radius:0;background:#0d1218;
+  clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch))}
+.v3 .ico::before{content:'';position:absolute;inset:0;padding:1px;
+  background:rgba(196,226,255,.4);
+  clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;z-index:5}
+.v3 .ico>i.bar{border-radius:0}
+
+/* ══ ④ 코너 브래킷 — 네 귀퉁이만 ══ */
+.v4 .ico{box-shadow:0 0 0 1px rgba(120,160,205,.16),0 5px 12px -5px rgba(0,0,0,.9)}
+.v4 .ico::before,.v4 .ico::after{content:'';position:absolute;width:6px;height:6px;z-index:5;
+  border:1.4px solid rgba(214,238,255,.9)}
+.s18.v4 .ico::before,.s18.v4 .ico::after{width:5px;height:5px;border-width:1.2px}
+.v4 .ico::before{left:-1px;top:-1px;border-right:0;border-bottom:0}
+.v4 .ico::after{right:-1px;bottom:-1px;border-left:0;border-top:0}
+
+/* ══ ⑤ 안쪽 광원 — 테두리 없이 ══ */
+.v5 .ico{box-shadow:inset 0 0 0 1px rgba(190,225,255,.16),inset 0 1px 0 rgba(255,255,255,.22),
+  0 0 12px -2px rgba(92,214,255,.28),0 5px 12px -5px rgba(0,0,0,.9)}
+
+/* ══ ⑥ 금속 베벨 — 위 하이라이트 · 아래 그림자 ══ */
+.v6 .ico{box-shadow:0 0 0 1px rgba(12,18,26,.95),0 0 0 2px rgba(126,152,182,.5),
+  inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(0,0,0,.6),
+  0 5px 12px -5px rgba(0,0,0,.9)}
+
+/* ══ ⑦ 아래만 두꺼운 액센트 — 진행선과 한 몸 ══ */
+.v7 .ico{box-shadow:0 0 0 1px rgba(150,200,240,.22),0 5px 12px -5px rgba(0,0,0,.9)}
+.v7 .ico>i.bar{height:4px;box-shadow:0 0 9px rgba(92,214,255,.95)}
+.v7 .ico>span::after{height:4px;background:rgba(0,0,0,.55)}
+.v7 .ico::before{content:'';position:absolute;left:-1px;right:-1px;bottom:-1px;height:5px;
+  border-radius:0 0 3px 3px;box-shadow:0 0 10px -1px rgba(92,214,255,.5);z-index:0}
+
+/* ══ ⑧ 컷 + 그라디언트 링 — ②와 ③을 합친다 ══ */
+.v8 .ico{--ch:5px;border-radius:0;background:transparent;
+  filter:drop-shadow(0 4px 7px rgba(0,0,0,.75))}
+.s18.v8 .ico{--ch:4px}
+.v8 .ico>span{border-radius:0;background:#0d1218;
+  clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch))}
+.v8 .ico::before{content:'';position:absolute;inset:0;padding:1px;
+  background:linear-gradient(180deg,rgba(220,242,255,.92),rgba(60,100,150,.2));
+  clip-path:polygon(var(--ch) 0,100% 0,100% calc(100% - var(--ch)),calc(100% - var(--ch)) 100%,0 100%,0 var(--ch));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;z-index:5}
+.v8 .ico>i.bar{border-radius:0}
+</style></head><body>
+<h1>생산 표시 — 판 테두리 8안</h1>
+<p class="sub">안쪽(얼굴 · 아래 진행선 · 위 캡슐)은 <b>여덟 안이 전부 같다</b> — 달라지는 것은 테두리뿐이다.<br>
+왼쪽이 <b>축소(18px)</b>, 오른쪽이 <b>확대(25px)</b> — 실제 크기 그대로. 작을 때가 판가름이다.</p>
+<div class="grid">
+
+  <div class="cell base">
+    <div class="no"><b>지금</b><span>한 겹 1px</span></div>
+    <p class="dsc">얇은 선 한 겹 + 바깥 그림자. 바닥이 밝으면 선이 묻힌다.</p>
+    <div class="pair">
+      <div class="one s18 v0"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v0"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>①</b><span>이중 테두리</span></div>
+    <p class="dsc">밝은 선 <b>바깥에 어두운 선</b>을 한 겹 더. 어떤 바닥에서도 판이 또렷하게 뜬다.</p>
+    <div class="pair">
+      <div class="one s18 v1"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v1"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>②</b><span>그라디언트 링</span></div>
+    <p class="dsc">위가 밝고 아래로 사라지는 1px 링 — <b>환생 버튼과 같은 어휘</b>. 빛이 위에서 온다.</p>
+    <div class="pair">
+      <div class="one s18 v2"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v2"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>③</b><span>모서리 컷</span></div>
+    <p class="dsc">왼쪽 위·오른쪽 아래를 <b>잘라 낸 각진 SF</b>. 프로젝트의 판 어휘와 곧장 이어진다.</p>
+    <div class="pair">
+      <div class="one s18 v3"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v3"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>④</b><span>코너 브래킷</span></div>
+    <p class="dsc">네 변을 지우고 <b>두 귀퉁이만</b> — 조준선 느낌. 가장 가볍고 판을 안 가둔다.</p>
+    <div class="pair">
+      <div class="one s18 v4"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v4"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑤</b><span>안쪽 광원</span></div>
+    <p class="dsc">바깥 선을 없애고 <b>안쪽에서 빛</b>이 돈다 + 옅은 청록 번짐. 가장 부드럽다.</p>
+    <div class="pair">
+      <div class="one s18 v5"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v5"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑥</b><span>금속 베벨</span></div>
+    <p class="dsc">어두운 선 + 밝은 금속 선 + 위아래 <b>베벨</b>. 두께가 느껴진다 — 가장 묵직하다.</p>
+    <div class="pair">
+      <div class="one s18 v6"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v6"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑦</b><span>아래만 두껍게</span></div>
+    <p class="dsc">테두리를 죽이고 <b>진행선을 두껍게</b> — 판과 게이지가 한 몸이 된다.</p>
+    <div class="pair">
+      <div class="one s18 v7"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v7"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑧</b><span>컷 + 그라디언트 링</span></div>
+    <p class="dsc">②와 ③을 합친다 — 각진 실루엣에 <b>위에서 오는 빛</b>. 가장 하이엔드에 가깝다.</p>
+    <div class="pair">
+      <div class="one s18 v8"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">18px</span></div>
+      <div class="one s25 v8"><span class="holder"><span class="ico"><span><img src="../../assets/portraits/ranger_portrait.webp" alt=""></span><i class="bar"></i><b>×2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+</div></body></html>
