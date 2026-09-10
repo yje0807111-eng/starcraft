@@ -706,12 +706,8 @@ function setCpDiff(d){ if(!DIFFICULTY[d]) return; _createDiff=d; _createInf=fals
 
 // ── [js/19-camp.js] campEnterDungeon
 // 캠프(0) → 던전으로 내려간다. 인자가 없으면 **최고 기록 다음 칸**이 아니라 던전 1부터.
-function campEnterDungeon(dg){ const C = campState(); if(!C) return 0;
-  const n = Math.max(1, Math.min(CAMP_DG_MAX, (dg | 0) || 1));
-  C.dg = n; C.cleared = 0; campSave();
-  if(typeof campBarReset === 'function') campBarReset();
-  campSkin();                                        // 🎨 바닥을 그 던전 그림으로 (아래 ⛔)
-  return n; }
+// (campEnterDungeon 은 2026-09-09 에 **되살렸다** — js/23-camp-dungeon.js. 던전이 「적 기지」가 되며
+//  「그 던전 처음부터」가 규칙이 되어 다시 유일한 입구가 됐다. ⛔ 여기에 사본을 두지 말 것.)
 
 // ── [js/19-camp.js] campBest
 function campBest(dg){ const C = campState(); return (C && C.best && C.best[dg | 0]) | 0; }
@@ -1015,7 +1011,8 @@ function campHQ(){
 }
 
 // ── [js/22-camp-rune.js] campRuneMaxRound
-function campRuneMaxRound(){ const per = (typeof CAMP_ROUND_MAX !== 'undefined') ? CAMP_ROUND_MAX : 50;
+// 🏰 눈금이 **통산 관문**으로 바뀌었다(2026-09-09 · 라운드 폐지) — 던전 셋 × 진행 건물 6채 = 18.
+function campRuneMaxRound(){ const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
   const dgs = (typeof CAMP_DG_MAX !== 'undefined') ? (CAMP_DG_MAX | 0) : 10;
   return per * Math.max(1, dgs); }
 
@@ -1183,3 +1180,152 @@ function hbNextRw(dg,from){ const best=hbBest(dg);
 //   던전 선택 화면이 그쪽을 쓴다. ⛔ 되살릴 때 둘을 헷갈리지 말 것.
 function campDgMul(dg){ return (dg == null) ? campMineMul() : CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))].base; }
 
+
+// ── [js/12-appshell.js] campRndSlider
+// 🎚 슬라이더 — 누른 자리·끄는 자리를 라운드로 바꾼다. pointer capture 로 손가락이 트랙을 벗어나도 따라온다.
+//   ⚠ 여기서 값을 따로 들지 않는다 — campRndTap 이 유일한 입구(◀▶ 와 같은 길).
+function campRndSlider(el){ if(!el) return;
+  const at=(ev)=>{ const r=el.getBoundingClientRect(); if(r.width<=0) return;
+    const x=Math.max(0, Math.min(1, (ev.clientX-r.left)/r.width));
+    campRndTap(1+Math.round(x*(CAMP_RND_MAX-1))); };
+  el.addEventListener('pointerdown', (ev)=>{ ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){}
+    el.classList.add('drag'); at(ev); });
+  el.addEventListener('pointermove', (ev)=>{ if(el.classList.contains('drag')) at(ev); });
+  for(const t of ['pointerup','pointercancel']) el.addEventListener(t, ()=>el.classList.remove('drag')); }
+
+// ── [js/12-appshell.js] campRndHold
+// ◀▶ 를 **누르고 있으면 반복**한다(0.35초 뒤부터 70ms 마다) — 50칸을 한 칸씩 눌러 가는 건 고문이다.
+//   ⚠ click 이 아니라 pointerdown 으로 첫 칸을 움직인다 — 캠프 화면은 터치 처리가 click 을 안 만들 수 있다
+//     (무장 트레이가 그래서 안 눌렸다 · CLAUDE.md 무장 칸 항목). 그래서 click 은 막는다(두 번 가지 않게).
+function campRndHold(btn, dir){
+  const stop=()=>{ clearTimeout(_cdRndT); clearInterval(_cdRndT); _cdRndT=null; };
+  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); if(btn.disabled) return;
+    campRndStep(dir); stop();
+    _cdRndT=setTimeout(()=>{ _cdRndT=setInterval(()=>{ if(btn.disabled){ stop(); return; } campRndStep(dir); }, 70); }, 350); });
+  for(const t of ['pointerup','pointercancel','pointerleave']) btn.addEventListener(t, stop);
+  btn.onclick=(e)=>e.preventDefault();
+}
+
+// ── [js/12-appshell.js] campRndTap
+function campRndTap(r){ if(!_cdPick) return;
+  const v=Math.max(1, Math.min(CAMP_RND_MAX, r|0)); if(v===_cdPick.rnd) return;
+  _cdPick.rnd=v; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
+
+// ── [js/12-appshell.js] campRndStep
+function campRndStep(dir){ if(_cdPick) campRndTap(_cdPick.rnd+dir); }
+
+// ── [js/12-appshell.js] campRndMark
+// 라운드 = **큰 숫자 + ◀▶**(2026-09-03). 굴림 피커는 무겁고 막대는 손가락으로 정확히 안 잡혀서 버렸다.
+//   눌러서 정확히 고르고, 아래 붉은 밑선(.cdProg)이 「50 중 어디쯤」을 읽어 준다 — 칩의 밑선과 같은 어휘.
+function campRndMark(){ const d=document.getElementById('campDrop'); if(!d||!_cdPick) return;
+  const n=d.querySelector('.cdRnN'), f=d.querySelector('.cdFill'), k=d.querySelector('.cdKnob'), sl=d.querySelector('.cdSld');
+  if(n) n.innerHTML=_cdPick.rnd+'<em>/'+CAMP_RND_MAX+'</em>';
+  // 슬라이더 위치 = (r-1)/(max-1) — 1 이 왼끝, 50 이 오른끝(손잡이가 눈금 1·50 위에 정확히 선다)
+  const pct=((_cdPick.rnd-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
+  if(f) f.style.width=pct; if(k) k.style.left=pct;
+  if(sl) sl.setAttribute('aria-valuenow', _cdPick.rnd);
+  // 끝에 닿은 쪽 화살표는 잠근다(1 아래·50 위는 없다)
+  for(const b of d.querySelectorAll('.cdArw')){ const dd=+b.dataset.d;
+    b.disabled=(dd<0 && _cdPick.rnd<=1)||(dd>0 && _cdPick.rnd>=CAMP_RND_MAX); } }
+
+// ── [js/19-camp.js] campDgThreshold — 🏰 **옛 라운드 눈금의 던전 문턱**(2026-09-09 배선 끊김)
+//   던전 하나를 라운드 49개로 넘던 시절의 자다. 관문 6개(CAMP_GATE_RATE)로 갈아타면서
+//   `campFoeDiff` 가 이걸 안 부른다. ⛔ 되살리지 말 것 — 되살리면 던전 문턱이 ×540 절벽으로 돌아온다.
+function campDgThreshold(dg){
+  let x = 1; for(let k = 1; k <= CAMP_ROUND_MAX - 1; k++) x *= campRoundRate(dg - 1, k);
+  return x * CAMP_DG_STEP; }
+
+// ── [js/19-camp.js] campRaceSheet
+function campRaceSheet(){
+  if(typeof STK_RACES === 'undefined') return;
+  _campRacePick = _campRacePick || CAMP_RACE_ORDER[0];
+  let ov = document.getElementById('campRaceOv');
+  if(!ov){ ov = document.createElement('div'); ov.id = 'campRaceOv';
+    // ⚠ 껍데기는 **한 번만** 짓는다 — 미리보기 두 겹(.crPrevL)이 살아 있어야 크로스페이드가 된다.
+    //   행/버튼만 campRaceRender() 가 다시 그린다.
+    ov.innerHTML = '<div class="crPrev"><div class="crPrevL"></div><div class="crPrevL"></div></div>'
+      + '<div class="crScr"><div class="crHd"><div class="crTtl">종족 선택</div></div>'
+      + '<div class="crRows"></div>'
+      + '<button type="button" class="crGo" onclick="campPickRace()"></button></div>';
+    (document.getElementById('phone') || document.body).appendChild(ov); }
+  { const _ph=document.getElementById('phone'); if(_ph) _ph.classList.add('campPick'); }   // 옛 사냥터 UI 를 숨긴다(css 「campPick」)
+  // ⭐ display 해제와 `on` 을 **같은 프레임에** 한다. animation 은 클래스가 붙는 순간 처음부터 돌기 때문에
+  //    한 프레임 미룰 이유가 없다 — 미루면 그 사이 프레임에 판이 보여 검은 섬광이 된다(css 「기본값은 0」).
+  ov.classList.remove('hide');
+  ov.classList.remove('closing');
+  // 🎬 로딩에서 바로 넘어온 것이면 로딩과 **같은 길이로** 차오른다(css 「raceFx」)
+  { const _ph2=document.getElementById('phone');
+    ov.classList.toggle('raceFx', !!(_ph2 && _ph2.classList.contains('raceIn'))); }
+  ov.classList.add('on');
+  campRaceRender(); campRacePrev(_campRacePick, true);
+}
+
+// ── [js/19-camp.js] campPickRace
+// ⚠ 한 번 고르면 바꾸지 않는다 — 기지가 종족 건물로 채워지므로 도중 교체는 뜻이 없다.
+//   (바꾸는 기능이 필요해지면 '기지를 버리고 새로 시작'으로 따로 만든다)
+function campPickRace(){
+  const C = campState(); if(!C || C.race) return;
+  C.race = _campRacePick || CAMP_RACE_ORDER[0];
+  if(typeof saveMeta === 'function') saveMeta();
+  // 🎬 **검은 화면 + 로고** → 캠프가 드러나며 다가온다.
+  //    여기가 「게임이 실제로 시작되는 지점」이다(enterAfterWarm 의 _needRace 주석과 짝).
+  //    ⛔ 여기서 종족 판을 걷지 않는다. 위에서 검은 판(z88)이 덮어 주므로 걷을 이유가 없고,
+  //       먼저 걷으면 **아직 반투명한 검은 판 아래로 캠프가 통째로 드러난다**
+  //       (2026-08-27 프레임 실측: 종족 선택 73.9 → **캠프 139** → 검은 화면 35.6 → 캠프 142.
+  //        캠프가 두 번 나온다). 걷는 일은 campRaceToCamp 이 다 덮은 뒤에 한다.
+  campRaceToCamp();
+}
+
+// ── [js/06-daily.js] _tutoLv
+function _tutoLv(k){ return (typeof campUpgLv==='function' && campUpgLv(k)>0) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoCost
+// 💰 값과 지갑 — 「모으기」 단계가 쓴다. 값은 **살 때마다 오르므로** 그때그때 물어본다.
+function _tutoCost(k){ return (typeof campUpgCost==='function') ? Math.max(1, campUpgCost(k)|0) : 1; }
+
+// ── [js/06-daily.js] _tutoPickedU
+// 🚶 뽑은 유닛을 **실제로 옮겼나**. 이동 목표(tx)는 도착하면 사라지므로 그것만 보면 놓친다 —
+//   그래서 **시작 자리를 기억해 두고** 달라졌는지 함께 본다(S.mv0 · 단계가 바뀌면 지운다).
+// 👆 전투 유닛을 **지정했나**(일꾼이 아니라). 지정이 곧 「옮길 대상을 골랐다」는 뜻이다.
+function _tutoPickedU(){
+  const T=(typeof G!=='undefined')?G.tech:null;
+  const id=_tutoUnitId(); if(!id) return 1;
+  if(!T || !(T.selU||[]).length) return 0;
+  return T.selU.some(x=>{ const e=(T.ents||[]).find(y=>y && y.eid===x);
+    return !!(e && e.type==='unit' && e.uid===id); }) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoMovedTo
+function _tutoMovedTo(){
+  const T=(typeof G!=='undefined')?G.tech:null;
+  if(!T) return 0;
+  const id=_tutoUnitId(); if(!id) return 1;                       // 뽑을 유닛이 없는 종족이면 건너뛴다
+  const u=(T.ents||[]).find(e=>e && e.type==='unit' && e.uid===id);
+  if(!u) return 0;                                                // 아직 안 나왔다
+  if(u.tx!=null) return 0;                                        // 가는 중 — **멈춰야** 넘어간다
+  const p=_tutoBox && _tutoBox.kind==='move' ? _tutoBox : null;
+  if(!p) return 0;
+  return (Math.hypot(u.x-p.wx, u.y-p.wy) <= p.wr) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoPanMode
+// 🖐 화면 이동 모드가 켜졌나 — DOM 으로 본다(#cstMain.campPan · campPanMode 가 붙인다).
+//   ⛔ 롱프레스 이벤트를 여기서 세지 말 것: 캠프가 이미 그 판정을 갖고 있다(두 벌이 된다).
+function _tutoPanMode(){
+  const m=document.getElementById('cstMain');
+  if(m && m.classList.contains('campPan')) return 1;
+  return (typeof _campPanMode!=='undefined' && _campPanMode) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoView
+// 🔍 화면을 **확대했나 / 움직였나** — 시점(techView)이 그 단계에 들어올 때와 달라졌는지 본다.
+//   ⛔ 두 손가락 이벤트를 직접 세지 말 것: 캠프·관리자 탭이 같은 조작을 공유해 두 벌이 된다.
+function _tutoView(kind){
+  const S=guideState(); if(!S || typeof techView!=='function') return 0;
+  const v=techView(); if(!v) return 0;
+  const key=(kind==='zoom') ? 'vw0' : 'vp0';
+  const now=(kind==='zoom') ? String(Math.round((v.zoom||1)*100))
+                            : (Math.round((v.x||0)*1000)+','+Math.round((v.y||0)*1000));
+  if(S[key]==null){ S[key]=now; return 0; }
+  return (now!==S[key]) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoMoveRect
+// 🚪 유닛을 데려갈 자리 — 링이 이 사각형을 감싼다.
+function _tutoMoveRect(){ return (_tutoBox && _tutoBox.kind==='move') ? _tutoBox : null; }

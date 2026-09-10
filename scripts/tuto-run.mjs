@@ -114,9 +114,39 @@ const log = async (what) => { const s = await snap();
     + String(s.tip||'').split(String.fromCharCode(10)).join(' | ') + (what ? ('   <- ' + what) : '')); };
 
 
+// 📚 챕터 카드는 **읽고 [계속]** 을 누르면 넘어간다 — 시키는 일이 없다.
+//   ⚠ **버튼이 생길 때까지 기다린다** — 첫 카드는 오버레이가 그려지기 전에 부르게 되고,
+//     그때 그냥 지나치면 뒤의 조작이 전부 카드 위에서 헛돈다(실측: 채굴·연구가 카드 상태에서 돌았다).
+const chGo = async (wait = 16) => {
+  for (let i = 0; i < wait; i++) {
+    const r = await page.evaluate(() => {
+      const st = (typeof tutoStep === 'function') ? tutoStep() : null;
+      if (!st || !st.ch) return 'done';
+      const g = document.querySelector('#tutoOv .tuGo');
+      if (!g || getComputedStyle(g).display === 'none') return null;
+      window.__chShot = st.ch; return 'shot'; });
+    if (r === 'shot') {
+      // 🖼 챕터 카드는 **눈으로 본다** — 제목·부제·[계속] 이 한 판에 들어가는지는 글자 수로 못 잰다.
+      const k = await page.evaluate(() => window.__chShot);
+      if (process.env.SHOT) { await new Promise(x => setTimeout(x, 500));
+        await page.screenshot({ path: 'docs/mock/camp-tuto-ch' + k + '.png' });
+        console.log('        shot docs/mock/camp-tuto-ch' + k + '.png'); }
+      const r2 = await page.evaluate(() => { const st = tutoStep();
+        document.querySelector('#tutoOv .tuGo').click(); return '챕터 ' + st.ch + ' 시작'; });
+      await new Promise(x => setTimeout(x, 760)); await log(r2); return true; }
+    if (r === 'done') return false;
+    if (r) { await new Promise(x => setTimeout(x, 760)); await log(r); return true; }
+    await new Promise(x => setTimeout(x, 300)); }
+  return false; };
+
 await log('시작');
+await chGo();                                        // 챕터 1 카드
 await page.evaluate(() => { if (typeof campMineModeSet === 'function') campMineModeSet(true); });
 await new Promise(r => setTimeout(r, 760)); await log('채굴 켬');
+// 🖼 전장 틀의 **기준 모습** — 시트가 기지 요약(작을 때)인 화면. 병영을 고른 pickU(시트가 큼)와
+//   같은 규칙으로 잡히는지는 두 장을 나란히 봐야 안다.
+if (process.env.SHOT) { await page.screenshot({ path: 'docs/mock/camp-tuto-map.png' });
+  console.log('        shot docs/mock/camp-tuto-map.png'); }
 await page.evaluate(() => { for (let i = 0; i < 12; i++) if (typeof campMineOnce === 'function') campMineOnce(195, 400, false); });
 await new Promise(r => setTimeout(r, 760)); await log('12번 캠');
 await page.evaluate(() => { const b = document.querySelector('.navIt[data-nav="research"]'); if (b) b.click(); });
@@ -126,9 +156,10 @@ const feed = async (n) => { await page.evaluate((k) => {
   if (typeof G !== 'undefined' && G.tech) G.tech.credit = (G.tech.credit || 0) + k;
   if (typeof updateCurBar === 'function') updateCurBar(); }, n); };
 
-for (let guard = 0; guard < 24; guard++) {
+for (let guard = 0; guard < 26; guard++) {
   const s = await snap();
   if (s.id === null) break;
+  if (String(s.id).indexOf('ch')===0) { await chGo(); continue; }
   if (/^coin/.test(s.id)) { await feed(Math.max(0, s.goal - s.credit) + 5);
     await new Promise(r => setTimeout(r, 760)); await log('돈 채움'); continue; }
   if (s.id === 'upgTap' || s.id === 'upgGat') { const k = (s.id === 'upgTap') ? 'tap' : 'gather';
@@ -142,6 +173,7 @@ for (let guard = 0; guard < 24; guard++) {
   break;
 }
 
+await chGo();                                        // 챕터 2 카드
 { const ok = await page.evaluate(() => { const b = document.getElementById('campMineStop'); if (!b) return false; b.click(); return true; });
   await new Promise(r => setTimeout(r, 760)); await log(ok ? '채굴 멈춤 버튼 누름' : '⚠ 멈춤 버튼이 없다'); }
 
@@ -157,9 +189,10 @@ await page.evaluate(() => { if (typeof G === 'undefined' || !G.tech) return;
     if (typeof techUIRender === 'function') techUIRender(); } });
 await new Promise(r => setTimeout(r, 760)); await log('일꾼 지정');
 
-for (let guard = 0; guard < 20; guard++) {
+for (let guard = 0; guard < 26; guard++) {
   const s = await snap(); const id = String(s.id || '');
-  if (!/^(armB|placeB|deselWk|selB1|unit|dg|outro)/.test(id)) break;
+  if (!/^(ch|armB|placeB|deselWk|selB1|unit|dg|outro)/.test(id)) break;
+  if (id.indexOf('ch')===0) { await chGo(); continue; }
   if (id === 'dgOpen') {
     await page.evaluate(() => { const e = document.getElementById('curTitle'); if (e) e.click();
       else if (typeof campDropToggle === 'function') campDropToggle(); });
@@ -169,6 +202,11 @@ for (let guard = 0; guard < 20; guard++) {
       if (!el) return '⚠ 던전 칸이 없다'; el.click(); return '던전 ' + TUTO_DG + ' 고름'; });
     await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'outro') {
+    // 🖼 마지막 칸은 **눈으로 본다** — 왼쪽 위 「튜토리얼 종료」·초기화 예고·보상 둘이
+    //   한 카드에 들어가는지는 글자 수로 못 잰다.
+    if (process.env.SHOT) { await new Promise(r => setTimeout(r, 500));
+      await page.screenshot({ path: 'docs/mock/camp-tuto-outro.png' });
+      console.log('        shot docs/mock/camp-tuto-outro.png'); }
     const r = await page.evaluate(() => { const ov = document.getElementById('tutoOv');
       const g0 = (typeof profGem === 'function') ? profGem() : -1;
       const go = ov ? ov.querySelector('.tuGo') : null;
@@ -183,7 +221,15 @@ for (let guard = 0; guard < 20; guard++) {
         + String.fromCharCode(10) + '        HTML: ' + icoH; });
     await new Promise(r => setTimeout(r, 760));
     const gem = await page.evaluate(() => (window.__g0|0) + '→' + ((typeof profGem==='function')?profGem():-1));
-    await log(r + ' · 텀 뒤 젬 ' + gem); continue; }
+    // 🔄 마치면 **판을 걷고 맨 처음부터** — 던전 0 · 건물 없음 · 밑천 미네랄
+    const rs = await page.evaluate(() => { const C = campState() || {};
+      const built = Object.keys(C.built || {}).join(',') || '없음';
+      const cr = (typeof G!=='undefined'&&G.tech) ? (G.tech.credit|0) : (C.credit|0);
+      const ents = (typeof G!=='undefined'&&G.tech)
+        ? (G.tech.ents||[]).map(e=>e.type+':'+(e.bid||e.uid||'')).join(' ') : '-';
+      return '던전 ' + (C.dg|0) + ' · 건물 [' + built + '] · 판 [' + ents + '] · 미네랄 ' + cr
+           + ' · 환생배수 ' + (C.rebMul||0) + '/포인트 ' + (C.rbPts||0); });
+    await log(r + ' · 텀 뒤 젬 ' + gem + String.fromCharCode(10) + '        되감김: ' + rs); continue; }
   if (id === 'dgGo') {
     const r = await page.evaluate(() => { const el = document.querySelector('.cdGo');
       if (!el) return '⚠ 이동 버튼이 없다'; el.click(); return '이동 누름'; });
@@ -192,7 +238,10 @@ for (let guard = 0; guard < 20; guard++) {
         const rg=ov?ov.querySelector('.tuRing'):null; const out=[];
         for(let i=0;i<40;i++){ await new Promise(r=>requestAnimationFrame(r));
           const q=rg?rg.getBoundingClientRect():null;
-          out.push(q?(Math.round(q.left)+','+Math.round(q.top)):'-'); }
+          const cm=document.getElementById('curMul');
+          const cs=cm?getComputedStyle(cm):null;
+          out.push(q?(Math.round(q.left)+','+Math.round(q.top)+'/'+Math.round(q.width)+'x'+Math.round(q.height)
+            +' mul:'+(cs?cs.display:'-')+':'+(cm?(cm.style.left||'없음'):'-')):'-'); }
         return out; });
       const uniq=[]; for(const p of tr) if(uniq[uniq.length-1]!==p) uniq.push(p);
       console.log('        링 궤적: ' + uniq.join('  ')); }
@@ -283,6 +332,40 @@ await log('끝');
       mine: mine, foes: foes, baseHp: baseHp, fails: (typeof campState === 'function') ? (campState().fails | 0) : -1, n0: n0 }; });
   console.log('던전 1 에서 60초: 내 병력 ' + r.mine + ' · 적 ' + r.foes + ' · 본부 ' + r.baseHp
     + ' · 지금 던전/라운드 ' + r.dg + '/' + r.rnd); }
+// 🗺 구역 안내 — 튜토리얼이 **강제로 안 시키는 것**을 여기서 말한다. 한 장씩 떠서 닫히는지 본다.
+{ const seen = [];
+  // 조건을 하나씩 만들어 준다 — 연구 구역을 열고 · 유닛을 세우고 · 던전으로 옮긴다.
+  const arm = async (k) => { await page.evaluate((kk) => {
+    const S = (typeof guideState === 'function') ? guideState() : null; if (S) S.zt = S.zt || {};
+    if (kk === 'res') { const b = document.querySelector('.navIt[data-nav="research"]'); if (b) b.click(); }
+    if (kk === 'army') { const b = document.querySelector('.navIt[data-nav="camp"]'); if (b) b.click();
+      if (typeof G !== 'undefined' && G.tech) G.tech.ents.push({ eid: 9001, type: 'unit', uid: 'marine', x: .5, y: .6, hp: 10 }); }
+    if (kk === 'foe' && typeof campEnterDungeon === 'function') campEnterDungeon(1);
+    if (typeof updateCurBar === 'function') updateCurBar(); }, k);
+    await new Promise(x => setTimeout(x, 500)); };
+  for (const k of ['res', 'army', 'foe']) {
+    await arm(k);
+    for (let q = 0; q < 4; q++) {
+    const r = await page.evaluate(() => {
+      if (typeof zoneTipPaint === 'function') zoneTipPaint();
+      const el = document.getElementById('zoneTip'); if (!el) return null;
+      const tip = el.querySelector('.tuTip');
+      const blocks = Array.from(el.querySelectorAll('i'))
+        .some(i => getComputedStyle(i).pointerEvents !== 'none');
+      return { id: el.dataset.zt, title: el.querySelector('.tuTx').textContent,
+        sub: el.querySelector('.tuSub').textContent.split(String.fromCharCode(10)).join(' | '),
+        card: tip.classList.contains('ch'), blocks: blocks }; });
+    if (!r) break;
+      if (process.env.SHOT && seen.length === 0) { await new Promise(x => setTimeout(x, 300));
+      await page.screenshot({ path: 'docs/mock/camp-zone-tip.png' });
+      console.log('        shot docs/mock/camp-zone-tip.png'); }
+    seen.push(r.id);
+    console.log('  안내 [' + r.id + '] ' + r.title + (r.blocks ? ' ⛔막는다' : '')
+      + (r.card ? '' : ' ⛔카드아님') + String.fromCharCode(10) + '        ' + r.sub);
+    await page.evaluate(() => { const g = document.querySelector('#zoneTip .tuGo'); if (g) g.click(); });
+    await new Promise(x => setTimeout(x, 200)); }
+  }
+  console.log('구역 안내 ' + seen.length + '장: ' + (seen.join(' · ') || '없음')); }
 console.log('\n총 단계 ' + (await page.evaluate(() => TUTO_STEPS.length)));
 if (errs.length) console.log('페이지 오류: ' + errs.join(' | '));
 await browser.close(); server.close();

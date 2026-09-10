@@ -1876,3 +1876,508 @@ node scripts/icon-cutout.mjs <입력.png> assets/icons/tree/<계열키>.webp
 (얇게 나오면 24px 에서 사라진다). 각 `NEGATIVE` 끝에 **그 룬에서만 막을 것**을 적는다 —
 치유에 `christian cross`, 가속에 `sand, realistic hourglass`, 신속에 `double chevron` 같은 식이다.
 ⚠ 문양 프롬프트에는 `hexagon, tile, plate, frame` 을 반드시 넣는다. 안 넣으면 판을 같이 그린다.
+
+### 16-6. 🔷 문양 공통 블록 — **원문 보관** (2026-09-08)
+
+⚠ **이 절은 복원본이다.** 문양 16장을 뽑은 원문이 어디에도 안 남아 있었고(§16-5 는
+「§15-2 를 굵고 밝게」라고만 적혀 있다), 그 설명만으로는 실제 그림이 안 나온다 —
+있는 16장은 **입체 아이콘이 아니라 얇은 선 각인**이다(2026-09-08 에 전부 펼쳐 보고 확인).
+그래서 **보고 맞춘 블록**을 여기 적어 둔다.
+
+⛔ **다음에 뽑을 때 이 블록을 고치지 말 것.** 대신 **첫 한 장을 뽑아 기존 문양 옆에 나란히
+놓고 눈으로 대조한 뒤** 나머지를 돌린다 — 스타일이 갈리면 한 화면에서 바로 티가 난다(§15-2 교훈).
+
+```
+--- RENDER SPEC ---
+A single abstract rune sigil for a mobile game, drawn as a MINIMAL LINE MARK.
+One mark only, centered, flat straight-on view. Even margin on all four sides.
+FORM: two to four strokes at most. Straight segments and hard angles; a curve only
+where the meaning needs one. Reads at 24 pixels. Not an illustration, not an object
+with volume — an engraved sign.
+STROKE: uniform thin bright neon line, constant width, sharp square ends, no taper,
+no outline around the line. Hollow shapes only — nothing is filled in.
+TREATMENT: the line self-illuminates on black with a tight soft glow hugging it.
+Bright and saturated so it survives at small size. No shading, no gradient across
+the mark, no volume, no perspective, no three-dimensional facets.
+BACKGROUND: flat solid pure black #000000 filling the entire frame, completely empty.
+No gradient, no vignette, no stars, no ground plane, no cast shadow, no pedestal.
+OUTPUT: 1024x1024 PNG, crisp vector-like edges.
+--- NEGATIVE ---
+hexagon, tile, plate, frame, border, badge, shield plate, background shape,
+white background, light background, grey background, gradient background, transparent
+checkerboard, vignette, photorealistic, 3d render, volume, shading, bevel, chamfer,
+metal, chrome, glossy, drop shadow, ground shadow, pedestal, text, letters, numbers,
+watermark, logo, multiple marks, scene, character, cute, filled solid shapes,
+thick outline, tapered strokes, calligraphy, brush stroke, sketch, hand drawn,
+grain, bokeh, wide bloom, low contrast
+--- SUBJECT ---
+{SYMBOL}. Colour {COLOUR}.
+```
+
+**색 — 갈래가 정한다.** ⚠ 아래 값은 문서에서 옮긴 것이 아니라 **있는 문양 16장의 획을
+직접 재서** 얻은 것이다(2026-09-08). §16-3 의 표(`#7effc9`/`#ffa3b8`/`#e6eef8`)와 실제
+그림이 서로 달랐고, **파일이 맞다** — 새로 뽑는 것은 이 값에 맞춘다.
+
+| 갈래 | 색 | 잰 룬 |
+|---|---|---|
+| 경제(버는 것) | `#13f487` 초록 | 손끝 `#13f487` · 채굴 · 정제 |
+| 전투 | `#d6496e` 장미 | 힘 `#d6496e` · 치유 `#e5497a` · 연타 · 수호 |
+| 성장(캠프 밖) | `#4b84d8` 파랑 | 전과 `#4b84d8` · 전리품 `#5084c8` · 열정 `#1f7bcc` |
+| ~~속도·비용·피버~~ | ~~`#fbc304` 금~~ | ⛔ **없어진 무리다** — §16-8 참고 |
+
+**📏 획 굵기 — 마크 긴 변의 1/13**(2026-09-08 실측).
+⛔ **픽셀 수로 적지 말 것.** 모델마다 마크를 프레임에 채우는 정도가 다르다 —
+같은 1024px 안에서도 잉크 상자가 510~891px 로 갈린다. **비율**이라야 재현된다.
+
+| | 획 ÷ 마크 긴 변 |
+|---|---|
+| 중앙값 | **1/13** |
+| 굵은 쪽 | 치유 1/6 · 전과 1/7 · 각성 1/9 · 열기 1/9 |
+| 얇은 쪽 | 일격 1/20 · 경험 1/20 · 힘 1/19 · 절약 1/18 |
+
+⇒ SUBJECT 에 **굵기 조항을 반드시 넣는다**: 「선 너비는 마크 긴 변의 약 1/13」.
+⛔ 「thin」 한 단어로만 적지 말 것 — 안 듣는다.
+⚠ **1/20 으로 적지 말 것**(2026-09-08 에 그렇게 썼다가 사용자가 잡았다) — 그건 24장 중
+가장 얇은 축이라, 넷을 다시 뽑으면 그 넷만 얇아진다.
+재는 법: 밝기 110 넘는 픽셀의 가로 연속 길이 중앙값 ÷ 잉크 상자의 긴 변.
+
+⚠ 색 재는 법: 밝고(>150) 채도 있는 픽셀 중 **채도 상위 5%** 의 평균이다. 그냥 평균을 내면
+바깥 번짐이 섞여 어둡게 나온다(첫 측정에서 `#26945f` 가 나왔다 — 같은 초록의 흐린 판이다).
+
+### 16-7. 🆕 아직 안 뽑은 문양 8종 (2026-09-08)
+
+⚠ **지금 화면에서 그림이 깨져 있는 룬들이다.** 상점에서 이미지 13장 중 7장이 안 뜬다(실측).
+문양이 나오면 타일은 `node scripts/rune-compose.mjs` 가 조합한다 — **손으로 만들지 말 것.**
+
+⛔ **한 모티프는 한 룬에만**(§15-3). 아래 여덟은 있는 16장과 **겹치지 않게** 골랐다 —
+있는 것은 리듬 막대(연타) · 아래 검(힘) · 빗살(비용·미사용) · 막대 그래프(경험·미사용) ·
+Y 갈래(열기) · 마름모+선(열정) · 두 기둥(정제) · 십자(치유) · 아래 삼각(수호) ·
+X(전과) · 모래알(전리품) · 가로선+세로획(채굴) · 사각 나선(환생·미사용) · 모래시계(가속) ·
+아래 화살(손끝) · ≡→(신속)이다.
+
+⚠ **SUBJECT 는 「무엇처럼 생겼나」가 아니라 「어떻게 그리나」로 적는다**(2026-09-08 사용자 지적).
+한 줄짜리 명사구는 모델이 제 마음대로 살을 붙인다 — **획 몇 개인지 · 어디서 만나고 어디서
+안 닿는지 · 무엇이 비어 있는지**까지 적어야 같은 그림이 다시 나온다. 색도 그 안에 적는다
+(`{COLOUR}` 자리를 따로 두지 않는다 — 「가운데가 거의 흰 획」이 이 계열의 광택이다).
+
+---
+
+**① 예리의 룬** (치명 터치 확률) — `sym_crit.png`
+
+```
+A single crescent arc drawn as one clean curved stroke that opens toward the lower
+left, the same width along its whole length with no taper at either tip. Outside the
+arc's upper-right flank, two short straight ticks sit parallel to each other and
+angled to follow the curve, both floating clear of the arc and not touching it; the
+tick nearer the arc is slightly longer than the far one. Nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `sword, blade with handle, hilt, crescent moon with a face, star,
+spiral, filled solid shape, three or more ticks, ticks touching the arc`
+
+**② 일격의 룬** (치명 배수) — `sym_critm.png`
+
+```
+A small hollow circle sits at the exact centre. Six short straight rays radiate
+outward from it in even sixty-degree steps, every ray floating clear of the circle
+and not touching it. Three alternating rays are long; the three between them are half
+that length. All strokes are one equal width and the circle stays empty inside.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `snowflake, asterisk glyph, sun with a face, wheel, gear, spokes
+touching the circle, filled centre dot, four rays, eight rays`
+
+**③ 노다지의 룬** (일꾼 채굴 치명 확률) — `sym_gcrit.png`
+
+```
+Three upright angular crystals stand side by side on one shared straight baseline: a
+tall one in the centre and a shorter one on each side. Each is an open outline with
+straight facet edges and a pointed top, hollow inside. One short straight spark
+stroke floats just above the centre crystal's tip, angled away from it and not
+touching. Equal stroke thickness throughout.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `diamond gemstone, ring, jewel sparkle, pickaxe, rock pile, cave,
+filled solid shape, more than three crystals, crystals of equal height`
+
+**④ 조준의 룬** (유닛 사거리) — `sym_rng.png`
+
+```
+Four L-shaped corner brackets sit at the corners of an imaginary square, each opening
+inward toward the centre. The two arms of every bracket are equal in length and meet
+at a hard right angle. The brackets never touch one another — a wide gap runs along
+the middle of each side of the square. A single small dot sits alone at the exact
+centre, clear of all four brackets.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `circle scope, crosshair lines running through the centre, closed
+square, complete frame, target rings, telescope, arrow, filled solid shape`
+
+**⑤ 각성의 룬** (스킬 쿨타임 감소) — `sym_skcd.png`
+
+```
+A ring drawn as an open outline with a wedge-shaped notch cut out of its top, so the
+circle stops cleanly on both sides of the gap and the two cut ends face each other.
+Inside the ring, floating clear of it and not touching, one short downward chevron
+sits centred — two straight strokes meeting at a point below. Equal stroke thickness
+throughout, nothing filled.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `clock hands, numerals, tick marks around the ring, hourglass, arrow,
+spiral, letter C, two rings, filled solid shape`
+
+**⑥ 방벽의 룬** (유닛 방어막) — `sym_shld.png`
+
+```
+Two arcs and one straight bar. A wide shallow dome arc spans the top. Directly under
+it a shorter arc of the same curvature sits nested inside, floating clear and not
+touching. Beneath both, one straight horizontal bar runs across, its ends stopping
+just short of where the outer dome lands so the bar connects to neither arc.
+Everything is hollow and drawn at one stroke width.
+Rose pink #d6496e with a near-white core along each stroke.
+```
+추가 NEGATIVE: `heraldic shield, triangle, hexagon, honeycomb, umbrella, rainbow,
+bridge, three arcs, closed dome touching the base, filled solid shape`
+
+**⑦ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
+
+```
+An upright angular crystal occupies the upper half: a pointed top, two straight sides
+flaring outward, a flat base, hollow inside, with one straight facet line running
+down its middle. Below it, floating clear and not touching, a single downward chevron
+of the same stroke width sits centred — two straight strokes meeting at a point
+below. Nothing is filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `coin, currency symbol, percent sign, arrowhead with a shaft, two
+chevrons, diamond suit, filled solid shape, chevron touching the crystal`
+
+**⑧ 검약의 룬** (가스 구매 비용 감소) — `sym_costg.png`
+
+```
+Two short straight vertical bars of equal length and equal width stand side by side
+in the upper half, separated by a gap about as wide as one bar. Below them, floating
+clear and touching neither, one downward chevron sits centred and spans both — two
+straight strokes meeting at a point below. Nothing is filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `bottle, flask, gas cloud, smoke, three bars, arrowhead with a shaft,
+two chevrons, equals sign, letter U, filled solid shape`
+
+---
+
+### 16-8. 🔁 갈래가 바뀌어 **색만** 다시 뽑는 문양 3종 (2026-09-08)
+
+옛 문양은 갈래가 셋이 아니라 **넷**이었다 — 경제·전투·성장 + 「속도·비용·피버」 금색 무리.
+그 무리가 없어지면서 셋이 다른 갈래로 옮겨 갔는데 **그림은 금색인 채 남았다**. 성좌 판에서
+같은 무리 안에 색이 혼자 다른 칸이 생긴다.
+
+⭐ **모양은 그대로 두고 색만 바꾼다.** 아래 SUBJECT 는 지금 파일을 보고 그대로 받아 적은 것이다
+(2026-09-08 · 300px 로 확대해 확인). ⛔ 이 참에 모양을 「더 낫게」 고치지 말 것 —
+쓰던 그림이 바뀌면 사용자는 새 룬이 생긴 줄 안다.
+
+| 룬 | 지금 색 | 갈래 | 바꿀 색 |
+|---|---|---|---|
+| 신속의 룬(일꾼 이동속도) | `#f9cb08` 금 | 경제 | `#13f487` |
+| 가속의 룬(캠프 진행 속도) | `#fbc304` 금 | 성장 | `#4b84d8` |
+| 열기의 룬(피버 발동 확률) | `#dca61c` 금 | 성장 | `#4b84d8` |
+
+---
+
+**⑨ 신속의 룬** (일꾼 이동속도) — `sym_wspd.png`
+
+```
+Two short horizontal bars sit stacked at the left, one above the other with a clear
+gap between them; the upper bar is shorter than the lower one. To their right, clear
+of both and touching neither, one long horizontal arrow runs to the right: a straight
+shaft ending in an open arrowhead made of two short diagonals that meet at the tip
+and do not close into a triangle. All strokes are one equal width, nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `double chevron, filled triangular arrowhead, three or more bars,
+bars touching the shaft, motion blur, speed lines curving, filled solid shape`
+
+**⑩ 가속의 룬** (캠프 전체 진행 속도) — `sym_speed.png`
+
+```
+An angular hourglass drawn as an open outline: one horizontal bar across the top, one
+horizontal bar across the bottom of equal length, and two long straight diagonals that
+run from the ends of the top bar inward, cross at a single point in the middle, and
+continue outward to the ends of the bottom bar. The shape is hollow, perfectly
+symmetric left to right and top to bottom.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `sand, falling grains, realistic hourglass, wooden frame, filled solid
+shape, arrow, arrowhead, bowtie ribbon`
+
+**⑪ 열기의 룬** (피버 발동 확률) — `sym_fever.png`
+
+```
+A tall straight vertical stem rises from the bottom and splits at its top into two
+straight arms that spread outward and upward at equal angles, forming a Y. Each arm
+ends in a short horizontal segment that turns outward, so both tips finish in a small
+right-angled hook. Everything is one equal stroke width, hollow, and symmetric.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `flame, fire, tree, branch with leaves, tuning fork with round tips,
+slingshot, letter Y typeface, arrow, filled solid shape, three arms`
+
+---
+
+### 16-9. 🔁 다시 뽑는 넷 (2026-09-08 · 첫 판을 보고 조인 것)
+
+첫 판에서 셋이 어긋났고 하나는 원래부터 굵었다. ⭐ **모양의 뜻은 그대로 두고 조건만 조인다.**
+
+| 룬 | 무엇이 문제였나 |
+|---|---|
+| 예리 | 초승달 호가 안 나오고 **십자+눈금**이 됐다 — 전과(X)·일격(별)과 한 무리로 보인다 |
+| 절약 · 검약 | **금색**으로 나왔다. 성장 갈래라 파랑이어야 한다(색 표를 고치기 전 프롬프트였다) |
+| 치유 | 선이 **102px** 로 다른 것(중앙값 51px)의 두 배다 |
+
+---
+
+**⑫ 예리의 룬** (치명 터치 확률) — `sym_crit.png` · **베인 자국 셋**
+
+⚠ **호(弧)를 네 번 시도하고 접었다.** 초승달은 이 세트에서 안 나온다 —
+공통 블록의 `FORM: Straight segments and hard angles` 가 곡선을 계속 밀어낸다.
+  ① 호 + 눈금 둘 → **십자**(전과 X·일격 별과 한 무리)
+  ② 조건을 조임 → 눈금이 호에 붙어 **룬 문자**(ᛒ)
+  ③ 눈금을 뺌 → 「>」 꼴로 **꺾였다**
+  ④ `cut from the rim of a perfect circle` → 곡선은 나왔으나 **3/4 바퀴**라 각성(열린 고리)과 겹쳤다
+⇒ ⭐ **모티프를 직선으로 바꿨다**(2026-09-08 사용자 확정). 공통 블록이 각진 형태를
+  요구하므로, 곡선을 우겨넣는 것보다 **직선으로 뜻을 만드는 편**이 한 번에 나온다.
+  ⛔ 다시 초승달로 되돌리지 말 것 — 위 넷을 다시 겪는다.
+
+```
+Three straight parallel slashes leaning to the right, evenly spaced side by side like
+cut marks. The middle slash is the longest, the one on its upper right is shorter,
+and the one on its lower left is shorter still, so their ends form a stepped rhythm
+rather than a straight edge. All three are simple straight lines of the same width
+with flat square ends and no curve anywhere, and none of them touch. A single small
+square dot sits just off the upper end of the middle slash, floating clear of it in
+the direction the slashes lean.
+Nothing else appears in the frame and nothing is filled.
+Vivid green #13f487 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `curve, arc, crescent, circle, ring, X shape, cross, strokes crossing
+each other, strokes joined at one end, chevron, V shape, arrow, arrowhead, sword,
+blade with handle, hilt, claw with fingers, hand, four or more slashes, slashes of
+equal length, dot touching the slash, tapered strokes, filled solid shape,
+rune letter, futhark`
+
+**⑬ 절약의 룬** (미네랄 구매 비용 감소) — `sym_costm.png`
+
+```
+An upright angular crystal drawn as an open outline stands in the upper half: a
+pointed top, two straight sides flaring outward, a flat base, and one straight facet
+line down its middle. Below it, floating clear and not touching, a single downward
+chevron sits centred — two straight strokes meeting at a point below, the same width
+as the rest. Nothing is filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `arrow with a shaft, arrowhead on a stem, tapering arrow, coin,
+currency symbol, percent sign, two chevrons, diamond suit, chevron touching the
+crystal, filled solid shape`
+
+**⑭ 검약의 룬** (가스 구매 비용 감소) — `sym_costg.png`
+
+```
+Two short straight vertical bars of equal length and equal width stand side by side
+in the upper half, separated by a gap about as wide as one bar. Below them, floating
+clear and touching neither, a single downward chevron sits centred and spans both —
+two straight strokes meeting at a point below, the same width as the bars. Nothing is
+filled.
+Steel blue #4b84d8 with a near-white core along each stroke.
+```
+추가 NEGATIVE: `arrow with a shaft, arrowhead on a stem, tapering arrow, thick arrow,
+bottle, flask, gas cloud, smoke, three bars, two chevrons, equals sign, letter U,
+filled solid shape`
+
+**⑮ 치유의 룬** (회복량) — `sym_heal.png` · **속을 비운 십자**
+
+⭐ **얇게 만들지 않고 「테두리만」으로 바꾼다**(2026-09-08 사용자 확정).
+선을 가늘게 하라고 적으면 실이 되도록 얇아졌다 — 굵은 십자를 그대로 두고 **속을 비우면**
+획 굵기는 다른 문양과 같아지면서 십자의 크기와 무게는 남는다.
+⚠ 이 집의 문법과도 맞는다: 있는 문양은 전부 **속이 빈 윤곽**이다(가스의 마름모·수호의 삼각).
+
+```
+A cross drawn as an outline only, hollow inside. Its silhouette has four arms of
+equal length radiating up, down, left and right from a square centre; every corner is
+a hard right angle and each arm ends in a flat square cut, so the contour is a
+twelve-sided figure. One continuous line of even width traces that whole contour and
+the interior stays empty. The shape is perfectly symmetric in every direction — no
+arm is longer than another.
+Rose pink #d6496e with a near-white core along the contour.
+```
+추가 NEGATIVE: `filled solid cross, solid plus sign, thick single stroke cross,
+double outline, second cross inside, rounded corners, chamfered corners, christian
+cross with a long lower arm, medical cross badge, square outline around the cross,
+shading inside the outline`
+
+⭐ **막는 말은 SUBJECT 가 아니라 NEGATIVE 에 둔다**(2026-09-08 사용자 확정).
+조건을 SUBJECT 안에 잔뜩 쌓았더니 문장이 뻣뻣해지고 오히려 모양이 흐트러졌다 —
+SUBJECT 는 **어떻게 그리나**만 흐르듯 적고, 하지 말 것은 NEGATIVE 가 맡는다.
+⚠ 굵기 조항도 **치유에만** 넣는다(그것만 굵어서 고치는 것이다). 나머지는 적지 않는다 —
+적으면 그 넷만 다른 것과 다른 굵기가 된다(§16-6).
+
+⚠ 치유의 색을 `#ffa3b8` 에서 `#d6496e` 로 바꿨다 — 옛 프롬프트의 값은 §16-3 표의 것인데,
+실제 파일들은 그보다 진하다(힘 `#d6496e` · 치유 `#e5497a`). 옅은 값으로 다시 뽑으면
+치유만 혼자 뜬다.
+
+---
+
+⚠ **절약·검약은 아래 꺾쇠를 함께 쓴다** — 그게 「내려간다」의 어휘이고, 위에 얹은 것
+(결정 ↔ 두 기둥)이 무엇이 싸지는지를 가른다. ⛔ 둘 중 하나만 꺾쇠를 빼지 말 것.
+
+⚠ **방벽에 육각형을 쓰지 말 것.** 육각은 **판**의 모양이라 문양이 판과 섞인다(NEGATIVE 에 있다).
+
+각 `NEGATIVE` 끝에 그 룬에서만 막을 것을 더한다:
+예리 `sword, blade with handle` · 일격 `snowflake, asterisk glyph` ·
+노다지 `diamond gemstone, ring` · 조준 `circle scope, cross hair lines through centre` ·
+각성 `clock hands, numerals, hourglass` · 방벽 `heraldic shield, triangle, hexagon` ·
+절약 `coin, currency symbol` · 검약 `bottle, flask, gas cloud`
+
+
+## 17. 🏰 던전 맵 계열 v2 — 적 기지가 위 한 화면에 (2026-09-09 · 새 스타일)
+
+**§11 을 대체한다**(캠프·던전 지면). 스타일·프롬프트를 **버리고 새로 썼다** — 이유 둘:
+① 적 기지가 **격자 위 한 화면**으로 올라가(19-camp `CAMP_LANE_TOP` −0.26) 옛 9:16 그림(격자 −0.18~1.0)은
+   위쪽이 통째로 비고 ② 사용자가 「내 화면(각진 SF · 회색 메탈 · 파란 회색 3D 건물)과 어울리게 아예 새로」를 골랐다.
+⚠ §11-2 의 **게임판 규칙**(그림이 곧 게임판 · 지형지물은 가장자리 · 덩어리는 건물보다 작게)은 그대로 산다 — 스타일만 바뀐다.
+⭐ **적 기지는 내 기지의 거울이고 자리는 원정마다 랜덤이다**(2026-09-09 사용자 확정 · `campFoeLayout`): 맨 위 광맥 호 →
+본진 → 테크 → 앞줄 생산, 탑은 구간 앞 가운데. 그래서 그림에 **고정 대좌를 그리지 않는다** — 건물이 설 자리가 씨앗마다
+다르다. 적 진영은 **넓고 평평한 고원 한 덩어리**이고, 위끝에 **광맥이 설 얕은 호(弧) 자국** 하나만 둔다.
+
+### 17-1. 규격 — 그림의 어디가 격자의 어디인가 (실측 2026-09-09)
+
+바닥(`.bmapFloor`)은 **격자와 같은 좌표계**다(요소 세로 비율 = gy · 가로 비율 = gx · 실측). 배경은 그 요소에
+`background-size:auto N%` · `position:50% 100%`(아래 정렬)로 깔린다. 옛 118% 는 격자 −0.18~1.0 을 덮었다.
+
+| 항목 | 값 | 왜 |
+|---|---|---|
+| 덮을 세로 | 격자 **−0.58 ~ 1.0** | 그림 위 6.5%(광맥 홈) ↔ 적 광맥 gy −0.48(`CAMP_FOE_ROW.mine`) · 아래 100% ↔ gy 1.0 → 높이 1.58 gy |
+| CSS | `.bmapFloor::before{top:-58%}` + `background-size:auto 100%`(css/30-home.css) | 바닥 요소 자체는 격자(0~1)라 **::before** 를 위로 58% 늘려 깐다 — ⛔ 바닥 요소에 바로 배경을 주면 격자 위가 검게 남는다(실측) |
+| 비율 | **9:16 으로 뽑고 양옆을 잘라 1:2** — `node scripts/map-crop.mjs <입력> <출력.webp>` | 생성기에 1:2 가 없다(2026-09-10 사용자). 세로는 그대로(세로 비율이 곧 게임판) · 1:2 로 깔면 폭이 요소의 1.55배 → 좌우 27% 씩 넘친다(가장자리는 지형지물 띠라 잘려도 된다) |
+| 모델 | `gpt_image_2` · `9:16` · `2k`~`4k` · `high` | §11 과 같다(구조를 지키는 모델) · ⚠ `_min` 미리보기(752×1344)가 아니라 **원본 크기**로 받을 것 |
+| 저장 | 폭 2400 리사이즈 + WebP q82 → `assets/backgrounds/camp/camp.webp` · `dungeons/dg1~3.webp` | §11 규격 · ⚠ 1:2 라 장당 2MB 급 |
+| 장수 | 캠프 0 + 던전 3 = **4장** | 던전은 셋뿐이다(REDESIGN §0-A) |
+
+**그림 안 위치(위 0% → 아래 100%)** — gy → (gy + 0.58) / 1.58. 적 줄은 `CAMP_FOE_ROW`(23-camp-dungeon)에서 환산.
+⭐ 아래 비율은 **첫 그림(2026-09-10)이 실제로 낸 것**을 기준으로 삼았다 — 모델이 요청(13~42%)보다 짧은 고원(8~27%)을 냈고, 그림을 다시 뽑는 대신 **적 기지 줄을 조여서**(`CAMP_FOE_ROW` 간격 0.08 · 사용자: 「미네랄을 더 위로 · 건물은 판 안에 더 작은 비율로」) 고원 안에 넣었다. 그래서 공통 블록의 LAYOUT 도 이 비율이다.
+
+| 구역 | 세로 | 내용 |
+|---|---|---|
+| 상단 여백 | 0 ~ 6% | 벽·경계 — 재화 바·칩 아래(`campViewTop` 여유 0.18 안) |
+| **적 광맥 홈** | 6 ~ 8% | 위로 볼록한 얕은 호 하나(가로 30~70%) — 광맥(gy −0.48) 이 그 위에 선다 |
+| **적 기지 고원** | **8 ~ 27%** | 평평한 한 덩어리 · **대좌 없음**(자리는 랜덤) · gy −0.45 ~ −0.15: 본진 −0.42(10%) · 테크 −0.38/−0.30 · 탑 −0.34/−0.26/−0.18 · 생산 −0.22 · 보급고는 탑 줄의 좌우 0.19/0.81 |
+| 통로 | 27 ~ 66% | 적이 내려오는 길 · 장애물 없음 · 격자 위끝 0.18 = 48% |
+| **내 기지 석판** | **66 ~ 100%** | 석판 위끝 gy 0.46 · 본부 gy 0.64 → 77% · 광맥 줄 그 아래 · §11-2 ① |
+| 지형지물 | 가로 0 ~ 22% · 78 ~ 100% | 화면 밖으로 넘치는 좌우 띠 + 위 모서리 |
+
+⚠ 모델은 좌표를 못 지킨다 — 뽑은 뒤 던전 1 에 들어가 표식(`campFoeMarks`)이 **고원 안에 앉는지** 눈으로 본다(가장 빠른 길: 그림을
+프로젝트 루트에 두고 `--campBg` 를 그 URL 로 바꿔 스크린샷 — 이 절의 수치가 그렇게 나왔다). 고원이 어긋나면 그림을 다시 뽑지 말고
+`::before` 의 `top` 을 손본다(고원 위끝이 gy −0.48 에 오도록).
+
+### 17-2. 방법 — 0번(캠프)을 먼저, 던전은 그것을 첨부해 위쪽만 바꾼다 (§11-1 그대로)
+
+내 기지 석판(66~100%)은 **4장이 같아야** 한다(원정에서 돌아와도 같은 집). 캠프 0번을 마음에 들 때까지 뽑고,
+던전 1~3 은 그 그림을 **첨부**하고 「아래 1/3 은 그대로 · 위쪽만 그 던전」으로 뽑는다. ⛔ 후처리로 하단을 이식하지 말 것(§11-1).
+
+### 17-3. 공통 블록 — 원문 그대로 (4장 모두)
+
+`{SCENE}` 한 칸만 바꾼다. ⛔ 한 글자도 고쳐 쓰지 말 것 — 4장의 결이 갈린다.
+
+```
+--- RENDER SPEC ---
+A tall vertical top-down game board for a mobile real-time strategy game, seen from directly
+above (orthographic, no perspective tilt, no horizon). Portrait 9:16 (the sides get cropped later,
+so keep everything important inside the middle 56% of the width).
+STYLE: dark industrial science-fiction ground. Charcoal concrete slabs and gunmetal deck plating
+with crisp chamfered edges, hairline panel seams and recessed grid lines. Cool blue-grey base tone.
+Clean hard-surface look — flat readable surfaces, no clutter, no small debris. The board must feel
+like the same world as angular metal UI panels and blue-grey military buildings.
+LIGHT: even overhead light, mid-tone overall (neither dark nor bright — the game darkens it later).
+Soft, low-contrast shading in the seams only. No strong shadows, no spotlights, no glow pools.
+LAYOUT (top to bottom, of the full image height):
+  0–6%    a dark bounding wall or ridge — this strip is hidden under the top bar.
+  6–8%    one shallow ARC-SHAPED GROOVE bowing upward, spanning the middle 40% of the width —
+          a resting mark where mineral crystals will be placed. Nothing else on it.
+  8–27%   ENEMY BASE PLATEAU: one broad, flat, completely EMPTY platform of the enemy's material,
+          spanning 20–80% of the width, with a clean rim. NO pads, NO sockets, NO markings on it —
+          buildings will be placed on it at random positions. Plain readable surface only.
+  27–66%  OPEN CORRIDOR: a wide empty passage down the centre, plain ground, nothing blocking it.
+  66–100% PLAYER BASE SLAB: one broad stone-and-metal platform spanning the FULL width and running
+          off both sides and off the bottom edge, completely empty. Same material in every image
+          of this set.
+EDGES: terrain features (ridges, pipes, crystal, growth) ONLY in the outer 20% on the left and
+right, and in the top corners. Every feature is small — smaller than a single building.
+The centre column stays open from the enemy plateau down to the player slab.
+COLOUR: grey and blue-grey ground everywhere. ONE accent colour per image, used sparingly on the
+enemy plateau rim and the edges only, never on the player slab and never on the corridor.
+OUTPUT: 9:16 portrait, no text, no UI, no frame.
+--- NEGATIVE ---
+buildings, pads, sockets, platforms drawn on the plateau, units, vehicles, characters, creatures,
+people, text, letters, numbers, icons, HUD, user interface, frame, border, isometric, perspective,
+horizon, sky, clouds, camera tilt, fisheye, vignette, dark corners, bright centre, spotlight,
+glow pool, lens flare, big rocks, big trees, forest, objects in the centre corridor, objects on
+the player slab, objects on the plateau, clutter, rubble piles, scattered debris, cartoon,
+painterly, watercolor, glossy plastic, chrome, mirrored symmetry artifacts, tiling seams, watermark
+--- SCENE ---
+{SCENE}
+```
+
+### 17-4. 장면 4개 — `{SCENE}` 에 넣는 것
+
+**⓪ 캠프 (`camp/camp.webp` · 레퍼런스 없이 · 이 한 장이 4장의 석판을 정한다)**
+
+```
+Home camp. The enemy plateau (8–27%) is here just quiet unused ground of the same grey concrete,
+its rim barely visible, as if nothing has settled there yet; the arc groove above it is faint.
+The player slab (66–100%) is the hero of this image: large interlocking blue-grey deck plates with
+chamfered edges, a few hairline seams, subtle wear at the joints. Edges left and right: low
+charcoal retaining walls with a single embedded pipe run. Accent colour: none — keep this image
+fully neutral grey and blue-grey so the three dungeons can differ from it.
+```
+
+**① 던전 1 — 유니온 「버려진 전초기지」 (`dungeons/dg1.webp` · ⓪ 첨부)**
+
+```
+Keep the bottom third exactly as the attached reference. Replace the top: an abandoned human
+outpost. The enemy plateau is one flat sheet of scorched gunmetal deck plating with a raised rim;
+a few plates are buckled or missing only at the plateau's outer corners, the middle stays plain.
+Edges: stacked cargo crates and a fallen communication mast in the outer bands, a broken barricade
+in each top corner. Corridor: plain cracked concrete. Accent colour: dull rust-amber, only as
+faint hazard stripes along the plateau rim and oxidation on the crates.
+```
+
+**② 던전 2 — 스웜 「감염된 둥지」 (`dungeons/dg2.webp` · ⓪ 첨부)**
+
+```
+Keep the bottom third exactly as the attached reference. Replace the top: an infested nest. The
+enemy plateau is concrete overgrown by a thin, even layer of organic creep — smooth, membranous,
+with faint veins — with no bare patches and no bumps, so the surface stays flat and readable.
+Edges: ribbed organic growths and a few small spore vents in the outer bands, tendrils creeping
+into the top corners but never reaching the corridor. Corridor: grey ground with the creep
+stopping in a clean edge at its boundary. Accent colour: muted violet, only in the creep veins
+and the vents.
+```
+
+**③ 던전 3 — 에테리얼 「잊혀진 회랑」 (`dungeons/dg3.webp` · ⓪ 첨부)**
+
+```
+Keep the bottom third exactly as the attached reference. Replace the top: a forgotten alien
+gallery. The enemy plateau is one sheet of polished dark stone with a thin geometric inlay only
+along its rim, the inside left plain. Edges: broken monolith columns and a few small floating
+crystal shards in the outer bands, a collapsed arch in each top corner. Corridor: plain dark
+stone with one straight inlaid channel running down its centre. Accent colour: cold teal, only in
+the rim inlay, the channel and the crystal shards.
+```
+
+### 17-5. 뽑은 뒤 체크리스트
+
+1. ⓪ 를 먼저 — 석판이 화면 폭을 꽉 채우고 위 1/3 이 비었나. 마음에 안 들면 ⓪ 만 다시.
+2. ①~③ 은 ⓪ 첨부 · 하단이 정말 같은가(자르지 말 것).
+3. `node scripts/map-crop.mjs <원본.png> assets/backgrounds/camp/camp.webp`(던전은 `dungeons/dgN.webp`) — 양옆 크롭 + WebP q82 · 세로 2688.
+   그리고 **`CAMP_BG_V2`(js/19-camp.js)에서 그 번호를 true 로** — 그래야 바닥이 −58% 까지 올라간다(옛 그림은 −18%).
+4. 던전 1 에 들어가 표식(`campFoeMarks`)이 고원 **안**에 앉고 광맥이 호 자국 위에 서는지 본다. 어긋나면 `::before` 의 `top` 을 손본다
+   (자리는 랜덤이라 표를 옮길 것이 없다). `node scripts/art-lint.mjs`.

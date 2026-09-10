@@ -459,6 +459,7 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   const _campSelN=(typeof campSelList==='function')?campSelList().length:0;
   const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes || _campSelN>0); }
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
+  if(typeof campFoeUnpick==='function') campFoeUnpick();   // 🏰 캠프에서 들여다보던 적 건물도 닫는다(시트가 요약으로 돌아간다)
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
   if(typeof campSelClear==='function') campSelClear();   // 🏕 캠프 던전의 전장 유닛 지정도 같은 버튼으로 푼다(2026-09-05)
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제

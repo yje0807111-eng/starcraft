@@ -72,7 +72,7 @@
       <!-- ExoMiner식 하단 인터페이스: 슬라이드 시트 + 아이콘 독 + 유닛 지정 해제(메인 deselTop 재사용 디자인) -->
       <!-- 🗺 캠프 단계·라운드 배지 — campMode 에서만 보인다(css/30-home.css). 내용은 campBarRender() -->
       <!-- 던전·라운드는 재화 바 왼쪽 칩(#curTitle)이 단일 소스다 — 여기는 칩과 안 겹치는 것만 -->
-      <div id="campBar"><span class="cbFoe"></span><span class="cbFev hide"></span></div>
+      <div id="campBar"><span class="cbFoe"></span><span class="cbFev hide"></span><span class="cbTgt hide"></span></div>
       <div id="btSheet"><div id="btSheetBody"></div></div>
       <div id="techSkTip" class="hide"></div>   <!-- 🔮 스킬 롱프레스 설명 팝업(손 떼면 사라짐) -->
 
@@ -911,6 +911,7 @@
 <script src="js/20-camp-research.js"></script>   <!-- 🔬 캠프 연구 구역 — 19 의 값·상태를 읽는다(순서가 뒤여야 한다) -->
 <script src="js/21-camp-battle.js"></script>   <!-- ⚔ 캠프 전투 — 캠프가 제 프레임을 소유한다(18-strike 는 부품으로만 쓴다 · 순서가 뒤여야 한다) -->
 <script src="js/22-camp-rune.js"></script>   <!-- 💠 룬 — 19 의 campState·CAMP_ROUND_MAX 를 읽는다(순서가 뒤여야 한다) -->
+<script src="js/23-camp-dungeon.js"></script>   <!-- 🏰 던전 = 적 기지 — 19 의 campState·campG2W·campFoeDiff 를 읽는다(순서가 뒤여야 한다) -->
 <!-- 🗄 다락(휴지통) — 지금 화면에서 도달할 수 없는 코드. 무엇이 왜 여기 있는지는 ATTIC.md.
      ⚠ **맨 마지막**이다: 아무도 여기 것을 부르지 않으므로 순서가 무의미하고, 거꾸로 여기 것이
      살아 있는 코드를 부르는 것은 런타임이라 문제가 없다. ⛔ 위 순서는 건드리지 않았다. -->

@@ -17,6 +17,35 @@ const MINS=+(process.argv[2]||10), DG0=+(process.argv[3]||1);
 // 🧭 구매 정책 — HUNT_R1 §6-7-0 의 세 갈래를 그대로 옵션으로 둔다(대조용)
 //   A 살 수 있는 것 중 ROI 1위   B 인구가 막히면 보급소만 모은다   C ROI 1위가 비싸면 모은다
 const POL=(process.argv[4]||'A').toUpperCase();
+// 🎯 **전략 프리셋** — `STRAT=이름` (2026-09-08 · 「고를 게 있나」를 재는 자)
+//   ⛔ 위의 POL A/B/C 는 **전략이 아니다.** 셋 다 같은 ROI 순위를 쓰고 「돈이 모자랄 때 기다리나」만
+//     다르다 — 그래서 「전략이 갈리는가」를 잰 적이 한 번도 없다(2026-09-08 발견).
+//   ⭐ 진짜로 갈리는 축은 셋이다: ① 지갑을 경제/병력에 어떻게 나누나(지금은 50:50 고정)
+//     ② 경제 안에서 무엇을 사나 ③ 연구를 하나.
+//   ⭐ **읽는 법**: 프리셋들의 결과가 안 벌어지면 「무엇을 골라도 같다」 = 판단이 없다는 뜻이고,
+//     너무 벌어지면 지배 전략 하나만 남는다(GAME_DIRECTION §2-5 「지배 빌드 하나」).
+//     둘 사이가 목표다 — 어느 쪽이 옳은지가 **상황에 따라** 갈리는 것.
+//   ⭐ 두 갈래로 나눠 둔다 — **섞어서 판정하면 안 된다**(2026-09-08 실측에서 실제로 틀렸다).
+//     kind:'play' 사람이 실제로 고를 법한 것 → **갈림도는 이것들로만** 잰다.
+//     kind:'abl'  기둥을 통째로 뽑는 절단 실험 → 「무엇이 이 게임을 떠받치나」를 본다.
+//     ⛔ 절단을 갈림도에 넣으면 「탭만 사면 망한다」가 「지배 전략이 있다」로 둔갑한다.
+const STRATS={
+  // 🎚 경제:병력 지출 비율 한 축 — 사람이 실제로 고르는 것은 대개 이 눈금이다
+  e20:  { nm:'경제20:병력80', eco:0.20, only:null,                rsch:1, kind:'play' },
+  e35:  { nm:'경제35:병력65', eco:0.35, only:null,                rsch:1, kind:'play' },
+  e50:  { nm:'경제50:병력50', eco:0.50, only:null,                rsch:1, kind:'play' },
+  e65:  { nm:'경제65:병력35', eco:0.65, only:null,                rsch:1, kind:'play' },
+  e80:  { nm:'경제80:병력20', eco:0.80, only:null,                rsch:1, kind:'play' },
+  // 🔪 절단 — 기둥 하나를 뽑는다(전략이 아니라 「그게 없으면 어떻게 되나」)
+  tap:  { nm:'탭만',        eco:0.5, only:['tap'],              rsch:1, kind:'abl' },
+  gath: { nm:'채취만',      eco:0.5, only:['gather'],           rsch:1, kind:'abl' },
+  work: { nm:'일꾼·인구만',  eco:0.5, only:['worker','supply'],  rsch:1, kind:'abl' },
+  nors: { nm:'연구 안 함',   eco:0.5, only:null,                 rsch:0, kind:'abl' },
+};
+// 옛 이름은 그대로 통하게 둔다(BALANCE·커밋 기록이 이 이름으로 적혀 있다)
+STRATS.bal=STRATS.e50; STRATS.eco=STRATS.e80; STRATS.army=STRATS.e20;
+const STRAT=(process.env.STRAT||'bal').trim();
+if(!STRATS[STRAT]){ console.error('STRAT 이름이 없다: '+STRAT+'  (있는 것: '+Object.keys(STRATS).join(' ')+')'); process.exit(2); }
 // 🔮 **스킬을 끄고 재는 모드** — `SKILLS_OFF=1` (2026-08-28).
 //   ⭐ 스킬이 밸런스에 얼마나 기여하는지는 **껐다 켠 두 판을 비교해야** 알 수 있다 —
 //     한 판만 보면 그 사이 들어온 다른 변경과 구분이 안 된다(실제로 그래서 못 갈랐다).
@@ -121,7 +150,7 @@ pg.on('console', m=>{ const t=m.text(); if(t.indexOf('__PROBE__')===0) probes.pu
 await pg.goto(`http://127.0.0.1:${server.address().port}/sc-ums-web.html`,{waitUntil:'load'});
 await pg.waitForFunction('typeof openHome==="function" && typeof campCombatStep==="function"',{timeout:30000});
 
-await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0,nodg0,hand0,dbg10,gate0)=>{
+await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,rallyW0,rebDg0,startMul0,hoard0,holdGate0,nosk,seed0,nodg0,hand0,dbg10,gate0,strat0)=>{
   // 🔮 스킬 끄기 — 목록을 비우면 시전 판정이 통째로 빠진다(효과·쿨·대상 선택 전부).
   if(nosk && typeof strikeSkillKeys === 'function') window.strikeSkillKeys = function(){ return []; };
   // 🎲 씨앗을 심는다 — mulberry32(작고 고르다). ⛔ 전역 Math.random 을 갈아 끼우는 것이
@@ -137,8 +166,8 @@ await pg.evaluate((dg0,pol,refCap0,rebMode0,wallWarn0,wallStop0,bunk0,rally0,ral
   const C=campState(); C.race='terran';
   if(startMul0>0) C.rebMul=startMul0;              // 🔁 「이미 환생한 사람」으로 출발
   saveMeta(); openHome();
-  window.__CB={ dg0, pol, refCap:refCap0, rebMode:rebMode0, gateMode:gate0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0, nodg:nodg0, hand:hand0, dbg1:dbg10 };
-}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED, NODG, HAND, DBG1, GATE);
+  window.__CB={ strat:strat0, dg0, pol, refCap:refCap0, rebMode:rebMode0, gateMode:gate0, rebDg:rebDg0, wallWarn:wallWarn0, wallStop:wallStop0, bunk:bunk0, rallyMode:rally0, rallyW:rallyW0, hoard:hoard0, holdGate:holdGate0, nodg:nodg0, hand:hand0, dbg1:dbg10 };
+}, DG0, POL, REFCAP, REB, WALL_WARN, WALL_STOP, BUNK, RALLY, RALLYW, REB_DG, START_MUL, HOARD, HOLD_GATE, NOSK, SEED, NODG, HAND, DBG1, GATE, Object.assign({key:STRAT}, STRATS[STRAT]));
 if(PACKS.length){ const got=await pg.evaluate(list=>{ const p=PROF(); p.packs=p.packs||{};
   for(const k of list) p.packs[k]=1; saveMeta();
   return { on:Object.keys(p.packs), gather:(typeof campPackGather==="function")?campPackGather():null,
@@ -359,7 +388,9 @@ await pg.evaluate(()=>{
         opts.push({k:'supply', c:campSupplyCost(sn), d:gain*perWk,
           go:()=>{ __CB.want.supply=sn+1; __CB.build(); }});   // 배치는 build 가 한다
       }
-      const live=opts.filter(o=>o.d>0);
+      // 🎯 전략 — 「이것만 산다」 목록이 있으면 나머지는 후보에서 뺀다(경제 안의 갈림)
+      const _only=(__CB.strat&&__CB.strat.only)||null;
+      const live=opts.filter(o=>o.d>0 && (!_only || _only.indexOf(o.k)>=0));
       if(!live.length) return;
       const ranked=live.sort((a,b)=>(b.d/b.c)-(a.d/a.c));
       let pick=null;
@@ -387,6 +418,7 @@ await pg.evaluate(()=>{
   //   ⚠ 살 수 있는 것 중 **가장 싼 것**을 산다(§4 규약). 계열 업그레이드는 상한이 없어
   //     늘 후보에 남고, 단발 연구는 한 번 사면 빠진다.
   __CB.research=function(){ const T=G.tech; if(!T) return;
+    if(__CB.strat && !__CB.strat.rsch) return;   // 🎯 전략 「연구 안 함」 — 전투 연구를 통째로 뺀다(정제소는 __CB.buy 소관이라 그대로)
     const t=TECH_TREE[T.race]; if(!t) return;
     for(const b of (t.buildings||[])){
       if(!b.research || !b.research.length) continue;
@@ -532,7 +564,9 @@ await pg.evaluate(()=>{
   //     초당 수입이 6,902 → 2,909 로 줄었다. 사람도 그렇게 몰아 쓰지 않는다.
   //   ⚠ 지갑은 하나(G.tech.credit)라 **누적 지출**로 가른다.
   { const oP=__CB.produce, oB=__CB.buy;
-    __CB.produce=function(){ if((__CB.spentU||0) >= campWealth()*0.5) return;
+    // 🎯 전략 — 지갑을 경제/병력에 나누는 비율. eco=0.5 가 옛 50:50 이다.
+    const _ecoShare=()=>(__CB.strat&&__CB.strat.eco!=null)?__CB.strat.eco:0.5;
+    __CB.produce=function(){ if((__CB.spentU||0) >= campWealth()*(1-_ecoShare())) return;
       // 🖐 손 플레이 기준 — 병력은 **한 기**뿐. 죽으면 다시 한 기.
       if(__CB.hand>=0){ const alive=(typeof campAlive==='function')?campAlive('me'):0;
         const base=(G.tech.ents||[]).filter(e=>e.type==='unit').length;
@@ -541,7 +575,7 @@ await pg.evaluate(()=>{
         const down=(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._down)?CAMPB._down.length:0;
         if(alive+base+down>=1) return; }
       const c0=G.tech.credit||0; oP(); __CB.spentU=(__CB.spentU||0)+Math.max(0,c0-(G.tech.credit||0)); };
-    __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*0.5) return;
+    __CB.buy=function(){ if((__CB.spentE||0) >= campWealth()*_ecoShare()) return;
       // 💰 모으기 모드 — 채취가 목표 레벨에 닿으면 경제 구매를 멈춘다(HOARD)
       if(__CB.hoard && campUpgLv('gather') >= __CB.hoard) return;
       const c0=G.tech.credit||0; oB(); __CB.spentE=(__CB.spentE||0)+Math.max(0,c0-(G.tech.credit||0)); }; }
@@ -1021,5 +1055,19 @@ if(froze){
   console.log('   ⛔ 이 판은 ' + froze.at + '분에 멎었다. 번 돈이 ' + froze.min + '분 동안 '
     + froze.earn + ' 에서 안 움직였다.');
   console.log('   ⚠ 원인 미특정 — 관찰된 사례는 모두 **다른 무거운 작업과 동시에** 돌릴 때였다.'); }
+// 🤖 **기계가 읽는 한 줄** — scripts/camp-strat.mjs 가 이것만 본다(사람이 읽는 표는 위에 그대로 둔다).
+//   ⚠ 30분 시점은 15초마다 찍는 __CB.wealth 에서 가장 가까운 표본을 고른다.
+{ const at=(sec)=>{ const W=fin.wealth||[]; if(!W.length) return null;
+    let b=W[0]; for(const q of W){ if(Math.abs(q.t-sec)<Math.abs(b.t-sec)) b=q; } return b; };
+  const m30=at(1800);
+  const WW=await pg.evaluate(()=>({ wall:__CB.wall||null, warn:__CB.wallWarnLog||[] }));
+  console.log('«BENCH» '+JSON.stringify({
+    strat:STRAT, nm:STRATS[STRAT].nm, kind:STRATS[STRAT].kind||'play', pol:POL, mins:MINS, seed:SEED,
+    t:+(fin.t/60).toFixed(1), dg:fin.dg, round:fin.round, earn:Math.round(fin.earn),
+    reb:fin.reb, froze:!!froze,
+    m30: m30 ? { t:m30.t, w:m30.w, dg:m30.dg, r:m30.r } : null,
+    wall: WW.wall ? { dg:WW.wall.dg, r:WW.wall.r, sec:WW.wall.sec, t:WW.wall.t } : null,
+    warns: (WW.warn||[]).map(x=>'D'+x.dg+'R'+x.r+'@'+x.t),
+    err:errs.length })); }
 console.log(errs.length ? ('\n⚠ 페이지 예외 '+errs.length+'건:\n  '+[...new Set(errs)].slice(0,6).join('\n  ')) : '\n✅ 페이지 예외 없음');
 await b.close(); server.close();

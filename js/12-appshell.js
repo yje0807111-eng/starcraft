@@ -93,7 +93,9 @@ function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) ret
   //   캠프로 돌아왔을 때 curPaintChip 이 「값이 안 바뀌었다」고 보고 다시 안 그려 **칩이 빈 채로 남는다**
   //   (유즈맵·상점에 갔다 오면 좌상단이 사라졌다 — 사용자 신고).
   campDropClose(); e.classList.remove('asChip','open'); e._cdKey=''; e.textContent=t||''; }   // 재화 바 왼쪽 제목(화면별) — 칩(asChip)이 붙어 있었다면 걷고 글자로 되돌린다
-const CAMP_DG_MAX=10;      // 던전 1~10 (HB_DUNGEONS 길이와 같다)
+// 🏰 던전 **셋**(2026-09-09 · GAME_DIRECTION §0-A) — 적 종족과 짝이다(유니온 → 스웜 → 에테리얼).
+//   ⛔ 옛 10 으로 되돌리지 말 것. 표의 단일 소스는 `js/23-camp-dungeon.js` 의 `CAMP_DG` 다.
+const CAMP_DG_MAX=(typeof CAMP_DG_MAX_N!=='undefined')?CAMP_DG_MAX_N:3;
 // ⚠ 라운드 상한 — **설계 단일 소스는 19-camp.js 의 CAMP_ROUND_MAX** 다(HUNT_R1.md §6-1).
 //    그 파일이 **뒤에** 로드되므로 여기서 참조할 수 없어 값을 복사해 둔다.
 //    ⛔ 둘이 갈리면 칩·드롭다운이 실제 라운드와 어긋난다 — 스모크가 같은지 검사한다.
@@ -114,11 +116,13 @@ function campChipInfo(){
   const d=(typeof hbDun==='function')?hbDun(dg):null;
   // 🏕 캠프도 던전과 **같은 자리**를 쓴다(2026-09-03) — 숫자를 빼 봤더니 너무 밋밋했다.
   //   상한은 던전과 같은 라운드 상한(50)이다 — 단계 개수(10)를 쓰면 다른 구역과 자릿수가 갈려 보인다.
-  if(!inDg) return { name:CAMP_HOME_NAME, lab:'라운드',
-    cur:0, max:(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:CAMP_RND_MAX };
-  const rnd=(typeof campRoundN==='function')?campRoundN():1;
-  const rmax=(typeof CAMP_ROUND_MAX!=='undefined')?CAMP_ROUND_MAX:50;
-  return { name:(d&&d.name)||('던전 '+dg), lab:'라운드', cur:rnd, max:rmax }; }
+  // 🏰 **진행 지표가 「부순 건물 수」다**(2026-09-09 · 라운드 폐지 · GAME_DIRECTION §0-A).
+  //   ⛔ 「라운드 30/50」으로 되돌리지 말 것 — 던전은 적 기지이고 관문은 건물 여섯이다.
+  const smax=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+  if(!inDg) return { name:CAMP_HOME_NAME, lab:'건물', cur:0, max:smax };
+  const nm=(typeof campDgName==='function')?campDgName(dg):((d&&d.name)||('던전 '+dg));
+  const done=(typeof campBroken==='function')?campBroken():0;
+  return { name:nm, lab:'건물', cur:done, max:smax }; }
 // 🧑 레벨·경험치 — 재화 바 **맨 왼쪽**. 캠프에서만 보인다(CSS 가 가른다).
 //   ⚠ **아직 캠프에서는 경험치가 안 오른다** — profGainXp 를 부르는 곳이 옛 사냥터(08-hunt.js)와
 //     토벌(09-dungeon.js)뿐이고 둘 다 유보 상태다. 표시만 먼저 만든 것이다(2026-09-04 사용자 확정).
@@ -173,12 +177,18 @@ function curPaintMul(){ const e=document.getElementById('curMul'); if(!e) return
   const tx = '획득 ×' + ((v>=100 && typeof fmtCur==='function') ? fmtCur(v)
                         : (Math.round(v*10)/10).toFixed(1));
   if(e.textContent!==tx) e.textContent=tx;
-  e.classList.add('on');
   // 자리 — 칩 **바로 오른쪽**(같은 줄). 칩 폭은 던전 이름 길이에 따라 변하므로 그때그때 잰다.
-  { const ch=document.getElementById('curTitle');
+  //   ⚠ **자리를 잡고 나서 보여 준다**(2026-09-08). 던전을 옮기면 칩이 잠깐 비는데, 먼저 보이게 하면
+  //     left 가 아직 없어 **화면 왼쪽 끝에 나타났다가** 제자리로 미끄러진다 — 튜토리얼 링이 그걸
+  //     따라가 「왼쪽에 갔다가 온다」로 보였다(실측 궤적 x 2 → 110).
+  //   ⛔ 순서를 되돌리지 말 것(보이기 → 자리).
+  { let put=false;
+    const ch=document.getElementById('curTitle');
     if(ch && ch.classList.contains('asChip') && e.parentElement){
       const cr=ch.getBoundingClientRect(), br=e.parentElement.getBoundingClientRect();
-      if(cr.width>0) e.style.left=Math.round(cr.right-br.left+8)+'px'; } } }
+      if(cr.width>20){ e.style.left=Math.round(cr.right-br.left+8)+'px'; put=true; } }
+    if(!put && e.style.left) put=true;                 // 전에 잡아 둔 자리가 있으면 그대로 쓴다
+    e.classList.toggle('on', put); } }
 // 칩을 그리거나 걷는다. updateCurBar() 가 부른다 — 캠프가 수입마다 그걸 부르므로 따로 타이머를 두지 않는다.
 function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) return;
   // 🏕 캠프 **구역**(환생·업그레이드·룬)이 열려 있으면 던전 칩 대신 그 이름을 쓴다(2026-09-03).
@@ -240,7 +250,14 @@ const CAMP_DG_DESC = [
   '공허로 이어지는 무너진 관문',                     // 9 공허의 문
   '무엇도 돌아오지 못한 바닥',                       // 10 심연
 ];
-function campDgDesc(dg){ return CAMP_DG_DESC[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))] || ''; }
+// 🏰 **부제도 이름과 같은 표에서 온다**(2026-09-10). 개편이 이름을 CAMP_DG 로 옮기면서 부제는
+//   옛 10던전 표(CAMP_DG_DESC)에 남아, 목록에 「버려진 전초기지 / 스웜 종족의 한적한 터전 외곽」처럼
+//   **종족이 어긋난 줄**이 떴다(실측). 이름이 campDgName 한 곳에서 오듯 부제도 그렇다.
+//   ⚠ CAMP_DG_DESC 는 캠프(0) 한 줄 때문에 남는다 — 던전 쪽은 이제 안 읽는다.
+function campDgDesc(dg){
+  const i = Math.max(0, dg | 0);
+  if(i > 0 && typeof CAMP_DG !== 'undefined' && CAMP_DG[i] && CAMP_DG[i].desc) return CAMP_DG[i].desc;
+  return CAMP_DG_DESC[Math.min(CAMP_DG_DESC.length - 1, i)] || ''; }
 // 💠 카드 오른쪽 배수 — **진입 ~ 50라운드 클리어 범위**로 적는다(2026-09-04 사용자 확정).
 //   ⚠ 배수는 라운드를 깰 때마다 조금씩 붙는다(campMineInc) — 던전 1 은 ×1 로 들어가 ×2 로 나온다.
 //     그래서 진입값 하나만 적으면 「던전 1 = ×1」로 읽혀 **아무 이득이 없어 보인다**(사용자 지적).
@@ -260,7 +277,13 @@ function campDgMulTx(dg){
   return '×' + f(t.base) + ' ~ ×' + f(t.base * t.x);   // 진입 ~ 50클리어
 }
 const CAMP_HOME_NAME='캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다 · ⛔ 왼쪽 아이콘 되돌리지 말 것(2026-09-03)
-function campDgOpen(dg){ return dg>=0 && dg<=CAMP_DG_MAX; }
+// 🔓 **앞 던전을 완주해야 열린다**(2026-09-09). 캠프(0)와 던전 1 은 늘 열려 있다.
+//   ⛔ 「최고 도달」로 열지 말 것 — 절반만 부수고 나온 던전은 아직 못 깬 것이다.
+function campDgOpen(dg){
+  if(dg<0 || dg>CAMP_DG_MAX) return false;
+  if(dg<=1) return true;
+  const C=(typeof campState==='function')?campState():null;
+  return !!(C && C.dgDone && C.dgDone[dg-1]); }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.
 //   ⛔ 두 벌로 들고 있지 말 것 — 드롭다운으로 옮긴 뒤 실제 라운드가 안 따라오던 원인이다.
@@ -304,6 +327,14 @@ function _cdOutside(ev){ const d=document.getElementById('campDrop'), t=document
 //   위: 던전 카드 목록(굴림) · 아래 고정: ROUND(◀▶ + **슬라이더**) · [이동]. 손가락 닿는 자리에 조작이 모인다.
 //   ⛔ 청록·발광 없음. 버튼은 공용 .actBtn.pri, ◀▶ 는 공용 .arwBtn — 제 것을 만들지 않는다(CLAUDE.md 레지스트리).
 //   ⛔ 칩 아래 드롭다운으로 되돌리지 말 것 — 굴림 피커·목록 스크롤이 좁아 손가락에 안 맞았다.
+// 🚪 아래 칸의 **글자 둘** — 고른 곳이 캠프냐 던전이냐로 갈린다.
+//   ⛔ 두 곳에서 만들지 말 것: 처음 그릴 때만 정하고 고를 때 안 고쳐서, 캠프에서 목록을 열면
+//     던전 1 을 골라도 버튼이 「돌아가기」로 남아 있었다(2026-09-10 실측 · 튜토리얼이 그 글자를 읽어 드러났다).
+function _cdGoLabel(dg){ return (dg|0)===0 ? '돌아가기' : '진입'; }
+function _cdNoteTx(dg){
+  if((dg|0)===0) return '집 — 여기서 키우고 재정비한다';
+  const n=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+  return '진행 건물 '+n+'채를 부수면 완주'; }
 function campDropRender(){
   const ph=document.getElementById('phone'); if(!ph||!_cdPick) return;
   let d=document.getElementById('campDrop');
@@ -313,84 +344,44 @@ function campDropRender(){
   let L='';
   // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
   //   지나온 던전(here 보다 앞)은 번호를 옅게 — 「어디까지 왔나」가 목록에서 읽힌다.
-  for(let i=0;i<=CAMP_DG_MAX;i++){ const D=(i>0 && typeof hbDun==='function')?hbDun(i):null;
+  // 🏰 **이름은 `campDgName`(23-camp-dungeon) 한 곳에서 온다**(2026-09-09).
+  //   ⛔ `hbDun`(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 칩과 목록의 이름이 어긋났다
+  //     (실측: 칩은 「감염된 둥지」인데 목록 같은 줄은 「버려진 전초기지」였다).
+  for(let i=0;i<=CAMP_DG_MAX;i++){
     const open=campDgOpen(i), here=(i===_cdPick.dg), done=(i>0 && i<_cdPick.dg);
-    const nm=(i===0)?CAMP_HOME_NAME:((D&&D.name)||('던전 '+i));
+    const nm=(i===0)?CAMP_HOME_NAME
+      :((typeof campDgName==='function')?campDgName(i):('던전 '+i));
     // 부제 = **장소 설명**(배수가 아니다). 잠긴 곳만 이유를 적는다.
     const sub=open ? campDgDesc(i) : '아직 열리지 않았다';
     L+='<button class="cdRow'+(here?' here':'')+(done?' done':'')+(open?'':' lock')+(i===0?' home':'')+'" data-dg="'+i+'"'
       +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
       +'<span class="cdTx"><span class="cdRnm">'+escHtml(nm)+'</span><span class="cdSub">'+escHtml(sub)+'</span></span>'
       +'<span class="cdMul">'+(!open?'잠김':campDgMulTx(i))+'</span></button>'; }
-  // ⚠ 캠프(0단계)에는 **라운드가 없다**(CAMP_MINE[0] 「배율 고정, 라운드 없음」) — 그 칸을 잠근다.
   const noRnd=(_cdPick.dg===0);
   d.innerHTML='<div class="cdSec cdTop">'
       +'<div class="cdSl">DUNGEON<em>0 – '+CAMP_DG_MAX+'</em></div><div class="cdList">'+L+'</div></div>'
+    // 🏰 **라운드 줄이 없어졌다**(2026-09-09 · GAME_DIRECTION §0-A). 관문은 건물 여섯이고
+    //   **늘 그 던전 처음부터** 들어가므로 고를 것이 없다.
+    //   ⛔ ROUND 큰 숫자·◀▶·슬라이더(.cdRnd/.cdRnN/.cdSld/.cdTicks)를 되살리지 말 것 —
+    //     되살리면 「중간부터 들어간다」가 되어 관문 규칙이 무너진다. CSS 는 다락으로 갔다.
     +'<div class="cdFoot">'
-      +'<div class="cdRnd'+(noRnd?' off':'')+'"><div class="cdSl">ROUND<em>1 – '+CAMP_RND_MAX+'</em></div>'
-        +'<div class="cdRl">'
-          +'<button class="arwBtn cdArw" data-arw="l" data-d="-1" type="button" aria-label="이전 라운드"></button>'
-          +'<b class="cdRnN"></b>'
-          +'<button class="arwBtn cdArw" data-arw="r" data-d="1" type="button" aria-label="다음 라운드"></button>'
-        +'</div>'
-        // 🎚 슬라이더 — 한 번에 멀리. ◀▶ 는 한 칸씩 정확히. 둘 다 campRndTap 하나로 모인다.
-        +'<div class="cdSld" role="slider" aria-label="라운드" aria-valuemin="1" aria-valuemax="'+CAMP_RND_MAX+'">'
-          +'<i class="cdFill"></i><i class="cdKnob"></i></div>'
-        +'<div class="cdTicks">'+[1,10,20,30,40,50].map(v=>'<span>'+v+'</span>').join('')+'</div>'
-      +'</div>'
-      +'<button class="actBtn pri cdGo" type="button">이동</button></div>';
+      +'<div class="cdNote">'+_cdNoteTx(_cdPick.dg)+'</div>'
+      +'<button class="actBtn pri cdGo" type="button">'+_cdGoLabel(_cdPick.dg)+'</button></div>';
   for(const b of d.querySelectorAll('.cdRow')) b.onclick=()=>campDropPickDg(+b.dataset.dg);
-  for(const b of d.querySelectorAll('.cdArw')) campRndHold(b, +b.dataset.d);
-  campRndSlider(d.querySelector('.cdSld'));
   d.querySelector('.cdGo').onclick=campDropGo;
   if(typeof paintIcons==='function') paintIcons(d);   // .arwBtn[data-arw] 글리프를 채운다(공용 · CLAUDE.md 「방향 버튼」)
-  campRndMark(); }
+  // 🏰 campRndMark() 는 라운드 줄과 함께 다락으로 갔다(2026-09-09) — ⛔ 다시 부르지 말 것(없는 요소를 읽는다).
+}
 
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
   const d=document.getElementById('campDrop'); if(d){
     for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
-    // 캠프를 고르면 라운드 칸이 잠기고, 던전으로 옮기면 풀린다
-    const R=d.querySelector('.cdRnd'); if(R) R.classList.toggle('off', dg===0); }
+    // 🚪 **아래 칸도 따라온다** — 캠프↔던전을 오가면 버튼 글자와 안내가 달라진다
+    const G=d.querySelector('.cdGo'); if(G) G.textContent=_cdGoLabel(dg);
+    const N=d.querySelector('.cdNote'); if(N) N.textContent=_cdNoteTx(dg); }
   if(typeof playSfx==='function') playSfx('ui_tab'); }
 
-// 라운드 = **큰 숫자 + ◀▶**(2026-09-03). 굴림 피커는 무겁고 막대는 손가락으로 정확히 안 잡혀서 버렸다.
-//   눌러서 정확히 고르고, 아래 붉은 밑선(.cdProg)이 「50 중 어디쯤」을 읽어 준다 — 칩의 밑선과 같은 어휘.
-function campRndMark(){ const d=document.getElementById('campDrop'); if(!d||!_cdPick) return;
-  const n=d.querySelector('.cdRnN'), f=d.querySelector('.cdFill'), k=d.querySelector('.cdKnob'), sl=d.querySelector('.cdSld');
-  if(n) n.innerHTML=_cdPick.rnd+'<em>/'+CAMP_RND_MAX+'</em>';
-  // 슬라이더 위치 = (r-1)/(max-1) — 1 이 왼끝, 50 이 오른끝(손잡이가 눈금 1·50 위에 정확히 선다)
-  const pct=((_cdPick.rnd-1)/(CAMP_RND_MAX-1)*100).toFixed(1)+'%';
-  if(f) f.style.width=pct; if(k) k.style.left=pct;
-  if(sl) sl.setAttribute('aria-valuenow', _cdPick.rnd);
-  // 끝에 닿은 쪽 화살표는 잠근다(1 아래·50 위는 없다)
-  for(const b of d.querySelectorAll('.cdArw')){ const dd=+b.dataset.d;
-    b.disabled=(dd<0 && _cdPick.rnd<=1)||(dd>0 && _cdPick.rnd>=CAMP_RND_MAX); } }
-function campRndTap(r){ if(!_cdPick) return;
-  const v=Math.max(1, Math.min(CAMP_RND_MAX, r|0)); if(v===_cdPick.rnd) return;
-  _cdPick.rnd=v; campRndMark(); if(typeof playSfx==='function') playSfx('ui_tab'); }
-function campRndStep(dir){ if(_cdPick) campRndTap(_cdPick.rnd+dir); }
-// 🎚 슬라이더 — 누른 자리·끄는 자리를 라운드로 바꾼다. pointer capture 로 손가락이 트랙을 벗어나도 따라온다.
-//   ⚠ 여기서 값을 따로 들지 않는다 — campRndTap 이 유일한 입구(◀▶ 와 같은 길).
-function campRndSlider(el){ if(!el) return;
-  const at=(ev)=>{ const r=el.getBoundingClientRect(); if(r.width<=0) return;
-    const x=Math.max(0, Math.min(1, (ev.clientX-r.left)/r.width));
-    campRndTap(1+Math.round(x*(CAMP_RND_MAX-1))); };
-  el.addEventListener('pointerdown', (ev)=>{ ev.preventDefault(); try{ el.setPointerCapture(ev.pointerId); }catch(e){}
-    el.classList.add('drag'); at(ev); });
-  el.addEventListener('pointermove', (ev)=>{ if(el.classList.contains('drag')) at(ev); });
-  for(const t of ['pointerup','pointercancel']) el.addEventListener(t, ()=>el.classList.remove('drag')); }
-// ◀▶ 를 **누르고 있으면 반복**한다(0.35초 뒤부터 70ms 마다) — 50칸을 한 칸씩 눌러 가는 건 고문이다.
-//   ⚠ click 이 아니라 pointerdown 으로 첫 칸을 움직인다 — 캠프 화면은 터치 처리가 click 을 안 만들 수 있다
-//     (무장 트레이가 그래서 안 눌렸다 · CLAUDE.md 무장 칸 항목). 그래서 click 은 막는다(두 번 가지 않게).
-function campRndHold(btn, dir){
-  const stop=()=>{ clearTimeout(_cdRndT); clearInterval(_cdRndT); _cdRndT=null; };
-  btn.addEventListener('pointerdown', (e)=>{ e.preventDefault(); if(btn.disabled) return;
-    campRndStep(dir); stop();
-    _cdRndT=setTimeout(()=>{ _cdRndT=setInterval(()=>{ if(btn.disabled){ stop(); return; } campRndStep(dir); }, 70); }, 350); });
-  for(const t of ['pointerup','pointercancel','pointerleave']) btn.addEventListener(t, stop);
-  btn.onclick=(e)=>e.preventDefault();
-}
 
 // [이동] — **여기서만** 실제로 옮긴다. 고르기만 해서는 아무것도 안 바뀐다.
 function campDropGo(){ if(!_cdPick) return;
@@ -404,8 +395,12 @@ function campDropGo(){ if(!_cdPick) return;
     return; }
   // ⭐ 캠프 상태에 쓴다 — cleared 가 단일 소스이고 rnd 는 그것을 비춘다(라운드 n = 깬 수 n-1)
   // 🏕 캠프(0)로 가면 라운드는 없다 — cleared·rnd 를 비운다(campRoundN 도 0 을 돌려준다)
+  // 🏰 **그 던전을 처음부터** 시작한다(2026-09-09 · §0-A). 부순 건물은 되살아난다.
+  //   ⛔ 옛 「라운드를 골라서 들어간다」로 되돌리지 말 것 — 관문은 건물이고 중간 진입이 없다.
+  //   ⭐ 규칙은 `campEnterDungeon`(23-camp-dungeon) 한 곳에 있다 — 여기서 상태를 직접 만지지 말 것.
   const toHome=(_cdPick.dg===0);
-  C.dg=_cdPick.dg; C.cleared=toHome?0:Math.max(0, _cdPick.rnd-1); C.rnd=toHome?1:_cdPick.rnd;
+  if(typeof campEnterDungeon==='function') campEnterDungeon(_cdPick.dg);
+  else { C.dg=_cdPick.dg; C.broken=0; C.foeDead={}; C.cleared=0; C.rnd=1; }
   if(typeof campBattleClose==='function') campBattleClose();   // 던전이 바뀌면 전장을 새로 연다
   if(typeof campBarReset==='function') campBarReset();
   if(typeof campSkin==='function') campSkin();          // 🎨 바닥 그림이 그 던전 것으로
@@ -511,7 +506,8 @@ function updateCurBar(){ if(!PLAYER_META||!PLAYER_META.profile) return;
   curPaintChip();     // 🏕 좌상단 던전 칩도 같은 박자로 갱신된다(캠프가 수입마다 이 함수를 부른다)
   curPaintMul();      // 📈 라운드에 따라 오르는 획득 배수(칩 옆)
   if(typeof guidePaint==='function') guidePaint();   // 🧭 가이드 띠도 같은 박자로
-  if(typeof tutoKick==='function') tutoKick(); }     // 🎓 튜토리얼 스포트라이트도 같은 박자로
+  if(typeof tutoKick==='function') tutoKick();       // 🎓 튜토리얼 스포트라이트도 같은 박자로
+  if(typeof zoneTipKick==='function') zoneTipKick(); }  // 🗺 구역 안내도(그 화면에 처음 왔을 때 한 장)
 // 🎬 화면 전환 크로스페이드 (2026-08-23)
 // ⚠ `.appScreen.hide` 는 `display:none` 이다. 나가는 화면에 .hide 를 바로 걸면 전환이 뚝 끊긴다 —
 //   var(--t-screen) 동안 남겨 두고 겹쳐 넘긴다.
@@ -609,6 +605,7 @@ function showAppScreen(id){ setInGame(false);
   //    (위 campExit() 로 캠프가 이미 꺼졌으므로 guidePaint 가 스스로 지운다).
   //    ⛔ 없으면 상점·정비 화면에서 띠가 첫 패널 머리줄을 덮는다(실측 2026-08-31).
   if(typeof guidePaint==='function') guidePaint(); if(typeof tutoKick==='function') tutoKick();   // 🎓 튜토리얼 스포트라이트도 같은 박자로
+  if(typeof zoneTipKick==='function') zoneTipKick();
   const tgt=document.getElementById(id); if(tgt && id!=='opening') playScreenFx(tgt); }   // 전환 FX(부팅 로딩 제외)
 function hideAppScreens(){ if(typeof stopMapLive==='function') stopMapLive(); curShow(false);
   // 🏕 캠프도 같은 이유로 여기서 걷는다 — 캠프는 공용 3D 캔버스(#cvMarine)를 HOME 안으로 **빌려 간다.**

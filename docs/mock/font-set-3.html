@@ -1,0 +1,153 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>글꼴 체계 — 제목 · 본문 · 숫자 (지금 + A·B·C안 · 한글/영어)</title>
+<!-- ⓪ 지금 쓰는 얼굴(Jua · Noto Sans KR · Rajdhani)을 CDN 판으로 — 게임 안은 서브셋 woff2 라 같은 얼굴이다 -->
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* A안 — SUIT 한 가족 */
+@font-face{font-family:'SUIT';font-weight:400;src:url(https://cdn.jsdelivr.net/gh/sunn-us/SUIT@2/fonts/static/woff2/SUIT-Regular.woff2) format('woff2')}
+@font-face{font-family:'SUIT';font-weight:500;src:url(https://cdn.jsdelivr.net/gh/sunn-us/SUIT@2/fonts/static/woff2/SUIT-Medium.woff2) format('woff2')}
+@font-face{font-family:'SUIT';font-weight:800;src:url(https://cdn.jsdelivr.net/gh/sunn-us/SUIT@2/fonts/static/woff2/SUIT-ExtraBold.woff2) format('woff2')}
+@font-face{font-family:'SUIT';font-weight:900;src:url(https://cdn.jsdelivr.net/gh/sunn-us/SUIT@2/fonts/static/woff2/SUIT-Heavy.woff2) format('woff2')}
+/* B안 — G마켓 산스(제목) + Pretendard(본문) */
+@font-face{font-family:'Gmarket';font-weight:500;src:url(https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff) format('woff')}
+@font-face{font-family:'Gmarket';font-weight:700;src:url(https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff) format('woff')}
+@font-face{font-family:'Pretendard';font-weight:400;src:url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2) format('woff2')}
+@font-face{font-family:'Pretendard';font-weight:500;src:url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Medium.woff2) format('woff2')}
+@font-face{font-family:'Pretendard';font-weight:700;src:url(https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2) format('woff2')}
+/* C안 — 넥슨 풋볼고딕(제목) + Pretendard(본문) */
+@font-face{font-family:'FootballGothic';font-weight:700;src:url(https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/NEXONFootballGothicBA1.woff) format('woff')}
+@font-face{font-family:'FootballGothic';font-weight:300;src:url(https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/NEXONFootballGothicLA1.woff) format('woff')}
+
+:root{
+  --r-sm:3px; --r-md:6px; --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f; --gem:#c98bff;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(186,194,208,.55) 30%,
+    rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(150,158,172,.14) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:'Pretendard','Noto Sans KR',sans-serif;font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1500px}
+h1 + p b{color:var(--txt-dim)}
+.wrap{display:flex;gap:16px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:385px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:'Rajdhani',sans-serif}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:74px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+
+/* ── 각 안의 세 역할은 변수 셋으로만 갈린다 ── */
+.set{--ti:'Jua',sans-serif;--tiW:400;--ko:'Noto Sans KR',sans-serif;--koW:700;--num:'Rajdhani',sans-serif;--numW:600}
+.set.a{--ti:'SUIT',sans-serif;--tiW:900;--ko:'SUIT',sans-serif;--koW:500;--num:'Rajdhani',sans-serif;--numW:600}
+.set.b{--ti:'Gmarket',sans-serif;--tiW:700;--ko:'Pretendard',sans-serif;--koW:500;--num:'Rajdhani',sans-serif;--numW:600}
+.set.c{--ti:'FootballGothic',sans-serif;--tiW:700;--ko:'Pretendard',sans-serif;--koW:500;--num:'Rajdhani',sans-serif;--numW:600}
+.ti{font-family:var(--ti);font-weight:var(--tiW)}
+.ko{font-family:var(--ko);font-weight:var(--koW)}
+.num{font-family:var(--num);font-weight:var(--numW);font-variant-numeric:tabular-nums}
+
+/* 📐 규격 띠 — 역할 × 한글/영어 */
+.spec{border:1px solid var(--metal-edge);border-radius:var(--r-md);background:rgba(255,255,255,.03);
+  padding:8px 10px;margin-bottom:10px}
+.spec .row{display:grid;grid-template-columns:44px 1fr;gap:6px 8px;align-items:baseline;padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,.06)}
+.spec .row:last-child{border-bottom:0}
+.spec .lbl{font-size:9.5px;color:var(--txt-off);letter-spacing:.08em;font-family:'Rajdhani',sans-serif;font-weight:600}
+.spec .lbl small{display:block;font-size:8.5px;color:#4d5663;letter-spacing:0;font-family:'Pretendard',sans-serif;font-weight:400}
+.spec .ti{font-size:19px;color:#eef1f6;line-height:1.25}
+.spec .ko{font-size:12px;color:var(--txt-dim);line-height:1.55}
+.spec .num{font-size:20px;color:#fff;line-height:1.1}
+.spec .num b{color:var(--gem);font-weight:inherit} .spec .num s{text-decoration:none;color:#ff7676;font-size:14px}
+.spec .en{display:block;color:var(--txt-mute);margin-top:1px}
+.spec .ti .en{font-size:16px;color:#aab4c2} .spec .num .en{font-size:15px;color:#aab4c2}
+
+/* 📱 실제 자리 셋 */
+.pane{width:385px;border-radius:var(--r-md);border:1px solid var(--metal-edge);overflow:hidden;
+  background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%)}
+/* ① 재화 바 */
+.cur{display:flex;align-items:center;gap:10px;padding:8px 10px;
+  background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.15));position:relative}
+.cur::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--edge-light)}
+.cur .name{font-size:13px;color:#eef1f6;letter-spacing:.04em;margin-right:auto}
+.cur .res{display:flex;align-items:center;gap:4px;font-size:12.5px;color:#fff}
+.cur .res img{width:12px;height:12px}
+.cur .res u{text-decoration:none;color:var(--txt-mute);font-size:9px}
+/* ② 상점 */
+.shop{padding:9px 10px 4px}
+.secH{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px}
+.secT{font-size:12.5px;color:#eef1f6;letter-spacing:.06em}
+.secN{font-size:11px;color:#aab4c2}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.buy{--cut:7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px 8px;min-height:116px;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03));color:#c3ccd8;font-size:11px}
+.buy::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 55%,transparent),rgba(150,170,200,.14));
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut),
+    1px calc(var(--cut) + .5px),1px calc(100% - 1px),calc(100% - var(--cut) - .5px) calc(100% - 1px),
+    calc(100% - 1px) calc(100% - var(--cut) - .5px),calc(100% - 1px) 1px,calc(var(--cut) + .5px) 1px)}
+.buy img.ic{width:38px;height:38px;display:block;margin:1px auto 2px}
+.buy b{color:var(--rg);font-size:11px}
+.buy .val{font-size:10.5px}
+.buy u{text-decoration:none;color:var(--gem);font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:3px;
+  margin-top:auto;width:100%;padding:4px;background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.06);
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+.buy u img{width:11px;height:11px}
+.buy u s{text-decoration:line-through;color:#69737f;font-size:9.5px;margin-left:3px;font-weight:400}
+.off{position:absolute;left:5px;top:5px;font-style:normal;font-size:9px;color:#fff;padding:1px 5px;background:#e03a44;
+  clip-path:polygon(3px 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,0 100%,0 3px)}
+/* ③ 확인 팝업(.ecCard 규격) */
+.pop{margin:8px 10px 10px;padding:12px 12px 10px;border:1px solid var(--metal-edge);border-radius:var(--r-md);
+  background:linear-gradient(180deg,rgba(20,26,34,.98),rgba(9,12,16,.98))}
+.pop .t{font-size:15px;color:#eef1f6;margin-bottom:5px}
+.pop .m{font-size:11.5px;color:var(--txt-dim);line-height:1.55}
+.pop .m b{color:#fff;font-weight:inherit}
+.pop .btns{display:flex;gap:6px;margin-top:10px}
+.pop .btn{flex:1;text-align:center;padding:9px 0;border-radius:var(--r-sm);font-size:12.5px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:var(--txt-dim)}
+.pop .btn.go{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.32);color:#ff7676}
+</style></head><body>
+
+<h1>글꼴 체계 — <b>제목 · 본문 · 숫자</b> 세 역할 · 지금 + A·B·C안 · 한글/영어</h1>
+<p>같은 화면 셋(재화 바 · 상점 카드 · 확인 팝업)에 네 벌을 얹었다. 위 규격 띠는 역할마다 <b>한글 한 줄 · 영어 한 줄</b>이다.
+숫자는 넷 다 <b>Rajdhani + 고정폭 숫자</b>(tabular)로 같다 — 바꿀 것은 제목·본문뿐이라는 뜻이다.
+⚠ 여기 서체는 CDN 원본이라 게임 안(서브셋 woff2)보다 무겁다 — 얼굴은 같다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var SETS = [
+{ c:'',  t:'지금 — Jua · Noto Sans KR 700 · Rajdhani', d:'제목이 <s>둥글고 귀여운</s> Jua 라 각진 SF 와 어긋난다(버튼에서는 이미 뺐다). 본문 Noto 700 은 무겁고, 숫자 Rajdhani 는 맞다.' },
+{ c:'a', t:'A — SUIT 한 가족 (Heavy / Medium) + Rajdhani', d:'가족이 <b>하나</b>라 화면이 조용하다. 제목은 굵기(900)로만 갈리고, 자간이 좁고 각이 살아 있어 SF 톤과 맞는다. <em>추천</em>.' },
+{ c:'b', t:'B — G마켓 산스 Bold + Pretendard 500 + Rajdhani', d:'제목이 기하학적이고 넓어 «게임 제목» 느낌이 확실하다. 본문 Pretendard 는 지금 표준. 가족이 둘이라 결이 살짝 갈린다.' },
+{ c:'c', t:'C — 넥슨 풋볼고딕 Bold + Pretendard 500 + Rajdhani', d:'개성이 가장 강하다(스포츠 게임 어휘). 굵기가 사실상 하나라 위계를 굵기로 못 만들고, 긴 한글 제목에서 피로하다.' },
+];
+var G = '../../assets/icons/res_gem.webp', M = '../../assets/icons/res_mineral.webp', S = '../../assets/icons/res_gas.webp';
+function spec(){
+  return '<div class="spec">'
+   + '<div class="row"><span class="lbl">TITLE<small>제목</small></span><span class="ti">환생 트리 · 주간 할인<span class="en">REBIRTH TREE · WEEKLY SALE</span></span></div>'
+   + '<div class="row"><span class="lbl">BODY<small>본문</small></span><span class="ko">실드로 막는 피해는 상성을 무시합니다. 원래 실드가 있는 유닛에는 더해집니다.<span class="en">Damage absorbed by shields ignores type advantage. Units with shields gain it on top.</span></span></div>'
+   + '<div class="row"><span class="lbl">NUM<small>숫자</small></span><span class="num">1,234,567 <b>840</b> <s>−30%</s> 12:45<span class="en">R27 · +1.5% · ×8 · 5d 17h</span></span></div>'
+   + '</div>'; }
+function card(id,gd,nm,v,p,o,rg){
+  return '<div class="buy" style="--rg:'+rg+'"><i class="off num">-30%</i>'
+   + '<img class="ic" src="../../assets/icons/rune/'+id+'_'+gd+'.webp" alt="">'
+   + '<b class="ti">'+nm+'</b><span class="val num">'+v+'</span>'
+   + '<u class="num"><img src="'+G+'" alt="">'+p+'<s>'+o+'</s></u></div>'; }
+function pane(){
+  return '<div class="pane">'
+   + '<div class="cur"><span class="name ti">룬 상점</span>'
+   +   '<span class="res num"><img src="'+M+'" alt="">12,480</span>'
+   +   '<span class="res num"><img src="'+S+'" alt="">3,105</span>'
+   +   '<span class="res num"><img src="'+G+'" alt="">9,999,999</span></div>'
+   + '<div class="shop"><div class="secH"><span class="secT ti">주간 할인</span><span class="secN num">5일 17시간 뒤 갱신</span></div>'
+   +   '<div class="g3">'
+   +   card('atk','mid','중급 힘의 룬','+1%',91,130,'#5cd6ff')
+   +   card('mapg','high','상급 전리품의 룬','+1.5%',280,400,'#ffcf6b')
+   +   card('heal','uniq','유니크 치유의 룬','+5%',840,1200,'#c98bff')
+   +   '</div></div>'
+   + '<div class="pop"><div class="t ti">환생하시겠습니까?</div>'
+   +   '<div class="m ko">이번 회차의 자원과 건물이 사라지고 <b class="num">+18%</b> 획득 배수를 얻습니다. 룬과 트리는 남습니다.</div>'
+   +   '<div class="btns"><span class="btn ko">취소</span><span class="btn go ko">환생</span></div></div>'
+   + '</div>'; }
+document.getElementById('wrap').innerHTML = SETS.map(function(x,i){
+  return '<div class="cell set '+x.c+'"><p class="cap"><i>'+i+'</i>'+x.t+'</p><p class="sub">'+x.d+'</p>'+spec()+pane()+'</div>'; }).join('');
+</script></body></html>

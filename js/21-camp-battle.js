@@ -151,6 +151,29 @@ const CAMP_ORDER_ARRIVE = 24;
  * ⚠ slot/cnt 는 **같은 표적을 문 아군 안에서의 번호**다. uid 로 정렬해 고정한다 —
  *   매 프레임 뒤바뀌면 자리가 흔들려 제자리걸음이 된다.
  */
+// 🏰 **건물로 갈 때도 자리를 나눈다**(2026-09-09).
+//   ⛔ `goal = {x:b.x, y:b.y}` 로 두면 열둘이 **한 점**으로 몰려 서로 밀어내 덜덜 떤다
+//     (실측: 적 기지를 넣자마자 떨림 20.1회/10초 · 문턱 20 · 옛 구조 96.4).
+//   ⭐ 각도는 **자기 자리(또는 본부) 쪽**을 기준으로 벌린다 — 지금 위치로 잡으면 움직일 때마다
+//     목표가 돌아 그 자체가 떨림이 된다. 그리고 유닛마다 **고정된** 몫을 준다(uid 해시).
+//   ⛔ campGoalFor 를 쓰지 말 것 — 거기엔 「자리에서 멀리 안 나간다」 제한이 있어 **진격을 막는다**.
+function campBldAngle(u){
+  if(u._bAng == null){ let h = 0; const q = String(u.uid || '');
+    for(let i = 0; i < q.length; i++) h = (h * 31 + q.charCodeAt(i)) | 0;
+    u._bAng = ((h >>> 0) % 1000) / 1000; }
+  return u._bAng; }
+//   ⚠ **각도만 나누면 모자란다** — 사거리가 같은 유닛끼리는 같은 원 위에 서서 여전히 부딪힌다.
+//     그래서 거리도 함께 흩는다(같은 몫으로 · 최대 +60%). 둘 다 uid 로 고정이라 목표가 안 돈다.
+function campBldGoal(u, b, home){
+  const rng = u.rng || 0, sz = u.size || 14;
+  const q = campBldAngle(u);
+  const want = Math.max(CAMP_BLD_R + sz * 0.9,
+    rng * (u.melee ? CAMP_ENG_MELEE : CAMP_ENG_RANGED)) * (1 + q * 0.6);
+  const h = home || u._post || u;
+  const base = Math.atan2(h.y - b.y, h.x - b.x);
+  const ang = base + (q - 0.5) * CAMP_ENG_ARC * 1.6;
+  return { x:b.x + Math.cos(ang) * want, y:b.y + Math.sin(ang) * want }; }
+
 function campGoalFor(u, tgt, slot, cnt){
   if(!tgt) return u._post ? { x:u._post.x, y:u._post.y } : { x:u.x, y:u.y };
   const rng = u.rng || 0;
@@ -326,9 +349,14 @@ function _campFireBld(u, b, me, dt, col){
   u.cd = u.cdMax;
   u.fireSeq = (u.fireSeq || 0) + 1;
   const sz = (typeof _sbTypeMulSize === 'function') ? _sbTypeMulSize({ id:u.id, gmodel:u.gm }, 'l') : 1;
-  b.hp -= u.dmg * strikeSkillAtkMul(u) * strikeAtkMul(me) * sz * CAMP_FOE_BLD_MUL;
+  // 🏰 **×40 은 적이 내 건물을 칠 때만**이다(2026-09-09). 그 배수는 「전멸 뒤 60~120초에 끝난다」를
+  //   맞추려고 넣은 것이라, 내가 적 기지를 칠 때 쓰면 여섯 채가 몇 초에 녹는다.
+  const mul = b.foe ? 1 : CAMP_FOE_BLD_MUL;
+  b.hp -= u.dmg * strikeSkillAtkMul(u) * strikeAtkMul(me) * sz * mul;
   strikeFx(u, b.x, b.y, col);
-  if(b.hp <= 0){ b.hp = 0; b.dead = true; }
+  if(b.hp <= 0){ b.hp = 0; b.dead = true;
+    // 💥 적 건물이면 **입구는 campBreakBld 하나**다 — 전리품·반격·체크포인트 부활·진행이 거기 다 있다.
+    if(b.foe && typeof campBreakBld === 'function') campBreakBld(b); }
   return true;
 }
 
@@ -344,11 +372,22 @@ function campStepUnits(dt){
   //   ⛔ **프레임 처음에 한 번만 고르면 안 된다**(2026-08-31). 그 건물이 프레임 **중간에**
   //     부서지면, 뒤에 오는 적들이 이미 죽은 건물을 계속 때려 그만큼의 피해가 버려진다.
   //     ⭐ 그래서 부서진 것이 확인되면 그 자리에서 다음 건물로 갈아탄다(아래 nextBld).
-  let frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
-  const nextBld = function(){
-    if(frontBld && !frontBld.dead && (frontBld.hp || 0) > 0) return frontBld;
-    frontBld = (typeof campFrontBld === 'function') ? campFrontBld() : null;
-    return frontBld; };
+  // 🏰 **진영마다 표적 건물 목록이 다르다**(2026-09-09): 적 → 내 건물(campFrontBld) · 나 → 적 건물(campFoeFront).
+  //   ⛔ 하나로 두면 내 유닛이 **내 건물**을 치러 간다.
+  const _front = { ai:null, me:null };
+  const _pickBld = function(sd){
+    return (sd === 'ai')
+      ? ((typeof campFrontBld === 'function') ? campFrontBld() : null)
+      : ((typeof campFoeFront === 'function') ? campFoeFront() : null); };
+  const nextBld = function(sd){
+    const cur = _front[sd];
+    if(cur && !cur.dead && (cur.hp || 0) > 0) return cur;
+    return (_front[sd] = _pickBld(sd)); };
+  const _bldPool = function(sd){
+    return (sd === 'ai')
+      ? ((typeof campBldAlive === 'function') ? campBldAlive() : [])
+      : ((typeof campFoeBldAlive === 'function') ? campFoeBldAlive() : []); };
+  _front.ai = _pickBld('ai'); _front.me = _pickBld('me');
   for(const side of ['me', 'ai']){
     const me = S[side], foe = S[side === 'me' ? 'ai' : 'me'];
     const col = (side === 'me') ? '#7fd0ff' : '#ff8a96';
@@ -455,6 +494,22 @@ function campStepUnits(dt){
         continue; }
 
       if(tgt) u._idleT = 0;                              // ⏳ 싸우는 중 — 복귀 시계를 되감는다
+      // 🏰 **건물에 닿은 유닛은 건물을 친다 — 적보다 먼저** (2026-09-09 · 시뮬로 잡은 공성 불가).
+      //   ⛔ 적을 먼저 쏘게 두면 **건물을 영영 못 친다.** 옛 라운드에는 웨이브 사이에 틈이 있어
+      //     그때 건물을 쳤지만, 릴레이는 적이 **끊이지 않는 흐름**이라 그 틈이 안 온다.
+      //     실측(관문 6 · 아군 15기): 본진이 60초에 **73**만 깎였다 — 이론 화력의 **2%**.
+      //   ⭐ 이 한 줄이 **분업**을 만든다: 앞줄(건물에 닿은 유닛)은 벽을 치고, 뒷줄은 적을 막는다.
+      //     역할을 따로 지정할 필요가 없다 — 자리가 역할을 정한다.
+      //   ⚠ 아군(me)에만 건다. 적은 내 건물을 치러 오는 쪽이라 이미 그 순서다.
+      //   ⚠ 벙커에 탄 유닛은 위에서 이미 `continue` 했다.
+      if(side === 'me'){
+        const mb = nextBld(side);
+        if(mb && u._atk.gnd){
+          const gap = Math.hypot(mb.x - u.x, mb.y - u.y) - CAMP_BLD_R;
+          if(gap <= (u.rng || 0) + (u.size || 14) * 0.95 + CAMP_BLD_PAD){
+            u.moving = false; u.face = Math.atan2(mb.x - u.x, mb.y - u.y);
+            _campFireBld(u, mb, me, dt, col);
+            continue; } } }
       if(tgt){
         const d = Math.hypot(tgt.x - u.x, tgt.y - u.y);
         // 🗿 최소 사거리 — 이보다 가까우면 **쏠 수 없다.** 물러나 거리를 되찾는다.
@@ -469,8 +524,21 @@ function campStepUnits(dt){
       }
 
       // ── 갈 곳을 정한다
+      // ⚔🏰 **진군 중에는 적을 쫓지 않는다** (2026-09-09 실측으로 잡은 교착).
+      //   ⭐ 사거리에 든 적은 위에서 이미 쏘고 `continue` 했다 — 여기 남은 `tgt` 는 **쫓아가야 닿는 적**이다.
+      //     칠 건물이 있는데 그걸 쫓으면 진군이 통째로 멈춘다: 쫓는 목표는 `campGoalFor` 가 **자리에서
+      //     1200 안으로 자르고**(제자리 방어의 자), 건물 목표는 안 자른다. 그래서 적이 하나만 보여도
+      //     아군이 자리 쪽으로 되돌아갔다가 적이 죽으면 다시 나아가기를 반복한다.
+      //   📊 실측(3분 · 아군 12기 · D1): 60초 뒤부터 **12기 전부가 적 유닛과 교전 중이고 건물 사거리
+      //     안에는 0기**였다. 구간 2 문지기 체력이 90/90 그대로 120초를 버텼다(이론 파괴 8초).
+      //     건물에 실제로 들어간 피해는 이론 화력의 **10.8%**, 60초 이후로는 사실상 0 이었다.
+      //   ⛔ 「적을 다 잡고 나서 나아간다」로 되돌리지 말 것 — 릴레이는 적이 **끊이지 않는** 흐름이라
+      //     그 조건이 영영 안 온다(옛 라운드에는 숨 고르기가 있었다).
+      //   ⚠ **아군(me)에만 건다.** 적(ai)은 내 건물을 치러 내려오는 쪽이라 규칙이 다르다 —
+      //     여기 걸면 적이 내 병력을 통째로 무시하고 지나쳐 방어의 뜻이 사라진다.
+      const _march = (side === 'me') && !!nextBld(side);
       let goal;
-      if(tgt){
+      if(tgt && !_march){
         // ⏱ 목표를 짧게 붙들어 미세 조정을 줄인다. ⛔ **이동을 몰아서 하지 않는다** —
         //   예전에 0.4초치를 한 프레임에 밀었다가 유닛이 203px 씩 튀었다(실측 236회).
         //   붙드는 것은 **목표**고, 이동은 늘 dt 만큼이다.
@@ -479,11 +547,12 @@ function campStepUnits(dt){
           const g = campGoalFor(u, tgt, slotOf.get(u.uid) | 0, cntOf.get(u.uid) || 1);
           u._goalX = g.x; u._goalY = g.y; u._goalTgt = u.tgtUid; u._goalT = CAMP_GOAL_HOLD; }
         goal = { x:u._goalX, y:u._goalY };
-      } else if(side === 'ai'){
+      } else if(side === 'ai' || nextBld(side)){
         // 👹 적은 표적이 없으면 **내 건물**을 치러 내려온다. 앞(y 가 작은) 건물부터.
+        // 🏰 아군은 표적이 없으면 **적 건물**을 치러 올라간다(2026-09-09 · 던전 = 적 기지를 친다).
         //   ⛔ 오토배틀의 신전 분기를 쓰지 않는다 — 캠프에는 신전 형상이 없다.
         u._goalX = null; u._goalTgt = null;
-        let b = nextBld();                                // 앞(y 가 작은) 건물 — 부서졌으면 그 자리에서 다음 것으로
+        let b = nextBld(side);                            // 그 진영의 표적 건물 — 부서졌으면 그 자리에서 다음 것으로
         if(!b){ u.moving = false; continue; }             // 부술 것이 없으면 선다
         if(!u._atk.gnd){ u.moving = false; continue; }     // 지상을 못 때리면 건물도 못 때린다
         // 🕸 **앞 건물에 못 다가가면 가까운 건물로**(2026-09-07 · 교착 실측 D2R35: 적 넷이 앞 건물 옆에서 30분).
@@ -495,7 +564,7 @@ function campStepUnits(dt){
           if(u._bdK !== b.uid + ':' + b.eid || dNow < (u._bdBest || Infinity) - 2){ u._bdK = b.uid + ':' + b.eid; u._bdBest = dNow; u._bdT = 0; }
           else if((u._bdT = (u._bdT || 0) + dt) > CAMP_BLD_STUCK_T){
             let nb = null, nd = Infinity;
-            for(const x of ((typeof campBldAlive === 'function') ? campBldAlive() : [])){ const d = Math.hypot(x.x - u.x, x.y - u.y); if(d < nd){ nd = d; nb = x; } }
+            for(const x of _bldPool(side)){ const d = Math.hypot(x.x - u.x, x.y - u.y); if(d < nd){ nd = d; nb = x; } }
             if(nb && nb !== b){ u._bAlt = nb; u._bAltT = CAMP_BLD_ALT_T; b = nb; }
             u._bdT = 0; u._bdBest = Infinity; } }
         // 🏛 **본부는 밀어내는 원(반폭 210)이 CAMP_BLD_R(46)보다 훨씬 크다** — 표면까지의 거리로 재야 한다.
@@ -503,11 +572,19 @@ function campStepUnits(dt){
         //   D2R1: 아군 전멸 · 적 1 · 본부 체력 그대로 · 10~30분). 본부만 남으면 판이 멈추는 버그였다.
         const bd2 = (b === S.me.base && typeof strikeTempleGap === 'function')
           ? strikeTempleGap(b, u.x, u.y) : Math.hypot(b.x - u.x, b.y - u.y) - CAMP_BLD_R;
-        if(bd2 <= (u.rng || 0) + (u.size || 14) * 0.95){
+        // 🏰 **건물은 크다 — 사격 거리에 여유를 준다**(2026-09-09 · 시뮬로 잡은 공성 불가).
+        //   ⛔ 유닛끼리의 사거리를 그대로 쓰면 **짧은 사거리 유닛이 건물을 영영 못 때린다**:
+        //     실측(관문 6) — 아군 20기가 살아 있는데 표적 건물 사거리 안이 **0기**였고,
+        //     본진이 1555/1611 로 멈춘 채 판이 끝났다. 적 27 + 아군 20 = 47기가 건물 앞에
+        //     뭉치면 겹침 회피(strikeSeparate)가 서로를 밀어내 아무도 표면 128px 안에 못 들어간다.
+        //     ⚠ 화력병은 사거리가 **70**(거의 근접)이라 특히 심하다 — 그 유닛으로는 공성이 불가능했다.
+        //   ⭐ 건물은 유닛보다 훨씬 크므로 「벽을 칠 수 있는 거리」가 더 넓은 것이 자연스럽다.
+        //   ⚠ **사격 판정에만** 더한다 — 목표 자리(campBldGoal)는 그대로라 유닛은 여전히 붙으러 간다.
+        if(bd2 <= (u.rng || 0) + (u.size || 14) * 0.95 + CAMP_BLD_PAD){
           u.moving = false; u.face = Math.atan2(b.x - u.x, b.y - u.y);
           _campFireBld(u, b, me, dt, col);
           continue; }
-        goal = { x:b.x, y:b.y };
+        goal = campBldGoal(u, b, u._post || me.base);   // 🏰 한 점으로 몰리지 않게 자리를 나눈다
       } else {
         // 🪧 아군은 표적이 없으면 **자기 자리로 돌아간다.**
         //   ⛔ 옛 구조는 여기서 「집결점」이라는 가짜 구조물을 목표로 줬다(campRallyPoint) —

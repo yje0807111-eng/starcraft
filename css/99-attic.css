@@ -548,3 +548,38 @@ body.vgMode #townScreen{padding-bottom:var(--navH)}
 #campRune .rnIN{font-size:12px;color:#eef1f6;font-weight:600}
 #campRune .rnID{font-size:10.5px;color:#aab4c2}
 #campRune .rnIi{width:26px;height:26px;flex:none;object-fit:contain}
+
+/* ══════════ [30-home.css] 2026-09-09 — 어디에도 안 쓰는 클래스 7개의 규칙 ══════════ */
+.cdRl{display:flex;align-items:center;gap:2px;padding:4px 0 2px}
+.cdRl .cdArw{width:32px;height:32px;flex:none}
+.cdRl .cdArw:disabled{opacity:.25;pointer-events:none}
+.cdRnN{flex:1;text-align:center;font-family:var(--font-num);font-size:30px;font-weight:700;line-height:1;color:#fff}
+.cdRnN em{font-style:normal;font-size:13px;color:rgba(214,226,240,.35);margin-left:3px}
+.cdSld{position:relative;height:28px;margin:0 9px;cursor:pointer;touch-action:none}
+.cdSld::before{content:'';position:absolute;left:0;right:0;top:12.5px;height:3px;border-radius:2px;background:rgba(255,255,255,.12)}
+.cdSld .cdFill{position:absolute;left:0;top:12.5px;height:3px;border-radius:2px;background:#ff7676}
+.cdSld .cdKnob{position:absolute;top:5px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 3px rgba(255,118,118,.25);transition:box-shadow .12s}
+.cdSld.drag .cdKnob{box-shadow:0 1px 4px rgba(0,0,0,.7),0 0 0 6px rgba(255,118,118,.3)}
+.cdTicks{display:flex;justify-content:space-between;margin:0 9px;font-family:var(--font-num);font-size:9px;color:rgba(214,226,240,.35)}
+.cdTicks span{width:2ch;text-align:center}
+
+/* ══════════ [30-home.css] 2026-09-09 — 어디에도 안 쓰는 클래스 4개의 규칙 ══════════ */
+#campRaceOv .crPrev{position:absolute;inset:0;
+    background:linear-gradient(180deg,#25344a 0%,#1a2636 26%,#101823 48%,#0a0e15 70%,#06080c 100%)}
+#campRaceOv .crPrev::after{content:'';position:absolute;inset:0;
+    background:
+      linear-gradient(180deg,rgba(6,8,12,.72) 0%,rgba(6,8,12,.34) 46%,rgba(6,8,12,0) 100%)
+        top/100% 148px no-repeat,
+      linear-gradient(180deg,rgba(6,8,12,.06) 0%,rgba(6,8,12,.10) 30%,
+        rgba(6,8,12,.38) 52%,rgba(6,8,12,.80) 66%,rgba(6,8,12,.95) 100%)}
+#campRaceOv .crScr{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;
+    padding:16px 14px 0}
+/* 제목 — 설정 화면과 같은 크기·자리(왼쪽 정렬) */
+#campRaceOv .crHd{display:flex;align-items:flex-start;justify-content:space-between}
+#campRaceOv .crTtl{font-family:var(--font-ti);font-size:21px;color:#fff}
+
+/* ══════════ [30-home.css] 2026-09-10 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
+/* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
+.cdRnd.off{opacity:.3;pointer-events:none}
+.cdRnd .cdSl{border-bottom:0;margin-bottom:0;padding-bottom:2px}

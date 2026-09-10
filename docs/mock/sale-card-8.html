@@ -1,0 +1,181 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>주간 할인 — 하이엔드 모바일 게임형 8안 (기존 스타일과 어울리게)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --gem:#c98bff;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(186,194,208,.55) 30%,
+    rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(150,158,172,.14) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 10px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1400px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:300px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:88px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.pane{width:300px;padding:10px;border-radius:var(--r-md);border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%);overflow:hidden}
+
+/* ── 지금 규격(2026-09-08 고친 것) = ① ── */
+.sec{border:0;border-bottom:1px solid rgba(150,170,200,.22);padding:0 0 9px}
+.secH{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.secT{font-size:12.5px;color:#eef1f6;font-weight:600;letter-spacing:.06em}
+.secN{font-size:11px;color:#aab4c2;font-family:var(--font-num)}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.buy{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:9px 6px 8px;min-height:116px;
+  border:1px solid color-mix(in srgb,var(--rg) 24%,transparent);
+  border-radius:var(--r-sm);background:rgba(255,255,255,.06);color:#c3ccd8;font-size:11px}
+.buy img.ic{width:38px;height:38px;display:block;margin:1px auto 2px;object-fit:contain}
+.buy b{color:var(--rg);font-weight:600;font-size:11px}
+.buy span{font-size:10.5px}
+.buy u{text-decoration:none;color:var(--gem);font-size:11px;font-family:var(--font-num);font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:3px;margin-top:auto;width:100%;
+  padding:4px 4px;border-radius:var(--r-sm);background:rgba(0,0,0,.34);border:1px solid rgba(255,255,255,.06)}
+.buy u img{width:11px;height:11px;display:block}
+.buy u s{text-decoration:line-through;color:#69737f;font-size:9.5px;margin-left:3px;font-weight:400}
+.off{position:absolute;left:4px;top:4px;font-style:normal;font-family:var(--font-num);
+  font-size:9px;font-weight:700;color:#fff;padding:1px 5px;border-radius:5px;background:#e03a44;
+  box-shadow:0 1px 3px rgba(0,0,0,.45)}
+.has{position:absolute;right:3px;top:3px;font-style:normal;font-family:var(--font-num);
+  font-size:9.5px;color:#8d97a6}
+
+/* ══ ② 무대 + 정보판(2단 카드) ══ */
+.v2 .buy{padding:0;gap:0;overflow:hidden;background:rgba(255,255,255,.04)}
+.v2 .buy .stage{width:100%;padding:10px 0 6px;display:flex;justify-content:center;
+  background:radial-gradient(70% 90% at 50% 40%,color-mix(in srgb,var(--rg) 22%,transparent),transparent 72%),
+    linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.05))}
+.v2 .buy .stage img.ic{margin:0}
+.v2 .buy .info{width:100%;padding:5px 6px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:rgba(255,255,255,.035);border-top:1px solid rgba(255,255,255,.06)}
+.v2 .buy u{margin-top:3px}
+
+/* ══ ③ 등급 뒷광(라디얼) + 밑변 등급 광원 ══ */
+.v3 .buy{background:
+  radial-gradient(60% 55% at 50% 30%,color-mix(in srgb,var(--rg) 26%,transparent),transparent 70%),
+  rgba(255,255,255,.05);overflow:hidden}
+.v3 .buy::after{content:'';position:absolute;left:8%;right:8%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--rg) 50%,transparent);opacity:.8}
+.v3 .buy img.ic{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--rg) 55%,transparent))}
+
+/* ══ ④ 모서리 컷(각진 SF) + 금속 테 ══ */
+.v4 .buy{border:0;border-radius:0;padding:10px 6px 8px;
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03))}
+.v4 .buy::before{content:'';position:absolute;inset:0;padding:1px;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 55%,transparent),rgba(150,170,200,.14));
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px,
+    1px 7.5px,1px calc(100% - 1px),calc(100% - 7.5px) calc(100% - 1px),calc(100% - 1px) calc(100% - 7.5px),
+    calc(100% - 1px) 1px,7.5px 1px)}
+.v4 .buy u{border-radius:0;clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px)}
+.v4 .off{border-radius:0;clip-path:polygon(3px 0,100% 0,100% calc(100% - 3px),calc(100% - 3px) 100%,0 100%,0 3px);left:5px;top:5px}
+
+/* ══ ⑤ 값을 버튼으로(CTA) ══ */
+.v5 .buy u{background:linear-gradient(180deg,#8a3fd6,#5d23a3);border:1px solid rgba(255,255,255,.18);
+  color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.25);padding:5px 4px;font-size:11.5px}
+.v5 .buy u s{color:rgba(255,255,255,.55)}
+.v5 .buy u img{filter:brightness(1.3)}
+
+/* ══ ⑥ 리본(코너 띠) + 머리줄에 「한정」 ══ */
+.v6 .off{left:-18px;top:7px;transform:rotate(-45deg);border-radius:0;padding:1px 22px;
+  box-shadow:0 1px 2px rgba(0,0,0,.5);font-size:8.5px;letter-spacing:.04em}
+.v6 .buy{overflow:hidden}
+.v6 .secT::before{content:'한정';display:inline-block;margin-right:6px;padding:0 5px;font-size:9px;
+  font-family:var(--font-num);font-weight:700;color:#fff;background:#e03a44;border-radius:3px;vertical-align:1px}
+
+/* ══ ⑦ 갱신 타이머를 막대로 + 재고 점 ══ */
+.v7 .secH{margin-bottom:4px}
+.v7 .tbar{height:2px;margin:0 0 8px;background:rgba(255,255,255,.08);border-radius:1px;overflow:hidden}
+.v7 .tbar i{display:block;height:100%;width:63%;background:linear-gradient(90deg,#e03a44,#ff8a5b)}
+.v7 .secN{color:#ff9c8a}
+.v7 .buy .stock{position:absolute;right:5px;top:5px;display:flex;gap:2px}
+.v7 .buy .stock i{width:5px;height:5px;border-radius:1px;background:#8fe6b0;box-shadow:0 0 4px #8fe6b0}
+.v7 .buy .has{display:none}
+.v7 .buy.sold{opacity:.42}
+.v7 .buy.sold .stock i{background:#3b4450;box-shadow:none}
+.v7 .buy.sold::after{content:'품절';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg);
+  font-size:13px;font-weight:700;color:#ff7676;border:2px solid #ff7676;padding:1px 8px;border-radius:3px;
+  letter-spacing:.2em;background:rgba(0,0,0,.5);white-space:nowrap}
+
+/* ══ ⑧ 피처드 1 + 5 ══ */
+.v8 .g3{grid-template-columns:repeat(3,1fr);grid-auto-rows:auto}
+.v8 .buy.feat{grid-column:1 / -1;flex-direction:row;align-items:center;gap:10px;min-height:0;padding:8px 10px;
+  background:
+    radial-gradient(60% 120% at 12% 50%,color-mix(in srgb,var(--rg) 30%,transparent),transparent 60%),
+    linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03))}
+.v8 .buy.feat img.ic{width:54px;height:54px;margin:0;filter:drop-shadow(0 0 8px color-mix(in srgb,var(--rg) 60%,transparent))}
+.v8 .buy.feat .col{display:flex;flex-direction:column;align-items:flex-start;gap:1px;flex:1 1 auto}
+.v8 .buy.feat b{font-size:12.5px}
+.v8 .buy.feat .col span{color:#c3ccd8}
+.v8 .buy.feat .col small{font-size:9.5px;color:#8d97a6}
+.v8 .buy.feat u{width:auto;margin:0;padding:6px 10px;font-size:12px}
+.v8 .buy.feat .off{left:auto;right:6px;top:6px}
+.v8 .buy.feat .has{right:6px;top:22px}
+.v8 .buy:not(.feat){min-height:104px;padding:8px 4px 6px}
+.v8 .buy:not(.feat) img.ic{width:32px;height:32px}
+</style></head><body>
+
+<h1>주간 할인 — <b>하이엔드 모바일 게임형</b> 8안 · 기존 스타일(각진 SF · 3단 볼륨 · 등급색 액센트)과 어울리게</h1>
+<p>①은 <b>오늘 고친 지금 모습</b>(값 판 · 옅은 테두리 · 붉은 배지 · 그림 38px). 나머지 일곱은 그 위에 모바일 상점이 흔히 쓰는
+어휘를 <b>하나씩</b> 얹은 것이다 — 겹쳐 쓸 수 있는 것은 설명에 적었다. 그림은 실제 룬 타일이다.</p>
+<div class="wrap" id="wrap"></div>
+
+<script>
+var SALE = [
+  { id:'atk',  gd:'mid',  nm:'중급 힘의 룬',    v:'+1%',   p:91,  o:130,  rg:'#5cd6ff' },
+  { id:'crit', gd:'mid',  nm:'중급 예리의 룬',  v:'+10%',  p:91,  o:130,  rg:'#5cd6ff' },
+  { id:'mapg', gd:'high', nm:'상급 전리품의 룬',v:'+1.5%', p:280, o:400,  rg:'#ffcf6b' },
+  { id:'costg',gd:'high', nm:'상급 검약의 룬',  v:'+1.5%', p:280, o:400,  rg:'#ffcf6b' },
+  { id:'atk',  gd:'high', nm:'상급 힘의 룬',    v:'+1.5%', p:280, o:400,  rg:'#ffcf6b' },
+  { id:'heal', gd:'uniq', nm:'유니크 치유의 룬',v:'+5%',   p:840, o:1200, rg:'#c98bff' } ];
+var GEM = '<img src="../../assets/icons/res_gem.webp" alt="">';
+function ico(s){ return '<img class="ic" src="../../assets/icons/rune/' + s.id + '_' + s.gd + '.webp" alt="">'; }
+function price(s){ return '<u>' + GEM + s.p + '<s>' + s.o + '</s></u>'; }
+function buy(s, k){
+  var off = '<i class="off">-30%</i>', has = '<em class="has">×3</em>';
+  if(k === 'v2') return '<div class="buy" style="--rg:' + s.rg + '">' + off + has
+    + '<div class="stage">' + ico(s) + '</div>'
+    + '<div class="info"><b>' + s.nm + '</b><span>' + s.v + '</span>' + price(s) + '</div></div>';
+  if(k === 'v7') return '<div class="buy' + (s.sold ? ' sold' : '') + '" style="--rg:' + s.rg + '">' + off
+    + '<span class="stock"><i></i></span>' + ico(s) + '<b>' + s.nm + '</b><span>' + s.v + '</span>' + price(s) + '</div>';
+  if(k === 'feat') return '<div class="buy feat" style="--rg:' + s.rg + '">' + off + has + ico(s)
+    + '<div class="col"><b>' + s.nm + '</b><span>' + s.v + '</span><small>이번 주 가장 좋은 것 · 1개 한정</small></div>'
+    + price(s) + '</div>';
+  return '<div class="buy" style="--rg:' + s.rg + '">' + off + has + ico(s)
+    + '<b>' + s.nm + '</b><span>' + s.v + '</span>' + price(s) + '</div>'; }
+function section(k){
+  var head = '<div class="secH"><span class="secT">주간 할인</span><span class="secN">5일 17시간 뒤 갱신</span></div>';
+  if(k === 'v7') head = '<div class="secH"><span class="secT">주간 할인</span><span class="secN">5일 17시간 남음</span></div>'
+    + '<div class="tbar"><i></i></div>';
+  var list = SALE.map(function(s){ return Object.assign({}, s); });
+  if(k === 'v7') list[1].sold = true;
+  var cells;
+  if(k === 'v8'){ var f = list[5]; cells = buy(f, 'feat') + list.slice(0, 5).map(function(s){ return buy(s, k); }).join(''); }
+  else cells = list.map(function(s){ return buy(s, k); }).join('');
+  return '<div class="sec">' + head + '<div class="g3">' + cells + '</div></div>'; }
+
+var CASES = [
+{ c:'',   t:'지금(오늘 고친 것)', d:'값 판 · 옅은 테두리 · 붉은 배지 · 그림 38px · 세로 124px. <b>비교 기준</b>이다.' },
+{ c:'v2', t:'무대 + 정보판(2단)', d:'그림이 서는 <b>어두운 무대</b>와 이름·값이 앉는 <b>밝은 정보판</b>으로 카드를 두 층으로 가른다. 가챠·상점에서 가장 흔한 짜임 — 그림이 «상품»으로 읽힌다. 뒷광은 등급색.' },
+{ c:'v3', t:'등급 뒷광 + 밑변 광원', d:'카드 안에 등급색 <b>라디얼 빛</b>을 깔고 그림에 같은 색 그림자, 밑변에 등급색 광원 한 줄. 커맨드 카드·탭 띠와 <em>같은 어휘</em>라 가장 조용히 섞인다. ②와 겹쳐 쓸 수 있다.' },
+{ c:'v4', t:'모서리 컷 + 금속 테', d:'모서리를 45°로 <b>잘라낸</b> 판에 등급색→금속의 그라데이션 테. DESIGN.md의 «각진 SF»를 카드에 그대로 옮긴 것. 배지·값 판도 같이 각진다. ⚠ clip-path라 그림자는 못 쓴다.' },
+{ c:'v5', t:'값을 버튼으로', d:'값 판을 <b>보라(젬) 버튼</b>으로 — «누르면 산다»가 손가락에 먼저 읽힌다. 모바일 상점의 표준. ⚠ 여섯 개가 다 보라면 시끄러울 수 있어 할인 구역에만.' },
+{ c:'v6', t:'코너 리본 + 「한정」 표', d:'−30%를 왼쪽 위 <b>대각 리본</b>으로, 제목 앞에 붉은 「한정」 표. 리본은 «세일»의 오래된 신호라 설명 없이 읽힌다. ⚠ 리본이 그림 왼쪽 위를 살짝 가린다.' },
+{ c:'v7', t:'타이머 막대 + 재고 점 + 품절 도장', d:'갱신 시각을 글자 대신 <b>줄어드는 붉은 막대</b>로, 오른쪽 위 ×3 대신 <b>재고 점</b>(1개 한정), 산 것은 <b>품절 도장</b>. «지금 아니면 없다»가 세 군데서 말한다.' },
+{ c:'v8', t:'피처드 1 + 5', d:'가장 좋은 것(유니크)을 <b>가로로 큰 카드</b>에 올리고 나머지 다섯은 작게. 시선이 한 곳에 먼저 간다 — 이벤트 배너 어휘. 값도 크게. ⚠ 세로가 한 줄 더 는다.' },
+];
+document.getElementById('wrap').innerHTML = CASES.map(function(x, i){
+  return '<div class="cell"><p class="cap"><i>' + (i+1) + '</i>' + x.t + '</p><p class="sub">' + x.d + '</p>'
+   + '<div class="pane ' + x.c + '">' + section(x.c) + '</div></div>'; }).join('');
+</script></body></html>

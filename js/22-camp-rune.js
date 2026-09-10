@@ -101,14 +101,23 @@ const RUNE_LIST = [
   { id:'gcrit', nm:'노다지의 룬', grp:'eco',  eff:'gcritPct', ico:'coin',
     v:{ low:0.04, mid:0.08, high:0.12, uniq:0.40 }, de:'일꾼 채굴 치명 확률' },
 
-  // ⚔ 전투 6 — 던전에서 싸우는 것
-  //   ⚠ **여섯이다**(2026-09-05). 「공격 회피율」은 사용자가 뺐다.
+  // ⚔ 전투 7 — 던전에서 싸우는 것
+  //   ⚠ 「공격 회피율」은 사용자가 뺐다(2026-09-05).
   { id:'atk',   nm:'힘의 룬',     grp:'war',  eff:'atk',      ico:'upg',
     de:'유닛 공격력' },
   { id:'aspd',  nm:'연타의 룬',   grp:'war',  eff:'aspd',     ico:'upg',
     de:'유닛 공격속도' },
   { id:'hp',    nm:'수호의 룬',   grp:'war',  eff:'hp',       ico:'armor',
     de:'유닛 체력' },
+  // 🛡 **방어막** — 최대 체력의 n% 만큼 실드를 얹는다(2026-09-08 사용자 확정).
+  //   ⭐ 수호(체력)와 같은 축처럼 보이지만 **다르다**: 실드로 막는 피해는 `strikeHit` 에서
+  //     **상성을 무시**하고 실드 전용 방어(`shArmor`)를 쓴다 — 상성상 불리한 적에게 더 값을 한다.
+  //     체력바 위 파란 칸으로 **눈에도 보인다**(18-strike.js 의 유닛 바).
+  //   ⛔ 「피해 감소 %」로 만들지 말 것 — 그건 실효 체력이라 수호와 **글자만 다른 룬**이 된다.
+  //   ⚠ 이미 실드를 가진 유닛에는 **더한다**(덮어쓰지 않는다).
+  //   ⚠ 실드는 **저절로 차지 않는다**(스킬만 채운다). 라운드마다 전원 부활·회복이라 그때 함께 찬다.
+  { id:'shld',  nm:'방벽의 룬',   grp:'war',  eff:'shield',
+    de:'유닛 방어막' },
   { id:'heal',  nm:'치유의 룬',   grp:'war',  eff:'heal',     ico:'hero',
     de:'회복량' },
   // 🎯 ⚠ campScaleAllies 의 옛 주석은 「사거리는 건드리지 않는다(종족 상성이 바뀐다)」였다.
@@ -198,11 +207,17 @@ const RUNE_GEM = { low:40, mid:130, high:400, uniq:1200 };
 //       그게 무너지면 유니크가 왜 셋인지 그림으로 설명되지 않는다.
 //     ⚠ 칸이 5 → 24 로 늘었다. 효과 상한도 그만큼 늘었다(상급만 채우면 축 하나에 +120%).
 //       값(RUNE_VAL 1~5%)은 5칸 시절에 정해진 것이라 **다시 재야 한다** — BALANCE §3-2-7.
+//   🏰 **눈금이 「통산 관문」으로 바뀌었다**(2026-09-09 · 라운드 폐지). 한 던전 = 진행 건물 6채이고
+//     던전 셋이라 통산 18 이 끝이다. ⛔ 옛 라운드 눈금(0~400)으로 되돌리지 말 것 — 영영 안 열린다.
+//     ⚠ 칸 27개를 18 눈금에 나눠야 하므로 **한 관문에 한 칸 이상**이 열린다:
+//       성좌 ① 0~5(관문마다) · 유니크 ① 6 · 성좌 ② 7~12 … 순서(성좌를 채우면 중심이 켜진다)는 그대로다.
+//     ⚠ 칸이 27 인데 관문은 18 뿐이라 **한 관문에 두 칸이 열리는 자리**가 있다. 다만 **맨 처음(0)만은
+//       한 칸**이어야 한다 — 아무것도 못 깬 사람에게 두 칸을 주면 「첫 칸 하나」 규칙이 깨진다.
 const RUNE_SLOT_R = {
-  norm: [0, 15, 30, 45, 60, 75, 90, 105,           // 성좌 ①
-         140, 155, 170, 185, 200, 215, 230, 245,   // 성좌 ②
-         280, 295, 310, 325, 340, 355, 370, 385],  // 성좌 ③
-  uniq: [120, 260, 400] };       // 성좌마다 한가운데 하나
+  norm: [0, 1, 1, 2, 2, 3, 3, 4,                   // 성좌 ① — 던전 1 을 깨는 동안 열린다
+         6, 6, 7, 7, 8, 8, 9, 9,                   // 성좌 ② — 던전 2
+         11, 11, 12, 12, 13, 14, 15, 16],          // 성좌 ③ — 던전 3
+  uniq: [5, 10, 18] };           // 성좌마다 한가운데 하나 — 그 성좌를 다 연 다음
 const RUNE_CONS = 8;             // 성좌 하나에 든 일반 칸 수 (24 = 8 × 3)
 
 // ── 🌌 판 좌표 — 유니크가 중심, 일반 8칸이 고리로 둘러싼다 ───────────────
@@ -240,17 +255,19 @@ function campRuneUPos(i){ return RUNE_CT[i] || RUNE_CT[0]; }
 
 // 통산 최대 도달 라운드. 던전이 넘어가면 라운드가 1로 돌아가므로 **한 줄로 펴서** 센다.
 //   D1 R50 = 50 · D2 R10 = 60 · D10 R50 = 500.
+//   🏰 **통산 관문 수**다(2026-09-09) — D2 에서 3채를 부쉈으면 (2−1)×6 + 3 = 9.
+//     ⛔ 이름은 그대로 두었다(부르는 곳이 넷) — 뜻만 「라운드」에서 「관문」으로 바뀌었다.
 function campRuneBestRound(){
   const C = (typeof campState === 'function') ? campState() : null;
   if(!C || !C.best) return 0;
-  const per = (typeof CAMP_ROUND_MAX !== 'undefined') ? CAMP_ROUND_MAX : 50;
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
   let m = 0;
   for(const k in C.best){ const dg = k | 0; if(dg < 1) continue;
     const r = (dg - 1) * per + (C.best[k] | 0); if(r > m) m = r; }
   return m; }
 // 열린 칸 수 — 표에서 「도달 라운드 이하」인 것을 센다
 function campRuneSlots(kind){ const tb = RUNE_SLOT_R[kind] || [];
-  if(CAMP_RUNE_FREE) return tb.length;          // 🔧 전부 열어 둔다(위 스위치)
+  if(CAMP_RUNE_FREE || CAMP_RUNE_DEV_SEED) return tb.length;   // 🔧 전부 열어 둔다(확인용 스위치 둘)
   const b = campRuneBestRound();
   let n = 0; for(const r of tb) if(b >= r) n++; return n; }
 
@@ -264,7 +281,18 @@ function campRuneState(){
   if(!R.own || typeof R.own !== 'object') R.own = {};
   if(!Array.isArray(R.norm)) R.norm = [];
   if(!Array.isArray(R.uniq)) R.uniq = [];
+  if(CAMP_RUNE_DEV_SEED && R.seed !== CAMP_RUNE_DEV_TAG) _campRuneDevSeed(R);
   return R; }
+// 🔧 확인용 상태를 **저장에 심는다**(위 CAMP_RUNE_DEV_SEED 설명).
+//   ⚠ 이미 갖고 있는 것은 건드리지 않는다 — 모자란 것만 채운다.
+function _campRuneDevSeed(R){
+  R.seed = CAMP_RUNE_DEV_TAG;
+  for(const d of RUNE_LIST) for(const gd of RUNE_GRADES){
+    const k = runeKey(d.id, gd);
+    if((R.own[k] | 0) < CAMP_RUNE_DEV_OWN) R.own[k] = CAMP_RUNE_DEV_OWN; }
+  const P = (typeof PROF === 'function') ? PROF() : null;
+  if(P && (P.gem | 0) < CAMP_RUNE_DEV_GEM) P.gem = CAMP_RUNE_DEV_GEM;
+  if(typeof saveMeta === 'function') saveMeta(); }
 
 // ── 룬 키 — 일반은 `id:등급`, 유니크는 `id` ───────────────────────────────
 function runeDef(id){ for(const d of RUNE_LIST) if(d.id === id) return d; return null; }
@@ -320,8 +348,19 @@ function runeValTx(key){ const v = runeVal(key), p = v * 100;
 //   ⭐ 환생 포인트 무제한(CAMP_RT_PTS_FREE)과 같은 성격이다 — 게임 안에서 눈으로 확인하려는 문.
 //   ⚠ **읽기만 바꾼다.** 저장(R.own)에는 손대지 않으므로 끄면 원래 보유로 돌아온다.
 //   ⛔ 켠 채로 커밋하지 말 것 — 상점에서 살 이유가 사라진다. 스모크가 이 값을 잰다.
-let CAMP_RUNE_FREE = true;              // ⚠ let 이다 — 스모크가 끄고 정상 규칙을 잰다
+let CAMP_RUNE_FREE = false;             // ⚠ let 이다 — 스모크가 끄고 정상 규칙을 잰다
 const CAMP_RUNE_FREE_N = 9;              // 켰을 때 종류마다 갖고 있다고 치는 개수
+// 🔧 **구매를 눈으로 확인하려고 심어 두는 상태** (2026-09-08 사용자 요청).
+//   ⭐ CAMP_RUNE_FREE 와 **다르다**: 저것은 「갖고 있다고 친다」라 개수가 늘 9라서
+//     상한(8)에 걸려 **상점에서 아무것도 못 산다**. 이것은 저장에 **진짜로 넣어** 두므로
+//     사면 개수가 실제로 오르고 젬도 실제로 빠진다 — 그게 지금 확인하려는 것이다.
+//   ⚠ 한 번만 심는다(R.seed 표시). 사서 줄어든 것을 도로 채우지 않는다 —
+//     채우면 「젬이 빠지는지」를 못 본다.
+//   ⛔ 내보내기 전에 false 로 되돌릴 것. 스모크는 세 곳에서 이 값을 끄고 정상 규칙을 잰다.
+let CAMP_RUNE_DEV_SEED = true;
+const CAMP_RUNE_DEV_OWN = 3;             // 종류·등급마다 이만큼 갖고 시작한다
+const CAMP_RUNE_DEV_GEM = 9999999;       // 다 사고도 남는 양(전부 사면 약 30만)
+const CAMP_RUNE_DEV_TAG = 'dev3';        // 이 표시가 있으면 이미 심었다
 function campRuneOwn(key){
   if(CAMP_RUNE_FREE) return runeParse(key).def ? CAMP_RUNE_FREE_N : 0;
   const R = campRuneState(); return R ? ((R.own[key] | 0)) : 0; }
