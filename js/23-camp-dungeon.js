@@ -569,7 +569,7 @@ function campFoeBld3D(){
     if(x < -0.3 || x > 1.3 || y < -0.3 || y > 1.3) continue;
     out.push({ uid:'cst_foe_' + q.eid, id:'cb_' + mk, x:x, y:y,
       face:yaw + ((cfg && cfg.f) || 0), yoff:-3, dy:((cfg && cfg.dy) || 0), lift:0,
-      fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12) * CAMP_FOE_SCL,
+      fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12) * CAMP_FOE_SCL, rimCol:campFoeRim(),
       sel:false, buildP:null, hidden:!q.seen, z:zOf(by) }); }
   for(const w of campFoeWorkers3D(v, cwpx)) out.push(w);        // 🚶 적 일꾼(연출)
   return out; }
@@ -721,15 +721,24 @@ function campViewTop(){
 //   📏 **같은 열에 서는 쌍은 줄 차이 − 흔들림 합 ≥ 0.07(발판)** 이어야 한다 — 씨앗 12,000개를 돌려 잡은 규칙(scratch seeds.mjs):
 //     가운데 열(본진·탑 셋)은 0.08 간격에 흔들림 0 · 옆 열(테크③·테크②·생산)은 0.08 − 0.005×2 = 0.07.
 //     ⛔ 값을 옮기면 스모크의 겹침 검사(900판)가 씨앗에 따라 터진다.
-const CAMP_FOE_ROW = { mine:-0.48, main:-0.42, tech3:-0.38, tower3:-0.34, tech:-0.30, tower2:-0.26, prod:-0.22, tower1:-0.18 };
+//   🏔 **고원에는 높은 테크만, 통로에는 펼쳐서**(2026-09-10 사용자): 본진·테크·탑③ 은 고원 · 탑②·생산·탑① 은 통로에
+//     0.08~0.10 간격으로 내려온다. 앞줄(탑① +0.02)은 **진입 화면의 가운데보다 조금 아래**까지만 — 더 내려오면 내 병력 집결선과 붙는다.
+//   📏 **고원의 실측 경계는 gy −0.45 ~ −0.14**(그림 세로 8.2%·27.9% 의 밝기 단차 — scratch 로 잰 값 · ART.md §17).
+//     광맥은 그 **안**에 들어간다(2026-09-10 사용자: 「미네랄을 조금 내려 판 안에」) — 줄 −0.43 에 호가 0.018 위로 부풀어 −0.448.
+//     본진도 따라 내려(−0.38) 광맥과 0.05 를 둔다 — 내 기지의 본부↔광맥 간격(0.053 · CAMP_ROW_BASE↔MINE)과 같은 거울이다.
+const CAMP_FOE_ROW = { mine:-0.43, main:-0.38, tech3:-0.34, tower3:-0.28, tech:-0.22, tower2:-0.14, prod:-0.06, tower1:0.02 };
 // 🔍 던전 안의 축소 하한 — 위 한 화면(적 기지)까지 한눈에 보이게 1.0 까지 내린다(캠프는 CAMP_MIN_ZOOM 그대로).
 //   ⚠ 1.0 아래로는 바닥이 화면 폭을 못 덮는다(19-camp CAMP_MIN_ZOOM 설명 · 물리 하한 1.0).
 const CAMP_DG_MIN_ZOOM = 1.0;
 function campMinZoom(){ const dg = (typeof campDgN === 'function') ? campDgN() : 0;
   return dg > 0 ? CAMP_DG_MIN_ZOOM : ((typeof CAMP_MIN_ZOOM !== 'undefined') ? CAMP_MIN_ZOOM : 1.45); }
-const CAMP_FOE_JIT = { x:0.04, y:0.005, tower:0.06 };         // 씨앗 흔들림(격자 단위) — 발판(2칸 = 0.088)보다 작다 · 본진·탑은 가로만
-// 🏗 적 건물 3D 크기 — 내 건물의 0.85 배(2026-09-10 사용자: 「건물이 판에 더 작은 비율로」). 표식(.fbMark)은 그대로다.
-const CAMP_FOE_SCL = 0.85;
+const CAMP_FOE_JIT = { x:0.04, y:0.02, tower:0.06 };         // 씨앗 흔들림(격자 단위) — 발판(2칸 = 0.088)보다 작다 · 본진·탑은 가로만
+// 🏗 적 건물 3D 크기 — **내 건물과 같다**(2026-09-10 사용자가 0.85 배를 물렸다: 「이전처럼 다시 키워」).
+//   ⚠ 크기는 발판(fitW)이 정하므로 이 값은 1 이 기본이다 — 줄이면 건물이 제 발판보다 작아져 표식(.fbMark)과 어긋난다.
+const CAMP_FOE_SCL = 1;
+// 🎨 **적 건물·일꾼은 붉다**(2026-09-10 사용자 요청) — 색은 오토배틀의 **적 진영 색 그대로**(PLAYER_VIEW_COLORS[1] · 18-strike 가 u.pcol 로 쓰는 것).
+//   ⛔ 새 빨강을 정하지 말 것 · 칠하는 일은 3D 의 공용 인스턴스 틴트(`applyTeamTint`)가 한다 — 엔트리에 rimCol 을 얹기만 하면 된다.
+function campFoeRim(){ return (typeof PLAYER_VIEW_COLORS !== 'undefined' && PLAYER_VIEW_COLORS[1]) || '#d6292f'; }
 function campFoeRng(seed){                                   // mulberry32 — 작고 결정적이다
   let a = (seed >>> 0) || 1;
   return function(){ a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -799,5 +808,5 @@ function campFoeWorkers3D(v, cwpx){
     const x = (gx - v.x) * v.zoom + 0.5, y = (gy - v.y) * v.zoom + 0.5;
     if(x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue;
     out.push({ uid:'cst_foe_wk' + i, id:mk, x:x, y:y, face:(ph < 0.5 ? -Math.PI / 2 : Math.PI / 2), moving:true,
-      yoff:yoff, yawFix:true, scl:scl, working:false, sel:false, z:-1185 }); }
+      yoff:yoff, yawFix:true, scl:scl, working:false, sel:false, z:-1185, rimCol:campFoeRim() }); }
   return out; }

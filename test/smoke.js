@@ -7544,7 +7544,9 @@ async function groupLobby(){
       // 📐 **전장 좌표가 표의 줄을 지킨다** — campG2W 가 레인 위(t<0)를 0 에서 자르면 −0.26 위의 줄이 전부 한 줄로 무너진다(실측 2026-09-10)
       for(const b of fb){ const g=campW2G(b.x,b.y,CAMPB.world); assert(Math.abs(g.gy-b.gy)<0.005,'적 건물의 전장 자리가 표의 줄과 다르다(레인 위가 잘렸다): '+b.bk+' 표 '+b.gy.toFixed(3)+' 전장 '+g.gy.toFixed(3)); }
       // 🗺 기지 전체가 그림의 고원 안(gy −0.48 ~ −0.15 · ART.md §17) — 광맥은 고원 위 홈, 건물은 그 아래
-      for(const b of fb) assert(b.gy<=-0.15,'적 건물이 고원 아래 통로에 선다: '+b.bk+' gy='+b.gy.toFixed(3));
+      //    (2026-09-10 사용자) 본진·테크·구간 3 탑은 고원 · 생산·앞 탑은 통로에 펼치되 **+0.06 아래로는 안 내려온다**(진입 화면 가운데보다 조금 아래)
+      for(const b of fb){ if(b.kind==='main'||b.kind==='tech'||b.kind==='res'||(b.kind==='tower'&&b.zone===3)) assert(b.gy<=-0.15,'높은 건물이 고원 밖이다: '+b.bk+' gy='+b.gy.toFixed(3));
+        assert(b.gy<=0.06,'적 건물이 너무 아래로 내려왔다: '+b.bk+' gy='+b.gy.toFixed(3)); }
       // ③ 겹치지 않는다 — 발판(0.07)보다 가깝게 붙은 쌍이 없다. ⚠ **씨앗 300개 × 던전 3** 으로 잰다 — 한 판만 재면
       //    씨앗 운이다(실측 2026-09-09: 4000개 중 780개가 겹치던 값이 스모크 한 번은 통과했다). 순서 규칙도 같이.
       const d=campDgDef(1);
@@ -7567,6 +7569,16 @@ async function groupLobby(){
       assert(CAMPB._fgas,'적 가스 자리가 없다');
       const mainNow=CAMPB._fbld.find(b=>b.kind==='main');
       for(const m of CAMPB._fmine) assert(m.gy<mainNow.gy,'적 광맥이 본진 위에 있지 않다');
+      // 🏔 광맥은 **그림의 고원 안**(위 경계 gy −0.45 · 실측 · 2026-09-10 사용자: 「판 안에 들어가게」)
+      for(const m of CAMPB._fmine) assert(m.gy>=-0.45,'적 광맥이 고원 위(판 밖)로 나갔다: gy='+m.gy.toFixed(3));
+      // 📏 적 건물 3D 는 **내 기지 건물과 같은 크기**(2026-09-10 사용자가 축소를 물렸다) — 발판 폭 × 셀 × CST_BVIS
+      { const e=campFoeBld3D().find(q=>/_wk/.test(q.uid)===false), b=CAMPB._fbld.find(q=>('cb_'+(TECH_MODEL[campDgDef(1).race]||{})[q.bk])===e.id);
+        const f=_techFoot(campDgDef(1).race, b.bk), map=document.getElementById('cstMain');
+        const want=f.w*_techCW()*(map.clientWidth||360)*techView().zoom*CST_BVIS;
+        assert(Math.abs(e.fitW-want)<0.5,'적 건물 크기가 내 기지 규약과 다르다: '+e.fitW.toFixed(1)+' / '+want.toFixed(1)); }
+      // 🎨 적 건물·일꾼은 **오토배틀의 적 진영 색**으로 칠해진다(3D 공용 applyTeamTint · rimCol 규약)
+      { const all=campFoeBld3D(); assert(all.every(q=>q.rimCol===PLAYER_VIEW_COLORS[1]),'적 3D 엔트리에 적 진영 색(rimCol)이 없다');
+        assert(PLAYER_VIEW_COLORS[1]!==PLAYER_VIEW_COLORS[0],'적 색이 내 색과 같다'); }
       assert(campFoeBld3D().filter(e=>/_wk/.test(e.uid)).length===CAMP_FOE_WORKERS,'적 일꾼 연출이 없다');
       assert(!(G.tech.minerals||[]).some(m=>m.gy!=null && m.gy<0),'적 광맥이 G.tech.minerals 에 들어갔다 — 내 일꾼이 캐러 간다');
       assert(campAlive('ai')===CAMPB.ai.units.filter(u=>!u.dead).length,'적 수에 연출 유닛이 섞였다');

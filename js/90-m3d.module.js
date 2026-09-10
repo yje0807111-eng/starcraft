@@ -1360,7 +1360,10 @@ window.M3D={
       seen.add(it.uid);
       let m=buildModels.get(it.uid); if(m && m._mid!==it.id){ if(m.holder&&m.holder.parent) m.holder.parent.remove(m.holder); buildModels.delete(it.uid); m=null; }   // 종족 전환 시 eid 재사용으로 이전 종족 모델이 남던 버그 방지(모델 키 불일치 → 재생성)
       if(!m){ m=makeModel(it.id); if(!m) continue; m.kind='build'; m._mid=it.id; buildModels.set(it.uid,m); }
-      applyPlayerTintInst(m, it.id);   // 건설 구역도 전부 내 유닛 → NPC 공유 모델(레이스·드랍쉽 등)에 인스턴스 틴트
+      // 🎨 rimCol 이 있으면 **그 색으로 인스턴스 틴트**(유닛 경로와 같은 함수 applyTeamTint) — 캠프 던전의 적 기지가 붉은 이유다.
+      //   ⛔ 건물용 틴트를 새로 만들지 말 것: 색조 마스크 임계값(_tintKind 'b')까지 이 함수가 이미 갖고 있다.
+      if(it.rimCol) applyTeamTint(m, it.rimCol);
+      else applyPlayerTintInst(m, it.id);   // 건설 구역도 전부 내 유닛 → NPC 공유 모델(레이스·드랍쉽 등)에 인스턴스 틴트
       m.holder.visible=!it.hidden; if(m.rim){ m.rim.visible=!!it.sel&&!it.hidden; if(it.sel) m.rim.scale.setScalar(1.12); } if(m.shadow) m.shadow.visible=((it.fitW||it.noShadow)?false:true)&&!it.hidden;   // 🌫️ it.hidden=활성 시야 밖 → 숨김 · 그리드 건물(fitW)·공중 유닛(noShadow)은 원형 그림자 숨김(DOM 그림자로 대체)
       if(it.hidden){ continue; }   // 시야 밖: 위치/애니 갱신 생략(숨김 유지)
       if(it.working && m.workInner){ if(m.inner)m.inner.visible=false; if(m.runInner)m.runInner.visible=false; m.workInner.visible=true; if(m.gun)m.gun.visible=false; if(m.atkInner)m.atkInner.visible=false; m.anim.position.set(0,0,0); m.anim.rotation.set(0,0,0); if(m.workMixer) m.workMixer.update(dt); }   // 🔨 건설(작업) 모션 — 일꾼이 건물 지을 때
