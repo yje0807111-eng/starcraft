@@ -124,7 +124,7 @@ function campChipInfo(){
   const done=(typeof campBroken==='function')?campBroken():0;
   return { name:nm, lab:'건물', cur:done, max:smax }; }
 // 🧑 레벨·경험치 — 재화 바 **맨 왼쪽**. 캠프에서만 보인다(CSS 가 가른다).
-//   ⚠ **아직 캠프에서는 경험치가 안 오른다** — profGainXp 를 부르는 곳이 옛 사냥터(08-hunt.js)와
+//   ⚠ **아직 캠프에서는 경험치가 안 오른다** — profGainXp 를 부르는 곳이 옛 사냥터(🗄 js/99-attic.js)와
 //     토벌(09-dungeon.js)뿐이고 둘 다 유보 상태다. 표시만 먼저 만든 것이다(2026-09-04 사용자 확정).
 //     ⛔ 「값이 안 변한다」고 이 칸을 지우지 말 것 — 지급 규칙이 정해지면 여기가 그대로 살아난다.
 //   ⛔ 바뀐 게 없으면 다시 그리지 않는다 — 칩과 같은 이유다(누르는 사이에 DOM 이 갈리면 안 된다).
@@ -236,7 +236,7 @@ function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) ret
 //   던전에서 돌아오는 길이라 잠글 이유가 없다(지면 campFail 이 어차피 0 으로 되돌린다).
 // 🏷 던전 한 줄 소개 — 던전 선택 화면 카드의 **부제**다(2026-09-04 사용자 확정).
 //   ⛔ 여기에 배수·라운드를 적지 말 것 — 숫자는 카드 오른쪽에 이미 있다(두 번 적으면 어느 쪽이 맞는지 헷갈린다).
-//   ⚠ 이름은 HB_DUNGEONS(js/08-hunt.js)가 단일 소스다 — 여기는 **설명만** 갖는다(칸 번호로 짝을 맞춘다).
+//   ⚠ 이름은 HB_DUNGEONS(js/08-ui-parts.js)가 단일 소스다 — 여기는 **설명만** 갖는다(칸 번호로 짝을 맞춘다).
 const CAMP_DG_DESC = [
   '병력을 추스르는 안전한 자리',                    // 0 캠프
   '스웜 종족의 한적한 터전 외곽',                    // 1 감염된 둥지
@@ -345,7 +345,7 @@ function campDropRender(){
   // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
   //   지나온 던전(here 보다 앞)은 번호를 옅게 — 「어디까지 왔나」가 목록에서 읽힌다.
   // 🏰 **이름은 `campDgName`(23-camp-dungeon) 한 곳에서 온다**(2026-09-09).
-  //   ⛔ `hbDun`(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 칩과 목록의 이름이 어긋났다
+  //   ⛔ `hbDun`(08-ui-parts 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 칩과 목록의 이름이 어긋났다
   //     (실측: 칩은 「감염된 둥지」인데 목록 같은 줄은 「버려진 전초기지」였다).
   for(let i=0;i<=CAMP_DG_MAX;i++){
     const open=campDgOpen(i), here=(i===_cdPick.dg), done=(i>0 && i<_cdPick.dg);

@@ -22,7 +22,7 @@
 - 라운드는 `C.cleared` 하나. 입구 `campClearRound()` · 읽기 `campRoundN()` `campCleared()` · 난이도 `campFoeDiff(dg, cleared)` · 보상 `campMineMul()`(cleared 로 오른다) · 부활 `campRoundRevive()` · 포인트 `campRebPtGain()`(√번돈 × 1.35^던전 × 1.012^라운드) · 관문 `campCanRebirth()`(누적 100만) · 룬 칸 `campRuneBestRound()` · 칩 `curPaintChip()` · 던전 선택 `campDropRender/campRndTap`(12-appshell 280~375).
 - 패배 = 본부 파괴 → `campFail()`(dg=0 · cleared=0) → `campBattleClose()`. **전멸은 패배가 아니다**(누운 유닛 `_down` 이 라운드 시작에 일어난다).
 - 종족: `campEnter()` 가 `C.race` 없으면 `campRaceSheet()`(#campRaceOv) → `campPickRace` → `campRaceToCamp`(검은 판 + `tutoKick`).
-- 적 종족: `campFoeRace(dg)` = `CAMP_DG_RACE[hbDun(dg).race]` → `STK_RACES` 키(terran/zerg/protoss). `HB_DUNGEONS`(08-hunt · 10개)가 이름·타일·종족을 준다.
+- 적 종족: `campFoeRace(dg)` = `CAMP_DG_RACE[hbDun(dg).race]` → `STK_RACES` 키(terran/zerg/protoss). `HB_DUNGEONS`(08-ui-parts · 10개)가 이름·타일·종족을 준다.
 - ⚠ **종족 키가 두 벌이다**(계획 초안의 오류를 정정): 건물 표 `TECH_TREE` 는 **`union`·`swarm`·`aetherial`**,
   전투 엔진 `STK_RACES` 는 **`terran`·`zerg`·`protoss`**. 잇는 함수는 `campTechRace(r)`(→ `stkTechRace`).
   ⛔ `TECH_TREE['terran']` 은 **없다** — 적 기지 표는 `TECH_TREE[campTechRace(race)]` 로 읽어야 한다.
@@ -100,7 +100,7 @@ const CAMP_DG = [
 ⚠ **값(체력·전리품 양·탑 화력)은 안 정했다.** 단계 0 의 자로 D1 부터 맞추고 D2·D3 은 그 배수로 시작한다.
 - `k` 는 **`TECH_TREE[race].buildings` 의 키**다(그림·이름을 거기서 가져온다 — 새 에셋 없음). 종족마다 키가 다르므로 표는 종족별로 쓴다.
 - ⚠ 좌표는 **격자 비율**(내 기지 `campG2W` 와 같은 변환) — 화면과 어긋나지 않게. 적 기지는 격자 **위 절반**(지금 적이 내려오는 레인 `CAMP_LANE_TOP=0.18` 부터).
-- `HB_DUNGEONS`(08-hunt) 는 **읽지 않는다** — `hbDun`/`CAMP_DG_RACE` 의존을 끊고 `CAMP_DG` 가 단일 소스. 08-hunt 는 마을 때문에 그대로 둔다.
+- `HB_DUNGEONS`(08-ui-parts) 는 **읽지 않는다** — `hbDun`/`CAMP_DG_RACE` 의존을 끊고 `CAMP_DG` 가 단일 소스. ⚠ 2026-09-10 에 `08-hunt.js` 는 없어졌고 그 표만 `js/08-ui-parts.js` 에 남았다.
 - ⭐ **적 기지는 이 표에서 「만든다」**(`campFoeBase(dgDef)`) — 나중에 남의 캠프(`G.tech.ents` 스냅샷)도 같은 함수에 넣을 수 있게 **입력을 표 하나로** 받는다.
 
 ### 1-B. 상태 — `C.cleared` → `C.broken`

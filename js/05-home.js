@@ -28,85 +28,18 @@ const HM_ARW='<svg class="hmArw" viewBox="0 0 24 24"><path d="M6 12h11M13 7.5 17
 // 아이콘은 전부 기존 에셋 재사용 — 'upgrades/up_x' 처럼 폴더까지 담겨 있다
 // 경로형 아이콘 — 키에 하위폴더까지 들어 있는 표기('upgrades/up_range'). HB_UPG.ico 와 LP_STATS.ico 가 같이 쓴다.
 function _icoPathImg(path, fb){ return '<img class="icoImg" src="'+ICO_DIR+path+'.webp" alt="" draggable="false" data-fb="'+(fb||'⚙')+'" data-fbcls="" onerror="_icoFail(this)">'; }
-function hbUpgIco(k){ return _icoPathImg(HB_UPG[k].ico); }
 // 이름을 [본체 + 작은 보조어]로 쪼개다 — 폭도 벌고 훑어보기도 쉽다
 const HM_SUF=['확률','배수','계수','재생','표적','수','흡수'];
-// ═══ 업그레이드/건설 카드 한 장 — 단일 소스 ═══
-//  사냥터(renderHome)와 마을(_vgShop)이 둘 다 이 함수만 부른다.
-//  ⚠ 마크업을 베껴 두 번째 구현을 만들지 말 것. 새 화면이 필요하면 인자만 늘린다.
-//  o = { ico, name, val, next, lv, cost, off, lock, key }
-//    val→next 가 있으면 제목 아래에 '값 ▸ 다음값' 으로 화살표가 붙는다.
-//  ⚠ 버튼 윗줄은 '지금 레벨'만 적는다(2026-08-18). 예전엔 'LV.8 ▸ 12' 였는데,
-//    바로 위에서 이미 값이 어떻게 변하는지 화살표로 말하고 있어 같은 말이 두 번이었다.
-function hmUpCardHTML(o){
-  const arw=(a,b)=>(b==null||b==='')?a:(a+HM_ARW+'<b class="nx">'+b+'</b>');
-  const head=o.lock ? '<span class="hmUpLk">'+(o.lockTx||'해금 필요')+'</span>'
-                    : '<span class="hmUpVl">'+arw(o.val,o.next)+'</span>';
-  const foot='<span class="hmUpBl">'+(o.lock?stIco('lock','🔒'):o.lv)+'</span>'
-            +'<span class="hmUpBc">'+o.cost+'</span>';
-  return '<div class="hmUp'+(o.lock?' lk':'')+'" data-k="'+o.key+'">'
-    +'<span class="hmUpIco">'+o.ico+'</span>'
-    +'<span class="hmUpTx"><b class="hmUpName">'+o.name+'</b>'+head+'</span>'
-    +'<button class="hmUpBtn'+(o.off?' off':'')+'" data-k="'+o.key+'"'+(o.act?' onclick="'+o.act+'"':' data-sfx=""')+'>'+foot+'</button>'
-    +'</div>'; }
-function hmUpgName(n){ const i=n.indexOf(' (');
-  if(i>=0) return n.slice(0,i)+'<span class="p"> '+n.slice(i+1)+'</span>';
-  const j=n.lastIndexOf(' ');
-  if(j>0 && HM_SUF.indexOf(n.slice(j+1))>=0) return n.slice(0,j)+'<span class="p"> '+n.slice(j+1)+'</span>';
-  return n; }
+// 🏠 HOME(=캠프) 화면을 다시 그린다.
+// 🗄 **사냥터 업그레이드 카드는 없앴다**(2026-09-10 · 마을을 접으며). 내용이 전부 캐릭터 하나가
+//   싸우던 수치(데미지·치명타·멀티샷 …)라 캠프에는 쓸 곳이 없다 — 마크업·CSS·그리는 코드 전부 걷었다.
+//   ⚠ 그 전에도 `#phone.campMode #hmScroll{display:none}` 이라 **화면엔 안 보이면서 그리기만** 돌았다.
+//   ⛔ 되살리지 말 것(GAME_DIRECTION §0-A). 껍데기가 필요하면 연구 구역이 같은 부품을 쓴다.
+//   ⭐ 남은 일은 둘뿐이다 — 재화 바 갱신과 ☰ 의 ! 배지.
 function renderHome(){ try{
-  const p=PROF(); if(!p) return;
-  if(typeof updateCurBar==='function') updateCurBar();       // 💠 재화는 전부 공용 재화 바(#curBar)로 이관
-  const gr=document.getElementById('hmUpgGrid');
-  // 🧱 건설 모드 = 이 패널이 통째로 '건설' 구역이 된다. 탭 띠·수량은 숨기고 제목만 바꾼다.
-  { const bd=!!(_hb&&_hb.build), card=document.querySelector('#homeScreen .hmUpg'),
-      ttl=document.querySelector('#homeScreen .hmUpgTtl');
-    if(card) card.classList.toggle('bd', bd);
-    if(ttl) ttl.textContent = bd ? '건설' : '사냥터 업그레이드';
-    if(bd){ if(gr) gr.innerHTML=HB_BUILD_KEYS.map(hbBuildCardHTML).join('');
-      if(card) card.classList.remove('down');   // 접혀 있었으면 펴 준다 — 건설인데 안 보이면 막힌다
-      renderHomeStats(); return; } }
-  if(gr){ const u=hbHunt().upg, coin=Math.floor(p.pcoin||0), cat=hbHunt().upgCat||'char';
-    // 탭 띠 — 장비창 섹션 바와 같은 컴포넌트(segNavHTML). 새 탭 띠를 만들지 말 것
-    const tb=document.getElementById('hmUpgTabs');
-    if(tb){ const ci=Math.max(0, HB_UPG_CAT.findIndex(function(c){ return c[0]===cat; }));
-      // 글자만 — 아이콘을 같이 넣으면 아이콘+글자가 한 덩어리로 가운데 정렬돼 글자가 중앙에서 밀린다
-      tb.innerHTML=segNavHTML(HB_UPG_CAT.map(function(c){ return { label:c[1], col:c[2] }; }), ci,
-        function(k){ return 'hmUpgTab(&#39;'+HB_UPG_CAT[k][0]+'&#39;)'; }); }
-    // 수량 1 / 10 / MAX
-    hmAutoPaint();
-    const qb=document.getElementById('hmUpgQty'), q=hbHunt().upgQty||1;
-    if(qb) qb.innerHTML='<button class="hmUpQ on" onclick="hmUpgQtyCycle()">'
-      +(q==='max'?'MAX':('×'+q))+'</button>';
-    // 카드 — 해금한 것을 위로(쓸 수 있는 것이 먼저 보여야 한다)
-    const keys=Object.keys(HB_UPG).filter(function(k){ return HB_UPG[k].cat===cat })
-      .sort(function(a,b){ return (hbUpgOwned(b)?1:0)-(hbUpgOwned(a)?1:0); });
-    // ⚠ 건설 카드는 여기 없다 — 여긴 '지어진 것의 스활을 올리는' 곳이다.
-    //   짓는 것은 전장 위 버튼(renderHbBar → hbBuy)에서 한다 — 어떤 자리에 놓을지 고라야 하므로 필드 옆에 있어야 한다.
-    gr.innerHTML=keys.map(function(k){ const U=HB_UPG[k], lv=u[k]||0, own=hbUpgOwned(k);
-      let _hd;
-      if(own){ const P=hbUpgPlan(k);
-        _hd={ v:hbUpgVal(k,lv), n:hbUpgVal(k,lv+P.n), l:'LV.'+lv,
-              c:resIco('mineral')+fmtCur(P.sum) }; }
-      else _hd={ c:resIco('mineral')+fmtCur(U.u) };
-      return hmUpCardHTML({ key:k, ico:hbUpgIco(k), name:hmUpgName(U.name), off:hmUpgOff(k),
-        lock:!own, val:_hd.v, next:_hd.n, lv:_hd.l, cost:_hd.c }); }).join('');
-    hmUpgBindHold(); }
-  hmUpgSnapGrid();
+  if(typeof updateCurBar==='function') updateCurBar();   // 💠 재화는 공용 재화 바(#curBar)가 갖는다
   renderHomeStats();
-  const card=document.querySelector('#homeScreen .hmUpg');
-  if(card) card.classList.remove('down');   // 접기 폐지 — 옛 저장에 upgDown 이 남아 있어도 늘 펴 둔다
 }catch(e){} }
-// 칸 폭을 정수로 못 박는다 — 1fr 로 두면 (안쪽폭 - 간격)이 홀수일 때 칸이 185.5px 같은 반 픽셀이 되고,
-// 세로 테두리가 기기 픽셀 격자에 안 맞아 한쪽 변만 두 픽셀로 번진다(왼쪽 칸의 오른쪽 변만 흐려 보였다).
-// justify-content:start 로 남는 소수는 오른쪽 끝 여백으로 보낸다 — 가운데로 나누면 격자 전체가 다시 반 픽셀로 밀린다.
-function hmUpgSnapGrid(){ const g=document.getElementById('hmUpgGrid'); if(!g) return;
-  const cs=getComputedStyle(g), gap=parseFloat(cs.columnGap)||0;
-  const inner=g.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-  if(!(inner>0)) return;
-  const col=Math.floor((inner-gap)/2); if(!(col>0)) return;
-  g.style.justifyContent='start';
-  g.style.gridTemplateColumns=col+'px '+col+'px'; }
 // 레벨업으로 받은 스탯 포인트 — 남았을 때만 줄이 뜬다. 배분은 공용 profAllocStat()(마을 광장과 같은 함수).
 // 진화·환생 신호 — 하단 패널의 줄이 아니라 상단 성장 버튼의 ! 배지.
 //   (줄로 두면 조건이 찰 때마다 패널 높이가 흔들렸다 — 2026-08-14 이동)
@@ -114,33 +47,11 @@ function renderHomeStats(){ const dot=document.getElementById('hbGrowDot'); if(!
   // ☰ 의 ! = 더보기 안에 '지금 할 수 있는 것'이 있다는 신호. 안을 열면 어느 칸인지 각자의 점이 알려 준다.
   const has=((typeof hbGrowHas==='function') && hbGrowHas()) || ((typeof dqHas==='function') && dqHas());
   dot.classList.toggle('show', !!has); }
-// 4칸(2행)까지만 보이게 — 칸 높이는 글꼴·문구에 따라 변하므로 실측해서 넣는다(값을 박으면 어긋난다)
-// 높이는 CSS 에서 2.7줄로 고정된다(탭마다 개수가 달라도 패널이 안 흔들리도록).
-// ── 라운드 선택 · 반복/등반 ──
-// 최고 도달 라운드(hunt.best[dg])까지만 고를 수 있다. 라운드를 바꾸면 진행 중인 판은 버리고 새로 시작한다.
-function hbBest(dg){ const H=hbHunt(); return Math.max(1, Math.min(HB_ROUND_MAX, H.best[dg||H.dg]||1)); }
-function hbEliteChance(dg,round){ return Math.min(HB_ELITE_MAX, hbProg(dg,round)*0.012); }
 // ── 던전·라운드 고르기 ────────────────────────────────────────────────────
 // ⚠ 고르는 즉시 이동하지 않는다 — _hbPick 에 '초안'을 담고 [이동]을 눌러야 적용된다.
 //   던전은 ◀▶ 로 한 장씩, 라운드는 세로 피커(아래가 1라운드)에서 가운데 띠에 멈춘 것이 선택된다.
 let _hbPick=null, _hbRdT=null;
 const HB_RD_H=40, HB_RD_GAP=6;                       // 피커 한 칸 높이 · 간격 → 이동 간격은 둘의 합
-// ── Phase 4 UI — 스킬 바(전장 하단) + 부스트 팝업(라운드 팝업과 같은 .hbModal 재사용) ──
-// 🧱 건설 카드 한 장 — 하단 패널이 건설 구역이 될 때 쓴다. 카드 규격은 업그레이드와 같은 hmUpCardHTML.
-//    누르면 그 자리에서 배치 모드로 들어간다(hbBuy → hbArmStart).
-function hbBuildCardHTML(bk){
-  const B=HB_STRUCT[bk], n=hbStructN(bk), mx=hbBuildMax(bk), full=n>=mx, cost=hbBuildCost(bk), M=hbAllyMul();
-  const coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
-  // 값 = 지금 이 종류가 내는 총량. ⚠ 벽은 화력이 없다 — 화력 수치를 붙이면 거짓말이라 '칸 수'로 낸다.
-  const tot=function(c){ return (bk==='wall')   ? (c+'칸')
-                             : (bk==='bunker') ? Math.round(hbCharStats().hpMax*M.bunker.hp*c)
-                                               : Math.round(M.turret.dps*100*c)+'%'; };
-  return hmUpCardHTML({ key:'b_'+bk,
-    ico:'<img class="icoImg" src="'+ICO_DIR+'buildings/'+B.ico+'.webp" alt="" draggable="false">', name:B.name,
-    off:hmUpgOff('b_'+bk), lock:full, lockTx:'최대 '+mx+(bk==='wall'?'칸':'기'),
-    val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n,
-    cost:resIco('mineral')+fmtCur(cost),
-    act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }
 // ☰ 더보기 — 사냥터에서만. 다른 화면에서는 같은 버튼이 그대로 설정을 연다.
 // ⚠ ☰ 는 두 개가 겹쳐 있다 — 게임 HUD의 #settingsBtn(hudTopRow)과 재화 바의 #curSettingsBtn.
 //    사냥터에서는 재화 바 쪽이 위에 있어 그쪽이 눌린다. 그래서 둘 다 이 함수를 거치게 한다.

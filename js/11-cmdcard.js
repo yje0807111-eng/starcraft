@@ -1298,7 +1298,6 @@ const SPR_UNITS={
     states:{ idle:{frames:8,fps:8,loop:1}, walk:{frames:8,fps:12,loop:1}, attack:{frames:6,fps:14,loop:0} },
     url:{ idle:'assets/sprites/marine/idle.png', walk:'assets/sprites/marine/walk.png', attack:'assets/sprites/marine/attack.png' } },
 };
-function sprSheet(key){ return SPR_UNITS[key]||null; }
 const SPR_MARINE=SPR_UNITS.marine;   // 실험장이 쓰던 이름(그대로 유지 — 같은 객체다)
 let _spr=null, _sprRaf=0, _sprLast=0, _sprScale=1.15, _sprSpin=null;
 const SPR_SPEED=125;   // px/s
@@ -2486,7 +2485,7 @@ function overlayToLobby(){
   //   이 판의 미네랄·유닛이 그대로 떠 있다(실측 프레임: 로딩 화면에 미네랄 6덩이가 남았다).
   //   ⛔ 숨기지 말고 **지운다** — 숨긴 것은 어딘가에서 다시 켜지면 도로 나타난다.
   //   ⚠ 지우기는 **지운 뒤 한 번 더 그려야** 완성된다 — clearGameModels 는 scene 에서 빼기만 하고
-  //     캔버스에는 마지막 프레임이 박제된 채 남는다(js/08-hunt.js 예열 정리와 같은 처방).
+  //     캔버스에는 마지막 프레임이 박제된 채 남는다(js/08-ui-parts.js 예열 정리와 같은 처방).
   if(window.M3D && M3D.clearGameModels){ try{ M3D.clearGameModels();
     if(M3D.sync) M3D.sync([], 300, 300, .016, [], [], null, null); }catch(e){} }
   if(window.M3D && M3D.clearIdlePools){ try{ M3D.clearIdlePools(); }catch(e){} }
