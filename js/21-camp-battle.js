@@ -548,8 +548,14 @@ function campStepUnits(dt){
         if(!b){ u._idleT = (u._idleT || 0) + dt;           // 🪧 칠 것이 자리 안에 없다 — 자리로 돌아간다
           if(u._idleT < CAMP_RETURN_DELAY){ u.moving = false; continue; }
           if(!u._post) u._post = { x:u.x, y:u.y };
+          // 🧲 **정착 반경은 CAMP_POST_R(45)** — 아래 AI 복귀 분기와 **같은 자**를 쓴다.
+          //   ⛔ campArriveR(마린 ≈ 11)을 쓰지 말 것. 그건 「목표에 닿았나」를 재는 자라 너무 좁다:
+          //     겹침 회피(strikeSeparate)가 동료를 그보다 쉽게 밀어내므로 **밀린다 → 걸어 돌아온다 →
+          //     또 밀린다**가 끝없이 돈다. 실측(2026-09-10 · 스모크 「미는 주체가 하나다」):
+          //     회복 존이 들어와 유닛이 안 죽게 되자 밀집이 유지되며 **떨림 20.0회/10초**(문턱 20)로 튀었다.
+          //     45 로 넓히니 문턱 안으로 돌아왔다. ⚠ 회복 존과 이 값은 그렇게 한 짝이다.
           const d0 = Math.hypot(u._post.x - u.x, u._post.y - u.y);
-          if(d0 <= campArriveR(u)){ u.moving = false; continue; }
+          if(d0 <= CAMP_POST_R){ u.moving = false; continue; }
           campMove(u, u._post.x, u._post.y, dt); continue; }
         // 🕸 **앞 건물에 못 다가가면 가까운 건물로**(2026-09-07 · 교착 실측 D2R35: 적 넷이 앞 건물 옆에서 30분).
         //   CAMP_BLD_STUCK_T 동안 앞 건물과의 거리가 안 줄면 그 유닛만 **가장 가까운** 건물을 CAMP_BLD_ALT_T 동안 친다.

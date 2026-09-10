@@ -342,9 +342,9 @@ function campBreakBld(b){
     if(typeof campNote === 'function') campNote('broken', 1);   // 🧭 가이드 — 진행 건물을 하나 부쉈다
     if(!C.best) C.best = {};
     C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.broken);    // 룬 칸·환생이 읽는 「최고 도달」
-    // 🩹 **체크포인트 부활** — 옛 「라운드 시작」의 자리다. 누운 병력이 일어나고 체력이 찬다.
+    // 🩹 **관문 보상 = 전체 회복** — 옛 「라운드 시작」의 자리다. ⛔ 부활은 없다(2026-09-10).
     if(typeof campRescaleMine === 'function') campRescaleMine();   // 🏛 내 기지도 그 관문의 자로
-    if(typeof campRoundRevive === 'function') campRoundRevive();
+    if(typeof campHealAll === 'function') campHealAll();
     if(typeof campSay === 'function'){
       const nx = campFoeActive();                          // 이어받을 다음 건물(없으면 이 던전 끝)
       campSay('🏚 ' + (b.nm || '건물') + ' 파괴 — ' + C.broken + '/' + CAMP_DG_STEPS
