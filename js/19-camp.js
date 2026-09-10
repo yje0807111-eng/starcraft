@@ -3457,9 +3457,10 @@ function campFoeMinesHTML(){
   const zm = (G.tech && G.tech.view ? G.tech.view.zoom : 1) || 1, cw = _techCW(), ch = _techCH();
   const k = (typeof CAMP_MINE_SCALE !== 'undefined') ? CAMP_MINE_SCALE : 1.34, dy = 0.30;
   const out = [];
-  const _mfog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogHidden === 'function');
+  // 🌫 적 광맥은 **한 번 본 것**만 그린다(vis · campFogExtra 가 켠다) — 지형은 기억에 남는다(유닛과 다르다)
+  const _mfog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogEnabled === 'function') && techFogEnabled();
   CAMPB._fmine.forEach(function(m, i){
-    if(_mfog && techFogHidden(m.gx, m.gy)) return;   // 🌫 적 광맥·가스도 안개 안이면 안 보인다(적 진영 연출)
+    if(_mfog && !m.vis) return;
     const spr = (typeof campMineSprite === 'function') ? campMineSprite(m, i) : ''; if(!spr) return;
     const tl = _techW2S(m.gx - k / 2 * cw, m.gy - (k / 2 + dy) * ch), br = _techW2S(m.gx + k / 2 * cw, m.gy + (k / 2 - dy) * ch);
     if(br.x < -0.2 || tl.x > 1.2 || br.y < -0.2 || tl.y > 1.2) return;
@@ -3470,7 +3471,7 @@ function campFoeMinesHTML(){
       + ((br.x - tl.x) * 100).toFixed(2) + '%;height:' + ((br.y - tl.y) * 100).toFixed(2) + '%"><img class="mnSpr" src="' + spr
       + '" alt=""><img class="mnSpr shade" src="' + spr + '" alt=""></div>'); });
   // ⛽ 가스 — 왼쪽 가스 구역(.bGasZone)의 **복제**(campDrawGas2 와 같은 수법 · 마크업을 다시 쓰지 않는다)
-  if(CAMPB._fgas){ const left = document.querySelector('#cstMain .bmap .bGasZone');
+  if(CAMPB._fgas && !(_mfog && !CAMPB._fgas.vis)){ const left = document.querySelector('#cstMain .bmap .bGasZone');   // 🌫 가스도 본 것만
     if(left){ const gw = (typeof TECH_GAS !== 'undefined' ? TECH_GAS.w : 3) * cw, gh = (typeof TECH_GAS !== 'undefined' ? TECH_GAS.h : 2) * ch;
       const tl = _techW2S(CAMPB._fgas.gx - gw / 2, CAMPB._fgas.gy - gh / 2), br = _techW2S(CAMPB._fgas.gx + gw / 2, CAMPB._fgas.gy + gh / 2);
       if(!(br.x < -0.2 || tl.x > 1.2 || br.y < -0.2 || tl.y > 1.2))

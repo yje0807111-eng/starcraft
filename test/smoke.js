@@ -7438,29 +7438,33 @@ async function groupLobby(){
        skipIf(!CAMPB||!CAMPB._fbld,'전장이 안 열림');
        campWithStk(()=>{ for(let i=0;i<4;i++) strikeSpawnUnit('me','marine'); });
        CAMPB.ai.units.forEach(u=>{ u.dmg=0; });
+       // 👀 이 스텝은 **그리는 규약**을 잰다(표식·탭·카드) — 「눈으로 봤나(vis)」는 안개 스텝의 몫이라 여기선 다 본 것으로 둔다.
+       //   ⚠ 그런 다음 **뷰를 다시 맞춘다** — 진입 뷰는 「보이는 것이 없으면 집」이라 적 기지가 화면 밖이고, 화면 밖은 3D 에서 컬링된다.
+       CAMPB._fbld.forEach(b=>{ b.vis=true; });
+       if(typeof campFoeLookAt==='function') campFoeLookAt();
        // 👁 진입 뷰는 **목표(t)만** 옮기고 실제 뷰는 보간이 따라간다(campFoeLookAt) — 프레임이 안 도는 여기서는 한 번에 끝낸다
        if(typeof techViewTick==='function') techViewTick(1);
        const fb=CAMPB._fbld, live=fb.filter(b=>!b.dead), seen=fb.filter(b=>b.seen&&!b.dead).length;
        // ① 3D 엔트리 — 기지 건물과 같은 규약(id 'cb_'+모델키 · fitW · z) · 살아 있는 것 전부 · 안 본 것은 hidden
        // 🌫 안개를 잠깐 끄고 잰다 — 켜져 있으면 못 본 것이 빠져 「연출이 있나」를 못 잰다(안개 자체는 전용 스텝이 잰다)
        const _noFog=fn=>{ const f=G.tech&&G.tech.fog, on=!!(f&&f.on); if(f) f.on=false; try{ return fn(); } finally { if(f) f.on=on; } };
-       const e3all=_noFog(()=>campFoeBld3D()), e3=e3all.filter(e=>!/_wk/.test(e.uid));
+       const e3all=campFoeBld3D(), e3=e3all.filter(e=>!/_wk/.test(e.uid));   // ⚠ 안개를 켠 채 잰다(기대값 campFoeShown 과 같은 조건)
        // 🚶 일꾼은 **넓은 뷰**로 센다 — 진입 뷰는 좁아 화면 밖 컬링에 걸린다(컬링 자체는 옳다)
        const wk=_noFog(()=>campFoeWorkers3D({x:0.5,y:0.1,zoom:0.5}, 10)).length;
        assert(e3.length===live.length,'3D 엔트리가 산 건물 수와 다르다: '+e3.length+'/'+live.length);
        assert(wk===CAMP_FOE_WORKERS,'적 일꾼 연출이 '+CAMP_FOE_WORKERS+'기가 아니다: '+wk);
        for(const e of e3){ assert(/^cb_/.test(e.id),'3D 엔트리 id 가 cb_ 규약이 아니다: '+e.id);
          assert(e.fitW>0 && typeof e.z==='number','3D 엔트리에 fitW·z 가 없다(기지 건물과 다른 크기로 선다)'); }
-       assert(e3.filter(e=>e.hidden).length===live.length-seen,'안 본 건물이 hidden 으로 안 넘어간다');
+       assert(e3.filter(e=>e.hidden).length===live.filter(b=>!campFoeShown(b)).length,'안 본 건물이 hidden 으로 안 넘어간다');
        // ② 표식 — 프레임이 그린다. 두 프레임 뒤에도 **12개**(덧붙이기만 하면 쌓인다 — 실측 144개)
        for(let i=0;i<3;i++){ campCombatStep(0.05); if(typeof campFrame==='function'){ try{ campFrame(0.05); }catch(_e){} } }
        await sleep(120);
        const marks=[...document.querySelectorAll('#cstLabels .fbLayer .fbMark')];
        const cnt=k=>marks.filter(m=>m.classList.contains(k)).length;
-       // 🌫 안개가 켜져 있으면 표식은 **본 건물만**(못 본 것은 안개가 가린다 · 2026-09-10) — 꺼져 있으면 12채 전부
-       const _fogOn=(typeof campFogOn==='function')&&campFogOn()&&techFogEnabled(), _want=_fogOn?seen:fb.length;
+       // 🌫 표식은 **보이는 것만**(campFoeShown) — 위에서 다 봤다고 뒀으므로 여기서는 12채 전부다
+       const _fogOn=(typeof campFogOn==='function')&&campFogOn()&&techFogEnabled(), _want=fb.filter(b=>campFoeShown(b)).length;
        assert(marks.length===_want,'표식이 그려야 할 수와 다르다(쌓이거나 빠졌다): '+marks.length+'/'+_want);
-       assert(cnt('prog')===(_fogOn?fb.filter(b=>b.seen&&b.role==='prog').length:CAMP_DG_STEPS),'진행 건물 표식 수가 다르다: '+cnt('prog'));
+       assert(cnt('prog')===fb.filter(b=>campFoeShown(b)&&b.role==='prog').length,'진행 건물 표식 수가 다르다: '+cnt('prog'));
        assert(cnt('tgt')===1 && marks.find(m=>m.classList.contains('tgt')).dataset.eid===campFoeFront().eid,
          '다음 표적 표식이 campFoeFront 와 다르다');
        assert(cnt('hid')===(_fogOn?0:fb.length-seen),'안개가 켜졌는데 실루엣이 남았다(둘을 같이 두지 말 것): '+cnt('hid'));
@@ -7554,19 +7558,40 @@ async function groupLobby(){
       assert(techFogVisAt(0.5,techY0()+0.02)===2,'내 격자 위끝이 덮였다');
       const main=CAMPB._fbld.find(b=>b.kind==='main');
       assert(techFogVisAt(0.5,campW2G(main.x,main.y,CAMPB.world).gy)!==2,'적 본진이 처음부터 보인다 — 탐험이 사라진다');
+      // 🏰 **적 건물도 안개에 가려진다**(2026-09-10 사용자) — 관문 규칙이 seen 을 미리 켜도 **그림은 vis** 를 본다
+      assert(CAMPB._fbld.some(b=>b.seen),'전제: 관문 규칙이 표적 기억(seen)을 켜 둔다');
+      assert(!CAMPB._fbld.some(b=>b.vis),'가 보지도 않았는데 적 건물이 보인다(vis)');
+      assert(campFoeBld3D().every(e=>e.hidden||/_wk/.test(e.uid)),'안개인데 적 건물 3D 가 그려진다');
+      assert(campFoeMarks().every(m=>m.hid),'안개인데 적 건물 표식이 뜬다');
+      assert(campFoeTapAt(0.5,campW2G(main.x,main.y,CAMPB.world).gy)==null,'안 보이는 적 건물이 눌린다');
       // ③ 병력을 올려 보내면 그만큼 열린다
       const lit=()=>{ let n=0; for(const v of f.state) if(v===2) n++; return n; };
       const before=lit(), seen0=CAMPB._fbld.filter(b=>b.seen).length;
-      const W=CAMPB.world; CAMPB.me.units.forEach((u,i)=>{ u.y=W*0.28; u.x=W*(0.44+i*0.03); });
+      // 👣 **앞줄 건물 바로 아래**로 옮긴다 — 고정 좌표는 시야(acq)보다 멀 수 있어 「안 열린다」로 잘못 읽힌다(실측 304px)
+      const W=CAMPB.world;
+      const front=CAMPB._fbld.filter(b=>!b.dead).sort((a,b)=>b.y-a.y)[0];
+      CAMPB.me.units.forEach((u,i)=>{ u.y=front.y+40; u.x=front.x+(i-1)*30; });
       for(let i=0;i<3;i++){ campCombatStep(0.05); try{ campFrame(performance.now()+900+i*40); }catch(_e){} }
       const after=lit();
       assert(after>before,'병력을 올려 보냈는데 안개가 안 열린다: '+before+'→'+after);
       assert(techFogVisAt(0.5,campW2G(CAMPB.me.units[0].x,CAMPB.me.units[0].y,W).gy)===2,'내 병력이 선 자리가 안 열렸다');
       assert(CAMPB._fbld.filter(b=>b.seen).length>=seen0,'나아갔는데 본 건물이 줄었다');
+      // 👀 **다가간 만큼 보인다** — 병력 근처의 건물이 vis 로 켜지고 3D·표식·탭이 함께 열린다
+      { const W2=CAMPB.world, u0=CAMPB.me.units[0];
+        let near=null, best=1e9;
+        for(const b of CAMPB._fbld){ const d=Math.hypot(b.x-u0.x,b.y-u0.y); if(d<best){ best=d; near=b; } }
+        assert(near&&near.vis,'바로 앞 적 건물이 안 보인다(다가가도 안 열린다): '+Math.round(best)+'px');
+        { const _v=G.tech.view; G.tech.view={ x:0.5, y:0.1, zoom:0.5 };   // 넓은 뷰 — 화면 밖 컬링과 안개를 가른다
+          try{ assert(campFoeBld3D().some(e=>!e.hidden&&!/_wk/.test(e.uid)),'열렸는데 적 건물 3D 가 하나도 안 그려진다'); }
+          finally { G.tech.view=_v; } }
+        assert(campFoeMarks().some(m=>!m.hid),'열렸는데 적 건물 표식이 하나도 없다');
+        const g=campW2G(near.x,near.y,W2);
+        assert(campFoeTapAt(g.gx,g.gy)!=null,'열린 적 건물이 안 눌린다'); }
       // ④ 안개 속 적은 3D·체력 바에서 빠진다(안개 층은 3D 캔버스 아래라 오버레이로는 못 가린다)
       CAMPB.ai.units.length=0;
       campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });
       const foe=CAMPB.ai.units[0]; foe.x=W*0.5; foe.y=W*0.16; foe.hp=Math.max(1,Math.floor((foe.maxHp||10)/2));   // 적 기지 안(안개)
+      G.tech.view={ x:0.5, y:0.1, zoom:0.5 };   // 📷 넓은 뷰로 고정 — 화면 밖 컬링을 빼고 **안개만** 잰다
       assert(campFogHidesAt(foe.x,foe.y),'전제: 그 자리가 안개다');
       assert(!campBattleList().some(e=>e.uid==='cb_ai_'+foe.uid),'안개 속 적이 3D 목록에 남았다');
       const _bars=()=>((campBattleBars()||'').match(/bentBar/g)||[]).length;
@@ -7576,7 +7601,7 @@ async function groupLobby(){
         try{ assert(campBattleList().some(e=>e.uid==='cb_ai_'+foe.uid),'안개를 껐는데도 적이 3D 목록에 없다(다른 이유로 빠졌다)');
           assert(_bars()===_nFog+1,'안개 속 적의 체력 바가 보인다(가려질 때와 같은 수): '+_nFog+'→'+_bars()); }
         finally { f.on=true; } }
-      return '집 열림 · 적 덮임 · 병력 이동으로 '+before+'→'+after+'칸 · 안개 속 적 숨김';
+      return '집 열림 · 적 건물·유닛 덮임 · 병력 이동으로 '+before+'→'+after+'칸 · 다가가니 보인다';
     } finally { C.dg=back.dg; campBattleClose(); campFogSync(); campBarReset(); }
   });
 
@@ -7632,9 +7657,14 @@ async function groupLobby(){
       // 🏔 광맥은 **그림의 고원 안**(위 경계 gy −0.45 · 실측 · 2026-09-10 사용자: 「판 안에 들어가게」)
       for(const m of CAMPB._fmine) assert(m.gy>=-0.45,'적 광맥이 고원 위(판 밖)로 나갔다: gy='+m.gy.toFixed(3));
       // 📏 적 건물 3D 는 **내 기지 건물과 같은 크기**(2026-09-10 사용자가 축소를 물렸다) — 발판 폭 × 셀 × CST_BVIS
-      { const e=campFoeBld3D().find(q=>/_wk/.test(q.uid)===false), b=CAMPB._fbld.find(q=>('cb_'+(TECH_MODEL[campDgDef(1).race]||{})[q.bk])===e.id);
+      { const _v=G.tech.view, _f=G.tech.fog, _on=!!(_f&&_f.on); if(_f) _f.on=false;
+        G.tech.view={ x:0.5, y:0.1, zoom:0.5 };                       // 넓은 뷰 — 화면 밖 컬링을 피한다
+        let e=null, b=null;
+        try{ e=campFoeBld3D().find(q=>/_wk/.test(q.uid)===false); b=e?CAMPB._fbld.find(q=>('cb_'+(TECH_MODEL[campDgDef(1).race]||{})[q.bk])===e.id):null; }
+        finally { G.tech.view=_v; if(_f) _f.on=_on; }
+        assert(e&&b,'적 건물 3D 엔트리를 못 찾았다');
         const f=_techFoot(campDgDef(1).race, b.bk), map=document.getElementById('cstMain');
-        const want=f.w*_techCW()*(map.clientWidth||360)*techView().zoom*CST_BVIS;
+        const want=f.w*_techCW()*(map.clientWidth||360)*0.5*CST_BVIS;   // 위에서 쓴 넓은 뷰의 zoom
         assert(Math.abs(e.fitW-want)<0.5,'적 건물 크기가 내 기지 규약과 다르다: '+e.fitW.toFixed(1)+' / '+want.toFixed(1)); }
       // 🎨 적 건물·일꾼은 **오토배틀의 적 진영 색**으로 칠해진다(3D 공용 applyTeamTint · rimCol 규약)
       { const all=campFoeBld3D(); assert(all.every(q=>q.rimCol===PLAYER_VIEW_COLORS[1]),'적 3D 엔트리에 적 진영 색(rimCol)이 없다');

@@ -304,6 +304,13 @@ function campFoeFront(){
 //   ⭐ 탑과 보급고는 **언제든** 때릴 수 있다(문을 여는 길 · 들르는 길).
 //   ⚠ 안개에 가린 것은 아직 표적이 아니다.
 //   ⛔ 옛 「본진은 나머지 다섯이 죽어야 열린다」 규칙은 없앴다 — 구간 3 의 문지기가 그 일을 한다.
+// 👁 **화면에 보이나** — 안개가 켜져 있으면 「눈으로 본 것(vis)」, 꺼져 있으면 옛 기준(seen).
+//   ⭐ 그리는 쪽(3D·표식)과 만지는 쪽(탭·쪽지)이 **같은 자**를 써야 한다 — 안 그러면 안 보이는 것이 눌린다.
+//   ⚠ `campFoeCanTarget`(엔진의 표적 판정)은 **seen** 그대로다 — 아군이 나아갈 목표가 없으면 교착이다(campFoeRevealGate).
+function campFoeShown(b){
+  if(!b) return false;
+  const fog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogEnabled === 'function') && techFogEnabled();
+  return fog ? !!b.vis : !!b.seen; }
 function campFoeCanTarget(b){
   if(!b || b.dead) return false;
   if(!b.seen) return false;
@@ -571,7 +578,7 @@ function campFoeBld3D(){
     out.push({ uid:'cst_foe_' + q.eid, id:'cb_' + mk, x:x, y:y,
       face:yaw + ((cfg && cfg.f) || 0), yoff:-3, dy:((cfg && cfg.dy) || 0), lift:0,
       fitW:bf.w * cwpx * ((typeof CST_BVIS !== 'undefined') ? CST_BVIS : 1.12) * CAMP_FOE_SCL, rimCol:campFoeRim(),
-      sel:false, buildP:null, hidden:!q.seen, z:zOf(by) }); }
+      sel:false, buildP:null, hidden:!campFoeShown(q), z:zOf(by) }); }
   for(const w of campFoeWorkers3D(v, cwpx)) out.push(w);        // 🚶 적 일꾼(연출)
   return out; }
 // 👁 **던전에 들어가면 적 기지가 보이게 뷰를 맞춘다**(REDESIGN_PLAN §위험 2 「12채가 화면에 다 드나」).
@@ -588,7 +595,9 @@ function campFoeLookAt(){
   //   통째로 검다(적 기지는 아직 안 봤다). 진입 때 보이는 것은 관문 규칙으로 드러난 앞줄 몇 채다.
   //   ⛔ 안개를 끄고 전체를 보여 주지 말 것 — 그러면 탐험이 사라진다.
   const _fog = (typeof campFogOn === 'function') && campFogOn() && (typeof techFogEnabled === 'function') && techFogEnabled();
-  const _list = _fog ? CAMPB._fbld.filter(function(q){ return q && q.seen; }) : CAMPB._fbld;
+  const _list = _fog ? CAMPB._fbld.filter(function(q){ return campFoeShown(q); }) : CAMPB._fbld;
+  // 🏠 아직 **한 채도 못 봤으면**(원정 첫 순간) 집을 보여 준다 — 적 기지에 맞추면 통째로 검은 화면이다.
+  if(_fog && !(_list && _list.length)){ if(typeof campZoom === 'function') campZoom(); return true; }
   const list = (_list && _list.length) ? _list : CAMPB._fbld;
   let sy = 0, n = 0;
   for(const q of list){ if(!q) continue; const g = campW2G(q.x, q.y, W); sy += g.gy; n++; }
@@ -629,13 +638,14 @@ function campFoeMarks(){
   const W = CAMPB.world || 1, tgt = campFoeFront(), out = [];
   for(const b of CAMPB._fbld){
     if(!b) continue;
+    const _shown = campFoeShown(b);
     const g = (typeof campW2G === 'function') ? campW2G(b.x, b.y, W) : { gx:b.x / W, gy:b.y / W };
     const foot = (typeof _techFoot === 'function') ? _techFoot(d.race, b.bk) : { w:2, h:2 };
     out.push({ eid:b.eid, nm:b.nm, x:g.gx, y:g.gy, fw:foot.w, fh:foot.h,
       prog:b.role === 'prog', tower:b.kind === 'tower', depot:b.kind === 'depot',
-      tgt:!!(tgt && tgt.eid === b.eid), hid:!b.seen, dead:!!b.dead,
-      lock:(b.role === 'prog' && !b.dead && b.seen && !campFoeZoneOpen(b.zone)),
-      hp:b.hp, max:b.max, hit:(!b.dead && b.seen && b.hp < b.max) }); }
+      tgt:!!(tgt && tgt.eid === b.eid), hid:!_shown, dead:!!b.dead,
+      lock:(b.role === 'prog' && !b.dead && _shown && !campFoeZoneOpen(b.zone)),
+      hp:b.hp, max:b.max, hit:(!b.dead && _shown && b.hp < b.max) }); }
   return out; }
 // 🗺 맵 띠 오른쪽에 적을 이름 — 「다음 공학소」. 없으면 빈 문자열(띠가 칸을 감춘다).
 function campFoeTgtName(){ const t = campFoeFront(); return t ? (t.nm || t.bk || '') : ''; }
@@ -651,7 +661,7 @@ function campFoeTapAt(gx, gy){
         ch = (typeof _techCH === 'function') ? _techCH() : 0.05;
   let best = null, bd = 1e9;
   for(const b of CAMPB._fbld){
-    if(!b || b.dead || !b.seen) continue;
+    if(!b || b.dead || !campFoeShown(b)) continue;   // 🌫 안 보이는 것은 안 잡힌다(campFoeShown)
     const g = (typeof campW2G === 'function') ? campW2G(b.x, b.y, W) : { gx:b.x / W, gy:b.y / W };
     const foot = (typeof _techFoot === 'function') ? _techFoot(d.race, b.bk) : { w:2, h:2 };
     const hw = Math.max(1, foot.w) * cw * 0.6, hh = Math.max(1, foot.h) * ch * 0.6;
@@ -670,7 +680,7 @@ function campFoeSheetModel(b){
   const isTgt = !!(C && C.foeTgt === b.eid), can = campFoeCanTarget(b);
   const role = b.role === 'prog' ? ('진행 ' + b.step + '/' + CAMP_DG_STEPS)
              : (b.kind === 'tower' ? '문지기 탑' : (b.kind === 'depot' ? '보급고' : '부수'));
-  const why = !b.seen ? '아직 못 봤다' : (b.dead ? '이미 부쉈다' : (!campFoeZoneOpen(b.zone) ? ('구간 ' + b.zone + ' 문지기 탑이 살아 있다') : ''));
+  const why = !campFoeShown(b) ? '아직 못 봤다' : (b.dead ? '이미 부쉈다' : (!campFoeZoneOpen(b.zone) ? ('구간 ' + b.zone + ' 문지기 탑이 살아 있다') : ''));
   const loot = b.kind === 'res' ? '가스' : b.kind === 'prod' ? '미네랄' : b.kind === 'tech' ? '연구 시간 −'
              : b.kind === 'main' ? '미네랄 + 가스' : b.kind === 'depot' ? '⚡ 잠시 자원 ×2' : '—';
   // ⚠ 잠김 표기는 **진행 건물에만** — 탑·보급고는 언제든 때릴 수 있다(실측: 탑 자체에 「잠김」이 떠 헷갈렸다)
@@ -869,19 +879,17 @@ function campFogExtra(f, asp, cpt){
       const g = campW2G(u.x, u.y, W);
       const rg = ((u.acq || 300) * CAMP_FOG_SIGHT) / W * laneW;     // 전장 사거리 → 격자 비율
       _fogReveal(g.gx, g.gy, Math.max(1, rg * f.cols), false, f, asp); n++; } }
-  // 🏚 **본 적 있는 적 건물 둘레는 「탐색됨」**(검정 0 → 회색 1)으로 남긴다.
-  //   ⭐ 이걸 안 하면 관문 규칙(campFoeRevealGate — 막고 선 것은 늘 보인다)으로 드러난 건물이
-  //     **새까만 허공에 떠 있다**(실측 2026-09-10). 기억한 건물 밑에는 기억한 땅이 있어야 한다.
-  //   ⚠ 활성(2)으로 올리지 말 것 — 지금 보고 있는 것이 아니다(적 유닛이 그 위를 지나가도 안 보여야 한다).
-  if(typeof CAMPB !== 'undefined' && CAMPB && CAMPB._fbld){
-    const W2 = CAMPB.world || 1, laneW2 = (typeof CAMP_LANE_W !== 'undefined') ? CAMP_LANE_W : 1;
-    for(const b of CAMPB._fbld){ if(!b || !b.seen) continue;
-      const g = campW2G(b.x, b.y, W2), rg = (CAMP_FOE_SEE_NEAR * 0.62) / W2 * laneW2;
-      const t0 = _fogTile(g.gx, g.gy, f), rr = Math.max(1, rg * f.cols), rry = Math.max(1, rr * asp);
-      for(let dy = -Math.ceil(rry); dy <= Math.ceil(rry); dy++){ const ty = t0.ty + dy; if(ty < 0 || ty >= f.rows) continue;
-        for(let dx = -Math.ceil(rr); dx <= Math.ceil(rr); dx++){ const tx = t0.tx + dx; if(tx < 0 || tx >= f.cols) continue;
-          if((dx / rr) * (dx / rr) + (dy / rry) * (dy / rry) > 1) continue;
-          const i = ty * f.cols + tx; if(f.state[i] === 0) f.state[i] = 1; } } } }
+  // 👀 **눈에 들어온 것에 표시를 남긴다**(b.vis / m.vis · 2026-09-10 사용자: 「적 건물과 유닛도 안개에 가려지고,
+  //   다가가서 시야를 열면 보이도록」). 한 번 본 것은 계속 그린다(RTS 의 기억 — 지형·건물은 남고 유닛은 안 남는다).
+  //   ⚠ **b.seen 과 다른 자다.** seen 은 **엔진의 표적 기억**이라 관문 규칙(campFoeRevealGate)이 아군을 안 멈추게
+  //     미리 켜 준다 — 그걸 그림에 쓰면 **가 보지도 않은 건물이 어둠 속에 떠 있다**(실측). 그림은 vis 만 본다.
+  //   ⛔ 유닛에는 vis 를 두지 말 것 — 유닛은 지금 보이는 것만 그린다(campFogHidesAt).
+  if(typeof CAMPB !== 'undefined' && CAMPB){
+    const W2 = CAMPB.world || 1, at = function(gx, gy){ const t = _fogTile(gx, gy, f); return f.state[t.ty * f.cols + t.tx]; };
+    for(const b of (CAMPB._fbld || [])){ if(!b || b.vis) continue;
+      const g = campW2G(b.x, b.y, W2); if(at(g.gx, g.gy) === 2) b.vis = true; }
+    for(const m of (CAMPB._fmine || [])){ if(!m || m.vis) continue; if(at(m.gx, m.gy) === 2) m.vis = true; }
+    if(CAMPB._fgas && !CAMPB._fgas.vis && at(CAMPB._fgas.gx, CAMPB._fgas.gy) === 2) CAMPB._fgas.vis = true; }
   return n; }
 // 🌫 **안개에 가려 안 보이나** — 전장 좌표(x,y)로 묻는다(3D·HP 바가 쓴다).
 //   ⚠ 격자 좌표를 받는 techFogHidden 과 다른 자다 — 전장 좌표를 그대로 넘기면 늘 가려진다.
