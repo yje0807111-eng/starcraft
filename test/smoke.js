@@ -7984,32 +7984,38 @@ async function groupLobby(){
           '나중에 나온 적이 처음 것보다 훨씬 약하다 — 옛 _wqTot 몫이 되살아났다: '
           +hp[0].toFixed(3)+' ~ '+hp[hp.length-1].toFixed(3));
         campWithStk(()=>{ STK.ai.units.length=0; }); CAMPB._wq=[]; }
-      // ⑦ ⚔🏰 **진군 중에는 적을 쫓지 않는다** — 2026-09-09 실측으로 잡은 교착.
-      //    ⛔ 쫓는 목표(campGoalFor)는 **자리에서 1200 안으로 잘리고** 건물 목표는 안 잘린다.
-      //      그래서 적이 하나만 보여도 아군이 자리 쪽으로 되돌아갔다가 적이 죽으면 다시 나아가기를
-      //      반복해, 적이 끊이지 않는 릴레이에서는 **영영 건물에 못 닿는다**.
-      //    📊 고치기 전(3분·12기): 진행 2/6 · 건물 실효 화력 10.8% · 60초 뒤 사거리 안 0/12.
-      //       고친 뒤: 진행 5/6 · 31.2%.
-      //    ⚠ 재는 법: **사거리 밖**(쫓아야 닿는) 적을 하나 두고, 그래도 건물에 가까워지는지 본다.
+      // ⑦ 🪧 **아군은 적 기지로 저절로 걸어가지 않는다** (2026-09-10 사용자 확정).
+      //    ⛔ 옛 규칙은 「표적 건물이 있으면 거기로 간다」였고 그 목표만 **자리 제한을 안 탔다** —
+      //      던전에 들어가는 순간 전 병력이 맵 끝까지 자동 돌격했다(플레이어의 판단이 사라진다).
+      //    ⭐ 지금 자는 하나다: **적 유닛이든 건물이든 자리에서 `campEngageOut` 안의 것만** 친다.
+      //      진격은 **드래그 명령**(campMoveSel)이 자리를 옮겨서 한다 — 새 자리에서 규칙이 다시 돈다.
+      //    ⚠ 재는 법: 자리에서 **한참 먼** 건물을 두고 ⓐ 60초 뒤에도 자리를 지키는지 ⓑ 밀면 가는지.
       { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
         const t1=campFoeTowerLive(1); for(const t of t1){ t.seen=true; campBreakBld(t); }  // 구간 1 을 연다
         const b=campFoeFront(); assert(b && b.role==='prog','구간을 열었는데 진행 건물이 표적이 아니다');
-        const u=campDeploy('marine', 0.5, 0.5); assert(u,'레인저 배치 실패');
-        const d0=Math.hypot(b.x-u.x, b.y-u.y);
-        // 사거리 밖 · 인지 안에 적 하나 — 「쫓아야 닿는」 자리다
-        const e=campWithStk(()=>{ strikeSpawnUnit('ai','marine');
-          const z=STK.ai.units[STK.ai.units.length-1];
-          if(z){ z.x=u.x+(u.rng||187)*1.35; z.y=u.y; z._sx=z.x; z._sy=z.y; } return z; });
-        assert(e,'적을 못 만들었다');
-        // ⚠ **한 번이라도** 잡았으면 전제는 충족이다 — 릴레이가 뽑는 적이 오가며 표적이 순간 비는 틱이 있다
-        //   (실측 2026-09-09: 10틱 su3 → 30틱 null → 60틱 su8). 그 틈에 재면 헛돈다.
-        let _sawTgt=false;
-        for(let i=0;i<60;i++){ campCombatStep(1/30); if(u.tgtUid) _sawTgt=true; }
-        assert(_sawTgt,'적을 표적으로 안 잡았다 — 검사가 헛돈다(사거리·인지 값이 바뀌었나)');
+        const u=campDeploy('marine', 0.5, 0.62); assert(u,'레인저 배치 실패');
+        const d0=Math.hypot(b.x-u._post.x, b.y-u._post.y);
+        assert(d0 > campEngageOut(u)+(u.rng||0),
+          '검사가 헛돈다 — 건물이 이미 자리 제한 안에 있다: '+Math.round(d0));
+        // ⓐ 그냥 두면 자리를 지킨다
+        //   ⚠ **적을 매 프레임 비운다** — 이 검사가 재는 것은 「이동」이지 「전투」가 아니다.
+        //     안 비우면 릴레이가 상한까지 적을 보내 마린 한 기가 죽고, 전멸 규칙이 판을 닫아
+        //     CAMPB 가 null 이 되어 검사가 통째로 터진다(2026-09-10 실측).
+        const _clr=()=>{ if(CAMPB){ campWithStk(()=>{ STK.ai.units.length=0; });
+          if(CAMPB._wq) CAMPB._wq.length=0; } };
+        for(let i=0;i<30*60;i++){ _clr(); campCombatStep(1/30); }
+        assert(CAMPB,'판이 닫혔다 — 적을 비웠는데도 원정이 끝났다');
+        const drift=Math.hypot(u.x-u._post.x, u.y-u._post.y);
+        assert(drift < 240,'자리를 떠나 적 기지로 걸어갔다 — 자동 돌격이 되살아났다: '
+          +Math.round(drift)+'px (건물까지 '+Math.round(d0)+')');
+        // ⓑ 드래그로 밀면 간다 — 명령이 자리를 옮긴다
+        _campSel.length=0; _campSel.push(u.uid);
+        const g=campW2G(b.x, b.y+240, CAMPB.world); campMoveSel(g.gx, g.gy, true);
+        assert(u._order,'드래그 명령이 안 걸렸다');
+        for(let i=0;i<30*40;i++){ _clr(); campCombatStep(1/30); }
         const d1=Math.hypot(b.x-u.x, b.y-u.y);
-        assert(d1 < d0-5,'적을 쫓느라 건물로 안 나아간다 — 교착이 되살아났다: '
-          +Math.round(d0)+' → '+Math.round(d1));
-        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); }
+        assert(d1 < d0-400,'드래그로 밀었는데 안 나아간다: '+Math.round(d0)+' → '+Math.round(d1));
+        campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); _campSel.length=0; }
       // ⑧ 릴레이가 이어받는다 — 첫 채를 깨면 두 번째가 활성이 된다
       { const p1=CAMPB._fbld.find(b=>b.step===1); campBreakBld(p1);
         const nx=campFoeActive();
@@ -8043,17 +8049,26 @@ async function groupLobby(){
       const me=CAMPB.me.units;
       assert(me.length>=20,'병력 배치 실패: '+me.length);
       for(const u of me){ u.dmg*=5; u.maxHp*=5; u.hp=u.maxHp; }
-      let t=0, best=0, done=false;
-      for(let f=0; f<30*200 && !done; f++){
+      // 🖐 **손으로 민다** — 아군은 저절로 안 나간다(2026-09-10). 자리 안의 것을 다 깨면 다시 드래그.
+      //   ⚠ 실제 명령 경로를 쓴다(전원 지정 → campMoveSel) — `_post` 를 직접 옮기면 검사가 헛돈다.
+      const push=()=>{ _campSel.length=0;
+        for(const u of me) if(!u.dead) _campSel.push(u.uid);
+        const fr=campFoeFront(); if(!fr) return false;
+        const g=campW2G(fr.x, fr.y+240, CAMPB.world); campMoveSel(g.gx, g.gy, true); return true; };
+      let t=0, best=0, done=false, lastB=0, idle=0, pushes=0;
+      push(); pushes++;
+      for(let f=0; f<30*300 && !done; f++){
         campCombatStep(1/30); t+=1/30;
         if(!CAMPB){ done=true; break; }
-        best=Math.max(best, campBroken()); }
-      assert(done,'200초 안에 판이 안 끝났다 — 최고 '+best+'/'+CAMP_DG_STEPS
-        +' (공성이 안 닿으면 여기서 걸린다)');
+        best=Math.max(best, campBroken());
+        if(campBroken()!==lastB){ lastB=campBroken(); idle=0; } else idle+=1/30;
+        if(idle>=12){ idle=0; if(push()) pushes++; } }        // 진전이 없으면 다시 민다
+      assert(done,'300초 안에 판이 안 끝났다 — 최고 '+best+'/'+CAMP_DG_STEPS
+        +' · 드래그 '+pushes+'회 (공성이 안 닿으면 여기서 걸린다)');
       assert(C.dgDone && C.dgDone[1],'던전 1 을 못 깼다 — 최고 '+best+'/'+CAMP_DG_STEPS
         +' · '+Math.round(t)+'초. ⚠ 값이 아니라 구조를 볼 것: 건물 사격 순서(_campFireBld 가 적보다'
         +' 먼저인가) · 진군(_march) · 건물 사격 여유(CAMP_BLD_PAD)');
-      return '화력병 20기 · 연구 ×5 → '+Math.round(t)+'초에 클리어';
+      return '화력병 20기 · 연구 ×5 · 드래그 '+pushes+'회 → '+Math.round(t)+'초에 클리어';
     } finally { C.dg=back.dg; C.broken=back.broken; C.foeDead=back.foeDead;
       C.dgDone=back.dgDone; C.depotT=back.depotT;
       campBattleClose(); if(typeof campSave==='function') campSave(); } });

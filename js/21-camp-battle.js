@@ -506,6 +506,8 @@ function campStepUnits(dt){
         const mb = nextBld(side);
         if(mb && u._atk.gnd){
           const gap = Math.hypot(mb.x - u.x, mb.y - u.y) - CAMP_BLD_R;
+          // ⚠ **사거리에 들었으면 친다** — 자리 제한은 「나갈지」를 정하는 자이지 「쏠지」가 아니다.
+          //   여기까지 왔다는 것은 이미 벽 앞에 서 있다는 뜻이다.
           if(gap <= (u.rng || 0) + (u.size || 14) * 0.95 + CAMP_BLD_PAD){
             u.moving = false; u.face = Math.atan2(mb.x - u.x, mb.y - u.y);
             _campFireBld(u, mb, me, dt, col);
@@ -524,21 +526,8 @@ function campStepUnits(dt){
       }
 
       // ── 갈 곳을 정한다
-      // ⚔🏰 **진군 중에는 적을 쫓지 않는다** (2026-09-09 실측으로 잡은 교착).
-      //   ⭐ 사거리에 든 적은 위에서 이미 쏘고 `continue` 했다 — 여기 남은 `tgt` 는 **쫓아가야 닿는 적**이다.
-      //     칠 건물이 있는데 그걸 쫓으면 진군이 통째로 멈춘다: 쫓는 목표는 `campGoalFor` 가 **자리에서
-      //     1200 안으로 자르고**(제자리 방어의 자), 건물 목표는 안 자른다. 그래서 적이 하나만 보여도
-      //     아군이 자리 쪽으로 되돌아갔다가 적이 죽으면 다시 나아가기를 반복한다.
-      //   📊 실측(3분 · 아군 12기 · D1): 60초 뒤부터 **12기 전부가 적 유닛과 교전 중이고 건물 사거리
-      //     안에는 0기**였다. 구간 2 문지기 체력이 90/90 그대로 120초를 버텼다(이론 파괴 8초).
-      //     건물에 실제로 들어간 피해는 이론 화력의 **10.8%**, 60초 이후로는 사실상 0 이었다.
-      //   ⛔ 「적을 다 잡고 나서 나아간다」로 되돌리지 말 것 — 릴레이는 적이 **끊이지 않는** 흐름이라
-      //     그 조건이 영영 안 온다(옛 라운드에는 숨 고르기가 있었다).
-      //   ⚠ **아군(me)에만 건다.** 적(ai)은 내 건물을 치러 내려오는 쪽이라 규칙이 다르다 —
-      //     여기 걸면 적이 내 병력을 통째로 무시하고 지나쳐 방어의 뜻이 사라진다.
-      const _march = (side === 'me') && !!nextBld(side);
       let goal;
-      if(tgt && !_march){
+      if(tgt){
         // ⏱ 목표를 짧게 붙들어 미세 조정을 줄인다. ⛔ **이동을 몰아서 하지 않는다** —
         //   예전에 0.4초치를 한 프레임에 밀었다가 유닛이 203px 씩 튀었다(실측 236회).
         //   붙드는 것은 **목표**고, 이동은 늘 dt 만큼이다.
@@ -555,6 +544,25 @@ function campStepUnits(dt){
         let b = nextBld(side);                            // 그 진영의 표적 건물 — 부서졌으면 그 자리에서 다음 것으로
         if(!b){ u.moving = false; continue; }             // 부술 것이 없으면 선다
         if(!u._atk.gnd){ u.moving = false; continue; }     // 지상을 못 때리면 건물도 못 때린다
+        // 🪧 **아군은 제 자리를 지킨다 — 적 기지로 저절로 걸어가지 않는다**(2026-09-10 사용자 확정).
+        //   ⛔ 옛 규칙은 「표적 건물이 있으면 거기로 간다」였고 그 목표만 **자리 제한을 안 탔다**.
+        //     그래서 던전에 들어가는 순간 전 병력이 맵 끝까지 자동 돌격했다 — 판단이 사라진다.
+        //   ⭐ 지금은 자든 하나다: **적 유닛이든 건물이든, 자리에서 `campEngageOut` 안의 것만** 친다.
+        //     진격은 **드래그 명령**(campMoveSel)이 자리를 옮겨서 한다 — 새 자리에서 다시 이 규칙이 돈다.
+        //   ⚠ **아군(me)에만 건다.** 적(ai)은 내 건물을 치러 내려오는 쪽이라 규칙이 다르다 —
+        //     여기 걸면 적이 제자리에 서서 내 기지를 영영 안 친다(패배 규칙이 죽는다).
+        if(side === 'me'){
+          const home = u._post || u;
+          const reach = ((typeof campEngageOut === 'function') ? campEngageOut(u) : CAMP_ENG_OUT)
+            + (u.rng || 0);
+          if(Math.hypot(b.x - home.x, b.y - home.y) - CAMP_BLD_R > reach){
+            u._btgt = null; b = null; } }
+        if(!b){ u._idleT = (u._idleT || 0) + dt;           // 🪧 칠 것이 자리 안에 없다 — 자리로 돌아간다
+          if(u._idleT < CAMP_RETURN_DELAY){ u.moving = false; continue; }
+          if(!u._post) u._post = { x:u.x, y:u.y };
+          const d0 = Math.hypot(u._post.x - u.x, u._post.y - u.y);
+          if(d0 <= campArriveR(u)){ u.moving = false; continue; }
+          campMove(u, u._post.x, u._post.y, dt); continue; }
         // 🕸 **앞 건물에 못 다가가면 가까운 건물로**(2026-09-07 · 교착 실측 D2R35: 적 넷이 앞 건물 옆에서 30분).
         //   CAMP_BLD_STUCK_T 동안 앞 건물과의 거리가 안 줄면 그 유닛만 **가장 가까운** 건물을 CAMP_BLD_ALT_T 동안 친다.
         //   ⛔ 처음부터 최근접으로 두지 말 것 — 무리가 갈라져 건물 여럿을 동시에 갉는다(위 주석).
