@@ -1975,21 +1975,25 @@ async function groupLobby(){
         // 🏗 **유닛을 지정한 채 내 건물을 탭하면 유닛이 풀리고 그 건물이 지정된다**
         //   (2026-09-10 사용자 확정 · 옛 규칙은 「그 자리로 이동」이라 ⊘ 로 먼저 풀어야 했다).
         //   ⛔ 「건물 탭 = 이동」으로 되돌리지 말 것.
-        //   ⚠ 재기 전에 **시점을 집으로 되돌린다**(campZoom) — 위의 팬 검사들이 화면을 끌어 놨다.
-        //     techPtrUp 은 맵 위 13%(down.sy<0.13)를 상단바로 보고 탭을 버리므로, 건물이 그
-        //     띠에 들어가 있으면 탭이 통째로 무시된다(실측: 3회 중 1회 실패한 진짜 이유).
-        //     그래서 그 띠 안이면 재지 않는다 — onMap 은 '.bmap 안인가'만 보아 못 거른다.
+        //   ⚠ **자원을 든 일꾼 + 본진 탭은 예외다** — techPtrDown 이 「자원 작업 재개」로 먼저
+        //     가로채고 _btDown 을 비워, techPtrUp 의 이 규칙까지 오지 않는다(17-build-cards).
+        //     bd 는 첫 건물 = 본진이고 캠프 일꾼은 계속 캐므로, 마침 손에 들고 있던 판에서만
+        //     실패했다(실측 4회 중 1회). 재는 것은 일반 규칙이니 손을 비우고 잰다.
+        //   ⚠ 맵 위 13%(down.sy<0.13)는 techPtrUp 이 상단바로 보고 탭을 버린다 —
+        //     onMap 은 '.bmap 안인가'만 보아 못 거르므로 여기서 함께 거른다.
         { campPanMode(false); clearSel();
           if(typeof campZoom==='function') campZoom();
           spin(2);
-          G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
-          const q=at(bd.x,bd.y), _r=_btRect();
-          const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
-          if(onMap(q) && _sy>=0.13){
-            pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
-            assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
-            assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
-          clearSel(); }
+          const _cy=wk._carry, _ck=wk._cKind; wk._carry=0; wk._cKind=null;
+          try{
+            G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
+            const q=at(bd.x,bd.y), _r=_btRect();
+            const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
+            if(onMap(q) && _sy>=0.13){
+              pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+              assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
+              assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
+          } finally { wk._carry=_cy; wk._cKind=_ck; clearSel(); } }
 
         // ⑤ ⛔ **모드가 꺼져 있으면 빈 바닥 드래그는 여전히 박스 지정이다.**
         //   여기를 팬으로 쓰면 유닛 드래그 지정이 죽는다 — 그래서 모드로 가른 것이다.
