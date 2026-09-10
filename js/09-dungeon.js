@@ -446,6 +446,20 @@ function teamLevel(id){ let mx=buildLevel(id);
   if(ix>=0 && typeof G!=='undefined' && G && G.coopTeamB){ for(const k in G.coopTeamB){ const v=(G.coopTeamB[k]||[])[ix]||0; if(v>mx) mx=v; } }
   return mx; }
 function teamEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], teamLevel(id)); }   // 팀 최고레벨 + 초월 배율 적용
+// ⚙ **오토 배틀 강화** — 유즈맵 강화 구역에서 산 것(map:'cpu')이 판에 닿는 자리.
+//   ⛔ **여기 값을 캠프 전투로 새게 하지 말 것.** 오토 배틀 엔진(18-strike)의 부품을
+//     캠프 전투(21-camp-battle)가 그대로 빌려 쓴다 — `strikeAtkMul` 이 그 예다.
+//     그래서 거는 쪽(18-strike)이 **「오토 배틀이고 내 진영일 때만」** 을 직접 확인한다(`stkUpgOn`).
+//   ⚠ 값은 약하다(다 채워도 공격 +8% · 체력 +10%) — 8인 대전이라 세지면 대전이 「누가 오래 했나」가 된다.
+function cpuBonus(){ const L=id=>metaEffLv(id);
+  return {
+    startGold: L('cpu_start_gold')*150,
+    mineCost:  Math.max(0.5, 1 - L('cpu_mine_cost')*0.015),   // 하한 — 0 이나 음수가 되면 광산이 공짜다
+    mineYield: 1 + L('cpu_mine_yield')*0.02,
+    income:    1 + L('cpu_income')*0.02,
+    atkMul:    1 + L('cpu_unit_atk')*0.008,
+    hpMul:     1 + L('cpu_unit_hp')*0.01,
+  }; }
 function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효과 = 초월 배율 반영 레벨(일반=그대로, 초월=×2/×4/×8)
   return {
     creditMul:   1 + L('credit_gain')*0.05,

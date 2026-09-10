@@ -70,6 +70,21 @@ const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect�
   pboss_cd:      { name:'개인보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'개인 보스' },
   rboss_hp_down: { name:'라운드보스 체력', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'라운드 보스' },
   rboss_dmg_up:  { name:'라운드보스 피해', desc:'10·20·30라운드 보스에 주는 피해 증가 (+2%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'라운드 보스' },
+  // ══ ⚙ 오토 배틀(cpu) ══════════════════════════════════════════════════
+  // 2026-09-10 사용자 확정 — 「유닛 강화는 **약하게**(밸런스가 뭉개지지 않게) · 자원은 **미미한 것은
+  //   싸게, 영향이 큰 것은 비싸게**」.
+  // ⭐ 값을 그렇게 갈랐다: 시작 자금은 **초반 한 번**뿐이라 제일 싸고(합 660),
+  //   광산 값 → 광산 수입 → 기본 수입 순으로 비싸진다(합 2,200 → 3,300 → 4,400).
+  //   뒤로 갈수록 **판 내내 복리로 불어나는** 것이라 같은 %라도 결과가 훨씬 크다.
+  // ⚠ 유닛 둘은 다 채워도 공격 +8% · 체력 +10% 다 — ⛔ 두 자릿수로 올리지 말 것:
+  //   오토 배틀은 **8인 대전**이라 영구 강화가 세지면 「오래 한 사람이 이긴다」가 된다.
+  // ⚠ 비용은 `start × (레벨+1)` 이다(META_COST_POW=1). start 만 보면 총액이 안 보인다.
+  cpu_start_gold: { name:'시작 자금',   desc:'판 시작 자금 증가 (+150/Lv)',      start:12, nMax:10, max:10, group:'eco',    sect:'시작', map:'cpu', out:true },
+  cpu_mine_cost:  { name:'광산 값 인하', desc:'광산 구매 비용 감소 (-1.5%/Lv)',   start:40, nMax:10, max:10, group:'eco',    sect:'채굴', map:'cpu', out:true },
+  cpu_mine_yield: { name:'광산 수입',   desc:'광산 1개당 수입 증가 (+2%/Lv)',    start:60, nMax:10, max:10, group:'eco',    sect:'채굴', map:'cpu', out:true },
+  cpu_income:     { name:'기본 수입',   desc:'광산과 무관한 기본 수입 증가 (+2%/Lv)', start:80, nMax:10, max:10, group:'eco', sect:'수입', map:'cpu', out:true },
+  cpu_unit_atk:   { name:'유닛 공격력', desc:'내 유닛 공격력 증가 (+0.8%/Lv)',   start:45, nMax:10, max:10, group:'combat', sect:'아군 강화', map:'cpu', out:true },
+  cpu_unit_hp:    { name:'유닛 체력',   desc:'내 유닛 체력·실드 증가 (+1%/Lv)',  start:45, nMax:10, max:10, group:'combat', sect:'아군 강화', map:'cpu', out:true },
 };
 // 비용 곡선: 일반 레벨 = start×(lv+1) (선형 — 1단계 start, 2단계 2×start … 딱 떨어지는 가격), 초월 레벨 = 일반 누적×[..] (5단위 반올림).
 const META_COST_POW=1.0;

@@ -323,6 +323,31 @@ async function groupLobby(){
         assert(buildLevel(id)===lv0+1,'강화 구역에서 샀는데 레벨이 안 오른다');
         assert(PLAYER_META.coins<c0,'샀는데 포인트가 안 빠진다');
         PLAYER_META.buildLevels[id]=lv0; }
+      // ⚙ 오토 배틀 표 — 유닛 강화는 **약하다**(8인 대전이라 세지면 「오래 한 사람이 이긴다」).
+      { const cpu=Object.keys(META_BUILDS).filter(k=>META_BUILDS[k].map==='cpu');
+        assert(cpu.length,'오토 배틀 강화가 없다');
+        const keep=JSON.stringify(PLAYER_META.buildLevels);
+        for(const k of cpu) PLAYER_META.buildLevels[k]=META_BUILDS[k].max;   // 다 채운 뒤 상한을 본다
+        const b=cpuBonus();
+        assert(b.atkMul<=1.12,'유닛 공격 강화가 세다(대전이 「누가 오래 했나」가 된다): '+b.atkMul.toFixed(3));
+        assert(b.hpMul<=1.15,'유닛 체력 강화가 세다: '+b.hpMul.toFixed(3));
+        assert(b.mineCost>=0.5,'광산 값이 반 아래로 내려간다: '+b.mineCost.toFixed(3));
+        // 💰 「미미한 것은 싸고 큰 것은 비싸다」 — 시작 자금 < 광산 값 < 광산 수입 < 기본 수입
+        const tot=k=>{ let t=0; for(let l=0;l<META_BUILDS[k].max;l++) t+=metaNextCost(k,l); return t; };
+        const order=['cpu_start_gold','cpu_mine_cost','cpu_mine_yield','cpu_income'];
+        for(let i=1;i<order.length;i++) assert(tot(order[i])>tot(order[i-1]),
+          '값 순서가 깨졌다(영향이 큰 것이 더 비싸야 한다): '+order[i-1]+' '+tot(order[i-1])+' ≥ '+order[i]+' '+tot(order[i]));
+        // ⛔ **캠프로 새지 않는가** — 캠프 전투가 이 파일의 부품(strikeAtkMul)을 그대로 빌려 쓴다.
+        //   여기가 뚫리면 오토 배틀 강화가 캠프 밸런스를 통째로 흔든다.
+        { const on0=window.campIsOn, map0=(typeof MAP!=='undefined')?MAP:null;
+          try{
+            window.campIsOn=()=>true;
+            assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'캠프 전투 중인데 오토 배틀 강화가 걸린다');
+            window.campIsOn=()=>false;
+            if(typeof MAP!=='undefined'){ MAP=USEMAPS.nemo;
+              assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'다른 유즈맵인데 오토 배틀 강화가 걸린다'); }
+          } finally { window.campIsOn=on0; if(map0) MAP=map0; } }
+        PLAYER_META.buildLevels=JSON.parse(keep); }
       // ⑦ 뒤로 = 맵 목록
       mapUpgBack();
       assert(document.querySelectorAll('.muMap').length,'뒤로 갔는데 맵 목록이 안 나온다');
