@@ -3943,6 +3943,24 @@ async function groupLobby(){
         if(b) assert(b.hp===(b.maxHp||b.max),'건물이 안 찼다: '+b.hp);
         if(bOut) assert(bOut.hp===1,
           '회복 구역 밖 건물이 찼다 — 앞에 내놓는 대가가 사라진다: '+bOut.hp);
+        // 🔨 **맞는 중에는 안 고쳐진다**(2026-09-10 실측으로 잡은 구조 결함).
+        //   ⛔ 무조건 채우면 **패배 규칙(본부 파괴)이 영영 성립하지 않는다** — 전멸시켜 놓고
+        //     10분을 돌려도 본부가 750 ↔ 728 을 오갈 뿐이었다(회복이 적 화력의 약 35배).
+        //   ⚠ 유닛에는 안 건다 — 「자리를 지키면 안 죽는다」가 회복 존의 전부다.
+        if(b){ b.hp=b.maxHp;
+          campHealZone();                              // ① 안 맞았다 → 그대로 가득
+          assert(b.hp===b.maxHp,'전제가 바뀜');
+          b.hp=b.maxHp*0.5; campHealZone();             // ② 직전 주기에 줄었다 → 건너뛴다
+          assert(b.hp===b.maxHp*0.5,
+            '맞는 중인데 고쳐졌다 — 적이 본부를 영영 못 부순다: '+b.hp+'/'+b.maxHp);
+          campHealZone();                              // ③ 더 안 줄었다(싸움이 멎었다) → 고쳐진다
+          assert(b.hp===b.maxHp,'싸움이 멎었는데 안 고쳐진다: '+b.hp+'/'+b.maxHp);
+          // ⚠ 유닛은 교전 중에도 찬다(건물과 갈리는 지점)
+          const uu=CAMPB.me.units.find(x=>!x.dead&&campInHome(x,W));
+          if(uu){ uu.hp=1; campHealZone(); const h1=uu.hp;
+            uu.hp=1; campHealZone();
+            assert(h1===uu.maxHp && uu.hp===uu.maxHp,
+              '유닛도 「맞으면 안 참」이 걸렸다 — 자리를 지켜도 죽는다: '+uu.hp+'/'+uu.maxHp); } }
         if(dead) assert(dead.dead&&(dead.hp||0)<=0,
           '부서진 건물이 되살아났다 — 적이 본부까지 못 와 패배 규칙이 죽는다');
         // 🗺 경계는 **맵의 「내 구역 입구」**(석판 위끝 CAMP_HEAL_GY)다.
@@ -7945,9 +7963,16 @@ async function groupLobby(){
       const after=lit();
       assert(after>before,'병력을 올려 보냈는데 안개가 안 열린다: '+before+'→'+after);
       // ⚠ **그 유닛의 x 로 물어야 한다.** 0.5 로 고정하면 적 기지 배치(씨앗마다 다르다)에 따라
-      //   병력이 가운데에서 멀 때 「안 열렸다」로 잘못 읽힌다 — 판마다 되기도 안 되기도 했다.
+      //   병력이 가운데에서 멀 때 「안 열렸다」로 잘못 읽힌다.
+      // ⚠ **한 칸 여유를 준다.** 안개는 campFrame 안에서 계산되는데 그 프레임이 전투도 함께
+      //   굴려 유닛이 **계산 뒤에 또 움직인다** — 딱 그 칸으로 재면 판마다 되기도 안 되기도 했다.
+      //   이 검사의 뜻은 「병력이 간 자리가 열렸나」이므로 이웃 칸까지 본다.
       { const u0=CAMPB.me.units[0], g0=campW2G(u0.x,u0.y,W);
-        assert(techFogVisAt(g0.gx,g0.gy)===2,'내 병력이 선 자리가 안 열렸다'); }
+        const cw=_techCW(), ch=_techCH();
+        let lit=false;
+        for(let dc=-1;dc<=1&&!lit;dc++) for(let dr=-1;dr<=1&&!lit;dr++)
+          if(techFogVisAt(g0.gx+dc*cw, g0.gy+dr*ch)===2) lit=true;
+        assert(lit,'내 병력이 선 자리가 안 열렸다'); }
       assert(CAMPB._fbld.filter(b=>b.seen).length>=seen0,'나아갔는데 본 건물이 줄었다');
       // 👀 **다가간 만큼 보인다** — 병력 근처의 건물이 vis 로 켜지고 3D·표식·탭이 함께 열린다
       { const W2=CAMPB.world, u0=CAMPB.me.units[0];
