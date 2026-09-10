@@ -7826,6 +7826,65 @@ async function groupLobby(){
     } finally { C.dg=back.dg; campBattleClose(); campFogSync(); campBarReset(); }
   });
 
+  /* 🗺 **지형층**(벽·언덕·램프 · js/24-terrain.js · 2026-09-10 1단계 = 그림만)
+   *   재는 것은 다섯이다: ① 집에는 없다 ② 격자가 **안개와 같다** ③ 씨앗이 같으면 지형도 같다
+   *   ④ 길이 안 막힌다 ⑤ **서명이 같으면 다시 굽지 않는다**(이걸 어겼을 때 스모크가 통째로 멎었다). */
+  await step('캠프 던전: 지형층 — 격자는 안개와 같고 · 길은 안 막히고 · 다시 굽지 않는다', async()=>{
+    skipIf(typeof campTerrDraw!=='function'||typeof campTerrGen!=='function','지형층 없음');
+    const C=campState(); const back={dg:C.dg};
+    try{
+      // ① 집(캠프)에는 지형이 없다 — 집은 평지다
+      campEnterDungeon(0); campBattleClose(); campFogSync(); campTerrDraw();
+      assert(typeof CAMPT==='undefined'||!CAMPT,'캠프(집)에 지형이 생겼다 — 집은 평지다');
+      // ② 던전 — 격자는 안개에서 받아 온다(⛔ 따로 계산하면 절벽이 한 칸 밀린다)
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      for(let i=0;i<3;i++){ campCombatStep(0.05); try{ campFrame(performance.now()+i*40); }catch(_e){} }
+      campTerrDraw();
+      assert(CAMPT,'던전인데 지형이 없다');
+      const f=G.tech.fog;
+      assert(CAMPT.cols===f.cols&&CAMPT.rows===f.rows,'지형 격자가 안개와 다르다: '
+        +CAMPT.cols+'x'+CAMPT.rows+' vs '+f.cols+'x'+f.rows);
+      assert(Math.abs(CAMPT.wy0-(f.wy0==null?0:f.wy0))<1e-9,'지형이 덮는 세로 범위가 안개와 다르다');
+      // 화면 층 — .bmap 안 · 바닥 위 · 엔티티 아래(z 1)
+      { const cv=document.querySelector('#cstMain .bmap canvas.bmapTerr');
+        assert(cv,'지형 캔버스(.bmapTerr)가 맵 안에 없다');
+        assert(+getComputedStyle(cv).zIndex===1,'지형 층의 z-index 가 1 이 아니다 — 광맥·버튼을 덮는다');
+        const fl=document.querySelector('#cstMain .bmap .bmapFloor');
+        assert(fl&&(fl.compareDocumentPosition(cv)&Node.DOCUMENT_POSITION_FOLLOWING),'지형이 바닥보다 앞에 있다'); }
+      // ③ **다시 굽지 않는다** — 서명이 그대로면 굽는 횟수가 안 늘어야 한다.
+      //   ⚠ 굽는 **횟수**로 잰다(캔버스 동일성이 아니라) — 다시 구우면 화면이 멎어 검사 자체가
+      //     죽어 버려 「가드가 물었는지」를 알 수 없다(2026-09-10 주입 시험에서 겪었다).
+      const b0=CAMPT.bake, n0=_terrBakes;
+      assert(b0,'지형을 안 구웠다');
+      for(let i=0;i<5;i++){ try{ campFrame(performance.now()+400+i*40); }catch(_e){} campTerrDraw(); }
+      assert(_terrBakes===n0,'프레임마다 지형을 다시 굽는다('+(_terrBakes-n0)+'회) — 1200×2000 캔버스가 매 프레임 새로 생긴다');
+      assert(CAMPT.bake===b0,'구운 그림이 바뀌었다 — 지형을 다시 만들었다');
+      // ④ 길이 안 막힌다 · 램프가 있다 · 아무 데나 벽이 나지 않는다
+      assert(campTerrConnected(),'벽이 길을 막았다 — 릴레이 던전은 적이 나한테 와야 성립한다');
+      let hi=0, wall=0, ramp=0; for(let i=0;i<CAMPT.h.length;i++){ if(CAMPT.h[i])hi++; if(CAMPT.w[i])wall++; if(CAMPT.r[i])ramp++; }
+      assert(hi>0,'고원이 없다'); assert(ramp>0,'램프가 없다 — 절벽이 길을 막으면 올라갈 길이 사라진다');
+      { const y0=techY0(), tower1=CAMP_FOE_ROW.tower1, span=CAMPT.wy1-CAMPT.wy0;
+        for(let ty=0;ty<CAMPT.rows;ty++){ const wy=CAMPT.wy0+((ty+0.5)/CAMPT.rows)*span;
+          for(let tx=0;tx<CAMPT.cols;tx++){ if(!CAMPT.w[ty*CAMPT.cols+tx]) continue;
+            assert(wy<y0,'내 격자 안에 벽이 났다(gy='+wy.toFixed(3)+') — 건물을 짓는 자리다');
+            assert(wy>tower1,'적 기지 줄에 벽이 났다(gy='+wy.toFixed(3)+') — 건물 위에 선다'); } } }
+      // ⑤ 고원 아래 가장자리는 **계단**이다 — 이웃 열의 밑변이 한 칸 넘게 차이 나면 빗살로 보인다
+      { const C2=CAMPT.cols; let prev=null, worst=0;
+        for(let tx=0;tx<C2;tx++){ let last=-1;
+          for(let ty=0;ty<CAMPT.rows;ty++) if(CAMPT.h[ty*C2+tx]) last=ty;
+          if(prev!=null) worst=Math.max(worst,Math.abs(last-prev));
+          prev=last; }
+        assert(worst<=1,'고원 밑변이 이웃 열끼리 '+worst+'칸 튄다 — 빗살로 보인다'); }
+      // ⑥ 씨앗이 같으면 지형도 같다(⛔ Math.random 금지 — 저장·복원하면 자리가 바뀐다)
+      { const a=Array.from(CAMPT.h).join('')+'|'+Array.from(CAMPT.w).join('');
+        campTerrGen(campDgN(), C.foeSeed||1);
+        const b=Array.from(CAMPT.h).join('')+'|'+Array.from(CAMPT.w).join('');
+        assert(a===b,'같은 씨앗인데 지형이 다르다 — Math.random 이 섞였다'); }
+      return CAMPT.cols+'x'+CAMPT.rows+' · 고지 '+hi+' · 벽 '+wall+' · 램프 '+ramp+' · 한 번만 구웠다';
+    } finally { C.dg=back.dg; campBattleClose(); campFogSync(); campTerrDraw(); campBarReset(); }
+  });
+
   // 🎲 **적 기지 배치는 생성기가 뽑는다**(2026-09-09 사용자 확정 · 23-camp-dungeon campFoeLayout).
   //   규칙은 고정 — **맨 위 본진 → 테크 → 앞줄 생산**(내 기지의 거울) · 탑은 구간 앞 · 보급고류는 바깥 —
   //   자리만 씨앗 난수다. 씨앗은 원정마다 새로(C.foeSeed) · 같은 씨앗이면 같은 배치.

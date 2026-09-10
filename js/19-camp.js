@@ -6557,6 +6557,9 @@ function campFrame(now){
     //   ⛔ 튜토리얼 쪽에서 직접 계산하지 말 것: 그때는 관리자 탭 좌표계라 링이 좌상단으로 튄다.
     try{ if(typeof tutoBldBoxSave === 'function') tutoBldBoxSave(); }catch(_e){}
     _campSim = false;
+    // 🗺 지형층(벽·언덕·램프) — renderBuildTab 이 #cstMain 을 통째로 갈아 끼운 **뒤에** 다시 꽂는다.
+    //   ⛔ renderBuildTab 안으로 옮기지 말 것 — 그 파일은 관리자 건설 탭·오토배틀과 공유다.
+    try{ if(typeof campTerrDraw === 'function') campTerrDraw(); }catch(_e){}
     // ❤ 전장 HP 바 — renderBuildTab 이 라벨 층(#cstLabels)을 **통째로 덮으므로** 그 뒤에 얹는다.
     //   ⛔ renderBuildTab 안으로 옮기지 말 것 — 그 파일은 관리자 건설 탭과 공유다(캠프 전장이 새 나간다).
     { const _lb = document.getElementById('cstLabels');

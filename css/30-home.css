@@ -1291,6 +1291,13 @@
          따뜻한 기가 사라져 콘크리트만 남는다.
        ⚠ 이 filter 는 **바닥 층에만** 걸린다(.bmapFloor). 그 위의 유닛·건물·자원은 영향이 없다. */
     filter:brightness(.60) saturate(.80)}
+  /* 🗺 **지형층**(벽·언덕·램프 — js/24-terrain.js) — 바닥 위, 엔티티 아래.
+     ⛰ z-index 1 은 옛 `.bHill`(「지형은 엔티티 아래」)과 같은 자리다. ⛔ 올리지 말 것:
+       올리면 광맥 스프라이트·건설 버튼이 지형에 덮인다.
+     ⚠ 이 층은 **뷰 변환을 CSS 로 받지 않는다** — 안개(#cstFog)처럼 캔버스 안에서 좌표를 계산한다.
+       ⛔ transform 을 주지 말 것: 두 벌이 되어 두 배로 밀린다.
+     ⚠ 바닥의 filter(brightness .60)는 여기 안 걸린다 — 지형은 바닥이 아니라 그 위의 물건이다. */
+  #phone.campMode #cstMain .bmapTerr{position:absolute;inset:0;z-index:1;pointer-events:none}
   /* 맵 위에 얹힌 건설 장식·안내 */
   #phone.campMode #cstMain .bhint,     /* 「건물을 골라 배치」 같은 안내 문구 */
   #phone.campMode #cstMain .bHill{display:none}   /* 언덕 장식만 걷는다 — 가스 구역은 캠프도 쓴다 */
