@@ -583,3 +583,64 @@ body.vgMode #townScreen{padding-bottom:var(--navH)}
 /* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
 .cdRnd.off{opacity:.3;pointer-events:none}
 .cdRnd .cdSl{border-bottom:0;margin-bottom:0;padding-bottom:2px}
+
+/* ══════════ [20-lobby.css] 2026-09-10 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
+#dgSheet:not(.hide) .dgSheetCard{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+
+/* ══════════ [30-home.css] 2026-09-10 — 어디에도 안 쓰는 클래스 11개의 규칙 ══════════ */
+/* ⚔ 던전 허브 — 던전 목록 카드(배너) + 팝업(소탕/입장) */
+.dgHubHead{font-size:12px;color:var(--txt-mute);margin:2px 4px 12px;line-height:1.5;text-align:center}
+.dgHubHead b{color:#ffd24a}
+body:not(.dgFight) #dgFightOut{display:none}
+body.dgFight .hmScroll{display:none}
+/* 사냥터 업그레이드 카드 */
+body.dgFight #hbRdPrev, body.dgFight #hbRdNext{display:none}
+/* 토벌 중에 단계를 갈아탈 수는 없다 */
+body.dgFight #hbMidTx{pointer-events:none}
+/* 가운데도 목록을 열지 않는다 */
+body.dgFight #hbBuildStop{display:none}
+body.dgFight .hbAutoChip{display:none}
+.dgRow{height:76px;gap:7px;padding:8px 8px}
+.dgRow .riName{display:flex;align-items:center;gap:5px;min-width:0;font-size:var(--fs-xl);font-weight:700;color:var(--txt)}
+.dgRow .riName>u{text-decoration:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 던전 아이콘 — assets/icons/dungeons/dg_<id>.webp 를 먼저 찾고 없으면 이모지로 떨어진다(beaconProHTML 과 같은 규칙) */
+.dgIco{flex:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1;
+    border-radius:var(--r-bar);border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);overflow:hidden}
+.dgIco img{width:100%;height:100%;object-fit:contain;display:block}
+.roomItem.locked .dgIco{opacity:.45}
+/* 단계 배지 — 12단계 · 미개척 · Lv.50 이 같은 자리에서 읽힌다(잠긴 것까지 한 문법) */
+.dgStg{display:inline-flex;align-items:center;padding:1px 5px;border-radius:var(--r-bar);flex:none;
+    border:1px solid rgba(255,255,255,.14);font-family:var(--font-num);font-variant-numeric:tabular-nums;
+    font-weight:700;font-size:var(--fs-sm);color:#cfe0ec}
+/* 🗝 열쇠 — assets/icons/ui/ui_key.webp 가 들어오면 자동 교체(uiIco 와 같은 규칙). ⛔ 이모지를 박지 말 것 */
+.dgKey{display:inline-flex;align-items:center;gap:3px;flex:none;font-family:var(--font-num);
+    font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-lg);color:var(--gold)}
+.dgKey svg,.dgKey img{width:12px;height:12px;flex:none;display:block}
+.dgKey svg{fill:none;stroke:var(--gold);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dgKey s{text-decoration:none;color:#61666e;font-size:var(--fs-sm)}
+.roomItem.locked .dgKey{color:#5f6772}
+.roomItem.locked .dgKey svg{stroke:#5f6772}
+.dgBtnW{flex:none;display:flex;flex-direction:column;align-items:center}
+.dgBtnW .actBtn{width:54px;height:24px;font-size:var(--fs-sm);padding:0 6px}
+.dgVals{display:flex;flex-direction:column;align-items:center;gap:1px;margin-top:3px}
+.dgVals span{display:flex;align-items:center;gap:3px;line-height:1.1;
+    font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:8.5px;font-weight:700;color:#96a0ab}
+.dgVals.off span{color:#4e535a}
+.dgVals .ri{width:11px;height:11px}
+.dgTix{display:flex;gap:14px;justify-content:center;padding:10px 4px 2px;color:#c6ccd4;font-size:var(--fs-md);font-weight:700}
+.dgTix b{font-family:var(--font-num);font-variant-numeric:tabular-nums;color:#fff;margin-left:3px}
+.dgSheet{position:absolute;inset:0;z-index:64;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse 300px 220px at 50% 46%,rgba(92,214,255,.10),transparent 72%),rgba(2,4,9,.62)}
+.dgSheet.hide{display:none}
+/* 방금 누른 그 행을 그대로 얹는다(dgRowHTML 'sheet') — 시트 안에서는 버튼 없이 이번에 받을 것만 */
+#dgSheetRow .dgRow{height:60px;cursor:default}
+#dgSheetRow .dgVals{margin-top:0;align-items:flex-end}
+/* ⚔ 토벌 팝업 본문 — 카드 목록이 길어지므로 남은 높이 안에서만 스크롤 */
+.dgHubBody{flex:1 1 auto;min-height:0;padding:0 12px;overflow-y:auto;overflow-x:hidden}
+
+/* ══════════ [30-home.css] 2026-09-10 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
+.dgSheetCard{position:relative;width:86%;max-width:290px;padding:16px 14px 15px;box-sizing:border-box;
+    background:linear-gradient(180deg,rgba(25,25,25,.9),rgba(14,14,14,.92));border:1px solid var(--metal-edge);
+    clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
+    box-shadow:0 16px 44px -12px #000,inset 0 1px 0 rgba(255,255,255,.05)}
+.dgSheetCard>*{position:relative;z-index:1}

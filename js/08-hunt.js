@@ -1037,7 +1037,6 @@ let _hbView='hunt';                 // _hb 가 지금 가리키는 쪽
 let _hb=null,_hbRaf=0,_hbTick=0;
 function hbUse(k){ _hbView=k; _hb=HBS[k]||null; return _hb; }                        // 포인터 재조준(세션 생성 아님)
 function hbSetSess(k,S){ HBS[k]=S||null; if(_hbView===k) _hb=HBS[k]; return HBS[k]; }// 세션 교체 — 보고 있으면 포인터도 따라간다
-function hbWith(k,fn){ const v=_hbView; try{ hbUse(k); return fn(HBS[k]); } finally{ hbUse(v); } }  // 그 세션 기준으로 잠깐 실행
 // ⏩ 자동 토벌 배속 상한 — dt 를 키우면 충돌·사거리 판정이 통째로 샌다(적이 벽을 통과하고 사거리를 건너뛴다).
 //    그래서 '한 번에 크게'가 아니라 **작은 dt 로 여러 번** 민다. 값은 BALANCE.md 가 단일 소스.
 const HB_SUB_MAX=16;
@@ -1054,17 +1053,6 @@ function hbPump(){ const S=_hb; if(!S||!S.on||S.manual) return;   // manual = �
   const sub=Math.max(1, Math.min(HB_SUB_MAX, Math.round(S.speed||1)));   // speed 미설정 = 1 = 옛 동작 그대로
   for(let i=0;i<sub;i++){ hbStep(dt); if(_hb!==S) break; }         // 스텝 도중 세션이 걷히면(사망·클리어) 즉시 중단
 }
-// 그리기 재개 — 보는 세션이 바뀌었을 때(사냥터 ↔ 토벌) 한 줄로 다시 돌린다.
-// ⚠ hbFrame 은 `_hb.bg` 면 스스로 멎고 _hbRaf 를 0 으로 놓는다 — 그래서 되살릴 입구가 필요하다.
-function hbKick(){ const S=_hb; if(!S||!S.on||S.bg) return;
-  S.lastSim=performance.now();
-  if(!_hbRaf) _hbRaf=requestAnimationFrame(hbFrame);
-  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50); }
-// 살아 있는 세션을 **전부** 민다 — 배경 세션도 여기서 진행한다.
-// ⚠ 반드시 원래 보던 세션으로 되돌려 놓는다(finally). 안 하면 다음 그리기가 남의 세션을 그린다.
-function hbPumpAll(){ const v=_hbView;
-  try{ for(const k in HBS){ const S=HBS[k]; if(!S||!S.on||S.manual) continue; hbUse(k); hbPump(); } }
-  finally{ hbUse(v); } }
 // ══ ⚔ 토벌 세션 — 같은 엔진, 다른 규칙 (2026-08-20) ══════════════════════════════════
 // 사냥터와 **같은 hbStep** 을 쓴다. 이동·카이팅·스킬·3D 를 두 번 만들지 않기 위해서다(단일 소스).
 // 다른 것은 규칙뿐이고, 규칙 차이는 딱 다섯 군데다:
@@ -1078,30 +1066,6 @@ const DG_HB_W=390, DG_HB_H=560;        // 화면이 없을 때 쓸 가상 화면
 // 토벌 단계 → 사냥터 곡선 좌표. 단계 하나가 라운드 하나다(곡선을 그대로 빌린다).
 //   ⚠ 아직 실측 전이다(BALANCE.md §5 A6). 토벌이 사냥터보다 쉬우면 아무도 사냥터를 안 한다.
 const DG_ROUND_PER_FLOOR=1;
-function dgHbRound(floor){ return Math.max(1, Math.round(floor*DG_ROUND_PER_FLOOR)); }
-function dgHbStart(floor, id, opt){ const c=CHAR(); if(!c) return null;
-  const o=opt||{}, st=hbCharStats(), cv=o.cv||null;
-  const S={ on:true, mode:'dg', auto:!!o.auto, speed:o.auto?DG_AUTO_SPEED:1, lastSim:performance.now(),
-    dgId:id||'normal', floor:floor, needKey:!!o.key, done:0,
-    cv:cv, ctx:cv?cv.getContext('2d'):null, bg:!cv,
-    w:DG_HB_W, h:DG_HB_H, d:1, vTop:0, vBot:DG_HB_H, cx:0, cy:0, k:1, t:0,
-    dg:1, round:dgHbRound(floor), wave:1, phase:'fight', waveT:hbWaveTime(1), gapT:0, downT:0,
-    pend:[], pendT:0, foes:[], chests:[], shots:[], floats:[], kills:0, rt0:0, charDir:4, charFace:0, atkT:0,
-    allies:[], turrets:[], bunkers:[], pets:[],   // ⑤ 캐릭터 단독 — 비워 두면 그 루프들이 안 돈다
-    skT:{nova:0,heal:0,slow:0}, slowT:0, skDirty:false, _chAt:'', _foeAt:'', _chF:null,
-    buf:{min:0,gas:0,xp:0,kills:0},
-    char:{ x:0,y:0, hp:st.hpMax, hpMax:st.hpMax, atk:st.atk, cd:st.cd, crit:st.crit, critDmg:st.critDmg,
-           range:st.range, regen:st.regen, cdT:0, hitT:9,
-           shd:st.shdMax, shdMax:st.shdMax, shdReg:st.shdReg,
-           lifest:st.lifest, knock:st.knock, chestDmg:st.chestDmg, multiC:st.multiC, multiN:st.multiN,
-           bncC:st.bncC, bncN:st.bncN, scritC:st.scritC, scritM:st.scritM,
-           mspd:st.mspd, rrng:st.rrng } };
-  hbSetSess('dg', S);
-  hbWith('dg', ()=>{ hbSpawnWave(); });      // ⚠ 반드시 그 세션을 보는 상태에서 — hbSpawnWave 는 _hb 를 읽는다
-  if(!_hbTick) _hbTick=setInterval(hbPumpAll,50);   // 자동은 rAF 없이 인터벌로 돈다(탭을 내려도 진행)
-  return S; }
-// 토벌 판을 끝낸다 — 결과는 dg 쪽(09-dungeon.js)이 처리한다.
-function dgHbEnd(){ const S=HBS.dg; hbSetSess('dg', null); return S; }
 // 화면을 떠나도 전투는 계속 돈다 — '그리기'만 멈추고 시뮬(setInterval)은 살려 둔다.
 // ⚠ 여기서 반드시 저장한다. 처치 보상은 메모리에만 있어서, 다음 화면의 loadMeta()가 그대로 덮어쓴다(재화가 사라지던 원인).
 // ⚠ 3D 캔버스는 공용이라 떠날 때 무조건 반납한다(안 하면 유즈맵 3D가 사라진다).

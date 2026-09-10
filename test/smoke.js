@@ -269,6 +269,98 @@ async function groupLobby(){
   // 허브 소셜: 상단(게임 선택)과 시각적으로 분리되고, '친구'가 한눈에 읽혀야 한다.
   // 탭 띠는 **하나뿐**이다 — 채팅/파티/친구 · 친구 필터 · 코인 공학소 · 유즈맵 정렬이 전부
   // segNavHTML(.pdSeg) 한 함수로 그려진다(2026-08-27 통일). 옛 사본(.msTab2/.ptTab/.cpSegBtn)은 없앴다.
+  // 🗺 유즈맵 강화 구역 — 2차 환생 포인트로 **맵마다** 영구 강화를 산다(2026-09-10 사용자 확정).
+  //   ⭐ 여기서 재는 것은 「같은 뒷단을 두 화면이 나눠 쓰는가」다 — 강화를 사고·저장하고·판에
+  //     먹이는 코드는 공학소와 **한 벌**이어야 한다(⛔ 두 벌이 되면 값이 갈린다).
+  await step('유즈맵 강화 구역: 공학소와 한 뒷단 · 맵별로 갈린다', ()=>{
+    skipIf(typeof mapUpgOpen!=='function','유즈맵 강화 구역 없음');
+    const keep=PLAYER_META.coins;
+    try{
+      // ① 표가 「어디서 사는가」를 꼬리표로 가른다 — 화면이 아니라 표가 단일 소스다
+      let inN=0, outN=0;
+      for(const k in META_BUILDS){ const b=META_BUILDS[k];
+        assert(b.map,'강화에 map 꼬리표가 없다: '+k);
+        if(b.out) outN++; else inN++; }
+      assert(inN>0 && outN>0,'공학소/바깥 한쪽이 비었다: 안 '+inN+' · 밖 '+outN);
+      // ② 공학소에는 바깥 것이 **안 보인다**(그 반대도)
+      openPointUpgrade();
+      { const names=[...$('ptList').querySelectorAll('.ptName')].map(x=>x.textContent);
+        for(const k in META_BUILDS){ const b=META_BUILDS[k];
+          if(b.out) assert(names.indexOf(b.name)<0,'바깥 강화가 공학소에 보인다: '+b.name); } }
+      closePointUpgrade();
+      // ③ 강화 구역 — 맵 목록이 뜨고, 항목이 있는 맵만 선다
+      //   ⚠ 포인트는 **연 뒤에** 넣는다 — `mapUpgEnter` 가 `loadMeta()` 로 저장본을 다시 읽어
+      //     미리 넣어 둔 값을 덮는다(실측: 「샀는데 레벨이 안 오른다」의 진짜 이유였다).
+      // ⭐ 입구는 **`campRebEnter('umap')` 하나**다 — 그것이 환생·트리를 닫아 준다.
+      //   ⛔ `mapUpgOpen()` 을 직접 부르지 말 것: 둘이 겹쳐 뜬다.
+      campRebEnter('umap');
+      assert(mapUpgIsOn(),'유즈맵 강화가 안 열렸다');
+      assert(!campRebIsOn() && !campTreeIsOn(),'환생·트리가 같이 열려 있다');
+      assert(campZoneTitle()==='유즈맵 강화','재화 바 이름이 다르다: '+campZoneTitle());
+      PLAYER_META.coins=99999;
+      const cards=[...document.querySelectorAll('.muMap')];
+      assert(cards.length,'강화할 유즈맵이 하나도 안 보인다');
+      assert(cards.length===mapUpgMaps().length,'맵 칸 수가 표와 다르다');
+      // ⛔ 이모지를 직접 박지 말 것 — 맵 그림은 목록과 **같은 것**(mapThumbHTML)을 쓴다
+      assert(cards[0].querySelector('.mapThumb'),'맵 그림이 공용 썸네일이 아니다');
+      // 🪙 가진 포인트가 보인다 — 상단 재화 바에 없는 재화라 이 화면이 말해야 한다
+      assert(($('muBal')||{}).textContent,'가진 포인트가 화면에 없다');
+      // ④ 맵을 고르면 **그 맵의 바깥 강화만** 나온다
+      mapUpgPick('nemo');
+      { const rows=[...$('muList').querySelectorAll('.ptName')].map(x=>x.textContent);
+        assert(rows.length,'고른 맵의 강화가 안 나온다');
+        const ok=Object.keys(META_BUILDS).filter(k=>META_BUILDS[k].out && META_BUILDS[k].map==='nemo')
+          .map(k=>META_BUILDS[k].name);
+        for(const nm of rows) assert(ok.indexOf(nm)>=0,'다른 맵/공학소 강화가 섞였다: '+nm); }
+      // ⑤ 줄은 **공학소와 같은 것**이다(ptRowsHTML 한 함수) — 뼈대가 같아야 한다
+      assert($('muList').querySelector('.ptRow')&&$('muList').querySelector('.ptBtn'),
+        '강화 줄이 공용 줄(.ptRow/.ptBtn)이 아니다');
+      // ⑥ 사면 레벨이 오르고 **지갑이 준다** — 뒷단이 공학소와 한 벌이라는 증거
+      { const id=Object.keys(META_BUILDS).find(k=>META_BUILDS[k].out && META_BUILDS[k].map==='nemo');
+        const lv0=buildLevel(id), c0=PLAYER_META.coins;
+        doPtUp(id);
+        assert(buildLevel(id)===lv0+1,'강화 구역에서 샀는데 레벨이 안 오른다');
+        assert(PLAYER_META.coins<c0,'샀는데 포인트가 안 빠진다');
+        PLAYER_META.buildLevels[id]=lv0; }
+      // ⚙ 오토 배틀 표 — 유닛 강화는 **약하다**(8인 대전이라 세지면 「오래 한 사람이 이긴다」).
+      { const cpu=Object.keys(META_BUILDS).filter(k=>META_BUILDS[k].map==='cpu');
+        assert(cpu.length,'오토 배틀 강화가 없다');
+        const keep=JSON.stringify(PLAYER_META.buildLevels);
+        for(const k of cpu) PLAYER_META.buildLevels[k]=META_BUILDS[k].max;   // 다 채운 뒤 상한을 본다
+        const b=cpuBonus();
+        assert(b.atkMul<=1.12,'유닛 공격 강화가 세다(대전이 「누가 오래 했나」가 된다): '+b.atkMul.toFixed(3));
+        assert(b.hpMul<=1.15,'유닛 체력 강화가 세다: '+b.hpMul.toFixed(3));
+        assert(b.mineCost>=0.5,'광산 값이 반 아래로 내려간다: '+b.mineCost.toFixed(3));
+        // 💰 「미미한 것은 싸고 큰 것은 비싸다」 — 시작 자금 < 광산 값 < 광산 수입 < 기본 수입
+        const tot=k=>{ let t=0; for(let l=0;l<META_BUILDS[k].max;l++) t+=metaNextCost(k,l); return t; };
+        const order=['cpu_start_gold','cpu_mine_cost','cpu_mine_yield','cpu_income'];
+        for(let i=1;i<order.length;i++) assert(tot(order[i])>tot(order[i-1]),
+          '값 순서가 깨졌다(영향이 큰 것이 더 비싸야 한다): '+order[i-1]+' '+tot(order[i-1])+' ≥ '+order[i]+' '+tot(order[i]));
+        // ⛔ **캠프로 새지 않는가** — 캠프 전투가 이 파일의 부품(strikeAtkMul)을 그대로 빌려 쓴다.
+        //   여기가 뚫리면 오토 배틀 강화가 캠프 밸런스를 통째로 흔든다.
+        //   ⭐ 판단은 **`battleCtx()` 하나**가 한다 — 「캠프가 빌려 쓰는 중」은 `STK===CAMPB` 로 안다.
+        { const on0=window.campIsOn, sb0=(typeof G!=='undefined'&&G)?G.sandbox:undefined,
+                st0=(typeof G!=='undefined'&&G)?G.strike:undefined;
+          try{
+            window.campIsOn=()=>true;
+            assert(battleCtx()==='camp','캠프 화면인데 battleCtx 가 camp 가 아니다: '+battleCtx());
+            assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'캠프인데 오토 배틀 강화가 걸린다');
+            window.campIsOn=()=>false;
+            if(typeof G!=='undefined'&&G){
+              G.sandbox=false; G.strike=false;
+              assert(battleCtx()!=='autobattle','오토 배틀이 아닌데 autobattle 로 읽힌다: '+battleCtx());
+              assert(!stkUpgOn((typeof STK!=='undefined'&&STK)?STK.me:{}),'오토 배틀이 아닌데 강화가 걸린다');
+              G.strike=true;
+              assert(battleCtx()==='autobattle','오토 배틀인데 autobattle 이 아니다: '+battleCtx()); }
+          } finally { window.campIsOn=on0;
+            if(typeof G!=='undefined'&&G){ G.sandbox=sb0; G.strike=st0; } } }
+        PLAYER_META.buildLevels=JSON.parse(keep); }
+      // ⑦ 뒤로 = 맵 목록
+      mapUpgBack();
+      assert(document.querySelectorAll('.muMap').length,'뒤로 갔는데 맵 목록이 안 나온다');
+      return '맵 '+cards.length+' · 바깥 '+outN+' · 공학소 '+inN;
+    } finally { PLAYER_META.coins=keep; }
+  });
   await step('탭 띠 단일 소스: 네 곳이 모두 공용 .pdSeg', ()=>{
     const seg=(host)=>host && host.querySelector('.pdSeg');
     // ⚠ 렌더러를 여기서 직접 부르면 안 된다 — 그러면 「화면을 열었을 때 띠가 채워지는가」를
@@ -282,7 +374,13 @@ async function groupLobby(){
     skipIf(typeof openPointUpgrade!=='function','코인 공학소 없음');
     openPointUpgrade();
     const pt=$('ptTabs'); assert(seg(pt),'코인 공학소를 열었는데 탭 띠가 안 그려짐');
-    assert(seg(pt).querySelectorAll('.pdSegBtn').length===5,'코인 공학소 5칸이 아님');
+    // ⚠ 칸 수를 박지 말 것 — 표(META_BUILDS)가 단일 소스이고 `ptTabsFor` 가 **실제로 있는 갈래만**
+    //   세운다(2026-09-10 에 스물셋을 유즈맵 강화 구역으로 빼면서 공학소는 생산 하나만 남았다).
+    //   여기서 재는 것은 「공용 탭 띠를 쓰는가」이지 「몇 칸인가」가 아니다.
+    { const want=(typeof ptTabsFor==='function') ? ptTabsFor(b=>!b.out).length : 0;
+      assert(want>0,'공학소에 남은 갈래가 없다 — 전부 바깥으로 나갔다');
+      assert(seg(pt).querySelectorAll('.pdSegBtn').length===want,
+        '코인 공학소 탭 수가 표와 다름: '+seg(pt).querySelectorAll('.pdSegBtn').length+' vs '+want); }
     // 형태가 같은가 — 같은 함수가 그렸으니 버튼의 뼈대가 같아야 한다(크기만 화면이 덮는다)
     // ⚠ 글자 크기·굵기는 뺀다 — 화면이 덮으라고 열어 둔 자리다. 뼈대(칸 나눔·정렬·테두리)만 본다.
     const key=b=>{ const c=getComputedStyle(b);
@@ -290,9 +388,12 @@ async function groupLobby(){
     assert(key(seg(srt).querySelector('.pdSegBtn'))===key(seg(pt).querySelector('.pdSegBtn')),
       '유즈맵 정렬과 코인 공학소의 뼈대가 다름');
     // 선택 표시가 옮겨가는가(띠를 다시 그리므로 매번 새로 찾아야 한다)
-    setPtGroup('combat');
-    assert($('ptTabs').querySelectorAll('.pdSegBtn')[3].classList.contains('on'),'코인 공학소 선택이 안 옮겨감');
-    setPtGroup('team');
+    // ⚠ 갈래 이름을 박지 말 것 — 2026-09-10 에 'combat'·'team' 이 유즈맵 강화 구역으로 나가면서
+    //   `setPtGroup('combat')` 이 없는 칸을 눌러 [3] 이 undefined 가 됐다(실측). 표에서 고른다.
+    { const ts=ptTabsFor(b=>!b.out);
+      if(ts.length>=2){ const g0=_ptGroup; setPtGroup(ts[1][0]);
+        assert($('ptTabs').querySelectorAll('.pdSegBtn')[1].classList.contains('on'),'코인 공학소 선택이 안 옮겨감');
+        setPtGroup(g0); } }
     return '2곳 = 한 컴포넌트'; });
   // 「둘 중 하나 고르기」도 하나뿐 — 방 만들기 공개/비공개가 설정 창의 그래픽 품질과 같은 컴포넌트여야 한다.
   await step('둘 중 하나 고르기 단일 소스: 방 공개 설정 = 설정 그래픽 품질', ()=>{
@@ -13696,11 +13797,13 @@ async function groupLobby(){
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
-      assert(reb && reb.subs.length===2,'환생 하위 칸(환생·환생 트리)이 없음');
+      // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10) — 2차 환생이 주는 포인트를 쓰는 곳이라 여기다.
+      //   ⛔ 유즈맵 구역으로 되돌리지 말 것(거기 있다가 옮겨 왔다).
+      assert(reb && reb.subs.length===3,'환생 하위 칸(환생·환생 트리·유즈맵 강화)이 없음');
       // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
       //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
       //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.
@@ -17604,24 +17707,36 @@ async function groupGame(){
     } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
       if(faked) ph.classList.remove('inGame'); } });
 
-  // 🔗 유즈맵 보상은 사냥터 시급에 앵커한다 — 고정값이면 지수 곡선에 몇 라운드 만에 삼켜진다.
-  await step('유즈맵 보상: 사냥터 시급 앵커 · 진행도', async()=>{
+  // 🔗 유즈맵 보상은 **캠프 시급**에 앵커한다 — 고정값이면 지수 곡선에 몇 관문 만에 삼켜진다.
+  //   🏕 기준이 사냥터에서 캠프로 옮겨 왔다(2026-09-10 · 마을을 접으며). ⛔ `PROF().hunt.rate` 로
+  //     되돌리지 말 것 — 그 값은 **아무도 안 적어** 폴백(8/분)에 굳어 있었다(유즈맵 한 판 480 미네랄).
+  await step('유즈맵 보상: 캠프 시급 앵커 · 진행도', async()=>{
     skipIf(typeof profRunReward!=='function' || typeof umProgress!=='function','경제 연결 없음');
+    skipIf(typeof campState!=='function' || typeof campRateOf!=='function','캠프 시급 계측 없음');
     const p=PROF(), keepPc=p.pcoin, keepGas=p.gas, keepHunt=JSON.parse(JSON.stringify(p.hunt||{}));
     const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP, keepDay0=PLAYER_META.umDay;
+    const _C=campState(), keepRate=_C?_C.rate:0;
     MAP=USEMAPS.nemo;   // ⚠ 앞 스텝이 무한모드로 두고 갔을 수 있다(rounds 100만 · infinite) — 맵을 고정하고 잰다
-    const run=(rate)=>{ p.hunt.rate=rate; p.pcoin=0; p.gas=0; return profRunReward(); };
+    // ⚠ 캠프 시급은 **초당**이다(C.rate) — umRate() 가 ×60 해서 분당으로 준다
+    // ⚠ **하루 판 수 계수를 매번 되감는다** — profRunReward 가 판을 세므로(umDayCount) 네 번째
+    //   호출부터 ×0.3 이 붙어 「시급을 올렸는데 보상이 줄었다」로 읽힌다(실측 5400 → 1620).
+    const run=(perSec)=>{ if(_C) _C.rate=perSec; p.pcoin=0; p.gas=0;
+      PLAYER_META.umDay={ key:(typeof _dgDayKey==='function')?_dgDayKey():'x', n:0 };
+      return profRunReward(); };
     let bad_noChar=false;
     try{
       G=newGame(); G.phase='won'; G.round=30; G.kills=500; G.difficulty='normal';
-      // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(사냥터 XP 곡선이 만드는 '레벨의 벽'을 지킨다)
+      // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(XP 곡선이 만드는 '레벨의 벽'을 지킨다)
       const a=run(1), b2=run(10);
       assert(Math.abs(b2.pc/a.pc-10)<0.02,'시급 10배인데 보상이 10배가 아님: '+a.pc+' → '+b2.pc);
       assert(a.xp===b2.xp,'시급이 경험치까지 밀었음: '+a.xp+' → '+b2.xp);
-      // ② 첫 라운드 클리어 전(rate 0)에도 빈손이 아니다 — 방치와 같은 폴백을 쓴다
-      assert(run(0).pc>0,'신규(rate 0)에게 보상이 0');
-      // ③ 가스는 사냥터 처치 보상과 같은 비율
-      assert(Math.abs(b2.gas/b2.pc-UM_GAS_RATIO)<0.01,'가스 비율이 사냥터와 다름: '+(b2.gas/b2.pc));
+      // ①-b 사냥터 시급(옛 앵커)은 이제 아무 일도 안 한다 — 되돌아가면 여기서 걸린다
+      { const c0=run(1); p.hunt.rate=999; const c1=run(1); p.hunt.rate=0;
+        assert(c0.pc===c1.pc,'옛 사냥터 앵커(hunt.rate)가 되살아났다: '+c0.pc+' → '+c1.pc); }
+      // ② 캠프에 5초도 안 머문 새 계정(rate 0)에도 빈손이 아니다 — 방치와 같은 폴백을 쓴다
+      assert(run(0).pc>0,'신규(시급 0)에게 보상이 0');
+      // ③ 가스는 미네랄과 정해진 비율
+      assert(Math.abs(b2.gas/b2.pc-UM_GAS_RATIO)<0.01,'가스 비율이 표와 다름: '+(b2.gas/b2.pc));
       // ④ 네모 진행도 — 클리어=1.0 · 못 깼으면 도달 라운드 비율
       const rounds=mapCfg('rounds',TOTAL_ROUNDS);
       G.phase='won';  assert(umProgress()===1,'클리어인데 진행도가 1이 아님: '+umProgress());
@@ -17649,18 +17764,23 @@ async function groupGame(){
         for(let i=1;i<o.length;i++){ const r=DIFFICULTY[o[i]].enemyHp/DIFFICULTY[o[i-1]].enemyHp;
           assert(Math.abs(r-2)<0.01, o[i-1]+'→'+o[i]+' 가 ×2 가 아님: ×'+r.toFixed(2)); } }
       // ⑦ 첫 클리어 = 맵×난이도 1회성 · ⚠ 상한이 없으면 '늦게 깰수록 이득'이 되어 유즈맵을 미루게 된다
+      //   🏕 상한의 자[尺]가 **캠프 진행도**로 바뀌었다(umCapRate → campMineMulAt) — 시급이 아무리 높아도
+      //     그 난이도에 걸맞은 관문의 배수까지만 쳐준다. ⛔ 사냥터 곡선으로 되돌리지 말 것.
       { const keepClear=PLAYER_META.umClear; PLAYER_META.umClear={};
+        const keepDg=_C?_C.dg:0, keepBr=_C?_C.broken:0;
         try{
-          p.hunt.rate=1e9;  const big=umFirstRw('normal').pcoin;
-          p.hunt.rate=1e15; const huge=umFirstRw('normal').pcoin;
+          if(_C){ _C.dg=1; _C.broken=0; }                 // 진행도는 고정 — 움직이는 것은 시급뿐이다
+          // ⚠ 상한은 **절대값**이다 — 시급에 비례시키면 상한이 시급을 따라 올라 뜻이 없어진다
+          if(_C) _C.rate=1e9;  const big=umFirstRw('normal').pcoin;
+          if(_C) _C.rate=1e15; const huge=umFirstRw('normal').pcoin;
           assert(big===huge,'첫 클리어 보상에 상한이 없음(늦게 깰수록 이득): '+big+' → '+huge);
-          p.hunt.rate=0.2;  const small=umFirstRw('normal').pcoin;
+          if(_C) _C.rate=0.2;  const small=umFirstRw('normal').pcoin;
           assert(small>0 && small<big,'상한 미만일 때 실제 시급을 안 따라감: '+small+' vs '+big);
           assert(umFirstClaim('nemo','normal'),'첫 클리어인데 보상이 없음');
           assert(!umFirstClaim('nemo','normal'),'첫 클리어 보상이 두 번 나옴');
           assert(umFirstClaim('nemo','hard'),'같은 맵 다른 난이도가 막힘');
           assert(umFirstClaim('cpu','normal'),'다른 맵 같은 난이도가 막힘');
-        } finally { PLAYER_META.umClear=keepClear; } }
+        } finally { PLAYER_META.umClear=keepClear; if(_C){ _C.dg=keepDg; _C.broken=keepBr; } } }
       // ⑧ ⚠ 오토배틀도 앵커 보상을 받는다 — _runSummary 의 직스 분기가 먼저 return 하면 통째로 못 받는다
       { G=newGame(); G.strike=true; G.phase='won'; G.round=5; STK={ me:{gold:0, earned:1000, kills:3, units:[]}, t:120, round:10 };
         p.hunt.rate=1; p.pcoin=0; PLAYER_META.umDay=null;   // ⚠ 앞 검사들이 판 수를 올려 놨다 — 하루 체감과 얽히지 않게 초기화
@@ -17723,7 +17843,8 @@ async function groupGame(){
           assert(out===DQ_OUT_N, d+'일 뒤 바깥 퀘스트가 '+out+'개(기대 '+DQ_OUT_N+')'); } }
       return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
-      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
+      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt;
+      if(_C) _C.rate=keepRate; } });
 
   // ══ 협동(멀티) — 죽은 자리 · 정지된 자리 · 대역폭 ══════════════════════
   // 가짜 채널을 물려 실제 송신 경로(coopSend)를 그대로 태운다. 실제 접속은 하지 않는다.

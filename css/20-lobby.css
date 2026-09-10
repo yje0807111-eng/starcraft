@@ -639,7 +639,7 @@
      scale(1) 로 끝낸다. 그래서 1.25배로 꽉 찬 카드가 떴다가 애니가 끝나며 툭 줄었다
      (2026-08-31 실측). 설정은 제 애니(setCardIn · css/10-game.css)가 따로 있고 그쪽은
      --setScale 을 지킨다. */
-  .hbModal:not(.hide) .hbmCard,#exitConfirm:not(.hide) .setCard,#dgSheet:not(.hide) .dgSheetCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+  .hbModal:not(.hide) .hbmCard,#exitConfirm:not(.hide) .setCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
   /* ⛔ 제외 — 방 만들기(#createPanel)·난이도 선택(#soloDiffPanel)은 즉시 뜬다(요청) */
   #createPanel .cpCard, #soloDiffPanel .cpCard, #soloDiffPanel .msPanel{animation:none!important}
   @keyframes fxPopOn{0%{opacity:0;transform:translateY(7px) scale(.965)}100%{opacity:1;transform:translateY(0) scale(1)}}
@@ -1151,6 +1151,47 @@
   .ptSeg{margin:0 0 11px}
   .ptSeg .pdSeg{max-width:none;margin:0}
   .ptSeg .pdSegBtn{font-size:var(--fs-xs);white-space:nowrap}
+  /* ══ 🗺 유즈맵 강화 구역 ═══════════════════════════════════════════════
+     ⭐ 줄(.ptRow)·목록(.ppList)은 **공학소 것을 그대로** 쓴다 — 여기서는 머리줄과
+        맵 고르는 칸만 정한다. ⛔ 강화 줄 모양을 여기서 다시 정하지 말 것. */
+  /* 🏠 껍데기는 **환생·룬 구역과 같은 규격**이다(#phone 직속 · z 120 · 네비 자리를 비운다).
+     ⛔ `.appScreen` 가족으로 되돌리지 말 것 — 그때는 아이디가 `.appScreen.hide` 를 이겨
+        화면이 영영 안 숨었다(게임 중 조작 버튼·☰ 를 통째로 먹었다 · 2026-09-10 실측).
+     ⚠ 배경(.rnBg)은 공용 #campRebBg 위에 얹는 어둠뿐이다 — 제 그림을 두지 않는다. */
+  #mapUpgScreen{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
+  #mapUpgScreen.on{display:flex;flex-direction:column;gap:8px;
+    padding:calc(var(--topPad) + var(--curH) + 10px) 13px 10px}
+  #mapUpgScreen.on.crIn{animation:crFadeIn var(--t-screen) ease}
+  #mapUpgScreen .rnBg{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(5,8,12,.20) 0%,rgba(5,8,12,.06) 24%,rgba(5,8,12,.62) 62%,rgba(5,8,12,.94) 100%)}
+  #mapUpgScreen .muHead,#mapUpgScreen .muSeg,#mapUpgScreen .ppList{position:relative;z-index:1}
+  .muHead{display:flex;align-items:center;gap:8px;min-height:22px}
+  .muBack{width:26px;height:26px;flex:none;border:none;background:none;cursor:pointer;
+    color:var(--txt-dim,#c3ccd8);font:400 20px/1 var(--font-num);padding:0}
+  .muBack.hide{display:none}
+  .muTtl{flex:1;min-width:0;font-size:var(--fs-md);color:#93a0b2;letter-spacing:.02em;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 🪙 가진 포인트 — 상단 재화 바에 없는 재화라 이 화면이 직접 말한다(공학소 머리줄과 같은 어휘) */
+  .muBal{flex:none;font-size:var(--fs-sm);color:#8794a8;font-family:var(--font-num)}
+  .muBal b{font-size:var(--fs-xl);color:#e6eefc;font-weight:700;
+    font-variant-numeric:tabular-nums;margin-right:1px}
+  .muSeg:empty{display:none}
+  /* 맵 한 칸 — 목록 판(.msPanel)이 아니라 **줄**이다(강화 줄과 같은 결). */
+  .muMap{display:flex;align-items:center;gap:10px;width:100%;padding:10px 11px;margin-bottom:6px;
+    border:1px solid var(--metal-edge,rgba(150,170,200,.22));border-radius:var(--r-md);
+    background:rgba(255,255,255,.035);color:inherit;cursor:pointer;text-align:left;font:inherit}
+  .muMap:active{background:rgba(255,255,255,.07)}
+  .muMap .mapThumb{flex:none}
+  .muMi{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .muMi b{font-size:var(--fs-lg);color:#eaf1fb;font-weight:700}
+  .muMi i{font-style:normal;font-size:var(--fs-xs);color:#8794a8;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 「몇 개 샀나」 — 목록에서 어디에 투자했는지가 바로 읽힌다 */
+  .muN{flex:none;font-family:var(--font-num);font-weight:700;font-size:15px;color:#e6eefc;
+    font-variant-numeric:tabular-nums}
+  .muN u{text-decoration:none;font-size:9.5px;color:#8794a8}
+  /* 한 갈래뿐이면 탭 띠를 감춘다 — 고를 것이 없다 */
+  .ptSeg.one{display:none}
   .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;

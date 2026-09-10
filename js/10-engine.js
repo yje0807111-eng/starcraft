@@ -6,6 +6,30 @@
 // ============================================================================
 // 게임 상태
 // ============================================================================
+// ══ 🧭 지금 어느 판인가 — **판별기는 여기 하나다** (2026-09-10) ═════════════
+// 왜 필요한가: **캠프 전투가 오토 배틀 엔진(18-strike)의 부품을 그대로 빌려 쓴다.**
+//   빌리는 방법이 `campWithStk` — **전역 `STK` 를 캠프 것(CAMPB)으로 바꿔치기**하고 부른다.
+//   그래서 빌려 간 함수 안에서는 `STK` 가 그냥 `STK` 라 **자기가 누구를 위해 도는지 알 수가 없다.**
+//   (18-strike 안에서 전역 STK 를 읽는 곳이 333줄 · 캠프가 빌려 쓰는 함수가 20종이다.)
+//
+// ⛔ 그래서 새 코드는 **여기 하나만 묻는다.** 옛 판별기 다섯(`campIsOn` 24곳 · `techWallet` 38 ·
+//   `G.strike` 44 · `G.sandbox` 46 · `MAP.id` 4)은 **서로 다른 질문**이라, 무엇을 물어야 맞는지가
+//   자명하지 않았다 — 실제로 오토 배틀 강화를 걸 때 셋을 겹쳐 물어야 했다.
+//   ⚠ 옛 다섯은 그대로 둔다(쓰는 곳이 156곳이다). **새로 쓰는 것만** 여기로 모은다.
+//
+// ⭐ 가장 정확한 신호는 **`STK === CAMPB`** 다 — 「지금 이 순간 캠프가 빌려 쓰는 중」이라는 뜻이고,
+//   화면이 무엇이든 맵이 무엇이든 상관없이 참이다. 그래서 맨 먼저 본다.
+//   ⛔ `campIsOn()` 을 먼저 보지 말 것 — 그건 「캠프 **화면**이 떠 있나」라서 결이 다르다.
+function battleCtx(){
+  // ① 캠프가 엔진을 빌려 쓰는 중(campWithStk 안) — 빌려 간 함수가 물어야 할 유일한 질문
+  if(typeof CAMPB !== 'undefined' && CAMPB && typeof STK !== 'undefined' && STK === CAMPB) return 'camp';
+  if(typeof campIsOn === 'function' && campIsOn()) return 'camp';        // ② 캠프 화면(전투 밖)
+  if(typeof G !== 'undefined' && G && G.sandbox) return 'sandbox';       // ③ 관리자 샌드박스
+  if(typeof G !== 'undefined' && G && G.strike) return 'autobattle';     // ④ 오토 배틀
+  if(typeof G !== 'undefined' && G) return 'usemap';                     // ⑤ 그 밖의 유즈맵 판(네모네모 등)
+  return 'none';                                                        // ⑥ 판이 아니다(로비·화면 밖)
+}
+
 function newGame(){ return {
   phase:'ready', round:1, kills:0, timeSec:0, speedMul:1, difficulty:'normal',
   view:{x:0.5, y:0.5, zoom:1}, viewT:{x:0.5, y:0.5, zoom:1},   // view=렌더(보간) / viewT=핀치 목표. zoom1·중심0.5=항등(기존과 동일)

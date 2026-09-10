@@ -58,6 +58,16 @@ function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, 
 function campMineMul(){ const C = campState(); if(!C) return 1;
   const dg = campDgN(), t = CAMP_MINE[dg];
   return (t.base + campCleared() * campMineInc(dg)) * campRtMul('mine'); }
+// 📍 **통산 관문 n(0~18)에서의 미네랄 배수** — 「지금」이 아니라 「그 자리였다면」을 묻는다.
+//   ⭐ 쓰는 곳은 유즈맵 첫 클리어 상한 하나다(04-profile `umCapRate`): 시급이 계속 오르므로
+//     상한이 없으면 **유즈맵을 최대한 늦게 하는 것이 최적 플레이**가 된다.
+//   ⛔ 식을 새로 쓰지 말 것 — campMineMul 과 **같은 표(CAMP_MINE)**를 본다.
+//   ⚠ 트리 배수(campRtMul('mine'))는 **빼고** 잰다 — 상한은 「진행도」의 자이지 「내가 얼마나 찍었나」가 아니다.
+function campMineMulAt(n){
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  const k = Math.max(0, n | 0);
+  const dg = Math.max(1, Math.min(CAMP_DG_MAX, Math.floor(k / per) + 1)), g = Math.min(per, k % per);
+  const t = CAMP_MINE[dg]; return t ? (t.base + g * campMineInc(dg)) : 1; }
 // 🏰 **라운드가 없어졌다**(2026-09-09 · GAME_DIRECTION §0-A). 던전은 적 기지이고, 진행 지표는
 //   「부순 진행 건물 수」(0~6)다. ⛔ 이름을 그대로 둔 이유는 **소비처가 스무 곳**이기 때문이다 —
 //   여기 한 곳에서 갈아끼우면 난이도(campFoeDiff)·보상(campMineMul)·환생 포인트가 전부 새 자를 따라온다.
@@ -1547,7 +1557,8 @@ let _rebArtT = 0;
 function _rebArtAnyOn(){
   return (typeof campRebIsOn === 'function' && campRebIsOn())
       || (typeof campTreeIsOn === 'function' && campTreeIsOn())
-      || (typeof campRuneIsOn === 'function' && campRuneIsOn()); }
+      || (typeof campRuneIsOn === 'function' && campRuneIsOn())
+      || (typeof mapUpgIsOn === 'function' && mapUpgIsOn()); }
 function campRebArtOff(){
   if(_rebArtT) return;
   _rebArtT = setTimeout(() => { _rebArtT = 0; if(_rebArtAnyOn()) return; _campRebArtOff0(); }, 0); }
@@ -1571,6 +1582,7 @@ function campRebClose(keepArt){
 function campZoneTitle(){
   if(typeof campRuneIsOn === 'function' && campRuneIsOn())
     return (typeof _runeSec !== 'undefined' && _runeSec === 'shop') ? '룬 상점' : '룬';
+  if(typeof mapUpgIsOn === 'function' && mapUpgIsOn()) return '유즈맵 강화';
   if(typeof campTreeIsOn === 'function' && campTreeIsOn()) return '환생 트리';
   if(typeof campRebIsOn === 'function' && campRebIsOn()) return '환생';
   return ''; }
@@ -1590,17 +1602,21 @@ function campRebIsOn(){ const el = document.getElementById('campReb'); return !!
 //     둘 다 `.on` 이 되면 트리가 환생 화면을 덮어 어느 탭인지 알 수 없다.
 //   ⚠ 하단 네비는 **켜 둔 채**로 연다(두 화면 CSS 가 네비 높이만큼 자리를 비운다).
 function campRebEnter(sec){
-  const s = (sec === 'tree') ? 'tree' : 'info';
+  // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10 사용자 확정 · 환생 · 환생 트리 · 유즈맵 강화)
+  const s = (sec === 'tree') ? 'tree' : (sec === 'umap' ? 'umap' : 'info');
   // 🎬 페이드는 **구역에 들어올 때 한 번만**이다 (2026-08-31 사용자 지적).
   //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 탭을 오갈 때마다 매번 다시 돈다 —
   //     같은 구역 안에서 칸만 바꾸는 것인데 화면이 통째로 껌뻑여 이동이 무거워 보인다.
   //   ⭐ 그래서 애니는 `.crIn` 이 가지고, 밖에서 들어온 경우에만 붙인다(안이었으면 즉시 교체).
   const wasIn = (typeof campRebIsOn === 'function' && campRebIsOn()) ||
-                (typeof campTreeIsOn === 'function' && campTreeIsOn());
+                (typeof campTreeIsOn === 'function' && campTreeIsOn()) ||
+                (typeof mapUpgIsOn === 'function' && mapUpgIsOn());
   // ⚠ 닫는 쪽에 keepArt 를 준다 — 구역 안에서 칸만 바꾸는 것이라 배경은 그대로 둔다.
-  if(s === 'tree'){ campRebClose(true); campTreeOpen(); }
-  else { campTreeClose(); campRebOpen(); }
-  { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
+  //   ⛔ 셋 중 **둘을 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
+  if(s === 'tree'){ campRebClose(true); if(typeof mapUpgClose==='function') mapUpgClose(true); campTreeOpen(); }
+  else if(s === 'umap'){ campRebClose(true); campTreeClose(); if(typeof mapUpgOpen==='function') mapUpgOpen(); }   // ⚠ campTreeClose 는 인자를 안 받는다(그림은 안 만진다)
+  else { campTreeClose(); if(typeof mapUpgClose==='function') mapUpgClose(true); campRebOpen(); }
+  { const el = document.getElementById(s === 'tree' ? 'campTree' : (s === 'umap' ? 'mapUpgScreen' : 'campReb'));
     if(el) el.classList.toggle('crIn', !wasIn); }
   if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(환생 / 환생 트리)
