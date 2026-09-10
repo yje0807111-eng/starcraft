@@ -433,7 +433,7 @@ function curSplitSync(screenOn){
   if(screenOn !== undefined) _splitScreen = !!screenOn;
   // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
   //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
-  const zone = ['campRune','campReb','campTree'].some(id => {
+  const zone = ['campRune','campReb','campTree','mapUpgScreen'].some(id => {
     const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
   curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
@@ -1957,6 +1957,119 @@ document.addEventListener('pointerdown', function(e){
   if(!t) return; if(t.disabled && !t.classList.contains('locked')) return;
   playSfx(_sfxForEl(t));
 }, true);
+// ══ 🗺 유즈맵 강화 구역 ══════════════════════════════════════════════════
+// 2차 환생으로 받은 포인트를 **유즈맵마다** 영구 강화에 넣는 곳(2026-09-10 사용자 확정).
+// 산 것은 그 유즈맵을 플레이할 때마다 **기본으로 깔린다** — 뒷단(`PLAYER_META.buildLevels` ·
+// `G.metaB`)이 이미 그렇게 돼 있어 여기서는 **사는 자리만** 새로 만든다.
+//
+// ⭐ **두 단**이다: 맵 목록 → 고른 맵의 강화 목록(무장 칸의 「계열 고르기 → 항목」과 같은 어법).
+// ⛔ 강화 줄을 새로 그리지 말 것 — 공학소와 **같은 줄**(`ptRowsHTML` · 09-usemap-base.js)을 쓴다.
+// ⛔ 지갑을 새로 만들지 말 것 — `PLAYER_META.coins` 하나다(판 보상도 2차 환생도 여기로 들어온다).
+//   ⚠ 2차 환생은 **아직 없다**(다른 작업). 그래서 지금은 판 보상만 이 지갑을 채운다 —
+//     화면·표·적용은 그대로 시험된다. 2차 환생이 생기면 지급 한 줄만 이 지갑에 붙이면 된다.
+// ⚠ 지금 항목이 있는 맵은 **네모네모 하나**다. 오토 배틀 표는 다음 조각에서 짠다 —
+//   ⛔ 항목 없는 맵을 목록에 세우지 말 것(눌러도 빈 판이라 고장으로 보인다).
+let _mapUpgPick = null;   // null = 맵 목록 · 'nemo' 등 = 그 맵의 강화 목록
+let _mapUpgGrp  = null;   // 고른 맵 안에서 지금 보는 갈래(탭)
+function mapUpgIsOn(){ const el=document.getElementById('mapUpgScreen');
+  return !!(el && el.classList.contains('on')); }
+// 바깥 강화가 **하나라도 있는** 맵만 목록에 선다.
+function mapUpgMaps(){
+  return (typeof MAPS!=='undefined'?MAPS:[]).filter(function(m){
+    for(const k in META_BUILDS){ const b=META_BUILDS[k]; if(b.out && b.map===m.id) return true; }
+    return false; }); }
+// 🪙 지금 가진 포인트 — 상단 재화 바에는 없는 재화라 이 화면이 직접 말한다.
+//   ⚠ 안 보이면 「살 수 있나」를 값만 보고 못 가늠한다(공학소도 제 머리줄에 같은 것을 단다).
+function mapUpgBal(){ const el=document.getElementById('muBal'); if(!el) return;
+  el.innerHTML='<b>'+((typeof fmtCur==='function')?fmtCur(PLAYER_META.coins||0):(PLAYER_META.coins||0))+'</b>P'; }
+// ⛔ **밖에서 이 함수를 직접 부르지 말 것** — 환생 구역의 유일한 입구는 `campRebEnter('umap')` 이다.
+//   거기가 나머지 둘(환생·트리)을 닫아 준다. 여기서 열기만 하면 둘이 겹쳐 뜬다.
+function mapUpgOpen(){ const el=document.getElementById('mapUpgScreen'); if(!el) return;
+  if(typeof loadMeta==='function') loadMeta();
+  _mapUpgPick=null; _mapUpgGrp=null;
+  el.classList.add('on');
+  // 🖼 배경은 **환생 구역과 같은 그림**이다 — 네 화면이 한 장을 나눠 쓴다(⛔ 제 그림을 두지 말 것).
+  if(typeof campRebArtOn==='function') campRebArtOn();
+  renderMapUpg();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function mapUpgClose(keepArt){
+  setTimeout(()=>{ if(typeof curSplitSync==='function') curSplitSync(); },0);   // 📐 상단 띠 맞춤
+  const el=document.getElementById('mapUpgScreen'); if(el) el.classList.remove('on','crIn');
+  if(keepArt) return;
+  if(typeof campRebArtOff==='function') campRebArtOff(); }
+// 🔷 **갈래 탭은 룬 상점과 같은 「아이콘 탭」**(`.pdSeg.stack` · 2026-09-10 사용자 확정).
+//   ⭐ 껍데기는 **공용 `segNavHTML` 그대로**다 — 그림은 label 에 담고 세로로 세우는 일은
+//     공용 변형 `.stack`(css/40-social.css)이 한다. ⛔ 전용 탭 함수·마크업을 새로 만들지 말 것.
+//   ⭐ 아이콘도 **있는 것**을 쓴다: 육각 테두리 + 속 글리프는 `_PT_ICO`(09-usemap-base.js)에서 온다
+//     — 공학소가 쓰던 그 그림이다(⛔ 새 에셋을 만들지 말 것).
+//   ⚠ 색은 **역할이 정해진 것을 피해** 골랐다: 청록(--acc-sel)은 「지금 선택된 것」 전용이라 안 쓴다.
+//     경제=금색(재화의 색) · 전투=붉은 계열 · 전체=중립 파랑 · 보스=보라. 전부 이미 쓰던 값이다.
+const MU_TAB_COL = { eco:'#ffd24a', combat:'#ff7676', team:'#b4cdeb', coop:'#c8b6ff', prod:'#8fe6b0' };
+const MU_TAB_ICO = 22;
+function _muTabIco(grp, on){
+  const c = MU_TAB_COL[grp] || '#b4cdeb';
+  const S = MU_TAB_ICO, R = S/2 - 1, q = [];
+  for(let i=0;i<6;i++){ const a = Math.PI/180*(60*i - 90);
+    q.push((S/2 + R*Math.cos(a)).toFixed(1)+','+(S/2 + R*Math.sin(a)).toFixed(1)); }
+  const k = (S*0.58/24).toFixed(3), off = (S/2 - S*0.29).toFixed(1);
+  const gl = (typeof _PT_ICO!=='undefined' && _PT_ICO[grp]) || '';
+  return '<svg class="rnTabI" width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'">'
+    + '<polygon points="'+q.join(' ')+'" fill="'+(on?'rgba(255,255,255,.05)':'none')
+    +   '" stroke="'+c+'" stroke-width="1" opacity="'+(on?'.85':'.38')+'"/>'
+    // ⚠ `_PT_ICO` 는 **선(stroke) 그림**이다 — 룬 글리프처럼 fill 로 그리면 통째로 뭉개진다.
+    + '<g transform="translate('+off+','+off+') scale('+k+')" fill="none" stroke="'+c
+    +   '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity="'
+    +   (on?'1':'.45')+'">'+gl+'</g></svg>'; }
+function mapUpgPick(id){ _mapUpgPick=id; _mapUpgGrp=null;
+  if(typeof playSfx==='function') playSfx('ui_tab'); renderMapUpg(); }
+function mapUpgBack(){ _mapUpgPick=null; _mapUpgGrp=null;
+  if(typeof playSfx==='function') playSfx('ui_close'); renderMapUpg(); }
+function setMapUpgGrp(g){ _mapUpgGrp=g; renderMapUpg(); }
+function renderMapUpg(){
+  const list=document.getElementById('muList'); if(!list) return;
+  const ttl=document.getElementById('muTtl'), back=document.getElementById('muBack');
+  const tabs=document.getElementById('muTabs');
+  const pick=_mapUpgPick;
+  mapUpgBal();
+  if(typeof curPaintChip==='function') curPaintChip();   // 🏷 이름은 재화 바가 말한다(campZoneTitle)
+  if(back) back.classList.toggle('hide', !pick);
+  // ── ① 맵 목록 ──
+  if(!pick){
+    if(ttl) ttl.textContent='강화할 유즈맵을 고르세요';
+    if(tabs) tabs.innerHTML='';
+    const maps=mapUpgMaps();
+    list.innerHTML = maps.length ? maps.map(function(m){
+      // 그 맵에 산 강화가 몇 개인지 — 「어디에 투자했나」가 목록에서 바로 읽힌다
+      let have=0, all=0;
+      for(const k in META_BUILDS){ const b=META_BUILDS[k]; if(!(b.out && b.map===m.id)) continue;
+        all++; if((typeof buildLevel==='function'?buildLevel(k):0)>0) have++; }
+      // ⭐ 그림·색은 **맵 목록과 같은 것**을 쓴다(mapThumbHTML · MAP_ACCENT) — ⛔ 이모지를 직접 박지 말 것.
+      const ac=(typeof MAP_ACCENT!=='undefined')?MAP_ACCENT[m.id]:null;
+      const esc=(typeof escHtml==='function')?escHtml:(x=>x);
+      return '<button class="muMap" onclick="mapUpgPick(\''+m.id+'\')"'
+        +(ac?' style="--mapAccent:'+ac+'"':'')+'>'
+        +((typeof mapThumbHTML==='function')?mapThumbHTML(m):'')
+        +'<span class="muMi"><b>'+esc(m.name)+'</b><i>'+esc(m.desc||'')+'</i></span>'
+        +'<span class="muN">'+have+'<u>/'+all+'</u></span></button>'; }).join('')
+      : '<div class="ptEmpty">아직 강화할 수 있는 유즈맵이 없습니다</div>';
+    return; }
+  // ── ② 고른 맵의 강화 목록 ──
+  const m=(typeof USEMAPS!=='undefined')?USEMAPS[pick]:null;
+  if(ttl) ttl.textContent=(m&&m.name)||'';
+  const mine=function(b){ return !!b.out && b.map===pick; };
+  const ts=(typeof ptTabsFor==='function')?ptTabsFor(mine):[];
+  if(ts.length && !ts.some(function(t){ return t[0]===_mapUpgGrp; })) _mapUpgGrp=ts[0][0];
+  if(tabs) tabs.innerHTML=(ts.length>1 && typeof segNavHTML==='function')
+    ? segNavHTML(ts.map(function(t){
+          return { label:_muTabIco(t[0], t[0]===_mapUpgGrp)+'<span>'+t[1]+'</span>' }; }),
+        Math.max(0, ts.findIndex(function(t){ return t[0]===_mapUpgGrp; })),
+        function(k){ return "setMapUpgGrp('"+ts[k][0]+"')"; })
+      .replace('class="pdSeg"', 'class="pdSeg stack"') : '';
+  list.innerHTML=(typeof ptRowsHTML==='function')
+    ? ptRowsHTML(function(b){ return mine(b) && (!_mapUpgGrp || b.group===_mapUpgGrp); })
+    : '';
+}
+
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태

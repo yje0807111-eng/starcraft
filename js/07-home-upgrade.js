@@ -51,11 +51,15 @@ const NAV_TREE=[
   //       CSS 가 `bottom:var(--navH)` 로 네비 자리를 비운다 — z-index 를 낮추지 않는다
   //       (낮추면 키 아트가 딸려 내려가고 시트류와 층이 꼬인다).
   //     ⚠ 서로를 닫아 준다 — 둘 다 `.on` 이면 트리가 환생 화면을 덮어 어느 탭인지 모른다.
+  //   🗺 **셋째 칸 = 유즈맵 강화**(2026-09-10 사용자 확정). 2차 환생이 주는 포인트를 쓰는 곳이라
+  //     「버는 곳 옆에서 쓴다」가 맞다 — ⛔ 유즈맵 구역으로 되돌리지 말 것.
   { k:'reb', label:'환생', ico:'upg', go:()=>campRebEnter('info'),
-    cur:()=>(campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null)),
+    cur:()=>((typeof mapUpgIsOn==='function' && mapUpgIsOn()) ? 'umap'
+             : (campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null))),
     reset:()=>campRebEnter('info'), subs:[
       { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
-      { k:'tree', label:'환생 트리', ico:'flag', act:()=>campRebEnter('tree') } ] },
+      { k:'tree', label:'환생 트리', ico:'flag', act:()=>campRebEnter('tree') },
+      { k:'umap', label:'유즈맵 강화', ico:'map', act:()=>campRebEnter('umap') } ] },
   // 💠 룬 — 환생과 유즈맵 사이(2026-09-02 사용자 확정: 연구·환생·**룬**·유즈맵·상점).
   //   ⭐ 자리가 여기인 이유: 왼쪽 셋이 「내가 세지는 곳」이고 오른쪽 둘이 「밖으로 나가는 곳」이다.
   //   하위 둘 — **장착**(칸에 끼우기)과 **룬 상점**(젬으로 사기).
@@ -68,7 +72,10 @@ const NAV_TREE=[
       { k:'shop', label:'룬 상점', ico:'gift', act:()=>campRuneEnter('shop') } ] },
   // 유즈맵: 정렬(인기·신규·추천·즐겨찾기)은 화면 위 띠로 되돌렸고, 하단은 소셜이 맡는다.
   //   ⛔ 소셜 UI 를 새로 만들지 않는다 — 이미 있는 #twChat 시트(.msSocial 채팅·파티·친구)를 연다.
-  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial, reset:()=>mapOpenSocial('chat'), subs:[
+  // ⛔ 여기에 「강화」를 되돌리지 말 것 — 유즈맵 강화는 **환생 구역의 셋째 칸**이다(2026-09-10).
+  //   포인트를 주는 쪽이 2차 환생이라 「버는 곳 옆에서 쓴다」가 맞다.
+  { k:'map',  label:'유즈맵', ico:'map', go:()=>twGoMap(), cur:()=>_mapSocial,
+    reset:()=>mapOpenSocial('chat'), subs:[
       { k:'chat',   label:'채팅', ico:'chat',   act:()=>mapOpenSocial('chat') },
       { k:'friend', label:'친구', ico:'friend', act:()=>mapOpenSocial('friend') },
       { k:'party',  label:'파티', ico:'party',  act:()=>mapOpenSocial('party') } ] },

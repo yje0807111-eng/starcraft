@@ -729,7 +729,6 @@ function campHasUnit(uid) {
   if (typeof CAMPB !== 'undefined' && CAMPB && CAMPB.me) {
     const hit = (u) => u && (u.gm === uid || u.id === uid);
     if (CAMPB.me.units.some(hit)) return true;
-    if ((CAMPB._down || []).some(d => d && hit(d.u))) return true;   // ⚠ _down 은 {u,t} 껍데기다
   }
   return false;
 }

@@ -104,14 +104,13 @@ function campClearRound(){ const C = campState(); if(!C || !((C.dg | 0) > 0)) re
 //   ⛔ 두 장치를 함께 두지 말 것 — 어느 쪽이 막는지 헷갈린다.
 // 💀 **패배 = 캠프로 돌아와 재정비하고, 다시 들어가면 그 던전 처음부터**(2026-09-09 · §0-A).
 //   ⛔ 옛 「직전 체크포인트」 안은 폐기했다 — 부순 건물은 **되살아난다**(C.foeDead 를 비운다).
-//   ⛔ 누운 병력(_down)도 버린다: 「재화는 지키되 **죽은 유닛은 다시 산다**」가 확정 규칙이다.
-//     공짜로 복구하면 무한 재시도가 되어 「지금 갈까, 키우고 갈까」라는 판단이 통째로 사라진다.
+//   ⛔ **죽은 유닛은 다시 산다**가 확정 규칙이다(2026-09-10 사용자 재확인). 공짜로 복구하면
+//     무한 재시도가 되어 「지금 갈까, 키우고 갈까」라는 판단이 통째로 사라진다.
 //   ✅ 손실은 유한하다 — campUnitOwned 가 **현재 보유 수**를 세므로 유닛이 죽으면 값이 도로 내려간다.
 function campFail(){ const C = campState(); if(!C) return 0;
   const was = { dg:C.dg | 0, cleared: campCleared(), broken: campCleared() };
   C.dg = 0; C.cleared = 0; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
   C.depotT = 0;                                       // ⚡ 보급고 버프도 사라진다(그 던전 처음부터)
-  if(typeof CAMPB !== 'undefined' && CAMPB && CAMPB._down) CAMPB._down.length = 0;
   if(typeof CAMPB !== 'undefined' && CAMPB){ CAMPB._fspT = 0; if(CAMPB._wq) CAMPB._wq.length = 0; }
   campSave(); return was; }
 
@@ -1558,7 +1557,8 @@ let _rebArtT = 0;
 function _rebArtAnyOn(){
   return (typeof campRebIsOn === 'function' && campRebIsOn())
       || (typeof campTreeIsOn === 'function' && campTreeIsOn())
-      || (typeof campRuneIsOn === 'function' && campRuneIsOn()); }
+      || (typeof campRuneIsOn === 'function' && campRuneIsOn())
+      || (typeof mapUpgIsOn === 'function' && mapUpgIsOn()); }
 function campRebArtOff(){
   if(_rebArtT) return;
   _rebArtT = setTimeout(() => { _rebArtT = 0; if(_rebArtAnyOn()) return; _campRebArtOff0(); }, 0); }
@@ -1582,6 +1582,7 @@ function campRebClose(keepArt){
 function campZoneTitle(){
   if(typeof campRuneIsOn === 'function' && campRuneIsOn())
     return (typeof _runeSec !== 'undefined' && _runeSec === 'shop') ? '룬 상점' : '룬';
+  if(typeof mapUpgIsOn === 'function' && mapUpgIsOn()) return '유즈맵 강화';
   if(typeof campTreeIsOn === 'function' && campTreeIsOn()) return '환생 트리';
   if(typeof campRebIsOn === 'function' && campRebIsOn()) return '환생';
   return ''; }
@@ -1601,17 +1602,21 @@ function campRebIsOn(){ const el = document.getElementById('campReb'); return !!
 //     둘 다 `.on` 이 되면 트리가 환생 화면을 덮어 어느 탭인지 알 수 없다.
 //   ⚠ 하단 네비는 **켜 둔 채**로 연다(두 화면 CSS 가 네비 높이만큼 자리를 비운다).
 function campRebEnter(sec){
-  const s = (sec === 'tree') ? 'tree' : 'info';
+  // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10 사용자 확정 · 환생 · 환생 트리 · 유즈맵 강화)
+  const s = (sec === 'tree') ? 'tree' : (sec === 'umap' ? 'umap' : 'info');
   // 🎬 페이드는 **구역에 들어올 때 한 번만**이다 (2026-08-31 사용자 지적).
   //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 탭을 오갈 때마다 매번 다시 돈다 —
   //     같은 구역 안에서 칸만 바꾸는 것인데 화면이 통째로 껌뻑여 이동이 무거워 보인다.
   //   ⭐ 그래서 애니는 `.crIn` 이 가지고, 밖에서 들어온 경우에만 붙인다(안이었으면 즉시 교체).
   const wasIn = (typeof campRebIsOn === 'function' && campRebIsOn()) ||
-                (typeof campTreeIsOn === 'function' && campTreeIsOn());
+                (typeof campTreeIsOn === 'function' && campTreeIsOn()) ||
+                (typeof mapUpgIsOn === 'function' && mapUpgIsOn());
   // ⚠ 닫는 쪽에 keepArt 를 준다 — 구역 안에서 칸만 바꾸는 것이라 배경은 그대로 둔다.
-  if(s === 'tree'){ campRebClose(true); campTreeOpen(); }
-  else { campTreeClose(); campRebOpen(); }
-  { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
+  //   ⛔ 셋 중 **둘을 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
+  if(s === 'tree'){ campRebClose(true); if(typeof mapUpgClose==='function') mapUpgClose(true); campTreeOpen(); }
+  else if(s === 'umap'){ campRebClose(true); campTreeClose(); if(typeof mapUpgOpen==='function') mapUpgOpen(); }   // ⚠ campTreeClose 는 인자를 안 받는다(그림은 안 만진다)
+  else { campTreeClose(); if(typeof mapUpgClose==='function') mapUpgClose(true); campRebOpen(); }
+  { const el = document.getElementById(s === 'tree' ? 'campTree' : (s === 'umap' ? 'mapUpgScreen' : 'campReb'));
     if(el) el.classList.toggle('crIn', !wasIn); }
   if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(환생 / 환생 트리)
@@ -2717,15 +2722,14 @@ function campBattleOpen(){
 //     「D1R1 10분 · D1R2 17.4분」짜리 이상한 라운드가 그 자리다.
 //   ⭐ 초반 9.4분이 병력 0 인 것은 **설계대로다**(시작 미네랄 0 → 탭 → 일꾼 140 → 마린 5,000).
 //     그 시간은 캠프(0단계)에서 보내야 한다 — 거긴 적이 없다.
-//   ⚠ 누운 병력도 센다 — 라운드가 시작되면 일어나므로 「데리고 들어갈 수 있는 병력」이다.
+//   ⚠ **누운 병력이라는 것은 없다**(2026-09-10) — 죽으면 명부에서 지워진다. 서 있는 것이 전부다.
 //   ⚠ 일꾼은 안 센다 — STK_UNITS 에 없는 것이 일꾼이다(campAdoptBaseUnits 와 같은 잣대).
 function campCombatCount(){
   let n = 0;
   if(typeof G !== 'undefined' && G.tech && typeof STK_UNITS !== 'undefined')
     for(const e of (G.tech.ents || [])) if(e && e.type === 'unit' && STK_UNITS[e.uid]) n++;
   if(typeof CAMPB !== 'undefined' && CAMPB){
-    for(const u of (CAMPB.me.units || [])) if(u && !u.dead) n++;
-    for(const d of (CAMPB._down || [])) if(d && d.u) n++; }
+    for(const u of (CAMPB.me.units || [])) if(u && !u.dead) n++; }
   return n; }
 // 캠프(0)로 돌아가는 것은 **언제나 된다** — 막는 것은 던전으로 내려가는 쪽뿐이다.
 function campCanEnterDungeon(dg){ return ((dg | 0) <= 0) || campCombatCount() > 0; }
@@ -2759,12 +2763,11 @@ function campAdoptBaseUnits(){
 //   ⭐ 자리(_post)를 격자 좌표로 역변환해 담는다 — 재입장 시 campAdoptBaseUnits 가
 //     그 자리 그대로 데려오고, campDeploy 가 새로 세우므로 체력도 가득 찬다.
 //     「패배하여 다시 시작할 때 부활 + 전체 회복」(사용자 규칙)이 이 경로로 이루어진다.
-//   ⚠ 누운 병력(_down)도 담는다 — uid 만 있으면 되살릴 수 있다.
+//   ⚠ **죽은 유닛은 담지 않는다**(2026-09-10) — 죽는 순간 명부에서 지워졌다(campReapDead).
 function campBattleClose(){
   if(CAMPB && typeof G !== 'undefined' && G.tech){
     const W = CAMPB.world || 4800, all = [];
     for(const u of CAMPB.me.units){ if(u && !u.dead) all.push(u); }
-    for(const d of (CAMPB._down || [])){ if(d && d.u) all.push(d.u); }
     for(const u of all){
       const p = u._post || { x:u.x, y:u.y };
       const g = campW2G(p.x, p.y, W);
@@ -2803,7 +2806,7 @@ function campBattleClose(){
 //     적 한 대 0.17×51 = 8.7 이고 건물 배수(×12)까지 곱하면 105, 셋이면 초당 315 — 750 은 2.4초다.
 //   ⭐ 「전멸해도 건물이 60~120초를 벌어 준다」(패배 규칙의 짝)가 성립하려면 **같은 자로 자라야** 한다.
 //   ⚠ **관문마다 다시 잰다**(campRescaleMine). 판 중간에 체력이 오르는 것이 이상해 보일 수 있지만,
-//     관문을 깨면 어차피 **전원 부활 + 전체 회복**이 일어난다(campRoundRevive) — 같은 박자다.
+//     관문을 깨면 어차피 **전체 회복**이 일어난다(campHealAll) — 같은 박자다.
 //     ⛔ 입장 시점으로 고정하지 말 것: 적만 관문마다 세져서 뒤로 갈수록 내 기지가 종잇장이 된다.
 function campMyScale(){
   if(typeof campFoeDiff !== 'function' || typeof campDgN !== 'function') return 1;
@@ -2854,11 +2857,7 @@ const CAMP_DEF_BLD = { bunker:1, turret:1 };
 //   📐 지금 짝: 적 30마리 × 0.17 × 1.5 = 7.65/초 · 본부 750 → **98초**. 설계 구간(60~120초) 안이다.
 //     ⚠ 난이도는 양쪽(적 공격·내 본부)에 똑같이 곱해지므로 이 시간은 관문이 올라가도 그대로다.
 const CAMP_FOE_BLD_MUL = 1.5;
-// 💀 전멸 판정 유예(초) — 한 프레임의 0 으로 판을 닫지 않는다(배치·부활 사이의 빈 틈).
-const CAMP_WIPE_GRACE = 3;
-// 🕸 진격 정지 판정(초) — 표적 건물 체력이 이만큼 **한 톨도** 안 줄면 원정을 끝낸다.
-//   ⚠ 너무 짧게 두지 말 것: 긴 사거리 유닛이 걸어가는 동안에도 체력은 안 준다(이동 30~40초).
-const CAMP_STALL_T = 75;
+
 function campBuildStructs(){
   if(!CAMPB || typeof G === 'undefined' || !G.tech) return 0;
   const W = CAMPB.world, bm = campRtMul('bldg');
@@ -3397,6 +3396,7 @@ function campDeploy(id, gx, gy){
   u.x = p.x; u.y = p.y;
   u.wait = 0; u.rallied = true;            // ⚠ 집결지로 걸어가지 않는다 — 여기가 이미 제자리다
   u._post = { x:p.x, y:p.y };              // 🪧 자리 — 내가 옮기면 갱신된다(2단계)
+  u._camp0 = 1;                            // 💀 **명부에 있는 유닛** — 죽으면 인구·재구매 배수를 돌려준다(campUnlist)
   campScaleAllies([u]);                    // ⚔ 설계 능력치 + 🌳 트리 배수 + 👀 인식 거리
   campLayerPost(u, W);                     // 🪜 사거리가 길수록 뒤에 세운다(아래) — 능력치 뒤라야 rng 을 안다
   return u; }
@@ -4144,7 +4144,6 @@ function campFoeRngCap(){
     if(!(u.dmg > 0) || !(u.rng > 0) || u.melee) return;
     if(u.rng < min) min = u.rng; };
   for(const u of CAMPB.me.units) see(u);
-  for(const d of (CAMPB._down || [])) see(d && d.u);   // ⚠ _down 은 {u,t} 껍데기다(유닛이 아니다)
   return (min === Infinity) ? campFoeRngFb() : min * CAMP_FOE_RNG_K;
 }
 
@@ -4348,10 +4347,9 @@ function campEndureP(){ const n = campRtHas('endure'); if(n <= 0) return 0;
 //   ⚠ **죽은 유닛은 배열에 남지 않는다** — strikeStepUnits 끝에서 `me.units=me.units.filter(u=>!u.dead)`
 //     로 걷어낸다(18-strike.js:1301, 공유 파일이라 못 고침). 그래서 **걷히기 전후를 비교해** 붙잡는다.
 //     객체는 살아 있으므로(배열에서 빠졌을 뿐) 그대로 들고 있다가 되살려 배열에 돌려놓는다.
-function campCatchDown(before){
+function campReapDead(before){
   if(!CAMPB || !before) return 0;
-  if(!CAMPB._down) CAMPB._down = [];
-  const now = CAMPB.me.units, keep = new Set(now);
+  const keep = new Set(CAMPB.me.units);
   let n = 0;
   const endP = campEndureP();
   for(const u of before){ if(keep.has(u) || !u) continue;
@@ -4360,30 +4358,117 @@ function campCatchDown(before){
     if(endP > 0 && !u._endured && Math.random() < endP){
       u._endured = true; u.dead = false; u.hp = 1;
       CAMPB.me.units.push(u); continue; }
-    // 🧠 **정신 지배로 뺏은 적은 소환수다** — 죽으면 그대로 사라진다(부활 대기에 안 넣는다).
-    //   ⛔ 넣으면 라운드마다 되살아나 적이 영영 줄어든다.
+    // 🧠 **정신 지배로 뺏은 적은 소환수다** — 산 적이 없으니 돌려줄 것도 없다.
     if(u._mc) continue;
-    CAMPB._down.push({ u:u, t:0 }); n++; }   // 걷힌 것 = 이번 프레임에 누운 것 (⏱ 타이머 없음 — 라운드가 끝나야 일어난다)
+    campUnlist(u); n++; }   // 💀 걷힌 것 = 이번 프레임에 **죽은** 것 — 명부에서 지운다
   return n; }
-// 🩹 **라운드 리셋** — 누운 병력을 전원 일으키고, 서 있는 병력도 체력을 가득 채운다.
-//   ⭐ 라운드가 시작될 때 · 던전이 바뀔 때 · 전장을 새로 열 때 부른다.
-//   ⛔ 라운드 도중에는 부르지 않는다 — 그게 이 규칙의 전부다.
-function campRoundRevive(){
+
+// 💀 **명부에서 지운다 — 인구와 재구매 배수가 되돌아온다** (2026-09-10 사용자 확정).
+//   ⭐ 죽음의 대가는 **다시 사는 값**이다. 「유닛 수가 줄어든 만큼 비용이 되돌아간다」가 그 뜻이라,
+//     20기째에서 한 기를 잃으면 다음 한 기는 **20기째 값**으로 다시 산다(배수가 한 칸 내려간다).
+//   ⚠ 값을 되돌리는 실제 장치는 `campUnitOwned` 다 — 그 자가 `G.tech.units` 하나만 보므로,
+//     여기서 그 숫자를 내리면 `campSyncUnitCost` 가 다음 프레임에 가격표를 다시 쓴다.
+//   ⚠ **인구도 돌려준다**(생산을 예약할 때 선차감한 그 몫 · 17-build-cards.js:997).
+//     안 돌려주면 병력을 잃을수록 인구 상한에 막혀 **다시 살 수가 없다** — 죽음이 영구 손실이 된다.
+//   ⚠ **명부에 있는 유닛만**(`u._camp0`). 소환수·정신 지배로 뺏은 적은 산 적이 없다.
+//   ⛔ 두 번 돌려주지 말 것 — 표식을 지워 재진입을 막는다.
+function campUnitPop(id){
+  if(typeof TECH_TREE === 'undefined' || typeof G === 'undefined' || !G.tech) return 0;
+  const t = TECH_TREE[G.tech.race]; if(!t) return 0;
+  for(const b of (t.buildings || [])) for(const q of (b.produces || []))
+    if(q.id === id) return q.pop || 0;
+  return 0; }
+function campUnlist(u){
+  if(!u || !u._camp0) return 0;
+  u._camp0 = 0;
+  const id = u.gm || u.id;
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  if(G.tech.units) G.tech.units[id] = Math.max(0, (G.tech.units[id] | 0) - 1);
+  G.tech.sup = Math.max(0, (G.tech.sup || 0) - campUnitPop(id));
+  return 1; }
+// 🩹 **전체 회복 — 부활은 없다** (2026-09-10 사용자 확정).
+//   ⛔ **부활을 되살리지 말 것.** 죽은 유닛은 죽은 것이고 건물에서 **다시 사야** 한다 —
+//     그 대신 인구와 재구매 배수가 되돌아온다(campUnlist). 죽음이 값을 갖는 자리가 거기다.
+//   ⚠ 이 함수의 옛 이름은 `campRoundRevive` 였다. 라운드가 있던 시절 「라운드 리셋 = 전원 부활 +
+//     체력 가득」이었는데, 라운드가 사라지면서 **부활 쪽이 통째로 없어졌다.** 이름이 거짓말을
+//     하지 않도록 바꿨다 — 남은 일은 체력을 채우는 것 하나다.
+//   ⭐ 부르는 곳: 관문(적 진행 건물)을 깼을 때 · 던전이 바뀔 때 · 전장을 새로 열 때.
+//     ⚠ 이것은 **판 전체**를 채운다(적진에 나가 있는 부대까지). 자리를 지키는 부대를 5초마다
+//       채우는 것은 **회복 존**(campHealZone)이고 둘은 다른 자다.
+function campHealAll(){
   if(!CAMPB || !CAMPB.me) return 0;
-  let up = 0;
-  for(const d of (CAMPB._down || [])){ const u = d && d.u; if(!u) continue;
-    u.dead = false;
-    u._collapseT = null; u.wait = 0;                 // 붕괴 대기·스폰 대기 흔적 정리
-    u.tgtUid = null; u._btgt = null; u._btT = 0;     // 표적은 새로 고른다
-    if(u._post){ u.x = u._post.x; u.y = u._post.y; } // 🪧 자기 자리에서 일어난다(누운 곳이 아니라)
-    u._sx = u.x; u._sy = u.y;
-    CAMPB.me.units.push(u); up++; }
-  if(CAMPB._down) CAMPB._down.length = 0;
-  // ⭐ **서 있던 병력도 가득 채운다** — 라운드가 온전한 상태로 시작해야 화력이 줄지 않는다.
+  let n = 0;
   for(const u of CAMPB.me.units){ if(u.dead) continue;
     u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0;
-    u._endured = false; }                            // 🛡 버팀은 라운드당 1회 — 새 라운드에 다시 찬다
-  return up; }
+    u._endured = false; n++; }                       // 🛡 버팀은 한 관문에 1회 — 관문을 깨면 다시 찬다
+  return n; }
+
+// ══ 🏥 회복 존 — **내 땅에 있으면 일정 주기마다 체력이 가득 찬다** (2026-09-10 사용자 확정) ══
+//   ⭐ 왜 있나 — 「평범하게는 절대 못 깬다. 캠프에서 엄청나게 돈을 벌고 화력을 올려놔야 겨우
+//     올라간다」가 이 게임의 모양이라(사용자), 그 **오래 버티는 구간**을 받쳐 줄 바닥이 필요하다.
+//     마린키우기의 회복 존과 같은 장치다: 적이 세져서 **회복 속도를 못 따라가는 순간**부터
+//     유닛이 실제로 죽기 시작한다 — 난이도의 문턱이 거기 하나로 모인다.
+//   ⭐ **내 땅에만 닿는다.** 그래서 드래그로 밀고 나가는 것이 진짜 판단이 된다 —
+//     자리를 지키면 회복, 적진으로 나가면 제 체력으로 싸운다.
+//   🗺 경계는 **맵 그림의 「내 구역 입구」**다 — `CAMP_HEAL_GY`(격자 y 0.36).
+//     📏 눈금을 그려 실제로 쟀다(2026-09-10 · 캠프 배경): **난간·문설주 gy 0.33~0.36 ·
+//       노란 빗금 0.36~0.39 · 그 아래가 석판 본체.** 0.36 은 그 문간 한복판이라
+//       플레이어가 「여기까지가 내 땅」이라고 읽는 바로 그 선이다.
+//     ⚠ ART.md §17-1 표의 「석판 위끝 0.46」은 **던전 그림 기준의 옛 값**이다 — 캠프 배경으로
+//       재면 0.33 이다. ⛔ 표만 보고 값을 되돌리지 말 것(그러면 석판 한참 안쪽에서 끊긴다 · 실측).
+//     ⛔ **안개 경계(`techY0` 0.18)를 쓰지 말 것**(2026-09-10 사용자: 「안개 없는 땅이 내 땅보다
+//       넓은 느낌」). 0.18 은 격자 위끝이라 그림상 **통로 한복판**이다 — 석판보다 훨씬 위다.
+//     ⛔ 값을 코드 여기저기에 흩지 말 것 — 회복·건설 미리보기·경고문이 이 상수 하나를 본다.
+//   🏢 **내 건물도 함께 찬다.** ⛔ 부서진 건물은 안 되살린다 — 그러면 적이 본부까지 못 와서
+//     패배 규칙(본부 파괴)이 영영 성립하지 않는다.
+//   ⛔ 죽은 유닛은 안 살린다(위 campHealAll 주석과 같은 이유).
+const CAMP_HEAL_S = 5;             // 회복 주기(초) — 사용자 확정 2026-09-10
+//   ⚠ 전장은 **아래(y 큰 쪽)가 내 땅**이다 — 적은 위에서 내려온다.
+const CAMP_HEAL_GY = 0.36;         // 회복 구역 위 경계(격자 y) = 내 구역 입구(난간·빗금) · 실측 2026-09-10
+function campHomeY(W){
+  const lim = W || (CAMPB && CAMPB.world) || 4800;
+  return (typeof campG2W === 'function') ? campG2W(0.5, CAMP_HEAL_GY, lim).y : lim * 0.647; }
+// 🧱 **격자 자리가 회복 구역인가** — 건물·건설 미리보기가 쓰는 쪽(격자 좌표 그대로 잰다).
+//   ⚠ 큰 건물도 **중심 한 점**으로 판단한다 — 미리보기(노란 격자)와 실제 회복이 같은 자를 써야
+//     「초록으로 지었는데 회복이 안 된다」가 안 생긴다.
+function campHealGyOk(gy){ return (gy || 0) >= CAMP_HEAL_GY; }
+// 🟡 **여기 지으면 회복이 안 된다** — 건설 미리보기가 노란 격자·경고문을 띄우는 판단.
+//   ⭐ 건설 자체는 **막지 않는다**(2026-09-10 사용자 확정) — 벙커·포탑을 앞에 세울 수 있어야 한다.
+//     대가는 「맞아도 안 고쳐진다」 하나다.
+function campBuildNoHeal(gy){
+  return (typeof campIsOn === 'function') && campIsOn() && !campHealGyOk(gy); }
+//   ⭐ **「내 땅인가」의 단일 소스** — 화면(안개·표식)도 이걸 물어야 규칙이 하나로 보인다.
+function campInHome(u, W){ return !!u && (u.y >= campHomeY(W)); }
+function campHealZone(){
+  if(!CAMPB || !CAMPB.me) return 0;
+  const W = CAMPB.world || 4800;
+  let n = 0;
+  for(const u of CAMPB.me.units){ if(u.dead || !campInHome(u, W)) continue;
+    u.hp = u.maxHp || u.hp; u.sh = u.maxSh || 0; n++; }
+  // 🏢 **건물 — 맞는 중에는 안 고쳐진다** (2026-09-10 실측으로 잡은 구조 결함).
+  //   ⛔ 예전엔 살아 있는 건물을 무조건 채웠다. 그러면 **패배 규칙(본부 파괴)이 영영 성립하지 않는다** —
+  //     실측: 전멸시켜 놓고 10분을 돌렸는데 본부가 750 → 728 을 오갈 뿐이었다(5초에 22 깎이고
+  //     5초마다 750 으로 참). 회복이 적 화력의 **약 35배**다. 던전 3 관문 5 에서도 같다
+  //     (38,553 → 37,308 · 5분) — 내 본부도 관문과 함께 자라므로 **비율이 그대로**이기 때문이다.
+  //     그래서 「전멸하면 적이 건물을 부수며 들어와 본부가 무너진다」가 통째로 죽어 있었다.
+  //   ⭐ 규칙은 한 줄이다: **직전 주기에 체력이 줄었으면 이번 주기는 건너뛴다.**
+  //     싸움이 멎으면 한 박자 뒤 스스로 고쳐지고, 두들겨 맞는 동안은 안 고쳐져 결국 부서진다.
+  //   ⚠ **유닛에는 안 건다.** 「자리를 지키면 안 죽는다」가 회복 존의 전부라, 유닛은 교전 중에도
+  //     찬다. 갈리는 지점이 여기다 — **유닛은 지켜 주고 건물은 소모된다**(마린키우기의 원형도 그렇다).
+  //   ⚠ 맞았는지는 **직접 재지 않고 체력 변화로 본다** — 피해 처리는 18-strike 안이라 ⛔ 못 고친다.
+  const y0 = campHomeY(W);
+  for(const b of (CAMPB._bld || [])){ if(!b || b.dead || (b.hp || 0) <= 0) continue;
+    if((b.y || 0) < y0){ b._hzHp = b.hp; continue; }  // 앞에 내놓은 건물 = 회복 없음(그게 값이다)
+    const hit = (b._hzHp != null) && (b.hp < b._hzHp - 1e-6);
+    if(!hit) b.hp = b.maxHp || b.max || b.hp;
+    b._hzHp = b.hp; }
+  return n; }
+function campHealTick(dt){
+  if(!CAMPB) return 0;
+  CAMPB._healT = (CAMPB._healT || 0) + (dt || 0);
+  if(CAMPB._healT < CAMP_HEAL_S) return 0;
+  CAMPB._healT -= CAMP_HEAL_S;
+  return campHealZone(); }
 
 // 살아 있는 유닛 수
 function campAlive(side){ if(!CAMPB) return 0; let n = 0;
@@ -4404,7 +4489,7 @@ function campDungeonSwap(){
   if(CAMPB._wq) CAMPB._wq.length = 0;
   CAMPB._wqTot = 0; CAMPB._wqT = 0;
   campBuildStructs();                              // 🏢 건물을 다시 올린다 = 체력이 가득 찬다
-  campRoundRevive();                               // 🩹 던전이 바뀌어도 온전한 상태로 시작한다
+  campHealAll();                                   // 🩹 던전이 바뀌어도 온전한 상태로 시작한다
   campRegroup();                                   // 🧭 표적을 풀어 자기 자리로 돌아가게 (아래)
   // 🧹 **50라운드를 채워 자동으로 넘어갈 때도 지정을 푼다** — 손으로 옮길 때(campBattleClose)와 같은 규칙.
   //   ⚠ 여기서는 전장이 안 닫히므로(적만 갈아 끼운다) campBattleClose 를 안 지난다.
@@ -4494,36 +4579,35 @@ function campCombatStep(dt){
   // ⏸ 숨 고르기 — 적이 안 나오는 동안 **걸어서 자기 자리로 돌아온다**.
   //   ⛔ 예전엔 여기서 곧바로 return 해서 **6초 동안 유닛이 한 발짝도 안 움직였다**(2026-08-30 발견).
   //     「돌아올 시간을 준다」는 주석만 있고 실제로는 멈춰 서 있었다 — 텀을 아무리 늘려도 소용없었다.
-  //   ⭐ 그래서 이동·복귀·부활만 굴린다. 적이 없으니 전투는 저절로 일어나지 않는다.
+  //   ⭐ 그래서 이동·복귀만 굴린다. 적이 없으니 전투는 저절로 일어나지 않는다.
   if(CAMPB._gapT > 0){ CAMPB._gapT -= dt;
-    const _g4 = CAMPB.me.units.slice();                   // 🩹 걷히기 전 명부(아래 campCatchDown)
+    const _g4 = CAMPB.me.units.slice();                   // 💀 걷히기 전 명부(아래 campReapDead)
     campWithStk(() => { campStepUnits(dt); CAMPB.t += dt; });
-    // ⛔ **여기에도 campCatchDown 이 있어야 한다** (2026-08-30 · 병력 누수의 원인).
-    //   campStepUnits 는 끝에서 죽은 유닛을 배열에서 **걷어낸다**. 그걸 붙잡지
-    //   않으면 그 유닛은 _down 에도 안 들어가 **명부에서 통째로 사라진다** — 부활도 못 하고
-    //   campBattleClose 가 기지로 되돌리지도 못한다.
+    // ⛔ **여기에도 campReapDead 가 있어야 한다** (2026-08-30 · 병력 누수의 원인).
+    //   campStepUnits 는 끝에서 죽은 유닛을 배열에서 **걷어낸다**. 그걸 붙잡지 않으면
+    //   그 유닛은 **명부에서 조용히 사라진다** — 인구도 재구매 배수도 안 돌아온다(campUnlist).
     //   ⚠ 「숨 고르기엔 적이 없으니 안 죽는다」가 아니다 — 지속 피해(역병·방사능)와 붕괴
     //     대기(_collapseT)가 이 구간에서도 계속 굴러간다.
     //   ⭐ 실측(2026-08-30 브라우저): 숨 고르기 중 한 기를 죽였더니 명부가 4 → 3 이 됐고
     //     라운드가 시작돼도 3 그대로였다. 벽 측정에서 병력이 88 → 85 로 줄던 것이 이것이다.
-    campCatchDown(_g4);
+    campReapDead(_g4);
     campBunkerStep(dt);                                   // 🧱 벙커에 탄 유닛은 그 자리에 (숨 고르기에도 유지)
-    // ⛔ 여기서 부활시키지 않는다 — **부활은 라운드 단위**다(campRoundRevive · 2026-08-29).
-    //   숨 고르기 끝에서 한 번에 일으키므로, 여기서 또 부르면 두 벌이 된다.
-    //   ⚠ 옛 시간 부활(campReviveStep)은 없앴다 — 그게 후반 발산의 동력이었다.
+    // ⛔ 여기서 부활시키지 않는다 — **부활이라는 것이 없다**(2026-09-10 사용자 확정).
+    //   ⚠ 옛 시간 부활(campReviveStep · 30초)은 2026-08-29 에 없앴다 — 그게 후반 발산의 동력이었다.
     if(CAMPB._gapT <= 0){
       // ⛔ **출격이라는 것이 없다** (2026-08-28). 유닛은 생산될 때 이미 전장에 선다(campDeploy).
       //   인구 상한도 생산에서 막히므로 전장에서 잘라낼 것이 없다.
       campBuildStructs();                                 // 🏢 그새 지은 건물을 전장에 반영(체력도 새로)
-      campRoundRevive();                                  // 🩹 라운드 시작 = 전원 부활 + 체력 전체 회복
+      campHealAll();                                      // 🩹 숨 고르기 끝 = 체력 전체 회복(부활은 없다)
       campSpawnFoes(); }
     return; }
-  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campRoundRevive(); campSpawnFoes(); return; }
+  if(!CAMPB.ai.units.length && !CAMPB._started){ CAMPB._started = true; campHealAll(); campSpawnFoes(); return; }
   campAlertTick(dt);    // 👀 발견 전파 — 이동·전투보다 **먼저** 걸어야 이번 프레임에 반영된다
   // 🏰 적 기지(23-camp-dungeon) — 압박·방어탑·안개·타이머. ⚠ 이동보다 **먼저** 봐야 이번 프레임에 반영된다.
   if(typeof campFoeReveal === 'function') campFoeReveal(false, dt);      // 🌫 시야가 닿은 건물이 드러난다
   if(typeof campFoeSpawnTick === 'function') campFoeSpawnTick(dt);       // 🌊 활성 건물(릴레이)이 적을 보낸다
   if(typeof campDepotTick === 'function') campDepotTick(dt);             // ⚡ 보급고 버프가 닳는다
+  campHealTick(dt);                                                     // 🏥 회복 존 — 내 땅의 유닛·건물이 5초마다 가득
   if(typeof campFoeTowerStep === 'function') campFoeTowerStep(dt);       // 🗼 방어탑이 나를 쏜다
   if(typeof campDgTimerTick === 'function') campDgTimerTick(dt);         // ⏱ 최고기록 시계
   const _b4 = CAMPB.me.units.slice();   // 🩹 campStepUnits 가 죽은 것을 걷어내므로 미리 떠 둔다
@@ -4535,7 +4619,7 @@ function campCombatStep(dt){
   //   ⭐ 지금은 표적 선정·자리·이동·사격이 campStepUnits 한 곳에 있다. 자리 제약은
   //     「목표를 정할 때」 걸리고, 이동은 프레임당 한 번뿐이라 무를 것이 없다.
   campWithStk(() => { campStepUnits(dt); CAMPB.t += dt; });
-  campCatchDown(_b4);   // 🩹 이번 프레임에 누운 아군을 붙잡는다
+  campReapDead(_b4);    // 💀 이번 프레임에 죽은 아군을 명부에서 지운다(인구·재구매 배수 반환)
   campBunkerStep(dt);   // 🧱 벙커에 탄 유닛은 그 자리에 붙들고, 맞은 만큼을 벙커가 대신 받는다
   // 🌳 「스킬 쿨다운」 −70% — 18-strike 를 고치지 않고, 이미 dt 만큼 깎인 값을 **더** 깎아 배속한다.
   //   ⚠ 내 유닛만. 사다리 ×N 을 '남은 시간이 1/N 속도로 흐른다'가 아니라 '(N−1)dt 만큼 더 깎는다'로 읽는다.
@@ -4554,8 +4638,8 @@ function campCombatStep(dt){
         for(const k in u.skillCd){ if(u.skillCd[k] > 0) u.skillCd[k] = Math.max(0, u.skillCd[k] - extra); } } } }
   // ① 졌나 — **먼저 본다.** 본부가 뚫린 프레임에 마침 마지막 적도 죽었다면 그건 진 것이다.
   //    ⚠ 순서를 바꾸지 말 것: 승리를 먼저 보면 본부가 0인데도 라운드가 올라간다(스모크가 잡았다).
-  //    ⭐ **패배 = 본부 파괴다**(HUNT_R1 §6-5). 부활이 생긴 뒤로 「전멸」은 패배가 아니다 —
-  //      다 누워도 30초 뒤 일어난다. 다만 **되살릴 유닛이 하나도 없으면**(출격 병력 0) 끝이 없으므로 그때만 진다.
+  //    ⭐ **패배 = 본부 파괴다**(HUNT_R1 §6-5 · 2026-09-10 사용자 재확정). 전멸은 패배가 아니다 —
+  //      병력이 다 죽으면 적이 건물을 부수며 밀고 들어오고, 본부가 무너질 때 진다.
   // ⛔ **때릴 수 없는 적만 남았으면 진다.** 안 그러면 라운드가 영원히 안 끝난다(실측: R12 hellfire).
   //   ⚠ 아직 안 나온 무리가 있으면 그중에 때릴 수 있는 것이 있을 수 있으므로 기다린다.
   //   ⚠ **병력이 하나도 없을 때는 이 규칙을 쓰지 않는다**(2026-08-30 · 새 패배 규칙과 짝).
@@ -4580,53 +4664,34 @@ function campCombatStep(dt){
   //    ⛔ 되돌리지 말 것 — 이 자리에서 두 규칙을 거쳐 왔다:
   //       · 「건물 전부 파괴」(2026-08-27) → 지금은 본부 하나
   //       · 「전멸 = 패배」(2026-08-29) → 사용자가 2026-08-30 에 뒤집었다
-  //    ⚠ 전멸해도 판이 멈추지 않는 이유가 여기 있다: 부활은 라운드 시작뿐이라 그동안 못
-  //      일어나지만, 적이 본부를 부수면서 **게임은 계속 나아간다.** 그 둘이 짝이다.
-  // 🕸 **진격이 멈추면 원정을 끝낸다** (2026-09-09 · 시뮬로 잡은 교착 두 번째).
-  //   ⛔ 전멸 판정만으로는 못 잡는다. 실측(관문 6): 무장 병력이 **0 은 아닌데**(1~4기 남음)
-  //     아무도 표적 건물 사거리 안에 못 들어가서, 탑이 **40/921 로 97초 동안 그대로**였다.
-  //     누운 병력 14기는 관문을 깨야 일어나는데 관문을 못 깨니 영영 안 일어난다.
-  //   ⭐ 원인은 **짧은 사거리**다 — 화력병은 사거리 70(거의 근접)이라 적 27마리가 건물을
-  //     둘러싸면 붙을 자리가 없다. 그래서 「원리상 못 때린다」가 아니라 **「사실상 안 줄어든다」**를 잰다.
-  //   ⚠ 자는 **표적 건물의 체력**이다 — 그게 안 줄고 관문도 안 깨지면 진격이 멈춘 것이다.
-  //     ⛔ 「적을 못 때린다」로 재지 말 것: 적은 계속 잡고 있어도 기지는 안 부수는 상태가 이것이다.
-  { const fr = (typeof campFoeFront === 'function') ? campFoeFront() : null;
-    const hp = fr ? (fr.hp || 0) : -1, bk = campBroken();
-    if(!fr || hp < (CAMPB._stallHp == null ? Infinity : CAMPB._stallHp) - 1e-6 || bk !== CAMPB._stallB){
-      CAMPB._stallT = 0; CAMPB._stallHp = hp; CAMPB._stallB = bk; }
-    else CAMPB._stallT = (CAMPB._stallT || 0) + dt; }
-  const _stalled = CAMPB._started && (CAMPB._stallT || 0) >= CAMP_STALL_T;
+  //       · 「전멸 = 그 원정의 끝」(2026-09-09) → 사용자가 2026-09-10 에 다시 뒤집었다(아래)
+  //    ⚠ **전멸해도 판이 멈추지 않는다.** 죽은 병력은 안 일어나지만 **건물에서 다시 살 수 있고**
+  //      (죽으면서 인구·재구매 배수를 돌려줬다 · campUnlist), 그동안 적이 내 건물을 차례로
+  //      부수며 다가온다. 시간을 벌어 주는 것이 건물이고, 그 시간에 병력을 다시 세우는 것이
+  //      플레이어의 몫이다. 본부가 무너지면 거기서 끝난다.
+  // 🕸 **진격 정지 판정은 없앴다** (2026-09-10 · 아군이 자동 돌격을 안 하게 되면서).
+  //   옛 규칙은 「표적 건물 체력이 75초 동안 안 줄면 원정 끝」이었다. 그때는 아군이 저절로
+  //   기지로 걸어갔으므로 「안 줄어든다 = 교착」이 성립했다.
+  //   ⛔ 이제 **가만히 서 있는 것은 플레이어의 선택**이다(자리를 지키다 준비되면 드래그로 민다).
+  //     그대로 두면 캠프 경제를 돌리며 기다리는 사이 **75초마다 원정이 강제 종료**된다.
+  //   ⚠ 옛 교착(무장 병력은 있는데 아무도 건물에 못 닿는 상태)은 이제 **손으로 물러날 수 있다**.
   const _base = CAMPB.me.base;
-  // 💀 **전멸 = 그 원정의 끝**(2026-09-09 · 시뮬로 잡은 구조 결함).
-  //   ⛔ 「패배는 본부 파괴 하나뿐」은 **라운드가 있던 시절의 규칙**이다. 그때는 라운드가 바뀔 때마다
-  //     전원 부활이 있어서, 전멸해도 다음 라운드에 다시 일어났다.
-  //   ⚠ 라운드를 없애면서 부활이 **「관문을 깰 때」**로 옮겨졌는데, 병력이 0 이면 관문을 못 깬다 —
-  //     **순환**이다. 30분 자동 플레이에서 아군이 세 시점 모두 **0기**였고, 본부만 천천히
-  //     갉아먹히며 아무 일도 일어나지 않았다(BALANCE §5-5).
-  //   ⭐ 그래서 전멸하면 캠프로 돌려보낸다 — 사용자가 정한 「캠프로 돌아와 재정비하고 다시 들어간다」
-  //     그대로다(GAME_DIRECTION §0-A). 재화는 지키고 죽은 유닛은 다시 산다.
-  //   ⚠ **유예를 둔다** — 한 프레임의 0 으로 끝내면 「사고 배치하는 사이」에 판이 닫힌다.
-  //   ⚠ 무기가 없는 유닛(의무병)은 안 센다 — `campArmedUnits` 는 `_noHit` 과 **같은 자**를 쓴다.
-  const _armed = (typeof campArmedUnits === 'function') ? campArmedUnits().length : 1;
-  if(_armed > 0) CAMPB._wipeT = 0;
-  else CAMPB._wipeT = (CAMPB._wipeT || 0) + dt;
-  const _wiped = CAMPB._started && _armed === 0 && (CAMPB._wipeT || 0) >= CAMP_WIPE_GRACE;
+  // 💀 **전멸은 패배가 아니다 — 「본부 파괴」 하나로 되돌렸다**(2026-09-10 사용자 확정).
+  //   ⚠ 2026-09-09 에 내가 `_wiped`(전멸 = 원정 끝)를 넣었던 이유는 **순환**이었다: 부활이
+  //     「관문을 깰 때」로 옮겨졌는데 병력이 0 이면 관문을 못 깬다 → 아무 일도 안 일어난 채
+  //     본부만 30분 갉아먹혔다(BALANCE §5-5).
+  //   ⭐ **그 순환이 이제 끊겼다.** 죽은 유닛이 인구와 재구매 배수를 돌려주므로(campUnlist)
+  //     병력이 0 이 되어도 **건물에서 다시 살 수 있고**, 캠프 경제는 원정 중에도 계속 돈다.
+  //     빠져나가는 길이 있으니 막다른 길이 아니다.
+  //   ⏳ 시간 제한 노릇은 **적이 내 건물을 부수며 다가오는 것**이 한다 — 늦으면 본부가 무너진다.
+  //   ⛔ 되살리지 말 것. 되살리면 「전멸했지만 돈이 있어 다시 세운다」는 반격이 통째로 사라진다.
   const _lost = !_base || _base.dead || (_base.hp || 0) <= 0;
-  if(_lost || _noHit || _wiped || _stalled){
+  if(_lost || _noHit){
     const was = campFail(); campBattleClose(); campBarReset();
-    campSay(_stalled
-      ? ('🕸 진격이 멈췄습니다 — 캠프에서 더 키워 다시 오세요(던전 ' + was.dg + ' · ' + was.cleared + '/'
-         + CAMP_DG_STEPS + ' 채)')
-      : _wiped
-      ? ('💀 병력이 전멸했습니다 — 캠프로 돌아가 재정비하세요(던전 ' + was.dg + ' · ' + was.cleared + '/'
-         + CAMP_DG_STEPS + ' 채)')
-      : _lost
-      ? ('🏢 본부가 무너졌습니다 — 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락')
-      : _noHit
-      ? ('✈ 공중을 칠 수 없어 탈락 — 대공이 되는 병력을 섞으세요(던전 ' + was.dg + ' ' + was.cleared + '라운드)')
-      : (was.cleared > 0
-        ? ('💀 던전 ' + was.dg + ' ' + was.cleared + '라운드에서 탈락 — 캠프로 돌아갑니다')
-        : ('💀 던전 ' + was.dg + ' 1라운드도 못 깼습니다 — 캠프로 돌아갑니다')), 'lose');
+    const _at = '던전 ' + was.dg + ' · ' + was.cleared + '/' + CAMP_DG_STEPS + ' 채';
+    campSay(_lost
+      ? ('🏢 본부가 무너졌습니다 — ' + _at + ' 에서 탈락')
+      : ('✈ 공중을 칠 수 없어 탈락 — 대공이 되는 병력을 섞으세요(' + _at + ')'), 'lose');
     return; }
   // ② 🏰 **진행 건물 6채를 다 부쉈다 → 던전 완주**(2026-09-09 · 옛 「적 유닛 0 = 라운드 클리어」를 대체).
   //    ⛔ 적 유닛 수로 판정하지 말 것 — 적은 살아 있는 생산 건물이 계속 보내므로 0 이 되는 순간이
@@ -7384,13 +7449,16 @@ const CAMP_UNIT_PRICE_MUL = 40;   // ⏬ 200 → 40 (위 표와 같은 비율)
 const CAMP_UNIT_GAS = {};
 function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
   return (v != null) ? v : Math.round((m || 0) * CAMP_UNIT_PRICE_MUL); }
+// 💰 **지금 몇 기 갖고 있나** — 재구매 배수(CAMP_UNIT_R)가 이 값을 지수로 쓴다.
+//   ⭐ 단일 소스는 **`G.tech.units` 하나**다. 전장 유닛도 거기 세어져 있다(생산이 올리고,
+//     campUnlist 가 죽을 때 내린다) — 그래서 유닛이 죽으면 **값이 도로 내려가고 가격도 내려간다.**
+//   ⛔ **여기에 `CAMPB.me.units` 를 더하지 말 것**(2026-09-10 실측으로 잡은 결함).
+//     던전 안에서는 같은 유닛이 `G.tech.units` 에도 전장 명부에도 있어 **두 번 세어졌다** —
+//     배수가 1.30 이 아니라 **1.69/기**로 붙어(프로브: owned 1 → 2 → 4) 병력을 늘리는 값이
+//     설계의 제곱이 됐다. 던전에 오래 있을수록 병력이 안 늘던 것이 이것이다.
+//     ⚠ 옛 코드에 있던 `_down`(부활 대기) 항은 `{u,t}` 껍데기를 훑어 **늘 0** 이었다 — 죽은 코드였다.
 function campUnitOwned(id){
-  let n = (typeof G !== 'undefined' && G.tech && G.tech.units) ? (G.tech.units[id] | 0) : 0;
-  if(typeof CAMPB !== 'undefined' && CAMPB){
-    const cnt = (L) => { let k = 0; for(const u of (L || [])){ if(u && !u.dead && (u.id === id || u.gm === id)) k++; } return k; };
-    n += cnt(CAMPB.me && CAMPB.me.units) + cnt(CAMPB._down);
-  }
-  return n;
+  return (typeof G !== 'undefined' && G.tech && G.tech.units) ? (G.tech.units[id] | 0) : 0;
 }
 function campUnitCost(base, id){ return Math.max(1, Math.ceil((base || 0) * Math.pow(CAMP_UNIT_R, campUnitOwned(id)))); }
 let _campUnitHome = null;

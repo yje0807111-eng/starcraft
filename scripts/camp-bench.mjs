@@ -570,7 +570,8 @@ await pg.evaluate(()=>{
       // 🖐 손 플레이 기준 — 병력은 **한 기**뿐. 죽으면 다시 한 기.
       if(__CB.hand>=0){ const alive=(typeof campAlive==='function')?campAlive('me'):0;
         const base=(G.tech.ents||[]).filter(e=>e.type==='unit').length;
-        // ⚠ 누운 유닛(_down · 30초 뒤 부활)도 센다 — 안 세면 첫 죽음에서 둘째 기를 사서 「1기」가 아니게 된다
+        // ⚠ 죽은 유닛은 **안 센다**(2026-09-10 · 부활이 없어졌다) — 죽으면 다시 사는 것이 규칙이다.
+        //   아래 _down 항은 늘 0 이다(옛 부활 대기의 흔적).
         //   (2026-09-05 실측: R6 에서 죽자 기관총병을 사서 그 뒤가 2기 판이었다).
         const down=(typeof CAMPB!=='undefined'&&CAMPB&&CAMPB._down)?CAMPB._down.length:0;
         if(alive+base+down>=1) return; }
@@ -757,7 +758,7 @@ await pg.evaluate(()=>{
             // ⚔ 병력 구성 — 반복 구매(×1.15)가 실제로 조합을 강제하는지 보는 값이다.
             //   한 종류가 절반을 넘으면 배수가 약한 것이다.
             mix:(function(){ const m={};
-              // ⚠ _down 은 유닛이 아니라 **{u,t} 껍데기**다 — 그대로 세면 전부 undefined 가 된다.
+              // ⚠ _down(옛 부활 대기)은 2026-09-10 에 없어졌다 — 이 항은 늘 빈 배열이다.
               //   그리고 누운 유닛은 dead=true 라, 살아있는 것만 거를 때 통째로 사라진다.
               const add=(L,skipDead)=>{ for(const u of (L||[])){ if(!u||(skipDead&&u.dead)) continue; const k=u.gm||u.id; m[k]=(m[k]||0)+1; } };
               if(typeof CAMPB!=='undefined'&&CAMPB){ add(CAMPB.me&&CAMPB.me.units,true); add((CAMPB._down||[]).map(d=>d&&d.u),false); }

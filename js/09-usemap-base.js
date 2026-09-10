@@ -16,6 +16,20 @@ function teamLevel(id){ let mx=buildLevel(id);
   if(ix>=0 && typeof G!=='undefined' && G && G.coopTeamB){ for(const k in G.coopTeamB){ const v=(G.coopTeamB[k]||[])[ix]||0; if(v>mx) mx=v; } }
   return mx; }
 function teamEffLv(id){ return _metaEffFromRaw(META_BUILDS[id], teamLevel(id)); }   // 팀 최고레벨 + 초월 배율 적용
+// ⚙ **오토 배틀 강화** — 유즈맵 강화 구역에서 산 것(map:'cpu')이 판에 닿는 자리.
+//   ⛔ **여기 값을 캠프 전투로 새게 하지 말 것.** 오토 배틀 엔진(18-strike)의 부품을
+//     캠프 전투(21-camp-battle)가 그대로 빌려 쓴다 — `strikeAtkMul` 이 그 예다.
+//     그래서 거는 쪽(18-strike)이 **「오토 배틀이고 내 진영일 때만」** 을 직접 확인한다(`stkUpgOn`).
+//   ⚠ 값은 약하다(다 채워도 공격 +8% · 체력 +10%) — 8인 대전이라 세지면 대전이 「누가 오래 했나」가 된다.
+function cpuBonus(){ const L=id=>metaEffLv(id);
+  return {
+    startGold: L('cpu_start_gold')*150,
+    mineCost:  Math.max(0.5, 1 - L('cpu_mine_cost')*0.015),   // 하한 — 0 이나 음수가 되면 광산이 공짜다
+    mineYield: 1 + L('cpu_mine_yield')*0.02,
+    income:    1 + L('cpu_income')*0.02,
+    atkMul:    1 + L('cpu_unit_atk')*0.008,
+    hpMul:     1 + L('cpu_unit_hp')*0.01,
+  }; }
 function metaBonus(){ const L=id=>metaEffLv(id), T=id=>teamEffLv(id);   // 효과 = 초월 배율 반영 레벨(일반=그대로, 초월=×2/×4/×8)
   return {
     creditMul:   1 + L('credit_gain')*0.05,
@@ -108,15 +122,26 @@ const _PT_ICO={
   team:'<rect x="3.8" y="3.8" width="7" height="7" rx="1.6"/><rect x="13.2" y="3.8" width="7" height="7" rx="1.6"/><rect x="3.8" y="13.2" width="7" height="7" rx="1.6"/><rect x="13.2" y="13.2" width="7" height="7" rx="1.6"/>',   // 전체=ALL 텍스트(다른 아이콘 크기에 맞춤)
   coop:'<path d="M12 3.6c-3.9 0-6.9 2.8-6.9 6.5 0 2.2 1 3.9 2.5 4.9v3.4h8.8V15c1.5-1 2.5-2.7 2.5-4.9 0-3.7-3-6.5-6.9-6.5z"/><circle cx="9.4" cy="10.4" r="1.15"/><circle cx="14.6" cy="10.4" r="1.15"/><path d="M10.6 18.4v2M13.4 18.4v2"/>' };  // 보스=해골
 // 탭 띠 = 공용 세그먼트 바(segNavHTML). ⛔ 새 탭 띠를 만들지 말 것 — 아이콘 없이 글자만이 이 컴포넌트의 규칙이다.
+// 🧭 **탭은 실제로 있는 갈래만** 세운다(2026-09-10). 스물셋을 바깥으로 빼면서 공학소에는
+//   생산 하나만 남았다 — 빈 탭 넷을 세워 두면 눌러도 「항목 없음」이 나온다.
+//   ⛔ 표를 다시 나누면 여기도 같이 고치지 말 것: 이 함수가 표를 보고 스스로 줄인다.
+function ptTabsFor(pred){ return _PT_TABS.filter(function(t){
+  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(b.group===t[0] && pred(b, id)) return true; }
+  return false; }); }
 function renderPtTabs(){ const box=document.getElementById('ptTabs'); if(!box) return;
-  const i=Math.max(0, _PT_TABS.findIndex(function(t){ return t[0]===_ptGroup; }));
-  box.innerHTML=segNavHTML(_PT_TABS.map(function(t){ return { label:t[1] }; }), i,
-    function(k){ return "setPtGroup('"+_PT_TABS[k][0]+"')"; }); }
-function renderPt(){ const list=document.getElementById('ptList'); if(!list) return;
-  if(TEMP_COIN_TEST) PLAYER_META.coins=9999999;   // [임시] 포인트 항상 넉넉(상점 렌더 시 보충)
-  const cE=document.getElementById('ptCoins'); if(cE) cE.textContent=PLAYER_META.coins||0;
+  const tabs=ptTabsFor(function(b){ return !b.out; });
+  if(tabs.length && !tabs.some(function(t){ return t[0]===_ptGroup; })) _ptGroup=tabs[0][0];
+  box.classList.toggle('one', tabs.length<=1);   // 한 칸뿐이면 띠를 감춘다(고를 것이 없다)
+  const i=Math.max(0, tabs.findIndex(function(t){ return t[0]===_ptGroup; }));
+  box.innerHTML=segNavHTML(tabs.map(function(t){ return { label:t[1] }; }), i,
+    function(k){ return "setPtGroup('"+tabs[k][0]+"')"; }); }
+// 🧱 **강화 줄을 만드는 곳은 여기 하나다**(2026-09-10).
+//   공학소 팝업(`renderPt`)과 유즈맵 강화 구역(`renderMapUpg` · 12-appshell.js)이 **같은 줄**을 쓴다 —
+//   거르개(pred)만 달리 준다. ⛔ 두 번째 줄 렌더러를 만들지 말 것: 레벨 눈금·값·초월 표기가 갈린다.
+//   ⚠ 산 뒤에 다시 그리는 일은 `doPtUp` 이 **열려 있는 쪽**을 보고 정한다.
+function ptRowsHTML(pred){
   let rows='', _lastSect=null;
-  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(b.group!==_ptGroup) continue;
+  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(!pred(b, id)) continue;
     if(b.sect && b.sect!==_lastSect){ _lastSect=b.sect; rows+='<div class="ptSect"><span class="ptSectBar"></span>'+b.sect+'</div>'; }   // 섹션 헤더(세분화)
     const lv=buildLevel(id), n=metaNMax(b), maxed=lv>=b.max, cost=metaNextCost(id,lv), deferred=!!b.deferred, poor=(PLAYER_META.coins||0)<cost;
     const nextTrans=!maxed && lv>=n;   // 다음 강화가 초월 레벨
@@ -132,15 +157,20 @@ function renderPt(){ const list=document.getElementById('ptList'); if(!list) ret
       +ptPips(lv,b.max,n)+'</div>'
       +btn+'</div>';
   }
-  if(!rows) rows='<div class="ptEmpty">항목 없음</div>';
-  list.innerHTML=rows;
+  return rows || '<div class="ptEmpty">항목 없음</div>';
+}
+// 🏭 공학소 = **판 안에서 번 포인트**로 사는 곳. 바깥으로 뺀 것(out)은 여기 안 나온다.
+function renderPt(){ const list=document.getElementById('ptList'); if(!list) return;
+  if(TEMP_COIN_TEST) PLAYER_META.coins=9999999;   // [임시] 포인트 항상 넉넉(상점 렌더 시 보충)
+  const cE=document.getElementById('ptCoins'); if(cE) cE.textContent=PLAYER_META.coins||0;
+  list.innerHTML=ptRowsHTML(b => b.group===_ptGroup && !b.out);
 }
 // 공학소 ? 상세 정보 — 자잘한 설명(정산 방식 + 현재 카테고리 항목별 효과)을 별도 팝업으로 분리.
 function openPtHelp(){ const body=document.getElementById('ptHelpBody'); if(!body) return;
   let h='<div class="phGen">판이 끝나면 모은 <b>포인트(P)</b>가 정산되고, 강화하면 <b>이번 판에 즉시 적용</b>됩니다. (시작 자원·유닛은 다음 판부터)</div>';
   const tab=(_PT_TABS.find(t=>t[0]===_ptGroup)||[])[1]||'';
   h+='<div class="phSect">'+tab+(_PT_NOTE[_ptGroup]?' · '+_PT_NOTE[_ptGroup]:'')+'</div>';
-  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(b.group!==_ptGroup) continue;
+  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(b.group!==_ptGroup || b.out) continue;
     h+='<div class="phItem"><b>'+b.name+'</b> — '+b.desc+'</div>'; }
   body.innerHTML=h; popShow('ptHelpPop'); if(typeof playSfx==='function') playSfx('ui_open'); }
 function closePtHelp(){ popHide('ptHelpPop'); }
@@ -163,7 +193,11 @@ function ptPips(lv, max, n){ const N=Math.max(1,max), norm=(n!=null?n:N);
   let s='<div class="ptPips'+(N>12?' mini':'')+'">';
   for(let i=0;i<N;i++){ const on=i<lv, tr=on&&i>=norm; s+='<i class="'+(tr?'on tr':(on?'on':''))+'"></i>'; }
   return s+'</div>'; }
-function doPtUp(id){ if(buildUpgrade(id)) renderPt(); }
+// ⚠ 두 화면이 같은 표를 사므로 **열려 있는 쪽**을 다시 그린다 —
+//   한쪽만 그리면 다른 쪽에서 샀을 때 값이 안 바뀐 것처럼 보인다.
+function doPtUp(id){ if(!buildUpgrade(id)) return;
+  if(typeof mapUpgIsOn==='function' && mapUpgIsOn()){ renderMapUpg(); return; }
+  renderPt(); }
 
 // ── 상시 공용 보스(협동/솔로) ──
 const BOSS_VIEW={x:0,y:0};    // 보스방 드래그 패닝 오프셋(px)
