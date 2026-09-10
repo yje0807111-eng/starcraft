@@ -248,14 +248,50 @@ function campTerrSync(){
   const f = (typeof G !== 'undefined' && G.tech) ? G.tech.fog : null;
   // ⚠ 안개가 **꺼져 있어도** 지형은 남는다 — 격자만 빌리는 것이지 안개에 딸린 층이 아니다.
   //   (던전인가는 campTerrOn 이 판단한다 · 던전에 들어가면 campFogSync 가 늘 먼저 판다.)
-  if(!campTerrOn() || !f){ CAMPT = null; if(_terrCv && _terrCv.parentNode) _terrCv.parentNode.removeChild(_terrCv); return false; }
+  if(!campTerrOn() || !f){
+    CAMPT = null; if(_terrCv && _terrCv.parentNode) _terrCv.parentNode.removeChild(_terrCv);
+    // 🧹 **집으로 돌아왔으면 안개의 고저도 걷는다**(2026-09-10 스모크가 잡았다).
+    //   `campFogSync` 는 캠프에서 `f.on=false` 로 끄기만 하고 배열은 그대로 둔다 — 그러면
+    //   **절벽이 데이터에 남아** 나중에 안개를 켜는 순간(관리자 탭·다음 던전) 없는 벽이 시야를 막는다.
+    //   ⚠ **우리가 심어 둔 것일 때만** 지운다 — 안 그러면 관리자 탭의 테스트 언덕(TECH_HILL)까지 지운다.
+    if(_terrPushed && f){ f.height.fill(0); _terrPushed = false; }
+    return false; }
   const C0 = (typeof campState === 'function') ? campState() : null;
   const dg = campDgN(), seed = (C0 && C0.foeSeed) || 1;
   const wy0 = (f.wy0 == null ? 0 : f.wy0), wy1 = (f.wy1 == null ? 1 : f.wy1);
   const sig = dg + '/' + seed + '/' + f.cols + 'x' + f.rows + '/' + wy0.toFixed(4);
   if(CAMPT && CAMPT.sig === sig) return true;
   campTerrInit(wy0, wy1, f.rows); campTerrGen(dg, seed); CAMPT.sig = sig;
+  campTerrPushHeight(f);   // 👁 지형이 새로 생겼으면 안개의 고저도 갈아 끼운다(씨앗이 바뀌면 절벽 자리도 바뀐다)
   return true; }
+/* ══ 👁 시야 차단 — 안개에 고저를 준다 (2026-09-10 · 2단계) ═══════════════════════════
+ *   ⭐ **막는 일은 이미 엔진이 한다** — `_fogReveal` 의 `if(!air && fogHeightAt(...)>vh) continue;`
+ *     한 줄이 「저지 → 고지」를 이미 자르고 있었다. 지금까지 그 배열이 **비어 있었을 뿐**이다
+ *     (캠프는 `techFogInit(..., {flat:true})` 로 관리자 테스트 언덕조차 꺼 두었다).
+ *     그래서 2단계에 새로 만든 것은 **배열을 채우는 함수 둘**뿐이다. ⛔ 차단 규칙을 새로 짜지 말 것.
+ *   🚪 **램프는 「낮은 쪽」으로 친다.** 비탈이니 아래에서 보이는 것이 맞고, 그래야 올라갈 길이 보인다.
+ *     ⛔ 램프를 고지로 치지 말 것 — 통로가 통째로 어둠에 잠겨 「어디로 올라가나」가 사라진다.
+ *     ⚠ 그래서 램프 위에 선 유닛은 아직 고원을 못 본다. 램프를 다 올라 **고원 칸을 밟는 순간**
+ *       시야가 열린다 — 능선을 넘는 그 느낌이 의도한 것이다.
+ *   ⚠ 공중 유닛은 지형을 무시한다(엔진이 `air` 로 이미 가른다). */
+let _terrPushed = false;   // 우리가 안개에 고저를 심어 두었나(집으로 돌아갈 때 걷기 위해)
+function campTerrPushHeight(fog){
+  const f = fog || ((typeof G !== 'undefined' && G.tech) ? G.tech.fog : null);
+  const T = CAMPT;
+  if(!f || !T || T.cols !== f.cols || T.rows !== f.rows) return 0;
+  let n = 0;
+  for(let i = 0; i < f.height.length; i++){
+    const h = T.r[i] ? 0 : T.h[i];   // 🚪 램프 = 비탈 → 낮은 쪽
+    f.height[i] = h; if(h) n++; }
+  _terrPushed = true;
+  return n; }
+/* 👁 **엔진이 부르는 훅** — `techFogInit` 이 격자를 새로 판 직후. 캠프 밖에서는 스스로 빠진다.
+ *   ⚠ 여기서 `campTerrSync` 만 부르고 끝내면 안 된다 — 지형 서명이 그대로면 sync 는 아무것도
+ *     안 하는데, **안개는 방금 새로 파여 높이가 0**이다. 그래서 늘 다시 밀어 넣는다. */
+function campTerrHeightFill(f){
+  if(!f || !campTerrSync()) return 0;
+  return campTerrPushHeight(f); }
+
 /* 매 프레임 — 구운 그림 한 장을 뷰 사각형에 확대해 그린다(techFogDraw 와 같은 식). */
 function campTerrDraw(){
   if(!campTerrSync()) return false;

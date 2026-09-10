@@ -7836,6 +7836,7 @@ async function groupLobby(){
       // ① 집(캠프)에는 지형이 없다 — 집은 평지다
       campEnterDungeon(0); campBattleClose(); campFogSync(); campTerrDraw();
       assert(typeof CAMPT==='undefined'||!CAMPT,'캠프(집)에 지형이 생겼다 — 집은 평지다');
+      if(G.tech.fog) assert(!Array.prototype.some.call(G.tech.fog.height,v=>v>0),'캠프(집)에 고지가 남아 있다');
       // ② 던전 — 격자는 안개에서 받아 온다(⛔ 따로 계산하면 절벽이 한 칸 밀린다)
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
       skipIf(!CAMPB,'전장이 안 열림');
@@ -7876,6 +7877,39 @@ async function groupLobby(){
           if(prev!=null) worst=Math.max(worst,Math.abs(last-prev));
           prev=last; }
         assert(worst<=1,'고원 밑변이 이웃 열끼리 '+worst+'칸 튄다 — 빗살로 보인다'); }
+      /* 👁 **안개를 새로 팔 때 그 자리에서 고저가 채워진다**(10-engine techFogInit 의 훅).
+       *   ⚠ 「다음 프레임에 채워진다」로는 부족하다 — `techFogInit` 은 끝에서 **바로**
+       *     `techFogCompute()` 를 돌린다. 그때 고저가 0 이면 **첫 시야가 절벽을 넘어** 퍼지고,
+       *     그 한 번으로 고원 위 건물이 `b.vis` 로 켜져 「가 보지도 않았는데 보이는」 상태가 된다. */
+      { G.tech.fog=null; campFogSync();
+        const ff0=G.tech.fog;
+        assert(ff0,'전제: 안개를 다시 팠다');
+        let hi0=0; for(const v of ff0.height) if(v) hi0++;
+        assert(hi0>0,'안개를 새로 팠는데 고저가 비어 있다 — 첫 시야가 절벽을 넘는다');
+        for(let i=0;i<3;i++){ campCombatStep(0.05); try{ campFrame(performance.now()+800+i*40); }catch(_e){} }
+        campTerrDraw(); }
+      // 👁 **시야 차단**(2단계) — 안개의 고저가 지형에서 온다. 램프는 **낮은 쪽**으로 친다.
+      { const ff=G.tech.fog; let bad=0, rampHi=0;
+        for(let i=0;i<ff.height.length;i++){ const want=CAMPT.r[i]?0:CAMPT.h[i];
+          if(ff.height[i]!==want) bad++; if(CAMPT.r[i]&&ff.height[i]) rampHi++; }
+        assert(bad===0,'안개 고저가 지형과 다르다: '+bad+'칸');
+        assert(rampHi===0,'램프를 고지로 쳤다 — 통로가 어둠에 잠겨 올라갈 길이 안 보인다');
+        // 아래에서 쏜 시야가 절벽을 못 넘는다 · 공중은 넘는다
+        const C2=ff.cols, tx=Math.floor(C2/2);
+        let last=-1; for(let ty=0;ty<ff.rows;ty++) if(ff.height[ty*C2+tx]) last=ty;
+        assert(last>=0,'전제: 가운데 열에 고지가 있다');
+        const below=last+4;
+        assert(below<ff.rows,'전제: 절벽 아래에 설 자리가 있다');
+        const sp0=(ff.wy0==null?0:ff.wy0), span=(ff.wy1==null?1:ff.wy1)-sp0;
+        const cwx=t=>(t+0.5)/C2, cwy=t=>sp0+((t+0.5)/ff.rows)*span;
+        const shoot=(air)=>{ for(let i=0;i<ff.state.length;i++) ff.state[i]=1;
+          _fogReveal(cwx(tx), cwy(below), 8, air, ff, 1);
+          return { hi:ff.state[last*C2+tx], low:ff.state[below*C2+tx] }; };
+        const g=shoot(false);
+        assert(g.low===2,'전제: 선 자리는 열린다');
+        assert(g.hi!==2,'아래에서 고원 위가 보인다 — 고저 차단이 안 걸렸다');
+        assert(shoot(true).hi===2,'공중인데 고원이 안 보인다 — air 가 지형을 무시해야 한다');
+        techFogCompute(); }
       // ⑥ 씨앗이 같으면 지형도 같다(⛔ Math.random 금지 — 저장·복원하면 자리가 바뀐다)
       { const a=Array.from(CAMPT.h).join('')+'|'+Array.from(CAMPT.w).join('');
         campTerrGen(campDgN(), C.foeSeed||1);

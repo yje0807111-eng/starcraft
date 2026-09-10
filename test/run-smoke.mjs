@@ -100,9 +100,15 @@ const SMOKE_SRC=fs.readFileSync(path.join(ROOT,'test','smoke.js'),'utf8');
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const PORT=server.address().port;
 const browser=await puppeteer.launch({ executablePath:CHROME, headless:process.env.HEADFUL?false:'new',
-  // ⏱ 스로틀링이면 lobby 한 판(평소 100~160초)이 4배로 늘어 puppeteer 기본 protocolTimeout(180초)을 넘긴다
-  //    (실측 2026-09-07 · Runtime.callFunctionOn timed out). 그때만 넉넉히 푼다 — 평소엔 기본값이 멈춤을 잡아 준다.
-  protocolTimeout: CPU>1 ? 1800000 : undefined,
+  /* ⏱ **puppeteer 기본 protocolTimeout(180초)은 이 검사에 너무 빠듯하다.**
+   *   lobby 한 판은 그룹 전체가 `page.evaluate` **한 번**이라 그 시간이 통째로 이 상한에 걸린다.
+   *   실측(2026-09-10): 같은 커밋이 같은 기계에서 105 → 118 → 158 → 179초로 흔들렸다(부하·발열).
+   *   상한을 넘기면 **결과가 한 줄도 안 나오고** 통째로 죽어, 「어느 검사가 왜 실패했나」를 알 수 없다
+   *   — 실제로 그것 때문에 가드 두 개가 무는지 못 재고 헤맸다.
+   *   ⭐ 그래서 늘 넉넉히 준다. **검사가 느슨해지는 것이 아니다** — 단정문은 그대로고,
+   *     이건 하네스가 먼저 죽지 않게 하는 것뿐이다. 진짜 멈춤은 `timeout` 명령이 잡는다.
+   *   ⛔ 180초(기본값)로 되돌리지 말 것. */
+  protocolTimeout: 1800000,
   args:['--mute-audio','--disable-gpu-sandbox','--no-sandbox'] });
 
 let anyFail=false; const allReports=[];

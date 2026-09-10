@@ -56,7 +56,8 @@ const info=await pg.evaluate(()=>{
   return { cols:T.cols, rows:T.rows, wy0:+T.wy0.toFixed(3), hi, wall, ramp,
            baked:!!T.bake, bakeW:T.bake?T.bake.width:0, bakeH:T.bake?T.bake.height:0,
            canvas:!!cv, cw:cv?cv.width:0, ch:cv?cv.height:0,
-           conn:(typeof campTerrConnected==='function')?campTerrConnected():null };
+           conn:(typeof campTerrConnected==='function')?campTerrConnected():null,
+           fogHi:(function(){ const f=G.tech&&G.tech.fog; if(!f) return -1; let n=0; for(const v of f.height) if(v) n++; return n; })() };
 });
 console.log('지형:', JSON.stringify(info));
 
@@ -77,7 +78,31 @@ await pg.evaluate(()=>{ try{ const v=techView(), t=techViewT();
   v.zoom=t.zoom=2.2; v.x=t.x=0.5; v.y=t.y=0.02; }catch(e){} });
 await sleep(900);
 await pg.screenshot({path:path.join(OUT,'camp-terr-wall.png')});
-// ⑤ 구운 그림 원본 — 조각이 맞물리는지는 이걸 봐야 정확하다
+// ⑤ 👁 시야 차단 — 절벽 **아래**에 병력을 세우고 안개를 켠 채로 본다
+//   (고원 위가 안 열리면 성공 · 램프는 낮은 쪽이라 보인다)
+await pg.evaluate(()=>{ try{
+  const f=G.tech.fog; f.on=true;
+  // 고원 밑변에서 세 칸 아래 — 가운데 열
+  const C=f.cols, tx=Math.floor(C/2); let last=-1;
+  for(let ty=0;ty<f.rows;ty++) if(f.height[ty*C+tx]) last=ty;
+  const sp0=(f.wy0==null?0:f.wy0), span=(f.wy1==null?1:f.wy1)-sp0;
+  const wy=sp0+((last+4+0.5)/f.rows)*span, W=CAMPB.world;
+  campWithStk(()=>{ for(let i=0;i<5;i++) strikeSpawnUnit('me','marine'); });
+  CAMPB.ai.units.forEach(u=>{u.dead=true;});
+  const t=(wy-(-0.26))/(1-(-0.26));                        // 격자 → 레인 t
+  const sy=(t*0.72+0.14)*W;
+  CAMPB.me.units.forEach((u,i)=>{ u.x=W*(0.5+(i-2)*0.02); u.y=sy; });
+  techFogCompute(); techFogDraw();
+  const v=techView(), vt=techViewT(); v.zoom=vt.zoom=1.0; v.x=vt.x=0.5; v.y=vt.y=0.16;
+}catch(e){ console.log('shot5 '+e.message); } });
+await sleep(1000);
+await pg.screenshot({path:path.join(OUT,'camp-terr-fog.png')});
+{ const r=await pg.evaluate(()=>{ const f=G.tech.fog, C=f.cols, tx=Math.floor(C/2);
+    let last=-1; for(let ty=0;ty<f.rows;ty++) if(f.height[ty*C+tx]) last=ty;
+    return { hi:f.state[last*C+tx], low:f.state[(last+4)*C+tx], last:last }; });
+  console.log('시야: 선 자리 '+r.low+'(2=열림) · 고원 위 '+r.hi+'(2 아니면 차단됨)'); }
+
+// ⑥ 구운 그림 원본 — 조각이 맞물리는지는 이걸 봐야 정확하다
 const bake=await pg.evaluate(()=>{ try{
   if(typeof CAMPT==='undefined'||!CAMPT) return 'ERR:CAMPT 없음';
   if(!CAMPT.bake) return 'ERR:bake 없음';

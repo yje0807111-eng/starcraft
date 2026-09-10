@@ -1255,6 +1255,11 @@ function techFogInit(on, opt){ if(!G.tech) return; const o=opt||{};
   if(!o.flat) for(let ty=0;ty<rows;ty++){ const wy=wy0+((ty+0.5)/rows)*span; for(let tx=0;tx<cols;tx++){ const wx=(tx+0.5)/cols;
     if(wx>=H.x0&&wx<=H.x1&&wy>=H.y0&&wy<=H.y1) height[ty*cols+tx]=H.h; } }
   G.tech.fog={ on:!!on, cols, rows, state:new Uint8Array(cols*rows), height, t:0, wy0:wy0, wy1:wy1 };
+  // 🗺 **캠프 던전은 지형(js/24-terrain.js)이 고저를 준다** — 엔진에 캠프 코드를 넣지 않으려고 뺀 훅
+  //   (`campFogExtra` 와 같은 어법). 캠프 밖에서는 스스로 빠지므로 관리자 탭·오토배틀은 그대로다.
+  //   ⚠ 순서가 중요하다 — 지형은 **여기서 만든 격자**(cols·rows·wy0)를 빌려 쓴다. 그래서 fog 를
+  //     만든 **뒤**에 부르고, 시야 계산(techFogCompute)보다는 **앞**이어야 한다.
+  if(typeof campTerrHeightFill==='function') campTerrHeightFill(G.tech.fog);
   if(on) techFogCompute(); }
 function techFogEnabled(){ return !!(G.tech && G.tech.fog && G.tech.fog.on); }
 function techFogVisAt(nx,ny){ if(!techFogEnabled()) return 2; const f=G.tech.fog, t=_fogTile(nx,ny,f); return f.state[t.ty*f.cols+t.tx]; }
