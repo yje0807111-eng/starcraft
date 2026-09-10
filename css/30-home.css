@@ -976,12 +976,22 @@
     white-space:pre-line;word-break:keep-all}
   /* ⚠ **초기화 예고** — 본문보다 한 단 작고 옅다(읽히되 문구를 밀어내지 않는다).
      ⛔ 경고색(붉은색)을 쓰지 말 것: 이 자리의 붉은색은 왼쪽 위 제목과 스포트라이트 링이다. */
+  /* ⚠ 줄바꿈 규칙은 본문(.tuTx)과 **같다** — pre-line 이 없으면 「의미 단위로 접는다」가 안 먹어
+     구역 안내의 두 줄이 한 덩어리로 뭉친다(2026-09-10 실측). */
   .tutoOv .tuSub{margin-top:1px;font-size:11px;font-weight:700;color:rgba(214,226,240,.62);
-    line-height:1.3;word-break:keep-all}
+    line-height:1.3;white-space:pre-line;word-break:keep-all}
   /* 📚 **챕터 카드** — 시키는 일이 없고 「여기서부터 무엇을 배우는지」만 말한다(2026-09-08).
      제목을 한 단 키우고 진행 숫자를 숨겨, 지시 카드와 **한눈에 갈리게** 한다.
      ⛔ 새 판을 만들지 말 것 — 같은 .tuTip 이고 달라지는 건 글자 크기와 여백뿐이다. */
   /* ⛔ 챕터 카드에는 **꼬리가 없다** — 가리킬 대상이 없는데 꼬리만 남으면 화면의 빈자리를 가리킨다. */
+  /* 🗺 **구역 안내** — 그 화면에 처음 왔을 때 한 장(2026-09-10 · js/06-daily.js ZONE_TIPS).
+     ⭐ 껍데기는 챕터 카드 그대로다 — 여기서 덮는 것은 **막지 않는다**는 것 하나뿐이다.
+     자유 플레이 중에 뜨므로 게임 조작을 가로채면 안 된다(튜토리얼은 반대로 일부러 막는다).
+     ⚠ 판 넷은 두께 0 이라 실제로 덮는 것도 없다 — 카드만 화면 가운데에 앉는다.
+     ⛔ 딤을 깔지 말 것: 「읽고 넘기는 쪽지」이지 화면을 멈추는 것이 아니다. */
+  .tutoOv.ztOv{z-index:139}
+  .tutoOv.ztOv>i{background:none;pointer-events:none}
+  .tutoOv.ztOv .tuTip{pointer-events:auto}
   .tutoOv .tuTip.ch::after{display:none}
   .tutoOv .tuTip.ch{padding:11px 13px 11px}
   .tutoOv .tuTip.ch .tuTx{font-size:17px;line-height:1.2;letter-spacing:-.01em}
@@ -1133,8 +1143,6 @@
   #phone.campMode #btSheetBody .cmbSlot.on .cgName{color:#fff}
   /* 캔 만큼 숫자가 튀어오른다 — 맵 위에 뜨는 판(팝업 안의 .cmPop 과 같은 어법) */
   #cstMain .cmPop.mapPop{position:absolute;z-index:6;pointer-events:none;transform:translate(-50%,-50%)}
-  /* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
-  .cdRnd.off{opacity:.3;pointer-events:none}
   /* 첫 칸(캠프)은 던전과 성격이 달라 살짝 갈라 둔다 — 아래로 1px 선 */
   .cdRow.home{margin-top:0}
   /* 라운드 = **큰 숫자 + ◀▶**(공용 .arwBtn 글리프) + 아래 붉은 진행 밑선(칩과 같은 어휘).
@@ -1142,7 +1150,6 @@
   /* 아래 고정 패널 — ROUND ◀▶ + 슬라이더 + [이동]. 목록이 그 위에서 굴러 들어간다(그라데로 경계를 흐린다). */
   .cdFoot{flex:none;margin:0 -14px;padding:10px 14px 14px;
     background:linear-gradient(180deg,rgba(8,8,9,0),rgba(8,8,9,.96) 30%)}
-  .cdRnd .cdSl{border-bottom:0;margin-bottom:0;padding-bottom:2px}
   /* 🎚 슬라이더 = 붉은 채움 + 흰 손잡이(칩 밑선 어휘를 키운 것). 트랙은 3px 이지만 **누르는 높이는 28px** —
      손가락이 트랙 위아래 어디를 눌러도 잡힌다. 손잡이 위치는 (r-1)/(max-1) — 1·50 이 눈금 위에 정확히 선다. */
   /* [이동] = 공용 .actBtn.pri 그대로(옅은 흰 면 .14 + 1px .32). 여기서 덮는 건 **크기뿐**. ⛔ 제 버튼을 만들지 말 것. */

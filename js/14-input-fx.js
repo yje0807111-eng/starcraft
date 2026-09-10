@@ -894,6 +894,26 @@ function loop(now){
 }
 
 // 🏗 건설 탭 렌더 — 건설 시간 진행 + 배치 건물/유닛 3D. nemo(관리자) 건설 탭과 오토배틀 건설지가 이 함수 하나를 공유한다.
+/* 🎒 **일꾼이 든 덩어리의 자리** — 값 넷이 단일 소스다(2026-09-08 · 시안 비교용으로 이름을 뺐다).
+ *   앞(FWD)·옆(SIDE)은 **격자 좌표**라 줌을 저절로 탄다 · 높이(YOFF)는 화면 px 이고 **음수가 위**다
+ *   (M3D 가 `position.y -= yoff` 로 쓴다) · 크기(SCL)는 모델 배율.
+ *   ⛔ 여기 말고 다른 곳에서 덩어리 자리를 다시 계산하지 말 것 — 두 벌이 되면 반드시 어긋난다.
+ *   ⚠ 값을 바꿨으면   📸 a-now · 지금 (크고 · 떠 있음)
+  📸 b-small · 작게만 (0.45)
+  📸 c-down · 작게 + 아래로
+  📸 d-hand · 작게 + 손 앞
+  📸 e-side · 작게 + 옆구리
+  📸 f-head · 작게 + 머리 위
+errs: 없음 로 **눈으로 볼 것**(숫자로는 안 보인다).
+ *   ⭐ 지금 값 = 「작게 + 머리 위」(2026-09-08 사용자 확정 · 시안 docs/mock/camp-carry-6 ⑤안).
+ *     ⛔ 크기 1.0 으로 되돌리지 말 것 — 그건 광맥에 박힌 큰 덩어리 모델 그대로라 **일꾼만큼 크다**.
+ *     ⛔ 앞으로 0.014 만큼 밀지 말 것 — 몸에서 떨어져 **공중에 뜬 것**처럼 보였다(그게 신고 내용이다).
+ *   ⚠ 이 덩어리는 손에 붙는 게 아니라 **좌표로 옆에 놓는** 것이다 — 손을 따라가게 하려면 glb 의 본을
+ *     읽어야 해서 지금 구조로는 안 된다. 값으로 「그렇게 보이게」 맞추는 것이 여기서 할 수 있는 전부다. */
+let TECH_CARRY_FWD  = 0.002;   // 앞으로(격자)
+let TECH_CARRY_SIDE = 0;       // 오른쪽 옆으로(격자)
+let TECH_CARRY_YOFF = -6;      // 위로(px · 음수가 위)
+let TECH_CARRY_SCL  = 0.42;    // 크기 배율
 function renderBuildTab(dt){
   {
     if(G.tech && typeof techTick==='function') techTick(dt);   // ⏱ 건설·생산 시간 진행
@@ -932,7 +952,15 @@ function renderBuildTab(dt){
         for(const m of ((typeof campIsOn==='function'&&campIsOn())?[]:(G.tech.minerals||[]))){ list.push({uid:'mn_'+m.eid, id:'res_cn', x:(m.x-_v.x)*_v.zoom+0.5, y:(m.y-_v.y)*_v.zoom+0.5, face:Math.PI, sel:!!(G.tech.selRes&&G.tech.selRes.kind==='mineral'&&G.tech.selRes.eid===m.eid), hidden:techFogHidden(m.x,m.y), z:_zOf(m.y,false)}); }   // 미네랄 180° 회전 · sel=유닛/건물과 동일한 3D 하단 링
         const _gasB=G.tech.ents.some(be=>be.type==='bldg'&&((techGetBldg(race,be.bk)||{}).gas));
         if(!_gasB && !techWallet() && !(typeof campIsOn==='function'&&campIsOn())){ const _gx=TECH_GRID.x0+(TECH_GAS.c0+TECH_GAS.w/2)*_techCW(), _gy=techY0()+(TECH_GAS.r0+TECH_GAS.h-0.55)*_techCH(); list.push({uid:'gz_res', id:'res_en', x:(_gx-_v.x)*_v.zoom+0.5, y:(_gy-_v.y)*_v.zoom+0.5, face:Math.PI/2, fitW:TECH_GAS.w*_cwpx, sel:!!(G.tech.selRes&&G.tech.selRes.kind==='gas'), hidden:techFogHidden(_gx,_gy), z:_zOf(_gy,false)}); }   // 가스 건물 없을 때만 · sel=3D 하단 링
-        for(const e of (G.tech.ents||[])){ if(e.type==='worker'&&e._carry&&!e._inGas){ const _cf=e.face||0, _cd=0.014; list.push({uid:'carry_'+e.eid, id:((e._cKind||e._gKind)==='gas'?'res_ec':'res_cc'), x:((e.x+Math.sin(_cf)*_cd)-_v.x)*_v.zoom+0.5, y:((e.y+Math.cos(_cf)*_cd)-_v.y)*_v.zoom+0.5, yoff:-3, hidden:techFogHidden(e.x,e.y), z:_zOf(e.y,false)+1}); } }   // 운반 청크 = 일꾼 정면(진행 방향) 앞·손 높이 — 앞에서 들고 가는 느낌
+        for(const e of (G.tech.ents||[])){ if(e.type==='worker'&&e._carry&&!e._inGas){ const _cf=e.face||0;
+          // 🎒 운반 덩어리의 자리 — 값은 TECH_CARRY_* 넷이 정한다(아래 선언부 주석 참고).
+          const _fx=Math.sin(_cf), _fy=Math.cos(_cf);            // 일꾼이 보는 쪽
+          const _sx=Math.cos(_cf), _sy=-Math.sin(_cf);           // 그 오른쪽(옆구리)
+          list.push({uid:'carry_'+e.eid, id:((e._cKind||e._gKind)==='gas'?'res_ec':'res_cc'),
+            x:((e.x+_fx*TECH_CARRY_FWD+_sx*TECH_CARRY_SIDE)-_v.x)*_v.zoom+0.5,
+            y:((e.y+_fy*TECH_CARRY_FWD+_sy*TECH_CARRY_SIDE)-_v.y)*_v.zoom+0.5,
+            yoff:TECH_CARRY_YOFF, scl:TECH_CARRY_SCL,
+            hidden:techFogHidden(e.x,e.y), z:_zOf(e.y,false)+1}); } }   // 운반 청크 = 일꾼 정면(진행 방향) 앞·손 높이 — 앞에서 들고 가는 느낌
       }
       window.M3D.syncBuild(list, W, H, dt, _v.zoom);
     // ⛔ 캠프 진입 애니(.campIn) 중에는 끄지 않는다 — 끄는 순간 그 프레임에 애니가 죽어

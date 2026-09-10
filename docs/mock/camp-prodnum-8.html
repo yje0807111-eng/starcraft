@@ -1,0 +1,192 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>생산 표시 대기 수 8안</title>
+<style>
+/* 🔢 생산 표시의 **대기 수**를 어디에 어떻게 둘까 — 2026-09-08
+   문제: 지금 배지가 판 안쪽을 너무 많이 먹는다. 축소(14px)에서는 배지가 판만큼 크다.
+   앞 넷 = 안쪽에 두되 깔끔하게 · 뒤 넷 = 밖으로 뺀다.
+   ⚠ 실제 크기 그대로 본다 — 축소(14px)와 확대(25px) 둘 다 함께 놓는다. 작을 때가 진짜 시험이다. */
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 40px;font-family:'Pretendard','Malgun Gothic',sans-serif;
+  background:#0a0c10;color:#e6e9f2}
+h1{margin:0 0 4px;font-size:15px;letter-spacing:.04em;color:#cfd6e6}
+.sub{margin:0 0 16px;font-size:11.5px;color:#78829a;line-height:1.6}
+.gh{margin:16px 0 8px;font-size:12px;font-weight:800;color:#9fb6cc;letter-spacing:.06em}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:1000px}
+@media (max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{padding:11px 11px 13px;border-radius:10px;background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06)}
+.cell.base{background:rgba(255,120,120,.05);border-color:rgba(255,120,120,.2)}
+.no{display:flex;align-items:baseline;gap:6px;margin:0 0 2px}
+.no b{font-size:12.5px;color:#fff}
+.no span{font-size:10px;color:#8a93a8}
+.dsc{margin:0 0 10px;font-size:10.5px;color:#6f7a8e;line-height:1.5;min-height:46px}
+.pair{display:flex;align-items:flex-end;justify-content:center;gap:26px;height:112px;
+  border-radius:8px;background:linear-gradient(180deg,#2b2f36,#22262c 60%,#1b1e23);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);padding-bottom:10px}
+.one{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px}
+.cap{font:700 8.5px/1 'Rajdhani',sans-serif;color:#5f6a78;letter-spacing:.05em}
+.bldg{width:46px;height:26px;border-radius:4px;
+  background:linear-gradient(160deg,#5c7fa8,#33506e 55%,#22384f);
+  box-shadow:0 6px 12px -6px #000,inset 0 1px 0 rgba(255,255,255,.16)}
+.holder{position:relative;display:flex;justify-content:center}
+
+/* ── 공통 판 ───────────────────────────────────────────── */
+.ico{position:relative;border-radius:3px;overflow:hidden;background:#0d1218;
+  box-shadow:0 0 0 1px rgba(150,200,240,.28),0 4px 10px -4px rgba(0,0,0,.8)}
+.s14 .ico{width:14px;height:14px}
+.s25 .ico{width:25px;height:25px}
+.ico>img{width:100%;height:100%;object-fit:cover;object-position:center 26%;display:block;
+  filter:brightness(1.3) saturate(1.1)}
+.ico::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:rgba(255,255,255,.10);z-index:2}
+.ico>i.bar{position:absolute;left:0;bottom:0;height:3px;width:55%;z-index:3;
+  background:#5cd6ff;box-shadow:0 0 7px rgba(92,214,255,.85)}
+
+/* ══ 기준 · 지금 ══ */
+.v0 .ico>b{position:absolute;right:-3px;top:-3px;min-width:15px;height:15px;padding:0 2px;
+  border-radius:3px;background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.42);
+  color:#dff2ff;font:800 9.5px/15px 'Rajdhani',sans-serif;text-align:center;z-index:4}
+
+/* ══ ① 판 없는 코너 숫자 ══ */
+.v1 .ico>b{position:absolute;right:1px;top:0;z-index:4;color:#eaf6ff;
+  font:800 9px/1 'Rajdhani',sans-serif;text-shadow:0 1px 2px #000,0 0 4px #000}
+.s14.v1 .ico>b{font-size:7.5px}
+
+/* ══ ② 진행선 위 오른쪽 ══ */
+.v2 .ico>b{position:absolute;right:1.5px;bottom:4px;z-index:4;color:#cfe6ff;
+  font:800 9px/1 'Rajdhani',sans-serif;text-shadow:0 1px 2px #000}
+.s14.v2 .ico>b{font-size:7px}
+
+/* ══ ③ 왼쪽 아래 어두운 사선 귀퉁이 ══ */
+.v3 .ico>b{position:absolute;left:0;top:0;z-index:4;padding:0 2.5px 1px 1.5px;
+  background:rgba(8,12,18,.82);border-bottom-right-radius:4px;color:#dff2ff;
+  font:800 8.5px/1.35 'Rajdhani',sans-serif}
+.s14.v3 .ico>b{font-size:7px;padding:0 2px 1px 1px}
+
+/* ══ ④ 숫자 대신 점 ══ */
+.v4 .ico>b{position:absolute;right:2px;top:2px;z-index:4;display:flex;gap:1.5px;font-size:0}
+.v4 .ico>b i{width:2.5px;height:2.5px;border-radius:50%;background:#7fd8ff;
+  box-shadow:0 0 3px rgba(92,214,255,.9)}
+.s14.v4 .ico>b i{width:2px;height:2px}
+
+/* ══ ⑤ 오른쪽에 붙는 탭 ══ */
+.v5 .holder>b{position:absolute;left:calc(50% + var(--hw));top:0;height:100%;
+  display:flex;align-items:center;padding:0 3px;border-radius:0 3px 3px 0;
+  background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.24);
+  color:#dff2ff;font:800 8.5px/1 'Rajdhani',sans-serif}
+.s14.v5{--hw:7px} .s25.v5{--hw:12.5px}
+.s14.v5 .holder>b{font-size:7px;padding:0 2.5px}
+
+/* ══ ⑥ 위쪽 작은 캡슐 ══ */
+.v6 .holder>b{position:absolute;left:50%;bottom:calc(100% + 2px);transform:translateX(-50%);
+  padding:0 4px;height:11px;border-radius:6px;background:#0d1218;
+  box-shadow:0 0 0 1px rgba(150,200,240,.28);color:#dff2ff;
+  font:800 8px/11px 'Rajdhani',sans-serif;white-space:nowrap}
+
+/* ══ ⑦ 아래 진행선 오른쪽 바깥 ══ */
+.v7 .holder>b{position:absolute;left:calc(50% + var(--hw) + 3px);bottom:0;
+  color:#9fc6e4;font:800 8.5px/1 'Rajdhani',sans-serif;text-shadow:0 1px 2px #000}
+.s14.v7{--hw:7px} .s25.v7{--hw:12.5px}
+.s14.v7 .holder>b{font-size:7px}
+
+/* ══ ⑧ 뒤에 겹친 판(장 수로 읽는다) ══ */
+.v8 .holder>i.stack{position:absolute;left:50%;top:-3px;transform:translateX(-50%);
+  width:calc(var(--w) - 6px);height:4px;border-radius:2px 2px 0 0;background:#0d1218;
+  box-shadow:0 0 0 1px rgba(150,200,240,.22)}
+.v8 .holder>i.stack.s2{top:-6px;width:calc(var(--w) - 11px)}
+.s14.v8{--w:14px} .s25.v8{--w:25px}
+</style></head><body>
+<h1>생산 표시 — 대기 수를 어디에</h1>
+<p class="sub">맨 앞이 <b>지금</b>이다. 왼쪽이 <b>축소(14px)</b>, 오른쪽이 <b>확대(25px)</b> — 실제 크기 그대로다.<br>
+축소에서 배지가 판만큼 커지는 것이 지금의 문제다.</p>
+
+<div class="gh">기준 — 지금</div>
+<div class="grid" style="max-width:250px">
+  <div class="cell base">
+    <div class="no"><b>지금</b><span>고칠 대상</span></div>
+    <p class="dsc">판 배지 15px 고정 — 14px 아이콘에서는 <b>판보다 크다</b>.</p>
+    <div class="pair">
+      <div class="one s14 v0"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v0"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="gh">Ⓐ 안쪽에 두되 깔끔하게 (4안)</div>
+<div class="grid">
+  <div class="cell">
+    <div class="no"><b>①</b><span>판 없는 코너</span></div>
+    <p class="dsc">배지 판을 없애고 <b>글자만</b> — 그림자로 띄운다. 자리를 거의 안 먹는다.</p>
+    <div class="pair">
+      <div class="one s14 v1"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v1"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>②</b><span>진행선 위</span></div>
+    <p class="dsc">아래쪽 <b>진행선 바로 위</b>에 붙인다 — 얼굴을 안 가린다.</p>
+    <div class="pair">
+      <div class="one s14 v2"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v2"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>③</b><span>왼쪽 위 귀퉁이</span></div>
+    <p class="dsc">왼쪽 위 <b>어두운 귀퉁이</b> 안에. 판 밖으로 안 튀어나온다.</p>
+    <div class="pair">
+      <div class="one s14 v3"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v3"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b>2</b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+  <div class="cell">
+    <div class="no"><b>④</b><span>점으로</span></div>
+    <p class="dsc">숫자 대신 <b>점</b> — 대기 수만큼. 축소에서도 안 뭉갠다(많으면 못 센다).</p>
+    <div class="pair">
+      <div class="one s14 v4"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b><i></i><i></i></b></span></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v4"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i><b><i></i><i></i></b></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="gh">Ⓑ 숫자를 밖으로 (4안)</div>
+<div class="grid">
+  <div class="cell">
+    <div class="no"><b>⑤</b><span>오른쪽 탭</span></div>
+    <p class="dsc">판 <b>오른쪽에 붙는 칸</b>. 얼굴을 하나도 안 가린다 — 대신 가로로 넓어진다.</p>
+    <div class="pair">
+      <div class="one s14 v5"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span><b>2</b></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v5"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span><b>2</b></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑥</b><span>위쪽 캡슐</span></div>
+    <p class="dsc">판 <b>위에 작은 캡슐</b>. 세로로 조금 높아지지만 판은 온전하다.</p>
+    <div class="pair">
+      <div class="one s14 v6"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span><b>×2</b></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v6"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span><b>×2</b></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑦</b><span>오른쪽 아래 글자만</span></div>
+    <p class="dsc">판 <b>바깥 오른쪽 아래</b>에 글자만. 가장 조용하지만 배경이 밝으면 묻힌다.</p>
+    <div class="pair">
+      <div class="one s14 v7"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span><b>2</b></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v7"><span class="holder"><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span><b>2</b></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="no"><b>⑧</b><span>뒤에 겹친 장</span></div>
+    <p class="dsc">숫자를 아예 안 쓰고 <b>뒤에 판이 겹쳐</b> 보인다 — 카드 더미처럼. 셋 이상은 못 센다.</p>
+    <div class="pair">
+      <div class="one s14 v8"><span class="holder"><i class="stack"></i><i class="stack s2"></i><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span></span><span class="bldg"></span><span class="cap">14px</span></div>
+      <div class="one s25 v8"><span class="holder"><i class="stack"></i><i class="stack s2"></i><span class="ico"><img src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></span></span><span class="bldg"></span><span class="cap">25px</span></div>
+    </div>
+  </div>
+</div>
+</body></html>

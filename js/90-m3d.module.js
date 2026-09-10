@@ -175,6 +175,15 @@ function attachSwords(model, baseH){
   });
 }
 const models=new Map();   // uid -> {holder,view,yaw,anim,id,h,breathe,lean,seenSeq,dying,deadT}
+/* 📦 **눈에 보이는 것만** 감싸는 상자 (2026-09-08)
+ *   ⚠ Box3.setFromObject 는 안 보이는 노드(빈 노드·헬퍼·꺼 둔 메시)까지 감싼다. 건물 위에 뜨는
+ *     표시의 자리로 쓰려면 그러면 안 된다 — 그림보다 위에서 상자가 끝나 표시가 붕 뜬다(실측 24px).
+ *   ⛔ 이 함수를 **크기 맞춤(fitW)에 쓰지 말 것** — 거기는 예전부터 yaw 전체를 기준으로 재 왔고,
+ *     기준을 바꾸면 모든 건물 크기가 한꺼번에 달라진다. 여기는 **자리 계산 전용**이다. */
+function _visBox(root){ if(!root) return null;
+  const box=new THREE.Box3(); let any=false;
+  root.traverseVisible(function(o){ if(o.isMesh && o.geometry){ box.expandByObject(o); any=true; } });
+  return any ? box : null; }
 // ── 선택링 인스턴스 배치: 다중 선택 시 유닛마다 개별 링 메시(=드로우콜)를 그리면 수백 기 선택에서 CPU 병목 →
 //    정규화 링 지오메트리 1개를 InstancedMesh로 그려 전체 선택링을 드로우콜 1개로 합침(색·반지름은 인스턴스별)
 const RING_MAX=600;   // 동시 표시 가능한 선택링 수(유닛 상한 100의 여유분)
@@ -1046,6 +1055,20 @@ function techMap3DStop(){ if(_tmRAF){ cancelAnimationFrame(_tmRAF); _tmRAF=0; } 
 Object.keys(CST_GLB).forEach(function(k){ if(!MODELS['cb_'+k]) MODELS['cb_'+k]=CST_GLB[k]; });   // 건설 건물 → 게임 MODELS(cb_) 등록(네모 '*' 로딩 제외)
 window.M3D={
   ready:()=>ready,
+  /* 📍 **그려진 모델의 꼭대기** — 화면 정규 좌표(0~1, 캔버스 기준)로 돌려준다 (2026-09-08).
+   *   건물 위에 뜨는 표시(생산 아이콘)가 「발자국 윗변」이 아니라 **실제로 그린 그림의 꼭대기**에
+   *   붙게 하려고 낸 창구다. ⛔ 호출부에서 모델 높이를 표로 들고 있지 말 것 — 모델을 바꾸면 어긋난다.
+   *   ⚠ 카메라가 **직교**라 월드→화면이 선형이다(원근 보정이 필요 없다).
+   *   ⚠ 그 모델이 아직 안 그려졌으면 null — 호출부는 발자국 기준으로 물러서면 된다. */
+  topOf:(uid)=>{ const m=uid!=null?(buildModels.get(uid)||models.get(uid)):null;
+    if(!m||m._topW==null||!camera||!renderer||!renderer._w) return null;
+    const cw=camera.right-camera.left, chh=camera.top-camera.bottom;
+    if(!(cw>0)||!(chh>0)) return null;
+    // h = **화면에서의 모델 높이**(정규). 위에 뜨는 표시를 모델 크기에 비례해 내릴 때 쓴다 —
+    //   상자 꼭대기는 실루엣보다 조금 위라(안테나 등) 높은 모델일수록 더 떠 보인다.
+    return { x:((m._cxW!=null?m._cxW:m.holder.position.x)-camera.left)/cw,
+             y:(camera.top-m._topW)/chh,
+             h:(m._botW!=null?(m._topW-m._botW)/chh:0) }; },
   cstShow:(canvas,key)=>cstShowModel(canvas,key),   // 건설 섹션 건물 3D 프리뷰(회전)
   bldgImage:(key)=>bldgImage(key),   // 건물 glb → 맵 배치용 3D 렌더 이미지(dataURL/null)
   techMap3DSync:()=>techMap3DSync(),   // 건설 맵 라이브 3D: 배치 건물 실모델 렌더/동기화
@@ -1377,7 +1400,13 @@ window.M3D={
       m.holder.scale.setScalar((SCALE[it.id]||MODEL_SCALE)*mul*(it.scl||1));
       m.holder.position.set(it.x*W, (H-it.y*H)-Y_DROP-(it.yoff||0), (it.z!=null?it.z:it.y*H*2.5));   // yoff=화면 아래로 내림 · z=화면 아래일수록 앞(겹칠 때 아래 건물이 앞에 보임)
       m.holder.rotation.x = it.pitch||0;   // 건물 사선 틸트(SC식 부감) — 미지정=0(기존 동작 유지)
-      if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y + (it.lift||0) - (it.dy||0); }   // 폭을 footprint에 꽉 맞춤 + 최하단을 footprint 하단으로 + 🛫 lift(부양 높이) 적용
+      if(it.fitW){ const _fw=it.fitW*(CB_FIT_MUL[it.id]||1); m.holder.updateWorldMatrix(true,true); let _bb=new THREE.Box3().setFromObject(m.yaw); const _pw=_bb.max.x-_bb.min.x; if(_pw>0.5){ m.holder.scale.multiplyScalar(_fw/_pw); m.holder.updateWorldMatrix(true,true); _bb=new THREE.Box3().setFromObject(m.yaw); } m.holder.position.y += ((H-it.y*H)+1) - _bb.min.y + (it.lift||0) - (it.dy||0);
+        // 📍 **그려진 꼭대기를 적어 둔다**(2026-09-08) — 건물 위에 뜨는 표시(생산 아이콘)가 쓸 자리다.
+        //   ⛔ 발자국 윗변으로 대신하지 말 것 — 모델마다 높이·비율이 달라 건물마다 뜨는 자리가 달라진다
+        //     (사용자 신고). 여기 값은 **실제로 그린 상자**라 모델이 바뀌어도 저절로 맞는다.
+        //   ⚠ 위치를 옮긴 **뒤에** 잰다(위 position.y 보정 다음). 카메라는 직교라 화면 환산이 선형이다.
+        m.holder.updateWorldMatrix(true,true); { const _b2=_visBox(m.yaw);
+          if(_b2){ m._topW = _b2.max.y; m._botW = _b2.min.y; m._cxW = (_b2.max.x + _b2.min.x) / 2; } } }   // 폭을 footprint에 꽉 맞춤 + 최하단을 footprint 하단으로 + 🛫 lift(부양 높이) 적용
       if(it.buildP!=null){   // 🏗 건설 중: 하단→상단 채움(월드 Y) + 유닛보다 뒤(z)에 그려 겹쳐도 유닛이 보임
         if(!m._bldMats){ try{ m._bldMats=cloneMats(m.anim); if(m._bldMats) for(const _mt of m._bldMats){ const _orig=_mt.onBeforeCompile; _mt._fillY={value:-1e9}; _mt._flashY={value:-1e9}; _mt._flashI={value:0};   // 채움선 + 완성 빛 스윕 유니폼
           _mt.onBeforeCompile=(sh)=>{ if(_orig) _orig(sh); sh.uniforms.uFillY=_mt._fillY; sh.uniforms.uFlashY=_mt._flashY; sh.uniforms.uFlashI=_mt._flashI;   // 원래 림 셰이더 유지 + 채움/빛 게이팅

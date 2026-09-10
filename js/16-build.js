@@ -296,6 +296,15 @@ function _segInRect(ax,ay,bx,by,R){ const dx=bx-ax, dy=by-ay; let t0=0, t1=1;   
   if(t1-t0<1e-9) return false;
   const tm=(t0+t1)/2, mx=ax+dx*tm, my=ay+dy*tm, E=1e-9;
   return mx>R.x0+E && mx<R.x1-E && my>R.y0+E && my<R.y1-E; }
+/* 🧍 **일꾼이 서는 자리** — 값 둘이 단일 소스다(2026-09-08 · 시안 비교용으로 이름을 뺐다).
+ *   ⚠ 값을 바꿨으면 `node scripts/camp-worker-shot.mjs` 로 **눈으로 볼 것**(숫자로는 안 보인다).
+ *   ⛔ 여기 말고 다른 곳에서 서는 자리를 다시 계산하지 말 것 — 두 벌이 되면 반드시 어긋난다. */
+let TECH_MINE_STAND = 1.7;   // 채취: 광맥 상자 가장자리에서 더 물러서는 몫(1 = 일꾼 반지름만큼)
+//   ⭐ 1.0 → 1.7(2026-09-08 사용자 확정 · 시안 docs/mock/camp-worker-8 ②안).
+//     ⛔ 1.0 이하로 되돌리지 말 것 — 일꾼이 덩어리에 **반쯤 파묻혀** 캐는 것처럼 보인다.
+let TECH_BUILD_SIDE = 1.0;   // 건설: 건물 발판 반지름의 몇 배 자리에 서는가(1 미만 = 발판 안쪽)
+//   ⭐ 0.6 → 1.0(같은 날 ④안) — **발판 가장자리**에 선다.
+//     ⛔ 발판 안쪽(1 미만)으로 되돌리지 말 것 — 건물 그림에 겹쳐 「짓는 중」이 안 읽힌다.
 const TECH_MINE_EXP=0.06;   // 미네랄 충돌 상자를 타일보다 살짝 키워(±0.06칸) 인접 상자끼리 겹치게 → 사이 틈(seam)으로 못 빠져나감
 function _techMineralRects(){ const out=[], cw=_techCW(), ch=_techCH(), ex=TECH_MINE_EXP*cw, ey=TECH_MINE_EXP*ch; for(const m of (G.tech.minerals||[])){ out.push({x0:m.x-0.5*cw-ex, x1:m.x+0.5*cw+ex, y0:m.y-0.5*ch-ey, y1:m.y+0.5*ch+ey}); } return out; }   // 💎 미네랄 = 통과 불가 벽(1×1, 살짝 겹침)
 function _techNavRects(e){ const out=[]; for(const b of G.tech.ents){ if(b.type!=='bldg'||b.eid===e.build||b._lifted) continue;   // 🛫 부양 건물=공중이라 지상 통과(장애물 아님) if(b.bt>0&&!b._bpause) continue;   // 벽 = 완성/일시정지 건물(건설 중은 통과 허용, 자기가 짓는 건물 제외)
@@ -398,7 +407,7 @@ function techSeparate(){ if(!G.tech||!GW||!GH) return false; const es=G.tech.ent
   for(let i=0;i<items.length;i++){ if(Math.abs(items[i].ref.x-b0[i][0])>1e-9 || Math.abs(items[i].ref.y-b0[i][1])>1e-9) return true; }
   return false; }
 function _techBldgSide(bd, i){ const race=G.tech.race, f=(typeof _techFoot==='function')?_techFoot(race,bd.bk):{w:2,h:2};   // 건물 상/우/하/좌 지점 — 발판 안쪽(≈0.6배)이라 일꾼이 건물 위에 겹쳐 서고, 반대 면으로 갈 때 건물 중앙을 가로지름
-  const hw=(f.w/2)*_techCW()*0.6, hh=(f.h/2)*_techCH()*0.6;
+  const hw=(f.w/2)*_techCW()*TECH_BUILD_SIDE, hh=(f.h/2)*_techCH()*TECH_BUILD_SIDE;
   const sd=[{x:bd.x,y:bd.y-hh},{x:bd.x+hw,y:bd.y},{x:bd.x,y:bd.y+hh},{x:bd.x-hw,y:bd.y}][i%4];   // 상·우·하·좌
   return { x:Math.max(techBX0(),Math.min(techBX1(),sd.x)), y:Math.max(techBY0(),Math.min(techBY1(),sd.y)) }; }
 // ═══ 💎⚡ 자원 채취(미네랄=크레딧 / 가스=에너지) — 덩어리 독점·왕복·8씩 적립·반납 ═══
@@ -476,7 +485,8 @@ function _techMineSpot(res, fromX, fromY){ const cw=_techCW(), ch=_techCH();
   const gx=uRp/(GW||390), gy=uRp/(GH||390), bx=0.5*cw+TECH_MINE_EXP*cw, by=0.5*ch+TECH_MINE_EXP*ch;
   let dx=fromX-cx0, dy=fromY-cy0; if(Math.abs(dx)<1e-6&&Math.abs(dy)<1e-6) dy=1;
   const ideal=Math.atan2(dy,dx);
-  const spotAt=(a)=>{ const ca=Math.cos(a), sa=Math.sin(a), tX=Math.abs(ca)>1e-6?hw/Math.abs(ca):1e9, tY=Math.abs(sa)>1e-6?hh/Math.abs(sa):1e9, t=Math.min(tX,tY); return { x:cx0+ca*t+ca*gx, y:cy0+sa*t+sa*gy }; };
+  // 🧍 상자 가장자리에서 **얼마나 더 물러서는가** — TECH_MINE_STAND 가 그 몫이다(1 = 일꾼 반지름만큼).
+  const spotAt=(a)=>{ const ca=Math.cos(a), sa=Math.sin(a), tX=Math.abs(ca)>1e-6?hw/Math.abs(ca):1e9, tY=Math.abs(sa)>1e-6?hh/Math.abs(sa):1e9, t=Math.min(tX,tY); return { x:cx0+ca*t+ca*gx*TECH_MINE_STAND, y:cy0+sa*t+sa*gy*TECH_MINE_STAND }; };
   const blocked=(s)=> others.some(m=> s.x>m.x-bx && s.x<m.x+bx && s.y>m.y-by && s.y<m.y+by);   // 다른 미네랄 상자 안이면 막힘
   for(let i=0;i<8;i++){ const a=ideal + (i%2?1:-1)*Math.ceil(i/2)*(Math.PI/4); const s=spotAt(a); if(!blocked(s)) return s; }   // ideal 방향부터 ±45,±90,±135,180 순으로 열린 면 채택
   return spotAt(ideal); }   // 다 막히면 폴백
@@ -858,7 +868,16 @@ function techTick(dt){ if(!G.tech) return; let active=false, done=false;
   const _panLive=(_panSig!=null && _panSig!==G.tech._panSig);   // 표시값(정수) 변화 감지
   if(done){ if(_techHold) _techDirty=true; else techUIRender(); }
   else { let _panDone=false;
-    if(active||_vmoving){ if(_techHold && !_vmoving) _techDirty=true; else techMapRender();   // 🎥 팬·줌 중이면 손가락이 닿아 있어도 그린다(17-build-cards.js 의 _vmoving 주석)
+    // 🖐 **끌고 있는 동안에도 그린다** — 팬·줌과 같은 이유다(2026-09-08 사용자 신고).
+    //   ⛔ 손가락이 닿아 있다고 무조건 멈추면 안 된다: 유닛을 끌어 옮기는 동안 3D 는 따라가는데
+    //     DOM 라벨(지정 링·HP 바)만 얼어붙어 **제자리에 남았다가 손을 떼야 따라온다**
+    //     (실측 2026-09-08: 드래그 중 183px 까지 벌어짐 · 손 뗀 순간 0px).
+    //   ⚠ _techHold 가 원래 막던 것은 **버튼 클릭**이다 — 맵을 innerHTML 로 다시 그리면 누르고 있던
+    //     요소가 사라져 click 이 안 난다. 이동 명령을 끄는 중에는 누를 버튼이 없으므로 해당이 없다.
+    const _dragMv = _vmoving
+      || !!(typeof _btCmd !== 'undefined' && _btCmd)                       // 기지: 지정 유닛 이동 끌기
+      || !!(typeof _campCmd !== 'undefined' && _campCmd);                  // 캠프 던전: 같은 것
+    if(active||_dragMv){ if(_techHold && !_dragMv) _techDirty=true; else techMapRender();
       const _selB=(G.tech.sel!=null)?G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'):null;   // 선택된 건물(건설·생산·연구·장전 진행) = 프로필 실시간 갱신(스로틀 5/s)
       const _selU1=((G.tech.selU||[]).length===1)?G.tech.ents.find(x=>x.eid===G.tech.selU[0]):null;   // 단일 지정 유닛(캐리어·리버 장전)
       if((_selB && (_selB.bt>0 || (_selB._pq&&_selB._pq.length) || _selB._rj || (_selB._chq&&_selB._chq.length))) || (_selU1&&_selU1._chq&&_selU1._chq.length)){ G.tech._panT=(G.tech._panT||0)+dt; if(G.tech._panT>=0.2){ G.tech._panT=0; techPanelRender(); _panDone=true; } } }
@@ -874,6 +893,15 @@ const TECH_MODEL={
 // 건설 건물 고정 스펙 — s: 목표 화면크기(모델 바운딩박스로 정규화 → 파일 재추가·다른 맵에도 동일 크기) · f: 정면 방향(yaw 라디안)
 // 값만 바꾸면 크기·정면이 확정됨. (스웜·에테리얼은 미지정 시 자동크기 55·정면 0.34)
 // 타일 비율 기준 크기(s): 4x3=64 · 4x2=58 · 3x3=52 · 3x2=46 · 2x2=36 · f=정면 yaw
+/* 🕐 생산 표시 크기 — **격자 한 칸에서 뽑는다**(2026-09-08). 칸 기준이라 건물 종류와 무관하게 같다.
+ *   식은 「바닥 + 칸 × 몫」이다. ⛔ 순수 비례(바닥 0)로 되돌리지 말 것 — 그러면 최소 줌에서 14px 이라
+ *     얼굴이 안 읽혔다(2026-09-08 사용자 요청 「축소 때 조금만 키워 달라」).
+ *   ⛔ 하한(clamp)으로 키우지도 말 것 — 하한에 걸리는 구간에서 크기가 멈춰 「줌에 따라 비율이 흔들리는」
+ *     옛 문제가 그대로 돌아온다(그것이 애초의 신고였다). 바닥값은 **연속**이라 그 꺾임이 없다.
+ *   실측(줌 1.45 / 2.0 / 2.6): 18 / 21 / 25px — 확대 쪽은 그대로 두고 축소 쪽만 올린 값이다. */
+const CST_PROD_BASE = 9;      // 축소에서도 읽히게 하는 바닥(px)
+const CST_PROD_K    = 0.73;   // 격자 한 칸이 키우는 몫
+const CST_PROD_DY   = 0.12;   // 모델 꼭대기에서 **아래로** 내리는 몫(모델 높이 대비 · 양수=겹침)
 const CST_BLDG_CFG={
   // 유니온(테란)
   union_command_center:{s:64,f:0,dy:8},   // dy = 발판 대비 세로 미세 보정(px, +면 아래로) — 다른 건물과 눈높이 맞춤
@@ -1096,7 +1124,9 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
           // 🎨 **색이 있는 초상**을 쓴다 — 회색 프로필(un_*)은 작게 뜨면 뭔지 안 읽힌다.
           const _face=(_q0.id && typeof unitFaceColorHTML==='function') ? unitFaceColorHTML(_q0.id)
                      : ((_q0.id && typeof unitPortraitHTML==='function') ? unitPortraitHTML(_q0.id) : '');
-          const _qn=(e._pq&&e._pq.length>1) ? '<b>'+e._pq.length+'</b>' : '';
+          // 🔢 대기 수는 **판 위 작은 캡슐**이다(2026-09-08 사용자 확정 · 목업 camp-prodnum-8 ⑥안 + camp-prodcap-4 ①안).
+          //   ⛔ 판 안 오른쪽 위 배지로 되돌리지 말 것 — 축소(18px)에서 배지가 판만큼 커져 얼굴을 덮었다.
+          const _qn=(e._pq&&e._pq.length>1) ? '<b>×'+e._pq.length+'</b>' : '';
           // ⚠ **크기는 건물 발자국에서 px 로 계산해 넣는다**(2026-09-03 사용자 확정).
           //   ⛔ 건물 요소(.bent) 안에 두고 width:% 로 주지 말 것 — .bent 는 **크기 없는 앵커**라
           //     (3D 가 그린다) % 가 0 이 되어 아이콘이 3~8px 로 찌부러진다(실측).
@@ -1104,12 +1134,29 @@ function techMapRender(){ const map=document.getElementById('cstMain'); if(!map)
           //     「비율이 왔다 갔다」 한다(사용자 지적).
           //   ⭐ 그래서 발자국 폭(_bf.w × 칸폭 × 줌 × 맵 px)의 일정 비율로 **매 프레임 다시 잰다.**
           const _br=(typeof _btRect==='function')?_btRect():null;
-          const _bpx=_br ? (_bf.w*_techCW()*techView().zoom*_br.width) : 40;
-          //   ⭐ 0.62 → **0.31**(2026-09-03 사용자 요청 「절반으로」) — 건물 폭의 약 1/3.
-          const _isz=Math.max(12, Math.round(_bpx*0.31));
-          const _ip2=_techW2S(e.x, e.y-(_bf.h/2)*_techCH());
+          // 📍 **자리 = 그려진 모델의 꼭대기**(2026-09-08 사용자 확정 · A안).
+          //   ⛔ 발자국 윗변으로 되돌리지 말 것 — 3D 는 발자국 **아랫변**에서 위로 그리고 모델마다
+          //     높이·비율이 달라서, 발자국을 기준 삼으면 **건물마다 뜨는 자리가 달라진다**(사용자 신고).
+          //   ⭐ M3D.topOf(uid) 가 실제로 그린 상자의 꼭대기를 화면 정규 좌표로 돌려준다 — 모델을
+          //     바꿔도 저절로 맞는다. 아직 안 그려졌으면 null 이라 발자국 기준으로 물러선다.
+          const _m3k='cst_'+race+'_'+((TECH_MODEL[race]||{})[e.bk]||'')+'_'+e.eid;
+          const _top=(window.M3D && M3D.topOf) ? M3D.topOf(_m3k) : null;
+          const _ip2=_top || _techW2S(e.x, e.y-(_bf.h/2)*_techCH());
+          // 📏 **크기는 격자 한 칸 기준**이다 — ⛔ 건물 발자국 폭으로 재지 말 것: 작은 건물의
+          //   아이콘만 작아지고, 하한(옛 12px)에 걸리면 줌을 키워도 안 커져 **비율이 흔들렸다**
+          //   (실측 2026-09-08: 보급고 0.496 → 0.448 → 0.479 → 0.460).
+          const _cellPx=_br ? (_techCW()*techView().zoom*_br.width) : 24;
+          const _isz=Math.max(16, Math.min(46, Math.round(CST_PROD_BASE + _cellPx*CST_PROD_K)));
+          // ⚠ 높이도 **모델 높이에 비례**시킨다 — 상자 꼭대기는 실루엣보다 조금 위라(안테나·굴뚝)
+          //   **높은 건물일수록 더 떠 보였다**. 판 크기로 내리면 그 차이가 안 잡힌다.
+          //   ⚠ 부호를 인라인 문자열에서 빼지 말 것 — 음수면 `margin-top:--2px` 이 되어 통째로 무시된다.
+          const _mh=(_top && _top.h>0 && _br) ? _top.h*_br.height : 0;
+          const _gap=Math.round((_mh>0 ? _mh : _isz)*CST_PROD_DY);
+          // 🔷 모서리 컷은 판 크기에 비례한다 — 고정하면 축소(18px)에서 과하게 잘린다.
+          const _ch=Math.max(3, Math.round(_isz*0.2));
           labels+='<div class="bprodIco" style="left:'+(_ip2.x*100).toFixed(2)+'%;top:'+(_ip2.y*100).toFixed(2)+'%;'
-            +'width:'+_isz+'px;height:'+_isz+'px;--p:'+_pd.toFixed(1)+'%"><span>'+_face+'</span>'+_qn+'</div>'; } } }
+            +'width:'+_isz+'px;height:'+_isz+'px;margin-top:'+_gap+'px;--ch:'+_ch+'px;--p:'+_pd.toFixed(1)+'%">'
+            +'<span>'+_face+'</span><i class="bpBar"></i>'+_qn+'</div>'; } } }
     else if(e.type==='larva'){ const _lh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_larva')&&!(G.opt&&G.opt.model3d===false)); cls='larvaE'+(_lh3?' live3d':''); inner=_lh3?'':'<span class="lvWig">🐛</span>'; }   // 🐛 라바 · 3D 로드 시 빈 앵커 + live3d(2D 네모 아웃라인 제거 → 유닛과 동일한 3D 하단링)
     else if(e.type==='egg'){ const _eh3=!!(window.M3D&&M3D.ready&&M3D.ready()&&M3D.hasModel&&M3D.hasModel('swarm_egg')&&!(G.opt&&G.opt.model3d===false)); cls='eggE'+(_eh3?' live3d':''); inner=_eh3?'':'<span class="eggWig">🥚</span>'; }   // 🥚 알(변태 중) · 3D 로드 시 빈 앵커(swarm_egg 모델로 렌더)
     else if(e.type==='worker'||e.type==='unit'){ const _mk=_techEntModel(e);

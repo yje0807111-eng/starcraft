@@ -578,3 +578,8 @@ body.vgMode #townScreen{padding-bottom:var(--navH)}
 /* 제목 — 설정 화면과 같은 크기·자리(왼쪽 정렬) */
 #campRaceOv .crHd{display:flex;align-items:flex-start;justify-content:space-between}
 #campRaceOv .crTtl{font-family:var(--font-ti);font-size:21px;color:#fff}
+
+/* ══════════ [30-home.css] 2026-09-10 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
+/* 🏕 캠프(0단계)를 고르면 라운드 칸을 잠근다 — 캠프에는 라운드가 없다(CAMP_MINE[0]) */
+.cdRnd.off{opacity:.3;pointer-events:none}
+.cdRnd .cdSl{border-bottom:0;margin-bottom:0;padding-bottom:2px}

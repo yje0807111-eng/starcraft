@@ -1275,3 +1275,57 @@ function campPickRace(){
   //        캠프가 두 번 나온다). 걷는 일은 campRaceToCamp 이 다 덮은 뒤에 한다.
   campRaceToCamp();
 }
+
+// ── [js/06-daily.js] _tutoLv
+function _tutoLv(k){ return (typeof campUpgLv==='function' && campUpgLv(k)>0) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoCost
+// 💰 값과 지갑 — 「모으기」 단계가 쓴다. 값은 **살 때마다 오르므로** 그때그때 물어본다.
+function _tutoCost(k){ return (typeof campUpgCost==='function') ? Math.max(1, campUpgCost(k)|0) : 1; }
+
+// ── [js/06-daily.js] _tutoPickedU
+// 🚶 뽑은 유닛을 **실제로 옮겼나**. 이동 목표(tx)는 도착하면 사라지므로 그것만 보면 놓친다 —
+//   그래서 **시작 자리를 기억해 두고** 달라졌는지 함께 본다(S.mv0 · 단계가 바뀌면 지운다).
+// 👆 전투 유닛을 **지정했나**(일꾼이 아니라). 지정이 곧 「옮길 대상을 골랐다」는 뜻이다.
+function _tutoPickedU(){
+  const T=(typeof G!=='undefined')?G.tech:null;
+  const id=_tutoUnitId(); if(!id) return 1;
+  if(!T || !(T.selU||[]).length) return 0;
+  return T.selU.some(x=>{ const e=(T.ents||[]).find(y=>y && y.eid===x);
+    return !!(e && e.type==='unit' && e.uid===id); }) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoMovedTo
+function _tutoMovedTo(){
+  const T=(typeof G!=='undefined')?G.tech:null;
+  if(!T) return 0;
+  const id=_tutoUnitId(); if(!id) return 1;                       // 뽑을 유닛이 없는 종족이면 건너뛴다
+  const u=(T.ents||[]).find(e=>e && e.type==='unit' && e.uid===id);
+  if(!u) return 0;                                                // 아직 안 나왔다
+  if(u.tx!=null) return 0;                                        // 가는 중 — **멈춰야** 넘어간다
+  const p=_tutoBox && _tutoBox.kind==='move' ? _tutoBox : null;
+  if(!p) return 0;
+  return (Math.hypot(u.x-p.wx, u.y-p.wy) <= p.wr) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoPanMode
+// 🖐 화면 이동 모드가 켜졌나 — DOM 으로 본다(#cstMain.campPan · campPanMode 가 붙인다).
+//   ⛔ 롱프레스 이벤트를 여기서 세지 말 것: 캠프가 이미 그 판정을 갖고 있다(두 벌이 된다).
+function _tutoPanMode(){
+  const m=document.getElementById('cstMain');
+  if(m && m.classList.contains('campPan')) return 1;
+  return (typeof _campPanMode!=='undefined' && _campPanMode) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoView
+// 🔍 화면을 **확대했나 / 움직였나** — 시점(techView)이 그 단계에 들어올 때와 달라졌는지 본다.
+//   ⛔ 두 손가락 이벤트를 직접 세지 말 것: 캠프·관리자 탭이 같은 조작을 공유해 두 벌이 된다.
+function _tutoView(kind){
+  const S=guideState(); if(!S || typeof techView!=='function') return 0;
+  const v=techView(); if(!v) return 0;
+  const key=(kind==='zoom') ? 'vw0' : 'vp0';
+  const now=(kind==='zoom') ? String(Math.round((v.zoom||1)*100))
+                            : (Math.round((v.x||0)*1000)+','+Math.round((v.y||0)*1000));
+  if(S[key]==null){ S[key]=now; return 0; }
+  return (now!==S[key]) ? 1 : 0; }
+
+// ── [js/06-daily.js] _tutoMoveRect
+// 🚪 유닛을 데려갈 자리 — 링이 이 사각형을 감싼다.
+function _tutoMoveRect(){ return (_tutoBox && _tutoBox.kind==='move') ? _tutoBox : null; }

@@ -6163,6 +6163,208 @@ async function groupLobby(){
     return '복귀 · 회피 · 목줄 · 부활 자리 ok';
   });
 
+  // 🕐 **생산 표시** — 건물 위 각진 판 + 아래 청록 진행선(2026-09-08 사용자 확정 · 목업 camp-prodico-8 ①안).
+  //    ⛔ 되살아나면 안 되는 옛 것 셋: ① 어두운 원 + 위→아래 덮개 ② 크기 하한(12px)에 걸려 줌에서
+  //      비율이 흔들리던 것 ③ 발자국 윗변에 붙어 건물마다 자리가 달라지던 것.
+  await step('캠프 생산 표시: 건물마다 같은 크기 · 크기 식 일치 · 아래 진행선', async()=>{
+    skipIf(typeof techMapRender!=='function'||typeof G==='undefined'||!G.tech,'건설 맵 없음');
+    const race=G.tech.race, keep=(G.tech.ents||[]).slice(), v0=Object.assign({},techViewT());
+    try{
+      // 발자국이 **다른** 건물 둘을 세운다 — 옛 코드는 여기서 크기가 갈렸다
+      const bl=(TECH_TREE[race].buildings||[]).filter(x=>!x.addonTo&&!x.evolveOnly);
+      const big=bl.find(x=>(_techFoot(race,x.k)||{}).w>=3), small=bl.find(x=>(_techFoot(race,x.k)||{}).w<=2);
+      skipIf(!big||!small,'발자국이 다른 건물 둘을 못 찾음');
+      G.tech.ents=(G.tech.ents||[]).filter(e=>e.type!=='bldg');
+      for(const k of [big.k, small.k]) G.tech.ents.push({ eid:G.tech.eseq++, type:'bldg', bk:k, x:0.35+(k===small.k?0.3:0), y:0.55, bt:0,
+        _pq:[{id:'marine',t:5000,tMax:10000},{id:'marine',t:10000,tMax:10000}] });
+      const szAt=(z)=>{ const t=techViewT(); t.zoom=z; t.x=0.5; t.y=0.55; _techClampView(t);
+        const vv=techView(); vv.zoom=t.zoom; vv.x=t.x; vv.y=t.y; techMapRender();
+        return [...document.querySelectorAll('.bprodIco')].map(n=>n.getBoundingClientRect().width); };
+      const a=szAt(1.45); assert(a.length>=2,'생산 표시가 둘이 안 뜬다: '+a.length);
+      // ① 건물이 달라도 크기가 같다(격자 한 칸 기준)
+      assert(Math.abs(a[0]-a[1])<=1,'건물마다 크기가 다르다: '+a.map(x=>Math.round(x)).join(' vs '));
+      // ② 크기는 **식 그대로**다 — 「바닥 + 격자 한 칸 × 몫」(16-build.js CST_PROD_BASE/K).
+      //    ⛔ 하한(clamp)에 걸려 크기가 멈추면 안 된다 — 그 구간에서 줌을 키워도 안 커져
+      //      「비율이 흔들리는」 옛 문제가 돌아온다(2026-09-08 애초의 신고).
+      //    ⚠ 바닥값이 있어 **순수 비례는 아니다**(축소에서 읽히게 하려고 올린 것) — 식으로 잰다.
+      const exp=()=>{ const cw=_techCW()*techView().zoom*_btRect().width;
+        return Math.max(16, Math.min(46, Math.round(CST_PROD_BASE + cw*CST_PROD_K))); };
+      const zz=techView().zoom, e1=exp();
+      assert(Math.abs(a[0]-e1)<=1,'축소에서 크기가 식과 다르다: '+Math.round(a[0])+'px · 식 '+e1+'px');
+      const b=szAt(zz*1.7), zz2=techView().zoom, e2=exp();
+      assert(Math.abs(b[0]-e2)<=1,'확대에서 크기가 식과 다르다: '+Math.round(b[0])+'px · 식 '+e2+'px');
+      assert(b[0]>a[0]+2,'줌을 키웠는데 안 커진다: '+Math.round(a[0])+' → '+Math.round(b[0]));
+      const got=b[0];
+      // ③ 아래 진행선 — ⛔ 옛 원형 덮개(::after 로 위에서 걷히던 것)로 되돌리지 말 것
+      const ico=document.querySelector('.bprodIco'), bar=ico&&ico.querySelector('.bpBar');
+      assert(bar,'진행선(.bpBar)이 없다 — 옛 원형 덮개로 되돌아갔다');
+      assert(getComputedStyle(ico).borderRadius!=='50%','생산 표시가 다시 원이 됐다');
+      assert(parseFloat(getComputedStyle(bar).width)>0,'진행선이 안 찬다');
+      // 🔷 **모서리 컷 + 그라디언트 링**(2026-09-08 사용자 확정 · ⑧안 + 캡슐 ①안)
+      //   ⛔ 한 겹 1px 테두리·둥근 원으로 되돌리지 말 것.
+      //   ⚠ clip-path 는 **자식까지 자른다** — 판(.bprodIco)에 걸면 위 캡슐이 통째로 사라진다.
+      //     그래서 자르는 것은 안쪽 면(>span)과 링(::before)뿐이어야 한다.
+      { const sp=ico.querySelector('span'), rg=getComputedStyle(ico,'::before');
+        assert(sp && getComputedStyle(sp).clipPath!=='none','안쪽 면에 모서리 컷이 없다');
+        assert(getComputedStyle(ico).clipPath==='none',
+          '판 자신에 clip-path 가 걸렸다 — 위 캡슐이 잘려 안 보인다');
+        assert(/gradient/.test(rg.backgroundImage),'테두리가 그라디언트 링이 아니다');
+        assert(rg.clipPath!=='none','링이 모서리 컷을 안 따라간다'); }
+      return '건물 둘 '+Math.round(a[0])+'px 동일 · 줌 ×1.7 → '+Math.round(got)+'px(식 일치) · 진행선 ok';
+    } finally { G.tech.ents=keep; const t=techViewT(); t.zoom=v0.zoom; t.x=v0.x; t.y=v0.y;
+      const vv=techView(); vv.zoom=v0.zoom; vv.x=v0.x; vv.y=v0.y; techMapRender(); } });
+
+  // 🎒 **일꾼이 든 덩어리** — 「작게 + 머리 위」(2026-09-08 사용자 확정 · 시안 docs/mock/camp-carry-6 ⑤안)
+  //    ⛔ 크기 1.0 으로 되돌리지 말 것: 그건 광맥에 박힌 큰 덩어리 모델 그대로라 **일꾼만큼 크다**.
+  //    ⛔ 앞으로 멀리 밀지 말 것: 몸에서 떨어져 **공중에 뜬 것**처럼 보인다(그게 신고 내용이었다).
+  await step('캠프 일꾼: 든 덩어리는 작고 몸에 붙는다', async()=>{
+    skipIf(typeof TECH_CARRY_SCL==='undefined','운반 값이 없다');
+    assert(TECH_CARRY_SCL<0.7,'덩어리가 너무 크다(크기 '+TECH_CARRY_SCL+') — 일꾼만큼 커 보인다');
+    assert(Math.abs(TECH_CARRY_FWD)+Math.abs(TECH_CARRY_SIDE)<0.008,
+      '덩어리가 몸에서 너무 멀다(앞 '+TECH_CARRY_FWD+' · 옆 '+TECH_CARRY_SIDE+') — 공중에 뜬 것처럼 보인다');
+    return '크기 '+TECH_CARRY_SCL+' · 앞 '+TECH_CARRY_FWD+' · 높이 '+TECH_CARRY_YOFF; });
+
+  // 🖐 **끌고 옮기는 동안에도 지정 링·HP 바가 따라온다**(2026-09-08 사용자 신고).
+  //    ⛔ 손가락이 닿아 있다고 재렌더를 멈추지 말 것(_techHold) — 3D 는 따라가는데 DOM 라벨만
+  //      얼어붙어 제자리에 남았다가 손을 떼야 따라왔다(실측: 드래그 중 183px 벌어짐).
+  await step('캠프: 끌어 옮기는 동안 HP 바가 유닛을 따라온다', async()=>{
+    skipIf(typeof techMapRender!=='function'||typeof G==='undefined'||!G.tech,'건설 맵 없음');
+    const keep=(G.tech.ents||[]).slice(), sel0=(G.tech.selU||[]).slice();
+    try{
+      const C=campState(); if(C){ C.dg=0; C.cleared=0; }
+      G.tech.ents=(G.tech.ents||[]).filter(e=>e.type!=='unit');
+      const e={eid:G.tech.eseq++, type:'unit', uid:'marine', x:0.35, y:0.62, pop:1};
+      G.tech.ents.push(e); G.tech.selU=[e.eid]; G.tech.sel=null;
+      techMapRender(); await sleep(60);
+      const bar=()=>{ const n=document.querySelector('#cstLabels .bentBar'); return n?parseFloat(n.style.left):null; };
+      const unit=()=>_techW2S(e.x,e.y).x*100;
+      assert(bar()!=null,'HP 바가 없다');
+      assert(Math.abs(bar()-unit())<1,'전제: 처음에는 붙어 있어야 한다');
+      // 끌고 있는 상태를 흉내 낸다 — 손가락이 닿아 있고(_techHold) 이동 명령 중(_btCmd)
+      const h0=_techHold; _techHold=1; _btCmd={};
+      try{ e.x=0.62; techTick(0.05); await sleep(40);
+        assert(Math.abs(bar()-unit())<1,
+          '끄는 동안 바가 안 따라온다: 유닛 '+unit().toFixed(1)+'% · 바 '+bar().toFixed(1)+'%'); }
+      finally { _btCmd=null; _techHold=h0; }
+      return '드래그 중 어긋남 0';
+    } finally { G.tech.ents=keep; G.tech.selU=sel0; techMapRender(); } });
+
+  // 🧍 **일꾼이 서는 자리** — 채취 ②안 · 건설 ④안(2026-09-08 사용자 확정 · docs/mock/camp-worker-8)
+  //    ⛔ 채취를 1.0 이하로 되돌리지 말 것: 덩어리에 **반쯤 파묻혀** 캐는 것처럼 보인다.
+  //    ⛔ 건설을 발판 안쪽(1 미만)으로 되돌리지 말 것: 건물 그림에 겹쳐 「짓는 중」이 안 읽힌다.
+  await step('캠프 일꾼: 광맥 앞에 서고 · 건물 가장자리에 선다', async()=>{
+    skipIf(typeof TECH_MINE_STAND==='undefined'||typeof TECH_BUILD_SIDE==='undefined','서는 자리 값이 없다');
+    assert(TECH_MINE_STAND>1.2,'광맥에 너무 붙는다(물러섬 '+TECH_MINE_STAND+') — 덩어리에 파묻혀 보인다');
+    assert(TECH_BUILD_SIDE>=1,'건물 발판 안쪽에 선다(×'+TECH_BUILD_SIDE+') — 건물에 겹쳐 보인다');
+    // 값이 실제로 자리에 쓰이는지 — 물러섬을 키우면 광맥에서 더 멀어져야 한다
+    { const m=(G.tech.minerals||[])[0]; skipIf(!m,'광맥이 없다');
+      const d=(k)=>{ const o=TECH_MINE_STAND; TECH_MINE_STAND=k;
+        const sp=_techMineSpot(m, m.x, m.y+0.2); TECH_MINE_STAND=o;
+        return Math.hypot(sp.x-m.x, sp.y-m.y); };
+      assert(d(2.6)>d(1.0)+1e-6,'물러섬 값이 채취 자리에 안 쓰인다'); }
+    // 🧱 **건설을 시작할 때도 건물 아랫변으로 간다**(2026-09-08 사용자 신고).
+    //    ⛔ 고정 오프셋(옛 bd.y+0.05)으로 되돌리지 말 것 — 칸 높이가 0.0112 라 0.05 는 **4.5칸 아래**다.
+    //      건물 반높이는 1~1.5칸뿐이라, 일꾼이 세 칸이나 떨어진 곳으로 먼저 갔다가 건설이 시작되면
+    //      그제서야 제자리로 붙었다(= 「한참 아래에서 시작한다」).
+    { const race=G.tech.race, bl=(TECH_TREE[race].buildings||[]).filter(x=>!x.addonTo&&!x.evolveOnly);
+      const bk=(bl.find(x=>x.k==='supply')||bl[1]).k, ft=_techFoot(race,bk);
+      const bd={x:0.5,y:0.6,bk,type:'bldg'};
+      const bot=bd.y+(ft.h/2)*_techCH();                 // 발판 아랫변
+      const sd=_techBldgSide(bd,2);
+      assert(Math.abs(sd.y-bot)<=_techCH()*0.6,
+        '건설 자리가 발판 아랫변에서 '+((sd.y-bot)/_techCH()).toFixed(1)+'칸 떨어져 있다'); }
+    return '채취 '+TECH_MINE_STAND+' · 건설 ×'+TECH_BUILD_SIDE+' · 시작 자리 = 아랫변'; });
+
+  // 🧹 **던전을 옮기면 지정이 풀린 기본 상태로 들어간다** (2026-09-08 사용자 확정).
+  //    ⛔ 안 풀면 지정 번호가 **사라진 전장의 것**이라 아무도 못 찾는데 ⊘ 버튼만 켜져 있다.
+  await step('캠프: 던전을 옮기면 지정이 풀린 기본 상태로 들어간다', async()=>{
+    skipIf(typeof campBattleClose!=='function'||typeof campDungeonSwap!=='function','3단계 없음');
+    const dz=$('btDesel'); assert(dz,'해제 버튼이 없다');
+    const setup=()=>{ campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      if(!CAMPB) return null;
+      campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      const u=campDeploy('marine', 0.5, CAMP_LINE_GY); if(u) campSelSet([u]); return u; };
+    // ① 손으로 옮길 때 — campDropGo 가 지나는 길(campBattleClose)
+    { const u=setup(); skipIf(!u,'전장이 안 열림');
+      assert(campSelList().length===1 && dz.classList.contains('on'),'전제: 지정·⊘ 가 켜져 있어야 한다');
+      campBattleClose();
+      assert(campSelList().length===0,'던전을 옮겼는데 지정이 남았다');
+      assert(!dz.classList.contains('on'),'지정은 풀렸는데 ⊘ 버튼이 남아 있다'); }
+    // ② 50라운드를 채워 자동으로 넘어갈 때 — 전장이 안 닫히는 길(campDungeonSwap)
+    { const u=setup(); skipIf(!u,'전장이 안 열림');
+      assert(campSelList().length===1,'전제: 지정이 있어야 한다');
+      campDungeonSwap();
+      assert(campSelList().length===0,'자동 이동에서 지정이 안 풀렸다');
+      assert(!dz.classList.contains('on'),'자동 이동 뒤 ⊘ 버튼이 남아 있다'); }
+    // ③ **캠프에서 기지 방식으로 지정한 채** 내려간다 — 그 병력은 전장 유닛이 되어 엔티티가 사라진다.
+    //    ⛔ selU 에 번호가 남으면 기지 입력이 「지정이 있다」고 믿고 모든 탭을 유령 유닛의 이동 명령으로
+    //      삼킨다(확인음만 나고 아무 일도 안 일어난다 · 2026-09-08 실측: 내려간 뒤 selU 3 · 실재 0).
+    { campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+      const C=campState(); C.dg=0; C.cleared=0; campBattleClose();
+      const made=[]; for(let i=0;i<3;i++){ const e={eid:G.tech.eseq++,type:'unit',uid:'marine',x:0.45+i*0.03,y:0.55,pop:1};
+        G.tech.ents.push(e); made.push(e); }
+      G.tech.selU=made.map(e=>e.eid); G.tech.sel=null; techPanelRender(); await sleep(20);
+      assert(dz.classList.contains('on'),'전제: 기지 지정이면 ⊘ 가 켜져 있어야 한다');
+      C.dg=1; C.cleared=0; CAMPB=null; campCombatStep(0.05); await sleep(20);
+      const live=(G.tech.selU||[]).filter(id=>(G.tech.ents||[]).some(e=>e.eid===id)).length;
+      assert((G.tech.selU||[]).length===0,
+        '내려왔는데 기지 지정이 남았다: '+(G.tech.selU||[]).length+'개(그중 실재 '+live+'개) — 탭이 유령 이동 명령으로 먹힌다');
+      assert(!dz.classList.contains('on'),'내려왔는데 ⊘ 버튼이 남아 있다');
+      assert(CAMPB && CAMPB.me.units.length>=3,'전제: 병력이 전장으로 옮겨져야 한다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
+    return '손 이동 · 자동 이동 · 기지 지정째 내려가기 셋 다 기본 상태'; });
+
+  // 👆 **손이 흔들려도 명령은 먹는다** (2026-09-08 사용자 신고 「연타하면 몇 번이 안 먹는다」).
+  //    ⛔ 원인은 연타 속도가 아니라 **손 흔들림**이었다 — 명령을 뗄 때(up) 내면서 그 앞에
+  //      「끌었으면 박스 지정」 판정이 있었고, 문턱이 두 축 합 6px 이라 보통의 탭도 박스로 샜다.
+  //      실측(좌우 10연타): 또박또박 10/10 · **흔들림 4px 0/10** · 8px 0/10.
+  //    ⭐ 지금은 기지와 같다 — 지정이 있으면 **누르는 순간** 명령이 나가고, 끄는 동안 목표만 따라온다.
+  await step('캠프: 손이 흔들려도 이동 명령이 먹는다(누르는 순간 나간다)', async()=>{
+    skipIf(typeof campCmdAt!=='function'||typeof campMoveSel!=='function','3단계 없음');
+    campEnterDungeon(1); CAMPB=null; campCombatStep(0.05); skipIf(!CAMPB,'전장이 안 열림');
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
+    if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+    const r=_btRect(); skipIf(!r||!r.width,'맵 사각을 못 잼');
+    const u=campDeploy('marine', 0.5, CAMP_LINE_GY); assert(u,'배치 실패'); campSelSet([u]);
+    const cy=r.top+r.height*0.42, xs=[r.left+r.width*0.28, r.left+r.width*0.72];
+    const fire=(type,x,y,id)=>{ const el=document.elementFromPoint(x,y)||document.body;
+      el.dispatchEvent(new PointerEvent(type,{pointerId:id,pointerType:'touch',isPrimary:true,
+        clientX:x,clientY:y,bubbles:true,cancelable:true,buttons:type==='pointerup'?0:1,button:0})); };
+    let pid=900, ok=0; const N=6, DRIFT=5;      // 5px = 두 축 합 10 > 박스 문턱 6 (옛 코드가 죽던 값)
+    for(let i=0;i<N;i++){ const x=xs[i%2];
+      const was=u._order?{x:u._order.x,y:u._order.y}:null;
+      fire('pointerdown',x,cy,++pid);
+      fire('pointermove',x+DRIFT,cy+DRIFT,pid);
+      fire('pointerup',x+DRIFT,cy+DRIFT,pid);
+      const now=u._order;
+      if(now && (!was || Math.hypot(now.x-was.x, now.y-was.y)>1)) ok++;
+      await sleep(12); }
+    assert(ok===N,'흔들린 탭 '+N+'번 중 '+ok+'번만 먹었다 — 박스 지정으로 새는 길이 되살아났다');
+    // ⚠ 손가락이 떨어진 뒤에는 끌기 상태가 남으면 안 된다(다음 탭이 명령으로 새어 나간다)
+    assert(!campCmdAt({clientX:-999,clientY:-999}),'맵 밖인데 명령으로 본다');
+    // 🖐 **지정 중에는 드래그가 없다**(기지 규약 「새 박스는 해제(✕) 후에만」과 같다).
+    //   ⛔ 지정한 채로 **내 유닛 위**를 누르면 박스·롱프레스 팬이 걸리던 것을 되살리지 말 것 —
+    //     조금만 끌려도 _btMoved 가 서서 up 의 탭 판정이 통째로 빠진다(= 씹힘 · 2026-09-08 실측).
+    { const W=CAMPB.world||4800, g=campW2G(u.x,u.y,W), s=_techW2S(g.gx,g.gy);
+      const cx=r.left+s.x*r.width, cyU=r.top+s.y*r.height;
+      const drag=(sel)=>{ campSelClear(); if(sel) campSelSet([u]);
+        const id=++pid; fire('pointerdown',cx,cyU,id);
+        const armed=!!_campLongT; fire('pointermove',cx+20,cyU+20,id);
+        const box=!!((typeof _campBox!=='undefined'&&_campBox&&_campBox.on)
+                   ||(typeof _btBox!=='undefined'&&_btBox&&_btBox.active));
+        fire('pointerup',cx+20,cyU+20,id); return { armed, box }; };
+      const on=drag(true);
+      assert(!on.box,'지정 중인데 내 유닛 위에서 박스가 생긴다');
+      assert(!on.armed,'지정 중인데 내 유닛 위에서 롱프레스 화면 이동이 걸린다');
+      // 지정이 없을 때도 **유닛 위는 빈 바닥이 아니다** — 꾹 눌러도 화면 이동이 켜지면 안 된다(기지와 같다)
+      const off=drag(false);
+      assert(!off.armed,'지정이 없어도 유닛 위에서 롱프레스 화면 이동이 걸린다 — 고르기가 씹힌다'); }
+    campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; }); campSelClear();
+    { const C=campState(); if(C){ C.dg=0; C.cleared=0; } } campBattleClose();
+    return '흔들림 '+DRIFT+'px · '+ok+'/'+N; });
+
   // 🗂 **전장 유닛을 고르면 시트에 그 유닛 카드가 서고 · 해제 버튼이 켜진다**(2026-09-05 사용자 신고).
   //    원인이었던 것 둘: ① campSyncSheet 가 기지 변수만 보고 매 프레임 요약으로 덮었다
   //                    ② #btDesel 표시 조건이 기지 지정만 셌다. 이 스텝은 둘 다 프레임을 굴려 잰다.
@@ -6729,12 +6931,12 @@ async function groupLobby(){
     return '값 '+got.join(' → ')+' · 생산 '+CAMP_WORKER_SEC+'초';
   });
 
-  // 🕐 **생산 중 표시 = 건물 위 유닛 얼굴 + 시계방향으로 걷히는 덮개** (2026-09-03 사용자 확정)
+  // 🕐 **생산 중 표시 = 건물 위 각진 판 + 아래 청록 진행선** (2026-09-08 사용자 확정 · ①안)
   //    ⛔ 옛 가로 막대(.bprog.prod)로 되돌리지 말 것 — 건물 **한가운데를 가로질러**(147×19px)
   //      그려서 건물 그림에 묻혔고, 무엇을 뽑는지도 알 수 없었다.
   //    ⚠ 얼굴은 labels 레이어에 둔다 — 건물 안(inner)에 두면 뷰 변환을 함께 받아
   //      확대할 때 같이 커진다(실측 30px 로 짰는데 줌 3.2 에서 96px 이 됐다).
-  await step('캠프: 생산 중이면 건물 위에 유닛 얼굴과 진행 덮개', async()=>{
+  await step('캠프: 생산 중이면 건물 위에 유닛 얼굴과 진행선', async()=>{
     skipIf(typeof campWorkerBldg!=='function'||typeof techDoProduce!=='function','생산 경로 없음');
     campEnterDungeon(0);
     const keep=G.tech.credit; G.tech.credit=1e9;
@@ -6754,9 +6956,13 @@ async function groupLobby(){
     const sp0=el.querySelector('span');
     const pct=parseFloat(el.style.getPropertyValue('--p'));
     assert(Math.abs(pct-50)<4,'진행이 절반(50%)이 아니다: '+pct+'%');
-    // 🩶 덮개가 **얼굴 위에** 있어야 한다 — 얼굴 filter 가 새 층을 만들어 아래로 깔린 적이 있다
-    assert(+getComputedStyle(sp0,'::after').zIndex>=1,
-      '덮개에 z-index 가 없다 — 얼굴 filter 층 아래로 깔린다');
+    // 🟦 진행은 **아래 가로선**이 말한다(2026-09-08). ⛔ 옛 원형 덮개로 되돌리지 말 것 —
+    //   작은 원 안에서 위→아래로 걷히는 덮개는 얼마나 찼는지 안 읽혔다.
+    { const bar=el.querySelector('.bpBar');
+      assert(bar,'진행선(.bpBar)이 없다 — 옛 원형 덮개로 되돌아갔다');
+      const bw=parseFloat(getComputedStyle(bar).width), iw=el.getBoundingClientRect().width;
+      assert(Math.abs(bw/Math.max(1,iw)-0.5)<0.12,'진행선이 절반이 아니다: '+Math.round(bw)+'/'+Math.round(iw));
+      assert(getComputedStyle(el).borderRadius!=='50%','생산 표시가 다시 원이 됐다'); }
     // ② 얼굴은 **색이 있는 초상**이다(PORTRAIT_IMG) — 회색 프로필(un_*)은 작게 뜨면 안 읽힌다
     //    ⛔ 새 그림표를 만들지 말 것 — unitFaceColorHTML 이 PORTRAIT_IMG 를 그대로 쓴다.
     const im=el.querySelector('img.portImg');
@@ -6775,17 +6981,32 @@ async function groupLobby(){
       for(const z of [CAMP_MIN_ZOOM, techMaxZoom()]){
         t.zoom=z; _techClampView(t); v.zoom=t.zoom; v.x=t.x; v.y=t.y; techMapRender();
         const e2=document.querySelector('.bprodIco'); if(!e2) continue;
-        const bw=bf.w*_techCW()*v.zoom*_btRect().width;
-        rats.push(e2.getBoundingClientRect().width/bw); }
-      assert(rats.length===2 && Math.abs(rats[0]-rats[1])<0.03,
-        '줌에 따라 건물 대비 비율이 달라진다: '+rats.map(r=>r.toFixed(3)).join(' vs '));
+        const cw=_techCW()*v.zoom*_btRect().width;   // 📏 기준은 **격자 한 칸**이다(건물 발자국이 아니다)
+        // ⛔ 옛 「건물 발자국 대비」로 되돌리지 말 것 — 작은 건물의 아이콘만 작아진다.
+        // ⚠ 「칸 대비 비율 일정」으로도 재지 말 것 — 축소에서 읽히게 하려고 **바닥값**을 뒀다(2026-09-08).
+        //   그래서 식(바닥 + 칸 × 몫) 그대로인지를 잰다.
+        rats.push([e2.getBoundingClientRect().width,
+          Math.max(16, Math.min(46, Math.round(CST_PROD_BASE + cw*CST_PROD_K)))]); }
+      assert(rats.length===2 && rats.every(r=>Math.abs(r[0]-r[1])<=1),
+        '크기가 식과 다르다: '+rats.map(r=>Math.round(r[0])+'≠'+r[1]).join(' · '));
+      assert(rats[1][0]>rats[0][0],'줌을 키웠는데 안 커진다: '+rats.map(r=>Math.round(r[0])).join(' → '));
       v.zoom=z0; t.zoom=z0; techMapRender(); }
-    // ⑤ 대기열이 둘 이상이면 개수를 적는다
-    assert((document.querySelector('.bprodIco b')||{}).textContent==='2',
-      '대기 수 배지가 안 맞는다');
+    // ⑤ 대기열이 둘 이상이면 개수를 적는다 — **판 위 작은 캡슐**이다(2026-09-08 ⑥안)
+    //    ⛔ 판 안 오른쪽 위 배지로 되돌리지 말 것: 축소(14px)에서 배지가 판보다 커져 얼굴을 덮었다.
+    { const qb=document.querySelector('.bprodIco b');
+      assert(qb && qb.textContent==='×2','대기 수 캡슐이 안 맞는다: '+(qb?qb.textContent:'없음'));
+      const el2=document.querySelector('.bprodIco');
+      const ib=el2.getBoundingClientRect(), cb=qb.getBoundingClientRect();
+      assert(cb.bottom<=ib.top+1,'대기 수가 판 위에 안 서 있다(안쪽 배지로 되돌아갔다)');
+      assert(getComputedStyle(el2).overflow!=='hidden','판이 overflow:hidden 이라 위 캡슐이 잘린다');
+      // 🔷 캡슐도 판과 **같은 어휘**다(컷 + 링 · 2026-09-08 목업 camp-prodcap-4 ①안)
+      //   ⛔ 둥근 알약으로 되돌리지 말 것 — 판만 각지고 캡슐만 둥글면 어휘가 갈린다.
+      assert(getComputedStyle(qb).clipPath!=='none','대기 수 칸에 모서리 컷이 없다(둥근 알약으로 되돌아갔다)');
+      assert(/gradient/.test(getComputedStyle(qb,'::before').backgroundImage),
+        '대기 수 칸의 테두리가 그라디언트 링이 아니다'); }
     for(const e of (G.tech.ents||[])) if(e.type==='bldg'&&e._pq) e._pq.length=0;
     G.tech.credit=keep; techMapRender();
-    return '얼굴 '+im.src.split('/').pop()+' · 절반에서 '+pct.toFixed(0)+'% · 건물 대비 비율 일정';
+    return '얼굴 '+im.src.split('/').pop()+' · 절반에서 '+pct.toFixed(0)+'% · 크기 식 일치';
   });
 
   // 🧬 **던전 이름과 적 종족이 맞는다** (2026-08-30)
@@ -13813,6 +14034,34 @@ async function groupLobby(){
     return ks.join(' · ');
   });
 
+  // 🐞 **가이드가 멈추는 자리** — 계측이 안 이어진 단계는 영영 안 넘어간다(2026-09-10 실측:
+  //   열다섯 중 넷만 이어져 다섯째 「병영 짓기」에서 멈춰 있었다).
+  //   ⭐ 그래서 **표의 kind 마다 그 계측을 넣는 곳이 있는지**를 코드에서 직접 찾아 본다.
+  //   ⛔ 표만 고치고 계측을 안 이으면 이 계약이 잡는다.
+  await step('가이드: 모든 단계가 실제로 넘어갈 수 있다', async()=>{
+    skipIf(typeof GUIDE_STEPS==='undefined','가이드 없음');
+    const S=guideState(); skipIf(!S,'상태 없음');
+    const i0=S.i, n0=S.n;
+    try{
+      for(let k=0;k<GUIDE_STEPS.length;k++){
+        S.i=k; S.n=0;
+        const g=GUIDE_STEPS[k];
+        guideNote(g.kind, g.goal);              // 그 종류를 목표만큼 넣으면
+        assert(S.i===k+1,'단계 「'+g.id+'」('+g.kind+')가 제 계측으로 안 넘어간다');
+      }
+    } finally { S.i=i0; S.n=n0; }
+    // 🏰 개편을 따라간다 — 없어진 것을 시키지 않는다
+    { const all=GUIDE_STEPS.map(g=>String(guideTx(g,'do'))+' '+String(guideTx(g,'why'))).join(' ');
+      for(const gone of ['라운드','통신소','스캔','보급고'])
+        assert(all.indexOf(gone)<0,'가이드가 없어진 것을 시킨다: '+gone+' — '+all); }
+    // 🧬 종족을 안 가린다 — 첫 건물은 표(TUTO_BLD)에서 이름을 꺼낸다
+    assert(typeof GUIDE_RACE==='undefined','GUIDE_RACE 가 살아 있다 — 종족을 다시 가린다');
+    { const b=GUIDE_STEPS.find(g=>g.kind==='build:first');
+      assert(b,'첫 건물 단계가 없다');
+      assert(typeof b.name==='function','첫 건물 이름이 박혀 있다 — 종족마다 다르다'); }
+    return GUIDE_STEPS.length+'단계 · 전부 제 계측으로 넘어간다';
+  });
+
   // 🧭 가이드 퀘스트(2026-08-25) — 「이 게임을 어떻게 하는가」를 순서로 가르친다.
   //   일일 퀘스트와 달리 **한 번만** 돌고 순서가 있다. 캠프 화면은 3D 라 못 띄우므로 상태만 흉내 낸다.
   await step('가이드 퀘스트: 순서 · 띠 · 목록', async()=>{
@@ -13839,7 +14088,7 @@ async function groupLobby(){
       // ③ 화면 띠 — 지금 할 일 한 줄. ⚠ 더보기 안에만 두면 초보자가 못 찾는다.
       const gb=$('guideBar'); assert(gb,'「지금 할 일」 띠가 없음');
       assert(gb.parentElement===$('phone'),'띠가 #phone 직속이 아니다 — 캠프 화면 안에 넣으면 캠프 파일을 건드리게 된다');
-      assert((gb.querySelector('.gbTx')||{}).textContent===guideCur().do,'띠 글이 지금 단계와 다름');
+      assert((gb.querySelector('.gbTx')||{}).textContent===guideTx(guideCur(),'do'),'띠 글이 지금 단계와 다름');
       { const cs=getComputedStyle(gb), a=cs.backgroundColor.match(/[\d.]+/g)||[];
         const alpha=(a.length===4)?parseFloat(a[3]):1;
         assert(alpha>=0.995,'띠가 비친다(전폭이라 7% 만 비쳐도 뒤 글자가 읽힌다): '+cs.backgroundColor);
@@ -13861,19 +14110,30 @@ async function groupLobby(){
         if(im){ const w=im.getBoundingClientRect().width;
           assert(w>0 && w<=16,'보상 아이콘이 너무 크다(줄을 덮는다): '+w.toFixed(0)+'px'); } }
       closeGuide();
-      // ⑤ 다른 종족이면 아예 안 띄운다 — 건물 키가 종족마다 다르다(union=barracks · swarm=pool …)
+      // ⑤ **종족을 안 가린다**(2026-09-10) — 첫 건물은 이름만 표에서 꺼내므로(TUTO_BLD) 어느 종족이든 깬다.
+      //   ⛔ 「유니온이 아니면 안 띄운다」로 되돌리지 말 것: 다른 종족을 고르면 가이드가 통째로 없었다.
       prof.camp.race='zerg'; updateCurBar();
-      assert(!guideOn(),'유니온이 아닌데 가이드가 켜졌다 — 건물 키가 달라 영영 못 깬다');
-      assert(!$('guideBar'),'가이드를 끄는 종족인데 띠가 남았다');
-      // ⑥ 던전 이동이 실제로 센다(지금 이어져 있는 유일한 계측)
-      prof.camp.race='terran'; prof.guide={i:7, n:0};    // 8번째 = 던전 2 로 옮기기
-      updateCurBar();
-      assert(guideCur().kind==='dg:2','8번째 단계가 던전 2 가 아님: '+guideCur().kind);
-      window.campSkin=()=>{};
-      gateOff=campGateOpen();          // 🚪 이 step 은 가이드 계측을 보는 것이라 병력 문의 대상이 아니다
-      campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
-      assert(guideState().i===8,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i);
-      return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 가드 · 던전 이동 계측';
+      assert(guideOn(),'종족을 바꿨더니 가이드가 사라졌다 — 표는 종족을 안 가린다');
+      { const b=GUIDE_STEPS.find(g=>g.kind==='build:first');
+        const nm=String(guideTx(b,'name'));
+        assert(nm && nm.indexOf('undefined')<0,'첫 건물 이름이 안 나온다: '+nm); }
+      assert($('guideBar'),'종족을 바꿨더니 「지금 할 일」 띠가 사라졌다');
+      // 🚪 **다 끝내면** 띠가 걷힌다 — 그때가 가이드를 끄는 유일한 자리다
+      { const S=guideState(), was=S.i; try{ S.i=GUIDE_STEPS.length; updateCurBar();
+          assert(!guideOn(),'다 끝냈는데 가이드가 켜져 있다');
+          assert(!$('guideBar'),'다 끝냈는데 띠가 남았다');
+        } finally { S.i=was; updateCurBar(); } }
+      // ⑥ 던전 이동이 실제로 센다 — **표에서 자리를 찾아** 잰다(⛔ 번호를 박지 말 것: 표가 바뀐다)
+      prof.camp.race='terran';
+      { const k=GUIDE_STEPS.findIndex(g=>g.kind==='dg:2');
+        assert(k>=0,'던전 2 단계가 표에 없다');
+        prof.guide={i:k, n:0}; updateCurBar();
+        assert(guideCur().kind==='dg:2','자리를 잘못 짚었다: '+guideCur().kind);
+        window.campSkin=()=>{};
+        gateOff=campGateOpen();        // 🚪 이 step 은 가이드 계측을 보는 것이라 병력 문의 대상이 아니다
+        campDropOpen(); campDropPickDg(2); campDropGo(); await sleep(40);
+        assert(guideState().i===k+1,'던전을 옮겼는데 가이드가 안 넘어감: i='+guideState().i); }
+      return GUIDE_STEPS.length+'단계 · 순서 지킴 · 띠/목록 · 종족 무관 · 던전 이동 계측';
     } finally {
       gateOff();
       campDropClose(); closeGuide();
@@ -14103,6 +14363,63 @@ async function groupLobby(){
     return '되감음 · 환생 값 유지 · 밑천 '+got.toLocaleString()+' · 가스 0 · 일꾼 '+wk;
   });
 
+  // 🗺 구역 안내 — 강제 튜토리얼에서 뺀 것들이 여기서 「말해 주고 자유롭게」로 산다(2026-09-10).
+  await step('구역 안내: 처음 그 화면에 왔을 때 한 장 · 막지 않는다', async()=>{
+    skipIf(typeof ZONE_TIPS==='undefined'||typeof zoneTipPaint!=='function','구역 안내 없음');
+    // 뺀 여섯을 **아무도 안 가르치는 일**이 없어야 한다 — 문구로 다 덮였는지 본다
+    { const all=ZONE_TIPS.map(z=>String(z.title)+' '+String((typeof z.sub==='function')?z.sub():z.sub)).join(' ');
+      for(const w of ['지정','⊘','확대','길게','강화'])
+        assert(all.indexOf(w)>=0,'구역 안내가 「'+w+'」을 아무 데서도 안 말한다'); }
+    for(const z of ZONE_TIPS){ assert(z.id && z.title && z.sub && typeof z.at==='function',
+      '구역 안내 한 장이 덜 찼다: '+JSON.stringify(z.id)); }
+    // 🏰 적 기지 안내는 **개편이 만든 규칙 셋**을 말한다(진행 건물 · 표적 · 구간 잠김)
+    { const foe=ZONE_TIPS.find(z=>z.id==='foe'); assert(foe,'적 기지 안내가 없다');
+      const tx=String((typeof foe.sub==='function')?foe.sub():foe.sub);
+      for(const w of ['진행 건물','표적','잠깁니다'])
+        assert(tx.indexOf(w)>=0,'적 기지 안내가 「'+w+'」을 안 말한다: '+tx);
+      const n=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+      assert(tx.indexOf(String(n)+'채')>=0,'진행 건물 수를 손으로 박았나: '+tx); }
+    const S=guideState(); skipIf(!S,'상태 없음');
+    const zt0=S.zt, on0=window.campIsOn, off0=TUTO_OFF, t0=S.t, run0=S.trun, skip0=S.skip;
+    try{
+      window.campIsOn=()=>true; TUTO_OFF=true; delete S.trun; S.skip=1;   // 튜토리얼은 꺼 둔다
+      S.zt={};
+      // ⚠ 스모크에는 캠프 화면이 없다 — 「던전에 들어와 있다」를 만들어 'foe' 한 장을 띄운다.
+      //   ⛔ 화면이 없다고 건너뛰지 말 것: 이 계약이 재는 것은 **카드의 규칙**이지 화면이 아니다.
+      var _dg0=window.campDgN; window.campDgN=()=>TUTO_DG;
+      // ⛔ 튜토리얼이 도는 동안에는 안 뜬다(두 카드가 겹치면 어느 것을 눌러야 할지 모른다)
+      { TUTO_OFF=false; delete S.skip; S.trun=1; S.t=0;
+        assert(zoneTipNext()===null,'튜토리얼 중인데 구역 안내가 뜬다');
+        TUTO_OFF=true; S.skip=1; delete S.trun; S.t=t0; }
+      const z=zoneTipNext();
+      skipIf(!z,'지금 조건이 맞는 안내가 없다');
+      zoneTipPaint();
+      const el=$('zoneTip'); assert(el,'구역 안내가 안 그려졌다');
+      // ⭐ 껍데기는 **챕터 카드 그대로** — 새 컴포넌트를 만들지 않았다
+      const tip=el.querySelector('.tuTip');
+      assert(tip && tip.classList.contains('ch'),'구역 안내가 챕터 카드 껍데기를 안 쓴다');
+      assert(el.querySelector('.tuGo'),'확인 버튼이 없다');
+      // ⛔ **막지 않는다** — 자유 플레이 중에 뜨므로 게임 조작을 가로채면 안 된다
+      for(const i of el.querySelectorAll('i'))
+        assert(getComputedStyle(i).pointerEvents==='none',
+          '구역 안내가 화면을 막는다 — 자유 플레이 중이다: '+getComputedStyle(i).pointerEvents);
+      assert(getComputedStyle(tip).pointerEvents!=='none','카드가 안 눌린다');
+      // 👆 확인하면 닫히고 **다시 안 뜬다**
+      el.querySelector('.tuGo').click();
+      assert(!$('zoneTip'),'확인했는데 안 닫힌다');
+      assert(S.zt && S.zt[z.id],'봤다는 표시가 안 남는다 — 열 때마다 또 뜬다');
+      zoneTipPaint();
+      const el2=$('zoneTip');
+      assert(!el2 || el2.dataset.zt!==z.id,'닫은 안내가 다시 뜬다');
+      return '안내 '+ZONE_TIPS.length+'장 · 막지 않음 · 한 번만';
+    } finally { window.campIsOn=on0; TUTO_OFF=off0;
+      if(typeof _dg0!=='undefined') window.campDgN=_dg0;
+      if(zt0!=null) S.zt=zt0; else delete S.zt;
+      S.t=t0; if(run0!=null) S.trun=run0; else delete S.trun;
+      if(skip0!=null) S.skip=skip0; else delete S.skip;
+      const e=$('zoneTip'); if(e) e.remove(); }
+  });
+
   // 📚 튜토리얼은 **셋으로 나뉜다**(2026-09-08 사용자 확정) — 자원 · 기지와 부대 · 출격.
   //   경계는 표가 아니라 **챕터 카드 단계**이고, 번호도 그 사이에서 센다.
   await step('튜토리얼: 챕터 셋으로 갈린다 · 카드는 읽고 넘긴다', async()=>{
@@ -14159,6 +14476,31 @@ async function groupLobby(){
           if(skip0!=null) S.skip=skip0; else delete S.skip;
           if(ack0!=null) S.tack=ack0; else delete S.tack; }
         tutoPaint(); } }
+    // 🏰 **개편을 따라간다**(2026-09-10) — 던전이 적 기지가 되면서 안내 셋이 거짓말이 됐었다.
+    //   ⛔ 문구를 손으로 박지 말 것: 이름·버튼 글자·진행 축이 전부 화면과 같은 소스에서 와야 한다.
+    { const tp=(k)=>{ const s=TUTO_STEPS[at(k)]; return String((typeof s.tip==='function')?s.tip():s.tip); };
+      // ① 던전 이름은 campDgName — 옛 표(hbDun)를 읽으면 목록과 어긋난다
+      const nm=(typeof campDgName==='function')?campDgName(TUTO_DG):'';
+      assert(nm && tp('dgPick').indexOf(nm)===0,
+        '던전 안내가 목록과 다른 이름을 쓴다: '+tp('dgPick')+' (목록은 '+nm+')');
+      { const ds=(typeof campDgDesc==='function')?campDgDesc(TUTO_DG):'';
+        assert(ds && tp('dgPick').indexOf(ds)>0,'던전 안내에 그 던전 설명이 없다: '+tp('dgPick')); }
+      // ② 라운드는 없어졌다 — 어느 안내도 그 말을 하면 안 된다
+      for(const k of ids){ const s=TUTO_STEPS[ids.indexOf(k)];
+        const t=String((typeof s.tip==='function')?s.tip():s.tip);
+        assert(t.indexOf('라운드')<0,'「라운드」가 남은 안내가 있다('+k+'): '+t); }
+      // 🎁 마지막은 **보상 카드**다(2026-09-10) — 던전 설명은 구역 안내('foe')가 맡는다.
+      //   ⛔ 여기서 또 설명하지 말 것: 튜토리얼은 곧 판을 걷으므로 배운 것이 바로 사라진다.
+      assert(TUTO_STEPS[at('outro')].at()==='all',
+        '마지막 칸이 무언가를 가리킨다 — 시킬 일이 없는 칸이다: '+TUTO_STEPS[at('outro')].at());
+      assert(String(TUTO_STEPS[at('outro')].sub())===TUTO_END_SUB,
+        '마지막 칸이 초기화를 말없이 한다'); }
+    // ③ 진입 버튼 글자는 **화면이 정한다** — 캠프에서는 「돌아가기」, 던전을 고르면 「진입」
+    { assert(typeof _cdGoLabel==='function','버튼 글자 함수가 없다');
+      assert(_cdGoLabel(0)!==_cdGoLabel(TUTO_DG),
+        '캠프와 던전의 버튼 글자가 같다: '+_cdGoLabel(0));
+      const t=String(TUTO_STEPS[at('dgGo')].tip());
+      assert(t.indexOf('이동 버튼')<0,'「이동 버튼」이 남았다 — 버튼은 「진입」이다: '+t); }
     return '챕터 '+TUTO_CH.map(c=>c.title).join(' · ');
   });
 
@@ -14166,23 +14508,15 @@ async function groupLobby(){
     skipIf(typeof TUTO_STEPS==='undefined'||typeof TUTO_BLD==='undefined','튜토리얼 없음');
     const ids=TUTO_STEPS.map(s=>s.id);
     for(const need of ['coinB','mineOff','pickWk','armB1','placeB1','deselWk','selB1','unit',
-                       'pickU','moveU','deselU','zoomPan','panMode','panDrag',
                        'dgOpen','dgPick','dgGo','outro'])
       assert(ids.indexOf(need)>=0,'단계가 없다: '+need);
-    // 🔍 화면 조작 판정 — **단계마다 기준을 새로 잡는다**(확대하면 시점도 함께 움직인다)
-    { const S=guideState(), v0=(typeof techView==='function')?techView():null;
-      skipIf(!S||!v0,'시점이 없다');
-      const keep={ vw0:S.vw0, zoom:v0.zoom, x:v0.x };
-      try{ delete S.vw0;
-        assert(_tutoView('zoom')===0,'기준을 잡기도 전에 확대했다고 한다');
-        v0.zoom=(v0.zoom||1)*1.3;
-        assert(_tutoView('zoom')===1,'확대했는데 못 알아본다');
-        delete S.vw0;
-        assert(_tutoView('pan')===0,'이동도 기준부터 잡아야 한다');
-        v0.x=(v0.x||0.5)+0.05;
-        assert(_tutoView('pan')===1,'움직였는데 못 알아본다');
-      } finally { v0.zoom=keep.zoom; v0.x=keep.x;
-        if(keep.vw0!=null) S.vw0=keep.vw0; else delete S.vw0; } }
+    // 🗄 **강제로 시키지 않는 것**(2026-09-10 사용자 확정 — 「아주 기본만」). 이 여섯은 구역 안내로 갔다.
+    //   ⛔ 다시 강제 단계로 되돌리지 말 것: 강제가 길수록 개편 때마다 통째로 낡는다(실측).
+    for(const gone of ['upgTap','coinGat','upgGat','pickU','moveU','deselU','zoomPan','panMode','panDrag'])
+      assert(ids.indexOf(gone)<0,'강제로 되돌아온 단계가 있다: '+gone);
+    // 📏 **짧아야 한다** — 카드 셋을 빼고 스무 칸을 넘지 않는다(넘으면 다시 「손잡고 끌기」다)
+    assert(ids.filter(i=>i.indexOf('ch')!==0).length<=20,
+      '강제 단계가 다시 길어졌다: '+ids.length);
     // 🔢 **번호가 중간에 안 뛴다**(2026-09-04 사용자 지적) — 종족에 없는 단계는 세지 않는다.
     //   유니온은 둘째 건물이 없어(TUTO_BLD.union.b[1]=null) armB2·placeB2 가 화면에 안 나타난다.
     { const r0=G.tech.race; try{ G.tech.race='union';
@@ -14352,33 +14686,9 @@ async function groupLobby(){
     assert(at('coinB')<at('mineOff'),'채굴을 끄고 나서 돈을 모으라고 한다 — 두드릴 수가 없다');
     assert(at('mineOff')<at('pickWk') && at('pickWk')<at('armB1') && at('armB1')<at('placeB1'),
       '건물 단계 순서가 어긋났다: '+ids.join(' → '));
-    // 🚶🔍 유닛을 뽑은 **뒤에** 옮기고 · 지정을 풀고 · 화면 조작을 익히고 · 던전으로 간다(2026-09-08 사용자 확정)
-    assert(at('unit')<at('pickU') && at('pickU')<at('moveU')
-           && at('moveU')<at('deselU') && at('deselU')<at('zoomPan')
-           && at('zoomPan')<at('panMode') && at('panMode')<at('panDrag')
-           && at('panDrag')<at('dgOpen'),
-      '유닛·화면 조작 단계 순서가 어긋났다: '+ids.join(' → '));
-    // 🔍 확대와 이동은 **둘 다** 해야 넘어간다(0/2) — 한 단계로 묶되 하나만 해서는 안 된다
-    assert(_tutoGoal(TUTO_STEPS[at('zoomPan')])===2,
-      '화면 조작이 하나만 해도 넘어간다: '+_tutoGoal(TUTO_STEPS[at('zoomPan')]));
-    // 🖐 모드를 켠 다음 **실제로 민다** — 모드만 켜고 끝내면 무엇이 달라졌는지 모른다.
-    //   ⚠ 모드가 꺼져 있으면 밀어도 0 이어야 한다(밀리지도 않는데 통과시키면 안 넘어간 채로 남는다).
-    { const S=guideState(), m=$('cstMain');
-      if(S && m){ const was=m.classList.contains('campPan'), keep=S.vp0;
-        try{ m.classList.remove('campPan'); delete S.vp0;
-          const d=TUTO_STEPS[at('panDrag')];
-          const tp=(typeof d.tip==='function')?d.tip():d.tip;
-          assert((d.n()|0)===0,'이동 모드가 꺼졌는데 민 것으로 친다');
-          assert(String(tp).indexOf('다시')>=0,
-            '이동 모드가 풀렸는데 다시 켜라고 말하지 않는다: '+tp);
-        } finally { if(was) m.classList.add('campPan'); if(keep!=null) S.vp0=keep; else delete S.vp0; } } }
-    // 🚪 데려갈 자리는 **맵 위쪽**이다(본부 0.59 · 광맥 0.66 보다 위) — 화면을 보고 맞춘 값이라 범위만 지킨다
-    assert(TUTO_MOVE_GY < CAMP_ROW_BASE - 0.1,
-      '데려갈 자리가 본부에 너무 가깝다: '+TUTO_MOVE_GY+' (본부 '+CAMP_ROW_BASE+')');
-    assert(TUTO_MOVE_GY > 0.15,'데려갈 자리가 맵 꼭대기로 붙었다: '+TUTO_MOVE_GY);
-    // 👆 유닛을 잡는 단계의 대상은 **전장 전체**다 — 유닛이 어디 서 있든 손이 닿아야 하므로
-    //   한 자리를 가리킬 수 없다(2026-09-08 사용자 확정 · 그 전에는 'free' 라 틀이 아예 없었다).
-    assert(TUTO_STEPS[at('pickU')].at()==='map','유닛 지정 단계가 전장 틀을 안 쓴다');
+    assert(at('unit')<at('dgOpen'),'유닛을 뽑기 전에 던전으로 보낸다: '+ids.join(' → '));
+    // 👆 일꾼을 잡는 단계의 대상은 **전장 전체**다 — 어디 서 있든 손이 닿아야 하므로 한 자리를 못 가리킨다
+    assert(TUTO_STEPS[at('pickWk')].at()==='map','일꾼 지정 단계가 전장 틀을 안 쓴다');
     // 🗺 **전장 틀의 아랫변은 시트를 직접 재서** 잡는다 — 상수로 두면 병영을 고른 화면처럼
     //   시트가 커졌을 때 틀 아랫변이 시트 뒤로 숨어 「어디까지가 전장인지」가 안 보인다.
     { const S=guideState(), on0=window.campIsOn, off0=TUTO_OFF, sh=$('btSheet');
@@ -14389,7 +14699,7 @@ async function groupLobby(){
       const par0=sh?sh.parentNode:null, nx0=sh?sh.nextSibling:null;
       try{ if(S && sh){ window.campIsOn=()=>true; TUTO_OFF=false;
           $('phone').appendChild(sh);
-          S.t=ids.indexOf('pickU'); S.trun=1; delete S.skip;
+          S.t=ids.indexOf('pickWk'); S.trun=1; delete S.skip;
           const read=()=>{ tutoPaint(); const ov=$('tutoOv');
             const rg=ov?ov.querySelector('.tuRing'):null;
             return rg?rg.getBoundingClientRect():null; };

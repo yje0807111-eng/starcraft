@@ -1,0 +1,198 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>생산 표시 8안</title>
+<style>
+/* 🕐 건물 위 **생산 중 표시** 8안 — 2026-09-08
+   지금 것(기준)의 문제 셋: ① 건물마다 뜨는 자리가 다르다 ② 확대·축소에서 뜬 정도가 바뀐다
+   ③ 디자인이 낡았다(어두운 원 + 작은 얼굴 + 테두리 배지).
+   ⚠ 이 목업은 **③(생김새)** 만 고른다 — ①②는 자리 계산의 문제라 코드에서 따로 고친다.
+   기준선: DESIGN.md 각진 SF · 라운드 0/3/6/9 · 역할별 액센트(청록=동작 · 금색=보상) */
+*{box-sizing:border-box}
+body{margin:0;padding:20px 14px 40px;font-family:'Pretendard','Malgun Gothic',sans-serif;
+  background:#0a0c10;color:#e6e9f2}
+h1{margin:0 0 4px;font-size:15px;letter-spacing:.04em;color:#cfd6e6}
+.sub{margin:0 0 18px;font-size:11.5px;color:#78829a;line-height:1.6}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:980px}
+@media (max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}}
+.cell{padding:12px 12px 14px;border-radius:10px;background:rgba(255,255,255,.02);
+  border:1px solid rgba(255,255,255,.06)}
+.cell.base{background:rgba(255,120,120,.05);border-color:rgba(255,120,120,.2)}
+.no{display:flex;align-items:baseline;gap:7px;margin:0 0 2px}
+.no b{font-size:13px;color:#fff}
+.no span{font-size:10.5px;color:#8a93a8}
+.dsc{margin:0 0 10px;font-size:10.5px;color:#6f7a8e;line-height:1.5;min-height:31px}
+/* 건물 자리 — 실제 맵처럼 어두운 바닥 위에 건물 덩어리 */
+.stage{position:relative;height:150px;border-radius:8px;overflow:hidden;
+  background:linear-gradient(180deg,#2b2f36,#22262c 60%,#1b1e23);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.bldg{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
+  width:88px;height:56px;border-radius:6px;
+  background:linear-gradient(160deg,#5c7fa8,#33506e 55%,#22384f);
+  box-shadow:0 10px 18px -8px #000,inset 0 1px 0 rgba(255,255,255,.18)}
+.bldg::after{content:'';position:absolute;left:14%;right:14%;top:-11px;height:14px;border-radius:4px;
+  background:linear-gradient(160deg,#6d90b8,#3d5c7c);box-shadow:inset 0 1px 0 rgba(255,255,255,.2)}
+.shadow{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
+  width:104px;height:16px;border-radius:50%;background:rgba(0,0,0,.45);filter:blur(5px)}
+/* 표시가 앉는 자리 — 건물 꼭대기에서 일정하게 띄운다 */
+.slot{position:absolute;left:50%;bottom:104px;transform:translateX(-50%);z-index:3}
+.face{width:100%;height:100%;object-fit:cover;object-position:center 28%;display:block;
+  filter:brightness(1.3) saturate(1.1)}
+
+/* ══ 기준 · 지금 ══ */
+.v0 .ico{position:relative;width:34px;height:34px;border-radius:50%;overflow:hidden;
+  border:1px solid rgba(130,180,230,.45);background:#0b1017;box-shadow:0 2px 8px rgba(0,0,0,.55)}
+.v0 .ico::after{content:'';position:absolute;inset:0;border-radius:50%;
+  background:linear-gradient(to bottom,rgba(0,0,0,0) 45%,rgba(18,24,32,.86) 0)}
+.v0 .qn{position:absolute;right:-5px;top:-5px;min-width:15px;height:15px;border-radius:50%;
+  background:#0b1017;border:1px solid rgba(120,170,220,.5);color:#cfe6ff;
+  font:800 9px/15px 'Rajdhani',sans-serif;text-align:center;z-index:2}
+
+/* ══ ① 각진 판 + 아래 진행선 ══ */
+.v1 .ico{position:relative;width:36px;height:36px;border-radius:3px;overflow:hidden;
+  background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.28),0 4px 10px -4px #000}
+.v1 .ico::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:rgba(255,255,255,.10)}
+.v1 .bar{position:absolute;left:0;bottom:0;height:3px;width:55%;z-index:2;
+  background:#5cd6ff;box-shadow:0 0 7px rgba(92,214,255,.85)}
+.v1 .qn{position:absolute;right:-4px;top:-4px;min-width:14px;height:14px;border-radius:2px;
+  background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.4);color:#dff2ff;
+  font:800 9px/14px 'Rajdhani',sans-serif;text-align:center;z-index:3}
+
+/* ══ ② 진행 링만 · 얼굴 없음 · 남은 초 ══ */
+.v2 .ico{position:relative;width:34px;height:34px;border-radius:50%;
+  background:conic-gradient(#5cd6ff 55%,rgba(255,255,255,.10) 0);
+  display:flex;align-items:center;justify-content:center}
+.v2 .ico::after{content:'';position:absolute;inset:3px;border-radius:50%;background:#0b1017}
+.v2 i{position:relative;z-index:2;font:800 12px/1 'Rajdhani',sans-serif;color:#dff2ff;font-style:normal}
+
+/* ══ ③ 캡슐 — [얼굴][진행][×2] ══ */
+.v3 .ico{display:flex;align-items:center;gap:6px;height:28px;padding:0 8px 0 3px;
+  border-radius:14px;background:rgba(10,14,20,.9);
+  box-shadow:0 0 0 1px rgba(150,200,240,.26),0 4px 10px -4px #000}
+.v3 .pic{width:22px;height:22px;border-radius:50%;overflow:hidden;flex:none;background:#0b1017}
+.v3 .trk{width:34px;height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.v3 .trk i{display:block;height:100%;width:55%;background:#5cd6ff;box-shadow:0 0 6px rgba(92,214,255,.8)}
+.v3 em{font:800 10px/1 'Rajdhani',sans-serif;color:#9fb6cc;font-style:normal}
+
+/* ══ ④ 육각 — 룬 구역과 같은 어휘 ══ */
+.v4 .ico{position:relative;width:38px;height:38px;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(180deg,rgba(150,205,245,.55),rgba(40,70,100,.5));
+  display:flex;align-items:center;justify-content:center}
+.v4 .in{position:relative;width:34px;height:34px;overflow:hidden;background:#0b1017;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.v4 .in::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(0,0,0,0) 55%,rgba(10,16,22,.88) 0)}
+.v4 .qn{position:absolute;right:-3px;top:-1px;min-width:14px;height:14px;border-radius:2px;
+  background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.45);color:#dff2ff;
+  font:800 9px/14px 'Rajdhani',sans-serif;text-align:center;z-index:3}
+
+/* ══ ⑤ 핀(말풍선) — 아래 꼭짓점이 건물을 가리킨다 ══ */
+.v5 .ico{position:relative;width:36px;height:36px;border-radius:6px;overflow:hidden;
+  background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.3),0 5px 12px -5px #000}
+.v5 .ico::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(0,0,0,0) 55%,rgba(12,18,26,.85) 0)}
+.v5 .tip{position:absolute;left:50%;bottom:-5px;transform:translateX(-50%) rotate(45deg);
+  width:10px;height:10px;background:#0d1218;box-shadow:1px 1px 0 rgba(150,200,240,.3)}
+.v5 .qn{position:absolute;right:-4px;top:-4px;min-width:14px;height:14px;border-radius:2px;
+  background:#0d1218;box-shadow:0 0 0 1px rgba(150,200,240,.45);color:#dff2ff;
+  font:800 9px/14px 'Rajdhani',sans-serif;text-align:center;z-index:3}
+
+/* ══ ⑥ 홀로그램 — 건물에서 올라오는 빛 위에 얼굴 ══ */
+.v6 .ico{position:relative;width:34px;height:34px;border-radius:4px;overflow:hidden;
+  background:rgba(14,32,44,.72);box-shadow:0 0 0 1px rgba(92,214,255,.45),0 0 16px -4px rgba(92,214,255,.55)}
+.v6 .ico .face{filter:brightness(1.25) saturate(.5) sepia(.35) hue-rotate(160deg)}
+.v6 .ico::after{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(180deg,rgba(92,214,255,.16) 0 1px,transparent 1px 3px)}
+.v6 .beam{position:absolute;left:50%;top:34px;transform:translateX(-50%);
+  width:16px;height:34px;background:linear-gradient(180deg,rgba(92,214,255,.32),transparent);
+  clip-path:polygon(28% 0,72% 0,100% 100%,0 100%)}
+.v6 .bar{position:absolute;left:0;bottom:0;height:2px;width:55%;background:#5cd6ff;z-index:2}
+
+/* ══ ⑦ 얇은 가로 게이지 + 작은 얼굴(가장 조용함) ══ */
+.v7 .ico{display:flex;flex-direction:column;align-items:center;gap:4px}
+.v7 .pic{width:22px;height:22px;border-radius:3px;overflow:hidden;background:#0b1017;
+  box-shadow:0 0 0 1px rgba(150,200,240,.22)}
+.v7 .trk{width:44px;height:3px;border-radius:0;background:rgba(0,0,0,.55);
+  box-shadow:0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+.v7 .trk i{display:block;height:100%;width:55%;background:#5cd6ff;box-shadow:0 0 6px rgba(92,214,255,.8)}
+
+/* ══ ⑧ 각진 컷 + 왼쪽 색 띠(환생 버튼 어휘) ══ */
+.v8 .ico{position:relative;display:flex;align-items:center;gap:6px;height:30px;padding:0 9px 0 26px;
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+  box-shadow:0 0 0 1px rgba(150,200,240,.24),0 4px 10px -4px #000;
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px)}
+.v8 .ico::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#5cd6ff;
+  box-shadow:0 0 8px rgba(92,214,255,.8)}
+.v8 .pic{position:absolute;left:7px;top:50%;transform:translateY(-50%);
+  width:18px;height:18px;border-radius:2px;overflow:hidden;background:#0b1017}
+.v8 b{font:800 11px/1 'Rajdhani',sans-serif;color:#dff2ff}
+.v8 em{font:700 9.5px/1 'Rajdhani',sans-serif;color:#8ea6bc;font-style:normal}
+</style></head><body>
+<h1>건물 위 생산 표시 — 8안</h1>
+<p class="sub">맨 앞이 <b>지금</b>이다. 여덟 안은 전부 「무엇을 · 얼마나 · 몇 개」를 한눈에 읽히게 하는 방향이다.<br>
+⚠ 여기서 고르는 것은 <b>생김새</b>뿐 — 「건물마다 자리가 다르다 · 줌에서 뜬 정도가 바뀐다」는 자리 계산의 문제라 코드에서 따로 고친다.</p>
+<div class="grid">
+
+  <div class="cell base v0">
+    <div class="no"><b>지금</b><span>고칠 대상</span></div>
+    <p class="dsc">어두운 원 + 작은 얼굴 + 테두리 배지. 덮개가 위에서 아래로 걷힌다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""><b class="qn">2</b></div></div></div>
+  </div>
+
+  <div class="cell v1">
+    <div class="no"><b>①</b><span>각진 판 + 진행선</span></div>
+    <p class="dsc">DESIGN.md 기본 어휘 그대로 — 각진 3px · 얇은 테두리 · <b>아래 청록 진행선</b>.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></div><b class="qn">2</b></div></div>
+  </div>
+
+  <div class="cell v2">
+    <div class="no"><b>②</b><span>링 + 남은 초</span></div>
+    <p class="dsc">얼굴을 빼고 <b>남은 시간</b>만. 가장 작고 조용하지만 무엇을 뽑는지는 모른다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><i>4s</i></div></div></div>
+  </div>
+
+  <div class="cell v3">
+    <div class="no"><b>③</b><span>캡슐</span></div>
+    <p class="dsc">[얼굴][진행 막대][×2] 가로 한 줄. 셋을 다 말하지만 폭을 많이 쓴다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><span class="pic"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""></span><span class="trk"><i></i></span><em>×2</em></div></div></div>
+  </div>
+
+  <div class="cell v4">
+    <div class="no"><b>④</b><span>육각</span></div>
+    <p class="dsc">룬 구역과 <b>같은 어휘</b>(육각 + 테두리 그라디언트). 게임 안에서 낯이 익다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><span class="in"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""></span><b class="qn">2</b></div></div></div>
+  </div>
+
+  <div class="cell v5">
+    <div class="no"><b>⑤</b><span>핀(말풍선)</span></div>
+    <p class="dsc">아래 꼭짓점이 <b>어느 건물인지</b> 가리킨다 — 건물이 붙어 있어도 헷갈리지 않는다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="tip"></i><b class="qn">2</b></div></div></div>
+  </div>
+
+  <div class="cell v6">
+    <div class="no"><b>⑥</b><span>홀로그램</span></div>
+    <p class="dsc">건물에서 <b>빛이 올라와</b> 그 위에 뜬다. 「지금 만드는 중」이 움직임으로 읽힌다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""><i class="bar"></i></div><i class="beam"></i></div></div>
+  </div>
+
+  <div class="cell v7">
+    <div class="no"><b>⑦</b><span>얇은 게이지</span></div>
+    <p class="dsc">작은 얼굴 + <b>가로 게이지</b>. 여덟 중 가장 조용해 건물을 안 가린다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><span class="pic"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""></span><span class="trk"><i></i></span></div></div></div>
+  </div>
+
+  <div class="cell v8">
+    <div class="no"><b>⑧</b><span>각진 컷 + 색 띠</span></div>
+    <p class="dsc">환생 해금 버튼과 <b>같은 어휘</b>(모서리 컷 + 왼쪽 색 띠). 남은 초를 글자로 읽는다.</p>
+    <div class="stage"><div class="shadow"></div><div class="bldg"></div>
+      <div class="slot"><div class="ico"><span class="pic"><img class="face" src="../../assets/portraits/ranger_portrait.webp" alt=""></span><b>4s</b><em>×2</em></div></div></div>
+  </div>
+
+</div></body></html>

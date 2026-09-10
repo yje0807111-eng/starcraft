@@ -191,61 +191,8 @@ await new Promise(r => setTimeout(r, 760)); await log('일꾼 지정');
 
 for (let guard = 0; guard < 26; guard++) {
   const s = await snap(); const id = String(s.id || '');
-  if (!/^(ch|armB|placeB|deselWk|selB1|unit|pickU|moveU|deselU|zoomPan|panMode|panDrag|dg|outro)/.test(id)) break;
+  if (!/^(ch|armB|placeB|deselWk|selB1|unit|dg|outro)/.test(id)) break;
   if (id.indexOf('ch')===0) { await chGo(); continue; }
-  if (id === 'deselU') {
-    await page.evaluate(() => { const b = document.getElementById('btDesel'); if (b) b.click();
-      else if (typeof techDeselU === 'function') techDeselU(); });
-    await new Promise(r => setTimeout(r, 760)); await log('유닛 지정 해제'); continue; }
-  if (id === 'zoomPan') {
-    const r = await page.evaluate(() => { const v = techView(); v.zoom = (v.zoom || 1) * 1.4; v.x = (v.x || 0.5) + 0.06;
-      const t = (typeof techViewT === 'function') ? techViewT() : null;
-      if (t) { t.zoom = v.zoom; t.x = v.x; }
-      return '확대 ' + v.zoom.toFixed(2) + ' · 이동 ' + v.x.toFixed(3); });
-    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
-  if (id === 'panMode') {
-    await page.evaluate(() => { if (typeof campPanMode === 'function') campPanMode(true); });
-    await new Promise(r => setTimeout(r, 760)); await log('이동 모드 켬'); continue; }
-  if (id === 'panDrag') {
-    // 🖐 이동 모드를 켠 채 **한 손가락으로 민다** — 모드가 꺼져 있으면 단계가 안 넘어간다.
-    const r = await page.evaluate(() => {
-      if (typeof campPanMode === 'function') campPanMode(true);
-      const v = techView(); v.y = (v.y || 0.5) + 0.05;
-      const t = (typeof techViewT === 'function') ? techViewT() : null; if (t) t.y = v.y;
-      return '한 손가락 밀기 y=' + v.y.toFixed(3); });
-    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
-  if (id === 'pickU') {
-    // 🖼 틀이 **유닛을 품는지** 눈으로 본다 — 틀 밖에 서 있으면 드래그가 막혀 못 지정한다.
-    if (process.env.SHOT) { await new Promise(r => setTimeout(r, 500));
-      await page.screenshot({ path: 'docs/mock/camp-tuto-picku.png' });
-      console.log('        shot docs/mock/camp-tuto-picku.png'); }
-    const r = await page.evaluate(() => { const id = _tutoUnitId();
-      const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
-      if (!u) return '유닛이 없다';
-      G.tech.sel = null; G.tech.selU = [u.eid];
-      const sh = G.tech.sheet || (G.tech.sheet = {}); sh.open = true; sh.sec = 'ent';
-      if (typeof techUIRender === 'function') techUIRender();
-      return '유닛 지정'; });
-    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
-  if (id === 'moveU') {
-    const r = await page.evaluate(() => { const id = _tutoUnitId();
-      const u = (G.tech.ents || []).find(e => e && e.type === 'unit' && e.uid === id);
-      if (!u) return '유닛이 없다';
-      const p = _tutoMoveRect();
-      if (!p) return '목표 자리를 아직 못 잰다';
-      u.x = p.wx; u.y = p.wy; u.tx = null; u.ty = null;   // 그 자리에 **멈춰** 세운다
-      return '입구로 옮겼다 (' + u.x.toFixed(3) + ',' + u.y.toFixed(3) + ')'; });
-    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
-  if (id === 'zoomV') {
-    const r = await page.evaluate(() => { const v = techView(); v.zoom = (v.zoom || 1) * 1.4;
-      if (typeof techViewT === 'function' && techViewT()) techViewT().zoom = v.zoom;
-      return '확대 ' + v.zoom.toFixed(2); });
-    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
-  if (id === 'panV') {
-    const r = await page.evaluate(() => { const v = techView(); v.x = (v.x || 0.5) + 0.06;
-      if (typeof techViewT === 'function' && techViewT()) techViewT().x = v.x;
-      return '이동 x=' + v.x.toFixed(3); });
-    await new Promise(r => setTimeout(r, 760)); await log(r); continue; }
   if (id === 'dgOpen') {
     await page.evaluate(() => { const e = document.getElementById('curTitle'); if (e) e.click();
       else if (typeof campDropToggle === 'function') campDropToggle(); });
@@ -385,6 +332,40 @@ await log('끝');
       mine: mine, foes: foes, baseHp: baseHp, fails: (typeof campState === 'function') ? (campState().fails | 0) : -1, n0: n0 }; });
   console.log('던전 1 에서 60초: 내 병력 ' + r.mine + ' · 적 ' + r.foes + ' · 본부 ' + r.baseHp
     + ' · 지금 던전/라운드 ' + r.dg + '/' + r.rnd); }
+// 🗺 구역 안내 — 튜토리얼이 **강제로 안 시키는 것**을 여기서 말한다. 한 장씩 떠서 닫히는지 본다.
+{ const seen = [];
+  // 조건을 하나씩 만들어 준다 — 연구 구역을 열고 · 유닛을 세우고 · 던전으로 옮긴다.
+  const arm = async (k) => { await page.evaluate((kk) => {
+    const S = (typeof guideState === 'function') ? guideState() : null; if (S) S.zt = S.zt || {};
+    if (kk === 'res') { const b = document.querySelector('.navIt[data-nav="research"]'); if (b) b.click(); }
+    if (kk === 'army') { const b = document.querySelector('.navIt[data-nav="camp"]'); if (b) b.click();
+      if (typeof G !== 'undefined' && G.tech) G.tech.ents.push({ eid: 9001, type: 'unit', uid: 'marine', x: .5, y: .6, hp: 10 }); }
+    if (kk === 'foe' && typeof campEnterDungeon === 'function') campEnterDungeon(1);
+    if (typeof updateCurBar === 'function') updateCurBar(); }, k);
+    await new Promise(x => setTimeout(x, 500)); };
+  for (const k of ['res', 'army', 'foe']) {
+    await arm(k);
+    for (let q = 0; q < 4; q++) {
+    const r = await page.evaluate(() => {
+      if (typeof zoneTipPaint === 'function') zoneTipPaint();
+      const el = document.getElementById('zoneTip'); if (!el) return null;
+      const tip = el.querySelector('.tuTip');
+      const blocks = Array.from(el.querySelectorAll('i'))
+        .some(i => getComputedStyle(i).pointerEvents !== 'none');
+      return { id: el.dataset.zt, title: el.querySelector('.tuTx').textContent,
+        sub: el.querySelector('.tuSub').textContent.split(String.fromCharCode(10)).join(' | '),
+        card: tip.classList.contains('ch'), blocks: blocks }; });
+    if (!r) break;
+      if (process.env.SHOT && seen.length === 0) { await new Promise(x => setTimeout(x, 300));
+      await page.screenshot({ path: 'docs/mock/camp-zone-tip.png' });
+      console.log('        shot docs/mock/camp-zone-tip.png'); }
+    seen.push(r.id);
+    console.log('  안내 [' + r.id + '] ' + r.title + (r.blocks ? ' ⛔막는다' : '')
+      + (r.card ? '' : ' ⛔카드아님') + String.fromCharCode(10) + '        ' + r.sub);
+    await page.evaluate(() => { const g = document.querySelector('#zoneTip .tuGo'); if (g) g.click(); });
+    await new Promise(x => setTimeout(x, 200)); }
+  }
+  console.log('구역 안내 ' + seen.length + '장: ' + (seen.join(' · ') || '없음')); }
 console.log('\n총 단계 ' + (await page.evaluate(() => TUTO_STEPS.length)));
 if (errs.length) console.log('페이지 오류: ' + errs.join(' | '));
 await browser.close(); server.close();
