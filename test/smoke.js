@@ -14056,6 +14056,27 @@ async function groupLobby(){
           if(skip0!=null) S.skip=skip0; else delete S.skip;
           if(ack0!=null) S.tack=ack0; else delete S.tack; }
         tutoPaint(); } }
+    // 🏰 **개편을 따라간다**(2026-09-10) — 던전이 적 기지가 되면서 안내 셋이 거짓말이 됐었다.
+    //   ⛔ 문구를 손으로 박지 말 것: 이름·버튼 글자·진행 축이 전부 화면과 같은 소스에서 와야 한다.
+    { const tp=(k)=>{ const s=TUTO_STEPS[at(k)]; return String((typeof s.tip==='function')?s.tip():s.tip); };
+      // ① 던전 이름은 campDgName — 옛 표(hbDun)를 읽으면 목록과 어긋난다
+      const nm=(typeof campDgName==='function')?campDgName(TUTO_DG):'';
+      assert(nm && tp('dgPick').indexOf(nm)===0,
+        '던전 안내가 목록과 다른 이름을 쓴다: '+tp('dgPick')+' (목록은 '+nm+')');
+      { const ds=(typeof campDgDesc==='function')?campDgDesc(TUTO_DG):'';
+        assert(ds && tp('dgPick').indexOf(ds)>0,'던전 안내에 그 던전 설명이 없다: '+tp('dgPick')); }
+      // ② 라운드는 없어졌다 — 어느 안내도 그 말을 하면 안 된다
+      for(const k of ids){ const s=TUTO_STEPS[ids.indexOf(k)];
+        const t=String((typeof s.tip==='function')?s.tip():s.tip);
+        assert(t.indexOf('라운드')<0,'「라운드」가 남은 안내가 있다('+k+'): '+t); }
+      assert(tp('outro').indexOf('부술수록')>0 || tp('outro').indexOf('부수면')>0,
+        '마지막 안내가 진행 축(부순 건물)을 안 말한다: '+tp('outro')); }
+    // ③ 진입 버튼 글자는 **화면이 정한다** — 캠프에서는 「돌아가기」, 던전을 고르면 「진입」
+    { assert(typeof _cdGoLabel==='function','버튼 글자 함수가 없다');
+      assert(_cdGoLabel(0)!==_cdGoLabel(TUTO_DG),
+        '캠프와 던전의 버튼 글자가 같다: '+_cdGoLabel(0));
+      const t=String(TUTO_STEPS[at('dgGo')].tip());
+      assert(t.indexOf('이동 버튼')<0,'「이동 버튼」이 남았다 — 버튼은 「진입」이다: '+t); }
     return '챕터 '+TUTO_CH.map(c=>c.title).join(' · ');
   });
 

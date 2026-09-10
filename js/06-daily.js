@@ -494,14 +494,18 @@ const TUTO_STEPS = [
   { id:'dgPick', goal:1,  tip:()=>_tutoDgTip(),
     at:()=>_tutoVis('.cdRow[data-dg="'+TUTO_DG+'"]') || _tutoVis('#curTitle'),
     n:()=>((typeof _cdPick!=='undefined' && _cdPick && (_cdPick.dg|0)===TUTO_DG) ? 1 : 0) },
-  { id:'dgGo',   goal:1,  tip:'하단의 이동 버튼을 눌러 던전을 이동합니다',
+  { id:'dgGo',   goal:1,  tip:()=>('하단의 「' + _tutoGoLabel() + '」 버튼을 눌러 던전에 들어갑니다'),
     at:()=>_tutoVis('.cdGo') || _tutoVis('#curTitle'),
     n:()=>{ const C=(typeof campState==='function')?campState():null;
       return (C && (C.dg|0)>=TUTO_DG) ? 1 : 0; } },
   // 📖 **마지막은 읽고 넘긴다**(2026-09-04 사용자 확정). 시킬 일이 없고 알려 줄 것만 있다 —
   //   아무 데나 터치하면 끝나고 보상이 나간다(tutoPaint 가 오버레이에 리스너를 단다).
   //   ⚠ 이 단계만 게임 상태가 아니라 **터치했나**를 본다. 그래서 상태를 S.tack 에 남긴다.
-  { id:'outro',  goal:1,  tip:'라운드가 오를수록 재화 획득 배수가 늘어납니다',
+  // 🏰 **라운드가 없어졌다**(2026-09-09 개편) — 진행은 「부순 진행 건물 수」이고 배수도 그걸 따라 오른다.
+  //   ⛔ 「라운드가 오를수록」으로 되돌리지 말 것: 화면 어디에도 라운드가 없다.
+  { id:'outro',  goal:1,  tip:()=>('적 건물을 부술수록 재화 획득 배수가 늘어납니다'
+      + String.fromCharCode(10) + '진행 건물 '
+      + ((typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6) + '채를 부수면 완주'),
     sub:()=>TUTO_END_SUB,                                    // ⚠ 초기화를 말없이 하지 않는다
     at:()=>_tutoVis('#curMul') || 'all',
     n:()=>{ const S=guideState(); return (S && S.tack) ? 1 : 0; } },
@@ -509,14 +513,22 @@ const TUTO_STEPS = [
 // 🧱 건설 비용 안내 — 「병영 건설 비용을 모읍니다」처럼 **그 건물 이름**으로 말한다.
 //   ⛔ 「건물」이라고 뭉뚱그리지 말 것 — 종족마다 첫 건물이 다르다(TUTO_BLD).
 function _tutoBuildCostTip(){ return _tutoTapTip(_tutoBName(0) + ' 건설 비용을 모읍니다'); }
-// 🗺 던전 고르기 안내 — 이름과 배율을 **표에서 꺼낸다**(값이 바뀌면 문구도 따라온다).
-//   ⛔ 「감염된 둥지 1.5~2.0」 을 손으로 적지 말 것 — CAMP_MINE 이 단일 소스다(HUNT_R1 §6-1-0-1).
+// 🚪 진입 버튼의 **글자는 화면이 정한다**(campDropRender) — 「이동」이었다가 개편으로 「진입」이 됐다.
+//   ⛔ 문구에 손으로 박지 말 것: 버튼 글자가 바뀌면 안내가 곧바로 거짓말이 된다(2026-09-10 실제로 그랬다).
+function _tutoGoLabel(){
+  const b = document.querySelector('#campDrop .cdGo');
+  const t = b ? String(b.textContent||'').trim() : '';
+  return t || '진입'; }
+// 🗺 던전 고르기 안내 — 이름과 한 줄 설명을 **화면과 같은 함수**에서 꺼낸다.
+//   ⛔ hbDun(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 **말풍선과 목록의 이름이 어긋난다**
+//     (2026-09-10 · 던전 개편이 이름을 campDgName 으로 옮겼다. 같은 실수를 던전 칩이 먼저 했다).
+//   ⛔ 획득 배율을 문구에 적지 말 것 — 목록 카드 오른쪽이 이미 말하고, 개편으로 오르는 축이 바뀌었다.
 function _tutoDgTip(){
-  let nm = '던전 ' + TUTO_DG, mul = '';
-  try{ if(typeof hbDun==='function'){ const d=hbDun(TUTO_DG); if(d && d.name) nm=d.name; } }catch(_e){}
-  try{ if(typeof campDgMulTx==='function') mul=campDgMulTx(TUTO_DG); }catch(_e){}
+  let nm = '던전 ' + TUTO_DG, ds = '';
+  try{ if(typeof campDgName==='function') nm = campDgName(TUTO_DG) || nm; }catch(_e){}
+  try{ if(typeof campDgDesc==='function') ds = campDgDesc(TUTO_DG) || ''; }catch(_e){}
   const jo = (typeof josaEul==='function') ? josaEul(nm) : '를';
-  return nm + jo + ' 선택합니다' + (mul ? ('\n미네랄 획득 배율 ' + mul.replace(/×/g,'')) : ''); }
+  return nm + jo + ' 선택합니다' + (ds ? (String.fromCharCode(10) + ds) : ''); }
 
 // ⛏ **맵을 두드려 버는 단계의 공용 대상**(2026-09-04 사용자 신고에서 나왔다).
 //   채굴이 꺼져 있으면 맵을 아무리 두드려도 안 캐진다 — 그 상태로 두면 그 단계가 영영 안 끝난다.
