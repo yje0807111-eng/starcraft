@@ -1154,11 +1154,17 @@
   /* ══ 🗺 유즈맵 강화 구역 ═══════════════════════════════════════════════
      ⭐ 줄(.ptRow)·목록(.ppList)은 **공학소 것을 그대로** 쓴다 — 여기서는 머리줄과
         맵 고르는 칸만 정한다. ⛔ 강화 줄 모양을 여기서 다시 정하지 말 것. */
-  /* ⛔ 여기에 `display` 를 쓰지 말 것 — `.appScreen` 이 이미 flex 를 주고 `.appScreen.hide` 가
-     숨긴다. **아이디가 그 클래스를 이겨** 화면이 영영 안 숨는다(2026-09-10 실측: 게임 중에
-     이 화면이 위에 깔려 조작 버튼·☰ 를 통째로 먹었다). 다른 화면들도 여백만 정한다. */
-  #mapUpgScreen{gap:8px;padding:12px 12px calc(var(--navH) + 8px)}
-  #phone.curOn #mapUpgScreen{padding-top:calc(var(--curH) + var(--topPad) + 8px)}
+  /* 🏠 껍데기는 **환생·룬 구역과 같은 규격**이다(#phone 직속 · z 120 · 네비 자리를 비운다).
+     ⛔ `.appScreen` 가족으로 되돌리지 말 것 — 그때는 아이디가 `.appScreen.hide` 를 이겨
+        화면이 영영 안 숨었다(게임 중 조작 버튼·☰ 를 통째로 먹었다 · 2026-09-10 실측).
+     ⚠ 배경(.rnBg)은 공용 #campRebBg 위에 얹는 어둠뿐이다 — 제 그림을 두지 않는다. */
+  #mapUpgScreen{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
+  #mapUpgScreen.on{display:flex;flex-direction:column;gap:8px;
+    padding:calc(var(--topPad) + var(--curH) + 10px) 13px 10px}
+  #mapUpgScreen.on.crIn{animation:crFadeIn var(--t-screen) ease}
+  #mapUpgScreen .rnBg{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(5,8,12,.20) 0%,rgba(5,8,12,.06) 24%,rgba(5,8,12,.62) 62%,rgba(5,8,12,.94) 100%)}
+  #mapUpgScreen .muHead,#mapUpgScreen .muSeg,#mapUpgScreen .ppList{position:relative;z-index:1}
   .muHead{display:flex;align-items:center;gap:8px;min-height:22px}
   .muBack{width:26px;height:26px;flex:none;border:none;background:none;cursor:pointer;
     color:var(--txt-dim,#c3ccd8);font:400 20px/1 var(--font-num);padding:0}

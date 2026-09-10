@@ -274,7 +274,7 @@ async function groupLobby(){
   //   ⭐ 여기서 재는 것은 「같은 뒷단을 두 화면이 나눠 쓰는가」다 — 강화를 사고·저장하고·판에
   //     먹이는 코드는 공학소와 **한 벌**이어야 한다(⛔ 두 벌이 되면 값이 갈린다).
   await step('유즈맵 강화 구역: 공학소와 한 뒷단 · 맵별로 갈린다', ()=>{
-    skipIf(typeof mapUpgEnter!=='function','유즈맵 강화 구역 없음');
+    skipIf(typeof mapUpgOpen!=='function','유즈맵 강화 구역 없음');
     const keep=PLAYER_META.coins;
     try{
       // ① 표가 「어디서 사는가」를 꼬리표로 가른다 — 화면이 아니라 표가 단일 소스다
@@ -292,7 +292,12 @@ async function groupLobby(){
       // ③ 강화 구역 — 맵 목록이 뜨고, 항목이 있는 맵만 선다
       //   ⚠ 포인트는 **연 뒤에** 넣는다 — `mapUpgEnter` 가 `loadMeta()` 로 저장본을 다시 읽어
       //     미리 넣어 둔 값을 덮는다(실측: 「샀는데 레벨이 안 오른다」의 진짜 이유였다).
-      mapUpgEnter();
+      // ⭐ 입구는 **`campRebEnter('umap')` 하나**다 — 그것이 환생·트리를 닫아 준다.
+      //   ⛔ `mapUpgOpen()` 을 직접 부르지 말 것: 둘이 겹쳐 뜬다.
+      campRebEnter('umap');
+      assert(mapUpgIsOn(),'유즈맵 강화가 안 열렸다');
+      assert(!campRebIsOn() && !campTreeIsOn(),'환생·트리가 같이 열려 있다');
+      assert(campZoneTitle()==='유즈맵 강화','재화 바 이름이 다르다: '+campZoneTitle());
       PLAYER_META.coins=99999;
       const cards=[...document.querySelectorAll('.muMap')];
       assert(cards.length,'강화할 유즈맵이 하나도 안 보인다');
@@ -13693,11 +13698,13 @@ async function groupLobby(){
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
-      assert(reb && reb.subs.length===2,'환생 하위 칸(환생·환생 트리)이 없음');
+      // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10) — 2차 환생이 주는 포인트를 쓰는 곳이라 여기다.
+      //   ⛔ 유즈맵 구역으로 되돌리지 말 것(거기 있다가 옮겨 왔다).
+      assert(reb && reb.subs.length===3,'환생 하위 칸(환생·환생 트리·유즈맵 강화)이 없음');
       // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
       //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
       //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.

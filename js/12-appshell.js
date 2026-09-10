@@ -75,19 +75,19 @@ function playScreenFx(){ }
 function fxPop(card){ if(!card) return; card.classList.remove('fxPop'); void card.offsetWidth; card.classList.add('fxPop');
   clearTimeout(card._fxT); card._fxT=setTimeout(()=>card.classList.remove('fxPop'),200); }
 // ── 앱 화면 전환 ──
-const APP_SCREENS=['opening','auth','mapSelect','mapUpgScreen','modeSheet','homeScreen','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // ⚠ townScreen 은 다락으로 갔다(ATTIC.md)   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
+const APP_SCREENS=['opening','auth','mapSelect','modeSheet','homeScreen','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // ⚠ townScreen 은 다락으로 갔다(ATTIC.md)   // ⚠ 여기 없는 화면은 showAppScreen 이 영영 안 켠다
 // 💠 공용 재화 바를 띄우는 화면(RPG/허브 + 유즈맵 선택). 로그인·타이틀·캐릭터생성·인게임은 제외.
 // 화면 제목은 재화 바 왼쪽에 붙는다(유즈맵과 같은 방식) — 화면 안에 가운데 제목을 또 두지 않는다.
 // 여기 한 곳에서만 정한다. 화면마다 curSetTitle을 부르면 새 화면에서 빠뜨린다.
 const SCREEN_TITLE={ upgScreen:'캐릭터', gearScreen:'정비', shopScreen:'상점' };
-const CUR_SCREENS=['homeScreen','mapSelect','mapUpgScreen','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
+const CUR_SCREENS=['homeScreen','mapSelect','modeSheet','dgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 이 화면들은 공용 재화 바를 쓴다
 // 그중 바를 '판'이 아니라 배경 위 숫자로 두는 화면(.curBar.bare) — 배경이 상단까지 이어져 보여야 하는 곳
 // 🧍 인구 칸을 캠프 **밖에서도** 보여 줄 화면(2026-09-03 사용자 확정).
 //   ⚠ 값은 캠프 상태에서 온다 — 캠프를 한 번도 안 열었으면 0/0 이다.
-const POP_SCREENS=['mapSelect','mapUpgScreen','shopScreen'];
+const POP_SCREENS=['mapSelect','shopScreen'];
 // 📐 구역 상단 띠를 쓰는 화면(환생·룬은 campRebEnter/campRuneEnter 가 직접 켠다)
-const SPLIT_CUR_SCREENS=['mapSelect','mapUpgScreen','shopScreen'];
-const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','mapUpgScreen','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
+const SPLIT_CUR_SCREENS=['mapSelect','shopScreen'];
+const BARE_CUR_SCREENS=['homeScreen','townScreen','mapSelect','shopScreen','gearScreen','upgScreen','researchScreen','questScreen'];   // 재화 바를 '판'이 아니라 배경 위 숫자로 — 상단 줄이 겹쳐 답답해진다(구분선 없이 배경이 이어진다)
 function curSetTitle(t){ const e=document.getElementById('curTitle'); if(!e) return;
   // ⚠ **캐시(_cdKey)도 함께 비운다**(2026-09-04). 칩 내용을 글자로 덮어써 놓고 키를 남기면,
   //   캠프로 돌아왔을 때 curPaintChip 이 「값이 안 바뀌었다」고 보고 다시 안 그려 **칩이 빈 채로 남는다**
@@ -433,7 +433,7 @@ function curSplitSync(screenOn){
   if(screenOn !== undefined) _splitScreen = !!screenOn;
   // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
   //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
-  const zone = ['campRune','campReb','campTree'].some(id => {
+  const zone = ['campRune','campReb','campTree','mapUpgScreen'].some(id => {
     const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
   curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
@@ -1972,7 +1972,7 @@ document.addEventListener('pointerdown', function(e){
 let _mapUpgPick = null;   // null = 맵 목록 · 'nemo' 등 = 그 맵의 강화 목록
 let _mapUpgGrp  = null;   // 고른 맵 안에서 지금 보는 갈래(탭)
 function mapUpgIsOn(){ const el=document.getElementById('mapUpgScreen');
-  return !!(el && !el.classList.contains('hide')); }
+  return !!(el && el.classList.contains('on')); }
 // 바깥 강화가 **하나라도 있는** 맵만 목록에 선다.
 function mapUpgMaps(){
   return (typeof MAPS!=='undefined'?MAPS:[]).filter(function(m){
@@ -1982,10 +1982,44 @@ function mapUpgMaps(){
 //   ⚠ 안 보이면 「살 수 있나」를 값만 보고 못 가늠한다(공학소도 제 머리줄에 같은 것을 단다).
 function mapUpgBal(){ const el=document.getElementById('muBal'); if(!el) return;
   el.innerHTML='<b>'+((typeof fmtCur==='function')?fmtCur(PLAYER_META.coins||0):(PLAYER_META.coins||0))+'</b>P'; }
-function mapUpgEnter(){ if(typeof loadMeta==='function') loadMeta();
+// ⛔ **밖에서 이 함수를 직접 부르지 말 것** — 환생 구역의 유일한 입구는 `campRebEnter('umap')` 이다.
+//   거기가 나머지 둘(환생·트리)을 닫아 준다. 여기서 열기만 하면 둘이 겹쳐 뜬다.
+function mapUpgOpen(){ const el=document.getElementById('mapUpgScreen'); if(!el) return;
+  if(typeof loadMeta==='function') loadMeta();
   _mapUpgPick=null; _mapUpgGrp=null;
-  showAppScreen('mapUpgScreen'); navShow('map');
-  renderMapUpg(); if(typeof navPaint==='function') navPaint(); }
+  el.classList.add('on');
+  // 🖼 배경은 **환생 구역과 같은 그림**이다 — 네 화면이 한 장을 나눠 쓴다(⛔ 제 그림을 두지 말 것).
+  if(typeof campRebArtOn==='function') campRebArtOn();
+  renderMapUpg();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function mapUpgClose(keepArt){
+  setTimeout(()=>{ if(typeof curSplitSync==='function') curSplitSync(); },0);   // 📐 상단 띠 맞춤
+  const el=document.getElementById('mapUpgScreen'); if(el) el.classList.remove('on','crIn');
+  if(keepArt) return;
+  if(typeof campRebArtOff==='function') campRebArtOff(); }
+// 🔷 **갈래 탭은 룬 상점과 같은 「아이콘 탭」**(`.pdSeg.stack` · 2026-09-10 사용자 확정).
+//   ⭐ 껍데기는 **공용 `segNavHTML` 그대로**다 — 그림은 label 에 담고 세로로 세우는 일은
+//     공용 변형 `.stack`(css/40-social.css)이 한다. ⛔ 전용 탭 함수·마크업을 새로 만들지 말 것.
+//   ⭐ 아이콘도 **있는 것**을 쓴다: 육각 테두리 + 속 글리프는 `_PT_ICO`(09-dungeon.js)에서 온다
+//     — 공학소가 쓰던 그 그림이다(⛔ 새 에셋을 만들지 말 것).
+//   ⚠ 색은 **역할이 정해진 것을 피해** 골랐다: 청록(--acc-sel)은 「지금 선택된 것」 전용이라 안 쓴다.
+//     경제=금색(재화의 색) · 전투=붉은 계열 · 전체=중립 파랑 · 보스=보라. 전부 이미 쓰던 값이다.
+const MU_TAB_COL = { eco:'#ffd24a', combat:'#ff7676', team:'#b4cdeb', coop:'#c8b6ff', prod:'#8fe6b0' };
+const MU_TAB_ICO = 22;
+function _muTabIco(grp, on){
+  const c = MU_TAB_COL[grp] || '#b4cdeb';
+  const S = MU_TAB_ICO, R = S/2 - 1, q = [];
+  for(let i=0;i<6;i++){ const a = Math.PI/180*(60*i - 90);
+    q.push((S/2 + R*Math.cos(a)).toFixed(1)+','+(S/2 + R*Math.sin(a)).toFixed(1)); }
+  const k = (S*0.58/24).toFixed(3), off = (S/2 - S*0.29).toFixed(1);
+  const gl = (typeof _PT_ICO!=='undefined' && _PT_ICO[grp]) || '';
+  return '<svg class="rnTabI" width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'">'
+    + '<polygon points="'+q.join(' ')+'" fill="'+(on?'rgba(255,255,255,.05)':'none')
+    +   '" stroke="'+c+'" stroke-width="1" opacity="'+(on?'.85':'.38')+'"/>'
+    // ⚠ `_PT_ICO` 는 **선(stroke) 그림**이다 — 룬 글리프처럼 fill 로 그리면 통째로 뭉개진다.
+    + '<g transform="translate('+off+','+off+') scale('+k+')" fill="none" stroke="'+c
+    +   '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity="'
+    +   (on?'1':'.45')+'">'+gl+'</g></svg>'; }
 function mapUpgPick(id){ _mapUpgPick=id; _mapUpgGrp=null;
   if(typeof playSfx==='function') playSfx('ui_tab'); renderMapUpg(); }
 function mapUpgBack(){ _mapUpgPick=null; _mapUpgGrp=null;
@@ -1997,10 +2031,10 @@ function renderMapUpg(){
   const tabs=document.getElementById('muTabs');
   const pick=_mapUpgPick;
   mapUpgBal();
+  if(typeof curPaintChip==='function') curPaintChip();   // 🏷 이름은 재화 바가 말한다(campZoneTitle)
   if(back) back.classList.toggle('hide', !pick);
   // ── ① 맵 목록 ──
   if(!pick){
-    if(typeof curSetTitle==='function') curSetTitle('유즈맵 강화');
     if(ttl) ttl.textContent='강화할 유즈맵을 고르세요';
     if(tabs) tabs.innerHTML='';
     const maps=mapUpgMaps();
@@ -2021,15 +2055,16 @@ function renderMapUpg(){
     return; }
   // ── ② 고른 맵의 강화 목록 ──
   const m=(typeof USEMAPS!=='undefined')?USEMAPS[pick]:null;
-  if(typeof curSetTitle==='function') curSetTitle((m&&m.name)||'유즈맵 강화');
   if(ttl) ttl.textContent=(m&&m.name)||'';
   const mine=function(b){ return !!b.out && b.map===pick; };
   const ts=(typeof ptTabsFor==='function')?ptTabsFor(mine):[];
   if(ts.length && !ts.some(function(t){ return t[0]===_mapUpgGrp; })) _mapUpgGrp=ts[0][0];
   if(tabs) tabs.innerHTML=(ts.length>1 && typeof segNavHTML==='function')
-    ? segNavHTML(ts.map(function(t){ return { label:t[1] }; }),
+    ? segNavHTML(ts.map(function(t){
+          return { label:_muTabIco(t[0], t[0]===_mapUpgGrp)+'<span>'+t[1]+'</span>' }; }),
         Math.max(0, ts.findIndex(function(t){ return t[0]===_mapUpgGrp; })),
-        function(k){ return "setMapUpgGrp('"+ts[k][0]+"')"; }) : '';
+        function(k){ return "setMapUpgGrp('"+ts[k][0]+"')"; })
+      .replace('class="pdSeg"', 'class="pdSeg stack"') : '';
   list.innerHTML=(typeof ptRowsHTML==='function')
     ? ptRowsHTML(function(b){ return mine(b) && (!_mapUpgGrp || b.group===_mapUpgGrp); })
     : '';

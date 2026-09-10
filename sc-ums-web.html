@@ -317,16 +317,6 @@
     </div>
 
     <!-- ===== 신규: 유즈맵 선택 ===== -->
-    <!-- 🗺 유즈맵 강화 구역 — 2차 환생 포인트로 맵마다 영구 강화를 산다(2026-09-10).
-         ⚠ 껍데기만 여기 있다. 안은 renderMapUpg()(js/12-appshell.js)가 통째로 그린다.
-         ⛔ 강화 줄을 여기 마크업으로 박지 말 것 — 공학소와 같은 줄(ptRowsHTML)을 쓴다. -->
-    <div id="mapUpgScreen" class="appScreen spaceBg hide">
-      <div class="muHead"><button class="muBack hide" id="muBack" onclick="mapUpgBack()" aria-label="유즈맵 목록으로">‹</button>
-        <span class="muTtl" id="muTtl"></span><span class="muBal" id="muBal"></span></div>
-      <div class="muSeg" id="muTabs"></div>
-      <div class="ppList uiScroll" id="muList"></div>
-    </div>
-
     <div id="mapSelect" class="appScreen spaceBg hide">
       <!-- 제목은 상단 재화 바에 합쳐졌다(curSetTitle) · 프로필/설정 버튼 제거(설정은 마을 상단) -->
       <div class="msTopBar">
@@ -624,6 +614,18 @@
        🖼 배경 그림은 #campRebBg 한 장을 환생·업그레이드와 **함께 쓴다**(2026-09-03 사용자 확정).
        🗺 상단은 판 **위에 떠 있다** — 판이 화면 맨 위까지 차오른다(캠프 메인과 같은 규칙).
        내용은 campRuneRender() 가 채운다(장착 / 룬 상점 두 가지). -->
+  <!-- 🗺 유즈맵 강화 — **환생 구역의 셋째 칸**(2026-09-10 사용자 확정).
+       ⚠ 환생·트리·룬과 **같은 규격**이다: #phone 직속 · z 120 · bottom:var(--navH) ·
+          배경은 공용 #campRebBg 한 장. ⛔ appScreen 가족으로 되돌리지 말 것.
+       ⛔ 강화 줄을 여기 마크업으로 박지 말 것 — 공학소와 같은 줄(ptRowsHTML)을 쓴다. -->
+  <div id="mapUpgScreen">
+    <div class="rnBg"></div>
+    <div class="muHead"><button class="muBack hide" id="muBack" onclick="mapUpgBack()" aria-label="유즈맵 목록으로">‹</button>
+      <span class="muTtl" id="muTtl"></span><span class="muBal" id="muBal"></span></div>
+    <div class="muSeg" id="muTabs"></div>
+    <div class="ppList uiScroll" id="muList"></div>
+  </div>
+
   <div id="campRune">
     <div class="rnBg"></div>
     <div class="rnTop"><span class="rnTitle">룬</span><span class="rnRound" id="rnRound"></span></div>

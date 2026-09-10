@@ -1548,7 +1548,8 @@ let _rebArtT = 0;
 function _rebArtAnyOn(){
   return (typeof campRebIsOn === 'function' && campRebIsOn())
       || (typeof campTreeIsOn === 'function' && campTreeIsOn())
-      || (typeof campRuneIsOn === 'function' && campRuneIsOn()); }
+      || (typeof campRuneIsOn === 'function' && campRuneIsOn())
+      || (typeof mapUpgIsOn === 'function' && mapUpgIsOn()); }
 function campRebArtOff(){
   if(_rebArtT) return;
   _rebArtT = setTimeout(() => { _rebArtT = 0; if(_rebArtAnyOn()) return; _campRebArtOff0(); }, 0); }
@@ -1572,6 +1573,7 @@ function campRebClose(keepArt){
 function campZoneTitle(){
   if(typeof campRuneIsOn === 'function' && campRuneIsOn())
     return (typeof _runeSec !== 'undefined' && _runeSec === 'shop') ? '룬 상점' : '룬';
+  if(typeof mapUpgIsOn === 'function' && mapUpgIsOn()) return '유즈맵 강화';
   if(typeof campTreeIsOn === 'function' && campTreeIsOn()) return '환생 트리';
   if(typeof campRebIsOn === 'function' && campRebIsOn()) return '환생';
   return ''; }
@@ -1591,17 +1593,21 @@ function campRebIsOn(){ const el = document.getElementById('campReb'); return !!
 //     둘 다 `.on` 이 되면 트리가 환생 화면을 덮어 어느 탭인지 알 수 없다.
 //   ⚠ 하단 네비는 **켜 둔 채**로 연다(두 화면 CSS 가 네비 높이만큼 자리를 비운다).
 function campRebEnter(sec){
-  const s = (sec === 'tree') ? 'tree' : 'info';
+  // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10 사용자 확정 · 환생 · 환생 트리 · 유즈맵 강화)
+  const s = (sec === 'tree') ? 'tree' : (sec === 'umap' ? 'umap' : 'info');
   // 🎬 페이드는 **구역에 들어올 때 한 번만**이다 (2026-08-31 사용자 지적).
   //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 탭을 오갈 때마다 매번 다시 돈다 —
   //     같은 구역 안에서 칸만 바꾸는 것인데 화면이 통째로 껌뻑여 이동이 무거워 보인다.
   //   ⭐ 그래서 애니는 `.crIn` 이 가지고, 밖에서 들어온 경우에만 붙인다(안이었으면 즉시 교체).
   const wasIn = (typeof campRebIsOn === 'function' && campRebIsOn()) ||
-                (typeof campTreeIsOn === 'function' && campTreeIsOn());
+                (typeof campTreeIsOn === 'function' && campTreeIsOn()) ||
+                (typeof mapUpgIsOn === 'function' && mapUpgIsOn());
   // ⚠ 닫는 쪽에 keepArt 를 준다 — 구역 안에서 칸만 바꾸는 것이라 배경은 그대로 둔다.
-  if(s === 'tree'){ campRebClose(true); campTreeOpen(); }
-  else { campTreeClose(); campRebOpen(); }
-  { const el = document.getElementById(s === 'tree' ? 'campTree' : 'campReb');
+  //   ⛔ 셋 중 **둘을 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
+  if(s === 'tree'){ campRebClose(true); if(typeof mapUpgClose==='function') mapUpgClose(true); campTreeOpen(); }
+  else if(s === 'umap'){ campRebClose(true); campTreeClose(); if(typeof mapUpgOpen==='function') mapUpgOpen(); }   // ⚠ campTreeClose 는 인자를 안 받는다(그림은 안 만진다)
+  else { campTreeClose(); if(typeof mapUpgClose==='function') mapUpgClose(true); campRebOpen(); }
+  { const el = document.getElementById(s === 'tree' ? 'campTree' : (s === 'umap' ? 'mapUpgScreen' : 'campReb'));
     if(el) el.classList.toggle('crIn', !wasIn); }
   if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(환생 / 환생 트리)
