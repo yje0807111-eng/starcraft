@@ -413,19 +413,23 @@ const PROF_DEFAULT_CLASS='ranger';
 function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
 // 캐릭터 선택·삭제·환급은 폐지했다(계정당 하나) — 고를 것도, 지울 것도 없다.
 function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
-// ══ 🔗 유즈맵 ↔ 사냥터 경제 ═══════════════════════════════════════════════
-// 유즈맵 보상은 고정값이 아니라 **사냥터 시급에 앵커**한다. 사냥터 재화는 지수(라운드 ×HB_ROUND_REW ·
-// 던전 ×그것의 99제곱)라서 고정값은 몇 라운드만 지나면 반올림 오차가 된다 — 실측으로 옛 공식은
-// 판당 117 미네랄이었고 그건 던전1 R50 기준 **0.7초치**였다.
-//   ⚠ 시급의 단일 소스는 `hunt.rate`(hbSettle 이 EMA 로 적는 '초당 미네랄')다. 방치 수입(profIdleRate)이
-//      이미 이 값을 본다 — 유즈맵용 곡선을 새로 만들지 말 것.
-//   ⚠ 경험치는 앵커에 붙이지 않는다. 사냥터 XP 곡선(HB_ROUND_XP)만 일부러 완만해서 '레벨이 적 체력을
-//      못 따라가는 벽'을 만드는데, XP까지 시급에 앵커하면 그 설계가 통째로 무너진다.
-const UM_ANCHOR_MIN=60;              // 판당 기준 = 사냥터 60분치(진행도·난이도로 오르내린다)
+// ══ 🔗 유즈맵 ↔ **캠프** 경제 ═════════════════════════════════════════════
+// 유즈맵 보상은 고정값이 아니라 **내 시급에 앵커**한다. 캠프 재화는 지수(관문마다 배수가 붙는다)라서
+// 고정값은 몇 관문만 지나면 반올림 오차가 된다 — 옛 실측으로 고정 공식은 판당 117 미네랄이었고
+// 그건 그때 기준 **0.7초치**였다.
+// 🏕 **기준을 사냥터에서 캠프로 옮겼다**(2026-09-10 · 마을을 접으며 · GAME_DIRECTION §0-A).
+//   ⛔ 옛 기준 `PROF().hunt.rate` 는 **아무도 안 적고 있었다** — 사냥터가 멎은 뒤로 폴백
+//     (PROF_IDLE_BASE=8/분)에 굳어 유즈맵 한 판이 480 미네랄이었다. 캠프 수입 몇 초치다.
+//   ⭐ 캠프도 **같은 것을 이미 재고 있다**(campNoteRate → campRateOf · 초당 EMA). 자리 비움 정산과
+//     상점의 「n 시간치」가 그 값을 쓴다 — ⛔ 유즈맵용 곡선을 새로 만들지 말 것.
+//   ⚠ 경험치는 앵커에 붙이지 않는다 — XP 곡선은 일부러 완만해서 '레벨이 적을 못 따라가는 벽'을
+//      만드는데, XP까지 시급에 앵커하면 그 설계가 통째로 무너진다.
+const UM_ANCHOR_MIN=60;              // 판당 기준 = **캠프 60분치**(진행도·난이도로 오르내린다) · ⚠ 안 쟀다
 const UM_PROG_MIN=0.2;               // 진행도 하한 — 일찍 끝나도 빈손은 아니다
-const UM_GAS_RATIO=0.09/0.85;        // 가스:미네랄 = 사냥터 처치 보상(hbKillReward)과 같은 비율
-function umRate(){ const p=(typeof PROF==='function')?PROF():null, H=p&&p.hunt;
-  return (H && H.rate>0) ? H.rate*60 : PROF_IDLE_BASE; }   // 분당 미네랄 · 첫 라운드 클리어 전에는 방치와 같은 폴백
+const UM_GAS_RATIO=0.09/0.85;        // 가스:미네랄 — 옛 사냥터 처치 보상의 비율을 그대로 물려받았다
+function umRate(){
+  const r=(typeof campRateOf==='function') ? campRateOf('credit') : 0;   // 🏕 캠프 초당 미네랄(EMA)
+  return (r>0) ? r*60 : PROF_IDLE_BASE; }   // 분당 · 캠프에 5초도 안 머문 새 계정은 방치와 같은 폴백
 // 판 진행도 0~1 — '얼마나 해냈나'의 뜻이 맵마다 다르다.
 //   네모      : 클리어 = 1.0 · 못 깼으면 도달 라운드 비율 (라운드가 이미 다 말해 준다 — 소모 자원은 안 본다)
 //   오토배틀  : 승패 + '번 돈을 굴린 비율' + 버틴 시간 (라운드 개념이 없다)
@@ -444,7 +448,7 @@ function umProgress(){ if(typeof G==='undefined' || !G) return 0;
 // 🏁 첫 클리어 마일스톤 — 맵×난이도마다 **평생 1회**. 사냥터 마일스톤(hunt.rw[dg][round])과 같은 문법이다.
 //   보상 크기는 '사냥터 N시간치'인데, ⚠ **상한을 걸지 않으면 유즈맵을 최대한 늦게 하는 것이 최적 플레이**가 된다
 //     (시급이 계속 오르므로). 그래서 min(현재 시급, 난이도별 권장 시급) 으로 막는다.
-const UM_DIFF_R={ easy:20, normal:35, hard:50, hell:65, nightmare:80 };   // 난이도별 '권장 사냥터 라운드'(상한 기준)
+const UM_DIFF_GATE={ easy:2, normal:5, hard:9, hell:13, nightmare:17 };   // 난이도별 '권장 통산 관문'(0~18 · 상한 기준) · ⚠ 안 쟀다
 const UM_FIRST={   // h=사냥터 시간치 · gem/tk=시급과 무관한 절대 재화
   easy:      {h:1,  gem:10,  tk:{gear:1}},
   normal:    {h:2,  gem:20,  tk:{gear:1, pet:1}},
@@ -453,10 +457,17 @@ const UM_FIRST={   // h=사냥터 시간치 · gem/tk=시급과 무관한 절대
   nightmare: {h:16, gem:150, tk:{gear:5, pet:2, ally:2}},
 };
 const UM_STK_FIRST='hard';   // 오토배틀은 난이도가 없다(noDiff) → '첫 승리' 1회를 이 급으로
-// 권장 진행도의 시급(분당 미네랄). ⚠ 사냥터 곡선 함수를 그대로 쓴다 — 새 곡선을 만들면 반드시 어긋난다.
-function umCapRate(diff){ const R=UM_DIFF_R[diff]||UM_DIFF_R.normal;
-  let foes=0, sec=0; for(let w=1;w<=HB_WAVES;w++){ foes+=hbFoeCount(R,w); sec+=hbWaveTime(w)+HB_GAP_S; }
-  return (foes*hbKillReward(1,R).min + hbClearBonus(1,R).min) / (sec/60); }
+// 권장 진행도의 시급(분당 미네랄) — 「그 난이도를 깰 만한 자리」의 시급이다.
+//   🏕 캠프 시급은 **실측 EMA** 라 예측 함수가 없다. 대신 **진행 배수**로 환산한다(campMineMulAt) —
+//     수입에서 진행도가 차지하는 몫은 그 배수가 전부라, 「그때 배수 ÷ 지금 배수」가 곧 시급의 비다.
+//   ⛔ 사냥터 곡선(hbFoeCount·hbKillReward)으로 되돌리지 말 것 — 그 파일은 다락으로 갔다.
+//   ⚠ UM_DIFF_GATE 도 이 환산도 **안 쟀다**. 첫 클리어 보상은 평생 1회라 급하진 않지만 재야 한다.
+//   ⚠ **절대값이어야 한다.** 지금 시급에 비례시키면(예: 시급 × 배수비) 상한이 시급을 따라 올라
+//     상한 구실을 못 한다 — 「늦게 할수록 이득」이 그대로 남는다(2026-09-10 에 한 번 그렇게 짰다가 잡았다).
+const UM_CAP_BASE=3000;   // 진행 배수 1 일 때의 분당 미네랄 — ⚠ **안 쟀다**(출발점)
+function umCapRate(diff){
+  if(typeof campMineMulAt!=='function') return umRate();   // 캠프가 아직 안 떴다 — 상한 없음
+  return UM_CAP_BASE * campMineMulAt(UM_DIFF_GATE[diff]||UM_DIFF_GATE.normal); }
 // 💠 전리품의 룬 — **보상 재화만** 늘린다(사용자 확정 2026-09-02).
 //   ⛔ 젬에는 걸지 않는다. 젬으로 산 룬이 젬을 더 준다면 그것은 인쇄기다.
 //   ⚠ 이 룬은 일부러 **층을 넘는다**(GEM.md §1: 젬 부스트는 유즈맵에 안 걸린다).
