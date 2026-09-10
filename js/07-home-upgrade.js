@@ -131,9 +131,6 @@ function hbNoteRate(min, sec){ if(!(sec>0)) return;
 // 성장 배지(!) — '지금 할 수 있는 게 있다'는 신호. 진입점 자체는 항상 열려 있다(좌상단 아이콘).
 function hbGrowHas(){ const c=(typeof CHAR==='function')?CHAR():null; if(!c) return false;
   return profCanRebirth(c) || rpFree(c)>0; }   // 환생할 수 있거나 · 안 찍은 환생 포인트가 있거나
-function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
-  if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
-  el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
 function renderGrowModal(){ const box=document.getElementById('hbGrowBody'); if(!box) return;
   const c=CHAR(); if(!c) return;
   let h='<div class="hbRoundNote" style="padding:0 0 8px">Lv.'+c.level

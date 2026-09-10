@@ -58,6 +58,16 @@ function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, 
 function campMineMul(){ const C = campState(); if(!C) return 1;
   const dg = campDgN(), t = CAMP_MINE[dg];
   return (t.base + campCleared() * campMineInc(dg)) * campRtMul('mine'); }
+// 📍 **통산 관문 n(0~18)에서의 미네랄 배수** — 「지금」이 아니라 「그 자리였다면」을 묻는다.
+//   ⭐ 쓰는 곳은 유즈맵 첫 클리어 상한 하나다(04-profile `umCapRate`): 시급이 계속 오르므로
+//     상한이 없으면 **유즈맵을 최대한 늦게 하는 것이 최적 플레이**가 된다.
+//   ⛔ 식을 새로 쓰지 말 것 — campMineMul 과 **같은 표(CAMP_MINE)**를 본다.
+//   ⚠ 트리 배수(campRtMul('mine'))는 **빼고** 잰다 — 상한은 「진행도」의 자이지 「내가 얼마나 찍었나」가 아니다.
+function campMineMulAt(n){
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  const k = Math.max(0, n | 0);
+  const dg = Math.max(1, Math.min(CAMP_DG_MAX, Math.floor(k / per) + 1)), g = Math.min(per, k % per);
+  const t = CAMP_MINE[dg]; return t ? (t.base + g * campMineInc(dg)) : 1; }
 // 🏰 **라운드가 없어졌다**(2026-09-09 · GAME_DIRECTION §0-A). 던전은 적 기지이고, 진행 지표는
 //   「부순 진행 건물 수」(0~6)다. ⛔ 이름을 그대로 둔 이유는 **소비처가 스무 곳**이기 때문이다 —
 //   여기 한 곳에서 갈아끼우면 난이도(campFoeDiff)·보상(campMineMul)·환생 포인트가 전부 새 자를 따라온다.

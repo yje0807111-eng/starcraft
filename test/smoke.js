@@ -17641,24 +17641,36 @@ async function groupGame(){
     } finally { if(typeof strikeEnd==='function') try{ strikeEnd(); }catch(e){}
       if(faked) ph.classList.remove('inGame'); } });
 
-  // 🔗 유즈맵 보상은 사냥터 시급에 앵커한다 — 고정값이면 지수 곡선에 몇 라운드 만에 삼켜진다.
-  await step('유즈맵 보상: 사냥터 시급 앵커 · 진행도', async()=>{
+  // 🔗 유즈맵 보상은 **캠프 시급**에 앵커한다 — 고정값이면 지수 곡선에 몇 관문 만에 삼켜진다.
+  //   🏕 기준이 사냥터에서 캠프로 옮겨 왔다(2026-09-10 · 마을을 접으며). ⛔ `PROF().hunt.rate` 로
+  //     되돌리지 말 것 — 그 값은 **아무도 안 적어** 폴백(8/분)에 굳어 있었다(유즈맵 한 판 480 미네랄).
+  await step('유즈맵 보상: 캠프 시급 앵커 · 진행도', async()=>{
     skipIf(typeof profRunReward!=='function' || typeof umProgress!=='function','경제 연결 없음');
+    skipIf(typeof campState!=='function' || typeof campRateOf!=='function','캠프 시급 계측 없음');
     const p=PROF(), keepPc=p.pcoin, keepGas=p.gas, keepHunt=JSON.parse(JSON.stringify(p.hunt||{}));
     const keepG=G, keepSTK=(typeof STK!=='undefined')?STK:null, keepMap=MAP, keepDay0=PLAYER_META.umDay;
+    const _C=campState(), keepRate=_C?_C.rate:0;
     MAP=USEMAPS.nemo;   // ⚠ 앞 스텝이 무한모드로 두고 갔을 수 있다(rounds 100만 · infinite) — 맵을 고정하고 잰다
-    const run=(rate)=>{ p.hunt.rate=rate; p.pcoin=0; p.gas=0; return profRunReward(); };
+    // ⚠ 캠프 시급은 **초당**이다(C.rate) — umRate() 가 ×60 해서 분당으로 준다
+    // ⚠ **하루 판 수 계수를 매번 되감는다** — profRunReward 가 판을 세므로(umDayCount) 네 번째
+    //   호출부터 ×0.3 이 붙어 「시급을 올렸는데 보상이 줄었다」로 읽힌다(실측 5400 → 1620).
+    const run=(perSec)=>{ if(_C) _C.rate=perSec; p.pcoin=0; p.gas=0;
+      PLAYER_META.umDay={ key:(typeof _dgDayKey==='function')?_dgDayKey():'x', n:0 };
+      return profRunReward(); };
     let bad_noChar=false;
     try{
       G=newGame(); G.phase='won'; G.round=30; G.kills=500; G.difficulty='normal';
-      // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(사냥터 XP 곡선이 만드는 '레벨의 벽'을 지킨다)
+      // ① 시급이 10배가 되면 보상도 10배 — **경험치는 그대로**(XP 곡선이 만드는 '레벨의 벽'을 지킨다)
       const a=run(1), b2=run(10);
       assert(Math.abs(b2.pc/a.pc-10)<0.02,'시급 10배인데 보상이 10배가 아님: '+a.pc+' → '+b2.pc);
       assert(a.xp===b2.xp,'시급이 경험치까지 밀었음: '+a.xp+' → '+b2.xp);
-      // ② 첫 라운드 클리어 전(rate 0)에도 빈손이 아니다 — 방치와 같은 폴백을 쓴다
-      assert(run(0).pc>0,'신규(rate 0)에게 보상이 0');
-      // ③ 가스는 사냥터 처치 보상과 같은 비율
-      assert(Math.abs(b2.gas/b2.pc-UM_GAS_RATIO)<0.01,'가스 비율이 사냥터와 다름: '+(b2.gas/b2.pc));
+      // ①-b 사냥터 시급(옛 앵커)은 이제 아무 일도 안 한다 — 되돌아가면 여기서 걸린다
+      { const c0=run(1); p.hunt.rate=999; const c1=run(1); p.hunt.rate=0;
+        assert(c0.pc===c1.pc,'옛 사냥터 앵커(hunt.rate)가 되살아났다: '+c0.pc+' → '+c1.pc); }
+      // ② 캠프에 5초도 안 머문 새 계정(rate 0)에도 빈손이 아니다 — 방치와 같은 폴백을 쓴다
+      assert(run(0).pc>0,'신규(시급 0)에게 보상이 0');
+      // ③ 가스는 미네랄과 정해진 비율
+      assert(Math.abs(b2.gas/b2.pc-UM_GAS_RATIO)<0.01,'가스 비율이 표와 다름: '+(b2.gas/b2.pc));
       // ④ 네모 진행도 — 클리어=1.0 · 못 깼으면 도달 라운드 비율
       const rounds=mapCfg('rounds',TOTAL_ROUNDS);
       G.phase='won';  assert(umProgress()===1,'클리어인데 진행도가 1이 아님: '+umProgress());
@@ -17686,18 +17698,23 @@ async function groupGame(){
         for(let i=1;i<o.length;i++){ const r=DIFFICULTY[o[i]].enemyHp/DIFFICULTY[o[i-1]].enemyHp;
           assert(Math.abs(r-2)<0.01, o[i-1]+'→'+o[i]+' 가 ×2 가 아님: ×'+r.toFixed(2)); } }
       // ⑦ 첫 클리어 = 맵×난이도 1회성 · ⚠ 상한이 없으면 '늦게 깰수록 이득'이 되어 유즈맵을 미루게 된다
+      //   🏕 상한의 자[尺]가 **캠프 진행도**로 바뀌었다(umCapRate → campMineMulAt) — 시급이 아무리 높아도
+      //     그 난이도에 걸맞은 관문의 배수까지만 쳐준다. ⛔ 사냥터 곡선으로 되돌리지 말 것.
       { const keepClear=PLAYER_META.umClear; PLAYER_META.umClear={};
+        const keepDg=_C?_C.dg:0, keepBr=_C?_C.broken:0;
         try{
-          p.hunt.rate=1e9;  const big=umFirstRw('normal').pcoin;
-          p.hunt.rate=1e15; const huge=umFirstRw('normal').pcoin;
+          if(_C){ _C.dg=1; _C.broken=0; }                 // 진행도는 고정 — 움직이는 것은 시급뿐이다
+          // ⚠ 상한은 **절대값**이다 — 시급에 비례시키면 상한이 시급을 따라 올라 뜻이 없어진다
+          if(_C) _C.rate=1e9;  const big=umFirstRw('normal').pcoin;
+          if(_C) _C.rate=1e15; const huge=umFirstRw('normal').pcoin;
           assert(big===huge,'첫 클리어 보상에 상한이 없음(늦게 깰수록 이득): '+big+' → '+huge);
-          p.hunt.rate=0.2;  const small=umFirstRw('normal').pcoin;
+          if(_C) _C.rate=0.2;  const small=umFirstRw('normal').pcoin;
           assert(small>0 && small<big,'상한 미만일 때 실제 시급을 안 따라감: '+small+' vs '+big);
           assert(umFirstClaim('nemo','normal'),'첫 클리어인데 보상이 없음');
           assert(!umFirstClaim('nemo','normal'),'첫 클리어 보상이 두 번 나옴');
           assert(umFirstClaim('nemo','hard'),'같은 맵 다른 난이도가 막힘');
           assert(umFirstClaim('cpu','normal'),'다른 맵 같은 난이도가 막힘');
-        } finally { PLAYER_META.umClear=keepClear; } }
+        } finally { PLAYER_META.umClear=keepClear; if(_C){ _C.dg=keepDg; _C.broken=keepBr; } } }
       // ⑧ ⚠ 오토배틀도 앵커 보상을 받는다 — _runSummary 의 직스 분기가 먼저 return 하면 통째로 못 받는다
       { G=newGame(); G.strike=true; G.phase='won'; G.round=5; STK={ me:{gold:0, earned:1000, kills:3, units:[]}, t:120, round:10 };
         p.hunt.rate=1; p.pcoin=0; PLAYER_META.umDay=null;   // ⚠ 앞 검사들이 판 수를 올려 놨다 — 하루 체감과 얽히지 않게 초기화
@@ -17760,7 +17777,8 @@ async function groupGame(){
           assert(out===DQ_OUT_N, d+'일 뒤 바깥 퀘스트가 '+out+'개(기대 '+DQ_OUT_N+')'); } }
       return '앵커·진행도·난이도·첫클리어·포인트·관문 ok · 하루 '+UM_DAY_FULL+'판 체감 ok · 일일 바깥 '+DQ_OUT_N;
     } finally { G=keepG; MAP=keepMap; if(typeof STK!=='undefined') STK=keepSTK;
-      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt; } });
+      PLAYER_META.umDay=keepDay0; p.pcoin=keepPc; p.gas=keepGas; p.hunt=keepHunt;
+      if(_C) _C.rate=keepRate; } });
 
   // ══ 협동(멀티) — 죽은 자리 · 정지된 자리 · 대역폭 ══════════════════════
   // 가짜 채널을 물려 실제 송신 경로(coopSend)를 그대로 태운다. 실제 접속은 하지 않는다.

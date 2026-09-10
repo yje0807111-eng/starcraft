@@ -639,7 +639,7 @@
      scale(1) 로 끝낸다. 그래서 1.25배로 꽉 찬 카드가 떴다가 애니가 끝나며 툭 줄었다
      (2026-08-31 실측). 설정은 제 애니(setCardIn · css/10-game.css)가 따로 있고 그쪽은
      --setScale 을 지킨다. */
-  .hbModal:not(.hide) .hbmCard,#exitConfirm:not(.hide) .setCard,#dgSheet:not(.hide) .dgSheetCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
+  .hbModal:not(.hide) .hbmCard,#exitConfirm:not(.hide) .setCard,#modeSheet:not(.hide) .msPanel{animation:fxPopOn var(--fxPopT) cubic-bezier(.22,.9,.28,1)}
   /* ⛔ 제외 — 방 만들기(#createPanel)·난이도 선택(#soloDiffPanel)은 즉시 뜬다(요청) */
   #createPanel .cpCard, #soloDiffPanel .cpCard, #soloDiffPanel .msPanel{animation:none!important}
   @keyframes fxPopOn{0%{opacity:0;transform:translateY(7px) scale(.965)}100%{opacity:1;transform:translateY(0) scale(1)}}
