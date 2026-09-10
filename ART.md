@@ -2476,6 +2476,61 @@ dark tones, game background tile, 3D render
 `{PROP}` 보기: `weathered rock outcrop` · `broken concrete barrier` · `wrecked vehicle hull` ·
 `stack of cargo crates`
 
+### 18-4-1. 📋 바로 붙여 쓰는 완성본 (2026-09-10)
+
+⛔ 아래는 **손대지 말고 통째로** 복사한다. 위 §18-2~18-4 는 그 만드는 법이고, 여기는 결과다.
+
+**바닥 — 콘크리트**
+```
+cracked dark concrete slabs with fine grit and thin expansion joints,
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
+```
+
+**바닥 — 흙**
+```
+hard packed reddish earth with scattered small gravel,
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
+```
+
+**바닥 — 금속 갑판**
+```
+riveted dark steel deck plating with shallow panel lines,
+seamless tileable texture, top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
+```
+
+**벽 시트 — 12조각 한 장**
+```
+a 4 x 3 grid of 12 separate square wall tiles on a flat black background,
+each tile the same heavy dark metal armour plating, each wall drawn edge to edge so it connects to the next tile,
+row 1: straight left-right, straight up-down, corner right+down, corner left+down,
+row 2: corner right+up, corner left+up, T left-right-down, T left-right-up,
+row 3: T up-down-right, T up-down-left, four-way cross, single isolated pillar,
+same camera angle and same light direction in every tile,
+top-down bird's eye view,
+no characters no objects no units,
+dark tones, game background tile, 3D render
+```
+
+**지형지물 — 바위**
+```
+a single weathered rock outcrop on a flat black background, smaller than a building,
+top-down bird's eye view,
+dark tones, game background tile, 3D render
+```
+
+**지형지물 — 부서진 방벽**
+```
+a single broken concrete barrier on a flat black background, smaller than a building,
+top-down bird's eye view,
+dark tones, game background tile, 3D render
+```
+
 ### 18-5. ⚠ 뽑은 뒤에 반드시 할 일
 
 | | |
