@@ -5,6 +5,9 @@
 > **무효**다(전투 성장은 `TECH_TREE` 연구로 전면 대체). 무효 목록은 `GAME_DIRECTION.md` §6 에 표로 있다.
 > 여기서 여전히 유효한 것: 신규 시스템 N1~N7 · 캐릭터 해체(`S.char`→`S.army[]`) · 「그림은 병목이 아니다」.
 
+> 🗄 **2026-09-10 — `js/08-hunt.js` 는 없어졌다.** 사냥터·토벌·마을·정비 본체가 통째로 `js/99-attic.js` 로 갔고,
+> 살아남은 부품만 `js/08-ui-parts.js` 에 있다(ATTIC.md 「🏹 사냥터 본체」). 아래 본문의 `08-hunt.js` 는 **옛 자리 이름**이다.
+
 > 이 문서는 **설계 계획서**다. 확정된 구현 사양이 아니라, 무엇을 죽이고 무엇을 살리고
 > 무엇을 새로 만드는지에 대한 합의 문서다. 확정된 값은 구현하면서
 > `ARCHITECTURE.md`(구조) · `BALANCE.md`(수치) · `RACES.md`(종족) 로 옮긴다.
@@ -80,7 +83,7 @@
 | **난이도 곡선** `hbCurve` · `hbRoundHp` · `hbDgK` · `hbRoundS` | `js/08-hunt.js` | 던전별 기울기 + S자 리듬. **실측으로 맞춘 자산**(BALANCE.md §3). 웨이브와 무관하다 |
 | **환생 전체** `profRebGainAt` · `profRebGrantAt` · `profRebirth` | `js/04-profile.js` | 축 역할 분리(배수=선형 / RP=복리)까지 끝난 부분. 던전 1-1 되감기 + `hunt.best` 유지도 그대로 |
 | **성장 축 4개** 미네랄업글`log` / LP선형 / RP복리 / 환생배수선형 | BALANCE.md §0 | 폭주하지 않는 조합을 실측으로 찾아낸 것. 새 시스템도 이 위에 얹는다 |
-| **던전 표** `HB_DUNGEONS`(10) · `HB_DG_UNLOCK` · 타일·틴트 | `js/08-hunt.js` | 던전이라는 그릇 자체는 그대로 |
+| **던전 표** `HB_DUNGEONS`(10) · 타일·틴트 | `js/08-ui-parts.js` | 던전이라는 그릇 자체는 그대로 · ⚠ `HB_DG_UNLOCK` 은 다락으로 갔다 |
 | **큰 수 표기** `fmtCur` | | |
 | **3D 렌더 경로** `M3D.unitSprite` · `M3D.syncBuild` · `hb3dReady` | `js/08-hunt.js` + `js/90-m3d.module.js` | ⭐ 아래 §4 참조 — **그림이 병목이 아닌 이유** |
 | **타일 배경·카메라·줌** | | |

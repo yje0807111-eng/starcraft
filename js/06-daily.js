@@ -266,23 +266,6 @@ function dqAttHTML(){ const D=dqState(); if(!D) return ''; const A=D.att;
       +'<span class="dqFinTx"><b>4주 완성 보상</b><em>'+(fin?dqRwPlain(DQ_FINAL_RW)+' · 남은 추가 보상 포함':'20일을 다 채우면 열립니다')+'</em></span>'
       +'<button class="hbRowBtn" onclick="dqClaimFinal()"'+(fin?'':' disabled')+'>받기</button></div>'; }
   return h; }
-// ⛔ 좌상단 건설 드롭다운(renderHbBuild/#hbBuildWrap)은 폐지했다(2026-08-14).
-//    더보기 > 건설 = 즉시 건설 모드이고, 고르는 곳은 하단 패널이다(hbBuildCardHTML).
-//    오른쪽 위에서 열었는데 왼쪽 위에 목록이 뜨던 것이 문제였다.
-function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
-  const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
-  // 하단 바는 '전투 중에 쓰는 것'만 — 스킬 3개. 판을 여는 것(건설·토벌·부스트)은 좌상단 줄로 갔다.
-  // 판 하나에 셋을 담고(트레이), 자동은 판 '밖' 작은 칩으로 뺀다 — 가끔 만지는 설정이라 스킬보다 가벼워야 한다.
-  const au=!!hbHunt().skAuto;
-  let h='<div class="hbGrp"><div class="hbSkWrap">'
-    +'<button class="hbAutoChip'+(au?' on':'')+'" onclick="hbToggleAuto()" title="스킬 자동 사용 '+(au?'켬':'꺼짐')+'">'
-    +'<i></i>AUTO '+(au?'ON':'OFF')+'</button><div class="hbTray">';
-  for(const k in HB_SKILLS){ const SK=HB_SKILLS[k];
-    h+='<button class="hbSk" data-k="'+k+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.name+' — '+SK.tip+'">'
-      +'<span class="hbSkIco">'+_icoImg('skills', SK.ico)+'</span>'
-      +'<b class="hbSkSec"></b>'                    // 남은 초 — 글자는 hbSkCdPaint 가 넣는다
-      +'<i class="hbCd"><b></b></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
-  bar.innerHTML=h+'</div></div></div>'; }
 
 // ════════════════════════════════════════════════════════════════════
 // 🧭 가이드 퀘스트 (2026-08-25) — 「이 게임을 어떻게 하는가」를 순서로 가르친다
@@ -491,7 +474,7 @@ function _tutoGoLabel(){
   const t = b ? String(b.textContent||'').trim() : '';
   return t || '진입'; }
 // 🗺 던전 고르기 안내 — 이름과 한 줄 설명을 **화면과 같은 함수**에서 꺼낸다.
-//   ⛔ hbDun(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 **말풍선과 목록의 이름이 어긋난다**
+//   ⛔ hbDun(08-ui-parts 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 **말풍선과 목록의 이름이 어긋난다**
 //     (2026-09-10 · 던전 개편이 이름을 campDgName 으로 옮겼다. 같은 실수를 던전 칩이 먼저 했다).
 //   ⛔ 획득 배율을 문구에 적지 말 것 — 목록 카드 오른쪽이 이미 말하고, 개편으로 오르는 축이 바뀌었다.
 function _tutoDgTip(){

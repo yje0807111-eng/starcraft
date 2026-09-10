@@ -689,7 +689,7 @@
   .ecCard .ecGo:active,.hbModal .ecGo:active,#ovBtn:active{background:rgba(255,255,255,.22);box-shadow:none}
   /* ⛔ 로그인 화면 버튼(.authBtn/.authGuest)은 여기 넣지 말 것 — 그쪽은 판이 없어서
      누를 때 없던 상자가 생긴다(실제로 게스트 버튼에서 그랬다). 누름 반응은 css/20-lobby.css 에 따로 있다. */
-  .twBtn{--btnIn:rgba(92,214,255,.26)} .twBtn.del{--btnIn:rgba(255,120,120,.3)}
+  .twBtn{--btnIn:rgba(92,214,255,.26)}
   /* 팝업 액션 버튼은 카드 액센트를 따라가지 않고 한 스타일로 통일한다(기준 = 나가기 버튼).
      ⚠ 색은 위 「선만」 규칙이 정한다 — 여기서 다시 덮으면 주/부 구분이 사라진다. */
   
