@@ -156,12 +156,6 @@ function dgFightRestore(){
   hbWith('hunt', ()=>{ hbResize(); hbHud(); });
   if(typeof renderHbBar==='function') renderHbBar();
   hbKick(); }
-// 포기 — 전투를 버린다. ⚠ 열쇠는 소모하지 않는다(완료할 때만 쓴다는 규칙 그대로).
-function dgFightGiveUp(){ const S=HBS.dg; if(!S) return;
-  hbSetSess('dg', null); dgFightRestore();
-  if(typeof playSfx==='function') playSfx('ui_close');
-  if(typeof toast==='function') toast('⚔ 토벌을 포기했습니다 — 🗝 열쇠는 소모되지 않았습니다');
-  openDungeonHub(); }
 // opt: { auto:자동 전투(화면 없이 배속) · id:토벌 종류 · key:완료 시 열쇠 소모 }
 // ⚠ id/key 를 **여기서** 심는다 — 자동은 이 함수 안에서 판이 끝날 수도 있어, 호출부에서
 //   dgStart(...) 뒤에 심으면 이미 dgWin 이 지나간 뒤가 된다(보상이 엉뚱한 종류로 들어간다).

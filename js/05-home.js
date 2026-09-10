@@ -141,11 +141,6 @@ function hbBuildCardHTML(bk){
     val:tot(n), next:full?null:tot(n+1), lv:'LV.'+n,
     cost:resIco('mineral')+fmtCur(cost),
     act:full?null:('hbBuy(&#39;'+bk+'&#39;)') }); }
-// 더보기 > 건설 = 즉시 건설 모드. 하단 업그레이드 패널이 그대로 '건설' 구역이 된다(팝업·드롭다운 없음).
-// 나가는 길은 오른쪽 위 ⊘(#hbBuildStop) 하나 — hbBuildExit()가 모드도 끄고 하단도 되돌린다.
-function hbBuildStart(){ if(!_hb) return;
-  hbBuildEnter(); hbArmBtns(); renderHome();
-  if(typeof playSfx==='function') playSfx('ui_open'); }
 // ☰ 더보기 — 사냥터에서만. 다른 화면에서는 같은 버튼이 그대로 설정을 연다.
 // ⚠ ☰ 는 두 개가 겹쳐 있다 — 게임 HUD의 #settingsBtn(hudTopRow)과 재화 바의 #curSettingsBtn.
 //    사냥터에서는 재화 바 쪽이 위에 있어 그쪽이 눌린다. 그래서 둘 다 이 함수를 거치게 한다.
@@ -246,15 +241,15 @@ function renderHbMore(){ const g=document.getElementById('hbMoreGrid'); if(!g) r
     return '<button class="hbMoreIt" data-k="'+it.k+'" onclick="hbMoreTap(&#39;'+it.k+'&#39;)"'+off
       +' title="'+tip+'" aria-label="'+tip+'">'+dot+ico+'</button>'; }).join('');
   if(typeof paintIcons==='function') paintIcons(g); }
+// ⚠ **분기는 HB_MORE 에 있는 칸만 둔다.** 없는 칸의 분기를 「유보」로 남겨 두면 그것이 옛 마을 코드
+//   4천 줄을 통째로 살아 있는 것처럼 붙들어, 죽은 코드 검사가 아무것도 못 잡는다(2026-09-10 실측).
+//   ⛔ 마을·성장·건설·토벌 분기를 되살리지 말 것 — 그 화면들은 없어졌다(GAME_DIRECTION §0-A).
+//   ⚠ 일일 퀘스트(daily)는 **마을이 아니다** — 칸만 가이드에 내줬을 뿐 캠프의 기능이라 분기를 남긴다.
 function hbMoreTap(k){
   if(k==='guide') return hbMoreGo(function(){ if(typeof openGuide==='function') openGuide(); });
-  if(k==='daily') return hbMoreGo(function(){ if(typeof openDaily==='function') openDaily(); });   // ⛔ 칸에서만 뺐다 — 함수는 살아 있다
+  if(k==='daily') return hbMoreGo(function(){ if(typeof openDaily==='function') openDaily(); });   // ⛔ 칸에서만 뺐다 — 일일 퀘스트는 캠프의 것이라 살아 있다
   if(k==='att')   return hbMoreGo(function(){ if(typeof openAtt==='function') openAtt(); });
   if(k==='set')   return hbMoreGo(function(){
     if(typeof openAppSettings==='function') openAppSettings();   // 앱 문맥(.appCtx) — 인게임 설정에는 배속·게임 나가기가 있다
     else openSettings(); });
-  if(k==='build') return hbMoreGo(function(){ if(typeof hbBuildStart==='function') hbBuildStart(); });
-  if(k==='dg')    return hbMoreGo(function(){ if(typeof openDungeonHub==='function') openDungeonHub(); });
-  if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); });
-  if(k==='town')  return hbMoreGo(function(){ if(typeof openVillage==='function') openVillage(); });
-  if(k==='grow')  return hbMoreGo(function(){ if(typeof hbOpenGrow==='function') hbOpenGrow(); }); }
+  if(k==='boost') return hbMoreGo(function(){ if(typeof hbOpenBoost==='function') hbOpenBoost(); }); }

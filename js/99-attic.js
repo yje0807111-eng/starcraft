@@ -1329,3 +1329,23 @@ function _tutoView(kind){
 // ── [js/06-daily.js] _tutoMoveRect
 // 🚪 유닛을 데려갈 자리 — 링이 이 사각형을 감싼다.
 function _tutoMoveRect(){ return (_tutoBox && _tutoBox.kind==='move') ? _tutoBox : null; }
+
+// ── [js/07-home-upgrade.js] hbOpenGrow
+function hbOpenGrow(){ const el=document.getElementById('hbGrowModal'); if(!el) return;
+  if(typeof chrReturnBody==='function') chrReturnBody();   // 캐릭터 화면이 빌려 갔으면 되찾는다
+  el.classList.remove('hide'); renderGrowModal(); if(typeof playSfx==='function') playSfx('ui_open'); }
+
+// ── [js/09-dungeon.js] dgFightGiveUp
+// 포기 — 전투를 버린다. ⚠ 열쇠는 소모하지 않는다(완료할 때만 쓴다는 규칙 그대로).
+function dgFightGiveUp(){ const S=HBS.dg; if(!S) return;
+  hbSetSess('dg', null); dgFightRestore();
+  if(typeof playSfx==='function') playSfx('ui_close');
+  if(typeof toast==='function') toast('⚔ 토벌을 포기했습니다 — 🗝 열쇠는 소모되지 않았습니다');
+  openDungeonHub(); }
+
+// ── [js/05-home.js] hbBuildStart
+// 더보기 > 건설 = 즉시 건설 모드. 하단 업그레이드 패널이 그대로 '건설' 구역이 된다(팝업·드롭다운 없음).
+// 나가는 길은 오른쪽 위 ⊘(#hbBuildStop) 하나 — hbBuildExit()가 모드도 끄고 하단도 되돌린다.
+function hbBuildStart(){ if(!_hb) return;
+  hbBuildEnter(); hbArmBtns(); renderHome();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
