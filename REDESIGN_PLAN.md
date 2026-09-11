@@ -231,7 +231,7 @@ function campDgTimerTick(dt)         // 🎁 타이머 — dg>0 이고 전장이
 > (`3faf2ac` 환생 강화 `CAMP_REB_UPG` · `560d97f` 무한층), 사용자가 **메인 쪽으로 합치라고** 했다.
 > 이 가지가 만든 별자리 트리(`CAMP_RBT_LINES` 등)는 전부 지웠다. 남아서 옮겨 간 것은
 > **자동 일꾼·자동 연구** 둘뿐이고, 지금은 `CAMP_REB_UPG.autoWk`/`.autoRes` 다.
-> ⚠ 잰 값은 BALANCE §5-12 에 그대로 둔다(엔진을 잰 것이라 껍데기가 바뀌어도 같다).
+> ⚠ 잰 값은 BALANCE §5-17 에 그대로 둔다(엔진을 잰 것이라 껍데기가 바뀌어도 같다).
 >
 > <details><summary>지운 설계(기록용)</summary>
 >

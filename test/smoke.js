@@ -1610,7 +1610,7 @@ async function groupLobby(){
     //    ⛔ techUIInit 이 깔아 두는 1기를 되살리지 말 것. 「일꾼을 사는 것」이 첫 목표다.
     assert((G.tech.ents||[]).filter(e=>e.type==='worker').length===0,
       '시작 일꾼이 0기가 아니다: '+(G.tech.ents||[]).filter(e=>e.type==='worker').length);
-    // 👷 다음 마리 가격 — **다항식** `50 × (보유+1)²`(2026-09-11 실측으로 지수를 버렸다 · BALANCE §5-14)
+    // 👷 다음 마리 가격 — **다항식** `50 × (보유+1)²`(2026-09-11 실측으로 지수를 버렸다 · BALANCE §5-18)
     //   ⭐ 첫 마리 **50**(2026-09-02 · 옛 140) — 첫 탭 강화(10) 뒤 탭당 2원이니 25탭이면 닿는다.
     assert(campHireCost(0)===50,'첫 일꾼 가격이 50 이 아니다: '+campHireCost(0));
     assert(campHireCost(1)>campHireCost(0),'일꾼 가격이 안 오른다');
@@ -1716,7 +1716,7 @@ async function groupLobby(){
       +CAMP_MINE_COLS+'×'+campMineCap()+' vs '+CAMP_WORKER_MAX);
     // ⛏ **자리는 일꾼 상한을 따라간다**(2026-09-11) — 상수로 두면 반드시 어긋난다.
     //   실제로 어긋나 있었다: 환생 강화 `capWk` 가 상한을 80 으로 여는데 자리는 40 이라
-    //   41기부터 한 기의 값어치가 절반이었다(실측 Δ 883 → 439 · BALANCE §5-14).
+    //   41기부터 한 기의 값어치가 절반이었다(실측 Δ 883 → 439 · BALANCE §5-18).
     { const b=campRebUpgBag(), was=b?(b.capWk|0):0;
       try{
         if(b){ b.capWk=CAMP_REB_UPG.capWk.max;
@@ -4441,7 +4441,7 @@ async function groupLobby(){
     assert(typeof campWorkerMax==='function' && typeof campUnitRate==='function',
       '상한 입구(campWorkerMax·campUnitRate)가 없다');
     // ⚠ 보급소 상한은 **팔지 않는다** — 엔진이 인구를 TECH_SUP_MAX(200)에서 자르므로
-    //   24채면 이미 상한이고 더 지어도 인구가 안 는다(실측 BALANCE §5-12 ③).
+    //   24채면 이미 상한이고 더 지어도 인구가 안 는다(실측 BALANCE §5-17 ③).
     assert(!CAMP_REB_UPG.capSup,'보급소 상한을 판다 — 엔진이 인구를 200 에서 잘라 아무 일도 안 한다');
     return '한 벌 ok · 옛 이름 8개 없음 · 지갑 안 섞임 · 자동화 둘 · 보급소 상한 안 팜';
   });
@@ -8444,15 +8444,14 @@ async function groupLobby(){
       assert(after>before,'병력을 올려 보냈는데 안개가 안 열린다: '+before+'→'+after);
       // ⚠ **그 유닛의 x 로 물어야 한다.** 0.5 로 고정하면 적 기지 배치(씨앗마다 다르다)에 따라
       //   병력이 가운데에서 멀 때 「안 열렸다」로 잘못 읽힌다.
-      // ⚠ **한 칸 여유를 준다.** 안개는 campFrame 안에서 계산되는데 그 프레임이 전투도 함께
-      //   굴려 유닛이 **계산 뒤에 또 움직인다** — 딱 그 칸으로 재면 판마다 되기도 안 되기도 했다.
-      //   이 검사의 뜻은 「병력이 간 자리가 열렸나」이므로 이웃 칸까지 본다.
+      // 🌫 **더 움직이지 않은 채 한 번 확정 계산하고 잰다.** 안개는 프레임 안에서 **초당 10번만**
+      //   다시 계산되는데(16-build.js `f.t>=0.1`) 그 프레임이 **전투도 함께 굴려** 유닛이
+      //   계산 뒤에 또 움직인다 — 그래서 「마지막으로 잰 안개」와 「유닛의 최종 위치」가 어긋났다.
+      //   옛 ±1칸 여유는 그 어긋남을 덮으려던 것인데 한 칸을 넘게 움직인 판에서 샜다(실측 6회 중 1회).
+      //   ⛔ 여유 칸으로 되돌리지 말 것 — 어긋남을 덮으면 「안개가 유닛을 안 따라간다」는 진짜 버그도 덮인다.
+      techFogCompute();
       { const u0=CAMPB.me.units[0], g0=campW2G(u0.x,u0.y,W);
-        const cw=_techCW(), ch=_techCH();
-        let lit=false;
-        for(let dc=-1;dc<=1&&!lit;dc++) for(let dr=-1;dr<=1&&!lit;dr++)
-          if(techFogVisAt(g0.gx+dc*cw, g0.gy+dr*ch)===2) lit=true;
-        assert(lit,'내 병력이 선 자리가 안 열렸다'); }
+        assert(techFogVisAt(g0.gx,g0.gy)===2,'내 병력이 선 자리가 안 열렸다'); }
       assert(CAMPB._fbld.filter(b=>b.seen).length>=seen0,'나아갔는데 본 건물이 줄었다');
       // 👀 **다가간 만큼 보인다** — 병력 근처의 건물이 vis 로 켜지고 3D·표식·탭이 함께 열린다
       { const W2=CAMPB.world, u0=CAMPB.me.units[0];

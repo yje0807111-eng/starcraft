@@ -1436,7 +1436,7 @@ function campRtFoeMul(){ let m = 1;
 //     `C.rebTree`(자루). 스모크가 이 이름들을 잰다.
 //   ⭐ **트리는 이제 하나뿐**이라 `campRtLines()`/`campRtBRs()` 는 갈림이 없는 단순 통로다 —
 //     ⛔ 「지금 트리」 스위치를 다시 넣지 말 것(효과 함수가 통째로 0 이 되는 누수가 거기서 났다).
-//   ⚠ 값 실측은 BALANCE §5-12 에 남겼다 — 줄은 사라졌어도 **잰 사실은 그대로 쓸모가 있다**
+//   ⚠ 값 실측은 BALANCE §5-17 에 남겼다 — 줄은 사라졌어도 **잰 사실은 그대로 쓸모가 있다**
 //     (`capWk` 는 상한이 아니라 값이 벽 · `capSup` 은 엔진이 인구를 200 에서 자른다).
 function campRtLines(){ return CAMP_RT_LINES; }
 function campRtBRs(){ return CAMP_TREE_BR; }
@@ -5372,7 +5372,7 @@ function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRa
 // ⛏ **자리는 일꾼 상한을 따라간다**(2026-09-11 사용자 요청 「광맥 자리도 열어줘」).
 //   ⭐ 상수로 두면 반드시 어긋난다 — 실제로 어긋나 있었다: 환생 강화 `capWk` 가 상한을
 //     40 → 80 으로 여는데 자리는 8 × 5 = **40** 그대로라, 41기부터는 줄을 서면서
-//     한 기의 값어치가 **절반**으로 떨어졌다(실측 Δ 883 → 439 · BALANCE §5-14).
+//     한 기의 값어치가 **절반**으로 떨어졌다(실측 Δ 883 → 439 · BALANCE §5-18).
 //   ⇒ 그래서 **값이 아니라 함수**다. 상한이 오르면 자리도 같이 열린다.
 //   ⚠ `cap` 은 광맥 객체에 **찍히는** 값이라(아래 세 곳) 상한이 바뀌면 다시 찍어야 한다 —
 //     그 일은 `campMineCapSync()` 가 캠프 시계에서 한다. ⛔ 찍는 곳을 늘리지 말 것.
@@ -7879,7 +7879,7 @@ function campEmptyAt(cx, cy){
 //     되고, 그 위는 **환생 배수(미네랄 획득)와 트리 포인트**가 열어 준다(사용자 판단 · §4).
 //   ⚠ 일꾼 = 자동 수입의 전부다. 여기를 만지면 회차 시간이 통째로 바뀐다 —
 //     초반이 확정되면 BALANCE.md §4 방식으로 회차 시간을 다시 잴 것.
-// 👷 **일꾼 값 — 지수가 아니라 다항식이다**(2026-09-11 실측으로 바꿨다 · BALANCE §5-14).
+// 👷 **일꾼 값 — 지수가 아니라 다항식이다**(2026-09-11 실측으로 바꿨다 · BALANCE §5-18).
 //
 // ⛔ **지수(`50 × 2.5^n`)로 되돌리지 말 것.** 그 곡선에서는 **일꾼 축이 10기쯤에서 죽었다** —
 //   실측 회수 시간(채취 Lv.30 · 일꾼 한 기가 분당 900 을 번다): 5기째 5분 · **10기째 495분** ·
@@ -7904,7 +7904,7 @@ const CAMP_WORKER_MAX = 40;                      // 일꾼 상한 — ⚠ **기�
 // 🗄 여기 있던 `campCap(k)` 는 없앴다(2026-09-11) — 메인의 **`campWorkerMax()`·`campUnitRate()`**
 //   (위쪽 · 환생 강화가 연다)와 같은 일을 하던 둘째 입구였다. ⛔ 되살리지 말 것.
 //   ⚠ 보급소 상한은 **어느 쪽에도 없다** — 엔진이 인구를 `TECH_SUP_MAX`(200)에서 자르므로
-//     24채면 이미 상한이라 팔 것이 없다(실측 BALANCE §5-12 ③). 캠프에서 그 벽을 넘는 길은
+//     24채면 이미 상한이라 팔 것이 없다(실측 BALANCE §5-17 ③). 캠프에서 그 벽을 넘는 길은
 //     성장 트리의 「인구 상한」(`campApplySupCap`) 하나다.
 function campHireCost(n){
   return Math.max(1, Math.ceil(CAMP_HIRE0 * Math.pow(Math.max(0, n | 0) + 1, CAMP_HIRE_P)));
@@ -7934,7 +7934,19 @@ function campWorkerNPlanned(){ return campWorkerN() + campWorkerQueued(); }
 // ⚠ 설계 문구는 「한 채를 레벨업」이다. 지금은 **여러 채를 짓되 값이 누진**하는 형태로 넣었다 —
 //   수치(비용·인구·누적 1,177만)는 같고, 한 채 레벨업 UI 는 별도 작업이다.
 const CAMP_SUPPLY0 = 30000, CAMP_SUPPLY_R = 1.20, CAMP_SUPPLY_MAX = 24;
-function campSupplyCost(n){ return Math.max(1, Math.ceil(CAMP_SUPPLY0 * Math.pow(CAMP_SUPPLY_R, n))); }
+// 🏠 **첫 채만 싸다** (2026-09-11 사용자 요청 · BALANCE §5-16)
+//   ⭐ 왜 — 본부 인구 **10** 을 일꾼 4~6기가 먹으면 **병력 자리가 4~6밖에 없다**.
+//     그 천장을 여는 길이 보급소 하나뿐인데 첫 채가 3만이라 초반의 벽이었다(§5-15 실측:
+//     30분 내내 인구가 `n/10` 이고 보급소 0채 · 병력이 4기에서 멈췄다).
+//   ⚠ **둘째 채부터는 원래 값 그대로다**(`3만 × 1.20^n` · 2채 3.6만). 누진도, 24채 인구 202 도,
+//     누적 1,177만도 안 건드린다 — 바뀌는 것은 **첫 칸 하나뿐**이다.
+//   ⛔ `CAMP_SUPPLY0` 자체를 내리지 말 것: 사다리 전체가 싸져 **후반 인구가 헐거워진다**.
+//   ⚠ 그 대신 1채 → 2채가 **7.2배 점프**다. 그건 알고 고른 모양이다 — 첫 채는 「인구가 늘어난다」를
+//     가르치는 칸이고, 진짜 사다리는 둘째부터다.
+const CAMP_SUPPLY_FIRST = 5000;
+function campSupplyCost(n){
+  if((n | 0) <= 0) return CAMP_SUPPLY_FIRST;
+  return Math.max(1, Math.ceil(CAMP_SUPPLY0 * Math.pow(CAMP_SUPPLY_R, n))); }
 function campSupplyN(){
   if(typeof G === 'undefined' || !G.tech) return 0;
   return (G.tech.built && G.tech.built.supply) | 0;
@@ -8063,6 +8075,12 @@ function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
 function campUnitOwned(id){
   return (typeof G !== 'undefined' && G.tech && G.tech.units) ? (G.tech.units[id] | 0) : 0;
 }
+// 🚫 **무릎(처음 몇 기는 배수 면제)을 넣지 말 것 — 2026-09-11 에 넣어 보고 되돌렸다.**
+//   ⭐ 노린 것: 「병력 1기 7분인데 5기 28분」(BALANCE §5-13)의 빈 20분을 메우는 것.
+//   📏 실측(무릎 5기 · 45분 벤치 두 판): 병력 5기 **28.3 → 29.3분**(그대로) ·
+//     끝 병력 **25 → 36기**(+44%). **초반은 하나도 안 고치고 후반 병력만 불렸다.**
+//   ⇒ 그 빈 20분의 원인은 **유닛 값이 아니다**(5기 값 1.8만인데 19분에 이미 누적 10만이고
+//     인구도 9/10 이라 안 막힌다 · BALANCE §5-14). ⛔ 여기를 만져서 초반을 고치려 하지 말 것.
 function campUnitCost(base, id){ return Math.max(1, Math.ceil((base || 0) * Math.pow(campUnitRate(), campUnitOwned(id)))); }
 let _campUnitHome = null;
 function campSyncUnitCost(){
@@ -8097,7 +8115,7 @@ function campPatchArm(){
   _campArmHome = o;
   window.techArm = function(bk){
     // ⚠ 보급소 상한은 **상수 그대로**다 — 파는 항목이 없다(엔진이 인구를 200 에서 자르므로
-    //   24채면 이미 상한이고 더 지어도 인구가 안 는다 · 실측 BALANCE §5-12 ③).
+    //   24채면 이미 상한이고 더 지어도 인구가 안 는다 · 실측 BALANCE §5-17 ③).
     if(_campOn && bk === 'supply' && campSupplyN() >= CAMP_SUPPLY_MAX){
       if(typeof toast === 'function') toast('⛔ 보급소는 ' + CAMP_SUPPLY_MAX + '채까지');
       return;
