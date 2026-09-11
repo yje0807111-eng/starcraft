@@ -269,6 +269,34 @@ await pg.evaluate(()=>{
   //   추정된다 — 300초로 두면 정상 라운드를 정체로 세고 스스로 중단한다(그렇게 한 번 겪었다).
   __CB.stallS=900;
   __CB.wealth=[]; __CB.lastW=0; __CB.lastSample=0; __CB.gateT=0;
+  // 🏁 **첫 도달 시각** — 「빈손에서 얼마 만에 무엇을 살 수 있나」 (2026-09-11).
+  //   ⭐ 개발 스위치 CAMP_DEV_START_MIN 을 끄고 나서야 뜻을 갖는 값이다(그전엔 1만을 쥐고 시작했다).
+  //   ⛔ 여기 말고 다른 곳에서 시각을 찍지 말 것 — 표가 둘이 되면 어긋난다.
+  __CB.mile={};
+  __CB.MILE=[
+    ['미네랄 1만',   ()=>campWealth()>=1e4],
+    ['미네랄 10만',  ()=>campWealth()>=1e5],
+    ['미네랄 100만', ()=>campWealth()>=1e6],
+    // ⚠ 일꾼은 **엔트리 type==='worker'** 로 센다 — `built.worker` 는 안 차는 칸이다(2026-09-11 실측).
+    ['일꾼 4기',     ()=>_cbWk()>=4],
+    ['일꾼 8기',     ()=>_cbWk()>=8],
+    ['병영',         ()=>((G.tech.built&&G.tech.built.barracks)|0)>=1],
+    ['보급소',       ()=>((G.tech.built&&G.tech.built.supply)|0)>=1],
+    ['정제소',       ()=>((G.tech.built&&G.tech.built.refinery)|0)>=1],
+    ['병력 1기',     ()=>_cbArmy()>=1],
+    ['병력 5기',     ()=>_cbArmy()>=5],
+    ['병력 10기',    ()=>_cbArmy()>=10],
+    ['병력 20기',    ()=>_cbArmy()>=20],
+    // ⚠ 후반 칸도 잰다 — 유닛 값을 만지면 **초반이 빨라지는 만큼 후반이 부는지**를 봐야 한다
+    ['병력 30기',    ()=>_cbArmy()>=30],
+    ['병력 40기',    ()=>_cbArmy()>=40],
+    ['병력 60기',    ()=>_cbArmy()>=60] ];
+  window._cbWk=function(){ let n=0; for(const e of (G.tech.ents||[])) if(e&&e.type==='worker') n++; return n; };
+  // 전투 유닛 수 — 일꾼은 뺀다(`G.tech.units` 는 산 누적이라 못 쓴다)
+  window._cbArmy=function(){ const wk=(typeof TECH_WORKER!=='undefined')?TECH_WORKER[G.tech.race]:null;
+    return ((G.tech.ents||[]).filter(e=>e.type==='unit'&&e.uid!==wk).length)
+         + ((typeof CAMPB!=='undefined'&&CAMPB&&CAMPB.me&&CAMPB.me.units)
+            ? CAMPB.me.units.filter(u=>!u.dead).length : 0); };
   __CB.holdT=0; __CB.holdMax=0;   // 💰 지갑이 관문에 닿은 시각 · 지갑 최고치
   // 🧱 벽 — 라운드가 wallWarn(10분) 넘으면 후보로 적고, wallStop(30분)이면 벽으로 보고 멈춘다.
   __CB.wallWarnLog=[]; __CB.wall=null;
@@ -368,6 +396,9 @@ await pg.evaluate(()=>{
       const smax=(typeof CAMP_SUPPLY_MAX!=='undefined')?CAMP_SUPPLY_MAX:24;
       const wmax=(typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:40;
       const R=__CB.rate||0, perWk=(wn>0? R/wn : 3.5);
+      // 🏠 **「인구가 막히면 보급소를 위해 모은다」를 여기 넣지 말 것 — 2026-09-11 에 넣어 보고 되돌렸다.**
+      //   실측: 보급소 28.2 → 31.3분 · 끝 병력 25 → 23기. **판 사이 흔들림(±3분) 안**이라 개선을 못 보였다.
+      //   ⇒ 벤치는 보급소를 **결국 짓는다**(27~33분). 늦는 것이지 못 짓는 것이 아니다(BALANCE §5-15).
       const opts=[];
       { const L=S.upg.gather|0, cur=campGatherMul();
         S.upg.gather=L+1; const nxt=campGatherMul(); S.upg.gather=L;
@@ -733,6 +764,10 @@ await pg.evaluate(()=>{
         { const cash=(G.tech&&G.tech.credit)||0;
           if(cash>__CB.holdMax) __CB.holdMax=cash;
           if(!__CB.holdT && cash>=__CB.holdGate) __CB.holdT=__CB.t; }
+        // 🏁 첫 도달 — 한 번 찍힌 것은 다시 안 본다
+        for(const m of (__CB.MILE||[])){ if(__CB.mile[m[0]]!=null) continue;
+          let ok=false; try{ ok=!!m[1](); }catch(_e){}
+          if(ok) __CB.mile[m[0]]=Math.round(__CB.t); }
         if(__CB.t-(__CB.lastSample||0) >= 15){ __CB.lastSample=__CB.t;
           __CB.wealth.push({ t:+__CB.t.toFixed(0), w:Math.round(w), dg:campDgN(), r:campRoundN(),
             gl:campUpgLv('gather'), tl:campUpgLv('tap'), hold:Math.round((G.tech&&G.tech.credit)||0), rate:Math.round((w-(__CB.lastW||0))/15),
@@ -896,7 +931,7 @@ const fin=await pg.evaluate(()=>({ price:(function(){ const T=TECH_TREE[G.tech.r
     if(typeof campSyncUnitCost==='function') campSyncUnitCost();
     for(const b of T.buildings) for(const q of (b.produces||[])) out.push({id:q.id, m:Math.round(q.m||0),
       own:(typeof campUnitOwned==='function')?campUnitOwned(q.id):-1, base:(G.tech.units[q.id]|0)});
-    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, dbg:__CB.dbg||[], gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
+    return out; })(), sk:__CB.sk||{}, skTick:__CB.skTick||0, skTickU:__CB.skTickU||0, medHp:Math.round(__CB.medHp||0), healHp:Math.round(__CB.healHp||0), log:__CB.log, wealth:__CB.wealth, mile:__CB.mile||{}, mileOrder:(__CB.MILE||[]).map(m=>m[0]), army:(typeof _cbArmy==='function')?_cbArmy():null, jam:__CB.jam||null, vanish:__CB.vanish||null, dead:__CB.dead||null, t:__CB.t, dbg:__CB.dbg||[], gateT:__CB.gateT||0, holdT:__CB.holdT||0, holdMax:Math.round(__CB.holdMax||0), hold:Math.round((G.tech&&G.tech.credit)||0), earn:Math.round(campWealth()),
   dg:campDgN(), round:campRoundN(), reb:campCanRebirth(),
   // 🧱 벙커 — 몇 채이고 몇 기가 탔고 실제로 얼마나 맞았나
   bunk:(function(){ const on=!!__CB.bunk;
@@ -1050,6 +1085,20 @@ if(fin.inc){
 // ⚠ **무효 표시는 `최종` 줄 자체에 붙인다.** 위에만 적으면 `grep '^최종'` 으로 표를 모으는 사람이
 //   그대로 표본에 넣는다 — 실제로 그렇게 오염된 판을 두 번 세었다.
 if(fin.dbg && fin.dbg.length){ console.log('\n🔬 진단 (손 플레이 5초마다 · 교착 라운드 1회)'); for(const l of fin.dbg) console.log('  '+l); }
+// 🏁 **첫 도달 시각** — 빈손 출발이 실제로 얼마나 걸리나(CAMP_DEV_START_MIN 이 0 일 때만 뜻이 있다)
+if(fin.mileOrder && fin.mileOrder.length){
+  console.log('\n■ 🏁 첫 도달 — 빈손에서 얼마 만에  (끝 병력 ' + (fin.army!=null?fin.army:'?') + '기)');
+// 📜 `TIMELINE=1` 이면 15초 표본을 표로 찍는다 — **무엇이 막고 있나**를 볼 때 쓴다.
+//   ⚠ 인구(sup/supCap)를 꼭 함께 볼 것: 본부 10 에 일꾼과 병력이 **같이** 들어가므로
+//     「병력이 안 는다」의 원인이 돈인지 인구인지는 이 두 칸으로만 갈린다.
+if(process.env.TIMELINE){ console.log('  분   누적       지갑      일꾼 인구   탭Lv 채취Lv');
+  // ⚠ 표본은 15초마다라 시각이 딱 떨어지지 않는다 — **개수로 걸러야 한다**(모듈러로 거르면 거의 다 빠진다)
+  for(let i=0;i<(fin.wealth||[]).length;i++){ if(i%4) continue; const q=fin.wealth[i];
+    console.log('  ' + String((q.t/60).toFixed(0)).padStart(3) + ' ' + String(q.w).padStart(9)
+      + ' ' + String(q.hold).padStart(9) + ' ' + String(q.wk).padStart(5)
+      + ' ' + (q.sup + '/' + q.supCap).padStart(7) + ' ' + String(q.tl).padStart(5) + ' ' + String(q.gl).padStart(6)); } }
+  for(const k of fin.mileOrder){ const v=fin.mile[k];
+    console.log('  ' + k.padEnd(12) + (v==null ? '  — (못 닿음)' : ('  ' + (v/60).toFixed(1) + '분'))); } }
 console.log(`\n최종 ${(fin.t/60).toFixed(1)}분 · D${fin.dg}R${fin.round} · 번 돈 ${fin.earn} · 환생 가능 ${fin.reb}`
   + (froze ? '  🧊 얼어붙음 — 표본으로 쓰지 말 것' : ''));
 if(froze){

@@ -731,6 +731,8 @@
   .cdRow.here{border-color:rgba(255,118,118,.45);background:rgba(255,59,59,.06)}
   .cdRow.here .cdIx{color:#ff7676}                              /* 칩 진행선과 같은 붉은색 · 발광 없음 */
   .cdRow.done .cdIx{color:#6f7a88}                              /* 지나온 던전 — 번호를 옅게 */
+  /* ♾ 무한층 줄 — 번호 자리에 기호가 온다(Rajdhani 에 ♾ 가 없어 본문 글꼴로 돌린다) */
+  .cdRow.inf .cdIx{font-family:inherit;font-size:18px;letter-spacing:0}
   .cdRow.lock{opacity:.38;cursor:default}
   /* 라운드 = 굴리는 피커. 큰 수가 위, 1 이 맨 아래(옛 사냥터 피커와 같은 방향) */
   /* ⛏ 채굴 토글 — 「MY BASE」 요약판의 **그리드 한 칸**(사용자 확정 2026-08-27).
@@ -2186,7 +2188,7 @@
 #campRune .rnHx.on{fill:url(#rnFace)}
 /* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
 #campRune .rnHxSel{fill:none;stroke:var(--acc-sel);stroke-width:1.1;opacity:.9}
-#campRune .rnLkT{fill:#49525d;font-family:var(--font-num);font-size:7.5px;text-anchor:middle}
+#campRune .rnLkT{fill:#49525d;font-family:var(--font-num);font-size:6.8px;text-anchor:middle}
 /* 🔁 교체 대기 — **숨쉬기 + 흐르는 점선**(2026-09-04 사용자 확정 · 목업 camp-rune-wait2-4 ①안).
    ⭐ 움직임을 칸 **안**(크기)과 **밖**(둘레 점선)으로 나눠 서로 안 부딪히게 한다.
    ⛔ 좌우로 떠는 흔들림으로 되돌리지 말 것 — 게임에서 그 몸짓은 「고르라」가 아니라

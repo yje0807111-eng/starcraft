@@ -139,19 +139,34 @@ function renderPtTabs(){ const box=document.getElementById('ptTabs'); if(!box) r
 //   공학소 팝업(`renderPt`)과 유즈맵 강화 구역(`renderMapUpg` · 12-appshell.js)이 **같은 줄**을 쓴다 —
 //   거르개(pred)만 달리 준다. ⛔ 두 번째 줄 렌더러를 만들지 말 것: 레벨 눈금·값·초월 표기가 갈린다.
 //   ⚠ 산 뒤에 다시 그리는 일은 `doPtUp` 이 **열려 있는 쪽**을 보고 정한다.
-function ptRowsHTML(pred){
+// 🔌 **줄 목록의 출처**(2026-09-11) — 표·지갑·구매가 어디서 오는지를 한 덩이로 넘긴다.
+//   ⭐ 이렇게 한 이유: 환생 강화(캠프)도 **같은 줄 목록**을 쓰는데 표와 지갑이 다르다.
+//     ⛔ 두 번째 줄 렌더러를 만들지 말 것 — 같은 UI 를 두 번 만들면 반드시 어긋난다(CLAUDE.md).
+//   기본값은 공학소·유즈맵 강화가 쓰던 그대로다(META_BUILDS · PLAYER_META.coins).
+const PT_SRC_META = {
+  tbl:   () => META_BUILDS,
+  lv:    (id) => buildLevel(id),
+  nmax:  (b)  => metaNMax(b),
+  cost:  (id, lv) => metaNextCost(id, lv),
+  purse: () => (PLAYER_META.coins || 0),
+  unit:  'P',
+  act:   (id) => "doPtUp('" + id + "')",
+  hint:  (id, b, lv) => ptValHint(id, b, lv) };
+function ptRowsHTML(pred, src){
+  src = src || PT_SRC_META;
+  const TBL = src.tbl();
   let rows='', _lastSect=null;
-  for(const id in META_BUILDS){ const b=META_BUILDS[id]; if(!pred(b, id)) continue;
+  for(const id in TBL){ const b=TBL[id]; if(!pred(b, id)) continue;
     if(b.sect && b.sect!==_lastSect){ _lastSect=b.sect; rows+='<div class="ptSect"><span class="ptSectBar"></span>'+b.sect+'</div>'; }   // 섹션 헤더(세분화)
-    const lv=buildLevel(id), n=metaNMax(b), maxed=lv>=b.max, cost=metaNextCost(id,lv), deferred=!!b.deferred, poor=(PLAYER_META.coins||0)<cost;
+    const lv=src.lv(id), n=src.nmax(b), maxed=lv>=b.max, cost=src.cost(id,lv), deferred=!!b.deferred, poor=src.purse()<cost;
     const nextTrans=!maxed && lv>=n;   // 다음 강화가 초월 레벨
     // 레벨 표기는 강화 버튼 안(비용 아래)으로 — 이름줄 폭을 수치 힌트에 양보
     const lvTxt=(lv>n)?('초월'+(lv-n)):(lv+' / '+b.max);
     let btn;
     if(deferred) btn='<button class="ptBtn" disabled><b>준비중</b></button>';
     else if(maxed) btn='<button class="ptBtn maxed" disabled><b>MAX</b><i class="ptBtnLv">'+lvTxt+'</i></button>';
-    else btn='<button class="ptBtn'+(poor?' poor':'')+(nextTrans?' trans':'')+'" onclick="doPtUp(\''+id+'\')"><b>'+cost+'P</b><i class="ptBtnLv'+(lv>n?' trans':'')+'">'+lvTxt+'</i></button>';
-    const vh=ptValHint(id,b,lv);   // 수치 변화 힌트(이름 오른쪽)
+    else btn='<button class="ptBtn'+(poor?' poor':'')+(nextTrans?' trans':'')+'" onclick="'+src.act(id)+'"><b>'+cost+(src.unit||'P')+'</b><i class="ptBtnLv'+(lv>n?' trans':'')+'">'+lvTxt+'</i></button>';
+    const vh=src.hint(id,b,lv);   // 수치 변화 힌트(이름 오른쪽)
     rows+='<div class="ptRow'+(deferred?' deferred':'')+(_ptGroup==='team'?' team':'')+'">'
       +'<div class="ptInfo"><div class="ptNameRow"><span class="ptName">'+b.name+'</span>'+(vh?'<span class="ptVal">'+vh+'</span>':'')+'</div>'
       +ptPips(lv,b.max,n)+'</div>'
