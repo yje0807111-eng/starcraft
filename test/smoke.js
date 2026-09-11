@@ -8748,6 +8748,43 @@ async function groupLobby(){
     } finally { C.dg=back.dg; campBattleClose(); campFogSync(); campTerrDraw(); campBarReset(); }
   });
 
+  // 🔬 **캠프 연구 넷** (2026-09-11 사용자): ① 공학소 카드 아이콘(공격속도·방어력)이 그림이다 ② def 축은 「체력」으로 부른다(방어력이 둘이면 안 된다)
+  //   ③ 캠프의 연구는 즉시 끝난다 ④ 연구가 끝나면 이미 선 병력에 다시 얹고(체력 비율 유지) 프로필이 지금 값을 보인다.
+  await step('캠프 연구: 아이콘 · 체력 라벨 · 즉시 · 이미 선 병력에 실시간 반영', async()=>{
+    skipIf(typeof campRescaleAllies!=='function'||typeof techApplyResearch!=='function','캠프 연구 훅 없음');
+    const C=campState(); const back={dg:C.dg, res:JSON.stringify(G.tech.research||{})};
+    try{
+      // ① 아이콘 — 별칭 표(UPG_ICO)를 지나 실제 그림이 나온다(⛔ 이모지 폴백 금지)
+      assert(/up_atkspd/.test(upgIcoHTML('inf_as')),'공격속도 연구 아이콘이 그림이 아니다');
+      assert(/up_carapace/.test(upgIcoHTML('inf_dr')),'방어력 연구 아이콘이 그림이 아니다');
+      // ② 공학소 카드 이름 — 체력 하나 · 방어력 하나
+      const eb=techGetBldg('union','engbay'); assert(eb,'공학소 표가 없다');
+      const names=_techResList(eb).map(r=>_techResearchCard(eb,r,null).sn);
+      assert(names.indexOf('보병 체력')>=0,'공학소에 「보병 체력」이 없다: '+names.join('·'));
+      assert(names.filter(n=>n==='보병 방어력').length===1,'공학소에 「보병 방어력」이 하나가 아니다: '+names.join('·'));
+      // ③ 즉시 — 캠프에서는 연구 시간이 0
+      assert(_techResearchTime(eb.research[0])===0,'캠프 연구가 즉시가 아니다: '+_techResearchTime(eb.research[0])+'초');
+      // ④ 이미 선 병력 — 캠프 규약대로 뽑은 유닛(campDeploy)에 연구 완료를 흉내낸다
+      campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
+      skipIf(!CAMPB,'전장이 안 열림');
+      const u=campDeploy('marine', 0.5, 0.5); assert(u,'유닛을 못 뽑았다');
+      u.hp=u.maxHp*0.5;
+      const dmg0=u.dmg, cd0=u.cdMax;
+      campSelSet([u]); campFieldSheet();
+      const stat=()=>[...document.querySelectorAll('#btSheetBody .cgInfo *')].map(e=>e.textContent).join(' ');
+      const s0=stat(); assert(s0.indexOf(''+(Math.round(dmg0*10)/10))>=0,'프로필이 전장 유닛의 지금 공격력을 안 보인다: '+s0.slice(0,80));
+      techApplyResearch(null,{ key:'union_inf_atk', tier:true, n:2 });
+      techApplyResearch(null,{ key:'union_inf_as',  tier:true, n:1 });
+      assert(Math.abs(u.dmg/dmg0-(1+CAMP_RES_ADD*2))<0.02,'연구가 끝났는데 이미 선 유닛의 공격력이 안 올랐다: '+dmg0+'→'+u.dmg);
+      assert(Math.abs(u.cdMax*(1+CAMP_RES_ADD)-cd0)<0.02,'공격속도 연구가 이미 선 유닛에 안 얹혔다: '+cd0+'→'+u.cdMax);
+      assert(Math.abs(u.hp/u.maxHp-0.5)<0.01,'다시 얹으면서 체력 비율이 깨졌다(풀피가 됐다): '+(u.hp/u.maxHp).toFixed(2));
+      campSyncSheet();
+      const s1=stat();
+      assert(s1!==s0 && s1.indexOf(''+(Math.round(u.dmg*10)/10))>=0,'프로필에 오른 공격력이 실시간으로 안 보인다: '+s1.slice(0,80));
+      return '아이콘 그림 · 체력/방어력 각 하나 · 즉시(0초) · 공격 '+dmg0+'→'+(Math.round(u.dmg*10)/10)+' 반피 유지 · 프로필 갱신';
+    } finally { C.dg=back.dg; G.tech.research=JSON.parse(back.res); campBattleClose(); campFogSync(); campBarReset(); }
+  });
+
   // 🎲 **적 기지 배치는 생성기가 뽑는다**(2026-09-09 사용자 확정 · 23-camp-dungeon campFoeLayout).
   //   규칙은 고정 — **맨 위 본진 → 테크 → 앞줄 생산**(내 기지의 거울) · 탑은 구간 앞 · 보급고류는 바깥 —
   //   자리만 씨앗 난수다. 씨앗은 원정마다 새로(C.foeSeed) · 같은 씨앗이면 같은 배치.
@@ -9450,10 +9487,11 @@ async function groupLobby(){
           try{
             T.research={}; T.energy=500; T.credit=999999; T.built.engbay=1;
             const lv=()=>T.research['union_inf_atk']|0;
+            // ⚡ 캠프 연구는 즉시라(2026-09-11) 예약(_rj)이 안 남는다 — 올라간 **레벨 수**로 n 을 잰다
             const one=(mul)=>{ _armMul=mul; _armSel='inf_atk'; be._rj=null;
-              const g0=T.energy; campArmBuy('inf_atk');
-              const rj=be._rj; if(rj){ techApplyResearch(be,rj); be._rj=null; }
-              return { n:rj?rj.n:0, t:rj?rj.t:0, gas:g0-T.energy }; };
+              const g0=T.energy, l0=lv(); campArmBuy('inf_atk');
+              const rj=be._rj; if(rj){ techApplyResearch(be,rj); be._rj=null; }   // 시간이 남는 화면(관리자)이면 끝내 준다
+              return { n:lv()-l0, t:rj?rj.t:0, gas:g0-T.energy }; };
             // 🔁 **한 칸을 눌러 돌린다** — 사냥터 수량 토글(.hmUpQty/.hmUpQ)과 같은 컴포넌트다.
             //   ⛔ 버튼 셋으로 되돌리지 말 것(트레이는 판 밖이라 칸이 늘수록 전장을 가린다).
             { const keep=_armMul; _armMul=1;
@@ -9485,8 +9523,8 @@ async function groupLobby(){
             const a5=one(5);   assert(a5.n===5&&lv()===6,'×5 가 5레벨을 한 번에 안 올린다: '+a5.n);
             // 💰 값은 **레벨마다 다르다** — 다섯 칸을 각각 더한 값이어야 한다(같은 값 ×5 가 아니다)
             assert(a5.gas>a1.gas*4,'×5 의 값이 레벨별 합이 아니다: '+a5.gas);
-            // ⏱ 시간도 n 배다 — ⛔ 「돈만 내고 즉시」로 만들지 말 것(시간 축이 사라진다)
-            assert(Math.abs(a5.t-a1.t*5)<0.01,'×5 의 연구 시간이 5배가 아니다: '+a5.t+' / '+a1.t);
+            // ⚡ 캠프의 연구는 **즉시**다(2026-09-11 사용자 · CAMP_RES_INSTANT) — 예약이 남으면 안 된다
+            assert(a1.t===0&&a5.t===0,'캠프 연구가 즉시가 아니다: '+a1.t+' / '+a5.t);
             // MAX — 가스로 살 수 있는 만큼만, 그 이상은 안 산다
             const can=campArmAfford('inf_atk'), aM=one('max');
             assert(aM.n===can&&aM.n>0,'MAX 가 살 수 있는 만큼을 안 산다: '+aM.n+' / '+can);

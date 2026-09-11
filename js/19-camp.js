@@ -3689,7 +3689,9 @@ function campSelSet(units){ _campSel = (units || []).map(function(u){ return u.u
 //   ⚠ 연구 구역도 `techPanelRender` 를 감싼다 — 이 패치를 **그 뒤에** 걸어야 바깥이 된다.
 function campFieldEnts(){
   return campSelList().map(function(u){
-    return { eid:'cf_' + u.uid, type:'unit', uid:(u.gm || u.id), x:u.x, y:u.y, _fu:u }; }); }
+    // 🔴 머리줄 체력·실드는 **지금 값**(techUnitPanelModel 은 ent.hp 가 있으면 그것을 쓴다) — 연구·피해가 바로 보인다
+    return { eid:'cf_' + u.uid, type:'unit', uid:(u.gm || u.id), x:u.x, y:u.y, _fu:u,
+      hp:u.hp, maxHp:u.maxHp, sh:u.sh, maxSh:u.maxSh }; }); }
 // 🏰 적 건물 프로필 시트 — 모델은 23-camp-dungeon(campFoeSheetModel) · 껍데기는 공용 renderCmdGrid.
 function campFoeSheet(){
   const body = document.getElementById('btSheetBody'), sheet = document.getElementById('btSheet');
@@ -4805,6 +4807,30 @@ function campDesignStats(list){ let n = 0; for(const u of (list || [])) if(campD
 //     상대적으로 +7% 뿐이고 가스 값은 계속 오르므로(CAMP_RES_GAS_R) 뒤로 갈수록 효율이 떨어진다 —
 //     그때 머릿수·다음 테크로 뚫는 것이 설계 의도다(위 campRoundRate 설명과 한 짝).
 const CAMP_RES_ADD = 0.20;        // 계열 업그레이드 한 레벨당 더해지는 몫(기본값 대비)
+// ⚡ **캠프의 연구는 즉시 끝난다**(2026-09-11 사용자: 「업그레이드할 때 즉시 되도록」).
+//   ⚠ 옛 규칙 「×n 은 클릭만 줄이고 시간은 안 줄인다」(2026-09-03)를 뒤집는다 — 사용자가 시간 축을 뺐다.
+//   관리자 건설·오토배틀은 그대로 시간이 든다(16-build _techResearchTime 이 캠프일 때만 0 을 준다).
+const CAMP_RES_INSTANT = true;
+function campResInstant(){ return CAMP_RES_INSTANT && (typeof campIsOn === 'function') && campIsOn(); }
+// 🔁 **연구가 끝나면 이미 선 병력에도 다시 얹는다**(2026-09-11 사용자: 「업그레이드되면 실시간으로 반영」).
+//   campScaleAllies 는 갓 나온 유닛에 한 번만 얹는다(_campRtOn) — 그 표시를 걷고 설계 능력치부터 다시 쌓는다.
+//   ⚠ 체력은 **비율을 지킨다**(맞고 있던 유닛이 연구로 풀피가 되면 안 된다 · 실드도 같다).
+//   ⚠ 프로필(campFieldSheet)은 서명(_campSel)만 보므로 여기서 서명을 지워 다음 프레임에 새로 그리게 한다.
+function campRescaleAllies(){
+  if(typeof CAMPB === 'undefined' || !CAMPB || !CAMPB.me) return 0;
+  let n = 0;
+  for(const u of (CAMPB.me.units || [])){
+    if(!u || u.dead) continue;
+    const hr = (u.maxHp > 0) ? Math.max(0, Math.min(1, u.hp / u.maxHp)) : 1;
+    const sr = (u.maxSh > 0) ? Math.max(0, Math.min(1, u.sh / u.maxSh)) : 1;
+    u._campStat = false; u._campRtOn = 0;
+    campScaleAllies([u]);
+    u.hp = u.maxHp * hr; if(u.maxSh > 0) u.sh = u.maxSh * sr;
+    n++; }
+  const body = document.getElementById('btSheetBody'); if(body) body._cfSig = null;   // 프로필 다시 그리기
+  return n; }
+// 17-build-cards techApplyResearch 가 부르는 훅 — 캠프 밖에서는 스스로 빠진다
+function campOnResearch(rj){ if(!(typeof campIsOn === 'function' && campIsOn())) return 0; return campRescaleAllies(); }
 function campResLv(uid, kind){    // kind: 'atk' | 'hp'
   if(typeof G === 'undefined' || !G.tech || typeof UNIT_UPG === 'undefined') return 0;
   const m = UNIT_UPG[uid]; if(!m) return 0;

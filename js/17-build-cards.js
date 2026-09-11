@@ -1046,13 +1046,14 @@ function techCancelAmmo(ev, key, j){ if(ev&&ev.stopPropagation) ev.stopPropagati
   if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 // ⏫ rj.n = 이 연구 한 건이 올리는 레벨 수(기본 1). 캠프 무장 칸의 ×5 / MAX 가 쓴다.
 //   ⛔ 기본값을 빼지 말 것 — 관리자 건설 탭은 n 을 안 넣는다(그때는 1 이어야 한다).
-function techApplyResearch(be, rj){ if(!rj) return; if(rj.tier) G.tech.research[rj.key]=(G.tech.research[rj.key]||0)+Math.max(1, rj.n|0); else G.tech.research[rj.key]=true; }
+function techApplyResearch(be, rj){ if(!rj) return; if(rj.tier) G.tech.research[rj.key]=(G.tech.research[rj.key]||0)+Math.max(1, rj.n|0); else G.tech.research[rj.key]=true;
+  if(typeof campOnResearch==="function") campOnResearch(rj); }   // 🏕 캠프: 이미 선 병력에 다시 얹고 프로필을 새로 그린다(19-camp)
 function techCancelResearch(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 연구 취소 = 100% 환불
   const be=(G.tech.sel!=null)?G.tech.ents.find(e=>e.eid===G.tech.sel&&e.type==='bldg'):null; if(!be||!be._rj) return;
   const rj=be._rj; techRefund(rj.cost[0],rj.cost[1]); be._rj=null; if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); }
 // ⏫ n = 한 번에 올릴 레벨 수(기본 1 · 캠프 무장 칸의 ×5 / MAX).
 //   ⭐ 비용은 **레벨마다 달라서** 한 칸씩 더해 합친다 — 한 번에 내고 한 건으로 예약한다.
-//   ⚠ 연구 시간도 n 배다. 「돈만 내고 즉시」가 아니다 — 그러면 시간 축이 통째로 사라진다.
+//   ⚠ 연구 시간도 n 배다(관리자 건설). 🏕 캠프는 2026-09-11 부터 **즉시**(_techResearchTime 이 0 · 19-camp CAMP_RES_INSTANT).
 function techDoResearch(bk, rk, n){ const race=G.tech.race, b=techGetBldg(race,bk); if(!b||!b.research) return; const r=b.research.find(x=>x.k===rk); if(!r) return;
   if(!((G.tech.built[bk]>0)||G.tech.addon[bk])){ if(typeof toast==='function') toast('⛔ 건물 미건설'); return; }
   const be=_techSelBldgOf(bk); if(!be){ if(typeof toast==='function') toast('⛔ 건물 없음'); return; }

@@ -520,6 +520,14 @@ function _techEnsureRoster(race){ const t=TECH_TREE[race]; if(!t||t._rosterSynce
     if(typeof TECH_MORPH!=='undefined' && Object.keys(TECH_MORPH).some(src=>TECH_MORPH[src].some(m=>m.to===key))) continue;   // 🧬 2차 변태 전용 유닛(베놈퀸·베놈·베히모스)은 직접 생산 제외
     const u=(typeof U!=='undefined'&&U[key])||{}; main.produces.push({id:key, name:r.n, m:(u.cost||50), g:0, pop:1}); have.add(key); } }
 function _techUnitStatList(spec,uid,ent){ const _spd=(spec.atk&&(typeof _sbBaseCd==='function'))?((1/_sbBaseCd(uid)).toFixed(1)+'/s'):'-';   // 공격속도 = base_stats 공속(/s) — 메인 배너와 동일 표시
+  // 🏕 **전장 유닛(캠프)은 지금 값을 보인다**(2026-09-11 사용자: 「업그레이드가 프로필에 실시간으로」) — 연구·트리·룬이 얹힌 dmg·cdMax·rng.
+  //   ⚠ 사거리는 전장 px 라 칸(CAMP_STAT_TILE)으로 되돌린다 · 공격속도는 발사 간격(cdMax)의 역수.
+  const _fu=ent&&ent._fu;
+  if(_fu&&_fu.dmg!=null){ const _tile=(typeof CAMP_STAT_TILE!=='undefined'&&CAMP_STAT_TILE>0)?CAMP_STAT_TILE:1;
+    const out=[['공격력', _fu.dmg>0?(''+Math.round(_fu.dmg*10)/10):'무공격'], ['사거리', _fu.rng!=null?(''+Math.round(_fu.rng/_tile*10)/10):'-'],
+      ['공격속도', (_fu.cdMax>0)?((1/_fu.cdMax).toFixed(1)+'/s'):'-'], ['처치',''+(_fu.kills|0)]];
+    const _me=(_fu.maxEn>0)?_fu.maxEn:0; if(_me>0) out.push(['마나', Math.round(_fu.en!=null?_fu.en:_me)+'/'+Math.round(_me)]);
+    return out; }
   const out=[['공격력', spec.atk?(''+spec.atk):'무공격'], ['사거리', spec.rng!=null?(''+spec.rng):'-'], ['공격속도', _spd], ['처치','0']];
   const me=(ent&&ent.maxEn>0)?ent.maxEn:((typeof U!=='undefined'&&U[uid]&&U[uid].energy)||0);   // 🔮 마나 = 머리줄이 아니라 여기(왼쪽 정보 구역)
   if(me>0) out.push(['마나', Math.round((ent&&ent.en!=null)?ent.en:me)+'/'+Math.round(me)]);
@@ -552,7 +560,11 @@ const UPG_ICO={
   ocular:'sight', antennae:'sight', apial:'sight', sensor:'sight',
   u238:'range', grooved:'range', singularity:'range', charon:'range',
   burrow:'burrow', lurker:'morph', ventral:'transport', carrier_cap:'transport', reaver_cap:'transport',
-  chitinous:'carapace' };
+  chitinous:'carapace',
+  // 🏕 캠프 전용 연구(20-camp-research CAMP_ARM_ADD) — 공격속도 = up_atkspd · 방어력 = up_carapace(2026-09-11 사용자: 「아이콘이 안 들어와 있다」)
+  //   ⚠ 계열(보병·차량·함선…)마다 같은 그림이다 — 계열별로 뽑으면 그때 갈라 적는다(CAMP_ARM_ICO 와 같은 값이어야 한다)
+  inf_as:'atkspd', veh_as:'atkspd', air_as:'atkspd', melee_as:'atkspd', range_as:'atkspd', fly_as:'atkspd', gnd_as:'atkspd',
+  inf_dr:'carapace', veh_dr:'carapace', air_dr:'carapace', gnd_dr:'carapace', fly_dr:'carapace' };
 function upgIcoHTML(k, fallback){ const f=UPG_ICO[k]; return f? _icoImg('upgrades','up_'+f,'🔬') : (fallback||pIco('🔬')); }
 // 스킬 🠒 아이콘 별칭 — 뜻이 같은 스킬끼리 한 장을 공유한다(UPG_ICO와 같은 규칙). 파일을 복사하지 말고 여기에 한 줄 추가할 것.
 const SKILL_ICO={ nuke:'bomb' };   // 핵 폭격 = 폭탄 아이콘 공유

@@ -29,7 +29,9 @@ function _techProdSpd(){
 function _techBuildTime(race,k){ if(G.tech.nocool) return 0; if(techWallet()) return STK_TECH_BUILD_T;   // 오토배틀: 건물 종류와 무관하게 동일 시간
   return ((techBldgSpec(race,k)||{}).t||20)*TECH_TIME_MUL/_techProdSpd(); }
 function _techProdTime(race,id){ if(G.tech.nocool) return 0; return ((techUnitSpec(race,id)||{}).t||15)*TECH_TIME_MUL/_techProdSpd(); }
-function _techResearchTime(r){ if(G.tech.nocool) return 0; return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL/_techProdSpd(); }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
+function _techResearchTime(r){ if(G.tech.nocool) return 0;
+  if(typeof campResInstant==='function' && campResInstant()) return 0;   // 🏕 캠프는 즉시(2026-09-11 사용자 · 19-camp CAMP_RES_INSTANT)
+  return (r&&r.t?r.t:(r&&r.tier?24:30))*TECH_TIME_MUL/_techProdSpd(); }   // 업그레이드 소요(스펙 t 있으면 사용, 없으면 티어 24s·일회성 30s)
 const TECH_DEF_BLDG={ union:['bunker','turret'], swarm:['sunken','spore'], aetherial:['cannon'], feral:['thornburrow'], colossus:['bastion'] };   // 🛡 방어 건물(공격형)
 function _techIsDef(bk){ return (TECH_DEF_BLDG[G.tech.race]||[]).indexOf(bk)>=0; }
 function _techBldgKind(b){ if(!b) return '건물'; if(b.produces) return '생산'; if(_techResList(b).length) return '업그레이드'; if(b.gas) return '에너지 채취'; if(_techIsDef(b.k)) return '방어'; if(b.supply) return '인구 공급'; if(b.unlocks) return '해금'; return '건물'; }
@@ -122,7 +124,10 @@ function _techResearchCard(b, r, e){ const race=G.tech.race, rj=e&&e._rj, key=ra
   if(r.tier){ const lv=_lv, isMax=!_cc&&lv>=r.tier.length, nx=_cc||r.tier[Math.min(lv,r.tier.length-1)]; meta=isMax?'MAX':((lv+1)+'단계'); tr=isMax?'MAX':''+(lv+1); cr=isMax?0:nx[0]; en=isMax?0:nx[1]; state=isThis?'busy':(isMax?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
   else { const done=G.tech.research[key], _c=_cc||[r.m,r.g]; meta=done?'완료':'연구'; cr=done?0:_c[0]; en=done?0:_c[1]; state=isThis?'busy':(done?'max':((rj||!_techAfford(cr,en))?'dim':'ok')); }
   const _act=isThis?'onclick="techCancelResearch(event)"':(state==='max'?'':'onclick="techDoResearch(\''+b.k+'\',\''+r.k+'\')"');
-  return { pro:(SKILLS&&SKILLS[r.k]?skillIcoHTML(r.k):upgIcoHTML(r.k)), sn:r.name, cr, en, meta, metaCls:'lv', tr, state, sel:isThis, act:_act+_techTipAttr('r',r.k,b.k) }; }   // 길게 = 연구 설명
+  // 🏕 캠프의 def 축은 **체력**이다(HUNT_R1 §3-4 · 표 이름은 「…방어력」) — 무장 칸(20-camp-research)과 같은 라벨로 덮는다.
+  //   안 덮으면 공학소에 「보병 방어력」이 둘(def·dr)로 보인다(2026-09-11 사용자 신고). ⛔ 표(15-tech-data)를 고치지 말 것 — 관리자 건설과 공유.
+  const _sn=((typeof campIsOn==='function')&&campIsOn()&&/_def$/.test(r.k))?r.name.replace('방어력','체력'):r.name;
+  return { pro:(SKILLS&&SKILLS[r.k]?skillIcoHTML(r.k):upgIcoHTML(r.k)), sn:_sn, cr, en, meta, metaCls:'lv', tr, state, sel:isThis, act:_act+_techTipAttr('r',r.k,b.k) }; }   // 길게 = 연구 설명
 // 🧬 건물 진화 카드 — b.evolveTo(단일/배열)의 각 대상으로 진화. 진행 중(_evo)=busy(남은 초)
 function _techEvolveCards(b, e){ if(!b||!b.evolveTo) return []; const race=G.tech.race, evo=(e&&e._evo);
   const tos=Array.isArray(b.evolveTo)?b.evolveTo:[b.evolveTo];
