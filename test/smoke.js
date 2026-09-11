@@ -538,16 +538,18 @@ async function groupLobby(){
     // ① 네비에서 들어가면 하위 둘이 뜬다
     navGo('reb');
     { const c=cells();
-      assert(c.indexOf('환생')>=0 && c.indexOf('환생 트리')>=0,
-        '하위가 환생·환생 트리가 아니다: '+c.join('|')); }
+      // 📈 2026-09-11 — 「환생 트리」가 **성장 트리**가 됐다(레벨 포인트로 산다 · GAME_DIRECTION §0-A).
+      //   ⛔ 옛 이름으로 되돌리지 말 것 — 1차 환생이 없어져 이름이 거짓말이 된다.
+      assert(c.indexOf('환생')>=0 && c.indexOf('성장 트리')>=0,
+        '하위가 환생·성장 트리가 아니다: '+c.join('|')); }
     assert(campRebIsOn(),'정보 탭인데 환생 화면이 안 열렸다');
-    // ② 업그레이드 = 환생 트리 · 서로 배타
+    // ② 성장 트리 · 서로 배타
     navSub('tree');
     assert(campTreeIsOn() && !campRebIsOn(),'업그레이드 탭이 트리 하나만 열지 않는다');
     // ③ 캠프 배지에서 바로 들어와도 하위가 뜬다(_navDrill 을 안 맞추면 통째로 안 나온다)
     campRebEnter('info');
     { const c=cells();
-      assert(c.indexOf('환생 트리')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
+      assert(c.indexOf('성장 트리')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
     assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
     // ④ ✕ 를 없앴다 — **나가는 길은 하단 네비 하나**다(2026-08-31 사용자 확정)
     assert(!document.querySelector('#campReb .crX'),'환생 화면에 ✕ 가 남아 있다');
@@ -859,6 +861,69 @@ async function groupLobby(){
       assert(R2.norm && R2.norm[0]===_rnKey,'환생하니 끼워 둔 룬이 빠졌다'); }
     return '조건·공식·먼 목표·확인 ok';
     }finally{ campRebCancel(); campRebClose(); } });
+  // 📈 **레벨 — 판 안의 성장 축**(2026-09-11 · GAME_DIRECTION §0-A 「새 뼈대」).
+  //   옛 1차 환생을 대체한 층이다. 여기서 재는 것은 「두 곡선의 관계」다 —
+  //   적이 주는 경험치는 난이도에 비례하고, 레벨업 요구량은 **그보다 더 빨리** 커야 한다.
+  await step('캠프 레벨: 적을 잡으면 오르고 · 갈수록 느려지고 · 포인트가 트리로 간다', async()=>{
+    skipIf(typeof campAddXp!=='function','캠프 레벨 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep={ lv:C.lv, xp:C.xp, lvPts:C.lvPts, dg:C.dg, cleared:C.cleared,
+                 tree:JSON.parse(JSON.stringify(C.rbTree||{})) };
+    try{
+      // ① 요구량은 등비이고, 그 배수는 **관문 평균보다 크다**(안 그러면 갈수록 빨라진다)
+      const r=campXpNeed(11)/campXpNeed(10);
+      assert(Math.abs(r-CAMP_XP_R)<0.02,'요구량이 등비가 아니다: '+r.toFixed(3)+' vs '+CAMP_XP_R);
+      { const g=CAMP_GATE_RATE, avg=Math.pow(g.reduce((a,b)=>a*b,1), 1/g.length);
+        assert(CAMP_XP_R>avg,'요구량 배수가 관문 평균 이하다 — 갈수록 레벨이 빨라진다: '
+          +CAMP_XP_R+' vs '+avg.toFixed(3)); }
+      assert(campXpNeed(2)>campXpNeed(1),'레벨이 올라도 요구량이 그대로다');
+      // ② 한 마리가 주는 경험치는 **난이도에 비례**한다 — 깊이 들어갈수록 커진다
+      C.dg=0; C.cleared=0; const xp0=campKillXp();
+      C.dg=3; C.cleared=6; const xp1=campKillXp();
+      assert(xp1>xp0*50,'깊이 들어가도 한 마리가 주는 경험치가 그대로다: '+xp0+' → '+xp1);
+      C.dg=0; C.cleared=0;
+      // ③ 쌓으면 오르고, 오른 만큼 **포인트**가 붙는다(⛔ 레벨이 배수를 직접 주지 않는다)
+      C.lv=1; C.xp=0; C.lvPts=0;
+      const ups=campAddXp(campXpNeed(1)+campXpNeed(2));
+      assert(ups===2,'2레벨치를 넣었는데 '+ups+'레벨 올랐다');
+      assert(campLevel()===3,'레벨이 3 이 아니다: '+campLevel());
+      assert(C.lvPts===2*CAMP_LV_PTS,'포인트가 레벨 수와 안 맞는다: '+C.lvPts);
+      // ④ 트리가 **그 포인트**를 쓴다 — 🔧 무제한 스위치를 지나지 않는 진짜 잔액으로 잰다
+      assert(campLvPtsLeft()===C.lvPts,'트리가 읽는 잔액이 레벨 포인트와 다르다');
+      assert(typeof campRtPts==='function','트리 포인트 입구가 없다');
+      if(!CAMP_RT_PTS_FREE) assert(campRtPts()===campLvPtsLeft(),
+        '트리가 레벨 포인트가 아닌 다른 지갑을 읽는다');
+      // ⑤ 지급 지점은 **죽은 유닛 정리 한 곳**이다 — 킬 지점마다 붙이면 반드시 하나를 빠뜨린다
+      { const src=String(campStepUnits);
+        assert(/campAddXp/.test(src),'전투 루프가 경험치를 안 준다 — campAddXp 호출이 없다');
+        assert(/side === 'ai'/.test(src) || /side==='ai'/.test(src),
+          '적이 죽었을 때만이라는 조건이 없다 — 내 유닛이 죽어도 경험치가 오른다'); }
+      // ⑥ 유즈맵은 한 점도 안 준다(사용자 확정 「경험치는 캠프에서만」)
+      assert(!/campAddXp/.test(String(profRunReward||'')),'유즈맵 보상이 캠프 레벨을 올린다');
+      return 'Lv.'+campLevel()+' · 포인트 '+C.lvPts+' · 요구량 ×'+CAMP_XP_R+' · 한 마리 '+xp0.toFixed(0)+'→'+xp1.toFixed(0);
+    } finally { C.lv=keep.lv; C.xp=keep.xp; C.lvPts=keep.lvPts;
+      C.dg=keep.dg; C.cleared=keep.cleared; C.rbTree=keep.tree; } });
+  // 🔄 **레벨·성장 트리는 한 회차짜리다** — 환생이 되감는다.
+  //   ⛔ 남기면 「회차 안에서 강해진다」가 아니라 옛 1차 환생이 이름만 바꾼 것이 된다.
+  await step('캠프 레벨: 환생하면 레벨·포인트·성장 트리가 되감긴다', async()=>{
+    skipIf(typeof campRunReset!=='function','되감기 없음');
+    // ⚠ **살아 있는 캠프에 대고 돌리지 말 것.** campRunReset 은 판까지 비운다(광맥·건물·엔트리) —
+    //   실제로 그렇게 재다가 뒤따르는 스텝 다섯이 「광맥이 안 깔림」으로 무너졌다(2026-09-11).
+    //   ⭐ 이 함수는 넘겨받은 객체의 필드만 만지므로 **가짜 상태**로 재는 것이 맞다.
+    const fake={ lv:17, xp:123, lvPts:9, rbTree:{root:1,_m2:1,gather:3},
+                 best:{2:3}, rebMul:5, rbPts:7, reb:2, rune:{a:1},
+                 dg:2, cleared:3, earn:999, upg:{tap:4} };
+    campRunReset(fake);
+    assert((fake.lv|0)===1,'레벨이 안 되감겼다: '+fake.lv);
+    assert(!(fake.xp>0),'경험치가 남았다: '+fake.xp);
+    assert(!(fake.lvPts>0),'포인트가 남았다: '+fake.lvPts);
+    assert(!(fake.rbTree&&fake.rbTree.gather),'성장 트리가 남았다');
+    // ⚠ 남는 것은 환생의 값이다 — 되감기가 같이 지우면 안 된다
+    assert((fake.reb|0)===2 && fake.rebMul===5 && fake.rune,'환생 값·룬까지 지웠다');
+    // ⛔ 환생이 트리를 들고 넘어가면 옛 1차 환생이 이름만 바꾼 것이 된다
+    assert(typeof campRebirth==='function' && !/rbTree:\s*C\.rbTree/.test(String(campRebirth)),
+      '환생이 아직 성장 트리를 들고 있다(keep 목록)');
+    return '레벨·포인트·트리 되감김 ok · 환생 값은 남음'; });
   // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
   //    도달 불가가 됐다 — 설정 > 로그아웃이 그 자리를 잇는다(2026-08-27).
   await step('로그아웃: 확인창을 거친다 · 설정 위에 뜬다 · 나가기와 같은 얼굴', async()=>{
@@ -13696,7 +13761,7 @@ async function groupLobby(){
       // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
       //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
       //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,성장 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.

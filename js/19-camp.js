@@ -218,6 +218,55 @@ function campWealth(){ const C = campState(); if(!C) return 0;
   return (C.earn || 0) + (C.earnGas || 0) * CAMP_GAS_RATE; }
 function campCanRebirth(){ return campWealth() >= CAMP_REB_COST; }
 
+// ══ 📈 레벨 — 판 안의 성장 축 (2026-09-11 · GAME_DIRECTION §0-A 「새 뼈대」) ══════════
+//
+// ⭐ **옛 1차 환생을 대체한 층이다.** 판을 접지 않고, 싸우는 동안 계속 강해진다.
+//   얻는 것은 **레벨 포인트**뿐이고, 그 포인트로 **성장 트리**(옛 환생 트리)와 **룬 칸**을 연다.
+//   ⛔ 레벨이 배수를 **직접** 주지 말 것 — 그러면 「어느 축에 찍을까」가 사라져 층이 하나 죽는다.
+//
+// 📊 경험치는 **캠프에서 적을 잡을 때만** 나온다(2026-09-10 사용자 확정 「경험치는 캠프에서만」).
+//   ⛔ 유즈맵(오토배틀)에 지급을 붙이지 말 것 — 8인 대전이라 「오래 한 사람이 이긴다」가 된다.
+//   ⚠ 지급 지점은 **js/21-camp-battle.js 의 죽은 유닛 정리 한 곳**이다(campStepUnits 끝).
+//     거기가 사격·광역·스킬·지뢰·핵·건물 사격이 **전부 모이는** 자리라, 킬 지점마다 붙이지 않는다.
+//
+// 📐 두 곡선의 관계가 이 축의 전부다(2026-09-10 사용자 요구):
+//   · 적이 주는 경험치 = **그 시점 난이도에 비례**(campFoeDiff) — 관문을 넘을수록 한 마리가 커진다
+//   · 레벨업 요구량   = **등비**(CAMP_XP_R) — 이쪽이 **더 빨리** 큰다
+//   ⇒ 초반엔 쭉쭉 오르고 갈수록 한 칸이 무거워진다. 모바일 방치형의 관례이자 사용자가 말한 그림이다.
+//   ⚠ 난이도 사다리는 관문당 ×1.22~1.62(평균 ≈1.36)다 — CAMP_XP_R 은 **그보다 커야** 느려진다.
+//     ⛔ 1.36 아래로 내리지 말 것: 뒤로 갈수록 레벨이 **빨라져** 트리가 회차 중반에 바닥난다.
+// ⚠ **값은 아직 안 쟀다**(2026-09-11 출발점). BALANCE.md §4 의 엔진 자동 플레이로 재고 표를 갱신할 것 —
+//   이 프로젝트에서 해석적 추정은 여러 번 크게 빗나갔다.
+const CAMP_XP_KILL = 1;        // 난이도 1 에서 적 하나가 주는 경험치
+const CAMP_XP_A    = 10;       // Lv.1 → Lv.2 에 드는 경험치
+const CAMP_XP_R    = 1.55;     // 레벨당 요구량 배수 — ⛔ 관문 평균(1.36) 아래로 내리지 말 것
+const CAMP_LV_PTS  = 1;        // 레벨 1회 = 포인트 몇 점
+const CAMP_LV_MAX  = 999;      // 안전장치 — 한 프레임에 무한히 오르지 않게
+
+// 그 레벨에서 **다음 레벨까지** 드는 경험치
+function campXpNeed(lv){ return Math.max(1, Math.round(CAMP_XP_A * Math.pow(CAMP_XP_R, Math.max(0, (lv | 0) - 1)))); }
+function campLevel(){ const C = campState(); return Math.max(1, (C && C.lv) | 0 || 1); }
+function campXp(){ const C = campState(); return (C && C.xp) || 0; }
+// 적 하나가 주는 경험치 — 지금 서 있는 던전·관문의 난이도에 비례한다
+function campKillXp(){
+  const d = (typeof campFoeDiff === 'function')
+    ? campFoeDiff((typeof campDgN === 'function') ? campDgN() : 0,
+                  (typeof campBroken === 'function') ? campBroken() : 0) : 1;
+  return CAMP_XP_KILL * Math.max(1, d); }
+// 쌓고 레벨업까지 한 번에. 오른 레벨 수를 돌려준다.
+//   ⚠ 포인트는 **남은 것만** 센다(C.lvPts) — 쓴 것은 트리·룬이 가져간다.
+function campAddXp(n){
+  const C = campState(); if(!C || !(n > 0)) return 0;
+  if(!(C.lv > 0)) C.lv = 1;
+  C.xp = (C.xp || 0) + n;
+  let ups = 0;
+  while(C.lv < CAMP_LV_MAX && C.xp >= campXpNeed(C.lv) && ups < CAMP_LV_MAX){
+    C.xp -= campXpNeed(C.lv); C.lv++; ups++; }
+  if(ups > 0) C.lvPts = (C.lvPts || 0) + ups * CAMP_LV_PTS;
+  return ups; }
+// 🌳 성장 트리가 읽는 잔액 — ⛔ C.lvPts 를 직접 읽어 비교하지 말 것(campRtPts 하나를 지난다)
+function campLvPtsLeft(){ const C = campState(); return Math.max(0, (C && C.lvPts) || 0); }
+
 // ══ 💳 결제 팩 (2026-08-31) ═════════════════════════════════════════════
 // 상점 「추천」 구역에서 현금으로 사는 영구 상품. 젬이 함께 들어 있다.
 //
@@ -368,6 +417,10 @@ function campRunReset(C){
   C.sup = 0; C.supCap = 0; C.eseq = 1; C.ents = []; C.minerals = [];
   C.upg = {};                                     // 캠프 업그레이드(탭·채취)도 한 회차짜리다
   C.rate = 0; C.rateGas = 0; C.leftAt = 0; C.tapped = 0; C.playS = 0;
+  // 📈 **레벨과 성장 트리는 한 회차짜리다**(2026-09-11 · GAME_DIRECTION §0-A 「레벨」).
+  //   ⛔ 남기지 말 것 — 남기면 「회차 안에서 강해진다」가 아니라 옛 1차 환생이 이름만 바꾼 것이 된다.
+  //   ⚠ 그래서 부르는 쪽(campRebirth·campTutoReset)의 keep 목록에 rbTree 가 **없다**.
+  C.lv = 1; C.xp = 0; C.lvPts = 0; C.rbTree = {};
   campFevReset();                                 // ⚡ 앞 회차의 피버가 이어지면 안 된다
   return true; }
 
@@ -376,16 +429,17 @@ function campRunReset(C){
 //   ⛔ **환생이 아니다** — 배수(rebMul)·포인트(rbPts)·환생 횟수(reb)를 **주지 않는다**.
 //     남는 것은 보상뿐이다(젬 · 밑천 미네랄). 튜토리얼로 환생 값을 벌 수 있으면 그게 최적 루틴이 된다.
 //   ⚠ 남길 것은 환생과 같다 — 💠 룬은 젬으로 산 것이라 어떤 되감기에서도 안 지운다.
+//   ⛔ 성장 트리(rbTree)는 **안 남긴다**(2026-09-11) — 레벨 포인트로 산 한 회차짜리다.
 function campTutoReset(minerals){
   const C = campState(); if(!C) return false;
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rbTree:C.rbTree, rune:C.rune };
+                 rune:C.rune };
   campRunReset(C);
   campBattleClose(); campBarReset();
   campWipeBoard();                                // 살아 있는 판도 새 판으로(안 하면 저장이 되살린다)
   { const C2 = campState();                       // 판을 다시 깔며 저장을 읽었을 수 있다 — 다시 얹는다
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
-      C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
+      C2.rbPts = keep.rbPts; C2.reb = keep.reb;
       if(keep.rune) C2.rune = keep.rune;          // 💠 젬으로 산 것 — 되감기면 안 된다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
@@ -393,7 +447,8 @@ function campTutoReset(minerals){
   campSave();
   return true; }
 
-// 환생 실행. 남는 것: 종족 · 최고 기록 · 배수 · 포인트 · 트리.  그 밖은 전부 되감는다.
+// 환생 실행. 남는 것: 종족 · 최고 기록 · 배수 · 환생 포인트 · 💠 룬.  그 밖은 전부 되감는다.
+//   ⛔ **성장 트리(rbTree)와 레벨은 안 남긴다**(2026-09-11) — 회차 안의 성장 축이다.
 function campRebirth(){
   const C = campState(); if(!C || !campCanRebirth()) return null;
   const got = { mul: campRebMulGain(), pts: campRebPtGain(), dg: campDgN(), cleared: campCleared() };
@@ -401,12 +456,12 @@ function campRebirth(){
   C.rbPts  = (C.rbPts  || 0) + got.pts;
   C.reb    = (C.reb | 0) + 1;
   campRunReset(C);                                // ── 되감기(환생·튜토리얼 종료가 함께 쓴다)
-  // ⛔ C.best · C.rebMul · C.rbPts · C.rbTree · C.rune 은 지우지 않는다 — 그게 환생의 값이다
+  // ⛔ C.best · C.rebMul · C.rbPts · C.rune 은 지우지 않는다 — 그게 환생의 값이다
   //    💠 룬은 **젬으로 산 것**이다. 회차가 되감긴다고 사라지면 결제가 사라지는 것이라 절대 안 된다.
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
   //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
-  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb, rbTree:C.rbTree,
+  const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
                  rune:C.rune };
   campBattleClose(); campBarReset();
   // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
@@ -414,7 +469,7 @@ function campRebirth(){
   campWipeBoard();
   { const C2 = campState();          // 판을 다시 깔면서 저장을 읽었을 수 있다 — 남길 것을 다시 얹는다
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
-      C2.rbPts = keep.rbPts; C2.reb = keep.reb; if(keep.rbTree) C2.rbTree = keep.rbTree;
+      C2.rbPts = keep.rbPts; C2.reb = keep.reb;
       if(keep.rune) C2.rune = keep.rune;   // 💠 젬으로 산 것 — 되감기면 안 된다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
@@ -892,11 +947,11 @@ function campRtKeyCost(k){
   if(k.indexOf('br:') === 0) return CAMP_RT_BR_COST;
   if(k.indexOf('gp:') === 0) return CAMP_RT_GP_COST;
   const n = campRtNext(k); return n ? campRtCost(k, n) : Infinity; }
-// 🔧 **환생 포인트 무제한** (2026-09-02 사용자 요청) — 트리를 게임 안에서 눈으로 보려는 스위치다.
-//   ⭐ 포인트 잔액을 **읽는 곳은 전부 이 함수 하나**를 지난다. ⛔ `C.rbPts` 를 직접 읽어 비교하지 말 것.
+// 🔧 **성장 포인트 무제한** (2026-09-02 사용자 요청) — 트리를 게임 안에서 눈으로 보려는 스위치다.
+//   ⭐ 포인트 잔액을 **읽는 곳은 전부 이 함수 하나**를 지난다. ⛔ `C.lvPts` 를 직접 읽어 비교하지 말 것.
 //   ⚠ 켜져 있으면 사도 줄지 않는다 — **밸런스를 재기 전에 반드시 끌 것**(회수 시간·손익분기가 통째로 무의미해진다).
 //   ⚠ 값은 최고 티어 비용(극상 20티어 ≈ 5.5조)보다 훨씬 커야 한다. 모자라면 끝 노드만 조용히 안 사진다.
-//   ⛔ 적립(campRebirth)·환급(campRtReset)은 그대로 `C.rbPts` 에 쓴다 — 스위치를 끄면 그동안 번 것이 그대로 남는다.
+//   ⛔ 적립(campAddXp)·환급(campRtReset)은 그대로 `C.lvPts` 에 쓴다 — 스위치를 끄면 그동안 번 것이 그대로 남는다.
 const CAMP_RT_PTS_FREE = true;
 const CAMP_RT_PTS_FREE_N = 1e18;
 // 🔧 **개발 스위치 — 회차 시작 미네랄**(2026-09-05 사용자 요청: 「바로 유닛 뽑아서 다음 던전 들어갈 수 있게」).
@@ -906,8 +961,10 @@ const CAMP_RT_PTS_FREE_N = 1e18;
 //     바로 시험하려는 임시 값이라, 켜져 있는 동안 회수 시간·손익분기 같은 밸런스 수치는 전부 무의미하다
 //     (camp-bench 도 이 돈을 받는다). 스모크 「개발 스위치」가 켜짐을 알린다 — **재기 전에 0 으로**.
 const CAMP_DEV_START_MIN = 10000;
+// 🌳 **트리 값은 이제 「레벨 포인트」로 낸다**(2026-09-11 · 옛 환생 포인트 C.rbPts 를 대신한다).
+//   ⛔ C.rbPts 로 되돌리지 말 것 — 1차 환생이 없어졌으므로 그 지갑에는 아무도 입금하지 않는다.
 function campRtPts(){ if(CAMP_RT_PTS_FREE) return CAMP_RT_PTS_FREE_N;
-  const C = campState(); return (C && C.rbPts) || 0; }
+  return campLvPtsLeft(); }
 // ⭐ 사슬 규칙 — 환생 → 갈래 → 묶음 → 계열, 그 다음은 그 계열의 앞 차수.
 function campRtCanBuy(k){ const C = campState(); if(!C) return false;
   if(k === 'root') return !campRtRootOn() && campRtPts() >= CAMP_RT_ROOT_COST;
@@ -929,7 +986,7 @@ function campRtCanBuy(k){ const C = campState(); if(!C) return false;
 function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 0;
   const b = campRtBag();
   const cost = campRtKeyCost(k);
-  if(!CAMP_RT_PTS_FREE) C.rbPts = (C.rbPts || 0) - cost;   // 🔧 무제한이면 깎지 않는다
+  if(!CAMP_RT_PTS_FREE) C.lvPts = Math.max(0, (C.lvPts || 0) - cost);   // 🔧 무제한이면 깎지 않는다
   b[k] = (b[k] | 0) + 1;
   campSave(); return cost; }
 
@@ -1583,7 +1640,7 @@ function campZoneTitle(){
   if(typeof campRuneIsOn === 'function' && campRuneIsOn())
     return (typeof _runeSec !== 'undefined' && _runeSec === 'shop') ? '룬 상점' : '룬';
   if(typeof mapUpgIsOn === 'function' && mapUpgIsOn()) return '유즈맵 강화';
-  if(typeof campTreeIsOn === 'function' && campTreeIsOn()) return '환생 트리';
+  if(typeof campTreeIsOn === 'function' && campTreeIsOn()) return '성장 트리';   // 📈 옛 「환생 트리」 — 레벨 포인트로 산다(2026-09-11)
   if(typeof campRebIsOn === 'function' && campRebIsOn()) return '환생';
   return ''; }
 // ❓ **이름 옆 물음표** — 그 구역이 도움말을 갖고 있으면 호출식을 돌려준다(없으면 빈 문자열).
@@ -4777,7 +4834,11 @@ function campState(){
   if(typeof p.camp.earn !== 'number') p.camp.earn = 0;         // 🔁 그 회차 누적 미네랄(환생 관문·포인트 기준)
   if(typeof p.camp.earnGas !== 'number') p.camp.earnGas = 0;
   if(typeof p.camp.rebMul !== 'number') p.camp.rebMul = 0;     // 환생 배수 — 합산 누적
-  if(typeof p.camp.rbPts !== 'number') p.camp.rbPts = 0;       // 환생 포인트 — 트리에 쓴다(6단계)
+  if(typeof p.camp.rbPts !== 'number') p.camp.rbPts = 0;       // 🗄 옛 환생 포인트 — 1차 환생이 없어져 아무도 입금하지 않는다(2026-09-11)
+  // 📈 레벨 — 판 안의 성장 축. 트리·룬 칸이 이 포인트를 쓴다(회차마다 되감긴다)
+  if(typeof p.camp.lv !== 'number') p.camp.lv = 1;
+  if(typeof p.camp.xp !== 'number') p.camp.xp = 0;
+  if(typeof p.camp.lvPts !== 'number') p.camp.lvPts = 0;
   if(!p.camp.best || typeof p.camp.best !== 'object') p.camp.best = {};
   // 🛡 rebuild → endure 이관(2026-08-29) — 갈래 키가 바뀌었다. 옛 세이브의 포인트를 옮긴다.
   if(p.camp.rbTree && p.camp.rbTree.rebuild && !p.camp.rbTree.endure){
