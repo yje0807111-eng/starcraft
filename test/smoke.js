@@ -8503,6 +8503,13 @@ async function groupLobby(){
         assert(campFoeMarks().some(m=>!m.hid),'열렸는데 적 건물 표식이 하나도 없다');
         const g=campW2G(near.x,near.y,W2);
         assert(campFoeTapAt(g.gx,g.gy)!=null,'열린 적 건물이 안 눌린다'); }
+      // 🎥 **격자 위에 선 유닛도 카메라 안에 있다**(2026-09-11 사용자: 「안개 구역에 들어가면 아군·적군 다 안 보여」) —
+      //   행이 음수라 z 가 −1200 아래로 내려가 통째로 컬링됐다(체력 바만 남았다). 적 건물과 같은 −1190 처방.
+      { const _v=G.tech.view; G.tech.view={ x:0.5, y:0.1, zoom:0.5 };
+        try{ const mine=campBattleList().filter(e=>e.uid.indexOf('cb_me_')===0);
+          assert(mine.length===CAMPB.me.units.filter(u=>!u.dead).length,'앞줄에 선 내 유닛이 3D 목록에 다 안 들었다: '+mine.length);
+          for(const e of mine) assert(e.z>=-1200 && e.z<=2800,'격자 위 유닛의 z 가 카메라 범위 밖이다(사라진다): '+e.z.toFixed(0)); }
+        finally { G.tech.view=_v; } }
       // ④ 안개 속 적은 3D·체력 바에서 빠진다(안개 층은 3D 캔버스 아래라 오버레이로는 못 가린다)
       CAMPB.ai.units.length=0;
       campWithStk(()=>{ strikeSpawnUnit('ai','marine'); });

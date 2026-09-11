@@ -4011,7 +4011,10 @@ function campBattleList(){
         sel:(side === 'me' && _campSel.indexOf(u.uid) >= 0),   // 🔵 지정 표시 = 3D 하단 링(기지 유닛과 같은 규약)
         face:(u.face || 0), moving:!!u.moving, yoff:yoff, yawFix:true, scl:scl,
         fireSeq:(u.fireSeq || 0), selCol:(side === 'ai') ? 0xff5c5c : undefined,
-        z: -1000 + (Math.floor((g.gy - techY0()) / _techCH()) + 0.5) * zstep }); } }
+        // ⚠ 격자 **위**(적 기지 쪽 · gy < 0.095)에서는 행이 음수라 z 가 −1200 아래로 내려가 카메라 범위(−1200..2800)를
+        //   벗어난다 — 유닛이 통째로 사라지고 DOM 체력 바만 남았다(2026-09-11 사용자: 「안개 구역에 들어가면 아군·적군 다 안 보여」).
+        //   적 건물(campFoeBld3D zOf −1190)과 같은 이유 · 같은 처방. 건물보다 앞(−1185)에서 받는다 — 적 일꾼 연출과 같은 값.
+        z: Math.max(-1185, -1000 + (Math.floor((g.gy - techY0()) / _techCH()) + 0.5) * zstep) }); } }
   return out; }
 
 // ❤ **전장 HP 바** (2026-09-04 사용자 요청 — 「맞으면 화면에서 hp 가 닳는 게 보여야 한다」)
