@@ -116,7 +116,7 @@ const CAMP_RES_ITEMS = [
     unit: '기',
     lv: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
     lvTx: () => ((typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0)
-            + '/' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40),
+            + '/' + ((typeof campCap === 'function') ? campCap('worker') : 40),
     cost: () => (typeof campHireCost === 'function' && typeof campWorkerNPlanned === 'function')
             ? campHireCost(campWorkerNPlanned()) : 0,
     // ⏫ n 기를 한 번에 — 값은 **마리마다 다르다**(campHireCost 가 지금 마릿수를 본다).
@@ -126,7 +126,7 @@ const CAMP_RES_ITEMS = [
       return s; },
     // MAX = 미네랄과 **상한(40기)** 이 함께 정한다 — 업그레이드 사다리와 다른 규칙이다.
     maxN: () => { if(typeof campHireCost !== 'function' || typeof campWorkerNPlanned !== 'function') return 1;
-      const cap = (typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40;
+      const cap = (typeof campCap === 'function') ? campCap('worker') : 40;
       const step = (typeof CAMP_UPG_MAX_STEP !== 'undefined') ? CAMP_UPG_MAX_STEP : 99;
       const b = campWorkerNPlanned();
       let have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0, n = 0;
@@ -144,8 +144,8 @@ const CAMP_RES_ITEMS = [
         if(typeof campSyncHire === 'function') campSyncHire();
         if(typeof techDoProduce === 'function' && typeof TECH_WORKER !== 'undefined')
           techDoProduce(TECH_WORKER[G.tech.race], bk); } },
-    lock: () => (typeof campWorkerNPlanned === 'function' && typeof CAMP_WORKER_MAX !== 'undefined')
-            && campWorkerNPlanned() >= CAMP_WORKER_MAX,
+    lock: () => (typeof campWorkerNPlanned === 'function' && typeof campCap === 'function')
+            && campWorkerNPlanned() >= campCap('worker'),
     lockWhy: '일꾼은 ' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40) + '기까지' }
 ];
 // 👷 일꾼 유닛 키와, 그 일꾼을 뽑는 건물 키 — 종족마다 다르다.

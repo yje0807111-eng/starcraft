@@ -4102,6 +4102,111 @@ async function groupLobby(){
     } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField();
       campBattleClose(); const S=campState(); if(S){ S.dg=0; S.cleared=0; } } });
 
+  // 🔁🔁 2차 환생 — REDESIGN 단계 2 · GAME_DIRECTION §0-A
+  await step('2차 환생: 배수는 합 · 1차를 비운다 · 룬은 남는다 · 스위치가 안 샌다', async()=>{
+    skipIf(typeof campRebirth2!=='function'||typeof campRt2Val!=='function','2차 환생 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const back=JSON.parse(JSON.stringify({rbTree:C.rbTree||{}, rebMul:C.rebMul||0, rbPts:C.rbPts||0,
+      reb:C.reb|0, reb2:C.reb2|0, reb2Pts:C.reb2Pts||0, rb2Tree:C.rb2Tree||{},
+      best:C.best||{}, dgDone:C.dgDone||{}, rune:C.rune||{}}));
+    try{
+      // ① 🚪 조건 — 던전 3 을 깨야 열린다
+      C.dgDone={}; assert(!campCanRebirth2(),'던전 3 을 안 깼는데 2차 환생이 열려 있다');
+      C.dgDone={}; C.dgDone[CAMP_DG_MAX_N]=1;
+      assert(campCanRebirth2(),'던전 3 을 깼는데 2차 환생이 안 열린다');
+
+      // ② 📐 포인트는 **도달 관문**이 정한다 — ⛔ 번 돈이 아니다(§0-A)
+      C.best={1:CAMP_DG_STEPS, 2:CAMP_DG_STEPS, 3:CAMP_DG_STEPS};
+      const full=campReb2PtGain();
+      assert(full===CAMP_DG_MAX_N*CAMP_DG_STEPS*CAMP_REB2_PT_K,
+        '한 바퀴를 다 돌았는데 포인트가 다르다: '+full);
+      { const was=C.earn; C.earn=(C.earn||0)*1e6+1e9;
+        assert(campReb2PtGain()===full,'번 돈이 2차 포인트를 움직인다 — §0-A 가 폐기한 기준이다');
+        C.earn=was; }
+      C.best={1:CAMP_DG_STEPS}; assert(campReb2PtGain()<full,'덜 갔는데 포인트가 같다');
+
+      // ③ ⛔ **배수는 합이다. 곱이면 실패한다.**
+      C.reb2=0; C.rb2Tree={}; C.rebMul=3;
+      assert(Math.abs(campRebMul()-4)<1e-9,'1차만 있을 때 1+3 이 아니다: '+campRebMul());
+      C.reb2=1;
+      assert(Math.abs(campRebMul()-(1+CAMP_REB2_BASE+3))<1e-9,
+        '2차 배수가 합이 아니다(곱이면 여기서 터진다): '+campRebMul());
+      C.reb2=2;
+      assert(Math.abs(campRebMul()-(1+2*CAMP_REB2_BASE+3))<1e-9,
+        '2차를 두 번 했는데 기본이 +1 씩 안 는다: '+campRebMul());
+
+      // ④ 🔓 상한 — **안 샀으면 지금과 똑같다**(사다리 0차 = 지금 상수)
+      C.rb2Tree={};
+      assert(campCap('worker')===CAMP_WORKER_MAX,'일꾼 상한 기본값이 어긋났다: '+campCap('worker'));
+      assert(campCap('supply')===CAMP_SUPPLY_MAX,'보급소 상한 기본값이 어긋났다: '+campCap('supply'));
+      assert(campCap('unitR')===CAMP_UNIT_R,'유닛 배수 기본값이 어긋났다: '+campCap('unitR'));
+      C.rb2Tree={wkCap2:2, unitR2:3};
+      assert(campCap('worker')>CAMP_WORKER_MAX,'상한을 샀는데 안 열린다: '+campCap('worker'));
+      assert(campCap('unitR')<CAMP_UNIT_R,'유닛 배수를 샀는데 안 내려간다: '+campCap('unitR'));
+      // ⛔ 1.0 근처로 내려가면 한 종류 도배가 최적이 된다
+      C.rb2Tree={unitR2:99};
+      assert(campCap('unitR')>=1.15,'유닛 반복 배수 하한이 뚫렸다 — 도배가 최적이 된다: '+campCap('unitR'));
+      C.rb2Tree={};
+
+      // ⑤ 🔒 **스위치가 안 샌다** — 2차 트리를 그리는 동안에도 효과는 1차를 읽어야 한다.
+      //    ⛔ 여기가 터지면 2차 트리 화면을 보는 동안 캠프 배수가 통째로 1 이 된다(경제가 계속 돈다).
+      C.rbTree={root:1,'br:econ':1,'gp:econ나':1,gather:3};
+      const g1=campRtMul('gather');
+      assert(g1>1,'전제가 바뀜 — 1차 트리 효과가 안 걸린다: '+g1);
+      campWithTree2(function(){
+        assert(campRtMul('gather')===g1,'2차로 켠 사이에 1차 효과가 사라졌다 — 스위치가 샌다');
+        assert(campRtLines()===CAMP_RT2_LINES,'2차로 켰는데 표가 안 바뀐다');
+        assert(campRtBRs()===CAMP_TREE2_BR,'2차로 켰는데 갈래 표가 안 바뀐다'); });
+      assert(campRtLines()===CAMP_RT_LINES,'되돌려 놓지 않았다 — finally 가 빠졌다');
+      assert(campRtMul('gather')===g1,'되돌린 뒤 1차 효과가 다르다');
+
+      // ⑥ ⛔ **관문 문턱 완화를 팔지 않는다**(남은 되먹임 고리 · CLAUDE.md)
+      for(const L of CAMP_RT2_LINES)
+        assert(!/문턱|관문|rebCost|gate/i.test(L.k+' '+L.nm+' '+(L.ds||'')),
+          '2차 트리가 환생 관문 완화를 판다: '+L.k+' / '+L.nm);
+      // 🔒 미개봉 갈래에는 계열이 없다(1차와 같은 규약)
+      for(const bk in CAMP_TREE2_BR){ if(!CAMP_TREE2_BR[bk].soon) continue;
+        assert(CAMP_RT2_LINES.every(L=>L.br!==bk),'미개봉 갈래에 계열이 들어 있다: '+bk); }
+      // ⚠ 사다리의 0차가 지금 상수와 같아야 한다는 규약
+      assert(CAMP_RT2_LINES.find(L=>L.k==='wkCap2').lad[0]===CAMP_WORKER_MAX,'일꾼 사다리 0차가 상수와 다르다');
+      assert(CAMP_RT2_LINES.find(L=>L.k==='unitR2').lad[0]===CAMP_UNIT_R,'유닛 배수 사다리 0차가 상수와 다르다');
+
+      // ⑦ 🔁 실행 — 1차를 비우고 룬·최고기록은 남긴다
+      C.rbTree={root:1,gather:3}; C.rebMul=5; C.rbPts=999; C.reb=4;
+      C.rune={ex:2}; C.dgT={1:{best:88}};
+      C.best={1:CAMP_DG_STEPS,2:CAMP_DG_STEPS,3:CAMP_DG_STEPS};
+      C.dgDone={}; C.dgDone[CAMP_DG_MAX_N]=1;
+      C.reb2=0; C.reb2Pts=0; C.rb2Tree={};
+      const got=campRebirth2();
+      assert(got,'2차 환생이 실행되지 않았다');
+      { const C2=campState();
+        assert((C2.reb2|0)===1,'2차 횟수가 안 올랐다: '+C2.reb2);
+        assert(C2.reb2Pts>0,'2차 포인트가 안 들어왔다: '+C2.reb2Pts);
+        assert(!C2.rebMul,'1차 배수가 안 비워졌다(keep1 이 0 인데 남았다): '+C2.rebMul);
+        assert(!Object.keys(C2.rbTree||{}).length,'1차 트리가 안 비워졌다');
+        assert(!(C2.rbPts>0),'1차 포인트가 남았다: '+C2.rbPts);
+        assert(!(C2.reb>0),'1차 환생 횟수가 남았다: '+C2.reb);
+        assert(C2.rune && C2.rune.ex===2,'💠 룬이 사라졌다 — 젬으로 산 것이다');
+        assert(C2.dgT && C2.dgT[1] && C2.dgT[1].best===88,'⏱ 최고기록이 사라졌다');
+        // ⛔ 조건·포인트 기준은 비워야 무한 적립이 안 된다
+        assert(!campCanRebirth2(),'2차 환생을 하고도 조건이 그대로다 — 무한 적립이 된다');
+        assert(!Object.keys(C2.best||{}).length,'도달 기록이 안 비워졌다 — 포인트가 무한히 쌓인다'); }
+
+      // ⑧ 🧮 keep1 을 샀으면 그만큼 남는다
+      { const C2=campState(); C2.rb2Tree={keep1:3}; C2.rebMul=10;
+        C2.best={1:CAMP_DG_STEPS}; C2.dgDone={}; C2.dgDone[CAMP_DG_MAX_N]=1;
+        campRebirth2();
+        const C3=campState();
+        assert(Math.abs(C3.rebMul-10*CAMP_RT2_LINES.find(L=>L.k==='keep1').lad[3])<1e-6,
+          '1차 배수 보존이 안 먹는다: '+C3.rebMul); }
+      return '조건 D3 · 포인트=도달 관문 · 배수 합 · 상한 열림 · 스위치 누수 없음 · 1차 비움';
+    } finally { const C2=campState(); if(C2) Object.assign(C2, back);
+      // ⚠ campRebirth2 가 판을 되감아 **개발 스위치 시작 미네랄**도 함께 날아간다 — 다시 넣어 준다.
+      //   ⛔ 안 하면 뒤 step(「개발 스위치」)이 남의 뒷정리 때문에 터진다.
+      if(C2) C2._devMin = 0;
+      if(typeof campDevSeed==='function') campDevSeed();
+      if(typeof campSave==='function') campSave(); } });
+
   // 🌌 별자리 트리 — 해금 규칙 · 관문 · 아이콘 · 확대축소 (2026-09-01 사용자 확정)
   await step('환생 트리: 부모가 켜져야 자식이 보인다 · 짝 조건은 없다', async()=>{
     skipIf(typeof campTreeState!=='function'||typeof campRtBrOn!=='function','별자리 트리 없음');
@@ -13666,11 +13771,11 @@ async function groupLobby(){
     { const reb=NAV_TREE.find(x=>x.k==='reb');
       // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10) — 2차 환생이 주는 포인트를 쓰는 곳이라 여기다.
       //   ⛔ 유즈맵 구역으로 되돌리지 말 것(거기 있다가 옮겨 왔다).
-      assert(reb && reb.subs.length===3,'환생 하위 칸(환생·환생 트리·유즈맵 강화)이 없음');
+      assert(reb && reb.subs.length===4,'환생 하위 칸(환생·환생 트리·2차 트리·유즈맵 강화)이 없음');
       // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
       //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
       //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리,2차 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.

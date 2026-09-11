@@ -53,13 +53,17 @@ const NAV_TREE=[
   //     ⚠ 서로를 닫아 준다 — 둘 다 `.on` 이면 트리가 환생 화면을 덮어 어느 탭인지 모른다.
   //   🗺 **셋째 칸 = 유즈맵 강화**(2026-09-10 사용자 확정). 2차 환생이 주는 포인트를 쓰는 곳이라
   //     「버는 곳 옆에서 쓴다」가 맞다 — ⛔ 유즈맵 구역으로 되돌리지 말 것.
+  // 🔁🔁 넷째 칸 = **2차 환생 트리**(2026-09-11 · REDESIGN 단계 2).
+  //   ⚠ 화면은 셋째 칸과 **같은 것**(`#campTree`)이고 그리는 표만 갈린다 — 렌더러는 하나다.
   { k:'reb', label:'환생', ico:'upg', go:()=>campRebEnter('info'),
     cur:()=>((typeof mapUpgIsOn==='function' && mapUpgIsOn()) ? 'umap'
-             : (campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null))),
+             : (campTreeIsOn() ? ((typeof _campTreeIs2!=='undefined' && _campTreeIs2) ? 'tree2' : 'tree')
+                               : (campRebIsOn() ? 'info' : null))),
     reset:()=>campRebEnter('info'), subs:[
-      { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
-      { k:'tree', label:'환생 트리', ico:'flag', act:()=>campRebEnter('tree') },
-      { k:'umap', label:'유즈맵 강화', ico:'map', act:()=>campRebEnter('umap') } ] },
+      { k:'info',  label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
+      { k:'tree',  label:'환생 트리', ico:'flag', act:()=>campRebEnter('tree') },
+      { k:'tree2', label:'2차 트리',  ico:'flag', act:()=>campRebEnter('tree2') },
+      { k:'umap',  label:'유즈맵 강화', ico:'map', act:()=>campRebEnter('umap') } ] },
   // 💠 룬 — 환생과 유즈맵 사이(2026-09-02 사용자 확정: 연구·환생·**룬**·유즈맵·상점).
   //   ⭐ 자리가 여기인 이유: 왼쪽 셋이 「내가 세지는 곳」이고 오른쪽 둘이 「밖으로 나가는 곳」이다.
   //   하위 둘 — **장착**(칸에 끼우기)과 **룬 상점**(젬으로 사기).

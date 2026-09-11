@@ -775,7 +775,7 @@ function _campIdleModel(){
   st.push(['터치당',    (typeof campTapGain==='function')?f(campTapGain()):'-']);
   st.push(['채취당',    (typeof campGatherGain==='function')?f(campGatherGain()):'-']);
   // 🧍 상한을 **같이** 보여 준다 — 더 뽑을 수 있는지가 여기서만 읽힌다(광맥 8덩이 × 5명 = 40).
-  st.push(['일꾼',      wk+u('/'+((typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:'-'))]);
+  st.push(['일꾼',      wk+u('/'+((typeof campCap==='function')?campCap('worker'):'-'))]);   // 🔓 상한은 campCap 하나(2차 트리가 연다)
   if(typeof campUpgLv==='function'){
     st.push(['터치 강화', u('Lv.')+campUpgLv('tap')]);
     st.push(['일꾼 강화', u('Lv.')+campUpgLv('gather')]); }

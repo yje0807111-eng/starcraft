@@ -1633,6 +1633,14 @@
 #campReb .crPk.ad .crRim{background:linear-gradient(180deg,rgba(255,226,150,.80),rgba(150,116,40,.22))}
 #campReb .crPk.ad::before{background:linear-gradient(90deg,transparent,rgba(255,236,190,.42),transparent)}
 #campReb .crPk.ad b{color:var(--gold,#ffd24a)}
+/* 🔁🔁 2차 환생 — 팩(보라·현질)과 **다른 것**이라 색을 가른다. 되돌릴 수 없는 큰 동작이라 붉은 기다.
+   ⛔ 새 버튼 컴포넌트를 만들지 말 것 — 껍데기는 .crPk 그대로이고 색만 덮는다. */
+#campReb .crPk.rb2{color:#ffd8d0;
+  background:radial-gradient(120% 180% at 50% -20%,rgba(255,120,100,.18),
+    rgba(110,40,34,.06) 62%,rgba(40,14,12,.03))}
+#campReb .crPk.rb2 .crRim{background:linear-gradient(180deg,rgba(255,168,150,.82),rgba(170,60,50,.24))}
+#campReb .crPk.rb2::before{background:linear-gradient(90deg,transparent,rgba(255,190,175,.42),transparent)}
+#campReb .crPk.rb2 b{color:#ff9a86}
 #campReb .crPk.ad:active{background:radial-gradient(120% 180% at 50% -20%,rgba(255,216,110,.30),
   rgba(110,86,24,.09) 62%,rgba(40,31,10,.05))}
 /* 🔒 환생 조건을 못 채웠으면 **같이 잠긴다** — 환생을 못 하는데 배수만 올려 둘 수는 없다.
