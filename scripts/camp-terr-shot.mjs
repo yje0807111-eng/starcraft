@@ -80,6 +80,17 @@ await pg.evaluate(()=>{ try{ const v=techView(), t=techViewT();
   v.zoom=t.zoom=2.2; v.x=t.x=0.5; v.y=t.y=0.02; }catch(e){} });
 await sleep(900);
 await pg.screenshot({path:path.join(OUT,'camp-terr-wall.png')});
+// ④-B 🚪 **오르막(램프) 확대** — 「여기로 올라간다」가 그림으로 읽히나
+await pg.evaluate(()=>{ try{
+  const T=CAMPT, C=T.cols, W=T.rows, span=T.wy1-T.wy0;
+  let ri=-1; for(let i=0;i<T.r.length;i++) if(T.r[i]){ ri=i; break; }
+  if(ri<0) return;
+  const gx=((ri%C)+0.5)/C, gy=T.wy0+((((ri/C)|0)+0.5)/W)*span;
+  const v=techView(), t=techViewT(); v.zoom=t.zoom=3.2; v.x=t.x=gx; v.y=t.y=gy+0.02;
+}catch(e){ console.log('ramp '+e.message); } });
+await sleep(900);
+await pg.screenshot({path:path.join(OUT,'camp-terr-ramp.png')});
+
 // ⑤ 👁 시야 차단 — 절벽 **아래**에 병력을 세우고 안개를 켠 채로 본다
 //   (고원 위가 안 열리면 성공 · 램프는 낮은 쪽이라 보인다)
 await pg.evaluate(()=>{ try{

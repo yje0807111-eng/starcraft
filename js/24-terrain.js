@@ -40,8 +40,11 @@ const TERR_FACE_K   = 0.62;  // 절벽 앞면 높이 = 칸 높이 × 이 값
 //   위쪽 절반이 여기 선다. ⛔ 여기서 새 줄을 정하지 말 것 — 23-camp-dungeon CAMP_FOE_ROW 와 한 몸이다.
 const TERR_PLATEAU_Y1 = -0.13;
 // 🚪 램프 — 고원으로 올라가는 길. ⛔ 빼지 말 것: 3단계에서 절벽이 길을 막으면 램프가 유일한 통로다.
-const TERR_RAMP_W  = 3;      // 램프 폭(칸)
+const TERR_RAMP_W  = 5;      // 램프 폭(칸) — ⚠ 3 칸이면 지도 축척에서 **사다리**로 보인다(실측)
+const TERR_RAMP_H  = 4;      // 램프 길이(칸) — ⚠ 2~3 칸이면 비탈이 아니라 「끊긴 자리」로 보인다(실측)
 const TERR_RAMP_N  = 2;      // 램프 개수
+const TERR_RAMP_GAP = 12;    // 램프끼리 최소 거리(칸) — ⚠ 없으면 둘이 붙어 나 「넓은 오르막 하나」로 보인다(실측)
+const TERR_RAMP_STEPS = 3;   // 비탈에 긋는 계단 선 수 — 작은 크기에서 「올라간다」를 읽게 하는 신호
 /* 🧱 벽 — **적 기지와 내 격자 사이의 통로에만** 둔다.
  *   ⛔ 내 격자(techY0 = 0.18 아래)에는 절대 두지 말 것 — 건물을 짓는 자리다.
  *   ⛔ 적 기지 줄(CAMP_FOE_ROW · 맨 아래가 tower1 = +0.02)과 겹치지 말 것 —
@@ -90,11 +93,17 @@ function campTerrGen(dg, seed){
     if(R() < 0.42) cut = Math.max(0, Math.min(TERR_EDGE_MAX, cut + (R() < 0.5 ? -1 : 1)));
     for(let k = 0; k < cut; k++){ const ty = py1 - k; if(ty > py0) T.h[ty * C + tx] = 0; } }
   // 🚪 램프 — 고원 아래 가장자리에 통로를 낸다
+  const rampAt = [];
   for(let i = 0; i < TERR_RAMP_N; i++){
-    const cx = Math.floor(2 + R() * (C - 4 - TERR_RAMP_W));
+    let cx = -1;
+    for(let tryN = 0; tryN < 16; tryN++){
+      const c0 = Math.floor(2 + R() * (C - 4 - TERR_RAMP_W));
+      if(rampAt.every(p => Math.abs(p - c0) >= TERR_RAMP_GAP)){ cx = c0; break; } }
+    if(cx < 0) continue;                    // 자리를 못 찾으면 그냥 하나 덜 둔다(붙여 두지 않는다)
+    rampAt.push(cx);
     for(let tx = cx; tx < cx + TERR_RAMP_W && tx < C; tx++){
       let ty = py1; while(ty > py0 && !T.h[ty * C + tx]) ty--;              // 그 열의 실제 고원 밑변
-      for(let k = 0; k < 2 && ty - k >= py0; k++){ const i2 = (ty - k) * C + tx; T.h[i2] = 1; T.r[i2] = 1; } } }
+      for(let k = 0; k < TERR_RAMP_H && ty - k >= py0; k++){ const i2 = (ty - k) * C + tx; T.h[i2] = 1; T.r[i2] = 1; } } }
   // 🧱 벽 — 통로에 덩어리 몇 개
   const wy0 = Math.max(py1 + 2, campTerrRowAt(TERR_WALL_ZONE.y0)), wy1 = Math.min(W - 2, campTerrRowAt(TERR_WALL_ZONE.y1));
   const blobs = [];
@@ -279,10 +288,41 @@ function campTerrBake(){
   const face = Math.round(px * TERR_FACE_K);
   for(let ty = 0; ty < W; ty++) for(let tx = 0; tx < C; tx++){
     if(!hiAt(tx, ty) || hiAt(tx, ty + 1)) continue;
-    const ramp = T.r[ty * C + tx] > 0, S = campTerrSkin(ramp ? 'ramp' : 'hi'), lip = Math.max(1, px * 0.09);
+    if(T.r[ty * C + tx]) continue;                    // 🚪 램프는 떨어지는 데가 아니다 — 아래 비탈이 그린다
+    const S = campTerrSkin('hi'), lip = Math.max(1, px * 0.09);
     x.fillStyle = S.face; x.fillRect(tx * px, (ty + 1) * px, px, face);
     x.fillStyle = S.lip;  x.fillRect(tx * px, (ty + 1) * px, px, lip);                       // 윗입술 — 「여기서 떨어진다」
     x.fillStyle = S.line; x.fillRect(tx * px, (ty + 1) * px + face - lip, px, lip); }        // 발치 그늘
+  /* 🚪 **오르막** — 절벽을 파고든 비탈.
+   *   ⛔ 「절벽만 안 그리기」로 두지 말 것 — 끊긴 자리가 **구멍**으로 보인다(2026-09-11 실측 · 확대 사진).
+   *   ⭐ 읽히게 하는 것은 셋이다: ① 위가 밝고 아래로 **사라지는 면**(내려간다) ② **계단 선**
+   *     (작은 크기에서 「걸어 올라간다」를 말하는 유일한 신호) ③ **옆벽**(절벽을 파고들었다는 증거).
+   *   ⚠ 고원 칠을 먼저 **걷어 낸다**(clearRect) — 안 걷으면 비탈 아래쪽이 고원 색으로 남아 평평해 보인다. */
+  { const S = campTerrSkin('ramp'), apron = Math.round(px * TERR_FACE_K), lip = Math.max(1, px * 0.10);
+    const isR = (tx2, ty2) => tx2 >= 0 && tx2 < C && ty2 >= 0 && ty2 < W && T.r[ty2 * C + tx2] > 0;
+    for(let tx = 0; tx < C; tx++){
+      let t0 = -1, b0 = -1;
+      for(let ty = 0; ty < W; ty++) if(T.r[ty * C + tx]){ if(t0 < 0) t0 = ty; b0 = ty; }
+      if(t0 < 0) continue;
+      const X = tx * px, Y = t0 * px, HH = (b0 + 1 - t0) * px + apron;
+      x.clearRect(X, Y, px, HH);
+      /* 위는 고원 색, 가운데부터 **절벽 면 색으로 어두워지다** 아래에서 사라진다 = 내려가는 비탈.
+       *   ⛔ 위아래를 다 밝게 두지 말 것 — 평평한 판으로 보인다(실측: 첫 시도가 그랬다). */
+      const g = x.createLinearGradient(0, Y, 0, Y + HH);
+      g.addColorStop(0, S.edge); g.addColorStop(0.38, S.top);
+      g.addColorStop(0.80, S.face); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.fillRect(X, Y, px, HH);
+      /* 🪜 계단 — **어두운 홈**이다(밝은 선을 그으면 사다리로 보인다 · 2026-09-11 실측). */
+      x.fillStyle = S.line;
+      for(let k = 1; k <= TERR_RAMP_STEPS; k++){
+        x.globalAlpha = 0.30 + 0.30 * (k / TERR_RAMP_STEPS);           // 아래 계단이 진하다 = 그늘이 깊다
+        x.fillRect(X, Y + (HH * k) / (TERR_RAMP_STEPS + 1), px, lip * 0.8); }
+      x.globalAlpha = 1;
+      // 옆벽 — 절벽 면과 **같은 색**이라야 「파고든 홈」으로 읽힌다(밝은 테는 사다리 난간이 된다)
+      if(!isR(tx - 1, t0)) { x.fillStyle = S.face; x.fillRect(X, Y, lip * 2.2, HH);
+                             x.fillStyle = S.line; x.fillRect(X, Y, lip * 0.8, HH); }
+      if(!isR(tx + 1, t0)) { x.fillStyle = S.face; x.fillRect(X + px - lip * 2.2, Y, lip * 2.2, HH);
+                             x.fillStyle = S.line; x.fillRect(X + px - lip * 0.8, Y, lip * 0.8, HH); } } }
   const wallAt = (tx, ty) => inB(tx, ty) && T.w[ty * C + tx] > 0;
   layer(wallAt, sheets.wall);
   // 🧱 벽도 앞면을 갖는다 — 평평한 판은 「못 지나간다」로 안 읽힌다(2026-09-10 실측)

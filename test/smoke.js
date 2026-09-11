@@ -7944,6 +7944,32 @@ async function groupLobby(){
           if(ramp<0 && T.r[i] && !m[i]) ramp=i;
           if(rim<0 && T.h[i] && !T.r[i] && campTerrBlockedAt(tx,ty)) rim=i; }
         assert(ramp>=0,'램프가 통로가 아니다 — 올라갈 길이 사라진다');
+        /* 🚪 **오르막은 절벽을 「잇는」 비탈이다**(2026-09-11 사용자: 「언덕으로 올라가는 오르막도 만들어야해」).
+         *   ⛔ 고원 한가운데 뚫린 구멍이 되면 안 된다 — 아래 끝이 **저지에 닿아야** 올라가는 길이다.
+         *   ⛔ 짧게(2~3칸) 되돌리지 말 것: 지도 축척에서 비탈이 아니라 「끊긴 자리」로 보인다(실측). */
+        { const cols=[];
+          for(let tx=0;tx<C2;tx++){ let run=0, bot=-1, runs=0;
+            for(let ty=0;ty<W2;ty++){ if(T.r[ty*C2+tx]){ run++; bot=ty; } else { if(run){ runs++; } run=0; } }
+            if(run) runs++;
+            if(bot<0) continue;
+            cols.push(tx);
+            assert(runs===1,'한 열에 오르막이 '+runs+'토막이다(tx='+tx+') — 비탈은 이어져야 한다');
+            let len=0; for(let ty=bot;ty>=0&&T.r[ty*C2+tx];ty--) len++;
+            assert(len>=TERR_RAMP_H,'오르막이 '+len+'칸뿐이다(tx='+tx+') — '+TERR_RAMP_H+'칸이어야 비탈로 읽힌다');
+            assert(bot+1<W2 && !T.h[(bot+1)*C2+tx],
+              '오르막 아래가 저지가 아니다(tx='+tx+') — 고원 한가운데 뚫린 구멍이다'); }
+          /* ⚠ **자기 자신을 기준으로 재지 말 것**(2026-09-11 주입 시험에서 둘이 안 물었다):
+           *   `cols.length >= TERR_RAMP_W` 는 폭을 1 로 바꾸면 같이 줄어 늘 통과하고,
+           *   「그룹 사이 거리」는 둘을 **붙여 놓으면 한 그룹으로 합쳐져** 검사 자체가 사라진다.
+           *   ⭐ 그래서 **그룹의 폭**으로 잰다: 아래로는 설계 바닥(4칸 · 그 아래는 사다리로 보인다),
+           *     위로는 `TERR_RAMP_W`(넘으면 둘이 붙어 「넓은 오르막 하나」가 된 것이다). */
+          const grp=[]; for(const tx of cols){ if(!grp.length || tx-grp[grp.length-1][1]>1) grp.push([tx,tx]); else grp[grp.length-1][1]=tx; }
+          assert(grp.length>=1,'오르막이 하나도 없다');
+          for(const g2 of grp){ const w2=g2[1]-g2[0]+1;
+            assert(w2>=4,'오르막 폭이 '+w2+'칸뿐이다 — 지도 축척에서 사다리로 보인다');
+            assert(w2<=TERR_RAMP_W,'오르막 폭이 '+w2+'칸이다 — 둘이 붙어 하나로 보인다'); }
+          for(let i=1;i<grp.length;i++) assert(grp[i][0]-grp[i-1][1] >= TERR_RAMP_GAP-TERR_RAMP_W,
+            '오르막 둘이 '+(grp[i][0]-grp[i-1][1])+'칸 거리로 붙었다 — 하나로 보인다'); }
         assert(rim>=0,'절벽 테두리가 하나도 안 막힌다');
         // 레인 밖은 못 가는 자리다(campG2W 가 접는다) → 마스크가 막아야 한다
         { let outOpen=0;
@@ -7989,7 +8015,7 @@ async function groupLobby(){
         campTerrGen(campDgN(), (seed ^ 0x5bf03635) >>> 0);   // 남의 씨앗으로 한 번
         campTerrGen(campDgN(), seed);                        // 원래 씨앗으로 되돌린다
         assert(sig()===a,'같은 씨앗인데 지형이 다르다 — Math.random 이 섞였거나 생성기가 안 비우고 쌓는다'); }
-      return CAMPT.cols+'x'+CAMPT.rows+' · 고지 '+hi+' · 벽 '+wall+' · 램프 '+ramp+' · 한 번만 구웠다';
+      return CAMPT.cols+'x'+CAMPT.rows+' · 고지 '+hi+' · 벽 '+wall+' · 오르막 '+ramp+'칸 · 한 번만 구웠다';
     } finally { C.dg=back.dg; campBattleClose(); campFogSync(); campTerrDraw(); campBarReset(); }
   });
 
