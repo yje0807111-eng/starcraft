@@ -7827,12 +7827,72 @@ async function groupLobby(){
       assert(campBroken()===0, '탈락인데 부순 수가 안 지워졌다: '+campBroken());
       assert(!Object.keys(C.foeDead||{}).length, '탈락인데 부순 건물이 안 되살아났다 — 「그 던전 처음부터」가 규칙이다');
       assert((C.best[2]|0)===3, '탈락으로 best 가 지워졌다');
-      // ⑥ 던전은 셋이다 — 그 위는 무한층(아직 없다)
+      // ⑥ 던전은 셋이다 — 그 위는 ♾ 무한층
       assert(CAMP_DG_MAX===3, '던전이 셋이 아니다: '+CAMP_DG_MAX);
       assert(CAMP_DG.length===CAMP_DG_MAX+1, 'CAMP_DG 표가 던전 수와 안 맞는다: '+CAMP_DG.length);
       campEnterDungeon(0);
       return '0=캠프 · 1~'+CAMP_DG_MAX+'던전 × '+CAMP_DG_STEPS+'관문 · 배율 1→'+(CAMP_MINE[CAMP_DG_MAX].base*CAMP_MINE[CAMP_DG_MAX].x);
     } finally { C.dg=back.dg; C.cleared=back.cleared; C.best=back.best; C.broken=0; C.foeDead={};
+      if(typeof campSave==='function') campSave(); } });
+
+  // ♾ **무한층**(2026-09-11 · 단계 3) — 던전 셋 위로 끝없이 이어진다.
+  //   ⭐ 재는 것 다섯: 표를 빌려 쓴다 · 난이도가 사다리를 잇는다 · 잠금 · 깊이(환생 포인트) · 기록이 안 되감긴다.
+  await step('캠프 무한층: 표를 빌려 쓰고 · 사다리를 잇고 · 마지막 던전이 문이다', async()=>{
+    skipIf(typeof campInfN!=='function'||typeof campDgDef!=='function','무한층 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const back={dg:C.dg, broken:C.broken, dgDone:C.dgDone, infBest:C.infBest, foeDead:C.foeDead};
+    const P=(typeof PLAYER_META!=='undefined')?PLAYER_META:null; const keepC=(P&&P.coins)||0;
+    try{
+      const MX=CAMP_DG_MAX, PER=CAMP_DG_STEPS;
+      // ① 층 번호 — 던전은 0, 그 위가 1층부터
+      assert(campInfN(MX)===0,'마지막 던전이 무한층으로 세어진다');
+      assert(campInfN(MX+1)===1 && campInfN(MX+4)===4,'층 번호가 안 맞는다: '+campInfN(MX+4));
+      // ② 표는 **빌려 쓴다**(종족 순환) — ⛔ 무한층 전용 표를 만들면 여기가 깨진다
+      for(let f=1; f<=7; f++){ const dg=MX+f, d=campDgDef(dg);
+        assert(d && d.bld && d.bld.length===CAMP_DG[1].bld.length,
+          '무한 '+f+'층에 건물 표가 없다');
+        assert(d.name==='무한 '+f+'층','이름이 틀리다: '+(d&&d.name));
+        const src=CAMP_DG[campInfBase(dg)];
+        assert(d.race===src.race && d.bld===src.bld,'표를 빌려 쓰지 않고 새로 만들었다 — 표가 둘이 된다'); }
+      assert(campInfBase(MX+1)===1 && campInfBase(MX+MX)===MX && campInfBase(MX+MX+1)===1,
+        '종족이 순환하지 않는다');
+      // ③ 난이도는 **사다리를 그대로 잇는다** — 한 층 = 던전 하나(관문 여섯의 곱)
+      const one=campFoeDiff(2,0)/campFoeDiff(1,0);
+      const inf1=campFoeDiff(MX+1,0)/campFoeDiff(MX,0);
+      assert(Math.abs(inf1-one)/one<1e-9,'무한층에서 사다리가 끊긴다: '+inf1+' vs '+one);
+      assert(campFoeDiff(MX+1,PER)>campFoeDiff(MX+1,0),'층 안에서 관문이 안 오른다');
+      // ④ 보상도 이어진다(표 밖이면 외삽) · ⛔ 난이도보다 느리게 오른다 = 그게 벽이다
+      { const a=campMineDef(MX+8).base, b=campMineDef(MX+9).base;
+        assert(b>a && isFinite(b),'보상 표가 무한층에서 안 이어진다: '+a+' → '+b);
+        assert(b/a < one, '보상이 난이도보다 빨리 오른다 — 무한층이 영원히 남는 장사가 된다: '
+          +(b/a).toFixed(2)+' vs '+one.toFixed(2)); }
+      // ⑤ 🔓 **마지막 던전을 깨야 열린다**(환생 관문과 같은 문)
+      C.dgDone={};
+      assert(campDgOpen(MX+1)===false,'마지막 던전을 안 깼는데 무한층이 열렸다');
+      C.dgDone={}; C.dgDone[MX]=1;
+      assert(campDgOpen(MX+1)===true,'마지막 던전을 깼는데 무한층이 안 열렸다');
+      // ⑥ 🏁 도달 깊이가 층을 센다 = 환생 포인트가 「한 층 더」에 반응한다
+      C.dg=MX+3; C.broken=0;
+      const d0=campRebDepth();
+      C.dgDone[MX+3]=1;
+      assert(campRebDepth()>d0 || d0>=(MX+3)*PER,'층이 깊이에 안 세어진다');
+      assert(campRebDepth()>=(MX+3)*PER,'무한 3층까지 갔는데 깊이가 '+campRebDepth());
+      // ⑦ 층을 깨면 코인 · 기록 · 다음 층
+      C.infBest=0; if(P) P.coins=0;
+      const got=campInfClear(MX+2);
+      assert(got>0 && (!P || P.coins===got),'층 보상이 코인 지갑에 안 들어갔다: '+got);
+      assert(campInfBest()===2,'최고기록이 안 적혔다: '+campInfBest());
+      campInfClear(MX+1);
+      assert(campInfBest()===2,'더 낮은 층이 최고기록을 깎았다');
+      // ⑧ 🏆 기록은 **되감기지 않는다**(campRunReset 은 가짜 상태로 잰다 — 살아 있는 캠프에 대고 부르면 판이 날아간다)
+      { const fake={ infBest:9, lvBest:5, dgDone:{1:1}, best:{} };
+        campRunReset(fake);
+        assert((fake.infBest|0)===9,'되감기가 무한층 기록을 지웠다');
+        assert(!Object.keys(fake.dgDone||{}).length,'되감기가 깬 던전을 안 지웠다'); }
+      return '층 = 표 순환 · 사다리 ×'+one.toFixed(2)+' 유지 · 마지막 던전이 문 · 코인 '+got;
+    } finally { C.dg=back.dg; C.broken=back.broken|0; C.dgDone=back.dgDone||{};
+      C.infBest=back.infBest|0; C.foeDead=back.foeDead||{};
+      if(P) P.coins=keepC;
       if(typeof campSave==='function') campSave(); } });
 
   // ⚔ 던전 전투 — 오토배틀(18-strike.js)을 빌려 쓴다. ⛔ 전투를 캠프에 새로 짜지 말 것.
@@ -15266,8 +15326,10 @@ async function groupLobby(){
       assert(t.classList.contains('open'),'열렸는데 칩에 open 표시가 없음(⌄ 가 안 뒤집힌다)');
       // ② 담긴 것 — 던전 열 줄 · 라운드 99칸 · 현재 값이 잡힌다
       // ⭐ **0단계(캠프)가 첫 칸이다**(2026-08-27) — 그래서 줄이 CAMP_DG_MAX+1 개다.
-      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX+1,
-        '던전 줄이 '+(CAMP_DG_MAX+1)+'개(캠프 0 + 던전 '+CAMP_DG_MAX+')가 아님: '+d().querySelectorAll('.cdRow').length);
+      // ♾ 줄 수 = 캠프(0) + 던전 CAMP_DG_MAX + **무한층 한 줄**(2026-09-11 · 단계 3)
+      assert(d().querySelectorAll('.cdRow').length===CAMP_DG_MAX+2,
+        '던전 줄이 '+(CAMP_DG_MAX+2)+'개(캠프 0 + 던전 '+CAMP_DG_MAX+' + 무한층)가 아님: '+d().querySelectorAll('.cdRow').length);
+      assert(d().querySelectorAll('.cdRow.inf').length===1,'무한층 줄이 하나가 아니다');
       { const first=d().querySelector('.cdRow');
         assert(first.dataset.dg==='0','첫 칸이 0단계가 아니다: '+first.dataset.dg);
         assert(!first.disabled && !first.classList.contains('lock'),'캠프가 잠겨 있다 — 돌아갈 길이 막힌다');
@@ -15326,7 +15388,7 @@ async function groupLobby(){
         assert(/^×10 ~ ×20$/.test(_rows[3].querySelector('.cdMul').textContent),
           '던전 3 배수가 「×10 ~ ×20」 이 아니다(10 이상은 소수를 뗀다): '+_rows[3].querySelector('.cdMul').textContent);
         // 🏰 던전이 **셋**이라 줄은 넷(캠프 + 1~3)이다 — ⛔ 옛 10던전(축약 배수 ×120K)을 참조하지 말 것
-        assert(_rows.length===CAMP_DG_MAX+1,'던전 줄 수가 던전 수와 안 맞는다: '+_rows.length);
+        assert(_rows.length===CAMP_DG_MAX+2,'던전 줄 수가 던전 수 + 무한층과 안 맞는다: '+_rows.length);
         for(const r of _rows) assert(!/\.\dK|\.0M/.test(r.querySelector('.cdMul').textContent),
           '축약 배수에 소수가 남았다: '+r.querySelector('.cdMul').textContent);
         // 🚫 던전 목록에 스크롤 막대를 보이지 않는다 — 카드 오른쪽 배수 글자와 겹친다
@@ -15417,7 +15479,7 @@ async function groupLobby(){
       d().querySelector('.cdRow[data-dg="2"]').click();
       assert(!d().querySelector('.cdRnd').classList.contains('off'),'던전을 골랐는데 라운드 칸이 잠긴 채다');
       campDropClose();
-      return '전체 화면(재화 바~네비) · 칩이 머리줄 · 카드 '+(CAMP_DG_MAX+1)+' · ◀▶+슬라이더(80%→40 · 끌기→11) · 공용 .actBtn/.arwBtn · 고르기≠이동 · 캠프 왕복';
+      return '전체 화면(재화 바~네비) · 칩이 머리줄 · 카드 '+(CAMP_DG_MAX+2)+' · ◀▶+슬라이더(80%→40 · 끌기→11) · 공용 .actBtn/.arwBtn · 고르기≠이동 · 캠프 왕복';
     } finally {
       gateOff();
       campDropClose();

@@ -43,11 +43,23 @@ const CAMP_MINE = [
   { base: 3000,   x: 4 }, { base: 20000,  x: 4 }, { base: 120000, x: 4 },
   { base: 700000, x: 5 },
 ];
-function campDgN(){ const C = campState(); return Math.max(0, Math.min(CAMP_DG_MAX, (C && C.dg) | 0)); }
+// ♾ **위쪽 한계가 없다**(2026-09-11 · 무한층) — CAMP_DG_MAX 를 넘으면 무한 (dg−3)층이다.
+//   ⛔ 여기에 상한을 되돌리지 말 것: 되돌리면 무한층에 서 있어도 난이도·보상·깊이가
+//     던전 3 에서 멈춘 것으로 읽혀 등반이 통째로 없는 일이 된다.
+function campDgN(){ const C = campState(); return Math.max(0, (C && C.dg) | 0); }
+// ⛏ 그 단계의 보상 기준값. ♾ 표(CAMP_MINE) 밖이면 **마지막 두 칸의 비**로 이어 간다.
+//   ⚠ 보상은 층당 ×5.8 이고 난이도는 ×7.2 라 **뒤로 갈수록 보상이 뒤처진다** — 그게 벽이다.
+//     ⛔ 보상 비를 난이도와 같게 맞추지 말 것: 그러면 무한층이 영원히 남는 장사가 되어 안 끊는다.
+function campMineDef(dg){
+  const n = Math.max(0, dg | 0);
+  if(n < CAMP_MINE.length) return CAMP_MINE[n];
+  const L = CAMP_MINE[CAMP_MINE.length - 1], P = CAMP_MINE[CAMP_MINE.length - 2];
+  const r = (P && P.base > 0) ? (L.base / P.base) : 5;
+  return { base: L.base * Math.pow(r, n - (CAMP_MINE.length - 1)), x: L.x }; }
 // ⭐ 배율은 라운드를 **클리어해야** 붙는다 → 50라운드면 50번 붙는다(49번이 아니다).
 //    그래서 증가량이 전부 딱 떨어진다: +0.02 · +0.06 · +0.2 · +1.2 · +6 · +28 · +180 · …
 //   ⚠ 나누는 수가 **관문 6개**다(2026-09-09 · 옛 라운드 50 에서). 한 채를 깰 때마다 붙는다.
-function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, dg | 0))];
+function campMineInc(dg){ const t = campMineDef(dg);
   const n = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : CAMP_ROUND_MAX;
   return t.base * (t.x - 1) / n; }
 // 지금 미네랄 배율 — 탭과 일꾼 **양쪽에 똑같이** 걸린다(한쪽만 올리면 두 수입의 비율이 무너진다)
@@ -56,7 +68,7 @@ function campMineInc(dg){ const t = CAMP_MINE[Math.max(0, Math.min(CAMP_DG_MAX, 
 //     (HUNT_R1 §4-5-2 「적용 대상: 터치 수급·자동 수급 둘 다」).
 //   ⚠ 배선 전에는 계열을 5차까지 사도 아무 일이 없었다 — 표에만 있고 소비처가 없었다.
 function campMineMul(){ const C = campState(); if(!C) return 1;
-  const dg = campDgN(), t = CAMP_MINE[dg];
+  const dg = campDgN(), t = campMineDef(dg);
   return (t.base + campCleared() * campMineInc(dg)) * campRtMul('mine'); }
 // 📍 **통산 관문 n(0~18)에서의 미네랄 배수** — 「지금」이 아니라 「그 자리였다면」을 묻는다.
 //   ⭐ 쓰는 곳은 유즈맵 첫 클리어 상한 하나다(04-profile `umCapRate`): 시급이 계속 오르므로
@@ -114,6 +126,28 @@ function campFail(){ const C = campState(); if(!C) return 0;
   if(typeof CAMPB !== 'undefined' && CAMPB){ CAMPB._fspT = 0; if(CAMPB._wq) CAMPB._wq.length = 0; }
   campSave(); return was; }
 
+
+// ══ ♾ 무한층 — 던전 셋 위의 등반 (2026-09-11 · 단계 3) ═════════════════════════
+//
+// ⭐ 표·난이도는 `js/23-camp-dungeon.js` 가 잇는다(거기 「♾ 무한층」 절). 여기는 **한 층을 깼을 때**만 맡는다.
+// 🧗 **한 층을 깨면 곧바로 다음 층**이다 — 캠프로 안 돌아온다(던전 1~3 과 다른 규칙 · 위 파일의 설명).
+// 🏆 최고기록 `C.infBest` 는 **되감기지 않는다**(환생·튜토리얼 keep 목록) — 기록이기 때문이다.
+// 🪙 보상은 **코인 하나**(`PLAYER_META.coins`) — 🗺 유즈맵 강화가 쓰는 그 지갑이다.
+//   ⛔ 무한 포인트라는 새 재화를 만들지 말 것(CLAUDE.md 「유즈맵 강화」 · 지갑은 하나다).
+function campInfBest(){ const C = campState(); return Math.max(0, (C && C.infBest) | 0); }
+// 무한 f 층을 깼다 — 기록·보상. 준 코인을 돌려준다.
+function campInfClear(dg){
+  const f = (typeof campInfN === 'function') ? campInfN(dg) : 0;
+  if(f <= 0) return 0;
+  const C = campState(); if(!C) return 0;
+  if(f > (C.infBest | 0)) C.infBest = f;
+  if(!C.dgDone) C.dgDone = {};
+  C.dgDone[dg | 0] = 1;                              // 🏁 도달 깊이(환생 포인트)가 이걸 읽는다
+  const coin = Math.max(1, Math.round(CAMP_INF_COIN * f));
+  if(typeof PLAYER_META !== 'undefined' && PLAYER_META){
+    PLAYER_META.coins = (PLAYER_META.coins || 0) + coin;
+    if(typeof saveMeta === 'function') saveMeta(); }
+  return coin; }
 
 // ══ 🔁 환생 — **하나뿐이다** (2026-09-11 개편 · GAME_DIRECTION §0-A 「새 뼈대」) ═══════
 //
@@ -556,7 +590,7 @@ function campRunReset(C){
 function campTutoReset(minerals){
   const C = campState(); if(!C) return false;
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rune:C.rune, rbUpg:C.rbUpg, lvBest:C.lvBest };
+                 rune:C.rune, rbUpg:C.rbUpg, lvBest:C.lvBest, infBest:C.infBest };
   campRunReset(C);
   campBattleClose(); campBarReset();
   campWipeBoard();                                // 살아 있는 판도 새 판으로(안 하면 저장이 되살린다)
@@ -566,6 +600,7 @@ function campTutoReset(minerals){
       if(keep.rune) C2.rune = keep.rune;          // 💠 젬으로 산 것 — 되감기면 안 된다
       if(keep.rbUpg) C2.rbUpg = keep.rbUpg;       // 🔁 환생 강화 — 영구
       if(keep.lvBest) C2.lvBest = keep.lvBest;    // 🏆 통산 최고 레벨 — 💠 룬 칸이 이걸로 열린다
+      if(keep.infBest) C2.infBest = keep.infBest; // ♾ 무한층 최고기록 — 기록은 안 되감는다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   if(minerals > 0) campAddRes(minerals, 0);       // 🎁 새 출발 밑천 — ⛔ 지갑 입구는 campAddRes 하나다
@@ -587,7 +622,7 @@ function campRebirth(){
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
   //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rune:C.rune, rbUpg:C.rbUpg, lvBest:C.lvBest };
+                 rune:C.rune, rbUpg:C.rbUpg, lvBest:C.lvBest, infBest:C.infBest };
   campBattleClose(); campBarReset();
   // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
   //    저장 상태만 되감고 저장하면 **방금 지운 것이 그대로 되살아난다**(스모크가 잡았다).
@@ -598,6 +633,7 @@ function campRebirth(){
       if(keep.rune) C2.rune = keep.rune;   // 💠 젬으로 산 것 — 되감기면 안 된다
       if(keep.rbUpg) C2.rbUpg = keep.rbUpg;   // 🔁 환생 강화 — 환생 포인트로 산 영구 항목
       if(keep.lvBest) C2.lvBest = keep.lvBest;   // 🏆 통산 최고 레벨 — 💠 룬 칸이 이걸로 열린다
+      if(keep.infBest) C2.infBest = keep.infBest;// ♾ 무한층 최고기록 — 기록은 안 되감는다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   // 🚪 **스킵은 되감은 뒤에 얹는다** — campRunReset 이 C.dgDone 을 비우므로 순서가 거꾸로면 사라진다
@@ -2877,11 +2913,19 @@ function campGateRate(k){                                 // k = 1..CAMP_DG_STEP
   return CAMP_GATE_RATE[i]; }
 // 「지금 던전 dg 에서 관문 gates 개를 깬 상태」의 적 난이도. dg=0(캠프)은 적이 없으므로 1.
 //   ⚠ 두 번째 인자는 이제 **부순 진행 건물 수**(0~6)다 — 옛 이름(cleared)은 라운드였다.
+// 던전 하나(관문 여섯)의 곱 — ♾ 무한층은 이 계단을 그대로 잇는다.
+//   ⚠ 게으르게 잰다: CAMP_DG_STEPS 는 **뒤에 로드되는 파일**(23-camp-dungeon.js)의 const 라
+//     이 파일이 읽힐 때는 아직 없다(TDZ). ⛔ 최상위에서 계산하지 말 것.
+let _campGateProd = 0;
+function campGateProd(){ if(_campGateProd > 0) return _campGateProd;
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  let x = 1; for(let k = 1; k <= per; k++) x *= campGateRate(k);
+  return (_campGateProd = x); }
 function campFoeDiff(dg, gates){ dg = dg | 0; if(dg <= 0) return 1;
   const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
-  let x = 1;
-  for(let d = 1; d < dg; d++)                             // 앞 던전들은 통째로 깬 것으로 친다
-    for(let k = 1; k <= per; k++) x *= campGateRate(k);
+  // ⭐ 앞 단계들은 통째로 깬 것으로 친다 = (던전 하나의 곱)^(dg−1).
+  //   ⛔ 이중 루프로 되돌리지 말 것 — 무한층에서는 dg 가 끝없이 커져 프레임마다 수천 번 돈다.
+  let x = Math.pow(campGateProd(), dg - 1);
   const n = Math.max(0, Math.min(per, gates | 0));
   for(let k = 1; k <= n; k++) x *= campGateRate(k);
   return x; }
@@ -4993,6 +5037,16 @@ function campCombatStep(dt){
     campNote('dgDone', 1);                        // 🧭 가이드 — 던전을 끝까지 밀었다
     const fresh = (typeof campDgTimerDone === 'function') ? campDgTimerDone(dgWas) : false;
     const mins = (C2 && C2.dgT && C2.dgT[dgWas]) ? Math.round((C2.dgT[dgWas].best || 0) / 60) : 0;
+    // ♾ **무한층이면 캠프로 안 돌아온다 — 곧바로 다음 층**(2026-09-11 · 단계 3).
+    //   ⛔ 여기서 campFail() 을 부르지 말 것: 그 함수는 dg 를 0 으로 돌리고 foeDead 를 비우므로
+    //     등반이 한 층마다 끊겨 「어디까지 버티나」가 성립하지 않는다.
+    //   ⚠ 던전 1~3 은 그대로 캠프로 온다(커리큘럼이라 집에 들러 전리품을 쓴다).
+    const _inf = (typeof campInfN === 'function') ? campInfN(dgWas) : 0;
+    if(_inf > 0){
+      const coin = campInfClear(dgWas);
+      campEnterDungeon(dgWas + 1);                // 🧗 다음 층 — 자리도 적도 새로 선다
+      campSay('🧗 무한 ' + _inf + '층 돌파 — 🪙 ' + coin + ' · 다음 층이 섭니다', 'game_start');
+      return; }
     campFail();                                   // 캠프(0단계)로 · ⚠ 이 함수가 broken·foeDead 도 비운다
     campBattleClose(); campBarReset();
     campSay('🏁 ' + campDgName(dgWas) + ' 완주 — 캠프로 돌아왔습니다'
@@ -5071,6 +5125,7 @@ function campState(){
   if(typeof p.camp.xp !== 'number') p.camp.xp = 0;
   if(typeof p.camp.lvPts !== 'number') p.camp.lvPts = 0;
   if(typeof p.camp.lvBest !== 'number') p.camp.lvBest = p.camp.lv || 1;   // 🏆 통산 최고 레벨(영구)
+  if(typeof p.camp.infBest !== 'number') p.camp.infBest = 0;            // ♾ 무한층 최고기록(영구)
   if(!p.camp.rbUpg || typeof p.camp.rbUpg !== 'object') p.camp.rbUpg = {};   // 🔁 환생 강화(영구)
   if(!p.camp.best || typeof p.camp.best !== 'object') p.camp.best = {};
   // 🛡 rebuild → endure 이관(2026-08-29) — 갈래 키가 바뀌었다. 옛 세이브의 포인트를 옮긴다.
@@ -7034,7 +7089,9 @@ function campSkin(){
     el.style.setProperty('--campBg', "url('" + u + "')");
     el.style.setProperty('--mnSx', String(CAMP_MINE_SX));
     return; }
-  const dg = Math.max(1, Math.min(10, raw));
+  // ♾ 무한층은 **빌려 쓰는 던전의 그림**을 쓴다(종족이 그 표라 바닥도 그 종족이라야 맞다)
+  const base = (typeof campInfBase === 'function') ? campInfBase(raw) : raw;
+  const dg = Math.max(1, Math.min(10, base));
   // ⚠ **문서 기준 절대 URL 로 만든다.** CSS 변수 안의 상대 경로는 변수를 *선언한 곳*이 아니라
   //   *쓰는 곳*(css/30-home.css)을 기준으로 풀린다 → 'assets/…' 가 'css/assets/…' 가 된다.
   //   같은 함정을 파일 분할 때도 밟았다(커밋 「분할이 깨뜨린 상대 경로」).
