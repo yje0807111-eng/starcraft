@@ -31,7 +31,12 @@ const CHROME=process.env.CHROME_PATH
   || ['C:/Program Files/Google/Chrome/Application/chrome.exe',
       '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].find(p=>fs.existsSync(p));
 if(!CHROME){ console.error('CHROME_PATH 를 지정하세요'); process.exit(2); }
-const D=+(process.argv[2]||1), N=+(process.argv[3]||20);
+// 🔗 **연속 모드** — 던전 자리에 `all` 을 주면 D1→D2→D3 를 **레벨을 안 되감고** 이어서 돈다.
+//   ⭐ 그게 실제 한 회차의 모습이라, 「한 바퀴에 몇 레벨인가」는 이 모드로만 제대로 나온다.
+//     ⛔ 던전 하나씩 잰 레벨을 더하지 말 것 — 요구량이 등비라 더하면 크게 어긋난다.
+//   배수는 던전마다 하나씩 준다: `node scripts/camp-clear.mjs all 20 "5,36,257"`
+const CHAIN=String(process.argv[2]||'')==='all';
+const D=CHAIN?1:+(process.argv[2]||1), N=+(process.argv[3]||20);
 const MULS=(process.argv[4]||'5').split(',').map(Number);
 const UNIT=process.argv[5]||'machinegun';
 const LIMIT=+(process.argv[6]||400);
@@ -54,16 +59,23 @@ await pg.evaluate(()=>{document.getElementById('opening')?.classList.add('hide')
  const C=campState(); C.race='terran'; saveMeta(); openHome();});
 await pg.waitForFunction("typeof campIsOn==='function'&&campIsOn()&&typeof G!=='undefined'&&G.tech&&(G.tech.ents||[]).some(e=>e.type==='bldg')",{timeout:30000});
 await new Promise(r=>setTimeout(r,900));
-const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT)=>{
+const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT,CHAIN)=>{
   window.requestAnimationFrame=()=>0;
   campStopFrame(); campStopTimer(); campAddRes(9e9,9e9);
   // 🔎 끝난 이유를 그대로 받는다 — campSay 가 패배·완주 문구의 단일 소스다
   const says=[]; { const o=window.campSay; window.campSay=function(m,k){ says.push(k+': '+m); return o&&o.apply(this,arguments); }; }
+  // 📈 **번 경험치를 그대로 센다** — 레벨만 보면 등비라 판끼리 못 더한다.
+  let _xpGot=0; { const o=window.campAddXp;
+    window.campAddXp=function(n){ _xpGot+=(+n||0); return o&&o.apply(this,arguments); }; }
   const rows=[];
-  for(const MUL of MULS){
-    const C=campState(); C.dgDone={}; C.foeDead={};
-    C.lv=1; C.xp=0; C.lvPts=0;                       // 📈 레벨도 함께 잰다 — 판마다 Lv.1 에서 시작
-    campEnterDungeon(0); campEnterDungeon(D); CAMPB=null; campCombatStep(0.05);
+  const JOBS=CHAIN ? MULS.map((m,i)=>({d:i+1, mul:m})) : MULS.map(m=>({d:D, mul:m}));
+  for(const JOB of JOBS){
+    const MUL=JOB.mul, DG=JOB.d;
+    const C=campState(); C.foeDead={};
+    // 🔗 연속 모드는 레벨을 **안 되감는다**(한 회차가 D1→D2→D3 이므로) · 낱개 모드는 판마다 Lv.1
+    if(!CHAIN){ C.dgDone={}; C.lv=1; C.xp=0; C.lvPts=0; _xpGot=0; }
+    const _xp0=_xpGot, _lv0=(typeof campLevel==='function')?campLevel():1;
+    campEnterDungeon(0); campEnterDungeon(DG); CAMPB=null; campCombatStep(0.05);
     if(!CAMPB){ rows.push({mul:MUL,err:'전장 없음'}); continue; }
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
     for(let i=0;i<N;i++) campDeploy(UNIT, 0.26+(i%6)*0.048, 0.44+Math.floor(i/6)*0.032);
@@ -81,7 +93,7 @@ const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT)=>{
       campCombatStep(1/30); t+=1/30;
       // ⚠ **전장이 닫혔다 = 졌다가 아니다** — 완주도 campBattleClose 를 지난다(실측으로 한 번 속았다).
       //   판정은 `C.dgDone[D]` 하나로 본다.
-      if(!CAMPB){ done=!!(C.dgDone && C.dgDone[D]); lost=!done; break; }
+      if(!CAMPB){ done=!!(C.dgDone && C.dgDone[DG]); lost=!done; break; }
       best=Math.max(best, campBroken());
       if(campBroken()>=CAMP_DG_STEPS){ done=true; break; }
       if(campBroken()!==lastB){ lastB=campBroken(); idle=0;
@@ -106,20 +118,25 @@ const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT)=>{
         tower:alive.filter(b=>b.kind==='tower').map(b=>'z'+b.zone),
         foe:campAlive('ai'), myY:CAMPB.me.units.length?Math.round(CAMPB.me.units[0].y):null,
         homeY:Math.round(campHomeY(CAMPB.world)) }; }
-    rows.push({ lv:(typeof campLevel==='function')?campLevel():0, lvPts:(C.lvPts||0), say:says.slice(-2), tl:tl.slice(-4), gateLog, diag, d:D, unit:UNIT, n:N, mul:MUL, done, lost, t:Math.round(t), best, pushes,
+    rows.push({ lv:(typeof campLevel==='function')?campLevel():0, lvPts:(C.lvPts||0),
+      lv0:_lv0, xp:Math.round(_xpGot-_xp0), xpAll:Math.round(_xpGot),
+      say:says.slice(-2), tl:tl.slice(-4), gateLog, diag, d:DG, unit:UNIT, n:N, mul:MUL, done, lost, t:Math.round(t), best, pushes,
       alive:CAMPB?CAMPB.me.units.filter(u=>!u.dead).length:0,
       baseLeft:CAMPB?Math.round(100*CAMPB.me.base.hp/(CAMPB.me.base.maxHp||1)):0 });
     if(CAMPB) campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
     campBattleClose(); }
   return rows;
-}, D, N, MULS, UNIT, LIMIT);
+}, D, N, MULS, UNIT, LIMIT, CHAIN);
 for(const r of out){
   if(r.err){ console.log('던전', r.d, '×'+r.mul, '—', r.err); continue; }
   console.log('던전 ' + r.d + ' · ' + r.unit + ' ' + r.n + '기 · 화력 ×' + r.mul + ' → '
     + (r.done ? ('🏁 ' + r.t + '초 클리어 (드래그 ' + r.pushes + '회 · 생존 ' + r.alive + '기)')
               : ('💀 못 깸 — 최고 ' + r.best + '/6 · ' + r.t + '초 · 드래그 ' + r.pushes + '회'))
     + (r.say && r.say.length ? '   ⟨' + r.say[r.say.length-1] + '⟩' : ''));
-  if(r.lv) console.log('   📈 레벨 ' + r.lv + ' · 안 쓴 성장 포인트 ' + r.lvPts);
+  if(r.lv) console.log('   📈 레벨 ' + (r.lv0 && r.lv0>1 ? (r.lv0 + ' → ' + r.lv) : r.lv)
+    + ' · 안 쓴 성장 포인트 ' + r.lvPts
+    + ' · 이 판에서 번 경험치 ' + r.xp.toLocaleString()
+    + (r.xpAll!==r.xp ? (' · 통산 ' + r.xpAll.toLocaleString()) : ''));
   if(r.gateLog && r.gateLog.length)
     console.log('   관문별: ' + r.gateLog.map(g=>g.gate+'채 '+g.t+'초(병력 '+g.alive+' · Lv'+g.lv+')').join(' · '));
 }

@@ -4390,10 +4390,10 @@ async function groupLobby(){
   await step('환생 트리: 부모가 켜져야 자식이 보인다 · 짝 조건은 없다', async()=>{
     skipIf(typeof campTreeState!=='function'||typeof campRtBrOn!=='function','별자리 트리 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepLP=C.lvPts;
     try{
       // ① 첫 환생 직후 — 갈래 넷만 보이고 계열은 **하나도** 안 그려진다
-      C.rbTree={root:1,_m2:1}; C.rbPts=1e9;
+      C.rbTree={root:1,_m2:1}; C.rbPts=1e9; C.lvPts=1e9;
       // ⚠ 관문 갈래만 센다 — 사슬 갈래(⛓)는 관문이 없어 가운데를 사면 바로 첫 별이 보인다
       let shown=0; for(const L of CAMP_RT_LINES){ if(campRtIsChain(L.br)) continue;
         for(let n=1,mx=campRtMax(L.k);n<=mx;n++) if(campTreeState(L.k,n)) shown++; }
@@ -4415,7 +4415,7 @@ async function groupLobby(){
         // ⛔ 옛 사슬 전제(가운데만 사면 첫 별이 열린다)는 지웠다 — 이제 모든 갈래가 관문을 거친다.
         // 📐 대신 **관문 순서**를 잰다: 갈래 → 묶음 → 계열 (모든 갈래가 같은 구조다)
         { const Lg=campRtLine('gather');
-          C.rbTree={root:1,_m2:1}; C.rbPts=1e9;
+          C.rbTree={root:1,_m2:1}; C.rbPts=1e9; C.lvPts=1e9;
           assert(campTreeState('gather',1)===null,'갈래를 안 샀는데 계열이 보인다');
           C.rbTree['br:'+Lg.br]=1;
           assert(campTreeState('gather',1)===null,'묶음을 안 샀는데 계열이 보인다');
@@ -4429,7 +4429,7 @@ async function groupLobby(){
           assert(sib.length>=2,'같은 묶음에 형제가 없다(검사 불가)');
           const a=campTreePos(sib[0].k,1), b=campTreePos(sib[1].k,1);
           assert(Math.hypot(a.x-b.x,a.y-b.y)>30,'같은 묶음의 별이 한자리에 겹친다'); }
-        C.rbTree={root:1,_m2:1}; C.rbPts=1e9; }
+        C.rbTree={root:1,_m2:1}; C.rbPts=1e9; C.lvPts=1e9; }
       assert(campTreeGpState('econ','가')===null,'갈래를 안 샀는데 묶음이 보인다');
       // ② 갈래를 사면 묶음이, 묶음을 사면 계열이 열린다
       assert(campRtCanBuy('br:econ'),'갈래를 못 산다');
@@ -4513,7 +4513,7 @@ async function groupLobby(){
         C2.upg={}; }
       return '갈래→묶음→계열 · 짝 조건 없음 · 옛 저장본 잇기 · 환급 '+back+
         ' · 새로운 시작 미네랄 '+CAMP_ROOT_MIN+'·터치 '+CAMP_ROOT_TAP+(CAMP_ROOT_BLD?'/'+CAMP_ROOT_BLD:'');
-    } finally { C.rbTree=keepT; C.rbPts=keepP; } });
+    } finally { C.rbTree=keepT; C.rbPts=keepP; C.lvPts=keepLP; } });
 
   // ⛽→💠 가스를 미네랄로 (2026-09-02 사용자 요청)
   //   ⭐ 고정 교환비가 **아니다** — 지금 미네랄 수입의 몇 초치를 준다(회차가 돌아도 체감이 같다).
@@ -4681,7 +4681,7 @@ async function groupLobby(){
   await step('환생 트리: 해금하면 선이 자라고 별이 떠오른다 — 마디·계열 둘 다', async()=>{
     skipIf(typeof campTreeBuySel!=='function'||typeof campTreeNewKind!=='function','해금 연출 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepSel=_campTreeSel;
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepLP=C.lvPts, keepSel=_campTreeSel;
     const buy=function(tree, sel){
       C.rbTree=tree; _ctNew={}; campRebEnter('tree'); campTreeRender();
       _campTreeSel=sel; campTreeRender();
@@ -4693,7 +4693,7 @@ async function groupLobby(){
                pop:g.querySelectorAll('.ctPop').length, lit:g.querySelectorAll('.ctLit').length,
                keys:Object.keys(_ctNew) }; };
     try{
-      C.rbPts=1e12;
+      C.rbPts=1e12; C.lvPts=1e12;
       // ① 마디(묶음)를 산다 — 자기 실선이 자라고(lit), 안 계열들이 점선으로 자라며 떠오른다(spawn)
       const a=buy({root:1,_m2:1,'br:army':1},{t:'gp',a:'army',b:'가'});
       assert(a,'묶음을 못 산다');
@@ -4734,7 +4734,7 @@ async function groupLobby(){
         assert(L1&&LT,'계열 해금 연출 조각이 빠졌다');
         assert(LT.s>=L1.e-0.01,'색이 실선 도착 전에 든다: 색 '+LT.s+' vs 선 끝 '+L1.e); }
       return '묶음: 실선 '+a.grow+' 점선 '+a.dash+' 떠오름 '+a.pop+' · 계열: 실선 '+b.grow+' 점선 '+b.dash+' · 선 '+CAMP_TREE_GROW_S+'s 고정';
-    } finally { C.rbTree=keepT; C.rbPts=keepP; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
+    } finally { C.rbTree=keepT; C.rbPts=keepP; C.lvPts=keepLP; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
   });
 
   // 🚧 팬 경계 (2026-09-03 사용자 요청) — 양옆·위아래로 끝없이 밀리지 않는다.
@@ -4991,7 +4991,7 @@ async function groupLobby(){
     //     광맥 8칸 × 덩이당 5 = 40 이라 상한만 올리면 남는 일꾼이 광맥 옆에 서서 논다.
     //   · dgRw — 던전 클리어 보상 **시스템이 아직 없다**(계열보다 시스템이 먼저다).
     const NOTYET=['wkCap','dgRw'];
-    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepLP=C.lvPts;
     const dead=[];
     try{
       for(const k in PROBE){
@@ -4999,7 +4999,7 @@ async function groupLobby(){
         C.rbTree={}; C.rbTree[k]=campRtMax(k); const hi=PROBE[k]();
         if(!(hi>lo)) dead.push(k+'('+lo+'→'+hi+')');
       }
-    } finally { C.rbTree=keepT; C.rbPts=keepP; }
+    } finally { C.rbTree=keepT; C.rbPts=keepP; C.lvPts=keepLP; }
     assert(dead.length===0,'샀는데 수치가 안 변한다 — 배선이 끊겼다: '+dead.join(' · '));
     // 미배선 목록이 실제로 미배선인지도 확인한다 — 배선했는데 목록에 남아 있으면 헷갈린다
     for(const k of NOTYET) assert(campRtLine(k),'미배선 목록에 없는 계열이 적혀 있다: '+k);
@@ -5047,9 +5047,9 @@ async function groupLobby(){
         return fetch('assets/icons/'+L.ic).then(function(r){ return r.ok?null:L.k; })
           .catch(function(){ return L.k; }); }))).filter(Boolean);
       assert(miss.length===0,'아이콘 파일이 없다: '+miss.join(',')); }
-    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts;
+    const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepP=C.rbPts, keepLP=C.lvPts;
     try{
-      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1}; C.rbPts=1e6;
+      C.rbTree={root:1,_m2:1,'br:econ':1,'gp:econ가':1,gather:2,gas:1}; C.rbPts=1e6; C.lvPts=1e6;
       campRebEnter('tree'); await sleep(60);
       assert($('campTree').querySelectorAll('#ctG image').length>0,'별 안에 아이콘이 안 그려진다');
       assert(!!$('campTree').querySelector('#ctG .ctCore'),'가운데 마름모가 없다');
@@ -5076,7 +5076,7 @@ async function groupLobby(){
       assert(_campTreeView.z>=CAMP_TREE_ZMIN&&_campTreeView.z<=CAMP_TREE_ZMAX,'전체 보기 배율이 범위 밖');
       // ⭐ 별이 적을 때가 많을 때보다 **덜 물러난다** — 그게 「안 비어 보이게」의 뜻이다.
       { const C=campState(), keep=JSON.parse(JSON.stringify(C.rbTree||{})), kp=C.rbPts;
-        C.rbPts=1e12; C.rbTree={root:1};
+        C.rbPts=1e12; C.lvPts=1e12; C.rbTree={root:1};
         for(const L of CAMP_RT_LINES) C.rbTree[L.k]=campRtMax(L.k);
         for(const b in CAMP_TREE_BR){ if(campRtIsChain(b)) continue; C.rbTree['br:'+b]=1;
           for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(b,g)) C.rbTree['gp:'+b+g]=1; }
@@ -5122,7 +5122,7 @@ async function groupLobby(){
         for(let i=0;i<500;i++) campFevRoll();
         assert(!campFevActive(),'활성화 없이 피버가 터졌다');
         // ② 선행 조건 — 활성화 없이는 확률·배수·시간을 **살 수 없고 보이지도 않는다**
-        C.rbPts=1e12; C.rbTree={root:1};
+        C.rbPts=1e12; C.lvPts=1e12; C.rbTree={root:1};
         for(const b in CAMP_TREE_BR){ if(campRtIsChain(b)) continue; C.rbTree['br:'+b]=1;
           for(const g of CAMP_RT_GRP_KEYS) if(campRtGpLive(b,g)) C.rbTree['gp:'+b+g]=1; }
         for(const k of ['fevPct','fevMul','fevSec']){
@@ -5405,7 +5405,7 @@ async function groupLobby(){
         assert(campTreeNearest(cx+10,cy+10)===hit,'조금 빗나갔는데 가까운 별을 못 찾는다');
         assert(campTreeNearest(cx+400,cy+400)===null,'엉뚱하게 먼 곳에서도 별을 잡는다'); }
       return '아이콘 '+CAMP_RT_LINES.length+'(계열키와 1:1) · 확대 붙잡기 ok · 상하한 '+lo+'~'+hi+' · 규칙은 도움말 한 곳';
-    } finally { campTreeClose(); C.rbTree=keepT; C.rbPts=keepP; } });
+    } finally { campTreeClose(); C.rbTree=keepT; C.rbPts=keepP; C.lvPts=keepLP; } });
 
   await step('캠프 트리: 아군 강화 갈래가 실제로 걸린다', async()=>{
     skipIf(typeof campScaleAllies!=='function'||typeof campState!=='function','아군 강화 배선 없음');
