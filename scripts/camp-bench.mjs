@@ -396,6 +396,9 @@ await pg.evaluate(()=>{
       const smax=(typeof CAMP_SUPPLY_MAX!=='undefined')?CAMP_SUPPLY_MAX:24;
       const wmax=(typeof CAMP_WORKER_MAX!=='undefined')?CAMP_WORKER_MAX:40;
       const R=__CB.rate||0, perWk=(wn>0? R/wn : 3.5);
+      // 🏠 **「인구가 막히면 보급소를 위해 모은다」를 여기 넣지 말 것 — 2026-09-11 에 넣어 보고 되돌렸다.**
+      //   실측: 보급소 28.2 → 31.3분 · 끝 병력 25 → 23기. **판 사이 흔들림(±3분) 안**이라 개선을 못 보였다.
+      //   ⇒ 벤치는 보급소를 **결국 짓는다**(27~33분). 늦는 것이지 못 짓는 것이 아니다(BALANCE §5-15).
       const opts=[];
       { const L=S.upg.gather|0, cur=campGatherMul();
         S.upg.gather=L+1; const nxt=campGatherMul(); S.upg.gather=L;
