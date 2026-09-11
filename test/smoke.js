@@ -5080,7 +5080,7 @@ async function groupLobby(){
     skipIf(typeof CAMP_DEV_START_MIN==='undefined'||typeof campDevSeed!=='function','스위치 없음');
     if(!(CAMP_DEV_START_MIN>0)) return '꺼져 있다(정상 · 시작 미네랄 0)';
     const C=campState(); skipIf(!C||typeof G==='undefined'||!G.tech,'캠프가 안 떠 있음');
-    assert(C._devMin===1,'스위치가 켜져 있는데 이 회차에 시작 미네랄을 안 받았다');
+    assert(C._devMin===CAMP_DEV_START_MIN,'스위치가 켜져 있는데 이 회차에 시작 미네랄을 안 받았다(플래그=준 액수): '+C._devMin);
     const c0=G.tech.credit|0; assert(campDevSeed()===0 && (G.tech.credit|0)===c0,'같은 회차에 두 번 준다');
     return '⚠ 켜져 있다 — 회차마다 +'+CAMP_DEV_START_MIN.toLocaleString()+' · 밸런스를 재기 전에 js/19-camp.js 의 CAMP_DEV_START_MIN 을 0 으로'; });
   await step('🔧 개발 스위치: 환생 포인트 무제한이 켜져 있는지', async()=>{
@@ -12929,7 +12929,7 @@ async function groupLobby(){
       campEnter();
       // 🔧 개발 스위치(CAMP_DEV_START_MIN)가 켜져 있으면 **회차마다 한 번** 시작 미네랄이 얹힌다 —
       //    이 회차에서 이미 받았으면(C._devMin) 0, 아니면 딱 그 값. 그 밖의 값은 규칙 위반이다.
-      { const seed=(typeof CAMP_DEV_START_MIN!=='undefined' && CAMP_DEV_START_MIN>0 && C._devMin!==1)?CAMP_DEV_START_MIN:0;
+      { const seed=(typeof CAMP_DEV_START_MIN!=='undefined' && CAMP_DEV_START_MIN>0 && C._devMin!==CAMP_DEV_START_MIN)?CAMP_DEV_START_MIN:0;
         const ok=(G.tech.credit|0)===0 || ((G.tech.credit|0)===seed && seed>0);
         assert(ok,'새 판인데 미네랄이 '+G.tech.credit+' 이다 — 탭으로 벌기 전에 이미 부자다'); }
       assert((G.tech.energy|0)===0,'새 판인데 가스가 '+G.tech.energy+' 이다');
