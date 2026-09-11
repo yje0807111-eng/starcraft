@@ -7830,7 +7830,7 @@ async function groupLobby(){
    *   재는 것은 다섯이다: ① 집에는 없다 ② 격자가 **안개와 같다** ③ 씨앗이 같으면 지형도 같다
    *   ④ 길이 안 막힌다 ⑤ **서명이 같으면 다시 굽지 않는다**(이걸 어겼을 때 스모크가 통째로 멎었다). */
   await step('캠프 던전: 지형층 — 격자는 안개와 같고 · 길은 안 막히고 · 다시 굽지 않는다', async()=>{
-    skipIf(typeof campTerrDraw!=='function'||typeof campTerrGen!=='function','지형층 없음');
+    skipIf(typeof campTerrDraw!=='function'||typeof campTerrWay!=='function','지형층 없음');
     const C=campState(); const back={dg:C.dg};
     try{
       // ① 집(캠프)에는 지형이 없다 — 집은 평지다
@@ -7910,11 +7910,62 @@ async function groupLobby(){
         assert(g.hi!==2,'아래에서 고원 위가 보인다 — 고저 차단이 안 걸렸다');
         assert(shoot(true).hi===2,'공중인데 고원이 안 보인다 — air 가 지형을 무시해야 한다');
         techFogCompute(); }
+      /* 🚶 **길막기**(3단계) — 지형이 직선을 막으면 흐름장이 다음 지점을 준다.
+       *   ⛔ 지형을 `_techNavRects` 에 얹는 방식으로 되돌리지 말 것 — `_techFindPath` 는 기지 격자
+       *     전용(`p[1]>0.12`)이라 격자 위 지형의 꼭짓점을 전부 버려 **아군이 갇힌다**(실측 6판 중 2판). */
+      { const T=CAMPT, L=campTerrLane(), m=campTerrMask(), C2=T.cols, W2=T.rows, span=T.wy1-T.wy0;
+        const mid=i=>({gx:((i%C2)+0.5)/C2, gy:T.wy0+((((i/C2)|0)+0.5)/W2)*span});
+        // 램프는 뚫려 있고 절벽 테두리는 막혀 있다
+        let ramp=-1, rim=-1;
+        for(let ty=0;ty<W2;ty++) for(let tx=0;tx<C2;tx++){ const i=ty*C2+tx;
+          if(ramp<0 && T.r[i] && !m[i]) ramp=i;
+          if(rim<0 && T.h[i] && !T.r[i] && campTerrBlockedAt(tx,ty)) rim=i; }
+        assert(ramp>=0,'램프가 통로가 아니다 — 올라갈 길이 사라진다');
+        assert(rim>=0,'절벽 테두리가 하나도 안 막힌다');
+        // 레인 밖은 못 가는 자리다(campG2W 가 접는다) → 마스크가 막아야 한다
+        { let outOpen=0;
+          for(let ty=0;ty<W2;ty++){ const gy=T.wy0+((ty+0.5)/W2)*span;
+            for(let tx=0;tx<C2;tx++){ const gx=(tx+0.5)/C2;
+              if((gx<L.x0||gx>L.x1||gy<L.y0||gy>L.y1) && !m[ty*C2+tx]) outOpen++; } }
+          assert(outOpen===0,'레인 밖 칸이 열려 있다('+outOpen+') — 유닛이 못 가는 자리로 길을 낸다'); }
+        // 막지 않으면 null(아무것도 안 바꾼다) · 막으면 레인 안의 지점을 준다
+        { const a={gx:0.5,gy:0.55}, bb={gx:0.52,gy:0.5};
+          assert(campTerrWay(a,bb)===null,'안 막혔는데 우회 지점을 준다 — 평지에서 길이 휜다'); }
+        { let wi=-1; for(let i=0;i<T.w.length;i++) if(T.w[i]){ wi=i; break; }
+          if(wi>=0){ const wx=wi%C2, wy=(wi/C2)|0;
+            const sg=mid(Math.min(W2-1,wy+5)*C2+wx), tg=mid(Math.max(0,wy-5)*C2+wx);
+            if(!m[Math.min(W2-1,wy+5)*C2+wx] && !m[Math.max(0,wy-5)*C2+wx]){
+              const way=campTerrWay(sg,tg);
+              assert(way,'벽 너머로 가라는데 우회 지점을 안 준다');
+              assert(way.gx>=L.x0-1e-6 && way.gx<=L.x1+1e-6 && way.gy>=L.y0-1e-6 && way.gy<=L.y1+1e-6,
+                '우회 지점이 레인 밖이다 — 유닛이 못 가는 자리로 간다: '+way.gx.toFixed(3)+','+way.gy.toFixed(3));
+              // 🚶 **실제로 벽을 돌아 도착하나** — 전투 AI 를 빼고 campMove 만 15초 돌린다
+              const W3=CAMPB.world, p0=campG2W(sg.gx,sg.gy,W3), p1=campG2W(tg.gx,tg.gy,W3);
+              campWithStk(()=>{ STK.me.units.length=0; });
+              const u=campDeploy('marine', 0.5, 0.5);
+              if(u){ u.x=p0.x; u.y=p0.y; u._cpWp=null; u._pgHold=false; u._pgT=0; u._pgX=null;
+                const d0=Math.hypot(p1.x-u.x,p1.y-u.y);
+                /* ⚠ **「도착했나」만으로는 부족하다.** 지형은 밀어내기를 안 하므로 우회를 꺼도 벽을
+                 *   뚫고 지나가 도착한다 — 그래서 가드가 안 물었다(2026-09-11 주입 시험).
+                 *   ⭐ **막힌 칸을 밟은 프레임 수**로 잰다: 우회 켬 0~1 · 끔 3~8(실측 8판). */
+                let onBlk=0;
+                campWithStk(()=>{ for(let i=0;i<450;i++){ u.hp=1e9; u.maxHp=1e9; u.dead=false;
+                  campMove(u,p1.x,p1.y,1/30);
+                  const gg=campW2G(u.x,u.y,W3), cx=Math.floor(gg.gx*C2), cy=Math.floor(((gg.gy-T.wy0)/span)*W2);
+                  if(cx>=0&&cy>=0&&cx<C2&&cy<W2&&m[cy*C2+cx]) onBlk++; } });
+                const d1=Math.hypot(p1.x-u.x,p1.y-u.y);
+                assert(d1 < d0*0.25,'벽 너머로 못 갔다(갇혔다): '+Math.round(d0)+' → '+Math.round(d1));
+                assert(onBlk<=2,'막힌 칸을 '+onBlk+'프레임 밟고 지나갔다 — 우회가 안 걸렸다(campMove 가 campTerrWay 를 안 쓴다)');
+                campWithStk(()=>{ STK.me.units.length=0; }); } } } } }
       // ⑥ 씨앗이 같으면 지형도 같다(⛔ Math.random 금지 — 저장·복원하면 자리가 바뀐다)
-      { const a=Array.from(CAMPT.h).join('')+'|'+Array.from(CAMPT.w).join('');
-        campTerrGen(campDgN(), C.foeSeed||1);
-        const b=Array.from(CAMPT.h).join('')+'|'+Array.from(CAMPT.w).join('');
-        assert(a===b,'같은 씨앗인데 지형이 다르다 — Math.random 이 섞였다'); }
+      //   ⚠ 램프까지 함께 본다 — 생성기가 배열을 안 비우면 **두 번째 호출에서 쌓인다**(실측 12 → 22).
+      /* ⚠ **같은 씨앗으로 두 번 부르는 것만으로는 「쌓임」을 못 잡는다** — 같은 자리에 다시 칠하니
+       *   결과가 같다(2026-09-11 주입 시험에서 안 물었다). **다른 씨앗을 한 번 끼워** 넣어야 보인다. */
+      { const sig=()=>Array.from(CAMPT.h).join('')+'|'+Array.from(CAMPT.w).join('')+'|'+Array.from(CAMPT.r).join('');
+        const seed=C.foeSeed||1, a=sig();
+        campTerrGen(campDgN(), (seed ^ 0x5bf03635) >>> 0);   // 남의 씨앗으로 한 번
+        campTerrGen(campDgN(), seed);                        // 원래 씨앗으로 되돌린다
+        assert(sig()===a,'같은 씨앗인데 지형이 다르다 — Math.random 이 섞였거나 생성기가 안 비우고 쌓는다'); }
       return CAMPT.cols+'x'+CAMPT.rows+' · 고지 '+hi+' · 벽 '+wall+' · 램프 '+ramp+' · 한 번만 구웠다';
     } finally { C.dg=back.dg; campBattleClose(); campFogSync(); campTerrDraw(); campBarReset(); }
   });

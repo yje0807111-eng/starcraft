@@ -74,6 +74,9 @@ function campTerrRowAt(wy){ const T = CAMPT; return Math.round(((wy - T.wy0) / (
  *   ⛔ Math.random 을 쓰지 말 것: 저장·복원하면 지형이 바뀌고 스모크가 못 잰다. */
 function campTerrGen(dg, seed){
   const T = CAMPT; if(!T) return null;
+  // 🧹 **비우고 시작한다** — 같은 지형에 두 번 부르면 램프·벽이 **쌓인다**(2026-09-11 실측: 램프 12 → 22 → 33).
+  //   보통은 campTerrInit 이 새 배열을 주지만, 검사·재생성은 같은 지형에 다시 부른다.
+  T.h.fill(0); T.r.fill(0); T.w.fill(0); T.bake = null; T._blk = null; T._flow = null;
   const R = campFoeRng((seed >>> 0) ^ 0x9E3779B9 ^ ((dg | 0) * 2654435761));
   const C = T.cols, W = T.rows;
   // 🏔 고원 — **위 끝에서** 아래 가장자리까지 통째로 고지다.
@@ -109,16 +112,69 @@ function campTerrGen(dg, seed){
   T.bake = null;
   return T; }
 
-/* 🚧 아래 끝(내 기지)에서 위 끝(적 기지)까지 벽을 피해 갈 수 있나 — 4방향 flood fill.
- *   ⚠ 절벽은 여기서 안 본다(램프가 있고, 3단계 전에는 아무것도 안 막는다). */
+/* 🚧 **무엇이 길을 막나** — 한 곳에서 정한다(흐름장·연결성 검사·스모크가 같은 자를 쓴다).
+ *   ① 벽 · ② **절벽의 테두리**(고지인데 4방향 중 저지가 하나라도 있는 칸).
+ *   ⭐ 절벽을 「고원 전체」로 잡으면 적 기지가 통째로 장애물 안에 들어가 아군이 못 간다.
+ *     막아야 하는 것은 **면이 아니라 경계**다 — 고원 안은 걸어 다닐 수 있어야 한다.
+ *   🚪 **램프는 뚫려 있다** — 그것이 올라가는 유일한 길이다(⛔ 램프를 막으면 던전이 멈춘다).
+ *   ⚠ 지도 **밖**은 「높다」로 친다 — 안 그러면 지도 네 변이 통째로 절벽이 된다. */
+function campTerrHiAt(tx, ty){
+  const T = CAMPT;
+  if(tx < 0 || ty < 0 || tx >= T.cols || ty >= T.rows) return 1;   // 밖 = 높다
+  return T.h[ty * T.cols + tx] > 0 ? 1 : 0; }
+function campTerrBlockedAt(tx, ty){
+  const T = CAMPT, i = ty * T.cols + tx;
+  if(T.w[i]) return true;                       // 🧱 벽
+  if(!T.h[i] || T.r[i]) return false;           // 저지·램프는 안 막는다
+  return !campTerrHiAt(tx - 1, ty) || !campTerrHiAt(tx + 1, ty)
+      || !campTerrHiAt(tx, ty - 1) || !campTerrHiAt(tx, ty + 1); }   // ⛰ 절벽 테두리
+/* 🛤 **전장이 실제로 닿는 칸의 범위**(레인 상자 · 격자 좌표).
+ *   ⚠ 지형 격자는 gx 0~1 · gy wy0~1 을 다 갖지만, **전장은 그만큼 못 간다**:
+ *     `campG2W` 가 x 를 `0.5+(gx-0.5)/CAMP_LANE_W` 로 펴고 `strikeMoveToward` 가 0~world 로 자르므로
+ *     격자 x 0.06 보다 왼쪽·0.94 보다 오른쪽은 **전부 같은 자리로 접힌다**. 세로도 마찬가지다(t 가 잘린다).
+ *   ⛔ 이 범위를 흐름장에서 빼지 말 것 — 실측(2026-09-11): 유닛이 gx 0.06 에 서서 **gx 0.01 로 가라는
+ *     지시를 30초 동안 받았다.** 갈 수 없는 칸이라 영영 안 움직였다(8판 중 1판). */
+function campTerrLane(){
+  const w = (typeof CAMP_LANE_W !== 'undefined') ? CAMP_LANE_W : 0.88;
+  const top = (typeof CAMP_LANE_TOP !== 'undefined') ? CAMP_LANE_TOP : -0.26;
+  const bot = (typeof CAMP_LANE_BOT !== 'undefined') ? CAMP_LANE_BOT : 0.62;
+  const tmin = (typeof CAMP_LANE_TMIN !== 'undefined') ? CAMP_LANE_TMIN : (-0.14 / 0.72);
+  return { x0: 0.5 - w / 2, x1: 0.5 + w / 2, y0: top + tmin * (bot - top), y1: bot }; }
+/* 막힌 칸 표 — 흐름장·직선 판정·연결성 검사가 **같은 표**를 본다(한 번만 만든다).
+ *   ⚠ 「지형이 막는가」(`campTerrBlockedAt`)와 다른 자다 — 여기엔 **레인 밖**이 함께 들어간다. */
+function campTerrMask(){
+  const T = CAMPT; if(!T) return null;
+  if(T._blk) return T._blk;
+  const C = T.cols, W = T.rows, m = new Uint8Array(C * W), L = campTerrLane(), span = T.wy1 - T.wy0;
+  for(let ty = 0; ty < W; ty++){ const gy = T.wy0 + ((ty + 0.5) / W) * span;
+    const outY = (gy < L.y0 || gy > L.y1);
+    for(let tx = 0; tx < C; tx++){ const gx = (tx + 0.5) / C;
+      m[ty * C + tx] = (outY || gx < L.x0 || gx > L.x1 || campTerrBlockedAt(tx, ty)) ? 1 : 0; } }
+  T._blk = m; return m; }
+/* 레인 안에 **칸 중심**이 들어오는 행의 위·아래 끝.
+ *   ⚠ 「gy 가 든 행」으로 잡으면 안 된다 — 마스크는 **중심**으로 판단하므로 한 행 어긋나
+ *     목표 행이 통째로 막힌 행이 되어 **연결성 검사가 늘 실패한다**(2026-09-11 실측 300/300). */
+function campTerrLaneRows(){
+  const T = CAMPT, L = campTerrLane(), span = T.wy1 - T.wy0;
+  const inLane = ty => { const gy = T.wy0 + ((ty + 0.5) / T.rows) * span; return gy >= L.y0 && gy <= L.y1; };
+  let hi = 0; while(hi < T.rows && !inLane(hi)) hi++;
+  let lo = T.rows - 1; while(lo >= 0 && !inLane(lo)) lo--;
+  return { hi: hi, lo: lo }; }
+/* 🚧 내 쪽 끝에서 적 쪽 끝까지 갈 수 있나 — 4방향 flood fill.
+ *   ⚠ **절벽도 함께 본다** — 벽만 보면 「램프가 벽에 막혔다」를 못 잡는다.
+ *   ⚠ **레인 안에서만 잰다**(campTerrMask) — 격자 맨 아랫줄·맨 윗줄은 전장이 못 가는 자리다.
+ *     거기서 출발하면 늘 「막혔다」가 나와 생성기가 벽을 전부 걷어 낸다. */
 function campTerrConnected(){
   const T = CAMPT; if(!T) return true;
-  const C = T.cols, W = T.rows, seen = new Uint8Array(C * W), q = [];
-  for(let tx = 0; tx < C; tx++){ const i = (W - 1) * C + tx; if(!T.w[i]){ seen[i] = 1; q.push(i); } }
+  T._blk = null;                       // 벽이 방금 바뀌었다 — 표를 다시 만든다
+  const C = T.cols, W = T.rows, m = campTerrMask(), R = campTerrLaneRows();
+  const yLo = R.lo, yHi = R.hi;   // 아래(나) ↔ 위(적)
+  const seen = new Uint8Array(C * W), q = [];
+  for(let tx = 0; tx < C; tx++){ const i = yLo * C + tx; if(!m[i]){ seen[i] = 1; q.push(i); } }
   for(let p = 0; p < q.length; p++){ const i = q[p], x = i % C, y = (i / C) | 0;
-    if(y === 0) return true;
+    if(y <= yHi) return true;
     const nb = [x > 0 ? i - 1 : -1, x < C - 1 ? i + 1 : -1, y > 0 ? i - C : -1, y < W - 1 ? i + C : -1];
-    for(const j of nb){ if(j < 0 || seen[j] || T.w[j]) continue; seen[j] = 1; q.push(j); } }
+    for(const j of nb){ if(j < 0 || seen[j] || m[j]) continue; seen[j] = 1; q.push(j); } }
   return false; }
 
 // ── 오토타일 ──────────────────────────────────────────────────────────────
@@ -291,6 +347,111 @@ function campTerrPushHeight(fog){
 function campTerrHeightFill(f){
   if(!f || !campTerrSync()) return 0;
   return campTerrPushHeight(f); }
+
+/* ══ 🚶 길막기 — 전장 흐름장 (2026-09-11 · 3단계) ══════════════════════════════════
+ * ⛔ **먼저 두 번 실패했다. 되돌리기 전에 여기를 읽을 것.**
+ *   ① 2026-09-05 — 건물을 「원형 장애물」로 만들어 국소 회피에 맡겼다 → **아군이 갇혔다**
+ *     (의무병이 아군에게서 1152 → 1387 로 멀어졌다 · 19-camp.js 3017). 길찾기가 없으면 뒤로 길이 안 난다.
+ *   ② 2026-09-10 — 지형을 **`_techNavRects` 에 얹어** 기지의 A\*(`_techFindPath`)를 빌리려 했다 →
+ *     **또 갇혔다.** 원인은 그 함수가 **기지 격자 전용**이라는 것이다: 노드를 고를 때 `p[1]>0.12` 로
+ *     거르므로(16-build.js) **격자 위 지형의 꼭짓점이 전부 버려진다** — 장애물은 보되 **돌아갈 모서리가
+ *     하나도 안 생긴다.** 실측 A/B 6판: 지형 끔 6/6 전진 · 지형 켬 **4/6**(두 판은 반대로 가서 굳었다).
+ *   ⛔ 그래서 지형을 `_techNavRects` 에 넣지 말 것. 16-build.js 도 못 고친다(관리자 탭·오토배틀 공유).
+ *
+ * ⭐ **그래서 전장은 제 길찾기를 갖는다 — 지형 격자 위의 흐름장이다.**
+ *   목적지 칸마다 **BFS 거리 지도**를 한 장 만들고(캐시), 유닛은 제 칸에서 **내리막**만 따라간다.
+ *   · 유닛 수에 비례하지 않는다(지도 한 장을 전군이 나눠 읽는다)
+ *   · y 제한이 없다(격자 위 적 기지까지 같은 격자다)
+ *   · 지형은 안 변하니 목적지당 **한 번만** 계산한다
+ *   ⚠ **목표를 바꾸기만 한다** — 그 뒤의 건물 회피(`_techFindPath`)는 그대로 돈다. 두 길찾기가
+ *     각자 제 일만 한다: 지형은 흐름장, 건물은 A\*. ⛔ 하나로 합치려 하지 말 것.
+ *   ⚠ **밀어내기는 하지 않는다** — 억지로 밀려 들어간 유닛도 흐름을 타고 스스로 나온다(①의 교훈).
+ */
+const TERR_WAY_STEPS = 28;    // 흐름을 따라 앞을 내다보는 칸 수(끈 당기기)
+const TERR_FLOW_KEEP = 8;     // 들고 있는 흐름장 수(목적지별)
+const TERR_SEG_MAX   = 160;   // 직선 판정에서 찍어 보는 점의 상한
+
+function campTerrIdxAt(gx, gy){
+  const T = CAMPT; if(!T) return -1;
+  const C = T.cols, W = T.rows;
+  const x = Math.floor(gx * C), y = Math.floor(((gy - T.wy0) / (T.wy1 - T.wy0)) * W);
+  return (x < 0 || y < 0 || x >= C || y >= W) ? -1 : y * C + x; }
+function campTerrCellMid(i){
+  const T = CAMPT, C = T.cols, W = T.rows;
+  return { gx: ((i % C) + 0.5) / C, gy: T.wy0 + ((((i / C) | 0) + 0.5) / W) * (T.wy1 - T.wy0) }; }
+/* 직선이 지형에 막히나 — 칸 해상도로 찍어 본다(⚠ 매 프레임 유닛마다 불린다: 상한을 둔다). */
+function campTerrSegBlocked(x0, y0, x1, y1){
+  const T = CAMPT; if(!T) return false;
+  const m = campTerrMask(), C = T.cols, W = T.rows, span = T.wy1 - T.wy0;
+  const n = Math.max(2, Math.min(TERR_SEG_MAX,
+    Math.ceil(Math.max(Math.abs(x1 - x0) * C, (Math.abs(y1 - y0) / span) * W) * 1.5)));
+  for(let k = 0; k <= n; k++){ const t = k / n;
+    const x = Math.floor((x0 + (x1 - x0) * t) * C);
+    const y = Math.floor((((y0 + (y1 - y0) * t) - T.wy0) / span) * W);
+    if(x < 0 || y < 0 || x >= C || y >= W) continue;
+    if(m[y * C + x]) return true; }
+  return false; }
+/* 목적지 칸 → 거리 지도(BFS). ⚠ 목적지가 막힌 칸이면(건물이 절벽 테두리에 섰다) **둘레에서** 시작한다. */
+function campTerrFlow(goal){
+  const T = CAMPT; if(!T) return null;
+  if(!T._flow) T._flow = new Map();
+  const hit = T._flow.get(goal); if(hit) return hit;
+  const C = T.cols, W = T.rows, n = C * W, m = campTerrMask();
+  const dist = new Int32Array(n).fill(-1), q = [];
+  const seed = i => { if(i >= 0 && i < n && dist[i] < 0 && !m[i]){ dist[i] = 0; q.push(i); } };
+  seed(goal);
+  if(!q.length){ const gx = goal % C, gy = (goal / C) | 0;
+    for(let r = 1; r <= 4 && !q.length; r++)
+      for(let dy = -r; dy <= r; dy++) for(let dx = -r; dx <= r; dx++){
+        if(Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = gx + dx, y = gy + dy; if(x < 0 || y < 0 || x >= C || y >= W) continue;
+        seed(y * C + x); } }
+  for(let p = 0; p < q.length; p++){
+    const i = q[p], x = i % C, y = (i / C) | 0, d = dist[i] + 1;
+    if(x > 0    && dist[i - 1] < 0 && !m[i - 1]){ dist[i - 1] = d; q.push(i - 1); }
+    if(x < C - 1 && dist[i + 1] < 0 && !m[i + 1]){ dist[i + 1] = d; q.push(i + 1); }
+    if(y > 0    && dist[i - C] < 0 && !m[i - C]){ dist[i - C] = d; q.push(i - C); }
+    if(y < W - 1 && dist[i + C] < 0 && !m[i + C]){ dist[i + C] = d; q.push(i + C); } }
+  if(T._flow.size >= TERR_FLOW_KEEP) T._flow.delete(T._flow.keys().next().value);
+  T._flow.set(goal, dist);
+  return dist; }
+function _terrDownhill(i, d){
+  const T = CAMPT, C = T.cols, W = T.rows, x = i % C, y = (i / C) | 0;
+  let best = -1, bd = d[i];
+  const try_ = j => { if(j >= 0 && j < C * W && d[j] >= 0 && d[j] < bd){ bd = d[j]; best = j; } };
+  if(x > 0) try_(i - 1); if(x < C - 1) try_(i + 1);
+  if(y > 0) try_(i - C); if(y < W - 1) try_(i + C);
+  return best; }
+/* 🚶 **다음에 향할 지점** — 지형이 직선을 안 막으면 `null`(아무것도 안 바꾼다).
+ *   막으면 흐름을 따라가며 **직선이 통하는 가장 먼 칸**을 돌려준다(끈 당기기 — 계단식 경로 제거). */
+function campTerrWay(gA, gB){
+  const T = CAMPT; if(!T) return null;
+  if(!campTerrSegBlocked(gA.gx, gA.gy, gB.gx, gB.gy)) return null;
+  const goal = campTerrIdxAt(gB.gx, gB.gy), from = campTerrIdxAt(gA.gx, gA.gy);
+  if(goal < 0 || from < 0) return null;
+  const d = campTerrFlow(goal); if(!d) return null;
+  let cur = from;
+  if(d[cur] < 0){                       // 내가 막힌 칸에 밀려 들어갔다 → 가장 가까운 갈 수 있는 칸으로
+    const C = T.cols, W = T.rows, x = cur % C, y = (cur / C) | 0; let pick = -1, pd = 1e9;
+    for(let r = 1; r <= 3 && pick < 0; r++)
+      for(let dy = -r; dy <= r; dy++) for(let dx = -r; dx <= r; dx++){
+        const nx = x + dx, ny = y + dy; if(nx < 0 || ny < 0 || nx >= C || ny >= W) continue;
+        const j = ny * C + nx; if(d[j] < 0 || d[j] >= pd) continue; pd = d[j]; pick = j; }
+    if(pick < 0) return null; cur = pick; }
+  let best = -1, first = -1, step = cur;
+  for(let k = 0; k < TERR_WAY_STEPS; k++){
+    const nx = _terrDownhill(step, d); if(nx < 0) break; step = nx;
+    if(first < 0) first = nx;
+    const p = campTerrCellMid(step);
+    if(campTerrSegBlocked(gA.gx, gA.gy, p.gx, p.gy)) break;   // 여기서부터는 안 보인다 → 앞의 것이 답
+    best = step;
+    if(d[step] === 0) break; }
+  /* ⚠ **한 칸도 안 보여도 포기하지 않는다.** 벽에 바싹 붙어 서면 바로 옆 칸의 **중심까지도**
+   *   선이 벽 모서리를 스쳐 「안 보인다」가 된다. 거기서 null 을 주면 직선으로 벽을 밀고,
+   *   이동 물리의 진행도 창(`_pgHold`)이 걸려 **그대로 선다**(실측 8판 중 1판 · 2026-09-11).
+   *   바로 옆 칸은 어차피 붙어 있으니 그냥 준다 — 한 걸음이라도 흐름을 타면 곧 풀린다. */
+  if(best < 0) best = first;
+  return best < 0 ? null : campTerrCellMid(best); }
 
 /* 매 프레임 — 구운 그림 한 장을 뷰 사각형에 확대해 그린다(techFogDraw 와 같은 식). */
 function campTerrDraw(){

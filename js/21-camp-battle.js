@@ -88,6 +88,15 @@ function campMove(u, tx, ty, dt){
   if(typeof campW2G !== 'function' || typeof campG2W !== 'function' || typeof _techFindPath !== 'function'){
     strikeMoveToward(u, tx, ty, step); return; }
   const gA = campW2G(u.x, u.y, W), gB = campW2G(tx, ty, W);
+  /* 🗺 **지형 우회**(2026-09-11 · js/24-terrain.js campTerrWay) — 벽·절벽이 직선을 막으면
+   *   흐름장이 **다음에 향할 지점**을 준다. 여기서는 **목표만 바꾼다** — 그 아래의 건물 길찾기
+   *   (`_techFindPath`)는 그대로 돈다. 지형은 흐름장이, 건물은 A\* 가 맡는 두 갈래다.
+   *   ⛔ 지형을 `_techNavRects` 에 얹는 방식으로 되돌리지 말 것 — `_techFindPath` 는 기지 격자
+   *     전용이라 `p[1]>0.12` 로 노드를 걸러 **격자 위 지형의 꼭짓점을 전부 버린다**.
+   *     장애물은 보되 돌아갈 모서리가 안 생겨 **아군이 갇힌다**(실측 6판 중 2판 · 2026-09-10). */
+  if(typeof campTerrWay === 'function'){
+    const way = campTerrWay(gA, gB);
+    if(way){ const p = campG2W(way.gx, way.gy, W); tx = p.x; ty = p.y; gB.gx = way.gx; gB.gy = way.gy; } }
   // 들고 있던 길 — 목표가 그대로면 이어서 따라간다
   const wp = u._cpWp;
   if(wp && wp.length && u._cpGx != null
