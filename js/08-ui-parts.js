@@ -101,9 +101,12 @@ function warmAll(onStep){
   return _warmRun; }
 // 로그인/게스트 → 로딩 화면(#opening 재사용)에서 데우기를 끝낸 뒤 HOME으로.
 // 새 로딩 UI를 만들지 않는다 — 부팅 때 쓰는 그 화면의 막대와 문구를 그대로 쓴다.
-// 🎬 로딩 → 종족 선택 : 머무는 시간과 디졸브 길이(css 「raceIn」 과 **같은 값**이어야 한다)
-const RACE_HOLD_MS = 420;    // 100% 를 잠깐 보여준다
-const RACE_FADE_MS = 440;    // 앞판이 걷히고(200) → 종족 판이 든다(240) · css 「--t-race」 와 같은 값
+// 🎬 **로딩 → 검은 판 → 캠프**(2026-09-12 · 한 길만 남았다).
+//   ⛔ 옛 「로딩 → 종족 선택」 갈래(RACE_HOLD_MS·RACE_FADE_MS·raceIn)를 되살리지 말 것 —
+//     종족 선택 화면은 다락으로 갔고(2026-09-09 · 첫 바퀴는 유니온 고정), 그 갈래가 남아 있어서
+//     **첫 진입이 「로딩 100% 로 한참 머물다 띡 하고 캠프로 끊기는」** 것이 됐다(2026-09-12 사용자 신고).
+//     원인은 둘이었다: ① 종족이 아직 없다는 이유로 검은 판을 안 씌우고 짧은 전환(raceIn)만 걸었다
+//     ② 그 길 끝의 titleOutroEnd 가 **campRaceToCamp 가 막 올린 검은 판을 곧바로 걷어** 캠프가 그대로 드러났다.
 async function enterAfterWarm(){
   const op=document.getElementById('opening');
   showAppScreen('opening');
@@ -127,19 +130,12 @@ async function enterAfterWarm(){
   //   ⛔ 로고·키 아트를 따로따로 다른 속도로 걷지 말 것 — 한 화면이 조각나 보인다.
   //   ⭐ 실제로 걷는 일은 openHome() → showAppScreen 이 이미 다 한다(로딩 fadeOut +
   //     titleArtShow(false) 로 키 아트·로고). 여기서는 **잠깐 머무는 것**만 맡는다.
-  const _needRace = (function(){ try{ return typeof campState==='function' && campState() && !campState().race; }catch(e){ return false; } })();
-  if(_needRace){
-    if(typeof _sleep==='function') await _sleep(RACE_HOLD_MS);   // ① 100% 를 잠깐 보여준다
-    const _ph0=document.getElementById('phone');
-    if(_ph0) _ph0.classList.add('raceIn');            // ② 이 전환만 짧게(css 「raceIn」)
-    // ⛔ 여기서 로딩을 직접 hide 하지 말 것 — 걷는 일은 openHome() → showAppScreen 이 한다.
-    //    직접 감추면 그 판만 전이 없이 사라져 나머지와 어긋난다(= 컷 시절의 코드).
-  }
-  else if(typeof titleToBlack==='function') await titleToBlack();
-  // ⛔ 막대는 **로딩 판이 다 걷힌 뒤에** 되돌린다. 여기서 바로 부르면 100% 이던 막대가
+  // ⭐ 갈래가 없다 — 로딩이 100% 에서 **검은 판으로 덮이고** 그 아래에서 캠프가 선다.
+  if(typeof titleToBlack==='function') await titleToBlack();
+  // ⛔ 막대는 **로딩 판이 검은 판에 덮인 뒤에** 되돌린다. 먼저 부르면 100% 이던 막대가
   //    아직 화면에 보이는 채로 0% 로 뚝 떨어진다(2026-08-27 프레임 확인: 1648ms 에 「LOADING 0%」).
-  if(_needRace) setTimeout(opBarReset, RACE_FADE_MS + 60);
-  else opBarReset();
+  //    위 titleToBlack 을 기다린 참이라 지금은 이미 덮여 있다.
+  opBarReset();
   // ⚠ 예열은 오래 걸린다(헤드리스 소프트웨어 렌더러에선 20초를 넘긴다). 그 사이 사용자가 이미
   //    **게임에 들어가 있으면 끌어오지 않는다** — 무조건 openHome() 을 부르면 게임 중에
   //    setInGame(false) 가 걸려 하단 콘솔(#bot)이 통째로 사라진다(스모크가 간헐 실패했다).
@@ -151,8 +147,18 @@ async function enterAfterWarm(){
   // 화면을 내린 사이 탭이 죽었을 수 있다 — 30초 안이면 그 판을 그대로 이어받는다(실패하면 평소대로 HOME)
   // ⛔ 부팅 경로다 — 여기서 예외가 나면 사용자가 HOME 에 영영 못 간다. 한 겹 더 감싼다.
   try{ if(typeof tryRestoreRun==='function' && tryRestoreRun()){ if(typeof titleOutroEnd==='function') titleOutroEnd(); return; } }catch(e){ console.warn('tryRestoreRun', e); }
+  // 🏳 **검은 판을 이미 올려 두었다는 표시** — `showAppScreen` 이 곧 `titleArtShow(false)` 로 그 클래스를 떼므로
+  //   클래스만 봐서는 campRaceToCamp 가 알 수 없다. 알려 주면 거기서 **덮는 시간을 건너뛰고 머물기만** 한다
+  //   (안 알려 주면 페이드가 두 번이라 검은 화면이 2.2초로 늘어진다 · 실측 2026-09-12).
+  window._campBootBlack = true;
   openHome();
-  // 🎨 **종족 선택으로 갈 때는 키 아트를 조금 더 남긴다.**
+  window._campBootBlack = false;
+  // 🏕 **캠프 첫 진입 연출이 시작됐으면 마무리를 그쪽에 넘긴다**(2026-09-12).
+  //   `campOpen` 은 종족이 없으면 `campRaceToCamp` 로 들어가고, 그것이 **검은 판을 유지한 채**
+  //   캠프를 세운 뒤 제 손으로 걷으며 튜토리얼까지 띄운다. 여기서 titleOutroEnd 를 부르면
+  //   그 검은 판이 곧바로 걷혀 **아직 그리는 중인 캠프가 그대로 드러난다**(= 「띡」 하고 끊기는 느낌).
+  if(typeof campIntroOn==='function' && campIntroOn()) return;
+  // 🎨 (옛 주석) 종족 선택으로 갈 때는 키 아트를 조금 더 남긴다.
   //    openHome → showAppScreen 이 titleArtShow(false) 로 키 아트를 로딩과 **같은 시간에** 걷는데,
   //    그때 종족 판은 아직 반투명이라 그 아래 키 아트(boot.webp — 전투 장면)가 그대로 드러난다.
   //    「그 사이에 사냥터 배경이 스친다」가 그것이었다(2026-08-27).
@@ -160,9 +166,6 @@ async function enterAfterWarm(){
   // 🎬 느린 전환 클래스는 다 걷힌 뒤에 뗀다(다음 화면 전환이 느려지지 않게)
   //   ⚠ 넉넉히 기다렸다 뗀다. 로딩 판을 걷는 애니메이션(fxOut)은 기본 길이(--t-screen .7s)로 잡혀 있어서,
   //     그 시간이 지나기 전에 클래스를 떼면 남은 구간이 다시 계산돼 **다 사라진 판이 살짝 돌아온다**(실측 0.01).
-  if(_needRace){ const _ph=document.getElementById('phone');
-    if(_ph){ clearTimeout(window._raceInT);
-      window._raceInT=setTimeout(function(){ _ph.classList.remove('raceIn'); }, RACE_FADE_MS+700); } }
   if(typeof titleOutroEnd==='function') titleOutroEnd(); }   // 게임 화면이 선 뒤 — 검은 판과 로고가 함께 걷힌다
 // ── 🏘 마을(메인 화면) UI ──
 // 🚪 메인(마을) 뒤로가기 = 로그아웃 확인 — 되돌아갈 곳이 로그인뿐이다

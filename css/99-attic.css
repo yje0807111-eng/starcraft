@@ -1138,3 +1138,15 @@ body.dgFight .hbAutoChip{display:none}
 
 /* ══════════ [30-home.css] 2026-09-10 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
 .hbRoundNote{flex:none;padding:8px 12px 0;font-size:var(--fs-sm);color:#7a7a7a;line-height:1.5}
+
+/* ══════════ [20-lobby.css] 2026-09-11 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
+/* --t-race = 두 토막의 합(js RACE_FADE_MS) */
+#phone.raceIn #opening,
+#phone.raceIn #titleMark{transition-duration:var(--t-race-out) !important;animation-duration:var(--t-race-out) !important;
+  /* ⚠ 곡선은 ease-in(끝이 빠르다). 기본 ease 는 마지막 20% 가 거의 안 변해서, 눈에는 이미
+     사라졌는데 종족 판은 아직 안 올라온 **멎은 구간**이 생겼다(실측 70ms · 2026-08-31). */
+  transition-timing-function:ease-in !important;animation-timing-function:ease-in !important}
+#phone.raceIn #titleBg{opacity:1 !important}
+
+/* ══════════ [30-home.css] 2026-09-11 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
+#phone.raceIn #homeScreen{opacity:0;transition:none}
