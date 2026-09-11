@@ -6,7 +6,7 @@
 //
 // ⚠ **GEM.md §6 「젬으로 영구 능력을 팔지 않는다」를 뒤집는 결정이다**(사용자 확정 2026-09-02).
 //   뒤집어도 되는 근거 둘:
-//     ① **칸이 라운드로 열린다** — 돈으로 칸을 앞당길 수 없다. 진행이 문이다.
+//     ① **칸이 통산 최고 레벨로 열린다**(2026-09-11) — 돈으로 칸을 앞당길 수 없다. 진행이 문이다.
 //     ② **칸이 한정이다** — 사 모아도 동시에 켜지는 것은 정해진 수뿐이라 쌓이지 않는다.
 //   ⛔ 이 둘 중 하나라도 무너지면(젬으로 칸을 열거나, 칸을 무한히 늘리면) 젬이 곧 지수 축이 된다.
 //
@@ -194,30 +194,34 @@ const RUNE_VAL = { low:0.005, mid:0.01, high:0.015, uniq:0.05 };
 //   ⛔ 함부로 내리지 말 것 — **가격은 사용자 결정**이다. 다만 값을 정할 때 이 사실을 볼 것.
 const RUNE_GEM = { low:40, mid:130, high:400, uniq:1200 };
 
-// ── 슬롯 해금 — **최대 도달 라운드**가 연다 ───────────────────────────────
-// ⭐ 「최대」다. 환생으로 되감겨도 **한 번이라도 닿았으면 남는다**(사용자 확정 2026-09-02).
-//   그래서 기준은 `C.best`(환생이 지우지 않는 값)이지 지금 라운드가 아니다.
-// 던전 10 × 50라운드 = 통산 500 이 상한이다.
+// ── 슬롯 해금 — **통산 최고 레벨**이 연다 ────────────────────────────────
+// ⭐ 「최고」다. 환생으로 되감겨도 **한 번이라도 닿았으면 남는다**(사용자 확정 2026-09-02).
+//   그래서 기준은 `C.lvBest`(되감기지 않는 값)이지 지금 레벨(`C.lv`)이 아니다.
+// 🏆 **칸을 여는 자 = 통산 최고 레벨**(2026-09-11 · `campBestLevel`).
 //   ⭐ 일반 첫 칸은 처음부터 열려 있다 — 아무것도 못 끼우는 화면은 「준비 중」으로 읽힌다.
-//   ⭐ 유니크 첫 칸은 R120(던전 3 중반) — 유니크는 **후반의 물건**이라야 자리가 귀해진다.
 //   ⭐ **성좌 셋**(2026-09-03 사용자 확정 · 목업 docs/mock/camp-rune-8.html ②안).
 //     일반 24칸이 8칸씩 세 무리로 갈리고, **한 무리를 다 열면 그 한가운데 유니크가 열린다.**
-//     15라운드마다 한 칸 → 8칸(R0~105) → 유니크 R120 → 다음 무리(R140~245) → 유니크 R260 → …
 //     ⛔ 순서를 흩뜨리지 말 것 — 「성좌 하나를 완성하면 그 중심이 켜진다」가 판의 규칙이고,
 //       그게 무너지면 유니크가 왜 셋인지 그림으로 설명되지 않는다.
-//     ⚠ 칸이 5 → 24 로 늘었다. 효과 상한도 그만큼 늘었다(상급만 채우면 축 하나에 +120%).
-//       값(RUNE_VAL 1~5%)은 5칸 시절에 정해진 것이라 **다시 재야 한다** — BALANCE §3-2-7.
-//   🏰 **눈금이 「통산 관문」으로 바뀌었다**(2026-09-09 · 라운드 폐지). 한 던전 = 진행 건물 6채이고
-//     던전 셋이라 통산 18 이 끝이다. ⛔ 옛 라운드 눈금(0~400)으로 되돌리지 말 것 — 영영 안 열린다.
-//     ⚠ 칸 27개를 18 눈금에 나눠야 하므로 **한 관문에 한 칸 이상**이 열린다:
-//       성좌 ① 0~5(관문마다) · 유니크 ① 6 · 성좌 ② 7~12 … 순서(성좌를 채우면 중심이 켜진다)는 그대로다.
-//     ⚠ 칸이 27 인데 관문은 18 뿐이라 **한 관문에 두 칸이 열리는 자리**가 있다. 다만 **맨 처음(0)만은
-//       한 칸**이어야 한다 — 아무것도 못 깬 사람에게 두 칸을 주면 「첫 칸 하나」 규칙이 깨진다.
-const RUNE_SLOT_R = {
-  norm: [0, 1, 1, 2, 2, 3, 3, 4,                   // 성좌 ① — 던전 1 을 깨는 동안 열린다
-         6, 6, 7, 7, 8, 8, 9, 9,                   // 성좌 ② — 던전 2
-         11, 11, 12, 12, 13, 14, 15, 16],          // 성좌 ③ — 던전 3
-  uniq: [5, 10, 18] };           // 성좌마다 한가운데 하나 — 그 성좌를 다 연 다음
+//
+// 🔁 **왜 라운드도 관문도 아니고 레벨인가**(2026-09-11 · 전면 개편):
+//   ① 라운드는 없어졌다(던전 = 적 기지 치기) · ② 통산 관문은 **던전 셋 = 18 이 끝**이라
+//     한 바퀴만 돌면 27칸이 전부 열려 버린다 — 룬은 긴 축인데 자가 짧았다.
+//   ③ 레벨은 환생할수록(배수가 붙을수록) 더 높이 오르므로 **회차를 거듭할수록 열린다**.
+//   ⚠ 그런데 레벨 자체는 **회차마다 1 로 되감긴다**. 💠 룬은 젬으로 산 물건이라
+//     한 번 열린 칸이 닫히면 결제가 사라지는 것이다 → 자는 **통산 최고 레벨**(`C.lvBest`)이다.
+//     ⛔ `campLevel()`(지금 레벨)으로 열지 말 것.
+//
+// ✅ **자로 확인했다**(2026-09-11 · BALANCE §5-12): 연속 실측으로 **한 회차 = Lv.17** 이고
+//   이 표에서 Lv.17 은 **27칸 중 17칸**(일반 16 + 유니크 1)을 연다 — 노린 「첫 완주 18칸」과 같다.
+//   다 열리는 **Lv.27** 은 누적 XP 250만이고, 무한층이 한 층마다 XP를 ×7.17 로 올리므로
+//   **무한 2~3층**쯤이다(환생 두세 바퀴). ⛔ 고칠 것이 없다 — 값을 흔들지 말 것.
+//   ⚠ 다만 레벨 곡선 셋(CAMP_XP_KILL·_A·_R)이 움직이면 이 표도 같이 움직인다.
+const RUNE_SLOT_LV = {
+  norm: [ 1,  2,  3,  4,  5,  6,  7,  8,          // 성좌 ① — 첫 회차 초반
+         10, 11, 12, 13, 14, 15, 16, 17,          // 성좌 ② — 첫 완주(Lv.18) 언저리까지
+         19, 20, 21, 22, 23, 24, 25, 26],         // 성좌 ③ — 환생을 거듭해야 닿는다
+  uniq: [9, 18, 27] };           // 성좌마다 한가운데 하나 — 그 성좌를 다 연 다음
 const RUNE_CONS = 8;             // 성좌 하나에 든 일반 칸 수 (24 = 8 × 3)
 
 // ── 🌌 판 좌표 — 유니크가 중심, 일반 8칸이 고리로 둘러싼다 ───────────────
@@ -253,22 +257,14 @@ function campRuneNPos(i){
   return [c[0] + Math.cos(a) * RUNE_RING, c[1] + Math.sin(a) * RUNE_RING]; }
 function campRuneUPos(i){ return RUNE_CT[i] || RUNE_CT[0]; }
 
-// 통산 최대 도달 라운드. 던전이 넘어가면 라운드가 1로 돌아가므로 **한 줄로 펴서** 센다.
-//   D1 R50 = 50 · D2 R10 = 60 · D10 R50 = 500.
-//   🏰 **통산 관문 수**다(2026-09-09) — D2 에서 3채를 부쉈으면 (2−1)×6 + 3 = 9.
-//     ⛔ 이름은 그대로 두었다(부르는 곳이 넷) — 뜻만 「라운드」에서 「관문」으로 바뀌었다.
-function campRuneBestRound(){
-  const C = (typeof campState === 'function') ? campState() : null;
-  if(!C || !C.best) return 0;
-  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
-  let m = 0;
-  for(const k in C.best){ const dg = k | 0; if(dg < 1) continue;
-    const r = (dg - 1) * per + (C.best[k] | 0); if(r > m) m = r; }
-  return m; }
-// 열린 칸 수 — 표에서 「도달 라운드 이하」인 것을 센다
-function campRuneSlots(kind){ const tb = RUNE_SLOT_R[kind] || [];
+// 🏆 통산 최고 레벨 — 되감기지 않는 값이다(js/19-camp.js `campBestLevel`).
+//   ⚠ 캠프가 없으면 1(첫 칸만 열린다).
+function campRuneBestLv(){
+  return (typeof campBestLevel === 'function') ? campBestLevel() : 1; }
+// 열린 칸 수 — 표에서 「최고 레벨 이하」인 것을 센다
+function campRuneSlots(kind){ const tb = RUNE_SLOT_LV[kind] || [];
   if(CAMP_RUNE_FREE || CAMP_RUNE_DEV_SEED) return tb.length;   // 🔧 전부 열어 둔다(확인용 스위치 둘)
-  const b = campRuneBestRound();
+  const b = campRuneBestLv();
   let n = 0; for(const r of tb) if(b >= r) n++; return n; }
 
 // ── 상태 ────────────────────────────────────────────────────────────────
@@ -559,7 +555,7 @@ function _runeSlotHTML(){
     + ' preserveAspectRatio="xMidYMid meet"><g id="rnG">' + _runeMapSvg() + '</g></svg></div>'
     + _runeSumHTML() + _runeBagHTML(); }
 // 🗺 **상단 진행 수치는 없앴다**(2026-09-04 사용자 확정: 「없어도 될 것 같아」).
-//   칸마다 「R45」로 열리는 라운드가 적혀 있어서 같은 말을 두 곳에서 하고 있었다.
+//   칸마다 「Lv.26」으로 열리는 레벨이 적혀 있어서 같은 말을 두 곳에서 하고 있었다.
 //   ⛔ 되살리지 말 것. ⚠ 요소(#rnRound)는 남겨 둔다 — 마크업을 건드리지 않으려는 것뿐이다.
 function _runeTopSync(){
   const el = document.getElementById('rnRound'); if(!el) return;
@@ -583,8 +579,8 @@ function _runeSvg(){ return document.getElementById('rnSvg'); }
 function _runeAlive(){ return typeof campRuneIsOn === 'function' && campRuneIsOn(); }
 // 판에 있는 별들의 자리 — 「전체 보기」가 이것만 잰다(글자·후광은 안 센다)
 function _runePts(){ const q = [];
-  for(let i = 0; i < RUNE_SLOT_R.norm.length; i++){ const c = campRuneNPos(i); q.push({ x:c[0], y:c[1] }); }
-  for(let i = 0; i < RUNE_SLOT_R.uniq.length; i++){ const c = campRuneUPos(i); q.push({ x:c[0], y:c[1] }); }
+  for(let i = 0; i < RUNE_SLOT_LV.norm.length; i++){ const c = campRuneNPos(i); q.push({ x:c[0], y:c[1] }); }
+  for(let i = 0; i < RUNE_SLOT_LV.uniq.length; i++){ const c = campRuneUPos(i); q.push({ x:c[0], y:c[1] }); }
   return q; }
 // 📐 칸이 놓인 범위 — **전체 보기와 팬 경계가 같은 값**을 쓴다(단일 소스).
 //   ⛔ getBBox 를 쓰지 말 것 — 값 글씨·번짐까지 범위에 들어 경계가 헐렁해진다.
@@ -686,7 +682,7 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
   const swDim = _runeSwapKey && !swCand && !(open && !key);
   if(!open){
     g.push('<polygon class="rnHx lk" points="' + _runeHexPts(x, y, r * 0.93) + '"/>');
-    g.push('<text class="rnLkT" x="' + X + '" y="' + (y + 2.5).toFixed(1) + '">R' + at + '</text>');
+    g.push('<text class="rnLkT" x="' + X + '" y="' + (y + 2.5).toFixed(1) + '">Lv.' + at + '</text>');
     return g.join(''); }
   if(!key){
     // 🕳 **파인 홈** — 「+」 하나뿐이던 빈 칸을 «끼우는 자리»로 바꾼다(목업 camp-rune-slot-8 ②안).
@@ -823,7 +819,7 @@ function _runeDefs(){
   return d + '</defs>'; }
 
 function _runeMapSvg(){
-  const rows = [_runeDefs(), _runeZoneSvg()], tbN = RUNE_SLOT_R.norm, tbU = RUNE_SLOT_R.uniq;
+  const rows = [_runeDefs(), _runeZoneSvg()], tbN = RUNE_SLOT_LV.norm, tbU = RUNE_SLOT_LV.uniq;
   const openN = campRuneSlots('norm'), openU = campRuneSlots('uniq');
   const eqN = campRuneEq('norm'), eqU = campRuneEq('uniq');
   // 성좌마다 — 중심에서 고리로 뻗는 실(열린 칸만 밝다)

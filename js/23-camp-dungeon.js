@@ -187,8 +187,39 @@ const CAMP_FOE_SEE_T = 0.35;             // 다시 보는 간격(초) — 매 �
 function campBroken(){ const C = (typeof campState === 'function') ? campState() : null;
   if(!C || !((C.dg | 0) > 0)) return 0;
   return Math.max(0, Math.min(CAMP_DG_STEPS, C.broken | 0)); }
-// 그 던전의 표. 무한층(단계 3)은 아직 없으므로 범위 밖은 null.
-function campDgDef(dg){ const n = dg | 0; return (n > 0 && n < CAMP_DG.length) ? CAMP_DG[n] : null; }
+// ══ ♾ 무한층 — 던전 셋 위로 끝없이 이어진다 (2026-09-11 · 단계 3) ═════════════
+//
+// ⭐ **표를 새로 쓰지 않는다.** 무한 n층은 던전 셋 중 하나를 **그대로 빌려** 쓰고(종족 순환)
+//   자리만 씨앗이 흔든다. 그래서 커리큘럼·기믹(공중·동력탑)이 층마다 돌아가며 나온다.
+//   ⛔ 무한층 전용 건물 표를 만들지 말 것 — 표가 둘이 되면 던전을 고칠 때마다 한쪽이 뒤처진다.
+//
+// ⭐ **난이도는 사다리를 그대로 잇는다** — 한 층이 던전 하나와 같은 계단이다(관문 여섯 ×7.17).
+//   ⛔ 무한층 전용 배율(CAMP_INF_R 류)을 새로 두지 말 것: 두 개의 자가 생기면
+//     「던전 3 끝」과 「무한 1층 시작」 사이에 설명할 수 없는 턱이 생긴다.
+//
+// 🧗 **한 층을 깨면 곧바로 다음 층이 선다**(캠프로 안 돌아온다).
+//   ⚠ 던전 1~3 의 ⛔「완주하면 캠프로」와 **다른 규칙이다** — 그 셋은 커리큘럼이라 집에 들러
+//     전리품을 쓰고 다시 온다. 무한층은 **등반**이라 「어디까지 버티나」가 전부다.
+//   ⭐ 그래서 환생의 「지금 끊을까, 한 층 더 갈까」가 여기서 생긴다(환생 포인트 = 도달 깊이).
+//
+// ⚠ **값 둘은 안 쟀다**: `CAMP_INF_COIN`(층당 코인)과 무한층 보상 배수(campMineDef 의 외삽).
+const CAMP_INF_COIN = 12;                // 무한 n층을 깨면 코인 n × 이 값 — ⛔ 새 재화를 만들지 않는다
+const CAMP_INF_DESC = '끝이 없다 — 한 층이 던전 하나만큼 세진다';
+let _campInfDefs = {};                   // 층마다 만든 표를 재사용(매 프레임 Object.assign 을 피한다)
+// 그 dg 가 무한 몇 층인가(던전이면 0)
+function campInfN(dg){ const n = dg | 0, mx = CAMP_DG_MAX_N; return n > mx ? n - mx : 0; }
+// 그 층이 빌려 쓰는 던전 번호(1~3) — 종족이 순환한다
+function campInfBase(dg){ const f = campInfN(dg);
+  if(f <= 0) return Math.max(1, Math.min(CAMP_DG_MAX_N, dg | 0));
+  return ((f - 1) % CAMP_DG_MAX_N) + 1; }
+function campInfDef(dg){ const f = campInfN(dg); if(f <= 0) return null;
+  if(_campInfDefs[dg]) return _campInfDefs[dg];
+  const src = CAMP_DG[campInfBase(dg)];
+  const d = Object.assign({}, src, { name:'무한 ' + f + '층', inf:f, desc:CAMP_INF_DESC });
+  _campInfDefs[dg] = d; return d; }
+// 그 던전의 표. ♾ 표 밖은 무한층이다(위).
+function campDgDef(dg){ const n = dg | 0; if(n <= 0) return null;
+  return (n < CAMP_DG.length) ? CAMP_DG[n] : campInfDef(n); }
 function campDgName(dg){ const d = campDgDef(dg); return d ? d.name : '캠프'; }
 // 그 종족의 건물 표에서 한 채를 찾는다 — 이름·아이콘을 거기서 가져온다(새 에셋을 만들지 않는다).
 function campFoeBldDef(race, k){
@@ -540,23 +571,16 @@ function campDgTimerReset(dg){
 //     ⛔ 「라운드를 골라 들어간다」로 되돌리지 말 것: 관문은 건물이고 중간 진입이 없다.
 function campEnterDungeon(dg){
   const C = (typeof campState === 'function') ? campState() : null; if(!C) return 0;
-  const mx = (typeof CAMP_DG_MAX !== 'undefined') ? CAMP_DG_MAX : CAMP_DG_MAX_N;
-  const n = Math.max(0, Math.min(mx, dg | 0));
+  // ♾ 위쪽 한계가 없다(무한층) — 어디까지 갈 수 있나는 `campDgOpen` 이 정한다(12-appshell).
+  const n = Math.max(0, dg | 0);
   C.dg = n; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
-  // 🎫 **환생 트리 「던전 시작 지점」** — 앞의 관문 몇 채를 이미 부순 채로 들어간다.
-  //   ⛔ `C.broken` 만 올리지 말 것. 릴레이(campFoeActive)는 **실제로 죽은 건물**을 보므로,
-  //     숫자만 올리면 **난이도는 관문 n 인데 웨이브는 관문 1 짜리**가 된다(2026-09-11 실측으로 겪었다).
-  //   ⭐ 그래서 `C.foeDead` 에 직접 찍는다 — eid 는 자리마다 고정('fb<던전>_<차례>')이라
-  //     `campFoeBase` 가 그것을 읽어 처음부터 부서진 채로 세운다.
-  //   ⚠ **문지기 탑은 안 건너뛴다** — 구간을 여는 것은 여전히 플레이어의 몫이다.
-  if(n > 0){
-    const sk = (typeof campRbtVal === 'function') ? (campRbtVal('dgStart') | 0) : 0;
-    if(sk > 0){ const d = campDgDef(n);
-      let i = 0, got = 0;
-      for(const q of (d && d.bld) || []){
-        const eid = 'fb' + n + '_' + (i++);
-        if(q.role === 'prog' && (q.step | 0) > 0 && (q.step | 0) <= sk){ C.foeDead[eid] = 1; got++; } }
-      C.broken = Math.min(CAMP_DG_STEPS, got); } }
+  // 🗄 여기 있던 **「관문 n채를 부순 채로 시작」**(옛 환생 트리 `dgStart`)은 없앴다(2026-09-11).
+  //   메인의 환생 강화에도 `dgStart` 가 있지만 **다른 것**이다 — 그쪽은 「던전 n까지 **열어 준다**」
+  //   이고 이쪽은 「던전 안의 관문을 건너뛴다」였다. 두 벌을 메인 쪽으로 합치면서 이쪽을 접었다.
+  //   ⚠ 잰 값은 남겨 둔다(BALANCE §5-12 ①): 관문 2채(=33%)를 건너뛰어도 클리어는 **14%만** 줄었다
+  //     — 릴레이가 관문 3 부터 돌아 적이 더 세기 때문이다. 되살릴 일이 생기면 그것부터 볼 것.
+  //   ⛔ 되살리더라도 `C.broken` 숫자만 올리지 말 것 — 릴레이는 **실제로 죽은 건물**(`C.foeDead`)을
+  //     보므로 난이도는 관문 n 인데 웨이브는 관문 1 짜리가 된다(실측으로 겪었다).
   // 🎲 원정마다 새 배치 — 같은 원정 안(저장·복원)에서는 같은 씨앗이라 자리가 안 바뀐다
   if(n > 0) C.foeSeed = campFoeNewSeed();
   C.cleared = 0; C.rnd = 1;                       // 🧷 옛 값 — 저장 호환용으로만 남긴다

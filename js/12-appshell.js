@@ -112,7 +112,8 @@ function campChipInfo(){
   // ⭐ 캠프에 단계·라운드가 생겼다(2026-08-25). **상태는 캠프가 단일 소스**다 — 여기서는 읽기만 한다.
   //    0단계 = 캠프(안전) · 1~10 = 던전. 던전에 있으면 라운드를, 캠프면 「캠프」를 보여준다.
   const inDg=(typeof campDgN==='function') ? campDgN()>0 : ((C.dg|0)>0);
-  const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
+  // ♾ 위쪽 clamp 를 빼 둔다(2026-09-11) — 무한층에서도 칩이 「무한 7층 · 2/6」을 말해야 한다
+  const dg=Math.max(1, C.dg||1);
   const d=(typeof hbDun==='function')?hbDun(dg):null;
   // 🏕 캠프도 던전과 **같은 자리**를 쓴다(2026-09-03) — 숫자를 빼 봤더니 너무 밋밋했다.
   //   상한은 던전과 같은 라운드 상한(50)이다 — 단계 개수(10)를 쓰면 다른 구역과 자릿수가 갈려 보인다.
@@ -266,9 +267,11 @@ function campDgDesc(dg){
 //     그래서 진입값 하나만 적으면 「던전 1 = ×1」로 읽혀 **아무 이득이 없어 보인다**(사용자 지적).
 //   ⛔ 공식으로 만들지 말 것 — 값은 CAMP_MINE(19-camp.js)이 단일 소스고 표로 고정돼 있다(HUNT_R1 §6-1-0-1).
 function campDgMulTx(dg){
-  const i = Math.max(0, Math.min(CAMP_DG_MAX, dg | 0));
+  const i = Math.max(0, dg | 0);
   if(typeof CAMP_MINE === 'undefined') return '';
-  const t = CAMP_MINE[i]; if(!t) return '';
+  // ♾ 표 밖(무한층)은 `campMineDef`(19-camp.js)가 마지막 두 칸의 비로 이어 준다
+  const t = (typeof campMineDef === 'function') ? campMineDef(i) : CAMP_MINE[Math.min(CAMP_MINE.length-1, i)];
+  if(!t) return '';
   // ⚠ **양쪽에 × 를 붙인다**(2026-09-04 사용자 지적) — 「×1~2」는 무슨 뜻인지 안 읽힌다.
   //   소수는 **한 자릿수(10 미만)에만** 붙인다 — 「×10.0」은 군더더기라 그냥 「×10」으로 적는다(사용자 확정).
   //   만 이상은 재화와 같은 축약기(fmtCur)를 쓴다.
@@ -282,11 +285,13 @@ function campDgMulTx(dg){
 const CAMP_HOME_NAME='캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다 · ⛔ 왼쪽 아이콘 되돌리지 말 것(2026-09-03)
 // 🔓 **앞 던전을 완주해야 열린다**(2026-09-09). 캠프(0)와 던전 1 은 늘 열려 있다.
 //   ⛔ 「최고 도달」로 열지 말 것 — 절반만 부수고 나온 던전은 아직 못 깬 것이다.
+// ♾ **무한층은 마지막 던전을 깨야 열린다**(2026-09-11) — 그것이 환생 관문과 같은 문이다.
 function campDgOpen(dg){
-  if(dg<0 || dg>CAMP_DG_MAX) return false;
-  if(dg<=1) return true;
+  const n=dg|0; if(n<0) return false;
+  if(n<=1) return true;
   const C=(typeof campState==='function')?campState():null;
-  return !!(C && C.dgDone && C.dgDone[dg-1]); }
+  if(n>CAMP_DG_MAX) return !!(C && C.dgDone && C.dgDone[CAMP_DG_MAX]);
+  return !!(C && C.dgDone && C.dgDone[n-1]); }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.
 //   ⛔ 두 벌로 들고 있지 말 것 — 드롭다운으로 옮긴 뒤 실제 라운드가 안 따라오던 원인이다.
@@ -301,7 +306,7 @@ function campDropOpen(){
   const o=campChipInfo(); if(!o) return;
   const C=campEnsureRnd(campState()); if(!C) return;
   // ⚠ 0(캠프)을 1 로 올리지 않는다 — 캠프에 있는데 드롭다운이 던전 1 을 가리키면 지금 자리를 못 읽는다.
-  _cdPick={ dg:Math.max(0,Math.min(CAMP_DG_MAX,C.dg|0)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
+  _cdPick={ dg:Math.max(0,C.dg|0), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };   // ♾ 위쪽 clamp 없음(무한층)
   campDropRender();
   const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
   if(typeof playSfx==='function') playSfx('ui_open');
@@ -333,10 +338,15 @@ function _cdOutside(ev){ const d=document.getElementById('campDrop'), t=document
 // 🚪 아래 칸의 **글자 둘** — 고른 곳이 캠프냐 던전이냐로 갈린다.
 //   ⛔ 두 곳에서 만들지 말 것: 처음 그릴 때만 정하고 고를 때 안 고쳐서, 캠프에서 목록을 열면
 //     던전 1 을 골라도 버튼이 「돌아가기」로 남아 있었다(2026-09-10 실측 · 튜토리얼이 그 글자를 읽어 드러났다).
-function _cdGoLabel(dg){ return (dg|0)===0 ? '돌아가기' : '진입'; }
+function _cdGoLabel(dg){ const n=dg|0;
+  if(n===0) return '돌아가기';
+  return (n>CAMP_DG_MAX) ? '등반' : '진입'; }
 function _cdNoteTx(dg){
-  if((dg|0)===0) return '집 — 여기서 키우고 재정비한다';
+  const d=dg|0;
+  if(d===0) return '집 — 여기서 키우고 재정비한다';
   const n=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+  // ♾ 무한층은 **캠프로 안 돌아온다** — 그 한 가지가 다른 점이라 여기서 말해 둔다
+  if(d>CAMP_DG_MAX) return '한 층을 깨면 곧바로 다음 층 — 질 때까지 오른다';
   return '진행 건물 '+n+'채를 부수면 완주'; }
 function campDropRender(){
   const ph=document.getElementById('phone'); if(!ph||!_cdPick) return;
@@ -360,6 +370,17 @@ function campDropRender(){
       +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
       +'<span class="cdTx"><span class="cdRnm">'+escHtml(nm)+'</span><span class="cdSub">'+escHtml(sub)+'</span></span>'
       +'<span class="cdMul">'+(!open?'잠김':campDgMulTx(i))+'</span></button>'; }
+  // ♾ **무한층 칸 하나**(2026-09-11 · 단계 3) — 늘 「무한 1층」부터 오른다.
+  //   ⛔ 층마다 줄을 세우지 말 것: 끝이 없어 목록이 끝없이 길어지고, 중간부터 들어가는 것은
+  //     관문 규칙(늘 처음부터)에 어긋난다. 어디까지 갔나는 **부제의 최고기록**이 말한다.
+  { const iy=CAMP_DG_MAX+1, open=campDgOpen(iy), here=(_cdPick.dg>=iy);
+    const best=(typeof campInfBest==='function')?campInfBest():0;
+    const sub=open ? (best>0 ? ('최고 '+best+'층 — '+CAMP_INF_DESC) : CAMP_INF_DESC)
+                   : ('마지막 던전을 깨야 열린다');
+    L+='<button class="cdRow inf'+(here?' here':'')+(open?'':' lock')+'" data-dg="'+iy+'"'
+      +(open?'':' disabled')+'><i class="cdIx">♾</i>'
+      +'<span class="cdTx"><span class="cdRnm">무한층</span><span class="cdSub">'+escHtml(sub)+'</span></span>'
+      +'<span class="cdMul">'+(!open?'잠김':campDgMulTx(iy))+'</span></button>'; }
   const noRnd=(_cdPick.dg===0);
   d.innerHTML='<div class="cdSec cdTop">'
       +'<div class="cdSl">DUNGEON<em>0 – '+CAMP_DG_MAX+'</em></div><div class="cdList">'+L+'</div></div>'
@@ -379,7 +400,9 @@ function campDropRender(){
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
   const d=document.getElementById('campDrop'); if(d){
-    for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
+    // ♾ 무한층은 **줄 하나**라 4층이든 9층이든 그 줄이 「여기」다
+    for(const b of d.querySelectorAll('.cdRow')){ const v=+b.dataset.dg;
+      b.classList.toggle('here', (v>CAMP_DG_MAX) ? (dg>CAMP_DG_MAX) : (v===dg)); }
     // 🚪 **아래 칸도 따라온다** — 캠프↔던전을 오가면 버튼 글자와 안내가 달라진다
     const G=d.querySelector('.cdGo'); if(G) G.textContent=_cdGoLabel(dg);
     const N=d.querySelector('.cdNote'); if(N) N.textContent=_cdNoteTx(dg); }
@@ -436,7 +459,7 @@ function curSplitSync(screenOn){
   if(screenOn !== undefined) _splitScreen = !!screenOn;
   // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
   //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
-  const zone = ['campRune','campReb','campTree','mapUpgScreen'].some(id => {
+  const zone = ['campRune','campReb','campTree','mapUpgScreen','rebUpgScreen'].some(id => {
     const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
   curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.

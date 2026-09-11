@@ -464,14 +464,14 @@ function campMineHit(clientX, clientY){
 // **성좌 판**(SVG 한 장 · 유니크가 중심, 일반 8칸이 고리)으로 바뀌며 호출자가 사라졌다.
 // ⛔ 되살리면 같은 화면을 두 번 그리게 된다 — 스모크 「성좌 판이 없다」가 잡는다.
 function _runeRowHTML(kind, label){
-  const tb = RUNE_SLOT_R[kind] || [], open = campRuneSlots(kind), eq = campRuneEq(kind);
+  const tb = RUNE_SLOT_LV[kind] || [], open = campRuneSlots(kind), eq = campRuneEq(kind);
   const next = campRuneNextAt(kind);
   let h = '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">' + label + '</span>'
     + '<span class="rnSecN">' + open + ' / ' + tb.length + '</span></div><div class="rnSlots">';
   for(let i = 0; i < tb.length; i++){
     if(i >= open){   // 🔒 잠긴 칸 — **왜 잠겼는지 적는다**(이유가 없으면 버그처럼 보인다)
       h += '<button class="rnSlot lk" type="button" disabled><i class="rnLk">🔒</i>'
-        + '<span class="rnLkR">R' + tb[i] + '</span></button>'; continue; }
+        + '<span class="rnLkR">Lv.' + tb[i] + '</span></button>'; continue; }
     const key = eq[i];
     const sel = (_runePickKind === kind && _runePick === i) ? ' sel' : '';
     if(!key){ h += '<button class="rnSlot em' + sel + '" type="button" onclick="campRunePick(\'' + kind + '\',' + i + ')">+</button>'; continue; }
@@ -1011,14 +1011,15 @@ function campHQ(){
 }
 
 // ── [js/22-camp-rune.js] campRuneMaxRound
-// 🏰 눈금이 **통산 관문**으로 바뀌었다(2026-09-09 · 라운드 폐지) — 던전 셋 × 진행 건물 6채 = 18.
+// ⛔⛔ **2026-09-11 부터 뜻이 없다** — 룬 칸의 자가 「통산 관문」에서 **통산 최고 레벨**로 바뀌었고
+//   레벨에는 이런 고정 천장이 없다. 되살리지 말 것(되살리면 27칸이 첫 완주에 다 열린다).
 function campRuneMaxRound(){ const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
   const dgs = (typeof CAMP_DG_MAX !== 'undefined') ? (CAMP_DG_MAX | 0) : 10;
   return per * Math.max(1, dgs); }
 
 // ── [js/22-camp-rune.js] campRuneNextAt
-// 다음 칸이 열리는 라운드(전부 열렸으면 0)
-function campRuneNextAt(kind){ const tb = RUNE_SLOT_R[kind] || []; const b = campRuneBestRound();
+// 다음 칸이 열리는 **레벨**(전부 열렸으면 0)
+function campRuneNextAt(kind){ const tb = RUNE_SLOT_LV[kind] || []; const b = campRuneBestLv();
   for(const r of tb) if(b < r) return r; return 0; }
 
 // ── [js/22-camp-rune.js] runeGradeOf
