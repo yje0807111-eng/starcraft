@@ -1198,7 +1198,7 @@ const CAMP_RT_PTS_FREE_N = 1e18;
 //   ⚠ 설계상의 시작 미네랄은 **0** 이다(HUNT_R1 §1 · 「첫 미네랄은 탭으로 번다」). 이건 조작감·전투를
 //     바로 시험하려는 임시 값이라, 켜져 있는 동안 회수 시간·손익분기 같은 밸런스 수치는 전부 무의미하다
 //     (camp-bench 도 이 돈을 받는다). 스모크 「개발 스위치」가 켜짐을 알린다 — **재기 전에 0 으로**.
-const CAMP_DEV_START_MIN = 10000;
+const CAMP_DEV_START_MIN = 0;   // 🔧 2026-09-11 **껐다**(사용자 확정) — 경제를 재려면 0 이어야 한다(BALANCE §5-13)
 // 🌳 **트리 값은 이제 「레벨 포인트」로 낸다**(2026-09-11 · 옛 환생 포인트 C.rbPts 를 대신한다).
 //   ⛔ C.rbPts 로 되돌리지 말 것 — 1차 환생이 없어졌으므로 그 지갑에는 아무도 입금하지 않는다.
 function campRtPts(){ if(CAMP_RT_PTS_FREE) return CAMP_RT_PTS_FREE_N;
