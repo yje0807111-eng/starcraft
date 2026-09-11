@@ -368,9 +368,20 @@ function campAddXp(n){
   while(C.lv < CAMP_LV_MAX && C.xp >= campXpNeed(C.lv) && ups < CAMP_LV_MAX){
     C.xp -= campXpNeed(C.lv); C.lv++; ups++; }
   if(ups > 0) C.lvPts = (C.lvPts || 0) + ups * CAMP_LV_PTS;
+  if(C.lv > (C.lvBest | 0)) C.lvBest = C.lv;     // 🏆 통산 최고 레벨 — 아래 설명
   return ups; }
 // 🌳 성장 트리가 읽는 잔액 — ⛔ C.lvPts 를 직접 읽어 비교하지 말 것(campRtPts 하나를 지난다)
 function campLvPtsLeft(){ const C = campState(); return Math.max(0, (C && C.lvPts) || 0); }
+
+// 🏆 **통산 최고 레벨 — 되감기지 않는 유일한 레벨 값**(2026-09-11).
+//   레벨 자체(C.lv)는 회차마다 1 로 되감기지만, 💠 **룬 칸은 젬으로 산 물건이 들어가는 자리**라
+//   한 번 열린 칸이 환생으로 닫히면 **결제한 것이 사라진다**. 그래서 칸의 자는 이 값이다.
+//   ⛔ C.lv 로 칸을 열지 말 것 · ⛔ campRunReset 이 이 값을 지우지 말 것
+//     (그리고 campRebirth·campTutoReset 의 keep 목록에도 있어야 한다 — campWipeBoard 가
+//      저장을 다시 읽으므로 손에 쥐고 있다가 다시 얹는 그 목록이다).
+//   ⚠ 지금 이 값을 쓰는 곳은 **룬 칸 해금 하나**다(js/22-camp-rune.js `campRuneBestLv`).
+function campBestLevel(){ const C = campState();
+  return Math.max(1, Math.max((C && C.lvBest) | 0, (C && C.lv) | 0)); }
 
 // ══ 💳 결제 팩 (2026-08-31) ═════════════════════════════════════════════
 // 상점 「추천」 구역에서 현금으로 사는 영구 상품. 젬이 함께 들어 있다.
@@ -524,6 +535,8 @@ function campRunReset(C){
   // 📈 **레벨과 성장 트리는 한 회차짜리다**(2026-09-11 · GAME_DIRECTION §0-A 「레벨」).
   //   ⛔ 남기지 말 것 — 남기면 「회차 안에서 강해진다」가 아니라 옛 1차 환생이 이름만 바꾼 것이 된다.
   //   ⚠ 그래서 부르는 쪽(campRebirth·campTutoReset)의 keep 목록에 rbTree 가 **없다**.
+  //   ⛔ 단 **C.lvBest(통산 최고 레벨)는 건드리지 않는다** — 💠 룬 칸을 여는 자라
+  //     되감으면 젬으로 산 룬이 들어갈 자리가 닫힌다(campBestLevel 설명).
   C.lv = 1; C.xp = 0; C.lvPts = 0; C.rbTree = {};
   // 🏁 **깬 던전도 되감는다**(2026-09-11). ⛔ 남기지 말 것 — 두 가지가 한꺼번에 깨진다:
   //   ① 던전 잠금이 안 걸려 한 바퀴가 사라진다(`campDgOpen` 이 `C.dgDone` 을 본다)
@@ -543,7 +556,7 @@ function campRunReset(C){
 function campTutoReset(minerals){
   const C = campState(); if(!C) return false;
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rune:C.rune, rbUpg:C.rbUpg };
+                 rune:C.rune, rbUpg:C.rbUpg, lvBest:C.lvBest };
   campRunReset(C);
   campBattleClose(); campBarReset();
   campWipeBoard();                                // 살아 있는 판도 새 판으로(안 하면 저장이 되살린다)
@@ -552,6 +565,7 @@ function campTutoReset(minerals){
       C2.rbPts = keep.rbPts; C2.reb = keep.reb;
       if(keep.rune) C2.rune = keep.rune;          // 💠 젬으로 산 것 — 되감기면 안 된다
       if(keep.rbUpg) C2.rbUpg = keep.rbUpg;       // 🔁 환생 강화 — 영구
+      if(keep.lvBest) C2.lvBest = keep.lvBest;    // 🏆 통산 최고 레벨 — 💠 룬 칸이 이걸로 열린다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   if(minerals > 0) campAddRes(minerals, 0);       // 🎁 새 출발 밑천 — ⛔ 지갑 입구는 campAddRes 하나다
@@ -573,7 +587,7 @@ function campRebirth(){
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
   //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rune:C.rune, rbUpg:C.rbUpg };
+                 rune:C.rune, rbUpg:C.rbUpg, lvBest:C.lvBest };
   campBattleClose(); campBarReset();
   // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
   //    저장 상태만 되감고 저장하면 **방금 지운 것이 그대로 되살아난다**(스모크가 잡았다).
@@ -583,6 +597,7 @@ function campRebirth(){
       C2.rbPts = keep.rbPts; C2.reb = keep.reb;
       if(keep.rune) C2.rune = keep.rune;   // 💠 젬으로 산 것 — 되감기면 안 된다
       if(keep.rbUpg) C2.rbUpg = keep.rbUpg;   // 🔁 환생 강화 — 환생 포인트로 산 영구 항목
+      if(keep.lvBest) C2.lvBest = keep.lvBest;   // 🏆 통산 최고 레벨 — 💠 룬 칸이 이걸로 열린다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   // 🚪 **스킵은 되감은 뒤에 얹는다** — campRunReset 이 C.dgDone 을 비우므로 순서가 거꾸로면 사라진다
@@ -5055,6 +5070,7 @@ function campState(){
   if(typeof p.camp.lv !== 'number') p.camp.lv = 1;
   if(typeof p.camp.xp !== 'number') p.camp.xp = 0;
   if(typeof p.camp.lvPts !== 'number') p.camp.lvPts = 0;
+  if(typeof p.camp.lvBest !== 'number') p.camp.lvBest = p.camp.lv || 1;   // 🏆 통산 최고 레벨(영구)
   if(!p.camp.rbUpg || typeof p.camp.rbUpg !== 'object') p.camp.rbUpg = {};   // 🔁 환생 강화(영구)
   if(!p.camp.best || typeof p.camp.best !== 'object') p.camp.best = {};
   // 🛡 rebuild → endure 이관(2026-08-29) — 갈래 키가 바뀌었다. 옛 세이브의 포인트를 옮긴다.

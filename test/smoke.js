@@ -858,7 +858,7 @@ async function groupLobby(){
     let _rnKey='';
     if(typeof campRuneState==='function'){ const R=campRuneState();
       if(R){ _rnKey=runeKey('tap','low'); R.own[_rnKey]=(R.own[_rnKey]|0)+1;
-        C.best=Object.assign({}, C.best, {10:50});   // 칸을 열어 실제로 끼워 본다
+        C.lvBest=99;   // 칸을 열어 실제로 끼워 본다
         campRuneEquip('norm',0,_rnKey); } }
     campRebAsk(); campRebGo();
     // ⚠ **되감긴 그 순간을 찍어서 잰다.** await 를 끼우면 캠프 틱(250ms)이 그 사이에 끼어들어
@@ -2658,7 +2658,7 @@ async function groupLobby(){
   //     구조 넷이다: ① 칸은 **최대 도달 라운드**가 연다(젬이 아니다) ② 칸이 한정이다
   //     ③ 효과는 **합**이다 ④ 젬으로 산 것은 **환생해도 남는다**.
   //   ⛔ 이 넷 중 하나라도 무너지면 젬이 곧 지수 축이 된다(GEM.md §6 · 이 시스템의 전제).
-  await step('룬: 칸은 최대 도달 라운드가 연다 (젬으로는 못 연다)', async()=>{
+  await step('룬: 칸은 통산 최고 레벨이 연다 (젬으로는 못 연다 · 환생해도 안 닫힌다)', async()=>{
     // 🔧 **확인용 스위치를 끈다** — CAMP_RUNE_FREE 는 「룬을 다 갖고 칸도 다 열린」 문이라,
     //   켜 둔 채로는 해금·구매 규칙을 못 잰다(2026-09-04).
     //   ⚠ 되돌리지 않는다 — 스모크가 도는 동안은 **정상 규칙**이어야 뒤 검사도 맞다.
@@ -2667,33 +2667,63 @@ async function groupLobby(){
     if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneSlots!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepB=(C.lvBest|0), keepLv=(C.lv|0);
     const p=PROF(), keepG=p.gem||0;
     try{
-      // ① 기록이 없으면 첫 칸만 열린다(표의 0)
-      C.best={};
-      assert(campRuneBestRound()===0,'기록이 없는데 도달 라운드가 0 이 아니다: '+campRuneBestRound());
+      // ① 아무것도 못 했으면 첫 칸만 열린다(표의 Lv.1)
+      C.lvBest=1; C.lv=1;
+      assert(campRuneBestLv()===1,'기록이 없는데 최고 레벨이 1 이 아니다: '+campRuneBestLv());
       const n0=campRuneSlots('norm');
-      assert(n0===1,'기록 0 인데 일반 칸이 '+n0+'개 열렸다 — 첫 칸 하나여야 한다');
-      assert(campRuneSlots('uniq')===0,'기록 0 인데 유니크 칸이 열렸다');
-      // ② 던전이 넘어가도 **한 줄로 펴서** 센다 — 🏰 D2 에서 3채 = (2−1)×6+3 = 9(2026-09-09 · 라운드 폐지)
-      C.best={2:3};
-      assert(campRuneBestRound()===9,'D2 에서 3채가 통산 9 가 아니다: '+campRuneBestRound());
-      // ③ 라운드가 오르면 칸이 는다 · ⛔ 젬으로는 **안 열린다**
-      C.best={}; p.gem=999999;
+      assert(n0===1,'Lv.1 인데 일반 칸이 '+n0+'개 열렸다 — 첫 칸 하나여야 한다');
+      assert(campRuneSlots('uniq')===0,'Lv.1 인데 유니크 칸이 열렸다');
+      // ② 🏆 자는 **되감기지 않는 최고 레벨**이다 — 지금 레벨이 1 로 돌아가도 칸은 그대로
+      C.lvBest=12; C.lv=1;
+      assert(campRuneBestLv()===12,'최고 레벨을 안 본다: '+campRuneBestLv());
+      const n12=campRuneSlots('norm');
+      assert(n12>n0,'Lv.12 인데 칸이 안 늘었다: '+n0+' → '+n12);
+      // ③ 지금 레벨이 최고보다 높으면 그쪽을 본다(기록 갱신 직전에도 칸이 맞다)
+      C.lvBest=1; C.lv=12;
+      assert(campRuneSlots('norm')===n12,'지금 레벨이 더 높은데 칸이 안 열린다');
+      C.lv=1;
+      // ④ ⛔ 젬으로는 **안 열린다**
+      C.lvBest=1; p.gem=999999;
       assert(campRuneSlots('norm')===1,'젬이 많으면 칸이 열린다 — 돈이 칸을 열면 안 된다');
-      C.best={1:4};                                   // 🏰 던전 1 에서 네 채를 부쉈다
-      const n1=campRuneSlots('norm');
-      assert(n1>n0,'네 채를 부쉈는데 칸이 안 늘었다: '+n0+' → '+n1);
-      // ④ 상한까지 다 열린다 · 그 위로는 더 안 열린다
-      C.best={3:CAMP_DG_STEPS};                       // 🏰 마지막 던전을 완주 = 통산 18
-      assert(campRuneBestRound()===campRuneMaxRound(),'던전 3 완주가 상한이 아니다: '
-        +campRuneBestRound()+' vs '+campRuneMaxRound());
-      assert(campRuneSlots('norm')===RUNE_SLOT_R.norm.length,'끝까지 갔는데 일반 칸이 다 안 열렸다');
-      assert(campRuneSlots('uniq')===RUNE_SLOT_R.uniq.length,'끝까지 갔는데 유니크 칸이 다 안 열렸다');
-      assert(campRuneNextAt('norm')===0,'다 열렸는데 다음 해금 라운드가 남아 있다');
-      return '통산 라운드 ok · 일반 '+RUNE_SLOT_R.norm.length+'칸 · 유니크 '+RUNE_SLOT_R.uniq.length+'칸';
-    } finally { C.best=keepB; p.gem=keepG; }
+      // ⑤ 표 끝까지 가면 다 열리고, 그 위로는 더 안 열린다
+      const top=Math.max(RUNE_SLOT_LV.norm[RUNE_SLOT_LV.norm.length-1],
+                         RUNE_SLOT_LV.uniq[RUNE_SLOT_LV.uniq.length-1]);
+      C.lvBest=top;
+      assert(campRuneSlots('norm')===RUNE_SLOT_LV.norm.length,'끝까지 갔는데 일반 칸이 다 안 열렸다');
+      assert(campRuneSlots('uniq')===RUNE_SLOT_LV.uniq.length,'끝까지 갔는데 유니크 칸이 다 안 열렸다');
+      assert(campRuneNextAt('norm')===0,'다 열렸는데 다음 해금 레벨이 남아 있다');
+      C.lvBest=top+50;
+      assert(campRuneSlots('norm')===RUNE_SLOT_LV.norm.length,'표 위로 칸이 더 생겼다');
+      // ⑥ 📈 campAddXp 가 최고 레벨을 **적는다** (레벨이 오르는 유일한 입구)
+      C.lvBest=1; C.lv=1; C.xp=0;
+      campAddXp(campXpNeed(1)*3);
+      assert((C.lv|0)>1,'경험치를 넣었는데 레벨이 안 올랐다');
+      assert((C.lvBest|0)===(C.lv|0),'레벨이 올랐는데 최고 레벨이 안 따라왔다: '
+        +C.lvBest+' vs '+C.lv);
+      return '통산 최고 레벨 ok · 일반 '+RUNE_SLOT_LV.norm.length+'칸 · 유니크 '+RUNE_SLOT_LV.uniq.length+'칸'
+        +' · 다 열리는 레벨 Lv.'+top;
+    } finally { C.lvBest=keepB; C.lv=keepLv||1; p.gem=keepG; }
+  });
+
+  // 🏆 **환생해도 룬 칸이 닫히지 않는다** — 💠 룬은 젬으로 산 물건이라 자리가 사라지면 결제가 사라진다.
+  //   ⚠ 여기서 `campRunReset` 을 **살아 있는 캠프 상태로 부르지 말 것**(2026-09-11에 한 번 당했다) —
+  //     미네랄·건물·엔티티를 통째로 비워서 뒤 step 다섯이 줄줄이 터진다. 가짜 상태로 잰다.
+  await step('룬: 회차가 되감겨도 통산 최고 레벨은 남는다', async()=>{
+    skipIf(typeof campRunReset!=='function'||typeof RUNE_SLOT_LV==='undefined','룬/되감기 없음');
+    const fake={ lv:20, xp:500, lvPts:9, lvBest:20, rbTree:{a:1}, dgDone:{1:1,2:1,3:1}, best:{} };
+    campRunReset(fake);
+    assert(fake.lv===1,'되감았는데 레벨이 1 이 아니다: '+fake.lv);
+    assert(fake.lvPts===0,'되감았는데 성장 포인트가 남았다');
+    assert((fake.lvBest|0)===20,'되감기가 통산 최고 레벨을 지웠다 — 젬으로 산 룬의 자리가 닫힌다: '
+      +fake.lvBest);
+    // 표에서 Lv.20 이 여는 칸 수가 Lv.1 보다 많아야 「안 닫힌다」가 뜻을 갖는다
+    let at20=0, at1=0;
+    for(const r of RUNE_SLOT_LV.norm){ if(20>=r) at20++; if(1>=r) at1++; }
+    assert(at20>at1,'Lv.20 이 Lv.1 보다 칸을 더 열지 않는다 — 표가 평평하다');
+    return '되감아도 Lv.20 유지 · 일반 칸 '+at1+' → '+at20;
   });
 
   await step('룬: 젬으로만 사고 · 보유한 만큼만 끼운다', async()=>{
@@ -2706,9 +2736,9 @@ async function groupLobby(){
     skipIf(typeof campRuneBuy!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
-    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepB=(C.lvBest|0);
     try{
-      C.rune={}; C.best={10:50};                    // 칸을 전부 열어 놓고 규칙만 본다
+      C.rune={}; C.lvBest=99;                    // 칸을 전부 열어 놓고 규칙만 본다
       const key=runeKey('tap','low'), cost=runeGem(key);
       assert(cost>0,'룬 값이 0 이다');
       // ① 젬이 모자라면 못 산다 — **보유가 늘어서는 안 된다**
@@ -2736,11 +2766,11 @@ async function groupLobby(){
       //     통과한다(2026-09-02 레드 테스트로 잡은 헛검사).
       campRuneUnequip('norm',1);
       assert(campRuneFree(key)>0,'검사 준비 실패 — 뺐는데도 남는 룬이 없다');
-      C.best={}; p.gem=999999;
+      C.lvBest=1; p.gem=999999;
       assert(campRuneSlots('norm')===1,'검사 준비 실패 — 기록을 지웠는데 칸이 여럿 열려 있다');
-      assert(campRuneEquip('norm',RUNE_SLOT_R.norm.length-1,key)===false,'잠긴 칸에 끼워졌다');
+      assert(campRuneEquip('norm',RUNE_SLOT_LV.norm.length-1,key)===false,'잠긴 칸에 끼워졌다');
       return '젬 결제 ok · 갈래·보유·잠금 규칙 ok';
-    } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
+    } finally { p.gem=keepG; C.rune=keepR; C.lvBest=keepB; }
   });
 
   await step('룬: 효과는 합이다 (곱이 아니다)', async()=>{
@@ -2753,9 +2783,9 @@ async function groupLobby(){
     skipIf(typeof campRuneEff!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const p=PROF(), keepG=p.gem||0, keepR=JSON.parse(JSON.stringify(C.rune||{}));
-    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepB=(C.lvBest|0);
     try{
-      C.rune={}; C.best={10:50};
+      C.rune={}; C.lvBest=99;
       const R=campRuneState();                       // 빈 칸을 채워 주는 유일한 입구
       // ① **합이다.** ⛔ 곱이면 지수 축이 하나 더 늘어 후반이 터진다(GEM.md §5-2).
       const k1=runeKey('tap','low'), k2=runeKey('tap','mid');
@@ -2773,7 +2803,7 @@ async function groupLobby(){
       //       들어가되, 갈래는 성좌가 정한다(경제 성좌 중심 = 경제 룬의 유니크 등급).
       { assert(RUNE_GRADES.join(',')==='low,mid,high,uniq','등급이 넷이 아니다: '+RUNE_GRADES.join(','));
         assert(!RUNE_LIST.some(x=>x.kind),'룬에 kind 가 남아 있다 — 유니크는 등급이지 종류가 아니다');
-        assert(RUNE_LIST.length>RUNE_SLOT_R.uniq.length,'룬 종류가 유니크 칸보다 적다');
+        assert(RUNE_LIST.length>RUNE_SLOT_LV.uniq.length,'룬 종류가 유니크 칸보다 적다');
         // 같은 룬을 두 칸에 — 보유한 만큼 끼워지고 효과도 그만큼 쌓인다
         R.norm=[]; R.own={}; R.own[k1]=2;
         assert(campRuneEquip('norm',0,k1)&&campRuneEquip('norm',1,k1),'같은 룬을 두 칸에 못 끼운다');
@@ -2808,7 +2838,7 @@ async function groupLobby(){
       // ⚠ 「환생해도 남는가」는 **환생 스텝**이 잰다 — 실제 환생을 도는 곳이 거기 하나뿐이라
       //   여기서 또 돌리면 판이 두 번 되감겨 뒤 검사들이 흔들린다.
       return '합 ' + sum.toFixed(4) + '(곱이면 ' + prod.toFixed(4) + ') · 종류>칸 · 값은 등급 표';
-    } finally { p.gem=keepG; C.rune=keepR; C.best=keepB; }
+    } finally { p.gem=keepG; C.rune=keepR; C.lvBest=keepB; }
   });
 
   // 💠 **효과 배선** — 끼운 룬이 실제로 게임에 닿는가(2026-09-02).
@@ -2826,7 +2856,7 @@ async function groupLobby(){
     if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneEff!=='function'||typeof campRuneMul!=='function','룬 시스템 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepR=JSON.parse(JSON.stringify(C.rune||{})), keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepR=JSON.parse(JSON.stringify(C.rune||{})), keepB=(C.lvBest|0);
     const keepU=JSON.parse(JSON.stringify(C.upg||{}));
     // ⚠ **기준값을 크게 잡아 둔다.** 탭 수입은 정수로 반올림되므로 Lv0(=1원)에서는
     //   +20% 가 반올림에 먹혀 1 → 1 로 보인다(2026-09-02 이 검사가 실제로 그렇게 죽었다).
@@ -2845,7 +2875,7 @@ async function groupLobby(){
       return false; };
     const clear=()=>{ C.rune={}; campRuneState(); if(typeof campRuneTouch==='function') campRuneTouch(); };
     try{
-      C.best={10:50}; clear();
+      C.lvBest=99; clear();
       // ① 👆 손끝의 룬 — **탭에만** 걸리고, 그 자리는 **합산 항**이다.
       //   ⚠ 「재화의 룬」(탭+채취)은 2026-09-03 에 지웠다 — 손끝을 품고 있어서 겹쳤다.
       //     그래서 지금 **채취에 걸리는 일반 룬은 없다**(그게 맞는지는 밸런스가 정한다).
@@ -3124,7 +3154,7 @@ async function groupLobby(){
         clear(); }
       assert(!bad.length, bad.length+'곳이 안 닿는다 — '+bad.join(' ／ '));
       return '탭 전용(합)·가스·인구·공격/체력/공속·일꾼(캠프만)·피버 확률·치명(터치·채굴)·사거리·감소형(뚜껑)·유즈맵(젬 제외)·회복 ok';
-    } finally { clear(); C.rune=keepR; C.best=keepB; C.upg=keepU;
+    } finally { clear(); C.rune=keepR; C.lvBest=keepB; C.upg=keepU;
       if(typeof campRuneTouch==='function') campRuneTouch();
       if(typeof campWipeField==='function') campWipeField();
       if(typeof campBattleClose==='function') campBattleClose();
@@ -3141,7 +3171,7 @@ async function groupLobby(){
     if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneEnter!=='function'||typeof NAV_TREE==='undefined','룬 구역 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepB=(C.lvBest|0);
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     let bagNote='';
     let swapNote='';
@@ -3152,7 +3182,7 @@ async function groupLobby(){
       assert(cells.join(',')==='research,reb,rune,map,shop',
         '네비 칸 순서가 다르다: '+cells.join(','));
       // ② 화면이 열린다 · 하위 둘을 오간다
-      C.best={}; C.rune={};
+      C.lvBest=1; C.rune={};
       campRuneEnter('slot'); await sleep(60);
       const el=$('campRune'); assert(visible(el),'룬 화면이 안 열림');
       assert(_runeSec==='slot','장착 탭이 아니다: '+_runeSec);
@@ -3162,10 +3192,10 @@ async function groupLobby(){
       //   판까지 합친 그림 한 장으로 되돌리면 배경과 상호작용이 없어 스티커처럼 얹힌다.
       //   ⭐ 여기서 잠그는 것은 넷이다: 도형으로 그린다 · 등급 그라데이션이 있다 ·
       //     등급을 **형태로도** 읽는다(상급 1링 · 유니크 2링) · 이웃 칸을 안 밟는다.
-      { const C2=campState(); const keepB2=JSON.parse(JSON.stringify(C2.best||{}));
+      { const C2=campState(); const keepB2=(C2.lvBest|0);
         const keepR2=JSON.parse(JSON.stringify(C2.rune||{}));
         try{
-          C2.best={10:50};
+          C2.lvBest=99;
           const put=(id,gd)=>{ const k=runeKey(id,gd); const R2=campRuneState();
             R2.own[k]=(R2.own[k]|0)+1; const kind=runeBucket(k);   // 🎚 칸 무리는 등급이 정한다
             const n=campRuneSlots(kind);
@@ -3197,23 +3227,28 @@ async function groupLobby(){
           { const gap=RUNE_RING*Math.sin(Math.PI/RUNE_CONS);
             const reach=RUNE_R_N+RUNE_RING1;
             assert(reach<=gap,'칸 장식이 옆 칸을 밟는다: '+reach.toFixed(1)+' > '+gap.toFixed(1)); }
-        } finally { C2.best=keepB2; C2.rune=keepR2; campRuneRender(); } }
+        } finally { C2.lvBest=keepB2; C2.rune=keepR2; campRuneRender(); } }
       // 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
       const lk=el.querySelectorAll('.rnHx.lk'), lkT=el.querySelectorAll('.rnLkT');
-      assert(lk.length>0,'기록 0 인데 잠긴 칸이 하나도 없다');
-      assert(lk.length===RUNE_SLOT_R.norm.length-1+RUNE_SLOT_R.uniq.length,
-        '기록 0 인데 잠긴 칸 수가 맞지 않다: '+lk.length);
-      assert(lkT.length===lk.length&&/^R\d+$/.test(lkT[0].textContent),
-        '잠긴 칸에 해금 라운드가 안 적혀 있다: '+(lkT[0]||{}).textContent);
+      assert(lk.length>0,'Lv.1 인데 잠긴 칸이 하나도 없다');
+      assert(lk.length===RUNE_SLOT_LV.norm.length-1+RUNE_SLOT_LV.uniq.length,
+        'Lv.1 인데 잠긴 칸 수가 맞지 않다: '+lk.length);
+      assert(lkT.length===lk.length&&/^Lv\.\d+$/.test(lkT[0].textContent),
+        '잠긴 칸에 해금 레벨이 안 적혀 있다: '+(lkT[0]||{}).textContent);
       // 성좌 셋 — 한 무리를 다 열면 그 한가운데 유니크가 열린다
-      assert(RUNE_SLOT_R.norm.length===RUNE_CONS*RUNE_SLOT_R.uniq.length,
-        '일반 칸이 성좌 수로 안 나뉜다: '+RUNE_SLOT_R.norm.length+' / '+RUNE_CONS);
-      for(let c=0;c<RUNE_SLOT_R.uniq.length;c++){
-        const last=RUNE_SLOT_R.norm[(c+1)*RUNE_CONS-1];
-        assert(RUNE_SLOT_R.uniq[c]>last,
-          '성좌 '+(c+1)+' 의 유니크가 그 무리를 다 열기 전에 열린다: R'+RUNE_SLOT_R.uniq[c]+' ≤ R'+last); }
+      assert(RUNE_SLOT_LV.norm.length===RUNE_CONS*RUNE_SLOT_LV.uniq.length,
+        '일반 칸이 성좌 수로 안 나뉜다: '+RUNE_SLOT_LV.norm.length+' / '+RUNE_CONS);
+      for(let c=0;c<RUNE_SLOT_LV.uniq.length;c++){
+        const last=RUNE_SLOT_LV.norm[(c+1)*RUNE_CONS-1];
+        assert(RUNE_SLOT_LV.uniq[c]>last,
+          '성좌 '+(c+1)+' 의 유니크가 그 무리를 다 열기 전에 열린다: Lv.'+RUNE_SLOT_LV.uniq[c]
+          +' ≤ Lv.'+last); }
+      // ⛔ 첫 칸(Lv.1)만은 **하나**여야 한다 — 처음 온 사람에게 두 칸을 주면 「첫 칸 하나」가 깨진다
+      { let n1=0; for(const r of RUNE_SLOT_LV.norm) if(r<=1) n1++;
+        for(const r of RUNE_SLOT_LV.uniq) if(r<=1) n1++;
+        assert(n1===1,'Lv.1 에 칸이 '+n1+'개 열린다 — 하나여야 한다'); }
       // ④ 🔍 판을 밀고 확대한다 · 🎒 가방은 늘 보인다 (2026-09-03)
-      { C.best={10:50}; campRuneEnter('slot'); await sleep(80);
+      { C.lvBest=99; campRuneEnter('slot'); await sleep(80);
         const svg=$('rnSvg'), g=$('rnG');
         assert(svg&&g,'판에 밀고 확대할 <g> 가 없다');
         assert(svg._svvBound,'판에 손가락이 안 이어졌다 — 공용 엔진(svvBind)을 안 썼다');
@@ -3839,16 +3874,16 @@ async function groupLobby(){
       assert(!campRuneIsOn(),'다른 구역으로 갔는데 룬 화면이 안 닫혔다');
       return '네비 5칸 · 두 탭 · 잠금 이유 · 밀고 확대 · 상시 가방 ok · '+bagNote+' · '+swapNote+' · '+glyphNote+' · '+animNote+' · '+waitNote+' · '+sumNote+' · '+nextNote;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
-      C.best=keepB; C.rune=keepR; }
+      C.lvBest=keepB; C.rune=keepR; }
   });
 
   // 📐 **구역 상단 띠** — 환생 · 룬 · 유즈맵 · 상점이 같은 얼굴을 쓴다(2026-09-05 사용자 확정)
   await step('구역 상단 띠: 네 화면이 같은 얼굴 · 캠프는 빠진다', async()=>{
     skipIf(typeof curSplit!=='function'||typeof campRuneEnter!=='function','구역 띠 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepB=(C.lvBest|0);
     try{
-      C.best={10:50};
+      C.lvBest=99;
       const bar=()=>document.getElementById('curBar');
       const on=()=>bar().classList.contains('split');
       const vis=()=>{ const cs=getComputedStyle(bar()); return cs.display!=='none'; };
@@ -3874,7 +3909,7 @@ async function groupLobby(){
         assert(!on(),'캠프에 구역 띠가 걸렸다 — 던전 칩 자리라 규칙이 다르다');
         assert(line().indexOf('1px')<0,'캠프의 그늘이 한 줄로 바뀌었다: '+line()); }
       return '네 화면 ok('+seen.join(' · ')+') · 캠프 제외';
-    } finally { C.best=keepB;
+    } finally { C.lvBest=keepB;
       if(typeof campRuneClose==='function') campRuneClose();
       // ⚠ **화면을 원래대로 돌려놓는다** — 이 스텝은 유즈맵·상점·캠프를 오간다.
       //   그냥 두면 뒤따르는 스텝들이 엉뚱한 화면에서 시작해 줄줄이 깨진다(실측 2026-09-05).
@@ -3890,11 +3925,11 @@ async function groupLobby(){
     // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
     if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     const C=campState(); skipIf(!C,'캠프 상태 없음');
-    const keepB=JSON.parse(JSON.stringify(C.best||{}));
+    const keepB=(C.lvBest|0);
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
     const P=(typeof PROF==='function')?PROF():null; const keepG=P?(P.gem||0):0;
     try{
-      C.best={10:50};
+      C.lvBest=99;
       const R=campRuneState(); R.norm=[]; R.uniq=[]; R.own={}; delete R.wk; campRuneTouch();
       if(P) P.gem=999999;
       campRuneEnter('shop'); await sleep(120);
@@ -4051,7 +4086,7 @@ async function groupLobby(){
       return shopNote+' · 세 구역 · 할인 '+sale.length+'종(유니크 1) · '+Math.round(RUNE_SALE_OFF*100)
         +'% · 재고 1 · 상한 '+RUNE_OWN_MAX+' · 탭 '+tabs.length;
     } finally { if(typeof campRuneClose==='function') campRuneClose();
-      C.best=keepB; C.rune=keepR; if(P) P.gem=keepG; }
+      C.lvBest=keepB; C.rune=keepR; if(P) P.gem=keepG; }
   });
 
   // ══ 🖼 룬 그림 — **룬마다 등급마다 한 장씩 있다** (2026-09-08) ═════════
