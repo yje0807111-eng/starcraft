@@ -57,7 +57,7 @@ await sleep(1200);
 { const ok=await pg.evaluate(()=>campDgN()===1 && typeof CAMPT!=='undefined' && !!CAMPT);
   if(!ok){ console.error('⛔ 던전에 안 들어갔다 — 지형이 없다'); await b.close(); server.close(); process.exit(1); } }
 
-const SEEDS=+(process.argv[2]||60), RUNS=+(process.argv[3]||6);
+const SEEDS=+(process.argv[2]||60), RUNS=+(process.argv[3]||6), WHY=+(process.argv[4]||0);
 
 // ── ① 정적 — 마스크 위에서 저지 → 고원 물 붓기 ───────────────────────────
 const stat = await pg.evaluate((N)=>{
@@ -169,4 +169,71 @@ console.log(`  └ 고원 밑변을 넘은 횟수 — **오르막으로 ${uR}회
     + Object.keys(H).sort((a,b)=>a-b).map(k=>(k>=6?'6+':k)+'칸 '+H[k]).join(' · ')
     + ` → 1칸 이내 ${(near/Math.max(1,D.length)*100).toFixed(1)}%(= 표집이 옆으로 샌 것)`); }
 if(ok<good.length) console.log('⛔ 못 올라간 판:', JSON.stringify(good.filter(r=>!r.hi)));
+
+/* ── ③ 왜 절벽을 넘나 (선택 · 넷째 인자에 판 수) ───────────────────────────
+ *   지형층은 길을 **막지 않고** 목표만 바꾼다. 그래서 새는 데가 어디인지 갈라 센다.
+ *   ⚠ **campMove 를 감싼다** — 그래서 ② **다음**에만 돌린다(앞에 두면 ② 가 감싼 것을 잰다).
+ *   ⛔ 「건물 A* 길(_cpWp)을 들고 있어서」는 **원인이 아니다**(2026-09-11 · 0/422). 거기서 멈추지 말 것.
+ *   📊 실측(200판 · 587회): 우회점을 줬는데도 넘음 54.0% · 직선이 안 막혔다고 봄 36.6% ·
+ *     막혔는데 우회점 없음 9.4% · campMove 를 안 탐 0%. 넘는 순간 목표가 고원 위인 것이 82%. */
+if(WHY > 0){
+  /* 🔍 절벽을 넘는 **그 프레임**에 지형 우회가 무슨 판단을 했나.
+   *   campMove 를 감싸서 유닛마다 남긴다: 직선이 막혔다고 봤나(blk) · 우회점을 줬나(way). */
+  const why = await pg.evaluate(async (RUNS)=>{
+    const _mv = campMove;
+    window.campMove = function(u, tx, ty, dt){
+      try{ const W=(CAMPB&&CAMPB.world)||4800;
+        const gA=campW2G(u.x,u.y,W), gB=campW2G(tx,ty,W);
+        u._dBlk = campTerrSegBlocked(gA.gx,gA.gy,gB.gx,gB.gy) ? 1 : 0;
+        u._dWay = campTerrWay(gA,gB) ? 1 : 0;
+        u._dTgtHi = 0;                                   // 목표가 고원 위인가
+        { const T=CAMPT, C=T.cols, W2=T.rows, span=T.wy1-T.wy0;
+          const bx=Math.floor(gB.gx*C), by=Math.floor((gB.gy-T.wy0)/span*W2);
+          if(bx>=0&&by>=0&&bx<C&&by<W2) u._dTgtHi = T.h[by*C+bx] ? 1 : 0; }
+        u._dMoved = 1;
+      }catch(e){ u._dMoved = 0; }
+      return _mv(u, tx, ty, dt); };
+    const tally={ noCall:0, notBlk:0, blkNoWay:0, blkWay:0, tgtHi:0, tgtLo:0, cross:0 };
+    for(let r=0;r<RUNS;r++){
+     try{
+      campEnterDungeon(1); campState().foeSeed = 4200 + r*131;
+      CAMPB=null; campCombatStep(0.05);
+      if(!CAMPB || typeof CAMPT==='undefined' || !CAMPT) continue;
+      campWithStk(()=>{ if(STK&&STK.me) STK.me.units.length=0; if(STK&&STK.ai) STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      campWithStk(()=>{ for(let i=0;i<8;i++) strikeSpawnUnit('me','marine'); });
+      const T=CAMPT, C=T.cols, W=T.rows, span=T.wy1-T.wy0;
+      const colBot=new Int16Array(C).fill(-1), colRamp=new Uint8Array(C);
+      for(let tx=0;tx<C;tx++){ for(let ty=0;ty<W;ty++) if(T.h[ty*C+tx]) colBot[tx]=ty;
+        if(colBot[tx]>=0 && T.r[colBot[tx]*C+tx]) colRamp[tx]=1; }
+      const lastTy=new Map();
+      for(let f=0; f<1200; f++){
+        try{ campCombatStep(0.05); }catch(e){ break; }
+        if(!CAMPB || !CAMPB.me) break;
+        for(const u of (CAMPB.me.units||[])){
+          if(u.dead) continue;
+          const g=campW2G(u.x,u.y,(CAMPB&&CAMPB.world)||4800);
+          const tx=Math.max(0,Math.min(C-1,Math.floor(g.gx*C)));
+          const ty=Math.max(0,Math.min(W-1,Math.floor((g.gy-T.wy0)/span*W)));
+          const pv=lastTy.get(u);
+          if(pv!==undefined && colBot[tx]>=0 && pv>colBot[tx] && ty<=colBot[tx] && !colRamp[tx]){
+            tally.cross++;
+            if(!u._dMoved) tally.noCall++;                // campMove 를 아예 안 탔다(다른 경로로 움직였다)
+            else if(!u._dBlk) tally.notBlk++;             // 직선이 「안 막혔다」고 봤다
+            else if(!u._dWay) tally.blkNoWay++;           // 막혔다고 보고도 우회점을 못 냈다
+            else tally.blkWay++;                          // 우회점을 줬는데도 넘었다
+            if(u._dTgtHi) tally.tgtHi++; else tally.tgtLo++; }
+          lastTy.set(u, ty); }
+      }
+     }catch(e){}
+    }
+    return tally; }, WHY);
+  const c=why.cross||1;
+  console.log(`절벽을 넘은 ${why.cross}회의 이유:`);
+  console.log(`  campMove 를 안 탔다            ${why.noCall}\t(${(why.noCall/c*100).toFixed(1)}%)`);
+  console.log(`  직선이 「안 막혔다」고 봤다     ${why.notBlk}\t(${(why.notBlk/c*100).toFixed(1)}%)  ← 절벽은 한 칸 두께라 점 사이로 샌다`);
+  console.log(`  막혔다고 보고도 우회점 없음    ${why.blkNoWay}\t(${(why.blkNoWay/c*100).toFixed(1)}%)`);
+  console.log(`  우회점을 줬는데도 넘었다       ${why.blkWay}\t(${(why.blkWay/c*100).toFixed(1)}%)  ← 몸을 안 막는 설계 그 자체`);
+  console.log(`  (그때 목표가 고원 위 ${why.tgtHi} · 아래 ${why.tgtLo})`);
+}
 await b.close(); server.close();
