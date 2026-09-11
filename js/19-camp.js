@@ -697,14 +697,21 @@ function svvBind(svg, ctx){
 const CAMP_RT_TIERS = 20;
 const CAMP_RT_BASE = 2;                     // 티어 1 기준값(비용 공식) — ⚠ root 값이 아니다(CAMP_RT_ROOT_COST)
 const CAMP_RT_MUL = 4;                      // 티어당 기준값 배수
-const CAMP_RT_GRADE = { 흔함:0.5, 보통:1, 귀함:3, 극상:10 };
+// 💰 **등급이 곧 값이다**(2026-09-11 · 위 campRtCost). 한 회차 예산이 17점이라 전부 작은 정수다.
+//   ⛔ 소수(0.5)로 되돌리지 말 것 — 화면에 「0.5 point」가 찍히고 잔액 비교가 흔들린다.
+//   ⚠ 극상은 지금 안 쓰인다(차수 1 이라 마일스톤 승급이 안 일어난다) — 되살릴 때를 위해 남긴다.
+const CAMP_RT_GRADE = { 흔함:1, 보통:2, 귀함:4, 극상:6 };
 // 등장 티어 묶음 — 갈래마다 묶음당 계열 2개 → 티어 하나에 노드 8개가 자동으로 맞는다
 const CAMP_RT_GRP = { 가:[1,5,9,13,17], 나:[2,6,10,14,18], 다:[3,7,11,15,19], 라:[4,8,12,16,20] };
 const CAMP_RT_MILE = { 가:5, 나:10, 다:15, 라:20 };
 const CAMP_RT_GRP_KEYS = ['가','나','다','라'];   // 묶음 순서 — 마디·좌표가 함께 쓴다   // 그 묶음의 귀함 계열이 극상이 되는 티어
 
 // 효과 사다리 — HUNT_R1 §4-5. 배수형은 1~5차가 이 값(누적)이다.
-const CAMP_RT_LADDER = [0, 1.5, 2.5, 5, 11, 25];
+// ⚠ **차수가 1 이라 쓰이는 칸은 [1] 하나다**(2026-09-11). 옛 5차 ×25 를 한 칸으로 눌렀다.
+//   ⛔ 1.5 로 되돌리지 말 것 — 그러면 계열 하나가 +50% 뿐이라 트리를 켜도 판이 안 달라진다.
+//   ⚠ **안 쟀다** — ×3 은 「계열 하나가 눈에 띄게 달라지되 두세 개로 판이 뒤집히지는 않는다」를
+//     노린 출발점이다. BALANCE §4 로 재고 표를 갱신할 것.
+const CAMP_RT_LADDER = [0, 3, 2.5, 5, 11, 25];
 
 // 32계열. br=갈래 · grp=묶음 · gr=등급 · f=효과 종류(배선된 것만 아래에서 쓴다)
 //   ⚠ 묶음마다 흔함4 · 보통3 · 귀함1 이어야 티어당 등급 구성이 맞는다(스모크가 검사).
@@ -861,8 +868,15 @@ function campRtStep(k, n){ return CAMP_RT_ROMAN[n] || n; }
 //   ⭐ 왜 — 「시작 미네랄」처럼 3차에서 끝나는 계열이 생겼고, 값·비용이 티어 공식과 안 맞는
 //     계열이 생겼다. **가진 것이 이기고, 없으면 공용 규칙으로 떨어진다.**
 //   ⛔ 공식(CAMP_RT_BASE·MUL·GRADE)을 계열 하나 때문에 흔들지 말 것 — 나머지 27계열이 함께 움직인다.
-const CAMP_RT_MAX_DEF = 5;
-function campRtMax(k){ const L = campRtLine(k); return (L && L.mx) || CAMP_RT_MAX_DEF; }
+// 📈 **차수는 1 이다**(2026-09-11 · A안 · BALANCE §5-11). 옛 5차수는 **환생 포인트 시절의 규격**이라
+//   한 회차에 수천~수억 점이 들어왔다. 이제 예산이 **17점**이라 161노드가 통째로 죽은 내용이 됐다.
+//   ⭐ 고른 길: **계열은 하나도 안 버리고 차수만 없앤다**(유보는 삭제가 아니다 · GAME_DIRECTION §5).
+//     32계열 중 어느 여섯 남짓을 켜느냐가 곧 그 회차의 빌드다 — 노드는 43개(root 1 · 갈래 2 · 묶음 8 · 계열 32).
+//   ⛔ 5 로 되돌리지 말 것 — 되돌리면 트리 전체 비용이 예산의 수십억 배로 돌아간다.
+const CAMP_RT_MAX_DEF = 1;
+//   ⚠ 계열이 제 차수(mx)를 갖고 있어도 **공용 상한을 넘지 못한다** — 안 그러면 mx:3 인 계열만 5배 비싸진다
+function campRtMax(k){ const L = campRtLine(k);
+  return Math.max(1, Math.min(CAMP_RT_MAX_DEF, (L && L.mx) || CAMP_RT_MAX_DEF)); }
 function campRtLad(k){ const L = campRtLine(k); return (L && L.lad) || CAMP_RT_LADDER; }
 // 그 묶음에 계열이 하나라도 있는가 — 빈 묶음은 사도 아무것도 안 열리므로 존재하지 않는 것으로 친다
 function campRtGpLive(bk, g){ if(campRtIsChain(bk)) return false;      // 사슬 갈래엔 관문이 없다
@@ -873,11 +887,11 @@ function campRtTier(k, n){ const L = campRtLine(k); if(!L) return 0;
 // 그 자리의 등급 — 귀함 계열은 자기 이정표 티어에서만 극상이 된다
 function campRtGrade(k, n){ const L = campRtLine(k); if(!L) return '보통';
   return (L.gr === '귀함' && campRtTier(k, n) === CAMP_RT_MILE[L.grp]) ? '극상' : L.gr; }
-// 노드 비용 = 티어 기준값 × 등급 배수
-function campRtCost(k, n){ const L = campRtLine(k);
-  if(L && L.cs) return (n >= 1 && n < L.cs.length) ? L.cs[n] : Infinity;   // 손으로 정한 값이 이긴다
-  const t = campRtTier(k, n); if(!t) return Infinity;
-  return CAMP_RT_BASE * Math.pow(CAMP_RT_MUL, t - 1) * CAMP_RT_GRADE[campRtGrade(k, n)]; }
+// 노드 비용 = **등급값 하나**(2026-09-11). 차수가 1 이라 티어 지수가 할 일이 없다.
+//   ⛔ 손값(`cs`)·티어 공식(CAMP_RT_BASE·MUL)으로 되돌리지 말 것 — 둘 다 환생 포인트 시절의
+//     자릿수(2 ~ 5.5조)라 17점 예산에서는 살 수 있는 것과 없는 것이 무작위로 갈린다.
+//   ⚠ 표는 남겨 뒀다(되살릴 때의 자산) — `cs`·`CAMP_RT_BASE`·`CAMP_RT_MUL` 은 그대로 있다.
+function campRtCost(k, n){ return CAMP_RT_GRADE[campRtGrade(k, n)] || 1; }
 
 // ── 🌌 마디 · 관문 (2026-09-01 사용자 확정 · 목업 docs/mock/camp-tree-star-v4-4.html) ──
 //   ⭐ **갈래와 묶음도 사는 것이다.** 예전에는 32계열의 1차가 처음부터 전부 열려 있어서
@@ -914,7 +928,7 @@ const CAMP_ROOT_BLD = null;
 //   8+32 면 첫 계열(1티어 1·2·6)에 닿기까지 41 이라 마디가 계열보다 20배 비쌌다 — 문이 방보다 비싼 셈.
 //   2/4 는 1티어 계열 값(1·2·6)과 같은 자릿수라 「갈래를 열고 하나를 고른다」가 첫 환생 안에 든다.
 const CAMP_RT_BR_COST = 2;      // 갈래 마디 값
-const CAMP_RT_GP_COST = 4;      // 묶음 마디 값
+const CAMP_RT_GP_COST = 2;      // 묶음 마디 값 — 2026-09-11 에 4 → 2(예산 17점에 묶음을 둘셋 열 수 있어야 한다)
 const CAMP_RT_BR_KEY = b => 'br:' + b;
 const CAMP_RT_GP_KEY = (b, g) => 'gp:' + b + g;
 //   ⛔ **짝 조건(관문)을 되살리지 말 것**(2026-09-01 제거). 「4차부터 같은 묶음의 짝도 3차 이상」이라는
@@ -1036,7 +1050,9 @@ function campRtMul(k){ const n = campRtHas(k), add = campRtNodeAdd(k);
   const lad = campRtLad(k); return lad[Math.min(campRtMax(k), n)] + add; }
 // ⛔ 공식으로 만들지 말 것 — 지수 감쇠는 5차에서 상한에 **정확히** 닿지 않는다(실측 −37.99%).
 //    HUNT_R1 §4-5-4 의 표를 그대로 둔다: 5차가 딱 −40% 여야 「다 찍었다」가 성립한다.
-const CAMP_RT_CUT = [0, 0.12, 0.25, 0.33, 0.38, CAMP_RT_CUT_MAX];
+// ⚠ 위와 같은 이유로 **[1] 하나만 쓰인다**(2026-09-11 · 옛 5차 −40% 를 −25% 한 칸으로).
+//   ⛔ 1차를 상한(−40%)까지 올리지 말 것 — 계열 하나로 적을 절반 가까이 깎으면 나머지가 안 팔린다.
+const CAMP_RT_CUT = [0, 0.25, 0.25, 0.33, 0.38, CAMP_RT_CUT_MAX];
 // ⚠ 마디 몫을 더해도 **계열 상한(−40%)은 그대로**다 — 여기를 넘기면 적 약화가 갈래 하한을 뚫는다.
 function campRtCut(k){ const n = campRtHas(k);
   const base = n <= 0 ? 0 : CAMP_RT_CUT[Math.min(5, n)];
@@ -1152,6 +1168,7 @@ function campTreeState(k, n){
   else if(L.pa && !campRtNodeOwn(L.pa)) return null;
   const have = campRtHas(k);
   if(n <= have) return 'own';
+  if(n > campRtMax(k)) return null;        // 📈 차수 상한 밖 — ⛔ 빼면 없는 차수가 「살 수 있다」로 뜬다
   if(n !== have + 1) return null;
   return (campRtPts() >= campRtCost(k, n)) ? 'buy' : 'next';
 }
@@ -5260,7 +5277,9 @@ function campRestore(){
 // 🌳 「인구 상한」 +500 — ⚠ _techAddSupCap 은 TECH_SUP_MAX(200)에서 잘린다.
 //   그 상한은 관리자·오토배틀 것이라 건드리지 않고, 캠프에서 트리 몫을 **위에 더한다**.
 // 🌳 「업그레이드 비용」 −20~−80% — 캠프가 값을 매기는 두 곳(campUpgCost · campCost)에 함께 건다.
-const CAMP_RT_DISC = [0, 0.20, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
+// ⚠ **차수가 1 이라 쓰이는 칸은 [1] 하나다**(2026-09-11 · 옛 5차 −80% 를 −40% 한 칸으로).
+//   ⛔ 0.20 으로 되돌리지 말 것 — 계열을 사도 비용이 거의 안 내려가 축이 죽는다.
+const CAMP_RT_DISC = [0, 0.40, 0.40, 0.55, 0.70, 0.80];   // HUNT_R1 §4-5-3
 // 🚪 마디 몫은 **할인율에 곱한다**. ⛔ 0.95 를 넘기지 말 것 — 1 이면 업그레이드가 공짜가 된다.
 // 💰 업그레이드 할인 — **깎아 주는 것은 전부 여기 한 곳을 지난다.**
 //   💠 **비용 감소 룬이 둘로 갈렸다**(2026-09-05 사용자 확정): 미네랄은 **절약의 룬**(costMin),
