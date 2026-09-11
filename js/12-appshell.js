@@ -124,16 +124,16 @@ function campChipInfo(){
   const done=(typeof campBroken==='function')?campBroken():0;
   return { name:nm, lab:'건물', cur:done, max:smax }; }
 // 🧑 레벨·경험치 — 재화 바 **맨 왼쪽**. 캠프에서만 보인다(CSS 가 가른다).
-//   ⚠ **아직 캠프에서는 경험치가 안 오른다** — profGainXp 를 부르는 곳이 옛 사냥터(🗄 js/99-attic.js)와
-//     토벌(09-dungeon.js)뿐이고 둘 다 유보 상태다. 표시만 먼저 만든 것이다(2026-09-04 사용자 확정).
-//     ⛔ 「값이 안 변한다」고 이 칸을 지우지 말 것 — 지급 규칙이 정해지면 여기가 그대로 살아난다.
+//   📈 **값은 캠프 레벨이다**(2026-09-11 · GAME_DIRECTION §0-A 「레벨」) — 적을 잡으면 오른다.
+//     ⛔ 옛 캐릭터 레벨(`CHAR().level` · `profXpForLevel`)로 되돌리지 말 것: 그쪽은 유즈맵 보상으로
+//       오르던 마을 축이라 캠프와 아무 관계가 없다(그래서 이 칸이 오래 멈춰 있었다).
 //   ⛔ 바뀐 게 없으면 다시 그리지 않는다 — 칩과 같은 이유다(누르는 사이에 DOM 이 갈리면 안 된다).
 function curPaintLv(){
   const e = document.getElementById('curLv'); if(!e) return;
   const c = (typeof CHAR === 'function') ? CHAR() : null;
-  const lv = (c && c.level) || 1;
-  const need = (typeof profXpForLevel === 'function') ? (profXpForLevel(lv) || 1) : 1;
-  const pct = Math.max(0, Math.min(100, ((c && c.xp) || 0) / need * 100));
+  const lv = (typeof campLevel === 'function') ? campLevel() : 1;
+  const need = (typeof campXpNeed === 'function') ? (campXpNeed(lv) || 1) : 1;
+  const pct = Math.max(0, Math.min(100, ((typeof campXp === 'function') ? campXp() : 0) / need * 100));
   // 이름 = **캐릭터 이름이 먼저, 없으면 계정 닉**(캐릭터를 안 지은 상태에서도 빈칸이 아니게)
   const nm = (c && c.name) || ((typeof myNick === 'function') ? myNick() : '') || '이름 없음';
   const key = nm + '|' + lv + '|' + pct.toFixed(1);
@@ -151,7 +151,10 @@ function curPaintLv(){
       //   사람을 가르는 색이다), 좌상단은 **한 사람뿐**이라 그 색이 의미가 없고 초록·보라가 상단 줄에서 튄다.
       //   인라인을 지워야 CSS 가 이긴다(!important 를 쓰지 않으려는 이유다 · 2026-09-04 사용자 지적).
       const a2 = av.querySelector('.fAva'); if(a2) a2.removeAttribute('style'); } }
-  e.setAttribute('aria-label', nm + ' · 레벨 ' + lv + ' · 경험치 ' + Math.round(pct) + '%'); }
+  // 🔊 읽어 주는 말에는 **안 쓴 성장 포인트**도 넣는다 — 화면에는 자리가 없지만 「쓸 게 있다」는 신호다
+  { const left = (typeof campLvPtsLeft === 'function') ? campLvPtsLeft() : 0;
+    e.setAttribute('aria-label', nm + ' · 레벨 ' + lv + ' · 경험치 ' + Math.round(pct) + '%'
+      + (left > 0 ? (' · 안 쓴 성장 포인트 ' + left) : '')); } }
 // 칩 마크업 — **한 줄 · 가운뎃점**(2026-09-03 사용자 확정 · 목업 docs/mock/camp-chip-cmd-8.html 5안).
 //   ⛔ 판(면·테두리)을 되돌리지 말 것 — 좌상단은 맵 위에 얹히는 **글자**다.
 //   ⛔ 청록(--hud)을 되돌리지 말 것 — 좌상단만 색이 갈려 하단 구역과 안 어울리던 것이 이유다.
