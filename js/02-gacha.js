@@ -18,9 +18,6 @@ const GACHA_TIERS = {   // 확률 합 = 1.000 (0.547+0.25+0.12+0.055+0.02+0.006+
   god:       { name:'갓',     prob:0.002, combine:false,    serverNotify:true  },
 };
 const GACHA_TIER_ORDER = ['common','rare','epic','unique','legend','transcend','god'];
-// 등급 → 단계 번호 1..7(단일 소스). 프레임 사다리(data-tr)·정렬·비교가 전부 이걸 쓴다.
-// ⚠ 등급 순서를 배열 리터럴로 다시 적지 말 것 — 여기 하나만 고치면 전부 따라온다.
-function tierRank(id){ const i=GACHA_TIER_ORDER.indexOf(id); return i<0? 1 : i+1; }
 // 🎰 단계형 뽑기 곡선(공용) — 동료·펫이 '같은 형태'를 쓴다. 새 뽑기를 만들 때도 이 함수를 쓸 것.
 //   문턱 need(k) = needA·(needB^(k-1) − 1)   → 초반은 촘촘하고 위로 갈수록 간격이 벌어진다
 //   확률 p(t,k) ∝ w0[t]·wg[t]^(k-1)          → wg<1 이면 비중이 줄고, >1 이면 는다
@@ -107,11 +104,6 @@ function _barsHTML(o){   // 🛡 쉴드+HP(한 칸) + ⚡마나(아래 별도 �
 function popShow(id){ const e=document.getElementById(id); if(e) e.classList.remove('hide'); return e; }   // 팝업 표시(공통)
 function popHide(id){ const e=document.getElementById(id); if(e) e.classList.add('hide'); return e; }    // 팝업 숨김(공통)
 const TIER_COLOR = { common:'#b8c0cc', rare:'#4aa8ff', epic:'#b06bff', unique:'#ffd23b', legend:'#ff8a3b', transcend:'#ff4d6d', god:'#ff2bd6' };
-// 🏷 등급 프레임 조각(단일 소스) — 착용 칸(.pdSlot.on)·가방 칸(.igCell)이 이 한 함수로만 등급을 입는다.
-//    반환값 = 여는 태그에 그대로 붙이는 속성들. 안쪽에 TIER_FRAME_HTML 을 꼭 같이 넣을 것(프레임 층).
-//    ⚠ 등급 색/단계를 호출부에서 다시 계산하지 말 것 — 두 화면이 어긋나는 건 늘 이 지점이었다.
-function tierFrame(tier, extraStyle){ const col=TIER_COLOR[tier]||TIER_COLOR.common;
-  return ' data-tr="'+tierRank(tier)+'" style="'+(extraStyle||'')+'border-color:'+col+'aa;color:'+col+'"'; }
 const TIER_FRAME_HTML='<i class="tfx"></i>';
 // #rrggbb → "r,g,b" — 세그먼트 바의 --segCol 은 알파를 얹어 쓰므로 색이 아니라 채널 셋이어야 한다
 function hexChannels(h){ const m=/^#?([0-9a-f]{6})$/i.exec(h||''); if(!m) return '255,255,255';

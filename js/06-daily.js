@@ -36,7 +36,6 @@ const DQ_POOL=[
   {id:'um1',     cat:'out',  ico:'map',     kind:'umRun', goal:1,   name:'유즈맵',       desc:'유즈맵에서 1판 플레이',       rw:{pcoin:2000, gas:60}},
   {id:'um2',     cat:'out',  ico:'map',     kind:'umRun', goal:2,   name:'유즈맵',       desc:'유즈맵에서 2판 플레이',       rw:{pcoin:3600, gear:1}},
   {id:'umWin1',  cat:'out',  ico:'globe',   kind:'umWin', goal:1,   name:'유즈맵 승리',  desc:'유즈맵에서 1승 거두기',       rw:{pcoin:3000, gem:3}},
-  {id:'dg1',     cat:'out',  ico:'dungeon', kind:'dgWin', goal:1,   name:'토벌',         desc:'토벌 단계 1회 클리어',        rw:{pcoin:2200, gear:1}},
   {id:'gacha1',  cat:'out',  ico:'gift',    kind:'gacha', goal:1,   name:'뽑기',         desc:'아무 뽑기 1회',               rw:{pcoin:1500}},
   {id:'boost1',  cat:'out',  ico:'boost',   kind:'boost', goal:1,   name:'부스트',       desc:'부스트 1회 사용',             rw:{pcoin:1200}},
 ];
@@ -267,23 +266,6 @@ function dqAttHTML(){ const D=dqState(); if(!D) return ''; const A=D.att;
       +'<span class="dqFinTx"><b>4주 완성 보상</b><em>'+(fin?dqRwPlain(DQ_FINAL_RW)+' · 남은 추가 보상 포함':'20일을 다 채우면 열립니다')+'</em></span>'
       +'<button class="hbRowBtn" onclick="dqClaimFinal()"'+(fin?'':' disabled')+'>받기</button></div>'; }
   return h; }
-// ⛔ 좌상단 건설 드롭다운(renderHbBuild/#hbBuildWrap)은 폐지했다(2026-08-14).
-//    더보기 > 건설 = 즉시 건설 모드이고, 고르는 곳은 하단 패널이다(hbBuildCardHTML).
-//    오른쪽 위에서 열었는데 왼쪽 위에 목록이 뜨던 것이 문제였다.
-function renderHbBar(){ const bar=document.getElementById('hbBar'); if(!bar||!_hb) return;
-  const S=_hb, coin=Math.floor(((typeof PROF==='function'&&PROF())||{}).pcoin||0);
-  // 하단 바는 '전투 중에 쓰는 것'만 — 스킬 3개. 판을 여는 것(건설·토벌·부스트)은 좌상단 줄로 갔다.
-  // 판 하나에 셋을 담고(트레이), 자동은 판 '밖' 작은 칩으로 뺀다 — 가끔 만지는 설정이라 스킬보다 가벼워야 한다.
-  const au=!!hbHunt().skAuto;
-  let h='<div class="hbGrp"><div class="hbSkWrap">'
-    +'<button class="hbAutoChip'+(au?' on':'')+'" onclick="hbToggleAuto()" title="스킬 자동 사용 '+(au?'켬':'꺼짐')+'">'
-    +'<i></i>AUTO '+(au?'ON':'OFF')+'</button><div class="hbTray">';
-  for(const k in HB_SKILLS){ const SK=HB_SKILLS[k];
-    h+='<button class="hbSk" data-k="'+k+'" onclick="hbUseSkill(&#39;'+k+'&#39;)" title="'+SK.name+' — '+SK.tip+'">'
-      +'<span class="hbSkIco">'+_icoImg('skills', SK.ico)+'</span>'
-      +'<b class="hbSkSec"></b>'                    // 남은 초 — 글자는 hbSkCdPaint 가 넣는다
-      +'<i class="hbCd"><b></b></i></button>'; }   // 껍데기는 --cd 로만 움직인다(다시 그리지 않음)
-  bar.innerHTML=h+'</div></div></div>'; }
 
 // ════════════════════════════════════════════════════════════════════
 // 🧭 가이드 퀘스트 (2026-08-25) — 「이 게임을 어떻게 하는가」를 순서로 가르친다
@@ -492,7 +474,7 @@ function _tutoGoLabel(){
   const t = b ? String(b.textContent||'').trim() : '';
   return t || '진입'; }
 // 🗺 던전 고르기 안내 — 이름과 한 줄 설명을 **화면과 같은 함수**에서 꺼낸다.
-//   ⛔ hbDun(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 **말풍선과 목록의 이름이 어긋난다**
+//   ⛔ hbDun(08-ui-parts 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 **말풍선과 목록의 이름이 어긋난다**
 //     (2026-09-10 · 던전 개편이 이름을 campDgName 으로 옮겼다. 같은 실수를 던전 칩이 먼저 했다).
 //   ⛔ 획득 배율을 문구에 적지 말 것 — 목록 카드 오른쪽이 이미 말하고, 개편으로 오르는 축이 바뀌었다.
 function _tutoDgTip(){
@@ -529,9 +511,11 @@ function _tutoBuilt(k){ const T=(typeof G!=='undefined')?G.tech:null;
 //   ⚠ 에테리얼은 **동력탑이 먼저**다(동력장 없이는 차원문을 못 짓는다) — 그래서 순서가 종족마다 다르다.
 //   ⚠ 스웜은 보급이 건물이 아니라 유닛(수송충)이라 둘째 칸이 없다 — null 이면 그 단계는 저절로 넘어간다.
 const TUTO_BLD = {
-  // ⛔ 유니온의 둘째 칸은 **비워 둔다** — 캠프의 보급소는 3만이다(campSupplyCost · 30000×1.2^n).
-  //   튜토리얼 초반에 손으로 모을 수 있는 돈이 아니다(실측: 목표가 30,150 으로 잡혔다).
-  //   인구는 환생 트리로도 올라간다 — 보급소는 한참 뒤의 일이라 첫 안내에서 뺀다.
+  // ⛔ 유니온의 둘째 칸은 **비워 둔다**.
+  //   ⚠ 옛 이유(「보급소가 3만이라 튜토리얼에 못 넣는다」)는 **2026-09-11 에 사라졌다** —
+  //     첫 채가 **5,000** 이 됐다(`CAMP_SUPPLY_FIRST` · BALANCE §5-16). 이제 모을 수 있는 돈이다.
+  //   그래도 안 넣는다: 튜토리얼은 **아주 기본만**이고(26 → 17단계로 줄인 결정), 인구 상한은
+  //   「인구수가 부족합니다」가 화면에서 말해 준다. ⇒ 넣고 싶으면 **그 결정을 먼저** 할 것.
   union:     { b:['barracks',null],     u:'barracks' },
   aetherial: { b:['pylon','gateway'],   u:'gateway'  },
   swarm:     { b:['pool',null],         u:'hatchery' },

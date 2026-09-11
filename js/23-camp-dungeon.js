@@ -126,8 +126,15 @@ const CAMP_FOE_TOWER_CD  = 1.0;          // 발사 간격(초)
 //   ⛔ 「시간이 지나면 적이 세진다」로 만들지 말 것 — 방치형에서 그건 「안 보면 손해」다(§2-5).
 //     이건 시간이 아니라 **내가 깬 것**에 반응하므로 방치해도 손해가 없다.
 //   ⚠ 두 표는 단계(step 1~6)로 읽는다 — 배열 인덱스는 step−1.
-const CAMP_FOE_RELAY_S = [3.4, 3.0, 2.7, 2.4, 2.1, 1.8];   // 단계별 스폰 주기(초) — 짧아진다
-const CAMP_FOE_RELAY_N = [2, 2, 3, 3, 4, 5];               // 단계별 한 무리 마리 수 — 늘어난다
+//   ⏳ **한 번에 많이 · 주기는 길게** (2026-09-10 사용자 확정) — 무리 사이에 **틈**이 있어야 한다.
+//     ⛔ 옛 값(2~5마리 / 1.8~3.4초)은 **틈이 없는 흐름**이었다. 적이 늘 사거리에 있으니 아군이
+//       건물을 영영 못 쳤고(본진 60초에 이론 화력의 2%), 그걸 「건물부터 친다」는 우회로 덮었다.
+//     ⭐ 지금은 리듬으로 푼다: **몰려온다 → 다 잡는다 → 그 틈에 벽을 친다.**
+//       무리를 정리하고 남는 시간이 곧 공성 시간이라, 「우리 화력이 무리를 제때 잡는가」가
+//       그 관문의 물음이 된다 — 못 잡으면 적이 쌓여 틈이 사라지고, 그때가 물러날 때다.
+//     ⚠ 초당 유입은 옛 값과 비슷하되 **뒤로 갈수록 완만**하다(0.50 → 1.64 · 옛 0.59 → 2.78).
+const CAMP_FOE_RELAY_S = [16, 15, 14, 13, 12, 11];         // 단계별 스폰 주기(초) — 조금씩 짧아진다
+const CAMP_FOE_RELAY_N = [8, 10, 12, 14, 16, 18];          // 단계별 한 무리 마리 수 — 한 번에 몰려온다
 // 🧯 **전장 적 상한 — 「죽음의 나선」을 끊는 유일한 장치** (2026-09-09 사용자 지적)
 //   ⛔ 상한이 없으면 **못 이기는 판은 반드시 지는 판**이 된다: 죽이는 속도가 나오는 속도보다
 //     느린 순간부터 적이 무한히 쌓이고, 그 뒤로는 무엇을 해도 전멸한다. 병력이 약한 초반이
@@ -146,7 +153,9 @@ const CAMP_FOE_RELAY_N = [2, 2, 3, 3, 4, 5];               // 단계별 한 무�
 //     ⭐ 지금은 ×1.6 — 총 전력이 ×11.5 로 사다리와 같은 자를 쓴다.
 //     ⭐ 그리고 **첫 칸을 10 → 16 으로 올렸다**: 초반에 적이 너무 적어 「몰려온다」가 없었고,
 //       적을 죽여 버는 돈(마린키우기의 고리)도 그만큼 얇았다.
-const CAMP_FOE_LIVE_MAX = [16, 18, 20, 22, 24, 26];        // 단계별 전장에 동시에 살아 있을 수 있는 적
+//   ⚠ **한 무리보다 넉넉해야 한다**(2026-09-10) — 상한이 무리 크기에 가까우면 남은 적이 몇만 있어도
+//     다음 무리가 통째로 건너뛰어져 리듬이 들쭉날쭉해진다. 무리의 두 배쯤 둔다.
+const CAMP_FOE_LIVE_MAX = [18, 22, 26, 30, 34, 38];        // 단계별 전장에 동시에 살아 있을 수 있는 적
 const CAMP_FOE_SPAWN_R   = 26;           // 건물 둘레로 흩는 반경 — 한 점에서 겹쳐 나오면 끼인다
 const CAMP_FOE_SPAWN_OFF = 18;           // 건물보다 내 쪽으로 이만큼 — 건물 안에서 안 나오게
 // ⚡ **보급고** — 진행에 안 세지만 깨면 일시 버프. ⭐ 「지금 들러서 힘 받고 갈까」가 생긴다.
@@ -178,8 +187,39 @@ const CAMP_FOE_SEE_T = 0.35;             // 다시 보는 간격(초) — 매 �
 function campBroken(){ const C = (typeof campState === 'function') ? campState() : null;
   if(!C || !((C.dg | 0) > 0)) return 0;
   return Math.max(0, Math.min(CAMP_DG_STEPS, C.broken | 0)); }
-// 그 던전의 표. 무한층(단계 3)은 아직 없으므로 범위 밖은 null.
-function campDgDef(dg){ const n = dg | 0; return (n > 0 && n < CAMP_DG.length) ? CAMP_DG[n] : null; }
+// ══ ♾ 무한층 — 던전 셋 위로 끝없이 이어진다 (2026-09-11 · 단계 3) ═════════════
+//
+// ⭐ **표를 새로 쓰지 않는다.** 무한 n층은 던전 셋 중 하나를 **그대로 빌려** 쓰고(종족 순환)
+//   자리만 씨앗이 흔든다. 그래서 커리큘럼·기믹(공중·동력탑)이 층마다 돌아가며 나온다.
+//   ⛔ 무한층 전용 건물 표를 만들지 말 것 — 표가 둘이 되면 던전을 고칠 때마다 한쪽이 뒤처진다.
+//
+// ⭐ **난이도는 사다리를 그대로 잇는다** — 한 층이 던전 하나와 같은 계단이다(관문 여섯 ×7.17).
+//   ⛔ 무한층 전용 배율(CAMP_INF_R 류)을 새로 두지 말 것: 두 개의 자가 생기면
+//     「던전 3 끝」과 「무한 1층 시작」 사이에 설명할 수 없는 턱이 생긴다.
+//
+// 🧗 **한 층을 깨면 곧바로 다음 층이 선다**(캠프로 안 돌아온다).
+//   ⚠ 던전 1~3 의 ⛔「완주하면 캠프로」와 **다른 규칙이다** — 그 셋은 커리큘럼이라 집에 들러
+//     전리품을 쓰고 다시 온다. 무한층은 **등반**이라 「어디까지 버티나」가 전부다.
+//   ⭐ 그래서 환생의 「지금 끊을까, 한 층 더 갈까」가 여기서 생긴다(환생 포인트 = 도달 깊이).
+//
+// ⚠ **값 둘은 안 쟀다**: `CAMP_INF_COIN`(층당 코인)과 무한층 보상 배수(campMineDef 의 외삽).
+const CAMP_INF_COIN = 12;                // 무한 n층을 깨면 코인 n × 이 값 — ⛔ 새 재화를 만들지 않는다
+const CAMP_INF_DESC = '끝이 없다 — 한 층이 던전 하나만큼 세진다';
+let _campInfDefs = {};                   // 층마다 만든 표를 재사용(매 프레임 Object.assign 을 피한다)
+// 그 dg 가 무한 몇 층인가(던전이면 0)
+function campInfN(dg){ const n = dg | 0, mx = CAMP_DG_MAX_N; return n > mx ? n - mx : 0; }
+// 그 층이 빌려 쓰는 던전 번호(1~3) — 종족이 순환한다
+function campInfBase(dg){ const f = campInfN(dg);
+  if(f <= 0) return Math.max(1, Math.min(CAMP_DG_MAX_N, dg | 0));
+  return ((f - 1) % CAMP_DG_MAX_N) + 1; }
+function campInfDef(dg){ const f = campInfN(dg); if(f <= 0) return null;
+  if(_campInfDefs[dg]) return _campInfDefs[dg];
+  const src = CAMP_DG[campInfBase(dg)];
+  const d = Object.assign({}, src, { name:'무한 ' + f + '층', inf:f, desc:CAMP_INF_DESC });
+  _campInfDefs[dg] = d; return d; }
+// 그 던전의 표. ♾ 표 밖은 무한층이다(위).
+function campDgDef(dg){ const n = dg | 0; if(n <= 0) return null;
+  return (n < CAMP_DG.length) ? CAMP_DG[n] : campInfDef(n); }
 function campDgName(dg){ const d = campDgDef(dg); return d ? d.name : '캠프'; }
 // 그 종족의 건물 표에서 한 채를 찾는다 — 이름·아이콘을 거기서 가져온다(새 에셋을 만들지 않는다).
 function campFoeBldDef(race, k){
@@ -333,9 +373,9 @@ function campBreakBld(b){
     if(typeof campNote === 'function') campNote('broken', 1);   // 🧭 가이드 — 진행 건물을 하나 부쉈다
     if(!C.best) C.best = {};
     C.best[C.dg] = Math.max(C.best[C.dg] | 0, C.broken);    // 룬 칸·환생이 읽는 「최고 도달」
-    // 🩹 **체크포인트 부활** — 옛 「라운드 시작」의 자리다. 누운 병력이 일어나고 체력이 찬다.
+    // 🩹 **관문 보상 = 전체 회복** — 옛 「라운드 시작」의 자리다. ⛔ 부활은 없다(2026-09-10).
     if(typeof campRescaleMine === 'function') campRescaleMine();   // 🏛 내 기지도 그 관문의 자로
-    if(typeof campRoundRevive === 'function') campRoundRevive();
+    if(typeof campHealAll === 'function') campHealAll();
     if(typeof campSay === 'function'){
       const nx = campFoeActive();                          // 이어받을 다음 건물(없으면 이 던전 끝)
       campSay('🏚 ' + (b.nm || '건물') + ' 파괴 — ' + C.broken + '/' + CAMP_DG_STEPS
@@ -394,11 +434,14 @@ function campFoeSpawnTick(dt){
   CAMPB._fspT = (CAMPB._fspT || 0) - dt;
   if(CAMPB._fspT > 0) return 0;
   const i = campFoeStepIdx(act);
+  const n = CAMP_FOE_RELAY_N[i] | 0;
   // 🧯 상한에 닿았으면 안 보낸다 — ⛔ 이 줄을 빼면 못 이기는 판이 반드시 지는 판이 된다(위 설명).
   //   ⚠ **대기 중인 무리도 센다**(_wq) — 안 세면 큐에 쌓아 두었다가 한꺼번에 쏟아진다.
+  //   ⚠ **무리 전체가 들어갈 자리**를 본다(2026-09-10). 「한 마리라도 들어가나」로 재면
+  //     무리가 커진 지금(8~18마리) 상한을 **최대 무리−1 만큼 넘긴다**(실측 24 > 18).
+  //   ⭐ 통째로 미루는 것이 리듬에도 맞다 — 전장이 어느 정도 비어야 다음 무리가 온다.
   { const live = campFoeLive(), pend = campFoePendN();
-    if(live + pend >= (CAMP_FOE_LIVE_MAX[i] | 0)){ CAMPB._fspT = CAMP_FOE_RELAY_S[i]; return 0; } }
-  const n = CAMP_FOE_RELAY_N[i] | 0;
+    if(live + pend + n > (CAMP_FOE_LIVE_MAX[i] | 0)){ CAMPB._fspT = CAMP_FOE_RELAY_S[i]; return 0; } }
   CAMPB._fspT = CAMP_FOE_RELAY_S[i];
   if(!CAMPB._wq) CAMPB._wq = [];
   CAMPB._wq.push({ n:n, x:act.x, y:act.y, ids:act.spawn || null });
@@ -528,9 +571,16 @@ function campDgTimerReset(dg){
 //     ⛔ 「라운드를 골라 들어간다」로 되돌리지 말 것: 관문은 건물이고 중간 진입이 없다.
 function campEnterDungeon(dg){
   const C = (typeof campState === 'function') ? campState() : null; if(!C) return 0;
-  const mx = (typeof CAMP_DG_MAX !== 'undefined') ? CAMP_DG_MAX : CAMP_DG_MAX_N;
-  const n = Math.max(0, Math.min(mx, dg | 0));
+  // ♾ 위쪽 한계가 없다(무한층) — 어디까지 갈 수 있나는 `campDgOpen` 이 정한다(12-appshell).
+  const n = Math.max(0, dg | 0);
   C.dg = n; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
+  // 🗄 여기 있던 **「관문 n채를 부순 채로 시작」**(옛 환생 트리 `dgStart`)은 없앴다(2026-09-11).
+  //   메인의 환생 강화에도 `dgStart` 가 있지만 **다른 것**이다 — 그쪽은 「던전 n까지 **열어 준다**」
+  //   이고 이쪽은 「던전 안의 관문을 건너뛴다」였다. 두 벌을 메인 쪽으로 합치면서 이쪽을 접었다.
+  //   ⚠ 잰 값은 남겨 둔다(BALANCE §5-17 ①): 관문 2채(=33%)를 건너뛰어도 클리어는 **14%만** 줄었다
+  //     — 릴레이가 관문 3 부터 돌아 적이 더 세기 때문이다. 되살릴 일이 생기면 그것부터 볼 것.
+  //   ⛔ 되살리더라도 `C.broken` 숫자만 올리지 말 것 — 릴레이는 **실제로 죽은 건물**(`C.foeDead`)을
+  //     보므로 난이도는 관문 n 인데 웨이브는 관문 1 짜리가 된다(실측으로 겪었다).
   // 🎲 원정마다 새 배치 — 같은 원정 안(저장·복원)에서는 같은 씨앗이라 자리가 안 바뀐다
   if(n > 0) C.foeSeed = campFoeNewSeed();
   C.cleared = 0; C.rnd = 1;                       // 🧷 옛 값 — 저장 호환용으로만 남긴다

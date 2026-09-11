@@ -2,7 +2,7 @@
 
 > *왜*는 `GAME_DIRECTION.md` §0-A · 이 문서는 **어떤 순서로 무엇을 고치나**.
 > ⛔ 코드는 아직 안 건드렸다. 승인되면 이 순서대로 간다. 단계마다 `npm test` 초록이 조건이다.
-> ⚠ 값(적 체력 계단·환생 관문·2차 트리 가격)은 **전부 임시**다 — 단계 0의 자로 재고 BALANCE 에 적는다.
+> ⚠ 값(적 체력 계단·환생 관문·환생 트리 가격)은 **전부 임시**다 — 단계 0의 자로 재고 BALANCE 에 적는다.
 
 ## 0. 한 장 요약
 
@@ -10,9 +10,9 @@
 |---|---|---|---|
 | **0** | 자(尺) — 벤치가 「건물 몇 채 · 몇 분」을 말하게 | 그대로 올린다 | 작다 |
 | **1** | 🏰 적 기지 + 라운드 폐지 + 종족 선택 제거 + 재미 넷 | **한 덩어리로**(반쯤은 두 체계가 공존한다) | **크다** |
-| **2** | 🔁 환생 2층(2차 환생 · 트리 · 배수 규칙) | 그대로 | 중 |
+| **2** | 🔁 환생 트리(갈래 넷 · 배수 규칙) ✅ **끝남**(2026-09-11) | 그대로 | 중 |
 | **3** | ♾ 무한층 + 무한 포인트 | 그대로 | 중 |
-| **4** | 🧬 종족 변이(2차 환생 때 고르기) | 2 뒤에 | 작다 |
+| **4** | 🧬 종족 변이(환생 때 고르기) | 2 뒤에 | 작다 |
 | — | 유즈맵 구역 업그레이드 · 비동기 습격 | **자리만** | — |
 
 ## 지금 코드가 정하는 것 (조사 결과 · 2026-09-09)
@@ -22,7 +22,7 @@
 - 라운드는 `C.cleared` 하나. 입구 `campClearRound()` · 읽기 `campRoundN()` `campCleared()` · 난이도 `campFoeDiff(dg, cleared)` · 보상 `campMineMul()`(cleared 로 오른다) · 부활 `campRoundRevive()` · 포인트 `campRebPtGain()`(√번돈 × 1.35^던전 × 1.012^라운드) · 관문 `campCanRebirth()`(누적 100만) · 룬 칸 `campRuneBestRound()` · 칩 `curPaintChip()` · 던전 선택 `campDropRender/campRndTap`(12-appshell 280~375).
 - 패배 = 본부 파괴 → `campFail()`(dg=0 · cleared=0) → `campBattleClose()`. **전멸은 패배가 아니다**(누운 유닛 `_down` 이 라운드 시작에 일어난다).
 - 종족: `campEnter()` 가 `C.race` 없으면 `campRaceSheet()`(#campRaceOv) → `campPickRace` → `campRaceToCamp`(검은 판 + `tutoKick`).
-- 적 종족: `campFoeRace(dg)` = `CAMP_DG_RACE[hbDun(dg).race]` → `STK_RACES` 키(terran/zerg/protoss). `HB_DUNGEONS`(08-hunt · 10개)가 이름·타일·종족을 준다.
+- 적 종족: `campFoeRace(dg)` = `CAMP_DG_RACE[hbDun(dg).race]` → `STK_RACES` 키(terran/zerg/protoss). `HB_DUNGEONS`(08-ui-parts · 10개)가 이름·타일·종족을 준다.
 - ⚠ **종족 키가 두 벌이다**(계획 초안의 오류를 정정): 건물 표 `TECH_TREE` 는 **`union`·`swarm`·`aetherial`**,
   전투 엔진 `STK_RACES` 는 **`terran`·`zerg`·`protoss`**. 잇는 함수는 `campTechRace(r)`(→ `stkTechRace`).
   ⛔ `TECH_TREE['terran']` 은 **없다** — 적 기지 표는 `TECH_TREE[campTechRace(race)]` 로 읽어야 한다.
@@ -100,7 +100,7 @@ const CAMP_DG = [
 ⚠ **값(체력·전리품 양·탑 화력)은 안 정했다.** 단계 0 의 자로 D1 부터 맞추고 D2·D3 은 그 배수로 시작한다.
 - `k` 는 **`TECH_TREE[race].buildings` 의 키**다(그림·이름을 거기서 가져온다 — 새 에셋 없음). 종족마다 키가 다르므로 표는 종족별로 쓴다.
 - ⚠ 좌표는 **격자 비율**(내 기지 `campG2W` 와 같은 변환) — 화면과 어긋나지 않게. 적 기지는 격자 **위 절반**(지금 적이 내려오는 레인 `CAMP_LANE_TOP=0.18` 부터).
-- `HB_DUNGEONS`(08-hunt) 는 **읽지 않는다** — `hbDun`/`CAMP_DG_RACE` 의존을 끊고 `CAMP_DG` 가 단일 소스. 08-hunt 는 마을 때문에 그대로 둔다.
+- `HB_DUNGEONS`(08-ui-parts) 는 **읽지 않는다** — `hbDun`/`CAMP_DG_RACE` 의존을 끊고 `CAMP_DG` 가 단일 소스. ⚠ 2026-09-10 에 `08-hunt.js` 는 없어졌고 그 표만 `js/08-ui-parts.js` 에 남았다.
 - ⭐ **적 기지는 이 표에서 「만든다」**(`campFoeBase(dgDef)`) — 나중에 남의 캠프(`G.tech.ents` 스냅샷)도 같은 함수에 넣을 수 있게 **입력을 표 하나로** 받는다.
 
 ### 1-B. 상태 — `C.cleared` → `C.broken`
@@ -162,7 +162,7 @@ function campDgTimerTick(dt)         // 🎁 타이머 — dg>0 이고 전장이
 | 맵 띠 `#campBar` | 적 수 · 피버 | 그대로 + **다음 표적 이름**(`campFoeFront().bk`) 한 칸 |
 | 적 건물 탭 | — | 기지 맵에서 적 건물을 누르면 `C.foeTgt=eid`(고르기). 프로필 시트는 **`techBldgPlainModel` 재사용**(단일 소스 규칙) — 「공격 대상」 카드 하나 |
 | 종족 선택 `#campRaceOv` | 첫 진입에 뜬다 | **뜨지 않는다** — `campEnter` 가 `C.race='terran'` 을 박는다. 마크업·CSS·`campRaceSheet/campPickRace/_campRacePick` → **다락**. `campRaceToCamp` 의 검은 판 전환은 **첫 진입 연출**로 남긴다(`tutoKick` 이 거기 걸려 있다) |
-| 룬 칸 해금 | `campRuneBestRound`(라운드 환산) | `campRuneBestStep()` = max((dg−1)×6 + best[dg]) · `RUNE_SLOT_R` 을 **0~18 눈금**으로 다시 적는다(GEM.md §8-3 갱신) |
+| 룬 칸 해금 | ~~`campRuneBestRound`(라운드 환산)~~ | ✅ **2026-09-11 완료 — 자가 「통산 최고 레벨」로 갔다**: `campRuneBestLv()` → `campBestLevel()`(`C.lvBest` · 되감기지 않는다) · 표 `RUNE_SLOT_LV`(일반 Lv.1~26 · 유니크 Lv.9/18/27) · ⛔ 관문 눈금(0~18)으로 되돌리지 말 것 — 한 바퀴에 27칸이 다 열린다 |
 | 환생 화면 `.crFx` | 재화×던전×라운드 | 재화 → **도달**(아래 1-F) · 라운드 → 건물 |
 
 #### 1-E 진행 (2026-09-09 · 화면을 실제 게임에 얹었다)
@@ -176,7 +176,7 @@ function campDgTimerTick(dt)         // 🎁 타이머 — dg>0 이고 전장이
 | 적 건물 탭 → 프로필 → 「공격 대상」 카드 → `C.foeTgt` | ✅ 탭은 들여다보기(`_foeSel`) · 지정은 카드 |
 | 종족 선택 제거 | ✅ 유니온 고정 · 옛 화면은 다락(ATTIC §5-D) · 첫 진입 연출은 그대로 |
 | 환생 화면 `.crFx` 라벨 | ✅ 「× 건물」 |
-| 룬 칸 해금 눈금 | ⚠ `campRuneBestRound` 는 6단 환산으로 바뀌어 있음 · `RUNE_SLOT_R` 표(0~16)가 새 눈금(0~18)에 맞는지는 **안 봤다** |
+| 룬 칸 해금 눈금 | ✅ 2026-09-11 해결 — 레벨 축으로 옮겼다(위 표) · ⚠ 다만 **문턱 값은 안 쟀다** |
 
 ⚠ 값(뷰 비율 0.45 · 표식 크기)은 헤드리스 실측이다 — 실기에서 한 번 볼 것.
 
@@ -198,27 +198,81 @@ function campDgTimerTick(dt)         // 🎁 타이머 — dg>0 이고 전장이
 
 ---
 
-## 단계 2 — 🔁 환생 2층
+## 단계 2 — 🔁 환생 2층  ⏳ **뼈대·트리·값 두 갈래까지 됨**(2026-09-11)
+
+> **된 것**: 상태(`C.reb2`/`reb2Pts`/`rb2Tree`) · 조건(D3 완주) · 실행(`campRebirth2`) · 포인트(도달 관문) ·
+> 배수 합 규칙 · 트리 4갈래 데이터 · **공용 별자리 렌더러 재사용**(`campRtLines()`/`campRtBRs()` 스위치) ·
+> 소비처 **기본 배수 · 상한 해제**(`campCap`) · 화면(환생 구역 넷째 칸) · 스모크.
+> **그 뒤(2026-09-11)**: ① **스킵**(던전 시작 지점 · 시작 자원) ② **자동화**(자동 일꾼 · 자동 연구)
+> ④ 값 실측 — 트리 전부 **39점** · 한 바퀴 18점이라 **두세 바퀴에 완성**된다.
+> **남은 것**: ③ **1차(성장) 트리 단순화·가격 하향**(사용자와 표를 새로 짜야 한다) ·
+> 🤖 **자동 유닛 구매·자동 건설**(앞엣것은 on/off 스위치가, 뒤엣것은 자리 찾기가 필요하다) ·
+> 🧬 **종족 구간 생략·시작 구성 바꾸기**(단계 4 종족 변이 뒤) ·
+> 📊 자동화가 **사람보다 잘하지 않는지** 실측(지금은 안 쟀다).
+
+> 🚨 **2026-09-11 개정 — 2층이 아니라 「레벨 + 환생 하나」다**(사용자 확정 · `GAME_DIRECTION.md` §0-A 「새 뼈대」).
+> 1차 환생을 없애고 그 자리에 **레벨**을 넣었다. 아래 표의 `reb2`/`rb2Tree` 이름은 **옛 계획**이다 —
+> 지금은 `C.reb`/`C.rebMul` 하나뿐이고, 1차 트리로 부르던 `C.rbTree` 는 **레벨 포인트로 사는 성장 트리**다.
+>
+> | | 2026-09-11 현재 |
+> |---|---|
+> | ✅ 끝남 | **레벨 축**(`C.lv`·`C.xp`·`C.lvPts` · `campAddXp`) · **성장 트리를 회차 크기로**(차수 1 · 43노드 · 83점 · BALANCE §5-11) · **환생의 자를 「도달 깊이」로**(관문 = 마지막 던전 클리어 · 포인트 = 통산 관문 수 · 배수 = 1 + 횟수) · **환생 강화**(`CAMP_REB_UPG` · 갈래 셋 · 항목 넷 · 화면 `#rebUpgScreen`) |
+> | ⏳ 남음 | 경제 실측(`CAMP_DEV_START_MIN` 을 0 으로 먼저) · 환생 강화 **항목끼리의 값 순서** · 「시작 구성 바꾸기」(닿는 데를 먼저 만들어야 한다) |
+> | ✅ 2026-09-11 | 🔧 `CAMP_RT_PTS_FREE` **껐다** + 📏 **실측**(BALANCE §5-12): 한 회차 Lv.17·16점 · 트리 82점 · 환생 강화 469점 · 룬 칸 문턱 확인 |
+> | ✅ 2026-09-11 | 환생 강화 **일곱 줄로**(+ 자리 비움 상한 · 자동 강화 · 자동 원정) · 🚫 트리와 겹치는 셋(보급소 상한·오프라인 배수·시작 자원)은 **안 넣는다**로 확정 |
+> | ✅ 2026-09-11 | ♾ **무한층**(단계 3) — 던전 셋 위로 끝없이 · 한 층 = 던전 하나의 계단 · 기록 `C.infBest` |
+> | ✅ 2026-09-11 | 🏆 **룬 칸 해금을 레벨로** — `RUNE_SLOT_LV` + 되감기지 않는 `C.lvBest`(`campBestLevel`) |
+> | ⚠ 안 쟀다 | `CAMP_XP_KILL`·`CAMP_XP_A`·`CAMP_XP_R` · 트리 사다리 넷 · 환생 강화 값(`max`·`c0`·`cr`) — 근거는 「요구량 배수 > 관문 평균」 하나뿐(BALANCE §0) |
+>
+> ⛔ 「1차 환생」을 되살리지 말 것. ⛔ 트리를 환생 뒤에 남기지 말 것(그러면 옛 1차 환생이 이름만 바꾼 것이 된다).
+
+
+> 🗄 **아래 표는 폐기됐다**(2026-09-11) — 메인이 같은 단계를 **제 방식으로 먼저 끝냈고**
+> (`3faf2ac` 환생 강화 `CAMP_REB_UPG` · `560d97f` 무한층), 사용자가 **메인 쪽으로 합치라고** 했다.
+> 이 가지가 만든 별자리 트리(`CAMP_RBT_LINES` 등)는 전부 지웠다. 남아서 옮겨 간 것은
+> **자동 일꾼·자동 연구** 둘뿐이고, 지금은 `CAMP_REB_UPG.autoWk`/`.autoRes` 다.
+> ⚠ 잰 값은 BALANCE §5-17 에 그대로 둔다(엔진을 잰 것이라 껍데기가 바뀌어도 같다).
+>
+> <details><summary>지운 설계(기록용)</summary>
+>
+> ✅ **2026-09-11 에 끝났다.** 아래 표는 **만들고 난 뒤의 모습**이다(계획이 아니라 기록).
+> ⚠ 도중에 메인이 환생을 **한 층**으로 합쳐서(`4e82de1`), 여기 적혀 있던 「2차 환생」 실행 경로는
+> 통째로 지웠다 — 같은 것이 두 벌이 되기 때문이다. **남은 것은 트리 넷**이고, 그 트리가
+> 메인의 환생 포인트(`C.rbPts`)를 쓴다.
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | `C.reb2`(횟수) · `C.reb2Pts` · `C.rb2Tree` · `C.infBest`(단계 3) |
-| 배수 | **`campRebMul()` = 1 + C.reb2 + C.rebMul`** — 2차 첫 번은 기본 ×2(=1+1), 그 뒤 +1씩 · 1차 `rebMul` 은 2차 환생 때 **0 으로**. ⛔ 곱 없음 |
-| 조건 | `campCanRebirth2()` = D3 완주(`C.dgDone[3]`) — 단계 3 뒤엔 「무한층 진입」과 같은 뜻 |
-| 실행 | `campRebirth2()`: `keep = {race?, rune, reb2+1, reb2Pts+got, rb2Tree, best?, dgT.best}` · **`rbTree` 와 `rebMul` 을 비운다** · `campRunReset` · 종족은 단계 4 |
-| 트리 | `CAMP_TREE2` = 갈래 넷(스킵 `skip` · 자동화 `auto` · 기본 배수 `base` · 상한 `cap`) · 렌더는 **`campTreeSvg(model)`** 에 모델을 넘겨 재사용(⛔ 두 번째 트리 렌더러 금지 · `CAMP_TREE_BR` 색 표에 넷 추가) · 화면은 `campRebEnter('tree2')` — 네비 「환생」 하위 세 번째 칸 |
-| 소비처 | `skip.dgStart` → `campEnterDungeon` 시작 broken · `skip.startRes` → `campFreshStart` · `auto.buy/build/research` → `__CB` 와 같은 규칙을 **게임 안에** 옮긴다(`campAutoTick` · 벤치 정책과 단일 소스로 — 벤치가 그 함수를 부르게) · `cap.worker/supply/unitR` → `CAMP_WORKER_MAX`·`CAMP_SUPPLY_MAX`·`CAMP_UNIT_R` 을 **함수**로(`campCap('worker')`) |
-| 1차 트리 | 단순화·가격 하향 — **별도 결정**(표를 새로 짜야 한다 · 사용자와) |
-| 테스트 | 배수 합 규칙(곱이면 실패) · 2차 환생이 1차 트리를 비운다 · 룬은 남는다 · 관문 완화 항목이 트리에 **없다**(스모크가 이름을 잰다) |
+| 상태 | `C.rbPts`(환생 포인트 · 메인) · **`C.rebTree`**(환생 트리 자루 · 환생을 넘어 남는다) · `C.infBest`(단계 3) |
+| 배수 | **`campRebMul()` = 1 + `C.rebMul`(환생 횟수 몫) + `campRbtVal('rebMul')`(트리 몫)**. ⛔ 곱 없음 |
+| 조건 | `campCanRebirth()` = `campRebDepth() >= campRebNeed()`(마지막 던전 클리어) — 단계 3 뒤엔 「무한층 진입」과 같은 뜻 |
+| 실행 | `campRebirth()`(메인) — keep 에 **`rebTree` 를 더했다**(환생 포인트로 산 것이라 되감기면 안 된다) · 성장 트리 `rbTree` 는 `campRunReset` 이 비운다 |
+| 트리 | **`CAMP_RBT_LINES`**(계열 8) + **`CAMP_RBT_BR`**(갈래 넷: 기본 배수 `base` · 상한 `cap` · 스킵 `skip` · 자동화 `auto`) · 렌더러는 **하나**다 — `campRtLines()`/`campRtBRs()` 가 표만 갈아 끼운다(`campWithRebTree`) · 화면은 `campRebEnter('rbtree')` — 네비 「환생」 하위 **세 번째 칸** |
+| 자리 | 갈래 넷을 **90° 씩** 벌린다(`base` ↑ · `cap` → · `skip` ↓ · `auto` ←). ⚠ 성장 트리(갈래 셋)의 각을 베끼고 넷째만 더했더니 `-0.48π` 와 `1.52π` 가 같은 방향이라 **둘이 겹쳐 그려졌다**(2026-09-11 실측 · 스모크가 사이 간격을 잰다) |
+| 값 | 등급이 정한다(`CAMP_RT_GRADE`) — 전부 사는 값 **37점**, 한 바퀴가 18점이라 **두세 바퀴**. ⛔ `cs` 손값 금지 |
+| 소비처 | `dgStart` → `campEnterDungeon` 이 **`C.foeDead` 에 찍는다**(⛔ `C.broken` 만 올리면 릴레이가 관문 1 짜리로 남는다 · 실측) · `startRes` → `campFreshStart` · `autoWk`/`autoRes` → `campAutoTick`(캠프 시계 · 주기 2초에 하나씩 · `campAutoQuiet`) · `capWk`/`capSup`/`capUnitR` → **`campCap()`** 하나가 단일 소스 |
+| 🔒 누수 | 효과 함수 넷(`campRtMul`·`campRtCut`·`campRtFoeMul`·`campRtNodeAdd`)은 `campWithGrowTree` 로 못 박혀 있다 — 안 박으면 환생 트리를 보는 동안 캠프 배수가 통째로 1 이 된다(경제가 계속 돈다) |
+| 성장 트리 | 단순화·가격 하향은 **메인이 먼저 했다**(`85ce3da` A안 · 차수 폐지 · 값 = 등급) — 여기서 다시 하지 않는다 |
+| 테스트 | 스모크 「환생 트리: 지갑은 환생 포인트 · 배수는 합 · 갈래 넷이 안 겹친다 · 스위치가 안 샌다」 — 옛 `campRebirth2`·`campReb2*` 가 되살아나는 것도 함께 잰다 |
 
-## 단계 3 — ♾ 무한층
-- `C.dg >= 4` = 무한층 n=dg−3. `campFoeBase()` 에 **생성기**: 세 표 중 하나(종족 순환) + 좌표 흔들기(씨앗 = n) · 난이도 `campFoeDiff(3, 6) × CAMP_INF_R^n`(계단은 6 그대로).
-- 무한 포인트 `C.infPts += CAMP_INF_PT × n`(층 클리어 때) · 최고기록 `C.infBest`. 칩 「무한 7층 · 건물 2/6」.
-- 유즈맵 구역 업그레이드: **자리만** — `C.umUpg={}` · 화면·표 없음.
-- 테스트: 층이 끝없이 이어진다 · 같은 층은 같은 배치(씨앗) · 포인트가 층에 비례.
+### ⏳ 단계 2 에서 **안 한 것**
+- **자동 유닛 구매 · 자동 건설** — 앞엣것은 플레이어의 미네랄을 다퉈 on/off 스위치가 있어야 하고,
+  뒤엣것은 자리 찾기가 붙는다. ⛔ 스위치 없이 넣지 말 것.
+- **값 실측** — 유닛 반복 구매 배수(1.30→1.24)·시작 자원(50,000)은 눈금 위에 올린 **출발점**이다.
+- **`CAMP_RT_PTS_FREE` 끄기** — 켜져 있는 동안 지갑 갈림은 스모크가 건너뛴다.
+
+</details>
+
+## 단계 3 — ♾ 무한층 ✅ **2026-09-11 완료**
+- `C.dg > CAMP_DG_MAX` = 무한 n층(`campInfN`). 표는 `campInfDef` 가 **`CAMP_DG` 를 빌린다**(종족 순환) — ⛔ 전용 표를 만들지 않았다.
+- 난이도는 `campFoeDiff` 가 **그대로 이어진다**(한 층 = 관문 여섯의 곱 ×7.17) — ⛔ `CAMP_INF_R` 같은 두 번째 자를 두지 않았다(턱이 생긴다).
+- 보상은 `campMineDef` 가 `CAMP_MINE` 밖을 외삽한다(×5.83) — **난이도보다 느린 것이 벽**이다.
+- 🧗 한 층을 깨면 **곧바로 다음 층**(캠프로 안 돌아온다) · 최고기록 `C.infBest`(안 되감긴다) · 칩 「무한 7층 · 2/6」.
+- 🪙 보상은 **코인 하나**(`PLAYER_META.coins` = 유즈맵 강화 지갑) — ⛔ 무한 포인트라는 새 재화를 만들지 않았다.
+- 🔓 문은 **마지막 던전 클리어**(환생 관문과 같은 자) · 던전 선택에 **줄 하나**(`.cdRow.inf`).
+- ⚠ 값 둘은 **안 쟀다**: `CAMP_INF_COIN`(12) · 보상 외삽 비.
 
 ## 단계 4 — 🧬 종족 변이
-- 2차 환생 실행 화면에 종족 띠(**`segNavHTML(CAMP_RACE_ORDER)`** — ⛔ 옛 `#campRaceOv` 되살리지 않는다) · 첫 바퀴는 유니온 고정(`C.reb2===0`).
+- 환생 실행 화면에 종족 띠(**`segNavHTML(CAMP_RACE_ORDER)`** — ⛔ 옛 `#campRaceOv` 되살리지 않는다) · 첫 바퀴는 유니온 고정(`C.reb===0`).
 - `campTechRace` · `TECH_TREE[race]` 는 이미 종족별이라 전투·생산은 그대로. ⚠ 스웜·에테리얼 **캠프 값 표**(`CAMP_UNIT_PRICE` 등)가 유니온만 있다 — 일률 배수(`CAMP_UNIT_PRICE_MUL`)로 시작하고 값은 단계 0 자로.
 
 ---

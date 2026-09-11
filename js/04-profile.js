@@ -45,7 +45,6 @@ const PROF_GEAR={
 };
 // 페이퍼돌 페이지 — 장비와 장신구를 섞지 않는다(한 페이지엔 자기 part만).
 const PROF_GEAR_PAGES=[{id:'armor',name:'장비'},{id:'acc',name:'장신구'}];
-function profPageSlots(pg){ return Object.keys(PROF_GEAR).filter(k=>PROF_GEAR[k].part===pg); }
 // 슬롯 라인아트 글리프(자체 제작 · viewBox 24) — 이모지 대신 이걸 쓴다.
 // 각 장비가 한눈에 구분되도록 특징부(투구 바이저 · 벨트 버클 · 검 손잡이 · 방패 문양 …)까지 그린다.
 const PROF_SLOT_ICON={
@@ -76,11 +75,6 @@ const PROF_SLOT_ICON={
   cape:'<path d="M6.6 4.2c2 1.5 3.6 2.1 5.4 2.1s3.4-.6 5.4-2.1l3 16.4H3.6z"/>'
       +'<path d="M9 4.5a3.2 3.2 0 0 0 6 0"/><path d="M12 6.4v14.2M8.4 9.4l-1.3 11.2M15.6 9.4l1.3 11.2"/>',
 };
-// 잠금 표시 — 이모지 대신 자물쇠 아이콘을 칸 가운데에 얹는다
-const PROF_LOCK_SVG='<svg class="pdLockIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">'
-  +'<path d="M7.6 10.4V7.6a4.4 4.4 0 0 1 8.8 0v2.8"/><path d="M5.4 10.4h13.2v9.4H5.4z"/><circle cx="12" cy="14.6" r="1.4"/><path d="M12 16v1.8"/></svg>';
-function _slotGlyph(slot){ return '<svg class="slIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linejoin="round" stroke-linecap="round">'
-  +(PROF_SLOT_ICON[slot]||'')+'</svg>'; }
 // 🖼 장비 아이콘 — 그림 파일이 있으면 그걸 쓰고, 없으면 위 라인아트 글리프로 돌아간다.
 //    파일 규칙: assets/icons/gear/<부위>_<등급>.webp (등급별 그림) → assets/icons/gear/<부위>.webp (부위 공용)
 //    ⚠ 없는 파일을 src 로 걸면 칸마다 404가 난다(가방이 40칸이다) → '있는 것만' 아래 목록에 적는다.
@@ -88,11 +82,7 @@ function _slotGlyph(slot){ return '<svg class="slIco" viewBox="0 0 24 24" fill="
 const GEAR_ART = new Set([
   // 예) 'weapon', 'weapon_legend', 'helmet_god'
 ]);
-function gearIco(slot, tier){
-  const k = (tier && GEAR_ART.has(slot+'_'+tier)) ? (slot+'_'+tier) : (GEAR_ART.has(slot) ? slot : '');
-  return k ? '<img class="slIco" src="assets/icons/gear/'+k+'.webp" alt="">' : _slotGlyph(slot); }
 function _emptyGear(){ const o={}; for(const k in PROF_GEAR) o[k]=''; return o; }
-function profSlotLocked(slot){ const g=PROF_GEAR[slot], c=CHAR(); return !g || !c || c.level < (g.reqLv||1); }
 // 장비 아이템 — 인벤토리는 계정 공용(PROF().items), 장착은 캐릭터별(c.unit.gear[slot]=iid).
 // 등급 확률은 프로필 전용 표다. 유즈맵 가챠 밸런스(GACHA_TIERS.prob)를 절대 건드리지 않는다(표시 색만 TIER_COLOR 공용).
 // ⚠ 등급 id·순서·색은 계정 공용 사다리(GACHA_TIER_ORDER / GACHA_TIERS / TIER_COLOR)를 그대로 쓴다.
@@ -110,42 +100,6 @@ const PROF_ITEM_TIERS=[
 const PROF_ITEM_PREFIX={ common:'낡은', rare:'단단한', epic:'벼려진', unique:'각인된', legend:'전설의',
                          transcend:'초월한', god:'신좌의' };
 const PROF_INV_MAX=40;               // 가방 칸(계정 공용)
-function profItemTier(id){ return PROF_ITEM_TIERS.find(t=>t.id===id) || PROF_ITEM_TIERS[0]; }
-function _profTierRoll(bonus){       // bonus↑ = 상위 등급 가중(던전 층이 깊을수록)
-  const w=PROF_ITEM_TIERS.map((t,i)=>t.p*(1+i*(bonus||0)));
-  let tot=0; for(const v of w) tot+=v;
-  let r=Math.random()*tot;
-  for(let i=0;i<w.length;i++){ if(r<w[i]) return PROF_ITEM_TIERS[i]; r-=w[i]; }
-  return PROF_ITEM_TIERS[0]; }
-function profSlots(){ return Object.keys(PROF_GEAR).filter(s=>!profSlotLocked(s)); }
-function profMakeItem(slot, lv, tierId){ const g=PROF_GEAR[slot]; if(!g) return null;
-  lv=Math.max(1, lv||1);
-  const T=tierId? profItemTier(tierId) : _profTierRoll(Math.min(0.9,(lv-1)*0.06));
-  const main=Math.max(1, Math.round(g.base*T.mul*(1+(lv-1)*0.35)));
-  const opts=[], pool=PROF_STATS.filter(k=>k!==g.stat);
-  for(let i=0;i<T.opts;i++){ const k=pool[Math.floor(Math.random()*pool.length)];
-    const v=Math.max(1, Math.round(g.base*0.4*T.mul*(1+(lv-1)*0.28)*(0.7+Math.random()*0.6)));
-    const ex=opts.find(o=>o.k===k); if(ex) ex.v+=v; else opts.push({k:k, v:v}); }
-  return { iid:'it'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-           slot:slot, tier:T.id, lv:lv, main:main, opts:opts }; }
-function profItemName(it){ const g=PROF_GEAR[it.slot]; return (PROF_ITEM_PREFIX[it.tier]||'')+' '+(g?g.name:'장비'); }
-function profItemPower(it){ let s=it.main; for(const o of it.opts) s+=o.v; return s; }
-function profItems(){ const p=PROF(); if(!Array.isArray(p.items)) p.items=[]; return p.items; }
-function profFindItem(iid){ return iid? (profItems().find(i=>i.iid===iid)||null) : null; }
-function profItemHolder(iid){ if(!iid) return null;
-  for(const c of PROF().chars) for(const s in c.unit.gear) if(c.unit.gear[s]===iid) return c;
-  return null; }
-function profAddItem(it){ if(!it) return null; const inv=profItems();
-  if(inv.length>=PROF_INV_MAX) return null; inv.push(it); return it; }
-function profEquipItem(iid){ const c=CHAR(), it=profFindItem(iid); if(!c||!it) return false;
-  if(profSlotLocked(it.slot)) return false;
-  const h=profItemHolder(iid); if(h && h!==c) return false;              // 다른 캐릭터가 장착 중
-  c.unit.gear[it.slot] = (c.unit.gear[it.slot]===iid) ? '' : iid;        // 같은 것을 누르면 해제
-  profSyncUnlocks(); saveMeta(); return true; }
-function profScrapValue(it){ const T=profItemTier(it.tier); return Math.round(12*T.mul*(1+(it.lv-1)*0.5)); }
-function profScrapItem(iid){ const p=PROF(), inv=profItems(), i=inv.findIndex(x=>x.iid===iid);
-  if(i<0 || profItemHolder(iid)) return -1;                              // 장착 중엔 분해 불가
-  const v=profScrapValue(inv[i]); inv.splice(i,1); p.pcoin+=v; saveMeta(); return v; }
 const PROF_IDLE_SOURCES={ drill:{name:'훈련장',rate:0.6,tip:'공격 위주'}, library:{name:'수련관',rate:0.6,tip:'집중 위주'}, arena:{name:'투기장',rate:1.0,reqUnlock:'idle_arena',tip:'고수익'} };
 // 레벨 해금 — 전부 실제로 무언가를 연다(표시만 하는 항목을 두지 않는다).
 // idle_arena→훈련장 장소 / evolve→진화 / idle_8h·idle_12h→오프라인 상한
@@ -206,16 +160,6 @@ const REB_LIN=0.01;                          // 배수 = (레벨 - 100) × 이 �
 //       (√ 도 시도했으나 던전2가 698 로 목표 550 보다 높았다 — 더 눕혀야 했다)
 const PROF_REB_RP_K=60;                      // 지급 = 1 + floor(K × ln(1 + 레벨-100))
 const PROF_REB_EVERY=PROF_REB_MIN_LV;        // 옛 이름 호환(= 첫 환생 레벨)
-function profRebDone(c){ c=c||CHAR(); return Math.max(0,(c&&c.reb)|0); }      // 지금까지 환생한 횟수
-// 다음 환생에 필요한 레벨 — 늘 '지금까지 쓴 최고 레벨 + 1' 이상이고, 최소 PROF_REB_MIN_LV.
-function profRebNextLv(c){ c=c||CHAR();
-  return Math.max(PROF_REB_MIN_LV, ((c&&c.rebLvMax)|0)+1); }
-// 🔺 이 레벨에서 환생하면 얻는 경험치·미네랄 배수(초과분). Lv100 이면 정확히 0.
-//    ⚠ 선형이다. 이 값은 '사이클 속도'만 정한다 — 전투력은 환생 포인트가 맡는다.
-function profRebGainAt(lv){ return Math.max(0,(lv|0)-PROF_REB_MIN_LV)*REB_LIN; }
-// 🔹 이 레벨에서 환생하면 받는 환생 포인트 — 아주 조금씩만 는다.
-function profRebGrantAt(lv){ const over=Math.max(0,(lv|0)-PROF_REB_MIN_LV);
-  return 1+Math.floor(PROF_REB_RP_K*Math.log(1+over)); }
 // ⚠ rebLvMax = 이미 환생에 쓴 최고 레벨. 같은 레벨에서 두 번 환생하는 것을 막는다.
 // 🔑 환생 관문 — 2회차부터 **유즈맵 전용 재화(포인트)** 를 요구한다.
 //   설계: 평소엔 강제가 없고(1회차 무료), 사냥터 최상위 축을 끝까지 밀려면 결국 유즈맵을 하게 된다.
@@ -223,13 +167,6 @@ function profRebGrantAt(lv){ const over=Math.max(0,(lv|0)-PROF_REB_MIN_LV);
 // ⚠ 옛 값은 회차 인덱스 배열이라 환생이 무한이 된 지금은 8회차부터 공짜가 됐다 → 레벨 비례 공식으로.
 //   깊이 밀수록 관문도 비싸진다(보상이 커지는 만큼). 첫 환생(Lv100)은 그대로 무료다.
 const PROF_REB_POINT_R=3;                    // 요구 포인트 = (레벨 - 100) × 이 값
-function profRebPoint(c){ c=c||CHAR();
-  return Math.max(0, ((c&&c.level)|0)-PROF_REB_MIN_LV)*PROF_REB_POINT_R; }
-function profRebPointOk(c){ const need=profRebPoint(c);
-  return need<=0 || (((typeof PLAYER_META!=='undefined'&&PLAYER_META.coins)||0) >= need); }
-// ⚠ '지난번보다 높은 레벨' 이 조건이다 — 같은 레벨에서 두 번 누르면 공짜 포인트가 된다.
-function profCanRebirth(c){ c=c||CHAR(); if(!c) return false;
-  return (c.level|0)>=profRebNextLv(c) && profRebPointOk(c); }
 function profXpMul(c){ c=c||CHAR(); return 1+((c&&c.rebMul)||0); }
 // 💠 미네랄 획득 배수 — 환생으로 미네랄과 업그레이드가 0이 되는 대신 버는 속도가 빨라진다.
 // ⚠ 경험치와 **같은 누적치(c.rebMul)** 에서 꺼낸다. 따로 세면 두 배수가 언젠가 갈라진다.
@@ -242,42 +179,6 @@ function profGainCoin(n){ const p=PROF(); if(!p || !(n>0)) return 0;
 // ⚠ 경험치 지급은 반드시 이 함수를 지난다 — 지급 지점이 4곳이라 배수를 각자 곱하면 언젠가 어긋난다.
 function profGainXp(c, xp){ c=c||CHAR(); if(!c || !(xp>0)) return 0;
   const got=xp*profXpMul(c); c.xp+=got; return got; }
-function profRebirth(c){ c=c||CHAR(); if(!profCanRebirth(c)) return 0;
-  { const cost=profRebPoint(c); if(cost>0){ PLAYER_META.coins=(PLAYER_META.coins||0)-cost; } }   // 🔑 관문 = 유즈맵 포인트 차감
-  const N=profRebDone(c)+1, LV=(c.level|0);          // 보상은 회차가 아니라 **이 레벨**이 정한다
-  c.reb=N; c.rebMul=(c.rebMul||0)+profRebGainAt(LV);  // ⚠ 곱이 아니라 합 — 초과분끼리 더한다
-  c.rp=(c.rp|0)+profRebGrantAt(LV);                  // 🔁 환생 포인트 지급(영구 — 다시 환생해도 안 사라진다)
-  c.rebLvMax=Math.max(c.rebLvMax|0, c.level|0);      // 이 레벨은 다 썼다
-  c.level=1; c.xp=0; if(c.unit){ c.unit.level=1; c.unit.pts={}; }   // 레벨 포인트는 레벨에서 나오므로 같이 되감는다
-  // 🔄 계정 진행도도 되감는다 — 이제 미네랄 축이 '한 회차짜리'다(2026-08-18).
-  //    ⚠ 해금(unl)과 최고 기록(best)은 남긴다: 해금비를 6번 다시 내면 매 회차 초반이 답답하고,
-  //      best 를 지우면 던전 해금과 라운드 선택이 통째로 사라진다.
-  try{ const p=PROF(), H=hbHunt();
-    H.upg={};                                        // 미네랄 업그레이드 레벨
-    // ⭐ 진행은 **던전 1-1 부터 다시** 시작한다 — 되감기가 환생의 값이다.
-    //    ⚠ 다만 '깼던 구간'은 열린 채로 남는다: hunt.best 를 지우지 않으므로
-    //       라운드 선택(hbSetRound)·던전 이동(hbGoDungeon)으로 곧장 돌아갈 수 있다.
-    //       환생 포인트가 영구라 대개 바로 복귀할 수 있고, 약하면 hbDie 가 알아서 내려 준다.
-    //    ⛔ hunt.best 를 같이 지우지 말 것 — 그러면 던전 해금과 복귀 경로가 통째로 사라진다.
-    H.dg=1; H.round=1;
-    p.pcoin=0;                                       // 미네랄 재화 — 안 지우면 즉시 되사서 리셋이 무의미
-  }catch(e){}
-  try{ saveMeta(); }catch(e){}
-  return N; }
-// 스탯/파워(전부 read-only)
-// 장비가 주는 스탯 합(pow/vit/foc/agi) — 이제 이 네 키는 '장비 전용 꼬리표'다.
-// ⚠ 직업 기본치·진화★·레벨 자동증가·펫 %는 전부 뺐다(2026-08-18). 스탯 출처는 넷뿐이다:
-//    사냥터 업그레이드 · 레벨 포인트 · 장비 · 환생 포인트. 여기에 다시 무언가를 더하지 말 것.
-function profStat(k){ const c=CHAR(); if(!c) return 0;
-  let gear=0;
-  for(const slot in c.unit.gear){ const it=profFindItem(c.unit.gear[slot]); if(!it) continue;
-    const g=PROF_GEAR[slot]; if(g && g.stat===k) gear+=it.main;
-    for(const o of it.opts) if(o.k===k) gear+=o.v; }
-  return Math.round(gear); }
-// 파워 = 대략적인 세기 한 줄. 전투 수치에서 뽑는다(장비 스탯만 보던 옛 식은 업그레이드·포인트를 무시했다).
-function profPower(){ const dps=csVal('atk')*(csVal('aspd')/100)*(1+(csVal('crit')/100)*(csVal('critd')/100-1));
-  return Math.round(dps*2 + csVal('hp')*0.15); }
-function profHasUnlock(id){ const p=PROF(); if(p.unlocks[id]) return true; const u=PROF_UNLOCKS.find(x=>x.id===id); return !!u && profUnlockLv()>=u.lv; }
 function profSyncUnlocks(){ const p=PROF(), lv=profUnlockLv(); for(const u of PROF_UNLOCKS){ if(!p.unlocks[u.id] && lv>=u.lv) p.unlocks[u.id]=true; } }   // 한 번 넘으면 영구(환생해도 안 닫힌다)
 // 레벨업(xp→level, 스탯 포인트 지급). 유닛 레벨도 동반 상승.
 // 성장은 두 축이다 — 캐릭터(레벨→스탯 포인트, 마을 광장에서 배분) / 계정(미네랄→업그레이드 6종).
@@ -330,69 +231,16 @@ const PROF_PET_START_TICKETS=5;      // 처음 열 때 쥐여 주는 펫 뽑기�
 //   ※ 퀘스트 보상은 아직 퀘스트 시스템 자체가 없다 — 생기면 여기 dgAddTicket 을 부르면 된다.
 const TICKET_GEM={ally:5, pet:4, gear:3};
 const TICKET_NAME={ally:'동료', pet:'펫', gear:'장비'};
-function buyTicketGem(kind){ const p=PROF(), c=TICKET_GEM[kind]; if(!c) return false;
-  if(profGem()<c) return false;
-  p.gem=(p.gem||0)-c; if(!p.tickets) p.tickets={gear:0,pet:0,ally:0};
-  p.tickets[kind]=(p.tickets[kind]||0)+1; saveMeta(); return true; }
 const PROF_PET_PT={common:1, rare:3, epic:9, unique:27, legend:81};   // 중복 1장이 주는 재료 포인트
 const PROF_PET_STAR_MAX=5;
 const PROF_BONUS_NAME={atk:'공격 %',vit:'체력 %',coin:'코인 %'};
 // 보유 상태 = { star:별, dup:합성 재료로 쓸 중복 수, fed:이번 별에 넣어 둔 재료 }
 function profPetRec(id){ const p=PROF(); return (p.pets&&p.pets[id])||null; }
 function profPetStar(id){ const r=profPetRec(id); return r? Math.max(0, r.star||0) : 0; }
-function profPetDup(id){ const r=profPetRec(id); return r? (r.dup||0) : 0; }
-function profPetOwned(id){ return !!profPetRec(id); }
 function profPetVal(id){ const P=PROF_PETS[id]; return P? P.bonus.val*(1+profPetStar(id)*0.2) : 0; }
 function profPetBonus(type){ const p=PROF(); let s=0; for(const id of (p.equip||[])){ const P=PROF_PETS[id]; if(P&&P.bonus.type===type) s+=profPetVal(id); } return s; }
-// ── 뽑기 단계 · 확률 ──
-function profPetN(){ const p=PROF(); if(typeof p.petN!=='number') p.petN=0; return p.petN; }
-function profPetStage(n){ n=(n==null)?profPetN():n;
-  let i=0; for(let k=0;k<PROF_PET_GACHA.length;k++) if(n>=PROF_PET_GACHA[k].need) i=k;
-  return i; }
-function profPetLv(n){ return profPetStage(n)+1; }
-function profPetProbs(n){ return PROF_PET_GACHA[profPetStage(n)].p; }
-function profPetNext(){ const st=profPetStage(), nx=PROF_PET_GACHA[st+1];
-  return nx? {lv:st+2, left:Math.max(0, nx.need-profPetN())} : null; }
-function profPetTicket(){ const p=PROF(); return (p.tickets&&p.tickets.pet)||0; }
-// 뽑기 1회 — 펫 뽑기권 1장. 신규면 ★0으로 영입, 중복이면 합성 재료(dup)로 쌓인다.
-function profPetRoll(){ const p=PROF(); if(profPetTicket()<=0) return null;
-  p.tickets.pet--; p.petN=profPetN()+1;
-  if(typeof dqNote==='function') dqNote('gacha',1);   // 📅 일일 — 뽑기(장비·펫·동료 공통)
-  const probs=profPetProbs(p.petN-1);                    // ⚠ 이번 판은 '뽑기 전' 확률로 굴린다
-  const pool={}; for(const id in PROF_PETS){ const t=PROF_PETS[id].tier; (pool[t]=pool[t]||[]).push(id); }
-  let r=Math.random(), tier=null;
-  for(const t of PET_TIERS){ const w=(probs[t]||0)*(pool[t]?1:0); if(w<=0) continue;
-    if(r<w){ tier=t; break; } r-=w; }
-  if(!tier){ for(let i=PET_TIERS.length-1;i>=0;i--){ const t=PET_TIERS[i];
-    if((probs[t]||0)>0 && pool[t]){ tier=t; break; } } }     // 반올림 잔차 — 열려 있는 최상위로
-  const list=pool[tier], id=list[Math.floor(Math.random()*list.length)];
-  const isNew=!profPetOwned(id);
-  if(!p.pets) p.pets={};
-  if(isNew){ p.pets[id]={star:0, dup:0, fed:0};
-    if((p.equip||[]).length<profPetSlots()) p.equip.push(id); }   // 신규 + 빈 슬롯 = 자동 장착
-  else p.pets[id].dup=(p.pets[id].dup||0)+1;
-  saveMeta(); return { id:id, tier:tier, star:profPetStar(id), isNew:isNew, lv:profPetLv() }; }
-// ── 합성 — 중복 펫을 '직접 골라' 재료로 넣어 별(★)을 올린다 ──
-function profPetPt(id){ return PROF_PET_PT[(PROF_PETS[id]||{}).tier]||1; }
-function profPetNeed(id){ const P=PROF_PETS[id]; if(!P) return 0;
-  return Math.ceil(PROF_PET_PT[P.tier]*2*Math.pow(1.5, profPetStar(id))); }
-function profPetFed(id){ const r=profPetRec(id); return r? (r.fed||0) : 0; }
-function profPetFeed(targetId, matId){
-  if(!profPetOwned(targetId) || !PROF_PETS[matId]) return false;
-  if(profPetStar(targetId)>=PROF_PET_STAR_MAX) return false;
-  if(profPetDup(matId)<=0) return false;
-  const p=PROF(), T=p.pets[targetId];
-  p.pets[matId].dup--;
-  T.fed=(T.fed||0)+profPetPt(matId);
-  let up=0;
-  while(profPetStar(targetId)<PROF_PET_STAR_MAX && T.fed>=profPetNeed(targetId)){
-    T.fed-=profPetNeed(targetId); T.star=(T.star||0)+1; up++; }
-  saveMeta(); return up? up : true; }
 // 상점: 미네랄 → 펫 뽑기권
 
-function profPetEquip(id){ const p=PROF(); if(!p.pets[id]) return false; const i=p.equip.indexOf(id);
-  if(i>=0){ p.equip.splice(i,1); saveMeta(); return true; }                                // 토글 해제
-  if(p.equip.length>=profPetSlots()) return false; p.equip.push(id); saveMeta(); return true; }
 // 🌟 유닛 진화(별)는 폐지됐다(2026-08-18) — 하던 일이 '전 스탯 +2' 하나뿐이라, 스탯 출처를 넷으로
 //   정리하면서 같이 걷어냈다. 되감고 다시 키우는 축은 환생(+환생 포인트) 하나로 통일한다.
 //   ⚠ 옛 저장의 c.unit.evoStars 는 남아 있을 수 있지만 아무 데서도 읽지 않는다(새 캐릭터엔 필드 자체가 없다).
@@ -411,21 +259,23 @@ function profCreateChar(cls, name){ const p=PROF(); if(!PROF_CLASSES[cls] || p.c
 const PROF_DEFAULT_CLASS='ranger';
 // 캐릭터가 없으면 조용히 만들어 준다. 반환값 = 지금 캐릭터(항상 있다)
 function profEnsureChar(){ return CHAR() || profCreateChar(PROF_DEFAULT_CLASS, ''); }
-// 캐릭터 선택·삭제·환급은 폐지했다(계정당 하나) — 고를 것도, 지울 것도 없다.
-function profSetIdleSource(id){ const p=PROF(), src=PROF_IDLE_SOURCES[id]; if(!src) return false; if(src.reqUnlock && !profHasUnlock(src.reqUnlock)) return false; p.idle.sourceId=id; saveMeta(); return true; }
-// ══ 🔗 유즈맵 ↔ 사냥터 경제 ═══════════════════════════════════════════════
-// 유즈맵 보상은 고정값이 아니라 **사냥터 시급에 앵커**한다. 사냥터 재화는 지수(라운드 ×HB_ROUND_REW ·
-// 던전 ×그것의 99제곱)라서 고정값은 몇 라운드만 지나면 반올림 오차가 된다 — 실측으로 옛 공식은
-// 판당 117 미네랄이었고 그건 던전1 R50 기준 **0.7초치**였다.
-//   ⚠ 시급의 단일 소스는 `hunt.rate`(hbSettle 이 EMA 로 적는 '초당 미네랄')다. 방치 수입(profIdleRate)이
-//      이미 이 값을 본다 — 유즈맵용 곡선을 새로 만들지 말 것.
-//   ⚠ 경험치는 앵커에 붙이지 않는다. 사냥터 XP 곡선(HB_ROUND_XP)만 일부러 완만해서 '레벨이 적 체력을
-//      못 따라가는 벽'을 만드는데, XP까지 시급에 앵커하면 그 설계가 통째로 무너진다.
-const UM_ANCHOR_MIN=60;              // 판당 기준 = 사냥터 60분치(진행도·난이도로 오르내린다)
+// ══ 🔗 유즈맵 ↔ **캠프** 경제 ═════════════════════════════════════════════
+// 유즈맵 보상은 고정값이 아니라 **내 시급에 앵커**한다. 캠프 재화는 지수(관문마다 배수가 붙는다)라서
+// 고정값은 몇 관문만 지나면 반올림 오차가 된다 — 옛 실측으로 고정 공식은 판당 117 미네랄이었고
+// 그건 그때 기준 **0.7초치**였다.
+// 🏕 **기준을 사냥터에서 캠프로 옮겼다**(2026-09-10 · 마을을 접으며 · GAME_DIRECTION §0-A).
+//   ⛔ 옛 기준 `PROF().hunt.rate` 는 **아무도 안 적고 있었다** — 사냥터가 멎은 뒤로 폴백
+//     (PROF_IDLE_BASE=8/분)에 굳어 유즈맵 한 판이 480 미네랄이었다. 캠프 수입 몇 초치다.
+//   ⭐ 캠프도 **같은 것을 이미 재고 있다**(campNoteRate → campRateOf · 초당 EMA). 자리 비움 정산과
+//     상점의 「n 시간치」가 그 값을 쓴다 — ⛔ 유즈맵용 곡선을 새로 만들지 말 것.
+//   ⚠ 경험치는 앵커에 붙이지 않는다 — XP 곡선은 일부러 완만해서 '레벨이 적을 못 따라가는 벽'을
+//      만드는데, XP까지 시급에 앵커하면 그 설계가 통째로 무너진다.
+const UM_ANCHOR_MIN=60;              // 판당 기준 = **캠프 60분치**(진행도·난이도로 오르내린다) · ⚠ 안 쟀다
 const UM_PROG_MIN=0.2;               // 진행도 하한 — 일찍 끝나도 빈손은 아니다
-const UM_GAS_RATIO=0.09/0.85;        // 가스:미네랄 = 사냥터 처치 보상(hbKillReward)과 같은 비율
-function umRate(){ const p=(typeof PROF==='function')?PROF():null, H=p&&p.hunt;
-  return (H && H.rate>0) ? H.rate*60 : PROF_IDLE_BASE; }   // 분당 미네랄 · 첫 라운드 클리어 전에는 방치와 같은 폴백
+const UM_GAS_RATIO=0.09/0.85;        // 가스:미네랄 — 옛 사냥터 처치 보상의 비율을 그대로 물려받았다
+function umRate(){
+  const r=(typeof campRateOf==='function') ? campRateOf('credit') : 0;   // 🏕 캠프 초당 미네랄(EMA)
+  return (r>0) ? r*60 : PROF_IDLE_BASE; }   // 분당 · 캠프에 5초도 안 머문 새 계정은 방치와 같은 폴백
 // 판 진행도 0~1 — '얼마나 해냈나'의 뜻이 맵마다 다르다.
 //   네모      : 클리어 = 1.0 · 못 깼으면 도달 라운드 비율 (라운드가 이미 다 말해 준다 — 소모 자원은 안 본다)
 //   오토배틀  : 승패 + '번 돈을 굴린 비율' + 버틴 시간 (라운드 개념이 없다)
@@ -444,7 +294,7 @@ function umProgress(){ if(typeof G==='undefined' || !G) return 0;
 // 🏁 첫 클리어 마일스톤 — 맵×난이도마다 **평생 1회**. 사냥터 마일스톤(hunt.rw[dg][round])과 같은 문법이다.
 //   보상 크기는 '사냥터 N시간치'인데, ⚠ **상한을 걸지 않으면 유즈맵을 최대한 늦게 하는 것이 최적 플레이**가 된다
 //     (시급이 계속 오르므로). 그래서 min(현재 시급, 난이도별 권장 시급) 으로 막는다.
-const UM_DIFF_R={ easy:20, normal:35, hard:50, hell:65, nightmare:80 };   // 난이도별 '권장 사냥터 라운드'(상한 기준)
+const UM_DIFF_GATE={ easy:2, normal:5, hard:9, hell:13, nightmare:17 };   // 난이도별 '권장 통산 관문'(0~18 · 상한 기준) · ⚠ 안 쟀다
 const UM_FIRST={   // h=사냥터 시간치 · gem/tk=시급과 무관한 절대 재화
   easy:      {h:1,  gem:10,  tk:{gear:1}},
   normal:    {h:2,  gem:20,  tk:{gear:1, pet:1}},
@@ -453,10 +303,17 @@ const UM_FIRST={   // h=사냥터 시간치 · gem/tk=시급과 무관한 절대
   nightmare: {h:16, gem:150, tk:{gear:5, pet:2, ally:2}},
 };
 const UM_STK_FIRST='hard';   // 오토배틀은 난이도가 없다(noDiff) → '첫 승리' 1회를 이 급으로
-// 권장 진행도의 시급(분당 미네랄). ⚠ 사냥터 곡선 함수를 그대로 쓴다 — 새 곡선을 만들면 반드시 어긋난다.
-function umCapRate(diff){ const R=UM_DIFF_R[diff]||UM_DIFF_R.normal;
-  let foes=0, sec=0; for(let w=1;w<=HB_WAVES;w++){ foes+=hbFoeCount(R,w); sec+=hbWaveTime(w)+HB_GAP_S; }
-  return (foes*hbKillReward(1,R).min + hbClearBonus(1,R).min) / (sec/60); }
+// 권장 진행도의 시급(분당 미네랄) — 「그 난이도를 깰 만한 자리」의 시급이다.
+//   🏕 캠프 시급은 **실측 EMA** 라 예측 함수가 없다. 대신 **진행 배수**로 환산한다(campMineMulAt) —
+//     수입에서 진행도가 차지하는 몫은 그 배수가 전부라, 「그때 배수 ÷ 지금 배수」가 곧 시급의 비다.
+//   ⛔ 사냥터 곡선(hbFoeCount·hbKillReward)으로 되돌리지 말 것 — 그 파일은 다락으로 갔다.
+//   ⚠ UM_DIFF_GATE 도 이 환산도 **안 쟀다**. 첫 클리어 보상은 평생 1회라 급하진 않지만 재야 한다.
+//   ⚠ **절대값이어야 한다.** 지금 시급에 비례시키면(예: 시급 × 배수비) 상한이 시급을 따라 올라
+//     상한 구실을 못 한다 — 「늦게 할수록 이득」이 그대로 남는다(2026-09-10 에 한 번 그렇게 짰다가 잡았다).
+const UM_CAP_BASE=3000;   // 진행 배수 1 일 때의 분당 미네랄 — ⚠ **안 쟀다**(출발점)
+function umCapRate(diff){
+  if(typeof campMineMulAt!=='function') return umRate();   // 캠프가 아직 안 떴다 — 상한 없음
+  return UM_CAP_BASE * campMineMulAt(UM_DIFF_GATE[diff]||UM_DIFF_GATE.normal); }
 // 💠 전리품의 룬 — **보상 재화만** 늘린다(사용자 확정 2026-09-02).
 //   ⛔ 젬에는 걸지 않는다. 젬으로 산 룬이 젬을 더 준다면 그것은 인쇄기다.
 //   ⚠ 이 룬은 일부러 **층을 넘는다**(GEM.md §1: 젬 부스트는 유즈맵에 안 걸린다).
@@ -497,10 +354,6 @@ function profRunReward(){ const p=PROF();
   const dayN=umDayCount();   // 📅 판 수는 여기서만 센다(정산은 판당 1회다)
   saveMeta();
   return { xp:xp, pc:min, gas:gas, prog:prog, ups:ups, level:c?c.level:1, day:dayN, dayMul:day }; }
-// 방치 정산(오프라인/켜둠) — Date.now 기준(1단계 클라이언트 신뢰). 유즈맵과 무관.
-function profOfflineCapMin(){ return profHasUnlock('idle_12h')?PROF_OFF_CAP12_MIN
-  : profHasUnlock('idle_8h')?PROF_OFF_CAP8_MIN : PROF_OFF_CAP_MIN; }
-function profOfflineRate(){ return profHasUnlock('idle_8h')?PROF_OFF_RATE8:PROF_OFF_RATE; }
 function profIdleTick(){ if(!PLAYER_META||!PLAYER_META.profile) return; const p=PROF();   // 켜둔 동안 60초마다 100%
   profGainCoin(profIdleRate()); const now=Date.now(); p.lastSeenTs=now; p.idle.lastClaimTs=now; saveMeta();
   if(typeof _townOpen!=='undefined' && _townOpen && typeof renderTownIdle==='function') renderTownIdle(); }

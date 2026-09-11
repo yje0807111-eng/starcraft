@@ -503,16 +503,8 @@
     
     <!-- 🪖 벙커 — 필드에서 벙커를 눌러 연다. 유닛을 넣으면 그만큼 함께 쏜다 -->
     
-    <!-- 부스트 — 시간제 강화 -->
-    <div class="hbModal hide" id="hbBoostModal" onclick="if(event.target===this)hbCloseBoost()">
-      <div class="hbmCard">
-        <div class="hbmHead"><b>부스트</b>
-          <button class="hbmX" onclick="hbCloseBoost()" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.4 6.4 17.6 17.6M17.6 6.4 6.4 17.6"/></svg></button>
-        </div>
-        <div class="hbRows uiScroll" id="hbBoostBody"></div>
-        <div class="hbRoundNote">이미 걸려 있으면 남은 시간에 더해집니다.</div>
-      </div>
-    </div>
+    <!-- 🗄 부스트 팝업(#hbBoostModal)은 다락으로 갔다(2026-09-10 · ATTIC.md 「🏹 사냥터 본체」).
+         배율이 옛 사냥터 전투에만 걸려 캠프 수급에는 한 줄도 안 닿았고, 더보기에서 길도 닫혔다. -->
     <!-- 라운드 선택 — 전장 한가운데 뜨는 팝업(회색톤 · 푸른기 금지) -->
     <!-- ☰ 더보기 — 전투 중에 안 쓰는 판을 한곳에 모은다(좌상단 아이콘 줄이 7개까지 늘어났었다) -->
     <div class="hbMoreWrap hide" id="hbMoreSheet">
@@ -614,6 +606,27 @@
        🖼 배경 그림은 #campRebBg 한 장을 환생·업그레이드와 **함께 쓴다**(2026-09-03 사용자 확정).
        🗺 상단은 판 **위에 떠 있다** — 판이 화면 맨 위까지 차오른다(캠프 메인과 같은 규칙).
        내용은 campRuneRender() 가 채운다(장착 / 룬 상점 두 가지). -->
+  <!-- 🗺 유즈맵 강화 — **환생 구역의 셋째 칸**(2026-09-10 사용자 확정).
+       ⚠ 환생·트리·룬과 **같은 규격**이다: #phone 직속 · z 120 · bottom:var(--navH) ·
+          배경은 공용 #campRebBg 한 장. ⛔ appScreen 가족으로 되돌리지 말 것.
+       ⛔ 강화 줄을 여기 마크업으로 박지 말 것 — 공학소와 같은 줄(ptRowsHTML)을 쓴다. -->
+  <div id="mapUpgScreen">
+    <div class="rnBg"></div>
+    <div class="muHead"><button class="muBack hide" id="muBack" onclick="mapUpgBack()" aria-label="유즈맵 목록으로">‹</button>
+      <span class="muTtl" id="muTtl"></span><span class="muBal" id="muBal"></span></div>
+    <div class="muSeg" id="muTabs"></div>
+    <div class="ppList uiScroll" id="muList"></div>
+  </div>
+
+  <!-- 🔁 환생 강화 — 환생 포인트로 사는 곳. 껍데기·줄 목록은 유즈맵 강화와 **같은 것**을 쓴다
+       (#mapUpgScreen 과 같은 CSS · `ptRowsHTML` 과 같은 렌더러). ⛔ 새 컴포넌트를 만들지 말 것. -->
+  <div id="rebUpgScreen">
+    <div class="rnBg"></div>
+    <div class="muHead"><span class="muTtl" id="ruTtl"></span><span class="muBal" id="ruBal"></span></div>
+    <div class="muSeg" id="ruTabs"></div>
+    <div class="ppList uiScroll" id="ruList"></div>
+  </div>
+
   <div id="campRune">
     <div class="rnBg"></div>
     <div class="rnTop"><span class="rnTitle">룬</span><span class="rnRound" id="rnRound"></span></div>
@@ -657,22 +670,13 @@
       <button class="hbRoundBtn hide" id="hbBuildStop" onclick="hbBuildExit(event)" aria-label="건설 종료" title="건설 종료">
         <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       </button>
-      <!-- ⚔ 토벌 포기 — 중단 아이콘은 공용 금지(⊘) SVG 하나뿐이다(건설 종료와 같은 그림). 표시는 CSS(.dgFight)가 맡는다 -->
-      <button class="hbRoundBtn" id="dgFightOut" onclick="dgFightGiveUp()" aria-label="토벌 포기" title="토벌 포기">
-        <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
-      </button>
     </div>
        <!-- 스킬·건설·부스트 (전장 위, 업그레이드 카드 바로 위) -->
     <div id="hbArmBtns" class="hbArmBtns hide"></div>   <!-- 🧱 배치 확정/취소 — 공용 .bArmBtns를 담는 앵커 -->
-    <div class="hmScroll uiScroll" id="hmScroll">
-      <!-- POWER UPGRADES — 화면에 남은 유일한 카드. 위쪽은 비워서 우주 배경(.spaceBg)이 그대로 보인다 -->
-      <div class="hmCard hmUpg">
-        <div class="hmUpgHead" id="hmUpgHead"><b class="hmUpgTtl">사냥터 업그레이드</b>
-          <span class="hmUpQty lpQ au" id="hmUpgAuto"></span><span class="hmUpQty" id="hmUpgQty"></span></div>
-        <div class="hmUpgBar"><span class="hmUpgTabs" id="hmUpgTabs"></span></div>
-      <div class="hmUpgGrid" id="hmUpgGrid"></div>
-      </div>
-    </div>
+    <!-- 🗄 「사냥터 업그레이드」 카드(#hmScroll · .hmUpg)는 없앴다(2026-09-10 · 마을을 접으며).
+         내용이 전부 **캐릭터 하나가 싸우던 사냥터 수치**(데미지·치명타·멀티샷 …)라 캠프에는 쓸 곳이 없다.
+         ⚠ 그 전에도 `#phone.campMode #hmScroll{display:none}` 으로 화면엔 안 나오고 있었다 — 그리기만 돌았다.
+         ⛔ 되살리지 말 것. 껍데기(2열 격자 · 수량 토글 · 탭 띠)가 필요하면 연구 구역이 같은 부품을 쓴다. -->
   </div>
 
   <!-- ⚔ 토벌 허브 — 네비 '토벌' 진입. 목록 카드 → 팝업. 전투는 #dgScreen 재사용. (#phone 안이라 재화 바 패딩 적용)
@@ -896,8 +900,8 @@
 <script src="js/05-home.js"></script>
 <script src="js/06-daily.js"></script>
 <script src="js/07-home-upgrade.js"></script>
-<script src="js/08-hunt.js"></script>
-<script src="js/09-dungeon.js"></script>
+<script src="js/08-ui-parts.js"></script>
+<script src="js/09-usemap-base.js"></script>
 <script src="js/10-engine.js"></script>
 <script src="js/11-cmdcard.js"></script>
 <script src="js/12-appshell.js"></script>

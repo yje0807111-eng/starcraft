@@ -24,44 +24,67 @@ const DIFFICULTY_ORDER = ['easy','normal','hard','hell','nightmare'];
 // 보스 처치 포인트(기본, 난이도 coinMult 적용 전). 표에 없는 라운드는 라운드 비례 폴백.
 // 메타 빌드 정의(설계서 4번). group: util / power / coop. 다음레벨 비용 = floor(start * rate^level)
 // start=1레벨 비용 기준값, nMax=일반 레벨 수, max=일반+초월(초월 3레벨·효과 ×2/×4/×8). 비용은 metaNextCost(완만 감소배율) 참조.
+// 🗺 **꼬리표 둘이 「어디서 사는가」를 정한다**(2026-09-10 사용자 확정).
+//   `map` — 그 강화가 **어느 유즈맵**의 것인가. 지금은 전부 네모네모('nemo')다.
+//   `out` — **true 면 바깥**(유즈맵 강화 구역 · 환생 포인트로 산다),
+//           없으면 **공학소**(판 안에서 번 포인트로 산다).
+//   ⭐ 가른 기준: 공학소에는 「이 판을 편하게 하는 것」 여덟(뽑기 2 · 자동화 6)만 남기고,
+//     「앞으로 늘 강해지는 것」 스물셋(시작 자원·획득·아군·적 약화·팀·보스)을 바깥으로 뺐다.
+//   ⛔ 강화를 사고·저장하고·판에 먹이는 뒷단을 **두 벌 만들지 말 것** — 화면 둘이 이 표 하나를
+//     꼬리표로 걸러 볼 뿐이다(`ptRowsHTML` 한 함수가 두 화면의 줄을 다 만든다).
 const META_BUILDS = {   // 탭(group) → 섹션(sect) 2단 분류. 같은 sect끼리 묶여 헤더로 구분됨
   // ── 경제 (시작 자원 → 자원 획득) ──
-  start_credit:  { name:'시작 미네랄', desc:'시작 시 미네랄 지급 (+25/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
-  start_energy:  { name:'시작 가스', desc:'시작 시 가스 지급 (+10/Lv)',   start:15, nMax:10, max:10, group:'eco', sect:'시작 자원' },
-  start_turret:  { name:'시작 포탑',   desc:'시작 시 미사일 포탑 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, group:'eco', sect:'시작 자원' },
-  credit_gain:   { name:'미네랄 획득', desc:'인게임 미네랄 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
-  energy_gain:   { name:'가스 획득', desc:'인게임 가스 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, group:'eco', sect:'자원 획득' },
-  interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, group:'eco', sect:'자원 획득' },
+  start_credit:  { name:'시작 미네랄', desc:'시작 시 미네랄 지급 (+25/Lv)',   start:15, nMax:10, max:10, map:'nemo', out:true, group:'eco', sect:'시작 자원' },
+  start_energy:  { name:'시작 가스', desc:'시작 시 가스 지급 (+10/Lv)',   start:15, nMax:10, max:10, map:'nemo', out:true, group:'eco', sect:'시작 자원' },
+  start_turret:  { name:'시작 포탑',   desc:'시작 시 미사일 포탑 배치 (+1기/Lv, 최대 3기)', start:100, costs:[100,250,500], nMax:3, max:3, map:'nemo', out:true, group:'eco', sect:'시작 자원' },
+  credit_gain:   { name:'미네랄 획득', desc:'인게임 미네랄 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, map:'nemo', out:true, group:'eco', sect:'자원 획득' },
+  energy_gain:   { name:'가스 획득', desc:'인게임 가스 획득 증가 (+5%/Lv)', start:25, nMax:10, max:10, map:'nemo', out:true, group:'eco', sect:'자원 획득' },
+  interest_cap:  { name:'이자 상한',   desc:'라운드 정산 이자 +10/Lv (보유 인정 한도 +100/Lv)', start:30, nMax:10, max:10, map:'nemo', out:true, group:'eco', sect:'자원 획득' },
   // ── 생산(뽑기·자동화) ──
-  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+2%/Lv)', start:20, nMax:10, max:10, group:'prod', sect:'뽑기' },
-  gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+1%/Lv)',  start:18, nMax:10, max:10, group:'prod', sect:'뽑기' },
+  gacha_luck:    { name:'고등급 확률', desc:'레전드+ 뽑기 확률 가중 (+2%/Lv)', start:20, nMax:10, max:10, map:'nemo', group:'prod', sect:'뽑기' },
+  gacha_double:  { name:'추가 생산',   desc:'뽑기 시 1기 추가 확률 (+1%/Lv)',  start:18, nMax:10, max:10, map:'nemo', group:'prod', sect:'뽑기' },
   // 자동화 해금(생산 섹션 통합) — 1회 구매로 인게임 on/off 토글 해금
-  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:250, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_energy:  { name:'자동 가스 변환', desc:'미네랄→가스 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:400, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:200, nMax:1, max:1, group:'prod', sect:'자동화' },
-  auto_bossdeploy:{ name:'자동 보스 파견', desc:'가장 강한 유닛을 포인트방 보스에 자동 파견 토글 해금 (빈 슬롯 채움)', start:300, nMax:1, max:1, group:'prod', sect:'자동화' },
+  auto_unit:    { name:'자동 유닛 소환',  desc:'유닛 자동 뽑기 토글 해금 (0.33초마다 1기)',          start:250, nMax:1, max:1, map:'nemo', group:'prod', sect:'자동화' },
+  auto_combine: { name:'자동 조합',       desc:'낮은 등급부터 자동 조합 토글 해금 (레전드까지·0.33초)', start:250, nMax:1, max:1, map:'nemo', group:'prod', sect:'자동화' },
+  auto_energy:  { name:'자동 가스 변환', desc:'미네랄→가스 자동 변환 토글 해금 (0.33초마다)',      start:220, nMax:1, max:1, map:'nemo', group:'prod', sect:'자동화' },
+  auto_pboss:   { name:'자동 개인 보스',   desc:'개인 보스를 쿨마다 자동 소환 토글 해금 (보스별 on/off)', start:400, nMax:1, max:1, map:'nemo', group:'prod', sect:'자동화' },
+  auto_place:   { name:'자동 유닛 배치',   desc:'새 유닛을 트랙에 자동 정렬 토글 해금 (가운데 쌓임 방지)', start:200, nMax:1, max:1, map:'nemo', group:'prod', sect:'자동화' },
+  auto_bossdeploy:{ name:'자동 보스 파견', desc:'가장 강한 유닛을 포인트방 보스에 자동 파견 토글 해금 (빈 슬롯 채움)', start:300, nMax:1, max:1, map:'nemo', group:'prod', sect:'자동화' },
   // ── 전투(아군 강화 · 적 약화) — 모두 10레벨 ──
-  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+2.5%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'아군 강화' },
-  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+2%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'아군 강화' },
-  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 감소 (-2%/Lv)', start:18, nMax:10, max:10, group:'combat', sect:'적 약화' },
-  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 감소 (-1/Lv)', start:15, nMax:10, max:10, group:'combat', sect:'적 약화' },
+  unit_atk_up:   { name:'공격력 증가',  desc:'유닛 공격력 증가 (+2.5%/Lv)', start:18, nMax:10, max:10, map:'nemo', out:true, group:'combat', sect:'아군 강화' },
+  unit_aspd:     { name:'공격 속도',    desc:'아군 공격 속도 증가 (+2%/Lv)', start:18, nMax:10, max:10, map:'nemo', out:true, group:'combat', sect:'아군 강화' },
+  enemy_hp_down: { name:'적 체력 감소', desc:'내 트랙 적 체력 감소 (-2%/Lv)', start:18, nMax:10, max:10, map:'nemo', out:true, group:'combat', sect:'적 약화' },
+  enemy_def_down:{ name:'적 방어 감소', desc:'내 트랙 적 방어력 감소 (-1/Lv)', start:15, nMax:10, max:10, map:'nemo', out:true, group:'combat', sect:'적 약화' },
   // ── 전체 강화(팀 공유) — 모두 20레벨 ──
-  team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+1%/Lv)',  start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
-  team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
-  team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
-  team_credit:   { name:'전체 시작 미네랄',desc:'모든 플레이어 시작 미네랄 (+10/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 강화' },
-  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
-  team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-0.5/Lv)',  start:8, nMax:20, max:20, group:'team', sect:'팀 적 약화' },
-  boss_hp_down:  { name:'포인트방 체력 감소', desc:'포인트방 보스 체력 감소 (-1.5%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'포인트방' },
-  boss_atk_up:   { name:'파견 유닛 피해', desc:'파견 유닛의 포인트방 보스 피해 증가 (+1%/Lv)', start:8, nMax:20, max:20, group:'team', sect:'포인트방' },
+  team_atk:      { name:'전체 공격력',   desc:'모든 유닛 공격력 증가 (+1%/Lv)',  start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'팀 강화' },
+  team_aspd:     { name:'전체 공격속도', desc:'모든 유닛 공격 속도 증가 (+1%/Lv)', start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'팀 강화' },
+  team_luck:     { name:'전체 고등급 확률', desc:'모든 플레이어 레전드+ 뽑기 가중 (+1%/Lv)', start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'팀 강화' },
+  team_credit:   { name:'전체 시작 미네랄',desc:'모든 플레이어 시작 미네랄 (+10/Lv)', start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'팀 강화' },
+  team_enemy_hp: { name:'전체 적 체력',  desc:'모든 적 체력 감소 (-1%/Lv)', start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'팀 적 약화' },
+  team_enemy_def:{ name:'전체 적 방어', desc:'모든 적 방어력 감소 (-0.5/Lv)',  start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'팀 적 약화' },
+  boss_hp_down:  { name:'포인트방 체력 감소', desc:'포인트방 보스 체력 감소 (-1.5%/Lv)', start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'포인트방' },
+  boss_atk_up:   { name:'파견 유닛 피해', desc:'파견 유닛의 포인트방 보스 피해 증가 (+1%/Lv)', start:8, nMax:20, max:20, map:'nemo', out:true, group:'team', sect:'포인트방' },
   // ── 보스(월드·개인·라운드) — 모두 10레벨 ──
-  boss_reward_up:{ name:'포인트방 보상', desc:'포인트방 보스 처치 포인트 보상 증가 (+10%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'포인트방' },
-  pboss_reward:  { name:'개인보스 보상', desc:'개인 보스 처치 보상 증가 (+5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
-  pboss_cd:      { name:'개인보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'개인 보스' },
-  rboss_hp_down: { name:'라운드보스 체력', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
-  rboss_dmg_up:  { name:'라운드보스 피해', desc:'10·20·30라운드 보스에 주는 피해 증가 (+2%/Lv)', start:20, nMax:10, max:10, group:'coop', sect:'라운드 보스' },
+  boss_reward_up:{ name:'포인트방 보상', desc:'포인트방 보스 처치 포인트 보상 증가 (+10%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'포인트방' },
+  pboss_reward:  { name:'개인보스 보상', desc:'개인 보스 처치 보상 증가 (+5%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'개인 보스' },
+  pboss_cd:      { name:'개인보스 쿨감', desc:'개인 보스 재소환 쿨다운 감소 (-2.5%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'개인 보스' },
+  rboss_hp_down: { name:'라운드보스 체력', desc:'10·20·30라운드 보스 체력 감소 (-2%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'라운드 보스' },
+  rboss_dmg_up:  { name:'라운드보스 피해', desc:'10·20·30라운드 보스에 주는 피해 증가 (+2%/Lv)', start:20, nMax:10, max:10, map:'nemo', out:true, group:'coop', sect:'라운드 보스' },
+  // ══ ⚙ 오토 배틀(cpu) ══════════════════════════════════════════════════
+  // 2026-09-10 사용자 확정 — 「유닛 강화는 **약하게**(밸런스가 뭉개지지 않게) · 자원은 **미미한 것은
+  //   싸게, 영향이 큰 것은 비싸게**」.
+  // ⭐ 값을 그렇게 갈랐다: 시작 자금은 **초반 한 번**뿐이라 제일 싸고(합 660),
+  //   광산 값 → 광산 수입 → 기본 수입 순으로 비싸진다(합 2,200 → 3,300 → 4,400).
+  //   뒤로 갈수록 **판 내내 복리로 불어나는** 것이라 같은 %라도 결과가 훨씬 크다.
+  // ⚠ 유닛 둘은 다 채워도 공격 +8% · 체력 +10% 다 — ⛔ 두 자릿수로 올리지 말 것:
+  //   오토 배틀은 **8인 대전**이라 영구 강화가 세지면 「오래 한 사람이 이긴다」가 된다.
+  // ⚠ 비용은 `start × (레벨+1)` 이다(META_COST_POW=1). start 만 보면 총액이 안 보인다.
+  cpu_start_gold: { name:'시작 자금',   desc:'판 시작 자금 증가 (+150/Lv)',      start:12, nMax:10, max:10, group:'eco',    sect:'시작', map:'cpu', out:true },
+  cpu_mine_cost:  { name:'광산 값 인하', desc:'광산 구매 비용 감소 (-1.5%/Lv)',   start:40, nMax:10, max:10, group:'eco',    sect:'채굴', map:'cpu', out:true },
+  cpu_mine_yield: { name:'광산 수입',   desc:'광산 1개당 수입 증가 (+2%/Lv)',    start:60, nMax:10, max:10, group:'eco',    sect:'채굴', map:'cpu', out:true },
+  cpu_income:     { name:'기본 수입',   desc:'광산과 무관한 기본 수입 증가 (+2%/Lv)', start:80, nMax:10, max:10, group:'eco', sect:'수입', map:'cpu', out:true },
+  cpu_unit_atk:   { name:'유닛 공격력', desc:'내 유닛 공격력 증가 (+0.8%/Lv)',   start:45, nMax:10, max:10, group:'combat', sect:'아군 강화', map:'cpu', out:true },
+  cpu_unit_hp:    { name:'유닛 체력',   desc:'내 유닛 체력·실드 증가 (+1%/Lv)',  start:45, nMax:10, max:10, group:'combat', sect:'아군 강화', map:'cpu', out:true },
 };
 // 비용 곡선: 일반 레벨 = start×(lv+1) (선형 — 1단계 start, 2단계 2×start … 딱 떨어지는 가격), 초월 레벨 = 일반 누적×[..] (5단위 반올림).
 const META_COST_POW=1.0;

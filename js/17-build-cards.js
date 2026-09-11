@@ -457,11 +457,15 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   // 🏕 캠프 던전의 **전장 유닛 지정**(_campSel · js/19-camp.js)도 셈에 넣는다 — 그 지정은 기지 변수(selU)에 없어서
   //    해제 버튼이 영영 안 켜졌다(2026-09-05 사용자 신고). 관리자 건설·오토배틀에서는 _campSel 이 비어 있어 영향이 없다.
   const _campSelN=(typeof campSelList==='function')?campSelList().length:0;
-  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes || _campSelN>0); }
+  // 🖐 캠프의 **화면 이동 모드**도 이 버튼으로 끈다(2026-09-10 사용자 확정 · 옛 「탭하면 해제」).
+  //   ⛔ `_campPanMode` 를 직접 읽지 말 것 — 이 파일은 관리자 탭·오토배틀과 공유다(campPanIsOn 을 쓴다).
+  const _campPan=(typeof campPanIsOn==='function') && campPanIsOn();
+  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes || _campSelN>0 || _campPan); }
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(typeof campFoeUnpick==='function') campFoeUnpick();   // 🏰 캠프에서 들여다보던 적 건물도 닫는다(시트가 요약으로 돌아간다)
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
   if(typeof campSelClear==='function') campSelClear();   // 🏕 캠프 던전의 전장 유닛 지정도 같은 버튼으로 푼다(2026-09-05)
+  if(typeof campPanMode==='function') campPanMode(false);   // 🖐 화면 이동 모드도 여기서 끈다(2026-09-10) — 끄는 길은 이 버튼 하나다
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
   const sh=G.tech.sheet; if(sh&&sh.sec==='ent'){ sh.open=false; sh.sec=null; } techUIRender(); }   // 해제 후 다시 드래그=박스 지정(메인 규약)
 function techSubSelectType(ev,uid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👥 혼합 지정 → 종류 칩 짧게 탭 = 그 종류 프로필만 표시(selU는 전부 유지 · 소프트) · uid 빈값=전체로 복귀
@@ -636,6 +640,9 @@ function _techBuildBldg(e){ return (e&&e.type==='worker'&&e.build!=null)?G.tech.
 function _techBuildLocked(e){ const bd=_techBuildBldg(e); return !!(bd&&bd.bt>0&&!bd._bpause); }   // 건설 중(미일시정지) 일꾼 = 이동 잠금
 function _techAirOf(e){ return (typeof FXLAB_AIR!=='undefined')&&FXLAB_AIR.has(_techEntKey(e)); }
 const _btPtrs=new Map(); let _btPan=null, _btPinch=null, _btBox=null, _btCmd=null, _btMoved=false, _btDown=null, _btArm=false, _btArmOff={x:0,y:0}, _btLongT=null, _btHold=null;
+// 🎒🔁 직전 탭이 「자원 작업 재개」를 시킨 본진의 eid. 같은 본진을 한 번 더 누르면 그 건물을 지정한다.
+//   ⚠ 탭 하나마다 비운다(아래 techPtrDown) — 딴 데를 한 번이라도 누르면 다시 「재개」부터다.
+let _btResumed=null;
 let _btArmPt=null;   // 🎥 배치 고스트를 끄는 동안의 손가락 화면 위치(0..1) — 가장자리 끌기용
 // 고스트를 화면 가장자리로 끌고 있으면 뷰를 그쪽으로 민다. HOME 사냥터와 **같은 edgePush()** 를 쓴다.
 function techEdgePan(dt){ if(!_btArm||!_btArmPt||!G.tech||!G.tech.arm) return false;
@@ -686,6 +693,7 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
   if(_btPtrs.size>=2){ _btBox=null; _btCmd=null; const p=[..._btPtrs.values()], v=techViewT();   // 두 손가락 = 화면 이동(팬 + 핀치 줌) — 목표 뷰 기준(부드럽게 보간)
     _btPinch={ d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1, zoom:v.zoom, cx:(p[0].x+p[1].x)/2, cy:(p[0].y+p[1].y)/2, vx:v.x, vy:v.y, rw:r.width, rh:r.height }; _btMoved=true; return; }
   _btMoved=false; _btDown={sx, sy}; _btBox=null; _btCmd=null; _btHold=null;
+  const _wasResumed=_btResumed; _btResumed=null;   // 🎒🔁 이 탭이 '재개 직후의 두 번째 탭'인가
   if(sy<0.13) return;   // 상단바 = 탭만
   if(G.tech.rallySet!=null){   // 🚩 랠리 지정 모드 = 맵 탭으로 랠리 위치 설정
     const rb=G.tech.ents.find(x=>x.eid===G.tech.rallySet&&x.type==='bldg'), w=_techS2W(sx,sy);
@@ -720,7 +728,14 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
       if(_mn){ _techAssignGatherMineral(_gwk, _mn.eid); if(typeof playSfx==='function') playSfx('ui_confirm'); _btDown=null; techUIRender(); return; }
       if(e && e.type==='bldg' && e.bt<=0 && ((techGetBldg(G.tech.race,e.bk)||{}).gas)){ _techAssignGather(_gwk,'gas',e.eid); if(typeof playSfx==='function') playSfx('ui_confirm'); _btDown=null; techUIRender(); return; }
       const _mainK=((TECH_TREE[G.tech.race].buildings||[])[0]||{}).k;   // 🎒 손에 자원 든 채 본진 탭 = 이동 아니라 그 자원 작업 재개(반납→계속 채취)
-      if(e && e.type==='bldg' && e.bt<=0 && e.bk===_mainK){ const _carriers=_gwk.filter(x=>x._carry&&x._cKind); if(_carriers.length && _techResumeCarry(_carriers)){ if(typeof playSfx==='function') playSfx('ui_confirm'); _btDown=null; techUIRender(); return; } } }
+      // 🔁 **두 번 누르면 바뀐다**(2026-09-11 사용자 확정): 첫 탭 = 자원 작업 재개 ·
+      //   **재개시킨 그 본진을 한 번 더 누르면** 재개를 건너뛰고 아래 일반 규칙으로 흘러가
+      //   techPtrUp 이 그 건물을 지정한다(유닛 지정은 풀린다).
+      //   ⛔ 첫 탭에서 바로 건물을 고르게 되돌리지 말 것 — 손에 자원을 든 일꾼을 본진으로
+      //      돌려보내는 길이 사라진다. ⚠ 딴 곳을 한 번이라도 누르면 다시 「재개」부터다.
+      if(e && e.type==='bldg' && e.bt<=0 && e.bk===_mainK && _wasResumed!==e.eid){
+        const _carriers=_gwk.filter(x=>x._carry&&x._cKind);
+        if(_carriers.length && _techResumeCarry(_carriers)){ _btResumed=e.eid; if(typeof playSfx==='function') playSfx('ui_confirm'); _btDown=null; techUIRender(); return; } } }
     const _hasIdleWk=(G.tech.selU||[]).some(id=>{ const wk=G.tech.ents.find(x=>x.eid===id); return wk&&wk.type==='worker'&&wk.build==null; });
     if(e && e.type==='bldg' && e.bt>0 && e._bpause && _hasIdleWk){ G.tech.sel=e.eid; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; if(typeof playSfx==='function') playSfx('ui_open'); techUIRender(); return; }   // 일꾼 지정 상태로 일시정지 건물 탭 = 이동 아니라 재개 대상 지정(일꾼 유지 → ▶ 재개 버튼 표시)
     if(G.tech.sel!=null){ const _cur=G.tech.ents.find(x=>x.eid===G.tech.sel&&x.type==='bldg'); if(_cur){ G.tech.sel=null; const _sh=G.tech.sheet||(G.tech.sheet={open:false,sec:null}); _sh.open=true; _sh.sec='ent'; _btDown=null; techUIRender(); return; } }   // 재개 대상 지정 상태에서 딴 곳/바닥 탭 = 건물 지정만 해제(일꾼 지정·프로필 유지). _btDown=null → techPtrUp이 이 탭을 빈곳탭으로 재처리해 시트 닫는 것 방지
@@ -767,8 +782,12 @@ function techPtrUp(ev){ if(!G.tech) return; clearTimeout(_btLongT); _btLongT=nul
   const e=_techEntAt(w.x, w.y);
   if(e){ G.tech.selRes=null; if(e.type==='bldg'){
       const _keepWk=(e.bt>0&&e._bpause&&(G.tech.selU||[]).some(id=>{ const w=G.tech.ents.find(x=>x.eid===id); return w&&w.type==='worker'&&w.build==null; }));   // 일시정지 건물 + 유휴 일꾼 지정 = 그 일꾼 지정 유지(재개 시 사용)
-      const _movU=(G.tech.selU||[]).some(id=>{ const u=G.tech.ents.find(x=>x.eid===id); return u&&(u.type==='unit'||u.type==='worker'); });   // 🏗 이동 가능 유닛 지정 중 = 건물 짧게 탭 = 그 지점으로 이동(건물 지정 안 함 · 롱프레스 탑승/수리는 별도) → 건물 지정은 유닛 해제(✕) 후에만
-      if(_movU && !_keepWk){ _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); if(body) body._cgPage=0; techMapRender(); return; }
+      // 🏗 **유닛을 지정한 채로 내 건물을 탭하면 유닛 지정이 풀리고 그 건물이 지정된다**
+      //   (2026-09-10 사용자 확정 · 옛 규칙: 「그 자리로 이동」이라 건물을 고르려면 ⊘ 로 유닛을
+      //    먼저 풀어야 했다 — 두 번 눌러야 해서 번거롭다는 지적).
+      //   ⚠ 그 대신 **건물 위를 탭해 이동시키는 길이 사라졌다** — 건물 옆 바닥을 탭하면 된다.
+      //   ⛔ 롱프레스(탑승·수리)는 이 길이 아니다(위 `hold` 갈래) — 그대로 산다.
+      //   ⚠ `_keepWk`(일시정지 건물 + 유휴 일꾼)는 예외로 남는다: 재개에 쓸 일꾼을 붙들어 둔다.
       G.tech.sel=e.eid; if(!_keepWk) G.tech.selU=[]; }
     else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
   else { const _mn=_techMineralAt(w.x,w.y), _gz=_techInGasZone(w.x,w.y);   // 💎⛽ 빈 곳 탭 = 중립 자원(미네랄·가스 광산) 지정(단 하나만). 자원 없으면 시트 닫기

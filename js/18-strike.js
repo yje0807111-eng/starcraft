@@ -115,8 +115,11 @@ function strikeNewState(){ const W=mapCfg('world',4800), hp=mapCfg('baseHp',7500
     build:{ W:2400, H:1800, cols:32, rows:24, cam:{x:1200,y:900}, zoom:1.15, zoomCur:1.15, _sc:1, _ox:0, _oy:0, cells:[], worker:null, placing:null },   // 건설 보드(4:3, 그리드 32×24 칸=75) — 화면 커버+팬(전체가 한 화면에 안 들어옴) + 생산 건물(cells,풋프린트)·일꾼
     leadT:0, leadIdx:0, sizeCmp:false, cmpUnits:null };
 }
-function strikeMineYield(side){ const S=STK; return S.mineIncome; }   // 광산 1개당 고정 수입
-function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me; return S.incomeBase + side.mines*strikeMineYield(side); }
+function strikeMineYield(side){ const S=STK, b=stkUpg(side);
+  return S.mineIncome * (b ? b.mineYield : 1); }   // 광산 1개당 고정 수입(+ 🗺 유즈맵 강화)
+function strikeIncome(side){ const S=STK; if(!S) return 0; side=side||S.me;
+  const b=stkUpg(side);
+  return S.incomeBase*(b ? b.income : 1) + side.mines*strikeMineYield(side); }
 // 보급 강화 비용(레벨별 누증) — 유닛 공격/체력, 채굴, 폭탄
 const STK_MINE_CAP=5, STK_BOMB_CAP=3;   // 광산·특수무기 보유 상한(표기를 n/max로 통일)
 const STK_MINE_STEP0=100, STK_MINE_STEPD=50;   // 첫 증가폭 100, 살 때마다 증가폭이 +50씩 커진다
@@ -151,8 +154,24 @@ function strikeWpnHave(k){ const S=STK; return (S&&S.me&&S.me.wpn&&S.me.wpn[k])|
 // 종족 전투 파워 배수(hp·공격 동시) — 배출 배수(테마)는 고정하고 이 값으로 종족 균형을 맞춘다. 밸런싱 단일 소스.
 const STK_RACE_POWER={ union:1.00, swarm:1.00, aetherial:1.00, feral:1.00, colossus:1.00 };   // 종족 세기는 스탯(공격·체력)으로만 조절 — 전역 파워 배수는 중립(1). 상성이 승패를 결정하도록.
 function _racePow(side){ return (side && STK_RACE_POWER[side.race]) || 1; }
-function strikeAtkMul(side){ return (1 + (side.atkLv||0)*0.12) * _racePow(side); }
-function strikeHpMul(side){ return (1 + (side.hpLv||0)*0.16) * _racePow(side); }
+// 🗺 **유즈맵 강화(오토 배틀)가 닿는 유일한 문**(2026-09-10).
+//   ⛔ 이 파일의 부품을 **캠프 전투(21-camp-battle.js)가 그대로 빌려 쓴다** — `strikeAtkMul`·
+//     `strikeSpawnUnit` 이 그 예다. 그래서 함수를 나누는 것으로는 못 가른다:
+//     「지금이 오토 배틀인가 · 이 진영이 나인가」를 **여기서 직접** 확인한다.
+//   ⚠ 둘 다 참이어야 걸린다 — ① 지금이 **오토 배틀**이다 ② 이 진영이 **나**다.
+//     하나라도 빼면 캠프 밸런스나 상대 컴퓨터에까지 내 영구 강화가 샌다.
+//   ⭐ ①은 **`battleCtx()` 하나**가 답한다(js/10-engine.js) — 캠프가 빌려 쓰는 중이면
+//     `STK===CAMPB` 라 거기서 'camp' 가 나온다. ⛔ `campIsOn()`·`MAP.id` 를 겹쳐 묻던 옛 꼴로
+//     되돌리지 말 것: 물어야 할 것이 셋이라 새 코드마다 무엇을 물을지 헷갈렸다.
+function stkUpgOn(side){
+  if(typeof battleCtx !== 'function' || battleCtx() !== 'autobattle') return false;   // ① 오토 배틀만
+  const S = STK; return !!(S && side && side === S.me);                                // ② 내 진영만
+}
+function stkUpg(side){ return stkUpgOn(side) && typeof cpuBonus === 'function' ? cpuBonus() : null; }
+function strikeAtkMul(side){ const b = stkUpg(side);
+  return (1 + (side.atkLv||0)*0.12) * _racePow(side) * (b ? b.atkMul : 1); }
+function strikeHpMul(side){ const b = stkUpg(side);
+  return (1 + (side.hpLv||0)*0.16) * _racePow(side) * (b ? b.hpMul : 1); }
 function strikeApplyHpUpg(side){ const S=STK; if(!S||!side) return;   // 글로벌 체력 업그레이드 — 이미 소환된 유닛의 최대 체력도 즉시 상향(비율 유지)
   const m=strikeHpMul(side), prev=side._hpMulApplied||1; if(m===prev) return; side._hpMulApplied=m;
   const k=m/prev; for(const u of side.units){ if(u.dead) continue; const r=u.maxHp?u.hp/u.maxHp:1;
@@ -197,6 +216,12 @@ function strikeStart(activePlayers, myNum, names){ if(typeof bgmStop==='function
   G.activePlayers=(activePlayers&&activePlayers.length)?activePlayers.slice():[1]; G.myPlayer=myNum||1; G.playerNames=names||{};   // 로딩화면 플레이어 목록·닉네임(네모와 동일)
   STK=strikeNewState();
   STK.me.race=(STK_RACES[_selRace]?_selRace:'terran'); STK.ai.race=strikeRandomRace();   // 내 종족=선택, 상대=랜덤 → 각자 그 종족 유닛만 소환
+  // 🗺 유즈맵 강화 중 **판을 시작할 때 한 번만** 걸리는 둘(시작 자금 · 광산 값).
+  //   ⚠ 여기서 걸어야 한다 — strikeNewState 안에서는 STK 가 아직 없어 `stkUpgOn` 이 내 진영을 못 가린다.
+  //   ⛔ ai 에 걸지 말 것: 내 영구 강화가 상대에게도 가면 강화한 뜻이 사라진다.
+  { const b=stkUpg(STK.me);
+    if(b){ STK.me.gold += b.startGold;
+      STK.me.mineCost = Math.max(1, Math.round(STK.me.mineCost * b.mineCost)); } }
   { const b=STK.build; b.cam.x=b.W*0.25; b.cam.y=b.H*0.25; }   // 관전 보드 카메라만 초기화(내 건설은 G.tech가 담당)
   if(STK.sizeCmp){   // 크기 비교용 샘플 유닛: 중앙 신전 주변 4×2 그리드(월드 좌표)
     const W=STK.world, sp=560, cols=4;
@@ -924,7 +949,7 @@ function _stkApplyFoe(u, t, sk, key){
     t.stunT=sk.dur||5; return true; }
   // 🧠 **정신 지배** — 적을 뺏어 **소환수처럼** 쓴다(사용자 확정 2026-08-28).
   //   ⭐ 능력치는 **적일 때 그대로** 가져온다 — 설계 능력치를 다시 씌우지 않는다.
-  //   ⭐ **죽으면 즉시 사라진다** — 부활 대기(`_down`)에 안 들어간다. 표식이 `u._mc` 다.
+  //   ⭐ **죽으면 즉시 사라진다** — 산 유닛이 아니라 캠프 명부에도 안 들어간다(표식이 `u._mc`).
   //   ⛔ 계속 남겨 두지 말 것 — 인구·부활·정산에 전부 얽혀 문제가 된다.
   //   ⚠ 캠프 밖에서는 뺏지 않는다(오토배틀 균형을 건드리지 않는다).
   if(key==='mind_control'){ if(!_stkCampSk() || !t || t._mc) return false;

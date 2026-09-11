@@ -112,7 +112,8 @@ function campChipInfo(){
   // ⭐ 캠프에 단계·라운드가 생겼다(2026-08-25). **상태는 캠프가 단일 소스**다 — 여기서는 읽기만 한다.
   //    0단계 = 캠프(안전) · 1~10 = 던전. 던전에 있으면 라운드를, 캠프면 「캠프」를 보여준다.
   const inDg=(typeof campDgN==='function') ? campDgN()>0 : ((C.dg|0)>0);
-  const dg=Math.max(1, Math.min(CAMP_DG_MAX, C.dg||1));
+  // ♾ 위쪽 clamp 를 빼 둔다(2026-09-11) — 무한층에서도 칩이 「무한 7층 · 2/6」을 말해야 한다
+  const dg=Math.max(1, C.dg||1);
   const d=(typeof hbDun==='function')?hbDun(dg):null;
   // 🏕 캠프도 던전과 **같은 자리**를 쓴다(2026-09-03) — 숫자를 빼 봤더니 너무 밋밋했다.
   //   상한은 던전과 같은 라운드 상한(50)이다 — 단계 개수(10)를 쓰면 다른 구역과 자릿수가 갈려 보인다.
@@ -124,16 +125,16 @@ function campChipInfo(){
   const done=(typeof campBroken==='function')?campBroken():0;
   return { name:nm, lab:'건물', cur:done, max:smax }; }
 // 🧑 레벨·경험치 — 재화 바 **맨 왼쪽**. 캠프에서만 보인다(CSS 가 가른다).
-//   ⚠ **아직 캠프에서는 경험치가 안 오른다** — profGainXp 를 부르는 곳이 옛 사냥터(08-hunt.js)와
-//     토벌(09-dungeon.js)뿐이고 둘 다 유보 상태다. 표시만 먼저 만든 것이다(2026-09-04 사용자 확정).
-//     ⛔ 「값이 안 변한다」고 이 칸을 지우지 말 것 — 지급 규칙이 정해지면 여기가 그대로 살아난다.
+//   📈 **값은 캠프 레벨이다**(2026-09-11 · GAME_DIRECTION §0-A 「레벨」) — 적을 잡으면 오른다.
+//     ⛔ 옛 캐릭터 레벨(`CHAR().level` · `profXpForLevel`)로 되돌리지 말 것: 그쪽은 유즈맵 보상으로
+//       오르던 마을 축이라 캠프와 아무 관계가 없다(그래서 이 칸이 오래 멈춰 있었다).
 //   ⛔ 바뀐 게 없으면 다시 그리지 않는다 — 칩과 같은 이유다(누르는 사이에 DOM 이 갈리면 안 된다).
 function curPaintLv(){
   const e = document.getElementById('curLv'); if(!e) return;
   const c = (typeof CHAR === 'function') ? CHAR() : null;
-  const lv = (c && c.level) || 1;
-  const need = (typeof profXpForLevel === 'function') ? (profXpForLevel(lv) || 1) : 1;
-  const pct = Math.max(0, Math.min(100, ((c && c.xp) || 0) / need * 100));
+  const lv = (typeof campLevel === 'function') ? campLevel() : 1;
+  const need = (typeof campXpNeed === 'function') ? (campXpNeed(lv) || 1) : 1;
+  const pct = Math.max(0, Math.min(100, ((typeof campXp === 'function') ? campXp() : 0) / need * 100));
   // 이름 = **캐릭터 이름이 먼저, 없으면 계정 닉**(캐릭터를 안 지은 상태에서도 빈칸이 아니게)
   const nm = (c && c.name) || ((typeof myNick === 'function') ? myNick() : '') || '이름 없음';
   const key = nm + '|' + lv + '|' + pct.toFixed(1);
@@ -151,7 +152,10 @@ function curPaintLv(){
       //   사람을 가르는 색이다), 좌상단은 **한 사람뿐**이라 그 색이 의미가 없고 초록·보라가 상단 줄에서 튄다.
       //   인라인을 지워야 CSS 가 이긴다(!important 를 쓰지 않으려는 이유다 · 2026-09-04 사용자 지적).
       const a2 = av.querySelector('.fAva'); if(a2) a2.removeAttribute('style'); } }
-  e.setAttribute('aria-label', nm + ' · 레벨 ' + lv + ' · 경험치 ' + Math.round(pct) + '%'); }
+  // 🔊 읽어 주는 말에는 **안 쓴 성장 포인트**도 넣는다 — 화면에는 자리가 없지만 「쓸 게 있다」는 신호다
+  { const left = (typeof campLvPtsLeft === 'function') ? campLvPtsLeft() : 0;
+    e.setAttribute('aria-label', nm + ' · 레벨 ' + lv + ' · 경험치 ' + Math.round(pct) + '%'
+      + (left > 0 ? (' · 안 쓴 성장 포인트 ' + left) : '')); } }
 // 칩 마크업 — **한 줄 · 가운뎃점**(2026-09-03 사용자 확정 · 목업 docs/mock/camp-chip-cmd-8.html 5안).
 //   ⛔ 판(면·테두리)을 되돌리지 말 것 — 좌상단은 맵 위에 얹히는 **글자**다.
 //   ⛔ 청록(--hud)을 되돌리지 말 것 — 좌상단만 색이 갈려 하단 구역과 안 어울리던 것이 이유다.
@@ -236,7 +240,7 @@ function curPaintChip(){ const e=document.getElementById('curTitle'); if(!e) ret
 //   던전에서 돌아오는 길이라 잠글 이유가 없다(지면 campFail 이 어차피 0 으로 되돌린다).
 // 🏷 던전 한 줄 소개 — 던전 선택 화면 카드의 **부제**다(2026-09-04 사용자 확정).
 //   ⛔ 여기에 배수·라운드를 적지 말 것 — 숫자는 카드 오른쪽에 이미 있다(두 번 적으면 어느 쪽이 맞는지 헷갈린다).
-//   ⚠ 이름은 HB_DUNGEONS(js/08-hunt.js)가 단일 소스다 — 여기는 **설명만** 갖는다(칸 번호로 짝을 맞춘다).
+//   ⚠ 이름은 HB_DUNGEONS(js/08-ui-parts.js)가 단일 소스다 — 여기는 **설명만** 갖는다(칸 번호로 짝을 맞춘다).
 const CAMP_DG_DESC = [
   '병력을 추스르는 안전한 자리',                    // 0 캠프
   '스웜 종족의 한적한 터전 외곽',                    // 1 감염된 둥지
@@ -263,9 +267,11 @@ function campDgDesc(dg){
 //     그래서 진입값 하나만 적으면 「던전 1 = ×1」로 읽혀 **아무 이득이 없어 보인다**(사용자 지적).
 //   ⛔ 공식으로 만들지 말 것 — 값은 CAMP_MINE(19-camp.js)이 단일 소스고 표로 고정돼 있다(HUNT_R1 §6-1-0-1).
 function campDgMulTx(dg){
-  const i = Math.max(0, Math.min(CAMP_DG_MAX, dg | 0));
+  const i = Math.max(0, dg | 0);
   if(typeof CAMP_MINE === 'undefined') return '';
-  const t = CAMP_MINE[i]; if(!t) return '';
+  // ♾ 표 밖(무한층)은 `campMineDef`(19-camp.js)가 마지막 두 칸의 비로 이어 준다
+  const t = (typeof campMineDef === 'function') ? campMineDef(i) : CAMP_MINE[Math.min(CAMP_MINE.length-1, i)];
+  if(!t) return '';
   // ⚠ **양쪽에 × 를 붙인다**(2026-09-04 사용자 지적) — 「×1~2」는 무슨 뜻인지 안 읽힌다.
   //   소수는 **한 자릿수(10 미만)에만** 붙인다 — 「×10.0」은 군더더기라 그냥 「×10」으로 적는다(사용자 확정).
   //   만 이상은 재화와 같은 축약기(fmtCur)를 쓴다.
@@ -279,11 +285,13 @@ function campDgMulTx(dg){
 const CAMP_HOME_NAME='캠프';   // 칩(campChipInfo)과 목록이 같은 이름을 쓴다 · ⛔ 왼쪽 아이콘 되돌리지 말 것(2026-09-03)
 // 🔓 **앞 던전을 완주해야 열린다**(2026-09-09). 캠프(0)와 던전 1 은 늘 열려 있다.
 //   ⛔ 「최고 도달」로 열지 말 것 — 절반만 부수고 나온 던전은 아직 못 깬 것이다.
+// ♾ **무한층은 마지막 던전을 깨야 열린다**(2026-09-11) — 그것이 환생 관문과 같은 문이다.
 function campDgOpen(dg){
-  if(dg<0 || dg>CAMP_DG_MAX) return false;
-  if(dg<=1) return true;
+  const n=dg|0; if(n<0) return false;
+  if(n<=1) return true;
   const C=(typeof campState==='function')?campState():null;
-  return !!(C && C.dgDone && C.dgDone[dg-1]); }
+  if(n>CAMP_DG_MAX) return !!(C && C.dgDone && C.dgDone[CAMP_DG_MAX]);
+  return !!(C && C.dgDone && C.dgDone[n-1]); }
 // 라운드는 캠프에 없던 값이다 — 없으면 여기서 1로 깐다(칸이 생기면 칩이 자동으로 라운드를 보여준다)
 // ⭐ 라운드의 진짜 자리는 캠프의 C.cleared 다(19-camp.js). 여기 C.rnd 는 **그것을 비추는 값**이다.
 //   ⛔ 두 벌로 들고 있지 말 것 — 드롭다운으로 옮긴 뒤 실제 라운드가 안 따라오던 원인이다.
@@ -298,7 +306,7 @@ function campDropOpen(){
   const o=campChipInfo(); if(!o) return;
   const C=campEnsureRnd(campState()); if(!C) return;
   // ⚠ 0(캠프)을 1 로 올리지 않는다 — 캠프에 있는데 드롭다운이 던전 1 을 가리키면 지금 자리를 못 읽는다.
-  _cdPick={ dg:Math.max(0,Math.min(CAMP_DG_MAX,C.dg|0)), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };
+  _cdPick={ dg:Math.max(0,C.dg|0), rnd:Math.max(1,Math.min(CAMP_RND_MAX,C.rnd||1)) };   // ♾ 위쪽 clamp 없음(무한층)
   campDropRender();
   const t=document.getElementById('curTitle'); if(t) t.classList.add('open');
   if(typeof playSfx==='function') playSfx('ui_open');
@@ -330,10 +338,15 @@ function _cdOutside(ev){ const d=document.getElementById('campDrop'), t=document
 // 🚪 아래 칸의 **글자 둘** — 고른 곳이 캠프냐 던전이냐로 갈린다.
 //   ⛔ 두 곳에서 만들지 말 것: 처음 그릴 때만 정하고 고를 때 안 고쳐서, 캠프에서 목록을 열면
 //     던전 1 을 골라도 버튼이 「돌아가기」로 남아 있었다(2026-09-10 실측 · 튜토리얼이 그 글자를 읽어 드러났다).
-function _cdGoLabel(dg){ return (dg|0)===0 ? '돌아가기' : '진입'; }
+function _cdGoLabel(dg){ const n=dg|0;
+  if(n===0) return '돌아가기';
+  return (n>CAMP_DG_MAX) ? '등반' : '진입'; }
 function _cdNoteTx(dg){
-  if((dg|0)===0) return '집 — 여기서 키우고 재정비한다';
+  const d=dg|0;
+  if(d===0) return '집 — 여기서 키우고 재정비한다';
   const n=(typeof CAMP_DG_STEPS!=='undefined')?CAMP_DG_STEPS:6;
+  // ♾ 무한층은 **캠프로 안 돌아온다** — 그 한 가지가 다른 점이라 여기서 말해 둔다
+  if(d>CAMP_DG_MAX) return '한 층을 깨면 곧바로 다음 층 — 질 때까지 오른다';
   return '진행 건물 '+n+'채를 부수면 완주'; }
 function campDropRender(){
   const ph=document.getElementById('phone'); if(!ph||!_cdPick) return;
@@ -345,7 +358,7 @@ function campDropRender(){
   // ⭐ **0 부터 돈다** — 첫 칸이 캠프(안전 구역)다. 던전 이름표(hbDun)에는 0 이 없으므로 이름을 직접 준다.
   //   지나온 던전(here 보다 앞)은 번호를 옅게 — 「어디까지 왔나」가 목록에서 읽힌다.
   // 🏰 **이름은 `campDgName`(23-camp-dungeon) 한 곳에서 온다**(2026-09-09).
-  //   ⛔ `hbDun`(08-hunt 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 칩과 목록의 이름이 어긋났다
+  //   ⛔ `hbDun`(08-ui-parts 의 옛 10던전 표)을 쓰지 말 것 — 순서가 달라 칩과 목록의 이름이 어긋났다
   //     (실측: 칩은 「감염된 둥지」인데 목록 같은 줄은 「버려진 전초기지」였다).
   for(let i=0;i<=CAMP_DG_MAX;i++){
     const open=campDgOpen(i), here=(i===_cdPick.dg), done=(i>0 && i<_cdPick.dg);
@@ -357,6 +370,17 @@ function campDropRender(){
       +(open?'':' disabled')+'><i class="cdIx">'+i+'</i>'
       +'<span class="cdTx"><span class="cdRnm">'+escHtml(nm)+'</span><span class="cdSub">'+escHtml(sub)+'</span></span>'
       +'<span class="cdMul">'+(!open?'잠김':campDgMulTx(i))+'</span></button>'; }
+  // ♾ **무한층 칸 하나**(2026-09-11 · 단계 3) — 늘 「무한 1층」부터 오른다.
+  //   ⛔ 층마다 줄을 세우지 말 것: 끝이 없어 목록이 끝없이 길어지고, 중간부터 들어가는 것은
+  //     관문 규칙(늘 처음부터)에 어긋난다. 어디까지 갔나는 **부제의 최고기록**이 말한다.
+  { const iy=CAMP_DG_MAX+1, open=campDgOpen(iy), here=(_cdPick.dg>=iy);
+    const best=(typeof campInfBest==='function')?campInfBest():0;
+    const sub=open ? (best>0 ? ('최고 '+best+'층 — '+CAMP_INF_DESC) : CAMP_INF_DESC)
+                   : ('마지막 던전을 깨야 열린다');
+    L+='<button class="cdRow inf'+(here?' here':'')+(open?'':' lock')+'" data-dg="'+iy+'"'
+      +(open?'':' disabled')+'><i class="cdIx">♾</i>'
+      +'<span class="cdTx"><span class="cdRnm">무한층</span><span class="cdSub">'+escHtml(sub)+'</span></span>'
+      +'<span class="cdMul">'+(!open?'잠김':campDgMulTx(iy))+'</span></button>'; }
   const noRnd=(_cdPick.dg===0);
   d.innerHTML='<div class="cdSec cdTop">'
       +'<div class="cdSl">DUNGEON<em>0 – '+CAMP_DG_MAX+'</em></div><div class="cdList">'+L+'</div></div>'
@@ -376,7 +400,9 @@ function campDropRender(){
 function campDropPickDg(dg){ if(!_cdPick||!campDgOpen(dg)) return;
   _cdPick.dg=dg;
   const d=document.getElementById('campDrop'); if(d){
-    for(const b of d.querySelectorAll('.cdRow')) b.classList.toggle('here', +b.dataset.dg===dg);
+    // ♾ 무한층은 **줄 하나**라 4층이든 9층이든 그 줄이 「여기」다
+    for(const b of d.querySelectorAll('.cdRow')){ const v=+b.dataset.dg;
+      b.classList.toggle('here', (v>CAMP_DG_MAX) ? (dg>CAMP_DG_MAX) : (v===dg)); }
     // 🚪 **아래 칸도 따라온다** — 캠프↔던전을 오가면 버튼 글자와 안내가 달라진다
     const G=d.querySelector('.cdGo'); if(G) G.textContent=_cdGoLabel(dg);
     const N=d.querySelector('.cdNote'); if(N) N.textContent=_cdNoteTx(dg); }
@@ -433,7 +459,7 @@ function curSplitSync(screenOn){
   if(screenOn !== undefined) _splitScreen = !!screenOn;
   // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
   //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
-  const zone = ['campRune','campReb','campTree'].some(id => {
+  const zone = ['campRune','campReb','campTree','mapUpgScreen','rebUpgScreen'].some(id => {
     const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
   curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.
@@ -1957,6 +1983,119 @@ document.addEventListener('pointerdown', function(e){
   if(!t) return; if(t.disabled && !t.classList.contains('locked')) return;
   playSfx(_sfxForEl(t));
 }, true);
+// ══ 🗺 유즈맵 강화 구역 ══════════════════════════════════════════════════
+// 환생으로 받은 포인트를 **유즈맵마다** 영구 강화에 넣는 곳(2026-09-10 사용자 확정).
+// 산 것은 그 유즈맵을 플레이할 때마다 **기본으로 깔린다** — 뒷단(`PLAYER_META.buildLevels` ·
+// `G.metaB`)이 이미 그렇게 돼 있어 여기서는 **사는 자리만** 새로 만든다.
+//
+// ⭐ **두 단**이다: 맵 목록 → 고른 맵의 강화 목록(무장 칸의 「계열 고르기 → 항목」과 같은 어법).
+// ⛔ 강화 줄을 새로 그리지 말 것 — 공학소와 **같은 줄**(`ptRowsHTML` · 09-usemap-base.js)을 쓴다.
+// ⛔ 지갑을 새로 만들지 말 것 — `PLAYER_META.coins` 하나다(판 보상도 환생 보상도 여기로 들어온다).
+//   ⚠ 환생 보상은 **아직 이 지갑에 안 붙었다**(다른 작업). 그래서 지금은 판 보상만 이 지갑을 채운다 —
+//     화면·표·적용은 그대로 시험된다. 환생이 생기면 지급 한 줄만 이 지갑에 붙이면 된다.
+// ⚠ 지금 항목이 있는 맵은 **네모네모 하나**다. 오토 배틀 표는 다음 조각에서 짠다 —
+//   ⛔ 항목 없는 맵을 목록에 세우지 말 것(눌러도 빈 판이라 고장으로 보인다).
+let _mapUpgPick = null;   // null = 맵 목록 · 'nemo' 등 = 그 맵의 강화 목록
+let _mapUpgGrp  = null;   // 고른 맵 안에서 지금 보는 갈래(탭)
+function mapUpgIsOn(){ const el=document.getElementById('mapUpgScreen');
+  return !!(el && el.classList.contains('on')); }
+// 바깥 강화가 **하나라도 있는** 맵만 목록에 선다.
+function mapUpgMaps(){
+  return (typeof MAPS!=='undefined'?MAPS:[]).filter(function(m){
+    for(const k in META_BUILDS){ const b=META_BUILDS[k]; if(b.out && b.map===m.id) return true; }
+    return false; }); }
+// 🪙 지금 가진 포인트 — 상단 재화 바에는 없는 재화라 이 화면이 직접 말한다.
+//   ⚠ 안 보이면 「살 수 있나」를 값만 보고 못 가늠한다(공학소도 제 머리줄에 같은 것을 단다).
+function mapUpgBal(){ const el=document.getElementById('muBal'); if(!el) return;
+  el.innerHTML='<b>'+((typeof fmtCur==='function')?fmtCur(PLAYER_META.coins||0):(PLAYER_META.coins||0))+'</b>P'; }
+// ⛔ **밖에서 이 함수를 직접 부르지 말 것** — 환생 구역의 유일한 입구는 `campRebEnter('umap')` 이다.
+//   거기가 나머지 둘(환생·트리)을 닫아 준다. 여기서 열기만 하면 둘이 겹쳐 뜬다.
+function mapUpgOpen(){ const el=document.getElementById('mapUpgScreen'); if(!el) return;
+  if(typeof loadMeta==='function') loadMeta();
+  _mapUpgPick=null; _mapUpgGrp=null;
+  el.classList.add('on');
+  // 🖼 배경은 **환생 구역과 같은 그림**이다 — 네 화면이 한 장을 나눠 쓴다(⛔ 제 그림을 두지 말 것).
+  if(typeof campRebArtOn==='function') campRebArtOn();
+  renderMapUpg();
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function mapUpgClose(keepArt){
+  setTimeout(()=>{ if(typeof curSplitSync==='function') curSplitSync(); },0);   // 📐 상단 띠 맞춤
+  const el=document.getElementById('mapUpgScreen'); if(el) el.classList.remove('on','crIn');
+  if(keepArt) return;
+  if(typeof campRebArtOff==='function') campRebArtOff(); }
+// 🔷 **갈래 탭은 룬 상점과 같은 「아이콘 탭」**(`.pdSeg.stack` · 2026-09-10 사용자 확정).
+//   ⭐ 껍데기는 **공용 `segNavHTML` 그대로**다 — 그림은 label 에 담고 세로로 세우는 일은
+//     공용 변형 `.stack`(css/40-social.css)이 한다. ⛔ 전용 탭 함수·마크업을 새로 만들지 말 것.
+//   ⭐ 아이콘도 **있는 것**을 쓴다: 육각 테두리 + 속 글리프는 `_PT_ICO`(09-usemap-base.js)에서 온다
+//     — 공학소가 쓰던 그 그림이다(⛔ 새 에셋을 만들지 말 것).
+//   ⚠ 색은 **역할이 정해진 것을 피해** 골랐다: 청록(--acc-sel)은 「지금 선택된 것」 전용이라 안 쓴다.
+//     경제=금색(재화의 색) · 전투=붉은 계열 · 전체=중립 파랑 · 보스=보라. 전부 이미 쓰던 값이다.
+const MU_TAB_COL = { eco:'#ffd24a', combat:'#ff7676', team:'#b4cdeb', coop:'#c8b6ff', prod:'#8fe6b0' };
+const MU_TAB_ICO = 22;
+function _muTabIco(grp, on){
+  const c = MU_TAB_COL[grp] || '#b4cdeb';
+  const S = MU_TAB_ICO, R = S/2 - 1, q = [];
+  for(let i=0;i<6;i++){ const a = Math.PI/180*(60*i - 90);
+    q.push((S/2 + R*Math.cos(a)).toFixed(1)+','+(S/2 + R*Math.sin(a)).toFixed(1)); }
+  const k = (S*0.58/24).toFixed(3), off = (S/2 - S*0.29).toFixed(1);
+  const gl = (typeof _PT_ICO!=='undefined' && _PT_ICO[grp]) || '';
+  return '<svg class="rnTabI" width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'">'
+    + '<polygon points="'+q.join(' ')+'" fill="'+(on?'rgba(255,255,255,.05)':'none')
+    +   '" stroke="'+c+'" stroke-width="1" opacity="'+(on?'.85':'.38')+'"/>'
+    // ⚠ `_PT_ICO` 는 **선(stroke) 그림**이다 — 룬 글리프처럼 fill 로 그리면 통째로 뭉개진다.
+    + '<g transform="translate('+off+','+off+') scale('+k+')" fill="none" stroke="'+c
+    +   '" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity="'
+    +   (on?'1':'.45')+'">'+gl+'</g></svg>'; }
+function mapUpgPick(id){ _mapUpgPick=id; _mapUpgGrp=null;
+  if(typeof playSfx==='function') playSfx('ui_tab'); renderMapUpg(); }
+function mapUpgBack(){ _mapUpgPick=null; _mapUpgGrp=null;
+  if(typeof playSfx==='function') playSfx('ui_close'); renderMapUpg(); }
+function setMapUpgGrp(g){ _mapUpgGrp=g; renderMapUpg(); }
+function renderMapUpg(){
+  const list=document.getElementById('muList'); if(!list) return;
+  const ttl=document.getElementById('muTtl'), back=document.getElementById('muBack');
+  const tabs=document.getElementById('muTabs');
+  const pick=_mapUpgPick;
+  mapUpgBal();
+  if(typeof curPaintChip==='function') curPaintChip();   // 🏷 이름은 재화 바가 말한다(campZoneTitle)
+  if(back) back.classList.toggle('hide', !pick);
+  // ── ① 맵 목록 ──
+  if(!pick){
+    if(ttl) ttl.textContent='강화할 유즈맵을 고르세요';
+    if(tabs) tabs.innerHTML='';
+    const maps=mapUpgMaps();
+    list.innerHTML = maps.length ? maps.map(function(m){
+      // 그 맵에 산 강화가 몇 개인지 — 「어디에 투자했나」가 목록에서 바로 읽힌다
+      let have=0, all=0;
+      for(const k in META_BUILDS){ const b=META_BUILDS[k]; if(!(b.out && b.map===m.id)) continue;
+        all++; if((typeof buildLevel==='function'?buildLevel(k):0)>0) have++; }
+      // ⭐ 그림·색은 **맵 목록과 같은 것**을 쓴다(mapThumbHTML · MAP_ACCENT) — ⛔ 이모지를 직접 박지 말 것.
+      const ac=(typeof MAP_ACCENT!=='undefined')?MAP_ACCENT[m.id]:null;
+      const esc=(typeof escHtml==='function')?escHtml:(x=>x);
+      return '<button class="muMap" onclick="mapUpgPick(\''+m.id+'\')"'
+        +(ac?' style="--mapAccent:'+ac+'"':'')+'>'
+        +((typeof mapThumbHTML==='function')?mapThumbHTML(m):'')
+        +'<span class="muMi"><b>'+esc(m.name)+'</b><i>'+esc(m.desc||'')+'</i></span>'
+        +'<span class="muN">'+have+'<u>/'+all+'</u></span></button>'; }).join('')
+      : '<div class="ptEmpty">아직 강화할 수 있는 유즈맵이 없습니다</div>';
+    return; }
+  // ── ② 고른 맵의 강화 목록 ──
+  const m=(typeof USEMAPS!=='undefined')?USEMAPS[pick]:null;
+  if(ttl) ttl.textContent=(m&&m.name)||'';
+  const mine=function(b){ return !!b.out && b.map===pick; };
+  const ts=(typeof ptTabsFor==='function')?ptTabsFor(mine):[];
+  if(ts.length && !ts.some(function(t){ return t[0]===_mapUpgGrp; })) _mapUpgGrp=ts[0][0];
+  if(tabs) tabs.innerHTML=(ts.length>1 && typeof segNavHTML==='function')
+    ? segNavHTML(ts.map(function(t){
+          return { label:_muTabIco(t[0], t[0]===_mapUpgGrp)+'<span>'+t[1]+'</span>' }; }),
+        Math.max(0, ts.findIndex(function(t){ return t[0]===_mapUpgGrp; })),
+        function(k){ return "setMapUpgGrp('"+ts[k][0]+"')"; })
+      .replace('class="pdSeg"', 'class="pdSeg stack"') : '';
+  list.innerHTML=(typeof ptRowsHTML==='function')
+    ? ptRowsHTML(function(b){ return mine(b) && (!_mapUpgGrp || b.group===_mapUpgGrp); })
+    : '';
+}
+
 function openMapSelect(){ updateMyNameTag(); bgmStart('lobby'); loadMeta();
   if(TEMP_COIN_TEST){ PLAYER_META.buildLevels={}; PLAYER_META.coins=9999999; saveMeta(); }   // [임시] 로비 진입(게임 나갔다 오면) 시 포인트 상점 업그레이드 초기화(저장까지 → 상점 재오픈 loadMeta가 덮어쓰지 않게)   // 계정별 메타 성장 데이터 로드(메인/로비 진입 시 로비 BGM)
   if(sbReady()){ rtStart(); rtSetStatus('online',''); }   // 실시간 소셜 연결 + 로비 상태

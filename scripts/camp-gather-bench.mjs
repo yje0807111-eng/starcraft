@@ -63,9 +63,9 @@ for(const cap of [1,5]) for(const n of [6,12,20,40]){
   if(_r===0 && !jam) jam=await pg.evaluate((c,k)=>__jam(c,k), cap, n);
 }
 const res=await pg.evaluate(rw=>({ 광맥:G.tech.minerals.length,
-  cap상수:(typeof CAMP_MINE_CAP!=='undefined'?CAMP_MINE_CAP:null), rows:rw }), rows);
+  cap상수:(typeof campMineCap==='function'?campMineCap():null), rows:rw }), rows);
 res.jam=jam;
-console.log('광맥 '+res.광맥+'덩이 · CAMP_MINE_CAP='+res.cap상수+'\n');
+console.log('광맥 '+res.광맥+'덩이 · 덩이당 '+res.cap상수+'기(campMineCap)'+'\n');
 console.log('cap  일꾼   초당수입   일꾼당');
 for(const r of res.rows) console.log(String(r.cap).padStart(3)+String(r.n).padStart(6)
   +String(r.rate).padStart(11)+String((r.rate/r.n).toFixed(2)).padStart(9));
