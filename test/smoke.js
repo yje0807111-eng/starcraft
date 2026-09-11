@@ -2241,6 +2241,18 @@ async function groupLobby(){
               assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
               assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
           } finally { wk._carry=_cy; wk._cKind=_ck; clearSel(); } }
+        // ⑤-1b 🏗 **전투 유닛도 같다**(2026-09-11 사용자: 「일꾼만 적용된 것 같다」) — 일꾼은 롱프레스(수리) 갈래가 먼저
+        //   돌아가 우연히 됐고, 전투 유닛은 techPtrDown 끝의 이동 명령이 up 의 지정을 삼켰다(실측: 본부 탭 → 이동).
+        { campPanMode(false); clearSel();
+          if(typeof campZoom==='function') campZoom(); spin(2);
+          const tu={eid:G.tech.eseq++, type:'unit', uid:'marine', x:bd.x+0.1, y:bd.y, hp:40, maxHp:40};
+          G.tech.ents.push(tu);
+          try{ G.tech.selU=[tu.eid]; G.tech.sel=null; spin(1);
+            if(_tapBd()){
+              assert(G.tech.sel===bd.eid,'전투 유닛 지정 중 건물을 탭했는데 건물이 안 골라진다(이동 명령이 삼켰다)');
+              assert(!(G.tech.selU||[]).length,'건물을 골랐는데 전투 유닛 지정이 남아 있다');
+              assert(tu.tx==null,'건물 탭이 이동 명령으로 나갔다'); } }
+          finally { G.tech.ents=G.tech.ents.filter(e=>e!==tu); clearSel(); } }
         // ⑤-2 🎒🔁 **자원을 든 일꾼 + 본진 = 두 번 누르면 바뀐다**(2026-09-11 사용자 확정)
         //   첫 탭 = 자원 작업 재개(건물이 안 골라진다) · **같은 본진을 한 번 더** 누르면 그 건물이 골라진다.
         //   ⛔ 첫 탭에서 바로 건물이 골라지게 되돌리지 말 것 — 자원을 든 일꾼을 되돌려보낼 길이 사라진다.

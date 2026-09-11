@@ -746,6 +746,10 @@ function techPtrDown(ev){ if(!G.tech) return; const r=_btRect(); if(!r) return; 
         if(_canBoard||_canNydus||_canRepair){ clearTimeout(_btLongT); const _be=_lpb.eid;   // 꾹 누르면 입장 시작 → 손을 건물 위에 유지하면 한 명씩 계속 입장, 떼면 중단
           _btLongT=setTimeout(()=>{ _btLongT=null; if(!_btDown) return; techLongPressBldg(_be); _btHold={eid:_be, board:_canBoard||_canNydus}; }, TECH_HOLD_MS);
           return; } } }   // 건물 위 손 유지 = 입장 모드 → 이동-추종(_btCmd) 안 함 = 입장 명령이 취소되지 않음
+    // 🏗 **어떤 유닛을 지정했든 내 건물을 누르면 이동이 아니다** — up 이 그 건물을 지정한다(2026-09-11 사용자:
+    //   「일꾼만 되고 다른 유닛은 안 된다」). 일꾼은 위 롱프레스(수리) 갈래가 먼저 돌아가서 됐고, 전투 유닛은
+    //   여기까지 내려와 이동 명령이 나가 up 의 지정을 삼켰다(실측). ⛔ 건물 탭을 이동으로 되돌리지 말 것 — 옆 바닥을 누르면 된다.
+    if(e && e.type==='bldg') return;
     _btCmd={}; _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); return; }
   _btBox={sx0:sx, sy0:sy, sx1:sx, sy1:sy, active:false, rw:r.width, rh:r.height}; }   // 무지정 = 한 손가락 드래그로 유닛 지정 박스
 function techPtrMove(ev){ if(!G.tech||G.tab!=='Build'||!_btPtrs.has(ev.pointerId)) return; _btPtrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
