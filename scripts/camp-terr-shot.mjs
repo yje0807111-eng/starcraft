@@ -37,6 +37,8 @@ await sleep(2000);
 { const ok=await pg.evaluate(()=>!!document.querySelector('#phone.campMode #cstMain .bmapFloor'));
   if(!ok){ console.error('⛔ 캠프가 안 열렸다'); await b.close(); server.close(); process.exit(1); } }
 
+// 🏕 집(캠프) — 바닥 타일의 주 무대다
+await pg.screenshot({path:path.join(OUT,'camp-terr-home.png')});
 // 🏰 던전 1 로 들어간다 — 지형은 던전에서만 켜진다(집은 평지다)
 //   ⚠ 병력이 0 이면 **한 프레임 만에 전멸 판정**이 나 캠프로 되돌아간다(19-camp _wiped).
 //     지형을 보는 것이 목적이므로, 전장이 열린 뒤 **전투 단계만 멈춘다**(게임 코드는 안 고친다).

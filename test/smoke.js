@@ -1957,8 +1957,9 @@ async function groupLobby(){
     { const fl=document.querySelector('#cstMain .bmapFloor');
       assert(fl,'맵 바닥이 없음');
       const bg=getComputedStyle(fl,'::before').backgroundImage;   // 🖼 2026-09-10: 그림은 ::before 에 있다(격자 위까지 깔려야 해서)
-      assert(bg.indexOf('backgrounds/camp/')>=0 || bg.indexOf('backgrounds/dungeons/')>=0,
-        '바닥이 던전 배경이 아님: '+bg.slice(0,60));
+      // 🧱 2026-09-11: 바닥은 **타일**이다(CAMP_TILE). 표에 없는 던전만 옛 그림을 쓴다.
+      assert(bg.indexOf('assets/tiles/')>=0 || bg.indexOf('backgrounds/camp/')>=0 || bg.indexOf('backgrounds/dungeons/')>=0,
+        '바닥이 타일도 던전 배경도 아님: '+bg.slice(0,60));
       assert(bg.indexOf('css/assets')<0,'배경 경로가 css/ 기준으로 샜다: '+bg.slice(0,70)); }
     // ⑥ 옛 사냥터는 안 돈다
     assert(!(typeof _hb!=='undefined' && _hb && _hb.on),'옛 사냥터가 아직 돈다');
@@ -6680,15 +6681,37 @@ async function groupLobby(){
     campEnterDungeon(3); const b=bgOf();
     assert(a && b, '--campBg 가 안 걸렸다');
     assert(a!==b, '던전을 옮겼는데 바닥 그림이 그대로다: '+a.slice(-28));
-    assert(/dg3/.test(b), '던전 3 인데 dg3 그림이 아니다: '+b.slice(-28));
+    /* 🧱 **바닥은 타일이다**(2026-09-11 사용자 확정 「전면 타일로」 · js/19-camp.js CAMP_TILE).
+     *   ⛔ 그림 한 장(assets/backgrounds/…/dg<N>.webp)으로 되돌리지 말 것 — 확대하면 뭉개지고
+     *     3D 건물과 축척이 안 맞았다. 표에 **없는** 던전만 옛 그림을 쓴다(유보 규칙). */
+    { const want=k=>(campTileOf(k)||{}).f;
+      assert(want(1)&&want(2)&&want(3),'던전 1~3 에 바닥 타일이 없다 — 표(CAMP_TILE)가 비었다');
+      for(const k of [1,2,3]){ campEnterDungeon(k); const u=bgOf();
+        assert(u.indexOf('assets/tiles/')>=0,'던전 '+k+' 바닥이 타일이 아니다: '+u.slice(-30));
+        assert(u.indexOf(want(k))>=0,'던전 '+k+' 이 표와 다른 타일을 쓴다: '+u.slice(-30));
+        assert(ph.classList.contains('tileFloor'),'던전 '+k+' 에 .tileFloor 가 안 걸렸다 — 타일이 반복 안 된다');
+        const st=getComputedStyle(document.querySelector('#cstMain .bmapFloor'),'::before');
+        // ⚠ `'no-repeat'.indexOf('repeat')` 는 **3 이다** — 부분 문자열로 재면 반복을 꺼도 통과한다(주입 시험에서 걸렸다)
+        assert(!/no-repeat/.test(st.backgroundRepeat) && /repeat/.test(st.backgroundRepeat),
+          '타일인데 반복이 아니다: '+st.backgroundRepeat);
+        /* ⛔ **격자 한 칸(≈8px)에 맞추지 말 것** — 1024 짜리 그림이 뭉개져 흙은 갈색 단색,
+         *   금속은 회색 덩어리가 된다(2026-09-10 실측). 실측으로 고른 값은 180px 언저리다. */
+        const px=parseFloat(st.backgroundSize);
+        assert(px>=100,'타일 반복이 너무 작다('+px+'px) — 무늬가 통째로 뭉갠다'); }
+      // 🌑 톤 낮추기(.60)는 **그림 한 장** 용이다 — 이미 어두운 타일에 걸면 검은 여백이 된다
+      { const f=getComputedStyle(document.querySelector('#cstMain .bmapFloor')).filter||'';
+        assert(!/brightness\(0?\.[0-8]/.test(f),'타일에 톤 낮추기가 걸렸다: '+f); }
+      /* ⚠ 「표에 없는 던전은 옛 그림」 갈래는 **지금 화면에서 못 잰다** — 전면 개편으로 던전이 3 개뿐이라
+       *   `campEnterDungeon` 이 그 위를 전부 3 으로 자른다(CAMP_DG_MAX). 코드는 유보 규칙으로 남겨 둔다. */
+      { for(let k=1;k<=CAMP_DG_MAX;k++) assert(campTileOf(k),'던전 '+k+' 에 바닥 타일이 없다 — 표를 채울 것'); } }
     // 🏰 **자동 이동이 없다**(2026-09-09 · 던전 = 원정). 완주하면 캠프로 돌아오고, 다음 던전은 골라서 간다.
     //   ⛔ 「50라운드를 채우면 다음 던전으로」를 되살리지 말 것 — 돌아와 재정비하는 것이 규칙이다.
-    { const C=campState(); campEnterDungeon(2); const c2=bgOf();
-      assert(/dg2/.test(c2),'던전 2 인데 dg2 그림이 아니다: '+c2.slice(-28));
+    { campEnterDungeon(2);
       assert(campDgN()===2,'campEnterDungeon(2) 인데 dg 가 2 가 아니다: '+campDgN());
       assert(campBroken()===0,'던전에 들어갔는데 부순 수가 0 이 아니다: '+campBroken()); }
-    { campEnterDungeon(0); campSkin(); }
-    return 'dg1 ≠ dg3 · 던전을 옮기면 갱신 · 자동 이동 없음';
+    { campEnterDungeon(0); campSkin();
+      assert(bgOf().indexOf('assets/tiles/')>=0,'집(캠프)도 타일이어야 한다: '+bgOf().slice(-30)); }
+    return '던전 1~3 + 집 = 타일 · 표 밖은 옛 그림 · 반복 크기·톤 확인';
   });
 
   // ✨ **초반에 적 수가 깜빡이지 않는다** (2026-08-30)

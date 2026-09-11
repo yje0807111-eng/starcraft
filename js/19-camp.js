@@ -6654,12 +6654,39 @@ const CAMP_BG_HOME = 'camp.webp';   // 0단계 전용 그림(ART.md §11-B)
 //   v2 는 바닥을 격자 위 0.58 까지 늘려 깔고(::before top −58%), 옛 §11 그림(9:16 · 118%)은 −18% 다 — 옛 그림을 −58% 로 깔면
 //   내 기지 석판이 1.34배 커져 본부가 타일 한 장 위에 선다(실측 2026-09-10 · 홈 캠프). 그림을 갈아 끼우면 여기를 true 로.
 const CAMP_BG_V2 = { 0:false, 1:false, 2:false, 3:false };
-function campFloorTop(dg){ return CAMP_BG_V2[dg | 0] ? -0.58 : -0.18; }
+/* 🧱 **바닥 타일**(2026-09-11 사용자 확정 「전면 타일로」) — 그림 한 장 대신 **반복 텍스처**를 깐다.
+ *   ⭐ 왜 — 그림 한 장은 확대하면 뭉개지고(원본의 일부만 쓴다) 3D 건물과 축척이 안 맞았다.
+ *     타일은 확대해도 안 깨지고, 지형층(js/24-terrain.js)이 그 위에 벽·절벽을 그린다.
+ *   📐 `px` = 화면 배율 1 에서 타일 한 장이 차지하는 CSS 픽셀. 맵 폭이 380 이므로 180 이면 두 장쯤 보인다.
+ *     ⛔ **격자 한 칸(8px)에 맞추지 말 것** — 1024 짜리 그림이 8px 로 줄어 무늬가 통째로 뭉갠다
+ *       (2026-09-10 실측: 흙은 갈색 단색, 금속은 회색 덩어리가 됐다).
+ *   ⚠ 표에 없는 던전은 **옛 그림 한 장**을 그대로 쓴다(유보 규칙 — 한 번에 다 갈지 않는다).
+ *   🩹 금속(camp_metal)은 위/아래 밝기가 55/47 이라 깔면 가로 줄무늬가 생겼다 →
+ *     `scripts/tile-import.mjs --flat` 으로 기울기만 나눠 51/51 로 들였다(이음매 6.65 → 4.3). */
+const CAMP_TILE = {
+  0: { f:'camp_stone.webp', px:180 },   // 🏕 집 — 석판
+  1: { f:'camp_metal.webp', px:180 },   // 유니온 기지 — 금속 갑판
+  2: { f:'camp_dirt.webp',  px:180 },   // 스웜 — 붉은 흙
+  3: { f:'camp_stone.webp', px:180 },   // 에테리얼 — 석판(임시)
+};
+const CAMP_TILE_DIR = 'assets/tiles/';
+function campTileOf(dg){ return CAMP_TILE[dg | 0] || null; }
+// 바닥이 덮는 세로 위끝 — 타일은 **위로 더 깐다**(격자 위 적 기지까지 · 반복이라 늘려도 공짜다)
+function campFloorTop(dg){ return campTileOf(dg) ? -0.80 : (CAMP_BG_V2[dg | 0] ? -0.58 : -0.18); }
 function campSkin(){
   const C = campState(); if(!C) return;
   const el = document.getElementById('phone'); if(!el) return;
   const raw = (C.dg | 0);
   el.style.setProperty('--floorTop', (campFloorTop(raw) * 100).toFixed(0) + '%');   // css/30-home.css .bmapFloor::before
+  // 🧱 **타일이 있으면 타일을 깐다** — 변수(`--campBg`)는 하나로 두고 **까는 방식**만 클래스로 가른다.
+  //   ⛔ 두 번째 배경 변수를 만들지 말 것(어느 쪽이 진짜인지 알 수 없어진다).
+  { const t = campTileOf(raw);
+    el.classList.toggle('tileFloor', !!t);
+    if(t){ const u = new URL(CAMP_TILE_DIR + t.f, document.baseURI).href;
+      el.style.setProperty('--campBg', "url('" + u + "')");
+      el.style.setProperty('--campTileSz', t.px + 'px');
+      el.style.setProperty('--mnSx', String(CAMP_MINE_SX));
+      return; } }
   if(raw <= 0){   // 캠프 — 전용 그림 한 장
     const u = new URL(CAMP_BG_DIR + CAMP_BG_HOME, document.baseURI).href;
     el.style.setProperty('--campBg', "url('" + u + "')");

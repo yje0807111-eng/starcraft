@@ -210,8 +210,20 @@ const TERR_SKIN = {
   hi:   { top:'rgba(120,140,170,.16)', face:'#232935', edge:'rgba(176,196,224,.50)', line:'rgba(8,11,17,.72)', lip:'rgba(198,216,240,.62)' },
   ramp: { top:'rgba(150,175,205,.26)', face:'#2c3442', edge:'rgba(200,220,245,.62)', line:'rgba(8,11,17,.60)', lip:'rgba(214,232,255,.72)' },
   wall: { top:'#3a3f4a',               face:'#20242c', edge:'#69748a',               line:'#12151b',          lip:'#7d89a0' } };
+/* 🧱 **바닥이 타일이면 고원을 더 진하게 칠한다**(2026-09-11).
+ *   옛 배경은 **그림에 고원이 이미 그려져** 있어서 이 층은 테와 앞면만 얹으면 됐다. 타일은 평평해서
+ *   그 연한 값(.16)으로는 고원인지 아닌지가 안 읽힌다 — 「높은 데」라는 것을 이 층이 혼자 말해야 한다.
+ *   ⛔ 옛 그림을 쓰는 던전에서 진한 값으로 되돌리지 말 것: 그림 위에 커다란 회청색 판이 얹힌다(실측). */
+const TERR_HI_TOP   = { scene:'rgba(120,140,170,.16)', tile:'rgba(152,174,208,.30)' };
+const TERR_RAMP_TOP = { scene:'rgba(150,175,205,.26)', tile:'rgba(186,210,240,.40)' };
+function campTerrOnTile(){ return !!(typeof campTileOf === 'function' && typeof campDgN === 'function' && campTileOf(campDgN())); }
+function campTerrSkin(kind){
+  const S = TERR_SKIN[kind] || TERR_SKIN.wall, k = campTerrOnTile() ? 'tile' : 'scene';
+  if(kind === 'hi')   return Object.assign({}, S, { top: TERR_HI_TOP[k] });
+  if(kind === 'ramp') return Object.assign({}, S, { top: TERR_RAMP_TOP[k] });
+  return S; }
 function campTerrSheet(kind, px){
-  const S = TERR_SKIN[kind] || TERR_SKIN.wall;
+  const S = campTerrSkin(kind);
   const cv = document.createElement('canvas'); cv.width = px * 4; cv.height = px * 3;
   const x = cv.getContext('2d'), E = Math.max(2, Math.round(px * 0.12));
   // 12칸: 어느 변이 바깥으로 드러나는가
@@ -267,14 +279,14 @@ function campTerrBake(){
   const face = Math.round(px * TERR_FACE_K);
   for(let ty = 0; ty < W; ty++) for(let tx = 0; tx < C; tx++){
     if(!hiAt(tx, ty) || hiAt(tx, ty + 1)) continue;
-    const ramp = T.r[ty * C + tx] > 0, S = TERR_SKIN[ramp ? 'ramp' : 'hi'], lip = Math.max(1, px * 0.09);
+    const ramp = T.r[ty * C + tx] > 0, S = campTerrSkin(ramp ? 'ramp' : 'hi'), lip = Math.max(1, px * 0.09);
     x.fillStyle = S.face; x.fillRect(tx * px, (ty + 1) * px, px, face);
     x.fillStyle = S.lip;  x.fillRect(tx * px, (ty + 1) * px, px, lip);                       // 윗입술 — 「여기서 떨어진다」
     x.fillStyle = S.line; x.fillRect(tx * px, (ty + 1) * px + face - lip, px, lip); }        // 발치 그늘
   const wallAt = (tx, ty) => inB(tx, ty) && T.w[ty * C + tx] > 0;
   layer(wallAt, sheets.wall);
   // 🧱 벽도 앞면을 갖는다 — 평평한 판은 「못 지나간다」로 안 읽힌다(2026-09-10 실측)
-  { const S = TERR_SKIN.wall, wf = Math.round(px * TERR_FACE_K * 0.8), lip = Math.max(1, px * 0.09);
+  { const S = campTerrSkin('wall'), wf = Math.round(px * TERR_FACE_K * 0.8), lip = Math.max(1, px * 0.09);
     for(let ty = 0; ty < W; ty++) for(let tx = 0; tx < C; tx++){
       if(!wallAt(tx, ty) || wallAt(tx, ty + 1)) continue;
       x.fillStyle = S.face; x.fillRect(tx * px, (ty + 1) * px, px, wf);
@@ -315,7 +327,7 @@ function campTerrSync(){
   const C0 = (typeof campState === 'function') ? campState() : null;
   const dg = campDgN(), seed = (C0 && C0.foeSeed) || 1;
   const wy0 = (f.wy0 == null ? 0 : f.wy0), wy1 = (f.wy1 == null ? 1 : f.wy1);
-  const sig = dg + '/' + seed + '/' + f.cols + 'x' + f.rows + '/' + wy0.toFixed(4);
+  const sig = dg + '/' + seed + '/' + f.cols + 'x' + f.rows + '/' + wy0.toFixed(4) + '/' + (campTerrOnTile() ? 'T' : 'S');
   if(CAMPT && CAMPT.sig === sig) return true;
   campTerrInit(wy0, wy1, f.rows); campTerrGen(dg, seed); CAMPT.sig = sig;
   campTerrPushHeight(f);   // 👁 지형이 새로 생겼으면 안개의 고저도 갈아 끼운다(씨앗이 바뀌면 절벽 자리도 바뀐다)
