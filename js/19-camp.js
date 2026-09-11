@@ -115,21 +115,25 @@ function campFail(){ const C = campState(); if(!C) return 0;
   campSave(); return was; }
 
 
-// ══ 🔁 환생 (2026-08-25 · 5단계) ═══════════════════════════════════════
-//   설계 단일 소스: HUNT_R1.md §4. 요지 셋 —
-//   ① 조건은 **매번 같다**: 그 회차 재화점수 100만. 회차가 늘어도 안 오른다.
-//      고정이라 후반에는 금방 채워진다 → 「특정 시점부터 자유롭게」가 저절로 이루어진다.
-//   ② 배수는 **로그**(폭주 방지) · 포인트는 **제곱근 × 깊이**(트리 비용이 지수라 같이 자라야 한다)
-//   ③ ~~기준선 100만과 포인트 공식의 기준선은 같은 숫자~~ → **2026-09-07 갈랐다**(사용자 결정 「둘 다」).
-//      관문을 100만으로 당긴 뒤 조건을 막 채운 첫 환생이 1.35 포인트라 **가운데(1) 말고는 아무것도 못 샀다**
-//      (갈래 8 · 묶음 32 · 첫 계열까지 41). 설계표(HUNT_R1 §4-4 「첫 환생 12.8 · 1티어 2~3개」)는 옛 경제
-//      (100만이 D2R20 쯤)를 전제한 것이라, 포인트 기준선을 따로 두어(CAMP_RP_BASE) 그 표의 자리로 되돌린다.
-//      첫 환생(100만 · D2R0) = √50 × 1.35 ≈ **9.5 포인트** → 가운데 1 + 갈래 2 + 묶음 4 + 계열 한둘.
+// ══ 🔁 환생 — **하나뿐이다** (2026-09-11 개편 · GAME_DIRECTION §0-A 「새 뼈대」) ═══════
 //
-//   ⚠ 통신소 스캔은 아직 입구로 안 붙였다(§4 의 화면 쪽). 지금 조건은 재화점수 하나다 —
-//      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
-const CAMP_REB_COST = 1e6;        // 환생 관문 = 포인트 공식의 기준선과 같은 숫자
-const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가
+// ⭐ 옛 「1차 환생」은 없어졌다. 그 자리는 **레벨**이 맡는다(위 「📈 레벨」 절).
+//   여기 남은 것은 옛 「2차 환생」 — **한 바퀴를 끝내고 다음 바퀴를 여는** 자다.
+//
+//   ① 관문 = **무한층에서 막히면** = 지금은 **던전 끝(마지막 던전 클리어)**.
+//      ⛔ 「번 돈 100만」으로 되돌리지 말 것 — 돈→포인트→배수→돈 되먹임 고리가 그거였다.
+//      ⚠ 무한층이 생기면 이 관문은 **저절로** 「무한층에서 막힘」이 된다(무한층 진입 = 던전 끝).
+//   ② 포인트 = **도달 깊이**(통산 관문 수). 던전 끝이 18관문이라 지금은 **늘 18** 이다.
+//      ⚠ **지금은 밀어붙일 이유가 없다**(던전을 깨자마자 환생이 최적) — 그 구간을 만드는 것이
+//        무한층이다. 층이 생기면 `campRebDepth` 에 층수가 더해지고 「더 올라갈수록 는다」가 산다.
+//   ③ 배수 = **1 + 환생 횟수**(2 → 3 → 4 …). ⛔ 곱하지 말 것 · ⛔ 로그 누적으로 되돌리지 말 것
+//      (옛 `C.rebMul`·`CAMP_REB_K` 는 「번 돈」 시절 물건이다).
+//
+// ⚠ **포인트를 쓰는 곳이 아직 없다**(2026-09-11). 스킵·자동화·기본 배수·상한 해제 넷은 다음 단계다
+//   (REDESIGN_PLAN 단계 2). 그때까지 `C.rbPts` 는 쌓이기만 한다 — 화면이 그렇게 말한다.
+const CAMP_REB_PT_GATE = 1;       // 관문 하나 = 환생 포인트 몇 점
+const CAMP_REB_MUL_STEP = 1;      // 환생 한 번 = 기본 배수 +얼마
+const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가 (회차 지표에 쓴다)
 // ── ⛽ 정제소 자동 생산 (HUNT_R1 §2-3-1) ────────────────────────────────
 // ⭐ **일꾼을 빼서 배치하지 않는다.** 정제소가 스스로 캔다 — 스타 원본과 다르다.
 //   분당 = (12 + 2 × 정제소Lv) × 던전배율 · 업그레이드 비용 = 미네랄 1만 × 1.12^Lv
@@ -202,21 +206,26 @@ function campGasTick(dt){
   const C = campState(); if(C) C.earnGas = (C.earnGas || 0) + got;
   return got;
 }
-// ⚠ K 는 **난이도 천장에 매여 있다**(2026-09-09). 관문 사다리를 재설계하며 천장이
-//   9.3e7 → 369 로 내려갔고(log10 7.97 → 2.57), K 를 그대로 두면 환생 배수가 3.1 배 작아진다.
-//   0.8 × 7.97 / 2.57 ≈ **2.5** 로 올려 「첫 환생에서 얻는 배수」를 옛 자리에 되돌린다.
-//   ⛔ CAMP_GATE_RATE 를 만졌으면 여기도 같이 볼 것 — 안 하면 환생이 통째로 시시해진다.
-const CAMP_REB_K = 2.5, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
-const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
-// 📐 포인트 기준선 — √(번 재화 ÷ CAMP_RP_BASE). ⛔ CAMP_REB_COST(관문)와 **같지 않다**(2026-09-07 · 위 ③).
-//   2만 = 관문 100만에서 √50 ≈ 7.07 배 — 트리 1티어(1·2·6)와 마디(2·4)를 첫 환생에 서넛 살 수 있는 자리.
-//   ⚠ 값을 바꾸면 트리 전체(160칸 · 최고 티어 ≈ 5.5조)의 도달 시각이 함께 움직인다 — 스모크가 첫 환생 범위를 잰다.
-const CAMP_RP_BASE = 20000;
+// 🗄 옛 계수 셋(`CAMP_REB_K`·`CAMP_RP_DG`·`CAMP_RP_BASE`)은 **없앴다**(2026-09-11) —
+//   전부 「번 돈」에서 포인트를 뽑던 자들이라 새 규칙에 자리가 없다. 되살리지 말 것.
 
-// 그 회차에 번 것 — 미네랄과 가스를 하나로 본다
+// 그 회차에 번 것 — 미네랄과 가스를 하나로 본다.
+//   ⚠ 이제 **환생 규칙이 아니라 회차 지표**다(환생 화면의 「이번 회차」 줄이 쓴다).
 function campWealth(){ const C = campState(); if(!C) return 0;
   return (C.earn || 0) + (C.earnGas || 0) * CAMP_GAS_RATE; }
-function campCanRebirth(){ return campWealth() >= CAMP_REB_COST; }
+// 🏁 이번 회차에 **어디까지 갔나** — 통산 관문 수(던전 하나 = CAMP_DG_STEPS 관문).
+//   ⚠ 무한층이 생기면 여기에 **층수를 더한다** — 그래야 「더 올라갈수록 포인트가 는다」가 산다.
+function campRebDepth(){
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  const C = campState(); if(!C) return 0;
+  let best = (campDgN() - 1) * per + campCleared();          // 지금 서 있는 곳
+  for(const k in (C.dgDone || {})) if(C.dgDone[k]) best = Math.max(best, (k | 0) * per);
+  return Math.max(0, best); }
+// 🚪 관문 — **마지막 던전을 깼나**(= 무한층 진입). ⛔ 「번 돈」으로 되돌리지 말 것.
+function campRebNeed(){
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  return CAMP_DG_MAX * per; }
+function campCanRebirth(){ return campRebDepth() >= campRebNeed(); }
 
 // ══ 📈 레벨 — 판 안의 성장 축 (2026-09-11 · GAME_DIRECTION §0-A 「새 뼈대」) ══════════
 //
@@ -366,21 +375,20 @@ function campDevSeed(){
   if(typeof saveMeta === 'function') saveMeta();
   return CAMP_DEV_START_MIN; }
 
-// ① 획득 배수 — 기존 배수에 **더한다**(곱이 아니다). 로그라 난이도가 1만 배 올라도 +3.2 만 붙는다.
-function campRebMulGain(){
-  return Math.max(CAMP_REB_MIN, CAMP_REB_K * Math.log10(Math.max(1, campFoeDiff(campDgN(), campCleared()))))
-    * campPackRebMul(); }   // 💳 환생 팩 — 쌓이는 양만 키운다(합산 누적이라 지수가 안 된다)
-// ② 획득 포인트 — 기준량(번 재화) × 깊이 배수. 재화를 2배 벌어야 1.41배다.
+// ① 이번 환생이 **기본 배수에 더하는 몫** — 한 번에 +1 이다(2 → 3 → 4 …).
+//   ⛔ 로그·곱으로 되돌리지 말 것(BALANCE §0: 지수 축이 둘이 되면 폭주한다).
+//   💳 환생 팩은 **쌓이는 양만** 키운다 — 합산 누적이라 지수가 안 된다.
+function campRebMulGain(){ return CAMP_REB_MUL_STEP * campPackRebMul(); }
+// ② 획득 포인트 — **도달 깊이**(통산 관문 수)에 비례. ⛔ 「번 돈」으로 되돌리지 말 것.
 function campRebPtGain(){
-  const base = Math.sqrt(campWealth() / CAMP_RP_BASE);   // ⚠ 관문(CAMP_REB_COST)이 아니라 포인트 기준선
-  return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
-    * campPackRebPt()                                     // 💳 환생 팩
-    ; }   // ⚠ 「윤회의 룬」(rebPts)은 2026-09-05 에 지웠다 — 환생할 때만 끼는 축이라 재미가 없다
+  return campRebDepth() * CAMP_REB_PT_GATE * campPackRebPt(); }
 // 💠 **가속의 룬 — 프레임 시간 배수.** ⛔ 부르는 곳은 `campFrame` 한 곳뿐이다.
 //   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
 //   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
 function campDtMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('speed') : 1; }
-// 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
+// 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리).
+//   📈 **1 + 환생 횟수**다(2026-09-11 · 옛 로그 누적을 대신한다). 쌓는 그릇은 그대로 `C.rebMul` 이라
+//     팩 배수(×2)가 그 위에 얹힌다 — ⛔ `C.reb` 를 직접 세지 말 것(팩이 빠진다).
 function campRebMul(){ const C = campState(); return 1 + ((C && C.rebMul) || 0); }
 
 // 📊 **총 배수 — 탭과 채취 양쪽에 똑같이 걸리는 곱 항만** (2026-09-05 사용자 확정).
@@ -1774,15 +1782,11 @@ function campRebStToggle(){
 function campRebRender(){
   const box = document.getElementById('crBody'); if(!box) return;
   const C = campState(); if(!C){ box.innerHTML = ''; return; }
-  const wealth = campWealth(), need = CAMP_REB_COST, can = campCanRebirth();
-  const pct = Math.max(0, Math.min(100, wealth / need * 100));
+  // 🏁 관문·포인트의 자는 **도달 깊이**다(2026-09-11 · 통산 관문 수). ⛔ 「번 돈」으로 되돌리지 말 것.
+  const depth = campRebDepth(), need = campRebNeed(), can = campCanRebirth();
+  const pct = Math.max(0, Math.min(100, depth / Math.max(1, need) * 100));
   const gMul = campRebMulGain(), gPts = campRebPtGain();
   const next = campRebMul() + gMul;                 // 배수는 **합**이다(곱이 아니다)
-  // 📐 포인트가 어디서 왔는지 — 식을 그대로 쓰지 않고 **곱하는 세 값**으로 쪼갠다.
-  //    식을 쓰면 결과(2.96)와 표시(+2 · 바닥내림)가 어긋나 오히려 헷갈린다.
-  const fW = Math.sqrt(Math.max(0, wealth) / CAMP_RP_BASE);   // 📐 포인트 기준선(관문과 다르다 · 2026-09-07)
-  const fD = Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1));
-  const fR = Math.pow(CAMP_RP_RD, campCleared());
   // 🔣 줄 아이콘 — 재화는 있는 자산, 나머지는 선 글리프(한 가족). ⛔ 이모지 금지.
   const gi = {
     tap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
@@ -1816,10 +1820,13 @@ function campRebRender(){
     + '<div class="crNow">지금 ×' + campRebMul().toFixed(2) + '</div></div>'
     // ✍ ⛔ 「획득량」을 붙이지 말 것 — 값이 「+2」라 + 가 이미 획득을 말한다.
     //   대신 **어디에 쓰는 포인트인지**를 이름에 넣는다(환생 트리).
-    + '<div class="crPt"><div class="crK">환생 트리 포인트</div>'
+    // 🚧 **쓰는 곳이 아직 없다**(2026-09-11) — 스킵·자동화·기본 배수·상한 해제 넷이 다음 단계다.
+    //   ⛔ 「환생 트리 포인트」로 되돌리지 말 것: 트리는 이제 **레벨 포인트**로 산다.
+    //   ✍ 받으면서 말을 안 하면 거짓이라, 어디에 쓸 것인지를 그 자리에서 적는다.
+    + '<div class="crPt"><div class="crK">환생 포인트</div>'
     + '<div class="crPv">+' + campNum(gPts) + '</div>'
-    + '<div class="crFx">재화 <b>' + fW.toFixed(2) + '</b> × 던전 <b>' + fD.toFixed(2)
-    + '</b> × 건물 <b>' + fR.toFixed(2) + '</b></div></div></div>'   // 🏰 라운드 → 부순 건물(2026-09-09)
+    + '<div class="crFx">도달 관문 <b>' + depth + '</b> · <b>준비 중</b>'
+    + '</div></div></div>'
     // ⬇ 접혔을 때 위·아래 빈 자리를 **1 : 0.55** 로 나눈다 — 위가 더 넓어 카드가 가운데보다 내려온다
     //   (2026-09-04 사용자 지적: 접으면 위가 너무 비었다). 펴져 있으면 이 칸은 0 이다.
     + '<div class="crGap2"></div>'
@@ -1854,8 +1861,8 @@ function campRebRender(){
   // ── ③ 아래 — 조건 + 버튼 둘. **바닥 고정**이라 지표가 길어져도 안 밀린다 ──
   const foot = document.getElementById('crFoot');
   if(foot) foot.innerHTML =
-    '<div class="crCond"><div class="crT"><span>환생 조건</span><span>'
-    + campNum(wealth) + ' / ' + campNum(need) + '</span></div>'
+    '<div class="crCond"><div class="crT"><span>환생 조건 — 마지막 던전 클리어</span><span>'
+    + depth + ' / ' + need + ' 관문</span></div>'
     + '<div class="crBar' + (can ? ' ok' : '') + '">'
     + '<i style="width:' + pct.toFixed(1) + '%"></i></div></div>'
     // 🔲 .crRim = 1px 그라디언트 고리(마스크). ⛔ 빼지 말 것 — 빼면 테두리가 통째로 사라진다.
@@ -1864,7 +1871,9 @@ function campRebRender(){
     // ✍ **무엇이 남는지까지** 말한다(2026-09-04) — 초기화만 적으면 겁만 주는데,
     //   실제로 배수·포인트·트리·최고 기록은 그대로다(campRebirth 는 C 만 되감는다).
     //   ⛔ 「환생하면 지금까지의 진행이 초기화됩니다」로 되돌리지 말 것 — 같은 말을 두 번 한다.
-    + '<div class="crWarn">진행은 초기화 · 배수와 트리는 그대로</div>'
+    // ✍ **성장 트리는 이제 되감긴다**(2026-09-11 · 레벨 포인트로 사는 한 회차짜리라서).
+    //   ⛔ 「트리는 그대로」로 되돌리지 말 것 — 화면이 거짓말을 한다.
+    + '<div class="crWarn">진행·레벨·성장 트리 초기화 · 배수와 룬은 그대로</div>'
     + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>'
     + '<span class="crRim"></span>'
     + '<span class="crGoI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"'

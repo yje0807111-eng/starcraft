@@ -642,13 +642,17 @@ async function groupLobby(){
     // ⚠ 실패해도 화면을 반드시 닫는다 — 열린 채로 죽으면 #campReb(z-index 120)이 뒤 스텝을 덮는다
     //   (실제로 주입 시험에서 로그아웃 스텝까지 같이 넘어졌다).
     try{
+    // 🏁 **관문의 자는 「도달 깊이」다**(2026-09-11) — ⛔ 「번 돈」으로 되돌리지 말 것.
+    //   돈→포인트→배수→돈 되먹임 고리가 그거였다(GAME_DIRECTION §0-A).
+    const _deep=()=>{ C.dgDone={}; C.dgDone[CAMP_DG_MAX]=1; };   // 마지막 던전을 깼다
+    const _shallow=()=>{ C.dgDone={}; C.dg=0; C.cleared=0; C.broken=0; };
     // ① 조건 미달이면 누를 수 없다
-    C.earn=0; C.earnGas=0; campRebOpen(); await sleep(80);
+    C.earn=0; C.earnGas=0; _shallow(); campRebOpen(); await sleep(80);
     assert(visible($('campReb')),'환생 화면이 안 열림');
     { const go=document.querySelector('#campReb .crGo');
       assert(go && go.disabled,'조건 미달인데 환생 버튼이 눌린다'); }
     // ② 조건을 채우면 열린다 + 받을 값이 실제 공식과 같다
-    C.earn=3.2e6; C.dg=2; C.cleared=17; campRebRender(); await sleep(60);
+    C.earn=3.2e6; _deep(); campRebRender(); await sleep(60);
     { const go=document.querySelector('#campReb .crGo');
       assert(go && !go.disabled,'조건을 채웠는데 환생 버튼이 잠겨 있다');
       const tx=$('crBody').textContent;
@@ -657,8 +661,16 @@ async function groupLobby(){
     // ③ 포인트에 **계산 근거**가 있어야 한다 — 「왜 2 인가」를 못 읽으면 숫자를 못 믿는다
     { const fx=document.querySelector('#campReb .crFx');
       assert(fx,'포인트 계산 근거 줄이 없다');
-      for(const k of ['재화','던전','건물']) assert(fx.textContent.indexOf(k)>=0,'계산 근거에 '+k+' 가 없음');   // 🏰 라운드 → 건물(2026-09-09)
-      assert(fx.querySelectorAll('b').length===3,'계산 근거의 값이 셋이 아님'); }
+      assert(fx.textContent.indexOf('도달 관문')>=0,'계산 근거가 도달 깊이를 안 말한다: '+fx.textContent);
+      // 🚧 **쓰는 곳이 아직 없다** — 받으면서 말을 안 하면 거짓 지급이다(GEM.md 의 `soon` 과 같은 규칙)
+      assert(fx.textContent.indexOf('준비 중')>=0,'포인트를 주면서 쓸 곳이 없다는 말을 안 한다');
+      assert(fx.querySelectorAll('b').length===2,'계산 근거의 값이 둘이 아님'); }
+    // ⛔ 「환생 트리 포인트」로 되돌리지 말 것 — 트리는 이제 **레벨 포인트**로 산다
+    assert($('crBody').textContent.indexOf('환생 트리 포인트')<0,'옛 이름(환생 트리 포인트)이 되살아났다');
+    // ✍ 경고 줄도 바뀌었다 — 성장 트리는 환생이 되감는다
+    { const w=document.querySelector('#campReb .crWarn');
+      assert(w && w.textContent.indexOf('트리')>=0 && /초기화/.test(w.textContent),
+        '경고가 성장 트리 초기화를 안 말한다: '+(w&&w.textContent)); }
     // 📂 **이번 회차는 접었다 편다** — 기본은 **접힘**(2026-09-04 사용자 확정).
     //   ⛔ 기본을 펴짐으로 되돌리지 말 것 — 이 화면에서 먼저 봐야 하는 것은 배수·포인트다.
     //   ⛔ 다시 그릴 때 접힘 상태가 풀리면 안 된다(campRebStApply 가 매 렌더 끝에 다시 입힌다).
@@ -724,8 +736,10 @@ async function groupLobby(){
     { const w=document.querySelector('#campReb .crWarn');
       assert(w,'되돌릴 수 없다는 안내가 없다');
       const t=(w.textContent||'').trim();
-      // ✍ **무엇이 남는지까지** 말한다 — 초기화만 적으면 겁만 준다(실제로 배수·트리는 남는다)
-      assert(t==='진행은 초기화 · 배수와 트리는 그대로','경고 문구가 다르다: '+t);
+      // ✍ **무엇이 남는지까지** 말한다 — 초기화만 적으면 겁만 준다.
+      //   📈 2026-09-11 — **성장 트리와 레벨은 이제 되감긴다**(레벨 포인트로 사는 한 회차짜리라서).
+      //   ⛔ 「배수와 트리는 그대로」로 되돌리지 말 것 — 화면이 거짓말을 한다.
+      assert(t==='진행·레벨·성장 트리 초기화 · 배수와 룬은 그대로','경고 문구가 다르다: '+t);
       // 자리 — **환생 버튼 위**다(팩 아래에 두면 팩에 대한 경고로 읽힌다)
       const go=document.querySelector('#campReb .crGo');
       assert(w.getBoundingClientRect().bottom<=go.getBoundingClientRect().top+1,
@@ -743,7 +757,8 @@ async function groupLobby(){
     { const q=s2=>document.querySelector('#campReb '+s2);
       const tx=(e)=>((e&&e.textContent)||'').replace(/\s+/g,'').trim();
       assert(tx(q('.crHero .crK'))==='환생후재화배수','큰 숫자 라벨이 다르다: '+tx(q('.crHero .crK')));
-      assert(tx(q('.crPt .crK'))==='환생트리포인트','포인트 라벨이 다르다: '+tx(q('.crPt .crK')));
+      // 📈 2026-09-11 — 트리는 **레벨 포인트**로 산다. ⛔ 「환생 트리 포인트」로 되돌리지 말 것.
+      assert(tx(q('.crPt .crK'))==='환생포인트','포인트 라벨이 다르다: '+tx(q('.crPt .crK')));
       assert(tx(q('.crNow')).indexOf('지금')===0,'칩이 「지금 ×N」 이 아니다: '+tx(q('.crNow')));
       assert(tx(q('.crNow')).indexOf('배수')<0,'칩에 「배수」가 겹친다 — 위 라벨이 이미 배수다');
       const w=tx(q('.crWarn'));
@@ -773,10 +788,10 @@ async function groupLobby(){
       //   어휘를 **끄지 말고 낮춘다** — 후광·고리 그라디언트·윗변 반사를 그대로 두고 세기만 뺀다.
       //   ⛔ 평면 회색(background 단색 · rim 단색 · ::before display:none)으로 되돌리지 말 것:
       //     두 칸이 나란히 죽어 화면이 통째로 밋밋해진다(사용자 지적).
-      { const C=campState(); const e0=C.earn;
-        C.earn=0; campRebRender(); await sleep(40);
+      { const C=campState(); const d0=JSON.parse(JSON.stringify(C.dgDone||{}));
+        _shallow(); campRebRender(); await sleep(40);
         const g=document.querySelector('#campReb .crGo'), ad=document.querySelector('#campReb .crPk.ad');
-        assert(g && g.disabled,'재화를 0 으로 했는데 환생이 안 잠긴다');
+        assert(g && g.disabled,'깊이를 0 으로 했는데 환생이 안 잠긴다');
         const lum=e=>{ const m=getComputedStyle(e).color.match(/[0-9.]+/g).map(Number);
           return .299*m[0]+.587*m[1]+.114*m[2]; };
         const off={};
@@ -791,14 +806,14 @@ async function groupLobby(){
             nm+' 잠김에서 윗변 반사를 껐다');
           off[nm]=lum(el); }
         // ⚠ 그래도 **켜짐보다 어두워야** 한다 — 못 누르는데 주 동작으로 읽히면 안 된다
-        C.earn=CAMP_REB_COST*3; campRebRender(); await sleep(40);
+        _deep(); campRebRender(); await sleep(40);
         const g2=document.querySelector('#campReb .crGo'), a2=document.querySelector('#campReb .crPk.ad');
         assert(!g2.disabled,'조건을 채웠는데 환생이 아직 잠겨 있다');
         assert(lum(g2)-off['환생']>40,'환생 잠김이 켜짐만큼 밝다: '
           +Math.round(off['환생'])+' → '+Math.round(lum(g2)));
         assert(lum(a2)-off['광고']>10,'광고 잠김이 켜짐만큼 밝다: '
           +Math.round(off['광고'])+' → '+Math.round(lum(a2)));
-        C.earn=e0; campRebRender(); await sleep(40); }
+        C.dgDone=d0; campRebRender(); await sleep(40); }
       // 🚧 광고는 껍데기다 — ⛔ 눌러도 배수가 **실제로 올라가면 안 된다**(표시와 어긋난다)
       { const m0=campRebMulGain(); campRebAd();
         assert(campRebMulGain()===m0,'광고 껍데기가 배수를 실제로 올렸다: '+m0+' → '+campRebMulGain()); }
@@ -8078,10 +8093,11 @@ async function groupLobby(){
        { C.race=null; campOpen(); await sleep(60);
          assert(C.race==='terran','종족이 안 박혔다: '+C.race);
          assert(!document.querySelector('#campRaceOv.on'),'종족 선택 화면이 떴다 — 첫 바퀴는 유니온 고정이다'); }
-       // ⑦ 환생 화면 근거 — 「라운드」가 아니라 「건물」
+       // ⑦ 환생 화면 근거 — 🏁 **도달 관문**이다(2026-09-11 · 옛 「라운드」도 「재화×던전×건물」도 아니다)
        if(typeof campRebRender==='function'){ campRebEnter('info'); await sleep(60);
-         const fx=document.querySelector('.crFx'); assert(fx && /건물/.test(fx.textContent) && !/라운드/.test(fx.textContent),
-           '환생 근거에 라운드가 남아 있다: '+(fx?fx.textContent:'없음')); campRebClose(); }
+         const fx=document.querySelector('.crFx');
+         assert(fx && /관문/.test(fx.textContent) && !/라운드/.test(fx.textContent) && !/재화/.test(fx.textContent),
+           '환생 근거가 도달 관문이 아니다: '+(fx?fx.textContent:'없음')); campRebClose(); }
        return '3D '+e3.length+' · 표식 '+marks.length+'(진행 '+cnt('prog')+' · 안개 '+cnt('hid')+') · 화면 안 · 띠 · 탭→카드→표적 · 종족 고정';
      } finally { C.dg=back.dg; C.race=back.race; C.foeTgt=back.foeTgt; if(CAMPB) CAMPB._foeSel=null; campBattleClose(); campBarReset(); }
    });
@@ -8441,14 +8457,15 @@ async function groupLobby(){
       //      산술적으로 불가능해진다(「한 번의 환생에 최종까지」가 설계다).
       { const top=campFoeDiff(CAMP_DG_MAX,CAMP_DG_STEPS);
         assert(top>200 && top<800,'한 회차 천장이 설계 구간(200~800)을 벗어났다: '+top.toFixed(0)); }
-      // ③-2 ⚠ 천장을 옮겼으면 **환생 배수**도 같이 옮겨야 한다 — campRebMul 은 이 천장의 log 다.
-      //    ⛔ CAMP_GATE_RATE 만 만지고 CAMP_REB_K 를 두면 환생이 조용히 시시해진다.
+      // ③-2 🔁 **환생 배수는 이제 난이도와 무관하다**(2026-09-11 · 한 번에 +1 · GAME_DIRECTION §0-A).
+      //    ⛔ 로그(`CAMP_REB_K × log10(난이도)`)로 되돌리지 말 것 — 난이도가 배수를 키우고 배수가
+      //      다시 진행을 키우는 되먹임이 그거였다. 관문·포인트도 같은 이유로 「도달 깊이」다.
       { const keep={dg:C.dg, broken:C.broken};
         C.dg=CAMP_DG_MAX; C.broken=CAMP_DG_STEPS; C.cleared=CAMP_DG_STEPS;
         const g=campRebMulGain();
         C.dg=keep.dg; C.broken=keep.broken;
-        assert(g>4 && g<10,'천장에서의 환생 배수가 옛 자리(+6 근처)를 벗어났다: +'+g.toFixed(2)
-          +' — CAMP_GATE_RATE 를 만졌으면 CAMP_REB_K 도 함께 볼 것'); }
+        assert(g===CAMP_REB_MUL_STEP,'환생 배수가 「한 번에 +'+CAMP_REB_MUL_STEP+'」가 아니다: +'+g.toFixed(2)
+          +' — 난이도에 매인 로그로 되돌아갔는지 볼 것'); }
       // ④ ⭐ 보상보다 난이도가 훨씬 크게 오른다(둘을 묶으면 안 되는 이유)
       C.dg=1; C.cleared=0; C.broken=0; const m0=campMineMul();
       C.cleared=CAMP_DG_STEPS; C.broken=CAMP_DG_STEPS; const m1=campMineMul();
