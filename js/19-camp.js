@@ -7877,6 +7877,12 @@ function campUnitBase(id, m){ const v = CAMP_UNIT_PRICE[id];
 function campUnitOwned(id){
   return (typeof G !== 'undefined' && G.tech && G.tech.units) ? (G.tech.units[id] | 0) : 0;
 }
+// 🚫 **무릎(처음 몇 기는 배수 면제)을 넣지 말 것 — 2026-09-11 에 넣어 보고 되돌렸다.**
+//   ⭐ 노린 것: 「병력 1기 7분인데 5기 28분」(BALANCE §5-13)의 빈 20분을 메우는 것.
+//   📏 실측(무릎 5기 · 45분 벤치 두 판): 병력 5기 **28.3 → 29.3분**(그대로) ·
+//     끝 병력 **25 → 36기**(+44%). **초반은 하나도 안 고치고 후반 병력만 불렸다.**
+//   ⇒ 그 빈 20분의 원인은 **유닛 값이 아니다**(5기 값 1.8만인데 19분에 이미 누적 10만이고
+//     인구도 9/10 이라 안 막힌다 · BALANCE §5-14). ⛔ 여기를 만져서 초반을 고치려 하지 말 것.
 function campUnitCost(base, id){ return Math.max(1, Math.ceil((base || 0) * Math.pow(campUnitRate(), campUnitOwned(id)))); }
 let _campUnitHome = null;
 function campSyncUnitCost(){
