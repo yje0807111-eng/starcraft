@@ -981,6 +981,44 @@ async function groupLobby(){
       { const tree=new Set(CAMP_RT_LINES.map(L=>L.f));
         const dup=Object.keys(CAMP_REB_UPG).filter(k=>tree.has(k));
         assert(dup.length===0,'성장 트리와 같은 키를 판다: '+dup.join(',')); }
+      // ⑨ 🚫 **넣으면 안 되는 것 셋**이 안 들어왔나(2026-09-11 · 표 위의 설명)
+      //   보급소 상한은 엔진이 인구를 TECH_SUP_MAX 에서 자르므로 트리의 「인구 상한」과 같은 자리다.
+      { const bad=['capSup','capSupply','supMax','awayMul','idleMul','startMin','startWk'];
+        for(const k of bad) assert(!CAMP_REB_UPG[k], '트리와 겹치는 항목을 판다: '+k); }
+      // ⑩ 🌙 **자리 비움은 상한만** 판다 — 배수는 트리 몫이라 겹치면 안 된다
+      { C.rbUpg={};
+        const a0=campAwayCapS();
+        C.rbUpg={awayCap:CAMP_REB_UPG.awayCap.max};
+        const a1=campAwayCapS();
+        assert(a1>a0,'자리 비움 상한이 안 늘었다: '+a0+' → '+a1);
+        assert(Math.round((a1-a0)/3600)===CAMP_REB_UPG.awayCap.step*CAMP_REB_UPG.awayCap.max,
+          '늘어난 시간이 표와 다르다: '+((a1-a0)/3600)); }
+      // ⑪ 🤖 **자동 강화** — 안 샀으면 아무 일이 없고, 사면 가장 싼 칸 하나만 산다.
+      //   ⛔ 살 수 있는 만큼 다 사면 안 된다(유닛 살 돈이 사라진다).
+      { C.rbUpg={}; _campAutoUpgAcc=0;
+        const lv0=campUpgLv('tap')+campUpgLv('gather');
+        campAutoUpgTick(99);
+        assert(campUpgLv('tap')+campUpgLv('gather')===lv0,'안 샀는데 자동 강화가 돈다');
+        C.rbUpg={autoUpg:1}; _campAutoUpgAcc=0;
+        // 넉넉하지 않으면 안 산다(값의 KEEP 배가 있어야 한다)
+        const need=Math.min(campUpgCost('tap'), campUpgCost('gather'));
+        G.tech.credit=need;                       // 살 수는 있지만 여유가 없다
+        campAutoUpgTick(99);
+        assert(campUpgLv('tap')+campUpgLv('gather')===lv0,
+          '여유가 없는데 샀다 — 유닛 살 돈이 사라진다');
+        // 넉넉하면 **한 칸만** 산다
+        G.tech.credit=need*CAMP_AUTOUPG_KEEP*20; _campAutoUpgAcc=0;
+        campAutoUpgTick(99);
+        const lv1=campUpgLv('tap')+campUpgLv('gather');
+        assert(lv1===lv0+1,'한 번에 '+(lv1-lv0)+'칸을 샀다 — 한 칸이어야 한다'); }
+      // ⑫ 🚀 **자동 원정**은 켜고 끄는 줄이다(값이 아니라 상태)
+      { assert(CAMP_REB_UPG.autoDg.onoff===true && CAMP_REB_UPG.autoDg.max===1,
+          '자동 원정이 켜고 끄는 줄이 아니다');
+        assert(CAMP_REB_UPG.autoUpg.onoff===true && CAMP_REB_UPG.autoUpg.max===1,
+          '자동 강화가 켜고 끄는 줄이 아니다');
+        C.rbUpg={autoDg:1};
+        const h=_rebUpgSrc().hint('autoDg', CAMP_REB_UPG.autoDg, 1);
+        assert(h==='켜짐','켜고 끄는 줄의 힌트가 값으로 나온다: '+h); }
       return '갈래 '+grps.length+' · 항목 '+Object.keys(CAMP_REB_UPG).length
         +' · 던전 개방 최대 '+CAMP_REB_UPG.dgStart.max+'(무한 환생 막이 ok)';
     } finally { C.rbPts=keep.pts; C.rbUpg=keep.bag; C.dgDone=keep.done; } });

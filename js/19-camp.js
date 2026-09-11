@@ -248,7 +248,9 @@ function campGasTick(dt){
 function campWealth(){ const C = campState(); if(!C) return 0;
   return (C.earn || 0) + (C.earnGas || 0) * CAMP_GAS_RATE; }
 // 🏁 이번 회차에 **어디까지 갔나** — 통산 관문 수(던전 하나 = CAMP_DG_STEPS 관문).
-//   ⚠ 무한층이 생기면 여기에 **층수를 더한다** — 그래야 「더 올라갈수록 포인트가 는다」가 산다.
+//   ♾ **무한층도 여기 세어진다**(2026-09-11) — `campDgN()` 에 위쪽 clamp 가 없고 층을 깨면
+//     `C.dgDone[dg]` 가 켜지므로, 한 층 더 오를 때마다 깊이가 +6 이고 환생 포인트도 그만큼 는다.
+//     ⛔ clamp 를 되돌리지 말 것 — 되돌리면 「한 층 더 갈까」가 통째로 사라진다.
 function campRebDepth(){
   const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
   const C = campState(); if(!C) return 0;
@@ -267,9 +269,18 @@ function campCanRebirth(){ return campRebDepth() >= campRebNeed(); }
 //   세지는 것은 레벨(성장 트리)의 몫이다 — 두 층이 같은 종류를 주면 한쪽이 폭주한다(BALANCE §0).
 //
 // 📦 갈래 셋. §0-A 의 「③ 기본 배수」는 **여기 없다** — 환생하면 자동으로 +1 이라 살 것이 아니다.
-//   ⚠ **아직 넷만 있다**(2026-09-11). §0-A 가 말한 나머지(시작 구성 바꾸기 · 자동 건설/연구/던전 ·
-//     오프라인 수익률 · 보급소 상한)는 붙일 자리가 생기는 대로 이 표에 줄을 더한다.
-//     ⛔ 「닿는 데가 없는 항목」을 미리 넣지 말 것 — 포인트를 받으면서 말을 안 하면 거짓 판매다.
+//
+// 🚫 **§0-A 의 항목 중 일부러 안 넣은 것 셋**(2026-09-11 · ⛔ 「나중에 넣자」가 아니라 **넣으면 안 되는 것**이다):
+//   · **보급소 상한** — 엔진이 인구를 `TECH_SUP_MAX`(200)에서 자른다(16-build.js). 보급소를 24채보다
+//     더 짓게 해 봐야 인구가 안 는다. 그 벽을 넘는 길은 **트리의 「인구 상한」**(`campSupAdd` 가 그 위에
+//     더한다) 하나뿐이라, 여기 줄을 세우면 **같은 효과를 두 곳에서 파는 것**이 된다. ⛔ 넣지 말 것.
+//   · **오프라인 수익률** — 트리의 「방치 수급」(`idle` → `campRtMul('idle')`)이 이미 그 배수다.
+//     ⭐ 대신 **상한**(`awayCap`)을 판다 — 배수가 아니라 몇 시간까지 쌓이나라, 축이 겹치지 않는다.
+//   · **시작 자원 · 시작 일꾼** — 트리에 있다.
+//
+//   ⚠ 남은 것 하나: **시작 구성 바꾸기**(병영 대신 기갑공장부터). 아직 **닿는 데가 없다** —
+//     캠프의 시작 건물을 정하는 자리가 `campWipeBoard` 한 줄이라 「무엇부터」라는 선택지가 없다.
+//     ⛔ 그 줄을 만들기 전에 표에 올리지 말 것 — 포인트를 받으면서 말을 안 하면 거짓 판매다.
 //
 // ⛔ **성장 트리와 같은 효과를 팔지 말 것**(인구 상한·시작 미네랄·시작 일꾼은 트리에 있다) —
 //   한 효과가 두 곳에 있으면 어느 표기도 진실이 아니게 된다.
@@ -281,6 +292,11 @@ const CAMP_REB_UPG_GRP = [
   { k:'cap',  nm:'상한 해제', ico:'prod' } ]; // 「천장에 막힌다」 — 더 많이
 // ⚠ `max`·`c0`·`cr` 는 **안 쟀다**(2026-09-11 출발점). 한 번 환생이 18점이라는 것만 자로 썼다 —
 //   dgStart 를 다 여는 데 두 회차, 나머지를 다 채우는 데 스무 회차쯤이다. BALANCE §4 로 다시 잴 것.
+// ⚠ **표보다 위에 둔다** — 아래 `CAMP_REB_UPG` 의 설명글이 이 값을 읽는다.
+//   ⛔ 아래로 내리지 말 것: const 는 같은 파일 안에서도 **선언 전에는 못 읽는다**(TDZ) —
+//     내리면 파일이 읽히는 순간 통째로 터진다(2026-09-11에 한 번 밟았다).
+const CAMP_AUTOUPG_KEEP = 4;     // 🤖 자동 강화 — 값의 몇 배가 남아 있을 때만 산다
+const CAMP_AUTOUPG_S    = 2;     // 🤖 자동 강화 — 몇 초마다 한 번 보나
 const CAMP_REB_UPG = {
   // 🚪 ⛔ **max 는 마지막 던전 바로 앞까지다**(CAMP_DG_MAX − 1). 마지막까지 열어 주면
   //   환생 관문(`campRebDepth` ≥ `campRebNeed`)이 환생 직후부터 참이라 **무한 환생**이 된다.
@@ -291,7 +307,16 @@ const CAMP_REB_UPG = {
   capWk   : { grp:'cap',  name:'일꾼 상한', max:5, c0:8,  cr:1.5, step:8,
               unit:'기',   desc:'일꾼을 {}기 더 데리고 있을 수 있습니다.' },
   capUnitR: { grp:'cap',  name:'재구매 완화', max:5, c0:10, cr:1.5, step:0.02,
-              unit:'',     desc:'같은 유닛을 살 때 비싸지는 폭이 {} 줄어듭니다.' } };
+              unit:'',     desc:'같은 유닛을 살 때 비싸지는 폭이 {} 줄어듭니다.' },
+  // 🌙 **배수가 아니라 상한이다** — 배수는 트리의 「방치 수급」 몫이다(위 🚫).
+  awayCap : { grp:'cap',  name:'자리 비움 상한', max:4, c0:9,  cr:1.5, step:4,
+              unit:'시간', desc:'자리를 비운 동안 {} 더 쌓입니다.' },
+  // 🤖 켜고 끄는 것 둘 — `onoff:true` 면 줄의 힌트가 「켜짐」이다(값이 아니라 상태다)
+  autoUpg : { grp:'auto', name:'자동 강화', max:1, c0:20, cr:2.0, step:1, onoff:true,
+              unit:'',     desc:'터치·일꾼 강화를 저절로 삽니다(값의 '
+                               + CAMP_AUTOUPG_KEEP + '배가 남을 때만 — 유닛 살 돈은 남긴다).' },
+  autoDg  : { grp:'auto', name:'자동 원정', max:1, c0:24, cr:2.0, step:1, onoff:true,
+              unit:'',     desc:'던전을 깨면 캠프에 머물지 않고 다음 곳으로 바로 들어갑니다.' } };
 
 // ── 보유 · 값 · 구매 ────────────────────────────────────────────────────
 //   저장은 `C.rbUpg = { dgStart:2, capWk:1, … }` — ⛔ `campRunReset` 이 지우면 안 된다(영구다).
@@ -343,6 +368,34 @@ function campAutoTapPS(){ return CAMP_REB_UPG.autoTap.step * campRebUpgLv('autoT
 // ⏱ 틱마다 **모자란 만큼만** 캔다 — 초당 n 회를 넘기지 않는다(소수는 다음 틱으로 넘긴다).
 //   ⛔ 사람 탭 경로(campMineOnce)를 쓰지 말 것: 화면에 숫자가 튀고 일일 퀘스트가 자동으로 찬다.
 //   ⭐ 대신 **같은 굴림**(campTapRoll)을 쓴다 — 치명·피버가 자동에도 그대로 걸린다.
+// 🌙 **자리 비움 상한** — 기본 8시간(CAMP_AWAY_CAP_S)에 산 만큼 더한다.
+//   ⛔ 배수(`campRtMul('idle')`)에 손대지 말 것 — 그건 트리의 자다(위 🚫).
+function campAwayCapS(){
+  const base = (typeof CAMP_AWAY_CAP_S !== 'undefined') ? CAMP_AWAY_CAP_S : 8 * 3600;
+  return base + 3600 * CAMP_REB_UPG.awayCap.step * campRebUpgLv('awayCap'); }
+// 🤖 **자동 강화** — 터치·일꾼 강화를 저절로 산다.
+//   ⭐ **가장 싼 칸 하나만** 산다. ⛔ 살 수 있는 만큼 다 사지 말 것: 미네랄이 바닥나
+//     유닛을 못 사고, 원정이 통째로 멈춘다(그게 「편해지는 것」의 반대다).
+//   ⚠ `CAMP_AUTOUPG_KEEP`·`CAMP_AUTOUPG_S` 둘 다 **안 쟀다** — 유닛 몫을 남기는 선이다.
+//   ⚠ 소리는 안 낸다(2초마다 울리면 귀가 아프다) — `_campUpgQuiet` 로 뒷정리만 직접 한다.
+let _campAutoUpgAcc = 0;
+function campAutoUpgTick(dtS){
+  if(campRebUpgLv('autoUpg') <= 0) return 0;
+  _campAutoUpgAcc += Math.max(0, dtS || 0);
+  if(_campAutoUpgAcc < CAMP_AUTOUPG_S) return 0;
+  _campAutoUpgAcc = 0;
+  if(typeof G === 'undefined' || !G.tech || typeof CAMP_MINE_UPGS === 'undefined') return 0;
+  let best = null, bc = Infinity;
+  for(const u of CAMP_MINE_UPGS){ const c = campUpgCost(u.k); if(c > 0 && c < bc){ bc = c; best = u.k; } }
+  if(!best || !((G.tech.credit || 0) >= bc * CAMP_AUTOUPG_KEEP)) return 0;
+  let ok = false;
+  _campUpgQuiet = true;
+  try { ok = campUpgBuy(best); } finally { _campUpgQuiet = false; }
+  if(!ok) return 0;
+  if(typeof saveMeta === 'function') saveMeta();
+  if(typeof updateCurBar === 'function') updateCurBar();
+  if(typeof campMineRender === 'function') campMineRender();
+  return 1; }
 let _campAutoTapAcc = 0;
 function campAutoTapTick(dtS){
   const ps = campAutoTapPS(); if(!(ps > 0)) return 0;
@@ -1872,6 +1925,7 @@ function _rebUpgSrc(){ return {
   act:   (id) => "doRebUpg('" + id + "')",
   // 📐 힌트 = **지금 걸려 있는 값**(0 이면 안 적는다 — 안 산 줄에 숫자가 붙으면 산 줄과 안 갈린다)
   hint:  (id, b, lv) => { if(!(lv > 0)) return '';
+    if(b.onoff) return '켜짐';                 // 🤖 값이 아니라 상태인 줄
     const v = b.step * lv;
     const tx = (id === 'dgStart') ? String(1 + v)
              : (id === 'capUnitR') ? ('−' + v.toFixed(2))
@@ -5049,6 +5103,16 @@ function campCombatStep(dt){
       return; }
     campFail();                                   // 캠프(0단계)로 · ⚠ 이 함수가 broken·foeDead 도 비운다
     campBattleClose(); campBarReset();
+    // 🚀 **자동 원정**(환생 강화) — 캠프에 머물지 않고 다음 곳으로 바로 들어간다.
+    //   ⚠ 순서가 중요하다: `campFail()` 로 **집에 한 번 돌아온 뒤** 다시 들어간다
+    //     (전장·진행·부순 건물이 그 한 곳에서만 정리된다 — ⛔ 건너뛰지 말 것).
+    //   ⚠ 병력이 없으면 안 간다(`campCanEnterDungeon`) — 도착하자마자 지는 것을 막는 그 자다.
+    const _nx = dgWas + 1;
+    if(campRebUpgLv('autoDg') > 0 && typeof campDgOpen === 'function' && campDgOpen(_nx)
+       && campCanEnterDungeon(_nx)){
+      campEnterDungeon(_nx);
+      campSay('🏁 ' + campDgName(dgWas) + ' 완주 — 🚀 ' + campDgName(_nx) + ' 로 이어 갑니다', 'game_start');
+      return; }
     campSay('🏁 ' + campDgName(dgWas) + ' 완주 — 캠프로 돌아왔습니다'
       + (fresh ? (' · ⏱ 최고기록 ' + mins + '분') : ''), 'game_start');
     return; }
@@ -6772,7 +6836,8 @@ function campTimeAmt(secs, kind){ const r = campRateOf(kind);
   return (r > 0) ? campRoundNice(r * secs) : 0; }
 function campSettleAway(){
   const C = campState(); if(!C || !C.leftAt || !(C.rate > 0)) return 0;
-  const secs = Math.min(CAMP_AWAY_CAP_S, Math.max(0, (Date.now() - C.leftAt) / 1000));
+  const cap = (typeof campAwayCapS === 'function') ? campAwayCapS() : CAMP_AWAY_CAP_S;
+  const secs = Math.min(cap, Math.max(0, (Date.now() - C.leftAt) / 1000));
   C.leftAt = 0;
   // 🌙 **방치 수급** 계열(2026-09-02 배선) — 자리를 비운 동안 쌓이는 몫만 늘린다.
   const got = Math.floor(C.rate * secs * CAMP_AWAY_EFF * campRtMul('idle'));
@@ -7053,6 +7118,7 @@ function campStartTimer(){
     if(!_campRAF && typeof campStartFrame === 'function') campStartFrame();
     campApplyGatherMul();
     campAutoTapTick(CAMP_TICK_MS / 1000);                    // 🤖 환생 강화 「자동 채굴」
+    campAutoUpgTick(CAMP_TICK_MS / 1000);                    // 🤖 환생 강화 「자동 강화」
     if(typeof updateCurBar === 'function') updateCurBar();   // 💠 번 돈이 재화 바에 바로 보이게
     if(++_campSlow >= CAMP_SLOW_EVERY){ _campSlow = 0;
       campAutoGather();    // 새 일꾼 · 고갈로 놀게 된 일꾼을 다시 붙인다
