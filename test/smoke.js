@@ -8009,6 +8009,24 @@ async function groupLobby(){
             if(ref && !got){ miss++; if(!ex) ex=a.gx.toFixed(3)+','+a.gy.toFixed(3)+' → '+b2.gx.toFixed(3)+','+b2.gy.toFixed(3); } }
           assert(blkRef>50,'견줄 표본이 모자란다(막힌 선 '+blkRef+'개) — 지형이 거의 안 깔렸다');
           assert(miss===0,'직선 판정이 막힌 칸을 '+miss+'/'+blkRef+'번 놓쳤다(예: '+ex+') — 점 사이로 샌다'); }
+        /* 🎯 **우회점은 가깝게 준다**(2026-09-11 · `TERR_WAY_NEAR`).
+         *   옛 끈 당기기는 「보이는 **가장 먼** 칸」을 줬는데, 목표가 멀수록 이동 엔진의 회피·조향이
+         *   명령 방향에서 벌어져(실측 평균 38.6°) 유닛이 절벽을 넘었다.
+         *   가깝게 주니 절벽 통과 33.0% → 23.1% · 떨림 9.4 → 6.6회/유닛 로 **둘 다** 좋아졌다.
+         *   ⚠ 아래 6 은 **글자 그대로 쓴 설계 상한**이다 — `TERR_WAY_NEAR` 로 재면 그 상수를 99 로
+         *     되돌려도 같이 늘어나 늘 통과한다(자기 자신을 기준으로 재는 덫).
+         *   ⚠ 1 칸이 아니라 6 인 이유: 막힌 칸에 밀려 들어간 유닛은 **주변 3칸**에서 출발점을 다시
+         *     잡으므로(대각 4.2칸) 정상 동작에서도 5칸대가 나온다. 옛 동작은 28칸까지 갔다. */
+        { let rs2=4200, rnd2=()=>((rs2=(rs2*1664525+1013904223)>>>0)/4294967296);
+          const span3=T.wy1-T.wy0; let far=0, n2=0, worst=0;
+          for(let k=0;k<400;k++){
+            const a={gx:rnd2(), gy:T.wy0+rnd2()*span3}, b3={gx:rnd2(), gy:T.wy0+rnd2()*span3};
+            const w3=campTerrWay(a,b3); if(!w3) continue; n2++;
+            const dd=Math.hypot((w3.gx-a.gx)*C2, ((w3.gy-a.gy)/span3)*W2);
+            if(dd>worst) worst=dd;
+            if(dd>6) far++; }
+          assert(n2>30,'우회점을 준 표본이 모자란다('+n2+') — 지형이 거의 안 깔렸다');
+          assert(far===0,'우회점이 '+far+'/'+n2+'번 6칸보다 멀다(최대 '+worst.toFixed(1)+'칸) — 멀수록 조타가 명령에서 벗어난다'); }
         // 막지 않으면 null(아무것도 안 바꾼다) · 막으면 레인 안의 지점을 준다
         { const a={gx:0.5,gy:0.55}, bb={gx:0.52,gy:0.5};
           assert(campTerrWay(a,bb)===null,'안 막혔는데 우회 지점을 준다 — 평지에서 길이 휜다'); }

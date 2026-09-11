@@ -113,7 +113,21 @@ function campTerrGen(dg, seed){
       if(ty > base) base = ty; }
     for(let tx = cx; tx < cx + TERR_RAMP_W && tx < C; tx++){
       for(let ty = py0; ty <= base; ty++) T.h[ty * C + tx] = 1;             // 밑변을 그 줄까지 채운다
-      for(let k = 0; k < TERR_RAMP_H && base - k >= py0; k++){ const i2 = (base - k) * C + tx; T.r[i2] = 1; } } }
+      for(let k = 0; k < TERR_RAMP_H && base - k >= py0; k++){ const i2 = (base - k) * C + tx; T.r[i2] = 1; } }
+    /* 🪜 **양옆을 한 칸씩 이어 내린다** — 평탄화는 오르막 열만 최저 줄로 맞추므로 **바깥 열과 단차**가
+     *   생긴다(가장자리가 계단이라 최대 `TERR_EDGE_MAX` 칸까지 튄다). 그대로 두면 고원 밑변이
+     *   **빗살**로 보인다(2026-09-11 · 스모크 ⑤ 가 씨앗에 따라 터졌다 — 회귀였다).
+     *   ⚠ **채우기만 한다**(내려 깎지 않는다) — 오르막 열은 건드리지 않으므로 오르막이 여전히 밑변이다.
+     *   자연 지형이 이미 충분히 낮으면 거기서 멈춘다(계단이 이어졌다는 뜻). */
+    for(const side of [-1, 1]){
+      let want = base - 1;
+      for(let k = 1; k <= TERR_EDGE_MAX + 2 && want > py0; k++){
+        const tx = (side < 0) ? (cx - k) : (cx + TERR_RAMP_W - 1 + k);
+        if(tx < 0 || tx >= C) break;
+        let b = py1; while(b > py0 && !T.h[b * C + tx]) b--;
+        if(b >= want) break;                                                // 이미 낮다 → 이어졌다
+        for(let ty = py0; ty <= want; ty++) T.h[ty * C + tx] = 1;
+        want--; } } }
   // 🧱 벽 — 통로에 덩어리 몇 개
   const wy0 = Math.max(py1 + 2, campTerrRowAt(TERR_WALL_ZONE.y0)), wy1 = Math.min(W - 2, campTerrRowAt(TERR_WALL_ZONE.y1));
   const blobs = [];
@@ -446,6 +460,7 @@ function campTerrHeightFill(f){
  *     각자 제 일만 한다: 지형은 흐름장, 건물은 A\*. ⛔ 하나로 합치려 하지 말 것.
  *   ⚠ **밀어내기는 하지 않는다** — 억지로 밀려 들어간 유닛도 흐름을 타고 스스로 나온다(①의 교훈).
  */
+const TERR_WAY_NEAR  = 1;    // 🎯 우회점을 최대 몇 칸 앞까지 줄까 — 실측으로 고른 값(표는 ARCHITECTURE §지형층)
 const TERR_WAY_STEPS = 28;    // 흐름을 따라 앞을 내다보는 칸 수(끈 당기기)
 const TERR_FLOW_KEEP = 8;     // 들고 있는 흐름장 수(목적지별)
 const TERR_SEG_MAX   = 160;   // 직선 판정에서 훑는 칸 수 상한(격자가 48×81 이라 |dx|+|dy| 는 129 를 못 넘는다)
@@ -536,13 +551,20 @@ function campTerrWay(gA, gB){
         const j = ny * C + nx; if(d[j] < 0 || d[j] >= pd) continue; pd = d[j]; pick = j; }
     if(pick < 0) return null; cur = pick; }
   let best = -1, first = -1, step = cur;
+  const C2 = T.cols, W2 = T.rows, sp2 = T.wy1 - T.wy0;
   for(let k = 0; k < TERR_WAY_STEPS; k++){
     const nx = _terrDownhill(step, d); if(nx < 0) break; step = nx;
     if(first < 0) first = nx;
     const p = campTerrCellMid(step);
     if(campTerrSegBlocked(gA.gx, gA.gy, p.gx, p.gy)) break;   // 여기서부터는 안 보인다 → 앞의 것이 답
     best = step;
-    if(d[step] === 0) break; }
+    if(d[step] === 0) break;
+    /* 🎯 **너무 멀리 보지 않는다**(2026-09-11) — 끈 당기기가 「보이는 가장 먼 칸」을 주면 목표가 멀어지고,
+     *   목표가 멀수록 이동 엔진의 회피·조향이 명령 방향에서 벌어질 여지가 커진다(실측 평균 38.6°).
+     *   ⚠ 너무 짧게 주면 흐름장의 4방향 계단을 그대로 따라가 **지그재그**가 되어 느려진다 —
+     *   값은 실측으로 골랐다(표는 ARCHITECTURE §지형층). */
+    const ddx = (p.gx - gA.gx) * C2, ddy = ((p.gy - gA.gy) / sp2) * W2;
+    if(Math.hypot(ddx, ddy) >= TERR_WAY_NEAR) break; }
   /* ⚠ **한 칸도 안 보여도 포기하지 않는다.** 벽에 바싹 붙어 서면 바로 옆 칸의 **중심까지도**
    *   선이 벽 모서리를 스쳐 「안 보인다」가 된다. 거기서 null 을 주면 직선으로 벽을 밀고,
    *   이동 물리의 진행도 창(`_pgHold`)이 걸려 **그대로 선다**(실측 8판 중 1판 · 2026-09-11).
