@@ -554,6 +554,83 @@ function campRebirth2(){
   campSave();
   return got; }
 
+// ══ 🤖 자동화 — 2차 트리 「자동화」 갈래 (2026-09-11) ═════════════════════
+//
+// ⭐ **하는 일은 「내가 늘 누르던 것」 하나씩**이고, 주기마다 **딱 한 번**만 한다.
+//   ⛔ 한 틱에 살 수 있는 만큼 몰아 사지 말 것 — 화면이 순식간에 바뀌어 무슨 일이 났는지
+//     읽을 수가 없고, 플레이어가 끼어들 틈도 사라진다.
+//
+// ⚠ **구매 경로를 새로 만들지 않는다** — 사람이 누르는 것과 **같은 함수**(`techDoProduce`·
+//   `techDoResearch`)를 부른다. 값·선행·환불이 전부 거기 있어서, 새로 짜면 반드시 어긋난다.
+//
+// 🔇 그런데 그 함수들은 **소리를 내고 실패하면 토스트를 띄운다**. 2초마다 「확인」 소리가 나거나
+//   「자원 부족」이 뜨면 자동화가 아니라 고장으로 보인다 — 그래서 부르는 동안만 **입을 막는다**.
+//   ⛔ 대신 조건을 미리 다 보고 부른다(입을 막았다고 아무 때나 부르면 안 된다).
+const CAMP_AUTO_S = 2;             // 자동화 주기(초) — 한 번에 하나씩
+function campAutoOn(k){ return (typeof campRt2Val === 'function') && campRt2Val(k) > 0; }
+function campAutoQuiet(fn){
+  const t = (typeof window !== 'undefined') ? window.toast : null;
+  const s0 = (typeof window !== 'undefined') ? window.playSfx : null;
+  if(typeof window !== 'undefined'){ window.toast = function(){}; window.playSfx = function(){}; }
+  try { return fn(); }
+  finally { if(typeof window !== 'undefined'){ window.toast = t; window.playSfx = s0; } } }
+
+// 👷 **자동 일꾼** — 상한까지 한 기씩. ⚠ 상한은 `campCap('worker')`(2차 트리가 연다).
+//   ⛔ 조건을 techDoProduce 에 맡기지 말 것 — 거기서 걸리면 토스트가 뜬다(입을 막아도 sfx·렌더가 돈다).
+function campAutoWorker(){
+  if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return 0;
+  const T = G.tech, t = TECH_TREE[T.race]; if(!t) return 0;
+  const wk = (typeof TECH_WORKER !== 'undefined') ? TECH_WORKER[T.race] : null; if(!wk) return 0;
+  if(campWorkerNPlanned() >= campCap('worker')) return 0;          // 상한
+  let bk = null, q = null;
+  for(const b of (t.buildings || [])){ const f = (b.produces || []).find(function(x){ return x.id === wk; });
+    if(f){ bk = b.k; q = f; break; } }
+  if(!bk || !q || !(T.built && T.built[bk] > 0)) return 0;
+  if((T.credit || 0) < (q.m || 0) || (T.energy || 0) < (q.g || 0)) return 0;   // 돈
+  if(!T.inf && (q.pop || 0) > 0 && (T.sup || 0) + (q.pop || 0) > (T.supCap || 0)) return 0;   // 인구
+  const be = (typeof _techSelBldgOf === 'function') ? _techSelBldgOf(bk) : null;
+  if(!be || ((be._pq || []).length >= 5)) return 0;                // 대기열
+  campAutoQuiet(function(){ techDoProduce(wk, bk); });
+  return 1; }
+
+// 🔬 **자동 연구** — 가스로 살 수 있는 무장 연구 중 **가장 싼 것** 하나.
+//   ⭐ 가장 싼 것을 고르는 이유: 레벨이 낮은 축부터 올라가 **골고루** 자란다. 가장 비싼 것을
+//     고르면 한 축만 깊어져 사람이 고를 때와 결과가 달라진다(자동화는 대신하는 것이지 정하는 것이 아니다).
+//   ⛔ 미네랄을 쓰는 연구가 생기면 이 규칙을 다시 볼 것 — 지금은 가스 전용이라 안 다툰다.
+function campAutoResearch(){
+  if(typeof CAMP_ARM_TREE === 'undefined' || typeof campArmRes !== 'function') return 0;
+  if(typeof G === 'undefined' || !G.tech) return 0;
+  const rows = CAMP_ARM_TREE[G.tech.race] || [];
+  let best = null, bestC = Infinity;
+  for(const row of rows) for(const ax of ['atk', 'as', 'def', 'dr']){
+    const rk = row[ax]; if(!rk) continue;
+    if(typeof campArmReady === 'function' && !campArmReady(rk)) continue;
+    if(typeof campArmAfford === 'function' && campArmAfford(rk) <= 0) continue;
+    const r = campArmRes(rk); if(!r) continue;
+    const c = (typeof campResearchCost === 'function') ? campResearchCost(r, campArmLv(rk)) : null;
+    if(!c) continue;
+    const g = (c[1] || 0) + (c[0] || 0);
+    if(g < bestC){ bestC = g; best = rk; } }
+  if(!best) return 0;
+  const b = (typeof campArmBldgOf === 'function') ? campArmBldgOf(best) : null; if(!b) return 0;
+  const be = (typeof _techSelBldgOf === 'function') ? _techSelBldgOf(b.k) : null;
+  if(!be || be._rj) return 0;                                      // 이미 연구 중(순차)
+  campAutoQuiet(function(){ techDoResearch(b.k, best, 1); });
+  return 1; }
+
+// ⏱ 자동화 시계 — **캠프 시계가 부른다**(campApplyGatherMul 옆). ⛔ 프레임마다 부르지 말 것.
+let _campAutoT = 0;
+function campAutoTick(dt){
+  if(!campEcoOn || !campEcoOn()) return 0;
+  _campAutoT += (dt || 0);
+  if(_campAutoT < CAMP_AUTO_S) return 0;
+  _campAutoT = 0;
+  let n = 0;
+  if(campAutoOn('autoWk'))  n += campAutoWorker();
+  if(campAutoOn('autoRes')) n += campAutoResearch();
+  if(n && typeof techUIRender === 'function') techUIRender();
+  return n; }
+
 // 🌱 **새 판의 시작 조건 — 한 곳에서만 정한다**(2026-09-08).
 //   ⚠ techUIInit 은 **관리자 건설 탭의 시작값**을 넣는다(16-build.js `TECH_START` — 미네랄 1,500 ·
 //     가스 1,000 · 일꾼 1기). 캠프의 시작은 **빈손**이다(HUNT_R1 §1·§2-3-1): 첫 미네랄은 탭으로 벌고,
@@ -567,6 +644,11 @@ function campFreshStart(){
   G.tech.energy = 0;                                  // ⛽ 시작 가스 0
   G.tech.credit = 0;                                  // 💎 시작 미네랄 0
   if(typeof campRootGrant === 'function') campRootGrant();
+  // 🎫 **2차 트리 「시작 자원」** — 회차를 넘어 남는 값이라 여기서 얹으면 매 회차 그대로 걸린다.
+  //   ⛔ 지갑 입구를 새로 만들지 말 것 — 여기는 판을 세우는 중이라 G.tech 가 곧 지갑이다
+  //     (campAddRes 는 화면·저장까지 건드린다).
+  { const r = (typeof campRt2Val === 'function') ? campRt2Val('startRes') : 0;
+    if(r > 0) G.tech.credit = (G.tech.credit || 0) + r; }
   return true; }
 
 // 살아 있는 건설 판을 새 판으로 되돌린다. 화면이 떠 있으면 다시 깔고, 아니면 비우기만 한다.
@@ -1194,11 +1276,17 @@ function campRtFoeMul(){ return campWithTree1(function(){ let m = 1;   // 🔒 �
 // 🔒 **스킵·자동화는 자리만 잡아 뒀다**(`soon:1`). 자동화는 벤치의 구매 정책을 게임 안으로 옮기는
 //   별도 작업이고, 스킵은 시작 지점·시작 구성이라 던전 진입 경로를 함께 고쳐야 한다.
 //   ⛔ 내용 없이 열지 말 것 — 미개봉 갈래의 규약은 1차의 `soon` 과 같다.
+// 🎨 갈래 색 — **DESIGN §2 역할표에서 꺼낸다**(넷째만 예외 · 아래).
+//   ⛔ 시안(`--acc-sel` #5cd6ff)을 쓰지 말 것 — 그건 「지금 고른 것」 전용이라 화면당 한 곳이다.
+//     처음에 상한 해제를 #4ad2ff 로 뒀다가 시안과 헷갈려 `--info` 로 내렸다.
+//   ⚠ **자동화(넷째)는 역할표에 맞는 자리가 없다** — 「편해지는 것」은 재화도 정보도 긍정도 아니다.
+//     1차 트리의 전투 갈래(#ff5a4a)와 같은 운용으로 **계열 구분색**을 쓴다.
+//     ⛔ 호박(#ffb14d)으로 되돌리지 말 것: 바로 옆 금색(기본 배수)과 붙어 안 갈린다(실측).
 const CAMP_TREE2_BR = {
-  base: { a:-Math.PI*0.48, rk:0.95, nm:'기본 배수', col:'#ffd24a' },   // ↗ 재화와 같은 금색(같은 축이다)
-  cap:  { a: Math.PI*0.52, rk:1.10, nm:'상한 해제', col:'#4ad2ff' },   // ↘ 정보=청(DESIGN §2 역할표)
-  skip: { a: Math.PI*1.03, rk:0.72, nm:'스킵',      col:'#6b7684', soon:1 },   // ← 미개봉
-  auto: { a: Math.PI*1.52, rk:0.86, nm:'자동화',    col:'#6b7684', soon:1 },   // ↑ 미개봉
+  base: { a:-Math.PI*0.48, rk:0.95, nm:'기본 배수', col:'#ffd24a' },   // ↗ 재화·보상 = 금(--gold)
+  cap:  { a: Math.PI*0.52, rk:1.10, nm:'상한 해제', col:'#4aa8ff' },   // ↘ 정보 = --info
+  skip: { a: Math.PI*1.03, rk:0.72, nm:'스킵',      col:'#5dff8f' },   // ← 긍정 = --ok
+  auto: { a: Math.PI*1.52, rk:0.86, nm:'자동화',    col:'#b07aff' },   // ↑ 계열 구분색(위 ⚠)
 };
 // 📐 값 눈금 — 한 바퀴를 다 돌면 **18 포인트**다(campReb2PtGain). 그 위에서 읽을 것:
 //   첫 바퀴에 갈래 하나(2) + 묶음 하나(4) + 1차 하나(2~4)가 들어간다.
@@ -1216,6 +1304,30 @@ const CAMP_RT2_LINES = [
   {k:'keep1', br:'base', grp:'가', gr:'보통', nm:'1차 배수 보존', tn:['유산'],
    f:'reb2Keep', ic:'tree/idle.webp', vk:'pct', lad:[0, 0.4],
    ds:'2차 환생을 해도 1차 환생 배수가 {} 남습니다.'},
+  // ══ 🟢 스킵 — 「또 하기 싫다」를 고친다 ═══════════════════════════════════
+  //   ⛔ 세지는 것이 아니다. **이미 해 본 구간을 건너뛰는 것**이라 시간만 줄인다.
+  //   ⚠ 종족 구간 생략·시작 구성 바꾸기는 **단계 4(종족 변이)** 뒤의 일이다 — 아직 표에 없다.
+  {k:'dgStart', br:'skip', grp:'가', gr:'귀함', nm:'던전 시작 지점', tn:['지름길'],
+   f:'skipDgStart', ic:'tree/skipRd.webp', vk:'cnt', lad:[0, 2],
+   ds:'던전에 들어갈 때 앞의 관문 {} 채를 이미 부순 채로 시작합니다.'},
+  // ⚠ 1차(성장 트리)의 `startMin` 과 **같은 축이지만 자릿수가 다르다** — 그쪽은 한 회차짜리라
+  //   회차가 시작될 땐 트리가 비어 있어 사실상 안 걸린다. 이건 **회차를 넘어 남는다**.
+  {k:'startRes', br:'skip', grp:'가', gr:'보통', nm:'시작 자원', tn:['밑천'],
+   f:'skipStartRes', ic:'tree/startMin.webp', vk:'cnt', lad:[0, 50000],
+   ds:'회차를 시작할 때 미네랄 {} 을 갖고 시작합니다.'},
+  // ══ 🤖 자동화 — 「손이 많이 간다」를 고친다 ═══════════════════════════════
+  //   ⛔ 세지는 것이 아니다 — **내가 늘 하던 것을 대신** 해 줄 뿐이고, 사람보다 잘하지 않는다.
+  //   ⭐ 여기 둘은 **켜고 끌 이유가 없는 것만** 골랐다: 일꾼은 상한까지가 늘 이득이고,
+  //     연구는 **가스 전용**이라 미네랄을 안 다툰다(`CAMP_UNIT_GAS` 가 비어 있다).
+  //   ⚠ **자동 유닛 구매·자동 건설은 아직 없다** — 앞엣것은 플레이어의 미네랄을 다퉈 on/off
+  //     스위치가 있어야 하고, 뒤엣것은 자리 찾기가 붙는다. ⛔ 스위치 없이 유닛을 자동으로
+  //     사게 하지 말 것: 업그레이드를 사려고 모으는 돈을 자동화가 먼저 써 버린다.
+  {k:'autoWk', br:'auto', grp:'가', gr:'흔함', nm:'자동 일꾼', tn:['교대'],
+   f:'autoWorker', ic:'tree/startWk.webp', vk:'on', lad:[0, 1],
+   ds:'일꾼을 상한까지 <b>저절로 뽑습니다</b>.'},
+  {k:'autoRes', br:'auto', grp:'가', gr:'보통', nm:'자동 연구', tn:['정비반'],
+   f:'autoResearch', ic:'tree/gather.webp', vk:'on', lad:[0, 1],
+   ds:'가스로 살 수 있는 무장 연구를 <b>저절로 올립니다</b>.'},
   // ══ 🔵 상한 해제 ═══════════════════════════════════════════════════════
   //   ⚠ 사다리의 **0차 값이 지금 상수와 같아야** 한다 — 안 사면 아무것도 안 달라지는 것이 규약이다.
   {k:'wkCap2', br:'cap', grp:'가', gr:'흔함', nm:'일꾼 상한', tn:['총동원'],
@@ -7018,6 +7130,7 @@ function campStartTimer(){
     // 🌱 프레임이 죽어 있으면 되살린다 — 유즈맵 게임에 다녀오면 campFrame 이 스스로 빠져 있다.
     if(!_campRAF && typeof campStartFrame === 'function') campStartFrame();
     campApplyGatherMul();
+    campAutoTick(CAMP_TICK_MS / 1000);   // 🤖 자동화 — 2차 트리를 샀을 때만 실제로 뭔가 한다
     if(typeof updateCurBar === 'function') updateCurBar();   // 💠 번 돈이 재화 바에 바로 보이게
     if(++_campSlow >= CAMP_SLOW_EVERY){ _campSlow = 0;
       campAutoGather();    // 새 일꾼 · 고갈로 놀게 된 일꾼을 다시 붙인다

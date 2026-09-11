@@ -4251,10 +4251,63 @@ async function groupLobby(){
       assert(campRtLines()===CAMP_RT_LINES,'되돌려 놓지 않았다 — finally 가 빠졌다');
       assert(campRtMul('gather')===g1,'되돌린 뒤 1차 효과가 다르다');
 
+      // ⑤-2 🎫 **스킵 — 던전 시작 지점**
+      //    ⛔ `C.broken` 만 올리면 안 된다: 릴레이는 **실제로 죽은 건물**을 보므로
+      //      난이도는 관문 n 인데 웨이브는 관문 1 짜리가 된다(2026-09-11 실측으로 겪었다).
+      if(typeof campEnterDungeon==='function'){
+        C.rb2Tree={}; campEnterDungeon(1);
+        assert((campState().broken|0)===0,'안 샀는데 관문이 건너뛰어졌다: '+campState().broken);
+        assert(!Object.keys(campState().foeDead||{}).length,'안 샀는데 건물이 부서진 채로 시작한다');
+        const sk=CAMP_RT2_LINES.find(L=>L.k==='dgStart').lad[1];
+        C.rb2Tree={dgStart:1}; campEnterDungeon(1);
+        const C4=campState();
+        assert((C4.broken|0)===sk,'시작 지점이 안 걸린다: '+C4.broken+'/'+sk);
+        assert(Object.keys(C4.foeDead||{}).length===sk,
+          '진행도만 올리고 건물은 안 부쉈다 — 웨이브가 관문 1 짜리로 남는다: '
+          +Object.keys(C4.foeDead||{}).length+'/'+sk);
+        // ⚠ 부서진 것은 **진행 건물만** — 문지기 탑은 여전히 플레이어가 깬다
+        { const d=campDgDef(1); let i=0, bad=0;
+          for(const q of (d&&d.bld)||[]){ const eid='fb1_'+(i++);
+            if(C4.foeDead[eid] && q.role!=='prog') bad++; }
+          assert(!bad,'진행 건물이 아닌 것까지 건너뛰었다(문지기 탑은 남아야 한다): '+bad); }
+        C.rb2Tree={}; campEnterDungeon(0); }
+      // ⑤-3 🎫 **스킵 — 시작 자원**은 회차 시작에 걸린다
+      if(typeof campFreshStart==='function' && typeof G!=='undefined' && G.tech){
+        const res=CAMP_RT2_LINES.find(L=>L.k==='startRes').lad[1];
+        C.rb2Tree={}; campFreshStart(); const a0=G.tech.credit||0;
+        C.rb2Tree={startRes:1}; campFreshStart(); const a1=G.tech.credit||0;
+        assert(a1-a0===res,'시작 자원이 안 걸린다: '+(a1-a0)+'/'+res);
+        C.rb2Tree={}; }
+      // ⑤-4 🤖 **자동화 — 안 샀으면 아무 일도 안 한다**
+      if(typeof campAutoTick==='function' && typeof G!=='undefined' && G.tech){
+        const wk0=campWorkerNPlanned();
+        C.rb2Tree={}; _campAutoT=0;
+        for(let i=0;i<20;i++) campAutoTick(1);
+        assert(campWorkerNPlanned()===wk0,'안 샀는데 일꾼이 저절로 늘었다: '
+          +campWorkerNPlanned()+'/'+wk0);
+        // 샀으면 **주기마다 한 기씩**이다(⛔ 한 틱에 몰아 사지 않는다)
+        G.tech.credit=1e9; G.tech.supCap=999; G.tech.inf=false;
+        C.rb2Tree={autoWk:1}; _campAutoT=0;
+        campAutoTick(CAMP_AUTO_S);
+        const wk1=campWorkerNPlanned();
+        assert(wk1===wk0+1,'자동 일꾼이 한 틱에 한 기가 아니다: '+wk1+'/'+(wk0+1));
+        // ⏱ 주기 전에는 아무 일도 없다
+        campAutoTick(CAMP_AUTO_S*0.4);
+        assert(campWorkerNPlanned()===wk1,'주기 전에 또 뽑았다: '+campWorkerNPlanned());
+        // 🔓 상한을 넘지 않는다 — 자는 campCap 하나
+        C.rb2Tree={autoWk:1};
+        for(let i=0;i<200;i++){ _campAutoT=CAMP_AUTO_S; campAutoTick(0); }
+        assert(campWorkerNPlanned()<=campCap('worker'),
+          '자동 일꾼이 상한을 넘었다: '+campWorkerNPlanned()+'/'+campCap('worker'));
+        C.rb2Tree={}; }
       // ⑥ ⛔ **관문 문턱 완화를 팔지 않는다**(남은 되먹임 고리 · CLAUDE.md)
+      //    ⚠ 금지된 것은 **환생 문턱(CAMP_REB_COST)을 깎는 것**이다 — 「던전 관문 n채」는
+      //      다른 말이다(스킵의 dgStart 가 거기 걸려 한 번 헛터졌다). 말이 아니라 **뜻**으로 잰다.
       for(const L of CAMP_RT2_LINES)
-        assert(!/문턱|관문|rebCost|gate/i.test(L.k+' '+L.nm+' '+(L.ds||'')),
-          '2차 트리가 환생 관문 완화를 판다: '+L.k+' / '+L.nm);
+        assert(!/문턱|rebCost|rebGate|환생\s*관문/i.test(L.k+' '+L.nm+' '+(L.ds||'')),
+          '2차 트리가 환생 문턱 완화를 판다: '+L.k+' / '+L.nm);
+      assert(!CAMP_RT2_LINES.some(L=>/reb(Cost|Gate)/i.test(L.f||'')),
+        '2차 트리가 환생 문턱에 닿는 효과를 갖는다');
       // 🔒 미개봉 갈래에는 계열이 없다(1차와 같은 규약)
       for(const bk in CAMP_TREE2_BR){ if(!CAMP_TREE2_BR[bk].soon) continue;
         assert(CAMP_RT2_LINES.every(L=>L.br!==bk),'미개봉 갈래에 계열이 들어 있다: '+bk); }
