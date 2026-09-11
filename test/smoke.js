@@ -7946,16 +7946,21 @@ async function groupLobby(){
         assert(ramp>=0,'램프가 통로가 아니다 — 올라갈 길이 사라진다');
         /* 🚪 **오르막은 절벽을 「잇는」 비탈이다**(2026-09-11 사용자: 「언덕으로 올라가는 오르막도 만들어야해」).
          *   ⛔ 고원 한가운데 뚫린 구멍이 되면 안 된다 — 아래 끝이 **저지에 닿아야** 올라가는 길이다.
-         *   ⛔ 짧게(2~3칸) 되돌리지 말 것: 지도 축척에서 비탈이 아니라 「끊긴 자리」로 보인다(실측). */
-        { const cols=[];
+         *   📏 **한 칸 만에 올라간다**(2026-09-11 사용자 확정: 「4칸에 걸쳐서 올라가는게 아니고 1칸만에」).
+         *     ⚠ 아래 1 은 **글자 그대로 쓴 설계값**이다 — `TERR_RAMP_H` 로 재면 그 상수를 4 로 되돌려도
+         *     같이 늘어나 늘 통과한다(자기 자신을 기준으로 재는 덫 · 2026-09-11 주입 시험).
+         *   🚪 그리고 **입구는 평평하다** — 그림이 열 묶음 하나를 사다리꼴 + 쐐기 옆벽으로 그리므로
+         *     열마다 줄이 다르면 옆벽이 계단처럼 어긋난다(`campTerrGen` 이 base 로 고른다). */
+        { const cols=[], botOf={};
           for(let tx=0;tx<C2;tx++){ let run=0, bot=-1, runs=0;
             for(let ty=0;ty<W2;ty++){ if(T.r[ty*C2+tx]){ run++; bot=ty; } else { if(run){ runs++; } run=0; } }
             if(run) runs++;
             if(bot<0) continue;
-            cols.push(tx);
+            cols.push(tx); botOf[tx]=bot;
             assert(runs===1,'한 열에 오르막이 '+runs+'토막이다(tx='+tx+') — 비탈은 이어져야 한다');
             let len=0; for(let ty=bot;ty>=0&&T.r[ty*C2+tx];ty--) len++;
-            assert(len>=TERR_RAMP_H,'오르막이 '+len+'칸뿐이다(tx='+tx+') — '+TERR_RAMP_H+'칸이어야 비탈로 읽힌다');
+            assert(len===1,'오르막이 '+len+'칸이다(tx='+tx+') — **한 칸 만에** 올라가기로 했다(사용자 확정)');
+            assert(len===TERR_RAMP_H,'오르막 칸 수('+len+')가 TERR_RAMP_H('+TERR_RAMP_H+')와 다르다 — 표와 생성기가 어긋났다');
             assert(bot+1<W2 && !T.h[(bot+1)*C2+tx],
               '오르막 아래가 저지가 아니다(tx='+tx+') — 고원 한가운데 뚫린 구멍이다'); }
           /* ⚠ **자기 자신을 기준으로 재지 말 것**(2026-09-11 주입 시험에서 둘이 안 물었다):
@@ -7969,7 +7974,10 @@ async function groupLobby(){
             assert(w2>=4,'오르막 폭이 '+w2+'칸뿐이다 — 지도 축척에서 사다리로 보인다');
             assert(w2<=TERR_RAMP_W,'오르막 폭이 '+w2+'칸이다 — 둘이 붙어 하나로 보인다'); }
           for(let i=1;i<grp.length;i++) assert(grp[i][0]-grp[i-1][1] >= TERR_RAMP_GAP-TERR_RAMP_W,
-            '오르막 둘이 '+(grp[i][0]-grp[i-1][1])+'칸 거리로 붙었다 — 하나로 보인다'); }
+            '오르막 둘이 '+(grp[i][0]-grp[i-1][1])+'칸 거리로 붙었다 — 하나로 보인다');
+          for(const g2 of grp){ const b0=botOf[g2[0]];
+            for(let tx=g2[0];tx<=g2[1];tx++) assert(botOf[tx]===b0,
+              '오르막 입구가 들쭉날쭉하다(tx='+tx+' 줄 '+botOf[tx]+' ≠ '+b0+') — 옆벽이 계단처럼 어긋난다'); } }
         assert(rim>=0,'절벽 테두리가 하나도 안 막힌다');
         // 레인 밖은 못 가는 자리다(campG2W 가 접는다) → 마스크가 막아야 한다
         { let outOpen=0;

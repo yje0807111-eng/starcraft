@@ -41,10 +41,14 @@ const TERR_FACE_K   = 0.62;  // 절벽 앞면 높이 = 칸 높이 × 이 값
 const TERR_PLATEAU_Y1 = -0.13;
 // 🚪 램프 — 고원으로 올라가는 길. ⛔ 빼지 말 것: 3단계에서 절벽이 길을 막으면 램프가 유일한 통로다.
 const TERR_RAMP_W  = 5;      // 램프 폭(칸) — ⚠ 3 칸이면 지도 축척에서 **사다리**로 보인다(실측)
-const TERR_RAMP_H  = 4;      // 램프 길이(칸) — ⚠ 2~3 칸이면 비탈이 아니라 「끊긴 자리」로 보인다(실측)
+/* 🚪 **오르막은 한 칸 만에 올라간다**(2026-09-11 사용자 확정: 「4칸에 걸쳐서가 아니고 1칸만에 바로」).
+ *   ⭐ 그래서 길이가 아니라 **모양**으로 읽힌다 — 위가 좁고 아래로 벌어지는 **사다리꼴**이다(입구가 열린다).
+ *   ⛔ 여러 칸으로 늘려 「긴 비탈」로 되돌리지 말 것 — 고원을 그만큼 파먹어 적 기지 자리가 줄어든다. */
+const TERR_RAMP_H  = 1;      // 램프 길이(칸)
+const TERR_RAMP_TAPER = 0.10;   // 입구가 아래로 조금 벌어진다 — ⚠ 크면 「미끄럼틀」로 보인다(실측 0.17)
 const TERR_RAMP_N  = 2;      // 램프 개수
 const TERR_RAMP_GAP = 12;    // 램프끼리 최소 거리(칸) — ⚠ 없으면 둘이 붙어 나 「넓은 오르막 하나」로 보인다(실측)
-const TERR_RAMP_STEPS = 3;   // 비탈에 긋는 계단 선 수 — 작은 크기에서 「올라간다」를 읽게 하는 신호
+const TERR_RAMP_STEPS = 3;   // 비탈의 **단** 수 — 작은 크기에서 「걸어 내려간다」를 읽게 하는 유일한 신호
 /* 🧱 벽 — **적 기지와 내 격자 사이의 통로에만** 둔다.
  *   ⛔ 내 격자(techY0 = 0.18 아래)에는 절대 두지 말 것 — 건물을 짓는 자리다.
  *   ⛔ 적 기지 줄(CAMP_FOE_ROW · 맨 아래가 tower1 = +0.02)과 겹치지 말 것 —
@@ -101,9 +105,15 @@ function campTerrGen(dg, seed){
       if(rampAt.every(p => Math.abs(p - c0) >= TERR_RAMP_GAP)){ cx = c0; break; } }
     if(cx < 0) continue;                    // 자리를 못 찾으면 그냥 하나 덜 둔다(붙여 두지 않는다)
     rampAt.push(cx);
+    /* 📏 **오르막 자리는 고원 밑변을 평평하게 고른다.** 가장자리는 계단이라 열마다 밑변이 다른데,
+     *   거기 그대로 파면 비탈이 들쭉날쭉해 「입구」로 안 읽힌다. 가장 낮은 줄까지 채워 한 줄로 맞춘다. */
+    let base = -1;
     for(let tx = cx; tx < cx + TERR_RAMP_W && tx < C; tx++){
       let ty = py1; while(ty > py0 && !T.h[ty * C + tx]) ty--;              // 그 열의 실제 고원 밑변
-      for(let k = 0; k < TERR_RAMP_H && ty - k >= py0; k++){ const i2 = (ty - k) * C + tx; T.h[i2] = 1; T.r[i2] = 1; } } }
+      if(ty > base) base = ty; }
+    for(let tx = cx; tx < cx + TERR_RAMP_W && tx < C; tx++){
+      for(let ty = py0; ty <= base; ty++) T.h[ty * C + tx] = 1;             // 밑변을 그 줄까지 채운다
+      for(let k = 0; k < TERR_RAMP_H && base - k >= py0; k++){ const i2 = (base - k) * C + tx; T.r[i2] = 1; } } }
   // 🧱 벽 — 통로에 덩어리 몇 개
   const wy0 = Math.max(py1 + 2, campTerrRowAt(TERR_WALL_ZONE.y0)), wy1 = Math.min(W - 2, campTerrRowAt(TERR_WALL_ZONE.y1));
   const blobs = [];
@@ -293,36 +303,53 @@ function campTerrBake(){
     x.fillStyle = S.face; x.fillRect(tx * px, (ty + 1) * px, px, face);
     x.fillStyle = S.lip;  x.fillRect(tx * px, (ty + 1) * px, px, lip);                       // 윗입술 — 「여기서 떨어진다」
     x.fillStyle = S.line; x.fillRect(tx * px, (ty + 1) * px + face - lip, px, lip); }        // 발치 그늘
-  /* 🚪 **오르막** — 절벽을 파고든 비탈.
-   *   ⛔ 「절벽만 안 그리기」로 두지 말 것 — 끊긴 자리가 **구멍**으로 보인다(2026-09-11 실측 · 확대 사진).
-   *   ⭐ 읽히게 하는 것은 셋이다: ① 위가 밝고 아래로 **사라지는 면**(내려간다) ② **계단 선**
-   *     (작은 크기에서 「걸어 올라간다」를 말하는 유일한 신호) ③ **옆벽**(절벽을 파고들었다는 증거).
-   *   ⚠ 고원 칠을 먼저 **걷어 낸다**(clearRect) — 안 걷으면 비탈 아래쪽이 고원 색으로 남아 평평해 보인다. */
-  { const S = campTerrSkin('ramp'), apron = Math.round(px * TERR_FACE_K), lip = Math.max(1, px * 0.10);
-    const isR = (tx2, ty2) => tx2 >= 0 && tx2 < C && ty2 >= 0 && ty2 < W && T.r[ty2 * C + tx2] > 0;
+  /* 🚪 **오르막** — 절벽에 난 **틈**이다. 고원 끝에서 낮은 땅으로 내려간다.
+   *   ⛔⛔ 절벽 선 **위**(고원 안)에서 그리기 시작하지 말 것 — 고원과 다른 것은 무엇이든
+   *     「고원에 올려놓은 상자」로 읽힌다(2026-09-11 실측 · `scripts/camp-ramp-pick.mjs` 1차 비교판).
+   *     그래서 그림은 **오르막 칸의 아래 모서리**(= 절벽 앞면이 시작될 자리)에서 시작한다.
+   *   ⭐ 읽히게 하는 것은 셋이다: ① **단 셋**(위가 밝고 아래로 어두워진다 — 「걸어 내려간다」를 말하는
+   *     유일한 신호) ② 단마다 밑에 **어두운 홈**(밝은 선을 쓰면 사다리 가로대가 된다)
+   *     ③ **쐐기 옆벽**(위는 폭 0 · 아래로 벌어진다 — 고원을 깎아 낸 자국).
+   *   ⚠ 고원의 **테(밝은 입술)를 입구에서 걷어 낸다** — 안 걷으면 밝은 선이 입구를 가로질러 막아
+   *     「구멍에 뚜껑을 덮은」 꼴이 된다. 걷은 자리는 고원 윗면 값으로 메워 고원이 입구까지 이어지게 한다. */
+  { const SH = campTerrSkin('hi');
+    const apron = Math.round(px * TERR_FACE_K), lip = Math.max(1, px * 0.09);
+    const eUp = Math.max(2, Math.round(px * 0.12)) + 1;   // 오토타일 테 두께(campTerrSheet 의 E)
+    /* 오르막은 **가로로 붙은 열 묶음**이 하나다 — 열마다 따로 그리면 옆벽이 열마다 선다. */
+    const gs = [];
     for(let tx = 0; tx < C; tx++){
       let t0 = -1, b0 = -1;
       for(let ty = 0; ty < W; ty++) if(T.r[ty * C + tx]){ if(t0 < 0) t0 = ty; b0 = ty; }
       if(t0 < 0) continue;
-      const X = tx * px, Y = t0 * px, HH = (b0 + 1 - t0) * px + apron;
-      x.clearRect(X, Y, px, HH);
-      /* 위는 고원 색, 가운데부터 **절벽 면 색으로 어두워지다** 아래에서 사라진다 = 내려가는 비탈.
-       *   ⛔ 위아래를 다 밝게 두지 말 것 — 평평한 판으로 보인다(실측: 첫 시도가 그랬다). */
-      const g = x.createLinearGradient(0, Y, 0, Y + HH);
-      g.addColorStop(0, S.edge); g.addColorStop(0.38, S.top);
-      g.addColorStop(0.80, S.face); g.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = g; x.fillRect(X, Y, px, HH);
-      /* 🪜 계단 — **어두운 홈**이다(밝은 선을 그으면 사다리로 보인다 · 2026-09-11 실측). */
-      x.fillStyle = S.line;
-      for(let k = 1; k <= TERR_RAMP_STEPS; k++){
-        x.globalAlpha = 0.30 + 0.30 * (k / TERR_RAMP_STEPS);           // 아래 계단이 진하다 = 그늘이 깊다
-        x.fillRect(X, Y + (HH * k) / (TERR_RAMP_STEPS + 1), px, lip * 0.8); }
-      x.globalAlpha = 1;
-      // 옆벽 — 절벽 면과 **같은 색**이라야 「파고든 홈」으로 읽힌다(밝은 테는 사다리 난간이 된다)
-      if(!isR(tx - 1, t0)) { x.fillStyle = S.face; x.fillRect(X, Y, lip * 2.2, HH);
-                             x.fillStyle = S.line; x.fillRect(X, Y, lip * 0.8, HH); }
-      if(!isR(tx + 1, t0)) { x.fillStyle = S.face; x.fillRect(X + px - lip * 2.2, Y, lip * 2.2, HH);
-                             x.fillStyle = S.line; x.fillRect(X + px - lip * 0.8, Y, lip * 0.8, HH); } } }
+      const g0 = gs[gs.length - 1];
+      if(g0 && g0.x1 === tx - 1 && g0.t === t0 && g0.b === b0) g0.x1 = tx;
+      else gs.push({ x0:tx, x1:tx, t:t0, b:b0 }); }
+    for(const g of gs){
+      const X0 = g.x0 * px, X1 = (g.x1 + 1) * px;
+      const Y = (g.b + 1) * px, HH = apron + px * 0.9;    // 절벽 앞면 자리 + 낮은 땅으로 반 칸 더
+      const ins = (X1 - X0) * TERR_RAMP_TAPER, wq = Math.max(2, px * 0.34);
+      x.save();
+      x.beginPath();                                      // 위는 좁고(고원과 만나는 목) 아래로 벌어진다
+      x.moveTo(X0 + ins, Y - eUp); x.lineTo(X1 - ins, Y - eUp);
+      x.lineTo(X1, Y + HH); x.lineTo(X0, Y + HH); x.closePath();
+      x.clip();
+      x.clearRect(X0, Y - eUp, X1 - X0, HH + eUp);
+      x.fillStyle = SH.top; x.fillRect(X0, Y - eUp, X1 - X0, eUp);   // 고원이 입구까지 이어진다
+      for(let k = 0; k < TERR_RAMP_STEPS; k++){           // 🪜 단 — 위가 밝고 아래로 어두워진다
+        const t0 = k / TERR_RAMP_STEPS, t1 = (k + 1) / TERR_RAMP_STEPS;
+        x.fillStyle = 'rgba(140,162,196,' + (0.26 - 0.08 * k).toFixed(3) + ')';
+        x.fillRect(X0, Y + HH * t0, X1 - X0, HH * (t1 - t0));
+        x.fillStyle = 'rgba(8,11,17,.46)';                // 단 밑의 그늘 홈
+        x.fillRect(X0, Y + HH * t1 - lip * 0.85, X1 - X0, lip * 0.85); }
+      x.restore();
+      const wedge = (w2, col) => {                        // 옆벽 — 꼭대기는 폭 0, 아래로 벌어진다
+        for(const left of [true, false]){
+          const d = left ? 1 : -1, xa = left ? X0 + ins : X1 - ins, xb = left ? X0 : X1;
+          x.fillStyle = col;
+          x.beginPath(); x.moveTo(xa, Y - eUp); x.lineTo(xb + d * w2, Y + HH); x.lineTo(xb, Y + HH);
+          x.closePath(); x.fill(); } };
+      wedge(wq, SH.face);                                 // 깎인 면
+      wedge(lip * 0.9, SH.lip); } }                       // 윗모서리 — 빛을 받는다
   const wallAt = (tx, ty) => inB(tx, ty) && T.w[ty * C + tx] > 0;
   layer(wallAt, sheets.wall);
   // 🧱 벽도 앞면을 갖는다 — 평평한 판은 「못 지나간다」로 안 읽힌다(2026-09-10 실측)
