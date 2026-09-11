@@ -116,7 +116,7 @@ const CAMP_RES_ITEMS = [
     unit: '기',
     lv: () => (typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0,
     lvTx: () => ((typeof campWorkerNPlanned === 'function') ? campWorkerNPlanned() : 0)
-            + '/' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40),
+            + '/' + ((typeof campWorkerMax === 'function') ? campWorkerMax() : 40),
     cost: () => (typeof campHireCost === 'function' && typeof campWorkerNPlanned === 'function')
             ? campHireCost(campWorkerNPlanned()) : 0,
     // ⏫ n 기를 한 번에 — 값은 **마리마다 다르다**(campHireCost 가 지금 마릿수를 본다).
@@ -126,7 +126,7 @@ const CAMP_RES_ITEMS = [
       return s; },
     // MAX = 미네랄과 **상한(40기)** 이 함께 정한다 — 업그레이드 사다리와 다른 규칙이다.
     maxN: () => { if(typeof campHireCost !== 'function' || typeof campWorkerNPlanned !== 'function') return 1;
-      const cap = (typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40;
+      const cap = (typeof campWorkerMax === 'function') ? campWorkerMax() : 40;
       const step = (typeof CAMP_UPG_MAX_STEP !== 'undefined') ? CAMP_UPG_MAX_STEP : 99;
       const b = campWorkerNPlanned();
       let have = (typeof G !== 'undefined' && G.tech) ? (G.tech.credit || 0) : 0, n = 0;
@@ -144,10 +144,14 @@ const CAMP_RES_ITEMS = [
         if(typeof campSyncHire === 'function') campSyncHire();
         if(typeof techDoProduce === 'function' && typeof TECH_WORKER !== 'undefined')
           techDoProduce(TECH_WORKER[G.tech.race], bk); } },
-    lock: () => (typeof campWorkerNPlanned === 'function' && typeof CAMP_WORKER_MAX !== 'undefined')
-            && campWorkerNPlanned() >= CAMP_WORKER_MAX,
-    lockWhy: '일꾼은 ' + ((typeof CAMP_WORKER_MAX !== 'undefined') ? CAMP_WORKER_MAX : 40) + '기까지' }
+    lock: () => (typeof campWorkerNPlanned === 'function' && typeof campWorkerMax === 'function')
+            && campWorkerNPlanned() >= campWorkerMax(),
+    lockWhy: () => '일꾼은 ' + ((typeof campWorkerMax === 'function') ? campWorkerMax() : 40) + '기까지' }
 ];
+// 🔒 잠긴 이유 — **글자이거나 함수**다(2026-09-11). 일꾼 상한처럼 값이 환생 강화로 움직이는 줄이
+//   생겨서 함수를 받게 했다. ⛔ 두 소비처가 `it.lockWhy` 를 직접 읽지 말 것(함수가 글자로 찍힌다).
+function _resWhy(it){ const w = it && it.lockWhy;
+  return (typeof w === 'function') ? w() : (w || ''); }
 // 👷 일꾼 유닛 키와, 그 일꾼을 뽑는 건물 키 — 종족마다 다르다.
 //   ⚠ TECH_TREE 를 뒤져 찾는다(campSyncHire 와 **같은 방식**) — 이름을 박아 두면 종족이 늘 때 깨진다.
 function campWorkerKey(){
@@ -238,7 +242,7 @@ function campResModelRes() {
       // ⛔ **toast 에 기대지 말 것** — toast() 는 채팅으로 간다(addChat). 캠프에는 채팅바가 없어서
       //   (CLAUDE.md: 「유즈맵 안 전 구역 · 캠프만 제외」) 그 알림은 **아무 데도 안 보인다**.
       //   그래서 못 사는 이유를 **정보판이 직접** 말한다 — 늘 화면에 있는 자리다.
-      desc: locked ? (it.lockWhy || '아직 올릴 수 없습니다')
+      desc: locked ? (_resWhy(it) || '아직 올릴 수 없습니다')
           : (have < cost)
             ? ('미네랄 ' + ((typeof fmtCur === 'function') ? fmtCur(cost - have) : (cost - have)) + ' 더 필요합니다')
             : it.why,
@@ -268,7 +272,7 @@ function campResTap(k) {
     campResSheet(); return;
   }
   if (it.lock && it.lock()) {
-    if (typeof toast === 'function') toast(it.lockWhy || '아직 올릴 수 없습니다');
+    if (typeof toast === 'function') toast(_resWhy(it) || '아직 올릴 수 없습니다');
     if (typeof playSfx === 'function') playSfx('ui_tab');
     campResSheet(); return;
   }

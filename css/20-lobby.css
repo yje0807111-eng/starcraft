@@ -1158,13 +1158,14 @@
      ⛔ `.appScreen` 가족으로 되돌리지 말 것 — 그때는 아이디가 `.appScreen.hide` 를 이겨
         화면이 영영 안 숨었다(게임 중 조작 버튼·☰ 를 통째로 먹었다 · 2026-09-10 실측).
      ⚠ 배경(.rnBg)은 공용 #campRebBg 위에 얹는 어둠뿐이다 — 제 그림을 두지 않는다. */
-  #mapUpgScreen{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
-  #mapUpgScreen.on{display:flex;flex-direction:column;gap:8px;
+  #mapUpgScreen,#rebUpgScreen{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
+  #mapUpgScreen.on,#rebUpgScreen.on{display:flex;flex-direction:column;gap:8px;
     padding:calc(var(--topPad) + var(--curH) + 10px) 13px 10px}
-  #mapUpgScreen.on.crIn{animation:crFadeIn var(--t-screen) ease}
-  #mapUpgScreen .rnBg{position:absolute;inset:0;z-index:0;pointer-events:none;
+  #mapUpgScreen.on.crIn,#rebUpgScreen.on.crIn{animation:crFadeIn var(--t-screen) ease}
+  #mapUpgScreen .rnBg,#rebUpgScreen .rnBg{position:absolute;inset:0;z-index:0;pointer-events:none;
     background:linear-gradient(180deg,rgba(5,8,12,.20) 0%,rgba(5,8,12,.06) 24%,rgba(5,8,12,.62) 62%,rgba(5,8,12,.94) 100%)}
-  #mapUpgScreen .muHead,#mapUpgScreen .muSeg,#mapUpgScreen .ppList{position:relative;z-index:1}
+  #mapUpgScreen .muHead,#mapUpgScreen .muSeg,#mapUpgScreen .ppList,
+  #rebUpgScreen .muHead,#rebUpgScreen .muSeg,#rebUpgScreen .ppList{position:relative;z-index:1}
   .muHead{display:flex;align-items:center;gap:8px;min-height:22px}
   .muBack{width:26px;height:26px;flex:none;border:none;background:none;cursor:pointer;
     color:var(--txt-dim,#c3ccd8);font:400 20px/1 var(--font-num);padding:0}

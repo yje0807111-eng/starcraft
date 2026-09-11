@@ -436,7 +436,7 @@ function curSplitSync(screenOn){
   if(screenOn !== undefined) _splitScreen = !!screenOn;
   // ⚠ **화면 요소를 직접 본다** — campRuneIsOn 류는 닫은 뒤에도 참을 주는 때가 있어
   //   캠프에 띠가 남았다(2026-09-05 사용자 신고).
-  const zone = ['campRune','campReb','campTree','mapUpgScreen'].some(id => {
+  const zone = ['campRune','campReb','campTree','mapUpgScreen','rebUpgScreen'].some(id => {
     const e = document.getElementById(id); return !!(e && e.classList.contains('on')); });
   curSplit(zone || _splitScreen); }
 // 💠 재화 표기 — 던전 보상 배수가 24^(dg-1)라 상위 던전에서는 자릿수가 폭주한다.

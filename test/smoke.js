@@ -918,6 +918,111 @@ async function groupLobby(){
       return 'Lv.'+campLevel()+' · 포인트 '+C.lvPts+' · 요구량 ×'+CAMP_XP_R+' · 한 마리 '+xp0.toFixed(0)+'→'+xp1.toFixed(0);
     } finally { C.lv=keep.lv; C.xp=keep.xp; C.lvPts=keep.lvPts;
       C.dg=keep.dg; C.cleared=keep.cleared; C.rbTree=keep.tree; } });
+  // 🔁 **환생 강화 — 환생 포인트로 사는 것**(2026-09-11 · GAME_DIRECTION §0-A).
+  //   ⭐ 「세지는 것」은 여기 없다(그건 레벨·성장 트리의 몫) — 빨라지고 편해지는 것만 판다.
+  await step('환생 강화: 포인트로 산다 · 영구히 남는다 · 무한 환생을 막는다', async()=>{
+    skipIf(typeof campRebUpgBuy!=='function','환생 강화 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep={ pts:C.rbPts, bag:JSON.parse(JSON.stringify(C.rbUpg||{})),
+                 done:JSON.parse(JSON.stringify(C.dgDone||{})) };
+    try{
+      // ① 갈래 셋 · 항목은 전부 그 갈래 안에 있다(표가 단일 소스 — ⛔ 개수를 박지 말 것)
+      const grps=CAMP_REB_UPG_GRP.map(g=>g.k);
+      assert(grps.length>=3,'갈래가 셋보다 적다: '+grps.join(','));
+      for(const k in CAMP_REB_UPG)
+        assert(grps.indexOf(CAMP_REB_UPG[k].grp)>=0, k+' 가 없는 갈래에 있다: '+CAMP_REB_UPG[k].grp);
+      // 🔷 탭 그림은 **있는 것**을 쓴다 — ⛔ 표에 없는 키를 주면 육각만 그려지고 속이 빈다
+      for(const g of CAMP_REB_UPG_GRP)
+        assert(typeof _PT_ICO!=='undefined' && _PT_ICO[g.ico], g.k+' 의 아이콘 키가 _PT_ICO 에 없다: '+g.ico);
+      // ② 🚨 **무한 환생 막이** — 던전 개방은 마지막 던전 **바로 앞까지**다.
+      //   ⛔ 끝까지 열면 환생 직후부터 관문(campRebDepth ≥ campRebNeed)이 참이라 누를 때마다 배수가 붙는다.
+      assert(CAMP_REB_UPG.dgStart.max <= CAMP_DG_MAX-1,
+        '던전 개방이 마지막 던전까지 연다 — 무한 환생이 된다: '+CAMP_REB_UPG.dgStart.max);
+      { C.rbUpg={dgStart:CAMP_REB_UPG.dgStart.max}; C.dgDone={};
+        campRebSkipApply(C);
+        assert(!campCanRebirth(),'스킵을 다 사면 환생 직후에 또 환생할 수 있다 — 무한 환생'); }
+      // ③ 산다 — 포인트가 깎이고 레벨이 오른다
+      C.rbUpg={}; C.rbPts=9999;
+      const c0=campRebUpgCost('capWk');
+      assert(c0>0,'값이 없다');
+      const paid=campRebUpgBuy('capWk');
+      assert(paid===c0,'낸 값이 다르다: '+paid+' vs '+c0);
+      assert(campRebUpgLv('capWk')===1,'레벨이 안 올랐다');
+      assert(C.rbPts===9999-c0,'포인트가 안 깎였다: '+C.rbPts);
+      assert(campRebUpgCost('capWk')>c0,'다음 칸이 안 비싸진다');
+      // ④ 소비처가 **실제로 움직인다** — ⛔ 값을 읽는 곳은 함수 하나씩을 지난다
+      { C.rbUpg={};
+        const w0=campWorkerMax(), r0=campUnitRate(), a0=campAutoTapPS();
+        C.rbUpg={capWk:2, capUnitR:2, autoTap:2};
+        assert(campWorkerMax()>w0,'일꾼 상한이 안 늘었다: '+w0+' → '+campWorkerMax());
+        assert(campUnitRate()<r0,'재구매 배수가 안 줄었다: '+r0+' → '+campUnitRate());
+        assert(campUnitRate()>1,'재구매 배수가 1 이하다 — 살수록 싸진다: '+campUnitRate());
+        assert(campAutoTapPS()>a0,'자동 채굴이 안 붙었다'); }
+      // 🤖 자동 채굴은 **터치 몫**으로 센다 — ⛔ 채취 배수를 먹으면 안 된다(맵 탭과 같은 규칙)
+      { C.rbUpg={autoTap:5}; _campAutoTapAcc=0;
+        const cr0=(G.tech&&G.tech.credit)||0;
+        const got=campAutoTapTick(1);
+        assert(got>0,'1초를 돌렸는데 한 번도 안 캤다');
+        assert(Math.round(((G.tech.credit||0)-cr0))===Math.round(got),'캔 만큼 지갑에 안 들어갔다'); }
+      // ⑤ 다 샀으면 더 못 산다
+      { C.rbUpg={capWk:CAMP_REB_UPG.capWk.max}; C.rbPts=9999;
+        assert(campRebUpgCost('capWk')===null,'MAX 인데 값이 있다');
+        assert(!campRebUpgCanBuy('capWk'),'MAX 인데 살 수 있다'); }
+      // ⑥ 포인트가 모자라면 못 산다
+      { C.rbUpg={}; C.rbPts=0;
+        assert(!campRebUpgCanBuy('capWk'),'포인트 0 인데 살 수 있다');
+        assert(campRebUpgBuy('capWk')===0,'포인트 0 인데 사졌다'); }
+      // ⑦ **영구다** — 회차 되감기가 지우면 안 된다(환생 포인트로 산 것이다)
+      { const fake={ rbUpg:{capWk:3}, lv:9, rbTree:{root:1} };
+        campRunReset(fake);
+        assert(fake.rbUpg && fake.rbUpg.capWk===3,'되감기가 환생 강화를 지웠다');
+        assert(!(fake.rbTree&&fake.rbTree.root),'되감기가 성장 트리를 안 지웠다'); }
+      // ⑧ ⛔ **성장 트리와 같은 효과를 팔지 말 것** — 한 효과가 두 곳에 있으면 표기가 거짓말이 된다
+      { const tree=new Set(CAMP_RT_LINES.map(L=>L.f));
+        const dup=Object.keys(CAMP_REB_UPG).filter(k=>tree.has(k));
+        assert(dup.length===0,'성장 트리와 같은 키를 판다: '+dup.join(',')); }
+      return '갈래 '+grps.length+' · 항목 '+Object.keys(CAMP_REB_UPG).length
+        +' · 던전 개방 최대 '+CAMP_REB_UPG.dgStart.max+'(무한 환생 막이 ok)';
+    } finally { C.rbPts=keep.pts; C.rbUpg=keep.bag; C.dgDone=keep.done; } });
+  // 🖥 화면 — 유즈맵 강화와 **같은 껍데기·같은 줄 목록**을 쓴다(⛔ 두 번째 구현 금지)
+  await step('환생 강화 화면: 껍데기·줄 목록을 유즈맵 강화와 공유한다', async()=>{
+    skipIf(typeof campRebEnter!=='function'||typeof rebUpgIsOn!=='function','환생 강화 화면 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep={ pts:C.rbPts, bag:JSON.parse(JSON.stringify(C.rbUpg||{})) };
+    try{
+      C.rbPts=500; C.rbUpg={};
+      campRebEnter('boost'); await sleep(120);
+      assert(rebUpgIsOn(),'환생 강화 화면이 안 열렸다');
+      // ⛔ 넷이 겹쳐 뜨면 안 된다 — 하나만 열려 있어야 한다
+      assert(!campRebIsOn() && !campTreeIsOn(),'환생·성장 트리가 같이 열려 있다');
+      if(typeof mapUpgIsOn==='function') assert(!mapUpgIsOn(),'유즈맵 강화가 같이 열려 있다');
+      // 🧱 줄은 **공용 `.ptRow`** 다(⛔ 전용 줄 클래스를 새로 만들지 말 것)
+      const rows=document.querySelectorAll('#ruList .ptRow');
+      assert(rows.length>0,'강화 줄이 하나도 없다');
+      { let n=0; for(const k in CAMP_REB_UPG) if(CAMP_REB_UPG[k].grp===_rebUpgGrp) n++;
+        assert(rows.length===n,'고른 갈래의 줄 수가 표와 다르다: '+rows.length+' vs '+n); }
+      // 🔷 탭 띠는 **공용 segNavHTML + .stack**(룬 상점·유즈맵 강화와 같은 아이콘 탭)
+      { const seg=document.querySelector('#ruTabs .pdSeg');
+        assert(seg,'탭 띠가 공용 컴포넌트(.pdSeg)가 아니다');
+        assert(seg.classList.contains('stack'),'아이콘 탭(.stack)이 아니다');
+        assert(seg.querySelectorAll('.pdSegBtn').length===CAMP_REB_UPG_GRP.length,'탭 칸 수가 갈래 수와 다르다'); }
+      // 🪙 가진 포인트를 화면이 직접 말한다(상단 재화 바에 없는 재화다)
+      { const bal=document.getElementById('ruBal');
+        assert(bal && /500/.test(bal.textContent),'가진 포인트를 안 말한다: '+(bal&&bal.textContent)); }
+      // 🏷 이름은 **재화 바**가 말한다(⛔ 화면 안에 제목을 또 두지 말 것)
+      assert(campZoneTitle()==='환생 강화','구역 이름이 다르다: '+campZoneTitle());
+      // 👆 눌러서 실제로 사진다
+      { const btn=document.querySelector('#ruList .ptBtn:not(:disabled)');
+        assert(btn,'살 수 있는 줄이 없다');
+        const before=C.rbPts; btn.click(); await sleep(60);
+        assert(C.rbPts<before,'눌렀는데 포인트가 안 깎였다'); }
+      // 🧭 네비 하위에 제 칸이 있고, 지금 그 칸이 켜져 있다
+      { const sec=(typeof navSec==='function')?navSec('reb'):null;
+        assert(sec && sec.subs.some(x=>x.k==='boost'),'네비에 환생 강화 칸이 없다');
+        assert(sec.cur()==='boost','네비가 환생 강화를 지금 칸으로 안 본다: '+sec.cur()); }
+      return '줄 '+rows.length+'개 · 탭 '+CAMP_REB_UPG_GRP.length+'칸 · 공용 컴포넌트 ok';
+    } finally { C.rbPts=keep.pts; C.rbUpg=keep.bag;
+      if(typeof rebUpgClose==='function') rebUpgClose(); } });
   // 🔄 **레벨·성장 트리는 한 회차짜리다** — 환생이 되감는다.
   //   ⛔ 남기면 「회차 안에서 강해진다」가 아니라 옛 1차 환생이 이름만 바꾼 것이 된다.
   await step('캠프 레벨: 환생하면 레벨·포인트·성장 트리가 되감긴다', async()=>{
@@ -13799,13 +13904,15 @@ async function groupLobby(){
     // 🔁 환생 = 옛 '임무' 자리(2026-08-31). 임무(가이드·일일·출석·도전과제)는 더보기 ☰ 로 갔다.
     //   ⚠ 환생은 **화면이 아니라 #phone 직속 오버레이**다(트리와 같은 규격) — APP_SCREENS 와 무관하다.
     { const reb=NAV_TREE.find(x=>x.k==='reb');
-      // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10) — 2차 환생이 주는 포인트를 쓰는 곳이라 여기다.
+      // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10) — 환생이 주는 포인트를 쓰는 곳이라 여기다.
       //   ⛔ 유즈맵 구역으로 되돌리지 말 것(거기 있다가 옮겨 왔다).
-      assert(reb && reb.subs.length===3,'환생 하위 칸(환생·환생 트리·유즈맵 강화)이 없음');
+      // 🔁 넷째 칸 = 환생 강화(2026-09-11) — 환생 포인트로 「빨라지고 편해지는 것」을 산다.
+      assert(reb && reb.subs.map(x=>x.k).join(',')==='info,tree,boost,umap',
+        '환생 하위 칸이 다름: '+(reb?reb.subs.map(x=>x.k).join(','):'없음'));
       // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
       //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
       //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,성장 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,성장 트리,환생 강화,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.
