@@ -1975,25 +1975,51 @@ async function groupLobby(){
         // 🏗 **유닛을 지정한 채 내 건물을 탭하면 유닛이 풀리고 그 건물이 지정된다**
         //   (2026-09-10 사용자 확정 · 옛 규칙은 「그 자리로 이동」이라 ⊘ 로 먼저 풀어야 했다).
         //   ⛔ 「건물 탭 = 이동」으로 되돌리지 말 것.
-        //   ⚠ **자원을 든 일꾼 + 본진 탭은 예외다** — techPtrDown 이 「자원 작업 재개」로 먼저
-        //     가로채고 _btDown 을 비워, techPtrUp 의 이 규칙까지 오지 않는다(17-build-cards).
-        //     bd 는 첫 건물 = 본진이고 캠프 일꾼은 계속 캐므로, 마침 손에 들고 있던 판에서만
-        //     실패했다(실측 4회 중 1회). 재는 것은 일반 규칙이니 손을 비우고 잰다.
         //   ⚠ 맵 위 13%(down.sy<0.13)는 techPtrUp 이 상단바로 보고 탭을 버린다 —
         //     onMap 은 '.bmap 안인가'만 보아 못 거르므로 여기서 함께 거른다.
+        //   ⚠ **자원을 든 일꾼 + 본진 탭은 예외**라 아래 ⑤-2 에서 따로 잰다 — 여기서는 손을 비운다
+        //     (안 비우면 캠프 일꾼이 계속 캐는 탓에 마침 들고 있던 판에서만 터진다 · 실측 4회 중 1회).
+        const _tapBd=()=>{ const q=at(bd.x,bd.y), _r=_btRect();
+          const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
+          if(!onMap(q) || _sy<0.13) return false;
+          pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3); return true; };
         { campPanMode(false); clearSel();
           if(typeof campZoom==='function') campZoom();
           spin(2);
           const _cy=wk._carry, _ck=wk._cKind; wk._carry=0; wk._cKind=null;
           try{
             G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
-            const q=at(bd.x,bd.y), _r=_btRect();
-            const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
-            if(onMap(q) && _sy>=0.13){
-              pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+            if(_tapBd()){
               assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
               assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
           } finally { wk._carry=_cy; wk._cKind=_ck; clearSel(); } }
+        // ⑤-2 🎒🔁 **자원을 든 일꾼 + 본진 = 두 번 누르면 바뀐다**(2026-09-11 사용자 확정)
+        //   첫 탭 = 자원 작업 재개(건물이 안 골라진다) · **같은 본진을 한 번 더** 누르면 그 건물이 골라진다.
+        //   ⛔ 첫 탭에서 바로 건물이 골라지게 되돌리지 말 것 — 자원을 든 일꾼을 되돌려보낼 길이 사라진다.
+        //   ⚠ **일회용 일꾼으로 잰다** — 첫 탭이 진짜로 「재개」를 시켜 일꾼을 광맥으로 보내므로,
+        //     캐던 일꾼을 쓰면 배정이 뒤틀린 채 남아 **뒤 검사(안개 등)에 새어 나간다**(실측).
+        //     끝나면 배정을 반납(_techReleaseGather)하고 명부에서 뺀다.
+        if(mnn && (G.tech.minerals||[]).some(m=>m.amount>0)){
+          campPanMode(false); clearSel();
+          if(typeof campZoom==='function') campZoom();
+          spin(2);
+          const tw={eid:G.tech.eseq++, type:'worker', x:bd.x, y:bd.y+0.03, build:null,
+            _carry:8, _cKind:'mineral', _cEid:mnn.eid};
+          G.tech.ents.push(tw);
+          try{
+            G.tech.selU=[tw.eid]; G.tech.sel=null; spin(1);
+            if(_tapBd()){
+              assert(G.tech.sel!==bd.eid,'자원을 든 일꾼으로 본진을 처음 눌렀는데 바로 건물이 골라진다(작업 재개가 사라졌다)');
+              assert((G.tech.selU||[]).length===1,'작업 재개인데 일꾼 지정이 풀렸다');
+              // 같은 본진을 한 번 더 — 이제는 건물이 골라진다
+              tw._carry=8; tw._cKind='mineral'; tw._cEid=mnn.eid;   // 재개로 손이 비지 않게(재는 것은 두 번째 탭이다)
+              if(_tapBd()){
+                assert(G.tech.sel===bd.eid,'작업 재개 뒤 본진을 한 번 더 눌렀는데 건물이 안 골라진다');
+                assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); } }
+          } finally {
+            if(typeof _techReleaseGather==='function') _techReleaseGather(tw);
+            const _i=G.tech.ents.indexOf(tw); if(_i>=0) G.tech.ents.splice(_i,1);
+            clearSel(); spin(1); } }
 
         // ⑤ ⛔ **모드가 꺼져 있으면 빈 바닥 드래그는 여전히 박스 지정이다.**
         //   여기를 팬으로 쓰면 유닛 드래그 지정이 죽는다 — 그래서 모드로 가른 것이다.
