@@ -48,8 +48,14 @@ const out=await pg.evaluate(async(SEC,LVS)=>{
   window.requestAnimationFrame=()=>0;
   campStopFrame(); campStopTimer();
   const C=campState();
+  // 🔓 **상한 해제를 다 산 상태로 잰다** — 안 그러면 `campMineCap()` 이 기본(5)이라
+  //   60·80기 표본이 자리 부족에 걸려 「값이 벽인지 자리가 벽인지」를 못 가른다.
+  if(typeof campRebUpgBag === 'function' && typeof CAMP_REB_UPG !== 'undefined'){
+    const b = campRebUpgBag(); if(b) b.capWk = CAMP_REB_UPG.capWk.max; }
   const tick=(dt)=>{ if(typeof renderBuildTab==='function'){ try{ renderBuildTab(dt); }catch(e){} }
-    campApplyGatherMul(); campSyncHire(); campSyncSupply(); campCombatStep(dt); };
+    campApplyGatherMul();
+    if(typeof campMineCapSync==='function') campMineCapSync();   // ⛏ 자리는 일꾼 상한을 따라간다
+    campSyncHire(); campSyncSupply(); campCombatStep(dt); };
   const setW=(n)=>{ const T=G.tech;
     T.ents=(T.ents||[]).filter(e=>e.type!=='worker');
     for(let i=0;i<n;i++) T.ents.push({ eid:T.eseq++, type:'worker', x:0.30+(i%20)*0.02, y:0.86-Math.floor(i/20)*0.02 });
@@ -84,13 +90,18 @@ const out=await pg.evaluate(async(SEC,LVS)=>{
     rows.push(r); }
   // 누적도 함께 — 「40기/80기를 채우는 데 얼마」가 이 축의 값이다
   const sum=(n)=>{ let t=0; for(let i=0;i<n;i++) t+=campHireCost(i); return t; };
-  return { rows:rows, ws:WS, curve:{ h0:CAMP_HIRE0, p:CAMP_HIRE_P }, sum:{ s40:sum(40), s80:sum(80) } };
+  return { rows:rows, ws:WS, curve:{ h0:CAMP_HIRE0, p:CAMP_HIRE_P },
+           slot:{ cols:CAMP_MINE_COLS, cap:campMineCap(), max:campWorkerMax(),
+                  seats:CAMP_MINE_COLS*campMineCap() },
+           sum:{ s40:sum(40), s80:sum(80) } };
 }, SEC, LVS);
 
 const f=n=>!isFinite(n)?'∞':(n>=1e6?n.toExponential(1):Math.round(n).toLocaleString('en-US'));
 console.log('\n════ 👷 일꾼 축이 살아 있나 (측정창 '+SEC+'초/표본) ════');
 console.log('값 곡선: '+out.curve.h0+' × (보유+1)^'+out.curve.p
-  +'   · 누적 40기 '+f(out.sum.s40)+' · 80기 '+f(out.sum.s80)+'\n');
+  +'   · 누적 40기 '+f(out.sum.s40)+' · 80기 '+f(out.sum.s80));
+console.log('자리: 광맥 '+out.slot.cols+'덩이 × '+out.slot.cap+'기 = '+out.slot.seats
+  +'개 (일꾼 상한 '+out.slot.max+' · 상한 해제 다 산 상태)\n');
 for(const r of out.rows){
   console.log('── 채취 Lv.'+r.L+' ───────────────────────────────────────────');
   console.log('   일꾼    분당수입    일꾼+1의 Δ      그 일꾼 값        회수');

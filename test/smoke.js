@@ -1711,9 +1711,23 @@ async function groupLobby(){
     //   ⛔ 두 줄(3×2)로 되돌리지 말 것 — 덩어리로 뭉쳐 보였다.
     //   ⛔ 여덟은 그림 취향이 아니라 **일꾼 천장**이다 — 8덩이 × cap 5 = 40 = CAMP_WORKER_MAX.
     const M=G.tech.minerals||[];
-    assert(CAMP_MINE_COLS*CAMP_MINE_CAP===CAMP_WORKER_MAX,
+    assert(CAMP_MINE_COLS*campMineCap()===CAMP_WORKER_MAX,
       '광맥 수 × 덩이당 상한이 일꾼 상한과 다르다 — 일꾼이 남거나 자리가 남는다: '
-      +CAMP_MINE_COLS+'×'+CAMP_MINE_CAP+' vs '+CAMP_WORKER_MAX);
+      +CAMP_MINE_COLS+'×'+campMineCap()+' vs '+CAMP_WORKER_MAX);
+    // ⛏ **자리는 일꾼 상한을 따라간다**(2026-09-11) — 상수로 두면 반드시 어긋난다.
+    //   실제로 어긋나 있었다: 환생 강화 `capWk` 가 상한을 80 으로 여는데 자리는 40 이라
+    //   41기부터 한 기의 값어치가 절반이었다(실측 Δ 883 → 439 · BALANCE §5-14).
+    { const b=campRebUpgBag(), was=b?(b.capWk|0):0;
+      try{
+        if(b){ b.capWk=CAMP_REB_UPG.capWk.max;
+          assert(CAMP_MINE_COLS*campMineCap()>=campWorkerMax(),
+            '상한 해제를 다 샀는데 자리가 모자란다 — 남는 일꾼이 광맥 옆에서 논다: '
+            +CAMP_MINE_COLS+'×'+campMineCap()+' vs '+campWorkerMax());
+          // 🔄 살아 있는 광맥에 **다시 찍혀야** 한다(찍는 값이라 안 고치면 옛 자릿수로 남는다)
+          campMineCapSync();
+          assert((G.tech.minerals||[]).every(m=>(m.cap|0)===campMineCap()),
+            '광맥에 새 자릿수가 안 찍혔다 — campMineCapSync 가 캠프 시계에서 빠졌나'); }
+      } finally { if(b){ b.capWk=was; campMineCapSync(); } } }
     assert(M.length===CAMP_MINE_COLS*CAMP_MINE_ROWS,'광맥 수가 배치와 다름: '+M.length);
     const xs=new Set(M.map(m=>m.x.toFixed(4)));
     assert(xs.size===CAMP_MINE_COLS,'광맥이 한 줄 '+CAMP_MINE_COLS+'칸이 아님: '+xs.size+'열');
@@ -9536,7 +9550,7 @@ async function groupLobby(){
       assert(Math.abs(m0-1/TECH_GATHER_AMT)<0.01,'효율 Lv0 배수가 1/'+TECH_GATHER_AMT+'(왕복 1원)이 아니다: '+m0.toFixed(3));
       assert(m40>m0,'효율 레벨이 채취 배수를 못 올린다');
       const mins=(G.tech&&G.tech.minerals)||[];
-      assert(mins.length&&mins.every(m=>(m.cap|0)===CAMP_MINE_CAP),
+      assert(mins.length&&mins.every(m=>(m.cap|0)===campMineCap()),
         '캠프 광맥에 cap 표식이 없다 — 일꾼 수 축이 다시 막힌다');
       // ⛏ **cap 은 이제 단단하다** — 5명이 차면 여섯째는 못 붙는다(2026-09-02 사용자 확정).
       //    ⚠ 옛 규칙은 안 막고 느리게만 했다. 되돌아가면 「한 개당 최대 5마리」가 뜻을 잃는다.
@@ -9544,12 +9558,12 @@ async function groupLobby(){
       //      전부 지워 버린다. **진짜로 캐는 중인 일꾼**(_gSt==='mine')을 세워야 한다.
       { const m=mins[0], bakM=m._miners, bakE=G.tech.ents.slice();
         m._miners=[];
-        for(let i=0;i<CAMP_MINE_CAP;i++){
+        for(let i=0;i<campMineCap();i++){
           assert(!_techMinerFull(m,7000+i),'아직 '+i+'명인데 자리가 없다고 한다');
           G.tech.ents.push({ eid:7000+i, type:'worker', _gSt:'mine', _gEid:m.eid });
           m._miners.push(7000+i); }
         assert(_techMinerFull(m,7999),
-          'cap '+CAMP_MINE_CAP+'명이 찼는데 더 붙는다 — 연성 cap 으로 되돌아갔다');
+          'cap '+campMineCap()+'명이 찼는데 더 붙는다 — 연성 cap 으로 되돌아갔다');
         assert(!_techMinerFull(m,7000),'이미 붙어 있는 일꾼이 쫓겨난다');
         m._miners=bakM; G.tech.ents.splice(0,G.tech.ents.length,...bakE); } }
     // ⑥ 비용은 한 문으로만 조회한다 — 표를 갈아끼울 자리

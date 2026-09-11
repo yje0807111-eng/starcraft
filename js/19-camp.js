@@ -5369,10 +5369,32 @@ function campTechRace(r){ return (typeof stkTechRace === 'function') ? stkTechRa
 //   (실측: 12기 26.8/초 · 300기도 26.8 — 나머지는 줄을 선다). 일꾼 축이 통째로 죽어 있었다.
 //   `cap` 은 16-build.js 가 읽는 캠프 표식이다(`inf` 와 같은 수법) — 관리자 탭·오토배틀은
 //   cap 이 없어 1로 동작하므로 영향이 없다. 설계 근거는 HUNT_R1.md §1.
-const CAMP_MINE_CAP = 5;
+// ⛏ **자리는 일꾼 상한을 따라간다**(2026-09-11 사용자 요청 「광맥 자리도 열어줘」).
+//   ⭐ 상수로 두면 반드시 어긋난다 — 실제로 어긋나 있었다: 환생 강화 `capWk` 가 상한을
+//     40 → 80 으로 여는데 자리는 8 × 5 = **40** 그대로라, 41기부터는 줄을 서면서
+//     한 기의 값어치가 **절반**으로 떨어졌다(실측 Δ 883 → 439 · BALANCE §5-14).
+//   ⇒ 그래서 **값이 아니라 함수**다. 상한이 오르면 자리도 같이 열린다.
+//   ⚠ `cap` 은 광맥 객체에 **찍히는** 값이라(아래 세 곳) 상한이 바뀌면 다시 찍어야 한다 —
+//     그 일은 `campMineCapSync()` 가 캠프 시계에서 한다. ⛔ 찍는 곳을 늘리지 말 것.
+//   ⛔ 칸 수(`CAMP_MINE_COLS` 8)를 늘려서 열지 말 것 — 그건 화면이다(2026-09-02 사용자 확정).
+//   ⚠ 하한 5 는 옛 상수다 — 상한이 기본(40)이면 지금과 **똑같다**(8 × 5 = 40).
+const CAMP_MINE_CAP_MIN = 5;
+function campMineCap(){
+  const cols = (typeof CAMP_MINE_COLS !== 'undefined') ? CAMP_MINE_COLS : 8;
+  const max = (typeof campWorkerMax === 'function') ? campWorkerMax() : 40;
+  return Math.max(CAMP_MINE_CAP_MIN, Math.ceil(max / Math.max(1, cols))); }
+// ⛏ 살아 있는 광맥에 지금 자릿수를 다시 찍는다 — **캠프 시계가 부른다**(싸고 idempotent).
+//   ⛔ 프레임마다 부르지 말 것(할 일이 없을 때가 대부분이다) · ⛔ 관리자 탭 광맥에는 안 찍힌다
+//     (캠프 광맥에만 `cap` 표식이 있고, 없으면 16-build 가 1 로 본다).
+function campMineCapSync(){
+  if(typeof G === 'undefined' || !G.tech || !G.tech.minerals) return 0;
+  const c = campMineCap(); let n = 0;
+  for(const m of G.tech.minerals) if(m && m.cap !== c){ m.cap = c; n++; }
+  return n; }
 // 💎 광맥은 **한 줄 여덟 칸 · 일직선**이다(2026-09-02 사용자 확정). 3×2 두 줄은 덩어리로 뭉쳐 보였다.
-//   ⭐ 여덟인 이유는 그림만이 아니다 — **일꾼 천장과 맞물린다.** 덩이당 5기(CAMP_MINE_CAP)를
-//     이제 **막으므로**(16-build.js _techMinerFull) 8 × 5 = 40 = CAMP_WORKER_MAX 다.
+//   ⭐ 여덟인 이유는 그림만이 아니다 — **일꾼 천장과 맞물린다.** 덩이당 몇 기가 붙나는
+//     `campMineCap()`(위)이 정하고, 그 자가 **일꾼 상한을 나눠** 자리를 낸다:
+//     기본이면 8 × 5 = 40 = `CAMP_WORKER_MAX` 이고, 상한 해제를 다 사면 8 × 10 = 80 이다.
 //     ⛔ 칸 수를 줄이면 일꾼을 다 뽑아도 붙을 자리가 없어 남는다.
 //   ⚠ 칸 수를 바꾸면 가스와의 간격(CAMP_GAS_GAP)도 같이 봐야 한다 — 반폭이 그만큼 늘어난다.
 const CAMP_MINE_COLS = 8, CAMP_MINE_ROWS = 1;
@@ -5497,7 +5519,7 @@ function campLayMinerals(){
       // ⭐ 캠프 광맥은 **마르지 않는다**(inf). 방치형이라 5분에 경제가 죽으면 게임이 끝난다 —
       //    실측에서 9,000 이 291초에 0 이 됐다(BALANCE.md §3-2).
       //    ⛔ 관리자 건설 탭의 광맥에는 붙이지 말 것 — 거긴 잔량 %가 화면에 나온다.
-      amount: TECH_MINE_START, inf: true, cap: CAMP_MINE_CAP, owner:null, miner:null });
+      amount: TECH_MINE_START, inf: true, cap: campMineCap(), owner:null, miner:null });
 }
 // 본부·일꾼을 하단으로 옮긴다 — techUIInit 은 관리자 자리(0.5, 0.3)에 놓는다.
 // ⛔ 16-build.js 를 고치지 않는다. 놓인 것을 캠프가 옮긴다(오토배틀의 strikeTechLayout 과 같은 결).
@@ -5738,7 +5760,7 @@ function campSave(){
   C.units = campClean(T.units); C.research = campClean(T.research);
   C.sup = T.sup || 0; C.supCap = T.supCap || 0; C.eseq = T.eseq || 1;
   C.ents = (T.ents || []).map(campClean);
-  C.minerals = (T.minerals || []).map(function(m){ return { eid:m.eid, x:m.x, y:m.y, amount:m.amount, inf:true, cap:CAMP_MINE_CAP, owner:null, miner:null }; });   // 캠프 광맥은 마르지 않는다
+  C.minerals = (T.minerals || []).map(function(m){ return { eid:m.eid, x:m.x, y:m.y, amount:m.amount, inf:true, cap:campMineCap(), owner:null, miner:null }; });   // 캠프 광맥은 마르지 않는다
   if(typeof saveMeta === 'function') saveMeta();
 }
 // 저장분이 있으면 통째로 덮어쓴다. 없으면 false — 호출부가 새 판으로 이어 간다.
@@ -5751,7 +5773,7 @@ function campRestore(){
   T.units = Object.assign({}, C.units); T.research = Object.assign({}, C.research);
   T.sup = C.sup || 0; T.supCap = C.supCap || 0; T.eseq = C.eseq || 1;
   T.ents = C.ents.map(function(e){ return Object.assign({}, e); });
-  T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m, { inf:true, cap:CAMP_MINE_CAP, amount:(m.amount>0?m.amount:TECH_MINE_START) }); });   // 옛 저장(마른 광맥·cap 없던 것)도 되살린다
+  T.minerals = (C.minerals || []).map(function(m){ return Object.assign({}, m, { inf:true, cap:campMineCap(), amount:(m.amount>0?m.amount:TECH_MINE_START) }); });   // 옛 저장(마른 광맥·cap 없던 것)도 되살린다
   T.sel = null; T.selU = []; T.arm = null; T.pend = [];   // 선택·배치 중이던 것은 이어받지 않는다
   campApplySupCap();   // 🌳 「인구 상한」 — 복원 뒤에 얹는다(복원이 supCap 을 통째로 덮어쓴다)
   return true;
@@ -6527,7 +6549,7 @@ function campTapGain(){
     * (campFevActive() ? campFevMul() : 1)));   // ⚡ 피버 — ⛔ 탭 경로마다 따로 곱하지 말 것
 }
 // 일꾼 효율 — **왕복 1회당** 배수(HUNT_R1 §1). Lv0 = 1.0 이라 기준선이 바뀌지 않는다.
-// ⚠ 일꾼 **수**로 올리는 축은 따로 산다 — 광맥 cap 을 5로 열어 두었다(CAMP_MINE_CAP).
+// ⚠ 일꾼 **수**로 올리는 축은 따로 산다 — 광맥 자리는 `campMineCap()` 이 일꾼 상한을 나눠 낸다.
 //   그 전에는 덩이당 1명이라 12기 26.8/초에서 천장이었고 일꾼을 뽑아도 소용이 없었다.
 //   지금은 실측 40기 137/초로 일꾼 수에 선형이다(scripts/camp-gather-bench.mjs).
 function campGatherMul(){ const C = campState(); if(!C) return 1;
@@ -7264,6 +7286,7 @@ function campStartTimer(){
     // 🌱 프레임이 죽어 있으면 되살린다 — 유즈맵 게임에 다녀오면 campFrame 이 스스로 빠져 있다.
     if(!_campRAF && typeof campStartFrame === 'function') campStartFrame();
     campApplyGatherMul();
+    campMineCapSync();                                       // ⛏ 자리는 일꾼 상한을 따라간다
     campAutoTapTick(CAMP_TICK_MS / 1000);                    // 🤖 환생 강화 「자동 채굴」
     campAutoUpgTick(CAMP_TICK_MS / 1000);                    // 🤖 환생 강화 「자동 강화」
     campAutoTick(CAMP_TICK_MS / 1000);                       // 🤖 환생 강화 「자동 일꾼·자동 연구」
@@ -7867,7 +7890,7 @@ function campEmptyAt(cx, cy){
 // ⭐ **왜 다항식인가** — 일꾼과 채취 강화는 **같은 축**이다: 둘 다 수입을 「왕복당 +N원」으로
 //   **선형하게** 올린다. 그런데 값의 밑이 **2.5 대 1.22** 였다. 선형 수입에 지수 값을 붙이면
 //   축의 수명이 밑에서 정해지고, 2.5 는 10기가 끝이다.
-//   ⚠ 게다가 일꾼에는 **자리 천장**(광맥 8덩이 × `CAMP_MINE_CAP`)이 이미 있다 — 무한히 못 늘린다.
+//   ⚠ 게다가 일꾼에는 **자리 천장**(광맥 8덩이 × `campMineCap()`)이 이미 있다 — 무한히 못 늘린다.
 //     천장이 있는 축을 값으로 또 막을 이유가 없다.
 //   ⛔ 밑만 낮추는 것(2.5 → 1.25)으로 고치지 말 것 — 지수는 결국 터진다(80기에서 39억).
 //
