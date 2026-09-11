@@ -538,16 +538,18 @@ async function groupLobby(){
     // ① 네비에서 들어가면 하위 둘이 뜬다
     navGo('reb');
     { const c=cells();
-      assert(c.indexOf('환생')>=0 && c.indexOf('환생 트리')>=0,
-        '하위가 환생·환생 트리가 아니다: '+c.join('|')); }
+      // 📈 2026-09-11 — 「환생 트리」가 **성장 트리**가 됐다(레벨 포인트로 산다 · GAME_DIRECTION §0-A).
+      //   ⛔ 옛 이름으로 되돌리지 말 것 — 1차 환생이 없어져 이름이 거짓말이 된다.
+      assert(c.indexOf('환생')>=0 && c.indexOf('성장 트리')>=0,
+        '하위가 환생·성장 트리가 아니다: '+c.join('|')); }
     assert(campRebIsOn(),'정보 탭인데 환생 화면이 안 열렸다');
-    // ② 업그레이드 = 환생 트리 · 서로 배타
+    // ② 성장 트리 · 서로 배타
     navSub('tree');
     assert(campTreeIsOn() && !campRebIsOn(),'업그레이드 탭이 트리 하나만 열지 않는다');
     // ③ 캠프 배지에서 바로 들어와도 하위가 뜬다(_navDrill 을 안 맞추면 통째로 안 나온다)
     campRebEnter('info');
     { const c=cells();
-      assert(c.indexOf('환생 트리')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
+      assert(c.indexOf('성장 트리')>=0,'배지로 들어오니 하위가 사라졌다: '+c.join('|')); }
     assert(campRebIsOn() && !campTreeIsOn(),'정보로 돌아왔는데 트리가 남아 있다');
     // ④ ✕ 를 없앴다 — **나가는 길은 하단 네비 하나**다(2026-08-31 사용자 확정)
     assert(!document.querySelector('#campReb .crX'),'환생 화면에 ✕ 가 남아 있다');
@@ -859,6 +861,69 @@ async function groupLobby(){
       assert(R2.norm && R2.norm[0]===_rnKey,'환생하니 끼워 둔 룬이 빠졌다'); }
     return '조건·공식·먼 목표·확인 ok';
     }finally{ campRebCancel(); campRebClose(); } });
+  // 📈 **레벨 — 판 안의 성장 축**(2026-09-11 · GAME_DIRECTION §0-A 「새 뼈대」).
+  //   옛 1차 환생을 대체한 층이다. 여기서 재는 것은 「두 곡선의 관계」다 —
+  //   적이 주는 경험치는 난이도에 비례하고, 레벨업 요구량은 **그보다 더 빨리** 커야 한다.
+  await step('캠프 레벨: 적을 잡으면 오르고 · 갈수록 느려지고 · 포인트가 트리로 간다', async()=>{
+    skipIf(typeof campAddXp!=='function','캠프 레벨 없음');
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    const keep={ lv:C.lv, xp:C.xp, lvPts:C.lvPts, dg:C.dg, cleared:C.cleared,
+                 tree:JSON.parse(JSON.stringify(C.rbTree||{})) };
+    try{
+      // ① 요구량은 등비이고, 그 배수는 **관문 평균보다 크다**(안 그러면 갈수록 빨라진다)
+      const r=campXpNeed(11)/campXpNeed(10);
+      assert(Math.abs(r-CAMP_XP_R)<0.02,'요구량이 등비가 아니다: '+r.toFixed(3)+' vs '+CAMP_XP_R);
+      { const g=CAMP_GATE_RATE, avg=Math.pow(g.reduce((a,b)=>a*b,1), 1/g.length);
+        assert(CAMP_XP_R>avg,'요구량 배수가 관문 평균 이하다 — 갈수록 레벨이 빨라진다: '
+          +CAMP_XP_R+' vs '+avg.toFixed(3)); }
+      assert(campXpNeed(2)>campXpNeed(1),'레벨이 올라도 요구량이 그대로다');
+      // ② 한 마리가 주는 경험치는 **난이도에 비례**한다 — 깊이 들어갈수록 커진다
+      C.dg=0; C.cleared=0; const xp0=campKillXp();
+      C.dg=3; C.cleared=6; const xp1=campKillXp();
+      assert(xp1>xp0*50,'깊이 들어가도 한 마리가 주는 경험치가 그대로다: '+xp0+' → '+xp1);
+      C.dg=0; C.cleared=0;
+      // ③ 쌓으면 오르고, 오른 만큼 **포인트**가 붙는다(⛔ 레벨이 배수를 직접 주지 않는다)
+      C.lv=1; C.xp=0; C.lvPts=0;
+      const ups=campAddXp(campXpNeed(1)+campXpNeed(2));
+      assert(ups===2,'2레벨치를 넣었는데 '+ups+'레벨 올랐다');
+      assert(campLevel()===3,'레벨이 3 이 아니다: '+campLevel());
+      assert(C.lvPts===2*CAMP_LV_PTS,'포인트가 레벨 수와 안 맞는다: '+C.lvPts);
+      // ④ 트리가 **그 포인트**를 쓴다 — 🔧 무제한 스위치를 지나지 않는 진짜 잔액으로 잰다
+      assert(campLvPtsLeft()===C.lvPts,'트리가 읽는 잔액이 레벨 포인트와 다르다');
+      assert(typeof campRtPts==='function','트리 포인트 입구가 없다');
+      if(!CAMP_RT_PTS_FREE) assert(campRtPts()===campLvPtsLeft(),
+        '트리가 레벨 포인트가 아닌 다른 지갑을 읽는다');
+      // ⑤ 지급 지점은 **죽은 유닛 정리 한 곳**이다 — 킬 지점마다 붙이면 반드시 하나를 빠뜨린다
+      { const src=String(campStepUnits);
+        assert(/campAddXp/.test(src),'전투 루프가 경험치를 안 준다 — campAddXp 호출이 없다');
+        assert(/side === 'ai'/.test(src) || /side==='ai'/.test(src),
+          '적이 죽었을 때만이라는 조건이 없다 — 내 유닛이 죽어도 경험치가 오른다'); }
+      // ⑥ 유즈맵은 한 점도 안 준다(사용자 확정 「경험치는 캠프에서만」)
+      assert(!/campAddXp/.test(String(profRunReward||'')),'유즈맵 보상이 캠프 레벨을 올린다');
+      return 'Lv.'+campLevel()+' · 포인트 '+C.lvPts+' · 요구량 ×'+CAMP_XP_R+' · 한 마리 '+xp0.toFixed(0)+'→'+xp1.toFixed(0);
+    } finally { C.lv=keep.lv; C.xp=keep.xp; C.lvPts=keep.lvPts;
+      C.dg=keep.dg; C.cleared=keep.cleared; C.rbTree=keep.tree; } });
+  // 🔄 **레벨·성장 트리는 한 회차짜리다** — 환생이 되감는다.
+  //   ⛔ 남기면 「회차 안에서 강해진다」가 아니라 옛 1차 환생이 이름만 바꾼 것이 된다.
+  await step('캠프 레벨: 환생하면 레벨·포인트·성장 트리가 되감긴다', async()=>{
+    skipIf(typeof campRunReset!=='function','되감기 없음');
+    // ⚠ **살아 있는 캠프에 대고 돌리지 말 것.** campRunReset 은 판까지 비운다(광맥·건물·엔트리) —
+    //   실제로 그렇게 재다가 뒤따르는 스텝 다섯이 「광맥이 안 깔림」으로 무너졌다(2026-09-11).
+    //   ⭐ 이 함수는 넘겨받은 객체의 필드만 만지므로 **가짜 상태**로 재는 것이 맞다.
+    const fake={ lv:17, xp:123, lvPts:9, rbTree:{root:1,_m2:1,gather:3},
+                 best:{2:3}, rebMul:5, rbPts:7, reb:2, rune:{a:1},
+                 dg:2, cleared:3, earn:999, upg:{tap:4} };
+    campRunReset(fake);
+    assert((fake.lv|0)===1,'레벨이 안 되감겼다: '+fake.lv);
+    assert(!(fake.xp>0),'경험치가 남았다: '+fake.xp);
+    assert(!(fake.lvPts>0),'포인트가 남았다: '+fake.lvPts);
+    assert(!(fake.rbTree&&fake.rbTree.gather),'성장 트리가 남았다');
+    // ⚠ 남는 것은 환생의 값이다 — 되감기가 같이 지우면 안 된다
+    assert((fake.reb|0)===2 && fake.rebMul===5 && fake.rune,'환생 값·룬까지 지웠다');
+    // ⛔ 환생이 트리를 들고 넘어가면 옛 1차 환생이 이름만 바꾼 것이 된다
+    assert(typeof campRebirth==='function' && !/rbTree:\s*C\.rbTree/.test(String(campRebirth)),
+      '환생이 아직 성장 트리를 들고 있다(keep 목록)');
+    return '레벨·포인트·트리 되감김 ok · 환생 값은 남음'; });
   // 🚪 로그아웃은 **확인을 한 번 받는다**. 옛 입구(마을 상단 바)가 다락으로 가면서 확인창이 통째로
   //    도달 불가가 됐다 — 설정 > 로그아웃이 그 자리를 잇는다(2026-08-27).
   await step('로그아웃: 확인창을 거친다 · 설정 위에 뜬다 · 나가기와 같은 얼굴', async()=>{
@@ -1975,25 +2040,51 @@ async function groupLobby(){
         // 🏗 **유닛을 지정한 채 내 건물을 탭하면 유닛이 풀리고 그 건물이 지정된다**
         //   (2026-09-10 사용자 확정 · 옛 규칙은 「그 자리로 이동」이라 ⊘ 로 먼저 풀어야 했다).
         //   ⛔ 「건물 탭 = 이동」으로 되돌리지 말 것.
-        //   ⚠ **자원을 든 일꾼 + 본진 탭은 예외다** — techPtrDown 이 「자원 작업 재개」로 먼저
-        //     가로채고 _btDown 을 비워, techPtrUp 의 이 규칙까지 오지 않는다(17-build-cards).
-        //     bd 는 첫 건물 = 본진이고 캠프 일꾼은 계속 캐므로, 마침 손에 들고 있던 판에서만
-        //     실패했다(실측 4회 중 1회). 재는 것은 일반 규칙이니 손을 비우고 잰다.
         //   ⚠ 맵 위 13%(down.sy<0.13)는 techPtrUp 이 상단바로 보고 탭을 버린다 —
         //     onMap 은 '.bmap 안인가'만 보아 못 거르므로 여기서 함께 거른다.
+        //   ⚠ **자원을 든 일꾼 + 본진 탭은 예외**라 아래 ⑤-2 에서 따로 잰다 — 여기서는 손을 비운다
+        //     (안 비우면 캠프 일꾼이 계속 캐는 탓에 마침 들고 있던 판에서만 터진다 · 실측 4회 중 1회).
+        const _tapBd=()=>{ const q=at(bd.x,bd.y), _r=_btRect();
+          const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
+          if(!onMap(q) || _sy<0.13) return false;
+          pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3); return true; };
         { campPanMode(false); clearSel();
           if(typeof campZoom==='function') campZoom();
           spin(2);
           const _cy=wk._carry, _ck=wk._cKind; wk._carry=0; wk._cKind=null;
           try{
             G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
-            const q=at(bd.x,bd.y), _r=_btRect();
-            const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
-            if(onMap(q) && _sy>=0.13){
-              pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+            if(_tapBd()){
               assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
               assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
           } finally { wk._carry=_cy; wk._cKind=_ck; clearSel(); } }
+        // ⑤-2 🎒🔁 **자원을 든 일꾼 + 본진 = 두 번 누르면 바뀐다**(2026-09-11 사용자 확정)
+        //   첫 탭 = 자원 작업 재개(건물이 안 골라진다) · **같은 본진을 한 번 더** 누르면 그 건물이 골라진다.
+        //   ⛔ 첫 탭에서 바로 건물이 골라지게 되돌리지 말 것 — 자원을 든 일꾼을 되돌려보낼 길이 사라진다.
+        //   ⚠ **일회용 일꾼으로 잰다** — 첫 탭이 진짜로 「재개」를 시켜 일꾼을 광맥으로 보내므로,
+        //     캐던 일꾼을 쓰면 배정이 뒤틀린 채 남아 **뒤 검사(안개 등)에 새어 나간다**(실측).
+        //     끝나면 배정을 반납(_techReleaseGather)하고 명부에서 뺀다.
+        if(mnn && (G.tech.minerals||[]).some(m=>m.amount>0)){
+          campPanMode(false); clearSel();
+          if(typeof campZoom==='function') campZoom();
+          spin(2);
+          const tw={eid:G.tech.eseq++, type:'worker', x:bd.x, y:bd.y+0.03, build:null,
+            _carry:8, _cKind:'mineral', _cEid:mnn.eid};
+          G.tech.ents.push(tw);
+          try{
+            G.tech.selU=[tw.eid]; G.tech.sel=null; spin(1);
+            if(_tapBd()){
+              assert(G.tech.sel!==bd.eid,'자원을 든 일꾼으로 본진을 처음 눌렀는데 바로 건물이 골라진다(작업 재개가 사라졌다)');
+              assert((G.tech.selU||[]).length===1,'작업 재개인데 일꾼 지정이 풀렸다');
+              // 같은 본진을 한 번 더 — 이제는 건물이 골라진다
+              tw._carry=8; tw._cKind='mineral'; tw._cEid=mnn.eid;   // 재개로 손이 비지 않게(재는 것은 두 번째 탭이다)
+              if(_tapBd()){
+                assert(G.tech.sel===bd.eid,'작업 재개 뒤 본진을 한 번 더 눌렀는데 건물이 안 골라진다');
+                assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); } }
+          } finally {
+            if(typeof _techReleaseGather==='function') _techReleaseGather(tw);
+            const _i=G.tech.ents.indexOf(tw); if(_i>=0) G.tech.ents.splice(_i,1);
+            clearSel(); spin(1); } }
 
         // ⑤ ⛔ **모드가 꺼져 있으면 빈 바닥 드래그는 여전히 박스 지정이다.**
         //   여기를 팬으로 쓰면 유닛 드래그 지정이 죽는다 — 그래서 모드로 가른 것이다.
@@ -4140,17 +4231,17 @@ async function groupLobby(){
       assert(campCap('worker')===CAMP_WORKER_MAX,'일꾼 상한 기본값이 어긋났다: '+campCap('worker'));
       assert(campCap('supply')===CAMP_SUPPLY_MAX,'보급소 상한 기본값이 어긋났다: '+campCap('supply'));
       assert(campCap('unitR')===CAMP_UNIT_R,'유닛 배수 기본값이 어긋났다: '+campCap('unitR'));
-      C.rb2Tree={wkCap2:2, unitR2:3};
+      C.rb2Tree={wkCap2:1, unitR2:1};   // ⚠ 한 계열 = 한 칸(CAMP_RT_MAX_DEF 1)
       assert(campCap('worker')>CAMP_WORKER_MAX,'상한을 샀는데 안 열린다: '+campCap('worker'));
       assert(campCap('unitR')<CAMP_UNIT_R,'유닛 배수를 샀는데 안 내려간다: '+campCap('unitR'));
       // ⛔ 1.0 근처로 내려가면 한 종류 도배가 최적이 된다
-      C.rb2Tree={unitR2:99};
+      C.rb2Tree={unitR2:99};   // 사다리 밖까지 밀어도 하한을 지켜야 한다
       assert(campCap('unitR')>=1.15,'유닛 반복 배수 하한이 뚫렸다 — 도배가 최적이 된다: '+campCap('unitR'));
       C.rb2Tree={};
 
       // ⑤ 🔒 **스위치가 안 샌다** — 2차 트리를 그리는 동안에도 효과는 1차를 읽어야 한다.
       //    ⛔ 여기가 터지면 2차 트리 화면을 보는 동안 캠프 배수가 통째로 1 이 된다(경제가 계속 돈다).
-      C.rbTree={root:1,'br:econ':1,'gp:econ나':1,gather:3};
+      C.rbTree={root:1,'br:econ':1,'gp:econ나':1,gather:1};   // ⚠ 차수 1(메인 2026-09-11)
       const g1=campRtMul('gather');
       assert(g1>1,'전제가 바뀜 — 1차 트리 효과가 안 걸린다: '+g1);
       campWithTree2(function(){
@@ -4172,7 +4263,7 @@ async function groupLobby(){
       assert(CAMP_RT2_LINES.find(L=>L.k==='unitR2').lad[0]===CAMP_UNIT_R,'유닛 배수 사다리 0차가 상수와 다르다');
 
       // ⑦ 🔁 실행 — 1차를 비우고 룬·최고기록은 남긴다
-      C.rbTree={root:1,gather:3}; C.rebMul=5; C.rbPts=999; C.reb=4;
+      C.rbTree={root:1,gather:1}; C.rebMul=5; C.rbPts=999; C.reb=4;
       C.rune={ex:2}; C.dgT={1:{best:88}};
       C.best={1:CAMP_DG_STEPS,2:CAMP_DG_STEPS,3:CAMP_DG_STEPS};
       C.dgDone={}; C.dgDone[CAMP_DG_MAX_N]=1;
@@ -4183,7 +4274,8 @@ async function groupLobby(){
         assert((C2.reb2|0)===1,'2차 횟수가 안 올랐다: '+C2.reb2);
         assert(C2.reb2Pts>0,'2차 포인트가 안 들어왔다: '+C2.reb2Pts);
         assert(!C2.rebMul,'1차 배수가 안 비워졌다(keep1 이 0 인데 남았다): '+C2.rebMul);
-        assert(!Object.keys(C2.rbTree||{}).length,'1차 트리가 안 비워졌다');
+        // ⚠ 성장 트리는 **campRunReset 이** 비운다(2026-09-11 부터 한 회차짜리다) — 2차도 그 길을 지난다
+        assert(!Object.keys(C2.rbTree||{}).length,'성장 트리가 안 비워졌다');
         assert(!(C2.rbPts>0),'1차 포인트가 남았다: '+C2.rbPts);
         assert(!(C2.reb>0),'1차 환생 횟수가 남았다: '+C2.reb);
         assert(C2.rune && C2.rune.ex===2,'💠 룬이 사라졌다 — 젬으로 산 것이다');
@@ -4193,11 +4285,11 @@ async function groupLobby(){
         assert(!Object.keys(C2.best||{}).length,'도달 기록이 안 비워졌다 — 포인트가 무한히 쌓인다'); }
 
       // ⑧ 🧮 keep1 을 샀으면 그만큼 남는다
-      { const C2=campState(); C2.rb2Tree={keep1:3}; C2.rebMul=10;
+      { const C2=campState(); C2.rb2Tree={keep1:1}; C2.rebMul=10;
         C2.best={1:CAMP_DG_STEPS}; C2.dgDone={}; C2.dgDone[CAMP_DG_MAX_N]=1;
         campRebirth2();
         const C3=campState();
-        assert(Math.abs(C3.rebMul-10*CAMP_RT2_LINES.find(L=>L.k==='keep1').lad[3])<1e-6,
+        assert(Math.abs(C3.rebMul-10*CAMP_RT2_LINES.find(L=>L.k==='keep1').lad[1])<1e-6,
           '1차 배수 보존이 안 먹는다: '+C3.rebMul); }
       return '조건 D3 · 포인트=도달 관문 · 배수 합 · 상한 열림 · 스위치 누수 없음 · 1차 비움';
     } finally { const C2=campState(); if(C2) Object.assign(C2, back);
@@ -4261,16 +4353,18 @@ async function groupLobby(){
         campRtBuy('gp:econ'+gg); }
       assert(campTreeState('gather',1)==='buy','묶음을 샀는데 계열 1차가 안 열렸다');
       assert(campTreeState('gather',2)===null,'1차를 안 샀는데 2차가 보인다 — 다음 한 칸만 보여야 한다');
-      // ③ ⛔ **짝 조건(관문)은 없앴다**(2026-09-01) — 계열은 제 앞 차수만 보면 된다.
-      //   되살리면 「왜 못 사는지」를 한 겹 더 읽어야 해서 걷어냈다.
+      // ③ 📈 **차수는 1 이다**(2026-09-11 · A안 · BALANCE §5-11).
+      //   ⛔ 5 로 되돌리지 말 것 — 트리 전체 비용이 한 회차 예산(17점)의 수십억 배로 돌아간다.
+      //   ⚠ 옛 「짝 조건(관문)」 검사는 여기 있었다. 차수가 하나뿐이라 잴 것이 없어졌다 —
+      //     장치가 되살아나지 않았다는 것만 남긴다.
+      assert(CAMP_RT_MAX_DEF===1,'차수 상한이 1 이 아니다: '+CAMP_RT_MAX_DEF);
+      for(const L of CAMP_RT_LINES)
+        assert(campRtMax(L.k)===1, L.k+' 가 제 차수(mx)로 공용 상한을 넘었다: '+campRtMax(L.k));
       { const Lg=campRtLine('gather');
-        C.rbTree={root:1,_m2:1,gather:3};
+        C.rbTree={root:1,_m2:1,gather:1};
         C.rbTree['br:'+Lg.br]=1; C.rbTree['gp:'+Lg.br+Lg.grp]=1;
-        // 짝(같은 묶음의 다른 계열)은 1차만 — 그래도 4차가 열려야 한다
-        const sib=CAMP_RT_LINES.find(L=>L.br===Lg.br&&L.grp===Lg.grp&&L.k!=='gather'&&!L.pa);
-        if(sib) C.rbTree[sib.k]=1; }
-      assert(campTreeState('gather',4)==='buy','짝이 1차라고 4차가 막혔다 — 관문이 되살아났다');
-      assert(campRtCanBuy('gather'),'앞 차수를 샀는데 못 산다');
+        assert(!campRtCanBuy('gather'),'다 산 계열을 또 산다');
+        assert(campTreeState('gather',2)===null,'차수가 1 인데 2차가 보인다'); }
       assert(typeof CAMP_RT_GATE_N==='undefined'&&typeof campRtGateOk==='undefined',
         '관문 상수·함수가 남아 있다');
       // ④ 🕰 옛 저장본 — 마디가 없던 자루도 살려낸다(안 그러면 산 계열이 화면에서 사라진다)
@@ -4284,31 +4378,38 @@ async function groupLobby(){
       const back=campRtReset();
       assert(back===CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST,
         '되돌린 값이 마디를 빠뜨렸다: '+back);
-      // ⑥ 🌟 새로운 시작 — **첫 환생이 딱 살 수 있어야** 한다.
-      //   포인트 공식이 √(번 재화÷100만) 이던 때 조건을 막 채운 첫 환생이 정확히 1 이었다(지금은 기준선 2만 · ≈9.5).
-      //   ⛔ root 가 1 보다 비싸면 「트리를 여는 열쇠」가 비싸진다(HUNT_R1 §4-2-0).
-      // 📐 **첫 환생이 서넛을 산다**(2026-09-07 사용자 결정) — 관문(100만 · D2R0)에서 포인트 9~15 이고,
-      //   가운데 + 갈래 + 묶음 + 1티어 흔함 한 계열(1+2+4+1 = 8)이 그 안에 든다. ⛔ 마디를 8/32 로 되돌리면 여기서 걸린다.
-      { const keepE=C.earn, keepG=C.earnGas, keepD=C.dg, keepC=C.cleared;
-        C.earn=CAMP_REB_COST; C.earnGas=0; C.dg=2; C.cleared=0;
-        const p=campRebPtGain();
-        assert(p>=9 && p<=15,'관문을 막 채운 첫 환생 포인트가 9~15 밖이다: '+p.toFixed(2));
-        // ⚠ 묶음 「가」의 계열이 1티어(1·2·6)다 — 「나」부터는 2티어(4·8·24)라 첫 환생에는 「가」 하나가 든다.
-        { const need=CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST+campRtCost('atk',1)+campRtCost('prod',1);
-          assert(need <= p,'첫 환생으로 「가운데+갈래+묶음+1티어 흔함 둘」을 못 산다: 값 '+need+' · 포인트 '+p.toFixed(2)); }
-        assert(CAMP_RT_BR_COST<=CAMP_RT_GP_COST && CAMP_RT_GP_COST<=campRtCost('mine',1),'마디가 1티어 귀함 계열보다 비싸다 — 문이 방보다 비싸다');
-        C.earn=keepE; C.earnGas=keepG; C.dg=keepD; C.cleared=keepC; }
-      assert(CAMP_RT_ROOT_COST<=1,'가운데 값이 첫 환생 포인트(1)보다 비싸다: '+CAMP_RT_ROOT_COST);
+      // ⑥ 🌟 새로운 시작 — **한 회차 예산 안에서 실제로 굴러가야** 한다.
+      //   📈 값의 자는 이제 **레벨 포인트**다(2026-09-11). 한 회차(던전 1~3 완주)가 Lv.18 · 17점이고
+      //     (BALANCE §5-11 실측), 그 안에서 「가운데 → 갈래 → 묶음 → 계열 여럿」이 돌아가야 한다.
+      //   ⛔ 옛 검사(첫 환생 포인트 9~15 · √(번 돈) 공식)는 지웠다 — 환생 포인트로는 트리를 안 산다.
+      { const RUN=17;                                  // 한 회차 예산(실측 · 하한)
+        const door=CAMP_RT_ROOT_COST+CAMP_RT_BR_COST+CAMP_RT_GP_COST;
+        assert(door<=RUN/2,'문(가운데+갈래+묶음)이 한 회차 예산의 절반을 넘는다: '+door+'/'+RUN);
+        // 문을 연 뒤 남는 것으로 **계열을 셋 이상** 살 수 있어야 한다 — 그래야 「무엇을 고를까」가 선다
+        const cheap=CAMP_RT_LINES.map(L=>campRtCost(L.k,1)).sort((a,b)=>a-b).slice(0,3)
+          .reduce((a,b)=>a+b,0);
+        assert(door+cheap<=RUN,'문을 열면 계열 셋도 못 산다: 문 '+door+' + 계열 '+cheap+' > '+RUN);
+        // 그렇다고 **트리를 한 회차에 다 사면** 안 된다 — 고를 것이 없어진다
+        const all=door+CAMP_RT_LINES.reduce((a,L)=>a+campRtCost(L.k,1),0);
+        assert(all>RUN*2,'트리 전체가 한 회차 예산의 두 배도 안 된다 — 다 사 버린다: '+all+' vs '+RUN);
+        // 💰 값은 **작은 정수**여야 한다(화면에 「0.5 point」가 찍히면 안 된다)
+        for(const L of CAMP_RT_LINES){ const c=campRtCost(L.k,1);
+          assert(Number.isInteger(c) && c>=1 && c<=RUN, L.k+' 값이 정수·1~'+RUN+' 밖이다: '+c); } }
+      assert(CAMP_RT_BR_COST<=CAMP_RT_GP_COST*2 && CAMP_RT_GP_COST<=campRtCost('mine',1),
+        '마디가 귀함 계열보다 비싸다 — 문이 방보다 비싸다');
+      assert(CAMP_RT_ROOT_COST<=1,'가운데 값이 1 보다 비싸다: '+CAMP_RT_ROOT_COST);
       assert(CAMP_RT_ROOT_COST!==CAMP_RT_BASE||CAMP_RT_BASE<=1,
         '가운데 값이 비용 공식의 기준값과 묶여 있다 — 한쪽을 고치면 160칸이 함께 움직인다');
-      { C.rbTree={}; C.rbPts=1;
-        assert(campRtCanBuy('root'),'포인트 1로 가운데를 못 산다');
+      { const keepLv=C.lvPts; C.rbTree={}; C.lvPts=1;
+        assert(campRtCanBuy('root'),'성장 포인트 1로 가운데를 못 산다');
         campRtBuy('root');
         assert(campRtRootOn(),'가운데를 샀는데 안 켜졌다');
         // 🔧 **포인트 무제한 스위치**(CAMP_RT_PTS_FREE)가 켜져 있으면 사도 안 깎인다 — 그게 정상이다.
         //   ⚠ 차감 규칙 자체는 스위치가 꺼졌을 때만 잴 수 있다. 아래 「개발 스위치」 스텝이 켜짐을 매번 알린다.
+        //   📈 깎이는 지갑은 **레벨 포인트**다(⛔ 옛 C.rbPts 가 아니다).
         if(typeof CAMP_RT_PTS_FREE==='undefined' || !CAMP_RT_PTS_FREE)
-          assert((C.rbPts|0)===0,'가운데를 샀는데 포인트가 안 깎였다: '+C.rbPts); }
+          assert((C.lvPts|0)===0,'가운데를 샀는데 성장 포인트가 안 깎였다: '+C.lvPts);
+        C.lvPts=keepLv; }
       // 새로운 시작은 **절대값**이다 — 배수면 §4-5-5 곱셈 상한 표에 축이 하나 더 늘어 폭주한다
       assert(typeof campRootGrant==='function','새로운 시작이 배선되지 않았다');
       // 🌟 새로운 시작 — **미네랄 50 + 터치 강화 1**(2026-09-04 사용자 확정).
@@ -4512,33 +4613,39 @@ async function groupLobby(){
       assert(a.grow>0,'묶음을 샀는데 실선이 안 자란다');
       assert(a.dash>0,'묶음을 샀는데 안 계열로 가는 점선이 안 자란다');
       assert(a.pop>0,'묶음을 샀는데 새 별이 안 떠오른다');
-      // ② 계열 1차를 산다 — **여기가 어긋났던 자리**. 실선이 자라야 한다.
+      // ①-b ⏱ **차례** — 실선 도착 → 점선 출발 → 새 별 (2026-09-03 사용자 확정).
+      //   ⛔ 전부 0초에 시작하면 순서가 뒤죽박죽이다. 시작·끝 시각으로 앞뒤를 잰다.
+      //   📈 **마디를 산 직후에 잰다**(2026-09-11) — 차수가 1 이라 계열을 사면 점선·새 별이 없다.
+      //     ⛔ 계열 구매 뒤로 옮기지 말 것: 잴 조각 둘이 사라져 검사가 통째로 헛돈다.
+      const T=function(sel){ const e=document.querySelector('#ctG '+sel); if(!e) return null;
+          const cs=getComputedStyle(e), d0=parseFloat(cs.animationDelay), du=parseFloat(cs.animationDuration);
+          return { s:d0, e:d0+du }; };
+      { const L1=T('.ctGrow'), L2=T('.ctGrowDash'), PP=T('.ctPop');
+        assert(L1&&L2&&PP,'해금 연출 조각이 빠졌다: '+[!!L1,!!L2,!!PP].join(','));
+        assert(L2.s>=L1.s,'점선이 실선보다 먼저 출발한다: 점선 '+L2.s+' vs 선 '+L1.s);
+        assert(PP.s>=L2.e-0.01,'새 별이 점선 도착 전에 뜬다: 별 '+PP.s+' vs 점선 끝 '+L2.e); }
+      // ③ 시간 — **모든 선이 같은 시간**(2026-09-03 재확정 · 등속을 접었다). 길이와 무관해야 한다.
+      { const durs=[].map.call(document.querySelectorAll('#ctG .ctGrow, #ctG .ctGrowDash'),
+          function(e){ return parseFloat(getComputedStyle(e).animationDuration); });
+        assert(durs.length>0,'자라는 선이 없다');
+        assert(durs.every(function(d){ return Math.abs(d-CAMP_TREE_GROW_S)<0.011; }),
+          '선 시간이 상수와 다르다: '+durs.join(',')+' vs '+CAMP_TREE_GROW_S); }
+      // ④ 점선은 대기 중에 **안 보여야** 한다(backwards) — 없으면 튀어나왔다 사라진다
+      { const dd=document.querySelector('#ctG .ctGrowDash');
+        assert(dd && /backwards/.test(getComputedStyle(dd).animationFillMode),
+          '점선 애니에 backwards 가 없다 — 대기 중에 원래 점선이 먼저 보인다'); }
+      // ② 계열 1차를 산다 — **여기가 어긋났던 자리**. 실선이 자라고 색이 차올라야 한다.
       const b=buy({root:1,_m2:1,'br:army':1,'gp:army가':1},{t:'n',a:'atk',b:1});
       assert(b,'계열을 못 산다');
       assert(b.keys.indexOf('atk:1')>=0,'산 계열의 키가 선과 다른 꼴이다: '+b.keys.join(','));
       assert(b.grow>0,'계열을 샀는데 실선이 안 자란다 — 키 형식이 어긋났다');
       assert(b.lit>0,'계열을 샀는데 색이 안 차오른다');
-      assert(b.dash>0,'계열을 샀는데 다음 차수로 가는 점선이 안 자란다');
-      // ②-b ⏱ **차례** — 실선 도착 → 색 차오름 → 점선 출발 → 새 별 (2026-09-03 사용자 확정).
-      //   ⛔ 전부 0초에 시작하면 순서가 뒤죽박죽이다. 시작·끝 시각으로 앞뒤를 잰다.
-      { const T=function(sel){ const e=document.querySelector('#ctG '+sel); if(!e) return null;
-          const cs=getComputedStyle(e), d0=parseFloat(cs.animationDelay), du=parseFloat(cs.animationDuration);
-          return { s:d0, e:d0+du }; };
-        const L1=T('.ctGrow'), LT=T('.ctLit'), L2=T('.ctGrowDash'), PP=T('.ctPop');
-        assert(L1&&LT&&L2&&PP,'해금 연출 조각이 빠졌다: '+[!!L1,!!LT,!!L2,!!PP].join(','));
-        assert(LT.s>=L1.e-0.01,'색이 실선 도착 전에 든다: 색 '+LT.s+' vs 선 끝 '+L1.e);
-        assert(L2.s>LT.s,'점선이 색 차오름보다 먼저 출발한다: 점선 '+L2.s+' vs 색 '+LT.s);
-        assert(PP.s>=L2.e-0.01,'새 별이 점선 도착 전에 뜬다: 별 '+PP.s+' vs 점선 끝 '+L2.e); }
-      // ③ 시간 — **모든 선이 같은 시간**(2026-09-03 재확정 · 등속을 접었다). 길이와 무관해야 한다.
-      const durs=[].map.call(document.querySelectorAll('#ctG .ctGrow, #ctG .ctGrowDash'),
-        function(e){ return parseFloat(getComputedStyle(e).animationDuration); });
-      assert(durs.length>0,'자라는 선이 없다');
-      assert(durs.every(function(d){ return Math.abs(d-CAMP_TREE_GROW_S)<0.011; }),
-        '선 시간이 상수와 다르다: '+durs.join(',')+' vs '+CAMP_TREE_GROW_S);
-      // ④ 점선은 대기 중에 **안 보여야** 한다(backwards) — 없으면 튀어나왔다 사라진다
-      const dd=document.querySelector('#ctG .ctGrowDash');
-      assert(/backwards/.test(getComputedStyle(dd).animationFillMode),
-        '점선 애니에 backwards 가 없다 — 대기 중에 원래 점선이 먼저 보인다');
+      // 📈 **차수가 1 이라 「다음 차수로 가는 점선」은 없다**(2026-09-11 · A안).
+      //   ⛔ 되살리지 말 것 — 계열 하나가 별 하나다. 점선은 마디 → 안 계열로만 뻗는다(위 ①).
+      assert(b.dash===0,'차수가 1 인데 다음 차수 점선이 있다: '+b.dash);
+      { const L1=T('.ctGrow'), LT=T('.ctLit');
+        assert(L1&&LT,'계열 해금 연출 조각이 빠졌다');
+        assert(LT.s>=L1.e-0.01,'색이 실선 도착 전에 든다: 색 '+LT.s+' vs 선 끝 '+L1.e); }
       return '묶음: 실선 '+a.grow+' 점선 '+a.dash+' 떠오름 '+a.pop+' · 계열: 실선 '+b.grow+' 점선 '+b.dash+' · 선 '+CAMP_TREE_GROW_S+'s 고정';
     } finally { C.rbTree=keepT; C.rbPts=keepP; _campTreeSel=keepSel; _ctNew={}; campTreeRender(); }
   });
@@ -4644,8 +4751,12 @@ async function groupLobby(){
         const ids=new Set(g.map(e=>e.getAttribute('stroke')));
         assert([...ids].every(v=>v.slice(-2)==='d)'),'안 산 별끼리 테두리가 갈린다: '+[...ids].join(' ')); }
       // ② 고르면 빛이 하나 붙는다(drop-shadow 를 두른 폴리곤)
+      //   📈 차수가 1 이라 **안 산 형제 계열**을 고른다(⛔ 'gather',2 로 되돌리지 말 것 — 2차는 없다)
       { const before=document.querySelectorAll('#ctG polygon[style*="drop-shadow"]').length;
-        campTreeTap('gather',2);
+        const Lg=campRtLine('gather');
+        const sib=CAMP_RT_LINES.find(L=>L.br===Lg.br&&L.grp===Lg.grp&&L.k!=='gather'&&!L.pa);
+        assert(sib,'같은 묶음에 안 산 형제가 없다(검사 불가)');
+        campTreeTap(sib.k,1);
         const after=document.querySelectorAll('#ctG polygon[style*="drop-shadow"]').length;
         assert(after>before,'고른 별에 빛이 안 붙는다: '+before+' → '+after); }
       return '안 산 별 = 갈래 색 흐린 그라디언트 · 고르면 산 별 테두리로 빛난다';
@@ -4730,9 +4841,11 @@ async function groupLobby(){
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepT=JSON.parse(JSON.stringify(C.rbTree||{})), keepSel=_campTreeSel;
     try{
-      C.rbPts=1e12; C.rbTree={root:1,_m2:1,'br:army':1,'gp:army가':1};
+      // 📈 **묶음을 산다**(2026-09-11) — 차수가 1 이라 계열을 사도 새 별이 안 떠오른다(.ctPop 이 없다).
+      //   ⛔ 계열 구매(`{t:'n',a:'atk',b:1}`)로 되돌리지 말 것: 잴 요소가 하나 사라진다.
+      C.rbPts=1e12; C.lvPts=1e12; C.rbTree={root:1,_m2:1,'br:army':1};
       _ctNew={}; campRebEnter('tree'); campTreeRender();
-      _campTreeSel={t:'n',a:'atk',b:1}; campTreeRender();
+      _campTreeSel={t:'gp',a:'army',b:'가'}; campTreeRender();
       const btn=document.querySelector('#campTree .ctBuy');
       skipIf(!btn||btn.disabled,'못 산다');
       campTreeBuySel();
@@ -5215,18 +5328,22 @@ async function groupLobby(){
       // ① 비용 — 업그레이드·건물 둘 다 캠프가 값을 매긴다
       C.rbTree={};
       const up0=campUpgCost('tap'), bd0=campCost('bldg','barracks',0).m, sup0=campSupAdd();
-      C.rbTree={upCost:5, sup:3};      // 🏠 인구 상한은 **3차가 끝**이다(2026-09-02)
-      assert(Math.abs(campUpgDisc()-0.2)<1e-6,'업그레이드 할인 5차가 −80%가 아님: '+campUpgDisc());
+      // 📈 **차수는 1 이다**(2026-09-11 · A안 · BALANCE §5-11) — 값은 사다리 1칸에서 나온다.
+      //   ⛔ 5차(:5)로 되돌리지 말 것. ⚠ 기대값을 손으로 박지 말고 **상수에서 꺼낸다** —
+      //     사다리는 아직 안 쟀고(§5-11) 다시 조정될 값이라, 박아 두면 조정할 때마다 여기가 터진다.
+      C.rbTree={upCost:1, sup:1};
+      assert(Math.abs(campUpgDisc()-(1-CAMP_RT_DISC[1]))<1e-6,
+        '업그레이드 할인이 사다리 1칸과 다름: '+campUpgDisc()+' vs '+(1-CAMP_RT_DISC[1]));
       assert(campUpgCost('tap')<up0,'업그레이드 비용이 안 내려감');
       assert(campCost('bldg','barracks',0).m<bd0,'건물 비용이 안 내려감');
-      // 🏠 3차 · +50/+100/+200 (2026-09-02 사용자 확정 · 옛 5차 10/30/80/200/500)
-      //   ⭐ 「보급소를 안 지어도 되게」가 이 축의 뜻이라, 초반에 손이 닿는 값으로 낮췄다.
-      assert(sup0===0 && campSupAdd()===200,'인구 상한 3차가 +200이 아님: '+campSupAdd());
-      assert(campRtMax('sup')===3,'인구 상한이 3차가 아님: '+campRtMax('sup'));
-      { const c=[1,2,3].map(i=>campRtCost('sup',i));
-        assert(c.join(',')==='10,50,100','인구 상한 비용이 10/50/100 이 아님: '+c.join(','));
-        assert(campRtCost('sup',4)===Infinity,'3차 위를 살 수 있다'); }
-      // ② 전투 값 — 공격력·체력·본부는 사다리 5차에서 ×25
+      // 🏠 「보급소를 안 지어도 되게」가 이 축의 뜻이라, 초반에 손이 닿는 값이어야 한다
+      assert(sup0===0 && campSupAdd()===CAMP_RT_SUP[1],
+        '인구 상한이 사다리 1칸과 다름: '+campSupAdd()+' vs '+CAMP_RT_SUP[1]);
+      assert(campRtMax('sup')===1,'차수가 1 이 아님: '+campRtMax('sup'));
+      { assert(campRtCost('sup',1)===CAMP_RT_GRADE[campRtGrade('sup',1)],
+          '인구 상한 값이 등급값과 다름: '+campRtCost('sup',1));
+        assert(campRtNext('sup')===0||campRtHas('sup')===0,'1차 위를 살 수 있다'); }
+      // ② 전투 값 — 공격력·체력·본부가 사다리 1칸만큼 오른다
       skipIf(typeof campEnterDungeon!=='function'||typeof campCombatStep!=='function','캠프 던전 없음');
       C.rbTree={};
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
@@ -5237,26 +5354,28 @@ async function groupLobby(){
       campScaleAllies(CAMPB.me.units);
       const base0=CAMPB.me.base.hp, u0=CAMPB.me.units.find(z=>z.id==='marine')||CAMPB.me.units[0],
             hp0=u0.maxHp, dm0=u0.dmg||0;
-      C.rbTree={atk:5, hp:5, bldg:5};
+      C.rbTree={atk:1, hp:1, bldg:1};
       campEnterDungeon(1); CAMPB=null; campCombatStep(0.05);
       campWithStk(()=>{ for(let i=0;i<3;i++) strikeSpawnUnit('me','marine'); });
       campScaleAllies(CAMPB.me.units);
       const u1=CAMPB.me.units.find(z=>z.id==='marine')||CAMPB.me.units[0];
-      assert(Math.abs(u1.maxHp/hp0-25)<0.5,'유닛 체력 5차가 ×25가 아님: ×'+(u1.maxHp/hp0).toFixed(1));
-      assert(Math.abs((u1.dmg||0)/(dm0||1)-25)<0.5,'유닛 공격력 5차가 ×25가 아님');
-      assert(Math.abs(CAMPB.me.base.hp/base0-25)<0.5,'본부 체력(건물 강화) 5차가 ×25가 아님');
+      const W=CAMP_RT_LADDER[1];                       // 사다리 1칸 — ⛔ 숫자를 박지 말 것
+      assert(Math.abs(u1.maxHp/hp0-W)<0.05*W,'유닛 체력이 사다리 1칸과 다름: ×'+(u1.maxHp/hp0).toFixed(2)+' vs ×'+W);
+      assert(Math.abs((u1.dmg||0)/(dm0||1)-W)<0.05*W,'유닛 공격력이 사다리 1칸과 다름');
+      assert(Math.abs(CAMPB.me.base.hp/base0-W)<0.05*W,'본부 체력(건물 강화)이 사다리 1칸과 다름');
       // ③ 같은 유닛에 두 번 걸리지 않는다 — 걸리면 라운드마다 눈덩이가 된다
       const h=u1.maxHp; const again=campScaleAllies(CAMPB.me.units);
       assert(again===0 && u1.maxHp===h,'아군 강화가 이중 적용됨');
       // ④ 스킬 쿨다운 — dt 만큼 깎인 뒤 (배수−1)dt 를 더 깎는다
-      C.rbTree={skCd:5};
+      C.rbTree={skCd:1};
       const t=CAMPB.me.units[0]; t.skillCd=t.skillCd||{}; t.skillCd.probe=10;
       campCombatStep(0.05);
       const cut5=10-t.skillCd.probe;
       C.rbTree={}; t.skillCd.probe=10; campCombatStep(0.05);
       const cut0=10-t.skillCd.probe;
-      assert(cut5>cut0*5,'스킬 쿨다운 감소가 트리를 안 탄다: '+cut5.toFixed(3)+' vs '+cut0.toFixed(3));
-      return '공격·체력·건물 ×25 · 비용 −80% · 인구 +500 · 스킬쿨 '+cut5.toFixed(2)+'/틱';
+      assert(cut5>cut0*1.5,'스킬 쿨다운 감소가 트리를 안 탄다: '+cut5.toFixed(3)+' vs '+cut0.toFixed(3));
+      return '공격·체력·건물 ×'+W+' · 비용 −'+Math.round(CAMP_RT_DISC[1]*100)+'% · 인구 +'+CAMP_RT_SUP[1]
+        +' · 스킬쿨 '+cut5.toFixed(2)+'/틱';
     } finally { C.rbTree=keep; if(typeof campWipeField==='function') campWipeField(); if(typeof campBattleClose==='function') campBattleClose();
       const S=campState(); if(S){ S.dg=0; S.cleared=0; } }
   });
@@ -13771,11 +13890,11 @@ async function groupLobby(){
     { const reb=NAV_TREE.find(x=>x.k==='reb');
       // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10) — 2차 환생이 주는 포인트를 쓰는 곳이라 여기다.
       //   ⛔ 유즈맵 구역으로 되돌리지 말 것(거기 있다가 옮겨 왔다).
-      assert(reb && reb.subs.length===4,'환생 하위 칸(환생·환생 트리·2차 트리·유즈맵 강화)이 없음');
+      assert(reb && reb.subs.length===4,'환생 하위 칸(환생·성장 트리·2차 트리·유즈맵 강화)이 없음');
       // ⭐ 2026-08-31 사용자 확정 — 「환생」(지금 환생하면 어떻게 되나) · 「환생 트리」(별 판)
       //   ⚠ 두 번째 칸의 이름은 2026-09-04 에 「업그레이드」에서 바뀌었다 — 그 말은 캠프의
       //     자원·무장 연구를 가리키는 다른 이름이라 같은 화면을 두 이름으로 부르고 있었다.
-      assert(reb.subs.map(x=>x.label).join(',')==='환생,환생 트리,2차 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
+      assert(reb.subs.map(x=>x.label).join(',')==='환생,성장 트리,2차 트리,유즈맵 강화','환생 하위 칸이 다름: '+reb.subs.map(x=>x.label).join(','));
       // ⚠ 입구는 campRebEnter 하나다 — 직접 campRebOpen/campTreeOpen 을 부르면 서로를 안 닫는다.
       assert(/campRebEnter/.test(String(reb.go)),'환생 칸이 campRebEnter 를 안 쓴다');
       // 트리는 **기존 것을 부른다** — 같은 UI 를 두 번 만들지 않는다.

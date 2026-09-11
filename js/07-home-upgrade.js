@@ -46,7 +46,7 @@ const NAV_TREE=[
   //   ⭐ 환생을 네비에 올린 이유는 화면이 **설계 요구**이기 때문이다 — HUNT_R1.md §4-2-0 이
   //     「먼 목표를 화면에서 보여 줘야 한다」고 못박았다. 안 보이면 첫 환생을 손해로 판단한다.
   //   ⚠ 이 결정은 GAME_DIRECTION.md §5-A(환생 유보)를 뒤집는다 — 그 문서도 함께 고쳤다.
-  //   ⭐ 하위 둘 — **정보**(지금 환생하면 어떻게 되나)와 **업그레이드**(환생 트리).
+  //   ⭐ 하위 둘 — **정보**(지금 환생하면 어떻게 되나)와 **성장 트리**(레벨 포인트로 산다).
   //     ⚠ 둘 다 하단 네비가 **보인 채로** 열린다(사용자 확정 2026-08-31). 그래서 두 화면의
   //       CSS 가 `bottom:var(--navH)` 로 네비 자리를 비운다 — z-index 를 낮추지 않는다
   //       (낮추면 키 아트가 딸려 내려가고 시트류와 층이 꼬인다).
@@ -61,8 +61,8 @@ const NAV_TREE=[
                                : (campRebIsOn() ? 'info' : null))),
     reset:()=>campRebEnter('info'), subs:[
       { k:'info',  label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
-      { k:'tree',  label:'환생 트리', ico:'flag', act:()=>campRebEnter('tree') },
-      { k:'tree2', label:'2차 트리',  ico:'flag', act:()=>campRebEnter('tree2') },
+      { k:'tree',  label:'성장 트리', ico:'flag', act:()=>campRebEnter('tree') },   // 📈 레벨 포인트로 산다(2026-09-11)
+      { k:'tree2', label:'2차 트리',  ico:'flag', act:()=>campRebEnter('tree2') },  // 🔁🔁 2차 포인트로 산다
       { k:'umap',  label:'유즈맵 강화', ico:'map', act:()=>campRebEnter('umap') } ] },
   // 💠 룬 — 환생과 유즈맵 사이(2026-09-02 사용자 확정: 연구·환생·**룬**·유즈맵·상점).
   //   ⭐ 자리가 여기인 이유: 왼쪽 셋이 「내가 세지는 곳」이고 오른쪽 둘이 「밖으로 나가는 곳」이다.

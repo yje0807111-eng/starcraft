@@ -12,6 +12,10 @@
  * ⛔ **전장이 닫혔다 = 졌다가 아니다.** 완주도 `campBattleClose` 를 지난다 — 여기서 한 번
  *   속아서 「던전 1 을 못 깬다」는 잘못된 결론을 냈다. 판정은 **`C.dgDone[D]` 하나**로 본다.
  *
+ * 📈 **레벨도 함께 잰다**(2026-09-11) — 판마다 Lv.1 에서 시작해 끝 레벨·안 쓴 포인트를 찍는다.
+ *   ⚠ 이 스크립트는 화력을 공짜로 주므로(×MUL) **레벨의 하한**이다. 실제 판은 관문마다 더 오래
+ *     버티므로 조금 더 오른다(실측 던전 1: ×5 → Lv.8 · ×2 → Lv.9, 7분을 버텨도 +1 뿐).
+ *
  * 📊 실측 기준선(2026-09-11 · 화력병 20기 · BALANCE §5-11):
  *     던전 1 ×5 → 164초 · 던전 2 ×36 → 172초 · 던전 3 ×257 → 141초
  *   필요 배수의 비가 `campFoeDiff` 와 정확히 같다(7.2 / 51.4).
@@ -58,6 +62,7 @@ const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT)=>{
   const rows=[];
   for(const MUL of MULS){
     const C=campState(); C.dgDone={}; C.foeDead={};
+    C.lv=1; C.xp=0; C.lvPts=0;                       // 📈 레벨도 함께 잰다 — 판마다 Lv.1 에서 시작
     campEnterDungeon(0); campEnterDungeon(D); CAMPB=null; campCombatStep(0.05);
     if(!CAMPB){ rows.push({mul:MUL,err:'전장 없음'}); continue; }
     campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
@@ -80,7 +85,8 @@ const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT)=>{
       best=Math.max(best, campBroken());
       if(campBroken()>=CAMP_DG_STEPS){ done=true; break; }
       if(campBroken()!==lastB){ lastB=campBroken(); idle=0;
-        gateLog.push({gate:lastB, t:Math.round(t), alive:CAMPB.me.units.filter(u=>!u.dead).length}); }
+        gateLog.push({gate:lastB, t:Math.round(t), alive:CAMPB.me.units.filter(u=>!u.dead).length,
+          lv:(typeof campLevel==='function')?campLevel():0}); }
       else idle+=1/30;
       if(idle>=12){ idle=0; if(push()) pushes++; }
       if(t>=nextT){ nextT+=2;
@@ -100,7 +106,7 @@ const out=await pg.evaluate((D,N,MULS,UNIT,LIMIT)=>{
         tower:alive.filter(b=>b.kind==='tower').map(b=>'z'+b.zone),
         foe:campAlive('ai'), myY:CAMPB.me.units.length?Math.round(CAMPB.me.units[0].y):null,
         homeY:Math.round(campHomeY(CAMPB.world)) }; }
-    rows.push({ say:says.slice(-2), tl:tl.slice(-4), gateLog, diag, d:D, unit:UNIT, n:N, mul:MUL, done, lost, t:Math.round(t), best, pushes,
+    rows.push({ lv:(typeof campLevel==='function')?campLevel():0, lvPts:(C.lvPts||0), say:says.slice(-2), tl:tl.slice(-4), gateLog, diag, d:D, unit:UNIT, n:N, mul:MUL, done, lost, t:Math.round(t), best, pushes,
       alive:CAMPB?CAMPB.me.units.filter(u=>!u.dead).length:0,
       baseLeft:CAMPB?Math.round(100*CAMPB.me.base.hp/(CAMPB.me.base.maxHp||1)):0 });
     if(CAMPB) campWithStk(()=>{ STK.me.units.length=0; STK.ai.units.length=0; });
@@ -113,8 +119,9 @@ for(const r of out){
     + (r.done ? ('🏁 ' + r.t + '초 클리어 (드래그 ' + r.pushes + '회 · 생존 ' + r.alive + '기)')
               : ('💀 못 깸 — 최고 ' + r.best + '/6 · ' + r.t + '초 · 드래그 ' + r.pushes + '회'))
     + (r.say && r.say.length ? '   ⟨' + r.say[r.say.length-1] + '⟩' : ''));
+  if(r.lv) console.log('   📈 레벨 ' + r.lv + ' · 안 쓴 성장 포인트 ' + r.lvPts);
   if(r.gateLog && r.gateLog.length)
-    console.log('   관문별: ' + r.gateLog.map(g=>g.gate+'채 '+g.t+'초(병력 '+g.alive+')').join(' · '));
+    console.log('   관문별: ' + r.gateLog.map(g=>g.gate+'채 '+g.t+'초(병력 '+g.alive+' · Lv'+g.lv+')').join(' · '));
 }
 if(errs.length) console.log('ERR',errs.slice(0,3));
 await browser.close(); server.close();

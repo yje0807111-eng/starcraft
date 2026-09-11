@@ -626,6 +626,13 @@ function campStepUnits(dt){
 
     // ── 죽은 유닛 정리 (오토배틀과 같은 규약)
     const dead = me.units.filter(u => u.dead);
+    // 📈 **경험치 — 적(ai)이 죽었을 때만.** ⭐ 지급 지점을 여기 하나로 둔 이유:
+    //   사격·광역·스킬·지뢰·핵·건물 사격이 **전부 이 정리를 지난다**. 킬 지점마다 붙이면
+    //   반드시 하나를 빠뜨린다(실제로 스킬 구역 둘은 me.kills 도 안 세고 있었다).
+    //   ⛔ 유즈맵(오토배틀)에는 붙이지 말 것 — 경험치는 캠프에서만이다(GAME_DIRECTION §0-A).
+    //     이 파일은 캠프 전용이라 그 조건이 파일 자체로 지켜진다.
+    if(side === 'ai' && dead.length && typeof campAddXp === 'function')
+      campAddXp(dead.length * campKillXp());
     if(dead.length){
       if(!S.fx || !S.fx.shots){ S.fx = FX.store(); S.fx.hitK = STK_HIT_K; }
       for(const du of dead) FX.death(S.fx, du.x, du.y,
