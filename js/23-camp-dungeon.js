@@ -897,7 +897,7 @@ function campFoeWorkers3D(v, cwpx){
 //     그래서 격자 위끝(techY0) 아래는 매 계산마다 활성(2)으로 칠한다.
 //   👣 적 쪽은 **병력을 데리고 올라가야** 열린다 — 이미 있던 「적 건물 seen」(campFoeSee)과 같은 자다.
 //   ⚠ 안개는 **던전에서만** 켠다(캠프 0단계는 집이라 끈다 · campFogSync).
-const CAMP_FOG_SIGHT = 1.15;      // 전장 유닛 시야 = 인지 사거리(u.acq) × 이 배수 — 건물 seen 판정(CAMP_FOE_SEE_R)보다 살짝 넓다
+const CAMP_FOG_SIGHT = 2.2;       // 전장 유닛 시야 = 인지 사거리(u.acq) × 이 배수 — 2026-09-11 사용자 「더 넓게 · 더 많은 구역」: 1.15 → 2.2(마린 acq 315 → 약 690px · 세로 한 화면의 1/4 쯤)
 function campFogOn(){ return (typeof campDgN === 'function') && campDgN() > 0; }
 // 덮을 세로 위끝 — 뷰가 올라갈 수 있는 끝(campViewTop)보다 조금 더 위. 안 그러면 위 가장자리가 안개 밖으로 샌다.
 function campFogTop(){ const t = (typeof campViewTop === 'function') ? campViewTop() : 0; return Math.min(0, t - 0.06); }
