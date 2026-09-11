@@ -7985,6 +7985,30 @@ async function groupLobby(){
             for(let tx=0;tx<C2;tx++){ const gx=(tx+0.5)/C2;
               if((gx<L.x0||gx>L.x1||gy<L.y0||gy>L.y1) && !m[ty*C2+tx]) outOpen++; } }
           assert(outOpen===0,'레인 밖 칸이 열려 있다('+outOpen+') — 유닛이 못 가는 자리로 길을 낸다'); }
+        /* 📏 **직선 판정은 선이 지나는 칸을 빠짐없이 봐야 한다**(2026-09-11).
+         *   ⛔ 「선 위에 점을 찍어 본다」로 되돌리면 절벽 테두리가 **한 칸 두께**라 대각선이 그 칸을
+         *     점 사이로 건너뛴다 → 막혔는데 「안 막혔다」가 되어 우회가 안 걸리고 유닛이 절벽을 통과한다
+         *     (실측: 절벽 통과의 38.8% 가 이것이었고, 고치니 51.5% → 39.1% 로 내려갔다).
+         *   ⭐ 재는 법: **아주 촘촘한 점 찍기를 기준자로 삼아** 둘을 견준다. 기준자가 「막혔다」는데
+         *     본 함수가 「안 막혔다」면 실패다(반대는 괜찮다 — 칸 훑기가 더 엄해서 모서리를 스쳐도 잡는다).
+         *   ⚠ 씨앗을 고정한다(Math.random 금지 — 실패가 재현돼야 한다). */
+        { const span2=T.wy1-T.wy0;
+          const dense=(x0,y0,x1,y1)=>{ const n=4000;
+            for(let k=0;k<=n;k++){ const t=k/n;
+              const x=Math.floor((x0+(x1-x0)*t)*C2), y=Math.floor((((y0+(y1-y0)*t)-T.wy0)/span2)*W2);
+              if(x<0||y<0||x>=C2||y>=W2) continue;
+              if(m[y*C2+x]) return true; }
+            return false; };
+          let rs=20260911, rnd=()=>((rs=(rs*1664525+1013904223)>>>0)/4294967296);
+          let miss=0, tried=0, blkRef=0, ex=null;
+          for(let k=0;k<600;k++){
+            const a={gx:rnd(), gy:T.wy0+rnd()*span2}, b2={gx:rnd(), gy:T.wy0+rnd()*span2};
+            tried++;
+            const ref=dense(a.gx,a.gy,b2.gx,b2.gy); if(ref) blkRef++;
+            const got=campTerrSegBlocked(a.gx,a.gy,b2.gx,b2.gy);
+            if(ref && !got){ miss++; if(!ex) ex=a.gx.toFixed(3)+','+a.gy.toFixed(3)+' → '+b2.gx.toFixed(3)+','+b2.gy.toFixed(3); } }
+          assert(blkRef>50,'견줄 표본이 모자란다(막힌 선 '+blkRef+'개) — 지형이 거의 안 깔렸다');
+          assert(miss===0,'직선 판정이 막힌 칸을 '+miss+'/'+blkRef+'번 놓쳤다(예: '+ex+') — 점 사이로 샌다'); }
         // 막지 않으면 null(아무것도 안 바꾼다) · 막으면 레인 안의 지점을 준다
         { const a={gx:0.5,gy:0.55}, bb={gx:0.52,gy:0.5};
           assert(campTerrWay(a,bb)===null,'안 막혔는데 우회 지점을 준다 — 평지에서 길이 휜다'); }

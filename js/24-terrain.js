@@ -448,7 +448,7 @@ function campTerrHeightFill(f){
  */
 const TERR_WAY_STEPS = 28;    // 흐름을 따라 앞을 내다보는 칸 수(끈 당기기)
 const TERR_FLOW_KEEP = 8;     // 들고 있는 흐름장 수(목적지별)
-const TERR_SEG_MAX   = 160;   // 직선 판정에서 찍어 보는 점의 상한
+const TERR_SEG_MAX   = 160;   // 직선 판정에서 훑는 칸 수 상한(격자가 48×81 이라 |dx|+|dy| 는 129 를 못 넘는다)
 
 function campTerrIdxAt(gx, gy){
   const T = CAMPT; if(!T) return -1;
@@ -458,17 +458,35 @@ function campTerrIdxAt(gx, gy){
 function campTerrCellMid(i){
   const T = CAMPT, C = T.cols, W = T.rows;
   return { gx: ((i % C) + 0.5) / C, gy: T.wy0 + ((((i / C) | 0) + 0.5) / W) * (T.wy1 - T.wy0) }; }
-/* 직선이 지형에 막히나 — 칸 해상도로 찍어 본다(⚠ 매 프레임 유닛마다 불린다: 상한을 둔다). */
+/* 직선이 지형에 막히나 — **선이 지나는 칸을 빠짐없이 훑는다**(격자 행진 · Amanatides–Woo).
+ *   ⛔⛔ **선 위에 점을 찍어 보는 방식으로 되돌리지 말 것**(2026-09-11 실측). 절벽 테두리는
+ *     **한 칸 두께**라 대각선이 그 한 칸을 **점 사이로 건너뛴다** — 막혔는데 「안 막혔다」가 되어
+ *     우회가 아예 안 걸리고 유닛이 절벽을 그대로 통과했다(절벽 통과 614회 중 **38.8%** 가 이것이었다).
+ *     점을 더 촘촘히 찍는 것으로는 못 고친다: 대각선은 칸 모서리를 스치므로 어떤 간격에도 빈틈이 남는다.
+ *   ⚠ 이 방식은 **더 엄하다** — 모서리를 스치기만 해도 「막혔다」가 된다. 그래서 `campTerrWay` 가
+ *     더 자주 걸리고(우회가 늘고) 끈 당기기의 웨이포인트도 짧아진다. 둘 다 의도한 것이다.
+ *   ⚠ 벽에 바싹 붙으면 **바로 옆 칸도 「안 보인다」**가 되는데, 그 자리는 `campTerrWay` 의
+ *     `best < 0 → first` 안전망이 받는다(거기 주석 참고 · 빼면 유닛이 선다).
+ *   💰 값은 점 찍기와 비슷하다(지나는 칸 수 ≈ |dx|+|dy|). ⚠ 매 프레임 유닛마다 불리므로 상한을 둔다. */
 function campTerrSegBlocked(x0, y0, x1, y1){
   const T = CAMPT; if(!T) return false;
   const m = campTerrMask(), C = T.cols, W = T.rows, span = T.wy1 - T.wy0;
-  const n = Math.max(2, Math.min(TERR_SEG_MAX,
-    Math.ceil(Math.max(Math.abs(x1 - x0) * C, (Math.abs(y1 - y0) / span) * W) * 1.5)));
-  for(let k = 0; k <= n; k++){ const t = k / n;
-    const x = Math.floor((x0 + (x1 - x0) * t) * C);
-    const y = Math.floor((((y0 + (y1 - y0) * t) - T.wy0) / span) * W);
-    if(x < 0 || y < 0 || x >= C || y >= W) continue;
-    if(m[y * C + x]) return true; }
+  const ax = x0 * C, ay = ((y0 - T.wy0) / span) * W;          // 칸 단위 실수 좌표로
+  const bx = x1 * C, by = ((y1 - T.wy0) / span) * W;
+  const dx = bx - ax, dy = by - ay;
+  let cx = Math.floor(ax), cy = Math.floor(ay);
+  const ex = Math.floor(bx), ey = Math.floor(by);
+  const hit = (x, y) => (x >= 0 && y >= 0 && x < C && y < W) ? m[y * C + x] : 0;
+  if(hit(cx, cy)) return true;
+  const sx = dx > 0 ? 1 : -1, sy = dy > 0 ? 1 : -1;
+  const tdx = dx !== 0 ? Math.abs(1 / dx) : Infinity;         // 한 칸 건너는 데 드는 t
+  const tdy = dy !== 0 ? Math.abs(1 / dy) : Infinity;
+  let tmx = dx !== 0 ? (dx > 0 ? (cx + 1 - ax) : (ax - cx)) * tdx : Infinity;
+  let tmy = dy !== 0 ? (dy > 0 ? (cy + 1 - ay) : (ay - cy)) * tdy : Infinity;
+  for(let g = 0; g < TERR_SEG_MAX; g++){
+    if(cx === ex && cy === ey) return false;
+    if(tmx < tmy){ cx += sx; tmx += tdx; } else { cy += sy; tmy += tdy; }
+    if(hit(cx, cy)) return true; }
   return false; }
 /* 목적지 칸 → 거리 지도(BFS). ⚠ 목적지가 막힌 칸이면(건물이 절벽 테두리에 섰다) **둘레에서** 시작한다. */
 function campTerrFlow(goal){
