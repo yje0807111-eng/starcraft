@@ -57,7 +57,7 @@ await sleep(1200);
 { const ok=await pg.evaluate(()=>campDgN()===1 && typeof CAMPT!=='undefined' && !!CAMPT);
   if(!ok){ console.error('⛔ 던전에 안 들어갔다 — 지형이 없다'); await b.close(); server.close(); process.exit(1); } }
 
-const SEEDS=+(process.argv[2]||60), RUNS=+(process.argv[3]||6), WHY=+(process.argv[4]||0);
+const SEEDS=+(process.argv[2]||60), RUNS=+(process.argv[3]||6), WHY=+(process.argv[4]||0), WHO=+(process.argv[5]||0);
 
 // ── ① 정적 — 마스크 위에서 저지 → 고원 물 붓기 ───────────────────────────
 const stat = await pg.evaluate((N)=>{
@@ -235,5 +235,95 @@ if(WHY > 0){
   console.log(`  막혔다고 보고도 우회점 없음    ${why.blkNoWay}\t(${(why.blkNoWay/c*100).toFixed(1)}%)`);
   console.log(`  우회점을 줬는데도 넘었다       ${why.blkWay}\t(${(why.blkWay/c*100).toFixed(1)}%)  ← 몸을 안 막는 설계 그 자체`);
   console.log(`  (그때 목표가 고원 위 ${why.tgtHi} · 아래 ${why.tgtLo})`);
+}
+
+/* ── ④ 절벽을 **넘긴 것이 누구냐** (선택 · 다섯째 인자에 판 수) ─────────────
+ *   유닛을 움직이는 것은 둘뿐이다: `campMove`(유닛마다) · `strikeSeparate`(프레임 끝에 한 번).
+ *   프레임마다 p0(이동 전) → p1(campMove 뒤) → p2(밀어내기 뒤) 를 잡아 어느 구간에서 넘었는지 센다.
+ *   ⚠ ③ 과 마찬가지로 campMove 를 감싸므로 ② **다음**에만 돌린다.
+ *   📊 실측(300판 · 567회): campMove **86.4%** · 밀어내기 12.5% · 기타 1.1%.
+ *     그 86.4% 를 다시 가르면 — 우회점 없음 48.4% · 안전망(막힌 우회점) **0%** ·
+ *     **우회점도 선도 멀쩡한데 넘음 51.6%**(명령 방향에서 평균 38.6° 벗어남).
+ *   ⭐ 결론: 남은 원인은 판정이 아니라 **조타 이탈**이다(stepUnitMove 의 회피·조향).
+ *     ⛔ 선 판정을 더 손보는 것으로는 못 줄인다. */
+if(WHO > 0){
+  /* 🔍 절벽을 **넘긴 것이 누구냐** — 유닛을 움직이는 것은 둘뿐이다.
+   *   ① campMove(유닛마다) → strikeMoveToward  ② strikeSeparate(프레임 끝에 한 번 · 겹침 밀어내기)
+   *   프레임마다 p0(이동 전) → p1(campMove 뒤) → p2(separate 뒤) 를 잡아 어느 구간에서 넘었는지 센다. */
+  const who = await pg.evaluate(async (RUNS)=>{
+    const _mv = campMove, _sep = strikeSeparate;
+    window.campMove = function(u, tx, ty, dt){
+      u._p0x=u.x; u._p0y=u.y;
+      /* 🔍 이 프레임에 지형층이 무엇을 줬나 — 그리고 **그 우회점까지 선이 뚫려 있나**.
+       *   campTerrWay 는 한 칸도 안 보이면 `best<0 → first` 로 **안 보이는 칸도 준다**(선 안전망).
+       *   그 경우 유닛은 절벽을 향해 곧장 가라는 명령을 받는다 — 그게 몇 %인지가 알고 싶은 값이다. */
+      try{ const W=(CAMPB&&CAMPB.world)||4800;
+        const gA=campW2G(u.x,u.y,W), gB=campW2G(tx,ty,W);
+        const way=campTerrWay(gA,gB);
+        u._dWay = way?1:0;
+        u._dWayBlk = way ? (campTerrSegBlocked(gA.gx,gA.gy,way.gx,way.gy)?1:0) : 0;
+        if(way){ const q=campG2W(way.gx,way.gy,W); u._dCx=q.x; u._dCy=q.y; }
+        else { u._dCx=tx; u._dCy=ty; }
+        { const T=CAMPT, C=T.cols, W2=T.rows, sp=T.wy1-T.wy0;          // 목표가 고원 위인가
+          const bx=Math.floor(gB.gx*C), by=Math.floor((gB.gy-T.wy0)/sp*W2);
+          u._dTgtHi = (bx>=0&&by>=0&&bx<C&&by<W2 && T.h[by*C+bx]) ? 1 : 0; }
+      }catch(e){ u._dWay=-1; }
+      const r=_mv(u,tx,ty,dt); u._p1x=u.x; u._p1y=u.y; return r; };
+    window.strikeSeparate = function(){ return _sep.apply(null, arguments); };
+    const T0={ move:0, sep:0, other:0, noMove:0, cross:0, wNo:0, wNoHi:0, wBlk:0, wOk:0, wOkHi:0, angSum:0, angN:0, angBad:0 };
+    for(let r=0;r<RUNS;r++){
+     try{
+      campEnterDungeon(1); campState().foeSeed = 4200 + r*131;
+      CAMPB=null; campCombatStep(0.05);
+      if(!CAMPB || typeof CAMPT==='undefined' || !CAMPT) continue;
+      campWithStk(()=>{ if(STK&&STK.me) STK.me.units.length=0; if(STK&&STK.ai) STK.ai.units.length=0; });
+      if(CAMPB._down) CAMPB._down.length=0; if(CAMPB._wq) CAMPB._wq.length=0;
+      campWithStk(()=>{ for(let i=0;i<8;i++) strikeSpawnUnit('me','marine'); });
+      const T=CAMPT, C=T.cols, W=T.rows, span=T.wy1-T.wy0, WD=(CAMPB&&CAMPB.world)||4800;
+      const colBot=new Int16Array(C).fill(-1), colRamp=new Uint8Array(C);
+      for(let tx=0;tx<C;tx++){ for(let ty=0;ty<W;ty++) if(T.h[ty*C+tx]) colBot[tx]=ty;
+        if(colBot[tx]>=0 && T.r[colBot[tx]*C+tx]) colRamp[tx]=1; }
+      const cellOf=(x,y)=>{ const g=campW2G(x,y,WD);
+        return { tx:Math.max(0,Math.min(C-1,Math.floor(g.gx*C))),
+                 ty:Math.max(0,Math.min(W-1,Math.floor((g.gy-T.wy0)/span*W))) }; };
+      // 도착 열의 밑변을 기준으로 「넘었나」 — 기존 계측기와 같은 규칙(오르막 열은 제외)
+      const cross=(ax,ay,bx,by)=>{ const a=cellOf(ax,ay), b=cellOf(bx,by);
+        return colBot[b.tx]>=0 && !colRamp[b.tx] && a.ty>colBot[b.tx] && b.ty<=colBot[b.tx]; };
+      const last=new Map();
+      for(let f=0; f<1200; f++){
+        try{ campCombatStep(0.05); }catch(e){ break; }
+        if(!CAMPB || !CAMPB.me) break;
+        for(const u of (CAMPB.me.units||[])){
+          if(u.dead) continue;
+          const pv=last.get(u);
+          if(pv && cross(pv.x, pv.y, u.x, u.y)){
+            T0.cross++;
+            if(u._p0x==null) T0.noMove++;                              // campMove 를 안 탔다
+            else if(cross(u._p0x,u._p0y,u._p1x,u._p1y)){ T0.move++;     // ① campMove 가 넘겼다
+              if(!u._dWay){ T0.wNo++; if(u._dTgtHi) T0.wNoHi++; }                                   // 우회점을 안 줬다(직선이 뚫렸다고 봄)
+              else if(u._dWayBlk) T0.wBlk++;                           // 줬는데 **그 선이 막혀 있다**(안전망)
+              else { T0.wOk++; if(u._dTgtHi) T0.wOkHi++;                                          // 줬고 선도 뚫렸는데 넘었다 → 조타 이탈
+                const cx=u._dCx-u._p0x, cy=u._dCy-u._p0y, mx=u._p1x-u._p0x, my=u._p1y-u._p0y;
+                const cl=Math.hypot(cx,cy), ml=Math.hypot(mx,my);
+                if(cl>1 && ml>1){ const cos=Math.max(-1,Math.min(1,(cx*mx+cy*my)/(cl*ml)));
+                  const deg=Math.acos(cos)*180/Math.PI; T0.angSum+=deg; T0.angN++; if(deg>45) T0.angBad++; } } }
+            else if(cross(u._p1x,u._p1y,u.x,u.y))       T0.sep++;      // ② 밀어내기가 넘겼다
+            else T0.other++; }                                          // 둘 다 아님(프레임 밖에서 옮겨졌다)
+          last.set(u, {x:u.x, y:u.y}); }
+      }
+     }catch(e){}
+    }
+    return T0; }, WHO);
+  const c=who.cross||1, mv=who.move||1;
+  console.log(`절벽을 넘긴 것이 누구냐 — 총 ${who.cross}회`);
+  console.log(`  ① campMove(이동 명령)가 넘겼다   ${who.move}\t(${(who.move/c*100).toFixed(1)}%)`);
+  console.log(`  ② strikeSeparate(겹침 밀어내기)  ${who.sep}\t(${(who.sep/c*100).toFixed(1)}%)`);
+  console.log(`  ③ 둘 다 아님                     ${who.other}\t(${(who.other/c*100).toFixed(1)}%)`);
+  console.log(`  ④ campMove 를 안 탐              ${who.noMove}\t(${(who.noMove/c*100).toFixed(1)}%)`);
+  console.log(`  ① 안을 다시 가르면(${who.move}회):`);
+  console.log(`    우회점을 아예 안 줬다          ${who.wNo}\t(${(who.wNo/mv*100).toFixed(1)}%)  ← 그중 목표가 고원 위 ${who.wNoHi}`);
+  console.log(`    줬는데 그 선이 막혀 있었다     ${who.wBlk}\t(${(who.wBlk/mv*100).toFixed(1)}%)  ← best<0 안전망`);
+  console.log(`    우회점도 선도 멀쩡한데 넘었다  ${who.wOk}\t(${(who.wOk/mv*100).toFixed(1)}%)  ← 조타 이탈`);
+  console.log(`    명령 방향 ↔ 실제 이동 각도: 평균 ${(who.angSum/Math.max(1,who.angN)).toFixed(1)}° · 45° 넘은 것 ${who.angBad}/${who.angN}`);
 }
 await b.close(); server.close();
