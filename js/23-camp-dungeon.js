@@ -543,14 +543,14 @@ function campEnterDungeon(dg){
   const mx = (typeof CAMP_DG_MAX !== 'undefined') ? CAMP_DG_MAX : CAMP_DG_MAX_N;
   const n = Math.max(0, Math.min(mx, dg | 0));
   C.dg = n; C.broken = 0; C.foeDead = {}; C.foeTgt = null;
-  // 🎫 **2차 트리 「던전 시작 지점」** — 앞의 관문 몇 채를 이미 부순 채로 들어간다.
+  // 🎫 **환생 트리 「던전 시작 지점」** — 앞의 관문 몇 채를 이미 부순 채로 들어간다.
   //   ⛔ `C.broken` 만 올리지 말 것. 릴레이(campFoeActive)는 **실제로 죽은 건물**을 보므로,
   //     숫자만 올리면 **난이도는 관문 n 인데 웨이브는 관문 1 짜리**가 된다(2026-09-11 실측으로 겪었다).
   //   ⭐ 그래서 `C.foeDead` 에 직접 찍는다 — eid 는 자리마다 고정('fb<던전>_<차례>')이라
   //     `campFoeBase` 가 그것을 읽어 처음부터 부서진 채로 세운다.
   //   ⚠ **문지기 탑은 안 건너뛴다** — 구간을 여는 것은 여전히 플레이어의 몫이다.
   if(n > 0){
-    const sk = (typeof campRt2Val === 'function') ? (campRt2Val('dgStart') | 0) : 0;
+    const sk = (typeof campRbtVal === 'function') ? (campRbtVal('dgStart') | 0) : 0;
     if(sk > 0){ const d = campDgDef(n);
       let i = 0, got = 0;
       for(const q of (d && d.bld) || []){

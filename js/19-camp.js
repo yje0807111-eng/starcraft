@@ -115,21 +115,26 @@ function campFail(){ const C = campState(); if(!C) return 0;
   campSave(); return was; }
 
 
-// ══ 🔁 환생 (2026-08-25 · 5단계) ═══════════════════════════════════════
-//   설계 단일 소스: HUNT_R1.md §4. 요지 셋 —
-//   ① 조건은 **매번 같다**: 그 회차 재화점수 100만. 회차가 늘어도 안 오른다.
-//      고정이라 후반에는 금방 채워진다 → 「특정 시점부터 자유롭게」가 저절로 이루어진다.
-//   ② 배수는 **로그**(폭주 방지) · 포인트는 **제곱근 × 깊이**(트리 비용이 지수라 같이 자라야 한다)
-//   ③ ~~기준선 100만과 포인트 공식의 기준선은 같은 숫자~~ → **2026-09-07 갈랐다**(사용자 결정 「둘 다」).
-//      관문을 100만으로 당긴 뒤 조건을 막 채운 첫 환생이 1.35 포인트라 **가운데(1) 말고는 아무것도 못 샀다**
-//      (갈래 8 · 묶음 32 · 첫 계열까지 41). 설계표(HUNT_R1 §4-4 「첫 환생 12.8 · 1티어 2~3개」)는 옛 경제
-//      (100만이 D2R20 쯤)를 전제한 것이라, 포인트 기준선을 따로 두어(CAMP_RP_BASE) 그 표의 자리로 되돌린다.
-//      첫 환생(100만 · D2R0) = √50 × 1.35 ≈ **9.5 포인트** → 가운데 1 + 갈래 2 + 묶음 4 + 계열 한둘.
+// ══ 🔁 환생 — **하나뿐이다** (2026-09-11 개편 · GAME_DIRECTION §0-A 「새 뼈대」) ═══════
 //
-//   ⚠ 통신소 스캔은 아직 입구로 안 붙였다(§4 의 화면 쪽). 지금 조건은 재화점수 하나다 —
-//      통신소는 유니온 테크에만 있어 다른 종족이 통째로 막힌다. UI 를 붙일 때 함께 푼다.
-const CAMP_REB_COST = 1e6;        // 환생 관문 = 포인트 공식의 기준선과 같은 숫자
-const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가
+// ⭐ 옛 「1차 환생」은 없어졌다. 그 자리는 **레벨**이 맡는다(위 「📈 레벨」 절).
+//   남은 층은 하나다 — **한 바퀴를 끝내고 다음 바퀴를 여는** 자다.
+//
+//   ① 관문 = **무한층에서 막히면** = 지금은 **던전 끝(마지막 던전 클리어)**.
+//      ⛔ 「번 돈 100만」으로 되돌리지 말 것 — 돈→포인트→배수→돈 되먹임 고리가 그거였다.
+//      ⚠ 무한층이 생기면 이 관문은 **저절로** 「무한층에서 막힘」이 된다(무한층 진입 = 던전 끝).
+//   ② 포인트 = **도달 깊이**(통산 관문 수). 던전 끝이 18관문이라 지금은 **늘 18** 이다.
+//      ⚠ **지금은 밀어붙일 이유가 없다**(던전을 깨자마자 환생이 최적) — 그 구간을 만드는 것이
+//        무한층이다. 층이 생기면 `campRebDepth` 에 층수가 더해지고 「더 올라갈수록 는다」가 산다.
+//   ③ 배수 = **1 + 환생 횟수 + 환생 트리 몫**(2 → 3 → 4 …). ⛔ 곱하지 말 것 · ⛔ 로그 누적으로
+//      되돌리지 말 것 (옛 `C.rebMul`·`CAMP_REB_K` 는 「번 돈」 시절 물건이다).
+//
+// 🌳 **포인트를 쓰는 곳은 환생 트리**(`CAMP_RBT_LINES` · 2026-09-11 · 갈래 넷: 기본 배수 ·
+//   스킵 · 자동화 · 상한 해제). 자루는 `C.rebTree` 이고 **환생을 넘어 남는다** —
+//   ⛔ 성장 트리(`C.rbTree` · 레벨 포인트 · 회차마다 되감김)와 헷갈리지 말 것.
+const CAMP_REB_PT_GATE = 1;       // 관문 하나 = 환생 포인트 몇 점
+const CAMP_REB_MUL_STEP = 1;      // 환생 한 번 = 기본 배수 +얼마
+const CAMP_GAS_RATE = 8;          // 재화점수에서 가스 1 = 미네랄 몇인가 (회차 지표에 쓴다)
 // ── ⛽ 정제소 자동 생산 (HUNT_R1 §2-3-1) ────────────────────────────────
 // ⭐ **일꾼을 빼서 배치하지 않는다.** 정제소가 스스로 캔다 — 스타 원본과 다르다.
 //   분당 = (12 + 2 × 정제소Lv) × 던전배율 · 업그레이드 비용 = 미네랄 1만 × 1.12^Lv
@@ -202,21 +207,26 @@ function campGasTick(dt){
   const C = campState(); if(C) C.earnGas = (C.earnGas || 0) + got;
   return got;
 }
-// ⚠ K 는 **난이도 천장에 매여 있다**(2026-09-09). 관문 사다리를 재설계하며 천장이
-//   9.3e7 → 369 로 내려갔고(log10 7.97 → 2.57), K 를 그대로 두면 환생 배수가 3.1 배 작아진다.
-//   0.8 × 7.97 / 2.57 ≈ **2.5** 로 올려 「첫 환생에서 얻는 배수」를 옛 자리에 되돌린다.
-//   ⛔ CAMP_GATE_RATE 를 만졌으면 여기도 같이 볼 것 — 안 하면 환생이 통째로 시시해진다.
-const CAMP_REB_K = 2.5, CAMP_REB_MIN = 0.2;      // 배수 = max(MIN, K × log10(난이도))
-const CAMP_RP_DG = 1.35, CAMP_RP_RD = 1.012;     // 포인트 깊이 배수 — 던전 · 라운드
-// 📐 포인트 기준선 — √(번 재화 ÷ CAMP_RP_BASE). ⛔ CAMP_REB_COST(관문)와 **같지 않다**(2026-09-07 · 위 ③).
-//   2만 = 관문 100만에서 √50 ≈ 7.07 배 — 트리 1티어(1·2·6)와 마디(2·4)를 첫 환생에 서넛 살 수 있는 자리.
-//   ⚠ 값을 바꾸면 트리 전체(160칸 · 최고 티어 ≈ 5.5조)의 도달 시각이 함께 움직인다 — 스모크가 첫 환생 범위를 잰다.
-const CAMP_RP_BASE = 20000;
+// 🗄 옛 계수 셋(`CAMP_REB_K`·`CAMP_RP_DG`·`CAMP_RP_BASE`)은 **없앴다**(2026-09-11) —
+//   전부 「번 돈」에서 포인트를 뽑던 자들이라 새 규칙에 자리가 없다. 되살리지 말 것.
 
-// 그 회차에 번 것 — 미네랄과 가스를 하나로 본다
+// 그 회차에 번 것 — 미네랄과 가스를 하나로 본다.
+//   ⚠ 이제 **환생 규칙이 아니라 회차 지표**다(환생 화면의 「이번 회차」 줄이 쓴다).
 function campWealth(){ const C = campState(); if(!C) return 0;
   return (C.earn || 0) + (C.earnGas || 0) * CAMP_GAS_RATE; }
-function campCanRebirth(){ return campWealth() >= CAMP_REB_COST; }
+// 🏁 이번 회차에 **어디까지 갔나** — 통산 관문 수(던전 하나 = CAMP_DG_STEPS 관문).
+//   ⚠ 무한층이 생기면 여기에 **층수를 더한다** — 그래야 「더 올라갈수록 포인트가 는다」가 산다.
+function campRebDepth(){
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  const C = campState(); if(!C) return 0;
+  let best = (campDgN() - 1) * per + campCleared();          // 지금 서 있는 곳
+  for(const k in (C.dgDone || {})) if(C.dgDone[k]) best = Math.max(best, (k | 0) * per);
+  return Math.max(0, best); }
+// 🚪 관문 — **마지막 던전을 깼나**(= 무한층 진입). ⛔ 「번 돈」으로 되돌리지 말 것.
+function campRebNeed(){
+  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
+  return CAMP_DG_MAX * per; }
+function campCanRebirth(){ return campRebDepth() >= campRebNeed(); }
 
 // ══ 📈 레벨 — 판 안의 성장 축 (2026-09-11 · GAME_DIRECTION §0-A 「새 뼈대」) ══════════
 //
@@ -366,26 +376,25 @@ function campDevSeed(){
   if(typeof saveMeta === 'function') saveMeta();
   return CAMP_DEV_START_MIN; }
 
-// ① 획득 배수 — 기존 배수에 **더한다**(곱이 아니다). 로그라 난이도가 1만 배 올라도 +3.2 만 붙는다.
-function campRebMulGain(){
-  return Math.max(CAMP_REB_MIN, CAMP_REB_K * Math.log10(Math.max(1, campFoeDiff(campDgN(), campCleared()))))
-    * campPackRebMul(); }   // 💳 환생 팩 — 쌓이는 양만 키운다(합산 누적이라 지수가 안 된다)
-// ② 획득 포인트 — 기준량(번 재화) × 깊이 배수. 재화를 2배 벌어야 1.41배다.
+// ① 이번 환생이 **기본 배수에 더하는 몫** — 한 번에 +1 이다(2 → 3 → 4 …).
+//   ⛔ 로그·곱으로 되돌리지 말 것(BALANCE §0: 지수 축이 둘이 되면 폭주한다).
+//   💳 환생 팩은 **쌓이는 양만** 키운다 — 합산 누적이라 지수가 안 된다.
+function campRebMulGain(){ return CAMP_REB_MUL_STEP * campPackRebMul(); }
+// ② 획득 포인트 — **도달 깊이**(통산 관문 수)에 비례. ⛔ 「번 돈」으로 되돌리지 말 것.
 function campRebPtGain(){
-  const base = Math.sqrt(campWealth() / CAMP_RP_BASE);   // ⚠ 관문(CAMP_REB_COST)이 아니라 포인트 기준선
-  return base * Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1)) * Math.pow(CAMP_RP_RD, campCleared())
-    * campPackRebPt()                                     // 💳 환생 팩
-    ; }   // ⚠ 「윤회의 룬」(rebPts)은 2026-09-05 에 지웠다 — 환생할 때만 끼는 축이라 재미가 없다
+  return campRebDepth() * CAMP_REB_PT_GATE * campPackRebPt(); }
 // 💠 **가속의 룬 — 프레임 시간 배수.** ⛔ 부르는 곳은 `campFrame` 한 곳뿐이다.
 //   거기 dt 하나에 일꾼·건설·전투·정제소가 전부 매달려 있어서, 여기만 곱하면 캠프 전체가 빨라진다.
 //   ⛔ 다른 데서 또 곱하지 말 것 — 두 겹이 되면 표기(+10%)가 거짓말이 된다.
 function campDtMul(){ return (typeof campRuneMul === 'function') ? campRuneMul('speed') : 1; }
-// 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리)
-//   ⛔ **셋은 더한다. 곱하지 말 것**(BALANCE §0 · 곱으로 뒀다가 ×1,900만이 났다):
-//     1(기본) + 2차가 주는 기본 배수 + 1차 누적.
-//   ⚠ 2차를 한 번 하면 기본이 +1 이라 **총 ×2 에서 시작**한다(§0-A).
+// 지금 환생 배수 — 터치와 일꾼 양쪽에 걸린다(campMineMul 과 같은 자리).
+//   📈 **1 + 환생 횟수 + 환생 트리 몫**이다(2026-09-11 · 옛 로그 누적을 대신한다).
+//     쌓는 그릇은 그대로 `C.rebMul` 이라 팩 배수(×2)가 그 위에 얹힌다 —
+//     ⛔ `C.reb` 를 직접 세지 말 것(팩이 빠진다).
+//   ⛔ **셋은 더한다. 곱하지 말 것**(BALANCE §0 · 곱으로 뒀다가 ×1,900만이 났다).
+//   🌳 트리 몫(`base` 갈래)은 환생 포인트로 산 것이다 — 환생 트리의 유일한 배수 항목이다.
 function campRebMul(){ const C = campState();
-  return 1 + ((typeof campReb2Base === 'function') ? campReb2Base() : 0) + ((C && C.rebMul) || 0); }
+  return 1 + ((C && C.rebMul) || 0) + ((typeof campRbtVal === 'function') ? campRbtVal('rebMul') : 0); }
 
 // 📊 **총 배수 — 탭과 채취 양쪽에 똑같이 걸리는 곱 항만** (2026-09-05 사용자 확정).
 //   하단 「MY BASE」 판의 대표 숫자다.
@@ -437,7 +446,7 @@ function campRunReset(C){
 function campTutoReset(minerals){
   const C = campState(); if(!C) return false;
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rune:C.rune };
+                 rune:C.rune, rebTree:C.rebTree };
   campRunReset(C);
   campBattleClose(); campBarReset();
   campWipeBoard();                                // 살아 있는 판도 새 판으로(안 하면 저장이 되살린다)
@@ -445,6 +454,7 @@ function campTutoReset(minerals){
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
       C2.rbPts = keep.rbPts; C2.reb = keep.reb;
       if(keep.rune) C2.rune = keep.rune;          // 💠 젬으로 산 것 — 되감기면 안 된다
+      if(keep.rebTree) C2.rebTree = keep.rebTree; // 🌳 환생 포인트로 산 것 — 되감기면 안 된다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   if(minerals > 0) campAddRes(minerals, 0);       // 🎁 새 출발 밑천 — ⛔ 지갑 입구는 campAddRes 하나다
@@ -465,8 +475,10 @@ function campRebirth(){
   //    ⚠ 다만 아래 campWipeBoard() 가 판을 새로 깔면서 **저장을 다시 읽을 수 있다** —
   //       그러면 방금 올린 값이 통째로 옛 저장으로 되돌아간다(스모크가 잡았다).
   //       그래서 남길 것을 손에 쥐고 있다가 비운 뒤 다시 얹는다.
+  //    🌳 **환생 트리(rebTree)는 환생을 넘어 남는다** — 환생 포인트로 산 것이라 되감기면
+  //       포인트만 사라지는 꼴이 된다. ⛔ 성장 트리(rbTree)와 헷갈리지 말 것(그쪽은 비운다).
   const keep = { race:C.race, best:C.best, rebMul:C.rebMul, rbPts:C.rbPts, reb:C.reb,
-                 rune:C.rune };
+                 rune:C.rune, rebTree:C.rebTree };
   campBattleClose(); campBarReset();
   // ⛔ **살아 있는 판(G.tech)도 같이 비운다.** campSave() 는 G.tech 를 C 로 복사하므로,
   //    저장 상태만 되감고 저장하면 **방금 지운 것이 그대로 되살아난다**(스모크가 잡았다).
@@ -475,86 +487,20 @@ function campRebirth(){
     if(C2){ C2.race = keep.race; C2.best = keep.best; C2.rebMul = keep.rebMul;
       C2.rbPts = keep.rbPts; C2.reb = keep.reb;
       if(keep.rune) C2.rune = keep.rune;   // 💠 젬으로 산 것 — 되감기면 안 된다
+      if(keep.rebTree) C2.rebTree = keep.rebTree;   // 🌳 환생 포인트로 산 것 — 되감기면 안 된다
       C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
       C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
   campSave();
   if(typeof dqNote === 'function') try{ dqNote('rebirth', 1); }catch(_e){}   // 🧭 가이드 — 환생
   return got; }
 
-// ══ 🔁🔁 2차 환생 (2026-09-11 · REDESIGN 단계 2 · GAME_DIRECTION §0-A) ═══════
-//
-// ⭐ **1차와 무엇이 다른가** — 1차는 「이 판을 다시」이고 2차는 **「이 바퀴를 다시」**다.
-//   1차가 쌓아 온 것(배수·트리·포인트)을 **통째로 반납**하고, 그 대가로 **기본 배수**와
-//   2차 트리를 받는다. 그래서 시계가 하루(1차) ↔ 주(2차)로 갈린다.
-//
-// ⛔ **배수는 「더한다」. 곱하지 말 것.**  총 배수 = 1 + (2차 기본) + (1차 누적).
-//   이 프로젝트는 곱으로 두었다가 **실측 5회 만에 ×1,900만**을 낸 적이 있다(BALANCE §0).
-//   2차를 한 번 하면 기본이 +1(= 총 ×2 에서 시작) · 더 할 때마다 +1 씩이다.
-//
-// ⛔ **「세지는 것」을 팔지 않는다**(GAME_DIRECTION §2차 환생) — 트리가 파는 것은
-//   빨라지는 것(스킵) · 편해지는 것(자동화) · 달라지는 것(상한 해제)이고,
-//   「기본 배수」 하나만 예외로 §0-A 가 명시했다.
-const CAMP_REB2_BASE = 1;          // 2차 환생 1회당 기본 배수 +1 (첫 번이면 총 ×2 에서 시작)
-const CAMP_REB2_PT_K = 1;          // 관문 하나 = 2차 포인트 1
-
-// 🚪 **조건 — 던전 3 완주**(단계 3 이 들어오면 「무한층 진입」과 같은 뜻이 된다).
-//   ⚠ 던전 진행(`C.dgDone`)은 2차 환생이 **비운다** — 안 비우면 한 번 깬 뒤로는 놀지 않고도
-//     계속 2차 환생을 눌러 포인트를 받을 수 있다.
-function campCanRebirth2(){
-  const C = campState(); if(!C || !C.dgDone) return false;
-  const last = (typeof CAMP_DG_MAX_N !== 'undefined') ? CAMP_DG_MAX_N : 3;
-  return !!C.dgDone[last]; }
-function campReb2N(){ const C = campState(); return C ? (C.reb2 | 0) : 0; }
-
-// 📐 **포인트는 「도달 던전·관문」이 정한다** — ⛔ 번 돈 기준은 §0-A 에서 폐기됐다.
-//   ⭐ 한 바퀴를 다 돌면(3던전 × 6관문) 18 포인트다. 트리 값이 그 눈금 위에 선다.
-//   ⚠ `C.best` 는 던전마다 **최고 도달 관문 수**다(campBreakBld 가 올린다).
-function campReb2PtGain(){
-  const C = campState(); if(!C) return 0;
-  const last = (typeof CAMP_DG_MAX_N !== 'undefined') ? CAMP_DG_MAX_N : 3;
-  const per = (typeof CAMP_DG_STEPS !== 'undefined') ? CAMP_DG_STEPS : 6;
-  let n = 0;
-  for(let d = 1; d <= last; d++) n += Math.min(per, (C.best && C.best[d]) | 0);
-  return n * CAMP_REB2_PT_K; }
-
-// ⭐ **2차가 주는 기본 배수** — 환생 횟수 몫 + 트리 몫(`base2`). 둘 다 **합산 항**이다.
-function campReb2Base(){
-  return campReb2N() * CAMP_REB2_BASE + campRt2Val('base2'); }
-
-// 🔁 2차 환생 실행. 남는 것: 종족 · 💠 룬 · 2차 값(횟수·포인트·트리) · ⏱ 던전 시간 기록.
-//   ⛔ 1차의 모든 것을 비운다 — `rebMul`(트리 `keep1` 만큼만 남는다) · `rbTree` · `rbPts` · `reb`.
-//   ⛔ `best` · `dgDone` 도 비운다 — 포인트 기준이자 조건이라 안 비우면 무한 적립이 된다.
-//   ⚠ 되감기·되얹기 순서는 `campRebirth` 와 **같다**(campWipeBoard 가 저장을 다시 읽는다).
-function campRebirth2(){
-  const C = campState(); if(!C || !campCanRebirth2()) return null;
-  const got = { pts: campReb2PtGain(), reb2: (C.reb2 | 0) + 1,
-                mulWas: C.rebMul || 0 };
-  C.reb2     = got.reb2;
-  C.reb2Pts  = (C.reb2Pts || 0) + got.pts;          // ⚠ 합이다
-  // 🧹 1차 반납 — 1차 환생이 쌓는 것은 **배수(rebMul)·포인트(rbPts)·횟수(reb)** 셋이다.
-  //   `keep1` 을 산 만큼만 배수가 남는다(0 이면 통째로 사라진다).
-  //   ⚠ **성장 트리(rbTree)·레벨은 여기서 안 지운다** — 2026-09-11 에 그것들이 「한 회차짜리」가 되어
-  //     `campRunReset` 이 이미 비운다. 두 곳에서 지우면 한쪽이 규칙을 바꿀 때 조용히 어긋난다.
-  C.rebMul = (C.rebMul || 0) * campRt2Val('keep1');
-  C.rbPts = 0; C.reb = 0;
-  C.best = {}; C.dgDone = {};
-  campRunReset(C);
-  const keep = { race:C.race, rune:C.rune, dgT:C.dgT,
-                 reb2:C.reb2, reb2Pts:C.reb2Pts, rb2Tree:C.rb2Tree, rebMul:C.rebMul };
-  campBattleClose(); campBarReset();
-  campWipeBoard();
-  { const C2 = campState();
-    if(C2){ C2.race = keep.race; if(keep.rune) C2.rune = keep.rune; if(keep.dgT) C2.dgT = keep.dgT;
-      C2.reb2 = keep.reb2; C2.reb2Pts = keep.reb2Pts;
-      if(keep.rb2Tree) C2.rb2Tree = keep.rb2Tree;
-      C2.rebMul = keep.rebMul; C2.rbPts = 0; C2.reb = 0;
-      C2.best = {}; C2.dgDone = {};
-      C2.dg = 0; C2.cleared = 0; C2.earn = 0; C2.earnGas = 0;
-      C2.earnTap = 0; C2.earnAuto = 0; C2.playS = 0; C2.tapped = 0; C2.upg = {}; } }
-  campSave();
-  return got; }
-
-// ══ 🤖 자동화 — 2차 트리 「자동화」 갈래 (2026-09-11) ═════════════════════
+// 🗄 **옛 「2차 환생」은 없어졌다**(2026-09-11) — 메인이 환생을 **한 층**으로 합쳤다.
+//   여기 있던 `campRebirth2`·`campCanRebirth2`·`campReb2PtGain`·`campReb2Base`·`campReb2N` 은
+//   위의 `campRebirth`·`campCanRebirth`·`campRebPtGain` 과 **같은 것을 두 벌** 하던 자들이라 지웠다.
+//   ⛔ 되살리지 말 것 — 층이 하나다(CLAUDE.md: 「1차 환생」·「2차 환생」이라는 말을 되살리지 말 것).
+//   ⭐ 그때 만든 것 중 **트리 넷(기본 배수·스킵·자동화·상한 해제)은 살아 있다** —
+//     이제 그것이 **환생 트리**(`CAMP_RBT_LINES`)이고 값은 환생 포인트(`C.rbPts`)로 낸다.
+// ══ 🤖 자동화 — 환생 트리 「자동화」 갈래 (2026-09-11) ═════════════════════
 //
 // ⭐ **하는 일은 「내가 늘 누르던 것」 하나씩**이고, 주기마다 **딱 한 번**만 한다.
 //   ⛔ 한 틱에 살 수 있는 만큼 몰아 사지 말 것 — 화면이 순식간에 바뀌어 무슨 일이 났는지
@@ -567,7 +513,7 @@ function campRebirth2(){
 //   「자원 부족」이 뜨면 자동화가 아니라 고장으로 보인다 — 그래서 부르는 동안만 **입을 막는다**.
 //   ⛔ 대신 조건을 미리 다 보고 부른다(입을 막았다고 아무 때나 부르면 안 된다).
 const CAMP_AUTO_S = 2;             // 자동화 주기(초) — 한 번에 하나씩
-function campAutoOn(k){ return (typeof campRt2Val === 'function') && campRt2Val(k) > 0; }
+function campAutoOn(k){ return (typeof campRbtVal === 'function') && campRbtVal(k) > 0; }
 function campAutoQuiet(fn){
   const t = (typeof window !== 'undefined') ? window.toast : null;
   const s0 = (typeof window !== 'undefined') ? window.playSfx : null;
@@ -575,7 +521,7 @@ function campAutoQuiet(fn){
   try { return fn(); }
   finally { if(typeof window !== 'undefined'){ window.toast = t; window.playSfx = s0; } } }
 
-// 👷 **자동 일꾼** — 상한까지 한 기씩. ⚠ 상한은 `campCap('worker')`(2차 트리가 연다).
+// 👷 **자동 일꾼** — 상한까지 한 기씩. ⚠ 상한은 `campCap('worker')`(환생 트리가 연다).
 //   ⛔ 조건을 techDoProduce 에 맡기지 말 것 — 거기서 걸리면 토스트가 뜬다(입을 막아도 sfx·렌더가 돈다).
 function campAutoWorker(){
   if(typeof G === 'undefined' || !G.tech || typeof TECH_TREE === 'undefined') return 0;
@@ -644,10 +590,10 @@ function campFreshStart(){
   G.tech.energy = 0;                                  // ⛽ 시작 가스 0
   G.tech.credit = 0;                                  // 💎 시작 미네랄 0
   if(typeof campRootGrant === 'function') campRootGrant();
-  // 🎫 **2차 트리 「시작 자원」** — 회차를 넘어 남는 값이라 여기서 얹으면 매 회차 그대로 걸린다.
+  // 🎫 **환생 트리 「시작 자원」** — 회차를 넘어 남는 값이라 여기서 얹으면 매 회차 그대로 걸린다.
   //   ⛔ 지갑 입구를 새로 만들지 말 것 — 여기는 판을 세우는 중이라 G.tech 가 곧 지갑이다
   //     (campAddRes 는 화면·저장까지 건드린다).
-  { const r = (typeof campRt2Val === 'function') ? campRt2Val('startRes') : 0;
+  { const r = (typeof campRbtVal === 'function') ? campRbtVal('startRes') : 0;
     if(r > 0) G.tech.credit = (G.tech.credit || 0) + r; }
   return true; }
 
@@ -1099,10 +1045,11 @@ function campRtGpOn(b, g){ return campRtHas(CAMP_RT_GP_KEY(b, g)) > 0; }
 // ── 보유 · 구매 ─────────────────────────────────────────────────────────
 //   저장은 C.rbTree = { root:1, 'br:econ':1, 'gp:econ가':1, '<계열>':<몇 차까지 샀나> }
 function campRtBag(){ const C = campState(); if(!C) return null;
-  // 🌳 **자루도 「지금 트리」를 따른다** — 2차는 `C.rb2Tree`. ⛔ 옛 이음(campRtMigrate)은 1차 것이다.
-  if(campRtIs2()){
-    if(!C.rb2Tree || typeof C.rb2Tree !== 'object') C.rb2Tree = {};
-    return C.rb2Tree; }
+  // 🌳 **자루도 「지금 트리」를 따른다** — 환생 트리는 `C.rebTree`, 성장 트리는 `C.rbTree`.
+  //   ⛔ 옛 이음(campRtMigrate)을 환생 자루에 태우지 말 것 — 그건 차수가 있던 시절의 성장 트리 것이다.
+  if(campRtIsRb()){
+    if(!C.rebTree || typeof C.rebTree !== 'object') C.rebTree = {};
+    return C.rebTree; }
   if(!C.rbTree || typeof C.rbTree !== 'object') C.rbTree = {};
   campRtMigrate(C.rbTree);
   return C.rbTree; }
@@ -1138,11 +1085,12 @@ const CAMP_RT_PTS_FREE_N = 1e18;
 //     바로 시험하려는 임시 값이라, 켜져 있는 동안 회수 시간·손익분기 같은 밸런스 수치는 전부 무의미하다
 //     (camp-bench 도 이 돈을 받는다). 스모크 「개발 스위치」가 켜짐을 알린다 — **재기 전에 0 으로**.
 const CAMP_DEV_START_MIN = 10000;
-// 🌳 **트리 값은 이제 「레벨 포인트」로 낸다**(2026-09-11 · 옛 환생 포인트 C.rbPts 를 대신한다).
-//   ⛔ C.rbPts 로 되돌리지 말 것 — 1차 환생이 없어졌으므로 그 지갑에는 아무도 입금하지 않는다.
+// 🪙 **지갑은 트리마다 다르다** — 성장 트리는 📈 **레벨 포인트**(회차 안에서 번다),
+//   환생 트리는 🔁 **환생 포인트**(`C.rbPts` · 환생할 때 도달 깊이만큼 들어온다).
+//   ⛔ 성장 트리를 C.rbPts 로 되돌리지 말 것 — 그 지갑은 환생 트리가 쓴다(2026-09-11).
+//   ⭐ **포인트 잔액을 읽는 곳은 전부 이 함수 하나**를 지난다(위 CAMP_RT_PTS_FREE 주석).
 function campRtPts(){ if(CAMP_RT_PTS_FREE) return CAMP_RT_PTS_FREE_N;
-  // 🌳 지갑은 **트리마다 다르다** — 성장 트리는 📈 레벨 포인트, 2차 트리는 🔁🔁 2차 포인트.
-  if(campRtIs2()){ const C = campState(); return (C && C.reb2Pts) || 0; }
+  if(campRtIsRb()){ const C = campState(); return (C && C.rbPts) || 0; }
   return campLvPtsLeft(); }
 // ⭐ 사슬 규칙 — 환생 → 갈래 → 묶음 → 계열, 그 다음은 그 계열의 앞 차수.
 function campRtCanBuy(k){ const C = campState(); if(!C) return false;
@@ -1167,7 +1115,7 @@ function campRtBuy(k){ const C = campState(); if(!C || !campRtCanBuy(k)) return 
   const cost = campRtKeyCost(k);
   if(!CAMP_RT_PTS_FREE){                                   // 🔧 무제한이면 깎지 않는다
     // 🌳 지갑도 「지금 트리」를 따른다 — 읽는 곳(campRtPts)과 **같은 갈림**이라야 어긋나지 않는다.
-    if(campRtIs2()) C.reb2Pts = Math.max(0, (C.reb2Pts || 0) - cost);
+    if(campRtIsRb()) C.rbPts = Math.max(0, (C.rbPts || 0) - cost);
     else C.lvPts = Math.max(0, (C.lvPts || 0) - cost); }
   b[k] = (b[k] | 0) + 1;
   campSave(); return cost; }
@@ -1186,7 +1134,7 @@ const CAMP_RT_CUT_FLOOR = 0.20;        // ⭐ 갈래 전체 실효 하한 — �
 //   ⚠ 사슬 갈래(시작 도움)에는 마디가 없다 — 가운데에서 바로 별로 간다.
 const CAMP_RT_NODE_BR = 0.10;   // 갈래 마디 — 그 갈래 계열 전부에 +10%p
 const CAMP_RT_NODE_GP = 0.05;   // 묶음 마디 — 그 묶음 계열들에 +5%p
-function campRtNodeAdd(k){ return campWithTree1(function(){   // 🔒 효과 — 늘 1차
+function campRtNodeAdd(k){ return campWithGrowTree(function(){   // 🔒 효과 — 늘 1차
   const L = campRtLine(k); if(!L) return 0;
   if(campRtIsChain(L.br)) return 0;
   let a = 0;
@@ -1209,21 +1157,21 @@ function campRtNodeIco(key){
   // 🔒 미개봉 갈래는 **그림이 없다** — 아직 무엇인지 모른다는 것이 그 자리의 뜻이다(2026-09-04).
   //   ⛔ 다른 갈래 그림을 빌려 오지 말 것: 엉뚱한 그림이 붙어도 화면은 멀쩡해 보인다.
   if(key.indexOf('br:') === 0 && campTreeBrSoon(key.slice(3))) return '';
-  // 🌳🔁 **2차 트리의 마디 그림은 아직 없다** — 새로 뽑으려면 ART.md §15 를 지나야 한다.
+  // 🌳🔁 **환생 트리의 마디 그림은 아직 없다** — 새로 뽑으려면 ART.md §15 를 지나야 한다.
   //   ⭐ 그동안은 **그 갈래·묶음의 첫 계열 그림**을 빌린다(기존 에셋 우선 원칙).
   //     「이 갈래가 무슨 이야기인지」는 그것으로 충분히 읽힌다.
   //   ⛔ 1차의 br_econ / br_army 를 빌려 오지 말 것 — 뜻이 아예 다른 그림이다.
   //   ⛔ 없는 파일 이름을 돌려주지 말 것: 깨진 그림이 뜨는데 화면은 멀쩡해 보인다(실측).
-  if(campRtIs2()){
+  if(campRtIsRb()){
     const br = (key.indexOf('br:') === 0) ? key.slice(3) : key.slice(3, -1);
     const gp = (key.indexOf('gp:') === 0) ? key.slice(-1) : null;
-    for(const L of CAMP_RT2_LINES) if(L.br === br && (gp == null || L.grp === gp)) return L.ic || '';
+    for(const L of CAMP_RBT_LINES) if(L.br === br && (gp == null || L.grp === gp)) return L.ic || '';
     return ''; }
   if(key.indexOf('br:') === 0) return 'tree/br_' + key.slice(3) + '.webp';
   if(key.indexOf('gp:') === 0){ const b = key.slice(3, -1), g = key.slice(-1);
     return 'tree/gp_' + b + '_' + (CAMP_RT_GRP_ABC[g] || g) + '.webp'; }
   return ''; }
-function campRtMul(k){ return campWithTree1(function(){   // 🔒 효과 — 늘 1차
+function campRtMul(k){ return campWithGrowTree(function(){   // 🔒 효과 — 늘 1차
   const n = campRtHas(k), add = campRtNodeAdd(k);
   if(n <= 0) return 1 + add;
   const lad = campRtLad(k); return lad[Math.min(campRtMax(k), n)] + add; }); }
@@ -1233,12 +1181,12 @@ function campRtMul(k){ return campWithTree1(function(){   // 🔒 효과 — 늘
 //   ⛔ 1차를 상한(−40%)까지 올리지 말 것 — 계열 하나로 적을 절반 가까이 깎으면 나머지가 안 팔린다.
 const CAMP_RT_CUT = [0, 0.25, 0.25, 0.33, 0.38, CAMP_RT_CUT_MAX];
 // ⚠ 마디 몫을 더해도 **계열 상한(−40%)은 그대로**다 — 여기를 넘기면 적 약화가 갈래 하한을 뚫는다.
-function campRtCut(k){ return campWithTree1(function(){   // 🔒 효과 — 늘 1차
+function campRtCut(k){ return campWithGrowTree(function(){   // 🔒 효과 — 늘 1차
   const n = campRtHas(k);
   const base = n <= 0 ? 0 : CAMP_RT_CUT[Math.min(5, n)];
   return Math.min(CAMP_RT_CUT_MAX, base + campRtNodeAdd(k)); }); }
 // 적 약화 갈래의 실효 배수 — 곱한 뒤 하한으로 막는다. ⛔ 하한을 빼면 지수 축이 둘이 된다.
-function campRtFoeMul(){ return campWithTree1(function(){ let m = 1;   // 🔒 효과 — 늘 1차
+function campRtFoeMul(){ return campWithGrowTree(function(){ let m = 1;   // 🔒 효과 — 늘 1차
   // ⚠ 갈래 이름으로 고르지 말 것 — 2026-09-04 에 아군·적이 한 갈래(war)로 합쳐졌다.
   //   **계열이 스스로 `cut:1` 로 말한다.**
   for(const L of campRtLines()){ if(!L.cut) continue; m *= (1 - campRtCut(L.k)); }
@@ -1264,54 +1212,66 @@ function campRtFoeMul(){ return campWithTree1(function(){ let m = 1;   // 🔒 �
 //   ⛔ 사슬 구조(초록)는 **되살리지 말 것** — 구조를 갈래마다 다르게 두면 같은 화면에서 둘이
 //     따로 논다(사용자 지적). 내용은 초록의 어법(「회차 시작 시 ~」)을 가져오되 구조는 통일한다.
 //   ⚠ 각도는 120° 씩. y 가 아래로 가는 좌표라 **각이 커지면 시계 방향**이다.
-// ══ 🌳🔁 2차 환생 트리 — 갈래 넷 (2026-09-11 · GAME_DIRECTION §2차 환생) ═══════
+// ══ 🌳🔁 환생 트리 — 갈래 넷 (2026-09-11 · GAME_DIRECTION §0-A) ═══════════════
 //
-// ⭐ **1차 트리와 같은 화면·같은 조작을 쓴다.** 별자리 렌더러(`campTreeSvg`)는 표를 직접 읽지 않고
-//   `campRtLines()`/`campRtBRs()` 를 지나므로, 「지금 트리」만 바꾸면 그대로 2차를 그린다.
+// ⭐ **성장 트리와 같은 화면·같은 조작을 쓴다.** 별자리 렌더러(`campTreeSvg`)는 표를 직접 읽지 않고
+//   `campRtLines()`/`campRtBRs()` 를 지나므로, 「지금 트리」만 바꾸면 그대로 이쪽을 그린다.
 //   ⛔ 두 번째 트리 렌더러를 만들지 말 것(단일 소스).
+//
+// 🪙 **값은 환생 포인트(`C.rbPts`)로 낸다** — 성장 트리는 📈 레벨 포인트다(campRtPts 가 가른다).
+//   ⚠ 저장 자루도 갈린다: 환생 트리 `C.rebTree` · 성장 트리 `C.rbTree`.
+//     ⛔ 두 이름을 헷갈리지 말 것 — 한 글자 차이인데 **되감기 규칙이 정반대**다
+//       (성장 트리는 환생 때 비워지고, 환생 트리는 환생을 넘어 남는다).
 //
 // ⛔ **「세지는 것」을 팔지 않는다** — 다만 「기본 배수」는 §0-A 가 명시한 예외다.
 // ⛔ **「환생 관문 문턱 완화」를 넣지 말 것** — 남은 되먹임 고리다(CLAUDE.md · 스모크가 이름을 잰다).
 //
-// 🔒 **스킵·자동화는 자리만 잡아 뒀다**(`soon:1`). 자동화는 벤치의 구매 정책을 게임 안으로 옮기는
-//   별도 작업이고, 스킵은 시작 지점·시작 구성이라 던전 진입 경로를 함께 고쳐야 한다.
-//   ⛔ 내용 없이 열지 말 것 — 미개봉 갈래의 규약은 1차의 `soon` 과 같다.
 // 🎨 갈래 색 — **DESIGN §2 역할표에서 꺼낸다**(넷째만 예외 · 아래).
 //   ⛔ 시안(`--acc-sel` #5cd6ff)을 쓰지 말 것 — 그건 「지금 고른 것」 전용이라 화면당 한 곳이다.
 //     처음에 상한 해제를 #4ad2ff 로 뒀다가 시안과 헷갈려 `--info` 로 내렸다.
 //   ⚠ **자동화(넷째)는 역할표에 맞는 자리가 없다** — 「편해지는 것」은 재화도 정보도 긍정도 아니다.
-//     1차 트리의 전투 갈래(#ff5a4a)와 같은 운용으로 **계열 구분색**을 쓴다.
+//     성장 트리의 전투 갈래(#ff5a4a)와 같은 운용으로 **계열 구분색**을 쓴다.
 //     ⛔ 호박(#ffb14d)으로 되돌리지 말 것: 바로 옆 금색(기본 배수)과 붙어 안 갈린다(실측).
-const CAMP_TREE2_BR = {
-  base: { a:-Math.PI*0.48, rk:0.95, nm:'기본 배수', col:'#ffd24a' },   // ↗ 재화·보상 = 금(--gold)
-  cap:  { a: Math.PI*0.52, rk:1.10, nm:'상한 해제', col:'#4aa8ff' },   // ↘ 정보 = --info
-  skip: { a: Math.PI*1.03, rk:0.72, nm:'스킵',      col:'#5dff8f' },   // ← 긍정 = --ok
-  auto: { a: Math.PI*1.52, rk:0.86, nm:'자동화',    col:'#b07aff' },   // ↑ 계열 구분색(위 ⚠)
+//
+// 📐 **자리 — 넷을 90° 씩 벌린다**(2026-09-11 사용자 요청 「각 배치 적절하게」).
+//   ⚠ 처음에 성장 트리(갈래 셋)의 각을 그대로 베끼고 넷째만 더했더니 **기본 배수와 자동화가
+//     같은 각**이 됐다(−0.48π 와 1.52π 는 같은 방향이다 · 둘이 겹쳐 그려졌다).
+//   ⭐ 그래서 셋이 아니라 **넷을 기준으로 다시 나눈다**: 위 → 오른쪽 → 아래 → 왼쪽.
+//   ⚠ 표에 적는 각은 **갈래 마디**의 각이고, 그 아래 묶음·계열은 `campTreeGpAng` 이
+//     `(gi − 1.5) × (SPREAD/3)` 만큼 **한쪽으로 돌려서** 단다(묶음이 '가' 하나뿐이라 −38.7° 고정).
+//     넷이 같은 만큼 돌아가므로 **사이 간격 90° 는 그대로 유지된다** — ⛔ 여기서 보정하지 말 것.
+//   ⚠ `rk`(반지름 배)는 겹침이 아니라 **깊이**를 만든다. 넷을 같은 값으로 두면 네 갈래가
+//     한 동심원 위에 서서 별자리가 아니라 시계 눈금처럼 보인다(성장 트리도 0.72~1.10 으로 흔든다).
+const CAMP_RBT_BR = {
+  base: { a:-Math.PI*0.50, rk:1.00, nm:'기본 배수', col:'#ffd24a' },   // ↑ 재화·보상 = 금(--gold)
+  cap:  { a: Math.PI*0.00, rk:1.08, nm:'상한 해제', col:'#4aa8ff' },   // → 정보 = --info
+  skip: { a: Math.PI*0.50, rk:0.86, nm:'스킵',      col:'#5dff8f' },   // ↓ 긍정 = --ok
+  auto: { a: Math.PI*1.00, rk:0.94, nm:'자동화',    col:'#b07aff' },   // ← 계열 구분색(위 ⚠)
 };
-// 📐 값 눈금 — 한 바퀴를 다 돌면 **18 포인트**다(campReb2PtGain). 그 위에서 읽을 것:
-//   첫 바퀴에 갈래 하나(2) + 묶음 하나(4) + 1차 하나(2~4)가 들어간다.
-//   ⛔ 1차 트리 비용표(수천~수조)를 여기로 가져오지 말 것 — 포인트의 자릿수가 통째로 다르다.
-const CAMP_RT2_LINES = [
+// 📐 값 눈금 — 한 바퀴를 다 돌면 **18 포인트**다(campRebPtGain = 통산 관문 수).
+//   ⭐ 트리 전부가 **37 점**이다(뿌리 1 + 갈래 마디 4×2 + 묶음 마디 4×2 + 계열 20) —
+//     두세 바퀴에 완성된다. ⛔ 1차 트리 비용표(수천~수조)를 여기로 가져오지 말 것:
+//     그쪽은 레벨 포인트라 자릿수가 통째로 다르다.
+const CAMP_RBT_LINES = [
   // ⚠ **한 계열 = 한 칸이다**(2026-09-11 · 메인이 차수를 없앴다 · `CAMP_RT_MAX_DEF` 1).
   //   그래서 사다리에서 **실제로 쓰이는 값은 `lad[1]` 하나**이고, 값은 **등급이 정한다**
   //   (`CAMP_RT_GRADE` 흔함1 · 보통2 · 귀함4 · 극상6). ⛔ `cs`(손값)를 되살리지 말 것 —
-  //   1차가 그 길로 갔다가 자릿수가 안 맞아 되돌렸다.
+  //   성장 트리가 그 길로 갔다가 자릿수가 안 맞아 되돌렸다.
   //   ⭐ 한 칸뿐이라 **계단이 아니라 「사면 이만큼」**이다 — 값을 작게 잡으면 사도 티가 안 난다.
   // ══ 🟡 기본 배수 ═══════════════════════════════════════════════════════
-  {k:'base2', br:'base', grp:'가', gr:'귀함', nm:'기본 배수', tn:['반석'],
-   f:'reb2Base', ic:'tree/mine.webp', vk:'cnt', lad:[0, 1],
-   ds:'2차 환생이 주는 기본 배수에 {} 을 더합니다.'},
-  {k:'keep1', br:'base', grp:'가', gr:'보통', nm:'1차 배수 보존', tn:['유산'],
-   f:'reb2Keep', ic:'tree/idle.webp', vk:'pct', lad:[0, 0.4],
-   ds:'2차 환생을 해도 1차 환생 배수가 {} 남습니다.'},
+  //   ⚠ 갈래에 계열이 **하나뿐**이다. 환생이 한 층이 되면서 짝이던 「1차 배수 보존」(`keep1`)이
+  //     뜻을 잃어 지웠다 — 반납할 앞 층이 없다. ⛔ 되살리지 말 것.
+  {k:'rebMul', br:'base', grp:'가', gr:'귀함', nm:'기본 배수', tn:['반석'],
+   f:'rebMul', ic:'tree/mine.webp', vk:'cnt', lad:[0, 1],
+   ds:'환생이 주는 기본 배수에 {} 을 더합니다.'},
   // ══ 🟢 스킵 — 「또 하기 싫다」를 고친다 ═══════════════════════════════════
   //   ⛔ 세지는 것이 아니다. **이미 해 본 구간을 건너뛰는 것**이라 시간만 줄인다.
   //   ⚠ 종족 구간 생략·시작 구성 바꾸기는 **단계 4(종족 변이)** 뒤의 일이다 — 아직 표에 없다.
   {k:'dgStart', br:'skip', grp:'가', gr:'귀함', nm:'던전 시작 지점', tn:['지름길'],
    f:'skipDgStart', ic:'tree/skipRd.webp', vk:'cnt', lad:[0, 2],
    ds:'던전에 들어갈 때 앞의 관문 {} 채를 이미 부순 채로 시작합니다.'},
-  // ⚠ 1차(성장 트리)의 `startMin` 과 **같은 축이지만 자릿수가 다르다** — 그쪽은 한 회차짜리라
-  //   회차가 시작될 땐 트리가 비어 있어 사실상 안 걸린다. 이건 **회차를 넘어 남는다**.
+  // ⚠ 성장 트리의 `startMin` 과 **같은 축이지만 자릿수가 다르다** — 그쪽은 한 회차짜리라
+  //   회차가 시작될 땐 트리가 비어 있어 사실상 안 걸린다. 이건 **환생을 넘어 남는다**.
   {k:'startRes', br:'skip', grp:'가', gr:'보통', nm:'시작 자원', tn:['밑천'],
    f:'skipStartRes', ic:'tree/startMin.webp', vk:'cnt', lad:[0, 50000],
    ds:'회차를 시작할 때 미네랄 {} 을 갖고 시작합니다.'},
@@ -1330,50 +1290,51 @@ const CAMP_RT2_LINES = [
    ds:'가스로 살 수 있는 무장 연구를 <b>저절로 올립니다</b>.'},
   // ══ 🔵 상한 해제 ═══════════════════════════════════════════════════════
   //   ⚠ 사다리의 **0차 값이 지금 상수와 같아야** 한다 — 안 사면 아무것도 안 달라지는 것이 규약이다.
-  {k:'wkCap2', br:'cap', grp:'가', gr:'흔함', nm:'일꾼 상한', tn:['총동원'],
+  {k:'capWk', br:'cap', grp:'가', gr:'흔함', nm:'일꾼 상한', tn:['총동원'],
    f:'capWorker', ic:'tree/wkCap.webp', vk:'cnt', lad:[40, 80],
    ds:'데리고 있을 수 있는 일꾼이 {} 기가 됩니다.'},
-  {k:'supCap2', br:'cap', grp:'가', gr:'보통', nm:'보급소 상한', tn:['군단'],
+  {k:'capSup', br:'cap', grp:'가', gr:'보통', nm:'보급소 상한', tn:['군단'],
    f:'capSupply', ic:'tree/startWk.webp', vk:'cnt', lad:[24, 40],
    ds:'지을 수 있는 보급소가 {} 채가 됩니다.'},
   // ⚠ **유닛 반복 구매 배수**는 지수의 밑이라 가장 세다 — 한 칸이지만 계단을 얕게 잡았다.
   //   ⛔ 1.0 근처로 내리지 말 것: 한 종류 도배가 최적이 되어 조합이 사라진다
   //   (`CAMP_UNIT_R` 주석과 같은 이유 · 스모크가 하한을 잰다).
-  {k:'unitR2', br:'cap', grp:'가', gr:'귀함', nm:'유닛 반복 구매', tn:['양산'],
+  {k:'capUnitR', br:'cap', grp:'가', gr:'귀함', nm:'유닛 반복 구매', tn:['양산'],
    f:'capUnitR', ic:'tree/gather.webp', vk:'x', lad:[1.30, 1.24],
    ds:'유닛을 한 기 더 살 때 값이 오르는 배수가 {} 가 됩니다.'},
 ];
-// 🌳 **지금 그리고 있는 트리** — 1차(`rb`) / 2차(`rb2`).
+// 🌳 **지금 그리고 있는 트리** — 성장(`grow`) / 환생(`reb`).
 //   ⚠ **`campWithStk` 와 같은 꼴의 바꿔치기**다(CLAUDE.md §「캠프 ↔ 오토 배틀」). 그래서 같은 규약을 쓴다:
-//     ① 바꾸는 곳은 `campWithTree2` **하나** ② 반드시 동기 실행 ③ finally 로 되돌린다.
+//     ① 바꾸는 곳은 `campWithRebTree` **하나** ② 반드시 동기 실행 ③ finally 로 되돌린다.
 //   ⛔ **게임 중에 부르지 말 것.** 효과 함수(`campRtMul`·`campRtCut`·`campRtFoeMul`)는 전부
-//     이 상태를 지나므로, 2차로 켜 둔 채 전투·수입이 돌면 **1차 트리 효과가 통째로 0 이 된다.**
+//     이 상태를 지나므로, 환생 트리로 켜 둔 채 전투·수입이 돌면 **성장 트리 효과가 통째로 0 이 된다.**
 //     쓰는 곳은 **트리 화면을 그리고 사는 경로뿐**이다(스모크가 누수를 잰다).
-let _rtCur = 'rb';
-function campRtIs2(){ return _rtCur === 'rb2'; }
-// 🖥 **트리 화면이 지금 보고 있는 것** — 화면 하나(`#campTree`)가 두 트리를 다 그린다.
+let _rtCur = 'grow';
+function campRtIsRb(){ return _rtCur === 'reb'; }
+// 🖥 **트리 화면이 지금 보고 있는 것**(참이면 환생 트리) — 화면 하나(`#campTree`)가 둘을 다 그린다.
 //   ⚠ `_rtCur`(효과가 읽는 자)와 **다른 자**다. 화면 상태는 오래 남고, `_rtCur` 는 그리는 동안만 바뀐다.
-let _campTreeIs2 = false;
-function campWithTree2(fn){
-  const b = _rtCur; _rtCur = 'rb2';
+let _campTreeRb = false;
+function campWithRebTree(fn){
+  const b = _rtCur; _rtCur = 'reb';
   try { return fn(); } finally { _rtCur = b; } }
-// 🔒 **효과를 읽을 때는 늘 1차로 못 박는다.**
-//   ⭐ 트리 화면은 열려 있는 동안 `_rtCur` 를 2차로 두는데, 그동안에도 **캠프 경제·전투는 계속 돈다**
-//     (campFrame · 캠프 시계). 못 박지 않으면 2차 트리를 보는 동안 1차 배수가 통째로 1 이 된다.
+// 🔒 **효과를 읽을 때는 늘 성장 트리로 못 박는다.**
+//   ⭐ 트리 화면은 열려 있는 동안 `_rtCur` 를 환생 트리로 두는데, 그동안에도 **캠프 경제·전투는
+//     계속 돈다**(campFrame · 캠프 시계). 못 박지 않으면 환생 트리를 보는 동안 배수가 통째로 1 이 된다.
 //   ⛔ 새 효과 함수를 만들면 **여기에 반드시 태울 것** — 스모크가 누수를 잰다.
-function campWithTree1(fn){
-  const b = _rtCur; _rtCur = 'rb';
+function campWithGrowTree(fn){
+  const b = _rtCur; _rtCur = 'grow';
   try { return fn(); } finally { _rtCur = b; } }
-function campRtLines(){ return campRtIs2() ? CAMP_RT2_LINES : CAMP_RT_LINES; }
-function campRtBRs(){ return campRtIs2() ? CAMP_TREE2_BR : CAMP_TREE_BR; }
-// 📊 **2차 계열의 지금 값** — 사다리에서 꺼낸다. ⛔ 1차의 `campRtMul` 을 쓰지 말 것(자루가 다르다).
+function campRtLines(){ return campRtIsRb() ? CAMP_RBT_LINES : CAMP_RT_LINES; }
+function campRtBRs(){ return campRtIsRb() ? CAMP_RBT_BR : CAMP_TREE_BR; }
+// 📊 **환생 트리 계열의 지금 값** — 사다리에서 꺼낸다.
+//   ⛔ 성장 트리의 `campRtMul` 을 쓰지 말 것(자루가 다르다 · `C.rebTree` ↔ `C.rbTree`).
 //   ⚠ 안 샀으면 `lad[0]` 이고, 그 값이 **지금 상수와 같아야** 한다(위 표 주석).
-function campRt2Val(k){
-  const L = CAMP_RT2_LINES.find(function(x){ return x.k === k; });
+function campRbtVal(k){
+  const L = CAMP_RBT_LINES.find(function(x){ return x.k === k; });
   if(!L || !L.lad) return 0;
   // ⚠ `campState` 가 없을 수도 있다 — campCap 은 캠프 밖(커맨드 카드)에서도 불린다.
   const C = (typeof campState === 'function') ? campState() : null;
-  const bag = (C && C.rb2Tree) || {};
+  const bag = (C && C.rebTree) || {};
   const n = Math.max(0, Math.min(L.lad.length - 1, bag[k] | 0));
   return L.lad[n]; }
 
@@ -1951,7 +1912,7 @@ function campZoneTitle(){
     return (typeof _runeSec !== 'undefined' && _runeSec === 'shop') ? '룬 상점' : '룬';
   if(typeof mapUpgIsOn === 'function' && mapUpgIsOn()) return '유즈맵 강화';
   if(typeof campTreeIsOn === 'function' && campTreeIsOn())   // 📈 옛 「환생 트리」 — 레벨 포인트로 산다(2026-09-11)
-    return (typeof _campTreeIs2 !== 'undefined' && _campTreeIs2) ? '2차 환생 트리' : '성장 트리';
+    return (typeof _campTreeRb !== 'undefined' && _campTreeRb) ? '환생 트리' : '성장 트리';
   if(typeof campRebIsOn === 'function' && campRebIsOn()) return '환생';
   return ''; }
 // ❓ **이름 옆 물음표** — 그 구역이 도움말을 갖고 있으면 호출식을 돌려준다(없으면 빈 문자열).
@@ -1971,7 +1932,7 @@ function campRebIsOn(){ const el = document.getElementById('campReb'); return !!
 //   ⚠ 하단 네비는 **켜 둔 채**로 연다(두 화면 CSS 가 네비 높이만큼 자리를 비운다).
 function campRebEnter(sec){
   // 🗺 셋째 칸 = 유즈맵 강화(2026-09-10 사용자 확정 · 환생 · 환생 트리 · 유즈맵 강화)
-  const s = (sec === 'tree') ? 'tree' : (sec === 'tree2') ? 'tree2'
+  const s = (sec === 'tree') ? 'tree' : (sec === 'rbtree') ? 'rbtree'
           : (sec === 'umap' ? 'umap' : 'info');
   // 🎬 페이드는 **구역에 들어올 때 한 번만**이다 (2026-08-31 사용자 지적).
   //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 탭을 오갈 때마다 매번 다시 돈다 —
@@ -1982,11 +1943,11 @@ function campRebEnter(sec){
                 (typeof mapUpgIsOn === 'function' && mapUpgIsOn());
   // ⚠ 닫는 쪽에 keepArt 를 준다 — 구역 안에서 칸만 바꾸는 것이라 배경은 그대로 둔다.
   //   ⛔ 셋 중 **둘을 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
-  if(s === 'tree' || s === 'tree2'){ campRebClose(true); if(typeof mapUpgClose==='function') mapUpgClose(true);
-    campTreeOpen(s === 'tree2'); }   // 🌳 화면은 하나, 그리는 트리만 갈린다
+  if(s === 'tree' || s === 'rbtree'){ campRebClose(true); if(typeof mapUpgClose==='function') mapUpgClose(true);
+    campTreeOpen(s === 'rbtree'); }   // 🌳 화면은 하나, 그리는 트리만 갈린다
   else if(s === 'umap'){ campRebClose(true); campTreeClose(); if(typeof mapUpgOpen==='function') mapUpgOpen(); }   // ⚠ campTreeClose 는 인자를 안 받는다(그림은 안 만진다)
   else { campTreeClose(); if(typeof mapUpgClose==='function') mapUpgClose(true); campRebOpen(); }
-  { const el = document.getElementById((s === 'tree' || s === 'tree2') ? 'campTree'
+  { const el = document.getElementById((s === 'tree' || s === 'rbtree') ? 'campTree'
       : (s === 'umap' ? 'mapUpgScreen' : 'campReb'));
     if(el) el.classList.toggle('crIn', !wasIn); }
   if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
@@ -2007,27 +1968,9 @@ function campRebEnter(sec){
 //     campRebMulGain / campRebPtGain 안의 campPackRebMul / campPackRebPt 가 알아서 곱한다.
 //   ⛔ 젬으로 회차마다 사는 형태로 되돌리지 말 것 — 「1회권」이라는 이름과 달리 횟수를 못 막아
 //     결국 같은 영구 2배가 되면서 값만 여러 번 받는 꼴이 된다(그래서 팩으로 옮겼다).
-// 🔁🔁 **2차 환생 — 확인창은 1차와 같은 것을 쓴다**(`#campRebOk` · `.ecCard` 공용).
-//   ⛔ 확인창을 새로 만들지 말 것(단일 소스 · CLAUDE.md 레지스트리).
-//   ⚠ 무엇을 실행할지는 표식 하나로 가른다 — `.ecGo` 의 onclick 은 마크업에 박혀 있어 못 바꾼다.
-let _rebAsk2 = false;
-function campReb2Ask(){
-  if(!campCanRebirth2()) return;
-  const p = document.getElementById('campRebOk'); if(!p) return;
-  _rebAsk2 = true;
-  const g = campReb2PtGain(), keep = campRt2Val('keep1');
-  const t = p.querySelector('.ecTitle'); if(t) t.textContent = '2차 환생';
-  const m = p.querySelector('.ecMsg');
-  if(m) m.innerHTML = '1차 환생으로 쌓은 <b>배수 · 트리 · 포인트가 전부 사라집니다</b>'
-    + (keep > 0 ? '(배수는 ' + Math.round(keep * 100) + '% 남습니다)' : '') + '.<br>'
-    + '대신 <b>기본 배수 +' + CAMP_REB2_BASE + '</b> 와 <b>2차 포인트 ' + campNum(g) + '</b> 을 받습니다.'
-    + '<br>💠 룬과 ⏱ 최고기록은 그대로입니다.';
-  const go = p.querySelector('.ecGo'); if(go) go.textContent = '2차 환생하기';
-  p.classList.remove('hide');
-  if(typeof playSfx === 'function') playSfx('ui_open'); }
-
+// ⛔ **확인창을 두 벌 만들지 말 것** — 옛 「2차 환생」이 표식(`_rebAsk2`) 하나로 같은 창을
+//   갈라 쓰던 자리다. 환생이 한 층이 되면서 갈래가 사라졌다(2026-09-11).
 function campRebAsk(){
-  _rebAsk2 = false;
   if(!campCanRebirth()) return;
   const p = document.getElementById('campRebOk'); if(!p) return;
   const g = { mul: campRebMulGain(), pts: campRebPtGain() };
@@ -2041,15 +1984,6 @@ function campRebAsk(){
 function campRebCancel(){ const p = document.getElementById('campRebOk'); if(p) p.classList.add('hide'); }
 function campRebGo(){
   campRebCancel();
-  // 🔁🔁 2차로 눌렀으면 그쪽으로 — 표식은 쓰고 곧바로 끈다(다음 번에 새지 않게)
-  if(_rebAsk2){ _rebAsk2 = false;
-    const g2 = campRebirth2(); if(!g2) return;
-    campRebRender();
-    if(typeof updateCurBar === 'function') updateCurBar();
-    if(typeof toast === 'function') toast('🔁🔁 2차 환생 — 기본 배수 ×'
-      + (1 + campReb2Base()).toFixed(1) + ' · 2차 포인트 ' + campNum(g2.pts));
-    if(typeof playSfx === 'function') playSfx('ui_confirm');
-    return; }
   const got = campRebirth(); if(!got) return;
   campRebRender();
   if(typeof updateCurBar === 'function') updateCurBar();
@@ -2100,15 +2034,11 @@ function campRebStToggle(){
 function campRebRender(){
   const box = document.getElementById('crBody'); if(!box) return;
   const C = campState(); if(!C){ box.innerHTML = ''; return; }
-  const wealth = campWealth(), need = CAMP_REB_COST, can = campCanRebirth();
-  const pct = Math.max(0, Math.min(100, wealth / need * 100));
+  // 🏁 관문·포인트의 자는 **도달 깊이**다(2026-09-11 · 통산 관문 수). ⛔ 「번 돈」으로 되돌리지 말 것.
+  const depth = campRebDepth(), need = campRebNeed(), can = campCanRebirth();
+  const pct = Math.max(0, Math.min(100, depth / Math.max(1, need) * 100));
   const gMul = campRebMulGain(), gPts = campRebPtGain();
   const next = campRebMul() + gMul;                 // 배수는 **합**이다(곱이 아니다)
-  // 📐 포인트가 어디서 왔는지 — 식을 그대로 쓰지 않고 **곱하는 세 값**으로 쪼갠다.
-  //    식을 쓰면 결과(2.96)와 표시(+2 · 바닥내림)가 어긋나 오히려 헷갈린다.
-  const fW = Math.sqrt(Math.max(0, wealth) / CAMP_RP_BASE);   // 📐 포인트 기준선(관문과 다르다 · 2026-09-07)
-  const fD = Math.pow(CAMP_RP_DG, Math.max(0, campDgN() - 1));
-  const fR = Math.pow(CAMP_RP_RD, campCleared());
   // 🔣 줄 아이콘 — 재화는 있는 자산, 나머지는 선 글리프(한 가족). ⛔ 이모지 금지.
   const gi = {
     tap:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
@@ -2142,10 +2072,13 @@ function campRebRender(){
     + '<div class="crNow">지금 ×' + campRebMul().toFixed(2) + '</div></div>'
     // ✍ ⛔ 「획득량」을 붙이지 말 것 — 값이 「+2」라 + 가 이미 획득을 말한다.
     //   대신 **어디에 쓰는 포인트인지**를 이름에 넣는다(환생 트리).
-    + '<div class="crPt"><div class="crK">환생 트리 포인트</div>'
+    // 🚧 **쓰는 곳이 아직 없다**(2026-09-11) — 스킵·자동화·기본 배수·상한 해제 넷이 다음 단계다.
+    //   ⛔ 「환생 트리 포인트」로 되돌리지 말 것: 트리는 이제 **레벨 포인트**로 산다.
+    //   ✍ 받으면서 말을 안 하면 거짓이라, 어디에 쓸 것인지를 그 자리에서 적는다.
+    + '<div class="crPt"><div class="crK">환생 포인트</div>'
     + '<div class="crPv">+' + campNum(gPts) + '</div>'
-    + '<div class="crFx">재화 <b>' + fW.toFixed(2) + '</b> × 던전 <b>' + fD.toFixed(2)
-    + '</b> × 건물 <b>' + fR.toFixed(2) + '</b></div></div></div>'   // 🏰 라운드 → 부순 건물(2026-09-09)
+    + '<div class="crFx">도달 관문 <b>' + depth + '</b> · <b>준비 중</b>'
+    + '</div></div></div>'
     // ⬇ 접혔을 때 위·아래 빈 자리를 **1 : 0.55** 로 나눈다 — 위가 더 넓어 카드가 가운데보다 내려온다
     //   (2026-09-04 사용자 지적: 접으면 위가 너무 비었다). 펴져 있으면 이 칸은 0 이다.
     + '<div class="crGap2"></div>'
@@ -2180,8 +2113,8 @@ function campRebRender(){
   // ── ③ 아래 — 조건 + 버튼 둘. **바닥 고정**이라 지표가 길어져도 안 밀린다 ──
   const foot = document.getElementById('crFoot');
   if(foot) foot.innerHTML =
-    '<div class="crCond"><div class="crT"><span>환생 조건</span><span>'
-    + campNum(wealth) + ' / ' + campNum(need) + '</span></div>'
+    '<div class="crCond"><div class="crT"><span>환생 조건 — 마지막 던전 클리어</span><span>'
+    + depth + ' / ' + need + ' 관문</span></div>'
     + '<div class="crBar' + (can ? ' ok' : '') + '">'
     + '<i style="width:' + pct.toFixed(1) + '%"></i></div></div>'
     // 🔲 .crRim = 1px 그라디언트 고리(마스크). ⛔ 빼지 말 것 — 빼면 테두리가 통째로 사라진다.
@@ -2190,7 +2123,9 @@ function campRebRender(){
     // ✍ **무엇이 남는지까지** 말한다(2026-09-04) — 초기화만 적으면 겁만 주는데,
     //   실제로 배수·포인트·트리·최고 기록은 그대로다(campRebirth 는 C 만 되감는다).
     //   ⛔ 「환생하면 지금까지의 진행이 초기화됩니다」로 되돌리지 말 것 — 같은 말을 두 번 한다.
-    + '<div class="crWarn">진행은 초기화 · 배수와 트리는 그대로</div>'
+    // ✍ **성장 트리는 이제 되감긴다**(2026-09-11 · 레벨 포인트로 사는 한 회차짜리라서).
+    //   ⛔ 「트리는 그대로」로 되돌리지 말 것 — 화면이 거짓말을 한다.
+    + '<div class="crWarn">진행·레벨·성장 트리 초기화 · 배수와 룬은 그대로</div>'
     + '<button class="crGo" type="button" onclick="campRebAsk()"' + (can ? '' : ' disabled') + '>'
     + '<span class="crRim"></span>'
     + '<span class="crGoI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"'
@@ -2217,18 +2152,9 @@ function campRebRender(){
           + '<span class="crPkI"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
           + '<path d="M8 5.5v13l11-6.5z"/></svg></span>'
           + '<span class="crPkT">광고 시청 시 <b>포인트 ×1.5</b></span></button>')
-    // 🔁🔁 **2차 환생 — 던전 3 을 깨야 나타난다.** ⛔ 못 할 때는 칸을 두지 않는다(빈 잠금 버튼은
-    //   「언젠가 열린다」를 말하지만, 그건 환생 화면이 아니라 2차 트리 화면이 할 말이다).
-    + (campCanRebirth2()
-        ? '<button class="crPk rb2" type="button" onclick="campReb2Ask()">'
-          + '<span class="crRim"></span>'
-          + '<span class="crPkI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"'
-          + ' stroke-width="2.2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/>'
-          + '<path d="M20 4v4.6h-4.6"/><path d="M4 12a8 8 0 0 0 2.6 5.9"/></svg></span>'
-          + '<span class="crPkT"><b>2차 환생</b>' + (campReb2N() ? ' ' + (campReb2N() + 1) + '회차' : '')
-          + ' — 기본 배수 +' + CAMP_REB2_BASE
-          + ' · 포인트 ' + campNum(campReb2PtGain()) + '</span></button>'
-        : '');
+    // 🗄 여기 있던 「2차 환생」 버튼은 없앴다(2026-09-11) — 환생이 한 층이라 위의 환생 버튼과
+    //   같은 일을 하던 둘째 버튼이었다. ⛔ 되살리지 말 것.
+    ;
   // 📂 접힘/펴짐을 다시 입힌다(다시 그릴 때마다 초기화되면 안 된다).
   //   ⚠ **다시 그린 직후에는 애니를 끈다**(noAnim) — 안 그러면 화면을 열 때마다 접힘 애니가
   //     한 번 재생돼 「왜 혼자 움직이지」가 된다. 손으로 누른 때만 움직여야 한다.
@@ -2247,11 +2173,11 @@ function campRebAd(){
 // ⛔ 옛 길(campRebToShop)은 다락으로 갔다 — 이 화면에서 상점으로 보내지 않는다(2026-09-04).
 
 // ── 화면 열고 닫기 ──────────────────────────────────────────────────────
-// 🌳 트리 화면 — `two` 가 참이면 2차 트리를 그린다(화면·조작은 같은 것을 쓴다).
+// 🌳 트리 화면 — `two` 가 참이면 **환생 트리**를, 아니면 성장 트리를 그린다(화면·조작은 같은 것).
 function campTreeOpen(two){
   const el = document.getElementById('campTree'); if(!el) return;
-  _campTreeIs2 = !!two;
-  el.classList.toggle('rt2', _campTreeIs2);
+  _campTreeRb = !!two;
+  el.classList.toggle('rbt', _campTreeRb);
   _campTreeSel = null;
   el.classList.add('on');
   campRebArtOn();   // 🖼 구역 배경은 두 화면이 함께 쓴다 — 여기서 안 켜면 환생 탭으로 넘어갈 때 번쩍인다
@@ -2582,9 +2508,9 @@ function campTreeProg(){
   const bar = el.querySelector('.ctBar i'); if(bar) bar.style.width = (have / all * 100).toFixed(1) + '%';
   const tx = el.querySelector('.ctProgN'); if(tx) tx.textContent = have + ' / ' + all; }
 // ⭐ **여기가 2차를 켜는 유일한 자리다**(그리기·조작·구매가 전부 이 아래를 지난다).
-//   ⛔ 화면 바깥에서 `campWithTree2` 를 부르지 말 것 — 게임이 도는 동안 켜지면 1차 효과가 사라진다.
+//   ⛔ 화면 바깥에서 `campWithRebTree` 를 부르지 말 것 — 게임이 도는 동안 켜지면 1차 효과가 사라진다.
 function campTreeRender(){
-  if(_campTreeIs2 && !campRtIs2()) return campWithTree2(campTreeRender);
+  if(_campTreeRb && !campRtIsRb()) return campWithRebTree(campTreeRender);
   const el = document.getElementById('campTree'); if(!el) return;
   const g = el.querySelector('#ctG'); if(g) g.innerHTML = campTreeSvg();
   campTreeApplyView();
@@ -2609,7 +2535,7 @@ function campNum(n){ if(typeof fmtCur === 'function') return fmtCur(n);
 //   ⚠ 이미 고른 채로 다른 별로 옮기는 중이면 덮어쓰지 않는다 — 기준은 **맨 처음** 고르기 전이다.
 let _ctZBefore = null;
 function campTreeTap(k, n){
-  if(_campTreeIs2 && !campRtIs2()) return campWithTree2(function(){ return campTreeTap(k, n); });
+  if(_campTreeRb && !campRtIsRb()) return campWithRebTree(function(){ return campTreeTap(k, n); });
   let sel;
   if(k === 'root') sel = { t:'root', a:'root' };
   else
@@ -2673,7 +2599,7 @@ function campTreeVisible(){
       if(campTreeState(L.k, n)) set[L.k + ':' + n] = 1;
   return set; }
 function campTreeBuySel(){
-  if(_campTreeIs2 && !campRtIs2()) return campWithTree2(campTreeBuySel);
+  if(_campTreeRb && !campRtIsRb()) return campWithRebTree(campTreeBuySel);
   const el = document.getElementById('campTree'); if(!el) return;
   const btn = el.querySelector('.ctBuy'); if(!btn || btn.disabled) return;
   const key = btn.dataset.key; if(!key) return;
@@ -2825,7 +2751,7 @@ const CAMP_TREE_FIT_MIN_SPAN = 150;
 //   렌더마다 바뀐다(해금할수록 커진다) — campTreeRender 끝에서 캐시를 갱신한다.
 let _ctBounds = null;
 function campTreeBounds(){
-  if(_campTreeIs2 && !campRtIs2()) return campWithTree2(campTreeBounds);
+  if(_campTreeRb && !campRtIsRb()) return campWithRebTree(campTreeBounds);
   let x0 = 0, y0 = 0, x1 = 0, y1 = 0, n = 0;
   // ⚠ 가운데(root)는 .ctGem 이 아니다 — 육각 여러 겹으로 직접 그린다. 그래서 **따로 적어 준다**.
   //   ⛔ 가운데에 .ctGem 클래스를 붙여 해결하지 말 것 — 그 클래스는 검은 면 + pointer-events:none 이라
@@ -2866,7 +2792,7 @@ function campTreeClampT(){
   t.x = cl(-hw + K.x - B.x1 * z,     hw - K.x - B.x0 * z,    t.x);
   t.y = cl(-hh + K.yTop - B.y1 * z,  hh - K.yBot - B.y0 * z, t.y); }
 function campTreeFit(now){
-  if(_campTreeIs2 && !campRtIs2()) return campWithTree2(function(){ return campTreeFit(now); });
+  if(_campTreeRb && !campRtIsRb()) return campWithRebTree(function(){ return campTreeFit(now); });
   _campTreeSel = null; _ctZBefore = null;
   campTreeRender();
   const svg = document.getElementById('ctSvg');
@@ -5781,7 +5707,7 @@ function campHideView(){
 function campEnter(){
   const C = campState(); if(!C) return;
   // 🧬 **종족 선택 화면은 뜨지 않는다**(2026-09-09 · REDESIGN_PLAN 1-E). 첫 바퀴는 유니온 고정이고
-  //   종족 변이는 2차 환생(단계 4)의 몫이다. ⛔ campRaceSheet 로 되돌리지 말 것.
+  //   종족 변이는 환생 뒤 「종족 변이」(단계 4)의 몫이다. ⛔ campRaceSheet 로 되돌리지 말 것.
   if(!C.race){ C.race = 'terran'; if(typeof campSave === 'function') campSave(); }
   if(typeof techUIInit !== 'function') return;
   techUIInit(campTechRace(C.race));                    // ① 본부·일꾼·광맥이 깔린 새 판
@@ -7130,7 +7056,7 @@ function campStartTimer(){
     // 🌱 프레임이 죽어 있으면 되살린다 — 유즈맵 게임에 다녀오면 campFrame 이 스스로 빠져 있다.
     if(!_campRAF && typeof campStartFrame === 'function') campStartFrame();
     campApplyGatherMul();
-    campAutoTick(CAMP_TICK_MS / 1000);   // 🤖 자동화 — 2차 트리를 샀을 때만 실제로 뭔가 한다
+    campAutoTick(CAMP_TICK_MS / 1000);   // 🤖 자동화 — 환생 트리를 샀을 때만 실제로 뭔가 한다
     if(typeof updateCurBar === 'function') updateCurBar();   // 💠 번 돈이 재화 바에 바로 보이게
     if(++_campSlow >= CAMP_SLOW_EVERY){ _campSlow = 0;
       campAutoGather();    // 새 일꾼 · 고갈로 놀게 된 일꾼을 다시 붙인다
@@ -7720,13 +7646,13 @@ function campEmptyAt(cx, cy){
 //     초반이 확정되면 BALANCE.md §4 방식으로 회차 시간을 다시 잴 것.
 const CAMP_HIRE0 = 50, CAMP_HIRE_R = 2.5;        // n마리 보유 → 다음 마리 가격
 const CAMP_HIRE_KNEE = 30, CAMP_HIRE_R2 = 1.10;  // 31마리째부터 완만하게
-const CAMP_WORKER_MAX = 40;                      // 일꾼 상한 — ⚠ **기본값**이다(2차 트리가 올린다)
-// 🔓 **상한의 단일 소스** (2026-09-11 · 2차 환생 「상한 해제」 갈래).
+const CAMP_WORKER_MAX = 40;                      // 일꾼 상한 — ⚠ **기본값**이다(환생 트리가 올린다)
+// 🔓 **상한의 단일 소스** (2026-09-11 · 환생 트리 「상한 해제」 갈래).
 //   ⛔ 상수를 직접 읽어 비교하지 말 것 — 트리를 사도 안 열린다. 화면·문지기 둘 다 이 함수를 지난다.
 //   ⚠ 사다리의 0차 값이 곧 여기 상수라, **안 샀으면 지금과 똑같다**(스모크가 잰다).
 function campCap(k){
-  const v = (typeof campRt2Val === 'function') ? campRt2Val(k === 'worker' ? 'wkCap2'
-            : k === 'supply' ? 'supCap2' : 'unitR2') : 0;
+  const v = (typeof campRbtVal === 'function') ? campRbtVal(k === 'worker' ? 'capWk'
+            : k === 'supply' ? 'capSup' : 'capUnitR') : 0;
   if(v) return v;
   return k === 'worker' ? CAMP_WORKER_MAX
        : k === 'supply' ? CAMP_SUPPLY_MAX : CAMP_UNIT_R; }
