@@ -8130,15 +8130,14 @@ async function groupLobby(){
       assert(after>before,'병력을 올려 보냈는데 안개가 안 열린다: '+before+'→'+after);
       // ⚠ **그 유닛의 x 로 물어야 한다.** 0.5 로 고정하면 적 기지 배치(씨앗마다 다르다)에 따라
       //   병력이 가운데에서 멀 때 「안 열렸다」로 잘못 읽힌다.
-      // ⚠ **한 칸 여유를 준다.** 안개는 campFrame 안에서 계산되는데 그 프레임이 전투도 함께
-      //   굴려 유닛이 **계산 뒤에 또 움직인다** — 딱 그 칸으로 재면 판마다 되기도 안 되기도 했다.
-      //   이 검사의 뜻은 「병력이 간 자리가 열렸나」이므로 이웃 칸까지 본다.
+      // 🌫 **더 움직이지 않은 채 한 번 확정 계산하고 잰다.** 안개는 프레임 안에서 **초당 10번만**
+      //   다시 계산되는데(16-build.js `f.t>=0.1`) 그 프레임이 **전투도 함께 굴려** 유닛이
+      //   계산 뒤에 또 움직인다 — 그래서 「마지막으로 잰 안개」와 「유닛의 최종 위치」가 어긋났다.
+      //   옛 ±1칸 여유는 그 어긋남을 덮으려던 것인데 한 칸을 넘게 움직인 판에서 샜다(실측 6회 중 1회).
+      //   ⛔ 여유 칸으로 되돌리지 말 것 — 어긋남을 덮으면 「안개가 유닛을 안 따라간다」는 진짜 버그도 덮인다.
+      techFogCompute();
       { const u0=CAMPB.me.units[0], g0=campW2G(u0.x,u0.y,W);
-        const cw=_techCW(), ch=_techCH();
-        let lit=false;
-        for(let dc=-1;dc<=1&&!lit;dc++) for(let dr=-1;dr<=1&&!lit;dr++)
-          if(techFogVisAt(g0.gx+dc*cw, g0.gy+dr*ch)===2) lit=true;
-        assert(lit,'내 병력이 선 자리가 안 열렸다'); }
+        assert(techFogVisAt(g0.gx,g0.gy)===2,'내 병력이 선 자리가 안 열렸다'); }
       assert(CAMPB._fbld.filter(b=>b.seen).length>=seen0,'나아갔는데 본 건물이 줄었다');
       // 👀 **다가간 만큼 보인다** — 병력 근처의 건물이 vis 로 켜지고 3D·표식·탭이 함께 열린다
       { const W2=CAMPB.world, u0=CAMPB.me.units[0];
