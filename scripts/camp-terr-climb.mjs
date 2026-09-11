@@ -33,7 +33,7 @@ const server=http.createServer((q,s)=>{try{const p=decodeURIComponent(new URL(q.
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const CHROME=process.env.CHROME_PATH;
 if(!CHROME||!fs.existsSync(CHROME)){ console.error('CHROME_PATH 를 지정하세요'); process.exit(2); }
-const b=await puppeteer.launch({executablePath:CHROME,headless:'new',protocolTimeout:300000,
+const b=await puppeteer.launch({executablePath:CHROME,headless:'new',protocolTimeout:1800000,   // ⚠ 판을 늘리면 한 evaluate 가 길어진다 — 짧으면 **아무 말 없이** 죽는다
   args:['--mute-audio','--no-sandbox','--disable-gpu-sandbox']});
 const pg=await b.newPage(); await pg.setViewport({width:390,height:844,deviceScaleFactor:2});
 const errs=[]; pg.on('pageerror',e=>errs.push(String(e.message).slice(0,160)));
@@ -113,7 +113,16 @@ const out = await pg.evaluate(async (RUNS)=>{
     const T=CAMPT, C=T.cols, W=T.rows, span=(T.wy1-T.wy0);
     let botRow=-1;
     for(let ty=0;ty<W;ty++) for(let tx=0;tx<C;tx++) if(T.h[ty*C+tx] && ty>botRow) botRow=ty;
-    let onHi=0, stuck=0, frames=0; const seenRamp=new Set();
+    /* 📏 **열마다** 고원 밑변이 다르다(가장자리가 계단이라). 「넘은 자리」는 그 열의 밑변으로 재야 한다.
+     *   ⭐ 넘은 열이 오르막 열이면 **오르막으로 올라간 것**, 아니면 **절벽을 뚫고 간 것**이다
+     *     (밀어내기를 안 하므로 물리적으로 가능하다 — 그게 몇 번인지가 진짜 알고 싶은 값이다). */
+    const colBot=new Int16Array(C).fill(-1), colRamp=new Uint8Array(C);
+    for(let tx=0;tx<C;tx++){ for(let ty=0;ty<W;ty++) if(T.h[ty*C+tx]) colBot[tx]=ty;
+      if(colBot[tx]>=0 && T.r[colBot[tx]*C+tx]) colRamp[tx]=1; }
+    let onHi=0, stuck=0, frames=0, upRamp=0, upCliff=0; const seenRamp=new Set(), lastTy=new Map();
+    const dist=[];                                   // 절벽으로 넘은 자리 ↔ 가장 가까운 오르막 열의 거리
+    const rampCols=[]; for(let tx=0;tx<C;tx++) if(colRamp[tx]) rampCols.push(tx);
+    const nearRamp=tx=>rampCols.reduce((m,c)=>Math.min(m,Math.abs(c-tx)), 99);
     for(let f=0; f<3600; f++){
       try{ campCombatStep(0.05); }catch(e){ break; }
       frames++;
@@ -127,16 +136,37 @@ const out = await pg.evaluate(async (RUNS)=>{
         if(T.r[i]) seenRamp.add(u);
         if(T.h[i] && !T.r[i] && ty<botRow) onHi++;
         if(T._blk && T._blk[i]) stuck++;
+        const pv=lastTy.get(u);                       // 고원 밑변을 **넘은 순간**을 잡는다
+        if(pv!==undefined && colBot[tx]>=0 && pv>colBot[tx] && ty<=colBot[tx]){
+          if(colRamp[tx]) upRamp++; else { upCliff++; dist.push(nearRamp(tx)); } }
+        lastTy.set(u, ty);
       }
       if(onHi>0 && seenRamp.size>0) break;
     }
-    R.push({ hi:onHi>0, ramp:seenRamp.size, stuck, sec:+(frames*0.05).toFixed(1),
+    R.push({ hi:onHi>0, ramp:seenRamp.size, upRamp, upCliff, dist, stuck, sec:+(frames*0.05).toFixed(1),
              alive:(CAMPB&&CAMPB.me?(CAMPB.me.units||[]).filter(u=>!u.dead).length:-1) });
    }catch(e){ R.push({err:String(e.message).slice(0,90)}); }
   }
   return R;
 }, RUNS);
-console.log('살아 있는 판:', JSON.stringify(out));
-const ok=out.filter(r=>r.hi).length, rmp=out.filter(r=>r.ramp>0).length;
-console.log(`고원 도달 ${ok}/${out.length} · 오르막을 밟은 판 ${rmp}/${out.length} · 막힌 칸 프레임 ${out.map(r=>r.stuck).join(',')}`);
+const bad=out.filter(r=>r.err);
+const good=out.filter(r=>!r.err);
+const ok=good.filter(r=>r.hi).length, rmp=good.filter(r=>r.ramp>0).length;
+const secs=good.filter(r=>r.hi).map(r=>r.sec).sort((a,b)=>a-b);
+const med=secs.length? secs[secs.length>>1] : -1;
+const stuck=good.map(r=>r.stuck).sort((a,b)=>a-b);
+console.log(`살아 있는 판 ${good.length}판 — 고원 도달 ${ok}/${good.length} · 오르막을 밟은 판 ${rmp}/${good.length}`
+  + ` · 등반 시간 ${secs[0]}~${secs[secs.length-1]}초(중앙 ${med})`
+  + ` · 막힌 칸 프레임 중앙 ${stuck[stuck.length>>1]} (최대 ${stuck[stuck.length-1]})`
+  + (bad.length? ' ⛔ 판이 안 열림 '+bad.length+'건':''));
+const uR=good.reduce((a,r)=>a+(r.upRamp||0),0), uC=good.reduce((a,r)=>a+(r.upCliff||0),0);
+console.log(`  └ 고원 밑변을 넘은 횟수 — **오르막으로 ${uR}회** · 절벽을 뚫고 ${uC}회`
+  + ` (절벽 ${(uC/Math.max(1,uR+uC)*100).toFixed(1)}%)`);
+{ const D=[].concat(...good.map(r=>r.dist||[]));
+  const H={}; for(const d of D) H[Math.min(d,6)]=(H[Math.min(d,6)]||0)+1;
+  const near=D.filter(d=>d<=1).length;
+  console.log(`     절벽으로 넘은 자리 ↔ 가장 가까운 오르막 거리(칸): `
+    + Object.keys(H).sort((a,b)=>a-b).map(k=>(k>=6?'6+':k)+'칸 '+H[k]).join(' · ')
+    + ` → 1칸 이내 ${(near/Math.max(1,D.length)*100).toFixed(1)}%(= 표집이 옆으로 샌 것)`); }
+if(ok<good.length) console.log('⛔ 못 올라간 판:', JSON.stringify(good.filter(r=>!r.hi)));
 await b.close(); server.close();
