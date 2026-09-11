@@ -457,11 +457,15 @@ function techPanelRender(){ const body=document.getElementById('btSheetBody'), s
   // 🏕 캠프 던전의 **전장 유닛 지정**(_campSel · js/19-camp.js)도 셈에 넣는다 — 그 지정은 기지 변수(selU)에 없어서
   //    해제 버튼이 영영 안 켜졌다(2026-09-05 사용자 신고). 관리자 건설·오토배틀에서는 _campSel 이 비어 있어 영향이 없다.
   const _campSelN=(typeof campSelList==='function')?campSelList().length:0;
-  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes || _campSelN>0); }
+  // 🖐 캠프의 **화면 이동 모드**도 이 버튼으로 끈다(2026-09-10 사용자 확정 · 옛 「탭하면 해제」).
+  //   ⛔ `_campPanMode` 를 직접 읽지 말 것 — 이 파일은 관리자 탭·오토배틀과 공유다(campPanIsOn 을 쓴다).
+  const _campPan=(typeof campPanIsOn==='function') && campPanIsOn();
+  const dz=document.getElementById('btDesel'); if(dz) dz.classList.toggle('on',(G.tech.selU||[]).length>0 || _liftSel || !!G.tech.selRes || _campSelN>0 || _campPan); }
 function techDeselU(ev){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;
   if(typeof campFoeUnpick==='function') campFoeUnpick();   // 🏰 캠프에서 들여다보던 적 건물도 닫는다(시트가 요약으로 돌아간다)
   if(G.tech.arm!=null){ techCancelArm(ev); return; }   // 🚫 건설 배치 중 = 지정 해제(⊘) 버튼 = 건설 취소 → 일꾼 지정·프로필 복귀(맵에 올리지 않고도 취소)
   if(typeof campSelClear==='function') campSelClear();   // 🏕 캠프 던전의 전장 유닛 지정도 같은 버튼으로 푼다(2026-09-05)
+  if(typeof campPanMode==='function') campPanMode(false);   // 🖐 화면 이동 모드도 여기서 끈다(2026-09-10) — 끄는 길은 이 버튼 하나다
   G.tech.selU=[]; G.tech.sel=null; G.tech.selRes=null;   // 유닛·건물(부양 포함)·중립 자원 지정 모두 해제
   const sh=G.tech.sheet; if(sh&&sh.sec==='ent'){ sh.open=false; sh.sec=null; } techUIRender(); }   // 해제 후 다시 드래그=박스 지정(메인 규약)
 function techSubSelectType(ev,uid){ if(ev&&ev.stopPropagation) ev.stopPropagation(); if(!G.tech) return;   // 👥 혼합 지정 → 종류 칩 짧게 탭 = 그 종류 프로필만 표시(selU는 전부 유지 · 소프트) · uid 빈값=전체로 복귀
@@ -767,8 +771,12 @@ function techPtrUp(ev){ if(!G.tech) return; clearTimeout(_btLongT); _btLongT=nul
   const e=_techEntAt(w.x, w.y);
   if(e){ G.tech.selRes=null; if(e.type==='bldg'){
       const _keepWk=(e.bt>0&&e._bpause&&(G.tech.selU||[]).some(id=>{ const w=G.tech.ents.find(x=>x.eid===id); return w&&w.type==='worker'&&w.build==null; }));   // 일시정지 건물 + 유휴 일꾼 지정 = 그 일꾼 지정 유지(재개 시 사용)
-      const _movU=(G.tech.selU||[]).some(id=>{ const u=G.tech.ents.find(x=>x.eid===id); return u&&(u.type==='unit'||u.type==='worker'); });   // 🏗 이동 가능 유닛 지정 중 = 건물 짧게 탭 = 그 지점으로 이동(건물 지정 안 함 · 롱프레스 탑승/수리는 별도) → 건물 지정은 유닛 해제(✕) 후에만
-      if(_movU && !_keepWk){ _techAssignMove(w.x,w.y); if(typeof playSfx==='function') playSfx('ui_confirm'); if(body) body._cgPage=0; techMapRender(); return; }
+      // 🏗 **유닛을 지정한 채로 내 건물을 탭하면 유닛 지정이 풀리고 그 건물이 지정된다**
+      //   (2026-09-10 사용자 확정 · 옛 규칙: 「그 자리로 이동」이라 건물을 고르려면 ⊘ 로 유닛을
+      //    먼저 풀어야 했다 — 두 번 눌러야 해서 번거롭다는 지적).
+      //   ⚠ 그 대신 **건물 위를 탭해 이동시키는 길이 사라졌다** — 건물 옆 바닥을 탭하면 된다.
+      //   ⛔ 롱프레스(탑승·수리)는 이 길이 아니다(위 `hold` 갈래) — 그대로 산다.
+      //   ⚠ `_keepWk`(일시정지 건물 + 유휴 일꾼)는 예외로 남는다: 재개에 쓸 일꾼을 붙들어 둔다.
       G.tech.sel=e.eid; if(!_keepWk) G.tech.selU=[]; }
     else { G.tech.selU=[e.eid]; G.tech.sel=null; } sh.open=true; sh.sec='ent'; }   // 엔티티 탭 = 시트 즉시 교체(닫혔다 열리지 않음)
   else { const _mn=_techMineralAt(w.x,w.y), _gz=_techInGasZone(w.x,w.y);   // 💎⛽ 빈 곳 탭 = 중립 자원(미네랄·가스 광산) 지정(단 하나만). 자원 없으면 시트 닫기

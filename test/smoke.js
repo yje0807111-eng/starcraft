@@ -1912,12 +1912,15 @@ async function groupLobby(){
             '모드 중 스와이프가 화면을 못 옮긴다');
           const t5=techViewT(); t5.zoom=1; t5.x=0.5; t5.y=0.5; _techClampView(t5); spin(40); }
 
-        // ③ 빈 바닥을 그냥 탭하면 꺼진다
+        // ③ 🖐 **탭으로는 안 꺼진다 — 나가는 길은 ⊘ 버튼 하나다**(2026-09-10 사용자 확정).
+        //   ⛔ 「빈 바닥 탭 = 해제」로 되돌리지 말 것: 화면을 옮기다 손이 미끄러질 때마다 꺼졌다.
         { const q=findEmpty(); pid++;
           fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x+1,q.y+1); spin(3);
-          assert(!_campPanMode,'빈 바닥 탭으로 모드가 안 꺼진다'); }
+          assert(_campPanMode,'빈 바닥 탭으로 모드가 꺼졌다 — ⊘ 로만 꺼져야 한다');
+          const dz=$('btDesel');
+          assert(dz && dz.classList.contains('on'),'화면 이동 모드인데 ⊘ 버튼이 안 켜졌다'); }
 
-        // ④ 모드 중 **유닛·건물·광맥을 탭하면** 꺼지고 그 선택·채집이 그대로 일어난다
+        // ④ 모드 중 **유닛·건물·광맥을 탭하면** 그 선택·채집이 그대로 일어난다(모드는 유지된다)
         //   (down 시점에 대상을 가려 원본에 넘긴다 — 재전달로 옛 좌표를 쓰면 선택이 안 됐다)
         { await arm();
           // ⚠ 일꾼을 **겹치지 않는 빈 자리로 잠시 옮겨** 탭한다. 제자리에서 하면 일꾼이
@@ -1930,7 +1933,7 @@ async function groupLobby(){
           const q=at(wk.x,wk.y);
           if(onMap(q)){
             pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
-            assert(!_campPanMode,'모드 중 유닛을 탭했는데 모드가 안 꺼진다');
+            assert(_campPanMode,'유닛을 탭했다고 모드가 꺼졌다 — ⊘ 로만 꺼져야 한다');
             assert((G.tech.selU||[]).indexOf(wk.eid)>=0||G.tech.sel===wk.eid,
               '모드 중 유닛 탭이 그 유닛을 못 고른다 — 모드가 조작을 삼켰다'
               +' | selU='+JSON.stringify(G.tech.selU)+' sel='+G.tech.sel); }
@@ -1943,7 +1946,7 @@ async function groupLobby(){
         { campMineModeSet(false); await arm(); const q=at(mnn.x,mnn.y);
           if(onMap(q)){ pid++;
             fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
-            assert(!_campPanMode,'모드 중 광맥을 탭했는데 모드가 안 꺼진다');
+            assert(_campPanMode,'광맥을 탭했다고 모드가 꺼졌다 — ⊘ 로만 꺼져야 한다');
             assert(!campMineModeOn(),'광맥을 탭했더니 채굴 모드가 켜졌다 — 버튼으로만 켜져야 한다');
           } }
         // ⛏ 그 대신 **버튼은 켠다** — 문이 하나도 없으면 채굴을 아예 못 한다.
@@ -1963,8 +1966,34 @@ async function groupLobby(){
         }
         { await arm(); const q=at(bd.x,bd.y);
           if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
-            assert(!_campPanMode,'모드 중 건물을 탭했는데 모드가 안 꺼진다');
+            assert(_campPanMode,'건물을 탭했다고 모드가 꺼졌다 — ⊘ 로만 꺼져야 한다');
             assert(G.tech.sel===bd.eid,'모드 중 건물 탭이 그 건물을 못 고른다'); } }
+        // 🖐 ⊘ 버튼이 **유일한 출구**다 — 이걸로 꺼진다.
+        { assert(_campPanMode,'전제가 바뀜: 여기서 모드가 켜져 있어야 한다');
+          techDeselU();
+          assert(!_campPanMode,'⊘ 를 눌렀는데 화면 이동 모드가 안 꺼진다'); }
+        // 🏗 **유닛을 지정한 채 내 건물을 탭하면 유닛이 풀리고 그 건물이 지정된다**
+        //   (2026-09-10 사용자 확정 · 옛 규칙은 「그 자리로 이동」이라 ⊘ 로 먼저 풀어야 했다).
+        //   ⛔ 「건물 탭 = 이동」으로 되돌리지 말 것.
+        //   ⚠ **자원을 든 일꾼 + 본진 탭은 예외다** — techPtrDown 이 「자원 작업 재개」로 먼저
+        //     가로채고 _btDown 을 비워, techPtrUp 의 이 규칙까지 오지 않는다(17-build-cards).
+        //     bd 는 첫 건물 = 본진이고 캠프 일꾼은 계속 캐므로, 마침 손에 들고 있던 판에서만
+        //     실패했다(실측 4회 중 1회). 재는 것은 일반 규칙이니 손을 비우고 잰다.
+        //   ⚠ 맵 위 13%(down.sy<0.13)는 techPtrUp 이 상단바로 보고 탭을 버린다 —
+        //     onMap 은 '.bmap 안인가'만 보아 못 거르므로 여기서 함께 거른다.
+        { campPanMode(false); clearSel();
+          if(typeof campZoom==='function') campZoom();
+          spin(2);
+          const _cy=wk._carry, _ck=wk._cKind; wk._carry=0; wk._cKind=null;
+          try{
+            G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
+            const q=at(bd.x,bd.y), _r=_btRect();
+            const _sy=_r&&_r.height ? (q.y-_r.top)/_r.height : 0;
+            if(onMap(q) && _sy>=0.13){
+              pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
+              assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
+              assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
+          } finally { wk._carry=_cy; wk._cKind=_ck; clearSel(); } }
 
         // ⑤ ⛔ **모드가 꺼져 있으면 빈 바닥 드래그는 여전히 박스 지정이다.**
         //   여기를 팬으로 쓰면 유닛 드래그 지정이 죽는다 — 그래서 모드로 가른 것이다.

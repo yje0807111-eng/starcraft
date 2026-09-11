@@ -6866,7 +6866,6 @@ let _campWorldPatched = null;         // 좌표계 패치(한 번 걸면 유지 
 let _campRectLast = null;             // 캠프 화면에서 마지막으로 잰 맵 크기(밖에서 대신 쓴다)
 let _campPanMode = false;   // 🖐 화면 이동 모드가 켜져 있나(롱프레스로 켜고 탭으로 끈다)
 let _campPanDown = null;    // 모드 중 눌린 손가락(움직였는지 판정용)
-let _campPanJustOn = false; // 방금 롱프레스로 켰다 — 그 손가락의 up 은 탭이 아니다
 let _campLongT = null, _campLongFrom = null;   // 롱프레스 타이머    // 이번 프레임의 맵 rect(campFrame 이 비운다) — 위 campPatchRect 설명
 // 📐 **좌표계 패치 — 한 번 걸면 풀지 않는다.**
 //   캠프는 격자를 촘촘하게(CAMP_COLS) 깔고, 셀 높이를 맵의 종횡비(_btRect)로 정한다.
@@ -6963,12 +6962,11 @@ function campPatchZoom(){
             _btMoved = true; return; } }
       }
       if(_campOn && _campPanMode && ev && ev.button !== 1 && typeof techPanStart === 'function'){
-        // ⭐ **대상 판별은 여기(down)서 한다.** 유닛·건물·자원을 눌렀으면 모드를 끄고 원본에 넘긴다
+        // ⭐ **대상 판별은 여기(down)서 한다.** 유닛·건물·자원을 눌렀으면 원본에 그대로 넘긴다
         //   — 그러면 선택·채집이 원본 규칙 그대로 일어난다(재전달 같은 잔재주가 필요 없다).
-        if(!campEmptyAt(ev.clientX, ev.clientY)){
-          campPanMode(false);
-          return oDown.apply(this, arguments);
-        }
+        //   ⛔ 여기서 모드를 끄지 말 것(2026-09-10 사용자 확정) — **나가는 길은 ⊘ 버튼 하나**다.
+        //     모드는 「빈 바닥 드래그가 팬이 된다」는 뜻일 뿐이라, 탭은 켜 둔 채로도 그대로 된다.
+        if(!campEmptyAt(ev.clientX, ev.clientY)) return oDown.apply(this, arguments);
         // 빈 바닥 = 팬. 움직였는지는 up 에서 본다(제자리면 '지정 해제 탭'으로 되돌린다).
         _campPanDown = { id:ev.pointerId, x:ev.clientX, y:ev.clientY };
         _btPtrs.set(ev.pointerId, { x:ev.clientX, y:ev.clientY });
@@ -7040,22 +7038,12 @@ function campPatchZoom(){
 
     window.techPtrUp = function(ev){
       campPanDisarm();
+      // 🖐 모드 중 빈 바닥에서 손을 뗐다 — **아무것도 하지 않는다.**
+      //   ⛔ 제자리 탭으로 모드를 끄던 것을 되돌리지 말 것(2026-09-10 사용자 확정):
+      //     끄는 길은 **⊘ 버튼 하나**다. 탭으로도 꺼지면 화면을 옮기다 손이 미끄러질 때마다 꺼졌다.
       if(_campOn && _campPanMode && _campPanDown && ev && ev.pointerId === _campPanDown.id){
-        const moved = Math.hypot(ev.clientX - _campPanDown.x, ev.clientY - _campPanDown.y) > 8;
         _campPanDown = null;
-        // ⚠ **모드를 켠 그 손가락이 떨어지는 것은 탭이 아니다.** 롱프레스는 제자리에서 일어나므로
-        //   거리로만 재면 moved=false 가 되어 켜자마자 다시 꺼진다(실측: 650ms 후 ON → up 후 OFF).
-        //   사용자 규칙은 "손을 떼도 유지" 다 — 그 한 번만 탭 판정을 건너뛴다.
-        if(_campPanJustOn){ _campPanJustOn = false; return oUp.apply(this, arguments); }
-        if(!moved){
-          // 빈 바닥을 제자리에서 눌렀다 뗐다 = 탭 → 모드를 끄고 그 탭을 원본에 넘긴다(지정 해제).
-          // ⚠ 재전달은 **지금 이벤트**로 한다 — 예전에 _campPanDownEv(모드를 켤 때의 빈 바닥
-          //   좌표)를 넘겼다가, 엉뚱한 자리를 누른 것이 되어 선택이 안 됐다.
-          campPanMode(false);
-          _btPan = null; _btPtrs.delete(ev.pointerId);
-          oDown.call(window, ev);
-          return oUp.apply(this, arguments);
-        }
+        return oUp.apply(this, arguments);
       }
       // 🖐 전장 병력 조작 — 원본보다 **먼저** 본다(원본은 기지 엔티티만 안다).
       //   처리했으면 _btDown·_btBox 를 비워 원본이 같은 탭을 두 번 쓰지 않게 한다.
@@ -7148,7 +7136,7 @@ function campUnpatchWheel(){
 function campUnpatchZoom(){
   if(!_campZoomPatched) return;
   campUnpatchWheel();
-  campPanDisarm(); campPanMode(false); _campPanDown = null; _campPanJustOn = false;   // 🖐 모드를 들고 나가지 않는다
+  campPanDisarm(); campPanMode(false); _campPanDown = null; 
   _campCmd = false;                                                                   // 🖐 끌던 이동 명령도 들고 나가지 않는다
   campSelClear(); _campBox = null;                                                    // 🖐 전장 병력 지정도 들고 나가지 않는다
   for(const k in _campZoomPatched) window[k] = _campZoomPatched[k];
@@ -7235,9 +7223,13 @@ function campPanMode(on){
   _campPanMode = !!on;
   const m = document.getElementById('cstMain');
   if(m) m.classList.toggle('campPan', _campPanMode);
-  if(typeof toast === 'function') toast(_campPanMode ? '🖐 화면 이동 — 탭하면 해제' : '👆 지정 모드');
+  if(typeof toast === 'function') toast(_campPanMode ? '🖐 화면 이동 — ⊘ 로 해제' : '👆 지정 모드');
   if(_campPanMode && typeof playSfx === 'function') playSfx('ui_open');
+  if(typeof techUIRender === 'function') techUIRender();   // ⊘ 버튼을 켜고 끈다
 }
+// 🖐 밖에서 「지금 화면 이동 모드인가」를 묻는 문 — ⊘ 버튼이 이것을 보고 켜진다.
+//   ⛔ `_campPanMode` 를 다른 파일에서 직접 읽지 말 것(17-build-cards 는 공유 파일이다).
+function campPanIsOn(){ return !!_campPanMode; }
 // 빈 바닥을 눌렀다 — 0.5초 버티면 모드 ON
 function campPanArm(ev){
   campPanDisarm();
@@ -7246,7 +7238,6 @@ function campPanArm(ev){
     _campLongT = null;
     if(!_campOn) return;
     campPanMode(true);
-    _campPanJustOn = true;   // 이 손가락이 떨어질 때는 탭으로 치지 않는다(위 techPtrUp 설명)
     // 누르고 있는 그 손가락을 **곧바로 팬으로 넘긴다** — 손을 뗐다 다시 끌 필요가 없다.
     if(_campLongFrom && _btPtrs.has(_campLongFrom.id) && typeof techPanStart === 'function'){
       _btBox = null;   // 혹 서 있으면 걷는다(박스 지정과 팬이 겹치지 않게)
