@@ -2230,9 +2230,13 @@ async function groupLobby(){
         { campPanMode(false); clearSel();
           if(typeof campZoom==='function') campZoom();
           spin(2);
-          const _cy=wk._carry, _ck=wk._cKind; wk._carry=0; wk._cKind=null;
+          const _cy=wk._carry, _ck=wk._cKind;
           try{
             G.tech.selU=[wk.eid]; G.tech.sel=null; spin(1);
+            // ⚠ 손은 **탭 직전에** 비운다 — 프레임(spin) 이 한 번이라도 돌면 캐던 일꾼이 광맥에서 다시 든다
+            //   (실측 2026-09-11: 비우고 프레임 하나 돌리면 400회 중 8회 다시 들었다 → 5회 중 1회 이 스텝이 터졌다).
+            //   pointerdown 은 동기라 여기서 비우면 그 사이에 프레임이 끼어들 수 없다.
+            wk._carry=0; wk._cKind=null;
             if(_tapBd()){
               assert(G.tech.sel===bd.eid,'유닛 지정 중 건물을 탭했는데 건물이 안 골라진다');
               assert(!(G.tech.selU||[]).length,'건물을 골랐는데 유닛 지정이 남아 있다'); }
