@@ -7748,7 +7748,19 @@ function campWorkerNPlanned(){ return campWorkerN() + campWorkerQueued(); }
 // ⚠ 설계 문구는 「한 채를 레벨업」이다. 지금은 **여러 채를 짓되 값이 누진**하는 형태로 넣었다 —
 //   수치(비용·인구·누적 1,177만)는 같고, 한 채 레벨업 UI 는 별도 작업이다.
 const CAMP_SUPPLY0 = 30000, CAMP_SUPPLY_R = 1.20, CAMP_SUPPLY_MAX = 24;
-function campSupplyCost(n){ return Math.max(1, Math.ceil(CAMP_SUPPLY0 * Math.pow(CAMP_SUPPLY_R, n))); }
+// 🏠 **첫 채만 싸다** (2026-09-11 사용자 요청 · BALANCE §5-16)
+//   ⭐ 왜 — 본부 인구 **10** 을 일꾼 4~6기가 먹으면 **병력 자리가 4~6밖에 없다**.
+//     그 천장을 여는 길이 보급소 하나뿐인데 첫 채가 3만이라 초반의 벽이었다(§5-15 실측:
+//     30분 내내 인구가 `n/10` 이고 보급소 0채 · 병력이 4기에서 멈췄다).
+//   ⚠ **둘째 채부터는 원래 값 그대로다**(`3만 × 1.20^n` · 2채 3.6만). 누진도, 24채 인구 202 도,
+//     누적 1,177만도 안 건드린다 — 바뀌는 것은 **첫 칸 하나뿐**이다.
+//   ⛔ `CAMP_SUPPLY0` 자체를 내리지 말 것: 사다리 전체가 싸져 **후반 인구가 헐거워진다**.
+//   ⚠ 그 대신 1채 → 2채가 **7.2배 점프**다. 그건 알고 고른 모양이다 — 첫 채는 「인구가 늘어난다」를
+//     가르치는 칸이고, 진짜 사다리는 둘째부터다.
+const CAMP_SUPPLY_FIRST = 5000;
+function campSupplyCost(n){
+  if((n | 0) <= 0) return CAMP_SUPPLY_FIRST;
+  return Math.max(1, Math.ceil(CAMP_SUPPLY0 * Math.pow(CAMP_SUPPLY_R, n))); }
 function campSupplyN(){
   if(typeof G === 'undefined' || !G.tech) return 0;
   return (G.tech.built && G.tech.built.supply) | 0;
