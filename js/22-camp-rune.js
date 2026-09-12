@@ -307,19 +307,6 @@ function runeVal(key){ const p = runeParse(key); if(!p.def) return 0;
 function runeGem(key){ const p = runeParse(key); if(!p.def) return 0;
   if(p.def.gem && p.def.gem[p.gd]) return p.def.gem[p.gd];
   return RUNE_GEM[p.gd] || 0; }
-// 🔷 **룬 그림은 판까지 포함된 한 장이다**(assets/icons/rune/<id>_<등급>.webp · 2026-09-04).
-//   판(육각 타일 4색)과 문양(11종)을 scripts/rune-compose.mjs 가 겹쳐 만든 25장이다.
-//   ⭐ 등급 색이 그림 안에 들어 있으므로 **키 하나로 등급까지 보여 준다** —
-//     칸·가방·상점이 같은 함수를 쓰고, 따로 색을 입히지 않는다.
-//   ⛔ 옛 data-ico(공용 아이콘 세트)로 되돌리지 말 것 — 그건 등급을 못 나타낸다.
-// 🔷 **성좌 판은 문양만 쓴다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).
-//   판(육각)은 도형으로 그린다 — 그래야 등급 색이 테두리·뒷광·번짐에 실려 **상태에 반응**한다.
-//   ⛔ 판까지 합친 그림(runeIcoSrc)으로 되돌리지 말 것 — 그건 배경과 상호작용이 없어 스티커처럼 얹혔다.
-//   ⚠ 가방·상점은 여전히 합친 그림을 쓴다(HTML 이라 SVG 도형을 못 쓴다) — 둘 다 필요하다.
-function runeGlyphSrc(key, grp){ const p = runeParse(key);
-  if(!p.def) return '';
-  const suf = (p.gd === 'uniq' && grp && grp !== 'uniq') ? ('_' + grp) : '';
-  return 'assets/icons/rune/glyph/' + p.def.id + suf + '.webp'; }
 
 //   🎨 유니크는 **앉은 성좌의 색**을 따른다(2026-09-04 사용자 확정) — grp 를 주면 그 벌을 준다.
 //     ⚠ 가방·상점처럼 성좌가 없는 자리에서는 기본(금)을 쓴다.
@@ -649,25 +636,20 @@ function _runeHexPts(x, y, r){ const q = [];
 //     낀 칸은 바깥에 얇은 겹을 하나 더 둘러 무리 속에서 즉시 읽히고, 색은 조용하게 남는다.
 //   ⛔ 십자 반짝임·후광 원을 되살리지 말 것 — 환생 트리의 어휘라 룬 판에서는 시끄러웠다.
 //   ⚠ 누르는 면은 **맨 위에 투명하게** 따로 둔다.
-/* 🎛 칸의 세기 — 목업 camp-rune-vec47-6 ④안에서 고른 값 (2026-09-04 사용자 확정).
-   ⚠ **이웃 칸 중심 사이는 55.1** 이라(고리 72 · 8칸) 칸 바깥으로 27.6 을 넘으면 옆 칸을 침범한다.
-     지금 가장 바깥이 유니크 링 둘째 = r+4.6 → 25.6 으로 안전하다.
-     ⛔ 점선 후광(r+7)을 되살리지 말 것 — 28.0 이 되어 옆 칸을 밟는다(목업에서 잰 값).
-   ⭐ 등급은 **바깥 링 수**로도 읽는다: 하급·중급 0 · 상급 1 · 유니크 2.
-     색을 못 알아봐도 형태로 갈린다. */
-const RUNE_RING1 = 2.5, RUNE_RING2 = 4.6;      // 바깥 링 — 칸 반지름에 더하는 여유
-const RUNE_RING_OP1 = 0.40, RUNE_RING_OP2 = 0.20;
-const RUNE_DOT_R = 3.2, RUNE_DOT_SZ = 0.9, RUNE_DOT_OP = 0.45;   // 유니크 꼭짓점 점 여섯
+/* 🃏 **낀 칸은 카드 그림 한 장이다**(2026-09-12 사용자 확정) — 가방·상점과 같은 에셋.
+   📐 크기는 **칸 지름 × 0.93**. 카드(128×128)의 육각이 네모의 **세로를 가득 채우므로**(실측:
+     알파 범위 세로 128 · 가로 118), `2r` 이면 옛 검은 바닥과 높이가 같고 `1.86r` 이면
+     옛 **면**(r×0.93)과 같다 — 칸 사이 숨 쉴 틈이 그대로 남는다(둘을 찍어 견줬다).
+     ⛔ 2.0 으로 올리지 말 것: 이웃과 맞닿아 고리가 답답해진다.
+     ⛔ 1.0 쯤으로 줄이지 말 것: 카드가 칸 안에 떠서 「칸 속의 작은 카드」가 된다. */
+const RUNE_CARD_K = 1.86;
+// 📏 **칸 하나가 바깥으로 뻗는 거리** ÷ 칸 반지름 — 전체 보기·팬 경계·이웃 간섭을 재는 자가
+//   이것 하나다(⛔ 값을 따로 적지 말 것). ⚠ 이웃 칸 중심 사이는 **55.1**(고리 72 · 8칸)이라
+//   칸 바깥으로 27.6 을 넘으면 옆 칸을 침범한다 — 지금은 r×0.93 = 22.8 로 넉넉하다.
+//   ⚠ 옛 「바깥 링(RUNE_RING1/2)·꼭짓점 점」은 카드가 등급을 말하면서 사라졌다(2026-09-12).
+const RUNE_CELL_OUT = RUNE_CARD_K / 2;
 // 🔁 교체 후보의 점선이 칸 밖으로 나가는 거리 — 이웃 칸 가장자리(28.0)를 넘으면 안 된다
 const RUNE_ANTS_GAP = 3.2;
-// 🔷 문양이 칸에서 차지하는 폭 ÷ 칸 반지름 (2026-09-04 사용자 지적: 「타일 내부를 너무 꽉 채운다」).
-//   ⚠ 육각 안에 들어가는 정사각의 한계는 **1.268** 이다(반변 a ≤ 0.634r). 옛 값 1.24 는
-//     그 한계에 거의 닿아 문양이 벽에 붙어 보였다. 1.00 이면 좌우로 0.13r 씩 남는다.
-//   ⛔ 1.2 이상으로 되돌리지 말 것.
-const RUNE_GLYPH_K = 1.00;
-// 육각 꼭짓점 하나 — i 번째(꼭짓점이 위)
-function _runeVtx(x, y, r, i){ const a = Math.PI / 180 * (60 * i - 90);
-  return [x + r * Math.cos(a), y + r * Math.sin(a)]; }
 
 // 칸 하나 — 잠김 / 빈칸 / 끼워짐 세 모습.
 //   ⭐ **판을 도형으로 그린다**(환생 트리 별과 같은 켜): 검은 바닥 → 면 그라데이션 + 등급색 테두리
@@ -695,35 +677,21 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
     g.push('<polygon class="rnEmIn" points="' + _runeHexPts(x, y, r * 0.93 - 1.6) + '"/>'); }
   else {
     const pp = runeParse(key), c = (RUNE_GD[pp.gd] || {}).col || '#8b95a5', uq = pp.gd === 'uniq';
-    const gd = pp.gd || 'low';
-    // ⭕ 바깥 링 — 등급을 형태로도 읽게 한다(위 설명). 하급·중급은 없다.
-    const nRing = uq ? 2 : (gd === 'high' ? 1 : 0);
-    for(let k = 0; k < nRing; k++)
-      g.push('<polygon class="rnHxR" points="'
-        + _runeHexPts(x, y, r + (k ? RUNE_RING2 : RUNE_RING1))
-        + '" style="stroke:' + c + ';stroke-width:' + (k ? .7 : .9)
-        + ';opacity:' + (k ? RUNE_RING_OP2 : RUNE_RING_OP1) + '"/>');
-    // ⬛ 검은 바닥 — 배경 사진을 눌러 앉힌다(안 깔면 칸이 배경에 뜬다)
+    // ⬛ 검은 바닥 — 배경 사진을 눌러 앉힌다(카드 속이 조금 비쳐 오로라가 올라온다)
     g.push('<polygon class="rnHxFloor" points="' + _runeHexPts(x, y, r) + '"/>');
-    // ⬡ 면 + 테두리 — 면은 위가 밝은 남색, 테두리는 흰빛→등급색. 번짐은 형태를 따라간다.
-    g.push('<polygon class="rnHx on" points="' + _runeHexPts(x, y, r * 0.93)
-      + '" style="stroke:url(#rnE' + gd + ');stroke-width:' + (uq ? 1.5 : 1.3)
-      + ';filter:drop-shadow(0 0 ' + (uq ? 4 : 3) + 'px ' + c + ')"/>');
-    // 💡 문양 뒤 광 — ⛔ blur 금지(칸이 27개다). radialGradient 로 낸다.
-    g.push('<circle class="rnBk" cx="' + X + '" cy="' + Y + '" r="' + (r * 0.72).toFixed(1)
-      + '" style="fill:url(#rnB' + gd + ')"/>');
-    // ✨ 안쪽 흰 실선 — 두께를 안 늘리고 깊이만 준다
-    g.push('<polygon class="rnHxIn2" points="' + _runeHexPts(x, y, r - Math.max(1, r * 0.073)) + '"/>');
-    // 🔶 유니크 — 꼭짓점 점 여섯. 빛을 더 쓰지 않고 「격」만 올린다.
-    if(uq) for(let k = 0; k < 6; k++){ const q = _runeVtx(x, y, r + RUNE_DOT_R, k);
-      g.push('<circle class="rnDot" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1)
-        + '" r="' + RUNE_DOT_SZ + '" style="fill:' + c + ';opacity:' + RUNE_DOT_OP + '"/>'); }
-    // 🔷 문양 — 유니크는 **앉은 성좌 색**을 따른다
+    // 🃏 **낀 칸은 카드 그림 한 장이다**(2026-09-12 사용자 확정) — 가방·상점과 **같은 에셋**이다.
+    //   ⭐ 손으로 그리던 것(바깥 링 · 면 그라데이션 · 뒷광 · 안쪽 흰 선 · 꼭짓점 점 · 문양)을
+    //     전부 카드가 대신한다 — 카드에 이미 테두리·등급색·속광이 그려져 있어 겹치면 테가 둘이 된다.
+    //   ⛔ 손그림을 도로 얹지 말 것(두 겹이 된다) · ⛔ 가방·상점과 다른 그림을 쓰지 말 것.
+    //   ⚠ 클래스는 **`rnImg` 그대로** 둔다 — 가림(`.veil`)·날아오기·부풀림이 그 이름을 잡는다.
+    //   💡 등급색 번짐만 남긴다 — 이게 없으면 배경과 상호작용이 없어 **스티커처럼 얹혀** 보인다
+    //     (2026-09-04 에 합친 그림을 물렸던 이유가 그것이라, 이번엔 번짐을 함께 준다).
     { const gp = (kind === 'uniq') ? (RUNE_GRPS[i] || '') : '';
-      const src = runeGlyphSrc(key, gp), w = r * RUNE_GLYPH_K;
+      const src = runeIcoSrc(key, gp), w = r * RUNE_CARD_K;
       if(src) g.push('<image class="rnImg" href="' + src + '"'
         + ' x="' + (x - w / 2).toFixed(1) + '" y="' + (y - w / 2).toFixed(1) + '"'
-        + ' width="' + w.toFixed(1) + '" height="' + w.toFixed(1) + '"/>'); }
+        + ' width="' + w.toFixed(1) + '" height="' + w.toFixed(1) + '"'
+        + ' style="filter:drop-shadow(0 0 ' + (uq ? 4 : 3) + 'px ' + c + ')"/>'); }
     // ⛔ 칸 밖 아래의 % 는 뺐다(2026-09-04 사용자 확정) — 스물일곱 칸에 숫자가 붙으면
     //   판이 시끄럽고, 값은 길게 눌러 뜨는 쪽지와 가방 줄이 이미 말한다. 
   }
@@ -770,17 +738,10 @@ function _runeZoneSvg(){
       + '" style="fill:' + gi.col + '">' + gi.nm + '</text>'); }
   return g.join(''); }
 function _runeDefs(){
-  let d = '<defs><linearGradient id="rnFace" x1="0" y1="0" x2="0" y2="1">'
-    + '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>';
-  for(const k in RUNE_GD){ const c = RUNE_GD[k].col;
-    d += '<linearGradient id="rnE' + k + '" x1="0" y1="0" x2="0" y2="1">'
-      + '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
-      + '<stop offset=".42" stop-color="' + c + '"/>'
-      + '<stop offset="1" stop-color="' + c + '" stop-opacity=".34"/></linearGradient>'
-      + '<radialGradient id="rnB' + k + '">'
-      + '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>'
-      + '<stop offset=".62" stop-color="' + c + '" stop-opacity=".07"/>'
-      + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
+  // 🃏 **낀 칸의 그라데이션은 없앴다**(2026-09-12) — 칸이 카드 그림 한 장이 되면서
+  //   면(#rnFace) · 테두리(#rnE<등급>) · 뒷광(#rnB<등급>)을 쓰는 곳이 사라졌다.
+  //   ⛔ 되살리지 말 것: 카드에 이미 그려져 있어 겹치면 테가 둘이 된다.
+  let d = '<defs>';
   // 🌌 성좌 구역의 오로라 — **환생 트리의 성운과 같은 문법**이다(2026-09-04 사용자 확정:
   //   「환생 트리 구역의 배경처럼 뒤에 나오는 은은한 빛」).
   //   ⭐ 요령은 **아주 넓게 · 아주 옅게**다(트리: 타원 rx186 · 세기 .05, 중심 빛 r300).
@@ -795,7 +756,7 @@ function _runeDefs(){
       + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".07"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
   // 🎨 **빈 칸 테두리는 갈래 색**이다(2026-09-04 사용자 확정 · 목업 camp-rune-edge-8 ③안).
-  //   ⭐ 낀 칸의 테두리(#rnE<등급>)와 **같은 어휘**다 — 위가 흰빛, 아래로 갈수록 색.
+  //   ⭐ 카드 그림의 테두리와 **같은 어휘**다 — 위가 흰빛, 아래로 갈수록 색.
   //     빛이 위에서 오는 결이 판 전체에 통하고, 칸 하나만 봐도 어느 갈래의 자리인지 읽힌다.
   //   ⚠ 세기는 낀 칸보다 **약하다**(흰빛 .92 → .34). 빈 칸이 더 시끄러우면 끼웠을 때
   //     달라지는 것이 없다. ⛔ 올리지 말 것.

@@ -2196,10 +2196,8 @@
      없어 스티커처럼 얹혔다. 그 그림은 **가방·상점**(HTML)이 계속 쓴다.
    ⚠ 색·굵기·번짐은 js 가 인라인으로 얹는다(등급마다 달라서) — 여기서는 공통 성질만 정한다. */
 #campRune .rnHxFloor{fill:#000;opacity:.55;pointer-events:none}
-#campRune .rnHxR{fill:none;pointer-events:none}                    /* 바깥 링 — 등급을 형태로 */
-#campRune .rnBk{pointer-events:none}                                /* 문양 뒤 광 */
-#campRune .rnHxIn2{fill:none;stroke:#fff;stroke-width:.6;opacity:.16;pointer-events:none}
-#campRune .rnDot{pointer-events:none}/* 빈 칸에 도는 숨 */
+
+/* 빈 칸에 도는 숨 */
 #campRune .rnHx{stroke-width:1.2}
 /* 🔒 잠긴 칸 — 흐릿하되 **얕게만** 비친다. opacity 로 통째로 흐리면(옛 .40)
    뒤의 구역 오로라가 그대로 들어온다 — 면만 살짝 열어 둔다. */
@@ -2210,8 +2208,6 @@
      ⛔ .8 아래로 내리지 말 것 — 물들기 시작한다(스모크가 하한을 잰다). */
 #campRune .rnHx.em{fill:url(#rnWell);fill-opacity:.86;stroke:rgba(180,205,235,.24);stroke-width:1.1}
 #campRune .rnEmIn{fill:none;stroke:#fff;stroke-width:.5;opacity:.07;pointer-events:none}
-/* 면은 **검게 둔다** — 등급색으로 채우면 그 위의 문양이 색에 묻힌다(트리에서 얻은 규칙). */
-#campRune .rnHx.on{fill:url(#rnFace)}
 /* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
 #campRune .rnHxSel{fill:none;stroke:var(--acc-sel);stroke-width:1.1;opacity:.9}
 #campRune .rnLkT{fill:#49525d;font-family:var(--font-num);font-size:6.8px;text-anchor:middle}

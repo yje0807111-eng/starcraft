@@ -3336,28 +3336,33 @@ async function groupLobby(){
           put('tap','low'); put('gas','high'); put('speed','uniq');   // 🎚 유니크는 등급이라 아무 룬이나 된다
           campRuneRender(); await sleep(40);
           const svg=el.querySelector('.rnMap svg');
-          // ① 판이 도형이다 — 등급 그라데이션이 defs 에 있어야 한다
-          assert(svg.querySelector('#rnFace'),'칸 면 그라데이션이 없다 — 판이 다시 그림 한 장이 됐다');
-          for(const gd of ['low','mid','high','uniq'])
-            assert(svg.querySelector('#rnE'+gd) && svg.querySelector('#rnB'+gd),
-              '등급 '+gd+' 의 테두리·뒷광 그라데이션이 없다');
-          // ② 문양은 **문양만** 담은 그림이다(판이 안 구워져 있다)
+          // ① **빈 칸은 도형이다** — 갈래 색 테두리·파인 홈 그라데이션이 defs 에 있어야 한다
+          // ⚠ 유니크 칸도 **제 성좌 갈래** 색이다(runeCellGrp) — 'uniq' 라는 테두리는 없다
+          for(const gk of RUNE_GRPS)
+            assert(svg.querySelector('#rnEg'+gk), '빈 칸 '+gk+' 테두리 그라데이션이 없다');
+          assert(svg.querySelector('#rnWell'),'빈 칸의 파인 홈이 없다');
+          // ② 🃏 **낀 칸은 카드 그림 한 장이다**(2026-09-12 사용자 확정) — 가방·상점과 **같은 에셋**.
+          //   ⛔ 문양만 담은 그림(/glyph/)으로 되돌리지 말 것 · ⛔ 손그림 테두리를 얹지 말 것.
           { const im=svg.querySelector('image.rnImg');
-            assert(im,'칸에 문양이 없다');
-            assert((im.getAttribute('href')||'').indexOf('/glyph/')>=0,
-              '문양이 판까지 합친 그림이다: '+im.getAttribute('href')); }
-          // ③ 등급을 **형태로도** 읽는다 — 상급 1링 · 유니크 2링 · 하급 0링
-          assert(svg.querySelectorAll('.rnHxR').length===3,
-            '바깥 링 수가 다르다(상급 1 + 유니크 2 = 3): '+svg.querySelectorAll('.rnHxR').length);
-          assert(svg.querySelectorAll('.rnDot').length===6,
-            '유니크 꼭짓점 점이 여섯이 아니다: '+svg.querySelectorAll('.rnDot').length);
+            assert(im,'낀 칸에 카드 그림이 없다');
+            const href=im.getAttribute('href')||'';
+            assert(href.indexOf('/glyph/')<0,
+              '낀 칸이 다시 문양만 그린다: '+href);
+            // ⭐ 가방이 쓰는 것과 **같은 함수·같은 경로**여야 한다(같은 UI 를 두 벌로 만들지 않는다)
+            const k0=campRuneEq('norm').find(Boolean)||campRuneEq('uniq').find(Boolean);
+            assert(k0,'준비가 틀렸다 — 낀 룬이 없다');
+            assert(href===runeIcoSrc(k0) || href===runeIcoSrc(k0,'eco')
+                || href===runeIcoSrc(k0,'war') || href===runeIcoSrc(k0,'grow'),
+              '카드 경로가 runeIcoSrc 와 다르다: '+href); }
+          // ③ 손으로 그리던 껍데기는 **없다** — 카드에 이미 있어 겹치면 테가 둘이 된다
+          for(const c of ['.rnHxR','.rnDot','.rnBk','.rnHxIn2','.rnHx.on'])
+            assert(!svg.querySelector(c), '카드 위에 옛 손그림이 다시 얹혔다: '+c);
           // ④ ⛔ **이웃 칸을 밟지 않는다** — 고리 8칸이라 중심 사이가 좁다.
           //   점선 후광(r+7)을 되살리면 여기서 걸린다(목업에서 28.0 vs 한계 27.6 이었다).
-          //   ⚠ 고리 위 칸이 가질 수 있는 가장 바깥은 **상급 링 하나**(RUNE_RING1)다 —
-          //     링 둘·점 여섯은 유니크의 것이고 유니크는 가운데에만 앉는다.
-          //     ⛔ 그 둘까지 더해 재지 말 것: 있지도 않은 장식으로 고리를 못 좁히게 된다(2026-09-04).
+          //   ⚠ 칸이 바깥으로 뻗는 거리는 **카드 그림의 반**(RUNE_CELL_OUT)이다 — 옛 「상급 링」은
+          //     카드가 등급을 말하면서 사라졌다(2026-09-12). ⛔ 값을 여기 손으로 적지 말 것.
           { const gap=RUNE_RING*Math.sin(Math.PI/RUNE_CONS);
-            const reach=RUNE_R_N+RUNE_RING1;
+            const reach=RUNE_R_N*RUNE_CELL_OUT;
             assert(reach<=gap,'칸 장식이 옆 칸을 밟는다: '+reach.toFixed(1)+' > '+gap.toFixed(1)); }
         } finally { C2.lvBest=keepB2; C2.rune=keepR2; campRuneRender(); } }
       // 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
@@ -3408,16 +3413,16 @@ async function groupLobby(){
             d.push(Math.hypot(RUNE_CT[i][0]-RUNE_CT[j][0], RUNE_CT[i][1]-RUNE_CT[j][1]));
           assert(Math.max(...d)-Math.min(...d)<2,'정삼각이 아니다: '+d.map(v=>v.toFixed(0)).join('/'));
           // ⛔ 성좌끼리 겹치면 어느 무리인지 안 읽힌다 — 칸 바깥까지 친 반지름으로 잰다
-          const rad=RUNE_RING+RUNE_R_N+Math.max(RUNE_RING1,RUNE_RING2,RUNE_DOT_R+RUNE_DOT_SZ);
+          const rad=RUNE_RING+RUNE_R_N*RUNE_CELL_OUT;
           assert(Math.min(...d)>=rad*2,'성좌가 겹친다: 간격 '+Math.min(...d).toFixed(0)+' < '+(rad*2).toFixed(0));
           assert(RUNE_CT[0][1]<RUNE_CT[1][1] && Math.abs(RUNE_CT[1][1]-RUNE_CT[2][1])<2,
             '위·왼쪽·오른쪽 배치가 아니다');
           assert(RUNE_CT[1][0]<RUNE_CT[2][0],
             '전투(왼쪽)와 성장(오른쪽)이 뒤집혔다: '+RUNE_CT[1]+' / '+RUNE_CT[2]); }
         // 🎯 **성좌 안에서도 칸이 안 겹친다** — 고리를 좁힐수록 이웃끼리·가운데와 붙는다.
-        //   ⚠ 고리 칸의 바깥은 상급 링까지 친 값이고, 가운데는 유니크(링 2 · 점)를 친다.
-        { const rN = RUNE_R_N + RUNE_RING1;
-          const rU = RUNE_R_U + Math.max(RUNE_RING2, RUNE_DOT_R + RUNE_DOT_SZ);
+        //   ⚠ 칸의 바깥은 **카드 그림의 반**이다(RUNE_CELL_OUT · 등급마다 같다).
+        { const rN = RUNE_R_N * RUNE_CELL_OUT;
+          const rU = RUNE_R_U * RUNE_CELL_OUT;
           const chord = 2 * RUNE_RING * Math.sin(Math.PI / RUNE_CONS);
           assert(chord > rN * 2,
             '고리 위 이웃 칸이 겹친다: 현 '+chord.toFixed(1)+' ≤ '+(rN*2).toFixed(1));
@@ -3849,13 +3854,17 @@ async function groupLobby(){
         // 🔇 칸 밖 아래의 % 는 뺐다 — 스물일곱 칸에 숫자가 붙으면 판이 시끄럽다
         assert(!$('rnG').querySelector('.rnVl'),
           '칸 아래 % 가 되살아났다 — 값은 쪽지와 가방 줄이 말한다');
-        // 📐 문양은 칸 안에 **여유 있게** 들어간다 — 육각의 한계(반지름×1.268)에 닿지 않는다
+        // 📐 🃏 **카드는 칸을 채우되 이웃을 안 밟는다** — 크기의 단일 소스는 RUNE_CARD_K 다.
+        //   ⚠ 옛 문양(칸 반지름의 1.00배)으로 되돌아가면 여기서 걸린다.
         { const img = $('rnG').querySelector('.rnImg');
-          assert(img, '낀 칸의 문양이 없다');
+          assert(img, '낀 칸의 카드 그림이 없다');
           const w = +img.getAttribute('width');
-          assert(w > 0 && w <= RUNE_R_N * 1.10,
-            '문양이 칸을 꽉 채운다: ' + w + ' (한계 ' + (RUNE_R_N * 1.268).toFixed(1) + ')');
-          glyphNote = '문양 ' + w.toFixed(0) + '/' + (RUNE_R_N * 1.268).toFixed(0); }
+          assert(Math.abs(w - RUNE_R_N * RUNE_CARD_K) < 0.05,
+            '카드 크기가 표와 다르다: ' + w + ' vs ' + (RUNE_R_N * RUNE_CARD_K).toFixed(1));
+          assert(w > RUNE_R_N * 1.4, '카드가 칸 안에 떠 있다 — 옛 문양 크기로 돌아갔다: ' + w);
+          const chord = 2 * RUNE_RING * Math.sin(Math.PI / RUNE_CONS);
+          assert(w < chord, '카드가 옆 칸을 밟는다: ' + w.toFixed(1) + ' ≥ ' + chord.toFixed(1));
+          glyphNote = '카드 ' + w.toFixed(0) + '/' + chord.toFixed(0); }
         // ✈ **빈 칸에 넣을 때도 날아서 들어간다**(2026-09-04 사용자 확정)
         //   ⛔ 교체만 날아가게 두지 말 것 — 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
         { const R5 = campRuneState(); R5.norm = []; R5.uniq = []; campRuneTouch();
@@ -4303,15 +4312,14 @@ async function groupLobby(){
     const gds=RUNE_GRADES;                   // ⚠ 유니크는 **이미 등급표 안에 있다**(넷)
     const want=[], bad=[];
     for(const d of RUNE_LIST) for(const gd of gds) want.push(runeIcoSrc(runeKey(d.id, gd)));
-    // 🌌 성좌 판은 **문양만** 쓴다 — 그것도 함께 잰다(칸이 빈 채로 보이던 길이 여기다)
-    for(const d of RUNE_LIST) want.push(runeGlyphSrc(runeKey(d.id, 'mid')));
+    // 🌌 성좌 판도 **같은 카드**를 쓴다(2026-09-12) — 문양만 담은 그림(/glyph/)은 다락으로 갔다.
     for(const src of want){
       if(!src){ bad.push('(빈 경로)'); continue; }
       try{ const r=await fetch(src, { cache:'no-store' }); if(!r.ok) bad.push(src); }
       catch(e){ bad.push(src+' ('+e.message+')'); } }
     assert(!bad.length, bad.length+'장이 없다 — node scripts/rune-compose.mjs 를 돌릴 것: '
       +bad.slice(0,6).join(' ／ '));
-    return '타일 '+(RUNE_LIST.length*gds.length)+'장 · 문양 '+RUNE_LIST.length+'장 · 빠진 것 0';
+    return '카드 '+(RUNE_LIST.length*gds.length)+'장 · 빠진 것 0';
   });
 
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.
