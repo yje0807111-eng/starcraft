@@ -6199,11 +6199,24 @@ function campRaceSel(k){ if(!STK_RACES[k] || k === _campRacePick) return;
 //   검은 판(z 88)은 종족 판(z 64)보다 위라, 캠프가 준비돼도 화면에는 안 보인다.
 //   ⛔ campEnter() 를 await 뒤로 옮기지 말 것. ⛔ 검은 판 없이 campEnter() 만 부르면
 //     캠프가 잠깐 보였다가 덮이고 다시 나와 — 그게 「깜빡인다」의 정체였다(2026-08-27).
+// 🏕 **첫 진입 연출이 도는 중인가** — 부팅(enterAfterWarm)이 제 마무리를 여기에 넘길지 이걸로 판단한다.
+//   ⛔ 둘이 다 걷으면 검은 판이 캠프를 세우는 도중에 걷혀 「띡」 하고 끊긴다(2026-09-12 사용자 신고).
+let _campIntroOn = false;
+function campIntroOn(){ return _campIntroOn; }
 function campRaceToCamp(){
   const ph = document.getElementById('phone');
   const hasBlack = (typeof titleToBlack === 'function' && typeof titleOutroEnd === 'function' && ph);
   if(hasBlack) ph.classList.add('artMark');   // 로고를 다시 켠다 — titleOutroEnd 가 앞서 걷었다
-  const black = hasBlack ? titleToBlack() : null;   // 검은 판이 덮이기 시작한다(기다리지 않는다)
+  _campIntroOn = hasBlack;
+  // ⚠ **부팅에서 오면 검은 판이 이미 올라와 있다**(enterAfterWarm 이 titleToBlack 을 기다린 뒤 부른다).
+  //   그때 또 덮으면 페이드가 두 번이라 검은 화면이 1.6초로 늘어진다 — 덮는 시간은 건너뛰고 **머무는 시간만** 쓴다.
+  //   ⚠ `showAppScreen` 이 방금 `artBlack` 을 떼었을 수 있다(titleArtShow(false)) — 부팅이 남긴 표시도 함께 본다.
+  const _already = !!(hasBlack && (ph.classList.contains('artBlack') || (typeof window !== 'undefined' && window._campBootBlack)));
+  if(_already) ph.classList.add('artBlack');   // 같은 태스크 안이라 다시 붙여도 페이드가 새로 돌지 않는다
+  const black = !hasBlack ? null
+    : (_already ? ((typeof _sleep === 'function') ? _sleep((typeof TITLE_BLACK_HOLD !== 'undefined') ? TITLE_BLACK_HOLD : 380)
+                                                 : Promise.resolve())
+                : titleToBlack());   // 검은 판이 덮이기 시작한다(기다리지 않는다)
   // ⛔ campEnter() 는 **즉시** 부른다. 검은 화면 뒤로 미뤄 봤더니(정지를 숨기려고) 캠프 상태를
   //    바로 기대하는 코드가 여럿이라 스모크 6 개가 깨졌다(2026-08-27). 그 준비 비용 때문에
   //    검은 판이 덮이는 도중 280ms 정도 얼어붙지만, 그 구간은 어차피 어두워지는 중이라 덜 띈다.
@@ -6228,10 +6241,10 @@ function campRaceToCamp(){
       ov.classList.add('hide'); }
     if(ph) ph.classList.remove('campPick');   // 캠프가 켜지면 campMode 가 이어받는다
   };
-  if(!black){ done(); campEnterAnim(); return; }
+  if(!black){ done(); campEnterAnim(); _campIntroOn = false; return; }
   // 🎓 튜토리얼은 **로고가 걷히는 그 자리에서** 뜬다(2026-09-04 사용자 확정 — 맵이 다 커질 때까지
   //   기다리면 2.7초라 「너무 느리다」였다). ⛔ campEnterAnim 이 끝난 뒤로 미루지 말 것.
-  black.then(function(){ done(); campEnterAnim(); titleOutroEnd();
+  black.then(function(){ done(); campEnterAnim(); titleOutroEnd(); _campIntroOn = false;
     if(typeof tutoKick === 'function') tutoKick(); });   // 다 덮인 뒤 걷으며 다가온다
 }
 

@@ -2038,7 +2038,6 @@
      프레임 녹화 실측: 밝기 68.4 → **35.4** → 65.8 (약 20ms). opacity 를 아무리 맞춰도 안 고쳐지는 이유다.
      ⇒ 종족 선택 중에는 홈에 볼 것이 없으니(campPick 이 본문을 이미 숨긴다) 통째로 비운다.
         디졸브가 끝나 raceIn 이 걷힐 때 홈이 돌아오지만, 그때는 불투명한 종족 판이 덮고 있어 안 보인다. */
-  #phone.raceIn #homeScreen{opacity:0;transition:none}
   #campRaceOv.closing{opacity:0;animation:none;transition:opacity var(--campOvDur,.4s) ease;pointer-events:none}
 
   /* ══ 💎 미네랄 채굴 판 (2026-08-27) ═══════════════════════════════════
