@@ -16206,6 +16206,60 @@ async function groupLobby(){
     return '등폭 5칸 · 뒤로 정사각 · 소셜 도크 상주';
   });
 
+  // 🎬 유즈맵 소셜 도크 — 여닫을 때 **높이가 자라고 줄어드는 것이 보여야 한다**(2026-09-12 사용자 요청).
+  //   ⛔ 이 검사가 있는 이유: 옛 코드는 `flex:0 0 auto` + `display:none` 이라 전환할 상대가 없어
+  //     한 프레임 만에 튀었다. 둘 중 하나만 되돌아가도 애니가 통째로 사라진다(눈에는 잘 안 띈다).
+  await step('유즈맵 소셜 도크: 여닫는 애니(높이가 곡선으로 자란다)', async()=>{
+    skipIf(typeof mapDockToggle!=='function','도크 토글 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','도크'); saveMeta(); }
+    // ⚠ 화면이 **머물러 있는 것까지** 확인하고 시작한다. ONLY 필터로 이 단계만 돌리면 앞 단계가
+    //   없어 부팅이 아직 끝나지 않은 채라, 열어 놓아도 부팅이 끝나며 홈으로 덮어 버린다
+    //   (실측: 열자마자 재면 통과하는데 0.4초 뒤에 높이가 0 이 됐다).
+    for(let i=0;i<14;i++){
+      if(!visible($('mapSelect'))){ navGo('map');
+        if(!visible($('mapSelect')) && typeof showAppScreen==='function'){ showAppScreen('mapSelect');
+          if(typeof mapDockSocial==='function') mapDockSocial(); } }
+      await sleep(200);
+      if(visible($('mapSelect'))){ await sleep(200); if(visible($('mapSelect'))) break; } }
+    assert(visible($('mapSelect')),'유즈맵 화면이 안 열림');
+    const d=$('msSocialDock'); assert(d,'소셜 도크가 없음');
+    assert(d.getBoundingClientRect().height>4,'도크가 화면에 없다(높이 0)');
+    const so=d.querySelector('.msSocial'); assert(so,'도크 안에 소셜이 없음');
+    // ① 접힌 쪽이 **정해진 높이**여야 한다 — auto 면 전환할 상대가 없다
+    { const cv=getComputedStyle(d).getPropertyValue('--dockPeek').trim();
+      assert(cv,'--dockPeek 토큰이 없음(접힌 높이가 auto 로 돌아갔다)'); }
+    // ② 접혔을 때 소셜을 display:none 으로 숨기면 안 된다(전환이 안 되는 성질)
+    if(!d.classList.contains('collapsed')) mapDockToggle();
+    await sleep(420);
+    { const cs=getComputedStyle(so);
+      assert(cs.display!=='none','접힌 소셜이 display:none 이다 — 애니가 통째로 죽는다');
+      assert(+cs.opacity<=0.05,'접혔는데 소셜이 그대로 보인다: opacity '+cs.opacity);
+      assert(cs.visibility==='hidden','접힌 소셜이 아직 탭 키에 잡힌다: visibility '+cs.visibility); }
+    const hClosed=d.getBoundingClientRect().height;
+    // ③ 펴면 **중간 높이**를 거친다 — 한 프레임 만에 끝나면 애니가 없는 것이다
+    const trace=async()=>{ const out=[]; mapDockToggle();
+      for(let i=0;i<10;i++){ out.push(d.getBoundingClientRect().height);
+        await new Promise(r=>requestAnimationFrame(r)); }
+      return out; };
+    const up=await trace(); await sleep(500);
+    const hOpen=d.getBoundingClientRect().height;
+    assert(hOpen>hClosed+80,'펴도 높이가 안 자람: '+hClosed.toFixed(1)+' → '+hOpen.toFixed(1)+' · 화면보임='+visible($('mapSelect'))+' · 추적='+up.map(h=>h.toFixed(0)).join('/'));
+    const mid=up.filter(h=>h>hClosed+4 && h<hOpen-4);
+    assert(mid.length>=3,'펴는 중간 높이가 '+mid.length+'컷뿐 — 애니 없이 튀었다: '+up.map(h=>h.toFixed(0)).join('/'));
+    // ④ 접을 때도 같다 — 그리고 **접기가 펴기보다 짧다**(치우는 동작은 기다릴 이유가 없다)
+    const dn=await trace(); await sleep(500);
+    const midD=dn.filter(h=>h>hClosed+4 && h<hOpen-4);
+    assert(midD.length>=3,'접는 중간 높이가 '+midD.length+'컷뿐: '+dn.map(h=>h.toFixed(0)).join('/'));
+    assert(midD.length<=mid.length,'접기가 펴기보다 느리다: 펴기 '+mid.length+'컷 · 접기 '+midD.length+'컷');
+    // ⑤ 속도감 = **앞이 빠른 곡선**이다. 절반 지점을 전체의 앞쪽 절반 안에 지나야 한다.
+    //    ⛔ linear 로 되돌리면 여기서 걸린다.
+    { const half=hClosed+(hOpen-hClosed)/2;
+      const i=up.findIndex(h=>h>=half);
+      assert(i>=0 && i<=Math.ceil(mid.length/2)+1,'펴는 곡선이 앞에서 안 빠르다(절반까지 '+i+'프레임)'); }
+    mapDockToggle(); await sleep(400);   // 상태 정리(기본 = 펴 둔 채로 두지 않는다)
+    return '펴기 '+mid.length+'컷 · 접기 '+midD.length+'컷 · '+hClosed.toFixed(1)+'↔'+hOpen.toFixed(1)+'px';
+  });
+
   await step('상점: 전용 화면(팝업 아님) · 네비/마을 구역 두 경로', async()=>{ skipIf(typeof openShop!=='function','상점 화면 없음');
     if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','상점'); saveMeta(); }
     navGo('shop'); await sleep(60);
