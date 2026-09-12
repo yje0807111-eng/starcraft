@@ -2843,11 +2843,25 @@ async function groupLobby(){
         assert(N[0]===5,'일반 첫 칸이 Lv.5 가 아니다: Lv.'+N[0]);
         assert(String(U)==='15,30,50','유니크 해금 레벨이 15/30/50 이 아니다: '+U);
         assert(Math.max(N[N.length-1],U[U.length-1])===50,'다 열리는 레벨이 50 이 아니다');
-        for(let i=1;i<N.length;i++) assert(N[i]>=N[i-1],'일반 해금 레벨이 거꾸로 간다: '+N);
-        // 📐 **성좌가 끝나야 그 한가운데가 열린다** — 각 성좌의 마지막 칸이 제 유니크보다 낮아야 한다
-        for(let c=0;c<U.length;c++)
-          assert(N[(c+1)*RUNE_CONS-1] < U[c],
-            '성좌 '+(c+1)+' 의 마지막 칸(Lv.'+N[(c+1)*RUNE_CONS-1]+')이 유니크(Lv.'+U[c]+') 뒤에 온다'); }
+        // 성좌 **안에서는** 오름차순(성좌끼리는 번갈아 열리므로 전체가 오름차순은 아니다)
+        for(let c=0;c<RUNE_GRPS.length;c++)
+          for(let j=1;j<RUNE_CONS;j++)
+            assert(N[c*RUNE_CONS+j]>=N[c*RUNE_CONS+j-1],'성좌 '+(c+1)+' 안에서 해금 레벨이 거꾸로 간다: '+N);
+        // 🔁 **갈래가 번갈아 열린다**(2026-09-12) — ⛔ 성좌를 통째로 먼저 열지 말 것:
+        //   칸은 제 갈래의 룬만 받으므로 그러면 세 번째 갈래가 Lv.31 까지 잠긴다.
+        { const order=[];                       // (레벨, 성좌) 를 열리는 순서대로
+          for(let i=0;i<N.length;i++) order.push({lv:N[i], c:Math.floor(i/RUNE_CONS), i:i});
+          order.sort((a,b)=> a.lv-b.lv || a.i-b.i);
+          for(let k=0;k<order.length;k++)
+            assert(order[k].c===k%RUNE_GRPS.length,
+              k+'번째로 열리는 칸이 성좌 '+(order[k].c+1)+' 이다 — 번갈아 열려야 한다: '
+              +order.map(o=>o.lv+'/'+(o.c+1)).join(' ')); }
+        // ⭐ 그 결과 **세 갈래가 한 자릿수 레벨에서 다 열린다** — 이게 이 배치의 목적이다
+        { const third=[...N].sort((a,b)=>a-b)[RUNE_GRPS.length-1];
+          assert(third<=10,'세 갈래가 다 열리는 레벨이 너무 늦다: Lv.'+third);
+          for(let c=0;c<RUNE_GRPS.length;c++)
+            assert(N.slice(c*RUNE_CONS,(c+1)*RUNE_CONS).filter(v=>v<=third).length>=1,
+              'Lv.'+third+' 인데 성좌 '+(c+1)+' 에 칸이 하나도 없다'); } }
       // ② 아직 Lv.5 가 아니면 한 칸도 안 열린다 — 잠긴 칸에 여는 레벨이 적혀 안내가 된다
       C.lvBest=1; C.lv=1;
       assert(campRuneBestLv()===1,'기록이 없는데 최고 레벨이 1 이 아니다: '+campRuneBestLv());
@@ -3422,11 +3436,10 @@ async function groupLobby(){
       // 성좌 셋 — 한 무리를 다 열면 그 한가운데 유니크가 열린다
       assert(RUNE_SLOT_LV.norm.length===RUNE_CONS*RUNE_SLOT_LV.uniq.length,
         '일반 칸이 성좌 수로 안 나뉜다: '+RUNE_SLOT_LV.norm.length+' / '+RUNE_CONS);
-      for(let c=0;c<RUNE_SLOT_LV.uniq.length;c++){
-        const last=RUNE_SLOT_LV.norm[(c+1)*RUNE_CONS-1];
-        assert(RUNE_SLOT_LV.uniq[c]>last,
-          '성좌 '+(c+1)+' 의 유니크가 그 무리를 다 열기 전에 열린다: Lv.'+RUNE_SLOT_LV.uniq[c]
-          +' ≤ Lv.'+last); }
+      // 🎚 유니크는 **15·30·50 고정**이다(2026-09-12) — 옛 「성좌를 다 열면 중심」 규칙은 버렸다.
+      //   ⛔ 되돌리지 말 것: 갈래를 번갈아 열면 성좌 셋이 같이 차서 유니크가 Lv.44~49 에 몰린다.
+      assert(String(RUNE_SLOT_LV.uniq)==='15,30,50',
+        '유니크 해금 레벨이 15/30/50 이 아니다: '+RUNE_SLOT_LV.uniq);
       // 🎚 첫 칸은 **Lv.5**다(2026-09-12 사용자 확정 · 옛 규칙은 Lv.1 한 칸이었다).
       //   그때 **딱 하나**만 열려야 한다 — 한 번에 둘이 열리면 「하나씩 열린다」가 깨진다.
       { const first=RUNE_SLOT_LV.norm[0];
