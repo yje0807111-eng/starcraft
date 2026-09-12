@@ -876,6 +876,41 @@ async function groupLobby(){
       assert(R2.norm && R2.norm[0]===_rnKey,'환생하니 끼워 둔 룬이 빠졌다'); }
     return '조건·공식·먼 목표·확인 ok';
     }finally{ campRebCancel(); campRebClose(); } });
+  // 🔔 **캠프에도 알림이 보인다** — `toast()` 는 #chatLog 에 글을 넣는데, 2026-08-25 부터
+  //   캠프가 채팅바와 함께 그 줄까지 숨기고 있었다(환생·완주·자원 부족이 전부 안 보였다 · 2026-09-12 고침).
+  //   ⛔ `#phone.campMode #chatLog{display:none}` 으로 되돌리지 말 것 — 채팅 **바**만 뺀다.
+  await step('캠프: 알림이 화면에 보인다(채팅바는 빼고 알림 줄은 남긴다)', async()=>{
+    skipIf(typeof campOpen!=='function' || typeof campSay!=='function','캠프 없음');
+    if(typeof CHAR==='function' && !CHAR()){ profCreateChar('ranger','알림'); saveMeta(); }
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    if(!C.race) C.race='terran';
+    // ⚠ 캠프가 **머물러 있는 것까지** 기다린다 — ONLY 필터로 이 단계만 돌리면 부팅이 아직 안 끝나
+    //   열어 놓아도 부팅이 끝나며 덮어 버린다(유즈맵 도크 단계에서 같은 일을 겪었다).
+    const ph=$('phone');
+    for(let i=0;i<14;i++){
+      if(!ph.classList.contains('campMode')){ showAppScreen('homeScreen'); campOpen(); }
+      await sleep(200);
+      if(ph.classList.contains('campMode')){ await sleep(200);
+        if(ph.classList.contains('campMode')) break; } }
+    assert(ph.classList.contains('campMode'),'캠프 모드가 아니다: '+ph.className);
+    const lg=$('chatLog'); assert(lg,'알림 줄(#chatLog)이 없다');
+    campSay('🔔 스모크 알림 확인'); await sleep(80);
+    const cs=getComputedStyle(lg);
+    assert(cs.display!=='none','캠프에서 알림 줄이 display:none 이다 — 모든 toast 가 사라진다');
+    assert(cs.visibility==='visible','캠프에서 알림 줄이 visibility:hidden 이다');
+    const r=lg.getBoundingClientRect();
+    assert(r.width>40 && r.height>4,'알림 줄이 자리를 못 받았다: '+Math.round(r.width)+'x'+Math.round(r.height));
+    assert([...lg.children].some(e=>/스모크 알림 확인/.test(e.textContent)),'말한 것이 줄에 안 들어갔다');
+    // 🚫 채팅 **바**는 그대로 빠져 있어야 한다(캠프는 멀티 채팅이 붙을 자리가 아니다)
+    { const bar=$('chatBar');
+      assert(!bar || getComputedStyle(bar).display==='none','캠프에 채팅 입력바가 살아났다'); }
+    // 📐 좌상단 던전 칩을 밟지 않는다 — 칩이 재화 바 밖으로 내려오므로 그 아래여야 한다
+    { const chip=$('curTitle');
+      if(chip){ const cr=chip.getBoundingClientRect();
+        assert(r.top >= cr.bottom - 1,'알림 줄이 던전 칩을 밟는다: 줄 '+Math.round(r.top)+' · 칩 밑 '+Math.round(cr.bottom)); } }
+    return '줄 보임 · 칩 안 밟음 · 입력바 없음';
+  });
+
   // 📈 **레벨 — 판 안의 성장 축**(2026-09-11 · GAME_DIRECTION §0-A 「새 뼈대」).
   //   옛 1차 환생을 대체한 층이다. 여기서 재는 것은 「두 곡선의 관계」다 —
   //   적이 주는 경험치는 난이도에 비례하고, 레벨업 요구량은 **그보다 더 빨리** 커야 한다.
@@ -899,7 +934,12 @@ async function groupLobby(){
       C.dg=0; C.cleared=0;
       // ③ 쌓으면 오르고, 오른 만큼 **포인트**가 붙는다(⛔ 레벨이 배수를 직접 주지 않는다)
       C.lv=1; C.xp=0; C.lvPts=0;
+      const _lg=$('chatLog'), _n0=_lg?_lg.children.length:0;
       const ups=campAddXp(campXpNeed(1)+campXpNeed(2));
+      // 📣 **말해 준다** — 알림이 없으면 레벨이 올라도 플레이어가 모른다(2026-09-12)
+      if(_lg){ const line=[..._lg.children].slice(_n0).map(e=>e.textContent).join(' | ');
+        assert(/Lv\.\s*3/.test(line),'레벨이 올랐는데 알림이 없다: "'+line+'"');
+        assert(/포인트/.test(line),'알림이 성장 포인트를 안 말한다: "'+line+'"'); }
       assert(ups===2,'2레벨치를 넣었는데 '+ups+'레벨 올랐다');
       assert(campLevel()===3,'레벨이 3 이 아니다: '+campLevel());
       assert(C.lvPts===2*CAMP_LV_PTS,'포인트가 레벨 수와 안 맞는다: '+C.lvPts);
@@ -2798,24 +2838,37 @@ async function groupLobby(){
     const keepB=(C.lvBest|0), keepLv=(C.lv|0);
     const p=PROF(), keepG=p.gem||0;
     try{
-      // ① 아무것도 못 했으면 첫 칸만 열린다(표의 Lv.1)
+      // ① 🎚 **표의 모양**(2026-09-12 사용자 확정: 5 에서 시작 · 유니크 15/30/50 · 50 이면 전부)
+      { const N=RUNE_SLOT_LV.norm, U=RUNE_SLOT_LV.uniq;
+        assert(N[0]===5,'일반 첫 칸이 Lv.5 가 아니다: Lv.'+N[0]);
+        assert(String(U)==='15,30,50','유니크 해금 레벨이 15/30/50 이 아니다: '+U);
+        assert(Math.max(N[N.length-1],U[U.length-1])===50,'다 열리는 레벨이 50 이 아니다');
+        for(let i=1;i<N.length;i++) assert(N[i]>=N[i-1],'일반 해금 레벨이 거꾸로 간다: '+N);
+        // 📐 **성좌가 끝나야 그 한가운데가 열린다** — 각 성좌의 마지막 칸이 제 유니크보다 낮아야 한다
+        for(let c=0;c<U.length;c++)
+          assert(N[(c+1)*RUNE_CONS-1] < U[c],
+            '성좌 '+(c+1)+' 의 마지막 칸(Lv.'+N[(c+1)*RUNE_CONS-1]+')이 유니크(Lv.'+U[c]+') 뒤에 온다'); }
+      // ② 아직 Lv.5 가 아니면 한 칸도 안 열린다 — 잠긴 칸에 여는 레벨이 적혀 안내가 된다
       C.lvBest=1; C.lv=1;
       assert(campRuneBestLv()===1,'기록이 없는데 최고 레벨이 1 이 아니다: '+campRuneBestLv());
       const n0=campRuneSlots('norm');
-      assert(n0===1,'Lv.1 인데 일반 칸이 '+n0+'개 열렸다 — 첫 칸 하나여야 한다');
+      assert(n0===0,'Lv.1 인데 일반 칸이 '+n0+'개 열렸다 — Lv.5 부터여야 한다');
       assert(campRuneSlots('uniq')===0,'Lv.1 인데 유니크 칸이 열렸다');
+      C.lvBest=5;
+      assert(campRuneSlots('norm')===1,'Lv.5 인데 첫 칸이 안 열린다: '+campRuneSlots('norm'));
+      C.lvBest=1;
       // ② 🏆 자는 **되감기지 않는 최고 레벨**이다 — 지금 레벨이 1 로 돌아가도 칸은 그대로
       C.lvBest=12; C.lv=1;
       assert(campRuneBestLv()===12,'최고 레벨을 안 본다: '+campRuneBestLv());
       const n12=campRuneSlots('norm');
-      assert(n12>n0,'Lv.12 인데 칸이 안 늘었다: '+n0+' → '+n12);
+      assert(n12>1,'Lv.12 인데 칸이 안 늘었다: '+n12);
       // ③ 지금 레벨이 최고보다 높으면 그쪽을 본다(기록 갱신 직전에도 칸이 맞다)
       C.lvBest=1; C.lv=12;
       assert(campRuneSlots('norm')===n12,'지금 레벨이 더 높은데 칸이 안 열린다');
       C.lv=1;
       // ④ ⛔ 젬으로는 **안 열린다**
       C.lvBest=1; p.gem=999999;
-      assert(campRuneSlots('norm')===1,'젬이 많으면 칸이 열린다 — 돈이 칸을 열면 안 된다');
+      assert(campRuneSlots('norm')===0,'젬이 많으면 칸이 열린다 — 돈이 칸을 열면 안 된다');
       // ⑤ 표 끝까지 가면 다 열리고, 그 위로는 더 안 열린다
       const top=Math.max(RUNE_SLOT_LV.norm[RUNE_SLOT_LV.norm.length-1],
                          RUNE_SLOT_LV.uniq[RUNE_SLOT_LV.uniq.length-1]);
@@ -2895,7 +2948,7 @@ async function groupLobby(){
       campRuneUnequip('norm',1);
       assert(campRuneFree(key)>0,'검사 준비 실패 — 뺐는데도 남는 룬이 없다');
       C.lvBest=1; p.gem=999999;
-      assert(campRuneSlots('norm')===1,'검사 준비 실패 — 기록을 지웠는데 칸이 여럿 열려 있다');
+      assert(campRuneSlots('norm')===0,'검사 준비 실패 — 기록을 지웠는데 칸이 열려 있다(첫 칸은 Lv.5)');
       assert(campRuneEquip('norm',RUNE_SLOT_LV.norm.length-1,key)===false,'잠긴 칸에 끼워졌다');
       return '젬 결제 ok · 갈래·보유·잠금 규칙 ok';
     } finally { p.gem=keepG; C.rune=keepR; C.lvBest=keepB; }
@@ -3359,8 +3412,11 @@ async function groupLobby(){
       // 🔒 잠긴 칸은 **왜 잠겼는지** 적는다 — 이유가 없으면 버그처럼 보인다
       const lk=el.querySelectorAll('.rnHx.lk'), lkT=el.querySelectorAll('.rnLkT');
       assert(lk.length>0,'Lv.1 인데 잠긴 칸이 하나도 없다');
-      assert(lk.length===RUNE_SLOT_LV.norm.length-1+RUNE_SLOT_LV.uniq.length,
-        'Lv.1 인데 잠긴 칸 수가 맞지 않다: '+lk.length);
+      // ⚠ 열린 칸 수는 **표가 정한다**(2026-09-12: 첫 칸이 Lv.5 로 옮겨져 Lv.1 은 0칸이다)
+      //   ⛔ 「전체 − 1」로 박지 말 것 — 표를 고칠 때마다 여기가 같이 틀어진다.
+      { const open=campRuneSlotsAt('norm',1)+campRuneSlotsAt('uniq',1);
+        assert(lk.length===RUNE_SLOT_LV.norm.length+RUNE_SLOT_LV.uniq.length-open,
+          'Lv.1 인데 잠긴 칸 수가 맞지 않다: '+lk.length+' (열린 칸 '+open+')'); }
       assert(lkT.length===lk.length&&/^Lv\.\d+$/.test(lkT[0].textContent),
         '잠긴 칸에 해금 레벨이 안 적혀 있다: '+(lkT[0]||{}).textContent);
       // 성좌 셋 — 한 무리를 다 열면 그 한가운데 유니크가 열린다
@@ -3371,10 +3427,14 @@ async function groupLobby(){
         assert(RUNE_SLOT_LV.uniq[c]>last,
           '성좌 '+(c+1)+' 의 유니크가 그 무리를 다 열기 전에 열린다: Lv.'+RUNE_SLOT_LV.uniq[c]
           +' ≤ Lv.'+last); }
-      // ⛔ 첫 칸(Lv.1)만은 **하나**여야 한다 — 처음 온 사람에게 두 칸을 주면 「첫 칸 하나」가 깨진다
-      { let n1=0; for(const r of RUNE_SLOT_LV.norm) if(r<=1) n1++;
-        for(const r of RUNE_SLOT_LV.uniq) if(r<=1) n1++;
-        assert(n1===1,'Lv.1 에 칸이 '+n1+'개 열린다 — 하나여야 한다'); }
+      // 🎚 첫 칸은 **Lv.5**다(2026-09-12 사용자 확정 · 옛 규칙은 Lv.1 한 칸이었다).
+      //   그때 **딱 하나**만 열려야 한다 — 한 번에 둘이 열리면 「하나씩 열린다」가 깨진다.
+      { const first=RUNE_SLOT_LV.norm[0];
+        assert(first===5,'첫 칸이 Lv.5 가 아니다: Lv.'+first);
+        assert(campRuneSlotsAt('norm',first-1)+campRuneSlotsAt('uniq',first-1)===0,
+          '첫 칸 전에 이미 열린 칸이 있다');
+        assert(campRuneSlotsAt('norm',first)+campRuneSlotsAt('uniq',first)===1,
+          'Lv.'+first+' 에 칸이 한 번에 둘 이상 열린다'); }
       // ④ 🔍 판을 밀고 확대한다 · 🎒 가방은 늘 보인다 (2026-09-03)
       { C.lvBest=99; campRuneEnter('slot'); await sleep(80);
         const svg=$('rnSvg'), g=$('rnG');

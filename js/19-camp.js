@@ -469,13 +469,31 @@ function campKillXp(){
 function campAddXp(n){
   const C = campState(); if(!C || !(n > 0)) return 0;
   if(!(C.lv > 0)) C.lv = 1;
+  const lv0 = C.lv | 0;                          // 📣 알림이 「어디서 어디로」를 알아야 한다
   C.xp = (C.xp || 0) + n;
   let ups = 0;
   while(C.lv < CAMP_LV_MAX && C.xp >= campXpNeed(C.lv) && ups < CAMP_LV_MAX){
     C.xp -= campXpNeed(C.lv); C.lv++; ups++; }
-  if(ups > 0) C.lvPts = (C.lvPts || 0) + ups * CAMP_LV_PTS;
   if(C.lv > (C.lvBest | 0)) C.lvBest = C.lv;     // 🏆 통산 최고 레벨 — 아래 설명
+  if(ups > 0){ C.lvPts = (C.lvPts || 0) + ups * CAMP_LV_PTS; campLvUpSay(lv0, C.lv | 0, ups); }
   return ups; }
+// 📣 **레벨이 오르면 말해 준다**(2026-09-12 사용자 요청 「레벨이 오를 때의 작업들」).
+//   ⭐ 입구는 `campAddXp` **하나**다 — 레벨이 오르는 길이 거기뿐이라 여기 한 줄이 전부를 덮는다.
+//     ⛔ 킬 지점마다 붙이지 말 것(경험치 지급을 한 곳에 모은 것과 같은 이유다).
+//   ⚠ 한 번에 여러 레벨이 올라도 **한 줄만** 말한다 — 몰아서 오를 때 줄이 도배된다.
+//   💠 룬 칸이 그 사이에 열렸으면 **그것도 함께** 말한다: 룬 화면을 열어 보기 전에는 알 길이 없고,
+//     열린 것을 모르면 산 룬이 가방에 그대로 남는다.
+//   ⚠ 말하는 길은 공용 `campSay`(→ toast) 하나다 — ⛔ 캠프 전용 알림 상자를 새로 만들지 말 것.
+function campLvUpSay(lv0, lv1, ups){
+  if(!(ups > 0) || typeof campSay !== 'function') return;
+  let m = '📈 Lv.' + lv1 + ' 달성';
+  const pts = ups * CAMP_LV_PTS;
+  if(pts > 0) m += ' · 성장 포인트 +' + pts;
+  if(typeof campRuneSlotsAt === 'function'){
+    const d = (campRuneSlotsAt('norm', lv1) - campRuneSlotsAt('norm', lv0))
+            + (campRuneSlotsAt('uniq', lv1) - campRuneSlotsAt('uniq', lv0));
+    if(d > 0) m += ' · 💠 룬 칸 ' + d + '개 열림'; }
+  campSay(m, 'upgrade'); }
 // 🌳 성장 트리가 읽는 잔액 — ⛔ C.lvPts 를 직접 읽어 비교하지 말 것(campRtPts 하나를 지난다)
 function campLvPtsLeft(){ const C = campState(); return Math.max(0, (C && C.lvPts) || 0); }
 
