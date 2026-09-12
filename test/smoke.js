@@ -920,6 +920,58 @@ async function groupLobby(){
       C.dg=keep.dg; C.cleared=keep.cleared; C.rbTree=keep.tree; } });
   // 🔁 **환생 강화 — 환생 포인트로 사는 것**(2026-09-11 · GAME_DIRECTION §0-A).
   //   ⭐ 「세지는 것」은 여기 없다(그건 레벨·성장 트리의 몫) — 빨라지고 편해지는 것만 판다.
+  // 🎬 「이번 회차」 접기/펴기가 **부드러운가**(2026-09-12 사용자 「미세하게 울컥울컥한다」).
+  //   ⛔ 이 검사가 있는 이유 — 울컥은 **높이를 바꾸는 것이 둘 이상**일 때 생겼다:
+  //     ① 판의 border/padding 을 grid 와 다른 곡선으로 같이 애니메이션 → 끝에서 되돌아옴
+  //     ② 여백의 flex-grow 합이 1 을 지나며 분배 방식이 바뀜 → 한가운데서 꺾임
+  //   둘 중 하나만 되돌아가도 눈에는 「미세하게」만 보이므로 **숫자로 잡는다**.
+  await step('환생: 「이번 회차」 접기/펴기가 부드럽다(꺾임·되돌아옴 없음)', async()=>{
+    skipIf(typeof campRebStToggle!=='function','접기 토글 없음');
+    if(typeof openHome==='function') openHome(); await sleep(60);
+    if(typeof campHasRace==='function' && !campHasRace() && typeof campPickRace==='function') campPickRace();
+    const C=campState(); skipIf(!C,'캠프 상태 없음');
+    C.tapped=12840; C.earnTap=938400; C.earnAuto=2841000; C.earnGas=48200; C.playS=5230;
+    try{
+    campRebOpen(); await sleep(150);
+    assert(visible($('campReb')),'환생 화면이 안 열림');
+    // ① 구조 — 높이를 재는 칸(.crClip)과 자리를 받아 두는 칸(.crFill)이 있어야 한다
+    const clips=document.querySelectorAll('#campReb .crFold > .crClip');
+    assert(clips.length===2,'접히는 칸 안에 .crClip 이 없다(판을 grid 자식으로 되돌렸다): '+clips.length);
+    assert(document.querySelector('#campReb .crFill'),'.crFill(받이 칸)이 없다 — 여백 합이 1 을 지나며 꺾인다');
+    // ② 판의 테두리·여백은 **애니메이션 대상이 아니어야** 한다
+    { const cs=getComputedStyle(document.querySelector('#campReb .crList'));
+      assert(!/border|padding/.test(cs.transitionProperty),
+        '판의 테두리·여백을 다시 애니메이션한다: '+cs.transitionProperty); }
+    // ③ 여백 셋의 grow 합이 **접힘·펴짐 양쪽에서 같아야** 한다(그래야 중간에 안 꺾인다)
+    const growSum=()=>['crGap','crGap2','crFill']
+      .reduce((n,k)=>n+(parseFloat(getComputedStyle(document.querySelector('#campReb .'+k)).flexGrow)||0),0);
+    const body=document.querySelector('#campReb .crBody');
+    const wasFold=body.classList.contains('fold');
+    const sumA=growSum(); campRebStToggle(); await sleep(420); const sumB=growSum();
+    assert(Math.abs(sumA-sumB)<0.01,'접힘·펴짐의 grow 합이 다르다: '+sumA+' ↔ '+sumB);
+    // ④ 움직임 — 카드가 **되돌아오지 않고**(속도 부호 0회) **꺾이지 않는다**(가속 부호 ≤2회)
+    const card=document.querySelector('#campReb .crTopCard');
+    const trace=async()=>{ const ys=[]; campRebStToggle();
+      for(let i=0;i<26;i++){ ys.push(card.getBoundingClientRect().top);
+        await new Promise(r=>requestAnimationFrame(r)); }
+      return ys; };
+    const flips=a=>{ let n=0,p=0; for(const v of a){ if(Math.abs(v)<0.3) continue;
+      const g=Math.sign(v); if(p && g!==p) n++; p=g; } return n; };
+    const dd=a=>a.slice(1).map((v,i)=>v-a[i]);
+    for(const nm of ['펴기','접기']){
+      const ys=await trace(); await sleep(500);
+      const v=dd(ys), a=dd(v);
+      assert(v.filter(x=>Math.abs(x)>0.3).length>=4,
+        nm+': 카드가 움직이는 프레임이 '+v.filter(x=>Math.abs(x)>0.3).length+'개뿐 — 애니 없이 튀었다');
+      assert(flips(v)===0,nm+': 카드가 지나쳤다 되돌아온다(속도 부호 '+flips(v)+'회) — '+ys.map(y=>y.toFixed(0)).join('/'));
+      assert(flips(a)<=2,nm+': 움직임이 도중에 꺾인다(가속 부호 '+flips(a)+'회) — '+v.map(x=>x.toFixed(1)).join('/'));
+    }
+    // 원래 상태로 되돌린다
+    if(body.classList.contains('fold')!==wasFold){ campRebStToggle(); await sleep(350); }
+    return 'clip 2칸 · grow 합 '+sumA.toFixed(2)+' 고정 · 되돌아옴 0회';
+    } finally { if(typeof campRebClose==='function') campRebClose(); await sleep(60); }
+  });
+
   await step('환생 강화: 포인트로 산다 · 영구히 남는다 · 무한 환생을 막는다', async()=>{
     skipIf(typeof campRebUpgBuy!=='function','환생 강화 없음');
     const C=campState(); skipIf(!C,'캠프 상태 없음');

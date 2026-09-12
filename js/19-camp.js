@@ -2283,18 +2283,30 @@ function campRebRender(){
     //   0fr ↔ 1fr 로 옮기면 **높이를 몰라도** 부드럽게 열리고 닫힌다.
     //   ⛔ display:none 으로 되돌리지 말 것 — display 는 애니가 안 걸린다(그래서 툭 튀었다).
     //   ⛔ max-height 로 하지 말 것 — 어림값을 박아야 하고, 내용이 그보다 길면 잘린다.
+    // 🎬 `.crClip` 한 겹을 끼운다 — **테두리·여백을 가진 판(.crPeek/.crList)은 절대 안 움직이고**,
+    //   높이를 재는 일은 이 빈 칸이 혼자 맡는다. ⛔ 판을 grid 자식으로 직접 두지 말 것:
+    //   그러면 다 접힌 자리에 테두리 2px 이 남아서 테두리·여백까지 같이 애니메이션해야 했고,
+    //   그 셋의 곡선이 서로 달라 **끝에서 되돌아왔다**(실측: 접기 끝에 카드가 0.5px 되돌아옴).
     + '<div class="crFold peek">'
-    + '<div class="crPeek">'
+    + '<div class="crClip"><div class="crPeek">'
     + li(gi.min,  '미네랄', campNum((C.earnTap || 0) + (C.earnAuto || 0)), '')
     + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
-    + '</div></div>'
-    + '<div class="crFold list"><div class="crList">'
+    + '</div></div></div>'
+    + '<div class="crFold list"><div class="crClip"><div class="crList">'
     + li(gi.tap,  '터치', campNum(C.tapped || 0), '회')
     + li(gi.min,  '터치로 번 미네랄', campNum(C.earnTap || 0), '')
     + li(gi.auto, '자동으로 번 미네랄', campNum(C.earnAuto || 0), '')
     + li(gi.gas,  '가스', campNum(C.earnGas || 0), '')
     + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
-    + '</div></div></div>';
+    + '</div></div></div></div>'
+    // 🫧 **남는 자리를 받아 두는 빈 칸** — 눈에 보이는 것이 없다(높이 0).
+    //   왜 있나: 위 여백 둘(.crGap/.crGap2)은 `flex-grow` 로 자리를 나눠 가지는데,
+    //   **grow 의 합이 1 보다 작으면 남는 자리를 그 비율만큼만** 나눠 준다(CSS 규칙).
+    //   그래서 0 → 1 로 키우면 합이 1 을 지나는 순간 분배 방식이 바뀌어 **딱 거기서 꺾였다**
+    //   (실측: 카드 속도가 −11 → −22 로 튀고 접을 땐 19 → 9 로 뚝 떨어졌다 = 그 울컥이다).
+    //   ⭐ 이 칸이 나머지를 받아 **합을 늘 1.55 로 고정**한다 — 이제 변하는 것은 비율뿐이라 안 꺾인다.
+    //   ⛔ 지우지 말 것 · ⛔ 세 칸의 전환 길이·곡선을 다르게 주지 말 것(합이 흔들린다).
+    + '<div class="crFill"></div>';
   // ── ③ 아래 — 조건 + 버튼 둘. **바닥 고정**이라 지표가 길어져도 안 밀린다 ──
   const foot = document.getElementById('crFoot');
   if(foot) foot.innerHTML =

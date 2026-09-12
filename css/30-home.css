@@ -1564,22 +1564,35 @@
    ⛔ display:none 으로 되돌리지 말 것(애니가 안 걸린다) · ⛔ max-height 어림값도 쓰지 말 것.
    ⚠ 판(.crList/.crPeek)의 **테두리와 여백도 함께** 0 으로 간다 — 안 그러면 다 접힌 자리에
      2px 짜리 선이 남는다. */
+/* ⭐⭐ **높이를 바꾸는 것은 딱 하나여야 한다**(2026-09-12 · 사용자 「미세하게 울컥울컥한다」).
+   옛 코드는 같은 동작을 셋으로 쪼개 애니메이션했다 —
+     ① 감싸는 칸의 `grid-template-rows`(빠른 곡선) ② 판의 `border-width`·`padding`(ease)
+   둘의 곡선이 달라 **합친 높이가 도중에 한 번 튀고 끝에서 되돌아왔다**
+   (실측: 펴기 중 카드 속도 −11 → −22 로 튐 · 접기 끝에 카드가 0.5px 되돌아옴 = 그 울컥이다).
+   ⭐ 지금은 **`.crClip` 한 겹**이 높이를 혼자 맡는다. 테두리·여백을 가진 판(.crPeek/.crList)은
+     그 안에서 **크기가 절대 안 변하고** 잘리기만 한다 — 그래서 다 접혀도 2px 선이 안 남는다.
+   ⛔ 판을 grid 자식으로 직접 되돌리지 말 것 · ⛔ border-width·padding 을 다시 애니메이션하지 말 것.
+   ⚠ 불투명도만 예외다 — **자리를 안 차지하므로** 높이에 못 끼어든다. */
+#campReb{--e-fold:cubic-bezier(.3,.8,.35,1)}
 #campReb .crFold{display:grid;grid-template-rows:1fr;
-  transition:grid-template-rows var(--t-fold,.26s) cubic-bezier(.3,.8,.35,1)}
-#campReb .crFold > *{min-height:0;overflow:hidden;
-  transition:opacity calc(var(--t-fold,.26s) * .7) ease,
-    border-width var(--t-fold,.26s) ease, padding var(--t-fold,.26s) ease}
+  transition:grid-template-rows var(--t-fold,.26s) var(--e-fold)}
+#campReb .crFold > .crClip{min-height:0;overflow:hidden;
+  transition:opacity calc(var(--t-fold,.26s) * .7) var(--e-fold)}
 #campReb .crSt.fold .crFold.list,
 #campReb .crSt:not(.fold) .crFold.peek{grid-template-rows:0fr}
-#campReb .crSt.fold .crList,
-#campReb .crSt:not(.fold) .crPeek{opacity:0;border-width:0;padding-top:0;padding-bottom:0}
-/* 위·아래 빈 자리도 같은 박자로 움직인다 — 안 그러면 카드만 툭 뛴다 */
-#campReb .crGap,#campReb .crGap2{transition:flex-grow var(--t-fold,.26s) cubic-bezier(.3,.8,.35,1)}
+#campReb .crSt.fold .crFold.list > .crClip,
+#campReb .crSt:not(.fold) .crFold.peek > .crClip{opacity:0}
+/* 위·아래 빈 자리도 **같은 곡선**으로 움직인다 — 안 그러면 카드만 툭 뛴다.
+   ⛔ 여기만 다른 곡선을 쓰지 말 것: 카드의 움직임은 이 둘과 위 높이의 **합**이라
+     하나라도 박자가 다르면 곧바로 울컥으로 보인다. */
+#campReb .crGap,#campReb .crGap2,#campReb .crFill{transition:flex-grow var(--t-fold,.26s) var(--e-fold)}
 /* ⏸ 다시 그린 직후 한 프레임 — 손으로 누른 것이 아니면 움직이지 않는다 */
-#campReb .crSt.noAnim .crFold,#campReb .crSt.noAnim .crFold > *,
-#campReb .crBody.noAnim .crGap,#campReb .crBody.noAnim .crGap2{transition:none}
+#campReb .crSt.noAnim .crFold,#campReb .crSt.noAnim .crFold > .crClip,
+#campReb .crBody.noAnim .crGap,#campReb .crBody.noAnim .crGap2,
+#campReb .crBody.noAnim .crFill{transition:none}
 @media (prefers-reduced-motion:reduce){
-  #campReb .crFold,#campReb .crFold > *,#campReb .crGap,#campReb .crGap2{transition:none} }
+  #campReb .crFold,#campReb .crFold > .crClip,
+  #campReb .crGap,#campReb .crGap2,#campReb .crFill{transition:none} }
 /* ⭐ 접히면 배수·포인트가 **화면 가운데로 내려온다**(2026-09-04 사용자 확정).
    auto 여백이 남는 자리를 위아래로 **반씩** 나눠 가진다 — 위 여백(.crGap)은 그때 필요 없다.
    ⛔ 고정 margin 으로 밀지 말 것: 화면 높이가 다른 기기에서 가운데가 안 맞는다. */
@@ -1588,10 +1601,15 @@
    ⚠ 펴져 있으면 두 칸 다 0 이라 아무 일도 안 한다. */
 /* ⚠ height 는 애니가 안 걸린다 — 24px 를 그대로 두고 **flex-grow 만** 0 → 1 로 옮긴다.
    그러면 남는 자리를 나눠 가지는 정도가 부드럽게 변한다. */
+/* 🫧 .crFill = 맨 아래의 **보이지 않는 받이 칸**. 세 칸의 grow 합을 늘 1.55 로 붙들어 둔다 —
+   합이 1 을 지나면 CSS 의 분배 방식이 바뀌어 그 지점에서 움직임이 꺾인다(위 주석 참고).
+   ⛔ 빼지 말 것 · ⛔ 셋의 전환 길이·곡선을 다르게 주지 말 것. */
 #campReb .crGap{flex:0 1 auto}
 #campReb .crGap2{flex:0 1 auto;height:0}
+#campReb .crFill{flex:1.55 1 auto;height:0;min-height:0;pointer-events:none}
 #campReb .crBody.fold .crGap{flex-grow:1}
 #campReb .crBody.fold .crGap2{flex-grow:.55}
+#campReb .crBody.fold .crFill{flex-grow:0}
 #campReb .crList{padding:2px 12px;border-radius:var(--r-md);
   border:1px solid rgba(255,255,255,.08);background:rgba(9,13,19,.46);
   -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
