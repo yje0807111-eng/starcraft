@@ -1831,7 +1831,13 @@
    갈래 색으로 얹는다. ⛔ .ctGem.on{fill:...} 으로 면을 채우지 말 것 — 아이콘이 색에 묻힌다. */
 /* 👆 누르는 면 — 보이지 않지만 **보이는 별보다 크다**. 별 하나에 이것 하나뿐이라
    어디를 눌렀는지 헷갈릴 일이 없다(실측: 15px 짜리 별은 6px 만 빗나가도 헛쳤다). */
-#campTree .ctHit{fill:transparent;cursor:pointer}
+/* 🚫 **탭 하이라이트·초점 테두리를 과녁에 직접 끈다**(2026-09-12 사용자 신고 「금색 정사각형」).
+   00-base 의 `*` 로 이미 껐지만 **일부 브라우저는 그 설정을 SVG 요소에 안 먹인다** — 그러면
+   누른 도형의 **경계상자**가 칠해지는데, 육각형의 경계상자는 거의 정사각형이라
+   「칸을 감싸는 네모」로 보인다(폰·태블릿에서 재현 · 헤드리스 크롬에서는 안 난다).
+   ⚠ 고른 칸 표시는 청록 육각(.rnHxSel) 하나뿐이다 — ⛔ 네모를 새로 그리지 말 것. */
+#campTree .ctHit{fill:transparent;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;outline:none;-webkit-touch-callout:none}
 /* 🏅 **다음에 열 것** 표식 (2026-09-04 사용자 확정) — 지정 표시와 같은 어휘(꼭짓점 조각 + 뒤 빛)를
    **더 얇고 · 더 은은하게 · 더 느리게**. 늘 떠 있는 표시라 눈에 띄면 곧 시끄러워진다.
    ⛔ 굵기·속도를 올리지 말 것 · ⛔ 색을 따로 두지 말 것(갈래 색을 그대로 쓴다).
@@ -2279,7 +2285,8 @@
   font-size:12px;font-weight:700;letter-spacing:.14em;opacity:.85}
 #campRune .rnLink{stroke:rgba(190,212,240,.07);stroke-width:.8;stroke-dasharray:2 3}
 #campRune .rnLink.on{stroke:rgba(190,212,240,.20);stroke-width:1;stroke-dasharray:none}
-#campRune .rnHit{fill:transparent;cursor:pointer}
+#campRune .rnHit{fill:transparent;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;outline:none;-webkit-touch-callout:none}
 #campRune #rnG{will-change:transform}
 /* 🎒 상시 가방 — 위=판 / 아래=가방. 프로필 장비창(아바타/가방)과 같은 나눔이다.
    ⛔ 칸을 눌러야 뜨는 임시 시트로 되돌리지 말 것(2026-09-03 사용자 확정). */
