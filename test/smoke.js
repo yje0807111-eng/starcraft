@@ -3288,6 +3288,20 @@ async function groupLobby(){
     // 🔧 심어 두는 확인용 상태도 끈다 — 켜 두면 C.rune 을 비울 때마다 3개씩 다시 심긴다
     if(typeof CAMP_RUNE_DEV_SEED !== 'undefined') CAMP_RUNE_DEV_SEED = false;
     skipIf(typeof campRuneEnter!=='function'||typeof NAV_TREE==='undefined','룬 구역 없음');
+    // ✈ **날아가는 그림이 붙을 때까지** — 빈 칸에 넣을 때는 판이 그 성좌로 미끄러진 뒤에야
+    //   날아간다(2026-09-12). 자리를 미끄러지는 중에 재면 룬이 옛 자리에 내리기 때문이다.
+    const runeFlyWait = async () => { for(let i = 0; i < 80 &&
+      !document.querySelector('#campRune .rnFly'); i++) await sleep(16); };
+    // 🧹 **미뤄진 비행까지 다 끝내고 판을 비운다** — 블록을 시작하기 전에 부른다.
+    //   ⚠⚠ `.rnFly` 를 지우는 것만으로는 모자란다: ① 빈 칸에 넣는 비행은 판이 미끄러진 뒤에야
+    //     **생기므로** 지운 뒤에 태어나고 ② 도착 콜백은 요소와 별개라 지워도 터진다.
+    //     그래서 앞 블록의 룬이 이 블록에서 날고 고리를 뿌려, 「우리 룬이 도착했다」로 잘못 읽힌다
+    //     (2026-09-12 실측: tap:low·atk:low·kill:low 셋이 다음 블록에서 날아올랐다).
+    //   ⛔ 이 기다림을 「.rnFly 지우기」로 되돌리지 말 것.
+    const runeFlyQuiet = async () => {
+      await sleep(RUNE_LOOK_MAX + RUNE_FLY_MS + RUNE_FLY_GAP + 140);
+      document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
+      document.querySelectorAll('#rnG .rnRipple').forEach(x => x.remove()); };
     const C=campState(); skipIf(!C,'캠프 상태 없음');
     const keepB=(C.lvBest|0);
     const keepR=JSON.parse(JSON.stringify(C.rune||{}));
@@ -3724,11 +3738,14 @@ async function groupLobby(){
         //   「단순하고 끊기는 느낌」). 끊겨 보이던 이유는 **도착하는 순간이 없어서**였다.
         { const R8 = campRuneState(); R8.norm = []; R8.uniq = []; campRuneTouch();
           campRuneRender(); await sleep(30);
-          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
+          await runeFlyQuiet();   // 🧹 앞 블록의 비행이 여기서 날아오르지 않게(위 주석)
           const k8 = runeKey('tap','high'); R8.own[k8] = (R8.own[k8] | 0) + 2;
           // ① 날아가는 동안 **받을 칸은 가려져** 있다 — 그림이 도착해야 문양이 나타난다
           campRuneBagTap(k8);
-          // ✈ 그림은 **지금** 붙고 애니는 다음 프레임에 붙는다. 느린 판에서는 아래 4프레임을 기다리는 동안
+          // 🎯 **판이 그 성좌로 미끄러진 뒤에** 날아간다(2026-09-12) — 자리는 화면 좌표라
+          //   미끄러지는 동안 재면 룬이 칸이 있던 자리에 내린다. 그래서 그림이 늦게 붙는다.
+          await runeFlyWait();
+          // ✈ 그림은 **붙자마자** 잡고 애니는 다음 프레임에 붙는다. 느린 판에서는 아래 4프레임을 기다리는 동안
           //   400ms 비행이 끝나 그림이 지워진다(4배 스로틀링 실측 3/3 · 2026-09-07) — 붙자마자 잡아 두고
           //   애니가 붙는 즉시 **멈춰 세운다**. 중간 지점은 뒤에서 시간을 직접 놓고 잰다.
           const fly = document.querySelector('#campRune .rnFly');
@@ -3771,9 +3788,14 @@ async function groupLobby(){
           //   ⏳ 고정 대기가 아니라 **기다렸다 확인**한다 — 기기가 느리면 연출이 늦게 온다.
           const waitFor = async (sel, ms) => { for(let t = 0; t * 40 < ms; t++){
             if(document.querySelector(sel)) return true; await sleep(40); } return false; };
-          assert(await waitFor('#rnG .rnRipple', 1200),
+          const gone = async (sel, ms) => { for(let t = 0; t * 40 < ms; t++){
+            if(!document.querySelector(sel)) return true; await sleep(40); } return false; };
+          // ⚠ **우리 칸**의 가림이 풀리는 것을 기다린다 — 「고리가 하나라도 있나」로 재면
+          //   남의 늦은 도착이 통과시킨다(위 주석과 같은 이유).
+          assert(await gone('#rnG .rnCell[data-ck="norm-0"].veil', 1600),
+            '도착했는데 칸이 계속 가려져 있다');
+          assert(document.querySelector('#rnG .rnRipple'),
             '도착 고리가 없다 — 「적용됐다」가 안 보인다');
-          assert(!document.querySelector('#rnG .rnCell.veil'), '도착했는데 칸이 계속 가려져 있다');
           await sleep(660);
           assert(!document.querySelector('#rnG .rnRipple'), '고리가 안 걷힌다 — 계속 쌓인다');
           // ③ 빼면 **가방 줄 버튼이 부푼다** — 어디로 갔는지 눈이 따라간다
@@ -3811,7 +3833,7 @@ async function groupLobby(){
         //   ⛔ 그냥 첫 빈 칸을 잡지 말 것 — 갈래가 다른 성좌에서 걸려 장착이 실패하고,
         //     그대로 교체 모드로 빠져 아무 일도 못 한다.
         { const R7 = campRuneState(); R7.norm = []; R7.uniq = []; campRuneTouch();
-          campRuneRender(); await sleep(20);
+          campRuneRender(); await sleep(20); await runeFlyQuiet();
           // ⚠ 목록을 손으로 적지 말 것 — 갈래마다 **첫 룬**을 그때그때 꺼낸다(2026-09-05).
           const pick = {}; for(const g of RUNE_GRPS){ const d = RUNE_LIST.find(x => x.grp === g);
             assert(d, g + ' 갈래에 룬이 없다'); pick[g] = d.id; }
@@ -3837,11 +3859,12 @@ async function groupLobby(){
         // ✈ **빈 칸에 넣을 때도 날아서 들어간다**(2026-09-04 사용자 확정)
         //   ⛔ 교체만 날아가게 두지 말 것 — 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
         { const R5 = campRuneState(); R5.norm = []; R5.uniq = []; campRuneTouch();
-          campRuneRender(); await sleep(30);
-          document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove());
+          campRuneRender(); await sleep(30); await runeFlyQuiet();
           const k5 = runeKey('tap','high'); R5.own[k5] = (R5.own[k5] | 0) + 1;
           campRuneBagTap(k5);
+          // ⭐ **장착은 즉시**다 — 미루는 것은 그림뿐이라 도중에 나가도 낀 것은 남는다
           assert(campRuneEq('norm')[0] === k5, '빈 칸에 안 들어갔다');
+          await runeFlyWait();
           assert(document.querySelectorAll('#campRune .rnFly').length === 1,
             '빈 칸에 넣었는데 날아가는 그림이 없다');
           document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
@@ -3927,6 +3950,69 @@ async function groupLobby(){
           if(campRuneSwapOn()){ campRuneSwapEnd();
             assert(!campRuneSwapOn(), '교체를 그만둘 수 없다'); }
           document.querySelectorAll('#campRune .rnFly').forEach(x => x.remove()); }
+        // 🎯 **빈 칸에 넣을 때도 그 성좌로 간다**(2026-09-12 사용자 요청 — 교체·칸 고르기와 같은 자리).
+        //   ⭐ 잠그는 것은 셋이다: ① 성좌가 보이는 자리의 한가운데로 온다 ② 확대가 들어간다
+        //     ③ **날아온 룬이 제자리에 내린다**(자리는 화면 좌표라, 미끄러지는 중에 재면 옛 자리다).
+        //   ⛔ 가운데로 옮기는 길을 또 만들지 말 것 — 교체(campRuneSwapLook)·칸 고르기(campRuneFocus)와
+        //     **같은 함수**(campRuneLookCons)여야 한다. 앵커가 갈리면 같은 동작인데 화면이 다르게 선다.
+        { await runeFlyQuiet();
+          const R3 = campRuneState(); R3.norm = []; R3.uniq = []; campRuneTouch();
+          // 🗺 **셋째 성좌**(성장)의 룬을 고른다 — 첫 성좌면 전체 보기와 자리가 겹쳐 안 움직여도 통과한다
+          const gw = RUNE_LIST.find(d => d.grp === RUNE_GRPS[2]);
+          assert(gw, RUNE_GRPS[2] + ' 갈래에 룬이 없다');
+          const kg = runeKey(gw.id, 'low'); R3.own[kg] = (R3.own[kg] | 0) + 1;
+          campRuneTouch(); campRuneRender(); await sleep(30);
+          campRuneFit(true); await sleep(30);             // 전체 보기에서 출발한다
+          const z0 = _rnView.z;
+          campRuneBagTap(kg);
+          const at3 = campRuneEq('norm').indexOf(kg);
+          assert(at3 >= 0, '성장 룬이 안 들어갔다');
+          await runeFlyWait();
+          // ③ 날아온 룬이 **그 칸 위에** 내린다 — 미끄러지는 중에 자리를 쟀으면 멀리 빗나간다
+          { const el = document.querySelector('#campRune .rnFly');
+            assert(el, '날아가는 그림이 없다');
+            // ⏳ 애니는 **다음 프레임**에 붙는다(_runeFly 가 rAF 안에서 건다) — 붙을 때까지 기다린다
+            let a3 = null;
+            for(let fr = 0; fr < 30 && !a3; fr++){ a3 = el.getAnimations()[0] || null;
+              if(!a3) await new Promise(r => requestAnimationFrame(r)); }
+            assert(a3, '날아가는 애니메이션이 안 붙었다');
+            a3.currentTime = a3.effect.getComputedTiming().duration;   // 도착 자리로 감는다
+            const r = el.getBoundingClientRect(), to = _runeSlotAt('norm', at3);
+            const d = Math.hypot(r.left + r.width / 2 - to.x, r.top + r.height / 2 - to.y);
+            // 📏 제대로 기다리면 **0px** 다(실측) — 미끄러지는 중에 재면 수십~수백 px 빗나간다
+            assert(d <= 6, '날아온 룬이 칸에 안 내린다: ' + Math.round(d) + 'px — 미끄러지는 중에 자리를 쟀다');
+            a3.play(); }
+          await sleep(RUNE_FLY_MS + 260);
+          // ①② 성좌가 한가운데로 오고 확대가 들어갔다 — 교체 검사와 **같은 자**로 잰다
+          assert(_rnView.z > z0 + 0.01, '빈 칸에 넣었는데 확대가 안 들어간다: ' + z0.toFixed(2) + ' → ' + _rnView.z.toFixed(2));
+          { const ci = campRuneConsOf('norm', at3);
+            let sx = 0, sy = 0, n = 0;
+            for(let i = 0; i < RUNE_CONS; i++){
+              const e = document.querySelector('#rnG [data-rk="norm"][data-ri="' + (ci * RUNE_CONS + i) + '"]');
+              if(!e) continue; const r = e.getBoundingClientRect();
+              sx += r.left + r.width / 2; sy += r.top + r.height / 2; n++; }
+            assert(n === RUNE_CONS, '그 성좌의 칸을 다 못 찾았다: ' + n);
+            sx /= n; sy /= n;
+            const mr = document.querySelector('#campRune .rnMap').getBoundingClientRect();
+            const ph = e => { const q = document.querySelector(e); return q ? q.getBoundingClientRect().height : 0; };
+            const t = ph('#campRune .rnTop'), b = ph('#campRune .rnBag');
+            const d = Math.hypot(sx - (mr.left + mr.width / 2),
+                                 sy - (mr.top + t + (mr.height - t - b) / 2));
+            assert(d <= 8, '넣은 성좌가 한가운데에 안 온다: ' + Math.round(d) + 'px'); }
+          await runeFlyQuiet(); }
+        // 🤏 **두 손가락 확대를 브라우저에 뺏기지 않는다** — 안 막으면 페이지째 커졌다 작아진다
+        //   (2026-09-12 사용자 신고 「바깥 인터넷 창까지 같이 확대된다」).
+        //   ⚠ 판만 막으면 모자란다 — 가방·상단 띠 위에서 벌려도 페이지가 커진다. 구역 전체가 받는다.
+        //   ⭐ 환생 트리(#ctSvg)와 같은 규칙이고, 스크롤 목록만 세로로 돌려준다(pan-y 는 확대를 막는다).
+        { const ta = e => { const q = document.querySelector(e); return q ? getComputedStyle(q).touchAction : ''; };
+          assert(ta('#campRune') === 'none', '룬 구역이 손가락을 안 받는다: ' + ta('#campRune'));
+          assert(ta('#campRune .rnMap') === 'none', '성좌 판이 손가락을 안 받는다: ' + ta('#campRune .rnMap'));
+          assert(ta('#rnSvg') === 'none', '판 SVG 가 손가락을 안 받는다: ' + ta('#rnSvg'));
+          assert(ta('#campTree #ctSvg') === 'none', '환생 트리와 규칙이 갈렸다: ' + ta('#campTree #ctSvg'));
+          const bg = ta('#campRune .rnBagG');
+          assert(bg === 'pan-y', '가방이 세로로 안 넘어간다(또는 확대가 새어 나간다): ' + bg);
+          // 🖱 휠(데스크톱 트랙패드 확대)도 우리가 먹는다 — 안 막으면 브라우저 배율이 바뀐다
+          assert(/preventDefault/.test(String(svvBind)), '휠을 안 막는다 — 브라우저가 같이 확대된다'); }
         // 🎒 가방 탭 = **빈 칸 중 첫 칸**에 자동 장착
         const R=campRuneState(); R.own[runeKey('tap','high')]=2;
         R.norm=[]; campRuneTouch(); campRuneRender(); await sleep(30);

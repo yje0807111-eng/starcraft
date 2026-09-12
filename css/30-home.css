@@ -2136,7 +2136,12 @@
    ⛔ 환생 구역의 키 아트를 빌리지 않는다 — 여기는 제 배경(불투명)을 갖는다.
    ⛔ animation-fill-mode 를 주지 말 것 — 탭이 백그라운드면 애니가 0 에 멈춰
       화면이 통째로 안 보인다(환생 화면에서 이미 밟은 함정). */
-#campRune{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
+/* 🤏 **구역 전체가 손가락을 받는다** — 판 밖(가방·상단 띠)에서 두 손가락을 벌려도
+   페이지가 커지지 않게(2026-09-12 사용자 신고 「바깥 인터넷 창까지 같이 확대된다」).
+   ⚠ 스크롤 목록만 세로로 돌려준다 — HOME(`#homeScreen` + `.uiScroll`)과 **같은 수법**이다.
+     `pan-y` 는 세로 밀기만 허용하므로 거기서도 확대는 안 먹는다. ⛔ `auto` 로 되돌리지 말 것. */
+#campRune{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;touch-action:none}
+#campRune .uiScroll{touch-action:pan-y}
 #campRune.on{display:block}
 #campRune.on.rnIn{animation:crFadeIn var(--t-screen) ease}
 /* 🖼 그림은 #campRebBg 한 장이다(환생·업그레이드·룬 공용) — 여기는 그 위에 얹는 어둠뿐.
@@ -2178,8 +2183,11 @@
 /* 🌌 성좌 판 (2026-09-03 · 목업 ②안) — 유니크가 중심, 일반 8칸이 고리로 둘러싼다.
    ⚠ 판은 SVG 한 장이다. 칸 크기·자리는 viewBox 안 좌표(22-camp-rune.js)가 정하고,
      여기서는 **색과 굵기만** 정한다 — 두 곳에서 자리를 만지면 반드시 어긋난다. */
-#campRune .rnMap{position:absolute;inset:0}
-#campRune .rnMap svg{display:block;width:100%;height:100%}
+/* 🤏 `touch-action:none` — 이게 없으면 **두 손가락 확대를 브라우저가 먼저 먹어** 페이지째
+   커졌다 작아진다(2026-09-12 사용자 신고). 판 안에서만 확대·축소되게 손가락을 통째로 받는다.
+   ⛔ 빼지 말 것 · ⭐ 환생 트리(`#ctSvg`)와 **같은 규칙**이다(두 판의 조작이 갈리면 안 된다). */
+#campRune .rnMap{position:absolute;inset:0;touch-action:none}
+#campRune .rnMap svg{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 /* ⭐ 이중 테두리 — 낀 칸은 바깥에 얇은 겹을 하나 더 두른다(2026-09-03 · 목업 tri-6 ②안).
    ⛔ 십자 반짝임·후광 원을 되살리지 말 것 — 환생 트리의 어휘라 룬 판에서는 시끄러웠다. */
 /* 🔷 **칸은 도형이다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).

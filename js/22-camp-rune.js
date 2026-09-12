@@ -611,14 +611,14 @@ function campRuneFit(now){
     return (H && q) ? Math.min(0.4, q.getBoundingClientRect().height / H) : 0; };
   svvFit(_rnView, _runeSvg(), _runeG, _runePts(),
     { pad:30, zmax:1.35, hideT:rt('#campRune .rnTop'), hideB:rt('#campRune .rnBag') }, now, _runeAlive); }
+// 🗺 그 칸이 속한 **성좌 번호** — 일반은 여덟 칸이 한 성좌, 유니크는 칸 하나가 한 성좌다.
+//   ⛔ 이 셈을 여러 곳에 적지 말 것(칸 → 성좌를 묻는 자리가 셋이다).
+function campRuneConsOf(kind, i){
+  return (kind === 'uniq') ? i : Math.floor(i / RUNE_CONS); }
 // 고른 칸의 성좌로 들어간다
 function campRuneFocus(now){
   if(!_rnView || !_runePickKind) return;
-  const ci = (_runePickKind === 'uniq') ? _runePick : Math.floor(_runePick / RUNE_CONS);
-  const c = RUNE_CT[ci] || RUNE_CT[0];
-  svvLookAt(_rnView, _runeG, { x:c[0], y:c[1] },
-    { x:RUNE_MAP_W / 2, y:RUNE_MAP_H * 0.34 },
-    Math.max(_rnView.tz, RUNE_PICK_SC), now, _runeAlive); }
+  campRuneLookCons(campRuneConsOf(_runePickKind, _runePick), now); }
 // 그릴 때마다 <g> 가 새로 생긴다 — 뷰를 도로 얹고 손가락을 다시 잇는다
 function campRuneBindMap(){
   const svg = _runeSvg(); if(!svg) return;
@@ -864,12 +864,18 @@ function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
 // 🎯 그 갈래 성좌를 **보이는 자리의 한가운데**로 — 위 띠와 아래 가방을 뺀 나머지의 중심이다.
 //   ⛔ 판 한가운데(RUNE_MAP_H/2)로 잡지 말 것 — 아래를 가방이 214px 덮어 성좌가 그 뒤로 내려간다.
 function campRuneSwapLook(now){
-  const p = runeParse(_runeSwapKey); if(!p.def || !_rnView) return;
-  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;   // 🗺 유니크도 제 성좌로 간다
+  const p = runeParse(_runeSwapKey); if(!p.def) return;
+  campRuneLookCons(RUNE_GRPS.indexOf(p.def.grp), now); }   // 🗺 유니크도 제 성좌로 간다
+// 🎯 **성좌 하나를 보이는 자리의 한가운데로** — 교체 대기 · 칸 고르기 · 빈 칸에 넣기 셋이
+//   같은 함수를 쓴다(2026-09-12 에 셋째가 붙으면서 하나로 모았다).
+//   ⛔ 성좌를 가운데로 옮기는 길을 또 만들지 말 것 — 앵커가 갈리면 같은 동작인데 화면이 다르게 선다
+//     (옛 campRuneFocus 는 `RUNE_MAP_H*0.34` 라는 **손으로 적은 근사값**을 썼다).
+function campRuneLookCons(ci, now){
+  if(!_rnView || ci == null || ci < 0) return;
   const c = RUNE_CT[ci]; if(!c) return;
   const mp = document.querySelector('#campRune .rnMap');
   const H = mp ? mp.getBoundingClientRect().height : 0;
-  if(!H){ requestAnimationFrame(() => { if(_runeAlive() && _runeSwapKey) campRuneSwapLook(now); }); return; }
+  if(!H){ requestAnimationFrame(() => { if(_runeAlive()) campRuneLookCons(ci, now); }); return; }
   // 📐 **화면에서 잰 자리를 viewBox 좌표로 바꿔** 앵커로 쓴다.
   //   ⛔ 화면 비율(높이/판높이)을 viewBox 값에 그대로 곱하지 말 것 —
   //     판은 preserveAspectRatio 로 비율을 지키느라 화면을 꽉 채우지 않는다.
@@ -1204,11 +1210,29 @@ function campRuneAuto(key){
   for(let i = 0; i < n; i++) if(!R[kind][i] && campRuneCanEquip(kind, i, key)){
     // ✈ 빈 칸에 들어갈 때도 **날아서** 들어간다(2026-09-04 사용자 확정) —
     //   교체만 날아가면 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
-    if(!campRuneEquipFly(kind, i, key)) return false;
+    if(!campRuneEquipFly(kind, i, key, { look:true })) return false;
     return true; }
   return false; }
 // ✈ 장착 + 날아가는 그림 — 가방 줄에서 칸으로.
 //   ⚠ 출발 자리는 **끼우기 전에** 잰다(다시 그리면 그 버튼이 «–» 로 바뀌거나 자리가 달라진다).
+// ⏳ **판이 다 미끄러진 뒤에** 한다 — 날아갈 자리(`_runeSlotAt`)는 **화면 좌표**라,
+//   미끄러지는 동안 재면 룬이 칸이 **있던 자리**에 내린다(궤적은 고정된 keyframe 이다).
+//   ⚠ 상한을 둔다 — 어떤 이유로든 안 멎으면 연출이 통째로 사라지는 것보다 조금 어긋나는 편이 낫다.
+const RUNE_LOOK_MAX = 900;
+function _runeAfterLook(fn){
+  let did = false;
+  const go = () => { if(did) return; did = true; fn(); };
+  // ⏰ **타이머가 안전망이다** — rAF 만 믿으면 안 된다. 탭이 가려지거나 그릴 것이 없으면
+  //   rAF 가 통째로 멈추는데, 그러면 날아가는 그림도 **도착도** 영영 안 와서 받을 칸이
+  //   가려진 채(`_runeVeil`) 빈칸으로 남는다 — 장착은 됐는데 화면에는 없는 꼴이다
+  //   (2026-09-12 실측: 스모크에서 rAF 가 안 와 비행이 통째로 사라졌다). ⛔ 빼지 말 것.
+  setTimeout(go, RUNE_LOOK_MAX);
+  const step = () => {
+    if(did || !_runeAlive()) return;
+    const v = _rnView;
+    if(!v || (v.x === v.tx && v.y === v.ty && v.z === v.tz)){ go(); return; }
+    requestAnimationFrame(step); };
+  requestAnimationFrame(step); }
 function campRuneEquipFly(kind, i, key, opt){
   const O = opt || {};
   const from = _runeBagAt(key);
@@ -1216,11 +1240,17 @@ function campRuneEquipFly(kind, i, key, opt){
   //   문양이 「생겼다 사라지는」 것으로 안 보인다.
   _runeVeil = _runeVeilKey(kind, i);
   if(!campRuneEquip(kind, i, key)){ _runeVeil = ''; return false; }
-  const to = _runeSlotAt(kind, i);
-  if(!from || !to){ _runeVeil = ''; campRuneRender(); return true; }   // 자리를 못 찾으면 그냥 보인다
   const c = (RUNE_GD[runeParse(key).gd] || {}).col || '';
-  _runeFly(key, from, to, RUNE_FLY_MS,
-    { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) });
+  const fly = () => {
+    const to = _runeSlotAt(kind, i);
+    if(!from || !to){ _runeVeil = ''; campRuneRender(); return; }   // 자리를 못 찾으면 그냥 보인다
+    _runeFly(key, from, to, RUNE_FLY_MS,
+      { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) }); };
+  // 🎯 **빈 칸에 넣을 때는 그 성좌로 먼저 간다**(2026-09-12 사용자 요청 — 교체·칸 고르기와 같은 자리).
+  //   ⭐ 상태는 위에서 **이미** 바뀌었다 — 여기서 미루는 것은 그림뿐이라, 도중에 화면을 나가도
+  //     장착은 남는다(⛔ 애니가 끝날 때 상태를 바꾸지 말 것 · 같은 규칙).
+  if(O.look){ campRuneLookCons(campRuneConsOf(kind, i)); _runeAfterLook(fly); }
+  else fly();
   return true; }
 // 🎒 가방을 눌렀을 때 — 칸을 골라 뒀으면 **그 칸에**, 아니면 **빈 칸에**.
 // 🎯 같은 갈래의 **다음 빈 칸** — 없으면 -1.
@@ -1245,7 +1275,7 @@ function campRuneBagTap(key){
     const cur = campRuneEq(kind)[_runePick] || null;
     if(cur === key) return;
     const at = _runePick;
-    if(!campRuneEquipFly(kind, at, key)){ say('남은 룬이 없습니다'); return; }
+    if(!campRuneEquipFly(kind, at, key, { look:true })){ say('남은 룬이 없습니다'); return; }
     // 🎯 **다음 빈 칸으로 옮겨 간다**(2026-09-04 사용자 요청) — 가방을 연달아 누르면
     //   그 갈래의 빈 칸이 차례로 채워진다. 칸을 하나 넣을 때마다 다시 고르지 않아도 된다.
     //   ⛔ 고른 자리를 그대로 두지 말 것 — 다음 탭이 방금 넣은 것을 **덮어쓴다**.
