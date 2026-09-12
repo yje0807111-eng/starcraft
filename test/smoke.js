@@ -2160,9 +2160,15 @@ async function groupLobby(){
         //   ⛔ 「빈 바닥 탭 = 해제」로 되돌리지 말 것: 화면을 옮기다 손이 미끄러질 때마다 꺼졌다.
         { const q=findEmpty(); pid++;
           fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x+1,q.y+1); spin(3);
-          assert(_campPanMode,'빈 바닥 탭으로 모드가 꺼졌다 — ⊘ 로만 꺼져야 한다');
+          assert(_campPanMode,'빈 바닥 탭으로 모드가 꺼졌다 — 해제 버튼으로만 꺼져야 한다');
+          // 🖐 **제 버튼이 뜬다**(2026-09-12 사용자 확정) — 채굴 멈춤과 같은 껍데기(.campModeStop)에
+          //   글자가 「화면 이동 모드 해제」다. ⛔ 공용 ⊘(#btDesel)에 얹지 말 것 — 거기는 지정 해제 자리다.
+          const ps=$('campPanStop');
+          assert(ps,'화면 이동 모드인데 해제 버튼이 없다');
+          assert(ps.classList.contains('campModeStop'),'해제 버튼이 공용 껍데기를 안 쓴다');
+          assert(/화면 이동 모드 해제/.test(ps.textContent),'해제 버튼에 글자가 없다: '+ps.textContent);
           const dz=$('btDesel');
-          assert(dz && dz.classList.contains('on'),'화면 이동 모드인데 ⊘ 버튼이 안 켜졌다'); }
+          assert(!(dz && dz.classList.contains('on')),'화면 이동 모드가 ⊘(지정 해제) 를 켰다 — 그 자리는 지정 전용이다'); }
 
         // ④ 모드 중 **유닛·건물·광맥을 탭하면** 그 선택·채집이 그대로 일어난다(모드는 유지된다)
         //   (down 시점에 대상을 가려 원본에 넘긴다 — 재전달로 옛 좌표를 쓰면 선택이 안 됐다)
@@ -2212,10 +2218,15 @@ async function groupLobby(){
           if(onMap(q)){ pid++; fire(pid,'pointerdown',q.x,q.y); fire(pid,'pointerup',q.x,q.y); spin(3);
             assert(_campPanMode,'건물을 탭했다고 모드가 꺼졌다 — ⊘ 로만 꺼져야 한다');
             assert(G.tech.sel===bd.eid,'모드 중 건물 탭이 그 건물을 못 고른다'); } }
-        // 🖐 ⊘ 버튼이 **유일한 출구**다 — 이걸로 꺼진다.
+        // 🖐 **「화면 이동 모드 해제」 버튼이 유일한 출구**다 — 이걸로 꺼지고, 꺼지면 버튼도 사라진다.
+        //   ⛔ techDeselU(⊘) 로 꺼지게 되돌리지 말 것(2026-09-12 사용자 확정 · 두 자리를 가른다).
         { assert(_campPanMode,'전제가 바뀜: 여기서 모드가 켜져 있어야 한다');
-          techDeselU();
-          assert(!_campPanMode,'⊘ 를 눌렀는데 화면 이동 모드가 안 꺼진다'); }
+          techDeselU(); spin(2);
+          assert(_campPanMode,'⊘(지정 해제) 가 화면 이동 모드까지 껐다 — 두 자리는 갈려 있어야 한다');
+          const ps=$('campPanStop'); assert(ps,'해제 버튼이 없다');
+          ps.click(); spin(2);
+          assert(!_campPanMode,'해제 버튼을 눌렀는데 화면 이동 모드가 안 꺼진다');
+          assert(!$('campPanStop'),'모드를 껐는데 해제 버튼이 남아 있다(잔상)'); }
         // 🏗 **유닛을 지정한 채 내 건물을 탭하면 유닛이 풀리고 그 건물이 지정된다**
         //   (2026-09-10 사용자 확정 · 옛 규칙은 「그 자리로 이동」이라 ⊘ 로 먼저 풀어야 했다).
         //   ⛔ 「건물 탭 = 이동」으로 되돌리지 말 것.

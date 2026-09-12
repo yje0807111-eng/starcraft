@@ -6666,20 +6666,37 @@ function campMineModeToggle(){ campMineModeSet(!_campMineMode); }
 //     ⛔ 켜는 버튼을 여기로 옮기지 말 것. 그러면 늘 보이게 되고, 그것을 피하려고
 //       요약판 안에 둔 것이다(2026-08-27 사용자 확정).
 //   ⚠ #phone 직속이라 하단이 무엇으로 바뀌어도 살아남는다(맵 안에 두면 techMapRender 가 지운다).
-function campMineStopBtn(){
+// 🛑 **모드 해제 버튼은 한 껍데기다** — 채굴·화면 이동이 같은 것을 쓴다
+//   (2026-09-12 사용자 확정 「채굴모드해제 버튼처럼 화면 이동 모드 해제로」).
+//   ⛔ 모드마다 버튼을 새로 만들지 말 것 — 자리(오른쪽 위)가 하나라 둘이 겹친다.
+//   ⚠ 두 모드는 **같이 못 켠다**(campMineModeSet 이 화면 이동을 끈다)라 한 번에 하나만 뜬다.
+function _campModeStopBtn(id, on, label, icoSvg, onExit){
   const ph = document.getElementById('phone'); if(!ph) return;
-  let b = document.getElementById('campMineStop');
-  if(!_campMineMode || !_campOn){ if(b) b.remove(); return; }   // 숨기지 말고 지운다(잔상 금지)
+  let b = document.getElementById(id);
+  if(!on || !_campOn){ if(b) b.remove(); return; }   // 숨기지 말고 지운다(잔상 금지)
   if(b) return;
   b = document.createElement('button');
-  b.id = 'campMineStop'; b.type = 'button';
-  b.setAttribute('aria-label', '채굴 모드 해제');
-  b.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
-    + '<rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/>'
-    + '<rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/></svg>'
-    + '<i>채굴 모드 해제</i>';
-  b.onclick = function(ev){ if(ev) ev.stopPropagation(); campMineModeSet(false); };
+  b.id = id; b.type = 'button'; b.className = 'campModeStop';
+  b.setAttribute('aria-label', label);
+  b.innerHTML = icoSvg + '<i>' + label + '</i>';
+  b.onclick = function(ev){ if(ev) ev.stopPropagation(); onExit(); };
   ph.appendChild(b);
+}
+function campMineStopBtn(){
+  _campModeStopBtn('campMineStop', _campMineMode, '채굴 모드 해제',
+    '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
+    + '<rect x="7" y="5" width="3.6" height="14" rx="1" fill="currentColor"/>'
+    + '<rect x="13.4" y="5" width="3.6" height="14" rx="1" fill="currentColor"/></svg>',
+    function(){ campMineModeSet(false); });
+}
+// 🖐 **화면 이동 모드를 끄는 버튼** — 그림은 공용 ⊘(지정 해제와 같은 글리프)를 쓴다.
+//   ⛔ 새 아이콘을 만들지 말 것(레지스트리 「지정 해제 버튼」의 그 SVG 다).
+function campPanStopBtn(){
+  _campModeStopBtn('campPanStop', _campPanMode, '화면 이동 모드 해제',
+    '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
+    + '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+    + '<line x1="6.2" y1="6.2" x2="17.8" y2="17.8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+    function(){ campPanMode(false); });
 }
 // 한 번 캔다 — 맵 어디서 눌렀든 같다(모드가 켜져 있을 때만 불린다).
 //   ⛔ 획득량 수식을 여기서 만들지 말 것 — campTapGain 하나가 단일 소스다.
@@ -7891,13 +7908,16 @@ function campPanMode(on){
   _campPanMode = !!on;
   const m = document.getElementById('cstMain');
   if(m) m.classList.toggle('campPan', _campPanMode);
-  if(typeof toast === 'function') toast(_campPanMode ? '🖐 화면 이동 — ⊘ 로 해제' : '👆 지정 모드');
-  if(_campPanMode && typeof playSfx === 'function') playSfx('ui_open');
-  if(typeof techUIRender === 'function') techUIRender();   // ⊘ 버튼을 켜고 끈다
+  // 🖐 끄는 길은 **오른쪽 위의 「화면 이동 모드 해제」 버튼 하나**다(2026-09-12 사용자 확정).
+  //   ⛔ 「탭하면 해제」로 되돌리지 말 것 — 화면을 옮기다 손이 미끄러질 때마다 꺼졌다.
+  //   ⛔ 공용 ⊘(#btDesel)에 얹지 말 것 — 거기는 **유닛·건물 지정 해제**의 자리다.
+  campPanStopBtn();
+  if(typeof toast === 'function') toast(_campPanMode ? '🖐 화면 이동 모드' : '👆 지정 모드');
+  if(typeof playSfx === 'function') playSfx(_campPanMode ? 'ui_open' : 'ui_close');
+  // ⚠ 모드가 바뀌면 **하단을 다시 그린다** — ⊘ 는 이제 팬을 안 보지만, 다시 안 그리면
+  //   직전 지정이 남긴 `.on` 이 그대로 남아 「아무것도 안 골랐는데 ⊘ 가 켜져 있다」가 된다(실측).
+  if(typeof techUIRender === 'function') techUIRender();
 }
-// 🖐 밖에서 「지금 화면 이동 모드인가」를 묻는 문 — ⊘ 버튼이 이것을 보고 켜진다.
-//   ⛔ `_campPanMode` 를 다른 파일에서 직접 읽지 말 것(17-build-cards 는 공유 파일이다).
-function campPanIsOn(){ return !!_campPanMode; }
 // 빈 바닥을 눌렀다 — 0.5초 버티면 모드 ON
 function campPanArm(ev){
   campPanDisarm();
