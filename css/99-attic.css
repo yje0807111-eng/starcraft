@@ -1150,3 +1150,23 @@ body.dgFight .hbAutoChip{display:none}
 
 /* ══════════ [30-home.css] 2026-09-11 — 어디에도 안 쓰는 클래스 1개의 규칙 ══════════ */
 #phone.raceIn #homeScreen{opacity:0;transition:none}
+
+/* ══════════ [30-home.css] 2026-09-12 — 어디에도 안 쓰는 클래스 2개의 규칙 ══════════ */
+#campRune .rnBuyS{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1px;min-width:46px;padding:5px 3px;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--rg) 60%,transparent);border-radius:var(--r-sm);
+  background:rgba(255,255,255,.04);font-family:inherit}
+#campRune .rnBuyS:disabled{opacity:.42;cursor:default}
+#campRune .rnBuyS b{font-size:10px;color:var(--rg);font-weight:600}
+#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:2px;
+  font-family:var(--font-num);font-size:10.5px;font-weight:700;color:#e2b6ff}
+#campRune .rnBuyS u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
+#campRune .rnBuyS u.max{color:#69737f;font-size:10px}
+#campRune .rnBuyS.sale{border-color:color-mix(in srgb,var(--rg) 85%,transparent);
+  background:rgba(255,255,255,.07)}
+#campRune .rnBuyS .rnOffS{position:absolute;left:3px;top:-7px;font-style:normal;
+  font-family:var(--font-num);font-size:8.5px;font-weight:700;color:#ff9c6b;
+  padding:0 3px;border-radius:var(--r-bar);background:#12181f;line-height:1.5}
+#campRune .rnBuyS u.sale{color:#ff9c6b}
+#campRune .rnBuyS em{position:absolute;right:2px;top:1px;font-style:normal;
+  font-family:var(--font-num);font-size:9px;color:#8d97a6}

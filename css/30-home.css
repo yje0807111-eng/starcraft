@@ -2386,35 +2386,63 @@
 /* 🧾 상점 줄 — **가방(.rnRw)과 같은 짜임**이다: [그림] [이름/등급 값] … [등급 버튼 셋].
    ⛔ 세로 카드로 되돌리지 말 것(2026-09-05 사용자 확정) — 룬 하나가 화면을 한 덩어리씩
      먹어 「무엇을 파는가」가 한눈에 안 읽혔다. */
-#campRune .rnShopRw{display:flex;align-items:center;gap:8px;padding:6px 2px}
-#campRune .rnShopRw + .rnShopRw{border-top:1px solid rgba(255,255,255,.07)}
+#campRune .rnShopRw{position:relative;display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer}
+/* 펼친 구역(.rnShopExp)이 줄 사이에 끼므로 「줄 다음 줄」과 「펼친 구역 다음 줄」 둘 다 선을 긋는다 */
+#campRune .rnShopRw + .rnShopRw,#campRune .rnShopExp + .rnShopRw{border-top:1px solid rgba(255,255,255,.07)}
 #campRune .rnShopRw .rnRwT{flex:1 1 auto;min-width:0}
-#campRune .rnShopRw .rnRwB{margin-left:auto;display:flex;gap:3px;flex:none}
+/* 상점 줄 부제 — 설명(한글)은 본문 글꼴, 등급 값은 숫자 글꼴(2026-09-12 · 제목=룬 이름 / 부제=설명) */
+#campRune .rnShopRw .rnRwT s i{font-style:normal;font-family:var(--font-ko);color:#8d97a6}
+#campRune .rnRwArw{margin-left:auto;width:18px;text-align:center;color:#69737f;font-size:11px;flex:none}
+/* 🔦 열린 줄 — 옅은 면 한 겹 + 왼쪽 세로 광원(2026-09-12 · 목업 rune-shop-hiend-8 ⑥안).
+   ⛔ 판·테두리를 더하지 말 것 — 카드로 만들면 할인 카드와 얼굴이 겹친다. */
+#campRune .rnShopRw.open{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
+#campRune .rnShopRw.open::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(232,236,244,.8),transparent)}
+/* 🎚 등급 칩 — 판 없는 글자 + 밑변 광원(탭 띠와 같은 어휘). 고른 것만 등급색으로 빛난다. */
+#campRune .rnGdChips{display:flex;align-items:center;gap:2px;margin:4px 0 2px}
+#campRune .rnGdChips>i{font-style:normal;font-size:10px;color:#69737f;padding:0 6px 0 4px}
+#campRune .rnGdChip{position:relative;padding:5px 8px;border:0;background:none;font:inherit;font-size:10.5px;
+  font-weight:600;cursor:pointer;color:color-mix(in srgb,var(--rg) 70%,#8d97a6)}
+#campRune .rnGdChip.on{color:var(--rg);text-shadow:0 0 8px color-mix(in srgb,var(--rg) 45%,transparent)}
+#campRune .rnGdChip.on::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--rg),transparent)}
+#campRune .rnGdNote{margin-left:auto;font-size:9.5px;color:#69737f}
+/* 🏷 제목 옆 상태 배지 — 「지금 무엇으로 좁혀져 있나」(유형 · 등급). 점이 빛나고 글자는 그 색. */
+#campRune .rnState{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:1px 7px;vertical-align:1px;
+  font-size:10px;font-weight:600;letter-spacing:0;color:var(--rg);border-radius:var(--r-bar);
+  border:1px solid color-mix(in srgb,var(--rg) 45%,transparent);background:color-mix(in srgb,var(--rg) 10%,transparent)}
+#campRune .rnState i{font-style:normal;width:5px;height:5px;border-radius:50%;background:var(--rg);box-shadow:0 0 6px var(--rg)}
+#campRune .rnState u{text-decoration:none;color:#69737f;font-weight:400}
+/* ⬇ 펼친 구역 — 등급 넷을 나란히. 카드는 할인 카드(.rnBuy)의 얼굴을 **작게**(.gd) 쓴다. */
+#campRune .rnShopExp{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 2px 10px}
+/* 등급 카드(.rnBuy.gd) — 등급 이름이 제일 크다(11px) · 값은 작게(10.5) · 보유는 더 작게(8) · 낮게.
+   (2026-09-12 사용자: 「가장 큰 것이 등급 · 퍼센트는 줄이고 · 보유 수는 더 작게 · 높이도 줄여」) */
+#campRune .rnBuy.gd{--cut:6px;min-height:0;padding:5px 3px 4px;gap:0}
+#campRune .rnBuy.gd .hd{display:flex;align-items:center;gap:4px;height:16px}
+#campRune .rnBuy.gd .rnGdI{width:14px;height:14px;display:block;object-fit:contain;
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--rg) 45%,transparent))}
+#campRune .rnBuy.gd .hd b{font-size:11px;font-weight:700;letter-spacing:.02em}
+#campRune .rnBuy.gd .pc{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10.5px;font-weight:600;
+  color:var(--rg);opacity:.9;margin:2px 0 3px;line-height:1}
+#campRune .rnBuy.gd u{font-size:10.5px;padding:2px 2px}
+#campRune .rnBuy.gd .own{margin-top:3px;font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:8px;color:#8d97a6;line-height:1}
+#campRune .rnBuy.gd .own.none{color:#3f4753}
+#campRune .rnBuy.gd .rnOff{left:auto;right:3px;top:3px;font-size:8px;padding:0 4px}
+/* 버튼 하나(.rnBuy.one) — 줄 오른쪽. 같은 모서리 컷 + 금속 띠를 30px 높이로. 유니크는 금빛 숫자. */
+#campRune .rnBuy.one{--cut:5px;min-height:0;height:30px;padding:0 10px;flex-direction:row;margin-left:auto;flex:none;min-width:66px}
+#campRune .rnBuy.one u{margin:0;width:auto;padding:0;background:none;border:0;clip-path:none;
+  font-size:13px;color:#eef1f6}
+#campRune .rnBuy.one.gold u{color:#ffe9a8;text-shadow:0 0 8px rgba(255,210,74,.35)}
+/* 🏷 버튼 하나의 −30% 배지 — **안쪽에 나란히**(position:static). 버튼이 clip-path 라 밖으로 내밀면 잘린다(실측: 빨간 조각만 남았다). */
+#campRune .rnBuy.one .rnOff{position:static;margin-right:5px;font-size:8px;padding:0 4px;line-height:1.5;flex:none}
 /* 작은 등급 버튼 — 가방의 육각 자리에 값(젬)이 온다.
    ⚠ **등급이 넷이 됐다**(2026-09-05 · 유니크가 등급이 되면서). 폭을 60 → 46 으로 줄였다 —
      넷을 60px 로 두면 줄이 넘쳐 이름이 두 줄로 접히고 줄 높이가 66px 이 된다(스모크가 잰다). */
-#campRune .rnBuyS{position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;min-width:46px;padding:5px 3px;cursor:pointer;
-  border:1px solid color-mix(in srgb,var(--rg) 60%,transparent);border-radius:var(--r-sm);
-  background:rgba(255,255,255,.04);font-family:inherit}
-#campRune .rnBuyS:disabled{opacity:.42;cursor:default}
-#campRune .rnBuyS b{font-size:10px;color:var(--rg);font-weight:600}
-#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:2px;
-  font-family:var(--font-num);font-size:10.5px;font-weight:700;color:#e2b6ff}
-#campRune .rnBuyS u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
-#campRune .rnBuyS u.max{color:#69737f;font-size:10px}
-#campRune .rnBuyS.sale{border-color:color-mix(in srgb,var(--rg) 85%,transparent);
-  background:rgba(255,255,255,.07)}
 /* 🏷 줄에서도 할인을 말한다 — 위 할인 구역과 같은 주황 */
 /* ⚠ 배지를 버튼 **위로 걸친다** — 안에 두면 등급 이름과 한 줄에서 부딪힌다(폭 60px).
    ⛔ 등급 이름을 배지로 대신하지 말 것: 무엇을 사는지가 사라진다. */
-#campRune .rnBuyS .rnOffS{position:absolute;left:3px;top:-7px;font-style:normal;
-  font-family:var(--font-num);font-size:8.5px;font-weight:700;color:#ff9c6b;
-  padding:0 3px;border-radius:var(--r-bar);background:#12181f;line-height:1.5}
 #campRune .rnShopRw{overflow:visible}
-#campRune .rnBuyS u.sale{color:#ff9c6b}
-#campRune .rnBuyS em{position:absolute;right:2px;top:1px;font-style:normal;
-  font-family:var(--font-num);font-size:9px;color:#8d97a6}
 /* 🏷 할인 칸 — 왼쪽 위에 −30%, 값 옆에 **제값을 그어** 붙인다 */
 #campRune .rnBuy{position:relative}
 /* 할인 칸 — 면만 한 단 밝다. ⚠ 테두리는 ::before 의 띠라 여기서 border 를 만지지 않는다 */

@@ -325,3 +325,10 @@ CSS 규칙 **342개**(30-home 255 · 40-social 47 · 20-lobby 26 · 10-game 14) 
 
 ⭐ **왜 파일을 지우고 새로 만들었나.** 이름이 `08-hunt.js` 인 채로 남으면 다음 사람이 거기에 사냥터를
 다시 넣는다. 실제로 이 저장소에서 「옛 화면이 되살아나는」 경로가 늘 그랬다.
+
+### 2026-09-12 · 룬 상점 「줄마다 등급 버튼 넷」 → 「유형 탭 + 등급 칩 + 펼치는 줄」
+- JS `_runeBuySmall`(js/22-camp-rune.js) — 상점 줄의 작은 등급 버튼(.rnBuyS). 줄마다 넷이 늘어서 격자가 먼저 읽혔다(사용자 지적).
+  대신 `_runeGdCard`(펼친 등급 카드 · `.rnBuy.gd`)와 `_runeBuyOne`(줄 버튼 하나 · `.rnBuy.one`)이 산다.
+- CSS `.rnBuyS` 계열 10조각 · `.rnOffS`(css/30-home.css → css/99-attic.css).
+- ⛔ 되살리지 말 것 — 목업 `docs/mock/rune-shop-final-3.html` 이 확정본이다.
+

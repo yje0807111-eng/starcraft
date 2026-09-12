@@ -3929,9 +3929,9 @@ async function groupLobby(){
         campRunePick('',-1); await sleep(20); }
       // ④ 룬 상점 탭 — 등급 버튼과 젬 값이 보인다
       campRuneEnter('shop'); await sleep(60);
-      // ⚠ 상점은 **두 모양**이다: 추천·할인은 카드(.rnBuy), 일반은 가로줄 버튼(.rnBuyS).
-      //   한쪽만 세면 목록을 가로형으로 바꿀 때 애먼 곳이 터진다(2026-09-05에 겪었다).
-      const buys=el.querySelectorAll('.rnBuy,.rnBuyS');
+      // ⚠ 상점의 살 것은 전부 .rnBuy 다 — 추천·할인 카드 · 펼친 등급 카드(.gd) · 줄 버튼 하나(.one).
+      //   (2026-09-12 · 옛 가로줄 버튼 .rnBuyS 는 다락으로 갔다)
+      const buys=el.querySelectorAll('.rnBuy');
       assert(buys.length>=RUNE_GRADES.length,'룬 상점에 살 것이 없다: '+buys.length);
       // 💠 **젬은 공용 아이콘이다**(2026-09-04 사용자 확정 · CLAUDE.md 「재화 아이콘」).
       //   ⛔ 💎 이모지로 되돌리지 말 것 — 상단 재화 바·상점과 그림이 달라진다.
@@ -4060,23 +4060,24 @@ async function groupLobby(){
       campRuneRender(); await sleep(40);
       let shopNote='';
       const tabs=[...document.querySelectorAll('#rnBody .pdSegBtn')].map(b=>b.textContent);
-      assert(tabs.length===RUNE_GRPS.length,'갈래 탭 수가 다르다: '+tabs.join(','));   // 🎚 유니크 탭은 없다(등급이라서)
+      // 🎚 유니크 탭은 없다(등급이라서) · 「전체」가 맨 앞에 하나 더 있다(2026-09-12 · 유형은 평소 묶여 있다)
+      assert(tabs.length===RUNE_GRPS.length+1,'갈래 탭 수가 다르다: '+tabs.join(','));
       assert(document.querySelector('#rnBody .pdSeg'),'공용 탭 띠(.pdSeg)를 안 쓴다');
       // ⚠ **아직 닿는 데가 없는 룬은 그렇게 말한다** — 젬을 받으면서 말을 안 하면 거짓 판매다.
       //   (2026-09-04 실측: exp·killGain 은 campRuneEff 를 부르는 곳이 0곳이다)
       { const soon = RUNE_LIST.filter(d => d.soon);
         assert(soon.length > 0, 'soon 표시가 하나도 없다 — 배선을 다 했으면 이 검사를 지운다');
         for(const d of soon){
-          // ⚠ 그 룬의 **갈래 탭을 열고** 찾는다 — 상점은 한 번에 한 갈래만 그린다.
-          //   ⛔ 안 열고 찾으면 칸이 없어 검사를 통째로 건너뛴다(실측: 지워도 통과했다).
-          campRuneShopTab(d.grp); await sleep(30);
-          const cell = [...document.querySelectorAll('#rnBody .rnBuy,#rnBody .rnBuyS')]
+          // ⚠ 그 룬의 **줄을 펼쳐서** 찾는다 — 살 수 있는 칸은 펼쳐야 그려진다(2026-09-12).
+          //   ⛔ 안 펼치고 찾으면 칸이 없어 검사를 통째로 건너뛴다(실측: 지워도 통과했다).
+          campRuneShopTab('all'); campRuneShopOpen(d.id); await sleep(30);
+          const cell = [...document.querySelectorAll('#rnBody .rnShopExp .rnBuy')]
             .find(b => (b.getAttribute('onclick') || '').indexOf("'" + d.id + "'") >= 0);
-          assert(cell, d.nm + ' 을 상점에서 못 찾았다(' + d.grp + ' 탭)');
-          // 카드는 칸 안(.rnSoon), 줄은 이름 옆(.rnRwT u)에 적는다
-          const row = cell.closest('.rnShopRw');
-          assert(cell.querySelector('.rnSoon') || (row && row.querySelector('.rnRwT u')),
-            d.nm + ' 이 아직 안 닿는데 상점이 그 말을 안 한다'); }
+          assert(cell, d.nm + ' 을 상점에서 못 찾았다(펼친 줄)');
+          // 줄은 이름 옆(.rnRwT u)에 「준비 중」을 적는다
+          const row = document.querySelector('#rnBody .rnShopRw.open');
+          assert(row && row.querySelector('.rnRwT u'), d.nm + ' 이 아직 안 닿는데 상점이 그 말을 안 한다');
+          campRuneShopOpen(d.id); await sleep(20); }
         // ⛔ 추천에는 넣지 않는다 — 아무 일도 안 하는 것을 권할 수는 없다
         const reco = runeRecoList().map(r => runeParse(r.key).def.id);
         for(const d of soon) assert(reco.indexOf(d.id) < 0,
@@ -4117,24 +4118,89 @@ async function groupLobby(){
           '고른 표시가 1px 밑변 광원이 아니다: '+(ind?getComputedStyle(ind).height:'없음'));
         assert(getComputedStyle(seg).backgroundColor==='rgba(0, 0, 0, 0)',
           '탭 띠 자체에 판이 남아 있다'); }
-      // 🧾 **일반 상점은 가로줄**이다(2026-09-05 사용자 확정) — 가방과 같은 짜임:
-      //   [그림] [이름 / 등급 값] … [등급 버튼 셋]. ⛔ 세로 카드로 되돌리지 말 것.
-      { const rows=document.querySelectorAll('#rnBody .rnShopRw');
-        assert(rows.length>0,'상점 목록이 가로줄이 아니다');
+      // 🧾 **일반 상점 = 유형 탭 + 등급 칩 + 펼치는 줄**(2026-09-12 사용자 확정 · 목업 rune-shop-final-3).
+      //   규칙 하나: 등급이 하나로 정해졌으면 줄 오른쪽에 버튼 하나, 아니면 줄을 눌러 아래로 펼친다.
+      //   ⛔ 줄마다 등급 버튼 넷(.rnBuyS)으로 되돌리지 말 것 — 한 탭에 서른 개가 깔렸다.
+      { campRuneShopTab('all'); await sleep(40);
+        const seg=document.querySelector('#rnBody .pdSeg.stack');
+        assert(seg && seg.querySelectorAll('.pdSegBtn').length===RUNE_GRPS.length+1,
+          '유형 탭이 「전체 + 갈래」가 아니다: '+(seg?seg.querySelectorAll('.pdSegBtn').length:0));
+        assert(/전체/.test(seg.querySelector('.pdSegBtn').textContent),'첫 탭이 「전체」가 아니다');
+        const chips=document.querySelectorAll('#rnBody .rnGdChip');
+        assert(chips.length===RUNE_GRADES.length,'등급 칩이 넷이 아니다: '+chips.length);
+        // ① 기본(전체 · 등급 미지정): 줄은 이름·부제만 — 살 것도 버튼도 없다. 제목엔 배지가 없다.
+        const rows=document.querySelectorAll('#rnBody .rnShopRw');
+        assert(rows.length===RUNE_LIST.length,'「전체」인데 룬이 다 안 나온다: '+rows.length+'/'+RUNE_LIST.length);
+        assert(!document.querySelector('#rnBody .rnShopRw .rnBuy'),'등급을 안 골랐는데 줄에 버튼이 있다');
+        assert(!document.querySelector('#rnBody .rnShopExp'),'아무것도 안 눌렀는데 펼쳐진 줄이 있다');
+        assert(!document.querySelector('#rnBody .rnState'),'좁히지 않았는데 제목에 배지가 붙었다');
         const r0=rows[0].getBoundingClientRect();
         assert(r0.height<=64,'줄이 너무 높다 — 카드로 되돌아갔다: '+Math.round(r0.height)+'px');
-        // 줄 하나에 등급 버튼이 셋(유니크 갈래는 하나)
-        const btns=rows[0].querySelectorAll('.rnBuyS');
-        assert(btns.length===RUNE_GRADES.length || btns.length===1,
-          '줄의 등급 버튼 수가 다르다: '+btns.length);
-        // 버튼은 **값**을 적는다(가방은 개수를 적는다 — 같은 자리 다른 숫자)
-        assert(rows[0].querySelector('.rnBuyS u'),'상점 줄 버튼에 값이 없다');
-        // 🏷 할인 중이면 일반 목록에서도 그렇게 말한다 — 값만 싸면 왜 싼지 모른다
-        { const sale=runeSaleList().find(k=>runeParse(k).gd!=='uniq');
-          if(sale){ campRuneShopTab(runeParse(sale).def.grp); await sleep(60);
-            assert(document.querySelector('#rnBody .rnBuyS .rnOffS'),
-              '할인 중인데 일반 목록이 그 말을 안 한다'); } }
-        shopNote='가로줄 '+rows.length+'개 · 높이 '+Math.round(r0.height)+'px'; }
+        // 제목 = 룬 이름 · 부제 = 설명(2026-09-12 사용자 확정 · 가방 줄은 반대라 맞추지 말 것)
+        { const d0=RUNE_LIST[0], t=rows[0].querySelector('.rnRwT');
+          assert(t.firstChild && t.firstChild.nodeType===3 && t.firstChild.textContent.indexOf(d0.nm)>=0,
+            '상점 줄 제목이 룬 이름이 아니다: '+t.textContent.slice(0,20));
+          assert(t.querySelector('s i') && t.querySelector('s i').textContent===d0.de,
+            '상점 줄 부제가 설명이 아니다'); }
+        // ② 줄을 누르면 그 아래가 펼쳐진다 — 등급 카드 넷(.rnBuy.gd) · 열린 줄은 .open · 한 번에 하나
+        { const d0=RUNE_LIST[0], d1=RUNE_LIST[1];
+          campRuneShopOpen(d0.id); await sleep(40);
+          const open=document.querySelectorAll('#rnBody .rnShopRw.open');
+          assert(open.length===1,'펼친 줄이 하나가 아니다: '+open.length);
+          const exp=document.querySelector('#rnBody .rnShopExp');
+          assert(exp && exp.previousElementSibling===open[0],'펼친 구역이 그 줄 바로 아래가 아니다');
+          const cards=exp.querySelectorAll('.rnBuy.gd');
+          assert(cards.length===RUNE_GRADES.length,'펼친 등급 카드가 넷이 아니다: '+cards.length);
+          // 카드 안 크기 순서: 등급 이름 > 등급 값 > 보유 (2026-09-12 사용자 확정)
+          const fz=el=>parseFloat(getComputedStyle(el).fontSize);
+          const c0=cards[0];
+          assert(c0.querySelector('.hd b') && c0.querySelector('.pc') && c0.querySelector('.own'),'등급 카드 안이 비었다');
+          assert(fz(c0.querySelector('.hd b'))>fz(c0.querySelector('.pc')) && fz(c0.querySelector('.pc'))>fz(c0.querySelector('.own')),
+            '등급 카드 글자 순서가 등급 > 값 > 보유 가 아니다: '+fz(c0.querySelector('.hd b'))+'/'+fz(c0.querySelector('.pc'))+'/'+fz(c0.querySelector('.own')));
+          assert(c0.getBoundingClientRect().height<=80,'등급 카드가 너무 높다: '+Math.round(c0.getBoundingClientRect().height)+'px');
+          assert(fz(c0.querySelector('.rnGdI'))<=16 || c0.querySelector('.rnGdI').getBoundingClientRect().width<=16,
+            '등급 카드 그림이 작지 않다');
+          // 카드는 할인 카드와 같은 얼굴 — border 0 · 모서리 컷
+          const cs=getComputedStyle(c0);
+          assert(cs.borderTopWidth==='0px' && /polygon/.test(cs.clipPath),'등급 카드가 할인 카드의 얼굴(컷+띠)이 아니다');
+          // 다른 줄을 누르면 이 줄은 닫히고 그 줄만 열린다
+          campRuneShopOpen(d1.id); await sleep(40);
+          const open2=document.querySelectorAll('#rnBody .rnShopRw.open');
+          assert(open2.length===1 && open2[0].querySelector('.rnRwT').textContent.indexOf(d1.nm)>=0,'다른 줄을 눌렀는데 한 줄만 열려 있지 않다');
+          campRuneShopOpen(d1.id); await sleep(30);
+          assert(!document.querySelector('#rnBody .rnShopExp'),'같은 줄을 다시 눌렀는데 안 닫힌다'); }
+        // ③ 등급을 고정하면 펼치지 않고 줄마다 버튼 하나(.rnBuy.one) · 제목에 「등급 만」 배지
+        { campRuneShopGd('uniq'); await sleep(40);
+          const rowsU=document.querySelectorAll('#rnBody .rnShopRw');
+          assert(rowsU.length===RUNE_LIST.length,'유니크로 좁혔는데 룬 수가 변했다(등급은 목록을 줄이지 않는다)');
+          for(const r of rowsU){ const b=r.querySelectorAll('.rnBuy.one'); assert(b.length===1,'등급을 고정했는데 줄의 버튼이 하나가 아니다: '+b.length);
+            assert(!r.getAttribute('onclick'),'등급을 고정했는데 줄이 아직 펼치기를 받는다'); }
+          assert(!document.querySelector('#rnBody .rnShopExp'),'등급을 고정했는데 펼친 구역이 있다');
+          assert(document.querySelector('#rnBody .rnBuy.one.gold'),'유니크 버튼이 금빛이 아니다');
+          const st=document.querySelectorAll('#rnBody .rnState');
+          assert(st.length===1 && /유니크/.test(st[0].textContent) && st[0].querySelector('u'),'제목에 「유니크 만」 배지가 없다');
+          // ④ 유형 + 등급 둘 다: 목록은 그 갈래만 · 배지 둘 · 버튼 하나씩
+          campRuneShopTab('eco'); campRuneShopGd('uniq'); campRuneShopGd('mid'); await sleep(40);
+          const rowsE=document.querySelectorAll('#rnBody .rnShopRw');
+          assert(rowsE.length===RUNE_LIST.filter(d=>d.grp==='eco').length,'경제로 좁혔는데 줄 수가 다르다');
+          assert(document.querySelectorAll('#rnBody .rnState').length===2,'배지가 둘(경제·중급)이 아니다');
+          assert(!document.querySelector('#rnBody .rnState u'),'둘 다 골랐는데 「만」이 남아 있다');
+          assert(document.querySelectorAll('#rnBody .rnBuy.one').length===rowsE.length,'줄마다 버튼 하나가 아니다');
+          // 같은 등급을 다시 누르면 풀리고 펼치기로 돌아온다
+          campRuneShopGd('mid'); await sleep(40);
+          assert(!document.querySelector('#rnBody .rnBuy.one'),'등급을 풀었는데 버튼이 남아 있다');
+          assert(document.querySelector('#rnBody .rnShopRw').getAttribute('onclick'),'등급을 풀었는데 줄이 펼치기를 안 받는다'); }
+        // 🏷 할인 중이면 일반 목록에서도 그렇게 말한다 — 펼친 카드에도, 버튼 하나에도 배지(.rnOff)
+        // ⚠ **아직 재고가 남은** 할인 룬으로 잰다 — 위 「재고 1」 검사가 하나를 이미 샀다(그 룬은 할인이 끝나 배지가 없다)
+        { const sale=runeSaleList().find(k=>runeParse(k).gd!=='uniq' && runeOnSale(k));
+          if(sale){ const sp=runeParse(sale);
+            campRuneShopTab('all'); campRuneShopOpen(sp.def.id); await sleep(40);
+            assert(document.querySelector('#rnBody .rnShopExp .rnBuy.gd.sale .rnOff'),'할인 중인데 펼친 카드가 그 말을 안 한다');
+            campRuneShopOpen(sp.def.id); campRuneShopGd(sp.gd); await sleep(40);
+            assert(document.querySelector('#rnBody .rnBuy.one.sale .rnOff'),'할인 중인데 줄 버튼이 그 말을 안 한다');
+            campRuneShopGd(sp.gd); await sleep(20); } }
+        campRuneShopTab('all'); await sleep(30);
+        shopNote='전체 '+rows.length+'줄 · 높이 '+Math.round(r0.height)+'px'; }
       // 🛒 **할인 카드의 얼굴**(2026-09-08 사용자 확정) — 값은 제 판 위에 · 테두리는 옅게 ·
       //   배지는 붉은 면 · 그림은 크게 · 카드는 세로로 길게.
       //   ⛔ 되돌리지 말 것: 진한 테두리 여섯이 나란히 서면 격자가 먼저 보이고 룬이 뒤로 물러난다.
