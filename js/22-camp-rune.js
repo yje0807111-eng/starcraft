@@ -384,7 +384,38 @@ function campRuneBuy(id, gd){
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof playSfx === 'function') playSfx('hero_merge');
   if(typeof toast === 'function') toast('💠 ' + runeName(key) + ' 획득');
-  campRuneRender(); return true; }
+  campRuneRender();
+  campRuneBuyFx(id, gd);            // ✨ 산 칸이 부풀고 고리가 퍼진다(연출은 그린 뒤에)
+                                    // ⚠ 여기 `p` 는 **프로필**(PROF())이다 — runeParse 결과가 아니다(한 번 헷갈렸다)
+  return true; }
+// ✨ **구매 연출** — 장착(campRuneEquipFly)과 **같은 어휘**다: 부풀기(.rnPop) + 등급 색 고리(.rnFxRing).
+//   ⛔ 새 어휘를 만들지 말 것 — 룬 화면의 「됐다」는 이미 이 둘이다.
+//   ⚠ campRuneRender 뒤에 부른다 — 다시 그리면 방금 누른 칸의 DOM 이 새것으로 바뀐다.
+function campRuneBuyFx(id, gd){
+  const box=document.getElementById('rnBody'); if(!box) return;
+  const el=[...box.querySelectorAll('.rnBuy')].find(b=>{
+    const o=b.getAttribute('onclick')||''; return o.indexOf("'"+id+"'")>=0 && o.indexOf("'"+gd+"'")>=0; });
+  if(!el) return;
+  el.classList.remove('rnPop'); void el.offsetWidth; el.classList.add('rnPop');
+  setTimeout(()=>el.classList.remove('rnPop'), 460);
+  const r=document.createElement('i'); r.className='rnFxRing';
+  r.style.setProperty('--rg', (RUNE_GD[gd]||{}).col || '#8b95a5');
+  el.appendChild(r); setTimeout(()=>r.remove(), 520); }
+// ❓ **살 때는 물어본다**(2026-09-12 사용자 요청) — 젬은 현질 재화라 잘못 누르면 되돌릴 수 없다.
+//   ⛔ 확인창을 새로 만들지 말 것 — 공용 uiAsk(.ecCard)를 쓴다(CLAUDE.md 「확인 팝업」).
+//   ⚠ 실제 구매는 campRuneBuy 하나다 — 확인은 그 앞의 문일 뿐이다(스모크는 campRuneBuy 를 직접 부른다).
+//   ⚠ 못 사는 경우(상한·젬 부족)는 **묻기 전에** 알린다 — 확인창을 띄웠다가 실패하면 두 번 속는다.
+function campRuneBuyAsk(id, gd){
+  const key=runeKey(id, gd), p=runeParse(key); if(!p.def) return;
+  if(campRuneOwn(key) >= RUNE_OWN_MAX){
+    if(typeof toast==='function') toast('이 룬은 ' + RUNE_OWN_MAX + '개까지만 가질 수 있습니다'); return; }
+  const cost=runeNowGem(key), gemI=(typeof resIco==='function') ? resIco('gem') : '';
+  const have=(typeof profGem==='function') ? profGem() : 0;
+  if(have < cost){ if(typeof toast==='function') toast('💎 젬이 부족합니다'); return; }
+  if(typeof uiAsk!=='function'){ campRuneBuy(id, gd); return; }
+  uiAsk({ title:runeName(key),
+    msg:'<b>' + runeValTx(key) + '</b> · ' + (p.def.de||'') + '<br>' + gemI + ' <b>' + cost + '</b> 을(를) 씁니다',
+    go:'구매', onGo:()=>campRuneBuy(id, gd) }); }
 
 // ── 장착 ────────────────────────────────────────────────────────────────
 // 규칙 셋. ⛔ 하나라도 빼면 「칸이 한정」이라는 전제가 무너진다(맨 위 주석).
@@ -1409,7 +1440,58 @@ let _runeShopGd = '';                    // 등급 고정 — '' | RUNE_GRADES �
 let _runeShopOpen = '';                  // 펼쳐 둔 줄(룬 id) — 한 번에 하나
 function campRuneShopTab(g){ _runeShopTab = g; _runeShopOpen = ''; campRuneRender(); }
 function campRuneShopGd(gd){ _runeShopGd = (_runeShopGd === gd) ? '' : gd; _runeShopOpen = ''; campRuneRender(); }
-function campRuneShopOpen(id){ _runeShopOpen = (_runeShopOpen === id) ? '' : id; campRuneRender(); }
+// ⬇ 펼친 구역의 HTML — **렌더와 애니가 같은 것을 쓴다**(⛔ 두 벌로 만들지 말 것)
+function _runeShopExpHTML(id){
+  return '<div class="rnShopExp">'
+    + RUNE_GRADES.map(gd => _runeGdCard(runeKey(id, gd))).join('') + '</div>'; }
+const RUNE_EXP_MS=220;   // 펼침·접힘 시간(ms) — CSS .rnShopExp 의 transition 과 같아야 한다
+// 🎬 **펼침·접힘은 제자리에서 움직인다**(2026-09-12 사용자 요청 「자연스러운 애니메이션」).
+//   ⛔ 여기서 campRuneRender() 를 부르지 말 것 — 목록을 통째로 다시 그리면 DOM 이 사라져
+//     전환이 걸릴 요소가 없다(그래서 옛 코드는 툭 열리고 툭 닫혔다).
+//   ⭐ 높이를 0 ↔ 실제높이로 민다. 다 펴지면 height:auto 로 풀어 준다(안 풀면 내용이 바뀔 때 잘린다).
+//   ⚠ 다른 줄을 누르면 **닫힘과 열림이 같이 돈다** — 닫는 것을 기다렸다 열면 굼떠 보인다.
+//   ⚠ 화면을 다시 그리는 다른 길(구매·등급 칩·탭)은 그대로 campRuneRender 를 쓴다 —
+//     그때는 열린 줄이 처음부터 펼쳐진 채로 그려진다(위 _runeShopExpHTML).
+function _runeExpOpen(el){
+  el.style.height='0px'; void el.offsetHeight;
+  el.style.height=el.scrollHeight+'px';
+  clearTimeout(el._expT); el._expT=setTimeout(()=>{ el.style.height='auto'; }, RUNE_EXP_MS); }
+function _runeExpClose(el, done){
+  if(el._expOut) return;   // 이미 접는 중 — 두 번 걸면 타이머가 엇갈린다
+  el._expOut=1; clearTimeout(el._expT);
+  el.style.height=el.scrollHeight+'px'; void el.offsetHeight;
+  el.style.height='0px';
+  el._expT=setTimeout(()=>{ el.remove(); if(done) done(); }, RUNE_EXP_MS); }
+function campRuneShopOpen(id){
+  const box=document.getElementById('rnBody');
+  const list=box && box.querySelector('.rnShopList');
+  const same=(_runeShopOpen===id);
+  _runeShopOpen = same ? '' : id;
+  // 목록이 아직 없으면(첫 그리기 전) 평소대로 그린다
+  if(!list){ campRuneRender(); return; }
+  // 열려 있던 것을 접는다
+  //   ⚠ 펼친 구역은 **열린 줄의 바로 다음 형제**로 집는다. `querySelector('.rnShopExp')` 로 집으면
+  //     아직 **접히는 중인 옛 구역**(사라지기 전 220ms)이 먼저 걸려, 정작 열린 것을 못 닫는다
+  //     (실측: 다른 줄을 연 직후 같은 줄을 다시 누르면 안 닫혔다 · 스모크가 잡았다).
+  const openRow=list.querySelector('.rnShopRw.open');
+  const _nx=openRow && openRow.nextElementSibling;
+  const openExp=(_nx && _nx.classList.contains('rnShopExp')) ? _nx : null;
+  if(openRow){ openRow.classList.remove('open');
+    const a=openRow.querySelector('.rnRwArw'); if(a) a.textContent='›'; }
+  if(openExp) _runeExpClose(openExp);
+  if(same){ if(typeof playSfx==='function') playSfx('ui_close'); return; }
+  // 새로 연다 — 그 줄 바로 뒤에 끼우고 높이를 민다
+  const rows=[...list.querySelectorAll('.rnShopRw')];
+  const idx=RUNE_LIST.filter(d=>_runeShopTab==='all'||d.grp===_runeShopTab).findIndex(d=>d.id===id);
+  const row=rows[idx]; if(!row){ campRuneRender(); return; }
+  row.classList.add('open');
+  { const a=row.querySelector('.rnRwArw'); if(a) a.textContent='⌃'; }
+  const tmp=document.createElement('div'); tmp.innerHTML=_runeShopExpHTML(id);
+  const exp=tmp.firstElementChild; if(!exp){ campRuneRender(); return; }
+  row.insertAdjacentElement('afterend', exp);
+  if(typeof paintIcons==='function') paintIcons(exp);
+  _runeExpOpen(exp);
+  if(typeof playSfx==='function') playSfx('ui_open'); }
 // 💠 한 칸 — 그림 · 이름 · 등급 · 값. 살 수 없으면 왜 못 사는지 칸이 말한다.
 function _runeBuyCell(key, opt){
   const O = opt || {}, p = runeParse(key); if(!p.def) return '';
@@ -1427,7 +1509,7 @@ function _runeBuyCell(key, opt){
     + (sale ? '<s>' + runeGem(key) + '</s>' : '') + '</u>';
   return '<button class="rnBuy' + (sale ? ' sale' : '') + '" type="button"'
     + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
-    + ' onclick="campRuneBuy(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + ' onclick="campRuneBuyAsk(\'' + p.def.id + '\',\'' + gd + '\')">'
     + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
     + runeIcoHTML(key, 'rnBuyI')
     + (p.def.soon ? '<i class="rnSoon">준비 중</i>' : '')
@@ -1448,7 +1530,7 @@ function _runeGdCard(key){
   const off = full || have < cost;
   return '<button class="rnBuy gd' + (sale ? ' sale' : '') + '" type="button"'
     + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
-    + ' onclick="campRuneBuy(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + ' onclick="campRuneBuyAsk(\'' + p.def.id + '\',\'' + gd + '\')">'
     + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
     + '<span class="hd">' + runeIcoHTML(key, 'rnGdI') + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b></span>'
     + '<span class="pc">' + runeValTx(key) + '</span>'
@@ -1467,7 +1549,7 @@ function _runeBuyOne(key){
   const off = full || have < cost;
   return '<button class="rnBuy one' + (sale ? ' sale' : '') + (gd === 'uniq' ? ' gold' : '') + '" type="button"'
     + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
-    + ' onclick="campRuneBuy(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + ' onclick="campRuneBuyAsk(\'' + p.def.id + '\',\'' + gd + '\')">'
     + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
     + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
             : '<u>' + gemI + ' ' + cost + (sale ? '<s>' + runeGem(key) + '</s>' : '') + '</u>')
@@ -1541,6 +1623,6 @@ function _runeShopHTML(){
       + (gdOn ? _runeBuyOne(runeKey(d.id, gdOn)) : '<span class="rnRwArw">' + (open ? '⌃' : '›') + '</span>')
       + '</div>';
     // ⬇ 펼친 구역 — 등급 넷을 할인 카드와 같은 얼굴(모서리 컷 + 금속 띠)로, 작게
-    if(open) h += '<div class="rnShopExp">' + RUNE_GRADES.map(gd => _runeGdCard(runeKey(d.id, gd))).join('') + '</div>'; }
+    if(open) h += _runeShopExpHTML(d.id); }
   h += '</div></div>';
   return h; }

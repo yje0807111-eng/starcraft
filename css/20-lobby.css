@@ -265,6 +265,10 @@
         73 이던 시절엔 설정 뒤에 깔려 아무것도 안 보였다(2026-08-27). */
   #logoutPanel{position:absolute;inset:0;z-index:97;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #logoutPanel.hide{display:none}
+  /* ❓ 공용 확인창(uiAsk) — 로그아웃 확인과 **같은 껍데기**. 다만 z 는 121:
+     룬·환생 같은 구역 화면이 120 이라 그 위에 떠야 한다(97 이면 통째로 가려진다). */
+  #uiAsk{position:absolute;inset:0;z-index:121;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #uiAsk.hide{display:none}
   /* ══ 🎚 난이도 선택 = **전체 화면**(2026-08-27 · F2+D2+D8+A3+B5 확정) ══════════════
      로딩·로그인이 쓰는 공식을 그대로 빌린다: **맵 키 아트 한 장 + 국소 스크림 + --loadDim**.
      ⛔ 팝업(딤 위 카드)으로 되돌리지 말 것 — 카드에는 그림이 한 점도 없어 밋밋했고,

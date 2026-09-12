@@ -221,6 +221,34 @@ function askLogout(){ const p=document.getElementById('logoutPanel'); if(!p) ret
   p.classList.remove('hide'); if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard'));
   if(typeof paintIcons==='function') paintIcons(p); if(typeof playSfx==='function') playSfx('ui_open'); }
 function closeLogout(){ const p=document.getElementById('logoutPanel'); if(p) p.classList.add('hide'); }
+// ── ❓ 공용 확인창 ────────────────────────────────────────────────────────
+// 🧩 **확인창은 한 컴포넌트다**(CLAUDE.md 「확인 팝업」) — `.ecCard` + `.ecTitle`/`.ecMsg`/`.ecBtns`.
+//   여기 것은 그 컴포넌트를 **틀로 한 번만** 세워 두고 내용만 갈아 끼우는 자리다.
+//   ⛔ 화면마다 확인창 마크업을 새로 쓰지 말 것 — 옛 방식(#exitConfirm·#logoutPanel)은 마크업이
+//     제각각이라 버튼 색·간격을 고칠 때마다 세 곳을 따라다녀야 했다.
+//   ⚠ `#phone` 직속 + z-index 121 — 룬·환생 같은 구역 화면(120) 위에 떠야 한다.
+//   ⚠ 되돌릴 수 없는 주 동작은 붉은 글자(.ecGo)가 규약이다.
+let _uiAskGo=null;
+function uiAsk(o){ const O=o||{}; const ph=document.getElementById('phone'); if(!ph) return;
+  let p=document.getElementById('uiAsk');
+  if(!p){ p=document.createElement('div'); p.id='uiAsk'; p.className='hide';
+    p.innerHTML='<div class="ecCard"><div class="ecTitle"></div><div class="ecMsg"></div>'
+      + '<div class="ecBtns"><button class="ecCancel" type="button">취소</button>'
+      + '<button class="ecGo" type="button"></button></div></div>';
+    p.addEventListener('click', e=>{ if(e.target===p) uiAskClose(); });
+    p.querySelector('.ecCancel').addEventListener('click', uiAskClose);
+    p.querySelector('.ecGo').addEventListener('click', ()=>{ const f=_uiAskGo; uiAskClose(); if(f) try{ f(); }catch(e){} });
+    ph.appendChild(p); }
+  p.querySelector('.ecTitle').textContent=O.title||'';
+  p.querySelector('.ecMsg').innerHTML=O.msg||'';
+  p.querySelector('.ecGo').textContent=O.go||'확인';
+  p.querySelector('.ecCancel').textContent=O.cancel||'취소';
+  _uiAskGo=O.onGo||null;
+  p.classList.remove('hide');
+  if(typeof fxPop==='function') fxPop(p.querySelector('.ecCard'));
+  if(typeof paintIcons==='function') paintIcons(p);
+  if(typeof playSfx==='function') playSfx('ui_open'); }
+function uiAskClose(){ const p=document.getElementById('uiAsk'); if(p) p.classList.add('hide'); _uiAskGo=null; }
 function doLogoutNow(){ closeLogout();
   if(typeof closeSettings==='function') closeSettings();   // 확인창 뒤에 설정창이 열린 채로 남는다 — 함께 닫는다
   if(typeof doLogout==='function') doLogout(); else openAuth(); }

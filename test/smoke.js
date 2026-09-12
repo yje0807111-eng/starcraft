@@ -4168,7 +4168,60 @@ async function groupLobby(){
           const open2=document.querySelectorAll('#rnBody .rnShopRw.open');
           assert(open2.length===1 && open2[0].querySelector('.rnRwT').textContent.indexOf(d1.nm)>=0,'다른 줄을 눌렀는데 한 줄만 열려 있지 않다');
           campRuneShopOpen(d1.id); await sleep(30);
+          // 🎬 접힘도 **애니메이션**이라 바로는 안 사라진다 — 시간이 지나야 걷힌다(2026-09-12)
+          await sleep(RUNE_EXP_MS+80);
           assert(!document.querySelector('#rnBody .rnShopExp'),'같은 줄을 다시 눌렀는데 안 닫힌다'); }
+        // 🎬 **펼침·접힘은 제자리에서 높이로 움직인다**(2026-09-12 사용자 요청).
+        //   ⛔ 토글이 campRuneRender 로 되돌아가면 DOM 이 통째로 갈려 전환이 사라진다 —
+        //     그래서 「같은 요소가 남아 있나」로 잰다.
+        { const d0=RUNE_LIST[0];
+          campRuneShopTab('all'); await sleep(40);
+          const list=document.querySelector('#rnBody .rnShopList');
+          campRuneShopOpen(d0.id); await sleep(20);
+          const exp=document.querySelector('#rnBody .rnShopExp');
+          assert(exp,'펼쳤는데 구역이 없다');
+          const cs=getComputedStyle(exp);
+          assert(/height/.test(cs.transitionProperty),'펼친 구역에 높이 전환이 없다: '+cs.transitionProperty);
+          assert(cs.overflow==='hidden','펼친 구역이 접히는 동안 삐져나온다(overflow): '+cs.overflow);
+          assert(parseFloat(cs.transitionDuration)>0,'전환 시간이 0 이다');
+          // 다 펴지면 height:auto 로 풀린다(안 풀면 내용이 바뀔 때 잘린다)
+          await sleep(RUNE_EXP_MS+80);
+          assert(exp.style.height==='auto','다 펴졌는데 높이가 안 풀렸다: '+exp.style.height);
+          // ⭐ **목록을 다시 그리지 않는다** — 같은 .rnShopList 요소가 그대로 있어야 한다
+          assert(document.querySelector('#rnBody .rnShopList')===list,'펼치면서 목록을 통째로 다시 그렸다');
+          campRuneShopOpen(d0.id); await sleep(RUNE_EXP_MS+80); }
+        // ❓ **살 때는 물어본다**(2026-09-12) — 공용 확인창(.ecCard) 한 컴포넌트를 쓴다.
+        //   ⛔ 확인창 마크업을 새로 만들지 말 것.
+        //   ⚠ 앞 검사들이 이 룬을 상한까지 채웠거나 젬을 썼을 수 있다 — **묻기 전에 걸러지므로**
+        //     확인창이 아예 안 뜬다(실측). 그래서 살 수 있는 상태를 여기서 만든다.
+        //   ⚠ 젬은 반드시 **지금의 PROF()** 로 넣는다(앞서 loadMeta 가 객체를 갈아 끼웠을 수 있다).
+        { const _P=(typeof PROF==='function')?PROF():null;
+          const g0=_P?_P.gem:0;
+          const d0=RUNE_LIST[0], _k0=runeKey(d0.id,'low');
+          if(_P) _P.gem=99999;
+          { const R=campRuneState(); if(R&&R.own) R.own[_k0]=0; campRuneTouch(); }
+          campRuneShopTab('all'); campRuneShopGd('low'); await sleep(40);
+          const btn=document.querySelector('#rnBody .rnBuy.one');
+          assert(btn && /campRuneBuyAsk/.test(btn.getAttribute('onclick')||''),'구매 버튼이 확인창을 안 거친다');
+          const own0=campRuneOwn(_k0);
+          assert(own0<RUNE_OWN_MAX,'전제가 깨졌다: 이미 상한이라 살 수 없다');
+          btn.click(); await sleep(60);
+          const ask=document.getElementById('uiAsk');
+          assert(ask && !ask.classList.contains('hide'),'구매를 눌렀는데 확인창이 없다');
+          assert(ask.querySelector('.ecCard')&&ask.querySelector('.ecTitle')&&ask.querySelector('.ecGo'),
+            '확인창이 공용 컴포넌트(.ecCard)가 아니다');
+          assert(campRuneOwn(_k0)===own0,'확인도 안 했는데 이미 샀다');
+          // 취소하면 안 산다
+          ask.querySelector('.ecCancel').click(); await sleep(40);
+          assert(ask.classList.contains('hide'),'취소했는데 확인창이 안 닫힌다');
+          assert(campRuneOwn(_k0)===own0,'취소했는데 샀다');
+          // 확인하면 산다 + ✨ 연출이 붙는다
+          document.querySelector('#rnBody .rnBuy.one').click(); await sleep(60);
+          document.getElementById('uiAsk').querySelector('.ecGo').click(); await sleep(60);
+          assert(campRuneOwn(_k0)===own0+1,'확인했는데 안 샀다');
+          assert(document.querySelector('#rnBody .rnBuy.rnPop')||document.querySelector('#rnBody .rnFxRing'),
+            '샀는데 구매 연출이 없다');
+          campRuneShopGd('low'); if(_P) _P.gem=g0; await sleep(30); }
         // ③ 등급을 고정하면 펼치지 않고 줄마다 버튼 하나(.rnBuy.one) · 제목에 「등급 만」 배지
         { campRuneShopGd('uniq'); await sleep(40);
           const rowsU=document.querySelectorAll('#rnBody .rnShopRw');

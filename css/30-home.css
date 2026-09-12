@@ -2414,7 +2414,20 @@
 #campRune .rnState i{font-style:normal;width:5px;height:5px;border-radius:50%;background:var(--rg);box-shadow:0 0 6px var(--rg)}
 #campRune .rnState u{text-decoration:none;color:#69737f;font-weight:400}
 /* ⬇ 펼친 구역 — 등급 넷을 나란히. 카드는 할인 카드(.rnBuy)의 얼굴을 **작게**(.gd) 쓴다. */
-#campRune .rnShopExp{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 2px 10px}
+/* 🎬 **펼침·접힘은 높이로 민다**(2026-09-12 사용자 요청) — JS(_runeExpOpen/_runeExpClose)가
+   0 ↔ 실제높이를 넣고 여기서 그 사이를 잇는다. ⚠ 시간은 RUNE_EXP_MS 와 같아야 한다.
+   ⚠ overflow:hidden 이 있어야 접히는 동안 카드가 밖으로 삐져나오지 않는다. */
+#campRune .rnShopExp{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 2px 10px;
+  overflow:hidden;transition:height .22s cubic-bezier(.2,.8,.25,1)}
+/* 화살표도 같이 돈다 — 줄이 「열렸다」를 글리프가 아니라 움직임으로도 말한다 */
+#campRune .rnRwArw{transition:transform .22s cubic-bezier(.2,.8,.25,1),color .16s}
+#campRune .rnShopRw.open .rnRwArw{color:#c3ccd8}
+/* ✨ 구매 연출의 고리 — 장착 도착(.rnRipple)과 같은 어휘를 HTML 칸에 맞춘 것.
+   ⚠ 칸이 clip-path 라 밖으로 번지면 잘린다 — 안에서 퍼지고 사라진다. */
+@keyframes rnFxRing{ 0%{transform:scale(.6);opacity:.9} 100%{transform:scale(1.9);opacity:0} }
+#campRune .rnFxRing{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
+  border-radius:50%;border:1.4px solid var(--rg);pointer-events:none;
+  animation:rnFxRing .5s cubic-bezier(.2,.8,.3,1) forwards}
 /* 등급 카드(.rnBuy.gd) — 등급 이름이 제일 크다(11px) · 값은 작게(10.5) · 보유는 더 작게(8) · 낮게.
    (2026-09-12 사용자: 「가장 큰 것이 등급 · 퍼센트는 줄이고 · 보유 수는 더 작게 · 높이도 줄여」) */
 #campRune .rnBuy.gd{--cut:6px;min-height:0;padding:5px 3px 4px;gap:0}
