@@ -2549,3 +2549,125 @@ dark tones, game background tile, 3D render
 지금 §18-1 의 방식은 **무늬 하나를 반복**하는 것이다. 자리마다 다른 타일(길·절벽·경사)을
 놓으려면 **타일맵 데이터**(칸마다 타일 번호)가 따로 필요하다 — 그건 다음 단계다.
 ⚠ 벽 조각 세트(§18-3)는 그 단계에서 쓴다. 지금은 뽑아 두기만 한다.
+
+---
+
+## 19. 🏃 2.5D 유닛 스프라이트 계열 — 고속 경장갑 (2026-09-12 사용자 확정)
+
+**왜 새 계열인가.** §9(유닛 참고 아트)는 **3D 모델을 만들기 위한 원본**이었다.
+이건 아니다 — 3D 를 접고 **스프라이트를 직접 그린다**(사용자 2026-09-12: 3D 는 모션 한계가
+있고 짐승·비인간형은 이동 모션조차 넣기 힘들다). 그래서 목적이 다르다:
+여기서 뽑은 그림이 **최종 에셋**이다. 중간 단계가 없으니 스타일이 흔들리면 그대로 게임에 남는다.
+
+⛔ **`M3D.unitSprite()`(3D 에서 스프라이트 굽기)를 쓰지 않는다**(2026-09-12 사용자 확정
+「아예 처음부터 다 뽑을거야」) — 기존 3D 모델의 퀄리티가 원하는 방향이 아니라서다.
+
+### 19-1. 모델·설정 — 고정
+
+| 항목 | 값 | 왜 |
+|---|---|---|
+| 모델 | **`gpt_image_2_5`** (Higgsfield MCP) | 각도 지시를 제일 잘 따랐다. ⚠ `nano_banana_pro` 로 지정하면 서버가 **`nano_banana_2` 로 갈아 끼운다**(실측) |
+| quality / resolution | `high` / `2k` | 1k 는 패널 라인이 뭉갠다 |
+| aspect_ratio | `1:1` | 시트가 격자라서 |
+| 레퍼런스 | **`medias: [{role:'image_references', value:'<앞 job_id>'}]`** | 19-4 |
+
+### 19-2. 고정 블록 다섯 — 그대로 복사한다
+
+⛔ **형용사를 새로 쓰지 말 것.** 아래 다섯 덩어리를 붙이고 **장면 한 칸만** 바꾼다.
+
+```
+CAMERA, the single most important requirement: a STEEP NEAR TOP-DOWN bird's eye view, about
+70 degrees above the horizon, as if hovering directly over the unit in a helicopter and
+looking down at it. You mostly see the TOP of each unit: the crown of the helmet rather than
+the face, the tops of both shoulders and backpack, the roof of the mech hull, the back and
+spine of the beast, the top of the gunship's fuselage. Only a small amount of the front face
+is visible at the bottom edge of each form. Legs and feet are strongly foreshortened and
+mostly hidden underneath the torso. The unit's silhouette and its ground footprint nearly
+coincide. This is NOT a frontal view and NOT an eye-level view. Each unit is rotated about
+30 degrees off axis.
+PROPORTIONS: stylized heroic, about 4.5 heads tall, broad shouldered, athletic and forward
+leaning, heavy boots, not chibi and not cute, reads fast and dangerous.
+COLOR: bold racing livery colour blocking, large flat fields of saturated red meeting
+off-white and graphite along hard diagonal edges, roughly a third of each unit red, with a
+cyan glow in the visor and thrusters.
+DESIGN LANGUAGE: high speed light armour. Sleek wedge shaped masses with an aggressive
+forward rake, very few panel lines but each one long and deliberate, sharp chamfered noses,
+swept back vents, thin high tech limbs supporting big shoulder and thruster masses, the
+confident restraint of a designed product rather than a pile of greebles.
+STYLE: toon-shaded 3D, four cel tones wrapping around the forms, a thin dark contour line
+only on the outer silhouette, matte, no glossy specular highlights, detail sparse but every
+line intentional. Units on a flat plain neutral grey background, no ground texture, no cast
+shadows, no text, no labels.
+```
+
+### 19-3. 각도 — 70°다. 🚨 코드의 `VIEW_TILT` 를 쓰지 말 것
+
+⛔⛔ **§9-2 의 「`VIEW_TILT = 0.65 rad = 37.2°` 를 프롬프트에 박는다」를 이 계열에 적용하지 말 것.**
+2026-09-12 에 그걸 믿고 37° 로 뽑았다가 사용자에게 **「거의 정면이잖아」**로 물렸다.
+그 값은 **세워 둔 3D 모델을 기울이는 각**이지 화면에 보이는 부감이 아니다 — 두 개가 다른 숫자다.
+그다음엔 반대로 튀어 60° 도 모자랐고, **70° 에서 확정**됐다(2026-09-12 사용자 「70도가 맞긴 한데」).
+
+⭐ **각도가 맞았는지는 숫자가 아니라 신호 넷으로 본다**(프롬프트에도 이 넷이 들어가 있다):
+
+| 신호 | 70° 에서 | 틀렸을 때 |
+|---|---|---|
+| 머리 | **정수리**가 보인다 | 얼굴이 보이면 각도가 낮다 |
+| 다리 | 몸통 밑에 깔려 **거의 안 보인다** | 무릎 아래가 보이면 낮다 |
+| 가슴 | 정수리 아래 **한 줄만** 보인다 | 아예 안 보이면 **너무 높다**(90° 로 샌 것) |
+| 실루엣 | 바닥 발자국과 **거의 겹친다** | — |
+
+⚠ 세 번째 줄이 70° 와 90° 를 가르는 자다. 회전 시트가 한 번 그걸로 샜다(19-4).
+
+### 19-4. 🔗 회전 시트는 레퍼런스를 물린다 — 말로 하면 샌다
+
+**증상**(2026-09-12): 4유닛 시트는 70° 로 잘 나왔는데, **같은 문장**으로 뽑은 8방향 회전
+시트만 더 위에서 본 각도로 나왔다. 칸이 여덟으로 잘게 쪼개지면 모델이 부감을 과장한다.
+
+⭐ **고친 방법 — 각도를 설명하지 말고 그림을 첨부한다.** 승인된 시트의 `job_id` 를
+`image_references` 로 넘기면 각도·색·선 굵기가 통째로 따라온다. 거기에 확인 문장 하나를 박는다:
+
+```
+CRITICAL: the camera elevation must be IDENTICAL in all eight cells and must MATCH THE
+REFERENCE EXACTLY, about 70 degrees above the horizon. Do not make it steeper than the
+reference, do not drift toward a pure straight-down bird's eye view. In the front facing cell
+a clear sliver of the chest and face plate must still be visible below the helmet crown,
+exactly as in the reference.
+```
+
+⚠ **8방향을 한 장에 넣으면 여덟이 미묘하게 다른 유닛이 된다** — §9-2 가 영상 턴테이블로 우회한
+바로 그 문제다. 2×2 **4방향**이 칸당 크기가 커서 제일 안정적이라, **각도 확인은 4방향으로** 한다.
+
+### 19-5. 스타일을 굳히는 판 넷 — 「같은 그림 넷」이 아니다
+
+스타일 확정은 예쁜 그림을 고르는 일이 아니라 **축을 하나씩 못 박는** 일이다. 넷을 뽑는다:
+
+| 판 | 무엇을 못 박나 | ⛔ 빠뜨리면 |
+|---|---|---|
+| **역할 스펙트럼** (일꾼·정찰·중보병·공성·비행·보스 6종) | 크기·역할이 달라져도 **서명 형태**가 반복되는가(깎인 쐐기 코 · 긴 대각 이음선 · 추진기 하우징 · 얇은 관절) | 유닛이 늘 때마다 딴 게임이 된다 |
+| **방향 회전** (4방향 → 8방향) | 각도 · 방향별 정체성 | 19-4 |
+| **재질·셰이딩 근접** (장갑면 · 색 경계 · 맨 금속 · 발광 · 배기 · 벗겨진 모서리) | 4톤이 **어디서 꺾이고** 외곽선이 **어디서 사라지나** | 사람마다 선을 안쪽까지 그린다 |
+| **팀 색 8종** | 리버리 색만 갈아도 **실루엣·명암이 안 변하는가** | 19-6 |
+
+### 19-6. 🎨 팀 색 8종 — 이게 2.5D 의 진짜 비용이다
+
+오토배틀이 **8인 대전**이라 유닛마다 색이 여덟 벌 필요하다. 3D 는 `applyTeamTint` 한 줄이면
+끝나던 자리다(`js/90-m3d.module.js` · 인스턴스 틴트). 스프라이트는 그게 공짜가 아니다.
+
+⭐ **「빨강이 몸의 1/3」이라는 지금 색 규칙이 그걸 유리하게 만든다** — 팀 색 면이 **크고 뭉쳐
+있어서** 별도 마스크 한 장으로 빼낼 수 있다. 그러면 한 벌로 여덟 색을 런타임에 찍는다.
+
+⛔ **팀 색을 여덟 벌 따로 굽지 말 것** — 유닛 42종 × 8방향 × 프레임 × 8색이면 장수가 폭발한다.
+⛔ **팀 색 면을 잘게 흩뿌리지 말 것** — 마스크가 지저분해지고 작게 줄이면 색이 안 읽힌다.
+⚠ 그림자·선택 링은 **굽지 않는다**(엔진이 따로 그린다 — 구워 넣으면 방향마다 어긋난다).
+
+### 19-7. ⏳ 아직 안 정한 것
+
+⛔ **정하기 전에 42종을 굽지 말 것.** 굽고 나면 못 바꾼다.
+
+- **스프라이트 px** — 줌 단계에 매달린다(사용자가 「줌을 구간에 스냅」으로 바꾸겠다고 했다).
+  지금 격자 한 칸이 9.5 CSS px 이고 줌 1.45~1.9 라 유닛이 약 18 CSS px 인데, **확대해서 유닛
+  하나하나를 보는 방향**으로 간다고 했으니 이 값 자체가 바뀐다.
+- **프레임 수** — 이동·공격 몇 프레임인가(참고: 사용자가 본 방식은 모션당 4프레임 × 8방향 = 24).
+- **팀 색 마스크 형식** — 별도 채널인가 별도 파일인가.
+- ⚠ **`VIEW_TILT` 를 70° 쪽으로 올릴 것인가** — 3D 를 완전히 걷어내면 무의미하지만, 섞어 쓰는
+  기간이 있으면 정해야 한다. 굽기 **전에** 정한다.
