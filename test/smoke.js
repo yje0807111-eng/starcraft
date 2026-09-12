@@ -361,6 +361,43 @@ async function groupLobby(){
       return '맵 '+cards.length+' · 바깥 '+outN+' · 공학소 '+inN;
     } finally { PLAYER_META.coins=keep; }
   });
+  // 🚪 **환생 구역은 나올 수 있어야 한다**(2026-09-12 사용자 신고 「유즈맵 강화에서 나오려고 하면
+  //   화면이 계속 남아 다른 구역으로 못 가거나 겹쳐 보인다」).
+  //   🔍 원인은 목록이 **세 곳에 흩어져 있던 것**이다 — 그중 navShow 의 것만 옛 둘(campReb·campTree)에
+  //     멈춰 있어, 나중에 붙은 유즈맵 강화·환생 강화가 구역을 떠나도 `.on` 인 채 남았다.
+  //     둘 다 z 120 짜리 전체 화면이라 다음 화면을 통째로 덮는다.
+  //   ⭐ 그래서 여기서 잠그는 것은 **칸 하나가 아니라 규칙**이다: 「환생 구역의 **어느 칸**에서 나가도
+  //     **네 화면이 전부** 닫힌다」. ⛔ 화면 id 를 이 스텝에 손으로 적지 말 것 — NAV_TREE 에서 읽는다
+  //     (그래야 다섯 번째 칸이 생겨도 저절로 검사 대상이 된다).
+  await step('환생 구역: 어느 칸에서 나가도 화면이 전부 닫힌다', async()=>{
+    skipIf(typeof campRebEnter!=='function' || typeof rebZoneScreens!=='function','환생 구역 없음');
+    const ids = rebZoneScreens();
+    assert(ids.length >= 4, '환생 구역 화면 목록이 비었다 — NAV_TREE 의 reb.subs 에 scr 가 없다: '+ids.join(','));
+    const subs = rebZoneSubs().filter(t=>t.scr && t.shut);
+    assert(subs.length === ids.length, '닫는 함수(shut)가 없는 칸이 있다');
+    const onNow = () => ids.filter(id=>{ const e=$(id); return !!(e && e.classList.contains('on')); });
+    try{
+      // ① **구역 안에서 칸을 옮긴다** — 앞 칸이 닫혀야 언제나 하나만 열려 있다.
+      //   ⚠ 칸마다 나갔다 들어오면 이 검사가 통째로 거짓이 된다(나가면서 전부 닫히므로
+      //     겹침이 일어날 수가 없다) — 실측: 그렇게 짰더니 겹침 주입이 그냥 통과했다.
+      for(const t of subs){
+        campRebEnter(t.k); await sleep(30);
+        const inZone = onNow();
+        assert(inZone.length===1 && inZone[0]===t.scr,
+          t.label+' 칸으로 옮겼는데 열린 화면이 하나가 아니다: '+(inZone.join(',')||'없음')
+          +' — 앞 칸이 안 닫혀 겹쳐 뜬다');
+      }
+      // ② **어느 칸에서 나가도** 네 화면이 전부 닫힌다
+      for(const t of subs){
+        campRebEnter(t.k); await sleep(30);
+        navShow('camp'); await sleep(30);
+        const left = onNow();
+        assert(left.length===0, t.label+' 에서 나왔는데 화면이 남았다: '+left.join(',')
+          +' — z 120 전체 화면이라 다음 화면을 통째로 덮는다');
+      }
+      return subs.length+'칸 × (옮기면 하나만 · 나가면 전부 닫힘)';
+    } finally { navShow('camp'); try{ openHome(); }catch(e){} await sleep(60); }
+  });
   await step('탭 띠 단일 소스: 네 곳이 모두 공용 .pdSeg', ()=>{
     const seg=(host)=>host && host.querySelector('.pdSeg');
     // ⚠ 렌더러를 여기서 직접 부르면 안 된다 — 그러면 「화면을 열었을 때 띠가 채워지는가」를

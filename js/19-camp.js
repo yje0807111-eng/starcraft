@@ -2116,18 +2116,11 @@ function campRebEnter(sec){
   //   ⛔ `.on` 에 애니를 걸면 환생 ↔ 업그레이드 탭을 오갈 때마다 매번 다시 돈다 —
   //     같은 구역 안에서 칸만 바꾸는 것인데 화면이 통째로 껌뻑여 이동이 무거워 보인다.
   //   ⭐ 그래서 애니는 `.crIn` 이 가지고, 밖에서 들어온 경우에만 붙인다(안이었으면 즉시 교체).
-  const wasIn = (typeof campRebIsOn === 'function' && campRebIsOn()) ||
-                (typeof campTreeIsOn === 'function' && campTreeIsOn()) ||
-                (typeof rebUpgIsOn === 'function' && rebUpgIsOn()) ||
-                (typeof mapUpgIsOn === 'function' && mapUpgIsOn());
+  const wasIn = (typeof rebZoneIsOn === 'function') && rebZoneIsOn();
   // ⚠ 닫는 쪽에 keepArt 를 준다 — 구역 안에서 칸만 바꾸는 것이라 배경은 그대로 둔다.
-  //   ⛔ 셋 중 **둘을 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
-  //   ⛔ **넷 중 셋을 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
-  const _shut = (keep) => { if(keep !== 'info') campRebClose(true);
-    if(keep !== 'tree') campTreeClose();
-    if(keep !== 'umap' && typeof mapUpgClose === 'function') mapUpgClose(true);
-    if(keep !== 'boost' && typeof rebUpgClose === 'function') rebUpgClose(true); };
-  _shut(s);
+  //   ⛔ **고른 칸 하나만 남기고 나머지를 반드시 닫는다** — 하나라도 빠뜨리면 두 화면이 겹쳐 뜬다.
+  //   ⛔ 화면을 여기 손으로 적지 말 것 — 목록은 NAV_TREE 의 reb.subs 하나다(rebZoneShut).
+  if(typeof rebZoneShut === 'function') rebZoneShut(s, true);
   if(s === 'tree') campTreeOpen();
   else if(s === 'umap'){ if(typeof mapUpgOpen==='function') mapUpgOpen(); }
   else if(s === 'boost'){ if(typeof rebUpgOpen==='function') rebUpgOpen(); }
