@@ -2956,6 +2956,40 @@ async function groupLobby(){
       // ⑤ 빼면 다시 끼울 수 있다
       assert(campRuneUnequip('norm',0)===true,'못 뺐다');
       assert(campRuneEquip('norm',1,key)===true,'뺀 뒤에도 못 끼운다');
+      // 💠 **유니크 칸은 갈래를 안 가린다**(2026-09-12 사용자 확정) — 종류(4)가 칸(3)보다 많은
+      //   자리라 갈래까지 묶으면 전투 유니크는 Lv.30, 성장은 Lv.50 까지 낄 데가 없다.
+      //   ⛔ `runeCellGrp` 로 유니크 칸을 막는 규칙을 되살리지 말 것(장착·교체·가방 셋 다).
+      { const keepB3=C.lvBest; C.lvBest=99;
+        const R3=campRuneState();
+        const eqU=R3.uniq.slice();  R3.uniq=R3.uniq.map(()=>null);
+        try{
+          // 유니크 등급 룬을 갈래마다 하나씩 쥐여 준다
+          const byGrp={};
+          for(const d of RUNE_LIST){ if(!byGrp[d.grp]) byGrp[d.grp]=runeKey(d.id,'uniq'); }
+          const grps=Object.keys(byGrp);
+          assert(grps.length>=2,'유니크로 시험할 갈래가 모자란다: '+grps);
+          for(const g of grps) R3.own[byGrp[g]]=(R3.own[byGrp[g]]|0)+3;
+          // 어느 갈래의 유니크 룬이든 **모든 유니크 칸**에 들어가야 한다
+          for(const g of grps)
+            for(let i=0;i<campRuneSlots('uniq');i++)
+              assert(campRuneCanEquip('uniq',i,byGrp[g])===true,
+                g+' 유니크 룬이 '+(i+1)+'번 유니크 칸에 못 들어간다 — 칸이 갈래를 가린다');
+          // 🔁 꽉 찼을 때의 **교체 후보**도 같아야 한다(여기가 어긋나 있었다)
+          for(let i=0;i<campRuneSlots('uniq');i++) campRuneEquip('uniq',i,byGrp[grps[0]]);
+          campRuneSwapBegin(byGrp[grps[grps.length-1]]);
+          try{
+            for(let i=0;i<campRuneSlots('uniq');i++)
+              assert(campRuneSwapCand('uniq',i)===true,
+                '다른 갈래 유니크 룬이 '+(i+1)+'번 칸의 교체 후보가 아니다 — 장착 규칙과 어긋난다');
+          } finally { if(typeof campRuneSwapEnd==='function') campRuneSwapEnd(false); }
+          // ⛔ 일반 칸은 **그대로 갈래를 탄다**(같이 풀어 버리면 성좌가 뜻을 잃는다)
+          { const lowKey=runeKey(RUNE_LIST[0].id,'low'); const g0=RUNE_LIST[0].grp;
+            let bad=-1;
+            for(let i=0;i<campRuneSlots('norm');i++) if(runeSlotGrp(i)!==g0){ bad=i; break; }
+            if(bad>=0){ R3.own[lowKey]=(R3.own[lowKey]|0)+1;
+              assert(campRuneCanEquip('norm',bad,lowKey)===false,
+                '일반 칸이 다른 갈래 룬을 받는다 — 성좌가 뜻을 잃는다'); } }
+        } finally { R3.uniq=eqU; C.lvBest=keepB3; } }
       // ⑥ 잠긴 칸에는 못 끼운다 — 이것이 「돈으로 못 앞당긴다」의 실제 장치다
       //   ⚠ **먼저 빼 둔다.** 안 그러면 「보유를 다 썼다」에 먼저 걸려서 잠금을 안 재고도
       //     통과한다(2026-09-02 레드 테스트로 잡은 헛검사).
@@ -3563,18 +3597,20 @@ async function groupLobby(){
         assert(Math.abs(svvClampZ(V,0.0001,RUNE_ZLIM)-V.fitZ*RUNE_ZLIM.out)<1e-6,
           '축소 하한이 전체 보기 배율을 안 따른다');
         // 🎨 **빈 칸 테두리는 갈래 색**이다(2026-09-04 사용자 확정 · 목업 camp-rune-edge-8 ③안)
-        //   ⚠ 유니크 칸도 **제 성좌의 갈래 색**이다(2026-09-05) — 유니크가 등급이 되면서
-        //     「유니크 갈래」가 사라졌기 때문이다. 등급의 보라는 낀 룬 쪽이 갖는다.
+        //   💠 유니크 칸만 **제 등급 색**이다(2026-09-12) — 갈래를 안 가리게 됐으므로
+        //     성좌 색을 쓰면 「여기는 경제 칸」이라고 거짓말을 한다.
+        //   ⛔ 성좌 색으로 되돌리지 말 것(2026-09-05~09-12 사이에는 그랬다).
         { const defs = _runeDefs();
-          for(const k of RUNE_GRPS)
+          for(const k of RUNE_GRPS.concat('uniq'))
             assert(defs.indexOf('id="rnEg' + k + '"') >= 0, '갈래 테두리 그라데이션이 없다: ' + k);
           const cellOf = (kind, i) => _runeCell(kind, i, 0, 0, 21, null, true, 1, false);
           RUNE_GRPS.forEach((k, ci) => { const t = cellOf('norm', ci * RUNE_CONS);
             assert(t.indexOf('#rnEg' + k) >= 0, ci + '번 성좌의 빈 칸이 ' + k + ' 색을 안 쓴다'); });
-          // 🎚 유니크 칸도 **제 성좌의 갈래 색**이다(2026-09-05) — 유니크가 등급이 되면서
-          //   「유니크 갈래」가 사라졌다. 등급의 보라는 낀 룬 쪽(RUNE_GD.uniq)이 갖는다.
-          RUNE_GRPS.forEach((k, ci) => assert(cellOf('uniq', ci).indexOf('#rnEg' + k) >= 0,
-            ci + '번 성좌의 유니크 칸이 ' + k + ' 색을 안 쓴다'));
+          RUNE_SLOT_LV.uniq.forEach((_, ci) => {
+            const t = cellOf('uniq', ci);
+            assert(t.indexOf('#rnEguniq') >= 0, ci + '번 유니크 칸이 등급 색을 안 쓴다');
+            assert(!RUNE_GRPS.some(k => t.indexOf('#rnEg' + k) >= 0),
+              ci + '번 유니크 칸이 아직 성좌 갈래 색을 쓴다 — 갈래를 안 가리는 칸이다'); });
           // ⚠ 빈 칸은 낀 칸보다 **조용해야** 한다 — 흰빛 세기가 낀 칸(.92)보다 낮다
           const m = /id="rnEgeco"[\s\S]*?stop-opacity="([.0-9]+)"/.exec(defs);
           assert(m && +m[1] < 0.92,
@@ -3735,13 +3771,18 @@ async function groupLobby(){
             assert(hs.length === 1 && hs[0] === RUNE_GRP[k].nm,
               ci + '번 성좌를 골랐는데 가방에 ' + hs.join(',') + ' 이 보인다');
             });
-          // 🎚 **유니크 칸도 제 성좌의 갈래만** 보여 준다(2026-09-05) — 유니크가 등급이 되면서
-          //   「유니크 갈래」가 사라졌다. 경제 성좌의 중심이면 가방에는 경제 룬만 남는다.
-          RUNE_GRPS.forEach((k, ci) => {
+          // 💠 **유니크 칸은 안 거른다**(2026-09-12 사용자 확정: 「그 구역 상관없이 다 낄 수 있게」) —
+          //   어느 갈래의 유니크 룬이든 들어가므로 가방을 좁히면 못 고르는 것이 생긴다.
+          //   ⛔ 「제 성좌의 갈래만」으로 되돌리지 말 것(2026-09-05~09-12 사이에는 그랬다).
+          RUNE_SLOT_LV.uniq.forEach((_, ci) => {
             campRunePick('', -1); campRuneSlotTap('uniq', ci);
             const hu = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
-            assert(hu.length === 1 && hu[0] === RUNE_GRP[k].nm,
-              ci + '번 유니크 칸을 골랐는데 가방에 ' + hu.join(',') + ' 이 보인다'); });
+            assert(hu.length === RUNE_GRPS.length,
+              ci + '번 유니크 칸을 골랐는데 가방이 좁혀졌다: ' + hu.join(','));
+            // 머리줄은 「유니크 룬만」이라고 말한다(갈래 이름이 아니다)
+            const note = document.querySelector('#campRune .rnBagN');
+            assert(note && /유니크/.test(note.textContent),
+              '유니크 칸 안내가 갈래 이름을 말한다: ' + (note && note.textContent)); });
           campRunePick('', -1);
           const all = [...document.querySelectorAll('#campRune .rnGrpH span')].map(x => x.textContent);
           assert(all.length === RUNE_GRPS.length, '고르기를 풀었는데 갈래가 다 안 돌아온다: ' + all.join(',')); }

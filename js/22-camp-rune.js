@@ -56,11 +56,22 @@ const RUNE_GRP = {
   uniq: { nm:'유니크', col:'#ffe08a' } };
 // 🎚 룬 하나가 들어갈 **칸 무리** — 등급이 정한다. ⛔ 룬 종류로 가르지 말 것.
 function runeBucket(key){ return (runeParse(key).gd === 'uniq') ? 'uniq' : 'norm'; }
-// 🗺 칸의 갈래 — 일반은 성좌 고리, **유니크 칸은 그 성좌의 중심**이라 같은 갈래다(사용자 확정).
+// 🗺 칸의 갈래 — 일반 칸은 제 성좌의 갈래이고, 💠 **유니크 칸은 갈래가 없다**
+//   (2026-09-12 사용자 확정: 「각 유니크 칸에는 그 구역 상관없이 다 낄 수 있게」).
+//   ⚠ 옛 규칙은 「유니크 칸도 제 성좌의 갈래」였는데, 그러면 전투 유니크 룬은 Lv.30 · 성장은 Lv.50
+//     까지 낄 데가 없었다 — 종류(4)가 칸(3)보다 많은 자리라 갈래까지 묶으면 고를 것이 사라진다.
+//   'uniq' 는 갈래가 아니라 **등급 이름**이고 여기서는 「갈래 없음 · 색은 유니크 색」이라는 뜻이다.
+//   ⛔ 이 값을 RUNE_GRPS 와 견주는 코드를 새로 쓰지 말 것 — 갈래 판정은 `runeSlotTakesGrp` 하나다.
 function runeCellGrp(kind, i){
-  return (kind === 'uniq') ? (RUNE_GRPS[i] || RUNE_GRPS[0]) : runeSlotGrp(i); }
+  return (kind === 'uniq') ? 'uniq' : runeSlotGrp(i); }
 // 일반 i번 칸이 속한 갈래 — 성좌 하나가 통째로 한 갈래다
 function runeSlotGrp(i){ return RUNE_GRPS[Math.floor(i / RUNE_CONS)] || RUNE_GRPS[0]; }
+// 🔑 **이 칸이 그 갈래의 룬을 받나 — 판정은 여기 하나뿐이다.**
+//   일반 칸만 갈래를 탄다. ⛔ 장착·교체·가방이 저마다 다시 비교하지 말 것(둘이 어긋나 있었다:
+//   장착은 유니크를 통과시키는데 교체 후보는 막아서, 칸이 다 차면 바꿀 수가 없었다 · 2026-09-12).
+function runeSlotTakesGrp(kind, i, grp){
+  if(kind !== 'norm') return true;
+  return !grp || grp === runeSlotGrp(i); }
 
 const RUNE_LIST = [
   // ── 갈래마다 7종을 목표로 한다(칸은 8이라 하나는 두 번 끼우게 된다 — 그게 마지막 선택이다).
@@ -426,7 +437,8 @@ function campRuneCanEquip(kind, i, key){
   if(i < 0 || i >= campRuneSlots(kind)) return false;
   // 🗺 **성좌마다 들어갈 갈래가 정해져 있다**(2026-09-04 사용자 확정 · RUNE_GRPS 설명).
   //   ⛔ 이 줄을 빼지 말 것 — 한 성좌 안에서 색이 섞이면 무엇을 모은 판인지 안 읽힌다.
-  if(kind === 'norm' && p.def.grp && p.def.grp !== runeSlotGrp(i)) return false;
+  //   💠 다만 **유니크 칸은 갈래를 안 가린다**(2026-09-12) — 판정은 `runeSlotTakesGrp` 하나다.
+  if(!runeSlotTakesGrp(kind, i, p.def.grp)) return false;
   const cur = R[kind][i] || null;
   return campRuneFree(key) > 0 || cur === key; }
 function campRuneEquip(kind, i, key){
@@ -827,7 +839,7 @@ function _runeDefs(){
   //     빛이 위에서 오는 결이 판 전체에 통하고, 칸 하나만 봐도 어느 갈래의 자리인지 읽힌다.
   //   ⚠ 세기는 낀 칸보다 **약하다**(흰빛 .92 → .34). 빈 칸이 더 시끄러우면 끼웠을 때
   //     달라지는 것이 없다. ⛔ 올리지 말 것.
-  for(const k of RUNE_GRPS){
+  for(const k of RUNE_GRPS.concat('uniq')){     // 💠 유니크 칸은 갈래가 없어 **제 등급 색**을 쓴다
     const c = (k === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
                              : ((RUNE_GRP[k] || {}).col || '#b4cdeb');
     d += '<linearGradient id="rnEg' + k + '" x1="0" y1="0" x2="0" y2="1">'
@@ -885,7 +897,7 @@ function campRuneSwapCand(kind, i){
   const want = runeBucket(_runeSwapKey);
   if(kind !== want) return false;
   if(!campRuneEq(kind)[i]) return false;                    // 빈 칸은 교체가 아니라 그냥 장착
-  return runeCellGrp(kind, i) === p.def.grp;               // 🗺 유니크 칸도 제 성좌의 갈래다
+  return runeSlotTakesGrp(kind, i, p.def.grp);              // 🗺 장착과 **같은 판정**을 쓴다
 }
 function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
   _runeSwapKey = ''; if(re !== false) campRuneRender(); }
@@ -893,7 +905,10 @@ function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
 //   ⛔ 판 한가운데(RUNE_MAP_H/2)로 잡지 말 것 — 아래를 가방이 214px 덮어 성좌가 그 뒤로 내려간다.
 function campRuneSwapLook(now){
   const p = runeParse(_runeSwapKey); if(!p.def || !_rnView) return;
-  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;   // 🗺 유니크도 제 성좌로 간다
+  // 💠 유니크 룬은 **어느 유니크 칸에도** 들어가고 그 셋이 세 성좌에 흩어져 있다 —
+  //   한 곳을 잡을 수 없으므로 **전체 보기 그대로** 둔다(2026-09-12).
+  if(runeBucket(_runeSwapKey) === 'uniq') return;
+  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;
   const c = RUNE_CT[ci]; if(!c) return;
   const mp = document.querySelector('#campRune .rnMap');
   const H = mp ? mp.getBoundingClientRect().height : 0;
@@ -1193,14 +1208,14 @@ function _runeBagHTML(){
   const kindSel = _runePickKind || '';
   // 🔎 **칸을 고르면 그 갈래만 남긴다**(2026-09-04 사용자 확정: 「전투 칸이면 전투 룬만」).
   //   ⛔ 물리기만(.off) 하지 말 것 — 못 끼우는 줄이 화면을 차지하면 고르는 일이 안 줄어든다.
-  //   ⚠ 갈래는 **칸이 정한다**(runeSlotGrp) — 유니크 칸이면 유니크만.
-  const grpSel = kindSel ? runeCellGrp(kindSel, _runePick) : '';
+  //   💠 **유니크 칸은 갈래를 안 가리므로 안 거른다**(2026-09-12) — 세 갈래를 다 보여 준다.
+  const grpSel = (kindSel && kindSel !== 'uniq') ? runeSlotGrp(_runePick) : '';
   // 머리줄 — 고른 칸이 있으면 그 칸을 말하고, 차 있으면 빼는 길을 준다
   let hd;
   if(kindSel){
     const eq = campRuneEq(kindSel), cur = eq[_runePick] || null;
     const nm = (kindSel === 'uniq' ? '유니크' : '일반') + ' ' + (_runePick + 1) + '번 칸';
-    const gn = (RUNE_GRP[grpSel] || {}).nm || '';
+    const gn = (kindSel === 'uniq') ? '유니크' : ((RUNE_GRP[grpSel] || {}).nm || '');
     hd = '<span class="rnBagT">' + nm + (cur ? ' · ' + runeName(cur) : ' · 비어 있음') + '</span>'
       + (gn ? '<span class="rnBagN">' + gn + ' 룬만</span>' : '')
       + (cur ? '<button class="rnOff" type="button" onclick="campRuneUnequip(\'' + kindSel + '\','
