@@ -1464,12 +1464,20 @@ try {
         try{ await cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }); }catch(e){}
       });
       await cdp.send('Page.startScreencast', { format:'jpeg', quality:70, everyNthFrame:1 });
-      await page.evaluate(() => {
+      await page.evaluate((hold) => {
+        window.__SHOT_TAP_HOLD = hold;
         try{ showAppScreen('opening'); }catch(e){}
         try{ const C=campState(); if(C){ C.race=null; C.ents=null; } }catch(e){}
         try{ _warmDone=true; _warmRun=null; }catch(e){}
         setTimeout(()=>{ try{ enterAfterWarm(); }catch(e){} }, 250);
-      });
+        // 👆 로딩 100% 뒤의 **터치 문**(bootTapWait) — 손가락이 없으니 여기서 눌러 준다.
+        //   ⚠ `bootTapGo()` 로 열지 말 것: 그건 뒷문이라 「눌렀을 때의 그림」이 안 찍힌다.
+        //   HOLD 동안은 기다리는 얼굴(문구 · 물러난 막대)이 그대로 녹화된다.
+        if(typeof bootTapWaiting==='function'){
+          const hold = +(window.__SHOT_TAP_HOLD||900);
+          const poll = setInterval(()=>{ if(!bootTapWaiting()) return; clearInterval(poll);
+            setTimeout(()=>document.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})), hold); }, 50); }
+      }, +(process.env.SHOT_TAP_HOLD||900));
       await new Promise(r=>setTimeout(r, +(process.env.SHOT_MS||3200)));
       try{ await cdp.send('Page.stopScreencast'); }catch(e){}
       // 휘도는 브라우저에게 계산시킨다(Node 쪽에 디코더가 없다)

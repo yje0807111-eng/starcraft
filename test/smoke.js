@@ -1169,7 +1169,12 @@ async function groupLobby(){
     // 게스트 입장도 로딩(#opening에서 3D 데우기)을 거친다 — 끝날 때까지 기다린다.
     // ⚠ 이 대기는 넉넉해야 한다: 실기기(GPU)에선 1초 안이지만 헤드리스 소프트웨어 렌더러(swiftshader)에선
     //   3D 예열에 10초 넘게 걸린다. 4초로 뒀다가 '게스트가 안 들어간다'고 잘못 실패했다(앱은 정상).
-    for(let i=0;i<120 && !visible($('homeScreen')); i++) await sleep(250);
+    // 👆 로딩 100% 뒤에는 **터치 문**이 있다(bootTapWait) — 손가락이 없으니 프로그램으로 연다.
+    //   ⚠ 안 열면 여기서 멈추는 데서 끝나지 않는다: 문이 문서에 리스너를 건 채 남아, 한참 뒤 캠프
+    //     스텝이 탭할 때 그 탭이 「게임 시작」으로 먹혀 부팅이 되살아난다(실측 — 캠프 스텝 둘이 같이 터졌다).
+    for(let i=0;i<120 && !visible($('homeScreen')); i++){
+      if(typeof bootTapWaiting==='function' && bootTapWaiting()) bootTapGo();
+      await sleep(250); }
     assert(visible($('homeScreen')),'게스트 버튼을 눌렀는데 메인(HOME)으로 안 감');
     assert(!visible($('auth')),'로그인 화면이 안 닫힘');
     for(let i=0;i<40 && !AUTH.user; i++) await sleep(50);   // 로딩 게이트를 거치면 몇 프레임 늦게 채워질 수 있다
@@ -10042,7 +10047,12 @@ async function groupLobby(){
     assert(M3D.dbg().n===0,'데운 흔적이 남음('+M3D.dbg().n+'개) — clearGameModels 누락');
     assert((await warmAll())===0,'두 번째 호출이 다시 데움 — 로그인마다 반복된다');
     // 로딩 게이트는 반드시 HOME에서 끝나야 한다
-    await enterAfterWarm();
+    // 👆 로딩 100% 뒤에는 **손가락을 기다린다**(bootTapWait) — 손이 없으니 프로그램으로 연다.
+    //   ⛔ 그냥 await 하지 말 것: 문이 안 열려 스위트가 **아무 말 없이** 멈춰 죽는다.
+    { const pr=enterAfterWarm();
+      for(let i=0;i<60 && !(typeof bootTapWaiting==='function' && bootTapWaiting());i++) await sleep(50);
+      if(typeof bootTapGo==='function') bootTapGo();
+      await pr; }
     assert(visible($('homeScreen')),'로딩 뒤 HOME이 안 열림');
     await sleep(_fadeMs()+80);   // ⚠ 로딩은 HOME 이 선 뒤에 그 위에서 걷힌다(크로스페이드)
     assert(!visible($('opening')),'로딩 화면이 안 닫힘');
@@ -12393,6 +12403,8 @@ async function groupLobby(){
       starts=0;
       const pr=enterAfterWarm(); await sleep(200);
       assert(starts===0,'데우기가 막대를 다시 시작했다 — 0 으로 되돌아간다');
+      for(let i=0;i<60 && !(typeof bootTapWaiting==='function' && bootTapWaiting());i++) await sleep(50);
+      if(typeof bootTapGo==='function') bootTapGo();   // 👆 터치 문을 열어 준다(안 열면 여기서 멈춘다)
       await pr;
     } finally { window.opBarStart=orig; }
     return '재시작 '+starts+'회 · CSS 애니 none';
@@ -12602,6 +12614,59 @@ async function groupLobby(){
     if(typeof authShowHub==='function'){ authShowHub(); await sleep(_cssMs('--t-swap',.22)+240); }
     openHome(); await sleep(40);
     return '디졸브 '+_cssMs('--t-swap',.22)+'ms'; });
+  // 👆 **로딩 100% → 손가락을 기다린다**(2026-09-12 사용자 요청 「터치해서 게임을 시작하도록」).
+  //   ⭐ 잠그는 것은 셋이다: ① 문이 켜져 있다(`BOOT_TAP_GATE`) ② 막대가 다 차도 **저 혼자 넘어가지 않는다**
+  //     ③ **진짜 pointerdown** 하나로 열린다. ③ 을 `bootTapGo()` 로 재면 안 된다 — 그건 스모크가 쓰는
+  //     뒷문이라, 리스너 배선이 통째로 끊겨도 통과한다(문을 여는 손이 둘이라는 것이 이 검사의 함정이다).
+  await step('부팅 터치 문: 100% 에서 멈춰 서고 탭 하나로 열린다', async()=>{
+    skipIf(typeof enterAfterWarm!=='function' || typeof bootTapWait!=='function','터치 문 없음');
+    assert(typeof BOOT_TAP_GATE!=='undefined' && BOOT_TAP_GATE===true,
+      'BOOT_TAP_GATE 가 꺼져 있다 — 도구가 끄고 안 되돌렸다(내보내면 터치 문이 통째로 사라진다)');
+    const op=$('opening'), tap=op.querySelector('.opTap'), dock=op.querySelector('.opDock');
+    assert(tap,'안내 문구(.opTap)가 없다 — 무엇을 하라는지 말하지 않는다');
+    const pr=enterAfterWarm();
+    // 🧷 **어떻게 끝나든 문은 닫고 나간다** — 실패로 튕겨 나가면 문이 문서에 리스너를 건 채 남아,
+    //   한참 뒤 다른 스텝의 탭이 「게임 시작」으로 먹혀 부팅이 되살아난다(실측: 뒤 스텝들이 통째로 멎었다).
+    try{
+    // ⏳ 넉넉해야 한다 — 헤드리스(swiftshader)에선 3D 예열(warmAll)만 10초를 넘는다.
+    //   4초로 뒀다가 「안 기다린다」로 잘못 실패했다(앞 스텝이 이미 데워 뒀을 때만 통과했다).
+    let waited=0; for(let i=0;i<600 && !bootTapWaiting();i++){ await sleep(50); waited+=50; }
+    assert(bootTapWaiting(),'로딩이 끝났는데 안 기다린다 — 100% 에서 저 혼자 넘어갔다('+waited+'ms)');
+    // ① 기다리는 동안의 얼굴 — 문구가 보이고 · 막대 자리는 물러나고 · 로딩 판은 아직 안 걷혔다
+    // 막대가 물러나고(--opTapOut) 문구가 들어오는(--opTapIn) 시간을 다 기다린다
+    // ⚠ 공용 _cssMs 는 :root 만 읽는다 — 이 둘은 #opening 에 걸려 있어 여기서 직접 잰다
+    const _opMs=(n,d)=>((parseFloat(getComputedStyle(op).getPropertyValue(n))||d)*1000);
+    await sleep(_opMs('--opTapOut',.30)+_opMs('--opTapIn',.42)+150);
+    assert(op.classList.contains('tapWait'),'.tapWait 가 안 켜졌다 — 문구가 CSS 로 안 나온다');
+    const tv=getComputedStyle(tap);
+    assert(tv.visibility!=='hidden' && +tv.opacity>.5,'안내 문구가 안 보인다(opacity '+tv.opacity+' · '+tv.visibility+')');
+    if(dock) assert(+getComputedStyle(dock).opacity<.5,'다 찬 막대가 문구와 같이 떠 있다 — 무엇을 기다리는지 흐려진다');
+    // 🔀 **차례가 겹치면 안 된다** — 둘은 바닥 같은 자리라, 동시에 트면 100% 막대 위에 글자가 겹쳐
+    //   지나간다(2026-09-12 프레임으로 잡았다 · 평균 밝기로는 안 보인다). 그래서 「문구가 들어오기
+    //   시작하는 때 ≥ 막대가 다 물러나는 때」를 **정적으로** 잠근다.
+    if(dock){ const _sec=v=>(parseFloat(v)||0)*1000;
+      const inAt=_sec(tv.transitionDelay.split(',')[0]);
+      const outFor=_sec(getComputedStyle(dock).transitionDuration.split(',')[0])
+                  +_sec(getComputedStyle(dock).transitionDelay.split(',')[0]);
+      assert(inAt >= outFor-10,'막대가 물러나기 전에 문구가 들어온다 — 바닥에서 둘이 겹친다('
+        +Math.round(inAt)+'ms < '+Math.round(outFor)+'ms)'); }
+    assert(!op.classList.contains('hide')&&!op.classList.contains('fxOut'),'기다리는 중에 로딩 판이 걷혔다');
+    // ② **저 혼자 넘어가지 않는다** — 손가락이 없으면 계속 기다린다
+    await sleep(700);
+    assert(bootTapWaiting(),'손가락 없이 스스로 넘어갔다 — 문이 사실은 안 걸려 있다');
+    // ③ **진짜 탭** 하나로 열린다(⛔ bootTapGo 로 재지 말 것 — 리스너가 끊겨도 통과한다)
+    document.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));
+    await sleep(60);
+    assert(!bootTapWaiting(),'화면을 눌렀는데 안 열린다 — pointerdown 리스너가 안 걸렸다');
+    assert(!op.classList.contains('tapWait'),'열렸는데 .tapWait 가 남았다 — 문구가 전환 위에 겹친다');
+    await pr;
+    // 🧹 부팅 뒤의 첫 진입 연출이 **다음 스텝 한가운데서 끝나지 않게** 여기서 마저 돌린다
+    await sleep(_cssMs('--t-screen',.7)+(typeof TITLE_BLACK_HOLD!=='undefined'?TITLE_BLACK_HOLD:380)+420);
+    $('phone').classList.remove('artBlack','artMark','raceIn');
+    try{ openHome(); }catch(e){} await sleep(120);
+    return '기다림 '+waited+'ms → 탭 하나로 열림';
+    } finally { if(bootTapWaiting()) bootTapGo(); try{ await pr; }catch(e){} }
+  });
   // 🎬 **로딩 → 검은 판 → 캠프**(2026-09-12 · 사용자 신고 「로딩이 한참 머물다 띡 하고 넘어간다」).
   //   ⭐ 옛 「로딩 → 종족 선택」 스텝을 이걸로 갈았다 — 종족 선택 화면은 다락으로 갔고(2026-09-09),
   //     그 전환(raceIn·--t-race)도 css/99-attic.css 로 따라갔다. 되살아나면 다락 스텝이 잡는다.
@@ -12615,7 +12680,11 @@ async function groupLobby(){
     let outro=0; window.titleOutroEnd=function(){ outro++; return oOut.apply(this,arguments); };
     try{
       C.race=null;                                   // 첫 진입 상태로 되돌린다(campOpen 이 연출을 탄다)
-      await enterAfterWarm();                        // 부팅의 마지막 구간 — 로딩 100% → 검은 판 → openHome
+      // 👆 로딩 100% 뒤의 **터치 문**을 프로그램으로 연다(bootTapWait · ⛔ 그냥 await 하면 여기서 멈춘다)
+      { const pr=enterAfterWarm();                   // 부팅의 마지막 구간 — 로딩 100% → 터치 → 검은 판 → openHome
+        for(let i=0;i<60 && !(typeof bootTapWaiting==='function' && bootTapWaiting());i++) await sleep(50);
+        if(typeof bootTapGo==='function') bootTapGo();
+        await pr; }
       // ① 연출은 캠프 쪽이 들고 있다 · ② 그동안 화면은 검은 판이 덮는다 · ③ 부팅은 제 손으로 안 걷는다
       assert(campIntroOn(),'첫 진입 연출이 안 돈다 — 캠프가 바로 드러난다');
       assert(ph.classList.contains('artBlack'),'캠프를 세우는데 검은 판이 없다');

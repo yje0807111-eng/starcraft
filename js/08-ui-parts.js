@@ -107,6 +107,41 @@ function warmAll(onStep){
 //     **첫 진입이 「로딩 100% 로 한참 머물다 띡 하고 캠프로 끊기는」** 것이 됐다(2026-09-12 사용자 신고).
 //     원인은 둘이었다: ① 종족이 아직 없다는 이유로 검은 판을 안 씌우고 짧은 전환(raceIn)만 걸었다
 //     ② 그 길 끝의 titleOutroEnd 가 **campRaceToCamp 가 막 올린 검은 판을 곧바로 걷어** 캠프가 그대로 드러났다.
+/* 👆 **로딩이 다 찼다고 바로 안 들어간다 — 눌러야 들어간다**(2026-09-12 사용자 요청:
+ *   「100% 찼다고 바로 들어가는 게 아니고 화면을 터치해서 게임을 시작하도록」).
+ *   도크(막대·퍼센트)가 걷히고 안내 한 줄이 들며, **아무 데나** 누르면 그때부터 원래의
+ *   검은 판 전환(titleToBlack → openHome)이 그대로 돈다 — ⛔ 새 페이드를 만들지 말 것.
+ *
+ *   ⚠⚠ **테스트가 여기서 영영 멈추면 안 된다.** 스모크 네 곳이 `await enterAfterWarm()` 을
+ *     그대로 기다린다 — 손가락이 없는 판에서 약속이 안 풀리면 스위트가 **아무 말 없이 죽는다**
+ *     (protocolTimeout · 이 프로젝트에서 실제로 겪은 실패 방식). 그래서 문을 셋 둔다:
+ *   ⚠ 열지 않고 두는 것도 안 된다 — 문은 대기 중 **문서에 리스너를 걸어 둔다**. 안 열면 한참 뒤
+ *     다른 테스트의 탭이 「게임 시작」으로 먹혀 부팅이 되살아난다(실측: 캠프 스텝 둘이 같이 터졌다).
+ *     ① 진짜 손가락(pointerdown) ② `bootTapGo()` — 프로그램이 여는 문(스모크·도구가 쓴다)
+ *     ③ `BOOT_TAP_GATE=false` — 문 자체를 끈다(도구가 부팅을 통째로 건너뛸 때).
+ *   ⚠ 키보드로도 열린다(Enter·Space) — 터치만 두면 키보드 사용자가 갇힌다.
+ *   ⚠ 듣는 자리는 **문서**다(`#opening` 만 듣게 하면 그 위에 뜬 로고·아트가 먹는다). */
+let BOOT_TAP_GATE = true;      // ⛔ 내보내기 전에 true 인지 확인할 것(도구가 끄고 안 되돌리면 문이 사라진다)
+let _bootTapGo = null;         // 대기 중이면 「여는 손잡이」가 들어 있다
+function bootTapWaiting(){ return !!_bootTapGo; }
+function bootTapGo(){ const f = _bootTapGo; if(f){ _bootTapGo = null; f(); } }
+function bootTapWait(){
+  const op = document.getElementById('opening');
+  if(!BOOT_TAP_GATE || !op) return Promise.resolve();
+  return new Promise(res => {
+    const done = () => {
+      document.removeEventListener('pointerdown', onTap, true);
+      document.removeEventListener('keydown', onKey, true);
+      op.classList.remove('tapWait');
+      _bootTapGo = null;
+      if(typeof playSfx === 'function') try{ playSfx('ui_confirm'); }catch(e){}
+      res(); };
+    const onTap = () => done();
+    const onKey = (e) => { if(e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') done(); };
+    _bootTapGo = done;
+    op.classList.add('tapWait');
+    document.addEventListener('pointerdown', onTap, true);
+    document.addEventListener('keydown', onKey, true); }); }
 async function enterAfterWarm(){
   const op=document.getElementById('opening');
   showAppScreen('opening');
@@ -118,6 +153,8 @@ async function enterAfterWarm(){
   if(!cont) opBarStart();
   await warmAll((n,t)=>opBarReal(base+(1-base)*(t?n/t:1)));
   await opBarDone();
+  // 👆 여기서 **멈춰 서서 손가락을 기다린다**(위 bootTapWait 주석) — 누르면 아래 전환이 그대로 이어진다.
+  await bootTapWait();
   // 🎬 **검은 화면 + 로고는 「게임이 실제로 시작되는 지점」에 쓴다.**
   //    종족을 아직 안 골랐으면 여기가 그 지점이 아니다 — 로딩에서 종족 선택으로 **바로 디졸브**하고,
   //    검은 화면은 종족을 고른 뒤(campPickRace)가 맡는다. 안 그러면 검은 화면이 두 번 나온다:
