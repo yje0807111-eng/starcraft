@@ -52,10 +52,22 @@ function warmIds(){ const ids=[];
   try{ const dg=(typeof hbHunt==='function' && hbHunt().dg)||1;
     for(const f of hbDun(dg).foes) if(f.mdl && ids.indexOf(f.mdl)<0) ids.push(f.mdl); }catch(e){}
   return ids; }
+// 📊 **예열의 단계 배분**(2026-09-12 · 사용자 신고 「99% 에서 한참」 · 「캠프에서 또 따로따로 로딩」).
+//   옛 예열은 **모델 한 줄만** 보고했다 — 그 앞의 두 대기(그림 받기 · three.js 모듈)가 무보고라
+//   막대가 멈춰 보였고, 실측에서 three.js 대기 하나가 10.3초 중 10초를 먹었다.
+//   ⭐ 이제 네 구간이 각자 제 몫만큼 막대를 민다. 합이 1 이다.
+//   ⛔ 구간을 지우거나 0 으로 만들지 말 것 — 그 구간이 길어지면 다시 「멈춘 막대」가 된다.
+const WARM_BAND={ img:0.12, m3d:0.33, mdl:0.30, camp:0.25 };
+const CAMP_WARM_MAX=9000;   // 🏕 캠프 자산 예열을 기다리는 **전체** 상한(ms) — 넘으면 그냥 들어간다(첫 프레임이 조금 늦게 채워질 뿐)
 function warmAll(onStep){
   if(_warmDone) return Promise.resolve(0);
   if(_warmRun) return _warmRun;
   _warmRun=(async()=>{
+    // 진행률은 0~1 로 만들고 100 눈금으로 넘긴다(부르는 쪽이 n/t 로 받는다)
+    let _base=0;
+    const rep=(f)=>{ if(!onStep) return; const p=Math.max(0,Math.min(1,_base+f));
+      try{ onStep(Math.round(p*100), 100); }catch(e){} };
+    const band=(k)=>{ _base=Math.min(1,_base+WARM_BAND[k]); rep(0); };
     // 🖼 **그림 미리 받기는 3D 와 무관하다 — 3D 대기보다 먼저 한다.**
     //    ⛔ 이걸 아래 3D 대기 뒤에 두지 말 것. 3D 가 없는 기기·환경에서는 그 앞의 early return 에
     //       걸려 **그림을 한 장도 안 받는다** — 정작 3D 가 없을수록 종족 판이 검게 뜬다.
@@ -68,6 +80,7 @@ function warmAll(onStep){
     // ⚠ **받을 때까지 기다린다.** src 만 걸고 지나가면 예열이 끝난 뒤에도 아직 오는 중이라
     //    종족 판이 여전히 검게 떴다 채워진다(실측: 세 장 중 한둘이 미완).
     //    ⛔ 그렇다고 무한정 기다리지 말 것 — 한 장이 실패하면 부팅이 멎는다. 3초로 끊는다.
+    rep(0);
     try{ if(typeof CAMP_RACE_ORDER !== 'undefined' && typeof campRaceArt === 'function'){
       const _ims=[];
       for(const _rk of CAMP_RACE_ORDER){
@@ -78,14 +91,23 @@ function warmAll(onStep){
           : new Promise(function(r){ im.addEventListener('load',r,{once:true}); im.addEventListener('error',r,{once:true}); }); })),
         new Promise(function(r){ setTimeout(r,3000); })]);
     } }catch(e){}
-    for(let i=0;i<200 && !(window.M3D&&M3D.ready&&M3D.ready()); i++) await new Promise(r=>setTimeout(r,50));
-    if(!(window.M3D&&M3D.ready&&M3D.ready())){ _warmDone=true; return 0; }   // 3D가 없으면 **모델은** 데울 것도 없다
+    band('img');
+    // ⏳ **three.js 모듈 대기에도 진행률을 준다.** 이건 esm.sh 에서 three 를 받아오는 네트워크
+    //   대기라 회선이 느릴수록 길어진다 — 무보고로 두면 그 시간만큼 막대가 통째로 멈춘다
+    //   (실측: 이 대기 하나가 예열 10.3초 중 10초였다).
+    //   ⚠ 언제 끝날지 모르므로 **점근**으로 민다(다 차지 않고 다가가기만 한다).
+    for(let i=0;i<200 && !(window.M3D&&M3D.ready&&M3D.ready()); i++){
+      rep(WARM_BAND.m3d*(1-Math.exp(-i/70)));   // ⚠ 시정수를 넉넉히 — 짧으면 대기 후반이 평평해진다(실측 6.6초 정지)
+      await new Promise(r=>setTimeout(r,50)); }
+    if(!(window.M3D&&M3D.ready&&M3D.ready())){ rep(1); _warmDone=true; return 0; }   // 3D가 없으면 **모델은** 데울 것도 없다
+    band('m3d');
     try{ hbBgImg((typeof hbHunt==='function' && hbHunt().dg)||1); }catch(e){}   // 배경 그림도 미리 받아 둔다
     const ids=warmIds(); let n=0;
     for(const id of ids){
       await new Promise(r=>requestAnimationFrame(()=>r()));
       try{ M3D.sync([{uid:'_warm', id:id, x:0.5, y:0.5, face:0, moving:false, size:1}], 300, 300, .016, [], [], null, null); }catch(e){}
-      n++; if(onStep) try{ onStep(n, ids.length); }catch(e){} }
+      n++; rep(WARM_BAND.mdl*(n/(ids.length||1))); }
+    band('mdl');
     await new Promise(r=>requestAnimationFrame(()=>r()));
     // 🧹 데운 흔적을 지운다 — GPU 캐시는 남는다(그게 목적).
     // ⚠ clearGameModels() 는 scene.remove() 만 한다. **다시 그리지 않으면 캔버스에는 마지막 프레임이
@@ -97,6 +119,32 @@ function warmAll(onStep){
     //       그 한 프레임 사이에 게임 루프가 sync 를 불러 모델을 도로 만든다(스모크가 잡았다).
     try{ M3D.clearGameModels();
          M3D.sync([], 300, 300, .016, [], [], null, null); }catch(e){}
+    // 🏕 **캠프가 첫 프레임에 쓸 것을 여기서 미리 받는다**(2026-09-12 사용자 신고
+    //   「로그인해서 캠프에 오면 요소들이 따로따로 로딩된다」).
+    //   원인: 캠프 건물(cb_*)·일꾼·자원 노드는 renderBuildTab(14-input-fx)이 **첫 프레임에**
+    //   cstEnsure/ensureUnits/cstEnsureRes 로 그제야 불러왔다 — 로딩이 끝난 뒤에 받는 것이라
+    //   기지가 하나씩 나타났다. 같은 함수를 **로딩 화면에서 미리** 부른다.
+    //   ⚠ 여기서 부르는 것은 renderBuildTab 의 그 함수 그대로다 — 두 번째 로더를 만들지 않는다.
+    //   ⚠ 첫 바퀴 종족은 유니온 고정이라 기본값이 'union' 이다(CLAUDE.md 「캠프 종족」).
+    //   ⛔ 빼지 말 것 — 빼면 캠프 첫 프레임이 다시 조각조각 채워진다.
+    try{
+      const _race=(typeof campTechRace==='function' && typeof campState==='function' && campState())
+        ? campTechRace(campState().race||'terran') : 'union';
+      const _bk=(typeof TECH_MODEL!=='undefined' && TECH_MODEL[_race]) ? Object.values(TECH_MODEL[_race]) : [];
+      const _uk=(typeof _techRaceUnitKeys==='function') ? _techRaceUnitKeys(_race) : [];
+      // ⚠ 상한은 **셋을 합쳐 하나**다 — 단계마다 따로 두면 하나가 멎었을 때 그 몇 배가 쌓인다.
+      const _dead=performance.now()+CAMP_WARM_MAX;
+      const _wait=(fn)=>new Promise(res=>{ let done=false;
+        const fin=()=>{ if(done) return; done=true; res(); };
+        try{ if(!fn(fin)) fin(); }catch(e){ fin(); }
+        setTimeout(fin, Math.max(0, _dead-performance.now())); });
+      if(_bk.length && M3D.cstEnsure){ await _wait(fin=>M3D.cstEnsure(_bk, fin)); }
+      rep(WARM_BAND.camp*0.5);
+      if(_uk.length && M3D.ensureUnits){ await _wait(fin=>M3D.ensureUnits(_uk, fin)); }
+      rep(WARM_BAND.camp*0.8);
+      if(M3D.cstEnsureRes){ await _wait(fin=>M3D.cstEnsureRes(fin)); }
+    }catch(e){}
+    band('camp'); rep(0);
     _warmDone=true; return n; })();
   return _warmRun; }
 // 로그인/게스트 → 로딩 화면(#opening 재사용)에서 데우기를 끝낸 뒤 HOME으로.
