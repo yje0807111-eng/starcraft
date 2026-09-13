@@ -469,13 +469,31 @@ function campKillXp(){
 function campAddXp(n){
   const C = campState(); if(!C || !(n > 0)) return 0;
   if(!(C.lv > 0)) C.lv = 1;
+  const lv0 = C.lv | 0;                          // 📣 알림이 「어디서 어디로」를 알아야 한다
   C.xp = (C.xp || 0) + n;
   let ups = 0;
   while(C.lv < CAMP_LV_MAX && C.xp >= campXpNeed(C.lv) && ups < CAMP_LV_MAX){
     C.xp -= campXpNeed(C.lv); C.lv++; ups++; }
-  if(ups > 0) C.lvPts = (C.lvPts || 0) + ups * CAMP_LV_PTS;
   if(C.lv > (C.lvBest | 0)) C.lvBest = C.lv;     // 🏆 통산 최고 레벨 — 아래 설명
+  if(ups > 0){ C.lvPts = (C.lvPts || 0) + ups * CAMP_LV_PTS; campLvUpSay(lv0, C.lv | 0, ups); }
   return ups; }
+// 📣 **레벨이 오르면 말해 준다**(2026-09-12 사용자 요청 「레벨이 오를 때의 작업들」).
+//   ⭐ 입구는 `campAddXp` **하나**다 — 레벨이 오르는 길이 거기뿐이라 여기 한 줄이 전부를 덮는다.
+//     ⛔ 킬 지점마다 붙이지 말 것(경험치 지급을 한 곳에 모은 것과 같은 이유다).
+//   ⚠ 한 번에 여러 레벨이 올라도 **한 줄만** 말한다 — 몰아서 오를 때 줄이 도배된다.
+//   💠 룬 칸이 그 사이에 열렸으면 **그것도 함께** 말한다: 룬 화면을 열어 보기 전에는 알 길이 없고,
+//     열린 것을 모르면 산 룬이 가방에 그대로 남는다.
+//   ⚠ 말하는 길은 공용 `campSay`(→ toast) 하나다 — ⛔ 캠프 전용 알림 상자를 새로 만들지 말 것.
+function campLvUpSay(lv0, lv1, ups){
+  if(!(ups > 0) || typeof campSay !== 'function') return;
+  let m = '📈 Lv.' + lv1 + ' 달성';
+  const pts = ups * CAMP_LV_PTS;
+  if(pts > 0) m += ' · 성장 포인트 +' + pts;
+  if(typeof campRuneSlotsAt === 'function'){
+    const d = (campRuneSlotsAt('norm', lv1) - campRuneSlotsAt('norm', lv0))
+            + (campRuneSlotsAt('uniq', lv1) - campRuneSlotsAt('uniq', lv0));
+    if(d > 0) m += ' · 💠 룬 칸 ' + d + '개 열림'; }
+  campSay(m, 'upgrade'); }
 // 🌳 성장 트리가 읽는 잔액 — ⛔ C.lvPts 를 직접 읽어 비교하지 말 것(campRtPts 하나를 지난다)
 function campLvPtsLeft(){ const C = campState(); return Math.max(0, (C && C.lvPts) || 0); }
 
@@ -2276,18 +2294,30 @@ function campRebRender(){
     //   0fr ↔ 1fr 로 옮기면 **높이를 몰라도** 부드럽게 열리고 닫힌다.
     //   ⛔ display:none 으로 되돌리지 말 것 — display 는 애니가 안 걸린다(그래서 툭 튀었다).
     //   ⛔ max-height 로 하지 말 것 — 어림값을 박아야 하고, 내용이 그보다 길면 잘린다.
+    // 🎬 `.crClip` 한 겹을 끼운다 — **테두리·여백을 가진 판(.crPeek/.crList)은 절대 안 움직이고**,
+    //   높이를 재는 일은 이 빈 칸이 혼자 맡는다. ⛔ 판을 grid 자식으로 직접 두지 말 것:
+    //   그러면 다 접힌 자리에 테두리 2px 이 남아서 테두리·여백까지 같이 애니메이션해야 했고,
+    //   그 셋의 곡선이 서로 달라 **끝에서 되돌아왔다**(실측: 접기 끝에 카드가 0.5px 되돌아옴).
     + '<div class="crFold peek">'
-    + '<div class="crPeek">'
+    + '<div class="crClip"><div class="crPeek">'
     + li(gi.min,  '미네랄', campNum((C.earnTap || 0) + (C.earnAuto || 0)), '')
     + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
-    + '</div></div>'
-    + '<div class="crFold list"><div class="crList">'
+    + '</div></div></div>'
+    + '<div class="crFold list"><div class="crClip"><div class="crList">'
     + li(gi.tap,  '터치', campNum(C.tapped || 0), '회')
     + li(gi.min,  '터치로 번 미네랄', campNum(C.earnTap || 0), '')
     + li(gi.auto, '자동으로 번 미네랄', campNum(C.earnAuto || 0), '')
     + li(gi.gas,  '가스', campNum(C.earnGas || 0), '')
     + li(gi.time, '플레이 시간', campRebPlayTx(C.playS), '')
-    + '</div></div></div>';
+    + '</div></div></div></div>'
+    // 🫧 **남는 자리를 받아 두는 빈 칸** — 눈에 보이는 것이 없다(높이 0).
+    //   왜 있나: 위 여백 둘(.crGap/.crGap2)은 `flex-grow` 로 자리를 나눠 가지는데,
+    //   **grow 의 합이 1 보다 작으면 남는 자리를 그 비율만큼만** 나눠 준다(CSS 규칙).
+    //   그래서 0 → 1 로 키우면 합이 1 을 지나는 순간 분배 방식이 바뀌어 **딱 거기서 꺾였다**
+    //   (실측: 카드 속도가 −11 → −22 로 튀고 접을 땐 19 → 9 로 뚝 떨어졌다 = 그 울컥이다).
+    //   ⭐ 이 칸이 나머지를 받아 **합을 늘 1.55 로 고정**한다 — 이제 변하는 것은 비율뿐이라 안 꺾인다.
+    //   ⛔ 지우지 말 것 · ⛔ 세 칸의 전환 길이·곡선을 다르게 주지 말 것(합이 흔들린다).
+    + '<div class="crFill"></div>';
   // ── ③ 아래 — 조건 + 버튼 둘. **바닥 고정**이라 지표가 길어져도 안 밀린다 ──
   const foot = document.getElementById('crFoot');
   if(foot) foot.innerHTML =
