@@ -130,20 +130,23 @@ const FAMILY = {
   sprite: {
     label: '2.5D 유닛 스프라이트(§19)',
     need: [
-      ['CAMERA 70°',   /about\s+70\s+degrees above the horizon/],
-      ['정수리',        /the crown of the helmet rather than the face/],
-      ['다리 가림',     /Legs and feet are strongly foreshortened and mostly hidden underneath the torso/],
-      ['가슴 한 줄',    /Only a small amount of the front face is visible at the bottom edge/],
-      ['정면·눈높이 금지', /This is NOT a frontal view and NOT an eye-level view/],
+      ['CAMERA 스타1',  /classic 1990s isometric real-time-strategy\s+view, exactly like the original StarCraft/],
+      ['타원 ½',        /ELLIPSE ROUGHLY HALF AS TALL AS IT IS WIDE/],
+      ['앞·옆이 더',     /more than you see of its roof/],
+      ['다리 보임',      /LEGS AND FEET ARE FULLY VISIBLE/],
+      ['양쪽 다 금지',   /NOT a steep bird's eye view and NOT a straight-down view, and equally NOT a flat\s+eye-level/],
       ['PROPORTIONS',  /not chibi and not cute, reads fast and dangerous/],
       ['COLOR 리버리',  /bold racing livery colour blocking/],
       ['DESIGN 언어',   /high speed light armour/],
       ['STYLE 4톤',    /four cel tones wrapping around the forms/],
       ['STYLE 외곽선',  /a thin dark contour line only on the outer silhouette/],
       ['배경 금지',     /no ground texture, no cast shadows, no text, no labels\.$/]],
-    // ⛔ 3D 시절의 각도를 되살리면 「거의 정면」으로 돌아간다(2026-09-12 사용자가 물린 그것)
-    ban: [['옛 3D 각도', /\b(37(\.2)?|0\.65 rad)\b/i],
-          ['정면 시점',  /\bfront view\b(?!.*NOT)/i]],
+    // ⛔ 급부감으로 되돌아가는 것을 막는다 — 실제로 그렇게 한 바퀴 돌았다(§19-3):
+    //   시트를 「70도」로 뽑아 고른 뒤 같은 숫자를 VIEW_TILT 에 넣었더니 지붕만 보였다.
+    //   ⚠ 37°·0.65 는 이제 **맞는 값**이라 금지어가 아니다(옛 규칙을 되살리지 말 것).
+    ban: [['과한 부감 각',  /\b(4[5-9]|[5-8]\d|90)\s*degrees above the horizon/i],
+          ['급부감 표현',    /steep near top-down/i],
+          ['헬기 비유',      /hovering directly over the unit/i]],
   },
   // 🐺 유닛 참고 아트(§9) — 환경 계열의 COMMON(안개·탈채도·명암분리)을 쓰지 않는다. 목적이 8방향 스프라이트 원본이라
   //   지켜야 할 것이 다르다: 배경이 흰 단색인가 · 그림자가 발밑인가 · 조명이 고정인가 · 금지줄이 있는가.

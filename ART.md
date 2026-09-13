@@ -2576,15 +2576,16 @@ dark tones, game background tile, 3D render
 ⛔ **형용사를 새로 쓰지 말 것.** 아래 다섯 덩어리를 붙이고 **장면 한 칸만** 바꾼다.
 
 ```
-CAMERA, the single most important requirement: a STEEP NEAR TOP-DOWN bird's eye view, about
-70 degrees above the horizon, as if hovering directly over the unit in a helicopter and
-looking down at it. You mostly see the TOP of each unit: the crown of the helmet rather than
-the face, the tops of both shoulders and backpack, the roof of the mech hull, the back and
-spine of the beast, the top of the gunship's fuselage. Only a small amount of the front face
-is visible at the bottom edge of each form. Legs and feet are strongly foreshortened and
-mostly hidden underneath the torso. The unit's silhouette and its ground footprint nearly
-coincide. This is NOT a frontal view and NOT an eye-level view. Each unit is rotated about
-30 degrees off axis.
+CAMERA, the single most important requirement: the classic 1990s isometric real-time-strategy
+view, exactly like the original StarCraft. The camera sits about 30 degrees above the horizon,
+a gentle three-quarter overhead angle. Judge it by these four signs, not by the number. One,
+a circular rooftop or a round base reads as an ELLIPSE ROUGHLY HALF AS TALL AS IT IS WIDE, not
+as a circle. Two, you see a generous amount of each unit's FRONT and SIDE walls, easily more
+than you see of its roof. Three, a standing soldier shows his face and chest plainly, with only
+a sliver of the top of his helmet, and his LEGS AND FEET ARE FULLY VISIBLE, not hidden under the
+torso. Four, each form is clearly taller on screen than its own ground footprint is deep. This
+is NOT a steep bird's eye view and NOT a straight-down view, and equally NOT a flat eye-level
+view. Each unit is rotated about 30 degrees off axis so two sides read.
 PROPORTIONS: stylized heroic, about 4.5 heads tall, broad shouldered, athletic and forward
 leaning, heavy boots, not chibi and not cute, reads fast and dangerous.
 COLOR: bold racing livery colour blocking, large flat fields of saturated red meeting
@@ -2600,57 +2601,73 @@ line intentional. Units on a flat plain neutral grey background, no ground textu
 shadows, no text, no labels.
 ```
 
-### 19-3. 각도 — 70°다. 🚨 코드의 `VIEW_TILT` 를 쓰지 말 것
+### 19-3. 각도 — **스타크래프트1 ≈ 30°** 다
 
-⛔⛔ **§9-2 의 「`VIEW_TILT = 0.65 rad = 37.2°` 를 프롬프트에 박는다」를 이 계열에 적용하지 말 것.**
-2026-09-12 에 그걸 믿고 37° 로 뽑았다가 사용자에게 **「거의 정면이잖아」**로 물렸다.
-그 값은 **세워 둔 3D 모델을 기울이는 각**이지 화면에 보이는 부감이 아니다 — 두 개가 다른 숫자다.
-그다음엔 반대로 튀어 60° 도 모자랐고, **70° 에서 확정**됐다(2026-09-12 사용자 「70도가 맞긴 한데」).
+🚨 **여기서 크게 한 바퀴 헛돌았다(2026-09-12~13). 그 기록이 이 절의 존재 이유다.**
 
-⭐ **각도가 맞았는지는 숫자가 아니라 신호 넷으로 본다**(프롬프트에도 이 넷이 들어가 있다):
+```
+37°(원래 값) → 「거의 정면이잖아」  → 60° → 70° 확정 → 코드에 1.22 를 넣음
+  → 실기기: 「거의 90도 수준이야」 → 55° → 사용자가 스타1 스크린샷을 줌 → 30°  → 0.65 로 되돌림
+```
 
-| 신호 | 70° 에서 | 틀렸을 때 |
+⛔⛔ **원인은 하나다 — 이미지 모델이 말하는 「70 degrees」는 실제 기하 70° 가 아니다.**
+시트를 「70°」로 뽑아서 사용자가 골랐기에 **같은 숫자를 코드 상수에 옮겼는데**, 화면에서는
+지붕만 보이는 거의 수직 부감이 됐다. **그림의 각도 숫자와 코드의 각도는 다른 단위**라고 여길 것.
+⇒ **그림은 「어느 쪽으로 갈지」만 정하고, 코드 값은 실기기 화면으로 정한다.**
+
+⭐ **기준은 스타크래프트1 이고, 그건 약 30° 다**(2026-09-13 사용자가 스크린샷으로 지정).
+사령부의 원형 지붕이 **세로/가로 ≈ 0.5 로 눌린 타원**이라 `asin(0.5)` ≈ 30°.
+⭐⭐ **그리고 이 게임의 원래 값 `VIEW_TILT = 0.65 rad = 37.2°` 가 이미 그 자리였다** — 올릴 이유가
+애초에 없었다. 되돌렸다.
+
+### 19-3-1. ⭐ 숫자 대신 **신호 넷**으로 본다
+
+프롬프트(19-2)에도 이 넷이 그대로 들어가 있다. ⛔ 각도를 숫자로만 지시하지 말 것.
+
+| 신호 | 맞을 때(≈30°) | 틀렸을 때 |
 |---|---|---|
-| 머리 | **정수리**가 보인다 | 얼굴이 보이면 각도가 낮다 |
-| 다리 | 몸통 밑에 깔려 **거의 안 보인다** | 무릎 아래가 보이면 낮다 |
-| 가슴 | 정수리 아래 **한 줄만** 보인다 | 아예 안 보이면 **너무 높다**(90° 로 샌 것) |
-| 실루엣 | 바닥 발자국과 **거의 겹친다** | — |
+| 🔵 **둥근 지붕·받침** | 세로/가로 **≈ 0.5 로 눌린 타원** | **원에 가까우면 너무 위**에서 본 것 |
+| 🧍 **다리·발** | **다 보인다** | 몸통 밑에 깔리면 너무 위 |
+| 😐 **얼굴·가슴** | **또렷이 보이고** 정수리는 살짝 | 정수리만 보이면 너무 위 · 정수리가 아예 없으면 너무 낮다 |
+| 📏 **높이 대 발자국** | 화면에서 **키가 발자국 깊이보다 크다** | 실루엣이 발자국과 겹치면 너무 위 |
 
-⚠ 세 번째 줄이 70° 와 90° 를 가르는 자다. 회전 시트가 한 번 그걸로 샜다(19-4).
+⭐ **가장 빠른 자는 선택 링이다** — 링의 납작한 정도가 곧 각도다(세로/가로 = sin 각도):
+**30° → 0.50** · 37° → 0.60 · 55° → 0.82 · 70° → 0.94(거의 원). **링이 원에 가까우면 과하다.**
 
-### 19-3-1. 🚨 지금 게임은 37° 다 — **바닥(90°)과 물건(37°)이 어긋나 있다**(2026-09-12 실측)
+### 19-3-2. 🧱 바닥은 90° 인 채로 둔다 — 깊이는 **대각선**이 만든다
 
-게임을 실제로 띄워 재 봤다(캠프 건설 뷰 · 헤드리스 캡처). 결론 둘:
+캠프 격자는 화면에 나란한 정사각형, 즉 **90° 정수직**이다. 그 위 물건만 30~37° 로 기울어 있다.
+「어긋난 것 아닌가」 싶지만 **스타1 도 똑같다** — 바닥은 정사각 타일이고, 깊이감은 **절벽·경계선이
+대각으로 그어져** 만들어진다(2026-09-13 사용자 관찰).
 
-| | 각도 |
+⛔ **바닥을 마름모 아이소메트릭으로 돌리지 말 것** — 격자가 곧 화면 좌표라 배치·길찾기·`_techSnap`·
+지형층·안개가 전부 걸린다. ⭐ 대신 **지형(절벽·경계)에 대각선을 넣어** 깊이를 만든다.
+
+⚠ 다만 바닥에 원근이 없으므로 **물건은 숫자보다 더 위에서 본 것처럼 읽힌다** — 깊이 단서가 없어서다.
+이것이 30° 에서도 충분히 부감으로 보이는 이유이고, 값을 더 올리면 곧바로 과해지는 이유다.
+
+### 19-3-3. ⚙ `VIEW_TILT` 하나만 만지면 된다 — 나머지는 **파생**이다
+
+| 따라오는 것 | 자리 |
 |---|---|
-| 지금 게임의 3D 유닛·건물 | **37.2°**(`VIEW_TILT = 0.65 rad`) |
-| 이 계열의 그림 | **70°** |
-| 🧱 **캠프 바닥·격자** | **90°(정수직)** — 격자 칸이 화면에 나란한 정사각형이다 |
+| 선택 링 방향 | `_ringQ` |
+| 발밑 그림자 | `_SH_COS` |
+| 초상 카메라 | `BI_TILT` (= `VIEW_TILT + 0.08`) |
+| 공중 부양 보정 | `airLiftPx` |
+| 스프라이트 굽는 각 | `SPRITE_TILT` (2026-09-13 에 파생으로 묶었다) |
 
-⭐ **어색함의 뿌리가 여기다.** 바닥은 **바로 위에서** 보고 그 위의 물건만 **비스듬히** 누워 있다.
-70° 가 눈에 맞았던 것도 그래서다 — 바닥의 90° 에 훨씬 가깝다.
+⛔ **이 다섯을 따로 맞추지 말 것** — 두 번 적용된다.
+⚠ 처음엔 「넷이 뒤에 남는다」고 적었는데 **틀렸다**. 코드를 읽고 바로잡았다.
 
-⇒ 길이 둘인데 **A 로 갔다**(2026-09-13 사용자 확정 · `VIEW_TILT` **0.65 → 1.22** 적용 완료):
-- **A. 물건을 바닥에 맞춘다(70°)** — 한 줄이다.
-  ⭐ **링·그림자·초상·부양 보정은 저절로 따라온다** — 넷 다 `VIEW_TILT` 에서 **파생**되는 값이다
-  (`_ringQ`·`_SH_COS`·`BI_TILT`·`airLiftPx`). ⛔ 따로 맞추지 말 것(두 번 적용된다).
-  ⚠ 처음엔 「넷이 뒤에 남는다」고 적었는데 **틀렸다** — 코드를 읽고 바로잡았다.
-- ⛔ **B. 바닥을 물건에 맞춘다(37° 마름모 아이소메트릭)는 하지 말 것** — 격자·길찾기·배치 좌표가
-  전부 화면 좌표와 어긋나고 `_techSnap`·지형층·안개가 다 걸린다. 비용이 A 의 수십 배다.
-
-🚨 **아직 눈으로 못 봤다.** 이 환경은 **3D 를 띄울 수 없다** — `js/90-m3d.module.js` 가 three.js 와
-애드온(`GLTFLoader`·`SkeletonUtils`·`RoomEnvironment`)을 **`esm.sh` 에서 받는데 프록시가 막는다**
-(`ERR_TUNNEL_CONNECTION_FAILED` · 실측). 그래서 `M3D` 가 아예 정의되지 않고 3D 는 한 점도 안 그려진다.
-⇒ **`npm test` 통과가 「각도가 괜찮다」는 뜻이 아니다**(스모크의 M3D 검사는 `window.M3D` 가 없으면 건너뛴다).
-⛔ 3D 화면 판단을 이 환경의 캡처에 기대지 말 것 — **실기기에서 봐야 한다.**
-
-⚠ **헤드리스로는 건물이 안 그려진다**(미네랄·가스는 그려진다 · 2026-09-12 실측). 원인은 안 팠다 —
-각도는 코드 상수로 확정돼서 더 파지 않았다. ⛔ 건물 화면 검증을 헤드리스 캡처에 기대지 말 것.
+🚨 **이 환경에서는 3D 를 못 띄운다** — `js/90-m3d.module.js` 가 three.js 와 애드온
+(`GLTFLoader`·`SkeletonUtils`·`RoomEnvironment`)을 **`esm.sh` 에서 받는데 프록시가 막는다**
+(`ERR_TUNNEL_CONNECTION_FAILED` · 실측). `M3D` 가 정의조차 안 되어 3D 는 한 점도 안 그려진다.
+⇒ **`npm test` 통과는 「각도가 괜찮다」는 뜻이 아니다**(스모크의 M3D 검사는 `window.M3D` 가 없으면
+건너뛴다). ⛔ 3D 화면 판단을 이 환경의 캡처에 기대지 말 것 — **실기기에서 봐야 한다.**
 
 ### 19-4. 🔗 회전 시트는 레퍼런스를 물린다 — 말로 하면 샌다
 
-**증상**(2026-09-12): 4유닛 시트는 70° 로 잘 나왔는데, **같은 문장**으로 뽑은 8방향 회전
+**증상**(2026-09-12): 4유닛 시트는 제 각도로 나왔는데, **같은 문장**으로 뽑은 8방향 회전
 시트만 더 위에서 본 각도로 나왔다. 칸이 여덟으로 잘게 쪼개지면 모델이 부감을 과장한다.
 
 ⭐ **고친 방법 — 각도를 설명하지 말고 그림을 첨부한다.** 승인된 시트의 `job_id` 를
@@ -2658,9 +2675,9 @@ shadows, no text, no labels.
 
 ```
 CRITICAL: the camera elevation must be IDENTICAL in all eight cells and must MATCH THE
-REFERENCE EXACTLY, about 70 degrees above the horizon. Do not make it steeper than the
-reference, do not drift toward a pure straight-down bird's eye view. In the front facing cell
-a clear sliver of the chest and face plate must still be visible below the helmet crown,
+REFERENCE EXACTLY. Do not make it steeper than the reference, do not drift toward a bird's eye
+view. In the front facing cell the soldier's face, chest and both legs must still be fully
+visible, and any circular base must still read as an ellipse about half as tall as it is wide,
 exactly as in the reference.
 ```
 
@@ -2699,6 +2716,7 @@ exactly as in the reference.
   하나하나를 보는 방향**으로 간다고 했으니 이 값 자체가 바뀐다.
 - **프레임 수** — 이동·공격 몇 프레임인가(참고: 사용자가 본 방식은 모션당 4프레임 × 8방향 = 24).
 - **팀 색 마스크 형식** — 별도 채널인가 별도 파일인가.
-- ✅ **`VIEW_TILT` 를 70°(1.22)로 올렸다**(2026-09-13 · §19-3-1). ⚠ **실기기 확인이 남았다** — 이 환경은
-  3D 를 못 띄운다. ⚠ 그리고 **70°가 게임플레이에서도 맞는지**는 아직 모른다: 각도가 오르면 유닛이
-  위에서 눌려 **작게 줄였을 때 실루엣 구분이 어려워진다**. 스프라이트 px 을 정하기 **전에** 실제 줌으로 볼 것.
+- ✅ **`VIEW_TILT` 는 `0.65`(37°) 그대로 간다** — 올려 봤다가 되돌렸다(§19-3). 스타1 이 ≈30° 라 원래
+  값이 이미 맞는 자리였다. ⚠ **30°(0.52) 로 한 칸 더 내릴지**는 실기기에서 볼 것 — 지금은 안 정했다.
+- ⚠ **기존 컨셉 시트는 전부 과한 각도로 뽑혔다**(70° 로 지시한 것들). 스프라이트를 굽기 전에
+  **19-2 의 새 CAMERA 블록으로 다시 뽑아** 각도를 맞출 것.
