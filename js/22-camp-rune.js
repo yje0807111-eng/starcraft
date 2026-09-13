@@ -346,19 +346,6 @@ function runeVal(key){ const p = runeParse(key); if(!p.def) return 0;
 function runeGem(key){ const p = runeParse(key); if(!p.def) return 0;
   if(p.def.gem && p.def.gem[p.gd]) return p.def.gem[p.gd];
   return RUNE_GEM[p.gd] || 0; }
-// 🔷 **룬 그림은 판까지 포함된 한 장이다**(assets/icons/rune/<id>_<등급>.webp · 2026-09-04).
-//   판(육각 타일 4색)과 문양(11종)을 scripts/rune-compose.mjs 가 겹쳐 만든 25장이다.
-//   ⭐ 등급 색이 그림 안에 들어 있으므로 **키 하나로 등급까지 보여 준다** —
-//     칸·가방·상점이 같은 함수를 쓰고, 따로 색을 입히지 않는다.
-//   ⛔ 옛 data-ico(공용 아이콘 세트)로 되돌리지 말 것 — 그건 등급을 못 나타낸다.
-// 🔷 **성좌 판은 문양만 쓴다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).
-//   판(육각)은 도형으로 그린다 — 그래야 등급 색이 테두리·뒷광·번짐에 실려 **상태에 반응**한다.
-//   ⛔ 판까지 합친 그림(runeIcoSrc)으로 되돌리지 말 것 — 그건 배경과 상호작용이 없어 스티커처럼 얹혔다.
-//   ⚠ 가방·상점은 여전히 합친 그림을 쓴다(HTML 이라 SVG 도형을 못 쓴다) — 둘 다 필요하다.
-function runeGlyphSrc(key, grp){ const p = runeParse(key);
-  if(!p.def) return '';
-  const suf = (p.gd === 'uniq' && grp && grp !== 'uniq') ? ('_' + grp) : '';
-  return 'assets/icons/rune/glyph/' + p.def.id + suf + '.webp'; }
 
 //   🎨 유니크는 **앉은 성좌의 색**을 따른다(2026-09-04 사용자 확정) — grp 를 주면 그 벌을 준다.
 //     ⚠ 가방·상점처럼 성좌가 없는 자리에서는 기본(금)을 쓴다.
@@ -423,7 +410,38 @@ function campRuneBuy(id, gd){
   if(typeof saveMeta === 'function') saveMeta();
   if(typeof playSfx === 'function') playSfx('hero_merge');
   if(typeof toast === 'function') toast('💠 ' + runeName(key) + ' 획득');
-  campRuneRender(); return true; }
+  campRuneRender();
+  campRuneBuyFx(id, gd);            // ✨ 산 칸이 부풀고 고리가 퍼진다(연출은 그린 뒤에)
+                                    // ⚠ 여기 `p` 는 **프로필**(PROF())이다 — runeParse 결과가 아니다(한 번 헷갈렸다)
+  return true; }
+// ✨ **구매 연출** — 장착(campRuneEquipFly)과 **같은 어휘**다: 부풀기(.rnPop) + 등급 색 고리(.rnFxRing).
+//   ⛔ 새 어휘를 만들지 말 것 — 룬 화면의 「됐다」는 이미 이 둘이다.
+//   ⚠ campRuneRender 뒤에 부른다 — 다시 그리면 방금 누른 칸의 DOM 이 새것으로 바뀐다.
+function campRuneBuyFx(id, gd){
+  const box=document.getElementById('rnBody'); if(!box) return;
+  const el=[...box.querySelectorAll('.rnBuy')].find(b=>{
+    const o=b.getAttribute('onclick')||''; return o.indexOf("'"+id+"'")>=0 && o.indexOf("'"+gd+"'")>=0; });
+  if(!el) return;
+  el.classList.remove('rnPop'); void el.offsetWidth; el.classList.add('rnPop');
+  setTimeout(()=>el.classList.remove('rnPop'), 460);
+  const r=document.createElement('i'); r.className='rnFxRing';
+  r.style.setProperty('--rg', (RUNE_GD[gd]||{}).col || '#8b95a5');
+  el.appendChild(r); setTimeout(()=>r.remove(), 520); }
+// ❓ **살 때는 물어본다**(2026-09-12 사용자 요청) — 젬은 현질 재화라 잘못 누르면 되돌릴 수 없다.
+//   ⛔ 확인창을 새로 만들지 말 것 — 공용 uiAsk(.ecCard)를 쓴다(CLAUDE.md 「확인 팝업」).
+//   ⚠ 실제 구매는 campRuneBuy 하나다 — 확인은 그 앞의 문일 뿐이다(스모크는 campRuneBuy 를 직접 부른다).
+//   ⚠ 못 사는 경우(상한·젬 부족)는 **묻기 전에** 알린다 — 확인창을 띄웠다가 실패하면 두 번 속는다.
+function campRuneBuyAsk(id, gd){
+  const key=runeKey(id, gd), p=runeParse(key); if(!p.def) return;
+  if(campRuneOwn(key) >= RUNE_OWN_MAX){
+    if(typeof toast==='function') toast('이 룬은 ' + RUNE_OWN_MAX + '개까지만 가질 수 있습니다'); return; }
+  const cost=runeNowGem(key), gemI=(typeof resIco==='function') ? resIco('gem') : '';
+  const have=(typeof profGem==='function') ? profGem() : 0;
+  if(have < cost){ if(typeof toast==='function') toast('💎 젬이 부족합니다'); return; }
+  if(typeof uiAsk!=='function'){ campRuneBuy(id, gd); return; }
+  uiAsk({ title:runeName(key),
+    msg:'<b>' + runeValTx(key) + '</b> · ' + (p.def.de||'') + '<br>' + gemI + ' <b>' + cost + '</b> 을(를) 씁니다',
+    go:'구매', onGo:()=>campRuneBuy(id, gd) }); }
 
 // ── 장착 ────────────────────────────────────────────────────────────────
 // 규칙 셋. ⛔ 하나라도 빼면 「칸이 한정」이라는 전제가 무너진다(맨 위 주석).
@@ -537,6 +555,8 @@ function campRuneRender(){
   //   ⚠ 갈래를 거르면 목록이 짧아진다 — 남은 높이에 맞춰 물린다(브라우저가 알아서 한다).
   const _bagKeep = (() => { const q = document.querySelector('#campRune .rnBagG');
     return q ? q.scrollTop : 0; })();
+  // 📜 상점도 같다 — 줄을 펼치거나 등급을 고를 때마다 다시 그리므로 #rnBody 의 자리를 지킨다
+  const _shopKeep = (_runeSec === 'shop') ? box.scrollTop : 0;
   if(!campRuneState()){ box.innerHTML = ''; return; }
   const _shop = (_runeSec === 'shop');
   box.classList.toggle('shop', _shop);       // 상점만 흐르는 목록이다(판은 전체를 채운다)
@@ -547,6 +567,7 @@ function campRuneRender(){
   box.innerHTML = (_runeSec === 'shop') ? _runeShopHTML() : _runeSlotHTML();
   if(typeof paintIcons === 'function') paintIcons(box);
   if(_bagKeep){ const q = document.querySelector('#campRune .rnBagG'); if(q) q.scrollTop = _bagKeep; }
+  if(_shopKeep) box.scrollTop = _shopKeep;
   _runeTopSync();
   if(typeof curSplitSync === 'function') curSplitSync();   // 📐 상단 띠 맞춤
   if(typeof curPaintChip === 'function') curPaintChip();   // 🏷 좌상단 이름(장착 / 룬 상점)
@@ -651,14 +672,14 @@ function campRuneFit(now){
     return (H && q) ? Math.min(0.4, q.getBoundingClientRect().height / H) : 0; };
   svvFit(_rnView, _runeSvg(), _runeG, _runePts(),
     { pad:30, zmax:1.35, hideT:rt('#campRune .rnTop'), hideB:rt('#campRune .rnBag') }, now, _runeAlive); }
+// 🗺 그 칸이 속한 **성좌 번호** — 일반은 여덟 칸이 한 성좌, 유니크는 칸 하나가 한 성좌다.
+//   ⛔ 이 셈을 여러 곳에 적지 말 것(칸 → 성좌를 묻는 자리가 셋이다).
+function campRuneConsOf(kind, i){
+  return (kind === 'uniq') ? i : Math.floor(i / RUNE_CONS); }
 // 고른 칸의 성좌로 들어간다
 function campRuneFocus(now){
   if(!_rnView || !_runePickKind) return;
-  const ci = (_runePickKind === 'uniq') ? _runePick : Math.floor(_runePick / RUNE_CONS);
-  const c = RUNE_CT[ci] || RUNE_CT[0];
-  svvLookAt(_rnView, _runeG, { x:c[0], y:c[1] },
-    { x:RUNE_MAP_W / 2, y:RUNE_MAP_H * 0.34 },
-    Math.max(_rnView.tz, RUNE_PICK_SC), now, _runeAlive); }
+  campRuneLookCons(campRuneConsOf(_runePickKind, _runePick), now); }
 // 그릴 때마다 <g> 가 새로 생긴다 — 뷰를 도로 얹고 손가락을 다시 잇는다
 function campRuneBindMap(){
   const svg = _runeSvg(); if(!svg) return;
@@ -689,25 +710,20 @@ function _runeHexPts(x, y, r){ const q = [];
 //     낀 칸은 바깥에 얇은 겹을 하나 더 둘러 무리 속에서 즉시 읽히고, 색은 조용하게 남는다.
 //   ⛔ 십자 반짝임·후광 원을 되살리지 말 것 — 환생 트리의 어휘라 룬 판에서는 시끄러웠다.
 //   ⚠ 누르는 면은 **맨 위에 투명하게** 따로 둔다.
-/* 🎛 칸의 세기 — 목업 camp-rune-vec47-6 ④안에서 고른 값 (2026-09-04 사용자 확정).
-   ⚠ **이웃 칸 중심 사이는 55.1** 이라(고리 72 · 8칸) 칸 바깥으로 27.6 을 넘으면 옆 칸을 침범한다.
-     지금 가장 바깥이 유니크 링 둘째 = r+4.6 → 25.6 으로 안전하다.
-     ⛔ 점선 후광(r+7)을 되살리지 말 것 — 28.0 이 되어 옆 칸을 밟는다(목업에서 잰 값).
-   ⭐ 등급은 **바깥 링 수**로도 읽는다: 하급·중급 0 · 상급 1 · 유니크 2.
-     색을 못 알아봐도 형태로 갈린다. */
-const RUNE_RING1 = 2.5, RUNE_RING2 = 4.6;      // 바깥 링 — 칸 반지름에 더하는 여유
-const RUNE_RING_OP1 = 0.40, RUNE_RING_OP2 = 0.20;
-const RUNE_DOT_R = 3.2, RUNE_DOT_SZ = 0.9, RUNE_DOT_OP = 0.45;   // 유니크 꼭짓점 점 여섯
+/* 🃏 **낀 칸은 카드 그림 한 장이다**(2026-09-12 사용자 확정) — 가방·상점과 같은 에셋.
+   📐 크기는 **칸 지름 × 0.93**. 카드(128×128)의 육각이 네모의 **세로를 가득 채우므로**(실측:
+     알파 범위 세로 128 · 가로 118), `2r` 이면 옛 검은 바닥과 높이가 같고 `1.86r` 이면
+     옛 **면**(r×0.93)과 같다 — 칸 사이 숨 쉴 틈이 그대로 남는다(둘을 찍어 견줬다).
+     ⛔ 2.0 으로 올리지 말 것: 이웃과 맞닿아 고리가 답답해진다.
+     ⛔ 1.0 쯤으로 줄이지 말 것: 카드가 칸 안에 떠서 「칸 속의 작은 카드」가 된다. */
+const RUNE_CARD_K = 1.86;
+// 📏 **칸 하나가 바깥으로 뻗는 거리** ÷ 칸 반지름 — 전체 보기·팬 경계·이웃 간섭을 재는 자가
+//   이것 하나다(⛔ 값을 따로 적지 말 것). ⚠ 이웃 칸 중심 사이는 **55.1**(고리 72 · 8칸)이라
+//   칸 바깥으로 27.6 을 넘으면 옆 칸을 침범한다 — 지금은 r×0.93 = 22.8 로 넉넉하다.
+//   ⚠ 옛 「바깥 링(RUNE_RING1/2)·꼭짓점 점」은 카드가 등급을 말하면서 사라졌다(2026-09-12).
+const RUNE_CELL_OUT = RUNE_CARD_K / 2;
 // 🔁 교체 후보의 점선이 칸 밖으로 나가는 거리 — 이웃 칸 가장자리(28.0)를 넘으면 안 된다
 const RUNE_ANTS_GAP = 3.2;
-// 🔷 문양이 칸에서 차지하는 폭 ÷ 칸 반지름 (2026-09-04 사용자 지적: 「타일 내부를 너무 꽉 채운다」).
-//   ⚠ 육각 안에 들어가는 정사각의 한계는 **1.268** 이다(반변 a ≤ 0.634r). 옛 값 1.24 는
-//     그 한계에 거의 닿아 문양이 벽에 붙어 보였다. 1.00 이면 좌우로 0.13r 씩 남는다.
-//   ⛔ 1.2 이상으로 되돌리지 말 것.
-const RUNE_GLYPH_K = 1.00;
-// 육각 꼭짓점 하나 — i 번째(꼭짓점이 위)
-function _runeVtx(x, y, r, i){ const a = Math.PI / 180 * (60 * i - 90);
-  return [x + r * Math.cos(a), y + r * Math.sin(a)]; }
 
 // 칸 하나 — 잠김 / 빈칸 / 끼워짐 세 모습.
 //   ⭐ **판을 도형으로 그린다**(환생 트리 별과 같은 켜): 검은 바닥 → 면 그라데이션 + 등급색 테두리
@@ -735,35 +751,21 @@ function _runeCell(kind, i, x, y, r, key, open, at, sel){
     g.push('<polygon class="rnEmIn" points="' + _runeHexPts(x, y, r * 0.93 - 1.6) + '"/>'); }
   else {
     const pp = runeParse(key), c = (RUNE_GD[pp.gd] || {}).col || '#8b95a5', uq = pp.gd === 'uniq';
-    const gd = pp.gd || 'low';
-    // ⭕ 바깥 링 — 등급을 형태로도 읽게 한다(위 설명). 하급·중급은 없다.
-    const nRing = uq ? 2 : (gd === 'high' ? 1 : 0);
-    for(let k = 0; k < nRing; k++)
-      g.push('<polygon class="rnHxR" points="'
-        + _runeHexPts(x, y, r + (k ? RUNE_RING2 : RUNE_RING1))
-        + '" style="stroke:' + c + ';stroke-width:' + (k ? .7 : .9)
-        + ';opacity:' + (k ? RUNE_RING_OP2 : RUNE_RING_OP1) + '"/>');
-    // ⬛ 검은 바닥 — 배경 사진을 눌러 앉힌다(안 깔면 칸이 배경에 뜬다)
+    // ⬛ 검은 바닥 — 배경 사진을 눌러 앉힌다(카드 속이 조금 비쳐 오로라가 올라온다)
     g.push('<polygon class="rnHxFloor" points="' + _runeHexPts(x, y, r) + '"/>');
-    // ⬡ 면 + 테두리 — 면은 위가 밝은 남색, 테두리는 흰빛→등급색. 번짐은 형태를 따라간다.
-    g.push('<polygon class="rnHx on" points="' + _runeHexPts(x, y, r * 0.93)
-      + '" style="stroke:url(#rnE' + gd + ');stroke-width:' + (uq ? 1.5 : 1.3)
-      + ';filter:drop-shadow(0 0 ' + (uq ? 4 : 3) + 'px ' + c + ')"/>');
-    // 💡 문양 뒤 광 — ⛔ blur 금지(칸이 27개다). radialGradient 로 낸다.
-    g.push('<circle class="rnBk" cx="' + X + '" cy="' + Y + '" r="' + (r * 0.72).toFixed(1)
-      + '" style="fill:url(#rnB' + gd + ')"/>');
-    // ✨ 안쪽 흰 실선 — 두께를 안 늘리고 깊이만 준다
-    g.push('<polygon class="rnHxIn2" points="' + _runeHexPts(x, y, r - Math.max(1, r * 0.073)) + '"/>');
-    // 🔶 유니크 — 꼭짓점 점 여섯. 빛을 더 쓰지 않고 「격」만 올린다.
-    if(uq) for(let k = 0; k < 6; k++){ const q = _runeVtx(x, y, r + RUNE_DOT_R, k);
-      g.push('<circle class="rnDot" cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1)
-        + '" r="' + RUNE_DOT_SZ + '" style="fill:' + c + ';opacity:' + RUNE_DOT_OP + '"/>'); }
-    // 🔷 문양 — 유니크는 **앉은 성좌 색**을 따른다
+    // 🃏 **낀 칸은 카드 그림 한 장이다**(2026-09-12 사용자 확정) — 가방·상점과 **같은 에셋**이다.
+    //   ⭐ 손으로 그리던 것(바깥 링 · 면 그라데이션 · 뒷광 · 안쪽 흰 선 · 꼭짓점 점 · 문양)을
+    //     전부 카드가 대신한다 — 카드에 이미 테두리·등급색·속광이 그려져 있어 겹치면 테가 둘이 된다.
+    //   ⛔ 손그림을 도로 얹지 말 것(두 겹이 된다) · ⛔ 가방·상점과 다른 그림을 쓰지 말 것.
+    //   ⚠ 클래스는 **`rnImg` 그대로** 둔다 — 가림(`.veil`)·날아오기·부풀림이 그 이름을 잡는다.
+    //   💡 등급색 번짐만 남긴다 — 이게 없으면 배경과 상호작용이 없어 **스티커처럼 얹혀** 보인다
+    //     (2026-09-04 에 합친 그림을 물렸던 이유가 그것이라, 이번엔 번짐을 함께 준다).
     { const gp = (kind === 'uniq') ? (RUNE_GRPS[i] || '') : '';
-      const src = runeGlyphSrc(key, gp), w = r * RUNE_GLYPH_K;
+      const src = runeIcoSrc(key, gp), w = r * RUNE_CARD_K;
       if(src) g.push('<image class="rnImg" href="' + src + '"'
         + ' x="' + (x - w / 2).toFixed(1) + '" y="' + (y - w / 2).toFixed(1) + '"'
-        + ' width="' + w.toFixed(1) + '" height="' + w.toFixed(1) + '"/>'); }
+        + ' width="' + w.toFixed(1) + '" height="' + w.toFixed(1) + '"'
+        + ' style="filter:drop-shadow(0 0 ' + (uq ? 4 : 3) + 'px ' + c + ')"/>'); }
     // ⛔ 칸 밖 아래의 % 는 뺐다(2026-09-04 사용자 확정) — 스물일곱 칸에 숫자가 붙으면
     //   판이 시끄럽고, 값은 길게 눌러 뜨는 쪽지와 가방 줄이 이미 말한다. 
   }
@@ -810,17 +812,10 @@ function _runeZoneSvg(){
       + '" style="fill:' + gi.col + '">' + gi.nm + '</text>'); }
   return g.join(''); }
 function _runeDefs(){
-  let d = '<defs><linearGradient id="rnFace" x1="0" y1="0" x2="0" y2="1">'
-    + '<stop offset="0" stop-color="#1b2634"/><stop offset="1" stop-color="#06090e"/></linearGradient>';
-  for(const k in RUNE_GD){ const c = RUNE_GD[k].col;
-    d += '<linearGradient id="rnE' + k + '" x1="0" y1="0" x2="0" y2="1">'
-      + '<stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>'
-      + '<stop offset=".42" stop-color="' + c + '"/>'
-      + '<stop offset="1" stop-color="' + c + '" stop-opacity=".34"/></linearGradient>'
-      + '<radialGradient id="rnB' + k + '">'
-      + '<stop offset="0" stop-color="' + c + '" stop-opacity=".22"/>'
-      + '<stop offset=".62" stop-color="' + c + '" stop-opacity=".07"/>'
-      + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
+  // 🃏 **낀 칸의 그라데이션은 없앴다**(2026-09-12) — 칸이 카드 그림 한 장이 되면서
+  //   면(#rnFace) · 테두리(#rnE<등급>) · 뒷광(#rnB<등급>)을 쓰는 곳이 사라졌다.
+  //   ⛔ 되살리지 말 것: 카드에 이미 그려져 있어 겹치면 테가 둘이 된다.
+  let d = '<defs>';
   // 🌌 성좌 구역의 오로라 — **환생 트리의 성운과 같은 문법**이다(2026-09-04 사용자 확정:
   //   「환생 트리 구역의 배경처럼 뒤에 나오는 은은한 빛」).
   //   ⭐ 요령은 **아주 넓게 · 아주 옅게**다(트리: 타원 rx186 · 세기 .05, 중심 빛 r300).
@@ -835,7 +830,7 @@ function _runeDefs(){
       + '<stop offset=".55" stop-color="' + c + '" stop-opacity=".07"/>'
       + '<stop offset="1" stop-color="' + c + '" stop-opacity="0"/></radialGradient>'; }
   // 🎨 **빈 칸 테두리는 갈래 색**이다(2026-09-04 사용자 확정 · 목업 camp-rune-edge-8 ③안).
-  //   ⭐ 낀 칸의 테두리(#rnE<등급>)와 **같은 어휘**다 — 위가 흰빛, 아래로 갈수록 색.
+  //   ⭐ 카드 그림의 테두리와 **같은 어휘**다 — 위가 흰빛, 아래로 갈수록 색.
   //     빛이 위에서 오는 결이 판 전체에 통하고, 칸 하나만 봐도 어느 갈래의 자리인지 읽힌다.
   //   ⚠ 세기는 낀 칸보다 **약하다**(흰빛 .92 → .34). 빈 칸이 더 시끄러우면 끼웠을 때
   //     달라지는 것이 없다. ⛔ 올리지 말 것.
@@ -904,15 +899,22 @@ function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
 // 🎯 그 갈래 성좌를 **보이는 자리의 한가운데**로 — 위 띠와 아래 가방을 뺀 나머지의 중심이다.
 //   ⛔ 판 한가운데(RUNE_MAP_H/2)로 잡지 말 것 — 아래를 가방이 214px 덮어 성좌가 그 뒤로 내려간다.
 function campRuneSwapLook(now){
-  const p = runeParse(_runeSwapKey); if(!p.def || !_rnView) return;
+  const p = runeParse(_runeSwapKey); if(!p.def) return;
   // 💠 유니크 룬은 **어느 유니크 칸에도** 들어가고 그 셋이 세 성좌에 흩어져 있다 —
   //   한 곳을 잡을 수 없으므로 **전체 보기 그대로** 둔다(2026-09-12).
+  //   ⚠ 여기(교체 대기)에서만 그렇다 — **빈 칸에 넣을 때는 칸이 이미 정해져 있어** 그리로 간다.
   if(runeBucket(_runeSwapKey) === 'uniq') return;
-  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;
+  campRuneLookCons(RUNE_GRPS.indexOf(p.def.grp), now); }
+// 🎯 **성좌 하나를 보이는 자리의 한가운데로** — 교체 대기 · 칸 고르기 · 빈 칸에 넣기 셋이
+//   같은 함수를 쓴다(2026-09-12 에 셋째가 붙으면서 하나로 모았다).
+//   ⛔ 성좌를 가운데로 옮기는 길을 또 만들지 말 것 — 앵커가 갈리면 같은 동작인데 화면이 다르게 선다
+//     (옛 campRuneFocus 는 `RUNE_MAP_H*0.34` 라는 **손으로 적은 근사값**을 썼다).
+function campRuneLookCons(ci, now){
+  if(!_rnView || ci == null || ci < 0) return;
   const c = RUNE_CT[ci]; if(!c) return;
   const mp = document.querySelector('#campRune .rnMap');
   const H = mp ? mp.getBoundingClientRect().height : 0;
-  if(!H){ requestAnimationFrame(() => { if(_runeAlive() && _runeSwapKey) campRuneSwapLook(now); }); return; }
+  if(!H){ requestAnimationFrame(() => { if(_runeAlive()) campRuneLookCons(ci, now); }); return; }
   // 📐 **화면에서 잰 자리를 viewBox 좌표로 바꿔** 앵커로 쓴다.
   //   ⛔ 화면 비율(높이/판높이)을 viewBox 값에 그대로 곱하지 말 것 —
   //     판은 preserveAspectRatio 로 비율을 지키느라 화면을 꽉 채우지 않는다.
@@ -1247,11 +1249,29 @@ function campRuneAuto(key){
   for(let i = 0; i < n; i++) if(!R[kind][i] && campRuneCanEquip(kind, i, key)){
     // ✈ 빈 칸에 들어갈 때도 **날아서** 들어간다(2026-09-04 사용자 확정) —
     //   교체만 날아가면 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
-    if(!campRuneEquipFly(kind, i, key)) return false;
+    if(!campRuneEquipFly(kind, i, key, { look:true })) return false;
     return true; }
   return false; }
 // ✈ 장착 + 날아가는 그림 — 가방 줄에서 칸으로.
 //   ⚠ 출발 자리는 **끼우기 전에** 잰다(다시 그리면 그 버튼이 «–» 로 바뀌거나 자리가 달라진다).
+// ⏳ **판이 다 미끄러진 뒤에** 한다 — 날아갈 자리(`_runeSlotAt`)는 **화면 좌표**라,
+//   미끄러지는 동안 재면 룬이 칸이 **있던 자리**에 내린다(궤적은 고정된 keyframe 이다).
+//   ⚠ 상한을 둔다 — 어떤 이유로든 안 멎으면 연출이 통째로 사라지는 것보다 조금 어긋나는 편이 낫다.
+const RUNE_LOOK_MAX = 900;
+function _runeAfterLook(fn){
+  let did = false;
+  const go = () => { if(did) return; did = true; fn(); };
+  // ⏰ **타이머가 안전망이다** — rAF 만 믿으면 안 된다. 탭이 가려지거나 그릴 것이 없으면
+  //   rAF 가 통째로 멈추는데, 그러면 날아가는 그림도 **도착도** 영영 안 와서 받을 칸이
+  //   가려진 채(`_runeVeil`) 빈칸으로 남는다 — 장착은 됐는데 화면에는 없는 꼴이다
+  //   (2026-09-12 실측: 스모크에서 rAF 가 안 와 비행이 통째로 사라졌다). ⛔ 빼지 말 것.
+  setTimeout(go, RUNE_LOOK_MAX);
+  const step = () => {
+    if(did || !_runeAlive()) return;
+    const v = _rnView;
+    if(!v || (v.x === v.tx && v.y === v.ty && v.z === v.tz)){ go(); return; }
+    requestAnimationFrame(step); };
+  requestAnimationFrame(step); }
 function campRuneEquipFly(kind, i, key, opt){
   const O = opt || {};
   const from = _runeBagAt(key);
@@ -1259,11 +1279,17 @@ function campRuneEquipFly(kind, i, key, opt){
   //   문양이 「생겼다 사라지는」 것으로 안 보인다.
   _runeVeil = _runeVeilKey(kind, i);
   if(!campRuneEquip(kind, i, key)){ _runeVeil = ''; return false; }
-  const to = _runeSlotAt(kind, i);
-  if(!from || !to){ _runeVeil = ''; campRuneRender(); return true; }   // 자리를 못 찾으면 그냥 보인다
   const c = (RUNE_GD[runeParse(key).gd] || {}).col || '';
-  _runeFly(key, from, to, RUNE_FLY_MS,
-    { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) });
+  const fly = () => {
+    const to = _runeSlotAt(kind, i);
+    if(!from || !to){ _runeVeil = ''; campRuneRender(); return; }   // 자리를 못 찾으면 그냥 보인다
+    _runeFly(key, from, to, RUNE_FLY_MS,
+      { tint:c, delay:O.delay || 0, onLand: () => campRuneLand(kind, i, key) }); };
+  // 🎯 **빈 칸에 넣을 때는 그 성좌로 먼저 간다**(2026-09-12 사용자 요청 — 교체·칸 고르기와 같은 자리).
+  //   ⭐ 상태는 위에서 **이미** 바뀌었다 — 여기서 미루는 것은 그림뿐이라, 도중에 화면을 나가도
+  //     장착은 남는다(⛔ 애니가 끝날 때 상태를 바꾸지 말 것 · 같은 규칙).
+  if(O.look){ campRuneLookCons(campRuneConsOf(kind, i)); _runeAfterLook(fly); }
+  else fly();
   return true; }
 // 🎒 가방을 눌렀을 때 — 칸을 골라 뒀으면 **그 칸에**, 아니면 **빈 칸에**.
 // 🎯 같은 갈래의 **다음 빈 칸** — 없으면 -1.
@@ -1288,7 +1314,7 @@ function campRuneBagTap(key){
     const cur = campRuneEq(kind)[_runePick] || null;
     if(cur === key) return;
     const at = _runePick;
-    if(!campRuneEquipFly(kind, at, key)){ say('남은 룬이 없습니다'); return; }
+    if(!campRuneEquipFly(kind, at, key, { look:true })){ say('남은 룬이 없습니다'); return; }
     // 🎯 **다음 빈 칸으로 옮겨 간다**(2026-09-04 사용자 요청) — 가방을 연달아 누르면
     //   그 갈래의 빈 칸이 차례로 채워진다. 칸을 하나 넣을 때마다 다시 고르지 않아도 된다.
     //   ⛔ 고른 자리를 그대로 두지 말 것 — 다음 탭이 방금 넣은 것을 **덮어쓴다**.
@@ -1421,9 +1447,15 @@ const RUNE_TAB_GLYPH = {
 const RUNE_TAB_ICO = 22;
 // 탭 하나의 그림 — 육각 테두리(갈래 색) + 속 글리프. 고른 것만 진하다.
 function _runeTabIco(grp, on){
+  const S = RUNE_TAB_ICO;
+  // ⚪ 「전체」 — 갈래가 아니라 원 하나(육각·글리프는 갈래의 것이다)
+  if(grp === 'all'){ const h = S / 2;
+    return '<svg class="rnTabI" width="' + S + '" height="' + S + '" viewBox="0 0 ' + S + ' ' + S + '">'
+      + '<circle cx="' + h + '" cy="' + h + '" r="' + (h - 2) + '" fill="none" stroke="#c3ccd8" stroke-width="1" opacity="' + (on ? '.85' : '.38') + '"/>'
+      + '<circle cx="' + h + '" cy="' + h + '" r="3.2" fill="#c3ccd8" opacity="' + (on ? '1' : '.45') + '"/></svg>'; }
   const c = (grp === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
                              : ((RUNE_GRP[grp] || {}).col || '#b4cdeb');
-  const S = RUNE_TAB_ICO, R = S / 2 - 1, q = [];
+  const R = S / 2 - 1, q = [];
   for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
     q.push((S / 2 + R * Math.cos(a)).toFixed(1) + ',' + (S / 2 + R * Math.sin(a)).toFixed(1)); }
   const k = (S * 0.60 / 24).toFixed(3), off = (S / 2 - S * 0.30).toFixed(1);
@@ -1433,8 +1465,68 @@ function _runeTabIco(grp, on){
     + '<g transform="translate(' + off + ',' + off + ') scale(' + k + ')">'
     + '<path d="' + (RUNE_TAB_GLYPH[grp] || RUNE_TAB_GLYPH.eco) + '" fill="' + c
     +   '" opacity="' + (on ? '1' : '.45') + '"/></g></svg>'; }
-let _runeShopTab = 'eco';                // 일반 구역에서 보고 있는 갈래
-function campRuneShopTab(g){ _runeShopTab = g; campRuneRender(); }
+// 🛒 **일반 상점의 두 축**(2026-09-12 사용자 확정 · 목업 rune-shop-final-3):
+//   유형(전체·경제·전투·성장)은 평소 「전체」로 **묶여 있고**, 등급(하·중·상·유니크)은 따로 고른다.
+//   ⭐ 규칙은 하나 — **등급이 하나로 정해졌으면 줄 오른쪽에 버튼 하나, 아니면 줄을 눌러 아래로 펼친다.**
+//   ⛔ 줄마다 등급 버튼 넷을 늘어놓던 옛 모양(.rnBuyS · 다락)으로 되돌리지 말 것 — 한 탭에 서른 개가
+//     깔려 「무엇을 파는가」보다 격자가 먼저 읽혔다.
+let _runeShopTab = 'all';                // 유형 — 'all' | RUNE_GRPS 중 하나
+let _runeShopGd = '';                    // 등급 고정 — '' | RUNE_GRADES 중 하나
+let _runeShopOpen = '';                  // 펼쳐 둔 줄(룬 id) — 한 번에 하나
+function campRuneShopTab(g){ _runeShopTab = g; _runeShopOpen = ''; campRuneRender(); }
+function campRuneShopGd(gd){ _runeShopGd = (_runeShopGd === gd) ? '' : gd; _runeShopOpen = ''; campRuneRender(); }
+// ⬇ 펼친 구역의 HTML — **렌더와 애니가 같은 것을 쓴다**(⛔ 두 벌로 만들지 말 것)
+function _runeShopExpHTML(id){
+  return '<div class="rnShopExp">'
+    + RUNE_GRADES.map(gd => _runeGdCard(runeKey(id, gd))).join('') + '</div>'; }
+const RUNE_EXP_MS=220;   // 펼침·접힘 시간(ms) — CSS .rnShopExp 의 transition 과 같아야 한다
+// 🎬 **펼침·접힘은 제자리에서 움직인다**(2026-09-12 사용자 요청 「자연스러운 애니메이션」).
+//   ⛔ 여기서 campRuneRender() 를 부르지 말 것 — 목록을 통째로 다시 그리면 DOM 이 사라져
+//     전환이 걸릴 요소가 없다(그래서 옛 코드는 툭 열리고 툭 닫혔다).
+//   ⭐ 높이를 0 ↔ 실제높이로 민다. 다 펴지면 height:auto 로 풀어 준다(안 풀면 내용이 바뀔 때 잘린다).
+//   ⚠ 다른 줄을 누르면 **닫힘과 열림이 같이 돈다** — 닫는 것을 기다렸다 열면 굼떠 보인다.
+//   ⚠ 화면을 다시 그리는 다른 길(구매·등급 칩·탭)은 그대로 campRuneRender 를 쓴다 —
+//     그때는 열린 줄이 처음부터 펼쳐진 채로 그려진다(위 _runeShopExpHTML).
+function _runeExpOpen(el){
+  el.style.height='0px'; void el.offsetHeight;
+  el.style.height=el.scrollHeight+'px';
+  clearTimeout(el._expT); el._expT=setTimeout(()=>{ el.style.height='auto'; }, RUNE_EXP_MS); }
+function _runeExpClose(el, done){
+  if(el._expOut) return;   // 이미 접는 중 — 두 번 걸면 타이머가 엇갈린다
+  el._expOut=1; clearTimeout(el._expT);
+  el.style.height=el.scrollHeight+'px'; void el.offsetHeight;
+  el.style.height='0px';
+  el._expT=setTimeout(()=>{ el.remove(); if(done) done(); }, RUNE_EXP_MS); }
+function campRuneShopOpen(id){
+  const box=document.getElementById('rnBody');
+  const list=box && box.querySelector('.rnShopList');
+  const same=(_runeShopOpen===id);
+  _runeShopOpen = same ? '' : id;
+  // 목록이 아직 없으면(첫 그리기 전) 평소대로 그린다
+  if(!list){ campRuneRender(); return; }
+  // 열려 있던 것을 접는다
+  //   ⚠ 펼친 구역은 **열린 줄의 바로 다음 형제**로 집는다. `querySelector('.rnShopExp')` 로 집으면
+  //     아직 **접히는 중인 옛 구역**(사라지기 전 220ms)이 먼저 걸려, 정작 열린 것을 못 닫는다
+  //     (실측: 다른 줄을 연 직후 같은 줄을 다시 누르면 안 닫혔다 · 스모크가 잡았다).
+  const openRow=list.querySelector('.rnShopRw.open');
+  const _nx=openRow && openRow.nextElementSibling;
+  const openExp=(_nx && _nx.classList.contains('rnShopExp')) ? _nx : null;
+  if(openRow){ openRow.classList.remove('open');
+    const a=openRow.querySelector('.rnRwArw'); if(a) a.textContent='›'; }
+  if(openExp) _runeExpClose(openExp);
+  if(same){ if(typeof playSfx==='function') playSfx('ui_close'); return; }
+  // 새로 연다 — 그 줄 바로 뒤에 끼우고 높이를 민다
+  const rows=[...list.querySelectorAll('.rnShopRw')];
+  const idx=RUNE_LIST.filter(d=>_runeShopTab==='all'||d.grp===_runeShopTab).findIndex(d=>d.id===id);
+  const row=rows[idx]; if(!row){ campRuneRender(); return; }
+  row.classList.add('open');
+  { const a=row.querySelector('.rnRwArw'); if(a) a.textContent='⌃'; }
+  const tmp=document.createElement('div'); tmp.innerHTML=_runeShopExpHTML(id);
+  const exp=tmp.firstElementChild; if(!exp){ campRuneRender(); return; }
+  row.insertAdjacentElement('afterend', exp);
+  if(typeof paintIcons==='function') paintIcons(exp);
+  _runeExpOpen(exp);
+  if(typeof playSfx==='function') playSfx('ui_open'); }
 // 💠 한 칸 — 그림 · 이름 · 등급 · 값. 살 수 없으면 왜 못 사는지 칸이 말한다.
 function _runeBuyCell(key, opt){
   const O = opt || {}, p = runeParse(key); if(!p.def) return '';
@@ -1452,7 +1544,7 @@ function _runeBuyCell(key, opt){
     + (sale ? '<s>' + runeGem(key) + '</s>' : '') + '</u>';
   return '<button class="rnBuy' + (sale ? ' sale' : '') + '" type="button"'
     + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
-    + ' onclick="campRuneBuy(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + ' onclick="campRuneBuyAsk(\'' + p.def.id + '\',\'' + gd + '\')">'
     + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
     + runeIcoHTML(key, 'rnBuyI')
     + (p.def.soon ? '<i class="rnSoon">준비 중</i>' : '')
@@ -1460,9 +1552,10 @@ function _runeBuyCell(key, opt){
     + '<span>' + runeValTx(key) + '</span>' + tail
     + (own > 0 ? '<em class="rnHas">×' + own + '</em>' : '') + '</button>'; }
 
-// 🧾 상점 줄의 **작은 등급 버튼** — 가방의 육각 버튼과 같은 자리를 맡되 값(젬)을 적는다.
-//   ⚠ 가방은 「몇 개 가졌나」, 상점은 「얼마인가」다 — 같은 자리에 다른 숫자가 온다.
-function _runeBuySmall(key){
+// 🧾 펼친 구역의 **등급 카드** — 할인 카드(.rnBuy)의 얼굴을 작게(.gd). 안은 넷:
+//   [작은 그림 + 등급 이름](제일 크다) / 등급 값(작게) / 젬 값 판 / 보유 ×N(더 작게).
+//   ⚠ 등급 이름이 제일 크다(2026-09-12 사용자: 「가장 큰 것이 등급이 되도록」) — 값·보유는 그 아래.
+function _runeGdCard(key){
   const p = runeParse(key); if(!p.def) return '';
   const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
   const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
@@ -1470,15 +1563,32 @@ function _runeBuySmall(key){
   const sale = runeOnSale(key), cost = runeNowGem(key);
   const have = (typeof profGem === 'function') ? profGem() : 0;
   const off = full || have < cost;
-  return '<button class="rnBuyS' + (sale ? ' sale' : '') + '" type="button"'
+  return '<button class="rnBuy gd' + (sale ? ' sale' : '') + '" type="button"'
     + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
-    + " onclick=\"campRuneBuy('" + p.def.id + "','" + gd + "')\">"
-    // 🏷 할인 중이면 그렇게 말한다 — 값만 싸면 「왜 싼가」를 모른다(일반 목록에도 뜬다)
-    + (sale ? '<i class="rnOffS">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
-    + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b>'
+    + ' onclick="campRuneBuyAsk(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + '<span class="hd">' + runeIcoHTML(key, 'rnGdI') + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b></span>'
+    + '<span class="pc">' + runeValTx(key) + '</span>'
     + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
-            : '<u' + (sale ? ' class="sale"' : '') + '>' + gemI + ' ' + cost + '</u>')
-    + (own > 0 && !full ? '<em>×' + own + '</em>' : '') + '</button>'; }
+            : '<u>' + gemI + ' ' + cost + (sale ? '<s>' + runeGem(key) + '</s>' : '') + '</u>')
+    + (own > 0 ? '<em class="own">보유 ×' + own + '</em>' : '<em class="own none">—</em>')
+    + '</button>'; }
+// 🧾 등급이 하나로 정해졌을 때 줄 오른쪽의 **버튼 하나**(.rnBuy.one · 모서리 컷 + 금속 띠)
+function _runeBuyOne(key){
+  const p = runeParse(key); if(!p.def) return '';
+  const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
+  const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
+  const own = campRuneOwn(key), full = own >= RUNE_OWN_MAX;
+  const sale = runeOnSale(key), cost = runeNowGem(key);
+  const have = (typeof profGem === 'function') ? profGem() : 0;
+  const off = full || have < cost;
+  return '<button class="rnBuy one' + (sale ? ' sale' : '') + (gd === 'uniq' ? ' gold' : '') + '" type="button"'
+    + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
+    + ' onclick="campRuneBuyAsk(\'' + p.def.id + '\',\'' + gd + '\')">'
+    + (sale ? '<i class="rnOff">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
+            : '<u>' + gemI + ' ' + cost + (sale ? '<s>' + runeGem(key) + '</s>' : '') + '</u>')
+    + '</button>'; }
 function _runeShopHTML(){
   // ⛔ 「보유 젬」 줄은 뺐다(2026-09-04 사용자 확정) — 젬은 **상단 재화 바**에 이미 있다.
   //   같은 숫자를 두 층에 띄우면 어느 쪽이 진짜인지 묻게 된다.
@@ -1506,32 +1616,48 @@ function _runeShopHTML(){
     + sale.map(k => _runeBuyCell(k, { sale:true, nameFull:true })).join('')
     + '</div></div>';
 
-  // 🗂 ③ 일반 — 갈래 탭으로 나눈다(16종 × 3등급이면 한 목록에 다 못 담는다)
-  const tabs = RUNE_GRPS;
+  // 🗂 ③ 일반 — 유형 탭(전체·경제·전투·성장) + 등급 칩 + 펼치는 줄(위 _runeShopTab 주석).
+  const tabs = ['all'].concat(RUNE_GRPS);
   const idx = Math.max(0, tabs.indexOf(_runeShopTab));
-  h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점</span></div>';
+  const gdOn = _runeShopGd;
+  const list = RUNE_LIST.filter(d => _runeShopTab === 'all' || d.grp === _runeShopTab);
+  // 🏷 제목 옆 배지 — 「지금 무엇으로 좁혀져 있나」를 제목이 말한다(안 그러면 분류 줄을 봐야 안다)
+  let badge = '';
+  if(_runeShopTab !== 'all') badge += '<span class="rnState" style="--rg:' + ((RUNE_GRP[_runeShopTab] || {}).col || '#c3ccd8')
+    + '"><i></i>' + ((RUNE_GRP[_runeShopTab] || {}).nm || '') + '</span>';
+  if(gdOn) badge += '<span class="rnState" style="--rg:' + ((RUNE_GD[gdOn] || {}).col || '#c3ccd8')
+    + '"><i></i>' + ((RUNE_GD[gdOn] || {}).tx || '') + (_runeShopTab === 'all' ? '<u>만</u>' : '') + '</span>';
+  h += '<div class="rnSec"><div class="rnSecH"><span class="rnSecT">상점' + badge + '</span>'
+    + '<span class="rnSecN"><b>' + list.length + '</b>종' + (_runeShopTab === 'all' && !gdOn ? ' · 전체' : '') + '</span></div>';
   // 🗂 탭 띠는 **공용 함수**다(CLAUDE.md 「세그먼트 이동 바」) — 새로 만들지 않는다.
-  //   ⚠ items 는 {label} 이고 act 는 **함수**(k => 코드)다.
-  //   🔷 **아이콘 탭**(2026-09-05 사용자 확정 · 목업 shop-icontab-4 ①안) —
-  //     육각 아이콘 + 이름, 고른 칸만 한 단 밝고 **아래 밑변 광원 한 줄**이 켜진다.
-  //     ⭐ 공용 함수(segNavHTML)를 그대로 쓴다 — label 에 그림을 담고 CSS 변형(.stack)이 세로로 세운다.
+  //   🔷 **아이콘 탭**(2026-09-05 사용자 확정 · 목업 shop-icontab-4 ①안) — 육각 아이콘 + 이름,
+  //     고른 칸만 한 단 밝고 **아래 밑변 광원 한 줄**이 켜진다. 「전체」는 원 하나(_runeTabIco).
   //     ⛔ 상점 전용 탭 함수를 새로 만들지 말 것.
   h += (typeof segNavHTML === 'function')
     ? segNavHTML(tabs.map((g, k) => ({
-        label: _runeTabIco(g, k === idx) + '<span>' + ((RUNE_GRP[g] || {}).nm || g) + '</span>' })), idx,
+        label: _runeTabIco(g, k === idx) + '<span>' + (g === 'all' ? '전체' : ((RUNE_GRP[g] || {}).nm || g)) + '</span>' })), idx,
         k => "campRuneShopTab('" + tabs[k] + "')").replace('class="pdSeg"', 'class="pdSeg stack"')
     : '';
+  // 🎚 등급 칩 — 판 없는 글자 + 밑변 광원(탭 띠와 같은 어휘 · 다시 누르면 풀린다)
+  h += '<div class="rnGdChips"><i>등급</i>'
+    + RUNE_GRADES.map(gd => '<button type="button" class="rnGdChip' + (gdOn === gd ? ' on' : '')
+        + '" style="--rg:' + ((RUNE_GD[gd] || {}).col || '#8b95a5') + '" data-gd="' + gd
+        + '" onclick="campRuneShopGd(\'' + gd + '\')">' + ((RUNE_GD[gd] || {}).tx || gd) + '</button>').join('')
+    + (gdOn ? '' : '<span class="rnGdNote">안 고르면 펼쳐서 산다</span>') + '</div>';
   h += '<div class="rnShopList">';
-  for(const d of RUNE_LIST){
-    const g = d.grp;
-    if(g !== tabs[idx]) continue;
-    const gds = RUNE_GRADES;
-    // 🧾 **가로줄** — 가방과 같은 짜임이라 두 화면이 한 어휘로 읽힌다
-    h += '<div class="rnShopRw">'
-      + runeIcoHTML(runeKey(d.id, 'mid'), 'rnRwI')
-      + '<span class="rnRwT">' + d.de + (d.soon ? '<u>준비 중</u>' : '')
-      + '<s>' + gds.map(gd => _runePctTx(runeKey(d.id, gd))).join(' · ') + '</s></span>'
-      + '<span class="rnRwB">' + gds.map(gd => _runeBuySmall(runeKey(d.id, gd))).join('')
-      + '</span></div>'; }
+  for(const d of list){
+    const open = !gdOn && _runeShopOpen === d.id;
+    // 🧾 **가로줄** — [그림] [룬 이름 / 설명 · 등급 값] … [▸ 또는 버튼 하나]
+    //   ⚠ 상점 줄은 **룬 이름이 제목, 설명이 부제**다(2026-09-12 사용자 확정). 가방 줄은 반대다
+    //     (2026-09-04 「무엇이 오르는지」가 먼저) — 두 화면의 규칙이 다르니 하나로 맞추지 말 것.
+    h += '<div class="rnShopRw' + (open ? ' open' : '') + '"'
+      + (gdOn ? '' : ' onclick="campRuneShopOpen(\'' + d.id + '\')"') + '>'
+      + runeIcoHTML(runeKey(d.id, gdOn || 'mid'), 'rnRwI')
+      + '<span class="rnRwT">' + d.nm + (d.soon ? '<u>준비 중</u>' : '')
+      + '<s><i>' + d.de + '</i> · ' + RUNE_GRADES.map(gd => _runePctTx(runeKey(d.id, gd))).join(' · ') + '</s></span>'
+      + (gdOn ? _runeBuyOne(runeKey(d.id, gdOn)) : '<span class="rnRwArw">' + (open ? '⌃' : '›') + '</span>')
+      + '</div>';
+    // ⬇ 펼친 구역 — 등급 넷을 할인 카드와 같은 얼굴(모서리 컷 + 금속 띠)로, 작게
+    if(open) h += _runeShopExpHTML(d.id); }
   h += '</div></div>';
   return h; }

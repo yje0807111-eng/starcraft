@@ -57,11 +57,19 @@ const NAV_TREE=[
     cur:()=>((typeof mapUpgIsOn==='function' && mapUpgIsOn()) ? 'umap'
              : ((typeof rebUpgIsOn==='function' && rebUpgIsOn()) ? 'boost'
              : (campTreeIsOn() ? 'tree' : (campRebIsOn() ? 'info' : null)))),
+    //   🖥 칸마다 **화면 id(`scr`)와 닫는 함수(`shut`)** 를 함께 들고 있다(2026-09-12) —
+    //     「구역을 떠날 때 무엇을 닫아야 하나」의 **단일 소스**다. ⛔ 그 목록을 다른 곳에 또 적지 말 것:
+    //     실제로 navShow 가 옛 둘(campReb·campTree)만 닫고 있어서, 나중에 붙은 유즈맵 강화·환생 강화가
+    //     구역을 떠나도 안 닫혔다 — z 120 짜리 전체 화면이라 다음 화면을 통째로 덮었다(사용자 신고).
     reset:()=>campRebEnter('info'), subs:[
-      { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info') },
-      { k:'tree', label:'성장 트리', ico:'flag', act:()=>campRebEnter('tree') },   // 📈 레벨 포인트로 산다(2026-09-11)
-      { k:'boost', label:'환생 강화', ico:'boost', act:()=>campRebEnter('boost') },   // 🔁 환생 포인트로 산다(2026-09-11)
-      { k:'umap', label:'유즈맵 강화', ico:'map', act:()=>campRebEnter('umap') } ] },
+      { k:'info', label:'환생',      ico:'upg',  act:()=>campRebEnter('info'),
+        scr:'campReb',      shut:(keep)=>{ if(typeof campRebClose==='function') campRebClose(keep); } },
+      { k:'tree', label:'성장 트리', ico:'flag', act:()=>campRebEnter('tree'),   // 📈 레벨 포인트로 산다(2026-09-11)
+        scr:'campTree',     shut:()=>{ if(typeof campTreeClose==='function') campTreeClose(); } },
+      { k:'boost', label:'환생 강화', ico:'boost', act:()=>campRebEnter('boost'),   // 🔁 환생 포인트로 산다(2026-09-11)
+        scr:'rebUpgScreen', shut:(keep)=>{ if(typeof rebUpgClose==='function') rebUpgClose(keep); } },
+      { k:'umap', label:'유즈맵 강화', ico:'map', act:()=>campRebEnter('umap'),
+        scr:'mapUpgScreen', shut:(keep)=>{ if(typeof mapUpgClose==='function') mapUpgClose(keep); } } ] },
   // 💠 룬 — 환생과 유즈맵 사이(2026-09-02 사용자 확정: 연구·환생·**룬**·유즈맵·상점).
   //   ⭐ 자리가 여기인 이유: 왼쪽 셋이 「내가 세지는 곳」이고 오른쪽 둘이 「밖으로 나가는 곳」이다.
   //   하위 둘 — **장착**(칸에 끼우기)과 **룬 상점**(젬으로 사기).
@@ -111,6 +119,19 @@ function openResearch(){
   navShow('research');
   campResEnter('res'); }
 const navSec=(k)=>NAV_TREE.find(x=>x.k===k)||null;
+// ══ 🔁 환생 구역의 화면 넷 — 목록은 위 NAV_TREE 의 `reb.subs` 하나다 ═══════════════
+//   ⭐ 묻는 것이 셋이라 세 곳이 저마다 id 를 적고 있었고, 그중 **navShow 의 것만 옛 둘에 멈춰**
+//     있어서 유즈맵 강화·환생 강화가 구역을 떠나도 안 닫혔다(2026-09-12 사용자 신고 —
+//     「나오려고 하면 화면이 계속 남아 다른 구역으로 못 가거나 겹쳐 보인다」).
+//   ⛔ 화면 id 를 여기 말고 다른 곳에 적지 말 것 — 칸이 하나 늘 때마다 같은 버그가 다시 난다.
+function rebZoneSubs(){ const s = navSec('reb'); return (s && s.subs) || []; }
+function rebZoneScreens(){ return rebZoneSubs().filter(t=>t.scr).map(t=>t.scr); }
+function rebZoneIsOn(){ return rebZoneScreens().some(id=>{
+  const e = document.getElementById(id); return !!(e && e.classList.contains('on')); }); }
+// keepK = 그 칸 하나만 남기고 닫는다(구역 **안에서** 칸을 바꾸는 중) · 없으면 전부 닫는다(구역을 떠난다).
+// keepArt = 배경 그림을 돌려주지 않는다 — 구역 안 이동일 때만 참(⛔ 떠날 때 주면 그림이 남는다).
+function rebZoneShut(keepK, keepArt){
+  for(const t of rebZoneSubs()){ if(!t.shut || (keepK && t.k===keepK)) continue; t.shut(keepArt); } }
 let _navSec='', _navDrill='';   // 지금 구역 / 내려가 있는 구역('' = 최상위)
 // attr = 'nav'(구역) / 'sub'(구역 안 항목). 같은 키가 두 층에 있을 수 있어(정비 구역 = 장비 하위 = gear) 나눈다.
 function _navCell(attr,k,label,ico,cls,fn){
@@ -141,9 +162,8 @@ function navShow(tab){ const b=document.getElementById('navBar'); if(!b) return;
   //     「뒤로」를 누르면 여기서 닫힌다(navBack 도 결국 navShow 를 거친다).
   //   ⛔ tab 이 null 일 때는 닫지 않는다 — 그건 「숨김」이지 「구역을 떠남」이 아니다
   //     (showAppScreen 이 매번 navShow(null) 을 부른다 · 위 주석과 같은 이유).
-  if(tab!=='reb'){
-    if(typeof campRebClose==='function') campRebClose();
-    if(typeof campTreeClose==='function') campTreeClose(); }
+  //   ⛔ 화면을 여기 손으로 적지 말 것 — 목록은 NAV_TREE 의 reb.subs 하나다(rebZoneShut).
+  if(tab!=='reb') rebZoneShut();
   // 💠 룬 구역도 같은 규칙 — 나가는 길이 하단 네비뿐이라 여기서 닫는다(2026-09-02).
   if(tab!=='rune'){ if(typeof campRuneClose==='function') campRuneClose(); }
   // 📐 **구역 상단 띠**는 환생·룬·유즈맵·상점의 것이다 — 캠프로 돌아오면 끈다(2026-09-05).

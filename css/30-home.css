@@ -1440,14 +1440,16 @@
 /* ⏸ 채굴 멈춤 — 채굴 중일 때만 JS 가 만든다(js/19-camp.js campMineStopBtn).
    ⚠ #phone 직속이라 하단 화면이 무엇이든(연구·환생) 그 위에 남는다.
    ⚠ 재화 바(z 62)보다 위, 설정 화면(95)보다는 아래다 — 설정을 가리면 안 된다. */
-#campMineStop{position:absolute;right:8px;top:calc(var(--topPad) + var(--curH) + 8px);z-index:64;
+/* ⭐ 껍데기는 **공용 클래스 하나**다 — 채굴 멈춤과 화면 이동 모드 해제가 같은 얼굴을 쓴다
+   (2026-09-12 사용자 확정 「채굴모드해제 버튼처럼」). ⛔ 모드마다 규칙을 복사하지 말 것. */
+.campModeStop{position:absolute;right:8px;top:calc(var(--topPad) + var(--curH) + 8px);z-index:64;
   display:flex;align-items:center;gap:6px;height:30px;padding:0 10px 0 8px;
   border:1px solid rgba(255,90,90,.34);border-radius:3px;
   background:rgba(28,12,14,.86);color:#ff8a90;cursor:pointer;
   font-family:var(--font-ui);font-size:var(--fs-sm);font-weight:800;
   box-shadow:0 2px 10px rgba(0,0,0,.45), inset 0 -1px 0 rgba(255,90,90,.28)}
-#campMineStop i{font-style:normal;letter-spacing:-.2px}
-#campMineStop:active{background:rgba(48,18,20,.92)}
+.campModeStop i{font-style:normal;letter-spacing:-.2px}
+.campModeStop:active{background:rgba(48,18,20,.92)}
 /* ⚔ 적 수 — 던전에서만. 던전·라운드는 재화 바 왼쪽 칩이 맡는다(중복 금지) */
 #campBar .cbFoe{font-family:var(--font-num);font-variant-numeric:tabular-nums;
   font-size:var(--fs-sm);font-weight:800;color:var(--neon,#ff3b3b);
@@ -1877,7 +1879,13 @@
    갈래 색으로 얹는다. ⛔ .ctGem.on{fill:...} 으로 면을 채우지 말 것 — 아이콘이 색에 묻힌다. */
 /* 👆 누르는 면 — 보이지 않지만 **보이는 별보다 크다**. 별 하나에 이것 하나뿐이라
    어디를 눌렀는지 헷갈릴 일이 없다(실측: 15px 짜리 별은 6px 만 빗나가도 헛쳤다). */
-#campTree .ctHit{fill:transparent;cursor:pointer}
+/* 🚫 **탭 하이라이트·초점 테두리를 과녁에 직접 끈다**(2026-09-12 사용자 신고 「금색 정사각형」).
+   00-base 의 `*` 로 이미 껐지만 **일부 브라우저는 그 설정을 SVG 요소에 안 먹인다** — 그러면
+   누른 도형의 **경계상자**가 칠해지는데, 육각형의 경계상자는 거의 정사각형이라
+   「칸을 감싸는 네모」로 보인다(폰·태블릿에서 재현 · 헤드리스 크롬에서는 안 난다).
+   ⚠ 고른 칸 표시는 청록 육각(.rnHxSel) 하나뿐이다 — ⛔ 네모를 새로 그리지 말 것. */
+#campTree .ctHit{fill:transparent;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;outline:none;-webkit-touch-callout:none}
 /* 🏅 **다음에 열 것** 표식 (2026-09-04 사용자 확정) — 지정 표시와 같은 어휘(꼭짓점 조각 + 뒤 빛)를
    **더 얇고 · 더 은은하게 · 더 느리게**. 늘 떠 있는 표시라 눈에 띄면 곧 시끄러워진다.
    ⛔ 굵기·속도를 올리지 말 것 · ⛔ 색을 따로 두지 말 것(갈래 색을 그대로 쓴다).
@@ -2184,7 +2192,12 @@
    ⛔ 환생 구역의 키 아트를 빌리지 않는다 — 여기는 제 배경(불투명)을 갖는다.
    ⛔ animation-fill-mode 를 주지 말 것 — 탭이 백그라운드면 애니가 0 에 멈춰
       화면이 통째로 안 보인다(환생 화면에서 이미 밟은 함정). */
-#campRune{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none}
+/* 🤏 **구역 전체가 손가락을 받는다** — 판 밖(가방·상단 띠)에서 두 손가락을 벌려도
+   페이지가 커지지 않게(2026-09-12 사용자 신고 「바깥 인터넷 창까지 같이 확대된다」).
+   ⚠ 스크롤 목록만 세로로 돌려준다 — HOME(`#homeScreen` + `.uiScroll`)과 **같은 수법**이다.
+     `pan-y` 는 세로 밀기만 허용하므로 거기서도 확대는 안 먹는다. ⛔ `auto` 로 되돌리지 말 것. */
+#campRune{position:absolute;left:0;right:0;top:0;bottom:var(--navH);z-index:120;display:none;touch-action:none}
+#campRune .uiScroll{touch-action:pan-y}
 #campRune.on{display:block}
 #campRune.on.rnIn{animation:crFadeIn var(--t-screen) ease}
 /* 🖼 그림은 #campRebBg 한 장이다(환생·업그레이드·룬 공용) — 여기는 그 위에 얹는 어둠뿐.
@@ -2226,8 +2239,11 @@
 /* 🌌 성좌 판 (2026-09-03 · 목업 ②안) — 유니크가 중심, 일반 8칸이 고리로 둘러싼다.
    ⚠ 판은 SVG 한 장이다. 칸 크기·자리는 viewBox 안 좌표(22-camp-rune.js)가 정하고,
      여기서는 **색과 굵기만** 정한다 — 두 곳에서 자리를 만지면 반드시 어긋난다. */
-#campRune .rnMap{position:absolute;inset:0}
-#campRune .rnMap svg{display:block;width:100%;height:100%}
+/* 🤏 `touch-action:none` — 이게 없으면 **두 손가락 확대를 브라우저가 먼저 먹어** 페이지째
+   커졌다 작아진다(2026-09-12 사용자 신고). 판 안에서만 확대·축소되게 손가락을 통째로 받는다.
+   ⛔ 빼지 말 것 · ⭐ 환생 트리(`#ctSvg`)와 **같은 규칙**이다(두 판의 조작이 갈리면 안 된다). */
+#campRune .rnMap{position:absolute;inset:0;touch-action:none}
+#campRune .rnMap svg{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
 /* ⭐ 이중 테두리 — 낀 칸은 바깥에 얇은 겹을 하나 더 두른다(2026-09-03 · 목업 tri-6 ②안).
    ⛔ 십자 반짝임·후광 원을 되살리지 말 것 — 환생 트리의 어휘라 룬 판에서는 시끄러웠다. */
 /* 🔷 **칸은 도형이다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).
@@ -2236,10 +2252,8 @@
      없어 스티커처럼 얹혔다. 그 그림은 **가방·상점**(HTML)이 계속 쓴다.
    ⚠ 색·굵기·번짐은 js 가 인라인으로 얹는다(등급마다 달라서) — 여기서는 공통 성질만 정한다. */
 #campRune .rnHxFloor{fill:#000;opacity:.55;pointer-events:none}
-#campRune .rnHxR{fill:none;pointer-events:none}                    /* 바깥 링 — 등급을 형태로 */
-#campRune .rnBk{pointer-events:none}                                /* 문양 뒤 광 */
-#campRune .rnHxIn2{fill:none;stroke:#fff;stroke-width:.6;opacity:.16;pointer-events:none}
-#campRune .rnDot{pointer-events:none}/* 빈 칸에 도는 숨 */
+
+/* 빈 칸에 도는 숨 */
 #campRune .rnHx{stroke-width:1.2}
 /* 🔒 잠긴 칸 — 흐릿하되 **얕게만** 비친다. opacity 로 통째로 흐리면(옛 .40)
    뒤의 구역 오로라가 그대로 들어온다 — 면만 살짝 열어 둔다. */
@@ -2250,8 +2264,6 @@
      ⛔ .8 아래로 내리지 말 것 — 물들기 시작한다(스모크가 하한을 잰다). */
 #campRune .rnHx.em{fill:url(#rnWell);fill-opacity:.86;stroke:rgba(180,205,235,.24);stroke-width:1.1}
 #campRune .rnEmIn{fill:none;stroke:#fff;stroke-width:.5;opacity:.07;pointer-events:none}
-/* 면은 **검게 둔다** — 등급색으로 채우면 그 위의 문양이 색에 묻힌다(트리에서 얻은 규칙). */
-#campRune .rnHx.on{fill:url(#rnFace)}
 /* 시안은 '지금 고른 것' 전용 — 화면당 한 곳(DESIGN §2) */
 #campRune .rnHxSel{fill:none;stroke:var(--acc-sel);stroke-width:1.1;opacity:.9}
 #campRune .rnLkT{fill:#49525d;font-family:var(--font-num);font-size:6.8px;text-anchor:middle}
@@ -2325,7 +2337,8 @@
   font-size:12px;font-weight:700;letter-spacing:.14em;opacity:.85}
 #campRune .rnLink{stroke:rgba(190,212,240,.07);stroke-width:.8;stroke-dasharray:2 3}
 #campRune .rnLink.on{stroke:rgba(190,212,240,.20);stroke-width:1;stroke-dasharray:none}
-#campRune .rnHit{fill:transparent;cursor:pointer}
+#campRune .rnHit{fill:transparent;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;outline:none;-webkit-touch-callout:none}
 #campRune #rnG{will-change:transform}
 /* 🎒 상시 가방 — 위=판 / 아래=가방. 프로필 장비창(아바타/가방)과 같은 나눔이다.
    ⛔ 칸을 눌러야 뜨는 임시 시트로 되돌리지 말 것(2026-09-03 사용자 확정). */
@@ -2425,35 +2438,76 @@
 /* 🧾 상점 줄 — **가방(.rnRw)과 같은 짜임**이다: [그림] [이름/등급 값] … [등급 버튼 셋].
    ⛔ 세로 카드로 되돌리지 말 것(2026-09-05 사용자 확정) — 룬 하나가 화면을 한 덩어리씩
      먹어 「무엇을 파는가」가 한눈에 안 읽혔다. */
-#campRune .rnShopRw{display:flex;align-items:center;gap:8px;padding:6px 2px}
-#campRune .rnShopRw + .rnShopRw{border-top:1px solid rgba(255,255,255,.07)}
+#campRune .rnShopRw{position:relative;display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer}
+/* 펼친 구역(.rnShopExp)이 줄 사이에 끼므로 「줄 다음 줄」과 「펼친 구역 다음 줄」 둘 다 선을 긋는다 */
+#campRune .rnShopRw + .rnShopRw,#campRune .rnShopExp + .rnShopRw{border-top:1px solid rgba(255,255,255,.07)}
 #campRune .rnShopRw .rnRwT{flex:1 1 auto;min-width:0}
-#campRune .rnShopRw .rnRwB{margin-left:auto;display:flex;gap:3px;flex:none}
+/* 상점 줄 부제 — 설명(한글)은 본문 글꼴, 등급 값은 숫자 글꼴(2026-09-12 · 제목=룬 이름 / 부제=설명) */
+#campRune .rnShopRw .rnRwT s i{font-style:normal;font-family:var(--font-ko);color:#8d97a6}
+#campRune .rnRwArw{margin-left:auto;width:18px;text-align:center;color:#69737f;font-size:11px;flex:none}
+/* 🔦 열린 줄 — 옅은 면 한 겹 + 왼쪽 세로 광원(2026-09-12 · 목업 rune-shop-hiend-8 ⑥안).
+   ⛔ 판·테두리를 더하지 말 것 — 카드로 만들면 할인 카드와 얼굴이 겹친다. */
+#campRune .rnShopRw.open{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
+#campRune .rnShopRw.open::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(232,236,244,.8),transparent)}
+/* 🎚 등급 칩 — 판 없는 글자 + 밑변 광원(탭 띠와 같은 어휘). 고른 것만 등급색으로 빛난다. */
+#campRune .rnGdChips{display:flex;align-items:center;gap:2px;margin:4px 0 2px}
+#campRune .rnGdChips>i{font-style:normal;font-size:10px;color:#69737f;padding:0 6px 0 4px}
+#campRune .rnGdChip{position:relative;padding:5px 8px;border:0;background:none;font:inherit;font-size:10.5px;
+  font-weight:600;cursor:pointer;color:color-mix(in srgb,var(--rg) 70%,#8d97a6)}
+#campRune .rnGdChip.on{color:var(--rg);text-shadow:0 0 8px color-mix(in srgb,var(--rg) 45%,transparent)}
+#campRune .rnGdChip.on::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--rg),transparent)}
+#campRune .rnGdNote{margin-left:auto;font-size:9.5px;color:#69737f}
+/* 🏷 제목 옆 상태 배지 — 「지금 무엇으로 좁혀져 있나」(유형 · 등급). 점이 빛나고 글자는 그 색. */
+#campRune .rnState{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:1px 7px;vertical-align:1px;
+  font-size:10px;font-weight:600;letter-spacing:0;color:var(--rg);border-radius:var(--r-bar);
+  border:1px solid color-mix(in srgb,var(--rg) 45%,transparent);background:color-mix(in srgb,var(--rg) 10%,transparent)}
+#campRune .rnState i{font-style:normal;width:5px;height:5px;border-radius:50%;background:var(--rg);box-shadow:0 0 6px var(--rg)}
+#campRune .rnState u{text-decoration:none;color:#69737f;font-weight:400}
+/* ⬇ 펼친 구역 — 등급 넷을 나란히. 카드는 할인 카드(.rnBuy)의 얼굴을 **작게**(.gd) 쓴다. */
+/* 🎬 **펼침·접힘은 높이로 민다**(2026-09-12 사용자 요청) — JS(_runeExpOpen/_runeExpClose)가
+   0 ↔ 실제높이를 넣고 여기서 그 사이를 잇는다. ⚠ 시간은 RUNE_EXP_MS 와 같아야 한다.
+   ⚠ overflow:hidden 이 있어야 접히는 동안 카드가 밖으로 삐져나오지 않는다. */
+#campRune .rnShopExp{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 2px 10px;
+  overflow:hidden;transition:height .22s cubic-bezier(.2,.8,.25,1)}
+/* 화살표도 같이 돈다 — 줄이 「열렸다」를 글리프가 아니라 움직임으로도 말한다 */
+#campRune .rnRwArw{transition:transform .22s cubic-bezier(.2,.8,.25,1),color .16s}
+#campRune .rnShopRw.open .rnRwArw{color:#c3ccd8}
+/* ✨ 구매 연출의 고리 — 장착 도착(.rnRipple)과 같은 어휘를 HTML 칸에 맞춘 것.
+   ⚠ 칸이 clip-path 라 밖으로 번지면 잘린다 — 안에서 퍼지고 사라진다. */
+@keyframes rnFxRing{ 0%{transform:scale(.6);opacity:.9} 100%{transform:scale(1.9);opacity:0} }
+#campRune .rnFxRing{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;
+  border-radius:50%;border:1.4px solid var(--rg);pointer-events:none;
+  animation:rnFxRing .5s cubic-bezier(.2,.8,.3,1) forwards}
+/* 등급 카드(.rnBuy.gd) — 등급 이름이 제일 크다(11px) · 값은 작게(10.5) · 보유는 더 작게(8) · 낮게.
+   (2026-09-12 사용자: 「가장 큰 것이 등급 · 퍼센트는 줄이고 · 보유 수는 더 작게 · 높이도 줄여」) */
+#campRune .rnBuy.gd{--cut:6px;min-height:0;padding:5px 3px 4px;gap:0}
+#campRune .rnBuy.gd .hd{display:flex;align-items:center;gap:4px;height:16px}
+#campRune .rnBuy.gd .rnGdI{width:14px;height:14px;display:block;object-fit:contain;
+  filter:drop-shadow(0 0 4px color-mix(in srgb,var(--rg) 45%,transparent))}
+#campRune .rnBuy.gd .hd b{font-size:11px;font-weight:700;letter-spacing:.02em}
+#campRune .rnBuy.gd .pc{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:10.5px;font-weight:600;
+  color:var(--rg);opacity:.9;margin:2px 0 3px;line-height:1}
+#campRune .rnBuy.gd u{font-size:10.5px;padding:2px 2px}
+#campRune .rnBuy.gd .own{margin-top:3px;font-style:normal;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:8px;color:#8d97a6;line-height:1}
+#campRune .rnBuy.gd .own.none{color:#3f4753}
+#campRune .rnBuy.gd .rnOff{left:auto;right:3px;top:3px;font-size:8px;padding:0 4px}
+/* 버튼 하나(.rnBuy.one) — 줄 오른쪽. 같은 모서리 컷 + 금속 띠를 30px 높이로. 유니크는 금빛 숫자. */
+#campRune .rnBuy.one{--cut:5px;min-height:0;height:30px;padding:0 10px;flex-direction:row;margin-left:auto;flex:none;min-width:66px}
+#campRune .rnBuy.one u{margin:0;width:auto;padding:0;background:none;border:0;clip-path:none;
+  font-size:13px;color:#eef1f6}
+#campRune .rnBuy.one.gold u{color:#ffe9a8;text-shadow:0 0 8px rgba(255,210,74,.35)}
+/* 🏷 버튼 하나의 −30% 배지 — **안쪽에 나란히**(position:static). 버튼이 clip-path 라 밖으로 내밀면 잘린다(실측: 빨간 조각만 남았다). */
+#campRune .rnBuy.one .rnOff{position:static;margin-right:5px;font-size:8px;padding:0 4px;line-height:1.5;flex:none}
 /* 작은 등급 버튼 — 가방의 육각 자리에 값(젬)이 온다.
    ⚠ **등급이 넷이 됐다**(2026-09-05 · 유니크가 등급이 되면서). 폭을 60 → 46 으로 줄였다 —
      넷을 60px 로 두면 줄이 넘쳐 이름이 두 줄로 접히고 줄 높이가 66px 이 된다(스모크가 잰다). */
-#campRune .rnBuyS{position:relative;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;min-width:46px;padding:5px 3px;cursor:pointer;
-  border:1px solid color-mix(in srgb,var(--rg) 60%,transparent);border-radius:var(--r-sm);
-  background:rgba(255,255,255,.04);font-family:inherit}
-#campRune .rnBuyS:disabled{opacity:.42;cursor:default}
-#campRune .rnBuyS b{font-size:10px;color:var(--rg);font-weight:600}
-#campRune .rnBuyS u{text-decoration:none;display:inline-flex;align-items:center;gap:2px;
-  font-family:var(--font-num);font-size:10.5px;font-weight:700;color:#e2b6ff}
-#campRune .rnBuyS u .ri{width:11px;height:11px;flex:none;display:block;object-fit:contain}
-#campRune .rnBuyS u.max{color:#69737f;font-size:10px}
-#campRune .rnBuyS.sale{border-color:color-mix(in srgb,var(--rg) 85%,transparent);
-  background:rgba(255,255,255,.07)}
 /* 🏷 줄에서도 할인을 말한다 — 위 할인 구역과 같은 주황 */
 /* ⚠ 배지를 버튼 **위로 걸친다** — 안에 두면 등급 이름과 한 줄에서 부딪힌다(폭 60px).
    ⛔ 등급 이름을 배지로 대신하지 말 것: 무엇을 사는지가 사라진다. */
-#campRune .rnBuyS .rnOffS{position:absolute;left:3px;top:-7px;font-style:normal;
-  font-family:var(--font-num);font-size:8.5px;font-weight:700;color:#ff9c6b;
-  padding:0 3px;border-radius:var(--r-bar);background:#12181f;line-height:1.5}
 #campRune .rnShopRw{overflow:visible}
-#campRune .rnBuyS u.sale{color:#ff9c6b}
-#campRune .rnBuyS em{position:absolute;right:2px;top:1px;font-style:normal;
-  font-family:var(--font-num);font-size:9px;color:#8d97a6}
 /* 🏷 할인 칸 — 왼쪽 위에 −30%, 값 옆에 **제값을 그어** 붙인다 */
 #campRune .rnBuy{position:relative}
 /* 할인 칸 — 면만 한 단 밝다. ⚠ 테두리는 ::before 의 띠라 여기서 border 를 만지지 않는다 */

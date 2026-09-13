@@ -865,6 +865,9 @@
         <div class="opCnt"><i>LOADING</i><div class="opLoading">0<s>%</s></div></div>
         <div class="opBarWrap"><div class="opBar"></div></div>
       </div>
+      <!-- 👆 로딩이 다 차면 도크가 걷히고 이 줄이 든다(#opening.tapWait) — 아무 데나 누르면 게임으로.
+           ⚠ 도크와 **같은 자리**를 쓴다(둘 다 .opWrap 의 마지막 칸) — 자리가 다르면 글자가 튄다. -->
+      <div class="opTap" id="opTap" aria-live="polite">화면을 터치하여 게임을 시작하세요</div>
     </div>
     <!-- 게임 진입 로딩 = 카드 덱(H안, 2026-08-19). 부팅 오프닝(.opWrap)과 **별개 층**이다 —
          .opWrap 은 부팅 오프닝과 공용이라 여기서 건드리면 그쪽이 같이 바뀐다. -->

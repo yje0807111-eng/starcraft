@@ -265,6 +265,10 @@
         73 이던 시절엔 설정 뒤에 깔려 아무것도 안 보였다(2026-08-27). */
   #logoutPanel{position:absolute;inset:0;z-index:97;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
   #logoutPanel.hide{display:none}
+  /* ❓ 공용 확인창(uiAsk) — 로그아웃 확인과 **같은 껍데기**. 다만 z 는 121:
+     룬·환생 같은 구역 화면이 120 이라 그 위에 떠야 한다(97 이면 통째로 가려진다). */
+  #uiAsk{position:absolute;inset:0;z-index:121;display:flex;align-items:center;justify-content:center;background:var(--ov-dim);backdrop-filter:blur(2px)}
+  #uiAsk.hide{display:none}
   /* ══ 🎚 난이도 선택 = **전체 화면**(2026-08-27 · F2+D2+D8+A3+B5 확정) ══════════════
      로딩·로그인이 쓰는 공식을 그대로 빌린다: **맵 키 아트 한 장 + 국소 스크림 + --loadDim**.
      ⛔ 팝업(딤 위 카드)으로 되돌리지 말 것 — 카드에는 그림이 한 점도 없어 밋밋했고,
@@ -688,6 +692,29 @@
      JS 막대는 스크립트가 읽힐 때 시작한다 — 둘이 겹치면 숫자 없는 바가 차다가 0 으로 되돌아가
      숫자 바가 다시 차는 「로딩 두 번」이 된다. 막대 주인은 opBarStart/Real/Done 하나뿐이다. */
   @keyframes opLoad{0%{width:8%}60%{width:72%}100%{width:100%}}
+  /* 👆 **로딩이 끝나면 「터치해서 시작」**(2026-09-12 사용자 요청) — 도크가 걷히고 이 줄이 든다.
+     ⭐ 배경(키 아트)은 그대로 두고 **앞판만** 바꾼다 — DESIGN §5.5 ③ 의 규칙이다(층이 하나만 움직인다).
+     ⚠ 도크와 **자리를 겹쳐** 둔다(둘 다 그리드의 마지막 칸) — 따로 쌓으면 도크가 걷힐 때 글자가 위로 튄다.
+     ⛔ 여기에 판·테두리를 두지 말 것: 이 화면은 아트 위에 글자만 얹는 시네마틱이다. */
+  /* ⚠ `.opWrap` 은 **flex 세로 기둥**(justify-content:flex-end)이다 — grid-area 로는 못 겹친다.
+     도크와 같은 자리(바닥)에 두려면 **absolute** 로 앉힌다(.opWrap 이 position:relative 다). */
+  #opening{--opTapOut:.30s;--opTapIn:.42s}   /* 막대가 물러나는 시간 · 문구가 들어오는 시간 */
+  #opening .opTap{position:absolute;left:0;right:0;bottom:0;padding:0 20px 40px;
+    font-size:var(--fs-md);letter-spacing:.04em;color:#cdd6e4;text-align:center;
+    text-shadow:0 1px 10px rgba(0,0,0,.75);
+    opacity:0;visibility:hidden;transform:translateY(6px);pointer-events:none;
+    transition:opacity var(--opTapIn) ease, transform var(--opTapIn) ease, visibility 0s linear var(--opTapIn)}
+  /* 🔀 **막대가 다 물러난 뒤에 들어온다**(--opTapOut 만큼 늦춘다) — 둘은 바닥 같은 자리라
+     동시에 트면 다 찬 막대 **위에 글자가 겹쳐** 지나간다(2026-09-12 · 프레임으로 확인했다). */
+  #opening.tapWait .opTap{opacity:1;visibility:visible;transform:none;
+    transition-delay:var(--opTapOut),var(--opTapOut),0s}
+  #opening.tapWait .opDock{opacity:0;transform:translateY(6px);
+    transition:opacity var(--opTapOut) ease, transform var(--opTapOut) ease}
+  /* 숨 쉬듯 아주 옅게 — ⛔ 깜빡이게(0 까지) 만들지 말 것: 「오류」로 읽힌다 */
+  /* ⚠ 숨은 **들어오는 전환이 끝난 뒤**에 시작한다(늦춤 + 길이) — 더 이르면 페이드인과 겹쳐 한 번 꿀렁인다 */
+  #opening.tapWait .opTap{animation:opTapBreath 2.4s ease-in-out calc(var(--opTapOut) + var(--opTapIn)) infinite}
+  @keyframes opTapBreath{0%,100%{opacity:.62}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){ #opening.tapWait .opTap{animation:none;opacity:1} }
   /* .opLoading = 진행률 숫자(막대와 같은 값). opBarStart/Done 이 이 요소의 글자를 쓴다 */
   .opLoading{font-family:var(--font-num);font-size:23px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:0}
   .opLoading s{text-decoration:none;font-size:14px;color:#7d8792}

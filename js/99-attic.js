@@ -5433,3 +5433,47 @@ const PROF_LOCK_SVG='<svg class="pdLockIco" viewBox="0 0 24 24" fill="none" stro
 
 // ── [js/11-cmdcard.js] sprSheet
 function sprSheet(key){ return SPR_UNITS[key]||null; }
+
+// ── [js/22-camp-rune.js] runeGlyphSrc
+// 🚨 **아래 주석의 ⛔ 는 2026-09-12 에 뒤집혔다**(사용자 확정: 「실제로 만든 카드가 들어갔으면」).
+//   성좌 판의 낀 칸은 이제 **카드 그림 한 장**(runeIcoSrc)이고, 손으로 그리던 껍데기는 없앴다.
+//   「스티커처럼 얹힌다」던 문제는 카드에 **등급색 번짐(drop-shadow)** 을 걸어 풀었다.
+//   ⛔ 아래 글을 근거로 문양 방식으로 되돌리지 말 것 — 스모크가 카드 경로·크기를 잰다.
+// 🔷 **룬 그림은 판까지 포함된 한 장이다**(assets/icons/rune/<id>_<등급>.webp · 2026-09-04).
+//   판(육각 타일 4색)과 문양(11종)을 scripts/rune-compose.mjs 가 겹쳐 만든 25장이다.
+//   ⭐ 등급 색이 그림 안에 들어 있으므로 **키 하나로 등급까지 보여 준다** —
+//     칸·가방·상점이 같은 함수를 쓰고, 따로 색을 입히지 않는다.
+//   ⛔ 옛 data-ico(공용 아이콘 세트)로 되돌리지 말 것 — 그건 등급을 못 나타낸다.
+// 🔷 **성좌 판은 문양만 쓴다**(2026-09-04 사용자 확정 · 목업 camp-rune-vec47-6 ④안).
+//   판(육각)은 도형으로 그린다 — 그래야 등급 색이 테두리·뒷광·번짐에 실려 **상태에 반응**한다.
+//   ⛔ 판까지 합친 그림(runeIcoSrc)으로 되돌리지 말 것 — 그건 배경과 상호작용이 없어 스티커처럼 얹혔다.
+//   ⚠ 가방·상점은 여전히 합친 그림을 쓴다(HTML 이라 SVG 도형을 못 쓴다) — 둘 다 필요하다.
+function runeGlyphSrc(key, grp){ const p = runeParse(key);
+  if(!p.def) return '';
+  const suf = (p.gd === 'uniq' && grp && grp !== 'uniq') ? ('_' + grp) : '';
+  return 'assets/icons/rune/glyph/' + p.def.id + suf + '.webp'; }
+
+// ── [js/22-camp-rune.js] _runeVtx
+// 육각 꼭짓점 하나 — i 번째(꼭짓점이 위)
+function _runeVtx(x, y, r, i){ const a = Math.PI / 180 * (60 * i - 90);
+  return [x + r * Math.cos(a), y + r * Math.sin(a)]; }
+// ── [js/22-camp-rune.js] _runeBuySmall
+// (옛) 상점 줄의 작은 등급 버튼 — 다락으로(ATTIC.md). 아래 주석은 그 흔적이다.
+//   ⚠ 가방은 「몇 개 가졌나」, 상점은 「얼마인가」다 — 같은 자리에 다른 숫자가 온다.
+function _runeBuySmall(key){
+  const p = runeParse(key); if(!p.def) return '';
+  const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
+  const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
+  const own = campRuneOwn(key), full = own >= RUNE_OWN_MAX;
+  const sale = runeOnSale(key), cost = runeNowGem(key);
+  const have = (typeof profGem === 'function') ? profGem() : 0;
+  const off = full || have < cost;
+  return '<button class="rnBuyS' + (sale ? ' sale' : '') + '" type="button"'
+    + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
+    + " onclick=\"campRuneBuy('" + p.def.id + "','" + gd + "')\">"
+    // 🏷 할인 중이면 그렇게 말한다 — 값만 싸면 「왜 싼가」를 모른다(일반 목록에도 뜬다)
+    + (sale ? '<i class="rnOffS">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b>'
+    + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
+            : '<u' + (sale ? ' class="sale"' : '') + '>' + gemI + ' ' + cost + '</u>')
+    + (own > 0 && !full ? '<em>×' + own + '</em>' : '') + '</button>'; }
