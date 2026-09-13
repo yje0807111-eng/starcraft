@@ -1,0 +1,130 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 상점 일반 구역 — 등급 버튼 줄이기 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif;
+  --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-sm:3px; --r-md:6px;
+  --gold:#ffd24a; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --low:#8b95a5; --mid:#5cd6ff; --high:#ffcf6b; --uniq:#c98bff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#14171c;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 14px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1240px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:18px;padding:10px 22px 26px;align-items:flex-start}
+.cell{width:356px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:86px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+.pane{width:356px;padding:9px;border-radius:var(--r-md);border:1px solid var(--metal-edge);
+  background:radial-gradient(120% 80% at 50% 0%,#101821,#070a0e 72%)}
+/* 공통 부품 */
+.ico{width:26px;height:26px;flex:0 0 26px;border-radius:50%;
+  background:conic-gradient(from 210deg,#2a3644,#4a5c72,#2a3644);border:1px solid rgba(255,255,255,.14)}
+.gem{display:inline-block;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);
+  background:linear-gradient(160deg,#8be9ff,#3aa8d8);vertical-align:-1px;margin-right:3px}
+.rw{display:flex;align-items:center;gap:8px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.07)}
+.rw:last-child{border-bottom:0}
+.nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.nm b{font-size:12px;font-weight:700;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm s{text-decoration:none;font-size:10px;color:var(--txt-off);font-family:var(--font-num)}
+.pct{font-family:var(--font-num)}
+.pct .l{color:var(--low)} .pct .m{color:var(--mid)} .pct .h{color:var(--high)} .pct .u{color:var(--uniq)}
+/* 지금 규격(비교용) */
+.bS{position:relative;width:56px;padding:3px 0 2px;border-radius:var(--r-bar);
+  border:1px solid color-mix(in srgb,var(--rg) 38%,transparent);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.25));
+  display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer}
+.bS b{font-size:9.5px;color:var(--rg);font-weight:700}
+.bS u{text-decoration:none;font-size:10px;color:var(--txt-dim);font-family:var(--font-num)}
+.bS em{position:absolute;right:2px;top:1px;font-style:normal;font-size:8px;color:var(--txt-off)}
+.bsWrap{display:flex;gap:3px}
+
+/* ① 등급 칩 + 버튼 하나 */
+.chips{display:flex;gap:3px}
+.chip{width:20px;height:20px;border-radius:var(--r-bar);display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;color:var(--rg);border:1px solid color-mix(in srgb,var(--rg) 30%,transparent);
+  background:rgba(0,0,0,.3);cursor:pointer}
+.chip.on{background:color-mix(in srgb,var(--rg) 22%,transparent);color:#fff;
+  border-color:color-mix(in srgb,var(--rg) 70%,transparent)}
+.buy1{min-width:60px;height:26px;padding:0 9px;border-radius:var(--r-bar);display:flex;align-items:center;
+  justify-content:center;gap:3px;font-family:var(--font-num);font-size:12px;font-weight:700;color:#eaf2fb;
+  border:1px solid rgba(255,255,255,.30);background:rgba(255,255,255,.12);cursor:pointer}
+/* ② 값만 — 등급은 색 점 */
+.dots{display:flex;gap:2px}
+.dot{width:34px;padding:2px 0;border-radius:var(--r-bar);text-align:center;cursor:pointer;
+  font-family:var(--font-num);font-size:11px;color:var(--rg);
+  border-bottom:1.5px solid color-mix(in srgb,var(--rg) 60%,transparent);background:rgba(255,255,255,.03)}
+/* ③ 펼치는 줄 */
+.acc{display:flex;align-items:center;gap:8px;padding:8px 2px;border-bottom:1px solid rgba(255,255,255,.07);cursor:pointer}
+.accArw{color:var(--txt-off);font-size:11px}
+.accOpen{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:2px 2px 9px}
+.accOpen .bS{width:auto}
+.from{font-family:var(--font-num);font-size:11.5px;color:var(--txt-dim);white-space:nowrap}
+.from i{font-style:normal;color:var(--txt-off);font-size:9.5px;margin-right:3px}
+/* ④ 등급 띠를 위로 */
+.gseg{display:flex;gap:0;margin:0 0 7px;border-radius:var(--r-bar);overflow:hidden;border:1px solid var(--metal-edge)}
+.gseg b{flex:1;text-align:center;padding:5px 0;font-size:10.5px;color:var(--txt-mute);cursor:pointer;
+  background:rgba(0,0,0,.28)}
+.gseg b.on{color:#fff;background:rgba(255,255,255,.09);box-shadow:inset 0 -2px 0 var(--rg)}
+/* ⑤ 2×2 */
+.g22{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.g22 .bS{width:52px}
+/* ⑥ 스테퍼 */
+.stp{display:flex;align-items:center;gap:5px}
+.stp .ar{width:16px;text-align:center;color:var(--txt-off);font-size:12px;cursor:pointer}
+.stp .cur{width:44px;text-align:center;font-size:10px;font-weight:700;color:var(--rg)}
+/* ⑦ 시트로 미루기 */
+.go{width:26px;height:26px;border-radius:var(--r-bar);display:flex;align-items:center;justify-content:center;
+  color:var(--txt-mute);border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);cursor:pointer}
+.range{font-family:var(--font-num);font-size:11px;color:var(--txt-dim);white-space:nowrap}
+/* ⑧ 한 줄 안에 막대 넷 */
+.bars{display:flex;flex-direction:column;gap:2px;width:74px}
+.bar{display:flex;align-items:center;gap:4px;cursor:pointer}
+.bar i{flex:0 0 3px;height:11px;border-radius:1px;background:var(--rg)}
+.bar u{text-decoration:none;flex:1;font-family:var(--font-num);font-size:10px;color:var(--txt-dim)}
+.bar s{text-decoration:none;font-size:8.5px;color:var(--txt-off)}
+</style></head><body>
+<h1>룬 상점 · 일반 구역 — 줄마다 등급 버튼 넷이 늘어서는 문제</h1>
+<p>지금은 줄 하나에 <b>하급·중급·상급·유니크 버튼 넷</b>이 붙어, 한 탭에 <b>버튼이 서른 개 가까이</b> 깔린다.
+「무엇을 파는가」보다 <s>격자</s>가 먼저 보이고, 값·개수·할인까지 버튼 안에 들어가 글자가 잘다.
+아래 여덟은 <b>버튼 수를 줄이거나 무게를 낮추는</b> 방향이다.
+⚠ 이 저장소의 기존 결정 둘을 함께 적었다 — <s>세로 카드 그리드</s>와 <s>옛 목록형</s>은 되돌리지 않기로 한 것이라, 그에 닿는 안은 그렇게 표시했다.</p>
+<div class="wrap">
+
+<div class="cell"><p class="cap"><i>0</i>지금 (비교용)</p>
+<p class="sub">줄 = [그림][이름/등급 값][버튼 넷]. 버튼마다 <b>등급 이름 + 젬 값 + 보유 ×N</b> 이 들어간다.
+<s>넷이 나란히 서면 칸이 먼저 읽히고 룬이 뒤로 물러난다.</s></p>
+<div class="pane">
+  <div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b>
+    <s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div>
+    <div class="bsWrap">
+      <div class="bS" style="--rg:var(--low)"><b>하급</b><u><i class="gem"></i>3</u></div>
+      <div class="bS" style="--rg:var(--mid)"><b>중급</b><u><i class="gem"></i>9</u><em>×2</em></div>
+      <div class="bS" style="--rg:var(--high)"><b>상급</b><u><i class="gem"></i>27</u></div>
+      <div class="bS" style="--rg:var(--uniq)"><b>유니크</b><u><i class="gem"></i>90</u></div></div></div>
+  <div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b>
+    <s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div>
+    <div class="bsWrap">
+      <div class="bS" style="--rg:var(--low)"><b>하급</b><u><i class="gem"></i>3</u></div>
+      <div class="bS" style="--rg:var(--mid)"><b>중급</b><u><i class="gem"></i>9</u></div>
+      <div class="bS" style="--rg:var(--high)"><b>상급</b><u><i class="gem"></i>27</u></div>
+      <div class="bS" style="--rg:var(--uniq)"><b>유니크</b><u><i class="gem"></i>90</u></div></div></div>
+</div></div>
+
+<div class="cell"><p class="cap"><i>1</i>등급은 칩 · 사는 버튼은 하나</p><p class="sub">등급을 <b>작은 칩 넷</b>으로 고르고, 실제로 누르는 <b>구매 버튼은 하나</b>다. 누를 수 있는 큰 칸이 줄당 1개로 줄어 격자가 사라진다. <em>값·보유는 고른 등급 것만 보인다.</em> <s>지금 고른 등급을 매번 확인해야 한다.</s></p><div class="pane"><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><div style="display:flex;align-items:center;gap:6px"><div class="chips"><span class="chip" style="--rg:var(--low)">하</span><span class="chip on" style="--rg:var(--mid)">중</span><span class="chip" style="--rg:var(--high)">상</span><span class="chip" style="--rg:var(--uniq)">U</span></div><span class="buy1"><i class="gem"></i>9</span></div></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><div style="display:flex;align-items:center;gap:6px"><div class="chips"><span class="chip" style="--rg:var(--low)">하</span><span class="chip on" style="--rg:var(--mid)">중</span><span class="chip" style="--rg:var(--high)">상</span><span class="chip" style="--rg:var(--uniq)">U</span></div><span class="buy1"><i class="gem"></i>9</span></div></div></div></div>
+<div class="cell"><p class="cap"><i>2</i>등급 이름을 빼고 값만</p><p class="sub">버튼 수는 그대로 넷이지만 <b>판·테두리를 걷고 값만</b> 남긴다. 등급은 <b>밑변 색 한 줄</b>로 읽는다. <em>고치는 폭이 가장 작고 줄 높이도 안 는다.</em> <s>등급 이름이 사라져 처음 보는 사람은 색을 배워야 한다.</s></p><div class="pane"><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><div class="dots"><span class="dot" style="--rg:var(--low)"><i class="gem"></i>3</span><span class="dot" style="--rg:var(--mid)"><i class="gem"></i>9</span><span class="dot" style="--rg:var(--high)"><i class="gem"></i>27</span><span class="dot" style="--rg:var(--uniq)"><i class="gem"></i>90</span></div></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><div class="dots"><span class="dot" style="--rg:var(--low)"><i class="gem"></i>3</span><span class="dot" style="--rg:var(--mid)"><i class="gem"></i>9</span><span class="dot" style="--rg:var(--high)"><i class="gem"></i>27</span><span class="dot" style="--rg:var(--uniq)"><i class="gem"></i>90</span></div></div></div></div>
+<div class="cell"><p class="cap"><i>3</i>눌러서 펼친다 (한 줄만 열림)</p><p class="sub">평소엔 <b>이름 + 최저가</b>만 있고, 줄을 누르면 그 줄에서만 등급 넷이 펼쳐진다. <em>화면에 열린 버튼이 늘 넷뿐이라 가장 조용하다.</em> <s>사려면 두 번 눌러야 하고, 값 비교가 한눈에 안 된다.</s></p><div class="pane"><div class="acc"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><span class="from"><i>최저</i><i class="gem"></i>3</span><span class="accArw">⌄</span></div><div class="accOpen"><div class="bS" style="--rg:var(--low)"><b>하급</b><u><i class="gem"></i>3</u></div><div class="bS" style="--rg:var(--mid)"><b>중급</b><u><i class="gem"></i>9</u></div><div class="bS" style="--rg:var(--high)"><b>상급</b><u><i class="gem"></i>27</u></div><div class="bS" style="--rg:var(--uniq)"><b>유니크</b><u><i class="gem"></i>90</u></div></div><div class="acc"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><span class="from"><i>최저</i><i class="gem"></i>3</span><span class="accArw">›</span></div></div></div>
+<div class="cell"><p class="cap"><i>4</i>등급을 위로 — 목록은 그 등급만</p><p class="sub"><b>등급 띠를 목록 위에 한 번만</b> 두고, 아래 줄은 고른 등급의 <b>버튼 하나</b>만 갖는다. <em>줄이 가장 가볍고 값 비교(같은 등급끼리)가 쉽다.</em> <s>갈래 탭 아래 띠가 하나 더 쌓인다 — 상단이 두 줄이 된다.</s></p><div class="pane"><div class="gseg" style="--rg:var(--mid)"><b>하급</b><b class="on">중급</b><b>상급</b><b>유니크</b></div><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><span class="buy1"><i class="gem"></i>9</span></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><span class="buy1"><i class="gem"></i>9</span></div></div></div>
+<div class="cell"><p class="cap"><i>5</i>넷을 2×2로 접는다</p><p class="sub">버튼은 그대로 넷인데 <b>가로 한 줄 → 2×2</b> 로 접는다. 줄 폭이 절반으로 줄어 이름·값이 넓어진다. <em>가장 적게 고치면서 「늘어선 느낌」은 깬다.</em> <s>줄 높이가 커져 한 화면에 보이는 룬이 줄어든다.</s></p><div class="pane"><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><div class="g22"><div class="bS" style="--rg:var(--low)"><b>하급</b><u><i class="gem"></i>3</u></div><div class="bS" style="--rg:var(--mid)"><b>중급</b><u><i class="gem"></i>9</u></div><div class="bS" style="--rg:var(--high)"><b>상급</b><u><i class="gem"></i>27</u></div><div class="bS" style="--rg:var(--uniq)"><b>유니크</b><u><i class="gem"></i>90</u></div></div></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><div class="g22"><div class="bS" style="--rg:var(--low)"><b>하급</b><u><i class="gem"></i>3</u></div><div class="bS" style="--rg:var(--mid)"><b>중급</b><u><i class="gem"></i>9</u></div><div class="bS" style="--rg:var(--high)"><b>상급</b><u><i class="gem"></i>27</u></div><div class="bS" style="--rg:var(--uniq)"><b>유니크</b><u><i class="gem"></i>90</u></div></div></div></div></div>
+<div class="cell"><p class="cap"><i>6</i>◀▶ 로 등급을 고른다</p><p class="sub">등급을 <b>공용 방향 버튼</b>으로 넘기고 구매는 하나다. 화면의 다른 ◀▶(라운드·수량)와 같은 어휘다. <em>누를 큰 칸이 하나뿐이라 가장 단정하다.</em> <s>등급 넷을 보려면 세 번 눌러야 한다 — 훑어보기가 안 된다.</s></p><div class="pane"><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><div class="stp" style="--rg:var(--mid)"><span class="ar">◀</span><span class="cur">중급</span><span class="ar">▶</span><span class="buy1"><i class="gem"></i>9</span></div></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><div class="stp" style="--rg:var(--mid)"><span class="ar">◀</span><span class="cur">중급</span><span class="ar">▶</span><span class="buy1"><i class="gem"></i>9</span></div></div></div></div>
+<div class="cell"><p class="cap"><i>7</i>줄은 정보만 · 사는 것은 시트에서</p><p class="sub">목록은 <b>이름 · 등급 값 · 값 범위</b>만 보여 주고, 줄을 누르면 <b>아래 시트</b>에서 등급을 고른다. <em>목록이 완전히 조용해지고 시트에서는 크게 보여 줄 수 있다.</em> <s>화면이 하나 늘고, 상점이 한 화면에 안 끝난다.</s></p><div class="pane"><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><div style="display:flex;align-items:center;gap:7px"><span class="range"><i class="gem"></i>3~90</span><span class="go">›</span></div></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><div style="display:flex;align-items:center;gap:7px"><span class="range"><i class="gem"></i>3~90</span><span class="go">›</span></div></div></div></div>
+<div class="cell"><p class="cap"><i>8</i>세로로 쌓고 색 막대만 남긴다</p><p class="sub">등급 넷을 <b>세로로 쌓고</b> 판 대신 <b>왼쪽 색 막대</b> 하나로 구분한다. 값이 세로로 정렬돼 「올라가는 값」이 보인다. <em>테두리가 사라져 격자감이 없다.</em> <s>줄 높이가 커지고, 누를 곳이 얇아 손가락에 빡빡하다.</s></p><div class="pane"><div class="rw"><div class="ico"></div><div class="nm"><b>적 처치 보상</b><s class="pct"><span class="l">0.5%</span> · <span class="m">1%</span> · <span class="h">1.5%</span> · <span class="u">5%</span></s></div><div class="bars"><span class="bar" style="--rg:var(--low)"><i></i><u><i class="gem"></i>3</u><s>하</s></span><span class="bar" style="--rg:var(--mid)"><i></i><u><i class="gem"></i>9</u><s>중</s></span><span class="bar" style="--rg:var(--high)"><i></i><u><i class="gem"></i>27</u><s>상</s></span><span class="bar" style="--rg:var(--uniq)"><i></i><u><i class="gem"></i>90</u><s>U</s></span></div></div><div class="rw"><div class="ico"></div><div class="nm"><b>피버 획득량</b><s class="pct"><span class="l">2.5%</span> · <span class="m">5%</span> · <span class="h">8%</span> · <span class="u">30%</span></s></div><div class="bars"><span class="bar" style="--rg:var(--low)"><i></i><u><i class="gem"></i>3</u><s>하</s></span><span class="bar" style="--rg:var(--mid)"><i></i><u><i class="gem"></i>9</u><s>중</s></span><span class="bar" style="--rg:var(--high)"><i></i><u><i class="gem"></i>27</u><s>상</s></span><span class="bar" style="--rg:var(--uniq)"><i></i><u><i class="gem"></i>90</u><s>U</s></span></div></div></div></div>
+</div>
+</body></html>

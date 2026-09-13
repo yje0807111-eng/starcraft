@@ -348,4 +348,9 @@ CSS 규칙 **342개**(30-home 255 · 40-social 47 · 20-lobby 26 · 10-game 14) 
 
 ⭐ 새 규칙은 하나다: **칸 = 카드 = 가방 = 상점**(전부 `runeIcoSrc`). 크기의 단일 소스는
 `RUNE_CARD_K`(칸 지름 × 0.93)이고, 칸이 바깥으로 뻗는 거리는 `RUNE_CELL_OUT` 하나가 말한다.
+### 2026-09-12 · 룬 상점 「줄마다 등급 버튼 넷」 → 「유형 탭 + 등급 칩 + 펼치는 줄」
+- JS `_runeBuySmall`(js/22-camp-rune.js) — 상점 줄의 작은 등급 버튼(.rnBuyS). 줄마다 넷이 늘어서 격자가 먼저 읽혔다(사용자 지적).
+  대신 `_runeGdCard`(펼친 등급 카드 · `.rnBuy.gd`)와 `_runeBuyOne`(줄 버튼 하나 · `.rnBuy.one`)이 산다.
+- CSS `.rnBuyS` 계열 10조각 · `.rnOffS`(css/30-home.css → css/99-attic.css).
+- ⛔ 되살리지 말 것 — 목업 `docs/mock/rune-shop-final-3.html` 이 확정본이다.
 

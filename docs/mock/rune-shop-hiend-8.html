@@ -1,0 +1,251 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<title>룬 상점 — 분류 + 펼침, 하이엔드 8안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-ti:'IBM Plex Sans KR',sans-serif; --font-ko:'IBM Plex Sans KR',sans-serif; --font-num:'Rajdhani',sans-serif;
+  --r-bar:3px; --r-md:6px; --r-lg:9px;
+  --gold:#ffd24a; --acc-sel:#5cd6ff; --metal-edge:rgba(150,170,200,.22);
+  --txt:#e6ecf4; --txt-dim:#c3ccd8; --txt-mute:#8d97a6; --txt-off:#69737f;
+  --low:#8b95a5; --mid:#5cd6ff; --high:#ffcf6b; --uniq:#c98bff;
+  --eco:#7effc9; --war:#ffa3b8; --grow:#e6eef8;
+  --edge-light:linear-gradient(90deg,rgba(150,158,172,.14) 0%,rgba(186,194,208,.55) 30%,rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(150,158,172,.14) 100%);
+}
+*{box-sizing:border-box}
+body{margin:0;background:#0e1116;color:var(--txt);font-family:var(--font-ko);font-size:12px}
+h1{font-size:15px;margin:20px 22px 4px;font-family:var(--font-ti);font-weight:700}
+h1 + p{margin:0 22px 8px;color:var(--txt-mute);font-size:11.5px;line-height:1.7;max-width:1500px}
+h1 + p b{color:var(--txt-dim)} h1 + p s{text-decoration:none;color:#ffb0b0}
+.wrap{display:flex;flex-wrap:wrap;gap:20px;padding:8px 22px 28px;align-items:flex-start}
+.cell{width:356px}
+.cap{margin:0 0 4px;font-weight:700;font-size:13.5px}
+.cap i{font-style:normal;color:var(--gold);margin-right:7px;font-family:var(--font-num)}
+.sub{margin:0 0 8px;color:var(--txt-mute);font-size:11px;line-height:1.6;min-height:70px}
+.sub em{font-style:normal;color:#8fe6b0} .sub s{text-decoration:none;color:#ffb0b0}
+/* ── 폰 판: 어두운 금속 + 갈래 오로라(룬 구역 문법 — 아주 넓고 아주 옅게) ── */
+.pane{position:relative;width:356px;padding:10px 10px 12px;overflow:hidden;
+  background:radial-gradient(130% 90% at 50% -10%,#141b26,#080b10 70%);
+  border:1px solid var(--metal-edge);
+  clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px)}
+.pane::before{content:'';position:absolute;inset:-40px -60px auto -60px;height:260px;pointer-events:none;
+  background:radial-gradient(ellipse 250px 150px at 20% 30%,color-mix(in srgb,var(--au1,#7effc9) 20%,transparent),transparent 70%),
+             radial-gradient(ellipse 250px 150px at 85% 20%,color-mix(in srgb,var(--au2,#c98bff) 16%,transparent),transparent 70%)}
+.pane>*{position:relative}
+/* 구역 제목 — 제목 + 아래 그라데 헤어라인(팝업 제목 문법) */
+.secH{display:flex;align-items:baseline;justify-content:space-between;padding:2px 2px 7px;margin-bottom:6px;position:relative}
+.secH::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--edge-light);opacity:.55}
+.secT{font-size:12.5px;font-weight:600;letter-spacing:.08em;color:#eef1f6}
+.secN{font-size:10.5px;color:var(--txt-mute);font-family:var(--font-num);letter-spacing:.02em}
+.secN b{color:var(--txt-dim);font-weight:600}
+/* ── 아이콘 탭(공용 .pdSeg.stack 문법): 육각+글리프, 고른 칸만 밝고 밑변 광원 한 줄 ── */
+.tabs{display:flex;gap:5px;margin-bottom:8px}
+.tab{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px 7px;
+  border-radius:var(--r-bar);font-size:10px;color:#8d97a6;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015))}
+.tab.on{color:#fff;font-weight:700;background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.03))}
+.tab.on::after{content:'';position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--edge-light)}
+.tab svg{display:block}
+/* ── 필터 칩(판 없는 글자 + 밑변 광원) ── */
+.chips{display:flex;align-items:center;gap:2px;margin-bottom:6px}
+.chip{position:relative;padding:5px 8px;font-size:10.5px;font-weight:600;color:var(--txt-mute);cursor:pointer}
+.chip.on{color:#fff}
+.chip.on::after{content:'';position:absolute;left:6px;right:6px;bottom:0;height:1px;background:var(--edge-light)}
+.chip.g{color:color-mix(in srgb,var(--c) 70%,#8d97a6)}
+.chip.g.on{color:var(--c);text-shadow:0 0 8px color-mix(in srgb,var(--c) 45%,transparent)}
+.chip.g.on::after{background:linear-gradient(90deg,transparent,var(--c),transparent)}
+.chipDiv{width:1px;height:14px;background:rgba(255,255,255,.14);margin:0 4px}
+.chipR{margin-left:auto;font-size:10px;color:var(--txt-off);font-family:var(--font-num)}
+.chipR b{color:var(--txt-dim);font-weight:600}
+/* ── 목록 줄 ── */
+.rw{display:flex;align-items:center;gap:9px;padding:7px 4px;border-top:1px solid rgba(255,255,255,.07);cursor:pointer}
+.rw:first-of-type{border-top:0}
+.ri{position:relative;width:34px;height:34px;flex:none}
+.ri img{width:34px;height:34px;display:block;object-fit:contain;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--c,#fff) 35%,transparent))}
+.nm{flex:1;min-width:0}
+.nm b{display:block;font-size:12px;font-weight:700;color:#eef1f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm s{display:block;text-decoration:none;font-size:9.5px;color:#69737f;font-family:var(--font-num);margin-top:1px;font-variant-numeric:tabular-nums}
+.nm s i{font-style:normal}
+.gd{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--c);margin-right:5px;vertical-align:1px;
+  box-shadow:0 0 6px color-mix(in srgb,var(--c) 60%,transparent)}
+.arw{width:18px;text-align:center;color:var(--txt-off);font-size:11px}
+.gem{width:11px;height:11px;display:inline-block;vertical-align:-2px;object-fit:contain;margin-right:3px}
+.from{font-family:var(--font-num);font-size:11.5px;color:var(--txt-dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+.from i{font-style:normal;font-size:9.5px;color:var(--txt-off);margin-right:4px;font-family:var(--font-ko)}
+/* 오른쪽 버튼 하나 — 모서리 컷 + 금속·등급색 띠(.rnBuy 문법을 작게) */
+.one{--cut:5px;position:relative;min-width:66px;height:30px;padding:0 10px;display:flex;align-items:center;justify-content:center;gap:3px;
+  font-family:var(--font-num);font-size:13px;font-weight:700;color:#eef1f6;cursor:pointer;font-variant-numeric:tabular-nums;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.03))}
+.one::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 60%,transparent),rgba(150,170,200,.16));
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut),
+    1px calc(var(--cut) + .5px),1px calc(100% - 1px),calc(100% - var(--cut) - .5px) calc(100% - 1px),
+    calc(100% - 1px) calc(100% - var(--cut) - .5px),calc(100% - 1px) 1px,calc(var(--cut) + .5px) 1px)}
+.one.gold{color:#ffe9a8;text-shadow:0 0 8px rgba(255,210,74,.35)}
+/* 펼친 구역 — 등급 넷을 금속 테 카드로 */
+.exp{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 2px 10px}
+.gb{--cut:6px;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px 5px;cursor:pointer;
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut));
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025))}
+.gb::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rg) 55%,transparent),rgba(150,170,200,.14));
+  clip-path:polygon(var(--cut) 0,100% 0,100% calc(100% - var(--cut)),calc(100% - var(--cut)) 100%,0 100%,0 var(--cut),
+    1px calc(var(--cut) + .5px),1px calc(100% - 1px),calc(100% - var(--cut) - .5px) calc(100% - 1px),
+    calc(100% - 1px) calc(100% - var(--cut) - .5px),calc(100% - 1px) 1px,calc(var(--cut) + .5px) 1px)}
+.gb b{font-size:9.5px;color:var(--rg);font-weight:600;letter-spacing:.02em}
+.gb img{width:26px;height:26px;object-fit:contain;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--rg) 45%,transparent))}
+.gb u{text-decoration:none;display:flex;align-items:center;justify-content:center;gap:2px;width:100%;margin-top:2px;padding:3px 2px;
+  font-family:var(--font-num);font-size:11px;font-weight:700;color:#e2b6ff;font-variant-numeric:tabular-nums;
+  clip-path:polygon(4px 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%,0 4px);
+  background:rgba(0,0,0,.36);border:1px solid rgba(255,255,255,.06)}
+.gb i{font-style:normal;font-size:8.5px;color:var(--txt-off);font-family:var(--font-num)}
+.gb.pick{box-shadow:0 0 0 1px rgba(92,214,255,.45),0 0 10px -3px rgba(92,214,255,.5)}
+.gb.pick::after{content:'';position:absolute;left:8px;right:8px;bottom:0;height:1px;background:linear-gradient(90deg,transparent,var(--acc-sel),transparent)}
+/* 열린 줄 — 옅은 면 + 왼쪽 세로 광원(면 한 겹만) */
+.rw.open{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border-top-color:rgba(255,255,255,.10)}
+.rw.open::before{content:'';width:1px;align-self:stretch;margin:-7px 0 -7px -4px;
+  background:linear-gradient(180deg,transparent,rgba(232,236,244,.8),transparent)}
+/* 옆 레일(③) */
+.rail{display:flex;gap:4px;padding:0 4px 10px;overflow:hidden}
+.rail .gb{flex:1}
+/* 하단 등급 독(⑦) — 모서리 컷 판 + 육각 버튼 */
+.dock{margin-top:10px;padding:8px 6px 6px;position:relative;
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.28))}
+.dock::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(186,194,208,.32),rgba(150,170,200,.10));
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px,
+    1px 9.5px,1px calc(100% - 1px),calc(100% - 9.5px) calc(100% - 1px),calc(100% - 1px) calc(100% - 9.5px),calc(100% - 1px) 1px,9.5px 1px)}
+.dockH{display:flex;justify-content:space-between;align-items:center;padding:0 4px 6px;font-size:10px;color:var(--txt-off)}
+.dockH b{color:var(--txt-dim);font-weight:600}
+.hexes{display:flex;justify-content:space-around}
+.hx{position:relative;width:52px;height:46px;cursor:pointer}
+.hx svg{position:absolute;inset:0;display:block}
+.hx span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  font-size:9.5px;color:var(--rg);font-weight:600}
+.hx span u{text-decoration:none;font-family:var(--font-num);font-size:11px;font-weight:700;color:#eef1f6}
+.hx.on span{color:#fff;text-shadow:0 0 8px color-mix(in srgb,var(--rg) 60%,transparent)}
+/* 상태 배지(④⑤) — 제목 옆 「지금 좁힌 것」 */
+.state{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:2px 7px;font-size:10px;font-weight:600;color:var(--rg);
+  border:1px solid color-mix(in srgb,var(--rg) 45%,transparent);border-radius:var(--r-bar);background:color-mix(in srgb,var(--rg) 10%,transparent)}
+.state i{font-style:normal;width:5px;height:5px;border-radius:50%;background:var(--rg);box-shadow:0 0 6px var(--rg)}
+.state u{text-decoration:none;color:var(--txt-off);font-weight:400}
+/* 룬 아이콘 링(⑧) */
+.ri.ring::after{content:'';position:absolute;inset:-3px;border-radius:50%;pointer-events:none;
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent);box-shadow:0 0 8px -2px color-mix(in srgb,var(--c) 55%,transparent)}
+.sort{margin-left:auto;font-size:10px;color:var(--txt-off)}
+.sort b{color:var(--txt-dim);font-weight:600}
+</style></head><body>
+<h1>룬 상점 · 일반 구역 — 「분류 + 펼침」을 지금 상점의 어휘로</h1>
+<p>규칙은 같다: <b>등급이 하나로 정해졌으면 오른쪽 버튼 하나, 아니면 줄을 눌러 아래로 펼친다.</b>
+여덟 모두 지금 상점이 이미 쓰는 것으로만 지었다 — <b>모서리 컷 + 금속·등급색 띠</b>(할인 카드), <b>육각 아이콘 탭 + 밑변 광원</b>, <b>제목 아래 그라데 헤어라인</b>, <b>갈래 오로라</b>, <b>Rajdhani 숫자</b>. 선은 1px, 강조는 빛. 시안은 「지금 고른 것」 한 곳에만.</p>
+<div class="wrap" id="w"></div>
+<script>
+const GEM='../../assets/icons/res_gem.webp';
+const ico=(id,gd)=>'../../assets/icons/rune/'+id+'_'+gd+'.webp';
+const GR={low:['하급','var(--low)'],mid:['중급','var(--mid)'],high:['상급','var(--high)'],uniq:['유니크','var(--uniq)']};
+const GRK=['low','mid','high','uniq'];
+const GP={eco:['경제','var(--eco)','#7effc9'],war:['전투','var(--war)','#ffa3b8'],grow:['성장','var(--grow)','#e6eef8']};
+const GLY={eco:'M12 3 L20 12 L12 21 L4 12 Z',war:'M12 3 L20 7 V13 C20 17 12 21 12 21 C12 21 4 17 4 13 V7 Z',grow:'M12 3 L19 11 H15 V21 H9 V11 H5 Z'};
+const R=[
+ {id:'tap', g:'eco', n:'손끝의 룬', de:'탭 획득량',      p:['0.5%','1%','1.5%','5%'],   c:[3,9,27,90]},
+ {id:'crit',g:'eco', n:'예리의 룬', de:'치명 터치 확률',  p:['+15%','+30%','+45%','+170%'],c:[3,9,27,90]},
+ {id:'mine',g:'eco', n:'채굴의 룬', de:'채취 획득량',    p:['0.5%','1%','1.5%','5%'],   c:[3,9,27,90]},
+ {id:'atk', g:'war', n:'힘의 룬',   de:'유닛 공격력',    p:['0.5%','1%','1.5%','5%'],   c:[4,12,36,120]},
+ {id:'hp',  g:'war', n:'수호의 룬', de:'유닛 체력',      p:['0.5%','1%','1.5%','5%'],   c:[4,12,36,120]},
+ {id:'fever',g:'grow',n:'열기의 룬',de:'피버 발동 확률', p:['+15%','+30%','+45%','+170%'],c:[5,15,45,150]},
+ {id:'speed',g:'grow',n:'가속의 룬',de:'캠프 전체 진행 속도',p:['0.1%','0.2%','0.3%','1%'],c:[5,15,45,150]}];
+const gem='<img class="gem" src="'+GEM+'" alt="">';
+function hexTab(grp,on){const S=22,Rr=S/2-1,q=[];for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90);q.push((S/2+Rr*Math.cos(a)).toFixed(1)+','+(S/2+Rr*Math.sin(a)).toFixed(1));}
+  const c=GP[grp][2],k=(S*0.60/24).toFixed(3),off=(S/2-S*0.30).toFixed(1);
+  return '<svg width="'+S+'" height="'+S+'" viewBox="0 0 '+S+' '+S+'"><polygon points="'+q.join(' ')+'" fill="'+(on?'rgba(255,255,255,.05)':'none')+'" stroke="'+c+'" stroke-width="1" opacity="'+(on?'.85':'.38')+'"/><g transform="translate('+off+','+off+') scale('+k+')"><path d="'+GLY[grp]+'" fill="'+c+'" opacity="'+(on?'1':'.45')+'"/></g></svg>';}
+function tabs(sel,all){let h='<div class="tabs">';
+  if(all!==false) h+='<div class="tab'+(sel==null?' on':'')+'"><svg width="22" height="22" viewBox="0 0 22 22"><circle cx="11" cy="11" r="9" fill="none" stroke="#c3ccd8" stroke-width="1" opacity="'+(sel==null?'.85':'.38')+'"/><circle cx="11" cy="11" r="3.2" fill="#c3ccd8" opacity="'+(sel==null?'1':'.45')+'"/></svg><span>전체</span></div>';
+  for(const k in GP) h+='<div class="tab'+(sel===k?' on':'')+'">'+hexTab(k,sel===k)+'<span>'+GP[k][0]+'</span></div>';
+  return h+'</div>';}
+function gradeChips(gsel,extra){let h='<div class="chips"><span class="chip" style="color:var(--txt-off);padding-left:4px;cursor:default">등급</span>';
+  for(const k of GRK) h+='<span class="chip g'+(gsel===k?' on':'')+'" style="--c:'+GR[k][1]+'">'+GR[k][0]+'</span>';
+  return h+(extra||'')+'</div>';}
+const pct=r=>r.p.map((v,i)=>'<i style="color:'+GR[GRK[i]][1]+'">'+v+'</i>').join(' <i style="color:#3a424d">·</i> ');
+function row(r,tail,opt={}){const gd=opt.gd||'mid';
+  return '<div class="rw'+(opt.open?' open':'')+'" style="--c:'+GP[r.g][1]+'"><div class="ri'+(opt.ring?' ring':'')+'"><img src="'+ico(r.id,gd)+'" alt=""></div>'
+   +'<div class="nm"><b><i class="gd"></i>'+r.de+'</b><s>'+(opt.nm?'<i style="color:#8d97a6">'+r.n+'</i> <i style="color:#3a424d">·</i> ':'')+pct(r)+'</s></div>'+tail+'</div>';}
+function one(r,gd){const i=GRK.indexOf(gd);return '<span class="one'+(gd==='uniq'?' gold':'')+'" style="--rg:'+GR[gd][1]+'">'+gem+r.c[i]+'</span>';}
+function exp(r,opt={}){let h='<div class="'+(opt.rail?'rail':'exp')+'">';
+  GRK.forEach((k,i)=>{h+='<div class="gb'+(opt.pick===k?' pick':'')+'" style="--rg:'+GR[k][1]+'"><b>'+GR[k][0]+'</b><img src="'+ico(r.id,k)+'" alt=""><u>'+gem+r.c[i]+'</u><i>'+(opt.own?opt.own[i]:r.p[i])+'</i></div>';});
+  return h+'</div>';}
+function secH(t,n){return '<div class="secH"><span class="secT">'+t+'</span><span class="secN">'+n+'</span></div>';}
+function cell(n,cap,sub,body,au){return '<div class="cell"><p class="cap"><i>'+n+'</i>'+cap+'</p><p class="sub">'+sub+'</p><div class="pane" style="'+(au||'')+'">'+body+'</div></div>';}
+const W=document.getElementById('w');let H='';
+
+// ① 기본 상태 — 아이콘 탭(전체·경제·전투·성장) + 등급 칩 접힘 · 한 줄 펼침(금속 테 카드 넷)
+H+=cell('1','기본 — 아이콘 탭 + 등급 칩 · 펼치면 금속 테 카드 넷',
+ '유형은 <b>지금 탭 그대로</b>(앞에 「전체」 하나만 더함). 등급은 그 아래 <b>판 없는 칩 줄</b>. 줄은 이름·효과·등급 값만 갖고, 누르면 <b>할인 카드와 같은 얼굴</b>(모서리 컷 + 등급색→금속 띠) 넷이 열린다. <em>새 어휘가 하나도 없다.</em>',
+ secH('상점','<b>7</b>종 · 전체')+tabs(null)+gradeChips(null,'<span class="chipR">안 고르면 펼쳐서 산다</span>')
+ +row(R[0],'<span class="arw">⌃</span>',{open:true})+exp(R[0])
+ +row(R[1],'<span class="arw">›</span>')+row(R[3],'<span class="arw">›</span>')+row(R[5],'<span class="arw">›</span>'),
+ '--au1:#7effc9;--au2:#c98bff');
+
+// ② 유니크 고정 — 오른쪽 금빛 버튼 하나 · 제목 옆 상태 배지
+H+=cell('2','유니크로 좁힘 — 줄마다 버튼 하나 · 제목이 상태를 말한다',
+ '등급을 유니크로 두면 펼칠 것이 없다. 줄 오른쪽에 <b>모서리 컷 버튼 하나</b>(보라→금속 띠 · 금빛 숫자). <b>제목 옆 배지</b>가 「지금 유니크만 보는 중」을 말해 준다 — 앞서 지적한 <s>무엇으로 좁혀져 있는지 봐야 안다</s>의 답이다.',
+ '<div class="secH"><span class="secT">상점<span class="state" style="--rg:var(--uniq)"><i></i>유니크<u>만</u></span></span><span class="secN"><b>7</b>종</span></div>'
+ +tabs(null)+gradeChips('uniq')
+ +R.slice(0,5).map(r=>row(r,one(r,'uniq'),{gd:'uniq'})).join(''),
+ '--au1:#c98bff;--au2:#ffd24a');
+
+// ③ 유형만(전투) — 펼친 넷을 옆 레일로 · 아이콘 탭이 전투에 켜짐
+H+=cell('3','전투만 — 펼친 넷이 옆으로 흐르는 레일',
+ '유형만 좁히면 등급이 아직 넷이라 펼친다. 이 안은 펼친 넷을 <b>세로 카드 대신 낮은 레일</b>로 눕혀 줄 높이를 아낀다. 전투 오로라가 뒤에 깔려 <b>어느 갈래에 와 있는지</b>가 색으로 읽힌다.',
+ secH('상점','<b>7</b>종 중 <b>2</b>')+tabs('war')+gradeChips(null)
+ +row(R[3],'<span class="arw">⌃</span>',{open:true})+exp(R[3],{rail:true})
+ +row(R[4],'<span class="arw">›</span>'),
+ '--au1:#ffa3b8;--au2:#ff7676');
+
+// ④ 유형+등급(경제·중급) — 줄마다 버튼 하나 · 배지 둘
+H+=cell('4','경제 · 중급 — 줄마다 버튼 하나, 쓸어 담는 화면',
+ '둘 다 고르면 살 것이 한 가지로 정해져 <b>줄마다 시안 띠 버튼 하나</b>. 제목 옆 배지가 「경제 · 중급」을 말한다. <em>상점다운 흐름 — 한 등급을 죽 훑으며 산다.</em> 버튼 숫자는 Rajdhani·탭 정렬이라 값이 세로로 맞는다.',
+ '<div class="secH"><span class="secT">상점<span class="state" style="--rg:var(--eco)"><i></i>경제</span><span class="state" style="--rg:var(--mid)"><i></i>중급</span></span><span class="secN"><b>3</b>종</span></div>'
+ +tabs('eco')+gradeChips('mid')
+ +R.slice(0,3).map(r=>row(r,one(r,'mid'))).join(''),
+ '--au1:#7effc9;--au2:#5cd6ff');
+
+// ⑤ 펼친 칸에 보유·장착 + 「추천」 시안 밑줄 하나
+H+=cell('5','펼친 칸에 보유·장착 — 살 만한 등급 하나에만 시안',
+ '두 번 눌러 펼친 값을 치르는 만큼 거기서 결정이 끝나야 한다. 칸마다 <b>보유 ×N · 낀 개수</b>를 적고, <b>지금 살 만한 등급 하나</b>에만 시안 밑줄+발광(「선택됨」 문법 · 화면당 한 곳). ⚠ 장착 수는 <s>배선이 필요하다</s>.',
+ secH('상점','<b>7</b>종 · 전체')+tabs(null)+gradeChips(null)
+ +row(R[1],'<span class="arw">›</span>')
+ +row(R[0],'<span class="arw">⌃</span>',{open:true})+exp(R[0],{pick:'high',own:['×5','×2 · 1낌','—','—']})
+ +row(R[3],'<span class="arw">›</span>'),
+ '--au1:#7effc9;--au2:#5cd6ff');
+
+// ⑥ 열린 줄 발광 — 세로 광원 + 룬 이름까지
+H+=cell('6','열린 줄만 빛난다 — 왼쪽 세로 광원 · 한 번에 하나',
+ '펼친 줄에 <b>옅은 면 한 겹 + 왼쪽 세로 광원</b>만 준다(판·테두리 없음). 다른 줄을 누르면 이 줄은 닫힌다. 줄 부제에 <b>룬 이름</b>(손끝의 룬)까지 실어 가방과 이름이 맞게 한다. <em>긴 목록에서 지금 자리를 잃지 않는다.</em>',
+ secH('상점','<b>7</b>종 · 전체')+tabs(null)+gradeChips(null)
+ +row(R[1],'<span class="arw">›</span>',{nm:true})
+ +row(R[2],'<span class="arw">⌃</span>',{open:true,nm:true})+exp(R[2])
+ +row(R[3],'<span class="arw">›</span>',{nm:true})+row(R[6],'<span class="arw">›</span>',{nm:true}),
+ '--au1:#7effc9;--au2:#e6eef8');
+
+// ⑦ 하단 등급 독 — 육각 버튼 넷(가방 어휘) · 엄지 범위
+{ const hx=(k,on,tx)=>{const S=52,h=46,Rr=21,cx=26,cy=23,q=[];for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-90);q.push((cx+Rr*Math.cos(a)).toFixed(1)+','+(cy+Rr*0.92*Math.sin(a)).toFixed(1));}
+   return '<div class="hx'+(on?' on':'')+'" style="--rg:'+GR[k][1]+'"><svg viewBox="0 0 '+S+' '+h+'"><polygon points="'+q.join(' ')+'" fill="'+(on?'rgba(255,255,255,.07)':'rgba(0,0,0,.25)')+'" stroke="'+(on?GR[k][1]:'rgba(150,170,200,.28)')+'" stroke-width="1"/>'+(on?'<polygon points="'+q.join(' ')+'" fill="none" stroke="'+GR[k][1]+'" stroke-width="1" opacity=".35" transform="translate(26 23) scale(.86) translate(-26 -23)"/>':'')+'</svg><span>'+GR[k][0]+'<u>'+tx+'</u></span></div>';};
+  H+=cell('7','등급은 아래 독에 — 육각 버튼 넷, 엄지가 닿는 자리',
+   '유형은 위 탭, <b>등급은 목록 아래 고정 독</b>(모서리 컷 판)에 <b>가방과 같은 육각 버튼</b>으로. 고른 등급만 이중 육각으로 빛나고 목록 줄은 그 등급 버튼 하나. <em>등급을 바꿔 가며 쓸어 담기 좋다.</em> <s>목록이 짧을 때 독이 붕 뜬다.</s>',
+   secH('상점','<b>3</b>종')+tabs('eco')
+   +R.slice(0,3).map(r=>row(r,one(r,'high'),{gd:'high'})).join('')
+   +'<div class="dock"><div class="dockH"><span>등급 · <b>상급</b></span><span>안 고르면 펼쳐서 산다</span></div><div class="hexes">'
+   +hx('low',false,'3')+hx('mid',false,'9')+hx('high',true,'27')+hx('uniq',false,'90')+'</div></div>',
+   '--au1:#7effc9;--au2:#ffcf6b'); }
+
+// ⑧ 가장 조용한 기본 — 전부 접힘 · 룬 아이콘에 등급 링 · 최저가 · 정렬
+H+=cell('8','가장 조용한 기본 — 전부 접힘 · 아이콘 링 · 최저가',
+ '아무것도 안 고른 첫 화면. 줄엔 <b>그림(갈래색 링) · 효과 · 등급 값 · 최저가 · ›</b>만. 오른쪽 위 <b>정렬</b>(최저가순/이름순)이 상점의 마지막 조각. <em>상점 전체가 한 톤으로 가라앉고 룬 그림이 앞으로 나온다.</em>',
+ secH('상점','<b>7</b>종 · <span style="color:#c3ccd8">최저가순</span> ⌄')+tabs(null)+gradeChips(null)
+ +R.slice(0,5).map(r=>row(r,'<span class="from"><i>부터</i>'+gem+r.c[0]+'</span><span class="arw">›</span>',{ring:true,gd:'low'})).join(''),
+ '--au1:#7effc9;--au2:#c98bff');
+W.innerHTML=H;
+</script>
+</body></html>

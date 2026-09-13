@@ -123,6 +123,28 @@ const FAMILY = {
       ['테두리 두께', /one\s+twentieth\s+of\s+(the\s+slab|its\s+height)/]],
     ban: [['타일 전용 문구', /seamless|tileable|square tile/i]],
   },
+  // 🏃 2.5D 유닛 스프라이트(§19) — **최종 에셋**이라 중간 단계가 없다. 스타일이 새면 그대로 게임에 남는다.
+  //   ⛔ §9 의 `VIEW_TILT 37.2°` 를 여기 적용하지 말 것 — 그건 3D 모델을 기울이는 각이고, 화면 부감은 **70°** 다(§19-3).
+  //   ⭐ 각도가 맞았는지는 숫자가 아니라 **신호 셋**으로 잡는다: 정수리가 보인다 / 다리가 몸통 밑에 깔린다 /
+  //      그래도 가슴이 한 줄은 보인다. 셋째가 없으면 90° 로 샌 것이다(회전 시트가 실제로 그렇게 샜다 · §19-4).
+  sprite: {
+    label: '2.5D 유닛 스프라이트(§19)',
+    need: [
+      ['CAMERA 70°',   /about\s+70\s+degrees above the horizon/],
+      ['정수리',        /the crown of the helmet rather than the face/],
+      ['다리 가림',     /Legs and feet are strongly foreshortened and mostly hidden underneath the torso/],
+      ['가슴 한 줄',    /Only a small amount of the front face is visible at the bottom edge/],
+      ['정면·눈높이 금지', /This is NOT a frontal view and NOT an eye-level view/],
+      ['PROPORTIONS',  /not chibi and not cute, reads fast and dangerous/],
+      ['COLOR 리버리',  /bold racing livery colour blocking/],
+      ['DESIGN 언어',   /high speed light armour/],
+      ['STYLE 4톤',    /four cel tones wrapping around the forms/],
+      ['STYLE 외곽선',  /a thin dark contour line only on the outer silhouette/],
+      ['배경 금지',     /no ground texture, no cast shadows, no text, no labels\.$/]],
+    // ⛔ 3D 시절의 각도를 되살리면 「거의 정면」으로 돌아간다(2026-09-12 사용자가 물린 그것)
+    ban: [['옛 3D 각도', /\b(37(\.2)?|0\.65 rad)\b/i],
+          ['정면 시점',  /\bfront view\b(?!.*NOT)/i]],
+  },
   // 🐺 유닛 참고 아트(§9) — 환경 계열의 COMMON(안개·탈채도·명암분리)을 쓰지 않는다. 목적이 8방향 스프라이트 원본이라
   //   지켜야 할 것이 다르다: 배경이 흰 단색인가 · 그림자가 발밑인가 · 조명이 고정인가 · 금지줄이 있는가.
   unit: {
@@ -149,7 +171,7 @@ const BANNED = [
 ];
 
 // ── 프롬프트를 계열별로 모은다(어느 ## 아래에 있는가) ──────────────
-const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [], floor: [], reb: [] };
+const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeonmap: [], floor: [], reb: [], sprite: [] };
 {
   let fam = null;
   // 환경 계열은 한 줄 프롬프트(Moody…), 유닛 계열은 여러 문단이라 블록 전체를 담는다.
@@ -158,11 +180,12 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
   const re = /^## (\d+)\.|^```([a-z]*)\n([\s\S]*?)\n```/gm;
   let m;
   while ((m = re.exec(art))) {
-    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : (m[1] === '12' ? 'floor' : (m[1] === '14' ? 'reb' : null)))))); continue; }
+    if (m[1]) { fam = m[1] === '8' ? 'title' : (m[1] === '6' ? 'usemap' : (m[1] === '9' ? 'unit' : (m[1] === '10' ? 'race' : (m[1] === '11' ? 'camp' : (m[1] === '12' ? 'floor' : (m[1] === '14' ? 'reb' : (m[1] === '19' ? 'sprite' : null))))))); continue; }
     if (m[2] || !fam) continue;   // 언어 태그가 있으면 프롬프트가 아니다(bash 등)
     const body = m[3];
     if (/[가-힣]/.test(body)) continue;   // 한글이 있으면 프롬프트가 아니다(설명용 도표 등)
-    if (fam === 'unit') { if (!/^\[UNIT:/.test(body)) prompts.unit.push(body); }   // [UNIT:…] 은 변수 칸 = 검사 대상 아님
+    if (fam === 'sprite') { if (/^CAMERA,/.test(body)) prompts.sprite.push(body.replace(/\s+/g, ' ')); }
+    else if (fam === 'unit') { if (!/^\[UNIT:/.test(body)) prompts.unit.push(body); }   // [UNIT:…] 은 변수 칸 = 검사 대상 아님
     // §11 은 매체 문장이 달라 'Moody' 로 시작하지 않는다. 던전(battlefield)과 캠프(home-camp)를 문장으로 가른다.
     // §11 은 둘로 갈린다: 레퍼런스를 쓰는 던전 템플릿과, 레퍼런스 없이 뽑는 0번 캠프.
     else if (fam === 'camp') { if (/^Use the attached/.test(body)) prompts.dungeonmap.push(body);
@@ -175,7 +198,7 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
   }
 }
 
-for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap', 'floor', 'reb']) {
+for (const key of ['usemap', 'title', 'unit', 'race', 'campmap', 'dungeonmap', 'floor', 'reb', 'sprite']) {
   const F = FAMILY[key], list = prompts[key];
   console.log(`${F.label} 프롬프트 ${list.length}개`);
   if (!list.length) bad(`${F.label} 프롬프트를 하나도 못 찾았다 — ART.md 형식이 바뀌었나?`);

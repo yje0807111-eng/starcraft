@@ -669,6 +669,15 @@ function resetGameChrome(){
 const LOAD_HOLD=200;   // 100% 를 보여 주는 시간(ms) — 0 이면 다 찼는지 모르고 튕겨 들어간다
 const LOAD_FILL=700;   // 막대가 0→100% 로 차는 기본 시간. 실제 로딩이 더 빨라도 이만큼은 보여 준다
 const BOOT_AUTH_P=0.35; // 부팅 막대에서 '인증까지' 가 차지하는 구간 — 나머지 0.35~1 은 데우기가 채운다
+// ⏳ **시간 곡선은 점근이다 — 포화하지 않는다**(2026-09-12 사용자 신고 「99% 에서 한참」).
+//   옛 식은 `min(1, t/dur)*0.985` 라 dur(1.4초)만 지나면 **99% 에 박혀** 그 뒤의 진짜 일
+//   (인증 CDN · three.js CDN · 모델 로드)이 얼마나 남았든 화면이 멈춰 보였다.
+//   실측(헤드리스): 14.2초에 99% 도달 → 23.4초에 100% — **9.2초를 99% 로 서 있었다.**
+//   ⭐ 이제 시간은 천장(LOAD_TIME_CEIL)까지 **느려지며 다가갈 뿐** 닿지 않는다. 그래서
+//     보고가 없는 구간에서도 막대가 조금씩 움직여 「오래 걸리는구나」가 읽힌다.
+//   ⛔ 천장을 1 에 가깝게 올리지 말 것 — 그러면 옛 증상이 그대로 돌아온다.
+//   ⚠ 진짜 진행률(opBarReal)이 늘 이기므로, 빠른 기기에서는 이 곡선이 보이지도 않는다.
+const LOAD_TIME_CEIL=0.55;
 // (구 LOAD_SNAP 폐지 2026-08-20 — 마지막 칸을 CSS 전환으로 채우다가 프레임이 없으면 0 에 멈췄다. 이제 즉시 채운다)
 let _opBar=null;
 function _opBarEls(){ const op=document.getElementById('opening');
@@ -679,13 +688,19 @@ function opBarStart(dur){ const e=_opBarEls(); if(!e) return null;
   const st={ t0:performance.now(), dur:Math.max(200, dur||LOAD_FILL), real:0, raf:0, dead:false, bar:e.bar, tx:e.tx };
   if(st.bar){ st.bar.style.animation='none'; st.bar.style.transition='none'; st.bar.style.width='0%'; }
   const step=()=>{ if(st.dead) return;
-    const byTime=Math.min(1,(performance.now()-st.t0)/st.dur);
-    const p=Math.max(byTime*0.985, st.real);   // 시간·실제 중 앞선 쪽 · 0.985 = 마지막 칸은 opBarDone 이 채운다
+    // 점근 곡선 — dur 이 지나면 천장의 63%, 그 뒤로는 천천히 다가간다(위 주석)
+    const byTime=LOAD_TIME_CEIL*(1-Math.exp(-(performance.now()-st.t0)/st.dur));
+    const p=Math.min(0.985, Math.max(byTime, st.real));   // 시간·실제 중 앞선 쪽 · 마지막 칸은 opBarDone 이 채운다
     if(st.bar) st.bar.style.width=(p*100).toFixed(1)+'%';
     if(st.tx) st.tx.innerHTML=Math.round(p*100)+'<s>%</s>';   // .opLoading = 큰 숫자(라벨 LOADING 은 마크업이 갖는다)
     st.raf=requestAnimationFrame(step); };
   step(); _opBar=st; return st; }
-function opBarReal(p){ if(_opBar) _opBar.real=Math.max(0,Math.min(1,p||0)); }   // 실제 진행률(모델 로드 등)
+// 실제 진행률(모델 로드 등) — ⚠ **뒤로 가지 않는다**(2026-09-12).
+//   보고하는 곳이 둘이다: 예열(warmAll 의 구간 배분)과 ensureModels 의 자체 bumpBar(doneN/total).
+//   뒤엣것은 제 큐 기준이라 시작할 때 0 을 쓴다 — 단조가 아니면 그 순간 막대가 **뚝 떨어진다**.
+//   ⛔ 이 max 를 빼지 말 것. 되감기는 opBarReset(새 로딩)만 한다.
+function opBarReal(p){ if(!_opBar) return;
+  _opBar.real=Math.max(_opBar.real||0, Math.max(0,Math.min(1,p||0))); }
 // 100% 를 채우고 LOAD_HOLD 만큼 보여 준 뒤 resolve. 아직 최소 시간이 안 됐으면 그만큼 더 기다린다.
 function opBarDone(){ const st=_opBar;
   return new Promise(res=>{

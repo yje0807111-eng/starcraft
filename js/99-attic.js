@@ -5457,3 +5457,23 @@ function runeGlyphSrc(key, grp){ const p = runeParse(key);
 // 육각 꼭짓점 하나 — i 번째(꼭짓점이 위)
 function _runeVtx(x, y, r, i){ const a = Math.PI / 180 * (60 * i - 90);
   return [x + r * Math.cos(a), y + r * Math.sin(a)]; }
+// ── [js/22-camp-rune.js] _runeBuySmall
+// (옛) 상점 줄의 작은 등급 버튼 — 다락으로(ATTIC.md). 아래 주석은 그 흔적이다.
+//   ⚠ 가방은 「몇 개 가졌나」, 상점은 「얼마인가」다 — 같은 자리에 다른 숫자가 온다.
+function _runeBuySmall(key){
+  const p = runeParse(key); if(!p.def) return '';
+  const gd = p.gd, c = (RUNE_GD[gd] || {}).col || '#8b95a5';
+  const gemI = (typeof resIco === 'function') ? resIco('gem') : '';
+  const own = campRuneOwn(key), full = own >= RUNE_OWN_MAX;
+  const sale = runeOnSale(key), cost = runeNowGem(key);
+  const have = (typeof profGem === 'function') ? profGem() : 0;
+  const off = full || have < cost;
+  return '<button class="rnBuyS' + (sale ? ' sale' : '') + '" type="button"'
+    + (off ? ' disabled' : '') + ' style="--rg:' + c + '"'
+    + " onclick=\"campRuneBuy('" + p.def.id + "','" + gd + "')\">"
+    // 🏷 할인 중이면 그렇게 말한다 — 값만 싸면 「왜 싼가」를 모른다(일반 목록에도 뜬다)
+    + (sale ? '<i class="rnOffS">-' + Math.round(RUNE_SALE_OFF * 100) + '%</i>' : '')
+    + '<b>' + ((RUNE_GD[gd] || {}).tx || '') + '</b>'
+    + (full ? '<u class="max">' + RUNE_OWN_MAX + '개</u>'
+            : '<u' + (sale ? ' class="sale"' : '') + '>' + gemI + ' ' + cost + '</u>')
+    + (own > 0 && !full ? '<em>×' + own + '</em>' : '') + '</button>'; }
