@@ -2584,15 +2584,16 @@ dark tones, game background tile, 3D render
 ⛔ **형용사를 새로 쓰지 말 것.** 아래 다섯 덩어리를 붙이고 **장면 한 칸만** 바꾼다.
 
 ```
-CAMERA, the single most important requirement: a STEEP NEAR TOP-DOWN bird's eye view, about
-70 degrees above the horizon, as if hovering directly over the unit in a helicopter and
-looking down at it. You mostly see the TOP of each unit: the crown of the helmet rather than
-the face, the tops of both shoulders and backpack, the roof of the mech hull, the back and
-spine of the beast, the top of the gunship's fuselage. Only a small amount of the front face
-is visible at the bottom edge of each form. Legs and feet are strongly foreshortened and
-mostly hidden underneath the torso. The unit's silhouette and its ground footprint nearly
-coincide. This is NOT a frontal view and NOT an eye-level view. Each unit is rotated about
-30 degrees off axis.
+PROJECTION, the single most important requirement: an ORTHOGRAPHIC, PARALLEL, ISOMETRIC
+projection exactly like a 1990s 2D strategy game sprite. There is NO perspective, NO vanishing
+point, NO lens distortion and NO foreshortening from depth. Parallel edges stay exactly parallel
+on screen. The head is NOT larger than the feet, near parts are NOT bigger than far parts. Think
+of a flat parallel projection render, not a photograph.
+CAMERA: elevation 30 degrees above the horizon, and yaw rotated 45 degrees so each form is seen
+from a corner with two sides equally visible. A circular rooftop or round base reads as an
+ELLIPSE HALF AS TALL AS IT IS WIDE. A standing soldier's LEGS AND FEET ARE FULLY VISIBLE, not
+hidden under the torso. The ground beneath is a plain SQUARE tile grid whose lines run straight
+across the screen, not diamonds and not rotated.
 PROPORTIONS: stylized heroic, about 4.5 heads tall, broad shouldered, athletic and forward
 leaning, heavy boots, not chibi and not cute, reads fast and dangerous.
 COLOR: bold racing livery colour blocking, large flat fields of saturated red meeting
@@ -2608,49 +2609,99 @@ line intentional. Units on a flat plain neutral grey background, no ground textu
 shadows, no text, no labels.
 ```
 
-### 19-3. 각도 — 70°다. 🚨 코드의 `VIEW_TILT` 를 쓰지 말 것
+### 19-3. 각도 — **스타크래프트1 ≈ 30°** 다
 
-⛔⛔ **§9-2 의 「`VIEW_TILT = 0.65 rad = 37.2°` 를 프롬프트에 박는다」를 이 계열에 적용하지 말 것.**
-2026-09-12 에 그걸 믿고 37° 로 뽑았다가 사용자에게 **「거의 정면이잖아」**로 물렸다.
-그 값은 **세워 둔 3D 모델을 기울이는 각**이지 화면에 보이는 부감이 아니다 — 두 개가 다른 숫자다.
-그다음엔 반대로 튀어 60° 도 모자랐고, **70° 에서 확정**됐다(2026-09-12 사용자 「70도가 맞긴 한데」).
+🚨 **여기서 크게 한 바퀴 헛돌았다(2026-09-12~13). 그 기록이 이 절의 존재 이유다.**
 
-⭐ **각도가 맞았는지는 숫자가 아니라 신호 넷으로 본다**(프롬프트에도 이 넷이 들어가 있다):
+```
+37°(원래 값) → 「거의 정면이잖아」  → 60° → 70° 확정 → 코드에 1.22 를 넣음
+  → 실기기: 「거의 90도 수준이야」 → 55° → 사용자가 스타1 스크린샷을 줌 → 30°  → 0.65 로 되돌림
+```
 
-| 신호 | 70° 에서 | 틀렸을 때 |
-|---|---|---|
-| 머리 | **정수리**가 보인다 | 얼굴이 보이면 각도가 낮다 |
-| 다리 | 몸통 밑에 깔려 **거의 안 보인다** | 무릎 아래가 보이면 낮다 |
-| 가슴 | 정수리 아래 **한 줄만** 보인다 | 아예 안 보이면 **너무 높다**(90° 로 샌 것) |
-| 실루엣 | 바닥 발자국과 **거의 겹친다** | — |
+⛔⛔ **원인은 하나다 — 이미지 모델이 말하는 「70 degrees」는 실제 기하 70° 가 아니다.**
+시트를 「70°」로 뽑아서 사용자가 골랐기에 **같은 숫자를 코드 상수에 옮겼는데**, 화면에서는
+지붕만 보이는 거의 수직 부감이 됐다. **그림의 각도 숫자와 코드의 각도는 다른 단위**라고 여길 것.
+⇒ **그림은 「어느 쪽으로 갈지」만 정하고, 코드 값은 실기기 화면으로 정한다.**
 
-⚠ 세 번째 줄이 70° 와 90° 를 가르는 자다. 회전 시트가 한 번 그걸로 샜다(19-4).
+⭐⭐ **범인은 각도가 아니라 「투영」이었다**(2026-09-13 확정). 같은 30° 라도 **원근(perspective)**으로
+그리면 머리가 커지고 정면이 과장돼 「너무 정면」으로 보인다. 스타1 은 **직교 투영**이라 그 왜곡이 없다.
+⇒ 프롬프트에 **ORTHOGRAPHIC · 소실점 없음 · 머리가 발보다 크지 않다**를 박으니 30° 에서 바로 맞았다.
+⭐ **요(yaw)도 45° 다** — 내가 「30도 돌려서」라고 써 온 것은 **틀렸다**. 2:1 마름모에 얹히는 각이 45° 다.
 
-### 19-3-1. 🚨 지금 게임은 37° 다 — **바닥(90°)과 물건(37°)이 어긋나 있다**(2026-09-12 실측)
+🧭 **각도 기준이 둘이라 헷갈린다 — 표로 못 박는다**(이것 때문에 70° 사고가 났다):
 
-게임을 실제로 띄워 재 봤다(캠프 건설 뷰 · 헤드리스 캡처). 결론 둘:
-
-| | 각도 |
+| 같은 각도를 부르는 세 가지 말 | 값 |
 |---|---|
-| 지금 게임의 3D 유닛·건물 | **37.2°**(`VIEW_TILT = 0.65 rad`) |
-| 이 계열의 그림 | **70°** |
-| 🧱 **캠프 바닥·격자** | **90°(정수직)** — 격자 칸이 화면에 나란한 정사각형이다 |
+| **수평선 위**(이 문서의 기준) | **30°** |
+| 수직(바로 위)에서 아래로 | 60° |
+| 블렌더 카메라 X회전(= 수직 기준) | 60° · *정통 아이소메트릭은 54.74° = 수평선 위 35.26°* |
 
-⭐ **어색함의 뿌리가 여기다.** 바닥은 **바로 위에서** 보고 그 위의 물건만 **비스듬히** 누워 있다.
-70° 가 눈에 맞았던 것도 그래서다 — 바닥의 90° 에 훨씬 가깝다.
+⛔ 「3D 툴 기준 55~60도」 같은 문장을 **수평선 기준으로 읽지 말 것.** 같은 각도를 뒤집어 말한 것이다.
 
-⇒ 길이 둘인데 **A 로 간다**:
-- **A. 물건을 바닥에 맞춘다(70°)** — 고칠 것은 `VIEW_TILT` **0.65 → 1.22** 한 줄.
-  ⚠ 기존 3D 에셋 전부·발밑 그림자·선택 링이 함께 흔들리므로 **2.5D 로 갈아탈 때 같이** 한다.
-- ⛔ **B. 바닥을 물건에 맞춘다(37° 마름모 아이소메트릭)는 하지 말 것** — 격자·길찾기·배치 좌표가
-  전부 화면 좌표와 어긋나고 `_techSnap`·지형층·안개가 다 걸린다. 비용이 A 의 수십 배다.
+⭐ **기준은 스타크래프트1 이고, 그건 약 30° 다**(2026-09-13 사용자가 스크린샷으로 지정).
+사령부의 원형 지붕이 **세로/가로 ≈ 0.5 로 눌린 타원**이라 `asin(0.5)` ≈ 30°.
+⭐⭐ **그리고 이 게임의 원래 값 `VIEW_TILT = 0.65 rad = 37.2°` 가 이미 그 자리였다** — 올릴 이유가
+애초에 없었다. 되돌렸다.
 
-⚠ **헤드리스로는 건물이 안 그려진다**(미네랄·가스는 그려진다 · 2026-09-12 실측). 원인은 안 팠다 —
-각도는 코드 상수로 확정돼서 더 파지 않았다. ⛔ 건물 화면 검증을 헤드리스 캡처에 기대지 말 것.
+### 19-3-1. ⭐ 숫자 대신 **신호 넷**으로 본다
+
+프롬프트(19-2)에도 이 넷이 그대로 들어가 있다. ⛔ 각도를 숫자로만 지시하지 말 것.
+
+| 신호 | 맞을 때(≈30°) | 틀렸을 때 |
+|---|---|---|
+| 🔵 **둥근 지붕·받침** | 세로/가로 **≈ 0.5 로 눌린 타원** | **원에 가까우면 너무 위**에서 본 것 |
+| 🧍 **다리·발** | **다 보인다** | 몸통 밑에 깔리면 너무 위 |
+| 😐 **얼굴·가슴** | **또렷이 보이고** 정수리는 살짝 | 정수리만 보이면 너무 위 · 정수리가 아예 없으면 너무 낮다 |
+| 📏 **높이 대 발자국** | 화면에서 **키가 발자국 깊이보다 크다** | 실루엣이 발자국과 겹치면 너무 위 |
+
+⭐ **가장 빠른 자는 선택 링이다** — 링의 납작한 정도가 곧 각도다(세로/가로 = sin 각도):
+**30° → 0.50** · 37° → 0.60 · 55° → 0.82 · 70° → 0.94(거의 원). **링이 원에 가까우면 과하다.**
+
+### 19-3-2. 🔷 바닥은 **정사각으로 둔다** — 마름모는 재 보고 접었다(2026-09-13)
+
+스타1 바닥은 **2:1 마름모**라 우리도 그러자는 이야기가 나왔고, **게임을 안 건드리고 재 봤다**
+(실제 격자 값을 읽어 두 방식을 같은 크기로 그렸다 · `docs/mock/iso-grid-spike.png`).
+
+| | 화면 차지 | |
+|---|---|---|
+| **정사각(지금)** | 87% × **76%** | ✅ |
+| 마름모 · 타일 폭 그대로 | 118% × **30%** | 폭이 화면 밖으로 나간다 |
+| 마름모 · 폭에 맞춰 축소 | 100% × **25%** | 타일이 84% 로 작아지고 세로가 1/3 로 납작 |
+
+⛔ **마름모로 가지 말 것.** 우리 격자는 **40×68 = 세로로 긴 맵**인데, 마름모 투영이 그걸 45° 돌려
+**가로로 긴 평행사변형**으로 만든다. 세로 폰에서 **위아래 3/4 가 빈다.**
+스타1 이 마름모여도 됐던 것은 **가로로 넓은 PC 화면**이었기 때문이다 — 전제가 다르다.
+
+⭐ 대신 **대각선 느낌은 지형이 낸다** — 스타1 도 깊이감의 상당 부분이 **절벽·경계선의 대각선**에서
+온다(2026-09-13 사용자 관찰). 바닥 격자를 돌리지 않고 `js/24-terrain.js` 의 절벽을 대각으로 그린다.
+
+⚠ **요(yaw) 45° 는 그대로 간다**(2026-09-13 사용자 확정 — 정사각 바닥 위 45° 와 0° 를 견주어 골랐다).
+그래서 **그려진 건물은 모서리에서 본 마름모인데 발자국은 축 정렬 사각형**이라 둘이 안 맞는다.
+⚠ **`fitW` 를 다시 봐야 한다** — 지금은 건물 그림 폭을 `발자국 w × 셀폭` 으로 맞추는데(`14-input-fx.js`),
+모서리에서 본 그림은 **대각선이 가장 넓다.** 그대로 두면 이웃 칸을 밟는다. **안 쟀다** — 넣어 봐야 안다.
+
+### 19-3-3. ⚙ `VIEW_TILT` 하나만 만지면 된다 — 나머지는 **파생**이다
+
+| 따라오는 것 | 자리 |
+|---|---|
+| 선택 링 방향 | `_ringQ` |
+| 발밑 그림자 | `_SH_COS` |
+| 초상 카메라 | `BI_TILT` (= `VIEW_TILT + 0.08`) |
+| 공중 부양 보정 | `airLiftPx` |
+| 스프라이트 굽는 각 | `SPRITE_TILT` (2026-09-13 에 파생으로 묶었다) |
+
+⛔ **이 다섯을 따로 맞추지 말 것** — 두 번 적용된다.
+⚠ 처음엔 「넷이 뒤에 남는다」고 적었는데 **틀렸다**. 코드를 읽고 바로잡았다.
+
+🚨 **이 환경에서는 3D 를 못 띄운다** — `js/90-m3d.module.js` 가 three.js 와 애드온
+(`GLTFLoader`·`SkeletonUtils`·`RoomEnvironment`)을 **`esm.sh` 에서 받는데 프록시가 막는다**
+(`ERR_TUNNEL_CONNECTION_FAILED` · 실측). `M3D` 가 정의조차 안 되어 3D 는 한 점도 안 그려진다.
+⇒ **`npm test` 통과는 「각도가 괜찮다」는 뜻이 아니다**(스모크의 M3D 검사는 `window.M3D` 가 없으면
+건너뛴다). ⛔ 3D 화면 판단을 이 환경의 캡처에 기대지 말 것 — **실기기에서 봐야 한다.**
 
 ### 19-4. 🔗 회전 시트는 레퍼런스를 물린다 — 말로 하면 샌다
 
-**증상**(2026-09-12): 4유닛 시트는 70° 로 잘 나왔는데, **같은 문장**으로 뽑은 8방향 회전
+**증상**(2026-09-12): 4유닛 시트는 제 각도로 나왔는데, **같은 문장**으로 뽑은 8방향 회전
 시트만 더 위에서 본 각도로 나왔다. 칸이 여덟으로 잘게 쪼개지면 모델이 부감을 과장한다.
 
 ⭐ **고친 방법 — 각도를 설명하지 말고 그림을 첨부한다.** 승인된 시트의 `job_id` 를
@@ -2658,9 +2709,9 @@ shadows, no text, no labels.
 
 ```
 CRITICAL: the camera elevation must be IDENTICAL in all eight cells and must MATCH THE
-REFERENCE EXACTLY, about 70 degrees above the horizon. Do not make it steeper than the
-reference, do not drift toward a pure straight-down bird's eye view. In the front facing cell
-a clear sliver of the chest and face plate must still be visible below the helmet crown,
+REFERENCE EXACTLY. Do not make it steeper than the reference, do not drift toward a bird's eye
+view. In the front facing cell the soldier's face, chest and both legs must still be fully
+visible, and any circular base must still read as an ellipse about half as tall as it is wide,
 exactly as in the reference.
 ```
 
@@ -2699,5 +2750,10 @@ exactly as in the reference.
   하나하나를 보는 방향**으로 간다고 했으니 이 값 자체가 바뀐다.
 - **프레임 수** — 이동·공격 몇 프레임인가(참고: 사용자가 본 방식은 모션당 4프레임 × 8방향 = 24).
 - **팀 색 마스크 형식** — 별도 채널인가 별도 파일인가.
-- ✅ **`VIEW_TILT` 는 70° 로 올린다**(2026-09-12 실측으로 결론 · §19-3-1) — 지금 37° 라 바닥(90°)과
-  어긋나 있다. ⚠ 다만 **언제** 올릴지는 미정이다: 기존 3D 에셋이 함께 흔들리므로 2.5D 전환과 같이 한다.
+- ✅ **`VIEW_TILT` 는 `0.65`(37°) 그대로 간다** — 올려 봤다가 되돌렸다(§19-3). 스타1 이 ≈30° 라 원래
+  값이 이미 맞는 자리였다. ⚠ **30°(0.52) 로 한 칸 더 내릴지**는 실기기에서 볼 것 — 지금은 안 정했다.
+- ⚠ **기존 컨셉 시트는 전부 규격 전의 것이다**(각도가 과하거나 원근이 들어갔다). 스프라이트를 굽기 전에
+  **19-2 의 새 PROJECTION 블록으로 다시 뽑을 것**.
+- ⚠ **`fitW` 를 안 쟀다**(§19-3-2) — 모서리에서 본 그림은 대각선이 가장 넓은데 지금 코드는 발자국 폭에
+  맞춘다. 이웃 칸을 밟는지 실제로 넣어 봐야 안다.
+- ⚠ **`VIEW_TILT`(지금 0.65 = 37°)를 30° = 0.52 로 내릴지** 안 정했다 — 그림 규격은 30° 다.

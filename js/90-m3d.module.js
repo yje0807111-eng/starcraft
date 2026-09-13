@@ -98,7 +98,20 @@ const BEACON_RIM=new THREE.Color(0xff3b3b);   // 비콘 테두리(빨강 림) �
 const beaconRimIntU={value:0.15};
 const MODEL_SCALE=13;     // 기본 스케일(미지정 유닛) — 보드 축소(INSET 0.245)에 맞춰 추가 ~0.85 축소
 const Y_DROP=2;           // 점 기준 수직 보정(px)
-const VIEW_TILT=0.65;     // 카메라 부감(작게=서 있게 보임, 0=정면). 모델은 세워두고 이 각도만큼만 기울여 내려다봄 — 더 위에서 본 각도로 상향(0.42→0.65)
+const VIEW_TILT=0.65;     // 카메라 부감(작게=서 있게 보임, 0=정면). 모델은 세워두고 이 각도만큼만 기울여 내려다봄.
+//   🚨 **0.65 로 되돌렸다**(2026-09-13). 1.22(70°) → 0.96(55°) 로 올려 봤다가 전부 물렸다 —
+//   실기기에서 70° 는 **지붕만 보여** 본부가 납작한 원반으로 읽힌다.
+//   ⭐ 기준은 **스타크래프트1 ≈ 30°**(사령부 원형 지붕이 세로/가로 ≈0.5 로 눌린 타원 = asin .5).
+//     **원래 값 0.65(37°)가 이미 그 자리였다** — 올릴 이유가 없었다.
+//   ⛔⛔ **컨셉 그림의 각도 숫자를 이 상수에 옮기지 말 것** — 이미지 모델의 「70도」는 실제 기하
+//     70° 가 아니다. 그림은 방향만 정하고 값은 **실기기 화면**으로 정한다(ART.md §19-3-2).
+//   ⚠ 숫자보다 더 위에서 본 것처럼 읽힌다 — **바닥이 90°(원근 없음)라 깊이 단서가 없어서**다.
+//     스타1 도 바닥은 정사각 타일이고 깊이는 **절벽의 대각선**이 만든다(사용자 관찰 2026-09-13).
+//   바닥·격자가 화면에 나란한
+//   정사각형 = **90° 정수직**인데 그 위 물건만 37° 로 누워 있어 어긋나 있었다. 물건을 바닥에 맞춘 것이다.
+//   ⛔ 반대로 바닥을 마름모 아이소메트릭으로 돌리지 말 것 — 격자가 곧 화면 좌표라 배치·길찾기·지형층·안개가 전부 걸린다.
+//   ⭐ 아래 넷은 이 값에서 **파생**되므로 저절로 따라온다: 선택 링 `_ringQ` · 발밑 그림자 `_SH_COS` ·
+//     초상 카메라 `BI_TILT` · 공중 부양 보정 `airLiftPx`. ⛔ 따로 맞추지 말 것(두 번 적용된다).
 const ROT_OFFSET=0;       // 모델 정면(+Z 가정)과 실제 forward 차이 보정(yaw, 필요시 조정)
 const MODEL_YAW_OFF={ forge:Math.PI, turret:Math.PI/2, racer:Math.PI/2, tank:Math.PI/2, skyguard:Math.PI/2, skydancer:Math.PI/2,
   falcon:Math.PI/2, pelican:Math.PI/2, kronos:Math.PI/2 };  // 모델별 yaw 보정. 터렛/레이서/브레이커 +90°. falcon·pelican·kronos(아비터, 신규 방향성 기체): 동체 수직이라 옆으로 진행 → +90° 회전 보정
@@ -865,7 +878,9 @@ let _pRend=null,_pScene=null,_pCam=null; const _pCache={};
 // dir = 관리자 실험장(sprDir)과 같은 8방향 규약(북=0, 시계). 방향별로 한 장씩 구워 캐시한다.
 // 정지 이미지 하나로 8방향을 다 쓰면 어느 쪽으로 걸어도 같은 그림이라 '미끄러지는' 느낌이 난다.
 const _sCache={}; let _sRend=null,_sScene=null,_sCam=null;
-const SPRITE_DIRS=8, SPRITE_TILT=0.65, SPRITE_YAW0=Math.PI;   // 시트 프로토타입과 같은 부감 각도
+const SPRITE_DIRS=8, SPRITE_TILT=VIEW_TILT, SPRITE_YAW0=Math.PI;   // 굽는 각도 = 인게임 부감
+//   ⛔ 숫자를 직접 적지 말 것 — 예전에 0.65 를 박아 뒀다가 VIEW_TILT 가 움직이면 **조용히 어긋나는**
+//     자리가 됐다(굽고 나면 각도는 못 고친다). 파생으로 묶어 둔다.
 function unitSprite(id, dir){
   const d=((dir|0)%SPRITE_DIRS+SPRITE_DIRS)%SPRITE_DIRS, ck=id+'#'+d;
   if(_sCache[ck]!==undefined) return _sCache[ck];
@@ -995,7 +1010,7 @@ function cstStopModel(){ if(_cvRAF){ cancelAnimationFrame(_cvRAF); _cvRAF=0; } i
 // 건설 맵: 건물 glb → 3D 렌더 이미지(맵에 실제 모델로 배치, key별 1회 캐시 · 준비되면 맵 갱신)
 const _bldgImgCache={}; let _biRend=null,_biScene=null,_biCam=null,_biHemi=null,_biDl=null,_biDl2=null;
 const BI_FIT=1.45*0.8;   // 초상 안에서 모델이 차지하는 크기(작을수록 여백↑ — 건물 실루엣 구분용) · ×0.8 축소
-const BI_TILT=VIEW_TILT+0.08, BI_DIST=3.0;   // 초상 부감 = 인게임 VIEW_TILT(0.65)와 같은 방향, +0.08rad만 더 위에서 내려다봄(살짝 드라마틱). 정면 회전(yaw)은 인게임 CST_YAW+건물별 f를 그대로 사용
+const BI_TILT=VIEW_TILT+0.08, BI_DIST=3.0;   // 초상 부감 = 인게임 VIEW_TILT 와 같은 방향, +0.08rad만 더 위에서 내려다봄(살짝 드라마틱). 정면 회전(yaw)은 인게임 CST_YAW+건물별 f를 그대로 사용
 // 종족별 초상 조명(모델 키 접두사 기준) — 원본 텍스처가 어두워 실루엣이 뭉개지므로 종족별로 보정. 평균 휘도 ≈70 목표
 const BI_LIGHT={ base:{hemi:1.3, dl:1.2, dl2:0.55}, union:{hemi:2.9, dl:2.5, dl2:1.1}, swarm:{hemi:2.4, dl:2.1, dl2:0.95}, aetherial:{hemi:2.6, dl:2.3, dl2:1.0} };
 const BI_LUM=68, BI_AE_STEPS=3, BI_AE_MAX=3.2;   // 자동 노출: 목표 평균 휘도 · 보정 반복 횟수 · 조명 배율 상한(과노출 방지)

@@ -1,0 +1,41 @@
+<!doctype html><meta charset=utf-8><style>
+body{margin:0;background:#cfc9bb;font:12px system-ui;display:flex;gap:14px;padding:14px}
+.col{text-align:center}.lab{font-weight:700;margin-bottom:6px}
+canvas{background:#2a2a2c;display:block}
+.n{margin-top:6px;white-space:pre;text-align:left;font:11px ui-monospace}
+</style>
+<div class=col><div class=lab>지금 — 정사각 격자</div><canvas id=a width=380 height=746></canvas><div class=n id=na></div></div>
+<div class=col><div class=lab>마름모 2:1 — 같은 타일 폭</div><canvas id=b width=380 height=746></canvas><div class=n id=nb></div></div>
+<div class=col><div class=lab>마름모 2:1 — 맵 전체가 들어가게</div><canvas id=c width=380 height=746></canvas><div class=n id=nc></div></div>
+<script>
+const COLS=40, ROWS=68, CW=8.36, W=380, H=746;
+const grid=(ctx,fn,cols,rows)=>{ctx.strokeStyle='#5a5a60';ctx.lineWidth=1;
+ for(let u=0;u<=cols;u++){ctx.beginPath();for(let v=0;v<=rows;v++){const p=fn(u,v);v?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}ctx.stroke();}
+ for(let v=0;v<=rows;v++){ctx.beginPath();for(let u=0;u<=cols;u++){const p=fn(u,v);u?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}ctx.stroke();}};
+const mark=(ctx,fn,u,v,col,r)=>{const p=fn(u,v);ctx.fillStyle=col;ctx.beginPath();ctx.arc(p.x,p.y,r||5,0,7);ctx.fill();};
+// ① 정사각 — 지금
+{const ctx=a.getContext('2d'); const ox=(W-COLS*CW)/2, oy=20;
+ const f=(u,v)=>({x:ox+u*CW, y:oy+v*CW});
+ grid(ctx,f,COLS,ROWS);
+ mark(ctx,f,20,64,'#4fa3ff',7); mark(ctx,f,20,6,'#ff5a5a',7);
+ ctx.fillStyle='#9ad';ctx.font='11px system-ui';ctx.fillText('내 기지',ox+20*CW-16,oy+64*CW+22);
+ ctx.fillStyle='#f88';ctx.fillText('적 기지',ox+20*CW-16,oy+6*CW-10);
+ na.textContent='격자 '+COLS+'×'+ROWS+' · 타일폭 '+CW+'px\n차지 '+(COLS*CW).toFixed(0)+'×'+(ROWS*CW).toFixed(0)+'px\n화면 대비 '+
+  ((COLS*CW/W*100)|0)+'% × '+((ROWS*CW/H*100)|0)+'%';}
+// ② 마름모 — 타일 폭 그대로
+{const ctx=b.getContext('2d'); const T=CW, ox=W/2+ (ROWS*T/2)*0 , oy=20;
+ const f=(u,v)=>({x:W/2+(u-v)*T/2+ (ROWS-COLS)*T/4, y:oy+(u+v)*T/4});
+ grid(ctx,f,COLS,ROWS);
+ mark(ctx,f,20,64,'#4fa3ff',7); mark(ctx,f,20,6,'#ff5a5a',7);
+ const wpx=(COLS+ROWS)*T/2, hpx=(COLS+ROWS)*T/4;
+ nb.textContent='타일폭 '+T+'px (그대로)\n차지 '+wpx.toFixed(0)+'×'+hpx.toFixed(0)+'px\n화면 대비 '+
+  ((wpx/W*100)|0)+'% × '+((hpx/H*100)|0)+'%\n⚠ 폭이 화면을 넘는다';}
+// ③ 마름모 — 폭에 맞춰 축소
+{const ctx=c.getContext('2d'); const T=W*2/(COLS+ROWS), oy=20;
+ const f=(u,v)=>({x:W/2+(u-v)*T/2+(ROWS-COLS)*T/4, y:oy+(u+v)*T/4});
+ grid(ctx,f,COLS,ROWS);
+ mark(ctx,f,20,64,'#4fa3ff',7); mark(ctx,f,20,6,'#ff5a5a',7);
+ const hpx=(COLS+ROWS)*T/4;
+ nc.textContent='타일폭 '+T.toFixed(2)+'px ('+((T/CW*100)|0)+'%로 축소)\n차지 '+W+'×'+hpx.toFixed(0)+'px\n화면 대비 100% × '+
+  ((hpx/H*100)|0)+'%\n⚠ 세로가 '+((hpx/(ROWS*CW)*100)|0)+'% 로 납작해진다';}
+</script>
