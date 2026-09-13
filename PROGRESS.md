@@ -1,4 +1,51 @@
-# 관리자 페이지 작업 진행 상태 (PROGRESS)
+# 진행 상태 (PROGRESS)
+
+## 🧭 2026-09-13 — 여기서 멈춘다 (인수인계 반 페이지)
+
+> **지금 상태**: `main` = `origin/main` = `1d227a7` · 작업 트리 깨끗 · `npm test` 전부 통과.
+> 사용자가 이 프로젝트를 **잠시 멈추고 한 달짜리 작은 게임**을 먼저 내기로 했다(2026-09-13).
+> 돌아왔을 때 **이 절만 읽으면** 바로 이어갈 수 있게 적는다. 아래 「관리자 페이지」 절부터는
+> 2026-07 의 옛 문서라 지금 무게중심(캠프)과 다르다 — 참고만 할 것.
+
+### 마지막 세션에서 한 일
+| 커밋 | 무엇 |
+|---|---|
+| — | 🏠 보급소 **첫 채만** 5,000 확정(`CAMP_SUPPLY_FIRST`). 1만도 재 보고 되돌렸다 — 근거는 BALANCE §5-16 |
+| `dfd859b` | 🎬 유즈맵 소셜 도크 여닫기 애니(`--t-dock` .26s / `--t-dockOut` .2s) |
+| `1c8472d` | 🎬 환생 「이번 회차」 접기/펴기 울컥 제거 — 높이를 **한 속성**(grid-template-rows)만 움직이게 |
+| `6c90937` | 💠📣 룬 칸 해금을 Lv.5~50 으로 · 레벨업 알림(`campLvUpSay`) · **캠프가 말을 못 하던 것**(토스트가 2026-08-25부터 통째로 숨어 있었다) |
+| `130586e` | 🔁 룬 칸을 갈래별로 **번갈아** 연다(Lv.8 이면 세 갈래가 다 열린다) |
+| `1d227a7` | 💠 유니크 칸은 갈래를 안 가린다 — 판정은 `runeSlotTakesGrp` 하나 |
+
+### 🚨 내보내기 전에 반드시 끌 것 (지금 켜져 있다)
+- `js/22-camp-rune.js:395` **`CAMP_RUNE_DEV_SEED = true`** — 저장에 룬·젬·칸을 진짜로 심는다.
+- `js/19-camp.js:1332` **`CAMP_DEV_START_MIN = 1000000`** — 시작 미네랄. ⛔ 경제를 **재기 전에도** 0 으로.
+- (`CAMP_RUNE_FREE`·`CAMP_RT_PTS_FREE` 는 이미 false)
+
+### 다음에 이어간다면 — 값이 없는 것부터
+1. **전과의 룬**(적 처치 보상)이 아직 `soon:true` 다 — 젬을 받으면서 닿는 데가 없다. 배선하면 `soon` 을 지운다.
+2. **안 잰 값들**: `CAMP_INF_COIN`(12) · 무한층 보상 외삽 비 · `CAMP_AUTOUPG_KEEP`(4) · 환생 강화 「켜고 끄는 넷」의 값 순서 · 룬 칸 Lv.30/50 에 닿는 **실제 깊이**(계산만 했다).
+3. **환생 강화 「시작 구성 바꾸기」** — 표에 못 올린다. 닿는 자리(`campWipeBoard` 한 줄)를 먼저 만들어야 한다.
+4. **Supabase RLS 를 한 번도 확인 안 했다** — 내보내기 전에 반드시.
+
+### 재는 법 (잊기 쉬운 것만)
+```
+CHROME_PATH=/opt/pw-browsers/chromium npm test          # 유일한 검증. 이게 통과 안 하면 끝난 게 아니다
+node --check js/<파일>.js                                 # 고친 파일만
+node scripts/camp-clear.mjs all 20 "5,36,257"            # 난이도 사다리(연속 모드)
+node scripts/camp-bench.mjs 45 1                         # 경제 · 「🏁 첫 도달」
+node scripts/camp-trace.mjs                              # 전투 움직임은 반드시 눈으로
+```
+⚠ **연출은 `pg.screenshot` 으로 재지 말 것** — 한 장에 100ms 넘어 늘 「이미 끝났다」만 나온다.
+속도는 rAF 로 잰다(`scripts/mapdock-shot.mjs`·`scripts/reb-fold-shot.mjs` 가 그 본보기다).
+
+### 문서 순서 (헷갈리면 이 순서)
+`GAME_DIRECTION.md` §0-A → `GAME_DIRECTION.md` → `HUNT_R1.md` → **`BALANCE.md`(실측 확정치)** → `HUNT2.md` → `GEM.md`.
+구조는 `ARCHITECTURE.md`, 화면은 `DESIGN.md`, 그림은 `ART.md`, 안 쓰는 코드는 `ATTIC.md`.
+
+---
+
+## 📦 (옛 문서 · 2026-07) 관리자 페이지 작업 진행 상태
 
 > 이 파일 하나만 보고 새 세션에서 페이지별로 바로 이어갈 수 있도록 정리한 핸드오프 문서.
 > 대상은 `sc-ums-web.html`(마크업) + `css/` 5개 + `js/` 19개 (빌드 없음, vanilla JS, Three.js 3D `M3D` 모듈).
