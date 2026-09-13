@@ -1330,7 +1330,16 @@
   body.cstMode #miniWrap,body.cstMode #deselTop,body.cstMode #skillFab,body.cstMode #btCtl{display:none !important}
   /* 💬 채팅은 **건설 구역에도 남긴다**(2026-08-25) — 유즈맵 안 모든 구역에서 같은 자리에 있어야 한다.
      빼는 곳은 캠프뿐이다: HOME 안에 사는 전용 화면이라 멀티 채팅이 붙을 자리가 아니다. */
-  #phone.campMode #chatBar,#phone.campMode #chatLog{display:none !important}
+  #phone.campMode #chatBar{display:none !important}
+  /* 🔔 ⛔ **알림 줄(#chatLog)까지 같이 숨기지 말 것**(2026-09-12 고침).
+       `toast()` 가 이 줄에 글을 넣으므로 같이 숨기면 **캠프의 모든 알림이 통째로 사라진다** —
+       2026-08-25 부터 실제로 그랬다(환생·던전 완주·자원 부족·오프라인 수급까지 한 마디도 안 보였다).
+       채팅 **바**(입력칸)만 빼면 되는 일이었다.
+     📐 자리는 **위**다 — 캠프 아래쪽은 커맨드 시트(#btSheet)가 늘 차지하고 있어 가린다.
+       z 는 61: 화면(#homeScreen 60)보다 위 · 재화 바(62)보다 아래라 바를 안 덮는다.
+     ⚠ 좌상단 던전 칩은 재화 바 **밖으로 내려오므로**(음수 bottom) 그만큼 더 띄운다 — 안 그러면 첫 줄이 칩을 밟는다(실측). */
+  #phone.campMode #chatLog{display:flex !important;visibility:visible;z-index:61;
+    top:calc(var(--topPad,0px) + var(--curH,34px) + 38px);bottom:auto}
   /* 🏗 관리자 건설은 자체 상단바(.bmapTop = 종족 탭·치트 버튼·자원)만 쓴다 → 게임 HUD 숨김(이중 표시 방지).
      오토배틀 건설지(.stkCst)는 반대다 — 상단이 전투 화면과 **같아야** 하므로 #hud 를 그대로 두고
      건설맵 쪽 자원 복제본(.bres)을 만들지 않는다(techMapRender 가 techWallet() 일 때 생략). */
