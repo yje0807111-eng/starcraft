@@ -2592,8 +2592,7 @@ of a flat parallel projection render, not a photograph.
 CAMERA: elevation 30 degrees above the horizon, and yaw rotated 45 degrees so each form is seen
 from a corner with two sides equally visible. A circular rooftop or round base reads as an
 ELLIPSE HALF AS TALL AS IT IS WIDE. A standing soldier's LEGS AND FEET ARE FULLY VISIBLE, not
-hidden under the torso. The ground beneath is a plain SQUARE tile grid whose lines run straight
-across the screen, not diamonds and not rotated.
+hidden under the torso.
 PROPORTIONS: stylized heroic, about 4.5 heads tall, broad shouldered, athletic and forward
 leaning, heavy boots, not chibi and not cute, reads fast and dangerous.
 COLOR: bold racing livery colour blocking, large flat fields of saturated red meeting
@@ -2608,6 +2607,22 @@ only on the outer silhouette, matte, no glossy specular highlights, detail spars
 line intentional. Units on a flat plain neutral grey background, no ground texture, no cast
 shadows, no text, no labels.
 ```
+
+### 19-2-1. 🧱 바닥을 **그리는 시트**에만 한 줄 더한다
+
+고정 블록은 **회색 배경**이 기본이다(끝줄이 `no ground texture`). 바닥이 실제로 보이는 시트
+(축척 확인 · 바닥 확인 · 한 장면)를 뽑을 때만 CAMERA 끝에 **이 한 줄**을 더하고, 동시에
+STYLE 끝줄의 `no ground texture` 를 **뺀다**.
+
+```text
+The ground beneath is a plain SQUARE tile grid whose lines run straight across the screen, not
+diamonds and not rotated.
+```
+
+🚨 **둘을 같이 두지 말 것.** 2026-09-13 에 실제로 그렇게 적혀 있었다(내가 정사각 바닥을 확정하며
+고정 블록에 넣었다) — 「정사각 타일 격자를 그려라」와 「바닥 텍스처 없음」이 한 프롬프트 안에서
+**서로를 물었다.** 사용자가 그 프롬프트로 뽑기 직전에 잡았다.
+⚠ **규격 검사는 이걸 못 잡는다**(둘 다 고정 블록 항목이 아니다) — 사람이 봐야 한다.
 
 ### 19-3. 각도 — **스타크래프트1 ≈ 30°** 다
 
