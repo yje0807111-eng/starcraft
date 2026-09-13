@@ -130,23 +130,27 @@ const FAMILY = {
   sprite: {
     label: '2.5D 유닛 스프라이트(§19)',
     need: [
-      ['CAMERA 스타1',  /classic 1990s isometric real-time-strategy\s+view, exactly like the original StarCraft/],
-      ['타원 ½',        /ELLIPSE ROUGHLY HALF AS TALL AS IT IS WIDE/],
-      ['앞·옆이 더',     /more than you see of its roof/],
-      ['다리 보임',      /LEGS AND FEET ARE FULLY VISIBLE/],
-      ['양쪽 다 금지',   /NOT a steep bird's eye view and NOT a straight-down view, and equally NOT a flat\s+eye-level/],
-      ['PROPORTIONS',  /not chibi and not cute, reads fast and dangerous/],
-      ['COLOR 리버리',  /bold racing livery colour blocking/],
-      ['DESIGN 언어',   /high speed light armour/],
-      ['STYLE 4톤',    /four cel tones wrapping around the forms/],
-      ['STYLE 외곽선',  /a thin dark contour line only on the outer silhouette/],
-      ['배경 금지',     /no ground texture, no cast shadows, no text, no labels\.$/]],
-    // ⛔ 급부감으로 되돌아가는 것을 막는다 — 실제로 그렇게 한 바퀴 돌았다(§19-3):
-    //   시트를 「70도」로 뽑아 고른 뒤 같은 숫자를 VIEW_TILT 에 넣었더니 지붕만 보였다.
-    //   ⚠ 37°·0.65 는 이제 **맞는 값**이라 금지어가 아니다(옛 규칙을 되살리지 말 것).
-    ban: [['과한 부감 각',  /\b(4[5-9]|[5-8]\d|90)\s*degrees above the horizon/i],
-          ['급부감 표현',    /steep near top-down/i],
-          ['헬기 비유',      /hovering directly over the unit/i]],
+      ['직교 투영',     /ORTHOGRAPHIC, PARALLEL, ISOMETRIC/],
+      ['원근 금지',     /NO perspective, NO vanishing\s+point/],
+      ['머리≯발',      /The head is NOT larger than the feet/],
+      ['부감 30°',     /elevation 30 degrees above the horizon/],
+      ['요 45°',       /yaw rotated 45 degrees/],
+      ['타원 ½',       /ELLIPSE HALF AS TALL AS IT IS WIDE/],
+      ['다리 보임',     /LEGS AND FEET ARE FULLY VISIBLE/],
+      ['PROPORTIONS', /not chibi and not cute, reads fast and dangerous/],
+      ['COLOR 리버리', /bold racing livery colour blocking/],
+      ['DESIGN 언어',  /high speed light armour/],
+      ['STYLE 4톤',   /four cel tones wrapping around the forms/],
+      ['STYLE 외곽선', /a thin dark contour line only on the outer silhouette/],
+      ['배경 금지',    /no ground texture, no cast shadows, no text, no labels\.$/]],
+    // ⛔ 세 가지 실패를 그대로 막는다(§19-3):
+    //   ① 급부감 — 시트의 「70도」를 코드에 옮겨 지붕만 보였다
+    //   ② 요 30° — 2:1 마름모에 안 얹힌다. 45° 여야 한다
+    //   ③ 원근 — 진짜 범인. 같은 30° 라도 원근이면 「너무 정면」이 된다
+    ban: [['과한 부감 각', /\b(4[5-9]|[5-8]\d|90)\s*degrees above the horizon/i],
+          ['급부감 표현',   /steep near top-down/i],
+          ['헬기 비유',     /hovering directly over the unit/i],
+          ['요 30°(틀림)',  /rotated about 30 degrees off axis/i]],
   },
   // 🐺 유닛 참고 아트(§9) — 환경 계열의 COMMON(안개·탈채도·명암분리)을 쓰지 않는다. 목적이 8방향 스프라이트 원본이라
   //   지켜야 할 것이 다르다: 배경이 흰 단색인가 · 그림자가 발밑인가 · 조명이 고정인가 · 금지줄이 있는가.
@@ -187,7 +191,9 @@ const prompts = { usemap: [], title: [], unit: [], race: [], campmap: [], dungeo
     if (m[2] || !fam) continue;   // 언어 태그가 있으면 프롬프트가 아니다(bash 등)
     const body = m[3];
     if (/[가-힣]/.test(body)) continue;   // 한글이 있으면 프롬프트가 아니다(설명용 도표 등)
-    if (fam === 'sprite') { if (/^CAMERA,/.test(body)) prompts.sprite.push(body.replace(/\s+/g, ' ')); }
+    // ⚠ 블록 머리는 **PROJECTION** 이다(2026-09-13 · 투영이 첫 줄로 올라왔다). 옛 머리 CAMERA 도 함께 받아
+    //   §19-4 의 조각(레퍼런스 확인 문장)과 구분한다 — 조각은 CRITICAL 로 시작해서 안 걸린다.
+    if (fam === 'sprite') { if (/^(PROJECTION|CAMERA),/.test(body)) prompts.sprite.push(body.replace(/\s+/g, ' ')); }
     else if (fam === 'unit') { if (!/^\[UNIT:/.test(body)) prompts.unit.push(body); }   // [UNIT:…] 은 변수 칸 = 검사 대상 아님
     // §11 은 매체 문장이 달라 'Moody' 로 시작하지 않는다. 던전(battlefield)과 캠프(home-camp)를 문장으로 가른다.
     // §11 은 둘로 갈린다: 레퍼런스를 쓰는 던전 템플릿과, 레퍼런스 없이 뽑는 0번 캠프.

@@ -2576,16 +2576,15 @@ dark tones, game background tile, 3D render
 ⛔ **형용사를 새로 쓰지 말 것.** 아래 다섯 덩어리를 붙이고 **장면 한 칸만** 바꾼다.
 
 ```
-CAMERA, the single most important requirement: the classic 1990s isometric real-time-strategy
-view, exactly like the original StarCraft. The camera sits about 30 degrees above the horizon,
-a gentle three-quarter overhead angle. Judge it by these four signs, not by the number. One,
-a circular rooftop or a round base reads as an ELLIPSE ROUGHLY HALF AS TALL AS IT IS WIDE, not
-as a circle. Two, you see a generous amount of each unit's FRONT and SIDE walls, easily more
-than you see of its roof. Three, a standing soldier shows his face and chest plainly, with only
-a sliver of the top of his helmet, and his LEGS AND FEET ARE FULLY VISIBLE, not hidden under the
-torso. Four, each form is clearly taller on screen than its own ground footprint is deep. This
-is NOT a steep bird's eye view and NOT a straight-down view, and equally NOT a flat eye-level
-view. Each unit is rotated about 30 degrees off axis so two sides read.
+PROJECTION, the single most important requirement: an ORTHOGRAPHIC, PARALLEL, ISOMETRIC
+projection exactly like a 1990s 2D strategy game sprite. There is NO perspective, NO vanishing
+point, NO lens distortion and NO foreshortening from depth. Parallel edges stay exactly parallel
+on screen. The head is NOT larger than the feet, near parts are NOT bigger than far parts. Think
+of a flat parallel projection render, not a photograph.
+CAMERA: elevation 30 degrees above the horizon, and yaw rotated 45 degrees so each form is seen
+from a corner with two sides equally visible. A circular rooftop or round base reads as an
+ELLIPSE HALF AS TALL AS IT IS WIDE, matching a two to one diamond floor tile exactly. A standing
+soldier's LEGS AND FEET ARE FULLY VISIBLE, not hidden under the torso.
 PROPORTIONS: stylized heroic, about 4.5 heads tall, broad shouldered, athletic and forward
 leaning, heavy boots, not chibi and not cute, reads fast and dangerous.
 COLOR: bold racing livery colour blocking, large flat fields of saturated red meeting
@@ -2614,6 +2613,21 @@ shadows, no text, no labels.
 시트를 「70°」로 뽑아서 사용자가 골랐기에 **같은 숫자를 코드 상수에 옮겼는데**, 화면에서는
 지붕만 보이는 거의 수직 부감이 됐다. **그림의 각도 숫자와 코드의 각도는 다른 단위**라고 여길 것.
 ⇒ **그림은 「어느 쪽으로 갈지」만 정하고, 코드 값은 실기기 화면으로 정한다.**
+
+⭐⭐ **범인은 각도가 아니라 「투영」이었다**(2026-09-13 확정). 같은 30° 라도 **원근(perspective)**으로
+그리면 머리가 커지고 정면이 과장돼 「너무 정면」으로 보인다. 스타1 은 **직교 투영**이라 그 왜곡이 없다.
+⇒ 프롬프트에 **ORTHOGRAPHIC · 소실점 없음 · 머리가 발보다 크지 않다**를 박으니 30° 에서 바로 맞았다.
+⭐ **요(yaw)도 45° 다** — 내가 「30도 돌려서」라고 써 온 것은 **틀렸다**. 2:1 마름모에 얹히는 각이 45° 다.
+
+🧭 **각도 기준이 둘이라 헷갈린다 — 표로 못 박는다**(이것 때문에 70° 사고가 났다):
+
+| 같은 각도를 부르는 세 가지 말 | 값 |
+|---|---|
+| **수평선 위**(이 문서의 기준) | **30°** |
+| 수직(바로 위)에서 아래로 | 60° |
+| 블렌더 카메라 X회전(= 수직 기준) | 60° · *정통 아이소메트릭은 54.74° = 수평선 위 35.26°* |
+
+⛔ 「3D 툴 기준 55~60도」 같은 문장을 **수평선 기준으로 읽지 말 것.** 같은 각도를 뒤집어 말한 것이다.
 
 ⭐ **기준은 스타크래프트1 이고, 그건 약 30° 다**(2026-09-13 사용자가 스크린샷으로 지정).
 사령부의 원형 지붕이 **세로/가로 ≈ 0.5 로 눌린 타원**이라 `asin(0.5)` ≈ 30°.
