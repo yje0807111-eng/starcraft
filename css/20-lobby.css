@@ -25,7 +25,6 @@
     margin-bottom:9px;border-radius:var(--r-bar);background:rgba(0,0,0,.3);border:1px solid var(--metal-edge)}
   .lbChat{flex:1 1 auto;min-height:44px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;padding:7px 9px;
     background:transparent;border:none;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  .lbChat::-webkit-scrollbar{width:4px}.lbChat::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   .lbMsg{font-size:var(--fs-md);line-height:1.35;color:#d6d2d2;word-break:break-all}
   .lbMsg b{font-weight:700}
   .lbMsg.sys{color:var(--txt-mute);font-style:italic;font-size:var(--fs-sm)}
@@ -79,7 +78,6 @@
     flex:0 0 auto;height:calc(8*var(--lbRowTH) + 2*var(--lbSepH) + 2*var(--lbGridPad) + 2px);
     overflow:hidden;display:flex;flex-direction:column;gap:0;margin-bottom:9px;padding:var(--lbGridPad) 11px;border-radius:var(--r-bar);
     background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.014));border:1px solid var(--metal-edge)}
-  .lbGrid::-webkit-scrollbar{width:5px} .lbGrid::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
   .lbSlot{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:3px 2px;min-height:var(--lbRowH);position:relative;overflow:hidden;   /* 높이는 .lbGrid 의 식에서 나온 값 — 여기만 고치지 말 것 */
     background:none;border:none;border-bottom:1px solid rgba(255,255,255,.06);border-radius:0}
   .lbSlot:last-child{border-bottom:none}
@@ -491,7 +489,6 @@
   .rmList{--rmItemH:58px;--rmGap:7px;flex:1;min-height:0;
     overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
     display:flex;flex-direction:column;gap:var(--rmGap);padding-right:2px}
-  .rmList::-webkit-scrollbar{width:5px}.rmList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 행 = 액션 버튼과 같은 문법(볼록 판 + 밑변 광원). 광원 색이 곧 난이도라 배지를 안 읽어도 훑힌다.
      ⚠ 난이도가 없는 유즈맵/파티 목록은 --dc 를 안 실어 주면 중립 흰선이 된다(.actBtn 기본형과 같다). */
   .roomItem{position:relative;flex:0 0 auto;height:var(--rmItemH);box-sizing:border-box;overflow:hidden;
@@ -1215,7 +1212,6 @@
   /* 한 갈래뿐이면 탭 띠를 감춘다 — 고를 것이 없다 */
   .ptSeg.one{display:none}
   .ppList{flex:1;min-height:90px;overflow-y:auto;display:flex;flex-direction:column;padding-right:3px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  .ppList::-webkit-scrollbar{width:5px}.ppList::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:var(--r-bar)}
   .ptSect{display:flex;align-items:center;gap:6px;font-size:var(--fs-md);font-weight:800;color:#d3dbe6;letter-spacing:.4px;margin:13px 1px 7px;padding-bottom:5px;
     border-bottom:1px solid rgba(92,214,255,.22)}   /* 섹션 = 밝은 라벨 + 시안 밑줄로 확실히 구분 */
   .ptSect:first-child{margin-top:2px}
