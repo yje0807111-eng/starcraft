@@ -56,11 +56,22 @@ const RUNE_GRP = {
   uniq: { nm:'유니크', col:'#ffe08a' } };
 // 🎚 룬 하나가 들어갈 **칸 무리** — 등급이 정한다. ⛔ 룬 종류로 가르지 말 것.
 function runeBucket(key){ return (runeParse(key).gd === 'uniq') ? 'uniq' : 'norm'; }
-// 🗺 칸의 갈래 — 일반은 성좌 고리, **유니크 칸은 그 성좌의 중심**이라 같은 갈래다(사용자 확정).
+// 🗺 칸의 갈래 — 일반 칸은 제 성좌의 갈래이고, 💠 **유니크 칸은 갈래가 없다**
+//   (2026-09-12 사용자 확정: 「각 유니크 칸에는 그 구역 상관없이 다 낄 수 있게」).
+//   ⚠ 옛 규칙은 「유니크 칸도 제 성좌의 갈래」였는데, 그러면 전투 유니크 룬은 Lv.30 · 성장은 Lv.50
+//     까지 낄 데가 없었다 — 종류(4)가 칸(3)보다 많은 자리라 갈래까지 묶으면 고를 것이 사라진다.
+//   'uniq' 는 갈래가 아니라 **등급 이름**이고 여기서는 「갈래 없음 · 색은 유니크 색」이라는 뜻이다.
+//   ⛔ 이 값을 RUNE_GRPS 와 견주는 코드를 새로 쓰지 말 것 — 갈래 판정은 `runeSlotTakesGrp` 하나다.
 function runeCellGrp(kind, i){
-  return (kind === 'uniq') ? (RUNE_GRPS[i] || RUNE_GRPS[0]) : runeSlotGrp(i); }
+  return (kind === 'uniq') ? 'uniq' : runeSlotGrp(i); }
 // 일반 i번 칸이 속한 갈래 — 성좌 하나가 통째로 한 갈래다
 function runeSlotGrp(i){ return RUNE_GRPS[Math.floor(i / RUNE_CONS)] || RUNE_GRPS[0]; }
+// 🔑 **이 칸이 그 갈래의 룬을 받나 — 판정은 여기 하나뿐이다.**
+//   일반 칸만 갈래를 탄다. ⛔ 장착·교체·가방이 저마다 다시 비교하지 말 것(둘이 어긋나 있었다:
+//   장착은 유니크를 통과시키는데 교체 후보는 막아서, 칸이 다 차면 바꿀 수가 없었다 · 2026-09-12).
+function runeSlotTakesGrp(kind, i, grp){
+  if(kind !== 'norm') return true;
+  return !grp || grp === runeSlotGrp(i); }
 
 const RUNE_LIST = [
   // ── 갈래마다 7종을 목표로 한다(칸은 8이라 하나는 두 번 끼우게 된다 — 그게 마지막 선택이다).
@@ -198,11 +209,12 @@ const RUNE_GEM = { low:40, mid:130, high:400, uniq:1200 };
 // ⭐ 「최고」다. 환생으로 되감겨도 **한 번이라도 닿았으면 남는다**(사용자 확정 2026-09-02).
 //   그래서 기준은 `C.lvBest`(되감기지 않는 값)이지 지금 레벨(`C.lv`)이 아니다.
 // 🏆 **칸을 여는 자 = 통산 최고 레벨**(2026-09-11 · `campBestLevel`).
-//   ⭐ 일반 첫 칸은 처음부터 열려 있다 — 아무것도 못 끼우는 화면은 「준비 중」으로 읽힌다.
+//   ⚠ 옛 규칙은 「일반 첫 칸은 처음부터 열려 있다」였다 — 2026-09-12 에 **Lv.5 로 옮겼다**(사용자).
+//     그 전까지는 스물일곱 칸이 전부 잠겨 보이지만, 칸마다 **여는 레벨이 적혀 있어** 빈 화면이 아니다.
 //   ⭐ **성좌 셋**(2026-09-03 사용자 확정 · 목업 docs/mock/camp-rune-8.html ②안).
-//     일반 24칸이 8칸씩 세 무리로 갈리고, **한 무리를 다 열면 그 한가운데 유니크가 열린다.**
-//     ⛔ 순서를 흩뜨리지 말 것 — 「성좌 하나를 완성하면 그 중심이 켜진다」가 판의 규칙이고,
-//       그게 무너지면 유니크가 왜 셋인지 그림으로 설명되지 않는다.
+//     일반 24칸이 8칸씩 세 무리로 갈린다. 무리 하나 = 갈래 하나이고, **칸은 제 갈래의 룬만 받는다.**
+//     ⚠ 옛 규칙 「한 무리를 다 열면 그 한가운데 유니크가 열린다」는 **2026-09-12 에 버렸다** —
+//       무리를 통째로 먼저 열면 세 번째 갈래가 Lv.31 까지 잠겼기 때문이다(아래 여는 레벨 절).
 //
 // 🔁 **왜 라운드도 관문도 아니고 레벨인가**(2026-09-11 · 전면 개편):
 //   ① 라운드는 없어졌다(던전 = 적 기지 치기) · ② 통산 관문은 **던전 셋 = 18 이 끝**이라
@@ -212,17 +224,42 @@ const RUNE_GEM = { low:40, mid:130, high:400, uniq:1200 };
 //     한 번 열린 칸이 닫히면 결제가 사라지는 것이다 → 자는 **통산 최고 레벨**(`C.lvBest`)이다.
 //     ⛔ `campLevel()`(지금 레벨)으로 열지 말 것.
 //
-// ✅ **자로 확인했다**(2026-09-11 · BALANCE §5-12): 연속 실측으로 **한 회차 = Lv.17** 이고
-//   이 표에서 Lv.17 은 **27칸 중 17칸**(일반 16 + 유니크 1)을 연다 — 노린 「첫 완주 18칸」과 같다.
-//   다 열리는 **Lv.27** 은 누적 XP 250만이고, 무한층이 한 층마다 XP를 ×7.17 로 올리므로
-//   **무한 2~3층**쯤이다(환생 두세 바퀴). ⛔ 고칠 것이 없다 — 값을 흔들지 말 것.
-//   ⚠ 다만 레벨 곡선 셋(CAMP_XP_KILL·_A·_R)이 움직이면 이 표도 같이 움직인다.
-const RUNE_SLOT_LV = {
-  norm: [ 1,  2,  3,  4,  5,  6,  7,  8,          // 성좌 ① — 첫 회차 초반
-         10, 11, 12, 13, 14, 15, 16, 17,          // 성좌 ② — 첫 완주(Lv.18) 언저리까지
-         19, 20, 21, 22, 23, 24, 25, 26],         // 성좌 ③ — 환생을 거듭해야 닿는다
-  uniq: [9, 18, 27] };           // 성좌마다 한가운데 하나 — 그 성좌를 다 연 다음
 const RUNE_CONS = 8;             // 성좌 하나에 든 일반 칸 수 (24 = 8 × 3)
+// 🎚 **여는 레벨 — 5 에서 시작해 50 에서 끝난다**(2026-09-12 사용자 확정:
+//   「5레벨부터 하나씩 · 유니크는 15·30·50 · 50레벨이면 전부 열림」).
+//
+// 🔁 **갈래를 번갈아 연다**(2026-09-12 사용자 지적: 「성좌 1,2,3 으로 가면 내가 원하는 구역이
+//   너무 늦게까지 안 열린다」). ⛔ **성좌 하나를 통째로 먼저 열지 말 것** — 칸은 **제 성좌의 갈래만**
+//   받으므로(`runeCellGrp`), 성좌 순서대로 열면 **세 번째 갈래의 룬은 Lv.31 까지 낄 데가 없다.**
+//   젬으로 산 룬이 스무 레벨 넘게 가방에 묶여 있는 셈이라 거짓 판매에 가깝다.
+//   ⭐ 지금은 **경제 → 전투 → 성장 → 경제 …** 순으로 한 칸씩 돌아가며 열린다 — **Lv.8 이면 세 갈래가 다 열린다.**
+//
+// ⚠ **그래서 옛 규칙 「성좌를 다 열면 그 한가운데가 열린다」는 버렸다.** 돌아가며 열면 성좌 셋이
+//   거의 같이 차므로 그 규칙으로는 유니크 셋이 Lv.44~49 에 몰린다. 유니크는 **15·30·50 으로 고정**이고
+//   갈래 순서(경제·전투·성장)는 그대로라 「성좌가 셋이라 중심도 셋」은 여전히 그림으로 읽힌다.
+//   ⛔ 「완성하면 중심」으로 되돌리지 말 것 — 되돌리면 위의 「세 번째 갈래가 잠긴다」가 같이 돌아온다.
+//
+//   ⭐ 숫자를 손으로 스물일곱 개 찍지 않는다 — **시기 셋의 「첫 칸 ~ 마지막 칸」**과 유니크 셋만 적는다.
+//     ⛔ 생성된 배열을 리터럴로 되돌리지 말 것 — 폭을 바꾸려면 아래 두 줄만 고치면 된다.
+//   📈 간격이 **저절로 벌어진다**: 초반 1~2레벨 · 중반 2레벨 · 후반 2~3레벨.
+//     레벨 요구량이 등비(×1.55)라 뒤로 갈수록 한 칸이 훨씬 무거워진다.
+//   ⚠ **Lv.5 이전에는 한 칸도 안 열린다**(옛 표는 첫 칸이 Lv.1 이었다). 사용자 확정 사항이고,
+//     Lv.5 는 첫 던전에서 관문 셋을 깨면 닿는다(실측 73초) — 잠긴 칸에는 여는 레벨이 적혀 있다.
+const RUNE_LV_UNIQ = [15, 30, 50];                     // 성좌 셋의 한가운데 — 경제 · 전투 · 성장 순
+// ⚠ 이 셋은 **시기**(초·중·후반)다 — **성좌가 아니다.** 여덟 칸씩 세 묶음으로 레벨만 낸다.
+const RUNE_LV_PHASE = [[5, 14], [16, 29], [31, 49]];
+const RUNE_SLOT_LV = (function(){
+  // ① 열리는 **순서대로의** 레벨 24개
+  const seq = [];
+  for(const ph of RUNE_LV_PHASE)
+    for(let j = 0; j < RUNE_CONS; j++)
+      seq.push(Math.round(ph[0] + (ph[1] - ph[0]) * j / (RUNE_CONS - 1)));
+  // ② 🔁 갈래를 **번갈아** 나눠 준다 — k번째로 열리는 칸은 성좌 (k % 성좌수) 의 것이다.
+  const nc = RUNE_GRPS.length, norm = new Array(seq.length);
+  for(let k = 0; k < seq.length; k++){
+    const c = k % nc, j = (k - c) / nc;                // 성좌 c 의 j번째 칸
+    norm[c * RUNE_CONS + j] = seq[k]; }
+  return { norm: norm, uniq: RUNE_LV_UNIQ.slice() }; })();
 
 // ── 🌌 판 좌표 — 유니크가 중심, 일반 8칸이 고리로 둘러싼다 ───────────────
 //   ⚠ SVG viewBox 안의 값이다(화면 크기와 무관). 기기마다 판이 통째로 확대·축소된다.
@@ -261,11 +298,13 @@ function campRuneUPos(i){ return RUNE_CT[i] || RUNE_CT[0]; }
 //   ⚠ 캠프가 없으면 1(첫 칸만 열린다).
 function campRuneBestLv(){
   return (typeof campBestLevel === 'function') ? campBestLevel() : 1; }
-// 열린 칸 수 — 표에서 「최고 레벨 이하」인 것을 센다
-function campRuneSlots(kind){ const tb = RUNE_SLOT_LV[kind] || [];
+// 열린 칸 수 — 표에서 「그 레벨 이하」인 것을 센다.
+//   ⭐ **레벨을 인자로 받는 쪽이 단일 소스**다(2026-09-12) — 레벨업 알림이 「이번에 몇 칸이 열렸나」를
+//     재려면 지금 레벨이 아니라 **오르기 전 레벨**로도 물어봐야 한다.
+function campRuneSlotsAt(kind, lv){ const tb = RUNE_SLOT_LV[kind] || [];
   if(CAMP_RUNE_FREE || CAMP_RUNE_DEV_SEED) return tb.length;   // 🔧 전부 열어 둔다(확인용 스위치 둘)
-  const b = campRuneBestLv();
-  let n = 0; for(const r of tb) if(b >= r) n++; return n; }
+  let n = 0; for(const r of tb) if(lv >= r) n++; return n; }
+function campRuneSlots(kind){ return campRuneSlotsAt(kind, campRuneBestLv()); }
 
 // ── 상태 ────────────────────────────────────────────────────────────────
 // `C.rune` 에 산다 = **환생해도 남는다**(campRebirth 의 keep 목록에 넣었다).
@@ -398,7 +437,8 @@ function campRuneCanEquip(kind, i, key){
   if(i < 0 || i >= campRuneSlots(kind)) return false;
   // 🗺 **성좌마다 들어갈 갈래가 정해져 있다**(2026-09-04 사용자 확정 · RUNE_GRPS 설명).
   //   ⛔ 이 줄을 빼지 말 것 — 한 성좌 안에서 색이 섞이면 무엇을 모은 판인지 안 읽힌다.
-  if(kind === 'norm' && p.def.grp && p.def.grp !== runeSlotGrp(i)) return false;
+  //   💠 다만 **유니크 칸은 갈래를 안 가린다**(2026-09-12) — 판정은 `runeSlotTakesGrp` 하나다.
+  if(!runeSlotTakesGrp(kind, i, p.def.grp)) return false;
   const cur = R[kind][i] || null;
   return campRuneFree(key) > 0 || cur === key; }
 function campRuneEquip(kind, i, key){
@@ -799,7 +839,7 @@ function _runeDefs(){
   //     빛이 위에서 오는 결이 판 전체에 통하고, 칸 하나만 봐도 어느 갈래의 자리인지 읽힌다.
   //   ⚠ 세기는 낀 칸보다 **약하다**(흰빛 .92 → .34). 빈 칸이 더 시끄러우면 끼웠을 때
   //     달라지는 것이 없다. ⛔ 올리지 말 것.
-  for(const k of RUNE_GRPS){
+  for(const k of RUNE_GRPS.concat('uniq')){     // 💠 유니크 칸은 갈래가 없어 **제 등급 색**을 쓴다
     const c = (k === 'uniq') ? ((RUNE_GD.uniq || {}).col || '#c98bff')
                              : ((RUNE_GRP[k] || {}).col || '#b4cdeb');
     d += '<linearGradient id="rnEg' + k + '" x1="0" y1="0" x2="0" y2="1">'
@@ -857,7 +897,7 @@ function campRuneSwapCand(kind, i){
   const want = runeBucket(_runeSwapKey);
   if(kind !== want) return false;
   if(!campRuneEq(kind)[i]) return false;                    // 빈 칸은 교체가 아니라 그냥 장착
-  return runeCellGrp(kind, i) === p.def.grp;               // 🗺 유니크 칸도 제 성좌의 갈래다
+  return runeSlotTakesGrp(kind, i, p.def.grp);              // 🗺 장착과 **같은 판정**을 쓴다
 }
 function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
   _runeSwapKey = ''; if(re !== false) campRuneRender(); }
@@ -865,7 +905,10 @@ function campRuneSwapEnd(re){ if(!_runeSwapKey) return;
 //   ⛔ 판 한가운데(RUNE_MAP_H/2)로 잡지 말 것 — 아래를 가방이 214px 덮어 성좌가 그 뒤로 내려간다.
 function campRuneSwapLook(now){
   const p = runeParse(_runeSwapKey); if(!p.def || !_rnView) return;
-  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;   // 🗺 유니크도 제 성좌로 간다
+  // 💠 유니크 룬은 **어느 유니크 칸에도** 들어가고 그 셋이 세 성좌에 흩어져 있다 —
+  //   한 곳을 잡을 수 없으므로 **전체 보기 그대로** 둔다(2026-09-12).
+  if(runeBucket(_runeSwapKey) === 'uniq') return;
+  const ci = RUNE_GRPS.indexOf(p.def.grp); if(ci < 0) return;
   const c = RUNE_CT[ci]; if(!c) return;
   const mp = document.querySelector('#campRune .rnMap');
   const H = mp ? mp.getBoundingClientRect().height : 0;
@@ -1165,14 +1208,14 @@ function _runeBagHTML(){
   const kindSel = _runePickKind || '';
   // 🔎 **칸을 고르면 그 갈래만 남긴다**(2026-09-04 사용자 확정: 「전투 칸이면 전투 룬만」).
   //   ⛔ 물리기만(.off) 하지 말 것 — 못 끼우는 줄이 화면을 차지하면 고르는 일이 안 줄어든다.
-  //   ⚠ 갈래는 **칸이 정한다**(runeSlotGrp) — 유니크 칸이면 유니크만.
-  const grpSel = kindSel ? runeCellGrp(kindSel, _runePick) : '';
+  //   💠 **유니크 칸은 갈래를 안 가리므로 안 거른다**(2026-09-12) — 세 갈래를 다 보여 준다.
+  const grpSel = (kindSel && kindSel !== 'uniq') ? runeSlotGrp(_runePick) : '';
   // 머리줄 — 고른 칸이 있으면 그 칸을 말하고, 차 있으면 빼는 길을 준다
   let hd;
   if(kindSel){
     const eq = campRuneEq(kindSel), cur = eq[_runePick] || null;
     const nm = (kindSel === 'uniq' ? '유니크' : '일반') + ' ' + (_runePick + 1) + '번 칸';
-    const gn = (RUNE_GRP[grpSel] || {}).nm || '';
+    const gn = (kindSel === 'uniq') ? '유니크' : ((RUNE_GRP[grpSel] || {}).nm || '');
     hd = '<span class="rnBagT">' + nm + (cur ? ' · ' + runeName(cur) : ' · 비어 있음') + '</span>'
       + (gn ? '<span class="rnBagN">' + gn + ' 룬만</span>' : '')
       + (cur ? '<button class="rnOff" type="button" onclick="campRuneUnequip(\'' + kindSel + '\','
