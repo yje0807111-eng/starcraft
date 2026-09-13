@@ -2583,8 +2583,9 @@ on screen. The head is NOT larger than the feet, near parts are NOT bigger than 
 of a flat parallel projection render, not a photograph.
 CAMERA: elevation 30 degrees above the horizon, and yaw rotated 45 degrees so each form is seen
 from a corner with two sides equally visible. A circular rooftop or round base reads as an
-ELLIPSE HALF AS TALL AS IT IS WIDE, matching a two to one diamond floor tile exactly. A standing
-soldier's LEGS AND FEET ARE FULLY VISIBLE, not hidden under the torso.
+ELLIPSE HALF AS TALL AS IT IS WIDE. A standing soldier's LEGS AND FEET ARE FULLY VISIBLE, not
+hidden under the torso. The ground beneath is a plain SQUARE tile grid whose lines run straight
+across the screen, not diamonds and not rotated.
 PROPORTIONS: stylized heroic, about 4.5 heads tall, broad shouldered, athletic and forward
 leaning, heavy boots, not chibi and not cute, reads fast and dangerous.
 COLOR: bold racing livery colour blocking, large flat fields of saturated red meeting
@@ -2648,17 +2649,28 @@ shadows, no text, no labels.
 ⭐ **가장 빠른 자는 선택 링이다** — 링의 납작한 정도가 곧 각도다(세로/가로 = sin 각도):
 **30° → 0.50** · 37° → 0.60 · 55° → 0.82 · 70° → 0.94(거의 원). **링이 원에 가까우면 과하다.**
 
-### 19-3-2. 🧱 바닥은 90° 인 채로 둔다 — 깊이는 **대각선**이 만든다
+### 19-3-2. 🔷 바닥은 **정사각으로 둔다** — 마름모는 재 보고 접었다(2026-09-13)
 
-캠프 격자는 화면에 나란한 정사각형, 즉 **90° 정수직**이다. 그 위 물건만 30~37° 로 기울어 있다.
-「어긋난 것 아닌가」 싶지만 **스타1 도 똑같다** — 바닥은 정사각 타일이고, 깊이감은 **절벽·경계선이
-대각으로 그어져** 만들어진다(2026-09-13 사용자 관찰).
+스타1 바닥은 **2:1 마름모**라 우리도 그러자는 이야기가 나왔고, **게임을 안 건드리고 재 봤다**
+(실제 격자 값을 읽어 두 방식을 같은 크기로 그렸다 · `docs/mock/iso-grid-spike.png`).
 
-⛔ **바닥을 마름모 아이소메트릭으로 돌리지 말 것** — 격자가 곧 화면 좌표라 배치·길찾기·`_techSnap`·
-지형층·안개가 전부 걸린다. ⭐ 대신 **지형(절벽·경계)에 대각선을 넣어** 깊이를 만든다.
+| | 화면 차지 | |
+|---|---|---|
+| **정사각(지금)** | 87% × **76%** | ✅ |
+| 마름모 · 타일 폭 그대로 | 118% × **30%** | 폭이 화면 밖으로 나간다 |
+| 마름모 · 폭에 맞춰 축소 | 100% × **25%** | 타일이 84% 로 작아지고 세로가 1/3 로 납작 |
 
-⚠ 다만 바닥에 원근이 없으므로 **물건은 숫자보다 더 위에서 본 것처럼 읽힌다** — 깊이 단서가 없어서다.
-이것이 30° 에서도 충분히 부감으로 보이는 이유이고, 값을 더 올리면 곧바로 과해지는 이유다.
+⛔ **마름모로 가지 말 것.** 우리 격자는 **40×68 = 세로로 긴 맵**인데, 마름모 투영이 그걸 45° 돌려
+**가로로 긴 평행사변형**으로 만든다. 세로 폰에서 **위아래 3/4 가 빈다.**
+스타1 이 마름모여도 됐던 것은 **가로로 넓은 PC 화면**이었기 때문이다 — 전제가 다르다.
+
+⭐ 대신 **대각선 느낌은 지형이 낸다** — 스타1 도 깊이감의 상당 부분이 **절벽·경계선의 대각선**에서
+온다(2026-09-13 사용자 관찰). 바닥 격자를 돌리지 않고 `js/24-terrain.js` 의 절벽을 대각으로 그린다.
+
+⚠ **요(yaw) 45° 는 그대로 간다**(2026-09-13 사용자 확정 — 정사각 바닥 위 45° 와 0° 를 견주어 골랐다).
+그래서 **그려진 건물은 모서리에서 본 마름모인데 발자국은 축 정렬 사각형**이라 둘이 안 맞는다.
+⚠ **`fitW` 를 다시 봐야 한다** — 지금은 건물 그림 폭을 `발자국 w × 셀폭` 으로 맞추는데(`14-input-fx.js`),
+모서리에서 본 그림은 **대각선이 가장 넓다.** 그대로 두면 이웃 칸을 밟는다. **안 쟀다** — 넣어 봐야 안다.
 
 ### 19-3-3. ⚙ `VIEW_TILT` 하나만 만지면 된다 — 나머지는 **파생**이다
 
@@ -2732,5 +2744,8 @@ exactly as in the reference.
 - **팀 색 마스크 형식** — 별도 채널인가 별도 파일인가.
 - ✅ **`VIEW_TILT` 는 `0.65`(37°) 그대로 간다** — 올려 봤다가 되돌렸다(§19-3). 스타1 이 ≈30° 라 원래
   값이 이미 맞는 자리였다. ⚠ **30°(0.52) 로 한 칸 더 내릴지**는 실기기에서 볼 것 — 지금은 안 정했다.
-- ⚠ **기존 컨셉 시트는 전부 과한 각도로 뽑혔다**(70° 로 지시한 것들). 스프라이트를 굽기 전에
-  **19-2 의 새 CAMERA 블록으로 다시 뽑아** 각도를 맞출 것.
+- ⚠ **기존 컨셉 시트는 전부 규격 전의 것이다**(각도가 과하거나 원근이 들어갔다). 스프라이트를 굽기 전에
+  **19-2 의 새 PROJECTION 블록으로 다시 뽑을 것**.
+- ⚠ **`fitW` 를 안 쟀다**(§19-3-2) — 모서리에서 본 그림은 대각선이 가장 넓은데 지금 코드는 발자국 폭에
+  맞춘다. 이웃 칸을 밟는지 실제로 넣어 봐야 안다.
+- ⚠ **`VIEW_TILT`(지금 0.65 = 37°)를 30° = 0.52 로 내릴지** 안 정했다 — 그림 규격은 30° 다.
