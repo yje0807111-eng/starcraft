@@ -1262,24 +1262,36 @@ async function groupLobby(){
       const n=document.querySelectorAll('.'+cls).length;
       assert(n===0, '없앤 탭 클래스가 화면에 다시 있음: .'+cls+' ×'+n); }
     return '4종 없음 확인'; });
-  // 스크롤바는 .uiScroll 하나로 통일. 같은 UI를 두 번 정의하면 화면마다 굵기·색이 어긋난다(실제로 어긋나 있었음).
-  await step('스크롤바 단일 소스: 맵 목록 = 가이드 시트', ()=>{
-    const ms=$('msList'), hs=$('hbGuideBody'); skipIf(!ms||!hs,'대상 목록 없음');
-    for(const [n,el] of [['맵 목록',ms],['가이드 시트',hs]])
-      assert(el.classList.contains('uiScroll'), n+'에 공용 스크롤바 클래스(.uiScroll)가 없음');
-    // 이 요소들에 실제로 매칭되는 스크롤바 규칙을 모아 비교 — 스타일 몇 개 눈대중이 아니라 규칙 집합을 통째로 diff
-    const rulesFor=(el)=>{ const out=[];
-      for(const sh of document.styleSheets){ let rs; try{ rs=sh.cssRules; }catch(e){ continue; }
-        for(const r of rs){ if(!r.selectorText || r.selectorText.indexOf('scrollbar')<0) continue;
-          const base=r.selectorText.split(',').map(x=>x.trim().replace(/::-webkit-scrollbar.*$/,''));
-          if(base.some(b=>{ try{ return b && el.matches(b); }catch(e){ return false; } })) out.push(r.cssText); } }
-      return out.sort(); };
-    const a=rulesFor(ms), b=rulesFor(hs);
-    assert(a.length>0,'스크롤바 규칙이 하나도 매칭되지 않음');
-    assert(JSON.stringify(a)===JSON.stringify(b), '두 목록의 스크롤바 규칙이 다름\n맵: '+a.join(' | ')+'\n허브: '+b.join(' | '));
-    const c=getComputedStyle(ms);
-    assert(c.scrollbarWidth==='thin', '공용 스크롤바가 thin이 아님: '+c.scrollbarWidth);
-    return a.length+'개 규칙 공유'; });
+  // 🚫 **스크롤 막대는 어디에도 안 그린다**(2026-09-13 사용자: 「유즈맵 선택 구역·젬 상점 등 오른쪽 스크롤 바가 있는 것들을 다 지워줘」).
+  //   ⭐ 전역 규칙 하나(css/00-base.css)다. 옛 잠금(「맵 목록 = 가이드 시트 · thin」)을 이걸로 갈았다.
+  //   잠그는 것은 셋: ① 이름 붙은 목록들에 막대가 없다 ② **클래스 없는 새 스크롤 영역**에도 없다(전역인지)
+  //   ③ 막대를 되살리는 화면 전용 규칙이 **어디에도** 없다 — `*` 보다 구체적인 선택자는 전역을 이긴다.
+  //   ⚠ 막대만 지웠지 **스크롤은 된다**를 함께 잰다.
+  await step('스크롤 막대 없음: 맵 목록 · 젬 상점 · 새 목록 전부 — 스크롤은 그대로', ()=>{
+    const named=[['맵 목록','msList'],['가이드 시트','hbGuideBody'],['젬 상점','shopBody']].map(([n,id])=>[n,$(id)]).filter(x=>x[1]);
+    skipIf(!named.length,'대상 목록 없음');
+    for(const [n,el] of named){ const cs=getComputedStyle(el);
+      assert(cs.scrollbarWidth==='none', n+'에 막대가 보인다: '+cs.scrollbarWidth);
+      assert(el.offsetWidth-el.clientWidth===0, n+'의 막대가 자리를 먹는다: '+(el.offsetWidth-el.clientWidth)+'px'); }
+    // ② 클래스 없는 새 스크롤 영역 — 아무것도 안 붙여도 막대가 없어야 전역이다
+    const box=document.createElement('div'), inner=document.createElement('div');
+    box.style.cssText='position:absolute;left:0;top:0;width:120px;height:40px;overflow-y:auto;visibility:hidden';
+    inner.style.height='400px'; box.appendChild(inner); document.body.appendChild(box);
+    let gut, sc;
+    try{ gut=box.offsetWidth-box.clientWidth; box.scrollTop=90; sc=box.scrollTop; } finally { box.remove(); }
+    assert(gut===0,'클래스 없는 스크롤 영역에 막대가 그려진다(전역 규칙이 안 먹는다): '+gut+'px');
+    assert(sc===90,'막대를 지웠더니 스크롤이 안 된다: '+sc);
+    // ③ 되살리는 규칙 — 스타일시트를 통째로 뒤진다(@media 안까지)
+    const bad=[];
+    const walk=(rs)=>{ for(const r of rs){
+      if(!r.selectorText){ if(r.cssRules) walk(r.cssRules); continue; }
+      if(!r.style) continue;
+      const sw=r.style.getPropertyValue('scrollbar-width');
+      if(sw&&sw!=='none') bad.push(r.selectorText+' {scrollbar-width:'+sw+'}');
+      if(r.selectorText.indexOf('::-webkit-scrollbar')>=0&&!/^\*?::-webkit-scrollbar$/.test(r.selectorText.replace(/\s/g,''))) bad.push(r.selectorText); } };   // ⚠ Chrome 은 전역 `*::-webkit-scrollbar` 를 `::-webkit-scrollbar` 로 적는다
+    for(const sh of document.styleSheets){ let rs; try{ rs=sh.cssRules; }catch(e){ continue; } walk(rs); }
+    assert(!bad.length,'화면 전용 스크롤바 규칙이 남아 막대를 되살린다('+bad.length+'): '+bad.slice(0,4).join(' | '));
+    return named.length+'곳 막대 0px · 새 영역도 0px · 스크롤 됨 · 되살리는 규칙 0'; });
   // DESIGN.md 규칙 — 허브(볼륨 3)만. 다른 볼륨 3 화면(타이틀·로그인·대기실)은 각자 전환될 때 스텝을 추가할 것.
   // 빈 칸 바로 입장은 없앴다(2026-08-06). 체험 입장은 '게스트로 시작하기' 버튼 전용.
   await step('인증: 빈 칸은 막고, 게스트 버튼으로 입장', async()=>{ skipIf(typeof authSubmit!=='function','인증 없음');
@@ -4042,6 +4054,26 @@ async function groupLobby(){
           const chord = 2 * RUNE_RING * Math.sin(Math.PI / RUNE_CONS);
           assert(w < chord, '카드가 옆 칸을 밟는다: ' + w.toFixed(1) + ' ≥ ' + chord.toFixed(1));
           glyphNote = '카드 ' + w.toFixed(0) + '/' + chord.toFixed(0); }
+        // ⬛ **검은 바닥은 카드 밖으로 안 나온다**(2026-09-13 사용자: 「끼워진 육각 판 뒤의 검은 배경이 보인다」).
+        //   ⭐ 카드 그림의 모서리는 투명하게 잘 깎여 있다(실측: 네 모서리 알파 0) — 원인은 **크기**였다:
+        //     바닥을 칸 반지름 r(높이 2r)로 그리는데 카드는 r × RUNE_CARD_K(높이 1.86r)라
+        //     위아래 꼭짓점과 그 빗변에서 바닥이 7.5% 삐져나와 검은 테가 됐다.
+        //   ⛔ 바닥 반지름을 r 로 되돌리지 말 것 — 카드 크기(RUNE_CELL_OUT × RUNE_FLOOR_K)를 따라간다.
+        //   ⚠ 견주는 자는 **보이는 카드 윤곽**(알파≥128)이다 — 카드를 판 윤곽대로 다시 깎아(2026-09-13) 네모 상자보다 좁아졌다.
+        { const img = $('rnG').querySelector('.rnImg');
+          const fl = img && img.closest('.rnCell') && img.closest('.rnCell').querySelector('.rnHxFloor');
+          if(fl){ const fb = fl.getBBox(), ib = img.getBBox();
+            const pic = new Image(); pic.src = img.getAttribute('href'); await pic.decode();
+            const N = pic.naturalWidth, cv = document.createElement('canvas'); cv.width = N; cv.height = N;
+            const c2 = cv.getContext('2d', { willReadFrequently:true }); c2.drawImage(pic, 0, 0);
+            const px = c2.getImageData(0, 0, N, N).data, A = (x, y) => px[(y * N + x) * 4 + 3];
+            let l = 0; while(l < N && A(l, N >> 1) < 128) l++; let r = N - 1; while(r >= 0 && A(r, N >> 1) < 128) r--;
+            let t = 0; while(t < N && A(N >> 1, t) < 128) t++; let b = N - 1; while(b >= 0 && A(N >> 1, b) < 128) b--;
+            const visW = ib.width * (r - l + 1) / N, visH = ib.height * (b - t + 1) / N;
+            assert(fb.height < visH,
+              '검은 바닥이 카드 위아래로 삐져나온다: 바닥 ' + fb.height.toFixed(2) + ' ≥ 보이는 카드 ' + visH.toFixed(2));
+            assert(fb.width < visW,
+              '검은 바닥이 카드 옆으로 삐져나온다: 바닥 ' + fb.width.toFixed(2) + ' ≥ 보이는 카드 ' + visW.toFixed(2)); } }
         // ✈ **빈 칸에 넣을 때도 날아서 들어간다**(2026-09-04 사용자 확정)
         //   ⛔ 교체만 날아가게 두지 말 것 — 「그냥 넣기」와 「바꿔 넣기」가 다른 화면처럼 보인다.
         { const R5 = campRuneState(); R5.norm = []; R5.uniq = []; campRuneTouch();
@@ -4248,7 +4280,7 @@ async function groupLobby(){
         assert(!/💎/.test(box.textContent),'룬 상점에 💎 이모지가 남아 있다 — resIco 로 바꿀 것');
         // 📜 **스크롤은 젬 상점과 같은 규격**이다(2026-09-04 사용자 확정 · CLAUDE.md 「세로 스크롤바」).
         //   ⛔ 전용 스크롤바나 드래그 장치를 새로 만들지 말 것 — 화면마다 굵기가 달라진다.
-        //   ⚠ 이 클래스가 빠지면 브라우저 기본 막대가 **굵게** 뜬다(그게 원래 증상이었다).
+        //   ⚠ 막대는 이제 전역에서 안 그린다(2026-09-13 · css/00-base.css) — 이 클래스는 스크롤 영역 표시로 남는다.
         assert(box.classList.contains('uiScroll'),
           '룬 상점이 공용 스크롤바를 안 쓴다 — 굵은 기본 막대가 뜬다');
         { const gem=document.querySelector('#shopBody');
@@ -4616,6 +4648,34 @@ async function groupLobby(){
     assert(!bad.length, bad.length+'장이 없다 — node scripts/rune-compose.mjs 를 돌릴 것: '
       +bad.slice(0,6).join(' ／ '));
     return '카드 '+(RUNE_LIST.length*gds.length)+'장 · 빠진 것 0';
+  });
+
+  // ⬛ **룬 카드는 판 바깥에 검은 테가 없다** (2026-09-13 사용자: 「테두리 판 바깥의 검은색 테두리가 남아 있다 —
+  //   판을 깎을 때 뒤의 검은 테두리까지 지웠어야 했다」).
+  //   ⭐ 원인은 rune-compose 의 알파 마스크가 **판보다 큰 정육각**이었던 것이다(윤곽 픽셀의 96% 가 검정 · 157장 전부).
+  //     지금은 판의 **실제 윤곽을 딴 다각형**을 1.4px 들여 씌운다(ART.md §16-4).
+  //   ⚠ 재는 법: 카드 가운데에서 광선 12개를 쏘아 **가장 바깥의 불투명 픽셀**이 검정(V<24)인지 본다.
+  //   ⚠ 하급(회색) 판은 뺀다 — 아랫면이 그림자로 원래 어둡게 그려져 있어(판의 일부) 이 자로 가를 수 없다.
+  await step('룬 그림: 카드 판 바깥에 검은 테가 없다', async()=>{
+    skipIf(typeof runeIcoSrc!=='function'||typeof runeKey!=='function','룬 시스템 없음');
+    const cards=[];
+    for(const id of ['tap','crit','heal']){
+      cards.push([runeIcoSrc(runeKey(id,'mid')), id+' 중급'], [runeIcoSrc(runeKey(id,'high')), id+' 상급'],
+        [runeIcoSrc(runeKey(id,'uniq')), id+' 유니크'], [runeIcoSrc(runeKey(id,'uniq'),'eco'), id+' 유니크·경제']); }
+    const bad=[];
+    for(const [src,nm] of cards){
+      const img=new Image(); img.src=src; await img.decode();
+      const W=img.naturalWidth, cv=document.createElement('canvas'); cv.width=W; cv.height=W;
+      const c2=cv.getContext('2d',{willReadFrequently:true}); c2.drawImage(img,0,0);
+      const d=c2.getImageData(0,0,W,W).data; let dark=0;
+      for(let k=0;k<12;k++){ const a=k*Math.PI/6; let r=W*0.7, v=-1;
+        while(r>0){ const x=Math.round((W-1)/2+r*Math.cos(a)), y=Math.round((W-1)/2+r*Math.sin(a));
+          if(x>=0&&y>=0&&x<W&&y<W){ const i=(y*W+x)*4; if(d[i+3]>=128){ v=Math.max(d[i],d[i+1],d[i+2]); break; } }
+          r-=0.25; }
+        if(v<24) dark++; }
+      if(dark>2) bad.push(nm+' '+dark+'/12'); }
+    assert(!bad.length,'판 바깥에 검은 테가 남은 카드 — node scripts/rune-compose.mjs 로 다시 구울 것: '+bad.join(' · '));
+    return cards.length+'장 · 광선 12개 중 바깥 검정 ≤2';
   });
 
   // 🎬 두 판이 버튼 아래로 **잘려 내려온다**(셔터). 목업 docs/mock/panel-anim-6.html ④안.

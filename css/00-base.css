@@ -93,20 +93,14 @@
       rgb(232,236,244) 50%,rgba(186,194,208,.55) 70%,rgba(160,168,182,.26) 87%,rgba(150,158,172,.14) 100%);
     --fs-xs:9.5px; --fs-sm:10px; --fs-md:11px; --fs-lg:12px; --fs-xl:13px;
   }
-  /* ── 📜 공용 스크롤바(단일 소스) ──
-     세로 스크롤 영역은 이 클래스 하나만 붙인다. 새 목록을 만들 때 ::-webkit-scrollbar를
-     또 정의하지 말 것 — 화면마다 굵기·색이 미묘하게 달라지는 원인이었다(맵 선택 5px/.16 vs 허브 소셜 4px/.14). */
-  .uiScroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
-  .uiScroll::-webkit-scrollbar{width:5px}
-  .uiScroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
-  .uiScroll::-webkit-scrollbar-track{background:transparent}
-  /* 📜 **막대를 감추는 변형** — 스크롤은 그대로 되고 막대만 안 보인다(2026-09-04).
-     ⭐ Chrome 은 scrollbar-width 가 thin / none 둘뿐이라 「더 얇게」가 없다.
-       그래서 「거의 안 보이게」의 답은 **감추는 것**이다.
-     ⚠ 감추면 「더 있다」는 신호도 사라진다 — 쓰는 쪽에서 **아래 페이드**로 대신 알릴 것.
-     ⛔ 화면마다 scrollbar-width:none 을 새로 쓰지 말 것. 이 클래스를 함께 붙인다. */
-  .uiScroll.bare{scrollbar-width:none}
-  .uiScroll.bare::-webkit-scrollbar{width:0;height:0}
+  /* ── 📜 스크롤 막대는 **어디에도 안 그린다**(단일 소스 · 2026-09-13 사용자: 「오른쪽 스크롤 바가 있는 것들을 다 지워줘」) ──
+     스크롤은 그대로 된다(손가락·휠) — 막대만 안 보인다.
+     ⭐ 전역 규칙 하나다. 옛 `.uiScroll`(얇은 막대)·`.uiScroll.bare`(감춤)는 이제 **스크롤 영역 표시**일 뿐이다.
+     ⛔ 화면마다 `scrollbar-width`·`::-webkit-scrollbar` 를 다시 쓰지 말 것 — 선택자가 `*` 보다 구체적이라
+        그 화면만 막대가 되살아난다(스모크 「스크롤 막대 없음」이 스타일시트를 통째로 뒤진다).
+     ⚠ 막대가 없으면 「더 있다」는 신호도 없다 — 필요한 목록은 **아래 페이드**로 알린다(룬 가방이 그 예다). */
+  *{scrollbar-width:none}
+  *::-webkit-scrollbar{width:0;height:0}
   /* 🖼 폰 **바깥** 여백 = 짙은 아이보리(2026-08-24). 검정이면 폰 밑변과 배경이 이어져 버려
      하단 네비(면을 걷어낸 뒤로는 더더욱)가 어디서 끝나는지 안 보였다. 밝은 쪽으로 한 단 올려 폰의
      윤곽 자체가 경계가 되게 한다. ⛔ 화면 안(#phone) 색이 아니다 — 안쪽 톤은 건드리지 않는다. */

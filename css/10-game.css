@@ -300,7 +300,6 @@
      ⚠ 카드 폭은 항상 (뷰 - 3*--hsGap)/4 여야 '한 화면에 딱 4장'이 지켜진다.
      카드를 좁히고 싶으면 폭이 아니라 --hsGap 을 키울 것 — 폭만 줄이면 5번째가 삐져나와 잘려 보인다. */
   .hsGrid{--hsGap:6px;display:flex;flex-wrap:nowrap;justify-content:flex-start;gap:var(--hsGap);align-items:stretch;overflow-x:auto;overflow-y:hidden;padding-bottom:1px;flex:1;min-height:0}
-  .hsGrid::-webkit-scrollbar{height:4px}.hsGrid::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
   /* 유닛 셀 = 통일된 SC 카드(메탈+네온 엣지+사선 모서리+스캔라인) */
   /* 카드 = 사냥터 업그레이드 카드(.hmUp)와 같은 문법: 완전 검정 면 + 위가 밝고 아래로 스러지는 붉은 테두리.
      ⚠ 테두리 그라데는 `면 padding-box, 액센트 border-box, 금속링 border-box` 3층이다 —
@@ -543,9 +542,6 @@
      ⛔ border·box-shadow 를 여기서 다시 주지 말 것 — 이 선택자가 공통 블록보다 특이도가 높아
         **바깥에서만** 판이 되살아난다(2026-08-26 에 실제로 그래서 걷어냈다). */
   #settingsPop.appCtx .setCard{--setAcc:var(--neon);--setAccS:var(--neon-soft)}
-  .setCard::-webkit-scrollbar{width:5px}
-  .setCard::-webkit-scrollbar-thumb{background:rgba(255,255,255,.16);border-radius:var(--r-bar)}
-  .setCard::-webkit-scrollbar-track{background:transparent}
   /* 일시정지(상단) / 나가기(하단) */
   /* ⛔ 높이를 44px 로 고정하지 말 것 — 카드에 scale(--setScale)이 걸려 화면에서는 그만큼 작아진다
      (배율 .8 일 때 35.2px 로 §0 권고 44px 을 깨고 있었다 · 2026-08-31 실측).
@@ -588,13 +584,10 @@
     background-color:rgba(2,3,6,.90);
     backdrop-filter:blur(3px) saturate(.9);-webkit-backdrop-filter:blur(3px) saturate(.9)}
   #setSubPop.hide{display:none}
-  .setSubBody{min-height:0;overflow-y:auto;padding:2px 0 2px;
-    scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
+  .setSubBody{min-height:0;overflow-y:auto;padding:2px 0 2px}
   .setSubBody>.setBody{display:block;background:none;box-shadow:none;padding:2px 0 0;margin:0}   /* 리스트 안에서 쓰던 장식 제거 */
   .setMenu{display:flex;flex-direction:column;min-height:0;overflow-y:auto;padding:0 12px;border-radius:var(--r-bar);
-    background:linear-gradient(180deg,#0a0a0a,#000);border:1px solid var(--metal-edge);   /* 업그레이드 칸(.hmUp)과 같은 검정 면 */
-    scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}
-  .setMenu::-webkit-scrollbar{width:5px} .setMenu::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
+    background:linear-gradient(180deg,#0a0a0a,#000);border:1px solid var(--metal-edge)}   /* 업그레이드 칸(.hmUp)과 같은 검정 면 */
   /* 배속 선택 — 세 칸 세그먼트(선택=강조색) + 아래 현재값 한 줄 */
   .spdNow{color:var(--setAcc,var(--neon));font-family:var(--font-num);font-size:var(--fs-xl);margin-left:5px}
   .voteCols{display:flex;gap:5px}
@@ -810,9 +803,6 @@
   
   /* 임무 목표 — 라벨 + 정렬 목록 (현재+5줄까지 확장 후 내부 스크롤) */
   #body-mission{max-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
-  #body-mission::-webkit-scrollbar{width:5px}
-  #body-mission::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:var(--r-bar)}
-  #body-mission::-webkit-scrollbar-track{background:transparent}
   .missBlock{margin-bottom:12px}
   .missBlock:last-child{margin-bottom:0}
   .missLbl{font-size:var(--fs-sm);font-weight:800;letter-spacing:1.5px;color:var(--setAcc,var(--neon));margin-bottom:7px;padding-left:2px}
@@ -1786,17 +1776,14 @@
   .cmdG .cgStats.cgWide .cgStat b i.u{font-style:normal;font-weight:700;font-size:9.5px;
     color:#8794a8;letter-spacing:0;vertical-align:baseline}
   /* 👥 다중 지정: 유닛별 HP 칩 그리드 — 칩 탭=개별 지정 */
-  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:start;grid-auto-rows:calc((100% - 6px)/4);flex:1 1 auto;min-height:0;max-height:none;margin-top:0;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 · 행 높이=구역의 1/4(gap 3칸 제외) → 8기=4줄이 구역을 정확히 꽉 채움 / 소수 선택 시엔 늘어나지 않고 정상 높이 유지 / 8기 초과=스크롤 */
+  .cmdG .cgUnits{display:grid;grid-template-columns:repeat(2,1fr);gap:2px;overflow-y:auto;align-content:start;grid-auto-rows:calc((100% - 6px)/4);flex:1 1 auto;min-height:0;max-height:none;margin-top:0}   /* 👥 유닛별 HP 칩 그리드 — 2열 고정 · 행 높이=구역의 1/4(gap 3칸 제외) → 8기=4줄이 구역을 정확히 꽉 채움 / 소수 선택 시엔 늘어나지 않고 정상 높이 유지 / 8기 초과=스크롤 */
   .cmdG .cgUChip{position:relative;min-height:11px;border-radius:3px;background:rgba(0,0,0,.5);border:1px solid var(--glass);overflow:hidden;cursor:pointer;box-shadow:inset 0 0 3px rgba(0,0,0,.6)}   /* 높이=그리드 행 stretch로 채움(min 11px) */
   .cmdG .cgUChip:active{border-color:var(--ca)}
   .cmdG .cgUFill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:7px;border-radius:2px;transition:width .15s linear,background .2s}   /* HP 선 — 세로 중앙 · 비율↓=빨강(hpBarColor) · 칩 커짐에 맞춰 두께 6→7px */
   .cmdG .cgUHp{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 8.5px/1 var(--font-num);color:#fff;text-shadow:0 1px 1px #000,0 0 2px #000;font-variant-numeric:tabular-nums;letter-spacing:-.3px;pointer-events:none}   /* 칩 중앙 HP 수치 40/40(바 위 오버레이) · 가독성 7→8.5px */
   .cmdG .cgUMore{align-self:stretch;height:10px;display:flex;align-items:center;justify-content:center;color:var(--cgMuted);font:800 8px/1 sans-serif;border:1px dashed var(--glass);border-radius:3px}
-  .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;max-height:none;gap:1px;justify-content:flex-start;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(120,140,170,.4) transparent}   /* 혼합 다중지정 좌측 종류 목록 = 왼쪽 구역 전체를 써서 4종류가 스크롤 없이 딱 맞음(행이 늘어나 채움), 초과 시 스크롤 */
+  .cmdG .cgStats.cgScr{flex:1 1 auto;min-height:0;max-height:none;gap:1px;justify-content:flex-start;overflow-y:auto;padding-right:3px}   /* 혼합 다중지정 좌측 종류 목록 = 왼쪽 구역 전체를 써서 4종류가 스크롤 없이 딱 맞음(행이 늘어나 채움), 초과 시 스크롤 */
   .cmdG .cgStats.cgScr .cgStat{flex:1 1 0;min-height:11px;align-items:center}   /* 행이 남는 높이를 나눠 가짐(min 11px) → 4줄 꽉 참 · 초과분은 min 유지하며 스크롤 */
-  .cmdG .cgUnits::-webkit-scrollbar,.cmdG .cgStats.cgScr::-webkit-scrollbar{width:4px;height:4px}
-  .cmdG .cgUnits::-webkit-scrollbar-thumb,.cmdG .cgStats.cgScr::-webkit-scrollbar-thumb{background:rgba(120,140,170,.4);border-radius:3px}
-  .cmdG .cgUnits::-webkit-scrollbar-track,.cmdG .cgStats.cgScr::-webkit-scrollbar-track{background:transparent}
   /* ↩ 전체(소프트선택 복귀)는 `.cgLift` 변형이라 **트레이 칸 껍데기·크기를 그대로 물려받는다**(전용 치수 없음).
      자리는 트레이 맨 왼쪽 — `renderCmdGrid` 가 `m.back` 을 `.cgTopOut` 앞에 붙인다. */
   .cmdG .cgProg{margin-top:1px} .cmdG .cgProg .pl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--cgMuted);margin-bottom:2px} .cmdG .cgProg .pl b{color:var(--caL);font-family:var(--font-num);font-size:10px}

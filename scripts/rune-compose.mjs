@@ -19,6 +19,7 @@
  *   node scripts/rune-compose.mjs               # 전부
  *   node scripts/rune-compose.mjs --only=tap    # 한 종류만(크기 맞출 때)
  *   옵션: --scale=0.46(문양이 판 폭에서 차지하는 비율) · --size=128 · --sheet(대조판도 만든다)
+ *         --out=<폴더>(견줄 때만 · 기본 assets/icons/rune) · --mask-legacy(옛 정육각 마스크로 — 기준선 재기) · --mask-in=1.4(윤곽에서 들이는 px)
  * ========================================================================== */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,7 +33,7 @@ const opt = (k, d) => { const a = argv.find(x => x.startsWith('--' + k + '=')); 
 const has = k => argv.includes('--' + k);
 
 const SRC   = path.resolve(ROOT, 'docs/mock/rune');
-const OUT   = path.resolve(ROOT, 'assets/icons/rune');
+const OUT   = path.resolve(ROOT, opt('out', 'assets/icons/rune'));   // ⚠ 견줄 때만 --out 으로 딴 데 굽는다
 const SIZE  = +opt('size', 128);
 // 📐 0.44 → 0.64 (2026-09-04 사용자 지적: 「룬과 칸 사이 검은 여백」 — 문양이 판에 비해 작아 안쪽 검은 면이
 //   넓게 남았다. 성좌 칸 실제 크기(44px)에서 0.44/0.56/0.66 을 나란히 보고 정했다 — 0.66 도 테두리에 안 닿는다).
@@ -109,26 +110,69 @@ async function inkBox(file){
   return { left:x0, top:y0, width:x1-x0+1, height:y1-y0+1 };
 }
 
-// 🎭 **육각형 밖을 투명하게 잘라낸다** (2026-09-04).
-//   ⚠ 그림은 검정 배경 위에 그려져 있다. 그대로 쓰면 성좌 판에서 **육각형 뒤에 검은 사각**이 남는다.
+// 🎭 **판 밖을 투명하게 잘라낸다** — 알파는 **판의 실제 윤곽을 딴 다각형**이다(2026-09-13).
+//   ⚠ 판 그림은 검정 배경 위에 그려져 있다(원본 알파가 전부 255). 그대로 쓰면 성좌 판에서 **육각형 뒤에 검은 사각**이 남는다.
 //   ⛔ 「어두운 픽셀을 투명하게」로 하지 말 것 — 판 안쪽 면도 어두워서 구멍이 뚫린다.
-//   ⭐ 판이 정육각형(꼭짓점이 위)이라는 것을 알고 있으므로 **같은 모양의 마스크**를 만들어 씌운다.
-//     반경을 조금 키우고(MASK_R) 가장자리를 흐리게 해서 발광이 각져 잘리지 않게 한다.
-const MASK_R = 1.02;                     // 육각형 반경 배수 — 1 이면 딱 맞고, 크면 발광이 더 남는다
-const MASK_BLUR = 1.2;                   // 가장자리 흐림(px)
-function hexMaskSvg(size){
-  const c = size / 2, r = c * MASK_R, q = [];
-  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90);
-    q.push((c + r * Math.cos(a)).toFixed(1) + ',' + (c + r * Math.sin(a)).toFixed(1)); }
+//   🚨 옛 방식(정육각 · 반경 ×1.02 · 흐림 1.2)은 **판보다 컸다**(2026-09-13 사용자: 「판 바깥의 검은 테두리가 남아 있다」).
+//     그 틈에 ① contain 여백(투명 → removeAlpha 로 검정)과 ② 잉크 상자 모서리의 원본 검정 배경이 **불투명하게**
+//     되살아나 테 바깥에 검은 띠가 돌았다(실측: 윤곽 픽셀의 96% 가 검정 · 157장 전부).
+//   ❌ **「가로·세로를 따로 맞춘 육각」도 해 봤고 모자랐다**(96% → 45%) — 판은 정육각이 아니다:
+//     가로 비율이 넷이 다르고(109·111·115·117) **아랫 빗변이 1~2px 안으로 들어가 있다**(원근으로 그린 판 · 1024 원본에서 광선으로 실측).
+//     ⛔ 육각을 가정하는 마스크로 되돌리지 말 것 — 어떤 육각도 아랫 빗변에 검정을 남긴다.
+//   ⭐ 그래서 **윤곽을 그대로 딴다**: 판 가운데로부터 광선을 쏘아 **바깥에서 안으로** 들어오며 처음 밝은 픽셀
+//     (THRESH · inkBox 와 같은 문턱)을 만나는 자리를 잇는다. 처음 만난 **테**에서 멈추므로 안쪽의 어두운 면에는
+//     닿지 않는다 — 여전히 **모양으로 자르는** 것이라 구멍이 안 뚫린다.
+//   ⚠ 먼지·번짐 한 점이 윤곽을 튀게 하지 않도록 이웃 광선 9개의 **중앙값**을 쓴다.
+const MASK_IN = +opt('mask-in', 1.4);   // 윤곽에서 안으로 들이는 거리(128px 기준) — 0.6·1.0·1.4 를 견줘 골랐다(2026-09-13):
+                                          //   0.6 은 가장 바깥 한 줄이 검정과 섞여 V≈10 으로 남고, 1.4 에서 중·상·유니크의 바깥 픽셀이 전부 밝아진다(판 폭은 2px 준다)
+const MASK_BLUR = 0.7;                   // 가장자리 흐림(px) — 계단만 없앤다(1.2 면 검정이 도로 번져 테가 된다)
+const MASK_RAYS = 720;                   // 윤곽을 따는 광선 수(0.5° 간격)
+const MASK_LEGACY = has('mask-legacy');  // 🔬 옛 마스크(정육각 ×1.02) — 새 것과 견줄 때만
+function polySvg(size, pts){
   return Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '">'
-    + '<polygon points="' + q.join(' ') + '" fill="#fff"/></svg>');
-}
-let _maskCache = null;
-async function hexMask(size){
-  if(_maskCache && _maskCache.size === size) return _maskCache.buf;
-  const buf = await sharp(hexMaskSvg(size)).blur(MASK_BLUR).toColourspace('b-w').raw().toBuffer();
-  _maskCache = { size, buf }; return buf;
-}
+    + '<polygon points="' + pts.map(v => v[0].toFixed(2) + ',' + v[1].toFixed(2)).join(' ') + '" fill="#fff"/></svg>'); }
+function legacyHex(size){ const c = size / 2, r = c * 1.02, q = [];
+  for(let i = 0; i < 6; i++){ const a = Math.PI / 180 * (60 * i - 90); q.push([c + r * Math.cos(a), c + r * Math.sin(a)]); }
+  return q; }
+const _outlineCache = new Map();
+async function plateOutline(tile, tb, base){
+  if(_outlineCache.has(tile)) return _outlineCache.get(tile);
+  const { data, info } = await sharp(tile).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, C = info.channels;
+  const V = (x, y) => { x = Math.round(x); y = Math.round(y);
+    if(x < 0 || y < 0 || x >= W || y >= H) return 0;
+    const i = (y * W + x) * C; return Math.max(data[i], data[i + 1], data[i + 2]); };
+  const cx = tb.left + tb.width / 2, cy = tb.top + tb.height / 2, R0 = Math.hypot(tb.width, tb.height) / 2 + 4;
+  const rs = [];
+  for(let k = 0; k < MASK_RAYS; k++){ const a = 2 * Math.PI * k / MASK_RAYS, dx = Math.cos(a), dy = Math.sin(a);
+    let r = R0; while(r > 0 && V(cx + r * dx, cy + r * dy) < THRESH) r -= 0.5;
+    rs.push(r); }
+  const med = rs.map((_, k) => { const w = [];
+    for(let j = -4; j <= 4; j++) w.push(rs[(k + j + MASK_RAYS) % MASK_RAYS]);
+    return w.sort((a, b) => a - b)[4]; });
+  // 원본 좌표 → 128 좌표. ⚠ **줄인 판이 실제로 놓인 자리(base 의 알파 상자)**로 옮긴다.
+  //   ⛔ 「가운데 = 64」로 계산하지 말 것 — contain 은 정수로 붙여 판이 반 픽셀 치우친다(폭 109 → 왼쪽 9 · 오른쪽 10).
+  //     그렇게 옮기면 마스크가 오른쪽으로 0.5px 밀려 **오른쪽 옆변에만** 검은 한 줄이 남는다(2026-09-13 실측: 왼 10px · 오른 63px).
+  const bm = await sharp(base).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let L = bm.info.width, T = bm.info.height, Rt = -1, Bt = -1;
+  for(let y = 0; y < bm.info.height; y++) for(let x = 0; x < bm.info.width; x++){
+    if(bm.data[(y * bm.info.width + x) * 4 + 3] < 128) continue;
+    if(x < L) L = x; if(x > Rt) Rt = x; if(y < T) T = y; if(y > Bt) Bt = y; }
+  const sx = (Rt + 1 - L) / tb.width, sy = (Bt + 1 - T) / tb.height;
+  const ccx = L + (Rt + 1 - L) / 2, ccy = T + (Bt + 1 - T) / 2;
+  const pts = med.map((r, k) => { const a = 2 * Math.PI * k / MASK_RAYS;
+    // 원본 픽셀 중심(+0.5)을 128 로 옮기고, 가운데 쪽으로 MASK_IN 만큼 들인다
+    const X = L + (cx + r * Math.cos(a) - tb.left + 0.5) * sx, Y = T + (cy + r * Math.sin(a) - tb.top + 0.5) * sy;
+    const dx = X - ccx, dy = Y - ccy, d = Math.hypot(dx, dy) || 1, q = Math.max(0, d - MASK_IN) / d;
+    return [ccx + dx * q, ccy + dy * q]; });
+  _outlineCache.set(tile, pts); return pts; }
+const _maskCache = new Map();
+async function plateMask(tile, tb, base){
+  const k = MASK_LEGACY ? 'legacy' : tile;
+  if(_maskCache.has(k)) return _maskCache.get(k);
+  const pts = MASK_LEGACY ? legacyHex(SIZE) : await plateOutline(tile, tb, base);
+  const buf = await sharp(polySvg(SIZE, pts)).blur(MASK_LEGACY ? 1.2 : MASK_BLUR).toColourspace('b-w').raw().toBuffer();
+  _maskCache.set(k, buf); return buf; }
 
 // 문양을 판 위에 screen 으로 얹는다(위 설명)
 // tint 를 주면 문양을 그 색으로 물들인다(유니크의 갈래 색 벌 — 위 GRP_COL 설명).
@@ -205,7 +249,7 @@ async function compose(tile, sym, outFile, id, tint){
     .composite([{ input: over, left: off, top: offY, blend: 'screen' }])
     .removeAlpha().raw().toBuffer();
   // 🎭 육각 마스크를 알파로 붙인다(위 설명)
-  const m = await hexMask(SIZE);
+  const m = await plateMask(tile, tb, base);   // 🎭 이 판의 윤곽을 딴 마스크(위 설명)
   const rgba = Buffer.alloc(SIZE * SIZE * 4);
   for(let i = 0; i < SIZE * SIZE; i++){
     rgba[i*4] = flat[i*3]; rgba[i*4+1] = flat[i*3+1]; rgba[i*4+2] = flat[i*3+2];
@@ -220,7 +264,7 @@ async function compose(tile, sym, outFile, id, tint){
 //   ⚠ 배경이 검정인 원본을 그대로 얹으면 육각 안에 검은 사각이 남는다 —
 //     **밝기를 알파로** 옮긴다(글로우가 자연스럽게 사라진다). ⛔ 문턱으로 자르지 말 것: 가장자리가 톱니가 된다.
 //   ⚠ 가방·상점은 그대로 합친 그림(webp)을 쓴다 — 거기는 HTML 이라 SVG 도형을 못 쓴다.
-const GLYPH_OUT = path.resolve(ROOT, 'assets/icons/rune/glyph');
+const GLYPH_OUT = path.join(OUT, 'glyph');
 const GLYPH_SIZE = 128;
 async function glyph(sym, outFile, tint){
   const bx = await inkBox(sym);
